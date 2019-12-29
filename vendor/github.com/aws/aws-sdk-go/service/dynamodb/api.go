@@ -653,6 +653,9 @@ func (c *DynamoDB) CreateGlobalTableRequest(input *CreateGlobalTableInput) (req 
 // relationship between two or more DynamoDB tables with the same table name
 // in the provided Regions.
 //
+// This method only applies to Version 2017.11.29 (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables.V1.html)
+// of global tables.
+//
 // If you want to add a new replica table to a global table, each of the following
 // conditions must be true:
 //
@@ -1800,6 +1803,9 @@ func (c *DynamoDB) DescribeGlobalTableSettingsRequest(input *DescribeGlobalTable
 //
 // Describes Region-specific settings for a global table.
 //
+// This method only applies to Version 2017.11.29 (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables.V1.html)
+// of global tables.
+//
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
@@ -2593,6 +2599,9 @@ func (c *DynamoDB) ListGlobalTablesRequest(input *ListGlobalTablesInput) (req *r
 // ListGlobalTables API operation for Amazon DynamoDB.
 //
 // Lists all global tables that have a replica in the specified Region.
+//
+// This method only applies to Version 2017.11.29 (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables.V1.html)
+// of global tables.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -4002,16 +4011,6 @@ func (c *DynamoDB) TransactGetItemsRequest(input *TransactGetItemsInput) (req *r
 // cannot retrieve items from tables in more than one AWS account or Region.
 // The aggregate size of the items in the transaction cannot exceed 4 MB.
 //
-// All AWS Regions and AWS GovCloud (US) support up to 25 items per transaction
-// with up to 4 MB of data, except the following AWS Regions:
-//
-//    * China (Beijing)
-//
-//    * China (Ningxia)
-//
-// The China (Beijing) and China (Ningxia) Regions support up to 10 items per
-// transaction with up to 4 MB of data.
-//
 // DynamoDB rejects the entire TransactGetItems request if any of the following
 // is true:
 //
@@ -4057,8 +4056,6 @@ func (c *DynamoDB) TransactGetItemsRequest(input *TransactGetItemsInput) (req *r
 //      index (LSI) becomes too large, or a similar validation error occurs because
 //      of changes made by the transaction.
 //
-//      * The aggregate size of the items in the transaction exceeds 4 MBs.
-//
 //      * There is a user error, such as an invalid data format.
 //
 //   DynamoDB cancels a TransactGetItems request under the following circumstances:
@@ -4072,8 +4069,6 @@ func (c *DynamoDB) TransactGetItemsRequest(input *TransactGetItemsInput) (req *r
 //
 //      * There is insufficient provisioned capacity for the transaction to be
 //      completed.
-//
-//      * The aggregate size of the items in the transaction exceeds 4 MBs.
 //
 //      * There is a user error, such as an invalid data format.
 //
@@ -4238,16 +4233,6 @@ func (c *DynamoDB) TransactWriteItemsRequest(input *TransactWriteItemsInput) (re
 // item. The aggregate size of the items in the transaction cannot exceed 4
 // MB.
 //
-// All AWS Regions and AWS GovCloud (US) support up to 25 items per transaction
-// with up to 4 MB of data, except the following AWS Regions:
-//
-//    * China (Beijing)
-//
-//    * China (Ningxia)
-//
-// The China (Beijing) and China (Ningxia) Regions support up to 10 items per
-// transaction with up to 4 MB of data.
-//
 // The actions are completed atomically so that either all of them succeed,
 // or all of them fail. They are defined by the following objects:
 //
@@ -4328,8 +4313,6 @@ func (c *DynamoDB) TransactWriteItemsRequest(input *TransactWriteItemsInput) (re
 //      index (LSI) becomes too large, or a similar validation error occurs because
 //      of changes made by the transaction.
 //
-//      * The aggregate size of the items in the transaction exceeds 4 MBs.
-//
 //      * There is a user error, such as an invalid data format.
 //
 //   DynamoDB cancels a TransactGetItems request under the following circumstances:
@@ -4343,8 +4326,6 @@ func (c *DynamoDB) TransactWriteItemsRequest(input *TransactWriteItemsInput) (re
 //
 //      * There is insufficient provisioned capacity for the transaction to be
 //      completed.
-//
-//      * The aggregate size of the items in the transaction exceeds 4 MBs.
 //
 //      * There is a user error, such as an invalid data format.
 //
@@ -14046,13 +14027,14 @@ func (s *RestoreTableToPointInTimeOutput) SetTableDescription(v *TableDescriptio
 type SSEDescription struct {
 	_ struct{} `type:"structure"`
 
-	// The KMS customer master key (CMK) ARN used for the KMS encryption.
+	// The AWS KMS customer master key (CMK) ARN used for the AWS KMS encryption.
 	KMSMasterKeyArn *string `type:"string"`
 
 	// Server-side encryption type. The only supported value is:
 	//
-	//    * KMS - Server-side encryption which uses AWS Key Management Service.
-	//    Key is stored in your account and is managed by AWS KMS (KMS charges apply).
+	//    * KMS - Server-side encryption that uses AWS Key Management Service. The
+	//    key is stored in your account and is managed by AWS KMS (AWS KMS charges
+	//    apply).
 	SSEType *string `type:"string" enum:"SSEType"`
 
 	// Represents the current state of server-side encryption. The only supported
@@ -14102,10 +14084,10 @@ type SSESpecification struct {
 	// (false) or not specified, server-side encryption is set to AWS owned CMK.
 	Enabled *bool `type:"boolean"`
 
-	// The KMS Customer Master Key (CMK) which should be used for the KMS encryption.
-	// To specify a CMK, use its key ID, Amazon Resource Name (ARN), alias name,
-	// or alias ARN. Note that you should only provide this parameter if the key
-	// is different from the default DynamoDB Customer Master Key alias/aws/dynamodb.
+	// The AWS KMS customer master key (CMK) that should be used for the AWS KMS
+	// encryption. To specify a CMK, use its key ID, Amazon Resource Name (ARN),
+	// alias name, or alias ARN. Note that you should only provide this parameter
+	// if the key is different from the default DynamoDB customer master key alias/aws/dynamodb.
 	KMSMasterKeyId *string `type:"string"`
 
 	// Server-side encryption type. The only supported value is:

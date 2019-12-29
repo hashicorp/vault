@@ -127,6 +127,20 @@ type envConfig struct {
 	//
 	//  AWS_ROLE_SESSION_NAME=session_name
 	RoleSessionName string
+
+	// Specifies the STS Regional Endpoint flag for the SDK to resolve the endpoint
+	// for a service.
+	//
+	// AWS_STS_REGIONAL_ENDPOINTS=regional
+	// This can take value as `regional` or `legacy`
+	STSRegionalEndpoint endpoints.STSRegionalEndpoint
+
+	// Specifies the S3 Regional Endpoint flag for the SDK to resolve the
+	// endpoint for a service.
+	//
+	// AWS_S3_US_EAST_1_REGIONAL_ENDPOINT=regional
+	// This can take value as `regional` or `legacy`
+	S3UsEast1RegionalEndpoint endpoints.S3UsEast1RegionalEndpoint
 }
 
 var (
@@ -180,6 +194,12 @@ var (
 	}
 	roleSessionNameEnvKey = []string{
 		"AWS_ROLE_SESSION_NAME",
+	}
+	stsRegionalEndpointKey = []string{
+		"AWS_STS_REGIONAL_ENDPOINTS",
+	}
+	s3UsEast1RegionalEndpoint = []string{
+		"AWS_S3_US_EAST_1_REGIONAL_ENDPOINT",
 	}
 )
 

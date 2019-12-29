@@ -100,6 +100,10 @@ func New(cfgs ...*aws.Config) *Session {
 	}
 
 	s := deprecatedNewSession(cfgs...)
+	if envErr != nil {
+		msg := "failed to load env config"
+		s.logDeprecatedNewSessionError(msg, envErr, cfgs)
+	}
 
 	if csmCfg, err := loadCSMConfig(envCfg, []string{}); err != nil {
 		if l := s.Config.Logger; l != nil {
@@ -108,11 +112,8 @@ func New(cfgs ...*aws.Config) *Session {
 	} else if csmCfg.Enabled {
 		err := enableCSM(&s.Handlers, csmCfg, s.Config.Logger)
 		if err != nil {
-			err = fmt.Errorf("failed to enable CSM, %v", err)
-			s.Config.Logger.Log("ERROR:", err.Error())
-			s.Handlers.Validate.PushBack(func(r *request.Request) {
-				r.Error = err
-			})
+			msg := "failed to enable CSM"
+			s.logDeprecatedNewSessionError(msg, err, cfgs)
 		}
 	}
 
@@ -553,6 +554,22 @@ func mergeConfigSrcs(cfg, userCfg *aws.Config,
 		}
 	}
 
+	// Regional Endpoint flag for STS endpoint resolving
+	mergeSTSRegionalEndpointConfig(cfg, []endpoints.STSRegionalEndpoint{
+		userCfg.STSRegionalEndpoint,
+		envCfg.STSRegionalEndpoint,
+		sharedCfg.STSRegionalEndpoint,
+		endpoints.LegacySTSEndpoint,
+	})
+
+	// Regional Endpoint flag for S3 endpoint resolving
+	mergeS3UsEast1RegionalEndpointConfig(cfg, []endpoints.S3UsEast1RegionalEndpoint{
+		userCfg.S3UsEast1RegionalEndpoint,
+		envCfg.S3UsEast1RegionalEndpoint,
+		sharedCfg.S3UsEast1RegionalEndpoint,
+		endpoints.LegacyS3UsEast1Endpoint,
+	})
+
 	// Configure credentials if not already set by the user when creating the
 	// Session.
 	if cfg.Credentials == credentials.AnonymousCredentials && userCfg.Credentials == nil {
@@ -564,6 +581,24 @@ func mergeConfigSrcs(cfg, userCfg *aws.Config,
 	}
 
 	return nil
+}
+
+func mergeSTSRegionalEndpointConfig(cfg *aws.Config, values []endpoints.STSRegionalEndpoint) {
+	for _, v := range values {
+		if v != endpoints.UnsetSTSEndpoint {
+			cfg.STSRegionalEndpoint = v
+			break
+		}
+	}
+}
+
+func mergeS3UsEast1RegionalEndpointConfig(cfg *aws.Config, values []endpoints.S3UsEast1RegionalEndpoint) {
+	for _, v := range values {
+		if v != endpoints.UnsetS3UsEast1Endpoint {
+			cfg.S3UsEast1RegionalEndpoint = v
+			break
+		}
+	}
 }
 
 func initHandlers(s *Session) {

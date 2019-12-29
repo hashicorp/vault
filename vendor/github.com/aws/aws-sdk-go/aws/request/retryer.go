@@ -35,7 +35,7 @@ type Retryer interface {
 }
 
 // WithRetryer sets a Retryer value to the given Config returning the Config
-// value for chaining.
+// value for chaining. The value must not be nil.
 func WithRetryer(cfg *aws.Config, retryer Retryer) *aws.Config {
 	if retryer == nil {
 		if cfg.Logger != nil {
@@ -250,6 +250,16 @@ func (r *Request) IsErrorRetryable() bool {
 		return true
 	}
 
+	// HTTP response status code 501 should not be retried.
+	// 501 represents Not Implemented which means the request method is not
+	// supported by the server and cannot be handled.
+	if r.HTTPResponse != nil {
+		// HTTP response status code 500 represents internal server error and
+		// should be retried without any throttle.
+		if r.HTTPResponse.StatusCode == 500 {
+			return true
+		}
+	}
 	return IsErrorRetryable(r.Error)
 }
 
@@ -264,7 +274,11 @@ func (r *Request) IsErrorThrottle() bool {
 
 	if r.HTTPResponse != nil {
 		switch r.HTTPResponse.StatusCode {
-		case 429, 502, 503, 504:
+		case
+			429, // error caused due to too many requests
+			502, // Bad Gateway error should be throttled
+			503, // caused when service is unavailable
+			504: // error occurred due to gateway timeout
 			return true
 		}
 	}
