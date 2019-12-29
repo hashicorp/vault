@@ -303,9 +303,8 @@ github.com/hashicorp/go-gcp-common/gcputil
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.1.0
 github.com/hashicorp/go-immutable-radix
-# github.com/hashicorp/go-kms-wrapping v0.0.0-20191129225826-634facde9f88
+# github.com/hashicorp/go-kms-wrapping v0.0.0-20191229213738-edc2c6e9ee1d
 github.com/hashicorp/go-kms-wrapping
-github.com/hashicorp/go-kms-wrapping/awsutil
 github.com/hashicorp/go-kms-wrapping/entropy
 github.com/hashicorp/go-kms-wrapping/internal/xor
 github.com/hashicorp/go-kms-wrapping/wrappers/aead
@@ -444,7 +443,7 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms
 github.com/hashicorp/vault-plugin-secrets-kv
 # github.com/hashicorp/vault/api v1.0.5-0.20191218213558-0bc25f908162 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20191229211355-d8f483c65b94 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20191229212425-c478d00be0d6 => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/database/helper/credsutil

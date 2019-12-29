@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
-	"github.com/hashicorp/go-kms-wrapping/awsutil"
+	"github.com/hashicorp/vault/sdk/helper/awsutil"
 )
 
 // These constants contain the accepted env vars; the Vault one is for backwards compat
