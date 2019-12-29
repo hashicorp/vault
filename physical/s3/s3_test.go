@@ -8,7 +8,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-kms-wrapping/awsutil"
+	"github.com/hashicorp/vault/sdk/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 
@@ -34,12 +34,12 @@ func DoS3BackendTest(t *testing.T, kmsKeyId string) {
 
 	credsChain, err := credsConfig.GenerateCredentialChain()
 	if err != nil {
-		t.SkipNow()
+		t.Fatal(err)
 	}
 
 	_, err = credsChain.Get()
 	if err != nil {
-		t.SkipNow()
+		t.Fatal(err)
 	}
 
 	// If the variable is empty or doesn't exist, the default

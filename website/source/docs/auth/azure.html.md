@@ -116,7 +116,7 @@ tool.
 
     ```text
     $ vault write auth/azure/config \
-        tenant_id= 7cd1f227-ca67-4fc6-a1a4-9888ea7f388c \
+        tenant_id=7cd1f227-ca67-4fc6-a1a4-9888ea7f388c \
         resource=https://vault.hashicorp.com \
         client_id=dd794de4-4c6c-40b3-a930-d84cd32e9699 \
         client_secret=IT3B2XfZvWnfB98s1cie8EMe7zWg483Xy8zY004=

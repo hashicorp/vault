@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,6 +25,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/ryanuber/go-glob"
+	"golang.org/x/crypto/cryptobyte"
+	cbbasn1 "golang.org/x/crypto/cryptobyte/asn1"
 	"golang.org/x/net/idna"
 )
 
@@ -38,7 +41,9 @@ var (
 	// when doing the idna conversion, this appears to only affect output, not
 	// input, so it will allow e.g. host^123.example.com straight through. So
 	// we still need to use this to check the output.
-	hostnameRegex = regexp.MustCompile(`^(\*\.)?(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
+	hostnameRegex                = regexp.MustCompile(`^(\*\.)?(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
+	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
+	oidExtensionSubjectAltName   = []int{2, 5, 29, 17}
 )
 
 func oidInExtensions(oid asn1.ObjectIdentifier, extensions []pkix.Extension) bool {
@@ -349,12 +354,11 @@ func validateNames(data *inputBundle, names []string) string {
 // allowed, it will be returned as the second string. Empty strings + error
 // means everything is okay.
 func validateOtherSANs(data *inputBundle, requested map[string][]string) (string, string, error) {
-	for _, val := range data.role.AllowedOtherSANs {
-		if val == "*" {
-			// Anything is allowed
-			return "", "", nil
-		}
+	if len(data.role.AllowedOtherSANs) == 1 && data.role.AllowedOtherSANs[0] == "*" {
+		// Anything is allowed
+		return "", "", nil
 	}
+
 	allowed, err := parseOtherSANs(data.role.AllowedOtherSANs)
 	if err != nil {
 		return "", "", errwrap.Wrapf("error parsing role's allowed SANs: {{err}}", err)
@@ -618,6 +622,114 @@ func signCert(b *backend,
 	return parsedBundle, nil
 }
 
+// otherNameRaw describes a name related to a certificate which is not in one
+// of the standard name formats. RFC 5280, 4.2.1.6:
+// OtherName ::= SEQUENCE {
+//      type-id    OBJECT IDENTIFIER,
+//      value      [0] EXPLICIT ANY DEFINED BY type-id }
+type otherNameRaw struct {
+	TypeID asn1.ObjectIdentifier
+	Value  asn1.RawValue
+}
+
+type otherNameUtf8 struct {
+	oid   string
+	value string
+}
+
+// ExtractUTF8String returns the UTF8 string contained in the Value, or an error
+// if none is present.
+func (oraw *otherNameRaw) extractUTF8String() (*otherNameUtf8, error) {
+	svalue := cryptobyte.String(oraw.Value.Bytes)
+	var outTag cbbasn1.Tag
+	var val cryptobyte.String
+	read := svalue.ReadAnyASN1(&val, &outTag)
+
+	if read && outTag == asn1.TagUTF8String {
+		return &otherNameUtf8{oid: oraw.TypeID.String(), value: string(val)}, nil
+	}
+	return nil, fmt.Errorf("no UTF-8 string found in OtherName")
+}
+
+func (o otherNameUtf8) String() string {
+	return fmt.Sprintf("%s;%s:%s", o.oid, "UTF-8", o.value)
+}
+
+func getOtherSANsFromX509Extensions(exts []pkix.Extension) ([]otherNameUtf8, error) {
+	var ret []otherNameUtf8
+	for _, ext := range exts {
+		if !ext.Id.Equal(oidExtensionSubjectAltName) {
+			continue
+		}
+		err := forEachSAN(ext.Value, func(tag int, data []byte) error {
+			if tag != 0 {
+				return nil
+			}
+
+			var other otherNameRaw
+			_, err := asn1.UnmarshalWithParams(data, &other, "tag:0")
+			if err != nil {
+				return errwrap.Wrapf("could not parse requested other SAN: {{err}}", err)
+			}
+			val, err := other.extractUTF8String()
+			if err != nil {
+				return err
+			}
+			ret = append(ret, *val)
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return ret, nil
+}
+
+func forEachSAN(extension []byte, callback func(tag int, data []byte) error) error {
+	// RFC 5280, 4.2.1.6
+
+	// SubjectAltName ::= GeneralNames
+	//
+	// GeneralNames ::= SEQUENCE SIZE (1..MAX) OF GeneralName
+	//
+	// GeneralName ::= CHOICE {
+	//      otherName                       [0]     OtherName,
+	//      rfc822Name                      [1]     IA5String,
+	//      dNSName                         [2]     IA5String,
+	//      x400Address                     [3]     ORAddress,
+	//      directoryName                   [4]     Name,
+	//      ediPartyName                    [5]     EDIPartyName,
+	//      uniformResourceIdentifier       [6]     IA5String,
+	//      iPAddress                       [7]     OCTET STRING,
+	//      registeredID                    [8]     OBJECT IDENTIFIER }
+	var seq asn1.RawValue
+	rest, err := asn1.Unmarshal(extension, &seq)
+	if err != nil {
+		return err
+	} else if len(rest) != 0 {
+		return fmt.Errorf("x509: trailing data after X.509 extension")
+	}
+	if !seq.IsCompound || seq.Tag != 16 || seq.Class != 0 {
+		return asn1.StructuralError{Msg: "bad SAN sequence"}
+	}
+
+	rest = seq.Bytes
+	for len(rest) > 0 {
+		var v asn1.RawValue
+		rest, err = asn1.Unmarshal(rest, &v)
+		if err != nil {
+			return err
+		}
+
+		if err := callback(v.Tag, v.FullBytes); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // generateCreationBundle is a shared function that reads parameters supplied
 // from the various endpoints and generates a CreationParameters with the
 // parameters that can be used to issue or sign
@@ -733,9 +845,27 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		}
 	}
 
+	// otherSANsInput has the same format as the other_sans HTTP param in the
+	// Vault PKI API: it is a list of strings of the form <oid>;<type>:<value>
+	// where <type> must be UTF8/UTF-8.
+	var otherSANsInput []string
+	// otherSANs is the output of parseOtherSANs(otherSANsInput): its keys are
+	// the <oid> value, its values are of the form [<type>, <value>]
 	var otherSANs map[string][]string
 	if sans := data.apiData.Get("other_sans").([]string); len(sans) > 0 {
-		requested, err := parseOtherSANs(sans)
+		otherSANsInput = sans
+	}
+	if data.role.UseCSRSANs && csr != nil && len(csr.Extensions) > 0 {
+		others, err := getOtherSANsFromX509Extensions(csr.Extensions)
+		if err != nil {
+			return nil, errutil.UserError{Err: errwrap.Wrapf("could not parse requested other SAN: {{err}}", err).Error()}
+		}
+		for _, other := range others {
+			otherSANsInput = append(otherSANsInput, other.String())
+		}
+	}
+	if len(otherSANsInput) > 0 {
+		requested, err := parseOtherSANs(otherSANsInput)
 		if err != nil {
 			return nil, errutil.UserError{Err: errwrap.Wrapf("could not parse requested other SAN: {{err}}", err).Error()}
 		}
@@ -1018,4 +1148,131 @@ func convertRespToPKCS8(resp *logical.Response) error {
 	}
 
 	return nil
+}
+
+func handleOtherCSRSANs(in *x509.CertificateRequest, sans map[string][]string) error {
+	certTemplate := &x509.Certificate{
+		DNSNames:       in.DNSNames,
+		IPAddresses:    in.IPAddresses,
+		EmailAddresses: in.EmailAddresses,
+		URIs:           in.URIs,
+	}
+	if err := handleOtherSANs(certTemplate, sans); err != nil {
+		return err
+	}
+	if len(certTemplate.ExtraExtensions) > 0 {
+		for _, v := range certTemplate.ExtraExtensions {
+			in.ExtraExtensions = append(in.ExtraExtensions, v)
+		}
+	}
+	return nil
+}
+
+func handleOtherSANs(in *x509.Certificate, sans map[string][]string) error {
+	// If other SANs is empty we return which causes normal Go stdlib parsing
+	// of the other SAN types
+	if len(sans) == 0 {
+		return nil
+	}
+
+	var rawValues []asn1.RawValue
+
+	// We need to generate an IMPLICIT sequence for compatibility with OpenSSL
+	// -- it's an open question what the default for RFC 5280 actually is, see
+	// https://github.com/openssl/openssl/issues/5091 -- so we have to use
+	// cryptobyte because using the asn1 package's marshaling always produces
+	// an EXPLICIT sequence. Note that asn1 is way too magical according to
+	// agl, and cryptobyte is modeled after the CBB/CBS bits that agl put into
+	// boringssl.
+	for oid, vals := range sans {
+		for _, val := range vals {
+			var b cryptobyte.Builder
+			oidStr, err := stringToOid(oid)
+			if err != nil {
+				return err
+			}
+			b.AddASN1ObjectIdentifier(oidStr)
+			b.AddASN1(cbbasn1.Tag(0).ContextSpecific().Constructed(), func(b *cryptobyte.Builder) {
+				b.AddASN1(cbbasn1.UTF8String, func(b *cryptobyte.Builder) {
+					b.AddBytes([]byte(val))
+				})
+			})
+			m, err := b.Bytes()
+			if err != nil {
+				return err
+			}
+			rawValues = append(rawValues, asn1.RawValue{Tag: 0, Class: 2, IsCompound: true, Bytes: m})
+		}
+	}
+
+	// If other SANs is empty we return which causes normal Go stdlib parsing
+	// of the other SAN types
+	if len(rawValues) == 0 {
+		return nil
+	}
+
+	// Append any existing SANs, sans marshalling
+	rawValues = append(rawValues, marshalSANs(in.DNSNames, in.EmailAddresses, in.IPAddresses, in.URIs)...)
+
+	// Marshal and add to ExtraExtensions
+	ext := pkix.Extension{
+		// This is the defined OID for subjectAltName
+		Id: asn1.ObjectIdentifier(oidExtensionSubjectAltName),
+	}
+	var err error
+	ext.Value, err = asn1.Marshal(rawValues)
+	if err != nil {
+		return err
+	}
+	in.ExtraExtensions = append(in.ExtraExtensions, ext)
+
+	return nil
+}
+
+// Note: Taken from the Go source code since it's not public, and used in the
+// modified function below (which also uses these consts upstream)
+const (
+	nameTypeOther = 0
+	nameTypeEmail = 1
+	nameTypeDNS   = 2
+	nameTypeURI   = 6
+	nameTypeIP    = 7
+)
+
+// Note: Taken from the Go source code since it's not public, plus changed to not marshal
+// marshalSANs marshals a list of addresses into a the contents of an X.509
+// SubjectAlternativeName extension.
+func marshalSANs(dnsNames, emailAddresses []string, ipAddresses []net.IP, uris []*url.URL) []asn1.RawValue {
+	var rawValues []asn1.RawValue
+	for _, name := range dnsNames {
+		rawValues = append(rawValues, asn1.RawValue{Tag: nameTypeDNS, Class: 2, Bytes: []byte(name)})
+	}
+	for _, email := range emailAddresses {
+		rawValues = append(rawValues, asn1.RawValue{Tag: nameTypeEmail, Class: 2, Bytes: []byte(email)})
+	}
+	for _, rawIP := range ipAddresses {
+		// If possible, we always want to encode IPv4 addresses in 4 bytes.
+		ip := rawIP.To4()
+		if ip == nil {
+			ip = rawIP
+		}
+		rawValues = append(rawValues, asn1.RawValue{Tag: nameTypeIP, Class: 2, Bytes: ip})
+	}
+	for _, uri := range uris {
+		rawValues = append(rawValues, asn1.RawValue{Tag: nameTypeURI, Class: 2, Bytes: []byte(uri.String())})
+	}
+	return rawValues
+}
+
+func stringToOid(in string) (asn1.ObjectIdentifier, error) {
+	split := strings.Split(in, ".")
+	ret := make(asn1.ObjectIdentifier, 0, len(split))
+	for _, v := range split {
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, i)
+	}
+	return asn1.ObjectIdentifier(ret), nil
 }

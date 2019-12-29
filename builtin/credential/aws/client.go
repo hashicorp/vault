@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-kms-wrapping/awsutil"
+	"github.com/hashicorp/vault/sdk/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -37,14 +37,19 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 	endpoint := aws.String("")
 	var maxRetries int = aws.UseServiceDefaultRetries
 	if config != nil {
-		// Override the default endpoint with the configured endpoint.
+		// Override the defaults with configured values.
 		switch {
 		case clientType == "ec2" && config.Endpoint != "":
 			endpoint = aws.String(config.Endpoint)
 		case clientType == "iam" && config.IAMEndpoint != "":
 			endpoint = aws.String(config.IAMEndpoint)
-		case clientType == "sts" && config.STSEndpoint != "":
-			endpoint = aws.String(config.STSEndpoint)
+		case clientType == "sts":
+			if config.STSEndpoint != "" {
+				endpoint = aws.String(config.STSEndpoint)
+			}
+			if config.STSRegion != "" {
+				region = config.STSRegion
+			}
 		}
 
 		credsConfig.AccessKey = config.AccessKey

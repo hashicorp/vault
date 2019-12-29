@@ -1,17 +1,18 @@
 module github.com/hashicorp/vault/sdk
 
-go 1.12
+go 1.13
 
 require (
 	github.com/armon/go-metrics v0.3.0
 	github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310
+	github.com/aws/aws-sdk-go v1.25.37
 	github.com/fatih/structs v1.1.0
 	github.com/go-ldap/ldap/v3 v3.1.3
 	github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
 	github.com/golang/protobuf v1.3.2
 	github.com/golang/snappy v0.0.1
 	github.com/hashicorp/errwrap v1.0.0
-	github.com/hashicorp/go-hclog v0.10.0
+	github.com/hashicorp/go-hclog v0.10.1
 	github.com/hashicorp/go-immutable-radix v1.0.0
 	github.com/hashicorp/go-kms-wrapping v0.0.0-20191129225826-634facde9f88
 	github.com/hashicorp/go-multierror v1.0.0

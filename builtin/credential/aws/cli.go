@@ -13,8 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-kms-wrapping/awsutil"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/awsutil"
 )
 
 type CLIHandler struct{}

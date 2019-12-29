@@ -25,6 +25,11 @@
       "disable_clustering": "true"
     }
   },
+  "service_registration":{
+    "consul":{
+      "foo":"bar"
+    }
+  },
   "cache_size": 45678,
   "telemetry":{
     "statsd_address":"bar",

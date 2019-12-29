@@ -1,23 +1,60 @@
-## Next
+## 1.4 (Unreleased)
+
+IMPROVEMENTS:
+
+* auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80 & JWT-86]
+* auth/jwt: Bound claims may be optionally configured using globs [JWT-89]
+* core: Separate out service discovery interface from storage interface to allow
+  new types of service discovery not coupled to storage [GH-7887]
+* cli: Incorrect TLS configuration will now correctly fail [GH-8025] 
+* secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
+* secrets/gcp: Add support for rotating root keys [GCP-53]
+
+BUG FIXES:
+
+* ui: Update headless Chrome flag to fix `yarn run test:oss` [8035]
+* ui: Change `.box-radio` height to min-height to prevent overflow issues [8065]
+
+## 1.3.1 (December 18th, 2019)
 
 IMPROVEMENTS:
 
 * agent: Add ability to set `exit-after-auth` via the CLI [GH-7920]
 * auth/ldap: Add a `request_timeout` configuration option to prevent connection
   requests from hanging [GH-7909]
-* auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80 & JWT-86]
+* auth/kubernetes: Add audience to tokenreview API request for Kube deployments where issuer
+  is not Kube. [GH-74]
 * secrets/ad: Add a `request_timeout` configuration option to prevent connection
   requests from hanging [AD-59]
-* secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
-* secrets/gcp: Add support for rotating root keys [GCP-53]
 * storage/postgresql: Add support for setting `connection_url` from enviornment 
   variable `VAULT_PG_CONNECTION_URL` [GH-7937]
+* telemetry: Add `enable_hostname_label` option to telemetry stanza [GH-7902]
+* telemetry: Add accept header check for prometheus mime type [GH-7958]
 
 BUG FIXES:
 
 * agent: Fix issue where Agent exits before all templates are rendered when 
   using and `exit_after_auth` [GH-7899]
-* ui: Ensure secrets with a period in their key can be viewed an copied [GH-7926]
+* auth/aws: Fixes region-related issues when using a custom `sts_endpoint` by adding
+  a `sts_region` parameter [GH-7922]
+* auth/token: Fix panic when getting batch tokens on a performance standby from a role
+  that does not exist [GH-8027]
+* core: Improve warning message for lease TTLs [GH-7901]
+* identity: Fix identity token panic during invalidation [GH-8043]
+* plugin: Fix a panic that could occur if a mount/auth entry was unable to
+  mount the plugin backend and a request that required the system view to be 
+  retrieved was made [GH-7991]
+* replication: Add `generate-public-key` endpoint to list of allowed endpoints
+  for existing DR secondaries
+* secrets/gcp: Fix panic if bindings aren't provided in roleset create/update. [GCP-56]  
+* secrets/pki: Prevent generating certificate on performance standby when storing
+  [GH-7904]
+* secrets/transit: Prevent restoring keys to new names that are sub paths [GH-7998]
+* storage/s3: Fix a bug in configurable S3 paths that was preventing use of S3 as
+  a source during `operator migrate` operations [GH-7966]
+* ui: Ensure secrets with a period in their key can be viewed and copied [GH-7926]
+* ui: Fix status menu after demotion [GH-7997]
+* ui: Fix select dropdowns in Safari when running Mojave [GH-8023]
 
 ## 1.3 (November 14th, 2019)
 
@@ -170,9 +207,19 @@ BUG FIXES:
 
 SECURITY:
 
- * In a non-root namespace, revocation of a token scoped to a non-root namespace did not trigger the expected revocation of dynamic secret leases associated with that token. As a result, dynamic secret leases in non-root namespaces may outlive the token that created them.  This vulnerability, CVE-2019-18616, affects Vault Enterprise 0.11.0 and newer.
- * Disaster Recovery secondary clusters did not delete already-replicated data after a mount filter has been created on an upstream Performance secondary cluster. As a result, encrypted secrets may remain replicated on a Disaster Recovery secondary cluster after application of a mount filter excluding those secrets from replication. This vulnerability, CVE-2019-18617, affects Vault Enterprise 0.8 and newer.
- * Update version of Go to 1.12.12 to fix Go bug golang.org/issue/34960 which corresponds to CVE-2019-17596.
+ * In a non-root namespace, revocation of a token scoped to a non-root
+   namespace did not trigger the expected revocation of dynamic secret leases
+   associated with that token. As a result, dynamic secret leases in non-root
+   namespaces may outlive the token that created them.  This vulnerability,
+   CVE-2019-18616, affects Vault Enterprise 0.11.0 and newer.
+ * Disaster Recovery secondary clusters did not delete already-replicated data
+   after a mount filter has been created on an upstream Performance secondary
+   cluster. As a result, encrypted secrets may remain replicated on a Disaster
+   Recovery secondary cluster after application of a mount filter excluding
+   those secrets from replication. This vulnerability, CVE-2019-18617, affects
+   Vault Enterprise 0.8 and newer.
+ * Update version of Go to 1.12.12 to fix Go bug golang.org/issue/34960 which
+   corresponds to CVE-2019-17596.
 
 CHANGES: 
 
@@ -191,6 +238,8 @@ BUG FIXES:
 
  * agent: Fix handling of gzipped responses [GH-7470]
  * cli: Fix panic when pgp keys list is empty [GH-7546]
+ * cli: Command timeouts are now always specified solely by the
+   `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
  * core: add hook for initializing seals for migration [GH-7666]
  * core (enterprise): Migrating from one auto unseal method to another never
    worked on enterprise, now it does.
@@ -205,8 +254,6 @@ BUG FIXES:
  * secrets/pki: Improve tidy to continue when value is nil [GH-7589]
  * ui (Enterprise): Allow kv v2 secrets that are gated by Control Groups to be 
    viewed in the UI [GH-7504]
- * cli: Command timeouts are now always specified solely by the
-   `VAULT_CLIENT_TIMEOUT` value. [GH-7469]
 
 ## 1.2.3 (September 12, 2019)
 

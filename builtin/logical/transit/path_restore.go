@@ -2,6 +2,8 @@ package transit
 
 import (
 	"context"
+	"errors"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -42,8 +44,17 @@ func (b *backend) pathRestoreUpdate(ctx context.Context, req *logical.Request, d
 		return logical.ErrorResponse("'backup' must be supplied"), nil
 	}
 
-	return nil, b.lm.RestorePolicy(ctx, req.Storage, d.Get("name").(string), backupB64, force)
+	// If a name is given, make sure it does not contain any slashes. The Transit
+	// secret engine does not allow sub-paths in key names
+	keyName := d.Get("name").(string)
+	if strings.Contains(keyName, "/") {
+		return nil, ErrInvalidKeyName
+	}
+
+	return nil, b.lm.RestorePolicy(ctx, req.Storage, keyName, backupB64, force)
 }
 
 const pathRestoreHelpSyn = `Restore the named key`
 const pathRestoreHelpDesc = `This path is used to restore the named key.`
+
+var ErrInvalidKeyName = errors.New("key names cannot be paths")
