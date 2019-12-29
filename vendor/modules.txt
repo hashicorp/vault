@@ -15,28 +15,34 @@ cloud.google.com/go/spanner/internal/backoff
 cloud.google.com/go/storage
 # code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f
 code.cloudfoundry.org/gofileutils/fileutils
-# contrib.go.opencensus.io/exporter/ocagent v0.4.12
-contrib.go.opencensus.io/exporter/ocagent
-# github.com/Azure/azure-sdk-for-go v29.0.0+incompatible
+# github.com/Azure/azure-sdk-for-go v36.2.0+incompatible
 github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute
 github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac
-github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault
+github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault
 github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-01-01-preview/authorization
 github.com/Azure/azure-sdk-for-go/storage
 github.com/Azure/azure-sdk-for-go/version
 # github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78
 github.com/Azure/go-ansiterm
 github.com/Azure/go-ansiterm/winterm
-# github.com/Azure/go-autorest v11.7.1+incompatible
+# github.com/Azure/go-autorest/autorest v0.9.2
 github.com/Azure/go-autorest/autorest
-github.com/Azure/go-autorest/autorest/adal
 github.com/Azure/go-autorest/autorest/azure
+# github.com/Azure/go-autorest/autorest/adal v0.7.0
+github.com/Azure/go-autorest/autorest/adal
+# github.com/Azure/go-autorest/autorest/azure/auth v0.4.0
 github.com/Azure/go-autorest/autorest/azure/auth
+# github.com/Azure/go-autorest/autorest/azure/cli v0.3.0
 github.com/Azure/go-autorest/autorest/azure/cli
+# github.com/Azure/go-autorest/autorest/date v0.2.0
 github.com/Azure/go-autorest/autorest/date
+# github.com/Azure/go-autorest/autorest/to v0.3.0
 github.com/Azure/go-autorest/autorest/to
+# github.com/Azure/go-autorest/autorest/validation v0.2.0
 github.com/Azure/go-autorest/autorest/validation
+# github.com/Azure/go-autorest/logger v0.1.0
 github.com/Azure/go-autorest/logger
+# github.com/Azure/go-autorest/tracing v0.5.0
 github.com/Azure/go-autorest/tracing
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
@@ -159,13 +165,6 @@ github.com/briankassouf/jose/jws
 github.com/briankassouf/jose/jwt
 # github.com/cenkalti/backoff v2.2.1+incompatible
 github.com/cenkalti/backoff
-# github.com/census-instrumentation/opencensus-proto v0.2.0
-github.com/census-instrumentation/opencensus-proto/gen-go/agent/common/v1
-github.com/census-instrumentation/opencensus-proto/gen-go/agent/metrics/v1
-github.com/census-instrumentation/opencensus-proto/gen-go/agent/trace/v1
-github.com/census-instrumentation/opencensus-proto/gen-go/metrics/v1
-github.com/census-instrumentation/opencensus-proto/gen-go/resource/v1
-github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1
 # github.com/centrify/cloud-golang-sdk v0.0.0-20190214225812-119110094d0f
 github.com/centrify/cloud-golang-sdk/oauth
 github.com/centrify/cloud-golang-sdk/restapi
@@ -254,12 +253,8 @@ github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
 github.com/gogo/protobuf/sortkeys
 # github.com/golang/protobuf v1.3.2
-github.com/golang/protobuf/jsonpb
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/protoc-gen-go/descriptor
-github.com/golang/protobuf/protoc-gen-go/generator
-github.com/golang/protobuf/protoc-gen-go/generator/internal/remap
-github.com/golang/protobuf/protoc-gen-go/plugin
 github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
@@ -279,14 +274,10 @@ github.com/google/go-querystring/query
 github.com/google/gofuzz
 # github.com/google/uuid v1.0.0
 github.com/google/uuid
-# github.com/googleapis/gax-go/v2 v2.0.4
+# github.com/googleapis/gax-go/v2 v2.0.5
 github.com/googleapis/gax-go/v2
 # github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 github.com/gorhill/cronexpr
-# github.com/grpc-ecosystem/grpc-gateway v1.8.5
-github.com/grpc-ecosystem/grpc-gateway/internal
-github.com/grpc-ecosystem/grpc-gateway/runtime
-github.com/grpc-ecosystem/grpc-gateway/utilities
 # github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed
 github.com/hailocab/go-hostpool
 # github.com/hashicorp/consul-template v0.22.0
@@ -312,6 +303,18 @@ github.com/hashicorp/go-gcp-common/gcputil
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.1.0
 github.com/hashicorp/go-immutable-radix
+# github.com/hashicorp/go-kms-wrapping v0.0.0-20191129225826-634facde9f88
+github.com/hashicorp/go-kms-wrapping
+github.com/hashicorp/go-kms-wrapping/awsutil
+github.com/hashicorp/go-kms-wrapping/entropy
+github.com/hashicorp/go-kms-wrapping/internal/xor
+github.com/hashicorp/go-kms-wrapping/wrappers/aead
+github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms
+github.com/hashicorp/go-kms-wrapping/wrappers/awskms
+github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault
+github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms
+github.com/hashicorp/go-kms-wrapping/wrappers/ocikms
+github.com/hashicorp/go-kms-wrapping/wrappers/transit
 # github.com/hashicorp/go-memdb v1.0.2
 github.com/hashicorp/go-memdb
 # github.com/hashicorp/go-msgpack v0.5.5
@@ -398,7 +401,7 @@ github.com/hashicorp/serf/coordinate
 # github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190814210027-93970f08f2ec
 github.com/hashicorp/vault-plugin-auth-alicloud
 github.com/hashicorp/vault-plugin-auth-alicloud/tools
-# github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20190814210035-08e00d801115
+# github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20191119151105-86f21fbc96e3
 github.com/hashicorp/vault-plugin-auth-azure
 # github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190814210042-090ec2ed93ce
 github.com/hashicorp/vault-plugin-auth-centrify
@@ -429,9 +432,9 @@ github.com/hashicorp/vault-plugin-secrets-ad/plugin/util
 # github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190814210129-4d18bec92f56
 github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
-# github.com/hashicorp/vault-plugin-secrets-azure v0.5.2
+# github.com/hashicorp/vault-plugin-secrets-azure v0.5.3-0.20191119150734-45c076c82f1d
 github.com/hashicorp/vault-plugin-secrets-azure
-# github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20191112195538-3c798536d157
+# github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20191119222840-524d5b57ed36
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
@@ -441,12 +444,13 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms
 github.com/hashicorp/vault-plugin-secrets-kv
 # github.com/hashicorp/vault/api v1.0.5-0.20191218213558-0bc25f908162 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20191218213202-9caafff72a1f => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20191229211355-d8f483c65b94 => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/database/helper/credsutil
 github.com/hashicorp/vault/sdk/database/helper/dbutil
 github.com/hashicorp/vault/sdk/framework
+github.com/hashicorp/vault/sdk/helper/awsutil
 github.com/hashicorp/vault/sdk/helper/base62
 github.com/hashicorp/vault/sdk/helper/certutil
 github.com/hashicorp/vault/sdk/helper/cidrutil
@@ -454,7 +458,6 @@ github.com/hashicorp/vault/sdk/helper/compressutil
 github.com/hashicorp/vault/sdk/helper/consts
 github.com/hashicorp/vault/sdk/helper/cryptoutil
 github.com/hashicorp/vault/sdk/helper/dbtxn
-github.com/hashicorp/vault/sdk/helper/entropy
 github.com/hashicorp/vault/sdk/helper/errutil
 github.com/hashicorp/vault/sdk/helper/hclutil
 github.com/hashicorp/vault/sdk/helper/jsonutil
@@ -486,7 +489,7 @@ github.com/hashicorp/vault/sdk/plugin/mock
 github.com/hashicorp/vault/sdk/plugin/pb
 github.com/hashicorp/vault/sdk/queue
 github.com/hashicorp/vault/sdk/version
-# github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d
+# github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb
 github.com/hashicorp/yamux
 # github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 github.com/influxdata/influxdb/client/v2
@@ -587,7 +590,7 @@ github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
 # github.com/opencontainers/runc v0.1.1
 github.com/opencontainers/runc/libcontainer/user
-# github.com/oracle/oci-go-sdk v7.0.0+incompatible
+# github.com/oracle/oci-go-sdk v12.5.0+incompatible
 github.com/oracle/oci-go-sdk/common
 github.com/oracle/oci-go-sdk/common/auth
 github.com/oracle/oci-go-sdk/keymanagement
@@ -720,7 +723,6 @@ go.opencensus.io/metric/metricproducer
 go.opencensus.io/plugin/ocgrpc
 go.opencensus.io/plugin/ochttp
 go.opencensus.io/plugin/ochttp/propagation/b3
-go.opencensus.io/plugin/ochttp/propagation/tracecontext
 go.opencensus.io/resource
 go.opencensus.io/stats
 go.opencensus.io/stats/internal
@@ -772,15 +774,13 @@ golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
 golang.org/x/net/trace
-# golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
+# golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 golang.org/x/oauth2
 golang.org/x/oauth2/clientcredentials
 golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sync v0.0.0-20190423024810-112230192c58
-golang.org/x/sync/semaphore
 # golang.org/x/sys v0.0.0-20191008105621-543471e840be
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
@@ -798,20 +798,19 @@ golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 # golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 golang.org/x/time/rate
-# google.golang.org/api v0.5.0
+# google.golang.org/api v0.14.0
 google.golang.org/api/cloudresourcemanager/v1
 google.golang.org/api/compute/v1
-google.golang.org/api/gensupport
 google.golang.org/api/googleapi
-google.golang.org/api/googleapi/internal/uritemplates
 google.golang.org/api/googleapi/transport
 google.golang.org/api/iam/v1
 google.golang.org/api/internal
+google.golang.org/api/internal/gensupport
+google.golang.org/api/internal/third_party/uritemplates
 google.golang.org/api/iterator
 google.golang.org/api/oauth2/v2
 google.golang.org/api/option
 google.golang.org/api/storage/v1
-google.golang.org/api/support/bundler
 google.golang.org/api/transport
 google.golang.org/api/transport/grpc
 google.golang.org/api/transport/http
@@ -834,7 +833,6 @@ google.golang.org/appengine/urlfetch
 google.golang.org/genproto/googleapis/api
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/api/distribution
-google.golang.org/genproto/googleapis/api/httpbody
 google.golang.org/genproto/googleapis/api/label
 google.golang.org/genproto/googleapis/api/metric
 google.golang.org/genproto/googleapis/api/monitoredres
@@ -851,11 +849,21 @@ google.golang.org/genproto/protobuf/field_mask
 google.golang.org/grpc
 google.golang.org/grpc/balancer
 google.golang.org/grpc/balancer/base
+google.golang.org/grpc/balancer/grpclb
+google.golang.org/grpc/balancer/grpclb/grpc_lb_v1
 google.golang.org/grpc/balancer/roundrobin
 google.golang.org/grpc/binarylog/grpc_binarylog_v1
 google.golang.org/grpc/codes
 google.golang.org/grpc/connectivity
 google.golang.org/grpc/credentials
+google.golang.org/grpc/credentials/alts
+google.golang.org/grpc/credentials/alts/internal
+google.golang.org/grpc/credentials/alts/internal/authinfo
+google.golang.org/grpc/credentials/alts/internal/conn
+google.golang.org/grpc/credentials/alts/internal/handshaker
+google.golang.org/grpc/credentials/alts/internal/handshaker/service
+google.golang.org/grpc/credentials/alts/internal/proto/grpc_gcp
+google.golang.org/grpc/credentials/google
 google.golang.org/grpc/credentials/internal
 google.golang.org/grpc/credentials/oauth
 google.golang.org/grpc/encoding
