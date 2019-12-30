@@ -17,30 +17,30 @@ This program is intended to be largely a self-service process with links and gui
 
 ## Types of Vault Integrations
 
-From a high-level perspective, Vault is a tool used to manage secrets and protect sensitive data. It helps secure, store and tightly control access to tokens, passwords, certificates, encryption keys for protecting secrets and other sensitive data using a UI, CLI, or HTTP API. For a full description of the current features please refer to the Vault website [Vault Website]("https://www.vaultproject.io/"). Vault provides a unified interface to any secret, while providing tight access control and support with detailed recording from integrated audit logs.
+From a high-level perspective, Vault is a tool used to manage secrets and protect sensitive data. It helps secure, store and tightly control access to tokens, passwords, certificates, encryption keys for protecting secrets and other sensitive data using a UI, CLI, or HTTP API. For a full description of the current features please refer to the Vault website [Vault Website](/). Vault provides a unified interface to any secret, while providing tight access control and support with detailed recording from integrated audit logs.
  
 The diagram below depicts the key Vault integration categories and types.
 
-("https://www.datocms-assets.com/2885/1576879621-vaulteco.png")
+![Integration Categories]("https://www.datocms-assets.com/2885/1576879621-vaulteco.png")
 
 Main Vault categories for partners to integrate with include:
 
-**Authentication Methods**: Authentication (or Auth) methods are components in Vault that perform authentication and are responsible for assigning identity along with a set of policies to a user. Vault supports multiple auth methods/identity models to better support your business use case. You can find more information about Vault Auth Methods [here](" https://www.vaultproject.io/docs/auth/"). 
+**Authentication Methods**: Authentication (or Auth) methods are components in Vault that perform authentication and are responsible for assigning identity along with a set of policies to a user. Vault supports multiple auth methods/identity models to better support your business use case. You can find more information about Vault Auth Methods [here](/docs/auth/). 
 
 **Runtime Integrations**: Plugin backends are components in Vault that can be implemented separately from Vault's built-in features. Runtime integrations are sometimes referred to a Direct Application Integration. These backends can be either authentication, secrets engines or other security features. You can find more information about Vault Direct Application Integration [here]("https://learn.hashicorp.com/vault/developer/sm-app-integration").
 
-**Audit/Monitoring & Compliance**: Audit/Monitoring and Compliance are components in Vault that keep a detailed log of all requests and response to Vault. Because every operation with Vault is an API request/response, the audit log contains every authenticated interaction with Vault, including errors. Vault supports multiple audit devices to support your business use case. You can find more information about Vault Audit Devices [here]("https://www.vaultproject.io/docs/audit/").
+**Audit/Monitoring & Compliance**: Audit/Monitoring and Compliance are components in Vault that keep a detailed log of all requests and response to Vault. Because every operation with Vault is an API request/response, the audit log contains every authenticated interaction with Vault, including errors. Vault supports multiple audit devices to support your business use case. You can find more information about Vault Audit Devices [here](/docs/audit/).
 
-HSM (Hardware Security Module) integrations provide an added level of security and compliance. The HSM communicates with Vault using the PKCS#11 protocol thereby resulting in the integration to primarily involve verification of the operation of the functionality. You can find more information about Vault HSM [here]("https://www.vaultproject.io/docs/audit/").
+HSM (Hardware Security Module) integrations provide an added level of security and compliance. The HSM communicates with Vault using the PKCS#11 protocol thereby resulting in the integration to primarily involve verification of the operation of the functionality. You can find more information about Vault HSM [here](/docs/enterprise/hsm/index.html).
 
 **Secrets Engines**: Secrets engine are components which store, generate, or encrypt data. Secrets engines are provided some set of data, that take some action on that data, and then return a result. Some secrets engines store and read data, like encrypted in-memory data structure, other secrets engines connect to other services. Examples of secrets engines include Identity modules of Cloud providers like AWS, Azure IAM models, Cloud (LDAP), database or key management. You can find more information about Vault Secrets Engines here.
 
 
-## Development Process("https://www.vaultproject.io/docs/secrets/")
+## Development Process
 
 The Vault integration development process is divided into six steps. By following these steps, Vault integrations can be developed alongside HashiCorp to ensure that the integrations are able to be verified and supported in Vault as quickly as possible. A visual representation of the self-guided steps is depicted below.
 
-("https://www.datocms-assets.com/2885/1576879633-devprocess.png")
+![Development Process]("https://www.datocms-assets.com/2885/1576879633-devprocess.png")
 
 1.  Engage: Initial contact between vendor and HashiCorp
 2.  Enable: Information and articles to aid with the development of the integration
@@ -66,10 +66,9 @@ In an effort to support our self-serve model we’ve included links to resources
 
 * [Writing vendor extension guide]("https://learn.hashicorp.com/vault#operations-and-development")
 * Sample development implemented by a [partner]("https://www.hashicorp.com/integrations/venafi/vault/")
-* Example vendor extensions for reference: [Aqua]("https://www.hashicorp.com/integrations/aqua-security/vault/"), [Demisto]"(https://www.demisto.com/integrations/?_sf_s=hashicorp") 
+* Example vendor extensions for reference: [Aqua]("https://www.hashicorp.com/integrations/aqua-security/vault/"), [Demisto]("https://www.demisto.com/integrations/?_sf_s=hashicorp") 
 * Contributing to Vault [guidelines]("https://github.com/hashicorp/vault/blob/master/CONTRIBUTING.md")
-* Gitter HashiCorp-Vault [room]("https://gitter.im/hashicorp-vault/Lobby")
-* [Vault developer community forum]("https://groups.google.com/forum/#!forum/vault-tool")
+* [Vault Community Forum]("https://discuss.hashicorp.com/c/vault")
 * [Vault's source code]("https://github.com/hashicorp/vault")
 
 
@@ -81,32 +80,32 @@ We encourage vendors to closely follow the above guidance. Adopting the same str
 Vault requires all code-level integrations to be written in the [Go]("https://golang.org/") programming language and contain an [MPL-2.0]("https://en.wikipedia.org/wiki/Mozilla_Public_License") open source license. The only knowledge necessary to write a plugin is basic command-line skills and knowledge of the Go programming language.  When writing in Go-Language, HashiCorp has found the integration development process to be straightforward and simple when vendors pay close attention and follow the resources and by adopting the same structure and coding patterns helps expedite the review and release cycles. Please remember that all integration major steps should contain acceptance testing and the appropriate documentation.
 
 Auth Methods
-*  [Auth Methods documentation]("https://www.vaultproject.io/docs/auth/index.html")
+*  [Auth Methods documentation](/docs/auth/index.html)
 *  [Example of how to build, install, and maintain auth method plugins plugin]("https://www.hashicorp.com/blog/building-a-vault-secure-plugin") 
 *  [Sample plugin code]("https://github.com/hashicorp/vault-auth-plugin-example")
 
 Runtime Integration
-*  [Plugins documentation] ("https://www.vaultproject.io/docs/internals/plugins.html")
-*  [Guide to building Vault plugin backends] ("https://www.vaultproject.io/guides/operations/plugin-backends.html")
+*  [Plugins documentation](/docs/internals/plugins.html)
+*  [Guide to building Vault plugin backends]("https://www.vaultproject.io/guides/operations/plugin-backends.html")
 *  [Vault Direct Application Integration]("https://learn.hashicorp.com/vault?track=getting-started#getting-started")
 
 Audit, Monitoring & Compliance Integration
 
-*  [HSM documentation]("https://www.vaultproject.io/docs/enterprise/hsm/index.html")
-*  [Configuration information] ("https://www.vaultproject.io/docs/configuration/seal/pkcs11.html")
-*  [Audit devices documentation] ("https://www.vaultproject.io/docs/audit/index.html")
+*  [HSM documentation](/docs/enterprise/hsm/index.html)
+*  [Configuration information](/docs/configuration/seal/pkcs11.html)
+*  [Audit devices documentation](/docs/audit/index.html)
 
 Secrets Engine Integration
-*  [Secret engine documentation] ("https://www.vaultproject.io/docs/secrets/index.html")
-*  There is currently no empty sample secrets plugin; however, the [AliCloud Secrets Plugin] ("https://github.com/hashicorp/vault-plugin-secrets-alicloud")  was written recently and is fairly simple
-*  [Storage configuration documentation] ("https://www.vaultproject.io/docs/configuration/storage/index.html")
+*  [Secret engine documentation](/docs/secrets/index.html)
+*  There is currently no empty sample secrets plugin; however, the [AliCloud Secrets Plugin]("https://github.com/hashicorp/vault-plugin-secrets-alicloud")  was written recently and is fairly simple
+*  [Storage configuration documentation](/docs/configuration/storage/index.html)
 
 
 ### 4. Review
 
 During the review process, HashiCorp will provide feedback on the newly developed integration. This is an important step to allow HashiCorp to review and verify your Vault integration. Please send the integration code and other relevant logs for verification to: vault-integration-dev@hashicorp.com.
 
-For Auth, Secret and Storage plugins please submit a GitHub pull request (PR) against the [Vault project] ("https://github.com/hashicorp/vault"). In some cases the vendor may need to provide HashiCorp with a permanent test account so that the integration can be verified on an ongoing basis.
+For Auth, Secret and Storage plugins please submit a GitHub pull request (PR) against the [Vault project]("https://github.com/hashicorp/vault"). In some cases the vendor may need to provide HashiCorp with a permanent test account so that the integration can be verified on an ongoing basis.
 
 The review process can take a while to complete and may require some iterations through the code to address and problems identified by the HashiCorp team.
 
@@ -129,10 +128,10 @@ The expectation from the vendor/partner is to create a mechanism for them to tra
 Below is a checklist of steps that should be followed during the Vault integration development process. This reiterates the steps described above.
 
 [ ] Fill out the [Vault Integration webform](https://docs.google.com/forms/d/e/1FAIpQLSfQL1uj-mL59bd2EyCPI31LT9uvVT-xKyoHAb5FKIwWwwJ1qQ/viewform)
-[ ] Develop and test Vault integration along with the acceptance tests and documentationSend email to email (mailto:vault-integration-dev@hashicorp.com) to schedule an initial review
+[ ] Develop and test Vault integration along with the acceptance tests and documentationSend email to [email](mailto:vault-integration-dev@hashicorp.com) to schedule an initial review
 [ ] Address review feedback and finalize the development process
 [ ] Provide HashiCorp with credentials for underlying infrastructure for test purposes
-[ ] Demo the integration and/or send the test logs to HashiCorp at: email (mailto:vault-integration-dev@hashicorp.com)
+[ ] Demo the integration and/or send the test logs to HashiCorp at: [email](mailto:vault-integration-dev@hashicorp.com)
 [ ] Execute HashiCorp Partner Agreement Documents, review logo guidelines, partner listing and more
 [ ] Plan to continue supporting the integration with additional functionality and responding to customer issues.
 
