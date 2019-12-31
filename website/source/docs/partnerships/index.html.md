@@ -80,11 +80,13 @@ We encourage vendors to closely follow the above guidance. Adopting the same str
 Vault requires all code-level integrations to be written in the [Go]("https://golang.org/") programming language and contain an [MPL-2.0]("https://en.wikipedia.org/wiki/Mozilla_Public_License") open source license. The only knowledge necessary to write a plugin is basic command-line skills and knowledge of the Go programming language.  When writing in Go-Language, HashiCorp has found the integration development process to be straightforward and simple when vendors pay close attention and follow the resources and by adopting the same structure and coding patterns helps expedite the review and release cycles. Please remember that all integration major steps should contain acceptance testing and the appropriate documentation.
 
 Auth Methods
+
 *  [Auth Methods documentation](/docs/auth/index.html)
 *  [Example of how to build, install, and maintain auth method plugins plugin]("https://www.hashicorp.com/blog/building-a-vault-secure-plugin") 
 *  [Sample plugin code]("https://github.com/hashicorp/vault-auth-plugin-example")
 
 Runtime Integration
+
 *  [Plugins documentation](/docs/internals/plugins.html)
 *  [Guide to building Vault plugin backends]("https://www.vaultproject.io/guides/operations/plugin-backends.html")
 *  [Vault Direct Application Integration]("https://learn.hashicorp.com/vault?track=getting-started#getting-started")
@@ -96,6 +98,7 @@ Audit, Monitoring & Compliance Integration
 *  [Audit devices documentation](/docs/audit/index.html)
 
 Secrets Engine Integration
+
 *  [Secret engine documentation](/docs/secrets/index.html)
 *  There is currently no empty sample secrets plugin; however, the [AliCloud Secrets Plugin]("https://github.com/hashicorp/vault-plugin-secrets-alicloud")  was written recently and is fairly simple
 *  [Storage configuration documentation](/docs/configuration/storage/index.html)
@@ -127,13 +130,13 @@ The expectation from the vendor/partner is to create a mechanism for them to tra
 
 Below is a checklist of steps that should be followed during the Vault integration development process. This reiterates the steps described above.
 
-[ ] Fill out the [Vault Integration webform](https://docs.google.com/forms/d/e/1FAIpQLSfQL1uj-mL59bd2EyCPI31LT9uvVT-xKyoHAb5FKIwWwwJ1qQ/viewform)
-[ ] Develop and test Vault integration along with the acceptance tests and documentationSend email to [email](mailto:vault-integration-dev@hashicorp.com) to schedule an initial review
-[ ] Address review feedback and finalize the development process
-[ ] Provide HashiCorp with credentials for underlying infrastructure for test purposes
-[ ] Demo the integration and/or send the test logs to HashiCorp at: [email](mailto:vault-integration-dev@hashicorp.com)
-[ ] Execute HashiCorp Partner Agreement Documents, review logo guidelines, partner listing and more
-[ ] Plan to continue supporting the integration with additional functionality and responding to customer issues.
+- [ ] Fill out the [Vault Integration webform](https://docs.google.com/forms/d/e/1FAIpQLSfQL1uj-mL59bd2EyCPI31LT9uvVT-xKyoHAb5FKIwWwwJ1qQ/viewform)
+- [ ] Develop and test Vault integration along with the acceptance tests and documentationSend email to [email](mailto:vault-integration-dev@hashicorp.com) to schedule an initial review
+- [ ] Address review feedback and finalize the development process
+- [ ] Provide HashiCorp with credentials for underlying infrastructure for test purposes
+- [ ] Demo the integration and/or send the test logs to HashiCorp at: [email](mailto:vault-integration-dev@hashicorp.com)
+- [ ] Execute HashiCorp Partner Agreement Documents, review logo guidelines, partner listing and more
+- [ ] Plan to continue supporting the integration with additional functionality and responding to customer issues.
 
 
 ## Contact Us
