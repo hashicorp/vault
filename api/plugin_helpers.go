@@ -119,7 +119,7 @@ func VaultPluginTLSProvider(apiTLSConfig *TLSConfig) func() (*tls.Config, error)
 		}
 
 		// Reset token value to make sure nothing has been set by default
-		client.SetToken("")
+		client.ClearToken()
 
 		secret, err := client.Logical().Unwrap(unwrapToken)
 		if err != nil {
