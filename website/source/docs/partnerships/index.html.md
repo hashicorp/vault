@@ -21,7 +21,7 @@ From a high-level perspective, Vault is a tool used to manage secrets and protec
  
 The diagram below depicts the key Vault integration categories and types.
 
-![Integration Categories]("https://www.datocms-assets.com/2885/1576879621-vaulteco.png")
+![Integration Categories](/img/integration-program-vaulteco.png)
 
 Main Vault categories for partners to integrate with include:
 
@@ -40,7 +40,7 @@ HSM (Hardware Security Module) integrations provide an added level of security a
 
 The Vault integration development process is divided into six steps. By following these steps, Vault integrations can be developed alongside HashiCorp to ensure that the integrations are able to be verified and supported in Vault as quickly as possible. A visual representation of the self-guided steps is depicted below.
 
-![Development Process]("https://www.datocms-assets.com/2885/1576879633-devprocess.png")
+![Development Process](/img/integration-program-devprocess.png)
 
 1.  Engage: Initial contact between vendor and HashiCorp
 2.  Enable: Information and articles to aid with the development of the integration
