@@ -114,7 +114,7 @@ The review process can take a while to complete and may require some iterations 
 
 ### 5. Release
 
-At this stage, it is expected that the integration is fully complete, the necessary documentation has been written, the acceptance tests have all passed, and that HashiCorp has reviewed the integration. Once the plugin has been validated and accepted by Hashic/orp, the plugin can be hosted anywhere so it can more easily be downloaded then installed within Vault.
+At this stage, it is expected that the integration is fully complete, the necessary documentation has been written, the acceptance tests have all passed, and that HashiCorp has reviewed the integration. Once the plugin has been validated and accepted by Hashicorp, the plugin can be hosted anywhere so it can more easily be downloaded then installed within Vault.
 
 Once the integration has been released the vendor is requested to sign the HashiCorp Technology Partner Agreement so that we can have their integration be listed on the HashiCorp website.
 
