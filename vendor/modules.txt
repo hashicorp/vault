@@ -1,29 +1,33 @@
 # cloud.google.com/go v0.39.0
+cloud.google.com/go/monitoring/apiv3
+cloud.google.com/go/storage
+cloud.google.com/go/spanner
+cloud.google.com/go/kms/apiv1
 cloud.google.com/go/civil
 cloud.google.com/go/compute/metadata
 cloud.google.com/go/iam
 cloud.google.com/go/internal
-cloud.google.com/go/internal/fields
 cloud.google.com/go/internal/optional
-cloud.google.com/go/internal/protostruct
 cloud.google.com/go/internal/trace
 cloud.google.com/go/internal/version
-cloud.google.com/go/kms/apiv1
-cloud.google.com/go/monitoring/apiv3
-cloud.google.com/go/spanner
+cloud.google.com/go/internal/fields
+cloud.google.com/go/internal/protostruct
 cloud.google.com/go/spanner/internal/backoff
-cloud.google.com/go/storage
 # code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f
 code.cloudfoundry.org/gofileutils/fileutils
 # github.com/Azure/azure-sdk-for-go v36.2.0+incompatible
 github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute
 github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac
 github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault
-github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-01-01-preview/authorization
+# contrib.go.opencensus.io/exporter/ocagent v0.4.12
+contrib.go.opencensus.io/exporter/ocagent
+# github.com/Azure/azure-sdk-for-go v29.0.0+incompatible
 github.com/Azure/azure-sdk-for-go/storage
+github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault
+github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute
+github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac
 github.com/Azure/azure-sdk-for-go/version
 # github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78
-github.com/Azure/go-ansiterm
 github.com/Azure/go-ansiterm/winterm
 # github.com/Azure/go-autorest/autorest v0.9.2
 github.com/Azure/go-autorest/autorest
@@ -44,6 +48,20 @@ github.com/Azure/go-autorest/autorest/validation
 github.com/Azure/go-autorest/logger
 # github.com/Azure/go-autorest/tracing v0.5.0
 github.com/Azure/go-autorest/tracing
+=======
+github.com/Azure/go-ansiterm
+# github.com/Azure/go-autorest v11.7.1+incompatible
+github.com/Azure/go-autorest/autorest/azure
+github.com/Azure/go-autorest/autorest
+github.com/Azure/go-autorest/autorest/azure/auth
+github.com/Azure/go-autorest/autorest/to
+github.com/Azure/go-autorest/autorest/date
+github.com/Azure/go-autorest/tracing
+github.com/Azure/go-autorest/autorest/validation
+github.com/Azure/go-autorest/autorest/adal
+github.com/Azure/go-autorest/logger
+github.com/Azure/go-autorest/autorest/azure/cli
+>>>>>>> Add TLS options per Nomad backend
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
 # github.com/DataDog/datadog-go v3.2.0+incompatible
@@ -62,27 +80,27 @@ github.com/Nvveen/Gotty
 # github.com/SAP/go-hdb v0.14.1
 github.com/SAP/go-hdb/driver
 github.com/SAP/go-hdb/driver/sqltrace
-github.com/SAP/go-hdb/internal/bufio
 github.com/SAP/go-hdb/internal/protocol
+github.com/SAP/go-hdb/internal/bufio
 github.com/SAP/go-hdb/internal/unicode
 github.com/SAP/go-hdb/internal/unicode/cesu8
 # github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6
 github.com/StackExchange/wmi
 # github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190620160927-9418d7b0cd0f
-github.com/aliyun/alibaba-cloud-sdk-go/sdk
 github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth
-github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials
-github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/provider
 github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers
-github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/signers
+github.com/aliyun/alibaba-cloud-sdk-go/sdk
+github.com/aliyun/alibaba-cloud-sdk-go/services/kms
 github.com/aliyun/alibaba-cloud-sdk-go/sdk/endpoints
+github.com/aliyun/alibaba-cloud-sdk-go/services/sts
+github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials
+github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/signers
 github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors
 github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests
 github.com/aliyun/alibaba-cloud-sdk-go/sdk/responses
 github.com/aliyun/alibaba-cloud-sdk-go/sdk/utils
-github.com/aliyun/alibaba-cloud-sdk-go/services/kms
+github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/provider
 github.com/aliyun/alibaba-cloud-sdk-go/services/ram
-github.com/aliyun/alibaba-cloud-sdk-go/services/sts
 # github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 github.com/aliyun/aliyun-oss-go-sdk/oss
 # github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
@@ -103,53 +121,53 @@ github.com/armon/go-radix
 github.com/asaskevich/govalidator
 # github.com/aws/aws-sdk-go v1.25.41
 github.com/aws/aws-sdk-go/aws
+github.com/aws/aws-sdk-go/aws/credentials
+github.com/aws/aws-sdk-go/aws/credentials/stscreds
+github.com/aws/aws-sdk-go/aws/endpoints
+github.com/aws/aws-sdk-go/aws/session
+github.com/aws/aws-sdk-go/service/ec2
+github.com/aws/aws-sdk-go/service/iam
+github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/aws/arn
 github.com/aws/aws-sdk-go/aws/awserr
-github.com/aws/aws-sdk-go/aws/awsutil
-github.com/aws/aws-sdk-go/aws/client
-github.com/aws/aws-sdk-go/aws/client/metadata
-github.com/aws/aws-sdk-go/aws/corehandlers
-github.com/aws/aws-sdk-go/aws/credentials
-github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds
-github.com/aws/aws-sdk-go/aws/credentials/endpointcreds
-github.com/aws/aws-sdk-go/aws/credentials/processcreds
-github.com/aws/aws-sdk-go/aws/credentials/stscreds
-github.com/aws/aws-sdk-go/aws/crr
-github.com/aws/aws-sdk-go/aws/csm
+github.com/aws/aws-sdk-go/service/iam/iamiface
+github.com/aws/aws-sdk-go/service/sts/stsiface
 github.com/aws/aws-sdk-go/aws/defaults
 github.com/aws/aws-sdk-go/aws/ec2metadata
-github.com/aws/aws-sdk-go/aws/endpoints
 github.com/aws/aws-sdk-go/aws/request
-github.com/aws/aws-sdk-go/aws/session
-github.com/aws/aws-sdk-go/aws/signer/v4
-github.com/aws/aws-sdk-go/internal/ini
-github.com/aws/aws-sdk-go/internal/s3err
+github.com/aws/aws-sdk-go/service/dynamodb
+github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute
+github.com/aws/aws-sdk-go/service/s3
+github.com/aws/aws-sdk-go/service/kms
+github.com/aws/aws-sdk-go/service/kms/kmsiface
 github.com/aws/aws-sdk-go/internal/sdkio
-github.com/aws/aws-sdk-go/internal/sdkmath
-github.com/aws/aws-sdk-go/internal/sdkrand
-github.com/aws/aws-sdk-go/internal/sdkuri
+github.com/aws/aws-sdk-go/internal/ini
 github.com/aws/aws-sdk-go/internal/shareddefaults
+github.com/aws/aws-sdk-go/aws/client
+github.com/aws/aws-sdk-go/internal/sdkrand
+github.com/aws/aws-sdk-go/aws/corehandlers
+github.com/aws/aws-sdk-go/aws/credentials/processcreds
+github.com/aws/aws-sdk-go/aws/csm
+github.com/aws/aws-sdk-go/aws/awsutil
+github.com/aws/aws-sdk-go/aws/client/metadata
+github.com/aws/aws-sdk-go/aws/signer/v4
 github.com/aws/aws-sdk-go/private/protocol
 github.com/aws/aws-sdk-go/private/protocol/ec2query
+github.com/aws/aws-sdk-go/private/protocol/query
+github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds
+github.com/aws/aws-sdk-go/aws/credentials/endpointcreds
+github.com/aws/aws-sdk-go/internal/sdkuri
+github.com/aws/aws-sdk-go/aws/crr
+github.com/aws/aws-sdk-go/private/protocol/jsonrpc
+github.com/aws/aws-sdk-go/internal/s3err
 github.com/aws/aws-sdk-go/private/protocol/eventstream
 github.com/aws/aws-sdk-go/private/protocol/eventstream/eventstreamapi
-github.com/aws/aws-sdk-go/private/protocol/json/jsonutil
-github.com/aws/aws-sdk-go/private/protocol/jsonrpc
-github.com/aws/aws-sdk-go/private/protocol/query
-github.com/aws/aws-sdk-go/private/protocol/query/queryutil
 github.com/aws/aws-sdk-go/private/protocol/rest
 github.com/aws/aws-sdk-go/private/protocol/restxml
 github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
-github.com/aws/aws-sdk-go/service/dynamodb
-github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute
-github.com/aws/aws-sdk-go/service/ec2
-github.com/aws/aws-sdk-go/service/iam
-github.com/aws/aws-sdk-go/service/iam/iamiface
-github.com/aws/aws-sdk-go/service/kms
-github.com/aws/aws-sdk-go/service/kms/kmsiface
-github.com/aws/aws-sdk-go/service/s3
-github.com/aws/aws-sdk-go/service/sts
-github.com/aws/aws-sdk-go/service/sts/stsiface
+github.com/aws/aws-sdk-go/internal/sdkmath
+github.com/aws/aws-sdk-go/private/protocol/query/queryutil
+github.com/aws/aws-sdk-go/private/protocol/json/jsonutil
 # github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973
 github.com/beorn7/perks/quantile
 # github.com/bgentry/speakeasy v0.1.0
@@ -159,10 +177,10 @@ github.com/boombuler/barcode
 github.com/boombuler/barcode/qr
 github.com/boombuler/barcode/utils
 # github.com/briankassouf/jose v0.9.2-0.20180619214549-d2569464773f
-github.com/briankassouf/jose
 github.com/briankassouf/jose/crypto
 github.com/briankassouf/jose/jws
 github.com/briankassouf/jose/jwt
+github.com/briankassouf/jose
 # github.com/cenkalti/backoff v2.2.1+incompatible
 github.com/cenkalti/backoff
 # github.com/centrify/cloud-golang-sdk v0.0.0-20190214225812-119110094d0f
@@ -173,8 +191,8 @@ github.com/chrismalek/oktasdk-go/okta
 # github.com/circonus-labs/circonus-gometrics v2.3.1+incompatible
 github.com/circonus-labs/circonus-gometrics
 github.com/circonus-labs/circonus-gometrics/api
-github.com/circonus-labs/circonus-gometrics/api/config
 github.com/circonus-labs/circonus-gometrics/checkmgr
+github.com/circonus-labs/circonus-gometrics/api/config
 # github.com/circonus-labs/circonusllhist v0.1.3
 github.com/circonus-labs/circonusllhist
 # github.com/cloudfoundry-community/go-cfclient v0.0.0-20190201205600-f136f9222381
@@ -205,12 +223,12 @@ github.com/docker/go-connections/nat
 # github.com/docker/go-units v0.4.0
 github.com/docker/go-units
 # github.com/dsnet/compress v0.0.1
-github.com/dsnet/compress
 github.com/dsnet/compress/bzip2
 github.com/dsnet/compress/bzip2/internal/sais
 github.com/dsnet/compress/internal
 github.com/dsnet/compress/internal/errors
 github.com/dsnet/compress/internal/prefix
+github.com/dsnet/compress
 # github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 github.com/duosecurity/duo_api_golang
 github.com/duosecurity/duo_api_golang/authapi
@@ -247,21 +265,29 @@ github.com/gocql/gocql/internal/lru
 github.com/gocql/gocql/internal/murmur
 github.com/gocql/gocql/internal/streams
 # github.com/gogo/protobuf v1.2.1
-github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/io
 github.com/gogo/protobuf/proto
-github.com/gogo/protobuf/protoc-gen-gogo/descriptor
 github.com/gogo/protobuf/sortkeys
+github.com/gogo/protobuf/gogoproto
+github.com/gogo/protobuf/protoc-gen-gogo/descriptor
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto
+<<<<<<< HEAD
 github.com/golang/protobuf/protoc-gen-go/descriptor
+=======
+>>>>>>> Add TLS options per Nomad backend
 github.com/golang/protobuf/ptypes
+github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
-github.com/golang/protobuf/ptypes/empty
 github.com/golang/protobuf/ptypes/struct
-github.com/golang/protobuf/ptypes/timestamp
+github.com/golang/protobuf/ptypes/empty
 github.com/golang/protobuf/ptypes/wrappers
+github.com/golang/protobuf/protoc-gen-go/descriptor
+github.com/golang/protobuf/jsonpb
+github.com/golang/protobuf/protoc-gen-go/generator
+github.com/golang/protobuf/protoc-gen-go/generator/internal/remap
+github.com/golang/protobuf/protoc-gen-go/plugin
 # github.com/golang/snappy v0.0.1
 github.com/golang/snappy
 # github.com/google/go-github v17.0.0+incompatible
@@ -278,16 +304,25 @@ github.com/google/uuid
 github.com/googleapis/gax-go/v2
 # github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 github.com/gorhill/cronexpr
+<<<<<<< HEAD
+=======
+# github.com/gorilla/websocket v1.4.1
+github.com/gorilla/websocket
+# github.com/grpc-ecosystem/grpc-gateway v1.8.5
+github.com/grpc-ecosystem/grpc-gateway/runtime
+github.com/grpc-ecosystem/grpc-gateway/utilities
+github.com/grpc-ecosystem/grpc-gateway/internal
+>>>>>>> Add TLS options per Nomad backend
 # github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed
 github.com/hailocab/go-hostpool
 # github.com/hashicorp/consul-template v0.22.0
-github.com/hashicorp/consul-template/child
 github.com/hashicorp/consul-template/config
-github.com/hashicorp/consul-template/dependency
 github.com/hashicorp/consul-template/logging
 github.com/hashicorp/consul-template/manager
-github.com/hashicorp/consul-template/renderer
 github.com/hashicorp/consul-template/signals
+github.com/hashicorp/consul-template/child
+github.com/hashicorp/consul-template/dependency
+github.com/hashicorp/consul-template/renderer
 github.com/hashicorp/consul-template/template
 github.com/hashicorp/consul-template/version
 github.com/hashicorp/consul-template/watch
@@ -328,7 +363,7 @@ github.com/hashicorp/go-raftchunking
 github.com/hashicorp/go-raftchunking/types
 # github.com/hashicorp/go-retryablehttp v0.6.2
 github.com/hashicorp/go-retryablehttp
-# github.com/hashicorp/go-rootcerts v1.0.1
+# github.com/hashicorp/go-rootcerts v1.0.2
 github.com/hashicorp/go-rootcerts
 # github.com/hashicorp/go-sockaddr v1.0.2
 github.com/hashicorp/go-sockaddr
@@ -340,55 +375,55 @@ github.com/hashicorp/go-uuid
 # github.com/hashicorp/go-version v1.2.0
 github.com/hashicorp/go-version
 # github.com/hashicorp/gokrb5 v7.3.1-0.20191209171754-1a6fa9886ec3+incompatible
-github.com/hashicorp/gokrb5/asn1tools
 github.com/hashicorp/gokrb5/client
 github.com/hashicorp/gokrb5/config
+github.com/hashicorp/gokrb5/keytab
+github.com/hashicorp/gokrb5/service
+github.com/hashicorp/gokrb5/spnego
 github.com/hashicorp/gokrb5/credentials
 github.com/hashicorp/gokrb5/crypto
-github.com/hashicorp/gokrb5/crypto/common
 github.com/hashicorp/gokrb5/crypto/etype
+github.com/hashicorp/gokrb5/iana/errorcode
+github.com/hashicorp/gokrb5/iana/flags
+github.com/hashicorp/gokrb5/iana/keyusage
+github.com/hashicorp/gokrb5/iana/nametype
+github.com/hashicorp/gokrb5/iana/patype
+github.com/hashicorp/gokrb5/kadmin
+github.com/hashicorp/gokrb5/krberror
+github.com/hashicorp/gokrb5/messages
+github.com/hashicorp/gokrb5/types
+github.com/hashicorp/gokrb5/iana/etypeID
+github.com/hashicorp/gokrb5/asn1tools
+github.com/hashicorp/gokrb5/gssapi
+github.com/hashicorp/gokrb5/iana/chksumtype
+github.com/hashicorp/gokrb5/iana/msgtype
+github.com/hashicorp/gokrb5/crypto/common
 github.com/hashicorp/gokrb5/crypto/rfc3961
 github.com/hashicorp/gokrb5/crypto/rfc3962
 github.com/hashicorp/gokrb5/crypto/rfc4757
 github.com/hashicorp/gokrb5/crypto/rfc8009
-github.com/hashicorp/gokrb5/gssapi
 github.com/hashicorp/gokrb5/iana
-github.com/hashicorp/gokrb5/iana/addrtype
 github.com/hashicorp/gokrb5/iana/adtype
 github.com/hashicorp/gokrb5/iana/asnAppTag
-github.com/hashicorp/gokrb5/iana/chksumtype
-github.com/hashicorp/gokrb5/iana/errorcode
-github.com/hashicorp/gokrb5/iana/etypeID
-github.com/hashicorp/gokrb5/iana/flags
-github.com/hashicorp/gokrb5/iana/keyusage
-github.com/hashicorp/gokrb5/iana/msgtype
-github.com/hashicorp/gokrb5/iana/nametype
-github.com/hashicorp/gokrb5/iana/patype
-github.com/hashicorp/gokrb5/kadmin
-github.com/hashicorp/gokrb5/keytab
-github.com/hashicorp/gokrb5/krberror
-github.com/hashicorp/gokrb5/messages
 github.com/hashicorp/gokrb5/pac
-github.com/hashicorp/gokrb5/service
-github.com/hashicorp/gokrb5/spnego
-github.com/hashicorp/gokrb5/types
+github.com/hashicorp/gokrb5/iana/addrtype
 # github.com/hashicorp/golang-lru v0.5.3
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
 # github.com/hashicorp/hcl v1.0.0
 github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/ast
-github.com/hashicorp/hcl/hcl/parser
 github.com/hashicorp/hcl/hcl/printer
-github.com/hashicorp/hcl/hcl/scanner
-github.com/hashicorp/hcl/hcl/strconv
+github.com/hashicorp/hcl/hcl/parser
 github.com/hashicorp/hcl/hcl/token
 github.com/hashicorp/hcl/json/parser
+github.com/hashicorp/hcl/hcl/scanner
+github.com/hashicorp/hcl/hcl/strconv
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
 # github.com/hashicorp/logutils v1.0.0
 github.com/hashicorp/logutils
-# github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
+# github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
 github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
 # github.com/hashicorp/raft v1.1.2-0.20191002163536-9c6bd3e3eb17
@@ -406,11 +441,11 @@ github.com/hashicorp/vault-plugin-auth-azure
 github.com/hashicorp/vault-plugin-auth-centrify
 # github.com/hashicorp/vault-plugin-auth-cf v0.0.0-20190821162840-1c2205826fee
 github.com/hashicorp/vault-plugin-auth-cf
-github.com/hashicorp/vault-plugin-auth-cf/models
 github.com/hashicorp/vault-plugin-auth-cf/signatures
+github.com/hashicorp/vault-plugin-auth-cf/models
+github.com/hashicorp/vault-plugin-auth-cf/util
 github.com/hashicorp/vault-plugin-auth-cf/testing/certificates
 github.com/hashicorp/vault-plugin-auth-cf/testing/cf
-github.com/hashicorp/vault-plugin-auth-cf/util
 # github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190930204802-acfd134850c2
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
@@ -443,6 +478,7 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms
 github.com/hashicorp/vault-plugin-secrets-kv
 # github.com/hashicorp/vault/api v1.0.5-0.20200111014044-ba76c080ad1f => ./api
 github.com/hashicorp/vault/api
+<<<<<<< HEAD
 # github.com/hashicorp/vault/sdk v0.1.14-0.20200111013952-157e805b97be => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/helper/connutil
@@ -452,44 +488,65 @@ github.com/hashicorp/vault/sdk/framework
 github.com/hashicorp/vault/sdk/helper/awsutil
 github.com/hashicorp/vault/sdk/helper/base62
 github.com/hashicorp/vault/sdk/helper/certutil
+=======
+# github.com/hashicorp/vault/sdk v0.1.14-0.20191218213202-9caafff72a1f => ./sdk
+github.com/hashicorp/vault/sdk/helper/salt
+github.com/hashicorp/vault/sdk/helper/strutil
+github.com/hashicorp/vault/sdk/helper/wrapping
+github.com/hashicorp/vault/sdk/logical
+github.com/hashicorp/vault/sdk/helper/parseutil
+github.com/hashicorp/vault/sdk/framework
+github.com/hashicorp/vault/sdk/helper/policyutil
+github.com/hashicorp/vault/sdk/plugin
+>>>>>>> Add TLS options per Nomad backend
 github.com/hashicorp/vault/sdk/helper/cidrutil
-github.com/hashicorp/vault/sdk/helper/compressutil
 github.com/hashicorp/vault/sdk/helper/consts
-github.com/hashicorp/vault/sdk/helper/cryptoutil
+github.com/hashicorp/vault/sdk/helper/locksutil
+github.com/hashicorp/vault/sdk/helper/tokenutil
+github.com/hashicorp/vault/sdk/helper/jsonutil
+github.com/hashicorp/vault/sdk/helper/certutil
+github.com/hashicorp/vault/sdk/helper/password
+github.com/hashicorp/vault/sdk/helper/ldaputil
+github.com/hashicorp/vault/sdk/helper/tlsutil
+github.com/hashicorp/vault/sdk/database/dbplugin
+github.com/hashicorp/vault/sdk/database/helper/dbutil
+github.com/hashicorp/vault/sdk/queue
 github.com/hashicorp/vault/sdk/helper/dbtxn
 github.com/hashicorp/vault/sdk/helper/errutil
+<<<<<<< HEAD
 github.com/hashicorp/vault/sdk/helper/hclutil
 github.com/hashicorp/vault/sdk/helper/identitytpl
 github.com/hashicorp/vault/sdk/helper/jsonutil
 github.com/hashicorp/vault/sdk/helper/kdf
+=======
+>>>>>>> Add TLS options per Nomad backend
 github.com/hashicorp/vault/sdk/helper/keysutil
-github.com/hashicorp/vault/sdk/helper/ldaputil
-github.com/hashicorp/vault/sdk/helper/license
-github.com/hashicorp/vault/sdk/helper/locksutil
+github.com/hashicorp/vault/sdk/helper/base62
 github.com/hashicorp/vault/sdk/helper/logging
 github.com/hashicorp/vault/sdk/helper/mlock
-github.com/hashicorp/vault/sdk/helper/parseutil
-github.com/hashicorp/vault/sdk/helper/password
-github.com/hashicorp/vault/sdk/helper/pathmanager
-github.com/hashicorp/vault/sdk/helper/pluginutil
-github.com/hashicorp/vault/sdk/helper/pointerutil
-github.com/hashicorp/vault/sdk/helper/policyutil
-github.com/hashicorp/vault/sdk/helper/salt
-github.com/hashicorp/vault/sdk/helper/strutil
-github.com/hashicorp/vault/sdk/helper/tlsutil
-github.com/hashicorp/vault/sdk/helper/tokenutil
 github.com/hashicorp/vault/sdk/helper/useragent
-github.com/hashicorp/vault/sdk/helper/wrapping
-github.com/hashicorp/vault/sdk/logical
 github.com/hashicorp/vault/sdk/physical
 github.com/hashicorp/vault/sdk/physical/file
 github.com/hashicorp/vault/sdk/physical/inmem
-github.com/hashicorp/vault/sdk/plugin
-github.com/hashicorp/vault/sdk/plugin/mock
-github.com/hashicorp/vault/sdk/plugin/pb
-github.com/hashicorp/vault/sdk/queue
 github.com/hashicorp/vault/sdk/version
+<<<<<<< HEAD
 # github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb
+=======
+github.com/hashicorp/vault/sdk/helper/cryptoutil
+github.com/hashicorp/vault/sdk/helper/pointerutil
+github.com/hashicorp/vault/sdk/helper/hclutil
+github.com/hashicorp/vault/sdk/database/helper/credsutil
+github.com/hashicorp/vault/sdk/helper/compressutil
+github.com/hashicorp/vault/sdk/helper/pathmanager
+github.com/hashicorp/vault/sdk/plugin/pb
+github.com/hashicorp/vault/sdk/database/helper/connutil
+github.com/hashicorp/vault/sdk/helper/license
+github.com/hashicorp/vault/sdk/helper/pluginutil
+github.com/hashicorp/vault/sdk/helper/entropy
+github.com/hashicorp/vault/sdk/helper/kdf
+github.com/hashicorp/vault/sdk/plugin/mock
+# github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d
+>>>>>>> Add TLS options per Nomad backend
 github.com/hashicorp/yamux
 # github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 github.com/influxdata/influxdb/client/v2
@@ -497,11 +554,11 @@ github.com/influxdata/influxdb/models
 github.com/influxdata/influxdb/pkg/escape
 # github.com/jackc/pgx v3.3.0+incompatible
 github.com/jackc/pgx
-github.com/jackc/pgx/chunkreader
 github.com/jackc/pgx/internal/sanitize
 github.com/jackc/pgx/pgio
 github.com/jackc/pgx/pgproto3
 github.com/jackc/pgx/pgtype
+github.com/jackc/pgx/chunkreader
 # github.com/jcmturner/gofork v1.0.0
 github.com/jcmturner/gofork/encoding/asn1
 github.com/jcmturner/gofork/x/crypto/pbkdf2
@@ -516,25 +573,25 @@ github.com/jmespath/go-jmespath
 # github.com/joyent/triton-go v0.0.0-20190112182421-51ffac552869
 github.com/joyent/triton-go
 github.com/joyent/triton-go/authentication
-github.com/joyent/triton-go/client
 github.com/joyent/triton-go/errors
 github.com/joyent/triton-go/storage
+github.com/joyent/triton-go/client
 # github.com/json-iterator/go v1.1.6
 github.com/json-iterator/go
 # github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f
+github.com/keybase/go-crypto/openpgp
+github.com/keybase/go-crypto/openpgp/packet
+github.com/keybase/go-crypto/openpgp/armor
+github.com/keybase/go-crypto/openpgp/errors
+github.com/keybase/go-crypto/openpgp/s2k
+github.com/keybase/go-crypto/rsa
 github.com/keybase/go-crypto/brainpool
 github.com/keybase/go-crypto/cast5
 github.com/keybase/go-crypto/curve25519
 github.com/keybase/go-crypto/ed25519
-github.com/keybase/go-crypto/ed25519/internal/edwards25519
-github.com/keybase/go-crypto/openpgp
-github.com/keybase/go-crypto/openpgp/armor
 github.com/keybase/go-crypto/openpgp/ecdh
 github.com/keybase/go-crypto/openpgp/elgamal
-github.com/keybase/go-crypto/openpgp/errors
-github.com/keybase/go-crypto/openpgp/packet
-github.com/keybase/go-crypto/openpgp/s2k
-github.com/keybase/go-crypto/rsa
+github.com/keybase/go-crypto/ed25519/internal/edwards25519
 # github.com/konsorten/go-windows-terminal-sequences v1.0.1
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/kr/pretty v0.1.0
@@ -586,15 +643,15 @@ github.com/oklog/run
 # github.com/opencontainers/go-digest v1.0.0-rc1
 github.com/opencontainers/go-digest
 # github.com/opencontainers/image-spec v1.0.1
-github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
+github.com/opencontainers/image-spec/specs-go
 # github.com/opencontainers/runc v0.1.1
 github.com/opencontainers/runc/libcontainer/user
 # github.com/oracle/oci-go-sdk v12.5.0+incompatible
 github.com/oracle/oci-go-sdk/common
 github.com/oracle/oci-go-sdk/common/auth
-github.com/oracle/oci-go-sdk/keymanagement
 github.com/oracle/oci-go-sdk/objectstorage
+github.com/oracle/oci-go-sdk/keymanagement
 # github.com/ory/dockertest v3.3.5+incompatible
 github.com/ory/dockertest
 github.com/ory/dockertest/docker
@@ -602,23 +659,23 @@ github.com/ory/dockertest/docker/opts
 github.com/ory/dockertest/docker/pkg/archive
 github.com/ory/dockertest/docker/pkg/fileutils
 github.com/ory/dockertest/docker/pkg/homedir
+github.com/ory/dockertest/docker/pkg/jsonmessage
+github.com/ory/dockertest/docker/pkg/stdcopy
+github.com/ory/dockertest/docker/types/registry
+github.com/ory/dockertest/docker/types
 github.com/ory/dockertest/docker/pkg/idtools
 github.com/ory/dockertest/docker/pkg/ioutils
-github.com/ory/dockertest/docker/pkg/jsonmessage
 github.com/ory/dockertest/docker/pkg/longpath
-github.com/ory/dockertest/docker/pkg/mount
 github.com/ory/dockertest/docker/pkg/pools
-github.com/ory/dockertest/docker/pkg/stdcopy
 github.com/ory/dockertest/docker/pkg/system
 github.com/ory/dockertest/docker/pkg/term
-github.com/ory/dockertest/docker/pkg/term/windows
-github.com/ory/dockertest/docker/types
-github.com/ory/dockertest/docker/types/blkiodev
 github.com/ory/dockertest/docker/types/container
 github.com/ory/dockertest/docker/types/filters
 github.com/ory/dockertest/docker/types/mount
 github.com/ory/dockertest/docker/types/network
-github.com/ory/dockertest/docker/types/registry
+github.com/ory/dockertest/docker/pkg/mount
+github.com/ory/dockertest/docker/pkg/term/windows
+github.com/ory/dockertest/docker/types/blkiodev
 github.com/ory/dockertest/docker/types/strslice
 github.com/ory/dockertest/docker/types/versions
 # github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -632,31 +689,31 @@ github.com/pkg/errors
 github.com/pmezard/go-difflib/difflib
 # github.com/posener/complete v1.2.1
 github.com/posener/complete
-github.com/posener/complete/cmd
 github.com/posener/complete/cmd/install
+github.com/posener/complete/cmd
 github.com/posener/complete/match
 # github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35
 github.com/pquerna/cachecontrol
 github.com/pquerna/cachecontrol/cacheobject
 # github.com/pquerna/otp v1.2.1-0.20191009055518-468c2dd2b58d
 github.com/pquerna/otp
-github.com/pquerna/otp/hotp
 github.com/pquerna/otp/totp
+github.com/pquerna/otp/hotp
 # github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829
 github.com/prometheus/client_golang/prometheus
-github.com/prometheus/client_golang/prometheus/internal
 github.com/prometheus/client_golang/prometheus/push
+github.com/prometheus/client_golang/prometheus/internal
 # github.com/prometheus/client_model v0.0.0-20190115171406-56726106282f
 github.com/prometheus/client_model/go
 # github.com/prometheus/common v0.2.0
 github.com/prometheus/common/expfmt
-github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
 github.com/prometheus/common/model
+github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
 # github.com/prometheus/procfs v0.0.0-20190117184657-bf6a532e95b1
 github.com/prometheus/procfs
-github.com/prometheus/procfs/internal/util
 github.com/prometheus/procfs/nfs
 github.com/prometheus/procfs/xfs
+github.com/prometheus/procfs/internal/util
 # github.com/ryanuber/columnize v2.1.0+incompatible
 github.com/ryanuber/columnize
 # github.com/ryanuber/go-glob v1.0.0
@@ -669,10 +726,10 @@ github.com/satori/go.uuid
 github.com/shirou/gopsutil/cpu
 github.com/shirou/gopsutil/disk
 github.com/shirou/gopsutil/host
-github.com/shirou/gopsutil/internal/common
 github.com/shirou/gopsutil/mem
-github.com/shirou/gopsutil/net
+github.com/shirou/gopsutil/internal/common
 github.com/shirou/gopsutil/process
+github.com/shirou/gopsutil/net
 # github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4
 github.com/shirou/w32
 # github.com/sirupsen/logrus v1.4.2
@@ -686,118 +743,135 @@ github.com/tv42/httpunix
 github.com/ugorji/go/codec
 # github.com/ulikunitz/xz v0.5.6
 github.com/ulikunitz/xz
-github.com/ulikunitz/xz/internal/hash
 github.com/ulikunitz/xz/internal/xlog
 github.com/ulikunitz/xz/lzma
+github.com/ulikunitz/xz/internal/hash
 # github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 github.com/xi2/xz
 # go.etcd.io/bbolt v1.3.2
 go.etcd.io/bbolt
 # go.etcd.io/etcd v0.0.0-20190412021913-f29b1ada1971
-go.etcd.io/etcd/auth/authpb
 go.etcd.io/etcd/client
 go.etcd.io/etcd/clientv3
+go.etcd.io/etcd/clientv3/concurrency
+go.etcd.io/etcd/pkg/transport
+go.etcd.io/etcd/pkg/pathutil
+go.etcd.io/etcd/pkg/srv
+go.etcd.io/etcd/pkg/types
+go.etcd.io/etcd/version
+go.etcd.io/etcd/auth/authpb
 go.etcd.io/etcd/clientv3/balancer
 go.etcd.io/etcd/clientv3/balancer/picker
 go.etcd.io/etcd/clientv3/balancer/resolver/endpoint
-go.etcd.io/etcd/clientv3/concurrency
 go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes
 go.etcd.io/etcd/etcdserver/etcdserverpb
 go.etcd.io/etcd/mvcc/mvccpb
 go.etcd.io/etcd/pkg/logutil
-go.etcd.io/etcd/pkg/pathutil
-go.etcd.io/etcd/pkg/srv
-go.etcd.io/etcd/pkg/systemd
 go.etcd.io/etcd/pkg/tlsutil
-go.etcd.io/etcd/pkg/transport
-go.etcd.io/etcd/pkg/types
+go.etcd.io/etcd/pkg/systemd
 go.etcd.io/etcd/raft
 go.etcd.io/etcd/raft/raftpb
-go.etcd.io/etcd/version
 # go.opencensus.io v0.21.0
-go.opencensus.io
-go.opencensus.io/internal
-go.opencensus.io/internal/tagencoding
-go.opencensus.io/metric/metricdata
-go.opencensus.io/metric/metricproducer
-go.opencensus.io/plugin/ocgrpc
+go.opencensus.io/stats
+go.opencensus.io/stats/view
 go.opencensus.io/plugin/ochttp
+<<<<<<< HEAD
 go.opencensus.io/plugin/ochttp/propagation/b3
 go.opencensus.io/resource
 go.opencensus.io/stats
-go.opencensus.io/stats/internal
-go.opencensus.io/stats/view
-go.opencensus.io/tag
+=======
+go.opencensus.io/plugin/ochttp/propagation/tracecontext
 go.opencensus.io/trace
-go.opencensus.io/trace/internal
+go.opencensus.io/metric/metricdata
+>>>>>>> Add TLS options per Nomad backend
+go.opencensus.io/stats/internal
+go.opencensus.io/tag
+go.opencensus.io/internal/tagencoding
+go.opencensus.io/metric/metricproducer
+go.opencensus.io/plugin/ocgrpc
+go.opencensus.io/plugin/ochttp/propagation/b3
 go.opencensus.io/trace/propagation
+go.opencensus.io
+go.opencensus.io/resource
 go.opencensus.io/trace/tracestate
+go.opencensus.io/internal
+go.opencensus.io/trace/internal
 # go.uber.org/atomic v1.4.0
 go.uber.org/atomic
 # go.uber.org/multierr v1.1.0
 go.uber.org/multierr
 # go.uber.org/zap v1.9.1
 go.uber.org/zap
-go.uber.org/zap/buffer
+go.uber.org/zap/zapcore
 go.uber.org/zap/internal/bufferpool
+go.uber.org/zap/buffer
 go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
-go.uber.org/zap/zapcore
 # golang.org/x/crypto v0.0.0-20191106202628-ed6320f186d4
 golang.org/x/crypto/bcrypt
-golang.org/x/crypto/blake2b
-golang.org/x/crypto/blowfish
-golang.org/x/crypto/chacha20poly1305
 golang.org/x/crypto/cryptobyte
 golang.org/x/crypto/cryptobyte/asn1
-golang.org/x/crypto/curve25519
 golang.org/x/crypto/ed25519
-golang.org/x/crypto/ed25519/internal/edwards25519
-golang.org/x/crypto/hkdf
-golang.org/x/crypto/internal/chacha20
-golang.org/x/crypto/internal/subtle
-golang.org/x/crypto/md4
-golang.org/x/crypto/pbkdf2
-golang.org/x/crypto/pkcs12
-golang.org/x/crypto/pkcs12/internal/rc2
-golang.org/x/crypto/poly1305
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/agent
+golang.org/x/crypto/curve25519
 golang.org/x/crypto/ssh/terminal
+golang.org/x/crypto/blowfish
+golang.org/x/crypto/md4
+golang.org/x/crypto/ed25519/internal/edwards25519
+golang.org/x/crypto/internal/chacha20
+golang.org/x/crypto/poly1305
+golang.org/x/crypto/chacha20poly1305
+golang.org/x/crypto/hkdf
+golang.org/x/crypto/pbkdf2
+golang.org/x/crypto/blake2b
+golang.org/x/crypto/pkcs12
+golang.org/x/crypto/internal/subtle
+golang.org/x/crypto/pkcs12/internal/rc2
 # golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
-golang.org/x/net/context
-golang.org/x/net/context/ctxhttp
-golang.org/x/net/http/httpguts
-golang.org/x/net/http/httpproxy
-golang.org/x/net/http2
-golang.org/x/net/http2/hpack
 golang.org/x/net/idna
-golang.org/x/net/internal/timeseries
+golang.org/x/net/http/httpproxy
+golang.org/x/net/context
+golang.org/x/net/http2
+golang.org/x/net/http/httpguts
+golang.org/x/net/http2/hpack
 golang.org/x/net/trace
+<<<<<<< HEAD
 # golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+=======
+golang.org/x/net/context/ctxhttp
+golang.org/x/net/internal/timeseries
+# golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
+>>>>>>> Add TLS options per Nomad backend
 golang.org/x/oauth2
-golang.org/x/oauth2/clientcredentials
-golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
-golang.org/x/oauth2/jws
+golang.org/x/oauth2/google
 golang.org/x/oauth2/jwt
+<<<<<<< HEAD
+=======
+golang.org/x/oauth2/jws
+golang.org/x/oauth2/clientcredentials
+# golang.org/x/sync v0.0.0-20190423024810-112230192c58
+golang.org/x/sync/semaphore
+>>>>>>> Add TLS options per Nomad backend
 # golang.org/x/sys v0.0.0-20191008105621-543471e840be
-golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
+golang.org/x/sys/cpu
 # golang.org/x/text v0.3.2
+golang.org/x/text/secure/bidirule
+golang.org/x/text/unicode/bidi
+golang.org/x/text/unicode/norm
+golang.org/x/text/transform
+golang.org/x/text/encoding/unicode
 golang.org/x/text/encoding
 golang.org/x/text/encoding/internal
 golang.org/x/text/encoding/internal/identifier
-golang.org/x/text/encoding/unicode
 golang.org/x/text/internal/utf8internal
 golang.org/x/text/runes
-golang.org/x/text/secure/bidirule
-golang.org/x/text/transform
-golang.org/x/text/unicode/bidi
-golang.org/x/text/unicode/norm
 # golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 golang.org/x/time/rate
+<<<<<<< HEAD
 # google.golang.org/api v0.14.0
 google.golang.org/api/cloudresourcemanager/v1
 google.golang.org/api/compute/v1
@@ -808,53 +882,86 @@ google.golang.org/api/internal
 google.golang.org/api/internal/gensupport
 google.golang.org/api/internal/third_party/uritemplates
 google.golang.org/api/iterator
-google.golang.org/api/oauth2/v2
+=======
+# google.golang.org/api v0.5.0
 google.golang.org/api/option
-google.golang.org/api/storage/v1
+google.golang.org/api/iam/v1
+google.golang.org/api/googleapi
+google.golang.org/api/iterator
 google.golang.org/api/transport
-google.golang.org/api/transport/grpc
+google.golang.org/api/cloudresourcemanager/v1
+google.golang.org/api/compute/v1
+google.golang.org/api/internal
+>>>>>>> Add TLS options per Nomad backend
+google.golang.org/api/oauth2/v2
+google.golang.org/api/gensupport
 google.golang.org/api/transport/http
+google.golang.org/api/storage/v1
+<<<<<<< HEAD
+google.golang.org/api/transport
+=======
+google.golang.org/api/googleapi/internal/uritemplates
+>>>>>>> Add TLS options per Nomad backend
+google.golang.org/api/transport/grpc
+google.golang.org/api/googleapi/transport
 google.golang.org/api/transport/http/internal/propagation
+google.golang.org/api/support/bundler
 # google.golang.org/appengine v1.6.0
-google.golang.org/appengine
 google.golang.org/appengine/cloudsql
+google.golang.org/appengine/urlfetch
+google.golang.org/appengine
+google.golang.org/appengine/socket
 google.golang.org/appengine/internal
+google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/internal/app_identity
+google.golang.org/appengine/internal/modules
+google.golang.org/appengine/internal/socket
 google.golang.org/appengine/internal/base
 google.golang.org/appengine/internal/datastore
 google.golang.org/appengine/internal/log
-google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/remote_api
-google.golang.org/appengine/internal/socket
-google.golang.org/appengine/internal/urlfetch
-google.golang.org/appengine/socket
-google.golang.org/appengine/urlfetch
 # google.golang.org/genproto v0.0.0-20190801165951-fa694d86fc64
+<<<<<<< HEAD
 google.golang.org/genproto/googleapis/api
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/api/distribution
 google.golang.org/genproto/googleapis/api/label
+=======
+google.golang.org/genproto/googleapis/cloud/kms/v1
+>>>>>>> Add TLS options per Nomad backend
 google.golang.org/genproto/googleapis/api/metric
 google.golang.org/genproto/googleapis/api/monitoredres
-google.golang.org/genproto/googleapis/cloud/kms/v1
-google.golang.org/genproto/googleapis/iam/v1
 google.golang.org/genproto/googleapis/monitoring/v3
-google.golang.org/genproto/googleapis/rpc/code
-google.golang.org/genproto/googleapis/rpc/errdetails
-google.golang.org/genproto/googleapis/rpc/status
-google.golang.org/genproto/googleapis/spanner/v1
-google.golang.org/genproto/googleapis/type/expr
+google.golang.org/genproto/googleapis/api/distribution
 google.golang.org/genproto/protobuf/field_mask
+google.golang.org/genproto/googleapis/iam/v1
+google.golang.org/genproto/googleapis/rpc/errdetails
+google.golang.org/genproto/googleapis/spanner/v1
+google.golang.org/genproto/googleapis/rpc/status
+google.golang.org/genproto/googleapis/api/annotations
+google.golang.org/genproto/googleapis/api
+google.golang.org/genproto/googleapis/api/label
+google.golang.org/genproto/googleapis/rpc/code
+google.golang.org/genproto/googleapis/type/expr
+google.golang.org/genproto/googleapis/api/httpbody
 # google.golang.org/grpc v1.22.0
+google.golang.org/grpc/grpclog
+google.golang.org/grpc/codes
 google.golang.org/grpc
+google.golang.org/grpc/keepalive
+google.golang.org/grpc/status
+google.golang.org/grpc/metadata
+google.golang.org/grpc/credentials
 google.golang.org/grpc/balancer
+<<<<<<< HEAD
 google.golang.org/grpc/balancer/base
 google.golang.org/grpc/balancer/grpclb
 google.golang.org/grpc/balancer/grpclb/grpc_lb_v1
+=======
+>>>>>>> Add TLS options per Nomad backend
 google.golang.org/grpc/balancer/roundrobin
-google.golang.org/grpc/binarylog/grpc_binarylog_v1
-google.golang.org/grpc/codes
 google.golang.org/grpc/connectivity
+<<<<<<< HEAD
 google.golang.org/grpc/credentials
 google.golang.org/grpc/credentials/alts
 google.golang.org/grpc/credentials/alts/internal
@@ -866,11 +973,10 @@ google.golang.org/grpc/credentials/alts/internal/proto/grpc_gcp
 google.golang.org/grpc/credentials/google
 google.golang.org/grpc/credentials/internal
 google.golang.org/grpc/credentials/oauth
+=======
+>>>>>>> Add TLS options per Nomad backend
 google.golang.org/grpc/encoding
 google.golang.org/grpc/encoding/proto
-google.golang.org/grpc/grpclog
-google.golang.org/grpc/health
-google.golang.org/grpc/health/grpc_health_v1
 google.golang.org/grpc/internal
 google.golang.org/grpc/internal/backoff
 google.golang.org/grpc/internal/balancerload
@@ -879,10 +985,7 @@ google.golang.org/grpc/internal/channelz
 google.golang.org/grpc/internal/envconfig
 google.golang.org/grpc/internal/grpcrand
 google.golang.org/grpc/internal/grpcsync
-google.golang.org/grpc/internal/syscall
 google.golang.org/grpc/internal/transport
-google.golang.org/grpc/keepalive
-google.golang.org/grpc/metadata
 google.golang.org/grpc/naming
 google.golang.org/grpc/peer
 google.golang.org/grpc/resolver
@@ -890,8 +993,14 @@ google.golang.org/grpc/resolver/dns
 google.golang.org/grpc/resolver/passthrough
 google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
-google.golang.org/grpc/status
 google.golang.org/grpc/tap
+google.golang.org/grpc/health
+google.golang.org/grpc/health/grpc_health_v1
+google.golang.org/grpc/credentials/internal
+google.golang.org/grpc/credentials/oauth
+google.golang.org/grpc/balancer/base
+google.golang.org/grpc/binarylog/grpc_binarylog_v1
+google.golang.org/grpc/internal/syscall
 # gopkg.in/inf.v0 v0.9.1
 gopkg.in/inf.v0
 # gopkg.in/ini.v1 v1.42.0
@@ -908,43 +1017,43 @@ gopkg.in/jcmturner/rpc.v1/ndr
 # gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 gopkg.in/mgo.v2
 gopkg.in/mgo.v2/bson
-gopkg.in/mgo.v2/internal/json
 gopkg.in/mgo.v2/internal/sasl
 gopkg.in/mgo.v2/internal/scram
+gopkg.in/mgo.v2/internal/json
 # gopkg.in/ory-am/dockertest.v3 v3.3.4
 gopkg.in/ory-am/dockertest.v3
 # gopkg.in/square/go-jose.v2 v2.3.1
-gopkg.in/square/go-jose.v2
-gopkg.in/square/go-jose.v2/cipher
-gopkg.in/square/go-jose.v2/json
 gopkg.in/square/go-jose.v2/jwt
+gopkg.in/square/go-jose.v2
+gopkg.in/square/go-jose.v2/json
+gopkg.in/square/go-jose.v2/cipher
 # gopkg.in/yaml.v2 v2.2.2
 gopkg.in/yaml.v2
 # k8s.io/api v0.0.0-20190409092523-d687e77c8ae9
 k8s.io/api/authentication/v1
 # k8s.io/apimachinery v0.0.0-20190409092423-760d1845f48b
 k8s.io/apimachinery/pkg/api/errors
-k8s.io/apimachinery/pkg/api/resource
 k8s.io/apimachinery/pkg/apis/meta/v1
-k8s.io/apimachinery/pkg/conversion
-k8s.io/apimachinery/pkg/conversion/queryparams
-k8s.io/apimachinery/pkg/fields
-k8s.io/apimachinery/pkg/labels
 k8s.io/apimachinery/pkg/runtime
 k8s.io/apimachinery/pkg/runtime/schema
-k8s.io/apimachinery/pkg/selection
 k8s.io/apimachinery/pkg/types
-k8s.io/apimachinery/pkg/util/errors
+k8s.io/apimachinery/pkg/util/validation/field
+k8s.io/apimachinery/pkg/api/resource
+k8s.io/apimachinery/pkg/conversion
+k8s.io/apimachinery/pkg/fields
+k8s.io/apimachinery/pkg/labels
+k8s.io/apimachinery/pkg/selection
 k8s.io/apimachinery/pkg/util/intstr
+k8s.io/apimachinery/pkg/util/runtime
+k8s.io/apimachinery/pkg/watch
+k8s.io/apimachinery/pkg/conversion/queryparams
+k8s.io/apimachinery/pkg/util/errors
 k8s.io/apimachinery/pkg/util/json
 k8s.io/apimachinery/pkg/util/naming
-k8s.io/apimachinery/pkg/util/net
-k8s.io/apimachinery/pkg/util/runtime
 k8s.io/apimachinery/pkg/util/sets
-k8s.io/apimachinery/pkg/util/validation
-k8s.io/apimachinery/pkg/util/validation/field
-k8s.io/apimachinery/pkg/watch
 k8s.io/apimachinery/third_party/forked/golang/reflect
+k8s.io/apimachinery/pkg/util/validation
+k8s.io/apimachinery/pkg/util/net
 # k8s.io/klog v0.0.0-20190306015804-8e90cee79f82
 k8s.io/klog
 # layeh.com/radius v0.0.0-20190322222518-890bc1058917
