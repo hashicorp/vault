@@ -178,7 +178,7 @@ These metrics relate to internal operations on Merkle Trees and Write Ahead Logs
 
 ## Replication Metrics
 
-These metrics relate to [Vault Enterprise Replication](https://www.vaultproject.io/docs/enterprise/replication/index.html).
+These metrics relate to [Vault Enterprise Replication](https://www.vaultproject.io/docs/enterprise/replication/index.html). The following metrics are not available in telemetry unless replication is in an unhealthy state: `replication.fetchRemoteKeys`, `replication.merkleDiff`, and `replication.merkleSync`.
 
 | Metric | Description | Unit | Type |
 | :----- | :---------- | :--- | :--- |
