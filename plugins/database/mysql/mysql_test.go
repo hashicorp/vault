@@ -384,7 +384,7 @@ func TestMySQL_Initialize_ReservedChars(t *testing.T) {
 	db := new(MetadataLen, MetadataLen, UsernameLen)
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
-		t.Fatalf("Type: %s; connURL: %s; err: %s", db.SQLConnectionProducer.Type, db.ConnectionURL, err)
+		t.Fatalf("err: %s", err)
 	}
 
 	if !db.Initialized {
