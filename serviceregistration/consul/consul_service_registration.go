@@ -267,6 +267,8 @@ func setupTLSConfig(conf map[string]string, address string) (*tls.Config, error)
 		}
 
 		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
+	} else if okCert || okKey {
+		return nil, fmt.Errorf("both tls_cert_file and tls_key_file must be provided")
 	}
 
 	if tlsCaFile, ok := conf["tls_ca_file"]; ok {
