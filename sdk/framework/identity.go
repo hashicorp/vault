@@ -4,10 +4,14 @@ import (
 	"errors"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/helper/identity"
+	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// PopulateIdentityTemplate takes a template string, an entity ID, and an
+// instance of system view. It will query system view for information about the
+// entity and use the resulting identity information to populate the template
+// string.
 func PopulateIdentityTemplate(tpl string, entityID string, sysView logical.SystemView) (string, error) {
 	entity, err := sysView.EntityInfo(entityID)
 	if err != nil {
@@ -22,15 +26,14 @@ func PopulateIdentityTemplate(tpl string, entityID string, sysView logical.Syste
 		return "", err
 	}
 
-	// TODO: Namespace bound?
-	input := identity.PopulateStringInput{
+	input := identitytpl.PopulateStringInput{
 		String: tpl,
 		Entity: entity,
 		Groups: groups,
-		Mode:   identity.ACLTemplating,
+		Mode:   identitytpl.ACLTemplating,
 	}
 
-	_, out, err := identity.PopulateString(input)
+	_, out, err := identitytpl.PopulateString(input)
 	if err != nil {
 		return "", err
 	}
@@ -38,9 +41,11 @@ func PopulateIdentityTemplate(tpl string, entityID string, sysView logical.Syste
 	return out, nil
 }
 
+// ValidateIdentityTemplate takes a template string and returns if the string is
+// a valid identity template.
 func ValidateIdentityTemplate(tpl string) (bool, error) {
-	hasTemplating, _, err := identity.PopulateString(identity.PopulateStringInput{
-		Mode:              identity.ACLTemplating,
+	hasTemplating, _, err := identitytpl.PopulateString(identitytpl.PopulateStringInput{
+		Mode:              identitytpl.ACLTemplating,
 		ValidityCheckOnly: true,
 		String:            tpl,
 	})

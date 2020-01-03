@@ -16,13 +16,13 @@ message Entity {
 
 	// Metadata represents the custom data tied to this entity
 	map<string, string> metadata = 4;
-    
-    // Disabled is true if the entity is disabled.
-    bool disabled = 5;
+	
+	// Disabled is true if the entity is disabled.
+	bool disabled = 5;
 
-    // NamespaceID is the identifier of the namespace to which this entity
+	// NamespaceID is the identifier of the namespace to which this entity
 	// belongs to. 
-    string namespace_id = 6;
+	string namespace_id = 6;
 }
 
 message Alias {
@@ -42,7 +42,7 @@ message Alias {
 	// ID is the unique identifier for the alias
 	string ID = 5;
 
-    // NamespaceID is the identifier of the namespace to which this alias
+	// NamespaceID is the identifier of the namespace to which this alias
 	// belongs.
 	string namespace_id = 6;
 }

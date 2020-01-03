@@ -1,4 +1,4 @@
-package identity
+package identitytpl
 
 import (
 	"encoding/json"

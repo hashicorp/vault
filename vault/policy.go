@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/hclutil"
-	identitytpl "github.com/hashicorp/vault/sdk/helper/identity"
+	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/copystructure"
 )
