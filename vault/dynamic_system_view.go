@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/license"
@@ -267,20 +268,17 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 
 	aliases := make([]*logical.Alias, len(entity.Aliases))
 	for i, a := range entity.Aliases {
-		alias := &logical.Alias{
-			MountAccessor: a.MountAccessor,
-			Name:          a.Name,
+
+		// Don't return aliases from other namespaces
+		if a.NamespaceID != d.mountEntry.NamespaceID {
+			continue
 		}
+
+		alias := identity.ToSDKAlias(a)
+
 		// MountType is not stored with the entity and must be looked up
 		if mount := d.core.router.validateMountByAccessor(a.MountAccessor); mount != nil {
 			alias.MountType = mount.MountType
-		}
-
-		if a.Metadata != nil {
-			alias.Metadata = make(map[string]string, len(a.Metadata))
-			for k, v := range a.Metadata {
-				alias.Metadata[k] = v
-			}
 		}
 
 		aliases[i] = alias
@@ -288,6 +286,40 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 	ret.Aliases = aliases
 
 	return ret, nil
+}
+
+func (d dynamicSystemView) GroupsForEntity(entityID string) ([]*logical.Group, error) {
+	// Requests from token created from the token backend will not have entity information.
+	// Return missing entity instead of error when requesting from MemDB.
+	if entityID == "" {
+		return nil, nil
+	}
+
+	if d.core == nil {
+		return nil, fmt.Errorf("system view core is nil")
+	}
+	if d.core.identityStore == nil {
+		return nil, fmt.Errorf("system view identity store is nil")
+	}
+
+	groups, inheritedGroups, err := d.core.identityStore.groupsByEntityID(entityID)
+	if err != nil {
+		return nil, err
+	}
+
+	groups = append(groups, inheritedGroups...)
+
+	logicalGroups := make([]*logical.Group, len(groups))
+	for i, g := range groups {
+		// Don't return groups from other namespaces
+		if g.NamespaceID != d.mountEntry.NamespaceID {
+			continue
+		}
+
+		logicalGroups[i] = identity.ToSDKGroup(g)
+	}
+
+	return logicalGroups, nil
 }
 
 func (d dynamicSystemView) PluginEnv(_ context.Context) (*logical.PluginEnvironment, error) {
