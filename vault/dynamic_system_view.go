@@ -102,7 +102,7 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 
 	// Construct the corresponding ACL object. Derive and use a new context that
 	// uses the req.ClientToken's namespace
-	acl, err := e.core.policyStore.ACL(tokenCtx, entity, policies)
+	acl, err := e.core.policyStore.ACL(tokenCtx, te, entity, policies)
 	if err != nil {
 		e.core.logger.Error("failed to retrieve ACL for token's policies", "token_policies", te.Policies, "error", err)
 		return false
