@@ -572,7 +572,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	}
 
 	join := func(retry bool) error {
-		c.logger.Info("raft join attempt initiated")
 		joinLeader := func(leaderInfo *raft.LeaderJoinInfo) error {
 			if leaderInfo == nil {
 				return errors.New("raft leader information is nil")

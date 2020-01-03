@@ -144,11 +144,11 @@ func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
 	var leaderInfos []*LeaderJoinInfo
 	err := jsonutil.DecodeJSON([]byte(config), &leaderInfos)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to decode retry join leader configuration: {{err}}", err)
+		return nil, errwrap.Wrapf("failed to decode retry_join config: {{err}}", err)
 	}
 
 	if len(leaderInfos) == 0 {
-		return nil, errors.New("invalid retry join blocks")
+		return nil, errors.New("invalid retry_join config")
 	}
 
 	for _, info := range leaderInfos {

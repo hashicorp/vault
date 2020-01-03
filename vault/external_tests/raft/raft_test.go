@@ -56,18 +56,17 @@ func TestRaft_Retry_Join(t *testing.T) {
 		vault.TestWaitActive(t, leaderCore.Core)
 	}
 
-	leaderInfo := &raft.LeaderJoinInfo{
-		LeaderAPIAddr: leaderAPI,
-		TLSConfig:     leaderCore.TLSConfig,
-		Retry:         true,
+	leaderInfos := []*raft.LeaderJoinInfo{
+		&raft.LeaderJoinInfo{
+			LeaderAPIAddr: leaderAPI,
+			TLSConfig:     leaderCore.TLSConfig,
+			Retry:         true,
+		},
 	}
 
 	{
 		core := cluster.Cores[1]
 		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		leaderInfos := []*raft.LeaderJoinInfo{
-			leaderInfo,
-		}
 		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
 		if err != nil {
 			t.Fatal(err)
@@ -81,9 +80,6 @@ func TestRaft_Retry_Join(t *testing.T) {
 	{
 		core := cluster.Cores[2]
 		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		leaderInfos := []*raft.LeaderJoinInfo{
-			leaderInfo,
-		}
 		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
 		if err != nil {
 			t.Fatal(err)

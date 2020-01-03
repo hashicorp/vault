@@ -1047,7 +1047,7 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 
 			atomic.StoreUint32(c.postUnsealStarted, 1)
 
-			c.logger.Info("wait for raft retry join process to complete")
+			c.logger.Info("waiting for raft retry join process to complete")
 			<-c.raftJoinDoneCh
 
 		default:
