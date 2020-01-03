@@ -266,8 +266,8 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 		}
 	}
 
-	aliases := make([]*logical.Alias, len(entity.Aliases))
-	for i, a := range entity.Aliases {
+	aliases := make([]*logical.Alias, 0, len(entity.Aliases))
+	for _, a := range entity.Aliases {
 
 		// Don't return aliases from other namespaces
 		if a.NamespaceID != d.mountEntry.NamespaceID {
@@ -281,7 +281,7 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 			alias.MountType = mount.MountType
 		}
 
-		aliases[i] = alias
+		aliases = append(aliases, alias)
 	}
 	ret.Aliases = aliases
 
@@ -309,14 +309,14 @@ func (d dynamicSystemView) GroupsForEntity(entityID string) ([]*logical.Group, e
 
 	groups = append(groups, inheritedGroups...)
 
-	logicalGroups := make([]*logical.Group, len(groups))
-	for i, g := range groups {
+	logicalGroups := make([]*logical.Group, 0, len(groups))
+	for _, g := range groups {
 		// Don't return groups from other namespaces
 		if g.NamespaceID != d.mountEntry.NamespaceID {
 			continue
 		}
 
-		logicalGroups[i] = identity.ToSDKGroup(g)
+		logicalGroups = append(logicalGroups, identity.ToSDKGroup(g))
 	}
 
 	return logicalGroups, nil
