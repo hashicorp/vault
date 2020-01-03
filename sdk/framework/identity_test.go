@@ -18,12 +18,12 @@ func TestIdentityTemplating(t *testing.T) {
 					MountAccessor: "test_mount",
 					MountType:     "secret",
 					Metadata: map[string]string{
-						"alias-metadata": "metadata-value",
+						"alias-metadata": "alias-metadata-value",
 					},
 				},
 			},
 			Metadata: map[string]string{
-				"entity-metadata": "metadata-value",
+				"entity-metadata": "entity-metadata-value",
 			},
 		},
 		GroupsVal: []*logical.Group{
@@ -31,7 +31,7 @@ func TestIdentityTemplating(t *testing.T) {
 				ID:   "group1-id",
 				Name: "group1",
 				Metadata: map[string]string{
-					"group-metadata": "metadata-value",
+					"group-metadata": "group-metadata-value",
 				},
 			},
 		},
@@ -51,7 +51,7 @@ func TestIdentityTemplating(t *testing.T) {
 		},
 		{
 			tpl:      "{{identity.entity.metadata.entity-metadata}}",
-			expected: "metadata-value",
+			expected: "entity-metadata-value",
 		},
 		{
 			tpl:      "{{identity.entity.aliases.test_mount.id}}",
@@ -67,7 +67,7 @@ func TestIdentityTemplating(t *testing.T) {
 		},
 		{
 			tpl:      "{{identity.entity.aliases.test_mount.metadata.alias-metadata}}",
-			expected: "metadata-value",
+			expected: "alias-metadata-value",
 		},
 		{
 			tpl:      "{{identity.groups.ids.group1-id.name}}",
@@ -79,11 +79,11 @@ func TestIdentityTemplating(t *testing.T) {
 		},
 		{
 			tpl:      "{{identity.groups.names.group1.metadata.group-metadata}}",
-			expected: "metadata-value",
+			expected: "group-metadata-value",
 		},
 		{
 			tpl:      "{{identity.groups.ids.group1-id.metadata.group-metadata}}",
-			expected: "metadata-value",
+			expected: "group-metadata-value",
 		},
 	}
 

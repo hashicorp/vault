@@ -600,7 +600,7 @@ service SystemView {
 	// PluginEnv returns Vault environment information used by plugins
 	rpc PluginEnv(Empty) returns (PluginEnvReply);
 
-	// GroupsForEntity returns the group membersship information for the given
+	// GroupsForEntity returns the group membership information for the given
 	// entity id
 	rpc GroupsForEntity(EntityInfoArgs) returns (GroupsForEntityReply);
 }
