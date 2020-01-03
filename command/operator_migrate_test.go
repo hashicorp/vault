@@ -1,14 +1,18 @@
+// +build !race
+
 package command
 
 import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -59,6 +63,46 @@ func TestMigration(t *testing.T) {
 
 		cmd := OperatorMigrateCommand{
 			logger: log.NewNullLogger(),
+			flagConcurrency: 1,
+		}
+		if err := cmd.migrateAll(context.Background(), from, to); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := compareStoredData(to, data, ""); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("Concurrent migration", func(t *testing.T) {
+		data := generateData()
+
+		fromFactory := physicalBackends["file"]
+
+		folder := filepath.Join(os.TempDir(), testhelpers.RandomWithPrefix("migrator"))
+		defer os.RemoveAll(folder)
+		confFrom := map[string]string{
+			"path": folder,
+		}
+
+		from, err := fromFactory(confFrom, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := storeData(from, data); err != nil {
+			t.Fatal(err)
+		}
+
+		toFactory := physicalBackends["inmem"]
+		confTo := map[string]string{}
+		to, err := toFactory(confTo, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := OperatorMigrateCommand{
+			logger: log.NewNullLogger(),
+			flagConcurrency: 4,
 		}
 		if err := cmd.migrateAll(context.Background(), from, to); err != nil {
 			t.Fatal(err)
@@ -99,6 +143,7 @@ func TestMigration(t *testing.T) {
 		cmd := OperatorMigrateCommand{
 			logger:    log.NewNullLogger(),
 			flagStart: start,
+			flagConcurrency: 1,
 		}
 		if err := cmd.migrateAll(context.Background(), from, to); err != nil {
 			t.Fatal(err)
@@ -205,21 +250,63 @@ storage_destination "dest_type2" {
 		storeData(s, data)
 
 		l := randomLister{s}
-
 		var out []string
+		mutex := sync.Mutex{}
 		dfsScan(context.Background(), l, func(ctx context.Context, path string) error {
+			mutex.Lock()
 			out = append(out, path)
+			mutex.Unlock()
 			return nil
-		}, sync.WaitGroup{})
+		}, &migratorVisited{m: make(map[string]bool), s: make(semaphore, 1)})
 
 		delete(data, trailing_slash_key)
 		delete(data, "")
+
 
 		var keys []string
 		for key := range data {
 			keys = append(keys, key)
 		}
 		sort.Strings(keys)
+		sort.Strings(out)
+		if !reflect.DeepEqual(keys, out) {
+			t.Fatalf("expected equal: %v, %v", keys, out)
+		}
+	})
+
+	t.Run("Concurrent DFS Scan limits number of goroutines", func(t *testing.T) {
+		s, _ := physicalBackends["inmem"](map[string]string{}, nil)
+
+		data := generateData()
+		data["cc"] = []byte{}
+		data["c/d/e/f"] = []byte{}
+		data["c/d/e/g"] = []byte{}
+		data["c"] = []byte{}
+		storeData(s, data)
+
+		l := randomLister{s}
+		var out []string
+		mutex := sync.Mutex{}
+		concurrency := 8
+		startingGoroutines := runtime.NumGoroutine()
+		dfsScan(context.Background(), l, func(ctx context.Context, path string) error {
+			mutex.Lock()
+			out = append(out, path)
+			mutex.Unlock()
+			assert.LessOrEqual(t, runtime.NumGoroutine(), startingGoroutines + concurrency)
+			return nil
+		}, &migratorVisited{m: make(map[string]bool), s: make(semaphore, concurrency)})
+
+		delete(data, trailing_slash_key)
+		delete(data, "")
+
+
+		var keys []string
+		for key := range data {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		sort.Strings(out)
 		if !reflect.DeepEqual(keys, out) {
 			t.Fatalf("expected equal: %v, %v", keys, out)
 		}

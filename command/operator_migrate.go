@@ -37,6 +37,7 @@ type OperatorMigrateCommand struct {
 	flagConfig       string
 	flagStart        string
 	flagReset        bool
+	flagConcurrency  int
 	logger           log.Logger
 	ShutdownCh       chan struct{}
 }
@@ -45,6 +46,23 @@ type migratorConfig struct {
 	StorageSource      *server.Storage `hcl:"-"`
 	StorageDestination *server.Storage `hcl:"-"`
 	ClusterAddr        string          `hcl:"cluster_addr"`
+}
+
+// Semaphore implementation
+type empty struct {}
+type semaphore chan empty
+func(s semaphore) acquire() {
+	e := empty{}
+	s <- e
+}
+func(s semaphore) release() {
+	<-s
+}
+
+// A map of visited paths as well as a semaphore to limit concurrency
+type migratorVisited struct {
+	m map[string]bool
+	s semaphore
 }
 
 func (c *OperatorMigrateCommand) Synopsis() string {
@@ -96,6 +114,13 @@ func (c *OperatorMigrateCommand) Flags() *FlagSets {
 		Usage:  "Reset the migration lock. No migration will occur.",
 	})
 
+	f.IntVar(&IntVar{
+		Name:    "concurrency",
+		Target:  &c.flagConcurrency,
+		Default: 1,
+		Usage:   "Set the concurrency of the migration operation.",
+	})
+
 	return set
 }
 
@@ -105,6 +130,10 @@ func (c *OperatorMigrateCommand) AutocompleteArgs() complete.Predictor {
 
 func (c *OperatorMigrateCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
+}
+
+func (c *OperatorMigrateCommand) getMigratorVisited(concurrency int) migratorVisited {
+	return migratorVisited{m: make(map[string]bool), s: make(semaphore, concurrency)}
 }
 
 func (c *OperatorMigrateCommand) Run(args []string) int {
@@ -200,33 +229,27 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 
 // migrateAll copies all keys in lexicographic order.
 func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.Backend, to physical.Backend) error {
-	var wg = sync.WaitGroup{}
-	errorCh := make(chan error)
-	go func() {
-		errorCh <- dfsScan(ctx, from, func(ctx context.Context, path string) error {
-			if path < c.flagStart || path == storageMigrationLock || path == vault.CoreLockPath {
-				return nil
-			}
-
-			entry, err := from.Get(ctx, path)
-
-			if err != nil {
-				return errwrap.Wrapf("error reading entry: {{err}}", err)
-			}
-
-			if entry == nil {
-				return nil
-			}
-
-			if err := to.Put(ctx, entry); err != nil {
-				return errwrap.Wrapf("error writing entry: {{err}}", err)
-			}
-			c.logger.Info("copied key", "path", path)
+	migratorVisited := c.getMigratorVisited(c.flagConcurrency)
+	return dfsScan(ctx, from, func(ctx context.Context, path string) error {
+		if path < c.flagStart || path == storageMigrationLock || path == vault.CoreLockPath {
 			return nil
-		}, wg)
-	}()
-	wg.Wait()
-	return <-errorCh
+		}
+
+		entry, err := from.Get(ctx, path)
+		if err != nil {
+			return errwrap.Wrapf("error reading entry: {{err}}", err)
+		}
+
+		if entry == nil {
+			return nil
+		}
+
+		if err := to.Put(ctx, entry); err != nil {
+			return errwrap.Wrapf("error writing entry: {{err}}", err)
+		}
+		c.logger.Info("copied key", "path", path)
+		return nil
+	}, &migratorVisited)
 }
 
 func (c *OperatorMigrateCommand) newBackend(kind string, conf map[string]string) (physical.Backend, error) {
@@ -346,45 +369,61 @@ func parseStorage(result *migratorConfig, list *ast.ObjectList, name string) err
 
 // dfsScan will invoke cb with every key from source.
 // Keys will be traversed in lexicographic, depth-first order.
-func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.Context, path string) error, wg sync.WaitGroup) error {
+// Note that cb must be thread safe since it may be called by multiple goroutines.
+func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.Context, path string) error, migratorVisited *migratorVisited) error {
+
+	errorCh := make(chan error)
 	dfs := []string{""}
+	// This lock is used to coordinate modifications to dfs
+	dfsMutex := sync.Mutex{}
+	var wg = sync.WaitGroup{}
 
 	for l := len(dfs); l > 0; l = len(dfs) {
+		dfsMutex.Lock()
 		key := dfs[len(dfs)-1]
+		dfs = dfs[:len(dfs) - 1]
 		if key == "" || strings.HasSuffix(key, "/") {
 			children, err := source.List(ctx, key)
 			if err != nil {
-				return errwrap.Wrapf("failed to scan for children: {{err}}", err)
+				errorCh <- errwrap.Wrapf("failed to scan for children: {{err}}", err)
 			}
 			sort.Strings(children)
 
-			// remove List-triggering key and add children in reverse order
-			dfs = dfs[:len(dfs)-1]
 			for i := len(children) - 1; i >= 0; i-- {
 				if children[i] != "" {
 					dfs = append(dfs, key+children[i])
 				}
 			}
+			// Finished modifying dfs - let go of lock
+			dfsMutex.Unlock()
 		} else {
-			errorCh := make(chan error)
+			// We don't modify dfs here, so let go of lock
+			dfsMutex.Unlock()
+			migratorVisited.s.acquire()
+			_, ok := migratorVisited.m[key]
+			if ok {
+				continue
+			}
+			migratorVisited.m[key] = true
 			wg.Add(1)
 			go func() {
-				errorCh <- cb(ctx, key)
-				wg.Done()
+				defer migratorVisited.s.release()
+				defer wg.Done()
+				err := cb(ctx, key)
+				if err != nil {
+					errorCh <- err
+				}
 			}()
-
-			err := <- errorCh
-			if err != nil {
-				return err
-			}
-			dfs = dfs[:len(dfs)-1]
 		}
 
 		select {
+		case err := <-errorCh:
+			return err
 		case <-ctx.Done():
 			return nil
 		default:
 		}
 	}
+	wg.Wait()
 	return nil
 }
