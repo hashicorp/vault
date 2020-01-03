@@ -131,12 +131,12 @@ The expectation from the vendor/partner is to create a mechanism for them to tra
 Below is a checklist of steps that should be followed during the Vault integration development process. This reiterates the steps described above.
 
 * Fill out the [Vault Integration webform](https://docs.google.com/forms/d/e/1FAIpQLSfQL1uj-mL59bd2EyCPI31LT9uvVT-xKyoHAb5FKIwWwwJ1qQ/viewform)
-* Develop and test Vault integration along with the acceptance tests and documentationSend email to [email](mailto:vault-integration-dev@hashicorp.com) to schedule an initial review
+* Develop and test Vault integration along with the acceptance tests and documentation, send to vault-integration-dev@hashicorp.com, to schedule an initial review
 * Address review feedback and finalize the development process
 * Provide HashiCorp with credentials for underlying infrastructure for test purposes
-* Demo the integration and/or send the test logs to HashiCorp at: [email](mailto:vault-integration-dev@hashicorp.com)
+* Demo the integration and/or send the test logs to HashiCorp to vault-integration-dev@hashicorp.com
 * Execute HashiCorp Partner Agreement Documents, review logo guidelines, partner listing and more
-* Plan to continue supporting the integration with additional functionality and responding to customer issues.
+* Plan to continue supporting the integration with additional functionality and responding to customer issues
 
 
 ## Contact Us
