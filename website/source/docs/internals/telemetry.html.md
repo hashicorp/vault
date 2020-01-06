@@ -138,7 +138,7 @@ These operations take a request and response with an associated lease and regist
 | `vault.policy.delete_policy` | Time taken to delete a policy | ms | summary |
 | `vault.policy.set_policy` | Time taken to set a policy | ms | summary |
 | `vault.token.create` | The time taken to create a token | ms | summary |
-| `vault.token.create_root` | Number of created root tokens | token | gauge |
+| `vault.token.create_root` | Number of created root tokens | token | counter |
 | `vault.token.createAccessor` | The time taken to create a token accessor | ms | summary |
 | `vault.token.lookup` | The time taken to look up a token | ms | summary |
 | `vault.token.revoke` | Time taken to revoke a token | ms | summary |
