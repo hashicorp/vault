@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/patrickmn/go-cache"
@@ -794,11 +795,11 @@ func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity
 	// Parse and integrate the populated role template. Structural errors with the template _should_
 	// be caught during role configuration. Error found during runtime will be logged, but they will
 	// not block generation of the basic ID token. They should not be returned to the requester.
-	_, populatedTemplate, err := identity.PopulateString(identity.PopulateStringInput{
-		Mode:   identity.JSONTemplating,
+	_, populatedTemplate, err := identitytpl.PopulateString(identitytpl.PopulateStringInput{
+		Mode:   identitytpl.JSONTemplating,
 		String: template,
-		Entity: entity,
-		Groups: groups,
+		Entity: identity.ToSDKEntity(entity),
+		Groups: identity.ToSDKGroups(groups),
 		// namespace?
 	})
 
@@ -899,11 +900,11 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 
 	// Validate that template can be parsed and results in valid JSON
 	if role.Template != "" {
-		_, populatedTemplate, err := identity.PopulateString(identity.PopulateStringInput{
-			Mode:   identity.JSONTemplating,
+		_, populatedTemplate, err := identitytpl.PopulateString(identitytpl.PopulateStringInput{
+			Mode:   identitytpl.JSONTemplating,
 			String: role.Template,
-			Entity: new(identity.Entity),
-			Groups: make([]*identity.Group, 0),
+			Entity: new(logical.Entity),
+			Groups: make([]*logical.Group, 0),
 			// namespace?
 		})
 
