@@ -12,6 +12,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+* plugin: Fix issue where a plugin unwrap request potentially used an expired token [GH-8058]
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [8035]
 * ui: Change `.box-radio` height to min-height to prevent overflow issues [8065]
 

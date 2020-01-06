@@ -1,4 +1,4 @@
-package identity
+package identitytpl
 
 import (
 	"errors"
@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // intentionally != time.Now() to catch latent used of time.Now instead of
@@ -332,16 +332,16 @@ func TestPopulate_Basic(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		var entity *Entity
+		var entity *logical.Entity
 		if !test.nilEntity {
-			entity = &Entity{
+			entity = &logical.Entity{
 				ID:       "entityID",
 				Name:     test.entityName,
 				Metadata: test.metadata,
 			}
 		}
 		if test.aliasAccessor != "" {
-			entity.Aliases = []*Alias{
+			entity.Aliases = []*logical.Alias{
 				{
 					MountAccessor: test.aliasAccessor,
 					ID:            test.aliasID,
@@ -350,19 +350,19 @@ func TestPopulate_Basic(t *testing.T) {
 				},
 			}
 		}
-		var groups []*Group
+		var groups []*logical.Group
 		if test.groupName != "" {
-			groups = append(groups, &Group{
+			groups = append(groups, &logical.Group{
 				ID:          "groupID",
 				Name:        test.groupName,
 				Metadata:    test.groupMetadata,
-				NamespaceID: namespace.RootNamespace.ID,
+				NamespaceID: "root",
 			})
 		}
 
 		if test.groupMemberships != nil {
 			for i, groupName := range test.groupMemberships {
-				groups = append(groups, &Group{
+				groups = append(groups, &logical.Group{
 					ID:   fmt.Sprintf("%s_%d", groupName, i),
 					Name: groupName,
 				})
@@ -375,7 +375,7 @@ func TestPopulate_Basic(t *testing.T) {
 			String:            test.input,
 			Entity:            entity,
 			Groups:            groups,
-			Namespace:         namespace.RootNamespace,
+			NamespaceID:       "root",
 			Now:               test.now,
 		})
 		if err != nil {
@@ -421,7 +421,7 @@ func TestPopulate_CurrentTime(t *testing.T) {
 }
 
 func TestPopulate_FullObject(t *testing.T) {
-	var testEntity = &Entity{
+	var testEntity = &logical.Entity{
 		ID:   "abc-123",
 		Name: "Entity Name",
 		Metadata: map[string]string{
@@ -429,7 +429,7 @@ func TestPopulate_FullObject(t *testing.T) {
 			"size":          "small",
 			"non-printable": "\"\n\t",
 		},
-		Aliases: []*Alias{
+		Aliases: []*logical.Alias{
 			{
 				MountAccessor: "aws_123",
 				Metadata: map[string]string{
@@ -440,7 +440,7 @@ func TestPopulate_FullObject(t *testing.T) {
 		},
 	}
 
-	var testGroups = []*Group{
+	var testGroups = []*logical.Group{
 		{ID: "a08b0c02", Name: "g1"},
 		{ID: "239bef91", Name: "g2"},
 	}
