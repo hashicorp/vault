@@ -1,4 +1,4 @@
-package identity
+package identitytpl
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var (
@@ -27,9 +27,9 @@ const (
 type PopulateStringInput struct {
 	String            string
 	ValidityCheckOnly bool
-	Entity            *Entity
-	Groups            []*Group
-	Namespace         *namespace.Namespace
+	Entity            *logical.Entity
+	Groups            []*logical.Group
+	NamespaceID       string
 	Mode              int       // processing mode, ACLTemplate or JSONTemplating
 	Now               time.Time // optional, defaults to current time
 
@@ -165,7 +165,7 @@ func PopulateString(p PopulateStringInput) (bool, string, error) {
 
 func performTemplating(input string, p *PopulateStringInput) (string, error) {
 
-	performAliasTemplating := func(trimmed string, alias *Alias) (string, error) {
+	performAliasTemplating := func(trimmed string, alias *logical.Alias) (string, error) {
 		switch {
 		case trimmed == "id":
 			return p.templateHandler(alias.ID)
@@ -210,7 +210,7 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 			if len(split) != 2 {
 				return "", errors.New("invalid alias selector")
 			}
-			var alias *Alias
+			var alias *logical.Alias
 			for _, a := range p.Entity.Aliases {
 				if split[0] == a.MountAccessor {
 					alias = a
@@ -223,7 +223,7 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 				}
 
 				// An empty alias is sufficient for generating defaults
-				alias = &Alias{Metadata: make(map[string]string)}
+				alias = &logical.Alias{Metadata: make(map[string]string)}
 			}
 			return performAliasTemplating(split[1], alias)
 		}
@@ -254,17 +254,16 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 		if len(accessorSplit) != 2 {
 			return "", errors.New("invalid groups accessor")
 		}
-		var found *Group
+		var found *logical.Group
 		for _, group := range p.Groups {
 			var compare string
 			if ids {
 				compare = group.ID
 			} else {
-				if p.Namespace != nil && group.NamespaceID == p.Namespace.ID {
-					compare = group.Name
-				} else {
+				if p.NamespaceID != "" && group.NamespaceID != p.NamespaceID {
 					continue
 				}
+				compare = group.Name
 			}
 
 			if compare == accessorSplit[0] {
