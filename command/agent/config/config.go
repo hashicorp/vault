@@ -43,7 +43,8 @@ type Vault struct {
 
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	UseAutoAuthToken bool `hcl:"use_auto_auth_token"`
+	UseAutoAuthToken        bool `hcl:"use_auto_auth_token"`
+	UseAutoAuthTokenEnforce bool `hcl:"use_auto_auth_token_enforce"`
 }
 
 // Listener contains configuration for any Vault Agent listeners
@@ -213,7 +214,7 @@ func parseCache(result *Config, list *ast.ObjectList) error {
 
 	item := cacheList.Items[0]
 
-	var c Cache
+	var c = Cache {UseAutoAuthTokenEnforce:true}
 	err := hcl.DecodeObject(&c, item.Val)
 	if err != nil {
 		return err

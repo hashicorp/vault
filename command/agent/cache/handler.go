@@ -20,11 +20,16 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink) http.Handler {
+func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, proxyVaultToken bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "method", r.Method, "path", r.URL.Path)
 
-		token := r.Header.Get(consts.AuthHeaderName)
+		token := ""
+		if proxyVaultToken {
+			token = r.Header.Get(consts.AuthHeaderName)
+		} else {
+			r.Header.Del(consts.AuthHeaderName)
+		}
 		if token == "" && inmemSink != nil {
 			logger.Debug("using auto auth token", "method", r.Method, "path", r.URL.Path)
 			token = inmemSink.(sink.SinkReader).Token()
