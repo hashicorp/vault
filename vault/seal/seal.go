@@ -7,15 +7,16 @@ import (
 )
 
 const (
-	Shamir        = "shamir"
-	PKCS11        = "pkcs11"
-	AliCloudKMS   = "alicloudkms"
-	AWSKMS        = "awskms"
-	GCPCKMS       = "gcpckms"
-	AzureKeyVault = "azurekeyvault"
-	OCIKMS        = "ocikms"
-	Transit       = "transit"
-	Test          = "test-auto"
+	Shamir          = "shamir"
+	PKCS11          = "pkcs11"
+	AliCloudKMS     = "alicloudkms"
+	AWSKMS          = "awskms"
+	GCPCKMS         = "gcpckms"
+	AzureKeyVault   = "azurekeyvault"
+	FailoverCluster = "failovercluster"
+	OCIKMS          = "ocikms"
+	Transit         = "transit"
+	Test            = "test-auto"
 
 	// HSMAutoDeprecated is a deprecated seal type prior to 0.9.0.
 	// It is still referenced in certain code paths for upgrade purporses
