@@ -3524,7 +3524,7 @@ type SystemViewClient interface {
 	EntityInfo(ctx context.Context, in *EntityInfoArgs, opts ...grpc.CallOption) (*EntityInfoReply, error)
 	// PluginEnv returns Vault environment information used by plugins
 	PluginEnv(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*PluginEnvReply, error)
-	// GroupsForEntity returns the group membersship information for the given
+	// GroupsForEntity returns the group membership information for the given
 	// entity id
 	GroupsForEntity(ctx context.Context, in *EntityInfoArgs, opts ...grpc.CallOption) (*GroupsForEntityReply, error)
 }
@@ -3671,7 +3671,7 @@ type SystemViewServer interface {
 	EntityInfo(context.Context, *EntityInfoArgs) (*EntityInfoReply, error)
 	// PluginEnv returns Vault environment information used by plugins
 	PluginEnv(context.Context, *Empty) (*PluginEnvReply, error)
-	// GroupsForEntity returns the group membersship information for the given
+	// GroupsForEntity returns the group membership information for the given
 	// entity id
 	GroupsForEntity(context.Context, *EntityInfoArgs) (*GroupsForEntityReply, error)
 }
