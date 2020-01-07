@@ -458,7 +458,7 @@ func (c *AgentCommand) Run(args []string) int {
 			})
 		}
 
-		var proxyVaultToken = config.Cache.UseAutoAuthTokenEnforce
+		var proxyVaultToken = !config.Cache.UseAutoAuthTokenEnforce
 
 		// Create the request handler
 		cacheHandler := cache.Handler(ctx, cacheLogger, leaseCache, inmemSink, proxyVaultToken)

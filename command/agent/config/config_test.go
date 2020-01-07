@@ -39,7 +39,6 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 		},
 		Cache: &Cache{
 			UseAutoAuthToken:        true,
-			UseAutoAuthTokenEnforce: true,
 		},
 		Listeners: []*Listener{
 			&Listener{
@@ -199,9 +198,7 @@ func TestLoadConfigFile_AgentCache_NoAutoAuth(t *testing.T) {
 	}
 
 	expected := &Config{
-		Cache: &Cache{
-			UseAutoAuthTokenEnforce: true,
-		},
+		Cache: &Cache{},
 		Listeners: []*Listener{
 			&Listener{
 				Type: "tcp",
@@ -272,7 +269,6 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 		},
 		Cache: &Cache{
 			UseAutoAuthToken:        true,
-			UseAutoAuthTokenEnforce: true,
 		},
 		Listeners: []*Listener{
 			&Listener{

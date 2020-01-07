@@ -214,7 +214,7 @@ func parseCache(result *Config, list *ast.ObjectList) error {
 
 	item := cacheList.Items[0]
 
-	var c = Cache {UseAutoAuthTokenEnforce:true}
+	var c Cache
 	err := hcl.DecodeObject(&c, item.Val)
 	if err != nil {
 		return err
