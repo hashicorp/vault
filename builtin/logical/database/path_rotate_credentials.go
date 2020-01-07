@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 )
@@ -52,6 +53,11 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 		name := data.Get("name").(string)
 		if name == "" {
 			return logical.ErrorResponse(respErrEmptyName), nil
+		}
+
+		// If on a performance secondary/standby, forward this request on to the primary
+		if b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationPerformanceStandby) {
+			return nil, logical.ErrReadOnly
 		}
 
 		config, err := b.DatabaseConfig(ctx, req.Storage, name)
