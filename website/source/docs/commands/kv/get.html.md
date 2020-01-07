@@ -56,7 +56,13 @@ included on all commands.
 - `-field` `(string: "")` - Print only the field with the given name. Specifying
   this option will take precedence over other formatting directives. The result
   will not have a trailing newline making it ideal for piping to other
-  processes.
+  processes. 
+  Example usage:
+
+  ```text
+  $ vault kv get -field=passcode secret/creds
+  my-long-passwcode
+  ```
 
 - `-format` `(string: "table")` - Print the output in the given format. Valid
   formats are "table", "json", or "yaml". This can also be specified via the
