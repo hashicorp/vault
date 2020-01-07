@@ -61,7 +61,7 @@ included on all commands.
 
   ```text
   $ vault kv get -field=passcode secret/creds
-  my-long-passwcode
+  my-long-passcode
   ```
 
 - `-format` `(string: "table")` - Print the output in the given format. Valid
