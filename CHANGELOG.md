@@ -2,40 +2,60 @@
 
 IMPROVEMENTS:
 
+* auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80 & JWT-86]
+* auth/jwt: Bound claims may be optionally configured using globs [JWT-89]
 * core: Separate out service discovery interface from storage interface to allow
   new types of service discovery not coupled to storage [GH-7887]
+* cli: Incorrect TLS configuration will now correctly fail [GH-8025] 
 * secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
 * secrets/gcp: Add support for rotating root keys [GCP-53]
 
-## 1.3.1 (Unreleased)
+BUG FIXES:
+
+* plugin: Fix issue where a plugin unwrap request potentially used an expired token [GH-8058]
+* ui: Update headless Chrome flag to fix `yarn run test:oss` [8035]
+* ui: Change `.box-radio` height to min-height to prevent overflow issues [8065]
+
+## 1.3.1 (December 18th, 2019)
 
 IMPROVEMENTS:
 
 * agent: Add ability to set `exit-after-auth` via the CLI [GH-7920]
 * auth/ldap: Add a `request_timeout` configuration option to prevent connection
   requests from hanging [GH-7909]
-* auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80 & JWT-86]
+* auth/kubernetes: Add audience to tokenreview API request for Kube deployments where issuer
+  is not Kube. [GH-74]
 * secrets/ad: Add a `request_timeout` configuration option to prevent connection
   requests from hanging [AD-59]
-* secrets/gcp: Fix panic if bindings aren't provided in roleset create/update. [GCP-56]
 * storage/postgresql: Add support for setting `connection_url` from enviornment 
   variable `VAULT_PG_CONNECTION_URL` [GH-7937]
+* telemetry: Add `enable_hostname_label` option to telemetry stanza [GH-7902]
+* telemetry: Add accept header check for prometheus mime type [GH-7958]
 
 BUG FIXES:
 
 * agent: Fix issue where Agent exits before all templates are rendered when 
   using and `exit_after_auth` [GH-7899]
+* auth/aws: Fixes region-related issues when using a custom `sts_endpoint` by adding
+  a `sts_region` parameter [GH-7922]
+* auth/token: Fix panic when getting batch tokens on a performance standby from a role
+  that does not exist [GH-8027]
+* core: Improve warning message for lease TTLs [GH-7901]
+* identity: Fix identity token panic during invalidation [GH-8043]
 * plugin: Fix a panic that could occur if a mount/auth entry was unable to
   mount the plugin backend and a request that required the system view to be 
   retrieved was made [GH-7991]
 * replication: Add `generate-public-key` endpoint to list of allowed endpoints
   for existing DR secondaries
+* secrets/gcp: Fix panic if bindings aren't provided in roleset create/update. [GCP-56]  
 * secrets/pki: Prevent generating certificate on performance standby when storing
   [GH-7904]
 * secrets/transit: Prevent restoring keys to new names that are sub paths [GH-7998]
 * storage/s3: Fix a bug in configurable S3 paths that was preventing use of S3 as
   a source during `operator migrate` operations [GH-7966]
-* ui: Ensure secrets with a period in their key can be viewed an copied [GH-7926]
+* ui: Ensure secrets with a period in their key can be viewed and copied [GH-7926]
+* ui: Fix status menu after demotion [GH-7997]
+* ui: Fix select dropdowns in Safari when running Mojave [GH-8023]
 
 ## 1.3 (November 14th, 2019)
 

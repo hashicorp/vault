@@ -98,7 +98,7 @@ Deletes the stored Azure configuration and credentials.
 
 | Method   | Path                         |
 | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/azure/config`         |
+| `DELETE` | `/azure/config`         |
 
 ### Sample Request
 
@@ -106,7 +106,7 @@ Deletes the stored Azure configuration and credentials.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://127.0.0.1:8200/v1/auth/azure/config
+    https://127.0.0.1:8200/v1/azure/config
 ```
 
 

@@ -25,6 +25,7 @@
     "test:quick-oss": "yarn test:quick -f='!enterprise'",
     "build:storybook": "build-storybook -s ../pkg/web_ui",
     "storybook": "start-storybook -p 6006 -s ../pkg/web_ui",
+    "deploy:storybook": "yarn build && yarn build:storybook",
     "gen-story-md": "node scripts/gen-story-md.js"
   },
   "lint-staged": {
@@ -161,7 +162,8 @@
     "lodash": "^4.17.13",
     "merge": "^1.2.1",
     "minimatch": "^3.0.2",
-    "growl": "^1.10.0"
+    "growl": "^1.10.0",
+    "serialize-javascript": "^2.1.1"
   },
   "engines": {
     "node": " >= 10.* <11"
