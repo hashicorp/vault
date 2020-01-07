@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -93,6 +94,7 @@ func TestBackendHandleRequest(t *testing.T) {
 				},
 			},
 		},
+		system: &logical.StaticSystemView{},
 	}
 
 	for _, path := range []string{"foo/bar", "foo/baz/handler", "foo/both/handler"} {
@@ -111,6 +113,98 @@ func TestBackendHandleRequest(t *testing.T) {
 		if resp.Data[key] != 42 {
 			t.Fatalf("bad: %#v", resp)
 		}
+	}
+}
+
+func TestBackendHandleRequest_Forwarding(t *testing.T) {
+	tests := map[string]struct {
+		fwdStandby   bool
+		fwdSecondary bool
+		isLocal      bool
+		isStandby    bool
+		isSecondary  bool
+		expectFwd    bool
+	}{
+		"no forward": {
+			expectFwd: false,
+		},
+		"no forward, local restricted": {
+			isSecondary:  true,
+			fwdSecondary: true,
+			isLocal:      true,
+			expectFwd:    false,
+		},
+		"no forward, forwarding not requested": {
+			isSecondary: true,
+			isStandby:   true,
+			expectFwd:   false,
+		},
+		"forward, secondary": {
+			fwdSecondary: true,
+			isSecondary:  true,
+			expectFwd:    true,
+		},
+		"forward, standby": {
+			fwdStandby: true,
+			isStandby:  true,
+			expectFwd:  true,
+		},
+		"no forward, only secondary": {
+			fwdSecondary: true,
+			isStandby:    true,
+			expectFwd:    false,
+		},
+		"no forward, only standby": {
+			fwdStandby:  true,
+			isSecondary: true,
+			expectFwd:   false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			var replState consts.ReplicationState
+			if test.isStandby {
+				replState.AddState(consts.ReplicationPerformanceStandby)
+			}
+			if test.isSecondary {
+				replState.AddState(consts.ReplicationPerformanceSecondary)
+			}
+
+			b := &Backend{
+				Paths: []*Path{
+					{
+						Pattern: "foo",
+						Operations: map[logical.Operation]OperationHandler{
+							logical.ReadOperation: &PathOperation{
+								Callback: func(ctx context.Context, req *logical.Request, data *FieldData) (*logical.Response, error) {
+									return nil, nil
+								},
+								ForwardPerformanceSecondary: test.fwdSecondary,
+								ForwardPerformanceStandby:   test.fwdStandby,
+							},
+						},
+					},
+				},
+
+				system: &logical.StaticSystemView{
+					LocalMountVal:       test.isLocal,
+					ReplicationStateVal: replState,
+				},
+			}
+
+			_, err := b.HandleRequest(context.Background(), &logical.Request{
+				Operation: logical.ReadOperation,
+				Path:      "foo",
+			})
+
+			if !test.expectFwd && err != nil {
+				t.Fatalf("unexpected err: %v", err)
+			}
+			if test.expectFwd && err != logical.ErrReadOnly {
+				t.Fatalf("expected ErrReadOnly, got: %v", err)
+			}
+		})
 	}
 }
 
