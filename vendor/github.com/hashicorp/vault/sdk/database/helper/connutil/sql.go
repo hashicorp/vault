@@ -58,7 +58,7 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 	// Don't escape special characters for MySQL password
 	password := c.Password
 	if c.Type != "mysql" {
-		//password = url.PathEscape(c.Password)
+		password = url.PathEscape(c.Password)
 	}
 
 	// QueryHelper doesn't do any SQL escaping, but if it starts to do so
