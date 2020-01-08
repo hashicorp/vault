@@ -76,6 +76,14 @@ CHANGES:
    that assumed insecure ciphers were being used. The previous behavior can be
    achieved by setting the value of the (undocumented) `cluster_cipher_suites`
    config flag to `tls12`.
+ * API/Agent Renewal behavior: The API now allows multiple options for how it
+   deals with renewals. The legacy behavior in the Agent/API is for the renewer
+   (now called the lifetime watcher) to exit on a renew error, leading to a
+   reauthentication. The new default behavior is for the lifetime watcher to
+   ignore 5XX errors and simply retry as scheduled, using the existing lease
+   duration. It is also possible, within custom code, to disable renewals
+   entirely, which allows the lifetime watcher to simply return when it
+   believes it is time for your code to renew or reauthenticate.
 
 FEATURES:
 
@@ -126,6 +134,7 @@ FEATURES:
 IMPROVEMENTS:
 
  * agent: Add ability to set the TLS SNI name used by Agent [GH-7519]
+ * agent & api: Change default renewer behavior to ignore 5XX errors [GH-7733]
  * auth/jwt: The redirect callback host may now be specified for CLI logins
    [JWT-71]
  * auth/jwt: Bound claims may now contain boolean values [JWT-73]
@@ -145,24 +154,30 @@ IMPROVEMENTS:
  * replication (enterprise): Added more replication metrics
  * replication (enterprise): Reindex process now compares subpages for a more
    accurate indexing process.
- * replication (enterprise): Reindex API now accepts a new `skip_flush` parameter
-   indicating all the changes should not be flushed while the tree is locked.
+ * replication (enterprise): Reindex API now accepts a new `skip_flush`
+   parameter indicating all the changes should not be flushed while the tree is
+   locked.
  * secrets/aws: The root config can now be read [GH-7245]
  * secrets/aws: Role paths may now contain the '@' character [GH-7553]
- * secrets/database/cassandra: Add ability to skip verfication of connection [GH-7614]
- * secrets/gcp: Fix panic during rollback if the roleset has been deleted [GCP-52]
+ * secrets/database/cassandra: Add ability to skip verfication of connection
+   [GH-7614]
+ * secrets/gcp: Fix panic during rollback if the roleset has been deleted
+   [GCP-52]
  * storage/azure: Add config parameter to Azure storage backend to allow
    specifying the ARM endpoint [GH-7567]
  * storage/cassandra: Improve storage efficiency by eliminating unnecessary
    copies of value data [GH-7199]
- * storage/raft: Improve raft write performance by utilizing FSM Batching [GH-7527]
+ * storage/raft: Improve raft write performance by utilizing FSM Batching
+   [GH-7527]
  * storage/raft: Add support for non-voter nodes [GH-7634]
  * sys: Add a new `sys/host-info` endpoint for querying information about 
    the host [GH-7330]
  * sys: Add a new set of endpoints under `sys/pprof/` that allows profiling
    information to be extracted [GH-7473]
- * sys: Add endpoint that counts the total number of active identity entities [GH-7541]
- * sys: `sys/seal-status` now has a `storage_type` field denoting what type of storage
+ * sys: Add endpoint that counts the total number of active identity entities
+   [GH-7541]
+ * sys: `sys/seal-status` now has a `storage_type` field denoting what type of
+   storage
    the cluster is configured to use
  * sys: Add a new `sys/internal/counters/tokens` endpoint, that counts the
    total number of active service token accessors in the shared token storage.
@@ -173,7 +188,8 @@ IMPROVEMENTS:
    from `telemetry` due to potential sensitive entries in those fields.
  * ui: when using raft storage, you can now join a raft cluster, download a
    snapshot, and restore a snapshot from the UI [GH-7410]
- * ui: clarify when secret version is deleted in the secret version history dropdown [GH-7714]
+ * ui: clarify when secret version is deleted in the secret version history
+   dropdown [GH-7714]
 
 BUG FIXES:
 
