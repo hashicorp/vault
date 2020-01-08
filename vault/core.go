@@ -1346,10 +1346,6 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		return false, err
 	}
 
-	if err := c.migrateSeal(ctx); err != nil {
-		return false, err
-	}
-
 	// Do post-unseal setup if HA is not enabled
 	if c.ha == nil {
 		// We still need to set up cluster info even if it's not part of a
@@ -1855,6 +1851,10 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		if err := seal.UpgradeKeys(c.activeContext); err != nil {
 			c.logger.Warn("post-unseal upgrade seal keys failed", "error", err)
 		}
+	}
+
+	if err := c.migrateSeal(c.activeContext); err != nil {
+		return err
 	}
 
 	c.metricsCh = make(chan struct{})
