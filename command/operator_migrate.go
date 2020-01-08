@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"sort"
+	"sync"
 	"strings"
 	"time"
 
@@ -340,6 +341,7 @@ func parseStorage(result *migratorConfig, list *ast.ObjectList, name string) err
 // dfsScan will invoke cb with every key from source.
 // Keys will be traversed in lexicographic, depth-first order.
 func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.Context, path string) error) error {
+	var wg sync.WaitGroup
 	dfs := []string{""}
 
 	for l := len(dfs); l > 0; l = len(dfs) {
@@ -359,10 +361,14 @@ func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.C
 				}
 			}
 		} else {
-			err := cb(ctx, key)
-			if err != nil {
-				return err
-			}
+			wg.Add(1)
+			go func(cbKey string) {
+				defer wg.Done()
+				err := cb(ctx, cbKey)
+				if err != nil {
+					panic(err)
+				}
+			}(key)
 
 			dfs = dfs[:len(dfs)-1]
 		}
@@ -373,5 +379,6 @@ func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.C
 		default:
 		}
 	}
+	wg.Wait()
 	return nil
 }
