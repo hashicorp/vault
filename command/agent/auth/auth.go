@@ -142,11 +142,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			})
 			clientToUse = wrapClient
 		}
-		if len(header) > 0 {
-			for key, values := range header {
-				for _, value := range values {
-					clientToUse.AddHeader(key, value)
-				}
+		for key, values := range header {
+			for _, value := range values {
+				clientToUse.AddHeader(key, value)
 			}
 		}
 

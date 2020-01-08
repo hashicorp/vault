@@ -27,9 +27,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
-
 	"github.com/fatih/structs"
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	vaulthttp "github.com/hashicorp/vault/http"
