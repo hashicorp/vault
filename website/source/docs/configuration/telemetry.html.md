@@ -11,7 +11,8 @@ description: |-
 # `telemetry` Stanza
 
 The `telemetry` stanza specifies various configurations for Vault to publish
-metrics to upstream systems.
+metrics to upstream systems. Available Vault metrics can be found in the
+[Telemetry internals documentation](/docs/internals/telemetry.html).
 
 ```hcl
 telemetry {
