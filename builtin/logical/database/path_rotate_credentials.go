@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 )
@@ -39,8 +38,12 @@ func pathRotateCredentials(b *databaseBackend) []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRotateRoleCredentialsUpdate(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:                    b.pathRotateRoleCredentialsUpdate(),
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
+				},
 			},
 
 			HelpSynopsis:    pathCredsCreateReadHelpSyn,
@@ -106,11 +109,6 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			return logical.ErrorResponse("empty role name attribute given"), nil
 		}
 
-		// If on a performance secondary/standby, forward this request on to the primary
-		if b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationPerformanceStandby) {
-			return nil, logical.ErrReadOnly
-		}
-
 		role, err := b.StaticRole(ctx, req.Storage, name)
 		if err != nil {
 			return nil, err
@@ -154,19 +152,16 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 		// Send a canary to force a guard check which prevents the client
 		// to run in a timeout if the request was originally send to a
 		// performance secondary/standby node.
-		if b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationPerformanceStandby) {
-			canaryUUID, err := uuid.GenerateUUID()
-			if err != nil {
-				return nil, err
-			}
-			canaryEntry := &logical.StorageEntry{
-				Key:   "core/replication-canary",
-				Value: []byte(canaryUUID),
-			}
-
-			return nil, req.Storage.Put(ctx, canaryEntry)
+		canaryUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			return nil, err
 		}
-		return nil, nil
+		canaryEntry := &logical.StorageEntry{
+			Key:   "core/replication-canary",
+			Value: []byte(canaryUUID),
+		}
+
+		return nil, req.Storage.Put(ctx, canaryEntry)
 	}
 }
 
