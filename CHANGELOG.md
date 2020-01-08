@@ -2,6 +2,7 @@
 
 IMPROVEMENTS:
 
+* auth/azure: Fix Azure compute client to use correct base URL [AZURE-27]
 * auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80 & JWT-86]
 * auth/jwt: Bound claims may be optionally configured using globs [JWT-89]
 * core: Separate out service discovery interface from storage interface to allow
@@ -12,6 +13,9 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+* plugin: Fix issue where a plugin unwrap request potentially used an expired token [GH-8058]
+* secrets/database: Fix issue where a manual static role rotation could potentially panic [GH-8098]
+* secrets/database/mysql: Fix issue where special characters for a MySQL password were encoded [GH-8040]
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [8035]
 * ui: Change `.box-radio` height to min-height to prevent overflow issues [8065]
 

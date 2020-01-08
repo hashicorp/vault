@@ -1026,6 +1026,99 @@ func TestBackend_StaticRole_LockRegression(t *testing.T) {
 	}
 }
 
+func TestBackend_StaticRole_Rotate_Invalid_Role(t *testing.T) {
+	cluster, sys := getCluster(t)
+	defer cluster.Cleanup()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	lb, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, ok := lb.(*databaseBackend)
+	if !ok {
+		t.Fatal("could not convert to db backend")
+	}
+	defer b.Cleanup(context.Background())
+
+	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	defer cleanup()
+
+	// create the database user
+	createTestPGUser(t, connURL, dbUser, dbUserDefaultPassword, testRoleStaticCreate)
+
+	verifyPgConn(t, dbUser, dbUserDefaultPassword, connURL)
+
+	// Configure a connection
+	data := map[string]interface{}{
+		"connection_url":    connURL,
+		"plugin_name":       "postgresql-database-plugin",
+		"verify_connection": false,
+		"allowed_roles":     []string{"*"},
+		"name":              "plugin-test",
+	}
+
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	data = map[string]interface{}{
+		"name":                "plugin-role-test",
+		"db_name":             "plugin-test",
+		"rotation_statements": testRoleStaticUpdate,
+		"username":            dbUser,
+		"rotation_period":     "5400s",
+	}
+
+	req = &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "static-roles/plugin-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Pop manually key to emulate a queue without existing key
+	b.credRotationQueue.PopByKey("plugin-role-test")
+
+	// Make sure queue is empty
+	if b.credRotationQueue.Len() != 0 {
+		t.Fatalf("expected queue length to be 0 but is %d", b.credRotationQueue.Len())
+	}
+
+	// Trigger rotation
+	data = map[string]interface{}{"name": "plugin-role-test"}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "rotate-role/plugin-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Check if key is in queue
+	if b.credRotationQueue.Len() != 1 {
+		t.Fatalf("expected queue length to be 1 but is %d", b.credRotationQueue.Len())
+	}
+}
+
 // capturePasswords captures the current passwords at the time of calling, and
 // returns a map of username / passwords building off of the input map
 func capturePasswords(t *testing.T, b logical.Backend, config *logical.BackendConfig, testCases []string, pws map[string][]string) map[string][]string {
