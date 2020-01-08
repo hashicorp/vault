@@ -395,6 +395,14 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		return nil, err
 	}
 
+	if c.serviceRegistration != nil {
+		if err := c.serviceRegistration.NotifyInitializedStateChange(true); err != nil {
+			if c.logger.IsWarn() {
+				c.logger.Warn("notification of initialization failed", "error", err)
+			}
+		}
+	}
+
 	return results, nil
 }
 

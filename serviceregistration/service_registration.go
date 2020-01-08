@@ -1,40 +1,68 @@
 package serviceregistration
 
-import (
-	"sync"
+/*
+ServiceRegistration is an interface that can be fulfilled to use
+varying applications for service discovery, regardless of the physical
+back-end used. It uses [the observer pattern](https://refactoring.guru/design-patterns/observer).
 
+Implementing the Factory and adding your factory to the list in commands.go
+is essentially how you register your implementation as an observer. There is
+no deregistration because service discovery stops on its own if Vault stops.
+
+Service registration implements notifications for changes in _dynamic_
+properties regarding Vault's health. Vault's version is the only static
+property given in state for now, but if there's a need for more in the future,
+we could add them on.
+*/
+
+import (
 	log "github.com/hashicorp/go-hclog"
 )
 
+type State struct {
+	VaultVersion                                           string
+	IsInitialized, IsSealed, IsActive, IsPerformanceLeader bool
+}
+
 // Factory is the factory function to create a ServiceRegistration.
-type Factory func(config map[string]string, logger log.Logger) (ServiceRegistration, error)
+//
+// The shutdownCh is the channel to watch for graceful shutdowns _of Vault_,
+// and is great to use for creating background cleanup processes, or for stopping
+// any ongoing goroutines.
+//
+// The config is the key/value pairs set _inside_ the service registration config stanza.
+//
+// The state is only the initial state. The pointer won't be updated over time. All
+// state notifications will come through Notify methods.
+//
+// The redirectAddr is Vault core's RedirectAddr.
+type Factory func(shutdownCh <-chan struct{}, config map[string]string, logger log.Logger, state *State, redirectAddr string) (ServiceRegistration, error)
 
 // ServiceRegistration is an interface that advertises the state of Vault to a
 // service discovery network.
 type ServiceRegistration interface {
 	// NotifyActiveStateChange is used by Core to notify that this Vault
-	// instance has changed its status to active or standby.
-	NotifyActiveStateChange() error
+	// instance has changed its status on whether it's active or is
+	// a standby.
+	NotifyActiveStateChange(isActive bool) error
 
 	// NotifySealedStateChange is used by Core to notify that Vault has changed
 	// its Sealed status to sealed or unsealed.
-	NotifySealedStateChange() error
+	NotifySealedStateChange(isSealed bool) error
 
-	// NotifyPerformanceStandbyStateChange is used by Core to notify that this
-	// Vault instance has changed it status to performance standby or standby.
-	NotifyPerformanceStandbyStateChange() error
+	// TODO - on master
+	// TODO - ask Brian where this should be implemented on vault-enterprise if you can't find it
+	/*
+		// NotifyPerformanceStandbyStateChange is used by Core to notify that this
+		// Vault instance has changed it status to performance standby or standby.
+		NotifyPerformanceStandbyStateChange() error
 
-	// Run executes any background service discovery tasks until the
-	// shutdown channel is closed.
-	RunServiceRegistration(
-		waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, redirectAddr string,
-		activeFunc ActiveFunction, sealedFunc SealedFunction, perfStandbyFunc PerformanceStandbyFunction) error
+	*/
+	// NotifyPerformanceLeaderStateChange is used by Core to notify that this
+	// Vault instance has changed it status to performance leader or standby.
+	NotifyPerformanceLeaderStateChange(isLeader bool) error
+
+	// NotifyInitializedStateChange is used by Core to notify that the core is
+	// initialized.
+	NotifyInitializedStateChange(isInitialized bool) error
 }
-
-// Callback signatures for RunServiceRegistration
-type ActiveFunction func() bool
-type SealedFunction func() bool
-type PerformanceStandbyFunction func() bool
-
-// ShutdownChannel is the shutdown signal for RunServiceRegistration
-type ShutdownChannel chan struct{}

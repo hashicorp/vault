@@ -1,10 +1,8 @@
 package consul
 
 import (
-	"math/rand"
 	"os"
 	"reflect"
-	"sync"
 	"testing"
 	"time"
 
@@ -16,64 +14,14 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/vault"
 )
 
+const redirectAddr = "http://127.0.0.1:8200"
+
 type consulConf map[string]string
-
-func testConsulServiceRegistration(t *testing.T) *ConsulServiceRegistration {
-	return testConsulServiceRegistrationConfig(t, &consulConf{})
-}
-
-func testConsulServiceRegistrationConfig(t *testing.T, conf *consulConf) *ConsulServiceRegistration {
-	logger := logging.NewVaultLogger(log.Debug)
-
-	be, err := NewConsulServiceRegistration(*conf, logger)
-	if err != nil {
-		t.Fatalf("Expected Consul to initialize: %v", err)
-	}
-
-	c, ok := be.(*ConsulServiceRegistration)
-	if !ok {
-		t.Fatalf("Expected ConsulServiceRegistration")
-	}
-
-	return c
-}
-
-func testActiveFunc(activePct float64) sr.ActiveFunction {
-	return func() bool {
-		var active bool
-		standbyProb := rand.Float64()
-		if standbyProb > activePct {
-			active = true
-		}
-		return active
-	}
-}
-
-func testSealedFunc(sealedPct float64) sr.SealedFunction {
-	return func() bool {
-		var sealed bool
-		unsealedProb := rand.Float64()
-		if unsealedProb > sealedPct {
-			sealed = true
-		}
-		return sealed
-	}
-}
-
-func testPerformanceStandbyFunc(perfPct float64) sr.PerformanceStandbyFunction {
-	return func() bool {
-		var ps bool
-		unsealedProb := rand.Float64()
-		if unsealedProb > perfPct {
-			ps = true
-		}
-		return ps
-	}
-}
 
 // TestConsul_ServiceRegistration tests whether consul ServiceRegistration works
 func TestConsul_ServiceRegistration(t *testing.T) {
@@ -91,31 +39,23 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// transitionFrom waits patiently for the services in the Consul catalog to
-	// transition from a known value, and then returns the new value.
-	transitionFrom := func(t *testing.T, known map[string][]string) map[string][]string {
-		t.Helper()
-		// Wait for up to 10 seconds
-		for i := 0; i < 10; i++ {
-			services, _, err := client.Catalog().Services(nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if diff := deep.Equal(services, known); diff != nil {
-				return services
-			}
-			time.Sleep(time.Second)
-		}
-		t.Fatalf("Catalog Services never transitioned from %v", known)
-		return nil
+	// Vault should not yet be registered with Consul
+	services, _, err := client.Catalog().Services(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(services, map[string][]string{
+		"consul": {},
+	}); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// Create a ServiceRegistration that points to our consul instance
 	logger := logging.NewVaultLogger(log.Trace)
-	sd, err := NewConsulServiceRegistration(map[string]string{
+	sd, err := NewServiceRegistration(make(chan struct{}), map[string]string{
 		"address": addr,
 		"token":   token,
-	}, logger)
+	}, logger, initialState(), redirectAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +69,6 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	const redirectAddr = "http://127.0.0.1:8200"
 	core, err := vault.NewCore(&vault.CoreConfig{
 		ServiceRegistration: sd,
 		Physical:            inm,
@@ -141,41 +80,16 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Vault should not yet be registered with Consul
-	services, _, err := client.Catalog().Services(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if diff := deep.Equal(services, map[string][]string{
-		"consul": []string{},
-	}); diff != nil {
-		t.Fatal(diff)
-	}
-
-	// Run service discovery on the core
-	wg := &sync.WaitGroup{}
-	var shutdown chan struct{}
-	activeFunc := func() bool {
-		if isLeader, _, _, err := core.Leader(); err == nil {
-			return isLeader
-		}
-		return false
-	}
-	err = sd.RunServiceRegistration(
-		wg, shutdown, redirectAddr, activeFunc, core.Sealed, core.PerfStandby)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// Vault should soon be registered with Consul in standby mode
-	services = transitionFrom(t, map[string][]string{
-		"consul": []string{},
-	})
-	if diff := deep.Equal(services, map[string][]string{
-		"consul": []string{},
-		"vault":  []string{"standby"},
-	}); diff != nil {
-		t.Fatal(diff)
+	services, _, err = client.Catalog().Services(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resultingTags := services["vault"]
+	for _, tag := range []string{tagNotPerfLeader, tagNotActive, tagUninitialized, tagSealed} {
+		if !strutil.StrListContains(resultingTags, tag) {
+			t.Fatalf("expected %q but received %q", tag, resultingTags)
+		}
 	}
 
 	// Initialize and unseal the core
@@ -193,111 +107,108 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 	vault.TestWaitActive(t, core)
 
 	// Vault should soon be registered with Consul in active mode
-	services = transitionFrom(t, map[string][]string{
-		"consul": []string{},
-		"vault":  []string{"standby"},
-	})
-	if diff := deep.Equal(services, map[string][]string{
-		"consul": []string{},
-		"vault":  []string{"active"},
-	}); diff != nil {
-		t.Fatal(diff)
+	services, _, err = client.Catalog().Services(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resultingTags = services["vault"]
+	for _, tag := range []string{tagNotPerfLeader, tagIsActive, tagInitialized, tagUnsealed} {
+		if !strutil.StrListContains(resultingTags, tag) {
+			t.Fatalf("expected %q but received %q", tag, resultingTags)
+		}
 	}
 }
 
 func TestConsul_ServiceTags(t *testing.T) {
-	consulConfig := map[string]string{
-		"path":                 "seaTech/",
-		"service":              "astronomy",
-		"service_tags":         "deadbeef, cafeefac, deadc0de, feedface",
-		"redirect_addr":        "http://127.0.0.2:8200",
-		"check_timeout":        "6s",
-		"address":              "127.0.0.2",
-		"scheme":               "https",
-		"token":                "deadbeef-cafeefac-deadc0de-feedface",
-		"max_parallel":         "4",
-		"disable_registration": "false",
-	}
-	logger := logging.NewVaultLogger(log.Debug)
 
-	be, err := NewConsulServiceRegistration(consulConfig, logger)
-	if err != nil {
-		t.Fatal(err)
+	usersTags := []string{"deadbeef", "cafeefac", "deadc0de", "feedface"}
+	negativeState := &sr.State{
+		VaultVersion:        "",
+		IsInitialized:       false,
+		IsSealed:            false,
+		IsActive:            false,
+		IsPerformanceLeader: false,
+	}
+	positiveState := &sr.State{
+		VaultVersion:        "some-version",
+		IsInitialized:       true,
+		IsSealed:            true,
+		IsActive:            true,
+		IsPerformanceLeader: true,
 	}
 
-	c, ok := be.(*ConsulServiceRegistration)
-	if !ok {
-		t.Fatalf("failed to create physical Consul backend")
+	actual := buildTags(nil, negativeState)
+	if !strutil.StrListContains(actual, tagNotPerfLeader) {
+		t.Fatalf("expected %q but received %q", tagNotPerfLeader, actual)
+	}
+	if !strutil.StrListContains(actual, tagNotActive) {
+		t.Fatalf("expected %q but received %q", tagNotActive, actual)
+	}
+	if !strutil.StrListContains(actual, tagUninitialized) {
+		t.Fatalf("expected %q but received %q", tagUninitialized, actual)
+	}
+	if !strutil.StrListContains(actual, tagUnsealed) {
+		t.Fatalf("expected %q but received %q", tagUnsealed, actual)
 	}
 
-	expected := []string{"deadbeef", "cafeefac", "deadc0de", "feedface"}
-	actual := c.fetchServiceTags(false, false)
-	if !strutil.EquivalentSlices(actual, append(expected, "standby")) {
-		t.Fatalf("bad: expected:%s actual:%s", append(expected, "standby"), actual)
+	actual = buildTags(nil, positiveState)
+	if !strutil.StrListContains(actual, tagPerfLeader) {
+		t.Fatalf("expected %q but received %q", tagPerfLeader, actual)
+	}
+	if !strutil.StrListContains(actual, tagIsActive) {
+		t.Fatalf("expected %q but received %q", tagIsActive, actual)
+	}
+	if !strutil.StrListContains(actual, tagInitialized) {
+		t.Fatalf("expected %q but received %q", tagInitialized, actual)
+	}
+	if !strutil.StrListContains(actual, tagSealed) {
+		t.Fatalf("expected %q but received %q", tagSealed, actual)
 	}
 
-	actual = c.fetchServiceTags(true, false)
-	if !strutil.EquivalentSlices(actual, append(expected, "active")) {
-		t.Fatalf("bad: expected:%s actual:%s", append(expected, "active"), actual)
+	actual = buildTags(usersTags, negativeState)
+	if !strutil.StrListContains(actual, tagNotPerfLeader) {
+		t.Fatalf("expected %q but received %q", tagNotPerfLeader, actual)
 	}
-
-	actual = c.fetchServiceTags(false, true)
-	if !strutil.EquivalentSlices(actual, append(expected, "performance-standby")) {
-		t.Fatalf("bad: expected:%s actual:%s", append(expected, "performance-standby"), actual)
+	if !strutil.StrListContains(actual, tagNotActive) {
+		t.Fatalf("expected %q but received %q", tagNotActive, actual)
 	}
-
-	actual = c.fetchServiceTags(true, true)
-	if !strutil.EquivalentSlices(actual, append(expected, "performance-standby")) {
-		t.Fatalf("bad: expected:%s actual:%s", append(expected, "performance-standby"), actual)
+	if !strutil.StrListContains(actual, tagUninitialized) {
+		t.Fatalf("expected %q but received %q", tagUninitialized, actual)
 	}
-}
-
-func TestConsul_ServiceAddress(t *testing.T) {
-	tests := []struct {
-		consulConfig   map[string]string
-		serviceAddrNil bool
-	}{
-		{
-			consulConfig: map[string]string{
-				"service_address": "",
-			},
-		},
-		{
-			consulConfig: map[string]string{
-				"service_address": "vault.example.com",
-			},
-		},
-		{
-			serviceAddrNil: true,
-		},
+	if !strutil.StrListContains(actual, tagUnsealed) {
+		t.Fatalf("expected %q but received %q", tagUnsealed, actual)
 	}
-
-	for _, test := range tests {
-		logger := logging.NewVaultLogger(log.Debug)
-
-		be, err := NewConsulServiceRegistration(test.consulConfig, logger)
-		if err != nil {
-			t.Fatalf("expected Consul to initialize: %v", err)
+	for _, tag := range usersTags {
+		if !strutil.StrListContains(actual, tag) {
+			t.Fatalf("expected %q but received %q", tag, actual)
 		}
+	}
 
-		c, ok := be.(*ConsulServiceRegistration)
-		if !ok {
-			t.Fatalf("Expected ConsulServiceRegistration")
-		}
-
-		if test.serviceAddrNil {
-			if c.serviceAddress != nil {
-				t.Fatalf("expected service address to be nil")
-			}
-		} else {
-			if c.serviceAddress == nil {
-				t.Fatalf("did not expect service address to be nil")
-			}
+	actual = buildTags(usersTags, positiveState)
+	if !strutil.StrListContains(actual, tagPerfLeader) {
+		t.Fatalf("expected %q but received %q", tagPerfLeader, actual)
+	}
+	if !strutil.StrListContains(actual, tagIsActive) {
+		t.Fatalf("expected %q but received %q", tagIsActive, actual)
+	}
+	if !strutil.StrListContains(actual, tagInitialized) {
+		t.Fatalf("expected %q but received %q", tagInitialized, actual)
+	}
+	if !strutil.StrListContains(actual, tagSealed) {
+		t.Fatalf("expected %q but received %q", tagSealed, actual)
+	}
+	for _, tag := range usersTags {
+		if !strutil.StrListContains(actual, tag) {
+			t.Fatalf("expected %q but received %q", tag, actual)
 		}
 	}
 }
 
 func TestConsul_newConsulServiceRegistration(t *testing.T) {
+	// Prepare a docker-based consul instance
+	cleanup, addr, token := consul.PrepareTestContainer(t, "1.4.0-rc1")
+	defer cleanup()
+
 	tests := []struct {
 		name            string
 		consulConfig    map[string]string
@@ -335,7 +246,7 @@ func TestConsul_newConsulServiceRegistration(t *testing.T) {
 				"redirect_addr":        "http://127.0.0.2:8200",
 				"check_timeout":        "6s",
 				"address":              "127.0.0.2",
-				"scheme":               "https",
+				"scheme":               "http",
 				"token":                "deadbeef-cafeefac-deadc0de-feedface",
 				"max_parallel":         "4",
 				"disable_registration": "false",
@@ -346,7 +257,7 @@ func TestConsul_newConsulServiceRegistration(t *testing.T) {
 			service:         "astronomy",
 			redirectAddr:    "http://127.0.0.2:8200",
 			address:         "127.0.0.2",
-			scheme:          "https",
+			scheme:          "http",
 			token:           "deadbeef-cafeefac-deadc0de-feedface",
 			max_parallel:    4,
 			consistencyMode: "strong",
@@ -375,7 +286,7 @@ func TestConsul_newConsulServiceRegistration(t *testing.T) {
 				"address": "https://127.0.0.2:5000",
 			},
 			address: "127.0.0.2:5000",
-			scheme:  "https",
+			scheme:  "http",
 
 			// Defaults
 			checkTimeout:    5 * time.Second,
@@ -399,7 +310,9 @@ func TestConsul_newConsulServiceRegistration(t *testing.T) {
 	for _, test := range tests {
 		logger := logging.NewVaultLogger(log.Debug)
 
-		be, err := NewConsulServiceRegistration(test.consulConfig, logger)
+		test.consulConfig["address"] = addr
+		test.consulConfig["token"] = token
+		be, err := NewServiceRegistration(make(chan struct{}), test.consulConfig, logger, initialState(), redirectAddr)
 		if test.fail {
 			if err == nil {
 				t.Fatalf(`Expected config "%s" to fail`, test.name)
@@ -410,9 +323,9 @@ func TestConsul_newConsulServiceRegistration(t *testing.T) {
 			t.Fatalf("Expected config %s to not fail: %v", test.name, err)
 		}
 
-		c, ok := be.(*ConsulServiceRegistration)
+		c, ok := be.(*ServiceRegistration)
 		if !ok {
-			t.Fatalf("Expected ConsulServiceRegistration: %s", test.name)
+			t.Fatalf("Expected ServiceRegistration: %s", test.name)
 		}
 		c.disableRegistration = true
 
@@ -421,12 +334,6 @@ func TestConsul_newConsulServiceRegistration(t *testing.T) {
 			if addr == "" {
 				continue
 			}
-		}
-
-		var shutdownCh sr.ShutdownChannel
-		waitGroup := &sync.WaitGroup{}
-		if err := c.RunServiceRegistration(waitGroup, shutdownCh, test.redirectAddr, testActiveFunc(0.5), testSealedFunc(0.5), testPerformanceStandbyFunc(0.5)); err != nil {
-			t.Fatalf("bad: %v", err)
 		}
 
 		if test.checkTimeout != c.checkTimeout {
@@ -447,7 +354,7 @@ func TestConsul_newConsulServiceRegistration(t *testing.T) {
 			t.Errorf("bad scheme value: %v != %v", test.scheme, consulConfigScheme)
 		}
 
-		if test.address != consulConfigAddress {
+		if addr != consulConfigAddress {
 			t.Errorf("bad address value: %v != %v", test.address, consulConfigAddress)
 		}
 
@@ -458,45 +365,12 @@ func TestConsul_newConsulServiceRegistration(t *testing.T) {
 	}
 }
 
-func TestConsul_serviceTags(t *testing.T) {
-	tests := []struct {
-		active      bool
-		perfStandby bool
-		tags        []string
-	}{
-		{
-			active:      true,
-			perfStandby: false,
-			tags:        []string{"active"},
-		},
-		{
-			active:      false,
-			perfStandby: false,
-			tags:        []string{"standby"},
-		},
-		{
-			active:      false,
-			perfStandby: true,
-			tags:        []string{"performance-standby"},
-		},
-		{
-			active:      true,
-			perfStandby: true,
-			tags:        []string{"performance-standby"},
-		},
-	}
-
-	c := testConsulServiceRegistration(t)
-
-	for _, test := range tests {
-		tags := c.fetchServiceTags(test.active, test.perfStandby)
-		if !reflect.DeepEqual(tags[:], test.tags[:]) {
-			t.Errorf("Bad %v: %v %v", test.active, tags, test.tags)
-		}
-	}
-}
-
 func TestConsul_setRedirectAddr(t *testing.T) {
+	// Prepare a docker-based consul instance
+	cleanup, addr, token := consul.PrepareTestContainer(t, "1.4.0-rc1")
+	defer cleanup()
+	logger := logging.NewVaultLogger(log.Debug)
+
 	tests := []struct {
 		addr string
 		host string
@@ -537,8 +411,10 @@ func TestConsul_setRedirectAddr(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		c := testConsulServiceRegistration(t)
-		err := c.setRedirectAddr(test.addr)
+		be, err := NewServiceRegistration(make(chan struct{}), map[string]string{
+			"address": addr,
+			"token":   token,
+		}, logger, initialState(), test.addr)
 		if test.pass {
 			if err != nil {
 				t.Fatalf("bad: %v", err)
@@ -549,6 +425,10 @@ func TestConsul_setRedirectAddr(t *testing.T) {
 			} else {
 				continue
 			}
+		}
+		c, ok := be.(*ServiceRegistration)
+		if !ok {
+			t.Fatalf("Expected ServiceRegistration")
 		}
 
 		if c.redirectHost != test.host {
@@ -562,6 +442,10 @@ func TestConsul_setRedirectAddr(t *testing.T) {
 }
 
 func TestConsul_serviceID(t *testing.T) {
+	// Prepare a docker-based consul instance
+	cleanup, addr, token := consul.PrepareTestContainer(t, "1.4.0-rc1")
+	defer cleanup()
+
 	tests := []struct {
 		name         string
 		redirectAddr string
@@ -602,9 +486,11 @@ func TestConsul_serviceID(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Debug)
 
 	for _, test := range tests {
-		be, err := NewConsulServiceRegistration(consulConf{
+		be, err := NewServiceRegistration(make(chan struct{}), consulConf{
 			"service": test.serviceName,
-		}, logger)
+			"address": addr,
+			"token":   token,
+		}, logger, initialState(), redirectAddr)
 		if !test.valid {
 			if err == nil {
 				t.Fatalf("expected an error initializing for name %q", test.serviceName)
@@ -615,9 +501,9 @@ func TestConsul_serviceID(t *testing.T) {
 			t.Fatalf("expected Consul to initialize: %v", err)
 		}
 
-		c, ok := be.(*ConsulServiceRegistration)
+		c, ok := be.(*ServiceRegistration)
 		if !ok {
-			t.Fatalf("Expected ConsulServiceRegistration")
+			t.Fatalf("Expected ServiceRegistration")
 		}
 
 		if err := c.setRedirectAddr(test.redirectAddr); err != nil {
@@ -628,5 +514,15 @@ func TestConsul_serviceID(t *testing.T) {
 		if serviceID != test.expected {
 			t.Fatalf("bad: %v != %v", serviceID, test.expected)
 		}
+	}
+}
+
+func initialState() *sr.State {
+	return &sr.State{
+		VaultVersion:        version.GetVersion().VersionNumber(),
+		IsInitialized:       false,
+		IsSealed:            true,
+		IsActive:            false,
+		IsPerformanceLeader: false,
 	}
 }
