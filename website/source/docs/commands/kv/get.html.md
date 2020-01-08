@@ -52,13 +52,7 @@ Return only the "creds" "passcode" key:
 $ vault kv get -field=passcode secret/creds
 my-long-passcode
 ```
-  
-Set the Unix environment variable "mySecret" to the "passcode" key:
-```text
-$ mySecret=`vault kv get -field=passcode secret/creds`
-$ echo $mySecret
-my-long-passcode
-```
+
 
 ## Usage
 
