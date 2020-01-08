@@ -964,11 +964,11 @@ func (c *ServerCommand) Run(args []string) int {
 		// Since we haven't even begun starting Vault's core yet,
 		// we know that Vault is in its pre-running state.
 		state := &sr.State{
-			VaultVersion:        version.GetVersion().VersionNumber(),
-			IsInitialized:       false,
-			IsSealed:            true,
-			IsActive:            false,
-			IsPerformanceLeader: false,
+			VaultVersion:         version.GetVersion().VersionNumber(),
+			IsInitialized:        false,
+			IsSealed:             true,
+			IsActive:             false,
+			IsPerformanceStandby: true,
 		}
 		configSR, err = sdFactory(c.ShutdownCh, config.ServiceRegistration.Config, namedSDLogger, state, config.Storage.RedirectAddr)
 		if err != nil {

@@ -20,8 +20,8 @@ import (
 )
 
 type State struct {
-	VaultVersion                                           string
-	IsInitialized, IsSealed, IsActive, IsPerformanceLeader bool
+	VaultVersion                                            string
+	IsInitialized, IsSealed, IsActive, IsPerformanceStandby bool
 }
 
 // Factory is the factory function to create a ServiceRegistration.
@@ -50,17 +50,9 @@ type ServiceRegistration interface {
 	// its Sealed status to sealed or unsealed.
 	NotifySealedStateChange(isSealed bool) error
 
-	// TODO - on master
-	// TODO - ask Brian where this should be implemented on vault-enterprise if you can't find it
-	/*
-		// NotifyPerformanceStandbyStateChange is used by Core to notify that this
-		// Vault instance has changed it status to performance standby or standby.
-		NotifyPerformanceStandbyStateChange() error
-
-	*/
-	// NotifyPerformanceLeaderStateChange is used by Core to notify that this
-	// Vault instance has changed it status to performance leader or standby.
-	NotifyPerformanceLeaderStateChange(isLeader bool) error
+	// NotifyPerformanceStandbyStateChange is used by Core to notify that this
+	// Vault instance has changed its performance standby status.
+	NotifyPerformanceStandbyStateChange(isStandby bool) error
 
 	// NotifyInitializedStateChange is used by Core to notify that the core is
 	// initialized.

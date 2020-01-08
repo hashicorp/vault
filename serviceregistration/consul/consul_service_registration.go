@@ -44,14 +44,14 @@ const (
 	reconcileTimeout = 60 * time.Second
 
 	// These tags reflect Vault's state at a point in time.
-	tagPerfLeader    = "performance-leader"
-	tagNotPerfLeader = "not-performance-leader"
-	tagIsActive      = "active"
-	tagNotActive     = "inactive"
-	tagInitialized   = "initialized"
-	tagUninitialized = "uninitialized"
-	tagSealed        = "sealed"
-	tagUnsealed      = "unsealed"
+	tagPerfStandby    = "performance-standby"
+	tagNotPerfStandby = "not-performance-standby"
+	tagIsActive       = "active"
+	tagNotActive      = "inactive"
+	tagInitialized    = "initialized"
+	tagUninitialized  = "uninitialized"
+	tagSealed         = "sealed"
+	tagUnsealed       = "unsealed"
 )
 
 var (
@@ -282,12 +282,12 @@ func (c *ServiceRegistration) NotifyActiveStateChange(isActive bool) error {
 	return c.reconcileConsul()
 }
 
-func (c *ServiceRegistration) NotifyPerformanceLeaderStateChange(isLeader bool) error {
+func (c *ServiceRegistration) NotifyPerformanceStandbyStateChange(isStandby bool) error {
 	if c.logger.IsDebug() {
-		c.logger.Debug(fmt.Sprintf("received NotifyPerformanceLeaderStateChange isLeader: %v", isLeader))
+		c.logger.Debug(fmt.Sprintf("received NotifyPerformanceStandbyStateChange isStandby: %v", isStandby))
 	}
 	c.stateLock.Lock()
-	c.state.IsPerformanceLeader = isLeader
+	c.state.IsPerformanceStandby = isStandby
 	c.stateLock.Unlock()
 	return c.runCheck()
 }
@@ -321,7 +321,7 @@ func (c *ServiceRegistration) GoToFinalState(shutdownCh <-chan struct{}) {
 	c.stateLock.Lock()
 	c.state.IsSealed = true
 	c.state.IsInitialized = false
-	c.state.IsPerformanceLeader = false
+	c.state.IsPerformanceStandby = false
 	c.state.IsActive = false
 	c.stateLock.Unlock()
 
@@ -508,10 +508,10 @@ func durationMinusBufferDomain(intv time.Duration, buffer time.Duration, jitter 
 
 func buildTags(usersTags []string, state *sr.State) []string {
 	result := usersTags
-	if state.IsPerformanceLeader {
-		result = append(result, tagPerfLeader)
+	if state.IsPerformanceStandby {
+		result = append(result, tagPerfStandby)
 	} else {
-		result = append(result, tagNotPerfLeader)
+		result = append(result, tagNotPerfStandby)
 	}
 	if state.IsActive {
 		result = append(result, tagIsActive)

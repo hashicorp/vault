@@ -86,7 +86,7 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 		t.Fatal(err)
 	}
 	resultingTags := services["vault"]
-	for _, tag := range []string{tagNotPerfLeader, tagNotActive, tagUninitialized, tagSealed} {
+	for _, tag := range []string{tagPerfStandby, tagNotActive, tagUninitialized, tagSealed} {
 		if !strutil.StrListContains(resultingTags, tag) {
 			t.Fatalf("expected %q but received %q", tag, resultingTags)
 		}
@@ -112,7 +112,7 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 		t.Fatal(err)
 	}
 	resultingTags = services["vault"]
-	for _, tag := range []string{tagNotPerfLeader, tagIsActive, tagInitialized, tagUnsealed} {
+	for _, tag := range []string{tagPerfStandby, tagIsActive, tagInitialized, tagUnsealed} {
 		if !strutil.StrListContains(resultingTags, tag) {
 			t.Fatalf("expected %q but received %q", tag, resultingTags)
 		}
@@ -123,23 +123,23 @@ func TestConsul_ServiceTags(t *testing.T) {
 
 	usersTags := []string{"deadbeef", "cafeefac", "deadc0de", "feedface"}
 	negativeState := &sr.State{
-		VaultVersion:        "",
-		IsInitialized:       false,
-		IsSealed:            false,
-		IsActive:            false,
-		IsPerformanceLeader: false,
+		VaultVersion:         "",
+		IsInitialized:        false,
+		IsSealed:             false,
+		IsActive:             false,
+		IsPerformanceStandby: false,
 	}
 	positiveState := &sr.State{
-		VaultVersion:        "some-version",
-		IsInitialized:       true,
-		IsSealed:            true,
-		IsActive:            true,
-		IsPerformanceLeader: true,
+		VaultVersion:         "some-version",
+		IsInitialized:        true,
+		IsSealed:             true,
+		IsActive:             true,
+		IsPerformanceStandby: true,
 	}
 
 	actual := buildTags(nil, negativeState)
-	if !strutil.StrListContains(actual, tagNotPerfLeader) {
-		t.Fatalf("expected %q but received %q", tagNotPerfLeader, actual)
+	if !strutil.StrListContains(actual, tagNotPerfStandby) {
+		t.Fatalf("expected %q but received %q", tagNotPerfStandby, actual)
 	}
 	if !strutil.StrListContains(actual, tagNotActive) {
 		t.Fatalf("expected %q but received %q", tagNotActive, actual)
@@ -152,8 +152,8 @@ func TestConsul_ServiceTags(t *testing.T) {
 	}
 
 	actual = buildTags(nil, positiveState)
-	if !strutil.StrListContains(actual, tagPerfLeader) {
-		t.Fatalf("expected %q but received %q", tagPerfLeader, actual)
+	if !strutil.StrListContains(actual, tagPerfStandby) {
+		t.Fatalf("expected %q but received %q", tagPerfStandby, actual)
 	}
 	if !strutil.StrListContains(actual, tagIsActive) {
 		t.Fatalf("expected %q but received %q", tagIsActive, actual)
@@ -166,8 +166,8 @@ func TestConsul_ServiceTags(t *testing.T) {
 	}
 
 	actual = buildTags(usersTags, negativeState)
-	if !strutil.StrListContains(actual, tagNotPerfLeader) {
-		t.Fatalf("expected %q but received %q", tagNotPerfLeader, actual)
+	if !strutil.StrListContains(actual, tagNotPerfStandby) {
+		t.Fatalf("expected %q but received %q", tagNotPerfStandby, actual)
 	}
 	if !strutil.StrListContains(actual, tagNotActive) {
 		t.Fatalf("expected %q but received %q", tagNotActive, actual)
@@ -185,8 +185,8 @@ func TestConsul_ServiceTags(t *testing.T) {
 	}
 
 	actual = buildTags(usersTags, positiveState)
-	if !strutil.StrListContains(actual, tagPerfLeader) {
-		t.Fatalf("expected %q but received %q", tagPerfLeader, actual)
+	if !strutil.StrListContains(actual, tagPerfStandby) {
+		t.Fatalf("expected %q but received %q", tagPerfStandby, actual)
 	}
 	if !strutil.StrListContains(actual, tagIsActive) {
 		t.Fatalf("expected %q but received %q", tagIsActive, actual)
@@ -519,10 +519,10 @@ func TestConsul_serviceID(t *testing.T) {
 
 func initialState() *sr.State {
 	return &sr.State{
-		VaultVersion:        version.GetVersion().VersionNumber(),
-		IsInitialized:       false,
-		IsSealed:            true,
-		IsActive:            false,
-		IsPerformanceLeader: false,
+		VaultVersion:         version.GetVersion().VersionNumber(),
+		IsInitialized:        false,
+		IsSealed:             true,
+		IsActive:             false,
+		IsPerformanceStandby: true,
 	}
 }
