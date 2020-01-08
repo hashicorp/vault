@@ -1227,9 +1227,6 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		return nil
 	}
 
-	// TODO: Fix this
-	time.Sleep(15 * time.Second)
-
 	switch {
 	case c.migrationInfo.seal.RecoveryKeySupported() && c.seal.RecoveryKeySupported():
 		// Set the recovery and barrier keys to be the same.
