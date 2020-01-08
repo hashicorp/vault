@@ -998,18 +998,18 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 	}
 
 	if masterKey != nil {
-		if c.seal.BarrierType() == seal.Shamir {
+		if sealToUse.BarrierType() == seal.Shamir && sealToUse.StoredKeysSupported() == StoredKeysNotSupported {
 			// If this is a legacy shamir seal this serves no purpose but it
 			// doesn't hurt.
-			err = c.seal.GetAccess().(*shamirseal.ShamirSeal).SetKey(masterKey)
+			err = sealToUse.GetAccess().(*shamirseal.ShamirSeal).SetKey(masterKey)
 			if err != nil {
 				return false, err
 			}
 		}
 
 		if !c.isRaftUnseal() {
-			if c.seal.BarrierType() == seal.Shamir {
-				cfg, err := c.seal.BarrierConfig(ctx)
+			if sealToUse.BarrierType() == seal.Shamir {
+				cfg, err := sealToUse.BarrierConfig(ctx)
 				if err != nil {
 					return false, err
 				}
@@ -1021,7 +1021,7 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 					}
 					// Here's where we actually test that the provided unseal
 					// key is valid: can it decrypt the stored master key?
-					storedKeys, err := c.seal.GetStoredKeys(ctx)
+					storedKeys, err := sealToUse.GetStoredKeys(ctx)
 					if err != nil {
 						return false, err
 					}
@@ -1037,7 +1037,7 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 
 		// If we are in the middle of a raft join send the answer and wait for
 		// data to start streaming in.
-		if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), c.raftInfo); err != nil {
+		if err := c.joinRaftSendAnswer(ctx, sealToUse.GetAccess(), c.raftInfo); err != nil {
 			return false, err
 		}
 		// Reset the state
@@ -1045,7 +1045,7 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 
 		go func() {
 			keyringFound := false
-			haveMasterKey := c.seal.StoredKeysSupported() != StoredKeysSupportedShamirMaster
+			haveMasterKey := sealToUse.StoredKeysSupported() != StoredKeysSupportedShamirMaster
 			defer func() {
 				if keyringFound && haveMasterKey {
 					_, err := c.unsealInternal(ctx, masterKey)
@@ -1069,7 +1069,7 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 					}
 				}
 				if !haveMasterKey {
-					keys, err := c.seal.GetStoredKeys(ctx)
+					keys, err := sealToUse.GetStoredKeys(ctx)
 					if err != nil {
 						c.logger.Error("failed to read master key", "error", err)
 						return
