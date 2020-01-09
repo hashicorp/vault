@@ -124,6 +124,7 @@ func TestBackendHandleRequest_Forwarding(t *testing.T) {
 		isStandby    bool
 		isSecondary  bool
 		expectFwd    bool
+		nilSysView   bool
 	}{
 		"no forward": {
 			expectFwd: false,
@@ -159,6 +160,10 @@ func TestBackendHandleRequest_Forwarding(t *testing.T) {
 			isSecondary: true,
 			expectFwd:   false,
 		},
+		"nil system view": {
+			nilSysView: true,
+			expectFwd:  false,
+		},
 	}
 
 	for name, test := range tests {
@@ -191,6 +196,10 @@ func TestBackendHandleRequest_Forwarding(t *testing.T) {
 					LocalMountVal:       test.isLocal,
 					ReplicationStateVal: replState,
 				},
+			}
+
+			if test.nilSysView {
+				b.system = nil
 			}
 
 			_, err := b.HandleRequest(context.Background(), &logical.Request{

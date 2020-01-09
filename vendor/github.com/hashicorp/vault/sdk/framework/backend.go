@@ -228,15 +228,17 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		if op, ok := path.Operations[req.Operation]; ok {
 
 			// Check whether this operation should be forwarded
-			replState := b.System().ReplicationState()
-			props := op.Properties()
+			if sysView := b.System(); sysView != nil {
+				replState := sysView.ReplicationState()
+				props := op.Properties()
 
-			if props.ForwardPerformanceStandby && replState.HasState(consts.ReplicationPerformanceStandby) {
-				return nil, logical.ErrReadOnly
-			}
+				if props.ForwardPerformanceStandby && replState.HasState(consts.ReplicationPerformanceStandby) {
+					return nil, logical.ErrReadOnly
+				}
 
-			if props.ForwardPerformanceSecondary && !b.System().LocalMount() && replState.HasState(consts.ReplicationPerformanceSecondary) {
-				return nil, logical.ErrReadOnly
+				if props.ForwardPerformanceSecondary && !sysView.LocalMount() && replState.HasState(consts.ReplicationPerformanceSecondary) {
+					return nil, logical.ErrReadOnly
+				}
 			}
 
 			callback = op.Handler()
