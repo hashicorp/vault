@@ -9,6 +9,7 @@ import (
 	"os/user"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	hclog "github.com/hashicorp/go-hclog"
 )
 
@@ -240,11 +241,10 @@ func setInstanceMetadata(t *testing.T, region string) (cleanup func()) {
 			t.Fatalf("received unexpected request path: %s", reqPath)
 		}
 	}))
-	originalMetadataBaseURL := InstanceMetadataService.BaseURL
-	InstanceMetadataService.BaseURL = ts.URL
+	ec2Endpoint = aws.String(ts.URL)
 	cleanup = func() {
 		ts.Close()
-		InstanceMetadataService.BaseURL = originalMetadataBaseURL
+		ec2Endpoint = nil
 	}
 	return
 }

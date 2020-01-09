@@ -5,17 +5,16 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"reflect"
 	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/hashicorp/errwrap"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	hclog "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/agent/auth"
@@ -23,8 +22,8 @@ import (
 )
 
 const (
-	typeEC2          = "ec2"
-	typeIAM          = "iam"
+	typeEC2 = "ec2"
+	typeIAM = "iam"
 
 	/*
 
@@ -182,70 +181,33 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retTo
 	a.logger.Trace("beginning authentication")
 
 	data := make(map[string]interface{})
-	identityURL := awsutil.InstanceMetadataService.BaseURL + awsutil.InstanceMetadataService.IdentityEndpoint
+	sess, err := session.NewSession()
+	if err != nil {
+		retErr = errwrap.Wrapf("error creating session: {{err}}", err)
+		return
+	}
+	metadataSvc := ec2metadata.New(sess)
 
 	switch a.authType {
 	case typeEC2:
-		client := cleanhttp.DefaultClient()
-
 		// Fetch document
 		{
-			req, err := http.NewRequest("GET", fmt.Sprintf("%s/document", identityURL), nil)
+			doc, err := metadataSvc.GetDynamicData("/instance-identity/document")
 			if err != nil {
-				retErr = errwrap.Wrapf("error creating request: {{err}}", err)
+				retErr = errwrap.Wrapf("error requesting doc: {{err}}", err)
 				return
 			}
-			if err := awsutil.InstanceMetadataService.PrepareRequest(req); err != nil {
-				retErr = errwrap.Wrapf("error preparing instance metadata request: {{err}}", err)
-				return
-			}
-			req = req.WithContext(ctx)
-			resp, err := client.Do(req)
-			if err != nil {
-				retErr = errwrap.Wrapf("error fetching instance document: {{err}}", err)
-				return
-			}
-			if resp == nil {
-				retErr = errors.New("empty response fetching instance document")
-				return
-			}
-			defer resp.Body.Close()
-			doc, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				retErr = errwrap.Wrapf("error reading instance document response body: {{err}}", err)
-				return
-			}
-			data["identity"] = base64.StdEncoding.EncodeToString(doc)
+			data["identity"] = base64.StdEncoding.EncodeToString([]byte(doc))
 		}
 
 		// Fetch signature
 		{
-			req, err := http.NewRequest("GET", fmt.Sprintf("%s/signature", identityURL), nil)
+			signature, err := metadataSvc.GetDynamicData("/instance-identity/signature")
 			if err != nil {
-				retErr = errwrap.Wrapf("error creating request: {{err}}", err)
+				retErr = errwrap.Wrapf("error requesting signature: {{err}}", err)
 				return
 			}
-			if err := awsutil.InstanceMetadataService.PrepareRequest(req); err != nil {
-				retErr = errwrap.Wrapf("error preparing instance metadata request: {{err}}", err)
-				return
-			}
-			req = req.WithContext(ctx)
-			resp, err := client.Do(req)
-			if err != nil {
-				retErr = errwrap.Wrapf("error fetching instance document signature: {{err}}", err)
-				return
-			}
-			if resp == nil {
-				retErr = errors.New("empty response fetching instance document signature")
-				return
-			}
-			defer resp.Body.Close()
-			sig, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				retErr = errwrap.Wrapf("error reading instance document signature response body: {{err}}", err)
-				return
-			}
-			data["signature"] = string(sig)
+			data["signature"] = signature
 		}
 
 		// Add the reauthentication value, if we have one

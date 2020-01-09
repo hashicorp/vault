@@ -15,6 +15,9 @@ import (
 // is a widely used region, and is the most common one for some services like STS.
 const DefaultRegion = "us-east-1"
 
+// This is nil by default, but is exposed in case it needs to be changed for tests.
+var ec2Endpoint *string = nil
+
 /*
 It's impossible to mimic "normal" AWS behavior here because it's not consistent
 or well-defined. For example, boto3, the Python SDK (which the aws cli uses),
@@ -54,7 +57,7 @@ func GetOrDefaultRegion(logger hclog.Logger, configuredRegion string) string {
 	}
 
 	metadata := ec2metadata.New(sess, &aws.Config{
-		Endpoint:                          aws.String(InstanceMetadataService.BaseURL + InstanceMetadataService.LatestEndpoint),
+		Endpoint:                          ec2Endpoint,
 		EC2MetadataDisableTimeoutOverride: aws.Bool(true),
 		HTTPClient: &http.Client{
 			Timeout: time.Second,
