@@ -71,7 +71,7 @@ type ServiceRegistration struct {
 	redirectPort        int64
 	serviceName         string
 	serviceAddress      *string
-	usersTags           []string
+	serviceTags         []string
 	disableRegistration bool
 	checkTimeout        time.Duration
 }
@@ -204,7 +204,7 @@ func NewServiceRegistration(shutdownCh <-chan struct{}, conf map[string]string, 
 		logger:              logger,
 		state:               state,
 		serviceName:         service,
-		usersTags:           strutil.ParseDedupLowercaseAndSortStrings(tags, ","),
+		serviceTags:         strutil.ParseDedupLowercaseAndSortStrings(tags, ","),
 		serviceAddress:      serviceAddr,
 		disableRegistration: disableRegistration,
 		checkTimeout:        checkTimeout,
@@ -382,7 +382,7 @@ func (c *ServiceRegistration) reconcileConsul() error {
 		}
 	}
 
-	tags := buildTags(c.usersTags, c.state)
+	tags := buildTags(c.serviceTags, c.state)
 
 	var reregister bool
 
@@ -506,8 +506,8 @@ func durationMinusBufferDomain(intv time.Duration, buffer time.Duration, jitter 
 	return min, max
 }
 
-func buildTags(usersTags []string, state *sr.State) []string {
-	result := usersTags
+func buildTags(serviceTags []string, state *sr.State) []string {
+	result := serviceTags
 	if state.IsPerformanceStandby {
 		result = append(result, tagPerfStandby)
 	} else {
