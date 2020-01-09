@@ -54,7 +54,7 @@ $ git clone https://github.com/hashicorp/vault-helm.git
 $ cd vault-helm
 
 # Checkout a tagged version
-$ git checkout v0.3.0
+$ git checkout v0.3.2
 
 # Run Helm
 $ helm install --dry-run ./
