@@ -74,9 +74,11 @@ func nonCachedClientIAM(ctx context.Context, s logical.Storage) (*iam.IAM, error
 	if err != nil {
 		return nil, err
 	}
-
-	client := iam.New(session.New(awsConfig))
-
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return nil, err
+	}
+	client := iam.New(sess)
 	if client == nil {
 		return nil, fmt.Errorf("could not obtain iam client")
 	}
@@ -88,8 +90,11 @@ func nonCachedClientSTS(ctx context.Context, s logical.Storage) (*sts.STS, error
 	if err != nil {
 		return nil, err
 	}
-	client := sts.New(session.New(awsConfig))
-
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return nil, err
+	}
+	client := sts.New(sess)
 	if client == nil {
 		return nil, fmt.Errorf("could not obtain sts client")
 	}
