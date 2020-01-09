@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
@@ -149,19 +148,7 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			return nil, err
 		}
 
-		// Send a canary to force a guard check which prevents the client
-		// to run in a timeout if the request was originally send to a
-		// performance secondary/standby node.
-		canaryUUID, err := uuid.GenerateUUID()
-		if err != nil {
-			return nil, err
-		}
-		canaryEntry := &logical.StorageEntry{
-			Key:   "core/replication-canary",
-			Value: []byte(canaryUUID),
-		}
-
-		return nil, req.Storage.Put(ctx, canaryEntry)
+		return nil, nil
 	}
 }
 
