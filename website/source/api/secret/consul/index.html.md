@@ -67,7 +67,7 @@ updated attributes.
 | :--------------------------- | :--------------------- |
 | `POST`   | `/consul/roles/:name`        |
 
-### Parameters for Consul version below 1.4
+### Parameters for Consul versions 1.4 and above
 
 - `name` `(string: <required>)` – Specifies the name of an existing role against
   which to create this Consul credential. This is part of the request URL.
@@ -123,7 +123,7 @@ $ curl \
     http://127.0.0.1:8200/v1/consul/roles/example-role
 ```
 
-### Parameters for Consul versions 1.4 and above
+### Parameters for Consul version below 1.4
 
 - `lease` `(string: "")` – Specifies the lease for this role. This is provided
   as a string duration with a time suffix like `"30s"` or `"1h"`. If not
