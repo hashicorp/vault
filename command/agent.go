@@ -65,6 +65,9 @@ type AgentCommand struct {
 	flagLogLevel      string
 	flagExitAfterAuth bool
 
+	// maximum number of attempts to connect to Vault
+	flagMaxConnectionAttempts int
+
 	flagTestVerifyOnly bool
 	flagCombineLogs    bool
 }
@@ -114,6 +117,15 @@ func (c *AgentCommand) Flags() *FlagSets {
 		Completion: complete.PredictSet("trace", "debug", "info", "warn", "err"),
 		Usage: "Log verbosity level. Supported values (in order of detail) are " +
 			"\"trace\", \"debug\", \"info\", \"warn\", and \"err\".",
+	})
+
+	f.IntVar(&IntVar{
+		Name:    "max-connection-attempts",
+		Target:  &c.flagMaxConnectionAttempts,
+		Default: 0,
+		EnvVar:  "VAULT_MAX_CONNECTION_ATTEMPTS",
+		Usage: "Maximum attempts to connect to Vault. This is different than " +
+			"timeout or max retries",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -237,6 +249,13 @@ func (c *AgentCommand) Run(args []string) int {
 	f.Visit(func(fl *flag.Flag) {
 		if fl.Name == "exit-after-auth" {
 			exitAfterAuth = c.flagExitAfterAuth
+		}
+	})
+
+	maxConnectionAttempts := config.MaxConnectionAttempts
+	f.Visit(func(fl *flag.Flag) {
+		if fl.Name == "max-connection-attempts" {
+			maxConnectionAttempts = c.flagMaxConnectionAttempts
 		}
 	})
 
@@ -555,7 +574,7 @@ func (c *AgentCommand) Run(args []string) int {
 		})
 		tsDoneCh = ts.DoneCh
 
-		go ah.Run(ctx, method)
+		go ah.Run(ctx, method, maxConnectionAttempts)
 		go ss.Run(ctx, ah.OutputCh, sinks)
 		go ts.Run(ctx, ah.TemplateTokenCh, config.Templates)
 	}
@@ -609,6 +628,14 @@ func (c *AgentCommand) Run(args []string) int {
 		if tsDoneCh != nil {
 			<-tsDoneCh
 		}
+	case <-ahDoneCh:
+		// The auth handler DoneCh can be closed if the auth handler fails to
+		// establish a connection to Vault. This can happen if Vault is not
+		// available at the address given, which could result in the Agent
+		// continually trying to authenticate unless max-connection-attempts is set.
+		// This is different from timeout or max retries, which actuall get a
+		// response from Vault.
+		c.UI.Output("==> Vault Agent auth failure")
 	}
 
 	return 0

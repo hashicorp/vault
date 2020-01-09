@@ -71,7 +71,7 @@ func backoffOrQuit(ctx context.Context, backoff time.Duration) {
 	}
 }
 
-func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
+func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod, maxAuthRetries int) {
 	if am == nil {
 		panic("nil auth method")
 	}
@@ -107,12 +107,18 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 
 	var watcher *api.LifetimeWatcher
 
+	var authErrCount int
 	for {
 		select {
 		case <-ctx.Done():
 			return
 
 		default:
+		}
+
+		if maxAuthRetries > 0 && authErrCount >= maxAuthRetries {
+			ah.logger.Error("too many connection attempts, quitting", "attempts", maxAuthRetries)
+			return
 		}
 
 		// Create a fresh backoff value
@@ -145,8 +151,12 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 		if err != nil {
 			ah.logger.Error("error authenticating", "error", err, "backoff", backoff.Seconds())
 			backoffOrQuit(ctx, backoff)
+			authErrCount++
 			continue
 		}
+
+		// reset the auth error count
+		authErrCount = 0
 
 		switch {
 		case ah.wrapTTL > 0:
