@@ -13,7 +13,6 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"github.com/go-test/deep"
 	"math"
 	"math/big"
 	mathrand "math/rand"
@@ -29,6 +28,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	vaulthttp "github.com/hashicorp/vault/http"
