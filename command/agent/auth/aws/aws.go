@@ -2,12 +2,12 @@ package aws
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -188,9 +188,9 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retTo
 	case typeEC2:
 		client := cleanhttp.DefaultClient()
 
-		// Fetch document
+		// Fetch pkcs7 document
 		{
-			req, err := http.NewRequest("GET", fmt.Sprintf("%s/document", identityEndpoint), nil)
+			req, err := http.NewRequest("GET", fmt.Sprintf("%s/pkcs7", identityEndpoint), nil)
 			if err != nil {
 				retErr = errwrap.Wrapf("error creating request: {{err}}", err)
 				return
@@ -198,46 +198,20 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retTo
 			req = req.WithContext(ctx)
 			resp, err := client.Do(req)
 			if err != nil {
-				retErr = errwrap.Wrapf("error fetching instance document: {{err}}", err)
+				retErr = errwrap.Wrapf("error fetching signed instance document: {{err}}", err)
 				return
 			}
 			if resp == nil {
-				retErr = errors.New("empty response fetching instance document")
-				return
-			}
-			defer resp.Body.Close()
-			doc, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				retErr = errwrap.Wrapf("error reading instance document response body: {{err}}", err)
-				return
-			}
-			data["identity"] = base64.StdEncoding.EncodeToString(doc)
-		}
-
-		// Fetch signature
-		{
-			req, err := http.NewRequest("GET", fmt.Sprintf("%s/signature", identityEndpoint), nil)
-			if err != nil {
-				retErr = errwrap.Wrapf("error creating request: {{err}}", err)
-				return
-			}
-			req = req.WithContext(ctx)
-			resp, err := client.Do(req)
-			if err != nil {
-				retErr = errwrap.Wrapf("error fetching instance document signature: {{err}}", err)
-				return
-			}
-			if resp == nil {
-				retErr = errors.New("empty response fetching instance document signature")
+				retErr = errors.New("empty response fetching signed instance document")
 				return
 			}
 			defer resp.Body.Close()
 			sig, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				retErr = errwrap.Wrapf("error reading instance document signature response body: {{err}}", err)
+				retErr = errwrap.Wrapf("error reading signed instance document signature response body: {{err}}", err)
 				return
 			}
-			data["signature"] = string(sig)
+			data["pkcs7"] = strings.ReplaceAll(string(sig), "\n", "")
 		}
 
 		// Add the reauthentication value, if we have one
