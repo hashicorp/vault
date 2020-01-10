@@ -310,6 +310,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       this.persistKey(() => {
         this.transitionToRoute(SHOW_ROUTE, this.model.path || this.model.id);
       }).catch((error) => {
+        // if 403 returns it's a permissions denied error and we have to manually set the error
         if(error.httpStatus === 403){
           this.set('model.isError', true)
           this.set('model.adapterError', error);
