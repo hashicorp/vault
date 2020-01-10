@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -252,11 +253,11 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	})
 
-	maxConnectionAttempts := config.MaxConnectionAttempts
-	f.Visit(func(fl *flag.Flag) {
-		if fl.Name == "max-connection-attempts" {
-			maxConnectionAttempts = c.flagMaxConnectionAttempts
-		}
+	c.setIntFlag(f, config.MaxConnectionAttempts, &IntVar{
+		Name:    "max-connection-attempts",
+		Target:  &c.flagMaxConnectionAttempts,
+		Default: 0,
+		EnvVar:  "VAULT_MAX_CONNECTION_ATTEMPTS",
 	})
 
 	c.setStringFlag(f, config.Vault.Address, &StringVar{
@@ -574,7 +575,7 @@ func (c *AgentCommand) Run(args []string) int {
 		})
 		tsDoneCh = ts.DoneCh
 
-		go ah.Run(ctx, method, maxConnectionAttempts)
+		go ah.RunWithMaxAttempts(ctx, method, c.flagMaxConnectionAttempts)
 		go ss.Run(ctx, ah.OutputCh, sinks)
 		go ts.Run(ctx, ah.TemplateTokenCh, config.Templates)
 	}
@@ -697,6 +698,34 @@ func (c *AgentCommand) setBoolFlag(f *FlagSets, configVal bool, fVar *BoolVar) {
 		// Use value from env var
 		*fVar.Target = flagEnvValue != ""
 	case configVal == true:
+		// Use value from config
+		*fVar.Target = configVal
+	default:
+		// Use the default value
+		*fVar.Target = fVar.Default
+	}
+}
+
+func (c *AgentCommand) setIntFlag(f *FlagSets, configVal int, fVar *IntVar) {
+	var isFlagSet bool
+	f.Visit(func(f *flag.Flag) {
+		if f.Name == fVar.Name {
+			isFlagSet = true
+		}
+	})
+
+	flagEnvValue, flagEnvSet := os.LookupEnv(fVar.EnvVar)
+	switch {
+	case isFlagSet:
+		// Don't do anything as the flag is already set from the command line
+	case flagEnvSet:
+		// Use value from env var
+		v, err := strconv.Atoi(flagEnvValue)
+		if err != nil {
+			v = 0
+		}
+		*fVar.Target = v
+	case configVal != 0:
 		// Use value from config
 		*fVar.Target = configVal
 	default:

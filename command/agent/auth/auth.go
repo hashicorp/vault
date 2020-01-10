@@ -8,6 +8,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/y0ssar1an/q"
 )
 
 type AuthMethod interface {
@@ -71,7 +72,19 @@ func backoffOrQuit(ctx context.Context, backoff time.Duration) {
 	}
 }
 
-func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod, maxAuthRetries int) {
+// Run is a convienence method to call RunWithMaxAttempts with the default value
+// of 0 maxConnectionAttempts, which indicates no maximum attempts.
+func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
+	ah.RunWithMaxAttempts(ctx, am, 0)
+}
+
+// Run is a long running process that authenticates with Vault, retrieves an
+// access token, and passes that token to it's output channels to be consumed
+// down the pipeline. The MaxAttempts variable determines how many attempts can
+// be made to a non-responsive Vault instance. A value of 0 for
+// maxConnectionAttempts means there is no limit to the connection attemts
+// (Vault Agent will not abort due to no connection being established).
+func (ah *AuthHandler) RunWithMaxAttempts(ctx context.Context, am AuthMethod, maxConnectionAttempts int) {
 	if am == nil {
 		panic("nil auth method")
 	}
@@ -83,6 +96,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod, maxAuthRetries in
 		close(ah.DoneCh)
 		close(ah.TemplateTokenCh)
 		ah.logger.Info("auth handler stopped")
+		q.Q(">-->Auth Handler defer func")
 	}()
 
 	credCh := am.NewCreds()
@@ -107,7 +121,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod, maxAuthRetries in
 
 	var watcher *api.LifetimeWatcher
 
-	var authErrCount int
+	var connErrCount int
 	for {
 		select {
 		case <-ctx.Done():
@@ -116,8 +130,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod, maxAuthRetries in
 		default:
 		}
 
-		if maxAuthRetries > 0 && authErrCount >= maxAuthRetries {
-			ah.logger.Error("too many connection attempts, quitting", "attempts", maxAuthRetries)
+		if maxConnectionAttempts > 0 && connErrCount >= maxConnectionAttempts {
+			ah.logger.Error("too many connection attempts, quitting", "attempts", maxConnectionAttempts)
+			q.Q("->>->> auth handler max attempts, return")
 			return
 		}
 
@@ -151,12 +166,12 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod, maxAuthRetries in
 		if err != nil {
 			ah.logger.Error("error authenticating", "error", err, "backoff", backoff.Seconds())
 			backoffOrQuit(ctx, backoff)
-			authErrCount++
+			connErrCount++
 			continue
 		}
 
-		// reset the auth error count
-		authErrCount = 0
+		// reset the connection error count
+		connErrCount = 0
 
 		switch {
 		case ah.wrapTTL > 0:
