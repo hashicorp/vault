@@ -309,6 +309,9 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
       this.persistKey(() => {
         this.transitionToRoute(SHOW_ROUTE, this.model.path || this.model.id);
+      }).catch((error) => {
+        this.set('model.isError', true)
+        this.set('model.adapterError', error);
       });
     },
 
