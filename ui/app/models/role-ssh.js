@@ -66,7 +66,7 @@ export default DS.Model.extend({
   }),
   allowedUsers: attr('string', {
     helpText:
-      'Create a whitelist of users that can use this key (e.g. `admin, dev`, or use `*` to allow all)',
+      'Create a whitelist of users that can use this key (e.g. `admin, dev`, use `*` to allow all. Supports templated policies e.g. {{identity.entity.aliases.mount_accessor_xyz.name}})',
   }),
   allowedDomains: attr('string', {
     helpText:
