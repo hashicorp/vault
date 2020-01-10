@@ -1263,6 +1263,17 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		if err != nil {
 			return errwrap.Wrapf("failed to set master key in seal: {{err}}", err)
 		}
+
+		// Enforce Shamir as KeK
+		if err := c.seal.SetBarrierConfig(ctx, &SealConfig{
+			Type:            seal.Shamir,
+			SecretShares:    1,
+			SecretThreshold: 1,
+			StoredShares:    1,
+		}); err != nil {
+			return errwrap.Wrapf("failed to store barrier config migration: {{err}}", err)
+		}
+
 		if err := c.seal.SetStoredKeys(ctx, [][]byte{c.migrationInfo.masterKey}); err != nil {
 			return errwrap.Wrapf("error setting new barrier key information during migrate: {{err}}", err)
 		}
