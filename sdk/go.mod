@@ -18,7 +18,7 @@ require (
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-plugin v1.0.1
 	github.com/hashicorp/go-sockaddr v1.0.2
-	github.com/hashicorp/go-uuid v1.0.2-0.20191001231223-f32f5fe8d6a8
+	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/go-version v1.1.0
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/hashicorp/hcl v1.0.0

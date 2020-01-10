@@ -14,7 +14,8 @@ import (
 // is a widely used region, and is the most common one for some services like STS.
 const DefaultRegion = "us-east-1"
 
-var ec2MetadataBaseURL = "http://169.254.169.254"
+// This is nil by default, but is exposed in case it needs to be changed for tests.
+var ec2Endpoint *string = nil
 
 /*
 It's impossible to mimic "normal" AWS behavior here because it's not consistent
@@ -54,7 +55,7 @@ func GetRegion(configuredRegion string) (string, error) {
 	}
 
 	metadata := ec2metadata.New(sess, &aws.Config{
-		Endpoint:                          aws.String(ec2MetadataBaseURL + "/latest"),
+		Endpoint:                          ec2Endpoint,
 		EC2MetadataDisableTimeoutOverride: aws.Bool(true),
 		HTTPClient: &http.Client{
 			Timeout: time.Second,

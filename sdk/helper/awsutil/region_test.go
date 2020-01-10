@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/user"
 	"testing"
+
+	"github.com/aws/aws-sdk-go/aws"
 )
 
 const testConfigFile = `[default]
@@ -255,11 +257,10 @@ func setInstanceMetadata(t *testing.T, region string) (cleanup func()) {
 			t.Fatalf("received unexpected request path: %s", reqPath)
 		}
 	}))
-	originalMetadataBaseURL := ec2MetadataBaseURL
-	ec2MetadataBaseURL = ts.URL
+	ec2Endpoint = aws.String(ts.URL)
 	cleanup = func() {
 		ts.Close()
-		ec2MetadataBaseURL = originalMetadataBaseURL
+		ec2Endpoint = nil
 	}
 	return
 }

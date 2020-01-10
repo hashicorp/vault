@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"time"
 
@@ -41,18 +42,18 @@ func NewCFAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return a, nil
 }
 
-func (p *cfMethod) Authenticate(ctx context.Context, client *api.Client) (string, map[string]interface{}, error) {
+func (p *cfMethod) Authenticate(ctx context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
 	pathToClientCert := os.Getenv(cf.EnvVarInstanceCertificate)
 	if pathToClientCert == "" {
-		return "", nil, fmt.Errorf("missing %q value", cf.EnvVarInstanceCertificate)
+		return "", nil, nil, fmt.Errorf("missing %q value", cf.EnvVarInstanceCertificate)
 	}
 	certBytes, err := ioutil.ReadFile(pathToClientCert)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	pathToClientKey := os.Getenv(cf.EnvVarInstanceKey)
 	if pathToClientKey == "" {
-		return "", nil, fmt.Errorf("missing %q value", cf.EnvVarInstanceKey)
+		return "", nil, nil, fmt.Errorf("missing %q value", cf.EnvVarInstanceKey)
 	}
 	signingTime := time.Now().UTC()
 	signatureData := &signatures.SignatureData{
@@ -62,7 +63,7 @@ func (p *cfMethod) Authenticate(ctx context.Context, client *api.Client) (string
 	}
 	signature, err := signatures.Sign(pathToClientKey, signatureData)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	data := map[string]interface{}{
 		"role":             p.roleName,
@@ -70,7 +71,7 @@ func (p *cfMethod) Authenticate(ctx context.Context, client *api.Client) (string
 		"signing_time":     signingTime.Format(signatures.TimeFormat),
 		"signature":        signature,
 	}
-	return fmt.Sprintf("%s/login", p.mountPath), data, nil
+	return fmt.Sprintf("%s/login", p.mountPath), nil, data, nil
 }
 
 func (p *cfMethod) NewCreds() chan struct{} {
