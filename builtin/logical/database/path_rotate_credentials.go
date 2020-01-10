@@ -37,8 +37,12 @@ func pathRotateCredentials(b *databaseBackend) []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRotateRoleCredentialsUpdate(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:                    b.pathRotateRoleCredentialsUpdate(),
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
+				},
 			},
 
 			HelpSynopsis:    pathCredsCreateReadHelpSyn,
