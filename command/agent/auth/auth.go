@@ -8,7 +8,6 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/y0ssar1an/q"
 )
 
 type AuthMethod interface {
@@ -96,7 +95,6 @@ func (ah *AuthHandler) RunWithMaxAttempts(ctx context.Context, am AuthMethod, ma
 		close(ah.DoneCh)
 		close(ah.TemplateTokenCh)
 		ah.logger.Info("auth handler stopped")
-		q.Q(">-->Auth Handler defer func")
 	}()
 
 	credCh := am.NewCreds()
@@ -132,7 +130,6 @@ func (ah *AuthHandler) RunWithMaxAttempts(ctx context.Context, am AuthMethod, ma
 
 		if maxConnectionAttempts > 0 && connErrCount >= maxConnectionAttempts {
 			ah.logger.Error("too many connection attempts, quitting", "attempts", maxConnectionAttempts)
-			q.Q("->>->> auth handler max attempts, return")
 			return
 		}
 

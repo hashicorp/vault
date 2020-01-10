@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/y0ssar1an/q"
 )
 
 type userpassTestMethod struct{}
@@ -136,9 +135,6 @@ func TestConnectionAttempts(t *testing.T) {
 
 	for name, maxAttempts := range testCases {
 		t.Run(name, func(t *testing.T) {
-			q.Q("")
-			q.Q(">>>> running:", name)
-			q.Q("")
 			l, err := net.Listen("tcp", ":1234")
 			if err != nil {
 				t.Fatal(err)
@@ -197,7 +193,6 @@ func TestConnectionAttempts(t *testing.T) {
 				case <-ah.TemplateTokenCh:
 				// Nothing
 				case <-time.After(stopTime.Sub(time.Now())):
-					q.Q("--> timeout")
 					// if test max is not zero and we've reached the timeout, something is
 					// wrong
 					if !closed {
