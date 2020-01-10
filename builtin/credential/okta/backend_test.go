@@ -36,24 +36,23 @@ func TestBackend_Config(t *testing.T) {
 	token := os.Getenv("OKTA_API_TOKEN")
 
 	configData := map[string]interface{}{
-		"organization": os.Getenv("OKTA_ORG"),
-		"base_url":     "oktapreview.com",
+		"org_name": os.Getenv("OKTA_ORG"),
+		"base_url": "oktapreview.com",
 	}
 
 	updatedDuration := time.Hour * 1
 	configDataToken := map[string]interface{}{
-		"token": token,
-		"ttl":   "1h",
+		"api_token": token,
+		"token_ttl": "1h",
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		LogicalBackend: b,
+		AcceptanceTest:    true,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testConfigCreate(t, configData),
 			testLoginWrite(t, username, "wrong", "E0000004", 0, nil),
-			testLoginWrite(t, username, password, "user is not a member of any authorized policy", 0, nil),
 			testAccUserGroups(t, username, "local_grouP,lOcal_group2", []string{"user_policy"}),
 			testAccGroups(t, "local_groUp", "loCal_group_policy"),
 			testLoginWrite(t, username, password, "", defaultLeaseTTLVal, []string{"local_group_policy", "user_policy"}),
@@ -81,6 +80,9 @@ func testLoginWrite(t *testing.T, username, password, reason string, expectedTTL
 				if reason == "" || !strings.Contains(resp.Error().Error(), reason) {
 					return resp.Error()
 				}
+			} else if reason != "" {
+				return fmt.Errorf("expected error containing %q, got no error", reason)
+
 			}
 
 			if resp.Auth != nil {
@@ -124,7 +126,7 @@ func testConfigRead(t *testing.T, token string, d map[string]interface{}) logica
 				return resp.Error()
 			}
 
-			if resp.Data["organization"] != d["organization"] {
+			if resp.Data["org_name"] != d["org_name"] {
 				return fmt.Errorf("org mismatch expected %s but got %s", d["organization"], resp.Data["Org"])
 			}
 
