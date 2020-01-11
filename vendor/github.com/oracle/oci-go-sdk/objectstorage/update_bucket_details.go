@@ -20,7 +20,7 @@ type UpdateBucketDetails struct {
 	// The Object Storage namespace in which the bucket lives.
 	Namespace *string `mandatory:"false" json:"namespace"`
 
-	// The compartmentId for the compartment to which the bucket is targeted to move to.
+	// The compartmentId for the compartment to move the bucket to.
 	CompartmentId *string `mandatory:"false" json:"compartmentId"`
 
 	// The name of the bucket. Avoid entering confidential information.
@@ -35,6 +35,10 @@ type UpdateBucketDetails struct {
 	// is allowed for the `GetObject`, `HeadObject`, and `ListObjects` operations. When `ObjectReadWithoutList` is enabled
 	// on the bucket, public access is allowed for the `GetObject` and `HeadObject` operations.
 	PublicAccessType UpdateBucketDetailsPublicAccessTypeEnum `mandatory:"false" json:"publicAccessType,omitempty"`
+
+	// A property that determines whether events will be generated for operations on objects in this bucket.
+	// This is false by default.
+	ObjectEventsEnabled *bool `mandatory:"false" json:"objectEventsEnabled"`
 
 	// Free-form tags for this resource. Each tag is a simple key-value pair with no predefined name, type, or namespace.
 	// For more information, see Resource Tags (https://docs.cloud.oracle.com/Content/General/Concepts/resourcetags.htm).

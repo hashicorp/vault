@@ -13,9 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/awsutil"
+	"github.com/hashicorp/vault/sdk/helper/awsutil"
 )
 
 type CLIHandler struct{}
@@ -39,7 +38,10 @@ func GenerateLoginData(creds *credentials.Credentials, headerValue, configuredRe
 	loginData := make(map[string]interface{})
 
 	// Use the credentials we've found to construct an STS session
-	region := awsutil.GetOrDefaultRegion(hclog.Default(), configuredRegion)
+	region, err := awsutil.GetRegion(configuredRegion)
+	if err != nil {
+		return nil, err
+	}
 	stsSession, err := session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
 			Credentials:      creds,

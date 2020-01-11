@@ -31,6 +31,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/copystructure"
 
 	"golang.org/x/crypto/ed25519"
@@ -267,7 +268,7 @@ func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, handler http.Handl
 	}
 
 	switch core.seal.StoredKeysSupported() {
-	case StoredKeysNotSupported:
+	case seal.StoredKeysNotSupported:
 		barrierConfig.StoredShares = 0
 	default:
 		barrierConfig.StoredShares = 1
@@ -282,7 +283,7 @@ func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, handler http.Handl
 		BarrierConfig:  barrierConfig,
 		RecoveryConfig: recoveryConfig,
 	}
-	if core.seal.StoredKeysSupported() == StoredKeysNotSupported {
+	if core.seal.StoredKeysSupported() == seal.StoredKeysNotSupported {
 		initParams.LegacyShamirSeal = true
 	}
 	result, err := core.Initialize(context.Background(), initParams)

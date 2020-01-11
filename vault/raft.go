@@ -17,12 +17,12 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/net/http2"
@@ -491,13 +491,14 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 			// The snapshot contained a master key or keyring we couldn't
 			// recover
 			switch c.seal.BarrierType() {
-			case seal.Shamir:
+			case wrapping.Shamir:
 				// If we are a shamir seal we can't do anything. Just
 				// seal all nodes.
 
 				// Seal ourselves
 				c.logger.Info("failed to perform key upgrades, sealing", "error", err)
 				return err
+
 			default:
 				// If we are using an auto-unseal we can try to use the seal to
 				// unseal again. If the auto-unseal mechanism has changed then
@@ -599,7 +600,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, tlsConfig
 			return errwrap.Wrapf("error decoding challenge: {{err}}", err)
 		}
 
-		eBlob := &physical.EncryptedBlobInfo{}
+		eBlob := &wrapping.EncryptedBlobInfo{}
 		if err := proto.Unmarshal(challengeRaw, eBlob); err != nil {
 			return errwrap.Wrapf("error decoding challenge: {{err}}", err)
 		}
@@ -609,7 +610,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, tlsConfig
 			leaderBarrierConfig: &sealConfig,
 			nonVoter:            nonVoter,
 		}
-		if c.seal.BarrierType() == seal.Shamir {
+		if c.seal.BarrierType() == wrapping.Shamir {
 			c.raftInfo = raftInfo
 			c.seal.SetBarrierConfig(ctx, &sealConfig)
 			return nil
@@ -651,7 +652,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, tlsConfig
 // This is used in tests to override the cluster address
 var UpdateClusterAddrForTests uint32
 
-func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, raftInfo *raftInformation) error {
+func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, raftInfo *raftInformation) error {
 	if raftInfo.challenge == nil {
 		return errors.New("raft challenge is nil")
 	}
@@ -665,7 +666,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, r
 		return errors.New("raft is already initialized")
 	}
 
-	plaintext, err := sealAccess.Decrypt(ctx, raftInfo.challenge)
+	plaintext, err := sealAccess.Decrypt(ctx, raftInfo.challenge, nil)
 	if err != nil {
 		return errwrap.Wrapf("error decrypting challenge: {{err}}", err)
 	}
