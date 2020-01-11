@@ -12,7 +12,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.6.2
 	github.com/hashicorp/go-rootcerts v1.0.1
 	github.com/hashicorp/hcl v1.0.0
-	github.com/hashicorp/vault/sdk v0.1.14-0.20191218213202-9caafff72a1f
+	github.com/hashicorp/vault/sdk v0.1.14-0.20200111013952-157e805b97be
 	github.com/mitchellh/mapstructure v1.1.2
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
