@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-kms-wrapping/wrappers/transit"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/ory/dockertest"
@@ -29,7 +28,9 @@ func TestTransitWrapper_Lifecycle(t *testing.T) {
 		"mount_path": mountPath,
 		"key_name":   keyName,
 	}
-	s := transit.NewWrapper(nil)
+
+	s := getTransitKMSFunc(nil)
+
 	_, err := s.SetConfig(wrapperConfig)
 	if err != nil {
 		t.Fatalf("error setting wrapper config: %v", err)
@@ -86,7 +87,7 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 		"mount_path": mountPath,
 		"key_name":   keyName,
 	}
-	s := transit.NewWrapper(nil)
+	s := getTransitKMSFunc(nil)
 	_, err = s.SetConfig(wrapperConfig)
 	if err != nil {
 		t.Fatalf("error setting wrapper config: %v", err)

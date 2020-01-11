@@ -3,6 +3,7 @@ package seal
 import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -10,8 +11,10 @@ import (
 	"github.com/hashicorp/vault/vault/seal"
 )
 
+var getAWSKMSFunc = func(opts *wrapping.WrapperOptions) *awskms.Wrapper { return awskms.NewWrapper(opts) }
+
 func configureAWSKMSSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger hclog.Logger, inseal vault.Seal) (vault.Seal, error) {
-	kms := awskms.NewWrapper(nil)
+	kms := getAWSKMSFunc(nil)
 	kmsInfo, err := kms.SetConfig(configSeal.Config)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error

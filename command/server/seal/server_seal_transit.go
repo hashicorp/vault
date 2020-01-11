@@ -11,8 +11,10 @@ import (
 	"github.com/hashicorp/vault/vault/seal"
 )
 
+var getTransitKMSFunc = func(opts *wrapping.WrapperOptions) *transit.Wrapper { return transit.NewWrapper(opts) }
+
 func configureTransitSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (vault.Seal, error) {
-	transitSeal := transit.NewWrapper(&wrapping.WrapperOptions{
+	transitSeal := getTransitKMSFunc(&wrapping.WrapperOptions{
 		Logger: logger.ResetNamed("seal-transit"),
 	})
 	sealInfo, err := transitSeal.SetConfig(configSeal.Config)
