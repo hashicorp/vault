@@ -62,7 +62,8 @@ require (
 	github.com/hashicorp/go-rootcerts v1.0.1
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
-	github.com/hashicorp/go-uuid v1.0.2-0.20191001231223-f32f5fe8d6a8
+	github.com/hashicorp/go-uuid v1.0.2
+	github.com/hashicorp/gokrb5 v7.3.1-0.20191209171754-1a6fa9886ec3+incompatible
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
@@ -84,8 +85,8 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20191119222840-524d5b57ed36
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190814210149-315cdbf5de6e
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20191017213228-e8cf7060a4d0
-	github.com/hashicorp/vault/api v1.0.5-0.20191218213558-0bc25f908162
-	github.com/hashicorp/vault/sdk v0.1.14-0.20191229212425-c478d00be0d6
+	github.com/hashicorp/vault/api v1.0.5-0.20200111014044-ba76c080ad1f
+	github.com/hashicorp/vault/sdk v0.1.14-0.20200111013952-157e805b97be
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
