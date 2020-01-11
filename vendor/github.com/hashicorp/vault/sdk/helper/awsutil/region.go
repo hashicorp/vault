@@ -1,21 +1,20 @@
 package awsutil
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/hashicorp/errwrap"
 )
 
 // "us-east-1 is used because it's where AWS first provides support for new features,
 // is a widely used region, and is the most common one for some services like STS.
 const DefaultRegion = "us-east-1"
 
-// This is nil by default, but is exposed in case it needs to be changed for tests.
-var ec2Endpoint *string = nil
+var ec2MetadataBaseURL = "http://169.254.169.254"
 
 /*
 It's impossible to mimic "normal" AWS behavior here because it's not consistent
@@ -46,7 +45,7 @@ func GetRegion(configuredRegion string) (string, error) {
 		SharedConfigState: session.SharedConfigEnable,
 	})
 	if err != nil {
-		return "", fmt.Errorf("got error when starting session: %w", err)
+		return "", errwrap.Wrapf("got error when starting session: {{err}}", err)
 	}
 
 	region := aws.StringValue(sess.Config.Region)
@@ -55,7 +54,7 @@ func GetRegion(configuredRegion string) (string, error) {
 	}
 
 	metadata := ec2metadata.New(sess, &aws.Config{
-		Endpoint:                          ec2Endpoint,
+		Endpoint:                          aws.String(ec2MetadataBaseURL + "/latest"),
 		EC2MetadataDisableTimeoutOverride: aws.Bool(true),
 		HTTPClient: &http.Client{
 			Timeout: time.Second,
@@ -67,7 +66,7 @@ func GetRegion(configuredRegion string) (string, error) {
 
 	region, err = metadata.Region()
 	if err != nil {
-		return "", fmt.Errorf("unable to retrieve region from instance metadata: %w", err)
+		return "", errwrap.Wrapf("unable to retrieve region from instance metadata: {{err}}", err)
 	}
 
 	return region, nil
