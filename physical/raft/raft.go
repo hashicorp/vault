@@ -128,10 +128,10 @@ type LeaderJoinInfo struct {
 	LeaderClientKey string `json:"leader_client_key"`
 
 	// Retry indicates if the join process should automatically be retried
-	Retry bool
+	Retry bool `json:"-"`
 
 	// TLSConfig for the API client to use when communicating with the leader node
-	TLSConfig *tls.Config
+	TLSConfig *tls.Config `json:"-"`
 }
 
 // JoinConfig returns a list of information about possible leader nodes that
@@ -642,29 +642,6 @@ func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 	future := b.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
 
 	return future.Error()
-}
-
-// IsLeader tells if the current node is the leader node in the raft cluster
-func (b *RaftBackend) IsLeader(ctx context.Context) (bool, error) {
-	b.l.RLock()
-	defer b.l.RUnlock()
-
-	if b.raft == nil {
-		return false, errors.New("raft storage is not initialized")
-	}
-
-	future := b.raft.GetConfiguration()
-	if err := future.Error(); err != nil {
-		return false, err
-	}
-
-	for _, server := range future.Configuration().Servers {
-		if string(server.ID) == b.NodeID() {
-			return true, nil
-		}
-	}
-
-	return false, nil
 }
 
 func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationResponse, error) {

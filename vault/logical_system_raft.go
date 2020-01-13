@@ -181,14 +181,6 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
 		}
 
-		leader, err := raftStorage.IsLeader(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if !leader {
-			return logical.ErrorResponse("not the raft leader node"), logical.ErrInvalidRequest
-		}
-
 		serverID := d.Get("server_id").(string)
 		if len(serverID) == 0 {
 			return logical.ErrorResponse("no server id provided"), logical.ErrInvalidRequest

@@ -629,17 +629,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				return errwrap.Wrapf("failed to create api client: {{err}}", err)
 			}
 
-			// Get the seal status of the leader node
-			sealStatus, err := apiClient.Sys().SealStatus()
-			if err != nil || sealStatus == nil {
-				return errwrap.Wrapf("failed to fetch seal status of leader node: {{err}}", err)
-			}
-
-			// Wait for the leader node to become active
-			if sealStatus.Sealed {
-				return errors.New("raft leader node is sealed")
-			}
-
 			// Attempt to join the leader by requesting for the bootstrap challenge
 			secret, err := apiClient.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
 				"server_id": raftStorage.NodeID(),
@@ -692,7 +681,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				}
 
 				// Wait until unseal keys are supplied
-				c.logger.Info("wait until unseal keys are supplied")
 				c.raftInfo.joinInProgress = true
 				if atomic.LoadUint32(c.postUnsealStarted) != 1 {
 					return errors.New("waiting for unseal keys to be supplied")
@@ -741,7 +729,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				if err == nil {
 					return
 				}
-				c.logger.Error("failed to retry join raft cluster", "error", err, "retry", "5s")
+				c.logger.Error("failed to retry join raft cluster", "retry", "2s")
 				time.Sleep(2 * time.Second)
 			}
 		}()
