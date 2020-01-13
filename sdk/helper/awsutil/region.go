@@ -15,7 +15,7 @@ import (
 const DefaultRegion = "us-east-1"
 
 // This is nil by default, but is exposed in case it needs to be changed for tests.
-var ec2Endpoint *string = nil
+var ec2Endpoint *string
 
 /*
 It's impossible to mimic "normal" AWS behavior here because it's not consistent
@@ -69,6 +69,6 @@ func GetRegion(configuredRegion string) (string, error) {
 	if err != nil {
 		return "", errwrap.Wrapf("unable to retrieve region from instance metadata: {{err}}", err)
 	}
-	
+
 	return region, nil
 }
