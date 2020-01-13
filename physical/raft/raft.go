@@ -19,6 +19,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
@@ -742,7 +743,7 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 // Snapshot takes a raft snapshot, packages it into a archive file and writes it
 // to the provided writer. Seal access is used to encrypt the SHASUM file so we
 // can validate the snapshot was taken using the same master keys or not.
-func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access seal.Access) error {
+func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access *seal.Access) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -785,7 +786,7 @@ func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access seal.Acce
 // access is used to decrypt the SHASUM file in the archive to ensure this
 // snapshot has the same master key as the running instance. If the provided
 // access is nil then it will skip that validation.
-func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access seal.Access) (*os.File, func(), raft.SnapshotMeta, error) {
+func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access) (*os.File, func(), raft.SnapshotMeta, error) {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -1120,7 +1121,7 @@ func (l *RaftLock) Value() (bool, string, error) {
 // sealer implements the snapshot.Sealer interface and is used in the snapshot
 // process for encrypting/decrypting the SHASUM file in snapshot archives.
 type sealer struct {
-	access seal.Access
+	access *seal.Access
 }
 
 // Seal encrypts the data with using the seal access object.
@@ -1128,7 +1129,7 @@ func (s sealer) Seal(ctx context.Context, pt []byte) ([]byte, error) {
 	if s.access == nil {
 		return nil, errors.New("no seal access available")
 	}
-	eblob, err := s.access.Encrypt(ctx, pt)
+	eblob, err := s.access.Encrypt(ctx, pt, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1142,11 +1143,11 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 		return nil, errors.New("no seal access available")
 	}
 
-	var eblob physical.EncryptedBlobInfo
+	var eblob wrapping.EncryptedBlobInfo
 	err := proto.Unmarshal(ct, &eblob)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.access.Decrypt(ctx, &eblob)
+	return s.access.Decrypt(ctx, &eblob, nil)
 }
