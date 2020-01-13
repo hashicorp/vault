@@ -2,15 +2,9 @@ package mongodb
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net"
-	"net/url"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -18,7 +12,10 @@ import (
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/mitchellh/mapstructure"
-	mgo "gopkg.in/mgo.v2"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 )
 
 // mongoDBConnectionProducer implements ConnectionProducer and provides an
@@ -29,12 +26,21 @@ type mongoDBConnectionProducer struct {
 	Username      string `json:"username" structs:"username" mapstructure:"username"`
 	Password      string `json:"password" structs:"password" mapstructure:"password"`
 
-	Initialized bool
-	RawConfig   map[string]interface{}
-	Type        string
-	session     *mgo.Session
-	safe        *mgo.Safe
+	Initialized   bool
+	RawConfig     map[string]interface{}
+	Type          string
+	clientOptions *options.ClientOptions
+	client        *mongo.Client
 	sync.Mutex
+}
+
+// WriteConcern defines the write concern options
+type WriteConcern struct {
+	W        int    // Min # of servers to ack before success
+	WMode    string // Write mode for MongoDB 2.0+ (e.g. "majority")
+	WTimeout int    // Milliseconds to wait for W before timing out
+	FSync    bool   // DEPRECATED: Is now handled by J. See: https://jira.mongodb.org/browse/CXX-910
+	J        bool   // Sync via the journal if present
 }
 
 func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
@@ -73,18 +79,41 @@ func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]in
 			input = string(inputBytes)
 		}
 
-		concern := &mgo.Safe{}
+		concern := &WriteConcern{}
 		err = json.Unmarshal([]byte(input), concern)
 		if err != nil {
-			return nil, errwrap.Wrapf("error mashalling write_concern: {{err}}", err)
+			return nil, errwrap.Wrapf("error marshalling write_concern: {{err}}", err)
 		}
 
-		// Guard against empty, non-nil mgo.Safe object; we don't want to pass that
-		// into mgo.SetSafe in Connection().
-		if (mgo.Safe{} == *concern) {
-			return nil, fmt.Errorf("provided write_concern values did not map to any mgo.Safe fields")
+		// Translate write concern to mongo options
+		var w func(*writeconcern.WriteConcern)
+		switch {
+		case concern.W != 0:
+			w = writeconcern.W(concern.W)
+		case concern.WMode != "":
+			w = writeconcern.WTagSet(concern.WMode)
+		default:
+			w = writeconcern.WMajority()
 		}
-		c.safe = concern
+
+		var j func(*writeconcern.WriteConcern)
+		switch {
+		case concern.FSync:
+			j = writeconcern.J(concern.FSync)
+		case concern.J:
+			j = writeconcern.J(concern.J)
+		default:
+			j = writeconcern.J(false)
+		}
+
+		writeConcern := writeconcern.New(
+			w,
+			j,
+			writeconcern.WTimeout(time.Duration(concern.WTimeout)*time.Millisecond))
+
+		c.clientOptions = &options.ClientOptions{
+			WriteConcern: writeConcern,
+		}
 	}
 
 	// Set initialized to true at this point since all fields are set,
@@ -96,7 +125,7 @@ func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]in
 			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
 		}
 
-		if err := c.session.Ping(); err != nil {
+		if err := c.client.Ping(ctx, readpref.Primary()); err != nil {
 			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
 		}
 	}
@@ -106,36 +135,31 @@ func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]in
 
 // Connection creates or returns an existing a database connection. If the session fails
 // on a ping check, the session will be closed and then re-created.
-func (c *mongoDBConnectionProducer) Connection(_ context.Context) (interface{}, error) {
+func (c *mongoDBConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
 	if !c.Initialized {
 		return nil, connutil.ErrNotInitialized
 	}
 
-	if c.session != nil {
-		if err := c.session.Ping(); err == nil {
-			return c.session, nil
+	if c.client != nil {
+		if err := c.client.Ping(ctx, readpref.Primary()); err == nil {
+			return c.client, nil
 		}
-		c.session.Close()
+		// Ignore error on purpose since we want to re-create a session
+		_ = c.client.Disconnect(ctx)
 	}
 
-	dialInfo, err := parseMongoURL(c.ConnectionURL)
+	if c.clientOptions == nil {
+		c.clientOptions = options.Client()
+	}
+	c.clientOptions.SetSocketTimeout(1 * time.Minute)
+	c.clientOptions.SetConnectTimeout(1 * time.Minute)
+
+	var err error
+	c.client, err = mongo.Connect(ctx, c.clientOptions.ApplyURI(c.ConnectionURL))
 	if err != nil {
 		return nil, err
 	}
-
-	c.session, err = mgo.DialWithInfo(dialInfo)
-	if err != nil {
-		return nil, err
-	}
-
-	if c.safe != nil {
-		c.session.SetSafe(c.safe)
-	}
-
-	c.session.SetSyncTimeout(1 * time.Minute)
-	c.session.SetSocketTimeout(1 * time.Minute)
-
-	return c.session, nil
+	return c.client, nil
 }
 
 // Close terminates the database connection.
@@ -143,81 +167,15 @@ func (c *mongoDBConnectionProducer) Close() error {
 	c.Lock()
 	defer c.Unlock()
 
-	if c.session != nil {
-		c.session.Close()
+	if c.client != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 1 * time.Minute)
+		defer cancel()
+		c.client.Disconnect(ctx)
 	}
 
-	c.session = nil
+	c.client = nil
 
 	return nil
-}
-
-func parseMongoURL(rawURL string) (*mgo.DialInfo, error) {
-	url, err := url.Parse(rawURL)
-	if err != nil {
-		return nil, err
-	}
-
-	info := mgo.DialInfo{
-		Addrs:    strings.Split(url.Host, ","),
-		Database: strings.TrimPrefix(url.Path, "/"),
-		Timeout:  10 * time.Second,
-	}
-
-	if url.User != nil {
-		info.Username = url.User.Username()
-		info.Password, _ = url.User.Password()
-	}
-
-	query := url.Query()
-	for key, values := range query {
-		var value string
-		if len(values) > 0 {
-			value = values[0]
-		}
-
-		switch key {
-		case "authSource":
-			info.Source = value
-		case "authMechanism":
-			info.Mechanism = value
-		case "gssapiServiceName":
-			info.Service = value
-		case "replicaSet":
-			info.ReplicaSetName = value
-		case "maxPoolSize":
-			poolLimit, err := strconv.Atoi(value)
-			if err != nil {
-				return nil, errors.New("bad value for maxPoolSize: " + value)
-			}
-			info.PoolLimit = poolLimit
-		case "ssl":
-			// Unfortunately, mgo doesn't support the ssl parameter in its MongoDB URI parsing logic, so we have to handle that
-			// ourselves. See https://github.com/go-mgo/mgo/issues/84
-			ssl, err := strconv.ParseBool(value)
-			if err != nil {
-				return nil, errors.New("bad value for ssl: " + value)
-			}
-			if ssl {
-				info.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
-					return tls.Dial("tcp", addr.String(), &tls.Config{})
-				}
-			}
-		case "connect":
-			if value == "direct" {
-				info.Direct = true
-				break
-			}
-			if value == "replicaSet" {
-				break
-			}
-			fallthrough
-		default:
-			return nil, errors.New("unsupported connection URL option: " + key + "=" + value)
-		}
-	}
-
-	return &info, nil
 }
 
 func (c *mongoDBConnectionProducer) secretValues() map[string]interface{} {

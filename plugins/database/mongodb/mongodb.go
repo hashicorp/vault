@@ -2,21 +2,21 @@ package mongodb
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"io"
 	"strings"
 	"time"
-
-	"encoding/json"
-
-	"fmt"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	mgo "gopkg.in/mgo.v2"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
 const mongoDBTypeName = "mongodb"
@@ -70,13 +70,13 @@ func (m *MongoDB) Type() (string, error) {
 	return mongoDBTypeName, nil
 }
 
-func (m *MongoDB) getConnection(ctx context.Context) (*mgo.Session, error) {
-	session, err := m.Connection(ctx)
+func (m *MongoDB) getConnection(ctx context.Context) (*mongo.Client, error) {
+	client, err := m.Connection(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return session.(*mgo.Session), nil
+	return client.(*mongo.Client), nil
 }
 
 // CreateUser generates the username/password on the underlying secret backend as instructed by
@@ -98,7 +98,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
-	session, err := m.getConnection(ctx)
+	client, err := m.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 	}
@@ -135,17 +135,17 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 		Roles:    mongoCS.Roles.toStandardRolesArray(),
 	}
 
-	err = session.DB(mongoCS.DB).Run(createUserCmd, nil)
+	result := client.Database(mongoCS.DB).RunCommand(ctx, createUserCmd, nil)
 	switch {
-	case err == nil:
-	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
-		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
-		session, err := m.getConnection(ctx)
+	case result.Err() == nil:
+	case result.Err() == io.EOF, strings.Contains(result.Err().Error(), "EOF"):
+		// Call getConnection to reset and retry query if we get an ErrNoDocuments error on first attempt.
+		client, err := m.getConnection(ctx)
 		if err != nil {
 			return "", "", err
 		}
-		err = session.DB(mongoCS.DB).Run(createUserCmd, nil)
-		if err != nil {
+		result = client.Database(mongoCS.DB).RunCommand(ctx, createUserCmd, nil)
+		if result.Err() != nil {
 			return "", "", err
 		}
 	default:
@@ -166,7 +166,7 @@ func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statem
 	m.Lock()
 	defer m.Unlock()
 
-	session, err := m.getConnection(ctx)
+	client, err := m.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 	}
@@ -174,28 +174,27 @@ func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statem
 	username = staticUser.Username
 	password = staticUser.Password
 
-	dialInfo, err := parseMongoURL(m.ConnectionURL)
-	if err != nil {
-		return "", "", err
-	}
-
-	mongoUser := mgo.User{
+	changeUserCmd := &updateUserCommand{
 		Username: username,
 		Password: password,
 	}
 
-	err = session.DB(dialInfo.Database).UpsertUser(&mongoUser)
+	cs, err := connstring.Parse(m.ConnectionURL)
+	if err != nil {
+		return "", "", err
+	}
+	result := client.Database(cs.Database).RunCommand(ctx, changeUserCmd, nil)
 
 	switch {
-	case err == nil:
-	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
-		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
-		session, err := m.getConnection(ctx)
+	case result.Err() == nil:
+	case result.Err() == io.EOF, strings.Contains(result.Err().Error(), "EOF"):
+		// Call getConnection to reset and retry query if we get an ErrNoDocuments error on first attempt.
+		client, err := m.getConnection(ctx)
 		if err != nil {
 			return "", "", err
 		}
-		err = session.DB(dialInfo.Database).UpsertUser(&mongoUser)
-		if err != nil {
+		result = client.Database(cs.Database).RunCommand(ctx, changeUserCmd, nil)
+		if result.Err() != nil {
 			return "", "", err
 		}
 	default:
@@ -219,7 +218,7 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 
 	statements = dbutil.StatementCompatibilityHelper(statements)
 
-	session, err := m.getConnection(ctx)
+	client, err := m.getConnection(ctx)
 	if err != nil {
 		return err
 	}
@@ -248,19 +247,24 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 		db = "admin"
 	}
 
-	err = session.DB(db).RemoveUser(username)
+	dropUserCmd := &dropUserCommand{
+		Username:     username,
+		WriteConcern: writeconcern.New(writeconcern.WMajority()),
+	}
+
+	result := client.Database(db).RunCommand(ctx, dropUserCmd, nil)
 	switch {
-	case err == nil, err == mgo.ErrNotFound:
-	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
+	case result.Err() == nil:
+	case result.Err() == io.EOF, strings.Contains(result.Err().Error(), "EOF"):
 		if err := m.Close(); err != nil {
 			return errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
 		}
-		session, err := m.getConnection(ctx)
+		client, err := m.getConnection(ctx)
 		if err != nil {
 			return err
 		}
-		err = session.DB(db).RemoveUser(username)
-		if err != nil {
+		result = client.Database(db).RunCommand(ctx, dropUserCmd, nil)
+		if result.Err() != nil {
 			return err
 		}
 	default:
