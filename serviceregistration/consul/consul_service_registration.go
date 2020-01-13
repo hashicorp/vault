@@ -219,8 +219,13 @@ func NewServiceRegistration(shutdownCh <-chan struct{}, conf map[string]string, 
 		isSealed:      state.IsSealed,
 		isPerfStandby: state.IsPerformanceStandby,
 	}
-	// TODO the error that's dropped, plus do we need the wg?
-	go c.runServiceRegistration(&sync.WaitGroup{}, shutdownCh, redirectAddr)
+	go func() {
+		if err := c.runServiceRegistration(&sync.WaitGroup{}, shutdownCh, redirectAddr); err != nil {
+			if logger.IsError() {
+				logger.Error(fmt.Sprintf("error running service registration: %s", err))
+			}
+		}
+	}()
 	return c, nil
 }
 
