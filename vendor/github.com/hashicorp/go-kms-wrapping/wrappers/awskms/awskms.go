@@ -106,7 +106,7 @@ func (k *Wrapper) SetConfig(config map[string]string) (map[string]string, error)
 
 	// Check and set k.client
 	if k.client == nil {
-		client, err := k.getAWSKMSClient()
+		client, err := k.GetAWSKMSClient()
 		if err != nil {
 			return nil, fmt.Errorf("error initializing AWS KMS wrapping client: %w", err)
 		}
@@ -263,8 +263,8 @@ func (k *Wrapper) Decrypt(_ context.Context, in *wrapping.EncryptedBlobInfo, aad
 	return plaintext, nil
 }
 
-// getAWSKMSClient returns an instance of the KMS client.
-func (k *Wrapper) getAWSKMSClient() (*kms.KMS, error) {
+// GetAWSKMSClient returns an instance of the KMS client.
+func (k *Wrapper) GetAWSKMSClient() (*kms.KMS, error) {
 	credsConfig := &awsutil.CredentialsConfig{}
 
 	credsConfig.AccessKey = k.accessKey

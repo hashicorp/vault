@@ -28,7 +28,7 @@ type transitClientEncryptor interface {
 	Decrypt(ciphertext []byte) (plaintext []byte, err error)
 }
 
-type transitClient struct {
+type TransitClient struct {
 	client          *api.Client
 	lifetimeWatcher *api.Renewer
 
@@ -36,7 +36,7 @@ type transitClient struct {
 	keyName   string
 }
 
-func newTransitClient(logger hclog.Logger, config map[string]string) (*transitClient, map[string]string, error) {
+func newTransitClient(logger hclog.Logger, config map[string]string) (*TransitClient, map[string]string, error) {
 	if config == nil {
 		config = map[string]string{}
 	}
@@ -129,10 +129,12 @@ func newTransitClient(logger hclog.Logger, config map[string]string) (*transitCl
 		apiClient.SetNamespace(namespace)
 	}
 	if apiClient.Token() == "" {
-		logger.Info("no token provided to transit auto-seal")
+		if logger != nil {
+			logger.Info("no token provided to transit auto-seal")
+		}
 	}
 
-	client := &transitClient{
+	client := &TransitClient{
 		client:    apiClient,
 		mountPath: mountPath,
 		keyName:   keyName,
@@ -156,19 +158,27 @@ func newTransitClient(logger hclog.Logger, config map[string]string) (*transitCl
 				for {
 					select {
 					case err := <-lifetimeWatcher.DoneCh():
-						logger.Info("shutting down token renewal")
+						if logger != nil {
+							logger.Info("shutting down token renewal")
+						}
 						if err != nil {
-							logger.Error("error renewing token", "error", err)
+							if logger != nil {
+								logger.Error("error renewing token", "error", err)
+							}
 						}
 						return
 					case <-lifetimeWatcher.RenewCh():
-						logger.Trace("successfully renewed token")
+						if logger != nil {
+							logger.Trace("successfully renewed token")
+						}
 					}
 				}
 			}()
 			go lifetimeWatcher.Start()
 		} else {
-			logger.Info("unable to renew token, disabling renewal", "err", err)
+			if logger != nil {
+				logger.Info("unable to renew token, disabling renewal", "err", err)
+			}
 		}
 	}
 
@@ -183,13 +193,13 @@ func newTransitClient(logger hclog.Logger, config map[string]string) (*transitCl
 	return client, sealInfo, nil
 }
 
-func (c *transitClient) Close() {
+func (c *TransitClient) Close() {
 	if c.lifetimeWatcher != nil {
 		c.lifetimeWatcher.Stop()
 	}
 }
 
-func (c *transitClient) Encrypt(plaintext []byte) ([]byte, error) {
+func (c *TransitClient) Encrypt(plaintext []byte) ([]byte, error) {
 	encPlaintext := base64.StdEncoding.EncodeToString(plaintext)
 	path := path.Join(c.mountPath, "encrypt", c.keyName)
 	secret, err := c.client.Logical().Write(path, map[string]interface{}{
@@ -202,7 +212,7 @@ func (c *transitClient) Encrypt(plaintext []byte) ([]byte, error) {
 	return []byte(secret.Data["ciphertext"].(string)), nil
 }
 
-func (c *transitClient) Decrypt(ciphertext []byte) ([]byte, error) {
+func (c *TransitClient) Decrypt(ciphertext []byte) ([]byte, error) {
 	path := path.Join(c.mountPath, "decrypt", c.keyName)
 	secret, err := c.client.Logical().Write(path, map[string]interface{}{
 		"ciphertext": string(ciphertext),
@@ -216,4 +226,12 @@ func (c *transitClient) Decrypt(ciphertext []byte) ([]byte, error) {
 		return nil, err
 	}
 	return plaintext, nil
+}
+
+func (c *TransitClient) GetMountPath() string {
+	return c.mountPath
+}
+
+func (c *TransitClient) GetApiClient() *api.Client {
+	return c.client
 }

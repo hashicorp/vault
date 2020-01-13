@@ -3,7 +3,8 @@
 [![Godoc](https://godoc.org/github.com/hashicorp/go-kms-wrapping?status.svg)](https://godoc.org/github.com/hashicorp/go-kms-wrapping)
 
 *NOTE*: Currently no compatibility guarantees are provided for this library; we
-expect tags to remain in the `0.x.y` range.
+expect tags to remain in the `0.x.y` range. Function signatures, interfaces,
+etc. may change at any time.
 
 Go-KMS-Wrapping is a library that can be used to encrypt things through various
 KMS providers -- public clouds, Vault's Transit plugin, etc. It is similar in
