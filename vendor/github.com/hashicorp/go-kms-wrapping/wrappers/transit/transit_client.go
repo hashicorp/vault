@@ -129,7 +129,9 @@ func newTransitClient(logger hclog.Logger, config map[string]string) (*TransitCl
 		apiClient.SetNamespace(namespace)
 	}
 	if apiClient.Token() == "" {
-		logger.Info("no token provided to transit auto-seal")
+		if logger != nil {
+			logger.Info("no token provided to transit auto-seal")
+		}
 	}
 
 	client := &TransitClient{
@@ -156,19 +158,27 @@ func newTransitClient(logger hclog.Logger, config map[string]string) (*TransitCl
 				for {
 					select {
 					case err := <-lifetimeWatcher.DoneCh():
-						logger.Info("shutting down token renewal")
+						if logger != nil {
+							logger.Info("shutting down token renewal")
+						}
 						if err != nil {
-							logger.Error("error renewing token", "error", err)
+							if logger != nil {
+								logger.Error("error renewing token", "error", err)
+							}
 						}
 						return
 					case <-lifetimeWatcher.RenewCh():
-						logger.Trace("successfully renewed token")
+						if logger != nil {
+							logger.Trace("successfully renewed token")
+						}
 					}
 				}
 			}()
 			go lifetimeWatcher.Start()
 		} else {
-			logger.Info("unable to renew token, disabling renewal", "err", err)
+			if logger != nil {
+				logger.Info("unable to renew token, disabling renewal", "err", err)
+			}
 		}
 	}
 

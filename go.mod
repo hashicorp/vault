@@ -54,7 +54,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-gcp-common v0.5.0
 	github.com/hashicorp/go-hclog v0.10.1
-	github.com/hashicorp/go-kms-wrapping v0.0.0-20200106175407-e7ccf8e61c53
+	github.com/hashicorp/go-kms-wrapping v0.5.0
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.0.0
