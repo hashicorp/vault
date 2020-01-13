@@ -38,10 +38,7 @@ func GenerateLoginData(creds *credentials.Credentials, headerValue, configuredRe
 	loginData := make(map[string]interface{})
 
 	// Use the credentials we've found to construct an STS session
-	region, err := awsutil.GetRegion(configuredRegion)
-	if err != nil {
-		return nil, err
-	}
+	region := awsutil.GetRegion(configuredRegion)
 	stsSession, err := session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
 			Credentials:      creds,

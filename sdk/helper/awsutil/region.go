@@ -1,14 +1,12 @@
 package awsutil
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
-	hclog "github.com/hashicorp/go-hclog"
 )
 
 // "us-east-1 is used because it's where AWS first provides support for new features,
@@ -34,7 +32,7 @@ Our chosen approach is:
 4. Configuration retrieved from the EC2 instance metadata service is shared by all invocations on a given machine, and so it has the lowest precedence.
 This approach should be used in future updates to this logic.
 */
-func GetOrDefaultRegion(logger hclog.Logger, configuredRegion string) string {
+func GetRegion(configuredRegion string) string {
 	if configuredRegion != "" {
 		return configuredRegion
 	}
@@ -43,7 +41,6 @@ func GetOrDefaultRegion(logger hclog.Logger, configuredRegion string) string {
 		SharedConfigState: session.SharedConfigEnable,
 	})
 	if err != nil {
-		logger.Warn(fmt.Sprintf("unable to start session, defaulting region to %s", DefaultRegion))
 		return DefaultRegion
 	}
 
@@ -65,7 +62,6 @@ func GetOrDefaultRegion(logger hclog.Logger, configuredRegion string) string {
 
 	region, err = metadata.Region()
 	if err != nil {
-		logger.Warn("unable to retrieve region from instance metadata, defaulting region to %s", DefaultRegion)
 		return DefaultRegion
 	}
 	return region

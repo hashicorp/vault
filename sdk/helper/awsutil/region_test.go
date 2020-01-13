@@ -38,7 +38,7 @@ func TestGetOrDefaultRegion_UserConfigPreferredFirst(t *testing.T) {
 	cleanupMetadata := setInstanceMetadata(t, unexpectedTestRegion)
 	defer cleanupMetadata()
 
-	result := GetOrDefaultRegion(logger, configuredRegion)
+	result := GetRegion(logger, configuredRegion)
 	if result != expectedTestRegion {
 		t.Fatalf("expected: %s; actual: %s", expectedTestRegion, result)
 	}
@@ -56,7 +56,7 @@ func TestGetOrDefaultRegion_EnvVarsPreferredSecond(t *testing.T) {
 	cleanupMetadata := setInstanceMetadata(t, unexpectedTestRegion)
 	defer cleanupMetadata()
 
-	result := GetOrDefaultRegion(logger, configuredRegion)
+	result := GetRegion(logger, configuredRegion)
 	if result != expectedTestRegion {
 		t.Fatalf("expected: %s; actual: %s", expectedTestRegion, result)
 	}
@@ -80,7 +80,7 @@ func TestGetOrDefaultRegion_ConfigFilesPreferredThird(t *testing.T) {
 	cleanupMetadata := setInstanceMetadata(t, unexpectedTestRegion)
 	defer cleanupMetadata()
 
-	result := GetOrDefaultRegion(logger, configuredRegion)
+	result := GetRegion(logger, configuredRegion)
 	if result != expectedTestRegion {
 		t.Fatalf("expected: %s; actual: %s", expectedTestRegion, result)
 	}
@@ -104,7 +104,7 @@ func TestGetOrDefaultRegion_ConfigFileUnfound(t *testing.T) {
 		}
 	}()
 
-	result := GetOrDefaultRegion(logger, configuredRegion)
+	result := GetRegion(logger, configuredRegion)
 	if result != DefaultRegion {
 		t.Fatalf("expected: %s; actual: %s", DefaultRegion, result)
 	}
@@ -128,7 +128,7 @@ func TestGetOrDefaultRegion_EC2InstanceMetadataPreferredFourth(t *testing.T) {
 	cleanupMetadata := setInstanceMetadata(t, expectedTestRegion)
 	defer cleanupMetadata()
 
-	result := GetOrDefaultRegion(logger, configuredRegion)
+	result := GetRegion(logger, configuredRegion)
 	if result != expectedTestRegion {
 		t.Fatalf("expected: %s; actual: %s", expectedTestRegion, result)
 	}
@@ -147,7 +147,7 @@ func TestGetOrDefaultRegion_DefaultsToDefaultRegionWhenRegionUnavailable(t *test
 	cleanupFile := setConfigFileRegion(t, "")
 	defer cleanupFile()
 
-	result := GetOrDefaultRegion(logger, configuredRegion)
+	result := GetRegion(logger, configuredRegion)
 	if result != DefaultRegion {
 		t.Fatalf("expected: %s; actual: %s", DefaultRegion, result)
 	}
