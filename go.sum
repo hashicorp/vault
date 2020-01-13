@@ -306,8 +306,8 @@ github.com/hashicorp/go-immutable-radix v1.1.0 h1:vN9wG1D6KG6YHRTWr8512cxGOVgTME
 github.com/hashicorp/go-immutable-radix v1.1.0/go.mod h1:0y9vanUI8NX6FsYoO3zeMjhV/C5i9g4Q3DwcSNZ4P60=
 github.com/hashicorp/go-kms-wrapping v0.0.0-20191129225826-634facde9f88 h1:YMLQiDrLQT1QEollUbw+yxpW0yJiKVHDGmMpBISeACA=
 github.com/hashicorp/go-kms-wrapping v0.0.0-20191129225826-634facde9f88/go.mod h1:Pm+Umb/6Gij6ZG534L7QDyvkauaOQWGb+arj9aFjCE0=
-github.com/hashicorp/go-kms-wrapping v0.0.0-20191229213738-edc2c6e9ee1d h1:smWxnN+O7eRYqt0nDSwdbxacOczfnf3hMAxT9SMxeno=
-github.com/hashicorp/go-kms-wrapping v0.0.0-20191229213738-edc2c6e9ee1d/go.mod h1:cGIibZmMx9qlxS1pZTUrEgGqA+7u3zJyvVYMhjU2bDs=
+github.com/hashicorp/go-kms-wrapping v0.0.0-20200106175407-e7ccf8e61c53 h1:fUX6B6n/g1GC3TWQJeo+atLl6dfR9fijeKQPrIz7Wcg=
+github.com/hashicorp/go-kms-wrapping v0.0.0-20200106175407-e7ccf8e61c53/go.mod h1:cGIibZmMx9qlxS1pZTUrEgGqA+7u3zJyvVYMhjU2bDs=
 github.com/hashicorp/go-memdb v1.0.2 h1:AIjzJlwIxz2inhZqRJZfe6D15lPeF0/cZyS1BVlnlHg=
 github.com/hashicorp/go-memdb v1.0.2/go.mod h1:I6dKdmYhZqU0RJSheVEWgTNWdVQH5QvTgIUQ0t/t32M=
 github.com/hashicorp/go-msgpack v0.5.3/go.mod h1:ahLV/dePpqEmjfWmKiqvPkv/twdG7iPBM1vqhUKIvfM=

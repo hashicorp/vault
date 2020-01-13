@@ -107,3 +107,8 @@ func (s *Wrapper) Decrypt(_ context.Context, in *wrapping.EncryptedBlobInfo, _ [
 	}
 	return plaintext, nil
 }
+
+// GetClient returns the transit Wrapper's transitClientEncryptor
+func (s *Wrapper) GetClient() transitClientEncryptor {
+	return s.client
+}
