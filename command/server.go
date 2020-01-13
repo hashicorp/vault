@@ -968,7 +968,7 @@ func (c *ServerCommand) Run(args []string) int {
 			IsInitialized:        false,
 			IsSealed:             true,
 			IsActive:             false,
-			IsPerformanceStandby: true,
+			IsPerformanceStandby: false,
 		}
 		configSR, err = sdFactory(c.ShutdownCh, config.ServiceRegistration.Config, namedSDLogger, state, config.Storage.RedirectAddr)
 		if err != nil {
