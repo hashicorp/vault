@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/hashicorp/errwrap"
 )
 
 // "us-east-1 is used because it's where AWS first provides support for new features,
@@ -32,21 +33,24 @@ Our chosen approach is:
 4. Configuration retrieved from the EC2 instance metadata service is shared by all invocations on a given machine, and so it has the lowest precedence.
 This approach should be used in future updates to this logic.
 */
-func GetRegion(configuredRegion string) string {
+func GetRegion(configuredRegion string) (string, error) {
+	// We create a logger here because all callers won't have access to a logger.
+	// This allows us to log any errors we encounter while falling back to the
+	// default region, which maintains backwards compatibility.
 	if configuredRegion != "" {
-		return configuredRegion
+		return configuredRegion, nil
 	}
 
 	sess, err := session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	})
 	if err != nil {
-		return DefaultRegion
+		return "", errwrap.Wrapf("got error when starting session: {{err}}", err)
 	}
 
 	region := aws.StringValue(sess.Config.Region)
 	if region != "" {
-		return region
+		return region, nil
 	}
 
 	metadata := ec2metadata.New(sess, &aws.Config{
@@ -57,12 +61,12 @@ func GetRegion(configuredRegion string) string {
 		},
 	})
 	if !metadata.Available() {
-		return DefaultRegion
+		return DefaultRegion, nil
 	}
 
 	region, err = metadata.Region()
 	if err != nil {
-		return DefaultRegion
+		return "", errwrap.Wrapf("unable to retrieve region from instance metadata: {{err}}", err)
 	}
-	return region
+	return region, nil
 }

@@ -26,7 +26,7 @@ var (
 	regionEnvKeys        = []string{"AWS_REGION", "AWS_DEFAULT_REGION"}
 )
 
-func TestGetOrDefaultRegion_UserConfigPreferredFirst(t *testing.T) {
+func TestGetRegion_UserConfigPreferredFirst(t *testing.T) {
 	configuredRegion := expectedTestRegion
 
 	cleanupEnv := setEnvRegion(t, unexpectedTestRegion)
@@ -38,13 +38,16 @@ func TestGetOrDefaultRegion_UserConfigPreferredFirst(t *testing.T) {
 	cleanupMetadata := setInstanceMetadata(t, unexpectedTestRegion)
 	defer cleanupMetadata()
 
-	result := GetRegion(logger, configuredRegion)
+	result, err := GetRegion(configuredRegion)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if result != expectedTestRegion {
 		t.Fatalf("expected: %s; actual: %s", expectedTestRegion, result)
 	}
 }
 
-func TestGetOrDefaultRegion_EnvVarsPreferredSecond(t *testing.T) {
+func TestGetRegion_EnvVarsPreferredSecond(t *testing.T) {
 	configuredRegion := ""
 
 	cleanupEnv := setEnvRegion(t, expectedTestRegion)
@@ -56,13 +59,16 @@ func TestGetOrDefaultRegion_EnvVarsPreferredSecond(t *testing.T) {
 	cleanupMetadata := setInstanceMetadata(t, unexpectedTestRegion)
 	defer cleanupMetadata()
 
-	result := GetRegion(logger, configuredRegion)
+	result, err := GetRegion(configuredRegion)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if result != expectedTestRegion {
 		t.Fatalf("expected: %s; actual: %s", expectedTestRegion, result)
 	}
 }
 
-func TestGetOrDefaultRegion_ConfigFilesPreferredThird(t *testing.T) {
+func TestGetRegion_ConfigFilesPreferredThird(t *testing.T) {
 	if !shouldTestFiles {
 		// In some test environments, like a CI environment, we may not have the
 		// permissions to write to the ~/.aws/config file. Thus, this test is off
@@ -80,13 +86,16 @@ func TestGetOrDefaultRegion_ConfigFilesPreferredThird(t *testing.T) {
 	cleanupMetadata := setInstanceMetadata(t, unexpectedTestRegion)
 	defer cleanupMetadata()
 
-	result := GetRegion(logger, configuredRegion)
+	result, err := GetRegion(configuredRegion)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if result != expectedTestRegion {
 		t.Fatalf("expected: %s; actual: %s", expectedTestRegion, result)
 	}
 }
 
-func TestGetOrDefaultRegion_ConfigFileUnfound(t *testing.T) {
+func TestGetRegion_ConfigFileUnfound(t *testing.T) {
 	if enabled := os.Getenv("VAULT_ACC"); enabled == "" {
 		t.Skip()
 	}
@@ -104,13 +113,16 @@ func TestGetOrDefaultRegion_ConfigFileUnfound(t *testing.T) {
 		}
 	}()
 
-	result := GetRegion(logger, configuredRegion)
+	result, err := GetRegion(configuredRegion)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if result != DefaultRegion {
 		t.Fatalf("expected: %s; actual: %s", DefaultRegion, result)
 	}
 }
 
-func TestGetOrDefaultRegion_EC2InstanceMetadataPreferredFourth(t *testing.T) {
+func TestGetRegion_EC2InstanceMetadataPreferredFourth(t *testing.T) {
 	if !shouldTestFiles {
 		// In some test environments, like a CI environment, we may not have the
 		// permissions to write to the ~/.aws/config file. Thus, this test is off
@@ -128,13 +140,16 @@ func TestGetOrDefaultRegion_EC2InstanceMetadataPreferredFourth(t *testing.T) {
 	cleanupMetadata := setInstanceMetadata(t, expectedTestRegion)
 	defer cleanupMetadata()
 
-	result := GetRegion(logger, configuredRegion)
+	result, err := GetRegion(configuredRegion)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if result != expectedTestRegion {
 		t.Fatalf("expected: %s; actual: %s", expectedTestRegion, result)
 	}
 }
 
-func TestGetOrDefaultRegion_DefaultsToDefaultRegionWhenRegionUnavailable(t *testing.T) {
+func TestGetRegion_DefaultsToDefaultRegionWhenRegionUnavailable(t *testing.T) {
 	if enabled := os.Getenv("VAULT_ACC"); enabled == "" {
 		t.Skip()
 	}
@@ -147,7 +162,10 @@ func TestGetOrDefaultRegion_DefaultsToDefaultRegionWhenRegionUnavailable(t *test
 	cleanupFile := setConfigFileRegion(t, "")
 	defer cleanupFile()
 
-	result := GetRegion(logger, configuredRegion)
+	result, err := GetRegion(configuredRegion)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if result != DefaultRegion {
 		t.Fatalf("expected: %s; actual: %s", DefaultRegion, result)
 	}

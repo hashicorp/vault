@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/hashicorp/go-hclog"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
@@ -38,7 +40,11 @@ func GenerateLoginData(creds *credentials.Credentials, headerValue, configuredRe
 	loginData := make(map[string]interface{})
 
 	// Use the credentials we've found to construct an STS session
-	region := awsutil.GetRegion(configuredRegion)
+	region, err := awsutil.GetRegion(configuredRegion)
+	if err != nil {
+		hclog.Default().Warn(fmt.Sprintf("defaulting region to %q due to %s", awsutil.DefaultRegion, err.Error()))
+		region = awsutil.DefaultRegion
+	}
 	stsSession, err := session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
 			Credentials:      creds,
