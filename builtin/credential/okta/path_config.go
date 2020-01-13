@@ -4,14 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-
 	"time"
 
-	"github.com/chrismalek/oktasdk-go/okta"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	okta "github.com/okta/okta-sdk-golang/okta"
 )
 
 const (
@@ -267,7 +265,7 @@ func (b *backend) pathConfigExistenceCheck(ctx context.Context, req *logical.Req
 }
 
 // OktaClient creates a basic okta client connection
-func (c *ConfigEntry) OktaClient() *okta.Client {
+func (c *ConfigEntry) OktaClient() (*okta.Client, *okta.RequestExecutor, error) {
 	baseURL := defaultBaseURL
 	if c.Production != nil {
 		if !*c.Production {
@@ -278,9 +276,38 @@ func (c *ConfigEntry) OktaClient() *okta.Client {
 		baseURL = c.BaseURL
 	}
 
+	oktaURL := "https://" + c.Org + "." + baseURL
 	// We validate config on input and errors are only returned when parsing URLs
-	client, _ := okta.NewClientWithDomain(cleanhttp.DefaultClient(), c.Org, baseURL, c.Token)
-	return client
+	conf := []okta.ConfigSetter{okta.WithOrgUrl(oktaURL)}
+	if c.Token != "" {
+		conf = append(conf, okta.WithToken(c.Token))
+		client, err := okta.NewClient(context.Background(), conf...)
+		if err != nil {
+			return nil, nil, err
+		}
+		return client, client.GetRequestExecutor(), nil
+	}
+
+	conf = append(conf, okta.WithConnectionTimeout(30),
+		okta.WithCache(true),
+		okta.WithCacheTtl(300),
+		okta.WithCacheTti(300),
+		okta.WithUserAgentExtra(""))
+
+	config, err := okta.NewConfig(conf...)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = okta.ValidateOktaDomain(config)
+	if err != nil {
+		return nil, nil, err
+	}
+	cache, err := okta.NewCache(config)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return nil, okta.NewRequestExecutor(&config.HttpClient, cache, config), nil
 }
 
 // ConfigEntry for Okta

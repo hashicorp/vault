@@ -6,14 +6,12 @@ import (
 	"os"
 	"strings"
 	"testing"
-
-	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/policyutil"
-
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -52,14 +50,28 @@ func TestBackend_Config(t *testing.T) {
 		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testConfigCreate(t, configData),
+			// 2. Login with bad password, expect failure (E0000004=okta auth failure).
 			testLoginWrite(t, username, "wrong", "E0000004", 0, nil),
+			// 3. Make our user belong to two groups and have one user-specific policy.
 			testAccUserGroups(t, username, "local_grouP,lOcal_group2", []string{"user_policy"}),
+			// 4. Create the group local_group, assign it a single policy.
 			testAccGroups(t, "local_groUp", "loCal_group_policy"),
+			// 5. Login with good password, expect user to have their user-specific
+			// policy and the policy of the one valid group they belong to.
 			testLoginWrite(t, username, password, "", defaultLeaseTTLVal, []string{"local_group_policy", "user_policy"}),
+			// 6. Create the group everyone, assign it two policies.  This is a
+			// magic group name in okta that always exists and which every
+			// user automatically belongs to.
 			testAccGroups(t, "everyoNe", "everyone_grouP_policy,eveRy_group_policy2"),
+			// 7. Login as before, expect same result
 			testLoginWrite(t, username, password, "", defaultLeaseTTLVal, []string{"local_group_policy", "user_policy"}),
+			// 8. Add API token so we can lookup groups
 			testConfigUpdate(t, configDataToken),
 			testConfigRead(t, token, configData),
+			// 10. Login should now lookup okta groups; since all okta users are
+			// in the "everyone" group, that should be returned; since we
+			// defined policies attached to the everyone group, we should now
+			// see those policies attached to returned vault token.
 			testLoginWrite(t, username, password, "", updatedDuration, []string{"everyone_group_policy", "every_group_policy2", "local_group_policy", "user_policy"}),
 			testAccGroups(t, "locAl_group2", "testgroup_group_policy"),
 			testLoginWrite(t, username, password, "", updatedDuration, []string{"everyone_group_policy", "every_group_policy2", "local_group_policy", "testgroup_group_policy", "user_policy"}),

@@ -6,6 +6,8 @@ replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
+replace github.com/okta/okta-sdk-golang => github.com/ncabatoff/okta-sdk-golang v1.0.2-0.20200113143729-b3ae90a98438
+
 require (
 	cloud.google.com/go v0.39.0
 	github.com/Azure/azure-sdk-for-go v29.0.0+incompatible
@@ -24,7 +26,6 @@ require (
 	github.com/aws/aws-sdk-go v1.25.41
 	github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
-	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/coreos/go-semver v0.2.0
@@ -62,7 +63,8 @@ require (
 	github.com/hashicorp/go-rootcerts v1.0.1
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
-	github.com/hashicorp/go-uuid v1.0.2-0.20191001231223-f32f5fe8d6a8
+	github.com/hashicorp/go-uuid v1.0.2
+	github.com/hashicorp/gokrb5 v7.3.1-0.20191209171754-1a6fa9886ec3+incompatible
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
@@ -109,6 +111,7 @@ require (
 	github.com/ncw/swift v1.0.47
 	github.com/nwaples/rardecode v1.0.0 // indirect
 	github.com/oklog/run v1.0.0
+	github.com/okta/okta-sdk-golang v1.0.1
 	github.com/oracle/oci-go-sdk v7.0.0+incompatible
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/patrickmn/go-cache v2.1.0+incompatible
