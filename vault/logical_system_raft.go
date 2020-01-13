@@ -176,11 +176,6 @@ func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 
 func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		raftStorage, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
-		if !ok {
-			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
-		}
-
 		serverID := d.Get("server_id").(string)
 		if len(serverID) == 0 {
 			return logical.ErrorResponse("no server id provided"), logical.ErrInvalidRequest
