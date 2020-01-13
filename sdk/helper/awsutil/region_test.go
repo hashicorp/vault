@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-	hclog "github.com/hashicorp/go-hclog"
 )
 
 const testConfigFile = `[default]
@@ -20,7 +19,6 @@ output=json`
 var (
 	shouldTestFiles = os.Getenv("VAULT_ACC_AWS_FILES") == "1"
 
-	logger               = hclog.NewNullLogger()
 	expectedTestRegion   = "us-west-2"
 	unexpectedTestRegion = "us-east-2"
 	regionEnvKeys        = []string{"AWS_REGION", "AWS_DEFAULT_REGION"}
