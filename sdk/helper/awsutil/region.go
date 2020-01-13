@@ -25,18 +25,19 @@ variable (and not `AWS_REGION`, while the golang SDK does _mostly_ the opposite 
 reads the region **only** from `AWS_REGION` and not at all `~/.aws/config`, **unless**
 the `AWS_SDK_LOAD_CONFIG` environment variable is set. So, we must define our own
 approach to walking AWS config and deciding what to use.
+
 Our chosen approach is:
+
 	"More specific takes precedence over less specific."
+
 1. User-provided configuration is the most explicit.
 2. Environment variables are potentially shared across many invocations and so they have less precedence.
 3. Configuration in `~/.aws/config` is shared across all invocations of a given user and so this has even less precedence.
 4. Configuration retrieved from the EC2 instance metadata service is shared by all invocations on a given machine, and so it has the lowest precedence.
+
 This approach should be used in future updates to this logic.
 */
 func GetRegion(configuredRegion string) (string, error) {
-	// We create a logger here because all callers won't have access to a logger.
-	// This allows us to log any errors we encounter while falling back to the
-	// default region, which maintains backwards compatibility.
 	if configuredRegion != "" {
 		return configuredRegion, nil
 	}
@@ -68,5 +69,6 @@ func GetRegion(configuredRegion string) (string, error) {
 	if err != nil {
 		return "", errwrap.Wrapf("unable to retrieve region from instance metadata: {{err}}", err)
 	}
+	
 	return region, nil
 }
