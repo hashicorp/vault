@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/plugins/database/postgresql"
+	"github.com/hashicorp/vault/plugins/database/redshift"
 )
 
 func main() {
@@ -13,7 +13,7 @@ func main() {
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(os.Args[1:])
 
-	err := postgresql.RunRedshift(apiClientMeta.GetTLSConfig())
+	err := redshift.Run(apiClientMeta.GetTLSConfig())
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)

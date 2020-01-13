@@ -1,4 +1,4 @@
-package postgresql
+package redshift
 
 import (
 	"context"
@@ -20,20 +20,20 @@ import (
 )
 
 const (
-	postgreSQLTypeName      = "postgres"
-	defaultPostgresRenewSQL = `
+	sqlTypeName     = "postgres"
+	defaultRenewSQL = `
 ALTER ROLE "{{name}}" VALID UNTIL '{{expiration}}';
 `
-	defaultPostgresRotateRootCredentialsSQL = `
+	defaultRotateRootCredentialsSQL = `
 ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
 `
 
-	defaultPostgresRotateCredentialsSQL = `
+	defaultRotateCredentialsSQL = `
 ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';
 `
 )
 
-var _ dbplugin.Database = &PostgreSQL{}
+var _ dbplugin.Database = &RedShift{}
 
 // New implements builtinplugins.BuiltinFactory
 func New(lowercaseUsername bool) func() (interface{}, error) {
@@ -45,9 +45,9 @@ func New(lowercaseUsername bool) func() (interface{}, error) {
 	}
 }
 
-func new(lowercaseUsername bool) *PostgreSQL {
+func new(lowercaseUsername bool) *RedShift {
 	connProducer := &connutil.SQLConnectionProducer{}
-	connProducer.Type = postgreSQLTypeName
+	connProducer.Type = sqlTypeName
 
 	credsProducer := &credsutil.SQLCredentialsProducer{
 		DisplayNameLen:    8,
@@ -57,7 +57,7 @@ func new(lowercaseUsername bool) *PostgreSQL {
 		LowercaseUsername: lowercaseUsername,
 	}
 
-	db := &PostgreSQL{
+	db := &RedShift{
 		SQLConnectionProducer: connProducer,
 		CredentialsProducer:   credsProducer,
 	}
@@ -65,9 +65,9 @@ func new(lowercaseUsername bool) *PostgreSQL {
 	return db
 }
 
-// Run instantiates a PostgreSQL object, and runs the RPC server for the plugin
+// Run instantiates a RedShift object, and runs the RPC server for the plugin
 func Run(apiTLSConfig *api.TLSConfig) error {
-	dbType, err := New(false)()
+	dbType, err := New(true)()
 	if err != nil {
 		return err
 	}
@@ -77,16 +77,16 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 	return nil
 }
 
-type PostgreSQL struct {
+type RedShift struct {
 	*connutil.SQLConnectionProducer
 	credsutil.CredentialsProducer
 }
 
-func (p *PostgreSQL) Type() (string, error) {
-	return postgreSQLTypeName, nil
+func (p *RedShift) Type() (string, error) {
+	return sqlTypeName, nil
 }
 
-func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
+func (p *RedShift) getConnection(ctx context.Context) (*sql.DB, error) {
 	db, err := p.Connection(ctx)
 	if err != nil {
 		return nil, err
@@ -101,7 +101,7 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 // and setting the password of static accounts, as well as rolling back
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
-func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
+func (p *RedShift) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
 	if len(statements.Rotation) == 0 {
 		return "", "", errors.New("empty rotation statements")
 	}
@@ -124,7 +124,7 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Sta
 
 	// Check if the role exists
 	var exists bool
-	err = db.QueryRowContext(ctx, "SELECT exists (SELECT rolname FROM pg_roles WHERE rolname=$1);", username).Scan(&exists)
+	err = db.QueryRowContext(ctx, "SELECT exists (SELECT usename FROM pg_user WHERE usename=$1);", username).Scan(&exists)
 	if err != nil && err != sql.ErrNoRows {
 		return "", "", err
 	}
@@ -168,7 +168,7 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Sta
 	return username, password, nil
 }
 
-func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
+func (p *RedShift) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	statements = dbutil.StatementCompatibilityHelper(statements)
 
 	if len(statements.Creation) == 0 {
@@ -237,7 +237,7 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 	return username, password, nil
 }
 
-func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
+func (p *RedShift) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -245,7 +245,7 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 
 	renewStmts := statements.Renewal
 	if len(renewStmts) == 0 {
-		renewStmts = []string{defaultPostgresRenewSQL}
+		renewStmts = []string{defaultRenewSQL}
 	}
 
 	db, err := p.getConnection(ctx)
@@ -286,7 +286,7 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 	return tx.Commit()
 }
 
-func (p *PostgreSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
+func (p *RedShift) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
 	// Grab the lock
 	p.Lock()
 	defer p.Unlock()
@@ -300,7 +300,7 @@ func (p *PostgreSQL) RevokeUser(ctx context.Context, statements dbplugin.Stateme
 	return p.customRevokeUser(ctx, username, statements.Revocation)
 }
 
-func (p *PostgreSQL) customRevokeUser(ctx context.Context, username string, revocationStmts []string) error {
+func (p *RedShift) customRevokeUser(ctx context.Context, username string, revocationStmts []string) error {
 	db, err := p.getConnection(ctx)
 	if err != nil {
 		return err
@@ -333,7 +333,7 @@ func (p *PostgreSQL) customRevokeUser(ctx context.Context, username string, revo
 	return tx.Commit()
 }
 
-func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) error {
+func (p *RedShift) defaultRevokeUser(ctx context.Context, username string) error {
 	db, err := p.getConnection(ctx)
 	if err != nil {
 		return err
@@ -341,7 +341,7 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 
 	// Check if the role exists
 	var exists bool
-	err = db.QueryRowContext(ctx, "SELECT exists (SELECT rolname FROM pg_roles WHERE rolname=$1);", username).Scan(&exists)
+	err = db.QueryRowContext(ctx, "SELECT exists (SELECT usename FROM pg_user WHERE username=$1);", username).Scan(&exists)
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
@@ -444,7 +444,7 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 	return nil
 }
 
-func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
+func (p *RedShift) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
 	p.Lock()
 	defer p.Unlock()
 
@@ -454,7 +454,7 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 
 	rotateStatents := statements
 	if len(rotateStatents) == 0 {
-		rotateStatents = []string{defaultPostgresRotateRootCredentialsSQL}
+		rotateStatents = []string{defaultRotateRootCredentialsSQL}
 	}
 
 	db, err := p.getConnection(ctx)
