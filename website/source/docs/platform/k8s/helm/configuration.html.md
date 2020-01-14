@@ -197,6 +197,12 @@ and consider if they're appropriate for your deployment.
        GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/myproject/myproject-creds.json
     ```
 
+    * `extraArgs` `string: null`) - The extra arguments to be applied to the Vault server startup command.
+
+    ```yaml
+     extraArgs: "-config=/path/to/extra/config.hcl -log-format=json"
+    ```
+
     * `extraSecretEnvironmentVars` (`string: null`) - The extra environment variables populated from a secret to be applied to the Vault server.  This should be a multi-line key/value string.
 
         - `envName` (`string: required`) -
