@@ -10,6 +10,9 @@ IMPROVEMENTS:
 * cli: Incorrect TLS configuration will now correctly fail [GH-8025] 
 * secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
 * secrets/gcp: Add support for rotating root keys [GCP-53]
+* storage/raft: Nodes in the raft cluster can all be given possible leader
+  addresses for them to continuously try and join one of them, thus automating
+  the process of join to a greater extent [GH-7856]
 
 BUG FIXES:
 
