@@ -62,7 +62,7 @@ $ git clone https://github.com/hashicorp/vault-helm.git
 $ cd vault-helm
 
 # Checkout a tagged version
-$ git checkout v0.3.2
+$ git checkout v0.3.3
 
 # Run Helm
 $ helm install --name vault ./
@@ -195,6 +195,47 @@ $ kubectl exec -ti <name of pod> -- vault operator unseal
 
 After a few moments the Vault cluster should elect a new active primary.  The Vault
 cluster is now upgraded!
+
+### Protecting Sensitive Vault Configurations
+
+Vault Helm renders a Vault configuration file during installation and stores the 
+file in a Kubernetes configmap. Some configurations require sensitive data to be 
+included in the configuration file and would not be encrypted at rest once created 
+in Kubernetes.  
+
+The following example shows how to add extra configuration files to Vault Helm 
+to protect sensitive configurations from being in plaintext at rest using Kubernetes 
+secrets.
+
+First, create a partial Vault configuration with the sensitive settings Vault will 
+load during startup:
+
+```yaml
+cat <<EOF >>config.hcl
+storage "mysql" {
+  username = "user1234"
+  password = "secret123!"
+  database = "vault"
+}
+EOF
+```
+
+Next, create a Kubernetes secret containing this partial configuration:
+
+```bash
+kubectl create secret generic vault-storage-config \
+    --from-file=config.hcl
+```
+
+Finally, mount this secret as an extra volume and add an additional `-config` flag 
+to the Vault startup command:
+
+```bash
+helm install --name=vault \
+  --set='server.extraVolumes[0].type=secret' \
+  --set='server.extraVolumes[0].name=vault-storage-config' \
+  --set='server.extraArgs=-config=/vault/userconfig/vault-storage-config/config.hcl' .
+```
 
 #### Google KMS Auto Unseal
 
