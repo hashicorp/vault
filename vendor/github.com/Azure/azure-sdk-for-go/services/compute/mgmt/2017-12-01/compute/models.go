@@ -31,21 +31,36 @@ import (
 // The package's fully qualified name.
 const fqdn = "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute"
 
+// AccessLevel enumerates the values for access level.
+type AccessLevel string
+
+const (
+	// None ...
+	None AccessLevel = "None"
+	// Read ...
+	Read AccessLevel = "Read"
+)
+
+// PossibleAccessLevelValues returns an array of possible values for the AccessLevel const type.
+func PossibleAccessLevelValues() []AccessLevel {
+	return []AccessLevel{None, Read}
+}
+
 // CachingTypes enumerates the values for caching types.
 type CachingTypes string
 
 const (
-	// None ...
-	None CachingTypes = "None"
-	// ReadOnly ...
-	ReadOnly CachingTypes = "ReadOnly"
-	// ReadWrite ...
-	ReadWrite CachingTypes = "ReadWrite"
+	// CachingTypesNone ...
+	CachingTypesNone CachingTypes = "None"
+	// CachingTypesReadOnly ...
+	CachingTypesReadOnly CachingTypes = "ReadOnly"
+	// CachingTypesReadWrite ...
+	CachingTypesReadWrite CachingTypes = "ReadWrite"
 )
 
 // PossibleCachingTypesValues returns an array of possible values for the CachingTypes const type.
 func PossibleCachingTypesValues() []CachingTypes {
-	return []CachingTypes{None, ReadOnly, ReadWrite}
+	return []CachingTypes{CachingTypesNone, CachingTypesReadOnly, CachingTypesReadWrite}
 }
 
 // ComponentNames enumerates the values for component names.
@@ -61,21 +76,42 @@ func PossibleComponentNamesValues() []ComponentNames {
 	return []ComponentNames{MicrosoftWindowsShellSetup}
 }
 
+// DiskCreateOption enumerates the values for disk create option.
+type DiskCreateOption string
+
+const (
+	// Attach ...
+	Attach DiskCreateOption = "Attach"
+	// Copy ...
+	Copy DiskCreateOption = "Copy"
+	// Empty ...
+	Empty DiskCreateOption = "Empty"
+	// FromImage ...
+	FromImage DiskCreateOption = "FromImage"
+	// Import ...
+	Import DiskCreateOption = "Import"
+)
+
+// PossibleDiskCreateOptionValues returns an array of possible values for the DiskCreateOption const type.
+func PossibleDiskCreateOptionValues() []DiskCreateOption {
+	return []DiskCreateOption{Attach, Copy, Empty, FromImage, Import}
+}
+
 // DiskCreateOptionTypes enumerates the values for disk create option types.
 type DiskCreateOptionTypes string
 
 const (
-	// Attach ...
-	Attach DiskCreateOptionTypes = "Attach"
-	// Empty ...
-	Empty DiskCreateOptionTypes = "Empty"
-	// FromImage ...
-	FromImage DiskCreateOptionTypes = "FromImage"
+	// DiskCreateOptionTypesAttach ...
+	DiskCreateOptionTypesAttach DiskCreateOptionTypes = "Attach"
+	// DiskCreateOptionTypesEmpty ...
+	DiskCreateOptionTypesEmpty DiskCreateOptionTypes = "Empty"
+	// DiskCreateOptionTypesFromImage ...
+	DiskCreateOptionTypesFromImage DiskCreateOptionTypes = "FromImage"
 )
 
 // PossibleDiskCreateOptionTypesValues returns an array of possible values for the DiskCreateOptionTypes const type.
 func PossibleDiskCreateOptionTypesValues() []DiskCreateOptionTypes {
-	return []DiskCreateOptionTypes{Attach, Empty, FromImage}
+	return []DiskCreateOptionTypes{DiskCreateOptionTypesAttach, DiskCreateOptionTypesEmpty, DiskCreateOptionTypesFromImage}
 }
 
 // InstanceViewTypes enumerates the values for instance view types.
@@ -219,6 +255,53 @@ const (
 // PossibleResourceIdentityTypeValues returns an array of possible values for the ResourceIdentityType const type.
 func PossibleResourceIdentityTypeValues() []ResourceIdentityType {
 	return []ResourceIdentityType{ResourceIdentityTypeNone, ResourceIdentityTypeSystemAssigned, ResourceIdentityTypeSystemAssignedUserAssigned, ResourceIdentityTypeUserAssigned}
+}
+
+// ResourceSkuCapacityScaleType enumerates the values for resource sku capacity scale type.
+type ResourceSkuCapacityScaleType string
+
+const (
+	// ResourceSkuCapacityScaleTypeAutomatic ...
+	ResourceSkuCapacityScaleTypeAutomatic ResourceSkuCapacityScaleType = "Automatic"
+	// ResourceSkuCapacityScaleTypeManual ...
+	ResourceSkuCapacityScaleTypeManual ResourceSkuCapacityScaleType = "Manual"
+	// ResourceSkuCapacityScaleTypeNone ...
+	ResourceSkuCapacityScaleTypeNone ResourceSkuCapacityScaleType = "None"
+)
+
+// PossibleResourceSkuCapacityScaleTypeValues returns an array of possible values for the ResourceSkuCapacityScaleType const type.
+func PossibleResourceSkuCapacityScaleTypeValues() []ResourceSkuCapacityScaleType {
+	return []ResourceSkuCapacityScaleType{ResourceSkuCapacityScaleTypeAutomatic, ResourceSkuCapacityScaleTypeManual, ResourceSkuCapacityScaleTypeNone}
+}
+
+// ResourceSkuRestrictionsReasonCode enumerates the values for resource sku restrictions reason code.
+type ResourceSkuRestrictionsReasonCode string
+
+const (
+	// NotAvailableForSubscription ...
+	NotAvailableForSubscription ResourceSkuRestrictionsReasonCode = "NotAvailableForSubscription"
+	// QuotaID ...
+	QuotaID ResourceSkuRestrictionsReasonCode = "QuotaId"
+)
+
+// PossibleResourceSkuRestrictionsReasonCodeValues returns an array of possible values for the ResourceSkuRestrictionsReasonCode const type.
+func PossibleResourceSkuRestrictionsReasonCodeValues() []ResourceSkuRestrictionsReasonCode {
+	return []ResourceSkuRestrictionsReasonCode{NotAvailableForSubscription, QuotaID}
+}
+
+// ResourceSkuRestrictionsType enumerates the values for resource sku restrictions type.
+type ResourceSkuRestrictionsType string
+
+const (
+	// Location ...
+	Location ResourceSkuRestrictionsType = "Location"
+	// Zone ...
+	Zone ResourceSkuRestrictionsType = "Zone"
+)
+
+// PossibleResourceSkuRestrictionsTypeValues returns an array of possible values for the ResourceSkuRestrictionsType const type.
+func PossibleResourceSkuRestrictionsTypeValues() []ResourceSkuRestrictionsType {
+	return []ResourceSkuRestrictionsType{Location, Zone}
 }
 
 // RollingUpgradeActionType enumerates the values for rolling upgrade action type.
@@ -743,6 +826,91 @@ func PossibleVirtualMachineSizeTypesValues() []VirtualMachineSizeTypes {
 	return []VirtualMachineSizeTypes{BasicA0, BasicA1, BasicA2, BasicA3, BasicA4, StandardA0, StandardA1, StandardA10, StandardA11, StandardA1V2, StandardA2, StandardA2mV2, StandardA2V2, StandardA3, StandardA4, StandardA4mV2, StandardA4V2, StandardA5, StandardA6, StandardA7, StandardA8, StandardA8mV2, StandardA8V2, StandardA9, StandardB1ms, StandardB1s, StandardB2ms, StandardB2s, StandardB4ms, StandardB8ms, StandardD1, StandardD11, StandardD11V2, StandardD12, StandardD12V2, StandardD13, StandardD13V2, StandardD14, StandardD14V2, StandardD15V2, StandardD16sV3, StandardD16V3, StandardD1V2, StandardD2, StandardD2sV3, StandardD2V2, StandardD2V3, StandardD3, StandardD32sV3, StandardD32V3, StandardD3V2, StandardD4, StandardD4sV3, StandardD4V2, StandardD4V3, StandardD5V2, StandardD64sV3, StandardD64V3, StandardD8sV3, StandardD8V3, StandardDS1, StandardDS11, StandardDS11V2, StandardDS12, StandardDS12V2, StandardDS13, StandardDS132V2, StandardDS134V2, StandardDS13V2, StandardDS14, StandardDS144V2, StandardDS148V2, StandardDS14V2, StandardDS15V2, StandardDS1V2, StandardDS2, StandardDS2V2, StandardDS3, StandardDS3V2, StandardDS4, StandardDS4V2, StandardDS5V2, StandardE16sV3, StandardE16V3, StandardE2sV3, StandardE2V3, StandardE3216V3, StandardE328sV3, StandardE32sV3, StandardE32V3, StandardE4sV3, StandardE4V3, StandardE6416sV3, StandardE6432sV3, StandardE64sV3, StandardE64V3, StandardE8sV3, StandardE8V3, StandardF1, StandardF16, StandardF16s, StandardF16sV2, StandardF1s, StandardF2, StandardF2s, StandardF2sV2, StandardF32sV2, StandardF4, StandardF4s, StandardF4sV2, StandardF64sV2, StandardF72sV2, StandardF8, StandardF8s, StandardF8sV2, StandardG1, StandardG2, StandardG3, StandardG4, StandardG5, StandardGS1, StandardGS2, StandardGS3, StandardGS4, StandardGS44, StandardGS48, StandardGS5, StandardGS516, StandardGS58, StandardH16, StandardH16m, StandardH16mr, StandardH16r, StandardH8, StandardH8m, StandardL16s, StandardL32s, StandardL4s, StandardL8s, StandardM12832ms, StandardM12864ms, StandardM128ms, StandardM128s, StandardM6416ms, StandardM6432ms, StandardM64ms, StandardM64s, StandardNC12, StandardNC12sV2, StandardNC12sV3, StandardNC24, StandardNC24r, StandardNC24rsV2, StandardNC24rsV3, StandardNC24sV2, StandardNC24sV3, StandardNC6, StandardNC6sV2, StandardNC6sV3, StandardND12s, StandardND24rs, StandardND24s, StandardND6s, StandardNV12, StandardNV24, StandardNV6}
 }
 
+// AccessURI a disk access SAS uri.
+type AccessURI struct {
+	autorest.Response `json:"-"`
+	// AccessURIOutput - Operation output data (raw JSON)
+	*AccessURIOutput `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for AccessURI.
+func (au AccessURI) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if au.AccessURIOutput != nil {
+		objectMap["properties"] = au.AccessURIOutput
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for AccessURI struct.
+func (au *AccessURI) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var accessURIOutput AccessURIOutput
+				err = json.Unmarshal(*v, &accessURIOutput)
+				if err != nil {
+					return err
+				}
+				au.AccessURIOutput = &accessURIOutput
+			}
+		}
+	}
+
+	return nil
+}
+
+// AccessURIOutput azure properties, including output.
+type AccessURIOutput struct {
+	// AccessURIRaw - Operation output data (raw JSON)
+	*AccessURIRaw `json:"output,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for AccessURIOutput.
+func (auo AccessURIOutput) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if auo.AccessURIRaw != nil {
+		objectMap["output"] = auo.AccessURIRaw
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for AccessURIOutput struct.
+func (auo *AccessURIOutput) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "output":
+			if v != nil {
+				var accessURIRaw AccessURIRaw
+				err = json.Unmarshal(*v, &accessURIRaw)
+				if err != nil {
+					return err
+				}
+				auo.AccessURIRaw = &accessURIRaw
+			}
+		}
+	}
+
+	return nil
+}
+
+// AccessURIRaw this object gets 'bubbled up' through flattening.
+type AccessURIRaw struct {
+	// AccessSAS - READ-ONLY; A SAS uri for accessing a disk.
+	AccessSAS *string `json:"accessSAS,omitempty"`
+}
+
 // AdditionalUnattendContent specifies additional XML formatted information that can be included in the
 // Unattend.xml file, which is used by Windows Setup. Contents are defined by setting name, component name,
 // and the pass in which the content is applied.
@@ -1159,6 +1327,20 @@ type BootDiagnosticsInstanceView struct {
 	SerialConsoleLogBlobURI *string `json:"serialConsoleLogBlobUri,omitempty"`
 }
 
+// CreationData data used when creating a disk.
+type CreationData struct {
+	// CreateOption - This enumerates the possible sources of a disk's creation. Possible values include: 'Empty', 'Attach', 'FromImage', 'Import', 'Copy'
+	CreateOption DiskCreateOption `json:"createOption,omitempty"`
+	// StorageAccountID - If createOption is Import, the Azure Resource Manager identifier of the storage account containing the blob to import as a disk. Required only if the blob is in a different subscription
+	StorageAccountID *string `json:"storageAccountId,omitempty"`
+	// ImageReference - Disk source information.
+	ImageReference *ImageDiskReference `json:"imageReference,omitempty"`
+	// SourceURI - If createOption is Import, this is the URI of a blob to be imported into a managed disk.
+	SourceURI *string `json:"sourceUri,omitempty"`
+	// SourceResourceID - If createOption is Copy, this is the ARM id of the source snapshot or disk.
+	SourceResourceID *string `json:"sourceResourceId,omitempty"`
+}
+
 // DataDisk describes a data disk.
 type DataDisk struct {
 	// Lun - Specifies the logical unit number of the data disk. This value is used to identify data disks within the VM and therefore must be unique for each data disk attached to a VM.
@@ -1169,11 +1351,11 @@ type DataDisk struct {
 	Vhd *VirtualHardDisk `json:"vhd,omitempty"`
 	// Image - The source user image virtual hard disk. The virtual hard disk will be copied before being attached to the virtual machine. If SourceImage is provided, the destination virtual hard drive must not exist.
 	Image *VirtualHardDisk `json:"image,omitempty"`
-	// Caching - Specifies the caching requirements. <br><br> Possible values are: <br><br> **None** <br><br> **ReadOnly** <br><br> **ReadWrite** <br><br> Default: **None for Standard storage. ReadOnly for Premium storage**. Possible values include: 'None', 'ReadOnly', 'ReadWrite'
+	// Caching - Specifies the caching requirements. <br><br> Possible values are: <br><br> **None** <br><br> **ReadOnly** <br><br> **ReadWrite** <br><br> Default: **None for Standard storage. ReadOnly for Premium storage**. Possible values include: 'CachingTypesNone', 'CachingTypesReadOnly', 'CachingTypesReadWrite'
 	Caching CachingTypes `json:"caching,omitempty"`
 	// WriteAcceleratorEnabled - Specifies whether writeAccelerator should be enabled or disabled on the disk.
 	WriteAcceleratorEnabled *bool `json:"writeAcceleratorEnabled,omitempty"`
-	// CreateOption - Specifies how the virtual machine should be created.<br><br> Possible values are:<br><br> **Attach** \u2013 This value is used when you are using a specialized disk to create the virtual machine.<br><br> **FromImage** \u2013 This value is used when you are using an image to create the virtual machine. If you are using a platform image, you also use the imageReference element described above. If you are using a marketplace image, you  also use the plan element previously described. Possible values include: 'FromImage', 'Empty', 'Attach'
+	// CreateOption - Specifies how the virtual machine should be created.<br><br> Possible values are:<br><br> **Attach** \u2013 This value is used when you are using a specialized disk to create the virtual machine.<br><br> **FromImage** \u2013 This value is used when you are using an image to create the virtual machine. If you are using a platform image, you also use the imageReference element described above. If you are using a marketplace image, you  also use the plan element previously described. Possible values include: 'DiskCreateOptionTypesFromImage', 'DiskCreateOptionTypesEmpty', 'DiskCreateOptionTypesAttach'
 	CreateOption DiskCreateOptionTypes `json:"createOption,omitempty"`
 	// DiskSizeGB - Specifies the size of an empty data disk in gigabytes. This element can be used to overwrite the size of the disk in a virtual machine image. <br><br> This value cannot be larger than 1023 GB
 	DiskSizeGB *int32 `json:"diskSizeGB,omitempty"`
@@ -1194,6 +1376,144 @@ type DiagnosticsProfile struct {
 	BootDiagnostics *BootDiagnostics `json:"bootDiagnostics,omitempty"`
 }
 
+// Disk disk resource.
+type Disk struct {
+	autorest.Response `json:"-"`
+	// ManagedBy - READ-ONLY; A relative URI containing the ID of the VM that has the disk attached.
+	ManagedBy *string  `json:"managedBy,omitempty"`
+	Sku       *DiskSku `json:"sku,omitempty"`
+	// Zones - The Logical zone list for Disk.
+	Zones           *[]string `json:"zones,omitempty"`
+	*DiskProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; Resource Id
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; Resource name
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; Resource type
+	Type *string `json:"type,omitempty"`
+	// Location - Resource location
+	Location *string `json:"location,omitempty"`
+	// Tags - Resource tags
+	Tags map[string]*string `json:"tags"`
+}
+
+// MarshalJSON is the custom marshaler for Disk.
+func (d Disk) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if d.Sku != nil {
+		objectMap["sku"] = d.Sku
+	}
+	if d.Zones != nil {
+		objectMap["zones"] = d.Zones
+	}
+	if d.DiskProperties != nil {
+		objectMap["properties"] = d.DiskProperties
+	}
+	if d.Location != nil {
+		objectMap["location"] = d.Location
+	}
+	if d.Tags != nil {
+		objectMap["tags"] = d.Tags
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for Disk struct.
+func (d *Disk) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "managedBy":
+			if v != nil {
+				var managedBy string
+				err = json.Unmarshal(*v, &managedBy)
+				if err != nil {
+					return err
+				}
+				d.ManagedBy = &managedBy
+			}
+		case "sku":
+			if v != nil {
+				var sku DiskSku
+				err = json.Unmarshal(*v, &sku)
+				if err != nil {
+					return err
+				}
+				d.Sku = &sku
+			}
+		case "zones":
+			if v != nil {
+				var zones []string
+				err = json.Unmarshal(*v, &zones)
+				if err != nil {
+					return err
+				}
+				d.Zones = &zones
+			}
+		case "properties":
+			if v != nil {
+				var diskProperties DiskProperties
+				err = json.Unmarshal(*v, &diskProperties)
+				if err != nil {
+					return err
+				}
+				d.DiskProperties = &diskProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				d.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				d.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				d.Type = &typeVar
+			}
+		case "location":
+			if v != nil {
+				var location string
+				err = json.Unmarshal(*v, &location)
+				if err != nil {
+					return err
+				}
+				d.Location = &location
+			}
+		case "tags":
+			if v != nil {
+				var tags map[string]*string
+				err = json.Unmarshal(*v, &tags)
+				if err != nil {
+					return err
+				}
+				d.Tags = tags
+			}
+		}
+	}
+
+	return nil
+}
+
 // DiskEncryptionSettings describes a Encryption Settings for a Disk
 type DiskEncryptionSettings struct {
 	// DiskEncryptionKey - Specifies the location of the disk encryption key, which is a Key Vault Secret.
@@ -1212,6 +1532,412 @@ type DiskInstanceView struct {
 	EncryptionSettings *[]DiskEncryptionSettings `json:"encryptionSettings,omitempty"`
 	// Statuses - The resource status information.
 	Statuses *[]InstanceViewStatus `json:"statuses,omitempty"`
+}
+
+// DiskList the List Disks operation response.
+type DiskList struct {
+	autorest.Response `json:"-"`
+	// Value - A list of disks.
+	Value *[]Disk `json:"value,omitempty"`
+	// NextLink - The uri to fetch the next page of disks. Call ListNext() with this to fetch the next page of disks.
+	NextLink *string `json:"nextLink,omitempty"`
+}
+
+// DiskListIterator provides access to a complete listing of Disk values.
+type DiskListIterator struct {
+	i    int
+	page DiskListPage
+}
+
+// NextWithContext advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+func (iter *DiskListIterator) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/DiskListIterator.NextWithContext")
+		defer func() {
+			sc := -1
+			if iter.Response().Response.Response != nil {
+				sc = iter.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	iter.i++
+	if iter.i < len(iter.page.Values()) {
+		return nil
+	}
+	err = iter.page.NextWithContext(ctx)
+	if err != nil {
+		iter.i--
+		return err
+	}
+	iter.i = 0
+	return nil
+}
+
+// Next advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (iter *DiskListIterator) Next() error {
+	return iter.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the enumeration should be started or is not yet complete.
+func (iter DiskListIterator) NotDone() bool {
+	return iter.page.NotDone() && iter.i < len(iter.page.Values())
+}
+
+// Response returns the raw server response from the last page request.
+func (iter DiskListIterator) Response() DiskList {
+	return iter.page.Response()
+}
+
+// Value returns the current value or a zero-initialized value if the
+// iterator has advanced beyond the end of the collection.
+func (iter DiskListIterator) Value() Disk {
+	if !iter.page.NotDone() {
+		return Disk{}
+	}
+	return iter.page.Values()[iter.i]
+}
+
+// Creates a new instance of the DiskListIterator type.
+func NewDiskListIterator(page DiskListPage) DiskListIterator {
+	return DiskListIterator{page: page}
+}
+
+// IsEmpty returns true if the ListResult contains no values.
+func (dl DiskList) IsEmpty() bool {
+	return dl.Value == nil || len(*dl.Value) == 0
+}
+
+// diskListPreparer prepares a request to retrieve the next set of results.
+// It returns nil if no more results exist.
+func (dl DiskList) diskListPreparer(ctx context.Context) (*http.Request, error) {
+	if dl.NextLink == nil || len(to.String(dl.NextLink)) < 1 {
+		return nil, nil
+	}
+	return autorest.Prepare((&http.Request{}).WithContext(ctx),
+		autorest.AsJSON(),
+		autorest.AsGet(),
+		autorest.WithBaseURL(to.String(dl.NextLink)))
+}
+
+// DiskListPage contains a page of Disk values.
+type DiskListPage struct {
+	fn func(context.Context, DiskList) (DiskList, error)
+	dl DiskList
+}
+
+// NextWithContext advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+func (page *DiskListPage) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/DiskListPage.NextWithContext")
+		defer func() {
+			sc := -1
+			if page.Response().Response.Response != nil {
+				sc = page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	next, err := page.fn(ctx, page.dl)
+	if err != nil {
+		return err
+	}
+	page.dl = next
+	return nil
+}
+
+// Next advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (page *DiskListPage) Next() error {
+	return page.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the page enumeration should be started or is not yet complete.
+func (page DiskListPage) NotDone() bool {
+	return !page.dl.IsEmpty()
+}
+
+// Response returns the raw server response from the last page request.
+func (page DiskListPage) Response() DiskList {
+	return page.dl
+}
+
+// Values returns the slice of values for the current page or nil if there are no values.
+func (page DiskListPage) Values() []Disk {
+	if page.dl.IsEmpty() {
+		return nil
+	}
+	return *page.dl.Value
+}
+
+// Creates a new instance of the DiskListPage type.
+func NewDiskListPage(getNextPage func(context.Context, DiskList) (DiskList, error)) DiskListPage {
+	return DiskListPage{fn: getNextPage}
+}
+
+// DiskProperties disk resource properties.
+type DiskProperties struct {
+	// TimeCreated - READ-ONLY; The time when the disk was created.
+	TimeCreated *date.Time `json:"timeCreated,omitempty"`
+	// OsType - The Operating System type. Possible values include: 'Windows', 'Linux'
+	OsType OperatingSystemTypes `json:"osType,omitempty"`
+	// CreationData - Disk source information. CreationData information cannot be changed after the disk has been created.
+	CreationData *CreationData `json:"creationData,omitempty"`
+	// DiskSizeGB - If creationData.createOption is Empty, this field is mandatory and it indicates the size of the VHD to create. If this field is present for updates or creation with other options, it indicates a resize. Resizes are only allowed if the disk is not attached to a running VM, and can only increase the disk's size.
+	DiskSizeGB *int32 `json:"diskSizeGB,omitempty"`
+	// EncryptionSettings - Encryption settings for disk or snapshot
+	EncryptionSettings *EncryptionSettings `json:"encryptionSettings,omitempty"`
+	// ProvisioningState - READ-ONLY; The disk provisioning state.
+	ProvisioningState *string `json:"provisioningState,omitempty"`
+}
+
+// DisksCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
+type DisksCreateOrUpdateFuture struct {
+	azure.Future
+}
+
+// Result returns the result of the asynchronous operation.
+// If the operation has not completed it will return an error.
+func (future *DisksCreateOrUpdateFuture) Result(client DisksClient) (d Disk, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.DisksCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		err = azure.NewAsyncOpIncompleteError("compute.DisksCreateOrUpdateFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if d.Response.Response, err = future.GetResult(sender); err == nil && d.Response.Response.StatusCode != http.StatusNoContent {
+		d, err = client.CreateOrUpdateResponder(d.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.DisksCreateOrUpdateFuture", "Result", d.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// DisksDeleteFuture an abstraction for monitoring and retrieving the results of a long-running operation.
+type DisksDeleteFuture struct {
+	azure.Future
+}
+
+// Result returns the result of the asynchronous operation.
+// If the operation has not completed it will return an error.
+func (future *DisksDeleteFuture) Result(client DisksClient) (osr OperationStatusResponse, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.DisksDeleteFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		err = azure.NewAsyncOpIncompleteError("compute.DisksDeleteFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if osr.Response.Response, err = future.GetResult(sender); err == nil && osr.Response.Response.StatusCode != http.StatusNoContent {
+		osr, err = client.DeleteResponder(osr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.DisksDeleteFuture", "Result", osr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// DisksGrantAccessFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
+type DisksGrantAccessFuture struct {
+	azure.Future
+}
+
+// Result returns the result of the asynchronous operation.
+// If the operation has not completed it will return an error.
+func (future *DisksGrantAccessFuture) Result(client DisksClient) (au AccessURI, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.DisksGrantAccessFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		err = azure.NewAsyncOpIncompleteError("compute.DisksGrantAccessFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if au.Response.Response, err = future.GetResult(sender); err == nil && au.Response.Response.StatusCode != http.StatusNoContent {
+		au, err = client.GrantAccessResponder(au.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.DisksGrantAccessFuture", "Result", au.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// DiskSku the disks and snapshots sku name. Can be Standard_LRS or Premium_LRS.
+type DiskSku struct {
+	// Name - The sku name. Possible values include: 'StandardLRS', 'PremiumLRS'
+	Name StorageAccountTypes `json:"name,omitempty"`
+	// Tier - READ-ONLY; The sku tier.
+	Tier *string `json:"tier,omitempty"`
+}
+
+// DisksRevokeAccessFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
+type DisksRevokeAccessFuture struct {
+	azure.Future
+}
+
+// Result returns the result of the asynchronous operation.
+// If the operation has not completed it will return an error.
+func (future *DisksRevokeAccessFuture) Result(client DisksClient) (osr OperationStatusResponse, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.DisksRevokeAccessFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		err = azure.NewAsyncOpIncompleteError("compute.DisksRevokeAccessFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if osr.Response.Response, err = future.GetResult(sender); err == nil && osr.Response.Response.StatusCode != http.StatusNoContent {
+		osr, err = client.RevokeAccessResponder(osr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.DisksRevokeAccessFuture", "Result", osr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// DisksUpdateFuture an abstraction for monitoring and retrieving the results of a long-running operation.
+type DisksUpdateFuture struct {
+	azure.Future
+}
+
+// Result returns the result of the asynchronous operation.
+// If the operation has not completed it will return an error.
+func (future *DisksUpdateFuture) Result(client DisksClient) (d Disk, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.DisksUpdateFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		err = azure.NewAsyncOpIncompleteError("compute.DisksUpdateFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if d.Response.Response, err = future.GetResult(sender); err == nil && d.Response.Response.StatusCode != http.StatusNoContent {
+		d, err = client.UpdateResponder(d.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.DisksUpdateFuture", "Result", d.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// DiskUpdate disk update resource.
+type DiskUpdate struct {
+	*DiskUpdateProperties `json:"properties,omitempty"`
+	// Tags - Resource tags
+	Tags map[string]*string `json:"tags"`
+	Sku  *DiskSku           `json:"sku,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for DiskUpdate.
+func (du DiskUpdate) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if du.DiskUpdateProperties != nil {
+		objectMap["properties"] = du.DiskUpdateProperties
+	}
+	if du.Tags != nil {
+		objectMap["tags"] = du.Tags
+	}
+	if du.Sku != nil {
+		objectMap["sku"] = du.Sku
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for DiskUpdate struct.
+func (du *DiskUpdate) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var diskUpdateProperties DiskUpdateProperties
+				err = json.Unmarshal(*v, &diskUpdateProperties)
+				if err != nil {
+					return err
+				}
+				du.DiskUpdateProperties = &diskUpdateProperties
+			}
+		case "tags":
+			if v != nil {
+				var tags map[string]*string
+				err = json.Unmarshal(*v, &tags)
+				if err != nil {
+					return err
+				}
+				du.Tags = tags
+			}
+		case "sku":
+			if v != nil {
+				var sku DiskSku
+				err = json.Unmarshal(*v, &sku)
+				if err != nil {
+					return err
+				}
+				du.Sku = &sku
+			}
+		}
+	}
+
+	return nil
+}
+
+// DiskUpdateProperties disk resource update properties.
+type DiskUpdateProperties struct {
+	// OsType - the Operating System type. Possible values include: 'Windows', 'Linux'
+	OsType OperatingSystemTypes `json:"osType,omitempty"`
+	// DiskSizeGB - If creationData.createOption is Empty, this field is mandatory and it indicates the size of the VHD to create. If this field is present for updates or creation with other options, it indicates a resize. Resizes are only allowed if the disk is not attached to a running VM, and can only increase the disk's size.
+	DiskSizeGB *int32 `json:"diskSizeGB,omitempty"`
+	// EncryptionSettings - Encryption settings for disk or snapshot
+	EncryptionSettings *EncryptionSettings `json:"encryptionSettings,omitempty"`
+}
+
+// EncryptionSettings encryption settings for disk or snapshot
+type EncryptionSettings struct {
+	// Enabled - Set this flag to true and provide DiskEncryptionKey and optional KeyEncryptionKey to enable encryption. Set this flag to false and remove DiskEncryptionKey and KeyEncryptionKey to disable encryption. If EncryptionSettings is null in the request object, the existing settings remain unchanged.
+	Enabled *bool `json:"enabled,omitempty"`
+	// DiskEncryptionKey - Key Vault Secret Url and vault id of the disk encryption key
+	DiskEncryptionKey *KeyVaultAndSecretReference `json:"diskEncryptionKey,omitempty"`
+	// KeyEncryptionKey - Key Vault Key Url and vault id of the key encryption key
+	KeyEncryptionKey *KeyVaultAndKeyReference `json:"keyEncryptionKey,omitempty"`
+}
+
+// GrantAccessData data used for requesting a SAS.
+type GrantAccessData struct {
+	// Access - Possible values include: 'None', 'Read'
+	Access AccessLevel `json:"access,omitempty"`
+	// DurationInSeconds - Time duration in seconds until the SAS access expires.
+	DurationInSeconds *int32 `json:"durationInSeconds,omitempty"`
 }
 
 // HardwareProfile specifies the hardware settings for the virtual machine.
@@ -1332,12 +2058,20 @@ type ImageDataDisk struct {
 	ManagedDisk *SubResource `json:"managedDisk,omitempty"`
 	// BlobURI - The Virtual Hard Disk.
 	BlobURI *string `json:"blobUri,omitempty"`
-	// Caching - Specifies the caching requirements. <br><br> Possible values are: <br><br> **None** <br><br> **ReadOnly** <br><br> **ReadWrite** <br><br> Default: **None for Standard storage. ReadOnly for Premium storage**. Possible values include: 'None', 'ReadOnly', 'ReadWrite'
+	// Caching - Specifies the caching requirements. <br><br> Possible values are: <br><br> **None** <br><br> **ReadOnly** <br><br> **ReadWrite** <br><br> Default: **None for Standard storage. ReadOnly for Premium storage**. Possible values include: 'CachingTypesNone', 'CachingTypesReadOnly', 'CachingTypesReadWrite'
 	Caching CachingTypes `json:"caching,omitempty"`
 	// DiskSizeGB - Specifies the size of empty data disks in gigabytes. This element can be used to overwrite the name of the disk in a virtual machine image. <br><br> This value cannot be larger than 1023 GB
 	DiskSizeGB *int32 `json:"diskSizeGB,omitempty"`
 	// StorageAccountType - Specifies the storage account type for the managed disk. Possible values are: Standard_LRS or Premium_LRS. Possible values include: 'StandardLRS', 'PremiumLRS'
 	StorageAccountType StorageAccountTypes `json:"storageAccountType,omitempty"`
+}
+
+// ImageDiskReference the source image used for creating the disk.
+type ImageDiskReference struct {
+	// ID - A relative uri containing either a Platform Image Repository or user image reference.
+	ID *string `json:"id,omitempty"`
+	// Lun - If the disk is created from an image's data disk, this is an index that indicates which of the data disks in the image to use. For OS disks, this field is null.
+	Lun *int32 `json:"lun,omitempty"`
 }
 
 // ImageListResult the List Image operation response.
@@ -1498,7 +2232,7 @@ type ImageOSDisk struct {
 	ManagedDisk *SubResource `json:"managedDisk,omitempty"`
 	// BlobURI - The Virtual Hard Disk.
 	BlobURI *string `json:"blobUri,omitempty"`
-	// Caching - Specifies the caching requirements. <br><br> Possible values are: <br><br> **None** <br><br> **ReadOnly** <br><br> **ReadWrite** <br><br> Default: **None for Standard storage. ReadOnly for Premium storage**. Possible values include: 'None', 'ReadOnly', 'ReadWrite'
+	// Caching - Specifies the caching requirements. <br><br> Possible values are: <br><br> **None** <br><br> **ReadOnly** <br><br> **ReadWrite** <br><br> Default: **None for Standard storage. ReadOnly for Premium storage**. Possible values include: 'CachingTypesNone', 'CachingTypesReadOnly', 'CachingTypesReadWrite'
 	Caching CachingTypes `json:"caching,omitempty"`
 	// DiskSizeGB - Specifies the size of empty data disks in gigabytes. This element can be used to overwrite the name of the disk in a virtual machine image. <br><br> This value cannot be larger than 1023 GB
 	DiskSizeGB *int32 `json:"diskSizeGB,omitempty"`
@@ -1700,6 +2434,23 @@ type InstanceViewStatus struct {
 	Message *string `json:"message,omitempty"`
 	// Time - The time of the status.
 	Time *date.Time `json:"time,omitempty"`
+}
+
+// KeyVaultAndKeyReference key Vault Key Url and vault id of KeK, KeK is optional and when provided is used
+// to unwrap the encryptionKey
+type KeyVaultAndKeyReference struct {
+	// SourceVault - Resource id of the KeyVault containing the key or secret
+	SourceVault *SourceVault `json:"sourceVault,omitempty"`
+	// KeyURL - Url pointing to a key or secret in KeyVault
+	KeyURL *string `json:"keyUrl,omitempty"`
+}
+
+// KeyVaultAndSecretReference key Vault Secret Url and vault id of the encryption key
+type KeyVaultAndSecretReference struct {
+	// SourceVault - Resource id of the KeyVault containing the key or secret
+	SourceVault *SourceVault `json:"sourceVault,omitempty"`
+	// SecretURL - Url pointing to a key or secret in KeyVault
+	SecretURL *string `json:"secretUrl,omitempty"`
 }
 
 // KeyVaultKeyReference describes a reference to Key Vault Key
@@ -2189,11 +2940,11 @@ type OSDisk struct {
 	Vhd *VirtualHardDisk `json:"vhd,omitempty"`
 	// Image - The source user image virtual hard disk. The virtual hard disk will be copied before being attached to the virtual machine. If SourceImage is provided, the destination virtual hard drive must not exist.
 	Image *VirtualHardDisk `json:"image,omitempty"`
-	// Caching - Specifies the caching requirements. <br><br> Possible values are: <br><br> **None** <br><br> **ReadOnly** <br><br> **ReadWrite** <br><br> Default: **None for Standard storage. ReadOnly for Premium storage**. Possible values include: 'None', 'ReadOnly', 'ReadWrite'
+	// Caching - Specifies the caching requirements. <br><br> Possible values are: <br><br> **None** <br><br> **ReadOnly** <br><br> **ReadWrite** <br><br> Default: **None for Standard storage. ReadOnly for Premium storage**. Possible values include: 'CachingTypesNone', 'CachingTypesReadOnly', 'CachingTypesReadWrite'
 	Caching CachingTypes `json:"caching,omitempty"`
 	// WriteAcceleratorEnabled - Specifies whether writeAccelerator should be enabled or disabled on the disk.
 	WriteAcceleratorEnabled *bool `json:"writeAcceleratorEnabled,omitempty"`
-	// CreateOption - Specifies how the virtual machine should be created.<br><br> Possible values are:<br><br> **Attach** \u2013 This value is used when you are using a specialized disk to create the virtual machine.<br><br> **FromImage** \u2013 This value is used when you are using an image to create the virtual machine. If you are using a platform image, you also use the imageReference element described above. If you are using a marketplace image, you  also use the plan element previously described. Possible values include: 'FromImage', 'Empty', 'Attach'
+	// CreateOption - Specifies how the virtual machine should be created.<br><br> Possible values are:<br><br> **Attach** \u2013 This value is used when you are using a specialized disk to create the virtual machine.<br><br> **FromImage** \u2013 This value is used when you are using an image to create the virtual machine. If you are using a platform image, you also use the imageReference element described above. If you are using a marketplace image, you  also use the plan element previously described. Possible values include: 'DiskCreateOptionTypesFromImage', 'DiskCreateOptionTypesEmpty', 'DiskCreateOptionTypesAttach'
 	CreateOption DiskCreateOptionTypes `json:"createOption,omitempty"`
 	// DiskSizeGB - Specifies the size of an empty data disk in gigabytes. This element can be used to overwrite the size of the disk in a virtual machine image. <br><br> This value cannot be larger than 1023 GB
 	DiskSizeGB *int32 `json:"diskSizeGB,omitempty"`
@@ -2300,6 +3051,259 @@ func (r Resource) MarshalJSON() ([]byte, error) {
 	}
 	if r.Tags != nil {
 		objectMap["tags"] = r.Tags
+	}
+	return json.Marshal(objectMap)
+}
+
+// ResourceSku describes an available Compute SKU.
+type ResourceSku struct {
+	// ResourceType - READ-ONLY; The type of resource the SKU applies to.
+	ResourceType *string `json:"resourceType,omitempty"`
+	// Name - READ-ONLY; The name of SKU.
+	Name *string `json:"name,omitempty"`
+	// Tier - READ-ONLY; Specifies the tier of virtual machines in a scale set.<br /><br /> Possible Values:<br /><br /> **Standard**<br /><br /> **Basic**
+	Tier *string `json:"tier,omitempty"`
+	// Size - READ-ONLY; The Size of the SKU.
+	Size *string `json:"size,omitempty"`
+	// Family - READ-ONLY; The Family of this particular SKU.
+	Family *string `json:"family,omitempty"`
+	// Kind - READ-ONLY; The Kind of resources that are supported in this SKU.
+	Kind *string `json:"kind,omitempty"`
+	// Capacity - READ-ONLY; Specifies the number of virtual machines in the scale set.
+	Capacity *ResourceSkuCapacity `json:"capacity,omitempty"`
+	// Locations - READ-ONLY; The set of locations that the SKU is available.
+	Locations *[]string `json:"locations,omitempty"`
+	// LocationInfo - READ-ONLY; A list of locations and availability zones in those locations where the SKU is available.
+	LocationInfo *[]ResourceSkuLocationInfo `json:"locationInfo,omitempty"`
+	// APIVersions - READ-ONLY; The api versions that support this SKU.
+	APIVersions *[]string `json:"apiVersions,omitempty"`
+	// Costs - READ-ONLY; Metadata for retrieving price info.
+	Costs *[]ResourceSkuCosts `json:"costs,omitempty"`
+	// Capabilities - READ-ONLY; A name value pair to describe the capability.
+	Capabilities *[]ResourceSkuCapabilities `json:"capabilities,omitempty"`
+	// Restrictions - READ-ONLY; The restrictions because of which SKU cannot be used. This is empty if there are no restrictions.
+	Restrictions *[]ResourceSkuRestrictions `json:"restrictions,omitempty"`
+}
+
+// ResourceSkuCapabilities describes The SKU capabilities object.
+type ResourceSkuCapabilities struct {
+	// Name - READ-ONLY; An invariant to describe the feature.
+	Name *string `json:"name,omitempty"`
+	// Value - READ-ONLY; An invariant if the feature is measured by quantity.
+	Value *string `json:"value,omitempty"`
+}
+
+// ResourceSkuCapacity describes scaling information of a SKU.
+type ResourceSkuCapacity struct {
+	// Minimum - READ-ONLY; The minimum capacity.
+	Minimum *int64 `json:"minimum,omitempty"`
+	// Maximum - READ-ONLY; The maximum capacity that can be set.
+	Maximum *int64 `json:"maximum,omitempty"`
+	// Default - READ-ONLY; The default capacity.
+	Default *int64 `json:"default,omitempty"`
+	// ScaleType - READ-ONLY; The scale type applicable to the sku. Possible values include: 'ResourceSkuCapacityScaleTypeAutomatic', 'ResourceSkuCapacityScaleTypeManual', 'ResourceSkuCapacityScaleTypeNone'
+	ScaleType ResourceSkuCapacityScaleType `json:"scaleType,omitempty"`
+}
+
+// ResourceSkuCosts describes metadata for retrieving price info.
+type ResourceSkuCosts struct {
+	// MeterID - READ-ONLY; Used for querying price from commerce.
+	MeterID *string `json:"meterID,omitempty"`
+	// Quantity - READ-ONLY; The multiplier is needed to extend the base metered cost.
+	Quantity *int64 `json:"quantity,omitempty"`
+	// ExtendedUnit - READ-ONLY; An invariant to show the extended unit.
+	ExtendedUnit *string `json:"extendedUnit,omitempty"`
+}
+
+// ResourceSkuLocationInfo ...
+type ResourceSkuLocationInfo struct {
+	// Location - READ-ONLY; Location of the SKU
+	Location *string `json:"location,omitempty"`
+	// Zones - READ-ONLY; List of availability zones where the SKU is supported.
+	Zones *[]string `json:"zones,omitempty"`
+}
+
+// ResourceSkuRestrictionInfo ...
+type ResourceSkuRestrictionInfo struct {
+	// Locations - READ-ONLY; Locations where the SKU is restricted
+	Locations *[]string `json:"locations,omitempty"`
+	// Zones - READ-ONLY; List of availability zones where the SKU is restricted.
+	Zones *[]string `json:"zones,omitempty"`
+}
+
+// ResourceSkuRestrictions describes scaling information of a SKU.
+type ResourceSkuRestrictions struct {
+	// Type - READ-ONLY; The type of restrictions. Possible values include: 'Location', 'Zone'
+	Type ResourceSkuRestrictionsType `json:"type,omitempty"`
+	// Values - READ-ONLY; The value of restrictions. If the restriction type is set to location. This would be different locations where the SKU is restricted.
+	Values *[]string `json:"values,omitempty"`
+	// RestrictionInfo - READ-ONLY; The information about the restriction where the SKU cannot be used.
+	RestrictionInfo *ResourceSkuRestrictionInfo `json:"restrictionInfo,omitempty"`
+	// ReasonCode - READ-ONLY; The reason for restriction. Possible values include: 'QuotaID', 'NotAvailableForSubscription'
+	ReasonCode ResourceSkuRestrictionsReasonCode `json:"reasonCode,omitempty"`
+}
+
+// ResourceSkusResult the List Resource Skus operation response.
+type ResourceSkusResult struct {
+	autorest.Response `json:"-"`
+	// Value - The list of skus available for the subscription.
+	Value *[]ResourceSku `json:"value,omitempty"`
+	// NextLink - The URI to fetch the next page of Resource Skus. Call ListNext() with this URI to fetch the next page of Resource Skus
+	NextLink *string `json:"nextLink,omitempty"`
+}
+
+// ResourceSkusResultIterator provides access to a complete listing of ResourceSku values.
+type ResourceSkusResultIterator struct {
+	i    int
+	page ResourceSkusResultPage
+}
+
+// NextWithContext advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+func (iter *ResourceSkusResultIterator) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ResourceSkusResultIterator.NextWithContext")
+		defer func() {
+			sc := -1
+			if iter.Response().Response.Response != nil {
+				sc = iter.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	iter.i++
+	if iter.i < len(iter.page.Values()) {
+		return nil
+	}
+	err = iter.page.NextWithContext(ctx)
+	if err != nil {
+		iter.i--
+		return err
+	}
+	iter.i = 0
+	return nil
+}
+
+// Next advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (iter *ResourceSkusResultIterator) Next() error {
+	return iter.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the enumeration should be started or is not yet complete.
+func (iter ResourceSkusResultIterator) NotDone() bool {
+	return iter.page.NotDone() && iter.i < len(iter.page.Values())
+}
+
+// Response returns the raw server response from the last page request.
+func (iter ResourceSkusResultIterator) Response() ResourceSkusResult {
+	return iter.page.Response()
+}
+
+// Value returns the current value or a zero-initialized value if the
+// iterator has advanced beyond the end of the collection.
+func (iter ResourceSkusResultIterator) Value() ResourceSku {
+	if !iter.page.NotDone() {
+		return ResourceSku{}
+	}
+	return iter.page.Values()[iter.i]
+}
+
+// Creates a new instance of the ResourceSkusResultIterator type.
+func NewResourceSkusResultIterator(page ResourceSkusResultPage) ResourceSkusResultIterator {
+	return ResourceSkusResultIterator{page: page}
+}
+
+// IsEmpty returns true if the ListResult contains no values.
+func (rsr ResourceSkusResult) IsEmpty() bool {
+	return rsr.Value == nil || len(*rsr.Value) == 0
+}
+
+// resourceSkusResultPreparer prepares a request to retrieve the next set of results.
+// It returns nil if no more results exist.
+func (rsr ResourceSkusResult) resourceSkusResultPreparer(ctx context.Context) (*http.Request, error) {
+	if rsr.NextLink == nil || len(to.String(rsr.NextLink)) < 1 {
+		return nil, nil
+	}
+	return autorest.Prepare((&http.Request{}).WithContext(ctx),
+		autorest.AsJSON(),
+		autorest.AsGet(),
+		autorest.WithBaseURL(to.String(rsr.NextLink)))
+}
+
+// ResourceSkusResultPage contains a page of ResourceSku values.
+type ResourceSkusResultPage struct {
+	fn  func(context.Context, ResourceSkusResult) (ResourceSkusResult, error)
+	rsr ResourceSkusResult
+}
+
+// NextWithContext advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+func (page *ResourceSkusResultPage) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ResourceSkusResultPage.NextWithContext")
+		defer func() {
+			sc := -1
+			if page.Response().Response.Response != nil {
+				sc = page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	next, err := page.fn(ctx, page.rsr)
+	if err != nil {
+		return err
+	}
+	page.rsr = next
+	return nil
+}
+
+// Next advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (page *ResourceSkusResultPage) Next() error {
+	return page.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the page enumeration should be started or is not yet complete.
+func (page ResourceSkusResultPage) NotDone() bool {
+	return !page.rsr.IsEmpty()
+}
+
+// Response returns the raw server response from the last page request.
+func (page ResourceSkusResultPage) Response() ResourceSkusResult {
+	return page.rsr
+}
+
+// Values returns the slice of values for the current page or nil if there are no values.
+func (page ResourceSkusResultPage) Values() []ResourceSku {
+	if page.rsr.IsEmpty() {
+		return nil
+	}
+	return *page.rsr.Value
+}
+
+// Creates a new instance of the ResourceSkusResultPage type.
+func NewResourceSkusResultPage(getNextPage func(context.Context, ResourceSkusResult) (ResourceSkusResult, error)) ResourceSkusResultPage {
+	return ResourceSkusResultPage{fn: getNextPage}
+}
+
+// ResourceUpdate the Resource model definition.
+type ResourceUpdate struct {
+	// Tags - Resource tags
+	Tags map[string]*string `json:"tags"`
+	Sku  *DiskSku           `json:"sku,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ResourceUpdate.
+func (ru ResourceUpdate) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ru.Tags != nil {
+		objectMap["tags"] = ru.Tags
+	}
+	if ru.Sku != nil {
+		objectMap["sku"] = ru.Sku
 	}
 	return json.Marshal(objectMap)
 }
@@ -2780,6 +3784,493 @@ type Sku struct {
 	Tier *string `json:"tier,omitempty"`
 	// Capacity - Specifies the number of virtual machines in the scale set.
 	Capacity *int64 `json:"capacity,omitempty"`
+}
+
+// Snapshot snapshot resource.
+type Snapshot struct {
+	autorest.Response `json:"-"`
+	// ManagedBy - READ-ONLY; Unused. Always Null.
+	ManagedBy       *string  `json:"managedBy,omitempty"`
+	Sku             *DiskSku `json:"sku,omitempty"`
+	*DiskProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; Resource Id
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; Resource name
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; Resource type
+	Type *string `json:"type,omitempty"`
+	// Location - Resource location
+	Location *string `json:"location,omitempty"`
+	// Tags - Resource tags
+	Tags map[string]*string `json:"tags"`
+}
+
+// MarshalJSON is the custom marshaler for Snapshot.
+func (s Snapshot) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if s.Sku != nil {
+		objectMap["sku"] = s.Sku
+	}
+	if s.DiskProperties != nil {
+		objectMap["properties"] = s.DiskProperties
+	}
+	if s.Location != nil {
+		objectMap["location"] = s.Location
+	}
+	if s.Tags != nil {
+		objectMap["tags"] = s.Tags
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for Snapshot struct.
+func (s *Snapshot) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "managedBy":
+			if v != nil {
+				var managedBy string
+				err = json.Unmarshal(*v, &managedBy)
+				if err != nil {
+					return err
+				}
+				s.ManagedBy = &managedBy
+			}
+		case "sku":
+			if v != nil {
+				var sku DiskSku
+				err = json.Unmarshal(*v, &sku)
+				if err != nil {
+					return err
+				}
+				s.Sku = &sku
+			}
+		case "properties":
+			if v != nil {
+				var diskProperties DiskProperties
+				err = json.Unmarshal(*v, &diskProperties)
+				if err != nil {
+					return err
+				}
+				s.DiskProperties = &diskProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				s.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				s.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				s.Type = &typeVar
+			}
+		case "location":
+			if v != nil {
+				var location string
+				err = json.Unmarshal(*v, &location)
+				if err != nil {
+					return err
+				}
+				s.Location = &location
+			}
+		case "tags":
+			if v != nil {
+				var tags map[string]*string
+				err = json.Unmarshal(*v, &tags)
+				if err != nil {
+					return err
+				}
+				s.Tags = tags
+			}
+		}
+	}
+
+	return nil
+}
+
+// SnapshotList the List Snapshots operation response.
+type SnapshotList struct {
+	autorest.Response `json:"-"`
+	// Value - A list of snapshots.
+	Value *[]Snapshot `json:"value,omitempty"`
+	// NextLink - The uri to fetch the next page of snapshots. Call ListNext() with this to fetch the next page of snapshots.
+	NextLink *string `json:"nextLink,omitempty"`
+}
+
+// SnapshotListIterator provides access to a complete listing of Snapshot values.
+type SnapshotListIterator struct {
+	i    int
+	page SnapshotListPage
+}
+
+// NextWithContext advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+func (iter *SnapshotListIterator) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/SnapshotListIterator.NextWithContext")
+		defer func() {
+			sc := -1
+			if iter.Response().Response.Response != nil {
+				sc = iter.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	iter.i++
+	if iter.i < len(iter.page.Values()) {
+		return nil
+	}
+	err = iter.page.NextWithContext(ctx)
+	if err != nil {
+		iter.i--
+		return err
+	}
+	iter.i = 0
+	return nil
+}
+
+// Next advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (iter *SnapshotListIterator) Next() error {
+	return iter.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the enumeration should be started or is not yet complete.
+func (iter SnapshotListIterator) NotDone() bool {
+	return iter.page.NotDone() && iter.i < len(iter.page.Values())
+}
+
+// Response returns the raw server response from the last page request.
+func (iter SnapshotListIterator) Response() SnapshotList {
+	return iter.page.Response()
+}
+
+// Value returns the current value or a zero-initialized value if the
+// iterator has advanced beyond the end of the collection.
+func (iter SnapshotListIterator) Value() Snapshot {
+	if !iter.page.NotDone() {
+		return Snapshot{}
+	}
+	return iter.page.Values()[iter.i]
+}
+
+// Creates a new instance of the SnapshotListIterator type.
+func NewSnapshotListIterator(page SnapshotListPage) SnapshotListIterator {
+	return SnapshotListIterator{page: page}
+}
+
+// IsEmpty returns true if the ListResult contains no values.
+func (sl SnapshotList) IsEmpty() bool {
+	return sl.Value == nil || len(*sl.Value) == 0
+}
+
+// snapshotListPreparer prepares a request to retrieve the next set of results.
+// It returns nil if no more results exist.
+func (sl SnapshotList) snapshotListPreparer(ctx context.Context) (*http.Request, error) {
+	if sl.NextLink == nil || len(to.String(sl.NextLink)) < 1 {
+		return nil, nil
+	}
+	return autorest.Prepare((&http.Request{}).WithContext(ctx),
+		autorest.AsJSON(),
+		autorest.AsGet(),
+		autorest.WithBaseURL(to.String(sl.NextLink)))
+}
+
+// SnapshotListPage contains a page of Snapshot values.
+type SnapshotListPage struct {
+	fn func(context.Context, SnapshotList) (SnapshotList, error)
+	sl SnapshotList
+}
+
+// NextWithContext advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+func (page *SnapshotListPage) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/SnapshotListPage.NextWithContext")
+		defer func() {
+			sc := -1
+			if page.Response().Response.Response != nil {
+				sc = page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	next, err := page.fn(ctx, page.sl)
+	if err != nil {
+		return err
+	}
+	page.sl = next
+	return nil
+}
+
+// Next advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (page *SnapshotListPage) Next() error {
+	return page.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the page enumeration should be started or is not yet complete.
+func (page SnapshotListPage) NotDone() bool {
+	return !page.sl.IsEmpty()
+}
+
+// Response returns the raw server response from the last page request.
+func (page SnapshotListPage) Response() SnapshotList {
+	return page.sl
+}
+
+// Values returns the slice of values for the current page or nil if there are no values.
+func (page SnapshotListPage) Values() []Snapshot {
+	if page.sl.IsEmpty() {
+		return nil
+	}
+	return *page.sl.Value
+}
+
+// Creates a new instance of the SnapshotListPage type.
+func NewSnapshotListPage(getNextPage func(context.Context, SnapshotList) (SnapshotList, error)) SnapshotListPage {
+	return SnapshotListPage{fn: getNextPage}
+}
+
+// SnapshotsCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
+type SnapshotsCreateOrUpdateFuture struct {
+	azure.Future
+}
+
+// Result returns the result of the asynchronous operation.
+// If the operation has not completed it will return an error.
+func (future *SnapshotsCreateOrUpdateFuture) Result(client SnapshotsClient) (s Snapshot, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.SnapshotsCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		err = azure.NewAsyncOpIncompleteError("compute.SnapshotsCreateOrUpdateFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if s.Response.Response, err = future.GetResult(sender); err == nil && s.Response.Response.StatusCode != http.StatusNoContent {
+		s, err = client.CreateOrUpdateResponder(s.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.SnapshotsCreateOrUpdateFuture", "Result", s.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// SnapshotsDeleteFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
+type SnapshotsDeleteFuture struct {
+	azure.Future
+}
+
+// Result returns the result of the asynchronous operation.
+// If the operation has not completed it will return an error.
+func (future *SnapshotsDeleteFuture) Result(client SnapshotsClient) (osr OperationStatusResponse, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.SnapshotsDeleteFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		err = azure.NewAsyncOpIncompleteError("compute.SnapshotsDeleteFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if osr.Response.Response, err = future.GetResult(sender); err == nil && osr.Response.Response.StatusCode != http.StatusNoContent {
+		osr, err = client.DeleteResponder(osr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.SnapshotsDeleteFuture", "Result", osr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// SnapshotsGrantAccessFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
+type SnapshotsGrantAccessFuture struct {
+	azure.Future
+}
+
+// Result returns the result of the asynchronous operation.
+// If the operation has not completed it will return an error.
+func (future *SnapshotsGrantAccessFuture) Result(client SnapshotsClient) (au AccessURI, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.SnapshotsGrantAccessFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		err = azure.NewAsyncOpIncompleteError("compute.SnapshotsGrantAccessFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if au.Response.Response, err = future.GetResult(sender); err == nil && au.Response.Response.StatusCode != http.StatusNoContent {
+		au, err = client.GrantAccessResponder(au.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.SnapshotsGrantAccessFuture", "Result", au.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// SnapshotsRevokeAccessFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
+type SnapshotsRevokeAccessFuture struct {
+	azure.Future
+}
+
+// Result returns the result of the asynchronous operation.
+// If the operation has not completed it will return an error.
+func (future *SnapshotsRevokeAccessFuture) Result(client SnapshotsClient) (osr OperationStatusResponse, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.SnapshotsRevokeAccessFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		err = azure.NewAsyncOpIncompleteError("compute.SnapshotsRevokeAccessFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if osr.Response.Response, err = future.GetResult(sender); err == nil && osr.Response.Response.StatusCode != http.StatusNoContent {
+		osr, err = client.RevokeAccessResponder(osr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.SnapshotsRevokeAccessFuture", "Result", osr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// SnapshotsUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
+type SnapshotsUpdateFuture struct {
+	azure.Future
+}
+
+// Result returns the result of the asynchronous operation.
+// If the operation has not completed it will return an error.
+func (future *SnapshotsUpdateFuture) Result(client SnapshotsClient) (s Snapshot, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.SnapshotsUpdateFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		err = azure.NewAsyncOpIncompleteError("compute.SnapshotsUpdateFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if s.Response.Response, err = future.GetResult(sender); err == nil && s.Response.Response.StatusCode != http.StatusNoContent {
+		s, err = client.UpdateResponder(s.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "compute.SnapshotsUpdateFuture", "Result", s.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// SnapshotUpdate snapshot update resource.
+type SnapshotUpdate struct {
+	*DiskUpdateProperties `json:"properties,omitempty"`
+	// Tags - Resource tags
+	Tags map[string]*string `json:"tags"`
+	Sku  *DiskSku           `json:"sku,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for SnapshotUpdate.
+func (su SnapshotUpdate) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if su.DiskUpdateProperties != nil {
+		objectMap["properties"] = su.DiskUpdateProperties
+	}
+	if su.Tags != nil {
+		objectMap["tags"] = su.Tags
+	}
+	if su.Sku != nil {
+		objectMap["sku"] = su.Sku
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for SnapshotUpdate struct.
+func (su *SnapshotUpdate) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var diskUpdateProperties DiskUpdateProperties
+				err = json.Unmarshal(*v, &diskUpdateProperties)
+				if err != nil {
+					return err
+				}
+				su.DiskUpdateProperties = &diskUpdateProperties
+			}
+		case "tags":
+			if v != nil {
+				var tags map[string]*string
+				err = json.Unmarshal(*v, &tags)
+				if err != nil {
+					return err
+				}
+				su.Tags = tags
+			}
+		case "sku":
+			if v != nil {
+				var sku DiskSku
+				err = json.Unmarshal(*v, &sku)
+				if err != nil {
+					return err
+				}
+				su.Sku = &sku
+			}
+		}
+	}
+
+	return nil
+}
+
+// SourceVault the vault id is an Azure Resource Manager Resource id in the form
+// /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.KeyVault/vaults/{vaultName}
+type SourceVault struct {
+	// ID - Resource Id
+	ID *string `json:"id,omitempty"`
 }
 
 // SSHConfiguration SSH configuration for Linux based VMs running on Azure
@@ -4109,11 +5600,11 @@ type VirtualMachineScaleSetDataDisk struct {
 	Name *string `json:"name,omitempty"`
 	// Lun - Specifies the logical unit number of the data disk. This value is used to identify data disks within the VM and therefore must be unique for each data disk attached to a VM.
 	Lun *int32 `json:"lun,omitempty"`
-	// Caching - Specifies the caching requirements. <br><br> Possible values are: <br><br> **None** <br><br> **ReadOnly** <br><br> **ReadWrite** <br><br> Default: **None for Standard storage. ReadOnly for Premium storage**. Possible values include: 'None', 'ReadOnly', 'ReadWrite'
+	// Caching - Specifies the caching requirements. <br><br> Possible values are: <br><br> **None** <br><br> **ReadOnly** <br><br> **ReadWrite** <br><br> Default: **None for Standard storage. ReadOnly for Premium storage**. Possible values include: 'CachingTypesNone', 'CachingTypesReadOnly', 'CachingTypesReadWrite'
 	Caching CachingTypes `json:"caching,omitempty"`
 	// WriteAcceleratorEnabled - Specifies whether writeAccelerator should be enabled or disabled on the disk.
 	WriteAcceleratorEnabled *bool `json:"writeAcceleratorEnabled,omitempty"`
-	// CreateOption - The create option. Possible values include: 'FromImage', 'Empty', 'Attach'
+	// CreateOption - The create option. Possible values include: 'DiskCreateOptionTypesFromImage', 'DiskCreateOptionTypesEmpty', 'DiskCreateOptionTypesAttach'
 	CreateOption DiskCreateOptionTypes `json:"createOption,omitempty"`
 	// DiskSizeGB - Specifies the size of an empty data disk in gigabytes. This element can be used to overwrite the size of the disk in a virtual machine image. <br><br> This value cannot be larger than 1023 GB
 	DiskSizeGB *int32 `json:"diskSizeGB,omitempty"`
@@ -5232,11 +6723,11 @@ type VirtualMachineScaleSetNetworkProfile struct {
 type VirtualMachineScaleSetOSDisk struct {
 	// Name - The disk name.
 	Name *string `json:"name,omitempty"`
-	// Caching - Specifies the caching requirements. <br><br> Possible values are: <br><br> **None** <br><br> **ReadOnly** <br><br> **ReadWrite** <br><br> Default: **None for Standard storage. ReadOnly for Premium storage**. Possible values include: 'None', 'ReadOnly', 'ReadWrite'
+	// Caching - Specifies the caching requirements. <br><br> Possible values are: <br><br> **None** <br><br> **ReadOnly** <br><br> **ReadWrite** <br><br> Default: **None for Standard storage. ReadOnly for Premium storage**. Possible values include: 'CachingTypesNone', 'CachingTypesReadOnly', 'CachingTypesReadWrite'
 	Caching CachingTypes `json:"caching,omitempty"`
 	// WriteAcceleratorEnabled - Specifies whether writeAccelerator should be enabled or disabled on the disk.
 	WriteAcceleratorEnabled *bool `json:"writeAcceleratorEnabled,omitempty"`
-	// CreateOption - Specifies how the virtual machines in the scale set should be created.<br><br> The only allowed value is: **FromImage** \u2013 This value is used when you are using an image to create the virtual machine. If you are using a platform image, you also use the imageReference element described above. If you are using a marketplace image, you  also use the plan element previously described. Possible values include: 'FromImage', 'Empty', 'Attach'
+	// CreateOption - Specifies how the virtual machines in the scale set should be created.<br><br> The only allowed value is: **FromImage** \u2013 This value is used when you are using an image to create the virtual machine. If you are using a platform image, you also use the imageReference element described above. If you are using a marketplace image, you  also use the plan element previously described. Possible values include: 'DiskCreateOptionTypesFromImage', 'DiskCreateOptionTypesEmpty', 'DiskCreateOptionTypesAttach'
 	CreateOption DiskCreateOptionTypes `json:"createOption,omitempty"`
 	// OsType - This property allows you to specify the type of the OS that is included in the disk if creating a VM from user-image or a specialized VHD. <br><br> Possible values are: <br><br> **Windows** <br><br> **Linux**. Possible values include: 'Windows', 'Linux'
 	OsType OperatingSystemTypes `json:"osType,omitempty"`
@@ -6096,7 +7587,7 @@ type VirtualMachineScaleSetUpdateNetworkProfile struct {
 // VirtualMachineScaleSetUpdateOSDisk describes virtual machine scale set operating system disk Update
 // Object. This should be used for Updating VMSS OS Disk.
 type VirtualMachineScaleSetUpdateOSDisk struct {
-	// Caching - The caching type. Possible values include: 'None', 'ReadOnly', 'ReadWrite'
+	// Caching - The caching type. Possible values include: 'CachingTypesNone', 'CachingTypesReadOnly', 'CachingTypesReadWrite'
 	Caching CachingTypes `json:"caching,omitempty"`
 	// WriteAcceleratorEnabled - Specifies whether writeAccelerator should be enabled or disabled on the disk.
 	WriteAcceleratorEnabled *bool `json:"writeAcceleratorEnabled,omitempty"`

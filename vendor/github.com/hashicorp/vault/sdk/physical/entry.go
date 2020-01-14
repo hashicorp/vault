@@ -1,5 +1,7 @@
 package physical
 
+import wrapping "github.com/hashicorp/go-kms-wrapping"
+
 // Entry is used to represent data stored by the physical backend
 type Entry struct {
 	Key      string
@@ -13,5 +15,5 @@ type Entry struct {
 	// is used to carry information about whether seal wrapping is *desired*
 	// regardless of whether it's currently available. The struct below stores
 	// needed information when it's actually performed.
-	SealWrapInfo *EncryptedBlobInfo `json:"seal_wrap_info,omitempty"`
+	SealWrapInfo *wrapping.EncryptedBlobInfo `json:"seal_wrap_info,omitempty"`
 }
