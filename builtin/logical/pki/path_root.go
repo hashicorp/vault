@@ -429,6 +429,10 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 	cert.CRLDistributionPoints = urls.CRLDistributionPoints
 	cert.OCSPServer = urls.OCSPServers
 
+	// clear out the signature algorithm. This allows cross-signing certificates
+	// of different key types, at the cost of verifying the algorithm used.
+	cert.SignatureAlgorithm = x509.UnknownSignatureAlgorithm
+
 	newCert, err := x509.CreateCertificate(rand.Reader, cert, signingBundle.Certificate, cert.PublicKey, signingBundle.PrivateKey)
 	if err != nil {
 		return nil, errwrap.Wrapf("error signing self-issued certificate: {{err}}", err)

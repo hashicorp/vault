@@ -2089,22 +2089,6 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	getSelfSigned := func(subject, issuer *x509.Certificate) (string, *x509.Certificate) {
-		selfSigned, err := x509.CreateCertificate(rand.Reader, subject, issuer, key.Public(), key)
-		if err != nil {
-			t.Fatal(err)
-		}
-		cert, err := x509.ParseCertificate(selfSigned)
-		if err != nil {
-			t.Fatal(err)
-		}
-		pemSS := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: selfSigned,
-		})))
-		return pemSS, cert
-	}
-
 	template := &x509.Certificate{
 		Subject: pkix.Name{
 			CommonName: "foo.bar.com",
@@ -2114,7 +2098,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		BasicConstraintsValid: true,
 	}
 
-	ss, _ := getSelfSigned(template, template)
+	ss, _ := getSelfSigned(t, template, template, key)
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
@@ -2144,7 +2128,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		IsCA:                  true,
 		BasicConstraintsValid: true,
 	}
-	ss, ssCert := getSelfSigned(template, issuer)
+	ss, ssCert := getSelfSigned(t, template, issuer, key)
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
@@ -2163,7 +2147,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		t.Fatalf("expected error due to different issuer; cert info is\nIssuer\n%#v\nSubject\n%#v\n", ssCert.Issuer, ssCert.Subject)
 	}
 
-	ss, ssCert = getSelfSigned(template, template)
+	ss, ssCert = getSelfSigned(t, template, template, key)
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
@@ -2208,6 +2192,171 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	if newCert.Subject.CommonName != "foo.bar.com" {
 		t.Fatalf("unexpected common name on new cert: %s", newCert.Subject.CommonName)
 	}
+}
+
+// TestBackend_SignSelfIssued_DifferentTypes is a copy of
+// TestBackend_SignSelfIssued, but uses a different key type for the internal
+// root (EC instead of RSA). This verifies that we can cross-sign CAs that are
+// different key types, at the cost of verifying the algorithm used
+func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
+	// create the backend
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b := Backend(config)
+	err := b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// generate root
+	rootData := map[string]interface{}{
+		"common_name": "test.com",
+		"ttl":         "172800",
+		"key_type":    "ec",
+		"key_bits":    "521",
+	}
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/generate/internal",
+		Storage:   storage,
+		Data:      rootData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to generate root, %#v", *resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	template := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "foo.bar.com",
+		},
+		SerialNumber:          big.NewInt(1234),
+		IsCA:                  false,
+		BasicConstraintsValid: true,
+	}
+
+	ss, _ := getSelfSigned(t, template, template, key)
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/sign-self-issued",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"certificate": ss,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response")
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected error due to non-CA; got: %#v", *resp)
+	}
+
+	// Set CA to true, but leave issuer alone
+	template.IsCA = true
+
+	issuer := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "bar.foo.com",
+		},
+		SerialNumber:          big.NewInt(2345),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+	}
+
+	ss, ssCert := getSelfSigned(t, template, issuer, key)
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/sign-self-issued",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"certificate": ss,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response")
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected error due to different issuer; cert info is\nIssuer\n%#v\nSubject\n%#v\n", ssCert.Issuer, ssCert.Subject)
+	}
+
+	ss, ssCert = getSelfSigned(t, template, template, key)
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/sign-self-issued",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"certificate": ss,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response")
+	}
+	if resp.IsError() {
+		t.Fatalf("error in response: %s", resp.Error().Error())
+	}
+
+	newCertString := resp.Data["certificate"].(string)
+	block, _ := pem.Decode([]byte(newCertString))
+	newCert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signingBundle, err := fetchCAInfo(context.Background(), &logical.Request{Storage: storage})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reflect.DeepEqual(newCert.Subject, newCert.Issuer) {
+		t.Fatal("expected different subject/issuer")
+	}
+	if !reflect.DeepEqual(newCert.Issuer, signingBundle.Certificate.Subject) {
+		t.Fatalf("expected matching issuer/CA subject\n\nIssuer:\n%#v\nSubject:\n%#v\n", newCert.Issuer, signingBundle.Certificate.Subject)
+	}
+	if bytes.Equal(newCert.AuthorityKeyId, newCert.SubjectKeyId) {
+		t.Fatal("expected different authority/subject")
+	}
+	if !bytes.Equal(newCert.AuthorityKeyId, signingBundle.Certificate.SubjectKeyId) {
+		t.Fatal("expected authority on new cert to be same as signing subject")
+	}
+	if newCert.Subject.CommonName != "foo.bar.com" {
+		t.Fatalf("unexpected common name on new cert: %s", newCert.Subject.CommonName)
+	}
+}
+
+func getSelfSigned(t *testing.T, subject, issuer *x509.Certificate, key *rsa.PrivateKey) (string, *x509.Certificate) {
+	t.Helper()
+	selfSigned, err := x509.CreateCertificate(rand.Reader, subject, issuer, key.Public(), key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cert, err := x509.ParseCertificate(selfSigned)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pemSS := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: selfSigned,
+	})))
+	return pemSS, cert
 }
 
 // This is a really tricky test because the Go stdlib asn1 package is incapable
