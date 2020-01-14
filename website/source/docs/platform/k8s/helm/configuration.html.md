@@ -203,7 +203,7 @@ and consider if they're appropriate for your deployment.
      extraArgs: "-config=/path/to/extra/config.hcl -log-format=json"
     ```
 
-    * `extraSecretEnvironmentVars` (`string: null`) - The extra environment variables populated from a secret to be applied to the Vault server.  This should be a multi-line key/value string.
+     * `extraSecretEnvironmentVars` (`string: null`) - The extra environment variables populated from a secret to be applied to the Vault server. This should be a multi-line key/value string.
 
         - `envName` (`string: required`) -
         Name of the environment variable to be populated in the Vault container.
