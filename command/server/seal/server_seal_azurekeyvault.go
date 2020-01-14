@@ -3,14 +3,15 @@ package seal
 import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/hashicorp/vault/vault/seal/azurekeyvault"
+	"github.com/hashicorp/vault/vault/seal"
 )
 
 func configureAzureKeyVaultSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (vault.Seal, error) {
-	kv := azurekeyvault.NewSeal(logger)
+	kv := azurekeyvault.NewWrapper(nil)
 	kvInfo, err := kv.SetConfig(configSeal.Config)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
@@ -18,7 +19,9 @@ func configureAzureKeyVaultSeal(configSeal *server.Seal, infoKeys *[]string, inf
 			return nil, err
 		}
 	}
-	autoseal := vault.NewAutoSeal(kv)
+	autoseal := vault.NewAutoSeal(&seal.Access{
+		Wrapper: kv,
+	})
 	if kvInfo != nil {
 		*infoKeys = append(*infoKeys, "Seal Type", "Azure Environment", "Azure Vault Name", "Azure Key Name")
 		(*info)["Seal Type"] = configSeal.Type
