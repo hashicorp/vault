@@ -199,7 +199,7 @@ cluster is now upgraded!
 ### Protecting Sensitive Vault Configurations
 
 Vault Helm renders a Vault configuration file during installation and stores the 
-file in a Kubernetes configmap.  Some configurations require sensitive data to be 
+file in a Kubernetes configmap. Some configurations require sensitive data to be 
 included in the configuration file and would not be encrypted at rest once created 
 in Kubernetes.  
 
