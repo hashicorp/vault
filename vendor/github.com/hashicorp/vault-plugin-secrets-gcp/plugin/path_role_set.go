@@ -347,11 +347,18 @@ func (b *backend) pathRoleSetCreateUpdate(ctx context.Context, req *logical.Requ
 
 	// Bindings
 	bRaw, newBindings := d.GetOk("bindings")
-	if len(bRaw.(string)) == 0 {
-		return logical.ErrorResponse("given empty bindings string"), nil
+
+	if newBindings {
+		bindings, ok := bRaw.(string)
+		if !ok {
+			return logical.ErrorResponse("bindings are not a string"), nil
+		}
+		if bindings == "" {
+			return logical.ErrorResponse("bindings are empty"), nil
+		}
 	}
 
-	if isCreate && newBindings == false {
+	if isCreate && !newBindings {
 		return logical.ErrorResponse("bindings are required for new role set"), nil
 	}
 

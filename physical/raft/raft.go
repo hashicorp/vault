@@ -2,8 +2,11 @@ package raft
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"io"
 	"io/ioutil"
 	"os"
@@ -16,6 +19,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
@@ -104,6 +108,64 @@ type RaftBackend struct {
 
 	// permitPool is used to limit the number of concurrent storage calls.
 	permitPool *physical.PermitPool
+}
+
+// LeaderJoinInfo contains information required by a node to join itself as a
+// follower to an existing raft cluster
+type LeaderJoinInfo struct {
+	// LeaderAPIAddr is the address of the leader node to connect to
+	LeaderAPIAddr string `json:"leader_api_addr"`
+
+	// LeaderCACert is the CA cert of the leader node
+	LeaderCACert string `json:"leader_ca_cert"`
+
+	// LeaderClientCert is the client certificate for the follower node to establish
+	// client authentication during TLS
+	LeaderClientCert string `json:"leader_client_cert"`
+
+	// LeaderClientKey is the client key for the follower node to establish client
+	// authentication during TLS
+	LeaderClientKey string `json:"leader_client_key"`
+
+	// Retry indicates if the join process should automatically be retried
+	Retry bool `json:"-"`
+
+	// TLSConfig for the API client to use when communicating with the leader node
+	TLSConfig *tls.Config `json:"-"`
+}
+
+// JoinConfig returns a list of information about possible leader nodes that
+// this node can join as a follower
+func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
+	config := b.conf["retry_join"]
+	if config == "" {
+		return nil, nil
+	}
+
+	var leaderInfos []*LeaderJoinInfo
+	err := jsonutil.DecodeJSON([]byte(config), &leaderInfos)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to decode retry_join config: {{err}}", err)
+	}
+
+	if len(leaderInfos) == 0 {
+		return nil, errors.New("invalid retry_join config")
+	}
+
+	for _, info := range leaderInfos {
+		info.Retry = true
+		var tlsConfig *tls.Config
+		var err error
+		if len(info.LeaderCACert) != 0 || len(info.LeaderClientCert) != 0 || len(info.LeaderClientKey) != 0 {
+			tlsConfig, err = tlsutil.ClientTLSConfig([]byte(info.LeaderCACert), []byte(info.LeaderClientCert), []byte(info.LeaderClientKey))
+			if err != nil {
+				return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node %q: {{err}}", info.LeaderAPIAddr), err)
+			}
+		}
+		info.TLSConfig = tlsConfig
+	}
+
+	return leaderInfos, nil
 }
 
 // EnsurePath is used to make sure a path exists
@@ -658,7 +720,7 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 // Snapshot takes a raft snapshot, packages it into a archive file and writes it
 // to the provided writer. Seal access is used to encrypt the SHASUM file so we
 // can validate the snapshot was taken using the same master keys or not.
-func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access seal.Access) error {
+func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access *seal.Access) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -701,7 +763,7 @@ func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access seal.Acce
 // access is used to decrypt the SHASUM file in the archive to ensure this
 // snapshot has the same master key as the running instance. If the provided
 // access is nil then it will skip that validation.
-func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access seal.Access) (*os.File, func(), raft.SnapshotMeta, error) {
+func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access) (*os.File, func(), raft.SnapshotMeta, error) {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -1036,7 +1098,7 @@ func (l *RaftLock) Value() (bool, string, error) {
 // sealer implements the snapshot.Sealer interface and is used in the snapshot
 // process for encrypting/decrypting the SHASUM file in snapshot archives.
 type sealer struct {
-	access seal.Access
+	access *seal.Access
 }
 
 // Seal encrypts the data with using the seal access object.
@@ -1044,7 +1106,7 @@ func (s sealer) Seal(ctx context.Context, pt []byte) ([]byte, error) {
 	if s.access == nil {
 		return nil, errors.New("no seal access available")
 	}
-	eblob, err := s.access.Encrypt(ctx, pt)
+	eblob, err := s.access.Encrypt(ctx, pt, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1058,11 +1120,11 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 		return nil, errors.New("no seal access available")
 	}
 
-	var eblob physical.EncryptedBlobInfo
+	var eblob wrapping.EncryptedBlobInfo
 	err := proto.Unmarshal(ct, &eblob)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.access.Decrypt(ctx, &eblob)
+	return s.access.Decrypt(ctx, &eblob, nil)
 }

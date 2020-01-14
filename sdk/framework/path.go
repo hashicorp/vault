@@ -153,6 +153,14 @@ type OperationProperties struct {
 	// Deprecated indicates that this operation should be avoided.
 	Deprecated bool
 
+	// ForwardPerformanceStandby indicates that this path should not be processed
+	// on a performance standby node, and should be forwarded to the active node instead.
+	ForwardPerformanceStandby bool
+
+	// ForwardPerformanceSecondary indicates that this path should not be processed
+	// on a performance secondary node, and should be forwarded to the active node instead.
+	ForwardPerformanceSecondary bool
+
 	// DisplayAttrs provides hints for UI and documentation generators. They
 	// will be included in OpenAPI output if set.
 	DisplayAttrs *DisplayAttributes
@@ -206,13 +214,15 @@ type Response struct {
 
 // PathOperation is a concrete implementation of OperationHandler.
 type PathOperation struct {
-	Callback    OperationFunc
-	Summary     string
-	Description string
-	Examples    []RequestExample
-	Responses   map[int][]Response
-	Unpublished bool
-	Deprecated  bool
+	Callback                    OperationFunc
+	Summary                     string
+	Description                 string
+	Examples                    []RequestExample
+	Responses                   map[int][]Response
+	Unpublished                 bool
+	Deprecated                  bool
+	ForwardPerformanceSecondary bool
+	ForwardPerformanceStandby   bool
 }
 
 func (p *PathOperation) Handler() OperationFunc {
@@ -221,12 +231,14 @@ func (p *PathOperation) Handler() OperationFunc {
 
 func (p *PathOperation) Properties() OperationProperties {
 	return OperationProperties{
-		Summary:     strings.TrimSpace(p.Summary),
-		Description: strings.TrimSpace(p.Description),
-		Responses:   p.Responses,
-		Examples:    p.Examples,
-		Unpublished: p.Unpublished,
-		Deprecated:  p.Deprecated,
+		Summary:                     strings.TrimSpace(p.Summary),
+		Description:                 strings.TrimSpace(p.Description),
+		Responses:                   p.Responses,
+		Examples:                    p.Examples,
+		Unpublished:                 p.Unpublished,
+		Deprecated:                  p.Deprecated,
+		ForwardPerformanceSecondary: p.ForwardPerformanceSecondary,
+		ForwardPerformanceStandby:   p.ForwardPerformanceStandby,
 	}
 }
 
