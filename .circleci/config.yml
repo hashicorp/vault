@@ -35,7 +35,9 @@ jobs:
         command: make ci-verify
   install-ui-dependencies:
     docker:
-    - image: node:10-buster
+    - environment:
+        JOBS: 2
+      image: node:10-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /go/src/github.com/hashicorp/vault
     steps:
@@ -98,7 +100,9 @@ jobs:
     - GOTESTSUM_VERSION: 0.3.3
   test-ui:
     docker:
-    - image: node:10-buster
+    - environment:
+        JOBS: 2
+      image: node:10-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /go/src/github.com/hashicorp/vault
     resource_class: medium+
@@ -136,7 +140,9 @@ jobs:
         path: ui/test-results
   test-ui-browserstack:
     docker:
-    - image: node:10-buster
+    - environment:
+        JOBS: 2
+      image: node:10-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /go/src/github.com/hashicorp/vault
     resource_class: medium+
@@ -426,7 +432,9 @@ workflows:
 #     working_directory: /go/src/github.com/hashicorp/vault
 #   node:
 #     docker:
-#     - image: node:10-buster
+#     - environment:
+#         JOBS: 2
+#       image: node:10-buster
 #     shell: /usr/bin/env bash -euo pipefail -c
 #     working_directory: /go/src/github.com/hashicorp/vault
 #   python:
