@@ -53,6 +53,7 @@ const (
 	KeyType_ECDSA_P256
 	KeyType_ED25519
 	KeyType_RSA2048
+	KeyType_RSA3072
 	KeyType_RSA4096
 	KeyType_ChaCha20_Poly1305
 	KeyType_ECDSA_P384
@@ -92,7 +93,7 @@ type KeyType int
 
 func (kt KeyType) EncryptionSupported() bool {
 	switch kt {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -100,7 +101,7 @@ func (kt KeyType) EncryptionSupported() bool {
 
 func (kt KeyType) DecryptionSupported() bool {
 	switch kt {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -108,7 +109,7 @@ func (kt KeyType) DecryptionSupported() bool {
 
 func (kt KeyType) SigningSupported() bool {
 	switch kt {
-	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -116,7 +117,7 @@ func (kt KeyType) SigningSupported() bool {
 
 func (kt KeyType) HashSignatureInput() bool {
 	switch kt {
-	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -148,6 +149,8 @@ func (kt KeyType) String() string {
 		return "ed25519"
 	case KeyType_RSA2048:
 		return "rsa-2048"
+	case KeyType_RSA3072:
+		return "rsa-3072"
 	case KeyType_RSA4096:
 		return "rsa-4096"
 	}
@@ -899,7 +902,7 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 			ciphertext = append(nonce, ciphertext...)
 		}
 
-	case KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		key := p.Keys[strconv.Itoa(ver)].RSAKey
 		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, &key.PublicKey, plaintext, nil)
 		if err != nil {
@@ -1033,7 +1036,7 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 			return "", errutil.UserError{Err: "invalid ciphertext: unable to decrypt"}
 		}
 
-	case KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		key := p.Keys[strconv.Itoa(ver)].RSAKey
 		plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
 		if err != nil {
@@ -1169,7 +1172,7 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 			return nil, err
 		}
 
-	case KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		key := p.Keys[strconv.Itoa(ver)].RSAKey
 
 		var algo crypto.Hash
@@ -1332,7 +1335,7 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 
 		return ed25519.Verify(key.Public().(ed25519.PublicKey), input, sigBytes), nil
 
-	case KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		key := p.Keys[strconv.Itoa(ver)].RSAKey
 
 		var algo crypto.Hash
@@ -1464,8 +1467,11 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 		entry.Key = pri
 		entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pub)
 
-	case KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		bitSize := 2048
+		if p.Type == KeyType_RSA3072 {
+			bitSize = 3072
+		}
 		if p.Type == KeyType_RSA4096 {
 			bitSize = 4096
 		}

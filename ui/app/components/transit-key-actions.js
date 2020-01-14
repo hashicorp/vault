@@ -77,7 +77,7 @@ export default Component.extend(TRANSIT_PARAMS, {
 
   keyIsRSA: computed('key.type', function() {
     let type = get(this, 'key.type');
-    return type === 'rsa-2048' || type === 'rsa-4096';
+    return type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
   }),
 
   getModelInfo() {
@@ -150,7 +150,7 @@ export default Component.extend(TRANSIT_PARAMS, {
 
   compactData(data) {
     let type = get(this, 'key.type');
-    let isRSA = type === 'rsa-2048' || type === 'rsa-4096';
+    let isRSA = type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
     return Object.keys(data).reduce((result, key) => {
       if (key === 'signature_algorithm' && !isRSA) {
         return result;

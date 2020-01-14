@@ -71,6 +71,8 @@ types also generate separate HMAC keys):
   verification
 * `rsa-2048`: 2048-bit RSA key; supports encryption, decryption, signing, and
   signature verification
+* `rsa-3072`: 3072-bit RSA key; supports encryption, decryption, signing, and
+  signature verification
 * `rsa-4096`: 4096-bit RSA key; supports encryption, decryption, signing, and
   signature verification
 

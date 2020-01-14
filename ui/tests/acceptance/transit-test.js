@@ -49,6 +49,12 @@ const keyTypes = [
     supportsEncryption: true,
   },
   {
+    name: ts => `rsa-3072-${ts}`,
+    type: `rsa-3072`,
+    supportsSigning: true,
+    supportsEncryption: true,
+  },
+  {
     name: ts => `rsa-4096-${ts}`,
     type: `rsa-4096`,
     supportsSigning: true,
