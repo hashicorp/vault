@@ -37,3 +37,7 @@ func TestParseListeners(t *testing.T) {
 func TestParseEntropy(t *testing.T) {
 	testParseEntropy(t, true)
 }
+
+func TestConfigRaftRetryJoin(t *testing.T) {
+	testConfigRaftRetryJoin(t)
+}
