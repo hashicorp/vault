@@ -34,8 +34,8 @@ type mongoDBConnectionProducer struct {
 	sync.Mutex
 }
 
-// WriteConcern defines the write concern options
-type WriteConcern struct {
+// writeConcern defines the write concern options
+type writeConcern struct {
 	W        int    // Min # of servers to ack before success
 	WMode    string // Write mode for MongoDB 2.0+ (e.g. "majority")
 	WTimeout int    // Milliseconds to wait for W before timing out
@@ -79,7 +79,7 @@ func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]in
 			input = string(inputBytes)
 		}
 
-		concern := &WriteConcern{}
+		concern := &writeConcern{}
 		err = json.Unmarshal([]byte(input), concern)
 		if err != nil {
 			return nil, errwrap.Wrapf("error marshalling write_concern: {{err}}", err)
