@@ -196,7 +196,7 @@ $ kubectl exec -ti <name of pod> -- vault operator unseal
 After a few moments the Vault cluster should elect a new active primary.  The Vault
 cluster is now upgraded!
 
-#### Protecting Sensitive Vault Configurations
+### Protecting Sensitive Vault Configurations
 
 Vault Helm renders a Vault configuration file during installation and stores the 
 file in a Kubernetes configmap.  Some configurations require sensitive data to be 
