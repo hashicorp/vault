@@ -25,6 +25,8 @@ BUG FIXES:
 ## 1.3.2 (Unreleased)
 
 BUG FIXES:
+* secrets/database: Fix issue where a manual static role rotation could potentially panic [GH-8098]
+* secrets/database/mysql: Fix issue where special characters for a MySQL password were encoded [GH-8040]
 * ui: Fix deleting namespaces [GH-8132]
 
 ## 1.3.1 (December 18th, 2019)
