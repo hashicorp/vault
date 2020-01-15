@@ -14,13 +14,7 @@ import (
 var getAWSKMSFunc = func(opts *wrapping.WrapperOptions, config map[string]string) (wrapping.Wrapper, map[string]string, error) {
 	kms := awskms.NewWrapper(nil)
 	kmsInfo, err := kms.SetConfig(config)
-	if err != nil {
-		// If the error is any other than logical.KeyNotFoundError, return the error
-		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
-			return nil, nil, err
-		}
-	}
-	return kms, kmsInfo, nil
+	return kms, kmsInfo, err
 }
 
 func configureAWSKMSSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger hclog.Logger, inseal vault.Seal) (vault.Seal, error) {

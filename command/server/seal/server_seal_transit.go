@@ -14,13 +14,7 @@ import (
 var getTransitKMSFunc = func(opts *wrapping.WrapperOptions, config map[string]string) (wrapping.Wrapper, map[string]string, error) {
 	transitSeal := transit.NewWrapper(opts)
 	sealInfo, err := transitSeal.SetConfig(config)
-	if err != nil {
-		// If the error is any other than logical.KeyNotFoundError, return the error
-		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
-			return nil, nil, err
-		}
-	}
-	return transitSeal, sealInfo, nil
+	return transitSeal, sealInfo, err
 }
 
 func configureTransitSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (vault.Seal, error) {
