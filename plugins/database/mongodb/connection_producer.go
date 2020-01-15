@@ -82,11 +82,11 @@ func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]in
 		concern := &writeConcern{}
 		err = json.Unmarshal([]byte(input), concern)
 		if err != nil {
-			return nil, errwrap.Wrapf("error marshalling write_concern: {{err}}", err)
+			return nil, errwrap.Wrapf("error unmarshalling write_concern: {{err}}", err)
 		}
 
 		// Translate write concern to mongo options
-		var w func(*writeconcern.WriteConcern)
+		var w writeconcern.Option
 		switch {
 		case concern.W != 0:
 			w = writeconcern.W(concern.W)
@@ -96,7 +96,7 @@ func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]in
 			w = writeconcern.WMajority()
 		}
 
-		var j func(*writeconcern.WriteConcern)
+		var j writeconcern.Option
 		switch {
 		case concern.FSync:
 			j = writeconcern.J(concern.FSync)
@@ -135,6 +135,8 @@ func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]in
 
 // Connection creates or returns an existing a database connection. If the session fails
 // on a ping check, the session will be closed and then re-created.
+// This method does not lock the mutex and it is intended that this is the callers
+// responsibility.
 func (c *mongoDBConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
 	if !c.Initialized {
 		return nil, connutil.ErrNotInitialized
@@ -170,7 +172,9 @@ func (c *mongoDBConnectionProducer) Close() error {
 	if c.client != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 1 * time.Minute)
 		defer cancel()
-		c.client.Disconnect(ctx)
+		if err := c.client.Disconnect(ctx); err != nil {
+			return err
+		}
 	}
 
 	c.client = nil

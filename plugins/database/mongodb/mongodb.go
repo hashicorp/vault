@@ -5,11 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
@@ -136,20 +133,8 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 	}
 
 	result := client.Database(mongoCS.DB).RunCommand(ctx, createUserCmd, nil)
-	switch {
-	case result.Err() == nil:
-	case result.Err() == io.EOF, strings.Contains(result.Err().Error(), "EOF"):
-		// Call getConnection to reset and retry query if we get an ErrNoDocuments error on first attempt.
-		client, err := m.getConnection(ctx)
-		if err != nil {
-			return "", "", err
-		}
-		result = client.Database(mongoCS.DB).RunCommand(ctx, createUserCmd, nil)
-		if result.Err() != nil {
-			return "", "", err
-		}
-	default:
-		return "", "", err
+	if result.Err() != nil {
+		return "", "", result.Err()
 	}
 
 	return username, password, nil
@@ -184,21 +169,8 @@ func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statem
 		return "", "", err
 	}
 	result := client.Database(cs.Database).RunCommand(ctx, changeUserCmd, nil)
-
-	switch {
-	case result.Err() == nil:
-	case result.Err() == io.EOF, strings.Contains(result.Err().Error(), "EOF"):
-		// Call getConnection to reset and retry query if we get an ErrNoDocuments error on first attempt.
-		client, err := m.getConnection(ctx)
-		if err != nil {
-			return "", "", err
-		}
-		result = client.Database(cs.Database).RunCommand(ctx, changeUserCmd, nil)
-		if result.Err() != nil {
-			return "", "", err
-		}
-	default:
-		return "", "", err
+	if result.Err() != nil {
+		return "", "", result.Err()
 	}
 
 	return username, password, nil
@@ -253,25 +225,7 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 	}
 
 	result := client.Database(db).RunCommand(ctx, dropUserCmd, nil)
-	switch {
-	case result.Err() == nil:
-	case result.Err() == io.EOF, strings.Contains(result.Err().Error(), "EOF"):
-		if err := m.Close(); err != nil {
-			return errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
-		}
-		client, err := m.getConnection(ctx)
-		if err != nil {
-			return err
-		}
-		result = client.Database(db).RunCommand(ctx, dropUserCmd, nil)
-		if result.Err() != nil {
-			return err
-		}
-	default:
-		return err
-	}
-
-	return nil
+	return result.Err()
 }
 
 // RotateRootCredentials is not currently supported on MongoDB
