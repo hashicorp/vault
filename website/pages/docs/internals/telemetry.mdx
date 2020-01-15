@@ -127,21 +127,20 @@ These metrics relate to policies and tokens.
 
 These operations take a request and response with an associated lease and register a lease entry with lease ID
 
-| Metric                       | Description                                                                                   | Unit | Type    |
-| :--------------------------- | :-------------------------------------------------------------------------------------------- | :--- | :------ |
-| `vault.expire.register-auth` | Time taken for register authentication operations which create lease entries without lease ID | ms   | summary |
-| `vault.policy.get_policy`    | Time taken to get a policy                                                                    | ms   | summary |
-| `vault.policy.list_policies` | Time taken to list policies                                                                   | ms   | summary |
-| `vault.policy.delete_policy` | Time taken to delete a policy                                                                 | ms   | summary |
-| `vault.policy.set_policy`    | Time taken to set a policy                                                                    | ms   | summary |
-| `vault.token.create`         | The time taken to create a token                                                              | ms   | summary |
-| `vault.token.create_root`    | Number of created root tokens. Does not decrease on revocation.                               |
-| token                        | counter                                                                                       |
-| `vault.token.createAccessor` | The time taken to create a token accessor                                                     | ms   | summary |
-| `vault.token.lookup`         | The time taken to look up a token                                                             | ms   | summary |
-| `vault.token.revoke`         | Time taken to revoke a token                                                                  | ms   | summary |
-| `vault.token.revoke-tree`    | Time taken to revoke a token tree                                                             | ms   | summary |
-| `vault.token.store`          | Time taken to store an updated token entry without writing to the secondary index             | ms   | summary |
+| Metric                       | Description                                                                                   | Unit  | Type    |
+| :--------------------------- | :-------------------------------------------------------------------------------------------- | :---- | :------ |
+| `vault.expire.register-auth` | Time taken for register authentication operations which create lease entries without lease ID | ms    | summary |
+| `vault.policy.get_policy`    | Time taken to get a policy                                                                    | ms    | summary |
+| `vault.policy.list_policies` | Time taken to list policies                                                                   | ms    | summary |
+| `vault.policy.delete_policy` | Time taken to delete a policy                                                                 | ms    | summary |
+| `vault.policy.set_policy`    | Time taken to set a policy                                                                    | ms    | summary |
+| `vault.token.create`         | The time taken to create a token                                                              | ms    | summary |
+| `vault.token.create_root`    | Number of created root tokens. Does not decrease on revocation.                               | token | counter |
+| `vault.token.createAccessor` | The time taken to create a token accessor                                                     | ms    | summary |
+| `vault.token.lookup`         | The time taken to look up a token                                                             | ms    | summary |
+| `vault.token.revoke`         | Time taken to revoke a token                                                                  | ms    | summary |
+| `vault.token.revoke-tree`    | Time taken to revoke a token tree                                                             | ms    | summary |
+| `vault.token.store`          | Time taken to store an updated token entry without writing to the secondary index             | ms    | summary |
 
 ## Auth Methods Metrics
 
