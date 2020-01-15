@@ -39,6 +39,7 @@ BUG FIXES:
   to the primary node [GH-8126]
 * secrets/database/mysql: Fix issue where special characters for a MySQL password were encoded [GH-8040]
 * ui: Fix deleting namespaces [GH-8132]
+* ui: Fix Error handler on kv-secret edit and kv-secret view pages [GH-8133]
 
 ## 1.3.1 (December 18th, 2019)
 
