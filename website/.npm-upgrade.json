@@ -1,0 +1,8 @@
+{
+  "ignore": {
+    "marked": {
+      "versions": "0.8.0",
+      "reason": "breaks IE"
+    }
+  }
+}
