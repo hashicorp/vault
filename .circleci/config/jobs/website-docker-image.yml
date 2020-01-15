@@ -1,5 +1,6 @@
 docker:
   - image: circleci/buildpack-deps
+shell: /usr/bin/env bash -euo pipefail -c
 steps:
   - checkout
   - setup_remote_docker
