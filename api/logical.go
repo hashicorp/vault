@@ -21,8 +21,9 @@ var (
 	// changed
 	DefaultWrappingTTL = "5m"
 
-	// The default function used if no other function is set, which honors the
-	// env var and wraps `sys/wrapping/wrap`
+	// The default function used if no other function is set. It honors the env
+	// var to set the wrap TTL. The default wrap TTL will apply when when writing
+	// to `sys/wrapping/wrap` when the env var is not set.
 	DefaultWrappingLookupFunc = func(operation, path string) string {
 		if os.Getenv(EnvVaultWrapTTL) != "" {
 			return os.Getenv(EnvVaultWrapTTL)

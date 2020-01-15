@@ -49,7 +49,8 @@ const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
 // returns an optional string duration to be used for response wrapping (e.g.
 // "15s", or simply "15"). The path will not begin with "/v1/" or "v1/" or "/",
 // however, end-of-path forward slashes are not trimmed, so must match your
-// called path precisely.
+// called path precisely. Response wrapping will only be used when the return
+// value is not the empty string.
 type WrappingLookupFunc func(operation, path string) string
 
 // Config is used to configure the creation of the client.
@@ -534,7 +535,7 @@ func (c *Client) SetOutputCurlString(curl bool) {
 }
 
 // CurrentWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
-// for a given operation and path
+// for a given operation and path.
 func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
@@ -543,7 +544,7 @@ func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
 }
 
 // SetWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
-// for a given operation and path
+// for a given operation and path.
 func (c *Client) SetWrappingLookupFunc(lookupFunc WrappingLookupFunc) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
