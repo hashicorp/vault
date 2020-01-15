@@ -10,11 +10,19 @@ IMPROVEMENTS:
 * cli: Incorrect TLS configuration will now correctly fail [GH-8025] 
 * secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
 * secrets/gcp: Add support for rotating root keys [GCP-53]
+* secrets/nomad: Add support to specify TLS options per Nomad backend [GH-8083]
+* storage/raft: Nodes in the raft cluster can all be given possible leader
+  addresses for them to continuously try and join one of them, thus automating
+  the process of join to a greater extent [GH-7856]
 
 BUG FIXES:
 
 * plugin: Fix issue where a plugin unwrap request potentially used an expired token [GH-8058]
 * secrets/database: Fix issue where a manual static role rotation could potentially panic [GH-8098]
+* secrets/database: Fix issue where a manual root credential rotation request is not forwarded
+  to the primary node [GH-8125]
+* secrets/database: Fix issue where a manual static role rotation request is not forwarded
+  to the primary node [GH-8126]
 * secrets/database/mysql: Fix issue where special characters for a MySQL password were encoded [GH-8040]
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [GH-8035]
 * ui: Change `.box-radio` height to min-height to prevent overflow issues [GH-8065]
@@ -22,6 +30,14 @@ BUG FIXES:
 ## 1.3.2 (Unreleased)
 
 BUG FIXES:
+* replication: Fix issue where a forwarded request from a performance/standby node could run in 
+  a timeout 
+* secrets/database: Fix issue where a manual static role rotation could potentially panic [GH-8098]
+* secrets/database: Fix issue where a manual root credential rotation request is not forwarded
+  to the primary node [GH-8125]
+* secrets/database: Fix issue where a manual static role rotation request is not forwarded
+  to the primary node [GH-8126]
+* secrets/database/mysql: Fix issue where special characters for a MySQL password were encoded [GH-8040]
 * ui: Fix deleting namespaces [GH-8132]
 
 ## 1.3.1 (December 18th, 2019)
