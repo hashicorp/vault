@@ -129,11 +129,11 @@ func TestConnectionAttempts(t *testing.T) {
 	// simulates an unresponsive Vault cluster
 	testCases := map[string]int{
 		"unset": 0,
-		"low":   1,
+		"low":   3,
 		"high":  15,
 	}
 
-	for name, maxAttempts := range testCases {
+	for name, connTimeout := range testCases {
 		t.Run(name, func(t *testing.T) {
 			l, err := net.Listen("tcp", ":1234")
 			if err != nil {
@@ -152,8 +152,8 @@ func TestConnectionAttempts(t *testing.T) {
 
 			ctx, cancelFunc := context.WithCancel(context.Background())
 
-			// attempts tracks the connection attempts
-			var attempts int
+			// Launch a goroutine to accept connections but immediately close them.
+			// This simulates failed connections, albeit with a different tcp error
 			go func(ctx context.Context) {
 				for {
 					conn, _ := l.Accept()
@@ -164,7 +164,6 @@ func TestConnectionAttempts(t *testing.T) {
 					}
 
 					conn.Close()
-					attempts++
 				}
 			}(ctx)
 
@@ -174,18 +173,17 @@ func TestConnectionAttempts(t *testing.T) {
 			})
 
 			am := newFakeTestMethod(t, client)
-			go ah.RunWithMaxAttempts(ctx, am, maxAttempts)
+			go ah.RunWithMaxAttempts(ctx, am, connTimeout)
+			connDuration := time.Duration(connTimeout) * time.Second
 
-			// all the tests should complete well within this time. We use a timer to
-			// ensure that if something does break, we don't hang forever
-			timeout := maxAttempts * 5
-			if timeout == 0 {
-				timeout = 5
-			}
-			stopTime := time.Now().Add(time.Duration(timeout) * time.Second)
+			// short-circut the test if we exceed this time
+			stopTime := time.Now().Add(20 * time.Second)
 
-			var closed bool
+			// connTimer := time.NewTimer(time.Duration(connTimeout) + 2*time.Second)
+
+			var closed, shortCircuit bool
 			// Consume tokens so we don't block
+			starTime := time.Now()
 		consumption:
 			for {
 				select {
@@ -199,24 +197,30 @@ func TestConnectionAttempts(t *testing.T) {
 						cancelFunc()
 						closed = true
 					}
-					if maxAttempts != 0 {
-						t.Fatalf("test timeout. Expected: %d, actual: %d", maxAttempts, attempts)
+					if connTimeout != 0 {
+						t.Fatalf("test timeout. Expected: %ds, got: 20", connTimeout)
+						shortCircuit = true
 					}
 					break consumption
 				case <-ah.DoneCh:
 					break consumption
 				}
 			}
+			runTime := time.Since(starTime)
 
 			if !closed {
 				cancelFunc()
 				closed = true
 			}
 
-			if maxAttempts != 0 {
-				if attempts != maxAttempts {
-					t.Fatalf("connection attempts did not match expected. Expected: %d, actual: %d", maxAttempts, attempts)
+			if connTimeout != 0 {
+				rs := runTime.Seconds()
+				cs := connDuration.Seconds()
+				if rs-cs > 3.0 {
+					t.Fatalf("test timeout exceeds buffer: %f", rs-cs)
 				}
+			} else if connTimeout != 0 && !shortCircuit {
+				t.Fatal("Expected connection timeout, but short-circuit timeout was not triggerd")
 			}
 
 			l.Close()

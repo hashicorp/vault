@@ -88,6 +88,7 @@ func (ah *AuthHandler) RunWithMaxAttempts(ctx context.Context, am AuthMethod, ma
 		panic("nil auth method")
 	}
 
+	var connTimer *time.Timer
 	ah.logger.Info("starting auth handler")
 	defer func() {
 		am.Shutdown()
@@ -95,6 +96,11 @@ func (ah *AuthHandler) RunWithMaxAttempts(ctx context.Context, am AuthMethod, ma
 		close(ah.DoneCh)
 		close(ah.TemplateTokenCh)
 		ah.logger.Info("auth handler stopped")
+		if connTimer != nil {
+			if !connTimer.Stop() {
+				<-connTimer.C
+			}
+		}
 	}()
 
 	credCh := am.NewCreds()
@@ -119,8 +125,21 @@ func (ah *AuthHandler) RunWithMaxAttempts(ctx context.Context, am AuthMethod, ma
 
 	var watcher *api.LifetimeWatcher
 
+	timeLimit := time.Duration(maxConnectionAttempts) * time.Second
+
 	var connErrCount int
 	for {
+		// If the timer is not nil and connection timeout is set, create and start
+		// timer with the configured duration
+		//
+		// If the timer is not nil, then we're in the connection loop and we simply
+		// select. If it fires, we've exceeded the timeout. If we are successful in
+		// connecting, then the timer will be stoped
+
+		if connTimer == nil {
+			connTimer = time.NewTimer(timeLimit)
+		}
+
 		select {
 		case <-ctx.Done():
 			return
@@ -128,9 +147,13 @@ func (ah *AuthHandler) RunWithMaxAttempts(ctx context.Context, am AuthMethod, ma
 		default:
 		}
 
-		if maxConnectionAttempts > 0 && connErrCount >= maxConnectionAttempts {
-			ah.logger.Error("too many connection attempts, quitting", "attempts", maxConnectionAttempts)
-			return
+		if timeLimit != time.Duration(0) {
+			select {
+			case <-connTimer.C:
+				ah.logger.Error("connection attempt timeout hit, aborting", "timeout", timeLimit.String())
+				return
+			default:
+			}
 		}
 
 		// Create a fresh backoff value
@@ -169,6 +192,10 @@ func (ah *AuthHandler) RunWithMaxAttempts(ctx context.Context, am AuthMethod, ma
 
 		// reset the connection error count
 		connErrCount = 0
+		if !connTimer.Stop() {
+			<-connTimer.C
+		}
+		connTimer = nil
 
 		switch {
 		case ah.wrapTTL > 0:
