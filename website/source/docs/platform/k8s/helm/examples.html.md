@@ -93,6 +93,7 @@ TMPDIR=/tmp
     1. Create a file `${TMPDIR}/csr.conf` with the following contents:
 
         ```
+        $ cat <<EOF >${TMPDIR}/csr.conf
         [req]
         req_extensions = v3_req
         distinguished_name = req_distinguished_name
@@ -106,7 +107,7 @@ TMPDIR=/tmp
         DNS.1 = ${SERVICE}
         DNS.2 = ${SERVICE}.${NAMESPACE}
         DNS.3 = ${SERVICE}.${NAMESPACE}.svc
-		DNS.4 = ${SERVICE}.${NAMESPACE}.svc.cluster.local
+        DNS.4 = ${SERVICE}.${NAMESPACE}.svc.cluster.local
         IP.1 = 127.0.0.1
         EOF
         ```
@@ -119,9 +120,11 @@ TMPDIR=/tmp
 
 3. Create the certificate
 
-    1. Create a file `${TMPDIR/csr.yaml` with the following contents:
+    1. Create a file `${TMPDIR}/csr.yaml` with the following contents:
 
-        ```yaml
+        ```
+        $ export CSR_NAME=vault-csr
+        $ cat <<EOF >${TMPDIR}/csr.yaml
         apiVersion: certificates.k8s.io/v1beta1
         kind: CertificateSigningRequest
         metadata:
@@ -134,8 +137,9 @@ TMPDIR=/tmp
           - digital signature
           - key encipherment
           - server auth
-       ```
-       -> `CSR_NAME` can be any name you want. It's the name of the CSR as seen by Kubernetes
+        EOF
+        ```
+        -> `CSR_NAME` can be any name you want. It's the name of the CSR as seen by Kubernetes
 
     2. Send the CSR to Kubernetes.
 
@@ -156,7 +160,7 @@ TMPDIR=/tmp
 1. Retrieve the certificate.
 
     ```bash
-    serverCert=$(kubectl get csr ${csrName} -o jsonpath='{.status.certificate}')
+    serverCert=$(kubectl get csr ${CSR_NAME} -o jsonpath='{.status.certificate}')
     ```
    -> If this process is automated, you may need to wait to ensure the certificate has been created.
    If it hasn't, this will return an empty string.
@@ -185,7 +189,7 @@ TMPDIR=/tmp
 
 
 
-## Helm Configuration
+## 3. Helm Configuration
 
 The below `custom-values.yaml` can be used to set up a single server Vault cluster using TLS.
 This assumes that a Kubernetes `secret` exists with the server certificate, key and
