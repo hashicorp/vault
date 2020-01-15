@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/ldap"
+	ldaphelper "github.com/hashicorp/vault/helper/testhelpers/ldap"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -45,12 +46,17 @@ func TestPolicy_NoDefaultPolicy(t *testing.T) {
 	}
 
 	// Configure LDAP auth backend
-	secret, err := client.Logical().Write("auth/ldap/config", map[string]interface{}{
-		"url":                     "ldap://ldap.forumsys.com",
-		"userattr":                "uid",
-		"userdn":                  "dc=example,dc=com",
-		"groupdn":                 "dc=example,dc=com",
-		"binddn":                  "cn=read-only-admin,dc=example,dc=com",
+	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
+	_, err = client.Logical().Write("auth/ldap/config", map[string]interface{}{
+		"url":                     cfg.Url,
+		"userattr":                cfg.UserAttr,
+		"userdn":                  cfg.UserDN,
+		"groupdn":                 cfg.GroupDN,
+		"groupattr":               cfg.GroupAttr,
+		"binddn":                  cfg.BindDN,
+		"bindpass":                cfg.BindPassword,
 		"token_no_default_policy": true,
 	})
 	if err != nil {
@@ -58,7 +64,7 @@ func TestPolicy_NoDefaultPolicy(t *testing.T) {
 	}
 
 	// Create a local user in LDAP
-	secret, err = client.Logical().Write("auth/ldap/users/tesla", map[string]interface{}{
+	secret, err := client.Logical().Write("auth/ldap/users/hermes conrad", map[string]interface{}{
 		"policies": "foo",
 	})
 	if err != nil {
@@ -66,8 +72,8 @@ func TestPolicy_NoDefaultPolicy(t *testing.T) {
 	}
 
 	// Login with LDAP and create a token
-	secret, err = client.Logical().Write("auth/ldap/login/tesla", map[string]interface{}{
-		"password": "password",
+	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
+		"password": "hermes",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -117,12 +123,17 @@ func TestPolicy_NoConfiguredPolicy(t *testing.T) {
 	}
 
 	// Configure LDAP auth backend
-	secret, err := client.Logical().Write("auth/ldap/config", map[string]interface{}{
-		"url":       "ldap://ldap.forumsys.com",
-		"userattr":  "uid",
-		"userdn":    "dc=example,dc=com",
-		"groupdn":   "dc=example,dc=com",
-		"binddn":    "cn=read-only-admin,dc=example,dc=com",
+	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
+	_, err = client.Logical().Write("auth/ldap/config", map[string]interface{}{
+		"url":       cfg.Url,
+		"userattr":  cfg.UserAttr,
+		"userdn":    cfg.UserDN,
+		"groupdn":   cfg.GroupDN,
+		"groupattr": cfg.GroupAttr,
+		"binddn":    cfg.BindDN,
+		"bindpass":  cfg.BindPassword,
 		"token_ttl": "24h",
 	})
 	if err != nil {
@@ -130,14 +141,14 @@ func TestPolicy_NoConfiguredPolicy(t *testing.T) {
 	}
 
 	// Create a local user in LDAP without any policies configured
-	secret, err = client.Logical().Write("auth/ldap/users/tesla", map[string]interface{}{})
+	secret, err := client.Logical().Write("auth/ldap/users/hermes conrad", map[string]interface{}{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Login with LDAP and create a token
-	secret, err = client.Logical().Write("auth/ldap/login/tesla", map[string]interface{}{
-		"password": "password",
+	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
+		"password": "hermes",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -154,20 +165,19 @@ func TestPolicy_NoConfiguredPolicy(t *testing.T) {
 		t.Fatal(diff)
 	}
 
-	// Sleep a bit to let the lease elapse
-	time.Sleep(3 * time.Second)
-
-	// Renew the token
+	// Renew the token with an increment of 2 hours to ensure that lease renewal
+	// occurred and can be checked against the default lease duration with a
+	// big enough delta.
 	secret, err = client.Logical().Write("auth/token/renew", map[string]interface{}{
-		"token": token,
+		"token":     token,
+		"increment": "2h",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Verify that the lease renewal extended the duration properly. We give it a one
-	// second leeway to prevent test failure in case the response is delayed.
-	if secret.Auth.LeaseDuration <= 86399 {
+	// Verify that the lease renewal extended the duration properly.
+	if float64(secret.Auth.LeaseDuration) < (1 * time.Hour).Seconds() {
 		t.Fatalf("failed to renew lease, got: %v", secret.Auth.LeaseDuration)
 	}
 }
