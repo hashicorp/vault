@@ -35,4 +35,9 @@ with either the `plugin` or `mounts` parameter respectively.
 Until step 4, the mount will still use plugin_v1, and when the reload is
 triggered, Vault will kill plugin_v1’s process and start a plugin_v2 process.
 
+-> **Important:** Plugin reload of a new plugin binary must be 
+performed on each Vault instance. Performing a plugin upgrade on a single 
+instance or through a load balancer can result in mismatched 
+plugin binaries within a cluster. 
+
 [plugin_reload_api]: /api/system/plugins-reload-backend.html

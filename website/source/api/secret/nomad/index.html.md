@@ -45,6 +45,15 @@ Nomad tokens.
   0.8.3 and earlier, the default is `64`. For Nomad version 0.8.4 and later, the default is
   `256`.
 
+- `ca_cert` `(string: "")` - CA certificate to use when verifying Nomad server certificate,
+  must be x509 PEM encoded.
+  
+- `client_cert` `(string: "")` - Client certificate used for Nomad's TLS communication,
+  must be x509 PEM encoded and if this is set you need to also set `client_key`.
+  
+- `client_key` `(string: "")` - Client key used for Nomad's TLS communication,
+  must be x509 PEM encoded and if this is set you need to also set `client_cert`.
+  
 ### Sample Payload
 
 ```json

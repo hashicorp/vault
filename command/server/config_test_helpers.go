@@ -12,6 +12,38 @@ import (
 	"github.com/hashicorp/hcl/hcl/ast"
 )
 
+func testConfigRaftRetryJoin(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/raft_retry_join.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	retryJoinConfig := `[{"leader_api_addr":"http://127.0.0.1:8200"},{"leader_api_addr":"http://127.0.0.2:8200"},{"leader_api_addr":"http://127.0.0.3:8200"}]` + "\n"
+	expected := &Config{
+		Listeners: []*Listener{
+			{
+				Type: "tcp",
+				Config: map[string]interface{}{
+					"address": "127.0.0.1:8200",
+				},
+			},
+		},
+
+		Storage: &Storage{
+			Type: "raft",
+			Config: map[string]string{
+				"path":       "/storage/path/raft",
+				"node_id":    "raft1",
+				"retry_join": retryJoinConfig,
+			},
+		},
+		DisableMlock:    true,
+		DisableMlockRaw: true,
+	}
+	if !reflect.DeepEqual(config, expected) {
+		t.Fatalf("\nexpected: %#v\n actual:%#v\n", config, expected)
+	}
+}
+
 func testLoadConfigFile_topLevel(t *testing.T, entropy *Entropy) {
 	config, err := LoadConfigFile("./test-fixtures/config2.hcl")
 	if err != nil {

@@ -35,7 +35,7 @@ and consider if they're appropriate for your deployment.
 
         * `repository` (`string: "hashicorp/vault-k8s"`) - The name of the Docker image for Vault Agent Injector.
 
-        * `tag` (`string: "0.1.1"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+        * `tag` (`string: "0.1.2"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
         * `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images.  The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
     
@@ -197,7 +197,13 @@ and consider if they're appropriate for your deployment.
        GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/myproject/myproject-creds.json
     ```
 
-    * `extraSecretEnvironmentVars` (`string: null`) - The extra environment variables populated from a secret to be applied to the Vault server.  This should be a multi-line key/value string.
+    * `extraArgs` (`string: null`) - The extra arguments to be applied to the Vault server startup command.
+
+    ```yaml
+     extraArgs: "-config=/path/to/extra/config.hcl -log-format=json"
+    ```
+
+     * `extraSecretEnvironmentVars` (`string: null`) - The extra environment variables populated from a secret to be applied to the Vault server. This should be a multi-line key/value string.
 
         - `envName` (`string: required`) -
         Name of the environment variable to be populated in the Vault container.

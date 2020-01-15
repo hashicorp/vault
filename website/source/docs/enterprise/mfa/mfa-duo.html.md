@@ -131,3 +131,18 @@ the push notification is either approved or declined:
     refresh_interval    768h
     data                which can only be read after MFA validation
     ```
+   
+## Hardware Tokens and Passcodes
+
+If hardware tokens or other TOTP/HOTP devices (e.g. Google Authenticator) are configured on the Duo
+account, the codes from these devices may be passed via the
+[X-Vault-MFA header](/docs/enterprise/mfa/index.html#supplying-mfa-credentials) and will be used
+in lieu of a Duo push. They may also be provided to the `vault` command using the `-mfa` parameter
+and the `passcode` field.
+
+### Sample Command
+
+```
+$ vault login -mfa=my_duo:passcode=280077 -method=userpass \ 
+    username=testuser password=testpassword
+``` 

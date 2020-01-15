@@ -153,7 +153,7 @@
     "lint-staged": "^9.2.1"
   },
   "resolutions": {
-    "handlebars": "^4.1.2",
+    "handlebars": "^4.3.0",
     "eslint-utils": "^1.4.1",
     "lodash.defaultsdeep": "^4.6.1",
     "lodash.merge": "^4.6.2",

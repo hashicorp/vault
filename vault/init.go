@@ -9,14 +9,15 @@ import (
 	"net/url"
 	"sync/atomic"
 
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/vault/seal"
 
 	"github.com/hashicorp/errwrap"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/shamir"
-	"github.com/hashicorp/vault/vault/seal"
-	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 )
 
 // InitParams keeps the init function from being littered with too many
@@ -145,7 +146,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// which means both that the shares will be different *AND* there would
 	// need to be a way to actually allow fetching of the generated keys by
 	// operators.
-	if c.SealAccess().StoredKeysSupported() == StoredKeysSupportedGeneric {
+	if c.SealAccess().StoredKeysSupported() == seal.StoredKeysSupportedGeneric {
 		if len(barrierConfig.PGPKeys) > 0 {
 			return nil, fmt.Errorf("PGP keys not supported when storing shares")
 		}
@@ -254,7 +255,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 
 	var sealKey []byte
 	var sealKeyShares [][]byte
-	if barrierConfig.StoredShares == 1 && c.seal.BarrierType() == seal.Shamir {
+	if barrierConfig.StoredShares == 1 && c.seal.BarrierType() == wrapping.Shamir {
 		sealKey, sealKeyShares, err = c.generateShares(barrierConfig)
 		if err != nil {
 			c.logger.Error("error generating shares", "error", err)
@@ -300,9 +301,9 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// If we are storing shares, pop them out of the returned results and push
 	// them through the seal
 	switch c.seal.StoredKeysSupported() {
-	case StoredKeysSupportedShamirMaster:
+	case seal.StoredKeysSupportedShamirMaster:
 		keysToStore := [][]byte{barrierKey}
-		if err := c.seal.GetAccess().(*shamirseal.ShamirSeal).SetKey(sealKey); err != nil {
+		if err := c.seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(sealKey); err != nil {
 			c.logger.Error("failed to set seal key", "error", err)
 			return nil, errwrap.Wrapf("failed to set seal key: {{err}}", err)
 		}
@@ -311,7 +312,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 			return nil, errwrap.Wrapf("failed to store keys: {{err}}", err)
 		}
 		results.SecretShares = sealKeyShares
-	case StoredKeysSupportedGeneric:
+	case seal.StoredKeysSupportedGeneric:
 		keysToStore := [][]byte{barrierKey}
 		if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
 			c.logger.Error("failed to store keys", "error", err)
@@ -415,7 +416,7 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	c.unsealWithStoredKeysLock.Lock()
 	defer c.unsealWithStoredKeysLock.Unlock()
 
-	if c.seal.BarrierType() == seal.Shamir {
+	if c.seal.BarrierType() == wrapping.Shamir {
 		return nil
 	}
 

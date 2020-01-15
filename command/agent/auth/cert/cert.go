@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
 )
@@ -44,7 +45,7 @@ func NewCertAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return c, nil
 }
 
-func (c *certMethod) Authenticate(_ context.Context, client *api.Client) (string, map[string]interface{}, error) {
+func (c *certMethod) Authenticate(_ context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
 	c.logger.Trace("beginning authentication")
 
 	authMap := map[string]interface{}{}
@@ -53,7 +54,7 @@ func (c *certMethod) Authenticate(_ context.Context, client *api.Client) (string
 		authMap["name"] = c.name
 	}
 
-	return fmt.Sprintf("%s/login", c.mountPath), authMap, nil
+	return fmt.Sprintf("%s/login", c.mountPath), nil, authMap, nil
 }
 
 func (c *certMethod) NewCreds() chan struct{} {
