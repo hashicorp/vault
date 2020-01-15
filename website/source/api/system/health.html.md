@@ -19,8 +19,8 @@ Vault instance.
 
 | Method   | Path                         |
 | :--------------------------- | :--------------------- |
-| `HEAD`   | `/sys/health`                | `000 (empty body)`     |
-| `GET`    | `/sys/health`                | `000 application/json` |
+| `HEAD`   | `/sys/health`                | 
+| `GET`    | `/sys/health`                | 
 
 The default status codes are:
 

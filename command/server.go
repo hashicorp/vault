@@ -28,6 +28,8 @@ import (
 	stackdriver "github.com/google/go-metrics-stackdriver"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
@@ -47,9 +49,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/version"
+	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/vault"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
-	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
@@ -78,6 +80,8 @@ type ServerCommand struct {
 	CredentialBackends map[string]logical.Factory
 	LogicalBackends    map[string]logical.Factory
 	PhysicalBackends   map[string]physical.Factory
+
+	ServiceRegistrations map[string]sr.Factory
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
@@ -485,7 +489,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	var sealConfigError error
 
 	if len(config.Seals) == 0 {
-		config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+		config.Seals = append(config.Seals, &server.Seal{Type: wrapping.Shamir})
 	}
 
 	if len(config.Seals) > 1 {
@@ -494,7 +498,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	configSeal := config.Seals[0]
-	sealType := vaultseal.Shamir
+	sealType := wrapping.Shamir
 	if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
 		sealType = os.Getenv("VAULT_SEAL_TYPE")
 		configSeal.Type = sealType
@@ -504,7 +508,11 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	var seal vault.Seal
 	sealLogger := c.logger.Named(sealType)
-	seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("shamir"))))
+	seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(&vaultseal.Access{
+		Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+			Logger: c.logger.Named("shamir"),
+		}),
+	}))
 	if sealConfigError != nil {
 		if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
 			c.UI.Error(fmt.Sprintf(
@@ -935,6 +943,24 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	// Initialize the Service Discovery, if there is one
+	var configSR sr.ServiceRegistration
+	if config.ServiceRegistration != nil {
+		sdFactory, ok := c.ServiceRegistrations[config.ServiceRegistration.Type]
+		if !ok {
+			c.UI.Error(fmt.Sprintf("Unknown service_registration type %s", config.ServiceRegistration.Type))
+			return 1
+		}
+
+		namedSDLogger := c.logger.Named("service_registration." + config.ServiceRegistration.Type)
+		allLoggers = append(allLoggers, namedSDLogger)
+		configSR, err = sdFactory(config.ServiceRegistration.Config, namedSDLogger)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error initializing service_registration of type %s: %s", config.ServiceRegistration.Type, err))
+			return 1
+		}
+	}
+
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
 	info["log level"] = logLevelString
@@ -950,16 +976,16 @@ func (c *ServerCommand) Run(args []string) int {
 		// Handle the case where no seal is provided
 		switch len(config.Seals) {
 		case 0:
-			config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+			config.Seals = append(config.Seals, &server.Seal{Type: wrapping.Shamir})
 		case 1:
 			// If there's only one seal and it's disabled assume they want to
 			// migrate to a shamir seal and simply didn't provide it
 			if config.Seals[0].Disabled {
-				config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+				config.Seals = append(config.Seals, &server.Seal{Type: wrapping.Shamir})
 			}
 		}
 		for _, configSeal := range config.Seals {
-			sealType := vaultseal.Shamir
+			sealType := wrapping.Shamir
 			if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
 				sealType = os.Getenv("VAULT_SEAL_TYPE")
 				configSeal.Type = sealType
@@ -970,7 +996,11 @@ func (c *ServerCommand) Run(args []string) int {
 			var seal vault.Seal
 			sealLogger := c.logger.Named(sealType)
 			allLoggers = append(allLoggers, sealLogger)
-			seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("shamir"))))
+			seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(&vaultseal.Access{
+				Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+					Logger: c.logger.Named("shamir"),
+				}),
+			}))
 			if sealConfigError != nil {
 				if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
 					c.UI.Error(fmt.Sprintf(
@@ -1019,6 +1049,7 @@ func (c *ServerCommand) Run(args []string) int {
 		RedirectAddr:              config.Storage.RedirectAddr,
 		StorageType:               config.Storage.Type,
 		HAPhysical:                nil,
+		ServiceRegistration:       configSR,
 		Seal:                      barrierSeal,
 		AuditBackends:             c.AuditBackends,
 		CredentialBackends:        c.CredentialBackends,
@@ -1216,6 +1247,13 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			c.UI.Output("Error parsing the environment variable VAULT_UI")
 			return 1
 		}
+	}
+
+	// If ServiceRegistration is configured, then the backend must support HA
+	isBackendHA := coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled()
+	if (coreConfig.ServiceRegistration != nil) && !isBackendHA {
+		c.UI.Output("service_registration is configured, but storage does not support HA")
+		return 1
 	}
 
 	// Initialize the core
@@ -1467,27 +1505,32 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}()
 	}
 
+	// When the underlying storage is raft, kick off retry join if it was specified
+	// in the configuration
+	if config.Storage.Type == "raft" {
+		if err := core.InitiateRetryJoin(context.Background()); err != nil {
+			c.UI.Error(fmt.Sprintf("Failed to initiate raft retry join, %q", err.Error()))
+			return 1
+		}
+	}
+
 	// Perform service discovery registrations and initialization of
 	// HTTP server after the verifyOnly check.
 
 	// Instantiate the wait group
 	c.WaitGroup = &sync.WaitGroup{}
 
-	// If the backend supports service discovery, run service discovery
-	if coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled() {
-		sd, ok := coreConfig.HAPhysical.(physical.ServiceDiscovery)
-		if ok {
-			activeFunc := func() bool {
-				if isLeader, _, _, err := core.Leader(); err == nil {
-					return isLeader
-				}
-				return false
+	// If service discovery is available, run service discovery
+	if disc := coreConfig.GetServiceRegistration(); disc != nil {
+		activeFunc := func() bool {
+			if isLeader, _, _, err := core.Leader(); err == nil {
+				return isLeader
 			}
-
-			if err := sd.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, core.Sealed, core.PerfStandby); err != nil {
-				c.UI.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
-				return 1
-			}
+			return false
+		}
+		if err := disc.RunServiceRegistration(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, core.Sealed, core.PerfStandby); err != nil {
+			c.UI.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
+			return 1
 		}
 	}
 
@@ -1822,7 +1865,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		}
 	}
 
-	if core.SealAccess().StoredKeysSupported() != vault.StoredKeysNotSupported {
+	if core.SealAccess().StoredKeysSupported() != vaultseal.StoredKeysNotSupported {
 		barrierConfig.StoredShares = 1
 	}
 
@@ -1836,7 +1879,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 
 	// Handle unseal with stored keys
-	if core.SealAccess().StoredKeysSupported() == vault.StoredKeysSupportedGeneric {
+	if core.SealAccess().StoredKeysSupported() == vaultseal.StoredKeysSupportedGeneric {
 		err := core.UnsealWithStoredKeys(ctx)
 		if err != nil {
 			return nil, err
@@ -2270,6 +2313,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 
 	metricsConf := metrics.DefaultConfig("vault")
 	metricsConf.EnableHostname = !telConfig.DisableHostname
+	metricsConf.EnableHostnameLabel = telConfig.EnableHostnameLabel
 
 	// Configure the statsite sink
 	var fanout metrics.FanoutSink

@@ -1,16 +1,16 @@
 {{#if (eq display 'menu')}}
   <div class="level is-mobile">
-    <div class="level-left is-flex-1">
+    <div class="is-flex-1">
       {{#if replicationUnsupported}}
         Unsupported
       {{else if replicationEnabled}}
-        <span>
-          {{capitalize modeForUrl}}
-        </span>
+        <div>
+          {{concat (if (eq mode 'performance') 'Performance ' 'Disaster Recovery ') (capitalize modeForUrl)}}
+        </div>
         {{#if secondaryId}}
           <small>
             <code>
-              {{secondaryId}}
+             {{secondaryId}}
             </code>
           </small>
         {{/if}}
@@ -22,9 +22,11 @@
         {{else if (and (eq mode 'performance') (not (has-feature "Performance Replication")))}}
         Learn more
       {{else if auth.currentToken}}
-        Enable {{if (eq mode 'performance') 'Performance' 'DR'}}
+        Enable {{if (eq mode 'performance') 'Performance' 'Disaster Recovery'}}
       {{else}}
-        Not enabled
+        <span class="has-text-grey-light">
+          {{if (eq mode 'performance') 'Performance' 'Disaster Recovery'}}
+        </span>
       {{/if}}
     </div>
     <div class="level-right">

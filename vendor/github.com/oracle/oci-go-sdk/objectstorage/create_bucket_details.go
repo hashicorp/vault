@@ -41,6 +41,10 @@ type CreateBucketDetails struct {
 	// property is immutable after bucket is created.
 	StorageTier CreateBucketDetailsStorageTierEnum `mandatory:"false" json:"storageTier,omitempty"`
 
+	// A property that determines whether events will be generated for operations on objects in this bucket.
+	// This is false by default.
+	ObjectEventsEnabled *bool `mandatory:"false" json:"objectEventsEnabled"`
+
 	// Free-form tags for this resource. Each tag is a simple key-value pair with no predefined name, type, or namespace.
 	// For more information, see Resource Tags (https://docs.cloud.oracle.com/Content/General/Concepts/resourcetags.htm).
 	// Example: `{"Department": "Finance"}`

@@ -100,7 +100,8 @@ and [`cluster_addr`][cluster-addr] ([example][listener-example]).
 
 - `token` `(string: "")` – Specifies the [Consul ACL token][consul-acl] with
   permission to read and write from the `path` in Consul's key-value store.
-  This is **not** a Vault token. See the ACL section below for help.
+  This is **not** a Vault token. This can also be provided via the environment
+  variable [`CONSUL_HTTP_TOKEN`][consul-token]. See the ACL section below for help.
 
 - `session_ttl` `(string: "15s")` - Specifies the minimum allowed [session
   TTL][consul-session-ttl]. Consul server has a lower limit of 10s on the
@@ -273,6 +274,7 @@ storage "consul" {
 [consul-consistency]: https://www.consul.io/api/index.html#consistency-modes "Consul Consistency Modes"
 [consul-encryption]: https://www.consul.io/docs/agent/encryption.html "Consul Encryption"
 [consul-translate-wan-addrs]: https://www.consul.io/docs/agent/options.html#translate_wan_addrs "Consul Configuration"
+[consul-token]: https://www.consul.io/docs/commands/acl/set-agent-token.html#token-lt-value-gt- "Consul Token"
 [consul-session-ttl]: https://www.consul.io/docs/agent/options.html#session_ttl_min "Consul Configuration"
 [api-addr]: /docs/configuration/index.html#api_addr
 [cluster-addr]: /docs/configuration/index.html#cluster_addr

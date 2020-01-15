@@ -116,7 +116,7 @@ func NewGCPAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return g, nil
 }
 
-func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPath string, retData map[string]interface{}, retErr error) {
+func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPath string, header http.Header, retData map[string]interface{}, retErr error) {
 	g.logger.Trace("beginning authentication")
 
 	data := make(map[string]interface{})
@@ -227,7 +227,7 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPa
 	data["role"] = g.role
 	data["jwt"] = jwt
 
-	return fmt.Sprintf("%s/login", g.mountPath), data, nil
+	return fmt.Sprintf("%s/login", g.mountPath), nil, data, nil
 }
 
 func (g *gcpMethod) NewCreds() chan struct{} {

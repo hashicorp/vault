@@ -128,28 +128,22 @@ These metrics relate to policies and tokens.
 | `vault.expire.renew-token` | Time taken to renew a token which does not need to invoke a logical backend | ms | summary |
 | `vault.expire.register` | Time taken for register operations | ms | summary |
 
-Thes operations take a request and response with an associated lease and register a lease entry with lease ID
+These operations take a request and response with an associated lease and register a lease entry with lease ID
 
 | Metric | Description | Unit | Type |
 | :----- | :---------- | :--- | :--- |
 | `vault.expire.register-auth` | Time taken for register authentication operations which create lease entries without lease ID | ms | summary |
-| `vault.merkle_flushdirty` | Time taken to flush any dirty pages to cold storage | ms | summary |
-| `vault.merkle_savecheckpoint` | Time taken to save the checkpoint | ms | summary |
 | `vault.policy.get_policy` | Time taken to get a policy | ms | summary |
 | `vault.policy.list_policies` | Time taken to list policies | ms | summary |
 | `vault.policy.delete_policy` | Time taken to delete a policy | ms | summary |
 | `vault.policy.set_policy` | Time taken to set a policy | ms | summary |
 | `vault.token.create` | The time taken to create a token | ms | summary |
+| `vault.token.create_root` | Number of created root tokens. Does not decrease on revocation. | token | counter |
 | `vault.token.createAccessor` | The time taken to create a token accessor | ms | summary |
 | `vault.token.lookup` | The time taken to look up a token | ms | summary |
 | `vault.token.revoke` | Time taken to revoke a token | ms | summary |
 | `vault.token.revoke-tree` | Time taken to revoke a token tree | ms | summary |
 | `vault.token.store` | Time taken to store an updated token entry without writing to the secondary index | ms | summary |
-| `vault.wal_deletewals` | Time taken to delete a Write Ahead Log (WAL) | ms | summary |
-| `vault.wal_gc_deleted` | Number of Write Ahead Logs (WAL) deleted during each garbage collection run | WAL | counter |
-| `vault.wal_gc_total` | Total Number of Write Ahead Logs (WAL) on disk | WAL | counter |
-| `vault.wal_persistwals` | Time taken to persist a Write Ahead Log (WAL) | ms | summary |
-| `vault.wal_flushready` | Time taken to flush a ready Write Ahead Log (WAL) to storage | ms | summary |
 
 ## Auth Methods Metrics
 
@@ -168,13 +162,28 @@ These metrics relate to supported authentication methods.
 | `vault.route.rollback.secret` | Time taken to perform a route rollback operation for the [K/V secret backend][kv-secrets-engine] | ms | summary |
 | `vault.route.rollback.sys` | Time taken to perform a route rollback operation for the system backend | ms | summary |
 
-## Replication Metrics
+## Merkle Tree and Write Ahead Log Metrics
 
-These metrics relate to [Vault Enterprise Replication](https://www.vaultproject.io/docs/enterprise/replication/index.html).
+These metrics relate to internal operations on Merkle Trees and Write Ahead Logs (WAL)
 
 | Metric | Description | Unit | Type |
 | :----- | :---------- | :--- | :--- |
-| `logshipper.streamWALs.missing_guard` | Number of incidences where the starting Merkle Tree index used to begin streaming WAL entries is not matched/found | missing guards | counter | 
+| `vault.merkle_flushdirty` | Time taken to flush any dirty pages to cold storage | ms | summary |
+| `vault.merkle_savecheckpoint` | Time taken to save the checkpoint | ms | summary |
+| `vault.wal_deletewals` | Time taken to delete a Write Ahead Log (WAL) | ms | summary |
+| `vault.wal_gc_deleted` | Number of Write Ahead Logs (WAL) deleted during each garbage collection run | WAL | counter |
+| `vault.wal_gc_total` | Total Number of Write Ahead Logs (WAL) on disk | WAL | counter |
+| `vault.wal_loadWAL` | Time taken to load a Write Ahead Log (WAL) | ms | summary |
+| `vault.wal_persistwals` | Time taken to persist a Write Ahead Log (WAL) | ms | summary |
+| `vault.wal_flushready` | Time taken to flush a ready Write Ahead Log (WAL) to storage | ms | summary |
+
+## Replication Metrics
+
+These metrics relate to [Vault Enterprise Replication](https://www.vaultproject.io/docs/enterprise/replication/index.html). The following metrics are not available in telemetry unless replication is in an unhealthy state: `replication.fetchRemoteKeys`, `replication.merkleDiff`, and `replication.merkleSync`.
+
+| Metric | Description | Unit | Type |
+| :----- | :---------- | :--- | :--- |
+| `logshipper.streamWALs.missing_guard` | Number of incidences where the starting Merkle Tree index used to begin streaming WAL entries is not matched/found | missing guards | counter |
 | `logshipper.streamWALs.guard_found` | Number of incidences where the starting Merkle Tree index used to begin streaming WAL entries is matched/found | found guards | counter |
 | `replication.fetchRemoteKeys` | Time taken to fetch keys from a remote cluster participating in replication prior to Merkle Tree based delta generation | ms | summary |
 | `replication.merkleDiff` | Time taken to perform a Merkle Tree based delta generation between the clusters participating in replication | ms | summary |

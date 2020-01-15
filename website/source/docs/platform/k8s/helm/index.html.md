@@ -1,0 +1,61 @@
+---
+layout: "docs"
+page_title: "Helm - Kubernetes"
+sidebar_current: "docs-platform-k8s-helm"
+sidebar_title: "Helm Chart"
+description: |-
+  The Vault Helm chart is the recommended way to install and configure Vault on Kubernetes.
+---
+
+# Helm Chart
+
+~> **Important Note:** This chart is not compatible with Helm 3. Please use Helm 2 with this chart.
+
+The [Vault Helm chart](https://github.com/hashicorp/vault-helm)
+is the recommended way to install and configure Vault on Kubernetes.
+In addition to running Vault itself, the Helm chart is the primary
+method for installing and configuring Vault to integrate with other
+services such as Consul for High Availability deployments.
+
+This page assumes general knowledge of [Helm](https://v2.helm.sh/) and
+how to use it. Using Helm to install Vault will require that Helm is
+properly installed and configured with your Kubernetes cluster.
+
+-> **Important:** The Helm chart is new and
+may still change significantly over time. Please always run Helm with
+`--dry-run` before any install or upgrade to verify changes.
+
+~> **Security Warning:** By default, the chart will install an insecure configuration
+of Vault. This provides a less complicated out-of-box experience for new users,
+but is not appropriate for a production setup. It is highly recommended to use
+a [properly secured Kubernetes cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/).
+See the [architecture reference](/docs/platform/k8s/run.html#architecture)
+for a Vault Helm production deployment checklist.
+
+## Using the Helm Chart
+
+To use the Helm chart, you must download or clone the
+[vault-helm GitHub repository](https://github.com/hashicorp/vault-helm)
+and run Helm against the directory. We plan to transition to using a real
+Helm repository soon. When running Helm, we highly recommend you always
+checkout a specific tagged release of the chart to avoid any
+instabilities from master.
+
+Prior to this, you must have Helm installed and configured both in your
+Kubernetes cluster and locally on your machine. The steps to do this are
+out of the scope of this document. Please refer to the
+[Helm documentation](https://helm.sh/) for more information.
+
+Example chart usage:
+
+```sh
+# Clone the chart repo
+$ git clone https://github.com/hashicorp/vault-helm.git
+$ cd vault-helm
+
+# Checkout a tagged version
+$ git checkout v0.3.3
+
+# Run Helm
+$ helm install --dry-run ./
+```

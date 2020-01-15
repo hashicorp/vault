@@ -7,10 +7,11 @@ import (
 	"io"
 
 	log "github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/vault"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
-	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 	"github.com/pkg/errors"
 )
 
@@ -31,7 +32,7 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 
 	// If we don't have an existing config or if it's the deprecated auto seal
 	// which needs an upgrade, skip out
-	if existBarrierSealConfig == nil || existBarrierSealConfig.Type == vaultseal.HSMAutoDeprecated {
+	if existBarrierSealConfig == nil || existBarrierSealConfig.Type == wrapping.HSMAutoDeprecated {
 		return nil
 	}
 
@@ -44,11 +45,11 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 
 		// If we're not coming from Shamir, and the existing type doesn't match
 		// the barrier type, we need both the migration seal and the new seal
-		if existBarrierSealConfig.Type != vaultseal.Shamir && barrierSeal.BarrierType() != vaultseal.Shamir {
+		if existBarrierSealConfig.Type != wrapping.Shamir && barrierSeal.BarrierType() != wrapping.Shamir {
 			return errors.New(`Trying to migrate from auto-seal to auto-seal but no "disabled" seal stanza found`)
 		}
 	} else {
-		if unwrapSeal.BarrierType() == vaultseal.Shamir {
+		if unwrapSeal.BarrierType() == wrapping.Shamir {
 			return errors.New("Shamir seals cannot be set disabled (they should simply not be set)")
 		}
 	}
@@ -64,14 +65,18 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 		return nil
 	}
 
-	if existBarrierSealConfig.Type != vaultseal.Shamir && existRecoverySealConfig == nil {
+	if existBarrierSealConfig.Type != wrapping.Shamir && existRecoverySealConfig == nil {
 		return errors.New(`Recovery seal configuration not found for existing seal`)
 	}
 
 	switch existBarrierSealConfig.Type {
-	case vaultseal.Shamir:
+	case wrapping.Shamir:
 		// The value reflected in config is what we're going to
-		existSeal = vault.NewDefaultSeal(shamirseal.NewSeal(logger.Named("shamir")))
+		existSeal = vault.NewDefaultSeal(&vaultseal.Access{
+			Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+				Logger: logger.Named("shamir"),
+			}),
+		})
 		newSeal = barrierSeal
 		newBarrierSealConfig := &vault.SealConfig{
 			Type:            newSeal.BarrierType(),
@@ -83,7 +88,7 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 		newSeal.SetCachedRecoveryConfig(existBarrierSealConfig)
 
 	default:
-		if onEnterprise && barrierSeal.BarrierType() == vaultseal.Shamir {
+		if onEnterprise && barrierSeal.BarrierType() == wrapping.Shamir {
 			return errors.New("Migrating from autoseal to Shamir seal is not currently supported on Vault Enterprise")
 		}
 

@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+	sr "github.com/hashicorp/vault/serviceregistration"
 )
 
 var (
@@ -2444,5 +2446,116 @@ func TestCore_HandleRequest_TokenCreate_RegisterAuthFailure(t *testing.T) {
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+// mockServiceRegistration helps test whether standalone ServiceRegistration works
+type mockServiceRegistration struct {
+	notifyActiveCount int
+	notifySealedCount int
+	notifyPerfCount   int
+	runDiscoveryCount int
+}
+
+func (m *mockServiceRegistration) NotifyActiveStateChange() error {
+	m.notifyActiveCount++
+	return nil
+}
+
+func (m *mockServiceRegistration) NotifySealedStateChange() error {
+	m.notifySealedCount++
+	return nil
+}
+
+func (m *mockServiceRegistration) NotifyPerformanceStandbyStateChange() error {
+	m.notifyPerfCount++
+	return nil
+}
+
+func (m *mockServiceRegistration) RunServiceRegistration(
+	_ *sync.WaitGroup, _ sr.ShutdownChannel, _ string,
+	_ sr.ActiveFunction, _ sr.SealedFunction,
+	_ sr.PerformanceStandbyFunction) error {
+
+	m.runDiscoveryCount++
+	return nil
+}
+
+// TestCore_ServiceRegistration tests whether standalone ServiceRegistration works
+func TestCore_ServiceRegistration(t *testing.T) {
+
+	// Make a mock service discovery
+	sr := &mockServiceRegistration{}
+
+	// Create the core
+	logger = logging.NewVaultLogger(log.Trace)
+	inm, err := inmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inmha, err := inmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const redirectAddr = "http://127.0.0.1:8200"
+	core, err := NewCore(&CoreConfig{
+		ServiceRegistration: sr,
+		Physical:            inm,
+		HAPhysical:          inmha.(physical.HABackend),
+		RedirectAddr:        redirectAddr,
+		DisableMlock:        true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Vault should not yet be registered
+	if diff := deep.Equal(sr, &mockServiceRegistration{}); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Run service discovery on the core
+	wg := &sync.WaitGroup{}
+	var shutdown chan struct{}
+	activeFunc := func() bool {
+		if isLeader, _, _, err := core.Leader(); err == nil {
+			return isLeader
+		}
+		return false
+	}
+	err = sr.RunServiceRegistration(
+		wg, shutdown, redirectAddr, activeFunc, core.Sealed, core.PerfStandby)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Vault should be registered
+	if diff := deep.Equal(sr, &mockServiceRegistration{
+		runDiscoveryCount: 1,
+	}); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Initialize and unseal the core
+	keys, _ := TestCoreInit(t, core)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
+	}
+	if core.Sealed() {
+		t.Fatal("should not be sealed")
+	}
+
+	// Wait for core to become active
+	TestWaitActive(t, core)
+
+	// Vault should be registered, unsealed, and active
+	if diff := deep.Equal(sr, &mockServiceRegistration{
+		runDiscoveryCount: 1,
+		notifyActiveCount: 1,
+		notifySealedCount: 1,
+	}); diff != nil {
+		t.Fatal(diff)
 	}
 }

@@ -315,7 +315,9 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		return
 
 	case strings.HasPrefix(key, oidcTokensPrefix):
-		i.oidcCache.Flush(nil)
+		if err := i.oidcCache.Flush(noNamespace); err != nil {
+			i.logger.Error("error flushing oidc cache", "error", err)
+		}
 	}
 }
 

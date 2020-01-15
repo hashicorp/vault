@@ -11,7 +11,8 @@ description: |-
 # `telemetry` Stanza
 
 The `telemetry` stanza specifies various configurations for Vault to publish
-metrics to upstream systems.
+metrics to upstream systems. Available Vault metrics can be found in the
+[Telemetry internals documentation](/docs/internals/telemetry.html).
 
 ```hcl
 telemetry {
@@ -30,6 +31,9 @@ The following options are available on all telemetry configurations.
 
 * `disable_hostname` `(bool: false)` - Specifies if gauge values should be
   prefixed with the local hostname.
+* `enable_hostname_label` `(bool: false)` - Specifies if all metric values should
+  contain the `host` label with the local hostname. It is recommended to enable
+  `disable_hostname` if this option is used.
 
 ### `statsite`
 
@@ -192,7 +196,7 @@ roles/monitoring.metricWriter
 *  `stackdriver_namespace` a namespace identifier for the telemetry data.
 
 It is recommended to also enable the option `disable_hostname` to avoid having prefixed
-metrics with hostname.
+metrics with hostname and enable instead `enable_hostname_label`. 
 
 ```hcl
 telemetry {
@@ -200,5 +204,6 @@ telemetry {
   stackdriver_location = "us-east1-a"
   stackdriver_namespace = "vault-cluster-a"
   disable_hostname = true
+  enable_hostname_label = true
 }
 ```

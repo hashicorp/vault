@@ -18,9 +18,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	multierror "github.com/hashicorp/go-multierror"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
@@ -39,10 +41,10 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
-	"github.com/hashicorp/vault/vault/seal"
-	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
+	vaultseal "github.com/hashicorp/vault/vault/seal"
 	cache "github.com/patrickmn/go-cache"
 	"google.golang.org/grpc"
 )
@@ -156,10 +158,11 @@ type unlockInformation struct {
 }
 
 type raftInformation struct {
-	challenge           *physical.EncryptedBlobInfo
+	challenge           *wrapping.EncryptedBlobInfo
 	leaderClient        *api.Client
 	leaderBarrierConfig *SealConfig
 	nonVoter            bool
+	joinInProgress      bool
 }
 
 // Core is used as the central manager of Vault activity. It is the primary point of
@@ -192,12 +195,24 @@ type Core struct {
 	// physical backend is the un-trusted backend with durable data
 	physical physical.Backend
 
+	// serviceRegistration is the ServiceRegistration network
+	serviceRegistration sr.ServiceRegistration
+
 	// underlyingPhysical will always point to the underlying backend
 	// implementation. This is an un-trusted backend with durable data
 	underlyingPhysical physical.Backend
 
 	// seal is our seal, for seal configuration information
 	seal Seal
+
+	// raftJoinDoneCh is used by the raft retry join routine to inform unseal process
+	// that the join is complete
+	raftJoinDoneCh chan struct{}
+
+	// postUnsealStarted informs the raft retry join routine that unseal key
+	// validation is completed and post unseal has started so that it can complete
+	// the join process when Shamir seal is in use
+	postUnsealStarted *uint32
 
 	// raftInfo will contain information required for this node to join as a
 	// peer to an existing raft cluster
@@ -482,60 +497,62 @@ type Core struct {
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
-	DevToken string `json:"dev_token" structs:"dev_token" mapstructure:"dev_token"`
+	DevToken string
 
-	BuiltinRegistry BuiltinRegistry `json:"builtin_registry" structs:"builtin_registry" mapstructure:"builtin_registry"`
+	BuiltinRegistry BuiltinRegistry
 
-	LogicalBackends map[string]logical.Factory `json:"logical_backends" structs:"logical_backends" mapstructure:"logical_backends"`
+	LogicalBackends map[string]logical.Factory
 
-	CredentialBackends map[string]logical.Factory `json:"credential_backends" structs:"credential_backends" mapstructure:"credential_backends"`
+	CredentialBackends map[string]logical.Factory
 
-	AuditBackends map[string]audit.Factory `json:"audit_backends" structs:"audit_backends" mapstructure:"audit_backends"`
+	AuditBackends map[string]audit.Factory
 
-	Physical physical.Backend `json:"physical" structs:"physical" mapstructure:"physical"`
+	Physical physical.Backend
 
-	StorageType string `json:"storage_type" structs:"storage_type" mapstructure:"storage_type"`
+	StorageType string
 
 	// May be nil, which disables HA operations
-	HAPhysical physical.HABackend `json:"ha_physical" structs:"ha_physical" mapstructure:"ha_physical"`
+	HAPhysical physical.HABackend
 
-	Seal Seal `json:"seal" structs:"seal" mapstructure:"seal"`
+	ServiceRegistration sr.ServiceRegistration
 
-	SecureRandomReader io.Reader `json:"secure_random_reader" structs:"secure_random_reader" mapstructure:"secure_random_reader"`
+	Seal Seal
 
-	Logger log.Logger `json:"logger" structs:"logger" mapstructure:"logger"`
+	SecureRandomReader io.Reader
+
+	Logger log.Logger
 
 	// Disables the LRU cache on the physical backend
-	DisableCache bool `json:"disable_cache" structs:"disable_cache" mapstructure:"disable_cache"`
+	DisableCache bool
 
 	// Disables mlock syscall
-	DisableMlock bool `json:"disable_mlock" structs:"disable_mlock" mapstructure:"disable_mlock"`
+	DisableMlock bool
 
 	// Custom cache size for the LRU cache on the physical backend, or zero for default
-	CacheSize int `json:"cache_size" structs:"cache_size" mapstructure:"cache_size"`
+	CacheSize int
 
 	// Set as the leader address for HA
-	RedirectAddr string `json:"redirect_addr" structs:"redirect_addr" mapstructure:"redirect_addr"`
+	RedirectAddr string
 
 	// Set as the cluster address for HA
-	ClusterAddr string `json:"cluster_addr" structs:"cluster_addr" mapstructure:"cluster_addr"`
+	ClusterAddr string
 
-	DefaultLeaseTTL time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	DefaultLeaseTTL time.Duration
 
-	MaxLeaseTTL time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	MaxLeaseTTL time.Duration
 
-	ClusterName string `json:"cluster_name" structs:"cluster_name" mapstructure:"cluster_name"`
+	ClusterName string
 
-	ClusterCipherSuites string `json:"cluster_cipher_suites" structs:"cluster_cipher_suites" mapstructure:"cluster_cipher_suites"`
+	ClusterCipherSuites string
 
-	EnableUI bool `json:"ui" structs:"ui" mapstructure:"ui"`
+	EnableUI bool
 
 	// Enable the raw endpoint
-	EnableRaw bool `json:"enable_raw" structs:"enable_raw" mapstructure:"enable_raw"`
+	EnableRaw bool
 
-	PluginDirectory string `json:"plugin_directory" structs:"plugin_directory" mapstructure:"plugin_directory"`
+	PluginDirectory string
 
-	DisableSealWrap bool `json:"disable_sealwrap" structs:"disable_sealwrap" mapstructure:"disable_sealwrap"`
+	DisableSealWrap bool
 
 	RawConfig *server.Config
 
@@ -569,6 +586,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 		AuditBackends:             c.AuditBackends,
 		Physical:                  c.Physical,
 		HAPhysical:                c.HAPhysical,
+		ServiceRegistration:       c.ServiceRegistration,
 		Seal:                      c.Seal,
 		Logger:                    c.Logger,
 		DisableCache:              c.DisableCache,
@@ -594,6 +612,26 @@ func (c *CoreConfig) Clone() *CoreConfig {
 		AllLoggers:                c.AllLoggers,
 		CounterSyncInterval:       c.CounterSyncInterval,
 	}
+}
+
+// GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
+// not exist.
+func (c *CoreConfig) GetServiceRegistration() sr.ServiceRegistration {
+
+	// Check whether there is a ServiceRegistration explictly configured
+	if c.ServiceRegistration != nil {
+		return c.ServiceRegistration
+	}
+
+	// Check if HAPhysical is configured and implements ServiceRegistration
+	if c.HAPhysical != nil && c.HAPhysical.HAEnabled() {
+		if disc, ok := c.HAPhysical.(sr.ServiceRegistration); ok {
+			return disc
+		}
+	}
+
+	// No service discovery is available.
+	return nil
 }
 
 // NewCore is used to construct a new core
@@ -651,6 +689,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		entCore:                      entCore{},
 		devToken:                     conf.DevToken,
 		physical:                     conf.Physical,
+		serviceRegistration:          conf.GetServiceRegistration(),
 		underlyingPhysical:           conf.Physical,
 		storageType:                  conf.StorageType,
 		redirectAddr:                 conf.RedirectAddr,
@@ -692,7 +731,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 			requests:     new(uint64),
 			syncInterval: syncInterval,
 		},
-		recoveryMode: conf.RecoveryMode,
+		recoveryMode:      conf.RecoveryMode,
+		postUnsealStarted: new(uint32),
+		raftJoinDoneCh:    make(chan struct{}),
 	}
 
 	atomic.StoreUint32(c.sealed, 1)
@@ -742,7 +783,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	if c.seal == nil {
-		c.seal = NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("shamir")))
+		c.seal = NewDefaultSeal(&vaultseal.Access{
+			Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+				Logger: c.logger.Named("shamir"),
+			}),
+		})
 	}
 	c.seal.SetCore(c)
 
@@ -962,17 +1007,17 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 	}
 
 	if masterKey != nil {
-		if c.seal.BarrierType() == seal.Shamir {
+		if c.seal.BarrierType() == wrapping.Shamir {
 			// If this is a legacy shamir seal this serves no purpose but it
 			// doesn't hurt.
-			err = c.seal.GetAccess().(*shamirseal.ShamirSeal).SetKey(masterKey)
+			err = c.seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(masterKey)
 			if err != nil {
 				return false, err
 			}
 		}
 
 		if !c.isRaftUnseal() {
-			if c.seal.BarrierType() == seal.Shamir {
+			if c.seal.BarrierType() == wrapping.Shamir {
 				cfg, err := c.seal.BarrierConfig(ctx)
 				if err != nil {
 					return false, err
@@ -999,17 +1044,30 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 			return c.unsealInternal(ctx, masterKey)
 		}
 
-		// If we are in the middle of a raft join send the answer and wait for
-		// data to start streaming in.
-		if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), c.raftInfo); err != nil {
-			return false, err
+		switch c.raftInfo.joinInProgress {
+		case true:
+			// JoinRaftCluster is already trying to perform a join based on retry_join configuration.
+			// Inform that routine that unseal key validation is complete so that it can continue to
+			// try and join possible leader nodes, and wait for it to complete.
+
+			atomic.StoreUint32(c.postUnsealStarted, 1)
+
+			c.logger.Info("waiting for raft retry join process to complete")
+			<-c.raftJoinDoneCh
+
+		default:
+			// This is the case for manual raft join. Send the answer to the leader node and
+			// wait for data to start streaming in.
+			if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), c.raftInfo); err != nil {
+				return false, err
+			}
+			// Reset the state
+			c.raftInfo = nil
 		}
-		// Reset the state
-		c.raftInfo = nil
 
 		go func() {
 			keyringFound := false
-			haveMasterKey := c.seal.StoredKeysSupported() != StoredKeysSupportedShamirMaster
+			haveMasterKey := c.seal.StoredKeysSupported() != vaultseal.StoredKeysSupportedShamirMaster
 			defer func() {
 				if keyringFound && haveMasterKey {
 					_, err := c.unsealInternal(ctx, masterKey)
@@ -1143,7 +1201,7 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 		// keys setup, nor 2) seals that support recovery keys but not stored keys.
 		// If insufficient shares are provided, shamir.Combine will error, and if
 		// no stored keys are found it will return masterKey as nil.
-		if seal.StoredKeysSupported() == StoredKeysSupportedGeneric {
+		if seal.StoredKeysSupported() == vaultseal.StoredKeysSupportedGeneric {
 			masterKeyShares, err := seal.GetStoredKeys(ctx)
 			if err != nil {
 				return nil, errwrap.Wrapf("unable to retrieve stored keys: {{err}}", err)
@@ -1168,8 +1226,8 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 
 	// If we have a migration seal, now's the time!
 	if c.migrationSeal != nil {
-		if seal.StoredKeysSupported() == StoredKeysSupportedShamirMaster {
-			err = seal.GetAccess().(*shamirseal.ShamirSeal).SetKey(masterKey)
+		if seal.StoredKeysSupported() == vaultseal.StoredKeysSupportedShamirMaster {
+			err = seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(masterKey)
 			if err != nil {
 				return nil, errwrap.Wrapf("failed to set master key in seal: {{err}}", err)
 			}
@@ -1217,7 +1275,7 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 
 			// We have recovery keys; we're going to use them as the new
 			// shamir KeK.
-			err = c.seal.GetAccess().(*shamirseal.ShamirSeal).SetKey(recoveryKey)
+			err = c.seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(recoveryKey)
 			if err != nil {
 				return nil, errwrap.Wrapf("failed to set master key in seal: {{err}}", err)
 			}
@@ -1347,13 +1405,10 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		c.logger.Info("vault is unsealed")
 	}
 
-	if c.ha != nil {
-		sd, ok := c.ha.(physical.ServiceDiscovery)
-		if ok {
-			if err := sd.NotifySealedStateChange(); err != nil {
-				if c.logger.IsWarn() {
-					c.logger.Warn("failed to notify unsealed status", "error", err)
-				}
+	if c.serviceRegistration != nil {
+		if err := c.serviceRegistration.NotifySealedStateChange(); err != nil {
+			if c.logger.IsWarn() {
+				c.logger.Warn("failed to notify unsealed status", "error", err)
 			}
 		}
 	}
@@ -1651,13 +1706,10 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 		return err
 	}
 
-	if c.ha != nil {
-		sd, ok := c.ha.(physical.ServiceDiscovery)
-		if ok {
-			if err := sd.NotifySealedStateChange(); err != nil {
-				if c.logger.IsWarn() {
-					c.logger.Warn("failed to notify sealed status", "error", err)
-				}
+	if c.serviceRegistration != nil {
+		if err := c.serviceRegistration.NotifySealedStateChange(); err != nil {
+			if c.logger.IsWarn() {
+				c.logger.Warn("failed to notify sealed status", "error", err)
 			}
 		}
 	}
@@ -2026,7 +2078,7 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 	// In older versions of vault the default seal would not store a type. This
 	// is here to offer backwards compatibility for older seal configs.
 	if barrierConf.Type == "" {
-		barrierConf.Type = seal.Shamir
+		barrierConf.Type = wrapping.Shamir
 	}
 
 	var recoveryConf *SealConfig
@@ -2046,7 +2098,7 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 		// In older versions of vault the default seal would not store a type. This
 		// is here to offer backwards compatibility for older seal configs.
 		if recoveryConf.Type == "" {
-			recoveryConf.Type = seal.Shamir
+			recoveryConf.Type = wrapping.Shamir
 		}
 	}
 
@@ -2076,7 +2128,7 @@ func (c *Core) SetSealsForMigration(migrationSeal, newSeal, unwrapSeal Seal) {
 // that can be used to unseal the barrier.
 func (c *Core) unsealKeyToMasterKey(ctx context.Context, combinedKey []byte) ([]byte, error) {
 	switch c.seal.StoredKeysSupported() {
-	case StoredKeysSupportedGeneric:
+	case vaultseal.StoredKeysSupportedGeneric:
 		if err := c.seal.VerifyRecoveryKey(ctx, combinedKey); err != nil {
 			return nil, errwrap.Wrapf("recovery key verification failed: {{err}}", err)
 		}
@@ -2090,15 +2142,19 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, combinedKey []byte) ([]
 		}
 		return storedKeys[0], nil
 
-	case StoredKeysSupportedShamirMaster:
-		testseal := NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("testseal")))
+	case vaultseal.StoredKeysSupportedShamirMaster:
+		testseal := NewDefaultSeal(&vaultseal.Access{
+			Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+				Logger: c.logger.Named("testseal"),
+			}),
+		})
 		testseal.SetCore(c)
 		cfg, err := c.seal.BarrierConfig(ctx)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to setup test barrier config: {{err}}", err)
 		}
 		testseal.SetCachedBarrierConfig(cfg)
-		err = testseal.GetAccess().(*shamirseal.ShamirSeal).SetKey(combinedKey)
+		err = testseal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(combinedKey)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to setup unseal key: {{err}}", err)
 		}
@@ -2111,7 +2167,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, combinedKey []byte) ([]
 		}
 		return storedKeys[0], nil
 
-	case StoredKeysNotSupported:
+	case vaultseal.StoredKeysNotSupported:
 		return combinedKey, nil
 	}
 	return nil, fmt.Errorf("invalid seal")

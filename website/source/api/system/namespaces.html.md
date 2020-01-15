@@ -66,7 +66,7 @@ This endpoint deletes a namespace at the specified path.
 
 | Method   | Path                         |
 | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/namespaces/:path`      | `204 (empty body)    ` |
+| `DELETE` | `/sys/namespaces/:path`      | 
 
 ### Sample Request
 

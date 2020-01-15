@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"math/rand"
+	"net/http"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -11,7 +12,9 @@ import (
 )
 
 type AuthMethod interface {
-	Authenticate(context.Context, *api.Client) (string, map[string]interface{}, error)
+	// Authenticate returns a mount path, header, request body, and error.
+	// The header may be nil if no special header is needed.
+	Authenticate(context.Context, *api.Client) (string, http.Header, map[string]interface{}, error)
 	NewCreds() chan struct{}
 	CredSuccess()
 	Shutdown()
@@ -119,7 +122,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 		backoff := 2*time.Second + time.Duration(ah.random.Int63()%int64(time.Second*2)-int64(time.Second))
 
 		ah.logger.Info("authenticating")
-		path, data, err := am.Authenticate(ctx, ah.client)
+		path, header, data, err := am.Authenticate(ctx, ah.client)
 		if err != nil {
 			ah.logger.Error("error getting path or data from method", "error", err, "backoff", backoff.Seconds())
 			backoffOrQuit(ctx, backoff)
@@ -138,6 +141,11 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 				return ah.wrapTTL.String()
 			})
 			clientToUse = wrapClient
+		}
+		for key, values := range header {
+			for _, value := range values {
+				clientToUse.AddHeader(key, value)
+			}
 		}
 
 		secret, err := clientToUse.Logical().Write(path, data)
