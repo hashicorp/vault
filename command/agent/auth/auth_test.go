@@ -127,10 +127,10 @@ func TestConnectionAttempts(t *testing.T) {
 
 	// start a network listener, intentionally don't listen for anything. This
 	// simulates an unresponsive Vault cluster
-	testCases := map[string]int{
+	testCases := map[string]time.Duration{
 		"unset": 0,
-		"low":   3,
-		"high":  15,
+		"low":   3 * time.Second,
+		"high":  15 * time.Second,
 	}
 
 	for name, connTimeout := range testCases {
@@ -173,17 +173,14 @@ func TestConnectionAttempts(t *testing.T) {
 			})
 
 			am := newFakeTestMethod(t, client)
-			go ah.RunWithMaxAttempts(ctx, am, connTimeout)
-			connDuration := time.Duration(connTimeout) * time.Second
+			go ah.RunWithConnectionTimeout(ctx, am, connTimeout)
 
 			// short-circut the test if we exceed this time
 			stopTime := time.Now().Add(20 * time.Second)
 
-			// connTimer := time.NewTimer(time.Duration(connTimeout) + 2*time.Second)
-
 			var closed, shortCircuit bool
 			// Consume tokens so we don't block
-			starTime := time.Now()
+			startTime := time.Now()
 		consumption:
 			for {
 				select {
@@ -198,7 +195,7 @@ func TestConnectionAttempts(t *testing.T) {
 						closed = true
 					}
 					if connTimeout != 0 {
-						t.Fatalf("test timeout. Expected: %ds, got: 20", connTimeout)
+						t.Fatalf("test timeout. Expected: %2f, got: %2f", connTimeout.Seconds(), time.Since(startTime).Seconds())
 						shortCircuit = true
 					}
 					break consumption
@@ -206,7 +203,7 @@ func TestConnectionAttempts(t *testing.T) {
 					break consumption
 				}
 			}
-			runTime := time.Since(starTime)
+			runTime := time.Since(startTime)
 
 			if !closed {
 				cancelFunc()
@@ -215,7 +212,7 @@ func TestConnectionAttempts(t *testing.T) {
 
 			if connTimeout != 0 {
 				rs := runTime.Seconds()
-				cs := connDuration.Seconds()
+				cs := connTimeout.Seconds()
 				if rs-cs > 3.0 {
 					t.Fatalf("test timeout exceeds buffer: %f", rs-cs)
 				}

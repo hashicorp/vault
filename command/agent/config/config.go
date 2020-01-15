@@ -20,14 +20,15 @@ import (
 
 // Config is the configuration for the vault server.
 type Config struct {
-	AutoAuth              *AutoAuth                  `hcl:"auto_auth"`
-	ExitAfterAuth         bool                       `hcl:"exit_after_auth"`
-	MaxConnectionAttempts int                        `hcl:"max_connection_attempts"`
-	PidFile               string                     `hcl:"pid_file"`
-	Listeners             []*Listener                `hcl:"listeners"`
-	Cache                 *Cache                     `hcl:"cache"`
-	Vault                 *Vault                     `hcl:"vault"`
-	Templates             []*ctconfig.TemplateConfig `hcl:"templates"`
+	AutoAuth                *AutoAuth                  `hcl:"auto_auth"`
+	ExitAfterAuth           bool                       `hcl:"exit_after_auth"`
+	MaxConnectionTimeout    time.Duration              `hcl:"-"`
+	MaxConnectionTimeoutRaw interface{}                `hcl:"max_connection_timeout"`
+	PidFile                 string                     `hcl:"pid_file"`
+	Listeners               []*Listener                `hcl:"listeners"`
+	Cache                   *Cache                     `hcl:"cache"`
+	Vault                   *Vault                     `hcl:"vault"`
+	Templates               []*ctconfig.TemplateConfig `hcl:"templates"`
 }
 
 // Vault contains configuration for connnecting to Vault servers

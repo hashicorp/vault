@@ -11,7 +11,6 @@ import (
 	"os"
 	"path"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -38,6 +37,7 @@ import (
 	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/kr/pretty"
@@ -67,7 +67,7 @@ type AgentCommand struct {
 	flagExitAfterAuth bool
 
 	// maximum number of attempts to connect to Vault
-	flagMaxConnectionAttempts int
+	flagMaxConnectionTimeout time.Duration
 
 	flagTestVerifyOnly bool
 	flagCombineLogs    bool
@@ -120,12 +120,12 @@ func (c *AgentCommand) Flags() *FlagSets {
 			"\"trace\", \"debug\", \"info\", \"warn\", and \"err\".",
 	})
 
-	f.IntVar(&IntVar{
-		Name:    "max-connection-attempts",
-		Target:  &c.flagMaxConnectionAttempts,
+	f.DurationVar(&DurationVar{
+		Name:    "max-connection-timeout",
+		Target:  &c.flagMaxConnectionTimeout,
 		Default: 0,
-		EnvVar:  "VAULT_MAX_CONNECTION_ATTEMPTS",
-		Usage: "Maximum attempts to connect to Vault. This is different than " +
+		EnvVar:  "VAULT_MAX_CONNECTION_TIMEOUT",
+		Usage: "Maximum timeout to connect to Vault. This is different than " +
 			"timeout or max retries",
 	})
 
@@ -253,11 +253,11 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	})
 
-	c.setIntFlag(f, config.MaxConnectionAttempts, &IntVar{
-		Name:    "max-connection-attempts",
-		Target:  &c.flagMaxConnectionAttempts,
+	c.setDurationFlag(f, config.MaxConnectionTimeoutRaw, &DurationVar{
+		Name:    "max-connection-timeout",
+		Target:  &c.flagMaxConnectionTimeout,
 		Default: 0,
-		EnvVar:  "VAULT_MAX_CONNECTION_ATTEMPTS",
+		EnvVar:  "VAULT_MAX_CONNECTION_TIMEOUT",
 	})
 
 	c.setStringFlag(f, config.Vault.Address, &StringVar{
@@ -575,7 +575,7 @@ func (c *AgentCommand) Run(args []string) int {
 		})
 		tsDoneCh = ts.DoneCh
 
-		go ah.RunWithMaxAttempts(ctx, method, c.flagMaxConnectionAttempts)
+		go ah.RunWithConnectionTimeout(ctx, method, c.flagMaxConnectionTimeout)
 		go ss.Run(ctx, ah.OutputCh, sinks)
 		go ts.Run(ctx, ah.TemplateTokenCh, config.Templates)
 	}
@@ -706,7 +706,7 @@ func (c *AgentCommand) setBoolFlag(f *FlagSets, configVal bool, fVar *BoolVar) {
 	}
 }
 
-func (c *AgentCommand) setIntFlag(f *FlagSets, configVal int, fVar *IntVar) {
+func (c *AgentCommand) setDurationFlag(f *FlagSets, configValRaw interface{}, fVar *DurationVar) {
 	var isFlagSet bool
 	f.Visit(func(f *flag.Flag) {
 		if f.Name == fVar.Name {
@@ -715,12 +715,17 @@ func (c *AgentCommand) setIntFlag(f *FlagSets, configVal int, fVar *IntVar) {
 	})
 
 	flagEnvValue, flagEnvSet := os.LookupEnv(fVar.EnvVar)
+
+	configVal, err := parseutil.ParseDurationSecond(configValRaw)
+	if err != nil {
+		configVal = 0
+	}
 	switch {
 	case isFlagSet:
 		// Don't do anything as the flag is already set from the command line
 	case flagEnvSet:
 		// Use value from env var
-		v, err := strconv.Atoi(flagEnvValue)
+		v, err := parseutil.ParseDurationSecond(flagEnvValue)
 		if err != nil {
 			v = 0
 		}

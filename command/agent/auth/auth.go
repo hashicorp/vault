@@ -71,19 +71,19 @@ func backoffOrQuit(ctx context.Context, backoff time.Duration) {
 	}
 }
 
-// Run is a convienence method to call RunWithMaxAttempts with the default value
-// of 0 maxConnectionAttempts, which indicates no maximum attempts.
+// Run is a convienence method to call RunWithConnectionTimeout with the default value
+// of 0 connTimeout, which indicates no maximum attempts.
 func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
-	ah.RunWithMaxAttempts(ctx, am, 0)
+	ah.RunWithConnectionTimeout(ctx, am, 0)
 }
 
 // Run is a long running process that authenticates with Vault, retrieves an
 // access token, and passes that token to it's output channels to be consumed
 // down the pipeline. The MaxAttempts variable determines how many attempts can
 // be made to a non-responsive Vault instance. A value of 0 for
-// maxConnectionAttempts means there is no limit to the connection attemts
+// connTimeout means there is no limit to the connection attemts
 // (Vault Agent will not abort due to no connection being established).
-func (ah *AuthHandler) RunWithMaxAttempts(ctx context.Context, am AuthMethod, maxConnectionAttempts int) {
+func (ah *AuthHandler) RunWithConnectionTimeout(ctx context.Context, am AuthMethod, connTimeout time.Duration) {
 	if am == nil {
 		panic("nil auth method")
 	}
@@ -125,7 +125,7 @@ func (ah *AuthHandler) RunWithMaxAttempts(ctx context.Context, am AuthMethod, ma
 
 	var watcher *api.LifetimeWatcher
 
-	timeLimit := time.Duration(maxConnectionAttempts) * time.Second
+	timeLimit := connTimeout
 
 	var connErrCount int
 	for {
@@ -147,7 +147,7 @@ func (ah *AuthHandler) RunWithMaxAttempts(ctx context.Context, am AuthMethod, ma
 		default:
 		}
 
-		if timeLimit != time.Duration(0) {
+		if timeLimit != 0 {
 			select {
 			case <-connTimer.C:
 				ah.logger.Error("connection attempt timeout hit, aborting", "timeout", timeLimit.String())
