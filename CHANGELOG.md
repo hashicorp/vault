@@ -26,6 +26,7 @@ BUG FIXES:
 * secrets/database/mysql: Fix issue where special characters for a MySQL password were encoded [GH-8040]
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [GH-8035]
 * ui: Change `.box-radio` height to min-height to prevent overflow issues [GH-8065]
+* ui: Fix OIDC callback to check storage [GH-7929].
 
 ## 1.3.2 (Unreleased)
 
