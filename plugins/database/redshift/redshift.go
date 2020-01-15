@@ -341,7 +341,7 @@ func (p *RedShift) defaultRevokeUser(ctx context.Context, username string) error
 
 	// Check if the role exists
 	var exists bool
-	err = db.QueryRowContext(ctx, "SELECT exists (SELECT usename FROM pg_user WHERE username=$1);", username).Scan(&exists)
+	err = db.QueryRowContext(ctx, "SELECT exists (SELECT usename FROM pg_user WHERE usename=$1);", username).Scan(&exists)
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
