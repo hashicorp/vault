@@ -1,9 +1,18 @@
 package api
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"net"
 	"sort"
+	"strconv"
+	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 var (
@@ -61,6 +70,219 @@ func (a *Allocations) Info(allocID string, q *QueryOptions) (*Allocation, *Query
 	return &resp, qm, nil
 }
 
+// Exec is used to execute a command inside a running task.  The command is to run inside
+// the task environment.
+//
+// The parameters are:
+// * ctx: context to set deadlines or timeout
+// * allocation: the allocation to execute command inside
+// * task: the task's name to execute command in
+// * tty: indicates whether to start a pseudo-tty for the command
+// * stdin, stdout, stderr: the std io to pass to command.
+//      If tty is true, then streams need to point to a tty that's alive for the whole process
+// * terminalSizeCh: A channel to send new tty terminal sizes
+//
+// The call blocks until command terminates (or an error occurs), and returns the exit code.
+func (a *Allocations) Exec(ctx context.Context,
+	alloc *Allocation, task string, tty bool, command []string,
+	stdin io.Reader, stdout, stderr io.Writer,
+	terminalSizeCh <-chan TerminalSize, q *QueryOptions) (exitCode int, err error) {
+
+	ctx, cancelFn := context.WithCancel(ctx)
+	defer cancelFn()
+
+	errCh := make(chan error, 4)
+
+	sender, output := a.execFrames(ctx, alloc, task, tty, command, errCh, q)
+
+	select {
+	case err := <-errCh:
+		return -2, err
+	default:
+	}
+
+	// Errors resulting from sending input (in goroutines) are silently dropped.
+	// To mitigate this, extra care is needed to distinguish between actual send errors
+	// and from send errors due to command terminating and our race to detect failures.
+	// If we have an actual network failure or send a bad input, we'd get an
+	// error in the reading side of websocket.
+
+	go func() {
+
+		bytes := make([]byte, 2048)
+		for {
+			if ctx.Err() != nil {
+				return
+			}
+
+			input := ExecStreamingInput{Stdin: &ExecStreamingIOOperation{}}
+
+			n, err := stdin.Read(bytes)
+
+			// always send data if we read some
+			if n != 0 {
+				input.Stdin.Data = bytes[:n]
+				sender(&input)
+			}
+
+			// then handle error
+			if err == io.EOF {
+				// if n != 0, send data and we'll get n = 0 on next read
+				if n == 0 {
+					input.Stdin.Close = true
+					sender(&input)
+					return
+				}
+			} else if err != nil {
+				errCh <- err
+				return
+			}
+		}
+	}()
+
+	// forwarding terminal size
+	go func() {
+		for {
+			resizeInput := ExecStreamingInput{}
+
+			select {
+			case <-ctx.Done():
+				return
+			case size, ok := <-terminalSizeCh:
+				if !ok {
+					return
+				}
+				resizeInput.TTYSize = &size
+				sender(&resizeInput)
+			}
+
+		}
+	}()
+
+	// send a heartbeat every 10 seconds
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			// heartbeat message
+			case <-time.After(10 * time.Second):
+				sender(&execStreamingInputHeartbeat)
+			}
+
+		}
+	}()
+
+	for {
+		select {
+		case err := <-errCh:
+			// drop websocket code, not relevant to user
+			if wsErr, ok := err.(*websocket.CloseError); ok && wsErr.Text != "" {
+				return -2, errors.New(wsErr.Text)
+			}
+			return -2, err
+		case <-ctx.Done():
+			return -2, ctx.Err()
+		case frame, ok := <-output:
+			if !ok {
+				return -2, errors.New("disconnected without receiving the exit code")
+			}
+
+			switch {
+			case frame.Stdout != nil:
+				if len(frame.Stdout.Data) != 0 {
+					stdout.Write(frame.Stdout.Data)
+				}
+				// don't really do anything if stdout is closing
+			case frame.Stderr != nil:
+				if len(frame.Stderr.Data) != 0 {
+					stderr.Write(frame.Stderr.Data)
+				}
+				// don't really do anything if stderr is closing
+			case frame.Exited && frame.Result != nil:
+				return frame.Result.ExitCode, nil
+			default:
+				// noop - heartbeat
+			}
+		}
+	}
+}
+
+func (a *Allocations) execFrames(ctx context.Context, alloc *Allocation, task string, tty bool, command []string,
+	errCh chan<- error, q *QueryOptions) (sendFn func(*ExecStreamingInput) error, output <-chan *ExecStreamingOutput) {
+	nodeClient, _ := a.client.GetNodeClientWithTimeout(alloc.NodeID, ClientConnTimeout, q)
+
+	if q == nil {
+		q = &QueryOptions{}
+	}
+	if q.Params == nil {
+		q.Params = make(map[string]string)
+	}
+
+	commandBytes, err := json.Marshal(command)
+	if err != nil {
+		errCh <- fmt.Errorf("failed to marshal command: %s", err)
+		return nil, nil
+	}
+
+	q.Params["tty"] = strconv.FormatBool(tty)
+	q.Params["task"] = task
+	q.Params["command"] = string(commandBytes)
+
+	reqPath := fmt.Sprintf("/v1/client/allocation/%s/exec", alloc.ID)
+
+	var conn *websocket.Conn
+
+	if nodeClient != nil {
+		conn, _, err = nodeClient.websocket(reqPath, q)
+		if _, ok := err.(net.Error); err != nil && !ok {
+			errCh <- err
+			return nil, nil
+		}
+	}
+
+	if conn == nil {
+		conn, _, err = a.client.websocket(reqPath, q)
+		if err != nil {
+			errCh <- err
+			return nil, nil
+		}
+	}
+
+	// Create the output channel
+	frames := make(chan *ExecStreamingOutput, 10)
+
+	go func() {
+		defer conn.Close()
+		for ctx.Err() == nil {
+
+			// Decode the next frame
+			var frame ExecStreamingOutput
+			err := conn.ReadJSON(&frame)
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+				close(frames)
+				return
+			} else if err != nil {
+				errCh <- err
+				return
+			}
+
+			frames <- &frame
+		}
+	}()
+
+	var sendLock sync.Mutex
+	send := func(v *ExecStreamingInput) error {
+		sendLock.Lock()
+		defer sendLock.Unlock()
+
+		return conn.WriteJSON(v)
+	}
+
+	return send, frames
+
+}
+
 func (a *Allocations) Stats(alloc *Allocation, q *QueryOptions) (*AllocResourceUsage, error) {
 	var resp AllocResourceUsage
 	path := fmt.Sprintf("/v1/client/allocation/%s/stats", alloc.ID)
@@ -86,6 +308,36 @@ func (a *Allocations) Restart(alloc *Allocation, taskName string, q *QueryOption
 
 	var resp struct{}
 	_, err := a.client.putQuery("/v1/client/allocation/"+alloc.ID+"/restart", &req, &resp, q)
+	return err
+}
+
+func (a *Allocations) Stop(alloc *Allocation, q *QueryOptions) (*AllocStopResponse, error) {
+	var resp AllocStopResponse
+	_, err := a.client.putQuery("/v1/allocation/"+alloc.ID+"/stop", nil, &resp, q)
+	return &resp, err
+}
+
+// AllocStopResponse is the response to an `AllocStopRequest`
+type AllocStopResponse struct {
+	// EvalID is the id of the follow up evalution for the rescheduled alloc.
+	EvalID string
+
+	WriteMeta
+}
+
+func (a *Allocations) Signal(alloc *Allocation, q *QueryOptions, task, signal string) error {
+	nodeClient, err := a.client.GetNodeClient(alloc.NodeID, q)
+	if err != nil {
+		return err
+	}
+
+	req := AllocSignalRequest{
+		Signal: signal,
+		Task:   task,
+	}
+
+	var resp GenericResponse
+	_, err = nodeClient.putQuery("/v1/client/allocation/"+alloc.ID+"/signal", &req, &resp, q)
 	return err
 }
 
@@ -155,28 +407,30 @@ type NodeScoreMeta struct {
 // AllocationListStub is used to return a subset of an allocation
 // during list operations.
 type AllocationListStub struct {
-	ID                 string
-	EvalID             string
-	Name               string
-	Namespace          string
-	NodeID             string
-	NodeName           string
-	JobID              string
-	JobType            string
-	JobVersion         uint64
-	TaskGroup          string
-	DesiredStatus      string
-	DesiredDescription string
-	ClientStatus       string
-	ClientDescription  string
-	TaskStates         map[string]*TaskState
-	DeploymentStatus   *AllocDeploymentStatus
-	FollowupEvalID     string
-	RescheduleTracker  *RescheduleTracker
-	CreateIndex        uint64
-	ModifyIndex        uint64
-	CreateTime         int64
-	ModifyTime         int64
+	ID                    string
+	EvalID                string
+	Name                  string
+	Namespace             string
+	NodeID                string
+	NodeName              string
+	JobID                 string
+	JobType               string
+	JobVersion            uint64
+	TaskGroup             string
+	DesiredStatus         string
+	DesiredDescription    string
+	ClientStatus          string
+	ClientDescription     string
+	TaskStates            map[string]*TaskState
+	DeploymentStatus      *AllocDeploymentStatus
+	FollowupEvalID        string
+	RescheduleTracker     *RescheduleTracker
+	PreemptedAllocations  []string
+	PreemptedByAllocation string
+	CreateIndex           uint64
+	ModifyIndex           uint64
+	CreateTime            int64
+	ModifyTime            int64
 }
 
 // AllocDeploymentStatus captures the status of the allocation as part of the
@@ -201,7 +455,8 @@ type AllocatedTaskResources struct {
 }
 
 type AllocatedSharedResources struct {
-	DiskMB int64
+	DiskMB   int64
+	Networks []*NetworkResource
 }
 
 type AllocatedCpuResources struct {
@@ -260,6 +515,17 @@ type AllocationRestartRequest struct {
 	TaskName string
 }
 
+type AllocSignalRequest struct {
+	Task   string
+	Signal string
+}
+
+// GenericResponse is used to respond to a request where no
+// specific response information is needed.
+type GenericResponse struct {
+	WriteMeta
+}
+
 // RescheduleTracker encapsulates previous reschedule events
 type RescheduleTracker struct {
 	Events []*RescheduleEvent
@@ -293,4 +559,43 @@ type DesiredTransition struct {
 // ShouldMigrate returns whether the transition object dictates a migration.
 func (d DesiredTransition) ShouldMigrate() bool {
 	return d.Migrate != nil && *d.Migrate
+}
+
+// ExecStreamingIOOperation represents a stream write operation: either appending data or close (exclusively)
+type ExecStreamingIOOperation struct {
+	Data  []byte `json:"data,omitempty"`
+	Close bool   `json:"close,omitempty"`
+}
+
+// TerminalSize represents the size of the terminal
+type TerminalSize struct {
+	Height int `json:"height,omitempty"`
+	Width  int `json:"width,omitempty"`
+}
+
+var execStreamingInputHeartbeat = ExecStreamingInput{}
+
+// ExecStreamingInput represents user input to be sent to nomad exec handler.
+//
+// At most one field should be set.
+type ExecStreamingInput struct {
+	Stdin   *ExecStreamingIOOperation `json:"stdin,omitempty"`
+	TTYSize *TerminalSize             `json:"tty_size,omitempty"`
+}
+
+// ExecStreamingExitResults captures the exit code of just completed nomad exec command
+type ExecStreamingExitResult struct {
+	ExitCode int `json:"exit_code"`
+}
+
+// ExecStreamingInput represents an output streaming entity, e.g. stdout/stderr update or termination
+//
+// At most one of these fields should be set: `Stdout`, `Stderr`, or `Result`.
+// If `Exited` is true, then `Result` is non-nil, and other fields are nil.
+type ExecStreamingOutput struct {
+	Stdout *ExecStreamingIOOperation `json:"stdout,omitempty"`
+	Stderr *ExecStreamingIOOperation `json:"stderr,omitempty"`
+
+	Exited bool                     `json:"exited,omitempty"`
+	Result *ExecStreamingExitResult `json:"result,omitempty"`
 }

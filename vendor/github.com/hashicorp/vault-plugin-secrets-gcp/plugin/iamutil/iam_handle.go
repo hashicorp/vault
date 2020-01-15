@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/errwrap"
-	"google.golang.org/api/gensupport"
 	"google.golang.org/api/googleapi"
 )
 
@@ -54,18 +53,11 @@ func (h *IamHandle) doRequest(ctx context.Context, req *http.Request, out interf
 		req.Header.Set("User-Agent", h.userAgent)
 	}
 
-	resp, err := gensupport.SendRequest(ctx, h.c, req)
-	defer googleapi.CloseBody(resp)
-
-	if resp != nil && resp.StatusCode == http.StatusNotModified {
-		return &googleapi.Error{
-			Code:   resp.StatusCode,
-			Header: resp.Header,
-		}
-	}
+	resp, err := h.c.Do(req.WithContext(ctx))
 	if err != nil {
 		return err
 	}
+	defer googleapi.CloseBody(resp)
 
 	if err := googleapi.CheckResponse(resp); err != nil {
 		return err

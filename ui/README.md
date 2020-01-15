@@ -72,8 +72,8 @@ Running tests will spin up a Vault dev server on port 9200 via a
 pretest script that testem (the test runner) executes. All of the
 acceptance tests then run, proxing requests back to that server.
 
-- `yarn run test-oss`
-- `yarn run test-oss -s` to keep the test server running after the initial run.
+- `yarn run test:oss`
+- `yarn run test:oss -s` to keep the test server running after the initial run.
 - `yarn run test -f="policies"` to filter the tests that are run. `-f` gets passed into
   [QUnit's `filter` config](https://api.qunitjs.com/config/QUnit.config#qunitconfigfilter-string--default-undefined)
 - `yarn run test:browserstack` to run the kv acceptance tests in Browserstack
@@ -110,7 +110,6 @@ setting `VAULT_UI` environment variable.
 ## Vault Storybook
 
 The Vault UI uses Storybook to catalog all of its components. Below are details for running and contributing to Storybook.
-
 ### Storybook Commands at a Glance
 
 | Command                                    | Description               |
@@ -164,6 +163,9 @@ See the [Storybook Docs](https://storybook.js.org/docs/basics/introduction/) for
 
 It is important to add all new components into Storybook and to keep the story and notes files up to date. To ease the process of creating and updating stories please use the code generators using the [commands listed above](#storybook-commands-at-a-glance).
 
+### Storybook Deployment
+
+A Netlify integration deploys a static Storybook build for any PR on the Vault GitHub repo. A preview link will show up in the PR checks. Once items are merged, the auto-deployed integration will publish that build making it available at [https://vault-storybook.netlify.com](https://vault-storybook.netlify.com). Currently the Netlify integration will cd into the `ui/` directory and then run `yarn deploy:storybook` so troubleshooting any issues can be done locally by running this same command. The logs for this build are public and will be linked from the PR checks.
 
 ## Further Reading / Useful Links
 

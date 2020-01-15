@@ -29,3 +29,14 @@ communication and would always pick a strong cipher, it could cause false flags
 on port scanners and other security utilities that assumed insecure ciphers were
 being used. The previous behavior can be achieved by setting the value of the
 (undocumented) cluster_cipher_suites config flag to tls12.
+
+## API/Agent Renewal Behavior
+
+The API now allows multiple options for how it deals with renewals. The legacy
+behavior in the Agent/API is for the renewer (now called the lifetime watcher)
+to exit on a renew error, leading to a reauthentication. The new default
+behavior is for the lifetime watcher to ignore 5XX errors and simply retry as
+scheduled, using the existing lease duration. It is also possible, within
+custom code, to disable renewals entirely, which allows the lifetime watcher to
+simply return when it believes it is time for your code to renew or
+reauthenticate.
