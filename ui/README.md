@@ -110,7 +110,6 @@ setting `VAULT_UI` environment variable.
 ## Vault Storybook
 
 The Vault UI uses Storybook to catalog all of its components. Below are details for running and contributing to Storybook.
-
 ### Storybook Commands at a Glance
 
 | Command                                    | Description               |
@@ -164,6 +163,9 @@ See the [Storybook Docs](https://storybook.js.org/docs/basics/introduction/) for
 
 It is important to add all new components into Storybook and to keep the story and notes files up to date. To ease the process of creating and updating stories please use the code generators using the [commands listed above](#storybook-commands-at-a-glance).
 
+### Storybook Deployment
+
+A Netlify integration deploys a static Storybook build for any PR on the Vault GitHub repo. A preview link will show up in the PR checks. Once items are merged, the auto-deployed integration will publish that build making it available at [https://vault-storybook.netlify.com](https://vault-storybook.netlify.com). Currently the Netlify integration will cd into the `ui/` directory and then run `yarn deploy:storybook` so troubleshooting any issues can be done locally by running this same command. The logs for this build are public and will be linked from the PR checks.
 
 ## Further Reading / Useful Links
 

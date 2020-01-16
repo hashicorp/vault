@@ -525,7 +525,13 @@ func (b *databaseBackend) popFromRotationQueueByKey(name string) (*queue.Item, e
 	b.RLock()
 	defer b.RUnlock()
 	if b.credRotationQueue != nil {
-		return b.credRotationQueue.PopByKey(name)
+		item, err := b.credRotationQueue.PopByKey(name)
+		if err != nil {
+			return nil, err
+		}
+		if item != nil {
+			return item, nil
+		}
 	}
 	return nil, queue.ErrEmpty
 }

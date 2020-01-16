@@ -24,7 +24,7 @@ To install a new instance of Vault and the Vault Agent Injector, run the followi
 ```bash
 helm install --name=vault \
   --set="injector.enabled=true" \
-  https://github.com/hashicorp/vault-helm/archive/v0.3.0.tar.gz
+  https://github.com/hashicorp/vault-helm/archive/v0.3.3.tar.gz
 ``` 
 
 Other values in the Helm chart can be used to limit the namespaces the injector

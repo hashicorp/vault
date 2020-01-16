@@ -603,7 +603,7 @@ func (c *Client) ClearToken() {
 }
 
 // Headers gets the current set of headers used for requests. This returns a
-// copy; to modify it make modifications locally and use SetHeaders.
+// copy; to modify it call AddHeader or SetHeaders.
 func (c *Client) Headers() http.Header {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
@@ -622,11 +622,19 @@ func (c *Client) Headers() http.Header {
 	return ret
 }
 
-// SetHeaders sets the headers to be used for future requests.
+// AddHeader allows a single header key/value pair to be added
+// in a race-safe fashion.
+func (c *Client) AddHeader(key, value string) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+	c.headers.Add(key, value)
+}
+
+// SetHeaders clears all previous headers and uses only the given
+// ones going forward.
 func (c *Client) SetHeaders(headers http.Header) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
-
 	c.headers = headers
 }
 
@@ -680,8 +688,8 @@ func (c *Client) SetPolicyOverride(override bool) {
 
 // portMap defines the standard port map
 var portMap = map[string]string{
-	"http":   "80",
-	"https":  "443",
+	"http":  "80",
+	"https": "443",
 }
 
 // NewRequest creates a new raw request object to query the Vault server
@@ -703,7 +711,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 		// Avoid lookup of SRV record if scheme is known
 		port, ok := portMap[addr.Scheme]
 		if ok {
-			host = net.JoinHostPort(host,  port)
+			host = net.JoinHostPort(host, port)
 		} else {
 			// Internet Draft specifies that the SRV record is ignored if a port is given
 			_, addrs, err := net.LookupSRV("http", "tcp", addr.Hostname())

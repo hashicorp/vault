@@ -69,6 +69,7 @@ func Backend() *backend {
 			pathsRoleSet(b),
 			[]*framework.Path{
 				pathConfig(b),
+				pathConfigRotateRoot(b),
 				pathSecretAccessToken(b),
 				pathSecretServiceAccountKey(b),
 			},

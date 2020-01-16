@@ -2,6 +2,7 @@ package command
 
 import (
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -189,6 +190,11 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 				args = append(args, "file_path=discard")
 			case "socket":
 				args = append(args, "address=127.0.0.1:8888")
+			case "syslog":
+				if _, exists := os.LookupEnv("WSLENV"); exists {
+					t.Log("skipping syslog test on WSL")
+					continue
+				}
 			}
 			code := cmd.Run(args)
 			if exp := 0; code != exp {
