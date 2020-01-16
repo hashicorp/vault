@@ -132,9 +132,8 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 		Roles:    mongoCS.Roles.toStandardRolesArray(),
 	}
 
-	result := client.Database(mongoCS.DB).RunCommand(ctx, createUserCmd, nil)
-	if result.Err() != nil {
-		return "", "", result.Err()
+	if err := runCommandWithRetry(ctx, client, mongoCS.DB, createUserCmd); err != nil {
+		return "", "", err
 	}
 
 	return username, password, nil
@@ -168,9 +167,8 @@ func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statem
 	if err != nil {
 		return "", "", err
 	}
-	result := client.Database(cs.Database).RunCommand(ctx, changeUserCmd, nil)
-	if result.Err() != nil {
-		return "", "", result.Err()
+	if err := runCommandWithRetry(ctx, client, cs.Database, changeUserCmd); err != nil {
+		return "", "", err
 	}
 
 	return username, password, nil
@@ -224,11 +222,28 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 		WriteConcern: writeconcern.New(writeconcern.WMajority()),
 	}
 
-	result := client.Database(db).RunCommand(ctx, dropUserCmd, nil)
-	return result.Err()
+	return runCommandWithRetry(ctx, client, db, dropUserCmd)
 }
 
 // RotateRootCredentials is not currently supported on MongoDB
 func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
 	return nil, errors.New("root credential rotation is not currently implemented in this database secrets engine")
+}
+
+// runCommandWithRetry runs a command with retry.
+func runCommandWithRetry(ctx context.Context, client *mongo.Client, db string, cmd interface{}) error {
+	timeout := time.Now().Add(1 * time.Minute)
+	for {
+		// Run command
+		result := client.Database(db).RunCommand(ctx, cmd, nil)
+		if result.Err() == nil {
+			break
+		}
+
+		if time.Now().After(timeout) {
+			return result.Err()
+		}
+		time.Sleep(30 * time.Millisecond)
+	}
+	return nil
 }
