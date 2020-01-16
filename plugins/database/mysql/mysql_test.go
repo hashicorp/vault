@@ -3,69 +3,22 @@ package mysql
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
 
 	stdmysql "github.com/go-sql-driver/mysql"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	mysqlhelper "github.com/hashicorp/vault/helper/testhelpers/mysql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/ory/dockertest"
 )
 
 var _ dbplugin.Database = (*MySQL)(nil)
 
-func prepareMySQLTestContainer(t *testing.T, legacy bool, pw string) (cleanup func(), retURL string) {
-	if os.Getenv("MYSQL_URL") != "" {
-		return func() {}, os.Getenv("MYSQL_URL")
-	}
-
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-
-	imageVersion := "5.7"
-	if legacy {
-		imageVersion = "5.6"
-	}
-
-	resource, err := pool.Run("mysql", imageVersion, []string{"MYSQL_ROOT_PASSWORD=" + pw})
-	if err != nil {
-		t.Fatalf("Could not start local MySQL docker container: %s", err)
-	}
-
-	cleanup = func() {
-		docker.CleanupResource(t, pool, resource)
-	}
-
-	retURL = fmt.Sprintf("root:%s@(localhost:%s)/mysql?parseTime=true", pw, resource.GetPort("3306/tcp"))
-
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
-		var err error
-		var db *sql.DB
-		db, err = sql.Open("mysql", retURL)
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-		return db.Ping()
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to MySQL docker container: %s", err)
-	}
-
-	return
-}
-
 func TestMySQL_Initialize(t *testing.T) {
-	cleanup, connURL := prepareMySQLTestContainer(t, false, "secret")
+	cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, false, "secret")
 	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
@@ -100,7 +53,7 @@ func TestMySQL_Initialize(t *testing.T) {
 }
 
 func TestMySQL_CreateUser(t *testing.T) {
-	cleanup, connURL := prepareMySQLTestContainer(t, false, "secret")
+	cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, false, "secret")
 	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
@@ -133,7 +86,7 @@ func TestMySQL_CreateUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(t, connURL, username, password); err != nil {
+	if err := mysqlhelper.TestCredsExist(t, connURL, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
@@ -143,7 +96,7 @@ func TestMySQL_CreateUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(t, connURL, username, password); err != nil {
+	if err := mysqlhelper.TestCredsExist(t, connURL, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
@@ -155,14 +108,14 @@ func TestMySQL_CreateUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(t, connURL, username, password); err != nil {
+	if err := mysqlhelper.TestCredsExist(t, connURL, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
 }
 
 func TestMySQL_CreateUser_Legacy(t *testing.T) {
-	cleanup, connURL := prepareMySQLTestContainer(t, true, "secret")
+	cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, true, "secret")
 	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
@@ -195,7 +148,7 @@ func TestMySQL_CreateUser_Legacy(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(t, connURL, username, password); err != nil {
+	if err := mysqlhelper.TestCredsExist(t, connURL, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
@@ -205,13 +158,13 @@ func TestMySQL_CreateUser_Legacy(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(t, connURL, username, password); err != nil {
+	if err := mysqlhelper.TestCredsExist(t, connURL, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 }
 
 func TestMySQL_RotateRootCredentials(t *testing.T) {
-	cleanup, connURL := prepareMySQLTestContainer(t, false, "secret")
+	cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, false, "secret")
 	defer cleanup()
 
 	connURL = strings.Replace(connURL, "root:secret", `{{username}}:{{password}}`, -1)
@@ -247,7 +200,7 @@ func TestMySQL_RotateRootCredentials(t *testing.T) {
 }
 
 func TestMySQL_RevokeUser(t *testing.T) {
-	cleanup, connURL := prepareMySQLTestContainer(t, false, "secret")
+	cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, false, "secret")
 	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
@@ -274,7 +227,7 @@ func TestMySQL_RevokeUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(t, connURL, username, password); err != nil {
+	if err := mysqlhelper.TestCredsExist(t, connURL, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
@@ -284,7 +237,7 @@ func TestMySQL_RevokeUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(t, connURL, username, password); err == nil {
+	if err := mysqlhelper.TestCredsExist(t, connURL, username, password); err == nil {
 		t.Fatal("Credentials were not revoked")
 	}
 
@@ -294,7 +247,7 @@ func TestMySQL_RevokeUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(t, connURL, username, password); err != nil {
+	if err := mysqlhelper.TestCredsExist(t, connURL, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
@@ -305,19 +258,19 @@ func TestMySQL_RevokeUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(t, connURL, username, password); err == nil {
+	if err := mysqlhelper.TestCredsExist(t, connURL, username, password); err == nil {
 		t.Fatal("Credentials were not revoked")
 	}
 }
 
 func TestMySQL_SetCredentials(t *testing.T) {
-	cleanup, connURL := prepareMySQLTestContainer(t, false, "secret")
+	cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, false, "secret")
 	defer cleanup()
 
 	// create the database user and verify we can access
 	dbUser := "vaultstatictest"
 	createTestMySQLUser(t, connURL, dbUser, "password", testRoleStaticCreate)
-	if err := testCredsExist(t, connURL, dbUser, "password"); err != nil {
+	if err := mysqlhelper.TestCredsExist(t, connURL, dbUser, "password"); err != nil {
 		t.Fatalf("Could not connect with credentials: %s", err)
 	}
 
@@ -351,7 +304,7 @@ func TestMySQL_SetCredentials(t *testing.T) {
 	}
 
 	// verify new password works
-	if err := testCredsExist(t, connURL, dbUser, newPassword); err != nil {
+	if err := mysqlhelper.TestCredsExist(t, connURL, dbUser, newPassword); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
@@ -363,14 +316,14 @@ func TestMySQL_SetCredentials(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(t, connURL, dbUser, newPassword); err != nil {
+	if err := mysqlhelper.TestCredsExist(t, connURL, dbUser, newPassword); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 }
 
 func TestMySQL_Initialize_ReservedChars(t *testing.T) {
 	pw := "#secret!%25#{@}"
-	cleanup, connURL := prepareMySQLTestContainer(t, false, pw)
+	cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, false, pw)
 	defer cleanup()
 
 	// Revert password set to test replacement by db.Init
@@ -395,17 +348,6 @@ func TestMySQL_Initialize_ReservedChars(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-}
-
-func testCredsExist(t testing.TB, connURL, username, password string) error {
-	// Log in with the new creds
-	connURL = strings.Replace(connURL, "root:secret", fmt.Sprintf("%s:%s", username, password), 1)
-	db, err := sql.Open("mysql", connURL)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-	return db.Ping()
 }
 
 func createTestMySQLUser(t *testing.T, connURL, username, password, query string) {
