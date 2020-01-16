@@ -251,6 +251,10 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 					Description: "TTL of the tokens generated against the role.",
 					Default:     "24h",
 				},
+				"client_id": {
+					Type:        framework.TypeString,
+					Description: "Optional client_id",
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.pathOIDCCreateUpdateRole,
@@ -929,6 +933,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		role.TokenTTL = time.Duration(ttl.(int)) * time.Second
 	} else if req.Operation == logical.CreateOperation {
 		role.TokenTTL = time.Duration(d.Get("ttl").(int)) * time.Second
+	}
+
+	if clientID, ok := d.GetOk("client_id"); ok {
+		role.ClientID = clientID.(string)
 	}
 
 	// create role path
