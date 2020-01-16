@@ -129,6 +129,12 @@ path "sys/policies/acl/*"
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
 }
 
+# To make the Policy menu point visible for the user
+path "sys/policies/acl"
+{
+  capabilities = ["list"]
+}
+
 # To list policies - Step 3
 path "sys/policy"
 {
