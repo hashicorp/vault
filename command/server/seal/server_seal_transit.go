@@ -11,14 +11,14 @@ import (
 	"github.com/hashicorp/vault/vault/seal"
 )
 
-var getTransitKMSFunc = func(opts *wrapping.WrapperOptions, config map[string]string) (wrapping.Wrapper, map[string]string, error) {
+var GetTransitKMSFunc = func(opts *wrapping.WrapperOptions, config map[string]string) (wrapping.Wrapper, map[string]string, error) {
 	transitSeal := transit.NewWrapper(opts)
 	sealInfo, err := transitSeal.SetConfig(config)
 	return transitSeal, sealInfo, err
 }
 
 func configureTransitSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (vault.Seal, error) {
-	transitSeal, sealInfo, err := getTransitKMSFunc(
+	transitSeal, sealInfo, err := GetTransitKMSFunc(
 		&wrapping.WrapperOptions{
 			Logger: logger.ResetNamed("seal-transit"),
 		}, configSeal.Config)

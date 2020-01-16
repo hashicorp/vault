@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/server/seal"
 	"github.com/ory/dockertest"
 )
 
@@ -29,9 +30,7 @@ func TestTransitWrapper_Lifecycle(t *testing.T) {
 		"key_name":   keyName,
 	}
 
-	s := getTransitKMSFunc(nil)
-
-	_, err := s.SetConfig(wrapperConfig)
+	s, _, err := seal.GetTransitKMSFunc(nil, wrapperConfig)
 	if err != nil {
 		t.Fatalf("error setting wrapper config: %v", err)
 	}
@@ -87,8 +86,7 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 		"mount_path": mountPath,
 		"key_name":   keyName,
 	}
-	s := getTransitKMSFunc(nil)
-	_, err = s.SetConfig(wrapperConfig)
+	s, _, err := seal.GetTransitKMSFunc(nil, wrapperConfig)
 	if err != nil {
 		t.Fatalf("error setting wrapper config: %v", err)
 	}
