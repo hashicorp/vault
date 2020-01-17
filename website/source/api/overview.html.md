@@ -55,13 +55,13 @@ client or passed via the `X-Vault-Token` or `Authorization` header for future re
 If using the [Namespaces](/docs/enterprise/namespaces/index.html) feature, API
 operations are relative to the namespace value passed in via the
 `X-Vault-Namespace` header. For instance, if the request path is to
-`secret/foo`, and the header is set to `ns1/ns2/`, the final request path Vault
-uses will be `ns1/ns2/secret/foo`. Note that it is semantically equivalent to
+`secret/data/foo`, and the header is set to `ns1/ns2/`, the final request path Vault
+uses will be `ns1/ns2/secret/data/foo`. Note that it is semantically equivalent to
 use a full path rather than the `X-Vault-Namespace` header, as the operation in
 Vault will always look up the correct namespace based on the final given path.
 Thus, it would be equivalent to the above example to set `X-Vault-Namespace` to
-`ns1/` and a request path of `ns2/secret/foo`, or to not set
-`X-Vault-Namespace` at all and use a request path of `ns1/ns2/secret/foo`.
+`ns1/` and a request path of `ns2/secret/data/foo`, or to not set
+`X-Vault-Namespace` at all and use a request path of `ns1/ns2/secret/data/foo`.
 
 For example, the following two commands result in equivalent requests:
 
@@ -70,14 +70,14 @@ $ curl \
     -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
     -H "X-Vault-Namespace: ns1/ns2/" \
     -X GET \
-    http://127.0.0.1:8200/v1/secret/foo
+    http://127.0.0.1:8200/v1/secret/data/foo
 ```
 
 ```shell
 $ curl \
     -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
     -X GET \
-    http://127.0.0.1:8200/v1/ns1/ns2/secret/foo
+    http://127.0.0.1:8200/v1/ns1/ns2/secret/data/foo
 ```
 
 ## API Operations
@@ -87,14 +87,15 @@ Vault is via JSON. Vault will set the `Content-Type` header appropriately but
 does not require that clients set it.
 
 Different plugins implement different APIs according to their functionality.
-The examples below are created with the `KVv1` backend, which acts like a very
-simple Key/Value store. Read the documentation for a particular backend for
-detailed information on its API; this simply provides a general overview.
+The examples below are created with the `KVv2` backend, which is mounted by 
+default at `secret` in a new Vault installation. It acts like a simple 
+Key/Value store. Read the documentation for a particular backend for detailed 
+information on its API; this simply provides a general overview.
 
-For `KVv1`, reading a secret via the HTTP API is done by issuing a GET:
+For `KVv2`, reading a secret via the HTTP API is done by issuing a GET:
 
 ```text
-/v1/secret/foo
+/v1/secret/data/foo
 ```
 
 This maps to `secret/foo` where `foo` is the key in the `secret/` mount, which
@@ -106,7 +107,7 @@ Here is an example of reading a secret using cURL:
 $ curl \
     -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
     -X GET \
-    http://127.0.0.1:8200/v1/secret/foo
+    http://127.0.0.1:8200/v1/secret/data/foo
 ```
 
 A few endpoints consume query parameters via `GET` calls, but only if those
@@ -123,7 +124,7 @@ given directory:
 $ curl \
     -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
     -X LIST \
-    http://127.0.0.1:8200/v1/secret/
+    http://127.0.0.1:8200/v1/secret/metadata/
 ```
 
 The API documentation uses `LIST` as the HTTP verb, but you can still use `GET`
@@ -132,7 +133,7 @@ with the `?list=true` query string.
 To use an API that consumes data via request body, issue a `POST` or `PUT`:
 
 ```text
-/v1/secret/foo
+/v1/secret/data/foo
 ```
 
 with a JSON body like:
@@ -151,7 +152,7 @@ $ curl \
     -H "Content-Type: application/json" \
     -X POST \
     -d '{"value":"bar"}' \
-    http://127.0.0.1:8200/v1/secret/baz
+    http://127.0.0.1:8200/v1/secret/data/baz
 ```
 
 Vault currently considers `PUT` and `POST` to be synonyms. Rather than trust a
