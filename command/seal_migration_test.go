@@ -102,6 +102,28 @@ func TestSealMigrationAutoToShamir(t *testing.T) {
 	if resp.Sealed {
 		t.Fatalf("expected unsealed state; got %#v", *resp)
 	}
+
+	// Seal and unseal again to verify that things are working fine
+	if err := client.Sys().Seal(); err != nil {
+		t.Fatal(err)
+	}
+	unsealOpts.Migrate = false
+	for _, key := range keys {
+		unsealOpts.Key = key
+		resp, err = client.Sys().UnsealWithOptions(unsealOpts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected response")
+		}
+		if !resp.Sealed {
+			break
+		}
+	}
+	if resp.Sealed {
+		t.Fatalf("expected unsealed state; got %#v", *resp)
+	}
 }
 
 func TestSealMigration(t *testing.T) {
