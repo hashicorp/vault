@@ -58,7 +58,7 @@ func (l *TCPLayer) Listeners() []NetworkListener {
 		return l.listeners
 	}
 
-	listeners := make([]NetworkListener, len(l.addrs))
+	listeners := []NetworkListener{}
 	for i, laddr := range l.addrs {
 		if l.logger.IsInfo() {
 			l.logger.Info("starting listener", "listener_address", laddr)
@@ -74,7 +74,7 @@ func (l *TCPLayer) Listeners() []NetworkListener {
 			l.addrs[i] = tcpLn.Addr().(*net.TCPAddr)
 		}
 
-		listeners[i] = tcpLn
+		listeners = append(listeners, tcpLn)
 	}
 
 	l.listeners = listeners
