@@ -202,15 +202,15 @@ groups.
     > must have `create` and `update` permission on the
     > **`sys/control-group/authorize`** endpoint so that they can approve the request.
 
-1) Enable key/value secrets engine at **`EU_GDPR_data`** and write some mock data:
+1.  Enable key/value secrets engine at **`EU_GDPR_data`** and write some mock data:
 
-   ```shell
-   # Enable kv-v1 at EU_GDPR_data
-   $ vault secrets enable -path=EU_GDPR_data -version=1 kv
+    ```shell
+    # Enable kv-v1 at EU_GDPR_data
+    $ vault secrets enable -path=EU_GDPR_data -version=1 kv
 
-   # Write some mock data
-   $ vault kv put EU_GDPR_data/orders/acct1 order_number="12345678" product_id="987654321"
-   ```
+    # Write some mock data
+    $ vault kv put EU_GDPR_data/orders/acct1 order_number="12345678" product_id="987654321"
+    ```
 
 ### <a name="step2"></a>Step 2: Deploy the policies
 
