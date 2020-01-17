@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/base64"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/shamir"
 	"testing"
 
@@ -53,6 +54,9 @@ func TestSealMigrationAutoToShamir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	testhelpers.WaitForActiveNode(t, cluster)
+
 	keys := resp.RecoveryKeysB64
 	rootToken := resp.RootToken
 	client.SetToken(rootToken)
