@@ -321,6 +321,35 @@ func TestMySQL_SetCredentials(t *testing.T) {
 	}
 }
 
+func TestMySQL_Initialize_ReservedChars(t *testing.T) {
+	pw := "#secret!%25#{@}"
+	cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, false, pw)
+	defer cleanup()
+
+	// Revert password set to test replacement by db.Init
+	connURL = strings.ReplaceAll(connURL, pw, "{{password}}")
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+		"password":       pw,
+	}
+
+	db := new(MetadataLen, MetadataLen, UsernameLen)
+	_, err := db.Init(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if !db.Initialized {
+		t.Fatal("Database should be initialized")
+	}
+
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+}
+
 func createTestMySQLUser(t *testing.T, connURL, username, password, query string) {
 	t.Helper()
 	db, err := sql.Open("mysql", connURL)
