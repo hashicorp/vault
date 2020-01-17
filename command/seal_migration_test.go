@@ -5,20 +5,92 @@ package command
 import (
 	"context"
 	"encoding/base64"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/shamir"
 	"testing"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
-	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
-	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
 )
+
+func TestSealMigrationAutoToShamir(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace).Named(t.Name())
+	phys, err := physInmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	haPhys, err := physInmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	autoSeal := vault.NewAutoSeal(seal.NewTestSeal(nil))
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		Seal:            autoSeal,
+		Physical:        phys,
+		HAPhysical:      haPhys.(physical.HABackend),
+		DisableSealWrap: true,
+	}, &vault.TestClusterOptions{
+		Logger:      logger,
+		HandlerFunc: vaulthttp.Handler,
+		SkipInit:    true,
+		NumCores:    1,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	resp, err := client.Sys().Init(&api.InitRequest{
+		RecoveryShares:    1,
+		RecoveryThreshold: 1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	keys := resp.RecoveryKeysB64
+	rootToken := resp.RootToken
+	client.SetToken(rootToken)
+	core := cluster.Cores[0].Core
+
+	shamirSeal := vault.NewDefaultSeal(&seal.Access{
+		Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+			Logger: logger.Named("shamir"),
+		}),
+	})
+	shamirSeal.SetCore(core)
+
+	if err := adjustCoreForSealMigration(logger, core, shamirSeal, autoSeal); err != nil {
+		t.Fatal(err)
+	}
+
+	var statusResp *api.SealStatusResponse
+	unsealOpts := &api.UnsealOpts{}
+	for _, key := range keys {
+		unsealOpts.Key = key
+		unsealOpts.Migrate = false
+		statusResp, err = client.Sys().UnsealWithOptions(unsealOpts)
+		if err == nil {
+			t.Fatal("expected error due to lack of migrate parameter")
+		}
+		unsealOpts.Migrate = true
+		statusResp, err = client.Sys().UnsealWithOptions(unsealOpts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected response")
+		}
+	}
+	if statusResp.Sealed {
+		t.Fatalf("expected unsealed state; got %#v", *resp)
+	}
+}
 
 func TestSealMigration(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace).Named(t.Name())
