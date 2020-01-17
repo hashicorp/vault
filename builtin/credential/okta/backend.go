@@ -77,7 +77,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		}
 	}
 
-	client, reqExec, err := cfg.OktaClient()
+	shim, err := cfg.OktaClient()
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -100,7 +100,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		StateToken   string         `json:"stateToken"`
 	}
 
-	authReq, err := reqExec.NewRequest("POST", "/api/v1/authn", map[string]interface{}{
+	authReq, err := shim.NewRequest("POST", "/api/v1/authn", map[string]interface{}{
 		"username": username,
 		"password": password,
 	})
@@ -109,7 +109,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	}
 
 	var result authResult
-	rsp, err := reqExec.Do(authReq, &result)
+	rsp, err := shim.Do(authReq, &result)
 	if err != nil {
 		if oe, ok := err.(*okta.Error); ok {
 			return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed: %v (code=%v)", err, oe.ErrorCode)), nil, nil
@@ -184,12 +184,12 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		payload := map[string]interface{}{
 			"stateToken": result.StateToken,
 		}
-		verifyReq, err := reqExec.NewRequest("POST", requestPath, payload)
+		verifyReq, err := shim.NewRequest("POST", requestPath, payload)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 
-		rsp, err := reqExec.Do(verifyReq, &result)
+		rsp, err := shim.Do(verifyReq, &result)
 		if err != nil {
 			return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed: %v", err)), nil, nil
 		}
@@ -199,11 +199,11 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		for result.Status == "MFA_CHALLENGE" {
 			switch result.FactorResult {
 			case "WAITING":
-				verifyReq, err := reqExec.NewRequest("POST", requestPath, payload)
+				verifyReq, err := shim.NewRequest("POST", requestPath, payload)
 				if err != nil {
 					return nil, logical.ErrorResponse(fmt.Sprintf("okta auth failed creating verify request: %v", err)), nil, nil
 				}
-				rsp, err := reqExec.Do(verifyReq, &result)
+				rsp, err := shim.Do(verifyReq, &result)
 				if err != nil {
 					return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed checking loop: %v", err)), nil, nil
 				}
@@ -258,6 +258,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 
 	var allGroups []string
 	// Only query the Okta API for group membership if we have a token
+	client := shim.Client()
 	if client != nil {
 		oktaGroups, err := b.getOktaGroups(client, &result.Embedded.User)
 		if err != nil {
