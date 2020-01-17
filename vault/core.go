@@ -1279,7 +1279,7 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 				SecretThreshold: config.SecretThreshold,
 				StoredShares:    1,
 			}); err != nil {
-				return nil, errwrap.Wrapf("failed to store barrier config migration: {{err}}", err)
+				return nil, errwrap.Wrapf("failed to store barrier config during migration: {{err}}", err)
 			}
 
 			// We have recovery keys; we're going to use them as the new
