@@ -48,7 +48,7 @@ func TestSealMigrationAutoToShamir(t *testing.T) {
 	defer cluster.Cleanup()
 
 	client := cluster.Cores[0].Client
-	resp, err := client.Sys().Init(&api.InitRequest{
+	initResp, err := client.Sys().Init(&api.InitRequest{
 		RecoveryShares:    1,
 		RecoveryThreshold: 1,
 	})
@@ -58,9 +58,8 @@ func TestSealMigrationAutoToShamir(t *testing.T) {
 
 	testhelpers.WaitForActiveNode(t, cluster)
 
-	keys := resp.RecoveryKeysB64
-	rootToken := resp.RootToken
-	client.SetToken(rootToken)
+	keys := initResp.RecoveryKeysB64
+	rootToken := initResp.RootToken
 	core := cluster.Cores[0].Core
 
 	client.SetToken(rootToken)
@@ -79,17 +78,17 @@ func TestSealMigrationAutoToShamir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var statusResp *api.SealStatusResponse
+	var resp *api.SealStatusResponse
 	unsealOpts := &api.UnsealOpts{}
 	for _, key := range keys {
 		unsealOpts.Key = key
 		unsealOpts.Migrate = false
-		statusResp, err = client.Sys().UnsealWithOptions(unsealOpts)
+		resp, err = client.Sys().UnsealWithOptions(unsealOpts)
 		if err == nil {
 			t.Fatal("expected error due to lack of migrate parameter")
 		}
 		unsealOpts.Migrate = true
-		statusResp, err = client.Sys().UnsealWithOptions(unsealOpts)
+		resp, err = client.Sys().UnsealWithOptions(unsealOpts)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -97,7 +96,7 @@ func TestSealMigrationAutoToShamir(t *testing.T) {
 			t.Fatal("expected response")
 		}
 	}
-	if statusResp.Sealed {
+	if resp.Sealed {
 		t.Fatalf("expected unsealed state; got %#v", *resp)
 	}
 }

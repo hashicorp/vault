@@ -1284,16 +1284,15 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 			if recoveryKey == nil {
 				return nil, errors.New("did not get expected recovery information to set new seal during migration")
 			}
-			/*
-				if err := c.seal.SetBarrierConfig(ctx, &SealConfig{
-					Type:            wrapping.Shamir,
-					SecretShares:    config.SecretShares,
-					SecretThreshold: config.SecretThreshold,
-					StoredShares:    1,
-				}); err != nil {
-					return nil, errwrap.Wrapf("failed to store barrier config during migration: {{err}}", err)
-				}
-			*/
+			if err := c.seal.SetBarrierConfig(ctx, &SealConfig{
+				Type:            wrapping.Shamir,
+				SecretShares:    config.SecretShares,
+				SecretThreshold: config.SecretThreshold,
+				StoredShares:    1,
+			}); err != nil {
+				return nil, errwrap.Wrapf("failed to store barrier config during migration: {{err}}", err)
+			}
+
 			// We have recovery keys; we're going to use them as the new
 			// shamir KeK.
 			err = c.seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(recoveryKey)
