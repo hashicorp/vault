@@ -1275,8 +1275,8 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 
 			if err := c.seal.SetBarrierConfig(ctx, &SealConfig{
 				Type:            wrapping.Shamir,
-				SecretShares:    1,
-				SecretThreshold: 1,
+				SecretShares:    config.SecretShares,
+				SecretThreshold: config.SecretThreshold,
 				StoredShares:    1,
 			}); err != nil {
 				return nil, errwrap.Wrapf("failed to store barrier config migration: {{err}}", err)
