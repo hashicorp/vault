@@ -18,7 +18,6 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [GH-8035]
-* ui: Change `.box-radio` height to min-height to prevent overflow issues [GH-8065]
 
 ## 1.3.2 (Unreleased)
 
@@ -39,6 +38,7 @@ BUG FIXES:
 * ui: Fix deleting namespaces [GH-8132]
 * ui: Fix Error handler on kv-secret edit and kv-secret view pages [GH-8133]
 * ui: Fix OIDC callback to check storage [GH-7929].
+* ui: Change `.box-radio` height to min-height to prevent overflow issues [GH-8065]
 
 ## 1.3.1 (December 18th, 2019)
 
