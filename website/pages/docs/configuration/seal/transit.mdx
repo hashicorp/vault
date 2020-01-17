@@ -28,12 +28,12 @@ seal "transit" {
   token              = "s.Qf1s5zigZ4OX6akYjQXJC1jY"
   disable_renewal    = "false"
 
-  // Key configuration
+  # Key configuration
   key_name           = "transit_key_name"
   mount_path         = "transit/"
   namespace          = "ns1/"
 
-  // TLS Configuration
+  # TLS Configuration
   tls_ca_cert        = "/etc/vault/ca_cert.pem"
   tls_client_cert    = "/etc/vault/client_cert.pem"
   tls_client_key     = "/etc/vault/ca_cert.pem"
@@ -56,11 +56,11 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   decryption. This may also be supplied using the `VAULT_TRANSIT_SEAL_KEY_NAME`
   environment variable.
 
-- `mount_path` `(string: <required>)`: The mount path to the transit secret engine.  
+- `mount_path` `(string: <required>)`: The mount path to the transit secret engine.
   This may also be supplied using the `VAULT_TRANSIT_SEAL_MOUNT_PATH` environment
   variable.
 
-- `namespace` `(string: "")`: The namespace path to the transit secret engine.  
+- `namespace` `(string: "")`: The namespace path to the transit secret engine.
   This may also be supplied using the `VAULT_NAMESPACE` environment variable.
 
 - `disable_renewal` `(string: "false")`: Disables the automatic renewal of the token
