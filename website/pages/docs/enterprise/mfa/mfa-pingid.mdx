@@ -58,72 +58,71 @@ This page demonstrates PingID MFA on ACL'd paths of Vault.
    identity information. Create a user in the `userpass` auth method and
    authenticate against it:
 
+   ```text
+   $ vault write auth/userpass/users/testuser \
+       password=testpassword \
+       policies=ping-policy
+   ```
 
-    ```text
-    $ vault write auth/userpass/users/testuser \
-        password=testpassword \
-        policies=ping-policy
-    ```
+1. Create a login token:
 
-1.  Create a login token:
+   ```text
+   $ vault write auth/userpass/login/testuser password=testpassword
 
-    ```text
-    $ vault write auth/userpass/login/testuser password=testpassword
+   Key                    Value
+   ---                    -----
+   token                  70f97438-e174-c03c-40fe-6bcdc1028d6c
+   token_accessor         a91d97f4-1c7d-6af3-e4bf-971f74f9fab9
+   token_duration         768h0m0s
+   token_renewable        true
+   token_policies         [default ping-policy]
+   token_meta_username    "testuser"
+   ```
 
-    Key                    Value
-    ---                    -----
-    token                  70f97438-e174-c03c-40fe-6bcdc1028d6c
-    token_accessor         a91d97f4-1c7d-6af3-e4bf-971f74f9fab9
-    token_duration         768h0m0s
-    token_renewable        true
-    token_policies         [default ping-policy]
-    token_meta_username    "testuser"
-    ```
+   Note that the CLI is not authenticated with the newly created token yet, we
+   did not call `vault login`, instead we used the login API to simply return a
+   token.
 
-    Note that the CLI is not authenticated with the newly created token yet, we
-    did not call `vault login`, instead we used the login API to simply return a
-    token.
+1. Fetch the entity ID from the token. The caller identity is represented by the
+   `entity_id` property of the token:
 
-1.  Fetch the entity ID from the token. The caller identity is represented by the
-    `entity_id` property of the token:
+   ```text
+   $ vault token lookup 70f97438-e174-c03c-40fe-6bcdc1028d6c
 
-    ```text
-    $ vault token lookup 70f97438-e174-c03c-40fe-6bcdc1028d6c
+   Key                 Value
+   ---                 -----
+   accessor            a91d97f4-1c7d-6af3-e4bf-971f74f9fab9
+   creation_time       1502245243
+   creation_ttl        2764800
+   display_name        userpass-testuser
+   entity_id           307d6c16-6f5c-4ae7-46a9-2d153ffcbc63
+   expire_time         2017-09-09T22:20:43.448543132-04:00
+   explicit_max_ttl    0
+   id                  70f97438-e174-c03c-40fe-6bcdc1028d6c
+   issue_time          2017-08-08T22:20:43.448543003-04:00
+   meta                map[username:testuser]
+   num_uses            0
+   orphan              true
+   path                auth/userpass/login/testuser
+   policies            [default ping-policy]
+   renewable           true
+   ttl                 2764623
+   ```
 
-    Key                 Value
-    ---                 -----
-    accessor            a91d97f4-1c7d-6af3-e4bf-971f74f9fab9
-    creation_time       1502245243
-    creation_ttl        2764800
-    display_name        userpass-testuser
-    entity_id           307d6c16-6f5c-4ae7-46a9-2d153ffcbc63
-    expire_time         2017-09-09T22:20:43.448543132-04:00
-    explicit_max_ttl    0
-    id                  70f97438-e174-c03c-40fe-6bcdc1028d6c
-    issue_time          2017-08-08T22:20:43.448543003-04:00
-    meta                map[username:testuser]
-    num_uses            0
-    orphan              true
-    path                auth/userpass/login/testuser
-    policies            [default ping-policy]
-    renewable           true
-    ttl                 2764623
-    ```
+1. Login as the user:
 
-1.  Login as the user:
+   ```text
+   $ vault login 70f97438-e174-c03c-40fe-6bcdc1028d6c
+   ```
 
-    ```text
-    $ vault login 70f97438-e174-c03c-40fe-6bcdc1028d6c
-    ```
+1. Read a secret to trigger a PingID push. This will be a blocking call until
+   the push notification is either approved or declined:
 
-1.  Read a secret to trigger a PingID push. This will be a blocking call until
-    the push notification is either approved or declined:
+   ```text
+   $ vault read secret/foo
 
-    ```text
-    $ vault read secret/foo
-
-    Key                 Value
-    ---                 -----
-    refresh_interval    768h
-    data                which can only be read after MFA validation
-    ```
+   Key                 Value
+   ---                 -----
+   refresh_interval    768h
+   data                which can only be read after MFA validation
+   ```
