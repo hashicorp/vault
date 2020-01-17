@@ -5,10 +5,11 @@ package command
 import (
 	"context"
 	"encoding/base64"
+	"testing"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/shamir"
-	"testing"
 
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
@@ -61,6 +62,11 @@ func TestSealMigrationAutoToShamir(t *testing.T) {
 	rootToken := resp.RootToken
 	client.SetToken(rootToken)
 	core := cluster.Cores[0].Core
+
+	client.SetToken(rootToken)
+	if err := client.Sys().Seal(); err != nil {
+		t.Fatal(err)
+	}
 
 	shamirSeal := vault.NewDefaultSeal(&seal.Access{
 		Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
