@@ -49,8 +49,8 @@ func TestSealMigrationAutoToShamir(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 	initResp, err := client.Sys().Init(&api.InitRequest{
-		RecoveryShares:    1,
-		RecoveryThreshold: 1,
+		RecoveryShares:    5,
+		RecoveryThreshold: 3,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -94,6 +94,9 @@ func TestSealMigrationAutoToShamir(t *testing.T) {
 		}
 		if resp == nil {
 			t.Fatal("expected response")
+		}
+		if !resp.Sealed {
+			break
 		}
 	}
 	if resp.Sealed {
