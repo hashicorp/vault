@@ -31,6 +31,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/copystructure"
 
@@ -1057,7 +1058,11 @@ type TestClusterOptions struct {
 	FirstCoreNumber   int
 	RequireClientAuth bool
 	// SetupFunc is called after the cluster is started.
-	SetupFunc func(t testing.T, c *TestCluster)
+	SetupFunc      func(t testing.T, c *TestCluster)
+	PR1103Disabled bool
+
+	// ClusterLayers are used to override the default cluster connection layer
+	ClusterLayers cluster.NetworkLayerSet
 }
 
 var DefaultNumCores = 3
@@ -1091,6 +1096,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		numCores = DefaultNumCores
 	} else {
 		numCores = opts.NumCores
+	}
+
+	var disablePR1103 bool
+	if opts != nil && opts.PR1103Disabled {
+		disablePR1103 = true
 	}
 
 	var firstCoreNumber int
@@ -1486,6 +1496,10 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			}
 		}
 
+		if opts != nil && opts.ClusterLayers != nil {
+			localConfig.ClusterNetworkLayer = opts.ClusterLayers.Layers()[i]
+		}
+
 		switch {
 		case localConfig.LicensingConfig != nil:
 			if pubKey != nil {
@@ -1506,6 +1520,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			t.Fatalf("err: %v", err)
 		}
 		c.coreNumber = firstCoreNumber + i
+		c.PR1103disabled = disablePR1103
 		cores = append(cores, c)
 		coreConfigs = append(coreConfigs, &localConfig)
 		if opts != nil && opts.HandlerFunc != nil {
