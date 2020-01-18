@@ -16,7 +16,11 @@ module.exports = withHashicorp({
       }
     ],
     redirects: () => [
-      { source: '/intro', destination: '/intro/getting-started' }
+      {
+        source: '/intro',
+        destination: '/intro/getting-started',
+        permanent: false
+      }
     ]
   },
   exportTrailingSlash: true,
