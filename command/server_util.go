@@ -107,7 +107,8 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 		newSeal.SetCachedBarrierConfig(newSealConfig)
 	case newSeal.RecoveryKeySupported():
 		// Migrating from shamir->auto, set a new barrier config and set
-		// recovery config to shamir's barrier config
+		// recovery config to a clone of shamir's barrier config with stored
+		// keys set to 0.
 		newBarrierSealConfig := &vault.SealConfig{
 			Type:            newSeal.BarrierType(),
 			SecretShares:    1,
@@ -115,7 +116,10 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 			StoredShares:    1,
 		}
 		newSeal.SetCachedBarrierConfig(newBarrierSealConfig)
-		newSeal.SetCachedRecoveryConfig(existBarrierSealConfig)
+
+		newRecoveryConfig := existBarrierSealConfig.Clone()
+		newRecoveryConfig.StoredShares = 0
+		newSeal.SetCachedRecoveryConfig(newRecoveryConfig)
 	}
 
 	core.SetSealsForMigration(migrationSeal, newSeal, unwrapSeal)
