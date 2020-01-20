@@ -1935,6 +1935,9 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 			},
 		}
 		resp, err := core.HandleRequest(ctx, req)
+		if err == nil && resp != nil && resp.Error() != nil {
+			err = resp.Error()
+		}
 		if err != nil {
 			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create root token with ID %q: {{err}}", coreConfig.DevToken), err)
 		}
