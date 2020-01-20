@@ -1,5 +1,6 @@
 /api/*  /api-docs/:splat 200
 /intro /intro/getting-started
+/intro/getting-started/install /intro/getting-started
 
 /api/secret/generic/index.html  /api/secret/kv
 /api/system/renew.html  /api/system/leases
