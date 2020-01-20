@@ -1114,9 +1114,7 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 		resp.Data["options"] = mountEntry.Options
 	}
 
-	if len(mountEntry.Description) > 0 {
-		resp.Data["description"] = mountEntry.Description
-	}
+	resp.Data["description"] = mountEntry.Description
 
 	return resp, nil
 }
