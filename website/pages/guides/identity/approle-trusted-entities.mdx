@@ -321,8 +321,7 @@ $ curl --silent \
        $VAULT_ADDR/v1/sys/policy/app-1-secret-read
 ```
 
-<br />
-\\*\\*CLI command\\*\\*
+**CLI command**
 
 ```bash
 # Policy to apply to AppRole token
@@ -358,8 +357,7 @@ $ curl --silent \
        $VAULT_ADDR/v1/sys/auth/approle
 ```
 
-<br />
-\\*\\*CLI command\\*\\*
+**CLI command**
 
 ```plaintext
 $ vault auth enable -description="Demo AppRole auth method" approle
@@ -398,8 +396,7 @@ $ curl --silent \
        $VAULT_ADDR/v1/auth/approle/role/app-1
 ```
 
-<br />
-\\*\\*CLI command\\*\\*
+**CLI command**
 
 ```bash
 # TTL is set to 10 minutes, and Max TTL to be 30 minutes
@@ -507,8 +504,7 @@ $ cat roleid-token.json | jq
 }
 ```
 
-<br />
-\\*\\*CLI command\\*\\*
+**CLI command**
 
 ```bash
 # Policy file granting to retrieve RoleID from Vault
@@ -627,8 +623,7 @@ $ cat secretid-token.json | jq
 }
 ```
 
-<br />
-\\*\\*CLI command\\*\\*
+**CLI command**
 
 ```bash
 # Policy file granting to retrieve SecretID
@@ -759,8 +754,7 @@ $ curl --silent \
 }
 ```
 
-<br />
-\\*\\*CLI command\\*\\*
+**CLI command**
 
 ```bash
 # Write some demo secrets
