@@ -503,7 +503,7 @@ type Core struct {
 	recoveryMode bool
 
 	clusterNetworkLayer cluster.NetworkLayer
-  
+
 	// PR1103disabled is used to test upgrade workflows: when set to true,
 	// the correct behaviour for namespaced cubbyholes is disabled, so we
 	// can test an upgrade to a version that includes the fixes from

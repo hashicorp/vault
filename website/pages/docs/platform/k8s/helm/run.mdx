@@ -37,7 +37,7 @@ upgrade, etc. the Vault cluster.
 The Helm chart has no required configuration and will install a Vault
 cluster with sane defaults out of the box. Prior to going to production,
 it is highly recommended that you
-[learn about the configuration options](/docs/platform/k8s/helm.html#configuration-values-).
+[learn about the configuration options](/docs/platform/k8s/helm/configuration).
 
 ~> **Security Warning:** By default, the chart will install an insecure configuration
 of Vault. This provides a less complicated out-of-box experience for new users,
@@ -54,7 +54,7 @@ To install Vault, clone the vault-helm repository, checkout the latest release, 
 Vault. You can run `helm install` with the `--dry-run` flag to see the
 resources it would configure. In a production environment, you should always
 use the `--dry-run` flag prior to making any changes to the Vault cluster
-via Helm. See the [chart configuration values](/docs/platform/k8s/helm.html#configuration-values-)
+via Helm. See the [chart configuration values](/docs/platform/k8s/helm/configuration)
 for additional configuration options.
 
 ```sh
@@ -73,11 +73,11 @@ $ helm install --name vault ./
 !> **IMPORTANT NOTE:** Vault Helm will not initialize and unseal Vault automatically.
 Initialization is required after installation followed by unsealing. Vault can be
 configured to auto-unseal using KMS providers such as
-[Google Cloud Platform](/docs/platform/k8s/run.html#google-kms-auto-unseal). This
+[Google Cloud Platform](/docs/platform/k8s/helm/run#google-kms-auto-unseal). This
 allows the pods to auto unseal if they're rescheduled in Kubernetes.
 
 If standalone or HA mode are being used, the Vault pods must be initialized and unsealed.
-For HA deployments, only one of the Vault pods needs to be initialized.
+For standalone deployments, only one of the Vault pods needs to be initialized.
 
 ```sh
 $ kubectl exec -ti vault-0 -- vault operator init
