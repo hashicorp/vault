@@ -3,7 +3,7 @@
   successfully, and ties the resulting token to these blocks as well.
 - `token_explicit_max_ttl` `(integer: 0 or string: "")` - If set, will encode
   an [explicit max
-  TTL](https://www.vaultproject.io/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls)
+  TTL](/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls)
   onto the token. This is a hard cap even if `token_ttl` and `token_max_ttl`
   would otherwise allow a renewal.
 - `token_no_default_policy` `(bool: false)` - If set, the `default` policy will
@@ -12,7 +12,7 @@
 - `token_num_uses` `(integer: 0)` - The maximum number of times a generated
   token may be used (within its lifetime); 0 means unlimited.
 - `token_period` `(integer: 0 or string: "")` - The
-  [period](https://www.vaultproject.io/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls),
+  [period](/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls),
   if any, to set on the token.
 - `token_type` `(string: "")` - The type of token that should be generated. Can
   be `service`, `batch`, or `default` to use the mount's tuned default (which

@@ -76,7 +76,7 @@ active duty. To do this:
    If you kill Vault without letting it release the lock, a standby node will
    not be able to take over until the lock's timeout period has expired. This
    is backend-specific but could be ten seconds or more.
-2. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](https://www.vaultproject.io/docs/configuration/index.html#disable_mlock)
+2. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/docs/configuration/index.html#disable_mlock)
 3. Start the node
 4. Unseal the node (it will now be a standby)
 

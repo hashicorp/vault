@@ -93,7 +93,7 @@ Add the below configuration to the Vault service file:
 ```text
 [Unit]
 Description="HashiCorp Vault - A tool for managing secrets"
-Documentation=https://www.vaultproject.io/docs/
+Documentation=/docs/
 Requires=network-online.target
 After=network-online.target
 ConditionFileNotEmpty=/etc/vault.d/vault.hcl

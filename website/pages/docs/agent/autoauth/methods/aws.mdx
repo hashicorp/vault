@@ -8,7 +8,7 @@ description: AWS Method for Vault Agent Auto-Auth
 # Vault Agent Auto-Auth AWS Method
 
 The `aws` method performs authentication against the [AWS Auth
-method](https://www.vaultproject.io/docs/auth/aws.html). Both `ec2` and `iam`
+method](/docs/auth/aws.html). Both `ec2` and `iam`
 authentication types are supported. If `ec2` is used, the agent will store the
 reauthentication value in memory and use it for reauthenticating, but will not
 persist it to disk.
@@ -49,13 +49,13 @@ parameters unset in your configuration.
 
 - `region` `(string: "us-east-1")` - The region to use for signing the authentication request. The
   region Agent uses should match that corresponding to
-  [`sts_endpoint`](https://www.vaultproject.io/api/auth/aws/index.html#sts_endpoint),
+  [`sts_endpoint`](/api/auth/aws/index.html#sts_endpoint),
   if a custom endpoint has been configured on the Vault server.
 
 - `session_token` `(string: optional)` - The session token to use for authentication, if needed.
 
 - `header_value` `(string: optional)` - If configured in Vault, the value to use for
-  [`iam_server_id_header_value`](https://www.vaultproject.io/api/auth/aws/index.html#iam_server_id_header_value).
+  [`iam_server_id_header_value`](/api/auth/aws/index.html#iam_server_id_header_value).
 
 ## Learn
 

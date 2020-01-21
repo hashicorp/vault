@@ -42,7 +42,7 @@ when enabling it.
 
 Vault creates a mutually authenticated TLS connection for communication with the
 plugin's RPC server. While invoking the plugin process, Vault passes a [wrapping
-token](https://www.vaultproject.io/docs/concepts/response-wrapping.html) to the
+token](/docs/concepts/response-wrapping.html) to the
 plugin process' environment. This token is single use and has a short TTL. Once
 unwrapped, it provides the plugin with a uniquely generated TLS certificate and
 private key for it to use to talk to the original Vault process.
@@ -65,7 +65,7 @@ plugin directory and the plugin catalog entry.
 ### Plugin Directory
 
 The plugin directory is a configuration option of Vault, and can be specified in
-the [configuration file](https://www.vaultproject.io/docs/configuration/index.html).
+the [configuration file](/docs/configuration/index.html).
 This setting specifies a directory in which all plugin binaries must live;
 _this value cannot be a symbolic link_. A plugin
 can not be added to Vault unless it exists in the plugin directory. There is no
@@ -103,7 +103,7 @@ When a backend wants to run a plugin, it first looks up the plugin, by name, in
 the catalog. It then checks the executable's SHA256 sum against the one
 configured in the plugin catalog. Finally Vault runs the command configured in
 the catalog, sending along the JWT formatted response wrapping token and mlock
-settings (like Vault, plugins support [the use of mlock when available](https://www.vaultproject.io/docs/configuration/index.html#disable_mlock)).
+settings (like Vault, plugins support [the use of mlock when available](/docs/configuration/index.html#disable_mlock)).
 
 # Plugin Development
 

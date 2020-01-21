@@ -143,7 +143,7 @@ Logging in via the Vault UI requires a redirect URI of the form:
 
 The "host:port" must be correct for the Vault server, and "path" must match the path the JWT
 backend is mounted at (e.g. "oidc" or "jwt").
-If [namespaces](https://www.vaultproject.io/docs/enterprise/namespaces/index.html) are being used,
+If [namespaces](/docs/enterprise/namespaces/index.html) are being used,
 they must be added as query parameters, for example:
 
 `https://vault.example.com:8200/ui/vault/auth/oidc/oidc/callback?namespace=my_ns`
