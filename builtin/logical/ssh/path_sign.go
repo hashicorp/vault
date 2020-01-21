@@ -37,7 +37,7 @@ type creationBundle struct {
 
 func pathSign(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "sign/" + framework.GenericNameRegex("role"),
+		Pattern: "sign/" + framework.GenericNameWithAtRegex("role"),
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathSign,
