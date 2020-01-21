@@ -16,7 +16,7 @@ import (
 // pathsRole returns the path configurations for the CRUD operations on roles
 func pathsRole(b *kubeAuthBackend) []*framework.Path {
 	p := []*framework.Path{
-		&framework.Path{
+		{
 			Pattern: "role/?",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: b.pathRoleList(),
@@ -34,12 +34,12 @@ func pathsRole(b *kubeAuthBackend) []*framework.Path {
 				"bound_service_account_names": &framework.FieldSchema{
 					Type: framework.TypeCommaStringSlice,
 					Description: `List of service account names able to access this role. If set to "*" all names
-are allowed, both this and bound_service_account_namespaces can not be "*"`,
+are allowed.`,
 				},
 				"bound_service_account_namespaces": &framework.FieldSchema{
 					Type: framework.TypeCommaStringSlice,
 					Description: `List of namespaces allowed to access this role. If set to "*" all namespaces
-are allowed, both this and bound_service_account_names can not be set to "*"`,
+are allowed.`,
 				},
 				"audience": &framework.FieldSchema{
 					Type:        framework.TypeString,
@@ -296,11 +296,6 @@ func (b *kubeAuthBackend) pathRoleCreateUpdate() framework.OperationFunc {
 		// Verify * was not set with other data
 		if len(role.ServiceAccountNamespaces) > 1 && strutil.StrListContains(role.ServiceAccountNamespaces, "*") {
 			return logical.ErrorResponse("can not mix \"*\" with values"), nil
-		}
-
-		// Verify that both names and namespaces are not set to "*"
-		if strutil.StrListContains(role.ServiceAccountNames, "*") && strutil.StrListContains(role.ServiceAccountNamespaces, "*") {
-			return logical.ErrorResponse("service_account_names and service_account_namespaces can not both be \"*\""), nil
 		}
 
 		// optional audience field
