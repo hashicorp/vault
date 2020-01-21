@@ -176,23 +176,24 @@ func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 
 func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		_, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
-		if !ok {
-			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
-		}
-
 		serverID := d.Get("server_id").(string)
 		if len(serverID) == 0 {
 			return logical.ErrorResponse("no server id provided"), logical.ErrInvalidRequest
 		}
 
-		uuid, err := uuid.GenerateRandomBytes(16)
-		if err != nil {
-			return nil, err
+		answer, ok := b.Core.pendingRaftPeers[serverID]
+		if !ok {
+			var err error
+			answer, err = uuid.GenerateRandomBytes(16)
+			if err != nil {
+				return nil, err
+			}
+			b.Core.pendingRaftPeers[serverID] = answer
 		}
 
 		sealAccess := b.Core.seal.GetAccess()
-		eBlob, err := sealAccess.Encrypt(ctx, uuid, nil)
+
+		eBlob, err := sealAccess.Encrypt(ctx, answer, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -201,7 +202,6 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 			return nil, err
 		}
 
-		b.Core.pendingRaftPeers[serverID] = uuid
 		sealConfig, err := b.Core.seal.BarrierConfig(ctx)
 		if err != nil {
 			return nil, err
@@ -284,6 +284,8 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 		if err != nil {
 			return nil, err
 		}
+
+		b.logger.Info("follower node answered the raft bootstrap challenge", "follower_server_id", serverID)
 
 		return &logical.Response{
 			Data: map[string]interface{}{

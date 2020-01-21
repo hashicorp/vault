@@ -18,7 +18,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
@@ -162,6 +162,7 @@ type raftInformation struct {
 	leaderClient        *api.Client
 	leaderBarrierConfig *SealConfig
 	nonVoter            bool
+	joinInProgress      bool
 }
 
 // Core is used as the central manager of Vault activity. It is the primary point of
@@ -203,6 +204,15 @@ type Core struct {
 
 	// seal is our seal, for seal configuration information
 	seal Seal
+
+	// raftJoinDoneCh is used by the raft retry join routine to inform unseal process
+	// that the join is complete
+	raftJoinDoneCh chan struct{}
+
+	// postUnsealStarted informs the raft retry join routine that unseal key
+	// validation is completed and post unseal has started so that it can complete
+	// the join process when Shamir seal is in use
+	postUnsealStarted *uint32
 
 	// raftInfo will contain information required for this node to join as a
 	// peer to an existing raft cluster
@@ -483,6 +493,14 @@ type Core struct {
 	secureRandomReader io.Reader
 
 	recoveryMode bool
+
+	clusterNetworkLayer cluster.NetworkLayer
+
+	// PR1103disabled is used to test upgrade workflows: when set to true,
+	// the correct behaviour for namespaced cubbyholes is disabled, so we
+	// can test an upgrade to a version that includes the fixes from
+	// https://github.com/hashicorp/vault-enterprise/pull/1103
+	PR1103disabled bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -566,6 +584,8 @@ type CoreConfig struct {
 	CounterSyncInterval time.Duration
 
 	RecoveryMode bool
+
+	ClusterNetworkLayer cluster.NetworkLayer
 }
 
 func (c *CoreConfig) Clone() *CoreConfig {
@@ -601,6 +621,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 		DisableIndexing:           c.DisableIndexing,
 		AllLoggers:                c.AllLoggers,
 		CounterSyncInterval:       c.CounterSyncInterval,
+		ClusterNetworkLayer:       c.ClusterNetworkLayer,
 	}
 }
 
@@ -696,6 +717,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		maxLeaseTTL:                  conf.MaxLeaseTTL,
 		cachingDisabled:              conf.DisableCache,
 		clusterName:                  conf.ClusterName,
+		clusterNetworkLayer:          conf.ClusterNetworkLayer,
 		clusterPeerClusterAddrsCache: cache.New(3*cluster.HeartbeatInterval, time.Second),
 		enableMlock:                  !conf.DisableMlock,
 		rawEnabled:                   conf.EnableRaw,
@@ -721,7 +743,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 			requests:     new(uint64),
 			syncInterval: syncInterval,
 		},
-		recoveryMode: conf.RecoveryMode,
+		recoveryMode:      conf.RecoveryMode,
+		postUnsealStarted: new(uint32),
+		raftJoinDoneCh:    make(chan struct{}),
 	}
 
 	atomic.StoreUint32(c.sealed, 1)
@@ -1032,13 +1056,26 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 			return c.unsealInternal(ctx, masterKey)
 		}
 
-		// If we are in the middle of a raft join send the answer and wait for
-		// data to start streaming in.
-		if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), c.raftInfo); err != nil {
-			return false, err
+		switch c.raftInfo.joinInProgress {
+		case true:
+			// JoinRaftCluster is already trying to perform a join based on retry_join configuration.
+			// Inform that routine that unseal key validation is complete so that it can continue to
+			// try and join possible leader nodes, and wait for it to complete.
+
+			atomic.StoreUint32(c.postUnsealStarted, 1)
+
+			c.logger.Info("waiting for raft retry join process to complete")
+			<-c.raftJoinDoneCh
+
+		default:
+			// This is the case for manual raft join. Send the answer to the leader node and
+			// wait for data to start streaming in.
+			if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), c.raftInfo); err != nil {
+				return false, err
+			}
+			// Reset the state
+			c.raftInfo = nil
 		}
-		// Reset the state
-		c.raftInfo = nil
 
 		go func() {
 			keyringFound := false

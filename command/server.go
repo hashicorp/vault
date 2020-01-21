@@ -1505,6 +1505,15 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}()
 	}
 
+	// When the underlying storage is raft, kick off retry join if it was specified
+	// in the configuration
+	if config.Storage.Type == "raft" {
+		if err := core.InitiateRetryJoin(context.Background()); err != nil {
+			c.UI.Error(fmt.Sprintf("Failed to initiate raft retry join, %q", err.Error()))
+			return 1
+		}
+	}
+
 	// Perform service discovery registrations and initialization of
 	// HTTP server after the verifyOnly check.
 

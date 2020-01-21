@@ -2,8 +2,11 @@ package raft
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"io"
 	"io/ioutil"
 	"os"
@@ -105,6 +108,64 @@ type RaftBackend struct {
 
 	// permitPool is used to limit the number of concurrent storage calls.
 	permitPool *physical.PermitPool
+}
+
+// LeaderJoinInfo contains information required by a node to join itself as a
+// follower to an existing raft cluster
+type LeaderJoinInfo struct {
+	// LeaderAPIAddr is the address of the leader node to connect to
+	LeaderAPIAddr string `json:"leader_api_addr"`
+
+	// LeaderCACert is the CA cert of the leader node
+	LeaderCACert string `json:"leader_ca_cert"`
+
+	// LeaderClientCert is the client certificate for the follower node to establish
+	// client authentication during TLS
+	LeaderClientCert string `json:"leader_client_cert"`
+
+	// LeaderClientKey is the client key for the follower node to establish client
+	// authentication during TLS
+	LeaderClientKey string `json:"leader_client_key"`
+
+	// Retry indicates if the join process should automatically be retried
+	Retry bool `json:"-"`
+
+	// TLSConfig for the API client to use when communicating with the leader node
+	TLSConfig *tls.Config `json:"-"`
+}
+
+// JoinConfig returns a list of information about possible leader nodes that
+// this node can join as a follower
+func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
+	config := b.conf["retry_join"]
+	if config == "" {
+		return nil, nil
+	}
+
+	var leaderInfos []*LeaderJoinInfo
+	err := jsonutil.DecodeJSON([]byte(config), &leaderInfos)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to decode retry_join config: {{err}}", err)
+	}
+
+	if len(leaderInfos) == 0 {
+		return nil, errors.New("invalid retry_join config")
+	}
+
+	for _, info := range leaderInfos {
+		info.Retry = true
+		var tlsConfig *tls.Config
+		var err error
+		if len(info.LeaderCACert) != 0 || len(info.LeaderClientCert) != 0 || len(info.LeaderClientKey) != 0 {
+			tlsConfig, err = tlsutil.ClientTLSConfig([]byte(info.LeaderCACert), []byte(info.LeaderClientCert), []byte(info.LeaderClientKey))
+			if err != nil {
+				return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node %q: {{err}}", info.LeaderAPIAddr), err)
+			}
+		}
+		info.TLSConfig = tlsConfig
+	}
+
+	return leaderInfos, nil
 }
 
 // EnsurePath is used to make sure a path exists
@@ -442,14 +503,8 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	case opts.ClusterListener == nil:
 		return errors.New("no cluster listener provided")
 	default:
-		// Load the base TLS config from the cluster listener.
-		baseTLSConfig, err := opts.ClusterListener.TLSConfig(ctx)
-		if err != nil {
-			return err
-		}
-
 		// Set the local address and localID in the streaming layer and the raft config.
-		streamLayer, err := NewRaftLayer(b.logger.Named("stream"), opts.TLSKeyring, opts.ClusterListener.Addr(), baseTLSConfig)
+		streamLayer, err := NewRaftLayer(b.logger.Named("stream"), opts.TLSKeyring, opts.ClusterListener)
 		if err != nil {
 			return err
 		}
