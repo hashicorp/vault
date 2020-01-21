@@ -325,3 +325,52 @@ func TestClone(t *testing.T) {
 
 	_ = client2
 }
+
+func TestSetHeadersRaceSafe(t *testing.T) {
+	client, err1 := NewClient(nil)
+	if err1 != nil {
+		t.Fatalf("NewClient failed: %v", err1)
+	}
+
+	start := make(chan interface{})
+	done := make(chan interface{})
+
+	testPairs := map[string]string{
+		"soda":    "rootbeer",
+		"veggie":  "carrots",
+		"fruit":   "apples",
+		"color":   "red",
+		"protein": "egg",
+	}
+
+	for key, value := range testPairs {
+		tmpKey := key
+		tmpValue := value
+		go func() {
+			<-start
+			// This test fails if here, you replace client.AddHeader(tmpKey, tmpValue) with:
+			// 	headerCopy := client.Header()
+			// 	headerCopy.AddHeader(tmpKey, tmpValue)
+			// 	client.SetHeader(headerCopy)
+			client.AddHeader(tmpKey, tmpValue)
+			done <- true
+		}()
+	}
+
+	// Start everyone at once.
+	close(start)
+
+	// Wait until everyone is done.
+	for i := 0; i < len(testPairs); i++ {
+		<-done
+	}
+
+	// Check that all the test pairs are in the resulting
+	// headers.
+	resultingHeaders := client.Headers()
+	for key, value := range testPairs {
+		if resultingHeaders.Get(key) != value {
+			t.Fatal("expected " + value + " for " + key)
+		}
+	}
+}

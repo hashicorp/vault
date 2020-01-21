@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"net/http"
 	"testing"
 	"time"
 
@@ -31,14 +32,14 @@ func newUserpassTestMethod(t *testing.T, client *api.Client) AuthMethod {
 	return &userpassTestMethod{}
 }
 
-func (u *userpassTestMethod) Authenticate(_ context.Context, client *api.Client) (string, map[string]interface{}, error) {
+func (u *userpassTestMethod) Authenticate(_ context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
 	_, err := client.Logical().Write("auth/userpass/users/foo", map[string]interface{}{
 		"password": "bar",
 	})
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
-	return "auth/userpass/login/foo", map[string]interface{}{
+	return "auth/userpass/login/foo", nil, map[string]interface{}{
 		"password": "bar",
 	}, nil
 }

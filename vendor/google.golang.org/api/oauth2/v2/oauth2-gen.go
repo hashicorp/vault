@@ -53,8 +53,8 @@ import (
 	"strconv"
 	"strings"
 
-	gensupport "google.golang.org/api/gensupport"
 	googleapi "google.golang.org/api/googleapi"
+	gensupport "google.golang.org/api/internal/gensupport"
 	option "google.golang.org/api/option"
 	htransport "google.golang.org/api/transport/http"
 )
@@ -422,6 +422,7 @@ func (c *GetCertForOpenIdConnectCall) Header() http.Header {
 
 func (c *GetCertForOpenIdConnectCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.13.4 gdcl/20191114")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -550,6 +551,7 @@ func (c *TokeninfoCall) Header() http.Header {
 
 func (c *TokeninfoCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.13.4 gdcl/20191114")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -682,6 +684,7 @@ func (c *UserinfoGetCall) Header() http.Header {
 
 func (c *UserinfoGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.13.4 gdcl/20191114")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -808,6 +811,7 @@ func (c *UserinfoV2MeGetCall) Header() http.Header {
 
 func (c *UserinfoV2MeGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.13.4 gdcl/20191114")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}

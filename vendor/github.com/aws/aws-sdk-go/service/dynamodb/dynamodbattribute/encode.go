@@ -194,6 +194,13 @@ type MarshalOptions struct {
 	// Note that values provided with a custom TagKey must also be supported
 	// by the (un)marshalers in this package.
 	TagKey string
+
+	// EnableEmptyCollections modifies how structures, maps, and slices are (un)marshalled.
+	// When set to true empty collection values will be preserved as their respective
+	// empty DynamoDB AttributeValue type when set to true.
+	//
+	// Disabled by default.
+	EnableEmptyCollections bool
 }
 
 // An Encoder provides marshaling Go value types to AttributeValues.
@@ -255,7 +262,7 @@ func fieldByIndex(v reflect.Value, index []int,
 
 func (e *Encoder) encode(av *dynamodb.AttributeValue, v reflect.Value, fieldTag tag) error {
 	// We should check for omitted values first before dereferencing.
-	if fieldTag.OmitEmpty && emptyValue(v) {
+	if fieldTag.OmitEmpty && emptyValue(v, e.EnableEmptyCollections) {
 		encodeNull(av)
 		return nil
 	}
@@ -330,7 +337,7 @@ func (e *Encoder) encodeStruct(av *dynamodb.AttributeValue, v reflect.Value, fie
 
 		av.M[f.Name] = elem
 	}
-	if len(av.M) == 0 {
+	if len(av.M) == 0 && !e.EnableEmptyCollections {
 		encodeNull(av)
 	}
 
@@ -357,7 +364,8 @@ func (e *Encoder) encodeMap(av *dynamodb.AttributeValue, v reflect.Value, fieldT
 
 		av.M[keyName] = elem
 	}
-	if len(av.M) == 0 {
+
+	if v.IsNil() || (len(av.M) == 0 && !e.EnableEmptyCollections) {
 		encodeNull(av)
 	}
 
@@ -365,13 +373,18 @@ func (e *Encoder) encodeMap(av *dynamodb.AttributeValue, v reflect.Value, fieldT
 }
 
 func (e *Encoder) encodeSlice(av *dynamodb.AttributeValue, v reflect.Value, fieldTag tag) error {
+	if v.Kind() == reflect.Array && v.Len() == 0 && e.EnableEmptyCollections && fieldTag.OmitEmpty {
+		encodeNull(av)
+		return nil
+	}
+
 	switch v.Type().Elem().Kind() {
 	case reflect.Uint8:
 		slice := reflect.MakeSlice(byteSliceType, v.Len(), v.Len())
 		reflect.Copy(slice, v)
 
 		b := slice.Bytes()
-		if len(b) == 0 {
+		if (v.Kind() == reflect.Slice && v.IsNil()) || (len(b) == 0 && !e.EnableEmptyCollections) {
 			encodeNull(av)
 			return nil
 		}
@@ -416,7 +429,7 @@ func (e *Encoder) encodeSlice(av *dynamodb.AttributeValue, v reflect.Value, fiel
 
 		if n, err := e.encodeList(v, fieldTag, elemFn); err != nil {
 			return err
-		} else if n == 0 {
+		} else if (v.Kind() == reflect.Slice && v.IsNil()) || (n == 0 && !e.EnableEmptyCollections) {
 			encodeNull(av)
 		}
 	}
@@ -489,8 +502,10 @@ func (e *Encoder) encodeNumber(av *dynamodb.AttributeValue, v reflect.Value) err
 		out = encodeInt(v.Int())
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		out = encodeUint(v.Uint())
-	case reflect.Float32, reflect.Float64:
-		out = encodeFloat(v.Float())
+	case reflect.Float32:
+		out = encodeFloat(v.Float(), 32)
+	case reflect.Float64:
+		out = encodeFloat(v.Float(), 64)
 	default:
 		return &unsupportedMarshalTypeError{Type: v.Type()}
 	}
@@ -526,8 +541,8 @@ func encodeInt(i int64) string {
 func encodeUint(u uint64) string {
 	return strconv.FormatUint(u, 10)
 }
-func encodeFloat(f float64) string {
-	return strconv.FormatFloat(f, 'f', -1, 64)
+func encodeFloat(f float64, bitSize int) string {
+	return strconv.FormatFloat(f, 'f', -1, bitSize)
 }
 func encodeNull(av *dynamodb.AttributeValue) {
 	t := true
@@ -545,9 +560,13 @@ func valueElem(v reflect.Value) reflect.Value {
 	return v
 }
 
-func emptyValue(v reflect.Value) bool {
+func emptyValue(v reflect.Value, emptyCollections bool) bool {
 	switch v.Kind() {
-	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
+	case reflect.Array:
+		return v.Len() == 0 && !emptyCollections
+	case reflect.Map, reflect.Slice:
+		return v.IsNil() || (v.Len() == 0 && !emptyCollections)
+	case reflect.String:
 		return v.Len() == 0
 	case reflect.Bool:
 		return !v.Bool()
