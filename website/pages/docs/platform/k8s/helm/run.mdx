@@ -77,7 +77,7 @@ configured to auto-unseal using KMS providers such as
 allows the pods to auto unseal if they're rescheduled in Kubernetes.
 
 If standalone or HA mode are being used, the Vault pods must be initialized and unsealed.
-For HA deployments, only one of the Vault pods needs to be initialized.
+For standalone deployments, only one of the Vault pods needs to be initialized.
 
 ```sh
 $ kubectl exec -ti vault-0 -- vault operator init
