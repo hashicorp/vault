@@ -12,8 +12,8 @@ require (
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-hclog v0.9.2
-	github.com/hashicorp/vault/api v1.0.5-0.20191216174727-9d51b36f3ae4
-	github.com/hashicorp/vault/sdk v0.1.14-0.20191216174727-9d51b36f3ae4
+	github.com/hashicorp/vault/api v1.0.5-0.20200117231345-460d63e36490
+	github.com/hashicorp/vault/sdk v0.1.14-0.20200117231345-460d63e36490
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
 )
