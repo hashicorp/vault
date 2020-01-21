@@ -26,8 +26,8 @@ it into HashiCorp's maintenance.
 ## Prerequisites
 
 Kerberos is a very hands-on auth method. Other auth methods like
-[LDAP](/docs/auth/ldap.html) and
-[Azure](/docs/auth/azure.html) only require
+[LDAP](/docs/auth/ldap) and
+[Azure](/docs/auth/azure) only require
 a cursory amount of knowledge for configuration and use.
 Kerberos, on the other hand, is best used by people already familiar
 with it. We recommend that you use simpler authentication methods if
@@ -113,14 +113,14 @@ $ vault write auth/kerberos/config/ldap \
 ```
 
 The LDAP above relies upon the same code as the LDAP auth method.
-See [its documentation](/docs/auth/ldap.html)
+See [its documentation](/docs/auth/ldap)
 for further discussion of available parameters.
 
 - Configure the Vault policies that should be granted to those
   who successfully authenticate based on their LDAP group membership.
   Since this is identical to the LDAP auth method, see
-  [Group Membership Resolution](/docs/auth/ldap.html#group-membership-resolution)
-  and [LDAP Group -> Policy Mapping](/docs/auth/ldap.html#ldap-group-gt-policy-mapping)
+  [Group Membership Resolution](/docs/auth/ldap#group-membership-resolution)
+  and [LDAP Group -> Policy Mapping](/docs/auth/ldap#ldap-group-gt-policy-mapping)
   for further discussion.
 
 ```text
@@ -194,7 +194,7 @@ in the `keytab` file.
 After you've stripped the issue down to its simplest form, if you still
 encounter difficulty resolving it, it will be much easier to gain assistance
 by posting your reproduction to the [Vault Forum](https://discuss.hashicorp.com/c/vault)
-or by providing it to [HashiCorp Support](https://www.hashicorp.com/support.html)
+or by providing it to [HashiCorp Support](https://www.hashicorp.com/support)
 (if applicable.)
 
 ### Additional Troubleshooting Resources

@@ -39,7 +39,7 @@ each status code (including `500`).
 
 Root tokens (tokens with the `root` policy) can no longer be created except by
 another root token or the
-[`generate-root`](/api/system/generate-root.html)
+[`generate-root`](/api/system/generate-root)
 endpoint or CLI command.
 
 ## PKI Backend Certificates Will Contain Default Key Usages
@@ -83,7 +83,7 @@ unfortunately has the side effect that `memberOf` is no longer searched for by
 default, which is a breaking change for many existing setups.
 
 `Scenario 2` in the [updated
-documentation](/docs/auth/ldap.html) shows an
+documentation](/docs/auth/ldap) shows an
 example of configuring the backend to query `memberOf`. It is recommended that
 a test Vault server be set up and that successful authentication can be
 performed using the new configuration before upgrading a primary or production
@@ -97,7 +97,7 @@ configuration can be specified successfully.
 ## App-ID is Deprecated
 
 With the addition of of the new [AppRole
-backend](/docs/auth/approle.html), App-ID is
+backend](/docs/auth/approle), App-ID is
 deprecated. There are no current plans to remove it, but we encourage using
 AppRole whenever possible, as it offers enhanced functionality and can
 accommodate many more types of authentication paradigms. App-ID will receive

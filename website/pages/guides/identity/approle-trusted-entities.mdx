@@ -12,7 +12,7 @@ description: |-
 # Vault AppRole with Terraform and Chef Demo
 
 In the [AppRole Pull
-Authentication](/guides/identity/authentication.html#advanced-features) guide,
+Authentication](/guides/identity/authentication#advanced-features) guide,
 the question of how best to deliver the Role ID and Secret ID were brought up,
 and the role of trusted entities (Terraform, Chef, Nomad, Kubernetes, etc.) was
 mentioned.
@@ -21,7 +21,7 @@ mentioned.
 
 This _intermediate_ Vault guide aims to provide a **simple**, **end-to-end**
 example of how to use Vault's [AppRole authentication
-method](/docs/auth/approle.html), along with Terraform and Chef, to address the
+method](/docs/auth/approle), along with Terraform and Chef, to address the
 challenge of the **_secure introduction_** of an initial token to a target
 system.
 
@@ -37,7 +37,7 @@ webinar.
 
 ## Reference Material
 
-- [AppRole Auth Method](/docs/auth/approle.html)
+- [AppRole Auth Method](/docs/auth/approle)
 - [Authenticating Applications with HashiCorp Vault AppRole](https://www.hashicorp.com/blog/authenticating-applications-with-vault-approle)
 - [Delivering Secret Zero: Vault AppRole with Terraform and
   Chef](https://www.hashicorp.com/resources/delivering-secret-zero-vault-approle-terraform-chef)
@@ -60,7 +60,7 @@ or deliver the `RoleID` and `SecretID` to our target systems.
 Use _Trusted Entities_ to deliver the AppRole authentication values. For
 example, use Terraform to deliver your `RoleID` or embed it into your AMI or
 Dockerfile. Then you might use Jenkins or Chef to obtain the
-[response-wrapped](/guides/secret-mgmt/cubbyhole.html) `SecretID` and deliver it
+[response-wrapped](/guides/secret-mgmt/cubbyhole) `SecretID` and deliver it
 to the target system.
 
 AppRole allows us to securely introduce the authentication token to the target
@@ -265,7 +265,7 @@ First, initialize and unseal the Vault server using a shortcut.
 
 ~> This is a convenient shortcut for demo. **_DO NOT DO THIS IN PRODUCTION!!!_**
 
-Refer to the [online documentation for initializing and unsealing](/intro/getting-started/deploy.html#initializing-the-vault) Vault for more details.
+Refer to the [online documentation for initializing and unsealing](/intro/getting-started/deploy#initializing-the-vault) Vault for more details.
 
 ```shell
 # Initialize the Vault server and write out the unseal keys and root token into files
@@ -322,7 +322,7 @@ $ curl --silent \
 ```
 
 <br />
-\*\*CLI command\*\*
+\\*\\*CLI command\\*\\*
 
 ```bash
 # Policy to apply to AppRole token
@@ -359,7 +359,7 @@ $ curl --silent \
 ```
 
 <br />
-\*\*CLI command\*\*
+\\*\\*CLI command\\*\\*
 
 ```plaintext
 $ vault auth enable -description="Demo AppRole auth method" approle
@@ -399,7 +399,7 @@ $ curl --silent \
 ```
 
 <br />
-\*\*CLI command\*\*
+\\*\\*CLI command\\*\\*
 
 ```bash
 # TTL is set to 10 minutes, and Max TTL to be 30 minutes
@@ -508,7 +508,7 @@ $ cat roleid-token.json | jq
 ```
 
 <br />
-\*\*CLI command\*\*
+\\*\\*CLI command\\*\\*
 
 ```bash
 # Policy file granting to retrieve RoleID from Vault
@@ -628,7 +628,7 @@ $ cat secretid-token.json | jq
 ```
 
 <br />
-\*\*CLI command\*\*
+\\*\\*CLI command\\*\\*
 
 ```bash
 # Policy file granting to retrieve SecretID
@@ -760,7 +760,7 @@ $ curl --silent \
 ```
 
 <br />
-\*\*CLI command\*\*
+\\*\\*CLI command\\*\\*
 
 ```bash
 # Write some demo secrets

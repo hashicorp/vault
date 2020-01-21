@@ -11,7 +11,7 @@ description: 'In this guide,'
 part of _Vault Enterprise_.
 
 **_Vault Enterprise_** integrates with [HSM platforms](/docs/enterprise/hsm)
-to opt-in automatic [unsealing](/docs/concepts/seal.html#unsealing).
+to opt-in automatic [unsealing](/docs/concepts/seal#unsealing).
 HSM integration provides three pieces of special functionality:
 
 - **Master Key Wrapping**: Vault protects its master key by transiting it through
@@ -37,7 +37,7 @@ operations.
 
 - [HashiCorp + AWS: Integrating CloudHSM with Vault Enterprise](https://www.hashicorp.com/resources/hashicorp-and-aws-integrating-cloudhsm-with-vault-e) webinar
 - [Seal Wrap documentation](/docs/enterprise/sealwrap)
-- [Vault Configuration - pkcs11 Seal](/docs/configuration/seal/pkcs11.html)
+- [Vault Configuration - pkcs11 Seal](/docs/configuration/seal/pkcs11)
 - [Vault Enterprise HSM Support](/docs/enterprise/hsm)
 - [NIST SC-12: Cryptographic Key Establishment and Management](https://nvd.nist.gov/800-53/Rev4/control/SC-12)
 - [NIST SC-13: Cryptographic Protection](https://nvd.nist.gov/800-53/Rev4/control/SC-13)
@@ -106,7 +106,7 @@ provider.
 #### Task 1: Write a Vault configuration file
 
 To integrate your Vault Enterprise server with an HSM cluster, the configuration
-file must define the [`PKCS11 seal` stanza](/docs/configuration/seal/pkcs11.html)
+file must define the [`PKCS11 seal` stanza](/docs/configuration/seal/pkcs11)
 providing necessary connection information.
 
 **Example: `config-hsm.hcl`**
@@ -156,7 +156,7 @@ The example configuration defines the following in its **`seal`** stanza:
 ~> **IMPORTANT:** Having Vault generate its own key is the easiest way to get up
 and running, but for security, Vault marks the key as **non-exportable**. If
 your HSM key backup strategy requires the key to be exportable, you should
-generate the key yourself. Refer to the [key generation attributes](/docs/configuration/seal/pkcs11.html#vault-key-generation-attributes).
+generate the key yourself. Refer to the [key generation attributes](/docs/configuration/seal/pkcs11#vault-key-generation-attributes).
 
 #### Task 2: Initialize your Vault Enterprise server
 
@@ -188,7 +188,7 @@ $ vault server -config=/home/ec2-user/config-hsm.hcl
 
 <br />
 
-In another terminal, set the `VAULT_ADDR` environment variable, and [initialize](/intro/getting-started/deploy.html#initializing-the-vault) your Vault server.
+In another terminal, set the `VAULT_ADDR` environment variable, and [initialize](/intro/getting-started/deploy#initializing-the-vault) your Vault server.
 
 **Example:**
 
@@ -216,7 +216,7 @@ HSM to decrypt the master key.
 ~> **NOTE:** When Vault is initialized while using an HSM, rather than unseal
 keys being returned to the operator, **recovery keys** are returned. These are
 generated from an internal recovery key that is [split via Shamir's Secret
-Sharing](/docs/enterprise/hsm/behavior.html#initialization), similar to Vault's
+Sharing](/docs/enterprise/hsm/behavior#initialization), similar to Vault's
 treatment of unseal keys when running without an HSM. Some Vault operations such
 as generation of a root token require these recovery keys.
 
@@ -293,7 +293,7 @@ Notice that the `seal_wrap` parameter is set to **`false`**.
 $ vault secrets enable -path=secret2/ -version=1 -seal-wrap kv
 ```
 
-The above command enabled [key/value version 1](/docs/secrets/kv/kv-v1.html) with
+The above command enabled [key/value version 1](/docs/secrets/kv/kv-v1) with
 seal wrap feature enabled.
 
 ```plaintext
@@ -370,7 +370,7 @@ $ curl --header "X-Vault-Token: ..." \
        http://127.0.0.1:8200/v1/sys/mounts/secret2
 ```
 
-The above command enabled [key/value version 1](/docs/secrets/kv/kv-v1.html) with
+The above command enabled [key/value version 1](/docs/secrets/kv/kv-v1) with
 seal wrap feature enabled.
 
 ```plaintext
@@ -610,4 +610,4 @@ with KeyStorage and KeyTransit requirements.
 
 This guide used the local file system as the storage backend to keep it simple.
 To learn more about making your Vault cluster highly available, read the [Vault
-HA with Consul](/guides/operations/vault-ha-consul.html) guide.
+HA with Consul](/guides/operations/vault-ha-consul) guide.

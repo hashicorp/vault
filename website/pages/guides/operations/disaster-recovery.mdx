@@ -28,16 +28,16 @@ service read or write requests until they are promoted and become a new primary
 
 - they essentially act as a warm standby cluster.
 
-The [Mount Filter](/guides/operations/mount-filter.html) guide provides step-by-step
+The [Mount Filter](/guides/operations/mount-filter) guide provides step-by-step
 instructions on setting up performance replication. This guide focuses on DR
 replication setup.
 
 ## Reference Materials
 
 - [Performance Replication and Disaster Recovery (DR) Replication](/docs/enterprise/replication#performance-replication-and-disaster-recovery-dr-replication)
-- [DR Replication API](/api/system/replication-dr.html)
-- [Replication Setup & Guidance](/guides/operations/replication.html)
-- [Vault HA guide](/guides/operations/vault-ha-consul.html)
+- [DR Replication API](/api/system/replication-dr)
+- [Replication Setup & Guidance](/guides/operations/replication)
+- [Vault HA guide](/guides/operations/vault-ha-consul)
 
 ## Estimated Time to Complete
 
@@ -255,7 +255,7 @@ inoperable. Refer to the [_Important Note about Automated DR
 Failover_](#important) section for more background information.
 
 First, you must generate a **DR operation token** which you need to promote the
-secondary cluster. The process, outlined below using API calls, is the similar to [_Generating a Root Token (via CLI)_](/guides/operations/generate-root.html).
+secondary cluster. The process, outlined below using API calls, is the similar to [_Generating a Root Token (via CLI)_](/guides/operations/generate-root).
 
 #### From Terminal
 
@@ -432,7 +432,7 @@ secondary cluster. The process, outlined below using API calls, is the similar t
 > Once the secondary cluster was successfully promoted, you should be able to
 > log in using the original primary cluster's root token or via configured
 > authentication method. If desired, generate a [new root
-> token](/guides/operations/generate-root.html).
+> token](/guides/operations/generate-root).
 
 ### <a name="step4"></a>Step 4: Demote DR Primary to Secondary
 
@@ -585,11 +585,11 @@ which allows the customer to write their own logic about automating some of
 these operations based on experience within their own environments. You can
 review the available replication APIs at the following links:
 
-- [Vault Replication API](/api/system/replication.html)
-- [DR Replication API](/api/system/replication-dr.html)
-- [Performance Replication API](/api/system/replication-performance.html)
+- [Vault Replication API](/api/system/replication)
+- [DR Replication API](/api/system/replication-dr)
+- [Performance Replication API](/api/system/replication-performance)
 
 ## Next steps
 
-Read [Production Hardening](/guides/operations/production.html) to learn more
+Read [Production Hardening](/guides/operations/production) to learn more
 about the guidance on hardening the production deployments of Vault.

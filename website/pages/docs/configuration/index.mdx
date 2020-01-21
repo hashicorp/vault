@@ -88,7 +88,7 @@ to specify where the configuration is.
   sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
   ```
 
-  Note: Since each plugin runs as a separate process, you need to do the same for each plugin in your [plugins directory](/docs/internals/plugins.html#plugin-directory).
+  Note: Since each plugin runs as a separate process, you need to do the same for each plugin in your [plugins directory](/docs/internals/plugins#plugin-directory).
 
   If you use a Linux distribution with a modern version of systemd, you can add
   the following directive to the "[Service]" configuration section:
@@ -176,6 +176,6 @@ The following parameters are only used with Vault Enterprise
 [listener]: /docs/configuration/listener
 [seal]: /docs/configuration/seal
 [sealwrap]: /docs/enterprise/sealwrap
-[telemetry]: /docs/configuration/telemetry.html
-[high-availability]: /docs/concepts/ha.html
+[telemetry]: /docs/configuration/telemetry
+[high-availability]: /docs/concepts/ha
 [plugins]: /docs/plugin

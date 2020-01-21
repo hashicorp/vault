@@ -14,7 +14,7 @@ via the HTTP API.
 
 Once you have started the Vault server, you can use `curl` or any other http
 client to make API calls. For example, if you started the Vault server in
-[dev mode](/docs/concepts/dev-server.html), you could validate the
+[dev mode](/docs/concepts/dev-server), you could validate the
 initialization status like this:
 
 ```text
@@ -33,7 +33,7 @@ This will return a JSON response:
 
 Machines that need access to information stored in Vault will most likely
 access Vault via its REST API. For example, if a machine were using
-[AppRole](/docs/auth/approle.html) for authentication, the application would
+[AppRole](/docs/auth/approle) for authentication, the application would
 first authenticate to Vault which would return a Vault API token. The
 application would use that token for future communication with Vault.
 
@@ -116,7 +116,7 @@ output. This will return a JSON response:
 ```
 
 Now any of the available auth methods can be enabled and configured.
-For the purposes of this guide lets enable [AppRole](/docs/auth/approle.html)
+For the purposes of this guide lets enable [AppRole](/docs/auth/approle)
 authentication.
 
 Start by enabling the AppRole authentication.
@@ -135,7 +135,7 @@ the Vault server. We could also generate tokens using any other authentication
 mechanisms, but we will use the root token for simplicity.
 
 Now create an AppRole with desired set of [ACL
-policies](/docs/concepts/policies.html). In the following command, it is being
+policies](/docs/concepts/policies). In the following command, it is being
 specified that the tokens issued under the AppRole `my-role`, should be
 associated with `dev-policy` and the `my-policy`.
 
@@ -263,5 +263,5 @@ Congratulations! You now know all the basics to get started with Vault.
 ## Next
 
 Next, we have a page dedicated to [next
-steps](/intro/getting-started/next-steps.html) depending on what you would like
+steps](/intro/getting-started/next-steps) depending on what you would like
 to achieve.

@@ -42,7 +42,7 @@ when enabling it.
 
 Vault creates a mutually authenticated TLS connection for communication with the
 plugin's RPC server. While invoking the plugin process, Vault passes a [wrapping
-token](/docs/concepts/response-wrapping.html) to the
+token](/docs/concepts/response-wrapping) to the
 plugin process' environment. This token is single use and has a short TTL. Once
 unwrapped, it provides the plugin with a uniquely generated TLS certificate and
 private key for it to use to talk to the original Vault process.
@@ -86,7 +86,7 @@ make sure the executable referenced in the command exists in the plugin
 directory. When added to the catalog the plugin is not automatically executed,
 it instead becomes visible to backends and can be executed by them. For more
 information on the plugin catalog please see the [Plugin Catalog API
-docs](/api/system/plugins-catalog.html).
+docs](/api/system/plugins-catalog).
 
 An example plugin submission looks like:
 

@@ -17,12 +17,12 @@ as well as its connected machines and systems.
 
 The Vault SSH secrets engine provides secure authentication and authorization
 for access to machines via the SSH protocol. It supports [signed SSH
-certificate](/docs/secrets/ssh/signed-ssh-certificates.html) and one-time SSH
+certificate](/docs/secrets/ssh/signed-ssh-certificates) and one-time SSH
 password modes. This guide demonstrates the one-time SSH password mode.
 
 ## Reference Material
 
-- [One-Time SSH Passwords](/docs/secrets/ssh/one-time-ssh-passwords.html)
+- [One-Time SSH Passwords](/docs/secrets/ssh/one-time-ssh-passwords)
 - [SSH Secrets Engine (API)](/api/secret/ssh)
 - [Vault SSH Helper](https://github.com/hashicorp/vault-ssh-helper)
 
@@ -67,7 +67,7 @@ secrets engine.
 
 To perform the tasks described in this guide, you need to have a Vault
 environment. Refer to the [Getting
-Started](/intro/getting-started/install.html) guide to install Vault.
+Started](/intro/getting-started/install) guide to install Vault.
 
 ### Policy requirements
 
@@ -97,7 +97,7 @@ path "sys/mounts/*" {
 ```
 
 If you are not familiar with policies, complete the
-[policies](/guides/identity/policies.html) guide.
+[policies](/guides/identity/policies) guide.
 
 ## Steps
 
@@ -241,7 +241,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
 ```
 
 Where `<TOKEN>` is your valid token, and `<PARAMETERS>` holds [configuration
-parameters](/api/system/mounts.html#enable-secrets-engine) of the secret engine.
+parameters](/api/system/mounts#enable-secrets-engine) of the secret engine.
 
 **Example:**
 
@@ -418,6 +418,6 @@ $ vault ssh -role otp_key_role -mode otp -strict-host-key-checking=no ubuntu@192
 ## Next steps
 
 Read the [Signed SSH
-Certificates](/docs/secrets/ssh/signed-ssh-certificates.html) documentation if
+Certificates](/docs/secrets/ssh/signed-ssh-certificates) documentation if
 you want to use signed SSH certificate so that the clients can use their local
 SSH keys to connect to the target hosts.

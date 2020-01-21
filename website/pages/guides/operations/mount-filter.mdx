@@ -27,7 +27,7 @@ control the movement of secrets across their infrastructure.
 
 - Preparing for GDPR Compliance with HashiCorp Vault [webinar](https://www.hashicorp.com/resources/preparing-for-gdpr-compliance-with-hashicorp-vault)
 - Preparing for GDPR Compliance with HashiCorp Vault [blog post](https://www.hashicorp.com/blog/preparing-for-gdpr-compliance-with-hashicorp-vault)
-- [Create Mounts Filter (API)](/api/system/replication-performance.html#create-mounts-filter)
+- [Create Mounts Filter (API)](/api/system/replication-performance#create-mounts-filter)
 - [Performance Replication and Disaster Recovery (DR) Replication](/docs/enterprise/replication#performance-replication-and-disaster-recovery-dr-replication)
 
 ## Estimated Time to Complete
@@ -310,7 +310,7 @@ $ vault auth enable userpass
 $ vault write auth/userpass/users/james password="passw0rd" policy="admin"
 ```
 
--> Alternatively, you can [generate a new root token](/guides/operations/generate-root.html)
+-> Alternatively, you can [generate a new root token](/guides/operations/generate-root)
 using the primary cluster's unseal key. However, it is recommended that root
 tokens are only used for just enough initial setup or in emergencies.
 
@@ -501,5 +501,5 @@ you won't be able to see it from the primary cluster.
 ## Next steps
 
 Read [Vault Deployment Reference
-Architecture](/guides/operations/reference-architecture.html) to learn more
+Architecture](/guides/operations/reference-architecture) to learn more
 about the recommended deployment practices.

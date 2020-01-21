@@ -9,7 +9,7 @@ description: AppRole Method for Vault Agent Auto-Auth
 
 The `approle` method reads in a role ID and a secret ID from files and sends
 the values to the [AppRole Auth
-method](/docs/auth/approle.html).
+method](/docs/auth/approle).
 
 The method caches values and it is safe to delete the role ID/secret ID files
 after they have been read. In fact, by default, after reading the secret ID,
@@ -32,7 +32,7 @@ cached.
 
 - `secret_id_response_wrapping_path` `(string: optional)` - If set, the value
   at `secret_id_file_path` will be expected to be a [Response-Wrapping
-  Token](/docs/concepts/response-wrapping.html)
+  Token](/docs/concepts/response-wrapping)
   containing the output of the secret ID retrieval endpoint for the role (e.g.
   `auth/approle/role/webservers/secret-id`) and the creation path for the
   response-wrapping token must match the value set here.

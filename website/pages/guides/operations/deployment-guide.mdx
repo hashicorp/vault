@@ -10,19 +10,19 @@ ea_version: 1
 
 # Vault Deployment Guide
 
-This deployment guide covers the steps required to install and configure a single HashiCorp Vault cluster as defined in the [Vault Reference Architecture](/guides/operations/reference-architecture.html).
+This deployment guide covers the steps required to install and configure a single HashiCorp Vault cluster as defined in the [Vault Reference Architecture](/guides/operations/reference-architecture).
 
 Below are instructions for installing and configuring Vault on Linux hosts running the systemd system and service manager.
 
 ## Reference Material
 
-This deployment guide is designed to work in combination with the [Vault Reference Architecture](/guides/operations/reference-architecture.html). Although not a strict requirement to follow the Vault Reference Architecture, please ensure you are familiar with the overall architecture design; for example installing Vault on multiple physical or virtual (with correct anti-affinity) hosts for high-availability and using Consul for the HA and storage backend.
+This deployment guide is designed to work in combination with the [Vault Reference Architecture](/guides/operations/reference-architecture). Although not a strict requirement to follow the Vault Reference Architecture, please ensure you are familiar with the overall architecture design; for example installing Vault on multiple physical or virtual (with correct anti-affinity) hosts for high-availability and using Consul for the HA and storage backend.
 
-During the installation of Vault you should also review and apply the recommendations provided in the [Vault Production Hardening](/guides/operations/production.html) guide.
+During the installation of Vault you should also review and apply the recommendations provided in the [Vault Production Hardening](/guides/operations/production) guide.
 
 ## Overview
 
-To provide a highly-available single cluster architecture, we recommend Vault be deployed to more than one host, as shown in the [Vault Reference Architecture](/guides/operations/reference-architecture.html), and connected to a Consul cluster for persistent data storage.
+To provide a highly-available single cluster architecture, we recommend Vault be deployed to more than one host, as shown in the [Vault Reference Architecture](/guides/operations/reference-architecture), and connected to a Consul cluster for persistent data storage.
 
 ![Reference Diagram](/img/vault-ref-arch-2-02305ae7.png)
 
@@ -39,7 +39,7 @@ The below setup steps should be completed on all Vault hosts.
 
 Precompiled Vault binaries are available for download at [https://releases.hashicorp.com/vault/](https://releases.hashicorp.com/vault/) and Vault Enterprise binaries are available for download by following the instructions made available to HashiCorp Vault customers.
 
-You should perform checksum verification of the zip packages using the SHA256SUMS and SHA256SUMS.sig files available for the specific release version. HashiCorp provides [a guide on checksum verification](https://www.hashicorp.com/security.html) for precompiled binaries.
+You should perform checksum verification of the zip packages using the SHA256SUMS and SHA256SUMS.sig files available for the specific release version. HashiCorp provides [a guide on checksum verification](https://www.hashicorp.com/security) for precompiled binaries.
 
 ```text
 VAULT_VERSION="0.10.3"
@@ -142,7 +142,7 @@ The following parameters are set for the `[Service]` stanza:
 - [`ExecReload`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#ExecReload=) - Send vault a HUP signal to trigger a configuration reload in vault
 - [`KillMode`](https://www.freedesktop.org/software/systemd/man/systemd.kill.html#KillMode=) - Treat vault as a single process
 - [`KillSignal`](https://www.freedesktop.org/software/systemd/man/systemd.kill.html#KillSignal=) - Send SIGINT signal when shutting down vault
-- [`Restart`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#RestartSec=) - Restart vault ([in a sealed state](/docs/concepts/seal.html)) unless it returned a clean exit code
+- [`Restart`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#RestartSec=) - Restart vault ([in a sealed state](/docs/concepts/seal)) unless it returned a clean exit code
 - [`RestartSec`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#RestartSec=) - Restart vault after 5 seconds of it being considered 'failed'
 - [`TimeoutStopSec`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#TimeoutStopSec=) - Wait 30 seconds for a clean stop before sending a SIGKILL signal
 - [`StartLimitIntervalSec`, `StartLimitBurst`](https://www.freedesktop.org/software/systemd/man/systemd.unit.html#StartLimitIntervalSec=interval) - Limit vault to three start attempts in 60 seconds
@@ -153,7 +153,7 @@ The following parameters are set for the `[Install]` stanza:
 
 ## Configure Consul
 
-When using Consul as the storage backend for Vault, we recommend using Consul's [ACL system](https://www.consul.io/docs/guides/acl.html) to restrict access to the path where Vault stores data. This access restriction is an added security measure in addition to the [encryption Vault uses to protect data](/docs/internals/architecture.html) written to the storage backend.
+When using Consul as the storage backend for Vault, we recommend using Consul's [ACL system](https://www.consul.io/docs/guides/acl.html) to restrict access to the path where Vault stores data. This access restriction is an added security measure in addition to the [encryption Vault uses to protect data](/docs/internals/architecture) written to the storage backend.
 
 The Consul website provides documentation on [bootstrapping the ACL system](https://www.consul.io/docs/guides/acl.html#bootstrapping-acls), generating a management token and using that token to add some initial tokens for Consul agents, UI access etc. You should complete the bootstrapping section of the Consul documentation before continuing with this guide.
 
@@ -226,11 +226,11 @@ listener "tcp" {
 
 The following parameters are set for the `tcp` listener stanza:
 
-- [`address`](/docs/configuration/listener/tcp.html#address) `(string: "127.0.0.1:8200")` - Changing from the loopback address to allow external access to the Vault UI
-- [`tls_cert_file`](/docs/configuration/listener/tcp.html#tls_cert_file) `(string: <required-if-enabled>, reloads-on-SIGHUP)` - Must be set when using TLS
-- [`tls_key_file`](/docs/configuration/listener/tcp.html#tls_key_file) `(string: <required-if-enabled>, reloads-on-SIGHUP)` - Must be set when using TLS
+- [`address`](/docs/configuration/listener/tcp#address) `(string: "127.0.0.1:8200")` - Changing from the loopback address to allow external access to the Vault UI
+- [`tls_cert_file`](/docs/configuration/listener/tcp#tls_cert_file) `(string: <required-if-enabled>, reloads-on-SIGHUP)` - Must be set when using TLS
+- [`tls_key_file`](/docs/configuration/listener/tcp#tls_key_file) `(string: <required-if-enabled>, reloads-on-SIGHUP)` - Must be set when using TLS
 
-[More information about tcp listener configuration](/docs/configuration/listener/tcp.html).
+[More information about tcp listener configuration](/docs/configuration/listener/tcp).
 
 ~> Vault should always be configured to use TLS to provide secure communication between clients and the Vault cluster. This requires a certificate file and key file be installed on each Linux host running Vault. The certificate file and key file must have permissions allowing the vault user/group to read them.
 
@@ -268,9 +268,9 @@ storage "consul" {
 
 The following parameters are set for the `consul` storage stanza:
 
-- [`token`](/docs/configuration/storage/consul.html#token) `(string: "")` - Specify the Consul ACL token with permission to read and write from `/vault` in Consul's key-value store
+- [`token`](/docs/configuration/storage/consul#token) `(string: "")` - Specify the Consul ACL token with permission to read and write from `/vault` in Consul's key-value store
 
-[More information about consul storage configuration](/docs/configuration/storage/consul.html).
+[More information about consul storage configuration](/docs/configuration/storage/consul).
 
 ~> Vault should always be configured to use a Consul token with a restrictive ACL policy to read and write from `/vault` in Consul's key-value store. This follows the principal of least privilege, ensuring Vault is unable to access Consul key-value data stored outside of the `/vault` path.
 
@@ -278,7 +278,7 @@ The following parameters are set for the `consul` storage stanza:
 
 The `telemetry` stanza specifies various configurations for Vault to publish metrics to upstream systems.
 
-If you decide to configure Vault to publish telemetry data, you should review the [telemetry configuration section](/docs/configuration/telemetry.html) of our documentation.
+If you decide to configure Vault to publish telemetry data, you should review the [telemetry configuration section](/docs/configuration/telemetry) of our documentation.
 
 ### High Availability Parameters
 
@@ -320,5 +320,5 @@ sudo systemctl status vault
 
 ## Next Steps
 
-- Read [Production Hardening](/guides/operations/production.html) to learn best
+- Read [Production Hardening](/guides/operations/production) to learn best
   practices for a production hardening deployment of Vault.

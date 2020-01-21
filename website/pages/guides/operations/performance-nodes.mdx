@@ -12,7 +12,7 @@ description: |-
 
 ~> **Enterprise Only:** Performance Standby Nodes feature is a part of _Vault Enterprise_.
 
-In [Vault High Availability](/guides/operations/vault-ha-consul.html) guide, it
+In [Vault High Availability](/guides/operations/vault-ha-consul) guide, it
 was explained that only one Vault server will be _active_ in a cluster and
 handles **all** requests (reads and writes). The rest of the servers become the
 _standby_ nodes and simply forward requests to the _active_ node.
@@ -31,9 +31,9 @@ of performance standby nodes deployed in a cluster.
 ## Reference Materials
 
 - [Performance Standby Nodes](/docs/enterprise/performance-standby)
-- [High Availability Mode](/docs/concepts/ha.html)
-- [Consul Storage Backend](/docs/configuration/storage/consul.html)
-- [Vault Reference Architecture](/guides/operations/reference-architecture.html)
+- [High Availability Mode](/docs/concepts/ha)
+- [Consul Storage Backend](/docs/configuration/storage/consul)
+- [Vault Reference Architecture](/guides/operations/reference-architecture)
 
 ## Server Configuration
 
@@ -79,5 +79,5 @@ process read-only requests. However, the _standby_ nodes running on VM 6 and VM
 
 ## Next steps
 
-Read [Production Hardening](/guides/operations/production.html) to learn best
+Read [Production Hardening](/guides/operations/production) to learn best
 practices for a production hardening deployment of Vault.

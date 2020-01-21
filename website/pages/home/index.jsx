@@ -25,7 +25,7 @@ export default function Homepage() {
               {
                 external: false,
                 title: 'Download',
-                url: 'https://www.vaultproject.io/downloads.html'
+                url: 'https://www.vaultproject.io/downloads'
               },
               {
                 external: false,

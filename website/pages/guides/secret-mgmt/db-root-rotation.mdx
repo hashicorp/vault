@@ -22,14 +22,14 @@ can be revoked immediately.
 This reduces the manual tasks performed by the database administrator and make
 the access to the database to be more efficient and secure.
 
-The [Secret as a Service: Dynamic Secrets](/guides/secret-mgmt/dynamic-secrets.html)
+The [Secret as a Service: Dynamic Secrets](/guides/secret-mgmt/dynamic-secrets)
 guide demonstrates the primary workflow.
 
 ## Reference Material
 
-- [Secret as a Service: Dynamic Secrets](/guides/secret-mgmt/dynamic-secrets.html)
+- [Secret as a Service: Dynamic Secrets](/guides/secret-mgmt/dynamic-secrets)
 - [Database Secret Engine (API)](/api/secret/databases#rotate-root-credentials)
-- [PostgreSQL Database Plugin HTTP API](/api/secret/databases/postgresql.html)
+- [PostgreSQL Database Plugin HTTP API](/api/secret/databases/postgresql)
 
 ## Estimated Time to Complete
 
@@ -60,9 +60,9 @@ immediately after the initial configuration of each database.
 
 To perform the tasks described in this guide, you need to have a Vault
 environment. Refer to the [Getting
-Started](/intro/getting-started/install.html) guide to install Vault. Make sure
+Started](/intro/getting-started/install) guide to install Vault. Make sure
 that your Vault server has been [initialized and
-unsealed](/intro/getting-started/deploy.html).
+unsealed](/intro/getting-started/deploy).
 
 ### PostgreSQL
 
@@ -96,7 +96,7 @@ path "database/*" {
 ```
 
 If you are not familiar with policies, complete the
-[policies](/guides/identity/policies.html) guide.
+[policies](/guides/identity/policies) guide.
 
 ## Steps
 
@@ -143,7 +143,7 @@ and passes the secret engine type ("`database`") in the request payload.
 ### <a name="step2"></a>Step 2: Configure PostgreSQL secret engine
 
 In the [Secret as a Service: Dynamic
-Secrets](/guides/secret-mgmt/dynamic-secrets.html#step2) guide, the PostgreSQL
+Secrets](/guides/secret-mgmt/dynamic-secrets#step2) guide, the PostgreSQL
 plugin was configured with its root credentials embedded in the `connection_url`
 (`root` and `rootpassword`) as below:
 
@@ -356,6 +356,6 @@ which is not used for other purposes.
 
 In this guide, you learned how to rotate the root database credentials.
 
-Read the [AppRole Pull Authentication](/guides/identity/authentication.html)
+Read the [AppRole Pull Authentication](/guides/identity/authentication)
 guide to learn about generating a client token for your app so that it can
 request database credentials from Vault.

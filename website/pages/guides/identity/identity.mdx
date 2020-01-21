@@ -62,9 +62,9 @@ specific users.
 
 To perform the tasks described in this guide, you need to have a Vault
 environment. Refer to the [Getting
-Started](/intro/getting-started/install.html) guide to install Vault. Make sure
+Started](/intro/getting-started/install) guide to install Vault. Make sure
 that your Vault server has been [initialized and
-unsealed](/intro/getting-started/deploy.html).
+unsealed](/intro/getting-started/deploy).
 
 ### Policy requirements
 
@@ -129,7 +129,7 @@ path "identity/*" {
 ```
 
 If you are not familiar with policies, complete the
-[policies](/guides/identity/policies.html) guide.
+[policies](/guides/identity/policies) guide.
 
 ## Steps
 
@@ -184,7 +184,7 @@ path "secret/team-qa" {
 }
 ```
 
-~> **NOTE:** If you are running [K/V Secrets Engine v2](/api/secret/kv/kv-v2.html)
+~> **NOTE:** If you are running [K/V Secrets Engine v2](/api/secret/kv/kv-v2)
 at `secret`, set the policies path accordingly: `secret/data/training_*`,
 `secret/data/test`, and `secret/data/team-qa`.
 
@@ -1092,5 +1092,5 @@ $ curl --header "X-Vault-Token: ..." \
 
 Now that you have learned about managing user identity using entities and
 groups, read the [AppRole Pull
-Authentication](/guides/identity/authentication.html) guide to learn how apps or
+Authentication](/guides/identity/authentication) guide to learn how apps or
 machines can authenticate with Vault.

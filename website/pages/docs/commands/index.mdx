@@ -13,7 +13,7 @@ description: |-
 
 ~> **Note:** The Vault CLI interface was changed substantially in 0.9.2+ and may cause
 confusion while using older versions of Vault with this documentation. Read our
-[upgrade guide](/guides/upgrading/upgrade-to-0.9.2.html#backwards-compatible-cli-changes) for more information.
+[upgrade guide](/guides/upgrading/upgrade-to-0.9.2#backwards-compatible-cli-changes) for more information.
 
 In addition to a verbose [HTTP API](/api), Vault features a
 command-line interface that wraps common functionality and formats output. The
@@ -206,7 +206,7 @@ precedence over the environment variables.
 Vault authentication token. Conceptually similar to a session token on a
 website, the `VAULT_TOKEN` environment variable holds the contents of the token.
 For more information, please see the [token
-concepts](/docs/concepts/tokens.html) page.
+concepts](/docs/concepts/tokens) page.
 
 ### `VAULT_ADDR`
 
@@ -257,7 +257,7 @@ High Availability mode.
 
 Do not verify Vault's presented certificate before communicating with it.
 Setting this variable is not recommended and voids Vault's [security
-model](/docs/internals/security.html).
+model](/docs/internals/security).
 
 ### `VAULT_TLS_SERVER_NAME`
 
@@ -281,7 +281,7 @@ limiting is off by default.
 _Note:_ The rate is limited for each invocation of the `vault` CLI. Since
 each invocation of the `vault` CLI typically only makes a few requests,
 this environment variable is most useful when using the Go
-[Vault client API](/api/libraries.html#go).
+[Vault client API](/api/libraries#go).
 
 ### `VAULT_NAMESPACE`
 

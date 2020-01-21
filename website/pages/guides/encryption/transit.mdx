@@ -67,9 +67,9 @@ This guide demonstrates the basics of the `transit` secrets engine.
 
 To perform the tasks described in this guide, you need to have a Vault
 environment. Refer to the [Getting
-Started](/intro/getting-started/install.html) guide to install Vault. Make sure
+Started](/intro/getting-started/install) guide to install Vault. Make sure
 that your Vault server has been [initialized and
-unsealed](/intro/getting-started/deploy.html).
+unsealed](/intro/getting-started/deploy).
 
 ### Policy requirements
 
@@ -99,7 +99,7 @@ path "transit/*" {
 ```
 
 If you are not familiar with policies, complete the
-[policies](/guides/identity/policies.html) guide.
+[policies](/guides/identity/policies) guide.
 
 ## Steps
 
@@ -151,7 +151,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
 ```
 
 Where `<TOKEN>` is your valid token, and `<PARAMETERS>` holds [configuration
-parameters](/api/system/mounts.html#enable-secrets-engine) of the secret engine.
+parameters](/api/system/mounts#enable-secrets-engine) of the secret engine.
 
 **Example:**
 
@@ -615,6 +615,6 @@ versions (`5` and `6`).
 
 ## Next steps
 
-[Transit Secrets Re-wrapping](/guides/encryption/transit-rewrap.html) guide
+[Transit Secrets Re-wrapping](/guides/encryption/transit-rewrap) guide
 introduces a sample application which re-wraps data after rotating an encryption
 key in the transit engine in Vault.

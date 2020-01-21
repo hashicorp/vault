@@ -10,7 +10,7 @@ description: |-
 
 # Versioned Key/Value Secret Engine
 
-The [Static Secrets](/guides/secret-mgmt/static-secrets.html) guide introduced
+The [Static Secrets](/guides/secret-mgmt/static-secrets) guide introduced
 the basics of working with key-value secret engine. **Vault 0.10** introduced [_K/V
 Secrets Engine v2 with Secret
 Versioning_](https://www.hashicorp.com/blog/vault-0-10). This guide
@@ -18,9 +18,9 @@ demonstrates the new features introduced by the key-value secret engine v2.
 
 ## Reference Material
 
-- [Static Secrets guide](/guides/secret-mgmt/static-secrets.html)
-- [KV Secrets Engine - Version 2](/docs/secrets/kv/kv-v2.html)
-- [KV Secrets Engine - Version 2 (API)](/api/secret/kv/kv-v2.html)
+- [Static Secrets guide](/guides/secret-mgmt/static-secrets)
+- [KV Secrets Engine - Version 2](/docs/secrets/kv/kv-v2)
+- [KV Secrets Engine - Version 2 (API)](/api/secret/kv/kv-v2)
 
 ~> **NOTE:** An [interactive
 tutorial](https://www.katacoda.com/hashicorp/scenarios/vault-static-secrets) is
@@ -51,9 +51,9 @@ unintentionally.
 
 To perform the tasks described in this guide, you need to have a Vault
 environment. Refer to the [Getting
-Started](/intro/getting-started/install.html) guide to install Vault. Make sure
+Started](/intro/getting-started/install) guide to install Vault. Make sure
 that your Vault server has been [initialized and
-unsealed](/intro/getting-started/deploy.html).
+unsealed](/intro/getting-started/deploy).
 
 ### Policy requirements
 
@@ -83,7 +83,7 @@ path "sys/mounts/*" {
 ```
 
 If you are not familiar with policies, complete the
-[policies](/guides/identity/policies.html) guide.
+[policies](/guides/identity/policies) guide.
 
 ## Steps
 
@@ -928,5 +928,5 @@ the `cas` does not match the current version number, you will receive the
 ## Next steps
 
 This guide introduced the CLI commands and API endpoints to read and write
-static secrets in the key-value secret engine. Read [Secret as a Service: Dynamic Secrets](/guides/secret-mgmt/dynamic-secrets.html) guide to learn about the
+static secrets in the key-value secret engine. Read [Secret as a Service: Dynamic Secrets](/guides/secret-mgmt/dynamic-secrets) guide to learn about the
 usage of database secret engine.

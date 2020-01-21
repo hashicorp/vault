@@ -23,7 +23,7 @@ Policies (EGPs)** can be defined using Sentinel:
 - EGPs are tied to particular paths (e.g. `aws/creds/`)
 
 > This guide walks you through the authoring of Sentinel policies in Vault. For
-> ACL policy authoring, refer to the [Policies](/guides/identity/policies.html)
+> ACL policy authoring, refer to the [Policies](/guides/identity/policies)
 > guide.
 
 ## Reference Material
@@ -32,7 +32,7 @@ Policies (EGPs)** can be defined using Sentinel:
 - [Sentinel](https://docs.hashicorp.com/sentinel/) documentation
 - [Vault Sentinel](/docs/enterprise/sentinel) documentation
 - [Security and Fundamentals at Scale with Vault](https://www.youtube.com/watch?time_continue=121&v=yiPbKICFkvQ)
-- [Identity - Entities and Groups](/guides/identity/identity.html) guide
+- [Identity - Entities and Groups](/guides/identity/identity) guide
 
 ## Estimated Time to Complete
 
@@ -191,7 +191,7 @@ main = rule when precond {
 > **NOTE:** The **`main`** has conditional rule (`when precond`) to ensure that
 > the rule gets evaluated only if the request is relevant.
 
-~> Refer to the [Sentinel Properties](/docs/enterprise/sentinel/properties.html)
+~> Refer to the [Sentinel Properties](/docs/enterprise/sentinel/properties)
 documentation for available properties which Vault injects to Sentinel to allow
 fine-grained controls.
 
@@ -200,7 +200,7 @@ fine-grained controls.
 You can test the Sentinel policies prior to deployment in orders to validate
 syntax and to document expected behavior.
 
-1.  First, you need to download the [Sentinel simulator](https://docs.hashicorp.com/sentinel/downloads.html).
+1.  First, you need to download the [Sentinel simulator](https://docs.hashicorp.com/sentinel/downloads).
 
     **Example:**
 
@@ -583,6 +583,6 @@ $ curl --header "X-Vault-Token: ..." \
 
 ## Next steps
 
-Refer to the [Sentinel Properties](/docs/enterprise/sentinel/properties.html)
+Refer to the [Sentinel Properties](/docs/enterprise/sentinel/properties)
 documentation for the full list of properties available in Vault to write
 fine-grained policies to meet your organizational policy requirements.

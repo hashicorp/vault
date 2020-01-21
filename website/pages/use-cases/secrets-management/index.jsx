@@ -17,7 +17,7 @@ export default function SecretsManagmentUseCase() {
         />
 
         <div className="button-container">
-          <Button title="Download" url="/downloads.html" />
+          <Button title="Download" url="/downloads" />
           <Button title="Get Started" url="/intro" theme="dark-outline" />
         </div>
       </section>
