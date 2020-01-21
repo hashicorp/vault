@@ -22,7 +22,7 @@ _standby_ nodes and simply forward requests to the _active_ node.
 If you are running **_Vault Enterprise_ 0.11** or later with the Consul storage
 backend, those standby nodes can handle most read-only requests. For example,
 performance standbys can handle encryption/decryption of data using
-[transit](/docs/secrets/transit/index.html) keys, GET requests of key/value
+[transit](/docs/secrets/transit) keys, GET requests of key/value
 secrets and other requests that do not change underlying storage. This can
 provide considerable improvements in throughput for traffic of this type,
 resulting in aggregate performance increase linearly correlated to the number
@@ -30,7 +30,7 @@ of performance standby nodes deployed in a cluster.
 
 ## Reference Materials
 
-- [Performance Standby Nodes](/docs/enterprise/performance-standby/index.html)
+- [Performance Standby Nodes](/docs/enterprise/performance-standby)
 - [High Availability Mode](/docs/concepts/ha.html)
 - [Consul Storage Backend](/docs/configuration/storage/consul.html)
 - [Vault Reference Architecture](/guides/operations/reference-architecture.html)
@@ -40,7 +40,7 @@ of performance standby nodes deployed in a cluster.
 Performance standbys are enabled by default when the Vault Enterprise license
 includes this feature. If you wish to disable the performance standbys, you can
 do so by setting the
-[`disable_performance_standby`](/docs/configuration/index.html#vault-enterprise-parameters)
+[`disable_performance_standby`](/docs/configuration#vault-enterprise-parameters)
 flag to `true`.
 
 Since any of the nodes in a cluster can get elected as active, it is recommended

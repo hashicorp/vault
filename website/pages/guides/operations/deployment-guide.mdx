@@ -240,7 +240,7 @@ This is an **ENTERPRISE** feature.
 
 If you are deploying [Vault Enterprise](https://www.hashicorp.com/products/vault), you can include `seal` stanza configuration to specify the seal type to use for additional data protection, such as using HSM or Cloud KMS solutions to encrypt and decrypt the Vault master key. This stanza is optional, and if this is not configured, Vault will use the Shamir algorithm to cryptographically split the master key.
 
-If you are deploying Vault Enterprise, you should review the [seal configuration section](/docs/configuration/seal/index.html) of our documentation.
+If you are deploying Vault Enterprise, you should review the [seal configuration section](/docs/configuration/seal) of our documentation.
 
 An example PKCS #11 compatible HSM example is:
 
@@ -306,7 +306,7 @@ Optionally, add the below configuration to the Vault configuration file to enabl
 ui = true
 ```
 
-[More information about configuring the Vault UI](/docs/configuration/ui/index.html).
+[More information about configuring the Vault UI](/docs/configuration/ui).
 
 ## Start Vault
 

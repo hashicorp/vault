@@ -33,13 +33,13 @@ Reference: [Azure Active Directory v2.0 and the OpenID Connect protocol](https:/
    it will not be accessible after you leave the page.
 
 Please note [Azure AD v2.0 endpoints](https://docs.microsoft.com/en-gb/azure/active-directory/develop/azure-ad-endpoint-comparison)
-are required for [external groups](/docs/secrets/identity/index.html#external-vs-internal-groups) to work.
+are required for [external groups](/docs/secrets/identity#external-vs-internal-groups) to work.
 
 - `groupMembershipClaims` should be changed from `none` in the
   [App registration manifest](https://docs.microsoft.com/en-us/azure/active-directory/develop/reference-app-manifest).
   Options are "All" or "Security"
 
-- In the [OIDC Role config](/api/auth/jwt/index.html#create-role)
+- In the [OIDC Role config](/api/auth/jwt#create-role)
   the scope `"https://graph.microsoft.com/.default"` should be added to add groups
   to the jwt token and `groups_claim` should be set to `groups`.
 

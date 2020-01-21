@@ -37,7 +37,7 @@ either the `X-Vault-Token` HTTP Header or as `Authorization` HTTP Header using
 the `Bearer <token>` scheme.
 
 Otherwise, a client token can be retrieved via [authentication
-backends](/docs/auth/index.html).
+backends](/docs/auth).
 
 Each auth method has one or more unauthenticated login endpoints. These
 endpoints can be reached without any authentication, and are used for
@@ -50,7 +50,7 @@ client or passed via the `X-Vault-Token` or `Authorization` header for future re
 
 ## Namespaces
 
-If using the [Namespaces](/docs/enterprise/namespaces/index.html) feature, API
+If using the [Namespaces](/docs/enterprise/namespaces) feature, API
 operations are relative to the namespace value passed in via the
 `X-Vault-Namespace` header. For instance, if the request path is to
 `secret/foo`, and the header is set to `ns1/ns2/`, the final request path Vault
@@ -289,4 +289,4 @@ A maximum request size of 32MB is imposed to prevent a denial of service attack
 with arbitrarily large requests; this can be tuned per `listener` block in
 Vault's server configuration file.
 
-[agent]: /docs/agent/index.html#listener-stanza
+[agent]: /docs/agent#listener-stanza

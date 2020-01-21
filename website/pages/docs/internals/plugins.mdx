@@ -65,7 +65,7 @@ plugin directory and the plugin catalog entry.
 ### Plugin Directory
 
 The plugin directory is a configuration option of Vault, and can be specified in
-the [configuration file](/docs/configuration/index.html).
+the [configuration file](/docs/configuration).
 This setting specifies a directory in which all plugin binaries must live;
 _this value cannot be a symbolic link_. A plugin
 can not be added to Vault unless it exists in the plugin directory. There is no
@@ -103,7 +103,7 @@ When a backend wants to run a plugin, it first looks up the plugin, by name, in
 the catalog. It then checks the executable's SHA256 sum against the one
 configured in the plugin catalog. Finally Vault runs the command configured in
 the catalog, sending along the JWT formatted response wrapping token and mlock
-settings (like Vault, plugins support [the use of mlock when available](/docs/configuration/index.html#disable_mlock)).
+settings (like Vault, plugins support [the use of mlock when available](/docs/configuration#disable_mlock)).
 
 # Plugin Development
 
@@ -164,4 +164,4 @@ func main() {
 And that's basically it! You would just need to change `myPlugin` to your actual
 plugin. For more information on how to register and enable your plugin, check out the [Building Plugin Backends](https://learn.hashicorp.com/vault/developer/plugin-backends) tutorial.
 
-[api_addr]: /docs/configuration/index.html#api_addr
+[api_addr]: /docs/configuration#api_addr

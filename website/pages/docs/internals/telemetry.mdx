@@ -176,7 +176,7 @@ These metrics relate to internal operations on Merkle Trees and Write Ahead Logs
 
 ## Replication Metrics
 
-These metrics relate to [Vault Enterprise Replication](/docs/enterprise/replication/index.html). The following metrics are not available in telemetry unless replication is in an unhealthy state: `replication.fetchRemoteKeys`, `replication.merkleDiff`, and `replication.merkleSync`.
+These metrics relate to [Vault Enterprise Replication](/docs/enterprise/replication). The following metrics are not available in telemetry unless replication is in an unhealthy state: `replication.fetchRemoteKeys`, `replication.merkleDiff`, and `replication.merkleSync`.
 
 | Metric                                                  | Description                                                                                                                                | Unit            | Type    |
 | :------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------- | :-------------- | :------ |
@@ -321,11 +321,11 @@ These metrics relate to the supported [storage backends][storage-backends].
 | `vault.zookeeper.delete`    | Duration of a DELETE operation against the [ZooKeeper storage backend][zookeeper-storage-backend]                      | ms   | summary |
 | `vault.zookeeper.list`      | Duration of a LIST operation against the [ZooKeeper storage backend][zookeeper-storage-backend]                        | ms   | summary |
 
-[secrets-engines]: /docs/secrets/index.html
-[storage-backends]: /docs/configuration/storage/index.html
+[secrets-engines]: /docs/secrets
+[storage-backends]: /docs/configuration/storage
 [telemetry-stanza]: /docs/configuration/telemetry.html
-[cubbyhole-secrets-engine]: /docs/secrets/cubbyhole/index.html
-[kv-secrets-engine]: /docs/secrets/kv/index.html
+[cubbyhole-secrets-engine]: /docs/secrets/cubbyhole
+[kv-secrets-engine]: /docs/secrets/kv
 [ldap-auth-backend]: /docs/auth/ldap.html
 [token-auth-backend]: /docs/auth/token.html
 [azure-storage-backend]: /docs/configuration/storage/azure.html

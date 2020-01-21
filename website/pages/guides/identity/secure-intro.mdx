@@ -139,8 +139,7 @@ orchestrator](#trusted-orchestrator) approaches.
 
 #### Vault agent auto-auth:
 
-- Automatically authenticates to Vault for those [supported auth
-  methods](/docs/agent/autoauth/methods/index.html)
+- Automatically authenticates to Vault for those [supported auth methods](/docs/agent/autoauth/methods)
 - Keeps token renewed (re-authenticates as needed) until the renewal is no
   longer allowed
 - Designed with robustness and fault tolerance
@@ -148,7 +147,7 @@ orchestrator](#trusted-orchestrator) approaches.
 ![Vault Agent](/img/vault-secure-intro-5.png)
 
 To leverage this feature, run the vault binary in agent mode (`vault agent -config=<config_file>`) on the client. The agent configuration file must specify
-the auth method and [sink](/docs/agent/autoauth/sinks/index.html) locations
+the auth method and [sink](/docs/agent/autoauth/sinks) locations
 where the token to be written.
 
 When the agent is started, it will attempt to acquire a Vault token using the
@@ -165,8 +164,8 @@ handles the login and token refresh logic.
 ### Reference Materials:
 
 - [Streamline Secrets Management with Vault Agent and Vault 0.11](https://youtu.be/zDnIqSB4tyA)
-- [Vault Agent documentation](/docs/agent/index.html)
-- [Auto-Auth documentation](/docs/agent/autoauth/index.html)
+- [Vault Agent documentation](/docs/agent)
+- [Auto-Auth documentation](/docs/agent/autoauth)
 
 ## Next steps
 

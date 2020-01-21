@@ -143,7 +143,7 @@ Logging in via the Vault UI requires a redirect URI of the form:
 
 The "host:port" must be correct for the Vault server, and "path" must match the path the JWT
 backend is mounted at (e.g. "oidc" or "jwt").
-If [namespaces](/docs/enterprise/namespaces/index.html) are being used,
+If [namespaces](/docs/enterprise/namespaces) are being used,
 they must be added as query parameters, for example:
 
 `https://vault.example.com:8200/ui/vault/auth/oidc/oidc/callback?namespace=my_ns`
@@ -204,7 +204,7 @@ why things aren't working. Some tips for setting up OIDC:
 
   `cat jwt.json | jq -r .access_token | cut -d. -f2 | base64 -D`
 
-- As of Vault 1.2, the [`verbose_oidc_logging`](/api/auth/jwt/index.html#verbose_oidc_logging) role
+- As of Vault 1.2, the [`verbose_oidc_logging`](/api/auth/jwt#verbose_oidc_logging) role
   option is available which will log the received OIDC token if debug-level logging is enabled. This can
   be helpful when debugging provider setup and verifying that the received claims are what you expect.
   Since claims data is logged verbatim and may contain sensitive information, this option should not be
@@ -270,7 +270,7 @@ management tool.
 
 1.  Use the `/config` endpoint to configure Vault. To support JWT roles, either local keys or an OIDC
     Discovery URL must be present. For OIDC roles, OIDC Discovery URL, OIDC Client ID and OIDC Client Secret are required. For the
-    list of available configuration options, please see the [API documentation](/api/auth/jwt/index.html).
+    list of available configuration options, please see the [API documentation](/api/auth/jwt).
 
     ```text
     $ vault write auth/jwt/config \
@@ -302,4 +302,4 @@ management tool.
 ## API
 
 The JWT Auth Plugin has a full HTTP API. Please see the
-[API docs](/api/auth/jwt/index.html) for more details.
+[API docs](/api/auth/jwt) for more details.

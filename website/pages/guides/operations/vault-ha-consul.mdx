@@ -30,8 +30,8 @@ redirect requests to the _active_ node.
 > Nodes** feature is included in _Vault Enterprise Premium_, and also available
 > for _Vault Enterprise Pro_ with additional fee. This is particularly useful for
 > processing high volume Encryption as a Service ([Transit secrets
-> engine](/docs/secrets/transit/index.html)) requests. Read [Performance Standby
-> Nodes](/docs/enterprise/performance-standby/index.html) documentation and a [guide](/guides/operations/performance-nodes.html) for more details.
+> engine](/docs/secrets/transit)) requests. Read [Performance Standby
+> Nodes](/docs/enterprise/performance-standby) documentation and a [guide](/guides/operations/performance-nodes.html) for more details.
 
 ~> This guide will walk you through a simple Vault Highly Available (HA) cluster
 implementation. While this is not an exhaustive or prescriptive guide that can
@@ -42,7 +42,7 @@ inform your own production setup.
 
 - [High Availability Mode](/docs/concepts/ha.html)
 - [Consul Storage Backend](/docs/configuration/storage/consul.html)
-- [High Availability Parameters](/docs/configuration/index.html#high-availability-parameters)
+- [High Availability Parameters](/docs/configuration#high-availability-parameters)
 - [Consul Agent Configuration](https://www.consul.io/docs/agent/options.html)
 
 ## Estimated Time to Complete
@@ -462,7 +462,7 @@ In our configuration file, we'll set up the following:
 
 - [**`tcp`**](/docs/configuration/listener/tcp.html) listener
 - [**`consul`**](/docs/configuration/storage/consul.html) storage backend
-- [High Availability parameters](/docs/configuration/index.html#high-availability-parameters)
+- [High Availability parameters](/docs/configuration#high-availability-parameters)
 
 This section assumes the Vault binary is located at **`/usr/local/bin/vault`**
 
@@ -490,7 +490,7 @@ We're setting the following parameters for our `tcp` listener:
 This configuration allows for listening on all interfaces (such that a Vault
 command against the loopback address would succeed, for example).
 
-We're also explicitly setting Vault's [HA parameters](/docs/configuration/index.html#high-availability-parameters) (`api_addr` and `cluster_addr`). Often, it's not necessary to configure these two parameters when using Consul as Vault's storage backend, as Consul will attempt to automatically discover and advertise the address of the active Vault node. However, certain cluster configurations might require them to be explicitly set (accessing Vault through a load balancer, for example).
+We're also explicitly setting Vault's [HA parameters](/docs/configuration#high-availability-parameters) (`api_addr` and `cluster_addr`). Often, it's not necessary to configure these two parameters when using Consul as Vault's storage backend, as Consul will attempt to automatically discover and advertise the address of the active Vault node. However, certain cluster configurations might require them to be explicitly set (accessing Vault through a load balancer, for example).
 
 For the sake of simplicity, we will assume that clients in our scenario connect directly to the Vault nodes (rather than through a load balancer). Review the [Client Redirection](/docs/concepts/ha.html#client-redirection) documentation for more information on client access patterns and their implications.
 

@@ -107,21 +107,21 @@ spec:
       labels:
         app: app-example
       annotations:
-        vault.hashicorp.com/agent-inject: "true"
-        vault.hashicorp.com/agent-inject-secret-db-creds: "database/creds/db-app"
+        vault.hashicorp.com/agent-inject: 'true'
+        vault.hashicorp.com/agent-inject-secret-db-creds: 'database/creds/db-app'
         vault.hashicorp.com/agent-inject-template-db-creds: |
           {{- with secret "database/creds/db-app" -}}
           postgres://{{ .Data.username }}:{{ .Data.password }}@postgres:5432/appdb?sslmode=disable
           {{- end }}
-        vault.hashicorp.com/role: "db-app"
-        vault.hashicorp.com/ca-cert: "/vault/tls/ca.crt"
-        vault.hashicorp.com/client-cert: "/vault/tls/client.crt"
-        vault.hashicorp.com/client-key: "/vault/tls/client.key"
-        vault.hashicorp.com/tls-secret: "vault-tls-client"
+        vault.hashicorp.com/role: 'db-app'
+        vault.hashicorp.com/ca-cert: '/vault/tls/ca.crt'
+        vault.hashicorp.com/client-cert: '/vault/tls/client.crt'
+        vault.hashicorp.com/client-key: '/vault/tls/client.key'
+        vault.hashicorp.com/tls-secret: 'vault-tls-client'
     spec:
       containers:
         - name: app
-          image: "app:1.0.0"
+          image: 'app:1.0.0'
       serviceAccountName: app-example
 ```
 
@@ -129,7 +129,7 @@ spec:
 
 The following example creates a deployment that mounts a Kubernetes ConfigMap
 containing Vault Agent configuration files. For a complete list of the Vault
-Agent configuration settings, [see the Agent documentation](/docs/agent/template/index.html#vault-agent-templates).
+Agent configuration settings, [see the Agent documentation](/docs/agent/template#vault-agent-templates).
 
 ```yaml
 ---
@@ -152,13 +152,13 @@ spec:
       labels:
         app: app-example
       annotations:
-        vault.hashicorp.com/agent-inject: "true"
-        vault.hashicorp.com/agent-configmap: "my-configmap"
-        vault.hashicorp.com/tls-secret: "vault-tls-client"
+        vault.hashicorp.com/agent-inject: 'true'
+        vault.hashicorp.com/agent-configmap: 'my-configmap'
+        vault.hashicorp.com/tls-secret: 'vault-tls-client'
     spec:
       containers:
         - name: app
-          image: "app:1.0.0"
+          image: 'app:1.0.0'
       serviceAccountName: app-example
 ---
 apiVersion: v1

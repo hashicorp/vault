@@ -55,7 +55,7 @@ This makes many management and delegation tasks challenging. For example,
 allowing a user to change their own password by invoking the
 `auth/userpass/users/<user_name>/password` endpoint can require either a policy
 for _every user_ or requires the use of Sentinel which is a part of [Vault
-Enterprise](/docs/enterprise/sentinel/index.html).
+Enterprise](/docs/enterprise/sentinel).
 
 ## Solution
 
@@ -63,7 +63,7 @@ As of **Vault 0.11**, ACL templating capability is available to allow a subset
 of user information to be used within ACL policy paths.
 
 -> **NOTE:** This feature leverages [Vault
-Identities](/docs/secrets/identity/index.html) to inject values into ACL policy
+Identities](/docs/secrets/identity) to inject values into ACL policy
 paths.
 
 ## Prerequisites

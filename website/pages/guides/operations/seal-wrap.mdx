@@ -10,7 +10,7 @@ description: 'In this guide,'
 ~> **Enterprise Only:** Vault's HSM auto-unseal and Seal Wrap features are a
 part of _Vault Enterprise_.
 
-**_Vault Enterprise_** integrates with [HSM platforms](/docs/enterprise/hsm/index.html)
+**_Vault Enterprise_** integrates with [HSM platforms](/docs/enterprise/hsm)
 to opt-in automatic [unsealing](/docs/concepts/seal.html#unsealing).
 HSM integration provides three pieces of special functionality:
 
@@ -36,9 +36,9 @@ operations.
 ## Reference Material
 
 - [HashiCorp + AWS: Integrating CloudHSM with Vault Enterprise](https://www.hashicorp.com/resources/hashicorp-and-aws-integrating-cloudhsm-with-vault-e) webinar
-- [Seal Wrap documentation](/docs/enterprise/sealwrap/index.html)
+- [Seal Wrap documentation](/docs/enterprise/sealwrap)
 - [Vault Configuration - pkcs11 Seal](/docs/configuration/seal/pkcs11.html)
-- [Vault Enterprise HSM Support](/docs/enterprise/hsm/index.html)
+- [Vault Enterprise HSM Support](/docs/enterprise/hsm)
 - [NIST SC-12: Cryptographic Key Establishment and Management](https://nvd.nist.gov/800-53/Rev4/control/SC-12)
 - [NIST SC-13: Cryptographic Protection](https://nvd.nist.gov/800-53/Rev4/control/SC-13)
 
@@ -71,7 +71,7 @@ HSM encryption and decryption.
 
 #### Benefits of the Seal Wrap:
 
-- Conformance with FIPS 140-2 directives on Key Storage and Key Transport as [certified by Leidos](/docs/enterprise/sealwrap/index.html#fips-140-2-compliance)
+- Conformance with FIPS 140-2 directives on Key Storage and Key Transport as [certified by Leidos](/docs/enterprise/sealwrap#fips-140-2-compliance)
 - Supports FIPS level of security equal to HSM
   - For example, if you use Level 3 hardware encryption on an HSM, Vault will be
     using FIPS 140-2 Level 3 cryptography
@@ -84,7 +84,7 @@ HSM encryption and decryption.
 
 This intermediate operations guide assumes that you have:
 
-- A [supported HSM](/docs/enterprise/hsm/index.html) cluster to be integrated
+- A [supported HSM](/docs/enterprise/hsm) cluster to be integrated
   with Vault
 - Vault Enterprise Premium
 

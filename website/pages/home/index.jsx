@@ -30,8 +30,7 @@ export default function Homepage() {
               {
                 external: false,
                 title: 'Get Started with Vault',
-                url:
-                  'https://www.vaultproject.io/intro/getting-started/index.html'
+                url: 'https://www.vaultproject.io/intro/getting-started'
               }
             ],
             centered: false,

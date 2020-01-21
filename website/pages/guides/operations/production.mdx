@@ -50,7 +50,7 @@ and practical.
   still have sensitive data in memory to function. Risk of exposure should be
   minimized by disabling swap to prevent the operating system from paging
   sensitive data to disk. Vault attempts to ["memory lock" to physical memory
-  automatically](/docs/configuration/index.html#disable_mlock), but disabling
+  automatically](/docs/configuration#disable_mlock), but disabling
   swap adds another layer of defense.
 
 - **Don't Run as Root**. Vault is designed to run as an unprivileged user, and
@@ -88,7 +88,7 @@ and practical.
 - **Enable Auditing**. Vault supports several auditing backends. Enabling
   auditing provides a history of all operations performed by Vault and provides
   a forensics trail in the case of misuse or compromise. Audit logs [securely
-  hash](/docs/audit/index.html) any sensitive data, but access should still be
+  hash](/docs/audit) any sensitive data, but access should still be
   restricted to prevent any unintended disclosures.
 
 - **Upgrade Frequently**. Vault is actively developed, and updating frequently
@@ -118,5 +118,5 @@ and practical.
   Consider to review `ulimits` for maximum amount of open files, connections, etc. before
   going into production; they may need increasing.
 
-- **Docker Containers**. To leverage the ["memory lock"](/docs/configuration/index.html#disable_mlock)
+- **Docker Containers**. To leverage the ["memory lock"](/docs/configuration#disable_mlock)
   feature inside the Vault container you will likely need to use the `overlayfs2` or another supporting driver.

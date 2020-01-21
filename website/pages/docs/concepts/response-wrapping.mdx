@@ -26,7 +26,7 @@ in persistent storage, you cannot encrypt this key in transit.
 To help address this problem, Vault includes a feature called _response
 wrapping_. When requested, Vault can take the response it would have sent to an
 HTTP client and instead insert it into the
-[`cubbyhole`](/docs/secrets/cubbyhole/index.html) of a single-use token,
+[`cubbyhole`](/docs/secrets/cubbyhole) of a single-use token,
 returning that single-use token instead. Logically speaking, the response is
 wrapped by the token, and retrieving it requires an unwrap operation against
 this token.
