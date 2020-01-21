@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -231,6 +232,18 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	expectedAliasMetadata := map[string]string{
+		"account_id":     "123456789012",
+		"auth_type":      "iam",
+		"canonical_arn":  "arn:aws:iam::123456789012:user/valid-role",
+		"client_arn":     "arn:aws:iam::123456789012:user/valid-role",
+		"client_user_id": "ASOMETHINGSOMETHINGSOMETHING",
+		// Note there is no inferred entity, so these fields should be empty
+		"inferred_aws_region":  "",
+		"inferred_entity_id":   "",
+		"inferred_entity_type": "",
+	}
+
 	// expected errors for certain tests
 	missingHeaderErr := errors.New("error validating X-Vault-AWS-IAM-Server-ID header: missing header \"X-Vault-AWS-IAM-Server-ID\"")
 	parsingErr := errors.New("error making upstream request: error parsing STS response")
@@ -324,6 +337,10 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 					return
 				}
 				t.Errorf("un expected failed login:\nresp: %#v\n\nerr: %v", resp, err)
+			}
+
+			if !reflect.DeepEqual(expectedAliasMetadata, resp.Auth.Alias.Metadata) {
+				t.Errorf("expected metadata (%#v) to match (%#v)", expectedAliasMetadata, resp.Auth.Alias.Metadata)
 			}
 		})
 	}
