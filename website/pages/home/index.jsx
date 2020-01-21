@@ -87,7 +87,7 @@ export default function Homepage() {
             beforeHeadline="Static Infrastructure"
             beforeContent={`Datacenters with inherently high-trust networks with clear network perimeters.
 
-#### Tradidtional Approach
+#### Traditional Approach
 
 - High trust networks
 - A clear network perimeter
