@@ -144,6 +144,41 @@ func TestSealMigration(t *testing.T) {
 			t.Fatalf("expected unsealed state; got %#v", *resp)
 		}
 
+		// Make sure the seal configs were updated correctly
+		b, err := autoSeal.BarrierConfig(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if b.Type != autoSeal.BarrierType() {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.SecretShares != 1 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.SecretThreshold != 1 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.StoredShares != 1 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+
+		r, err := autoSeal.RecoveryConfig(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r.Type != seal.Shamir {
+			t.Fatalf("bad seal config: %#v", r)
+		}
+		if r.SecretShares != 2 {
+			t.Fatalf("bad seal config: %#v", r)
+		}
+		if r.SecretThreshold != 2 {
+			t.Fatalf("bad seal config: %#v", r)
+		}
+		if r.StoredShares != 0 {
+			t.Fatalf("bad seal config: %#v", r)
+		}
+
 		cluster.Cleanup()
 		cluster.Cores = nil
 	}
@@ -238,6 +273,41 @@ func TestSealMigration(t *testing.T) {
 			t.Fatalf("expected unsealed state; got %#v", *resp)
 		}
 
+		// Make sure the seal configs were updated correctly
+		b, err := altSeal.BarrierConfig(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if b.Type != altSeal.BarrierType() {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.SecretShares != 1 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.SecretThreshold != 1 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.StoredShares != 1 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+
+		r, err := altSeal.RecoveryConfig(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r.Type != seal.Shamir {
+			t.Fatalf("bad seal config: %#v", r)
+		}
+		if r.SecretShares != 2 {
+			t.Fatalf("bad seal config: %#v", r)
+		}
+		if r.SecretThreshold != 2 {
+			t.Fatalf("bad seal config: %#v", r)
+		}
+		if r.StoredShares != 0 {
+			t.Fatalf("bad seal config: %#v", r)
+		}
+
 		cluster.Cleanup()
 		cluster.Cores = nil
 	}
@@ -279,6 +349,29 @@ func TestSealMigration(t *testing.T) {
 		}
 		if resp.Sealed {
 			t.Fatalf("expected unsealed state; got %#v", *resp)
+		}
+
+		// Make sure the seal configs were updated correctly
+		b, err := shamirSeal.BarrierConfig(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if b.Type != seal.Shamir {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.SecretShares != 2 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.SecretThreshold != 2 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.StoredShares != 1 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+
+		_, err = shamirSeal.RecoveryConfig(context.Background())
+		if err == nil {
+			t.Fatal("expected error")
 		}
 
 		cluster.Cleanup()
