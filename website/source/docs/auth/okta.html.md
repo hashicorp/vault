@@ -82,9 +82,7 @@ management tool.
     group membership will be available. Without a token, groups will not be
     queried.
     
-    Support for okta auth with no API token is deprecated in Vault 1.4,
-    and will be removed in Vault 1.5.
-    **
+    Support for okta auth with no API token is deprecated in Vault 1.4.**
 
     For the complete list of configuration options, please see the API
     documentation.
