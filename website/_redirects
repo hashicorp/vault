@@ -184,3 +184,6 @@
 /intro/getting-started/deploy.html https://learn.hashicorp.com/vault/getting-started/deploy
 /intro/getting-started/apis.html https://learn.hashicorp.com/vault/getting-started/apis
 /intro/getting-started/next-steps.html https://learn.hashicorp.com/vault/getting-started/next-steps
+
+/docs/secrets/postgresql/index.html     /docs/secrets/databases/postgresql
+/docs/secrets/postgresql                /docs/secrets/databases/postgresql
