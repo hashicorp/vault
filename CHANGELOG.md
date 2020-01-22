@@ -22,6 +22,7 @@ BUG FIXES:
 
 IMPROVEMENTS:
  * auth/aws: Add aws metadata to identity alias [GH-7975]
+ * auth/kubernetes: Allow both names and namespaces to be set to "*" [GH-78]
 
 BUG FIXES:
 
