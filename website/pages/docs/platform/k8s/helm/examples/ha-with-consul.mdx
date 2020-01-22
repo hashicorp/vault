@@ -21,7 +21,7 @@ server:
     GOOGLE_PROJECT: myproject
     GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/my-gcp-iam/myproject-creds.json
 
-  extraVolumes: []
+  extraVolumes:
     - type: secret
       name: my-gcp-iam
 
