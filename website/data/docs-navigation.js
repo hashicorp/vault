@@ -244,8 +244,7 @@ export default [
       { category: 'cassandra' },
       { category: 'mongodb' },
       { category: 'mssql' },
-      { category: 'mysql' },
-      { category: 'postgresql' }
+      { category: 'mysql' }
     ]
   },
   {
