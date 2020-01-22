@@ -185,6 +185,7 @@ export default [
               'cf',
               'gcp',
               'jwt',
+              'kerberos',
               'kubernetes'
             ]
           },
