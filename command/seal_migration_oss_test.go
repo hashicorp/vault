@@ -6,44 +6,55 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/physical"
-	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
 )
 
 func TestSealMigrationAutoToShamir(t *testing.T) {
+	t.Parallel()
+	t.Run("inmem", func(t *testing.T) {
+		t.Parallel()
+		testSealMigrationAutoToShamir(t, teststorage.InmemBackendSetup)
+	})
+
+	t.Run("file", func(t *testing.T) {
+		t.Parallel()
+		testSealMigrationAutoToShamir(t, teststorage.FileBackendSetup)
+	})
+
+	t.Run("consul", func(t *testing.T) {
+		t.Parallel()
+		testSealMigrationAutoToShamir(t, teststorage.ConsulBackendSetup)
+	})
+
+	t.Run("raft", func(t *testing.T) {
+		t.Parallel()
+		testSealMigrationAutoToShamir(t, teststorage.RaftBackendSetup)
+	})
+}
+
+func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupMutator) {
 	tcluster := newTransitSealServer(t)
 	defer tcluster.Cleanup()
 
-	logger := logging.NewVaultLogger(hclog.Trace).Named(t.Name())
-	phys, err := physInmem.NewInmem(nil, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-	haPhys, err := physInmem.NewInmemHA(nil, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
 	autoSeal := tcluster.makeKeyAndSeal(t, "key1")
-	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
 		Seal:            autoSeal,
-		Physical:        phys,
-		HAPhysical:      haPhys.(physical.HABackend),
 		DisableSealWrap: true,
 	}, &vault.TestClusterOptions{
-		Logger:      logger,
 		HandlerFunc: vaulthttp.Handler,
 		SkipInit:    true,
 		NumCores:    1,
-	})
+	},
+		setup,
+	)
+	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
 	defer cluster.Cleanup()
 
@@ -64,9 +75,10 @@ func TestSealMigrationAutoToShamir(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	logger := cluster.Logger.Named("shamir")
 	shamirSeal := vault.NewDefaultSeal(&seal.Access{
 		Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
-			Logger: logger.Named("shamir"),
+			Logger: logger,
 		}),
 	})
 
