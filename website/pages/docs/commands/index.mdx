@@ -13,9 +13,9 @@ description: |-
 
 ~> **Note:** The Vault CLI interface was changed substantially in 0.9.2+ and may cause
 confusion while using older versions of Vault with this documentation. Read our
-[upgrade guide](/guides/upgrading/upgrade-to-0.9.2.html#backwards-compatible-cli-changes) for more information.
+[upgrade guide](/guides/upgrading/upgrade-to-0.9.2#backwards-compatible-cli-changes) for more information.
 
-In addition to a verbose [HTTP API](/api/index.html), Vault features a
+In addition to a verbose [HTTP API](/api), Vault features a
 command-line interface that wraps common functionality and formats output. The
 Vault CLI is a single static binary. It is a thin wrapper around the HTTP API.
 Every CLI command maps directly to the HTTP API internally.
@@ -50,7 +50,7 @@ and arguments if any:
 vault <command> [options] [path] [args]
 ```
 
-- `options` - [Flags](/docs/commands/index.html#flags) to specify additional settings
+- `options` - [Flags](/docs/commands#flags) to specify additional settings
 - `args` - API arguments specific to the operation
 
   -> **NOTE:** Run `vault path-help <path>` to see the list of args (parameters).
@@ -60,7 +60,7 @@ vault <command> [options] [path] [args]
 The following `write` command creates a new user (`bob`) in the userpass auth
 method. It passes the `-address` flag to specify the Vault server address which
 precedes the path (`auth/userpass/users/bob`) and its
-[argument](/api/auth/userpass/index.html#create-update-user)
+[argument](/api/auth/userpass#create-update-user)
 (`password="long-password"`) at last.
 
 ```text
@@ -68,7 +68,7 @@ $ vault write -address="http://127.0.0.1:8200" auth/userpass/users/bob password=
 ```
 
 If multiple options (`-address` and `-namespace`) and
-[arguments](/api/auth/userpass/index.html#create-update-user) (`password` and
+[arguments](/api/auth/userpass#create-update-user) (`password` and
 `policies`) are specified, the command would look like:
 
 ```text
@@ -206,7 +206,7 @@ precedence over the environment variables.
 Vault authentication token. Conceptually similar to a session token on a
 website, the `VAULT_TOKEN` environment variable holds the contents of the token.
 For more information, please see the [token
-concepts](/docs/concepts/tokens.html) page.
+concepts](/docs/concepts/tokens) page.
 
 ### `VAULT_ADDR`
 
@@ -257,7 +257,7 @@ High Availability mode.
 
 Do not verify Vault's presented certificate before communicating with it.
 Setting this variable is not recommended and voids Vault's [security
-model](/docs/internals/security.html).
+model](/docs/internals/security).
 
 ### `VAULT_TLS_SERVER_NAME`
 
@@ -281,7 +281,7 @@ limiting is off by default.
 _Note:_ The rate is limited for each invocation of the `vault` CLI. Since
 each invocation of the `vault` CLI typically only makes a few requests,
 this environment variable is most useful when using the Go
-[Vault client API](https://www.vaultproject.io/api/libraries.html#go).
+[Vault client API](/api/libraries#go).
 
 ### `VAULT_NAMESPACE`
 

@@ -16,7 +16,7 @@ you in as the root user with admin permissions. In a non-dev setup, you would
 have had to authenticate first.
 
 On this page, we'll talk specifically about authentication. On the next page, we
-talk about [authorization](/intro/getting-started/policies.html). Authentication
+talk about [authorization](/intro/getting-started/policies). Authentication
 is the mechanism of assigning an identity to a Vault user. The access control
 and permissions associated with an identity are authorization, and will not be
 covered on this page.
@@ -80,7 +80,7 @@ $ vault token revoke 463763ae-0c3b-ff77-e137-af668941465c
 Success! Revoked token (if it existed)
 ```
 
-In a [previous section](/intro/getting-started/dynamic-secrets.html#revoking-the-secret), we use the `vault lease revoke` command. This command
+In a [previous section](/intro/getting-started/dynamic-secrets#revoking-the-secret), we use the `vault lease revoke` command. This command
 is only used for revoking _leases_. For revoking _tokens_, use
 `vault token revoke`.
 
@@ -279,6 +279,6 @@ The multiple auth methods Vault provides let you choose the most appropriate
 authentication mechanism for your organization.
 
 In this next section, we'll learn about
-[authorization and policies](/intro/getting-started/policies.html).
+[authorization and policies](/intro/getting-started/policies).
 
 [gh-pat]: https://help.github.com/articles/creating-an-access-token-for-command-line-use/

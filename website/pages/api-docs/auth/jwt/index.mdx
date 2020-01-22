@@ -11,7 +11,7 @@ description: |-
 
 This is the API documentation for the Vault JWT/OIDC auth method
 plugin. To learn more about the usage and operation, see the
-[Vault JWT/OIDC method documentation](/docs/auth/jwt.html).
+[Vault JWT/OIDC method documentation](/docs/auth/jwt).
 
 This documentation assumes the plugin method is mounted at the
 `/auth/jwt` path in Vault. Since it is possible to enable auth methods
@@ -281,7 +281,7 @@ Obtain an authorization URL from Vault to start an OIDC login flow.
 - `redirect_uri` `(string: <required>)` - Path to the callback to complete the login. This will be
   of the form, "https://.../oidc/callback" where the leading portion is dependent on your Vault
   server location, port, and the mount of the JWT plugin. This must be configured with Vault and the
-  provider. See [Redirect URIs](/docs/auth/jwt.html#redirect-uris) for more information.
+  provider. See [Redirect URIs](/docs/auth/jwt#redirect-uris) for more information.
 
 ### Sample Payload
 
