@@ -4,6 +4,7 @@ package command
 
 import (
 	"context"
+	"encoding/base64"
 	"testing"
 
 	wrapping "github.com/hashicorp/go-kms-wrapping"
@@ -54,6 +55,7 @@ func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupM
 	},
 		setup,
 	)
+	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -66,11 +68,15 @@ func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupM
 	if err != nil {
 		t.Fatal(err)
 	}
-	rootToken := initResp.RootToken
-	client.SetToken(rootToken)
+	for _, k := range initResp.RecoveryKeysB64 {
+		b, _ := base64.RawStdEncoding.DecodeString(k)
+		cluster.RecoveryKeys = append(cluster.RecoveryKeys, b)
+	}
 
 	testhelpers.WaitForActiveNode(t, cluster)
 
+	rootToken := initResp.RootToken
+	client.SetToken(rootToken)
 	if err := client.Sys().Seal(); err != nil {
 		t.Fatal(err)
 	}

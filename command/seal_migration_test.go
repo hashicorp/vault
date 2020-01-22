@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"encoding/base64"
 	"path"
 	"testing"
 
@@ -269,6 +270,7 @@ func testSealMigrationAutoToAuto(t *testing.T, setup teststorage.ClusterSetupMut
 	},
 		setup,
 	)
+	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -283,6 +285,10 @@ func testSealMigrationAutoToAuto(t *testing.T, setup teststorage.ClusterSetupMut
 	}
 	rootToken := initResp.RootToken
 	client.SetToken(rootToken)
+	for _, k := range initResp.RecoveryKeysB64 {
+		b, _ := base64.RawStdEncoding.DecodeString(k)
+		cluster.RecoveryKeys = append(cluster.RecoveryKeys, b)
+	}
 
 	testhelpers.WaitForActiveNode(t, cluster)
 
