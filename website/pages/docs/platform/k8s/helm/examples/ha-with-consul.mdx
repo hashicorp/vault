@@ -15,10 +15,6 @@ The below `values.yaml` can be used to set up a five server Vault cluster using
 Consul as a highly available storage backend, Google Cloud KMS for Auto Unseal.
 
 ```yaml
-global:
-  enabled: true
-  image: "vault:1.3.0"
-
 server:
   extraEnvironmentVars:
     GOOGLE_REGION: global
