@@ -5,15 +5,15 @@ import (
 	"strings"
 )
 
-func ValidateConfig(c *config) (*config, error) {
+func validateConfig(c *config) (*config, error) {
 	var err error
 
-	err = ValidateOktaDomain(c)
+	err = validateOktaDomain(c)
 	if err != nil {
 		return nil, err
 	}
 
-	err = ValidateApiToken(c)
+	err = validateApiToken(c)
 	if err != nil {
 		return nil, err
 	}
@@ -21,7 +21,7 @@ func ValidateConfig(c *config) (*config, error) {
 	return c, nil
 }
 
-func ValidateOktaDomain(c *config) error {
+func validateOktaDomain(c *config) error {
 	if c.Okta.Client.OrgUrl == "" {
 		return errors.New("your Okta URL is missing. You can copy your domain from the Okta Developer Console. Follow these instructions to find it: https://bit.ly/finding-okta-domain")
 	}
@@ -48,7 +48,7 @@ func ValidateOktaDomain(c *config) error {
 	return nil
 }
 
-func ValidateApiToken(c *config) error {
+func validateApiToken(c *config) error {
 	if c.Okta.Client.Token == "" {
 		return errors.New("your Okta API token is missing. You can generate one in the Okta Developer Console. Follow these instructions: https://bit.ly/get-okta-api-token")
 	}
