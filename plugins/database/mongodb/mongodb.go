@@ -233,6 +233,7 @@ func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string
 // runCommandWithRetry runs a command with retry.
 func runCommandWithRetry(ctx context.Context, client *mongo.Client, db string, cmd interface{}) error {
 	timeout := time.Now().Add(1 * time.Minute)
+	backoffTime := 3
 	for {
 		// Run command
 		result := client.Database(db).RunCommand(ctx, cmd, nil)
@@ -243,7 +244,8 @@ func runCommandWithRetry(ctx context.Context, client *mongo.Client, db string, c
 		if time.Now().After(timeout) {
 			return result.Err()
 		}
-		time.Sleep(30 * time.Millisecond)
+		time.Sleep(time.Duration(backoffTime) * time.Second)
+		backoffTime += backoffTime
 	}
 	return nil
 }
