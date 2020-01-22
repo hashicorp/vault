@@ -27,7 +27,7 @@ The following topics are addressed in this guide:
 - [Additional References](#additional-references)
 
 -> This document assumes Vault uses Consul as the [storage
-backend](/docs/internals/architecture.html) since that is the recommended
+backend](/docs/internals/architecture) since that is the recommended
 storage backend for production deployments.
 
 ## <a name="one-dc"></a>Deployment Topology within One Datacenter
@@ -38,7 +38,7 @@ cluster replication.
 
 ### Reference Diagram
 
-Eight Nodes with [Consul Storage Backend](/docs/configuration/storage/consul.html)
+Eight Nodes with [Consul Storage Backend](/docs/configuration/storage/consul)
 ![Reference diagram](/img/vault-ref-arch-2.png)
 
 #### Design Summary
@@ -60,7 +60,7 @@ such as an AWS Region. The diagram below shows Vault and Consul spread between
 AZs, with Consul servers in Redundancy Zone configurations, promoting a single
 voting member per AZ, providing both Zone and Node level failure protection.
 
--> Refer to the online documentation to learn more about the [Consul leader election process](https://www.consul.io/docs/guides/leader-election.html).
+-> Refer to the online documentation to learn more about the [Consul leader election process](https://www.consul.io/docs/guides/leader-election).
 
 ![Failure tolerance|40%](/img/vault-ref-arch-3.png)
 
@@ -143,7 +143,7 @@ in some cloud providers.
 
 ### Other Considerations
 
-[Vault Production Hardening Recommendations](/guides/operations/production.html)
+[Vault Production Hardening Recommendations](/guides/operations/production)
 provides guidance on best practices for a production hardened deployment of
 Vault.
 
@@ -200,8 +200,8 @@ listen vault
 
 There are two supported methods for handling client IP addressing behind a proxy
 or load balancer;
-[X-Forwarded-For Headers](https://www.vaultproject.io/docs/configuration/listener/tcp.html#x_forwarded_for_authorized_addrs)
-and [PROXY v1](https://www.vaultproject.io/docs/configuration/listener/tcp.html#proxy_protocol_authorized_addrs). Both require a trusted load balancer and require IP address whitelisting to
+[X-Forwarded-For Headers](/docs/configuration/listener/tcp#x_forwarded_for_authorized_addrs)
+and [PROXY v1](/docs/configuration/listener/tcp#proxy_protocol_authorized_addrs). Both require a trusted load balancer and require IP address whitelisting to
 adhere to security best practices.
 
 ### High Availability
@@ -212,10 +212,10 @@ backend. With this configuration, during a Vault server outage, failover is
 handled immediately without human intervention.
 
 To learn more about setting up your Vault servers in HA mode, read [_Vault HA
-with Consul_](/guides/operations/vault-ha-consul.html) guide.
+with Consul_](/guides/operations/vault-ha-consul) guide.
 
 > High-availability with [Performance Standby
-> Nodes](/guides/operations/performance-nodes.html) and data-locality across
+> Nodes](/guides/operations/performance-nodes) and data-locality across
 > datacenters requires Vault Enterprise.
 
 ## <a name="multi-dc"></a>Deployment Topology for Multiple Datacenters
@@ -227,9 +227,7 @@ with Consul_](/guides/operations/vault-ha-consul.html) guide.
 ~> **Enterprise Only:** Vault replication feature is a part of _Vault Enterprise_.
 
 HashiCorp Vault Enterprise provides two modes of replication, **performance**
-and **disaster recovery**. The [Vault
-documentation](/docs/enterprise/replication/index.html) provides more detailed
-information on the replication capabilities within Vault Enterprise.
+and **disaster recovery**. The [Vault documentation](/docs/enterprise/replication) provides more detailed information on the replication capabilities within Vault Enterprise.
 
 ![Replication Pattern](/img/vault-ref-arch-8.png)
 
@@ -239,7 +237,7 @@ Vault performance replication allows for secrets management across many sites.
 Secrets, authentication methods, authorization policies and other details are
 replicated to be active and available in multiple locations.
 
--> Refer to the [Vault Mount Filter](/guides/operations/mount-filter.html) guide
+-> Refer to the [Vault Mount Filter](/guides/operations/mount-filter) guide
 about filtering out secret engines from being replicated across regions.
 
 #### Disaster Recovery Replication
@@ -272,7 +270,7 @@ scenario.
 
 ![Replication Pattern](/img/vault-ref-arch-7.png)
 
--> Refer to the [Vault Disaster Recovery Setup](/guides/operations/disaster-recovery.html) guide for additional information.
+-> Refer to the [Vault Disaster Recovery Setup](/guides/operations/disaster-recovery) guide for additional information.
 
 #### Corruption or Sabotage Disaster Recovery
 
@@ -319,12 +317,12 @@ HSM.
 
 ## Additional References
 
-- Vault [architecture](/docs/internals/architecture.html) documentation explains
+- Vault [architecture](/docs/internals/architecture) documentation explains
   each Vault component
 - To integrate Vault with existing LDAP server, refer to
-  [LDAP Auth Method](/docs/auth/ldap.html) documentation
+  [LDAP Auth Method](/docs/auth/ldap) documentation
 - Refer to the [AppRole Pull
-  Authentication](/guides/identity/authentication.html) guide to programmatically
+  Authentication](/guides/identity/authentication) guide to programmatically
   generate a token for a machine or app
 - Consul is an integral part of running a resilient Vault cluster, regardless of
   location. Refer to the online [Consul documentation](https://www.consul.io/intro/getting-started/install.html) to
@@ -332,8 +330,8 @@ HSM.
 
 ## Next steps
 
-- Read [Production Hardening](/guides/operations/production.html) to learn best
+- Read [Production Hardening](/guides/operations/production) to learn best
   practices for a production hardening deployment of Vault.
 
-- Read [Deployment Guide](/guides/operations/deployment-guide.html) to learn
+- Read [Deployment Guide](/guides/operations/deployment-guide) to learn
   the steps required to install and configure a single HashiCorp Vault cluster.

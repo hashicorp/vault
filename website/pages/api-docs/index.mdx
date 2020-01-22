@@ -37,7 +37,7 @@ either the `X-Vault-Token` HTTP Header or as `Authorization` HTTP Header using
 the `Bearer <token>` scheme.
 
 Otherwise, a client token can be retrieved via [authentication
-backends](/docs/auth/index.html).
+backends](/docs/auth).
 
 Each auth method has one or more unauthenticated login endpoints. These
 endpoints can be reached without any authentication, and are used for
@@ -50,7 +50,7 @@ client or passed via the `X-Vault-Token` or `Authorization` header for future re
 
 ## Namespaces
 
-If using the [Namespaces](/docs/enterprise/namespaces/index.html) feature, API
+If using the [Namespaces](/docs/enterprise/namespaces) feature, API
 operations are relative to the namespace value passed in via the
 `X-Vault-Namespace` header. For instance, if the request path is to
 `secret/foo`, and the header is set to `ns1/ns2/`, the final request path Vault
@@ -186,7 +186,7 @@ To retrieve the help for any API within Vault, including mounted backends, auth
 methods, etc. then append `?help=1` to any URL. If you have valid permission to
 access the path, then the help text will be return a markdown-formatted block in the `help` attribute of the response.
 
-Additionally, with the [OpenAPI generation](/api/system/internal-specs-openapi.html) in Vault, you will get back a small
+Additionally, with the [OpenAPI generation](/api/system/internal-specs-openapi) in Vault, you will get back a small
 OpenAPI document in the `openapi` attribute. This document is relevant for the path you're looking up and any paths under it - also note paths in the OpenAPI document are relative to the initial path queried.
 
 Example request:
@@ -289,4 +289,4 @@ A maximum request size of 32MB is imposed to prevent a denial of service attack
 with arbitrarily large requests; this can be tuned per `listener` block in
 Vault's server configuration file.
 
-[agent]: /docs/agent/index.html#listener-stanza
+[agent]: /docs/agent#listener-stanza

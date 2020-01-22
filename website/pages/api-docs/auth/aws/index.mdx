@@ -9,7 +9,7 @@ description: This is the API documentation for the Vault AWS auth method.
 
 This is the API documentation for the Vault AWS auth method. For
 general information about the usage and operation of the AWS method, please
-see the [Vault AWS method documentation](/docs/auth/aws.html).
+see the [Vault AWS method documentation](/docs/auth/aws).
 
 This documentation assumes the AWS method is mounted at the `/auth/aws`
 path in Vault. Since it is possible to enable auth methods at any location,
@@ -137,7 +137,7 @@ $ curl \
 ## Configure Identity Integration
 
 This configures the way that Vault interacts with the
-[Identity](/docs/secrets/identity/index.html) store. The default (as of Vault
+[Identity](/docs/secrets/identity) store. The default (as of Vault
 1.0.3) is `role_id` for both values.
 
 | Method | Path                        |
@@ -150,7 +150,7 @@ This configures the way that Vault interacts with the
   using the `iam` auth method. Valid choices are `role_id`, `unique_id`, and
   `full_arn` When `role_id` is selected, the randomly generated ID of the role
   is used. When `unique_id` is selected, the [IAM Unique
-  ID](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids)
+  ID](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers#identifiers-unique-ids)
   of the IAM principal (either the user or role) is used as the identity alias
   name. When `full_arn` is selected, the ARN returned by the
   `sts:GetCallerIdentity` call is used as the alias name. This is either
@@ -705,7 +705,7 @@ list in order to satisfy that constraint.
   role inferencing is activated. This only applies to the iam auth method.
 - `resolve_aws_unique_ids` `(bool: true)` - When set, resolves the
   `bound_iam_principal_arn` to the
-  [AWS Unique ID](http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids)
+  [AWS Unique ID](http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers#identifiers-unique-ids)
   for the bound principal ARN. This field is ignored when
   `bound_iam_principal_arn` ends with a wildcard character.
   This requires Vault to be able to call `iam:GetUser` or `iam:GetRole` on the
