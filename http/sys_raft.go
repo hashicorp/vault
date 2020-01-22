@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"github.com/hashicorp/vault/physical/raft"
 	"io"
 	"net/http"
 
@@ -44,7 +45,14 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	joined, err := core.JoinRaftCluster(context.Background(), req.LeaderAPIAddr, tlsConfig, req.Retry, req.NonVoter)
+	leaderInfos := []*raft.LeaderJoinInfo{
+		{
+			LeaderAPIAddr: req.LeaderAPIAddr,
+			TLSConfig:     tlsConfig,
+			Retry:         req.Retry,
+		},
+	}
+	joined, err := core.JoinRaftCluster(context.Background(), leaderInfos, req.NonVoter)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return

@@ -10,10 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/vault/vault/seal/shamir"
-
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -23,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/vault/seal"
 	"github.com/oklog/run"
 )
 
@@ -781,9 +781,9 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 	}
 	var shamirKey []byte
 	switch c.seal.StoredKeysSupported() {
-	case StoredKeysSupportedGeneric:
+	case seal.StoredKeysSupportedGeneric:
 		return nil
-	case StoredKeysSupportedShamirMaster:
+	case seal.StoredKeysSupportedShamirMaster:
 		entry, err := c.barrier.Get(ctx, shamirKekPath)
 		if err != nil {
 			return err
@@ -792,14 +792,14 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 			return nil
 		}
 		shamirKey = entry.Value
-	case StoredKeysNotSupported:
+	case seal.StoredKeysNotSupported:
 		keyring, err := c.barrier.Keyring()
 		if err != nil {
 			return errwrap.Wrapf("failed to update seal access: {{err}}", err)
 		}
 		shamirKey = keyring.masterKey
 	}
-	return c.seal.GetAccess().(*shamir.ShamirSeal).SetKey(shamirKey)
+	return c.seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(shamirKey)
 }
 
 func (c *Core) performKeyUpgrades(ctx context.Context) error {

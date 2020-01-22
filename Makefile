@@ -195,7 +195,6 @@ proto:
 	protoc helper/storagepacker/types.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc helper/forwarding/types.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc sdk/logical/*.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc sdk/physical/types.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc physical/raft/types.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc helper/identity/mfa/types.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc helper/identity/types.proto --go_out=plugins=grpc,paths=source_relative:.
@@ -203,7 +202,6 @@ proto:
 	protoc sdk/plugin/pb/*.proto --go_out=plugins=grpc,paths=source_relative:.
 	sed -i -e 's/Id/ID/' vault/request_forwarding_service.pb.go
 	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/protobuf:"/sentinel:"" protobuf:"/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go 
-	sed -i -e 's/Iv/IV/' -e 's/Hmac/HMAC/' sdk/physical/types.pb.go
 
 fmtcheck:
 	@true

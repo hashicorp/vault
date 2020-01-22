@@ -12,20 +12,11 @@ filtered.set('meta', {
   total: 100,
 });
 
-let paginated = ArrayProxy.create({
-  content: [{ id: 'middle' }, { id: 'of' }, { id: 'the' }, { id: 'list' }],
-});
-paginated.set('meta', {
-  lastPage: 10,
-  currentPage: 4,
-  total: 100,
-});
-
+// TODO: add a pagination option when we have a better way to fake Ember models in Storybook.
 let options = {
   list: [{ id: 'one' }, { id: 'two' }],
   empty: [],
   filtered,
-  paginated,
 };
 
 storiesOf('ListView/', module)
