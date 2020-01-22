@@ -56,7 +56,7 @@ module('Acceptance | redirect_to query param functionality', function(hooks) {
   test('redirect from root does not include redirect_to', async function(assert) {
     let url = '/';
     await visit(url);
-    assert.equal(currentURL(), `/vault/auth`, 'there is no redirect_to query param');
+    assert.equal(currentURL(), `/vault/auth?with=token`, 'there is no redirect_to query param');
   });
 
   test('redirect to a route after authentication with a query param', async function(assert) {
@@ -64,7 +64,7 @@ module('Acceptance | redirect_to query param functionality', function(hooks) {
     await visit(url);
     assert.equal(
       currentURL(),
-      `/vault/auth?redirect_to=${encodeURIComponent(url)}`,
+      `/vault/auth?redirect_to=${encodeURIComponent(url)}&with=token`,
       'encodes url for the query param'
     );
     await auth.tokenInput('root').submit();
