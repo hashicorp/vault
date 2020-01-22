@@ -20,7 +20,7 @@ type sshOTP struct {
 
 func pathCredsCreate(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "creds/" + framework.GenericNameRegex("role"),
+		Pattern: "creds/" + framework.GenericNameWithAtRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
 			"role": &framework.FieldSchema{
 				Type:        framework.TypeString,

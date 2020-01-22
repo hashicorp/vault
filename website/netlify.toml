@@ -1,0 +1,13 @@
+
+# This file sets configuration for Netlify
+# ref: https://www.netlify.com/docs/netlify-toml-reference/
+
+[build]
+  publish = "out"
+  command = "npm run static"
+
+[context.production]
+  environment = { HASHI_ENV = "production", NODE_ENV = "production"}
+
+[context.deploy-preview]
+  environment = { HASHI_ENV = "staging" }
