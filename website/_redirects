@@ -109,6 +109,8 @@
 /intro/getting-started/secret-backends.html  /intro/getting-started/secrets-engines
 
 /guides/getting-started/index.html              https://learn.hashicorp.com/vault
+/intro/getting-started/install                  https://learn.hashicorp.com/vault/getting-started/install
+/intro/getting-started/install.html             https://learn.hashicorp.com/vault/getting-started/install
 
 /guides/operations/index.html                   https://learn.hashicorp.com/vault/?track=operations#operations
 /guides/operations/reference-architecture.html  https://learn.hashicorp.com/vault/operations/ops-reference-architecture
