@@ -327,9 +327,13 @@ export default [
                   'ha-with-consul',
                   'kubernetes-auth'
                 ]
-              }
-            ]
+              },
+            ],
           },
+          {
+            category: 'injector',
+            content: ['installation', 'examples']
+          }
         ]
       },
       {
