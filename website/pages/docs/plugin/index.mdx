@@ -18,12 +18,12 @@ has HA enabled and supports automatic host address detection (e.g. Consul),
 Vault will automatically attempt to determine the `api_addr` as well.
 
 Detailed information regarding the plugin system can be found in the
-[internals documentation](https://www.vaultproject.io/docs/internals/plugins.html).
+[internals documentation](/docs/internals/plugins).
 
 # Enabling/Disabling Plugin Backends
 
 Before a plugin backend can be mounted, it needs to be registered via the
-[plugin catalog](https://www.vaultproject.io/docs/internals/plugins.html#plugin-catalog). After
+[plugin catalog](/docs/internals/plugins#plugin-catalog). After
 the plugin is registered, it can be mounted by specifying the registered plugin name:
 
 ```text
@@ -51,5 +51,5 @@ $ vault secrets disable my-secrets
 Upgrade instructions can be found in the [Upgrading Plugins - Guides][upgrading_plugins]
 page.
 
-[api_addr]: /docs/configuration/index.html#api_addr
-[upgrading_plugins]: /docs/upgrading/plugins.html
+[api_addr]: /docs/configuration#api_addr
+[upgrading_plugins]: /docs/upgrading/plugins

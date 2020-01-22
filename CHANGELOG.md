@@ -18,10 +18,17 @@ BUG FIXES:
 
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [GH-8035]
 
-## 1.3.2 (Unreleased)
+## 1.3.2 (January 22nd, 2020)
+
+SECURITY:
+ * When deleting a namespace on Vault Enterprise, in certain circumstances, the deletion
+   process will fail to revoke dynamic secrets for a mount in that namespace. This will 
+   leave any dynamic secrets in remote systems alive and will fail to clean them up. This
+   vulnerability, CVE-2020-7220, affects Vault Enterprise 0.11.0 and newer.
 
 IMPROVEMENTS:
  * auth/aws: Add aws metadata to identity alias [GH-7975]
+ * auth/kubernetes: Allow both names and namespaces to be set to "*" [GH-78]
 
 BUG FIXES:
 

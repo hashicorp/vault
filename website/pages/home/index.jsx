@@ -25,13 +25,12 @@ export default function Homepage() {
               {
                 external: false,
                 title: 'Download',
-                url: 'https://www.vaultproject.io/downloads.html'
+                url: 'https://www.vaultproject.io/downloads'
               },
               {
                 external: false,
                 title: 'Get Started with Vault',
-                url:
-                  'https://www.vaultproject.io/intro/getting-started/index.html'
+                url: 'https://www.vaultproject.io/intro/getting-started'
               }
             ],
             centered: false,

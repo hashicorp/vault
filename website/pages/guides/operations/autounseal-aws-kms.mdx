@@ -13,7 +13,7 @@ description: |-
 ~> **Enterprise Only:** Vault auto-unseal feature is a part of _Vault Enterprise Pro_.
 
 When a Vault server is started, it starts in a
-[**_sealed_**](/docs/concepts/seal.html) state and it does not know how to
+[**_sealed_**](/docs/concepts/seal) state and it does not know how to
 decrypt data. Before any operation can be performed on the Vault, it must be
 unsealed. Unsealing is the process of constructing the master key necessary to
 decrypt the data encryption key.
@@ -26,8 +26,8 @@ instance that can utilize an encryption key from [AWS Key Management Services
 
 ## Reference Material
 
-- [Vault Auto Unseal](/docs/configuration/seal/index.html)
-- [Configuration: `awskms` Seal](/docs/configuration/seal/awskms.html)
+- [Vault Auto Unseal](/docs/configuration/seal)
+- [Configuration: `awskms` Seal](/docs/configuration/seal/awskms)
 
 ## Estimated Time to Complete
 
@@ -63,7 +63,7 @@ This guide assumes the following:
 - Access to **Vault Enterprise 0.9.0 or later**
 - A URL to download Vault Enterprise from (an Amazon S3 bucket will suffice)
 - AWS account for provisioning cloud resources
-- [Terraform installed](https://www.terraform.io/intro/getting-started/install.html)
+- [Terraform installed](https://www.terraform.io/intro/getting-started/install)
   and basic understanding of its usage
 
 ### Download demo assets
@@ -254,7 +254,7 @@ ui=true
 ```
 
 Notice the Vault configuration file defines the [`awskms`
-stanza](/docs/configuration/seal/awskms.html) which sets the AWS KMS key ID to
+stanza](/docs/configuration/seal/awskms) which sets the AWS KMS key ID to
 use for encryption and decryption.
 
 At this point, you should be able to launch the Vault Enterprise UI by entering
@@ -276,5 +276,5 @@ $ rm -rf .terraform terraform.tfstate* private.key
 ## Next steps
 
 Once you have a Vault environment setup, the next step is to write policies.
-Read [Policies](/guides/identity/policies.html) to learn how to write policies
+Read [Policies](/guides/identity/policies) to learn how to write policies
 to govern the behavior of clients.

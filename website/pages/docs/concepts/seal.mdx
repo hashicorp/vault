@@ -59,7 +59,7 @@ Once a Vault is unsealed, it remains unsealed until one of two things happens:
 difficult. Automated tools can easily install, configure, and start Vault,
 but unsealing it is a very manual process. We have plans in the future to
 make it easier. For the time being, the best method is to manually unseal
-multiple Vault servers in [HA mode](/docs/concepts/ha.html). Use a tool such
+multiple Vault servers in [HA mode](/docs/concepts/ha). Use a tool such
 as Consul to make sure you only query Vault servers that are unsealed.
 
 ## Sealing
@@ -87,7 +87,7 @@ During the initialization process, a set of Shamir keys are generated that are c
 Recovery Keys and are used for these operations.
 
 For a list of examples and supported providers, please see the
-[seal documentation](/docs/configuration/seal/index.html).
+[seal documentation](/docs/configuration/seal).
 
 ## Seal Migration
 
@@ -99,7 +99,7 @@ which type of seal is being migrated from/to, may not work correctly. We plan
 to support this officially in a future release.
 
 To migrate from Shamir keys to Auto Unseal, take your server cluster offline and update
-the [seal configuration](/docs/configuration/seal/index.html) with the appropriate seal
+the [seal configuration](/docs/configuration/seal) with the appropriate seal
 configuration. Bring your server back up and leave the rest of the nodes offline if
 using multi-server mode, then run the unseal process with the `-migrate` flag and bring
 the rest of the cluster online.
@@ -112,7 +112,7 @@ $ vault operator unseal -migrate
 ```
 
 To migrate from Auto Unseal to Shamir keys, take your server cluster offline and update
-the [seal configuration](/docs/configuration/seal/index.html) and add `disabled = "true"`
+the [seal configuration](/docs/configuration/seal) and add `disabled = "true"`
 to the seal block. This allows the migration to use this information to decrypt the key
 but will not unseal Vault. When you bring your server back up, run the unseal process
 with the `-migrate` flag and use the Recovery Keys to perform the migration. All unseal
