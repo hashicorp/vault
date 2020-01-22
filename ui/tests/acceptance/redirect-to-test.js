@@ -45,7 +45,7 @@ module('Acceptance | redirect_to query param functionality', function(hooks) {
     await visit(url);
     assert.equal(
       currentURL(),
-      `/vault/auth?redirect_to=${encodeURIComponent(url)}@with=token`,
+      `/vault/auth?redirect_to=${encodeURIComponent(url)}&with=token`,
       'encodes url for the query param'
     );
     // the login method on this page does another visit call that we don't want here
