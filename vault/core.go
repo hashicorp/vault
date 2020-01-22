@@ -1349,6 +1349,10 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 			if err := c.seal.SetRecoveryConfig(ctx, rc); err != nil {
 				return nil, errwrap.Wrapf("error storing recovery config after migration: {{err}}", err)
 			}
+		} else {
+			if err := c.physical.Delete(ctx, recoverySealConfigPlaintextPath); err != nil {
+				return nil, errwrap.Wrapf("failed to delete old recovery seal configuration during migration: {{err}}", err)
+			}
 		}
 	}
 
