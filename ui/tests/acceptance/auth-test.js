@@ -37,7 +37,7 @@ module('Acceptance | auth', function(hooks) {
     let backends = supportedAuthBackends();
     assert.expect(backends.length + 1);
     await visit('/vault/auth');
-    assert.equal(currentURL(), '/vault/auth');
+    assert.equal(currentURL(), '/vault/auth?with=token');
     for (let backend of backends.reverse()) {
       await component.selectMethod(backend.type);
       if (backend.type === 'token') {
@@ -54,7 +54,7 @@ module('Acceptance | auth', function(hooks) {
 
   test('it clears token when changing selected auth method', async function(assert) {
     await visit('/vault/auth');
-    assert.equal(currentURL(), '/vault/auth');
+    assert.equal(currentURL(), '/vault/auth?with=token');
     await component.token('token').selectMethod('github');
     await component.selectMethod('token');
     assert.equal(component.tokenValue, '', 'it clears the token value when toggling methods');
