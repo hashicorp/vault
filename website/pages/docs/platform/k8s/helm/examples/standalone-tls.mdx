@@ -73,7 +73,7 @@ TMPDIR=/tmp
 
 3. Create the certificate
 
-    1. Create a file `${TMPDIR/csr.yaml` with the following contents:
+    1. Create a file `${TMPDIR}/csr.yaml` with the following contents:
 
         ```yaml
         apiVersion: certificates.k8s.io/v1beta1
@@ -110,7 +110,7 @@ TMPDIR=/tmp
 1. Retrieve the certificate.
 
     ```bash
-    serverCert=$(kubectl get csr ${csrName} -o jsonpath='{.status.certificate}')
+    serverCert=$(kubectl get csr ${CSR_NAME} -o jsonpath='{.status.certificate}')
     ```
    -> If this process is automated, you may need to wait to ensure the certificate has been created.
    If it hasn't, this will return an empty string.
