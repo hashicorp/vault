@@ -54,9 +54,6 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 		}
 	}
 
-	var existSeal vault.Seal
-	var newSeal vault.Seal
-
 	if existBarrierSealConfig.Type == barrierSeal.BarrierType() {
 		// In this case our migration seal is set so we are using it
 		// (potentially) for unwrapping. Set it on core for that purpose then
@@ -69,15 +66,49 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 		return errors.New(`Recovery seal configuration not found for existing seal`)
 	}
 
+	if onEnterprise && barrierSeal.BarrierType() == wrapping.Shamir {
+		return errors.New("Migrating from autoseal to Shamir seal is not currently supported on Vault Enterprise")
+	}
+
+	var migrationSeal vault.Seal
+	var newSeal vault.Seal
+
+	// Determine the migrationSeal. This is either going to be an instance of
+	// shamir or the unwrapSeal.
 	switch existBarrierSealConfig.Type {
 	case wrapping.Shamir:
 		// The value reflected in config is what we're going to
-		existSeal = vault.NewDefaultSeal(&vaultseal.Access{
+		migrationSeal = vault.NewDefaultSeal(&vaultseal.Access{
 			Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
 				Logger: logger.Named("shamir"),
 			}),
 		})
-		newSeal = barrierSeal
+
+	default:
+		// If we're not coming from Shamir we expect the previous seal to be
+		// in the config and disabled.
+		migrationSeal = unwrapSeal
+	}
+
+	// newSeal will be the barrierSeal
+	newSeal = barrierSeal
+
+	// Set the appropriate barrier and recovery configs.
+	switch {
+	case migrationSeal.RecoveryKeySupported() && newSeal.RecoveryKeySupported():
+		// Migrating from auto->auto, copy the configs over
+		newSeal.SetCachedBarrierConfig(existBarrierSealConfig)
+		newSeal.SetCachedRecoveryConfig(existRecoverySealConfig)
+	case migrationSeal.RecoveryKeySupported():
+		// Migrating from auto->shamir, clone auto's recovery config and set
+		// stored keys to 1.
+		newSealConfig := existRecoverySealConfig.Clone()
+		newSealConfig.StoredShares = 1
+		newSeal.SetCachedBarrierConfig(newSealConfig)
+	case newSeal.RecoveryKeySupported():
+		// Migrating from shamir->auto, set a new barrier config and set
+		// recovery config to a clone of shamir's barrier config with stored
+		// keys set to 0.
 		newBarrierSealConfig := &vault.SealConfig{
 			Type:            newSeal.BarrierType(),
 			SecretShares:    1,
@@ -85,21 +116,13 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 			StoredShares:    1,
 		}
 		newSeal.SetCachedBarrierConfig(newBarrierSealConfig)
-		newSeal.SetCachedRecoveryConfig(existBarrierSealConfig)
 
-	default:
-		if onEnterprise && barrierSeal.BarrierType() == wrapping.Shamir {
-			return errors.New("Migrating from autoseal to Shamir seal is not currently supported on Vault Enterprise")
-		}
-
-		// If we're not coming from Shamir we expect the previous seal to be
-		// in the config and disabled.
-		existSeal = unwrapSeal
-		newSeal = barrierSeal
-		newSeal.SetCachedBarrierConfig(existRecoverySealConfig)
+		newRecoveryConfig := existBarrierSealConfig.Clone()
+		newRecoveryConfig.StoredShares = 0
+		newSeal.SetCachedRecoveryConfig(newRecoveryConfig)
 	}
 
-	core.SetSealsForMigration(existSeal, newSeal, unwrapSeal)
+	core.SetSealsForMigration(migrationSeal, newSeal, unwrapSeal)
 
 	return nil
 }
