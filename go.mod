@@ -48,6 +48,7 @@ require (
 	github.com/golang/protobuf v1.3.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.0.0-20190816035513-b52628e82e2a
+	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.8.5 // indirect
 	github.com/hashicorp/consul-template v0.22.0
 	github.com/hashicorp/consul/api v1.1.0

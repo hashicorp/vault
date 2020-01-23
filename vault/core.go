@@ -1401,6 +1401,13 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 			return false, err
 		}
 
+		if err := c.migrateSeal(ctx); err != nil {
+			c.logger.Error("seal migration error", "error", err)
+			c.barrier.Seal()
+			c.logger.Warn("vault is sealed")
+			return false, err
+		}
+
 		ctx, ctxCancel := context.WithCancel(namespace.RootContext(nil))
 		if err := c.postUnseal(ctx, ctxCancel, standardUnsealStrategy{}); err != nil {
 			c.logger.Error("post-unseal setup failed", "error", err)
