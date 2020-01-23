@@ -223,9 +223,9 @@ func (c *DebugCommand) Run(args []string) int {
 	}
 
 	// Initialize the logger for debug output
-	logWriter := gatedwriter.NewWriter(os.Stderr)
+	gatedWriter := gatedwriter.NewWriter(os.Stderr)
 	if c.logger == nil {
-		c.logger = logging.NewVaultLoggerWithWriter(logWriter, hclog.Trace)
+		c.logger = logging.NewVaultLoggerWithWriter(gatedWriter, hclog.Trace)
 	}
 
 	dstOutputFile, err := c.preflight(args)
@@ -246,7 +246,9 @@ func (c *DebugCommand) Run(args []string) int {
 	c.UI.Output("")
 
 	// Release the log gate.
-	logWriter.Flush()
+	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
+		Output: os.Stderr,
+	}, gatedWriter)
 
 	// Capture static information
 	c.UI.Info("==> Capturing static information...")
