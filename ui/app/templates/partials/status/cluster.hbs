@@ -65,11 +65,10 @@
         {{/if}}
       {{/if}}
     {{/unless}}
-      {{#if (and (or
+      {{#if (or
         (and version.features (has-permission 'status' routeParams='license'))
         (and cluster.usingRaft (has-permission 'status' routeParams='raft'))
         )
-        not cluster.dr.isSecondary)
       }}
         <nav class="menu">
           <div class="menu-label">
