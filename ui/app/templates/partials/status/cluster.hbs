@@ -65,10 +65,10 @@
         {{/if}}
       {{/if}}
     {{/unless}}
-      {{#if (or
+      {{#if (and (or
         (and version.features (has-permission 'status' routeParams='license'))
         (and cluster.usingRaft (has-permission 'status' routeParams='raft'))
-        )
+        ) (not cluster.dr.isSecondary))
       }}
         <nav class="menu">
           <div class="menu-label">
@@ -79,7 +79,7 @@
               <li class="action">
                 {{#link-to "vault.cluster.license" activeCluster.name invokeAction=onLinkClick}}
                   <div class="level is-mobile">
-                    <span class="level-left">License</span>
+                    <span class="level-left">License {{cluster.dr.isSecondary}}</span>
                     <Chevron class="has-text-grey-light level-right" />
                   </div>
                 {{/link-to}}
