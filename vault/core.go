@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/physical/raft"
 	"io"
 	"net"
 	"net/http"
@@ -23,15 +24,14 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
-	multierror "github.com/hashicorp/go-multierror"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/reload"
-	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -45,7 +45,7 @@ import (
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
-	cache "github.com/patrickmn/go-cache"
+	"github.com/patrickmn/go-cache"
 	"google.golang.org/grpc"
 )
 
@@ -1269,6 +1269,8 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		return nil
 	}
 
+	c.logger.Info("seal migration initiated")
+
 	switch {
 	case c.migrationInfo.seal.RecoveryKeySupported() && c.seal.RecoveryKeySupported():
 		// Set the recovery and barrier keys to be the same.
@@ -1304,16 +1306,6 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		err := c.seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(c.migrationInfo.recoveryKey)
 		if err != nil {
 			return errwrap.Wrapf("failed to set master key in seal: {{err}}", err)
-		}
-
-		// Enforce Shamir as KeK
-		if err := c.seal.SetBarrierConfig(ctx, &SealConfig{
-			Type:            wrapping.Shamir,
-			SecretShares:    1,
-			SecretThreshold: 1,
-			StoredShares:    1,
-		}); err != nil {
-			return errwrap.Wrapf("failed to store barrier config migration: {{err}}", err)
 		}
 
 		if err := c.seal.SetStoredKeys(ctx, [][]byte{c.migrationInfo.masterKey}); err != nil {
@@ -1371,6 +1363,8 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 			return errwrap.Wrapf("error storing recovery config after migration: {{err}}", err)
 		}
 	}
+
+	c.logger.Info("seal migration complete")
 	return nil
 }
 
@@ -1422,11 +1416,6 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		c.manualStepDownCh = make(chan struct{})
 		c.standbyStopCh = make(chan struct{})
 		go c.runStandby(c.standbyDoneCh, c.manualStepDownCh, c.standbyStopCh)
-	}
-
-	// Force a cache bust here, which will also run migration code
-	if c.seal.RecoveryKeySupported() {
-		c.seal.SetRecoveryConfig(ctx, nil)
 	}
 
 	// Success!
@@ -1901,10 +1890,6 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		if err := seal.UpgradeKeys(c.activeContext); err != nil {
 			c.logger.Warn("post-unseal upgrade seal keys failed", "error", err)
 		}
-	}
-
-	if err := c.migrateSeal(c.activeContext); err != nil {
-		return err
 	}
 
 	c.metricsCh = make(chan struct{})

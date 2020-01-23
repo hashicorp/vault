@@ -462,6 +462,17 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		c.activeContext = activeCtx
 		c.activeContextCancelFunc.Store(activeCtxCancel)
 
+		// Perform seal migration before wiping the barrier/seal state
+		if err := c.migrateSeal(c.activeContext); err != nil {
+			c.heldHALock = nil
+			lock.Unlock()
+			close(continueCh)
+			c.stateLock.Unlock()
+			c.logger.Error("seal migration error", "error", err)
+			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
+			continue
+		}
+
 		// This block is used to wipe barrier/seal state and verify that
 		// everything is sane. If we have no sanity in the barrier, we actually
 		// seal, as there's little we can do.
