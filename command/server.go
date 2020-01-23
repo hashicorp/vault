@@ -955,6 +955,8 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Initialize the Service Discovery, if there is one
+	// Instantiate the wait group
+	c.WaitGroup = &sync.WaitGroup{}
 	var configSR sr.ServiceRegistration
 	if config.ServiceRegistration != nil {
 		sdFactory, ok := c.ServiceRegistrations[config.ServiceRegistration.Type]
@@ -975,9 +977,13 @@ func (c *ServerCommand) Run(args []string) int {
 			IsActive:             false,
 			IsPerformanceStandby: false,
 		}
-		configSR, err = sdFactory(c.ShutdownCh, config.ServiceRegistration.Config, namedSDLogger, state, config.Storage.RedirectAddr)
+		configSR, err = sdFactory(config.ServiceRegistration.Config, namedSDLogger, state, config.Storage.RedirectAddr)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing service_registration of type %s: %s", config.ServiceRegistration.Type, err))
+			return 1
+		}
+		if err := configSR.Run(c.ShutdownCh, c.WaitGroup); err != nil {
+			c.UI.Error(fmt.Sprintf("Error running service_registration of type %s: %s", config.ServiceRegistration.Type, err))
 			return 1
 		}
 	}
@@ -1535,12 +1541,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 	}
 
-	// Perform service discovery registrations and initialization of
-	// HTTP server after the verifyOnly check.
-
-	// Instantiate the wait group
-	c.WaitGroup = &sync.WaitGroup{}
-
+	// Perform initialization of HTTP server after the verifyOnly check.
 	// If we're in Dev mode, then initialize the core
 	if c.flagDev && !c.flagDevSkipInit {
 		init, err := c.enableDev(core, coreConfig)

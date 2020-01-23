@@ -3,6 +3,7 @@ package consul
 import (
 	"os"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -31,9 +32,12 @@ func testConsulServiceRegistrationConfig(t *testing.T, conf *consulConf) *servic
 	defer func() {
 		close(shutdownCh)
 	}()
-	be, err := NewServiceRegistration(shutdownCh, *conf, logger, &sr.State{}, "")
+	be, err := NewServiceRegistration(*conf, logger, &sr.State{}, "")
 	if err != nil {
 		t.Fatalf("Expected Consul to initialize: %v", err)
+	}
+	if err := be.Run(shutdownCh, &sync.WaitGroup{}); err != nil {
+		t.Fatal(err)
 	}
 
 	c, ok := be.(*serviceRegistration)
@@ -87,11 +91,14 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 
 	// Create a ServiceRegistration that points to our consul instance
 	logger := logging.NewVaultLogger(log.Trace)
-	sd, err := NewServiceRegistration(shutdownCh, map[string]string{
+	sd, err := NewServiceRegistration(map[string]string{
 		"address": addr,
 		"token":   token,
 	}, logger, &sr.State{}, redirectAddr)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sd.Run(shutdownCh, &sync.WaitGroup{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -184,8 +191,11 @@ func TestConsul_ServiceTags(t *testing.T) {
 		close(shutdownCh)
 	}()
 
-	be, err := NewServiceRegistration(shutdownCh, consulConfig, logger, &sr.State{}, "")
+	be, err := NewServiceRegistration(consulConfig, logger, &sr.State{}, "")
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := be.Run(shutdownCh, &sync.WaitGroup{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -240,9 +250,12 @@ func TestConsul_ServiceAddress(t *testing.T) {
 		shutdownCh := make(chan struct{})
 		logger := logging.NewVaultLogger(log.Debug)
 
-		be, err := NewServiceRegistration(shutdownCh, test.consulConfig, logger, &sr.State{}, "")
+		be, err := NewServiceRegistration(test.consulConfig, logger, &sr.State{}, "")
 		if err != nil {
 			t.Fatalf("expected Consul to initialize: %v", err)
+		}
+		if err := be.Run(shutdownCh, &sync.WaitGroup{}); err != nil {
+			t.Fatal(err)
 		}
 
 		c, ok := be.(*serviceRegistration)
@@ -366,7 +379,7 @@ func TestConsul_newConsulServiceRegistration(t *testing.T) {
 		shutdownCh := make(chan struct{})
 		logger := logging.NewVaultLogger(log.Debug)
 
-		be, err := NewServiceRegistration(shutdownCh, test.consulConfig, logger, &sr.State{}, "")
+		be, err := NewServiceRegistration(test.consulConfig, logger, &sr.State{}, "")
 		if test.fail {
 			if err == nil {
 				t.Fatalf(`Expected config "%s" to fail`, test.name)
@@ -375,6 +388,9 @@ func TestConsul_newConsulServiceRegistration(t *testing.T) {
 			}
 		} else if !test.fail && err != nil {
 			t.Fatalf("Expected config %s to not fail: %v", test.name, err)
+		}
+		if err := be.Run(shutdownCh, &sync.WaitGroup{}); err != nil {
+			t.Fatal(err)
 		}
 
 		c, ok := be.(*serviceRegistration)
@@ -565,7 +581,7 @@ func TestConsul_serviceID(t *testing.T) {
 
 	for _, test := range tests {
 		shutdownCh := make(chan struct{})
-		be, err := NewServiceRegistration(shutdownCh, consulConf{
+		be, err := NewServiceRegistration(consulConf{
 			"service": test.serviceName,
 		}, logger, &sr.State{}, "")
 		if !test.valid {
@@ -576,6 +592,9 @@ func TestConsul_serviceID(t *testing.T) {
 		}
 		if test.valid && err != nil {
 			t.Fatalf("expected Consul to initialize: %v", err)
+		}
+		if err := be.Run(shutdownCh, &sync.WaitGroup{}); err != nil {
+			t.Fatal(err)
 		}
 
 		c, ok := be.(*serviceRegistration)
