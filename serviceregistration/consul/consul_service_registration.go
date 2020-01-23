@@ -78,7 +78,7 @@ type serviceRegistration struct {
 }
 
 // NewConsulServiceRegistration constructs a Consul-based ServiceRegistration.
-func NewServiceRegistration(conf map[string]string, logger log.Logger, state *sr.State, redirectAddr string) (sr.ServiceRegistration, error) {
+func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.State, redirectAddr string) (sr.ServiceRegistration, error) {
 
 	// Allow admins to disable consul integration
 	disableReg, ok := conf["disable_registration"]

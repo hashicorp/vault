@@ -954,9 +954,10 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Initialize the Service Discovery, if there is one
 	// Instantiate the wait group
 	c.WaitGroup = &sync.WaitGroup{}
+
+	// Initialize the Service Discovery, if there is one
 	var configSR sr.ServiceRegistration
 	if config.ServiceRegistration != nil {
 		sdFactory, ok := c.ServiceRegistrations[config.ServiceRegistration.Type]
@@ -970,7 +971,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 		// Since we haven't even begun starting Vault's core yet,
 		// we know that Vault is in its pre-running state.
-		state := &sr.State{
+		state := sr.State{
 			VaultVersion:         version.GetVersion().VersionNumber(),
 			IsInitialized:        false,
 			IsSealed:             true,
