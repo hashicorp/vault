@@ -11,8 +11,10 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	mathrand "math/rand"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -400,6 +402,45 @@ func TestTLSConfig(t *testing.T) {
 				t.Fatalf("Found root pools in config object when not expected")
 			}
 		}
+	}
+}
+
+func TestNewCertPool(t *testing.T) {
+	caExample := `-----BEGIN CERTIFICATE-----
+MIIC5zCCAc+gAwIBAgIBATANBgkqhkiG9w0BAQsFADAVMRMwEQYDVQQDEwptaW5p
+a3ViZUNBMB4XDTE5MTIxMDIzMDUxOVoXDTI5MTIwODIzMDUxOVowFTETMBEGA1UE
+AxMKbWluaWt1YmVDQTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBANFi
+/RIdMHd865X6JygTb9riX01DA3QnR+RoXDXNnj8D3LziLG2n8ItXMJvWbU3sxxyy
+nX9HxJ0SIeexj1cYzdQBtJDjO1/PeuKc4CZ7zCukCAtHz8mC7BDPOU7F7pggpcQ0
+/t/pa2m22hmCu8aDF9WlUYHtJpYATnI/A5vz/VFLR9daxmkl59Qo3oHITj7vAzSx
+/75r9cibpQyJ+FhiHOZHQWYY2JYw2g4v5hm5hg5SFM9yFcZ75ISI9ebyFFIl9iBY
+zAk9jqv1mXvLr0Q39AVwMTamvGuap1oocjM9NIhQvaFL/DNqF1ouDQjCf5u2imLc
+TraO1/2KO8fqwOZCOrMCAwEAAaNCMEAwDgYDVR0PAQH/BAQDAgKkMB0GA1UdJQQW
+MBQGCCsGAQUFBwMCBggrBgEFBQcDATAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3
+DQEBCwUAA4IBAQBtVZCwCPqUUUpIClAlE9nc2fo2bTs9gsjXRmqdQ5oaSomSLE93
+aJWYFuAhxPXtlApbLYZfW2m1sM3mTVQN60y0uE4e1jdSN1ErYQ9slJdYDAMaEmOh
+iSexj+Nd1scUiMHV9lf3ps5J8sYeCpwZX3sPmw7lqZojTS12pANBDcigsaj5RRyN
+9GyP3WkSQUsTpWlDb9Fd+KNdkCVw7nClIpBPA2KW4BQKw/rNSvOFD61mbzc89lo0
+Q9IFGQFFF8jO18lbyWqnRBGXcS4/G7jQ3S7C121d14YLUeAYOM7pJykI1g4CLx9y
+vitin0L6nprauWkKO38XgM4T75qKZpqtiOcT
+-----END CERTIFICATE-----
+`
+
+	tmpfile, err := ioutil.TempFile("", "ca.crt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name())
+
+	if _, err := tmpfile.Write([]byte(caExample)); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := NewCertPool(tmpfile.Name()); err != nil {
+		t.Fatal(err)
 	}
 }
 
