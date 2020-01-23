@@ -67,6 +67,7 @@ type serviceRegistration struct {
 	serviceAddress      *string
 	disableRegistration bool
 	checkTimeout        time.Duration
+	redirectAddr        string
 
 	notifyActiveCh      chan bool
 	notifySealedCh      chan bool
@@ -77,7 +78,7 @@ type serviceRegistration struct {
 }
 
 // NewConsulServiceRegistration constructs a Consul-based ServiceRegistration.
-func NewServiceRegistration(shutdownCh <-chan struct{}, conf map[string]string, logger log.Logger, state *sr.State, redirectAddr string) (sr.ServiceRegistration, error) {
+func NewServiceRegistration(conf map[string]string, logger log.Logger, state *sr.State, redirectAddr string) (sr.ServiceRegistration, error) {
 
 	// Allow admins to disable consul integration
 	disableReg, ok := conf["disable_registration"]
@@ -207,6 +208,7 @@ func NewServiceRegistration(shutdownCh <-chan struct{}, conf map[string]string, 
 		serviceAddress:      serviceAddr,
 		checkTimeout:        checkTimeout,
 		disableRegistration: disableRegistration,
+		redirectAddr:        redirectAddr,
 
 		notifyActiveCh:      make(chan bool),
 		notifySealedCh:      make(chan bool),
@@ -216,14 +218,18 @@ func NewServiceRegistration(shutdownCh <-chan struct{}, conf map[string]string, 
 		isSealed:      state.IsSealed,
 		isPerfStandby: state.IsPerformanceStandby,
 	}
+	return c, nil
+}
+
+func (c *serviceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup) error {
 	go func() {
-		if err := c.runServiceRegistration(&sync.WaitGroup{}, shutdownCh, redirectAddr); err != nil {
-			if logger.IsError() {
-				logger.Error(fmt.Sprintf("error running service registration: %s", err))
+		if err := c.runServiceRegistration(wait, shutdownCh, c.redirectAddr); err != nil {
+			if c.logger.IsError() {
+				c.logger.Error(fmt.Sprintf("error running service registration: %s", err))
 			}
 		}
 	}()
-	return c, nil
+	return nil
 }
 
 func (c *serviceRegistration) NotifyActiveStateChange(isActive bool) error {
