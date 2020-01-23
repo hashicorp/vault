@@ -1027,7 +1027,7 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 	}
 
 	if masterKey != nil {
-		if sealToUse.BarrierType() == wrapping.Shamir && sealToUse.StoredKeysSupported() == vaultseal.StoredKeysNotSupported {
+		if sealToUse.BarrierType() == wrapping.Shamir && c.migrationInfo == nil {
 			// If this is a legacy shamir seal this serves no purpose but it
 			// doesn't hurt.
 			err = sealToUse.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(masterKey)
