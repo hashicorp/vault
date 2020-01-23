@@ -710,7 +710,7 @@ func (c *ServerCommand) adjustLogLevel(config *server.Config, logLevelWasNotSet 
 func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (log.Level, string, bool, logging.LogFormat, error) {
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
-	c.logGate = &gatedwriter.Writer{Writer: os.Stderr}
+	c.logGate = gatedwriter.NewWriter(os.Stderr)
 	c.logWriter = c.logGate
 	if c.flagCombineLogs {
 		c.logWriter = os.Stdout
