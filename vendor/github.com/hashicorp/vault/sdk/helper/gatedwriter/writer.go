@@ -22,12 +22,13 @@ func NewWriter(underlying io.Writer) *Writer {
 
 // Flush tells the Writer to flush any buffered data and to stop
 // buffering.
-func (w *Writer) Flush() {
+func (w *Writer) Flush() error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 
 	w.flush = true
-	w.buf.WriteTo(w.writer)
+	_, err := w.buf.WriteTo(w.writer)
+	return err
 }
 
 func (w *Writer) Write(p []byte) (n int, err error) {
