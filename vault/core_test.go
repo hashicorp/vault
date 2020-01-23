@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -2454,6 +2455,11 @@ type mockServiceRegistration struct {
 	notifyPerfCount   int
 	notifyInitCount   int
 	runDiscoveryCount int
+}
+
+func (m *mockServiceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup) error {
+	m.runDiscoveryCount++
+	return nil
 }
 
 func (m *mockServiceRegistration) NotifyActiveStateChange(isActive bool) error {
