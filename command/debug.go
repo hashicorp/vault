@@ -223,7 +223,7 @@ func (c *DebugCommand) Run(args []string) int {
 	}
 
 	// Initialize the logger for debug output
-	logWriter := &gatedwriter.Writer{Writer: os.Stderr}
+	logWriter := gatedwriter.NewWriter(os.Stderr)
 	if c.logger == nil {
 		c.logger = logging.NewVaultLoggerWithWriter(logWriter, hclog.Trace)
 	}

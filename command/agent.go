@@ -172,7 +172,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
-	c.logGate = &gatedwriter.Writer{Writer: os.Stderr}
+	c.logGate = gatedwriter.NewWriter(os.Stderr)
 	c.logWriter = c.logGate
 	if c.flagCombineLogs {
 		c.logWriter = os.Stdout

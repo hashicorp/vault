@@ -12,7 +12,7 @@ func TestWriter_impl(t *testing.T) {
 
 func TestWriter(t *testing.T) {
 	buf := new(bytes.Buffer)
-	w := &Writer{Writer: buf}
+	w := NewWriter(buf)
 	w.Write([]byte("foo\n"))
 	w.Write([]byte("bar\n"))
 
