@@ -40,7 +40,11 @@ module('Acceptance | auth', function(hooks) {
     assert.equal(currentURL(), '/vault/auth?with=token');
     for (let backend of backends.reverse()) {
       await component.selectMethod(backend.type);
-      assert.equal(currentURL(), `/vault/auth?with=${backend.type}`, `has the correct URL for $`);
+      assert.equal(
+        currentURL(),
+        `/vault/auth?with=${backend.type}`,
+        `has the correct URL for ${backend.type}`
+      );
     }
   });
 
