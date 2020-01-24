@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -120,7 +121,7 @@ func newLogger(opts *LoggerOptions) *intLogger {
 
 // Log a message and a set of key/value pairs if the given level is at
 // or more severe that the threshold configured in the Logger.
-func (l *intLogger) Log(name string, level Level, msg string, args ...interface{}) {
+func (l *intLogger) log(name string, level Level, msg string, args ...interface{}) {
 	if level < Level(atomic.LoadInt32(l.level)) {
 		return
 	}
@@ -133,7 +134,7 @@ func (l *intLogger) Log(name string, level Level, msg string, args ...interface{
 	if l.json {
 		l.logJSON(t, name, level, msg, args...)
 	} else {
-		l.log(t, name, level, msg, args...)
+		l.logPlain(t, name, level, msg, args...)
 	}
 
 	l.writer.Flush(level)
@@ -171,7 +172,7 @@ func trimCallerPath(path string) string {
 var logImplFile = regexp.MustCompile(`github.com/hashicorp/go-hclog/.+logger.go$`)
 
 // Non-JSON logging format function
-func (l *intLogger) log(t time.Time, name string, level Level, msg string, args ...interface{}) {
+func (l *intLogger) logPlain(t time.Time, name string, level Level, msg string, args ...interface{}) {
 	l.writer.WriteString(t.Format(l.timeFormat))
 	l.writer.WriteByte(' ')
 
@@ -431,29 +432,34 @@ func (l intLogger) jsonMapEntry(t time.Time, name string, level Level, msg strin
 	return vals
 }
 
+// Emit the message and args at the provided level
+func (l *intLogger) Log(level Level, msg string, args ...interface{}) {
+	l.log(l.Name(), level, msg, args...)
+}
+
 // Emit the message and args at DEBUG level
 func (l *intLogger) Debug(msg string, args ...interface{}) {
-	l.Log(l.Name(), Debug, msg, args...)
+	l.log(l.Name(), Debug, msg, args...)
 }
 
 // Emit the message and args at TRACE level
 func (l *intLogger) Trace(msg string, args ...interface{}) {
-	l.Log(l.Name(), Trace, msg, args...)
+	l.log(l.Name(), Trace, msg, args...)
 }
 
 // Emit the message and args at INFO level
 func (l *intLogger) Info(msg string, args ...interface{}) {
-	l.Log(l.Name(), Info, msg, args...)
+	l.log(l.Name(), Info, msg, args...)
 }
 
 // Emit the message and args at WARN level
 func (l *intLogger) Warn(msg string, args ...interface{}) {
-	l.Log(l.Name(), Warn, msg, args...)
+	l.log(l.Name(), Warn, msg, args...)
 }
 
 // Emit the message and args at ERROR level
 func (l *intLogger) Error(msg string, args ...interface{}) {
-	l.Log(l.Name(), Error, msg, args...)
+	l.log(l.Name(), Error, msg, args...)
 }
 
 // Indicate that the logger would emit TRACE level logs
@@ -556,6 +562,41 @@ func (l *intLogger) ResetNamed(name string) Logger {
 	return &sl
 }
 
+func (l *intLogger) ResetOutput(opts *LoggerOptions) error {
+	if opts.Output == nil {
+		return errors.New("given output is nil")
+	}
+
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	return l.resetOutput(opts)
+}
+
+func (l *intLogger) ResetOutputWithFlush(opts *LoggerOptions, flushable Flushable) error {
+	if opts.Output == nil {
+		return errors.New("given output is nil")
+	}
+	if flushable == nil {
+		return errors.New("flushable is nil")
+	}
+
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	if err := flushable.Flush(); err != nil {
+		return err
+	}
+
+	return l.resetOutput(opts)
+}
+
+func (l *intLogger) resetOutput(opts *LoggerOptions) error {
+	l.writer = newWriter(opts.Output, opts.Color)
+	l.setColorization(opts)
+	return nil
+}
+
 // Update the logging level on-the-fly. This will affect all subloggers as
 // well.
 func (l *intLogger) SetLevel(level Level) {
@@ -593,7 +634,7 @@ func (l *intLogger) checkWriterIsFile() *os.File {
 
 // Accept implements the SinkAdapter interface
 func (i *intLogger) Accept(name string, level Level, msg string, args ...interface{}) {
-	i.Log(name, level, msg, args...)
+	i.log(name, level, msg, args...)
 }
 
 // ImpliedArgs returns the loggers implied args
