@@ -39,12 +39,13 @@ type ServiceRegistration interface {
 	// for controlling shutdown behavior.
 	// Here is an example of its intended use:
 	//	func Run(shutdownCh <-chan struct{}, wait sync.WaitGroup) error {
-	//		// Since we are going to want Vault to wait to shutdown
-	//		// until after we do cleanup...
-	//		wait.Add(1)
 	//
 	//		// Run shutdown code in a goroutine so Run doesn't block.
 	//		go func(){
+	//			// Since we are going to want Vault to wait to shutdown
+	//			// until after we do cleanup...
+	//			wait.Add(1)
+	//
 	//			// Ensure that when this ends, no matter how it ends,
 	//			// we don't cause Vault to hang on shutdown.
 	//			defer wait.Done()
@@ -52,9 +53,7 @@ type ServiceRegistration interface {
 	//			// Now wait until we're actually receiving a shutdown.
 	//			<-shutdownCh
 	//
-	//			// Now do whatever we need to clean up. This is essentially
-	//			// an OnStop method, and we may wish someday to replace Run
-	//			// with OnStop to further simplify the interface.
+	//			// Now do whatever we need to clean up.
 	//			if err := someService.SetFinalState(); err != nil {
 	//				// Log it at error level.
 	//			}
