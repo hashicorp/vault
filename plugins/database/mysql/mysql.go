@@ -135,6 +135,7 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 
 	queryMap := map[string]string{
 		"name":       username,
+		"username":   username,
 		"password":   password,
 		"expiration": expirationStr,
 	}
@@ -187,6 +188,7 @@ func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 			// 1295: This command is not supported in the prepared statement protocol yet
 			// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
 			query = strings.Replace(query, "{{name}}", username, -1)
+			query = strings.Replace(query, "{{username}}", username, -1)
 			_, err = tx.ExecContext(ctx, query)
 			if err != nil {
 				return err
@@ -244,6 +246,7 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 			// 1295: This command is not supported in the prepared statement protocol yet
 			// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
 			query = strings.Replace(query, "{{username}}", m.Username, -1)
+			query = strings.Replace(query, "{{name}}", m.Username, -1)
 			query = strings.Replace(query, "{{password}}", password, -1)
 
 			if _, err := tx.ExecContext(ctx, query); err != nil {
@@ -283,10 +286,11 @@ func (m *MySQL) SetCredentials(ctx context.Context, statements dbplugin.Statemen
 
 	queryMap := map[string]string{
 		"name":     username,
+		"username": username,
 		"password": password,
 	}
 
-	if err := m.executePreparedStatmentsWithMap(ctx, statements.Rotation, queryMap); err != nil {
+	if err := m.executePreparedStatmentsWithMap(ctx, rotateStatements, queryMap); err != nil {
 		return "", "", err
 	}
 	return username, password, nil
