@@ -69,8 +69,8 @@
         <div class="menu-label">
           Server
         </div>
-          <ul class="menu-list">
-            <li class="action">
+        <ul class="menu-list">
+          <li class="action">
             {{#if activeCluster.unsealed}}
               {{#if (and (has-permission 'status' routeParams='seal') (not cluster.dr.isSecondary))}}
                 {{#link-to 'vault.cluster.settings.seal' cluster.name
@@ -103,9 +103,8 @@
         (and version.features (has-permission 'status' routeParams='license'))
         (and cluster.usingRaft (has-permission 'status' routeParams='raft'))
         )
-        (not cluster.dr.isSecondary))
-      }}
-        
+        not cluster.dr.isSecondary)
+        }}
           <ul class="menu-list">
             {{#if (and version.features (has-permission 'status' routeParams='license') (not cluster.dr.isSecondary))}}
               <li class="action">
@@ -128,19 +127,19 @@
               </li>
             {{/if}}
           </ul>
-      {{/if}}
-      {{#if ( and (has-permission 'metrics' routeParams='requests') (not cluster.dr.isSecondary) auth.currentToken)}}
-        <ul class="menu-list">
-          <li class="action">
-            {{#link-to "vault.cluster.requests"}}
-              <div class="level is-mobile">
-                <span class="level-left">Metrics</span>
-                <Chevron class="has-text-grey-light level-right" />
-              </div>
-            {{/link-to}}
-          </li>
-        </ul>
-      {{/if}}
+        {{/if}}
+        {{#if ( and (has-permission 'metrics' routeParams='requests') (not cluster.dr.isSecondary) auth.currentToken)}}
+          <ul class="menu-list">
+            <li class="action">
+              {{#link-to "vault.cluster.requests"}}
+                <div class="level is-mobile">
+                  <span class="level-left">Metrics</span>
+                  <Chevron class="has-text-grey-light level-right" />
+                </div>
+              {{/link-to}}
+            </li>
+          </ul>
+        {{/if}}
       </nav>
   </div>
 </div>
