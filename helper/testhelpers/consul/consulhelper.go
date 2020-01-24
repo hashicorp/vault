@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"testing"
 
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/mitchellh/go-testing-interface"
 	"github.com/ory/dockertest"
 )
 
-func PrepareTestContainer(t *testing.T, version string) (cleanup func(), retAddress string, consulToken string) {
+func PrepareTestContainer(t testing.T, version string) (cleanup func(), retAddress string, consulToken string) {
 	t.Logf("preparing test container")
 	consulToken = os.Getenv("CONSUL_HTTP_TOKEN")
 	retAddress = os.Getenv("CONSUL_HTTP_ADDR")

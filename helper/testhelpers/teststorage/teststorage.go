@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	realtesting "testing"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -82,7 +81,7 @@ func MakeFileBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBun
 }
 
 func MakeConsulBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
-	cleanup, consulAddress, consulToken := consul.PrepareTestContainer(t.(*realtesting.T), "1.4.0-rc1")
+	cleanup, consulAddress, consulToken := consul.PrepareTestContainer(t, "1.4.0-rc1")
 	consulConf := map[string]string{
 		"address":      consulAddress,
 		"token":        consulToken,
