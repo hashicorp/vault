@@ -1,7 +1,8 @@
-import ClusterRouteBase from './cluster-route-base';
+import Route from '@ember/routing/route';
+import ClusterRoute from 'vault/mixins/cluster-route';
 
-export default ClusterRouteBase.extend({
+export default Route.extend(ClusterRoute, {
   model() {
-    return this.store.queryRecord('requests', {});
+    return {};
   },
 });
