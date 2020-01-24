@@ -2,8 +2,6 @@ package database
 
 import (
 	"context"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"strings"
 	"testing"
@@ -16,8 +14,9 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/lib/pq"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const (
@@ -848,7 +847,7 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	testCases := []string{"65", "130", "5400"}
 	// Create database users ahead
 	for _, tc := range testCases {
-		testCreateDBUser(t, connURL, "vaulttestdb", "statictestMongo" + tc, "test")
+		testCreateDBUser(t, connURL, "vaulttestdb", "statictestMongo"+tc, "test")
 	}
 
 	// Configure a connection
