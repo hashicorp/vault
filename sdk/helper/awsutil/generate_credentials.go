@@ -3,10 +3,13 @@ package awsutil
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/defaults"
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 type CredentialsConfig struct {
@@ -35,6 +38,16 @@ type CredentialsConfig struct {
 }
 
 func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials, error) {
+	if os.Getenv("AWS_SDK_LOAD_CONFIG") != "" {
+		sess, err := session.NewSessionWithOptions(session.Options{
+			AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create AWS session: %v", err)
+		}
+		return sess.Config.Credentials, nil
+	}
+
 	var providers []credentials.Provider
 
 	switch {
