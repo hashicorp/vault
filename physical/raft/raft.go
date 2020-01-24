@@ -5,8 +5,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"io"
 	"io/ioutil"
 	"os"
@@ -14,6 +12,9 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
@@ -1018,6 +1019,13 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 	// Cache the notifyCh locally
 	leaderNotifyCh := l.b.raftNotifyCh
+
+	// TODO: Remove when Raft can server as the ha_storage backend. The internal
+	// raft pointer should not be nil here, but the nil check is a guard against
+	// https://github.com/hashicorp/vault/issues/8206
+	if l.b.raft == nil {
+		return nil, errors.New("attempted to grab a lock on a nil raft backend")
+	}
 
 	// Check to see if we are already leader.
 	if l.b.raft.State() == raft.Leader {
