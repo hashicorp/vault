@@ -3,6 +3,9 @@ package kubernetes
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"sync"
+	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	sr "github.com/hashicorp/vault/serviceregistration"
@@ -19,9 +22,12 @@ const (
 
 	// This is the path to where these labels are applied.
 	pathToLabels = "/metadata/labels/"
+
+	// How often to retry sending a state update if it fails.
+	retryFreq = 5 * time.Second
 )
 
-func NewServiceRegistration(shutdownCh <-chan struct{}, config map[string]string, logger log.Logger, state *sr.State, _ string) (sr.ServiceRegistration, error) {
+func NewServiceRegistration(config map[string]string, logger log.Logger, state *sr.State, _ string) (sr.ServiceRegistration, error) {
 	c, err := client.New(logger)
 	if err != nil {
 		return nil, err
@@ -121,14 +127,16 @@ func NewServiceRegistration(shutdownCh <-chan struct{}, config map[string]string
 	// Construct a registration to receive ongoing state updates.
 	registration := &serviceRegistration{
 		logger:    logger,
-		podName:   podName,
 		namespace: namespace,
+		podName:   podName,
 		client:    c,
+		retryer: &retryer{
+			logger:    logger,
+			namespace: namespace,
+			podName:   podName,
+			client:    c,
+		},
 	}
-
-	// Run a background goroutine to leave labels in the final state we'd like
-	// when Vault shuts down.
-	go registration.onShutdown(shutdownCh)
 	return registration, nil
 }
 
@@ -136,41 +144,62 @@ type serviceRegistration struct {
 	logger             log.Logger
 	namespace, podName string
 	client             *client.Client
+	retryer            *retryer
+}
+
+func (r *serviceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup) error {
+	// Run a background goroutine to leave labels in the final state we'd like
+	// when Vault shuts down.
+	go r.onShutdown(shutdownCh, wait)
+
+	// Run a service that retries errored-out notifications if they occur.
+	go r.retryer.Run(shutdownCh, wait)
+
+	return nil
 }
 
 func (r *serviceRegistration) NotifyActiveStateChange(isActive bool) error {
-	return r.client.PatchPod(r.namespace, r.podName, &client.Patch{
+	patch := &client.Patch{
 		Operation: client.Replace,
 		Path:      pathToLabels + labelActive,
 		Value:     toString(isActive),
-	})
+	}
+	return r.notifyOrRetry(patch)
 }
 
 func (r *serviceRegistration) NotifySealedStateChange(isSealed bool) error {
-	return r.client.PatchPod(r.namespace, r.podName, &client.Patch{
+	patch := &client.Patch{
 		Operation: client.Replace,
 		Path:      pathToLabels + labelSealed,
 		Value:     toString(isSealed),
-	})
+	}
+	return r.notifyOrRetry(patch)
 }
 
 func (r *serviceRegistration) NotifyPerformanceStandbyStateChange(isStandby bool) error {
-	return r.client.PatchPod(r.namespace, r.podName, &client.Patch{
+	patch := &client.Patch{
 		Operation: client.Replace,
 		Path:      pathToLabels + labelPerfStandby,
 		Value:     toString(isStandby),
-	})
+	}
+	return r.notifyOrRetry(patch)
 }
 
 func (r *serviceRegistration) NotifyInitializedStateChange(isInitialized bool) error {
-	return r.client.PatchPod(r.namespace, r.podName, &client.Patch{
+	patch := &client.Patch{
 		Operation: client.Replace,
 		Path:      pathToLabels + labelInitialized,
 		Value:     toString(isInitialized),
-	})
+	}
+	return r.notifyOrRetry(patch)
 }
 
-func (r *serviceRegistration) onShutdown(shutdownCh <-chan struct{}) {
+func (r *serviceRegistration) onShutdown(shutdownCh <-chan struct{}, wait *sync.WaitGroup) {
+	// Ensure Vault will allow us time to finish this code.
+	wait.Add(1)
+	defer wait.Done()
+
+	// Start running this when we receive a shutdown.
 	<-shutdownCh
 
 	// Label the pod with the values we want to leave behind after shutdown.
@@ -202,6 +231,107 @@ func (r *serviceRegistration) onShutdown(shutdownCh <-chan struct{}) {
 		}
 		return
 	}
+}
+
+func (r *serviceRegistration) notifyOrRetry(patch *client.Patch) error {
+	if err := r.client.PatchPod(r.namespace, r.podName, patch); err != nil {
+		if r.logger.IsWarn() {
+			r.logger.Warn("unable to update state due to %s, will retry", err.Error())
+		}
+		if err := r.retryer.Add(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type retryer struct {
+	logger             log.Logger
+	namespace, podName string
+	client             *client.Client
+
+	// To be populated by the Add method,
+	// and subtracted from by successfully applying
+	// them in Run.
+	desiredPatches     map[string]*client.Patch
+	desiredPatchesLock sync.Mutex
+}
+
+func (r *retryer) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup) {
+	wait.Add(1)
+	defer wait.Done()
+
+	retry := time.NewTicker(retryFreq)
+	for {
+		select {
+		case <-shutdownCh:
+			return
+		case <-retry.C:
+			r.attemptDesiredPatches()
+		}
+	}
+}
+
+func (r *retryer) Add(patches ...*client.Patch) error {
+	r.desiredPatchesLock.Lock()
+	defer r.desiredPatchesLock.Unlock()
+
+	for _, newPatch := range patches {
+		operationAndPath := newPatch.Operation.String() + newPatch.Path
+		prevPatch, ok := r.desiredPatches[operationAndPath]
+		if !ok {
+			// This is a new, unique patch.
+			r.desiredPatches[operationAndPath] = newPatch
+			continue
+		}
+
+		// Attempt to convert the value to a bool so we can see if the
+		// patch we already have for this operation reverts the pre-existing
+		// one or is a dupe.
+		newPatchValStr, ok := newPatch.Value.(string)
+		if !ok {
+			return fmt.Errorf("all patches must have bool values but received %+x", newPatch)
+		}
+		newPatchVal, err := strconv.ParseBool(newPatchValStr)
+		if err != nil {
+			return err
+		}
+
+		// This was already verified to not be a bool string when it was added.
+		prevPatchVal, _ := strconv.ParseBool(prevPatch.Value.(string))
+		if newPatchVal != prevPatchVal {
+			// The new patch cancels/reverts the need to apply the prev patch
+			// because we've now returned to the original state.
+			delete(r.desiredPatches, operationAndPath)
+		}
+		// If we arrive here, the new patch is a dupe of the previous patch.
+		// We don't need to add it to the desired patches because it already
+		// exists.
+	}
+	return nil
+}
+
+func (r *retryer) attemptDesiredPatches() {
+	r.desiredPatchesLock.Lock()
+	defer r.desiredPatchesLock.Unlock()
+
+	if len(r.desiredPatches) == 0 {
+		return
+	}
+	patches := make([]*client.Patch, len(r.desiredPatches))
+	i := 0
+	for _, patch := range r.desiredPatches {
+		patches[i] = patch
+		i++
+	}
+	if err := r.client.PatchPod(r.namespace, r.podName, patches...); err != nil {
+		if r.logger.IsWarn() {
+			r.logger.Warn("unable to update state due to %s, will retry", err.Error())
+		}
+		return
+	}
+	// We succeeded at applying the patches! We're back in a normal state.
+	r.desiredPatches = make(map[string]*client.Patch)
 }
 
 // Converts a bool to "true" or "false".
