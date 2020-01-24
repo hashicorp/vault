@@ -7,6 +7,7 @@ IMPROVEMENTS:
 * core: Separate out service discovery interface from storage interface to allow
   new types of service discovery not coupled to storage [GH-7887]
 * cli: Incorrect TLS configuration will now correctly fail [GH-8025] 
+* secrets/database/mongodb: Switched internal MongoDB driver to mongo-driver [GH-8140]
 * secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
 * secrets/gcp: Add support for rotating root keys [GCP-53]
 * secrets/nomad: Add support to specify TLS options per Nomad backend [GH-8083]
