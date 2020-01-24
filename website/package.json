@@ -11,7 +11,7 @@
     "@hashicorp/react-case-study-slider": "^2.0.4",
     "@hashicorp/react-consent-manager": "^2.0.3",
     "@hashicorp/react-content": "^2.2.0",
-    "@hashicorp/react-docs-sidenav": "^3.0.1",
+    "@hashicorp/react-docs-sidenav": "^3.0.2",
     "@hashicorp/react-docs-sitemap": "^1.0.0",
     "@hashicorp/react-footer": "3.1.6",
     "@hashicorp/react-global-styles": "^4.0.8",
@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "glob": "^7.1.6",
-    "husky": "^4.2.0",
+    "husky": "^4.2.1",
     "inquirer": "^7.0.3",
     "prettier": "^1.19.1"
   },
