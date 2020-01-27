@@ -25,13 +25,12 @@ export default function Homepage() {
               {
                 external: false,
                 title: 'Download',
-                url: 'https://www.vaultproject.io/downloads.html'
+                url: 'https://www.vaultproject.io/downloads'
               },
               {
                 external: false,
                 title: 'Get Started with Vault',
-                url:
-                  'https://www.vaultproject.io/intro/getting-started/index.html'
+                url: 'https://www.vaultproject.io/intro/getting-started'
               }
             ],
             centered: false,
@@ -81,7 +80,7 @@ export default function Homepage() {
           <BeforeAfterDiagram
             beforeImage={{
               url:
-                'https://www.datocms-assets.com/2885/1539884846-static-infrastructure.svg',
+                'https://www.datocms-assets.com/2885/1579635889-static-infrastructure.svg',
               format: 'svg'
             }}
             beforeHeadline="Static Infrastructure"
@@ -94,7 +93,7 @@ export default function Homepage() {
 - Security enforced by IP Address`}
             afterImage={{
               url:
-                'https://www.datocms-assets.com/2885/1539884849-dynamic-infrastructure.svg',
+                'https://www.datocms-assets.com/2885/1579635892-dynamic-infrastructure.svg',
               format: 'svg'
             }}
             afterHeadline="Dynamic Infrastructure"

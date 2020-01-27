@@ -12,13 +12,13 @@ Role-Based Access Control (RBAC) by specifying access privileges
 (_authorization_).
 
 When you first initialize Vault, the
-[**`root`**](/docs/concepts/policies.html#root-policy) policy gets created by
+[**`root`**](/docs/concepts/policies#root-policy) policy gets created by
 default. The `root` policy is a special policy that gives superuser access to
 _everything_ in Vault. This allows the superuser to set up initial policies,
 tokens, etc.
 
 In addition, another built-in policy,
-[**`default`**](/docs/concepts/policies.html#default-policy), is created. The
+[**`default`**](/docs/concepts/policies#default-policy), is created. The
 `default` policy is attached to all tokens and provides common permissions.
 
 Everything in Vault is path based, and admins write policies to grant or forbid
@@ -31,7 +31,7 @@ system.
 Policies written in [HCL](https://github.com/hashicorp/hcl) format are often
 referred as **_ACL Policies_**. [Sentinel](https://www.hashicorp.com/sentinel) is
 another framework for policy which is available in [Vault
-Enterprise](/docs/enterprise/index.html). Since Sentinel is an enterprise-only
+Enterprise](/docs/enterprise). Since Sentinel is an enterprise-only
 feature, this guide focuses on writing ACL policies as a foundation.
 
 **NOTE:** HCL is JSON compatible; therefore, JSON can be used as completely
@@ -39,9 +39,9 @@ valid input.
 
 ## Reference Material
 
-- [Policies](/docs/concepts/policies.html#default-policy) documentation
-- [Policy API](/api/system/policy.html) documentation
-- [Getting Started guide](/intro/getting-started/policies.html) on policies
+- [Policies](/docs/concepts/policies#default-policy) documentation
+- [Policy API](/api/system/policy) documentation
+- [Getting Started guide](/intro/getting-started/policies) on policies
 
 ~> **NOTE:** An [interactive
 tutorial](https://www.katacoda.com/hashicorp/scenarios/vault-policies) is
@@ -81,9 +81,9 @@ Vault.
 
 To perform the tasks described in this guide, you need to have a Vault
 environment. Refer to the [Getting
-Started](/intro/getting-started/install.html) guide to install Vault. Make sure
+Started](/intro/getting-started/install) guide to install Vault. Make sure
 that your Vault server has been [initialized and
-unsealed](/intro/getting-started/deploy.html).
+unsealed](/intro/getting-started/deploy).
 
 ### Policy requirements
 
@@ -193,7 +193,7 @@ path "<PATH>" {
 namespacing. For example, "`secret/training_*`" grants permissions on any
 path starting with "`secret/training_`" (e.g. `secret/training_vault`).
 
-Define one or more [capabilities](/docs/concepts/policies.html#capabilities) on each path to control operations that are
+Define one or more [capabilities](/docs/concepts/policies#capabilities) on each path to control operations that are
 permitted.
 
 | Capability | Associated HTTP verbs |
@@ -376,7 +376,7 @@ passing your modified policy (`*.hcl`).
 #### API call using cURL
 
 To create a policy, use the
-[`sys/policies/acl`](/api/system/policies.html#create-update-acl-policy)
+[`sys/policies/acl`](/api/system/policies#create-update-acl-policy)
 endpoint:
 
 ```shell
@@ -390,7 +390,7 @@ Where `<TOKEN>` is your valid token, and `<PAYLOAD>` includes the policy name an
 stringified policy.
 
 -> **NOTE:** To create ACL policies, you can use the
-[`sys/policy`](/api/system/policy.html) endpoint as well.
+[`sys/policy`](/api/system/policy) endpoint as well.
 
 **Example:**
 
@@ -639,8 +639,8 @@ $ curl --request POST --header "X-Vault-Token: ..." \
 ## Next steps
 
 In this guide, you learned how to write policies based on given policy
-requirements. Next, the [AppRole Pull Authentication](/guides/identity/authentication.html)
+requirements. Next, the [AppRole Pull Authentication](/guides/identity/authentication)
 guide demonstrates how to associate policies to a role.
 
 To learn about Sentinel policies, refer to the [Sentinel
-Policies](/guides/identity/sentinel.html) guide.
+Policies](/guides/identity/sentinel) guide.

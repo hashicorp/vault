@@ -9,8 +9,11 @@ description: |-
 
 # Entropy Augmentation
 
+-> **Note**: This feature requires [Vault Enterprise](https://www.hashicorp.com/products/vault/)
+with the Governance & Policy Module.
+
 Vault Enterprise features a mechanism to sample entropy (or randomness for
-cryptographic operations) from external cryptographic modules via the [seals](/docs/configuration/seal/index.html)
+cryptographic operations) from external cryptographic modules via the [seals](/docs/configuration/seal)
 interface. While the system entropy used by Vault is more than capable of
 operating in most threat models, there are some situations where additional
 entropy from hardware-based random number generators is desirable.
@@ -40,15 +43,15 @@ and include the following:
 - JWT token wrapping keys
 - Root tokens
 - DR operation tokens
-- [Transit](/docs/secrets/transit/index.html) backend key generation
+- [Transit](/docs/secrets/transit) backend key generation
 
 ## Enabling/Disabling
 
 Entropy augmentation is disabled by default. To enable entropy augmentation Vault's
-[configuration file][configuration] must include a properly configured [PKCS#11 seal and
-entropy stanza](/docs/configuration/entropy-augmentation/index.html).
+[configuration file][configuration] must include a properly configured [entropy and seal stanza](/docs/configuration/entropy-augmentation)
+for a supported seal type.
 
-[configuration]: /docs/configuration/index.html
+[configuration]: /docs/configuration
 
 ## Learn
 

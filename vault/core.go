@@ -1449,7 +1449,7 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 	}
 
 	if c.serviceRegistration != nil {
-		if err := c.serviceRegistration.NotifySealedStateChange(); err != nil {
+		if err := c.serviceRegistration.NotifySealedStateChange(false); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify unsealed status", "error", err)
 			}
@@ -1750,7 +1750,7 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 	}
 
 	if c.serviceRegistration != nil {
-		if err := c.serviceRegistration.NotifySealedStateChange(); err != nil {
+		if err := c.serviceRegistration.NotifySealedStateChange(true); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify sealed status", "error", err)
 			}

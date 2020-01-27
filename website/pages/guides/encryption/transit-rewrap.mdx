@@ -16,7 +16,7 @@ is stored elsewhere. The primary use of this is to allow applications to encrypt
 their data while still storing it in their primary data store. Vault does not
 store the data.
 
-The [`transit` secret engine](/docs/secrets/transit/index.html) handles
+The [`transit` secret engine](/docs/secrets/transit) handles
 cryptographic functions on data-in-transit, and often referred to as
 **_Encryption as a Service_** (EaaS). Both small amounts of arbitrary data, and
 large files such as images, can be protected with the transit engine. This EaaS
@@ -37,9 +37,9 @@ rotating an encryption key in the transit engine in Vault.
 
 ## Reference Material
 
-- [Encryption as a Service](/guides/encryption/transit.html)
-- [Transit Secret Engine](/docs/secrets/transit/index.html)
-- [Transit Secret Engine API](/api/secret/transit/index.html)
+- [Encryption as a Service](/guides/encryption/transit)
+- [Transit Secret Engine](/docs/secrets/transit)
+- [Transit Secret Engine API](/api/secret/transit)
 - [Transparent Data Encryption in the Modern Datacenter](https://www.hashicorp.com/blog/transparent-data-encryption-in-the-modern-datacenter)
 
 ## Estimated Time to Complete
@@ -99,9 +99,9 @@ particular organization or application.
 
 To perform the tasks described in this guide, you need to have a Vault
 environment. Refer to the [Getting
-Started](/intro/getting-started/install.html) guide to install Vault. Make sure
+Started](/intro/getting-started/install) guide to install Vault. Make sure
 that your Vault server has been [initialized and
-unsealed](/intro/getting-started/deploy.html).
+unsealed](/intro/getting-started/deploy).
 
 The following tools are required in order to successfully run the sample
 application provided in this guide:
@@ -160,7 +160,7 @@ path "auth/token/create" {
 ```
 
 If you are not familiar with policies, complete the
-[policies](/guides/identity/policies.html) guide.
+[policies](/guides/identity/policies) guide.
 
 ## Steps
 
@@ -235,7 +235,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
 ```
 
 Where `<TOKEN>` is your valid token, and `<PARAMETERS>` holds [configuration
-parameters](/api/system/mounts.html#enable-secrets-engine) of the secret engine.
+parameters](/api/system/mounts#enable-secrets-engine) of the secret engine.
 
 To crate a new encryption key, use the `transit/keys/<key_name>` endpoint:
 
@@ -247,7 +247,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
 ```
 
 Where `<PARAMETERS>` holds [configuration
-parameters](/api/secret/transit/index.html#create-key) to specify the key type.
+parameters](/api/secret/transit#create-key) to specify the key type.
 
 **Example:**
 
@@ -620,7 +620,7 @@ mysql> SELECT * FROM user_data WHERE dob LIKE "vault:v6%" limit 10;
 
 An application similar to this could be scheduled via cron, run periodically as
 a [Nomad batch
-job](https://www.nomadproject.io/docs/job-specification/periodic.html), or
+job](https://www.nomadproject.io/docs/job-specification/periodic), or
 executed in a variety of other ways. You could also modify it to re-wrap a
 limited number of records at a time so as to not put undue strain on the
 database. The final implementation should be based upon the needs and design
@@ -632,9 +632,9 @@ Since the main focus of this guide was to programmatically rewrap your secrets
 using the latest encryption key, the token used by the sample application was
 generated manually. In a production environment, you'll want to pass the token in
 a more secure manner. Refer to the [Cubbyhole Response
-Wrapping](/guides/secret-mgmt/cubbyhole.html) guide to wrap the token so that only the
+Wrapping](/guides/secret-mgmt/cubbyhole) guide to wrap the token so that only the
 expecting app can unwrap to obtain the token.
 
 Also, refer to the [AppRole Pull
-Authentication](/guides/identity/authentication.html) to generate tokens for
+Authentication](/guides/identity/authentication) to generate tokens for
 apps using the AppRole auth method.

@@ -936,7 +936,7 @@ func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-
 	}
 
 	if c.serviceRegistration != nil {
-		if err := c.serviceRegistration.NotifyActiveStateChange(); err != nil {
+		if err := c.serviceRegistration.NotifyActiveStateChange(true); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify active status", "error", err)
 			}
@@ -971,7 +971,7 @@ func (c *Core) clearLeader(uuid string) error {
 
 	// Advertise ourselves as a standby
 	if c.serviceRegistration != nil {
-		if err := c.serviceRegistration.NotifyActiveStateChange(); err != nil {
+		if err := c.serviceRegistration.NotifyActiveStateChange(false); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify standby status", "error", err)
 			}
