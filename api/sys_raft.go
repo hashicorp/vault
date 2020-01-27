@@ -112,11 +112,6 @@ func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 		// Update the request
 		req.URL = respLoc
 
-		// Reset the request body if any
-		if err := r.ResetJSONBody(); err != nil {
-			return err
-		}
-
 		// Retry the request
 		resp, err = c.c.config.HttpClient.Do(req)
 		if err != nil {
