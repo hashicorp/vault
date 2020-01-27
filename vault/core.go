@@ -171,6 +171,10 @@ type migrationInformation struct {
 	seal        Seal
 	masterKey   []byte
 	recoveryKey []byte
+	// newRecoveryKey is used is the master key when shamir seal is in use. This
+	// will be set as the recovery key when a migration happens from shamir to
+	// auto-seal.
+	newRecoveryKey []byte
 }
 
 // Core is used as the central manager of Vault activity. It is the primary point of
@@ -1244,6 +1248,8 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 	}
 
 	if c.migrationInfo != nil {
+		c.migrationInfo.newRecoveryKey = make([]byte, len(masterKey))
+		copy(c.migrationInfo.newRecoveryKey, masterKey)
 		if seal.StoredKeysSupported() == vaultseal.StoredKeysSupportedShamirMaster {
 			err = seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(masterKey)
 			if err != nil {
@@ -1327,9 +1333,7 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		}
 
 	case c.seal.RecoveryKeySupported():
-		// The new seal will have recovery keys; we set it to the existing
-		// master key, so barrier key shares -> recovery key shares
-		if err := c.seal.SetRecoveryKey(ctx, c.migrationInfo.masterKey); err != nil {
+		if err := c.seal.SetRecoveryKey(ctx, c.migrationInfo.newRecoveryKey); err != nil {
 			return errwrap.Wrapf("error setting new recovery key information: {{err}}", err)
 		}
 
