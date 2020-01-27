@@ -166,7 +166,7 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 
 		// Do an initial population of the creds because we want to err right away if we can't
 		// even get a first set.
-		creds, err := awsauth.RetrieveCreds(accessKey, secretKey, sessionToken)
+		creds, err := awsauth.RetrieveCreds(accessKey, secretKey, sessionToken, "")
 		if err != nil {
 			return nil, err
 		}
@@ -272,7 +272,7 @@ func (a *awsMethod) checkCreds(accessKey, secretKey, sessionToken string) error 
 	defer a.credLock.Unlock()
 
 	a.logger.Trace("checking for new credentials")
-	currentCreds, err := awsauth.RetrieveCreds(accessKey, secretKey, sessionToken)
+	currentCreds, err := awsauth.RetrieveCreds(accessKey, secretKey, sessionToken, "")
 	if err != nil {
 		return err
 	}

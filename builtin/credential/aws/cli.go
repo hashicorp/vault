@@ -98,7 +98,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		headerValue = ""
 	}
 
-	creds, err := RetrieveCreds(m["aws_access_key_id"], m["aws_secret_access_key"], m["aws_security_token"])
+	creds, err := RetrieveCreds(m["aws_access_key_id"], m["aws_secret_access_key"], m["aws_security_token"], m["aws_mfa_token"])
 	if err != nil {
 		return nil, err
 	}
@@ -128,11 +128,12 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	return secret, nil
 }
 
-func RetrieveCreds(accessKey, secretKey, sessionToken string) (*credentials.Credentials, error) {
+func RetrieveCreds(accessKey, secretKey, sessionToken, mfaToken string) (*credentials.Credentials, error) {
 	credConfig := &awsutil.CredentialsConfig{
 		AccessKey:    accessKey,
 		SecretKey:    secretKey,
 		SessionToken: sessionToken,
+		MFAToken:     mfaToken,
 	}
 	creds, err := credConfig.GenerateCredentialChain()
 	if err != nil {
@@ -183,6 +184,9 @@ Configuration:
 
   aws_security_token=<string>
       Explicit AWS security token for temporary credentials
+
+  aws_mfa_token=<string>
+      TODO
 
   header_value=<string>
       Value for the x-vault-aws-iam-server-id header in requests

@@ -35,12 +35,23 @@ type CredentialsConfig struct {
 
 	// The http.Client to use, or nil for the client to use its default
 	HTTPClient *http.Client
+
+	// The MFA token used for assuming role operation
+	MFAToken string
 }
 
 func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials, error) {
 	if os.Getenv("AWS_SDK_LOAD_CONFIG") != "" {
+		var assumeRoleTokenProvider func() (string, error)
+		if c.MFAToken == "" {
+			assumeRoleTokenProvider = stscreds.StdinTokenProvider
+		} else {
+			assumeRoleTokenProvider = func() (string, error) {
+				return c.MFAToken, nil
+			}
+		}
 		sess, err := session.NewSessionWithOptions(session.Options{
-			AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+			AssumeRoleTokenProvider: assumeRoleTokenProvider,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create AWS session: %v", err)
