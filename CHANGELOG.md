@@ -19,6 +19,12 @@ BUG FIXES:
 
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [GH-8035]
 
+## 1.3.3 (Unreleased)
+
+BUG FIXES:
+
+* ui: Fix missing License menu item [GH-8230]
+
 ## 1.3.2 (January 22nd, 2020)
 
 SECURITY:
