@@ -1269,6 +1269,22 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		return nil
 	}
 
+	// In case of raft storage, when a follower node assumes leadership, if the
+	// migration has already been performed by the previous leader, skip out
+	// migration again.
+	if _, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
+		existBarrierSealConfig, _, err := c.PhysicalSealConfigs(context.Background())
+		if err != nil {
+			return fmt.Errorf("failed to read existing seal configuration during migration: %v", err)
+		}
+		if existBarrierSealConfig.Type == c.seal.BarrierType() {
+			c.logger.Info("seal migration is already performed by previous leader")
+			c.migrationInfo = nil
+			atomic.StoreUint32(c.sealMigrated, 1)
+			return nil
+		}
+	}
+
 	c.logger.Info("seal migration initiated")
 
 	switch {
