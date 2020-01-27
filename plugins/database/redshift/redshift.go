@@ -408,10 +408,11 @@ func (p *RedShift) defaultRevokeUser(ctx context.Context, username string) error
 
 	if dbname.Valid {
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
-			`REVOKE CONNECT ON DATABASE %s FROM %s;`,
-			pq.QuoteIdentifier(dbname.String),
-			pq.QuoteIdentifier(username)))
+			`SELECT pg_terminate_backend(process) FROM stv_sessions WHERE user_name='%s';`,
+			username))
 	}
+
+	fmt.Printf("%+v\n", revocationStmts)
 
 	// again, here, we do not stop on error, as we want to remove as
 	// many permissions as possible right now
