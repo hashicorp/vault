@@ -171,10 +171,10 @@ type migrationInformation struct {
 	seal        Seal
 	masterKey   []byte
 	recoveryKey []byte
-	// newRecoveryKey is used is the master key when shamir seal is in use. This
-	// will be set as the recovery key when a migration happens from shamir to
-	// auto-seal.
-	newRecoveryKey []byte
+	// shamirCombinedKey is the key that is used to store master key when shamir
+	// seal is in use. This will be set as the recovery key when a migration happens
+	// from shamir to auto-seal.
+	shamirCombinedKey []byte
 }
 
 // Core is used as the central manager of Vault activity. It is the primary point of
@@ -1247,11 +1247,13 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 		masterKey = recoveredKey
 	}
 
-	if c.migrationInfo != nil {
-		c.migrationInfo.newRecoveryKey = make([]byte, len(masterKey))
-		copy(c.migrationInfo.newRecoveryKey, masterKey)
+	switch {
+	case c.migrationInfo != nil:
+		// Make a copy to avoid accidental reference changes for the values in migrationInfo
+		c.migrationInfo.shamirCombinedKey = make([]byte, len(recoveredKey))
+		copy(c.migrationInfo.shamirCombinedKey, recoveredKey)
 		if seal.StoredKeysSupported() == vaultseal.StoredKeysSupportedShamirMaster {
-			err = seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(masterKey)
+			err = seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(recoveredKey)
 			if err != nil {
 				return nil, errwrap.Wrapf("failed to set master key in seal: {{err}}", err)
 			}
@@ -1333,7 +1335,9 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		}
 
 	case c.seal.RecoveryKeySupported():
-		if err := c.seal.SetRecoveryKey(ctx, c.migrationInfo.newRecoveryKey); err != nil {
+		// Migration is happening from shamir -> auto. In this case use the shamir
+		// combined key that was used to store the master key as the new recovery key.
+		if err := c.seal.SetRecoveryKey(ctx, c.migrationInfo.shamirCombinedKey); err != nil {
 			return errwrap.Wrapf("error setting new recovery key information: {{err}}", err)
 		}
 
