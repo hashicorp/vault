@@ -17,6 +17,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+* agent: Fix issue where TLS options are ignored for agent template feature [GH-7889]
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [GH-8035]
 
 ## 1.3.3 (Unreleased)
