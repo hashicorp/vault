@@ -35,8 +35,8 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
 	"github.com/hashicorp/vault/command/agent/template"
-	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/gatedwriter"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -172,7 +172,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
-	c.logGate = &gatedwriter.Writer{Writer: os.Stderr}
+	c.logGate = gatedwriter.NewWriter(os.Stderr)
 	c.logWriter = c.logGate
 	if c.flagCombineLogs {
 		c.logWriter = os.Stdout
@@ -247,43 +247,49 @@ func (c *AgentCommand) Run(args []string) int {
 		Default: "https://127.0.0.1:8200",
 		EnvVar:  api.EnvVaultAddress,
 	})
-
+	config.Vault.Address = c.flagAddress
 	c.setStringFlag(f, config.Vault.CACert, &StringVar{
 		Name:    flagNameCACert,
 		Target:  &c.flagCACert,
 		Default: "",
 		EnvVar:  api.EnvVaultCACert,
 	})
+	config.Vault.CACert = c.flagCACert
 	c.setStringFlag(f, config.Vault.CAPath, &StringVar{
 		Name:    flagNameCAPath,
 		Target:  &c.flagCAPath,
 		Default: "",
 		EnvVar:  api.EnvVaultCAPath,
 	})
+	config.Vault.CAPath = c.flagCAPath
 	c.setStringFlag(f, config.Vault.ClientCert, &StringVar{
 		Name:    flagNameClientCert,
 		Target:  &c.flagClientCert,
 		Default: "",
 		EnvVar:  api.EnvVaultClientCert,
 	})
+	config.Vault.ClientCert = c.flagClientCert
 	c.setStringFlag(f, config.Vault.ClientKey, &StringVar{
 		Name:    flagNameClientKey,
 		Target:  &c.flagClientKey,
 		Default: "",
 		EnvVar:  api.EnvVaultClientKey,
 	})
+	config.Vault.ClientKey = c.flagClientKey
 	c.setBoolFlag(f, config.Vault.TLSSkipVerify, &BoolVar{
 		Name:    flagNameTLSSkipVerify,
 		Target:  &c.flagTLSSkipVerify,
 		Default: false,
 		EnvVar:  api.EnvVaultSkipVerify,
 	})
+	config.Vault.TLSSkipVerify = c.flagTLSSkipVerify
 	c.setStringFlag(f, config.Vault.TLSServerName, &StringVar{
 		Name:    flagTLSServerName,
 		Target:  &c.flagTLSServerName,
 		Default: "",
 		EnvVar:  api.EnvVaultTLSServerName,
 	})
+	config.Vault.TLSServerName = c.flagTLSServerName
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)

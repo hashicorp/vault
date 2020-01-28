@@ -493,6 +493,14 @@ type Core struct {
 	secureRandomReader io.Reader
 
 	recoveryMode bool
+
+	clusterNetworkLayer cluster.NetworkLayer
+
+	// PR1103disabled is used to test upgrade workflows: when set to true,
+	// the correct behaviour for namespaced cubbyholes is disabled, so we
+	// can test an upgrade to a version that includes the fixes from
+	// https://github.com/hashicorp/vault-enterprise/pull/1103
+	PR1103disabled bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -576,6 +584,8 @@ type CoreConfig struct {
 	CounterSyncInterval time.Duration
 
 	RecoveryMode bool
+
+	ClusterNetworkLayer cluster.NetworkLayer
 }
 
 func (c *CoreConfig) Clone() *CoreConfig {
@@ -611,6 +621,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 		DisableIndexing:           c.DisableIndexing,
 		AllLoggers:                c.AllLoggers,
 		CounterSyncInterval:       c.CounterSyncInterval,
+		ClusterNetworkLayer:       c.ClusterNetworkLayer,
 	}
 }
 
@@ -706,6 +717,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		maxLeaseTTL:                  conf.MaxLeaseTTL,
 		cachingDisabled:              conf.DisableCache,
 		clusterName:                  conf.ClusterName,
+		clusterNetworkLayer:          conf.ClusterNetworkLayer,
 		clusterPeerClusterAddrsCache: cache.New(3*cluster.HeartbeatInterval, time.Second),
 		enableMlock:                  !conf.DisableMlock,
 		rawEnabled:                   conf.EnableRaw,
@@ -1406,7 +1418,7 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 	}
 
 	if c.serviceRegistration != nil {
-		if err := c.serviceRegistration.NotifySealedStateChange(); err != nil {
+		if err := c.serviceRegistration.NotifySealedStateChange(false); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify unsealed status", "error", err)
 			}
@@ -1707,7 +1719,7 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 	}
 
 	if c.serviceRegistration != nil {
-		if err := c.serviceRegistration.NotifySealedStateChange(); err != nil {
+		if err := c.serviceRegistration.NotifySealedStateChange(true); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify sealed status", "error", err)
 			}

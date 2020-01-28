@@ -11,11 +11,17 @@ import (
 	"github.com/hashicorp/vault/vault/seal"
 )
 
+var GetTransitKMSFunc = func(opts *wrapping.WrapperOptions, config map[string]string) (wrapping.Wrapper, map[string]string, error) {
+	transitSeal := transit.NewWrapper(opts)
+	sealInfo, err := transitSeal.SetConfig(config)
+	return transitSeal, sealInfo, err
+}
+
 func configureTransitSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (vault.Seal, error) {
-	transitSeal := transit.NewWrapper(&wrapping.WrapperOptions{
-		Logger: logger.ResetNamed("seal-transit"),
-	})
-	sealInfo, err := transitSeal.SetConfig(configSeal.Config)
+	transitSeal, sealInfo, err := GetTransitKMSFunc(
+		&wrapping.WrapperOptions{
+			Logger: logger.ResetNamed("seal-transit"),
+		}, configSeal.Config)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
 		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {

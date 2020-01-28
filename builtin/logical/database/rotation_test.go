@@ -14,8 +14,9 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/lib/pq"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const (
@@ -843,6 +844,11 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	// configure backend, add item and confirm length
 	cleanup, connURL := mongodb.PrepareTestContainerWithDatabase(t, "latest", "vaulttestdb")
 	defer cleanup()
+	testCases := []string{"65", "130", "5400"}
+	// Create database users ahead
+	for _, tc := range testCases {
+		testCreateDBUser(t, connURL, "vaulttestdb", "statictestMongo"+tc, "test")
+	}
 
 	// Configure a connection
 	data := map[string]interface{}{
@@ -865,7 +871,6 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	}
 
 	// create three static roles with different rotation periods
-	testCases := []string{"65", "130", "5400"}
 	for _, tc := range testCases {
 		roleName := "plugin-static-role-" + tc
 		data = map[string]interface{}{
@@ -954,6 +959,30 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	if !pass {
 		t.Fatalf("password rotations did not match expected: %#v", pws)
 	}
+}
+
+func testCreateDBUser(t testing.TB, connURL, db, username, password string) {
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connURL))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	createUserCmd := &createUserCommand{
+		Username: username,
+		Password: password,
+		Roles:    []interface{}{},
+	}
+	result := client.Database(db).RunCommand(ctx, createUserCmd, nil)
+	if result.Err() != nil {
+		t.Fatal(result.Err())
+	}
+}
+
+type createUserCommand struct {
+	Username string        `bson:"createUser"`
+	Password string        `bson:"pwd"`
+	Roles    []interface{} `bson:"roles"`
 }
 
 // Demonstrates a bug fix for the credential rotation not releasing locks
