@@ -171,6 +171,7 @@ type migrationInformation struct {
 	seal        Seal
 	masterKey   []byte
 	recoveryKey []byte
+
 	// shamirCombinedKey is the key that is used to store master key when shamir
 	// seal is in use. This will be set as the recovery key when a migration happens
 	// from shamir to auto-seal.
@@ -1386,6 +1387,8 @@ DONE:
 		if err := c.seal.SetRecoveryConfig(ctx, rc); err != nil {
 			return errwrap.Wrapf("error storing recovery config after migration: {{err}}", err)
 		}
+	} else if err := c.physical.Delete(ctx, recoverySealConfigPlaintextPath); err != nil {
+		return errwrap.Wrapf("failed to delete old recovery seal configuration during migration: {{err}}", err)
 	}
 
 	c.logger.Info("seal migration complete")
