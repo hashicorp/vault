@@ -1,4 +1,4 @@
-import ClusterRouteBase from './cluster-route-base';
+import ClusterRouteBase from '../cluster-route-base';
 
 export default ClusterRouteBase.extend({
   model() {
