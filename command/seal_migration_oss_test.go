@@ -44,14 +44,19 @@ func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupM
 	tcluster := newTransitSealServer(t)
 	defer tcluster.Cleanup()
 
-	autoSeal := tcluster.makeKeyAndSeal(t, "key1")
+	tcluster.makeKey(t, "key1")
+	var seals []vault.Seal
 	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
-		Seal:            autoSeal,
 		DisableSealWrap: true,
 	}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 		SkipInit:    true,
-		NumCores:    1,
+		NumCores:    3,
+		SealFunc: func() vault.Seal {
+			tseal := tcluster.makeSeal(t, "key1")
+			seals = append(seals, tseal)
+			return tseal
+		},
 	},
 		setup,
 	)
@@ -88,7 +93,7 @@ func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupM
 		}),
 	})
 
-	if err := adjustCoreForSealMigration(logger, cluster.Cores[0].Core, shamirSeal, autoSeal); err != nil {
+	if err := adjustCoreForSealMigration(logger, cluster.Cores[0].Core, shamirSeal, seals[0]); err != nil {
 		t.Fatal(err)
 	}
 

@@ -48,7 +48,7 @@ func newTransitSealServer(t *testing.T) *transitSealServer {
 	return &transitSealServer{cluster}
 }
 
-func (tss *transitSealServer) makeKeyAndSeal(t *testing.T, key string) vault.Seal {
+func (tss *transitSealServer) makeKey(t *testing.T, key string) {
 	client := tss.Cores[0].Client
 	// Create default aesgcm key
 	if _, err := client.Logical().Write(path.Join("transit", "keys", key), nil); err != nil {
@@ -59,7 +59,10 @@ func (tss *transitSealServer) makeKeyAndSeal(t *testing.T, key string) vault.Sea
 	}); err != nil {
 		t.Fatal(err)
 	}
+}
 
+func (tss *transitSealServer) makeSeal(t *testing.T, key string) vault.Seal {
+	client := tss.Cores[0].Client
 	wrapperConfig := map[string]string{
 		"address":     client.Address(),
 		"token":       client.Token(),
@@ -125,12 +128,13 @@ func testSealMigrationShamirToAuto(t *testing.T, setup teststorage.ClusterSetupM
 	}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 		SkipInit:    true,
-		NumCores:    1,
+		NumCores:    3,
 	},
 		setup,
 	)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	autoSeal := tcluster.makeKeyAndSeal(t, "key1")
+	tcluster.makeKey(t, "key1")
+	autoSeal := tcluster.makeSeal(t, "key1")
 	cluster.Start()
 	defer cluster.Cleanup()
 
@@ -257,16 +261,21 @@ func TestSealMigrationAutoToAuto(t *testing.T) {
 func testSealMigrationAutoToAuto(t *testing.T, setup teststorage.ClusterSetupMutator) {
 	tcluster := newTransitSealServer(t)
 	defer tcluster.Cleanup()
-	autoSeal1 := tcluster.makeKeyAndSeal(t, "key1")
-	autoSeal2 := tcluster.makeKeyAndSeal(t, "key2")
+	tcluster.makeKey(t, "key1")
+	tcluster.makeKey(t, "key2")
+	var seals []vault.Seal
 
 	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
-		Seal:            autoSeal1,
 		DisableSealWrap: true,
 	}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 		SkipInit:    true,
-		NumCores:    1,
+		NumCores:    3,
+		SealFunc: func() vault.Seal {
+			tseal := tcluster.makeSeal(t, "key1")
+			seals = append(seals, tseal)
+			return tseal
+		},
 	},
 		setup,
 	)
@@ -297,7 +306,8 @@ func testSealMigrationAutoToAuto(t *testing.T, setup teststorage.ClusterSetupMut
 	}
 
 	logger := cluster.Logger.Named("shamir")
-	if err := adjustCoreForSealMigration(logger, cluster.Cores[0].Core, autoSeal2, autoSeal1); err != nil {
+	autoSeal2 := tcluster.makeSeal(t, "key2")
+	if err := adjustCoreForSealMigration(logger, cluster.Cores[0].Core, autoSeal2, seals[0]); err != nil {
 		t.Fatal(err)
 	}
 
