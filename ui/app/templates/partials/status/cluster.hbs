@@ -131,7 +131,7 @@
         {{#if ( and (has-permission 'metrics' routeParams='requests') (not cluster.dr.isSecondary) auth.currentToken)}}
           <ul class="menu-list">
             <li class="action">
-              {{#link-to "vault.cluster.requests"}}
+              {{#link-to "vault.cluster.metrics"}}
                 <div class="level is-mobile">
                   <span class="level-left">Metrics</span>
                   <Chevron class="has-text-grey-light level-right" />
