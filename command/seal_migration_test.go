@@ -132,6 +132,7 @@ func testSealMigrationShamirToAuto(t *testing.T, setup teststorage.ClusterSetupM
 	},
 		setup,
 	)
+	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, conf, opts)
 	tcluster.makeKey(t, "key1")
 	autoSeal := tcluster.makeSeal(t, "key1")
