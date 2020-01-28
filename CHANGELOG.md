@@ -17,6 +17,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+* agent: Fix issue where TLS options are ignored for agent template feature [GH-7889]
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [GH-8035]
 
 ## 1.3.3 (Unreleased)
@@ -25,6 +26,7 @@ BUG FIXES:
 
 * ui: Fix missing License menu item [GH-8230]
 * ui: Fix bug where default auth method on login is defaulted to auth method that is listing-visibility=unauth instead of “other” [GH-8218]
+* ui: Fix bug where KMIP details were not shown in the UI Wizard [GH-8255]
 
 ## 1.3.2 (January 22nd, 2020)
 

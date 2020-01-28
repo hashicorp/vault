@@ -108,8 +108,11 @@ management tool.
        policies="dev,prod" \
        bound_projects="my-project1,my-project2" \
        bound_zones="us-east1-b" \
-       bound_labels="foo:bar,zip:zap"
+       bound_labels="foo:bar,zip:zap" \
+       bound_service_accounts="my-service@my-project.iam.gserviceaccount.com"
    ```
+
+   Note that `bound_service_accounts` is only required for `iam`-type roles.
 
    For the complete list of configuration options for each type, please see the
    [API documentation][api-docs].
