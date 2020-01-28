@@ -638,6 +638,11 @@ func TestAgent_Template_Basic(t *testing.T) {
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	serverClient := cluster.Cores[0].Client
 
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Setenv(api.EnvVaultAddress, serverClient.Address())
+
 	// Enable the approle auth method
 	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
 	req.BodyBytes = []byte(`{
