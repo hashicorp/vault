@@ -108,7 +108,7 @@
           <ul class="menu-list">
             {{#if (and version.features (has-permission 'status' routeParams='license') (not cluster.dr.isSecondary))}}
               <li class="action">
-                {{#link-to "vault.cluster.license" activeCluster.name invokeAction=onLinkClick}}
+                {{#link-to "vault.cluster.license" activeCluster.name invokeAction=(action (queue (action onLinkClick) (action d.actions.close)))}}
                   <div class="level is-mobile">
                     <span class="level-left">License</span>
                     <Chevron class="has-text-grey-light level-right" />
@@ -131,7 +131,9 @@
         {{#if ( and (has-permission 'metrics' routeParams='requests') (not cluster.dr.isSecondary) auth.currentToken)}}
           <ul class="menu-list">
             <li class="action">
-              {{#link-to "vault.cluster.metrics"}}
+              {{#link-to 'vault.cluster.metrics' 
+                invokeAction=(action (queue (action onLinkClick) (action d.actions.close)))
+              }}
                 <div class="level is-mobile">
                   <span class="level-left">Metrics</span>
                   <Chevron class="has-text-grey-light level-right" />
