@@ -10,10 +10,9 @@
 {{!-- TODO: PLACEHOLDER, add permissions for menu dropdowns --}}
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
   <div class="selectable-card-container">
-    <p>{{model.tokens.counters.service_tokens.total}}</p>
     <SelectableCard>
       {{#link-to "vault.cluster.metrics.http-requests" }}
-      <p class="title-number">{{format-number 123456}}</p>
+      <p class="title-number">{{format-number model.httpsRequestTotal}}</p>
       <p class="title is-5">HTTP Request</p>
       <p class="has-text-grey is-size-8">This month</p>
       {{/link-to}}
@@ -66,8 +65,12 @@
     </div>
     <div class="selectable-card width-medium is-rounded">
       <div>
-        <p class="title-number">{{format-number 1234}}</p>
+        <p class="title-number">{{format-number model.tokenTotal}}</p>
+        {{#if (gt model.tokenTotal 1)}}
         <p class="title is-5">Tokens</p>
+        {{else}}
+        <p class="title is-5">Token</p>
+        {{/if}}
         <p class="has-text-grey is-size-8">Total</p>
       </div>
     </div>
