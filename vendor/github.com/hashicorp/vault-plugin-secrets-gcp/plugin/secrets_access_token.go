@@ -40,7 +40,7 @@ func (b *backend) pathAccessToken(ctx context.Context, req *logical.Request, d *
 		return nil, err
 	}
 	if rs == nil {
-		return logical.ErrorResponse("role set '%s' does not exists", rsName), nil
+		return logical.ErrorResponse("role set '%s' does not exist", rsName), nil
 	}
 
 	if rs.SecretType != SecretTypeAccessToken {
