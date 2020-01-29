@@ -4,8 +4,8 @@ import { hash } from 'rsvp';
 
 export default Route.extend(ClusterRoute, {
   model() {
-    let tokenModel = this.store.queryRecord('tokens', {}).then(response => {
-      return response.counters.service_tokens.total || 0;
+    let entitiesModel = this.store.queryRecord('entities', {}).then(response => {
+      return response.counters.entities.total || 0;
     });
 
     let httpsModel = this.store.queryRecord('http-requests', {}).then(response => {
@@ -15,9 +15,14 @@ export default Route.extend(ClusterRoute, {
       return reverseArray[0].total;
     });
 
+    let tokenModel = this.store.queryRecord('tokens', {}).then(response => {
+      return response.counters.service_tokens.total || 0;
+    });
+
     return hash({
-      tokenTotal: tokenModel,
+      entitiesTotal: entitiesModel,
       httpsRequestTotal: httpsModel,
+      tokenTotal: tokenModel,
     });
   },
 });
