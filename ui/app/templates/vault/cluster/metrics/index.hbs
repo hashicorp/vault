@@ -6,16 +6,18 @@
   </p.levelLeft>
 </PageHeader>
 
-{{!-- TODO: PLACEHOLDER, replace with new component --}}
-{{!-- TODO: PLACEHOLDER, add permissions for menu dropdowns --}}
+{{!-- ARG TODO: Add permission conditionals for menu dropdowns --}}
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
   <div class="selectable-card-container">
-    <SelectableCard>
-      {{#link-to "vault.cluster.metrics.http-requests" }}
-      <p class="title-number">{{format-number model.httpsRequestTotal}}</p>
-      <p class="title is-5">HTTP Request</p>
-      <p class="has-text-grey is-size-8">This month</p>
-      {{/link-to}}
+    {{#linked-block
+      "vault.cluster.metrics.http-requests"
+      class="selectable-card width-medium is-rounded"
+    }}
+      <div>
+        <p class="title-number">{{format-number model.httpsRequestTotal}}</p>
+        <p class="title is-5">HTTP Request</p>
+        <p class="has-text-grey is-size-8">This month</p>
+      </div>
       <div class="is-paddingless is-marginless">
         <div class="level-item">
           <PopupMenu name="engine-menu">
@@ -33,8 +35,8 @@
           </PopupMenu>
         </div>
       </div>
-    </SelectableCard>
-    <div class="selectable-card width-medium is-rounded">
+  {{/linked-block}}
+    <SelectableCard>
       <div>
         <p class="title-number">{{format-number model.entitiesTotal}}</p>
         {{#if (gt model.entitiesTotal 1)}}
@@ -66,8 +68,8 @@
           </PopupMenu>
         </div>
       </div>
-    </div>
-    <div class="selectable-card width-medium is-rounded">
+    </SelectableCard>
+    <SelectableCard>
       <div>
         <p class="title-number">{{format-number model.tokenTotal}}</p>
         {{#if (gt model.tokenTotal 1)}}
@@ -77,6 +79,6 @@
         {{/if}}
         <p class="has-text-grey is-size-8">Total</p>
       </div>
-    </div>
+    </SelectableCard>
   </div>
 </div>
