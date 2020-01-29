@@ -1,5 +1,10 @@
 ## 1.4 (Unreleased)
 
+FEATURES:
+
+ * **Kerberos Authentication**: We now support Kerberos authentication using
+   a SPNEGO token. Login can be performed using the Vault CLI, API, or agent.
+
 IMPROVEMENTS:
 
 * auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80 & JWT-86]
