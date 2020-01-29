@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
@@ -1050,9 +1051,6 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 
 				// If there is a stored key, retrieve it.
 				if cfg.StoredShares > 0 {
-					if err != nil {
-						return false, err
-					}
 					// Here's where we actually test that the provided unseal
 					// key is valid: can it decrypt the stored master key?
 					storedKeys, err := sealToUse.GetStoredKeys(ctx)
@@ -1250,7 +1248,8 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 
 	switch {
 	case c.migrationInfo != nil:
-		// Make a copy to avoid accidental reference changes for the values in migrationInfo
+		// Make copies of fields that gets passed on to migration via migrationInfo to
+		// avoid accidental reference changes
 		c.migrationInfo.shamirCombinedKey = make([]byte, len(recoveredKey))
 		copy(c.migrationInfo.shamirCombinedKey, recoveredKey)
 		if seal.StoredKeysSupported() == vaultseal.StoredKeysSupportedShamirMaster {
@@ -1286,9 +1285,41 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to read existing seal configuration during migration: %v", err)
 		}
-		if existBarrierSealConfig.Type == c.seal.BarrierType() {
-			c.logger.Info("seal migration has been performed by previous leader")
+
+		switch {
+		case existBarrierSealConfig.Type != c.migrationInfo.seal.BarrierType():
+			// If the existing barrier type is not the same as the type of seal we are
+			// migrating from, it can be concluded that migration has already been performed
+			c.logger.Info("migration is already performed since existing seal type and source seal types are different")
 			goto DONE
+		case existBarrierSealConfig.Type == c.seal.BarrierType():
+			// If the existing barrier type and the new seal type that we are moving to are
+			// the same, migration is assumed to have been completed, unless, migration is
+			// happening between same types (for example, transit to transit). When the
+			// migration is happening between same types, we need a different criteria to
+			// determine if the migration has happened or not. We can encrypt a sample value
+			// using the new seal that we are going to and attempt a decrypt from the
+			// existing seal. If that succeeds, we conclude that the migration has already
+			// been done.
+			plaintext := []byte("foo")
+			eblob, err := c.seal.GetAccess().Wrapper.Encrypt(ctx, []byte("foo"), nil)
+			if err != nil || eblob == nil {
+				c.logger.Warn("failed to encrypt using new seal", "error", err)
+				return err
+			}
+
+			decrypted, err := c.migrationInfo.seal.GetAccess().Wrapper.Decrypt(ctx, eblob, nil)
+			// Swallowing the error here since migration might have been complete and that
+			// migration seal might have become invalid due to valid reasons. We only care
+			// if migration seal is still around and if it the same as the new seal.
+			if err != nil {
+				c.logger.Warn("failed to decrypt using migration seal", "error", err)
+			}
+
+			if bytes.Compare(plaintext, decrypted) == 0 {
+				c.logger.Info("migration is already performed since existing and destination seals are same")
+				goto DONE
+			}
 		}
 	}
 
