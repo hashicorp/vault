@@ -7,6 +7,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* agent: add option to force the use of the auth-auth token, and ignore the Vault token in the request [GH-8101]
 * auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80 & JWT-86]
 * auth/jwt: Bound claims may be optionally configured using globs [JWT-89]
 * core: Separate out service discovery interface from storage interface to allow
