@@ -3,6 +3,7 @@ package ldap
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
@@ -56,7 +57,17 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 		}
 		defer conn.Close()
 
-		if _, err := client.GetUserBindDN(cfg, conn, "Philip J. Fry"); err != nil {
+		errchan := make(chan error)
+		go func() {
+			_, err := client.GetUserBindDN(cfg, conn, "Philip J. Fry")
+			errchan <- err
+		}()
+
+		timeout := time.NewTimer(time.Duration(cfg.RequestTimeout) * time.Second)
+		select {
+		case <-timeout.C:
+			t.Fatal("bind failed and timeout wasn't caught in library")
+		case err := <-errchan:
 			return err
 		}
 		return nil
