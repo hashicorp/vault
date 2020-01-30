@@ -13,12 +13,14 @@ IMPROVEMENTS:
   new types of service discovery not coupled to storage [GH-7887]
 * cli: Incorrect TLS configuration will now correctly fail [GH-8025] 
 * secrets/database/mongodb: Switched internal MongoDB driver to mongo-driver [GH-8140]
+* secrets/consul: Add support to specify TLS options per Consul backend [GH-4800]
 * secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
 * secrets/gcp: Add support for rotating root keys [GCP-53]
 * secrets/nomad: Add support to specify TLS options per Nomad backend [GH-8083]
 * storage/raft: Nodes in the raft cluster can all be given possible leader
   addresses for them to continuously try and join one of them, thus automating
   the process of join to a greater extent [GH-7856]
+* storage/etcd: Bumped etcd client API SDK [GH-7931 & GH-4961 & GH-4349 & GH-7582]
 
 BUG FIXES:
 
@@ -29,6 +31,7 @@ BUG FIXES:
 
 BUG FIXES:
 
+* cli: Fix issue where Raft snapshots from standby nodes created an empty backup file [GH-8097]
 * ui: Fix missing License menu item [GH-8230]
 * ui: Fix bug where default auth method on login is defaulted to auth method that is listing-visibility=unauth instead of “other” [GH-8218]
 * ui: Fix bug where KMIP details were not shown in the UI Wizard [GH-8255]
