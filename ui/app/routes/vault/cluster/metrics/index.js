@@ -9,7 +9,6 @@ export default Route.extend(ClusterRoute, {
     });
 
     let httpsModel = this.store.queryRecord('http-requests', {}).then(response => {
-      // reverse array so that most recent month shows
       let reverseArray = response.counters.reverse();
       return reverseArray[0].total;
     });
