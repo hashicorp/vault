@@ -21,8 +21,9 @@ import (
 )
 
 type Client struct {
-	Logger hclog.Logger
-	LDAP   LDAP
+	DebugBind bool
+	Logger    hclog.Logger
+	LDAP      LDAP
 }
 
 func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
@@ -110,10 +111,16 @@ func (c *Client) GetUserBindDN(cfg *ConfigEntry, conn Connection, username strin
 	// If updated, please update there as well.
 	if cfg.DiscoverDN || (cfg.BindDN != "" && cfg.BindPassword != "") {
 		var err error
+		if c.DebugBind {
+			conn.(*ldap.Conn).Debug = true
+		}
 		if cfg.BindPassword != "" {
 			err = conn.Bind(cfg.BindDN, cfg.BindPassword)
 		} else {
 			err = conn.UnauthenticatedBind(cfg.BindDN)
+		}
+		if c.DebugBind {
+			conn.(*ldap.Conn).Debug = false
 		}
 		if err != nil {
 			return bindDN, errwrap.Wrapf("LDAP bind (service) failed: {{err}}", err)
