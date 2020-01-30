@@ -64,8 +64,8 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// transitionFrom waits patiently for the services in the Consul catalog to
-	// transition from a known value, and then returns the new value.
+	// waitForServices waits for the services in the Consul catalog to
+	// reach an expected value, returning the delta if that doesn't happen in time.
 	waitForServices := func(t *testing.T, expected map[string][]string) map[string][]string {
 		t.Helper()
 		// Wait for up to 10 seconds
