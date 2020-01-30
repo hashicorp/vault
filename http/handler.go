@@ -395,9 +395,17 @@ func handleUIPost(h http.Handler) http.Handler {
 			return
 		}
 
+		// Limit handling to only the expected callback URL
+		if !strings.HasPrefix(req.URL.Path, "/ui/vault/auth") ||
+			!strings.HasSuffix(req.URL.Path, "callback") {
+			http.NotFound(w, req)
+			return
+		}
+
 		state := req.FormValue("state")
 		code := req.FormValue("code")
 
+		// state and code will always be part of a valid callback request
 		if state == "" || code == "" {
 			http.NotFound(w, req)
 			return
