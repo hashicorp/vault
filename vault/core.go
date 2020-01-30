@@ -1309,11 +1309,10 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 			}
 
 			decrypted, err := c.migrationInfo.seal.GetAccess().Wrapper.Decrypt(ctx, eblob, nil)
-			// Swallowing the error here since migration might have been complete and that
-			// migration seal might have become invalid due to valid reasons. We only care
-			// if migration seal is still around and if it the same as the new seal.
 			if err != nil {
-				c.logger.Warn("failed to decrypt using migration seal", "error", err)
+				// Swallowing the error here since migration might have been complete and that
+				// migration seal might have become invalid due to valid reasons. We only care
+				// if migration seal is still around and if it the same as the new seal.
 			}
 
 			if bytes.Compare(plaintext, decrypted) == 0 {
