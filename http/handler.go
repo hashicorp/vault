@@ -147,7 +147,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core)))
 		if core.UIEnabled() == true {
 			if uiBuiltIn {
-				mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
+				mux.Handle("/ui/", handleUIPost(http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))))
 				mux.Handle("/robots.txt", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))
 			} else {
 				mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
@@ -378,6 +378,37 @@ func handleUI(h http.Handler) http.Handler {
 		req.URL.Path = strings.TrimSuffix(req.URL.Path, "/")
 		h.ServeHTTP(w, req)
 		return
+	})
+}
+
+// handleUIPost handles the (very) rare POST request to the /ui/ endpoint.
+//
+// The only case (so far) to be handled is an OIDC authentication request that is using
+// response_mode=form_post (https://openid.net/specs/oauth-v2-form-post-response-mode-1_0.html).
+// In this case we'll move the state/code parameters from the form into a new redirect URL,
+// where they usually are and where the UI expects to find them.
+func handleUIPost(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		// Normal case: send non-POST request to the next handler
+		if req.Method != http.MethodPost {
+			h.ServeHTTP(w, req)
+			return
+		}
+
+		state := req.FormValue("state")
+		code := req.FormValue("code")
+
+		if state == "" || code == "" {
+			http.NotFound(w, req)
+			return
+		}
+
+		q := req.URL.Query()
+		q.Set("state", state)
+		q.Set("code", code)
+		req.URL.RawQuery = q.Encode()
+
+		http.Redirect(w, req, req.URL.String(), http.StatusSeeOther)
 	})
 }
 
