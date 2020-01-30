@@ -26,6 +26,14 @@ const (
 	MarshalingTypeJWS
 )
 
+type OpenPGPFormatType uint32
+
+const (
+	_                                         = iota
+	OpenPGPFormatTypeBase64 OpenPGPFormatType = iota
+	OpenPGPFormatTypeAsciiArmor
+)
+
 var (
 	HashTypeMap = map[string]HashType{
 		"sha1":     HashTypeSHA1,
@@ -46,5 +54,10 @@ var (
 	MarshalingTypeMap = map[string]MarshalingType{
 		"asn1": MarshalingTypeASN1,
 		"jws":  MarshalingTypeJWS,
+	}
+
+	OpenPGPFormatTypeMap = map[string]OpenPGPFormatType{
+		"base64":      OpenPGPFormatTypeBase64,
+		"ascii-armor": OpenPGPFormatTypeAsciiArmor,
 	}
 )
