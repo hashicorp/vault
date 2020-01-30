@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"bytes"
 	"context"
 	"crypto/elliptic"
 	"crypto/x509"
@@ -11,6 +12,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ed25519"
+	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/openpgp/armor"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/errwrap"
@@ -39,6 +42,24 @@ func (b *backend) pathKeys() *framework.Path {
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Name of the key",
+			},
+
+			"real_name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "[OpenPGP] Real Name",
+			},
+
+			"comment": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "[OpenPGP] Comment",
+			},
+
+			"email": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "[OpenPGP] Email",
 			},
 
 			"type": &framework.FieldSchema{
@@ -119,6 +140,9 @@ func (b *backend) pathKeysList(ctx context.Context, req *logical.Request, d *fra
 
 func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+	realName := d.Get("real_name").(string)
+	email := d.Get("email").(string)
+	comment := d.Get("comment").(string)
 	derived := d.Get("derived").(bool)
 	convergent := d.Get("convergent_encryption").(bool)
 	keyType := d.Get("type").(string)
@@ -133,6 +157,9 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		Upsert:               true,
 		Storage:              req.Storage,
 		Name:                 name,
+		RealName:             realName,
+		Email:                email,
+		Comment:              comment,
 		Derived:              derived,
 		Convergent:           convergent,
 		Exportable:           exportable,
@@ -157,6 +184,8 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_RSA2048
 	case "rsa-4096":
 		polReq.KeyType = keysutil.KeyType_RSA4096
+	case "openpgp":
+		polReq.KeyType = keysutil.KeyType_OpenPGP
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
@@ -269,7 +298,14 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 		}
 		resp.Data["keys"] = retKeys
 
-	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
+	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096, keysutil.KeyType_OpenPGP:
+
+		if p.Type == keysutil.KeyType_OpenPGP {
+			resp.Data["real_name"] = p.RealName
+			resp.Data["email"] = p.Email
+			resp.Data["comment"] = p.Comment
+		}
+
 		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {
 			key := asymKey{
@@ -287,6 +323,50 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 				key.Name = elliptic.P384().Params().Name
 			case keysutil.KeyType_ECDSA_P521:
 				key.Name = elliptic.P521().Params().Name
+			case keysutil.KeyType_OpenPGP:
+				key.Name = "openpgp"
+				// rawPrivKey := bytes.NewReader(v.Key)
+				// pgpEntityList, err := openpgp.ReadKeyRing(rawPrivKey)
+				// if err != nil {
+				// 	return nil, err
+				// }
+				//
+				// if len(pgpEntityList) < 1 {
+				// 	return nil, fmt.Errorf("No entities found in OpenPGP key ring")
+				// }
+				//
+				// entity := pgpEntityList[0]
+				//
+				// if len(entity.Identities) > 0 {
+				// 	for idkey, _ := range entity.Identities {
+				// 		if idkey != "" {
+				// 			key.Name = idkey
+				// 		}
+				// 		break
+				// 	}
+				// }
+				//
+				// var buf bytes.Buffer
+				// pgpArmoredPub, err := armor.Encode(&buf, openpgp.PublicKeyType, nil)
+				// if err != nil {
+				// 	return nil, err
+				// }
+				// err = entity.Serialize(pgpArmoredPub)
+				// if err != nil || pgpArmoredPub.Close() != nil {
+				// 	return nil, err
+				// }
+
+				pubkey, identity, err := extractOpenPGP(v.Key, openpgp.PublicKeyType)
+				if err != nil {
+					return nil, err
+				}
+
+				if identity != "" {
+					key.Name = identity
+				}
+
+				key.PublicKey = pubkey
+
 			case keysutil.KeyType_ED25519:
 				if p.Derived {
 					if len(context) == 0 {
@@ -346,6 +426,59 @@ func (b *backend) pathPolicyDelete(ctx context.Context, req *logical.Request, d 
 	}
 
 	return nil, nil
+}
+
+func extractOpenPGP(key []byte, blockType string) (retkey, identity string, err error) {
+	rawPrivKey := bytes.NewReader(key)
+	pgpEntityList, err := openpgp.ReadKeyRing(rawPrivKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	if len(pgpEntityList) < 1 {
+		return "", "", fmt.Errorf("No entities found in OpenPGP key ring")
+	}
+
+	entity := pgpEntityList[0]
+
+	if len(entity.Identities) > 0 {
+		for idkey, _ := range entity.Identities {
+			identity = idkey
+			break
+		}
+	}
+
+	var buf bytes.Buffer
+	switch blockType {
+	case openpgp.PublicKeyType:
+		pgpArmored, err := armor.Encode(&buf, blockType, nil)
+		if err != nil {
+			return "", "", err
+		}
+
+		err = entity.Serialize(pgpArmored)
+		if err != nil || pgpArmored.Close() != nil {
+			return "", "", fmt.Errorf("Issue Serializing OpenPGP Armored information")
+		}
+
+		return buf.String(), identity, nil
+
+	case openpgp.PrivateKeyType:
+		pgpArmored, err := armor.Encode(&buf, blockType, nil)
+		if err != nil {
+			return "", "", err
+		}
+
+		pgpArmored.Write(key)
+		if pgpArmored.Close() != nil {
+			return "", "", err
+		}
+
+		return buf.String(), identity, nil
+
+	default:
+		return "", "", fmt.Errorf("Incorrect blockType %v", blockType)
+	}
 }
 
 const pathPolicyHelpSyn = `Managed named encryption keys`

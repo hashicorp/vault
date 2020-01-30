@@ -31,6 +31,9 @@ import (
 	"golang.org/x/crypto/chacha20poly1305"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/hkdf"
+	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/openpgp/armor"
+	"golang.org/x/crypto/openpgp/packet"
 
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
@@ -58,6 +61,7 @@ const (
 	KeyType_ECDSA_P384
 	KeyType_ECDSA_P521
 	KeyType_AES128_GCM96
+	KeyType_OpenPGP
 )
 
 const (
@@ -108,7 +112,7 @@ func (kt KeyType) DecryptionSupported() bool {
 
 func (kt KeyType) SigningSupported() bool {
 	switch kt {
-	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA4096, KeyType_OpenPGP:
 		return true
 	}
 	return false
@@ -150,6 +154,8 @@ func (kt KeyType) String() string {
 		return "rsa-2048"
 	case KeyType_RSA4096:
 		return "rsa-4096"
+	case KeyType_OpenPGP:
+		return "openpgp"
 	}
 
 	return "[unknown]"
@@ -308,9 +314,12 @@ type Policy struct {
 	// served after a delete.
 	deleted uint32
 
-	Name string      `json:"name"`
-	Key  []byte      `json:"key,omitempty"` //DEPRECATED
-	Keys keyEntryMap `json:"keys"`
+	Name     string      `json:"name"`
+	RealName string      `json:"real_name"`
+	Email    string      `json:"email"`
+	Comment  string      `json:"comment"`
+	Key      []byte      `json:"key,omitempty"` //DEPRECATED
+	Keys     keyEntryMap `json:"keys"`
 
 	// Derived keys MUST provide a context and the master underlying key is
 	// never used. If convergent encryption is true, the context will be used
@@ -1062,7 +1071,7 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	return p.Keys[strconv.Itoa(version)].HMACKey, nil
 }
 
-func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, sigAlgorithm string, marshaling MarshalingType) (*SigningResult, error) {
+func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, sigAlgorithm string, marshaling MarshalingType, format OpenPGPFormatType) (*SigningResult, error) {
 	if !p.Type.SigningSupported() {
 		return nil, fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
@@ -1205,6 +1214,75 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 			}
 		default:
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature algorithm %s", sigAlgorithm)}
+		}
+
+	case KeyType_OpenPGP:
+		config := packet.Config{}
+		switch hashAlgorithm {
+		case HashTypeSHA2224:
+			config.DefaultHash = crypto.SHA224
+		case HashTypeSHA2256:
+			config.DefaultHash = crypto.SHA256
+		case HashTypeSHA2384:
+			config.DefaultHash = crypto.SHA384
+		case HashTypeSHA2512:
+			config.DefaultHash = crypto.SHA512
+		default:
+			return nil, errutil.InternalError{Err: "unsupported hash algorithm"}
+		}
+
+		rawKey := bytes.NewReader(p.Keys[strconv.Itoa(ver)].Key)
+		pgpEntityList, err := openpgp.ReadKeyRing(rawKey)
+		if err != nil {
+			return nil, err
+		}
+		if len(pgpEntityList) < 1 {
+			return nil, fmt.Errorf("No entities found in OpenPGP key ring")
+		}
+		entity := pgpEntityList[0]
+
+		var pubbuf bytes.Buffer
+		pgpArmored, err := armor.Encode(&pubbuf, openpgp.PublicKeyType, nil)
+		if err != nil {
+			return nil, err
+		}
+		err = entity.Serialize(pgpArmored)
+		if err != nil || pgpArmored.Close() != nil {
+			return nil, fmt.Errorf("Issue Serializing OpenPGP Armored information")
+		}
+
+		message := bytes.NewReader(input)
+		var signature bytes.Buffer
+		switch format {
+		case OpenPGPFormatTypeBase64:
+			encoder := base64.NewEncoder(base64.StdEncoding, &signature)
+			err = openpgp.DetachSign(encoder, entity, message, &config)
+			if err != nil {
+				return nil, err
+			}
+			err = encoder.Close()
+			if err != nil {
+				return nil, err
+			}
+
+			res := &SigningResult{
+				Signature: p.getVersionPrefix(ver) + signature.String(),
+				PublicKey: pubbuf.Bytes(),
+			}
+			return res, nil
+
+		case OpenPGPFormatTypeAsciiArmor:
+			err = openpgp.ArmoredDetachSign(&signature, entity, message, &config)
+			if err != nil {
+				return nil, err
+			}
+
+			res := &SigningResult{
+				Signature: p.getVersionPrefix(ver) + signature.String(),
+				PublicKey: pubbuf.Bytes(),
+			}
+			return res, nil
+
 		}
 
 	default:
@@ -1366,6 +1444,23 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 
 		return err == nil, nil
 
+	case KeyType_OpenPGP:
+		rawKey := bytes.NewReader(p.Keys[strconv.Itoa(ver)].Key)
+		pgpEntityList, err := openpgp.ReadKeyRing(rawKey)
+		if err != nil {
+			return false, err
+		}
+		if len(pgpEntityList) < 1 {
+			return false, fmt.Errorf("No entities found in OpenPGP key ring")
+		}
+
+		message := bytes.NewReader(input)
+		signature := bytes.NewReader(sigBytes)
+
+		_, err = openpgp.CheckDetachedSignature(pgpEntityList, message, signature)
+
+		return err == nil, nil
+
 	default:
 		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
@@ -1474,6 +1569,28 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 		if err != nil {
 			return err
 		}
+
+	case KeyType_OpenPGP:
+		bitSize := 2048 // This should be customizable
+
+		config := packet.Config{
+			RSABits: bitSize,
+			Rand:    randReader,
+		}
+
+		entity, err := openpgp.NewEntity(p.RealName, p.Comment, p.Email, &config)
+		if err != nil {
+			return err
+		}
+
+		var buf bytes.Buffer
+		err = entity.SerializePrivate(&buf, nil)
+		if err != nil {
+			return err
+		}
+
+		entry.Key = buf.Bytes()
+
 	}
 
 	if p.ConvergentEncryption {

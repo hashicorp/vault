@@ -35,6 +35,15 @@ type PolicyRequest struct {
 	// The name of the policy
 	Name string
 
+	// For OpenPGP - the provided Real Name
+	RealName string
+
+	// For OpenPGP - the provided email
+	Email string
+
+	// For OpenPGP - the provided comment
+	Comment string
+
 	// The key type
 	KeyType KeyType
 
@@ -352,6 +361,12 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
 			}
 
+		case KeyType_OpenPGP:
+			if req.Derived || req.Convergent {
+				cleanup()
+				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
+			}
+
 		default:
 			cleanup()
 			return nil, false, fmt.Errorf("unsupported key type %v", req.KeyType)
@@ -360,6 +375,9 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 		p = &Policy{
 			l:                    new(sync.RWMutex),
 			Name:                 req.Name,
+			RealName:             req.RealName,
+			Email:                req.Email,
+			Comment:              req.Comment,
 			Type:                 req.KeyType,
 			Derived:              req.Derived,
 			Exportable:           req.Exportable,
