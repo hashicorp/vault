@@ -49,11 +49,9 @@ type Conf struct {
 }
 
 // Server returns an http test server that can be used to test
-// Kubernetes client code. It returns its current patches as a map
-// so the caller can check current state. Calling the closeFunc
-// at the end closes the test server. Responses are provided using
-// real responses that have been captured from the Kube API.
-// testState is a map[string]map[string]interface{}.
+// Kubernetes client code. It also retains the current state,
+// and a func to close the server and to clean up any temporary
+// files.
 func Server(t *testing.T) (testState *State, testConf *Conf, closeFunc func()) {
 	testState = &State{m: &sync.Map{}}
 	testConf = &Conf{

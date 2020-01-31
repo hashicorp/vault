@@ -14,8 +14,8 @@ const (
 	// Vault may read them in if set through these environment variables.
 	// Example here:
 	// https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/
-	EnvVarKubernetesNamespace = "VAULT_NAMESPACE"
-	EnvVarKubernetesPodName   = "VAULT_POD_NAME"
+	EnvVarKubernetesNamespace = "VAULT_K8S_NAMESPACE"
+	EnvVarKubernetesPodName   = "VAULT_K8S_POD_NAME"
 
 	// The service host and port environment variables are
 	// set by default inside a Kubernetes environment.
