@@ -126,10 +126,10 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Description: `The method by which to marshal the signature. The default is 'asn1' which is used by openssl and X.509. It can also be set to 'jws' which is used for JWT signatures; setting it to this will also cause the encoding of the signature to be url-safe base64 instead of using standard base64 encoding. Currently only valid for ECDSA P-256 key types".`,
 			},
 
-			"pgpformat": {
+			"pgp_format": {
 				Type:        framework.TypeString,
 				Default:     "base64",
-				Description: `[OpenPGP] Encoding format the signature use. Can be "base64" or "ascii-armor". Defaults to "base64".`,
+				Description: `Encoding format for the generated signature use. Can be "base64" or "ascii-armor". Defaults to "base64". Currently only valid for OpenPGP key types.`,
 			},
 		},
 
@@ -246,7 +246,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse(fmt.Sprintf("invalid marshaling type %q", marshalingStr)), logical.ErrInvalidRequest
 	}
 
-	formatStr := d.Get("pgpformat").(string)
+	formatStr := d.Get("pgp_format").(string)
 	format, ok := keysutil.OpenPGPFormatTypeMap[formatStr]
 	if !ok {
 		return logical.ErrorResponse(fmt.Sprintf("invalid OpenPGP Format type %q", formatStr)), logical.ErrInvalidRequest

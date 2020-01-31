@@ -47,19 +47,19 @@ func (b *backend) pathKeys() *framework.Path {
 			"real_name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "[OpenPGP] Real Name",
+				Description: "Real name. Currently only valid for OpenPGP key types.",
 			},
 
 			"comment": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "[OpenPGP] Comment",
+				Description: "Comment. Currently only valid for OpenPGP key types.",
 			},
 
 			"email": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "[OpenPGP] Email",
+				Description: "Email. Currently only valid for OpenPGP key types.",
 			},
 
 			"type": &framework.FieldSchema{
@@ -68,7 +68,7 @@ func (b *backend) pathKeys() *framework.Path {
 				Description: `
 The type of key to create. Currently, "aes128-gcm96" (symmetric), "aes256-gcm96" (symmetric), "ecdsa-p256"
 (asymmetric), "ecdsa-p384" (asymmetric), "ecdsa-p521" (asymmetric), "ed25519" (asymmetric), "rsa-2048" (asymmetric), "rsa-4096"
-(asymmetric) are supported.  Defaults to "aes256-gcm96".
+(asymmetric), "openpgp" (asymmetric) are supported.  Defaults to "aes256-gcm96".
 `,
 			},
 
@@ -325,36 +325,6 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 				key.Name = elliptic.P521().Params().Name
 			case keysutil.KeyType_OpenPGP:
 				key.Name = "openpgp"
-				// rawPrivKey := bytes.NewReader(v.Key)
-				// pgpEntityList, err := openpgp.ReadKeyRing(rawPrivKey)
-				// if err != nil {
-				// 	return nil, err
-				// }
-				//
-				// if len(pgpEntityList) < 1 {
-				// 	return nil, fmt.Errorf("No entities found in OpenPGP key ring")
-				// }
-				//
-				// entity := pgpEntityList[0]
-				//
-				// if len(entity.Identities) > 0 {
-				// 	for idkey, _ := range entity.Identities {
-				// 		if idkey != "" {
-				// 			key.Name = idkey
-				// 		}
-				// 		break
-				// 	}
-				// }
-				//
-				// var buf bytes.Buffer
-				// pgpArmoredPub, err := armor.Encode(&buf, openpgp.PublicKeyType, nil)
-				// if err != nil {
-				// 	return nil, err
-				// }
-				// err = entity.Serialize(pgpArmoredPub)
-				// if err != nil || pgpArmoredPub.Close() != nil {
-				// 	return nil, err
-				// }
 
 				pubkey, identity, err := extractOpenPGP(v.Key, openpgp.PublicKeyType)
 				if err != nil {
