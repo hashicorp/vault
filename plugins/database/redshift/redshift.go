@@ -407,9 +407,35 @@ func (p *RedShift) defaultRevokeUser(ctx context.Context, username string) error
 	}
 
 	if dbname.Valid {
-		revocationStmts = append(revocationStmts, fmt.Sprintf(
-			`SELECT pg_terminate_backend(process) FROM stv_sessions WHERE user_name='%s';`,
-			username))
+		/*
+			- SP means we can't have parallel sessions creating and destroying the SP
+			- SP means we may accidentially leave a SP on the database if there's a network partition
+			- Since we've already revoked all the client privs, and those revocations are instant, we should
+			rely on the client killing its own connection instead of us doing it for them
+			- For large redshift clusters, upper bound on connections is 5000
+			- For small redshift clusters, upper bound on connections is less than 1000 (need to double check)
+			- Sessions are memory bound, so this may be an issue if clients fail to exit their session
+			- Scenario: TTL of 1 minute with hundreds of users means we may have hundreds of zombie connections
+			  Reality: TTLs are longer lived since apps can't handle reconnecting this often anyways, so it's probably ok?
+		*/
+		revocationStmts = append(revocationStmts, `CREATE OR REPLACE PROCEDURE terminateloop(dbusername varchar(100))
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  currentpid int;
+  loopvar int;
+  qtyconns int;
+BEGIN
+SELECT COUNT(process) INTO qtyconns FROM stv_sessions WHERE user_name=dbusername;
+  FOR loopvar IN 1..qtyconns LOOP
+    SELECT INTO currentpid process FROM stv_sessions WHERE user_name=dbusername ORDER BY process ASC LIMIT 1;
+    SELECT pg_terminate_backend(currentpid);
+  END LOOP;
+END
+$$;`)
+
+		revocationStmts = append(revocationStmts, fmt.Sprintf(`call terminateloop(%s);`, pq.QuoteIdentifier(username)))
+		revocationStmts = append(revocationStmts, `DROP PROCEDURE terminateloop(varchar);`)
 	}
 
 	fmt.Printf("%+v\n", revocationStmts)
