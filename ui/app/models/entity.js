@@ -23,5 +23,5 @@ const { attr } = DS;
 */
 
 export default DS.Model.extend({
-  counters: attr('object'),
+  totalEntities: attr('number'),
 });

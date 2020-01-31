@@ -4,22 +4,22 @@ import { hash } from 'rsvp';
 
 export default Route.extend(ClusterRoute, {
   model() {
-    let entitiesModel = this.store.queryRecord('entities', {}).then(response => {
-      return response.counters.entities.total;
+    let entitiesModel = this.store.queryRecord('entity', {}).then(response => {
+      return response.totalEntities;
     });
 
-    let httpsModel = this.store.queryRecord('http-requests', {}).then(response => {
+    let httpsRequestsModel = this.store.queryRecord('http-requests', {}).then(response => {
       let reverseArray = response.counters.reverse();
       return reverseArray[0].total;
     });
 
-    let tokenModel = this.store.queryRecord('tokens', {}).then(response => {
-      return response.counters.service_tokens.total;
+    let tokenModel = this.store.queryRecord('token', {}).then(response => {
+      return response.totalTokens;
     });
 
     return hash({
       entitiesTotal: entitiesModel,
-      httpsRequestTotal: httpsModel,
+      httpsRequestTotal: httpsRequestsModel,
       tokenTotal: tokenModel,
     });
   },
