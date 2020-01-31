@@ -12,6 +12,10 @@ export default Route.extend(ClusterRoute, {
       let reverseArray = response.counters.reverse();
       return reverseArray[0].total;
     });
+    // ARG TODO more efficient way to do this.... calling twice
+    let httpsBarChartModel = this.store.queryRecord('http-requests', {}).then(response => {
+      return response.counters;
+    });
 
     let tokenModel = this.store.queryRecord('tokens', {}).then(response => {
       return response.counters.service_tokens.total;
@@ -20,6 +24,7 @@ export default Route.extend(ClusterRoute, {
     return hash({
       entitiesTotal: entitiesModel,
       httpsRequestTotal: httpsModel,
+      httpsRequestBarChartData: httpsBarChartModel,
       tokenTotal: tokenModel,
     });
   },

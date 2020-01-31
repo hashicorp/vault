@@ -5,6 +5,24 @@
   grid-gap: 2rem;
 }
 
+.selectable-card-container-wide {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: repeat(3, 1fr); // ARG TODO: may remove depending on how graph looks.
+  grid-gap: 2rem;
+
+  @include until($mobile) {
+    grid-template-columns: 2fr;
+  }
+}
+
+.grid-item-http {
+  grid-column-start: 1;
+  grid-column-end: 2;
+  grid-row-start: 1;
+  grid-row-end: 3;
+}
+
 .selectable-card {
   box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
   display: flex;
@@ -29,4 +47,27 @@
 }
 .selectable-card.is-rounded {
   border-radius: $radius;
+}
+.selectable-card.is-grid-container {
+  display: grid;
+  grid-template-columns: 2fr 0.5fr;
+  grid-template-rows: 1fr 2fr 0.5fr;
+  grid-gap: 2rem;
+}
+
+.selectable-card-change {
+  justify-self: right;
+  padding-right: $spacing-l;
+}
+.selectable-card-chart {
+  grid-column: 1 / span 2;
+  grid-row-start: 2;
+  align-self: end;
+}
+.selectable-card-details {
+  grid-column-start: 2;
+  grid-row-start: 3;
+  align-self: end;
+  justify-self: right;
+  padding-right: $spacing-l;
 }

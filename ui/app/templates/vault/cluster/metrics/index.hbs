@@ -8,77 +8,141 @@
 
 {{!-- ARG TODO: Add permission conditionals for menu dropdowns --}}
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
-  <div class="selectable-card-container">
-    {{#linked-block
-      "vault.cluster.metrics.http-requests"
-      class="selectable-card width-medium is-rounded"
-    }}
-      <div>
-        <p class="title-number">{{format-number model.httpsRequestTotal}}</p>
-        <p class="title is-5">HTTP Requests</p>
-        <p class="has-text-grey is-size-8">This month</p>
+  {{#if true}}
+    <div class="selectable-card-container-wide">
+      <div class="selectable-card width-medium is-rounded is-grid-container grid-item-http">
+        <div class="selectable-card-title">
+          <p class="title-number">{{format-number model.httpsRequestTotal}}</p>
+          <p class="title is-5">HTTP Requests</p>
+          <p class="has-text-grey is-size-8">This month</p>
+        </div>
+        <div class="selectable-card-change">CHANGE</div>
+        {{!-- <div class="selectable-card-chart">CHART</div> --}}
+        <HttpRequestsBarChartSmallView @counters={{model.httpsRequestBarChartData}} class="selectable-card-chart"/>
+        <div class="selectable-card-details">view details</div>
       </div>
-      <div class="is-paddingless is-marginless">
-        <div class="level-item">
-          <PopupMenu name="engine-menu">
+      {{#linked-block
+        class="selectable-card width-medium is-rounded"
+      }}
+        <div>
+          <p class="title-number">{{format-number model.entitiesTotal}}</p>
+          {{#if (not-eq model.entitiesTotal 1)}}
+          <p class="title is-5">Entities</p>
+          {{else}}
+          <p class="title is-5">Entity</p>
+          {{/if}}
+          <p class="has-text-grey is-size-8">Total</p>
+        </div>
+        <div class="is-paddingless is-marginless">
+          <div class="level-item">
+            <PopupMenu name="engine-menu">
               <nav class="menu">
                 <ul class="menu-list">
                   <li class="action">
-                    {{#link-to "vault.cluster.metrics.http-requests"}}
-                      View Details
+                    {{#link-to "vault.cluster.access.identity" "entities" data-test-link=true }}
+                      Manage entities
                     {{/link-to}}
+                  </li>
+                  <li class="action">
+                    {{#link-to "vault.cluster.access.identity.create" "entities" }}
+                    Create entity
+                  {{/link-to}}
                   </li>
                 </ul>
               </nav>
-          </PopupMenu>
+            </PopupMenu>
+          </div>
         </div>
-      </div>
-    {{/linked-block}}
-    {{#linked-block
-      class="selectable-card width-medium is-rounded"
-    }}
-      <div>
-        <p class="title-number">{{format-number model.entitiesTotal}}</p>
-        {{#if (not-eq model.entitiesTotal 1)}}
-        <p class="title is-5">Entities</p>
-        {{else}}
-        <p class="title is-5">Entity</p>
-        {{/if}}
-        <p class="has-text-grey is-size-8">Total</p>
-      </div>
-      <div class="is-paddingless is-marginless">
-        <div class="level-item">
-          <PopupMenu name="engine-menu">
-            <nav class="menu">
-              <ul class="menu-list">
-                <li class="action">
-                  {{#link-to "vault.cluster.access.identity" "entities" data-test-link=true }}
-                    Manage entities
+      {{/linked-block}}
+      {{#linked-block
+        class="selectable-card width-medium is-rounded"
+      }}
+        <div>
+          <p class="title-number">{{format-number model.tokenTotal}}</p>
+          {{#if (not-eq model.tokenTotal 1)}}
+          <p class="title is-5">Tokens</p>
+          {{else}}
+          <p class="title is-5">Token</p>
+          {{/if}}
+          <p class="has-text-grey is-size-8">Total</p>
+        </div>
+      {{/linked-block}}
+    </div>
+  {{/if}}
+  {{! -- ARG TODO: add the proper conditional for when more than 1 month data --}}
+  {{#if false}}
+    <div class="selectable-card-container">
+      {{#linked-block
+        "vault.cluster.metrics.http-requests"
+        class="selectable-card width-medium is-rounded"
+      }}
+        <div>
+          <p class="title-number">{{format-number model.httpsRequestTotal}}</p>
+          <p class="title is-5">HTTP Requests</p>
+          <p class="has-text-grey is-size-8">This month</p>
+        </div>
+        <div class="is-paddingless is-marginless">
+          <div class="level-item">
+            <PopupMenu name="engine-menu">
+                <nav class="menu">
+                  <ul class="menu-list">
+                    <li class="action">
+                      {{#link-to "vault.cluster.metrics.http-requests"}}
+                        View Details
+                      {{/link-to}}
+                    </li>
+                  </ul>
+                </nav>
+            </PopupMenu>
+          </div>
+        </div>
+      {{/linked-block}}
+      {{#linked-block
+        class="selectable-card width-medium is-rounded"
+      }}
+        <div>
+          <p class="title-number">{{format-number model.entitiesTotal}}</p>
+          {{#if (not-eq model.entitiesTotal 1)}}
+          <p class="title is-5">Entities</p>
+          {{else}}
+          <p class="title is-5">Entity</p>
+          {{/if}}
+          <p class="has-text-grey is-size-8">Total</p>
+        </div>
+        <div class="is-paddingless is-marginless">
+          <div class="level-item">
+            <PopupMenu name="engine-menu">
+              <nav class="menu">
+                <ul class="menu-list">
+                  <li class="action">
+                    {{#link-to "vault.cluster.access.identity" "entities" data-test-link=true }}
+                      Manage entities
+                    {{/link-to}}
+                  </li>
+                  <li class="action">
+                    {{#link-to "vault.cluster.access.identity.create" "entities" }}
+                    Create entity
                   {{/link-to}}
-                </li>
-                <li class="action">
-                  {{#link-to "vault.cluster.access.identity.create" "entities" }}
-                  Create entity
-                {{/link-to}}
-                </li>
-              </ul>
-            </nav>
-          </PopupMenu>
+                  </li>
+                </ul>
+              </nav>
+            </PopupMenu>
+          </div>
         </div>
-      </div>
-    {{/linked-block}}
-    {{#linked-block
-      class="selectable-card width-medium is-rounded"
-    }}
-      <div>
-        <p class="title-number">{{format-number model.tokenTotal}}</p>
-        {{#if (not-eq model.tokenTotal 1)}}
-        <p class="title is-5">Tokens</p>
-        {{else}}
-        <p class="title is-5">Token</p>
-        {{/if}}
-        <p class="has-text-grey is-size-8">Total</p>
-      </div>
-    {{/linked-block}}
-  </div>
+      {{/linked-block}}
+      {{#linked-block
+        class="selectable-card width-medium is-rounded"
+      }}
+        <div>
+          <p class="title-number">{{format-number model.tokenTotal}}</p>
+          {{#if (not-eq model.tokenTotal 1)}}
+          <p class="title is-5">Tokens</p>
+          {{else}}
+          <p class="title is-5">Token</p>
+          {{/if}}
+          <p class="has-text-grey is-size-8">Total</p>
+        </div>
+      {{/linked-block}}
+    </div>
+  {{/if}}
 </div>
