@@ -314,6 +314,10 @@ jobs:
     - setup_remote_docker
     - run:
         command: |
+          echo $TEST_VAR
+        name: Test context value
+    - run:
+        command: |
           echo 'export PACKAGE_LOCK_CHANGED=$(git diff --name-only $(git log --pretty=format:'%h' -n1 HEAD~1)...HEAD | grep -c website/package-lock.json)' >> $BASH_ENV
         name: Diff package-lock.json
     - run:
@@ -606,6 +610,10 @@ workflows:
 #     steps:
 #     - checkout
 #     - setup_remote_docker
+#     - run:
+#         command: |
+#           echo $TEST_VAR
+#         name: Test context value
 #     - run:
 #         command: |
 #           echo 'export PACKAGE_LOCK_CHANGED=$(git diff --name-only $(git log --pretty=format:'%h' -n1 HEAD~1)...HEAD | grep -c website/package-lock.json)' >> $BASH_ENV

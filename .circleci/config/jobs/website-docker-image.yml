@@ -5,6 +5,10 @@ steps:
   - checkout
   - setup_remote_docker
   - run:
+      name: Test context value
+      command: |
+        echo $TEST_VAR
+  - run:
       name: Diff package-lock.json
       command: |
         echo 'export PACKAGE_LOCK_CHANGED=$(git diff --name-only $(git log --pretty=format:'%h' -n1 HEAD~1)...HEAD | grep -c website/package-lock.json)' >> $BASH_ENV
