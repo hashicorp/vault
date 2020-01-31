@@ -25,6 +25,289 @@ type signOutcome struct {
 	keyValid  bool
 }
 
+func TestTransit_SignVerify_OpenPGP(t *testing.T) {
+	t.Run("256", func(t *testing.T) {
+		testTransit_SignVerify_OpenPGP(t, 256)
+	})
+}
+
+func testTransit_SignVerify_OpenPGP(t *testing.T, bits int) {
+	// This knownInput is used for most of the testing
+	knownInput := `eG50cmlrIHdhcyAnZXJlCg==`
+
+	b, storage := createBackendWithSysView(t)
+
+	// First create a key
+	req := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/gpgtest",
+		Data: map[string]interface{}{
+			"type":       "openpgp",
+			"exportable": true,
+		},
+	}
+	_, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Now, change the key value to something we control
+	p, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
+		Storage: storage,
+		Name:    "gpgtest",
+	}, b.GetRandomReader())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	knownKey := `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`
+	/*
+			-----BEGIN PGP PRIVATE KEY BLOCK-----
+
+		  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
+		  =AoWS
+		  -----END PGP PRIVATE KEY BLOCK-----
+
+	*/
+
+	// Update the key with our knownKey
+	keyEntry := p.Keys[strconv.Itoa(p.LatestVersion)]
+	keyEntry.Key, err = base64.StdEncoding.DecodeString(knownKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.Keys[strconv.Itoa(p.LatestVersion)] = keyEntry
+	if err = p.Persist(context.Background(), storage); err != nil {
+		t.Fatal(err)
+	}
+
+	// Helper for signing
+	signRequest := func(req *logical.Request, errExpected bool, postpath string, expectedErrorContains string) string {
+		t.Helper()
+		req.Operation = logical.UpdateOperation
+		req.Path = "sign/gpgtest" + postpath
+		resp, err := b.HandleRequest(context.Background(), req)
+		if err != nil && !errExpected {
+			t.Fatal(err)
+		}
+		if err != nil && errExpected {
+			if !strings.Contains(err.Error(), expectedErrorContains) {
+				t.Fatalf("Was expecting '%#v' to contain '%s'", err, expectedErrorContains)
+			} else {
+				return ""
+			}
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if errExpected {
+			if !resp.IsError() {
+				t.Fatalf("bad: should have gotten error response: %#v", *resp)
+			}
+			return ""
+		}
+		if resp.IsError() {
+			t.Fatalf("bad: got error message: %#v", *resp)
+		}
+		value, ok := resp.Data["signature"]
+		if !ok {
+			t.Fatalf("no signature key found in returned data, got resp data %#v", resp.Data)
+		}
+		return value.(string)
+	}
+
+	// Helper for verifying
+	verifyRequest := func(req *logical.Request, errExpected bool, postpath, sig string) {
+		t.Helper()
+		req.Operation = logical.UpdateOperation
+		req.Path = "verify/gpgtest" + postpath
+		req.Data["signature"] = sig
+		resp, err := b.HandleRequest(context.Background(), req)
+		if err != nil && !errExpected {
+			t.Fatalf("got error: %v, sig was %v", err, sig)
+		}
+		if errExpected {
+			if resp != nil && !resp.IsError() {
+				t.Fatalf("bad: should have gotten error response %#v", *resp)
+			}
+			return
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.IsError() {
+			t.Fatalf("bad got error response: %#v", *resp)
+		}
+		value, ok := resp.Data["valid"]
+		if !ok {
+			t.Fatalf("no valid key found in returned data, got resp data %#v", resp.Data)
+		}
+		if !value.(bool) && !errExpected {
+			t.Fatalf("verification failed: req was %#v, resp is %#v", *req, *resp)
+		}
+	}
+
+	// Set the input for signing to the knownInput
+	req.Data = map[string]interface{}{
+		"input": knownInput,
+	}
+
+	// Testing signing and verifying
+	sig := signRequest(req, false, "", "")
+	verifyRequest(req, false, "", sig)
+
+	// Test that invalid signatures should fail
+	verifyRequest(req, true, "", sig[0:len(sig)-2])
+	verifyRequest(req, true, "", "eG50cmlrIHdhcyAnZXJlCg==")
+
+	// Test a signature generated with the same key by gpg outside of this implementation
+	sig = `vault:v1:iQEzBAABCAAdFiEEXeQQOIYrrr+NejEzKV3nLJ+I6+0FAl4zxvIACgkQKV3nLJ+I6+0jEQf9EaBDVEgZ07aUqqClnO938MW8UoHwIGp1CCeIM/6HjEf9XOa9I1lniFHvm8BXirnspzSrciBnXvt0IHTaOMifX3zwaOANavxKud68KbFgftzU9zhmpLUqNAwElGbnFdnWrovEJfOgnkR6hqcg6StIJ0lJhOF0JfqAEMXuV1xvFg42sktFB8sXgkJZOfD8tcnnmMaW1aV84cv3f6qe9E/xeXZtpCFWLkTy3PaKUJ9ydWtuVPSMmjRAsrbHSTFAhFd/BP+9aanyO28oZtIkFezJIs3gRXcvq3L08jHVdaCv0ZM9jlepqXOAvutH7QxDV6eCWhUKC2zsJOZWL2tgSF3s8g==`
+
+	verifyRequest(req, false, "", sig)
+
+	// Test algorithm we don't support
+	sig = signRequest(req, true, "/sha1", "unsupported hash algorithm")
+
+	// Test junk algorithm
+	sig = signRequest(req, true, "/boop", "invalid request")
+
+	// Test junk input
+	req.Data["input"] = "foobar"
+	sig = signRequest(req, true, "", "invalid request")
+
+	// Resetting input
+	req.Data["input"] = knownInput
+
+	// OpenPGP verify ignores the provided hash_algorithm
+	// Reset to initial sig
+	sig = signRequest(req, false, "", "")
+	// This should work
+	verifyRequest(req, false, "/sha1", sig)
+	// This should fail for because the provided hash-algorithm isn't known to the transit engine
+	verifyRequest(req, true, "/beep", sig)
+
+	// Test the other SHA algorithms - these should all work
+	sig = signRequest(req, false, "/sha2-224", "")
+	verifyRequest(req, false, "", sig)
+	sig = signRequest(req, false, "/sha2-256", "")
+	verifyRequest(req, false, "", sig)
+	sig = signRequest(req, false, "/sha2-384", "")
+	verifyRequest(req, false, "", sig)
+	sig = signRequest(req, false, "/sha2-512", "")
+	verifyRequest(req, false, "", sig)
+
+	// Test the other SHA algorithms by providing hash_algorithms - these should all work
+	req.Data["hash_algorith"] = "sha2-224"
+	sig = signRequest(req, false, "", "")
+	verifyRequest(req, false, "", sig)
+	req.Data["hash_algorith"] = "sha2-256"
+	sig = signRequest(req, false, "", "")
+	verifyRequest(req, false, "", sig)
+	req.Data["hash_algorith"] = "sha2-384"
+	sig = signRequest(req, false, "", "")
+	verifyRequest(req, false, "", sig)
+	req.Data["hash_algorith"] = "sha2-512"
+	sig = signRequest(req, false, "", "")
+	verifyRequest(req, false, "", sig)
+
+	// Resetting
+	delete(req.Data, "hash_algorithm")
+
+	// Test unknown pgp formout output
+	req.Data["pgpformat"] = "blep"
+	sig = signRequest(req, true, "", "invalid request")
+
+	// Reset back to default
+	req.Data["pgpformat"] = "base64"
+	sig = signRequest(req, false, "", "")
+	verifyRequest(req, false, "", sig)
+
+	// Test ascii-armor output
+	req.Data["pgpformat"] = "ascii-armor"
+	sig = signRequest(req, false, "", "")
+	if !strings.Contains(sig, "BEGIN PGP SIGNATURE") {
+		t.Fatalf("The sig, '%#v', didn't contain PGP SIGNATURE", sig)
+	}
+
+	// Resetting
+	delete(req.Data, "pgpformat")
+
+	// Test signing and rotating keys
+	v1Sig := signRequest(req, false, "", "")
+	verifyRequest(req, false, "", v1Sig)
+
+	err = p.Rotate(context.Background(), storage, b.GetRandomReader())
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = p.Rotate(context.Background(), storage, b.GetRandomReader())
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.MinDecryptionVersion = 2
+	if err = p.Persist(context.Background(), storage); err != nil {
+		t.Fatal(err)
+	}
+	// Make sure signing still works
+	sig = signRequest(req, false, "", "")
+	verifyRequest(req, false, "", sig)
+
+	// v1 sig shouldn't work
+	verifyRequest(req, true, "", v1Sig)
+
+}
+
 func TestTransit_SignVerify_ECDSA(t *testing.T) {
 	t.Run("256", func(t *testing.T) {
 		testTransit_SignVerify_ECDSA(t, 256)
