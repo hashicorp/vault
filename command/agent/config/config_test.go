@@ -38,9 +38,9 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			},
 		},
 		Cache: &Cache{
-			UseAutoAuthToken:        true,
-			UseAutoAuthTokenEnforce: false,
-			UseAutoAuthTokenRaw:     true,
+			UseAutoAuthToken:    true,
+			UseAutoAuthTokenRaw: true,
+			ForceAutoAuthToken:  false,
 		},
 		Listeners: []*Listener{
 			&Listener{
@@ -270,9 +270,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 			},
 		},
 		Cache: &Cache{
-			UseAutoAuthToken:        true,
-			UseAutoAuthTokenEnforce: false,
-			UseAutoAuthTokenRaw:     true,
+			UseAutoAuthToken:    true,
+			UseAutoAuthTokenRaw: true,
+			ForceAutoAuthToken:  false,
 		},
 		Listeners: []*Listener{
 			&Listener{
@@ -308,9 +308,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_Force(t *testing.T) {
 			},
 		},
 		Cache: &Cache{
-			UseAutoAuthToken:        true,
-			UseAutoAuthTokenEnforce: true,
-			UseAutoAuthTokenRaw:     "force",
+			UseAutoAuthToken:    true,
+			UseAutoAuthTokenRaw: "force",
+			ForceAutoAuthToken:  true,
 		},
 		Listeners: []*Listener{
 			&Listener{
@@ -346,9 +346,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_True(t *testing.T) {
 			},
 		},
 		Cache: &Cache{
-			UseAutoAuthToken:        true,
-			UseAutoAuthTokenEnforce: false,
-			UseAutoAuthTokenRaw:     "true",
+			UseAutoAuthToken:    true,
+			UseAutoAuthTokenRaw: "true",
+			ForceAutoAuthToken:  false,
 		},
 		Listeners: []*Listener{
 			&Listener{
@@ -395,9 +395,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 			},
 		},
 		Cache: &Cache{
-			UseAutoAuthToken:        false,
-			UseAutoAuthTokenEnforce: false,
-			UseAutoAuthTokenRaw:     "false",
+			UseAutoAuthToken:    false,
+			UseAutoAuthTokenRaw: "false",
+			ForceAutoAuthToken:  false,
 		},
 		Listeners: []*Listener{
 			&Listener{
