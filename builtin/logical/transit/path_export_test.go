@@ -18,6 +18,7 @@ func TestTransit_Export_KeyVersion_ExportsCorrectVersion(t *testing.T) {
 	verifyExportsCorrectVersion(t, "signing-key", "ecdsa-p384")
 	verifyExportsCorrectVersion(t, "signing-key", "ecdsa-p521")
 	verifyExportsCorrectVersion(t, "signing-key", "ed25519")
+	verifyExportsCorrectVersion(t, "signing-key", "openpgp")
 	verifyExportsCorrectVersion(t, "hmac-key", "aes128-gcm96")
 	verifyExportsCorrectVersion(t, "hmac-key", "aes256-gcm96")
 	verifyExportsCorrectVersion(t, "hmac-key", "chacha20-poly1305")
@@ -280,6 +281,7 @@ func TestTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t *testi
 	testTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t, "ecdsa-p384")
 	testTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t, "ecdsa-p521")
 	testTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t, "ed25519")
+	testTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t, "openpgp")
 }
 
 func testTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t *testing.T, keyType string) {
