@@ -173,7 +173,13 @@ The top level `cache` block has the following configuration entries:
   auto-auth token attached. If the requests already bear a token, this
   configuration will be overridden and the token in the request will be used to
   forward the request to the Vault server. If set to `"force"` Agent will use the
-  auto-auth token, overwriting the attached Vault token if set.
+  auto-auth token, overwriting the attached Vault token if set. 
+
+-> **Note:** Vault Agent does not require configuring auto-auth in order to use the
+  caching functionality. If no auto-auth is configured or Vault is otherwise
+  unable to authenticate and retrieve a token, using `force` will still remove
+  any token included in a request and replace it with an empty token value,
+  likely resulting in failures due to the requests now being unauthenticated.
 
 ## Configuration (`listener`)
 

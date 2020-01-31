@@ -225,6 +225,13 @@ func TestLoadConfigFile_Bad_AgentCache_InconsisentAutoAuth(t *testing.T) {
 	}
 }
 
+func TestLoadConfigFile_Bad_AgentCache_ForceAutoAuthNoMethod(t *testing.T) {
+	_, err := LoadConfig("./test-fixtures/bad-config-cache-inconsistent-auto_auth.hcl")
+	if err == nil {
+		t.Fatal("LoadConfig should return an error when use_auto_auth_token=true and no auto_auth section present")
+	}
+}
+
 func TestLoadConfigFile_Bad_AgentCache_NoListeners(t *testing.T) {
 	_, err := LoadConfig("./test-fixtures/bad-config-cache-no-listeners.hcl")
 	if err == nil {
