@@ -31,7 +31,7 @@ vault auth enable aws
 vault auth enable azure
 vault auth enable centrify
 vault auth enable cert
-vault auth enable pcf
+vault auth enable cf
 vault auth enable gcp
 vault auth enable github
 vault auth enable jwt
@@ -41,7 +41,6 @@ vault auth enable ldap
 vault auth enable oci
 vault auth enable oidc
 vault auth enable okta
-vault auth enable pcf
 vault auth enable radius
 vault auth enable userpass
 
