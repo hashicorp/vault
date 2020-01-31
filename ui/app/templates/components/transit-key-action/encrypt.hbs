@@ -109,6 +109,7 @@
 </form>
 <Modal
   @title="Copy Your Token"
-  @onClose={{this.closeModal}}>
+  @onClose={{action "closeModal"}}
+  @isActive={{isModalActive}}>
   <p>Ciphertext</p>
 </Modal>

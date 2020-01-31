@@ -47,6 +47,7 @@ export default Component.extend(TRANSIT_PARAMS, {
   // public attrs
   selectedAction: null,
   key: null,
+  isModalActive: true,
 
   onRefresh() {},
   init() {
@@ -179,6 +180,7 @@ export default Component.extend(TRANSIT_PARAMS, {
 
     closeModal() {
       console.log('close');
+      this.toggleProperty('isModalActive');
     },
 
     doSubmit(data, options = {}) {
