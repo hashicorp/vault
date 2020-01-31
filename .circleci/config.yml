@@ -355,7 +355,8 @@ workflows:
     - test-go-race:
         requires:
         - build-go-dev
-    - website-docker-image
+    - website-docker-image:
+        context: vault-docs
   version: 2
 
 # Original config.yml file:
@@ -655,4 +656,5 @@ workflows:
 #     - test-go-race:
 #         requires:
 #         - build-go-dev
-#     - website-docker-image
+#     - website-docker-image:
+#         context: vault-docs
