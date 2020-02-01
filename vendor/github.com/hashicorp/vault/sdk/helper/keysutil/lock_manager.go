@@ -361,7 +361,7 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
 			}
 
-		case KeyType_OpenPGP:
+		case KeyType_OpenPGP2048, KeyType_OpenPGP4096:
 			if req.Derived || req.Convergent {
 				cleanup()
 				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
