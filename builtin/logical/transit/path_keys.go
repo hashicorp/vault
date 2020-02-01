@@ -68,7 +68,7 @@ func (b *backend) pathKeys() *framework.Path {
 				Description: `
 The type of key to create. Currently, "aes128-gcm96" (symmetric), "aes256-gcm96" (symmetric), "ecdsa-p256"
 (asymmetric), "ecdsa-p384" (asymmetric), "ecdsa-p521" (asymmetric), "ed25519" (asymmetric), "rsa-2048" (asymmetric), "rsa-4096"
-(asymmetric), "openpgp" (asymmetric) are supported.  Defaults to "aes256-gcm96".
+(asymmetric), "openpgp-2048" (asymmetric), "openpgp-4096" (asymmetric) are supported.  Defaults to "aes256-gcm96".
 `,
 			},
 
@@ -184,8 +184,10 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_RSA2048
 	case "rsa-4096":
 		polReq.KeyType = keysutil.KeyType_RSA4096
-	case "openpgp":
-		polReq.KeyType = keysutil.KeyType_OpenPGP
+	case "openpgp-2048":
+		polReq.KeyType = keysutil.KeyType_OpenPGP2048
+	case "openpgp-4096":
+		polReq.KeyType = keysutil.KeyType_OpenPGP4096
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
@@ -298,9 +300,9 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 		}
 		resp.Data["keys"] = retKeys
 
-	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096, keysutil.KeyType_OpenPGP:
+	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096, keysutil.KeyType_OpenPGP2048, keysutil.KeyType_OpenPGP4096:
 
-		if p.Type == keysutil.KeyType_OpenPGP {
+		if (p.Type == keysutil.KeyType_OpenPGP2048) || (p.Type == keysutil.KeyType_OpenPGP4096) {
 			resp.Data["real_name"] = p.RealName
 			resp.Data["email"] = p.Email
 			resp.Data["comment"] = p.Comment
@@ -323,8 +325,12 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 				key.Name = elliptic.P384().Params().Name
 			case keysutil.KeyType_ECDSA_P521:
 				key.Name = elliptic.P521().Params().Name
-			case keysutil.KeyType_OpenPGP:
-				key.Name = "openpgp"
+			case keysutil.KeyType_OpenPGP2048, keysutil.KeyType_OpenPGP4096:
+				key.Name = "openpgp-2048"
+
+				if p.Type == keysutil.KeyType_OpenPGP4096 {
+					key.Name = "openpgp-4096"
+				}
 
 				pubkey, identity, err := extractOpenPGP(v.Key, openpgp.PublicKeyType)
 				if err != nil {

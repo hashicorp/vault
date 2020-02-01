@@ -26,15 +26,20 @@ type signOutcome struct {
 }
 
 func TestTransit_SignVerify_OpenPGP(t *testing.T) {
-	t.Run("256", func(t *testing.T) {
-		testTransit_SignVerify_OpenPGP(t, 256)
+	t.Run("2048", func(t *testing.T) {
+		testTransit_SignVerify_OpenPGP(t, 2048)
+	})
+
+	t.Run("4096", func(t *testing.T) {
+		testTransit_SignVerify_OpenPGP(t, 4096)
 	})
 }
 
-func testTransit_SignVerify_OpenPGP(t *testing.T, bits int) {
+func testTransit_SignVerify_OpenPGP(t *testing.T, bitsize int) {
 	// This knownInput is used for most of the testing
 	knownInput := `eG50cmlrIHdhcyAnZXJlCg==`
 
+	// This knownKey was exported from the Transit OpenPGP implementation when it was just 2048 bit RSA size, and it appears to work for 4096 bit RSA size too..somehow
 	knownKey := `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`
 	/*
 			-----BEGIN PGP PRIVATE KEY BLOCK-----
@@ -103,7 +108,7 @@ func testTransit_SignVerify_OpenPGP(t *testing.T, bits int) {
 		Operation: logical.UpdateOperation,
 		Path:      "keys/gpgtest",
 		Data: map[string]interface{}{
-			"type":       "openpgp",
+			"type":       "openpgp-" + strconv.Itoa(bitsize),
 			"exportable": true,
 		},
 	}
@@ -267,23 +272,23 @@ func testTransit_SignVerify_OpenPGP(t *testing.T, bits int) {
 	delete(req.Data, "hash_algorithm")
 
 	// Test unknown pgp formout output
-	req.Data["pgpformat"] = "blep"
+	req.Data["pgp_format"] = "blep"
 	sig = signRequest(req, true, "", "invalid request")
 
 	// Reset back to default
-	req.Data["pgpformat"] = "base64"
+	req.Data["pgp_format"] = "base64"
 	sig = signRequest(req, false, "", "")
 	verifyRequest(req, false, "", sig)
 
 	// Test ascii-armor output
-	req.Data["pgpformat"] = "ascii-armor"
+	req.Data["pgp_format"] = "ascii-armor"
 	sig = signRequest(req, false, "", "")
 	if !strings.Contains(sig, "BEGIN PGP SIGNATURE") {
 		t.Fatalf("The sig, '%#v', didn't contain PGP SIGNATURE", sig)
 	}
 
 	// Resetting
-	delete(req.Data, "pgpformat")
+	delete(req.Data, "pgp_format")
 
 	// Test signing and rotating keys
 	v1Sig := signRequest(req, false, "", "")

@@ -61,7 +61,8 @@ const (
 	KeyType_ECDSA_P384
 	KeyType_ECDSA_P521
 	KeyType_AES128_GCM96
-	KeyType_OpenPGP
+	KeyType_OpenPGP2048
+	KeyType_OpenPGP4096
 )
 
 const (
@@ -112,7 +113,7 @@ func (kt KeyType) DecryptionSupported() bool {
 
 func (kt KeyType) SigningSupported() bool {
 	switch kt {
-	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA4096, KeyType_OpenPGP:
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA4096, KeyType_OpenPGP2048, KeyType_OpenPGP4096:
 		return true
 	}
 	return false
@@ -154,8 +155,10 @@ func (kt KeyType) String() string {
 		return "rsa-2048"
 	case KeyType_RSA4096:
 		return "rsa-4096"
-	case KeyType_OpenPGP:
-		return "openpgp"
+	case KeyType_OpenPGP2048:
+		return "openpgp-2048"
+	case KeyType_OpenPGP4096:
+		return "openpgp-4096"
 	}
 
 	return "[unknown]"
@@ -1216,7 +1219,7 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature algorithm %s", sigAlgorithm)}
 		}
 
-	case KeyType_OpenPGP:
+	case KeyType_OpenPGP2048, KeyType_OpenPGP4096:
 		config := packet.Config{}
 		switch hashAlgorithm {
 		case HashTypeSHA2224:
@@ -1444,7 +1447,7 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 
 		return err == nil, nil
 
-	case KeyType_OpenPGP:
+	case KeyType_OpenPGP2048, KeyType_OpenPGP4096:
 		rawKey := bytes.NewReader(p.Keys[strconv.Itoa(ver)].Key)
 		pgpEntityList, err := openpgp.ReadKeyRing(rawKey)
 		if err != nil {
@@ -1570,8 +1573,12 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 			return err
 		}
 
-	case KeyType_OpenPGP:
-		bitSize := 2048 // This should be customizable
+	case KeyType_OpenPGP2048, KeyType_OpenPGP4096:
+		bitSize := 2048
+
+		if p.Type == KeyType_OpenPGP4096 {
+			bitSize = 4096
+		}
 
 		config := packet.Config{
 			RSABits: bitSize,
