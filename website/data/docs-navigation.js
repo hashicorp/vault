@@ -302,6 +302,7 @@ export default [
       'dropbox',
       'consul',
       'kms',
+      'google-secret-manager',
       'keywhiz',
       'custom'
     ]
