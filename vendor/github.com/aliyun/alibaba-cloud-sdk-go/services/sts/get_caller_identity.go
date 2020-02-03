@@ -95,7 +95,7 @@ func CreateGetCallerIdentityRequest() (request *GetCallerIdentityRequest) {
 	request = &GetCallerIdentityRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Sts", "2015-04-01", "GetCallerIdentity", "", "")
+	request.InitWithApiInfo("Sts", "2015-04-01", "GetCallerIdentity", "sts", "openAPI")
 	return
 }
 

@@ -14,10 +14,10 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const testVaultHeaderValue = "VaultAcceptanceTesting"
@@ -60,7 +60,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 
 	// read the created role entry
-	roleEntry, err := b.lockedAWSRole(context.Background(), storage, "abcd-123")
+	roleEntry, err := b.role(context.Background(), storage, "abcd-123")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +127,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 
 	// get the entry of the newly created role entry
-	roleEntry2, err := b.lockedAWSRole(context.Background(), storage, "ami-6789")
+	roleEntry2, err := b.role(context.Background(), storage, "ami-6789")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1688,12 +1688,12 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// dump a fake ARN into the metadata to ensure that we ONLY look
 	// at the unique ID that has been generated
 	renewReq.Auth.Metadata["canonical_arn"] = "fake_arn"
-	empty_login_fd := &framework.FieldData{
+	emptyLoginFd := &framework.FieldData{
 		Raw:    map[string]interface{}{},
-		Schema: pathLogin(b).Fields,
+		Schema: b.pathLogin().Fields,
 	}
 	// ensure we can renew
-	resp, err = b.pathLoginRenew(context.Background(), renewReq, empty_login_fd)
+	resp, err = b.pathLoginRenew(context.Background(), renewReq, emptyLoginFd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1721,7 +1721,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 
 	// and ensure a renew no longer works
-	resp, err = b.pathLoginRenew(context.Background(), renewReq, empty_login_fd)
+	resp, err = b.pathLoginRenew(context.Background(), renewReq, emptyLoginFd)
 	if err == nil || (resp != nil && !resp.IsError()) {
 		t.Errorf("bad: expected failed renew due to changed AWS role ID: resp: %#v", resp)
 	}
@@ -1749,7 +1749,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 	// and ensure we can renew
 	renewReq = generateRenewRequest(storage, resp.Auth)
-	resp, err = b.pathLoginRenew(context.Background(), renewReq, empty_login_fd)
+	resp, err = b.pathLoginRenew(context.Background(), renewReq, emptyLoginFd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1784,7 +1784,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 
 	renewReq = generateRenewRequest(storage, resp.Auth)
-	resp, err = b.pathLoginRenew(context.Background(), renewReq, empty_login_fd)
+	resp, err = b.pathLoginRenew(context.Background(), renewReq, emptyLoginFd)
 	if err != nil {
 		t.Fatal(err)
 	}

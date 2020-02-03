@@ -76,8 +76,7 @@ func (client *Client) CancelKeyDeletionWithCallback(request *CancelKeyDeletionRe
 // CancelKeyDeletionRequest is the request struct for api CancelKeyDeletion
 type CancelKeyDeletionRequest struct {
 	*requests.RpcRequest
-	KeyId    string `position:"Query" name:"KeyId"`
-	STSToken string `position:"Query" name:"STSToken"`
+	KeyId string `position:"Query" name:"KeyId"`
 }
 
 // CancelKeyDeletionResponse is the response struct for api CancelKeyDeletion

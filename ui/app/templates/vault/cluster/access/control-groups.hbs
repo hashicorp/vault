@@ -5,25 +5,26 @@
         Control Groups
       </h1>
     </p.levelLeft>
-    <p.levelRight>
-      {{#if model.canConfigure}}
-        {{#link-to 'vault.cluster.access.control-groups-configure' class="button has-icon-right is-ghost is-compact"}}
-          Configure
-          <ICon @glyph="chevron-right" @size=11 />
-        {{/link-to}}
-      {{/if}}
-    </p.levelRight>
   </PageHeader>
+  {{#if model.canConfigure}}
+    <Toolbar>
+      <ToolbarActions>
+        <ToolbarLink @params={{array 'vault.cluster.access.control-groups-configure'}}>
+          Configure
+        </ToolbarLink>
+      </ToolbarActions>
+    </Toolbar>
+  {{/if}}
   <form {{action (nav-to-route 'vault.cluster.access.control-group-accessor' model.id) on="submit"}}>
     <div class="box is-sideless is-fullwidth is-marginless">
       <p class="has-text-grey is-size-8">
-       Control Groups add additional authorization factors to be required before satisfying a request. If you have a control group accessor, provide it here to view the lookup the authorization progress.
+       Control Groups add additional authorization factors to be required before satisfying a request. If you have a Control Group accessor, provide it here to view the lookup the authorization progress.
       </p>
       <label for="accessor" class="is-label">
         Accessor
       </label>
       <div class="control">
-        {{input class="input" autocomplete="off" name="accessor" value=model.id}}
+        {{input class="input" autocomplete="off" spellcheck="false" name="accessor" value=model.id}}
       </div>
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">

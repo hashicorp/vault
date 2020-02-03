@@ -76,8 +76,7 @@ func (client *Client) DeleteKeyMaterialWithCallback(request *DeleteKeyMaterialRe
 // DeleteKeyMaterialRequest is the request struct for api DeleteKeyMaterial
 type DeleteKeyMaterialRequest struct {
 	*requests.RpcRequest
-	KeyId    string `position:"Query" name:"KeyId"`
-	STSToken string `position:"Query" name:"STSToken"`
+	KeyId string `position:"Query" name:"KeyId"`
 }
 
 // DeleteKeyMaterialResponse is the response struct for api DeleteKeyMaterial

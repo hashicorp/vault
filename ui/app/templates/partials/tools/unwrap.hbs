@@ -1,7 +1,7 @@
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
-      Unwrap Data
+      Unwrap data
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -11,10 +11,10 @@
     <nav class="tabs">
       <ul>
         <li role="tab" aria-selected={{if (eq unwrapActiveTab "data") "true" "false"}} class="{{if (eq unwrapActiveTab "data") "is-active"}}">
-          <button class="link link-plain tab has-text-weight-semibold" {{action (mut unwrapActiveTab)}}>Data</button>
+          <button class="link link-plain tab has-text-weight-semibold" {{action (mut unwrapActiveTab) "data"}} data-test-button-data>Data</button>
         </li>
         <li role="tab" aria-selected={{if (eq unwrapActiveTab "data") "true" "false"}} class="{{if (eq unwrapActiveTab "details") "is-active"}}">
-          <button class="link link-plain tab has-text-weight-semibold" {{action (mut unwrapActiveTab) "details"}}>Wrap Details</button>
+          <button class="link link-plain tab has-text-weight-semibold" {{action (mut unwrapActiveTab) "details"}} data-test-button-details>Wrap Details</button>
         </li>
       </ul>
     </nav>
@@ -34,10 +34,10 @@
         {{#each-in details as |key detail|}}
           {{#info-table-row label=key value=key}}
             {{#if (or (eq detail "No") (eq detail "None"))}}
-              <ICon  @class=has-text-grey @size="16" @glyph="cancel-square-outline" /> {{detail}}
+              <Icon class="has-text-grey" @glyph="cancel-square-outline" /> {{detail}}
             {{else}}
               {{#if (eq detail "Yes") }}
-                <ICon @class="has-text-success" @size="16" @glyph="checkmark-circled-outline" />
+                <Icon class="has-text-success" @glyph="check-circle-outline" />
               {{/if}}
               {{detail}}
             {{/if}}
@@ -75,6 +75,8 @@
           class="input"
           id="token"
           name="token"
+          autocomplete="off"
+          spellcheck="false"
           data-test-tools-input="wrapping-token"
         }}
       </div>
@@ -83,7 +85,7 @@
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
       <button type="submit" data-test-tools-submit="true" class="button is-primary">
-        Unwrap Data
+        Unwrap data
       </button>
     </div>
   </div>

@@ -10,13 +10,12 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/dbtxn"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/plugins"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
-	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
-	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/helper/connutil"
+	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/dbtxn"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/lib/pq"
 )
 
@@ -66,7 +65,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	plugins.Serve(dbType.(dbplugin.Database), apiTLSConfig)
+	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
 
 	return nil
 }
@@ -87,6 +86,80 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 	}
 
 	return db.(*sql.DB), nil
+}
+
+// SetCredentials uses provided information to set/create a user in the
+// database. Unlike CreateUser, this method requires a username be provided and
+// uses the name given, instead of generating a name. This is used for creating
+// and setting the password of static accounts, as well as rolling back
+// passwords in the database in the event an updated database fails to save in
+// Vault's storage.
+func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
+	if len(statements.Rotation) == 0 {
+		return "", "", errors.New("empty rotation statements")
+	}
+
+	username = staticUser.Username
+	password = staticUser.Password
+	if username == "" || password == "" {
+		return "", "", errors.New("must provide both username and password")
+	}
+
+	// Grab the lock
+	p.Lock()
+	defer p.Unlock()
+
+	// Get the connection
+	db, err := p.getConnection(ctx)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Check if the role exists
+	var exists bool
+	err = db.QueryRowContext(ctx, "SELECT exists (SELECT rolname FROM pg_roles WHERE rolname=$1);", username).Scan(&exists)
+	if err != nil && err != sql.ErrNoRows {
+		return "", "", err
+	}
+
+	// Vault requires the database user already exist, and that the credentials
+	// used to execute the rotation statements has sufficient privileges.
+	stmts := statements.Rotation
+
+	// Start a transaction
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return "", "", err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	// Execute each query
+	for _, stmt := range stmts {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+
+			m := map[string]string{
+				"name":     staticUser.Username,
+				"username": staticUser.Username,
+				"password": password,
+			}
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+				return "", "", err
+			}
+		}
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return "", "", err
+	}
+
+	return username, password, nil
 }
 
 func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
@@ -130,7 +203,6 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 	defer func() {
 		tx.Rollback()
 	}()
-	// Return the secret
 
 	// Execute each query
 	for _, stmt := range statements.Creation {
@@ -142,6 +214,7 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 
 			m := map[string]string{
 				"name":       username,
+				"username":   username,
 				"password":   password,
 				"expiration": expirationStr,
 			}
@@ -197,6 +270,7 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 
 			m := map[string]string{
 				"name":       username,
+				"username":   username,
 				"expiration": expirationStr,
 			}
 			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
@@ -244,7 +318,8 @@ func (p *PostgreSQL) customRevokeUser(ctx context.Context, username string, revo
 			}
 
 			m := map[string]string{
-				"name": username,
+				"name":     username,
+				"username": username,
 			}
 			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return err
@@ -268,7 +343,7 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 		return err
 	}
 
-	if exists == false {
+	if !exists {
 		return nil
 	}
 
@@ -404,6 +479,7 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 				continue
 			}
 			m := map[string]string{
+				"name":     p.Username,
 				"username": p.Username,
 				"password": password,
 			}

@@ -24,6 +24,7 @@ export default Controller.extend({
 
   namespaceQueryParam: '',
 
+  /* eslint-disable-next-line ember/no-observers */
   onQPChange: observer('namespaceQueryParam', function() {
     this.get('namespaceService').setNamespace(this.get('namespaceQueryParam'));
   }),

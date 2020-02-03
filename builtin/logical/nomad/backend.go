@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/hashicorp/nomad/api"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Factory returns a Nomad backend that satisfies the logical.Backend interface
@@ -61,6 +61,15 @@ func (b *backend) client(ctx context.Context, s logical.Storage) (*api.Client, e
 		}
 		if conf.Token != "" {
 			nomadConf.SecretID = conf.Token
+		}
+		if conf.CACert != "" {
+			nomadConf.TLSConfig.CACertPEM = []byte(conf.CACert)
+		}
+		if conf.ClientCert != "" {
+			nomadConf.TLSConfig.ClientCertPEM = []byte(conf.ClientCert)
+		}
+		if conf.ClientKey != "" {
+			nomadConf.TLSConfig.ClientKeyPEM = []byte(conf.ClientKey)
 		}
 	}
 

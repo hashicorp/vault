@@ -1,32 +1,55 @@
 package util
 
 import (
+	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/go-gcp-common/gcputil"
 )
 
-const googleCredentialsEnv = "TEST_GOOGLE_CREDENTIALS"
-const googleProjectEnv = "TEST_GOOGLE_PROJECT"
+func GetTestCredentials(tb testing.TB) (string, *gcputil.GcpCredentials) {
+	tb.Helper()
 
-func GetTestCredentials(t *testing.T) (string, *gcputil.GcpCredentials) {
-	credentialsJSON := os.Getenv(googleCredentialsEnv)
-	if credentialsJSON == "" {
-		t.Fatalf("%s must be set to JSON string of valid Google credentials file", googleCredentialsEnv)
+	if testing.Short() {
+		tb.Skip("skipping integration test (short)")
 	}
 
-	credentials, err := gcputil.Credentials(credentialsJSON)
+	var credsStr string
+	credsEnv := os.Getenv("GOOGLE_CREDENTIALS")
+	if credsEnv == "" {
+		tb.Fatal("set GOOGLE_CREDENTIALS to JSON or path to JSON creds on disk to run integration tests")
+	}
+
+	// Attempt to read as file path; if invalid, assume given JSON value directly
+	if _, err := os.Stat(credsEnv); err == nil {
+		credsBytes, err := ioutil.ReadFile(credsEnv)
+		if err != nil {
+			tb.Fatalf("unable to read credentials file %s: %v", credsStr, err)
+		}
+		credsStr = string(credsBytes)
+	} else {
+		credsStr = credsEnv
+	}
+
+	creds, err := gcputil.Credentials(credsStr)
 	if err != nil {
-		t.Fatalf("valid Google credentials JSON could not be read from %s env variable: %v", googleCredentialsEnv, err)
+		tb.Fatalf("failed to parse GOOGLE_CREDENTIALS as JSON: %s", err)
 	}
-	return credentialsJSON, credentials
+	return credsStr, creds
 }
 
-func GetTestProject(t *testing.T) string {
-	project := os.Getenv(googleProjectEnv)
+func GetTestProject(tb testing.TB) string {
+	tb.Helper()
+
+	if testing.Short() {
+		tb.Skip("skipping integration test (short)")
+	}
+
+	project := strings.TrimSpace(os.Getenv("GOOGLE_CLOUD_PROJECT"))
 	if project == "" {
-		t.Fatalf("%s must be set to JSON string of valid Google credentials file", googleProjectEnv)
+		tb.Fatal("set GOOGLE_CLOUD_PROJECT to the ID of a GCP project to run integration tests")
 	}
 	return project
 }

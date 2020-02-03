@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func lookupPaths(i *IdentityStore) []*framework.Path {

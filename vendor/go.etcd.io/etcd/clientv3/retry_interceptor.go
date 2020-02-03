@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 // unaryClientInterceptor returns a new retrying unary client interceptor.
@@ -48,11 +49,21 @@ func (c *Client) unaryClientInterceptor(logger *zap.Logger, optFuncs ...retryOpt
 			if err := waitRetryBackoff(ctx, attempt, callOpts); err != nil {
 				return err
 			}
+			logger.Debug(
+				"retrying of unary invoker",
+				zap.String("target", cc.Target()),
+				zap.Uint("attempt", attempt),
+			)
 			lastErr = invoker(ctx, method, req, reply, cc, grpcOpts...)
-			logger.Info("retry unary intercept", zap.Uint("attempt", attempt), zap.Error(lastErr))
 			if lastErr == nil {
 				return nil
 			}
+			logger.Warn(
+				"retrying of unary invoker failed",
+				zap.String("target", cc.Target()),
+				zap.Uint("attempt", attempt),
+				zap.Error(lastErr),
+			)
 			if isContextError(lastErr) {
 				if ctx.Err() != nil {
 					// its the context deadline or cancellation.
@@ -64,8 +75,12 @@ func (c *Client) unaryClientInterceptor(logger *zap.Logger, optFuncs ...retryOpt
 			if callOpts.retryAuth && rpctypes.Error(lastErr) == rpctypes.ErrInvalidAuthToken {
 				gterr := c.getToken(ctx)
 				if gterr != nil {
-					logger.Info("retry failed to fetch new auth token", zap.Error(gterr))
-					return lastErr // return the original error for simplicity
+					logger.Warn(
+						"retrying of unary invoker failed to fetch new auth token",
+						zap.String("target", cc.Target()),
+						zap.Error(gterr),
+					)
+					return gterr // lastErr must be invalid auth token
 				}
 				continue
 			}
@@ -95,10 +110,10 @@ func (c *Client) streamClientInterceptor(logger *zap.Logger, optFuncs ...retryOp
 			return streamer(ctx, desc, cc, method, grpcOpts...)
 		}
 		if desc.ClientStreams {
-			return nil, grpc.Errorf(codes.Unimplemented, "clientv3/retry_interceptor: cannot retry on ClientStreams, set Disable()")
+			return nil, status.Errorf(codes.Unimplemented, "clientv3/retry_interceptor: cannot retry on ClientStreams, set Disable()")
 		}
 		newStreamer, err := streamer(ctx, desc, cc, method, grpcOpts...)
-		logger.Info("retry stream intercept", zap.Error(err))
+		logger.Warn("retry stream intercept", zap.Error(err))
 		if err != nil {
 			// TODO(mwitkow): Maybe dial and transport errors should be retriable?
 			return nil, err
@@ -214,7 +229,7 @@ func (s *serverStreamingRetryingStream) receiveMsgAndIndicateRetry(m interface{}
 	if s.callOpts.retryAuth && rpctypes.Error(err) == rpctypes.ErrInvalidAuthToken {
 		gterr := s.client.getToken(s.ctx)
 		if gterr != nil {
-			s.client.lg.Info("retry failed to fetch new auth token", zap.Error(gterr))
+			s.client.lg.Warn("retry failed to fetch new auth token", zap.Error(gterr))
 			return false, err // return the original error for simplicity
 		}
 		return true, err
@@ -282,11 +297,11 @@ func isContextError(err error) bool {
 func contextErrToGrpcErr(err error) error {
 	switch err {
 	case context.DeadlineExceeded:
-		return grpc.Errorf(codes.DeadlineExceeded, err.Error())
+		return status.Errorf(codes.DeadlineExceeded, err.Error())
 	case context.Canceled:
-		return grpc.Errorf(codes.Canceled, err.Error())
+		return status.Errorf(codes.Canceled, err.Error())
 	default:
-		return grpc.Errorf(codes.Unknown, err.Error())
+		return status.Errorf(codes.Unknown, err.Error())
 	}
 }
 
@@ -311,13 +326,6 @@ type backoffFunc func(attempt uint) time.Duration
 func withRetryPolicy(rp retryPolicy) retryOption {
 	return retryOption{applyFunc: func(o *options) {
 		o.retryPolicy = rp
-	}}
-}
-
-// withAuthRetry sets enables authentication retries.
-func withAuthRetry(retryAuth bool) retryOption {
-	return retryOption{applyFunc: func(o *options) {
-		o.retryAuth = retryAuth
 	}}
 }
 

@@ -11,8 +11,9 @@ import (
 
 	"github.com/centrify/cloud-golang-sdk/oauth"
 	"github.com/centrify/cloud-golang-sdk/restapi"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const sourceHeader string = "vault-plugin-auth-centrify"
@@ -79,6 +80,16 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		return nil, errors.New("centrify auth plugin configuration not set")
 	}
 
+	if len(config.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, config.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
+	}
+
 	var token *oauth.TokenResponse
 	var failure *oauth.ErrorResponse
 
@@ -104,11 +115,11 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("Invalid mode or no mode provided: %s", mode)
+		return nil, fmt.Errorf("invalid mode or no mode provided: %s", mode)
 	}
 
 	if failure != nil {
-		return nil, fmt.Errorf("OAuth2 token request failed: %v", failure)
+		return nil, fmt.Errorf("oauth2 token request failed: %v", failure)
 	}
 
 	uinfo, err := b.getUserInfo(token, config.ServiceURL)
@@ -117,22 +128,32 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	}
 	b.Logger().Trace("centrify authenticated user", "userinfo", uinfo)
 
-	resp := &logical.Response{
-		Auth: &logical.Auth{
-			Policies: config.Policies,
-			Metadata: map[string]string{
-				"username": uinfo.username,
-			},
-			DisplayName: username,
-			LeaseOptions: logical.LeaseOptions{
-				TTL:       time.Duration(token.ExpiresIn) * time.Second,
-				Renewable: false,
-			},
-			Alias: &logical.Alias{
-				Name: username,
-			},
+	resp := &logical.Response{}
+
+	expiresIn := time.Duration(token.ExpiresIn) * time.Second
+	ttl := config.TokenTTL
+	if ttl == 0 || expiresIn < ttl {
+		ttl = expiresIn
+		if expiresIn < ttl {
+			resp.AddWarning("Centrify token expiration less than configured token TTL, capping to Centrify token expiration")
+		}
+	}
+
+	auth := &logical.Auth{
+		Metadata: map[string]string{
+			"username": uinfo.username,
+		},
+		DisplayName: username,
+		Alias: &logical.Alias{
+			Name: username,
 		},
 	}
+
+	config.PopulateTokenAuth(auth)
+	auth.LeaseOptions.Renewable = false
+	auth.LeaseOptions.TTL = ttl
+
+	resp.Auth = auth
 
 	for _, role := range uinfo.roles {
 		resp.Auth.GroupAliases = append(resp.Auth.GroupAliases, &logical.Alias{

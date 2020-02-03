@@ -5,7 +5,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
@@ -15,16 +14,14 @@ import (
 	mathrand "math/rand"
 	"net"
 	"net/http"
-	"sync"
-	"sync/atomic"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/logical"
-	"golang.org/x/net/http2"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/cluster"
 )
 
 const (
@@ -39,7 +36,8 @@ const (
 )
 
 var (
-	ErrCannotForward = errors.New("cannot forward request; no connection or address not known")
+	ErrCannotForward          = errors.New("cannot forward request; no connection or address not known")
+	ErrCannotForwardLocalOnly = errors.New("cannot forward local-only request")
 )
 
 type ClusterLeaderParams struct {
@@ -206,7 +204,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 		// Create a private key
 		if c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey) == nil {
 			c.logger.Debug("generating cluster private key")
-			key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+			key, err := ecdsa.GenerateKey(elliptic.P521(), c.secureRandomReader)
 			if err != nil {
 				c.logger.Error("failed to generate local cluster key", "error", err)
 				return err
@@ -281,303 +279,18 @@ func (c *Core) setupCluster(ctx context.Context) error {
 	return nil
 }
 
-// ClusterClient is used to lookup a client certificate.
-type ClusterClient interface {
-	ClientLookup(context.Context, *tls.CertificateRequestInfo) (*tls.Certificate, error)
-}
-
-// ClusterHandler exposes functions for looking up TLS configuration and handing
-// off a connection for a cluster listener application.
-type ClusterHandler interface {
-	ServerLookup(context.Context, *tls.ClientHelloInfo) (*tls.Certificate, error)
-	CALookup(context.Context) (*x509.Certificate, error)
-
-	// Handoff is used to pass the connection lifetime off to
-	// the handler
-	Handoff(context.Context, *sync.WaitGroup, chan struct{}, *tls.Conn) error
-	Stop() error
-}
-
-// ClusterListener is the source of truth for cluster handlers and connection
-// clients. It dynamically builds the cluster TLS information. It's also
-// responsible for starting tcp listeners and accepting new cluster connections.
-type ClusterListener struct {
-	handlers   map[string]ClusterHandler
-	clients    map[string]ClusterClient
-	shutdown   *uint32
-	shutdownWg *sync.WaitGroup
-	server     *http2.Server
-
-	clusterListenerAddrs []*net.TCPAddr
-	clusterCipherSuites  []uint16
-	logger               log.Logger
-	l                    sync.RWMutex
-}
-
-// AddClient adds a new client for an ALPN name
-func (cl *ClusterListener) AddClient(alpn string, client ClusterClient) {
-	cl.l.Lock()
-	cl.clients[alpn] = client
-	cl.l.Unlock()
-}
-
-// RemoveClient removes the client for the specified ALPN name
-func (cl *ClusterListener) RemoveClient(alpn string) {
-	cl.l.Lock()
-	delete(cl.clients, alpn)
-	cl.l.Unlock()
-}
-
-// AddHandler registers a new cluster handler for the provided ALPN name.
-func (cl *ClusterListener) AddHandler(alpn string, handler ClusterHandler) {
-	cl.l.Lock()
-	cl.handlers[alpn] = handler
-	cl.l.Unlock()
-}
-
-// StopHandler stops the cluster handler for the provided ALPN name, it also
-// calls stop on the handler.
-func (cl *ClusterListener) StopHandler(alpn string) {
-	cl.l.Lock()
-	handler, ok := cl.handlers[alpn]
-	delete(cl.handlers, alpn)
-	cl.l.Unlock()
-	if ok {
-		handler.Stop()
-	}
-}
-
-// Server returns the http2 server that the cluster listener is using
-func (cl *ClusterListener) Server() *http2.Server {
-	return cl.server
-}
-
-// TLSConfig returns a tls config object that uses dynamic lookups to correctly
-// authenticate registered handlers/clients
-func (cl *ClusterListener) TLSConfig(ctx context.Context) (*tls.Config, error) {
-	serverLookup := func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-		cl.logger.Debug("performing server cert lookup")
-
-		cl.l.RLock()
-		defer cl.l.RUnlock()
-		for _, v := range clientHello.SupportedProtos {
-			if handler, ok := cl.handlers[v]; ok {
-				return handler.ServerLookup(ctx, clientHello)
-			}
-		}
-
-		cl.logger.Warn("no TLS certs found for ALPN", "ALPN", clientHello.SupportedProtos)
-		return nil, errors.New("unsupported protocol")
-	}
-
-	clientLookup := func(requestInfo *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-		cl.logger.Debug("performing client cert lookup")
-
-		cl.l.RLock()
-		defer cl.l.RUnlock()
-		for _, client := range cl.clients {
-			cert, err := client.ClientLookup(ctx, requestInfo)
-			if err == nil && cert != nil {
-				return cert, nil
-			}
-		}
-
-		cl.logger.Warn("no client information found")
-		return nil, errors.New("no client cert found")
-	}
-
-	serverConfigLookup := func(clientHello *tls.ClientHelloInfo) (*tls.Config, error) {
-		caPool := x509.NewCertPool()
-
-		ret := &tls.Config{
-			ClientAuth:           tls.RequireAndVerifyClientCert,
-			GetCertificate:       serverLookup,
-			GetClientCertificate: clientLookup,
-			MinVersion:           tls.VersionTLS12,
-			RootCAs:              caPool,
-			ClientCAs:            caPool,
-			NextProtos:           clientHello.SupportedProtos,
-			CipherSuites:         cl.clusterCipherSuites,
-		}
-
-		cl.l.RLock()
-		defer cl.l.RUnlock()
-		for _, v := range clientHello.SupportedProtos {
-			if handler, ok := cl.handlers[v]; ok {
-				ca, err := handler.CALookup(ctx)
-				if err != nil {
-					return nil, err
-				}
-
-				caPool.AddCert(ca)
-				return ret, nil
-			}
-		}
-
-		cl.logger.Warn("no TLS config found for ALPN", "ALPN", clientHello.SupportedProtos)
-		return nil, errors.New("unsupported protocol")
-	}
-
-	return &tls.Config{
-		ClientAuth:           tls.RequireAndVerifyClientCert,
-		GetCertificate:       serverLookup,
-		GetClientCertificate: clientLookup,
-		GetConfigForClient:   serverConfigLookup,
-		MinVersion:           tls.VersionTLS12,
-		CipherSuites:         cl.clusterCipherSuites,
-	}, nil
-}
-
-// Run starts the tcp listeners and will accept connections until stop is
-// called. This function blocks so should be called in a go routine.
-func (cl *ClusterListener) Run(ctx context.Context) error {
-	// Get our TLS config
-	tlsConfig, err := cl.TLSConfig(ctx)
-	if err != nil {
-		cl.logger.Error("failed to get tls configuration when starting cluster listener", "error", err)
-		return err
-	}
-
-	// The server supports all of the possible protos
-	tlsConfig.NextProtos = []string{"h2", requestForwardingALPN, perfStandbyALPN, PerformanceReplicationALPN, DRReplicationALPN}
-
-	for _, addr := range cl.clusterListenerAddrs {
-		cl.shutdownWg.Add(1)
-
-		// Force a local resolution to avoid data races
-		laddr := addr
-
-		// Start our listening loop
-		go func() {
-			defer cl.shutdownWg.Done()
-
-			// closeCh is used to shutdown the spawned goroutines once this
-			// function returns
-			closeCh := make(chan struct{})
-			defer func() {
-				close(closeCh)
-			}()
-
-			if cl.logger.IsInfo() {
-				cl.logger.Info("starting listener", "listener_address", laddr)
-			}
-
-			// Create a TCP listener. We do this separately and specifically
-			// with TCP so that we can set deadlines.
-			tcpLn, err := net.ListenTCP("tcp", laddr)
-			if err != nil {
-				cl.logger.Error("error starting listener", "error", err)
-				return
-			}
-
-			// Wrap the listener with TLS
-			tlsLn := tls.NewListener(tcpLn, tlsConfig)
-			defer tlsLn.Close()
-
-			if cl.logger.IsInfo() {
-				cl.logger.Info("serving cluster requests", "cluster_listen_address", tlsLn.Addr())
-			}
-
-			for {
-				if atomic.LoadUint32(cl.shutdown) > 0 {
-					return
-				}
-
-				// Set the deadline for the accept call. If it passes we'll get
-				// an error, causing us to check the condition at the top
-				// again.
-				tcpLn.SetDeadline(time.Now().Add(clusterListenerAcceptDeadline))
-
-				// Accept the connection
-				conn, err := tlsLn.Accept()
-				if err != nil {
-					if err, ok := err.(net.Error); ok && !err.Timeout() {
-						cl.logger.Debug("non-timeout error accepting on cluster port", "error", err)
-					}
-					if conn != nil {
-						conn.Close()
-					}
-					continue
-				}
-				if conn == nil {
-					continue
-				}
-
-				// Type assert to TLS connection and handshake to populate the
-				// connection state
-				tlsConn := conn.(*tls.Conn)
-
-				// Set a deadline for the handshake. This will cause clients
-				// that don't successfully auth to be kicked out quickly.
-				// Cluster connections should be reliable so being marginally
-				// aggressive here is fine.
-				err = tlsConn.SetDeadline(time.Now().Add(30 * time.Second))
-				if err != nil {
-					if cl.logger.IsDebug() {
-						cl.logger.Debug("error setting deadline for cluster connection", "error", err)
-					}
-					tlsConn.Close()
-					continue
-				}
-
-				err = tlsConn.Handshake()
-				if err != nil {
-					if cl.logger.IsDebug() {
-						cl.logger.Debug("error handshaking cluster connection", "error", err)
-					}
-					tlsConn.Close()
-					continue
-				}
-
-				// Now, set it back to unlimited
-				err = tlsConn.SetDeadline(time.Time{})
-				if err != nil {
-					if cl.logger.IsDebug() {
-						cl.logger.Debug("error setting deadline for cluster connection", "error", err)
-					}
-					tlsConn.Close()
-					continue
-				}
-
-				cl.l.RLock()
-				handler, ok := cl.handlers[tlsConn.ConnectionState().NegotiatedProtocol]
-				cl.l.RUnlock()
-				if !ok {
-					cl.logger.Debug("unknown negotiated protocol on cluster port")
-					tlsConn.Close()
-					continue
-				}
-
-				if err := handler.Handoff(ctx, cl.shutdownWg, closeCh, tlsConn); err != nil {
-					cl.logger.Error("error handling cluster connection", "error", err)
-					continue
-				}
-			}
-		}()
-	}
-
-	return nil
-}
-
-// Stop stops the cluster listner
-func (cl *ClusterListener) Stop() {
-	// Set the shutdown flag. This will cause the listeners to shut down
-	// within the deadline in clusterListenerAcceptDeadline
-	atomic.StoreUint32(cl.shutdown, 1)
-	cl.logger.Info("forwarding rpc listeners stopped")
-
-	// Wait for them all to shut down
-	cl.shutdownWg.Wait()
-	cl.logger.Info("rpc listeners successfully shut down")
-}
-
 // startClusterListener starts cluster request listeners during unseal. It
 // is assumed that the state lock is held while this is run. Right now this
 // only starts cluster listeners. Once the listener is started handlers/clients
 // can start being registered to it.
 func (c *Core) startClusterListener(ctx context.Context) error {
-	if c.clusterAddr == "" {
+	if c.ClusterAddr() == "" {
 		c.logger.Info("clustering disabled, not starting listeners")
+		return nil
+	}
+
+	if c.getClusterListener() != nil {
+		c.logger.Warn("cluster listener is already started")
 		return nil
 	}
 
@@ -588,86 +301,62 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 
 	c.logger.Debug("starting cluster listeners")
 
-	// Create the HTTP/2 server that will be shared by both RPC and regular
-	// duties. Doing it this way instead of listening via the server and gRPC
-	// allows us to re-use the same port via ALPN. We can just tell the server
-	// to serve a given conn and which handler to use.
-	h2Server := &http2.Server{
-		// Our forwarding connections heartbeat regularly so anything else we
-		// want to go away/get cleaned up pretty rapidly
-		IdleTimeout: 5 * HeartbeatInterval,
+	networkLayer := c.clusterNetworkLayer
+
+	if networkLayer == nil {
+		networkLayer = cluster.NewTCPLayer(c.clusterListenerAddrs, c.logger.Named("cluster-listener.tcp"))
 	}
 
-	c.clusterListener = &ClusterListener{
-		handlers:   make(map[string]ClusterHandler),
-		clients:    make(map[string]ClusterClient),
-		shutdown:   new(uint32),
-		shutdownWg: &sync.WaitGroup{},
-		server:     h2Server,
+	c.clusterListener.Store(cluster.NewListener(networkLayer, c.clusterCipherSuites, c.logger.Named("cluster-listener")))
 
-		clusterListenerAddrs: c.clusterListenerAddrs,
-		clusterCipherSuites:  c.clusterCipherSuites,
-		logger:               c.logger.Named("cluster-listener"),
+	err := c.getClusterListener().Run(ctx)
+	if err != nil {
+		return err
 	}
+	if strings.HasSuffix(c.ClusterAddr(), ":0") {
+		// If we listened on port 0, record the port the OS gave us.
+		c.clusterAddr.Store(fmt.Sprintf("https://%s", c.getClusterListener().Addr()))
+	}
+	return nil
+}
 
-	return c.clusterListener.Run(ctx)
+func (c *Core) ClusterAddr() string {
+	return c.clusterAddr.Load().(string)
+}
+
+func (c *Core) getClusterListener() *cluster.Listener {
+	cl := c.clusterListener.Load()
+	if cl == nil {
+		return nil
+	}
+	return cl.(*cluster.Listener)
 }
 
 // stopClusterListener stops any existing listeners during seal. It is
 // assumed that the state lock is held while this is run.
 func (c *Core) stopClusterListener() {
-	if c.clusterListener == nil {
+	clusterListener := c.getClusterListener()
+	if clusterListener == nil {
 		c.logger.Debug("clustering disabled, not stopping listeners")
 		return
 	}
 
 	c.logger.Info("stopping cluster listeners")
 
-	c.clusterListener.Stop()
+	clusterListener.Stop()
+	var nilCL *cluster.Listener
+	c.clusterListener.Store(nilCL)
 
 	c.logger.Info("cluster listeners successfully shut down")
 }
 
 func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
 	c.clusterListenerAddrs = addrs
-	if c.clusterAddr == "" && len(addrs) == 1 {
-		c.clusterAddr = fmt.Sprintf("https://%s", addrs[0].String())
+	if c.ClusterAddr() == "" && len(addrs) == 1 {
+		c.clusterAddr.Store(fmt.Sprintf("https://%s", addrs[0].String()))
 	}
 }
 
 func (c *Core) SetClusterHandler(handler http.Handler) {
 	c.clusterHandler = handler
-}
-
-// getGRPCDialer is used to return a dialer that has the correct TLS
-// configuration. Otherwise gRPC tries to be helpful and stomps all over our
-// NextProtos.
-func (c *Core) getGRPCDialer(ctx context.Context, alpnProto, serverName string, caCert *x509.Certificate) func(string, time.Duration) (net.Conn, error) {
-	return func(addr string, timeout time.Duration) (net.Conn, error) {
-		if c.clusterListener == nil {
-			return nil, errors.New("clustering disabled")
-		}
-
-		tlsConfig, err := c.clusterListener.TLSConfig(ctx)
-		if err != nil {
-			c.logger.Error("failed to get tls configuration", "error", err)
-			return nil, err
-		}
-		if serverName != "" {
-			tlsConfig.ServerName = serverName
-		}
-		if caCert != nil {
-			pool := x509.NewCertPool()
-			pool.AddCert(caCert)
-			tlsConfig.RootCAs = pool
-			tlsConfig.ClientCAs = pool
-		}
-		c.logger.Debug("creating rpc dialer", "host", tlsConfig.ServerName)
-
-		tlsConfig.NextProtos = []string{alpnProto}
-		dialer := &net.Dialer{
-			Timeout: timeout,
-		}
-		return tls.DialWithDialer(dialer, "tcp", addr, tlsConfig)
-	}
 }

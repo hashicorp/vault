@@ -11,14 +11,20 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/queue"
 )
 
-const databaseConfigPath = "database/config/"
+const (
+	databaseConfigPath     = "database/config/"
+	databaseRolePath       = "role/"
+	databaseStaticRolePath = "static-role/"
+)
 
 type dbPluginInstance struct {
 	sync.RWMutex
@@ -46,6 +52,15 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
+
+	b.credRotationQueue = queue.New()
+	// Create a context with a cancel method for processing any WAL entries and
+	// populating the queue
+	initCtx := context.Background()
+	ictx, cancel := context.WithCancel(initCtx)
+	b.cancelQueue = cancel
+	// Load queue and kickoff new periodic ticker
+	go b.initQueue(ictx, conf)
 	return b, nil
 }
 
@@ -55,31 +70,39 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		Help: strings.TrimSpace(backendHelp),
 
 		PathsSpecial: &logical.Paths{
+			LocalStorage: []string{
+				framework.WALPrefix,
+			},
 			SealWrapStorage: []string{
 				"config/*",
+				"static-role/*",
 			},
 		},
-
-		Paths: []*framework.Path{
-			pathListPluginConnection(&b),
-			pathConfigurePluginConnection(&b),
+		Paths: framework.PathAppend(
+			[]*framework.Path{
+				pathListPluginConnection(&b),
+				pathConfigurePluginConnection(&b),
+				pathResetConnection(&b),
+			},
 			pathListRoles(&b),
 			pathRoles(&b),
 			pathCredsCreate(&b),
-			pathResetConnection(&b),
 			pathRotateCredentials(&b),
-		},
+		),
 
 		Secrets: []*framework.Secret{
 			secretCreds(&b),
 		},
-		Clean:       b.closeAllDBs,
+		Clean:       b.clean,
 		Invalidate:  b.invalidate,
 		BackendType: logical.TypeLogical,
 	}
 
 	b.logger = conf.Logger
 	b.connections = make(map[string]*dbPluginInstance)
+
+	b.roleLocks = locksutil.CreateLocks()
+
 	return &b
 }
 
@@ -89,6 +112,20 @@ type databaseBackend struct {
 
 	*framework.Backend
 	sync.RWMutex
+	// CredRotationQueue is an in-memory priority queue used to track Static Roles
+	// that require periodic rotation. Backends will have a PriorityQueue
+	// initialized on setup, but only backends that are mounted by a primary
+	// server or mounted as a local mount will perform the rotations.
+	//
+	// cancelQueue is used to remove the priority queue and terminate the
+	// background ticker.
+	credRotationQueue *queue.PriorityQueue
+	cancelQueue       context.CancelFunc
+
+	// roleLocks is used to lock modifications to roles in the queue, to ensure
+	// concurrent requests are not modifying the same role and possibly causing
+	// issues with the priority queue.
+	roleLocks []*locksutil.LockEntry
 }
 
 func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {
@@ -124,7 +161,15 @@ type upgradeCheck struct {
 }
 
 func (b *databaseBackend) Role(ctx context.Context, s logical.Storage, roleName string) (*roleEntry, error) {
-	entry, err := s.Get(ctx, "role/"+roleName)
+	return b.roleAtPath(ctx, s, roleName, databaseRolePath)
+}
+
+func (b *databaseBackend) StaticRole(ctx context.Context, s logical.Storage, roleName string) (*roleEntry, error) {
+	return b.roleAtPath(ctx, s, roleName, databaseStaticRolePath)
+}
+
+func (b *databaseBackend) roleAtPath(ctx context.Context, s logical.Storage, roleName string, pathPrefix string) (*roleEntry, error) {
+	entry, err := s.Get(ctx, pathPrefix+roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -228,6 +273,17 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 	return db, nil
 }
 
+// invalidateQueue cancels any background queue loading and destroys the queue.
+func (b *databaseBackend) invalidateQueue() {
+	b.Lock()
+	defer b.Unlock()
+
+	if b.cancelQueue != nil {
+		b.cancelQueue()
+	}
+	b.credRotationQueue = nil
+}
+
 // ClearConnection closes the database connection and
 // removes it from the b.connections map.
 func (b *databaseBackend) ClearConnection(name string) error {
@@ -267,8 +323,13 @@ func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 	}
 }
 
-// closeAllDBs closes all connections from all database types
-func (b *databaseBackend) closeAllDBs(ctx context.Context) {
+// clean closes all connections from all database types
+// and cancels any rotation queue loading operation.
+func (b *databaseBackend) clean(ctx context.Context) {
+	// invalidateQueue acquires it's own lock on the backend, removes queue, and
+	// terminates the background ticker
+	b.invalidateQueue()
+
 	b.Lock()
 	defer b.Unlock()
 

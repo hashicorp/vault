@@ -16,32 +16,13 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/forwarding"
+
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/replication"
-	cache "github.com/patrickmn/go-cache"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
-)
-
-const (
-	clusterListenerAcceptDeadline = 500 * time.Millisecond
-
-	// PerformanceReplicationALPN is the negotiated protocol used for
-	// performance replication.
-	PerformanceReplicationALPN = "replication_v1"
-
-	// DRReplicationALPN is the negotiated protocol used for
-	// dr replication.
-	DRReplicationALPN = "replication_dr_v1"
-
-	perfStandbyALPN = "perf_standby_v1"
-
-	requestForwardingALPN = "req_fw_sb-act_v1"
-)
-
-var (
-	// Making this a package var allows tests to modify
-	HeartbeatInterval = 5 * time.Second
 )
 
 type requestForwardingHandler struct {
@@ -59,13 +40,13 @@ type requestForwardingClusterClient struct {
 
 // NewRequestForwardingHandler creates a cluster handler for use with request
 // forwarding.
-func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots chan struct{}, perfStandbyRepCluster *replication.Cluster, perfStandbyCache *cache.Cache) (*requestForwardingHandler, error) {
+func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots chan struct{}, perfStandbyRepCluster *replication.Cluster) (*requestForwardingHandler, error) {
 	// Resolve locally to avoid races
 	ha := c.ha != nil
 
 	fwRPCServer := grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			Time: 2 * HeartbeatInterval,
+			Time: 2 * cluster.HeartbeatInterval,
 		}),
 		grpc.MaxRecvMsgSize(math.MaxInt32),
 		grpc.MaxSendMsgSize(math.MaxInt32),
@@ -77,7 +58,7 @@ func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots ch
 			handler:               c.clusterHandler,
 			perfStandbySlots:      perfStandbySlots,
 			perfStandbyRepCluster: perfStandbyRepCluster,
-			perfStandbyCache:      perfStandbyCache,
+			raftFollowerStates:    c.raftFollowerStates,
 		})
 	}
 
@@ -118,6 +99,19 @@ func (c *requestForwardingClusterClient) ClientLookup(ctx context.Context, reque
 	return nil, nil
 }
 
+func (c *requestForwardingClusterClient) ServerName() string {
+	parsedCert := c.core.localClusterParsedCert.Load().(*x509.Certificate)
+	if parsedCert == nil {
+		return ""
+	}
+
+	return parsedCert.Subject.CommonName
+}
+
+func (c *requestForwardingClusterClient) CACert(ctx context.Context) *x509.Certificate {
+	return c.core.localClusterParsedCert.Load().(*x509.Certificate)
+}
+
 // ServerLookup satisfies the ClusterHandler interface and returns the server's
 // tls certs.
 func (rf *requestForwardingHandler) ServerLookup(ctx context.Context, clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
@@ -137,14 +131,14 @@ func (rf *requestForwardingHandler) ServerLookup(ctx context.Context, clientHell
 }
 
 // CALookup satisfies the ClusterHandler interface and returns the ha ca cert.
-func (rf *requestForwardingHandler) CALookup(ctx context.Context) (*x509.Certificate, error) {
+func (rf *requestForwardingHandler) CALookup(ctx context.Context) ([]*x509.Certificate, error) {
 	parsedCert := rf.core.localClusterParsedCert.Load().(*x509.Certificate)
 
 	if parsedCert == nil {
 		return nil, fmt.Errorf("forwarding connection client but no local cert")
 	}
 
-	return parsedCert, nil
+	return []*x509.Certificate{parsedCert}, nil
 }
 
 // Handoff serves a request forwarding connection.
@@ -190,7 +184,7 @@ func (rf *requestForwardingHandler) Handoff(ctx context.Context, shutdownWg *syn
 // Stop stops the request forwarding server and closes connections.
 func (rf *requestForwardingHandler) Stop() error {
 	// Give some time for existing RPCs to drain.
-	time.Sleep(clusterListenerAcceptDeadline)
+	time.Sleep(cluster.ListenerAcceptDeadline)
 	close(rf.stopCh)
 	rf.fwRPCServer.Stop()
 	return nil
@@ -198,39 +192,40 @@ func (rf *requestForwardingHandler) Stop() error {
 
 // Starts the listeners and servers necessary to handle forwarded requests
 func (c *Core) startForwarding(ctx context.Context) error {
-	c.logger.Debug("cluster listener setup function")
-	defer c.logger.Debug("leaving cluster listener setup function")
+	c.logger.Debug("request forwarding setup function")
+	defer c.logger.Debug("leaving request forwarding setup function")
 
 	// Clean up in case we have transitioned from a client to a server
 	c.requestForwardingConnectionLock.Lock()
 	c.clearForwardingClients()
 	c.requestForwardingConnectionLock.Unlock()
 
-	// Resolve locally to avoid races
-	if c.ha == nil || c.clusterListener == nil {
+	if c.ha == nil || c.getClusterListener() == nil {
+		c.logger.Debug("request forwarding not setup")
 		return nil
 	}
 
-	perfStandbyRepCluster, perfStandbyCache, perfStandbySlots, err := c.perfStandbyClusterHandler()
+	perfStandbyRepCluster, perfStandbySlots, err := c.perfStandbyClusterHandler()
 	if err != nil {
 		return err
 	}
 
-	handler, err := NewRequestForwardingHandler(c, c.clusterListener.Server(), perfStandbySlots, perfStandbyRepCluster, perfStandbyCache)
+	handler, err := NewRequestForwardingHandler(c, c.getClusterListener().Server(), perfStandbySlots, perfStandbyRepCluster)
 	if err != nil {
 		return err
 	}
 
-	c.clusterListener.AddHandler(requestForwardingALPN, handler)
+	c.getClusterListener().AddHandler(consts.RequestForwardingALPN, handler)
 
 	return nil
 }
 
 func (c *Core) stopForwarding() {
-	if c.clusterListener != nil {
-		c.clusterListener.StopHandler(requestForwardingALPN)
-		c.clusterListener.StopHandler(perfStandbyALPN)
+	if c.getClusterListener() != nil {
+		c.getClusterListener().StopHandler(consts.RequestForwardingALPN)
+		c.getClusterListener().StopHandler(consts.PerfStandbyALPN)
 	}
+	c.removeAllPerfStandbySecondaries()
 }
 
 // refreshRequestForwardingConnection ensures that the client/transport are
@@ -263,11 +258,15 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 		return errors.New("no request forwarding cluster certificate found")
 	}
 
-	if c.clusterListener != nil {
-		c.clusterListener.AddClient(requestForwardingALPN, &requestForwardingClusterClient{
-			core: c,
-		})
+	clusterListener := c.getClusterListener()
+	if clusterListener == nil {
+		c.logger.Error("no cluster listener configured")
+		return nil
 	}
+
+	clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{
+		core: c,
+	})
 
 	// Set up grpc forwarding handling
 	// It's not really insecure, but we have to dial manually to get the
@@ -275,10 +274,10 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 	// the TLS state.
 	dctx, cancelFunc := context.WithCancel(ctx)
 	c.rpcClientConn, err = grpc.DialContext(dctx, clusterURL.Host,
-		grpc.WithDialer(c.getGRPCDialer(ctx, requestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)),
+		grpc.WithDialer(clusterListener.GetDialerFunc(ctx, consts.RequestForwardingALPN)),
 		grpc.WithInsecure(), // it's not, we handle it in the dialer
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time: 2 * HeartbeatInterval,
+			Time: 2 * cluster.HeartbeatInterval,
 		}),
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(math.MaxInt32),
@@ -294,7 +293,7 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 	c.rpcForwardingClient = &forwardingClient{
 		RequestForwardingClient: NewRequestForwardingClient(c.rpcClientConn),
 		core:                    c,
-		echoTicker:              time.NewTicker(HeartbeatInterval),
+		echoTicker:              time.NewTicker(cluster.HeartbeatInterval),
 		echoContext:             dctx,
 	}
 	c.rpcForwardingClient.startHeartbeat()
@@ -318,8 +317,9 @@ func (c *Core) clearForwardingClients() {
 	c.rpcClientConnContext = nil
 	c.rpcForwardingClient = nil
 
-	if c.clusterListener != nil {
-		c.clusterListener.RemoveClient(requestForwardingALPN)
+	clusterListener := c.getClusterListener()
+	if clusterListener != nil {
+		clusterListener.RemoveClient(consts.RequestForwardingALPN)
 	}
 	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
 }

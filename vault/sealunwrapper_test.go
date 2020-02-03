@@ -10,8 +10,9 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/physical"
-	"github.com/hashicorp/vault/physical/inmem"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
 func TestSealUnwrapper(t *testing.T) {
@@ -56,7 +57,7 @@ func performTestSealUnwrapper(t *testing.T, phys physical.Backend, logger log.Lo
 	// Save the original for comparison later
 	origBytes := make([]byte, len(entry.Value))
 	copy(origBytes, entry.Value)
-	se := &physical.EncryptedBlobInfo{
+	se := &wrapping.EncryptedBlobInfo{
 		Ciphertext: entry.Value,
 	}
 	seb, err := proto.Marshal(se)

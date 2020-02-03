@@ -66,12 +66,12 @@ export default Component.extend({
       return 'You have been given authorization';
     }
     if (isApproved) {
-      return 'This control group has been authorized';
+      return 'This Control Group has been authorized';
     }
     if (currentUserIsRequesting) {
-      return 'The path you requested is locked by a control group';
+      return 'The path you requested is locked by a Control Group';
     }
-    return 'Someone is requesting access to a path locked by a control group';
+    return 'Someone is requesting access to a path locked by a Control Group';
   }),
 
   refresh: task(function*() {

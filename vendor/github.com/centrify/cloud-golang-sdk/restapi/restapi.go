@@ -37,6 +37,11 @@ type GenericMapResponse struct {
 	Result map[string]interface{}
 }
 
+type HttpError struct {
+    error               // error type
+    StatusCode  int     // HTTP status
+}
+
 // BackendType is the type of backend that is being implemented
 type RestClientMode uint32
 
@@ -144,7 +149,7 @@ func (r *RestClient) postAndGetBody(method string, args map[string]interface{}) 
 	}
 
 	body, _ := ioutil.ReadAll(httpresp.Body)
-	return nil, fmt.Errorf("POST to %s failed with code %d, body: %s", method, httpresp.StatusCode, body)
+	return nil, &HttpError{error: fmt.Errorf("POST to %s failed with code %d, body: %s", method, httpresp.StatusCode, body), StatusCode: httpresp.StatusCode}
 }
 
 // This function converts a map[string]interface{} into json string

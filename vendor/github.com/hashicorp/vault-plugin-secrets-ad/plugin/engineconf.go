@@ -5,6 +5,7 @@ import (
 )
 
 type configuration struct {
-	PasswordConf *passwordConf
-	ADConf       *client.ADConf
+	PasswordConf          *passwordConf
+	ADConf                *client.ADConf
+	LastRotationTolerance int
 }

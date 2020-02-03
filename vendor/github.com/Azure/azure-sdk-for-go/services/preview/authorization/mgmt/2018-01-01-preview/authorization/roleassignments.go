@@ -22,13 +22,11 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
+	"github.com/Azure/go-autorest/tracing"
 	"net/http"
 )
 
-// RoleAssignmentsClient is the role based access control provides you a way to apply granular level policy
-// administration down to individual resources or resource groups. These operations enable you to manage role
-// definitions and role assignments. A role definition describes the set of actions that can be performed on resources.
-// A role assignment grants access to Azure Active Directory users.
+// RoleAssignmentsClient is the client for the RoleAssignments methods of the Authorization service.
 type RoleAssignmentsClient struct {
 	BaseClient
 }
@@ -53,6 +51,16 @@ func NewRoleAssignmentsClientWithBaseURI(baseURI string, subscriptionID string) 
 // roleAssignmentName - the name of the role assignment to create. It can be any valid GUID.
 // parameters - parameters for the role assignment.
 func (client RoleAssignmentsClient) Create(ctx context.Context, scope string, roleAssignmentName string, parameters RoleAssignmentCreateParameters) (result RoleAssignment, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/RoleAssignmentsClient.Create")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: parameters,
 			Constraints: []validation.Constraint{{Target: "parameters.RoleAssignmentProperties", Name: validation.Null, Rule: true,
@@ -108,8 +116,8 @@ func (client RoleAssignmentsClient) CreatePreparer(ctx context.Context, scope st
 // CreateSender sends the Create request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) CreateSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // CreateResponder handles the response to the Create request. The method always
@@ -130,6 +138,16 @@ func (client RoleAssignmentsClient) CreateResponder(resp *http.Response) (result
 // roleID - the ID of the role assignment to create.
 // parameters - parameters for the role assignment.
 func (client RoleAssignmentsClient) CreateByID(ctx context.Context, roleID string, parameters RoleAssignmentCreateParameters) (result RoleAssignment, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/RoleAssignmentsClient.CreateByID")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: parameters,
 			Constraints: []validation.Constraint{{Target: "parameters.RoleAssignmentProperties", Name: validation.Null, Rule: true,
@@ -184,8 +202,8 @@ func (client RoleAssignmentsClient) CreateByIDPreparer(ctx context.Context, role
 // CreateByIDSender sends the CreateByID request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) CreateByIDSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // CreateByIDResponder handles the response to the CreateByID request. The method always
@@ -206,6 +224,16 @@ func (client RoleAssignmentsClient) CreateByIDResponder(resp *http.Response) (re
 // scope - the scope of the role assignment to delete.
 // roleAssignmentName - the name of the role assignment to delete.
 func (client RoleAssignmentsClient) Delete(ctx context.Context, scope string, roleAssignmentName string) (result RoleAssignment, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/RoleAssignmentsClient.Delete")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.DeletePreparer(ctx, scope, roleAssignmentName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.RoleAssignmentsClient", "Delete", nil, "Failure preparing request")
@@ -250,8 +278,8 @@ func (client RoleAssignmentsClient) DeletePreparer(ctx context.Context, scope st
 // DeleteSender sends the Delete request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) DeleteSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // DeleteResponder handles the response to the Delete request. The method always
@@ -271,6 +299,16 @@ func (client RoleAssignmentsClient) DeleteResponder(resp *http.Response) (result
 // Parameters:
 // roleID - the ID of the role assignment to delete.
 func (client RoleAssignmentsClient) DeleteByID(ctx context.Context, roleID string) (result RoleAssignment, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/RoleAssignmentsClient.DeleteByID")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.DeleteByIDPreparer(ctx, roleID)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.RoleAssignmentsClient", "DeleteByID", nil, "Failure preparing request")
@@ -314,8 +352,8 @@ func (client RoleAssignmentsClient) DeleteByIDPreparer(ctx context.Context, role
 // DeleteByIDSender sends the DeleteByID request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) DeleteByIDSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // DeleteByIDResponder handles the response to the DeleteByID request. The method always
@@ -336,6 +374,16 @@ func (client RoleAssignmentsClient) DeleteByIDResponder(resp *http.Response) (re
 // scope - the scope of the role assignment.
 // roleAssignmentName - the name of the role assignment to get.
 func (client RoleAssignmentsClient) Get(ctx context.Context, scope string, roleAssignmentName string) (result RoleAssignment, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/RoleAssignmentsClient.Get")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetPreparer(ctx, scope, roleAssignmentName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.RoleAssignmentsClient", "Get", nil, "Failure preparing request")
@@ -380,8 +428,8 @@ func (client RoleAssignmentsClient) GetPreparer(ctx context.Context, scope strin
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) GetSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // GetResponder handles the response to the Get request. The method always
@@ -401,6 +449,16 @@ func (client RoleAssignmentsClient) GetResponder(resp *http.Response) (result Ro
 // Parameters:
 // roleID - the ID of the role assignment to get.
 func (client RoleAssignmentsClient) GetByID(ctx context.Context, roleID string) (result RoleAssignment, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/RoleAssignmentsClient.GetByID")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetByIDPreparer(ctx, roleID)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.RoleAssignmentsClient", "GetByID", nil, "Failure preparing request")
@@ -444,8 +502,8 @@ func (client RoleAssignmentsClient) GetByIDPreparer(ctx context.Context, roleID 
 // GetByIDSender sends the GetByID request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) GetByIDSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // GetByIDResponder handles the response to the GetByID request. The method always
@@ -467,6 +525,16 @@ func (client RoleAssignmentsClient) GetByIDResponder(resp *http.Response) (resul
 // above the scope. Use $filter=principalId eq {id} to return all role assignments at, above or below the scope
 // for the specified principal.
 func (client RoleAssignmentsClient) List(ctx context.Context, filter string) (result RoleAssignmentListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/RoleAssignmentsClient.List")
+		defer func() {
+			sc := -1
+			if result.ralr.Response.Response != nil {
+				sc = result.ralr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.fn = client.listNextResults
 	req, err := client.ListPreparer(ctx, filter)
 	if err != nil {
@@ -514,8 +582,8 @@ func (client RoleAssignmentsClient) ListPreparer(ctx context.Context, filter str
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) ListSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -532,8 +600,8 @@ func (client RoleAssignmentsClient) ListResponder(resp *http.Response) (result R
 }
 
 // listNextResults retrieves the next set of results, if any.
-func (client RoleAssignmentsClient) listNextResults(lastResults RoleAssignmentListResult) (result RoleAssignmentListResult, err error) {
-	req, err := lastResults.roleAssignmentListResultPreparer()
+func (client RoleAssignmentsClient) listNextResults(ctx context.Context, lastResults RoleAssignmentListResult) (result RoleAssignmentListResult, err error) {
+	req, err := lastResults.roleAssignmentListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "authorization.RoleAssignmentsClient", "listNextResults", nil, "Failure preparing next results request")
 	}
@@ -554,6 +622,16 @@ func (client RoleAssignmentsClient) listNextResults(lastResults RoleAssignmentLi
 
 // ListComplete enumerates all values, automatically crossing page boundaries as required.
 func (client RoleAssignmentsClient) ListComplete(ctx context.Context, filter string) (result RoleAssignmentListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/RoleAssignmentsClient.List")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.List(ctx, filter)
 	return
 }
@@ -569,6 +647,16 @@ func (client RoleAssignmentsClient) ListComplete(ctx context.Context, filter str
 // above the scope. Use $filter=principalId eq {id} to return all role assignments at, above or below the scope
 // for the specified principal.
 func (client RoleAssignmentsClient) ListForResource(ctx context.Context, resourceGroupName string, resourceProviderNamespace string, parentResourcePath string, resourceType string, resourceName string, filter string) (result RoleAssignmentListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/RoleAssignmentsClient.ListForResource")
+		defer func() {
+			sc := -1
+			if result.ralr.Response.Response != nil {
+				sc = result.ralr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.fn = client.listForResourceNextResults
 	req, err := client.ListForResourcePreparer(ctx, resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, filter)
 	if err != nil {
@@ -621,8 +709,8 @@ func (client RoleAssignmentsClient) ListForResourcePreparer(ctx context.Context,
 // ListForResourceSender sends the ListForResource request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) ListForResourceSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // ListForResourceResponder handles the response to the ListForResource request. The method always
@@ -639,8 +727,8 @@ func (client RoleAssignmentsClient) ListForResourceResponder(resp *http.Response
 }
 
 // listForResourceNextResults retrieves the next set of results, if any.
-func (client RoleAssignmentsClient) listForResourceNextResults(lastResults RoleAssignmentListResult) (result RoleAssignmentListResult, err error) {
-	req, err := lastResults.roleAssignmentListResultPreparer()
+func (client RoleAssignmentsClient) listForResourceNextResults(ctx context.Context, lastResults RoleAssignmentListResult) (result RoleAssignmentListResult, err error) {
+	req, err := lastResults.roleAssignmentListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "authorization.RoleAssignmentsClient", "listForResourceNextResults", nil, "Failure preparing next results request")
 	}
@@ -661,6 +749,16 @@ func (client RoleAssignmentsClient) listForResourceNextResults(lastResults RoleA
 
 // ListForResourceComplete enumerates all values, automatically crossing page boundaries as required.
 func (client RoleAssignmentsClient) ListForResourceComplete(ctx context.Context, resourceGroupName string, resourceProviderNamespace string, parentResourcePath string, resourceType string, resourceName string, filter string) (result RoleAssignmentListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/RoleAssignmentsClient.ListForResource")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.ListForResource(ctx, resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, filter)
 	return
 }
@@ -672,6 +770,16 @@ func (client RoleAssignmentsClient) ListForResourceComplete(ctx context.Context,
 // above the scope. Use $filter=principalId eq {id} to return all role assignments at, above or below the scope
 // for the specified principal.
 func (client RoleAssignmentsClient) ListForResourceGroup(ctx context.Context, resourceGroupName string, filter string) (result RoleAssignmentListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/RoleAssignmentsClient.ListForResourceGroup")
+		defer func() {
+			sc := -1
+			if result.ralr.Response.Response != nil {
+				sc = result.ralr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.fn = client.listForResourceGroupNextResults
 	req, err := client.ListForResourceGroupPreparer(ctx, resourceGroupName, filter)
 	if err != nil {
@@ -720,8 +828,8 @@ func (client RoleAssignmentsClient) ListForResourceGroupPreparer(ctx context.Con
 // ListForResourceGroupSender sends the ListForResourceGroup request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) ListForResourceGroupSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // ListForResourceGroupResponder handles the response to the ListForResourceGroup request. The method always
@@ -738,8 +846,8 @@ func (client RoleAssignmentsClient) ListForResourceGroupResponder(resp *http.Res
 }
 
 // listForResourceGroupNextResults retrieves the next set of results, if any.
-func (client RoleAssignmentsClient) listForResourceGroupNextResults(lastResults RoleAssignmentListResult) (result RoleAssignmentListResult, err error) {
-	req, err := lastResults.roleAssignmentListResultPreparer()
+func (client RoleAssignmentsClient) listForResourceGroupNextResults(ctx context.Context, lastResults RoleAssignmentListResult) (result RoleAssignmentListResult, err error) {
+	req, err := lastResults.roleAssignmentListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "authorization.RoleAssignmentsClient", "listForResourceGroupNextResults", nil, "Failure preparing next results request")
 	}
@@ -760,6 +868,16 @@ func (client RoleAssignmentsClient) listForResourceGroupNextResults(lastResults 
 
 // ListForResourceGroupComplete enumerates all values, automatically crossing page boundaries as required.
 func (client RoleAssignmentsClient) ListForResourceGroupComplete(ctx context.Context, resourceGroupName string, filter string) (result RoleAssignmentListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/RoleAssignmentsClient.ListForResourceGroup")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.ListForResourceGroup(ctx, resourceGroupName, filter)
 	return
 }
@@ -771,6 +889,16 @@ func (client RoleAssignmentsClient) ListForResourceGroupComplete(ctx context.Con
 // above the scope. Use $filter=principalId eq {id} to return all role assignments at, above or below the scope
 // for the specified principal.
 func (client RoleAssignmentsClient) ListForScope(ctx context.Context, scope string, filter string) (result RoleAssignmentListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/RoleAssignmentsClient.ListForScope")
+		defer func() {
+			sc := -1
+			if result.ralr.Response.Response != nil {
+				sc = result.ralr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.fn = client.listForScopeNextResults
 	req, err := client.ListForScopePreparer(ctx, scope, filter)
 	if err != nil {
@@ -818,8 +946,8 @@ func (client RoleAssignmentsClient) ListForScopePreparer(ctx context.Context, sc
 // ListForScopeSender sends the ListForScope request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleAssignmentsClient) ListForScopeSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // ListForScopeResponder handles the response to the ListForScope request. The method always
@@ -836,8 +964,8 @@ func (client RoleAssignmentsClient) ListForScopeResponder(resp *http.Response) (
 }
 
 // listForScopeNextResults retrieves the next set of results, if any.
-func (client RoleAssignmentsClient) listForScopeNextResults(lastResults RoleAssignmentListResult) (result RoleAssignmentListResult, err error) {
-	req, err := lastResults.roleAssignmentListResultPreparer()
+func (client RoleAssignmentsClient) listForScopeNextResults(ctx context.Context, lastResults RoleAssignmentListResult) (result RoleAssignmentListResult, err error) {
+	req, err := lastResults.roleAssignmentListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "authorization.RoleAssignmentsClient", "listForScopeNextResults", nil, "Failure preparing next results request")
 	}
@@ -858,6 +986,16 @@ func (client RoleAssignmentsClient) listForScopeNextResults(lastResults RoleAssi
 
 // ListForScopeComplete enumerates all values, automatically crossing page boundaries as required.
 func (client RoleAssignmentsClient) ListForScopeComplete(ctx context.Context, scope string, filter string) (result RoleAssignmentListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/RoleAssignmentsClient.ListForScope")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.ListForScope(ctx, scope, filter)
 	return
 }

@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/chrismalek/oktasdk-go/okta"
 	"github.com/hashicorp/vault/helper/mfa"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/okta/okta-sdk-golang/okta"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -65,7 +66,21 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		return nil, logical.ErrorResponse("Okta auth method not configured"), nil, nil
 	}
 
-	client := cfg.OktaClient()
+	// Check for a CIDR match.
+	if len(cfg.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, nil, nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, cfg.TokenBoundCIDRs) {
+			return nil, nil, nil, logical.ErrPermissionDenied
+		}
+	}
+
+	shim, err := cfg.OktaClient()
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	type mfaFactor struct {
 		Id       string `json:"id"`
@@ -85,7 +100,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		StateToken   string         `json:"stateToken"`
 	}
 
-	authReq, err := client.NewRequest("POST", "authn", map[string]interface{}{
+	authReq, err := shim.NewRequest("POST", "/api/v1/authn", map[string]interface{}{
 		"username": username,
 		"password": password,
 	})
@@ -94,8 +109,11 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	}
 
 	var result authResult
-	rsp, err := client.Do(authReq, &result)
+	rsp, err := shim.Do(authReq, &result)
 	if err != nil {
+		if oe, ok := err.(*okta.Error); ok {
+			return nil, logical.ErrorResponse("Okta auth failed: %v (code=%v)", err, oe.ErrorCode), nil, nil
+		}
 		return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed: %v", err)), nil, nil
 	}
 	if rsp == nil {
@@ -166,12 +184,12 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		payload := map[string]interface{}{
 			"stateToken": result.StateToken,
 		}
-		verifyReq, err := client.NewRequest("POST", requestPath, payload)
+		verifyReq, err := shim.NewRequest("POST", requestPath, payload)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 
-		rsp, err := client.Do(verifyReq, &result)
+		rsp, err := shim.Do(verifyReq, &result)
 		if err != nil {
 			return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed: %v", err)), nil, nil
 		}
@@ -181,8 +199,11 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		for result.Status == "MFA_CHALLENGE" {
 			switch result.FactorResult {
 			case "WAITING":
-				verifyReq, err := client.NewRequest("POST", requestPath, payload)
-				rsp, err := client.Do(verifyReq, &result)
+				verifyReq, err := shim.NewRequest("POST", requestPath, payload)
+				if err != nil {
+					return nil, logical.ErrorResponse(fmt.Sprintf("okta auth failed creating verify request: %v", err)), nil, nil
+				}
+				rsp, err := shim.Do(verifyReq, &result)
 				if err != nil {
 					return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed checking loop: %v", err)), nil, nil
 				}
@@ -237,7 +258,8 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 
 	var allGroups []string
 	// Only query the Okta API for group membership if we have a token
-	if cfg.Token != "" {
+	client := shim.Client()
+	if client != nil {
 		oktaGroups, err := b.getOktaGroups(client, &result.Embedded.User)
 		if err != nil {
 			return nil, logical.ErrorResponse(fmt.Sprintf("okta failure retrieving groups: %v", err)), nil, nil
@@ -287,15 +309,12 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 }
 
 func (b *backend) getOktaGroups(client *okta.Client, user *okta.User) ([]string, error) {
-	rsp, err := client.Users.PopulateGroups(user)
+	groups, _, err := client.User.ListUserGroups(user.Id, nil)
 	if err != nil {
 		return nil, err
 	}
-	if rsp == nil {
-		return nil, fmt.Errorf("okta auth method unexpected failure")
-	}
-	oktaGroups := make([]string, 0, len(user.Groups))
-	for _, group := range user.Groups {
+	oktaGroups := make([]string, 0, len(groups))
+	for _, group := range groups {
 		oktaGroups = append(oktaGroups, group.Profile.Name)
 	}
 	if b.Logger().IsDebug() {

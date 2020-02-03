@@ -1,19 +1,21 @@
 package file
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, error) {
@@ -87,11 +89,16 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		mode:       mode,
 		saltConfig: conf.SaltConfig,
 		saltView:   conf.SaltView,
+		salt:       new(atomic.Value),
 		formatConfig: audit.FormatterConfig{
 			Raw:          logRaw,
 			HMACAccessor: hmacAccessor,
 		},
 	}
+
+	// Ensure we are working with the right type by explicitly storing a nil of
+	// the right type
+	b.salt.Store((*salt.Salt)(nil))
 
 	switch format {
 	case "json":
@@ -137,7 +144,7 @@ type Backend struct {
 	mode     os.FileMode
 
 	saltMutex  sync.RWMutex
-	salt       *salt.Salt
+	salt       *atomic.Value
 	saltConfig *salt.Config
 	saltView   logical.Storage
 }
@@ -145,23 +152,27 @@ type Backend struct {
 var _ audit.Backend = (*Backend)(nil)
 
 func (b *Backend) Salt(ctx context.Context) (*salt.Salt, error) {
-	b.saltMutex.RLock()
-	if b.salt != nil {
-		defer b.saltMutex.RUnlock()
-		return b.salt, nil
+	s := b.salt.Load().(*salt.Salt)
+	if s != nil {
+		return s, nil
 	}
-	b.saltMutex.RUnlock()
+
 	b.saltMutex.Lock()
 	defer b.saltMutex.Unlock()
-	if b.salt != nil {
-		return b.salt, nil
+
+	s = b.salt.Load().(*salt.Salt)
+	if s != nil {
+		return s, nil
 	}
-	salt, err := salt.NewSalt(ctx, b.saltView, b.saltConfig)
+
+	newSalt, err := salt.NewSalt(ctx, b.saltView, b.saltConfig)
 	if err != nil {
+		b.salt.Store((*salt.Salt)(nil))
 		return nil, err
 	}
-	b.salt = salt
-	return salt, nil
+
+	b.salt.Store(newSalt)
+	return newSalt, nil
 }
 
 func (b *Backend) GetHash(ctx context.Context, data string) (string, error) {
@@ -169,68 +180,82 @@ func (b *Backend) GetHash(ctx context.Context, data string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return audit.HashString(salt, data), nil
 }
 
-func (b *Backend) LogRequest(ctx context.Context, in *audit.LogInput) error {
-	b.fileLock.Lock()
-	defer b.fileLock.Unlock()
-
+func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
+	var writer io.Writer
 	switch b.path {
 	case "stdout":
-		return b.formatter.FormatRequest(ctx, os.Stdout, b.formatConfig, in)
+		writer = os.Stdout
 	case "discard":
-		return b.formatter.FormatRequest(ctx, ioutil.Discard, b.formatConfig, in)
-	}
-
-	if err := b.open(); err != nil {
-		return err
-	}
-
-	if err := b.formatter.FormatRequest(ctx, b.f, b.formatConfig, in); err == nil {
 		return nil
 	}
 
-	// Opportunistically try to re-open the FD, once per call
-	b.f.Close()
-	b.f = nil
-
-	if err := b.open(); err != nil {
+	buf := bytes.NewBuffer(make([]byte, 0, 2000))
+	err := b.formatter.FormatRequest(ctx, buf, b.formatConfig, in)
+	if err != nil {
 		return err
 	}
 
-	return b.formatter.FormatRequest(ctx, b.f, b.formatConfig, in)
+	return b.log(ctx, buf, writer)
 }
 
-func (b *Backend) LogResponse(ctx context.Context, in *audit.LogInput) error {
+func (b *Backend) log(ctx context.Context, buf *bytes.Buffer, writer io.Writer) error {
+	reader := bytes.NewReader(buf.Bytes())
 
 	b.fileLock.Lock()
-	defer b.fileLock.Unlock()
 
-	switch b.path {
-	case "stdout":
-		return b.formatter.FormatResponse(ctx, os.Stdout, b.formatConfig, in)
-	case "discard":
-		return b.formatter.FormatResponse(ctx, ioutil.Discard, b.formatConfig, in)
+	if writer == nil {
+		if err := b.open(); err != nil {
+			b.fileLock.Unlock()
+			return err
+		}
+		writer = b.f
 	}
 
-	if err := b.open(); err != nil {
+	if _, err := reader.WriteTo(writer); err == nil {
+		b.fileLock.Unlock()
+		return nil
+	} else if b.path == "stdout" {
+		b.fileLock.Unlock()
 		return err
 	}
 
-	if err := b.formatter.FormatResponse(ctx, b.f, b.formatConfig, in); err == nil {
-		return nil
-	}
-
-	// Opportunistically try to re-open the FD, once per call
+	// If writing to stdout there's no real reason to think anything would have
+	// changed so return above. Otherwise, opportunistically try to re-open the
+	// FD, once per call.
 	b.f.Close()
 	b.f = nil
 
 	if err := b.open(); err != nil {
+		b.fileLock.Unlock()
 		return err
 	}
 
-	return b.formatter.FormatResponse(ctx, b.f, b.formatConfig, in)
+	reader.Seek(0, io.SeekStart)
+	_, err := reader.WriteTo(writer)
+	b.fileLock.Unlock()
+	return err
+}
+
+func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
+	var writer io.Writer
+	switch b.path {
+	case "stdout":
+		writer = os.Stdout
+	case "discard":
+		return nil
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, 6000))
+	err := b.formatter.FormatResponse(ctx, buf, b.formatConfig, in)
+	if err != nil {
+		return err
+	}
+
+	return b.log(ctx, buf, writer)
 }
 
 // The file lock must be held before calling this
@@ -291,5 +316,5 @@ func (b *Backend) Reload(_ context.Context) error {
 func (b *Backend) Invalidate(_ context.Context) {
 	b.saltMutex.Lock()
 	defer b.saltMutex.Unlock()
-	b.salt = nil
+	b.salt.Store((*salt.Salt)(nil))
 }

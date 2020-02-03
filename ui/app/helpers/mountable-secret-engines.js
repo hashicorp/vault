@@ -1,5 +1,12 @@
 import { helper as buildHelper } from '@ember/component/helper';
 
+export const KMIP = {
+  displayName: 'KMIP',
+  value: 'kmip',
+  type: 'kmip',
+  category: 'generic',
+};
+
 const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'Active Directory',

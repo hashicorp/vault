@@ -76,14 +76,18 @@ func (client *Client) ListUsersForGroupWithCallback(request *ListUsersForGroupRe
 // ListUsersForGroupRequest is the request struct for api ListUsersForGroup
 type ListUsersForGroupRequest struct {
 	*requests.RpcRequest
-	GroupName string `position:"Query" name:"GroupName"`
+	Marker    string           `position:"Query" name:"Marker"`
+	MaxItems  requests.Integer `position:"Query" name:"MaxItems"`
+	GroupName string           `position:"Query" name:"GroupName"`
 }
 
 // ListUsersForGroupResponse is the response struct for api ListUsersForGroup
 type ListUsersForGroupResponse struct {
 	*responses.BaseResponse
-	RequestId string                   `json:"RequestId" xml:"RequestId"`
-	Users     UsersInListUsersForGroup `json:"Users" xml:"Users"`
+	RequestId   string                   `json:"RequestId" xml:"RequestId"`
+	IsTruncated bool                     `json:"IsTruncated" xml:"IsTruncated"`
+	Marker      string                   `json:"Marker" xml:"Marker"`
+	Users       UsersInListUsersForGroup `json:"Users" xml:"Users"`
 }
 
 // CreateListUsersForGroupRequest creates a request to invoke ListUsersForGroup API

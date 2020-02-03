@@ -7,8 +7,8 @@ import (
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 	rabbithole "github.com/michaelklishin/rabbit-hole"
 )
 
@@ -90,6 +90,25 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 				return nil, multierror.Append(errwrap.Wrapf("failed to delete user: {{err}}", rmErr), outerErr)
 			}
 			return nil, outerErr
+		}
+	}
+
+	// If the role had vhost topic permissions specified, assign those permissions
+	// to the created username for respective vhosts and exchange.
+	for vhost, permissions := range role.VHostTopics {
+		for exchange, permission := range permissions {
+			if _, err := client.UpdateTopicPermissionsIn(vhost, username, rabbithole.TopicPermissions{
+				Exchange: exchange,
+				Write:    permission.Write,
+				Read:     permission.Read,
+			}); err != nil {
+				outerErr := errwrap.Wrapf(fmt.Sprintf("failed to update topic permissions to the %q user: {{err}}", username), err)
+				// Delete the user because it's in an unknown state
+				if _, rmErr := client.DeleteUser(username); rmErr != nil {
+					return nil, multierror.Append(errwrap.Wrapf("failed to delete user: {{err}}", rmErr), outerErr)
+				}
+				return nil, outerErr
+			}
 		}
 	}
 

@@ -1,0 +1,14 @@
+.http-requests-table {
+  & .percent-change {
+    font-weight: 500;
+    font-size: $size-7;
+  }
+
+  & .arrow-up {
+    transform: rotate(45deg);
+  }
+
+  & .arrow-down {
+    transform: rotate(-45deg);
+  }
+}

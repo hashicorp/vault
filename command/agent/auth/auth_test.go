@@ -2,15 +2,16 @@ package auth
 
 import (
 	"context"
+	"net/http"
 	"testing"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
-	"github.com/hashicorp/vault/helper/logging"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -31,14 +32,14 @@ func newUserpassTestMethod(t *testing.T, client *api.Client) AuthMethod {
 	return &userpassTestMethod{}
 }
 
-func (u *userpassTestMethod) Authenticate(_ context.Context, client *api.Client) (string, map[string]interface{}, error) {
+func (u *userpassTestMethod) Authenticate(_ context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
 	_, err := client.Logical().Write("auth/userpass/users/foo", map[string]interface{}{
 		"password": "bar",
 	})
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
-	return "auth/userpass/login/foo", map[string]interface{}{
+	return "auth/userpass/login/foo", nil, map[string]interface{}{
 		"password": "bar",
 	}, nil
 }
@@ -87,7 +88,8 @@ consumption:
 	for {
 		select {
 		case <-ah.OutputCh:
-			// Nothing
+		case <-ah.TemplateTokenCh:
+		// Nothing
 		case <-time.After(stopTime.Sub(time.Now())):
 			if !closed {
 				cancelFunc()

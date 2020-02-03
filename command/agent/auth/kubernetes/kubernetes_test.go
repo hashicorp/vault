@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/auth"
-	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
 func TestKubernetesAuth_basic(t *testing.T) {
@@ -61,7 +61,7 @@ func TestKubernetesAuth_basic(t *testing.T) {
 				k.jwtData = tc.data
 			}
 
-			_, data, err := k.Authenticate(context.Background(), nil)
+			_, _, data, err := k.Authenticate(context.Background(), nil)
 			if err != nil && tc.e == nil {
 				t.Fatal(err)
 			}

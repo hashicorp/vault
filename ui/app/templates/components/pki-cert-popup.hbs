@@ -8,20 +8,16 @@
       </li>
       {{#if item.canRevoke}}
         <li class="action">
-          {{#confirm-action
-            confirmButtonClasses="button is-primary"
-            buttonClasses="link is-destroy"
-            onConfirmAction=(action "delete" item)
-            confirmMessage=(concat "Are you sure you want to revoke " item.id "?")
-            showConfirm=(get this (concat "shouldDelete-" (dot-to-dash item.id)))
-            class=(if (get this (concat "shouldDelete-" (dot-to-dash item.id))) "message is-block is-warning is-outline")
-            containerClasses="message-body is-block"
-            messageClasses="is-block"
-            confirmButtonText="Revoke"
-            data-test-cert-revoke-delete=item.id
-          }}
+          <ConfirmAction
+            @buttonClasses="link is-destroy"
+            @onConfirmAction={{action "delete" item}}
+            @confirmTitle="Revoke this cert?"
+            @confirmMessage="Any services using this cert may be affected."
+            @confirmButtonText="Revoke"
+            data-test-cert-revoke-delete={{item.id}}
+          >
             Revoke
-          {{/confirm-action}}
+          </ConfirmAction>
         </li>
       {{/if}}
     </ul>

@@ -16,6 +16,24 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
+
+{{#if capabilities.revoke.canUpdate}}
+  <Toolbar>
+    <ToolbarActions>
+      <ConfirmAction
+        @buttonClasses="toolbar-link"
+        @confirmTitle="Revoke this?"
+        @confirmMessage={{concat "All leases under this one will also be removed"}}
+        @confirmButtonText="Confirm"
+        @onConfirmAction={{action "revokeLease" model}}
+        data-test-lease-revoke="true"
+      >
+        Revoke lease
+      </ConfirmAction>
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
+
 <div class="field box is-fullwidth is-sideless is-paddingless is-marginless">
   {{#info-table-row label="Issue time" value=model.issueTime}}
     {{date-format model.issueTime 'MMM DD, YYYY hh:mm:ss A'}}
@@ -67,17 +85,3 @@
     </form>
   </div>
 {{/if}}
-<div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
-  <div class="field">{{!-- needs to be here to push over the button --}}</div>
-  {{#if capabilities.revoke.canUpdate}}
-    {{#confirm-action
-      onConfirmAction=(action "revokeLease" model)
-      confirmMessage= (concat "Are you sure you want to revoke this lease?")
-      confirmButtonText="Confirm revocation"
-      cancelButtonText="Cancel"
-      data-test-lease-revoke=true
-    }}
-      Revoke lease
-    {{/confirm-action}}
-  {{/if}}
-</div>

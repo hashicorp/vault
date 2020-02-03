@@ -33,7 +33,7 @@ module('Acceptance | policies/acl', function(hooks) {
   test('it allows deletion of policies with dots in names', async function(assert) {
     const POLICY = 'path "*" { capabilities = ["list"]}';
     let policyName = 'list.policy';
-    await consoleComponent.runCommands([`write sys/policies/acl/${policyName} policy='${POLICY}'`]);
+    await consoleComponent.runCommands([`write sys/policies/acl/${policyName} policy=${btoa(POLICY)}`]);
     await page.visit({ type: 'acl' });
     let policy = page.row.filterBy('name', policyName)[0];
     assert.ok(policy, 'policy is shown in the list');

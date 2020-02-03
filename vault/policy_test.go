@@ -414,3 +414,18 @@ path "/" {
 		t.Errorf("bad error: %s", err)
 	}
 }
+
+func TestPolicy_ParseBadSegmentWildcard(t *testing.T) {
+	_, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+path "foo/+*" {
+	capabilities = ["read"]
+}
+`))
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	if !strings.Contains(err.Error(), `path "foo/+*": invalid use of wildcards ('+*' is forbidden)`) {
+		t.Errorf("bad error: %s", err)
+	}
+}

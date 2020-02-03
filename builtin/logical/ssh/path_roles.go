@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -69,7 +69,7 @@ func pathListRoles(b *backend) *framework.Path {
 
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "roles/" + framework.GenericNameRegex("role"),
+		Pattern: "roles/" + framework.GenericNameWithAtRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
 			"role": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -93,7 +93,9 @@ func pathRoles(b *backend) *framework.Path {
 				credential is being generated for other users, Vault uses this admin
 				username to login to remote host and install the generated credential
 				for the other user.`,
-				DisplayName: "Admin Username",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Admin Username",
+				},
 			},
 			"default_user": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -102,7 +104,9 @@ func pathRoles(b *backend) *framework.Path {
 				Default username for which a credential will be generated.
 				When the endpoint 'creds/' is used without a username, this
 				value will be used as default username.`,
-				DisplayName: "Default Username",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Default Username",
+				},
 			},
 			"cidr_list": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -110,7 +114,9 @@ func pathRoles(b *backend) *framework.Path {
 				[Optional for Dynamic type] [Optional for OTP type] [Not applicable for CA type]
 				Comma separated list of CIDR blocks for which the role is applicable for.
 				CIDR blocks can belong to more than one role.`,
-				DisplayName: "CIDR List",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "CIDR List",
+				},
 			},
 			"exclude_cidr_list": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -119,7 +125,9 @@ func pathRoles(b *backend) *framework.Path {
 				Comma separated list of CIDR blocks. IP addresses belonging to these blocks are not
 				accepted by the role. This is particularly useful when big CIDR blocks are being used
 				by the role and certain parts of it needs to be kept out.`,
-				DisplayName: "Exclude CIDR List",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Exclude CIDR List",
+				},
 			},
 			"port": &framework.FieldSchema{
 				Type: framework.TypeInt,
@@ -129,7 +137,9 @@ func pathRoles(b *backend) *framework.Path {
 				play any role in creation of OTP. For 'otp' type, this is just a way
 				to inform client about the port number to use. Port number will be
 				returned to client by Vault server along with OTP.`,
-				DisplayValue: 22,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Value: 22,
+				},
 			},
 			"key_type": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -138,7 +148,9 @@ func pathRoles(b *backend) *framework.Path {
 				Type of key used to login to hosts. It can be either 'otp', 'dynamic' or 'ca'.
 				'otp' type requires agent to be installed in remote hosts.`,
 				AllowedValues: []interface{}{"otp", "dynamic", "ca"},
-				DisplayValue:  "ca",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Value: "ca",
+				},
 			},
 			"key_bits": &framework.FieldSchema{
 				Type: framework.TypeInt,
@@ -195,7 +207,9 @@ func pathRoles(b *backend) *framework.Path {
 				requested. The lease duration controls the expiration
 				of certificates issued by this backend. Defaults to
 				the value of max_ttl.`,
-				DisplayName: "TTL",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "TTL",
+				},
 			},
 			"max_ttl": &framework.FieldSchema{
 				Type: framework.TypeDurationSecond,
@@ -203,7 +217,9 @@ func pathRoles(b *backend) *framework.Path {
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				The maximum allowed lease duration
 				`,
-				DisplayName: "Max TTL",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Max TTL",
+				},
 			},
 			"allowed_critical_options": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -281,7 +297,9 @@ func pathRoles(b *backend) *framework.Path {
 				When false, the key ID will always be the token display name.
 				The key ID is logged by the SSH server and can be useful for auditing.
 				`,
-				DisplayName: "Allow User Key IDs",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Allow User Key IDs",
+				},
 			},
 			"key_id_format": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -292,7 +310,9 @@ func pathRoles(b *backend) *framework.Path {
 				the token used to make the request. '{{role_name}}' - The name of the role signing the request.
 				'{{public_key_hash}}' - A SHA256 checksum of the public key that is being signed.
 				`,
-				DisplayName: "Key ID Format",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Key ID Format",
+				},
 			},
 			"allowed_user_key_lengths": &framework.FieldSchema{
 				Type: framework.TypeMap,

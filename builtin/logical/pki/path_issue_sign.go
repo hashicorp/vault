@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathIssue(b *backend) *framework.Path {
@@ -188,6 +189,11 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 }
 
 func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
+	// If storing the certificate and on a performance standby, forward this request on to the primary
+	if !role.NoStore && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+		return nil, logical.ErrReadOnly
+	}
+
 	format := getFormat(data)
 	if format == "" {
 		return logical.ErrorResponse(
@@ -205,18 +211,17 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 			"error fetching CA certificate: %s", caErr)}
 	}
 
-	input := &dataBundle{
-		req:           req,
-		apiData:       data,
-		role:          role,
-		signingBundle: signingBundle,
+	input := &inputBundle{
+		req:     req,
+		apiData: data,
+		role:    role,
 	}
 	var parsedBundle *certutil.ParsedCertBundle
 	var err error
 	if useCSR {
-		parsedBundle, err = signCert(b, input, false, useCSRValues)
+		parsedBundle, err = signCert(b, input, signingBundle, false, useCSRValues)
 	} else {
-		parsedBundle, err = generateCert(ctx, b, input, false)
+		parsedBundle, err = generateCert(ctx, b, input, signingBundle, false)
 	}
 	if err != nil {
 		switch err.(type) {
@@ -224,6 +229,8 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 			return logical.ErrorResponse(err.Error()), nil
 		case errutil.InternalError:
 			return nil, err
+		default:
+			return nil, errwrap.Wrapf("error signing/generating certificate: {{err}}", err)
 		}
 	}
 

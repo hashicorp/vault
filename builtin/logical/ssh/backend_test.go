@@ -17,8 +17,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
 )
@@ -35,6 +35,7 @@ const (
 	testOTPKeyType       = "otp"
 	testDynamicKeyType   = "dynamic"
 	testCIDRList         = "127.0.0.1/32"
+	testAtRoleName       = "test@RoleName"
 	testDynamicRoleName  = "testDynamicRoleName"
 	testOTPRoleName      = "testOTPRoleName"
 	testKeyName          = "testKeyName"
@@ -256,6 +257,7 @@ func TestSSHBackend_Lookup(t *testing.T) {
 	resp2 := []string{testOTPRoleName}
 	resp3 := []string{testDynamicRoleName, testOTPRoleName}
 	resp4 := []string{testDynamicRoleName}
+	resp5 := []string{testAtRoleName}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		LogicalFactory: testingFactory,
@@ -269,6 +271,10 @@ func TestSSHBackend_Lookup(t *testing.T) {
 			testRoleDelete(t, testOTPRoleName),
 			testLookupRead(t, data, resp4),
 			testRoleDelete(t, testDynamicRoleName),
+			testLookupRead(t, data, resp1),
+			testRoleWrite(t, testAtRoleName, testDynamicRoleData),
+			testLookupRead(t, data, resp5),
+			testRoleDelete(t, testAtRoleName),
 			testLookupRead(t, data, resp1),
 		},
 	})
@@ -289,12 +295,29 @@ func TestSSHBackend_RoleList(t *testing.T) {
 			},
 		},
 	}
+	resp3 := map[string]interface{}{
+		"keys": []string{testAtRoleName, testOTPRoleName},
+		"key_info": map[string]interface{}{
+			testOTPRoleName: map[string]interface{}{
+				"key_type": testOTPKeyType,
+			},
+			testAtRoleName: map[string]interface{}{
+				"key_type": testOTPKeyType,
+			},
+		},
+	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleList(t, resp1),
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testRoleList(t, resp2),
+			testRoleWrite(t, testAtRoleName, testOTPRoleData),
+			testRoleList(t, resp3),
+			testRoleDelete(t, testAtRoleName),
+			testRoleList(t, resp2),
+			testRoleDelete(t, testOTPRoleName),
+			testRoleList(t, resp1),
 		},
 	})
 }
@@ -319,6 +342,8 @@ func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
 			testCredsWrite(t, testDynamicRoleName, data, false),
+			testRoleWrite(t, testAtRoleName, testDynamicRoleData),
+			testCredsWrite(t, testAtRoleName, data, false),
 		},
 	})
 }
@@ -343,6 +368,10 @@ func TestSSHBackend_OTPRoleCrud(t *testing.T) {
 			testRoleRead(t, testOTPRoleName, respOTPRoleData),
 			testRoleDelete(t, testOTPRoleName),
 			testRoleRead(t, testOTPRoleName, nil),
+			testRoleWrite(t, testAtRoleName, testOTPRoleData),
+			testRoleRead(t, testAtRoleName, respOTPRoleData),
+			testRoleDelete(t, testAtRoleName),
+			testRoleRead(t, testAtRoleName, nil),
 		},
 	})
 }
@@ -374,6 +403,10 @@ func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
 			testRoleRead(t, testDynamicRoleName, respDynamicRoleData),
 			testRoleDelete(t, testDynamicRoleName),
 			testRoleRead(t, testDynamicRoleName, nil),
+			testRoleWrite(t, testAtRoleName, testDynamicRoleData),
+			testRoleRead(t, testAtRoleName, respDynamicRoleData),
+			testRoleDelete(t, testAtRoleName),
+			testRoleRead(t, testAtRoleName, nil),
 		},
 	})
 }
@@ -405,6 +438,8 @@ func TestSSHBackend_OTPCreate(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testCredsWrite(t, testOTPRoleName, data, false),
+			testRoleWrite(t, testAtRoleName, testOTPRoleData),
+			testCredsWrite(t, testAtRoleName, data, false),
 		},
 	})
 }
@@ -1108,14 +1143,17 @@ func testRoleRead(t *testing.T, roleName string, expected map[string]interface{}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return fmt.Errorf("error decoding response:%s", err)
 			}
-			if roleName == testOTPRoleName {
+			switch d.KeyType {
+			case "otp":
 				if d.KeyType != expected["key_type"] || d.DefaultUser != expected["default_user"] || d.CIDRList != expected["cidr_list"] {
 					return fmt.Errorf("data mismatch. bad: %#v", resp)
 				}
-			} else {
+			case "dynamic":
 				if d.AdminUser != expected["admin_user"] || d.CIDRList != expected["cidr_list"] || d.KeyName != expected["key"] || d.KeyType != expected["key_type"] {
 					return fmt.Errorf("data mismatch. bad: %#v", resp)
 				}
+			default:
+				return fmt.Errorf("unknown key type. bad: %#v", resp)
 			}
 			return nil
 		},

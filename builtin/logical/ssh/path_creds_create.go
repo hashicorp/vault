@@ -8,8 +8,8 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type sshOTP struct {
@@ -20,7 +20,7 @@ type sshOTP struct {
 
 func pathCredsCreate(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "creds/" + framework.GenericNameRegex("role"),
+		Pattern: "creds/" + framework.GenericNameWithAtRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
 			"role": &framework.FieldSchema{
 				Type:        framework.TypeString,

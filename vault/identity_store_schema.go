@@ -106,10 +106,10 @@ func entitiesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					Field: "MergedEntityIDs",
 				},
 			},
-			"bucket_key_hash": &memdb.IndexSchema{
-				Name: "bucket_key_hash",
+			"bucket_key": &memdb.IndexSchema{
+				Name: "bucket_key",
 				Indexer: &memdb.StringFieldIndex{
-					Field: "BucketKeyHash",
+					Field: "BucketKey",
 				},
 			},
 			"namespace_id": &memdb.IndexSchema{
@@ -162,10 +162,10 @@ func groupsTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					Field: "ParentGroupIDs",
 				},
 			},
-			"bucket_key_hash": &memdb.IndexSchema{
-				Name: "bucket_key_hash",
+			"bucket_key": &memdb.IndexSchema{
+				Name: "bucket_key",
 				Indexer: &memdb.StringFieldIndex{
-					Field: "BucketKeyHash",
+					Field: "BucketKey",
 				},
 			},
 			"namespace_id": &memdb.IndexSchema{

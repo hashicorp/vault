@@ -29,6 +29,12 @@ import (
 )
 
 /*
+SessionVaribles maps session variables to their values.
+All defined session variables will be set once after a database connection is opened.
+*/
+type SessionVariables map[string]string
+
+/*
 A Connector represents a hdb driver in a fixed configuration.
 A Connector can be passed to sql.OpenDB (starting from go 1.10) allowing users to bypass a string based data source name.
 */
@@ -38,6 +44,7 @@ type Connector struct {
 	locale                         string
 	bufferSize, fetchSize, timeout int
 	tlsConfig                      *tls.Config
+	sessionVariables               SessionVariables
 }
 
 func newConnector() *Connector {
@@ -253,6 +260,21 @@ func (c *Connector) SetTLSConfig(tlsConfig *tls.Config) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.tlsConfig = tlsConfig
+	return nil
+}
+
+// SessionVariables returns the session variables stored in connector.
+func (c *Connector) SessionVariables() SessionVariables {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.sessionVariables
+}
+
+// SetSessionVariables sets the session varibles of the connector.
+func (c *Connector) SetSessionVariables(sessionVariables SessionVariables) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.sessionVariables = sessionVariables
 	return nil
 }
 

@@ -7,17 +7,23 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestTransit_Export_KeyVersion_ExportsCorrectVersion(t *testing.T) {
+	verifyExportsCorrectVersion(t, "encryption-key", "aes128-gcm96")
 	verifyExportsCorrectVersion(t, "encryption-key", "aes256-gcm96")
 	verifyExportsCorrectVersion(t, "encryption-key", "chacha20-poly1305")
 	verifyExportsCorrectVersion(t, "signing-key", "ecdsa-p256")
+	verifyExportsCorrectVersion(t, "signing-key", "ecdsa-p384")
+	verifyExportsCorrectVersion(t, "signing-key", "ecdsa-p521")
 	verifyExportsCorrectVersion(t, "signing-key", "ed25519")
+	verifyExportsCorrectVersion(t, "hmac-key", "aes128-gcm96")
 	verifyExportsCorrectVersion(t, "hmac-key", "aes256-gcm96")
 	verifyExportsCorrectVersion(t, "hmac-key", "chacha20-poly1305")
 	verifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p256")
+	verifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p384")
+	verifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p521")
 	verifyExportsCorrectVersion(t, "hmac-key", "ed25519")
 }
 
@@ -271,6 +277,8 @@ func TestTransit_Export_SigningDoesNotSupportSigning_ReturnsError(t *testing.T) 
 
 func TestTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t *testing.T) {
 	testTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t, "ecdsa-p256")
+	testTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t, "ecdsa-p384")
+	testTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t, "ecdsa-p521")
 	testTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t, "ed25519")
 }
 

@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathConfig(b *backend) *framework.Path {
-	return &framework.Path{
+	p := &framework.Path{
 		Pattern: "config",
 		Fields: map[string]*framework.FieldSchema{
 			"client_id": &framework.FieldSchema{
@@ -38,7 +38,8 @@ func pathConfig(b *backend) *framework.Path {
 			},
 			"policies": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
-				Description: "Comma-separated list of policies all authenticated users inherit",
+				Description: tokenutil.DeprecationText("token_policies"),
+				Deprecated:  true,
 			},
 		},
 
@@ -52,6 +53,16 @@ func pathConfig(b *backend) *framework.Path {
 
 		HelpSynopsis: pathSyn,
 	}
+
+	tokenutil.AddTokenFieldsWithAllowList(p.Fields, []string{
+		"token_bound_cidrs",
+		"token_no_default_policy",
+		"token_policies",
+		"token_type",
+		"token_ttl",
+		"token_num_uses",
+	})
+	return p
 }
 
 func (b *backend) pathConfigExistCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
@@ -121,11 +132,13 @@ func (b *backend) pathConfigCreateOrUpdate(ctx context.Context, req *logical.Req
 		cfg.Scope = data.Get("scope").(string)
 	}
 
-	val, ok = data.GetOk("policies")
-	if ok {
-		cfg.Policies = policyutil.ParsePolicies(val)
-	} else if req.Operation == logical.CreateOperation {
-		cfg.Policies = policyutil.ParsePolicies(data.Get("policies"))
+	if err := cfg.ParseTokenFields(req, data); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+	{
+		if err := tokenutil.UpgradeValue(data, "policies", "token_policies", &cfg.Policies, &cfg.TokenPolicies); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
 	}
 
 	// We want to normalize the service url to https://
@@ -162,38 +175,52 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data
 		return nil, nil
 	}
 
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"client_id":   config.ClientID,
-			"service_url": config.ServiceURL,
-			"app_id":      config.AppID,
-			"scope":       config.Scope,
-			"policies":    config.Policies,
-		},
+	d := map[string]interface{}{
+		"client_id":   config.ClientID,
+		"service_url": config.ServiceURL,
+		"app_id":      config.AppID,
+		"scope":       config.Scope,
+		"policies":    config.Policies,
 	}
-	return resp, nil
+	config.PopulateTokenData(d)
+	delete(d, "token_explicit_max_ttl")
+	delete(d, "token_max_ttl")
+	delete(d, "token_period")
+
+	if len(config.Policies) > 0 {
+		d["policies"] = d["token_policies"]
+	}
+
+	return &logical.Response{
+		Data: d,
+	}, nil
 }
 
 // Config returns the configuration for this backend.
 func (b *backend) Config(ctx context.Context, s logical.Storage) (*config, error) {
 	entry, err := s.Get(ctx, "config")
-
 	if err != nil {
 		return nil, err
 	}
-
-	var result config
-	if entry != nil {
-		if err := entry.DecodeJSON(&result); err != nil {
-			return nil, fmt.Errorf("error reading configuration: %s", err)
-		}
-		return &result, nil
+	if entry == nil {
+		return nil, nil
 	}
 
-	return nil, nil
+	var result config
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, fmt.Errorf("error reading configuration: %s", err)
+	}
+
+	if len(result.TokenPolicies) == 0 && len(result.Policies) > 0 {
+		result.TokenPolicies = result.Policies
+	}
+
+	return &result, nil
 }
 
 type config struct {
+	tokenutil.TokenParams
+
 	ClientID     string   `json:"client_id"`
 	ClientSecret string   `json:"client_secret"`
 	ServiceURL   string   `json:"service_url"`

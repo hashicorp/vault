@@ -9,4 +9,5 @@ export default Component.extend({
   baseKey: null,
   backendCrumb: null,
   model: null,
+  options: null,
 });

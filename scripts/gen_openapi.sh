@@ -31,11 +31,15 @@ vault auth enable aws
 vault auth enable azure
 vault auth enable centrify
 vault auth enable cert
+vault auth enable cf
 vault auth enable gcp
 vault auth enable github
 vault auth enable jwt
+vault auth enable kerberos
 vault auth enable kubernetes
 vault auth enable ldap
+vault auth enable oci
+vault auth enable oidc
 vault auth enable okta
 vault auth enable radius
 vault auth enable userpass
@@ -49,6 +53,7 @@ vault secrets enable cassandra
 vault secrets enable consul
 vault secrets enable database
 vault secrets enable gcp
+vault secrets enable gcpkms
 vault secrets enable kv
 vault secrets enable mongodb
 vault secrets enable mssql
@@ -61,7 +66,20 @@ vault secrets enable ssh
 vault secrets enable totp
 vault secrets enable transit
 
-curl -H "X-Vault-Token: root" "http://127.0.0.1:8200/v1/sys/internal/specs/openapi" > openapi.json
+# Enterprise backends
+VERSION=$(vault status -format=json | jq -r .version)
+
+if [[ $VERSION =~ prem|ent ]]
+then
+  vault secrets enable kmip
+fi
+
+# Output OpenAPI, optionally formatted
+if [ "$1" == "-p" ]; then
+  curl -H "X-Vault-Token: root" "http://127.0.0.1:8200/v1/sys/internal/specs/openapi" | jq > openapi.json
+else
+  curl -H "X-Vault-Token: root" "http://127.0.0.1:8200/v1/sys/internal/specs/openapi" > openapi.json
+fi
 
 kill $VAULT_PID
 sleep 1

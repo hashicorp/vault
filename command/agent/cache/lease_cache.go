@@ -13,19 +13,20 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	cachememdb "github.com/hashicorp/vault/command/agent/cache/cachememdb"
-	"github.com/hashicorp/vault/helper/base62"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/cryptoutil"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	nshelper "github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -141,12 +142,21 @@ func (c *LeaseCache) checkCacheForRequest(id string) (*SendResponse, error) {
 		return nil, err
 	}
 
-	return &SendResponse{
-		Response: &api.Response{
-			Response: resp,
-		},
-		ResponseBody: index.Response,
-	}, nil
+	sendResp, err := NewSendResponse(&api.Response{Response: resp}, index.Response)
+	if err != nil {
+		c.logger.Error("failed to create new send response", "error", err)
+		return nil, err
+	}
+	sendResp.CacheMeta.Hit = true
+
+	respTime, err := http.ParseTime(resp.Header.Get("Date"))
+	if err != nil {
+		c.logger.Error("failed to parse cached response date", "error", err)
+		return nil, err
+	}
+	sendResp.CacheMeta.Age = time.Now().Sub(respTime)
+
+	return sendResp, nil
 }
 
 // Send performs a cache lookup on the incoming request. If it's a cache hit,
@@ -192,11 +202,11 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	// in between this upgrade so we can simply return that. Otherwise, this request
 	// will be the one performing the cache write.
 	if sendResp != nil {
-		c.logger.Debug("returning cached response", "path", req.Request.URL.Path)
+		c.logger.Debug("returning cached response", "method", req.Request.Method, "path", req.Request.URL.Path)
 		return sendResp, nil
 	}
 
-	c.logger.Debug("forwarding request", "path", req.Request.URL.Path, "method", req.Request.Method)
+	c.logger.Debug("forwarding request", "method", req.Request.Method, "path", req.Request.URL.Path)
 
 	// Pass the request down and get a response
 	resp, err := c.proxier.Send(ctx, req)
@@ -244,7 +254,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 
 	// Fast path for responses with no secrets
 	if secret == nil {
-		c.logger.Debug("pass-through response; no secret in response", "path", req.Request.URL.Path, "method", req.Request.Method)
+		c.logger.Debug("pass-through response; no secret in response", "method", req.Request.Method, "path", req.Request.URL.Path)
 		return resp, nil
 	}
 
@@ -255,14 +265,14 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return nil, err
 	}
 	if !secret.Renewable && !tokenRenewable {
-		c.logger.Debug("pass-through response; secret not renewable", "path", req.Request.URL.Path, "method", req.Request.Method)
+		c.logger.Debug("pass-through response; secret not renewable", "method", req.Request.Method, "path", req.Request.URL.Path)
 		return resp, nil
 	}
 
 	var renewCtxInfo *cachememdb.ContextInfo
 	switch {
 	case secret.LeaseID != "":
-		c.logger.Debug("processing lease response", "path", req.Request.URL.Path, "method", req.Request.Method)
+		c.logger.Debug("processing lease response", "method", req.Request.Method, "path", req.Request.URL.Path)
 		entry, err := c.db.Get(cachememdb.IndexNameToken, req.Token)
 		if err != nil {
 			return nil, err
@@ -270,7 +280,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		// If the lease belongs to a token that is not managed by the agent,
 		// return the response without caching it.
 		if entry == nil {
-			c.logger.Debug("pass-through lease response; token not managed by agent", "path", req.Request.URL.Path, "method", req.Request.Method)
+			c.logger.Debug("pass-through lease response; token not managed by agent", "method", req.Request.Method, "path", req.Request.URL.Path)
 			return resp, nil
 		}
 
@@ -281,7 +291,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		index.LeaseToken = req.Token
 
 	case secret.Auth != nil:
-		c.logger.Debug("processing auth response", "path", req.Request.URL.Path, "method", req.Request.Method)
+		c.logger.Debug("processing auth response", "method", req.Request.Method, "path", req.Request.URL.Path)
 
 		// Check if this token creation request resulted in a non-orphan token, and if so
 		// correctly set the parentCtx to the request's token context.
@@ -294,11 +304,11 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 			// If parent token is not managed by the agent, child shouldn't be
 			// either.
 			if entry == nil {
-				c.logger.Debug("pass-through auth response; parent token not managed by agent", "path", req.Request.URL.Path, "method", req.Request.Method)
+				c.logger.Debug("pass-through auth response; parent token not managed by agent", "method", req.Request.Method, "path", req.Request.URL.Path)
 				return resp, nil
 			}
 
-			c.logger.Debug("setting parent context", "path", req.Request.URL.Path, "method", req.Request.Method)
+			c.logger.Debug("setting parent context", "method", req.Request.Method, "path", req.Request.URL.Path)
 			parentCtx = entry.RenewCtxInfo.Ctx
 
 			entry.TokenParent = req.Token
@@ -311,7 +321,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	default:
 		// We shouldn't be hitting this, but will err on the side of caution and
 		// simply proxy.
-		c.logger.Debug("pass-through response; secret without lease and token", "path", req.Request.URL.Path, "method", req.Request.Method)
+		c.logger.Debug("pass-through response; secret without lease and token", "method", req.Request.Method, "path", req.Request.URL.Path)
 		return resp, nil
 	}
 
@@ -332,10 +342,10 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	// Set the index's Response
 	index.Response = respBytes.Bytes()
 
-	// Store the index ID in the renewer context
+	// Store the index ID in the lifetimewatcher context
 	renewCtx := context.WithValue(renewCtxInfo.Ctx, contextIndexID, index.ID)
 
-	// Store the renewer context in the index
+	// Store the lifetime watcher context in the index
 	index.RenewCtxInfo = &cachememdb.ContextInfo{
 		Ctx:        renewCtx,
 		CancelFunc: renewCtxInfo.CancelFunc,
@@ -343,7 +353,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	}
 
 	// Store the index in the cache
-	c.logger.Debug("storing response into the cache", "path", req.Request.URL.Path, "method", req.Request.Method)
+	c.logger.Debug("storing response into the cache", "method", req.Request.Method, "path", req.Request.URL.Path)
 	err = c.db.Set(index)
 	if err != nil {
 		c.logger.Error("failed to cache the proxied response", "error", err)
@@ -368,7 +378,7 @@ func (c *LeaseCache) createCtxInfo(ctx context.Context) *cachememdb.ContextInfo 
 func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index, req *SendRequest, secret *api.Secret) {
 	defer func() {
 		id := ctx.Value(contextIndexID).(string)
-		c.logger.Debug("evicting index from cache", "id", id, "path", req.Request.URL.Path, "method", req.Request.Method)
+		c.logger.Debug("evicting index from cache", "id", id, "method", req.Request.Method, "path", req.Request.URL.Path)
 		err := c.db.Evict(cachememdb.IndexNameID, id)
 		if err != nil {
 			c.logger.Error("failed to evict index", "id", id, "error", err)
@@ -378,23 +388,23 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 
 	client, err := c.client.Clone()
 	if err != nil {
-		c.logger.Error("failed to create API client in the renewer", "error", err)
+		c.logger.Error("failed to create API client in the lifetime watcher", "error", err)
 		return
 	}
 	client.SetToken(req.Token)
 	client.SetHeaders(req.Request.Header)
 
-	renewer, err := client.NewRenewer(&api.RenewerInput{
+	watcher, err := client.NewLifetimeWatcher(&api.LifetimeWatcherInput{
 		Secret: secret,
 	})
 	if err != nil {
-		c.logger.Error("failed to create secret renewer", "error", err)
+		c.logger.Error("failed to create secret lifetime watcher", "error", err)
 		return
 	}
 
-	c.logger.Debug("initiating renewal", "path", req.Request.URL.Path, "method", req.Request.Method)
-	go renewer.Renew()
-	defer renewer.Stop()
+	c.logger.Debug("initiating renewal", "method", req.Request.Method, "path", req.Request.URL.Path)
+	go watcher.Start()
+	defer watcher.Stop()
 
 	for {
 		select {
@@ -402,9 +412,9 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 			// This is the case which captures context cancellations from token
 			// and leases. Since all the contexts are derived from the agent's
 			// context, this will also cover the shutdown scenario.
-			c.logger.Debug("context cancelled; stopping renewer", "path", req.Request.URL.Path)
+			c.logger.Debug("context cancelled; stopping lifetime watcher", "path", req.Request.URL.Path)
 			return
-		case err := <-renewer.DoneCh():
+		case err := <-watcher.DoneCh():
 			// This case covers renewal completion and renewal errors
 			if err != nil {
 				c.logger.Error("failed to renew secret", "error", err)
@@ -412,7 +422,7 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 			}
 			c.logger.Debug("renewal halted; evicting from cache", "path", req.Request.URL.Path)
 			return
-		case <-renewer.RenewCh():
+		case <-watcher.RenewCh():
 			c.logger.Debug("secret renewed", "path", req.Request.URL.Path)
 		case <-index.RenewCtxInfo.DoneCh:
 			// This case indicates the renewal process to shutdown and evict
@@ -511,7 +521,7 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 		}
 
 		// Find all the cached entries which has the given request path and
-		// cancel the contexts of all the respective renewers
+		// cancel the contexts of all the respective lifetime watchers
 		indexes, err := c.db.GetByPrefix(cachememdb.IndexNameRequestPath, in.Namespace, in.RequestPath)
 		if err != nil {
 			return err
@@ -543,7 +553,8 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 			return errors.New("token accessor not provided")
 		}
 
-		// Get the cached index and cancel the corresponding renewer context
+		// Get the cached index and cancel the corresponding lifetime watcher
+		// context
 		index, err := c.db.Get(cachememdb.IndexNameTokenAccessor, in.TokenAccessor)
 		if err != nil {
 			return err
@@ -561,7 +572,8 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 			return errors.New("lease not provided")
 		}
 
-		// Get the cached index and cancel the corresponding renewer context
+		// Get the cached index and cancel the corresponding lifetime watcher
+		// context
 		index, err := c.db.Get(cachememdb.IndexNameLease, in.Lease)
 		if err != nil {
 			return err
@@ -687,7 +699,8 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 			return false, fmt.Errorf("expected token in the request body to be string")
 		}
 
-		// Kill the renewers of all the leases attached to the revoked token
+		// Kill the lifetime watchers of all the leases attached to the revoked
+		// token
 		indexes, err := c.db.GetByPrefix(cachememdb.IndexNameLeaseToken, token)
 		if err != nil {
 			return false, err
@@ -696,7 +709,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 			index.RenewCtxInfo.CancelFunc()
 		}
 
-		// Kill the renewer of the revoked token
+		// Kill the lifetime watchers of the revoked token
 		index, err := c.db.Get(cachememdb.IndexNameToken, token)
 		if err != nil {
 			return false, err
@@ -705,9 +718,9 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 			return true, nil
 		}
 
-		// Indicate the renewer goroutine for this index to return. This will
-		// not affect the child tokens because the context is not getting
-		// cancelled.
+		// Indicate the lifetime watcher goroutine for this index to return.
+		// This will not affect the child tokens because the context is not
+		// getting cancelled.
 		close(index.RenewCtxInfo.DoneCh)
 
 		// Clear the parent references of the revoked token in the entries
@@ -752,7 +765,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		// Trim the URL path to get the request path prefix
 		prefix := strings.TrimPrefix(path, vaultPathLeaseRevokeForce)
 		// Get all the cache indexes that use the request path containing the
-		// prefix and cancel the renewer context of each.
+		// prefix and cancel the lifetime watcher context of each.
 		indexes, err := c.db.GetByPrefix(cachememdb.IndexNameLease, prefix)
 		if err != nil {
 			return false, err
@@ -771,7 +784,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		// Trim the URL path to get the request path prefix
 		prefix := strings.TrimPrefix(path, vaultPathLeaseRevokePrefix)
 		// Get all the cache indexes that use the request path containing the
-		// prefix and cancel the renewer context of each.
+		// prefix and cancel the lifetime watcher context of each.
 		indexes, err := c.db.GetByPrefix(cachememdb.IndexNameLease, prefix)
 		if err != nil {
 			return false, err

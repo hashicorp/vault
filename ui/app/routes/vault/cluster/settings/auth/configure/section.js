@@ -4,7 +4,6 @@ import Route from '@ember/routing/route';
 import RSVP from 'rsvp';
 import DS from 'ember-data';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
-import { getOwner } from '@ember/application';
 
 export default Route.extend(UnloadModelRoute, {
   modelPath: 'model.model',
@@ -19,6 +18,7 @@ export default Route.extend(UnloadModelRoute, {
       'github-configuration': 'auth-config/github',
       'gcp-configuration': 'auth-config/gcp',
       'jwt-configuration': 'auth-config/jwt',
+      'oidc-configuration': 'auth-config/oidc',
       'kubernetes-configuration': 'auth-config/kubernetes',
       'ldap-configuration': 'auth-config/ldap',
       'okta-configuration': 'auth-config/okta',
@@ -35,8 +35,7 @@ export default Route.extend(UnloadModelRoute, {
     const { method } = this.paramsFor('vault.cluster.settings.auth.configure');
     const backend = this.modelFor('vault.cluster.settings.auth.configure');
     const modelType = this.modelType(backend.type, section_name);
-    let owner = getOwner(this);
-    return this.pathHelp.getNewModel(modelType, owner, method);
+    return this.pathHelp.getNewModel(modelType, method, backend.apiPath);
   },
 
   model(params) {

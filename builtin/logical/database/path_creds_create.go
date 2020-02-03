@@ -5,28 +5,46 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathCredsCreate(b *databaseBackend) *framework.Path {
-	return &framework.Path{
-		Pattern: "creds/" + framework.GenericNameRegex("name"),
-		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Name of the role.",
+func pathCredsCreate(b *databaseBackend) []*framework.Path {
+	return []*framework.Path{
+		&framework.Path{
+			Pattern: "creds/" + framework.GenericNameRegex("name"),
+			Fields: map[string]*framework.FieldSchema{
+				"name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Name of the role.",
+				},
 			},
-		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathCredsCreateRead(),
-		},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation: b.pathCredsCreateRead(),
+			},
 
-		HelpSynopsis:    pathCredsCreateReadHelpSyn,
-		HelpDescription: pathCredsCreateReadHelpDesc,
+			HelpSynopsis:    pathCredsCreateReadHelpSyn,
+			HelpDescription: pathCredsCreateReadHelpDesc,
+		},
+		&framework.Path{
+			Pattern: "static-creds/" + framework.GenericNameRegex("name"),
+			Fields: map[string]*framework.FieldSchema{
+				"name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Name of the static role.",
+				},
+			},
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation: b.pathStaticCredsRead(),
+			},
+
+			HelpSynopsis:    pathStaticCredsReadHelpSyn,
+			HelpDescription: pathStaticCredsReadHelpDesc,
+		},
 	}
 }
 
@@ -99,6 +117,41 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 	}
 }
 
+func (b *databaseBackend) pathStaticCredsRead() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		name := data.Get("name").(string)
+
+		role, err := b.StaticRole(ctx, req.Storage, name)
+		if err != nil {
+			return nil, err
+		}
+		if role == nil {
+			return logical.ErrorResponse("unknown role: %s", name), nil
+		}
+
+		dbConfig, err := b.DatabaseConfig(ctx, req.Storage, role.DBName)
+		if err != nil {
+			return nil, err
+		}
+
+		// If role name isn't in the database's allowed roles, send back a
+		// permission denied.
+		if !strutil.StrListContains(dbConfig.AllowedRoles, "*") && !strutil.StrListContainsGlob(dbConfig.AllowedRoles, name) {
+			return nil, fmt.Errorf("%q is not an allowed role", name)
+		}
+
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"username":            role.StaticAccount.Username,
+				"password":            role.StaticAccount.Password,
+				"ttl":                 role.StaticAccount.PasswordTTL().Seconds(),
+				"rotation_period":     role.StaticAccount.RotationPeriod.Seconds(),
+				"last_vault_rotation": role.StaticAccount.LastVaultRotation,
+			},
+		}, nil
+	}
+}
+
 const pathCredsCreateReadHelpSyn = `
 Request database credentials for a certain role.
 `
@@ -107,4 +160,15 @@ const pathCredsCreateReadHelpDesc = `
 This path reads database credentials for a certain role. The
 database credentials will be generated on demand and will be automatically
 revoked when the lease is up.
+`
+
+const pathStaticCredsReadHelpSyn = `
+Request database credentials for a certain static role. These credentials are
+rotated periodically.
+`
+
+const pathStaticCredsReadHelpDesc = `
+This path reads database credentials for a certain static role. The database
+credentials are rotated periodically according to their configuration, and will
+return the same password until they are rotated.
 `

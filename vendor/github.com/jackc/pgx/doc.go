@@ -236,6 +236,13 @@ nil, then TLS will be disabled. If it is present, then it will be used to
 configure the TLS connection. This allows total configuration of the TLS
 connection.
 
+pgx has never explicitly supported Postgres < 9.6's `ssl_renegotiation` option.
+As of v3.3.0, it doesn't send `ssl_renegotiation: 0` either to support Redshift
+(https://github.com/jackc/pgx/pull/476). If you need TLS Renegotiation,
+consider supplying `ConnConfig.TLSConfig` with a non-zero `Renegotiation`
+value and if it's not the default on your server, set `ssl_renegotiation`
+via `ConnConfig.RuntimeParams`.
+
 Logging
 
 pgx defines a simple logger interface. Connections optionally accept a logger

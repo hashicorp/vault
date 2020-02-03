@@ -2,7 +2,7 @@
   <MessageError @model={{model}} />
   <div class="control-group-header {{if isSuccess 'is-success'}}">
     <p>
-      <ICon @glyph={{if isSuccess "checkmark-circled" "control-lock"}} @size={{16}} />
+      <Icon @glyph={{if isSuccess "check-circle-fill" "lock-closed"}} />
       <strong data-test-banner-prefix>{{bannerPrefix}}</strong>
       <span data-test-banner-text>{{bannerText}}</span>
     </p>
@@ -42,7 +42,7 @@
       <div class="authorizations" data-test-authorizations>
         {{#if (gt model.authorizations.length 0)}}
         <span class="has-text-success">
-          <ICon @glyph="checkmark-circled-outline" @size={{16}} />
+          <Icon @glyph="check-circle-outline" />
         </span>
           Already approved by
           {{#each model.authorizations as |authorization index|}}
@@ -54,7 +54,7 @@
           {{/each}}
         {{else}}
           <span class="has-text-grey">
-            <ICon @glyph="checkmark-circled-outline" @size={{16}} />
+            <Icon @glyph="check-circle-outline" />
           </span>
           Awaiting authorization.
         {{/if}}
@@ -74,7 +74,7 @@
       {{#if model.canAuthorize}}
         {{#if (or model.approved currentUserHasAuthorized)}}
           {{#link-to 'vault.cluster.access.control-groups'class="button" data-test-back-link=true}}
-            <ICon @glyph="chevron-left" @size=10 /> Back
+            <Chevron @direction="left" /> Back
           {{/link-to}}
         {{else}}
           <button

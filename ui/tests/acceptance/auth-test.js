@@ -73,12 +73,14 @@ module('Acceptance | auth', function(hooks) {
       let body = JSON.parse(lastRequest.requestBody);
       if (backend.type === 'token') {
         assert.ok(
-          Object.keys(lastRequest.requestHeaders).includes('X-Vault-Token'),
+          Object.keys(lastRequest.requestHeaders).includes('x-vault-token'),
           'token uses vault token header'
         );
       } else if (backend.type === 'github') {
         assert.ok(Object.keys(body).includes('token'), 'GitHub includes token');
       } else if (backend.type === 'jwt' || backend.type === 'oidc') {
+        let authReq = this.server.passthroughRequests[this.server.passthroughRequests.length - 2];
+        body = JSON.parse(authReq.requestBody);
         assert.ok(Object.keys(body).includes('jwt'), `${backend.type} includes jwt`);
         assert.ok(Object.keys(body).includes('role'), `${backend.type} includes role`);
       } else {

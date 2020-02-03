@@ -17,22 +17,32 @@ type CAConfig struct {
 	// and maps).
 	Config map[string]interface{}
 
+	// State is read-only data that the provider might have persisted for use
+	// after restart or leadership transition. For example this might include
+	// UUIDs of resources it has created. Setting this when writing a
+	// configuration is an error.
+	State map[string]string
+
 	CreateIndex uint64
 	ModifyIndex uint64
 }
 
 // CommonCAProviderConfig is the common options available to all CA providers.
 type CommonCAProviderConfig struct {
-	LeafCertTTL time.Duration
+	LeafCertTTL      time.Duration
+	SkipValidate     bool
+	CSRMaxPerSecond  float32
+	CSRMaxConcurrent int
 }
 
 // ConsulCAProviderConfig is the config for the built-in Consul CA provider.
 type ConsulCAProviderConfig struct {
 	CommonCAProviderConfig `mapstructure:",squash"`
 
-	PrivateKey     string
-	RootCert       string
-	RotationPeriod time.Duration
+	PrivateKey          string
+	RootCert            string
+	RotationPeriod      time.Duration
+	IntermediateCertTTL time.Duration
 }
 
 // ParseConsulCAConfig takes a raw config map and returns a parsed
@@ -41,7 +51,6 @@ func ParseConsulCAConfig(raw map[string]interface{}) (*ConsulCAProviderConfig, e
 	var config ConsulCAProviderConfig
 	decodeConf := &mapstructure.DecoderConfig{
 		DecodeHook:       mapstructure.StringToTimeDurationHookFunc(),
-		ErrorUnused:      true,
 		Result:           &config,
 		WeaklyTypedInput: true,
 	}

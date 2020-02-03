@@ -3,13 +3,13 @@ package gcpauth
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"encoding/json"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-gcp-common/gcputil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathConfig(b *GcpAuthBackend) *framework.Path {
@@ -21,7 +21,9 @@ func pathConfig(b *GcpAuthBackend) *framework.Path {
 				Description: `
 Google credentials JSON that Vault will use to verify users against GCP APIs.
 If not specified, will use application default credentials`,
-				DisplayName: "Credentials",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Credentials",
+				},
 			},
 			"google_certs_endpoint": {
 				Type: framework.TypeString,
@@ -40,38 +42,50 @@ Deprecated. This field does nothing and be removed in a future release`,
 	}
 }
 
-func (b *GcpAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	// Validate we didn't get extraneous fields
-	if err := validateFields(req, data); err != nil {
+func (b *GcpAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	if err := validateFields(req, d); err != nil {
 		return nil, logical.CodedError(422, err.Error())
 	}
 
-	config, err := b.config(ctx, req.Storage)
+	c, err := b.config(ctx, req.Storage)
 
 	if err != nil {
 		return nil, err
 	}
-	if config == nil {
-		config = &gcpConfig{}
+	if c == nil {
+		c = &gcpConfig{}
 	}
 
-	if err := config.Update(data); err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("could not update config: %v", err)), nil
-	}
-
-	entry, err := logical.StorageEntryJSON("config", config)
+	changed, err := c.Update(d)
 	if err != nil {
-		return nil, err
+		return nil, logical.CodedError(400, err.Error())
 	}
 
-	if err := req.Storage.Put(ctx, entry); err != nil {
-		return nil, err
+	// Only do the following if the config is different
+	if changed {
+		// Generate a new storage entry
+		entry, err := logical.StorageEntryJSON("config", c)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to generate JSON configuration: {{err}}", err)
+		}
+
+		// Save the storage entry
+		if err := req.Storage.Put(ctx, entry); err != nil {
+			return nil, errwrap.Wrapf("failed to persist configuration to storage: {{err}}", err)
+		}
+
+		// Invalidate existing client so it reads the new configuration
+		b.ClearCaches()
 	}
 
 	return nil, nil
 }
 
-func (b *GcpAuthBackend) pathConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *GcpAuthBackend) pathConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	if err := validateFields(req, d); err != nil {
+		return nil, logical.CodedError(422, err.Error())
+	}
+
 	config, err := b.config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -139,19 +153,28 @@ func (config *gcpConfig) formatAndMarshalCredentials() ([]byte, error) {
 }
 
 // Update sets gcpConfig values parsed from the FieldData.
-func (config *gcpConfig) Update(data *framework.FieldData) error {
-	credentialsJson := data.Get("credentials").(string)
-	if credentialsJson != "" {
-		creds, err := gcputil.Credentials(credentialsJson)
-		if err != nil {
-			return fmt.Errorf("error reading google credentials from given JSON: %v", err)
-		}
-		if len(creds.PrivateKeyId) == 0 {
-			return errors.New("google credentials not found from given JSON")
-		}
-		config.Credentials = creds
+func (c *gcpConfig) Update(d *framework.FieldData) (bool, error) {
+	if d == nil {
+		return false, nil
 	}
-	return nil
+
+	changed := false
+
+	if v, ok := d.GetOk("credentials"); ok {
+		creds, err := gcputil.Credentials(v.(string))
+		if err != nil {
+			return false, errwrap.Wrapf("failed to read credentials: {{err}}", err)
+		}
+
+		if len(creds.PrivateKeyId) == 0 {
+			return false, errors.New("missing private key in credentials")
+		}
+
+		c.Credentials = creds
+		changed = true
+	}
+
+	return changed, nil
 }
 
 // config reads the backend's gcpConfig from storage.

@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/posener/complete"
 )
 
@@ -155,6 +155,17 @@ func (b *BaseCommand) PredictVaultPlugins(pluginTypes ...consts.PluginType) comp
 // for more information and restrictions.
 func (b *BaseCommand) PredictVaultPolicies() complete.Predictor {
 	return NewPredict().VaultPolicies()
+}
+
+func (b *BaseCommand) PredictVaultDebugTargets() complete.Predictor {
+	return complete.PredictSet(
+		"config",
+		"host",
+		"metrics",
+		"pprof",
+		"replication-status",
+		"server-status",
+	)
 }
 
 // VaultFiles returns a predictor for Vault "files". This is a public API for

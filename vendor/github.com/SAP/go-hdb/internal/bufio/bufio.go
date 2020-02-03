@@ -303,6 +303,9 @@ func (w *Writer) WriteZeroes(cnt int) {
 			j = len(w.b)
 		}
 		n, _ := w.wr.Write(w.b[:j])
+		if n != j {
+			return
+		}
 		i += n
 	}
 }

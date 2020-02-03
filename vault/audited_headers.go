@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // N.B.: While we could use textproto to get the canonical mime header, HTTP/2

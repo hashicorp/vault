@@ -5,10 +5,11 @@ package spanner
 
 import (
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	_struct "github.com/golang/protobuf/ptypes/struct"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -20,7 +21,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 // A modification to one or more Cloud Spanner rows.  Mutations can be
 // applied to a Cloud Spanner database by sending them in a
@@ -141,9 +142,9 @@ func (m *Mutation) GetDelete() *Mutation_Delete {
 	return nil
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*Mutation) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _Mutation_OneofMarshaler, _Mutation_OneofUnmarshaler, _Mutation_OneofSizer, []interface{}{
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*Mutation) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
 		(*Mutation_Insert)(nil),
 		(*Mutation_Update)(nil),
 		(*Mutation_InsertOrUpdate)(nil),
@@ -152,132 +153,15 @@ func (*Mutation) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) erro
 	}
 }
 
-func _Mutation_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*Mutation)
-	// operation
-	switch x := m.Operation.(type) {
-	case *Mutation_Insert:
-		b.EncodeVarint(1<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Insert); err != nil {
-			return err
-		}
-	case *Mutation_Update:
-		b.EncodeVarint(2<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Update); err != nil {
-			return err
-		}
-	case *Mutation_InsertOrUpdate:
-		b.EncodeVarint(3<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.InsertOrUpdate); err != nil {
-			return err
-		}
-	case *Mutation_Replace:
-		b.EncodeVarint(4<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Replace); err != nil {
-			return err
-		}
-	case *Mutation_Delete_:
-		b.EncodeVarint(5<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Delete); err != nil {
-			return err
-		}
-	case nil:
-	default:
-		return fmt.Errorf("Mutation.Operation has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _Mutation_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*Mutation)
-	switch tag {
-	case 1: // operation.insert
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Mutation_Write)
-		err := b.DecodeMessage(msg)
-		m.Operation = &Mutation_Insert{msg}
-		return true, err
-	case 2: // operation.update
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Mutation_Write)
-		err := b.DecodeMessage(msg)
-		m.Operation = &Mutation_Update{msg}
-		return true, err
-	case 3: // operation.insert_or_update
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Mutation_Write)
-		err := b.DecodeMessage(msg)
-		m.Operation = &Mutation_InsertOrUpdate{msg}
-		return true, err
-	case 4: // operation.replace
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Mutation_Write)
-		err := b.DecodeMessage(msg)
-		m.Operation = &Mutation_Replace{msg}
-		return true, err
-	case 5: // operation.delete
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Mutation_Delete)
-		err := b.DecodeMessage(msg)
-		m.Operation = &Mutation_Delete_{msg}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _Mutation_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*Mutation)
-	// operation
-	switch x := m.Operation.(type) {
-	case *Mutation_Insert:
-		s := proto.Size(x.Insert)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Mutation_Update:
-		s := proto.Size(x.Update)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Mutation_InsertOrUpdate:
-		s := proto.Size(x.InsertOrUpdate)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Mutation_Replace:
-		s := proto.Size(x.Replace)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Mutation_Delete_:
-		s := proto.Size(x.Delete)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
-}
-
-// Arguments to [insert][google.spanner.v1.Mutation.insert], [update][google.spanner.v1.Mutation.update], [insert_or_update][google.spanner.v1.Mutation.insert_or_update], and
+// Arguments to [insert][google.spanner.v1.Mutation.insert],
+// [update][google.spanner.v1.Mutation.update],
+// [insert_or_update][google.spanner.v1.Mutation.insert_or_update], and
 // [replace][google.spanner.v1.Mutation.replace] operations.
 type Mutation_Write struct {
 	// Required. The table whose rows will be written.
 	Table string `protobuf:"bytes,1,opt,name=table,proto3" json:"table,omitempty"`
-	// The names of the columns in [table][google.spanner.v1.Mutation.Write.table] to be written.
+	// The names of the columns in
+	// [table][google.spanner.v1.Mutation.Write.table] to be written.
 	//
 	// The list of columns must contain enough columns to allow
 	// Cloud Spanner to derive values for all primary key columns in the
@@ -286,11 +170,13 @@ type Mutation_Write struct {
 	// The values to be written. `values` can contain more than one
 	// list of values. If it does, then multiple rows are written, one
 	// for each entry in `values`. Each list in `values` must have
-	// exactly as many entries as there are entries in [columns][google.spanner.v1.Mutation.Write.columns]
-	// above. Sending multiple lists is equivalent to sending multiple
-	// `Mutation`s, each containing one `values` entry and repeating
-	// [table][google.spanner.v1.Mutation.Write.table] and [columns][google.spanner.v1.Mutation.Write.columns]. Individual values in each list are
-	// encoded as described [here][google.spanner.v1.TypeCode].
+	// exactly as many entries as there are entries in
+	// [columns][google.spanner.v1.Mutation.Write.columns] above. Sending
+	// multiple lists is equivalent to sending multiple `Mutation`s, each
+	// containing one `values` entry and repeating
+	// [table][google.spanner.v1.Mutation.Write.table] and
+	// [columns][google.spanner.v1.Mutation.Write.columns]. Individual values in
+	// each list are encoded as described [here][google.spanner.v1.TypeCode].
 	Values               []*_struct.ListValue `protobuf:"bytes,3,rep,name=values,proto3" json:"values,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
 	XXX_unrecognized     []byte               `json:"-"`
@@ -347,9 +233,10 @@ func (m *Mutation_Write) GetValues() []*_struct.ListValue {
 type Mutation_Delete struct {
 	// Required. The table whose rows will be deleted.
 	Table string `protobuf:"bytes,1,opt,name=table,proto3" json:"table,omitempty"`
-	// Required. The primary keys of the rows within [table][google.spanner.v1.Mutation.Delete.table] to delete.
-	// Delete is idempotent. The transaction will succeed even if some or all
-	// rows do not exist.
+	// Required. The primary keys of the rows within
+	// [table][google.spanner.v1.Mutation.Delete.table] to delete. Delete is
+	// idempotent. The transaction will succeed even if some or all rows do not
+	// exist.
 	KeySet               *KeySet  `protobuf:"bytes,2,opt,name=key_set,json=keySet,proto3" json:"key_set,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`

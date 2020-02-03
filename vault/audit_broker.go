@@ -10,6 +10,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type backendEntry struct {
@@ -86,7 +87,7 @@ func (a *AuditBroker) GetHash(ctx context.Context, name string, input string) (s
 
 // LogRequest is used to ensure all the audit backends have an opportunity to
 // log the given request and that *at least one* succeeds.
-func (a *AuditBroker) LogRequest(ctx context.Context, in *audit.LogInput, headersConfig *AuditedHeadersConfig) (ret error) {
+func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, headersConfig *AuditedHeadersConfig) (ret error) {
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
 	a.RLock()
 	defer a.RUnlock()
@@ -148,7 +149,7 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *audit.LogInput, header
 
 // LogResponse is used to ensure all the audit backends have an opportunity to
 // log the given response and that *at least one* succeeds.
-func (a *AuditBroker) LogResponse(ctx context.Context, in *audit.LogInput, headersConfig *AuditedHeadersConfig) (ret error) {
+func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, headersConfig *AuditedHeadersConfig) (ret error) {
 	defer metrics.MeasureSince([]string{"audit", "log_response"}, time.Now())
 	a.RLock()
 	defer a.RUnlock()

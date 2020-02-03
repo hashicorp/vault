@@ -1,7 +1,7 @@
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 import ClusterRoute from 'vault/mixins/cluster-route';
-import ListRoute from 'vault/mixins/list-route';
+import ListRoute from 'core/mixins/list-route';
 
 export default Route.extend(ClusterRoute, ListRoute, {
   version: service(),

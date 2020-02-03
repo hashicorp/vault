@@ -19,6 +19,7 @@ package hotp
 
 import (
 	"github.com/pquerna/otp"
+	"io"
 
 	"crypto/hmac"
 	"crypto/rand"
@@ -146,11 +147,17 @@ type GenerateOpts struct {
 	AccountName string
 	// Size in size of the generated Secret. Defaults to 10 bytes.
 	SecretSize uint
+	// Secret to store. Defaults to a randomly generated secret of SecretSize.  You should generally leave this empty.
+	Secret []byte
 	// Digits to request. Defaults to 6.
 	Digits otp.Digits
 	// Algorithm to use for HMAC. Defaults to SHA1.
 	Algorithm otp.Algorithm
+	// Reader to use for generating HOTP Key.
+	Rand io.Reader
 }
+
+var b32NoPadding = base32.StdEncoding.WithPadding(base32.NoPadding)
 
 // Generate creates a new HOTP Key.
 func Generate(opts GenerateOpts) (*otp.Key, error) {
@@ -171,16 +178,24 @@ func Generate(opts GenerateOpts) (*otp.Key, error) {
 		opts.Digits = otp.DigitsSix
 	}
 
+	if opts.Rand == nil {
+		opts.Rand = rand.Reader
+	}
+
 	// otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXP&issuer=Example
 
 	v := url.Values{}
-	secret := make([]byte, opts.SecretSize)
-	_, err := rand.Read(secret)
-	if err != nil {
-		return nil, err
+	if len(opts.Secret) != 0 {
+		v.Set("secret", b32NoPadding.EncodeToString(opts.Secret))
+	} else {
+		secret := make([]byte, opts.SecretSize)
+		_, err := opts.Rand.Read(secret)
+		if err != nil {
+			return nil, err
+		}
+		v.Set("secret", b32NoPadding.EncodeToString(secret))
 	}
 
-	v.Set("secret", strings.TrimRight(base32.StdEncoding.EncodeToString(secret), "="))
 	v.Set("issuer", opts.Issuer)
 	v.Set("algorithm", opts.Algorithm.String())
 	v.Set("digits", opts.Digits.String())

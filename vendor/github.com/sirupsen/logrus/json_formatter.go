@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"runtime"
 )
 
 type fieldKey string
@@ -34,12 +35,19 @@ type JSONFormatter struct {
 	// As an example:
 	// formatter := &JSONFormatter{
 	//   	FieldMap: FieldMap{
-	// 		 FieldKeyTime: "@timestamp",
+	// 		 FieldKeyTime:  "@timestamp",
 	// 		 FieldKeyLevel: "@level",
-	// 		 FieldKeyMsg: "@message",
+	// 		 FieldKeyMsg:   "@message",
+	// 		 FieldKeyFunc:  "@caller",
 	//    },
 	// }
 	FieldMap FieldMap
+
+	// CallerPrettyfier can be set by the user to modify the content
+	// of the function and file keys in the json data when ReportCaller is
+	// activated. If any of the returned value is the empty string the
+	// corresponding key will be removed from json fields.
+	CallerPrettyfier func(*runtime.Frame) (function string, file string)
 
 	// PrettyPrint will indent all json logs
 	PrettyPrint bool
@@ -47,7 +55,7 @@ type JSONFormatter struct {
 
 // Format renders a single log entry
 func (f *JSONFormatter) Format(entry *Entry) ([]byte, error) {
-	data := make(Fields, len(entry.Data)+3)
+	data := make(Fields, len(entry.Data)+4)
 	for k, v := range entry.Data {
 		switch v := v.(type) {
 		case error:
@@ -65,7 +73,7 @@ func (f *JSONFormatter) Format(entry *Entry) ([]byte, error) {
 		data = newData
 	}
 
-	prefixFieldClashes(data, f.FieldMap)
+	prefixFieldClashes(data, f.FieldMap, entry.HasCaller())
 
 	timestampFormat := f.TimestampFormat
 	if timestampFormat == "" {
@@ -80,6 +88,19 @@ func (f *JSONFormatter) Format(entry *Entry) ([]byte, error) {
 	}
 	data[f.FieldMap.resolve(FieldKeyMsg)] = entry.Message
 	data[f.FieldMap.resolve(FieldKeyLevel)] = entry.Level.String()
+	if entry.HasCaller() {
+		funcVal := entry.Caller.Function
+		fileVal := fmt.Sprintf("%s:%d", entry.Caller.File, entry.Caller.Line)
+		if f.CallerPrettyfier != nil {
+			funcVal, fileVal = f.CallerPrettyfier(entry.Caller)
+		}
+		if funcVal != "" {
+			data[f.FieldMap.resolve(FieldKeyFunc)] = funcVal
+		}
+		if fileVal != "" {
+			data[f.FieldMap.resolve(FieldKeyFile)] = fileVal
+		}
+	}
 
 	var b *bytes.Buffer
 	if entry.Buffer != nil {
@@ -93,7 +114,7 @@ func (f *JSONFormatter) Format(entry *Entry) ([]byte, error) {
 		encoder.SetIndent("", "  ")
 	}
 	if err := encoder.Encode(data); err != nil {
-		return nil, fmt.Errorf("Failed to marshal fields to JSON, %v", err)
+		return nil, fmt.Errorf("failed to marshal fields to JSON, %v", err)
 	}
 
 	return b.Bytes(), nil

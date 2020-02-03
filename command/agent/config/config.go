@@ -8,43 +8,56 @@ import (
 	"strings"
 	"time"
 
+	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/errwrap"
-	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/parseutil"
-
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/mitchellh/mapstructure"
 )
 
 // Config is the configuration for the vault server.
 type Config struct {
-	AutoAuth      *AutoAuth `hcl:"auto_auth"`
-	ExitAfterAuth bool      `hcl:"exit_after_auth"`
-	PidFile       string    `hcl:"pid_file"`
-	Cache         *Cache    `hcl:"cache"`
-	Vault         *Vault    `hcl:"vault"`
+	AutoAuth      *AutoAuth                  `hcl:"auto_auth"`
+	ExitAfterAuth bool                       `hcl:"exit_after_auth"`
+	PidFile       string                     `hcl:"pid_file"`
+	Listeners     []*Listener                `hcl:"listeners"`
+	Cache         *Cache                     `hcl:"cache"`
+	Vault         *Vault                     `hcl:"vault"`
+	Templates     []*ctconfig.TemplateConfig `hcl:"templates"`
 }
 
+// Vault contains configuration for connnecting to Vault servers
 type Vault struct {
-	Address       string `hcl:"address"`
-	CACert        string `hcl:"ca_cert"`
-	CAPath        string `hcl:"ca_path"`
-	TLSSkipVerify bool   `hcl:"tls_skip_verify"`
-	ClientCert    string `hcl:"client_cert"`
-	ClientKey     string `hcl:"client_key"`
+	Address          string      `hcl:"address"`
+	CACert           string      `hcl:"ca_cert"`
+	CAPath           string      `hcl:"ca_path"`
+	TLSSkipVerify    bool        `hcl:"-"`
+	TLSSkipVerifyRaw interface{} `hcl:"tls_skip_verify"`
+	ClientCert       string      `hcl:"client_cert"`
+	ClientKey        string      `hcl:"client_key"`
+	TLSServerName    string      `hcl:"tls_server_name"`
 }
 
+// Cache contains any configuration needed for Cache mode
 type Cache struct {
-	UseAutoAuthToken bool        `hcl:"use_auto_auth_token"`
-	Listeners        []*Listener `hcl:"listeners"`
+	UseAutoAuthTokenRaw     interface{} `hcl:"use_auto_auth_token"`
+	UseAutoAuthToken        bool `hcl:"-"`
+	UseAutoAuthTokenEnforce bool `hcl:"-"`
 }
 
+// Listener contains configuration for any Vault Agent listeners
 type Listener struct {
 	Type   string
 	Config map[string]interface{}
 }
 
+// RequireRequestHeader is a listener configuration option
+const RequireRequestHeader = "require_request_header"
+
+// AutoAuth is the configured authentication method and sinks
 type AutoAuth struct {
 	Method *Method `hcl:"-"`
 	Sinks  []*Sink `hcl:"sinks"`
@@ -54,14 +67,17 @@ type AutoAuth struct {
 	EnableReauthOnNewCredentials bool `hcl:"enable_reauth_on_new_credentials"`
 }
 
+// Method represents the configuration for the authentication backend
 type Method struct {
 	Type       string
 	MountPath  string        `hcl:"mount_path"`
 	WrapTTLRaw interface{}   `hcl:"wrap_ttl"`
 	WrapTTL    time.Duration `hcl:"-"`
+	Namespace  string        `hcl:"namespace"`
 	Config     map[string]interface{}
 }
 
+// Sink defines a location to write the authenticated token
 type Sink struct {
 	Type       string
 	WrapTTLRaw interface{}   `hcl:"wrap_ttl"`
@@ -75,7 +91,7 @@ type Sink struct {
 
 // LoadConfig loads the configuration at the given path, regardless if
 // its a file or directory.
-func LoadConfig(path string, logger log.Logger) (*Config, error) {
+func LoadConfig(path string) (*Config, error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -112,9 +128,37 @@ func LoadConfig(path string, logger log.Logger) (*Config, error) {
 		return nil, errwrap.Wrapf("error parsing 'auto_auth': {{err}}", err)
 	}
 
-	err = parseCache(&result, list)
-	if err != nil {
+	if err := parseListeners(&result, list); err != nil {
+		return nil, errwrap.Wrapf("error parsing 'listeners': {{err}}", err)
+	}
+
+	if err := parseCache(&result, list); err != nil {
 		return nil, errwrap.Wrapf("error parsing 'cache':{{err}}", err)
+	}
+
+	if err := parseTemplates(&result, list); err != nil {
+		return nil, errwrap.Wrapf("error parsing 'template': {{err}}", err)
+	}
+
+	if result.Cache != nil {
+		if len(result.Listeners) < 1 {
+			return nil, fmt.Errorf("at least one listener required when cache enabled")
+		}
+
+		if result.Cache.UseAutoAuthToken {
+			if result.AutoAuth == nil {
+				return nil, fmt.Errorf("cache.use_auto_auth_token is true but auto_auth not configured")
+			}
+			if result.AutoAuth.Method.WrapTTL > 0 {
+				return nil, fmt.Errorf("cache.use_auto_auth_token is true and auto_auth uses wrapping")
+			}
+		}
+	}
+
+	if result.AutoAuth != nil {
+		if len(result.AutoAuth.Sinks) == 0 && (result.Cache == nil || !result.Cache.UseAutoAuthToken) {
+			return nil, fmt.Errorf("auto_auth requires at least one sink or cache.use_auto_auth_token=true ")
+		}
 	}
 
 	err = parseVault(&result, list)
@@ -145,6 +189,13 @@ func parseVault(result *Config, list *ast.ObjectList) error {
 		return err
 	}
 
+	if v.TLSSkipVerifyRaw != nil {
+		v.TLSSkipVerify, err = parseutil.ParseBool(v.TLSSkipVerifyRaw)
+		if err != nil {
+			return err
+		}
+	}
+
 	result.Vault = &v
 
 	return nil
@@ -170,19 +221,27 @@ func parseCache(result *Config, list *ast.ObjectList) error {
 		return err
 	}
 
+	if c.UseAutoAuthTokenRaw != nil {
+		c.UseAutoAuthToken, err = parseutil.ParseBool(c.UseAutoAuthTokenRaw)
+		if err != nil {
+			// Could be a value of "force" instead of "true"/"false"
+			switch c.UseAutoAuthTokenRaw.(type) {
+			case string:
+				v := c.UseAutoAuthTokenRaw.(string)
+
+				if !strings.EqualFold(v, "force") {
+					return fmt.Errorf("value of 'use_auto_auth_token' can be either true/false/force, %q is an invalid option", c.UseAutoAuthTokenRaw)
+				}
+				c.UseAutoAuthToken = true
+				c.UseAutoAuthTokenEnforce = true
+
+			default:
+				return err
+			}
+		}
+	}
+
 	result.Cache = &c
-
-	subs, ok := item.Val.(*ast.ObjectType)
-	if !ok {
-		return fmt.Errorf("could not parse %q as an object", name)
-	}
-	subList := subs.List
-
-	err = parseListeners(result, subList)
-	if err != nil {
-		return errwrap.Wrapf("error parsing 'listener' stanzas: {{err}}", err)
-	}
-
 	return nil
 }
 
@@ -190,9 +249,6 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 	name := "listener"
 
 	listenerList := list.Filter(name)
-	if len(listenerList.Items) < 1 {
-		return fmt.Errorf("at least one %q block is required", name)
-	}
 
 	var listeners []*Listener
 	for _, item := range listenerList.Items {
@@ -225,7 +281,7 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 		})
 	}
 
-	result.Cache.Listeners = listeners
+	result.Listeners = listeners
 
 	return nil
 }
@@ -234,8 +290,11 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 	name := "auto_auth"
 
 	autoAuthList := list.Filter(name)
-	if len(autoAuthList.Items) != 1 {
-		return fmt.Errorf("one and only one %q block is required", name)
+	if len(autoAuthList.Items) == 0 {
+		return nil
+	}
+	if len(autoAuthList.Items) > 1 {
+		return fmt.Errorf("at most one %q block is allowed", name)
 	}
 
 	// Get our item
@@ -257,16 +316,22 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 	if err := parseMethod(result, subList); err != nil {
 		return errwrap.Wrapf("error parsing 'method': {{err}}", err)
 	}
+	if a.Method == nil {
+		return fmt.Errorf("no 'method' block found")
+	}
 
 	if err := parseSinks(result, subList); err != nil {
 		return errwrap.Wrapf("error parsing 'sink' stanzas: {{err}}", err)
 	}
 
-	switch {
-	case a.Method == nil:
-		return fmt.Errorf("no 'method' block found")
-	case len(a.Sinks) == 0:
-		return fmt.Errorf("at least one 'sink' block must be provided")
+	if result.AutoAuth.Method.WrapTTL > 0 {
+		if len(result.AutoAuth.Sinks) != 1 {
+			return fmt.Errorf("error parsing auto_auth: wrapping enabled on auth method and 0 or many sinks defined")
+		}
+
+		if result.AutoAuth.Sinks[0].WrapTTL > 0 {
+			return fmt.Errorf("error parsing auto_auth: wrapping enabled both on auth method and sink")
+		}
 	}
 
 	return nil
@@ -312,6 +377,9 @@ func parseMethod(result *Config, list *ast.ObjectList) error {
 		m.WrapTTLRaw = nil
 	}
 
+	// Canonicalize namespace path if provided
+	m.Namespace = namespace.Canonicalize(m.Namespace)
+
 	result.AutoAuth.Method = &m
 	return nil
 }
@@ -321,7 +389,7 @@ func parseSinks(result *Config, list *ast.ObjectList) error {
 
 	sinkList := list.Filter(name)
 	if len(sinkList.Items) < 1 {
-		return fmt.Errorf("at least one %q block is required", name)
+		return nil
 	}
 
 	var ts []*Sink
@@ -375,5 +443,67 @@ func parseSinks(result *Config, list *ast.ObjectList) error {
 	}
 
 	result.AutoAuth.Sinks = ts
+	return nil
+}
+
+func parseTemplates(result *Config, list *ast.ObjectList) error {
+	name := "template"
+
+	templateList := list.Filter(name)
+	if len(templateList.Items) < 1 {
+		return nil
+	}
+
+	var tcs []*ctconfig.TemplateConfig
+
+	for _, item := range templateList.Items {
+		var shadow interface{}
+		if err := hcl.DecodeObject(&shadow, item.Val); err != nil {
+			return fmt.Errorf("error decoding config: %s", err)
+		}
+
+		// Convert to a map and flatten the keys we want to flatten
+		parsed, ok := shadow.(map[string]interface{})
+		if !ok {
+			return errors.New("error converting config")
+		}
+
+		// flatten the wait field. The initial "wait" value, if given, is a
+		// []map[string]interface{}, but we need it to be map[string]interface{}.
+		// Consul Template has a method flattenKeys that walks all of parsed and
+		// flattens every key. For Vault Agent, we only care about the wait input.
+		// Only one wait stanza is supported, however Consul Template does not error
+		// with multiple instead it flattens them down, with last value winning.
+		// Here we take the last element of the parsed["wait"] slice to keep
+		// consistency with Consul Template behavior.
+		wait, ok := parsed["wait"].([]map[string]interface{})
+		if ok {
+			parsed["wait"] = wait[len(wait)-1]
+		}
+
+		var tc ctconfig.TemplateConfig
+
+		// Use mapstructure to populate the basic config fields
+		var md mapstructure.Metadata
+		decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+			DecodeHook: mapstructure.ComposeDecodeHookFunc(
+				ctconfig.StringToFileModeFunc(),
+				ctconfig.StringToWaitDurationHookFunc(),
+				mapstructure.StringToSliceHookFunc(","),
+				mapstructure.StringToTimeDurationHookFunc(),
+			),
+			ErrorUnused: true,
+			Metadata:    &md,
+			Result:      &tc,
+		})
+		if err != nil {
+			return errors.New("mapstructure decoder creation failed")
+		}
+		if err := decoder.Decode(parsed); err != nil {
+			return err
+		}
+		tcs = append(tcs, &tc)
+	}
+	result.Templates = tcs
 	return nil
 }

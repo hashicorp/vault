@@ -76,12 +76,12 @@ func (client *Client) UpdateUserWithCallback(request *UpdateUserRequest, callbac
 // UpdateUserRequest is the request struct for api UpdateUser
 type UpdateUserRequest struct {
 	*requests.RpcRequest
-	UserName       string `position:"Query" name:"UserName"`
 	NewUserName    string `position:"Query" name:"NewUserName"`
 	NewDisplayName string `position:"Query" name:"NewDisplayName"`
 	NewMobilePhone string `position:"Query" name:"NewMobilePhone"`
-	NewEmail       string `position:"Query" name:"NewEmail"`
 	NewComments    string `position:"Query" name:"NewComments"`
+	NewEmail       string `position:"Query" name:"NewEmail"`
+	UserName       string `position:"Query" name:"UserName"`
 }
 
 // UpdateUserResponse is the response struct for api UpdateUser

@@ -8,6 +8,7 @@ export default Component.extend({
   store: service(),
   version: null,
   useDefaultTrigger: false,
+  onRefresh() {},
 
   deleteVersionPath: maybeQueryRecord(
     'capabilities',
@@ -52,7 +53,8 @@ export default Component.extend({
     deleteVersion(deleteType = 'destroy') {
       return this.store
         .adapterFor('secret-v2-version')
-        .v2DeleteOperation(this.store, this.version.id, deleteType);
+        .v2DeleteOperation(this.store, this.version.id, deleteType)
+        .then(this.onRefresh);
     },
   },
 });

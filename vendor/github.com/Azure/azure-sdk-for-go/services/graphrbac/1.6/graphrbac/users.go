@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/Azure/go-autorest/autorest/validation"
+	"github.com/Azure/go-autorest/tracing"
 	"net/http"
 )
 
@@ -45,6 +46,16 @@ func NewUsersClientWithBaseURI(baseURI string, tenantID string) UsersClient {
 // Parameters:
 // parameters - parameters to create a user.
 func (client UsersClient) Create(ctx context.Context, parameters UserCreateParameters) (result User, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/UsersClient.Create")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: parameters,
 			Constraints: []validation.Constraint{{Target: "parameters.AccountEnabled", Name: validation.Null, Rule: true, Chain: nil},
@@ -101,8 +112,8 @@ func (client UsersClient) CreatePreparer(ctx context.Context, parameters UserCre
 // CreateSender sends the Create request. The method will close the
 // http.Response Body if it receives an error.
 func (client UsersClient) CreateSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // CreateResponder handles the response to the Create request. The method always
@@ -122,6 +133,16 @@ func (client UsersClient) CreateResponder(resp *http.Response) (result User, err
 // Parameters:
 // upnOrObjectID - the object ID or principal name of the user to delete.
 func (client UsersClient) Delete(ctx context.Context, upnOrObjectID string) (result autorest.Response, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/UsersClient.Delete")
+		defer func() {
+			sc := -1
+			if result.Response != nil {
+				sc = result.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.DeletePreparer(ctx, upnOrObjectID)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.UsersClient", "Delete", nil, "Failure preparing request")
@@ -166,8 +187,8 @@ func (client UsersClient) DeletePreparer(ctx context.Context, upnOrObjectID stri
 // DeleteSender sends the Delete request. The method will close the
 // http.Response Body if it receives an error.
 func (client UsersClient) DeleteSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // DeleteResponder handles the response to the Delete request. The method always
@@ -186,6 +207,16 @@ func (client UsersClient) DeleteResponder(resp *http.Response) (result autorest.
 // Parameters:
 // upnOrObjectID - the object ID or principal name of the user for which to get information.
 func (client UsersClient) Get(ctx context.Context, upnOrObjectID string) (result User, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/UsersClient.Get")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetPreparer(ctx, upnOrObjectID)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.UsersClient", "Get", nil, "Failure preparing request")
@@ -230,8 +261,8 @@ func (client UsersClient) GetPreparer(ctx context.Context, upnOrObjectID string)
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
 func (client UsersClient) GetSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // GetResponder handles the response to the Get request. The method always
@@ -252,6 +283,16 @@ func (client UsersClient) GetResponder(resp *http.Response) (result User, err er
 // objectID - the object ID of the user for which to get group membership.
 // parameters - user filtering parameters.
 func (client UsersClient) GetMemberGroups(ctx context.Context, objectID string, parameters UserGetMemberGroupsParameters) (result UserGetMemberGroupsResult, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/UsersClient.GetMemberGroups")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: parameters,
 			Constraints: []validation.Constraint{{Target: "parameters.SecurityEnabledOnly", Name: validation.Null, Rule: true, Chain: nil}}}}); err != nil {
@@ -304,8 +345,8 @@ func (client UsersClient) GetMemberGroupsPreparer(ctx context.Context, objectID 
 // GetMemberGroupsSender sends the GetMemberGroups request. The method will close the
 // http.Response Body if it receives an error.
 func (client UsersClient) GetMemberGroupsSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // GetMemberGroupsResponder handles the response to the GetMemberGroups request. The method always
@@ -325,7 +366,17 @@ func (client UsersClient) GetMemberGroupsResponder(resp *http.Response) (result 
 // Parameters:
 // filter - the filter to apply to the operation.
 func (client UsersClient) List(ctx context.Context, filter string) (result UserListResultPage, err error) {
-	result.fn = func(lastResult UserListResult) (UserListResult, error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/UsersClient.List")
+		defer func() {
+			sc := -1
+			if result.ulr.Response.Response != nil {
+				sc = result.ulr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	result.fn = func(ctx context.Context, lastResult UserListResult) (UserListResult, error) {
 		if lastResult.OdataNextLink == nil || len(to.String(lastResult.OdataNextLink)) < 1 {
 			return UserListResult{}, nil
 		}
@@ -377,8 +428,8 @@ func (client UsersClient) ListPreparer(ctx context.Context, filter string) (*htt
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client UsersClient) ListSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -396,6 +447,16 @@ func (client UsersClient) ListResponder(resp *http.Response) (result UserListRes
 
 // ListComplete enumerates all values, automatically crossing page boundaries as required.
 func (client UsersClient) ListComplete(ctx context.Context, filter string) (result UserListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/UsersClient.List")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.List(ctx, filter)
 	return
 }
@@ -404,6 +465,16 @@ func (client UsersClient) ListComplete(ctx context.Context, filter string) (resu
 // Parameters:
 // nextLink - next link for the list operation.
 func (client UsersClient) ListNext(ctx context.Context, nextLink string) (result UserListResult, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/UsersClient.ListNext")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.ListNextPreparer(ctx, nextLink)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.UsersClient", "ListNext", nil, "Failure preparing request")
@@ -448,8 +519,8 @@ func (client UsersClient) ListNextPreparer(ctx context.Context, nextLink string)
 // ListNextSender sends the ListNext request. The method will close the
 // http.Response Body if it receives an error.
 func (client UsersClient) ListNextSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // ListNextResponder handles the response to the ListNext request. The method always
@@ -470,6 +541,16 @@ func (client UsersClient) ListNextResponder(resp *http.Response) (result UserLis
 // upnOrObjectID - the object ID or principal name of the user to update.
 // parameters - parameters to update an existing user.
 func (client UsersClient) Update(ctx context.Context, upnOrObjectID string, parameters UserUpdateParameters) (result autorest.Response, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/UsersClient.Update")
+		defer func() {
+			sc := -1
+			if result.Response != nil {
+				sc = result.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.UpdatePreparer(ctx, upnOrObjectID, parameters)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.UsersClient", "Update", nil, "Failure preparing request")
@@ -516,8 +597,8 @@ func (client UsersClient) UpdatePreparer(ctx context.Context, upnOrObjectID stri
 // UpdateSender sends the Update request. The method will close the
 // http.Response Body if it receives an error.
 func (client UsersClient) UpdateSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // UpdateResponder handles the response to the Update request. The method always

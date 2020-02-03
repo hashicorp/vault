@@ -1,0 +1,28 @@
+{{#if (or alwaysRender value)}}
+  <div class="column is-one-quarter">
+    <span class="is-label has-text-grey-dark" data-test-row-label="{{label}}">{{label}}</span>
+  </div>
+  <div class="column is-flex">
+    {{#if (has-block)}}
+      {{yield}}
+    {{else if valueIsBoolean}}
+      {{#if value}}
+        <Icon
+          aria-hidden="true"
+          class="icon-true"
+          @size="l"
+          @glyph="check-circle-outline"
+        /> Yes
+      {{else}}
+        <Icon
+          aria-hidden="true"
+          class="icon-false"
+          @size="l"
+          @glyph="cancel-square-outline"
+        /> No
+      {{/if}}
+    {{else}}
+      <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>
+    {{/if}}
+  </div>
+{{/if}}

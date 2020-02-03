@@ -4,19 +4,17 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"crypto/x509"
-	"fmt"
-	"net"
 	"net/http"
 	"testing"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
-	"github.com/hashicorp/vault/physical/inmem"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
+	"github.com/hashicorp/vault/vault/cluster"
 )
 
 var (
@@ -102,42 +100,40 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	// Wait for core to become active
 	TestWaitActive(t, cores[0].Core)
 
+	clusterListener := cores[0].getClusterListener()
+	clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{cores[0].Core})
+	addrs := cores[0].getClusterListener().Addrs()
+
 	// Use this to have a valid config after sealing since ClusterTLSConfig returns nil
 	checkListenersFunc := func(expectFail bool) {
-		cores[0].clusterListener.AddClient(requestForwardingALPN, &requestForwardingClusterClient{cores[0].Core})
+		dialer := clusterListener.GetDialerFunc(context.Background(), consts.RequestForwardingALPN)
+		for i := range cores[0].Listeners {
 
-		parsedCert := cores[0].localClusterParsedCert.Load().(*x509.Certificate)
-		dialer := cores[0].getGRPCDialer(context.Background(), requestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
-		for _, ln := range cores[0].Listeners {
-			tcpAddr, ok := ln.Addr().(*net.TCPAddr)
-			if !ok {
-				t.Fatalf("%s not a TCP port", tcpAddr.String())
-			}
-
-			netConn, err := dialer(fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+105), 0)
-			conn := netConn.(*tls.Conn)
+			clnAddr := addrs[i]
+			netConn, err := dialer(clnAddr.String(), 0)
 			if err != nil {
 				if expectFail {
-					t.Logf("testing %s:%d unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+105)
+					t.Logf("testing %s unsuccessful as expected", clnAddr)
 					continue
 				}
-				t.Fatalf("error: %v\nlisteners are\n%#v\n%#v\n", err, cores[0].Listeners[0], cores[0].Listeners[0])
+				t.Fatalf("error: %v\ncluster listener is %s", err, clnAddr)
 			}
 			if expectFail {
-				t.Fatalf("testing %s:%d not unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+105)
+				t.Fatalf("testing %s not unsuccessful as expected", clnAddr)
 			}
+			conn := netConn.(*tls.Conn)
 			err = conn.Handshake()
 			if err != nil {
 				t.Fatal(err)
 			}
 			connState := conn.ConnectionState()
 			switch {
-			case connState.Version != tls.VersionTLS12:
+			case connState.Version != tls.VersionTLS12 && connState.Version != tls.VersionTLS13:
 				t.Fatal("version mismatch")
-			case connState.NegotiatedProtocol != requestForwardingALPN || !connState.NegotiatedProtocolIsMutual:
+			case connState.NegotiatedProtocol != consts.RequestForwardingALPN || !connState.NegotiatedProtocolIsMutual:
 				t.Fatal("bad protocol negotiation")
 			}
-			t.Logf("testing %s:%d successful", tcpAddr.IP.String(), tcpAddr.Port+105)
+			t.Logf("testing %s successful", clnAddr)
 		}
 	}
 
@@ -159,7 +155,8 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	checkListenersFunc(true)
 
 	// After this period it should be active again
-	time.Sleep(manualStepDownSleepPeriod)
+	TestWaitActive(t, cores[0].Core)
+	cores[0].getClusterListener().AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{cores[0].Core})
 	checkListenersFunc(false)
 
 	err = cores[0].Core.Seal(cluster.RootToken)
@@ -175,11 +172,25 @@ func TestCluster_ForwardRequests(t *testing.T) {
 	// Make this nicer for tests
 	manualStepDownSleepPeriod = 5 * time.Second
 
-	testCluster_ForwardRequestsCommon(t)
+	t.Run("tcpLayer", func(t *testing.T) {
+		testCluster_ForwardRequestsCommon(t, nil)
+	})
+
+	t.Run("inmemLayer", func(t *testing.T) {
+		// Run again with in-memory network
+		inmemCluster, err := cluster.NewInmemLayerCluster(3, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		testCluster_ForwardRequestsCommon(t, &TestClusterOptions{
+			ClusterLayers: inmemCluster,
+		})
+	})
 }
 
-func testCluster_ForwardRequestsCommon(t *testing.T) {
-	cluster := NewTestCluster(t, nil, nil)
+func testCluster_ForwardRequestsCommon(t *testing.T, clusterOpts *TestClusterOptions) {
+	cluster := NewTestCluster(t, nil, clusterOpts)
 	cores := cluster.Cores
 	cores[0].Handler.(*http.ServeMux).HandleFunc("/core1", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
@@ -372,40 +383,5 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, re
 		if statusCode != 203 {
 			t.Fatal("bad response")
 		}
-	}
-}
-
-func TestCluster_CustomCipherSuites(t *testing.T) {
-	cluster := NewTestCluster(t, &CoreConfig{
-		ClusterCipherSuites: "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
-	}, nil)
-	cluster.Start()
-	defer cluster.Cleanup()
-	core := cluster.Cores[0]
-
-	// Wait for core to become active
-	TestWaitActive(t, core.Core)
-
-	core.clusterListener.AddClient(requestForwardingALPN, &requestForwardingClusterClient{core.Core})
-
-	parsedCert := core.localClusterParsedCert.Load().(*x509.Certificate)
-	dialer := core.getGRPCDialer(context.Background(), requestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
-
-	netConn, err := dialer(fmt.Sprintf("%s:%d", core.Listeners[0].Address.IP.String(), core.Listeners[0].Address.Port+105), 0)
-	conn := netConn.(*tls.Conn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer conn.Close()
-	err = conn.Handshake()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if conn.ConnectionState().CipherSuite != tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 {
-		var availCiphers string
-		for _, cipher := range core.clusterCipherSuites {
-			availCiphers += fmt.Sprintf("%x ", cipher)
-		}
-		t.Fatalf("got bad negotiated cipher %x, core-set suites are %s", conn.ConnectionState().CipherSuite, availCiphers)
 	}
 }

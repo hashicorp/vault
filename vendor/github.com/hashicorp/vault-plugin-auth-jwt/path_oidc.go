@@ -2,18 +2,20 @@ package jwtauth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/helper/strutil"
-
 	"github.com/coreos/go-oidc"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/oauth2"
 )
 
@@ -76,6 +78,12 @@ func pathOIDC(b *jwtAuthBackend) []*framework.Path {
 }
 
 func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	// Because the state is cached, don't process OIDC logins on perf standbys
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+		return nil, logical.ErrReadOnly
+	}
+
 	state := b.verifyState(d.Get("state").(string))
 	if state == nil {
 		return logical.ErrorResponse(errLoginFailed + " Expired or missing OAuth state."), nil
@@ -98,9 +106,24 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(errLoginFailed + " Could not load configuration"), nil
 	}
 
-	provider, err := b.getProvider(ctx, config)
+	if len(role.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
+	}
+
+	provider, err := b.getProvider(config)
 	if err != nil {
-		return nil, errwrap.Wrapf(errLoginFailed+" Error getting provider for login operation: {{err}}", err)
+		return nil, errwrap.Wrapf("error getting provider for login operation: {{err}}", err)
+	}
+
+	oidcCtx, err := b.createCAContext(ctx, config.OIDCDiscoveryCAPEM)
+	if err != nil {
+		return nil, errwrap.Wrapf("error preparing context for login operation: {{err}}", err)
 	}
 
 	var oauth2Config = oauth2.Config{
@@ -116,7 +139,7 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(errLoginFailed + " OAuth code parameter not provided"), nil
 	}
 
-	oauth2Token, err := oauth2Config.Exchange(ctx, code)
+	oauth2Token, err := oauth2Config.Exchange(oidcCtx, code)
 	if err != nil {
 		return logical.ErrorResponse(errLoginFailed+" Error exchanging oidc code: %q.", err.Error()), nil
 	}
@@ -126,6 +149,9 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 	if !ok {
 		return logical.ErrorResponse(errTokenVerification + " No id_token found in response."), nil
 	}
+	if role.VerboseOIDCLogging {
+		b.Logger().Debug("OIDC provider response", "ID token", rawToken)
+	}
 
 	// Parse and verify ID Token payload.
 	allClaims, err := b.verifyOIDCToken(ctx, config, role, rawToken)
@@ -133,10 +159,15 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse("%s %s", errTokenVerification, err.Error()), nil
 	}
 
+	if allClaims["nonce"] != state.nonce {
+		return logical.ErrorResponse(errTokenVerification + " Invalid ID token nonce."), nil
+	}
+	delete(allClaims, "nonce")
+
 	// Attempt to fetch information from the /userinfo endpoint and merge it with
 	// the existing claims data. A failure to fetch additional information from this
 	// endpoint will not invalidate the authorization flow.
-	if userinfo, err := provider.UserInfo(ctx, oauth2.StaticTokenSource(oauth2Token)); err == nil {
+	if userinfo, err := provider.UserInfo(oidcCtx, oauth2.StaticTokenSource(oauth2Token)); err == nil {
 		_ = userinfo.Claims(&allClaims)
 	} else {
 		logFunc := b.Logger().Warn
@@ -146,10 +177,17 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 		logFunc("error reading /userinfo endpoint", "error", err)
 	}
 
-	if allClaims["nonce"] != state.nonce {
-		return logical.ErrorResponse(errTokenVerification + " Invalid ID token nonce."), nil
+	if role.VerboseOIDCLogging {
+		if c, err := json.Marshal(allClaims); err == nil {
+			b.Logger().Debug("OIDC provider response", "claims", string(c))
+		} else {
+			b.Logger().Debug("OIDC provider response", "marshalling error", err.Error())
+		}
 	}
-	delete(allClaims, "nonce")
+
+	if err := validateBoundClaims(b.Logger(), role.BoundClaims, allClaims); err != nil {
+		return logical.ErrorResponse("error validating claims: %s", err.Error()), nil
+	}
 
 	alias, groupAliases, err := b.createIdentity(allClaims, role)
 	if err != nil {
@@ -161,25 +199,29 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 		tokenMetadata[k] = v
 	}
 
-	resp := &logical.Response{
-		Auth: &logical.Auth{
-			Policies:     role.Policies,
-			DisplayName:  alias.Name,
-			Period:       role.Period,
-			NumUses:      role.NumUses,
-			Alias:        alias,
-			GroupAliases: groupAliases,
-			InternalData: map[string]interface{}{
-				"role": roleName,
-			},
-			Metadata: tokenMetadata,
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       role.TTL,
-				MaxTTL:    role.MaxTTL,
-			},
-			BoundCIDRs: role.BoundCIDRs,
+	auth := &logical.Auth{
+		Policies:     role.Policies,
+		DisplayName:  alias.Name,
+		Period:       role.Period,
+		NumUses:      role.NumUses,
+		Alias:        alias,
+		GroupAliases: groupAliases,
+		InternalData: map[string]interface{}{
+			"role": roleName,
 		},
+		Metadata: tokenMetadata,
+		LeaseOptions: logical.LeaseOptions{
+			Renewable: true,
+			TTL:       role.TTL,
+			MaxTTL:    role.MaxTTL,
+		},
+		BoundCIDRs: role.BoundCIDRs,
+	}
+
+	role.PopulateTokenAuth(auth)
+
+	resp := &logical.Response{
+		Auth: auth,
 	}
 
 	return resp, nil
@@ -192,6 +234,11 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	logger := b.Logger()
 
+	// Because the state is cached, don't process OIDC logins on perf standbys
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+		return nil, logical.ErrReadOnly
+	}
+
 	// default response for most error/invalid conditions
 	resp := &logical.Response{
 		Data: map[string]interface{}{
@@ -201,13 +248,14 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 
 	config, err := b.config(ctx, req.Storage)
 	if err != nil {
-		logger.Warn("error loading configuration", "error", err)
-		return resp, nil
+		return nil, err
+	}
+	if config == nil {
+		return logical.ErrorResponse("could not load configuration"), nil
 	}
 
-	if config == nil {
-		logger.Warn("nil configuration")
-		return resp, nil
+	if config.authType() != OIDCFlow {
+		return logical.ErrorResponse("OIDC login is not configured for this mount"), nil
 	}
 
 	roleName := d.Get("role").(string)
@@ -225,11 +273,10 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 
 	role, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
-		return resp, nil
+		return nil, err
 	}
-
-	if role == nil || role.RoleType != "oidc" {
-		return resp, nil
+	if role == nil {
+		return logical.ErrorResponse("role %q could not be found", roleName), nil
 	}
 
 	if !validRedirect(redirectURI, role.AllowedRedirectURIs) {
@@ -237,7 +284,7 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 		return resp, nil
 	}
 
-	provider, err := b.getProvider(ctx, config)
+	provider, err := b.getProvider(config)
 	if err != nil {
 		logger.Warn("error getting provider for login operation", "error", err)
 		return resp, nil

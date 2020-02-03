@@ -1,7 +1,7 @@
-<form {{action 'doSubmit' 
-       (hash param=(reduce-to-array exportKeyType (if exportVersion exportKeyVersion)))
+<form {{action 'doSubmit'
+       (hash param=(compact (array exportKeyType (if exportVersion exportKeyVersion))))
        (hash wrapTTL=wrapTTL)
-       on="submit" }} 
+       on="submit" }}
 >
   {{#if (or keys wrappedToken) }}
     <div class="box is-sideless is-fullwidth is-marginless">

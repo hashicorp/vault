@@ -59,7 +59,7 @@ type Conn struct {
 	conn               net.Conn
 	dstAddr            *net.TCPAddr
 	srcAddr            *net.TCPAddr
-	useConnRemoteAddr  bool
+	useConnAddr        bool
 	once               sync.Once
 	proxyHeaderTimeout time.Duration
 }
@@ -71,18 +71,18 @@ func (p *Listener) Accept() (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	var useConnRemoteAddr bool
+	var useConnAddr bool
 	if p.SourceCheck != nil {
 		allowed, err := p.SourceCheck(conn.RemoteAddr())
 		if err != nil {
 			return nil, err
 		}
 		if !allowed {
-			useConnRemoteAddr = true
+			useConnAddr = true
 		}
 	}
 	newConn := NewConn(conn, p.ProxyHeaderTimeout)
-	newConn.useConnRemoteAddr = useConnRemoteAddr
+	newConn.useConnAddr = useConnAddr
 	return newConn, nil
 }
 
@@ -128,6 +128,10 @@ func (p *Conn) Close() error {
 }
 
 func (p *Conn) LocalAddr() net.Addr {
+	p.checkPrefixOnce()
+	if p.dstAddr != nil && !p.useConnAddr {
+		return p.dstAddr
+	}
 	return p.conn.LocalAddr()
 }
 
@@ -139,14 +143,8 @@ func (p *Conn) LocalAddr() net.Addr {
 // client is slow. Using a Deadline is recommended if this is called
 // before Read()
 func (p *Conn) RemoteAddr() net.Addr {
-	p.once.Do(func() {
-		if err := p.checkPrefix(); err != nil && err != io.EOF {
-			log.Printf("[ERR] Failed to read proxy prefix: %v", err)
-			p.Close()
-			p.bufReader = bufio.NewReader(p.conn)
-		}
-	})
-	if p.srcAddr != nil && !p.useConnRemoteAddr {
+	p.checkPrefixOnce()
+	if p.srcAddr != nil && !p.useConnAddr {
 		return p.srcAddr
 	}
 	return p.conn.RemoteAddr()
@@ -162,6 +160,16 @@ func (p *Conn) SetReadDeadline(t time.Time) error {
 
 func (p *Conn) SetWriteDeadline(t time.Time) error {
 	return p.conn.SetWriteDeadline(t)
+}
+
+func (p *Conn) checkPrefixOnce() {
+	p.once.Do(func() {
+		if err := p.checkPrefix(); err != nil && err != io.EOF {
+			log.Printf("[ERR] Failed to read proxy prefix: %v", err)
+			p.Close()
+			p.bufReader = bufio.NewReader(p.conn)
+		}
+	})
 }
 
 func (p *Conn) checkPrefix() error {

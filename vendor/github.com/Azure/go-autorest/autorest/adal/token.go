@@ -26,15 +26,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
-	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/date"
-	"github.com/Azure/go-autorest/version"
 	"github.com/dgrijalva/jwt-go"
 )
 
@@ -64,11 +63,23 @@ const (
 
 	// the default number of attempts to refresh an MSI authentication token
 	defaultMaxMSIRefreshAttempts = 5
+
+	// asMSIEndpointEnv is the environment variable used to store the endpoint on App Service and Functions
+	asMSIEndpointEnv = "MSI_ENDPOINT"
+
+	// asMSISecretEnv is the environment variable used to store the request secret on App Service and Functions
+	asMSISecretEnv = "MSI_SECRET"
 )
 
 // OAuthTokenProvider is an interface which should be implemented by an access token retriever
 type OAuthTokenProvider interface {
 	OAuthToken() string
+}
+
+// MultitenantOAuthTokenProvider provides tokens used for multi-tenant authorization.
+type MultitenantOAuthTokenProvider interface {
+	PrimaryOAuthToken() string
+	AuxiliaryOAuthTokens() []string
 }
 
 // TokenRefreshError is an interface used by errors returned during token refresh.
@@ -385,8 +396,13 @@ func (spt *ServicePrincipalToken) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	spt.refreshLock = &sync.RWMutex{}
-	spt.sender = &http.Client{}
+	// Don't override the refreshLock or the sender if those have been already set.
+	if spt.refreshLock == nil {
+		spt.refreshLock = &sync.RWMutex{}
+	}
+	if spt.sender == nil {
+		spt.sender = sender()
+	}
 	return nil
 }
 
@@ -433,7 +449,7 @@ func NewServicePrincipalTokenWithSecret(oauthConfig OAuthConfig, id string, reso
 			RefreshWithin: defaultRefresh,
 		},
 		refreshLock:      &sync.RWMutex{},
-		sender:           &http.Client{},
+		sender:           sender(),
 		refreshCallbacks: callbacks,
 	}
 	return spt, nil
@@ -624,6 +640,31 @@ func GetMSIVMEndpoint() (string, error) {
 	return msiEndpoint, nil
 }
 
+func isAppService() bool {
+	_, asMSIEndpointEnvExists := os.LookupEnv(asMSIEndpointEnv)
+	_, asMSISecretEnvExists := os.LookupEnv(asMSISecretEnv)
+
+	return asMSIEndpointEnvExists && asMSISecretEnvExists
+}
+
+// GetMSIAppServiceEndpoint get the MSI endpoint for App Service and Functions
+func GetMSIAppServiceEndpoint() (string, error) {
+	asMSIEndpoint, asMSIEndpointEnvExists := os.LookupEnv(asMSIEndpointEnv)
+
+	if asMSIEndpointEnvExists {
+		return asMSIEndpoint, nil
+	}
+	return "", errors.New("MSI endpoint not found")
+}
+
+// GetMSIEndpoint get the appropriate MSI endpoint depending on the runtime environment
+func GetMSIEndpoint() (string, error) {
+	if isAppService() {
+		return GetMSIAppServiceEndpoint()
+	}
+	return GetMSIVMEndpoint()
+}
+
 // NewServicePrincipalTokenFromMSI creates a ServicePrincipalToken via the MSI VM Extension.
 // It will use the system assigned identity when creating the token.
 func NewServicePrincipalTokenFromMSI(msiEndpoint, resource string, callbacks ...TokenRefreshCallback) (*ServicePrincipalToken, error) {
@@ -656,7 +697,12 @@ func newServicePrincipalTokenFromMSI(msiEndpoint, resource string, userAssignedI
 
 	v := url.Values{}
 	v.Set("resource", resource)
-	v.Set("api-version", "2018-02-01")
+	// App Service MSI currently only supports token API version 2017-09-01
+	if isAppService() {
+		v.Set("api-version", "2017-09-01")
+	} else {
+		v.Set("api-version", "2018-02-01")
+	}
 	if userAssignedID != nil {
 		v.Set("client_id", *userAssignedID)
 	}
@@ -674,7 +720,7 @@ func newServicePrincipalTokenFromMSI(msiEndpoint, resource string, userAssignedI
 			RefreshWithin: defaultRefresh,
 		},
 		refreshLock:           &sync.RWMutex{},
-		sender:                &http.Client{},
+		sender:                sender(),
 		refreshCallbacks:      callbacks,
 		MaxMSIRefreshAttempts: defaultMaxMSIRefreshAttempts,
 	}
@@ -783,7 +829,7 @@ func isIMDS(u url.URL) bool {
 	if err != nil {
 		return false
 	}
-	return u.Host == imds.Host && u.Path == imds.Path
+	return (u.Host == imds.Host && u.Path == imds.Path) || isAppService()
 }
 
 func (spt *ServicePrincipalToken) refreshInternal(ctx context.Context, resource string) error {
@@ -791,7 +837,12 @@ func (spt *ServicePrincipalToken) refreshInternal(ctx context.Context, resource 
 	if err != nil {
 		return fmt.Errorf("adal: Failed to build the refresh request. Error = '%v'", err)
 	}
-	req.Header.Add("User-Agent", version.UserAgent())
+	req.Header.Add("User-Agent", UserAgent())
+	// Add header when runtime is on App Service or Functions
+	if isAppService() {
+		asMSISecret, _ := os.LookupEnv(asMSISecretEnv)
+		req.Header.Add("Secret", asMSISecret)
+	}
 	req = req.WithContext(ctx)
 	if !isIMDS(spt.inner.OauthConfig.TokenEndpoint) {
 		v := url.Values{}
@@ -836,7 +887,8 @@ func (spt *ServicePrincipalToken) refreshInternal(ctx context.Context, resource 
 		resp, err = spt.sender.Do(req)
 	}
 	if err != nil {
-		return newTokenRefreshError(fmt.Sprintf("adal: Failed to execute the refresh request. Error = '%v'", err), nil)
+		// don't return a TokenRefreshError here; this will allow retry logic to apply
+		return fmt.Errorf("adal: Failed to execute the refresh request. Error = '%v'", err)
 	}
 
 	defer resp.Body.Close()
@@ -903,10 +955,8 @@ func retryForIMDS(sender Sender, req *http.Request, maxAttempts int) (resp *http
 
 	for attempt < maxAttempts {
 		resp, err = sender.Do(req)
-		// retry on temporary network errors, e.g. transient network failures.
-		// if we don't receive a response then assume we can't connect to the
-		// endpoint so we're likely not running on an Azure VM so don't retry.
-		if (err != nil && !isTemporaryNetworkError(err)) || resp == nil || resp.StatusCode == http.StatusOK || !containsInt(retries, resp.StatusCode) {
+		// we want to retry if err is not nil or the status code is in the list of retry codes
+		if err == nil && !responseHasStatusCode(resp, retries...) {
 			return
 		}
 
@@ -930,20 +980,12 @@ func retryForIMDS(sender Sender, req *http.Request, maxAttempts int) (resp *http
 	return
 }
 
-// returns true if the specified error is a temporary network error or false if it's not.
-// if the error doesn't implement the net.Error interface the return value is true.
-func isTemporaryNetworkError(err error) bool {
-	if netErr, ok := err.(net.Error); !ok || (ok && netErr.Temporary()) {
-		return true
-	}
-	return false
-}
-
-// returns true if slice ints contains the value n
-func containsInt(ints []int, n int) bool {
-	for _, i := range ints {
-		if i == n {
-			return true
+func responseHasStatusCode(resp *http.Response, codes ...int) bool {
+	if resp != nil {
+		for _, i := range codes {
+			if i == resp.StatusCode {
+				return true
+			}
 		}
 	}
 	return false
@@ -977,4 +1019,94 @@ func (spt *ServicePrincipalToken) Token() Token {
 	spt.refreshLock.RLock()
 	defer spt.refreshLock.RUnlock()
 	return spt.inner.Token
+}
+
+// MultiTenantServicePrincipalToken contains tokens for multi-tenant authorization.
+type MultiTenantServicePrincipalToken struct {
+	PrimaryToken    *ServicePrincipalToken
+	AuxiliaryTokens []*ServicePrincipalToken
+}
+
+// PrimaryOAuthToken returns the primary authorization token.
+func (mt *MultiTenantServicePrincipalToken) PrimaryOAuthToken() string {
+	return mt.PrimaryToken.OAuthToken()
+}
+
+// AuxiliaryOAuthTokens returns one to three auxiliary authorization tokens.
+func (mt *MultiTenantServicePrincipalToken) AuxiliaryOAuthTokens() []string {
+	tokens := make([]string, len(mt.AuxiliaryTokens))
+	for i := range mt.AuxiliaryTokens {
+		tokens[i] = mt.AuxiliaryTokens[i].OAuthToken()
+	}
+	return tokens
+}
+
+// EnsureFreshWithContext will refresh the token if it will expire within the refresh window (as set by
+// RefreshWithin) and autoRefresh flag is on.  This method is safe for concurrent use.
+func (mt *MultiTenantServicePrincipalToken) EnsureFreshWithContext(ctx context.Context) error {
+	if err := mt.PrimaryToken.EnsureFreshWithContext(ctx); err != nil {
+		return fmt.Errorf("failed to refresh primary token: %v", err)
+	}
+	for _, aux := range mt.AuxiliaryTokens {
+		if err := aux.EnsureFreshWithContext(ctx); err != nil {
+			return fmt.Errorf("failed to refresh auxiliary token: %v", err)
+		}
+	}
+	return nil
+}
+
+// RefreshWithContext obtains a fresh token for the Service Principal.
+func (mt *MultiTenantServicePrincipalToken) RefreshWithContext(ctx context.Context) error {
+	if err := mt.PrimaryToken.RefreshWithContext(ctx); err != nil {
+		return fmt.Errorf("failed to refresh primary token: %v", err)
+	}
+	for _, aux := range mt.AuxiliaryTokens {
+		if err := aux.RefreshWithContext(ctx); err != nil {
+			return fmt.Errorf("failed to refresh auxiliary token: %v", err)
+		}
+	}
+	return nil
+}
+
+// RefreshExchangeWithContext refreshes the token, but for a different resource.
+func (mt *MultiTenantServicePrincipalToken) RefreshExchangeWithContext(ctx context.Context, resource string) error {
+	if err := mt.PrimaryToken.RefreshExchangeWithContext(ctx, resource); err != nil {
+		return fmt.Errorf("failed to refresh primary token: %v", err)
+	}
+	for _, aux := range mt.AuxiliaryTokens {
+		if err := aux.RefreshExchangeWithContext(ctx, resource); err != nil {
+			return fmt.Errorf("failed to refresh auxiliary token: %v", err)
+		}
+	}
+	return nil
+}
+
+// NewMultiTenantServicePrincipalToken creates a new MultiTenantServicePrincipalToken with the specified credentials and resource.
+func NewMultiTenantServicePrincipalToken(multiTenantCfg MultiTenantOAuthConfig, clientID string, secret string, resource string) (*MultiTenantServicePrincipalToken, error) {
+	if err := validateStringParam(clientID, "clientID"); err != nil {
+		return nil, err
+	}
+	if err := validateStringParam(secret, "secret"); err != nil {
+		return nil, err
+	}
+	if err := validateStringParam(resource, "resource"); err != nil {
+		return nil, err
+	}
+	auxTenants := multiTenantCfg.AuxiliaryTenants()
+	m := MultiTenantServicePrincipalToken{
+		AuxiliaryTokens: make([]*ServicePrincipalToken, len(auxTenants)),
+	}
+	primary, err := NewServicePrincipalToken(*multiTenantCfg.PrimaryTenant(), clientID, secret, resource)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SPT for primary tenant: %v", err)
+	}
+	m.PrimaryToken = primary
+	for i := range auxTenants {
+		aux, err := NewServicePrincipalToken(*auxTenants[i], clientID, secret, resource)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create SPT for auxiliary tenant: %v", err)
+		}
+		m.AuxiliaryTokens[i] = aux
+	}
+	return &m, nil
 }

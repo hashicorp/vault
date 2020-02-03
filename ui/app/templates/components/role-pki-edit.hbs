@@ -19,55 +19,56 @@
       {{/if}}
     </h1>
   </p.levelLeft>
-  <p.levelRight>
-    <div class="field is-grouped">
-      {{#if (eq mode "show") }}
-        {{#if (or model.canUpdate model.canDelete)}}
-          <div class="control">
-            {{#secret-link
-              secret=model.id
-              mode="edit"
-              replace=true
-              class="button has-icon-right is-ghost is-compact"
-              data-test-edit-link=true
-              }}
-              Edit role
-              {{i-con glyph="chevron-right" size=11}}
-            {{/secret-link}}
-          </div>
-        {{/if}}
-        {{#if model.canGenerate}}
-          <div class="control">
-            {{#secret-link
-              mode="credentials"
-              secret=model.id
-              queryParams=(query-params action="issue")
-              class="button has-icon-right is-ghost is-compact"
-              data-test-credentials-link=true
-              }}
-              Generate Certificate
-              {{i-con glyph="chevron-right" size=11}}
-            {{/secret-link}}
-          </div>
-        {{/if}}
-        {{#if model.canSign}}
-          <div class="control">
-            {{#secret-link
-              mode="credentials"
-              secret=model.id
-              queryParams=(query-params action="sign")
-              class="button has-icon-right is-ghost is-compact"
-              data-test-sign-link=true
-              }}
-              Sign Certificate
-              {{i-con glyph="chevron-right" size=11}}
-            {{/secret-link}}
-          </div>
-        {{/if}}
-      {{/if}}
-    </div>
-  </p.levelRight>
 </PageHeader>
+
+{{#if (eq mode "show") }}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if model.canGenerate}}
+        <ToolbarSecretLink
+          @secret={{model.id}}
+          @mode="credentials"
+          @queryParams={{query-params action="issue"}}
+          @data-test-credentials-link=true
+        >
+          Generate Certificate
+        </ToolbarSecretLink>
+      {{/if}}
+      {{#if model.canSign}}
+        <ToolbarSecretLink
+          @secret={{model.id}}
+          @mode="credentials"
+          @queryParams={{query-params action="sign"}}
+          @data-test-sign-link=true
+        >
+          Sign Certificate
+        </ToolbarSecretLink>
+      {{/if}}
+      {{#if (and (or model.canGenerate model.canSign) (or model.canDelete model.canEdit))}}
+        <div class="toolbar-separator" />
+      {{/if}}
+      {{#if model.canDelete}}
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @onConfirmAction={{action "delete"}}
+          data-test-role-delete="true"
+        >
+          Delete role
+        </ConfirmAction>
+      {{/if}}
+      {{#if model.canEdit}}
+        <ToolbarSecretLink
+          @secret={{model.id}}
+          @mode="edit"
+          @data-test-edit-link=true
+          @replace=true
+        >
+          Edit role
+        </ToolbarSecretLink>
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
 
 {{#if (or (eq mode 'edit') (eq mode 'create'))}}
   {{partial 'partials/role-pki/form'}}

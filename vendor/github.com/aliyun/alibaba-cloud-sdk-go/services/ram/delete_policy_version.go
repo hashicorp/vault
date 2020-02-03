@@ -76,8 +76,8 @@ func (client *Client) DeletePolicyVersionWithCallback(request *DeletePolicyVersi
 // DeletePolicyVersionRequest is the request struct for api DeletePolicyVersion
 type DeletePolicyVersionRequest struct {
 	*requests.RpcRequest
-	PolicyName string `position:"Query" name:"PolicyName"`
 	VersionId  string `position:"Query" name:"VersionId"`
+	PolicyName string `position:"Query" name:"PolicyName"`
 }
 
 // DeletePolicyVersionResponse is the response struct for api DeletePolicyVersion

@@ -5,9 +5,10 @@ package spanner
 
 import (
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -19,7 +20,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 // `TypeCode` is used as part of [Type][google.spanner.v1.Type] to
 // indicate the type of a Cloud Spanner value.
@@ -57,7 +58,8 @@ const (
 	// section 4.
 	TypeCode_BYTES TypeCode = 7
 	// Encoded as `list`, where the list elements are represented
-	// according to [array_element_type][google.spanner.v1.Type.array_element_type].
+	// according to
+	// [array_element_type][google.spanner.v1.Type.array_element_type].
 	TypeCode_ARRAY TypeCode = 8
 	// Encoded as `list`, where list element `i` is represented according
 	// to [struct_type.fields[i]][google.spanner.v1.StructType.fields].
@@ -103,11 +105,13 @@ func (TypeCode) EnumDescriptor() ([]byte, []int) {
 type Type struct {
 	// Required. The [TypeCode][google.spanner.v1.TypeCode] for this type.
 	Code TypeCode `protobuf:"varint,1,opt,name=code,proto3,enum=google.spanner.v1.TypeCode" json:"code,omitempty"`
-	// If [code][google.spanner.v1.Type.code] == [ARRAY][google.spanner.v1.TypeCode.ARRAY], then `array_element_type`
-	// is the type of the array elements.
+	// If [code][google.spanner.v1.Type.code] ==
+	// [ARRAY][google.spanner.v1.TypeCode.ARRAY], then `array_element_type` is the
+	// type of the array elements.
 	ArrayElementType *Type `protobuf:"bytes,2,opt,name=array_element_type,json=arrayElementType,proto3" json:"array_element_type,omitempty"`
-	// If [code][google.spanner.v1.Type.code] == [STRUCT][google.spanner.v1.TypeCode.STRUCT], then `struct_type`
-	// provides type information for the struct's fields.
+	// If [code][google.spanner.v1.Type.code] ==
+	// [STRUCT][google.spanner.v1.TypeCode.STRUCT], then `struct_type` provides
+	// type information for the struct's fields.
 	StructType           *StructType `protobuf:"bytes,3,opt,name=struct_type,json=structType,proto3" json:"struct_type,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
 	XXX_unrecognized     []byte      `json:"-"`
@@ -160,14 +164,15 @@ func (m *Type) GetStructType() *StructType {
 	return nil
 }
 
-// `StructType` defines the fields of a [STRUCT][google.spanner.v1.TypeCode.STRUCT] type.
+// `StructType` defines the fields of a
+// [STRUCT][google.spanner.v1.TypeCode.STRUCT] type.
 type StructType struct {
 	// The list of fields that make up this struct. Order is
 	// significant, because values of this struct type are represented as
 	// lists, where the order of field values matches the order of
-	// fields in the [StructType][google.spanner.v1.StructType]. In turn, the order of fields
-	// matches the order of columns in a read request, or the order of
-	// fields in the `SELECT` clause of a query.
+	// fields in the [StructType][google.spanner.v1.StructType]. In turn, the
+	// order of fields matches the order of columns in a read request, or the
+	// order of fields in the `SELECT` clause of a query.
 	Fields               []*StructType_Field `protobuf:"bytes,1,rep,name=fields,proto3" json:"fields,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
 	XXX_unrecognized     []byte              `json:"-"`

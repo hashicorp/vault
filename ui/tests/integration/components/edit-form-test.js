@@ -37,12 +37,7 @@ module('Integration | Component | edit form', function(hooks) {
     run(() => {
       this.owner.unregister('service:flash-messages');
       this.owner.register('service:flash-messages', flash);
-      component.setContext(this);
     });
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
   });
 
   test('it renders', async function(assert) {
@@ -51,19 +46,6 @@ module('Integration | Component | edit form', function(hooks) {
     await render(hbs`{{edit-form model=model}}`);
 
     assert.ok(component.fields.length, 2);
-    assert.ok(component.showsDelete);
-    assert.equal(component.deleteText, 'Delete');
-  });
-
-  test('it renders: custom deleteButton', async function(assert) {
-    let model = createModel();
-    let delText = 'Exterminate';
-    this.set('model', model);
-    this.set('deleteButtonText', delText);
-    await render(hbs`{{edit-form model=model deleteButtonText=deleteButtonText}}`);
-
-    assert.ok(component.showsDelete);
-    assert.equal(component.deleteText, delText);
   });
 
   test('it calls flash message fns on save', async function(assert) {
@@ -85,27 +67,6 @@ module('Integration | Component | edit form', function(hooks) {
       assert.deepEqual(saveSpy.getCall(0).args[0].model, model, 'passes model to onSave');
       let flash = this.owner.lookup('service:flash-messages');
       assert.equal(flash.success.callCount, 1, 'calls flash message success');
-    });
-  });
-
-  test('it calls flash message fns on delete', async function(assert) {
-    let model = createModel();
-    let onSave = () => {
-      return resolve();
-    };
-    this.set('model', model);
-    this.set('onSave', onSave);
-    let saveSpy = sinon.spy(this, 'onSave');
-
-    await render(hbs`{{edit-form model=model onSave=onSave}}`);
-    await component.deleteButton();
-    await component.deleteConfirm();
-
-    later(() => run.cancelTimers(), 50);
-    return settled().then(() => {
-      assert.ok(saveSpy.calledOnce, 'calls onSave');
-      assert.equal(saveSpy.getCall(0).args[0].saveType, 'destroyRecord');
-      assert.deepEqual(saveSpy.getCall(0).args[0].model, model, 'passes model to onSave');
     });
   });
 });

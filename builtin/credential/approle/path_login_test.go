@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestAppRole_BoundCIDRLogin(t *testing.T) {
@@ -89,6 +89,7 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error due to mismatching subnet relationship")
 	}
+
 	roleSecretIDReq.Data["token_bound_cidrs"] = "10.0.0.0/24"
 	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {

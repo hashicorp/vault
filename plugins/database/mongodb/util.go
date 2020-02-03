@@ -1,10 +1,23 @@
 package mongodb
 
+import "go.mongodb.org/mongo-driver/mongo/writeconcern"
+
 type createUserCommand struct {
 	Username string        `bson:"createUser"`
 	Password string        `bson:"pwd"`
 	Roles    []interface{} `bson:"roles"`
 }
+
+type updateUserCommand struct {
+	Username string `bson:"updateUser"`
+	Password string `bson:"pwd"`
+}
+
+type dropUserCommand struct {
+	Username     string                     `bson:"dropUser"`
+	WriteConcern *writeconcern.WriteConcern `bson:"writeConcern"`
+}
+
 type mongodbRole struct {
 	Role string `json:"role" bson:"role"`
 	DB   string `json:"db"   bson:"db"`

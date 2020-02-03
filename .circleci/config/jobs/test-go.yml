@@ -1,0 +1,10 @@
+executor: go-machine
+parallelism: 2
+steps:
+  - setup-go
+  - checkout
+  - go_test
+  - store_artifacts:
+      path: test-results
+  - store_test_results:
+      path: test-results

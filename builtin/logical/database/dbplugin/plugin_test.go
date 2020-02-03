@@ -8,19 +8,21 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/pluginutil"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/plugins"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
 type mockPlugin struct {
 	users map[string][]string
 }
+
+var _ dbplugin.Database = &mockPlugin{}
 
 func (m *mockPlugin) Type() (string, error) { return "mock", nil }
 func (m *mockPlugin) CreateUser(_ context.Context, statements dbplugin.Statements, usernameConf dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
@@ -86,6 +88,14 @@ func (m *mockPlugin) Close() error {
 	return nil
 }
 
+func (m *mockPlugin) GenerateCredentials(ctx context.Context) (password string, err error) {
+	return password, err
+}
+
+func (m *mockPlugin) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticConfig dbplugin.StaticUserConfig) (username string, password string, err error) {
+	return username, password, err
+}
+
 func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
@@ -112,11 +122,11 @@ func TestPlugin_GRPC_Main(t *testing.T) {
 
 	args := []string{"--tls-skip-verify=true"}
 
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 
-	plugins.Serve(plugin, apiClientMeta.GetTLSConfig())
+	dbplugin.Serve(plugin, api.VaultPluginTLSProvider(apiClientMeta.GetTLSConfig()))
 }
 
 func TestPlugin_Init(t *testing.T) {

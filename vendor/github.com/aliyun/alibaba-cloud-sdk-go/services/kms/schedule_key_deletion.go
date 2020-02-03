@@ -76,9 +76,8 @@ func (client *Client) ScheduleKeyDeletionWithCallback(request *ScheduleKeyDeleti
 // ScheduleKeyDeletionRequest is the request struct for api ScheduleKeyDeletion
 type ScheduleKeyDeletionRequest struct {
 	*requests.RpcRequest
-	KeyId               string           `position:"Query" name:"KeyId"`
 	PendingWindowInDays requests.Integer `position:"Query" name:"PendingWindowInDays"`
-	STSToken            string           `position:"Query" name:"STSToken"`
+	KeyId               string           `position:"Query" name:"KeyId"`
 }
 
 // ScheduleKeyDeletionResponse is the response struct for api ScheduleKeyDeletion

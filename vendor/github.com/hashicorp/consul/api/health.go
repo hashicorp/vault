@@ -1,8 +1,10 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 )
 
 const (
@@ -34,21 +36,124 @@ type HealthCheck struct {
 	ServiceID   string
 	ServiceName string
 	ServiceTags []string
+	Type        string
+	Namespace   string `json:",omitempty"`
 
 	Definition HealthCheckDefinition
+
+	CreateIndex uint64
+	ModifyIndex uint64
 }
 
 // HealthCheckDefinition is used to store the details about
 // a health check's execution.
 type HealthCheckDefinition struct {
-	HTTP                           string
-	Header                         map[string][]string
-	Method                         string
-	TLSSkipVerify                  bool
-	TCP                            string
+	HTTP                                   string
+	Header                                 map[string][]string
+	Method                                 string
+	TLSSkipVerify                          bool
+	TCP                                    string
+	IntervalDuration                       time.Duration `json:"-"`
+	TimeoutDuration                        time.Duration `json:"-"`
+	DeregisterCriticalServiceAfterDuration time.Duration `json:"-"`
+
+	// DEPRECATED in Consul 1.4.1. Use the above time.Duration fields instead.
 	Interval                       ReadableDuration
 	Timeout                        ReadableDuration
 	DeregisterCriticalServiceAfter ReadableDuration
+}
+
+func (d *HealthCheckDefinition) MarshalJSON() ([]byte, error) {
+	type Alias HealthCheckDefinition
+	out := &struct {
+		Interval                       string
+		Timeout                        string
+		DeregisterCriticalServiceAfter string
+		*Alias
+	}{
+		Interval:                       d.Interval.String(),
+		Timeout:                        d.Timeout.String(),
+		DeregisterCriticalServiceAfter: d.DeregisterCriticalServiceAfter.String(),
+		Alias:                          (*Alias)(d),
+	}
+
+	if d.IntervalDuration != 0 {
+		out.Interval = d.IntervalDuration.String()
+	} else if d.Interval != 0 {
+		out.Interval = d.Interval.String()
+	}
+	if d.TimeoutDuration != 0 {
+		out.Timeout = d.TimeoutDuration.String()
+	} else if d.Timeout != 0 {
+		out.Timeout = d.Timeout.String()
+	}
+	if d.DeregisterCriticalServiceAfterDuration != 0 {
+		out.DeregisterCriticalServiceAfter = d.DeregisterCriticalServiceAfterDuration.String()
+	} else if d.DeregisterCriticalServiceAfter != 0 {
+		out.DeregisterCriticalServiceAfter = d.DeregisterCriticalServiceAfter.String()
+	}
+
+	return json.Marshal(out)
+}
+
+func (t *HealthCheckDefinition) UnmarshalJSON(data []byte) (err error) {
+	type Alias HealthCheckDefinition
+	aux := &struct {
+		IntervalDuration                       interface{}
+		TimeoutDuration                        interface{}
+		DeregisterCriticalServiceAfterDuration interface{}
+		*Alias
+	}{
+		Alias: (*Alias)(t),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	// Parse the values into both the time.Duration and old ReadableDuration fields.
+
+	if aux.IntervalDuration == nil {
+		t.IntervalDuration = time.Duration(t.Interval)
+	} else {
+		switch v := aux.IntervalDuration.(type) {
+		case string:
+			if t.IntervalDuration, err = time.ParseDuration(v); err != nil {
+				return err
+			}
+		case float64:
+			t.IntervalDuration = time.Duration(v)
+		}
+		t.Interval = ReadableDuration(t.IntervalDuration)
+	}
+
+	if aux.TimeoutDuration == nil {
+		t.TimeoutDuration = time.Duration(t.Timeout)
+	} else {
+		switch v := aux.TimeoutDuration.(type) {
+		case string:
+			if t.TimeoutDuration, err = time.ParseDuration(v); err != nil {
+				return err
+			}
+		case float64:
+			t.TimeoutDuration = time.Duration(v)
+		}
+		t.Timeout = ReadableDuration(t.TimeoutDuration)
+	}
+	if aux.DeregisterCriticalServiceAfterDuration == nil {
+		t.DeregisterCriticalServiceAfterDuration = time.Duration(t.DeregisterCriticalServiceAfter)
+	} else {
+		switch v := aux.DeregisterCriticalServiceAfterDuration.(type) {
+		case string:
+			if t.DeregisterCriticalServiceAfterDuration, err = time.ParseDuration(v); err != nil {
+				return err
+			}
+		case float64:
+			t.DeregisterCriticalServiceAfterDuration = time.Duration(v)
+		}
+		t.DeregisterCriticalServiceAfter = ReadableDuration(t.DeregisterCriticalServiceAfterDuration)
+	}
+
+	return nil
 }
 
 // HealthChecks is a collection of HealthCheck structs.

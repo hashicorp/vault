@@ -2,12 +2,14 @@ package command
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"sort"
 	"strings"
 	"sync"
@@ -21,18 +23,23 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/approle"
 	"github.com/hashicorp/vault/command/agent/auth/aws"
 	"github.com/hashicorp/vault/command/agent/auth/azure"
+	"github.com/hashicorp/vault/command/agent/auth/cert"
+	"github.com/hashicorp/vault/command/agent/auth/cf"
 	"github.com/hashicorp/vault/command/agent/auth/gcp"
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
+	"github.com/hashicorp/vault/command/agent/auth/kerberos"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
 	"github.com/hashicorp/vault/command/agent/cache"
-	"github.com/hashicorp/vault/command/agent/config"
+	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
-	"github.com/hashicorp/vault/helper/consts"
-	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/version"
+	"github.com/hashicorp/vault/command/agent/template"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/gatedwriter"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/kr/pretty"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -55,8 +62,9 @@ type AgentCommand struct {
 
 	startedCh chan (struct{}) // for tests
 
-	flagConfigs  []string
-	flagLogLevel string
+	flagConfigs       []string
+	flagLogLevel      string
+	flagExitAfterAuth bool
 
 	flagTestVerifyOnly bool
 	flagCombineLogs    bool
@@ -109,11 +117,20 @@ func (c *AgentCommand) Flags() *FlagSets {
 			"\"trace\", \"debug\", \"info\", \"warn\", and \"err\".",
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:    "exit-after-auth",
+		Target:  &c.flagExitAfterAuth,
+		Default: false,
+		Usage: "If set to true, the agent will exit with code 0 after a single " +
+			"successful auth, where success means that a token was retrieved and " +
+			"all sinks successfully wrote it",
+	})
+
 	// Internal-only flags to follow.
 	//
 	// Why hello there little source code reader! Welcome to the Vault source
 	// code. The remaining options are intentionally undocumented and come with
-	// no warranty or backwards-compatability promise. Do not use these flags
+	// no warranty or backwards-compatibility promise. Do not use these flags
 	// in production. Do not build automation using these flags. Unless you are
 	// developing against Vault, you should not need any of these flags.
 
@@ -155,7 +172,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
-	c.logGate = &gatedwriter.Writer{Writer: os.Stderr}
+	c.logGate = gatedwriter.NewWriter(os.Stderr)
 	c.logWriter = c.logGate
 	if c.flagCombineLogs {
 		c.logWriter = os.Stdout
@@ -189,7 +206,7 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	// Load the configuration
-	config, err := config.LoadConfig(c.flagConfigs[0], c.logger)
+	config, err := agentConfig.LoadConfig(c.flagConfigs[0])
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", c.flagConfigs[0], err))
 		return 1
@@ -202,49 +219,77 @@ func (c *AgentCommand) Run(args []string) int {
 				"-config flag."))
 		return 1
 	}
-	if config.AutoAuth == nil {
-		c.UI.Error("No auto_auth block found in config file")
+	if config.AutoAuth == nil && config.Cache == nil {
+		c.UI.Error("No auto_auth or cache block found in config file")
 		return 1
 	}
-
-	if config.Vault != nil {
-		c.setStringFlag(f, config.Vault.Address, &StringVar{
-			Name:    flagNameAddress,
-			Target:  &c.flagAddress,
-			Default: "https://127.0.0.1:8200",
-			EnvVar:  api.EnvVaultAddress,
-		})
-		c.setStringFlag(f, config.Vault.CACert, &StringVar{
-			Name:    flagNameCACert,
-			Target:  &c.flagCACert,
-			Default: "",
-			EnvVar:  api.EnvVaultCACert,
-		})
-		c.setStringFlag(f, config.Vault.CAPath, &StringVar{
-			Name:    flagNameCAPath,
-			Target:  &c.flagCAPath,
-			Default: "",
-			EnvVar:  api.EnvVaultCAPath,
-		})
-		c.setStringFlag(f, config.Vault.ClientCert, &StringVar{
-			Name:    flagNameClientCert,
-			Target:  &c.flagClientCert,
-			Default: "",
-			EnvVar:  api.EnvVaultClientCert,
-		})
-		c.setStringFlag(f, config.Vault.ClientKey, &StringVar{
-			Name:    flagNameClientKey,
-			Target:  &c.flagClientKey,
-			Default: "",
-			EnvVar:  api.EnvVaultClientKey,
-		})
-		c.setBoolFlag(f, config.Vault.TLSSkipVerify, &BoolVar{
-			Name:    flagNameTLSSkipVerify,
-			Target:  &c.flagTLSSkipVerify,
-			Default: false,
-			EnvVar:  api.EnvVaultSkipVerify,
-		})
+	if config.AutoAuth == nil {
+		c.UI.Info("No auto_auth block found in config file, not starting automatic authentication feature")
 	}
+
+	// create an empty Vault configuration if none was loaded from file. The
+	// follow-up setStringFlag calls will populate with defaults if otherwise
+	// omitted
+	if config.Vault == nil {
+		config.Vault = new(agentConfig.Vault)
+	}
+
+	exitAfterAuth := config.ExitAfterAuth
+	f.Visit(func(fl *flag.Flag) {
+		if fl.Name == "exit-after-auth" {
+			exitAfterAuth = c.flagExitAfterAuth
+		}
+	})
+
+	c.setStringFlag(f, config.Vault.Address, &StringVar{
+		Name:    flagNameAddress,
+		Target:  &c.flagAddress,
+		Default: "https://127.0.0.1:8200",
+		EnvVar:  api.EnvVaultAddress,
+	})
+	config.Vault.Address = c.flagAddress
+	c.setStringFlag(f, config.Vault.CACert, &StringVar{
+		Name:    flagNameCACert,
+		Target:  &c.flagCACert,
+		Default: "",
+		EnvVar:  api.EnvVaultCACert,
+	})
+	config.Vault.CACert = c.flagCACert
+	c.setStringFlag(f, config.Vault.CAPath, &StringVar{
+		Name:    flagNameCAPath,
+		Target:  &c.flagCAPath,
+		Default: "",
+		EnvVar:  api.EnvVaultCAPath,
+	})
+	config.Vault.CAPath = c.flagCAPath
+	c.setStringFlag(f, config.Vault.ClientCert, &StringVar{
+		Name:    flagNameClientCert,
+		Target:  &c.flagClientCert,
+		Default: "",
+		EnvVar:  api.EnvVaultClientCert,
+	})
+	config.Vault.ClientCert = c.flagClientCert
+	c.setStringFlag(f, config.Vault.ClientKey, &StringVar{
+		Name:    flagNameClientKey,
+		Target:  &c.flagClientKey,
+		Default: "",
+		EnvVar:  api.EnvVaultClientKey,
+	})
+	config.Vault.ClientKey = c.flagClientKey
+	c.setBoolFlag(f, config.Vault.TLSSkipVerify, &BoolVar{
+		Name:    flagNameTLSSkipVerify,
+		Target:  &c.flagTLSSkipVerify,
+		Default: false,
+		EnvVar:  api.EnvVaultSkipVerify,
+	})
+	config.Vault.TLSSkipVerify = c.flagTLSSkipVerify
+	c.setStringFlag(f, config.Vault.TLSServerName, &StringVar{
+		Name:    flagTLSServerName,
+		Target:  &c.flagTLSServerName,
+		Default: "",
+		EnvVar:  api.EnvVaultTLSServerName,
+	})
+	config.Vault.TLSServerName = c.flagTLSServerName
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
@@ -286,62 +331,83 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
+	// ctx and cancelFunc are passed to the AuthHandler, SinkServer, and
+	// TemplateServer that periodically listen for ctx.Done() to fire and shut
+	// down accordingly.
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
+	var method auth.AuthMethod
 	var sinks []*sink.SinkConfig
-	for _, sc := range config.AutoAuth.Sinks {
-		switch sc.Type {
-		case "file":
-			config := &sink.SinkConfig{
-				Logger:  c.logger.Named("sink.file"),
-				Config:  sc.Config,
-				Client:  client,
-				WrapTTL: sc.WrapTTL,
-				DHType:  sc.DHType,
-				DHPath:  sc.DHPath,
-				AAD:     sc.AAD,
-			}
-			s, err := file.NewFileSink(config)
-			if err != nil {
-				c.UI.Error(errwrap.Wrapf("Error creating file sink: {{err}}", err).Error())
+	var namespace string
+	if config.AutoAuth != nil {
+		for _, sc := range config.AutoAuth.Sinks {
+			switch sc.Type {
+			case "file":
+				config := &sink.SinkConfig{
+					Logger:  c.logger.Named("sink.file"),
+					Config:  sc.Config,
+					Client:  client,
+					WrapTTL: sc.WrapTTL,
+					DHType:  sc.DHType,
+					DHPath:  sc.DHPath,
+					AAD:     sc.AAD,
+				}
+				s, err := file.NewFileSink(config)
+				if err != nil {
+					c.UI.Error(errwrap.Wrapf("Error creating file sink: {{err}}", err).Error())
+					return 1
+				}
+				config.Sink = s
+				sinks = append(sinks, config)
+			default:
+				c.UI.Error(fmt.Sprintf("Unknown sink type %q", sc.Type))
 				return 1
 			}
-			config.Sink = s
-			sinks = append(sinks, config)
+		}
+
+		// Check if a default namespace has been set
+		mountPath := config.AutoAuth.Method.MountPath
+		if config.AutoAuth.Method.Namespace != "" {
+			namespace = config.AutoAuth.Method.Namespace
+			mountPath = path.Join(namespace, mountPath)
+		}
+
+		authConfig := &auth.AuthConfig{
+			Logger:    c.logger.Named(fmt.Sprintf("auth.%s", config.AutoAuth.Method.Type)),
+			MountPath: mountPath,
+			Config:    config.AutoAuth.Method.Config,
+		}
+		switch config.AutoAuth.Method.Type {
+		case "alicloud":
+			method, err = alicloud.NewAliCloudAuthMethod(authConfig)
+		case "aws":
+			method, err = aws.NewAWSAuthMethod(authConfig)
+		case "azure":
+			method, err = azure.NewAzureAuthMethod(authConfig)
+		case "cert":
+			method, err = cert.NewCertAuthMethod(authConfig)
+		case "cf":
+			method, err = cf.NewCFAuthMethod(authConfig)
+		case "gcp":
+			method, err = gcp.NewGCPAuthMethod(authConfig)
+		case "jwt":
+			method, err = jwt.NewJWTAuthMethod(authConfig)
+		case "kerberos":
+			method, err = kerberos.NewKerberosAuthMethod(authConfig)
+		case "kubernetes":
+			method, err = kubernetes.NewKubernetesAuthMethod(authConfig)
+		case "approle":
+			method, err = approle.NewApproleAuthMethod(authConfig)
+		case "pcf": // Deprecated.
+			method, err = cf.NewCFAuthMethod(authConfig)
 		default:
-			c.UI.Error(fmt.Sprintf("Unknown sink type %q", sc.Type))
+			c.UI.Error(fmt.Sprintf("Unknown auth method %q", config.AutoAuth.Method.Type))
 			return 1
 		}
-	}
-
-	var method auth.AuthMethod
-	authConfig := &auth.AuthConfig{
-		Logger:    c.logger.Named(fmt.Sprintf("auth.%s", config.AutoAuth.Method.Type)),
-		MountPath: config.AutoAuth.Method.MountPath,
-		Config:    config.AutoAuth.Method.Config,
-	}
-	switch config.AutoAuth.Method.Type {
-	case "alicloud":
-		method, err = alicloud.NewAliCloudAuthMethod(authConfig)
-	case "aws":
-		method, err = aws.NewAWSAuthMethod(authConfig)
-	case "azure":
-		method, err = azure.NewAzureAuthMethod(authConfig)
-	case "gcp":
-		method, err = gcp.NewGCPAuthMethod(authConfig)
-	case "jwt":
-		method, err = jwt.NewJWTAuthMethod(authConfig)
-	case "kubernetes":
-		method, err = kubernetes.NewKubernetesAuthMethod(authConfig)
-	case "approle":
-		method, err = approle.NewApproleAuthMethod(authConfig)
-	default:
-		c.UI.Error(fmt.Sprintf("Unknown auth method %q", config.AutoAuth.Method.Type))
-		return 1
-	}
-	if err != nil {
-		c.UI.Error(errwrap.Wrapf(fmt.Sprintf("Error creating %s auth method: {{err}}", config.AutoAuth.Method.Type), err).Error())
-		return 1
+		if err != nil {
+			c.UI.Error(errwrap.Wrapf(fmt.Sprintf("Error creating %s auth method: {{err}}", config.AutoAuth.Method.Type), err).Error())
+			return 1
+		}
 	}
 
 	// Output the header that the server has started
@@ -355,21 +421,8 @@ func (c *AgentCommand) Run(args []string) int {
 	default:
 	}
 
-	ss := sink.NewSinkServer(&sink.SinkServerConfig{
-		Logger:        c.logger.Named("sink.server"),
-		Client:        client,
-		ExitAfterAuth: config.ExitAfterAuth,
-	})
-
-	ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
-		Logger:                       c.logger.Named("auth.handler"),
-		Client:                       c.client,
-		WrapTTL:                      config.AutoAuth.Method.WrapTTL,
-		EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
-	})
-
 	// Parse agent listener configurations
-	if config.Cache != nil && len(config.Cache.Listeners) != 0 {
+	if config.Cache != nil && len(config.Listeners) != 0 {
 		cacheLogger := c.logger.Named("cache")
 
 		// Create the API proxier
@@ -411,43 +464,63 @@ func (c *AgentCommand) Run(args []string) int {
 			})
 		}
 
-		// Create a muxer and add paths relevant for the lease cache layer
-		mux := http.NewServeMux()
-		mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
+		var proxyVaultToken = !config.Cache.UseAutoAuthTokenEnforce
 
-		mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, inmemSink))
+		// Create the request handler
+		cacheHandler := cache.Handler(ctx, cacheLogger, leaseCache, inmemSink, proxyVaultToken)
 
 		var listeners []net.Listener
-		for i, lnConfig := range config.Cache.Listeners {
-			listener, props, _, err := cache.ServerListener(lnConfig, c.logWriter, c.UI)
+		for i, lnConfig := range config.Listeners {
+			ln, tlsConf, err := cache.StartListener(lnConfig)
 			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error parsing listener configuration: %v", err))
+				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
 				return 1
 			}
 
-			listeners = append(listeners, listener)
+			listeners = append(listeners, ln)
+
+			// Parse 'require_request_header' listener config option, and wrap
+			// the request handler if necessary
+			muxHandler := cacheHandler
+			if v, ok := lnConfig.Config[agentConfig.RequireRequestHeader]; ok {
+				switch v {
+				case true:
+					muxHandler = verifyRequestHeader(muxHandler)
+				case false /* noop */ :
+				default:
+					c.UI.Error(fmt.Sprintf("Invalid value for 'require_request_header': %v", v))
+					return 1
+				}
+			}
+
+			// Create a muxer and add paths relevant for the lease cache layer
+			mux := http.NewServeMux()
+			mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
+			mux.Handle("/", muxHandler)
 
 			scheme := "https://"
-			if props["tls"] == "disabled" {
+			if tlsConf == nil {
 				scheme = "http://"
 			}
-			if lnConfig.Type == "unix" {
+			if ln.Addr().Network() == "unix" {
 				scheme = "unix://"
 			}
 
 			infoKey := fmt.Sprintf("api address %d", i+1)
-			info[infoKey] = scheme + listener.Addr().String()
+			info[infoKey] = scheme + ln.Addr().String()
 			infoKeys = append(infoKeys, infoKey)
 
-			cacheLogger.Info("starting listener", "addr", listener.Addr().String())
 			server := &http.Server{
+				Addr:              ln.Addr().String(),
+				TLSConfig:         tlsConf,
 				Handler:           mux,
 				ReadHeaderTimeout: 10 * time.Second,
 				ReadTimeout:       30 * time.Second,
 				IdleTimeout:       5 * time.Minute,
 				ErrorLog:          cacheLogger.StandardLogger(nil),
 			}
-			go server.Serve(listener)
+
+			go server.Serve(ln)
 		}
 
 		// Ensure that listeners are closed at all the exits
@@ -459,9 +532,44 @@ func (c *AgentCommand) Run(args []string) int {
 		defer c.cleanupGuard.Do(listenerCloseFunc)
 	}
 
+	// Listen for signals
+	// TODO: implement support for SIGHUP reloading of configuration
+	// signal.Notify(c.signalCh)
+
+	var ssDoneCh, ahDoneCh, tsDoneCh chan struct{}
 	// Start auto-auth and sink servers
-	go ah.Run(ctx, method)
-	go ss.Run(ctx, ah.OutputCh, sinks)
+	if method != nil {
+		enableTokenCh := len(config.Templates) > 0
+		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
+			Logger:                       c.logger.Named("auth.handler"),
+			Client:                       c.client,
+			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
+			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
+			EnableTemplateTokenCh:        enableTokenCh,
+		})
+		ahDoneCh = ah.DoneCh
+
+		ss := sink.NewSinkServer(&sink.SinkServerConfig{
+			Logger:        c.logger.Named("sink.server"),
+			Client:        client,
+			ExitAfterAuth: exitAfterAuth,
+		})
+		ssDoneCh = ss.DoneCh
+
+		ts := template.NewServer(&template.ServerConfig{
+			Logger:        c.logger.Named("template.server"),
+			LogLevel:      level,
+			LogWriter:     c.logWriter,
+			VaultConf:     config.Vault,
+			Namespace:     namespace,
+			ExitAfterAuth: exitAfterAuth,
+		})
+		tsDoneCh = ts.DoneCh
+
+		go ah.Run(ctx, method)
+		go ss.Run(ctx, ah.OutputCh, sinks)
+		go ts.Run(ctx, ah.TemplateTokenCh, config.Templates)
+	}
 
 	// Server configuration output
 	padding := 24
@@ -492,17 +600,45 @@ func (c *AgentCommand) Run(args []string) int {
 	}()
 
 	select {
-	case <-ss.DoneCh:
+	case <-ssDoneCh:
 		// This will happen if we exit-on-auth
 		c.logger.Info("sinks finished, exiting")
+		// allow any templates to be rendered
+		if tsDoneCh != nil {
+			<-tsDoneCh
+		}
 	case <-c.ShutdownCh:
 		c.UI.Output("==> Vault agent shutdown triggered")
 		cancelFunc()
-		<-ah.DoneCh
-		<-ss.DoneCh
+		if ahDoneCh != nil {
+			<-ahDoneCh
+		}
+		if ssDoneCh != nil {
+			<-ssDoneCh
+		}
+
+		if tsDoneCh != nil {
+			<-tsDoneCh
+		}
 	}
 
 	return 0
+}
+
+// verifyRequestHeader wraps an http.Handler inside a Handler that checks for
+// the request header that is used for SSRF protection.
+func verifyRequestHeader(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		if val, ok := r.Header[consts.RequestHeaderName]; !ok || len(val) != 1 || val[0] != "true" {
+			logical.RespondError(w,
+				http.StatusPreconditionFailed,
+				errors.New(fmt.Sprintf("missing '%s' header", consts.RequestHeaderName)))
+			return
+		}
+
+		handler.ServeHTTP(w, r)
+	})
 }
 
 func (c *AgentCommand) setStringFlag(f *FlagSets, configVal string, fVar *StringVar) {

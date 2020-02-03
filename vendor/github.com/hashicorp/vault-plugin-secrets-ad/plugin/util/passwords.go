@@ -35,7 +35,7 @@ func ValidatePwdSettings(formatter string, totalLength int) error {
 	// Check for if there's no formatter.
 	if formatter == "" {
 		if totalLength < len(PasswordComplexityPrefix)+minimumLengthOfComplexString {
-			return fmt.Errorf("it's not possible to generate a _secure_ password of length %d, please boost length to %d, though Vault recommends higher", totalLength, minimumLengthOfComplexString)
+			return fmt.Errorf("it's not possible to generate a _secure_ password of length %d, please boost length to %d, though Vault recommends higher", totalLength, minimumLengthOfComplexString+len(PasswordComplexityPrefix))
 		}
 		return nil
 	}

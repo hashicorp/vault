@@ -20,11 +20,11 @@ type udsWriter struct {
 	conn net.Conn
 	// write timeout
 	writeTimeout time.Duration
-	sync.Mutex   // used to lock conn / writer can replace it
+	sync.RWMutex // used to lock conn / writer can replace it
 }
 
-// New returns a pointer to a new udsWriter given a socket file path as addr.
-func newUdsWriter(addr string) (*udsWriter, error) {
+// newUDSWriter returns a pointer to a new udsWriter given a socket file path as addr.
+func newUDSWriter(addr string) (*udsWriter, error) {
 	udsAddr, err := net.ResolveUnixAddr("unixgram", addr)
 	if err != nil {
 		return nil, err
@@ -43,21 +43,17 @@ func (w *udsWriter) SetWriteTimeout(d time.Duration) error {
 // Write data to the UDS connection with write timeout and minimal error handling:
 // create the connection if nil, and destroy it if the statsd server has disconnected
 func (w *udsWriter) Write(data []byte) (int, error) {
-	w.Lock()
-	defer w.Unlock()
-	// Try connecting (first packet or connection lost)
-	if w.conn == nil {
-		conn, err := net.Dial(w.addr.Network(), w.addr.String())
-		if err != nil {
-			return 0, err
-		}
-		w.conn = conn
+	conn, err := w.ensureConnection()
+	if err != nil {
+		return 0, err
 	}
-	w.conn.SetWriteDeadline(time.Now().Add(w.writeTimeout))
-	n, e := w.conn.Write(data)
-	if e != nil {
+
+	conn.SetWriteDeadline(time.Now().Add(w.writeTimeout))
+	n, e := conn.Write(data)
+
+	if err, isNetworkErr := e.(net.Error); !isNetworkErr || !err.Temporary() {
 		// Statsd server disconnected, retry connecting at next packet
-		w.conn = nil
+		w.unsetConnection()
 		return 0, e
 	}
 	return n, e
@@ -68,4 +64,35 @@ func (w *udsWriter) Close() error {
 		return w.conn.Close()
 	}
 	return nil
+}
+
+func (w *udsWriter) ensureConnection() (net.Conn, error) {
+	// Check if we've already got a socket we can use
+	w.RLock()
+	currentConn := w.conn
+	w.RUnlock()
+
+	if currentConn != nil {
+		return currentConn, nil
+	}
+
+	// Looks like we might need to connect - try again with write locking.
+	w.Lock()
+	defer w.Unlock()
+	if w.conn != nil {
+		return w.conn, nil
+	}
+
+	newConn, err := net.Dial(w.addr.Network(), w.addr.String())
+	if err != nil {
+		return nil, err
+	}
+	w.conn = newConn
+	return newConn, nil
+}
+
+func (w *udsWriter) unsetConnection() {
+	w.Lock()
+	defer w.Unlock()
+	w.conn = nil
 }

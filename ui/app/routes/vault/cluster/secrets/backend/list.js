@@ -1,7 +1,6 @@
 import { set } from '@ember/object';
 import { hash, all } from 'rsvp';
 import Route from '@ember/routing/route';
-import { getOwner } from '@ember/application';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { inject as service } from '@ember/service';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
@@ -34,7 +33,6 @@ export default Route.extend({
   },
 
   beforeModel() {
-    let owner = getOwner(this);
     let secret = this.secretParam();
     let backend = this.enginePathParam();
     let { tab } = this.paramsFor('vault.cluster.secrets.backend');
@@ -47,7 +45,7 @@ export default Route.extend({
       return this.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
     }
     let modelType = this.getModelType(backend, tab);
-    return this.pathHelp.getNewModel(modelType, owner, backend).then(() => {
+    return this.pathHelp.getNewModel(modelType, backend).then(() => {
       this.store.unloadAll('capabilities');
     });
   },
@@ -160,7 +158,8 @@ export default Route.extend({
   resetController(controller, isExiting) {
     this._super(...arguments);
     if (isExiting) {
-      controller.set('filter', '');
+      controller.set('pageFilter', null);
+      controller.set('filter', null);
     }
   },
 

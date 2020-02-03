@@ -11,13 +11,13 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/pluginutil"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
-	lplugin "github.com/hashicorp/vault/logical/plugin"
-	"github.com/hashicorp/vault/logical/plugin/mock"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	lplugin "github.com/hashicorp/vault/sdk/plugin"
+	"github.com/hashicorp/vault/sdk/plugin/mock"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -99,6 +99,47 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 		// Wait for active so post-unseal takes place
 		// If it fails, it means unseal process failed
 		vault.TestWaitActive(t, core.Core)
+	}
+}
+
+func TestSystemBackend_Plugin_MissingBinary(t *testing.T) {
+	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0]
+
+	// Make a request to lazy load the plugin
+	req := logical.TestRequest(t, logical.ReadOperation, "mock-0/internal")
+	req.ClientToken = core.Client.Token()
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: response should not be nil")
+	}
+
+	// Seal the cluster
+	cluster.EnsureCoresSealed(t)
+
+	// Simulate removal of the plugin binary. Use os.Args to determine file name
+	// since that's how we create the file for catalog registration in the test
+	// helper.
+	pluginFileName := filepath.Base(os.Args[0])
+	err = os.Remove(filepath.Join(cluster.TempDir, pluginFileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Unseal the cluster
+	cluster.UnsealCores(t)
+
+	// Make a request against on tune after it is removed
+	req = logical.TestRequest(t, logical.ReadOperation, "sys/mounts/mock-0/tune")
+	req.ClientToken = core.Client.Token()
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil {
+		t.Fatalf("expected error")
 	}
 }
 
@@ -581,11 +622,11 @@ func TestBackend_PluginMainLogical(t *testing.T) {
 	}
 	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
 
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
+	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
 	factoryFunc := mock.FactoryType(logical.TypeLogical)
 
@@ -610,11 +651,11 @@ func TestBackend_PluginMainCredentials(t *testing.T) {
 	}
 	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
 
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
+	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
 	factoryFunc := mock.FactoryType(logical.TypeCredential)
 
@@ -646,11 +687,11 @@ func TestBackend_PluginMainEnv(t *testing.T) {
 	}
 	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
 
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
+	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
 	factoryFunc := mock.FactoryType(logical.TypeLogical)
 
@@ -752,11 +793,6 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 					"update",
 				},
 			},
-			"sys/tools/random": map[string]interface{}{
-				"capabilities": []interface{}{
-					"update",
-				},
-			},
 			"sys/wrapping/lookup": map[string]interface{}{
 				"capabilities": []interface{}{
 					"update",
@@ -784,11 +820,6 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 				},
 			},
 			"sys/tools/hash/": map[string]interface{}{
-				"capabilities": []interface{}{
-					"update",
-				},
-			},
-			"sys/tools/random/": map[string]interface{}{
 				"capabilities": []interface{}{
 					"update",
 				},

@@ -139,4 +139,6 @@ extend google.protobuf.FieldOptions {
 
 	optional bool stdtime = 65010;
 	optional bool stdduration = 65011;
+	optional bool wktpointer = 65012;
+
 }

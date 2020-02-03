@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/gorhill/cronexpr"
-	"github.com/hashicorp/nomad/helper"
-	"github.com/hashicorp/nomad/nomad/structs"
 )
 
 const (
@@ -19,11 +17,21 @@ const (
 	// JobTypeBatch indicates a short-lived process
 	JobTypeBatch = "batch"
 
+	// JobTypeSystem indicates a system process that should run on all clients
+	JobTypeSystem = "system"
+
 	// PeriodicSpecCron is used for a cron spec.
 	PeriodicSpecCron = "cron"
 
 	// DefaultNamespace is the default namespace.
 	DefaultNamespace = "default"
+
+	// For Job configuration, GlobalRegion is a sentinel region value
+	// that users may specify to indicate the job should be run on
+	// the region of the node that the job was submitted to.
+	// For Client configuration, if no region information is given,
+	// the client node will default to be part of the GlobalRegion.
+	GlobalRegion = "global"
 )
 
 const (
@@ -138,7 +146,7 @@ func (j *Jobs) PrefixList(prefix string) ([]*JobListStub, *QueryMeta, error) {
 // job given its unique ID.
 func (j *Jobs) Info(jobID string, q *QueryOptions) (*Job, *QueryMeta, error) {
 	var resp Job
-	qm, err := j.client.query("/v1/job/"+jobID, &resp, q)
+	qm, err := j.client.query("/v1/job/"+url.PathEscape(jobID), &resp, q)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -149,7 +157,7 @@ func (j *Jobs) Info(jobID string, q *QueryOptions) (*Job, *QueryMeta, error) {
 // unique ID.
 func (j *Jobs) Versions(jobID string, diffs bool, q *QueryOptions) ([]*Job, []*JobDiff, *QueryMeta, error) {
 	var resp JobVersionsResponse
-	qm, err := j.client.query(fmt.Sprintf("/v1/job/%s/versions?diffs=%v", jobID, diffs), &resp, q)
+	qm, err := j.client.query(fmt.Sprintf("/v1/job/%s/versions?diffs=%v", url.PathEscape(jobID), diffs), &resp, q)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -159,7 +167,7 @@ func (j *Jobs) Versions(jobID string, diffs bool, q *QueryOptions) ([]*Job, []*J
 // Allocations is used to return the allocs for a given job ID.
 func (j *Jobs) Allocations(jobID string, allAllocs bool, q *QueryOptions) ([]*AllocationListStub, *QueryMeta, error) {
 	var resp []*AllocationListStub
-	u, err := url.Parse("/v1/job/" + jobID + "/allocations")
+	u, err := url.Parse("/v1/job/" + url.PathEscape(jobID) + "/allocations")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -178,9 +186,17 @@ func (j *Jobs) Allocations(jobID string, allAllocs bool, q *QueryOptions) ([]*Al
 
 // Deployments is used to query the deployments associated with the given job
 // ID.
-func (j *Jobs) Deployments(jobID string, q *QueryOptions) ([]*Deployment, *QueryMeta, error) {
+func (j *Jobs) Deployments(jobID string, all bool, q *QueryOptions) ([]*Deployment, *QueryMeta, error) {
 	var resp []*Deployment
-	qm, err := j.client.query("/v1/job/"+jobID+"/deployments", &resp, q)
+	u, err := url.Parse("/v1/job/" + url.PathEscape(jobID) + "/deployments")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	v := u.Query()
+	v.Add("all", strconv.FormatBool(all))
+	u.RawQuery = v.Encode()
+	qm, err := j.client.query(u.String(), &resp, q)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -192,7 +208,7 @@ func (j *Jobs) Deployments(jobID string, q *QueryOptions) ([]*Deployment, *Query
 // the given job ID.
 func (j *Jobs) LatestDeployment(jobID string, q *QueryOptions) (*Deployment, *QueryMeta, error) {
 	var resp *Deployment
-	qm, err := j.client.query("/v1/job/"+jobID+"/deployment", &resp, q)
+	qm, err := j.client.query("/v1/job/"+url.PathEscape(jobID)+"/deployment", &resp, q)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -203,7 +219,7 @@ func (j *Jobs) LatestDeployment(jobID string, q *QueryOptions) (*Deployment, *Qu
 // ID.
 func (j *Jobs) Evaluations(jobID string, q *QueryOptions) ([]*Evaluation, *QueryMeta, error) {
 	var resp []*Evaluation
-	qm, err := j.client.query("/v1/job/"+jobID+"/evaluations", &resp, q)
+	qm, err := j.client.query("/v1/job/"+url.PathEscape(jobID)+"/evaluations", &resp, q)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -216,7 +232,7 @@ func (j *Jobs) Evaluations(jobID string, q *QueryOptions) ([]*Evaluation, *Query
 // eventually GC'ed from the system. Most callers should not specify purge.
 func (j *Jobs) Deregister(jobID string, purge bool, q *WriteOptions) (string, *WriteMeta, error) {
 	var resp JobDeregisterResponse
-	wm, err := j.client.delete(fmt.Sprintf("/v1/job/%v?purge=%t", jobID, purge), &resp, q)
+	wm, err := j.client.delete(fmt.Sprintf("/v1/job/%v?purge=%t", url.PathEscape(jobID), purge), &resp, q)
 	if err != nil {
 		return "", nil, err
 	}
@@ -226,7 +242,7 @@ func (j *Jobs) Deregister(jobID string, purge bool, q *WriteOptions) (string, *W
 // ForceEvaluate is used to force-evaluate an existing job.
 func (j *Jobs) ForceEvaluate(jobID string, q *WriteOptions) (string, *WriteMeta, error) {
 	var resp JobRegisterResponse
-	wm, err := j.client.write("/v1/job/"+jobID+"/evaluate", nil, &resp, q)
+	wm, err := j.client.write("/v1/job/"+url.PathEscape(jobID)+"/evaluate", nil, &resp, q)
 	if err != nil {
 		return "", nil, err
 	}
@@ -242,7 +258,7 @@ func (j *Jobs) EvaluateWithOpts(jobID string, opts EvalOptions, q *WriteOptions)
 	}
 
 	var resp JobRegisterResponse
-	wm, err := j.client.write("/v1/job/"+jobID+"/evaluate", req, &resp, q)
+	wm, err := j.client.write("/v1/job/"+url.PathEscape(jobID)+"/evaluate", req, &resp, q)
 	if err != nil {
 		return "", nil, err
 	}
@@ -252,7 +268,7 @@ func (j *Jobs) EvaluateWithOpts(jobID string, opts EvalOptions, q *WriteOptions)
 // PeriodicForce spawns a new instance of the periodic job and returns the eval ID
 func (j *Jobs) PeriodicForce(jobID string, q *WriteOptions) (string, *WriteMeta, error) {
 	var resp periodicForceResponse
-	wm, err := j.client.write("/v1/job/"+jobID+"/periodic/force", nil, &resp, q)
+	wm, err := j.client.write("/v1/job/"+url.PathEscape(jobID)+"/periodic/force", nil, &resp, q)
 	if err != nil {
 		return "", nil, err
 	}
@@ -285,7 +301,7 @@ func (j *Jobs) PlanOpts(job *Job, opts *PlanOptions, q *WriteOptions) (*JobPlanR
 	}
 
 	var resp JobPlanResponse
-	wm, err := j.client.write("/v1/job/"+*job.ID+"/plan", req, &resp, q)
+	wm, err := j.client.write("/v1/job/"+url.PathEscape(*job.ID)+"/plan", req, &resp, q)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -294,7 +310,7 @@ func (j *Jobs) PlanOpts(job *Job, opts *PlanOptions, q *WriteOptions) (*JobPlanR
 
 func (j *Jobs) Summary(jobID string, q *QueryOptions) (*JobSummary, *QueryMeta, error) {
 	var resp JobSummary
-	qm, err := j.client.query("/v1/job/"+jobID+"/summary", &resp, q)
+	qm, err := j.client.query("/v1/job/"+url.PathEscape(jobID)+"/summary", &resp, q)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -309,7 +325,7 @@ func (j *Jobs) Dispatch(jobID string, meta map[string]string,
 		Meta:    meta,
 		Payload: payload,
 	}
-	wm, err := j.client.write("/v1/job/"+jobID+"/dispatch", req, &resp, q)
+	wm, err := j.client.write("/v1/job/"+url.PathEscape(jobID)+"/dispatch", req, &resp, q)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -320,15 +336,16 @@ func (j *Jobs) Dispatch(jobID string, meta map[string]string,
 // enforceVersion is set, the job is only reverted if the current version is at
 // the passed version.
 func (j *Jobs) Revert(jobID string, version uint64, enforcePriorVersion *uint64,
-	q *WriteOptions) (*JobRegisterResponse, *WriteMeta, error) {
+	q *WriteOptions, vaultToken string) (*JobRegisterResponse, *WriteMeta, error) {
 
 	var resp JobRegisterResponse
 	req := &JobRevertRequest{
 		JobID:               jobID,
 		JobVersion:          version,
 		EnforcePriorVersion: enforcePriorVersion,
+		VaultToken:          vaultToken,
 	}
-	wm, err := j.client.write("/v1/job/"+jobID+"/revert", req, &resp, q)
+	wm, err := j.client.write("/v1/job/"+url.PathEscape(jobID)+"/revert", req, &resp, q)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -345,7 +362,7 @@ func (j *Jobs) Stable(jobID string, version uint64, stable bool,
 		JobVersion: version,
 		Stable:     stable,
 	}
-	wm, err := j.client.write("/v1/job/"+jobID+"/stable", req, &resp, q)
+	wm, err := j.client.write("/v1/job/"+url.PathEscape(jobID)+"/stable", req, &resp, q)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -365,22 +382,24 @@ type UpdateStrategy struct {
 	MinHealthyTime   *time.Duration `mapstructure:"min_healthy_time"`
 	HealthyDeadline  *time.Duration `mapstructure:"healthy_deadline"`
 	ProgressDeadline *time.Duration `mapstructure:"progress_deadline"`
-	AutoRevert       *bool          `mapstructure:"auto_revert"`
 	Canary           *int           `mapstructure:"canary"`
+	AutoRevert       *bool          `mapstructure:"auto_revert"`
+	AutoPromote      *bool          `mapstructure:"auto_promote"`
 }
 
 // DefaultUpdateStrategy provides a baseline that can be used to upgrade
 // jobs with the old policy or for populating field defaults.
 func DefaultUpdateStrategy() *UpdateStrategy {
 	return &UpdateStrategy{
-		Stagger:          helper.TimeToPtr(30 * time.Second),
-		MaxParallel:      helper.IntToPtr(1),
-		HealthCheck:      helper.StringToPtr("checks"),
-		MinHealthyTime:   helper.TimeToPtr(10 * time.Second),
-		HealthyDeadline:  helper.TimeToPtr(5 * time.Minute),
-		ProgressDeadline: helper.TimeToPtr(10 * time.Minute),
-		AutoRevert:       helper.BoolToPtr(false),
-		Canary:           helper.IntToPtr(0),
+		Stagger:          timeToPtr(30 * time.Second),
+		MaxParallel:      intToPtr(1),
+		HealthCheck:      stringToPtr("checks"),
+		MinHealthyTime:   timeToPtr(10 * time.Second),
+		HealthyDeadline:  timeToPtr(5 * time.Minute),
+		ProgressDeadline: timeToPtr(10 * time.Minute),
+		AutoRevert:       boolToPtr(false),
+		Canary:           intToPtr(0),
+		AutoPromote:      boolToPtr(false),
 	}
 }
 
@@ -392,35 +411,39 @@ func (u *UpdateStrategy) Copy() *UpdateStrategy {
 	copy := new(UpdateStrategy)
 
 	if u.Stagger != nil {
-		copy.Stagger = helper.TimeToPtr(*u.Stagger)
+		copy.Stagger = timeToPtr(*u.Stagger)
 	}
 
 	if u.MaxParallel != nil {
-		copy.MaxParallel = helper.IntToPtr(*u.MaxParallel)
+		copy.MaxParallel = intToPtr(*u.MaxParallel)
 	}
 
 	if u.HealthCheck != nil {
-		copy.HealthCheck = helper.StringToPtr(*u.HealthCheck)
+		copy.HealthCheck = stringToPtr(*u.HealthCheck)
 	}
 
 	if u.MinHealthyTime != nil {
-		copy.MinHealthyTime = helper.TimeToPtr(*u.MinHealthyTime)
+		copy.MinHealthyTime = timeToPtr(*u.MinHealthyTime)
 	}
 
 	if u.HealthyDeadline != nil {
-		copy.HealthyDeadline = helper.TimeToPtr(*u.HealthyDeadline)
+		copy.HealthyDeadline = timeToPtr(*u.HealthyDeadline)
 	}
 
 	if u.ProgressDeadline != nil {
-		copy.ProgressDeadline = helper.TimeToPtr(*u.ProgressDeadline)
+		copy.ProgressDeadline = timeToPtr(*u.ProgressDeadline)
 	}
 
 	if u.AutoRevert != nil {
-		copy.AutoRevert = helper.BoolToPtr(*u.AutoRevert)
+		copy.AutoRevert = boolToPtr(*u.AutoRevert)
 	}
 
 	if u.Canary != nil {
-		copy.Canary = helper.IntToPtr(*u.Canary)
+		copy.Canary = intToPtr(*u.Canary)
+	}
+
+	if u.AutoPromote != nil {
+		copy.AutoPromote = boolToPtr(*u.AutoPromote)
 	}
 
 	return copy
@@ -432,35 +455,39 @@ func (u *UpdateStrategy) Merge(o *UpdateStrategy) {
 	}
 
 	if o.Stagger != nil {
-		u.Stagger = helper.TimeToPtr(*o.Stagger)
+		u.Stagger = timeToPtr(*o.Stagger)
 	}
 
 	if o.MaxParallel != nil {
-		u.MaxParallel = helper.IntToPtr(*o.MaxParallel)
+		u.MaxParallel = intToPtr(*o.MaxParallel)
 	}
 
 	if o.HealthCheck != nil {
-		u.HealthCheck = helper.StringToPtr(*o.HealthCheck)
+		u.HealthCheck = stringToPtr(*o.HealthCheck)
 	}
 
 	if o.MinHealthyTime != nil {
-		u.MinHealthyTime = helper.TimeToPtr(*o.MinHealthyTime)
+		u.MinHealthyTime = timeToPtr(*o.MinHealthyTime)
 	}
 
 	if o.HealthyDeadline != nil {
-		u.HealthyDeadline = helper.TimeToPtr(*o.HealthyDeadline)
+		u.HealthyDeadline = timeToPtr(*o.HealthyDeadline)
 	}
 
 	if o.ProgressDeadline != nil {
-		u.ProgressDeadline = helper.TimeToPtr(*o.ProgressDeadline)
+		u.ProgressDeadline = timeToPtr(*o.ProgressDeadline)
 	}
 
 	if o.AutoRevert != nil {
-		u.AutoRevert = helper.BoolToPtr(*o.AutoRevert)
+		u.AutoRevert = boolToPtr(*o.AutoRevert)
 	}
 
 	if o.Canary != nil {
-		u.Canary = helper.IntToPtr(*o.Canary)
+		u.Canary = intToPtr(*o.Canary)
+	}
+
+	if o.AutoPromote != nil {
+		u.AutoPromote = boolToPtr(*o.AutoPromote)
 	}
 }
 
@@ -498,6 +525,10 @@ func (u *UpdateStrategy) Canonicalize() {
 	if u.Canary == nil {
 		u.Canary = d.Canary
 	}
+
+	if u.AutoPromote == nil {
+		u.AutoPromote = d.AutoPromote
+	}
 }
 
 // Empty returns whether the UpdateStrategy is empty or has user defined values.
@@ -534,6 +565,10 @@ func (u *UpdateStrategy) Empty() bool {
 		return false
 	}
 
+	if u.AutoPromote != nil && *u.AutoPromote {
+		return false
+	}
+
 	if u.Canary != nil && *u.Canary != 0 {
 		return false
 	}
@@ -552,19 +587,19 @@ type PeriodicConfig struct {
 
 func (p *PeriodicConfig) Canonicalize() {
 	if p.Enabled == nil {
-		p.Enabled = helper.BoolToPtr(true)
+		p.Enabled = boolToPtr(true)
 	}
 	if p.Spec == nil {
-		p.Spec = helper.StringToPtr("")
+		p.Spec = stringToPtr("")
 	}
 	if p.SpecType == nil {
-		p.SpecType = helper.StringToPtr(PeriodicSpecCron)
+		p.SpecType = stringToPtr(PeriodicSpecCron)
 	}
 	if p.ProhibitOverlap == nil {
-		p.ProhibitOverlap = helper.BoolToPtr(false)
+		p.ProhibitOverlap = boolToPtr(false)
 	}
 	if p.TimeZone == nil || *p.TimeZone == "" {
-		p.TimeZone = helper.StringToPtr("UTC")
+		p.TimeZone = stringToPtr("UTC")
 	}
 }
 
@@ -575,13 +610,27 @@ func (p *PeriodicConfig) Canonicalize() {
 func (p *PeriodicConfig) Next(fromTime time.Time) (time.Time, error) {
 	if *p.SpecType == PeriodicSpecCron {
 		if e, err := cronexpr.Parse(*p.Spec); err == nil {
-			return structs.CronParseNext(e, fromTime, *p.Spec)
+			return cronParseNext(e, fromTime, *p.Spec)
 		}
 	}
 
 	return time.Time{}, nil
 }
 
+// cronParseNext is a helper that parses the next time for the given expression
+// but captures any panic that may occur in the underlying library.
+// ---  THIS FUNCTION IS REPLICATED IN nomad/structs/structs.go
+// and should be kept in sync.
+func cronParseNext(e *cronexpr.Expression, fromTime time.Time, spec string) (t time.Time, err error) {
+	defer func() {
+		if recover() != nil {
+			t = time.Time{}
+			err = fmt.Errorf("failed parsing cron expression: %q", spec)
+		}
+	}()
+
+	return e.Next(fromTime), nil
+}
 func (p *PeriodicConfig) GetLocation() (*time.Location, error) {
 	if p.TimeZone == nil || *p.TimeZone == "" {
 		return time.UTC, nil
@@ -644,68 +693,77 @@ func (j *Job) IsParameterized() bool {
 
 func (j *Job) Canonicalize() {
 	if j.ID == nil {
-		j.ID = helper.StringToPtr("")
+		j.ID = stringToPtr("")
 	}
 	if j.Name == nil {
-		j.Name = helper.StringToPtr(*j.ID)
+		j.Name = stringToPtr(*j.ID)
 	}
 	if j.ParentID == nil {
-		j.ParentID = helper.StringToPtr("")
+		j.ParentID = stringToPtr("")
 	}
 	if j.Namespace == nil {
-		j.Namespace = helper.StringToPtr(DefaultNamespace)
+		j.Namespace = stringToPtr(DefaultNamespace)
 	}
 	if j.Priority == nil {
-		j.Priority = helper.IntToPtr(50)
+		j.Priority = intToPtr(50)
 	}
 	if j.Stop == nil {
-		j.Stop = helper.BoolToPtr(false)
+		j.Stop = boolToPtr(false)
 	}
 	if j.Region == nil {
-		j.Region = helper.StringToPtr("global")
+		j.Region = stringToPtr(GlobalRegion)
 	}
 	if j.Namespace == nil {
-		j.Namespace = helper.StringToPtr("default")
+		j.Namespace = stringToPtr("default")
 	}
 	if j.Type == nil {
-		j.Type = helper.StringToPtr("service")
+		j.Type = stringToPtr("service")
 	}
 	if j.AllAtOnce == nil {
-		j.AllAtOnce = helper.BoolToPtr(false)
+		j.AllAtOnce = boolToPtr(false)
 	}
 	if j.VaultToken == nil {
-		j.VaultToken = helper.StringToPtr("")
+		j.VaultToken = stringToPtr("")
 	}
 	if j.Status == nil {
-		j.Status = helper.StringToPtr("")
+		j.Status = stringToPtr("")
 	}
 	if j.StatusDescription == nil {
-		j.StatusDescription = helper.StringToPtr("")
+		j.StatusDescription = stringToPtr("")
 	}
 	if j.Stable == nil {
-		j.Stable = helper.BoolToPtr(false)
+		j.Stable = boolToPtr(false)
 	}
 	if j.Version == nil {
-		j.Version = helper.Uint64ToPtr(0)
+		j.Version = uint64ToPtr(0)
 	}
 	if j.CreateIndex == nil {
-		j.CreateIndex = helper.Uint64ToPtr(0)
+		j.CreateIndex = uint64ToPtr(0)
 	}
 	if j.ModifyIndex == nil {
-		j.ModifyIndex = helper.Uint64ToPtr(0)
+		j.ModifyIndex = uint64ToPtr(0)
 	}
 	if j.JobModifyIndex == nil {
-		j.JobModifyIndex = helper.Uint64ToPtr(0)
+		j.JobModifyIndex = uint64ToPtr(0)
 	}
 	if j.Periodic != nil {
 		j.Periodic.Canonicalize()
 	}
 	if j.Update != nil {
 		j.Update.Canonicalize()
+	} else if *j.Type == JobTypeService {
+		j.Update = DefaultUpdateStrategy()
 	}
 
 	for _, tg := range j.TaskGroups {
 		tg.Canonicalize(j)
+	}
+
+	for _, spread := range j.Spreads {
+		spread.Canonicalize()
+	}
+	for _, a := range j.Affinities {
+		a.Canonicalize()
 	}
 }
 
@@ -763,6 +821,7 @@ type JobListStub struct {
 	ID                string
 	ParentID          string
 	Name              string
+	Datacenters       []string
 	Type              string
 	Priority          int
 	Periodic          bool
@@ -907,6 +966,12 @@ type JobRevertRequest struct {
 	// version before reverting.
 	EnforcePriorVersion *uint64
 
+	// VaultToken is the Vault token that proves the submitter of the job revert
+	// has access to any Vault policies specified in the targeted job version. This
+	// field is only used to authorize the revert and is not stored after the Job
+	// revert.
+	VaultToken string `json:",omitempty"`
+
 	WriteRequest
 }
 
@@ -1013,6 +1078,7 @@ type ObjectDiff struct {
 
 type PlanAnnotations struct {
 	DesiredTGUpdates map[string]*DesiredUpdates
+	PreemptedAllocs  []*AllocationListStub
 }
 
 type DesiredUpdates struct {
@@ -1023,6 +1089,7 @@ type DesiredUpdates struct {
 	InPlaceUpdate     uint64
 	DestructiveUpdate uint64
 	Canary            uint64
+	Preemptions       uint64
 }
 
 type JobDispatchRequest struct {

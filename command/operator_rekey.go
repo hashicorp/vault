@@ -9,8 +9,8 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/password"
 	"github.com/hashicorp/vault/helper/pgpkeys"
+	"github.com/hashicorp/vault/sdk/helper/password"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -685,12 +685,22 @@ func (c *OperatorRekeyCommand) printUnsealKeys(client *api.Client, status *api.R
 
 	if len(resp.PGPFingerprints) > 0 && resp.Backup {
 		c.UI.Output("")
-		c.UI.Output(wrapAtLength(fmt.Sprintf(
-			"The encrypted unseal keys are backed up to \"core/unseal-keys-backup\"" +
-				"in the storage backend. Remove these keys at any time using " +
-				"\"vault operator rekey -backup-delete\". Vault does not automatically " +
-				"remove these keys.",
-		)))
+		switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
+		case "barrier":
+			c.UI.Output(wrapAtLength(fmt.Sprintf(
+				"The encrypted unseal keys are backed up to \"core/unseal-keys-backup\" " +
+					"in the storage backend. Remove these keys at any time using " +
+					"\"vault operator rekey -backup-delete\". Vault does not automatically " +
+					"remove these keys.",
+			)))
+		case "recovery", "hsm":
+			c.UI.Output(wrapAtLength(fmt.Sprintf(
+				"The encrypted unseal keys are backed up to \"core/recovery-keys-backup\" " +
+					"in the storage backend. Remove these keys at any time using " +
+					"\"vault operator rekey -backup-delete -target=recovery\". Vault does not automatically " +
+					"remove these keys.",
+			)))
+		}
 	}
 
 	switch status.VerificationRequired {

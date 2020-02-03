@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -20,9 +19,9 @@ import (
 	agentaws "github.com/hashicorp/vault/command/agent/auth/aws"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
-	"github.com/hashicorp/vault/helper/logging"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -77,7 +76,6 @@ func TestAWSEndToEnd(t *testing.T) {
 		// Retain thru the account number of the given arn and wildcard the rest.
 		"bound_iam_principal_arn": os.Getenv(envVarAwsTestRoleArn)[:25] + "*",
 	}); err != nil {
-		fmt.Println(err)
 		t.Fatal(err)
 	}
 

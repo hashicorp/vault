@@ -10,22 +10,28 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/sink"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink) http.Handler {
+func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, proxyVaultToken bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logger.Info("received request", "path", r.URL.Path, "method", r.Method)
+		logger.Info("received request", "method", r.Method, "path", r.URL.Path)
+
+		if !proxyVaultToken {
+			r.Header.Del(consts.AuthHeaderName)
+		}
 
 		token := r.Header.Get(consts.AuthHeaderName)
+
 		if token == "" && inmemSink != nil {
-			logger.Debug("using auto auth token", "path", r.URL.Path, "method", r.Method)
+			logger.Debug("using auto auth token", "method", r.Method, "path", r.URL.Path)
 			token = inmemSink.(sink.SinkReader).Token()
 		}
 
@@ -66,11 +72,40 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 
 		defer resp.Response.Body.Close()
 
-		copyHeader(w.Header(), resp.Response.Header)
-		w.WriteHeader(resp.Response.StatusCode)
+		// Set headers
+		setHeaders(w, resp)
+
+		// Set response body
 		io.Copy(w, resp.Response.Body)
 		return
 	})
+}
+
+// setHeaders is a helper that sets the header values based on SendResponse. It
+// copies over the headers from the original response and also includes any
+// cache-related headers.
+func setHeaders(w http.ResponseWriter, resp *SendResponse) {
+	// Set header values
+	copyHeader(w.Header(), resp.Response.Header)
+	if resp.CacheMeta != nil {
+		xCacheVal := "MISS"
+
+		if resp.CacheMeta.Hit {
+			xCacheVal = "HIT"
+
+			// If this is a cache hit, we also set the Age header
+			age := fmt.Sprintf("%.0f", resp.CacheMeta.Age.Seconds())
+			w.Header().Set("Age", age)
+
+			// Update the date value
+			w.Header().Set("Date", time.Now().Format(http.TimeFormat))
+		}
+
+		w.Header().Set("X-Cache", xCacheVal)
+	}
+
+	// Set status code
+	w.WriteHeader(resp.Response.StatusCode)
 }
 
 // processTokenLookupResponse checks if the request was one of token
@@ -118,7 +153,7 @@ func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, inmemS
 		return nil
 	}
 
-	logger.Info("stripping auto-auth token from the response", "path", req.Request.URL.Path, "method", req.Request.Method)
+	logger.Info("stripping auto-auth token from the response", "method", req.Request.Method, "path", req.Request.URL.Path)
 	secret, err := api.ParseSecret(bytes.NewReader(resp.ResponseBody))
 	if err != nil {
 		return fmt.Errorf("failed to parse token lookup response: %v", err)
@@ -143,7 +178,7 @@ func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, inmemS
 	resp.Response.Body = ioutil.NopCloser(bytes.NewReader(bodyBytes))
 	resp.Response.ContentLength = int64(len(bodyBytes))
 
-	// Serialize and re-read the reponse
+	// Serialize and re-read the response
 	var respBytes bytes.Buffer
 	err = resp.Response.Write(&respBytes)
 	if err != nil {

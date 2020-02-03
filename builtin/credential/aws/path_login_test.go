@@ -7,12 +7,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestBackend_pathLogin_getCallerIdentityResponse(t *testing.T) {
@@ -113,6 +114,10 @@ func TestBackend_pathLogin_parseIamArn(t *testing.T) {
 	_, err = parseIamArn("arn:aws:iam::1234556789012:/")
 	if err == nil {
 		t.Error("expected error from empty principal type and no principal name (arn:aws:iam::1234556789012:/)")
+	}
+	_, err = parseIamArn("arn:aws:sts::1234556789012:assumed-role/role")
+	if err == nil {
+		t.Error("expected error from malformed assumed role ARN")
 	}
 }
 
@@ -215,7 +220,7 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 		AuthType: iamAuthType,
 	}
 
-	if err := b.nonLockedSetAWSRole(context.Background(), storage, testValidRoleName, roleEntry); err != nil {
+	if err := b.setRole(context.Background(), storage, testValidRoleName, roleEntry); err != nil {
 		t.Fatalf("failed to set entry: %s", err)
 	}
 
@@ -225,6 +230,18 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 	loginData, err := defaultLoginData()
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	expectedAliasMetadata := map[string]string{
+		"account_id":     "123456789012",
+		"auth_type":      "iam",
+		"canonical_arn":  "arn:aws:iam::123456789012:user/valid-role",
+		"client_arn":     "arn:aws:iam::123456789012:user/valid-role",
+		"client_user_id": "ASOMETHINGSOMETHINGSOMETHING",
+		// Note there is no inferred entity, so these fields should be empty
+		"inferred_aws_region":  "",
+		"inferred_entity_id":   "",
+		"inferred_entity_type": "",
 	}
 
 	// expected errors for certain tests
@@ -307,10 +324,11 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 			}
 
 			loginRequest := &logical.Request{
-				Operation: logical.UpdateOperation,
-				Path:      "login",
-				Storage:   storage,
-				Data:      loginData,
+				Operation:  logical.UpdateOperation,
+				Path:       "login",
+				Storage:    storage,
+				Data:       loginData,
+				Connection: &logical.Connection{},
 			}
 
 			resp, err := b.HandleRequest(context.Background(), loginRequest)
@@ -319,6 +337,10 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 					return
 				}
 				t.Errorf("un expected failed login:\nresp: %#v\n\nerr: %v", resp, err)
+			}
+
+			if !reflect.DeepEqual(expectedAliasMetadata, resp.Auth.Alias.Metadata) {
+				t.Errorf("expected metadata (%#v) to match (%#v)", expectedAliasMetadata, resp.Auth.Alias.Metadata)
 			}
 		})
 	}

@@ -14,7 +14,7 @@ import (
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"go.etcd.io/etcd/client"
 	"go.etcd.io/etcd/pkg/transport"
 )

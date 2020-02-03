@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/vault/helper/locksutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // pathsDelete returns the path configuration for the delete and undelete paths
@@ -66,6 +66,11 @@ func (b *versionedKVBackend) pathUndeleteWrite() framework.OperationFunc {
 			return logical.ErrorResponse("No version number provided"), logical.ErrInvalidRequest
 		}
 
+		config, err := b.config(ctx, req.Storage)
+		if err != nil {
+			return nil, err
+		}
+
 		lock := locksutil.LockForKey(b.locks, key)
 		lock.Lock()
 		defer lock.Unlock()
@@ -84,8 +89,17 @@ func (b *versionedKVBackend) pathUndeleteWrite() framework.OperationFunc {
 			if lv == nil || lv.Destroyed {
 				continue
 			}
-
 			lv.DeletionTime = nil
+
+			if !config.IsDeleteVersionAfterDisabled() {
+				if dtime, ok := deletionTime(time.Now(), deleteVersionAfter(config), deleteVersionAfter(meta)); ok {
+					dt, err := ptypes.TimestampProto(dtime)
+					if err != nil {
+						return logical.ErrorResponse("error setting deletion_time: converting %v to protobuf: %v", dtime, err), logical.ErrInvalidRequest
+					}
+					lv.DeletionTime = dt
+				}
+			}
 		}
 		err = b.writeKeyMetadata(ctx, req.Storage, meta)
 		if err != nil {

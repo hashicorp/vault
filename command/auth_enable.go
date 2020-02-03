@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -32,6 +32,7 @@ type AuthEnableCommand struct {
 	flagOptions                   map[string]string
 	flagLocal                     bool
 	flagSealWrap                  bool
+	flagExternalEntropyAccess     bool
 	flagTokenType                 string
 	flagVersion                   int
 }
@@ -114,14 +115,14 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACRequestKeys,
 		Target: &c.flagAuditNonHMACRequestKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit" +
+		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
 			"devices in the request data object.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACResponseKeys,
 		Target: &c.flagAuditNonHMACResponseKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit" +
+		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
 			"devices in the response data object.",
 	})
 
@@ -174,6 +175,13 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Target:  &c.flagSealWrap,
 		Default: false,
 		Usage:   "Enable seal wrapping of critical values in the secrets engine.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "external-entropy-access",
+		Target:  &c.flagExternalEntropyAccess,
+		Default: false,
+		Usage:   "Enable auth method to access Vault's external entropy source.",
 	})
 
 	f.StringVar(&StringVar{
@@ -251,10 +259,11 @@ func (c *AuthEnableCommand) Run(args []string) int {
 	}
 
 	authOpts := &api.EnableAuthOptions{
-		Type:        authType,
-		Description: c.flagDescription,
-		Local:       c.flagLocal,
-		SealWrap:    c.flagSealWrap,
+		Type:                  authType,
+		Description:           c.flagDescription,
+		Local:                 c.flagLocal,
+		SealWrap:              c.flagSealWrap,
+		ExternalEntropyAccess: c.flagExternalEntropyAccess,
 		Config: api.AuthConfigInput{
 			DefaultLeaseTTL: c.flagDefaultLeaseTTL.String(),
 			MaxLeaseTTL:     c.flagMaxLeaseTTL.String(),

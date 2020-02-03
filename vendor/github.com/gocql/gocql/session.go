@@ -62,8 +62,9 @@ type Session struct {
 	schemaEvents *eventDebouncer
 
 	// ring metadata
-	hosts           []HostInfo
-	useSystemSchema bool
+	hosts                     []HostInfo
+	useSystemSchema           bool
+	hasAggregatesAndFunctions bool
 
 	cfg ClusterConfig
 
@@ -105,6 +106,11 @@ func NewSession(cfg ClusterConfig) (*Session, error) {
 	// Check that hosts in the ClusterConfig is not empty
 	if len(cfg.Hosts) < 1 {
 		return nil, ErrNoHosts
+	}
+
+	// Check that either Authenticator is set or AuthProvider, not both
+	if cfg.Authenticator != nil && cfg.AuthProvider != nil {
+		return nil, errors.New("Can't use both Authenticator and AuthProvider in cluster config.")
 	}
 
 	s := &Session{
@@ -235,12 +241,19 @@ func (s *Session) init() error {
 		newer, _ := checkSystemSchema(s.control)
 		s.useSystemSchema = newer
 	} else {
-		host := s.ring.rrHost()
-		s.useSystemSchema = host.Version().Major >= 3
+		version := s.ring.rrHost().Version()
+		s.useSystemSchema = version.AtLeast(3, 0, 0)
+		s.hasAggregatesAndFunctions = version.AtLeast(2, 2, 0)
 	}
 
 	if s.pool.Size() == 0 {
 		return ErrNoConnectionsStarted
+	}
+
+	// Invoke KeyspaceChanged to let the policy cache the session keyspace
+	// parameters. This is used by tokenAwareHostPolicy to discover replicas.
+	if !s.cfg.disableControlConn && s.cfg.Keyspace != "" {
+		s.policy.KeyspaceChanged(KeyspaceUpdateEvent{Keyspace: s.cfg.Keyspace})
 	}
 
 	return nil
@@ -570,8 +583,8 @@ func (s *Session) routingKeyInfo(ctx context.Context, stmt string) (*routingKeyI
 	return routingKeyInfo, nil
 }
 
-func (b *Batch) execute(conn *Conn) *Iter {
-	return conn.executeBatch(b)
+func (b *Batch) execute(ctx context.Context, conn *Conn) *Iter {
+	return conn.executeBatch(ctx, b)
 }
 
 func (s *Session) executeBatch(batch *Batch) *Iter {
@@ -643,21 +656,6 @@ func (s *Session) MapExecuteBatchCAS(batch *Batch, dest map[string]interface{}) 
 	return applied, iter, iter.err
 }
 
-func (s *Session) connect(host *HostInfo, errorHandler ConnErrorHandler) (*Conn, error) {
-	if s.connectObserver != nil {
-		obs := ObservedConnect{
-			Host:  host,
-			Start: time.Now(),
-		}
-		conn, err := s.dial(host, s.connCfg, errorHandler)
-		obs.End = time.Now()
-		obs.Err = err
-		s.connectObserver.ObserveConnect(obs)
-		return conn, err
-	}
-	return s.dial(host, s.connCfg, errorHandler)
-}
-
 type hostMetrics struct {
 	Attempts     int
 	TotalLatency int64
@@ -689,7 +687,6 @@ type Query struct {
 	defaultTimestampValue int64
 	disableSkipMetadata   bool
 	context               context.Context
-	cancelQuery           func()
 	idempotent            bool
 	customPayload         map[string][]byte
 	metrics               *queryMetrics
@@ -711,9 +708,6 @@ func (q *Query) defaultsFromSession() {
 	q.defaultTimestamp = s.cfg.DefaultTimestamp
 	q.idempotent = s.cfg.DefaultIdempotence
 	q.metrics = &queryMetrics{m: make(map[string]*hostMetrics)}
-
-	// Initiate an empty context with a cancel call
-	q.WithContext(context.Background())
 
 	q.spec = &NonSpeculativeExecution{}
 	s.mu.RUnlock()
@@ -808,7 +802,10 @@ func (q *Query) CustomPayload(customPayload map[string][]byte) *Query {
 	return q
 }
 
-func (q *Query) GetContext() context.Context {
+func (q *Query) Context() context.Context {
+	if q.context == nil {
+		return context.Background()
+	}
 	return q.context
 }
 
@@ -865,20 +862,30 @@ func (q *Query) RoutingKey(routingKey []byte) *Query {
 	return q
 }
 
-// WithContext will set the context to use during a query, it will be used to
-// timeout when waiting for responses from Cassandra. Additionally it adds
-// the cancel function so that it can be called whenever necessary.
+func (q *Query) withContext(ctx context.Context) ExecutableQuery {
+	// I really wish go had covariant types
+	return q.WithContext(ctx)
+}
+
+// WithContext returns a shallow copy of q with its context
+// set to ctx.
+//
+// The provided context controls the entire lifetime of executing a
+// query, queries will be canceled and return once the context is
+// canceled.
 func (q *Query) WithContext(ctx context.Context) *Query {
-	q.context, q.cancelQuery = context.WithCancel(ctx)
-	return q
+	q2 := *q
+	q2.context = ctx
+	return &q2
 }
 
+// Deprecate: does nothing, cancel the context passed to WithContext
 func (q *Query) Cancel() {
-	q.cancelQuery()
+	// TODO: delete
 }
 
-func (q *Query) execute(conn *Conn) *Iter {
-	return conn.executeQuery(q)
+func (q *Query) execute(ctx context.Context, conn *Conn) *Iter {
+	return conn.executeQuery(ctx, q)
 }
 
 func (q *Query) attempt(keyspace string, end, start time.Time, iter *Iter, host *HostInfo) {
@@ -886,7 +893,7 @@ func (q *Query) attempt(keyspace string, end, start time.Time, iter *Iter, host 
 	q.AddLatency(end.Sub(start).Nanoseconds(), host)
 
 	if q.observer != nil {
-		q.observer.ObserveQuery(q.context, ObservedQuery{
+		q.observer.ObserveQuery(q.Context(), ObservedQuery{
 			Keyspace:  keyspace,
 			Statement: q.stmt,
 			Start:     start,
@@ -930,7 +937,7 @@ func (q *Query) GetRoutingKey() ([]byte, error) {
 	}
 
 	// try to determine the routing key
-	routingKeyInfo, err := q.session.routingKeyInfo(q.context, q.stmt)
+	routingKeyInfo, err := q.session.routingKeyInfo(q.Context(), q.stmt)
 	if err != nil {
 		return nil, err
 	}
@@ -1351,7 +1358,7 @@ func (iter *Iter) Scan(dest ...interface{}) bool {
 		return false
 	}
 
-	if iter.next != nil && iter.pos == iter.next.pos {
+	if iter.next != nil && iter.pos >= iter.next.pos {
 		go iter.next.fetch()
 	}
 
@@ -1434,7 +1441,7 @@ func (iter *Iter) checkErrAndNotFound() error {
 }
 
 // PageState return the current paging state for a query which can be used for
-// subsequent quries to resume paging this point.
+// subsequent queries to resume paging this point.
 func (iter *Iter) PageState() []byte {
 	return iter.meta.pagingState
 }
@@ -1447,21 +1454,15 @@ func (iter *Iter) NumRows() int {
 }
 
 type nextIter struct {
-	qry  Query
+	qry  *Query
 	pos  int
 	once sync.Once
 	next *Iter
-	conn *Conn
 }
 
 func (n *nextIter) fetch() *Iter {
 	n.once.Do(func() {
-		iter := n.qry.session.executor.attemptQuery(&n.qry, n.conn)
-		if iter != nil && iter.err == nil {
-			n.next = iter
-		} else {
-			n.next = n.qry.session.executeQuery(&n.qry)
-		}
+		n.next = n.qry.session.executeQuery(n.qry)
 	})
 	return n.next
 }
@@ -1487,7 +1488,11 @@ type Batch struct {
 //
 // Deprecated: use session.NewBatch instead
 func NewBatch(typ BatchType) *Batch {
-	return &Batch{Type: typ, metrics: &queryMetrics{m: make(map[string]*hostMetrics)}}
+	return &Batch{
+		Type:    typ,
+		metrics: &queryMetrics{m: make(map[string]*hostMetrics)},
+		spec:    &NonSpeculativeExecution{},
+	}
 }
 
 // NewBatch creates a new batch operation using defaults defined in the cluster
@@ -1504,9 +1509,6 @@ func (s *Session) NewBatch(typ BatchType) *Batch {
 		metrics:          &queryMetrics{m: make(map[string]*hostMetrics)},
 		spec:             &NonSpeculativeExecution{},
 	}
-
-	// Initiate an empty context with a cancel call
-	batch.WithContext(context.Background())
 
 	s.mu.RUnlock()
 	return batch
@@ -1593,7 +1595,10 @@ func (b *Batch) SetConsistency(c Consistency) {
 	b.Cons = c
 }
 
-func (b *Batch) GetContext() context.Context {
+func (b *Batch) Context() context.Context {
+	if b.context == nil {
+		return context.Background()
+	}
 	return b.context
 }
 
@@ -1637,16 +1642,25 @@ func (b *Batch) RetryPolicy(r RetryPolicy) *Batch {
 	return b
 }
 
-// WithContext will set the context to use during a query, it will be used to
-// timeout when waiting for responses from Cassandra. Additionally it adds
-// the cancel function so that it can be called whenever necessary.
-func (b *Batch) WithContext(ctx context.Context) *Batch {
-	b.context, b.cancelBatch = context.WithCancel(ctx)
-	return b
+func (b *Batch) withContext(ctx context.Context) ExecutableQuery {
+	return b.WithContext(ctx)
 }
 
-func (b *Batch) Cancel() {
-	b.cancelBatch()
+// WithContext returns a shallow copy of b with its context
+// set to ctx.
+//
+// The provided context controls the entire lifetime of executing a
+// query, queries will be canceled and return once the context is
+// canceled.
+func (b *Batch) WithContext(ctx context.Context) *Batch {
+	b2 := *b
+	b2.context = ctx
+	return &b2
+}
+
+// Deprecate: does nothing, cancel the context passed to WithContext
+func (*Batch) Cancel() {
+	// TODO: delete
 }
 
 // Size returns the number of batch statements to be executed by the batch operation.
@@ -1702,7 +1716,7 @@ func (b *Batch) attempt(keyspace string, end, start time.Time, iter *Iter, host 
 		statements[i] = entry.Stmt
 	}
 
-	b.observer.ObserveBatch(b.context, ObservedBatch{
+	b.observer.ObserveBatch(b.Context(), ObservedBatch{
 		Keyspace:   keyspace,
 		Statements: statements,
 		Start:      start,

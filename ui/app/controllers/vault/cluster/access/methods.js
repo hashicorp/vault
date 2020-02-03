@@ -15,10 +15,10 @@ export default Controller.extend({
     const { type, path } = method.getProperties('type', 'path');
     try {
       yield method.destroyRecord();
-      this.get('flashMessages').success(`The ${type} auth method at ${path} has been disabled.`);
+      this.get('flashMessages').success(`The ${type} Auth Method at ${path} has been disabled.`);
     } catch (err) {
       this.get('flashMessages').danger(
-        `There was an error disabling auth method at ${path}: ${err.errors.join(' ')}.`
+        `There was an error disabling Auth Method at ${path}: ${err.errors.join(' ')}.`
       );
     }
   }).drop(),

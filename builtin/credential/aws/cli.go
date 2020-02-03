@@ -9,23 +9,47 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/awsutil"
+	"github.com/hashicorp/vault/sdk/helper/awsutil"
 )
 
 type CLIHandler struct{}
 
-// Generates the necessary data to send to the Vault server for generating a token
+// STS is a really weird service that used to only have global endpoints but now has regional endpoints as well.
+// For backwards compatibility, even if you request a region other than us-east-1, it'll still sign for us-east-1.
+// See, e.g., https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_enable-regions.html#id_credentials_temp_enable-regions_writing_code
+// So we have to shim in this EndpointResolver to force it to sign for the right region
+func stsSigningResolver(service, region string, optFns ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
+	defaultEndpoint, err := endpoints.DefaultResolver().EndpointFor(service, region, optFns...)
+	if err != nil {
+		return defaultEndpoint, err
+	}
+	defaultEndpoint.SigningRegion = region
+	return defaultEndpoint, nil
+}
+
+// GenerateLoginData populates the necessary data to send to the Vault server for generating a token
 // This is useful for other API clients to use
-func GenerateLoginData(creds *credentials.Credentials, headerValue string) (map[string]interface{}, error) {
+func GenerateLoginData(creds *credentials.Credentials, headerValue, configuredRegion string) (map[string]interface{}, error) {
 	loginData := make(map[string]interface{})
 
 	// Use the credentials we've found to construct an STS session
+	region, err := awsutil.GetRegion(configuredRegion)
+	if err != nil {
+		hclog.Default().Warn(fmt.Sprintf("defaulting region to %q due to %s", awsutil.DefaultRegion, err.Error()))
+		region = awsutil.DefaultRegion
+	}
 	stsSession, err := session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{Credentials: creds},
+		Config: aws.Config{
+			Credentials:      creds,
+			Region:           &region,
+			EndpointResolver: endpoints.ResolverFunc(stsSigningResolver),
+		},
 	})
 	if err != nil {
 		return nil, err
@@ -79,7 +103,11 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		return nil, err
 	}
 
-	loginData, err := GenerateLoginData(creds, headerValue)
+	region := m["region"]
+	if region == "" {
+		region = awsutil.DefaultRegion
+	}
+	loginData, err := GenerateLoginData(creds, headerValue, region)
 	if err != nil {
 		return nil, err
 	}

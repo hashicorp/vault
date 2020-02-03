@@ -1,16 +1,19 @@
 package builtinplugins
 
 import (
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
+	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 
 	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	credAzure "github.com/hashicorp/vault-plugin-auth-azure"
 	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
+	credCF "github.com/hashicorp/vault-plugin-auth-cf"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credJWT "github.com/hashicorp/vault-plugin-auth-jwt"
+	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
 	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
+	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
@@ -21,6 +24,7 @@ import (
 	credRadius "github.com/hashicorp/vault/builtin/credential/radius"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 
+	dbElastic "github.com/hashicorp/vault-plugin-database-elasticsearch"
 	dbCass "github.com/hashicorp/vault/plugins/database/cassandra"
 	dbHana "github.com/hashicorp/vault/plugins/database/hana"
 	dbInflux "github.com/hashicorp/vault/plugins/database/influxdb"
@@ -54,12 +58,14 @@ import (
 // Thus, rather than creating multiple instances of it, we only need one.
 var Registry = newRegistry()
 
+var addExternalPlugins = addExtPluginsImpl
+
 // BuiltinFactory is the func signature that should be returned by
 // the plugin's New() func.
 type BuiltinFactory func() (interface{}, error)
 
 func newRegistry() *registry {
-	return &registry{
+	reg := &registry{
 		credentialBackends: map[string]logical.Factory{
 			"alicloud":   credAliCloud.Factory,
 			"app-id":     credAppId.Factory,
@@ -68,13 +74,17 @@ func newRegistry() *registry {
 			"azure":      credAzure.Factory,
 			"centrify":   credCentrify.Factory,
 			"cert":       credCert.Factory,
+			"cf":         credCF.Factory,
 			"gcp":        credGcp.Factory,
 			"github":     credGitHub.Factory,
 			"jwt":        credJWT.Factory,
+			"kerberos":   credKerb.Factory,
 			"kubernetes": credKube.Factory,
 			"ldap":       credLdap.Factory,
+			"oci":        credOCI.Factory,
 			"oidc":       credJWT.Factory,
 			"okta":       credOkta.Factory,
+			"pcf":        credCF.Factory, // Deprecated.
 			"radius":     credRadius.Factory,
 			"userpass":   credUserpass.Factory,
 		},
@@ -86,12 +96,13 @@ func newRegistry() *registry {
 			"mysql-rds-database-plugin":    dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
 			"mysql-legacy-database-plugin": dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
 
-			"postgresql-database-plugin": dbPostgres.New,
-			"mssql-database-plugin":      dbMssql.New,
-			"cassandra-database-plugin":  dbCass.New,
-			"mongodb-database-plugin":    dbMongo.New,
-			"hana-database-plugin":       dbHana.New,
-			"influxdb-database-plugin":   dbInflux.New,
+			"postgresql-database-plugin":    dbPostgres.New,
+			"mssql-database-plugin":         dbMssql.New,
+			"cassandra-database-plugin":     dbCass.New,
+			"mongodb-database-plugin":       dbMongo.New,
+			"hana-database-plugin":          dbHana.New,
+			"influxdb-database-plugin":      dbInflux.New,
+			"elasticsearch-database-plugin": dbElastic.New,
 		},
 		logicalBackends: map[string]logical.Factory{
 			"ad":         logicalAd.Factory,
@@ -115,7 +126,13 @@ func newRegistry() *registry {
 			"transit":    logicalTransit.Factory,
 		},
 	}
+
+	addExternalPlugins(reg)
+
+	return reg
 }
+
+func addExtPluginsImpl(r *registry) {}
 
 type registry struct {
 	credentialBackends map[string]logical.Factory

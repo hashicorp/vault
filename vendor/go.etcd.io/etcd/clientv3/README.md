@@ -1,11 +1,9 @@
 # etcd/clientv3
 
-[![Docs](https://readthedocs.org/projects/etcd/badge/?version=latest&style=flat-square)](https://etcd.readthedocs.io/en/latest/?badge=latest)
+[![Docs](https://img.shields.io/badge/docs-latest-green.svg)](https://etcd.io/docs)
 [![Godoc](https://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](https://godoc.org/go.etcd.io/etcd/clientv3)
 
 `etcd/clientv3` is the official Go etcd client for v3.
-
-See https://etcd.readthedocs.io/en/latest for latest client architecture.
 
 ## Install
 
@@ -28,7 +26,7 @@ if err != nil {
 defer cli.Close()
 ```
 
-etcd v3 uses [`gRPC`](http://www.grpc.io) for remote procedure calls. And `clientv3` uses
+etcd v3 uses [`gRPC`](https://www.grpc.io) for remote procedure calls. And `clientv3` uses
 [`grpc-go`](https://github.com/grpc/grpc-go) to connect to etcd. Make sure to close the client after using it.
 If the client is not closed, the connection will have leaky goroutines. To specify client request timeout,
 pass `context.WithTimeout` to APIs:

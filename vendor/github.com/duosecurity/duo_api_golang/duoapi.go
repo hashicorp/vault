@@ -7,12 +7,21 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
+	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"sort"
 	"strings"
 	"time"
+)
+
+const (
+	initialBackoffMS  = 1000
+	maxBackoffMS      = 32000
+	backoffFactor     = 2
+	rateLimitHttpCode = 429
 )
 
 var spaceReplacer *strings.Replacer = strings.NewReplacer("+", "%20")
@@ -63,8 +72,21 @@ type DuoApi struct {
 	skey       string
 	host       string
 	userAgent  string
-	apiClient  *http.Client
-	authClient *http.Client
+	apiClient  httpClient
+	authClient httpClient
+	sleepSvc   sleepService
+}
+
+type httpClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+type sleepService interface {
+	Sleep(duration time.Duration)
+}
+type timeSleepService struct{}
+
+func (svc timeSleepService) Sleep(duration time.Duration) {
+	time.Sleep(duration + (time.Duration(rand.Intn(1000)) * time.Millisecond))
 }
 
 type apiOptions struct {
@@ -139,6 +161,7 @@ func NewDuoApi(ikey string,
 		authClient: &http.Client{
 			Transport: tr,
 		},
+		sleepSvc: timeSleepService{},
 	}
 }
 
@@ -161,6 +184,16 @@ func (duoapi *DuoApi) buildOptions(options ...DuoApiOption) *requestOptions {
 	return opts
 }
 
+// API calls will return a StatResult object.  On success, Stat is 'OK'.
+// On error, Stat is 'FAIL', and Code, Message, and Message_Detail
+// contain error information.
+type StatResult struct {
+	Stat           string
+	Code           *int32
+	Message        *string
+	Message_Detail *string
+}
+
 // Make an unsigned Duo Rest API call.  See Duo's online documentation
 // for the available REST API's.
 // method is POST or GET
@@ -174,12 +207,6 @@ func (duoapi *DuoApi) Call(method string,
 	uri string,
 	params url.Values,
 	options ...DuoApiOption) (*http.Response, []byte, error) {
-	opts := duoapi.buildOptions(options...)
-
-	client := duoapi.authClient
-	if opts.timeout {
-		client = duoapi.apiClient
-	}
 
 	url := url.URL{
 		Scheme:   "https",
@@ -187,17 +214,8 @@ func (duoapi *DuoApi) Call(method string,
 		Path:     uri,
 		RawQuery: params.Encode(),
 	}
-	request, err := http.NewRequest(method, url.String(), nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	resp, err := client.Do(request)
-	var body []byte
-	if err == nil {
-		body, err = ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
-	}
-	return resp, body, err
+
+	return duoapi.makeRetryableHttpCall(method, url, nil, nil, options...)
 }
 
 // Make a signed Duo Rest API call.  See Duo's online documentation
@@ -213,7 +231,6 @@ func (duoapi *DuoApi) SignedCall(method string,
 	uri string,
 	params url.Values,
 	options ...DuoApiOption) (*http.Response, []byte, error) {
-	opts := duoapi.buildOptions(options...)
 
 	now := time.Now().UTC().Format(time.RFC1123Z)
 	auth_sig := sign(duoapi.ikey, duoapi.skey, method, duoapi.host, uri, now, params)
@@ -229,29 +246,63 @@ func (duoapi *DuoApi) SignedCall(method string,
 		url.RawQuery = params.Encode()
 	}
 
-	request, err := http.NewRequest(method, url.String(), nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	request.Header.Set("Authorization", auth_sig)
-	request.Header.Set("Date", now)
-
+	headers := make(map[string]string)
+	headers["Authorization"] = auth_sig
+	headers["Date"] = now
+	var requestBody io.ReadCloser = nil
 	if method == "POST" || method == "PUT" {
-		request.Body = ioutil.NopCloser(strings.NewReader(params.Encode()))
-		request.Header.Set("Content-type", "application/x-www-form-urlencoded")
+		headers["Content-Type"] = "application/x-www-form-urlencoded"
+		requestBody = ioutil.NopCloser(strings.NewReader(params.Encode()))
 	}
+
+	return duoapi.makeRetryableHttpCall(method, url, headers, requestBody, options...)
+}
+
+func (duoapi *DuoApi) makeRetryableHttpCall(
+	method string,
+	url url.URL,
+	headers map[string]string,
+	body io.ReadCloser,
+	options ...DuoApiOption) (*http.Response, []byte, error) {
+
+	opts := duoapi.buildOptions(options...)
 
 	client := duoapi.authClient
 	if opts.timeout {
 		client = duoapi.apiClient
 	}
-	resp, err := client.Do(request)
-	var body []byte
-	if err == nil {
-		body, err = ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
+
+	backoffMs := initialBackoffMS
+	for {
+		request, err := http.NewRequest(method, url.String(), nil)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if headers != nil {
+			for k, v := range headers {
+				request.Header.Set(k, v)
+			}
+		}
+		if body != nil {
+			request.Body = body
+		}
+
+		resp, err := client.Do(request)
+		var body []byte
+		if err != nil {
+			return resp, body, err
+		}
+
+		if backoffMs > maxBackoffMS || resp.StatusCode != rateLimitHttpCode {
+			body, err = ioutil.ReadAll(resp.Body)
+			resp.Body.Close()
+			return resp, body, err
+		}
+
+		duoapi.sleepSvc.Sleep(time.Millisecond * time.Duration(backoffMs))
+		backoffMs *= backoffFactor
 	}
-	return resp, body, err
 }
 
 const duoPinnedCert string = `

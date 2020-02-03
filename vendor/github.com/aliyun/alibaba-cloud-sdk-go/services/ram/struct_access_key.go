@@ -17,8 +17,8 @@ package ram
 
 // AccessKey is a nested struct in ram response
 type AccessKey struct {
-	CreateDate      string `json:"CreateDate" xml:"CreateDate"`
-	AccessKeyId     string `json:"AccessKeyId" xml:"AccessKeyId"`
 	AccessKeySecret string `json:"AccessKeySecret" xml:"AccessKeySecret"`
+	CreateDate      string `json:"CreateDate" xml:"CreateDate"`
 	Status          string `json:"Status" xml:"Status"`
+	AccessKeyId     string `json:"AccessKeyId" xml:"AccessKeyId"`
 }

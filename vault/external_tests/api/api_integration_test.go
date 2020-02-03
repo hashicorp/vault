@@ -1,29 +1,24 @@
 package api
 
 import (
-	"context"
 	"database/sql"
 	"encoding/base64"
 	"fmt"
-	"net"
-	"net/http"
 	"testing"
-	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/builtinplugins"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-
-	log "github.com/hashicorp/go-hclog"
-
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
-	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/ory/dockertest"
 )
 
@@ -67,7 +62,7 @@ func testVaultServerCoreConfig(t testing.TB, coreConfig *vault.CoreConfig) (*api
 	t.Helper()
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
+		HandlerFunc: http.Handler,
 	})
 	cluster.Start()
 
@@ -89,48 +84,6 @@ func testVaultServerCoreConfig(t testing.TB, coreConfig *vault.CoreConfig) (*api
 	return client, unsealKeys, func() { defer cluster.Cleanup() }
 }
 
-// testVaultServerBad creates an http server that returns a 500 on each request
-// to simulate failures.
-func testVaultServerBad(t testing.TB) (*api.Client, func()) {
-	t.Helper()
-
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	server := &http.Server{
-		Addr: "127.0.0.1:0",
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.Error(w, "500 internal server error", http.StatusInternalServerError)
-		}),
-		ReadTimeout:       1 * time.Second,
-		ReadHeaderTimeout: 1 * time.Second,
-		WriteTimeout:      1 * time.Second,
-		IdleTimeout:       1 * time.Second,
-	}
-
-	go func() {
-		if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}()
-
-	client, err := api.NewClient(&api.Config{
-		Address: "http://" + listener.Addr().String(),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return client, func() {
-		ctx, done := context.WithTimeout(context.Background(), 5*time.Second)
-		defer done()
-
-		server.Shutdown(ctx)
-	}
-}
-
 // testPostgresDB creates a testing postgres database in a Docker container,
 // returning the connection URL and the associated closer function.
 func testPostgresDB(t testing.TB) (string, func()) {
@@ -148,9 +101,7 @@ func testPostgresDB(t testing.TB) (string, func()) {
 	}
 
 	cleanup := func() {
-		if err := pool.Purge(resource); err != nil {
-			t.Fatalf("failed to cleanup local container: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	addr := fmt.Sprintf("postgres://postgres:secret@localhost:%s/database?sslmode=disable", resource.GetPort("5432/tcp"))

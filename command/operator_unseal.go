@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/password"
+	"github.com/hashicorp/vault/sdk/helper/password"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -100,7 +100,7 @@ func (c *OperatorUnsealCommand) Run(args []string) int {
 	args = f.Args()
 	switch len(args) {
 	case 0:
-		// We will prompt for the unsealKey later
+		// We will prompt for the unseal key later
 	case 1:
 		unsealKey = strings.TrimSpace(args[0])
 	default:
@@ -139,8 +139,8 @@ func (c *OperatorUnsealCommand) Run(args []string) int {
 				"usually this is because you attempted to pipe a value into the "+
 				"unseal command or you are executing outside of a terminal (tty). "+
 				"You should run the unseal command from a terminal for maximum "+
-				"security. If this is not an option, the unseal can be provided as "+
-				"the first argument to the unseal command. The raw error "+
+				"security. If this is not an option, the unseal key can be provided "+
+				"as the first argument to the unseal command. The raw error "+
 				"was:\n\n%s", err)))
 			return 1
 		}

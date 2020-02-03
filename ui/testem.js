@@ -1,5 +1,4 @@
-/* eslint-env node */
-module.exports = {
+const config = {
   framework: 'qunit',
   test_page: 'tests/index.html?hidepassed',
   tap_quiet_logs: true,
@@ -11,8 +10,6 @@ module.exports = {
         // --no-sandbox is needed when running Chrome inside a container
         process.env.CI ? '--no-sandbox' : null,
         '--headless',
-        '--disable-gpu',
-        '--disable-dev-shm-usage',
         '--disable-software-rasterizer',
         '--mute-audio',
         '--remote-debugging-port=0',
@@ -20,12 +17,17 @@ module.exports = {
       ].filter(Boolean),
     },
   },
-  on_exit:
-    '[ -e ../../vault-ui-integration-server.pid ] && node ../../scripts/start-vault.js `cat ../../vault-ui-integration-server.pid`; [ -e ../../vault-ui-integration-server.pid ] && rm ../../vault-ui-integration-server.pid',
-
   proxies: {
     '/v1': {
       target: 'http://localhost:9200',
     },
   },
 };
+
+if (process.env.CI) {
+  config.reporter = 'xunit';
+  config.report_file = 'test-results/qunit/results.xml';
+  config.xunit_intermediate_output = true;
+}
+
+module.exports = config;

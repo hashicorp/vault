@@ -10,10 +10,10 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/compressutil"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/compressutil"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestMount_ReadOnlyViewDuringMount(t *testing.T) {
@@ -248,6 +248,11 @@ func TestCore_Unmount(t *testing.T) {
 }
 
 func TestCore_Unmount_Cleanup(t *testing.T) {
+	testCore_Unmount_Cleanup(t, false)
+	testCore_Unmount_Cleanup(t, true)
+}
+
+func testCore_Unmount_Cleanup(t *testing.T, causeFailure bool) {
 	noop := &NoopBackend{}
 	c, _, root := TestCoreUnsealed(t)
 	c.logicalBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
@@ -304,8 +309,17 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
+	if causeFailure {
+		view.(*BarrierView).setReadOnlyErr(logical.ErrSetupReadOnly)
+	}
+
 	// Unmount, this should cleanup
-	if err := c.unmount(namespace.RootContext(nil), "test/"); err != nil {
+	err = c.unmount(namespace.RootContext(nil), "test/")
+	switch {
+	case err != nil && causeFailure:
+	case err == nil && causeFailure:
+		t.Fatal("expected error")
+	case err != nil:
 		t.Fatalf("err: %v", err)
 	}
 
@@ -327,14 +341,29 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(out) != 0 {
+	switch {
+	case len(out) == 1 && causeFailure:
+	case len(out) == 0 && causeFailure:
+		t.Fatal("expected a value")
+	case len(out) != 0:
 		t.Fatalf("bad: %#v", out)
+	case !causeFailure:
+		return
+	}
+
+	// At this point just in the failure case, check mounting
+	if err := c.mount(namespace.RootContext(nil), me); err == nil {
+		t.Fatal("expected error")
+	} else {
+		if !strings.Contains(err.Error(), "path is already in use at") {
+			t.Fatalf("expected a path is already in use error, got %v", err)
+		}
 	}
 }
 
 func TestCore_Remount(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	err := c.remount(namespace.RootContext(nil), "secret", "foo")
+	err := c.remount(namespace.RootContext(nil), "secret", "foo", true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -437,7 +466,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 	}
 
 	// Remount, this should cleanup
-	if err := c.remount(namespace.RootContext(nil), "test/", "new/"); err != nil {
+	if err := c.remount(namespace.RootContext(nil), "test/", "new/", true); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -466,7 +495,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 
 func TestCore_Remount_Protected(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	err := c.remount(namespace.RootContext(nil), "sys", "foo")
+	err := c.remount(namespace.RootContext(nil), "sys", "foo", true)
 	if err.Error() != `cannot remount "sys/"` {
 		t.Fatalf("err: %v", err)
 	}
@@ -704,5 +733,74 @@ func TestSingletonMountTableFunc(t *testing.T) {
 
 	if auth.Entries[0].Type != "token" {
 		t.Fatal("unexpected entry type for auth")
+	}
+}
+
+func TestCore_MountInitialize(t *testing.T) {
+	{
+		backend := &InitializableBackend{
+			&NoopBackend{
+				BackendType: logical.TypeLogical,
+			}, false}
+
+		c, _, _ := TestCoreUnsealed(t)
+		c.logicalBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+			return backend, nil
+		}
+
+		// Mount the noop backend
+		me := &MountEntry{
+			Table: mountTableType,
+			Path:  "foo/",
+			Type:  "initable",
+		}
+		if err := c.mount(namespace.RootContext(nil), me); err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if !backend.isInitialized {
+			t.Fatal("backend is not initialized")
+		}
+	}
+	{
+		backend := &InitializableBackend{
+			&NoopBackend{
+				BackendType: logical.TypeLogical,
+			}, false}
+
+		c, _, _ := TestCoreUnsealed(t)
+		c.logicalBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+			return backend, nil
+		}
+
+		c.mounts = &MountTable{
+			Type: mountTableType,
+			Entries: []*MountEntry{
+				&MountEntry{
+					Table:            mountTableType,
+					Path:             "foo/",
+					Type:             "initable",
+					UUID:             "abcd",
+					Accessor:         "initable-abcd",
+					BackendAwareUUID: "abcde",
+					NamespaceID:      namespace.RootNamespaceID,
+					namespace:        namespace.RootNamespace,
+				},
+			},
+		}
+
+		err := c.setupMounts(namespace.RootContext(nil))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// run the postUnseal funcs, so that the backend will be inited
+		for _, f := range c.postUnsealFuncs {
+			f()
+		}
+
+		if !backend.isInitialized {
+			t.Fatal("backend is not initialized")
+		}
 	}
 }

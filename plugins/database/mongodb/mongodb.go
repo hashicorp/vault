@@ -2,22 +2,18 @@ package mongodb
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
-	"io"
-	"strings"
+	"fmt"
 	"time"
 
-	"encoding/json"
-
-	"fmt"
-
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/plugins"
-	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
-	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
-	mgo "gopkg.in/mgo.v2"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
+	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
 const mongoDBTypeName = "mongodb"
@@ -61,7 +57,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	plugins.Serve(dbType.(*MongoDB), apiTLSConfig)
+	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
 
 	return nil
 }
@@ -71,13 +67,13 @@ func (m *MongoDB) Type() (string, error) {
 	return mongoDBTypeName, nil
 }
 
-func (m *MongoDB) getConnection(ctx context.Context) (*mgo.Session, error) {
-	session, err := m.Connection(ctx)
+func (m *MongoDB) getConnection(ctx context.Context) (*mongo.Client, error) {
+	client, err := m.Connection(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return session.(*mgo.Session), nil
+	return client.(*mongo.Client), nil
 }
 
 // CreateUser generates the username/password on the underlying secret backend as instructed by
@@ -99,7 +95,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
-	session, err := m.getConnection(ctx)
+	client, err := m.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 	}
@@ -136,20 +132,42 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 		Roles:    mongoCS.Roles.toStandardRolesArray(),
 	}
 
-	err = session.DB(mongoCS.DB).Run(createUserCmd, nil)
-	switch {
-	case err == nil:
-	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
-		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
-		session, err := m.getConnection(ctx)
-		if err != nil {
-			return "", "", err
-		}
-		err = session.DB(mongoCS.DB).Run(createUserCmd, nil)
-		if err != nil {
-			return "", "", err
-		}
-	default:
+	if err := runCommandWithRetry(ctx, client, mongoCS.DB, createUserCmd); err != nil {
+		return "", "", err
+	}
+
+	return username, password, nil
+}
+
+// SetCredentials uses provided information to set/create a user in the
+// database. Unlike CreateUser, this method requires a username be provided and
+// uses the name given, instead of generating a name. This is used for creating
+// and setting the password of static accounts, as well as rolling back
+// passwords in the database in the event an updated database fails to save in
+// Vault's storage.
+func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
+	// Grab the lock
+	m.Lock()
+	defer m.Unlock()
+
+	client, err := m.getConnection(ctx)
+	if err != nil {
+		return "", "", err
+	}
+
+	username = staticUser.Username
+	password = staticUser.Password
+
+	changeUserCmd := &updateUserCommand{
+		Username: username,
+		Password: password,
+	}
+
+	cs, err := connstring.Parse(m.ConnectionURL)
+	if err != nil {
+		return "", "", err
+	}
+	if err := runCommandWithRetry(ctx, client, cs.Database, changeUserCmd); err != nil {
 		return "", "", err
 	}
 
@@ -170,7 +188,7 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 
 	statements = dbutil.StatementCompatibilityHelper(statements)
 
-	session, err := m.getConnection(ctx)
+	client, err := m.getConnection(ctx)
 	if err != nil {
 		return err
 	}
@@ -199,29 +217,35 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 		db = "admin"
 	}
 
-	err = session.DB(db).RemoveUser(username)
-	switch {
-	case err == nil, err == mgo.ErrNotFound:
-	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
-		if err := m.Close(); err != nil {
-			return errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
-		}
-		session, err := m.getConnection(ctx)
-		if err != nil {
-			return err
-		}
-		err = session.DB(db).RemoveUser(username)
-		if err != nil {
-			return err
-		}
-	default:
-		return err
+	dropUserCmd := &dropUserCommand{
+		Username:     username,
+		WriteConcern: writeconcern.New(writeconcern.WMajority()),
 	}
 
-	return nil
+	return runCommandWithRetry(ctx, client, db, dropUserCmd)
 }
 
 // RotateRootCredentials is not currently supported on MongoDB
 func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
 	return nil, errors.New("root credential rotation is not currently implemented in this database secrets engine")
+}
+
+// runCommandWithRetry runs a command with retry.
+func runCommandWithRetry(ctx context.Context, client *mongo.Client, db string, cmd interface{}) error {
+	timeout := time.Now().Add(1 * time.Minute)
+	backoffTime := 3
+	for {
+		// Run command
+		result := client.Database(db).RunCommand(ctx, cmd, nil)
+		if result.Err() == nil {
+			break
+		}
+
+		if time.Now().After(timeout) {
+			return result.Err()
+		}
+		time.Sleep(time.Duration(backoffTime) * time.Second)
+		backoffTime += backoffTime
+	}
+	return nil
 }

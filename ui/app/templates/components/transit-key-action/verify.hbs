@@ -6,7 +6,7 @@
         <div class="columns is-centered">
           <div class="column is-half has-text-centered">
             <p class="box is-shadowless {{if valid 'has-text-success' 'has-text-danger'}}" data-test-transit-verify="true">
-            {{i-con glyph=(if valid 'checkmark' 'close') }}
+            <Icon @glyph={{if valid "check-plain" "cancel-plain"}} />
             The input is <b>{{if valid 'valid' 'not valid'}}</b> for the given {{if signature 'signature' 'hmac'}}.
             </p>
           </div>
@@ -55,7 +55,7 @@
                    name="verification"
                    id="verification"
                    onchange={{queue
-                    (action (mut verification) value="target.value") 
+                    (action (mut verification) value="target.value")
                     (action "clearParams" (array "hmac" "signature"))
                    }}
                   >

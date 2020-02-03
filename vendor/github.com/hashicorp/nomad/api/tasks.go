@@ -6,9 +6,16 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+)
 
-	"github.com/hashicorp/nomad/helper"
-	"github.com/hashicorp/nomad/nomad/structs"
+const (
+	// RestartPolicyModeDelay causes an artificial delay till the next interval is
+	// reached when the specified attempts have been reached in the interval.
+	RestartPolicyModeDelay = "delay"
+
+	// RestartPolicyModeFail causes a job to fail if the specified number of
+	// attempts are reached within an interval.
+	RestartPolicyModeFail = "fail"
 )
 
 // MemoryStats holds memory usage related stats
@@ -16,6 +23,7 @@ type MemoryStats struct {
 	RSS            uint64
 	Cache          uint64
 	Swap           uint64
+	Usage          uint64
 	MaxUsage       uint64
 	KernelUsage    uint64
 	KernelMaxUsage uint64
@@ -37,6 +45,7 @@ type CpuStats struct {
 type ResourceUsage struct {
 	MemoryStats *MemoryStats
 	CpuStats    *CpuStats
+	DeviceStats []*DeviceGroupStats
 }
 
 // TaskResourceUsage holds aggregated resource usage of all processes in a Task
@@ -150,18 +159,24 @@ func (r *ReschedulePolicy) Canonicalize(jobType string) {
 
 // Affinity is used to serialize task group affinities
 type Affinity struct {
-	LTarget string  // Left-hand target
-	RTarget string  // Right-hand target
-	Operand string  // Constraint operand (<=, <, =, !=, >, >=), set_contains_all, set_contains_any
-	Weight  float64 // Weight applied to nodes that match the affinity. Can be negative
+	LTarget string // Left-hand target
+	RTarget string // Right-hand target
+	Operand string // Constraint operand (<=, <, =, !=, >, >=), set_contains_all, set_contains_any
+	Weight  *int8  // Weight applied to nodes that match the affinity. Can be negative
 }
 
-func NewAffinity(LTarget string, Operand string, RTarget string, Weight float64) *Affinity {
+func NewAffinity(LTarget string, Operand string, RTarget string, Weight int8) *Affinity {
 	return &Affinity{
 		LTarget: LTarget,
 		RTarget: RTarget,
 		Operand: Operand,
-		Weight:  Weight,
+		Weight:  int8ToPtr(Weight),
+	}
+}
+
+func (a *Affinity) Canonicalize() {
+	if a.Weight == nil {
+		a.Weight = int8ToPtr(50)
 	}
 }
 
@@ -169,32 +184,38 @@ func NewDefaultReschedulePolicy(jobType string) *ReschedulePolicy {
 	var dp *ReschedulePolicy
 	switch jobType {
 	case "service":
+		// This needs to be in sync with DefaultServiceJobReschedulePolicy
+		// in nomad/structs/structs.go
 		dp = &ReschedulePolicy{
-			Attempts:      helper.IntToPtr(structs.DefaultServiceJobReschedulePolicy.Attempts),
-			Interval:      helper.TimeToPtr(structs.DefaultServiceJobReschedulePolicy.Interval),
-			Delay:         helper.TimeToPtr(structs.DefaultServiceJobReschedulePolicy.Delay),
-			DelayFunction: helper.StringToPtr(structs.DefaultServiceJobReschedulePolicy.DelayFunction),
-			MaxDelay:      helper.TimeToPtr(structs.DefaultServiceJobReschedulePolicy.MaxDelay),
-			Unlimited:     helper.BoolToPtr(structs.DefaultServiceJobReschedulePolicy.Unlimited),
+			Delay:         timeToPtr(30 * time.Second),
+			DelayFunction: stringToPtr("exponential"),
+			MaxDelay:      timeToPtr(1 * time.Hour),
+			Unlimited:     boolToPtr(true),
+
+			Attempts: intToPtr(0),
+			Interval: timeToPtr(0),
 		}
 	case "batch":
+		// This needs to be in sync with DefaultBatchJobReschedulePolicy
+		// in nomad/structs/structs.go
 		dp = &ReschedulePolicy{
-			Attempts:      helper.IntToPtr(structs.DefaultBatchJobReschedulePolicy.Attempts),
-			Interval:      helper.TimeToPtr(structs.DefaultBatchJobReschedulePolicy.Interval),
-			Delay:         helper.TimeToPtr(structs.DefaultBatchJobReschedulePolicy.Delay),
-			DelayFunction: helper.StringToPtr(structs.DefaultBatchJobReschedulePolicy.DelayFunction),
-			MaxDelay:      helper.TimeToPtr(structs.DefaultBatchJobReschedulePolicy.MaxDelay),
-			Unlimited:     helper.BoolToPtr(structs.DefaultBatchJobReschedulePolicy.Unlimited),
+			Attempts:      intToPtr(1),
+			Interval:      timeToPtr(24 * time.Hour),
+			Delay:         timeToPtr(5 * time.Second),
+			DelayFunction: stringToPtr("constant"),
+
+			MaxDelay:  timeToPtr(0),
+			Unlimited: boolToPtr(false),
 		}
 
 	case "system":
 		dp = &ReschedulePolicy{
-			Attempts:      helper.IntToPtr(0),
-			Interval:      helper.TimeToPtr(0),
-			Delay:         helper.TimeToPtr(0),
-			DelayFunction: helper.StringToPtr(""),
-			MaxDelay:      helper.TimeToPtr(0),
-			Unlimited:     helper.BoolToPtr(false),
+			Attempts:      intToPtr(0),
+			Interval:      timeToPtr(0),
+			Delay:         timeToPtr(0),
+			DelayFunction: stringToPtr(""),
+			MaxDelay:      timeToPtr(0),
+			Unlimited:     boolToPtr(false),
 		}
 	}
 	return dp
@@ -222,146 +243,34 @@ func (p *ReschedulePolicy) String() string {
 // Spread is used to serialize task group allocation spread preferences
 type Spread struct {
 	Attribute    string
-	Weight       int
+	Weight       *int8
 	SpreadTarget []*SpreadTarget
 }
 
 // SpreadTarget is used to serialize target allocation spread percentages
 type SpreadTarget struct {
 	Value   string
-	Percent uint32
+	Percent uint8
 }
 
-func NewSpreadTarget(value string, percent uint32) *SpreadTarget {
+func NewSpreadTarget(value string, percent uint8) *SpreadTarget {
 	return &SpreadTarget{
 		Value:   value,
 		Percent: percent,
 	}
 }
 
-func NewSpread(attribute string, weight int, spreadTargets []*SpreadTarget) *Spread {
+func NewSpread(attribute string, weight int8, spreadTargets []*SpreadTarget) *Spread {
 	return &Spread{
 		Attribute:    attribute,
-		Weight:       weight,
+		Weight:       int8ToPtr(weight),
 		SpreadTarget: spreadTargets,
 	}
 }
 
-// CheckRestart describes if and when a task should be restarted based on
-// failing health checks.
-type CheckRestart struct {
-	Limit          int            `mapstructure:"limit"`
-	Grace          *time.Duration `mapstructure:"grace"`
-	IgnoreWarnings bool           `mapstructure:"ignore_warnings"`
-}
-
-// Canonicalize CheckRestart fields if not nil.
-func (c *CheckRestart) Canonicalize() {
-	if c == nil {
-		return
-	}
-
-	if c.Grace == nil {
-		c.Grace = helper.TimeToPtr(1 * time.Second)
-	}
-}
-
-// Copy returns a copy of CheckRestart or nil if unset.
-func (c *CheckRestart) Copy() *CheckRestart {
-	if c == nil {
-		return nil
-	}
-
-	nc := new(CheckRestart)
-	nc.Limit = c.Limit
-	if c.Grace != nil {
-		g := *c.Grace
-		nc.Grace = &g
-	}
-	nc.IgnoreWarnings = c.IgnoreWarnings
-	return nc
-}
-
-// Merge values from other CheckRestart over default values on this
-// CheckRestart and return merged copy.
-func (c *CheckRestart) Merge(o *CheckRestart) *CheckRestart {
-	if c == nil {
-		// Just return other
-		return o
-	}
-
-	nc := c.Copy()
-
-	if o == nil {
-		// Nothing to merge
-		return nc
-	}
-
-	if o.Limit > 0 {
-		nc.Limit = o.Limit
-	}
-
-	if o.Grace != nil {
-		nc.Grace = o.Grace
-	}
-
-	if o.IgnoreWarnings {
-		nc.IgnoreWarnings = o.IgnoreWarnings
-	}
-
-	return nc
-}
-
-// The ServiceCheck data model represents the consul health check that
-// Nomad registers for a Task
-type ServiceCheck struct {
-	Id            string
-	Name          string
-	Type          string
-	Command       string
-	Args          []string
-	Path          string
-	Protocol      string
-	PortLabel     string `mapstructure:"port"`
-	AddressMode   string `mapstructure:"address_mode"`
-	Interval      time.Duration
-	Timeout       time.Duration
-	InitialStatus string `mapstructure:"initial_status"`
-	TLSSkipVerify bool   `mapstructure:"tls_skip_verify"`
-	Header        map[string][]string
-	Method        string
-	CheckRestart  *CheckRestart `mapstructure:"check_restart"`
-	GRPCService   string        `mapstructure:"grpc_service"`
-	GRPCUseTLS    bool          `mapstructure:"grpc_use_tls"`
-}
-
-// The Service model represents a Consul service definition
-type Service struct {
-	Id           string
-	Name         string
-	Tags         []string
-	CanaryTags   []string `mapstructure:"canary_tags"`
-	PortLabel    string   `mapstructure:"port"`
-	AddressMode  string   `mapstructure:"address_mode"`
-	Checks       []ServiceCheck
-	CheckRestart *CheckRestart `mapstructure:"check_restart"`
-}
-
-func (s *Service) Canonicalize(t *Task, tg *TaskGroup, job *Job) {
-	if s.Name == "" {
-		s.Name = fmt.Sprintf("%s-%s-%s", *job.Name, *tg.Name, t.Name)
-	}
-
-	// Default to AddressModeAuto
-	if s.AddressMode == "" {
-		s.AddressMode = "auto"
-	}
-
-	// Canonicalize CheckRestart on Checks and merge Service.CheckRestart
-	// into each check.
-	for i, check := range s.Checks {
-		s.Checks[i].CheckRestart = s.CheckRestart.Merge(check.CheckRestart)
-		s.Checks[i].CheckRestart.Canonicalize()
+func (s *Spread) Canonicalize() {
+	if s.Weight == nil {
+		s.Weight = int8ToPtr(50)
 	}
 }
 
@@ -374,21 +283,21 @@ type EphemeralDisk struct {
 
 func DefaultEphemeralDisk() *EphemeralDisk {
 	return &EphemeralDisk{
-		Sticky:  helper.BoolToPtr(false),
-		Migrate: helper.BoolToPtr(false),
-		SizeMB:  helper.IntToPtr(300),
+		Sticky:  boolToPtr(false),
+		Migrate: boolToPtr(false),
+		SizeMB:  intToPtr(300),
 	}
 }
 
 func (e *EphemeralDisk) Canonicalize() {
 	if e.Sticky == nil {
-		e.Sticky = helper.BoolToPtr(false)
+		e.Sticky = boolToPtr(false)
 	}
 	if e.Migrate == nil {
-		e.Migrate = helper.BoolToPtr(false)
+		e.Migrate = boolToPtr(false)
 	}
 	if e.SizeMB == nil {
-		e.SizeMB = helper.IntToPtr(300)
+		e.SizeMB = intToPtr(300)
 	}
 }
 
@@ -403,10 +312,10 @@ type MigrateStrategy struct {
 
 func DefaultMigrateStrategy() *MigrateStrategy {
 	return &MigrateStrategy{
-		MaxParallel:     helper.IntToPtr(1),
-		HealthCheck:     helper.StringToPtr("checks"),
-		MinHealthyTime:  helper.TimeToPtr(10 * time.Second),
-		HealthyDeadline: helper.TimeToPtr(5 * time.Minute),
+		MaxParallel:     intToPtr(1),
+		HealthCheck:     stringToPtr("checks"),
+		MinHealthyTime:  timeToPtr(10 * time.Second),
+		HealthyDeadline: timeToPtr(5 * time.Minute),
 	}
 }
 
@@ -453,6 +362,38 @@ func (m *MigrateStrategy) Copy() *MigrateStrategy {
 	return nm
 }
 
+// VolumeRequest is a representation of a storage volume that a TaskGroup wishes to use.
+type VolumeRequest struct {
+	Name     string
+	Type     string
+	Source   string
+	ReadOnly bool `mapstructure:"read_only"`
+}
+
+const (
+	VolumeMountPropagationPrivate       = "private"
+	VolumeMountPropagationHostToTask    = "host-to-task"
+	VolumeMountPropagationBidirectional = "bidirectional"
+)
+
+// VolumeMount represents the relationship between a destination path in a task
+// and the task group volume that should be mounted there.
+type VolumeMount struct {
+	Volume          *string
+	Destination     *string
+	ReadOnly        *bool   `mapstructure:"read_only"`
+	PropagationMode *string `mapstructure:"propagation_mode"`
+}
+
+func (vm *VolumeMount) Canonicalize() {
+	if vm.PropagationMode == nil {
+		vm.PropagationMode = stringToPtr(VolumeMountPropagationPrivate)
+	}
+	if vm.ReadOnly == nil {
+		vm.ReadOnly = boolToPtr(false)
+	}
+}
+
 // TaskGroup is the unit of scheduling.
 type TaskGroup struct {
 	Name             *string
@@ -461,28 +402,33 @@ type TaskGroup struct {
 	Affinities       []*Affinity
 	Tasks            []*Task
 	Spreads          []*Spread
+	Volumes          map[string]*VolumeRequest
 	RestartPolicy    *RestartPolicy
 	ReschedulePolicy *ReschedulePolicy
 	EphemeralDisk    *EphemeralDisk
 	Update           *UpdateStrategy
 	Migrate          *MigrateStrategy
+	Networks         []*NetworkResource
 	Meta             map[string]string
+	Services         []*Service
+	ShutdownDelay    *time.Duration `mapstructure:"shutdown_delay"`
 }
 
 // NewTaskGroup creates a new TaskGroup.
 func NewTaskGroup(name string, count int) *TaskGroup {
 	return &TaskGroup{
-		Name:  helper.StringToPtr(name),
-		Count: helper.IntToPtr(count),
+		Name:  stringToPtr(name),
+		Count: intToPtr(count),
 	}
 }
 
+// Canonicalize sets defaults and merges settings that should be inherited from the job
 func (g *TaskGroup) Canonicalize(job *Job) {
 	if g.Name == nil {
-		g.Name = helper.StringToPtr("")
+		g.Name = stringToPtr("")
 	}
 	if g.Count == nil {
-		g.Count = helper.IntToPtr(1)
+		g.Count = intToPtr(1)
 	}
 	for _, t := range g.Tasks {
 		t.Canonicalize(g, job)
@@ -536,30 +482,32 @@ func (g *TaskGroup) Canonicalize(job *Job) {
 	}
 
 	// Merge with default reschedule policy
-	if *job.Type == "service" {
-		defaultMigrateStrategy := &MigrateStrategy{}
-		defaultMigrateStrategy.Canonicalize()
-		if g.Migrate != nil {
-			defaultMigrateStrategy.Merge(g.Migrate)
-		}
-		g.Migrate = defaultMigrateStrategy
+	if g.Migrate == nil && *job.Type == "service" {
+		g.Migrate = &MigrateStrategy{}
+	}
+	if g.Migrate != nil {
+		g.Migrate.Canonicalize()
 	}
 
 	var defaultRestartPolicy *RestartPolicy
 	switch *job.Type {
 	case "service", "system":
+		// These needs to be in sync with DefaultServiceJobRestartPolicy in
+		// in nomad/structs/structs.go
 		defaultRestartPolicy = &RestartPolicy{
-			Delay:    helper.TimeToPtr(structs.DefaultServiceJobRestartPolicy.Delay),
-			Attempts: helper.IntToPtr(structs.DefaultServiceJobRestartPolicy.Attempts),
-			Interval: helper.TimeToPtr(structs.DefaultServiceJobRestartPolicy.Interval),
-			Mode:     helper.StringToPtr(structs.DefaultServiceJobRestartPolicy.Mode),
+			Delay:    timeToPtr(15 * time.Second),
+			Attempts: intToPtr(2),
+			Interval: timeToPtr(30 * time.Minute),
+			Mode:     stringToPtr(RestartPolicyModeFail),
 		}
 	default:
+		// These needs to be in sync with DefaultBatchJobRestartPolicy in
+		// in nomad/structs/structs.go
 		defaultRestartPolicy = &RestartPolicy{
-			Delay:    helper.TimeToPtr(structs.DefaultBatchJobRestartPolicy.Delay),
-			Attempts: helper.IntToPtr(structs.DefaultBatchJobRestartPolicy.Attempts),
-			Interval: helper.TimeToPtr(structs.DefaultBatchJobRestartPolicy.Interval),
-			Mode:     helper.StringToPtr(structs.DefaultBatchJobRestartPolicy.Mode),
+			Delay:    timeToPtr(15 * time.Second),
+			Attempts: intToPtr(3),
+			Interval: timeToPtr(24 * time.Hour),
+			Mode:     stringToPtr(RestartPolicyModeFail),
 		}
 	}
 
@@ -567,6 +515,19 @@ func (g *TaskGroup) Canonicalize(job *Job) {
 		defaultRestartPolicy.Merge(g.RestartPolicy)
 	}
 	g.RestartPolicy = defaultRestartPolicy
+
+	for _, spread := range g.Spreads {
+		spread.Canonicalize()
+	}
+	for _, a := range g.Affinities {
+		a.Canonicalize()
+	}
+	for _, n := range g.Networks {
+		n.Canonicalize()
+	}
+	for _, s := range g.Services {
+		s.Canonicalize(nil, g, job)
+	}
 }
 
 // Constrain is used to add a constraint to a task group.
@@ -616,17 +577,17 @@ type LogConfig struct {
 
 func DefaultLogConfig() *LogConfig {
 	return &LogConfig{
-		MaxFiles:      helper.IntToPtr(10),
-		MaxFileSizeMB: helper.IntToPtr(10),
+		MaxFiles:      intToPtr(10),
+		MaxFileSizeMB: intToPtr(10),
 	}
 }
 
 func (l *LogConfig) Canonicalize() {
 	if l.MaxFiles == nil {
-		l.MaxFiles = helper.IntToPtr(10)
+		l.MaxFiles = intToPtr(10)
 	}
 	if l.MaxFileSizeMB == nil {
-		l.MaxFileSizeMB = helper.IntToPtr(10)
+		l.MaxFileSizeMB = intToPtr(10)
 	}
 }
 
@@ -653,9 +614,11 @@ type Task struct {
 	Vault           *Vault
 	Templates       []*Template
 	DispatchPayload *DispatchPayloadConfig
+	VolumeMounts    []*VolumeMount
 	Leader          bool
 	ShutdownDelay   time.Duration `mapstructure:"shutdown_delay"`
 	KillSignal      string        `mapstructure:"kill_signal"`
+	Kind            string
 }
 
 func (t *Task) Canonicalize(tg *TaskGroup, job *Job) {
@@ -664,7 +627,7 @@ func (t *Task) Canonicalize(tg *TaskGroup, job *Job) {
 	}
 	t.Resources.Canonicalize()
 	if t.KillTimeout == nil {
-		t.KillTimeout = helper.TimeToPtr(5 * time.Second)
+		t.KillTimeout = timeToPtr(5 * time.Second)
 	}
 	if t.LogConfig == nil {
 		t.LogConfig = DefaultLogConfig()
@@ -683,6 +646,12 @@ func (t *Task) Canonicalize(tg *TaskGroup, job *Job) {
 	for _, s := range t.Services {
 		s.Canonicalize(t, tg, job)
 	}
+	for _, a := range t.Affinities {
+		a.Canonicalize()
+	}
+	for _, vm := range t.VolumeMounts {
+		vm.Canonicalize()
+	}
 }
 
 // TaskArtifact is used to download artifacts before running a task.
@@ -695,11 +664,11 @@ type TaskArtifact struct {
 
 func (a *TaskArtifact) Canonicalize() {
 	if a.GetterMode == nil {
-		a.GetterMode = helper.StringToPtr("any")
+		a.GetterMode = stringToPtr("any")
 	}
 	if a.GetterSource == nil {
 		// Shouldn't be possible, but we don't want to panic
-		a.GetterSource = helper.StringToPtr("")
+		a.GetterSource = stringToPtr("")
 	}
 	if a.RelativeDest == nil {
 		switch *a.GetterMode {
@@ -711,7 +680,7 @@ func (a *TaskArtifact) Canonicalize() {
 			a.RelativeDest = &dest
 		default:
 			// Default to a directory
-			a.RelativeDest = helper.StringToPtr("local/")
+			a.RelativeDest = stringToPtr("local/")
 		}
 	}
 }
@@ -732,44 +701,44 @@ type Template struct {
 
 func (tmpl *Template) Canonicalize() {
 	if tmpl.SourcePath == nil {
-		tmpl.SourcePath = helper.StringToPtr("")
+		tmpl.SourcePath = stringToPtr("")
 	}
 	if tmpl.DestPath == nil {
-		tmpl.DestPath = helper.StringToPtr("")
+		tmpl.DestPath = stringToPtr("")
 	}
 	if tmpl.EmbeddedTmpl == nil {
-		tmpl.EmbeddedTmpl = helper.StringToPtr("")
+		tmpl.EmbeddedTmpl = stringToPtr("")
 	}
 	if tmpl.ChangeMode == nil {
-		tmpl.ChangeMode = helper.StringToPtr("restart")
+		tmpl.ChangeMode = stringToPtr("restart")
 	}
 	if tmpl.ChangeSignal == nil {
 		if *tmpl.ChangeMode == "signal" {
-			tmpl.ChangeSignal = helper.StringToPtr("SIGHUP")
+			tmpl.ChangeSignal = stringToPtr("SIGHUP")
 		} else {
-			tmpl.ChangeSignal = helper.StringToPtr("")
+			tmpl.ChangeSignal = stringToPtr("")
 		}
 	} else {
 		sig := *tmpl.ChangeSignal
-		tmpl.ChangeSignal = helper.StringToPtr(strings.ToUpper(sig))
+		tmpl.ChangeSignal = stringToPtr(strings.ToUpper(sig))
 	}
 	if tmpl.Splay == nil {
-		tmpl.Splay = helper.TimeToPtr(5 * time.Second)
+		tmpl.Splay = timeToPtr(5 * time.Second)
 	}
 	if tmpl.Perms == nil {
-		tmpl.Perms = helper.StringToPtr("0644")
+		tmpl.Perms = stringToPtr("0644")
 	}
 	if tmpl.LeftDelim == nil {
-		tmpl.LeftDelim = helper.StringToPtr("{{")
+		tmpl.LeftDelim = stringToPtr("{{")
 	}
 	if tmpl.RightDelim == nil {
-		tmpl.RightDelim = helper.StringToPtr("}}")
+		tmpl.RightDelim = stringToPtr("}}")
 	}
 	if tmpl.Envvars == nil {
-		tmpl.Envvars = helper.BoolToPtr(false)
+		tmpl.Envvars = boolToPtr(false)
 	}
 	if tmpl.VaultGrace == nil {
-		tmpl.VaultGrace = helper.TimeToPtr(15 * time.Second)
+		tmpl.VaultGrace = timeToPtr(15 * time.Second)
 	}
 }
 
@@ -782,13 +751,13 @@ type Vault struct {
 
 func (v *Vault) Canonicalize() {
 	if v.Env == nil {
-		v.Env = helper.BoolToPtr(true)
+		v.Env = boolToPtr(true)
 	}
 	if v.ChangeMode == nil {
-		v.ChangeMode = helper.StringToPtr("restart")
+		v.ChangeMode = stringToPtr("restart")
 	}
 	if v.ChangeSignal == nil {
-		v.ChangeSignal = helper.StringToPtr("SIGHUP")
+		v.ChangeSignal = stringToPtr("SIGHUP")
 	}
 }
 

@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/approle"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -299,6 +299,8 @@ path "kv/*" {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	time.Sleep(1 * time.Second)
 
 	// Verify the batch token is not usable anymore
 	client.SetToken(rootToken)
