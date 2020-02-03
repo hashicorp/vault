@@ -178,7 +178,7 @@ export default Component.extend(TRANSIT_PARAMS, {
       arr.forEach(param => this.set(param, null));
     },
 
-    closeModal() {
+    toggleModal() {
       console.log('close');
       this.toggleProperty('isModalActive');
     },
