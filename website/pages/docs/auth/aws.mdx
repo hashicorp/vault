@@ -41,26 +41,14 @@ below for more information.
 
 ### IAM auth method
 
-The AWS STS API includes a method,
-[`sts:GetCallerIdentity`](http://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html),
-which allows you to validate the identity of a client. The client signs a
-`GetCallerIdentity` query using the [AWS Signature v4
-algorithm](http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html) and
-submits 4 pieces of information to the Vault server to recreate a valid signed
-request: the request URL, the request body, the request headers, and the
-request method, as the AWS signature is computed over those fields. The Vault
-server then reconstructs the query and forwards it on to the AWS STS service
-and validates the result back. Clients don't need network-level access to talk
+The AWS STS API includes a method, [`sts:GetCallerIdentity`](http://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html), which allows you to validate the identity of a client. The client signs a `GetCallerIdentity` query using the [AWS Signature v4 algorithm](http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html) and sends it to the Vault server. The credentials used to sign the GetCallerIdentity request can come from the EC2 instance metadata service for an EC2 instance, or from the AWS environment variables in an AWS Lambda function execution, which obviates the need for an operator to manually provision some sort of identity material first. However, the credentials can, in principle, come from anywhere, not just from the locations AWS has provided for you.
+
+The `GetCallerIdentity` query consists of four pieces of information: the request URL, the request body, the request headers, and the request method, as the AWS signature is computed over those fields. The Vault server reconstructs the query using this information and forwards it on to the AWS STS service. Depending on the response from the STS service, the server authenticates the client.
+
+Notably, clients don't need network-level access themselves to talk
 to the AWS STS API endpoint; they merely need access to the credentials to sign
 the request. However, it means that the Vault server does need network-level
 access to send requests to the STS endpoint.
-
-Importantly, the credentials used to sign the GetCallerIdentity request can
-come from the EC2 instance metadata service for an EC2 instance, or from the
-AWS environment variables in an AWS Lambda function execution, which obviates
-the need for an operator to manually provision some sort of identity material
-first. However, the credentials can, in principle, come from anywhere, not
-just from the locations AWS has provided for you.
 
 Each signed AWS request includes the current timestamp to mitigate the risk of
 replay attacks. In addition, Vault allows you to require an additional header,
@@ -99,7 +87,7 @@ is also represented in the graphic below) is as follows:
    (by region) which can be used to verify the signature.
 
 1. The AWS EC2 instance makes a request to Vault with the PKCS#7 signature.
-   The PKCS#7 signature contains the Instance Identity Document within itself.
+   The PKCS#7 signature contains the Instance Identity Document.
 
 1. Vault verifies the signature on the PKCS#7 document, ensuring the information
    is certified accurate by AWS. This process validates both the validity and
