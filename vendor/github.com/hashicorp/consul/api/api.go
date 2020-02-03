@@ -71,10 +71,18 @@ const (
 	// client in this package but is defined here for consistency with all the
 	// other ENV names we use.
 	GRPCAddrEnvName = "CONSUL_GRPC_ADDR"
+
+	// HTTPNamespaceEnvVar defines an environment variable name which sets
+	// the HTTP Namespace to be used by default. This can still be overridden.
+	HTTPNamespaceEnvName = "CONSUL_NAMESPACE"
 )
 
 // QueryOptions are used to parameterize a query
 type QueryOptions struct {
+	// Namespace overrides the `default` namespace
+	// Note: Namespaces are available only in Consul Enterprise
+	Namespace string
+
 	// Providing a datacenter overwrites the DC provided
 	// by the Config
 	Datacenter string
@@ -89,7 +97,7 @@ type QueryOptions struct {
 	RequireConsistent bool
 
 	// UseCache requests that the agent cache results locally. See
-	// https://www.consul.io/api/index.html#agent-caching for more details on the
+	// https://www.consul.io/api/features/caching.html for more details on the
 	// semantics.
 	UseCache bool
 
@@ -99,14 +107,14 @@ type QueryOptions struct {
 	// returned. Clients that wish to allow for stale results on error can set
 	// StaleIfError to a longer duration to change this behavior. It is ignored
 	// if the endpoint supports background refresh caching. See
-	// https://www.consul.io/api/index.html#agent-caching for more details.
+	// https://www.consul.io/api/features/caching.html for more details.
 	MaxAge time.Duration
 
 	// StaleIfError specifies how stale the client will accept a cached response
 	// if the servers are unavailable to fetch a fresh one. Only makes sense when
 	// UseCache is true and MaxAge is set to a lower, non-zero value. It is
 	// ignored if the endpoint supports background refresh caching. See
-	// https://www.consul.io/api/index.html#agent-caching for more details.
+	// https://www.consul.io/api/features/caching.html for more details.
 	StaleIfError time.Duration
 
 	// WaitIndex is used to enable a blocking query. Waits
@@ -143,6 +151,10 @@ type QueryOptions struct {
 	// a value from 0 to 5 (inclusive).
 	RelayFactor uint8
 
+	// LocalOnly is used in keyring list operation to force the keyring
+	// query to only hit local servers (no WAN traffic).
+	LocalOnly bool
+
 	// Connect filters prepared query execution to only include Connect-capable
 	// services. This currently affects prepared query execution.
 	Connect bool
@@ -174,6 +186,10 @@ func (o *QueryOptions) WithContext(ctx context.Context) *QueryOptions {
 
 // WriteOptions are used to parameterize a write
 type WriteOptions struct {
+	// Namespace overrides the `default` namespace
+	// Note: Namespaces are available only in Consul Enterprise
+	Namespace string
+
 	// Providing a datacenter overwrites the DC provided
 	// by the Config
 	Datacenter string
@@ -288,6 +304,10 @@ type Config struct {
 	// If provided it is read once at startup and never again.
 	TokenFile string
 
+	// Namespace is the name of the namespace to send along for the request
+	// when no other Namespace ispresent in the QueryOptions
+	Namespace string
+
 	TLSConfig TLSConfig
 }
 
@@ -307,13 +327,25 @@ type TLSConfig struct {
 	// Consul communication, defaults to the system bundle if not specified.
 	CAPath string
 
+	// CAPem is the optional PEM-encoded CA certificate used for Consul
+	// communication, defaults to the system bundle if not specified.
+	CAPem []byte
+
 	// CertFile is the optional path to the certificate for Consul
 	// communication. If this is set then you need to also set KeyFile.
 	CertFile string
 
+	// CertPEM is the optional PEM-encoded certificate for Consul
+	// communication. If this is set then you need to also set KeyPEM.
+	CertPEM []byte
+
 	// KeyFile is the optional path to the private key for Consul communication.
 	// If this is set then you need to also set CertFile.
 	KeyFile string
+
+	// KeyPEM is the optional PEM-encoded private key for Consul communication.
+	// If this is set then you need to also set CertPEM.
+	KeyPEM []byte
 
 	// InsecureSkipVerify if set to true will disable TLS host verification.
 	InsecureSkipVerify bool
@@ -411,6 +443,10 @@ func defaultConfig(transportFn func() *http.Transport) *Config {
 		}
 	}
 
+	if v := os.Getenv(HTTPNamespaceEnvName); v != "" {
+		config.Namespace = v
+	}
+
 	return config
 }
 
@@ -434,18 +470,31 @@ func SetupTLSConfig(tlsConfig *TLSConfig) (*tls.Config, error) {
 		tlsClientConfig.ServerName = server
 	}
 
+	if len(tlsConfig.CertPEM) != 0 && len(tlsConfig.KeyPEM) != 0 {
+		tlsCert, err := tls.X509KeyPair(tlsConfig.CertPEM, tlsConfig.KeyPEM)
+		if err != nil {
+			return nil, err
+		}
+		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
+	} else if len(tlsConfig.CertPEM) != 0 || len(tlsConfig.KeyPEM) != 0 {
+		return nil, fmt.Errorf("both client cert and client key must be provided")
+	}
+
 	if tlsConfig.CertFile != "" && tlsConfig.KeyFile != "" {
 		tlsCert, err := tls.LoadX509KeyPair(tlsConfig.CertFile, tlsConfig.KeyFile)
 		if err != nil {
 			return nil, err
 		}
 		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
+	} else if tlsConfig.CertFile != "" || tlsConfig.KeyFile != "" {
+		return nil, fmt.Errorf("both client cert and client key must be provided")
 	}
 
-	if tlsConfig.CAFile != "" || tlsConfig.CAPath != "" {
+	if tlsConfig.CAFile != "" || tlsConfig.CAPath != "" || len(tlsConfig.CAPem) != 0 {
 		rootConfig := &rootcerts.Config{
-			CAFile: tlsConfig.CAFile,
-			CAPath: tlsConfig.CAPath,
+			CAFile:        tlsConfig.CAFile,
+			CAPath:        tlsConfig.CAPath,
+			CACertificate: tlsConfig.CAPem,
 		}
 		if err := rootcerts.ConfigureTLS(tlsClientConfig, rootConfig); err != nil {
 			return nil, err
@@ -620,6 +669,9 @@ func (r *request) setQueryOptions(q *QueryOptions) {
 	if q == nil {
 		return
 	}
+	if q.Namespace != "" {
+		r.params.Set("ns", q.Namespace)
+	}
 	if q.Datacenter != "" {
 		r.params.Set("dc", q.Datacenter)
 	}
@@ -655,6 +707,9 @@ func (r *request) setQueryOptions(q *QueryOptions) {
 	if q.RelayFactor != 0 {
 		r.params.Set("relay-factor", strconv.Itoa(int(q.RelayFactor)))
 	}
+	if q.LocalOnly {
+		r.params.Set("local-only", fmt.Sprintf("%t", q.LocalOnly))
+	}
 	if q.Connect {
 		r.params.Set("connect", "true")
 	}
@@ -672,6 +727,7 @@ func (r *request) setQueryOptions(q *QueryOptions) {
 			r.header.Set("Cache-Control", strings.Join(cc, ", "))
 		}
 	}
+
 	r.ctx = q.ctx
 }
 
@@ -714,6 +770,9 @@ func IsRetryableError(err error) bool {
 func (r *request) setWriteOptions(q *WriteOptions) {
 	if q == nil {
 		return
+	}
+	if q.Namespace != "" {
+		r.params.Set("ns", q.Namespace)
 	}
 	if q.Datacenter != "" {
 		r.params.Set("dc", q.Datacenter)
@@ -778,6 +837,9 @@ func (c *Client) newRequest(method, path string) *request {
 	}
 	if c.config.Datacenter != "" {
 		r.params.Set("dc", c.config.Datacenter)
+	}
+	if c.config.Namespace != "" {
+		r.params.Set("ns", c.config.Namespace)
 	}
 	if c.config.WaitTime != 0 {
 		r.params.Set("wait", durToMsec(r.config.WaitTime))
