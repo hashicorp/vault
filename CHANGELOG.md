@@ -12,6 +12,9 @@ IMPROVEMENTS:
 * auth/jwt: Bound claims may be optionally configured using globs [JWT-89]
 * core: Separate out service discovery interface from storage interface to allow
   new types of service discovery not coupled to storage [GH-7887]
+* audit: HMAC http_raw_body in audit log; this ensures that large authenticated Prometheus metrics responses get
+  replaced with short HMAC values [GH-8130]
+
 * cli: Incorrect TLS configuration will now correctly fail [GH-8025] 
 * secrets/database/mongodb: Switched internal MongoDB driver to mongo-driver [GH-8140]
 * secrets/consul: Add support to specify TLS options per Consul backend [GH-4800]
