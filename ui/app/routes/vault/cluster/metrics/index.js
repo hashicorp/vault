@@ -4,11 +4,11 @@ import { hash } from 'rsvp';
 
 export default Route.extend(ClusterRoute, {
   model() {
-    let entitiesModel = this.store.queryRecord('entities', {}).then(response => {
-      return response.counters.entities.total;
+    let entitiesModel = this.store.queryRecord('metrics/entity', {}).then(response => {
+      return response.totalEntities;
     });
 
-    let httpsModel = this.store.queryRecord('http-requests', {}).then(response => {
+    let httpsRequestsModel = this.store.queryRecord('metrics/http-requests', {}).then(response => {
       let reverseArray = response.counters.reverse();
       return reverseArray[0].total;
     });
@@ -17,14 +17,13 @@ export default Route.extend(ClusterRoute, {
       return response.counters;
     });
 
-    let tokenModel = this.store.queryRecord('tokens', {}).then(response => {
-      return response.counters.service_tokens.total;
+    let tokenModel = this.store.queryRecord('metrics/token', {}).then(response => {
+      return response.totalTokens;
     });
 
     return hash({
       entitiesTotal: entitiesModel,
-      httpsRequestTotal: httpsModel,
-      httpsRequestBarChartData: httpsBarChartModel,
+      httpsRequestTotal: httpsRequestsModel,
       tokenTotal: tokenModel,
     });
   },
