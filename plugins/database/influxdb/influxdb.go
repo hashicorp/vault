@@ -129,21 +129,25 @@ func (i *Influxdb) CreateUser(ctx context.Context, statements dbplugin.Statement
 				"password": password,
 			}), "", "")
 			response, err := cli.Query(q)
-			if err != nil && response.Error() != nil {
-				for _, stmt := range rollbackIFQL {
-					for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
-						query = strings.TrimSpace(query)
+			if err != nil {
+				if response != nil && response.Error() != nil {
+					for _, stmt := range rollbackIFQL {
+						for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+							query = strings.TrimSpace(query)
 
-						if len(query) == 0 {
-							continue
-						}
-						q := influx.NewQuery(dbutil.QueryHelper(query, map[string]string{
-							"username": username,
-						}), "", "")
+							if len(query) == 0 {
+								continue
+							}
+							q := influx.NewQuery(dbutil.QueryHelper(query, map[string]string{
+								"username": username,
+							}), "", "")
 
-						response, err := cli.Query(q)
-						if err != nil && response.Error() != nil {
-							return "", "", err
+							response, err := cli.Query(q)
+							if err != nil {
+								if response != nil && response.Error() != nil {
+									return "", "", err
+								}
+							}
 						}
 					}
 				}
@@ -190,7 +194,9 @@ func (i *Influxdb) RevokeUser(ctx context.Context, statements dbplugin.Statement
 			}), "", "")
 			response, err := cli.Query(q)
 			result = multierror.Append(result, err)
-			result = multierror.Append(result, response.Error())
+			if response != nil {
+				result = multierror.Append(result, response.Error())
+			}
 		}
 	}
 	return result.ErrorOrNil()
@@ -230,7 +236,9 @@ func (i *Influxdb) RotateRootCredentials(ctx context.Context, statements []strin
 			}), "", "")
 			response, err := cli.Query(q)
 			result = multierror.Append(result, err)
-			result = multierror.Append(result, response.Error())
+			if response != nil {
+				result = multierror.Append(result, response.Error())
+			}
 		}
 	}
 
