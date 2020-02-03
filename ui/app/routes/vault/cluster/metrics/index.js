@@ -14,7 +14,6 @@ export default Route.extend(ClusterRoute, {
     });
 
     let totalTokens = this.store.queryRecord('metrics/token', {}).then(response => {
-      console.log(response, 'tokens');
       return response.service_tokens.total;
     });
 
