@@ -14,6 +14,12 @@ const (
 	// Vault may read them in if set through these environment variables.
 	// Example here:
 	// https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/
+	// The client itself does nothing directly with these variables, it's
+	// up to the caller. However, they live here so they'll be consistently
+	// named should the client ever be reused.
+	// We generally recommend preferring environmental settings over configured
+	// ones, allowing settings from the Downward API to override hard-coded
+	// ones.
 	EnvVarKubernetesNamespace = "VAULT_K8S_NAMESPACE"
 	EnvVarKubernetesPodName   = "VAULT_K8S_POD_NAME"
 
