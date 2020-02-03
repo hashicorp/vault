@@ -19,8 +19,8 @@ import (
 	"github.com/NYTimes/gziphandler"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-sockaddr"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -160,6 +160,8 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		// Register metrics path without authentication if enabled
 		if props.UnauthenticatedMetricsAccess {
 			mux.Handle("/v1/sys/metrics", handleMetricsUnauthenticated(core))
+		} else {
+			mux.Handle("/v1/sys/metrics", handleLogicalNoForward(core))
 		}
 
 		additionalRoutes(mux, core)
