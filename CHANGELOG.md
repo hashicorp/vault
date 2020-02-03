@@ -14,7 +14,8 @@ IMPROVEMENTS:
 * auth/jwt: Bound claims may be optionally configured using globs [JWT-89]
 * core: Separate out service discovery interface from storage interface to allow
   new types of service discovery not coupled to storage [GH-7887]
-* cli: Incorrect TLS configuration will now correctly fail [GH-8025] 
+* cli: Incorrect TLS configuration will now correctly fail [GH-8025]
+* okta: Upgrade okta sdk lib, which should improve handling of groups [GH-8143] 
 * secrets/database/mongodb: Switched internal MongoDB driver to mongo-driver [GH-8140]
 * secrets/consul: Add support to specify TLS options per Consul backend [GH-4800]
 * secrets/gcp: Allow specifying the TTL for a service key [GCP-54]
