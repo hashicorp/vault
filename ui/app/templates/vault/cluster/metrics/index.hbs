@@ -17,8 +17,8 @@
           <p class="has-text-grey is-size-8">This month</p>
         </div>
         <div class="selectable-card-change">
-          {{!-- conditionally change the class from is-decrease or is-increase --}}
-          <Icon @glyph="arrow-up" @size="xlm" aria-hidden="true" class="selectable-card-icon is-increase"/>
+          {{!-- ARG TODO replace true with data --}}
+          <Icon @glyph="arrow-up" @size="xlm" aria-hidden="true" class="selectable-card-icon {{if true "is-increase" "is-decrease"}}"/>
           {{!-- ARG: replace with data, modified on a serializer --}}
           <p class="has-text-grey is-size-4 amount-change">+3.8%</p>
           <p class="has-text-grey is-size-6 item-c">Since last month</p>
