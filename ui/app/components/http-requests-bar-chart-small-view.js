@@ -45,10 +45,11 @@ export default Component.extend({
   parsedCounters: computed('counters', function() {
     // parse the start times so bars and ticks display properly
     const { counters } = this;
+    console.log(counters.length);
     return counters.map((counter, index) => {
       return assign({}, counter, {
         start_time: d3TimeFormat.isoParse(counter.start_time),
-        fill_color: index === 1 ? 'blue' : 'red',
+        fill_color: index === counters.length - 1 ? '#bac1cc' : '#ebeef2',
       });
     });
   }),
@@ -168,7 +169,8 @@ export default Component.extend({
       .attr('height', counter => height - yScale(counter.total))
       .attr('x', counter => xScale(counter.start_time))
       .attr('y', counter => yScale(counter.total))
-      .attr('fill', counter => counter.fill_color); // ARG: pick up from here
+      .attr('fill', counter => counter.fill_color)
+      .attr('stroke', counter => counter.fill_color);
 
     shadowBars.exit().remove();
   },

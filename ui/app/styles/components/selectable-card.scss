@@ -58,6 +58,29 @@
 .selectable-card-change {
   justify-self: right;
   padding-right: $spacing-l;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+
+  .hs-icon {
+    color: $grey-light;
+    align-self: center;
+    justify-self: right;
+  }
+
+  .amount-change {
+    align-self: center;
+    justify-self: center;
+
+    font-weight: 500;
+  }
+  .item-c {
+    grid-column: 1 / span 2;
+    align-self: start;
+    justify-self: end;
+
+    font-weight: $font-weight-semibold;
+  }
 }
 .selectable-card-chart {
   grid-column: 1 / span 2;
@@ -70,4 +93,12 @@
   align-self: end;
   justify-self: right;
   padding-right: $spacing-l;
+}
+
+// rotate and modify icon used to show metrics increase or decrease
+.selectable-card-icon.is-decrease {
+  transform: rotate(135deg);
+}
+.selectable-card-icon.is-increase {
+  transform: rotate(45deg);
 }

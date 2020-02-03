@@ -8,7 +8,7 @@
 
 {{!-- ARG TODO: Add permission conditionals for menu dropdowns --}}
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
-  {{#if true}}
+  {{#if (gt model.httpsRequestBarChartData.length 1) }}
     <div class="selectable-card-container-wide">
       <div class="selectable-card width-medium is-rounded is-grid-container grid-item-http">
         <div class="selectable-card-title">
@@ -16,8 +16,13 @@
           <p class="title is-5">HTTP Requests</p>
           <p class="has-text-grey is-size-8">This month</p>
         </div>
-        <div class="selectable-card-change">CHANGE</div>
-        {{!-- <div class="selectable-card-chart">CHART</div> --}}
+        <div class="selectable-card-change">
+          {{!-- conditionally change the class from is-decrease or is-increase --}}
+          <Icon @glyph="arrow-up" @size="xlm" aria-hidden="true" class="selectable-card-icon is-increase"/>
+          {{!-- ARG: replace with data, modified on a serializer --}}
+          <p class="has-text-grey is-size-4 amount-change">+3.8%</p>
+          <p class="has-text-grey is-size-6 item-c">Since last month</p>
+        </div>
         <HttpRequestsBarChartSmallView @counters={{model.httpsRequestBarChartData}} class="selectable-card-chart"/>
         <div class="selectable-card-details">view details</div>
       </div>
@@ -68,9 +73,7 @@
         </div>
       {{/linked-block}}
     </div>
-  {{/if}}
-  {{! -- ARG TODO: add the proper conditional for when more than 1 month data --}}
-  {{#if false}}
+  {{else}}
     <div class="selectable-card-container">
       {{#linked-block
         "vault.cluster.metrics.http-requests"
