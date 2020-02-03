@@ -23,5 +23,5 @@ const { attr } = DS;
 */
 
 export default DS.Model.extend({
-  totalTokens: attr('number'),
+  service_tokens: attr('object'),
 });

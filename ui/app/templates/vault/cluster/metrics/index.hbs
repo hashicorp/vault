@@ -14,7 +14,7 @@
       class="selectable-card width-medium is-rounded"
     }}
       <div>
-        <p class="title-number">{{format-number model.httpsRequestTotal}}</p>
+        <p class="title-number">{{format-number model.totalHttpsRequest}}</p>
         <p class="title is-5">HTTP Requests</p>
         <p class="has-text-grey is-size-8">This month</p>
       </div>
@@ -38,7 +38,7 @@
       class="selectable-card width-medium is-rounded"
     }}
       <div>
-        <p class="title-number">{{format-number model.entitiesTotal}}</p>
+        <p class="title-number">{{format-number model.totalEntities}}</p>
         {{#if (not-eq model.entitiesTotal 1)}}
         <p class="title is-5">Entities</p>
         {{else}}
@@ -71,7 +71,7 @@
       class="selectable-card width-medium is-rounded"
     }}
       <div>
-        <p class="title-number">{{format-number model.tokenTotal}}</p>
+        <p class="title-number">{{format-number model.totalTokens}}</p>
         {{#if (not-eq model.tokenTotal 1)}}
         <p class="title is-5">Tokens</p>
         {{else}}
