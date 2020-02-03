@@ -43,7 +43,7 @@ it is highly recommended that you
 of Vault. This provides a less complicated out-of-box experience for new users,
 but is not appropriate for a production setup. It is highly recommended to use
 a [properly secured Kubernetes cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/).
-See the [architecture reference](/docs/platform/k8s/run.html#architecture)
+See the [architecture reference](/docs/platform/k8s/run#architecture)
 for a production deployment checklist.
 
 ## How-To
@@ -76,8 +76,8 @@ configured to auto-unseal using KMS providers such as
 [Google Cloud Platform](/docs/platform/k8s/helm/run#google-kms-auto-unseal). This
 allows the pods to auto unseal if they're rescheduled in Kubernetes.
 
-If standalone or HA mode are being used, the Vault pods must be initialized and unsealed.
-For standalone deployments, only one of the Vault pods needs to be initialized.
+If standalone is used, the Vault pod must be initialized and unsealed.
+For HA deployments, only one of the Vault pods needs to be initialized and, all Vault pods need to be unsealed.
 
 ```sh
 $ kubectl exec -ti vault-0 -- vault operator init
@@ -103,14 +103,14 @@ $ kubectl port-forward vault-0 8200:8200
 ```
 
 The UI can also be exposed via a Kubernetes Service. To do this, configure
-the [`ui.service` chart values](/docs/platform/k8s/helm.html#v-ui).
+the [`ui.service` chart values](/docs/platform/k8s/helm#v-ui).
 
 ### Upgrading Vault on Kubernetes
 
 To upgrade Vault on Kubernetes, we follow the same pattern as
-[generally upgrading Vault](/docs/upgrading.html), except we can use
+[generally upgrading Vault](/docs/upgrading), except we can use
 the Helm chart to update the Vault server Statefulset. It is important to understand
-how to [generally upgrade Vault](/docs/upgrading.html) before reading this
+how to [generally upgrade Vault](/docs/upgrading) before reading this
 section.
 
 The Vault Statefulset uses `OnDelete` update strategy. It is critical to use `OnDelete` instead
@@ -241,7 +241,7 @@ helm install --name=vault \
 #### Google KMS Auto Unseal
 
 The following example demonstrates configuring Vault Helm to use
-[Google KMS for Auto Unseal](/docs/configuration/seal/gcpckms.html).
+[Google KMS for Auto Unseal](/docs/configuration/seal/gcpckms).
 
 In order to authenticate and use KMS in Google Cloud, Vault Helm needs credentials. The `credentials.json`
 file will need to be mounted as a secret to the Vault container.
@@ -307,7 +307,7 @@ server:
 #### Amazon EKS Auto Unseal
 
 The following example demonstrates configuring Vault Helm to use
-[AWS EKS for Auto Unseal](/docs/configuration/seal/awskms.html).
+[AWS EKS for Auto Unseal](/docs/configuration/seal/awskms).
 
 In order to authenticate and use EKS in AWS, Vault Helm needs credentials. The AWS access key
 ID and key will be mounted as secret environment variables in the Vault pods.
@@ -368,7 +368,7 @@ server:
 ## Architecture
 
 We recommend running Vault on Kubernetes with the same
-[general architecture](/docs/internals/architecture.html)
+[general architecture](/docs/internals/architecture)
 as running it anywhere else. There are some benefits Kubernetes can provide
 that eases operating a Vault cluster and we document those below. The standard
 [production deployment guide](https://learn.hashicorp.com/vault/day-one/production-hardening) is still an
@@ -380,14 +380,14 @@ _End-to-End TLS._ Vault should always be used with TLS in production. If
 intermediate load balancers or reverse proxies are used to front Vault,
 they should not terminate TLS. This way traffic is always encrypted in transit
 to Vault and minimizes risks introduced by intermediate layers. See the
-[official documentation](/docs/platform/k8s/helm.html#standalone-server-with-tls)
+[official documentation](/docs/platform/k8s/helm#standalone-server-with-tls)
 for example on configuring Vault Helm to use TLS.
 
 _Single Tenancy._ Vault should be the only main process running on a machine.
 This reduces the risk that another process running on the same machine is
 compromised and can interact with Vault. This can be accomplished by using Vault
 Helm's `affinity` configurable. See the
-[official documentation](/docs/platform/k8s/helm.html#highly-available-vault-cluster-with-consul)
+[official documentation](/docs/platform/k8s/helm#highly-available-vault-cluster-with-consul)
 for example on configuring Vault Helm to use affinity rules.
 
 _Enable Auditing._ Vault supports several auditing backends. Enabling auditing
@@ -396,7 +396,7 @@ trail in the case of misuse or compromise. Audit logs securely hash any sensitiv
 data, but access should still be restricted to prevent any unintended disclosures.
 Vault Helm includes a configurable `auditStorage` option that will provision a persistent
 volume to store audit logs. See the
-[official documentation](/docs/platform/k8s/helm.html#standalone-server-with-audit-storage)
+[official documentation](/docs/platform/k8s/helm#standalone-server-with-audit-storage)
 for an example on configuring Vault Helm to use auditing.
 
 _Immutable Upgrades._ Vault relies on an external storage backend for persistence,
@@ -405,7 +405,7 @@ When upgrading to new versions, new servers with the upgraded version of Vault
 are brought online. They are attached to the same shared storage backend and
 unsealed. Then the old servers are destroyed. This reduces the need for remote
 access and upgrade orchestration which may introduce security gaps. See the
-[upgrade section](/docs/platform/k8s/run.html#how-to) for instructions
+[upgrade section](/docs/platform/k8s/run#how-to) for instructions
 on upgrading Vault on Kubernetes.
 
 _Upgrade Frequently._ Vault is actively developed, and updating frequently is

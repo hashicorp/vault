@@ -8,7 +8,7 @@ description: OIDC provider configuration quick starts
 
 This page collects high-level setup steps on how to configure an OIDC
 application for various providers. For more general usage and operation
-information, see the [Vault JWT/OIDC method documentation](https://www.vaultproject.io/docs/auth/jwt.html).
+information, see the [Vault JWT/OIDC method documentation](/docs/auth/jwt).
 
 OIDC providers are often highly configurable and you should become familiar with
 their recommended settings and best practices. The instructions below are
@@ -33,17 +33,17 @@ Reference: [Azure Active Directory v2.0 and the OpenID Connect protocol](https:/
    it will not be accessible after you leave the page.
 
 Please note [Azure AD v2.0 endpoints](https://docs.microsoft.com/en-gb/azure/active-directory/develop/azure-ad-endpoint-comparison)
-are required for [external groups](https://www.vaultproject.io/docs/secrets/identity/index.html#external-vs-internal-groups) to work.
+are required for [external groups](/docs/secrets/identity#external-vs-internal-groups) to work.
 
 - `groupMembershipClaims` should be changed from `none` in the
   [App registration manifest](https://docs.microsoft.com/en-us/azure/active-directory/develop/reference-app-manifest).
   Options are "All" or "Security"
 
-- In the [OIDC Role config](https://www.vaultproject.io/api/auth/jwt/index.html#create-role)
+- In the [OIDC Role config](/api/auth/jwt#create-role)
   the scope `"https://graph.microsoft.com/.default"` should be added to add groups
   to the jwt token and `groups_claim` should be set to `groups`.
 
-- Finally Azure AD group can be referenced by using the groups `objectId` as the [group alias name](https://www.vaultproject.io/api/secret/identity/group-alias.html) for the external group.
+- Finally Azure AD group can be referenced by using the groups `objectId` as the [group alias name](/api/secret/identity/group-alias) for the external group.
 
 ### CLI setup instructions:
 

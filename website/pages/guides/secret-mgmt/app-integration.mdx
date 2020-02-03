@@ -42,7 +42,7 @@ applications across systems.
 
 - [Consul Template](https://github.com/hashicorp/consul-template)
 - [Envconsul](https://github.com/hashicorp/consul-template)
-- [Secret as a Service: Dynamic Secrets](/guides/secret-mgmt/dynamic-secrets.html)
+- [Secret as a Service: Dynamic Secrets](/guides/secret-mgmt/dynamic-secrets)
 
 ## Estimated Time to Complete
 
@@ -69,7 +69,7 @@ to make minimal to no code change.
 
 To perform the tasks described in this guide, you need:
 
-- A [Vault environment](/intro/getting-started/install.html)
+- A [Vault environment](/intro/getting-started/install)
 - [Consul Template](https://releases.hashicorp.com/consul-template/)
 - [Envconsul](https://releases.hashicorp.com/envconsul/)
 - [PostgreSQL](#postgresql)
@@ -81,7 +81,7 @@ Template and Envconsul. Therefore, you need a
 [PostgreSQL](https://www.postgresql.org/download/) server to connect to.
 
 ~> Complete the [Secret as a Service: Dynamic
-Secrets](/guides/secret-mgmt/dynamic-secrets.html) guide first if you are not
+Secrets](/guides/secret-mgmt/dynamic-secrets) guide first if you are not
 familiar with `database` secrets engine.
 
 ### Policy requirements
@@ -117,7 +117,7 @@ path "auth/token/create" {
 ```
 
 If you are not familiar with policies, complete the
-[policies](/guides/identity/policies.html) guide.
+[policies](/guides/identity/policies) guide.
 
 ## Steps
 
@@ -137,12 +137,12 @@ engine using `postgresql-database-plugin` where the database connection URL is
 `postgresql://root:rootpassword@localhost:5432/myapp`.
 
 > **NOTE:** Your database connection URL is most likely different from this
-> example. Be sure to use the correct [connection URL](http://localhost:4567/api/secret/databases/postgresql.html#connection_url) to
+> example. Be sure to use the correct [connection URL](/api/secret/databases/postgresql#connection_url) to
 > match your environment.
 
 ~> Refer to the [PostgreSQL Database Secrets
-Engine](/docs/secrets/databases/postgresql.html) documentation or [Secret as a
-Service: Dynamic Secrets](/guides/secret-mgmt/dynamic-secrets.html) guide if you
+Engine](/docs/secrets/databases/postgresql) documentation or [Secret as a
+Service: Dynamic Secrets](/guides/secret-mgmt/dynamic-secrets) guide if you
 are not familiar with `database` secrets engine. The detailed description of
 working with `database` secrets engine is out of scope for this guide.
 
@@ -411,5 +411,5 @@ uppercase. Otherwise, the default uses lowercase (e.g. `database_creds_readonly_
 
 If the integration option is to directly invoke Vault API within your
 application, refer to the [_AppRole Pull
-Authentication_](/guides/identity/authentication.html) guide to learn about the
+Authentication_](/guides/identity/authentication) guide to learn about the
 AppRole auth method which is designed for applications.

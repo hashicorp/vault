@@ -30,8 +30,8 @@ redirect requests to the _active_ node.
 > Nodes** feature is included in _Vault Enterprise Premium_, and also available
 > for _Vault Enterprise Pro_ with additional fee. This is particularly useful for
 > processing high volume Encryption as a Service ([Transit secrets
-> engine](/docs/secrets/transit/index.html)) requests. Read [Performance Standby
-> Nodes](/docs/enterprise/performance-standby/index.html) documentation and a [guide](/guides/operations/performance-nodes.html) for more details.
+> engine](/docs/secrets/transit)) requests. Read [Performance Standby
+> Nodes](/docs/enterprise/performance-standby) documentation and a [guide](/guides/operations/performance-nodes) for more details.
 
 ~> This guide will walk you through a simple Vault Highly Available (HA) cluster
 implementation. While this is not an exhaustive or prescriptive guide that can
@@ -40,9 +40,9 @@ inform your own production setup.
 
 ## Reference Materials
 
-- [High Availability Mode](/docs/concepts/ha.html)
-- [Consul Storage Backend](/docs/configuration/storage/consul.html)
-- [High Availability Parameters](/docs/configuration/index.html#high-availability-parameters)
+- [High Availability Mode](/docs/concepts/ha)
+- [Consul Storage Backend](/docs/configuration/storage/consul)
+- [High Availability Parameters](/docs/configuration#high-availability-parameters)
 - [Consul Agent Configuration](https://www.consul.io/docs/agent/options.html)
 
 ## Estimated Time to Complete
@@ -297,7 +297,7 @@ configure local Consul client agents on the Vault servers which will communicate
 with the Consul server cluster for registering health checks, service discovery, and cluster HA failover coordination (cluster leadership).
 
 ~> Note that [it is not recommended to connect the Vault servers directly to the
-Consul servers](/docs/configuration/storage/consul.html#address).
+Consul servers](/docs/configuration/storage/consul#address).
 
 The Consul client agents will be using the same address as the Vault servers for
 network communication to the Consul server cluster, but they will be binding the
@@ -460,9 +460,9 @@ by a label as well:
 
 In our configuration file, we'll set up the following:
 
-- [**`tcp`**](/docs/configuration/listener/tcp.html) listener
-- [**`consul`**](/docs/configuration/storage/consul.html) storage backend
-- [High Availability parameters](/docs/configuration/index.html#high-availability-parameters)
+- [**`tcp`**](/docs/configuration/listener/tcp) listener
+- [**`consul`**](/docs/configuration/storage/consul) storage backend
+- [High Availability parameters](/docs/configuration#high-availability-parameters)
 
 This section assumes the Vault binary is located at **`/usr/local/bin/vault`**
 
@@ -490,9 +490,9 @@ We're setting the following parameters for our `tcp` listener:
 This configuration allows for listening on all interfaces (such that a Vault
 command against the loopback address would succeed, for example).
 
-We're also explicitly setting Vault's [HA parameters](/docs/configuration/index.html#high-availability-parameters) (`api_addr` and `cluster_addr`). Often, it's not necessary to configure these two parameters when using Consul as Vault's storage backend, as Consul will attempt to automatically discover and advertise the address of the active Vault node. However, certain cluster configurations might require them to be explicitly set (accessing Vault through a load balancer, for example).
+We're also explicitly setting Vault's [HA parameters](/docs/configuration#high-availability-parameters) (`api_addr` and `cluster_addr`). Often, it's not necessary to configure these two parameters when using Consul as Vault's storage backend, as Consul will attempt to automatically discover and advertise the address of the active Vault node. However, certain cluster configurations might require them to be explicitly set (accessing Vault through a load balancer, for example).
 
-For the sake of simplicity, we will assume that clients in our scenario connect directly to the Vault nodes (rather than through a load balancer). Review the [Client Redirection](/docs/concepts/ha.html#client-redirection) documentation for more information on client access patterns and their implications.
+For the sake of simplicity, we will assume that clients in our scenario connect directly to the Vault nodes (rather than through a load balancer). Review the [Client Redirection](/docs/concepts/ha#client-redirection) documentation for more information on client access patterns and their implications.
 
 Note that some values contain variable placeholders while the rest have
 reasonable defaults. You should replace the following values in your own Vault
@@ -602,7 +602,7 @@ Start the Vault service on each system and verify the status:
                └─2080 /usr/local/bin/vault server -config=/home/ubuntu/vault_nano/config/vault_server.hcl -log-level=debu
 
 Now you’ll need to move on to [initializing and
-unsealing](/intro/getting-started/deploy.html#initializing-the-vault) each Vault
+unsealing](/intro/getting-started/deploy#initializing-the-vault) each Vault
 instance.
 
 Once that is done, check Vault status on each of the servers.
@@ -648,5 +648,5 @@ see the standby instance assumes the leadership.
 
 ## Next steps
 
-Read [Production Hardening](/guides/operations/production.html) to learn best
+Read [Production Hardening](/guides/operations/production) to learn best
 practices for a production hardening deployment of Vault.

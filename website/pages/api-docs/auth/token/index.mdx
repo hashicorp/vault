@@ -9,7 +9,7 @@ description: This is the API documentation for the Vault token auth method.
 
 This is the API documentation for the Vault token auth method. For
 general information about the usage and operation of the token method, please
-see the [Vault Token method documentation](/docs/auth/token.html).
+see the [Vault Token method documentation](/docs/auth/token).
 
 ## List Accessors
 
@@ -84,7 +84,7 @@ during this call.
 - `lease` `(string: "")` - DEPRECATED; use `ttl` instead
 - `ttl` `(string: "")` - The TTL period of the token, provided as "1h", where
   hour is the largest suffix. If not provided, the token is valid for the
-  [default lease TTL](/docs/configuration/index.html), or indefinitely if the
+  [default lease TTL](/docs/configuration), or indefinitely if the
   root policy is used.
 - `type` `(string: "")` - The token type. Can be "batch" or "service". Defaults
   to the type specified by the role configuration named by `role_name`.

@@ -1,0 +1,18 @@
+version = 0
+name = "DropDatabase"
+documentation = "DropDatabase performs a dropDatabase operation"
+
+[properties]
+enabled = ["write concern"]
+disabled = ["collection"]
+
+[command]
+name = "dropDatabase"
+parameter = "database"
+
+[response]
+name = "DropDatabaseResult"
+
+[response.field.dropped]
+type = "string"
+documentation = "The dropped database."

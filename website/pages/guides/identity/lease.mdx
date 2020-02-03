@@ -42,12 +42,12 @@ two hours later, `b519c6aa...` will be revoked and takes its child
 
 ## Reference Material
 
-- The [Validation](/guides/secret-mgmt/dynamic-secrets.html#validation) section of the
-  [Secret as a Service](/guides/secret-mgmt/dynamic-secrets.html) guide demonstrates lease
+- The [Validation](/guides/secret-mgmt/dynamic-secrets#validation) section of the
+  [Secret as a Service](/guides/secret-mgmt/dynamic-secrets) guide demonstrates lease
   renewal and revocation
-- [Tokens documentation](/docs/concepts/tokens.html)
-- [Token Auth Method (API)](/api/auth/token/index.html)
-- [Lease, Renew, and Revoke](/docs/concepts/lease.html)
+- [Tokens documentation](/docs/concepts/tokens)
+- [Token Auth Method (API)](/api/auth/token)
+- [Lease, Renew, and Revoke](/docs/concepts/lease)
 
 ~> **NOTE:** An [interactive
 tutorial](https://www.katacoda.com/hashicorp/scenarios/vault-tokens) is
@@ -94,9 +94,9 @@ This also allows for organizations to plan and train for various
 
 To perform the tasks described in this guide, you need to have a Vault
 environment. Refer to the [Getting
-Started](/intro/getting-started/install.html) guide to install Vault. Make sure
+Started](/intro/getting-started/install) guide to install Vault. Make sure
 that your Vault server has been [initialized and
-unsealed](/intro/getting-started/deploy.html).
+unsealed](/intro/getting-started/deploy).
 
 ### Policy requirements
 
@@ -136,7 +136,7 @@ path "sys/mounts/database/tune" {
 ```
 
 If you are not familiar with policies, complete the
-[policies](/guides/identity/policies.html) guide.
+[policies](/guides/identity/policies) guide.
 
 ## Steps
 
@@ -315,7 +315,7 @@ duration (e.g. "1h").
 #### API call using cURL
 
 Use the `auth/token/create` endpoint to create a new token. There are a number of
-optional [parameters](/api/auth/token/index.html#create-token) that you can pass
+optional [parameters](/api/auth/token#create-token) that you can pass
 in the request payload.
 
 **Example:**
@@ -631,7 +631,7 @@ are talking about long-running apps that need to be able to renew their token
 indefinitely.
 
 -> For more details about AppRole, read the [AppRole Pull
-Authentication](/guides/identity/authentication.html) guide.
+Authentication](/guides/identity/authentication) guide.
 
 To create AppRole periodic tokens, create your AppRole role with
 `period` specified.
@@ -826,5 +826,5 @@ renewable          	true
 ## Next steps
 
 Now that you have learned the lifecycle of tokens and leases, read the [AppRole Pull
-Authentication](/guides/identity/authentication.html) guide to learn how to generate
+Authentication](/guides/identity/authentication) guide to learn how to generate
 tokens for apps or machines.
