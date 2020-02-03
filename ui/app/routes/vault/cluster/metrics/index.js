@@ -12,7 +12,7 @@ export default Route.extend(ClusterRoute, {
       let reverseArray = response.counters.reverse();
       return reverseArray[0].total;
     });
-    // ARG TODO: more efficient way to do this.... calling twice, maybe in serializer return the data. or in template?
+    // ARG TODO: more efficient way to do this.... calling twice, in template?
     let httpsBarChartModel = this.store.queryRecord('metrics/http-requests', {}).then(response => {
       return response.counters;
     });
