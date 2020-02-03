@@ -1,40 +1,93 @@
 package serviceregistration
 
+/*
+ServiceRegistration is an interface that can be fulfilled to use
+varying applications for service discovery, regardless of the physical
+back-end used.
+
+Service registration implements notifications for changes in _dynamic_
+properties regarding Vault's health. Vault's version is the only static
+property given in state for now, but if there's a need for more in the future,
+we could add them on.
+*/
+
 import (
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
 )
 
+type State struct {
+	VaultVersion                                            string
+	IsInitialized, IsSealed, IsActive, IsPerformanceStandby bool
+}
+
 // Factory is the factory function to create a ServiceRegistration.
-type Factory func(config map[string]string, logger log.Logger) (ServiceRegistration, error)
+// The config is the key/value pairs set _inside_ the service registration config stanza.
+// The state is the initial state.
+// The redirectAddr is Vault core's RedirectAddr.
+type Factory func(config map[string]string, logger log.Logger, state State, redirectAddr string) (ServiceRegistration, error)
 
 // ServiceRegistration is an interface that advertises the state of Vault to a
 // service discovery network.
 type ServiceRegistration interface {
+	// Run provides a shutdownCh and wait WaitGroup. The shutdownCh
+	// is for monitoring when a shutdown occurs and initiating any actions needed
+	// to leave service registration in a final state. When finished, signalling
+	// that with wait means that Vault will wait until complete.
+	// Run is called just after Factory instantiation so can be relied upon
+	// for controlling shutdown behavior.
+	// Here is an example of its intended use:
+	//	func Run(shutdownCh <-chan struct{}, wait sync.WaitGroup) error {
+	//
+	//		// Run shutdown code in a goroutine so Run doesn't block.
+	//		go func(){
+	//			// Since we are going to want Vault to wait to shutdown
+	//			// until after we do cleanup...
+	//			wait.Add(1)
+	//
+	//			// Ensure that when this ends, no matter how it ends,
+	//			// we don't cause Vault to hang on shutdown.
+	//			defer wait.Done()
+	//
+	//			// Now wait until we're actually receiving a shutdown.
+	//			<-shutdownCh
+	//
+	//			// Now do whatever we need to clean up.
+	//			if err := someService.SetFinalState(); err != nil {
+	//				// Log it at error level.
+	//			}
+	//		}()
+	//		return nil
+	//	}
+	Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup) error
+
 	// NotifyActiveStateChange is used by Core to notify that this Vault
-	// instance has changed its status to active or standby.
-	NotifyActiveStateChange() error
+	// instance has changed its status on whether it's active or is
+	// a standby.
+	// If errors are returned, Vault only logs a warning, so it is
+	// the implementation's responsibility to retry updating state
+	// in the face of errors.
+	NotifyActiveStateChange(isActive bool) error
 
 	// NotifySealedStateChange is used by Core to notify that Vault has changed
 	// its Sealed status to sealed or unsealed.
-	NotifySealedStateChange() error
+	// If errors are returned, Vault only logs a warning, so it is
+	// the implementation's responsibility to retry updating state
+	// in the face of errors.
+	NotifySealedStateChange(isSealed bool) error
 
 	// NotifyPerformanceStandbyStateChange is used by Core to notify that this
-	// Vault instance has changed it status to performance standby or standby.
-	NotifyPerformanceStandbyStateChange() error
+	// Vault instance has changed its performance standby status.
+	// If errors are returned, Vault only logs a warning, so it is
+	// the implementation's responsibility to retry updating state
+	// in the face of errors.
+	NotifyPerformanceStandbyStateChange(isStandby bool) error
 
-	// Run executes any background service discovery tasks until the
-	// shutdown channel is closed.
-	RunServiceRegistration(
-		waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, redirectAddr string,
-		activeFunc ActiveFunction, sealedFunc SealedFunction, perfStandbyFunc PerformanceStandbyFunction) error
+	// NotifyInitializedStateChange is used by Core to notify that the core is
+	// initialized.
+	// If errors are returned, Vault only logs a warning, so it is
+	// the implementation's responsibility to retry updating state
+	// in the face of errors.
+	NotifyInitializedStateChange(isInitialized bool) error
 }
-
-// Callback signatures for RunServiceRegistration
-type ActiveFunction func() bool
-type SealedFunction func() bool
-type PerformanceStandbyFunction func() bool
-
-// ShutdownChannel is the shutdown signal for RunServiceRegistration
-type ShutdownChannel chan struct{}

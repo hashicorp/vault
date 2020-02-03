@@ -1,0 +1,45 @@
+version = 0
+name = "Insert"
+documentation = "Insert performs an insert operation."
+
+[properties]
+enabled = ["write concern"]
+retryable = {mode = "once per command", type = "writes"}
+batches = "documents"
+
+[command]
+name = "insert"
+parameter = "collection"
+
+[request.documents]
+type = "document"
+slice = true
+constructor = true
+variadic = true
+required = true
+documentation = """
+Documents adds documents to this operation that will be inserted when this operation is
+executed.\
+"""
+
+[request.ordered]
+type = "boolean"
+documentation = """
+Ordered sets ordered. If true, when a write fails, the operation will return the error, when
+false write failures do not stop execution of the operation.\
+"""
+
+[request.bypassDocumentValidation]
+type = "boolean"
+minWireVersion = 4
+documentation = """
+BypassDocumentValidation allows the operation to opt-out of document level validation. Valid
+for server versions >= 3.2. For servers < 3.2, this setting is ignored.\
+"""
+
+[response]
+name = "InsertResult"
+
+[response.field.n]
+type = "int32"
+documentation = "Number of documents successfully inserted."

@@ -19,6 +19,8 @@ func httpGet(dispatcher common.HTTPRequestDispatcher, url string) (body bytes.Bu
 	var response *http.Response
 	request, err := http.NewRequest(http.MethodGet, url, nil)
 
+	request.Header.Add("Authorization", "Bearer Oracle")
+
 	if response, err = dispatcher.Do(request); err != nil {
 		return
 	}

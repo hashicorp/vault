@@ -96,11 +96,11 @@ type VaultSummaryVaultTypeEnum string
 
 // Set of constants representing the allowable values for VaultSummaryVaultTypeEnum
 const (
-	VaultSummaryVaultTypePrivate VaultSummaryVaultTypeEnum = "VIRTUAL_PRIVATE"
+	VaultSummaryVaultTypeVirtualPrivate VaultSummaryVaultTypeEnum = "VIRTUAL_PRIVATE"
 )
 
 var mappingVaultSummaryVaultType = map[string]VaultSummaryVaultTypeEnum{
-	"VIRTUAL_PRIVATE": VaultSummaryVaultTypePrivate,
+	"VIRTUAL_PRIVATE": VaultSummaryVaultTypeVirtualPrivate,
 }
 
 // GetVaultSummaryVaultTypeEnumValues Enumerates the set of values for VaultSummaryVaultTypeEnum

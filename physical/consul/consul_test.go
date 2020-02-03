@@ -7,7 +7,6 @@ import (
 	"os"
 	"reflect"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -16,74 +15,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/consul"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-	sr "github.com/hashicorp/vault/serviceregistration"
 )
-
-type consulConf map[string]string
-
-var (
-	addrCount int = 0
-)
-
-func testConsulBackend(t *testing.T) *ConsulBackend {
-	return testConsulBackendConfig(t, &consulConf{})
-}
-
-func testConsulBackendConfig(t *testing.T, conf *consulConf) *ConsulBackend {
-	logger := logging.NewVaultLogger(log.Debug)
-
-	be, err := NewConsulBackend(*conf, logger)
-	if err != nil {
-		t.Fatalf("Expected Consul to initialize: %v", err)
-	}
-
-	c, ok := be.(*ConsulBackend)
-	if !ok {
-		t.Fatalf("Expected ConsulBackend")
-	}
-
-	return c
-}
-
-func testConsul_testConsulBackend(t *testing.T) {
-	c := testConsulBackend(t)
-	if c == nil {
-		t.Fatalf("bad")
-	}
-}
-
-func testActiveFunc(activePct float64) sr.ActiveFunction {
-	return func() bool {
-		var active bool
-		standbyProb := rand.Float64()
-		if standbyProb > activePct {
-			active = true
-		}
-		return active
-	}
-}
-
-func testSealedFunc(sealedPct float64) sr.SealedFunction {
-	return func() bool {
-		var sealed bool
-		unsealedProb := rand.Float64()
-		if unsealedProb > sealedPct {
-			sealed = true
-		}
-		return sealed
-	}
-}
-
-func testPerformanceStandbyFunc(perfPct float64) sr.PerformanceStandbyFunction {
-	return func() bool {
-		var ps bool
-		unsealedProb := rand.Float64()
-		if unsealedProb > perfPct {
-			ps = true
-		}
-		return ps
-	}
-}
 
 func TestConsul_newConsulBackend(t *testing.T) {
 	tests := []struct {
@@ -175,13 +107,6 @@ func TestConsul_newConsulBackend(t *testing.T) {
 			disableReg:      false,
 			consistencyMode: "default",
 		},
-		{
-			name: "check timeout too short",
-			fail: true,
-			consulConfig: map[string]string{
-				"check_timeout": "99ms",
-			},
-		},
 	}
 
 	for _, test := range tests {
@@ -203,12 +128,6 @@ func TestConsul_newConsulBackend(t *testing.T) {
 			t.Fatalf("Expected ConsulBackend: %s", test.name)
 		}
 
-		var shutdownCh sr.ShutdownChannel
-		waitGroup := &sync.WaitGroup{}
-		if err := c.RunServiceRegistration(waitGroup, shutdownCh, test.redirectAddr, testActiveFunc(0.5), testSealedFunc(0.5), testPerformanceStandbyFunc(0.5)); err != nil {
-			t.Fatalf("bad: %v", err)
-		}
-
 		if test.path != c.path {
 			t.Errorf("bad: %s %v != %v", test.name, test.path, c.path)
 		}
@@ -219,7 +138,7 @@ func TestConsul_newConsulBackend(t *testing.T) {
 
 		// The configuration stored in the Consul "client" object is not exported, so
 		// we either have to skip validating it, or add a method to export it, or use reflection.
-		consulConfig := reflect.Indirect(reflect.ValueOf(c.Client)).FieldByName("config")
+		consulConfig := reflect.Indirect(reflect.ValueOf(c.client)).FieldByName("config")
 		consulConfigScheme := consulConfig.FieldByName("Scheme").String()
 		consulConfigAddress := consulConfig.FieldByName("Address").String()
 
@@ -235,22 +154,6 @@ func TestConsul_newConsulBackend(t *testing.T) {
 		// if test.max_parallel != cap(c.permitPool) {
 		// 	t.Errorf("bad: %v != %v", test.max_parallel, cap(c.permitPool))
 		// }
-	}
-}
-
-func TestConsul_NotifyActiveStateChange(t *testing.T) {
-	c := testConsulBackend(t)
-
-	if err := c.NotifyActiveStateChange(); err != nil {
-		t.Fatalf("bad: %v", err)
-	}
-}
-
-func TestConsul_NotifySealedStateChange(t *testing.T) {
-	c := testConsulBackend(t)
-
-	if err := c.NotifySealedStateChange(); err != nil {
-		t.Fatalf("bad: %v", err)
 	}
 }
 

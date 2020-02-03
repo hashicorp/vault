@@ -30,6 +30,19 @@ func NewInterceptLogger(opts *LoggerOptions) InterceptLogger {
 	return intercept
 }
 
+func (i *interceptLogger) Log(level Level, msg string, args ...interface{}) {
+	i.Logger.Log(level, msg, args...)
+	if atomic.LoadInt32(i.sinkCount) == 0 {
+		return
+	}
+
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	for s := range i.Sinks {
+		s.Accept(i.Name(), level, msg, i.retrieveImplied(args...)...)
+	}
+}
+
 // Emit the message and args at TRACE level to log and sinks
 func (i *interceptLogger) Trace(msg string, args ...interface{}) {
 	i.Logger.Trace(msg, args...)

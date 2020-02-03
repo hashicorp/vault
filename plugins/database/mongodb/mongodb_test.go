@@ -9,7 +9,9 @@ import (
 
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"gopkg.in/mgo.v2"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 const testMongoDBRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
@@ -152,18 +154,13 @@ func TestMongoDB_RevokeUser(t *testing.T) {
 
 func testCredsExist(t testing.TB, connURL, username, password string) error {
 	connURL = strings.Replace(connURL, "mongodb://", fmt.Sprintf("mongodb://%s:%s@", username, password), 1)
-	dialInfo, err := parseMongoURL(connURL)
-	if err != nil {
-		return err
-	}
 
-	session, err := mgo.DialWithInfo(dialInfo)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connURL))
 	if err != nil {
 		return err
 	}
-	session.SetSyncTimeout(1 * time.Minute)
-	session.SetSocketTimeout(1 * time.Minute)
-	return session.Ping()
+	return client.Ping(ctx, readpref.Primary())
 }
 
 func TestMongoDB_SetCredentials(t *testing.T) {
@@ -186,7 +183,7 @@ func TestMongoDB_SetCredentials(t *testing.T) {
 	// create the database user in advance, and test the connection
 	dbUser := "testmongouser"
 	startingPassword := "password"
-	testCreateDBUser(t, connURL, dbUser, startingPassword)
+	testCreateDBUser(t, connURL, "test", dbUser, startingPassword)
 	if err := testCredsExist(t, connURL, dbUser, startingPassword); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
@@ -219,24 +216,20 @@ func TestMongoDB_SetCredentials(t *testing.T) {
 	}
 }
 
-func testCreateDBUser(t testing.TB, connURL, username, password string) {
-	dialInfo, err := parseMongoURL(connURL)
+func testCreateDBUser(t testing.TB, connURL, db, username, password string) {
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connURL))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	session, err := mgo.DialWithInfo(dialInfo)
-	if err != nil {
-		t.Fatal(err)
-	}
-	session.SetSyncTimeout(1 * time.Minute)
-	session.SetSocketTimeout(1 * time.Minute)
-	mUser := mgo.User{
+	createUserCmd := &createUserCommand{
 		Username: username,
 		Password: password,
+		Roles:    []interface{}{},
 	}
-
-	if err := session.DB(dialInfo.Database).UpsertUser(&mUser); err != nil {
-		t.Fatal(err)
+	result := client.Database(db).RunCommand(ctx, createUserCmd, nil)
+	if result.Err() != nil {
+		t.Fatal(result.Err())
 	}
 }

@@ -688,8 +688,8 @@ func (c *Client) SetPolicyOverride(override bool) {
 
 // portMap defines the standard port map
 var portMap = map[string]string{
-	"http":   "80",
-	"https":  "443",
+	"http":  "80",
+	"https": "443",
 }
 
 // NewRequest creates a new raw request object to query the Vault server
@@ -711,7 +711,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 		// Avoid lookup of SRV record if scheme is known
 		port, ok := portMap[addr.Scheme]
 		if ok {
-			host = net.JoinHostPort(host,  port)
+			host = net.JoinHostPort(host, port)
 		} else {
 			// Internet Draft specifies that the SRV record is ignored if a port is given
 			_, addrs, err := net.LookupSRV("http", "tcp", addr.Hostname())

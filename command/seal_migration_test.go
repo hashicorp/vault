@@ -7,17 +7,124 @@ import (
 	"encoding/base64"
 	"testing"
 
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/shamir"
+
+	"github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
-	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
-	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 )
+
+func TestSealMigrationAutoToShamir(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace).Named(t.Name())
+	phys, err := physInmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	haPhys, err := physInmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	autoSeal := vault.NewAutoSeal(seal.NewTestSeal(nil))
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		Seal:            autoSeal,
+		Physical:        phys,
+		HAPhysical:      haPhys.(physical.HABackend),
+		DisableSealWrap: true,
+	}, &vault.TestClusterOptions{
+		Logger:      logger,
+		HandlerFunc: vaulthttp.Handler,
+		SkipInit:    true,
+		NumCores:    1,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	initResp, err := client.Sys().Init(&api.InitRequest{
+		RecoveryShares:    5,
+		RecoveryThreshold: 3,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testhelpers.WaitForActiveNode(t, cluster)
+
+	keys := initResp.RecoveryKeysB64
+	rootToken := initResp.RootToken
+	core := cluster.Cores[0].Core
+
+	client.SetToken(rootToken)
+	if err := client.Sys().Seal(); err != nil {
+		t.Fatal(err)
+	}
+
+	shamirSeal := vault.NewDefaultSeal(&seal.Access{
+		Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+			Logger: logger.Named("shamir"),
+		}),
+	})
+	shamirSeal.SetCore(core)
+
+	if err := adjustCoreForSealMigration(logger, core, shamirSeal, autoSeal); err != nil {
+		t.Fatal(err)
+	}
+
+	var resp *api.SealStatusResponse
+	unsealOpts := &api.UnsealOpts{}
+	for _, key := range keys {
+		unsealOpts.Key = key
+		unsealOpts.Migrate = false
+		resp, err = client.Sys().UnsealWithOptions(unsealOpts)
+		if err == nil {
+			t.Fatal("expected error due to lack of migrate parameter")
+		}
+		unsealOpts.Migrate = true
+		resp, err = client.Sys().UnsealWithOptions(unsealOpts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected response")
+		}
+		if !resp.Sealed {
+			break
+		}
+	}
+	if resp.Sealed {
+		t.Fatalf("expected unsealed state; got %#v", *resp)
+	}
+
+	// Seal and unseal again to verify that things are working fine
+	if err := client.Sys().Seal(); err != nil {
+		t.Fatal(err)
+	}
+	unsealOpts.Migrate = false
+	for _, key := range keys {
+		unsealOpts.Key = key
+		resp, err = client.Sys().UnsealWithOptions(unsealOpts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected response")
+		}
+		if !resp.Sealed {
+			break
+		}
+	}
+	if resp.Sealed {
+		t.Fatalf("expected unsealed state; got %#v", *resp)
+	}
+}
 
 func TestSealMigration(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace).Named(t.Name())
@@ -29,9 +136,13 @@ func TestSealMigration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	shamirSeal := vault.NewDefaultSeal(shamirseal.NewSeal(logger.Named("shamir")))
+	wrapper := vault.NewDefaultSeal(&seal.Access{
+		Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+			Logger: logger.Named("shamir"),
+		}),
+	})
 	coreConfig := &vault.CoreConfig{
-		Seal:            shamirSeal,
+		Seal:            wrapper,
 		Physical:        phys,
 		HAPhysical:      haPhys.(physical.HABackend),
 		DisableSealWrap: true,
@@ -144,6 +255,41 @@ func TestSealMigration(t *testing.T) {
 			t.Fatalf("expected unsealed state; got %#v", *resp)
 		}
 
+		// Make sure the seal configs were updated correctly
+		b, err := autoSeal.BarrierConfig(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if b.Type != autoSeal.BarrierType() {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.SecretShares != 1 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.SecretThreshold != 1 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.StoredShares != 1 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+
+		r, err := autoSeal.RecoveryConfig(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r.Type != wrapping.Shamir {
+			t.Fatalf("bad seal config: %#v", r)
+		}
+		if r.SecretShares != 2 {
+			t.Fatalf("bad seal config: %#v", r)
+		}
+		if r.SecretThreshold != 2 {
+			t.Fatalf("bad seal config: %#v", r)
+		}
+		if r.StoredShares != 0 {
+			t.Fatalf("bad seal config: %#v", r)
+		}
+
 		cluster.Cleanup()
 		cluster.Cores = nil
 	}
@@ -201,7 +347,7 @@ func TestSealMigration(t *testing.T) {
 	}
 
 	altTestSeal := seal.NewTestSeal(nil)
-	altTestSeal.Type = "test-alternate"
+	altTestSeal.SetType("test-alternate")
 	altSeal := vault.NewAutoSeal(altTestSeal)
 
 	{
@@ -238,6 +384,41 @@ func TestSealMigration(t *testing.T) {
 			t.Fatalf("expected unsealed state; got %#v", *resp)
 		}
 
+		// Make sure the seal configs were updated correctly
+		b, err := altSeal.BarrierConfig(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if b.Type != altSeal.BarrierType() {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.SecretShares != 1 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.SecretThreshold != 1 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.StoredShares != 1 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+
+		r, err := altSeal.RecoveryConfig(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r.Type != wrapping.Shamir {
+			t.Fatalf("bad seal config: %#v", r)
+		}
+		if r.SecretShares != 2 {
+			t.Fatalf("bad seal config: %#v", r)
+		}
+		if r.SecretThreshold != 2 {
+			t.Fatalf("bad seal config: %#v", r)
+		}
+		if r.StoredShares != 0 {
+			t.Fatalf("bad seal config: %#v", r)
+		}
+
 		cluster.Cleanup()
 		cluster.Cores = nil
 	}
@@ -252,7 +433,13 @@ func TestSealMigration(t *testing.T) {
 
 		core := cluster.Cores[0].Core
 
-		if err := adjustCoreForSealMigration(logger, core, shamirSeal, altSeal); err != nil {
+		wrapper := vault.NewDefaultSeal(&seal.Access{
+			Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+				Logger: logger.Named("shamir"),
+			}),
+		})
+
+		if err := adjustCoreForSealMigration(logger, core, wrapper, altSeal); err != nil {
 			t.Fatal(err)
 		}
 
@@ -281,6 +468,29 @@ func TestSealMigration(t *testing.T) {
 			t.Fatalf("expected unsealed state; got %#v", *resp)
 		}
 
+		// Make sure the seal configs were updated correctly
+		b, err := wrapper.BarrierConfig(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if b.Type != wrapping.Shamir {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.SecretShares != 2 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.SecretThreshold != 2 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+		if b.StoredShares != 1 {
+			t.Fatalf("bad seal config: %#v", b)
+		}
+
+		_, err = wrapper.RecoveryConfig(context.Background())
+		if err == nil {
+			t.Fatal("expected error")
+		}
+
 		cluster.Cleanup()
 		cluster.Cores = nil
 	}
@@ -288,7 +498,7 @@ func TestSealMigration(t *testing.T) {
 	{
 		logger.SetLevel(hclog.Trace)
 		logger.Info("integ: verify autoseal is off and the expected key shares work")
-		coreConfig.Seal = shamirSeal
+		coreConfig.Seal = wrapper
 		cluster := vault.NewTestCluster(t, coreConfig, clusterConfig)
 		cluster.Start()
 		defer cluster.Cleanup()
