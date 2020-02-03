@@ -1,3 +1,3 @@
-import MetricsSerializer from './metrics';
+import MetricsSerializer from '../metrics';
 
 export default MetricsSerializer.extend();
