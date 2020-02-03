@@ -30,6 +30,12 @@ BUG FIXES:
 
 * agent: Fix issue where TLS options are ignored for agent template feature [GH-7889]
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [GH-8035]
+* secrets/database/mysql: Ensures default static credential rotation statements are used [GH-8240]
+* secrets/database/mysql: Fix inconsistent query parameter names: {{name}} or {{username}} for
+  different queries. Now it allows for either for backwards compatibility [GH-8240]
+* secrets/database/postgres: Fix inconsistent query parameter names: {{name}} or {{username}} for
+  different queries. Now it allows for either for backwards compatibility [GH-8240]
+
 
 ## 1.3.3 (Unreleased)
 
