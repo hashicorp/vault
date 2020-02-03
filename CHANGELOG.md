@@ -8,6 +8,8 @@ FEATURES:
 IMPROVEMENTS:
 
 * agent: add option to force the use of the auth-auth token, and ignore the Vault token in the request [GH-8101]
+* audit: HMAC http_raw_body in audit log; this ensures that large authenticated Prometheus metrics responses get
+  replaced with short HMAC values [GH-8130]
 * auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80 & JWT-86]
 * auth/jwt: Bound claims may be optionally configured using globs [JWT-89]
 * core: Separate out service discovery interface from storage interface to allow
