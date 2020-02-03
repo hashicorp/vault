@@ -112,7 +112,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	rsp, err := shim.Do(authReq, &result)
 	if err != nil {
 		if oe, ok := err.(*okta.Error); ok {
-			return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed: %v (code=%v)", err, oe.ErrorCode)), nil, nil
+			return nil, logical.ErrorResponse("Okta auth failed: %v (code=%v)", err, oe.ErrorCode), nil, nil
 		}
 		return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed: %v", err)), nil, nil
 	}
