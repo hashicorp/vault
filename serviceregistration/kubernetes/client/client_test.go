@@ -56,8 +56,8 @@ func (e *env) TestGetPodNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error because pod is unfound")
 	}
-	if err != ErrNotFound {
-		t.Fatalf("expected %q but received %q", ErrNotFound, err)
+	if _, ok := err.(*ErrNotFound); !ok {
+		t.Fatalf("expected *ErrNotFound but received %T", err)
 	}
 }
 
@@ -86,7 +86,7 @@ func (e *env) TestUpdatePodTagsNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error because pod is unfound")
 	}
-	if err != ErrNotFound {
-		t.Fatalf("expected %q but received %q", ErrNotFound, err)
+	if _, ok := err.(*ErrNotFound); !ok {
+		t.Fatalf("expected *ErrNotFound but received %T", err)
 	}
 }

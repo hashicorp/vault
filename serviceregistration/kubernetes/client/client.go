@@ -22,7 +22,6 @@ const maxRetries = 10
 var (
 	ErrNamespaceUnset = errors.New(`"namespace" is unset`)
 	ErrPodNameUnset   = errors.New(`"podName" is unset`)
-	ErrNotFound       = errors.New("not found")
 	ErrNotInCluster   = errors.New("unable to load in-cluster configuration, KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT must be defined")
 )
 
@@ -194,7 +193,7 @@ func (c *Client) attemptRequest(client *http.Client, req *http.Request, ptrToRet
 		// Continue to try again, but return the error too in case the caller would rather read it out.
 		return true, fmt.Errorf("bad status code: %s", sanitizedDebuggingInfo(req, reqBody, resp))
 	case 404:
-		return false, ErrNotFound
+		return false, &ErrNotFound{debuggingInfo: sanitizedDebuggingInfo(req, reqBody, resp)}
 	case 500, 502, 503, 504:
 		// Could be transient.
 		return true, fmt.Errorf("unexpected status code: %s", sanitizedDebuggingInfo(req, reqBody, resp))
@@ -273,9 +272,16 @@ type Patch struct {
 	Value     interface{}
 }
 
+type ErrNotFound struct {
+	debuggingInfo string
+}
+
+func (e *ErrNotFound) Error() string {
+	return e.debuggingInfo
+}
+
 // sanitizedDebuggingInfo converts an http response to a string without
-// including its headers to avoid leaking authorization
-// headers.
+// including its headers to avoid leaking authorization headers.
 func sanitizedDebuggingInfo(req *http.Request, reqBody []byte, resp *http.Response) string {
 	respBody, _ := ioutil.ReadAll(resp.Body)
 	return fmt.Sprintf("req method: %s, req url: %s, req body: %s, resp statuscode: %d, resp respBody: %s", req.Method, req.URL, reqBody, resp.StatusCode, respBody)
