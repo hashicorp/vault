@@ -185,6 +185,7 @@ export default [
               'cf',
               'gcp',
               'jwt',
+              'kerberos',
               'kubernetes'
             ]
           },
@@ -314,7 +315,20 @@ export default [
         content: [
           {
             category: 'helm',
-            content: ['run', 'configuration', 'examples']
+            content: [
+              'run',
+              'configuration',
+              {
+                category: 'examples',
+                content: [
+                  'standalone-load-balanced-ui',
+                  'standalone-tls',
+                  'standalone-audit',
+                  'ha-with-consul',
+                  'kubernetes-auth'
+                ]
+              },
+            ],
           },
           {
             category: 'injector',

@@ -161,7 +161,7 @@ var (
 	}
 
 	serviceRegistrations = map[string]sr.Factory{
-		"consul": csr.NewConsulServiceRegistration,
+		"consul": csr.NewServiceRegistration,
 	}
 )
 

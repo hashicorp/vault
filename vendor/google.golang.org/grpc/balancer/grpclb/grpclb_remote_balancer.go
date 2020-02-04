@@ -34,6 +34,7 @@ import (
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/internal"
 	"google.golang.org/grpc/internal/channelz"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/resolver"
 )
@@ -95,8 +96,6 @@ func (lb *lbBalancer) processServerList(l *lbpb.ServerList) {
 //
 // Caller must hold lb.mu.
 func (lb *lbBalancer) refreshSubConns(backendAddrs []resolver.Address, fallback bool, pickFirst bool) {
-	lb.inFallback = fallback
-
 	opts := balancer.NewSubConnOptions{}
 	if !fallback {
 		opts.CredsBundle = lb.grpclbBackendCreds
@@ -105,17 +104,29 @@ func (lb *lbBalancer) refreshSubConns(backendAddrs []resolver.Address, fallback 
 	lb.backendAddrs = backendAddrs
 	lb.backendAddrsWithoutMetadata = nil
 
-	if lb.usePickFirst != pickFirst {
-		// Remove all SubConns when switching modes.
+	fallbackModeChanged := lb.inFallback != fallback
+	lb.inFallback = fallback
+
+	balancingPolicyChanged := lb.usePickFirst != pickFirst
+	oldUsePickFirst := lb.usePickFirst
+	lb.usePickFirst = pickFirst
+
+	if fallbackModeChanged || balancingPolicyChanged {
+		// Remove all SubConns when switching balancing policy or switching
+		// fallback mode.
+		//
+		// For fallback mode switching with pickfirst, we want to recreate the
+		// SubConn because the creds could be different.
 		for a, sc := range lb.subConns {
-			if lb.usePickFirst {
+			if oldUsePickFirst {
+				// If old SubConn were created for pickfirst, bypass cache and
+				// remove directly.
 				lb.cc.cc.RemoveSubConn(sc)
 			} else {
 				lb.cc.RemoveSubConn(sc)
 			}
 			delete(lb.subConns, a)
 		}
-		lb.usePickFirst = pickFirst
 	}
 
 	if lb.usePickFirst {
@@ -338,6 +349,13 @@ func (lb *lbBalancer) dialRemoteLB(remoteLBName string) {
 	if channelz.IsOn() {
 		dopts = append(dopts, grpc.WithChannelzParentID(lb.opt.ChannelzParentID))
 	}
+
+	// Enable Keepalive for grpclb client.
+	dopts = append(dopts, grpc.WithKeepaliveParams(keepalive.ClientParameters{
+		Time:                20 * time.Second,
+		Timeout:             10 * time.Second,
+		PermitWithoutStream: true,
+	}))
 
 	// DialContext using manualResolver.Scheme, which is a random scheme
 	// generated when init grpclb. The target scheme here is not important.

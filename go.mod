@@ -10,6 +10,7 @@ require (
 	cloud.google.com/go v0.39.0
 	github.com/Azure/azure-sdk-for-go v36.2.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.9.2
+	github.com/DataDog/zstd v1.4.4 // indirect
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/SAP/go-hdb v0.14.1
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
@@ -47,13 +48,12 @@ require (
 	github.com/golang/protobuf v1.3.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.0.0-20190816035513-b52628e82e2a
-	github.com/grpc-ecosystem/grpc-gateway v1.8.5 // indirect
 	github.com/hashicorp/consul-template v0.22.0
-	github.com/hashicorp/consul/api v1.1.0
+	github.com/hashicorp/consul/api v1.2.1-0.20200128105449-6681be918a6e
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-gcp-common v0.5.0
-	github.com/hashicorp/go-hclog v0.10.1
+	github.com/hashicorp/go-hclog v0.12.0
 	github.com/hashicorp/go-kms-wrapping v0.5.0
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v0.5.5
@@ -82,11 +82,11 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-ad v0.6.2
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190814210129-4d18bec92f56
 	github.com/hashicorp/vault-plugin-secrets-azure v0.5.3-0.20191119150734-45c076c82f1d
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20191119222840-524d5b57ed36
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20191128235941-556b7c55d6db
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190814210149-315cdbf5de6e
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20191017213228-e8cf7060a4d0
 	github.com/hashicorp/vault/api v1.0.5-0.20200111014044-ba76c080ad1f
-	github.com/hashicorp/vault/sdk v0.1.14-0.20200111013952-157e805b97be
+	github.com/hashicorp/vault/sdk v0.1.14-0.20200123192413-777c45062569
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
@@ -115,8 +115,8 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/posener/complete v1.2.1
 	github.com/pquerna/otp v1.2.1-0.20191009055518-468c2dd2b58d
-	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829
-	github.com/prometheus/common v0.2.0
+	github.com/prometheus/client_golang v1.0.0
+	github.com/prometheus/common v0.4.1
 	github.com/ryanuber/columnize v2.1.0+incompatible
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec
@@ -124,15 +124,19 @@ require (
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
 	github.com/stretchr/testify v1.4.0
+	github.com/tidwall/pretty v1.0.0 // indirect
+	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
+	github.com/xdg/stringprep v1.0.0 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
-	go.etcd.io/bbolt v1.3.2
-	go.etcd.io/etcd v0.0.0-20190412021913-f29b1ada1971
+	go.etcd.io/bbolt v1.3.3
+	go.etcd.io/etcd v0.5.0-alpha.5.0.20191023171146-3cf2f69b5738
+	go.mongodb.org/mongo-driver v1.2.1
 	go.uber.org/atomic v1.4.0
 	golang.org/x/crypto v0.0.0-20191106202628-ed6320f186d4
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	google.golang.org/api v0.14.0
-	google.golang.org/grpc v1.22.0
+	google.golang.org/grpc v1.23.1
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.3.1

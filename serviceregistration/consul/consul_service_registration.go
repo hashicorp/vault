@@ -1,11 +1,8 @@
 package consul
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
@@ -52,17 +49,13 @@ const (
 	reconcileTimeout = 60 * time.Second
 )
 
-type notifyEvent struct{}
-
-var _ sr.ServiceRegistration = (*ConsulServiceRegistration)(nil)
-
 var (
 	hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
 )
 
-// ConsulServiceRegistration is a ServiceRegistration that advertises the state of
+// serviceRegistration is a ServiceRegistration that advertises the state of
 // Vault to Consul.
-type ConsulServiceRegistration struct {
+type serviceRegistration struct {
 	Client *api.Client
 
 	logger              log.Logger
@@ -74,14 +67,18 @@ type ConsulServiceRegistration struct {
 	serviceAddress      *string
 	disableRegistration bool
 	checkTimeout        time.Duration
+	redirectAddr        string
 
-	notifyActiveCh      chan notifyEvent
-	notifySealedCh      chan notifyEvent
-	notifyPerfStandbyCh chan notifyEvent
+	notifyActiveCh      chan bool
+	notifySealedCh      chan bool
+	notifyPerfStandbyCh chan bool
+
+	stateLock                         sync.RWMutex
+	isActive, isSealed, isPerfStandby bool
 }
 
 // NewConsulServiceRegistration constructs a Consul-based ServiceRegistration.
-func NewConsulServiceRegistration(conf map[string]string, logger log.Logger) (sr.ServiceRegistration, error) {
+func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.State, redirectAddr string) (sr.ServiceRegistration, error) {
 
 	// Allow admins to disable consul integration
 	disableReg, ok := conf["disable_registration"]
@@ -183,7 +180,7 @@ func NewConsulServiceRegistration(conf map[string]string, logger log.Logger) (sr
 
 	if consulConf.Scheme == "https" {
 		// Use the parsed Address instead of the raw conf['address']
-		tlsClientConfig, err := setupTLSConfig(conf, consulConf.Address)
+		tlsClientConfig, err := tlsutil.SetupTLSConfig(conf, consulConf.Address)
 		if err != nil {
 			return nil, err
 		}
@@ -202,7 +199,7 @@ func NewConsulServiceRegistration(conf map[string]string, logger log.Logger) (sr
 	}
 
 	// Setup the backend
-	c := &ConsulServiceRegistration{
+	c := &serviceRegistration{
 		Client: client,
 
 		logger:              logger,
@@ -211,87 +208,33 @@ func NewConsulServiceRegistration(conf map[string]string, logger log.Logger) (sr
 		serviceAddress:      serviceAddr,
 		checkTimeout:        checkTimeout,
 		disableRegistration: disableRegistration,
+		redirectAddr:        redirectAddr,
 
-		notifyActiveCh:      make(chan notifyEvent),
-		notifySealedCh:      make(chan notifyEvent),
-		notifyPerfStandbyCh: make(chan notifyEvent),
+		notifyActiveCh:      make(chan bool),
+		notifySealedCh:      make(chan bool),
+		notifyPerfStandbyCh: make(chan bool),
+
+		isActive:      state.IsActive,
+		isSealed:      state.IsSealed,
+		isPerfStandby: state.IsPerformanceStandby,
 	}
 	return c, nil
 }
 
-func setupTLSConfig(conf map[string]string, address string) (*tls.Config, error) {
-	serverName, _, err := net.SplitHostPort(address)
-	switch {
-	case err == nil:
-	case strings.Contains(err.Error(), "missing port"):
-		serverName = conf["address"]
-	default:
-		return nil, err
-	}
-
-	insecureSkipVerify := false
-	tlsSkipVerify, ok := conf["tls_skip_verify"]
-
-	if ok && tlsSkipVerify != "" {
-		b, err := parseutil.ParseBool(tlsSkipVerify)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing tls_skip_verify parameter: {{err}}", err)
+func (c *serviceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup) error {
+	go func() {
+		if err := c.runServiceRegistration(wait, shutdownCh, c.redirectAddr); err != nil {
+			if c.logger.IsError() {
+				c.logger.Error(fmt.Sprintf("error running service registration: %s", err))
+			}
 		}
-		insecureSkipVerify = b
-	}
-
-	tlsMinVersionStr, ok := conf["tls_min_version"]
-	if !ok {
-		// Set the default value
-		tlsMinVersionStr = "tls12"
-	}
-
-	tlsMinVersion, ok := tlsutil.TLSLookup[tlsMinVersionStr]
-	if !ok {
-		return nil, fmt.Errorf("invalid 'tls_min_version'")
-	}
-
-	tlsClientConfig := &tls.Config{
-		MinVersion:         tlsMinVersion,
-		InsecureSkipVerify: insecureSkipVerify,
-		ServerName:         serverName,
-	}
-
-	_, okCert := conf["tls_cert_file"]
-	_, okKey := conf["tls_key_file"]
-
-	if okCert && okKey {
-		tlsCert, err := tls.LoadX509KeyPair(conf["tls_cert_file"], conf["tls_key_file"])
-		if err != nil {
-			return nil, errwrap.Wrapf("client tls setup failed: {{err}}", err)
-		}
-
-		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
-	} else if okCert || okKey {
-		return nil, fmt.Errorf("both tls_cert_file and tls_key_file must be provided")
-	}
-
-	if tlsCaFile, ok := conf["tls_ca_file"]; ok {
-		caPool := x509.NewCertPool()
-
-		data, err := ioutil.ReadFile(tlsCaFile)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed to read CA file: {{err}}", err)
-		}
-
-		if !caPool.AppendCertsFromPEM(data) {
-			return nil, fmt.Errorf("failed to parse CA certificate")
-		}
-
-		tlsClientConfig.RootCAs = caPool
-	}
-
-	return tlsClientConfig, nil
+	}()
+	return nil
 }
 
-func (c *ConsulServiceRegistration) NotifyActiveStateChange() error {
+func (c *serviceRegistration) NotifyActiveStateChange(isActive bool) error {
 	select {
-	case c.notifyActiveCh <- notifyEvent{}:
+	case c.notifyActiveCh <- isActive:
 	default:
 		// NOTE: If this occurs Vault's active status could be out of
 		// sync with Consul until reconcileTimer expires.
@@ -301,9 +244,9 @@ func (c *ConsulServiceRegistration) NotifyActiveStateChange() error {
 	return nil
 }
 
-func (c *ConsulServiceRegistration) NotifyPerformanceStandbyStateChange() error {
+func (c *serviceRegistration) NotifyPerformanceStandbyStateChange(isStandby bool) error {
 	select {
-	case c.notifyPerfStandbyCh <- notifyEvent{}:
+	case c.notifyPerfStandbyCh <- isStandby:
 	default:
 		// NOTE: If this occurs Vault's active status could be out of
 		// sync with Consul until reconcileTimer expires.
@@ -313,9 +256,9 @@ func (c *ConsulServiceRegistration) NotifyPerformanceStandbyStateChange() error 
 	return nil
 }
 
-func (c *ConsulServiceRegistration) NotifySealedStateChange() error {
+func (c *serviceRegistration) NotifySealedStateChange(isSealed bool) error {
 	select {
-	case c.notifySealedCh <- notifyEvent{}:
+	case c.notifySealedCh <- isSealed:
 	default:
 		// NOTE: If this occurs Vault's sealed status could be out of
 		// sync with Consul until checkTimer expires.
@@ -325,11 +268,18 @@ func (c *ConsulServiceRegistration) NotifySealedStateChange() error {
 	return nil
 }
 
-func (c *ConsulServiceRegistration) checkDuration() time.Duration {
+func (c *serviceRegistration) NotifyInitializedStateChange(isInitialized bool) error {
+	// This is not implemented because to date, Consul service registration has
+	// never reported out on whether Vault was initialized. We may someday want to
+	// do this, but it has not yet been requested.
+	return nil
+}
+
+func (c *serviceRegistration) checkDuration() time.Duration {
 	return durationMinusBuffer(c.checkTimeout, checkMinBuffer, checkJitterFactor)
 }
 
-func (c *ConsulServiceRegistration) RunServiceRegistration(waitGroup *sync.WaitGroup, shutdownCh sr.ShutdownChannel, redirectAddr string, activeFunc sr.ActiveFunction, sealedFunc sr.SealedFunction, perfStandbyFunc sr.PerformanceStandbyFunction) (err error) {
+func (c *serviceRegistration) runServiceRegistration(waitGroup *sync.WaitGroup, shutdownCh <-chan struct{}, redirectAddr string) (err error) {
 	if err := c.setRedirectAddr(redirectAddr); err != nil {
 		return err
 	}
@@ -337,12 +287,12 @@ func (c *ConsulServiceRegistration) RunServiceRegistration(waitGroup *sync.WaitG
 	// 'server' command will wait for the below goroutine to complete
 	waitGroup.Add(1)
 
-	go c.runEventDemuxer(waitGroup, shutdownCh, redirectAddr, activeFunc, sealedFunc, perfStandbyFunc)
+	go c.runEventDemuxer(waitGroup, shutdownCh, redirectAddr)
 
 	return nil
 }
 
-func (c *ConsulServiceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh sr.ShutdownChannel, redirectAddr string, activeFunc sr.ActiveFunction, sealedFunc sr.SealedFunction, perfStandbyFunc sr.PerformanceStandbyFunction) {
+func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh <-chan struct{}, redirectAddr string) {
 	// This defer statement should be executed last. So push it first.
 	defer waitGroup.Done()
 
@@ -372,13 +322,25 @@ func (c *ConsulServiceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, s
 
 	for !shutdown {
 		select {
-		case <-c.notifyActiveCh:
+		case isActive := <-c.notifyActiveCh:
+			c.stateLock.Lock()
+			c.isActive = isActive
+			c.stateLock.Unlock()
+
 			// Run reconcile immediately upon active state change notification
 			reconcileTimer.Reset(0)
-		case <-c.notifySealedCh:
+		case isSealed := <-c.notifySealedCh:
+			c.stateLock.Lock()
+			c.isSealed = isSealed
+			c.stateLock.Unlock()
+
 			// Run check timer immediately upon a seal state change notification
 			checkTimer.Reset(0)
-		case <-c.notifyPerfStandbyCh:
+		case isStandby := <-c.notifyPerfStandbyCh:
+			c.stateLock.Lock()
+			c.isPerfStandby = isStandby
+			c.stateLock.Unlock()
+
 			// Run check timer immediately upon a seal state change notification
 			checkTimer.Reset(0)
 		case <-reconcileTimer.C:
@@ -392,7 +354,7 @@ func (c *ConsulServiceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, s
 				go func() {
 					defer atomic.CompareAndSwapInt32(serviceRegLock, 1, 0)
 					for !shutdown {
-						serviceID, err := c.reconcileConsul(registeredServiceID, activeFunc, sealedFunc, perfStandbyFunc)
+						serviceID, err := c.reconcileConsul(registeredServiceID)
 						if err != nil {
 							if c.logger.IsWarn() {
 								c.logger.Warn("reconcile unable to talk with Consul backend", "error", err)
@@ -418,7 +380,9 @@ func (c *ConsulServiceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, s
 				go func() {
 					defer atomic.CompareAndSwapInt32(checkLock, 1, 0)
 					for !shutdown {
-						sealed := sealedFunc()
+						c.stateLock.RLock()
+						sealed := c.isSealed
+						c.stateLock.RUnlock()
 						if err := c.runCheck(sealed); err != nil {
 							if c.logger.IsWarn() {
 								c.logger.Warn("check unable to talk with Consul backend", "error", err)
@@ -447,26 +411,28 @@ func (c *ConsulServiceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, s
 
 // checkID returns the ID used for a Consul Check.  Assume at least a read
 // lock is held.
-func (c *ConsulServiceRegistration) checkID() string {
+func (c *serviceRegistration) checkID() string {
 	return fmt.Sprintf("%s:vault-sealed-check", c.serviceID())
 }
 
 // serviceID returns the Vault ServiceID for use in Consul.  Assume at least
 // a read lock is held.
-func (c *ConsulServiceRegistration) serviceID() string {
+func (c *serviceRegistration) serviceID() string {
 	return fmt.Sprintf("%s:%s:%d", c.serviceName, c.redirectHost, c.redirectPort)
 }
 
 // reconcileConsul queries the state of Vault Core and Consul and fixes up
 // Consul's state according to what's in Vault.  reconcileConsul is called
 // without any locks held and can be run concurrently, therefore no changes
-// to ConsulServiceRegistration can be made in this method (i.e. wtb const receiver for
+// to serviceRegistration can be made in this method (i.e. wtb const receiver for
 // compiler enforced safety).
-func (c *ConsulServiceRegistration) reconcileConsul(registeredServiceID string, activeFunc sr.ActiveFunction, sealedFunc sr.SealedFunction, perfStandbyFunc sr.PerformanceStandbyFunction) (serviceID string, err error) {
+func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (serviceID string, err error) {
 	// Query vault Core for its current state
-	active := activeFunc()
-	sealed := sealedFunc()
-	perfStandby := perfStandbyFunc()
+	c.stateLock.RLock()
+	active := c.isActive
+	sealed := c.isSealed
+	perfStandby := c.isPerfStandby
+	c.stateLock.RUnlock()
 
 	agent := c.Client.Agent()
 	catalog := c.Client.Catalog()
@@ -550,7 +516,7 @@ func (c *ConsulServiceRegistration) reconcileConsul(registeredServiceID string, 
 }
 
 // runCheck immediately pushes a TTL check.
-func (c *ConsulServiceRegistration) runCheck(sealed bool) error {
+func (c *serviceRegistration) runCheck(sealed bool) error {
 	// Run a TTL check
 	agent := c.Client.Agent()
 	if !sealed {
@@ -561,7 +527,7 @@ func (c *ConsulServiceRegistration) runCheck(sealed bool) error {
 }
 
 // fetchServiceTags returns all of the relevant tags for Consul.
-func (c *ConsulServiceRegistration) fetchServiceTags(active bool, perfStandby bool) []string {
+func (c *serviceRegistration) fetchServiceTags(active bool, perfStandby bool) []string {
 	activeTag := "standby"
 	if active {
 		activeTag = "active"
@@ -576,7 +542,7 @@ func (c *ConsulServiceRegistration) fetchServiceTags(active bool, perfStandby bo
 	return result
 }
 
-func (c *ConsulServiceRegistration) setRedirectAddr(addr string) (err error) {
+func (c *serviceRegistration) setRedirectAddr(addr string) (err error) {
 	if addr == "" {
 		return fmt.Errorf("redirect address must not be empty")
 	}

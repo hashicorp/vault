@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -93,6 +94,29 @@ func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 	resp, err := c.c.config.HttpClient.Do(req)
 	if resp == nil {
 		return nil
+	}
+
+	// Check for a redirect, only allowing for a single redirect
+	if resp.StatusCode == 301 || resp.StatusCode == 302 || resp.StatusCode == 307 {
+		// Parse the updated location
+		respLoc, err := resp.Location()
+		if err != nil {
+			return err
+		}
+
+		// Ensure a protocol downgrade doesn't happen
+		if req.URL.Scheme == "https" && respLoc.Scheme != "https" {
+			return fmt.Errorf("redirect would cause protocol downgrade")
+		}
+
+		// Update the request
+		req.URL = respLoc
+
+		// Retry the request
+		resp, err = c.c.config.HttpClient.Do(req)
+		if err != nil {
+			return err
+		}
 	}
 
 	result = &Response{Response: resp}

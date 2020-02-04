@@ -32,6 +32,24 @@ func pathConfigAccess(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Token for API calls",
 			},
+
+			"ca_cert": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `CA certificate to use when verifying Consul server certificate,
+must be x509 PEM encoded.`,
+			},
+
+			"client_cert": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Client certificate used for Consul's TLS communication,
+must be x509 PEM encoded and if this is set you need to also set client_key.`,
+			},
+
+			"client_key": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Client key used for Consul's TLS communication,
+must be x509 PEM encoded and if this is set you need to also set client_cert.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -80,9 +98,12 @@ func (b *backend) pathConfigAccessRead(ctx context.Context, req *logical.Request
 
 func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	entry, err := logical.StorageEntryJSON("config/access", accessConfig{
-		Address: data.Get("address").(string),
-		Scheme:  data.Get("scheme").(string),
-		Token:   data.Get("token").(string),
+		Address:    data.Get("address").(string),
+		Scheme:     data.Get("scheme").(string),
+		Token:      data.Get("token").(string),
+		CACert:     data.Get("ca_cert").(string),
+		ClientCert: data.Get("client_cert").(string),
+		ClientKey:  data.Get("client_key").(string),
 	})
 	if err != nil {
 		return nil, err
@@ -96,7 +117,10 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 }
 
 type accessConfig struct {
-	Address string `json:"address"`
-	Scheme  string `json:"scheme"`
-	Token   string `json:"token"`
+	Address    string `json:"address"`
+	Scheme     string `json:"scheme"`
+	Token      string `json:"token"`
+	CACert     string `json:"ca_cert"`
+	ClientCert string `json:"client_cert"`
+	ClientKey  string `json:"client_key"`
 }
