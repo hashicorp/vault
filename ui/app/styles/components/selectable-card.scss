@@ -77,6 +77,10 @@
       justify-self: end;
 
       font-weight: $font-weight-semibold;
+
+      @include until($mobile) {
+        overflow: hidden;
+      }
     }
   }
 
@@ -96,7 +100,8 @@
   display: grid;
   grid-template-columns: 2fr 0.5fr;
   grid-template-rows: 1fr 2fr 0.5fr;
-  grid-gap: 2rem;
+  // modify bottom spacing to better align with other cards
+  padding: $spacing-l 0 14px $spacing-l;
 }
 
 .change-metric-icon.is-decrease {
