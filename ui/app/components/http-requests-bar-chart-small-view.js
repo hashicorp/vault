@@ -45,6 +45,7 @@ export default Component.extend({
   parsedCounters: computed('counters', function() {
     // parse the start times so bars and ticks display properly
     const { counters } = this;
+    counters.reverse();
     return counters.map((counter, index) => {
       return assign({}, counter, {
         start_time: d3TimeFormat.isoParse(counter.start_time),

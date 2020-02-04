@@ -8,7 +8,7 @@
 .selectable-card-container-graph {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  grid-template-rows: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
   grid-gap: 2rem;
 
   @include until($mobile) {
@@ -41,7 +41,7 @@
   .card-details {
     grid-column-start: 2;
     grid-row-start: 3;
-    align-self: end;
+    align-self: center;
     justify-self: right;
     padding-right: $spacing-l;
   }
@@ -56,7 +56,7 @@
     justify-self: right;
     padding-right: $spacing-l;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 2fr;
     grid-template-rows: 1fr 1fr;
 
     .hs-icon {
