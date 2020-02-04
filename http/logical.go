@@ -234,13 +234,6 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			return
 		}
 
-		// Prevent any metrics requests to be forwarded from a standby node.
-		// Instead, we return an error since we cannot be sure if we have an
-		// active token store to validate the provided token.
-		if isStandby, _ := core.Standby(); isStandby {
-			respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
-		}
-
 		// req.Path will be relative by this point. The prefix check is first
 		// to fail faster if we're not in this situation since it's a hot path
 		switch {
@@ -338,6 +331,14 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 						r = r.WithContext(newCtx)
 					}
 				}
+			}
+
+		// Prevent any metrics requests to be forwarded from a standby node.
+		// Instead, we return an error since we cannot be sure if we have an
+		// active token store to validate the provided token.
+		case strings.HasPrefix(req.Path, "sys/metrics"):
+			if isStandby, _ := core.Standby(); isStandby {
+				respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
 			}
 		}
 
