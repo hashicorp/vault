@@ -8,29 +8,30 @@
 
 {{!-- ARG TODO: Add permission conditionals for menu dropdowns --}}
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
-  {{#if (gt model.httpsRequestBarChartData.length 1) }}
-    <div class="selectable-card-container-wide">
+  {{#if (gt model.httpsRequests.length 1) }}
+  {{!-- ARG TODO: move to component --}}
+    <div class="selectable-card-container-graph">
       <div class="selectable-card width-medium is-rounded is-grid-container grid-item-http">
         <div class="selectable-card-title">
-          <p class="title-number">{{format-number model.httpsRequestTotal}}</p>
+          <p class="title-number">{{format-number model.httpsRequests.firstObject.total}}</p>
           <p class="title is-5">HTTP Requests</p>
           <p class="has-text-grey is-size-8">This month</p>
         </div>
-        <div class="selectable-card-change">
-          {{!-- ARG TODO replace true with data --}}
-          <Icon @glyph="arrow-up" @size="xlm" aria-hidden="true" class="selectable-card-icon {{if true "is-increase" "is-decrease"}}"/>
-          {{!-- ARG: replace with data, modified on a serializer --}}
+        <div class="change-metric">
+          {{!-- ARG TODO: replace true with data --}}
+          <Icon @glyph="arrow-up" @size="xlm" aria-hidden="true" class="change-metric-icon {{if true "is-increase" "is-decrease"}}"/>
+          {{!-- ARG TODO: replace with data --}}
           <p class="has-text-grey is-size-4 amount-change">+3.8%</p>
           <p class="has-text-grey is-size-6 item-c">Since last month</p>
         </div>
-        <HttpRequestsBarChartSmallView @counters={{model.httpsRequestBarChartData}} class="selectable-card-chart"/>
-        <div class="selectable-card-details">view details</div>
+        <HttpRequestsBarChartSmallView @counters={{model.httpsRequests}} class="chart"/>
+        <div class="card-details">view details</div>
       </div>
       {{#linked-block
         class="selectable-card width-medium is-rounded"
       }}
         <div>
-          <p class="title-number">{{format-number model.entitiesTotal}}</p>
+          <p class="title-number">{{format-number model.totalEntities}}</p>
           {{#if (not-eq model.entitiesTotal 1)}}
           <p class="title is-5">Entities</p>
           {{else}}
@@ -63,8 +64,8 @@
         class="selectable-card width-medium is-rounded"
       }}
         <div>
-          <p class="title-number">{{format-number model.tokenTotal}}</p>
-          {{#if (not-eq model.tokenTotal 1)}}
+          <p class="title-number">{{format-number model.totalTokens}}</p>
+          {{#if (not-eq model.tokenTotals 1)}}
           <p class="title is-5">Tokens</p>
           {{else}}
           <p class="title is-5">Token</p>
@@ -74,13 +75,14 @@
       {{/linked-block}}
     </div>
   {{else}}
+  {{!-- ARG TODO: move to component --}}
     <div class="selectable-card-container">
       {{#linked-block
         "vault.cluster.metrics.http-requests"
         class="selectable-card width-medium is-rounded"
       }}
         <div>
-          <p class="title-number">{{format-number model.httpsRequestTotal}}</p>
+          <p class="title-number">{{format-number model.httpsRequests.firstObject.total}}</p>
           <p class="title is-5">HTTP Requests</p>
           <p class="has-text-grey is-size-8">This month</p>
         </div>
@@ -104,8 +106,8 @@
         class="selectable-card width-medium is-rounded"
       }}
         <div>
-          <p class="title-number">{{format-number model.entitiesTotal}}</p>
-          {{#if (not-eq model.entitiesTotal 1)}}
+          <p class="title-number">{{format-number model.totalEntities}}</p>
+          {{#if (not-eq model.totalEntities 1)}}
           <p class="title is-5">Entities</p>
           {{else}}
           <p class="title is-5">Entity</p>
@@ -137,8 +139,8 @@
         class="selectable-card width-medium is-rounded"
       }}
         <div>
-          <p class="title-number">{{format-number model.tokenTotal}}</p>
-          {{#if (not-eq model.tokenTotal 1)}}
+          <p class="title-number">{{format-number model.totalTokens}}</p>
+          {{#if (not-eq model.totalTokens 1)}}
           <p class="title is-5">Tokens</p>
           {{else}}
           <p class="title is-5">Token</p>

@@ -2,15 +2,10 @@ import ApplicationSerializer from './application';
 
 export default ApplicationSerializer.extend({
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
-    let totalTokens = payload.data.counters.service_tokens ? payload.data.counters.service_tokens.total : 0;
-    let totalEntities = payload.data.counters.entities ? payload.data.counters.entities.total : 0;
-
-    let normalizedPayload = {
+    const normalizedPayload = {
       id: payload.id,
-      total_tokens: totalTokens,
-      total_entities: totalEntities,
+      data: payload.data.counters,
     };
-
     return this._super(store, primaryModelClass, normalizedPayload, id, requestType);
   },
 });

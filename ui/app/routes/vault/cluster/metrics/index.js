@@ -4,28 +4,23 @@ import { hash } from 'rsvp';
 
 export default Route.extend(ClusterRoute, {
   model() {
-    let entitiesModel = this.store.queryRecord('metrics/entity', {}).then(response => {
-      return response.totalEntities;
+    let totalEntities = this.store.queryRecord('metrics/entity', {}).then(response => {
+      return response.entities.total;
     });
 
-    let httpsRequestsModel = this.store.queryRecord('metrics/http-requests', {}).then(response => {
+    let httpsRequests = this.store.queryRecord('metrics/http-requests', {}).then(response => {
       let reverseArray = response.counters.reverse();
-      return reverseArray[0].total;
-    });
-    // ARG TODO: more efficient way to do this.... calling twice, in template?
-    let httpsBarChartModel = this.store.queryRecord('metrics/http-requests', {}).then(response => {
-      return response.counters;
+      return reverseArray;
     });
 
-    let tokenModel = this.store.queryRecord('metrics/token', {}).then(response => {
-      return response.totalTokens;
+    let totalTokens = this.store.queryRecord('metrics/token', {}).then(response => {
+      return response.service_tokens.total;
     });
 
     return hash({
-      entitiesTotal: entitiesModel,
-      httpsRequestTotal: httpsRequestsModel,
-      httpsRequestBarChartData: httpsBarChartModel,
-      tokenTotal: tokenModel,
+      totalEntities,
+      httpsRequests,
+      totalTokens,
     });
   },
 });
