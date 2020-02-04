@@ -126,10 +126,6 @@ func (r *serviceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGro
 	// Run a service that retries errored-out notifications if they occur.
 	go r.retryHandler.Run(shutdownCh, wait)
 
-	// Run a background goroutine to leave labels in the final state we'd like
-	// when Vault shuts down.
-	go r.onShutdown(shutdownCh, wait)
-
 	return nil
 }
 
@@ -163,45 +159,6 @@ func (r *serviceRegistration) NotifyInitializedStateChange(isInitialized bool) e
 		Path:      pathToLabels + labelInitialized,
 		Value:     toString(isInitialized),
 	})
-}
-
-func (r *serviceRegistration) onShutdown(shutdownCh <-chan struct{}, wait *sync.WaitGroup) {
-	// Make sure Vault will give us time to finish up here.
-	wait.Add(1)
-	defer wait.Done()
-
-	// Start running this when we receive a shutdown.
-	<-shutdownCh
-
-	// Label the pod with the values we want to leave behind after shutdown.
-	patches := []*client.Patch{
-		{
-			Operation: client.Replace,
-			Path:      pathToLabels + labelActive,
-			Value:     toString(false),
-		},
-		{
-			Operation: client.Replace,
-			Path:      pathToLabels + labelSealed,
-			Value:     toString(true),
-		},
-		{
-			Operation: client.Replace,
-			Path:      pathToLabels + labelPerfStandby,
-			Value:     toString(false),
-		},
-		{
-			Operation: client.Replace,
-			Path:      pathToLabels + labelInitialized,
-			Value:     toString(false),
-		},
-	}
-	if err := r.client.PatchPod(r.namespace, r.podName, patches...); err != nil {
-		if r.logger.IsError() {
-			r.logger.Error(fmt.Sprintf("unable to set final status on pod name %q in namespace %q on shutdown: %s", r.podName, r.namespace, err))
-		}
-		return
-	}
 }
 
 func (r *serviceRegistration) notifyOrRetry(patch *client.Patch) error {
