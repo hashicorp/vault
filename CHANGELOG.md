@@ -12,6 +12,7 @@ IMPROVEMENTS:
   replaced with short HMAC values [GH-8130]
 * auth/jwt: Additional OIDC callback parameters available for CLI logins [JWT-80 & JWT-86]
 * auth/jwt: Bound claims may be optionally configured using globs [JWT-89]
+* aws: Add support for v2 of the instance metadata service (see [issue 7924](https://github.com/hashicorp/vault/issues/7924) for all linked PRs)
 * core: Separate out service discovery interface from storage interface to allow
   new types of service discovery not coupled to storage [GH-7887]
 * cli: Incorrect TLS configuration will now correctly fail [GH-8025]
