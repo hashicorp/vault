@@ -331,7 +331,7 @@ are needed.
 - `iam:GetUser` and `iam:GetRole` are used when using the iam auth method and
   binding to an IAM user or role principal to determine the [AWS IAM Unique Identifiers](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids)
   or when using a wildcard on the bound ARN to resolve the full ARN of the user
-  or role. IAM Unique Identifiers are mapped to an array `bound_iam_principal_id`
+  or role.
 - The `sts:AssumeRole` stanza is necessary when you are using [Cross Account
   Access](#cross-account-access). The `Resource`s specified should be a list of
   all the roles for which you have configured cross-account access, and each of
