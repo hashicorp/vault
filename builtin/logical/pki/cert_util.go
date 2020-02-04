@@ -41,7 +41,7 @@ var (
 	// when doing the idna conversion, this appears to only affect output, not
 	// input, so it will allow e.g. host^123.example.com straight through. So
 	// we still need to use this to check the output.
-	hostnameRegex                = regexp.MustCompile(`^(\*\.)?(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
+	hostnameRegex                = regexp.MustCompile(`^(\*\.)?(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])\.?$`)
 	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
 	oidExtensionSubjectAltName   = []int{2, 5, 29, 17}
 )
