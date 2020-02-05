@@ -27,9 +27,10 @@
 
 {{#let (component "metrics/selectable-card") as |SelectableCard|}}
   <SelectableCard 
-    @type="Entities" 
+    @cardTitle="Entities" 
     @class="selectable-card width-medium is-rounded"
     @total={{counters.totalEntities}}
+    @subText="Total"
   >
     <div class="is-paddingless is-marginless">
       <div class="level-item">
@@ -56,8 +57,9 @@
 
 {{#let (component "metrics/selectable-card") as |SelectableCard|}}
   <SelectableCard 
-    @type="Tokens"  
     @class="selectable-card width-medium is-rounded"
     @total={{counters.totalTokens}}
+    @subText="Total"
+    @cardTitle="Tokens"
   />
 {{/let}}

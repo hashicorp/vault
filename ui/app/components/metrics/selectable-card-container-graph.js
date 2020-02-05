@@ -27,8 +27,7 @@ export default Component.extend({
     }
     return httpsRequestsArray;
   }),
-  // ARG TODO: ask noelle about changing name to avoid conflict
-  percentChangePreviousMonth: computed('counters', function() {
+  percentChange: computed('counters', function() {
     let httpsRequestsArray = this.counters.httpsRequests || [];
     let lastTwoMonthsArray = httpsRequestsArray.slice(0, 2);
     let previousMonthVal = lastTwoMonthsArray.lastObject.total;

@@ -1,15 +1,15 @@
 {{#let (component "metrics/selectable-card") as |SelectableCard|}}
-  <SelectableCard 
-    @counters={{counters}} 
+  <SelectableCard
     @class="grid-item-http"
     @containerGridItem="selectable-card width-medium is-rounded is-grid-container"
     @total={{totalHttpRequests}}
-    @type="httpRequests"
+    @cardTitle="Http Requests"
     @gridItem="selectable-card-title"
+    @subText="This month"
   >
     <div class="change-metric">
-      <Icon @glyph="arrow-up" @size="xlm" aria-hidden="true" class="change-metric-icon {{if (gt percentChangePreviousMonth 0) "is-increase" "is-decrease"}}"/>
-      <p class="has-text-grey is-size-4 amount-change">{{percentChangePreviousMonth}}%</p>
+      <Icon @glyph="arrow-up" @size="xlm" aria-hidden="true" class="change-metric-icon {{if (gt percentChange 0) "is-increase" "is-decrease"}}"/>
+      <p class="has-text-grey is-size-4 amount-change">{{percentChange}}%</p>
       <p class="has-text-grey is-size-6 item-c">Since last month</p>
     </div>
     <HttpRequestsBarChartSmallView @counters={{filteredHttpsRequests}} class="chart"/>
@@ -19,9 +19,10 @@
 
 {{#let (component "metrics/selectable-card") as |SelectableCard|}}
   <SelectableCard 
-    @type="Entities" 
+    @cardTitle="Entities" 
     @class="selectable-card width-medium is-rounded"
     @total={{counters.totalEntities}}
+    @subText="Total"
   >
     <div class="is-paddingless is-marginless">
       <div class="level-item">
@@ -48,8 +49,9 @@
 
 {{#let (component "metrics/selectable-card") as |SelectableCard|}}
   <SelectableCard 
-    @type="Tokens"  
+    @cardTitle="Tokens"  
     @class="selectable-card width-medium is-rounded"
     @total={{counters.totalTokens}}
+    @subText="Total"
   />
 {{/let}}

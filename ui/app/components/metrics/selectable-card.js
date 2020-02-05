@@ -1,4 +1,3 @@
-// ARG TODO may use may not
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 /**
@@ -15,23 +14,16 @@ import { computed } from '@ember/object';
  */
 
 export default Component.extend({
-  cardType: computed('type', function() {
-    let type = this.type || '';
+  cardTitleComputed: computed('type', function() {
+    let cardTitle = this.cardTitle || '';
     let total = this.total || '';
 
-    if (type === 'Tokens') {
+    if (cardTitle === 'Tokens') {
       return total !== 1 ? 'Tokens' : 'Token';
-    } else if (type === 'Entities') {
+    } else if (cardTitle === 'Entities') {
       return total !== 1 ? 'Entities' : 'Entity';
     }
-    return 'Http Requests';
-  }),
-  subText: computed('type', function() {
-    let type = this.type || '';
 
-    if (type === 'httpRequests') {
-      return 'This month';
-    }
-    return 'Total';
+    return cardTitle;
   }),
 });
