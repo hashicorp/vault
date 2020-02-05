@@ -93,7 +93,7 @@ func (c *Client) PatchPod(namespace, podName string, patches ...*Patch) error {
 		return nil
 	}
 
-	var jsonPatches []interface{}
+	var jsonPatches []map[string]interface{}
 	for _, patch := range patches {
 		if patch.Operation == Unset {
 			return errors.New("patch operation must be set")
