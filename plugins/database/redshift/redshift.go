@@ -22,14 +22,14 @@ import (
 const (
 	sqlTypeName     = "postgres"
 	defaultRenewSQL = `
-ALTER ROLE "{{name}}" VALID UNTIL '{{expiration}}';
+ALTER USER "{{name}}" VALID UNTIL '{{expiration}}';
 `
 	defaultRotateRootCredentialsSQL = `
-ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
+ALTER USER "{{username}}" WITH PASSWORD '{{password}}';
 `
 
 	defaultRotateCredentialsSQL = `
-ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';
+ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
 `
 )
 
@@ -392,10 +392,6 @@ func (p *RedShift) defaultRevokeUser(ctx context.Context, username string) error
 		pq.QuoteIdentifier(username)))
 
 	revocationStmts = append(revocationStmts, fmt.Sprintf(
-		"REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM %s;",
-		pq.QuoteIdentifier(username)))
-
-	revocationStmts = append(revocationStmts, fmt.Sprintf(
 		"REVOKE USAGE ON SCHEMA public FROM %s;",
 		pq.QuoteIdentifier(username)))
 
@@ -434,8 +430,8 @@ SELECT COUNT(process) INTO qtyconns FROM stv_sessions WHERE user_name=dbusername
 END
 $$;`)
 
-		revocationStmts = append(revocationStmts, fmt.Sprintf(`call terminateloop(%s);`, pq.QuoteIdentifier(username)))
-		revocationStmts = append(revocationStmts, `DROP PROCEDURE terminateloop(varchar);`)
+		revocationStmts = append(revocationStmts, fmt.Sprintf(`call terminateloop('%s');`, username))
+		//revocationStmts = append(revocationStmts, `DROP PROCEDURE terminateloop(varchar);`)
 	}
 
 	fmt.Printf("%+v\n", revocationStmts)
@@ -459,7 +455,7 @@ $$;`)
 
 	// Drop this user
 	stmt, err = db.PrepareContext(ctx, fmt.Sprintf(
-		`DROP ROLE IF EXISTS %s;`, pq.QuoteIdentifier(username)))
+		`DROP USER IF EXISTS %s;`, pq.QuoteIdentifier(username)))
 	if err != nil {
 		return err
 	}
