@@ -3,34 +3,28 @@
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   grid-template-rows: 1fr;
   grid-gap: 2rem;
+  margin-top: 24px;
 }
 
 .selectable-card {
-  box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
+  border-radius: $radius;
+  box-shadow: 0 0 0 1px rgba($grey-dark, 0.3), $box-shadow-middle;
   display: grid;
   grid-template-columns: 0.5fr 2fr;
   justify-content: space-between;
-  padding: $spacing-l 0 $spacing-l $spacing-l;
+  padding: $spacing-m 0 $spacing-m $spacing-m;
 
   .transit-icon-column {
     justify-self: center;
   }
 
+  .transit-action-description {
+    font-family: $family-sans;
+    color: rgb(111, 118, 130);
+  }
+
   &:hover {
-    box-shadow: 0 0 0 1px $grey-light, $box-shadow-middle;
+    box-shadow: 0 0 0 1px rgb(0, 104, 255), $box-shadow-middle;
+    background: rgb(251, 252, 255);
   }
-
-  > a {
-    text-decoration: none;
-  }
-
-  .title-number {
-    color: $black;
-    font-size: 36px;
-    font-weight: 500;
-    line-height: 1.33;
-  }
-}
-.selectable-card.is-rounded {
-  border-radius: $radius;
 }
