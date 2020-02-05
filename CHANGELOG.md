@@ -49,6 +49,7 @@ BUG FIXES:
 * ui: Fix missing License menu item [[GH-8230](https://github.com/hashicorp/vault/pull/8230)]
 * ui: Fix bug where default auth method on login is defaulted to auth method that is listing-visibility=unauth instead of “other” [[GH-8218](https://github.com/hashicorp/vault/pull/8218)]
 * ui: Fix bug where KMIP details were not shown in the UI Wizard [[GH-8255](https://github.com/hashicorp/vault/pull/8255)]
+* secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [GH-8282]
 
 ## 1.3.2 (January 22nd, 2020)
 
