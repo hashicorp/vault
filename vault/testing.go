@@ -1222,6 +1222,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Subject: pkix.Name{
 				CommonName: "localhost",
 			},
+			// Include host.docker.internal for the sake of benchmark-vault running on MacOS/Windows.
+			// This allows Prometheus running in docker to scrape the cluster for metrics.
 			DNSNames:    []string{"localhost", "host.docker.internal"},
 			IPAddresses: certIPs,
 			ExtKeyUsage: []x509.ExtKeyUsage{
