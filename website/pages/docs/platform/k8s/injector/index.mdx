@@ -128,7 +128,7 @@ For example, consider the following:
 vault.hashicorp.com/agent-inject-secret-foo: 'database/roles/app'
 vault.hashicorp.com/agent-inject-template-foo: |
   {{- with secret "database/creds/db-app" -}}
-  postgres://{{ .Data.username }}:{{ .Data.password }}@postgres:5432/mydb?sslmode=disable
+  postgres://{{ .Data.data.username }}:{{ .Data.data.password }}@postgres:5432/mydb?sslmode=disable
   {{- end }}
 vault.hashicorp.com/role: 'app'
 ```
@@ -146,7 +146,7 @@ If no template is provided the following generic template is used:
 
 ```
 {{ with secret "/path/to/secret" }}
-    {{ range $k, $v := .Data }}
+    {{ range $k, $v := .Data.data }}
         {{ $k }}: {{ $v }}
     {{ end }}
 {{ end }}
