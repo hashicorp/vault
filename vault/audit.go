@@ -506,6 +506,23 @@ func defaultAuditTable() *MountTable {
 	return table
 }
 
+type AuditLogger interface {
+	AuditRequest(ctx context.Context, input *logical.LogInput) error
+	AuditResponse(ctx context.Context, input *logical.LogInput) error
+}
+
+type basicAuditor struct {
+	c *Core
+}
+
+func (b *basicAuditor) AuditRequest(ctx context.Context, input *logical.LogInput) error {
+	return b.c.auditBroker.LogRequest(ctx, input, b.c.auditedHeaders)
+}
+
+func (b *basicAuditor) AuditResponse(ctx context.Context, input *logical.LogInput) error {
+	return b.c.auditBroker.LogResponse(ctx, input, b.c.auditedHeaders)
+}
+
 type genericAuditor struct {
 	c         *Core
 	mountType string

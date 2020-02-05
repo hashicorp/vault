@@ -2251,3 +2251,7 @@ type BuiltinRegistry interface {
 	Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool)
 	Keys(pluginType consts.PluginType) []string
 }
+
+func (c *Core) AuditLogger() AuditLogger {
+	return &basicAuditor{c: c}
+}
