@@ -50,6 +50,7 @@
     grid-column: 1 / span 2;
     grid-row-start: 2;
     align-self: end;
+    min-width: 100%; // necessary for Firefox
   }
 
   .change-metric {
