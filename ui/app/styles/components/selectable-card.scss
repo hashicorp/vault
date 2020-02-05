@@ -1,0 +1,32 @@
+.selectable-card-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-rows: 1fr;
+  grid-gap: 2rem;
+}
+
+.selectable-card {
+  box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
+  display: flex;
+  justify-content: space-between;
+  padding: $spacing-l 0 $spacing-l $spacing-l;
+  line-height: 0;
+
+  &:hover {
+    box-shadow: 0 0 0 1px $grey-light, $box-shadow-middle;
+  }
+
+  > a {
+    text-decoration: none;
+  }
+
+  .title-number {
+    color: $black;
+    font-size: 36px;
+    font-weight: 500;
+    line-height: 1.33;
+  }
+}
+.selectable-card.is-rounded {
+  border-radius: $radius;
+}
