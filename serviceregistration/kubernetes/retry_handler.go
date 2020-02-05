@@ -108,5 +108,5 @@ func (r *retryHandler) retry() {
 		}
 		return
 	}
-	r.patchesToRetry = make([]*client.Patch, 0)
+	r.patchesToRetry = nil
 }
