@@ -96,7 +96,7 @@ func verifyBarrierConfig(t *testing.T, cfg *vault.SealConfig, sealType string, s
 	}
 }
 
-func TestSealMigrationShamirToAuto(t *testing.T) {
+func TestSealMigration_ShamirToAuto(t *testing.T) {
 	t.Parallel()
 	t.Run("inmem", func(t *testing.T) {
 		t.Parallel()
@@ -236,7 +236,7 @@ func testSealMigrationShamirToAuto(t *testing.T, setup teststorage.ClusterSetupM
 	verifyBarrierConfig(t, r, wrapping.Shamir, 5, 3, 0)
 }
 
-func TestSealMigrationAutoToAuto(t *testing.T) {
+func TestSealMigration_AutoToAuto(t *testing.T) {
 	t.Parallel()
 	t.Run("inmem", func(t *testing.T) {
 		t.Parallel()

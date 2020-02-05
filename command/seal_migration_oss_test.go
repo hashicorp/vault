@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/vault/vault/seal"
 )
 
-func TestSealMigrationAutoToShamir(t *testing.T) {
+func TestSealMigration_AutoToShamir(t *testing.T) {
 	t.Parallel()
 	t.Run("inmem", func(t *testing.T) {
 		t.Parallel()
@@ -60,7 +60,6 @@ func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupM
 	},
 		setup,
 	)
-	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
 	defer cluster.Cleanup()
