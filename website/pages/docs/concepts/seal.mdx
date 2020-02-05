@@ -93,10 +93,11 @@ For a list of examples and supported providers, please see the
 
 The seal can be migrated from Shamir keys to Auto Unseal and vice versa.
 
-~> **NOTE**: This is not currently supported when using Vault Enterprise Replication.
-While the primary can be migrated without issue, the secondaries, depending on
-which type of seal is being migrated from/to, may not work correctly. We plan
-to support this officially in a future release.
+~> **NOTE**: The migration operation will require both seals to be available
+during the migration. For example, a migration from a cloud KMS seal to
+Shamir will require that the cloud KMS be accessible during the migration.
+
+### Migration From Shamir to Auto Unseal
 
 To migrate from Shamir keys to Auto Unseal, take your server cluster offline and update
 the [seal configuration](/docs/configuration/seal) with the appropriate seal
@@ -110,6 +111,11 @@ unseal keys are entered, unseal keys will be migrated to recovery keys.
 ```
 $ vault operator unseal -migrate
 ```
+
+### Migration From Auto Unseal to Shamir or another Auto Unseal configuration
+
+~> **NOTE**: Migration to Shamir seal is not currently supported when using
+Vault Enterprise. We plan to support this officially in a future release.
 
 To migrate from Auto Unseal to Shamir keys, take your server cluster offline and update
 the [seal configuration](/docs/configuration/seal) and add `disabled = "true"`
