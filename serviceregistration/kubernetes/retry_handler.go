@@ -34,6 +34,7 @@ func (r *retryHandler) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup) {
 	defer wait.Done()
 
 	retry := time.NewTicker(retryFreq)
+	defer retry.Stop()
 	for {
 		select {
 		case <-shutdownCh:
