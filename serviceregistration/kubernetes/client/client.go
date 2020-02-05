@@ -39,7 +39,11 @@ func New(logger hclog.Logger, stopCh <-chan struct{}) (*Client, error) {
 	}, nil
 }
 
-// Client is a minimal Kubernetes client.
+// Client is a minimal Kubernetes client. We rolled our own because the existing
+// Kubernetes client-go library available externally has a high number of dependencies
+// and we thought it wasn't worth it for only two API calls. If at some point they break
+// the client into smaller modules, or if we add quite a few methods to this client, it may
+// be worthwhile to revisit that decision.
 type Client struct {
 	logger hclog.Logger
 	config *Config
@@ -177,7 +181,7 @@ func (c *Client) attemptRequest(client *http.Client, req *http.Request, ptrToRet
 
 	// Check for success.
 	switch resp.StatusCode {
-	case 200, 201, 202:
+	case 200, 201, 202, 204:
 		// Pass.
 	case 401, 403:
 		// Perhaps the token from our bearer token file has been refreshed.
