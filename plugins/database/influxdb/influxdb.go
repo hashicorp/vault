@@ -129,29 +129,40 @@ func (i *Influxdb) CreateUser(ctx context.Context, statements dbplugin.Statement
 				"password": password,
 			}), "", "")
 			response, err := cli.Query(q)
-			if err != nil && response.Error() != nil {
-				for _, stmt := range rollbackIFQL {
-					for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
-						query = strings.TrimSpace(query)
-
-						if len(query) == 0 {
-							continue
-						}
-						q := influx.NewQuery(dbutil.QueryHelper(query, map[string]string{
-							"username": username,
-						}), "", "")
-
-						response, err := cli.Query(q)
-						if err != nil && response.Error() != nil {
-							return "", "", err
-						}
-					}
+			if err != nil {
+				if response != nil && response.Error() != nil {
+					attemptRollback(cli, username, rollbackIFQL)
 				}
 				return "", "", err
 			}
 		}
 	}
 	return username, password, nil
+}
+
+// attemptRollback will attempt to roll back user creation if an error occurs in
+// CreateUser
+func attemptRollback(cli influx.Client, username string, rollbackStatements []string) error {
+	for _, stmt := range rollbackStatements {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+
+			if len(query) == 0 {
+				continue
+			}
+			q := influx.NewQuery(dbutil.QueryHelper(query, map[string]string{
+				"username": username,
+			}), "", "")
+
+			response, err := cli.Query(q)
+			if err != nil {
+				if response != nil && response.Error() != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // RenewUser is not supported on Influxdb, so this is a no-op.
@@ -190,7 +201,9 @@ func (i *Influxdb) RevokeUser(ctx context.Context, statements dbplugin.Statement
 			}), "", "")
 			response, err := cli.Query(q)
 			result = multierror.Append(result, err)
-			result = multierror.Append(result, response.Error())
+			if response != nil {
+				result = multierror.Append(result, response.Error())
+			}
 		}
 	}
 	return result.ErrorOrNil()
@@ -230,7 +243,9 @@ func (i *Influxdb) RotateRootCredentials(ctx context.Context, statements []strin
 			}), "", "")
 			response, err := cli.Query(q)
 			result = multierror.Append(result, err)
-			result = multierror.Append(result, response.Error())
+			if response != nil {
+				result = multierror.Append(result, response.Error())
+			}
 		}
 	}
 
