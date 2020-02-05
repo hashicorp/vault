@@ -31,6 +31,8 @@ import { task, waitForEvent } from 'ember-concurrency';
 const HEIGHT = 125;
 const BASE_SPEED = 150;
 const DURATION = BASE_SPEED * 2;
+const UI_GRAY_300 = '#bac1cc';
+const UI_GRAY_100 = '#ebeef2';
 
 export default Component.extend({
   classNames: ['http-requests-bar-chart-small'],
@@ -49,7 +51,7 @@ export default Component.extend({
     return counters.map((counter, index) => {
       return assign({}, counter, {
         start_time: d3TimeFormat.isoParse(counter.start_time),
-        fill_color: index === counters.length - 1 ? '#bac1cc' : '#ebeef2', // does not accept color variables
+        fill_color: index === counters.length - 1 ? UI_GRAY_300 : UI_GRAY_100,
       });
     });
   }),
@@ -147,30 +149,12 @@ export default Component.extend({
       .delay(function(d, i) {
         return i * BASE_SPEED;
       })
-      .attr('height', counter => height - yScale(counter.total))
-      .attr('y', counter => yScale(counter.total));
-
-    bars.exit().remove();
-
-    const shadowBarsContainer = d3.select('.shadow-bars');
-
-    const shadowBars = shadowBarsContainer.selectAll('.bar').data(parsedCounters, c => +c.start_time);
-
-    const shadowBarsEnter = shadowBars
-      .enter()
-      .append('rect')
-      .attr('class', 'bar');
-
-    shadowBars
-      .merge(shadowBarsEnter)
-      .attr('width', xScale.bandwidth())
-      .attr('height', counter => height - yScale(counter.total))
-      .attr('x', counter => xScale(counter.start_time))
+      .attr('height', counter => height - yScale(counter.total) - 5)
       .attr('y', counter => yScale(counter.total))
       .attr('fill', counter => counter.fill_color)
       .attr('stroke', counter => counter.fill_color);
 
-    shadowBars.exit().remove();
+    bars.exit().remove();
   },
 
   updateDimensions() {
