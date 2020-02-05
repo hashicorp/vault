@@ -10,14 +10,14 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/gokrb5/keytab"
-	"github.com/hashicorp/gokrb5/service"
-	"github.com/hashicorp/gokrb5/spnego"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/jcmturner/gokrb5/v8/keytab"
+	"github.com/jcmturner/gokrb5/v8/service"
+	"github.com/jcmturner/gokrb5/v8/spnego"
 	"gopkg.in/jcmturner/goidentity.v3"
 )
 
@@ -114,7 +114,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, d *
 	authenticated := false
 	var identity goidentity.Identity
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		raw := r.Context().Value(spnego.CTXKeyCredentials)
+		raw := r.Context().Value(goidentity.CTXKey)
 		if raw == nil {
 			w.WriteHeader(400)
 			_, _ = w.Write([]byte("identity credentials are not included"))
