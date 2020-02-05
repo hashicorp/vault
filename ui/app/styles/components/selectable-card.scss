@@ -7,10 +7,14 @@
 
 .selectable-card {
   box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
-  display: flex;
+  display: grid;
+  grid-template-columns: 0.5fr 2fr;
   justify-content: space-between;
   padding: $spacing-l 0 $spacing-l $spacing-l;
-  line-height: 0;
+
+  .transit-icon-column {
+    justify-self: center;
+  }
 
   &:hover {
     box-shadow: 0 0 0 1px $grey-light, $box-shadow-middle;
