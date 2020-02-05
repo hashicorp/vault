@@ -99,7 +99,7 @@ func (c *Client) PatchPod(namespace, podName string, patches ...*Patch) error {
 			return errors.New("patch operation must be set")
 		}
 		jsonPatches = append(jsonPatches, map[string]interface{}{
-			"op":    patch.Operation.String(),
+			"op":    patch.Operation,
 			"path":  patch.Path,
 			"value": patch.Value,
 		})
@@ -230,45 +230,13 @@ type Metadata struct {
 	Labels map[string]string `json:"labels,omitempty"`
 }
 
-type PatchOperation int
+type PatchOperation string
 
 const (
-	// When adding support for more PatchOperations in the future,
-	// DO NOT alphebetize them because it will change the underlying
-	// int representing a user's intent. If that's stored anywhere,
-	// it will cause storage reads to map to the incorrect operation.
-	Unset PatchOperation = iota
-	Add
-	Replace
+	Unset   PatchOperation = "unset"
+	Add                    = "add"
+	Replace                = "replace"
 )
-
-func Parse(s string) PatchOperation {
-	switch s {
-	case "add":
-		return Add
-	case "replace":
-		return Replace
-	default:
-		return Unset
-	}
-}
-
-func (p PatchOperation) String() string {
-	switch p {
-	case Unset:
-		// This is an invalid choice, and will be shown on a patch
-		// where the PatchOperation is unset. That's because ints
-		// default to 0, and Unset corresponds to 0.
-		return "unset"
-	case Add:
-		return "add"
-	case Replace:
-		return "replace"
-	default:
-		// Should never arrive here.
-		return ""
-	}
-}
 
 type Patch struct {
 	Operation PatchOperation
