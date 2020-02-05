@@ -1,6 +1,6 @@
 {{!-- conditional to check if SelectableCard is apart of a CSS Grid, if yes return grid item class --}}
-{{#if containerGridItem}}
-  <div class={{containerGridItem}}>
+{{#if gridContainer}}
+  <div class={{gridContainer}}>
     <div class={{gridItem}}> 
       <p class="title-number">{{format-number total}}</p>
       <p class="title is-5">{{cardTitleComputed}}</p>
