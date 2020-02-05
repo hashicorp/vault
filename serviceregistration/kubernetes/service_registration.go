@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"sync"
 
 	"github.com/hashicorp/go-hclog"
@@ -80,10 +81,10 @@ func (r *serviceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGro
 			Path:      "/metadata/labels",
 			Value: map[string]string{
 				labelVaultVersion: r.initialState.VaultVersion,
-				labelActive:       toString(r.initialState.IsActive),
-				labelSealed:       toString(r.initialState.IsSealed),
-				labelPerfStandby:  toString(r.initialState.IsPerformanceStandby),
-				labelInitialized:  toString(r.initialState.IsInitialized),
+				labelActive:       strconv.FormatBool(r.initialState.IsActive),
+				labelSealed:       strconv.FormatBool(r.initialState.IsSealed),
+				labelPerfStandby:  strconv.FormatBool(r.initialState.IsPerformanceStandby),
+				labelInitialized:  strconv.FormatBool(r.initialState.IsInitialized),
 			},
 		}); err != nil {
 			return err
@@ -99,22 +100,22 @@ func (r *serviceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGro
 			{
 				Operation: client.Replace,
 				Path:      pathToLabels + labelActive,
-				Value:     toString(r.initialState.IsActive),
+				Value:     strconv.FormatBool(r.initialState.IsActive),
 			},
 			{
 				Operation: client.Replace,
 				Path:      pathToLabels + labelSealed,
-				Value:     toString(r.initialState.IsSealed),
+				Value:     strconv.FormatBool(r.initialState.IsSealed),
 			},
 			{
 				Operation: client.Replace,
 				Path:      pathToLabels + labelPerfStandby,
-				Value:     toString(r.initialState.IsPerformanceStandby),
+				Value:     strconv.FormatBool(r.initialState.IsPerformanceStandby),
 			},
 			{
 				Operation: client.Replace,
 				Path:      pathToLabels + labelInitialized,
-				Value:     toString(r.initialState.IsInitialized),
+				Value:     strconv.FormatBool(r.initialState.IsInitialized),
 			},
 		}
 		if err := c.PatchPod(r.namespace, r.podName, patches...); err != nil {
@@ -132,7 +133,7 @@ func (r *serviceRegistration) NotifyActiveStateChange(isActive bool) error {
 	return r.notifyOrRetry(&client.Patch{
 		Operation: client.Replace,
 		Path:      pathToLabels + labelActive,
-		Value:     toString(isActive),
+		Value:     strconv.FormatBool(isActive),
 	})
 }
 
@@ -140,7 +141,7 @@ func (r *serviceRegistration) NotifySealedStateChange(isSealed bool) error {
 	return r.notifyOrRetry(&client.Patch{
 		Operation: client.Replace,
 		Path:      pathToLabels + labelSealed,
-		Value:     toString(isSealed),
+		Value:     strconv.FormatBool(isSealed),
 	})
 }
 
@@ -148,7 +149,7 @@ func (r *serviceRegistration) NotifyPerformanceStandbyStateChange(isStandby bool
 	return r.notifyOrRetry(&client.Patch{
 		Operation: client.Replace,
 		Path:      pathToLabels + labelPerfStandby,
-		Value:     toString(isStandby),
+		Value:     strconv.FormatBool(isStandby),
 	})
 }
 
@@ -156,7 +157,7 @@ func (r *serviceRegistration) NotifyInitializedStateChange(isInitialized bool) e
 	return r.notifyOrRetry(&client.Patch{
 		Operation: client.Replace,
 		Path:      pathToLabels + labelInitialized,
-		Value:     toString(isInitialized),
+		Value:     strconv.FormatBool(isInitialized),
 	})
 }
 
@@ -186,9 +187,4 @@ func getRequiredField(logger hclog.Logger, config map[string]string, envVar, con
 		logger.Debug(fmt.Sprintf("%q: %q", configParam, value))
 	}
 	return value, nil
-}
-
-// Converts a bool to "true" or "false".
-func toString(b bool) string {
-	return fmt.Sprintf("%t", b)
 }
