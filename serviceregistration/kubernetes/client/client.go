@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -10,14 +11,17 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cenkalti/backoff"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-retryablehttp"
 )
 
-// maxRetries is the maximum number of times the client
-// should retry.
-const maxRetries = 10
+const (
+	// Retry configuration
+	retryWaitMin = 500 * time.Millisecond
+	retryWaitMax = 30 * time.Second
+	retryMax     = 10
+)
 
 var (
 	ErrNamespaceUnset = errors.New(`"namespace" is unset`)
@@ -118,44 +122,6 @@ func (c *Client) PatchPod(namespace, podName string, patches ...*Patch) error {
 
 // do executes the given request, retrying if necessary.
 func (c *Client) do(req *http.Request, ptrToReturnObj interface{}) error {
-	// Finish setting up a valid request.
-	req.Header.Set("Authorization", "Bearer "+c.config.BearerToken)
-	req.Header.Set("Accept", "application/json")
-	client := cleanhttp.DefaultClient()
-	client.Transport = &http.Transport{
-		TLSClientConfig: &tls.Config{
-			RootCAs: c.config.CACertPool,
-		},
-	}
-
-	// Execute and retry the request. This exponential backoff comes
-	// with jitter already rolled in.
-	var lastErr error
-	b := backoff.NewExponentialBackOff()
-	for i := 0; i < maxRetries; i++ {
-		if i != 0 {
-			select {
-			case <-c.stopCh:
-				return nil
-			case <-time.NewTimer(b.NextBackOff()).C:
-				// Continue to the request.
-			}
-		}
-		shouldRetry, err := c.attemptRequest(client, req, ptrToReturnObj)
-		if !shouldRetry {
-			// The error may be nil or populated depending on whether the
-			// request was successful.
-			return err
-		}
-		lastErr = err
-	}
-	return lastErr
-}
-
-// attemptRequest tries one single request. It's in its own function so each
-// response body can be closed before returning, which would read awkwardly if
-// executed in a loop.
-func (c *Client) attemptRequest(client *http.Client, req *http.Request, ptrToReturnObj interface{}) (shouldRetry bool, err error) {
 	// Preserve the original request body so it can be viewed for debugging if needed.
 	// Reading it empties it, so we need to re-add it afterwards.
 	var reqBody []byte
@@ -165,9 +131,33 @@ func (c *Client) attemptRequest(client *http.Client, req *http.Request, ptrToRet
 		req.Body = ioutil.NopCloser(reqBodyReader)
 	}
 
-	resp, err := client.Do(req)
+	// Finish setting up a valid request.
+	retryableReq, err := retryablehttp.FromRequest(req)
 	if err != nil {
-		return false, err
+		return err
+	}
+	retryableReq.Header.Set("Authorization", "Bearer "+c.config.BearerToken)
+	retryableReq.Header.Set("Accept", "application/json")
+
+	client := &retryablehttp.Client{
+		HTTPClient:   cleanhttp.DefaultClient(),
+		RetryWaitMin: retryWaitMin,
+		RetryWaitMax: retryWaitMax,
+		RetryMax:     retryMax,
+		CheckRetry:   c.getCheckRetry(req, reqBody),
+		Backoff:      retryablehttp.DefaultBackoff,
+	}
+	client.HTTPClient.Transport = &http.Transport{
+		TLSClientConfig: &tls.Config{
+			RootCAs: c.config.CACertPool,
+		},
+	}
+
+	// Execute and retry the request. This client comes with exponential backoff and
+	// jitter already rolled in.
+	resp, err := client.Do(retryableReq)
+	if err != nil {
+		return err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -179,42 +169,44 @@ func (c *Client) attemptRequest(client *http.Client, req *http.Request, ptrToRet
 		}
 	}()
 
-	// Check for success.
-	switch resp.StatusCode {
-	case 200, 201, 202, 204:
-		// Pass.
-	case 401, 403:
-		// Perhaps the token from our bearer token file has been refreshed.
-		config, err := inClusterConfig()
-		if err != nil {
-			return false, err
-		}
-		if config.BearerToken == c.config.BearerToken {
-			// It's the same token.
-			return false, fmt.Errorf("bad status code: %s", sanitizedDebuggingInfo(req, reqBody, resp))
-		}
-		c.config = config
-		// Continue to try again, but return the error too in case the caller would rather read it out.
-		return true, fmt.Errorf("bad status code: %s", sanitizedDebuggingInfo(req, reqBody, resp))
-	case 404:
-		return false, &ErrNotFound{debuggingInfo: sanitizedDebuggingInfo(req, reqBody, resp)}
-	case 500, 502, 503, 504:
-		// Could be transient.
-		return true, fmt.Errorf("unexpected status code: %s", sanitizedDebuggingInfo(req, reqBody, resp))
-	default:
-		// Unexpected.
-		return false, fmt.Errorf("unexpected status code: %s", sanitizedDebuggingInfo(req, reqBody, resp))
-	}
-
-	// We only arrive here with success.
 	// If we're not supposed to read out the body, we have nothing further
 	// to do here.
 	if ptrToReturnObj == nil {
-		return false, nil
+		return nil
 	}
 
 	// Attempt to read out the body into the given return object.
-	return false, json.NewDecoder(resp.Body).Decode(ptrToReturnObj)
+	return json.NewDecoder(resp.Body).Decode(ptrToReturnObj)
+}
+
+func (c *Client) getCheckRetry(req *http.Request, reqBody []byte) retryablehttp.CheckRetry {
+	return func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		switch resp.StatusCode {
+		case 200, 201, 202, 204:
+			// Success.
+			return false, nil
+		case 401, 403:
+			// Perhaps the token from our bearer token file has been refreshed.
+			config, err := inClusterConfig()
+			if err != nil {
+				return false, err
+			}
+			if config.BearerToken == c.config.BearerToken {
+				// It's the same token.
+				return false, fmt.Errorf("bad status code: %s", sanitizedDebuggingInfo(req, reqBody, resp))
+			}
+			c.config = config
+			// Continue to try again, but return the error too in case the caller would rather read it out.
+			return true, fmt.Errorf("bad status code: %s", sanitizedDebuggingInfo(req, reqBody, resp))
+		case 404:
+			return false, &ErrNotFound{debuggingInfo: sanitizedDebuggingInfo(req, reqBody, resp)}
+		case 500, 502, 503, 504:
+			// Could be transient.
+			return true, fmt.Errorf("unexpected status code: %s", sanitizedDebuggingInfo(req, reqBody, resp))
+		}
+		// Unexpected.
+		return false, fmt.Errorf("unexpected status code: %s", sanitizedDebuggingInfo(req, reqBody, resp))
+	}
 }
 
 type Pod struct {
