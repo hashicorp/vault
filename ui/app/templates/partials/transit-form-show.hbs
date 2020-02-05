@@ -75,7 +75,7 @@
           <Icon @glyph="more-horizontal" class="has-text-black auto-width" aria-label={{concat backend.path " options"}} />
         </div>
         <div class="transit-description-column">
-          {{#secret-link
+          <h3>{{#secret-link
             mode="actions"
             secret=model.id
             class=(if (eq supportedAction.name selectedAction) "is-active")
@@ -84,7 +84,8 @@
           }}
             {{capitalize supportedAction.name}}
           {{/secret-link}}
-          <p>{{supportedAction.description}}</p>
+          </h3>
+          <p class="transit-action-description">{{supportedAction.description}}</p>
         </div>
       </div>
     {{/each}}

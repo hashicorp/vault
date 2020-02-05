@@ -1,13 +1,9 @@
 .selectable-card {
   box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
-  display: grid;
-  grid-template-columns: 0.5fr 2fr;
+  display: flex;
   justify-content: space-between;
   padding: $spacing-l 0 $spacing-l $spacing-l;
-
-  .transit-icon-column {
-    justify-self: center;
-  }
+  line-height: 0;
 
   &:hover {
     box-shadow: 0 0 0 1px $grey-light, $box-shadow-middle;
