@@ -438,8 +438,11 @@ vitin0L6nprauWkKO38XgM4T75qKZpqtiOcT
 	if err := tmpfile.Close(); err != nil {
 		t.Fatal(err)
 	}
-
-	if _, err := NewCertPool(tmpfile.Name()); err != nil {
+	fileBody, err := ioutil.ReadFile(tmpfile.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := NewCertPool(bytes.NewReader(fileBody)); err != nil {
 		t.Fatal(err)
 	}
 }

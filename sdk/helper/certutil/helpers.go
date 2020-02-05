@@ -14,6 +14,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/big"
 	"net"
@@ -806,30 +807,20 @@ func SignCertificate(data *CreationBundle) (*ParsedCertBundle, error) {
 	return result, nil
 }
 
-func NewCertPool(pathToFile string) (*x509.CertPool, error) {
-	certs, err := certsFromFile(pathToFile)
+func NewCertPool(reader io.Reader) (*x509.CertPool, error) {
+	pemBlock, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return nil, err
+	}
+	certs, err := parseCertsPEM(pemBlock)
+	if err != nil {
+		return nil, fmt.Errorf("error reading certs: %s", err)
 	}
 	pool := x509.NewCertPool()
 	for _, cert := range certs {
 		pool.AddCert(cert)
 	}
 	return pool, nil
-}
-
-// CertsFromFile returns the x509.Certificates contained in the given PEM-encoded file.
-// Returns an error if the file could not be read, a certificate could not be parsed, or if the file does not contain any certificates
-func certsFromFile(file string) ([]*x509.Certificate, error) {
-	pemBlock, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-	certs, err := parseCertsPEM(pemBlock)
-	if err != nil {
-		return nil, fmt.Errorf("error reading %s: %s", file, err)
-	}
-	return certs, nil
 }
 
 // parseCertsPEM returns the x509.Certificates contained in the given PEM-encoded byte array

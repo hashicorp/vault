@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"crypto/x509"
 	"io/ioutil"
 	"net"
@@ -53,7 +54,11 @@ func inClusterConfig() (*Config, error) {
 		return nil, err
 	}
 
-	pool, err := certutil.NewCertPool(RootCAFile)
+	caBytes, err := ioutil.ReadFile(RootCAFile)
+	if err != nil {
+		return nil, err
+	}
+	pool, err := certutil.NewCertPool(bytes.NewReader(caBytes))
 	if err != nil {
 		return nil, err
 	}
