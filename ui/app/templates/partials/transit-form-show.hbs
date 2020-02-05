@@ -76,16 +76,17 @@
 
 {{#if (eq tab 'actions')}}
   {{#each model.supportedActions as |supportedAction|}}
-    <div class="box">
+    <div class="selectable-card">
       {{#secret-link
         mode="actions"
         secret=model.id
-        class=(if (eq supportedAction selectedAction) "is-active")
-        queryParams=(query-params action=supportedAction)
-        data-test-transit-action-link=supportedAction
+        class=(if (eq supportedAction.name selectedAction) "is-active")
+        queryParams=(query-params action=supportedAction.name)
+        data-test-transit-action-link=supportedAction.name
       }}
-        {{capitalize supportedAction}}
+        {{capitalize supportedAction.name}}
       {{/secret-link}}
+      <p>{{supportedAction.description}}</p>
     </div>
   {{/each}}
 {{else if (eq tab 'versions')}}

@@ -7,14 +7,14 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 const { attr } = DS;
 
 const ACTION_VALUES = {
-  encrypt: 'supportsEncryption',
-  decrypt: 'supportsDecryption',
-  datakey: 'supportsEncryption',
-  rewrap: 'supportsEncryption',
-  sign: 'supportsSigning',
-  hmac: true,
-  verify: true,
-  export: 'exportable',
+  encrypt: ['supportsEncryption', 'Looks up wrapping properties for the given token'],
+  decrypt: ['supportsDecryption', 'Decrypts the provided ciphertext using this key'],
+  datakey: ['supportsEncryption', 'Generates a new key and value encrypted with this key'],
+  rewrap: ['supportsEncryption', 'Rewraps the ciphertext using the latest version of the named key'],
+  sign: ['supportsSigning'],
+  hmac: [true, 'Generate a data digest using a hash algorithm'],
+  verify: [true, 'Validate the provided signature for the given data'],
+  export: ['exportable'],
 };
 
 export default DS.Model.extend({
@@ -56,13 +56,14 @@ export default DS.Model.extend({
   },
 
   supportedActions: computed('type', function() {
-    return Object.keys(ACTION_VALUES).filter(name => {
-      const isSupported = ACTION_VALUES[name];
-      if (typeof isSupported === 'boolean') {
-        return isSupported;
+    let actions = [];
+    Object.keys(ACTION_VALUES).filter(name => {
+      const isSupported = ACTION_VALUES[name][0];
+      if (typeof isSupported === 'boolean' || get(this, isSupported)) {
+        return actions.push({ name, description: ACTION_VALUES[name][1] });
       }
-      return get(this, isSupported);
     });
+    return actions;
   }),
 
   canDelete: computed('deletionAllowed', 'lastLoadTS', function() {
