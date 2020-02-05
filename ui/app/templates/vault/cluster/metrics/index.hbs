@@ -9,85 +9,12 @@
 {{!-- ARG TODO: Add permission conditionals for menu dropdowns --}}
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
   {{#if (gt model.httpsRequests.length 1) }}
-  {{!-- ARG TODO https://discuss.emberjs.com/t/status-of-angle-bracket-components-and-sub-folders/15859 --}}
-  {{#let (component "metrics/selectable-card-container-graph") as |SelectableCardContainerGraph|}}
-    <SelectableCardContainerGraph @counters={{model}}/>
-  {{/let}}
-    {{!-- {{metrics/selectable-card-container-graph model=model}}  --}}
+    {{#let (component "metrics/selectable-card-container-graph") as |SelectableCardContainerGraph|}}
+      <SelectableCardContainerGraph @counters={{model}} @class="selectable-card-container-graph"/>
+    {{/let}}
   {{else}}
-  {{!-- ARG TODO: move to component --}}
-    <div class="selectable-card-container">
-      {{#linked-block
-        "vault.cluster.metrics.http-requests"
-        class="selectable-card width-medium is-rounded"
-      }}
-        <div>
-          <p class="title-number">{{format-number model.httpsRequests.firstObject.total}}</p>
-          <p class="title is-5">HTTP Requests</p>
-          <p class="has-text-grey is-size-8">This month</p>
-        </div>
-        <div class="is-paddingless is-marginless">
-          <div class="level-item">
-            <PopupMenu name="engine-menu">
-                <nav class="menu">
-                  <ul class="menu-list">
-                    <li class="action">
-                      {{#link-to "vault.cluster.metrics.http-requests"}}
-                        View Details
-                      {{/link-to}}
-                    </li>
-                  </ul>
-                </nav>
-            </PopupMenu>
-          </div>
-        </div>
-      {{/linked-block}}
-      {{#linked-block
-        class="selectable-card width-medium is-rounded"
-      }}
-        <div>
-          <p class="title-number">{{format-number model.totalEntities}}</p>
-          {{#if (not-eq model.totalEntities 1)}}
-          <p class="title is-5">Entities</p>
-          {{else}}
-          <p class="title is-5">Entity</p>
-          {{/if}}
-          <p class="has-text-grey is-size-8">Total</p>
-        </div>
-        <div class="is-paddingless is-marginless">
-          <div class="level-item">
-            <PopupMenu name="engine-menu">
-              <nav class="menu">
-                <ul class="menu-list">
-                  <li class="action">
-                    {{#link-to "vault.cluster.access.identity" "entities" data-test-link=true }}
-                      Manage entities
-                    {{/link-to}}
-                  </li>
-                  <li class="action">
-                    {{#link-to "vault.cluster.access.identity.create" "entities" }}
-                    Create entity
-                  {{/link-to}}
-                  </li>
-                </ul>
-              </nav>
-            </PopupMenu>
-          </div>
-        </div>
-      {{/linked-block}}
-      {{#linked-block
-        class="selectable-card width-medium is-rounded"
-      }}
-        <div>
-          <p class="title-number">{{format-number model.totalTokens}}</p>
-          {{#if (not-eq model.totalTokens 1)}}
-          <p class="title is-5">Tokens</p>
-          {{else}}
-          <p class="title is-5">Token</p>
-          {{/if}}
-          <p class="has-text-grey is-size-8">Total</p>
-        </div>
-      {{/linked-block}}
-    </div>
+    {{#let (component "metrics/selectable-card-container") as |SelectableCardContainer|}}
+      <SelectableCardContainer @counters={{model}} @class="selectable-card-container"/>
+    {{/let}}
   {{/if}}
 </div>
