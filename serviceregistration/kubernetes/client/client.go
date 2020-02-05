@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
@@ -136,6 +137,7 @@ func (c *Client) do(req *http.Request, ptrToReturnObj interface{}) error {
 	if err != nil {
 		return err
 	}
+	retryableReq.WithContext(newContext(c.stopCh))
 	retryableReq.Header.Set("Authorization", "Bearer "+c.config.BearerToken)
 	retryableReq.Header.Set("Accept", "application/json")
 
@@ -249,4 +251,46 @@ func (e *ErrNotFound) Error() string {
 func sanitizedDebuggingInfo(req *http.Request, reqBody []byte, resp *http.Response) string {
 	respBody, _ := ioutil.ReadAll(resp.Body)
 	return fmt.Sprintf("req method: %s, req url: %s, req body: %s, resp statuscode: %d, resp respBody: %s", req.Method, req.URL, reqBody, resp.StatusCode, respBody)
+}
+
+// stopChContext allows us to cause requests to stop retrying if we receive
+// a stop from the caller.
+func newContext(stopCh <-chan struct{}) context.Context {
+	ctx := &stopChContext{
+		stopCh: stopCh,
+	}
+	go ctx.monitorStopCh()
+	return ctx
+}
+
+type stopChContext struct {
+	stopCh  <-chan struct{}
+	errLock sync.RWMutex
+	err     error
+}
+
+func (c *stopChContext) Deadline() (deadline time.Time, ok bool) {
+	// Return false to indicate that no deadline is set.
+	return time.Time{}, false
+}
+
+func (c *stopChContext) Done() <-chan struct{} {
+	return c.stopCh
+}
+
+func (c *stopChContext) Err() error {
+	c.errLock.RLock()
+	defer c.errLock.RUnlock()
+	return c.err
+}
+
+func (c *stopChContext) Value(key interface{}) interface{} {
+	return nil
+}
+
+func (c *stopChContext) monitorStopCh() {
+	<-c.stopCh
+	c.errLock.Lock()
+	defer c.errLock.Unlock()
+	c.err = errors.New("stop channel has been closed")
 }
