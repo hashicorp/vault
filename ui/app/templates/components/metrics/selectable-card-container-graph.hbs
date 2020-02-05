@@ -12,7 +12,7 @@
       <p class="has-text-grey is-size-4 amount-change">{{percentChange}}%</p>
       <p class="has-text-grey is-size-6 item-c">Since last month</p>
     </div>
-    <HttpRequestsBarChartSmallView @counters={{filteredHttpsRequests}} class="chart"/>
+    <HttpRequestsBarChartSmall @counters={{filteredHttpsRequests}} class="chart"/>
     {{#link-to "vault.cluster.metrics.http-requests" class="card-details"}}View Details{{/link-to}}
   </SelectableCard>
 {{/let}}

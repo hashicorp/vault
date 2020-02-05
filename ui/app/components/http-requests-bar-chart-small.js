@@ -33,7 +33,7 @@ const BASE_SPEED = 150;
 const DURATION = BASE_SPEED * 2;
 
 export default Component.extend({
-  classNames: ['http-requests-bar-chart-small-view'],
+  classNames: ['http-requests-bar-chart-small'],
   counters: null,
   margin: Object.freeze({ top: 24, right: 16, bottom: 24, left: 16 }),
   padding: 0.04,
@@ -94,7 +94,7 @@ export default Component.extend({
   renderBarChart() {
     const { margin, width, xScale, yScale, parsedCounters, elementId } = this;
     const height = this.height();
-    const barChartSVG = d3.select('.http-requests-bar-chart-small-view');
+    const barChartSVG = d3.select('.http-requests-bar-chart-small');
     const barsContainer = d3.select(`#bars-container-${elementId}`);
 
     // render the chart
