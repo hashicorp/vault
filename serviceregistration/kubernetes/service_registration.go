@@ -37,10 +37,9 @@ func NewServiceRegistration(config map[string]string, logger hclog.Logger, state
 		podName:      podName,
 		initialState: state,
 		retryHandler: &retryHandler{
-			logger:         logger,
-			namespace:      namespace,
-			podName:        podName,
-			patchesToRetry: make([]*client.Patch, 0),
+			logger:    logger,
+			namespace: namespace,
+			podName:   podName,
 		},
 	}, nil
 }

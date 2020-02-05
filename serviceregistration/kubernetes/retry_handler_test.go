@@ -44,11 +44,10 @@ func TestRetryHandlerSimple(t *testing.T) {
 	}
 
 	r := &retryHandler{
-		logger:         logger,
-		namespace:      kubetest.ExpectedNamespace,
-		podName:        kubetest.ExpectedPodName,
-		client:         c,
-		patchesToRetry: make([]*client.Patch, 0),
+		logger:    logger,
+		namespace: kubetest.ExpectedNamespace,
+		podName:   kubetest.ExpectedPodName,
+		client:    c,
 	}
 	go r.Run(shutdownCh, wait)
 
@@ -67,10 +66,9 @@ func TestRetryHandlerSimple(t *testing.T) {
 
 func TestRetryHandlerAdd(t *testing.T) {
 	r := &retryHandler{
-		logger:         hclog.NewNullLogger(),
-		namespace:      "some-namespace",
-		podName:        "some-pod-name",
-		patchesToRetry: make([]*client.Patch, 0),
+		logger:    hclog.NewNullLogger(),
+		namespace: "some-namespace",
+		podName:   "some-pod-name",
 	}
 
 	testPatch1 := &client.Patch{
@@ -207,11 +205,10 @@ func TestRetryHandlerRacesAndDeadlocks(t *testing.T) {
 	}
 
 	r := &retryHandler{
-		logger:         logger,
-		namespace:      kubetest.ExpectedNamespace,
-		podName:        kubetest.ExpectedPodName,
-		client:         c,
-		patchesToRetry: make([]*client.Patch, 0),
+		logger:    logger,
+		namespace: kubetest.ExpectedNamespace,
+		podName:   kubetest.ExpectedPodName,
+		client:    c,
 	}
 	go r.Run(shutdownCh, wait)
 
