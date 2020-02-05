@@ -221,7 +221,8 @@ func TestRetryHandlerRacesAndDeadlocks(t *testing.T) {
 		go func() {
 			<-start
 			if err := r.Add(testPatch); err != nil {
-				t.Fatal(err)
+				t.Log(err)
+				t.Fail()
 			}
 			done <- true
 		}()
