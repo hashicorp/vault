@@ -36,6 +36,7 @@ BUG FIXES:
   different queries. Now it allows for either for backwards compatibility [GH-8240]
 * secrets/database/postgres: Fix inconsistent query parameter names: {{name}} or {{username}} for
   different queries. Now it allows for either for backwards compatibility [GH-8240]
+* secrets/pki: Support FQDNs in DNS Name [GH-8288]
 
 
 ## 1.3.3 (Unreleased)
