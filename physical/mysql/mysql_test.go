@@ -117,7 +117,6 @@ func TestMySQLHABackend(t *testing.T) {
 // https://github.com/hashicorp/vault/pull/8229
 func TestMySQLHABackend_LockFailPanic(t *testing.T) {
 	cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, false, "secret")
-	defer cleanup()
 
 	cfg, err := mysql.ParseDSN(connURL)
 	if err != nil {
@@ -143,14 +142,6 @@ func TestMySQLHABackend_LockFailPanic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
 	}
-
-	defer func() {
-		mysql := b.(*MySQLBackend)
-		_, err := mysql.client.Exec("DROP TABLE IF EXISTS " + mysql.dbTable + " ," + mysql.dbLockTable)
-		if err != nil {
-			t.Fatalf("Failed to drop table: %v", err)
-		}
-	}()
 
 	b2, err := NewMySQLBackend(config, logger)
 	if err != nil {
@@ -210,14 +201,12 @@ func TestMySQLHABackend_LockFailPanic(t *testing.T) {
 	}
 	// end normal
 
-	// modify the connection string of lock2. When Lock() is called, a new
-	// connection is created using the configuration. If that connection cannot be
-	// created, there was a panic due to not returning with the connection error.
-	// Here we intentionally break the config for b2, so a new connection can't be
-	// made, which would trigger the panic shown in
-	// https://github.com/hashicorp/vault/issues/8203
-	haLock := lock2.(*MySQLHALock)
-	haLock.in.conf["username"] = "fake"
+	// Clean up the database. When Lock() is called, a new connection is created
+	// using the configuration. If that connection cannot be created, there was a
+	// panic due to not returning with the connection error. Here we intentionally
+	// break the config for b2, so a new connection can't be made, which would
+	// trigger the panic shown in https://github.com/hashicorp/vault/issues/8203
+	cleanup()
 
 	// Cancel attempt in 50 msec
 	stopCh2 := make(chan struct{})
