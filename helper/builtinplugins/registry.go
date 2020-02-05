@@ -28,6 +28,7 @@ import (
 	dbMssql "github.com/hashicorp/vault/plugins/database/mssql"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
+	dbRedshift "github.com/hashicorp/vault/plugins/database/redshift"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -97,6 +98,7 @@ func newRegistry() *registry {
 			"mysql-legacy-database-plugin": dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
 
 			"postgresql-database-plugin":    dbPostgres.New,
+			"redshift-database-plugin":      dbRedshift.New(true),
 			"mssql-database-plugin":         dbMssql.New,
 			"cassandra-database-plugin":     dbCass.New,
 			"mongodb-database-plugin":       dbMongo.New,
