@@ -217,6 +217,7 @@ export default [
           'influxdb',
           'hanadb',
           'mongodb',
+          'mongodbatlas',
           'mssql',
           'mysql-maria',
           'postgresql',
@@ -232,6 +233,7 @@ export default [
         content: ['kv-v1', 'kv-v2']
       },
       { category: 'identity' },
+      { category: 'mongodbatlas' },
       { category: 'nomad' },
       { category: 'pki' },
       { category: 'rabbitmq' },
