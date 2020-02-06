@@ -128,6 +128,12 @@ func (b *BaseCommand) PredictVaultFolders() complete.Predictor {
 	return NewPredict().VaultFolders()
 }
 
+// PredictVaultNamespaces returns a predictor for "namespaces". See PredictVaultFiles
+// for more information an restrictions.
+func (b *BaseCommand) PredictVaultNamespaces() complete.Predictor {
+	return NewPredict().VaultNamespaces()
+}
+
 // PredictVaultMounts returns a predictor for "folders". See PredictVaultFiles
 // for more information and restrictions.
 func (b *BaseCommand) PredictVaultMounts() complete.Predictor {
@@ -179,6 +185,13 @@ func (p *Predict) VaultFiles() complete.Predictor {
 // instead.
 func (p *Predict) VaultFolders() complete.Predictor {
 	return p.vaultPaths(false)
+}
+
+// VaultNamespaces returns a predictor for Vault "namespaces". This is a public
+// API for consumers, but you probably want BaseCommand.PredictVaultNamespaces
+// instead.
+func (p *Predict) VaultNamespaces() complete.Predictor {
+	return p.filterFunc(p.namespaces)
 }
 
 // VaultMounts returns a predictor for Vault "folders". This is a public
@@ -413,6 +426,36 @@ func (p *Predict) mounts() []string {
 	list := make([]string, 0, len(mounts))
 	for m := range mounts {
 		list = append(list, m)
+	}
+	sort.Strings(list)
+	return list
+}
+
+// namespaces returns a sorted list of the namespace paths for Vault server for
+// which the client is configured to communicate with. This function returns
+// an empty list in any error occurs.
+func (p *Predict) namespaces() []string {
+	client := p.Client()
+	if client == nil {
+		return nil
+	}
+
+	secret, err := client.Logical().List("sys/namespaces")
+	if err != nil {
+		return nil
+	}
+	namespaces, ok := extractListData(secret)
+	if !ok {
+		return nil
+	}
+
+	list := make([]string, 0, len(namespaces))
+	for _, n := range namespaces {
+		s, ok := n.(string)
+		if !ok {
+			continue
+		}
+		list = append(list, s)
 	}
 	sort.Strings(list)
 	return list

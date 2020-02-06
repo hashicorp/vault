@@ -45,7 +45,7 @@ func (c *NamespaceLookupCommand) Flags() *FlagSets {
 }
 
 func (c *NamespaceLookupCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultFolders()
+	return c.PredictVaultNamespaces()
 }
 
 func (c *NamespaceLookupCommand) AutocompleteFlags() complete.Flags {

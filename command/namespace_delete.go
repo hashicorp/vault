@@ -45,7 +45,7 @@ func (c *NamespaceDeleteCommand) Flags() *FlagSets {
 }
 
 func (c *NamespaceDeleteCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultFolders()
+	return c.PredictVaultNamespaces()
 }
 
 func (c *NamespaceDeleteCommand) AutocompleteFlags() complete.Flags {
