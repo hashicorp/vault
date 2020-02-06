@@ -60,6 +60,7 @@ func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupM
 	},
 		setup,
 	)
+	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
 	defer cluster.Cleanup()

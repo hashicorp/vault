@@ -159,7 +159,7 @@ func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.KeepStandbysSealed = true
 	opts.PhysicalFactory = MakeRaftBackend
 	opts.SetupFunc = func(t testing.T, c *vault.TestCluster) {
-		if opts.NumCores > 1 {
+		if opts.NumCores != 1 {
 			testhelpers.RaftClusterJoinNodes(t, c)
 			time.Sleep(15 * time.Second)
 		}
