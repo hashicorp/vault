@@ -44,7 +44,7 @@ effect if a CA certificate is provided`,
 			"tls_min_version": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "tls12",
-				Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+				Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. Defaults to 'tls12'",
 			},
 
 			"pem_bundle": &framework.FieldSchema{
