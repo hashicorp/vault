@@ -449,9 +449,9 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 		return nil, errors.New("username and password are required to rotate")
 	}
 
-	rotateStatents := statements
-	if len(rotateStatents) == 0 {
-		rotateStatents = []string{defaultPostgresRotateRootCredentialsSQL}
+	rotateStatements := statements
+	if len(rotateStatements) == 0 {
+		rotateStatements = []string{defaultPostgresRotateRootCredentialsSQL}
 	}
 
 	db, err := p.getConnection(ctx)
@@ -472,7 +472,7 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 		return nil, err
 	}
 
-	for _, stmt := range rotateStatents {
+	for _, stmt := range rotateStatements {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {
