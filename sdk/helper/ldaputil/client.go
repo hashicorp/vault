@@ -20,6 +20,11 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 )
 
+// LDAPSearchPageSize is the page size to search LDAP directory.
+// Default size is usually 1000, but this number doesn't affect the result.
+// It only affect the number of round trips the client has to do.
+var LDAPSearchPageSize uint32 = 500
+
 type Client struct {
 	Logger hclog.Logger
 	LDAP   LDAP
@@ -123,12 +128,12 @@ func (c *Client) GetUserBindDN(cfg *ConfigEntry, conn Connection, username strin
 		if c.Logger.IsDebug() {
 			c.Logger.Debug("discovering user", "userdn", cfg.UserDN, "filter", filter)
 		}
-		result, err := conn.Search(&ldap.SearchRequest{
+		result, err := conn.SearchWithPaging(&ldap.SearchRequest{
 			BaseDN:    cfg.UserDN,
 			Scope:     ldap.ScopeWholeSubtree,
 			Filter:    filter,
 			SizeLimit: math.MaxInt32,
-		})
+		}, LDAPSearchPageSize)
 		if err != nil {
 			return bindDN, errwrap.Wrapf("LDAP search for binddn failed: {{err}}", err)
 		}
@@ -158,12 +163,12 @@ func (c *Client) GetUserDN(cfg *ConfigEntry, conn Connection, bindDN string) (st
 		if c.Logger.IsDebug() {
 			c.Logger.Debug("searching upn", "userdn", cfg.UserDN, "filter", filter)
 		}
-		result, err := conn.Search(&ldap.SearchRequest{
+		result, err := conn.SearchWithPaging(&ldap.SearchRequest{
 			BaseDN:    cfg.UserDN,
 			Scope:     ldap.ScopeWholeSubtree,
 			Filter:    filter,
 			SizeLimit: math.MaxInt32,
-		})
+		}, LDAPSearchPageSize)
 		if err != nil {
 			return userDN, errwrap.Wrapf("LDAP search failed for detecting user: {{err}}", err)
 		}
@@ -219,7 +224,7 @@ func (c *Client) performLdapFilterGroupsSearch(cfg *ConfigEntry, conn Connection
 		c.Logger.Debug("searching", "groupdn", cfg.GroupDN, "rendered_query", renderedQuery.String())
 	}
 
-	result, err := conn.Search(&ldap.SearchRequest{
+	result, err := conn.SearchWithPaging(&ldap.SearchRequest{
 		BaseDN: cfg.GroupDN,
 		Scope:  ldap.ScopeWholeSubtree,
 		Filter: renderedQuery.String(),
@@ -227,7 +232,7 @@ func (c *Client) performLdapFilterGroupsSearch(cfg *ConfigEntry, conn Connection
 			cfg.GroupAttr,
 		},
 		SizeLimit: math.MaxInt32,
-	})
+	}, LDAPSearchPageSize)
 	if err != nil {
 		return nil, errwrap.Wrapf("LDAP search failed: {{err}}", err)
 	}

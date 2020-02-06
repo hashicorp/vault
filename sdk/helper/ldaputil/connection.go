@@ -14,6 +14,7 @@ type Connection interface {
 	Close()
 	Modify(modifyRequest *ldap.ModifyRequest) error
 	Search(searchRequest *ldap.SearchRequest) (*ldap.SearchResult, error)
+	SearchWithPaging(searchRequest *ldap.SearchRequest, pagingSize uint32) (*ldap.SearchResult, error)
 	StartTLS(config *tls.Config) error
 	SetTimeout(timeout time.Duration)
 	UnauthenticatedBind(username string) error
