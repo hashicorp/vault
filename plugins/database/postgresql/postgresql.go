@@ -27,10 +27,6 @@ ALTER ROLE "{{name}}" VALID UNTIL '{{expiration}}';
 	defaultPostgresRotateRootCredentialsSQL = `
 ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
 `
-
-	defaultPostgresRotateCredentialsSQL = `
-ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';
-`
 )
 
 var _ dbplugin.Database = &PostgreSQL{}
@@ -149,6 +145,7 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Sta
 
 			m := map[string]string{
 				"name":     staticUser.Username,
+				"username": staticUser.Username,
 				"password": password,
 			}
 			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
@@ -217,6 +214,7 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 
 			m := map[string]string{
 				"name":       username,
+				"username":   username,
 				"password":   password,
 				"expiration": expirationStr,
 			}
@@ -272,6 +270,7 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 
 			m := map[string]string{
 				"name":       username,
+				"username":   username,
 				"expiration": expirationStr,
 			}
 			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
@@ -319,7 +318,8 @@ func (p *PostgreSQL) customRevokeUser(ctx context.Context, username string, revo
 			}
 
 			m := map[string]string{
-				"name": username,
+				"name":     username,
+				"username": username,
 			}
 			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return err
@@ -479,6 +479,7 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 				continue
 			}
 			m := map[string]string{
+				"name":     p.Username,
 				"username": p.Username,
 				"password": password,
 			}

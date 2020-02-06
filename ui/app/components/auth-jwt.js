@@ -109,13 +109,14 @@ export default Component.extend({
   },
 
   exchangeOIDC: task(function*(event, oidcWindow) {
-    if (event.key !== 'oidcState') {
+    let oidcState = event.storageArea.getItem('oidcState');
+    if (oidcState === null || oidcState === undefined) {
       return;
     }
     this.onLoading(true);
     // get the info from the event fired by the other window and
     // then remove it from localStorage
-    let { namespace, path, state, code } = JSON.parse(event.newValue);
+    let { namespace, path, state, code } = JSON.parse(oidcState);
     this.getWindow().localStorage.removeItem('oidcState');
 
     // defer closing of the window, but continue executing the task

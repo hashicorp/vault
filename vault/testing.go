@@ -31,6 +31,8 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/copystructure"
 
 	"golang.org/x/crypto/ed25519"
@@ -267,7 +269,7 @@ func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, handler http.Handl
 	}
 
 	switch core.seal.StoredKeysSupported() {
-	case StoredKeysNotSupported:
+	case seal.StoredKeysNotSupported:
 		barrierConfig.StoredShares = 0
 	default:
 		barrierConfig.StoredShares = 1
@@ -282,7 +284,7 @@ func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, handler http.Handl
 		BarrierConfig:  barrierConfig,
 		RecoveryConfig: recoveryConfig,
 	}
-	if core.seal.StoredKeysSupported() == StoredKeysNotSupported {
+	if core.seal.StoredKeysSupported() == seal.StoredKeysNotSupported {
 		initParams.LegacyShamirSeal = true
 	}
 	result, err := core.Initialize(context.Background(), initParams)
@@ -1056,7 +1058,11 @@ type TestClusterOptions struct {
 	FirstCoreNumber   int
 	RequireClientAuth bool
 	// SetupFunc is called after the cluster is started.
-	SetupFunc func(t testing.T, c *TestCluster)
+	SetupFunc      func(t testing.T, c *TestCluster)
+	PR1103Disabled bool
+
+	// ClusterLayers are used to override the default cluster connection layer
+	ClusterLayers cluster.NetworkLayerSet
 }
 
 var DefaultNumCores = 3
@@ -1090,6 +1096,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		numCores = DefaultNumCores
 	} else {
 		numCores = opts.NumCores
+	}
+
+	var disablePR1103 bool
+	if opts != nil && opts.PR1103Disabled {
+		disablePR1103 = true
 	}
 
 	var firstCoreNumber int
@@ -1211,7 +1222,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Subject: pkix.Name{
 				CommonName: "localhost",
 			},
-			DNSNames:    []string{"localhost"},
+			// Include host.docker.internal for the sake of benchmark-vault running on MacOS/Windows.
+			// This allows Prometheus running in docker to scrape the cluster for metrics.
+			DNSNames:    []string{"localhost", "host.docker.internal"},
 			IPAddresses: certIPs,
 			ExtKeyUsage: []x509.ExtKeyUsage{
 				x509.ExtKeyUsageServerAuth,
@@ -1296,6 +1309,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 		certGetter := reload.NewCertificateGetter(certFile, keyFile, "")
 		certGetters = append(certGetters, certGetter)
+		certGetter.Reload(nil)
 		tlsConfig := &tls.Config{
 			Certificates:   []tls.Certificate{tlsCert},
 			RootCAs:        testCluster.RootCAs,
@@ -1485,6 +1499,10 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			}
 		}
 
+		if opts != nil && opts.ClusterLayers != nil {
+			localConfig.ClusterNetworkLayer = opts.ClusterLayers.Layers()[i]
+		}
+
 		switch {
 		case localConfig.LicensingConfig != nil:
 			if pubKey != nil {
@@ -1505,6 +1523,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			t.Fatalf("err: %v", err)
 		}
 		c.coreNumber = firstCoreNumber + i
+		c.PR1103disabled = disablePR1103
 		cores = append(cores, c)
 		coreConfigs = append(coreConfigs, &localConfig)
 		if opts != nil && opts.HandlerFunc != nil {

@@ -274,124 +274,6 @@ func (s *Spread) Canonicalize() {
 	}
 }
 
-// CheckRestart describes if and when a task should be restarted based on
-// failing health checks.
-type CheckRestart struct {
-	Limit          int            `mapstructure:"limit"`
-	Grace          *time.Duration `mapstructure:"grace"`
-	IgnoreWarnings bool           `mapstructure:"ignore_warnings"`
-}
-
-// Canonicalize CheckRestart fields if not nil.
-func (c *CheckRestart) Canonicalize() {
-	if c == nil {
-		return
-	}
-
-	if c.Grace == nil {
-		c.Grace = timeToPtr(1 * time.Second)
-	}
-}
-
-// Copy returns a copy of CheckRestart or nil if unset.
-func (c *CheckRestart) Copy() *CheckRestart {
-	if c == nil {
-		return nil
-	}
-
-	nc := new(CheckRestart)
-	nc.Limit = c.Limit
-	if c.Grace != nil {
-		g := *c.Grace
-		nc.Grace = &g
-	}
-	nc.IgnoreWarnings = c.IgnoreWarnings
-	return nc
-}
-
-// Merge values from other CheckRestart over default values on this
-// CheckRestart and return merged copy.
-func (c *CheckRestart) Merge(o *CheckRestart) *CheckRestart {
-	if c == nil {
-		// Just return other
-		return o
-	}
-
-	nc := c.Copy()
-
-	if o == nil {
-		// Nothing to merge
-		return nc
-	}
-
-	if o.Limit > 0 {
-		nc.Limit = o.Limit
-	}
-
-	if o.Grace != nil {
-		nc.Grace = o.Grace
-	}
-
-	if o.IgnoreWarnings {
-		nc.IgnoreWarnings = o.IgnoreWarnings
-	}
-
-	return nc
-}
-
-// The ServiceCheck data model represents the consul health check that
-// Nomad registers for a Task
-type ServiceCheck struct {
-	Id            string
-	Name          string
-	Type          string
-	Command       string
-	Args          []string
-	Path          string
-	Protocol      string
-	PortLabel     string `mapstructure:"port"`
-	AddressMode   string `mapstructure:"address_mode"`
-	Interval      time.Duration
-	Timeout       time.Duration
-	InitialStatus string `mapstructure:"initial_status"`
-	TLSSkipVerify bool   `mapstructure:"tls_skip_verify"`
-	Header        map[string][]string
-	Method        string
-	CheckRestart  *CheckRestart `mapstructure:"check_restart"`
-	GRPCService   string        `mapstructure:"grpc_service"`
-	GRPCUseTLS    bool          `mapstructure:"grpc_use_tls"`
-}
-
-// The Service model represents a Consul service definition
-type Service struct {
-	Id           string
-	Name         string
-	Tags         []string
-	CanaryTags   []string `mapstructure:"canary_tags"`
-	PortLabel    string   `mapstructure:"port"`
-	AddressMode  string   `mapstructure:"address_mode"`
-	Checks       []ServiceCheck
-	CheckRestart *CheckRestart `mapstructure:"check_restart"`
-}
-
-func (s *Service) Canonicalize(t *Task, tg *TaskGroup, job *Job) {
-	if s.Name == "" {
-		s.Name = fmt.Sprintf("%s-%s-%s", *job.Name, *tg.Name, t.Name)
-	}
-
-	// Default to AddressModeAuto
-	if s.AddressMode == "" {
-		s.AddressMode = "auto"
-	}
-
-	// Canonicalize CheckRestart on Checks and merge Service.CheckRestart
-	// into each check.
-	for i, check := range s.Checks {
-		s.Checks[i].CheckRestart = s.CheckRestart.Merge(check.CheckRestart)
-		s.Checks[i].CheckRestart.Canonicalize()
-	}
-}
-
 // EphemeralDisk is an ephemeral disk object
 type EphemeralDisk struct {
 	Sticky  *bool
@@ -480,6 +362,38 @@ func (m *MigrateStrategy) Copy() *MigrateStrategy {
 	return nm
 }
 
+// VolumeRequest is a representation of a storage volume that a TaskGroup wishes to use.
+type VolumeRequest struct {
+	Name     string
+	Type     string
+	Source   string
+	ReadOnly bool `mapstructure:"read_only"`
+}
+
+const (
+	VolumeMountPropagationPrivate       = "private"
+	VolumeMountPropagationHostToTask    = "host-to-task"
+	VolumeMountPropagationBidirectional = "bidirectional"
+)
+
+// VolumeMount represents the relationship between a destination path in a task
+// and the task group volume that should be mounted there.
+type VolumeMount struct {
+	Volume          *string
+	Destination     *string
+	ReadOnly        *bool   `mapstructure:"read_only"`
+	PropagationMode *string `mapstructure:"propagation_mode"`
+}
+
+func (vm *VolumeMount) Canonicalize() {
+	if vm.PropagationMode == nil {
+		vm.PropagationMode = stringToPtr(VolumeMountPropagationPrivate)
+	}
+	if vm.ReadOnly == nil {
+		vm.ReadOnly = boolToPtr(false)
+	}
+}
+
 // TaskGroup is the unit of scheduling.
 type TaskGroup struct {
 	Name             *string
@@ -488,12 +402,16 @@ type TaskGroup struct {
 	Affinities       []*Affinity
 	Tasks            []*Task
 	Spreads          []*Spread
+	Volumes          map[string]*VolumeRequest
 	RestartPolicy    *RestartPolicy
 	ReschedulePolicy *ReschedulePolicy
 	EphemeralDisk    *EphemeralDisk
 	Update           *UpdateStrategy
 	Migrate          *MigrateStrategy
+	Networks         []*NetworkResource
 	Meta             map[string]string
+	Services         []*Service
+	ShutdownDelay    *time.Duration `mapstructure:"shutdown_delay"`
 }
 
 // NewTaskGroup creates a new TaskGroup.
@@ -504,6 +422,7 @@ func NewTaskGroup(name string, count int) *TaskGroup {
 	}
 }
 
+// Canonicalize sets defaults and merges settings that should be inherited from the job
 func (g *TaskGroup) Canonicalize(job *Job) {
 	if g.Name == nil {
 		g.Name = stringToPtr("")
@@ -563,13 +482,11 @@ func (g *TaskGroup) Canonicalize(job *Job) {
 	}
 
 	// Merge with default reschedule policy
-	if *job.Type == "service" {
-		defaultMigrateStrategy := &MigrateStrategy{}
-		defaultMigrateStrategy.Canonicalize()
-		if g.Migrate != nil {
-			defaultMigrateStrategy.Merge(g.Migrate)
-		}
-		g.Migrate = defaultMigrateStrategy
+	if g.Migrate == nil && *job.Type == "service" {
+		g.Migrate = &MigrateStrategy{}
+	}
+	if g.Migrate != nil {
+		g.Migrate.Canonicalize()
 	}
 
 	var defaultRestartPolicy *RestartPolicy
@@ -604,6 +521,12 @@ func (g *TaskGroup) Canonicalize(job *Job) {
 	}
 	for _, a := range g.Affinities {
 		a.Canonicalize()
+	}
+	for _, n := range g.Networks {
+		n.Canonicalize()
+	}
+	for _, s := range g.Services {
+		s.Canonicalize(nil, g, job)
 	}
 }
 
@@ -691,9 +614,11 @@ type Task struct {
 	Vault           *Vault
 	Templates       []*Template
 	DispatchPayload *DispatchPayloadConfig
+	VolumeMounts    []*VolumeMount
 	Leader          bool
 	ShutdownDelay   time.Duration `mapstructure:"shutdown_delay"`
 	KillSignal      string        `mapstructure:"kill_signal"`
+	Kind            string
 }
 
 func (t *Task) Canonicalize(tg *TaskGroup, job *Job) {
@@ -723,6 +648,9 @@ func (t *Task) Canonicalize(tg *TaskGroup, job *Job) {
 	}
 	for _, a := range t.Affinities {
 		a.Canonicalize()
+	}
+	for _, vm := range t.VolumeMounts {
+		vm.Canonicalize()
 	}
 }
 
