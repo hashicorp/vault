@@ -33,7 +33,7 @@ Usage: vault namespace delete [options] PATH
 
   Delete a namespace namespace from a parent namespace (e.g. ns1/ns2/):
 
-      $ vault namespace create -namespace=ns1 ns2
+      $ vault namespace delete -namespace=ns1 ns2
 
 ` + c.Flags().Help()
 
