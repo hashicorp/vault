@@ -161,6 +161,7 @@ func (p *PrometheusSink) AddSampleWithLabels(parts []string, val float32, labels
 			Help:        key,
 			MaxAge:      10 * time.Second,
 			ConstLabels: prometheusLabels(labels),
+			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 		})
 		p.summaries[hash] = g
 	}
