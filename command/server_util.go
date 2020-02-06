@@ -58,7 +58,7 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 		// In this case our migration seal is set so we are using it
 		// (potentially) for unwrapping. Set it on core for that purpose then
 		// exit.
-		core.SetSealsForMigration(unwrapSeal, barrierSeal, unwrapSeal)
+		core.SetSealsForMigration(nil, nil, unwrapSeal)
 		return nil
 	}
 
