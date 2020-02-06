@@ -677,7 +677,7 @@ func (n *noopAudit) Salt(ctx context.Context) (*salt.Salt, error) {
 	return salt, nil
 }
 
-func AddNoopAudit(conf *CoreConfig) {
+func AddNoopAudit(conf *CoreConfig, records **[][]byte) {
 	conf.AuditBackends = map[string]audit.Factory{
 		"noop": func(_ context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 			view := &logical.InmemStorage{}
@@ -690,6 +690,9 @@ func AddNoopAudit(conf *CoreConfig) {
 			}
 			n.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
 				SaltFunc: n.Salt,
+			}
+			if records != nil {
+				*records = &n.records
 			}
 			return n, nil
 		},
@@ -1228,7 +1231,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Subject: pkix.Name{
 				CommonName: "localhost",
 			},
-			DNSNames:    []string{"localhost"},
+			// Include host.docker.internal for the sake of benchmark-vault running on MacOS/Windows.
+			// This allows Prometheus running in docker to scrape the cluster for metrics.
+			DNSNames:    []string{"localhost", "host.docker.internal"},
 			IPAddresses: certIPs,
 			ExtKeyUsage: []x509.ExtKeyUsage{
 				x509.ExtKeyUsageServerAuth,
@@ -1313,6 +1318,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 		certGetter := reload.NewCertificateGetter(certFile, keyFile, "")
 		certGetters = append(certGetters, certGetter)
+		certGetter.Reload(nil)
 		tlsConfig := &tls.Config{
 			Certificates:   []tls.Certificate{tlsCert},
 			RootCAs:        testCluster.RootCAs,
@@ -1440,7 +1446,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	addAuditBackend := len(coreConfig.AuditBackends) == 0
 	if addAuditBackend {
-		AddNoopAudit(coreConfig)
+		AddNoopAudit(coreConfig, nil)
 	}
 
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {

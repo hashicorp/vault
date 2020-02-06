@@ -6,7 +6,7 @@
   "dependencies": {
     "@bugsnag/js": "^6.5.0",
     "@bugsnag/plugin-react": "^6.5.0",
-    "@hashicorp/nextjs-scripts": "^6.0.0-1",
+    "@hashicorp/nextjs-scripts": "^6.0.0-2",
     "@hashicorp/react-button": "^2.1.3",
     "@hashicorp/react-case-study-slider": "^2.0.4",
     "@hashicorp/react-consent-manager": "^2.0.3",
@@ -19,7 +19,7 @@
     "@hashicorp/react-image": "^2.0.1",
     "@hashicorp/react-inline-svg": "^1.0.0",
     "@hashicorp/react-mega-nav": "^4.0.1-2",
-    "@hashicorp/react-product-downloader": "^2.1.0",
+    "@hashicorp/react-product-downloader": "^2.2.1",
     "@hashicorp/react-section-header": "^2.0.0",
     "@hashicorp/react-text-and-content": "^4.0.0",
     "@hashicorp/react-use-cases": "^1.0.3",
@@ -31,7 +31,7 @@
     "imagemin-svgo": "^7.0.0",
     "isomorphic-unfetch": "^3.0.0",
     "marked": "^0.7.0",
-    "next": "^9.2.0",
+    "next": "^9.2.1",
     "nprogress": "^0.2.0",
     "react": "^16.12.0",
     "react-dom": "^16.12.0",
@@ -41,7 +41,7 @@
   "devDependencies": {
     "glob": "^7.1.6",
     "husky": "^4.2.1",
-    "inquirer": "^7.0.3",
+    "inquirer": "^7.0.4",
     "prettier": "^1.19.1"
   },
   "husky": {

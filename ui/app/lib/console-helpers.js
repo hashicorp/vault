@@ -10,7 +10,8 @@ export function extractDataAndFlags(data, flags) {
     (accumulator, val) => {
       // will be "key=value" or "-flag=value" or "foo=bar=baz"
       // split on the first =
-      let [item, value] = val.split(/=(.+)/);
+      // default to value of empty string
+      let [item, value = ''] = val.split(/=(.+)?/);
       if (item.startsWith('-')) {
         let flagName = item.replace(/^-/, '');
         if (flagName === 'wrap-ttl') {
@@ -26,7 +27,6 @@ export function extractDataAndFlags(data, flags) {
         return accumulator;
       }
       accumulator.data[item] = value;
-
       return accumulator;
     },
     { data: {}, flags: {} }
