@@ -68,6 +68,8 @@ github.com/SAP/go-hdb/internal/bufio
 github.com/SAP/go-hdb/internal/protocol
 github.com/SAP/go-hdb/internal/unicode
 github.com/SAP/go-hdb/internal/unicode/cesu8
+# github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
+github.com/Sectorbob/mlab-ns2/gae/ns/digest
 # github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6
 github.com/StackExchange/wmi
 # github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190620160927-9418d7b0cd0f
@@ -399,6 +401,8 @@ github.com/hashicorp/vault-plugin-auth-kubernetes
 github.com/hashicorp/vault-plugin-auth-oci
 # github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190814210117-e079e01fbb93
 github.com/hashicorp/vault-plugin-database-elasticsearch
+# github.com/hashicorp/vault-plugin-database-mongodbatlas v0.0.0-20200124191841-a128333dc5d5
+github.com/hashicorp/vault-plugin-database-mongodbatlas
 # github.com/hashicorp/vault-plugin-secrets-ad v0.6.2
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/client
@@ -416,9 +420,11 @@ github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
 github.com/hashicorp/vault-plugin-secrets-gcpkms
 # github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20191017213228-e8cf7060a4d0
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault/api v1.0.5-0.20200111014044-ba76c080ad1f => ./api
+# github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.0.0-20200124190647-0026e6bed4fb
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas
+# github.com/hashicorp/vault/api v1.0.5-0.20200124174203-d7d4084c8670 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20200123192413-777c45062569 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20200124174203-d7d4084c8670 => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/database/helper/credsutil
@@ -597,6 +603,10 @@ github.com/mitchellh/reflectwalk
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
 github.com/modern-go/reflect2
+# github.com/mongodb/go-client-mongodb-atlas v0.1.2
+github.com/mongodb/go-client-mongodb-atlas/mongodbatlas
+# github.com/mwielbut/pointy v1.1.0
+github.com/mwielbut/pointy
 # github.com/ncw/swift v1.0.47
 github.com/ncw/swift
 # github.com/nwaples/rardecode v1.0.0
