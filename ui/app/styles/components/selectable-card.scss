@@ -101,8 +101,7 @@
   display: grid;
   grid-template-columns: 2fr 0.5fr;
   grid-template-rows: 1fr 2fr 0.5fr;
-  // modify bottom spacing to better align with other cards
-  padding: $spacing-l 0 14px $spacing-l;
+  padding: $spacing-l 0 14px $spacing-l; // modify bottom spacing to better align with other cards
 }
 
 .change-metric-icon.is-decrease {

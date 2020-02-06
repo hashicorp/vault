@@ -9,12 +9,8 @@
 {{!-- ARG TODO: Add permission conditionals for menu dropdowns --}}
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
   {{#if (gt model.httpsRequests.length 1) }}
-    {{#let (component "metrics/selectable-card-container-graph") as |SelectableCardContainerGraph|}}
-      <SelectableCardContainerGraph @counters={{model}} @class="selectable-card-container-graph"/>
-    {{/let}}
+    <SelectableCardContainerGraph @counters={{model}} @class="selectable-card-container-graph"/>
   {{else}}
-    {{#let (component "metrics/selectable-card-container") as |SelectableCardContainer|}}
-      <SelectableCardContainer @counters={{model}} @class="selectable-card-container"/>
-    {{/let}}
+    <SelectableCardContainer @counters={{model}} @class="selectable-card-container"/>
   {{/if}}
 </div>

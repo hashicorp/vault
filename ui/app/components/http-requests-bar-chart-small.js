@@ -118,14 +118,6 @@ export default Component.extend({
       .attr('transform', `translate(0,${height})`)
       .call(xAxis);
 
-    // render the gridlines
-    const gridlines = d3Axis
-      .axisRight(yScale)
-      .tickFormat('')
-      .tickSize(0);
-
-    barChartSVG.select('.gridlines').call(gridlines);
-
     // render the bars
     const bars = barsContainer.selectAll('.bar').data(parsedCounters, c => +c.start_time);
 
