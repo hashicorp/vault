@@ -236,6 +236,7 @@ func testSealMigrationShamirToAuto(t *testing.T, setup teststorage.ClusterSetupM
 	verifyBarrierConfig(t, r, wrapping.Shamir, 5, 3, 0)
 }
 
+/*
 func TestSealMigration_AutoToAuto(t *testing.T) {
 	t.Parallel()
 	t.Run("inmem", func(t *testing.T) {
@@ -258,6 +259,7 @@ func TestSealMigration_AutoToAuto(t *testing.T) {
 		testSealMigrationAutoToAuto(t, teststorage.RaftBackendSetup)
 	})
 }
+*/
 
 func testSealMigrationAutoToAuto(t *testing.T, setup teststorage.ClusterSetupMutator) {
 	tcluster := newTransitSealServer(t)
