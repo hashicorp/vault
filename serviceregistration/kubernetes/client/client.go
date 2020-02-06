@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"sync"
 	"time"
@@ -123,15 +122,6 @@ func (c *Client) PatchPod(namespace, podName string, patches ...*Patch) error {
 
 // do executes the given request, retrying if necessary.
 func (c *Client) do(req *http.Request, ptrToReturnObj interface{}) error {
-	// Preserve the original request body so it can be viewed for debugging if needed.
-	// Reading it empties it, so we need to re-add it afterwards.
-	var reqBody []byte
-	if req.Body != nil {
-		reqBody, _ = ioutil.ReadAll(req.Body)
-		reqBodyReader := bytes.NewReader(reqBody)
-		req.Body = ioutil.NopCloser(reqBodyReader)
-	}
-
 	// Finish setting up a valid request.
 	retryableReq, err := retryablehttp.FromRequest(req)
 	if err != nil {
@@ -146,7 +136,7 @@ func (c *Client) do(req *http.Request, ptrToReturnObj interface{}) error {
 		RetryWaitMin: retryWaitMin,
 		RetryWaitMax: retryWaitMax,
 		RetryMax:     retryMax,
-		CheckRetry:   c.getCheckRetry(req, reqBody),
+		CheckRetry:   c.getCheckRetry(req),
 		Backoff:      retryablehttp.DefaultBackoff,
 	}
 	client.HTTPClient.Transport = &http.Transport{
@@ -181,7 +171,7 @@ func (c *Client) do(req *http.Request, ptrToReturnObj interface{}) error {
 	return json.NewDecoder(resp.Body).Decode(ptrToReturnObj)
 }
 
-func (c *Client) getCheckRetry(req *http.Request, reqBody []byte) retryablehttp.CheckRetry {
+func (c *Client) getCheckRetry(req *http.Request) retryablehttp.CheckRetry {
 	return func(ctx context.Context, resp *http.Response, err error) (bool, error) {
 		switch resp.StatusCode {
 		case 200, 201, 202, 204:
@@ -195,19 +185,19 @@ func (c *Client) getCheckRetry(req *http.Request, reqBody []byte) retryablehttp.
 			}
 			if config.BearerToken == c.config.BearerToken {
 				// It's the same token.
-				return false, fmt.Errorf("bad status code: %s", sanitizedDebuggingInfo(req, reqBody, resp))
+				return false, fmt.Errorf("bad status code: %s", sanitizedDebuggingInfo(req, resp.StatusCode))
 			}
 			c.config = config
 			// Continue to try again, but return the error too in case the caller would rather read it out.
-			return true, fmt.Errorf("bad status code: %s", sanitizedDebuggingInfo(req, reqBody, resp))
+			return true, fmt.Errorf("bad status code: %s", sanitizedDebuggingInfo(req, resp.StatusCode))
 		case 404:
-			return false, &ErrNotFound{debuggingInfo: sanitizedDebuggingInfo(req, reqBody, resp)}
+			return false, &ErrNotFound{debuggingInfo: sanitizedDebuggingInfo(req, resp.StatusCode)}
 		case 500, 502, 503, 504:
 			// Could be transient.
-			return true, fmt.Errorf("unexpected status code: %s", sanitizedDebuggingInfo(req, reqBody, resp))
+			return true, fmt.Errorf("unexpected status code: %s", sanitizedDebuggingInfo(req, resp.StatusCode))
 		}
 		// Unexpected.
-		return false, fmt.Errorf("unexpected status code: %s", sanitizedDebuggingInfo(req, reqBody, resp))
+		return false, fmt.Errorf("unexpected status code: %s", sanitizedDebuggingInfo(req, resp.StatusCode))
 	}
 }
 
@@ -246,11 +236,10 @@ func (e *ErrNotFound) Error() string {
 	return e.debuggingInfo
 }
 
-// sanitizedDebuggingInfo converts an http response to a string without
-// including its headers to avoid leaking authorization headers.
-func sanitizedDebuggingInfo(req *http.Request, reqBody []byte, resp *http.Response) string {
-	respBody, _ := ioutil.ReadAll(resp.Body)
-	return fmt.Sprintf("req method: %s, req url: %s, req body: %s, resp statuscode: %d, resp respBody: %s", req.Method, req.URL, reqBody, resp.StatusCode, respBody)
+// sanitizedDebuggingInfo provides a returnable string that can be used for debugging. This is intentionally somewhat vague
+// because we don't want to leak secrets that may be in a request or response body.
+func sanitizedDebuggingInfo(req *http.Request, respStatus int) string {
+	return fmt.Sprintf("req method: %s, req url: %s, resp statuscode: %d", req.Method, req.URL, respStatus)
 }
 
 // stopChContext allows us to cause requests to stop retrying if we receive
