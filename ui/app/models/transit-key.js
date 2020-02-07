@@ -7,14 +7,31 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 const { attr } = DS;
 
 const ACTION_VALUES = {
-  encrypt: ['supportsEncryption', 'Looks up wrapping properties for the given token'],
-  decrypt: ['supportsDecryption', 'Decrypts the provided ciphertext using this key'],
-  datakey: ['supportsEncryption', 'Generates a new key and value encrypted with this key'],
-  rewrap: ['supportsEncryption', 'Rewraps the ciphertext using the latest version of the named key'],
-  sign: ['supportsSigning'],
-  hmac: [true, 'Generate a data digest using a hash algorithm'],
-  verify: [true, 'Validate the provided signature for the given data'],
-  export: ['exportable'],
+  encrypt: {
+    isSupported: 'supportsEncryption',
+    description: 'Looks up wrapping properties for the given token',
+    glyph: 'lock-closed',
+  },
+  decrypt: {
+    isSupported: 'supportsDecryption',
+    description: 'Decrypts the provided ciphertext using this key',
+  },
+  datakey: {
+    isSupported: 'supportsEncryption',
+    description: 'Generates a new key and value encrypted with this key',
+  },
+  rewrap: {
+    isSupported: 'supportsEncryption',
+    description: 'Rewraps the ciphertext using the latest version of the named key',
+  },
+  sign: { isSupported: 'supportsSigning' },
+  hmac: { isSupported: true, description: 'Generate a data digest using a hash algorithm' },
+  verify: {
+    isSupported: true,
+    description: 'Validate the provided signature for the given data',
+    glyph: 'check-circle-outline',
+  },
+  export: { isSupported: 'exportable' },
 };
 
 export default DS.Model.extend({
@@ -58,9 +75,14 @@ export default DS.Model.extend({
   supportedActions: computed('type', function() {
     let actions = [];
     Object.keys(ACTION_VALUES).filter(name => {
-      const isSupported = ACTION_VALUES[name][0];
+      const keyAction = ACTION_VALUES[name];
+      const isSupported = keyAction.isSupported;
       if (typeof isSupported === 'boolean' || get(this, isSupported)) {
-        return actions.push({ name, description: ACTION_VALUES[name][1] });
+        return actions.push({
+          name,
+          description: keyAction.description,
+          glyph: keyAction.glyph,
+        });
       }
     });
     return actions;
