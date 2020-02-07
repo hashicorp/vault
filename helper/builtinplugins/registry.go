@@ -109,17 +109,17 @@ func newRegistry() *registry {
 			"alicloud":   logicalAlicloud.Factory,
 			"aws":        logicalAws.Factory,
 			"azure":      logicalAzure.Factory,
-			"cassandra":  logicalCass.Factory,
+			"cassandra":  logicalCass.Factory, // Deprecated
 			"consul":     logicalConsul.Factory,
 			"gcp":        logicalGcp.Factory,
 			"gcpkms":     logicalGcpKms.Factory,
 			"kv":         logicalKv.Factory,
-			"mongodb":    logicalMongo.Factory,
-			"mssql":      logicalMssql.Factory,
-			"mysql":      logicalMysql.Factory,
+			"mongodb":    logicalMongo.Factory, // Deprecated
+			"mssql":      logicalMssql.Factory, // Deprecated
+			"mysql":      logicalMysql.Factory, // Deprecated
 			"nomad":      logicalNomad.Factory,
 			"pki":        logicalPki.Factory,
-			"postgresql": logicalPostgres.Factory,
+			"postgresql": logicalPostgres.Factory, // Deprecated
 			"rabbitmq":   logicalRabbit.Factory,
 			"ssh":        logicalSsh.Factory,
 			"totp":       logicalTotp.Factory,
