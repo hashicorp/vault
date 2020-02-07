@@ -99,13 +99,10 @@ export default Component.extend({
     const barChartSVG = d3.select('.http-requests-bar-chart-small');
     const barsContainer = d3.select(`#bars-container-${elementId}`);
 
-    // render the chart
     d3.select('.http-requests-bar-chart')
       .attr('width', width + margin.left + margin.right)
       .attr('height', height + margin.top + margin.bottom)
       .attr('viewBox', `0 0 ${width} ${height}`);
-
-    // scale and render the axes
 
     const xAxis = d3Axis
       .axisBottom(xScale)
@@ -118,7 +115,6 @@ export default Component.extend({
       .attr('transform', `translate(0,${height})`)
       .call(xAxis);
 
-    // render the bars
     const bars = barsContainer.selectAll('.bar').data(parsedCounters, c => +c.start_time);
 
     const barsEnter = bars
@@ -141,7 +137,7 @@ export default Component.extend({
       .delay(function(d, i) {
         return i * BASE_SPEED;
       })
-      .attr('height', counter => height - yScale(counter.total) - 5)
+      .attr('height', counter => height - yScale(counter.total) - 5) // subtract 5 to provide the gap between the xAxis and the bars
       .attr('y', counter => yScale(counter.total))
       .attr('fill', counter => counter.fill_color)
       .attr('stroke', counter => counter.fill_color);

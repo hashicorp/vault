@@ -31,9 +31,7 @@ const API_PATHS = {
   },
   metrics: {
     dashboard: 'sys/internal/counters',
-    entities: 'sys/internal/counters/entities',
     requests: 'sys/internal/counters/requests',
-    tokens: 'sys/internal/counters/tokens',
   },
 };
 

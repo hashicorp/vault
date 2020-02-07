@@ -3,8 +3,7 @@
   @cardTitle="Http Requests"
   @total={{totalHttpRequests}}
   @subText="This month"
-  @gridContainer="selectable-card is-rounded is-grid-container"
-  @gridItem="selectable-card-title"
+  @gridContainer="true"
 >
   <div class="change-metric">
     <Icon @glyph="arrow-up" @size="xlm" aria-hidden="true" class="change-metric-icon {{if (gt percentChange 0) "is-increase" "is-decrease"}}"/>
