@@ -78,6 +78,7 @@
       justify-self: end;
 
       font-weight: $font-weight-semibold;
+      white-space: nowrap;
 
       @include until($mobile) {
         overflow: hidden;
