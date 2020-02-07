@@ -39,8 +39,11 @@ BUG FIXES:
 * secrets/database/postgres: Fix inconsistent query parameter names: {{name}} or {{username}} for
   different queries. Now it allows for either for backwards compatibility [[GH-8240](https://github.com/hashicorp/vault/pull/8240)]
 * secrets/pki: Support FQDNs in DNS Name [[GH-8288](https://github.com/hashicorp/vault/pull/8288)]
-* storage/mysql: Fix potential crash when using MySQL as coordination for high availability [GH-8229]
+* storage/mysql: Fix potential crash when using MySQL as coordination for high availability [[GH-8229](https://github.com/hashicorp/vault/pull/8229)]
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
+* telemetry: Prometheus requests on standby nodes will now return an error instead of forwarding 
+  the request to the active node [[GH-8280](https://github.com/hashicorp/vault/pull/8280)]
+* cli: Support autocompletion for nested mounts [[GH-8303](https://github.com/hashicorp/vault/pull/8303)]
 
 
 ## 1.3.3 (Unreleased)
