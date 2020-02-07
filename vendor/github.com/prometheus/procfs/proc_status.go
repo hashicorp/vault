@@ -15,19 +15,22 @@ package procfs
 
 import (
 	"bytes"
-	"io/ioutil"
-	"os"
 	"strconv"
 	"strings"
+
+	"github.com/prometheus/procfs/internal/util"
 )
 
-// ProcStat provides status information about the process,
+// ProcStatus provides status information about the process,
 // read from /proc/[pid]/stat.
 type ProcStatus struct {
 	// The process ID.
 	PID int
 	// The process name.
 	Name string
+
+	// Thread group ID.
+	TGID int
 
 	// Peak virtual memory size.
 	VmPeak uint64
@@ -72,13 +75,7 @@ type ProcStatus struct {
 
 // NewStatus returns the current status information of the process.
 func (p Proc) NewStatus() (ProcStatus, error) {
-	f, err := os.Open(p.path("status"))
-	if err != nil {
-		return ProcStatus{}, err
-	}
-	defer f.Close()
-
-	data, err := ioutil.ReadAll(f)
+	data, err := util.ReadFileNoStat(p.path("status"))
 	if err != nil {
 		return ProcStatus{}, err
 	}
@@ -113,6 +110,8 @@ func (p Proc) NewStatus() (ProcStatus, error) {
 
 func (s *ProcStatus) fillStatus(k string, vString string, vUint uint64, vUintBytes uint64) {
 	switch k {
+	case "Tgid":
+		s.TGID = int(vUint)
 	case "Name":
 		s.Name = vString
 	case "VmPeak":

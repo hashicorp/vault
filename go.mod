@@ -18,7 +18,7 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190620160927-9418d7b0cd0f
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 	github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
-	github.com/armon/go-metrics v0.3.0
+	github.com/armon/go-metrics v0.3.1
 	github.com/armon/go-proxyproto v0.0.0-20190211145416-68259f75880e
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf
@@ -29,6 +29,7 @@ require (
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/coreos/go-semver v0.2.0
+	github.com/coreos/go-systemd v0.0.0-20181012123002-c6f51f82210d // indirect
 	github.com/denisenkom/go-mssqldb v0.0.0-20190412130859-3b1d194e553a
 	github.com/dnaeon/go-vcr v1.0.1 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
@@ -42,12 +43,14 @@ require (
 	github.com/go-ldap/ldap/v3 v3.1.3
 	github.com/go-ole/go-ole v1.2.1 // indirect
 	github.com/go-sql-driver/mysql v1.4.1
+	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/go-test/deep v1.0.2
 	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/protobuf v1.3.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.0.0-20190816035513-b52628e82e2a
+	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/hashicorp/consul-template v0.22.0
 	github.com/hashicorp/consul/api v1.2.1-0.20200128105449-6681be918a6e
 	github.com/hashicorp/errwrap v1.0.0
@@ -95,6 +98,7 @@ require (
 	github.com/joyent/triton-go v0.0.0-20190112182421-51ffac552869
 	github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f
 	github.com/kr/pretty v0.1.0
+	github.com/kr/pty v1.1.3 // indirect
 	github.com/kr/text v0.1.0
 	github.com/lib/pq v1.2.0
 	github.com/mattn/go-colorable v0.1.4
@@ -116,8 +120,8 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/posener/complete v1.2.1
 	github.com/pquerna/otp v1.2.1-0.20191009055518-468c2dd2b58d
-	github.com/prometheus/client_golang v1.0.0
-	github.com/prometheus/common v0.4.1
+	github.com/prometheus/client_golang v1.4.0
+	github.com/prometheus/common v0.9.1
 	github.com/ryanuber/columnize v2.1.0+incompatible
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec
