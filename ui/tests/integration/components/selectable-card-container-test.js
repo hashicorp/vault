@@ -18,8 +18,11 @@ module('Integration | Component | selectable-card-container', function(hooks) {
 
   test('it renders', async function(assert) {
     await render(hbs`<SelectableCardContainer @counters={{model}}/>`);
-    // the component due to CSS issues does not use the classNames in the route file
-    // thus the test is unable to select by the class name of the component
+    assert.dom('.selectable-card-container').exists();
+  });
+
+  test('it renders 3 selectable cards', async function(assert) {
+    await render(hbs`<SelectableCardContainer @counters={{model}}/>`);
     assert.dom('.selectable-card').exists({ count: 3 });
   });
 });

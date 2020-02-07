@@ -9,8 +9,8 @@
 {{!-- ARG TODO: Add permission conditionals for menu dropdowns --}}
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
   {{#if (gt model.httpsRequests.length 1) }}
-    <SelectableCardContainerGraph @counters={{model}} @class="selectable-card-container-graph"/>
+    <SelectableCardContainerGraph @counters={{model}}/>
   {{else}}
-    <SelectableCardContainer @counters={{model}} @class="selectable-card-container"/>
+    <SelectableCardContainer @counters={{model}} />
   {{/if}}
 </div>

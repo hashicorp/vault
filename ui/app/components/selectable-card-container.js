@@ -15,6 +15,7 @@ import { computed } from '@ember/object';
  */
 
 export default Component.extend({
+  classNames: ['selectable-card-container'],
   totalHttpRequests: computed('counters', function() {
     let httpsRequestsArray = this.counters.httpsRequests || [];
     return httpsRequestsArray.firstObject.total;
