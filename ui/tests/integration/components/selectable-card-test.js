@@ -3,24 +3,28 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | /metrics/selectable-card', function(hooks) {
+const TOTAL = 15;
+const CARD_TITLE = 'Tokens';
+
+module('Integration | Component meep', function(hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
-    // Set any properties with this.set('myProperty', 'value');
-    // Handle any actions with this.set('myAction', function(val) { ... });
+  hooks.beforeEach(function() {
+    this.set('total', TOTAL);
+    this.set('cardTitle', CARD_TITLE);
+  });
 
-    await render(hbs`{{/metrics/selectable-card}}`);
+  test('the total number renders', async function(assert) {
+    await render(hbs`<SelectableCard @total={{total}} @cardTitle={{cardTitle}}/>`);
+    let titleNumber = this.element.querySelector('.title-number').innerText;
 
-    assert.equal(this.element.textContent.trim(), '');
+    assert.equal(titleNumber, 15);
+  });
 
-    // Template block usage:
-    await render(hbs`
-      {{#/metrics/selectable-card}}
-        template block text
-      {{//metrics/selectable-card}}
-    `);
+  test('if total is 1, return non-plural version of card title', async function(assert) {
+    await render(hbs`<SelectableCard @total={{1}} @cardTitle={{cardTitle}}/>`);
+    let titleText = this.element.querySelector('.title').innerText;
 
-    assert.equal(this.element.textContent.trim(), 'template block text');
+    assert.equal(titleText, 'Token');
   });
 });
