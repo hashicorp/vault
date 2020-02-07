@@ -19,8 +19,8 @@ import (
 	"github.com/NYTimes/gziphandler"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-sockaddr"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -131,8 +131,10 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
 		mux.Handle("/v1/sys/leader", handleSysLeader(core))
 		mux.Handle("/v1/sys/health", handleSysHealth(core))
-		mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy)))
-		mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core, handleSysGenerateRootUpdate(core, vault.GenerateStandardRootTokenStrategy)))
+		mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core,
+			handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))
+		mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core,
+			handleAuditNonLogical(core, handleSysGenerateRootUpdate(core, vault.GenerateStandardRootTokenStrategy))))
 		mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
 		mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
 		mux.Handle("/v1/sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
@@ -160,6 +162,8 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		// Register metrics path without authentication if enabled
 		if props.UnauthenticatedMetricsAccess {
 			mux.Handle("/v1/sys/metrics", handleMetricsUnauthenticated(core))
+		} else {
+			mux.Handle("/v1/sys/metrics", handleLogicalNoForward(core))
 		}
 
 		additionalRoutes(mux, core)
@@ -179,6 +183,69 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	}
 
 	return printablePathCheckHandler
+}
+
+type copyResponseWriter struct {
+	wrapped    http.ResponseWriter
+	statusCode int
+	body       *bytes.Buffer
+}
+
+// newCopyResponseWriter returns an initialized newCopyResponseWriter
+func newCopyResponseWriter(wrapped http.ResponseWriter) *copyResponseWriter {
+	w := &copyResponseWriter{
+		wrapped:    wrapped,
+		body:       new(bytes.Buffer),
+		statusCode: 200,
+	}
+	return w
+}
+
+func (w *copyResponseWriter) Header() http.Header {
+	return w.wrapped.Header()
+}
+
+func (w *copyResponseWriter) Write(buf []byte) (int, error) {
+	w.body.Write(buf)
+	return w.wrapped.Write(buf)
+}
+
+func (w *copyResponseWriter) WriteHeader(code int) {
+	w.statusCode = code
+	w.wrapped.WriteHeader(code)
+}
+
+func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origBody := new(bytes.Buffer)
+		reader := ioutil.NopCloser(io.TeeReader(r.Body, origBody))
+		r.Body = reader
+		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+		if err != nil || status != 0 {
+			respondError(w, status, err)
+			return
+		}
+		if origBody != nil {
+			r.Body = ioutil.NopCloser(origBody)
+		}
+		input := &logical.LogInput{
+			Request: req,
+		}
+
+		core.AuditLogger().AuditRequest(r.Context(), input)
+		cw := newCopyResponseWriter(w)
+		h.ServeHTTP(cw, r)
+		data := make(map[string]interface{})
+		err = jsonutil.DecodeJSON(cw.body.Bytes(), &data)
+		if err != nil {
+			// best effort, ignore
+		}
+		httpResp := &logical.HTTPResponse{Data: data, Headers: cw.Header()}
+		input.Response = logical.HTTPResponseToLogicalResponse(httpResp)
+		core.AuditLogger().AuditResponse(r.Context(), input)
+		return
+	})
+
 }
 
 // wrapGenericHandler wraps the handler with an extra layer of handler where

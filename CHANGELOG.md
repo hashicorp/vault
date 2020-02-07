@@ -10,6 +10,7 @@ IMPROVEMENTS:
 * agent: add option to force the use of the auth-auth token, and ignore the Vault token in the request [[GH-8101](https://github.com/hashicorp/vault/pull/8101)]
 * audit: HMAC http_raw_body in audit log; this ensures that large authenticated Prometheus metrics responses get
   replaced with short HMAC values [[GH-8130](https://github.com/hashicorp/vault/pull/8130)]
+* audit: Generate-root, generate-recovery-token, and generate-dr-operation-token requests and responses are now audited. [[GH-8301](https://github.com/hashicorp/vault/pull/8301)]
 * auth/jwt: Additional OIDC callback parameters available for CLI logins [[GH-80](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/80) & [GH-86](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/86)]
 * auth/jwt: Bound claims may be optionally configured using globs [[GH-89](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/89)]
 * aws: Add support for v2 of the instance metadata service (see [issue 7924](https://github.com/hashicorp/vault/issues/7924) for all linked PRs)
@@ -38,7 +39,11 @@ BUG FIXES:
 * secrets/database/postgres: Fix inconsistent query parameter names: {{name}} or {{username}} for
   different queries. Now it allows for either for backwards compatibility [[GH-8240](https://github.com/hashicorp/vault/pull/8240)]
 * secrets/pki: Support FQDNs in DNS Name [[GH-8288](https://github.com/hashicorp/vault/pull/8288)]
-* storage/mysql: Fix potential crash when using MySQL as coordination for high availability [GH-8229]
+* storage/mysql: Fix potential crash when using MySQL as coordination for high availability [[GH-8229](https://github.com/hashicorp/vault/pull/8229)]
+* ui: Update CLI to accept empty strings as param value to reset previously-set values
+* telemetry: Prometheus requests on standby nodes will now return an error instead of forwarding 
+  the request to the active node [[GH-8280](https://github.com/hashicorp/vault/pull/8280)]
+* cli: Support autocompletion for nested mounts [[GH-8303](https://github.com/hashicorp/vault/pull/8303)]
 
 
 ## 1.3.3 (Unreleased)
