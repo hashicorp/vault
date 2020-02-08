@@ -193,6 +193,56 @@ func TestMyInfluxdb_RenewUser(t *testing.T) {
 	}
 }
 
+// TestInfluxdb_RevokeDeletedUser tests attempting to revoke a user that was
+// deleted externally. Guards against a panic, see
+// https://github.com/hashicorp/vault/issues/6734
+func TestInfluxdb_RevokeDeletedUser(t *testing.T) {
+	if os.Getenv("VAULT_ACC") == "" {
+		t.SkipNow()
+	}
+	cleanup, address, port := prepareInfluxdbTestContainer(t)
+
+	connectionDetails := map[string]interface{}{
+		"host":     address,
+		"port":     port,
+		"username": "influx-root",
+		"password": "influx-root",
+	}
+
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	statements := dbplugin.Statements{
+		Creation: []string{testInfluxRole},
+	}
+
+	usernameConfig := dbplugin.UsernameConfig{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if err = testCredsExist(t, address, port, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
+	// call cleanup to remove database
+	cleanup()
+
+	// attempt to revoke the user after database is gone
+	err = db.RevokeUser(context.Background(), statements, username)
+	if err == nil {
+		t.Fatalf("Expected err, got nil")
+	}
+}
+
 func TestInfluxdb_RevokeUser(t *testing.T) {
 	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
@@ -301,7 +351,7 @@ func testCredsExist(t testing.TB, address string, port int, username, password s
 	if err != nil {
 		return errwrap.Wrapf("error querying influxdb server: {{err}}", err)
 	}
-	if response.Error() != nil {
+	if response != nil && response.Error() != nil {
 		return errwrap.Wrapf("error using the correct influx database: {{err}}", response.Error())
 	}
 	return nil
