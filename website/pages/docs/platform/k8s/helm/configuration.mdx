@@ -10,7 +10,7 @@ description: This section documents configuration options for the Vault Helm cha
 ~> **Important Note:** This chart is not compatible with Helm 3. Please use Helm 2 with this chart.
 
 The chart is highly customizable using
-[Helm configuration values](https://docs.helm.sh/using_helm/#customizing-the-chart-before-installing).
+[Helm configuration values](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing).
 Each value has a default tuned for an optimal getting started experience
 with Vault. Before going into production, please review the parameters below
 and consider if they're appropriate for your deployment.
@@ -141,7 +141,7 @@ and consider if they're appropriate for your deployment.
 
       - `enabled` (`boolean: true`) - When set to `true`, a readiness probe will be applied to the Vault pods.
 
-      - `path` (`string: ""`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe. The http/https scheme is controled by the `tlsDisable` value.
+      - `path` (`string: ""`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe. The http/https scheme is controlled by the `tlsDisable` value.
 
     ```yaml
     readinessProbe:
@@ -153,7 +153,7 @@ and consider if they're appropriate for your deployment.
 
       - `enabled` (`boolean: false`) - When set to `true`, a liveliness probe will be applied to the Vault pods.
 
-      - `path` (`string: "/v1/sys/health?standbyok=true"`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe. The http/https scheme is controled by the `tlsDisable` value.
+      - `path` (`string: "/v1/sys/health?standbyok=true"`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe. The http/https scheme is controlled by the `tlsDisable` value.
 
       - `initialDelaySeconds` (`int: 60`) - Sets the initial delay of the liveliness probe when the container starts.
 
@@ -397,7 +397,7 @@ and consider if they're appropriate for your deployment.
         The number of pods to deploy to create a highly available cluster of Vault servers.
 
       - `updatePartition` (`int: 0`) -
-        If an updatePartition is specified, all Pods with an ordinal that is greater than or equal to the partition will be updated when the StatefulSet’s `.spec.template` is updated. If set to `0`, this disables parition updates. For more information see the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#rolling-updates).
+        If an updatePartition is specified, all Pods with an ordinal that is greater than or equal to the partition will be updated when the StatefulSet’s `.spec.template` is updated. If set to `0`, this disables partition updates. For more information see the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#rolling-updates).
 
       - `config` (`string: "{}"`) -
         A raw string of extra HCL or JSON [configuration](/docs/configuration) for Vault servers.
