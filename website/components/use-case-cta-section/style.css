@@ -12,6 +12,10 @@
   text-align: center;
   color: var(--white);
 
+  & .g-btn {
+    padding: 14px 20px;
+  }
+  
   & .g-btn.white {
     background: var(--white);
     border: 2px solid var(--white);
