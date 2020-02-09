@@ -246,8 +246,18 @@ func (p *Predict) vaultPaths(includeFiles bool) complete.PredictFunc {
 
 		path := args.Last
 
+		// Trim path with potential mount
+		var relativePath string
+		for _, mount := range p.mounts() {
+			if strings.HasPrefix(path, mount) {
+				relativePath = strings.TrimPrefix(path, mount+"/")
+				break
+			}
+		}
+
+		// Predict path or mount depending on path separator
 		var predictions []string
-		if strings.Contains(path, "/") {
+		if strings.Contains(relativePath, "/") {
 			predictions = p.paths(path, includeFiles)
 		} else {
 			predictions = p.filter(p.mounts(), path)
