@@ -23,10 +23,6 @@ func (c *NamespaceLookupCommand) Help() string {
 	helpText := `
 Usage: vault namespace lookup [options] PATH
 
-  Create a child namespace. The namespace created will be relative to the
-  namespace provided in either the VAULT_NAMESPACE environment variable or
-  -namespace CLI flag.
-
   Get information about the namespace of the locally authenticated token:
 
       $ vault namespace lookup
