@@ -16,7 +16,7 @@ const ACTION_VALUES = {
     isSupported: 'supportsDecryption',
     description: 'Decrypts the provided ciphertext using this key',
   },
-  datakey: {
+  'data-key': {
     isSupported: 'supportsEncryption',
     description: 'Generates a new key and value encrypted with this key',
   },
@@ -35,7 +35,7 @@ const ACTION_VALUES = {
     description: 'Validate the provided signature for the given data',
     glyph: 'check-circle-outline',
   },
-  export: { isSupported: 'exportable', description: 'Get the named key', glyph: 'exit' },
+  'export-key': { isSupported: 'exportable', description: 'Get the named key', glyph: 'exit' },
 };
 
 export default DS.Model.extend({

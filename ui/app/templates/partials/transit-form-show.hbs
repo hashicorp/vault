@@ -8,6 +8,7 @@
           replace=true
           queryParams=(query-params tab='actions')
           data-test-transit-link="actions"
+          data-test-transit-key-actions-link=true
           }}
           Key Actions
         {{/secret-link}}
@@ -75,6 +76,7 @@
         model.id
         queryParams=(hash action=supportedAction.name)
         class="transit-card"
+        data-test-transit-card=supportedAction.name
       }}
         <div class="transit-icon">
           <Icon
@@ -85,7 +87,7 @@
         </div>
         <div class="transit-description">
           <h2 class="title is-6">
-            {{capitalize supportedAction.name}}
+            {{humanize supportedAction.name}}
           </h2>
           <p class="transit-action-description">{{supportedAction.description}}</p>
         </div>
