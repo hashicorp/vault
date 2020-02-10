@@ -178,11 +178,6 @@ export default Component.extend(TRANSIT_PARAMS, {
       arr.forEach(param => this.set(param, null));
     },
 
-    toggleModal() {
-      console.log('close');
-      this.toggleProperty('isModalActive');
-    },
-
     doSubmit(data, options = {}) {
       const { backend, id } = this.getModelInfo();
       const action = this.get('selectedAction');
