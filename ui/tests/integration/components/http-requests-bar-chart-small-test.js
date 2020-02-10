@@ -17,9 +17,10 @@ module('Integration | Component | http-requests-bar-chart-small', function(hooks
     this.set('filteredHttpsRequests', FILTERED_HTTPS_REQUESTS);
   });
 
-  test('it renders', async function(assert) {
+  test('it renders and the correct number of bars are showing', async function(assert) {
     await render(hbs`<HttpRequestsBarChartSmall @counters={{filteredHttpsRequests}}/>`);
 
+    assert.dom('rect').exists({ count: FILTERED_HTTPS_REQUESTS.length });
     assert.dom('.http-requests-bar-chart-small').exists();
   });
 });

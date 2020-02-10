@@ -14,6 +14,7 @@ import { computed } from '@ember/object';
  */
 
 export default Component.extend({
+  tagName: '', // do not wrap component with div
   cardTitleComputed: computed('type', function() {
     let cardTitle = this.cardTitle || '';
     let total = this.total || '';
@@ -22,6 +23,15 @@ export default Component.extend({
       return total !== 1 ? 'Tokens' : 'Token';
     } else if (cardTitle === 'Entities') {
       return total !== 1 ? 'Entities' : 'Entity';
+    }
+
+    return cardTitle;
+  }),
+  cardTitleTesting: computed('type', function() {
+    let cardTitle = this.cardTitle || '';
+
+    if (cardTitle === 'Http Requests') {
+      return 'Requests';
     }
 
     return cardTitle;

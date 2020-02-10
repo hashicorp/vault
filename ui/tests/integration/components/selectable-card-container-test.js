@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, pauseTest } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 const MODEL = {
@@ -21,8 +21,12 @@ module('Integration | Component | selectable-card-container', function(hooks) {
     assert.dom('.selectable-card-container').exists();
   });
 
-  test('it renders 3 selectable cards', async function(assert) {
+  test('it renders a card for each of the models and titles are returned', async function(assert) {
     await render(hbs`<SelectableCardContainer @counters={{model}}/>`);
     assert.dom('.selectable-card').exists({ count: 3 });
+
+    assert.dom(`[data-test-selectable-card-title=Requests]`).exists();
+    assert.dom(`[data-test-selectable-card-title=Entities]`).exists();
+    assert.dom(`[data-test-selectable-card-title=Tokens]`).exists();
   });
 });

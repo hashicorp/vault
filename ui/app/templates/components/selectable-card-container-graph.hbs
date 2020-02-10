@@ -1,5 +1,4 @@
 <SelectableCard
-  @class="grid-item-http"
   @cardTitle="Http Requests"
   @total={{totalHttpRequests}}
   @subText="This month"
@@ -7,15 +6,18 @@
 >
   <div class="change-metric">
     <Icon @glyph="arrow-up" @size="xlm" aria-hidden="true" class="change-metric-icon {{if (gt percentChange 0) "is-increase" "is-decrease"}}"/>
+    {{#if (gt percentChange 0)}}
+    <p class="has-text-grey is-size-4 amount-change">+{{percentChange}}%</p>
+    {{else}}
     <p class="has-text-grey is-size-4 amount-change">{{percentChange}}%</p>
+    {{/if}}
     <p class="has-text-grey is-size-6 item-c">Since last month</p>
   </div>
   <HttpRequestsBarChartSmall @counters={{filteredHttpsRequests}} class="chart"/>
-  {{#link-to "vault.cluster.metrics.http-requests" class="card-details"}}View Details{{/link-to}}
+  {{#link-to "vault.cluster.metrics.http-requests" class="card-details"}} View Details {{/link-to}}
 </SelectableCard>
 
 <SelectableCard 
-  @class="selectable-card width-medium is-rounded"
   @cardTitle="Entities" 
   @total={{counters.totalEntities}}
   @subText="Total"
@@ -43,7 +45,6 @@
 </SelectableCard>
 
 <SelectableCard 
-  @class="selectable-card width-medium is-rounded"
   @cardTitle="Tokens"  
   @total={{counters.totalTokens}}
   @subText="Total"

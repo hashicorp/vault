@@ -3,8 +3,6 @@ import d3 from 'd3-selection';
 import d3Scale from 'd3-scale';
 import d3Axis from 'd3-axis';
 import d3TimeFormat from 'd3-time-format';
-import d3Transition from 'd3-transition';
-import d3Ease from 'd3-ease';
 import { assign } from '@ember/polyfills';
 import { computed } from '@ember/object';
 import { run } from '@ember/runloop';
@@ -29,8 +27,6 @@ import { task, waitForEvent } from 'ember-concurrency';
  */
 
 const HEIGHT = 125;
-const BASE_SPEED = 150;
-const DURATION = BASE_SPEED * 2;
 const UI_GRAY_300 = '#bac1cc';
 const UI_GRAY_100 = '#ebeef2';
 
@@ -45,7 +41,7 @@ export default Component.extend({
     return HEIGHT - margin.top - margin.bottom;
   },
   parsedCounters: computed('counters', function() {
-    // parse the start times so bars and ticks display properly
+    // parse the start times so bars display properly
     const { counters } = this;
     counters.reverse();
     return counters.map((counter, index) => {
@@ -122,21 +118,11 @@ export default Component.extend({
       .append('rect')
       .attr('class', 'bar');
 
-    const t = d3Transition
-      .transition()
-      .duration(DURATION)
-      .ease(d3Ease.easeQuad);
-
     bars
       .merge(barsEnter)
       .attr('x', counter => xScale(counter.start_time))
-      // set the initial y value to 0 so the bars animate upwards
       .attr('y', () => yScale(0))
       .attr('width', xScale.bandwidth())
-      .transition(t)
-      .delay(function(d, i) {
-        return i * BASE_SPEED;
-      })
       .attr('height', counter => height - yScale(counter.total) - 5) // subtract 5 to provide the gap between the xAxis and the bars
       .attr('y', counter => yScale(counter.total))
       .attr('fill', counter => counter.fill_color)

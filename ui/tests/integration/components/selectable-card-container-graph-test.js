@@ -42,7 +42,7 @@ module('Integration | Component | selectable-card-container-graph', function(hoo
     assert.dom('.selectable-card').exists({ count: 3 });
   });
 
-  test('only 12 months of data are sent in filteredHttpsRequests', async function(assert) {
+  test('it only renders a bar chart with the last 12 months of data', async function(assert) {
     await render(hbs`<SelectableCardContainerGraph @counters={{model}}/>`);
     assert.dom('rect').exists({ count: 12 });
   });
