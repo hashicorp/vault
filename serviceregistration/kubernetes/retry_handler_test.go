@@ -44,19 +44,18 @@ func TestRetryHandlerSimple(t *testing.T) {
 	}
 
 	r := &retryHandler{
-		logger:    logger,
-		namespace: kubetest.ExpectedNamespace,
-		podName:   kubetest.ExpectedPodName,
-		client:    c,
+		logger:         logger,
+		namespace:      kubetest.ExpectedNamespace,
+		podName:        kubetest.ExpectedPodName,
+		client:         c,
+		patchesToRetry: make(map[string]*client.Patch),
 	}
 	go r.Run(shutdownCh, wait)
 
 	if testState.NumPatches() != 0 {
 		t.Fatal("expected no current patches")
 	}
-	if err := r.Add(testPatch); err != nil {
-		t.Fatal(err)
-	}
+	r.Add(testPatch)
 	// Wait ample until the next try should have occurred.
 	<-time.NewTimer(retryFreq * 2).C
 	if testState.NumPatches() != 1 {
@@ -66,9 +65,10 @@ func TestRetryHandlerSimple(t *testing.T) {
 
 func TestRetryHandlerAdd(t *testing.T) {
 	r := &retryHandler{
-		logger:    hclog.NewNullLogger(),
-		namespace: "some-namespace",
-		podName:   "some-pod-name",
+		logger:         hclog.NewNullLogger(),
+		namespace:      "some-namespace",
+		podName:        "some-pod-name",
+		patchesToRetry: make(map[string]*client.Patch),
 	}
 
 	testPatch1 := &client.Patch{
@@ -93,85 +93,67 @@ func TestRetryHandlerAdd(t *testing.T) {
 	}
 
 	// Should be able to add all 4 patches.
-	if err := r.Add(testPatch1); err != nil {
-		t.Fatal(err)
-	}
+	r.Add(testPatch1)
 	if len(r.patchesToRetry) != 1 {
 		t.Fatal("expected 1 patch")
 	}
 
-	if err := r.Add(testPatch2); err != nil {
-		t.Fatal(err)
-	}
+	r.Add(testPatch2)
 	if len(r.patchesToRetry) != 2 {
 		t.Fatal("expected 2 patches")
 	}
 
-	if err := r.Add(testPatch3); err != nil {
-		t.Fatal(err)
-	}
+	r.Add(testPatch3)
 	if len(r.patchesToRetry) != 3 {
 		t.Fatal("expected 3 patches")
 	}
 
-	if err := r.Add(testPatch4); err != nil {
-		t.Fatal(err)
-	}
+	r.Add(testPatch4)
 	if len(r.patchesToRetry) != 4 {
 		t.Fatal("expected 4 patches")
 	}
 
 	// Adding a dupe should result in no change.
-	if err := r.Add(testPatch4); err != nil {
-		t.Fatal(err)
-	}
+	r.Add(testPatch4)
 	if len(r.patchesToRetry) != 4 {
 		t.Fatal("expected 4 patches")
 	}
 
 	// Adding a reversion should result in its twin being subtracted.
-	if err := r.Add(&client.Patch{
+	r.Add(&client.Patch{
 		Operation: client.Add,
 		Path:      "four",
 		Value:     "false",
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if len(r.patchesToRetry) != 3 {
-		t.Fatal("expected 3 patches")
+	})
+	if len(r.patchesToRetry) != 4 {
+		t.Fatal("expected 4 patches")
 	}
 
-	if err := r.Add(&client.Patch{
+	r.Add(&client.Patch{
 		Operation: client.Add,
 		Path:      "three",
 		Value:     "false",
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if len(r.patchesToRetry) != 2 {
-		t.Fatal("expected 2 patches")
+	})
+	if len(r.patchesToRetry) != 4 {
+		t.Fatal("expected 4 patches")
 	}
 
-	if err := r.Add(&client.Patch{
+	r.Add(&client.Patch{
 		Operation: client.Add,
 		Path:      "two",
 		Value:     "false",
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if len(r.patchesToRetry) != 1 {
-		t.Fatal("expected 1 patches")
+	})
+	if len(r.patchesToRetry) != 4 {
+		t.Fatal("expected 4 patches")
 	}
 
-	if err := r.Add(&client.Patch{
+	r.Add(&client.Patch{
 		Operation: client.Add,
 		Path:      "one",
 		Value:     "false",
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if len(r.patchesToRetry) != 0 {
-		t.Fatal("expected 0 patches")
+	})
+	if len(r.patchesToRetry) != 4 {
+		t.Fatal("expected 4 patches")
 	}
 }
 
@@ -205,10 +187,11 @@ func TestRetryHandlerRacesAndDeadlocks(t *testing.T) {
 	}
 
 	r := &retryHandler{
-		logger:    logger,
-		namespace: kubetest.ExpectedNamespace,
-		podName:   kubetest.ExpectedPodName,
-		client:    c,
+		logger:         logger,
+		namespace:      kubetest.ExpectedNamespace,
+		podName:        kubetest.ExpectedPodName,
+		client:         c,
+		patchesToRetry: make(map[string]*client.Patch),
 	}
 	go r.Run(shutdownCh, wait)
 
@@ -220,10 +203,7 @@ func TestRetryHandlerRacesAndDeadlocks(t *testing.T) {
 	for i := 0; i < numRoutines; i++ {
 		go func() {
 			<-start
-			if err := r.Add(testPatch); err != nil {
-				t.Log(err)
-				t.Fail()
-			}
+			r.Add(testPatch)
 			done <- true
 		}()
 	}

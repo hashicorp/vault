@@ -38,9 +38,10 @@ func NewServiceRegistration(config map[string]string, logger hclog.Logger, state
 		podName:      podName,
 		initialState: state,
 		retryHandler: &retryHandler{
-			logger:    logger,
-			namespace: namespace,
-			podName:   podName,
+			logger:         logger,
+			namespace:      namespace,
+			podName:        podName,
+			patchesToRetry: make(map[string]*client.Patch),
 		},
 	}, nil
 }
@@ -130,47 +131,48 @@ func (r *serviceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGro
 }
 
 func (r *serviceRegistration) NotifyActiveStateChange(isActive bool) error {
-	return r.notifyOrRetry(&client.Patch{
+	r.notifyOrRetry(&client.Patch{
 		Operation: client.Replace,
 		Path:      pathToLabels + labelActive,
 		Value:     strconv.FormatBool(isActive),
 	})
+	return nil
 }
 
 func (r *serviceRegistration) NotifySealedStateChange(isSealed bool) error {
-	return r.notifyOrRetry(&client.Patch{
+	r.notifyOrRetry(&client.Patch{
 		Operation: client.Replace,
 		Path:      pathToLabels + labelSealed,
 		Value:     strconv.FormatBool(isSealed),
 	})
+	return nil
 }
 
 func (r *serviceRegistration) NotifyPerformanceStandbyStateChange(isStandby bool) error {
-	return r.notifyOrRetry(&client.Patch{
+	r.notifyOrRetry(&client.Patch{
 		Operation: client.Replace,
 		Path:      pathToLabels + labelPerfStandby,
 		Value:     strconv.FormatBool(isStandby),
 	})
+	return nil
 }
 
 func (r *serviceRegistration) NotifyInitializedStateChange(isInitialized bool) error {
-	return r.notifyOrRetry(&client.Patch{
+	r.notifyOrRetry(&client.Patch{
 		Operation: client.Replace,
 		Path:      pathToLabels + labelInitialized,
 		Value:     strconv.FormatBool(isInitialized),
 	})
+	return nil
 }
 
-func (r *serviceRegistration) notifyOrRetry(patch *client.Patch) error {
+func (r *serviceRegistration) notifyOrRetry(patch *client.Patch) {
 	if err := r.client.PatchPod(r.namespace, r.podName, patch); err != nil {
 		if r.logger.IsWarn() {
 			r.logger.Warn("unable to update state due to %s, will retry", err.Error())
 		}
-		if err := r.retryHandler.Add(patch); err != nil {
-			return err
-		}
+		r.retryHandler.Add(patch)
 	}
-	return nil
 }
 
 func getRequiredField(logger hclog.Logger, config map[string]string, envVar, configParam string) (string, error) {
