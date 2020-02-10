@@ -13,6 +13,10 @@
   grid-template-columns: 0.45fr 2fr;
   padding: $spacing-m;
 
+  .transit-icon {
+    justify-self: center;
+  }
+
   .transit-action-description {
     font-family: $family-sans;
     font-size: $size-8;
