@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"mime"
 	"net"
 	"net/http"
 	"net/textproto"
@@ -566,7 +567,7 @@ func parseQuery(values url.Values) map[string]interface{} {
 	return nil
 }
 
-func parseRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, out interface{}) (io.ReadCloser, error) {
+func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, out interface{}) (io.ReadCloser, error) {
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
 	reader := r.Body
@@ -596,6 +597,43 @@ func parseRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, out 
 		return ioutil.NopCloser(origBody), err
 	}
 	return nil, err
+}
+
+// parseFormRequest parses values from a form POST.
+//
+// A nil map will be returned if the format is empty or invalid.
+func parseFormRequest(r *http.Request) (map[string]interface{}, error) {
+	maxRequestSize := r.Context().Value("max_request_size")
+	if maxRequestSize != nil {
+		max, ok := maxRequestSize.(int64)
+		if !ok {
+			return nil, errors.New("could not parse max_request_size from request context")
+		}
+		if max > 0 {
+			r.Body = ioutil.NopCloser(io.LimitReader(r.Body, max))
+		}
+	}
+	if err := r.ParseForm(); err != nil {
+		return nil, err
+	}
+
+	var data map[string]interface{}
+
+	if len(r.PostForm) != 0 {
+		data = make(map[string]interface{}, len(r.PostForm))
+		for k, v := range r.PostForm {
+			switch len(v) {
+			case 0, 1:
+				data[k] = v[0]
+			default:
+				// Almost anywhere taking in a string list can take in comma
+				// separated values, and really this is super niche anyways
+				data[k] = strings.Join(v, ",")
+			}
+		}
+	}
+
+	return data, nil
 }
 
 // handleRequestForwarding determines whether to forward a request or not,
@@ -958,6 +996,40 @@ func parseMFAHeader(req *logical.Request) error {
 	}
 
 	return nil
+}
+
+// isForm tries to determine whether the request should be
+// processed as a form or as JSON.
+//
+// Virtually all existing use cases have assumed processing as JSON,
+// and there has not been a Content-Type requirement in the API. In order to
+// maintain backwards compatibility, this will err on the side of JSON.
+// The request will be considered a form only if:
+//
+//   1. The content type is "application/x-www-form-urlencoded"
+//   2. The start of the request doesn't look like JSON. For this test we
+//      we expect the body to begin with { or [, ignoring leading whitespace.
+func isForm(head []byte, contentType string) bool {
+	contentType, _, err := mime.ParseMediaType(contentType)
+
+	if err != nil || contentType != "application/x-www-form-urlencoded" {
+		return false
+	}
+
+	// Look for the start of JSON or not-JSON, skipping any insignificant
+	// whitespace (per https://tools.ietf.org/html/rfc7159#section-2).
+	for _, c := range head {
+		switch c {
+		case ' ', '\t', '\n', '\r':
+			continue
+		case '[', '{': // JSON
+			return false
+		default: // not JSON
+			return true
+		}
+	}
+
+	return true
 }
 
 func respondError(w http.ResponseWriter, status int, err error) {
