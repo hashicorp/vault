@@ -178,5 +178,8 @@
       "lib/replication",
       "lib/service-worker-authenticated-download"
     ]
+  },
+  "dependencies": {
+    "sass": "^1.25.0"
   }
 }
