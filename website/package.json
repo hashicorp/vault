@@ -39,6 +39,7 @@
     "stringify-object": "^3.3.0"
   },
   "devDependencies": {
+    "dart-linkcheck": "^2.0.12",
     "glob": "^7.1.6",
     "husky": "^4.2.3",
     "inquirer": "^7.0.4",
@@ -59,6 +60,7 @@
     "lint": "next-hashicorp lint",
     "start": "npm run clear_babel_cache && next dev",
     "static": "npm run clear_babel_cache && npm run build && npm run export && cp _redirects out/.",
-    "clear_babel_cache": "rm -rf .next/cache/next-babel-loader"
+    "clear_babel_cache": "rm -rf .next/cache/next-babel-loader",
+    "linkcheck": "linkcheck https://www.vaultproject.io"
   }
 }

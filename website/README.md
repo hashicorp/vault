@@ -72,12 +72,12 @@ description: "A thorough, yet succinct description of the page's contents"
 The significant keys in the YAML frontmatter are:
 
 - `title` `(string)` - This is the title of the page that will be set in the
-HTML title.
+  HTML title.
 - `description` `(string)` - This is a description of the page that will be set
-in the HTML description.
+  in the HTML description.
 
 > ⚠️Since `api` is a reserved directory within NextJS, all `/api/**` pages are
-listed under the `/pages/api-docs` path.
+> listed under the `/pages/api-docs` path.
 
 ### Editing Sidebars
 
@@ -92,9 +92,9 @@ by the appropriate embedded `content` values.
 
 - `category` values will be **directory names** within the `pages` directory
 - `content` values will be **file names** within their appropriately nested
-directory.
+  directory.
 
-### Deployment
+## Deployment
 
 This website is hosted on Netlify and configured to automatically deploy anytime
 you push code to the `stable-website` branch. Any time a pull request is
@@ -102,6 +102,10 @@ submitted that changes files within the `website` folder, a deployment preview
 will appear in the github checks which can be used to validate the way docs
 changes will look live. Deployments from `stable-website` will look and behave
 the same way as deployment previews.
+
+## Checking for Broken Links
+
+There is a local script that can be used to check for broken links on the _current product website_ - you can start it by running `npm run linkcheck`. There will be a version of this script added as a github check in the near future!
 
 ## Known Issues
 
