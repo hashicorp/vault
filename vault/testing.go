@@ -677,7 +677,7 @@ func (n *noopAudit) Salt(ctx context.Context) (*salt.Salt, error) {
 	return salt, nil
 }
 
-func AddNoopAudit(conf *CoreConfig) {
+func AddNoopAudit(conf *CoreConfig, records **[][]byte) {
 	conf.AuditBackends = map[string]audit.Factory{
 		"noop": func(_ context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 			view := &logical.InmemStorage{}
@@ -690,6 +690,9 @@ func AddNoopAudit(conf *CoreConfig) {
 			}
 			n.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
 				SaltFunc: n.Salt,
+			}
+			if records != nil {
+				*records = &n.records
 			}
 			return n, nil
 		},
@@ -1437,7 +1440,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	addAuditBackend := len(coreConfig.AuditBackends) == 0
 	if addAuditBackend {
-		AddNoopAudit(coreConfig)
+		AddNoopAudit(coreConfig, nil)
 	}
 
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {
@@ -1838,6 +1841,7 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		"mssql-database-plugin",
 		"cassandra-database-plugin",
 		"mongodb-database-plugin",
+		"mongodbatlas-database-plugin",
 		"hana-database-plugin",
 		"influxdb-database-plugin",
 	}
