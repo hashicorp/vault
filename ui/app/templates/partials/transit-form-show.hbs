@@ -68,22 +68,22 @@
 
 
 {{#if (eq tab 'actions')}}
-  <div class="selectable-card-container">
+  <div class="transit-card-container">
     {{#each model.supportedActions as |supportedAction|}}
       {{#linked-block
         "vault.cluster.secrets.backend.actions"
         model.id
         queryParams=(hash action=supportedAction.name)
-        class="selectable-card"
+        class="transit-card"
       }}
-        <div class="transit-icon-column">
+        <div class="transit-icon">
           <Icon
             @glyph={{supportedAction.glyph}}
             @size="l"
             class="has-text-grey auto-width"
             aria-label={{concat backend.path " options"}} />
         </div>
-        <div class="transit-description-column">
+        <div class="transit-description">
           <h2 class="title is-6">
             {{capitalize supportedAction.name}}
           </h2>
