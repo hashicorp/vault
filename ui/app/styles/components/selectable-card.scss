@@ -23,8 +23,16 @@
     color: rgb(111, 118, 130);
   }
 
+  .title {
+    color: rgb(111, 118, 130);
+  }
+
   &:hover {
     box-shadow: 0 0 0 1px rgb(0, 104, 255), $box-shadow-middle;
     background: rgb(251, 252, 255);
+
+    .title {
+      color: initial;
+    }
   }
 }
