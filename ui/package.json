@@ -130,6 +130,7 @@
     "prettier-eslint-cli": "^5.0.0",
     "qunit-dom": "^0.7.1",
     "route-recognizer": "^0.3.4",
+    "sass": "^1.25.0",
     "sass-svg-uri": "^1.0.0",
     "shell-quote": "^1.6.1",
     "string.prototype.endswith": "^0.2.0",
@@ -178,8 +179,5 @@
       "lib/replication",
       "lib/service-worker-authenticated-download"
     ]
-  },
-  "dependencies": {
-    "sass": "^1.25.0"
   }
 }
