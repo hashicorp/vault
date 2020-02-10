@@ -267,8 +267,8 @@ module('Acceptance | transit', function(hooks) {
         currentURL().startsWith(`/vault/secrets/${path}/show/${name}?tab=actions`),
         `${name}: navigates to transit actions`
       );
-      await pauseTest();
-      await click(`[data-test-transit-card="encrypt"]`);
+      const keyAction = key.supportsEncryption ? 'encrypt' : 'sign';
+      await click(`[data-test-transit-card=${keyAction}]`);
       await settled();
       assert.ok(
         find('[data-test-transit-key-version-select]'),
@@ -276,12 +276,12 @@ module('Acceptance | transit', function(hooks) {
       );
       if (key.exportable) {
         assert.ok(
-          find('[data-test-transit-action-link="export"]'),
+          find('[data-test-transit-action-link="export-key"]'),
           `${name}: exportable key has a link to export action`
         );
       } else {
         assert
-          .dom('[data-test-transit-action-link="export"]')
+          .dom('[data-test-transit-action-link="export-key"]')
           .doesNotExist(`${name}: non-exportable key does not link to export action`);
       }
       if (key.convergent && key.supportsEncryption) {
