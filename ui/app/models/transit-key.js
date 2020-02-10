@@ -16,7 +16,7 @@ const ACTION_VALUES = {
     isSupported: 'supportsDecryption',
     description: 'Decrypts the provided ciphertext using this key',
   },
-  'data-key': {
+  datakey: {
     isSupported: 'supportsEncryption',
     description: 'Generates a new key and value encrypted with this key',
   },
