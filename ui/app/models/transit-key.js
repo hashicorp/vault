@@ -24,14 +24,18 @@ const ACTION_VALUES = {
     isSupported: 'supportsEncryption',
     description: 'Rewraps the ciphertext using the latest version of the named key',
   },
-  sign: { isSupported: 'supportsSigning' },
+  sign: {
+    isSupported: 'supportsSigning',
+    description: 'Get the cryptographic signature of the given data',
+    glyph: 'edit',
+  },
   hmac: { isSupported: true, description: 'Generate a data digest using a hash algorithm' },
   verify: {
     isSupported: true,
     description: 'Validate the provided signature for the given data',
     glyph: 'check-circle-outline',
   },
-  export: { isSupported: 'exportable' },
+  export: { isSupported: 'exportable', description: 'Get the named key', glyph: 'exit' },
 };
 
 export default DS.Model.extend({
