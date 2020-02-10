@@ -44,6 +44,7 @@ BUG FIXES:
 * telemetry: Prometheus requests on standby nodes will now return an error instead of forwarding 
   the request to the active node [[GH-8280](https://github.com/hashicorp/vault/pull/8280)]
 * cli: Support autocompletion for nested mounts [[GH-8303](https://github.com/hashicorp/vault/pull/8303)]
+* cli: Fix CLI namespace autocompletion [[GH-8315](https://github.com/hashicorp/vault/pull/8315)]
 
 
 ## 1.3.3 (Unreleased)
