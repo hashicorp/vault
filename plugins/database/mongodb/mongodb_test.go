@@ -1,8 +1,12 @@
 package mongodb
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -232,4 +236,192 @@ func testCreateDBUser(t testing.TB, connURL, db, username, password string) {
 	if result.Err() != nil {
 		t.Fatal(result.Err())
 	}
+}
+
+func TestRedact(t *testing.T) {
+	type testCase struct {
+		input    dbplugin.DatabaseConfig
+		expected dbplugin.DatabaseConfig
+	}
+
+	tests := map[string]testCase{
+		"empty returns empty": {
+			input:    dbplugin.DatabaseConfig{},
+			expected: dbplugin.DatabaseConfig{},
+		},
+		"non-redacted are unaffected": {
+			input: dbplugin.DatabaseConfig{
+				ConnectionDetails: map[string]interface{}{
+					"foo":        "bar",
+					"some thing": "omgwtfbbq",
+				},
+			},
+			expected: dbplugin.DatabaseConfig{
+				ConnectionDetails: map[string]interface{}{
+					"foo":        "bar",
+					"some thing": "omgwtfbbq",
+				},
+			},
+		},
+		"tls_certificate_key": {
+			input: dbplugin.DatabaseConfig{
+				ConnectionDetails: map[string]interface{}{
+					"tls_certificate_key": "foobar",
+				},
+			},
+			expected: dbplugin.DatabaseConfig{
+				ConnectionDetails: map[string]interface{}{
+					"tls_certificate_key": "*****",
+				},
+			},
+		},
+		"tls_ca": {
+			input: dbplugin.DatabaseConfig{
+				ConnectionDetails: map[string]interface{}{
+					"tls_ca": "foobar",
+				},
+			},
+			expected: dbplugin.DatabaseConfig{
+				ConnectionDetails: map[string]interface{}{
+					"tls_ca": "*****",
+				},
+			},
+		},
+		"tls_certificate_key and tls_ca": {
+			input: dbplugin.DatabaseConfig{
+				ConnectionDetails: map[string]interface{}{
+					"tls_certificate_key": "foobar",
+					"tls_ca":              "foobar",
+				},
+			},
+			expected: dbplugin.DatabaseConfig{
+				ConnectionDetails: map[string]interface{}{
+					"tls_certificate_key": "*****",
+					"tls_ca":              "*****",
+				},
+			},
+		},
+		"mixed values": {
+			input: dbplugin.DatabaseConfig{
+				ConnectionDetails: map[string]interface{}{
+					"foo":                 "bar",
+					"some thing":          "omgwtfbbq",
+					"tls_certificate_key": "foobar",
+					"tls_ca":              "foobar",
+				},
+			},
+			expected: dbplugin.DatabaseConfig{
+				ConnectionDetails: map[string]interface{}{
+					"foo":                 "bar",
+					"some thing":          "omgwtfbbq",
+					"tls_certificate_key": "*****",
+					"tls_ca":              "*****",
+				},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			m := new()
+			actual := m.Redact(test.input)
+			if !reflect.DeepEqual(actual, test.expected) {
+				t.Fatalf("Redaction failed:\nActual:\n%#v\nExpected:%#v", actual, test.expected)
+			}
+		})
+	}
+}
+
+func TestGetTLSAuth(t *testing.T) {
+	// certs := MakeCerts(t)
+	cert := MakeCert(t, nil)
+
+	type testCase struct {
+		username   string
+		tlsCAData  []byte
+		tlsKeyData []byte
+
+		expectOpts *options.ClientOptions
+		expectErr  bool
+	}
+
+	tests := map[string]testCase{
+		"no TLS data set": {
+			expectOpts: nil,
+			expectErr:  false,
+		},
+		"bad CA": {
+			tlsCAData: []byte("foobar"),
+
+			expectOpts: nil,
+			expectErr:  true,
+		},
+		"bad key": {
+			tlsKeyData: []byte("foobar"),
+
+			expectOpts: nil,
+			expectErr:  true,
+		},
+		"good ca": {
+			tlsCAData: cert.CertPem,
+
+			expectOpts: options.Client().
+				SetTLSConfig(
+					&tls.Config{
+						RootCAs: appendToCertPool(t, x509.NewCertPool(), cert.CertPem),
+					},
+				),
+			expectErr: false,
+		},
+		"good key": {
+			username:   "unittest",
+			tlsKeyData: mergePems(cert.CertPem, cert.KeyPem),
+
+			expectOpts: options.Client().
+				SetTLSConfig(
+					&tls.Config{
+						Certificates: []tls.Certificate{cert.TLSCert},
+					},
+				).
+				SetAuth(options.Credential{
+					AuthMechanism: "MONGODB-X509",
+					Username:      "unittest",
+				}),
+			expectErr: false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			c := new()
+			c.Username = test.username
+			c.TLSCAData = test.tlsCAData
+			c.TLSCertificateKeyData = test.tlsKeyData
+
+			actual, err := c.getTLSAuth()
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			if !reflect.DeepEqual(actual, test.expectOpts) {
+				t.Fatalf("Actual:\n%#v\nExpected:\n%#v", actual, test.expectOpts)
+			}
+		})
+	}
+}
+
+func appendToCertPool(t *testing.T, pool *x509.CertPool, caPem []byte) *x509.CertPool {
+	t.Helper()
+
+	ok := pool.AppendCertsFromPEM(caPem)
+	if !ok {
+		t.Fatalf("Unable to append cert to cert pool")
+	}
+	return pool
+}
+
+func mergePems(pems ...[]byte) []byte {
+	return bytes.Join(pems, []byte("\n"))
 }
