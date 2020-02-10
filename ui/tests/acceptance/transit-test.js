@@ -1,4 +1,4 @@
-import { click, fillIn, find, currentURL, settled, visit } from '@ember/test-helpers';
+import { click, fillIn, find, currentURL, settled, visit, pauseTest } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { encodeString } from 'vault/utils/b64';
@@ -258,9 +258,12 @@ module('Acceptance | transit', function(hooks) {
       await click('[data-test-transit-key-actions-link]');
       await settled();
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${path}/actions/${name}`),
-        `${name}: navigates to tranist actions`
+        currentURL().startsWith(`/vault/secrets/${path}/show/${name}?tab=actions`),
+        `${name}: navigates to transit actions`
       );
+      await pauseTest();
+      await click(`[data-test-transit-card="encrypt"]`);
+      await settled();
       assert.ok(
         find('[data-test-transit-key-version-select]'),
         `${name}: the rotated key allows you to select versions`
