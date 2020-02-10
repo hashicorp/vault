@@ -68,6 +68,8 @@ github.com/SAP/go-hdb/internal/bufio
 github.com/SAP/go-hdb/internal/protocol
 github.com/SAP/go-hdb/internal/unicode
 github.com/SAP/go-hdb/internal/unicode/cesu8
+# github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
+github.com/Sectorbob/mlab-ns2/gae/ns/digest
 # github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6
 github.com/StackExchange/wmi
 # github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190620160927-9418d7b0cd0f
@@ -92,7 +94,7 @@ github.com/apple/foundationdb/bindings/go/src/fdb
 github.com/apple/foundationdb/bindings/go/src/fdb/directory
 github.com/apple/foundationdb/bindings/go/src/fdb/subspace
 github.com/apple/foundationdb/bindings/go/src/fdb/tuple
-# github.com/armon/go-metrics v0.3.0
+# github.com/armon/go-metrics v0.3.1
 github.com/armon/go-metrics
 github.com/armon/go-metrics/circonus
 github.com/armon/go-metrics/datadog
@@ -152,7 +154,7 @@ github.com/aws/aws-sdk-go/service/kms/kmsiface
 github.com/aws/aws-sdk-go/service/s3
 github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/service/sts/stsiface
-# github.com/beorn7/perks v1.0.0
+# github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
 # github.com/bgentry/speakeasy v0.1.0
 github.com/bgentry/speakeasy
@@ -170,6 +172,8 @@ github.com/cenkalti/backoff
 # github.com/centrify/cloud-golang-sdk v0.0.0-20190214225812-119110094d0f
 github.com/centrify/cloud-golang-sdk/oauth
 github.com/centrify/cloud-golang-sdk/restapi
+# github.com/cespare/xxhash/v2 v2.1.1
+github.com/cespare/xxhash/v2
 # github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
 github.com/chrismalek/oktasdk-go/okta
 # github.com/circonus-labs/circonus-gometrics v2.3.1+incompatible
@@ -399,6 +403,8 @@ github.com/hashicorp/vault-plugin-auth-kubernetes
 github.com/hashicorp/vault-plugin-auth-oci
 # github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190814210117-e079e01fbb93
 github.com/hashicorp/vault-plugin-database-elasticsearch
+# github.com/hashicorp/vault-plugin-database-mongodbatlas v0.0.0-20200124191841-a128333dc5d5
+github.com/hashicorp/vault-plugin-database-mongodbatlas
 # github.com/hashicorp/vault-plugin-secrets-ad v0.6.2
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/client
@@ -416,9 +422,11 @@ github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
 github.com/hashicorp/vault-plugin-secrets-gcpkms
 # github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20191017213228-e8cf7060a4d0
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault/api v1.0.5-0.20200111014044-ba76c080ad1f => ./api
+# github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.0.0-20200124190647-0026e6bed4fb
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas
+# github.com/hashicorp/vault/api v1.0.5-0.20200124174203-d7d4084c8670 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20200123192413-777c45062569 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20200124174203-d7d4084c8670 => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/database/helper/credsutil
@@ -537,7 +545,7 @@ github.com/joyent/triton-go/authentication
 github.com/joyent/triton-go/client
 github.com/joyent/triton-go/errors
 github.com/joyent/triton-go/storage
-# github.com/json-iterator/go v1.1.7
+# github.com/json-iterator/go v1.1.9
 github.com/json-iterator/go
 # github.com/kelseyhightower/envconfig v1.3.0
 github.com/kelseyhightower/envconfig
@@ -597,6 +605,10 @@ github.com/mitchellh/reflectwalk
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
 github.com/modern-go/reflect2
+# github.com/mongodb/go-client-mongodb-atlas v0.1.2
+github.com/mongodb/go-client-mongodb-atlas/mongodbatlas
+# github.com/mwielbut/pointy v1.1.0
+github.com/mwielbut/pointy
 # github.com/ncw/swift v1.0.47
 github.com/ncw/swift
 # github.com/nwaples/rardecode v1.0.0
@@ -666,19 +678,20 @@ github.com/pquerna/cachecontrol/cacheobject
 github.com/pquerna/otp
 github.com/pquerna/otp/hotp
 github.com/pquerna/otp/totp
-# github.com/prometheus/client_golang v1.0.0
+# github.com/prometheus/client_golang v1.4.0
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/internal
 github.com/prometheus/client_golang/prometheus/push
-# github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
+# github.com/prometheus/client_model v0.2.0
 github.com/prometheus/client_model/go
-# github.com/prometheus/common v0.4.1
+# github.com/prometheus/common v0.9.1
 github.com/prometheus/common/expfmt
 github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
 github.com/prometheus/common/model
-# github.com/prometheus/procfs v0.0.2
+# github.com/prometheus/procfs v0.0.8
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
+github.com/prometheus/procfs/internal/util
 # github.com/ryanuber/columnize v2.1.0+incompatible
 github.com/ryanuber/columnize
 # github.com/ryanuber/go-glob v1.0.0
@@ -842,9 +855,9 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sync v0.0.0-20190423024810-112230192c58
+# golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20191008105621-543471e840be
+# golang.org/x/sys v0.0.0-20200122134326-e047566fdf82
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
@@ -974,7 +987,7 @@ gopkg.in/square/go-jose.v2
 gopkg.in/square/go-jose.v2/cipher
 gopkg.in/square/go-jose.v2/json
 gopkg.in/square/go-jose.v2/jwt
-# gopkg.in/yaml.v2 v2.2.2
+# gopkg.in/yaml.v2 v2.2.5
 gopkg.in/yaml.v2
 # k8s.io/api v0.0.0-20190409092523-d687e77c8ae9
 k8s.io/api/authentication/v1

@@ -1841,6 +1841,7 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		"mssql-database-plugin",
 		"cassandra-database-plugin",
 		"mongodb-database-plugin",
+		"mongodbatlas-database-plugin",
 		"hana-database-plugin",
 		"influxdb-database-plugin",
 	}

@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -331,6 +331,14 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 						r = r.WithContext(newCtx)
 					}
 				}
+			}
+
+		// Prevent any metrics requests to be forwarded from a standby node.
+		// Instead, we return an error since we cannot be sure if we have an
+		// active token store to validate the provided token.
+		case strings.HasPrefix(req.Path, "sys/metrics"):
+			if isStandby, _ := core.Standby(); isStandby {
+				respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
 			}
 		}
 
