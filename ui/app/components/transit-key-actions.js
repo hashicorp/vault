@@ -47,7 +47,6 @@ export default Component.extend(TRANSIT_PARAMS, {
   // public attrs
   selectedAction: null,
   key: null,
-  isModalActive: true,
 
   onRefresh() {},
   init() {
