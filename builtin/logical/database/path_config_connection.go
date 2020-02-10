@@ -20,18 +20,6 @@ var (
 	respErrEmptyName       = "empty name attribute given"
 )
 
-// DatabaseConfig is used by the Factory function to configure a Database
-// object.
-type DatabaseConfig struct {
-	PluginName string `json:"plugin_name" structs:"plugin_name" mapstructure:"plugin_name"`
-	// ConnectionDetails stores the database specific connection settings needed
-	// by each database type.
-	ConnectionDetails map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
-	AllowedRoles      []string               `json:"allowed_roles" structs:"allowed_roles" mapstructure:"allowed_roles"`
-
-	RootCredentialsRotateStatements []string `json:"root_credentials_rotate_statements" structs:"root_credentials_rotate_statements" mapstructure:"root_credentials_rotate_statements"`
-}
-
 // pathResetConnection configures a path to reset a plugin.
 func pathResetConnection(b *databaseBackend) *framework.Path {
 	return &framework.Path{
@@ -185,7 +173,7 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 			return nil, nil
 		}
 
-		var config DatabaseConfig
+		var config dbplugin.DatabaseConfig
 		if err := entry.DecodeJSON(&config); err != nil {
 			return nil, err
 		}
@@ -202,10 +190,24 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 
 		delete(config.ConnectionDetails, "password")
 
+		config = b.redact(name, config)
+
 		return &logical.Response{
 			Data: structs.New(config).Map(),
 		}, nil
 	}
+}
+
+func (b *databaseBackend) redact(name string, config dbplugin.DatabaseConfig) dbplugin.DatabaseConfig {
+	conn, exists := b.connections[name]
+	if !exists {
+		return config
+	}
+
+	if r, ok := conn.Database.(dbplugin.Redaction); ok {
+		return r.Redact(config)
+	}
+	return config
 }
 
 // connectionDeleteHandler deletes the connection configuration
@@ -241,7 +243,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 
 		// Baseline
-		config := &DatabaseConfig{}
+		config := &dbplugin.DatabaseConfig{}
 
 		entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", name))
 		if err != nil {
