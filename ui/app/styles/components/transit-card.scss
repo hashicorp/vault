@@ -1,4 +1,4 @@
-.selectable-card-container {
+.transit-card-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   grid-template-rows: 1fr;
@@ -6,17 +6,12 @@
   margin-top: $spacing-l;
 }
 
-.selectable-card {
+.transit-card {
   border-radius: $radius;
   box-shadow: 0 0 0 1px rgba($grey-dark, 0.3), $box-shadow-middle;
   display: grid;
-  grid-template-columns: 0.5fr 2fr;
-  justify-content: space-between;
+  grid-template-columns: 0.45fr 2fr;
   padding: $spacing-m;
-
-  .transit-icon-column {
-    justify-self: center;
-  }
 
   .transit-action-description {
     font-family: $family-sans;
