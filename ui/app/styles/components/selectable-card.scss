@@ -3,7 +3,7 @@
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   grid-template-rows: 1fr;
   grid-gap: 2rem;
-  margin-top: 24px;
+  margin-top: $spacing-l;
 }
 
 .selectable-card {
@@ -12,7 +12,7 @@
   display: grid;
   grid-template-columns: 0.5fr 2fr;
   justify-content: space-between;
-  padding: $spacing-m 0 $spacing-m $spacing-m;
+  padding: $spacing-m;
 
   .transit-icon-column {
     justify-self: center;
@@ -20,16 +20,19 @@
 
   .transit-action-description {
     font-family: $family-sans;
-    color: rgb(111, 118, 130);
+    font-size: $size-8;
+    color: $grey;
   }
 
   .title {
-    color: rgb(111, 118, 130);
+    color: $grey;
+    font-size: $size-7;
+    margin-bottom: $spacing-xxs;
   }
 
   &:hover {
-    box-shadow: 0 0 0 1px rgb(0, 104, 255), $box-shadow-middle;
-    background: rgb(251, 252, 255);
+    box-shadow: 0 0 0 1px $blue-500, $box-shadow-middle;
+    background: $blue-010;
 
     .title {
       color: initial;
