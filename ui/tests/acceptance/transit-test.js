@@ -276,12 +276,12 @@ module('Acceptance | transit', function(hooks) {
       );
       if (key.exportable) {
         assert.ok(
-          find('[data-test-transit-action-link="export-key"]'),
+          find('[data-test-transit-action-link="export"]'),
           `${name}: exportable key has a link to export action`
         );
       } else {
         assert
-          .dom('[data-test-transit-action-link="export-key"]')
+          .dom('[data-test-transit-action-link="export"]')
           .doesNotExist(`${name}: non-exportable key does not link to export action`);
       }
       if (key.convergent && key.supportsEncryption) {
