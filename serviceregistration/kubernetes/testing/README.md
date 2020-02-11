@@ -1,7 +1,7 @@
 # How to Test Manually
 
 - `$ minikube start`
-- In the Vault folder, `$ make dev`
+- In the Vault folder, `$ make dev XC_ARCH=amd64 XC_OS=linux XC_OSARCH=linux/amd64`
 - Create a file called `vault-test.yaml` with the following contents:
 
 ```
