@@ -9,21 +9,23 @@ import { run } from '@ember/runloop';
 import { task, waitForEvent } from 'ember-concurrency';
 
 /**
- * @module HttpRequestsContainer
- * The HttpRequestsContainer component is the parent component of the HttpRequestsDropdown, HttpRequestsBarChart, and HttpRequestsTable components. It is used to handle filtering the bar chart and table according to selected time window from the dropdown.
+ * @module HttpRequestsBarChartSmall
+ * The HttpRequestsBarChartSmall is a simplified version of the HttpRequestsBarChart component.
+ *
  *
  * @example
  * ```js
- * <HttpRequestsContainer @counters={counters}/>
+ * <HttpRequestsBarChartSmall @counters={counters}/>
  * ```
  *
- * @param counters=null {Array} - A list of objects containing the total number of HTTP Requests for each month. `counters` should be the response from the `/internal/counters/requests` endpoint which looks like:
- * COUNTERS = [
- *    {
- *       "start_time": "2019-05-01T00:00:00Z",
- *       "total": 50
- *     }
- * ]
+ * @param counters=null {Array} - A list of objects containing the total number of HTTP Requests for each month. `counters` should be the response from the `/internal/counters/requests`.
+ * The response is then filtered showing only the 12 most recent months of data.  This property is called filteredHttpsRequests, like:
+ * const FILTERED_HTTPS_REQUESTS = [
+ *  { start_time: '2018-11-01T00:00:00Z', total: 5500 },
+ *  { start_time: '2018-12-01T00:00:00Z', total: 4500 },
+ *  { start_time: '2019-01-01T00:00:00Z', total: 5000 },
+ *  { start_time: '2019-02-01T00:00:00Z', total: 5000 },
+ * ];
  */
 
 const HEIGHT = 125;

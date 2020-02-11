@@ -2,16 +2,21 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 
 /**
- * @module MetricsSelectableCardContainer
- * MetricsSelectableCardContainer components are used to...
+ * @module SelectableCardContainer
+ * SelectableCardContainer components are used to...
  *
  * @example
  * ```js
- * <MetricsSelectableCardContainer @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <SelectableCardContainer @counters={{model}} @gridContainer="true" />
  * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
+ * @param {object} counters - Counters is an object that returns the total entities, tokens, and an array of objects with the total https request per month.
+ * @param {string} [gridContainer] - gridContainer is optional.  If true, it's telling the container it will have a nested CSS grid item.
+ *
+ * const MODEL = {
+ *  totalEntities: 0,
+ *  httpsRequests: [{ start_time: '2019-04-01T00:00:00Z', total: 5500 }],
+ *  totalTokens: 1,
+ * };
  */
 
 export default Component.extend({

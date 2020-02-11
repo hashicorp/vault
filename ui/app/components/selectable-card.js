@@ -1,21 +1,23 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 /**
- * @module MetricsSelectableCard
- * MetricsSelectableCard components are used to...
+ * @module SelectableCard
+ * SelectableCard components are used to are used as card-like components to hold data and display them as box/card like objects.
+ * They are designed to be used in containers that act as flexbox or css grid containers.
  *
  * @example
  * ```js
- * <MetricsSelectableCard @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <SelectableCard @cardTitle="Tokens" @total={{totalHttpRequests}} @subText="Total" @gridContainer={{gridContainer}}/>
  * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
+ * @param {string} cardTitle - cardTitle displays the card title
+ * @param {number} total - the Total number displays like a title, it's the largest text in the component.
+ * @param {string} subText - subText describes the total
+ * @param {string} gridContainer - Optional parameter used to display CSS grid item class.
  */
 
 export default Component.extend({
   tagName: '', // do not wrap component with div
-  cardTitleComputed: computed('type', function() {
+  cardTitleComputed: computed('total', function() {
     let cardTitle = this.cardTitle || '';
     let total = this.total || '';
 
@@ -27,7 +29,7 @@ export default Component.extend({
 
     return cardTitle;
   }),
-  cardTitleTesting: computed('type', function() {
+  cardTitleTesting: computed('cardTitle', function() {
     let cardTitle = this.cardTitle || '';
 
     if (cardTitle === 'Http Requests') {
