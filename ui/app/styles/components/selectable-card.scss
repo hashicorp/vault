@@ -15,11 +15,18 @@
     grid-template-columns: 2fr;
   }
 
-  > .grid-item-http {
+  .grid-item-http {
     grid-column-start: 1;
     grid-column-end: 2;
     grid-row-start: 1;
     grid-row-end: 3;
+  }
+
+  .selectable-card.is-grid-container {
+    display: grid;
+    grid-template-columns: 2fr 0.5fr;
+    grid-template-rows: 1fr 2fr 0.5fr;
+    padding: $spacing-l 0 14px $spacing-l; // modify bottom spacing to better align with other cards
   }
 }
 
@@ -96,13 +103,6 @@
 
 .selectable-card.is-rounded {
   border-radius: $radius;
-}
-
-.selectable-card.is-grid-container {
-  display: grid;
-  grid-template-columns: 2fr 0.5fr;
-  grid-template-rows: 1fr 2fr 0.5fr;
-  padding: $spacing-l 0 14px $spacing-l; // modify bottom spacing to better align with other cards
 }
 
 .change-metric-icon.is-decrease {

@@ -8,8 +8,8 @@
 
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
   {{#if (gt model.httpsRequests.length 1) }}
-    <SelectableCardContainerGraph @counters={{model}}/>
+    <SelectableCardContainer @counters={{model}} @gridContainer="true"/>
   {{else}}
-    <SelectableCardContainer @counters={{model}} />
+    <SelectableCardContainer @counters={{model}} @gridContainer="false" />
   {{/if}}
 </div>

@@ -1,26 +1,42 @@
 {{#linked-block
   "vault.cluster.metrics.http-requests"
+  class="grid-item-http"
 }}
   <SelectableCard 
     @cardTitle="Http Requests" 
     @total={{totalHttpRequests}}
     @subText="Total"
+    @gridContainer={{gridContainer}}
   >
+  {{#if (eq counters.httpsRequests.length 1)}}
     <div class="is-paddingless is-marginless">
       <div class="level-item">
         <PopupMenu name="engine-menu">
-            <nav class="menu">
-              <ul class="menu-list">
-                <li class="action">
-                  {{#link-to "vault.cluster.metrics.http-requests"}}
-                    View Details
-                  {{/link-to}}
-                </li>
-              </ul>
-            </nav>
+          <nav class="menu">
+            <ul class="menu-list">
+              <li class="action">
+                {{#link-to "vault.cluster.metrics.http-requests"}}
+                  View Details
+                {{/link-to}}
+              </li>
+            </ul>
+          </nav>
         </PopupMenu>
       </div>
     </div>
+  {{else}}
+    <div class="change-metric">
+      <Icon @glyph="arrow-up" @size="xlm" aria-hidden="true" class="change-metric-icon {{if (gt percentChange 0) "is-increase" "is-decrease"}}"/>
+      {{#if (gt percentChange 0)}}
+        <p class="has-text-grey is-size-4 amount-change">+{{percentChange}}%</p>
+      {{else}}
+        <p class="has-text-grey is-size-4 amount-change">{{percentChange}}%</p>
+      {{/if}}
+      <p class="has-text-grey is-size-6 item-c">Since last month</p>
+    </div>
+    <HttpRequestsBarChartSmall @counters={{filteredHttpsRequests}} class="chart"/>
+    {{#link-to "vault.cluster.metrics.http-requests" class="card-details"}} View Details {{/link-to}}      
+  {{/if}}
   </SelectableCard>
 {{/linked-block}}
 
