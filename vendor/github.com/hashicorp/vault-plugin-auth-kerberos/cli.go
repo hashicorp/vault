@@ -8,11 +8,11 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/gokrb5/client"
-	"github.com/hashicorp/gokrb5/config"
-	"github.com/hashicorp/gokrb5/keytab"
-	"github.com/hashicorp/gokrb5/spnego"
 	"github.com/hashicorp/vault/api"
+	"github.com/jcmturner/gokrb5/v8/client"
+	"github.com/jcmturner/gokrb5/v8/config"
+	"github.com/jcmturner/gokrb5/v8/keytab"
+	"github.com/jcmturner/gokrb5/v8/spnego"
 )
 
 // CLIHandler fulfills Vault's LoginHandler interface.
@@ -131,7 +131,7 @@ func GetAuthHeaderVal(loginCfg *LoginCfg) (string, error) {
 		return "", errwrap.Wrapf("couldn't parse krb5Conf: {{err}}", err)
 	}
 
-	cl := client.NewClientWithKeytab(loginCfg.Username, loginCfg.Realm, kt, krb5Conf, client.AssumePreAuthentication(true))
+	cl := client.NewWithKeytab(loginCfg.Username, loginCfg.Realm, kt, krb5Conf, client.AssumePreAuthentication(true))
 	if err := cl.Login(); err != nil {
 		return "", errwrap.Wrapf("couldn't log in: {{err}}", err)
 	}

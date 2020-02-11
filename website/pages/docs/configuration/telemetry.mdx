@@ -141,6 +141,10 @@ These `telemetry` parameters apply to
 
 ### `prometheus`
 
+~> **Note:** The `/v1/sys/metrics` endpoint is only accessible on active nodes
+and automatically disabled on standby nodes. You can enable the `/v1/sys/metrics`
+endpoint on standby nodes by [enabling unauthenticated metrics access][telemetry-tcp].
+
 These `telemetry` parameters apply to
 [prometheus](https://prometheus.io).
 
@@ -206,3 +210,5 @@ telemetry {
   enable_hostname_label = true
 }
 ```
+
+[telemetry-tcp]: /docs/configuration/listener/tcp#telemetry
