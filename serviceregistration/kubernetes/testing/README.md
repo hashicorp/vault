@@ -34,7 +34,7 @@ spec:
 
 - Create the pod: `$ kubectl apply -f vault-test.yaml`
 - View the full initial state of the pod: `$ kubectl get pod vault -o=yaml > initialstate.txt`
-- Drop the Vault binary into the pod: `$ kubectl cp $(which vault) /vault:/`
+- Drop the Vault binary into the pod: `$ kubectl cp bin/vault /vault:/`
 - Drop to the shell within the pod: `$ kubectl exec -it vault -- /bin/bash`
 - Install a text editor: `$ apt-get update`, `$ apt-get install nano`
 - Write a test Vault config to `vault.config` like:
