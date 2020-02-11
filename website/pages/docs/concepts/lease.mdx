@@ -76,7 +76,10 @@ can revoke multiple secrets based on their lease ID prefix.
 
 Lease IDs are structured in a way that their prefix is always the path where
 the secret was requested from. This lets you revoke trees of secrets. For
-example, to revoke all AWS access keys, you can do `vault revoke -prefix aws/`.
+example, to revoke all AWS access keys, you can do `vault lease revoke -prefix aws/`.
+For more information about revoke command please check
+[cli's lease revoke](/docs/commands/lease/revoke/#lease-revoke)
+command docs.
 
 This is very useful if there is an intrusion within a specific system: all
 secrets of a specific backend or a certain configured backend can be revoked
