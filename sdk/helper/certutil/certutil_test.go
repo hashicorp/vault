@@ -11,10 +11,8 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	mathrand "math/rand"
-	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -425,24 +423,7 @@ Q9IFGQFFF8jO18lbyWqnRBGXcS4/G7jQ3S7C121d14YLUeAYOM7pJykI1g4CLx9y
 vitin0L6nprauWkKO38XgM4T75qKZpqtiOcT
 -----END CERTIFICATE-----
 `
-
-	tmpfile, err := ioutil.TempFile("", "ca.crt")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(tmpfile.Name())
-
-	if _, err := tmpfile.Write([]byte(caExample)); err != nil {
-		t.Fatal(err)
-	}
-	if err := tmpfile.Close(); err != nil {
-		t.Fatal(err)
-	}
-	fileBody, err := ioutil.ReadFile(tmpfile.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := NewCertPool(bytes.NewReader(fileBody)); err != nil {
+	if _, err := NewCertPool(bytes.NewReader([]byte(caExample))); err != nil {
 		t.Fatal(err)
 	}
 }
