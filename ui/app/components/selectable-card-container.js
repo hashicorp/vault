@@ -3,14 +3,14 @@ import { computed } from '@ember/object';
 
 /**
  * @module SelectableCardContainer
- * SelectableCardContainer components are used to...
+ * SelectableCardContainer components are used to hold SelectableCard components.  They act as a CSS grid container, and change grid configurations based on the boolean of @gridContainer.
  *
  * @example
  * ```js
  * <SelectableCardContainer @counters={{model}} @gridContainer="true" />
  * ```
- * @param {object} counters - Counters is an object that returns the total entities, tokens, and an array of objects with the total https request per month.
- * @param {string} [gridContainer] - gridContainer is optional.  If true, it's telling the container it will have a nested CSS grid item.
+ * @param {object} counters - Counters is an object that returns total entities, tokens, and an array of objects with the total https request per month.
+ * @param {string} [gridContainer] - gridContainer is optional.  If true, it's telling the container it will have a nested CSS grid.
  *
  * const MODEL = {
  *  totalEntities: 0,

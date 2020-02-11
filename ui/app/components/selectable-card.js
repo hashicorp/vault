@@ -2,7 +2,7 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 /**
  * @module SelectableCard
- * SelectableCard components are used to are used as card-like components to hold data and display them as box/card like objects.
+ * SelectableCard components are card-like components that display a title, total, subtotal, and anything after they yield.
  * They are designed to be used in containers that act as flexbox or css grid containers.
  *
  * @example
@@ -10,7 +10,7 @@ import { computed } from '@ember/object';
  * <SelectableCard @cardTitle="Tokens" @total={{totalHttpRequests}} @subText="Total" @gridContainer={{gridContainer}}/>
  * ```
  * @param {string} cardTitle - cardTitle displays the card title
- * @param {number} total - the Total number displays like a title, it's the largest text in the component.
+ * @param {number} total - the Total number displays like a title, it's the largest text in the component
  * @param {string} subText - subText describes the total
  * @param {string} gridContainer - Optional parameter used to display CSS grid item class.
  */
