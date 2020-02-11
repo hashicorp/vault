@@ -104,6 +104,14 @@ func (mw *databaseTracingMiddleware) SetCredentials(ctx context.Context, stateme
 	return mw.next.SetCredentials(ctx, statements, staticConfig)
 }
 
+func (mw *databaseTracingMiddleware) Redact(config DatabaseConfig) DatabaseConfig {
+	r, ok := mw.next.(Redaction)
+	if ok {
+		return r.Redact(config)
+	}
+	return config
+}
+
 // ---- Metrics Middleware Domain ----
 
 // databaseMetricsMiddleware wraps an implementation of Databases and on
@@ -251,6 +259,14 @@ func (mw *databaseMetricsMiddleware) SetCredentials(ctx context.Context, stateme
 	return mw.next.SetCredentials(ctx, statements, staticConfig)
 }
 
+func (mw *databaseMetricsMiddleware) Redact(config DatabaseConfig) DatabaseConfig {
+	r, ok := mw.next.(Redaction)
+	if ok {
+		return r.Redact(config)
+	}
+	return config
+}
+
 // ---- Error Sanitizer Middleware Domain ----
 
 // DatabaseErrorSanitizerMiddleware wraps an implementation of Databases and
@@ -332,4 +348,12 @@ func (mw *DatabaseErrorSanitizerMiddleware) GenerateCredentials(ctx context.Cont
 func (mw *DatabaseErrorSanitizerMiddleware) SetCredentials(ctx context.Context, statements Statements, staticConfig StaticUserConfig) (username, password string, err error) {
 	username, password, err = mw.next.SetCredentials(ctx, statements, staticConfig)
 	return username, password, mw.sanitize(err)
+}
+
+func (mw *DatabaseErrorSanitizerMiddleware) Redact(config DatabaseConfig) DatabaseConfig {
+	r, ok := mw.next.(Redaction)
+	if ok {
+		return r.Redact(config)
+	}
+	return config
 }
