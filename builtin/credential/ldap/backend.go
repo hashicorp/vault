@@ -127,7 +127,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		}
 	}
 
-	userDN, err := ldapClient.GetUserDN(cfg.ConfigEntry, c, userBindDN)
+	userDN, err := ldapClient.GetUserDN(cfg.ConfigEntry, c, userBindDN, username)
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
