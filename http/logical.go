@@ -115,7 +115,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 			if isForm(head, r.Header.Get("Content-Type")) {
 				formData, err := parseFormRequest(r)
 				if err != nil {
-					return nil, nil, http.StatusBadRequest, fmt.Errorf("error parsing form data: %w", err)
+					return nil, nil, http.StatusBadRequest, errwrap.Wrapf("error parsing form data: {{err}}", err)
 				}
 
 				data = formData
