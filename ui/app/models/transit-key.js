@@ -35,7 +35,7 @@ const ACTION_VALUES = {
     description: 'Validate the provided signature for the given data',
     glyph: 'check-circle-outline',
   },
-  'export-key': { isSupported: 'exportable', description: 'Get the named key', glyph: 'exit' },
+  export: { isSupported: 'exportable', description: 'Get the named key', glyph: 'exit' },
 };
 
 export default DS.Model.extend({
