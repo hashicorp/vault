@@ -17,15 +17,15 @@ spec:
       args:
       - while true; do
           echo -en '\n';
-          printenv VAULT_POD_NAME VAULT_NAMESPACE;
+          printenv VAULT_K8S_POD_NAME VAULT_K8S_NAMESPACE;
           sleep 10;
         done;
       env:
-        - name: VAULT_POD_NAME
+        - name: VAULT_K8S_POD_NAME
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        - name: VAULT_NAMESPACE
+        - name: VAULT_K8S_NAMESPACE
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
