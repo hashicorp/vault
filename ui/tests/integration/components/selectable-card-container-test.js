@@ -48,7 +48,7 @@ module('Integration | Component | selectable-card-container', function(hooks) {
   test('it renders a card for each of the models and titles are returned', async function(assert) {
     await render(hbs`<SelectableCardContainer @counters={{model}}/>`);
     assert.dom('.selectable-card').exists({ count: 3 });
-    let cardTitles = ['Http Requests', 'Entities', 'Tokens'];
+    let cardTitles = ['Http Requests', 'Entities', 'Token'];
     let httpRequestsTitle = this.element.querySelectorAll('[data-test-selectable-card-title]');
 
     httpRequestsTitle.forEach(item => {
