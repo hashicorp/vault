@@ -2320,7 +2320,12 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 		telConfig = &server.Telemetry{}
 	}
 
-	metricsConf := metrics.DefaultConfig("vault")
+	serviceName := "vault"
+	if telConfig.MetricsPrefix != "" {
+		serviceName = telConfig.MetricsPrefix
+	}
+
+	metricsConf := metrics.DefaultConfig(serviceName)
 	metricsConf.EnableHostname = !telConfig.DisableHostname
 	metricsConf.EnableHostnameLabel = telConfig.EnableHostnameLabel
 
