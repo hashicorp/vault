@@ -1284,7 +1284,9 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		// If the existing barrier type is not the same as the type of seal we are
 		// migrating from, it can be concluded that migration has already been performed
 		c.logger.Info("migration is already performed since existing seal type and source seal types are different")
-		goto DONE
+		c.migrationInfo = nil
+		atomic.StoreUint32(c.sealMigrated, 1)
+		return nil
 	}
 
 	c.logger.Info("seal migration initiated")
@@ -1360,8 +1362,6 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 	default:
 		return errors.New("unhandled migration case (shamir to shamir)")
 	}
-
-DONE:
 
 	// At this point we've swapped things around and need to ensure we
 	// don't migrate again
