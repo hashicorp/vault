@@ -462,7 +462,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		c.activeContext = activeCtx
 		c.activeContextCancelFunc.Store(activeCtxCancel)
 
-		// Perform seal migration before wiping the barrier/seal state
+		// Perform seal migration
 		if err := c.migrateSeal(c.activeContext); err != nil {
 			c.logger.Error("seal migration error", "error", err)
 			c.barrier.Seal()

@@ -1442,6 +1442,11 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 			return false, err
 		}
 
+		// Force a cache bust here, which will also run migration code
+		if c.seal.RecoveryKeySupported() {
+			c.seal.SetRecoveryConfig(ctx, nil)
+		}
+
 		c.standby = false
 	} else {
 		// Go to standby mode, wait until we are active to unseal
