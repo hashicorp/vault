@@ -257,8 +257,8 @@ func TestRequestHandling_Login_PeriodicToken(t *testing.T) {
 	}
 
 	// Depending on timing of the test this may have ticked down, so reset it
-	// back to the original value
-	if resp.Data["ttl"].(int64) == 4 {
+	// back to the original value as long as it's not expired.
+	if resp.Data["ttl"].(int64) > 0 && resp.Data["ttl"].(int64) < 5 {
 		resp.Data["ttl"] = int64(5)
 	}
 
