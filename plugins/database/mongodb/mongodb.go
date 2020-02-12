@@ -249,15 +249,3 @@ func runCommandWithRetry(ctx context.Context, client *mongo.Client, db string, c
 	}
 	return nil
 }
-
-func (m *MongoDB) Redact(config dbplugin.DatabaseConfig) dbplugin.DatabaseConfig {
-	redact(config.ConnectionDetails, "tls_certificate_key")
-	redact(config.ConnectionDetails, "tls_ca")
-	return config
-}
-
-func redact(m map[string]interface{}, key string) {
-	if _, ok := m[key]; ok {
-		m[key] = "*****"
-	}
-}

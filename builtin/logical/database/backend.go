@@ -128,7 +128,7 @@ type databaseBackend struct {
 	roleLocks []*locksutil.LockEntry
 }
 
-func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*dbplugin.DatabaseConfig, error) {
+func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {
 	entry, err := s.Get(ctx, fmt.Sprintf("config/%s", name))
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to read connection configuration: {{err}}", err)
@@ -137,7 +137,7 @@ func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage,
 		return nil, fmt.Errorf("failed to find entry for connection with name: %q", name)
 	}
 
-	var config dbplugin.DatabaseConfig
+	var config DatabaseConfig
 	if err := entry.DecodeJSON(&config); err != nil {
 		return nil, err
 	}

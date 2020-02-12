@@ -74,22 +74,6 @@ type Database interface {
 	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) (err error)
 }
 
-type Redaction interface {
-	Redact(config DatabaseConfig) DatabaseConfig
-}
-
-// DatabaseConfig is used by the Factory function to configure a Database
-// object.
-type DatabaseConfig struct {
-	PluginName string `json:"plugin_name" structs:"plugin_name" mapstructure:"plugin_name"`
-	// ConnectionDetails stores the database specific connection settings needed
-	// by each database type.
-	ConnectionDetails map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
-	AllowedRoles      []string               `json:"allowed_roles" structs:"allowed_roles" mapstructure:"allowed_roles"`
-
-	RootCredentialsRotateStatements []string `json:"root_credentials_rotate_statements" structs:"root_credentials_rotate_statements" mapstructure:"root_credentials_rotate_statements"`
-}
-
 // PluginFactory is used to build plugin database types. It wraps the database
 // object in a logging and metrics middleware.
 func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRunnerUtil, logger log.Logger) (Database, error) {
