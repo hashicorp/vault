@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -36,7 +37,7 @@ func (r *retryHandler) SetInitialState(setInitialState func() error) {
 	defer r.lock.Unlock()
 	if err := setInitialState(); err != nil {
 		if r.logger.IsWarn() {
-			r.logger.Warn("unable to set initial state due to %s, will retry", err.Error())
+			r.logger.Warn(fmt.Sprintf("unable to set initial state due to %s, will retry", err.Error()))
 		}
 		r.setInitialState = setInitialState
 	}
@@ -74,7 +75,7 @@ func (r *retryHandler) Notify(c *client.Client, patch *client.Patch) {
 	// We will store this to retry it when appropriate.
 	if r.setInitialState != nil {
 		if r.logger.IsWarn() {
-			r.logger.Warn("cannot notify of present state because initial state is unset", patch.Path)
+			r.logger.Warn(fmt.Sprintf("cannot notify of present state for %s because initial state is unset", patch.Path))
 		}
 		r.patchesToRetry[patch.Path] = patch
 		return
@@ -83,7 +84,7 @@ func (r *retryHandler) Notify(c *client.Client, patch *client.Patch) {
 	// Initial state has been sent, so it's OK to attempt a patch immediately.
 	if err := c.PatchPod(r.namespace, r.podName, patch); err != nil {
 		if r.logger.IsWarn() {
-			r.logger.Warn("unable to update state due to %s, will retry", patch.Path, err.Error())
+			r.logger.Warn(fmt.Sprintf("unable to update state for %s due to %s, will retry", patch.Path, err.Error()))
 		}
 		r.patchesToRetry[patch.Path] = patch
 	}
@@ -98,7 +99,7 @@ func (r *retryHandler) retry(c *client.Client) {
 	if r.setInitialState != nil {
 		if err := r.setInitialState(); err != nil {
 			if r.logger.IsWarn() {
-				r.logger.Warn("unable to set initial state due to %s, will retry", err.Error())
+				r.logger.Warn(fmt.Sprintf("unable to set initial state due to %s, will retry", err.Error()))
 			}
 			// On failure, we leave the initial state func populated for
 			// the next retry.
@@ -122,7 +123,7 @@ func (r *retryHandler) retry(c *client.Client) {
 
 	if err := c.PatchPod(r.namespace, r.podName, patches...); err != nil {
 		if r.logger.IsWarn() {
-			r.logger.Warn("unable to update state due to %s, will retry", err.Error())
+			r.logger.Warn(fmt.Sprintf("unable to update state for due to %s, will retry", err.Error()))
 		}
 		return
 	}
