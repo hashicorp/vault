@@ -11,7 +11,7 @@ description: |-
 
 This is the API documentation for the Vault Azure auth method
 plugin. To learn more about the usage and operation, see the
-[Vault Azure method documentation](/docs/auth/azure.html).
+[Vault Azure method documentation](/docs/auth/azure).
 
 This documentation assumes the plugin method is mounted at the
 `/auth/azure` path in Vault. Since it is possible to enable auth methods
@@ -263,10 +263,10 @@ entity and then authorizes the entity for the given role.
 - `role` `(string: <required>)` - Name of the role against which the login is being
   attempted.
 - `jwt` `(string: <required>)` - Signed [JSON Web Token](https://tools.ietf.org/html/rfc7519) (JWT) from Azure MSI.
-- `subscription_id` `(string: "")` - The subscription ID for the machine that
+- `subscription_id` `(string: <required>)` - The subscription ID for the machine that
   generated the MSI token. This information can be obtained through instance
   metadata.
-- `resource_group_name` `(string: "")` - The resource group for the machine that
+- `resource_group_name` `(string: <required>)` - The resource group for the machine that
   generated the MSI token. This information can be obtained through instance
   metadata.
 - `vm_name` `(string: "")` - The virtual machine name for the machine that

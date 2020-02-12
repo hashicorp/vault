@@ -11,7 +11,7 @@ description: >-
 
 This guide provides guidance on best practices for a production hardened
 deployment of Vault. The recommendations are based on the [security
-model](/docs/internals/security.html) and focus on defense in depth.
+model](/docs/internals/security) and focus on defense in depth.
 
 ~> **Apply When Possible!** This guide is meant to provide guidance for an
 _ideal_ deployment of Vault, not to document requirements. It is entirely
@@ -50,7 +50,7 @@ and practical.
   still have sensitive data in memory to function. Risk of exposure should be
   minimized by disabling swap to prevent the operating system from paging
   sensitive data to disk. Vault attempts to ["memory lock" to physical memory
-  automatically](/docs/configuration/index.html#disable_mlock), but disabling
+  automatically](/docs/configuration#disable_mlock), but disabling
   swap adds another layer of defense.
 
 - **Don't Run as Root**. Vault is designed to run as an unprivileged user, and
@@ -82,13 +82,13 @@ and practical.
   code](https://www.hashicorp.com/blog/codifying-vault-policies-and-configuration/),
   and using version control to manage policies. Once setup, the root token
   should be revoked to eliminate the risk of exposure. Root tokens can be
-  [generated when needed](/guides/operations/generate-root.html), and should be
+  [generated when needed](/guides/operations/generate-root), and should be
   revoked as soon as possible.
 
 - **Enable Auditing**. Vault supports several auditing backends. Enabling
   auditing provides a history of all operations performed by Vault and provides
   a forensics trail in the case of misuse or compromise. Audit logs [securely
-  hash](/docs/audit/index.html) any sensitive data, but access should still be
+  hash](/docs/audit) any sensitive data, but access should still be
   restricted to prevent any unintended disclosures.
 
 - **Upgrade Frequently**. Vault is actively developed, and updating frequently
@@ -105,18 +105,18 @@ and practical.
 
 - **Restrict Storage Access**. Vault encrypts all data at rest, regardless of
   which storage backend is used. Although the data is encrypted, an [attacker
-  with arbitrary control](/docs/internals/security.html) can cause data
+  with arbitrary control](/docs/internals/security) can cause data
   corruption or loss by modifying or deleting keys. Access to the storage
   backend should be restricted to only Vault to avoid unauthorized access or
   operations.
 
 - **Disable Shell Command History**. You may want the `vault` command itself to
-  not appear in history at all. Refer to [additional methods](/guides/secret-mgmt/static-secrets.html#additional-discussion)
+  not appear in history at all. Refer to [additional methods](/guides/secret-mgmt/static-secrets#additional-discussion)
   for guidance.
 
 - **Tweak ulimits**. It is possible that your Linux distribution has strict process `ulimits`.
   Consider to review `ulimits` for maximum amount of open files, connections, etc. before
   going into production; they may need increasing.
 
-- **Docker Containers**. To leverage the ["memory lock"](/docs/configuration/index.html#disable_mlock)
+- **Docker Containers**. To leverage the ["memory lock"](/docs/configuration#disable_mlock)
   feature inside the Vault container you will likely need to use the `overlayfs2` or another supporting driver.

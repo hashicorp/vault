@@ -19,13 +19,15 @@ using higher level constructs such as deployments, jobs or statefulsets.
 Before applying Vault Agent injection annotations to pods, the following requirements
 should be satisfied:
 
+- the master Kubernetes nodes can receive traffic from worker nodes on port `8080`,
 - Kubernetes auth method should be configured and enabled in Vault,
 - Pod should have a service account,
 - desired secrets exist within Vault,
 - the service account should be bound to a Vault role with a policy enabling access to desired secrets.
 
+
 For more information on configuring the Vault Kubernetes auth method,
-[see the official documentation](/docs/auth/kubernetes.html#configuration).
+[see the official documentation](/docs/auth/kubernetes#configuration).
 
 ## Debugging
 
@@ -38,7 +40,7 @@ owner of the pod. Check the following for errors:
 
 ## Patching Existing Pods
 
-To patch existing pods, a Kubernetes patch can be applied to add the required annoations
+To patch existing pods, a Kubernetes patch can be applied to add the required annotations
 to pods. When applying a patch, the pods will be rescheduled.
 
 First, create the patch:
@@ -129,7 +131,7 @@ spec:
 
 The following example creates a deployment that mounts a Kubernetes ConfigMap
 containing Vault Agent configuration files. For a complete list of the Vault
-Agent configuration settings, [see the Agent documentation](/docs/agent/template/index.html#vault-agent-templates).
+Agent configuration settings, [see the Agent documentation](/docs/agent/template#vault-agent-templates).
 
 ```yaml
 ---

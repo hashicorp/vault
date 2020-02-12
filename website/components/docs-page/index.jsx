@@ -25,6 +25,7 @@ export default function DocsPage({
             key="description"
           />
         )}
+        {pageMeta.deprecated && <meta name="robots" content="noindex" />}
       </Head>
       <div className="content-wrap g-container">
         <div id="sidebar" role="complementary">

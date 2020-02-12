@@ -13,12 +13,12 @@ responsible for assigning identity and a set of policies to a user.
 Having multiple auth methods enables you to use an auth method that makes the
 most sense for your use case of Vault and your organization.
 
-For example, on developer machines, the [GitHub auth method](/docs/auth/github.html)
-is easiest to use. But for servers the [AppRole](/docs/auth/approle.html)
+For example, on developer machines, the [GitHub auth method](/docs/auth/github)
+is easiest to use. But for servers the [AppRole](/docs/auth/approle)
 method is the recommended choice.
 
 To learn more about authentication, see the
-[authentication concepts page](/docs/concepts/auth.html).
+[authentication concepts page](/docs/concepts/auth).
 
 ## Enabling/Disabling Auth Methods
 
@@ -28,7 +28,7 @@ Auth methods can be enabled/disabled using the CLI or the API.
 $ vault auth enable userpass
 ```
 
-When enabled, auth methods are similar to [secrets engines](/docs/secrets/index.html):
+When enabled, auth methods are similar to [secrets engines](/docs/secrets):
 they are mounted within the Vault mount table and can be accessed
 and configured using the standard read/write API. All auth methods are mounted underneath the `auth/` prefix.
 

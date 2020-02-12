@@ -114,7 +114,7 @@ JSON Pointer can be used as a selector. Refer to the
 ## OIDC Authentication
 
 This section covers the setup and use of OIDC roles. If a JWT is to be provided directly,
-refer to the [JWT Authentication](/docs/auth/jwt.html#jwt-authentication) section below. Basic
+refer to the [JWT Authentication](/docs/auth/jwt#jwt-authentication) section below. Basic
 familiarity with [OIDC concepts](https://developer.okta.com/blog/2017/07/25/oidc-primer-part-1)
 is assumed.
 
@@ -143,7 +143,7 @@ Logging in via the Vault UI requires a redirect URI of the form:
 
 The "host:port" must be correct for the Vault server, and "path" must match the path the JWT
 backend is mounted at (e.g. "oidc" or "jwt").
-If [namespaces](https://www.vaultproject.io/docs/enterprise/namespaces/index.html) are being used,
+If [namespaces](/docs/enterprise/namespaces) are being used,
 they must be added as query parameters, for example:
 
 `https://vault.example.com:8200/ui/vault/auth/oidc/oidc/callback?namespace=my_ns`
@@ -180,7 +180,7 @@ The callback listener may be customized with the following optional parameters:
 The OIDC authentication flow has been successfully tested with a number of providers. A full
 guide to configuring OAuth/OIDC applications is beyond the scope of Vault documentation, but a
 collection of provider configuration steps has been collected to help get started:
-[OIDC Provider Setup](/docs/auth/jwt_oidc_providers.html)
+[OIDC Provider Setup](/docs/auth/jwt_oidc_providers)
 
 ### OIDC Configuration Troubleshooting
 
@@ -204,7 +204,7 @@ why things aren't working. Some tips for setting up OIDC:
 
   `cat jwt.json | jq -r .access_token | cut -d. -f2 | base64 -D`
 
-- As of Vault 1.2, the [`verbose_oidc_logging`](/api/auth/jwt/index.html#verbose_oidc_logging) role
+- As of Vault 1.2, the [`verbose_oidc_logging`](/api/auth/jwt#verbose_oidc_logging) role
   option is available which will log the received OIDC token if debug-level logging is enabled. This can
   be helpful when debugging provider setup and verifying that the received claims are what you expect.
   Since claims data is logged verbatim and may contain sensitive information, this option should not be
@@ -270,7 +270,7 @@ management tool.
 
 1.  Use the `/config` endpoint to configure Vault. To support JWT roles, either local keys or an OIDC
     Discovery URL must be present. For OIDC roles, OIDC Discovery URL, OIDC Client ID and OIDC Client Secret are required. For the
-    list of available configuration options, please see the [API documentation](/api/auth/jwt/index.html).
+    list of available configuration options, please see the [API documentation](/api/auth/jwt).
 
     ```text
     $ vault write auth/jwt/config \
@@ -302,4 +302,4 @@ management tool.
 ## API
 
 The JWT Auth Plugin has a full HTTP API. Please see the
-[API docs](/api/auth/jwt/index.html) for more details.
+[API docs](/api/auth/jwt) for more details.

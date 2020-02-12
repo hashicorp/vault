@@ -108,8 +108,11 @@ management tool.
        policies="dev,prod" \
        bound_projects="my-project1,my-project2" \
        bound_zones="us-east1-b" \
-       bound_labels="foo:bar,zip:zap"
+       bound_labels="foo:bar,zip:zap" \
+       bound_service_accounts="my-service@my-project.iam.gserviceaccount.com"
    ```
+
+   Note that `bound_service_accounts` is only required for `iam`-type roles.
 
    For the complete list of configuration options for each type, please see the
    [API documentation][api-docs].
@@ -342,7 +345,7 @@ The GCP Auth Plugin has a full HTTP API. Please see the
 [signjwt-method]: https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts/signJwt
 [cloud-creds]: https://cloud.google.com/docs/authentication/production#providing_credentials_to_your_application
 [service-accounts]: https://cloud.google.com/compute/docs/access/service-accounts
-[api-docs]: /api/auth/gcp/index.html
-[identity-group-aliases]: /api/secret/identity/group-alias.html
+[api-docs]: /api/auth/gcp
+[identity-group-aliases]: /api/secret/identity/group-alias
 [instance-identity]: https://cloud.google.com/compute/docs/instances/verifying-instance-identity
 [repo]: https://github.com/hashicorp/vault-plugin-auth-gcp

@@ -176,7 +176,7 @@ These metrics relate to internal operations on Merkle Trees and Write Ahead Logs
 
 ## Replication Metrics
 
-These metrics relate to [Vault Enterprise Replication](https://www.vaultproject.io/docs/enterprise/replication/index.html). The following metrics are not available in telemetry unless replication is in an unhealthy state: `replication.fetchRemoteKeys`, `replication.merkleDiff`, and `replication.merkleSync`.
+These metrics relate to [Vault Enterprise Replication](/docs/enterprise/replication). The following metrics are not available in telemetry unless replication is in an unhealthy state: `replication.fetchRemoteKeys`, `replication.merkleDiff`, and `replication.merkleSync`.
 
 | Metric                                                  | Description                                                                                                                                | Unit            | Type    |
 | :------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------- | :-------------- | :------ |
@@ -190,6 +190,7 @@ These metrics relate to [Vault Enterprise Replication](https://www.vaultproject.
 | `replication.wal.last_dr_wal`                           | The index of the last DR WAL                                                                                                               | sequence number | gauge   |
 | `replication.wal.last_performance_wal`                  | The index of the last Performance WAL                                                                                                      | sequence number | gauge   |
 | `replication.fsm.last_remote_wal`                       | The index of the last remote WAL                                                                                                           | sequence number | gauge   |
+| `vault.replication.wal.gc`                              |Time taken to complete one run of the WAL garbage collection process                                                                 | ms   | summary |
 | `replication.rpc.server.auth_request`                   | Duration of time taken by auth request                                                                                                     | ms              | summary |
 | `replication.rpc.server.bootstrap_request`              | Duration of time taken by bootstrap request                                                                                                | ms              | summary |
 | `replication.rpc.server.conflicting_pages_request`      | Duration of time taken by conflicting pages request                                                                                        | ms              | summary |
@@ -228,25 +229,25 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 | Metric                                   | Description                                                                                                                                                                | Unit   | Type    |
 | :--------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----- | :------ |
 | `database.Initialize`                    | Time taken to initialize a database secret engine across all database secrets engines                                                                                      | ms     | summary |
-| `database.&lt;name&gt;.Initialize`       | Time taken to initialize a database secret engine for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Initialize`                       | ms     | summary |
+| `database.<name>.Initialize`       | Time taken to initialize a database secret engine for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Initialize`                       | ms     | summary |
 | `database.Initialize.error`              | Number of database secrets engine initialization operation errors across all database secrets engines                                                                      | errors | counter |
-| `database.&lt;name&gt;.Initialize.error` | Number of database secrets engine initialization operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Initialize.error` | errors | counter |
+| `database.<name>.Initialize.error` | Number of database secrets engine initialization operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Initialize.error` | errors | counter |
 | `database.Close`                         | Time taken to close a database secret engine across all database secrets engines                                                                                           | ms     | summary |
-| `database.&lt;name&gt;.Close`            | Time taken to close a database secret engine for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Close`                                 | ms     | summary |
+| `database.<name>.Close`            | Time taken to close a database secret engine for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Close`                                 | ms     | summary |
 | `database.Close.error`                   | Number of database secrets engine close operation errors across all database secrets engines                                                                               | errors | counter |
-| `database.&lt;name&gt;.Close.error`      | Number of database secrets engine close operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Close.error`               | errors | counter |
+| `database.<name>.Close.error`      | Number of database secrets engine close operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Close.error`               | errors | counter |
 | `database.CreateUser`                    | Time taken to create a user across all database secrets engines                                                                                                            | ms     | summary |
-| `database.&lt;name&gt;.CreateUser`       | Time taken to create a user for the named database secrets engine `<name>`                                                                                                 | ms     | summary |
+| `database.<name>.CreateUser`       | Time taken to create a user for the named database secrets engine `<name>`                                                                                                 | ms     | summary |
 | `database.CreateUser.error`              | Number of user creation operation errors across all database secrets engines                                                                                               | errors | counter |
-| `database.&lt;name&gt;.CreateUser.error` | Number of user creation operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.CreateUser.error`                          | errors | counter |
+| `database.<name>.CreateUser.error` | Number of user creation operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.CreateUser.error`                          | errors | counter |
 | `database.RenewUser`                     | Time taken to renew a user across all database secrets engines                                                                                                             | ms     | summary |
-| `database.&lt;name&gt;.RenewUser`        | Time taken to renew a user for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RenewUser`                                               | ms     | summary |
+| `database.<name>.RenewUser`        | Time taken to renew a user for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RenewUser`                                               | ms     | summary |
 | `database.RenewUser.error`               | Number of user renewal operation errors across all database secrets engines                                                                                                | errors | counter |
-| `database.&lt;name&gt;.RenewUser.error`  | Number of user renewal operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RenewUser.error`                                  | errors | counter |
+| `database.<name>.RenewUser.error`  | Number of user renewal operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RenewUser.error`                                  | errors | counter |
 | `database.RevokeUser`                    | Time taken to revoke a user across all database secrets engines                                                                                                            | ms     | summary |
-| `database.&lt;name&gt;.RevokeUser`       | Time taken to revoke a user for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RevokeUser`                                             | ms     | summary |
+| `database.<name>.RevokeUser`       | Time taken to revoke a user for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RevokeUser`                                             | ms     | summary |
 | `database.RevokeUser.error`              | Number of user revocation operation errors across all database secrets engines                                                                                             | errors | counter |
-| `database.&lt;name&gt;.RevokeUser.error` | Number of user revocation operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RevokeUser.error`                              | errors | counter |
+| `database.<name>.RevokeUser.error` | Number of user revocation operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RevokeUser.error`                              | errors | counter |
 
 ## Storage Backend Metrics
 
@@ -321,25 +322,25 @@ These metrics relate to the supported [storage backends][storage-backends].
 | `vault.zookeeper.delete`    | Duration of a DELETE operation against the [ZooKeeper storage backend][zookeeper-storage-backend]                      | ms   | summary |
 | `vault.zookeeper.list`      | Duration of a LIST operation against the [ZooKeeper storage backend][zookeeper-storage-backend]                        | ms   | summary |
 
-[secrets-engines]: /docs/secrets/index.html
-[storage-backends]: /docs/configuration/storage/index.html
-[telemetry-stanza]: /docs/configuration/telemetry.html
-[cubbyhole-secrets-engine]: /docs/secrets/cubbyhole/index.html
-[kv-secrets-engine]: /docs/secrets/kv/index.html
-[ldap-auth-backend]: /docs/auth/ldap.html
-[token-auth-backend]: /docs/auth/token.html
-[azure-storage-backend]: /docs/configuration/storage/azure.html
-[cassandra-storage-backend]: /docs/configuration/storage/cassandra.html
-[cockroachdb-storage-backend]: /docs/configuration/storage/cockroachdb.html
-[consul-storage-backend]: /docs/configuration/storage/consul.html
-[couchdb-storage-backend]: /docs/configuration/storage/couchdb.html
-[dynamodb-storage-backend]: /docs/configuration/storage/dynamodb.html
-[etcd-storage-backend]: /docs/configuration/storage/etcd.html
-[gcs-storage-backend]: /docs/configuration/storage/google-cloud-storage.html
-[spanner-storage-backend]: /docs/configuration/storage/google-cloud-spanner.html
-[mssql-storage-backend]: /docs/configuration/storage/mssql.html
-[mysql-storage-backend]: /docs/configuration/storage/mysql.html
-[postgresql-storage-backend]: /docs/configuration/storage/postgresql.html
-[s3-storage-backend]: /docs/configuration/storage/s3.html
-[swift-storage-backend]: /docs/configuration/storage/swift.html
-[zookeeper-storage-backend]: /docs/configuration/storage/zookeeper.html
+[secrets-engines]: /docs/secrets
+[storage-backends]: /docs/configuration/storage
+[telemetry-stanza]: /docs/configuration/telemetry
+[cubbyhole-secrets-engine]: /docs/secrets/cubbyhole
+[kv-secrets-engine]: /docs/secrets/kv
+[ldap-auth-backend]: /docs/auth/ldap
+[token-auth-backend]: /docs/auth/token
+[azure-storage-backend]: /docs/configuration/storage/azure
+[cassandra-storage-backend]: /docs/configuration/storage/cassandra
+[cockroachdb-storage-backend]: /docs/configuration/storage/cockroachdb
+[consul-storage-backend]: /docs/configuration/storage/consul
+[couchdb-storage-backend]: /docs/configuration/storage/couchdb
+[dynamodb-storage-backend]: /docs/configuration/storage/dynamodb
+[etcd-storage-backend]: /docs/configuration/storage/etcd
+[gcs-storage-backend]: /docs/configuration/storage/google-cloud-storage
+[spanner-storage-backend]: /docs/configuration/storage/google-cloud-spanner
+[mssql-storage-backend]: /docs/configuration/storage/mssql
+[mysql-storage-backend]: /docs/configuration/storage/mysql
+[postgresql-storage-backend]: /docs/configuration/storage/postgresql
+[s3-storage-backend]: /docs/configuration/storage/s3
+[swift-storage-backend]: /docs/configuration/storage/swift
+[zookeeper-storage-backend]: /docs/configuration/storage/zookeeper

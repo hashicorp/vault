@@ -21,7 +21,7 @@ Currently supports authentication for:
 ## Prerequisites:
 
 The following documentation assumes that the method has been
-[mounted](/docs/plugin/index.html) at `auth/azure`.
+[mounted](/docs/plugin) at `auth/azure`.
 
 - A configured [Azure AD application](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-integrating-applications) which is used as the resource for generating MSI access tokens.
 - Client credentials (shared secret) for accessing the Azure Resource Manager with read access to compute endpoints. See [Azure AD Service to Service Client Credentials](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-service-to-service)
@@ -37,7 +37,7 @@ The next sections review how the authN/Z workflows work. If you
 have already reviewed these sections, here are some quick links to:
 
 - [Usage](#usage)
-- [API documentation](/api/auth/azure/index.html) docs.
+- [API documentation](/api/auth/azure) docs.
 
 ## Authentication
 
@@ -134,7 +134,7 @@ tool.
    authentication type, as well as overall constraints and configuration for
    the generated auth tokens.
 
-   For the complete list of role options, please see the [API documentation](/api/auth/azure/index.html).
+   For the complete list of role options, please see the [API documentation](/api/auth/azure).
 
 ### Via the API
 
@@ -175,7 +175,7 @@ method as an external plugin. The azure plugin method is integrated into Vault a
 a builtin method by default.
 
 Assuming you have saved the binary `vault-plugin-auth-azure` to some folder and
-configured the [plugin directory](/docs/internals/plugins.html#plugin-directory)
+configured the [plugin directory](/docs/internals/plugins#plugin-directory)
 for your server at `path/to/plugins`:
 
 1. Enable the plugin in the catalog:
@@ -194,4 +194,4 @@ for your server at `path/to/plugins`:
 
 ## API
 
-The Azure Auth Plugin has a full HTTP API. Please see the [API documentation](/api/auth/azure/index.html) for more details.
+The Azure Auth Plugin has a full HTTP API. Please see the [API documentation](/api/auth/azure) for more details.
