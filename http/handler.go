@@ -623,7 +623,8 @@ func parseFormRequest(r *http.Request) (map[string]interface{}, error) {
 		data = make(map[string]interface{}, len(r.PostForm))
 		for k, v := range r.PostForm {
 			switch len(v) {
-			case 0, 1:
+			case 0:
+			case 1:
 				data[k] = v[0]
 			default:
 				// Almost anywhere taking in a string list can take in comma

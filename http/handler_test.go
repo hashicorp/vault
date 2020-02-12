@@ -703,6 +703,7 @@ func TestHandler_Parse_Form(t *testing.T) {
 		"zip":   []string{"zap"},
 		"abc":   []string{"xyz"},
 		"multi": []string{"first", "second"},
+		"empty": []string{},
 	}
 	req, err := http.NewRequest("POST", cores[0].Client.Address()+"/v1/secret/foo", nil)
 	if err != nil {
