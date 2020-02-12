@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/mitchellh/mapstructure"
-	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -76,7 +75,7 @@ func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]in
 		return nil, err
 	}
 
-	authOpts, err := c.getAuth()
+	authOpts, err := c.getTLSAuth()
 	if err != nil {
 		return nil, err
 	}
@@ -216,17 +215,6 @@ func (c *mongoDBConnectionProducer) getWriteConcern() (opts *options.ClientOptio
 	return opts, nil
 }
 
-func (c *mongoDBConnectionProducer) getAuth() (opts *options.ClientOptions, err error) {
-	if len(c.TLSCAData) == 0 && len(c.TLSCertificateKeyData) == 0 {
-		return nil, nil // NOOP since the user/pass should be in the connection string
-	}
-	return c.getTLSAuth()
-}
-
-func (c *mongoDBConnectionProducer) getUserPassAuth() (opts *options.ClientOptions, err error) {
-	return nil, nil
-}
-
 func (c *mongoDBConnectionProducer) getTLSAuth() (opts *options.ClientOptions, err error) {
 	if len(c.TLSCAData) == 0 && len(c.TLSCertificateKeyData) == 0 {
 		return nil, nil
@@ -237,26 +225,23 @@ func (c *mongoDBConnectionProducer) getTLSAuth() (opts *options.ClientOptions, e
 	tlsConfig := &tls.Config{}
 
 	if len(c.TLSCAData) > 0 {
-		if tlsConfig.RootCAs == nil {
-			tlsConfig.RootCAs = x509.NewCertPool()
-		}
+		tlsConfig.RootCAs = x509.NewCertPool()
 
 		ok := tlsConfig.RootCAs.AppendCertsFromPEM(c.TLSCAData)
 		if !ok {
-			return nil, errors.New("failed to append CA to client options")
+			return nil, fmt.Errorf("failed to append CA to client options")
 		}
 	}
 
 	if len(c.TLSCertificateKeyData) > 0 {
 		certificate, err := tls.X509KeyPair(c.TLSCertificateKeyData, c.TLSCertificateKeyData)
 		if err != nil {
-			return nil, errors.Wrap(err, "unable to load tls_certificate_key_data")
+			return nil, fmt.Errorf("unable to load tls_certificate_key_data: %w", err)
 		}
 
-		username := c.Username
 		opts.SetAuth(options.Credential{
 			AuthMechanism: "MONGODB-X509",
-			Username:      username,
+			Username:      c.Username,
 		})
 
 		tlsConfig.Certificates = append(tlsConfig.Certificates, certificate)

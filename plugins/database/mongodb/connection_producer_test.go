@@ -30,25 +30,25 @@ func TestInit_clientTLS(t *testing.T) {
 	defer os.RemoveAll(confDir)
 
 	// Create certificates for Mongo authentication
-	caCert := NewCert(t,
-		CommonName("test certificate authority"),
-		IsCA(true),
-		SelfSign(),
+	caCert := newCert(t,
+		commonName("test certificate authority"),
+		isCA(true),
+		selfSign(),
 	)
-	serverCert := NewCert(t,
-		CommonName("server"),
-		DNS("localhost"),
-		Parent(caCert),
+	serverCert := newCert(t,
+		commonName("server"),
+		dns("localhost"),
+		parent(caCert),
 	)
-	clientCert := NewCert(t,
-		CommonName("client"),
-		DNS("client"),
-		Parent(caCert),
+	clientCert := newCert(t,
+		commonName("client"),
+		dns("client"),
+		parent(caCert),
 	)
 
-	WriteFile(t, paths.Join(confDir, "ca.pem"), caCert.CombinedPEM(), 0644)
-	WriteFile(t, paths.Join(confDir, "server.pem"), serverCert.CombinedPEM(), 0644)
-	WriteFile(t, paths.Join(confDir, "client.pem"), clientCert.CombinedPEM(), 0644)
+	writeFile(t, paths.Join(confDir, "ca.pem"), caCert.CombinedPEM(), 0644)
+	writeFile(t, paths.Join(confDir, "server.pem"), serverCert.CombinedPEM(), 0644)
+	writeFile(t, paths.Join(confDir, "client.pem"), clientCert.CombinedPEM(), 0644)
 
 	// //////////////////////////////////////////////////////
 	// Set up Mongo config file
@@ -60,7 +60,7 @@ net:
       CAFile: /etc/mongo/ca.pem
       allowInvalidHostnames: true`
 
-	WriteFile(t, paths.Join(confDir, "mongod.conf"), []byte(rawConf), 0644)
+	writeFile(t, paths.Join(confDir, "mongod.conf"), []byte(rawConf), 0644)
 
 	// //////////////////////////////////////////////////////
 	// Start Mongo container
@@ -81,7 +81,7 @@ net:
 		"connection_url":      retURL,
 		"allowed_roles":       "*",
 		"tls_certificate_key": clientCert.CombinedPEM(),
-		"tls_ca":              caCert.Pem,
+		"tls_ca":              caCert.pem,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -111,7 +111,7 @@ net:
 		AuthInfo: authInfo{
 			AuthenticatedUsers: []user{
 				{
-					User: fmt.Sprintf("CN=%s", clientCert.Template.Subject.CommonName),
+					User: fmt.Sprintf("CN=%s", clientCert.template.Subject.CommonName),
 					DB:   "$external",
 				},
 			},
@@ -247,11 +247,11 @@ func connect(t *testing.T, uri string) (client *mongo.Client) {
 	return client
 }
 
-func setUpX509User(t *testing.T, client *mongo.Client, cert Certificate) {
+func setUpX509User(t *testing.T, client *mongo.Client, cert certificate) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	username := fmt.Sprintf("CN=%s", cert.Template.Subject.CommonName)
+	username := fmt.Sprintf("CN=%s", cert.template.Subject.CommonName)
 
 	cmd := &createUserCommand{
 		Username: username,

@@ -238,14 +238,14 @@ func testCreateDBUser(t testing.TB, connURL, db, username, password string) {
 }
 
 func TestGetTLSAuth(t *testing.T) {
-	ca := NewCert(t,
-		CommonName("certificate authority"),
-		IsCA(true),
-		SelfSign(),
+	ca := newCert(t,
+		commonName("certificate authority"),
+		isCA(true),
+		selfSign(),
 	)
-	cert := NewCert(t,
-		CommonName("test cert"),
-		Parent(ca),
+	cert := newCert(t,
+		commonName("test cert"),
+		parent(ca),
 	)
 
 	type testCase struct {
@@ -275,12 +275,12 @@ func TestGetTLSAuth(t *testing.T) {
 			expectErr:  true,
 		},
 		"good ca": {
-			tlsCAData: cert.Pem,
+			tlsCAData: cert.pem,
 
 			expectOpts: options.Client().
 				SetTLSConfig(
 					&tls.Config{
-						RootCAs: appendToCertPool(t, x509.NewCertPool(), cert.Pem),
+						RootCAs: appendToCertPool(t, x509.NewCertPool(), cert.pem),
 					},
 				),
 			expectErr: false,
@@ -292,7 +292,7 @@ func TestGetTLSAuth(t *testing.T) {
 			expectOpts: options.Client().
 				SetTLSConfig(
 					&tls.Config{
-						Certificates: []tls.Certificate{cert.TLSCert},
+						Certificates: []tls.Certificate{cert.tlsCert},
 					},
 				).
 				SetAuth(options.Credential{

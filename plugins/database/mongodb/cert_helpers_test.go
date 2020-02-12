@@ -28,45 +28,45 @@ type certBuilder struct {
 	isCA bool
 }
 
-type CertOpt func(*certBuilder) error
+type certOpt func(*certBuilder) error
 
-func CommonName(cn string) CertOpt {
+func commonName(cn string) certOpt {
 	return func(builder *certBuilder) error {
 		builder.tmpl.Subject.CommonName = cn
 		return nil
 	}
 }
 
-func Parent(parent Certificate) CertOpt {
+func parent(parent certificate) certOpt {
 	return func(builder *certBuilder) error {
-		builder.parentKey = parent.PrivKey.PrivKey
-		builder.parentTmpl = parent.Template
+		builder.parentKey = parent.privKey.privKey
+		builder.parentTmpl = parent.template
 		return nil
 	}
 }
 
-func IsCA(isCA bool) CertOpt {
+func isCA(isCA bool) certOpt {
 	return func(builder *certBuilder) error {
 		builder.isCA = isCA
 		return nil
 	}
 }
 
-func SelfSign() CertOpt {
+func selfSign() certOpt {
 	return func(builder *certBuilder) error {
 		builder.selfSign = true
 		return nil
 	}
 }
 
-func DNS(dns ...string) CertOpt {
+func dns(dns ...string) certOpt {
 	return func(builder *certBuilder) error {
 		builder.tmpl.DNSNames = dns
 		return nil
 	}
 }
 
-func NewCert(t *testing.T, opts ...CertOpt) (cert Certificate) {
+func newCert(t *testing.T, opts ...certOpt) (cert certificate) {
 	t.Helper()
 
 	builder := certBuilder{
@@ -93,18 +93,18 @@ func NewCert(t *testing.T, opts ...CertOpt) (cert Certificate) {
 		}
 	}
 
-	key := NewPrivateKey(t)
+	key := newPrivateKey(t)
 
-	builder.tmpl.SubjectKeyId = getSubjKeyID(t, key.PrivKey)
+	builder.tmpl.SubjectKeyId = getSubjKeyID(t, key.privKey)
 
 	tmpl := builder.tmpl
 	parent := builder.parentTmpl
-	publicKey := key.PrivKey.Public()
+	publicKey := key.privKey.Public()
 	signingKey := builder.parentKey
 
 	if builder.selfSign {
 		parent = tmpl
-		signingKey = key.PrivKey
+		signingKey = key.privKey
 	}
 
 	if builder.isCA {
@@ -127,30 +127,30 @@ func NewCert(t *testing.T, opts ...CertOpt) (cert Certificate) {
 		Bytes: certBytes,
 	})
 
-	tlsCert, err := tls.X509KeyPair(certPem, key.Pem)
+	tlsCert, err := tls.X509KeyPair(certPem, key.pem)
 	if err != nil {
 		t.Fatalf("Unable to parse X509 key pair: %s", err)
 	}
 
-	return Certificate{
-		Template: tmpl,
-		PrivKey:  key,
-		TLSCert:  tlsCert,
-		RawCert:  certBytes,
-		Pem:      certPem,
-		IsCA:     builder.isCA,
+	return certificate{
+		template: tmpl,
+		privKey:  key,
+		tlsCert:  tlsCert,
+		rawCert:  certBytes,
+		pem:      certPem,
+		isCA:     builder.isCA,
 	}
 }
 
 // ////////////////////////////////////////////////////////////////////////////
 // Private Key
 // ////////////////////////////////////////////////////////////////////////////
-type KeyWrapper struct {
-	PrivKey *rsa.PrivateKey
-	Pem     []byte
+type keyWrapper struct {
+	privKey *rsa.PrivateKey
+	pem     []byte
 }
 
-func NewPrivateKey(t *testing.T) (key KeyWrapper) {
+func newPrivateKey(t *testing.T) (key keyWrapper) {
 	t.Helper()
 
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -165,41 +165,37 @@ func NewPrivateKey(t *testing.T) (key KeyWrapper) {
 		},
 	)
 
-	key = KeyWrapper{
-		PrivKey: privKey,
-		Pem:     privKeyPem,
+	key = keyWrapper{
+		privKey: privKey,
+		pem:     privKeyPem,
 	}
 
 	return key
 }
 
-func (pk KeyWrapper) PemBytes() []byte {
-	return pk.Pem[:]
-}
-
 // ////////////////////////////////////////////////////////////////////////////
 // Certificate
 // ////////////////////////////////////////////////////////////////////////////
-type Certificate struct {
-	PrivKey  KeyWrapper
-	Template *x509.Certificate
-	TLSCert  tls.Certificate
-	RawCert  []byte
-	Pem      []byte
-	IsCA     bool
+type certificate struct {
+	privKey  keyWrapper
+	template *x509.Certificate
+	tlsCert  tls.Certificate
+	rawCert  []byte
+	pem      []byte
+	isCA     bool
 }
 
-func (cert Certificate) CombinedPEM() []byte {
-	if cert.IsCA {
-		return cert.Pem
+func (cert certificate) CombinedPEM() []byte {
+	if cert.isCA {
+		return cert.pem
 	}
-	return bytes.Join([][]byte{cert.PrivKey.Pem, cert.Pem}, []byte{'\n'})
+	return bytes.Join([][]byte{cert.privKey.pem, cert.pem}, []byte{'\n'})
 }
 
 // ////////////////////////////////////////////////////////////////////////////
 // Writing to file
 // ////////////////////////////////////////////////////////////////////////////
-func WriteFile(t *testing.T, filename string, data []byte, perms os.FileMode) {
+func writeFile(t *testing.T, filename string, data []byte, perms os.FileMode) {
 	t.Helper()
 
 	err := ioutil.WriteFile(filename, data, perms)
@@ -212,6 +208,8 @@ func WriteFile(t *testing.T, filename string, data []byte, perms os.FileMode) {
 // Helpers
 // ////////////////////////////////////////////////////////////////////////////
 func makeSerial(t *testing.T) *big.Int {
+	t.Helper()
+
 	v := &big.Int{}
 	serialNumberLimit := v.Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
