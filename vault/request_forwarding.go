@@ -99,6 +99,19 @@ func (c *requestForwardingClusterClient) ClientLookup(ctx context.Context, reque
 	return nil, nil
 }
 
+func (c *requestForwardingClusterClient) ServerName() string {
+	parsedCert := c.core.localClusterParsedCert.Load().(*x509.Certificate)
+	if parsedCert == nil {
+		return ""
+	}
+
+	return parsedCert.Subject.CommonName
+}
+
+func (c *requestForwardingClusterClient) CACert(ctx context.Context) *x509.Certificate {
+	return c.core.localClusterParsedCert.Load().(*x509.Certificate)
+}
+
 // ServerLookup satisfies the ClusterHandler interface and returns the server's
 // tls certs.
 func (rf *requestForwardingHandler) ServerLookup(ctx context.Context, clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
@@ -246,11 +259,14 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 	}
 
 	clusterListener := c.getClusterListener()
-	if clusterListener != nil {
-		clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{
-			core: c,
-		})
+	if clusterListener == nil {
+		c.logger.Error("no cluster listener configured")
+		return nil
 	}
+
+	clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{
+		core: c,
+	})
 
 	// Set up grpc forwarding handling
 	// It's not really insecure, but we have to dial manually to get the
@@ -258,7 +274,7 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 	// the TLS state.
 	dctx, cancelFunc := context.WithCancel(ctx)
 	c.rpcClientConn, err = grpc.DialContext(dctx, clusterURL.Host,
-		grpc.WithDialer(c.getGRPCDialer(ctx, consts.RequestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)),
+		grpc.WithDialer(clusterListener.GetDialerFunc(ctx, consts.RequestForwardingALPN)),
 		grpc.WithInsecure(), // it's not, we handle it in the dialer
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time: 2 * cluster.HeartbeatInterval,

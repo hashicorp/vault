@@ -29,13 +29,15 @@ executors:
     environment:
       GO111MODULE: "off"
       CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
-      GO_VERSION: 1.12.12  # Pin Go to patch version (ex: 1.2.3)
+      GO_VERSION: 1.13.7  # Pin Go to patch version (ex: 1.2.3)
       GOTESTSUM_VERSION: 0.3.3  # Pin gotestsum to patch version (ex: 1.2.3)
       GO_TAGS: ""
     working_directory: /go/src/github.com/hashicorp/vault
   node:
     docker:
       - image: *NODE_IMAGE
+        environment:
+            JOBS: 2
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /go/src/github.com/hashicorp/vault
   python:

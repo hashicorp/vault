@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
 
@@ -27,6 +28,8 @@ type Config struct {
 	Listeners []*Listener `hcl:"-"`
 	Storage   *Storage    `hcl:"-"`
 	HAStorage *Storage    `hcl:"-"`
+
+	ServiceRegistration *ServiceRegistration `hcl:"-"`
 
 	Seals   []*Seal  `hcl:"-"`
 	Entropy *Entropy `hcl:"-"`
@@ -150,6 +153,16 @@ func (b *Storage) GoString() string {
 	return fmt.Sprintf("*%#v", *b)
 }
 
+// ServiceRegistration is the optional service discovery for the server.
+type ServiceRegistration struct {
+	Type   string
+	Config map[string]string
+}
+
+func (b *ServiceRegistration) GoString() string {
+	return fmt.Sprintf("*%#v", *b)
+}
+
 // Seal contains Seal configuration for the server
 type Seal struct {
 	Type     string
@@ -166,7 +179,8 @@ type Telemetry struct {
 	StatsiteAddr string `hcl:"statsite_address"`
 	StatsdAddr   string `hcl:"statsd_address"`
 
-	DisableHostname bool `hcl:"disable_hostname"`
+	DisableHostname     bool `hcl:"disable_hostname"`
+	EnableHostnameLabel bool `hcl:"enable_hostname_label"`
 
 	// Circonus: see https://github.com/circonus-labs/circonus-gometrics
 	// for more details on the various configuration options.
@@ -289,6 +303,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.HAStorage = c.HAStorage
 	if c2.HAStorage != nil {
 		result.HAStorage = c2.HAStorage
+	}
+
+	result.ServiceRegistration = c.ServiceRegistration
+	if c2.ServiceRegistration != nil {
+		result.ServiceRegistration = c2.ServiceRegistration
 	}
 
 	result.Entropy = c.Entropy
@@ -584,6 +603,13 @@ func ParseConfig(d string) (*Config, error) {
 		}
 	}
 
+	// Parse service discovery
+	if o := list.Filter("service_registration"); len(o.Items) > 0 {
+		if err := parseServiceRegistration(&result, o, "service_registration"); err != nil {
+			return nil, errwrap.Wrapf("error parsing 'service_registration': {{err}}", err)
+		}
+	}
+
 	if o := list.Filter("hsm"); len(o.Items) > 0 {
 		if err := parseSeals(&result, o, "hsm"); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'hsm': {{err}}", err)
@@ -705,9 +731,23 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 		key = item.Keys[0].Token.Value().(string)
 	}
 
-	var m map[string]string
-	if err := hcl.DecodeObject(&m, item.Val); err != nil {
+	var config map[string]interface{}
+	if err := hcl.DecodeObject(&config, item.Val); err != nil {
 		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
+	}
+
+	m := make(map[string]string)
+	for key, val := range config {
+		valStr, ok := val.(string)
+		if ok {
+			m[key] = valStr
+			continue
+		}
+		valBytes, err := jsonutil.EncodeJSON(val)
+		if err != nil {
+			return err
+		}
+		m[key] = string(valBytes)
 	}
 
 	// Pull out the redirect address since it's common to all backends
@@ -824,6 +864,30 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 		DisableClustering: disableClustering,
 		Type:              strings.ToLower(key),
 		Config:            m,
+	}
+	return nil
+}
+
+func parseServiceRegistration(result *Config, list *ast.ObjectList, name string) error {
+	if len(list.Items) > 1 {
+		return fmt.Errorf("only one %q block is permitted", name)
+	}
+
+	// Get our item
+	item := list.Items[0]
+	key := name
+	if len(item.Keys) > 0 {
+		key = item.Keys[0].Token.Value().(string)
+	}
+
+	var m map[string]string
+	if err := hcl.DecodeObject(&m, item.Val); err != nil {
+		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
+	}
+
+	result.ServiceRegistration = &ServiceRegistration{
+		Type:   strings.ToLower(key),
+		Config: m,
 	}
 	return nil
 }
@@ -1006,6 +1070,14 @@ func (c *Config) Sanitized() map[string]interface{} {
 			"disable_clustering": c.HAStorage.DisableClustering,
 		}
 		result["ha_storage"] = sanitizedHAStorage
+	}
+
+	// Sanitize service_registration stanza
+	if c.ServiceRegistration != nil {
+		sanitizedServiceRegistration := map[string]interface{}{
+			"type": c.ServiceRegistration.Type,
+		}
+		result["service_registration"] = sanitizedServiceRegistration
 	}
 
 	// Sanitize seals stanza

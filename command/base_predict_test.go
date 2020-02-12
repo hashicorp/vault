@@ -31,6 +31,12 @@ func TestPredictVaultPaths(t *testing.T) {
 	if _, err := client.Logical().Write("secret/zip/twoot", data); err != nil {
 		t.Fatal(err)
 	}
+	if err := client.Sys().Mount("level1a/level2a/level3a", &api.MountInput{Type: "kv"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.Sys().Mount("level1a/level2a/level3b", &api.MountInput{Type: "kv"}); err != nil {
+		t.Fatal(err)
+	}
 
 	cases := []struct {
 		name         string
@@ -181,6 +187,18 @@ func TestPredictVaultPaths(t *testing.T) {
 			},
 			false,
 			[]string{"secret/zip/t"},
+		},
+		{
+			"multi_nested",
+			complete.Args{
+				All:  []string{"read", "level1a/level2a"},
+				Last: "level1a/level2a",
+			},
+			false,
+			[]string{
+				"level1a/level2a/level3a/",
+				"level1a/level2a/level3b/",
+			},
 		},
 	}
 
@@ -342,12 +360,15 @@ func TestPredict_Plugins(t *testing.T) {
 				"hana-database-plugin",
 				"influxdb-database-plugin",
 				"jwt",
+				"kerberos",
 				"kmip",
 				"kubernetes",
 				"kv",
 				"ldap",
 				"mongodb",
 				"mongodb-database-plugin",
+				"mongodbatlas",
+				"mongodbatlas-database-plugin",
 				"mssql",
 				"mssql-database-plugin",
 				"mysql",
@@ -393,7 +414,7 @@ func TestPredict_Plugins(t *testing.T) {
 					}
 				}
 				if !reflect.DeepEqual(act, tc.exp) {
-					t.Errorf("expected %q to be %q", act, tc.exp)
+					t.Errorf("expected:%q, got: %q", tc.exp, act)
 				}
 			})
 		}

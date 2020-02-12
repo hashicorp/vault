@@ -28,6 +28,7 @@ import (
 	credCF "github.com/hashicorp/vault-plugin-auth-cf"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credOIDC "github.com/hashicorp/vault-plugin-auth-jwt"
+	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
 	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
@@ -62,6 +63,9 @@ import (
 	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
+
+	sr "github.com/hashicorp/vault/serviceregistration"
+	csr "github.com/hashicorp/vault/serviceregistration/consul"
 )
 
 const (
@@ -155,6 +159,10 @@ var (
 		"raft":                   physRaft.NewRaftBackend,
 		"zookeeper":              physZooKeeper.NewZooKeeperBackend,
 	}
+
+	serviceRegistrations = map[string]sr.Factory{
+		"consul": csr.NewServiceRegistration,
+	}
 )
 
 // Commands is the mapping of all the available commands.
@@ -169,6 +177,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"cf":       &credCF.CLIHandler{},
 		"gcp":      &credGcp.CLIHandler{},
 		"github":   &credGitHub.CLIHandler{},
+		"kerberos": &credKerb.CLIHandler{},
 		"ldap":     &credLdap.CLIHandler{},
 		"oci":      &credOCI.CLIHandler{},
 		"oidc":     &credOIDC.CLIHandler{},
@@ -517,9 +526,12 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				CredentialBackends: credentialBackends,
 				LogicalBackends:    logicalBackends,
 				PhysicalBackends:   physicalBackends,
-				ShutdownCh:         MakeShutdownCh(),
-				SighupCh:           MakeSighupCh(),
-				SigUSR2Ch:          MakeSigUSR2Ch(),
+
+				ServiceRegistrations: serviceRegistrations,
+
+				ShutdownCh: MakeShutdownCh(),
+				SighupCh:   MakeSighupCh(),
+				SigUSR2Ch:  MakeSigUSR2Ch(),
 			}, nil
 		},
 		"ssh": func() (cli.Command, error) {

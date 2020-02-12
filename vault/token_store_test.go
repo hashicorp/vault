@@ -213,7 +213,7 @@ func TestTokenStore_Salting(t *testing.T) {
 		t.Fatalf("expected sha2-256 hmac; got sha1 hash")
 	}
 
-	nsCtx := namespace.ContextWithNamespace(context.Background(), &namespace.Namespace{"testid", "ns1"})
+	nsCtx := namespace.ContextWithNamespace(context.Background(), &namespace.Namespace{ID: "testid", Path: "ns1"})
 	saltedID, err = ts.SaltID(nsCtx, "foo")
 	if err != nil {
 		t.Fatal(err)
@@ -2932,6 +2932,9 @@ func TestTokenStore_HandleRequest_CreateToken_NotAllowedEntityAlias(t *testing.T
 			"mount_accessor": tokenMountAccessor,
 		},
 	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
 
 	// Create token role
 	resp, err = core.HandleRequest(ctx, &logical.Request{

@@ -40,6 +40,7 @@ import (
 const (
 	SubscriptionID          = "AZURE_SUBSCRIPTION_ID"
 	TenantID                = "AZURE_TENANT_ID"
+	AuxiliaryTenantIDs      = "AZURE_AUXILIARY_TENANT_IDS"
 	ClientID                = "AZURE_CLIENT_ID"
 	ClientSecret            = "AZURE_CLIENT_SECRET"
 	CertificatePath         = "AZURE_CERTIFICATE_PATH"
@@ -96,6 +97,7 @@ func GetSettingsFromEnvironment() (s EnvironmentSettings, err error) {
 	}
 	s.setValue(SubscriptionID)
 	s.setValue(TenantID)
+	s.setValue(AuxiliaryTenantIDs)
 	s.setValue(ClientID)
 	s.setValue(ClientSecret)
 	s.setValue(CertificatePath)
@@ -145,6 +147,12 @@ func (settings EnvironmentSettings) GetClientCredentials() (ClientCredentialsCon
 	config := NewClientCredentialsConfig(clientID, secret, tenantID)
 	config.AADEndpoint = settings.Environment.ActiveDirectoryEndpoint
 	config.Resource = settings.Values[Resource]
+	if auxTenants, ok := settings.Values[AuxiliaryTenantIDs]; ok {
+		config.AuxTenants = strings.Split(auxTenants, ";")
+		for i := range config.AuxTenants {
+			config.AuxTenants[i] = strings.TrimSpace(config.AuxTenants[i])
+		}
+	}
 	return config, nil
 }
 
@@ -546,6 +554,7 @@ type ClientCredentialsConfig struct {
 	ClientID     string
 	ClientSecret string
 	TenantID     string
+	AuxTenants   []string
 	AADEndpoint  string
 	Resource     string
 }
@@ -559,13 +568,29 @@ func (ccc ClientCredentialsConfig) ServicePrincipalToken() (*adal.ServicePrincip
 	return adal.NewServicePrincipalToken(*oauthConfig, ccc.ClientID, ccc.ClientSecret, ccc.Resource)
 }
 
+// MultiTenantServicePrincipalToken creates a MultiTenantServicePrincipalToken from client credentials.
+func (ccc ClientCredentialsConfig) MultiTenantServicePrincipalToken() (*adal.MultiTenantServicePrincipalToken, error) {
+	oauthConfig, err := adal.NewMultiTenantOAuthConfig(ccc.AADEndpoint, ccc.TenantID, ccc.AuxTenants, adal.OAuthOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return adal.NewMultiTenantServicePrincipalToken(oauthConfig, ccc.ClientID, ccc.ClientSecret, ccc.Resource)
+}
+
 // Authorizer gets the authorizer from client credentials.
 func (ccc ClientCredentialsConfig) Authorizer() (autorest.Authorizer, error) {
-	spToken, err := ccc.ServicePrincipalToken()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get oauth token from client credentials: %v", err)
+	if len(ccc.AuxTenants) == 0 {
+		spToken, err := ccc.ServicePrincipalToken()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get SPT from client credentials: %v", err)
+		}
+		return autorest.NewBearerAuthorizer(spToken), nil
 	}
-	return autorest.NewBearerAuthorizer(spToken), nil
+	mtSPT, err := ccc.MultiTenantServicePrincipalToken()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get multitenant SPT from client credentials: %v", err)
+	}
+	return autorest.NewMultiTenantServicePrincipalTokenAuthorizer(mtSPT), nil
 }
 
 // ClientCertificateConfig provides the options to get a bearer authorizer from a client certificate.
@@ -690,7 +715,7 @@ type MSIConfig struct {
 
 // Authorizer gets the authorizer from MSI.
 func (mc MSIConfig) Authorizer() (autorest.Authorizer, error) {
-	msiEndpoint, err := adal.GetMSIVMEndpoint()
+	msiEndpoint, err := adal.GetMSIEndpoint()
 	if err != nil {
 		return nil, err
 	}

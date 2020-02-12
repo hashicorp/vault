@@ -104,9 +104,7 @@ type forwardingClient struct {
 func (c *forwardingClient) startHeartbeat() {
 	go func() {
 		tick := func() {
-			c.core.stateLock.RLock()
 			clusterAddr := c.core.ClusterAddr()
-			c.core.stateLock.RUnlock()
 
 			req := &EchoRequest{
 				Message:     "ping",

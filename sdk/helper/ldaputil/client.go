@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/hashicorp/errwrap"
@@ -84,8 +85,13 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 		}
 		retErr = multierror.Append(retErr, errwrap.Wrapf(fmt.Sprintf("error connecting to host %q: {{err}}", uut), err))
 	}
-
-	return conn, retErr.ErrorOrNil()
+	if retErr != nil {
+		return nil, retErr
+	}
+	if timeout := cfg.RequestTimeout; timeout > 0 {
+		conn.SetTimeout(time.Duration(timeout) * time.Second)
+	}
+	return conn, nil
 }
 
 /*
@@ -205,7 +211,9 @@ func (c *Client) performLdapFilterGroupsSearch(cfg *ConfigEntry, conn Connection
 	}
 
 	var renderedQuery bytes.Buffer
-	t.Execute(&renderedQuery, context)
+	if err := t.Execute(&renderedQuery, context); err != nil {
+		return nil, errwrap.Wrapf("LDAP search failed due to template parsing error: {{error}}", err)
+	}
 
 	if c.Logger.IsDebug() {
 		c.Logger.Debug("searching", "groupdn", cfg.GroupDN, "rendered_query", renderedQuery.String())

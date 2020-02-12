@@ -76,6 +76,10 @@ type STSAPI interface {
 	DecodeAuthorizationMessageWithContext(aws.Context, *sts.DecodeAuthorizationMessageInput, ...request.Option) (*sts.DecodeAuthorizationMessageOutput, error)
 	DecodeAuthorizationMessageRequest(*sts.DecodeAuthorizationMessageInput) (*request.Request, *sts.DecodeAuthorizationMessageOutput)
 
+	GetAccessKeyInfo(*sts.GetAccessKeyInfoInput) (*sts.GetAccessKeyInfoOutput, error)
+	GetAccessKeyInfoWithContext(aws.Context, *sts.GetAccessKeyInfoInput, ...request.Option) (*sts.GetAccessKeyInfoOutput, error)
+	GetAccessKeyInfoRequest(*sts.GetAccessKeyInfoInput) (*request.Request, *sts.GetAccessKeyInfoOutput)
+
 	GetCallerIdentity(*sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error)
 	GetCallerIdentityWithContext(aws.Context, *sts.GetCallerIdentityInput, ...request.Option) (*sts.GetCallerIdentityOutput, error)
 	GetCallerIdentityRequest(*sts.GetCallerIdentityInput) (*request.Request, *sts.GetCallerIdentityOutput)

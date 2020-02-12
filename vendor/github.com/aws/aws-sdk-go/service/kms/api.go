@@ -3404,10 +3404,12 @@ func (c *KMS) ListAliasesPagesWithContext(ctx aws.Context, input *ListAliasesInp
 		},
 	}
 
-	cont := true
-	for p.Next() && cont {
-		cont = fn(p.Page().(*ListAliasesOutput), !p.HasNextPage())
+	for p.Next() {
+		if !fn(p.Page().(*ListAliasesOutput), !p.HasNextPage()) {
+			break
+		}
 	}
+
 	return p.Err()
 }
 
@@ -3567,10 +3569,12 @@ func (c *KMS) ListGrantsPagesWithContext(ctx aws.Context, input *ListGrantsInput
 		},
 	}
 
-	cont := true
-	for p.Next() && cont {
-		cont = fn(p.Page().(*ListGrantsResponse), !p.HasNextPage())
+	for p.Next() {
+		if !fn(p.Page().(*ListGrantsResponse), !p.HasNextPage()) {
+			break
+		}
 	}
+
 	return p.Err()
 }
 
@@ -3726,10 +3730,12 @@ func (c *KMS) ListKeyPoliciesPagesWithContext(ctx aws.Context, input *ListKeyPol
 		},
 	}
 
-	cont := true
-	for p.Next() && cont {
-		cont = fn(p.Page().(*ListKeyPoliciesOutput), !p.HasNextPage())
+	for p.Next() {
+		if !fn(p.Page().(*ListKeyPoliciesOutput), !p.HasNextPage()) {
+			break
+		}
 	}
+
 	return p.Err()
 }
 
@@ -3871,10 +3877,12 @@ func (c *KMS) ListKeysPagesWithContext(ctx aws.Context, input *ListKeysInput, fn
 		},
 	}
 
-	cont := true
-	for p.Next() && cont {
-		cont = fn(p.Page().(*ListKeysOutput), !p.HasNextPage())
+	for p.Next() {
+		if !fn(p.Page().(*ListKeysOutput), !p.HasNextPage()) {
+			break
+		}
 	}
+
 	return p.Err()
 }
 
