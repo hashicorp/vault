@@ -181,6 +181,9 @@ func (c *Client) do(req *http.Request, ptrToReturnObj interface{}) error {
 
 func (c *Client) getCheckRetry(req *http.Request) retryablehttp.CheckRetry {
 	return func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		if resp == nil {
+			return true, fmt.Errorf("nil response: %s", req.URL.RequestURI())
+		}
 		switch resp.StatusCode {
 		case 200, 201, 202, 204:
 			// Success.
