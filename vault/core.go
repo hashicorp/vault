@@ -232,7 +232,7 @@ type Core struct {
 	raftInfo *raftInformation
 
 	// migrationInfo is used during a seal migration. This contains information
-	// about the seal we are migration *from*.
+	// about the seal we are migrating *from*.
 	migrationInfo *migrationInformation
 	sealMigrated  *uint32
 
