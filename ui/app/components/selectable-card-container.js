@@ -9,8 +9,8 @@ import { computed } from '@ember/object';
  * ```js
  * <SelectableCardContainer @counters={{model}} @gridContainer="true" />
  * ```
- * @param {object} counters - Counters is an object that returns total entities, tokens, and an array of objects with the total https request per month.
- * @param {string} [gridContainer] - gridContainer is optional.  If true, it's telling the container it will have a nested CSS grid.
+ * @param counters=null {Object} - Counters is an object that returns total entities, tokens, and an array of objects with the total https request per month.
+ * @param gridContainer=false {Boolean} - gridContainer is optional.  If true, it's telling the container it will have a nested CSS grid.
  *
  * const MODEL = {
  *  totalEntities: 0,
@@ -20,10 +20,12 @@ import { computed } from '@ember/object';
  */
 
 export default Component.extend({
-  classNameBindings: ['isGraphContainer'],
-  isGraphContainer: computed('counters', function() {
+  classNameBindings: ['isGridContainer'],
+  counters: null,
+  gridContainer: false,
+  isGridContainer: computed('counters', function() {
     return this.counters.httpsRequests.length > 1
-      ? 'selectable-card-container-graph'
+      ? 'selectable-card-container has-grid'
       : 'selectable-card-container';
   }),
   totalHttpRequests: computed('counters', function() {

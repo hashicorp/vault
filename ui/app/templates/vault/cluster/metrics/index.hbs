@@ -10,6 +10,6 @@
   {{#if (gt model.httpsRequests.length 1) }}
     <SelectableCardContainer @counters={{model}} @gridContainer="true"/>
   {{else}}
-    <SelectableCardContainer @counters={{model}} @gridContainer="false" />
+    <SelectableCardContainer @counters={{model}} />
   {{/if}}
 </div>

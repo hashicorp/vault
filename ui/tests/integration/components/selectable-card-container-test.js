@@ -9,7 +9,7 @@ const MODEL = {
   totalTokens: 1,
 };
 
-const MODEL_GRAPH = {
+const MODEL_WITH_GRID = {
   httpsRequests: [
     { start_time: '2018-11-01T00:00:00Z', total: 5500 },
     { start_time: '2018-12-01T00:00:00Z', total: 4500 },
@@ -37,7 +37,7 @@ module('Integration | Component | selectable-card-container', function(hooks) {
 
   hooks.beforeEach(function() {
     this.set('model', MODEL);
-    this.set('modelGraph', MODEL_GRAPH);
+    this.set('modelWithGrid', MODEL_WITH_GRID);
   });
 
   test('it renders', async function(assert) {
@@ -48,24 +48,26 @@ module('Integration | Component | selectable-card-container', function(hooks) {
   test('it renders a card for each of the models and titles are returned', async function(assert) {
     await render(hbs`<SelectableCardContainer @counters={{model}}/>`);
     assert.dom('.selectable-card').exists({ count: 3 });
+    let cardTitles = ['Http Requests', 'Entities', 'Tokens'];
+    let httpRequestsTitle = this.element.querySelectorAll('[data-test-selectable-card-title]');
 
-    assert.dom(`[data-test-selectable-card-title=Requests]`).exists();
-    assert.dom(`[data-test-selectable-card-title=Entities]`).exists();
-    assert.dom(`[data-test-selectable-card-title=Tokens]`).exists();
+    httpRequestsTitle.forEach((item, index) => {
+      assert.notEqual(cardTitles.indexOf(item.innerText), -1);
+    });
   });
 
   test('it renders with more than one month of data', async function(assert) {
-    await render(hbs`<SelectableCardContainer @counters={{modelGraph}}/>`);
-    assert.dom('.selectable-card-container-graph').exists();
+    await render(hbs`<SelectableCardContainer @counters={{modelWithGrid}}/>`);
+    assert.dom('.selectable-card-container .has-grid').exists();
   });
 
   test('it renders 3 selectable cards when there is more than one month of data', async function(assert) {
-    await render(hbs`<SelectableCardContainer @counters={{modelGraph}}/>`);
+    await render(hbs`<SelectableCardContainer @counters={{modelWithGrid}}/>`);
     assert.dom('.selectable-card').exists({ count: 3 });
   });
 
   test('it only renders a bar chart with the last 12 months of data', async function(assert) {
-    await render(hbs`<SelectableCardContainer @counters={{modelGraph}}/>`);
+    await render(hbs`<SelectableCardContainer @counters={{modelWithGrid}}/>`);
     assert.dom('rect').exists({ count: 12 });
   });
 });

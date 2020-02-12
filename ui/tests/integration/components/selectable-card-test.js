@@ -6,7 +6,7 @@ import hbs from 'htmlbars-inline-precompile';
 const TOTAL = 15;
 const CARD_TITLE = 'Tokens';
 
-module('Integration | Component meep', function(hooks) {
+module('Integration | Component selectable-card', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
@@ -14,7 +14,7 @@ module('Integration | Component meep', function(hooks) {
     this.set('cardTitle', CARD_TITLE);
   });
 
-  test('it shows the card title', async function(assert) {
+  test('it shows the card total', async function(assert) {
     await render(hbs`<SelectableCard @total={{total}} @cardTitle={{cardTitle}}/>`);
     let titleNumber = this.element.querySelector('.title-number').innerText;
 

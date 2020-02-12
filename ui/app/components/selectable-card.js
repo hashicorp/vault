@@ -9,31 +9,25 @@ import { computed } from '@ember/object';
  * ```js
  * <SelectableCard @cardTitle="Tokens" @total={{totalHttpRequests}} @subText="Total" @gridContainer={{gridContainer}}/>
  * ```
- * @param {string} cardTitle - cardTitle displays the card title
- * @param {number} total - the Total number displays like a title, it's the largest text in the component
- * @param {string} subText - subText describes the total
- * @param {string} gridContainer - Optional parameter used to display CSS grid item class.
+ * @param cardTitle='' {String} - cardTitle displays the card title
+ * @param total=0 {Number} - the Total number displays like a title, it's the largest text in the component
+ * @param subText='' {String} - subText describes the total
+ * @param gridContainer=false {Boolean} - Optional parameter used to display CSS grid item class.
  */
 
 export default Component.extend({
+  cardTitle: '',
+  total: 0,
+  subText: '',
+  gridContainer: false,
   tagName: '', // do not wrap component with div
-  cardTitleComputed: computed('total', function() {
-    let cardTitle = this.cardTitle || '';
-    let total = this.total || '';
+  formattedCardTitle: computed('total', function() {
+    const { cardTitle, total } = this;
 
     if (cardTitle === 'Tokens') {
       return total !== 1 ? 'Tokens' : 'Token';
     } else if (cardTitle === 'Entities') {
       return total !== 1 ? 'Entities' : 'Entity';
-    }
-
-    return cardTitle;
-  }),
-  cardTitleTesting: computed('cardTitle', function() {
-    let cardTitle = this.cardTitle || '';
-
-    if (cardTitle === 'Http Requests') {
-      return 'Requests';
     }
 
     return cardTitle;
