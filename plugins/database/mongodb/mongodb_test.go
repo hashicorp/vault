@@ -1,7 +1,6 @@
 package mongodb
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -333,8 +332,15 @@ func TestRedact(t *testing.T) {
 }
 
 func TestGetTLSAuth(t *testing.T) {
-	// certs := MakeCerts(t)
-	cert := MakeCert(t, nil)
+	ca := NewCert(t,
+		CommonName("certificate authority"),
+		IsCA(true),
+		SelfSign(),
+	)
+	cert := NewCert(t,
+		CommonName("test cert"),
+		Parent(ca),
+	)
 
 	type testCase struct {
 		username   string
@@ -363,19 +369,19 @@ func TestGetTLSAuth(t *testing.T) {
 			expectErr:  true,
 		},
 		"good ca": {
-			tlsCAData: cert.CertPem,
+			tlsCAData: cert.Pem,
 
 			expectOpts: options.Client().
 				SetTLSConfig(
 					&tls.Config{
-						RootCAs: appendToCertPool(t, x509.NewCertPool(), cert.CertPem),
+						RootCAs: appendToCertPool(t, x509.NewCertPool(), cert.Pem),
 					},
 				),
 			expectErr: false,
 		},
 		"good key": {
 			username:   "unittest",
-			tlsKeyData: mergePems(cert.CertPem, cert.KeyPem),
+			tlsKeyData: cert.CombinedPEM(),
 
 			expectOpts: options.Client().
 				SetTLSConfig(
@@ -420,8 +426,4 @@ func appendToCertPool(t *testing.T, pool *x509.CertPool, caPem []byte) *x509.Cer
 		t.Fatalf("Unable to append cert to cert pool")
 	}
 	return pool
-}
-
-func mergePems(pems ...[]byte) []byte {
-	return bytes.Join(pems, []byte("\n"))
 }

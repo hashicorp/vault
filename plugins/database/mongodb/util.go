@@ -4,8 +4,8 @@ import "go.mongodb.org/mongo-driver/mongo/writeconcern"
 
 type createUserCommand struct {
 	Username string        `bson:"createUser"`
-	Password string        `bson:"pwd"`
-	Roles    []interface{} `bson:"roles"`
+	Password string        `bson:"pwd,omitempty"`
+	Roles    []interface{} `bson:"roles,omitempty"`
 }
 
 type updateUserCommand struct {
