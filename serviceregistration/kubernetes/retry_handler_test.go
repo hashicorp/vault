@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/serviceregistration/kubernetes/client"
 	kubetest "github.com/hashicorp/vault/serviceregistration/kubernetes/testing"
 )
@@ -47,15 +48,14 @@ func TestRetryHandlerSimple(t *testing.T) {
 		logger:         logger,
 		namespace:      kubetest.ExpectedNamespace,
 		podName:        kubetest.ExpectedPodName,
-		client:         c,
 		patchesToRetry: make(map[string]*client.Patch),
 	}
-	go r.Run(shutdownCh, wait)
+	r.Run(shutdownCh, wait, c)
 
 	if testState.NumPatches() != 0 {
 		t.Fatal("expected no current patches")
 	}
-	r.Add(testPatch)
+	r.Notify(c, testPatch)
 	// Wait ample until the next try should have occurred.
 	<-time.NewTimer(retryFreq * 2).C
 	if testState.NumPatches() != 1 {
@@ -64,6 +64,26 @@ func TestRetryHandlerSimple(t *testing.T) {
 }
 
 func TestRetryHandlerAdd(t *testing.T) {
+	_, testConf, closeFunc := kubetest.Server(t)
+	defer closeFunc()
+
+	client.Scheme = testConf.ClientScheme
+	client.TokenFile = testConf.PathToTokenFile
+	client.RootCAFile = testConf.PathToRootCAFile
+	if err := os.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort); err != nil {
+		t.Fatal(err)
+	}
+
+	logger := hclog.NewNullLogger()
+	shutdownCh := make(chan struct{})
+	c, err := client.New(logger, shutdownCh)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	r := &retryHandler{
 		logger:         hclog.NewNullLogger(),
 		namespace:      "some-namespace",
@@ -93,34 +113,34 @@ func TestRetryHandlerAdd(t *testing.T) {
 	}
 
 	// Should be able to add all 4 patches.
-	r.Add(testPatch1)
+	r.Notify(c, testPatch1)
 	if len(r.patchesToRetry) != 1 {
 		t.Fatal("expected 1 patch")
 	}
 
-	r.Add(testPatch2)
+	r.Notify(c, testPatch2)
 	if len(r.patchesToRetry) != 2 {
 		t.Fatal("expected 2 patches")
 	}
 
-	r.Add(testPatch3)
+	r.Notify(c, testPatch3)
 	if len(r.patchesToRetry) != 3 {
 		t.Fatal("expected 3 patches")
 	}
 
-	r.Add(testPatch4)
+	r.Notify(c, testPatch4)
 	if len(r.patchesToRetry) != 4 {
 		t.Fatal("expected 4 patches")
 	}
 
 	// Adding a dupe should result in no change.
-	r.Add(testPatch4)
+	r.Notify(c, testPatch4)
 	if len(r.patchesToRetry) != 4 {
 		t.Fatal("expected 4 patches")
 	}
 
 	// Adding a reversion should result in its twin being subtracted.
-	r.Add(&client.Patch{
+	r.Notify(c, &client.Patch{
 		Operation: client.Add,
 		Path:      "four",
 		Value:     "false",
@@ -129,7 +149,7 @@ func TestRetryHandlerAdd(t *testing.T) {
 		t.Fatal("expected 4 patches")
 	}
 
-	r.Add(&client.Patch{
+	r.Notify(c, &client.Patch{
 		Operation: client.Add,
 		Path:      "three",
 		Value:     "false",
@@ -138,7 +158,7 @@ func TestRetryHandlerAdd(t *testing.T) {
 		t.Fatal("expected 4 patches")
 	}
 
-	r.Add(&client.Patch{
+	r.Notify(c, &client.Patch{
 		Operation: client.Add,
 		Path:      "two",
 		Value:     "false",
@@ -147,7 +167,7 @@ func TestRetryHandlerAdd(t *testing.T) {
 		t.Fatal("expected 4 patches")
 	}
 
-	r.Add(&client.Patch{
+	r.Notify(c, &client.Patch{
 		Operation: client.Add,
 		Path:      "one",
 		Value:     "false",
@@ -190,10 +210,8 @@ func TestRetryHandlerRacesAndDeadlocks(t *testing.T) {
 		logger:         logger,
 		namespace:      kubetest.ExpectedNamespace,
 		podName:        kubetest.ExpectedPodName,
-		client:         c,
 		patchesToRetry: make(map[string]*client.Patch),
 	}
-	go r.Run(shutdownCh, wait)
 
 	// Now hit it as quickly as possible to see if we can produce
 	// races or deadlocks.
@@ -203,7 +221,20 @@ func TestRetryHandlerRacesAndDeadlocks(t *testing.T) {
 	for i := 0; i < numRoutines; i++ {
 		go func() {
 			<-start
-			r.Add(testPatch)
+			r.Notify(c, testPatch)
+			done <- true
+		}()
+		go func() {
+			<-start
+			r.Run(shutdownCh, wait, c)
+			done <- true
+		}()
+		go func() {
+			<-start
+			r.SetInitialState(func() error {
+				c.GetPod(kubetest.ExpectedNamespace, kubetest.ExpectedPodName)
+				return nil
+			})
 			done <- true
 		}()
 	}
@@ -211,11 +242,209 @@ func TestRetryHandlerRacesAndDeadlocks(t *testing.T) {
 
 	// Allow up to 5 seconds for everything to finish.
 	timer := time.NewTimer(5 * time.Second)
-	for i := 0; i < numRoutines; i++ {
+	for i := 0; i < numRoutines*3; i++ {
 		select {
 		case <-timer.C:
 			t.Fatal("test took too long to complete, check for deadlock")
 		case <-done:
 		}
+	}
+}
+
+// In this test, the API server sends bad responses for 5 seconds,
+// then sends good responses, and we make sure we get the expected behavior.
+func TestRetryHandlerAPIConnectivityProblemsInitialState(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	testState, testConf, closeFunc := kubetest.Server(t)
+	defer closeFunc()
+	kubetest.ReturnGatewayTimeouts.Store(true)
+
+	client.Scheme = testConf.ClientScheme
+	client.TokenFile = testConf.PathToTokenFile
+	client.RootCAFile = testConf.PathToRootCAFile
+	client.RetryMax = 0
+	if err := os.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort); err != nil {
+		t.Fatal(err)
+	}
+
+	shutdownCh := make(chan struct{})
+	wait := &sync.WaitGroup{}
+	reg, err := NewServiceRegistration(map[string]string{
+		"namespace": kubetest.ExpectedNamespace,
+		"pod_name":  kubetest.ExpectedPodName,
+	}, hclog.NewNullLogger(), sr.State{
+		VaultVersion:         "vault-version",
+		IsInitialized:        true,
+		IsSealed:             true,
+		IsActive:             true,
+		IsPerformanceStandby: true,
+	}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := reg.Run(shutdownCh, wait); err != nil {
+		t.Fatal(err)
+	}
+
+	// At this point, since the initial state can't be set,
+	// remotely we should have false for all these labels.
+	patch := testState.Get(pathToLabels + labelVaultVersion)
+	if patch != nil {
+		t.Fatal("expected no value")
+	}
+	patch = testState.Get(pathToLabels + labelActive)
+	if patch != nil {
+		t.Fatal("expected no value")
+	}
+	patch = testState.Get(pathToLabels + labelSealed)
+	if patch != nil {
+		t.Fatal("expected no value")
+	}
+	patch = testState.Get(pathToLabels + labelPerfStandby)
+	if patch != nil {
+		t.Fatal("expected no value")
+	}
+	patch = testState.Get(pathToLabels + labelInitialized)
+	if patch != nil {
+		t.Fatal("expected no value")
+	}
+
+	kubetest.ReturnGatewayTimeouts.Store(false)
+
+	// Now we need to wait to give the retry handler
+	// a chance to update these values.
+	time.Sleep(retryFreq + time.Second)
+	val := testState.Get(pathToLabels + labelVaultVersion)["value"]
+	if val != "vault-version" {
+		t.Fatal("expected vault-version")
+	}
+	val = testState.Get(pathToLabels + labelActive)["value"]
+	if val != "true" {
+		t.Fatal("expected true")
+	}
+	val = testState.Get(pathToLabels + labelSealed)["value"]
+	if val != "true" {
+		t.Fatal("expected true")
+	}
+	val = testState.Get(pathToLabels + labelPerfStandby)["value"]
+	if val != "true" {
+		t.Fatal("expected true")
+	}
+	val = testState.Get(pathToLabels + labelInitialized)["value"]
+	if val != "true" {
+		t.Fatal("expected true")
+	}
+}
+
+// In this test, the API server sends bad responses for 5 seconds,
+// then sends good responses, and we make sure we get the expected behavior.
+func TestRetryHandlerAPIConnectivityProblemsNotifications(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	testState, testConf, closeFunc := kubetest.Server(t)
+	defer closeFunc()
+	kubetest.ReturnGatewayTimeouts.Store(true)
+
+	client.Scheme = testConf.ClientScheme
+	client.TokenFile = testConf.PathToTokenFile
+	client.RootCAFile = testConf.PathToRootCAFile
+	client.RetryMax = 0
+	if err := os.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort); err != nil {
+		t.Fatal(err)
+	}
+
+	shutdownCh := make(chan struct{})
+	wait := &sync.WaitGroup{}
+	reg, err := NewServiceRegistration(map[string]string{
+		"namespace": kubetest.ExpectedNamespace,
+		"pod_name":  kubetest.ExpectedPodName,
+	}, hclog.NewNullLogger(), sr.State{
+		VaultVersion:         "vault-version",
+		IsInitialized:        false,
+		IsSealed:             false,
+		IsActive:             false,
+		IsPerformanceStandby: false,
+	}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := reg.Run(shutdownCh, wait); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := reg.NotifyActiveStateChange(true); err != nil {
+		t.Fatal(err)
+	}
+	if err := reg.NotifyInitializedStateChange(true); err != nil {
+		t.Fatal(err)
+	}
+	if err := reg.NotifyPerformanceStandbyStateChange(true); err != nil {
+		t.Fatal(err)
+	}
+	if err := reg.NotifySealedStateChange(true); err != nil {
+		t.Fatal(err)
+	}
+
+	// At this point, since the initial state can't be set,
+	// remotely we should have false for all these labels.
+	patch := testState.Get(pathToLabels + labelVaultVersion)
+	if patch != nil {
+		t.Fatal("expected no value")
+	}
+	patch = testState.Get(pathToLabels + labelActive)
+	if patch != nil {
+		t.Fatal("expected no value")
+	}
+	patch = testState.Get(pathToLabels + labelSealed)
+	if patch != nil {
+		t.Fatal("expected no value")
+	}
+	patch = testState.Get(pathToLabels + labelPerfStandby)
+	if patch != nil {
+		t.Fatal("expected no value")
+	}
+	patch = testState.Get(pathToLabels + labelInitialized)
+	if patch != nil {
+		t.Fatal("expected no value")
+	}
+
+	kubetest.ReturnGatewayTimeouts.Store(false)
+
+	// Now we need to wait to give the retry handler
+	// a chance to update these values.
+	time.Sleep(retryFreq + time.Second)
+
+	// They should be "true" if the Notifications were set after the
+	// initial state.
+	val := testState.Get(pathToLabels + labelVaultVersion)["value"]
+	if val != "vault-version" {
+		t.Fatal("expected vault-version")
+	}
+	val = testState.Get(pathToLabels + labelActive)["value"]
+	if val != "true" {
+		t.Fatal("expected true")
+	}
+	val = testState.Get(pathToLabels + labelSealed)["value"]
+	if val != "true" {
+		t.Fatal("expected true")
+	}
+	val = testState.Get(pathToLabels + labelPerfStandby)["value"]
+	if val != "true" {
+		t.Fatal("expected true")
+	}
+	val = testState.Get(pathToLabels + labelInitialized)["value"]
+	if val != "true" {
+		t.Fatal("expected true")
 	}
 }

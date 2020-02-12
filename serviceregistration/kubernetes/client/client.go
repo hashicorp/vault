@@ -15,14 +15,13 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 )
 
-const (
-	// Retry configuration
-	retryWaitMin = 500 * time.Millisecond
-	retryWaitMax = 30 * time.Second
-	retryMax     = 10
-)
-
 var (
+	// Retry configuration
+	RetryWaitMin = 500 * time.Millisecond
+	RetryWaitMax = 30 * time.Second
+	RetryMax     = 10
+
+	// Standard errs
 	ErrNamespaceUnset = errors.New(`"namespace" is unset`)
 	ErrPodNameUnset   = errors.New(`"podName" is unset`)
 	ErrNotInCluster   = errors.New("unable to load in-cluster configuration, KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT must be defined")
@@ -142,9 +141,9 @@ func (c *Client) do(req *http.Request, ptrToReturnObj interface{}) error {
 
 	client := &retryablehttp.Client{
 		HTTPClient:   cleanhttp.DefaultClient(),
-		RetryWaitMin: retryWaitMin,
-		RetryWaitMax: retryWaitMax,
-		RetryMax:     retryMax,
+		RetryWaitMin: RetryWaitMin,
+		RetryWaitMax: RetryWaitMax,
+		RetryMax:     RetryMax,
 		CheckRetry:   c.getCheckRetry(req),
 		Backoff:      retryablehttp.DefaultBackoff,
 	}

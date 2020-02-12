@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"go.uber.org/atomic"
 )
 
 const (
@@ -25,11 +27,17 @@ const (
 	tokenFile     = "token"
 )
 
-var pathToFiles = func() string {
-	wd, _ := os.Getwd()
-	pathParts := strings.Split(wd, "vault")
-	return pathParts[0] + "vault/serviceregistration/kubernetes/testing/"
-}()
+var (
+	// ReturnGatewayTimeouts toggles whether the test server should return,
+	// well, gateway timeouts...
+	ReturnGatewayTimeouts = atomic.NewBool(false)
+
+	pathToFiles = func() string {
+		wd, _ := os.Getwd()
+		pathParts := strings.Split(wd, "vault")
+		return pathParts[0] + "vault/serviceregistration/kubernetes/testing/"
+	}()
+)
 
 // Conf returns the info needed to configure the client to point at
 // the test server. This must be done by the caller to avoid an import
@@ -125,6 +133,10 @@ func Server(t *testing.T) (testState *State, testConf *Conf, closeFunc func()) {
 	testConf.PathToRootCAFile = tmpCACrt.Name()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if ReturnGatewayTimeouts.Load() {
+			w.WriteHeader(504)
+			return
+		}
 		namespace, podName, err := parsePath(r.URL.Path)
 		if err != nil {
 			w.WriteHeader(400)

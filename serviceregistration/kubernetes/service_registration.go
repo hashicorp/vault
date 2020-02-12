@@ -60,10 +60,16 @@ func (r *serviceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGro
 		return err
 	}
 	r.client = c
-	r.retryHandler.client = c
 
+	// Now that we've populated the client, we can begin using the retry handler.
+	r.retryHandler.SetInitialState(r.setInitialState)
+	r.retryHandler.Run(shutdownCh, wait, c)
+	return nil
+}
+
+func (r *serviceRegistration) setInitialState() error {
 	// Verify that the pod exists and our configuration looks good.
-	pod, err := c.GetPod(r.namespace, r.podName)
+	pod, err := r.client.GetPod(r.namespace, r.podName)
 	if err != nil {
 		return err
 	}
@@ -74,10 +80,10 @@ func (r *serviceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGro
 		return fmt.Errorf("no pod metadata on %+v", pod)
 	}
 	if pod.Metadata.Labels == nil {
-		// Add the labels field, and the labels as part of that one call.
+		// Notify the labels field, and the labels as part of that one call.
 		// The reason we must take a different approach to adding them is discussed here:
 		// https://stackoverflow.com/questions/57480205/error-while-applying-json-patch-to-kubernetes-custom-resource
-		if err := c.PatchPod(r.namespace, r.podName, &client.Patch{
+		if err := r.client.PatchPod(r.namespace, r.podName, &client.Patch{
 			Operation: client.Add,
 			Path:      "/metadata/labels",
 			Value: map[string]string{
@@ -119,19 +125,15 @@ func (r *serviceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGro
 				Value:     strconv.FormatBool(r.initialState.IsInitialized),
 			},
 		}
-		if err := c.PatchPod(r.namespace, r.podName, patches...); err != nil {
+		if err := r.client.PatchPod(r.namespace, r.podName, patches...); err != nil {
 			return err
 		}
 	}
-
-	// Run a service that retries errored-out notifications if they occur.
-	go r.retryHandler.Run(shutdownCh, wait)
-
 	return nil
 }
 
 func (r *serviceRegistration) NotifyActiveStateChange(isActive bool) error {
-	r.notifyOrRetry(&client.Patch{
+	r.retryHandler.Notify(r.client, &client.Patch{
 		Operation: client.Replace,
 		Path:      pathToLabels + labelActive,
 		Value:     strconv.FormatBool(isActive),
@@ -140,7 +142,7 @@ func (r *serviceRegistration) NotifyActiveStateChange(isActive bool) error {
 }
 
 func (r *serviceRegistration) NotifySealedStateChange(isSealed bool) error {
-	r.notifyOrRetry(&client.Patch{
+	r.retryHandler.Notify(r.client, &client.Patch{
 		Operation: client.Replace,
 		Path:      pathToLabels + labelSealed,
 		Value:     strconv.FormatBool(isSealed),
@@ -149,7 +151,7 @@ func (r *serviceRegistration) NotifySealedStateChange(isSealed bool) error {
 }
 
 func (r *serviceRegistration) NotifyPerformanceStandbyStateChange(isStandby bool) error {
-	r.notifyOrRetry(&client.Patch{
+	r.retryHandler.Notify(r.client, &client.Patch{
 		Operation: client.Replace,
 		Path:      pathToLabels + labelPerfStandby,
 		Value:     strconv.FormatBool(isStandby),
@@ -158,21 +160,12 @@ func (r *serviceRegistration) NotifyPerformanceStandbyStateChange(isStandby bool
 }
 
 func (r *serviceRegistration) NotifyInitializedStateChange(isInitialized bool) error {
-	r.notifyOrRetry(&client.Patch{
+	r.retryHandler.Notify(r.client, &client.Patch{
 		Operation: client.Replace,
 		Path:      pathToLabels + labelInitialized,
 		Value:     strconv.FormatBool(isInitialized),
 	})
 	return nil
-}
-
-func (r *serviceRegistration) notifyOrRetry(patch *client.Patch) {
-	if err := r.client.PatchPod(r.namespace, r.podName, patch); err != nil {
-		if r.logger.IsWarn() {
-			r.logger.Warn("unable to update state due to %s, will retry", err.Error())
-		}
-		r.retryHandler.Add(patch)
-	}
 }
 
 func getRequiredField(logger hclog.Logger, config map[string]string, envVar, configParam string) (string, error) {
