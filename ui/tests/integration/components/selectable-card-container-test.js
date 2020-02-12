@@ -51,14 +51,14 @@ module('Integration | Component | selectable-card-container', function(hooks) {
     let cardTitles = ['Http Requests', 'Entities', 'Tokens'];
     let httpRequestsTitle = this.element.querySelectorAll('[data-test-selectable-card-title]');
 
-    httpRequestsTitle.forEach((item, index) => {
+    httpRequestsTitle.forEach(item => {
       assert.notEqual(cardTitles.indexOf(item.innerText), -1);
     });
   });
 
   test('it renders with more than one month of data', async function(assert) {
     await render(hbs`<SelectableCardContainer @counters={{modelWithGrid}}/>`);
-    assert.dom('.selectable-card-container .has-grid').exists();
+    assert.dom('.selectable-card-container.has-grid').exists();
   });
 
   test('it renders 3 selectable cards when there is more than one month of data', async function(assert) {
