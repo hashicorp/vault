@@ -367,6 +367,8 @@ func TestPredict_Plugins(t *testing.T) {
 				"ldap",
 				"mongodb",
 				"mongodb-database-plugin",
+				"mongodbatlas",
+				"mongodbatlas-database-plugin",
 				"mssql",
 				"mssql-database-plugin",
 				"mysql",
@@ -412,7 +414,7 @@ func TestPredict_Plugins(t *testing.T) {
 					}
 				}
 				if !reflect.DeepEqual(act, tc.exp) {
-					t.Errorf("expected %q to be %q", act, tc.exp)
+					t.Errorf("expected:%q, got: %q", tc.exp, act)
 				}
 			})
 		}

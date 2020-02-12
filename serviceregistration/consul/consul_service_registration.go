@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	sr "github.com/hashicorp/vault/serviceregistration"
+	atomicB "go.uber.org/atomic"
 	"golang.org/x/net/http2"
 )
 
@@ -69,12 +70,11 @@ type serviceRegistration struct {
 	checkTimeout        time.Duration
 	redirectAddr        string
 
-	notifyActiveCh      chan bool
-	notifySealedCh      chan bool
-	notifyPerfStandbyCh chan bool
+	notifyActiveCh      chan struct{}
+	notifySealedCh      chan struct{}
+	notifyPerfStandbyCh chan struct{}
 
-	stateLock                         sync.RWMutex
-	isActive, isSealed, isPerfStandby bool
+	isActive, isSealed, isPerfStandby *atomicB.Bool
 }
 
 // NewConsulServiceRegistration constructs a Consul-based ServiceRegistration.
@@ -210,13 +210,13 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 		disableRegistration: disableRegistration,
 		redirectAddr:        redirectAddr,
 
-		notifyActiveCh:      make(chan bool),
-		notifySealedCh:      make(chan bool),
-		notifyPerfStandbyCh: make(chan bool),
+		notifyActiveCh:      make(chan struct{}),
+		notifySealedCh:      make(chan struct{}),
+		notifyPerfStandbyCh: make(chan struct{}),
 
-		isActive:      state.IsActive,
-		isSealed:      state.IsSealed,
-		isPerfStandby: state.IsPerformanceStandby,
+		isActive:      atomicB.NewBool(state.IsActive),
+		isSealed:      atomicB.NewBool(state.IsSealed),
+		isPerfStandby: atomicB.NewBool(state.IsPerformanceStandby),
 	}
 	return c, nil
 }
@@ -233,8 +233,9 @@ func (c *serviceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGro
 }
 
 func (c *serviceRegistration) NotifyActiveStateChange(isActive bool) error {
+	c.isActive.Store(isActive)
 	select {
-	case c.notifyActiveCh <- isActive:
+	case c.notifyActiveCh <- struct{}{}:
 	default:
 		// NOTE: If this occurs Vault's active status could be out of
 		// sync with Consul until reconcileTimer expires.
@@ -245,8 +246,9 @@ func (c *serviceRegistration) NotifyActiveStateChange(isActive bool) error {
 }
 
 func (c *serviceRegistration) NotifyPerformanceStandbyStateChange(isStandby bool) error {
+	c.isPerfStandby.Store(isStandby)
 	select {
-	case c.notifyPerfStandbyCh <- isStandby:
+	case c.notifyPerfStandbyCh <- struct{}{}:
 	default:
 		// NOTE: If this occurs Vault's active status could be out of
 		// sync with Consul until reconcileTimer expires.
@@ -257,8 +259,9 @@ func (c *serviceRegistration) NotifyPerformanceStandbyStateChange(isStandby bool
 }
 
 func (c *serviceRegistration) NotifySealedStateChange(isSealed bool) error {
+	c.isSealed.Store(isSealed)
 	select {
-	case c.notifySealedCh <- isSealed:
+	case c.notifySealedCh <- struct{}{}:
 	default:
 		// NOTE: If this occurs Vault's sealed status could be out of
 		// sync with Consul until checkTimer expires.
@@ -322,25 +325,13 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 
 	for !shutdown {
 		select {
-		case isActive := <-c.notifyActiveCh:
-			c.stateLock.Lock()
-			c.isActive = isActive
-			c.stateLock.Unlock()
-
+		case <-c.notifyActiveCh:
 			// Run reconcile immediately upon active state change notification
 			reconcileTimer.Reset(0)
-		case isSealed := <-c.notifySealedCh:
-			c.stateLock.Lock()
-			c.isSealed = isSealed
-			c.stateLock.Unlock()
-
+		case <-c.notifySealedCh:
 			// Run check timer immediately upon a seal state change notification
 			checkTimer.Reset(0)
-		case isStandby := <-c.notifyPerfStandbyCh:
-			c.stateLock.Lock()
-			c.isPerfStandby = isStandby
-			c.stateLock.Unlock()
-
+		case <-c.notifyPerfStandbyCh:
 			// Run check timer immediately upon a seal state change notification
 			checkTimer.Reset(0)
 		case <-reconcileTimer.C:
@@ -380,10 +371,7 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 				go func() {
 					defer atomic.CompareAndSwapInt32(checkLock, 1, 0)
 					for !shutdown {
-						c.stateLock.RLock()
-						sealed := c.isSealed
-						c.stateLock.RUnlock()
-						if err := c.runCheck(sealed); err != nil {
+						if err := c.runCheck(c.isSealed.Load()); err != nil {
 							if c.logger.IsWarn() {
 								c.logger.Warn("check unable to talk with Consul backend", "error", err)
 							}
@@ -427,13 +415,6 @@ func (c *serviceRegistration) serviceID() string {
 // to serviceRegistration can be made in this method (i.e. wtb const receiver for
 // compiler enforced safety).
 func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (serviceID string, err error) {
-	// Query vault Core for its current state
-	c.stateLock.RLock()
-	active := c.isActive
-	sealed := c.isSealed
-	perfStandby := c.isPerfStandby
-	c.stateLock.RUnlock()
-
 	agent := c.Client.Agent()
 	catalog := c.Client.Catalog()
 
@@ -450,7 +431,7 @@ func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (servi
 		}
 	}
 
-	tags := c.fetchServiceTags(active, perfStandby)
+	tags := c.fetchServiceTags(c.isActive.Load(), c.isPerfStandby.Load())
 
 	var reregister bool
 
@@ -489,7 +470,7 @@ func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (servi
 	}
 
 	checkStatus := api.HealthCritical
-	if !sealed {
+	if !c.isSealed.Load() {
 		checkStatus = api.HealthPassing
 	}
 
