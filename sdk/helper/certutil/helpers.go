@@ -460,6 +460,7 @@ func ValidateKeyTypeLength(keyType string, keyBits int) error {
 	case "rsa":
 		switch keyBits {
 		case 2048:
+		case 3072:
 		case 4096:
 		case 8192:
 		default:
