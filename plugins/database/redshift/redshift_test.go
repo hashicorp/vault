@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/lib/pq"
@@ -326,7 +326,11 @@ func TestPostgresSQL_SetCredentials(t *testing.T) {
 	}
 
 	// create the database user
-	dbUser := "vaultstatictest-" + fmt.Sprintf("%s", uuid.New())
+	uid, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	dbUser := "vaultstatictest-" + fmt.Sprintf("%s", uid)
 	createTestPGUser(t, url, dbUser, "1Password", testRoleStaticCreate)
 
 	db := newRedshift(true)

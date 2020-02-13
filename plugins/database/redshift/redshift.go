@@ -21,7 +21,13 @@ import (
 )
 
 const (
-	sqlTypeName     = "postgres"
+	// This is how this plugin will be reflected in middleware
+	// such as metrics.
+	middlewareTypeName = "redshift"
+
+	// This allows us to use the postgres database driver.
+	sqlTypeName = "postgres"
+
 	defaultRenewSQL = `
 ALTER USER "{{name}}" VALID UNTIL '{{expiration}}';
 `
@@ -30,7 +36,9 @@ ALTER USER "{{username}}" WITH PASSWORD '{{password}}';
 `
 )
 
-// New implements builtinplugins.BuiltinFactory
+// lowercaseUsername is the reason we wrote this plugin. Redshift implements (mostly)
+// a postgres 8 interface, and part of that is under the hood, it's lowercasing the
+// usernames.
 func New(lowercaseUsername bool) func() (interface{}, error) {
 	return func() (interface{}, error) {
 		db := newRedshift(lowercaseUsername)
@@ -78,7 +86,7 @@ type RedShift struct {
 }
 
 func (r *RedShift) Type() (string, error) {
-	return sqlTypeName, nil
+	return middlewareTypeName, nil
 }
 
 // getConnection accepts a context and retuns a new pointer to a sql.DB object.
@@ -88,7 +96,6 @@ func (r *RedShift) getConnection(ctx context.Context) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return db.(*sql.DB), nil
 }
 
@@ -118,7 +125,6 @@ func (r *RedShift) SetCredentials(ctx context.Context, statements dbplugin.State
 	if err != nil {
 		return "", "", err
 	}
-
 	defer db.Close()
 
 	// Check if the role exists
@@ -163,7 +169,6 @@ func (r *RedShift) SetCredentials(ctx context.Context, statements dbplugin.State
 	if err := tx.Commit(); err != nil {
 		return "", "", err
 	}
-
 	return username, password, nil
 }
 
@@ -198,7 +203,6 @@ func (r *RedShift) CreateUser(ctx context.Context, statements dbplugin.Statement
 	if err != nil {
 		return "", "", err
 	}
-
 	defer db.Close()
 
 	// Start a transaction
@@ -234,7 +238,6 @@ func (r *RedShift) CreateUser(ctx context.Context, statements dbplugin.Statement
 	if err := tx.Commit(); err != nil {
 		return "", "", err
 	}
-
 	return username, password, nil
 }
 
@@ -253,7 +256,6 @@ func (r *RedShift) RenewUser(ctx context.Context, statements dbplugin.Statements
 	if err != nil {
 		return err
 	}
-
 	defer db.Close()
 
 	tx, err := db.BeginTx(ctx, nil)
@@ -308,7 +310,6 @@ func (r *RedShift) customRevokeUser(ctx context.Context, username string, revoca
 	if err != nil {
 		return err
 	}
-
 	defer db.Close()
 
 	tx, err := db.BeginTx(ctx, nil)
@@ -343,7 +344,6 @@ func (r *RedShift) defaultRevokeUser(ctx context.Context, username string) error
 	if err != nil {
 		return err
 	}
-
 	defer db.Close()
 
 	// Check if the role exists

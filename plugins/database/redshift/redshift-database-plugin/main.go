@@ -13,8 +13,7 @@ func main() {
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(os.Args[1:])
 
-	err := redshift.Run(apiClientMeta.GetTLSConfig())
-	if err != nil {
+	if err := redshift.Run(apiClientMeta.GetTLSConfig()); err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
