@@ -16,21 +16,24 @@ const ACTION_VALUES = {
   decrypt: {
     isSupported: 'supportsDecryption',
     description: 'Decrypts the provided ciphertext using this key',
+    glyph: 'envelope-unsealed--outline',
   },
   datakey: {
     isSupported: 'supportsEncryption',
     description: 'Generates a new key and value encrypted with this key',
+    glyph: 'key',
   },
   rewrap: {
     isSupported: 'supportsEncryption',
     description: 'Rewraps the ciphertext using the latest version of the named key',
+    glyph: 'refresh-default',
   },
   sign: {
     isSupported: 'supportsSigning',
     description: 'Get the cryptographic signature of the given data',
     glyph: 'edit',
   },
-  hmac: { isSupported: true, description: 'Generate a data digest using a hash algorithm' },
+  hmac: { isSupported: true, description: 'Generate a data digest using a hash algorithm', glyph: 'remix' },
   verify: {
     isSupported: true,
     description: 'Validate the provided signature for the given data',
