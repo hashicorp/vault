@@ -1279,7 +1279,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// If ServiceRegistration is configured, then the backend must support HA
 	isBackendHA := coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled()
-	if (coreConfig.ServiceRegistration != nil) && !isBackendHA {
+	if !c.flagDev && (coreConfig.ServiceRegistration != nil) && !isBackendHA {
 		c.UI.Output("service_registration is configured, but storage does not support HA")
 		return 1
 	}
