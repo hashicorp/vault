@@ -85,7 +85,7 @@
             aria-label={{concat backend.path " options"}} />
         </div>
         <div class="transit-description">
-          <h2 class="title is-6">
+          <h2 class="title is-6" data-test-transit-action-title={{supportedAction.name}}>
             {{if (eq supportedAction.name 'export') 'Export Key' (humanize supportedAction.name)}}
           </h2>
           <p class="transit-action-description">{{supportedAction.description}}</p>

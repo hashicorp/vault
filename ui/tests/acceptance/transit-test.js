@@ -267,7 +267,16 @@ module('Acceptance | transit', function(hooks) {
         currentURL().startsWith(`/vault/secrets/${path}/show/${name}?tab=actions`),
         `${name}: navigates to transit actions`
       );
+
       const keyAction = key.supportsEncryption ? 'encrypt' : 'sign';
+      const actionTitle = find(`[data-test-transit-action-title=${keyAction}]`).innerText.toLowerCase();
+
+      assert.equal(
+        actionTitle.includes(keyAction),
+        true,
+        `shows a card with title that links to the ${name} transit action`
+      );
+
       await click(`[data-test-transit-card=${keyAction}]`);
       await settled();
       assert.ok(
