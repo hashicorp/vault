@@ -41,10 +41,11 @@ set, this is automatically set to true`,
 effect if a CA certificate is provided`,
 			},
 
+			// TLS 1.3 is not supported as this engine is deprecated. Please switch to the Cassandra database secrets engine
 			"tls_min_version": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "tls12",
-				Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. Defaults to 'tls12'",
+				Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
 			},
 
 			"pem_bundle": &framework.FieldSchema{
