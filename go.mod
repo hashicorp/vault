@@ -25,6 +25,7 @@ require (
 	github.com/aws/aws-sdk-go v1.25.41
 	github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
+	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
