@@ -179,8 +179,9 @@ type Telemetry struct {
 	StatsiteAddr string `hcl:"statsite_address"`
 	StatsdAddr   string `hcl:"statsd_address"`
 
-	DisableHostname     bool `hcl:"disable_hostname"`
-	EnableHostnameLabel bool `hcl:"enable_hostname_label"`
+	DisableHostname     bool   `hcl:"disable_hostname"`
+	EnableHostnameLabel bool   `hcl:"enable_hostname_label"`
+	MetricsPrefix       string `hcl:"metrics_prefix"`
 
 	// Circonus: see https://github.com/circonus-labs/circonus-gometrics
 	// for more details on the various configuration options.
@@ -1099,6 +1100,7 @@ func (c *Config) Sanitized() map[string]interface{} {
 			"statsite_address":                       c.Telemetry.StatsiteAddr,
 			"statsd_address":                         c.Telemetry.StatsdAddr,
 			"disable_hostname":                       c.Telemetry.DisableHostname,
+			"metrics_prefix":                         c.Telemetry.MetricsPrefix,
 			"circonus_api_token":                     "",
 			"circonus_api_app":                       c.Telemetry.CirconusAPIApp,
 			"circonus_api_url":                       c.Telemetry.CirconusAPIURL,
