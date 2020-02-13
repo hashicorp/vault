@@ -38,13 +38,13 @@ import (
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/reload"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/gatedwriter"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/mlock"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/reload"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -2320,7 +2320,12 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 		telConfig = &server.Telemetry{}
 	}
 
-	metricsConf := metrics.DefaultConfig("vault")
+	serviceName := "vault"
+	if telConfig.MetricsPrefix != "" {
+		serviceName = telConfig.MetricsPrefix
+	}
+
+	metricsConf := metrics.DefaultConfig(serviceName)
 	metricsConf.EnableHostname = !telConfig.DisableHostname
 	metricsConf.EnableHostnameLabel = telConfig.EnableHostnameLabel
 
