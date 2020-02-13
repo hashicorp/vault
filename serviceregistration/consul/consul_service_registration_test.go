@@ -64,9 +64,9 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// transitionFrom waits patiently for the services in the Consul catalog to
-	// transition from a known value, and then returns the new value.
-	transitionFrom := func(t *testing.T, known map[string][]string) map[string][]string {
+	// waitForServices waits for the services in the Consul catalog to
+	// reach an expected value, returning the delta if that doesn't happen in time.
+	waitForServices := func(t *testing.T, expected map[string][]string) map[string][]string {
 		t.Helper()
 		// Wait for up to 10 seconds
 		for i := 0; i < 10; i++ {
@@ -74,12 +74,12 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := deep.Equal(services, known); diff != nil {
+			if diff := deep.Equal(services, expected); diff == nil {
 				return services
 			}
 			time.Sleep(time.Second)
 		}
-		t.Fatalf("Catalog Services never transitioned from %v", known)
+		t.Fatalf("Catalog Services never reached expected state %v", expected)
 		return nil
 	}
 
@@ -122,27 +122,10 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Vault should not yet be registered with Consul
-	services, _, err := client.Catalog().Services(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if diff := deep.Equal(services, map[string][]string{
-		"consul": []string{},
-	}); diff != nil {
-		t.Fatal(diff)
-	}
-
-	// Vault should soon be registered with Consul in standby mode
-	services = transitionFrom(t, map[string][]string{
-		"consul": []string{},
-	})
-	if diff := deep.Equal(services, map[string][]string{
+	waitForServices(t, map[string][]string{
 		"consul": []string{},
 		"vault":  []string{"standby"},
-	}); diff != nil {
-		t.Fatal(diff)
-	}
+	})
 
 	// Initialize and unseal the core
 	keys, _ := vault.TestCoreInit(t, core)
@@ -158,17 +141,10 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 	// Wait for the core to become active
 	vault.TestWaitActive(t, core)
 
-	// Vault should soon be registered with Consul in active mode
-	services = transitionFrom(t, map[string][]string{
-		"consul": []string{},
-		"vault":  []string{"standby"},
-	})
-	if diff := deep.Equal(services, map[string][]string{
+	waitForServices(t, map[string][]string{
 		"consul": []string{},
 		"vault":  []string{"active"},
-	}); diff != nil {
-		t.Fatal(diff)
-	}
+	})
 }
 
 func TestConsul_ServiceTags(t *testing.T) {

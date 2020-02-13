@@ -149,7 +149,8 @@ $ vault login -method=kerberos \
 - `krb5conf_path` is the path to a valid `krb5.conf` file describing how to
   communicate with the Kerberos environment.
 - `keytab_path` is the path to the `keytab` in which the entry lives for the
-  entity authenticating to Vault.
+  entity authenticating to Vault. Keytab files should be protected from other
+  users on a shared server using appropriate file permissions.
 - `username` is the username for the entry _within_ the `keytab` to use for
   logging into Kerberos. This username must match a service account in LDAP.
 - `service` is the service principal name to use in obtaining a service ticket for

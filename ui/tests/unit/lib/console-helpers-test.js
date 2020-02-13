@@ -166,6 +166,17 @@ module('Unit | Lib | console helpers', function() {
         flags: {},
       },
     },
+    {
+      name: 'data with empty values',
+      input: [[`foo=`, 'some=thing'], []],
+      expected: {
+        data: {
+          foo: '',
+          some: 'thing',
+        },
+        flags: {},
+      },
+    },
   ];
 
   testExtractCases.forEach(function(testCase) {

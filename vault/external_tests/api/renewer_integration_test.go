@@ -28,7 +28,7 @@ func TestRenewer_Renew(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			v, err := client.NewRenewer(&api.RenewerInput{
+			v, err := client.NewLifetimeWatcher(&api.RenewerInput{
 				Secret: secret,
 			})
 			if err != nil {
@@ -39,7 +39,7 @@ func TestRenewer_Renew(t *testing.T) {
 
 			select {
 			case err := <-v.DoneCh():
-				if err != api.ErrRenewerNotRenewable {
+				if err != api.ErrLifetimeWatcherNotRenewable {
 					t.Fatal(err)
 				}
 			case renew := <-v.RenewCh():
@@ -65,7 +65,7 @@ func TestRenewer_Renew(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			v, err := client.NewRenewer(&api.RenewerInput{
+			v, err := client.NewLifetimeWatcher(&api.RenewerInput{
 				Secret: secret,
 			})
 			if err != nil {
@@ -76,7 +76,7 @@ func TestRenewer_Renew(t *testing.T) {
 
 			select {
 			case err := <-v.DoneCh():
-				if err != api.ErrRenewerNotRenewable {
+				if err != api.ErrLifetimeWatcherNotRenewable {
 					t.Fatal(err)
 				}
 			case renew := <-v.RenewCh():
@@ -120,7 +120,7 @@ func TestRenewer_Renew(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			v, err := client.NewRenewer(&api.RenewerInput{
+			v, err := client.NewLifetimeWatcher(&api.RenewerInput{
 				Secret: secret,
 			})
 			if err != nil {
@@ -180,7 +180,7 @@ func TestRenewer_Renew(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			v, err := client.NewRenewer(&api.RenewerInput{
+			v, err := client.NewLifetimeWatcher(&api.RenewerInput{
 				Secret: secret,
 			})
 			if err != nil {

@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/listenerutil"
-	"github.com/hashicorp/vault/helper/reload"
+	"github.com/hashicorp/vault/sdk/helper/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/reload"
 	"github.com/mitchellh/cli"
 )
 

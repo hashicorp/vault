@@ -170,7 +170,7 @@ func (c *mongoDBConnectionProducer) Close() error {
 	defer c.Unlock()
 
 	if c.client != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 1 * time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 		defer cancel()
 		if err := c.client.Disconnect(ctx); err != nil {
 			return err
