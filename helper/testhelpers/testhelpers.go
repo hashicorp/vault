@@ -186,6 +186,14 @@ func AttemptUnsealCore(c *vault.TestCluster, core *vault.TestClusterCore) error 
 }
 
 func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
+	deriveStableActiveCore(t, cluster)
+}
+
+func DeriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
+	return deriveStableActiveCore(t, cluster)
+}
+
+func deriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
 	activeCore := DeriveActiveCore(t, cluster)
 
 	for i := 0; i < 30; i++ {
@@ -198,6 +206,8 @@ func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
+
+	return activeCore
 }
 
 func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
