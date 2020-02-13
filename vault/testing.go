@@ -894,7 +894,13 @@ func (c *TestCluster) UnsealCoresWithError(useStoredKeys bool) error {
 }
 
 func (c *TestCluster) UnsealCore(t testing.T, core *TestClusterCore) {
-	for _, key := range c.BarrierKeys {
+	var keys [][]byte
+	if core.seal.RecoveryKeySupported() {
+		keys = c.RecoveryKeys
+	} else {
+		keys = c.BarrierKeys
+	}
+	for _, key := range keys {
 		if _, err := core.Core.Unseal(TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
 		}
