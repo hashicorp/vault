@@ -14,17 +14,17 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
-
+	"github.com/ory/dockertest"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
-
-	"go.mongodb.org/mongo-driver/mongo"
-
-	"github.com/ory/dockertest"
 	"gopkg.in/mgo.v2"
 )
 
 func TestInit_clientTLS(t *testing.T) {
+	t.Skip("Skipping this test because CircleCI can't mount the files we need without further investigation: " +
+		"https://support.circleci.com/hc/en-us/articles/360007324514-How-can-I-mount-volumes-to-docker-containers-")
+
 	// Set up temp directory so we can mount it to the docker container
 	confDir := makeTempDir(t)
 	defer os.RemoveAll(confDir)
