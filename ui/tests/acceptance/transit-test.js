@@ -4,6 +4,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { encodeString } from 'vault/utils/b64';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
+import secretListPage from 'vault/tests/pages/secrets/backend/list';
 
 const keyTypes = [
   {
@@ -239,6 +240,11 @@ module('Acceptance | transit', function(hooks) {
     await settled();
   });
 
+  test(`transit backend: list menu`, async function(assert) {
+    await generateTransitKey(keyTypes[0], now);
+    await secretListPage.secrets.objectAt(0).menuToggle();
+    assert.equal(secretListPage.menuItems.length, 2, 'shows 2 items in the menu');
+  });
   for (let key of keyTypes) {
     test(`transit backend: ${key.type}`, async function(assert) {
       let name = await generateTransitKey(key, now);
