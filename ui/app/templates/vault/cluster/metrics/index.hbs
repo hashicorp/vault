@@ -6,79 +6,10 @@
   </p.levelLeft>
 </PageHeader>
 
-{{!-- ARG TODO: Add permission conditionals for menu dropdowns --}}
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
-  <div class="selectable-card-container">
-    {{#linked-block
-      "vault.cluster.metrics.http-requests"
-      class="selectable-card width-medium is-rounded"
-    }}
-      <div>
-        <p class="title-number">{{format-number model.totalHttpsRequest}}</p>
-        <p class="title is-5">HTTP Requests</p>
-        <p class="has-text-grey is-size-8">This month</p>
-      </div>
-      <div class="is-paddingless is-marginless">
-        <div class="level-item">
-          <PopupMenu name="engine-menu">
-              <nav class="menu">
-                <ul class="menu-list">
-                  <li class="action">
-                    {{#link-to "vault.cluster.metrics.http-requests"}}
-                      View Details
-                    {{/link-to}}
-                  </li>
-                </ul>
-              </nav>
-          </PopupMenu>
-        </div>
-      </div>
-    {{/linked-block}}
-    {{#linked-block
-      class="selectable-card width-medium is-rounded"
-    }}
-      <div>
-        <p class="title-number">{{format-number model.totalEntities}}</p>
-        {{#if (not-eq model.entitiesTotal 1)}}
-        <p class="title is-5">Entities</p>
-        {{else}}
-        <p class="title is-5">Entity</p>
-        {{/if}}
-        <p class="has-text-grey is-size-8">Total</p>
-      </div>
-      <div class="is-paddingless is-marginless">
-        <div class="level-item">
-          <PopupMenu name="engine-menu">
-            <nav class="menu">
-              <ul class="menu-list">
-                <li class="action">
-                  {{#link-to "vault.cluster.access.identity" "entities" data-test-link=true }}
-                    Manage entities
-                  {{/link-to}}
-                </li>
-                <li class="action">
-                  {{#link-to "vault.cluster.access.identity.create" "entities" }}
-                  Create entity
-                {{/link-to}}
-                </li>
-              </ul>
-            </nav>
-          </PopupMenu>
-        </div>
-      </div>
-    {{/linked-block}}
-    {{#linked-block
-      class="selectable-card width-medium is-rounded"
-    }}
-      <div>
-        <p class="title-number">{{format-number model.totalTokens}}</p>
-        {{#if (not-eq model.tokenTotal 1)}}
-        <p class="title is-5">Tokens</p>
-        {{else}}
-        <p class="title is-5">Token</p>
-        {{/if}}
-        <p class="has-text-grey is-size-8">Total</p>
-      </div>
-    {{/linked-block}}
-  </div>
+  {{#if (gt model.httpsRequests.length 1) }}
+    <SelectableCardContainer @counters={{model}} @gridContainer="true"/>
+  {{else}}
+    <SelectableCardContainer @counters={{model}} />
+  {{/if}}
 </div>

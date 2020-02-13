@@ -128,7 +128,7 @@
             {{/if}}
           </ul>
         {{/if}}
-        {{#if ( and (has-permission 'metrics' routeParams='requests') (not cluster.dr.isSecondary) auth.currentToken)}}
+        {{#if ( and (has-permission 'metrics' routeParams='dashboard') (not cluster.dr.isSecondary) auth.currentToken)}}
           <ul class="menu-list">
             <li class="action">
               {{#link-to 'vault.cluster.metrics' 

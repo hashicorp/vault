@@ -8,9 +8,9 @@ export default Route.extend(ClusterRoute, {
       return response.entities.total;
     });
 
-    let totalHttpsRequest = this.store.queryRecord('metrics/http-requests', {}).then(response => {
+    let httpsRequests = this.store.queryRecord('metrics/http-requests', {}).then(response => {
       let reverseArray = response.counters.reverse();
-      return reverseArray[0].total;
+      return reverseArray;
     });
 
     let totalTokens = this.store.queryRecord('metrics/token', {}).then(response => {
@@ -19,7 +19,7 @@ export default Route.extend(ClusterRoute, {
 
     return hash({
       totalEntities,
-      totalHttpsRequest,
+      httpsRequests,
       totalTokens,
     });
   },
