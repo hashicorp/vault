@@ -471,8 +471,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			lock.Unlock()
 			close(continueCh)
 			c.stateLock.Unlock()
-			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
-			continue
+			return
 		}
 
 		// This block is used to wipe barrier/seal state and verify that
