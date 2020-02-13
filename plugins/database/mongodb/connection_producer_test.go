@@ -167,6 +167,7 @@ func startMongoWithTLS(t *testing.T, version string, confDir string) (retURL str
 	if err != nil {
 		t.Fatalf("Failed to connect to docker: %s", err)
 	}
+	pool.MaxWait = 30 * time.Second
 
 	containerName := "mongo-unit-test"
 
@@ -191,6 +192,7 @@ func startMongoWithTLS(t *testing.T, version string, confDir string) (retURL str
 	if err != nil {
 		t.Fatalf("Could not start local mongo docker container: %s", err)
 	}
+	resource.Expire(30)
 
 	cleanup = func() {
 		err := pool.Purge(resource)
