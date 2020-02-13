@@ -3,7 +3,6 @@ import { set, get, computed } from '@ember/object';
 import DS from 'ember-data';
 import clamp from 'vault/utils/clamp';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import attachCapabilities from 'vault/lib/attach-capabilities';
 
 const { attr } = DS;
 
@@ -42,7 +41,7 @@ const ACTION_VALUES = {
   export: { isSupported: 'exportable', description: 'Get the named key', glyph: 'exit' },
 };
 
-let Model = DS.Model.extend({
+export default DS.Model.extend({
   type: attr('string', {
     defaultValue: 'aes256-gcm96',
   }),
