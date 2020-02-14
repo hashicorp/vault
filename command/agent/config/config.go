@@ -43,9 +43,9 @@ type Vault struct {
 
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	UseAutoAuthTokenRaw     interface{} `hcl:"use_auto_auth_token"`
-	UseAutoAuthToken        bool `hcl:"-"`
-	UseAutoAuthTokenEnforce bool `hcl:"-"`
+	UseAutoAuthTokenRaw interface{} `hcl:"use_auto_auth_token"`
+	UseAutoAuthToken    bool        `hcl:"-"`
+	ForceAutoAuthToken  bool        `hcl:"-"`
 }
 
 // Listener contains configuration for any Vault Agent listeners
@@ -233,7 +233,7 @@ func parseCache(result *Config, list *ast.ObjectList) error {
 					return fmt.Errorf("value of 'use_auto_auth_token' can be either true/false/force, %q is an invalid option", c.UseAutoAuthTokenRaw)
 				}
 				c.UseAutoAuthToken = true
-				c.UseAutoAuthTokenEnforce = true
+				c.ForceAutoAuthToken = true
 
 			default:
 				return err

@@ -47,6 +47,7 @@ BUG FIXES:
   different queries. Now it allows for either for backwards compatibility [[GH-8240](https://github.com/hashicorp/vault/pull/8240)]
 * secrets/pki: Support FQDNs in DNS Name [[GH-8288](https://github.com/hashicorp/vault/pull/8288)]
 * storage/mysql: Fix potential crash when using MySQL as coordination for high availability [[GH-8229](https://github.com/hashicorp/vault/pull/8229)]
+* storage/raft: Fix potential crash when using Raft as coordination for high availability [[GH-8239](https://github.com/hashicorp/vault/pull/8239)]
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
 * telemetry: Prometheus requests on standby nodes will now return an error instead of forwarding 
   the request to the active node [[GH-8280](https://github.com/hashicorp/vault/pull/8280)]
@@ -64,6 +65,8 @@ BUG FIXES:
 * ui: Fix bug where default auth method on login is defaulted to auth method that is listing-visibility=unauth instead of “other” [[GH-8218](https://github.com/hashicorp/vault/pull/8218)]
 * ui: Fix bug where KMIP details were not shown in the UI Wizard [[GH-8255](https://github.com/hashicorp/vault/pull/8255)]
 * secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [GH-8282]
+* storage/mysql: Fix potential crash when using MySQL as coordination for high availability [[GH-8300](https://github.com/hashicorp/vault/pull/8300)]
+* storage/raft: Fix potential crash when using Raft as coordination for high availability [[GH-8356](https://github.com/hashicorp/vault/pull/8356)]
 
 ## 1.3.2 (January 22nd, 2020)
 

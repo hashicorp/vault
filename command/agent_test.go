@@ -613,6 +613,37 @@ listener "tcp" {
 	request(t, agentClient, req, 200)
 }
 
+// TestAgent_RequireAutoAuthWithForce ensures that the client exits with a
+// non-zero code if configured to force the use of an auto-auth token without
+// configuring the auto_auth block
+func TestAgent_RequireAutoAuthWithForce(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	// Create a config file
+	config := `
+cache {
+    use_auto_auth_token = "force" 
+}
+
+listener "tcp" {
+    address = "127.0.0.1:8101"
+    tls_disable = true
+}
+`
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start the agent
+	ui, cmd := testAgentCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	code := cmd.Run([]string{"-config", configPath})
+	if code == 0 {
+		t.Errorf("expected error code, but got 0: %d", code)
+		t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+		t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+	}
+}
+
 // TestAgent_Template tests rendering templates
 func TestAgent_Template_Basic(t *testing.T) {
 	//----------------------------------------------------

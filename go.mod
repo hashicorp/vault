@@ -54,7 +54,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-gcp-common v0.5.0
 	github.com/hashicorp/go-hclog v0.12.0
-	github.com/hashicorp/go-kms-wrapping v0.5.0
+	github.com/hashicorp/go-kms-wrapping v0.5.1
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.0.0
@@ -87,8 +87,8 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190814210149-315cdbf5de6e
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20191017213228-e8cf7060a4d0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.0.0-20200124190647-0026e6bed4fb
-	github.com/hashicorp/vault/api v1.0.5-0.20200213154035-b215d1c32200
-	github.com/hashicorp/vault/sdk v0.1.14-0.20200214182630-348b04ecb4e1
+	github.com/hashicorp/vault/api v1.0.5-0.20200214222743-c39f5634b39f
+	github.com/hashicorp/vault/sdk v0.1.14-0.20200214222719-7a3b716487a5
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
