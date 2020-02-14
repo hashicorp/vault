@@ -1,48 +1,73 @@
 # Vault Website
 
-This subdirectory contains the entire source for the [Vault Website][vault].
-This is a [Middleman][middleman] project, which builds a static site from these
-source files.
+[![Netlify Status](https://img.shields.io/netlify/f7fa8963-0022-4a0e-9ccf-f5385355906b?style=flat-square)](https://app.netlify.com/sites/vault-docs-platform/deploys)
 
-## Updating Navigation
-
-There are a couple different places on the website that present navigation interfaces with differing levels of detail.
-
-On the homepage, docs index page, and api docs index page, there are grids of major categories [that look like this](https://cl.ly/73df9722848d/Screen%20Shot%202018-11-09%20at%2011.40.56%20AM.png). These major category grids can be updated through [`data/docs_basic_categories.yml`](data/docs_basic_categories.yml) and [`data/api_basic_categories.yml`](data/api_basic_categories.yml).
-
-On the docs and api index pages, there are more detailed breakdowns of top-level documentation pages within each category [that look like this](https://cl.ly/b05cf42402eb/Screen%20Shot%202018-11-09%20at%2011.43.25%20AM.png). These more detailed category listings can be updated through [`data/docs_detailed_categories.yml`](data/docs_detailed_categories.yml) and [`data/api_detailed_categories.yml`](data/api_detailed_categories.yml).
-
-Finally, within a given docs page, there is a sidebar which displays a fully nested version of all docs pages. This sidebar navigation can be updated through via middleman's layouts, found at [`source/layouts/docs.erb`](source/layouts/docs.erb) and [`source/layouts/api.erb`](source/layouts/api.erb). You will see within these files that it is no longer necessary to type out full nested html list item and link tags, you can simply add the documentation page's slug, defined as `sidebar_current` within the frontmatter of any docs markdown file. The sidebar nav component will go find the page by slug and render out its human-readable title and a link for you. This component does not allow broken links or nesting mistakes, so if you make a typo on the slug or put a page in the wrong category, the build will fail.
+This subdirectory contains the entire source for the [Vault Website](https://vaultproject.io/). This is a [NextJS](https://nextjs.org/) project, which builds a static site from these source files.
 
 ## Contributions Welcome!
 
-If you find a typo or you feel like you can improve the HTML, CSS, or
-JavaScript, we welcome contributions. Feel free to open issues or pull requests
-like any normal GitHub project, and we'll merge it in.
+If you find a typo or you feel like you can improve the HTML, CSS, or JavaScript, we welcome contributions. Feel free to open issues or pull requests like any normal GitHub project, and we'll merge it in 🚀
 
 ## Running the Site Locally
 
-When running the site locally, you can choose between running it directly on your machine, or running it through Docker. Docker has the advantage of requiring only Docker to be installed - no other dependencies are needed on your machine. However, Docker's overhead makes the site's compilation perform much slower than running it directly on your machine. If you are a frequent contributor, are bothered by the performance in Docker, or have no issues with installing ruby and node / already have them installed, it might be an advantage to try running the site directly on your machine. Instructions for both approaches are included below.
+The website can be run locally through node.js or Docker. If you choose to run through Docker, everything will be a little bit slower due to the additional overhead, so for frequent contributors it may be worth it to use node. Also if you are a vim user, it's also worth noting that vim's swapfile usage can cause issues for the live reload functionality. In order to avoid these issues, make sure you have run `:set backupcopy=yes` within vim.
 
-### Running the Site with Docker
+### With Docker
 
-First, make sure that [docker](docker) is installed. It can be installed in many ways, [the desktop app](docker-desktop) is the simplest. To run the site, clone this repo down, `cd` into the `website` directory, and run `make website`. If it is your first time running the site, the build will take a little longer as it needs to download a docker image and a bunch of dependencies, so maybe go grab a coffee. On subsequent runs, it will be faster as dependencies are cached.
+Running the site locally is simple. Provided you have Docker installed, clone this repo, run `make`, and then visit `http://localhost:3000`.
 
-### Running the Site Directly
+The docker image is pre-built with all the website dependencies installed, which is what makes it so quick and simple, but also means if you need to change dependencies and test the changes within Docker, you'll need a new image. If this is something you need to do, you can run `make build-image` to generate a local Docker image with updated dependencies, then `make website-local` to use that image and preview.
 
-This site requires a recent version of ruby as well as nodejs to be installed in order to run. There are [many ways to install ruby](https://www.ruby-lang.org/en/documentation/installation/), we recommend [rbenv](rbenv), which has very clear installation instructions in its readme, linked here, and installing ruby version `2.4.3`. Once ruby has been installed, you will need to install `bundler` as well, using `gem install bundler`. Node is quite easy to install [via universal binary](node) or [homebrew](homebrew) if you are a mac user.
+### With Node
 
-Once ruby and node have been installed, within this directory, you can run `sh bootstrap.sh` to install all the dependencies needed to run the site, then run `middleman` to start the dev server.
+If your local development environment has a supported version (v10.0.0+) of [node installed](https://nodejs.org/en/) you can run:
 
-### Browsing the Site Locally
+- `npm install`
+- `npm start`
 
-Once you have the local dev server running, head to `http://localhost:4567` in your browser. Note that for some URLs, you may need to append
-".html" to make them work (in the navigation).
+and then visit `http://localhost:3000`.
 
-[middleman]: https://www.middlemanapp.com
-[vault]: https://www.vaultproject.io
-[docker]: https://www.docker.com/
-[docker-desktop]: https://www.docker.com/products/docker-desktop
-[rbenv]: https://github.com/rbenv/rbenv#installation
-[node]: https://nodejs.org/en/
-[homebrew]: https://brew.sh/
+If you pull down new code from github, you should run `npm install` again. Otherwise, there's no need to re-run `npm install` each time the site is run, you can just run `npm start` to get it going.
+
+## Editing Content
+
+Documentation content is written in [Markdown](https://www.markdownguide.org/cheat-sheet/) and you'll find all files listed under the `/pages` directory.
+
+To create a new page with Markdown, create a file ending in `.mdx` in the `pages/` directory. The path in the pages directory will be the URL route. For example, `pages/hello/world.mdx` will be served from the `/hello/world` URL.
+
+This file can be standard Markdown and also supports [YAML frontmatter](https://middlemanapp.com/basics/frontmatter/). YAML frontmatter is optional, there are defaults for all keys.
+
+```yaml
+---
+title: 'My Title'
+description: "A thorough, yet succinct description of the page's contents"
+---
+
+```
+
+The significant keys in the YAML frontmatter are:
+
+- `title` `(string)` - This is the title of the page that will be set in the HTML title.
+- `description` `(string)` - This is a description of the page that will be set in the HTML description.
+
+> ⚠️Since `api` is a reserved directory within NextJS, all `/api/**` pages are listed under the `/pages/api-docs` path.
+
+### Editing Sidebars
+
+The structure of the sidebars are controlled by files in the [`/data` directory](data).
+
+- Edit [this file](data/docs-navigation.js) to change the **docs** sidebar
+- Edit [this file](data/api-navigation.js) to change the **api docs** sidebar
+
+To nest sidebar items, you'll want to add a new `category` key/value accompanied by the appropriate embedded `content` values.
+
+- `category` values will be **directory names** within the `pages` directory
+- `content` values will be **file names** within their appropriately nested directory.
+
+### Creating New Pages
+
+There is currently a small bug with new page creation - if you create a new page and link it up via subnav data while the server is running, it will report an error saying the page was not found. This can be resolved by restarting the server.
+
+### Deployment
+
+This website is hosted on Netlify and configured to automatically deploy anytime you push code to the `stable-website` branch. Any time a pull request is submitted that changes files within the `website` folder, a deployment preview will appear in the github checks which can be used to validate the way docs changes will look live. Deployments from `stable-website` will look and behave the same way as deployment previews.

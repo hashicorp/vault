@@ -5,8 +5,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"io"
 	"io/ioutil"
 	"os"
@@ -26,11 +24,12 @@ import (
 	snapshot "github.com/hashicorp/raft-snapshot"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
-
-	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // EnvVaultRaftNodeID is used to fetch the Raft node ID from the environment.
@@ -503,14 +502,8 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	case opts.ClusterListener == nil:
 		return errors.New("no cluster listener provided")
 	default:
-		// Load the base TLS config from the cluster listener.
-		baseTLSConfig, err := opts.ClusterListener.TLSConfig(ctx)
-		if err != nil {
-			return err
-		}
-
 		// Set the local address and localID in the streaming layer and the raft config.
-		streamLayer, err := NewRaftLayer(b.logger.Named("stream"), opts.TLSKeyring, opts.ClusterListener.Addr(), baseTLSConfig)
+		streamLayer, err := NewRaftLayer(b.logger.Named("stream"), opts.TLSKeyring, opts.ClusterListener)
 		if err != nil {
 			return err
 		}

@@ -84,7 +84,7 @@ func (b *backend) pathServiceAccountKey(ctx context.Context, req *logical.Reques
 		return nil, err
 	}
 	if rs == nil {
-		return logical.ErrorResponse(fmt.Sprintf("role set '%s' does not exists", rsName)), nil
+		return logical.ErrorResponse(fmt.Sprintf("role set '%s' does not exist", rsName)), nil
 	}
 
 	if rs.SecretType != SecretTypeKey {

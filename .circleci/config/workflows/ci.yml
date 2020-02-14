@@ -15,12 +15,14 @@ jobs:
         - install-ui-dependencies
         - build-go-dev
       filters:
-          branches:
-            # Forked pull requests have CIRCLE_BRANCH set to pull/XXX
-            ignore: /pull\/[0-9]+/
+        branches:
+          # Forked pull requests have CIRCLE_BRANCH set to pull/XXX
+          ignore: /pull\/[0-9]+/
   - test-go:
       requires:
         - build-go-dev
   - test-go-race:
       requires:
         - build-go-dev
+  - website-docker-image:
+      context: vault-docs

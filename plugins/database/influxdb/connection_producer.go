@@ -249,6 +249,9 @@ func isUserAdmin(cli influx.Client, user string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if response == nil {
+		return false, fmt.Errorf("empty response")
+	}
 	if response.Error() != nil {
 		return false, response.Error()
 	}

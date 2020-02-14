@@ -38,7 +38,9 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			},
 		},
 		Cache: &Cache{
-			UseAutoAuthToken: true,
+			UseAutoAuthToken:        true,
+			UseAutoAuthTokenEnforce: false,
+			UseAutoAuthTokenRaw:     true,
 		},
 		Listeners: []*Listener{
 			&Listener{
@@ -268,7 +270,134 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 			},
 		},
 		Cache: &Cache{
-			UseAutoAuthToken: true,
+			UseAutoAuthToken:        true,
+			UseAutoAuthTokenEnforce: false,
+			UseAutoAuthTokenRaw:     true,
+		},
+		Listeners: []*Listener{
+			&Listener{
+				Type: "tcp",
+				Config: map[string]interface{}{
+					"address":     "127.0.0.1:8300",
+					"tls_disable": true,
+				},
+			},
+		},
+		PidFile: "./pidfile",
+	}
+
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_AgentCache_AutoAuth_Force(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-cache-auto_auth-force.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+		},
+		Cache: &Cache{
+			UseAutoAuthToken:        true,
+			UseAutoAuthTokenEnforce: true,
+			UseAutoAuthTokenRaw:     "force",
+		},
+		Listeners: []*Listener{
+			&Listener{
+				Type: "tcp",
+				Config: map[string]interface{}{
+					"address":     "127.0.0.1:8300",
+					"tls_disable": true,
+				},
+			},
+		},
+		PidFile: "./pidfile",
+	}
+
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_AgentCache_AutoAuth_True(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-cache-auto_auth-true.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+		},
+		Cache: &Cache{
+			UseAutoAuthToken:        true,
+			UseAutoAuthTokenEnforce: false,
+			UseAutoAuthTokenRaw:     "true",
+		},
+		Listeners: []*Listener{
+			&Listener{
+				Type: "tcp",
+				Config: map[string]interface{}{
+					"address":     "127.0.0.1:8300",
+					"tls_disable": true,
+				},
+			},
+		},
+		PidFile: "./pidfile",
+	}
+
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-cache-auto_auth-false.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*Sink{
+				&Sink{
+					Type:   "file",
+					DHType: "curve25519",
+					DHPath: "/tmp/file-foo-dhpath",
+					AAD:    "foobar",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		Cache: &Cache{
+			UseAutoAuthToken:        false,
+			UseAutoAuthTokenEnforce: false,
+			UseAutoAuthTokenRaw:     "false",
 		},
 		Listeners: []*Listener{
 			&Listener{

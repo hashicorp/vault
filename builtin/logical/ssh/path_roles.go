@@ -69,7 +69,7 @@ func pathListRoles(b *backend) *framework.Path {
 
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "roles/" + framework.GenericNameRegex("role"),
+		Pattern: "roles/" + framework.GenericNameWithAtRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
 			"role": &framework.FieldSchema{
 				Type: framework.TypeString,
