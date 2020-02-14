@@ -1,0 +1,65 @@
+/*
+DANGER
+WARNING
+
+This is _not_ the canonical place for this type. That is in go-kms-wrapping. It
+is duplicated here, along with interface definitions, to avoid all users of
+this package having to import go-kms-wrapping along with all of the cloud
+dependencies. It _must_ be kept in lockstep with the go-kms-wrapping code!!!
+
+WARNING
+DANGER
+*/
+
+syntax = "proto3";
+
+option go_package = "physical";
+
+package github.com.hashicorp.vault.physical.encryption;
+
+// EncryptedBlobInfo contains information about the encrypted value along with
+// information about the key used to encrypt it
+message EncryptedBlobInfo {
+	// Ciphertext is the encrypted bytes
+    bytes ciphertext = 1;
+
+	// IV is the initialization value used during encryption
+    bytes iv  = 2;
+
+	// HMAC is the bytes of the HMAC, if any
+    bytes hmac = 3;
+
+	// Wrapped can be used by the client to indicate whether Ciphertext
+	// actually contains wrapped data or not. This can be useful if you want to
+	// reuse the same struct to pass data along before and after wrapping.
+    bool wrapped = 4;
+
+	// KeyInfo contains information about the key that was used to create this value
+    KeyInfo key_info = 5;
+
+	// ValuePath can be used by the client to store information about where the
+	// value came from
+    string ValuePath = 6;
+}
+
+// KeyInfo contains information regarding which Wrapper key was used to
+// encrypt the entry
+message KeyInfo {
+    // Mechanism is the method used by the wrapper to encrypt and sign the
+    // data as defined by the wrapper.
+    uint64 Mechanism = 1;
+    uint64 HMACMechanism = 2;
+
+    // This is an opaque ID used by the wrapper to identify the specific
+    // key to use as defined by the wrapper.  This could be a version, key 
+    // label, or something else.
+    string KeyID = 3;
+    string HMACKeyID = 4;
+
+    // These value are used when generating our own data encryption keys
+    // and encrypting them using the wrapper
+    bytes WrappedKey = 5;
+
+    // Mechanism specific flags
+    uint64 Flags = 6;
+}
