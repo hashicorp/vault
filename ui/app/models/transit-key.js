@@ -80,19 +80,15 @@ export default DS.Model.extend({
   },
 
   supportedActions: computed('type', function() {
-    let actions = [];
-    Object.keys(ACTION_VALUES).filter(name => {
-      const keyAction = ACTION_VALUES[name];
-      const isSupported = keyAction.isSupported;
-      if (typeof isSupported === 'boolean' || get(this, isSupported)) {
-        return actions.push({
-          name,
-          description: keyAction.description,
-          glyph: keyAction.glyph,
-        });
-      }
-    });
-    return actions;
+    return Object.keys(ACTION_VALUES)
+      .filter(name => {
+        const { isSupported } = ACTION_VALUES[name];
+        return typeof isSupported === 'boolean' || get(this, isSupported);
+      })
+      .map(name => {
+        const { description, glyph } = ACTION_VALUES[name];
+        return { name, description, glyph };
+      });
   }),
 
   canDelete: computed('deletionAllowed', 'lastLoadTS', function() {
