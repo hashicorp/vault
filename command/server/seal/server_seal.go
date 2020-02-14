@@ -24,6 +24,9 @@ func configureSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string
 	case wrapping.AzureKeyVault:
 		return configureAzureKeyVaultSeal(configSeal, infoKeys, info, logger, inseal)
 
+	case wrapping.HuaweiCloudKMS:
+		return configureHuaweiCloudKMSSeal(configSeal, infoKeys, info, logger, inseal)
+
 	case wrapping.GCPCKMS:
 		return configureGCPCKMSSeal(configSeal, infoKeys, info, logger, inseal)
 

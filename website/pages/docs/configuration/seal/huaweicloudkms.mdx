@@ -1,0 +1,89 @@
+---
+layout: docs
+page_title: HuaweiCloud KMS - Seals - Configuration
+sidebar_title: HuaweiCloud KMS
+description: >-
+  The HuaweiCloud KMS seal configures Vault to use HuaweiCloud KMS as the seal
+  wrapping
+
+  mechanism.
+---
+
+# `huaweicloudkms` Seal
+
+The HuaweiCloud KMS seal configures Vault to use HuaweiCloud KMS as the seal wrapping mechanism.
+The HuaweiCloud KMS seal is activated by one of the following:
+
+- The presence of a `seal "huaweicloudkms"` block in Vault's configuration file.
+- The presence of the environment variable `VAULT_SEAL_TYPE` set to `huaweicloudkms`. If
+  enabling via environment variable, all other required values specific to HuaweiCloud
+  KMS (i.e. `VAULT_HUAWEICLOUDKMS_SEAL_KEY_ID`) must be also supplied, as well as all
+  other HuaweiCloud-related environment variables that lends to successful
+  authentication.
+
+## `huaweicloudkms` Example
+
+This example shows configuring HuaweiCloud KMS seal through the Vault configuration file
+by providing all the required values:
+
+```hcl
+seal "huaweicloudkms" {
+  region     = "cn-north-1"
+  project    = "cn-north-1"
+  access_key = "0wNEpMMlzy7szvai"
+  secret_key = "PupkTg8jdmau1cXxYacgE736PJj4cA"
+  kms_key_id = "08c33a6f-4e0a-4a1b-a3fa-7ddfa1d4fb73"
+}
+```
+
+## `huaweicloudkms` Parameters
+
+These parameters apply to the `seal` stanza in the Vault configuration file:
+
+- `region` `(string: <required> "cn-north-1")`: The HuaweiCloud region where the encryption key
+  lives. May also be specified by the `HUAWEICLOUD_REGION`
+  environment variable.
+
+- `project` `(string: <required> "cn-north-1")`: The HuaweiCloud project where the encryption key
+  lives. May also be specified by the `HUAWEICLOUD_PROJECT`
+  environment variable.
+
+- `access_key` `(string: <required>)`: The HuaweiCloud access key ID to use. May also be
+  specified by the `HUAWEICLOUD_ACCESS_KEY` environment variable.
+
+- `secret_key` `(string: <required>)`: The HuaweiCloud secret access key to use. May
+  also be specified by the `HUAWEICLOUD_SECRET_KEY` environment variable.
+
+- `kms_key_id` `(string: <required>)`: The HuaweiCloud KMS key ID to use for encryption
+  and decryption. May also be specified by the `VAULT_HUAWEICLOUDKMS_SEAL_KEY_ID`
+  environment variable.
+
+## Authentication
+
+Authentication-related values must be provided, either as environment
+variables or as configuration parameters.
+
+~> **Note:** Although the configuration file allows you to pass in
+`HUAWEICLOUD_ACCESS_KEY` and `HUAWEICLOUD_SECRET_KEY` as part of the seal's parameters, it
+is _strongly_ recommended to set these values via environment variables.
+
+```text
+HuaweiCloud authentication values:
+
+* `HUAWEICLOUD_REGION`
+* `HUAWEICLOUD_PROJECT`
+* `HUAWEICLOUD_ACCESS_KEY`
+* `HUAWEICLOUD_SECRET_KEY`
+```
+
+## `huaweicloudkms` Environment Variables
+
+Alternatively, the HuaweiCloud KMS seal can be activated by providing the following
+environment variables:
+
+```text
+Vault Seal specific values:
+
+* `VAULT_SEAL_TYPE`
+* `VAULT_HUAWEICLOUDKMS_SEAL_KEY_ID`
+```
