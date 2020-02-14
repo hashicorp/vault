@@ -120,6 +120,10 @@ func (c *Client) GetUserBindDN(cfg *ConfigEntry, conn Connection, username strin
 		}
 
 		filter := fmt.Sprintf("(%s=%s)", cfg.UserAttr, ldap.EscapeFilter(username))
+		if cfg.UPNDomain != "" {
+			filter = fmt.Sprintf("(userPrincipalName=%s@%s)", EscapeLDAPValue(username), cfg.UPNDomain)
+		}
+
 		if c.Logger.IsDebug() {
 			c.Logger.Debug("discovering user", "userdn", cfg.UserDN, "filter", filter)
 		}
@@ -150,11 +154,11 @@ func (c *Client) GetUserBindDN(cfg *ConfigEntry, conn Connection, username strin
 /*
  * Returns the DN of the object representing the authenticated user.
  */
-func (c *Client) GetUserDN(cfg *ConfigEntry, conn Connection, bindDN string) (string, error) {
+func (c *Client) GetUserDN(cfg *ConfigEntry, conn Connection, bindDN, username string) (string, error) {
 	userDN := ""
 	if cfg.UPNDomain != "" {
 		// Find the distinguished name for the user if userPrincipalName used for login
-		filter := fmt.Sprintf("(userPrincipalName=%s)", ldap.EscapeFilter(bindDN))
+		filter := fmt.Sprintf("(userPrincipalName=%s@%s)", EscapeLDAPValue(username), cfg.UPNDomain)
 		if c.Logger.IsDebug() {
 			c.Logger.Debug("searching upn", "userdn", cfg.UserDN, "filter", filter)
 		}
@@ -167,9 +171,10 @@ func (c *Client) GetUserDN(cfg *ConfigEntry, conn Connection, bindDN string) (st
 		if err != nil {
 			return userDN, errwrap.Wrapf("LDAP search failed for detecting user: {{err}}", err)
 		}
-		for _, e := range result.Entries {
-			userDN = e.DN
+		if len(result.Entries) != 1 {
+			return userDN, fmt.Errorf("LDAP search for userdn 0 or not unique")
 		}
+		userDN = result.Entries[0].DN
 	} else {
 		userDN = bindDN
 	}
