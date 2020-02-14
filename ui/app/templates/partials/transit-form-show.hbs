@@ -1,12 +1,24 @@
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs">
     <ul>
-      <li class="{{if (eq tab '') 'is-active'}}">
+      <li class="{{if (eq tab 'actions') 'is-active'}}">
         {{#secret-link
           secret=key.id
           mode="show"
           replace=true
-          queryParams=(query-params tab='')
+          queryParams=(query-params tab='actions')
+          data-test-transit-key-actions-link=true
+          }}
+          Key Actions
+        {{/secret-link}}
+      </li>
+
+      <li class="{{if (eq tab 'details') 'is-active'}}">
+        {{#secret-link
+          secret=key.id
+          mode="show"
+          replace=true
+          queryParams=(query-params tab='details')
           data-test-transit-link="details"
           }}
           Details
@@ -28,38 +40,60 @@
   </nav>
 </div>
 
-<Toolbar>
-  <ToolbarActions>
-    {{#if (eq tab 'versions')}}
-      <TransitKeyActions
-        @key={{key}}
-        @selectedAction="rotate"
-        @capabilities={{capabilities}}
-        @onRefresh={{action "refresh"}}
-      />
-    {{/if}}
-    {{#if (eq mode "show") }}
-      {{#if (or capabilities.canUpdate capabilities.canDelete)}}
-        <ToolbarSecretLink
-          @secret={{key.id}}
-          @mode="edit"
-          replace=true
-        >
-          Edit encryption key
-        </ToolbarSecretLink>
+{{#unless (eq tab 'actions')}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if (eq tab 'versions')}}
+        <TransitKeyActions
+          @key={{key}}
+          @selectedAction="rotate"
+          @capabilities={{capabilities}}
+          @onRefresh={{action "refresh"}}
+        />
       {{/if}}
-      <ToolbarSecretLink
-        @secret={{key.id}}
-        @mode="actions"
-        @data-test-transit-key-actions-link=true
-      >
-        Key actions
-      </ToolbarSecretLink>
-    {{/if}}
-  </ToolbarActions>
-</Toolbar>
+      {{#if (eq mode "show") }}
+        {{#if (or capabilities.canUpdate capabilities.canDelete)}}
+          <ToolbarSecretLink
+            @secret={{key.id}}
+            @mode="edit"
+            replace=true
+          >
+            Edit encryption key
+          </ToolbarSecretLink>
+        {{/if}}
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+{{/unless}}
 
-{{#if (eq tab 'versions')}}
+
+{{#if (eq tab 'actions')}}
+  <div class="transit-card-container">
+    {{#each model.supportedActions as |supportedAction|}}
+      {{#linked-block
+        "vault.cluster.secrets.backend.actions"
+        model.id
+        queryParams=(hash action=supportedAction.name)
+        class="transit-card"
+        data-test-transit-card=supportedAction.name
+      }}
+        <div class="transit-icon">
+          <Icon
+            @glyph={{supportedAction.glyph}}
+            @size="l"
+            class="has-text-grey auto-width"
+            aria-label={{concat backend.path " options"}} />
+        </div>
+        <div class="transit-description">
+          <h2 class="title is-6" data-test-transit-action-title={{supportedAction.name}}>
+            {{if (eq supportedAction.name 'export') 'Export Key' (humanize supportedAction.name)}}
+          </h2>
+          <p class="transit-action-description">{{supportedAction.description}}</p>
+        </div>
+      {{/linked-block}}
+    {{/each}}
+  </div>
+{{else if (eq tab 'versions')}}
   {{#if (or
       (eq key.type "aes256-gcm96")
       (eq key.type "chacha20-poly1305")
