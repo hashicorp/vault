@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	hclog "github.com/hashicorp/go-hclog"
+
+	goldap "github.com/go-ldap/ldap/v3"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/ldap"
@@ -397,7 +400,10 @@ func factory(t *testing.T) logical.Backend {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
 	b, err := Factory(context.Background(), &logical.BackendConfig{
-		Logger: nil,
+		Logger: hclog.New(&hclog.LoggerOptions{
+			Name:  "FactoryLogger",
+			Level: hclog.Debug,
+		}),
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
 			MaxLeaseTTLVal:     maxLeaseTTLVal,
@@ -491,6 +497,66 @@ func TestBackend_basic_authbind(t *testing.T) {
 			testAccStepGroup(t, "engineers", "bar"),
 			testAccStepUser(t, "hermes conrad", "engineers"),
 			testAccStepLogin(t, "hermes conrad", "hermes"),
+		},
+	})
+}
+
+func TestBackend_basic_authbind_upndomain(t *testing.T) {
+	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
+	cfg.UPNDomain = "planetexpress.com"
+
+	// Setup connection
+	client := &ldaputil.Client{
+		Logger: hclog.New(&hclog.LoggerOptions{
+			Name:  "LDAPAuthTest",
+			Level: hclog.Debug,
+		}),
+		LDAP: ldaputil.NewLDAP(),
+	}
+	conn, err := client.DialLDAP(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	if err := conn.Bind("cn=admin,cn=config", cfg.BindPassword); err != nil {
+		t.Fatal(err)
+	}
+
+	// Add userPrincipalName attribute type
+	userPrincipleNameTypeReq := goldap.NewModifyRequest("cn={0}core,cn=schema,cn=config", nil)
+	userPrincipleNameTypeReq.Add("olcAttributetypes", []string{"( 2.25.247072656268950430024439664556757516066 NAME ( 'userPrincipalName' ) SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 EQUALITY caseIgnoreMatch SINGLE-VALUE )"})
+	if err := conn.Modify(userPrincipleNameTypeReq); err != nil {
+		t.Fatal(err)
+	}
+
+	// Add new object class
+	userPrincipleNameObjClassReq := goldap.NewModifyRequest("cn={0}core,cn=schema,cn=config", nil)
+	userPrincipleNameObjClassReq.Add("olcObjectClasses", []string{"( 1.2.840.113556.6.2.6 NAME 'PrincipalNameClass' AUXILIARY MAY ( userPrincipalName ) )"})
+	if err := conn.Modify(userPrincipleNameObjClassReq); err != nil {
+		t.Fatal(err)
+	}
+
+	// Re-authenticate with the binddn user
+	if err := conn.Bind(cfg.BindDN, cfg.BindPassword); err != nil {
+		t.Fatal(err)
+	}
+
+	// Modify professor user and add userPrincipalName attribute
+	profDN := "cn=Hubert J. Farnsworth,ou=people,dc=planetexpress,dc=com"
+	modifyUserReq := goldap.NewModifyRequest(profDN, nil)
+	modifyUserReq.Add("objectClass", []string{"PrincipalNameClass"})
+	modifyUserReq.Add("userPrincipalName", []string{"professor@planetexpress.com"})
+	if err := conn.Modify(modifyUserReq); err != nil {
+		t.Fatal(err)
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrlWithAuthBind(t, cfg),
+			testAccStepLoginNoAttachedPolicies(t, "professor", "professor"),
 		},
 	})
 }
@@ -626,6 +692,7 @@ func testAccStepConfigUrlWithAuthBind(t *testing.T, cfg *ldaputil.ConfigEntry) l
 			"groupattr":            cfg.GroupAttr,
 			"binddn":               cfg.BindDN,
 			"bindpass":             cfg.BindPassword,
+			"upndomain":            cfg.UPNDomain,
 			"case_sensitive_names": true,
 			"token_policies":       "abc,xyz",
 			"request_timeout":      cfg.RequestTimeout,
