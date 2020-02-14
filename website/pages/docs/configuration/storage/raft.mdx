@@ -35,7 +35,13 @@ storage "raft" {
 cluster_addr = "http://127.0.0.1:8201"
 ```
 
-**Note:** When using the Raft storage backend, it is required to provide `cluster_addr` to indicate the address and port to be used for communication between the nodes in the Raft cluster.
+~> **Note:** When using the Raft storage backend, it is required to provide
+`cluster_addr` to indicate the address and port to be used for communication
+between the nodes in the Raft cluster.
+
+~> **Note:** Raft cannot be used as the configured `ha_storage` backend at this
+time. To use Raft for HA coordination users must also use Raft for storage and
+set `ha_enabled = true`.
 
 ## `raft` Parameters
 
