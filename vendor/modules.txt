@@ -315,9 +315,8 @@ github.com/hashicorp/go-gcp-common/gcputil
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.1.0
 github.com/hashicorp/go-immutable-radix
-# github.com/hashicorp/go-kms-wrapping v0.5.0
+# github.com/hashicorp/go-kms-wrapping v0.5.1
 github.com/hashicorp/go-kms-wrapping
-github.com/hashicorp/go-kms-wrapping/entropy
 github.com/hashicorp/go-kms-wrapping/internal/xor
 github.com/hashicorp/go-kms-wrapping/wrappers/aead
 github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms
@@ -326,6 +325,8 @@ github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault
 github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms
 github.com/hashicorp/go-kms-wrapping/wrappers/ocikms
 github.com/hashicorp/go-kms-wrapping/wrappers/transit
+# github.com/hashicorp/go-kms-wrapping/entropy v0.1.0
+github.com/hashicorp/go-kms-wrapping/entropy
 # github.com/hashicorp/go-memdb v1.0.2
 github.com/hashicorp/go-memdb
 # github.com/hashicorp/go-msgpack v0.5.5
@@ -424,9 +425,9 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms
 github.com/hashicorp/vault-plugin-secrets-kv
 # github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.0.0-20200124190647-0026e6bed4fb
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas
-# github.com/hashicorp/vault/api v1.0.5-0.20200213154035-b215d1c32200 => ./api
+# github.com/hashicorp/vault/api v1.0.5-0.20200214222743-c39f5634b39f => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20200214182630-348b04ecb4e1 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20200214222719-7a3b716487a5 => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/database/helper/credsutil
