@@ -120,6 +120,7 @@ export default Component.extend(TRANSIT_PARAMS, {
       paramsToKeep.forEach(param => delete params[param]);
     }
     //resets params still left in the object to defaults
+    this.clearErrors();
     this.setProperties(params);
     if (action === 'export') {
       this.setExportKeyDefaults();
@@ -128,6 +129,10 @@ export default Component.extend(TRANSIT_PARAMS, {
 
   handleError(e) {
     this.set('errors', e.errors);
+  },
+
+  clearErrors() {
+    this.set('errors', null);
   },
 
   handleSuccess(resp, options, action) {
