@@ -122,4 +122,7 @@ export default DS.Model.extend({
 
   rotatePath: lazyCapabilities(apiPath`${'backend'}/keys/${'id'}/rotate`, 'backend', 'id'),
   canRotate: alias('rotatePath.canUpdate'),
+  secretPath: lazyCapabilities(apiPath`${'backend'}/keys/${'id'}`, 'backend', 'id'),
+  canRead: alias('secretPath.canUpdate'),
+  canEdit: alias('secretPath.canUpdate'),
 });

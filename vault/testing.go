@@ -31,6 +31,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/copystructure"
 
@@ -43,12 +44,12 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/reload"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/reload"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -676,7 +677,7 @@ func (n *noopAudit) Salt(ctx context.Context) (*salt.Salt, error) {
 	return salt, nil
 }
 
-func AddNoopAudit(conf *CoreConfig) {
+func AddNoopAudit(conf *CoreConfig, records **[][]byte) {
 	conf.AuditBackends = map[string]audit.Factory{
 		"noop": func(_ context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 			view := &logical.InmemStorage{}
@@ -689,6 +690,9 @@ func AddNoopAudit(conf *CoreConfig) {
 			}
 			n.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
 				SaltFunc: n.Salt,
+			}
+			if records != nil {
+				*records = &n.records
 			}
 			return n, nil
 		},
@@ -890,7 +894,13 @@ func (c *TestCluster) UnsealCoresWithError(useStoredKeys bool) error {
 }
 
 func (c *TestCluster) UnsealCore(t testing.T, core *TestClusterCore) {
-	for _, key := range c.BarrierKeys {
+	var keys [][]byte
+	if core.seal.RecoveryKeySupported() {
+		keys = c.RecoveryKeys
+	} else {
+		keys = c.BarrierKeys
+	}
+	for _, key := range keys {
 		if _, err := core.Core.Unseal(TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
 		}
@@ -1057,7 +1067,11 @@ type TestClusterOptions struct {
 	FirstCoreNumber   int
 	RequireClientAuth bool
 	// SetupFunc is called after the cluster is started.
-	SetupFunc func(t testing.T, c *TestCluster)
+	SetupFunc      func(t testing.T, c *TestCluster)
+	PR1103Disabled bool
+
+	// ClusterLayers are used to override the default cluster connection layer
+	ClusterLayers cluster.NetworkLayerSet
 }
 
 var DefaultNumCores = 3
@@ -1091,6 +1105,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		numCores = DefaultNumCores
 	} else {
 		numCores = opts.NumCores
+	}
+
+	var disablePR1103 bool
+	if opts != nil && opts.PR1103Disabled {
+		disablePR1103 = true
 	}
 
 	var firstCoreNumber int
@@ -1212,7 +1231,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Subject: pkix.Name{
 				CommonName: "localhost",
 			},
-			DNSNames:    []string{"localhost"},
+			// Include host.docker.internal for the sake of benchmark-vault running on MacOS/Windows.
+			// This allows Prometheus running in docker to scrape the cluster for metrics.
+			DNSNames:    []string{"localhost", "host.docker.internal"},
 			IPAddresses: certIPs,
 			ExtKeyUsage: []x509.ExtKeyUsage{
 				x509.ExtKeyUsageServerAuth,
@@ -1297,6 +1318,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 		certGetter := reload.NewCertificateGetter(certFile, keyFile, "")
 		certGetters = append(certGetters, certGetter)
+		certGetter.Reload(nil)
 		tlsConfig := &tls.Config{
 			Certificates:   []tls.Certificate{tlsCert},
 			RootCAs:        testCluster.RootCAs,
@@ -1424,7 +1446,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	addAuditBackend := len(coreConfig.AuditBackends) == 0
 	if addAuditBackend {
-		AddNoopAudit(coreConfig)
+		AddNoopAudit(coreConfig, nil)
 	}
 
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {
@@ -1486,6 +1508,10 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			}
 		}
 
+		if opts != nil && opts.ClusterLayers != nil {
+			localConfig.ClusterNetworkLayer = opts.ClusterLayers.Layers()[i]
+		}
+
 		switch {
 		case localConfig.LicensingConfig != nil:
 			if pubKey != nil {
@@ -1506,6 +1532,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			t.Fatalf("err: %v", err)
 		}
 		c.coreNumber = firstCoreNumber + i
+		c.PR1103disabled = disablePR1103
 		cores = append(cores, c)
 		coreConfigs = append(coreConfigs, &localConfig)
 		if opts != nil && opts.HandlerFunc != nil {
@@ -1820,8 +1847,10 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		"mssql-database-plugin",
 		"cassandra-database-plugin",
 		"mongodb-database-plugin",
+		"mongodbatlas-database-plugin",
 		"hana-database-plugin",
 		"influxdb-database-plugin",
+		"redshift-database-plugin",
 	}
 }
 

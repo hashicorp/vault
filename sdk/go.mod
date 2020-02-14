@@ -12,7 +12,7 @@ require (
 	github.com/golang/protobuf v1.3.2
 	github.com/golang/snappy v0.0.1
 	github.com/hashicorp/errwrap v1.0.0
-	github.com/hashicorp/go-hclog v0.10.1
+	github.com/hashicorp/go-hclog v0.12.0
 	github.com/hashicorp/go-immutable-radix v1.0.0
 	github.com/hashicorp/go-kms-wrapping v0.0.0-20191129225826-634facde9f88
 	github.com/hashicorp/go-multierror v1.0.0
@@ -22,6 +22,8 @@ require (
 	github.com/hashicorp/go-version v1.1.0
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/hashicorp/hcl v1.0.0
+	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
+	github.com/mitchellh/cli v1.0.0
 	github.com/mitchellh/copystructure v1.0.0
 	github.com/mitchellh/go-testing-interface v1.0.0
 	github.com/mitchellh/mapstructure v1.1.2

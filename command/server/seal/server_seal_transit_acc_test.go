@@ -3,23 +3,19 @@ package seal_test
 import (
 	"context"
 	"fmt"
-	"os"
 	"path"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-kms-wrapping/wrappers/transit"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/server/seal"
 	"github.com/ory/dockertest"
 )
 
 func TestTransitWrapper_Lifecycle(t *testing.T) {
-	if os.Getenv("VAULT_ACC") == "" {
-		t.Skip()
-	}
 	cleanup, retAddress, token, mountPath, keyName, _ := prepareTestContainer(t)
 	defer cleanup()
 
@@ -29,8 +25,8 @@ func TestTransitWrapper_Lifecycle(t *testing.T) {
 		"mount_path": mountPath,
 		"key_name":   keyName,
 	}
-	s := transit.NewWrapper(nil)
-	_, err := s.SetConfig(wrapperConfig)
+
+	s, _, err := seal.GetTransitKMSFunc(nil, wrapperConfig)
 	if err != nil {
 		t.Fatalf("error setting wrapper config: %v", err)
 	}
@@ -53,9 +49,6 @@ func TestTransitWrapper_Lifecycle(t *testing.T) {
 }
 
 func TestTransitSeal_TokenRenewal(t *testing.T) {
-	if os.Getenv("VAULT_ACC") == "" {
-		t.Skip()
-	}
 	cleanup, retAddress, token, mountPath, keyName, tlsConfig := prepareTestContainer(t)
 	defer cleanup()
 
@@ -86,8 +79,7 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 		"mount_path": mountPath,
 		"key_name":   keyName,
 	}
-	s := transit.NewWrapper(nil)
-	_, err = s.SetConfig(wrapperConfig)
+	s, _, err := seal.GetTransitKMSFunc(nil, wrapperConfig)
 	if err != nil {
 		t.Fatalf("error setting wrapper config: %v", err)
 	}

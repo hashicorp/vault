@@ -21,11 +21,7 @@ func (c *NamespaceLookupCommand) Synopsis() string {
 
 func (c *NamespaceLookupCommand) Help() string {
 	helpText := `
-Usage: vault namespace create [options] PATH
-
-  Create a child namespace. The namespace created will be relative to the
-  namespace provided in either the VAULT_NAMESPACE environment variable or
-  -namespace CLI flag.
+Usage: vault namespace lookup [options] PATH
 
   Get information about the namespace of the locally authenticated token:
 
@@ -45,7 +41,7 @@ func (c *NamespaceLookupCommand) Flags() *FlagSets {
 }
 
 func (c *NamespaceLookupCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultFolders()
+	return c.PredictVaultNamespaces()
 }
 
 func (c *NamespaceLookupCommand) AutocompleteFlags() complete.Flags {

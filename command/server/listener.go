@@ -10,7 +10,7 @@ import (
 	"net"
 
 	"github.com/hashicorp/vault/helper/proxyutil"
-	"github.com/hashicorp/vault/helper/reload"
+	"github.com/hashicorp/vault/sdk/helper/reload"
 	"github.com/mitchellh/cli"
 )
 
