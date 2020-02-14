@@ -17,7 +17,7 @@
       <SecretLink
         @mode={{if item.isFolder "list" "show" }}
         @secret={{item.id}}
-        @queryParams={{query-params tab='actions'}}
+        @queryParams={{if (eq backendModel.type "transit") (query-params tab="actions") ""}}
         @class="has-text-black has-text-weight-semibold"><Icon
           @glyph={{if item.isFolder 'folder-outline' 'file-outline' }}
           @class="has-text-grey-light"/>{{if (eq item.id ' ') '(self)' (or item.keyWithoutParent item.id)}}
