@@ -14,7 +14,7 @@ require (
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-hclog v0.12.0
 	github.com/hashicorp/go-immutable-radix v1.0.0
-	github.com/hashicorp/go-kms-wrapping v0.0.0-20191129225826-634facde9f88
+	github.com/hashicorp/go-kms-wrapping/entropy v0.1.0
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-plugin v1.0.1
 	github.com/hashicorp/go-sockaddr v1.0.2
