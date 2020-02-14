@@ -47,6 +47,7 @@ import (
 	logicalMssql "github.com/hashicorp/vault/builtin/logical/mssql"
 	logicalMysql "github.com/hashicorp/vault/builtin/logical/mysql"
 	logicalNomad "github.com/hashicorp/vault/builtin/logical/nomad"
+	logicalOpenLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
 	logicalPki "github.com/hashicorp/vault/builtin/logical/pki"
 	logicalPostgres "github.com/hashicorp/vault/builtin/logical/postgresql"
 	logicalRabbit "github.com/hashicorp/vault/builtin/logical/rabbitmq"
@@ -122,6 +123,7 @@ func newRegistry() *registry {
 			"mssql":        logicalMssql.Factory, // Deprecated
 			"mysql":        logicalMysql.Factory, // Deprecated
 			"nomad":        logicalNomad.Factory,
+			"openldap":     logicalOpenLDAP.Factory,
 			"pki":          logicalPki.Factory,
 			"postgresql":   logicalPostgres.Factory, // Deprecated
 			"rabbitmq":     logicalRabbit.Factory,
