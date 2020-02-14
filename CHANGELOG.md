@@ -4,6 +4,9 @@ FEATURES:
 
  * **Kerberos Authentication**: We now support Kerberos authentication using
    a SPNEGO token. Login can be performed using the Vault CLI, API, or agent.
+ * **Kubernetes Service Discovery**: We now support Kerberos service discover
+   where, if configured, Vault will tag Vault pods with their current health
+   status. For more, see [#8249](https://github.com/hashicorp/vault/pull/8249).
 
 IMPROVEMENTS:
 
