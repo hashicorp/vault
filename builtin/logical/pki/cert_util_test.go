@@ -158,3 +158,35 @@ func TestPki_MultipleOUs(t *testing.T) {
 		t.Fatalf("Expected %v, got %v", expected, actual)
 	}
 }
+
+func TestPki_PermitFQDNs(t *testing.T) {
+	var b backend
+	fields := addCACommonFields(map[string]*framework.FieldSchema{})
+
+	apiData := &framework.FieldData{
+		Schema: fields,
+		Raw: map[string]interface{}{
+			"common_name": "example.com.",
+			"ttl":         3600,
+		},
+	}
+	input := &inputBundle{
+		apiData: apiData,
+		role: &roleEntry{
+			AllowAnyName:     true,
+			MaxTTL:           3600,
+			EnforceHostnames: true,
+		},
+	}
+	cb, err := generateCreationBundle(&b, input, nil, nil)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+
+	expected := []string{"example.com."}
+	actual := cb.Params.DNSNames
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("Expected %v, got %v", expected, actual)
+	}
+}

@@ -442,12 +442,13 @@ func (i *MySQLHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 func (i *MySQLHALock) attemptLock(key, value string, didLock chan struct{}, failLock chan error, releaseCh chan bool) {
 	lock, err := NewMySQLLock(i.in, i.logger, key, value)
 
-	// Set node value
-	i.lock = lock
-
 	if err != nil {
 		failLock <- err
+		return
 	}
+
+	// Set node value
+	i.lock = lock
 
 	err = lock.Lock()
 	if err != nil {

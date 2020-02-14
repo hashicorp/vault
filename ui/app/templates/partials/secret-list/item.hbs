@@ -1,3 +1,5 @@
+
+
 {{#linked-block
   (concat
     "vault.cluster.secrets.backend."
@@ -8,12 +10,14 @@
   class="list-item-row"
   data-test-secret-link=item.id
   encode=true
+  queryParams=(secret-query-params backendModel.type)
 }}
   <div class="columns is-mobile">
     <div class="column is-10">
       <SecretLink
         @mode={{if item.isFolder "list" "show" }}
         @secret={{item.id}}
+        @queryParams={{if (eq backendModel.type "transit") (query-params tab="actions") ""}}
         @class="has-text-black has-text-weight-semibold"><Icon
           @glyph={{if item.isFolder 'folder-outline' 'file-outline' }}
           @class="has-text-grey-light"/>{{if (eq item.id ' ') '(self)' (or item.keyWithoutParent item.id)}}

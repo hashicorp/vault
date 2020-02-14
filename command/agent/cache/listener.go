@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/server"
-	"github.com/hashicorp/vault/helper/listenerutil"
+	"github.com/hashicorp/vault/sdk/helper/listenerutil"
 )
 
 func StartListener(lnConfig *config.Listener) (net.Listener, *tls.Config, error) {

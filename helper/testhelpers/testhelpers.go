@@ -186,7 +186,16 @@ func AttemptUnsealCore(c *vault.TestCluster, core *vault.TestClusterCore) error 
 }
 
 func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
+	deriveStableActiveCore(t, cluster)
+}
+
+func DeriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
+	return deriveStableActiveCore(t, cluster)
+}
+
+func deriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
 	activeCore := DeriveActiveCore(t, cluster)
+	minDuration := time.NewTimer(3 * time.Second)
 
 	for i := 0; i < 30; i++ {
 		leaderResp, err := activeCore.Client.Sys().Leader()
@@ -194,10 +203,22 @@ func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
 			t.Fatal(err)
 		}
 		if !leaderResp.IsSelf {
-			t.Fatal("unstable active node")
+			minDuration.Reset(3 * time.Second)
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
+
+	select {
+	case <-minDuration.C:
+	default:
+		if stopped := minDuration.Stop(); stopped {
+			t.Fatal("unstable active node")
+		}
+		// Drain the value
+		<-minDuration.C
+	}
+
+	return activeCore
 }
 
 func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {

@@ -76,8 +76,8 @@ configured to auto-unseal using KMS providers such as
 [Google Cloud Platform](/docs/platform/k8s/helm/run#google-kms-auto-unseal). This
 allows the pods to auto unseal if they're rescheduled in Kubernetes.
 
-If standalone or HA mode are being used, the Vault pods must be initialized and unsealed.
-For standalone deployments, only one of the Vault pods needs to be initialized.
+If standalone is used, the Vault pod must be initialized and unsealed.
+For HA deployments, only one of the Vault pods needs to be initialized and, all Vault pods need to be unsealed.
 
 ```sh
 $ kubectl exec -ti vault-0 -- vault operator init

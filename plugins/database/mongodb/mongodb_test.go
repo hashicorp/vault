@@ -2,7 +2,10 @@ package mongodb
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -232,4 +235,101 @@ func testCreateDBUser(t testing.TB, connURL, db, username, password string) {
 	if result.Err() != nil {
 		t.Fatal(result.Err())
 	}
+}
+
+func TestGetTLSAuth(t *testing.T) {
+	ca := newCert(t,
+		commonName("certificate authority"),
+		isCA(true),
+		selfSign(),
+	)
+	cert := newCert(t,
+		commonName("test cert"),
+		parent(ca),
+	)
+
+	type testCase struct {
+		username   string
+		tlsCAData  []byte
+		tlsKeyData []byte
+
+		expectOpts *options.ClientOptions
+		expectErr  bool
+	}
+
+	tests := map[string]testCase{
+		"no TLS data set": {
+			expectOpts: nil,
+			expectErr:  false,
+		},
+		"bad CA": {
+			tlsCAData: []byte("foobar"),
+
+			expectOpts: nil,
+			expectErr:  true,
+		},
+		"bad key": {
+			tlsKeyData: []byte("foobar"),
+
+			expectOpts: nil,
+			expectErr:  true,
+		},
+		"good ca": {
+			tlsCAData: cert.pem,
+
+			expectOpts: options.Client().
+				SetTLSConfig(
+					&tls.Config{
+						RootCAs: appendToCertPool(t, x509.NewCertPool(), cert.pem),
+					},
+				),
+			expectErr: false,
+		},
+		"good key": {
+			username:   "unittest",
+			tlsKeyData: cert.CombinedPEM(),
+
+			expectOpts: options.Client().
+				SetTLSConfig(
+					&tls.Config{
+						Certificates: []tls.Certificate{cert.tlsCert},
+					},
+				).
+				SetAuth(options.Credential{
+					AuthMechanism: "MONGODB-X509",
+					Username:      "unittest",
+				}),
+			expectErr: false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			c := new()
+			c.Username = test.username
+			c.TLSCAData = test.tlsCAData
+			c.TLSCertificateKeyData = test.tlsKeyData
+
+			actual, err := c.getTLSAuth()
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			if !reflect.DeepEqual(actual, test.expectOpts) {
+				t.Fatalf("Actual:\n%#v\nExpected:\n%#v", actual, test.expectOpts)
+			}
+		})
+	}
+}
+
+func appendToCertPool(t *testing.T, pool *x509.CertPool, caPem []byte) *x509.CertPool {
+	t.Helper()
+
+	ok := pool.AppendCertsFromPEM(caPem)
+	if !ok {
+		t.Fatalf("Unable to append cert to cert pool")
+	}
+	return pool
 }

@@ -3,15 +3,16 @@ package okta
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/go-cleanhttp"
+	"net/http"
 	"net/url"
-
 	"time"
 
-	"github.com/chrismalek/oktasdk-go/okta"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	oktaold "github.com/chrismalek/oktasdk-go/okta"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	oktanew "github.com/okta/okta-sdk-golang/okta"
 )
 
 const (
@@ -266,8 +267,46 @@ func (b *backend) pathConfigExistenceCheck(ctx context.Context, req *logical.Req
 	return cfg != nil, nil
 }
 
+type oktaShim interface {
+	Client() *oktanew.Client
+	NewRequest(method string, url string, body interface{}) (*http.Request, error)
+	Do(req *http.Request, v interface{}) (interface{}, error)
+}
+
+type oktaShimNew struct {
+	client *oktanew.Client
+}
+
+func (new *oktaShimNew) Client() *oktanew.Client {
+	return new.client
+}
+
+func (new *oktaShimNew) NewRequest(method string, url string, body interface{}) (*http.Request, error) {
+	return new.client.GetRequestExecutor().NewRequest(method, url, body)
+}
+
+func (new *oktaShimNew) Do(req *http.Request, v interface{}) (interface{}, error) {
+	return new.client.GetRequestExecutor().Do(req, v)
+}
+
+type oktaShimOld struct {
+	client *oktaold.Client
+}
+
+func (new *oktaShimOld) Client() *oktanew.Client {
+	return nil
+}
+
+func (new *oktaShimOld) NewRequest(method string, url string, body interface{}) (*http.Request, error) {
+	return new.client.NewRequest(method, url, body)
+}
+
+func (new *oktaShimOld) Do(req *http.Request, v interface{}) (interface{}, error) {
+	return new.client.Do(req, v)
+}
+
 // OktaClient creates a basic okta client connection
-func (c *ConfigEntry) OktaClient() *okta.Client {
+func (c *ConfigEntry) OktaClient() (oktaShim, error) {
 	baseURL := defaultBaseURL
 	if c.Production != nil {
 		if !*c.Production {
@@ -278,9 +317,20 @@ func (c *ConfigEntry) OktaClient() *okta.Client {
 		baseURL = c.BaseURL
 	}
 
-	// We validate config on input and errors are only returned when parsing URLs
-	client, _ := okta.NewClientWithDomain(cleanhttp.DefaultClient(), c.Org, baseURL, c.Token)
-	return client
+	if c.Token != "" {
+		client, err := oktanew.NewClient(context.Background(),
+			oktanew.WithOrgUrl("https://"+c.Org+"."+baseURL),
+			oktanew.WithToken(c.Token))
+		if err != nil {
+			return nil, err
+		}
+		return &oktaShimNew{client}, nil
+	}
+	client, err := oktaold.NewClientWithDomain(cleanhttp.DefaultClient(), c.Org, baseURL, "")
+	if err != nil {
+		return nil, err
+	}
+	return &oktaShimOld{client}, nil
 }
 
 // ConfigEntry for Okta
