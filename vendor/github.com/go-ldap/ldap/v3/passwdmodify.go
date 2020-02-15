@@ -1,3 +1,8 @@
+// This file contains the password modify extended operation as specified in rfc 3062
+//
+// https://tools.ietf.org/html/rfc3062
+//
+
 package ldap
 
 import (
@@ -56,7 +61,7 @@ func (req *PasswordModifyRequest) appendTo(envelope *ber.Packet) error {
 
 // NewPasswordModifyRequest creates a new PasswordModifyRequest
 //
-// According to the RFC 3602 (https://tools.ietf.org/html/rfc3062):
+// According to the RFC 3602:
 // userIdentity is a string representing the user associated with the request.
 // This string may or may not be an LDAPDN (RFC 2253).
 // If userIdentity is empty then the operation will act on the user associated

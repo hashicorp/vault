@@ -39,7 +39,7 @@ require (
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-errors/errors v1.0.1
-	github.com/go-ldap/ldap/v3 v3.1.6
+	github.com/go-ldap/ldap/v3 v3.1.3
 	github.com/go-ole/go-ole v1.2.1 // indirect
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/go-test/deep v1.0.2
@@ -87,7 +87,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190814210149-315cdbf5de6e
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20191017213228-e8cf7060a4d0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.0.0-20200124190647-0026e6bed4fb
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.0.0-20200215012635-7ec7135342ff
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.0.0-20200215140516-6e6441ca0948
 	github.com/hashicorp/vault/api v1.0.5-0.20200214222743-c39f5634b39f
 	github.com/hashicorp/vault/sdk v0.1.14-0.20200214222719-7a3b716487a5
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4

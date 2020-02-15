@@ -1,3 +1,28 @@
+// File contains Modify functionality
+//
+// https://tools.ietf.org/html/rfc4511
+//
+// ModifyRequest ::= [APPLICATION 6] SEQUENCE {
+//      object          LDAPDN,
+//      changes         SEQUENCE OF change SEQUENCE {
+//           operation       ENUMERATED {
+//                add     (0),
+//                delete  (1),
+//                replace (2),
+//                ...  },
+//           modification    PartialAttribute } }
+//
+// PartialAttribute ::= SEQUENCE {
+//      type       AttributeDescription,
+//      vals       SET OF value AttributeValue }
+//
+// AttributeDescription ::= LDAPString
+//                         -- Constrained to <attributedescription>
+//                         -- [RFC4512]
+//
+// AttributeValue ::= OCTET STRING
+//
+
 package ldap
 
 import (
@@ -8,10 +33,9 @@ import (
 
 // Change operation choices
 const (
-	AddAttribute       = 0
-	DeleteAttribute    = 1
-	ReplaceAttribute   = 2
-	IncrementAttribute = 3 // (https://tools.ietf.org/html/rfc4525)
+	AddAttribute     = 0
+	DeleteAttribute  = 1
+	ReplaceAttribute = 2
 )
 
 // PartialAttribute for a ModifyRequest as defined in https://tools.ietf.org/html/rfc4511
@@ -71,11 +95,6 @@ func (req *ModifyRequest) Delete(attrType string, attrVals []string) {
 // Replace appends the given attribute to the list of changes to be made
 func (req *ModifyRequest) Replace(attrType string, attrVals []string) {
 	req.appendChange(ReplaceAttribute, attrType, attrVals)
-}
-
-// Increment appends the given attribute to the list of changes to be made
-func (req *ModifyRequest) Increment(attrType string, attrVal string) {
-	req.appendChange(IncrementAttribute, attrType, []string{attrVal})
 }
 
 func (req *ModifyRequest) appendChange(operation uint, attrType string, attrVals []string) {

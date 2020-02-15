@@ -1,3 +1,8 @@
+//
+// https://tools.ietf.org/html/rfc4511
+//
+// DelRequest ::= [APPLICATION 10] LDAPDN
+
 package ldap
 
 import (

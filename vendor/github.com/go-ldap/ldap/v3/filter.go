@@ -5,12 +5,10 @@ import (
 	hexpac "encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
-	"unicode"
 	"unicode/utf8"
 
-	ber "github.com/go-asn1-ber/asn1-ber"
+	"github.com/go-asn1-ber/asn1-ber"
 )
 
 // Filter choices
@@ -71,8 +69,6 @@ var MatchingRuleAssertionMap = map[uint64]string{
 	MatchingRuleAssertionDNAttributes: "Matching Rule Assertion DN Attributes",
 }
 
-var _SymbolAny = []byte{'*'}
-
 // CompileFilter converts a string representation of a filter into a BER-encoded packet
 func CompileFilter(filter string) (*ber.Packet, error) {
 	if len(filter) == 0 || filter[0] != '(' {
@@ -92,75 +88,74 @@ func CompileFilter(filter string) (*ber.Packet, error) {
 }
 
 // DecompileFilter converts a packet representation of a filter into a string representation
-func DecompileFilter(packet *ber.Packet) (_ string, err error) {
+func DecompileFilter(packet *ber.Packet) (ret string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = NewError(ErrorFilterDecompile, errors.New("ldap: error decompiling filter"))
 		}
 	}()
-
-	buf := bytes.NewBuffer(nil)
-	buf.WriteByte('(')
+	ret = "("
+	err = nil
 	childStr := ""
 
 	switch packet.Tag {
 	case FilterAnd:
-		buf.WriteByte('&')
+		ret += "&"
 		for _, child := range packet.Children {
 			childStr, err = DecompileFilter(child)
 			if err != nil {
 				return
 			}
-			buf.WriteString(childStr)
+			ret += childStr
 		}
 	case FilterOr:
-		buf.WriteByte('|')
+		ret += "|"
 		for _, child := range packet.Children {
 			childStr, err = DecompileFilter(child)
 			if err != nil {
 				return
 			}
-			buf.WriteString(childStr)
+			ret += childStr
 		}
 	case FilterNot:
-		buf.WriteByte('!')
+		ret += "!"
 		childStr, err = DecompileFilter(packet.Children[0])
 		if err != nil {
 			return
 		}
-		buf.WriteString(childStr)
+		ret += childStr
 
 	case FilterSubstrings:
-		buf.WriteString(ber.DecodeString(packet.Children[0].Data.Bytes()))
-		buf.WriteByte('=')
+		ret += ber.DecodeString(packet.Children[0].Data.Bytes())
+		ret += "="
 		for i, child := range packet.Children[1].Children {
 			if i == 0 && child.Tag != FilterSubstringsInitial {
-				buf.Write(_SymbolAny)
+				ret += "*"
 			}
-			buf.WriteString(EscapeFilter(ber.DecodeString(child.Data.Bytes())))
+			ret += EscapeFilter(ber.DecodeString(child.Data.Bytes()))
 			if child.Tag != FilterSubstringsFinal {
-				buf.Write(_SymbolAny)
+				ret += "*"
 			}
 		}
 	case FilterEqualityMatch:
-		buf.WriteString(ber.DecodeString(packet.Children[0].Data.Bytes()))
-		buf.WriteByte('=')
-		buf.WriteString(EscapeFilter(ber.DecodeString(packet.Children[1].Data.Bytes())))
+		ret += ber.DecodeString(packet.Children[0].Data.Bytes())
+		ret += "="
+		ret += EscapeFilter(ber.DecodeString(packet.Children[1].Data.Bytes()))
 	case FilterGreaterOrEqual:
-		buf.WriteString(ber.DecodeString(packet.Children[0].Data.Bytes()))
-		buf.WriteString(">=")
-		buf.WriteString(EscapeFilter(ber.DecodeString(packet.Children[1].Data.Bytes())))
+		ret += ber.DecodeString(packet.Children[0].Data.Bytes())
+		ret += ">="
+		ret += EscapeFilter(ber.DecodeString(packet.Children[1].Data.Bytes()))
 	case FilterLessOrEqual:
-		buf.WriteString(ber.DecodeString(packet.Children[0].Data.Bytes()))
-		buf.WriteString("<=")
-		buf.WriteString(EscapeFilter(ber.DecodeString(packet.Children[1].Data.Bytes())))
+		ret += ber.DecodeString(packet.Children[0].Data.Bytes())
+		ret += "<="
+		ret += EscapeFilter(ber.DecodeString(packet.Children[1].Data.Bytes()))
 	case FilterPresent:
-		buf.WriteString(ber.DecodeString(packet.Data.Bytes()))
-		buf.WriteString("=*")
+		ret += ber.DecodeString(packet.Data.Bytes())
+		ret += "=*"
 	case FilterApproxMatch:
-		buf.WriteString(ber.DecodeString(packet.Children[0].Data.Bytes()))
-		buf.WriteString("~=")
-		buf.WriteString(EscapeFilter(ber.DecodeString(packet.Children[1].Data.Bytes())))
+		ret += ber.DecodeString(packet.Children[0].Data.Bytes())
+		ret += "~="
+		ret += EscapeFilter(ber.DecodeString(packet.Children[1].Data.Bytes()))
 	case FilterExtensibleMatch:
 		attr := ""
 		dnAttributes := false
@@ -181,22 +176,21 @@ func DecompileFilter(packet *ber.Packet) (_ string, err error) {
 		}
 
 		if len(attr) > 0 {
-			buf.WriteString(attr)
+			ret += attr
 		}
 		if dnAttributes {
-			buf.WriteString(":dn")
+			ret += ":dn"
 		}
 		if len(matchingRule) > 0 {
-			buf.WriteString(":")
-			buf.WriteString(matchingRule)
+			ret += ":"
+			ret += matchingRule
 		}
-		buf.WriteString(":=")
-		buf.WriteString(EscapeFilter(value))
+		ret += ":="
+		ret += EscapeFilter(value)
 	}
 
-	buf.WriteByte(')')
-
-	return buf.String(), nil
+	ret += ")"
+	return
 }
 
 func compileFilterSet(filter string, pos int, parent *ber.Packet) (int, error) {
@@ -259,10 +253,11 @@ func compileFilter(filter string, pos int) (*ber.Packet, int, error) {
 		)
 
 		state := stateReadingAttr
-		attribute := bytes.NewBuffer(nil)
+
+		attribute := ""
 		extensibleDNAttributes := false
-		extensibleMatchingRule := bytes.NewBuffer(nil)
-		condition := bytes.NewBuffer(nil)
+		extensibleMatchingRule := ""
+		condition := ""
 
 		for newPos < len(filter) {
 			remainingFilter := filter[newPos:]
@@ -329,7 +324,7 @@ func compileFilter(filter string, pos int) (*ber.Packet, int, error) {
 
 				// Still reading the attribute name
 				default:
-					attribute.WriteRune(currentRune)
+					attribute += fmt.Sprintf("%c", currentRune)
 					newPos += currentWidth
 				}
 
@@ -343,13 +338,13 @@ func compileFilter(filter string, pos int) (*ber.Packet, int, error) {
 
 				// Still reading the matching rule oid
 				default:
-					extensibleMatchingRule.WriteRune(currentRune)
+					extensibleMatchingRule += fmt.Sprintf("%c", currentRune)
 					newPos += currentWidth
 				}
 
 			case stateReadingCondition:
 				// append to the condition
-				condition.WriteRune(currentRune)
+				condition += fmt.Sprintf("%c", currentRune)
 				newPos += currentWidth
 			}
 		}
@@ -373,17 +368,17 @@ func compileFilter(filter string, pos int) (*ber.Packet, int, error) {
 			// }
 
 			// Include the matching rule oid, if specified
-			if extensibleMatchingRule.Len() > 0 {
-				packet.AppendChild(ber.NewString(ber.ClassContext, ber.TypePrimitive, MatchingRuleAssertionMatchingRule, extensibleMatchingRule.String(), MatchingRuleAssertionMap[MatchingRuleAssertionMatchingRule]))
+			if len(extensibleMatchingRule) > 0 {
+				packet.AppendChild(ber.NewString(ber.ClassContext, ber.TypePrimitive, MatchingRuleAssertionMatchingRule, extensibleMatchingRule, MatchingRuleAssertionMap[MatchingRuleAssertionMatchingRule]))
 			}
 
 			// Include the attribute, if specified
-			if attribute.Len() > 0 {
-				packet.AppendChild(ber.NewString(ber.ClassContext, ber.TypePrimitive, MatchingRuleAssertionType, attribute.String(), MatchingRuleAssertionMap[MatchingRuleAssertionType]))
+			if len(attribute) > 0 {
+				packet.AppendChild(ber.NewString(ber.ClassContext, ber.TypePrimitive, MatchingRuleAssertionType, attribute, MatchingRuleAssertionMap[MatchingRuleAssertionType]))
 			}
 
 			// Add the value (only required child)
-			encodedString, encodeErr := decodeEscapedSymbols(condition.Bytes())
+			encodedString, encodeErr := escapedStringToEncodedBytes(condition)
 			if encodeErr != nil {
 				return packet, newPos, encodeErr
 			}
@@ -394,16 +389,16 @@ func compileFilter(filter string, pos int) (*ber.Packet, int, error) {
 				packet.AppendChild(ber.NewBoolean(ber.ClassContext, ber.TypePrimitive, MatchingRuleAssertionDNAttributes, extensibleDNAttributes, MatchingRuleAssertionMap[MatchingRuleAssertionDNAttributes]))
 			}
 
-		case packet.Tag == FilterEqualityMatch && bytes.Equal(condition.Bytes(), _SymbolAny):
-			packet = ber.NewString(ber.ClassContext, ber.TypePrimitive, FilterPresent, attribute.String(), FilterMap[FilterPresent])
-		case packet.Tag == FilterEqualityMatch && bytes.Index(condition.Bytes(), _SymbolAny) > -1:
-			packet.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, attribute.String(), "Attribute"))
+		case packet.Tag == FilterEqualityMatch && condition == "*":
+			packet = ber.NewString(ber.ClassContext, ber.TypePrimitive, FilterPresent, attribute, FilterMap[FilterPresent])
+		case packet.Tag == FilterEqualityMatch && strings.Contains(condition, "*"):
+			packet.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, attribute, "Attribute"))
 			packet.Tag = FilterSubstrings
 			packet.Description = FilterMap[uint64(packet.Tag)]
 			seq := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "Substrings")
-			parts := bytes.Split(condition.Bytes(), _SymbolAny)
+			parts := strings.Split(condition, "*")
 			for i, part := range parts {
-				if len(part) == 0 {
+				if part == "" {
 					continue
 				}
 				var tag ber.Tag
@@ -415,7 +410,7 @@ func compileFilter(filter string, pos int) (*ber.Packet, int, error) {
 				default:
 					tag = FilterSubstringsAny
 				}
-				encodedString, encodeErr := decodeEscapedSymbols(part)
+				encodedString, encodeErr := escapedStringToEncodedBytes(part)
 				if encodeErr != nil {
 					return packet, newPos, encodeErr
 				}
@@ -423,11 +418,11 @@ func compileFilter(filter string, pos int) (*ber.Packet, int, error) {
 			}
 			packet.AppendChild(seq)
 		default:
-			encodedString, encodeErr := decodeEscapedSymbols(condition.Bytes())
+			encodedString, encodeErr := escapedStringToEncodedBytes(condition)
 			if encodeErr != nil {
 				return packet, newPos, encodeErr
 			}
-			packet.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, attribute.String(), "Attribute"))
+			packet.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, attribute, "Attribute"))
 			packet.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, encodedString, "Condition"))
 		}
 
@@ -437,51 +432,34 @@ func compileFilter(filter string, pos int) (*ber.Packet, int, error) {
 }
 
 // Convert from "ABC\xx\xx\xx" form to literal bytes for transport
-func decodeEscapedSymbols(src []byte) (string, error) {
-
-	var (
-		buffer  bytes.Buffer
-		offset  int
-		reader  = bytes.NewReader(src)
-		byteHex []byte
-		byteVal []byte
-	)
-
-	for {
-		runeVal, runeSize, err := reader.ReadRune()
-		if err == io.EOF {
-			return buffer.String(), nil
-		} else if err != nil {
-			return "", NewError(ErrorFilterCompile, fmt.Errorf("ldap: failed to read filter: %v", err))
-		} else if runeVal == unicode.ReplacementChar {
-			return "", NewError(ErrorFilterCompile, fmt.Errorf("ldap: error reading rune at position %d", offset))
+func escapedStringToEncodedBytes(escapedString string) (string, error) {
+	var buffer bytes.Buffer
+	i := 0
+	for i < len(escapedString) {
+		currentRune, currentWidth := utf8.DecodeRuneInString(escapedString[i:])
+		if currentRune == utf8.RuneError {
+			return "", NewError(ErrorFilterCompile, fmt.Errorf("ldap: error reading rune at position %d", i))
 		}
 
-		if runeVal == '\\' {
+		// Check for escaped hex characters and convert them to their literal value for transport.
+		if currentRune == '\\' {
 			// http://tools.ietf.org/search/rfc4515
 			// \ (%x5C) is not a valid character unless it is followed by two HEX characters due to not
 			// being a member of UTF1SUBSET.
-			if byteHex == nil {
-				byteHex = make([]byte, 2)
-				byteVal = make([]byte, 1)
+			if i+2 > len(escapedString) {
+				return "", NewError(ErrorFilterCompile, errors.New("ldap: missing characters for escape in filter"))
 			}
-
-			if _, err := io.ReadFull(reader, byteHex); err != nil {
-				if err == io.ErrUnexpectedEOF {
-					return "", NewError(ErrorFilterCompile, errors.New("ldap: missing characters for escape in filter"))
-				}
-				return "", NewError(ErrorFilterCompile, fmt.Errorf("ldap: invalid characters for escape in filter: %v", err))
+			escByte, decodeErr := hexpac.DecodeString(escapedString[i+1 : i+3])
+			if decodeErr != nil {
+				return "", NewError(ErrorFilterCompile, errors.New("ldap: invalid characters for escape in filter"))
 			}
-
-			if _, err := hexpac.Decode(byteVal, byteHex); err != nil {
-				return "", NewError(ErrorFilterCompile, fmt.Errorf("ldap: invalid characters for escape in filter: %v", err))
-			}
-
-			buffer.Write(byteVal)
+			buffer.WriteByte(escByte[0])
+			i += 2 // +1 from end of loop, so 3 total for \xx.
 		} else {
-			buffer.WriteRune(runeVal)
+			buffer.WriteRune(currentRune)
 		}
 
-		offset += runeSize
+		i += currentWidth
 	}
+	return buffer.String(), nil
 }

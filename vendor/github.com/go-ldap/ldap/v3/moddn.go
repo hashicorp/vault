@@ -1,3 +1,13 @@
+// Package ldap - moddn.go contains ModifyDN functionality
+//
+// https://tools.ietf.org/html/rfc4511
+// ModifyDNRequest ::= [APPLICATION 12] SEQUENCE {
+//      entry           LDAPDN,
+//      newrdn          RelativeLDAPDN,
+//      deleteoldrdn    BOOLEAN,
+//      newSuperior     [0] LDAPDN OPTIONAL }
+//
+//
 package ldap
 
 import (
