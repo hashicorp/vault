@@ -29,7 +29,7 @@ func (l *Conn) doRequest(req request) (*messageContext, error) {
 	}
 
 	if l.Debug {
-		ber.PrintPacket(packet)
+		l.Debug.PrintPacket(packet)
 	}
 
 	msgCtx, err := l.sendMessage(packet)
@@ -60,7 +60,7 @@ func (l *Conn) readPacket(msgCtx *messageContext) (*ber.Packet, error) {
 		if err = addLDAPDescriptions(packet); err != nil {
 			return nil, err
 		}
-		ber.PrintPacket(packet)
+		l.Debug.PrintPacket(packet)
 	}
 	return packet, nil
 }
