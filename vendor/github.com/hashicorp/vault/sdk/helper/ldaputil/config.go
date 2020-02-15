@@ -134,21 +134,21 @@ Default: cn`,
 		"tls_min_version": {
 			Type:        framework.TypeString,
 			Default:     "tls12",
-			Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. Defaults to 'tls12'",
 			DisplayAttrs: &framework.DisplayAttributes{
 				Name: "Minimum TLS Version",
 			},
-			AllowedValues: []interface{}{"tls10", "tls11", "tls12"},
+			AllowedValues: []interface{}{"tls10", "tls11", "tls12", "tls13"},
 		},
 
 		"tls_max_version": {
 			Type:        framework.TypeString,
 			Default:     "tls12",
-			Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. Defaults to 'tls12'",
 			DisplayAttrs: &framework.DisplayAttributes{
 				Name: "Maximum TLS Version",
 			},
-			AllowedValues: []interface{}{"tls10", "tls11", "tls12"},
+			AllowedValues: []interface{}{"tls10", "tls11", "tls12", "tls13"},
 		},
 
 		"deny_null_bind": {

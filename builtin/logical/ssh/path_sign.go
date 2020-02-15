@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -133,12 +134,12 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 
 	var parsedPrincipals []string
 	if certificateType == ssh.HostCert {
-		parsedPrincipals, err = b.calculateValidPrincipals(data, "", role.AllowedDomains, validateValidPrincipalForHosts(role))
+		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, "", role.AllowedDomains, validateValidPrincipalForHosts(role))
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 	} else {
-		parsedPrincipals, err = b.calculateValidPrincipals(data, role.DefaultUser, role.AllowedUsers, strutil.StrListContains)
+		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, role.DefaultUser, role.AllowedUsers, strutil.StrListContains)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
@@ -204,7 +205,7 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 	return response, nil
 }
 
-func (b *backend) calculateValidPrincipals(data *framework.FieldData, defaultPrincipal, principalsAllowedByRole string, validatePrincipal func([]string, string) bool) ([]string, error) {
+func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logical.Request, role *sshRole, defaultPrincipal, principalsAllowedByRole string, validatePrincipal func([]string, string) bool) ([]string, error) {
 	validPrincipals := ""
 	validPrincipalsRaw, ok := data.GetOk("valid_principals")
 	if ok {
@@ -214,7 +215,33 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, defaultPri
 	}
 
 	parsedPrincipals := strutil.RemoveDuplicates(strutil.ParseStringSlice(validPrincipals, ","), false)
-	allowedPrincipals := strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false)
+	// Build list of allowed Principals from template and static principalsAllowedByRole
+	var allowedPrincipals []string
+	for _, principal := range strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false) {
+		if role.AllowedUsersTemplate {
+			// Look for templating markers {{ .* }}
+			matched, _ := regexp.MatchString(`^{{.+?}}$`, principal)
+			if matched {
+				if req.EntityID != "" {
+					// Retrieve principal based on template + entityID from request.
+					templatePrincipal, err := framework.PopulateIdentityTemplate(principal, req.EntityID, b.System())
+					if err == nil {
+						// Template returned a principal
+						allowedPrincipals = append(allowedPrincipals, templatePrincipal)
+					} else {
+						return nil, fmt.Errorf("template '%s' could not be rendered -> %s", principal, err)
+					}
+				}
+			} else {
+				// Static principal or err template
+				allowedPrincipals = append(allowedPrincipals, principal)
+			}
+		} else {
+			// Static principal
+			allowedPrincipals = append(allowedPrincipals, principal)
+		}
+	}
+
 	switch {
 	case len(parsedPrincipals) == 0:
 		// There is nothing to process
@@ -230,7 +257,7 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, defaultPri
 		}
 
 		for _, principal := range parsedPrincipals {
-			if !validatePrincipal(allowedPrincipals, principal) {
+			if !validatePrincipal(strutil.RemoveDuplicates(allowedPrincipals, false), principal) {
 				return nil, fmt.Errorf("%v is not a valid value for valid_principals", principal)
 			}
 		}

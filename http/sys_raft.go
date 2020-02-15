@@ -4,10 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"github.com/hashicorp/vault/physical/raft"
 	"io"
 	"net/http"
 
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/vault"
 )
@@ -26,7 +26,7 @@ func handleSysRaftJoin(core *vault.Core) http.Handler {
 func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	// Parse the request
 	var req JoinRequest
-	if _, err := parseRequest(core.PerfStandby(), r, w, &req); err != nil && err != io.EOF {
+	if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil && err != io.EOF {
 		respondError(w, http.StatusBadRequest, err)
 		return
 	}

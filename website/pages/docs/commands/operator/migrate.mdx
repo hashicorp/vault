@@ -49,7 +49,7 @@ $ vault operator migrate -config migrate.hcl -start "data/logical/fd"
 
 The `operator migrate` command uses a dedicated configuration file to specify the source
 and destination storage backends. The format of the storage stanzas is identical
-to that used to [configure Vault](/docs/configuration/storage/index.html),
+to that used to [configure Vault](/docs/configuration/storage),
 with the only difference being that two stanzas are required: `storage_source` and `storage_destination`.
 
 ```hcl

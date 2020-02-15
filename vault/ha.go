@@ -387,6 +387,7 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 // active.
 func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stopCh chan struct{}) {
 	var manualStepDown bool
+	var firstIteration = true
 	for {
 		// Check for a shutdown
 		select {
@@ -399,19 +400,24 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			if manualStepDown {
 				time.Sleep(manualStepDownSleepPeriod)
 				manualStepDown = false
+			} else if !firstIteration {
+				// If we restarted the for loop due to an error, wait a second
+				// so that we don't busy loop if the error persists.
+				time.Sleep(1 * time.Second)
 			}
 		}
+		firstIteration = false
 
 		// Create a lock
 		uuid, err := uuid.GenerateUUID()
 		if err != nil {
 			c.logger.Error("failed to generate uuid", "error", err)
-			return
+			continue
 		}
 		lock, err := c.ha.LockWith(CoreLockPath, uuid)
 		if err != nil {
 			c.logger.Error("failed to create lock", "error", err)
-			return
+			continue
 		}
 
 		// Attempt the acquisition
@@ -461,6 +467,18 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		activeCtx, activeCtxCancel := context.WithCancel(namespace.RootContext(nil))
 		c.activeContext = activeCtx
 		c.activeContextCancelFunc.Store(activeCtxCancel)
+
+		// Perform seal migration
+		if err := c.migrateSeal(c.activeContext); err != nil {
+			c.logger.Error("seal migration error", "error", err)
+			c.barrier.Seal()
+			c.logger.Warn("vault is sealed")
+			c.heldHALock = nil
+			lock.Unlock()
+			close(continueCh)
+			c.stateLock.Unlock()
+			return
+		}
 
 		// This block is used to wipe barrier/seal state and verify that
 		// everything is sane. If we have no sanity in the barrier, we actually
@@ -925,7 +943,7 @@ func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-
 	}
 
 	if c.serviceRegistration != nil {
-		if err := c.serviceRegistration.NotifyActiveStateChange(); err != nil {
+		if err := c.serviceRegistration.NotifyActiveStateChange(true); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify active status", "error", err)
 			}
@@ -960,7 +978,7 @@ func (c *Core) clearLeader(uuid string) error {
 
 	// Advertise ourselves as a standby
 	if c.serviceRegistration != nil {
-		if err := c.serviceRegistration.NotifyActiveStateChange(); err != nil {
+		if err := c.serviceRegistration.NotifyActiveStateChange(false); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify standby status", "error", err)
 			}

@@ -14,7 +14,7 @@ by specifying access privileges (_authorization_).
 Since everything in Vault is path based, policy authors must be aware of
 all existing paths as well as paths to be created.
 
-The [Policies](/guides/identity/policies.html) guide walks you through the
+The [Policies](/guides/identity/policies) guide walks you through the
 creation of ACL policies in Vault.
 
 -> This guide highlights the use of ACL templating which was introduced in
@@ -22,9 +22,9 @@ creation of ACL policies in Vault.
 
 ## Reference Material
 
-- [Templated Policies](/docs/concepts/policies.html#templated-policies)
-- [Policy API](/api/system/policy.html)
-- [Identity: Entities and Groups](/guides/identity/identity.html)
+- [Templated Policies](/docs/concepts/policies#templated-policies)
+- [Policy API](/api/system/policy)
+- [Identity: Entities and Groups](/guides/identity/identity)
 - [Streamline Secrets Management with Vault Agent and Vault 0.11](https://youtu.be/zDnIqSB4tyA?t=24m37s)
 
 ~> **NOTE:** An [interactive
@@ -55,7 +55,7 @@ This makes many management and delegation tasks challenging. For example,
 allowing a user to change their own password by invoking the
 `auth/userpass/users/<user_name>/password` endpoint can require either a policy
 for _every user_ or requires the use of Sentinel which is a part of [Vault
-Enterprise](/docs/enterprise/sentinel/index.html).
+Enterprise](/docs/enterprise/sentinel).
 
 ## Solution
 
@@ -63,14 +63,14 @@ As of **Vault 0.11**, ACL templating capability is available to allow a subset
 of user information to be used within ACL policy paths.
 
 -> **NOTE:** This feature leverages [Vault
-Identities](/docs/secrets/identity/index.html) to inject values into ACL policy
+Identities](/docs/secrets/identity) to inject values into ACL policy
 paths.
 
 ## Prerequisites
 
 To perform the tasks described in this guide, you need to have an environment
 with **Vault 0.11** or later. Refer to the [Getting
-Started](/intro/getting-started/install.html) guide to install Vault.
+Started](/intro/getting-started/install) guide to install Vault.
 
 Alternately, you can use the [Vault
 Playground](https://www.katacoda.com/hashicorp/scenarios/vault-playground)
@@ -79,13 +79,13 @@ environment.
 ~> This guide assumes that you know how to create ACL policies. If you don't,
 go through the interactive [Policy
 tutorial](https://www.katacoda.com/hashicorp/scenarios/vault-policies) or
-[Policies](/guides/identity/policies.html) guide first.
+[Policies](/guides/identity/policies) guide first.
 
 ### Policy requirements
 
 Since this guide demonstrates the creation of an `admin` policy, log in with the
 `root` token if possible. Otherwise, refer to the policy requirement in the
-[Policies](/guides/identity/policies.html#policy-requirements) guide.
+[Policies](/guides/identity/policies#policy-requirements) guide.
 
 ## Steps
 
@@ -274,7 +274,7 @@ as its group member.
 
 -> This step only demonstrates CLI commands and Web UI to create
 entities and groups. Refer to the [Identity - Entities and
-Groups](/guides/identity/identity.html) guide if you need the full details.
+Groups](/guides/identity/identity) guide if you need the full details.
 
 - [CLI command](#step3-cli)
 - [Web UI](#step3-ui)
@@ -607,4 +607,4 @@ off](/img/vault-acl-templating-3.png)
 ## Next steps
 
 To learn about Sentinel policies to implement finer-grained policies, refer to
-the [Sentinel Policies](/guides/identity/sentinel.html) guide.
+the [Sentinel Policies](/guides/identity/sentinel) guide.

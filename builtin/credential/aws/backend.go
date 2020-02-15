@@ -65,6 +65,11 @@ type backend struct {
 	// will be flushed. The empty STS role signifies the master account
 	IAMClientsMap map[string]map[string]*iam.IAM
 
+	// Map to associate a partition to a random region in that partition. Users of
+	// this don't care what region in the partition they use, but there is some client
+	// cache efficiency gain if we keep the mapping stable, hence caching a single copy.
+	partitionToRegionMap map[string]*endpoints.Region
+
 	// Map of AWS unique IDs to the full ARN corresponding to that unique ID
 	// This avoids the overhead of an AWS API hit for every login request
 	// using the IAM auth method when bound_iam_principal_arn contains a wildcard
@@ -143,6 +148,8 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 		BackendType:    logical.TypeCredential,
 		Clean:          b.cleanup,
 	}
+
+	b.partitionToRegionMap = generatePartitionToRegionMap()
 
 	return b, nil
 }
@@ -249,7 +256,7 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 	// partition, and passing that region back back to the SDK, so that the SDK can figure out the
 	// proper partition from the arbitrary region we passed in to look up the endpoint.
 	// Sigh
-	region := getAnyRegionForAwsPartition(entity.Partition)
+	region := b.partitionToRegionMap[entity.Partition]
 	if region == nil {
 		return "", fmt.Errorf("unable to resolve partition %q to a region", entity.Partition)
 	}
@@ -293,18 +300,21 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 
 // Adapted from https://docs.aws.amazon.com/sdk-for-go/api/aws/endpoints/
 // the "Enumerating Regions and Endpoint Metadata" section
-func getAnyRegionForAwsPartition(partitionId string) *endpoints.Region {
+func generatePartitionToRegionMap() map[string]*endpoints.Region {
+	partitionToRegion := make(map[string]*endpoints.Region)
+
 	resolver := endpoints.DefaultResolver()
 	partitions := resolver.(endpoints.EnumPartitions).Partitions()
 
 	for _, p := range partitions {
-		if p.ID() == partitionId {
-			for _, r := range p.Regions() {
-				return &r
-			}
+		// Choose a single region randomly from the partition
+		for _, r := range p.Regions() {
+			partitionToRegion[p.ID()] = &r
+			break
 		}
 	}
-	return nil
+
+	return partitionToRegion
 }
 
 const backendHelp = `

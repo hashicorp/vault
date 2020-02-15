@@ -9,7 +9,7 @@ description: This is the API documentation for the Vault Kerberos auth method pl
 
 This is the API documentation for the Vault Kerberos auth method plugin. To
 learn more about the usage and operation, see the
-[Vault Kerberos auth method](/docs/auth/kerberos.html).
+[Vault Kerberos auth method](/docs/auth/kerberos).
 
 This documentation assumes the Kerberos auth method is mounted at the
 `auth/kerberos` path in Vault. Since it is possible to enable auth methods at
@@ -109,9 +109,9 @@ This endpoint configures LDAP in the Kerberos auth method.
 - `starttls` `(bool: false)` – If true, issues a `StartTLS` command after
   establishing an unencrypted connection.
 - `tls_min_version` `(string: tls12)` – Minimum TLS version to use. Accepted
-  values are `tls10`, `tls11` or `tls12`.
+  values are `tls10`, `tls11`, `tls12` or `tls13`.
 - `tls_max_version` `(string: tls12)` – Maximum TLS version to use. Accepted
-  values are `tls10`, `tls11` or `tls12`.
+  values are `tls10`, `tls11`, `tls12` or `tls13`.
 - `insecure_tls` `(bool: false)` – If true, skips LDAP server SSL certificate
   verification - insecure, use with caution!
 - `certificate` `(string: "")` – CA certificate to use when verifying LDAP server

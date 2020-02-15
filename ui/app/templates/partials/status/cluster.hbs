@@ -65,44 +65,9 @@
         {{/if}}
       {{/if}}
     {{/unless}}
-      {{#if (and (or
-        (and version.features (has-permission 'status' routeParams='license'))
-        (and cluster.usingRaft (has-permission 'status' routeParams='raft'))
-        )
-        not cluster.dr.isSecondary)
-      }}
-        <nav class="menu">
-          <div class="menu-label">
-            Server
-          </div>
-          <ul class="menu-list">
-            {{#if (and version.features (has-permission 'status' routeParams='license') (not cluster.dr.isSecondary))}}
-              <li class="action">
-                {{#link-to "vault.cluster.license" activeCluster.name invokeAction=onLinkClick}}
-                  <div class="level is-mobile">
-                    <span class="level-left">License</span>
-                    <Chevron class="has-text-grey-light level-right" />
-                  </div>
-                {{/link-to}}
-              </li>
-            {{/if}}
-            {{#if (and cluster.usingRaft (has-permission 'status' routeParams='raft'))}}
-              <li class="action">
-                {{#link-to "vault.cluster.storage" activeCluster.name invokeAction=onLinkClick}}
-                  <div class="level is-mobile">
-                    <span class="level-left">Raft Storage</span>
-                    <Chevron class="has-text-grey-light level-right" />
-                  </div>
-                {{/link-to}}
-              </li>
-            {{/if}}
-          </ul>
-        </nav>
-        <hr/>
-      {{/if}}
       <nav class="menu">
         <div class="menu-label">
-          Seal status
+          Server
         </div>
         <ul class="menu-list">
           <li class="action">
@@ -134,24 +99,49 @@
             {{/if}}
           </li>
         </ul>
-      </nav>
-      {{#if ( and (has-permission 'metrics' routeParams='requests') (not cluster.dr.isSecondary) auth.currentToken)}}
-        <hr />
-        <nav class="menu">
-          <div class="menu-label">
-            Metrics
-          </div>
+        {{#if (and (or
+        (and version.features (has-permission 'status' routeParams='license'))
+        (and cluster.usingRaft (has-permission 'status' routeParams='raft'))
+        )
+        (not cluster.dr.isSecondary))
+        }}
+          <ul class="menu-list">
+            {{#if (and version.features (has-permission 'status' routeParams='license') (not cluster.dr.isSecondary))}}
+              <li class="action">
+                {{#link-to "vault.cluster.license" activeCluster.name invokeAction=(action (queue (action onLinkClick) (action d.actions.close)))}}
+                  <div class="level is-mobile">
+                    <span class="level-left">License</span>
+                    <Chevron class="has-text-grey-light level-right" />
+                  </div>
+                {{/link-to}}
+              </li>
+            {{/if}}
+            {{#if (and cluster.usingRaft (has-permission 'status' routeParams='raft'))}}
+              <li class="action">
+                {{#link-to "vault.cluster.storage" activeCluster.name invokeAction=onLinkClick}}
+                  <div class="level is-mobile">
+                    <span class="level-left">Raft Storage</span>
+                    <Chevron class="has-text-grey-light level-right" />
+                  </div>
+                {{/link-to}}
+              </li>
+            {{/if}}
+          </ul>
+        {{/if}}
+        {{#if ( and (has-permission 'metrics' routeParams='dashboard') (not cluster.dr.isSecondary) auth.currentToken)}}
           <ul class="menu-list">
             <li class="action">
-              {{#link-to "vault.cluster.requests"}}
+              {{#link-to 'vault.cluster.metrics' 
+                invokeAction=(action (queue (action onLinkClick) (action d.actions.close)))
+              }}
                 <div class="level is-mobile">
-                  <span class="level-left">HTTP Requests</span>
+                  <span class="level-left">Metrics</span>
                   <Chevron class="has-text-grey-light level-right" />
                 </div>
               {{/link-to}}
             </li>
           </ul>
-        </nav>
-      {{/if}}
+        {{/if}}
+      </nav>
   </div>
 </div>

@@ -68,8 +68,8 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		cfg = &config{}
 	}
 
-	credentialsRaw, ok := data.GetOk("credentials")
-	if ok {
+	credentialsRaw, setNewCreds := data.GetOk("credentials")
+	if setNewCreds {
 		_, err := gcputil.Credentials(credentialsRaw.(string))
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("invalid credentials JSON file: %v", err)), nil
@@ -98,6 +98,9 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		return nil, err
 	}
 
+	if setNewCreds {
+		b.ClearCaches()
+	}
 	return nil, nil
 }
 

@@ -3,7 +3,6 @@ package server
 import (
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"io"
 	"io/ioutil"
 	"os"
@@ -16,6 +15,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
 
@@ -25,6 +25,8 @@ const (
 
 // Config is the configuration for the vault server.
 type Config struct {
+	entConfig
+
 	Listeners []*Listener `hcl:"-"`
 	Storage   *Storage    `hcl:"-"`
 	HAStorage *Storage    `hcl:"-"`
@@ -179,8 +181,9 @@ type Telemetry struct {
 	StatsiteAddr string `hcl:"statsite_address"`
 	StatsdAddr   string `hcl:"statsd_address"`
 
-	DisableHostname     bool `hcl:"disable_hostname"`
-	EnableHostnameLabel bool `hcl:"enable_hostname_label"`
+	DisableHostname     bool   `hcl:"disable_hostname"`
+	EnableHostnameLabel bool   `hcl:"enable_hostname_label"`
+	MetricsPrefix       string `hcl:"metrics_prefix"`
 
 	// Circonus: see https://github.com/circonus-labs/circonus-gometrics
 	// for more details on the various configuration options.
@@ -638,6 +641,11 @@ func ParseConfig(d string) (*Config, error) {
 		if err := parseTelemetry(&result, o); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'telemetry': {{err}}", err)
 		}
+	}
+
+	entConfig := &(result.entConfig)
+	if err := entConfig.parseConfig(list); err != nil {
+		return nil, errwrap.Wrapf("error parsing enterprise config: {{err}}", err)
 	}
 
 	return &result, nil
@@ -1099,6 +1107,7 @@ func (c *Config) Sanitized() map[string]interface{} {
 			"statsite_address":                       c.Telemetry.StatsiteAddr,
 			"statsd_address":                         c.Telemetry.StatsdAddr,
 			"disable_hostname":                       c.Telemetry.DisableHostname,
+			"metrics_prefix":                         c.Telemetry.MetricsPrefix,
 			"circonus_api_token":                     "",
 			"circonus_api_app":                       c.Telemetry.CirconusAPIApp,
 			"circonus_api_url":                       c.Telemetry.CirconusAPIURL,

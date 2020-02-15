@@ -152,7 +152,7 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 	mux := http.NewServeMux()
 	mux.Handle("/agent/v1/cache-clear", leaseCache.HandleCacheClear(ctx))
 
-	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, nil))
+	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, nil, true))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -243,7 +243,7 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
-	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, mock.NewSink("testid")))
+	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, mock.NewSink("testid"), true))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -278,6 +278,63 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	}
 	if secret.Data["id"] != nil || secret.Data["accessor"] != nil || secret.Data["request"].(string) != "lookup" {
 		t.Fatalf("failed to strip off auto-auth token on lookup")
+	}
+}
+
+func TestCache_AutoAuthClientTokenProxyStripping(t *testing.T) {
+	leaseCache := &mockTokenVerifierProxier{}
+	dummyToken := "DUMMY"
+	realToken := "testid"
+
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
+	client := cores[0].Client
+
+	cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := namespace.RootContext(nil)
+
+	// Create a muxer and add paths relevant for the lease cache layer
+	mux := http.NewServeMux()
+	//mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
+
+	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, mock.NewSink(realToken), false))
+	server := &http.Server{
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		IdleTimeout:       5 * time.Minute,
+		ErrorLog:          cacheLogger.StandardLogger(nil),
+	}
+	go server.Serve(listener)
+
+	testClient, err := client.Clone()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := testClient.SetAddress("http://" + listener.Addr().String()); err != nil {
+		t.Fatal(err)
+	}
+
+	// Empty the token in the client. Auto-auth token should be put to use.
+	testClient.SetToken(dummyToken)
+	_, err = testClient.Auth().Token().LookupSelf()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if leaseCache.currentToken != realToken {
+		t.Fatalf("failed to use real token from auto-auth")
 	}
 }
 

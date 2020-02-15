@@ -9,7 +9,7 @@ description: This is the API documentation for the Vault Okta auth method.
 
 This is the API documentation for the Vault Okta auth method. For
 general information about the usage and operation of the Okta method, please
-see the [Vault Okta method documentation](/docs/auth/okta.html).
+see the [Vault Okta method documentation](/docs/auth/okta).
 
 This documentation assumes the Okta method is mounted at the `/auth/okta`
 path in Vault. Since it is possible to enable auth methods at any location,
@@ -31,6 +31,7 @@ distinction between the `create` and `update` capabilities inside ACL policies.
 - `api_token` `(string: "")` - Okta API token. This is required to query Okta
   for user group membership. If this is not supplied only locally configured
   groups will be enabled.
+  **Support for okta auth without api_token is deprecated in Vault 1.4**
 - `base_url` `(string: "")` - If set, will be used as the base domain
   for API requests. Examples are okta.com, oktapreview.com, and okta-emea.com.
 - `bypass_okta_mfa` `(bool: false)` - Whether to bypass an Okta MFA request.

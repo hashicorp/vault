@@ -185,6 +185,7 @@ export default [
               'cf',
               'gcp',
               'jwt',
+              'kerberos',
               'kubernetes'
             ]
           },
@@ -216,6 +217,7 @@ export default [
           'influxdb',
           'hanadb',
           'mongodb',
+          'mongodbatlas',
           'mssql',
           'mysql-maria',
           'postgresql',
@@ -231,6 +233,7 @@ export default [
         content: ['kv-v1', 'kv-v2']
       },
       { category: 'identity' },
+      { category: 'mongodbatlas' },
       { category: 'nomad' },
       { category: 'pki' },
       { category: 'rabbitmq' },
@@ -248,8 +251,7 @@ export default [
       { category: 'cassandra' },
       { category: 'mongodb' },
       { category: 'mssql' },
-      { category: 'mysql' },
-      { category: 'postgresql' }
+      { category: 'mysql' }
     ]
   },
   {
@@ -315,7 +317,20 @@ export default [
         content: [
           {
             category: 'helm',
-            content: ['run', 'configuration', 'examples']
+            content: [
+              'run',
+              'configuration',
+              {
+                category: 'examples',
+                content: [
+                  'standalone-load-balanced-ui',
+                  'standalone-tls',
+                  'standalone-audit',
+                  'ha-with-consul',
+                  'kubernetes-auth'
+                ]
+              },
+            ],
           },
           {
             category: 'injector',

@@ -18,7 +18,11 @@ import (
 var (
 	onEnterprise                 = false
 	createSecureRandomReaderFunc = createSecureRandomReader
+	adjustCoreConfigForEnt       = adjustCoreConfigForEntNoop
 )
+
+func adjustCoreConfigForEntNoop(config *server.Config, coreConfig *vault.CoreConfig) {
+}
 
 func createSecureRandomReader(config *server.Config, seal *vault.Seal) (io.Reader, error) {
 	return rand.Reader, nil
@@ -54,14 +58,6 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 		}
 	}
 
-	if existBarrierSealConfig.Type == barrierSeal.BarrierType() {
-		// In this case our migration seal is set so we are using it
-		// (potentially) for unwrapping. Set it on core for that purpose then
-		// exit.
-		core.SetSealsForMigration(nil, nil, unwrapSeal)
-		return nil
-	}
-
 	if existBarrierSealConfig.Type != wrapping.Shamir && existRecoverySealConfig == nil {
 		return errors.New(`Recovery seal configuration not found for existing seal`)
 	}
@@ -92,6 +88,18 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 
 	// newSeal will be the barrierSeal
 	newSeal = barrierSeal
+
+	if migrationSeal != nil && newSeal != nil && migrationSeal.BarrierType() == newSeal.BarrierType() {
+		return errors.New("Migrating between same seal types is currently not supported")
+	}
+
+	if unwrapSeal != nil && existBarrierSealConfig.Type == barrierSeal.BarrierType() {
+		// In this case our migration seal is set so we are using it
+		// (potentially) for unwrapping. Set it on core for that purpose then
+		// exit.
+		core.SetSealsForMigration(nil, nil, unwrapSeal)
+		return nil
+	}
 
 	// Set the appropriate barrier and recovery configs.
 	switch {

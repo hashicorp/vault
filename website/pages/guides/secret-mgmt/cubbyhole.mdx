@@ -22,8 +22,8 @@ long as its policy allows it.
 
 ## Reference Material
 
-- [Cubbyhole](/docs/secrets/cubbyhole/index.html)
-- [Response Wrapping](/docs/concepts/response-wrapping.html)
+- [Cubbyhole](/docs/secrets/cubbyhole)
+- [Response Wrapping](/docs/concepts/response-wrapping)
 
 ~> **NOTE:** An [interactive
 tutorial](https://www.katacoda.com/hashicorp/scenarios/vault-cubbyhole) is
@@ -44,7 +44,7 @@ The end-to-end scenario described in this guide involves two personas:
 ## Challenge
 
 In order to tightly manage the secrets, you set the scope of who can do what
-using the [Vault policy](/docs/concepts/policies.html) and attach that to
+using the [Vault policy](/docs/concepts/policies) and attach that to
 tokens, roles, entities, etc.
 
 Think of a case where you have a trusted entity (Chef, Jenkins, etc.) which
@@ -67,9 +67,9 @@ be minimized.
 
 To perform the tasks described in this guide, you need to have a Vault
 environment. Refer to the [Getting
-Started](/intro/getting-started/install.html) guide to install Vault. Make sure
+Started](/intro/getting-started/install) guide to install Vault. Make sure
 that your Vault server has been [initialized and
-unsealed](/intro/getting-started/deploy.html).
+unsealed](/intro/getting-started/deploy).
 
 ### <a name="policy"></a>Policy requirements
 
@@ -99,7 +99,7 @@ path "secret/dev" {
 ```
 
 If you are not familiar with policies, complete the
-[policies](/guides/identity/policies.html) guide.
+[policies](/guides/identity/policies) guide.
 
 ## Steps
 
@@ -119,7 +119,7 @@ uses cubbyhole response wrapping. In this guide, you perform the following:
 
 **NOTE:** This guide demonstrates how the response wrapping works. To learn more
 about reading and writing secrets in Vault, refer to the [Static
-Secret](/guides/secret-mgmt/static-secrets.html) guide.
+Secret](/guides/secret-mgmt/static-secrets) guide.
 
 ### <a name="step1"></a>Step 1: Create and wrap a token
 
@@ -442,7 +442,7 @@ store a password tied to your username that should not be shared with anyone.
 The cubbyhole secret engine is mounted at the **`cubbyhole/`** prefix by
 default. The secrets you store in the `cubbyhole/` path are tied to your token
 and all tokens are permitted to read and write to the `cubbyhole` secret engine
-by the [`default`](/docs/concepts/policies.html#default-policy) policy.
+by the [`default`](/docs/concepts/policies#default-policy) policy.
 
 ```shell
 ...
@@ -543,11 +543,11 @@ $ curl --header "X-Vault-Token: root" --request GET \
 }
 ```
 
-Also, refer to [Cubbyhole Secret Engine (API)](/api/secret/cubbyhole/index.html).
+Also, refer to [Cubbyhole Secret Engine (API)](/api/secret/cubbyhole).
 
 ## Next steps
 
-The use of [AppRole Pull Authentication](/guides/identity/authentication.html) is a good
+The use of [AppRole Pull Authentication](/guides/identity/authentication) is a good
 use case to leverage the response wrapping. Go through the guide if you have not
 done so. To better understand the lifecycle of Vault tokens, proceed to [Tokens
-and Leases](/guides/identity/lease.html) guide.
+and Leases](/guides/identity/lease) guide.

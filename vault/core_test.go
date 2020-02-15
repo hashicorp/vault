@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
-	sr "github.com/hashicorp/vault/serviceregistration"
 )
 
 var (
@@ -245,6 +244,25 @@ func TestCore_Shutdown(t *testing.T) {
 	}
 	if !c.Sealed() {
 		t.Fatal("wasn't sealed")
+	}
+}
+
+// verify the channel returned by ShutdownDone is closed after Shutdown
+func TestCore_ShutdownDone(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	doneCh := c.ShutdownDone()
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		c.Shutdown()
+	}()
+
+	select {
+	case <-doneCh:
+		if !c.Sealed() {
+			t.Fatalf("shutdown done called prematurely!")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatalf("shutdown notification not received")
 	}
 }
 
@@ -2454,30 +2472,32 @@ type mockServiceRegistration struct {
 	notifyActiveCount int
 	notifySealedCount int
 	notifyPerfCount   int
+	notifyInitCount   int
 	runDiscoveryCount int
 }
 
-func (m *mockServiceRegistration) NotifyActiveStateChange() error {
+func (m *mockServiceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup) error {
+	m.runDiscoveryCount++
+	return nil
+}
+
+func (m *mockServiceRegistration) NotifyActiveStateChange(isActive bool) error {
 	m.notifyActiveCount++
 	return nil
 }
 
-func (m *mockServiceRegistration) NotifySealedStateChange() error {
+func (m *mockServiceRegistration) NotifySealedStateChange(isSealed bool) error {
 	m.notifySealedCount++
 	return nil
 }
 
-func (m *mockServiceRegistration) NotifyPerformanceStandbyStateChange() error {
+func (m *mockServiceRegistration) NotifyPerformanceStandbyStateChange(isStandby bool) error {
 	m.notifyPerfCount++
 	return nil
 }
 
-func (m *mockServiceRegistration) RunServiceRegistration(
-	_ *sync.WaitGroup, _ sr.ShutdownChannel, _ string,
-	_ sr.ActiveFunction, _ sr.SealedFunction,
-	_ sr.PerformanceStandbyFunction) error {
-
-	m.runDiscoveryCount++
+func (m *mockServiceRegistration) NotifyInitializedStateChange(isInitialized bool) error {
+	m.notifyInitCount++
 	return nil
 }
 
@@ -2514,21 +2534,6 @@ func TestCore_ServiceRegistration(t *testing.T) {
 		t.Fatal(diff)
 	}
 
-	// Run service discovery on the core
-	wg := &sync.WaitGroup{}
-	var shutdown chan struct{}
-	activeFunc := func() bool {
-		if isLeader, _, _, err := core.Leader(); err == nil {
-			return isLeader
-		}
-		return false
-	}
-	err = sr.RunServiceRegistration(
-		wg, shutdown, redirectAddr, activeFunc, core.Sealed, core.PerfStandby)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// Vault should be registered
 	if diff := deep.Equal(sr, &mockServiceRegistration{
 		runDiscoveryCount: 1,
@@ -2555,6 +2560,7 @@ func TestCore_ServiceRegistration(t *testing.T) {
 		runDiscoveryCount: 1,
 		notifyActiveCount: 1,
 		notifySealedCount: 1,
+		notifyInitCount:   1,
 	}); diff != nil {
 		t.Fatal(diff)
 	}

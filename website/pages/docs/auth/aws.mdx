@@ -41,26 +41,14 @@ below for more information.
 
 ### IAM auth method
 
-The AWS STS API includes a method,
-[`sts:GetCallerIdentity`](http://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html),
-which allows you to validate the identity of a client. The client signs a
-`GetCallerIdentity` query using the [AWS Signature v4
-algorithm](http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html) and
-submits 4 pieces of information to the Vault server to recreate a valid signed
-request: the request URL, the request body, the request headers, and the
-request method, as the AWS signature is computed over those fields. The Vault
-server then reconstructs the query and forwards it on to the AWS STS service
-and validates the result back. Clients don't need network-level access to talk
+The AWS STS API includes a method, [`sts:GetCallerIdentity`](http://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html), which allows you to validate the identity of a client. The client signs a `GetCallerIdentity` query using the [AWS Signature v4 algorithm](http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html) and sends it to the Vault server. The credentials used to sign the GetCallerIdentity request can come from the EC2 instance metadata service for an EC2 instance, or from the AWS environment variables in an AWS Lambda function execution, which obviates the need for an operator to manually provision some sort of identity material first. However, the credentials can, in principle, come from anywhere, not just from the locations AWS has provided for you.
+
+The `GetCallerIdentity` query consists of four pieces of information: the request URL, the request body, the request headers, and the request method, as the AWS signature is computed over those fields. The Vault server reconstructs the query using this information and forwards it on to the AWS STS service. Depending on the response from the STS service, the server authenticates the client.
+
+Notably, clients don't need network-level access themselves to talk
 to the AWS STS API endpoint; they merely need access to the credentials to sign
 the request. However, it means that the Vault server does need network-level
 access to send requests to the STS endpoint.
-
-Importantly, the credentials used to sign the GetCallerIdentity request can
-come from the EC2 instance metadata service for an EC2 instance, or from the
-AWS environment variables in an AWS Lambda function execution, which obviates
-the need for an operator to manually provision some sort of identity material
-first. However, the credentials can, in principle, come from anywhere, not
-just from the locations AWS has provided for you.
 
 Each signed AWS request includes the current timestamp to mitigate the risk of
 replay attacks. In addition, Vault allows you to require an additional header,
@@ -99,7 +87,7 @@ is also represented in the graphic below) is as follows:
    (by region) which can be used to verify the signature.
 
 1. The AWS EC2 instance makes a request to Vault with the PKCS#7 signature.
-   The PKCS#7 signature contains the Instance Identity Document within itself.
+   The PKCS#7 signature contains the Instance Identity Document.
 
 1. Vault verifies the signature on the PKCS#7 document, ensuring the information
    is certified accurate by AWS. This process validates both the validity and
@@ -329,7 +317,7 @@ are needed.
   `ec2` auth method. Vault needs to determine which IAM role is attached to the
   instance profile.
 - `iam:GetUser` and `iam:GetRole` are used when using the iam auth method and
-  binding to an IAM user or role principal to determine the unique AWS user ID
+  binding to an IAM user or role principal to determine the [AWS IAM Unique Identifiers](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids)
   or when using a wildcard on the bound ARN to resolve the full ARN of the user
   or role.
 - The `sts:AssumeRole` stanza is necessary when you are using [Cross Account
@@ -429,7 +417,7 @@ not specify the policy component, the client will inherit the allowed policies s
 on the role. If the role tag creation specifies the policy component but it contains
 no policies, the token will contain only the `default` policy; by default, this policy
 allows only manipulation (revocation, renewal, lookup) of the existing token, plus
-access to its [cubbyhole](/docs/secrets/cubbyhole/index.html).
+access to its [cubbyhole](/docs/secrets/cubbyhole).
 This can be useful to allow instances access to a secure "scratch space" for
 storing data (via the token's cubbyhole) but without granting any access to
 other resources provided by or resident in Vault.
@@ -728,5 +716,5 @@ The response will be in JSON. For example:
 ## API
 
 The AWS auth method has a full HTTP API. Please see the
-[AWS Auth API](/api/auth/aws/index.html) for more
+[AWS Auth API](/api/auth/aws) for more
 details.

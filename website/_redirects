@@ -109,6 +109,8 @@
 /intro/getting-started/secret-backends.html  /intro/getting-started/secrets-engines
 
 /guides/getting-started/index.html              https://learn.hashicorp.com/vault
+/intro/getting-started/install                  https://learn.hashicorp.com/vault/getting-started/install
+/intro/getting-started/install.html             https://learn.hashicorp.com/vault/getting-started/install
 
 /guides/operations/index.html                   https://learn.hashicorp.com/vault/?track=operations#operations
 /guides/operations/reference-architecture.html  https://learn.hashicorp.com/vault/operations/ops-reference-architecture
@@ -184,3 +186,6 @@
 /intro/getting-started/deploy.html https://learn.hashicorp.com/vault/getting-started/deploy
 /intro/getting-started/apis.html https://learn.hashicorp.com/vault/getting-started/apis
 /intro/getting-started/next-steps.html https://learn.hashicorp.com/vault/getting-started/next-steps
+
+/docs/secrets/postgresql/index.html     /docs/secrets/databases/postgresql
+/docs/secrets/postgresql                /docs/secrets/databases/postgresql

@@ -3,7 +3,6 @@ package seal_test
 import (
 	"context"
 	"fmt"
-	"os"
 	"path"
 	"reflect"
 	"strings"
@@ -17,9 +16,6 @@ import (
 )
 
 func TestTransitWrapper_Lifecycle(t *testing.T) {
-	if os.Getenv("VAULT_ACC") == "" {
-		t.Skip()
-	}
 	cleanup, retAddress, token, mountPath, keyName, _ := prepareTestContainer(t)
 	defer cleanup()
 
@@ -53,9 +49,6 @@ func TestTransitWrapper_Lifecycle(t *testing.T) {
 }
 
 func TestTransitSeal_TokenRenewal(t *testing.T) {
-	if os.Getenv("VAULT_ACC") == "" {
-		t.Skip()
-	}
 	cleanup, retAddress, token, mountPath, keyName, tlsConfig := prepareTestContainer(t)
 	defer cleanup()
 

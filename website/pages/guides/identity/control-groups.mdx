@@ -14,17 +14,17 @@ description: |-
 Control Groups add additional authorization factors to be required before
 processing requests to increase the governance, accountability, and security of
 your secrets. When a control group is required for a request, the requesting
-client receives the [wrapping token](/docs/concepts/response-wrapping.html) in
+client receives the [wrapping token](/docs/concepts/response-wrapping) in
 return. Only when all authorizations are satisfied, the wrapping token can be
 used to unwrap the requested secrets.
 
 ## Reference Material
 
-- [Vault Enterprise Control Group Support](/docs/enterprise/control-groups/index.html)
-- [Policies](http://localhost:4567/docs/concepts/policies.html)
-- [Identity Groups](/docs/secrets/identity/index.html)
-- [Control Group API](/api/system/control-group.html)
-- [Sentinel Policies](/docs/enterprise/sentinel/index.html)
+- [Vault Enterprise Control Group Support](/docs/enterprise/control-groups)
+- [Policies](/docs/concepts/policies)
+- [Identity Groups](/docs/secrets/identity)
+- [Control Group API](/api/system/control-group)
+- [Sentinel Policies](/docs/enterprise/sentinel)
 
 ## Estimated Time to Complete
 
@@ -66,12 +66,12 @@ To perform the tasks described in this guide, you need to have a **_Vault
 Enterprise_** environment.
 
 This guide assumes that you have some hands-on experience with [ACL
-policies](/docs/concepts/policies.html) as well as
-[Identities](/docs/secrets/identity/index.html). If you are not familiar,
+policies](/docs/concepts/policies) as well as
+[Identities](/docs/secrets/identity). If you are not familiar,
 go through the following guides first:
 
-- [Policies](/guides/identity/policies.html)
-- [Identity - Entities & Groups](/guides/identity/identity.html)
+- [Policies](/guides/identity/policies)
+- [Identity - Entities & Groups](/guides/identity/identity)
 
 ### Policy requirements
 
@@ -281,7 +281,7 @@ then login.
 
 -> This step only demonstrates CLI commands and Web UI to create
 entities and groups. Refer to the [Identity - Entities and
-Groups](/guides/identity/identity.html) guide if you need the full details.
+Groups](/guides/identity/identity) guide if you need the full details.
 
 Now you have policies, let's create a user, **`bob`** and an **`acct_manager`**
 group with **`ellen`** as a group member.
@@ -639,7 +639,7 @@ Deploy this policy as an Endpoint Governing Policy attached to
 "**`EU_GDPR_data/orders/*`**" path.
 
 -> Refer to the [Sentinel
-Properties](/docs/enterprise/sentinel/properties.html#control-group-properties)
+Properties](/docs/enterprise/sentinel/properties#control-group-properties)
 documentation for the list of available properties associated with control
 groups.
 
