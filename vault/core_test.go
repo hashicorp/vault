@@ -247,6 +247,25 @@ func TestCore_Shutdown(t *testing.T) {
 	}
 }
 
+// verify the channel returned by ShutdownDone is closed after Shutdown
+func TestCore_ShutdownDone(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	doneCh := c.ShutdownDone()
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		c.Shutdown()
+	}()
+
+	select {
+	case <-doneCh:
+		if !c.Sealed() {
+			t.Fatalf("shutdown done called prematurely!")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatalf("shutdown notification not received")
+	}
+}
+
 // Attempt to seal bad token
 func TestCore_Seal_BadToken(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)

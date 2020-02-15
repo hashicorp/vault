@@ -38,9 +38,9 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			},
 		},
 		Cache: &Cache{
-			UseAutoAuthToken:        true,
-			UseAutoAuthTokenEnforce: false,
-			UseAutoAuthTokenRaw:     true,
+			UseAutoAuthToken:    true,
+			UseAutoAuthTokenRaw: true,
+			ForceAutoAuthToken:  false,
 		},
 		Listeners: []*Listener{
 			&Listener{
@@ -225,6 +225,13 @@ func TestLoadConfigFile_Bad_AgentCache_InconsisentAutoAuth(t *testing.T) {
 	}
 }
 
+func TestLoadConfigFile_Bad_AgentCache_ForceAutoAuthNoMethod(t *testing.T) {
+	_, err := LoadConfig("./test-fixtures/bad-config-cache-inconsistent-auto_auth.hcl")
+	if err == nil {
+		t.Fatal("LoadConfig should return an error when use_auto_auth_token=true and no auto_auth section present")
+	}
+}
+
 func TestLoadConfigFile_Bad_AgentCache_NoListeners(t *testing.T) {
 	_, err := LoadConfig("./test-fixtures/bad-config-cache-no-listeners.hcl")
 	if err == nil {
@@ -270,9 +277,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 			},
 		},
 		Cache: &Cache{
-			UseAutoAuthToken:        true,
-			UseAutoAuthTokenEnforce: false,
-			UseAutoAuthTokenRaw:     true,
+			UseAutoAuthToken:    true,
+			UseAutoAuthTokenRaw: true,
+			ForceAutoAuthToken:  false,
 		},
 		Listeners: []*Listener{
 			&Listener{
@@ -308,9 +315,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_Force(t *testing.T) {
 			},
 		},
 		Cache: &Cache{
-			UseAutoAuthToken:        true,
-			UseAutoAuthTokenEnforce: true,
-			UseAutoAuthTokenRaw:     "force",
+			UseAutoAuthToken:    true,
+			UseAutoAuthTokenRaw: "force",
+			ForceAutoAuthToken:  true,
 		},
 		Listeners: []*Listener{
 			&Listener{
@@ -346,9 +353,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_True(t *testing.T) {
 			},
 		},
 		Cache: &Cache{
-			UseAutoAuthToken:        true,
-			UseAutoAuthTokenEnforce: false,
-			UseAutoAuthTokenRaw:     "true",
+			UseAutoAuthToken:    true,
+			UseAutoAuthTokenRaw: "true",
+			ForceAutoAuthToken:  false,
 		},
 		Listeners: []*Listener{
 			&Listener{
@@ -395,9 +402,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 			},
 		},
 		Cache: &Cache{
-			UseAutoAuthToken:        false,
-			UseAutoAuthTokenEnforce: false,
-			UseAutoAuthTokenRaw:     "false",
+			UseAutoAuthToken:    false,
+			UseAutoAuthTokenRaw: "false",
+			ForceAutoAuthToken:  false,
 		},
 		Listeners: []*Listener{
 			&Listener{

@@ -1,4 +1,4 @@
-import Application from './application';
+import Application from '../application';
 
 export default Application.extend({
   queryRecord() {

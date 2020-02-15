@@ -1,0 +1,13 @@
+{
+  "kind": "Status",
+  "apiVersion": "v1",
+  "metadata": {},
+  "status": "Failure",
+  "message": "pods \"shell-dem\" not found",
+  "reason": "NotFound",
+  "details": {
+    "name": "shell-dem",
+    "kind": "pods"
+  },
+  "code": 404
+}

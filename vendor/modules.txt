@@ -315,9 +315,8 @@ github.com/hashicorp/go-gcp-common/gcputil
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.1.0
 github.com/hashicorp/go-immutable-radix
-# github.com/hashicorp/go-kms-wrapping v0.5.0
+# github.com/hashicorp/go-kms-wrapping v0.5.1
 github.com/hashicorp/go-kms-wrapping
-github.com/hashicorp/go-kms-wrapping/entropy
 github.com/hashicorp/go-kms-wrapping/internal/xor
 github.com/hashicorp/go-kms-wrapping/wrappers/aead
 github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms
@@ -326,6 +325,8 @@ github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault
 github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms
 github.com/hashicorp/go-kms-wrapping/wrappers/ocikms
 github.com/hashicorp/go-kms-wrapping/wrappers/transit
+# github.com/hashicorp/go-kms-wrapping/entropy v0.1.0
+github.com/hashicorp/go-kms-wrapping/entropy
 # github.com/hashicorp/go-memdb v1.0.2
 github.com/hashicorp/go-memdb
 # github.com/hashicorp/go-msgpack v0.5.5
@@ -395,7 +396,7 @@ github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
 # github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20191010173058-65cf93bad3f2
 github.com/hashicorp/vault-plugin-auth-jwt
-# github.com/hashicorp/vault-plugin-auth-kerberos v0.1.2
+# github.com/hashicorp/vault-plugin-auth-kerberos v0.1.3
 github.com/hashicorp/vault-plugin-auth-kerberos
 # github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190925162726-2e5b0b8184e6
 github.com/hashicorp/vault-plugin-auth-kubernetes
@@ -424,9 +425,12 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms
 github.com/hashicorp/vault-plugin-secrets-kv
 # github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.0.0-20200124190647-0026e6bed4fb
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas
-# github.com/hashicorp/vault/api v1.0.5-0.20200124174203-d7d4084c8670 => ./api
+# github.com/hashicorp/vault-plugin-secrets-openldap v0.0.0-20200215165936-237ad8919d2c
+github.com/hashicorp/vault-plugin-secrets-openldap
+github.com/hashicorp/vault-plugin-secrets-openldap/client
+# github.com/hashicorp/vault/api v1.0.5-0.20200214222743-c39f5634b39f => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20200124174203-d7d4084c8670 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20200214222719-7a3b716487a5 => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/database/helper/credsutil
@@ -449,6 +453,7 @@ github.com/hashicorp/vault/sdk/helper/kdf
 github.com/hashicorp/vault/sdk/helper/keysutil
 github.com/hashicorp/vault/sdk/helper/ldaputil
 github.com/hashicorp/vault/sdk/helper/license
+github.com/hashicorp/vault/sdk/helper/listenerutil
 github.com/hashicorp/vault/sdk/helper/locksutil
 github.com/hashicorp/vault/sdk/helper/logging
 github.com/hashicorp/vault/sdk/helper/mlock
@@ -458,6 +463,7 @@ github.com/hashicorp/vault/sdk/helper/pathmanager
 github.com/hashicorp/vault/sdk/helper/pluginutil
 github.com/hashicorp/vault/sdk/helper/pointerutil
 github.com/hashicorp/vault/sdk/helper/policyutil
+github.com/hashicorp/vault/sdk/helper/reload
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/tlsutil

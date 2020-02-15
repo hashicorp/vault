@@ -242,7 +242,16 @@ func (c *OperatorGenerateRootCommand) Run(args []string) int {
 	case c.flagGenerateOTP:
 		otp, code := c.generateOTP(client, kind)
 		if code == 0 {
-			return PrintRaw(c.UI, otp)
+			switch Format(c.UI) {
+			case "", "table":
+				return PrintRaw(c.UI, otp)
+			default:
+				status := map[string]interface{}{
+					"otp":        otp,
+					"otp_length": len(otp),
+				}
+				return OutputData(c.UI, status)
+			}
 		}
 		return code
 	case c.flagDecode != "":
@@ -332,6 +341,7 @@ func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp st
 		return 2
 	}
 
+	var token string
 	switch status.OTPLength {
 	case 0:
 		// Backwards compat
@@ -341,13 +351,12 @@ func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp st
 			return 1
 		}
 
-		token, err := uuid.FormatUUID(tokenBytes)
+		uuidToken, err := uuid.FormatUUID(tokenBytes)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error formatting base64 token value: %s", err))
 			return 1
 		}
-
-		return PrintRaw(c.UI, strings.TrimSpace(token))
+		token = strings.TrimSpace(uuidToken)
 
 	default:
 		tokenBytes, err := base64.RawStdEncoding.DecodeString(encoded)
@@ -361,8 +370,17 @@ func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp st
 			c.UI.Error(errwrap.Wrapf("Error xoring token: {{err}}", err).Error())
 			return 1
 		}
+		token = string(tokenBytes)
+	}
 
-		return PrintRaw(c.UI, string(tokenBytes))
+	switch Format(c.UI) {
+	case "", "table":
+		return PrintRaw(c.UI, token)
+	default:
+		tokenJSON := map[string]interface{}{
+			"token": token,
+		}
+		return OutputData(c.UI, tokenJSON)
 	}
 }
 
