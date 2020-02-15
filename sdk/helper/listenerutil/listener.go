@@ -126,7 +126,7 @@ PASSPHRASECORRECT:
 	tlsConf.NextProtos = []string{"h2", "http/1.1"}
 	tlsConf.MinVersion, ok = tlsutil.TLSLookup[tlsvers]
 	if !ok {
-		return nil, nil, nil, nil, fmt.Errorf("'tls_min_version' value %q not supported, please specify one of [tls10,tls11,tls12]", tlsvers)
+		return nil, nil, nil, nil, fmt.Errorf("'tls_min_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]", tlsvers)
 	}
 	tlsConf.ClientAuth = tls.RequestClientCert
 
