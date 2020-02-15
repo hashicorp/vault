@@ -144,6 +144,10 @@ func (r ReplicationState) GetPerformanceString() string {
 	}
 }
 
+func (r ReplicationState) IsPrimaryState() bool {
+	return r.HasState(ReplicationPerformancePrimary | ReplicationDRPrimary)
+}
+
 func (r ReplicationState) HasState(flag ReplicationState) bool { return r&flag != 0 }
 func (r *ReplicationState) AddState(flag ReplicationState)     { *r |= flag }
 func (r *ReplicationState) ClearState(flag ReplicationState)   { *r &= ^flag }
