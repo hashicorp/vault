@@ -34,7 +34,11 @@ var (
 
 	pathToFiles = func() string {
 		wd, _ := os.Getwd()
-		pathParts := strings.Split(wd, "vault")
+		repoName := "vault-enterprise"
+		if !strings.Contains(wd, repoName) {
+			repoName = "vault"
+		}
+		pathParts := strings.Split(wd, repoName)
 		return pathParts[0] + "vault/serviceregistration/kubernetes/testing/"
 	}()
 )
