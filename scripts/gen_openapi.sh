@@ -59,6 +59,7 @@ vault secrets enable mongodb
 vault secrets enable mssql
 vault secrets enable mysql
 vault secrets enable nomad
+vault secrets enable openldap
 vault secrets enable pki
 vault secrets enable postgresql
 vault secrets enable rabbitmq

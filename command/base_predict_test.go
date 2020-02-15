@@ -380,6 +380,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"oci",
 				"oidc",
 				"okta",
+				"openldap",
 				"pcf", // Deprecated.
 				"pki",
 				"postgresql",
