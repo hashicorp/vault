@@ -126,6 +126,7 @@ type ServerCommand struct {
 	flagCombineLogs      bool
 	flagTestServerConfig bool
 	flagDevConsul        bool
+  flagExitOnCoreShutdown bool
 }
 
 type ServerListener struct {
@@ -202,6 +203,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 		// See github.com/hashicorp/vault/sdk/helper/logging.ParseEnvLogFormat()
 		Completion: complete.PredictSet("standard", "json"),
 		Usage:      `Log format. Supported values are "standard" and "json".`,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "exit-on-core-shutdown",
+		Target:  &c.flagExitOnCoreShutdown,
+		Default: false,
+		Usage:   "Exit the vault server if the vault core is shutdown.",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -1787,26 +1795,24 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 	}()
 
+	var coreShutdownDoneCh <-chan struct{}
+	if c.flagExitOnCoreShutdown {
+		coreShutdownDoneCh = core.ShutdownDone()
+	}
+
 	// Wait for shutdown
 	shutdownTriggered := false
+	retCode := 0
 
 	for !shutdownTriggered {
 		select {
+		case <-coreShutdownDoneCh:
+			c.UI.Output("==> Vault core was shut down")
+			retCode = 1
+			shutdownTriggered = true
 		case <-c.ShutdownCh:
 			c.UI.Output("==> Vault shutdown triggered")
-
-			// Stop the listeners so that we don't process further client requests.
-			c.cleanupGuard.Do(listenerCloseFunc)
-
-			// Shutdown will wait until after Vault is sealed, which means the
-			// request forwarding listeners will also be closed (and also
-			// waited for).
-			if err := core.Shutdown(); err != nil {
-				c.UI.Error(fmt.Sprintf("Error with core shutdown: %s", err))
-			}
-
 			shutdownTriggered = true
-
 		case <-c.SighupCh:
 			c.UI.Output("==> Vault reload triggered")
 
@@ -1867,9 +1873,19 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 	}
 
+	// Stop the listeners so that we don't process further client requests.
+	c.cleanupGuard.Do(listenerCloseFunc)
+
+	// Shutdown will wait until after Vault is sealed, which means the
+	// request forwarding listeners will also be closed (and also
+	// waited for).
+	if err := core.Shutdown(); err != nil {
+		c.UI.Error(fmt.Sprintf("Error with core shutdown: %s", err))
+	}
+
 	// Wait for dependent goroutines to complete
 	c.WaitGroup.Wait()
-	return 0
+	return retCode
 }
 
 func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig) (*vault.InitResult, error) {

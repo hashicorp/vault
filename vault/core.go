@@ -267,6 +267,9 @@ type Core struct {
 	keepHALockOnStepDown *uint32
 	heldHALock           physical.Lock
 
+	// shutdownDoneCh is used to notify when Shutdown() completes
+	shutdownDoneCh chan struct{}
+
 	// unlockInfo has the keys provided to Unseal until the threshold number of parts is available, as well as the operation nonce
 	unlockInfo *unlockInformation
 
@@ -737,6 +740,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterPeerClusterAddrsCache: cache.New(3*cluster.HeartbeatInterval, time.Second),
 		enableMlock:                  !conf.DisableMlock,
 		rawEnabled:                   conf.EnableRaw,
+		shutdownDoneCh:               make(chan struct{}),
 		replicationState:             new(uint32),
 		atomicPrimaryClusterAddrs:    new(atomic.Value),
 		atomicPrimaryFailoverAddrs:   new(atomic.Value),
@@ -933,7 +937,21 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 // happens as quickly as possible.
 func (c *Core) Shutdown() error {
 	c.logger.Debug("shutdown called")
-	return c.sealInternal()
+	err := c.sealInternal()
+
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+	if c.shutdownDoneCh != nil {
+		close(c.shutdownDoneCh)
+		c.shutdownDoneCh = nil
+	}
+
+	return err
+}
+
+// ShutdownDone returns a channel that will be closed after Shutdown completes
+func (c *Core) ShutdownDone() <-chan struct{} {
+	return c.shutdownDoneCh
 }
 
 // CORSConfig returns the current CORS configuration
