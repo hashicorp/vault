@@ -44,12 +44,12 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/reloadutil"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/reload"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -1023,7 +1023,7 @@ type TestClusterCore struct {
 	Client               *api.Client
 	Handler              http.Handler
 	Listeners            []*TestListener
-	ReloadFuncs          *map[string][]reload.ReloadFunc
+	ReloadFuncs          *map[string][]reloadutil.ReloadFunc
 	ReloadFuncsLock      *sync.RWMutex
 	Server               *http.Server
 	ServerCert           *x509.Certificate
@@ -1295,7 +1295,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	servers := []*http.Server{}
 	handlers := []http.Handler{}
 	tlsConfigs := []*tls.Config{}
-	certGetters := []*reload.CertificateGetter{}
+	certGetters := []*reloadutil.CertificateGetter{}
 	for i := 0; i < numCores; i++ {
 		baseAddr.Port = ports[i]
 		ln, err := net.ListenTCP("tcp", baseAddr)
@@ -1316,7 +1316,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		if err != nil {
 			t.Fatal(err)
 		}
-		certGetter := reload.NewCertificateGetter(certFile, keyFile, "")
+		certGetter := reloadutil.NewCertificateGetter(certFile, keyFile, "")
 		certGetters = append(certGetters, certGetter)
 		certGetter.Reload(nil)
 		tlsConfig := &tls.Config{
@@ -1773,7 +1773,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		tcc.ReloadFuncs = &cores[i].reloadFuncs
 		tcc.ReloadFuncsLock = &cores[i].reloadFuncsLock
 		tcc.ReloadFuncsLock.Lock()
-		(*tcc.ReloadFuncs)["listener|tcp"] = []reload.ReloadFunc{certGetters[i].Reload}
+		(*tcc.ReloadFuncs)["listener|tcp"] = []reloadutil.ReloadFunc{certGetters[i].Reload}
 		tcc.ReloadFuncsLock.Unlock()
 
 		testAdjustTestCore(base, tcc)

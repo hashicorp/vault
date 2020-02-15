@@ -40,12 +40,12 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/gatedwriter"
+	"github.com/hashicorp/vault/internalshared/gatedwriter"
+	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/mlock"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/reload"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -97,36 +97,36 @@ type ServerCommand struct {
 	cleanupGuard sync.Once
 
 	reloadFuncsLock *sync.RWMutex
-	reloadFuncs     *map[string][]reload.ReloadFunc
+	reloadFuncs     *map[string][]reloadutil.ReloadFunc
 	startedCh       chan (struct{}) // for tests
 	reloadedCh      chan (struct{}) // for tests
 
 	// new stuff
-	flagConfigs          []string
-	flagLogLevel         string
-	flagLogFormat        string
-	flagRecovery         bool
-	flagDev              bool
-	flagDevRootTokenID   string
-	flagDevListenAddr    string
-	flagDevNoStoreToken  bool
-	flagDevPluginDir     string
-	flagDevPluginInit    bool
-	flagDevHA            bool
-	flagDevLatency       int
-	flagDevLatencyJitter int
-	flagDevLeasedKV      bool
-	flagDevKVV1          bool
-	flagDevSkipInit      bool
-	flagDevThreeNode     bool
-	flagDevFourCluster   bool
-	flagDevTransactional bool
-	flagDevAutoSeal      bool
-	flagTestVerifyOnly   bool
-	flagCombineLogs      bool
-	flagTestServerConfig bool
-	flagDevConsul        bool
-  flagExitOnCoreShutdown bool
+	flagConfigs            []string
+	flagLogLevel           string
+	flagLogFormat          string
+	flagRecovery           bool
+	flagDev                bool
+	flagDevRootTokenID     string
+	flagDevListenAddr      string
+	flagDevNoStoreToken    bool
+	flagDevPluginDir       string
+	flagDevPluginInit      bool
+	flagDevHA              bool
+	flagDevLatency         int
+	flagDevLatencyJitter   int
+	flagDevLeasedKV        bool
+	flagDevKVV1            bool
+	flagDevSkipInit        bool
+	flagDevThreeNode       bool
+	flagDevFourCluster     bool
+	flagDevTransactional   bool
+	flagDevAutoSeal        bool
+	flagTestVerifyOnly     bool
+	flagCombineLogs        bool
+	flagTestServerConfig   bool
+	flagDevConsul          bool
+	flagExitOnCoreShutdown bool
 }
 
 type ServerListener struct {
@@ -2483,7 +2483,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 	return metricHelper, nil
 }
 
-func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]reload.ReloadFunc, configPath []string) error {
+func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]reloadutil.ReloadFunc, configPath []string) error {
 	lock.RLock()
 	defer lock.RUnlock()
 

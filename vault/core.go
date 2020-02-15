@@ -30,13 +30,13 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/mlock"
-	"github.com/hashicorp/vault/sdk/helper/reload"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -365,7 +365,7 @@ type Core struct {
 	physicalCache physical.ToggleablePurgemonster
 
 	// reloadFuncs is a map containing reload functions
-	reloadFuncs map[string][]reload.ReloadFunc
+	reloadFuncs map[string][]reloadutil.ReloadFunc
 
 	// reloadFuncsLock controls access to the funcs
 	reloadFuncsLock sync.RWMutex
@@ -582,7 +582,7 @@ type CoreConfig struct {
 
 	RawConfig *server.Config
 
-	ReloadFuncs     *map[string][]reload.ReloadFunc
+	ReloadFuncs     *map[string][]reloadutil.ReloadFunc
 	ReloadFuncsLock *sync.RWMutex
 
 	// Licensing
@@ -855,7 +855,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	// the caller can share state
 	conf.ReloadFuncsLock = &c.reloadFuncsLock
 	c.reloadFuncsLock.Lock()
-	c.reloadFuncs = make(map[string][]reload.ReloadFunc)
+	c.reloadFuncs = make(map[string][]reloadutil.ReloadFunc)
 	c.reloadFuncsLock.Unlock()
 	conf.ReloadFuncs = &c.reloadFuncs
 

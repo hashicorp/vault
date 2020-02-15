@@ -428,9 +428,9 @@ github.com/hashicorp/vault-plugin-secrets-mongodbatlas
 # github.com/hashicorp/vault-plugin-secrets-openldap v0.0.0-20200215165936-237ad8919d2c
 github.com/hashicorp/vault-plugin-secrets-openldap
 github.com/hashicorp/vault-plugin-secrets-openldap/client
-# github.com/hashicorp/vault/api v1.0.5-0.20200214222743-c39f5634b39f => ./api
+# github.com/hashicorp/vault/api v1.0.5-0.20200215195706-26a747400a65 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20200214222719-7a3b716487a5 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20200215195600-2ca765f0a500 => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/database/helper/credsutil
@@ -445,7 +445,6 @@ github.com/hashicorp/vault/sdk/helper/consts
 github.com/hashicorp/vault/sdk/helper/cryptoutil
 github.com/hashicorp/vault/sdk/helper/dbtxn
 github.com/hashicorp/vault/sdk/helper/errutil
-github.com/hashicorp/vault/sdk/helper/gatedwriter
 github.com/hashicorp/vault/sdk/helper/hclutil
 github.com/hashicorp/vault/sdk/helper/identitytpl
 github.com/hashicorp/vault/sdk/helper/jsonutil
@@ -453,7 +452,6 @@ github.com/hashicorp/vault/sdk/helper/kdf
 github.com/hashicorp/vault/sdk/helper/keysutil
 github.com/hashicorp/vault/sdk/helper/ldaputil
 github.com/hashicorp/vault/sdk/helper/license
-github.com/hashicorp/vault/sdk/helper/listenerutil
 github.com/hashicorp/vault/sdk/helper/locksutil
 github.com/hashicorp/vault/sdk/helper/logging
 github.com/hashicorp/vault/sdk/helper/mlock
@@ -463,7 +461,6 @@ github.com/hashicorp/vault/sdk/helper/pathmanager
 github.com/hashicorp/vault/sdk/helper/pluginutil
 github.com/hashicorp/vault/sdk/helper/pointerutil
 github.com/hashicorp/vault/sdk/helper/policyutil
-github.com/hashicorp/vault/sdk/helper/reload
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/tlsutil

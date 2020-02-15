@@ -11,8 +11,8 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/reload"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/jefferai/isbadcipher"
 	"github.com/mitchellh/cli"
@@ -71,7 +71,7 @@ func WrapTLS(
 	ln net.Listener,
 	props map[string]string,
 	config map[string]interface{},
-	ui cli.Ui) (net.Listener, map[string]string, reload.ReloadFunc, *tls.Config, error) {
+	ui cli.Ui) (net.Listener, map[string]string, reloadutil.ReloadFunc, *tls.Config, error) {
 	props["tls"] = "disabled"
 
 	if v, ok := config["tls_disable"]; ok {
@@ -95,7 +95,7 @@ func WrapTLS(
 	}
 	keyFile := keyFileRaw.(string)
 
-	cg := reload.NewCertificateGetter(certFile, keyFile, "")
+	cg := reloadutil.NewCertificateGetter(certFile, keyFile, "")
 	if err := cg.Reload(config); err != nil {
 		// We try the key without a passphrase first and if we get an incorrect
 		// passphrase response, try again after prompting for a passphrase
@@ -103,7 +103,7 @@ func WrapTLS(
 			var passphrase string
 			passphrase, err = ui.AskSecret(fmt.Sprintf("Enter passphrase for %s:", keyFile))
 			if err == nil {
-				cg = reload.NewCertificateGetter(certFile, keyFile, passphrase)
+				cg = reloadutil.NewCertificateGetter(certFile, keyFile, passphrase)
 				if err = cg.Reload(config); err == nil {
 					goto PASSPHRASECORRECT
 				}
