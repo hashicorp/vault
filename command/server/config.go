@@ -25,6 +25,8 @@ const (
 
 // Config is the configuration for the vault server.
 type Config struct {
+	entConfig
+
 	Listeners []*Listener `hcl:"-"`
 	Storage   *Storage    `hcl:"-"`
 	HAStorage *Storage    `hcl:"-"`
@@ -639,6 +641,11 @@ func ParseConfig(d string) (*Config, error) {
 		if err := parseTelemetry(&result, o); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'telemetry': {{err}}", err)
 		}
+	}
+
+	entConfig := &(result.entConfig)
+	if err := entConfig.parseConfig(list); err != nil {
+		return nil, errwrap.Wrapf("error parsing enterprise config: {{err}}", err)
 	}
 
 	return &result, nil

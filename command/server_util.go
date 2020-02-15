@@ -18,7 +18,11 @@ import (
 var (
 	onEnterprise                 = false
 	createSecureRandomReaderFunc = createSecureRandomReader
+	adjustCoreConfigForEnt       = adjustCoreConfigForEntNoop
 )
+
+func adjustCoreConfigForEntNoop(config *server.Config, coreConfig *vault.CoreConfig) {
+}
 
 func createSecureRandomReader(config *server.Config, seal *vault.Seal) (io.Reader, error) {
 	return rand.Reader, nil

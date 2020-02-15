@@ -1290,6 +1290,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		return 1
 	}
 
+	// Apply any enterprise configuration onto the coreConfig.
+	adjustCoreConfigForEnt(config, coreConfig)
+
 	// Initialize the core
 	core, newCoreError := vault.NewCore(coreConfig)
 	if newCoreError != nil {
