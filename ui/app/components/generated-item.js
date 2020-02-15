@@ -39,13 +39,13 @@ export default Component.extend({
       return;
     }
     this.router.transitionTo('vault.cluster.access.method.item.list').followRedirects();
-    this.flashMessages.success(`The ${this.itemType} configuration was saved successfully.`);
+    this.flashMessages.success(`Successfully saved ${this.itemType} ${this.model.id}.`);
   }).withTestWaiter(),
   actions: {
     deleteItem() {
       this.model.destroyRecord().then(() => {
         this.router.transitionTo('vault.cluster.access.method.item.list').followRedirects();
-        this.flashMessages.success(`${this.model.id} ${this.itemType} was deleted successfully.`);
+        this.flashMessages.success(`Successfully deleted ${this.itemType} ${this.model.id}.`);
       });
     },
   },

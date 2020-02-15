@@ -225,9 +225,9 @@ func testDynamoDBLockTTL(t *testing.T, ha physical.HABackend) {
 	lock2.ttl = lockTTL
 	lock2.watchRetryInterval = watchInterval
 
-	// Cancel attempt in 6 sec so as not to block unit tests forever
+	// Cancel attempt eventually so as not to block unit tests forever
 	stopCh := make(chan struct{})
-	time.AfterFunc(lockTTL*2, func() {
+	time.AfterFunc(lockTTL*10, func() {
 		close(stopCh)
 	})
 

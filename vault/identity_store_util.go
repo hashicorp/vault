@@ -2065,3 +2065,21 @@ func (i *IdentityStore) handleAliasListCommon(ctx context.Context, groupAlias bo
 
 	return logical.ListResponseWithInfo(aliasIDs, aliasInfo), nil
 }
+
+func (i *IdentityStore) countEntities() (int, error) {
+	txn := i.db.Txn(false)
+
+	iter, err := txn.Get(entitiesTable, "id")
+	if err != nil {
+		return -1, err
+	}
+
+	count := 0
+	val := iter.Next()
+	for val != nil {
+		count++
+		val = iter.Next()
+	}
+
+	return count, nil
+}

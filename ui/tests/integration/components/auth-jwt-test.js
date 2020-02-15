@@ -31,6 +31,7 @@ const fakeWindow = EmberObject.extend(Evented, {
   }),
   localStorage: computed(function() {
     return {
+      getItem: sinon.stub(),
       removeItem: sinon.stub(),
     };
   }),
@@ -202,7 +203,7 @@ module('Integration | Component | auth jwt', function(hooks) {
     assert.equal(this.error, ERROR_WINDOW_CLOSED, 'calls onError with error string');
   });
 
-  test('oidc: storage event fires with wrong key', async function(assert) {
+  test('oidc: storage event fires without state key', async function(assert) {
     await renderIt(this);
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
@@ -210,12 +211,14 @@ module('Integration | Component | auth jwt', function(hooks) {
     await waitUntil(() => {
       return this.openSpy.calledOnce;
     });
-    this.window.trigger('storage', { key: 'wrongThing' });
+    this.window.localStorage.getItem.returns(null);
+    this.window.trigger('storage', { storageArea: this.window.localStorage });
     run.cancelTimers();
-    assert.equal(this.window.localStorage.removeItem.callCount, 0, 'never calls removeItem');
+    assert.ok(this.window.localStorage.getItem.calledOnce, 'calls getItem');
+    assert.notOk(this.window.localStorage.removeItem.called, 'never calls removeItem');
   });
 
-  test('oidc: storage event fires with correct key, wrong params', async function(assert) {
+  test('oidc: storage event fires with state key, wrong params', async function(assert) {
     await renderIt(this);
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
@@ -223,13 +226,15 @@ module('Integration | Component | auth jwt', function(hooks) {
     await waitUntil(() => {
       return this.openSpy.calledOnce;
     });
-    this.window.trigger('storage', { key: 'oidcState', newValue: JSON.stringify({}) });
+    this.window.localStorage.getItem.returns(JSON.stringify({}));
+    this.window.trigger('storage', { storageArea: this.window.localStorage });
     run.cancelTimers();
-    assert.equal(this.window.localStorage.removeItem.callCount, 1, 'calls removeItem');
+    assert.ok(this.window.localStorage.getItem.calledOnce, 'calls getItem');
+    assert.ok(this.window.localStorage.removeItem.calledOnce, 'calls removeItem');
     assert.equal(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
   });
 
-  test('oidc: storage event fires with correct key, correct params', async function(assert) {
+  test('oidc: storage event fires with state key, correct params', async function(assert) {
     await renderIt(this);
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
@@ -237,14 +242,14 @@ module('Integration | Component | auth jwt', function(hooks) {
     await waitUntil(() => {
       return this.openSpy.calledOnce;
     });
-    this.window.trigger('storage', {
-      key: 'oidcState',
-      newValue: JSON.stringify({
+    this.window.localStorage.getItem.returns(
+      JSON.stringify({
         path: 'foo',
         state: 'state',
         code: 'code',
-      }),
-    });
+      })
+    );
+    this.window.trigger('storage', { storageArea: this.window.localStorage });
     await settled();
     assert.equal(this.selectedAuth, 'token', 'calls onSelectedAuth with token');
     assert.equal(this.token, 'token', 'calls onToken with token');

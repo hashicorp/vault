@@ -2,6 +2,9 @@
 package oci
 
 import (
+	"os"
+	"testing"
+
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -9,8 +12,6 @@ import (
 	"github.com/oracle/oci-go-sdk/common"
 	"github.com/oracle/oci-go-sdk/objectstorage"
 	"golang.org/x/net/context"
-	"os"
-	"testing"
 )
 
 func TestOCIBackend(t *testing.T) {
@@ -67,10 +68,10 @@ func getTenancyOcid(configProvider common.ConfigurationProvider, t *testing.T) (
 func createBackend(bucketName string, namespaceName string, haEnabledStr string, lockBucketName string, t *testing.T) physical.Backend {
 	backend, err := NewBackend(map[string]string{
 		"auth_type_api_key": "true",
-		"bucket_name":     bucketName,
-		"namespace_name":  namespaceName,
-		"ha_enabled":     haEnabledStr,
-		"lock_bucket_name": lockBucketName,
+		"bucket_name":       bucketName,
+		"namespace_name":    namespaceName,
+		"ha_enabled":        haEnabledStr,
+		"lock_bucket_name":  lockBucketName,
 	}, logging.NewVaultLogger(log.Trace))
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)

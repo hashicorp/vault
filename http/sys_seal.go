@@ -86,7 +86,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 
 		// Parse the request
 		var req UnsealRequest
-		if _, err := parseRequest(core, r, w, &req); err != nil {
+		if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
 			respondError(w, http.StatusBadRequest, err)
 			return
 		}
@@ -198,7 +198,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 			Initialized:  false,
 			Sealed:       true,
 			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
-			StorageType: core.StorageType(),
+			StorageType:  core.StorageType(),
 		})
 		return
 	}
@@ -234,7 +234,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 		ClusterName:  clusterName,
 		ClusterID:    clusterID,
 		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
-		StorageType: core.StorageType(),
+		StorageType:  core.StorageType(),
 	})
 }
 

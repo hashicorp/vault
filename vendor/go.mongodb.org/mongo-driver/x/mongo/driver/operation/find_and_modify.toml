@@ -1,0 +1,68 @@
+version = 0
+name = "FindAndModify"
+documentation = "FindAndModify performs a findAndModify operation."
+
+[properties]
+enabled = ["write concern"]
+retryable = {mode = "once", type = "writes"}
+
+[command]
+name = "findAndModify"
+parameter = "collection"
+
+[request.query]
+type = "document"
+constructor = true
+documentation = "Query specifies the selection criteria for the modification."
+
+[request.sort]
+type = "document"
+documentation = """
+Sort determines which document the operation modifies if the query matches multiple documents.\
+The first document matched by the sort order will be modified.
+"""
+
+[request.remove]
+type = "boolean"
+documentation = "Remove specifies that the matched document should be removed. Defaults to false."
+
+[request.update]
+type = "value"
+documentation = "Update specifies the update document to perform on the matched document."
+
+[request.newDocument]
+type = "boolean"
+documentation = "NewDocument specifies whether to return the modified document or the original. Defaults to false (return original)."
+
+[request.fields]
+type = "document"
+documentation = "Fields specifies a subset of fields to return."
+
+[request.upsert]
+type = "boolean"
+documentation = "Upsert specifies whether or not to create a new document if no documents match the query when doing an update. Defaults to false."
+
+[request.bypassDocumentValidation]
+type = "boolean"
+documentation = "BypassDocumentValidation specifies if document validation can be skipped when executing the operation."
+
+[request.maxTimeMS]
+type = "int64"
+documentation = "MaxTimeMS specifies the maximum amount of time to allow the operation to run."
+
+[request.collation]
+type = "document"
+minWireVersionRequired = 5
+documentation = "Collation specifies a collation to be used."
+
+[request.arrayFilters]
+type = "array"
+minWireVersionRequired = 6
+documentation = "ArrayFilters specifies an array of filter documents that determines which array elements to modify for an update operation on an array field."
+
+[response]
+name = "FindAndModifyResult"
+
+[response.field.value]
+type = "document"
+documentation = "Either the old or modified document, depending on the value of the new parameter."

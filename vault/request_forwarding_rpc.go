@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/replication"
-	cache "github.com/patrickmn/go-cache"
 )
 
 type forwardedRequestRPCServer struct {
@@ -19,7 +18,6 @@ type forwardedRequestRPCServer struct {
 	handler               http.Handler
 	perfStandbySlots      chan struct{}
 	perfStandbyRepCluster *replication.Cluster
-	perfStandbyCache      *cache.Cache
 	raftFollowerStates    *raftFollowerStates
 }
 
@@ -106,9 +104,7 @@ type forwardingClient struct {
 func (c *forwardingClient) startHeartbeat() {
 	go func() {
 		tick := func() {
-			c.core.stateLock.RLock()
 			clusterAddr := c.core.ClusterAddr()
-			c.core.stateLock.RUnlock()
 
 			req := &EchoRequest{
 				Message:     "ping",

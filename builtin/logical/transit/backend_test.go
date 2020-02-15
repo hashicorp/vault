@@ -2,6 +2,7 @@ package transit
 
 import (
 	"context"
+	cryptoRand "crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"math/rand"
@@ -922,7 +923,7 @@ func testDerivedKeyUpgrade(t *testing.T, keyType keysutil.KeyType) {
 	}
 
 	p.MigrateKeyToKeysMap()
-	p.Upgrade(context.Background(), storage) // Need to run the upgrade code to make the migration stick
+	p.Upgrade(context.Background(), storage, cryptoRand.Reader) // Need to run the upgrade code to make the migration stick
 
 	if p.KDF != keysutil.Kdf_hmac_sha256_counter {
 		t.Fatalf("bad KDF value by default; counter val is %d, KDF val is %d, policy is %#v", keysutil.Kdf_hmac_sha256_counter, p.KDF, *p)
@@ -968,8 +969,10 @@ func testDerivedKeyUpgrade(t *testing.T, keyType keysutil.KeyType) {
 
 func TestConvergentEncryption(t *testing.T) {
 	testConvergentEncryptionCommon(t, 0, keysutil.KeyType_AES256_GCM96)
+	testConvergentEncryptionCommon(t, 2, keysutil.KeyType_AES128_GCM96)
 	testConvergentEncryptionCommon(t, 2, keysutil.KeyType_AES256_GCM96)
 	testConvergentEncryptionCommon(t, 2, keysutil.KeyType_ChaCha20_Poly1305)
+	testConvergentEncryptionCommon(t, 3, keysutil.KeyType_AES128_GCM96)
 	testConvergentEncryptionCommon(t, 3, keysutil.KeyType_AES256_GCM96)
 	testConvergentEncryptionCommon(t, 3, keysutil.KeyType_ChaCha20_Poly1305)
 }

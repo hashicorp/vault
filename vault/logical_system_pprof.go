@@ -18,9 +18,11 @@ func (b *SystemBackend) pprofPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.handlePprofIndex,
-					Summary:     "Returns the running program's command line.",
-					Description: "Returns the running program's command line, with arguments separated by NUL bytes.",
+					Callback: b.handlePprofIndex,
+					Summary:  "Returns an HTML page listing the available profiles.",
+					Description: `Returns an HTML page listing the available 
+profiles. This should be mainly accessed via browsers or applications that can 
+render pages.`,
 				},
 			},
 		},

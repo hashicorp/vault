@@ -73,7 +73,7 @@ func (t *tokenReviewAPI) Review(jwt string) (*tokenReviewResult, error) {
 	}
 
 	// Build the request to the token review API
-	url := fmt.Sprintf("%s/apis/authentication.k8s.io/v1/tokenreviews", t.config.Host)
+	url := fmt.Sprintf("%s/apis/authentication.k8s.io/v1/tokenreviews", strings.TrimSuffix(t.config.Host, "/"))
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(trJSON))
 	if err != nil {
 		return nil, err
@@ -152,7 +152,7 @@ func parseResponse(resp *http.Response) (*authv1.TokenReview, error) {
 		return nil, kubeerrors.NewGenericServerResponse(resp.StatusCode, "POST", schema.GroupResource{}, "", strings.TrimSpace(string(body)), 0, true)
 	}
 
-	// If we can succesfully Unmarshal into a status object that means there is
+	// If we can successfully Unmarshal into a status object that means there is
 	// an error to return
 	errStatus := &metav1.Status{}
 	err = json.Unmarshal(body, errStatus)

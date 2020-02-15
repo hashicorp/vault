@@ -3,7 +3,7 @@ package client
 import (
 	"strings"
 
-	"github.com/go-ldap/ldap"
+	"github.com/go-ldap/ldap/v3"
 )
 
 // Entry is an Active Directory-specific construct

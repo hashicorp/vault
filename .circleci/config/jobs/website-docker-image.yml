@@ -1,0 +1,29 @@
+docker:
+  - image: circleci/buildpack-deps
+shell: /usr/bin/env bash -euo pipefail -c
+steps:
+  - checkout
+  - setup_remote_docker
+  - run:
+      name: Build Docker Image if Necessary
+      command: |
+        # BUILD_FROM_REPO should ALWAYS be the main OSS Vault repo URL.
+        BUILD_FROM_REPO=git@github.com:hashicorp/vault.git
+        [ "$CIRCLE_REPOSITORY_URL" = "$BUILD_FROM_REPO" ] || {
+          echo "Not building website docker image for repo '$CIRCLE_REPOSITORY_URL' - we only build it for $BUILD_FROM_REPO."
+          exit 0
+        }
+        [ "$CIRCLE_BRANCH" = "master" ] || {
+          echo "Not building website docker image for branch '$CIRCLE_BRANCH' - we only build it for master."
+          exit 0
+        }
+        PACKAGE_LOCK_CHANGED=$(git diff --name-only $(git log --pretty=format:'%h' -n1 HEAD~1)...HEAD | grep -c website/package-lock.json)
+        [ $PACKAGE_LOCK_CHANGED -gt 0 ] || {
+          echo "Not building a new website docker image - dependencies have not changed."
+          exit 0
+        }
+        cd website/
+        docker build -t hashicorp/vault-website:$CIRCLE_SHA1 .
+        docker tag hashicorp/vault-website:$CIRCLE_SHA1 hashicorp/vault-website:latest
+        docker login -u $DOCKER_USER -p $DOCKER_PASS
+        docker push hashicorp/vault-website

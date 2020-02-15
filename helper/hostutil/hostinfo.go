@@ -1,6 +1,9 @@
+// +build !openbsd
+
 package hostutil
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -31,49 +34,35 @@ type HostInfo struct {
 	Memory *mem.VirtualMemoryStat `json:"memory"`
 }
 
-// HostInfoError is a typed error for more convenient error checking.
-type HostInfoError struct {
-	Type string
-	Err  error
-}
-
-func (e *HostInfoError) WrappedErrors() []error {
-	return []error{e.Err}
-}
-
-func (e *HostInfoError) Error() string {
-	return fmt.Sprintf("%s: %s", e.Type, e.Err.Error())
-}
-
 // CollectHostInfo returns information on the host, which includes general
 // host status, CPU, memory, and disk utilization.
 //
 // The function does a best-effort capture on the most information possible,
 // continuing on capture errors encountered and appending them to a resulting
 // multierror.Error that gets returned at the end.
-func CollectHostInfo() (*HostInfo, error) {
+func CollectHostInfo(ctx context.Context) (*HostInfo, error) {
 	var retErr *multierror.Error
 	info := &HostInfo{Timestamp: time.Now().UTC()}
 
-	if h, err := host.Info(); err != nil {
+	if h, err := host.InfoWithContext(ctx); err != nil {
 		retErr = multierror.Append(retErr, &HostInfoError{"host", err})
 	} else {
 		info.Host = h
 	}
 
-	if v, err := mem.VirtualMemory(); err != nil {
+	if v, err := mem.VirtualMemoryWithContext(ctx); err != nil {
 		retErr = multierror.Append(retErr, &HostInfoError{"memory", err})
 	} else {
 		info.Memory = v
 	}
 
-	parts, err := disk.Partitions(false)
+	parts, err := disk.PartitionsWithContext(ctx, false)
 	if err != nil {
 		retErr = multierror.Append(retErr, &HostInfoError{"disk", err})
 	} else {
 		var usage []*disk.UsageStat
 		for i, part := range parts {
-			u, err := disk.Usage(part.Mountpoint)
+			u, err := disk.UsageWithContext(ctx, part.Mountpoint)
 			if err != nil {
 				retErr = multierror.Append(retErr, &HostInfoError{fmt.Sprintf("disk.%d", i), err})
 				continue
@@ -84,13 +73,13 @@ func CollectHostInfo() (*HostInfo, error) {
 		info.Disk = usage
 	}
 
-	if c, err := cpu.Info(); err != nil {
+	if c, err := cpu.InfoWithContext(ctx); err != nil {
 		retErr = multierror.Append(retErr, &HostInfoError{"cpu", err})
 	} else {
 		info.CPU = c
 	}
 
-	t, err := cpu.Times(true)
+	t, err := cpu.TimesWithContext(ctx, true)
 	if err != nil {
 		retErr = multierror.Append(retErr, &HostInfoError{"cpu_times", err})
 	} else {

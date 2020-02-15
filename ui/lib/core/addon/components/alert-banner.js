@@ -14,6 +14,7 @@ import layout from '../templates/components/alert-banner';
  *
  * @param type=null {String} - The banner type. This comes from the message-types helper.
  * @param [message=null {String}] - The message to display within the banner.
+ * @param [title=null {String}] - A title to show above the message. If this is not provided, there are default values for each type of alert.
  *
  */
 
@@ -21,6 +22,7 @@ export default Component.extend({
   layout,
   type: null,
   message: null,
+  title: null,
   yieldWithoutColumn: false,
   classNameBindings: ['containerClass'],
 

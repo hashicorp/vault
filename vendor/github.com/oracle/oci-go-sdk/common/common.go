@@ -32,7 +32,10 @@ const (
 	RegionAPMumbai1 Region = "ap-mumbai-1"
 	//RegionEUZurich1 region for Zurich
 	RegionEUZurich1 Region = "eu-zurich-1"
-
+	//RegionSASaopaulo1 region for Sao Paulo
+	RegionSASaopaulo1 Region = "sa-saopaulo-1"
+	//RegionAPSydney1 region for Sydney
+	RegionAPSydney1 Region = "ap-sydney-1"
 	//RegionUSLangley1 region for langley
 	RegionUSLangley1 Region = "us-langley-1"
 	//RegionUSLuke1 region for luke
@@ -53,15 +56,17 @@ var realm = map[string]string{
 }
 
 var regionRealm = map[Region]string{
-	RegionPHX:        "oc1",
-	RegionIAD:        "oc1",
-	RegionFRA:        "oc1",
-	RegionLHR:        "oc1",
-	RegionCAToronto1: "oc1",
-	RegionAPTokyo1:   "oc1",
-	RegionAPSeoul1:   "oc1",
-	RegionAPMumbai1:  "oc1",
-	RegionEUZurich1:  "oc1",
+	RegionPHX:         "oc1",
+	RegionIAD:         "oc1",
+	RegionFRA:         "oc1",
+	RegionLHR:         "oc1",
+	RegionCAToronto1:  "oc1",
+	RegionAPTokyo1:    "oc1",
+	RegionAPSeoul1:    "oc1",
+	RegionAPSydney1:   "oc1",
+	RegionAPMumbai1:   "oc1",
+	RegionEUZurich1:   "oc1",
+	RegionSASaopaulo1: "oc1",
 
 	RegionUSLangley1:    "oc2",
 	RegionUSLuke1:       "oc2",
@@ -109,7 +114,7 @@ func StringToRegion(stringRegion string) (r Region) {
 	switch strings.ToLower(stringRegion) {
 	case "sea":
 		r = RegionSEA
-	case "ca-toronto-1":
+	case "yyz", "ca-toronto-1":
 		r = RegionCAToronto1
 	case "phx", "us-phoenix-1":
 		r = RegionPHX
@@ -119,14 +124,18 @@ func StringToRegion(stringRegion string) (r Region) {
 		r = RegionFRA
 	case "lhr", "uk-london-1":
 		r = RegionLHR
-	case "ap-tokyo-1":
+	case "nrt", "ap-tokyo-1":
 		r = RegionAPTokyo1
-	case "ap-seoul-1":
+	case "icn", "ap-seoul-1":
 		r = RegionAPSeoul1
-	case "ap-mumbai-1":
+	case "bom", "ap-mumbai-1":
 		r = RegionAPMumbai1
-	case "eu-zurich-1":
+	case "zrh", "eu-zurich-1":
 		r = RegionEUZurich1
+	case "gru", "sa-saopaulo-1":
+		r = RegionSASaopaulo1
+	case "syd", "ap-sydney-1":
+		r = RegionAPSydney1
 	case "us-langley-1":
 		r = RegionUSLangley1
 	case "us-luke-1":

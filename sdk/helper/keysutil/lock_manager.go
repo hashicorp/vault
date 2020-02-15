@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -249,7 +250,7 @@ func (lm *LockManager) BackupPolicy(ctx context.Context, storage logical.Storage
 
 // When the function returns, if caching was disabled, the Policy's lock must
 // be unlocked when the caller is done (and it should not be re-locked).
-func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest) (retP *Policy, retUpserted bool, retErr error) {
+func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io.Reader) (retP *Policy, retUpserted bool, retErr error) {
 	var p *Policy
 	var err error
 	var ok bool
@@ -327,7 +328,7 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest) (retP *
 		// because we don't know if the parameters match.
 
 		switch req.KeyType {
-		case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
+		case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
 			if req.Convergent && !req.Derived {
 				cleanup()
 				return nil, false, fmt.Errorf("convergent encryption requires derivation to be enabled")
@@ -379,7 +380,7 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest) (retP *
 		}
 
 		// Performs the actual persist and does setup
-		err = p.Rotate(ctx, req.Storage)
+		err = p.Rotate(ctx, req.Storage, rand)
 		if err != nil {
 			cleanup()
 			return nil, false, err
@@ -400,7 +401,7 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest) (retP *
 	}
 
 	if p.NeedsUpgrade() {
-		if err := p.Upgrade(ctx, req.Storage); err != nil {
+		if err := p.Upgrade(ctx, req.Storage, rand); err != nil {
 			cleanup()
 			return nil, false, err
 		}

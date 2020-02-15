@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strings"
 
@@ -87,18 +88,18 @@ func NewApproleAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return a, nil
 }
 
-func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (string, map[string]interface{}, error) {
+func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
 	if _, err := os.Stat(a.roleIDFilePath); err == nil {
 		roleID, err := ioutil.ReadFile(a.roleIDFilePath)
 		if err != nil {
 			if a.cachedRoleID == "" {
-				return "", nil, errwrap.Wrapf("error reading role ID file and no cached role ID known: {{err}}", err)
+				return "", nil, nil, errwrap.Wrapf("error reading role ID file and no cached role ID known: {{err}}", err)
 			}
 			a.logger.Warn("error reading role ID file", "error", err)
 		}
 		if len(roleID) == 0 {
 			if a.cachedRoleID == "" {
-				return "", nil, errors.New("role ID file empty and no cached role ID known")
+				return "", nil, nil, errors.New("role ID file empty and no cached role ID known")
 			}
 			a.logger.Warn("role ID file exists but read empty value, re-using cached value")
 		} else {
@@ -107,11 +108,11 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 	}
 
 	if a.cachedRoleID == "" {
-		return "", nil, errors.New("no known role ID")
+		return "", nil, nil, errors.New("no known role ID")
 	}
 
 	if a.secretIDFilePath == "" {
-		return fmt.Sprintf("%s/login", a.mountPath), map[string]interface{}{
+		return fmt.Sprintf("%s/login", a.mountPath), nil, map[string]interface{}{
 			"role_id": a.cachedRoleID,
 		}, nil
 	}
@@ -120,13 +121,13 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 		secretID, err := ioutil.ReadFile(a.secretIDFilePath)
 		if err != nil {
 			if a.cachedSecretID == "" {
-				return "", nil, errwrap.Wrapf("error reading secret ID file and no cached secret ID known: {{err}}", err)
+				return "", nil, nil, errwrap.Wrapf("error reading secret ID file and no cached secret ID known: {{err}}", err)
 			}
 			a.logger.Warn("error reading secret ID file", "error", err)
 		}
 		if len(secretID) == 0 {
 			if a.cachedSecretID == "" {
-				return "", nil, errors.New("secret ID file empty and no cached secret ID known")
+				return "", nil, nil, errors.New("secret ID file empty and no cached secret ID known")
 			}
 			a.logger.Warn("secret ID file exists but read empty value, re-using cached value")
 		} else {
@@ -134,50 +135,50 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 			if a.secretIDResponseWrappingPath != "" {
 				clonedClient, err := client.Clone()
 				if err != nil {
-					return "", nil, errwrap.Wrapf("error cloning client to unwrap secret ID: {{err}}", err)
+					return "", nil, nil, errwrap.Wrapf("error cloning client to unwrap secret ID: {{err}}", err)
 				}
 				clonedClient.SetToken(stringSecretID)
 				// Validate the creation path
 				resp, err := clonedClient.Logical().Read("sys/wrapping/lookup")
 				if err != nil {
-					return "", nil, errwrap.Wrapf("error looking up wrapped secret ID: {{err}}", err)
+					return "", nil, nil, errwrap.Wrapf("error looking up wrapped secret ID: {{err}}", err)
 				}
 				if resp == nil {
-					return "", nil, errors.New("response nil when looking up wrapped secret ID")
+					return "", nil, nil, errors.New("response nil when looking up wrapped secret ID")
 				}
 				if resp.Data == nil {
-					return "", nil, errors.New("data in response nil when looking up wrapped secret ID")
+					return "", nil, nil, errors.New("data in response nil when looking up wrapped secret ID")
 				}
 				creationPathRaw, ok := resp.Data["creation_path"]
 				if !ok {
-					return "", nil, errors.New("creation_path in response nil when looking up wrapped secret ID")
+					return "", nil, nil, errors.New("creation_path in response nil when looking up wrapped secret ID")
 				}
 				creationPath, ok := creationPathRaw.(string)
 				if !ok {
-					return "", nil, errors.New("creation_path in response could not be parsed as string when looking up wrapped secret ID")
+					return "", nil, nil, errors.New("creation_path in response could not be parsed as string when looking up wrapped secret ID")
 				}
 				if creationPath != a.secretIDResponseWrappingPath {
 					a.logger.Error("SECURITY: unable to validate wrapping token creation path", "expected", a.secretIDResponseWrappingPath, "found", creationPath)
-					return "", nil, errors.New("unable to validate wrapping token creation path")
+					return "", nil, nil, errors.New("unable to validate wrapping token creation path")
 				}
 				// Now get the secret ID
 				resp, err = clonedClient.Logical().Unwrap("")
 				if err != nil {
-					return "", nil, errwrap.Wrapf("error unwrapping secret ID: {{err}}", err)
+					return "", nil, nil, errwrap.Wrapf("error unwrapping secret ID: {{err}}", err)
 				}
 				if resp == nil {
-					return "", nil, errors.New("response nil when unwrapping secret ID")
+					return "", nil, nil, errors.New("response nil when unwrapping secret ID")
 				}
 				if resp.Data == nil {
-					return "", nil, errors.New("data in response nil when unwrapping secret ID")
+					return "", nil, nil, errors.New("data in response nil when unwrapping secret ID")
 				}
 				secretIDRaw, ok := resp.Data["secret_id"]
 				if !ok {
-					return "", nil, errors.New("secret_id in response nil when unwrapping secret ID")
+					return "", nil, nil, errors.New("secret_id in response nil when unwrapping secret ID")
 				}
 				secretID, ok := secretIDRaw.(string)
 				if !ok {
-					return "", nil, errors.New("secret_id in response could not be parsed as string when unwrapping secret ID")
+					return "", nil, nil, errors.New("secret_id in response could not be parsed as string when unwrapping secret ID")
 				}
 				stringSecretID = secretID
 			}
@@ -191,10 +192,10 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 	}
 
 	if a.cachedSecretID == "" {
-		return "", nil, errors.New("no known secret ID")
+		return "", nil, nil, errors.New("no known secret ID")
 	}
 
-	return fmt.Sprintf("%s/login", a.mountPath), map[string]interface{}{
+	return fmt.Sprintf("%s/login", a.mountPath), nil, map[string]interface{}{
 		"role_id":   a.cachedRoleID,
 		"secret_id": a.cachedSecretID,
 	}, nil

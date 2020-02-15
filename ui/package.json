@@ -22,9 +22,10 @@
     "test:oss": "yarn run test -f='!enterprise'",
     "test:browserstack": "export CI=true; node scripts/start-vault.js --browserstack",
     "test:quick": "node scripts/start-vault.js",
-    "test:quick-oss": "yarn test-quick -f='!enterprise'",
+    "test:quick-oss": "yarn test:quick -f='!enterprise'",
     "build:storybook": "build-storybook -s ../pkg/web_ui",
     "storybook": "start-storybook -p 6006 -s ../pkg/web_ui",
+    "deploy:storybook": "yarn build && yarn build:storybook",
     "gen-story-md": "node scripts/gen-story-md.js"
   },
   "lint-staged": {
@@ -107,6 +108,7 @@
     "ember-resolver": "^5.0.1",
     "ember-responsive": "^3.0.0-beta.3",
     "ember-router-helpers": "^0.2.0",
+    "ember-service-worker": "meirish/ember-service-worker#configurable-scope",
     "ember-sinon": "^4.0.0",
     "ember-source": "~3.8.0",
     "ember-svg-jar": "^2.1.0",
@@ -117,6 +119,7 @@
     "eslint-config-prettier": "^6.0.0",
     "eslint-plugin-ember": "^6.7.0",
     "eslint-plugin-prettier": "^3.1.0",
+    "filesize": "^4.2.1",
     "flat": "^4.1.0",
     "ivy-codemirror": "IvyApp/ivy-codemirror#fb09333c5144da47e14a9e6260f80577d5408374",
     "jsonlint": "^1.6.3",
@@ -127,6 +130,7 @@
     "prettier-eslint-cli": "^5.0.0",
     "qunit-dom": "^0.7.1",
     "route-recognizer": "^0.3.4",
+    "sass": "^1.25.0",
     "sass-svg-uri": "^1.0.0",
     "shell-quote": "^1.6.1",
     "string.prototype.endswith": "^0.2.0",
@@ -150,11 +154,20 @@
     "lint-staged": "^9.2.1"
   },
   "resolutions": {
-    "handlebars": "^4.1.2"
+    "handlebars": "^4.3.0",
+    "eslint-utils": "^1.4.1",
+    "lodash.defaultsdeep": "^4.6.1",
+    "lodash.merge": "^4.6.2",
+    "js-yaml": "^3.13.1",
+    "jquery": "^3.4.0",
+    "lodash": "^4.17.13",
+    "merge": "^1.2.1",
+    "minimatch": "^3.0.2",
+    "growl": "^1.10.0",
+    "serialize-javascript": "^2.1.1"
   },
   "engines": {
-    "node": " >= 10.* <11",
-    "yarn": "1.17.3"
+    "node": " >= 10.* <11"
   },
   "private": true,
   "ember-addon": {
@@ -163,7 +176,8 @@
       "lib/css",
       "lib/kmip",
       "lib/open-api-explorer",
-      "lib/replication"
+      "lib/replication",
+      "lib/service-worker-authenticated-download"
     ]
   }
 }

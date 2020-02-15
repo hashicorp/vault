@@ -101,11 +101,13 @@ export default DS.RESTAdapter.extend(AdapterFetch, {
     return fetch(url, {
       method: type || 'GET',
       headers: opts.headers || {},
+      body: opts.body,
+      signal: opts.signal,
     }).then(response => {
       if (response.status >= 200 && response.status < 300) {
         return RSVP.resolve(response);
       } else {
-        return RSVP.reject();
+        return RSVP.reject(response);
       }
     });
   },

@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/replication"
-	cache "github.com/patrickmn/go-cache"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -41,7 +40,7 @@ type requestForwardingClusterClient struct {
 
 // NewRequestForwardingHandler creates a cluster handler for use with request
 // forwarding.
-func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots chan struct{}, perfStandbyRepCluster *replication.Cluster, perfStandbyCache *cache.Cache) (*requestForwardingHandler, error) {
+func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots chan struct{}, perfStandbyRepCluster *replication.Cluster) (*requestForwardingHandler, error) {
 	// Resolve locally to avoid races
 	ha := c.ha != nil
 
@@ -59,7 +58,6 @@ func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots ch
 			handler:               c.clusterHandler,
 			perfStandbySlots:      perfStandbySlots,
 			perfStandbyRepCluster: perfStandbyRepCluster,
-			perfStandbyCache:      perfStandbyCache,
 			raftFollowerStates:    c.raftFollowerStates,
 		})
 	}
@@ -99,6 +97,19 @@ func (c *requestForwardingClusterClient) ClientLookup(ctx context.Context, reque
 	}
 
 	return nil, nil
+}
+
+func (c *requestForwardingClusterClient) ServerName() string {
+	parsedCert := c.core.localClusterParsedCert.Load().(*x509.Certificate)
+	if parsedCert == nil {
+		return ""
+	}
+
+	return parsedCert.Subject.CommonName
+}
+
+func (c *requestForwardingClusterClient) CACert(ctx context.Context) *x509.Certificate {
+	return c.core.localClusterParsedCert.Load().(*x509.Certificate)
 }
 
 // ServerLookup satisfies the ClusterHandler interface and returns the server's
@@ -194,12 +205,12 @@ func (c *Core) startForwarding(ctx context.Context) error {
 		return nil
 	}
 
-	perfStandbyRepCluster, perfStandbyCache, perfStandbySlots, err := c.perfStandbyClusterHandler()
+	perfStandbyRepCluster, perfStandbySlots, err := c.perfStandbyClusterHandler()
 	if err != nil {
 		return err
 	}
 
-	handler, err := NewRequestForwardingHandler(c, c.getClusterListener().Server(), perfStandbySlots, perfStandbyRepCluster, perfStandbyCache)
+	handler, err := NewRequestForwardingHandler(c, c.getClusterListener().Server(), perfStandbySlots, perfStandbyRepCluster)
 	if err != nil {
 		return err
 	}
@@ -248,11 +259,14 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 	}
 
 	clusterListener := c.getClusterListener()
-	if clusterListener != nil {
-		clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{
-			core: c,
-		})
+	if clusterListener == nil {
+		c.logger.Error("no cluster listener configured")
+		return nil
 	}
+
+	clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{
+		core: c,
+	})
 
 	// Set up grpc forwarding handling
 	// It's not really insecure, but we have to dial manually to get the
@@ -260,7 +274,7 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 	// the TLS state.
 	dctx, cancelFunc := context.WithCancel(ctx)
 	c.rpcClientConn, err = grpc.DialContext(dctx, clusterURL.Host,
-		grpc.WithDialer(c.getGRPCDialer(ctx, consts.RequestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)),
+		grpc.WithDialer(clusterListener.GetDialerFunc(ctx, consts.RequestForwardingALPN)),
 		grpc.WithInsecure(), // it's not, we handle it in the dialer
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time: 2 * cluster.HeartbeatInterval,

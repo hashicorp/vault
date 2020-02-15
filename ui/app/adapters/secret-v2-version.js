@@ -4,6 +4,7 @@ import { get } from '@ember/object';
 import ApplicationAdapter from './application';
 import DS from 'ember-data';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import ControlGroupError from 'vault/lib/control-group-error';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -27,8 +28,8 @@ export default ApplicationAdapter.extend({
 
   findRecord() {
     return this._super(...arguments).catch(errorOrModel => {
-      // if it's a real 404, this will be an error, if not
-      // it will be the body of a deleted / destroyed version
+      // if the response is a real 404 or if the secret is gated by a control group this will be an error,
+      // otherwise the response will be the body of a deleted / destroyed version
       if (errorOrModel instanceof DS.AdapterError) {
         throw errorOrModel;
       }

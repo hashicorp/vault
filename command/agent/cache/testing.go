@@ -64,3 +64,19 @@ func newTestSendResponse(status int, body string) *SendResponse {
 
 	return resp
 }
+
+type mockTokenVerifierProxier struct {
+	currentToken string
+}
+
+func (p *mockTokenVerifierProxier) Send(ctx context.Context, req *SendRequest) (*SendResponse, error) {
+	p.currentToken = req.Token
+	resp := newTestSendResponse(http.StatusOK,
+		`{"data": {"id": "` + p.currentToken + `"}}`)
+
+	return resp, nil
+}
+
+func (p *mockTokenVerifierProxier) GetCurrentRequestToken() (string) {
+	return p.currentToken
+}

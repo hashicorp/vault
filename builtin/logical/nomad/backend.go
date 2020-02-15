@@ -62,6 +62,15 @@ func (b *backend) client(ctx context.Context, s logical.Storage) (*api.Client, e
 		if conf.Token != "" {
 			nomadConf.SecretID = conf.Token
 		}
+		if conf.CACert != "" {
+			nomadConf.TLSConfig.CACertPEM = []byte(conf.CACert)
+		}
+		if conf.ClientCert != "" {
+			nomadConf.TLSConfig.ClientCertPEM = []byte(conf.ClientCert)
+		}
+		if conf.ClientKey != "" {
+			nomadConf.TLSConfig.ClientKeyPEM = []byte(conf.ClientKey)
+		}
 	}
 
 	client, err := api.NewClient(nomadConf)

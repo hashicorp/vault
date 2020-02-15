@@ -1,7 +1,9 @@
-package vault
+package rafttests
 
 import (
 	"bytes"
+	"context"
+	"crypto/md5"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -11,7 +13,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -20,7 +24,7 @@ import (
 	"golang.org/x/net/http2"
 )
 
-func raftCluster(t *testing.T) *vault.TestCluster {
+func raftCluster(t testing.TB) *vault.TestCluster {
 	var conf vault.CoreConfig
 	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
@@ -28,6 +32,85 @@ func raftCluster(t *testing.T) *vault.TestCluster {
 	cluster.Start()
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	return cluster
+}
+
+func TestRaft_Retry_Join(t *testing.T) {
+	var conf vault.CoreConfig
+	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	teststorage.RaftBackendSetup(&conf, &opts)
+	opts.SetupFunc = nil
+	cluster := vault.NewTestCluster(t, &conf, &opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
+
+	leaderCore := cluster.Cores[0]
+	leaderAPI := leaderCore.Client.Address()
+	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
+
+	{
+		testhelpers.EnsureCoreSealed(t, leaderCore)
+		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		cluster.UnsealCore(t, leaderCore)
+		vault.TestWaitActive(t, leaderCore.Core)
+	}
+
+	leaderInfos := []*raft.LeaderJoinInfo{
+		&raft.LeaderJoinInfo{
+			LeaderAPIAddr: leaderAPI,
+			TLSConfig:     leaderCore.TLSConfig,
+			Retry:         true,
+		},
+	}
+
+	{
+		core := cluster.Cores[1]
+		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		time.Sleep(2 * time.Second)
+
+		cluster.UnsealCore(t, core)
+	}
+
+	{
+		core := cluster.Cores[2]
+		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		time.Sleep(2 * time.Second)
+
+		cluster.UnsealCore(t, core)
+	}
+
+	checkConfigFunc := func(expected map[string]bool) {
+		secret, err := cluster.Cores[0].Client.Logical().Read("sys/storage/raft/configuration")
+		if err != nil {
+			t.Fatal(err)
+		}
+		servers := secret.Data["config"].(map[string]interface{})["servers"].([]interface{})
+
+		for _, s := range servers {
+			server := s.(map[string]interface{})
+			delete(expected, server["node_id"].(string))
+		}
+		if len(expected) != 0 {
+			t.Fatalf("failed to read configuration successfully")
+		}
+	}
+
+	checkConfigFunc(map[string]bool{
+		"core-0": true,
+		"core-1": true,
+		"core-2": true,
+	})
 }
 
 func TestRaft_Join(t *testing.T) {
@@ -371,7 +454,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 
 			if tCaseLocal.Rekey {
 				// Rekey
-				testhelpers.RekeyCluster(t, cluster)
+				cluster.BarrierKeys = testhelpers.RekeyCluster(t, cluster, false)
 			}
 
 			if tCaseLocal.Rekey {
@@ -421,7 +504,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			cluster.BarrierKeys = barrierKeys
 			testhelpers.EnsureCoresUnsealed(t, cluster)
 			testhelpers.WaitForActiveNode(t, cluster)
-			activeCore := testhelpers.DeriveActiveCore(t, cluster)
+			activeCore := testhelpers.DeriveStableActiveCore(t, cluster)
 
 			// Read the value.
 			data, err := activeCore.Client.Logical().Read("secret/foo")
@@ -518,7 +601,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 
 			if tCaseLocal.Rekey {
 				// Rekey
-				testhelpers.RekeyCluster(t, cluster)
+				cluster.BarrierKeys = testhelpers.RekeyCluster(t, cluster, false)
 			}
 			if tCaseLocal.Rotate {
 				// Set the key clean up to 0 so it's cleaned immediately. This
@@ -586,8 +669,8 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 				}
 				// Parse Response
 				apiResp := api.Response{Response: resp}
-				if !strings.Contains(apiResp.Error().Error(), "could not verify hash file, possibly the snapshot is using a different set of unseal keys") {
-					t.Fatal(apiResp.Error())
+				if apiResp.Error() == nil || !strings.Contains(apiResp.Error().Error(), "could not verify hash file, possibly the snapshot is using a different set of unseal keys") {
+					t.Fatalf("expected error verifying hash file, got %v", apiResp.Error())
 				}
 			}
 
@@ -624,7 +707,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 				cluster.BarrierKeys = newBarrierKeys
 				testhelpers.EnsureCoresUnsealed(t, cluster)
 				testhelpers.WaitForActiveNode(t, cluster)
-				activeCore := testhelpers.DeriveActiveCore(t, cluster)
+				activeCore := testhelpers.DeriveStableActiveCore(t, cluster)
 
 				// Read the value.
 				data, err := activeCore.Client.Logical().Read("secret/foo")
@@ -730,4 +813,33 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 
 		testhelpers.WaitForNCoresSealed(t, cluster2, 3)
 	}
+}
+
+func BenchmarkRaft_SingleNode(b *testing.B) {
+	cluster := raftCluster(b)
+	defer cluster.Cleanup()
+
+	leaderClient := cluster.Cores[0].Client
+
+	bench := func(b *testing.B, dataSize int) {
+		data, err := uuid.GenerateRandomBytes(dataSize)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		testName := b.Name()
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			key := fmt.Sprintf("secret/%x", md5.Sum([]byte(fmt.Sprintf("%s-%d", testName, i))))
+			_, err := leaderClient.Logical().Write(key, map[string]interface{}{
+				"test": data,
+			})
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	}
+
+	b.Run("256b", func(b *testing.B) { bench(b, 25) })
 }
