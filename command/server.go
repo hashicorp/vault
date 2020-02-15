@@ -27,6 +27,7 @@ import (
 	"github.com/armon/go-metrics/prometheus"
 	stackdriver "github.com/google/go-metrics-stackdriver"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
@@ -89,9 +90,9 @@ type ServerCommand struct {
 
 	WaitGroup *sync.WaitGroup
 
-	logWriter io.Writer
-	logGate   *gatedwriter.Writer
-	logger    log.Logger
+	logOutput   io.Writer
+	gatedWriter *gatedwriter.Writer
+	logger      log.Logger
 
 	cleanupGuard sync.Once
 
@@ -420,7 +421,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	c.logger = log.New(&log.LoggerOptions{
-		Output: c.logWriter,
+		Output: c.gatedWriter,
 		Level:  level,
 		// Note that if logFormat is either unspecified or standard, then
 		// the resulting logger's format will be standard.
@@ -571,7 +572,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	// Initialize the listeners
 	lns := make([]ServerListener, 0, len(config.Listeners))
 	for _, lnConfig := range config.Listeners {
-		ln, _, _, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.logWriter, c.UI)
+		ln, _, _, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.gatedWriter, c.UI)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing listener of type %s: %s", lnConfig.Type, err))
 			return 1
@@ -659,7 +660,9 @@ func (c *ServerCommand) runRecoveryMode() int {
 		c.UI.Output("==> Vault server started! Log data will stream in below:\n")
 	}
 
-	c.logGate.Flush()
+	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
+		Output: c.logOutput,
+	}, c.gatedWriter)
 
 	for {
 		select {
@@ -710,11 +713,11 @@ func (c *ServerCommand) adjustLogLevel(config *server.Config, logLevelWasNotSet 
 func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (log.Level, string, bool, logging.LogFormat, error) {
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
-	c.logGate = gatedwriter.NewWriter(os.Stderr)
-	c.logWriter = c.logGate
+	c.logOutput = os.Stderr
 	if c.flagCombineLogs {
-		c.logWriter = os.Stdout
+		c.logOutput = os.Stdout
 	}
+	c.gatedWriter = gatedwriter.NewWriter(c.logOutput)
 	var level log.Level
 	var logLevelWasNotSet bool
 	logFormat := logging.UnspecifiedFormat
@@ -843,12 +846,12 @@ func (c *ServerCommand) Run(args []string) int {
 	if c.flagDevThreeNode || c.flagDevFourCluster {
 		c.logger = log.New(&log.LoggerOptions{
 			Mutex:  &sync.Mutex{},
-			Output: c.logWriter,
+			Output: c.gatedWriter,
 			Level:  log.Trace,
 		})
 	} else {
 		c.logger = log.New(&log.LoggerOptions{
-			Output: c.logWriter,
+			Output: c.gatedWriter,
 			Level:  level,
 			// Note that if logFormat is either unspecified or standard, then
 			// the resulting logger's format will be standard.
@@ -1342,7 +1345,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	lns := make([]ServerListener, 0, len(config.Listeners))
 	c.reloadFuncsLock.Lock()
 	for i, lnConfig := range config.Listeners {
-		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.logWriter, c.UI)
+		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.gatedWriter, c.UI)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing listener of type %s: %s", lnConfig.Type, err))
 			return 1
@@ -1768,7 +1771,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}
 
 	// Release the log gate.
-	c.logGate.Flush()
+	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
+		Output: c.logOutput,
+	}, c.gatedWriter)
 
 	// Write out the PID to the file now that server has successfully started
 	if err := c.storePidFile(config.PidFile); err != nil {
@@ -2159,7 +2164,9 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	}
 
 	// Release the log gate.
-	c.logGate.Flush()
+	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
+		Output: c.logOutput,
+	}, c.gatedWriter)
 
 	// Wait for shutdown
 	shutdownTriggered := false
@@ -2551,7 +2558,9 @@ func (c *ServerCommand) storageMigrationActive(backend physical.Backend) bool {
 			c.UI.Warn("\nWARNING! Unable to read storage migration status.")
 
 			// unexpected state, so stop buffering log messages
-			c.logGate.Flush()
+			c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
+				Output: c.logOutput,
+			}, c.gatedWriter)
 		}
 		c.logger.Warn("storage migration check error", "error", err.Error())
 
