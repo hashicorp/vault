@@ -60,9 +60,12 @@ func StartListener(lnConfig *config.Listener) (net.Listener, *tls.Config, error)
 	}
 
 	props := map[string]string{"addr": ln.Addr().String()}
-	ln, props, _, tlsConf, err := listenerutil.WrapTLS(ln, props, lnConfig.Config, nil)
+	props, _, tlsConf, err := listenerutil.GetTLSConfig(ln, props, lnConfig.Config, nil)
 	if err != nil {
 		return nil, nil, err
+	}
+	if tlsConf != nil {
+		ln = tls.NewListener(ln, tlsConf)
 	}
 
 	return ln, tlsConf, nil

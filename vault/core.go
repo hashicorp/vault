@@ -816,7 +816,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	if c.seal == nil {
 		c.seal = NewDefaultSeal(&vaultseal.Access{
-			Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+			Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
 				Logger: c.logger.Named("shamir"),
 			}),
 		})
@@ -1056,7 +1056,7 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 		if sealToUse.BarrierType() == wrapping.Shamir && c.migrationInfo == nil {
 			// If this is a legacy shamir seal this serves no purpose but it
 			// doesn't hurt.
-			err = sealToUse.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(masterKey)
+			err = sealToUse.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(masterKey)
 			if err != nil {
 				return false, err
 			}
@@ -1273,7 +1273,7 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 		c.migrationInfo.shamirCombinedKey = make([]byte, len(recoveredKey))
 		copy(c.migrationInfo.shamirCombinedKey, recoveredKey)
 		if seal.StoredKeysSupported() == vaultseal.StoredKeysSupportedShamirMaster {
-			err = seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(recoveredKey)
+			err = seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(recoveredKey)
 			if err != nil {
 				return nil, errwrap.Wrapf("failed to set master key in seal: {{err}}", err)
 			}
@@ -1347,7 +1347,7 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 
 		// We have recovery keys; we're going to use them as the new
 		// shamir KeK.
-		err := c.seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(c.migrationInfo.recoveryKey)
+		err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(c.migrationInfo.recoveryKey)
 		if err != nil {
 			return errwrap.Wrapf("failed to set master key in seal: {{err}}", err)
 		}
@@ -2239,7 +2239,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, combinedKey []byte) ([]
 
 	case vaultseal.StoredKeysSupportedShamirMaster:
 		testseal := NewDefaultSeal(&vaultseal.Access{
-			Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+			Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
 				Logger: c.logger.Named("testseal"),
 			}),
 		})
@@ -2249,7 +2249,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, combinedKey []byte) ([]
 			return nil, errwrap.Wrapf("failed to setup test barrier config: {{err}}", err)
 		}
 		testseal.SetCachedBarrierConfig(cfg)
-		err = testseal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(combinedKey)
+		err = testseal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(combinedKey)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to setup unseal key: {{err}}", err)
 		}

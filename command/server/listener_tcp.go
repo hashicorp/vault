@@ -1,6 +1,7 @@
 package server
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net"
@@ -95,9 +96,12 @@ func tcpListenerFactory(config map[string]interface{}, _ io.Writer, ui cli.Ui) (
 		config["x_forwarded_for_reject_not_authorized"] = true
 	}
 
-	ln, props, reloadFunc, _, err := listenerutil.WrapTLS(ln, props, config, ui)
+	props, reloadFunc, tlsConfig, err := listenerutil.GetTLSConfig(ln, props, config, ui)
 	if err != nil {
 		return nil, nil, nil, err
+	}
+	if tlsConfig != nil {
+		ln = tls.NewListener(ln, tlsConfig)
 	}
 
 	return ln, props, reloadFunc, nil

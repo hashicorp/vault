@@ -20,12 +20,6 @@ import (
 	"sync"
 	"time"
 
-	monitoring "cloud.google.com/go/monitoring/apiv3"
-	"github.com/armon/go-metrics"
-	"github.com/armon/go-metrics/circonus"
-	"github.com/armon/go-metrics/datadog"
-	"github.com/armon/go-metrics/prometheus"
-	stackdriver "github.com/google/go-metrics-stackdriver"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
@@ -35,12 +29,13 @@ import (
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
-	serverseal "github.com/hashicorp/vault/command/server/seal"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/gatedwriter"
+	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -58,7 +53,6 @@ import (
 	"github.com/posener/complete"
 	"go.uber.org/atomic"
 	"golang.org/x/net/http/httpproxy"
-	"google.golang.org/api/option"
 	"google.golang.org/grpc/grpclog"
 )
 
@@ -127,14 +121,6 @@ type ServerCommand struct {
 	flagTestServerConfig   bool
 	flagDevConsul          bool
 	flagExitOnCoreShutdown bool
-}
-
-type ServerListener struct {
-	net.Listener
-	config                       map[string]interface{}
-	maxRequestSize               int64
-	maxRequestDuration           time.Duration
-	unauthenticatedMetricsAccess bool
 }
 
 func (c *ServerCommand) Synopsis() string {
@@ -496,9 +482,10 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	var barrierSeal vault.Seal
 	var sealConfigError error
+	var wrapper wrapping.Wrapper
 
 	if len(config.Seals) == 0 {
-		config.Seals = append(config.Seals, &server.Seal{Type: wrapping.Shamir})
+		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
 	}
 
 	if len(config.Seals) > 1 {
@@ -516,12 +503,13 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	var seal vault.Seal
-	sealLogger := c.logger.Named(sealType)
-	seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(&vaultseal.Access{
-		Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+	defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
+		Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
 			Logger: c.logger.Named("shamir"),
 		}),
-	}))
+	})
+	sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal-%s", sealType))
+	wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &infoKeys, &info, sealLogger)
 	if sealConfigError != nil {
 		if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
 			c.UI.Error(fmt.Sprintf(
@@ -529,11 +517,15 @@ func (c *ServerCommand) runRecoveryMode() int {
 			return 1
 		}
 	}
-	if seal == nil {
-		c.UI.Error(fmt.Sprintf(
-			"After configuring seal nil returned, seal type was %s", sealType))
-		return 1
+	if wrapper == nil {
+		seal = defaultSeal
+	} else {
+		seal = vault.NewAutoSeal(&vaultseal.Access{
+			Wrapper: wrapper,
+		})
 	}
+	infoKeys = append(infoKeys, "Seal Type")
+	info["Seal Type"] = configSeal.Type
 
 	barrierSeal = seal
 
@@ -578,7 +570,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	// Initialize the listeners
-	lns := make([]ServerListener, 0, len(config.Listeners))
+	lns := make([]listenerutil.Listener, 0, len(config.Listeners))
 	for _, lnConfig := range config.Listeners {
 		ln, _, _, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.gatedWriter, c.UI)
 		if err != nil {
@@ -586,9 +578,9 @@ func (c *ServerCommand) runRecoveryMode() int {
 			return 1
 		}
 
-		lns = append(lns, ServerListener{
+		lns = append(lns, listenerutil.Listener{
 			Listener: ln,
-			config:   lnConfig.Config,
+			Config:   lnConfig.Config,
 		})
 	}
 
@@ -627,8 +619,8 @@ func (c *ServerCommand) runRecoveryMode() int {
 	for _, ln := range lns {
 		handler := vaulthttp.Handler(&vault.HandlerProperties{
 			Core:                  core,
-			MaxRequestSize:        ln.maxRequestSize,
-			MaxRequestDuration:    ln.maxRequestDuration,
+			MaxRequestSize:        ln.MaxRequestSize,
+			MaxRequestDuration:    ln.MaxRequestDuration,
 			DisablePrintableCheck: config.DisablePrintableCheck,
 			RecoveryMode:          c.flagRecovery,
 			RecoveryToken:         atomic.NewString(""),
@@ -917,11 +909,12 @@ func (c *ServerCommand) Run(args []string) int {
 				"in a Docker container, provide the IPC_LOCK cap to the container."))
 	}
 
-	metricsHelper, err := c.setupTelemetry(config)
+	inmemMetrics, prometheusEnabled, err := configutil.SetupTelemetry(config.Telemetry, c.UI, "vault", "Vault", useragent.String())
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
 		return 1
 	}
+	metricsHelper := metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
 
 	// Initialize the backend
 	factory, exists := c.PhysicalBackends[config.Storage.Type]
@@ -1009,18 +1002,20 @@ func (c *ServerCommand) Run(args []string) int {
 	var unwrapSeal vault.Seal
 
 	var sealConfigError error
+	var wrapper wrapping.Wrapper
+	var barrierWrapper wrapping.Wrapper
 	if c.flagDevAutoSeal {
 		barrierSeal = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
 	} else {
 		// Handle the case where no seal is provided
 		switch len(config.Seals) {
 		case 0:
-			config.Seals = append(config.Seals, &server.Seal{Type: wrapping.Shamir})
+			config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
 		case 1:
 			// If there's only one seal and it's disabled assume they want to
 			// migrate to a shamir seal and simply didn't provide it
 			if config.Seals[0].Disabled {
-				config.Seals = append(config.Seals, &server.Seal{Type: wrapping.Shamir})
+				config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
 			}
 		}
 		for _, configSeal := range config.Seals {
@@ -1033,13 +1028,14 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			var seal vault.Seal
-			sealLogger := c.logger.Named(sealType)
+			sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal-%s", sealType))
 			allLoggers = append(allLoggers, sealLogger)
-			seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal(&vaultseal.Access{
-				Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+			defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
+				Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
 					Logger: c.logger.Named("shamir"),
 				}),
-			}))
+			})
+			wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &infoKeys, &info, sealLogger)
 			if sealConfigError != nil {
 				if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
 					c.UI.Error(fmt.Sprintf(
@@ -1047,16 +1043,19 @@ func (c *ServerCommand) Run(args []string) int {
 					return 1
 				}
 			}
-			if seal == nil {
-				c.UI.Error(fmt.Sprintf(
-					"After configuring seal nil returned, seal type was %s", sealType))
-				return 1
+			if wrapper == nil {
+				seal = defaultSeal
+			} else {
+				seal = vault.NewAutoSeal(&vaultseal.Access{
+					Wrapper: wrapper,
+				})
 			}
 
 			if configSeal.Disabled {
 				unwrapSeal = seal
 			} else {
 				barrierSeal = seal
+				barrierWrapper = wrapper
 			}
 
 			// Ensure that the seal finalizer is called, even if using verify-only
@@ -1076,7 +1075,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// prepare a secure random reader for core
-	secureRandomReader, err := createSecureRandomReaderFunc(config, &barrierSeal)
+	secureRandomReader, err := configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -1350,7 +1349,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	clusterAddrs := []*net.TCPAddr{}
 
 	// Initialize the listeners
-	lns := make([]ServerListener, 0, len(config.Listeners))
+	lns := make([]listenerutil.Listener, 0, len(config.Listeners))
 	c.reloadFuncsLock.Lock()
 	for i, lnConfig := range config.Listeners {
 		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.gatedWriter, c.UI)
@@ -1440,12 +1439,12 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			}
 		}
 
-		lns = append(lns, ServerListener{
+		lns = append(lns, listenerutil.Listener{
 			Listener:                     ln,
-			config:                       lnConfig.Config,
-			maxRequestSize:               maxRequestSize,
-			maxRequestDuration:           maxRequestDuration,
-			unauthenticatedMetricsAccess: unauthenticatedMetricsAccess,
+			Config:                       lnConfig.Config,
+			MaxRequestSize:               maxRequestSize,
+			MaxRequestDuration:           maxRequestDuration,
+			UnauthenticatedMetricsAccess: unauthenticatedMetricsAccess,
 		})
 
 		// Store the listener props for output later
@@ -1672,19 +1671,19 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	for _, ln := range lns {
 		handler := vaulthttp.Handler(&vault.HandlerProperties{
 			Core:                         core,
-			MaxRequestSize:               ln.maxRequestSize,
-			MaxRequestDuration:           ln.maxRequestDuration,
+			MaxRequestSize:               ln.MaxRequestSize,
+			MaxRequestDuration:           ln.MaxRequestDuration,
 			DisablePrintableCheck:        config.DisablePrintableCheck,
-			UnauthenticatedMetricsAccess: ln.unauthenticatedMetricsAccess,
+			UnauthenticatedMetricsAccess: ln.UnauthenticatedMetricsAccess,
 			RecoveryMode:                 c.flagRecovery,
 		})
 
 		// We perform validation on the config earlier, we can just cast here
-		if _, ok := ln.config["x_forwarded_for_authorized_addrs"]; ok {
-			hopSkips := ln.config["x_forwarded_for_hop_skips"].(int)
-			authzdAddrs := ln.config["x_forwarded_for_authorized_addrs"].([]*sockaddr.SockAddrMarshaler)
-			rejectNotPresent := ln.config["x_forwarded_for_reject_not_present"].(bool)
-			rejectNonAuthz := ln.config["x_forwarded_for_reject_not_authorized"].(bool)
+		if _, ok := ln.Config["x_forwarded_for_authorized_addrs"]; ok {
+			hopSkips := ln.Config["x_forwarded_for_hop_skips"].(int)
+			authzdAddrs := ln.Config["x_forwarded_for_authorized_addrs"].([]*sockaddr.SockAddrMarshaler)
+			rejectNotPresent := ln.Config["x_forwarded_for_reject_not_present"].(bool)
+			rejectNonAuthz := ln.Config["x_forwarded_for_reject_not_authorized"].(bool)
 			if len(authzdAddrs) > 0 {
 				handler = vaulthttp.WrapForwardedForHandler(handler, authzdAddrs, rejectNotPresent, rejectNonAuthz, hopSkips)
 			}
@@ -1700,7 +1699,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 
 		// override server defaults with config values for read/write/idle timeouts if configured
-		if readHeaderTimeoutInterface, ok := ln.config["http_read_header_timeout"]; ok {
+		if readHeaderTimeoutInterface, ok := ln.Config["http_read_header_timeout"]; ok {
 			readHeaderTimeout, err := parseutil.ParseDurationSecond(readHeaderTimeoutInterface)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_read_header_timeout %v", readHeaderTimeout))
@@ -1709,7 +1708,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			server.ReadHeaderTimeout = readHeaderTimeout
 		}
 
-		if readTimeoutInterface, ok := ln.config["http_read_timeout"]; ok {
+		if readTimeoutInterface, ok := ln.Config["http_read_timeout"]; ok {
 			readTimeout, err := parseutil.ParseDurationSecond(readTimeoutInterface)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_read_timeout %v", readTimeout))
@@ -1718,7 +1717,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			server.ReadTimeout = readTimeout
 		}
 
-		if writeTimeoutInterface, ok := ln.config["http_write_timeout"]; ok {
+		if writeTimeoutInterface, ok := ln.Config["http_write_timeout"]; ok {
 			writeTimeout, err := parseutil.ParseDurationSecond(writeTimeoutInterface)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_write_timeout %v", writeTimeout))
@@ -1727,7 +1726,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			server.WriteTimeout = writeTimeout
 		}
 
-		if idleTimeoutInterface, ok := ln.config["http_idle_timeout"]; ok {
+		if idleTimeoutInterface, ok := ln.Config["http_idle_timeout"]; ok {
 			idleTimeout, err := parseutil.ParseDurationSecond(idleTimeoutInterface)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_idle_timeout %v", idleTimeout))
@@ -2334,153 +2333,6 @@ func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 
 	// Return the URL string
 	return url.String(), nil
-}
-
-// setupTelemetry is used to setup the telemetry sub-systems and returns the in-memory sink to be used in http configuration
-func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.MetricsHelper, error) {
-	/* Setup telemetry
-	Aggregate on 10 second intervals for 1 minute. Expose the
-	metrics over stderr when there is a SIGUSR1 received.
-	*/
-	inm := metrics.NewInmemSink(10*time.Second, time.Minute)
-	metrics.DefaultInmemSignal(inm)
-
-	var telConfig *server.Telemetry
-	if config.Telemetry != nil {
-		telConfig = config.Telemetry
-	} else {
-		telConfig = &server.Telemetry{}
-	}
-
-	serviceName := "vault"
-	if telConfig.MetricsPrefix != "" {
-		serviceName = telConfig.MetricsPrefix
-	}
-
-	metricsConf := metrics.DefaultConfig(serviceName)
-	metricsConf.EnableHostname = !telConfig.DisableHostname
-	metricsConf.EnableHostnameLabel = telConfig.EnableHostnameLabel
-
-	// Configure the statsite sink
-	var fanout metrics.FanoutSink
-	var prometheusEnabled bool
-
-	// Configure the Prometheus sink
-	if telConfig.PrometheusRetentionTime != 0 {
-		prometheusEnabled = true
-		prometheusOpts := prometheus.PrometheusOpts{
-			Expiration: telConfig.PrometheusRetentionTime,
-		}
-
-		sink, err := prometheus.NewPrometheusSinkFrom(prometheusOpts)
-		if err != nil {
-			return nil, err
-		}
-		fanout = append(fanout, sink)
-	}
-
-	metricHelper := metricsutil.NewMetricsHelper(inm, prometheusEnabled)
-
-	if telConfig.StatsiteAddr != "" {
-		sink, err := metrics.NewStatsiteSink(telConfig.StatsiteAddr)
-		if err != nil {
-			return nil, err
-		}
-		fanout = append(fanout, sink)
-	}
-
-	// Configure the statsd sink
-	if telConfig.StatsdAddr != "" {
-		sink, err := metrics.NewStatsdSink(telConfig.StatsdAddr)
-		if err != nil {
-			return nil, err
-		}
-		fanout = append(fanout, sink)
-	}
-
-	// Configure the Circonus sink
-	if telConfig.CirconusAPIToken != "" || telConfig.CirconusCheckSubmissionURL != "" {
-		cfg := &circonus.Config{}
-		cfg.Interval = telConfig.CirconusSubmissionInterval
-		cfg.CheckManager.API.TokenKey = telConfig.CirconusAPIToken
-		cfg.CheckManager.API.TokenApp = telConfig.CirconusAPIApp
-		cfg.CheckManager.API.URL = telConfig.CirconusAPIURL
-		cfg.CheckManager.Check.SubmissionURL = telConfig.CirconusCheckSubmissionURL
-		cfg.CheckManager.Check.ID = telConfig.CirconusCheckID
-		cfg.CheckManager.Check.ForceMetricActivation = telConfig.CirconusCheckForceMetricActivation
-		cfg.CheckManager.Check.InstanceID = telConfig.CirconusCheckInstanceID
-		cfg.CheckManager.Check.SearchTag = telConfig.CirconusCheckSearchTag
-		cfg.CheckManager.Check.DisplayName = telConfig.CirconusCheckDisplayName
-		cfg.CheckManager.Check.Tags = telConfig.CirconusCheckTags
-		cfg.CheckManager.Broker.ID = telConfig.CirconusBrokerID
-		cfg.CheckManager.Broker.SelectTag = telConfig.CirconusBrokerSelectTag
-
-		if cfg.CheckManager.API.TokenApp == "" {
-			cfg.CheckManager.API.TokenApp = "vault"
-		}
-
-		if cfg.CheckManager.Check.DisplayName == "" {
-			cfg.CheckManager.Check.DisplayName = "Vault"
-		}
-
-		if cfg.CheckManager.Check.SearchTag == "" {
-			cfg.CheckManager.Check.SearchTag = "service:vault"
-		}
-
-		sink, err := circonus.NewCirconusSink(cfg)
-		if err != nil {
-			return nil, err
-		}
-		sink.Start()
-		fanout = append(fanout, sink)
-	}
-
-	if telConfig.DogStatsDAddr != "" {
-		var tags []string
-
-		if telConfig.DogStatsDTags != nil {
-			tags = telConfig.DogStatsDTags
-		}
-
-		sink, err := datadog.NewDogStatsdSink(telConfig.DogStatsDAddr, metricsConf.HostName)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
-		}
-		sink.SetTags(tags)
-		fanout = append(fanout, sink)
-	}
-
-	// Configure the stackdriver sink
-	if telConfig.StackdriverProjectID != "" {
-		client, err := monitoring.NewMetricClient(context.Background(), option.WithUserAgent(useragent.String()))
-		if err != nil {
-			return nil, fmt.Errorf("Failed to create stackdriver client: %v", err)
-		}
-		sink := stackdriver.NewSink(client, &stackdriver.Config{
-			ProjectID: telConfig.StackdriverProjectID,
-			Location:  telConfig.StackdriverLocation,
-			Namespace: telConfig.StackdriverNamespace,
-		})
-		fanout = append(fanout, sink)
-	}
-
-	// Initialize the global sink
-	if len(fanout) > 1 {
-		// Hostname enabled will create poor quality metrics name for prometheus
-		if !telConfig.DisableHostname {
-			c.UI.Warn("telemetry.disable_hostname has been set to false. Recommended setting is true for Prometheus to avoid poorly named metrics.")
-		}
-	} else {
-		metricsConf.EnableHostname = false
-	}
-	fanout = append(fanout, inm)
-	_, err := metrics.NewGlobal(metricsConf, fanout)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return metricHelper, nil
 }
 
 func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]reloadutil.ReloadFunc, configPath []string) error {

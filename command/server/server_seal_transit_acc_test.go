@@ -1,4 +1,4 @@
-package seal_test
+package server
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/server/seal"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/ory/dockertest"
 )
 
@@ -26,19 +26,19 @@ func TestTransitWrapper_Lifecycle(t *testing.T) {
 		"key_name":   keyName,
 	}
 
-	s, _, err := seal.GetTransitKMSFunc(nil, wrapperConfig)
+	kms, _, err := configutil.GetTransitKMSFunc(nil, &configutil.KMS{Config: wrapperConfig})
 	if err != nil {
 		t.Fatalf("error setting wrapper config: %v", err)
 	}
 
 	// Test Encrypt and Decrypt calls
 	input := []byte("foo")
-	swi, err := s.Encrypt(context.Background(), input, nil)
+	swi, err := kms.Encrypt(context.Background(), input, nil)
 	if err != nil {
 		t.Fatalf("err: %s", err.Error())
 	}
 
-	pt, err := s.Decrypt(context.Background(), swi, nil)
+	pt, err := kms.Decrypt(context.Background(), swi, nil)
 	if err != nil {
 		t.Fatalf("err: %s", err.Error())
 	}
@@ -79,7 +79,7 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 		"mount_path": mountPath,
 		"key_name":   keyName,
 	}
-	s, _, err := seal.GetTransitKMSFunc(nil, wrapperConfig)
+	kms, _, err := configutil.GetTransitKMSFunc(nil, &configutil.KMS{Config: wrapperConfig})
 	if err != nil {
 		t.Fatalf("error setting wrapper config: %v", err)
 	}
@@ -88,12 +88,12 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 
 	// Test Encrypt and Decrypt calls
 	input := []byte("foo")
-	swi, err := s.Encrypt(context.Background(), input, nil)
+	swi, err := kms.Encrypt(context.Background(), input, nil)
 	if err != nil {
 		t.Fatalf("err: %s", err.Error())
 	}
 
-	pt, err := s.Decrypt(context.Background(), swi, nil)
+	pt, err := kms.Decrypt(context.Background(), swi, nil)
 	if err != nil {
 		t.Fatalf("err: %s", err.Error())
 	}

@@ -9,6 +9,7 @@ import (
 	"os"
 	osuser "os/user"
 	"strconv"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
@@ -17,6 +18,19 @@ import (
 	"github.com/jefferai/isbadcipher"
 	"github.com/mitchellh/cli"
 )
+
+type Listener struct {
+	net.Listener
+	Config                       map[string]interface{}
+	TLSConfig                    *tls.Config
+	MaxRequestSize               int64
+	MaxRequestDuration           time.Duration
+	UnauthenticatedMetricsAccess bool
+	HTTPReadHeaderTimeout        time.Duration
+	HTTPReadTimeout              time.Duration
+	HTTPWriteTimeout             time.Duration
+	HTTPIdleTimeout              time.Duration
+}
 
 type UnixSocketsConfig struct {
 	User  string `hcl:"user"`
@@ -67,31 +81,31 @@ func UnixSocketListener(path string, unixSocketsConfig *UnixSocketsConfig) (net.
 	}, nil
 }
 
-func WrapTLS(
+func GetTLSConfig(
 	ln net.Listener,
 	props map[string]string,
 	config map[string]interface{},
-	ui cli.Ui) (net.Listener, map[string]string, reloadutil.ReloadFunc, *tls.Config, error) {
+	ui cli.Ui) (map[string]string, reloadutil.ReloadFunc, *tls.Config, error) {
 	props["tls"] = "disabled"
 
 	if v, ok := config["tls_disable"]; ok {
 		disabled, err := parseutil.ParseBool(v)
 		if err != nil {
-			return nil, nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_disable': {{err}}", err)
+			return nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_disable': {{err}}", err)
 		}
 		if disabled {
-			return ln, props, nil, nil, nil
+			return props, nil, nil, nil
 		}
 	}
 
 	certFileRaw, ok := config["tls_cert_file"]
 	if !ok {
-		return nil, nil, nil, nil, fmt.Errorf("'tls_cert_file' must be set")
+		return nil, nil, nil, fmt.Errorf("'tls_cert_file' must be set")
 	}
 	certFile := certFileRaw.(string)
 	keyFileRaw, ok := config["tls_key_file"]
 	if !ok {
-		return nil, nil, nil, nil, fmt.Errorf("'tls_key_file' must be set")
+		return nil, nil, nil, fmt.Errorf("'tls_key_file' must be set")
 	}
 	keyFile := keyFileRaw.(string)
 
@@ -109,7 +123,7 @@ func WrapTLS(
 				}
 			}
 		}
-		return nil, nil, nil, nil, errwrap.Wrapf("error loading TLS cert: {{err}}", err)
+		return nil, nil, nil, errwrap.Wrapf("error loading TLS cert: {{err}}", err)
 	}
 
 PASSPHRASECORRECT:
@@ -126,14 +140,14 @@ PASSPHRASECORRECT:
 	tlsConf.NextProtos = []string{"h2", "http/1.1"}
 	tlsConf.MinVersion, ok = tlsutil.TLSLookup[tlsvers]
 	if !ok {
-		return nil, nil, nil, nil, fmt.Errorf("'tls_min_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]", tlsvers)
+		return nil, nil, nil, fmt.Errorf("'tls_min_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]", tlsvers)
 	}
 	tlsConf.ClientAuth = tls.RequestClientCert
 
 	if v, ok := config["tls_cipher_suites"]; ok {
 		ciphers, err := tlsutil.ParseCiphers(v.(string))
 		if err != nil {
-			return nil, nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_cipher_suites': {{err}}", err)
+			return nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_cipher_suites': {{err}}", err)
 		}
 
 		// HTTP/2 with TLS 1.2 blacklists several cipher suites.
@@ -147,7 +161,7 @@ PASSPHRASECORRECT:
 				// Get the name of the current cipher.
 				cipherStr, err := tlsutil.GetCipherName(cipher)
 				if err != nil {
-					return nil, nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_cipher_suites': {{err}}", err)
+					return nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_cipher_suites': {{err}}", err)
 				}
 				badCiphers = append(badCiphers, cipherStr)
 			}
@@ -168,7 +182,7 @@ Please see https://tools.ietf.org/html/rfc7540#appendix-A for further informatio
 	if v, ok := config["tls_prefer_server_cipher_suites"]; ok {
 		preferServer, err := parseutil.ParseBool(v)
 		if err != nil {
-			return nil, nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_prefer_server_cipher_suites': {{err}}", err)
+			return nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_prefer_server_cipher_suites': {{err}}", err)
 		}
 		tlsConf.PreferServerCipherSuites = preferServer
 	}
@@ -177,7 +191,7 @@ Please see https://tools.ietf.org/html/rfc7540#appendix-A for further informatio
 	if v, ok := config["tls_require_and_verify_client_cert"]; ok {
 		requireVerifyCerts, err = parseutil.ParseBool(v)
 		if err != nil {
-			return nil, nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_require_and_verify_client_cert': {{err}}", err)
+			return nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_require_and_verify_client_cert': {{err}}", err)
 		}
 		if requireVerifyCerts {
 			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
@@ -186,11 +200,11 @@ Please see https://tools.ietf.org/html/rfc7540#appendix-A for further informatio
 			caPool := x509.NewCertPool()
 			data, err := ioutil.ReadFile(tlsClientCaFile.(string))
 			if err != nil {
-				return nil, nil, nil, nil, errwrap.Wrapf("failed to read tls_client_ca_file: {{err}}", err)
+				return nil, nil, nil, errwrap.Wrapf("failed to read tls_client_ca_file: {{err}}", err)
 			}
 
 			if !caPool.AppendCertsFromPEM(data) {
-				return nil, nil, nil, nil, fmt.Errorf("failed to parse CA certificate in tls_client_ca_file")
+				return nil, nil, nil, fmt.Errorf("failed to parse CA certificate in tls_client_ca_file")
 			}
 			tlsConf.ClientCAs = caPool
 		}
@@ -198,19 +212,18 @@ Please see https://tools.ietf.org/html/rfc7540#appendix-A for further informatio
 	if v, ok := config["tls_disable_client_certs"]; ok {
 		disableClientCerts, err := parseutil.ParseBool(v)
 		if err != nil {
-			return nil, nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_disable_client_certs': {{err}}", err)
+			return nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_disable_client_certs': {{err}}", err)
 		}
 		if disableClientCerts && requireVerifyCerts {
-			return nil, nil, nil, nil, fmt.Errorf("'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are mutually exclusive")
+			return nil, nil, nil, fmt.Errorf("'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are mutually exclusive")
 		}
 		if disableClientCerts {
 			tlsConf.ClientAuth = tls.NoClientCert
 		}
 	}
 
-	ln = tls.NewListener(ln, tlsConf)
 	props["tls"] = "enabled"
-	return ln, props, cg.Reload, tlsConf, nil
+	return props, cg.Reload, tlsConf, nil
 }
 
 // setFilePermissions handles configuring ownership and permissions
