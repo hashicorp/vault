@@ -389,49 +389,22 @@ to %s, configure a new binddn and bindpass to restore openldap function`, pwdSto
 // not wait for success or failure of it's tasks before continuing. This is to
 // avoid blocking the mount process while loading and evaluating existing roles,
 // etc.
-func (b *backend) initQueue(ctx context.Context, conf *logical.BackendConfig) {
+func (b *backend) initQueue(ctx context.Context, conf *logical.InitializationRequest) {
 	// Verify this mount is on the primary server, or is a local mount. If not, do
 	// not create a queue or launch a ticker. Both processing the WAL list and
 	// populating the queue are done sequentially and before launching a
 	// go-routine to run the periodic ticker.
-	replicationState := conf.System.ReplicationState()
-	if (conf.System.LocalMount() || !replicationState.HasState(consts.ReplicationPerformanceSecondary)) &&
+	replicationState := b.System().ReplicationState()
+	if (b.System().LocalMount() || !replicationState.HasState(consts.ReplicationPerformanceSecondary)) &&
 		!replicationState.HasState(consts.ReplicationDRSecondary) &&
 		!replicationState.HasState(consts.ReplicationPerformanceStandby) {
 		b.Logger().Info("initializing database rotation queue")
 
-		// Poll for a PutWAL call that does not return a "read-only storage" error.
-		// This ensures the startup phases of loading WAL entries from any possible
-		// failed rotations can complete without error when deleting from storage.
-	READONLY_LOOP:
-		for {
-			select {
-			case <-ctx.Done():
-				b.Logger().Info("queue initialization canceled")
-				return
-			default:
-			}
-
-			walID, err := framework.PutWAL(ctx, conf.StorageView, staticWALKey, &setCredentialsWAL{RoleName: "vault-readonlytest"})
-			if walID != "" {
-				defer framework.DeleteWAL(ctx, conf.StorageView, walID)
-			}
-			switch {
-			case err == nil:
-				break READONLY_LOOP
-			case err.Error() == logical.ErrSetupReadOnly.Error():
-				time.Sleep(10 * time.Millisecond)
-			default:
-				b.Logger().Error("deleting nil key resulted in error", "error", err)
-				return
-			}
-		}
-
 		// Load roles and populate queue with static accounts
-		b.populateQueue(ctx, conf.StorageView)
+		b.populateQueue(ctx, conf.Storage)
 
 		// Launch ticker
-		go b.runTicker(ctx, conf.StorageView)
+		go b.runTicker(ctx, conf.Storage)
 	}
 }
 

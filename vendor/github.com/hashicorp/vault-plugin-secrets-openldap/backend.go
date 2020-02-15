@@ -18,16 +18,6 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 		return nil, err
 	}
 
-	b.credRotationQueue = queue.New()
-	// Create a context with a cancel method for processing any WAL entries and
-	// populating the queue
-	initCtx := context.Background()
-	ictx, cancel := context.WithCancel(initCtx)
-	b.cancelQueue = cancel
-
-	// Load queue and kickoff new periodic ticker
-	go b.initQueue(ictx, conf)
-
 	return b, nil
 }
 
@@ -52,6 +42,7 @@ func Backend(client ldapClient) *backend {
 			b.pathRotateCredentials(),
 			b.pathConfig(),
 		),
+		InitializeFunc: b.initialize,
 
 		Secrets:     []*framework.Secret{},
 		Clean:       b.clean,
@@ -59,8 +50,21 @@ func Backend(client ldapClient) *backend {
 	}
 	b.client = client
 	b.roleLocks = locksutil.CreateLocks()
+	b.credRotationQueue = queue.New()
 
 	return &b
+}
+
+func (b *backend) initialize(ctx context.Context, initRequest *logical.InitializationRequest) error {
+	// Create a context with a cancel method for processing any WAL entries and
+	// populating the queue
+	ictx, cancel := context.WithCancel(context.Background())
+	b.cancelQueue = cancel
+
+	// Load queue and kickoff new periodic ticker
+	go b.initQueue(ictx, initRequest)
+
+	return nil
 }
 
 func (b *backend) clean(ctx context.Context) {

@@ -105,13 +105,11 @@ func (TypeCode) EnumDescriptor() ([]byte, []int) {
 type Type struct {
 	// Required. The [TypeCode][google.spanner.v1.TypeCode] for this type.
 	Code TypeCode `protobuf:"varint,1,opt,name=code,proto3,enum=google.spanner.v1.TypeCode" json:"code,omitempty"`
-	// If [code][google.spanner.v1.Type.code] ==
-	// [ARRAY][google.spanner.v1.TypeCode.ARRAY], then `array_element_type` is the
-	// type of the array elements.
+	// If [code][google.spanner.v1.Type.code] == [ARRAY][google.spanner.v1.TypeCode.ARRAY], then `array_element_type`
+	// is the type of the array elements.
 	ArrayElementType *Type `protobuf:"bytes,2,opt,name=array_element_type,json=arrayElementType,proto3" json:"array_element_type,omitempty"`
-	// If [code][google.spanner.v1.Type.code] ==
-	// [STRUCT][google.spanner.v1.TypeCode.STRUCT], then `struct_type` provides
-	// type information for the struct's fields.
+	// If [code][google.spanner.v1.Type.code] == [STRUCT][google.spanner.v1.TypeCode.STRUCT], then `struct_type`
+	// provides type information for the struct's fields.
 	StructType           *StructType `protobuf:"bytes,3,opt,name=struct_type,json=structType,proto3" json:"struct_type,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
 	XXX_unrecognized     []byte      `json:"-"`
@@ -164,15 +162,14 @@ func (m *Type) GetStructType() *StructType {
 	return nil
 }
 
-// `StructType` defines the fields of a
-// [STRUCT][google.spanner.v1.TypeCode.STRUCT] type.
+// `StructType` defines the fields of a [STRUCT][google.spanner.v1.TypeCode.STRUCT] type.
 type StructType struct {
 	// The list of fields that make up this struct. Order is
 	// significant, because values of this struct type are represented as
 	// lists, where the order of field values matches the order of
-	// fields in the [StructType][google.spanner.v1.StructType]. In turn, the
-	// order of fields matches the order of columns in a read request, or the
-	// order of fields in the `SELECT` clause of a query.
+	// fields in the [StructType][google.spanner.v1.StructType]. In turn, the order of fields
+	// matches the order of columns in a read request, or the order of
+	// fields in the `SELECT` clause of a query.
 	Fields               []*StructType_Field `protobuf:"bytes,1,rep,name=fields,proto3" json:"fields,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
 	XXX_unrecognized     []byte              `json:"-"`
