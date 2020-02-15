@@ -518,6 +518,8 @@ type Core struct {
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
+	entCoreConfig
+
 	DevToken string
 
 	BuiltinRegistry BuiltinRegistry
@@ -635,6 +637,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 		AllLoggers:                c.AllLoggers,
 		CounterSyncInterval:       c.CounterSyncInterval,
 		ClusterNetworkLayer:       c.ClusterNetworkLayer,
+		entCoreConfig:             c.entCoreConfig.Clone(),
 	}
 }
 
@@ -1416,6 +1419,10 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		return false, err
 	}
 
+	if err := c.setupReplicationResolverHandler(); err != nil {
+		c.logger.Warn("failed to start replication resolver server", "error", err)
+	}
+
 	// Do post-unseal setup if HA is not enabled
 	if c.ha == nil {
 		// We still need to set up cluster info even if it's not part of a
@@ -1744,6 +1751,8 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 		atomic.StoreUint32(c.keepHALockOnStepDown, 0)
 		c.logger.Debug("runStandby done")
 	}
+
+	c.teardownReplicationResolverHandler()
 
 	// If the storage backend needs to be sealed
 	if shutdownRaft {
