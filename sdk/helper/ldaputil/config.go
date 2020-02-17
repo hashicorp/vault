@@ -23,6 +23,9 @@ func ConfigFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeBool,
 			Default:     false,
 			Description: "Use anonymous binds when performing LDAP group searches (if true the initial credentials will still be used for the initial connection test).",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Anonymous group search",
+			},
 		},
 		"url": {
 			Type:        framework.TypeString,
