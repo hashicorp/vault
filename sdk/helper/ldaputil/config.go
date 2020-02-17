@@ -114,6 +114,9 @@ Default: cn`,
 		"certificate": {
 			Type:        framework.TypeString,
 			Description: "CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded (optional)",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "CA certificate",
+			},
 		},
 
 		"client_tls_cert": {
