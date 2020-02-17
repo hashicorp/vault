@@ -138,7 +138,6 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		if err != nil {
 			return nil, logical.ErrorResponse("ldap operation failed"), nil, nil
 		}
-		defer c.Close()
 	}
 
 	ldapGroups, err := ldapClient.GetLdapGroups(cfg.ConfigEntry, c, userDN, username)
