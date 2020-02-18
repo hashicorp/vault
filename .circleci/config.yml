@@ -357,9 +357,19 @@ workflows:
         - install-ui-dependencies
         - build-go-dev
     - test-go:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-go-dev
     - test-go-race:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-go-dev
     - website-docker-image:
@@ -665,9 +675,19 @@ workflows:
 #         - install-ui-dependencies
 #         - build-go-dev
 #     - test-go:
+#         filters:
+#           branches:
+#             ignore:
+#             - /^docs\\/.*/
+#             - /^ui\\/.*/
 #         requires:
 #         - build-go-dev
 #     - test-go-race:
+#         filters:
+#           branches:
+#             ignore:
+#             - /^docs\\/.*/
+#             - /^ui\\/.*/
 #         requires:
 #         - build-go-dev
 #     - website-docker-image:
