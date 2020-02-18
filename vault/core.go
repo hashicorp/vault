@@ -30,13 +30,13 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/mlock"
-	"github.com/hashicorp/vault/sdk/helper/reload"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -267,6 +267,9 @@ type Core struct {
 	keepHALockOnStepDown *uint32
 	heldHALock           physical.Lock
 
+	// shutdownDoneCh is used to notify when Shutdown() completes
+	shutdownDoneCh chan struct{}
+
 	// unlockInfo has the keys provided to Unseal until the threshold number of parts is available, as well as the operation nonce
 	unlockInfo *unlockInformation
 
@@ -362,7 +365,7 @@ type Core struct {
 	physicalCache physical.ToggleablePurgemonster
 
 	// reloadFuncs is a map containing reload functions
-	reloadFuncs map[string][]reload.ReloadFunc
+	reloadFuncs map[string][]reloadutil.ReloadFunc
 
 	// reloadFuncsLock controls access to the funcs
 	reloadFuncsLock sync.RWMutex
@@ -518,6 +521,8 @@ type Core struct {
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
+	entCoreConfig
+
 	DevToken string
 
 	BuiltinRegistry BuiltinRegistry
@@ -577,7 +582,7 @@ type CoreConfig struct {
 
 	RawConfig *server.Config
 
-	ReloadFuncs     *map[string][]reload.ReloadFunc
+	ReloadFuncs     *map[string][]reloadutil.ReloadFunc
 	ReloadFuncsLock *sync.RWMutex
 
 	// Licensing
@@ -635,6 +640,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 		AllLoggers:                c.AllLoggers,
 		CounterSyncInterval:       c.CounterSyncInterval,
 		ClusterNetworkLayer:       c.ClusterNetworkLayer,
+		entCoreConfig:             c.entCoreConfig.Clone(),
 	}
 }
 
@@ -734,6 +740,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterPeerClusterAddrsCache: cache.New(3*cluster.HeartbeatInterval, time.Second),
 		enableMlock:                  !conf.DisableMlock,
 		rawEnabled:                   conf.EnableRaw,
+		shutdownDoneCh:               make(chan struct{}),
 		replicationState:             new(uint32),
 		atomicPrimaryClusterAddrs:    new(atomic.Value),
 		atomicPrimaryFailoverAddrs:   new(atomic.Value),
@@ -848,7 +855,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	// the caller can share state
 	conf.ReloadFuncsLock = &c.reloadFuncsLock
 	c.reloadFuncsLock.Lock()
-	c.reloadFuncs = make(map[string][]reload.ReloadFunc)
+	c.reloadFuncs = make(map[string][]reloadutil.ReloadFunc)
 	c.reloadFuncsLock.Unlock()
 	conf.ReloadFuncs = &c.reloadFuncs
 
@@ -930,7 +937,21 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 // happens as quickly as possible.
 func (c *Core) Shutdown() error {
 	c.logger.Debug("shutdown called")
-	return c.sealInternal()
+	err := c.sealInternal()
+
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+	if c.shutdownDoneCh != nil {
+		close(c.shutdownDoneCh)
+		c.shutdownDoneCh = nil
+	}
+
+	return err
+}
+
+// ShutdownDone returns a channel that will be closed after Shutdown completes
+func (c *Core) ShutdownDone() <-chan struct{} {
+	return c.shutdownDoneCh
 }
 
 // CORSConfig returns the current CORS configuration
@@ -1416,6 +1437,10 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		return false, err
 	}
 
+	if err := c.setupReplicationResolverHandler(); err != nil {
+		c.logger.Warn("failed to start replication resolver server", "error", err)
+	}
+
 	// Do post-unseal setup if HA is not enabled
 	if c.ha == nil {
 		// We still need to set up cluster info even if it's not part of a
@@ -1744,6 +1769,8 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 		atomic.StoreUint32(c.keepHALockOnStepDown, 0)
 		c.logger.Debug("runStandby done")
 	}
+
+	c.teardownReplicationResolverHandler()
 
 	// If the storage backend needs to be sealed
 	if shutdownRaft {

@@ -1,4 +1,4 @@
-package reload
+package reloadutil
 
 import (
 	"crypto/tls"

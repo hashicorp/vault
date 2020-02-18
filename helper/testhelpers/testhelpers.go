@@ -139,6 +139,14 @@ func EnsureCoresUnsealed(t testing.T, c *vault.TestCluster) {
 	}
 }
 
+func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClusterCore) {
+	t.Helper()
+	err := AttemptUnsealCore(c, core)
+	if err != nil {
+		t.Fatalf("failed to unseal core: %v", err)
+	}
+}
+
 func AttemptUnsealCores(c *vault.TestCluster) error {
 	for i, core := range c.Cores {
 		err := AttemptUnsealCore(c, core)
@@ -305,6 +313,19 @@ func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClust
 
 	t.Fatalf("node did not become active")
 	return nil
+}
+
+func WaitForStandbyNode(t testing.T, core *vault.TestClusterCore) {
+	t.Helper()
+	for i := 0; i < 30; i++ {
+		if isLeader, _, clusterAddr, _ := core.Core.Leader(); isLeader != true && clusterAddr != "" {
+			return
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	t.Fatalf("node did not become standby")
 }
 
 func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]byte {
