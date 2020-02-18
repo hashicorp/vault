@@ -69,6 +69,7 @@ BUG FIXES:
 * secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [GH-8282]
 * storage/mysql: Fix potential crash when using MySQL as coordination for high availability [[GH-8300](https://github.com/hashicorp/vault/pull/8300)]
 * storage/raft: Fix potential crash when using Raft as coordination for high availability [[GH-8356](https://github.com/hashicorp/vault/pull/8356)]
+* ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
 
 ## 1.3.2 (January 22nd, 2020)
 
