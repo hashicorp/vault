@@ -30,15 +30,15 @@ environment variables:
 - `VAULT_K8S_NAMESPACE`
 - `VAULT_K8S_POD_NAME`
 
+This allows you to set these parameters using
+[the Downward API](https://kubernetes.io/docs/tasks/inject-data-application/downward-api-volume-expose-pod-information/).
+
 If using only environment variables, the service registration stanza declaring
-you're using Kubernetes must still exist to indicate your intentions, like so:
+you're using Kubernetes must still exist to indicate your intentions:
 
 ```
 service_registration "kubernetes" {}
 ```
-
-This allows you to set these parameters using
-[the Downward API](https://kubernetes.io/docs/tasks/inject-data-application/downward-api-volume-expose-pod-information/).
 
 ## Examples
 
