@@ -24,6 +24,7 @@ export default AuthConfig.extend({
           'clientTLSKey',
           'userattr',
           'upndomain',
+          'anonymous_group_search',
         ],
       },
       {
