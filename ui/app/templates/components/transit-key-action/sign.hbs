@@ -85,7 +85,7 @@
           </div>
         </div>
       </div>
-      {{#if (or (eq key.type 'rsa-2048') (eq key.type 'rsa-4096'))}}
+      {{#if (or (eq key.type 'rsa-2048') (eq key.type 'rsa-3072') (eq key.type 'rsa-4096'))}}
         <div class="field">
           <label for="signature_algorithm" class="is-label">Signature Algorithm</label>
           <div class="control is-expanded">

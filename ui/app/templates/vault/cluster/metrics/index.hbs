@@ -1,0 +1,15 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Metrics
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="box is-sideless is-fullwidth is-marginless is-bottomless">
+  {{#if (gt model.httpsRequests.length 1) }}
+    <SelectableCardContainer @counters={{model}} @gridContainer="true"/>
+  {{else}}
+    <SelectableCardContainer @counters={{model}} />
+  {{/if}}
+</div>

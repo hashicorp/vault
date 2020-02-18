@@ -22,7 +22,7 @@ func pathSecretAccessToken(b *backend) *framework.Path {
 				Description: "Required. Name of the role set.",
 			},
 		},
-		ExistenceCheck: b.pathRoleSetExistenceCheck,
+		ExistenceCheck: b.pathRoleSetExistenceCheck("roleset"),
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation:   &framework.PathOperation{Callback: b.pathAccessToken},
 			logical.UpdateOperation: &framework.PathOperation{Callback: b.pathAccessToken},

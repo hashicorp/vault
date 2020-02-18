@@ -45,7 +45,6 @@ module.exports = function(defaults) {
     sassOptions: {
       sourceMap: false,
       onlyIncluded: true,
-      implementation: require('node-sass'),
     },
     autoprefixer: {
       enabled: isTest || isProd,

@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/listenerutil"
-	"github.com/hashicorp/vault/helper/reload"
+	"github.com/hashicorp/vault/internalshared/listenerutil"
+	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/cli"
 )
 
-func tcpListenerFactory(config map[string]interface{}, _ io.Writer, ui cli.Ui) (net.Listener, map[string]string, reload.ReloadFunc, error) {
+func tcpListenerFactory(config map[string]interface{}, _ io.Writer, ui cli.Ui) (net.Listener, map[string]string, reloadutil.ReloadFunc, error) {
 	bindProto := "tcp"
 	var addr string
 	addrRaw, ok := config["address"]

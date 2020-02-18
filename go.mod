@@ -52,13 +52,14 @@ require (
 	github.com/hashicorp/consul/api v1.2.1-0.20200128105449-6681be918a6e
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
-	github.com/hashicorp/go-gcp-common v0.5.0
+	github.com/hashicorp/go-gcp-common v0.6.0
 	github.com/hashicorp/go-hclog v0.12.0
-	github.com/hashicorp/go-kms-wrapping v0.5.0
+	github.com/hashicorp/go-kms-wrapping v0.5.1
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
+	github.com/hashicorp/go-retryablehttp v0.6.2
 	github.com/hashicorp/go-rootcerts v1.0.2
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
@@ -68,26 +69,27 @@ require (
 	github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
 	github.com/hashicorp/raft v1.1.2-0.20191002163536-9c6bd3e3eb17
 	github.com/hashicorp/raft-snapshot v1.0.2-0.20190827162939-8117efcc5aab
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190814210027-93970f08f2ec
-	github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20191119151105-86f21fbc96e3
-	github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190814210042-090ec2ed93ce
-	github.com/hashicorp/vault-plugin-auth-cf v0.0.0-20190821162840-1c2205826fee
-	github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190930204802-acfd134850c2
-	github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20191010173058-65cf93bad3f2
-	github.com/hashicorp/vault-plugin-auth-kerberos v0.1.2
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190925162726-2e5b0b8184e6
-	github.com/hashicorp/vault-plugin-auth-oci v0.0.0-20190904175623-97c0c0187c5c
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190814210117-e079e01fbb93
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.0.0-20200124191841-a128333dc5d5
-	github.com/hashicorp/vault-plugin-secrets-ad v0.6.2
-	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190814210129-4d18bec92f56
-	github.com/hashicorp/vault-plugin-secrets-azure v0.5.3-0.20191119150734-45c076c82f1d
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20191128235941-556b7c55d6db
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190814210149-315cdbf5de6e
-	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20191017213228-e8cf7060a4d0
-	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.0.0-20200124190647-0026e6bed4fb
-	github.com/hashicorp/vault/api v1.0.5-0.20200124174203-d7d4084c8670
-	github.com/hashicorp/vault/sdk v0.1.14-0.20200124174203-d7d4084c8670
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.4-beta1
+	github.com/hashicorp/vault-plugin-auth-azure v0.5.4-beta1
+	github.com/hashicorp/vault-plugin-auth-centrify v0.5.4-beta1
+	github.com/hashicorp/vault-plugin-auth-cf v0.5.3-beta1
+	github.com/hashicorp/vault-plugin-auth-gcp v0.6.0-beta1
+	github.com/hashicorp/vault-plugin-auth-jwt v0.6.0-beta1
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.1.4-beta1
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.6.0-beta1
+	github.com/hashicorp/vault-plugin-auth-oci v0.5.3-beta1
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.3-beta1
+	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.0-beta1
+	github.com/hashicorp/vault-plugin-secrets-ad v0.6.4-beta1
+	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.4-beta1
+	github.com/hashicorp/vault-plugin-secrets-azure v0.5.5-beta1
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.0-beta1
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.4-beta1
+	github.com/hashicorp/vault-plugin-secrets-kv v0.5.4-beta1
+	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.0-beta1
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.0-beta1
+	github.com/hashicorp/vault/api v1.0.5-0.20200215224050-f6547fa8e820
+	github.com/hashicorp/vault/sdk v0.1.14-0.20200215224050-f6547fa8e820
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
@@ -142,6 +144,6 @@ require (
 	google.golang.org/grpc v1.23.1
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
-	gopkg.in/square/go-jose.v2 v2.3.1
+	gopkg.in/square/go-jose.v2 v2.4.1
 	layeh.com/radius v0.0.0-20190322222518-890bc1058917
 )
