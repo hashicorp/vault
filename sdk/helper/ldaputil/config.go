@@ -283,6 +283,8 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		if _, err := tls.X509KeyPair([]byte(cfg.ClientTLSCert), []byte(cfg.ClientTLSKey)); err != nil {
 			return nil, errwrap.Wrapf("failed to parse client X509 key pair: {{err}}", err)
 		}
+	} else if (cfg.ClientTLSCert != "" && cfg.ClientTLSKey == "") || (cfg.ClientTLSCert == "" && cfg.ClientTLSKey != "") {
+		return nil, fmt.Errorf("both client_tls_cert and client_tls_cert must be set")
 	}
 
 	if _, ok := d.Raw["insecure_tls"]; ok || !hadExisting {
