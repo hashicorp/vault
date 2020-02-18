@@ -1,6 +1,7 @@
 package ldaputil
 
 import (
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -18,6 +19,14 @@ import (
 // Not all fields will be used by every integration.
 func ConfigFields() map[string]*framework.FieldSchema {
 	return map[string]*framework.FieldSchema{
+		"anonymous_group_search": {
+			Type:        framework.TypeBool,
+			Default:     false,
+			Description: "Use anonymous binds when performing LDAP group searches (if true the initial credentials will still be used for the initial connection test).",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Anonymous group search",
+			},
+		},
 		"url": {
 			Type:        framework.TypeString,
 			Default:     "ldap://127.0.0.1",
@@ -105,6 +114,19 @@ Default: cn`,
 		"certificate": {
 			Type:        framework.TypeString,
 			Description: "CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded (optional)",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "CA certificate",
+			},
+		},
+
+		"client_tls_cert": {
+			Type:        framework.TypeString,
+			Description: "Client certificate to provide to the LDAP server, must be x509 PEM encoded (optional)",
+		},
+
+		"client_tls_key": {
+			Type:        framework.TypeString,
+			Description: "Client certificate key to provide to the LDAP server, must be x509 PEM encoded (optional)",
 		},
 
 		"discoverdn": {
@@ -196,6 +218,10 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg = new(ConfigEntry)
 	}
 
+	if _, ok := d.Raw["anonymous_group_search"]; ok || !hadExisting {
+		cfg.AnonymousGroupSearch = d.Get("anonymous_group_search").(bool)
+	}
+
 	if _, ok := d.Raw["url"]; ok || !hadExisting {
 		cfg.Url = strings.ToLower(d.Get("url").(string))
 	}
@@ -236,18 +262,27 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 	if _, ok := d.Raw["certificate"]; ok || !hadExisting {
 		certificate := d.Get("certificate").(string)
 		if certificate != "" {
-			block, _ := pem.Decode([]byte(certificate))
-
-			if block == nil || block.Type != "CERTIFICATE" {
-				return nil, errors.New("failed to decode PEM block in the certificate")
-			}
-			_, err := x509.ParseCertificate(block.Bytes)
-			if err != nil {
-				return nil, errwrap.Wrapf("failed to parse certificate: {{err}}", err)
+			if err := validateCertificate([]byte(certificate)); err != nil {
+				return nil, errwrap.Wrapf("failed to parse server tls cert: {{err}}", err)
 			}
 		}
-
 		cfg.Certificate = certificate
+	}
+
+	if _, ok := d.Raw["client_tls_cert"]; ok || !hadExisting {
+		clientTLSCert := d.Get("client_tls_cert").(string)
+		cfg.ClientTLSCert = clientTLSCert
+	}
+
+	if _, ok := d.Raw["client_tls_key"]; ok || !hadExisting {
+		clientTLSKey := d.Get("client_tls_key").(string)
+		cfg.ClientTLSKey = clientTLSKey
+	}
+
+	if cfg.ClientTLSCert != "" && cfg.ClientTLSKey != "" {
+		if _, err := tls.X509KeyPair([]byte(cfg.ClientTLSCert), []byte(cfg.ClientTLSKey)); err != nil {
+			return nil, errwrap.Wrapf("failed to parse client X509 key pair: {{err}}", err)
+		}
 	}
 
 	if _, ok := d.Raw["insecure_tls"]; ok || !hadExisting {
@@ -318,12 +353,15 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 type ConfigEntry struct {
 	Url                      string `json:"url"`
 	UserDN                   string `json:"userdn"`
+	AnonymousGroupSearch     bool   `json:"anonymous_group_search"`
 	GroupDN                  string `json:"groupdn"`
 	GroupFilter              string `json:"groupfilter"`
 	GroupAttr                string `json:"groupattr"`
 	UPNDomain                string `json:"upndomain"`
 	UserAttr                 string `json:"userattr"`
 	Certificate              string `json:"certificate"`
+	ClientTLSCert            string `json:"client_tls_cert`
+	ClientTLSKey             string `json:"client_tls_key`
 	InsecureTLS              bool   `json:"insecure_tls"`
 	StartTLS                 bool   `json:"starttls"`
 	BindDN                   string `json:"binddn"`
@@ -377,6 +415,18 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 	return m
 }
 
+func validateCertificate(pemBlock []byte) error {
+	block, _ := pem.Decode([]byte(pemBlock))
+	if block == nil || block.Type != "CERTIFICATE" {
+		return errors.New("failed to decode PEM block in the certificate")
+	}
+	_, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("failed to parse certificate %s", err.Error())
+	}
+	return nil
+}
+
 func (c *ConfigEntry) Validate() error {
 	if len(c.Url) == 0 {
 		return errors.New("at least one url must be provided")
@@ -398,13 +448,13 @@ func (c *ConfigEntry) Validate() error {
 		return errors.New("'tls_max_version' must be greater than or equal to 'tls_min_version'")
 	}
 	if c.Certificate != "" {
-		block, _ := pem.Decode([]byte(c.Certificate))
-		if block == nil || block.Type != "CERTIFICATE" {
-			return errors.New("failed to decode PEM block in the certificate")
+		if err := validateCertificate([]byte(c.Certificate)); err != nil {
+			return errwrap.Wrapf("failed to parse server tls cert: {{err}}", err)
 		}
-		_, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return fmt.Errorf("failed to parse certificate %s", err.Error())
+	}
+	if c.ClientTLSCert != "" && c.ClientTLSKey != "" {
+		if _, err := tls.X509KeyPair([]byte(c.ClientTLSCert), []byte(c.ClientTLSKey)); err != nil {
+			return errwrap.Wrapf("failed to parse client X509 key pair: {{err}}", err)
 		}
 	}
 	return nil
