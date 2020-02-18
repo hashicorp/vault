@@ -496,7 +496,7 @@ func getTLSConfig(cfg *ConfigEntry, host string) (*tls.Config, error) {
 		}
 		tlsConfig.Certificates = append(tlsConfig.Certificates, certificate)
 	} else if (cfg.ClientTLSCert != "" && cfg.ClientTLSKey == "") || (cfg.ClientTLSCert == "" && cfg.ClientTLSKey != "") {
-		return nil, fmt.Errorf("both client_tls_cert and client_tls_cert must be set")
+		return nil, fmt.Errorf("both client_tls_cert and client_tls_key must be set")
 	}
 	return tlsConfig, nil
 }
