@@ -76,9 +76,7 @@ metadata:
 ## Label Definitions
 
 - `vault-active` `(string: "true"/"false")` – Vault active is updated dynamically each time Vault's active status changes.
-  **This field is only valuable if the pod is NOT a member of a performance standby cluster**,
-  it will simply be set to "false" when it's not applicable. True indicates that this Vault pod is currently the leader.
-  False indicates that this Vault pod is currently a standby.
+  True indicates that this Vault pod is currently the leader. False indicates that this Vault pod is currently a standby.
 - `vault-initialized` `(string: "true"/"false")` – Vault initialized is updated dynamically each time Vault's initialization
   status changes. True indicates that Vault is currently initialized. False indicates the Vault is currently uninitialized.
 - `vault-perf-standby` `(string: "true"/"false")` – Vault performance standby is updated dynamically each
