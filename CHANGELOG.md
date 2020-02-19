@@ -4,9 +4,11 @@ FEATURES:
 
 * **Kerberos Authentication**: We now support Kerberos authentication using a SPNEGO token. 
    Login can be performed using the Vault CLI, API, or agent.
-* **Kubernetes Service Discovery**: We now support Kerberos service discovery where, if 
+* **Kubernetes Service Discovery**: We now support Kubernetes service discovery where, if 
    configured, Vault will tag Vault pods with their current health status. For more, see [#8249](https://github.com/hashicorp/vault/pull/8249).
-
+* **MongoDB Atlas Secrets**: We now support generating dynamic credentials for both MongoDB Atlas databases
+  as well as the [Atlas programmatic interface](https://docs.atlas.mongodb.com/tutorial/manage-programmatic-access/).
+   
 IMPROVEMENTS:
 
 * agent: add option to force the use of the auth-auth token, and ignore the Vault token in the request [[GH-8101](https://github.com/hashicorp/vault/pull/8101)]

@@ -109,7 +109,11 @@ export default Component.extend({
   },
 
   exchangeOIDC: task(function*(event, oidcWindow) {
-    let oidcState = event.storageArea.getItem('oidcState');
+    // in non-incognito mode we need to use a timeout because it takes time before oidcState is written to local storage.
+    let oidcState = Ember.testing
+      ? event.storageArea.getItem('oidcState')
+      : yield timeout(1000).then(() => event.storageArea.getItem('oidcState'));
+
     if (oidcState === null || oidcState === undefined) {
       return;
     }

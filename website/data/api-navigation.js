@@ -107,6 +107,7 @@ export default [
       'health',
       'host-info',
       'init',
+      'internal-counters',
       'internal-specs-openapi',
       'internal-ui-mounts',
       'key-status',
