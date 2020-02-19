@@ -84,7 +84,10 @@ export default [
       },
       {
         category: 'service-registration',
-        content: ['consul']
+        content: [
+          'consul',
+          'kubernetes'
+        ]
       },
       'telemetry',
       { category: 'ui' },
