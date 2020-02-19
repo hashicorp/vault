@@ -213,7 +213,7 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		return nil, errors.New("unhandled case during login")
 	}
 
-	if err := validateBoundClaims(b.Logger(), role.BoundClaims, allClaims); err != nil {
+	if err := validateBoundClaims(b.Logger(), role.BoundClaimsType, role.BoundClaims, allClaims); err != nil {
 		return logical.ErrorResponse("error validating claims: %s", err.Error()), nil
 	}
 

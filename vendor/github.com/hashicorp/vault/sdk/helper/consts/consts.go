@@ -20,8 +20,7 @@ const (
 	// performance replication.
 	PerformanceReplicationALPN = "replication_v1"
 
-	// DRReplicationALPN is the negotiated protocol used for
-	// dr replication.
+	// DRReplicationALPN is the negotiated protocol used for dr replication.
 	DRReplicationALPN = "replication_dr_v1"
 
 	PerfStandbyALPN = "perf_standby_v1"
@@ -29,4 +28,8 @@ const (
 	RequestForwardingALPN = "req_fw_sb-act_v1"
 
 	RaftStorageALPN = "raft_storage_v1"
+
+	// ReplicationResolverALPN is the negotiated protocol used for
+	// resolving replicaiton addresses
+	ReplicationResolverALPN = "replication_resolver_v1"
 )

@@ -1075,6 +1075,7 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
+			"description":       mountEntry.Description,
 			"default_lease_ttl": int(sysView.DefaultLeaseTTL().Seconds()),
 			"max_lease_ttl":     int(sysView.MaxLeaseTTL().Seconds()),
 			"force_no_cache":    mountEntry.Config.ForceNoCache,

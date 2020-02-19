@@ -109,6 +109,7 @@ func createBackendWithForceNoCacheWithSysViewWithStorage(t *testing.T, s logical
 
 func TestTransit_RSA(t *testing.T) {
 	testTransit_RSA(t, "rsa-2048")
+	testTransit_RSA(t, "rsa-3072")
 	testTransit_RSA(t, "rsa-4096")
 }
 

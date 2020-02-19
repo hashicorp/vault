@@ -74,7 +74,15 @@ func (r *parsedIamResource) SetIamPolicyRequest(p *Policy) (req *http.Request, e
 	return r.constructRequest(&r.config.SetMethod, strings.NewReader(reqJson))
 }
 
+var requestPolicyVersion3 = `{"options": {"requestedPolicyVersion": 3}}`
+
 func (r *parsedIamResource) GetIamPolicyRequest() (*http.Request, error) {
+	// In order to support Resource Manager policies with conditional bindings,
+	// we need to request the policy version of 3. This request parameter is backwards compatible
+	// and will return version 1 policies if they are not yet updated to version 3.
+	if r.config != nil && r.config.Service == "cloudresourcemanager" {
+		return r.constructRequest(&r.config.GetMethod, strings.NewReader(requestPolicyVersion3))
+	}
 	return r.constructRequest(&r.config.GetMethod, nil)
 }
 

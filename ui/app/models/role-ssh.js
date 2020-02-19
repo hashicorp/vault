@@ -26,6 +26,7 @@ const CA_FIELDS = [
   'allowHostCertificates',
   'defaultUser',
   'allowedUsers',
+  'allowedUsersTemplate',
   'allowedDomains',
   'ttl',
   'maxTtl',
@@ -65,8 +66,11 @@ export default DS.Model.extend({
     helpText: "Username to use when one isn't specified",
   }),
   allowedUsers: attr('string', {
+    helpText: 'Create a whitelist of users that can use this key (e.g. `admin, dev`, use `*` to allow all.)',
+  }),
+  allowedUsersTemplate: attr('boolean', {
     helpText:
-      'Create a whitelist of users that can use this key (e.g. `admin, dev`, or use `*` to allow all)',
+      'Specifies that Allowed users can be templated e.g. {{identity.entity.aliases.mount_accessor_xyz.name}}',
   }),
   allowedDomains: attr('string', {
     helpText:

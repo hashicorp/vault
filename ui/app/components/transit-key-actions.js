@@ -77,7 +77,7 @@ export default Component.extend(TRANSIT_PARAMS, {
 
   keyIsRSA: computed('key.type', function() {
     let type = get(this, 'key.type');
-    return type === 'rsa-2048' || type === 'rsa-4096';
+    return type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
   }),
 
   getModelInfo() {
@@ -120,6 +120,7 @@ export default Component.extend(TRANSIT_PARAMS, {
       paramsToKeep.forEach(param => delete params[param]);
     }
     //resets params still left in the object to defaults
+    this.clearErrors();
     this.setProperties(params);
     if (action === 'export') {
       this.setExportKeyDefaults();
@@ -128,6 +129,10 @@ export default Component.extend(TRANSIT_PARAMS, {
 
   handleError(e) {
     this.set('errors', e.errors);
+  },
+
+  clearErrors() {
+    this.set('errors', null);
   },
 
   handleSuccess(resp, options, action) {
@@ -150,7 +155,7 @@ export default Component.extend(TRANSIT_PARAMS, {
 
   compactData(data) {
     let type = get(this, 'key.type');
-    let isRSA = type === 'rsa-2048' || type === 'rsa-4096';
+    let isRSA = type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
     return Object.keys(data).reduce((result, key) => {
       if (key === 'signature_algorithm' && !isRSA) {
         return result;
