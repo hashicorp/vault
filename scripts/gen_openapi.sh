@@ -56,6 +56,7 @@ vault secrets enable gcp
 vault secrets enable gcpkms
 vault secrets enable kv
 vault secrets enable mongodb
+vault secrets enable mongodbatlas
 vault secrets enable mssql
 vault secrets enable mysql
 vault secrets enable nomad
