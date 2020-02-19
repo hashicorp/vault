@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-        "sort"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -701,12 +701,12 @@ func LoadConfigDir(dir string) (*Config, error) {
 		}
 	}
 
-        // Fast-path if we have no files
-        if len(files) == 0 {
-                return &Config{}, nil
-        }
+	// Fast-path if we have no files
+	if len(files) == 0 {
+		return &Config{}, nil
+	}
 
-        sort.Strings(files)
+	sort.Strings(files)
 
 	var result *Config
 	for _, f := range files {
