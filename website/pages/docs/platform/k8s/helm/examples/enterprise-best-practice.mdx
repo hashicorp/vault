@@ -1,0 +1,133 @@
+---
+layout: "docs"
+page_title: "Enterprise Best Practice"
+sidebar_current: "docs-platform-k8s-examples-enterprise-best-practice"
+sidebar_title: "Enterprise Best Practice"
+description: |-
+  Describes how to set up a best practices Vault Enterprise cluster
+---
+
+# Vault Enterprise Best Practices Cluster
+
+~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3 with this chart.
+
+~> **Important Note:** Only non-HSM images are supported. Image tags ending with ".hsm" will not work.
+
+Vault's enterprise features focus around replication. Typically, one cluster is a leader, and other
+clusters are followers. There are two main types of following clusters. Disaster replication clusters
+serve as a warm standby should the leader cluster stop serving traffic. Performance replication
+clusters increase the number of reads that Vault can service.
+
+AWS is given here in depth as a sample for auto-unseal, but any [auto-unseal](/docs/configuration/seal)
+mechanism may be used.
+
+## Walk-Through
+
+1. Create an EKS cluster. This walk-through will assume it's named "vault-cluster".
+2. While the cluster is launching, create a role for Vault's node group to use.
+[AWS's docs](https://docs.aws.amazon.com/eks/latest/userguide/worker_node_IAM_role.html)
+should be considered the authority on the policies that need to be attached, but at the time
+of writing, the required policies are the `AmazonEKSWorkerNodePolicy`, the `AmazonEKS_CNI_Policy`,
+and the `AmazonEC2ContainerRegistryReadOnly`. For the purposes of this walk-through, we will
+assume you name this new role, "EKSNodeGroupForAutoUnseal".
+3. While the cluster is launching, also create a KMS key that will be used for auto-unseal.
+Under "Define key usage permissions", search for "EKSNodeGroupForAutoUnseal" and add a check
+next to it.
+4. One you've finished creating the key, return to IAM. Create a new policy called
+"UnsealKeyUsageForVault" and attach it to the "EKSNodeGroupForAutoUnseal" role. The policy
+contents should be:
+
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "kms:Decrypt",
+                "kms:Encrypt",
+                "kms:DescribeKey"
+            ],
+            "Resource": "arn:aws:kms:us-west-2:012345678901:key/207a68f5-f100-410c-8066-EXAMPLE"
+        }
+    ]
+}
+```
+
+5. Return to EKS and add a node group. While launching it, under "Node IAM Role Name", select
+"EKSNodeGroupForAutoUnseal".
+6. While the nodes are creating, point your local `kubectl` at your new cluster as shown
+[here](https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html).
+
+## Generate TLS Certificates
+
+TLS certificate generation is covered [here](/docs/platform/k8s/helm/examples/standalone-tls).
+
+## Setting Up the Primary Cluster
+
+The below `values.yaml` can be used to set up a three server Vault cluster using
+Consul as a highly available storage backend, with AWS KMS for Auto Unseal.
+
+```yaml
+server:
+  image:
+    repository: "hashicorp/vault-enterprise"
+    tag: "1.3.1_ent"
+
+  affinity: |
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app: {{ template "vault.name" . }}
+              release: "{{ .Release.Name }}"
+              component: server
+          topologyKey: kubernetes.io/hostname
+
+  service:
+    enabled: true
+
+  ha:
+    enabled: true
+    replicas: 3
+
+    config: |
+      ui = true
+
+      listener "tcp" {
+        tls_cert_file = "/path/to/fullchain.pem"
+        tls_key_file  = "/path/to/privkey.pem"
+        tls_client_ca_file = "/vault/userconfig/vault-server-tls/vault.ca"
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+
+      storage "consul" {
+        path = "vault"
+        address = "HOST_IP:8500"
+        token = "45a3bd52-07c7-47a4-52fd-0745e0cfe967"
+      }
+
+      seal "awskms" {
+        region     = "us-west-2"
+        kms_key_id = "19ec80b0-dfdd-4d97-8164-c6examplekey"
+      }
+```
+
+Note that in the above seal stanza, the AWS key and secret are omitted. That's because
+Vault picks them up from the node group's Instance Metadata, which in this example has
+been configured to provide credentials for the "EKSNodeGroupForAutoUnseal" role.
+
+## Setting Up a Disaster Replication (DR) Cluster
+
+Setting up a DR cluster follows an identical process and configuration for
+creating the cluster itself. Once the cluster is up, add it as a follower to
+the leader cluster. See [Disaster Recovery Replication Setup](https://learn.hashicorp.com/vault/operations/ops-disaster-recovery)
+for more.
+
+## Setting Up a Performance Cluster
+
+Setting up a performance cluster also follows an identical process and configuration
+for creating the cluster itself. See [Setting Up Performance Replication](https://learn.hashicorp.com/vault/operations/ops-replication)
+for more on how to configure a cluster to follow the primary once it is up.
