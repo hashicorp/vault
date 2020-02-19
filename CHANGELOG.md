@@ -45,6 +45,7 @@ BUG FIXES:
 
 * agent: Fix issue where TLS options are ignored for agent template feature [[GH-7889](https://github.com/hashicorp/vault/pull/7889)]
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [[GH-8035](https://github.com/hashicorp/vault/pull/8035)]
+* replication: Cubbyholes in namespaces on performance secondaries never worked, now do.
 * secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [GH-8282]
 * secrets/database/mysql: Ensures default static credential rotation statements are used [[GH-8240](https://github.com/hashicorp/vault/pull/8240)]
 * secrets/database/mysql: Fix inconsistent query parameter names: {{name}} or {{username}} for
