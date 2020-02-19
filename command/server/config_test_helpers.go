@@ -10,7 +10,6 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/y0ssar1an/q"
 )
 
 func testConfigRaftRetryJoin(t *testing.T) {
@@ -457,7 +456,7 @@ func testLoadConfigDir(t *testing.T) {
 		Storage: &Storage{
 			Type: "consul",
 			Config: map[string]string{
-				"foo": "baz",
+				"foo": "faz",
 			},
 			RedirectAddr:      "https://vault.local",
 			ClusterAddr:       "https://127.0.0.1:444",
@@ -476,12 +475,10 @@ func testLoadConfigDir(t *testing.T) {
 		},
 
 		MaxLeaseTTL:     10 * time.Hour,
-		DefaultLeaseTTL: 5 * time.Hour,
+		DefaultLeaseTTL: 10 * time.Hour,
 		ClusterName:     "testcluster",
 	}
 	if !reflect.DeepEqual(config, expected) {
-		q.Q("config: consul:", config.Storage)
-		q.Q("config: consul:", config.DefaultLeaseTTL)
 		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
 	}
 }
