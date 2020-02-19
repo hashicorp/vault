@@ -17,6 +17,7 @@ IMPROVEMENTS:
 * auth/jwt: Additional OIDC callback parameters available for CLI logins [[GH-80](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/80) & [GH-86](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/86)]
 * auth/jwt: Bound claims may be optionally configured using globs [[GH-89](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/89)]
 * auth/jwt: Timeout during OIDC CLI login if process doesn't complete within 2 minutes [[GH-97](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/97)]
+* auth/jwt: Add support for the `form_post` response mode [[GH-98](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/98)]
 * aws: Add support for v2 of the instance metadata service (see [issue 7924](https://github.com/hashicorp/vault/issues/7924) for all linked PRs)
 * core: Separate out service discovery interface from storage interface to allow
   new types of service discovery not coupled to storage [[GH-7887](https://github.com/hashicorp/vault/pull/7887)]
@@ -25,6 +26,7 @@ IMPROVEMENTS:
 * identity: Allow specifying a custom `client_id` for identity tokens [[GH-8165](https://github.com/hashicorp/vault/pull/8165)]
 * okta: Upgrade okta sdk lib, which should improve handling of groups [[GH-8143](https://github.com/hashicorp/vault/pull/8143)]
 * secrets/database/mongodb: Switched internal MongoDB driver to mongo-driver [[GH-8140](https://github.com/hashicorp/vault/pull/8140)]
+* secrets/database/mongodb: Add support for x509 client authorization to MongoDB [[GH-8329](https://github.com/hashicorp/vault/pull/8329)]
 * secrets/consul: Add support to specify TLS options per Consul backend [[GH-4800](https://github.com/hashicorp/vault/pull/4800)]
 * secrets/gcp: Allow specifying the TTL for a service key [[GH-54](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/54)]
 * secrets/gcp: Add support for rotating root keys [[GH-53](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/53)]
@@ -69,6 +71,7 @@ BUG FIXES:
 * secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [GH-8282]
 * storage/mysql: Fix potential crash when using MySQL as coordination for high availability [[GH-8300](https://github.com/hashicorp/vault/pull/8300)]
 * storage/raft: Fix potential crash when using Raft as coordination for high availability [[GH-8356](https://github.com/hashicorp/vault/pull/8356)]
+* ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
 
 ## 1.3.2 (January 22nd, 2020)
 

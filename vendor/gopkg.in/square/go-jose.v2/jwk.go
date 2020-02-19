@@ -357,11 +357,11 @@ func (key rawJSONWebKey) ecPublicKey() (*ecdsa.PublicKey, error) {
 	// the curve specified in the "crv" parameter.
 	// https://tools.ietf.org/html/rfc7518#section-6.2.1.2
 	if curveSize(curve) != len(key.X.data) {
-		return nil, fmt.Errorf("square/go-jose: invalid EC private key, wrong length for x")
+		return nil, fmt.Errorf("square/go-jose: invalid EC public key, wrong length for x")
 	}
 
 	if curveSize(curve) != len(key.Y.data) {
-		return nil, fmt.Errorf("square/go-jose: invalid EC private key, wrong length for y")
+		return nil, fmt.Errorf("square/go-jose: invalid EC public key, wrong length for y")
 	}
 
 	x := key.X.bigInt()
