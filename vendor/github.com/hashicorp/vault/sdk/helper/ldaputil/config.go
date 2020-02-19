@@ -122,11 +122,19 @@ Default: cn`,
 		"client_tls_cert": {
 			Type:        framework.TypeString,
 			Description: "Client certificate to provide to the LDAP server, must be x509 PEM encoded (optional)",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:     "Client certificate",
+				EditType: "file",
+			},
 		},
 
 		"client_tls_key": {
 			Type:        framework.TypeString,
 			Description: "Client certificate key to provide to the LDAP server, must be x509 PEM encoded (optional)",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:     "Client key",
+				EditType: "file",
+			},
 		},
 
 		"discoverdn": {
