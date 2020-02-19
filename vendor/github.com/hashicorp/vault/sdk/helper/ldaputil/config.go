@@ -291,7 +291,7 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		if _, err := tls.X509KeyPair([]byte(cfg.ClientTLSCert), []byte(cfg.ClientTLSKey)); err != nil {
 			return nil, errwrap.Wrapf("failed to parse client X509 key pair: {{err}}", err)
 		}
-	} else if (cfg.ClientTLSCert != "" && cfg.ClientTLSKey == "") || (cfg.ClientTLSCert == "" && cfg.ClientTLSKey != "") {
+	} else if cfg.ClientTLSCert != "" || cfg.ClientTLSKey != "" {
 		return nil, fmt.Errorf("both client_tls_cert and client_tls_key must be set")
 	}
 
@@ -399,22 +399,23 @@ func (c *ConfigEntry) Map() map[string]interface{} {
 
 func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 	m := map[string]interface{}{
-		"url":              c.Url,
-		"userdn":           c.UserDN,
-		"groupdn":          c.GroupDN,
-		"groupfilter":      c.GroupFilter,
-		"groupattr":        c.GroupAttr,
-		"upndomain":        c.UPNDomain,
-		"userattr":         c.UserAttr,
-		"certificate":      c.Certificate,
-		"insecure_tls":     c.InsecureTLS,
-		"starttls":         c.StartTLS,
-		"binddn":           c.BindDN,
-		"deny_null_bind":   c.DenyNullBind,
-		"discoverdn":       c.DiscoverDN,
-		"tls_min_version":  c.TLSMinVersion,
-		"tls_max_version":  c.TLSMaxVersion,
-		"use_token_groups": c.UseTokenGroups,
+		"url":                    c.Url,
+		"userdn":                 c.UserDN,
+		"groupdn":                c.GroupDN,
+		"groupfilter":            c.GroupFilter,
+		"groupattr":              c.GroupAttr,
+		"upndomain":              c.UPNDomain,
+		"userattr":               c.UserAttr,
+		"certificate":            c.Certificate,
+		"insecure_tls":           c.InsecureTLS,
+		"starttls":               c.StartTLS,
+		"binddn":                 c.BindDN,
+		"deny_null_bind":         c.DenyNullBind,
+		"discoverdn":             c.DiscoverDN,
+		"tls_min_version":        c.TLSMinVersion,
+		"tls_max_version":        c.TLSMaxVersion,
+		"use_token_groups":       c.UseTokenGroups,
+		"anonymous_group_search": c.AnonymousGroupSearch,
 	}
 	if c.CaseSensitiveNames != nil {
 		m["case_sensitive_names"] = *c.CaseSensitiveNames
