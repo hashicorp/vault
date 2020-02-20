@@ -6,79 +6,14 @@ import (
 	"path"
 	"testing"
 
-	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/logical/transit"
-	commandseal "github.com/hashicorp/vault/command/server/seal"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/seal"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/hashicorp/vault/vault/seal"
 )
-
-type transitSealServer struct {
-	*vault.TestCluster
-}
-
-func newTransitSealServer(t *testing.T) *transitSealServer {
-	conf := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"transit": transit.Factory,
-		},
-	}
-	opts := &vault.TestClusterOptions{
-		NumCores:    1,
-		HandlerFunc: vaulthttp.Handler,
-		Logger:      logging.NewVaultLogger(hclog.Trace).Named(t.Name()).Named("transit"),
-	}
-	teststorage.InmemBackendSetup(conf, opts)
-	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-
-	if err := cluster.Cores[0].Client.Sys().Mount("transit", &api.MountInput{
-		Type: "transit",
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	return &transitSealServer{cluster}
-}
-
-func (tss *transitSealServer) makeKey(t *testing.T, key string) {
-	client := tss.Cores[0].Client
-	// Create default aesgcm key
-	if _, err := client.Logical().Write(path.Join("transit", "keys", key), nil); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := client.Logical().Write(path.Join("transit", "keys", key, "config"), map[string]interface{}{
-		"deletion_allowed": true,
-	}); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func (tss *transitSealServer) makeSeal(t *testing.T, key string) vault.Seal {
-	client := tss.Cores[0].Client
-	wrapperConfig := map[string]string{
-		"address":     client.Address(),
-		"token":       client.Token(),
-		"mount_path":  "transit",
-		"key_name":    key,
-		"tls_ca_cert": tss.CACertPEMFile,
-	}
-	transitSeal, _, err := commandseal.GetTransitKMSFunc(nil, wrapperConfig)
-	if err != nil {
-		t.Fatalf("error setting wrapper config: %v", err)
-	}
-
-	return vault.NewAutoSeal(&seal.Access{
-		Wrapper: transitSeal,
-	})
-}
 
 func verifyBarrierConfig(t *testing.T, cfg *vault.SealConfig, sealType string, shares, threshold, stored int) {
 	t.Helper()
@@ -120,7 +55,7 @@ func TestSealMigration_ShamirToAuto(t *testing.T) {
 }
 
 func testSealMigrationShamirToAuto(t *testing.T, setup teststorage.ClusterSetupMutator) {
-	tcluster := newTransitSealServer(t)
+	tcluster := seal.NewTransitSealServer(t)
 	defer tcluster.Cleanup()
 
 	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
@@ -134,8 +69,8 @@ func testSealMigrationShamirToAuto(t *testing.T, setup teststorage.ClusterSetupM
 	)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, conf, opts)
-	tcluster.makeKey(t, "key1")
-	autoSeal := tcluster.makeSeal(t, "key1")
+	tcluster.MakeKey(t, "key1")
+	autoSeal := tcluster.MakeSeal(t, "key1")
 	cluster.Start()
 	defer cluster.Cleanup()
 
@@ -262,10 +197,10 @@ func TestSealMigration_AutoToAuto(t *testing.T) {
 */
 
 func testSealMigrationAutoToAuto(t *testing.T, setup teststorage.ClusterSetupMutator) {
-	tcluster := newTransitSealServer(t)
+	tcluster := seal.NewTransitSealServer(t)
 	defer tcluster.Cleanup()
-	tcluster.makeKey(t, "key1")
-	tcluster.makeKey(t, "key2")
+	tcluster.MakeKey(t, "key1")
+	tcluster.MakeKey(t, "key2")
 	var seals []vault.Seal
 
 	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
@@ -275,7 +210,7 @@ func testSealMigrationAutoToAuto(t *testing.T, setup teststorage.ClusterSetupMut
 		SkipInit:    true,
 		NumCores:    3,
 		SealFunc: func() vault.Seal {
-			tseal := tcluster.makeSeal(t, "key1")
+			tseal := tcluster.MakeSeal(t, "key1")
 			seals = append(seals, tseal)
 			return tseal
 		},
@@ -309,7 +244,7 @@ func testSealMigrationAutoToAuto(t *testing.T, setup teststorage.ClusterSetupMut
 	}
 
 	logger := cluster.Logger.Named("shamir")
-	autoSeal2 := tcluster.makeSeal(t, "key2")
+	autoSeal2 := tcluster.MakeSeal(t, "key2")
 	if err := adjustCoreForSealMigration(logger, cluster.Cores[0].Core, autoSeal2, seals[0]); err != nil {
 		t.Fatal(err)
 	}
