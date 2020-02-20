@@ -11,7 +11,8 @@ FEATURES:
   as well as the [Atlas programmatic interface](https://docs.atlas.mongodb.com/tutorial/manage-programmatic-access/).
 * **Redshift Database Secrets Engine**: We now support static and dynamic secrets for the Amazon Web Services (AWS) Redshift service.
 * **OpenLDAP Secrets Engine**: We now support password management of existing OpenLDAP user entries. For more, see [#8360](https://github.com/hashicorp/vault/pull/8360/).
-   
+* **Improve Disaster Recovery Token Workflow**: We now allow for an alternate means to create a Disaster Recovery token, by using a batch token that is created with an ACL that allows for access to one or more of the DR endpoints.
+
 IMPROVEMENTS:
 
 * agent: add option to force the use of the auth-auth token, and ignore the Vault token in the request [[GH-8101](https://github.com/hashicorp/vault/pull/8101)]
