@@ -9,23 +9,17 @@ import { run } from '@ember/runloop';
 import { task, waitForEvent } from 'ember-concurrency';
 
 /**
- * @module HttpRequestsBarChartSmall
- * The HttpRequestsBarChartSmall is a simplified version of the HttpRequestsBarChart component.
+ * @module HttpRequestsBarChartSimple
+ * The HttpRequestsBarChartSimple is a simplified version of the HttpRequestsBarChart component.
  *
  *
  * @example
  * ```js
- * <HttpRequestsBarChartSmall @counters={counters}/>
+ * <HttpRequestsBarChartSimple @counters={counters}/>
  * ```
  *
  * @param counters=null {Array} - A list of objects containing the total number of HTTP Requests for each month. `counters` should be the response from the `/internal/counters/requests`.
- * The response is then filtered showing only the 12 most recent months of data.  This property is called filteredHttpsRequests, like:
- * const FILTERED_HTTPS_REQUESTS = [
- *  { start_time: '2018-11-01T00:00:00Z', total: 5500 },
- *  { start_time: '2018-12-01T00:00:00Z', total: 4500 },
- *  { start_time: '2019-01-01T00:00:00Z', total: 5000 },
- *  { start_time: '2019-02-01T00:00:00Z', total: 5000 },
- * ];
+ * The response is then filtered showing only the 12 most recent months of data.  This property is called filteredHttpsRequests.
  */
 
 const HEIGHT = 125;
@@ -33,7 +27,7 @@ const UI_GRAY_300 = '#bac1cc';
 const UI_GRAY_100 = '#ebeef2';
 
 export default Component.extend({
-  classNames: ['http-requests-bar-chart-small'],
+  classNames: ['http-requests-bar-chart-simple'],
   counters: null,
   margin: Object.freeze({ top: 24, right: 16, bottom: 24, left: 16 }),
   padding: 0.04,
@@ -94,7 +88,7 @@ export default Component.extend({
   renderBarChart() {
     const { margin, width, xScale, yScale, parsedCounters, elementId } = this;
     const height = this.height();
-    const barChartSVG = d3.select('.http-requests-bar-chart-small');
+    const barChartSVG = d3.select('.http-requests-bar-chart-simple');
     const barsContainer = d3.select(`#bars-container-${elementId}`);
 
     d3.select('.http-requests-bar-chart')
