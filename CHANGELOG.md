@@ -9,6 +9,7 @@ FEATURES:
 * **MongoDB Atlas Secrets**: We now support generating dynamic credentials for both MongoDB Atlas databases
   as well as the [Atlas programmatic interface](https://docs.atlas.mongodb.com/tutorial/manage-programmatic-access/).
 * **Redshift Database Secrets Engine**: We now support static and dynamic secrets for the Amazon Web Services (AWS) Redshift service.
+* **OpenLDAP Secrets Engine**: We now support password management of existing OpenLDAP user entries. For more, see [#8360](https://github.com/hashicorp/vault/pull/8360/).
    
 IMPROVEMENTS:
 
