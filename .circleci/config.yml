@@ -170,9 +170,11 @@ jobs:
           [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
             # stop the job from this step
             circleci-agent step halt
-            exit 0
           }
+          # exit with success either way
+          exit 0
         name: Check branch name
+        working_directory: ~/
     - run:
         command: |
           [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
@@ -395,9 +397,11 @@ workflows:
 #           [[ \"$CIRCLE_BRANCH\" = ui/* || \"$CIRCLE_BRANCH\" = docs/* ]] && {
 #             # stop the job from this step
 #             circleci-agent step halt
-#             exit 0
 #           }
+#           # exit with success either way
+#           exit 0
 #         name: Check branch name
+#         working_directory: ~/
 #   go_test:
 #     description: run go tests
 #     parameters:
