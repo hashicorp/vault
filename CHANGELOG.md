@@ -45,8 +45,8 @@ IMPROVEMENTS:
   addresses for them to continuously try and join one of them, thus automating
   the process of join to a greater extent [[GH-7856](https://github.com/hashicorp/vault/pull/7856)]
 * storage/etcd: Bumped etcd client API SDK [[GH-7931](https://github.com/hashicorp/vault/pull/7931) & [GH-4961](https://github.com/hashicorp/vault/pull/4961) & [GH-4349](https://github.com/hashicorp/vault/pull/4349) & [GH-7582](https://github.com/hashicorp/vault/pull/7582)]
-* ui: Make Transit Key actions more prominent [GH-8304](https://github.com/hashicorp/vault/pull/8304)
-* ui: Add Core Usage Metrics [GH-8347](https://github.com/hashicorp/vault/pull/8347)
+* ui: Make Transit Key actions more prominent [[GH-8304](https://github.com/hashicorp/vault/pull/8304)]
+* ui: Add Core Usage Metrics [[GH-8347](https://github.com/hashicorp/vault/pull/8347)]
 
 BUG FIXES:
 
