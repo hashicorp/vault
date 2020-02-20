@@ -57,6 +57,7 @@ IMPROVEMENTS:
 * sys: We now allow for an alternate means to create a Disaster Recovery token, by using a batch token that is created with an ACL that allows for access to one or more of the DR endpoints.
 * ui: Make Transit Key actions more prominent [[GH-8304](https://github.com/hashicorp/vault/pull/8304)]
 * ui: Add Core Usage Metrics [[GH-8347](https://github.com/hashicorp/vault/pull/8347)]
+* docs: Add `sys/internal/counters` API endpoints to API Documentation [[GH-8390](https://github.com/hashicorp/vault/pull/8390)]
 
 
 BUG FIXES:
