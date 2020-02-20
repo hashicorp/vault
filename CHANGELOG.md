@@ -1,4 +1,4 @@
-## 1.4 (Unreleased)
+## 1.4 Beta1 (February 20th, 2020)
 
 FEATURES:
 
