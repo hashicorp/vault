@@ -47,6 +47,8 @@ IMPROVEMENTS:
 * secrets/nomad: Add support to specify TLS options per Nomad backend [[GH-8083](https://github.com/hashicorp/vault/pull/8083)]
 * secrets/ssh: Identity propogation in ssh secrets engine [[GH-7548](https://github.com/hashicorp/vault/pull/7548)]
 * secrets/transit: Adding RSA3072 implementation [[GH-8151](https://github.com/hashicorp/vault/pull/8151)]
+* storage/consul: Vault returns now a more descriptive error message when only a client cert or
+  a client key has been provided [[GH-4930]](https://github.com/hashicorp/vault/pull/8084)
 * storage/raft: Nodes in the raft cluster can all be given possible leader
   addresses for them to continuously try and join one of them, thus automating
   the process of join to a greater extent [[GH-7856](https://github.com/hashicorp/vault/pull/7856)]
@@ -69,8 +71,6 @@ BUG FIXES:
 * secrets/database/postgres: Fix inconsistent query parameter names: {{name}} or {{username}} for
   different queries. Now it allows for either for backwards compatibility [[GH-8240](https://github.com/hashicorp/vault/pull/8240)]
 * secrets/pki: Support FQDNs in DNS Name [[GH-8288](https://github.com/hashicorp/vault/pull/8288)]
-* storage/confsul: Vault returns now a more descriptive error message when only a client cert or
-  a client key has been provided [[GH-4930]](https://github.com/hashicorp/vault/pull/8084)
 * storage/raft: Allow seal migration to be performed on Vault clusters using raft storage [[GH-8103](https://github.com/hashicorp/vault/pull/8103)]
 * telemetry: Prometheus requests on standby nodes will now return an error instead of forwarding 
   the request to the active node [[GH-8280](https://github.com/hashicorp/vault/pull/8280)]
