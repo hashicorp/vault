@@ -11,7 +11,6 @@ FEATURES:
   as well as the [Atlas programmatic interface](https://docs.atlas.mongodb.com/tutorial/manage-programmatic-access/).
 * **Redshift Database Secrets Engine**: We now support static and dynamic secrets for the Amazon Web Services (AWS) Redshift service.
 * **OpenLDAP Secrets Engine**: We now support password management of existing OpenLDAP user entries. For more, see [#8360](https://github.com/hashicorp/vault/pull/8360/).
-* **Improve Disaster Recovery Token Workflow**: We now allow for an alternate means to create a Disaster Recovery token, by using a batch token that is created with an ACL that allows for access to one or more of the DR endpoints.
 
 IMPROVEMENTS:
 
@@ -55,8 +54,10 @@ IMPROVEMENTS:
   addresses for them to continuously try and join one of them, thus automating
   the process of join to a greater extent [[GH-7856](https://github.com/hashicorp/vault/pull/7856)]
 * storage/etcd: Bumped etcd client API SDK [[GH-7931](https://github.com/hashicorp/vault/pull/7931) & [GH-4961](https://github.com/hashicorp/vault/pull/4961) & [GH-4349](https://github.com/hashicorp/vault/pull/4349) & [GH-7582](https://github.com/hashicorp/vault/pull/7582)]
+* sys: We now allow for an alternate means to create a Disaster Recovery token, by using a batch token that is created with an ACL that allows for access to one or more of the DR endpoints.
 * ui: Make Transit Key actions more prominent [[GH-8304](https://github.com/hashicorp/vault/pull/8304)]
 * ui: Add Core Usage Metrics [[GH-8347](https://github.com/hashicorp/vault/pull/8347)]
+
 
 BUG FIXES:
 
