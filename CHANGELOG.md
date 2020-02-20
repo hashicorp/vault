@@ -27,6 +27,7 @@ IMPROVEMENTS:
 * core: Separate out service discovery interface from storage interface to allow
   new types of service discovery not coupled to storage [[GH-7887](https://github.com/hashicorp/vault/pull/7887)]
 * core: Add support for telemetry option `metrics_prefix` [[GH-8340](https://github.com/hashicorp/vault/pull/8340)]
+* core: Entropy Augmentation can now be used with AWS KMS and Vault Transit seals
 * cli: Incorrect TLS configuration will now correctly fail [[GH-8025](https://github.com/hashicorp/vault/pull/8025)]
 * identity: Allow specifying a custom `client_id` for identity tokens [[GH-8165](https://github.com/hashicorp/vault/pull/8165)]
 * replication: Fix race condition causing clusters with high throughput writes to sometimes
