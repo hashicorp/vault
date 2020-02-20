@@ -34,7 +34,9 @@ IMPROVEMENTS:
 * replication: Secondary clusters can now perfrom an extra gRPC call to all nodes in a primary 
   cluster in an attempt to resolve the active node's address
 * replication: The replication status API now outputs `last_performance_wal`, `last_dr_wal`, 
-  and `connection_state` values.
+  and `connection_state` values
+* replication: DR secondary clusters can now be recovered by the `replication/dr/secondary/recover`
+  API
 * secrets/database/mongodb: Switched internal MongoDB driver to mongo-driver [[GH-8140](https://github.com/hashicorp/vault/pull/8140)]
 * secrets/database/mongodb: Add support for x509 client authorization to MongoDB [[GH-8329](https://github.com/hashicorp/vault/pull/8329)]
 * secrets/consul: Add support to specify TLS options per Consul backend [[GH-4800](https://github.com/hashicorp/vault/pull/4800)]
