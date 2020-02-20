@@ -95,7 +95,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.13.7
+    - GO_VERSION: 1.13.8
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
   test-ui:
@@ -238,7 +238,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.13.7
+    - GO_VERSION: 1.13.8
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
   test-go-race:
@@ -311,7 +311,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.13.7
+    - GO_VERSION: 1.13.8
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
   website-docker-image:
@@ -333,7 +333,10 @@ jobs:
             echo "Not building website docker image for branch '$CIRCLE_BRANCH' - we only build it for master."
             exit 0
           }
-          PACKAGE_LOCK_CHANGED=$(git diff --name-only $(git log --pretty=format:'%h' -n1 HEAD~1)...HEAD | grep -c website/package-lock.json)
+          PACKAGE_LOCK_CHANGED="$( \
+            git diff --name-only $(git log --pretty=format:'%h' -n1 HEAD~1)...HEAD | \
+            grep -c website/package-lock.json; \
+          )" || true
           [ $PACKAGE_LOCK_CHANGED -gt 0 ] || {
             echo "Not building a new website docker image - dependencies have not changed."
             exit 0
@@ -483,7 +486,7 @@ workflows:
 #     environment:
 #       CIRCLECI_CLI_VERSION: 0.1.5546
 #       GO_TAGS: \"\"
-#       GO_VERSION: 1.13.7
+#       GO_VERSION: 1.13.8
 #       GO111MODULE: \"off\"
 #       GOTESTSUM_VERSION: 0.3.3
 #     machine: true
@@ -653,7 +656,10 @@ workflows:
 #             echo \"Not building website docker image for branch '$CIRCLE_BRANCH' - we only build it for master.\"
 #             exit 0
 #           }
-#           PACKAGE_LOCK_CHANGED=$(git diff --name-only $(git log --pretty=format:'%h' -n1 HEAD~1)...HEAD | grep -c website/package-lock.json)
+#           PACKAGE_LOCK_CHANGED=\"$( \\
+#             git diff --name-only $(git log --pretty=format:'%h' -n1 HEAD~1)...HEAD | \\
+#             grep -c website/package-lock.json; \\
+#           )\" || true
 #           [ $PACKAGE_LOCK_CHANGED -gt 0 ] || {
 #             echo \"Not building a new website docker image - dependencies have not changed.\"
 #             exit 0
