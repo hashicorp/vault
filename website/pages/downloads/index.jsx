@@ -9,6 +9,12 @@ export default function DownloadsPage({ downloadData }) {
       <Head>
         <title key="title">Downloads | Vault by HashiCorp</title>
       </Head>
+      <div className="alert alert-info" id="beta1-1-4" role="alert">
+        <p><strong>1.4.0
+          Beta 1 Available:</strong> Binaries can be accessed on <a
+          href="https://releases.hashicorp.com/vault/">releases.hashicorp.com</a>.
+        </p>
+      </div>
       <ProductDownloader
         product="Vault"
         version={VERSION}
