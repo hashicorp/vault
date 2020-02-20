@@ -61,7 +61,6 @@ BUG FIXES:
   different queries. Now it allows for either for backwards compatibility [[GH-8240](https://github.com/hashicorp/vault/pull/8240)]
 * secrets/pki: Support FQDNs in DNS Name [[GH-8288](https://github.com/hashicorp/vault/pull/8288)]
 * storage/mysql: Fix potential crash when using MySQL as coordination for high availability [[GH-8229](https://github.com/hashicorp/vault/pull/8229)]
-* storage/raft: Fix potential crash when using Raft as coordination for high availability [[GH-8239](https://github.com/hashicorp/vault/pull/8239)]
 * storage/raft: Allow seal migration to be performed on Vault clusters using raft storage [[GH-8103](https://github.com/hashicorp/vault/pull/8103)]
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
 * telemetry: Prometheus requests on standby nodes will now return an error instead of forwarding 
