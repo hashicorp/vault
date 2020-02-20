@@ -54,7 +54,8 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * agent: Fix issue where TLS options are ignored for agent template feature [[GH-7889](https://github.com/hashicorp/vault/pull/7889)]
-* ui: Update headless Chrome flag to fix `yarn run test:oss` [[GH-8035](https://github.com/hashicorp/vault/pull/8035)]
+* cli: Support autocompletion for nested mounts [[GH-8303](https://github.com/hashicorp/vault/pull/8303)]
+* cli: Fix CLI namespace autocompletion [[GH-8315](https://github.com/hashicorp/vault/pull/8315)]
 * replication: Cubbyholes in namespaces on performance secondaries never worked, now do.
 * secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [GH-8282]
 * secrets/database/mysql: Ensures default static credential rotation statements are used [[GH-8240](https://github.com/hashicorp/vault/pull/8240)]
@@ -65,12 +66,11 @@ BUG FIXES:
 * secrets/pki: Support FQDNs in DNS Name [[GH-8288](https://github.com/hashicorp/vault/pull/8288)]
 * storage/mysql: Fix potential crash when using MySQL as coordination for high availability [[GH-8229](https://github.com/hashicorp/vault/pull/8229)]
 * storage/raft: Allow seal migration to be performed on Vault clusters using raft storage [[GH-8103](https://github.com/hashicorp/vault/pull/8103)]
-* ui: Update CLI to accept empty strings as param value to reset previously-set values
 * telemetry: Prometheus requests on standby nodes will now return an error instead of forwarding 
   the request to the active node [[GH-8280](https://github.com/hashicorp/vault/pull/8280)]
-* cli: Support autocompletion for nested mounts [[GH-8303](https://github.com/hashicorp/vault/pull/8303)]
-* cli: Fix CLI namespace autocompletion [[GH-8315](https://github.com/hashicorp/vault/pull/8315)]
 * ui: Fix broken popup menu on the transit secrets list page [[GH-8348](https://github.com/hashicorp/vault/pull/8348)]
+* ui: Update headless Chrome flag to fix `yarn run test:oss` [[GH-8035](https://github.com/hashicorp/vault/pull/8035)]
+* ui: Update CLI to accept empty strings as param value to reset previously-set values
 
 
 ## 1.3.3 (Unreleased)
