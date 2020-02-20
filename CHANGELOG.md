@@ -57,6 +57,8 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * agent: Fix issue where TLS options are ignored for agent template feature [[GH-7889](https://github.com/hashicorp/vault/pull/7889)]
+* auth/ldap: Fix a bug where the UPNDOMAIN parameter was wrongly used to lookup the group
+  membership of the given user [[GH-6325]](https://github.com/hashicorp/vault/pull/8333)
 * cli: Support autocompletion for nested mounts [[GH-8303](https://github.com/hashicorp/vault/pull/8303)]
 * cli: Fix CLI namespace autocompletion [[GH-8315](https://github.com/hashicorp/vault/pull/8315)]
 * replication: Fix issue causing cubbyholes in namespaces on performance secondaries to not work.
@@ -67,6 +69,8 @@ BUG FIXES:
 * secrets/database/postgres: Fix inconsistent query parameter names: {{name}} or {{username}} for
   different queries. Now it allows for either for backwards compatibility [[GH-8240](https://github.com/hashicorp/vault/pull/8240)]
 * secrets/pki: Support FQDNs in DNS Name [[GH-8288](https://github.com/hashicorp/vault/pull/8288)]
+* storage/confsul: Vault returns now a more descriptive error message when only a client cert or
+  a client key has been provided [[GH-4930]](https://github.com/hashicorp/vault/pull/8084)
 * storage/raft: Allow seal migration to be performed on Vault clusters using raft storage [[GH-8103](https://github.com/hashicorp/vault/pull/8103)]
 * telemetry: Prometheus requests on standby nodes will now return an error instead of forwarding 
   the request to the active node [[GH-8280](https://github.com/hashicorp/vault/pull/8280)]
