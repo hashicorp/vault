@@ -30,7 +30,6 @@ IMPROVEMENTS:
 * core: Add support for telemetry option `metrics_prefix` [[GH-8340](https://github.com/hashicorp/vault/pull/8340)]
 * core: Entropy Augmentation can now be used with AWS KMS and Vault Transit seals
 * cli: Incorrect TLS configuration will now correctly fail [[GH-8025](https://github.com/hashicorp/vault/pull/8025)]
-* docs: Add `sys/internal/counters` API endpoints to API Documentation [[GH-8390](https://github.com/hashicorp/vault/pull/8390)]
 * identity: Allow specifying a custom `client_id` for identity tokens [[GH-8165](https://github.com/hashicorp/vault/pull/8165)]
 * replication: Fix race condition causing clusters with high throughput writes to sometimes
   fail to enter streaming-wal mode
