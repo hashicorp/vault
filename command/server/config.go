@@ -702,13 +702,13 @@ func LoadConfigDir(dir string) (*Config, error) {
 	}
 
 	// Fast-path if we have no files
+	var result *Config
 	if len(files) == 0 {
-		return &Config{}, nil
+		return result, nil
 	}
 
 	sort.Strings(files)
 
-	var result *Config
 	for _, f := range files {
 		config, err := LoadConfigFile(f)
 		if err != nil {
