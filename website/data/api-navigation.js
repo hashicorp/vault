@@ -52,7 +52,7 @@ export default [
         ]
       },
       { category: 'nomad' },
-	  { category: 'openldap' },
+      { category: 'openldap' },
       { category: 'pki' },
       { category: 'rabbitmq' },
       { category: 'ssh' },
