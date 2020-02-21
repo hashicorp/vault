@@ -48,7 +48,7 @@ IMPROVEMENTS:
 * secrets/gcp: Handle version 3 policies for Resource Manager IAM requests [[GH-77](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/77)]
 * secrets/nomad: Add support to specify TLS options per Nomad backend [[GH-8083](https://github.com/hashicorp/vault/pull/8083)]
 * secrets/ssh: Identity propogation in ssh secrets engine [[GH-7548](https://github.com/hashicorp/vault/pull/7548)]
-* secrets/transit: Adding RSA3072 implementation [[GH-8151](https://github.com/hashicorp/vault/pull/8151)]
+* secrets/transit: Adding RSA3072 key support [[GH-8151](https://github.com/hashicorp/vault/pull/8151)]
 * storage/consul: Vault returns now a more descriptive error message when only a client cert or
   a client key has been provided [[GH-4930]](https://github.com/hashicorp/vault/pull/8084)
 * storage/raft: Nodes in the raft cluster can all be given possible leader
