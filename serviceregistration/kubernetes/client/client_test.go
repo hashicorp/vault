@@ -93,3 +93,41 @@ func (e *env) TestUpdatePodTagsNotFound(t *testing.T) {
 		t.Fatalf("expected *ErrNotFound but received %T", err)
 	}
 }
+
+func TestSanitize(t *testing.T) {
+	expected := "fizzbuzz"
+	result := Sanitize("fizz+buzz")
+	if result != expected {
+		t.Fatalf("expected %q but received %q", expected, result)
+	}
+
+	expected = "fizz_buzz"
+	result = Sanitize("fizz_buzz")
+	if result != expected {
+		t.Fatalf("expected %q but received %q", expected, result)
+	}
+
+	expected = "fizz.buzz"
+	result = Sanitize("fizz.buzz")
+	if result != expected {
+		t.Fatalf("expected %q but received %q", expected, result)
+	}
+
+	expected = "fizz-buzz"
+	result = Sanitize("fizz-buzz")
+	if result != expected {
+		t.Fatalf("expected %q but received %q", expected, result)
+	}
+
+	expected = "123-fhd"
+	result = Sanitize("123-*fhd")
+	if result != expected {
+		t.Fatalf("expected %q but received %q", expected, result)
+	}
+
+	expected = "1.4.0-beta1ent"
+	result = Sanitize("1.4.0-beta1+ent")
+	if result != expected {
+		t.Fatalf("expected %q but received %q", expected, result)
+	}
+}
