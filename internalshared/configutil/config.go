@@ -14,10 +14,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
 
-const (
-	PrometheusDefaultRetentionTime = 24 * time.Hour
-)
-
 // SharedConfig contains some shared values
 type SharedConfig struct {
 	EntSharedConfig
@@ -44,151 +40,6 @@ type SharedConfig struct {
 	PidFile string `hcl:"pid_file"`
 
 	ClusterName string `hcl:"cluster_name"`
-}
-
-// Listener is the listener configuration for the server.
-type Listener struct {
-	Type   string
-	Config map[string]interface{}
-}
-
-func (l *Listener) GoString() string {
-	return fmt.Sprintf("*%#v", *l)
-}
-
-// Entropy contains Entropy configuration for the server
-type EntropyMode int
-
-const (
-	EntropyUnknown EntropyMode = iota
-	EntropyAugmentation
-)
-
-type Entropy struct {
-	Mode EntropyMode
-}
-
-// KMS contains KMS configuration for the server
-type KMS struct {
-	Type string
-	// Purpose can be used to allow a string-based specification of what this
-	// KMS is designated for, in situations where we want to allow more than
-	// one KMS to be specified
-	Purpose  string
-	Disabled bool
-	Config   map[string]string
-}
-
-func (k *KMS) GoString() string {
-	return fmt.Sprintf("*%#v", *k)
-}
-
-// Telemetry is the telemetry configuration for the server
-type Telemetry struct {
-	StatsiteAddr string `hcl:"statsite_address"`
-	StatsdAddr   string `hcl:"statsd_address"`
-
-	DisableHostname     bool   `hcl:"disable_hostname"`
-	EnableHostnameLabel bool   `hcl:"enable_hostname_label"`
-	MetricsPrefix       string `hcl:"metrics_prefix"`
-
-	// Circonus: see https://github.com/circonus-labs/circonus-gometrics
-	// for more details on the various configuration options.
-	// Valid configuration combinations:
-	//    - CirconusAPIToken
-	//      metric management enabled (search for existing check or create a new one)
-	//    - CirconusSubmissionUrl
-	//      metric management disabled (use check with specified submission_url,
-	//      broker must be using a public SSL certificate)
-	//    - CirconusAPIToken + CirconusCheckSubmissionURL
-	//      metric management enabled (use check with specified submission_url)
-	//    - CirconusAPIToken + CirconusCheckID
-	//      metric management enabled (use check with specified id)
-
-	// CirconusAPIToken is a valid API Token used to create/manage check. If provided,
-	// metric management is enabled.
-	// Default: none
-	CirconusAPIToken string `hcl:"circonus_api_token"`
-	// CirconusAPIApp is an app name associated with API token.
-	// Default: "consul"
-	CirconusAPIApp string `hcl:"circonus_api_app"`
-	// CirconusAPIURL is the base URL to use for contacting the Circonus API.
-	// Default: "https://api.circonus.com/v2"
-	CirconusAPIURL string `hcl:"circonus_api_url"`
-	// CirconusSubmissionInterval is the interval at which metrics are submitted to Circonus.
-	// Default: 10s
-	CirconusSubmissionInterval string `hcl:"circonus_submission_interval"`
-	// CirconusCheckSubmissionURL is the check.config.submission_url field from a
-	// previously created HTTPTRAP check.
-	// Default: none
-	CirconusCheckSubmissionURL string `hcl:"circonus_submission_url"`
-	// CirconusCheckID is the check id (not check bundle id) from a previously created
-	// HTTPTRAP check. The numeric portion of the check._cid field.
-	// Default: none
-	CirconusCheckID string `hcl:"circonus_check_id"`
-	// CirconusCheckForceMetricActivation will force enabling metrics, as they are encountered,
-	// if the metric already exists and is NOT active. If check management is enabled, the default
-	// behavior is to add new metrics as they are encountered. If the metric already exists in the
-	// check, it will *NOT* be activated. This setting overrides that behavior.
-	// Default: "false"
-	CirconusCheckForceMetricActivation string `hcl:"circonus_check_force_metric_activation"`
-	// CirconusCheckInstanceID serves to uniquely identify the metrics coming from this "instance".
-	// It can be used to maintain metric continuity with transient or ephemeral instances as
-	// they move around within an infrastructure.
-	// Default: hostname:app
-	CirconusCheckInstanceID string `hcl:"circonus_check_instance_id"`
-	// CirconusCheckSearchTag is a special tag which, when coupled with the instance id, helps to
-	// narrow down the search results when neither a Submission URL or Check ID is provided.
-	// Default: service:app (e.g. service:consul)
-	CirconusCheckSearchTag string `hcl:"circonus_check_search_tag"`
-	// CirconusCheckTags is a comma separated list of tags to apply to the check. Note that
-	// the value of CirconusCheckSearchTag will always be added to the check.
-	// Default: none
-	CirconusCheckTags string `hcl:"circonus_check_tags"`
-	// CirconusCheckDisplayName is the name for the check which will be displayed in the Circonus UI.
-	// Default: value of CirconusCheckInstanceID
-	CirconusCheckDisplayName string `hcl:"circonus_check_display_name"`
-	// CirconusBrokerID is an explicit broker to use when creating a new check. The numeric portion
-	// of broker._cid. If metric management is enabled and neither a Submission URL nor Check ID
-	// is provided, an attempt will be made to search for an existing check using Instance ID and
-	// Search Tag. If one is not found, a new HTTPTRAP check will be created.
-	// Default: use Select Tag if provided, otherwise, a random Enterprise Broker associated
-	// with the specified API token or the default Circonus Broker.
-	// Default: none
-	CirconusBrokerID string `hcl:"circonus_broker_id"`
-	// CirconusBrokerSelectTag is a special tag which will be used to select a broker when
-	// a Broker ID is not provided. The best use of this is to as a hint for which broker
-	// should be used based on *where* this particular instance is running.
-	// (e.g. a specific geo location or datacenter, dc:sfo)
-	// Default: none
-	CirconusBrokerSelectTag string `hcl:"circonus_broker_select_tag"`
-
-	// Dogstats:
-	// DogStatsdAddr is the address of a dogstatsd instance. If provided,
-	// metrics will be sent to that instance
-	DogStatsDAddr string `hcl:"dogstatsd_addr"`
-
-	// DogStatsdTags are the global tags that should be sent with each packet to dogstatsd
-	// It is a list of strings, where each string looks like "my_tag_name:my_tag_value"
-	DogStatsDTags []string `hcl:"dogstatsd_tags"`
-
-	// Prometheus:
-	// PrometheusRetentionTime is the retention time for prometheus metrics if greater than 0.
-	// Default: 24h
-	PrometheusRetentionTime    time.Duration `hcl:"-"`
-	PrometheusRetentionTimeRaw interface{}   `hcl:"prometheus_retention_time"`
-
-	// Stackdriver:
-	// StackdriverProjectID is the project to publish stackdriver metrics to.
-	StackdriverProjectID string `hcl:"stackdriver_project_id"`
-	// StackdriverLocation is the GCP or AWS region of the monitored resource.
-	StackdriverLocation string `hcl:"stackdriver_location"`
-	// StackdriverNamespace is the namespace identifier, such as a cluster name.
-	StackdriverNamespace string `hcl:"stackdriver_namespace"`
-}
-
-func (t *Telemetry) GoString() string {
-	return fmt.Sprintf("*%#v", *t)
 }
 
 // LoadConfigFile loads the configuration from the given file.
@@ -218,12 +69,14 @@ func ParseConfig(d string) (*SharedConfig, error) {
 		if result.DefaultMaxRequestDuration, err = parseutil.ParseDurationSecond(result.DefaultMaxRequestDurationRaw); err != nil {
 			return nil, err
 		}
+		result.DefaultMaxRequestDurationRaw = nil
 	}
 
 	if result.DisableMlockRaw != nil {
 		if result.DisableMlock, err = parseutil.ParseBool(result.DisableMlockRaw); err != nil {
 			return nil, err
 		}
+		result.DisableMlockRaw = nil
 	}
 
 	list, ok := obj.Node.(*ast.ObjectList)
@@ -244,7 +97,7 @@ func ParseConfig(d string) (*SharedConfig, error) {
 	}
 
 	if o := list.Filter("kms"); len(o.Items) > 0 {
-		if err := parseKMS(&result, o, "kms", 1); err != nil {
+		if err := parseKMS(&result, o, "kms", 2); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'kms': {{err}}", err)
 		}
 	}
@@ -313,31 +166,6 @@ func parseKMS(result *SharedConfig, list *ast.ObjectList, blockName string, maxK
 	return nil
 }
 
-func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
-	listeners := make([]*Listener, 0, len(list.Items))
-	for _, item := range list.Items {
-		key := "listener"
-		if len(item.Keys) > 0 {
-			key = item.Keys[0].Token.Value().(string)
-		}
-
-		var m map[string]interface{}
-		if err := hcl.DecodeObject(&m, item.Val); err != nil {
-			return multierror.Prefix(err, fmt.Sprintf("listeners.%s:", key))
-		}
-
-		lnType := strings.ToLower(key)
-
-		listeners = append(listeners, &Listener{
-			Type:   lnType,
-			Config: m,
-		})
-	}
-
-	result.Listeners = listeners
-	return nil
-}
-
 func parseTelemetry(result *SharedConfig, list *ast.ObjectList) error {
 	if len(list.Items) > 1 {
 		return fmt.Errorf("only one 'telemetry' block is permitted")
@@ -364,6 +192,7 @@ func parseTelemetry(result *SharedConfig, list *ast.ObjectList) error {
 		if result.Telemetry.PrometheusRetentionTime, err = parseutil.ParseDurationSecond(result.Telemetry.PrometheusRetentionTimeRaw); err != nil {
 			return err
 		}
+		result.Telemetry.PrometheusRetentionTimeRaw = nil
 	} else {
 		result.Telemetry.PrometheusRetentionTime = PrometheusDefaultRetentionTime
 	}
@@ -402,7 +231,7 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 		for _, ln := range c.Listeners {
 			cleanLn := map[string]interface{}{
 				"type":   ln.Type,
-				"config": ln.Config,
+				"config": ln.rawConfig,
 			}
 			sanitizedListeners = append(sanitizedListeners, cleanLn)
 		}

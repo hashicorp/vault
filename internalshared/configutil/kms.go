@@ -25,6 +25,33 @@ var (
 	CreateSecureRandomReaderFunc = createSecureRandomReader
 )
 
+// Entropy contains Entropy configuration for the server
+type EntropyMode int
+
+const (
+	EntropyUnknown EntropyMode = iota
+	EntropyAugmentation
+)
+
+type Entropy struct {
+	Mode EntropyMode
+}
+
+// KMS contains KMS configuration for the server
+type KMS struct {
+	Type string
+	// Purpose can be used to allow a string-based specification of what this
+	// KMS is designated for, in situations where we want to allow more than
+	// one KMS to be specified
+	Purpose  string
+	Disabled bool
+	Config   map[string]string
+}
+
+func (k *KMS) GoString() string {
+	return fmt.Sprintf("*%#v", *k)
+}
+
 func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]string, logger hclog.Logger) (wrapping.Wrapper, error) {
 	var wrapper wrapping.Wrapper
 	var kmsInfo map[string]string

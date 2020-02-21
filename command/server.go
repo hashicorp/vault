@@ -26,7 +26,6 @@ import (
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/builtinplugins"
@@ -40,7 +39,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/mlock"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -572,7 +570,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	// Initialize the listeners
 	lns := make([]listenerutil.Listener, 0, len(config.Listeners))
 	for _, lnConfig := range config.Listeners {
-		ln, _, _, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.gatedWriter, c.UI)
+		ln, _, _, err := server.NewListener(lnConfig, c.gatedWriter, c.UI)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing listener of type %s: %s", lnConfig.Type, err))
 			return 1
@@ -580,7 +578,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 		lns = append(lns, listenerutil.Listener{
 			Listener: ln,
-			Config:   lnConfig.Config,
+			Config:   lnConfig,
 		})
 	}
 
@@ -619,8 +617,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	for _, ln := range lns {
 		handler := vaulthttp.Handler(&vault.HandlerProperties{
 			Core:                  core,
-			MaxRequestSize:        ln.MaxRequestSize,
-			MaxRequestDuration:    ln.MaxRequestDuration,
+			ListenerConfig:        ln.Config,
 			DisablePrintableCheck: config.DisablePrintableCheck,
 			RecoveryMode:          c.flagRecovery,
 			RecoveryToken:         atomic.NewString(""),
@@ -796,6 +793,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Load the configuration
 	var config *server.Config
+	var err error
 	if c.flagDev {
 		var devStorageType string
 		switch {
@@ -810,9 +808,13 @@ func (c *ServerCommand) Run(args []string) int {
 		default:
 			devStorageType = "inmem"
 		}
-		config = server.DevConfig(devStorageType)
+		config, err = server.DevConfig(devStorageType)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 1
+		}
 		if c.flagDevListenAddr != "" {
-			config.Listeners[0].Config["address"] = c.flagDevListenAddr
+			config.Listeners[0].Address = c.flagDevListenAddr
 		}
 	}
 
@@ -1216,7 +1218,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 	if coreConfig.RedirectAddr == "" && c.flagDev {
-		coreConfig.RedirectAddr = fmt.Sprintf("http://%s", config.Listeners[0].Config["address"])
+		coreConfig.RedirectAddr = fmt.Sprintf("http://%s", config.Listeners[0].Address)
 	}
 
 	// After the redirect bits are sorted out, if no cluster address was
@@ -1231,7 +1233,7 @@ func (c *ServerCommand) Run(args []string) int {
 		case coreConfig.ClusterAddr == "" && coreConfig.RedirectAddr != "":
 			addrToUse = coreConfig.RedirectAddr
 		case c.flagDev:
-			addrToUse = fmt.Sprintf("http://%s", config.Listeners[0].Config["address"])
+			addrToUse = fmt.Sprintf("http://%s", config.Listeners[0].Address)
 		default:
 			goto CLUSTER_SYNTHESIS_COMPLETE
 		}
@@ -1352,7 +1354,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	lns := make([]listenerutil.Listener, 0, len(config.Listeners))
 	c.reloadFuncsLock.Lock()
 	for i, lnConfig := range config.Listeners {
-		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.gatedWriter, c.UI)
+		ln, props, reloadFunc, err := server.NewListener(lnConfig, c.gatedWriter, c.UI)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing listener of type %s: %s", lnConfig.Type, err))
 			return 1
@@ -1365,12 +1367,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 
 		if !disableClustering && lnConfig.Type == "tcp" {
-			var addrRaw interface{}
-			var addr string
-			var ok bool
-			if addrRaw, ok = lnConfig.Config["cluster_address"]; ok {
-				addr = addrRaw.(string)
-				tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
+			addr := lnConfig.ClusterAddress
+			if addr != "" {
+				tcpAddr, err := net.ResolveTCPAddr("tcp", lnConfig.ClusterAddress)
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("Error resolving cluster_address: %s", err))
 					return 1
@@ -1392,59 +1391,19 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			props["cluster address"] = addr
 		}
 
-		var maxRequestSize int64 = vaulthttp.DefaultMaxRequestSize
-		if valRaw, ok := lnConfig.Config["max_request_size"]; ok {
-			val, err := parseutil.ParseInt(valRaw)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Could not parse max_request_size value %v", valRaw))
-				return 1
-			}
-
-			if val >= 0 {
-				maxRequestSize = val
-			}
+		if lnConfig.MaxRequestSize == 0 {
+			lnConfig.MaxRequestSize = vaulthttp.DefaultMaxRequestSize
 		}
-		props["max_request_size"] = fmt.Sprintf("%d", maxRequestSize)
+		props["max_request_size"] = fmt.Sprintf("%d", lnConfig.MaxRequestSize)
 
-		maxRequestDuration := vault.DefaultMaxRequestDuration
-		if valRaw, ok := lnConfig.Config["max_request_duration"]; ok {
-			val, err := parseutil.ParseDurationSecond(valRaw)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Could not parse max_request_duration value %v", valRaw))
-				return 1
-			}
-
-			if val >= 0 {
-				maxRequestDuration = val
-			}
+		if lnConfig.MaxRequestDuration == 0 {
+			lnConfig.MaxRequestDuration = vault.DefaultMaxRequestDuration
 		}
-		props["max_request_duration"] = fmt.Sprintf("%s", maxRequestDuration.String())
-
-		var unauthenticatedMetricsAccess bool
-		if telemetryRaw, ok := lnConfig.Config["telemetry"]; ok {
-			telemetry, ok := telemetryRaw.([]map[string]interface{})
-			if !ok {
-				c.UI.Error(fmt.Sprintf("Could not parse telemetry sink value %v", telemetryRaw))
-				return 1
-			}
-
-			for _, item := range telemetry {
-				if valRaw, ok := item["unauthenticated_metrics_access"]; ok {
-					unauthenticatedMetricsAccess, err = parseutil.ParseBool(valRaw)
-					if err != nil {
-						c.UI.Error(fmt.Sprintf("Could not parse unauthenticated_metrics_access value %v", valRaw))
-						return 1
-					}
-				}
-			}
-		}
+		props["max_request_duration"] = fmt.Sprintf("%s", lnConfig.MaxRequestDuration.String())
 
 		lns = append(lns, listenerutil.Listener{
-			Listener:                     ln,
-			Config:                       lnConfig.Config,
-			MaxRequestSize:               maxRequestSize,
-			MaxRequestDuration:           maxRequestDuration,
-			UnauthenticatedMetricsAccess: unauthenticatedMetricsAccess,
+			Listener: ln,
+			Config:   lnConfig,
 		})
 
 		// Store the listener props for output later
@@ -1612,7 +1571,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		c.UI.Warn("You may need to set the following environment variable:")
 		c.UI.Warn("")
 
-		endpointURL := "http://" + config.Listeners[0].Config["address"].(string)
+		endpointURL := "http://" + config.Listeners[0].Address
 		if runtime.GOOS == "windows" {
 			c.UI.Warn("PowerShell:")
 			c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\"", endpointURL))
@@ -1670,23 +1629,15 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Initialize the HTTP servers
 	for _, ln := range lns {
 		handler := vaulthttp.Handler(&vault.HandlerProperties{
-			Core:                         core,
-			MaxRequestSize:               ln.MaxRequestSize,
-			MaxRequestDuration:           ln.MaxRequestDuration,
-			DisablePrintableCheck:        config.DisablePrintableCheck,
-			UnauthenticatedMetricsAccess: ln.UnauthenticatedMetricsAccess,
-			RecoveryMode:                 c.flagRecovery,
+			Core:                  core,
+			ListenerConfig:        ln.Config,
+			DisablePrintableCheck: config.DisablePrintableCheck,
+			RecoveryMode:          c.flagRecovery,
 		})
 
 		// We perform validation on the config earlier, we can just cast here
-		if _, ok := ln.Config["x_forwarded_for_authorized_addrs"]; ok {
-			hopSkips := ln.Config["x_forwarded_for_hop_skips"].(int)
-			authzdAddrs := ln.Config["x_forwarded_for_authorized_addrs"].([]*sockaddr.SockAddrMarshaler)
-			rejectNotPresent := ln.Config["x_forwarded_for_reject_not_present"].(bool)
-			rejectNonAuthz := ln.Config["x_forwarded_for_reject_not_authorized"].(bool)
-			if len(authzdAddrs) > 0 {
-				handler = vaulthttp.WrapForwardedForHandler(handler, authzdAddrs, rejectNotPresent, rejectNonAuthz, hopSkips)
-			}
+		if len(ln.Config.XForwardedForAuthorizedAddrs) > 0 {
+			handler = vaulthttp.WrapForwardedForHandler(handler, ln.Config)
 		}
 
 		// server defaults
@@ -1699,40 +1650,17 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 
 		// override server defaults with config values for read/write/idle timeouts if configured
-		if readHeaderTimeoutInterface, ok := ln.Config["http_read_header_timeout"]; ok {
-			readHeaderTimeout, err := parseutil.ParseDurationSecond(readHeaderTimeoutInterface)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_read_header_timeout %v", readHeaderTimeout))
-				return 1
-			}
-			server.ReadHeaderTimeout = readHeaderTimeout
+		if ln.Config.HTTPReadHeaderTimeout > 0 {
+			server.ReadHeaderTimeout = ln.Config.HTTPReadHeaderTimeout
 		}
-
-		if readTimeoutInterface, ok := ln.Config["http_read_timeout"]; ok {
-			readTimeout, err := parseutil.ParseDurationSecond(readTimeoutInterface)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_read_timeout %v", readTimeout))
-				return 1
-			}
-			server.ReadTimeout = readTimeout
+		if ln.Config.HTTPReadTimeout > 0 {
+			server.ReadTimeout = ln.Config.HTTPReadTimeout
 		}
-
-		if writeTimeoutInterface, ok := ln.Config["http_write_timeout"]; ok {
-			writeTimeout, err := parseutil.ParseDurationSecond(writeTimeoutInterface)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_write_timeout %v", writeTimeout))
-				return 1
-			}
-			server.WriteTimeout = writeTimeout
+		if ln.Config.HTTPWriteTimeout > 0 {
+			server.WriteTimeout = ln.Config.HTTPWriteTimeout
 		}
-
-		if idleTimeoutInterface, ok := ln.Config["http_idle_timeout"]; ok {
-			idleTimeout, err := parseutil.ParseDurationSecond(idleTimeoutInterface)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_idle_timeout %v", idleTimeout))
-				return 1
-			}
-			server.IdleTimeout = idleTimeout
+		if ln.Config.HTTPIdleTimeout > 0 {
+			server.IdleTimeout = ln.Config.HTTPIdleTimeout
 		}
 
 		// server config tests can exit now
@@ -2288,24 +2216,14 @@ func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 		}
 
 		// Check if TLS is disabled
-		if val, ok := list.Config["tls_disable"]; ok {
-			disable, err := parseutil.ParseBool(val)
-			if err != nil {
-				return "", errwrap.Wrapf("tls_disable: {{err}}", err)
-			}
-
-			if disable {
-				scheme = "http"
-			}
+		if list.TLSDisable {
+			scheme = "http"
 		}
 
 		// Check for address override
-		var addr string
-		addrRaw, ok := list.Config["address"]
-		if !ok {
+		addr := list.Address
+		if addr == "" {
 			addr = "127.0.0.1:8200"
-		} else {
-			addr = addrRaw.(string)
 		}
 
 		// Check for localhost
@@ -2346,7 +2264,7 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 		case strings.HasPrefix(k, "listener|"):
 			for _, relFunc := range relFuncs {
 				if relFunc != nil {
-					if err := relFunc(nil); err != nil {
+					if err := relFunc(); err != nil {
 						reloadErrors = multierror.Append(reloadErrors, errwrap.Wrapf("error encountered reloading listener: {{err}}", err))
 					}
 				}
@@ -2355,7 +2273,7 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 		case strings.HasPrefix(k, "audit_file|"):
 			for _, relFunc := range relFuncs {
 				if relFunc != nil {
-					if err := relFunc(nil); err != nil {
+					if err := relFunc(); err != nil {
 						reloadErrors = multierror.Append(reloadErrors, errwrap.Wrapf(fmt.Sprintf("error encountered reloading file audit device at path %q: {{err}}", strings.TrimPrefix(k, "audit_file|")), err))
 					}
 				}

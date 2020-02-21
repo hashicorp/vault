@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -23,14 +22,11 @@ func testConfigRaftRetryJoin(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
 				{
-					Type: "tcp",
-					Config: map[string]interface{}{
-						"address": "127.0.0.1:8200",
-					},
+					Type:    "tcp",
+					Address: "127.0.0.1:8200",
 				},
 			},
-			DisableMlock:    true,
-			DisableMlockRaw: true,
+			DisableMlock: true,
 		},
 
 		Storage: &Storage{
@@ -42,8 +38,8 @@ func testConfigRaftRetryJoin(t *testing.T) {
 			},
 		},
 	}
-	if !reflect.DeepEqual(config, expected) {
-		t.Fatalf("\nexpected: %#v\n actual:%#v\n", config, expected)
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
@@ -57,25 +53,21 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
 				{
-					Type: "tcp",
-					Config: map[string]interface{}{
-						"address": "127.0.0.1:443",
-					},
+					Type:    "tcp",
+					Address: "127.0.0.1:443",
 				},
 			},
 
 			Telemetry: &configutil.Telemetry{
-				StatsdAddr:                 "bar",
-				StatsiteAddr:               "foo",
-				DisableHostname:            false,
-				DogStatsDAddr:              "127.0.0.1:7254",
-				DogStatsDTags:              []string{"tag_1:val_1", "tag_2:val_2"},
-				PrometheusRetentionTime:    30 * time.Second,
-				PrometheusRetentionTimeRaw: "30s",
+				StatsdAddr:              "bar",
+				StatsiteAddr:            "foo",
+				DisableHostname:         false,
+				DogStatsDAddr:           "127.0.0.1:7254",
+				DogStatsDTags:           []string{"tag_1:val_1", "tag_2:val_2"},
+				PrometheusRetentionTime: 30 * time.Second,
 			},
 
-			DisableMlock:    true,
-			DisableMlockRaw: true,
+			DisableMlock: true,
 
 			PidFile: "./pidfile",
 
@@ -130,8 +122,8 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 	if entropy != nil {
 		expected.Entropy = entropy
 	}
-	if !reflect.DeepEqual(config, expected) {
-		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
@@ -145,16 +137,12 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
 				{
-					Type: "tcp",
-					Config: map[string]interface{}{
-						"address": "127.0.0.1:443",
-					},
+					Type:    "tcp",
+					Address: "127.0.0.1:443",
 				},
 				{
-					Type: "tcp",
-					Config: map[string]interface{}{
-						"address": "127.0.0.1:444",
-					},
+					Type:    "tcp",
+					Address: "127.0.0.1:444",
 				},
 			},
 
@@ -176,7 +164,6 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 				CirconusBrokerID:                   "0",
 				CirconusBrokerSelectTag:            "dc:sfo",
 				PrometheusRetentionTime:            30 * time.Second,
-				PrometheusRetentionTimeRaw:         "30s",
 			},
 		},
 
@@ -216,8 +203,8 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 	if entropy != nil {
 		expected.Entropy = entropy
 	}
-	if !reflect.DeepEqual(config, expected) {
-		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
@@ -293,10 +280,8 @@ func testLoadConfigFile(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
 				{
-					Type: "tcp",
-					Config: map[string]interface{}{
-						"address": "127.0.0.1:443",
-					},
+					Type:    "tcp",
+					Address: "127.0.0.1:443",
 				},
 			},
 
@@ -310,8 +295,7 @@ func testLoadConfigFile(t *testing.T) {
 				MetricsPrefix:           "myprefix",
 			},
 
-			DisableMlock:    true,
-			DisableMlockRaw: true,
+			DisableMlock: true,
 
 			Entropy: nil,
 
@@ -362,8 +346,8 @@ func testLoadConfigFile(t *testing.T) {
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
 	}
-	if !reflect.DeepEqual(config, expected) {
-		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
@@ -377,10 +361,8 @@ func testLoadConfigFile_json(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
 				{
-					Type: "tcp",
-					Config: map[string]interface{}{
-						"address": "127.0.0.1:443",
-					},
+					Type:    "tcp",
+					Address: "127.0.0.1:443",
 				},
 			},
 
@@ -404,10 +386,9 @@ func testLoadConfigFile_json(t *testing.T) {
 				PrometheusRetentionTime:            configutil.PrometheusDefaultRetentionTime,
 			},
 
-			DisableMlockRaw: interface{}(nil),
-			PidFile:         "./pidfile",
-			Entropy:         nil,
-			ClusterName:     "testcluster",
+			PidFile:     "./pidfile",
+			Entropy:     nil,
+			ClusterName: "testcluster",
 		},
 
 		Storage: &Storage{
@@ -439,8 +420,8 @@ func testLoadConfigFile_json(t *testing.T) {
 		DisableSealWrap:      true,
 		DisableSealWrapRaw:   true,
 	}
-	if !reflect.DeepEqual(config, expected) {
-		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
@@ -456,10 +437,8 @@ func testLoadConfigDir(t *testing.T) {
 
 			Listeners: []*configutil.Listener{
 				{
-					Type: "tcp",
-					Config: map[string]interface{}{
-						"address": "127.0.0.1:443",
-					},
+					Type:    "tcp",
+					Address: "127.0.0.1:443",
 				},
 			},
 
@@ -622,25 +601,20 @@ listener "tcp" {
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
 				{
-					Type: "tcp",
-					Config: map[string]interface{}{
-						"address":                            "127.0.0.1:443",
-						"cluster_address":                    "127.0.0.1:8201",
-						"tls_disable":                        false,
-						"tls_cert_file":                      "./certs/server.crt",
-						"tls_key_file":                       "./certs/server.key",
-						"tls_client_ca_file":                 "./certs/rootca.crt",
-						"tls_min_version":                    "tls12",
-						"tls_require_and_verify_client_cert": true,
-						"tls_disable_client_certs":           true,
-					},
+					Type:                          "tcp",
+					Address:                       "127.0.0.1:443",
+					ClusterAddress:                "127.0.0.1:8201",
+					TLSCertFile:                   "./certs/server.crt",
+					TLSKeyFile:                    "./certs/server.key",
+					TLSClientCAFile:               "./certs/rootca.crt",
+					TLSMinVersion:                 "tls12",
+					TLSRequireAndVerifyClientCert: true,
+					TLSDisableClientCerts:         true,
 				},
 			},
 		},
 	}
-
-	if !reflect.DeepEqual(config, *expected) {
-		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, *expected)
+	if diff := deep.Equal(config, *expected); diff != nil {
+		t.Fatal(diff)
 	}
-
 }

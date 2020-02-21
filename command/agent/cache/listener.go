@@ -7,16 +7,13 @@ import (
 
 	"strings"
 
-	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 )
 
-func StartListener(lnConfig *config.Listener) (net.Listener, *tls.Config, error) {
-	addr, ok := lnConfig.Config["address"].(string)
-	if !ok {
-		return nil, nil, fmt.Errorf("invalid address")
-	}
+func StartListener(lnConfig *configutil.Listener) (net.Listener, *tls.Config, error) {
+	addr := lnConfig.Address
 
 	var ln net.Listener
 	var err error
@@ -41,13 +38,13 @@ func StartListener(lnConfig *config.Listener) (net.Listener, *tls.Config, error)
 
 	case "unix":
 		var uConfig *listenerutil.UnixSocketsConfig
-		if lnConfig.Config["socket_mode"] != nil &&
-			lnConfig.Config["socket_user"] != nil &&
-			lnConfig.Config["socket_group"] != nil {
+		if lnConfig.SocketMode != "" &&
+			lnConfig.SocketUser != "" &&
+			lnConfig.SocketGroup != "" {
 			uConfig = &listenerutil.UnixSocketsConfig{
-				Mode:  lnConfig.Config["socket_mode"].(string),
-				User:  lnConfig.Config["socket_user"].(string),
-				Group: lnConfig.Config["socket_group"].(string),
+				Mode:  lnConfig.SocketMode,
+				User:  lnConfig.SocketUser,
+				Group: lnConfig.SocketGroup,
 			}
 		}
 		ln, err = listenerutil.UnixSocketListener(addr, uConfig)
@@ -60,7 +57,7 @@ func StartListener(lnConfig *config.Listener) (net.Listener, *tls.Config, error)
 	}
 
 	props := map[string]string{"addr": ln.Addr().String()}
-	props, _, tlsConf, err := listenerutil.GetTLSConfig(ln, props, lnConfig.Config, nil)
+	tlsConf, _, err := listenerutil.GetTLSConfig(ln, lnConfig, props, nil)
 	if err != nil {
 		return nil, nil, err
 	}

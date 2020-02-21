@@ -1318,7 +1318,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 		certGetter := reloadutil.NewCertificateGetter(certFile, keyFile, "")
 		certGetters = append(certGetters, certGetter)
-		certGetter.Reload(nil)
+		certGetter.Reload()
 		tlsConfig := &tls.Config{
 			Certificates:   []tls.Certificate{tlsCert},
 			RootCAs:        testCluster.RootCAs,
@@ -1538,8 +1538,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		if opts != nil && opts.HandlerFunc != nil {
 			props := opts.DefaultHandlerProperties
 			props.Core = c
-			if props.MaxRequestDuration == 0 {
-				props.MaxRequestDuration = DefaultMaxRequestDuration
+			if props.ListenerConfig != nil && props.ListenerConfig.MaxRequestDuration == 0 {
+				props.ListenerConfig.MaxRequestDuration = DefaultMaxRequestDuration
 			}
 			handlers[i] = opts.HandlerFunc(&props)
 			servers[i].Handler = handlers[i]

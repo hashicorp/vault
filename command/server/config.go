@@ -69,38 +69,36 @@ type Config struct {
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
-func DevConfig(storageType string) *Config {
-	ret := &Config{
-		SharedConfig: &configutil.SharedConfig{
-			DisableMlock: true,
+func DevConfig(storageType string) (*Config, error) {
+	hclStr := `
+disable_mlock = true
 
-			Listeners: []*configutil.Listener{
-				{
-					Type: "tcp",
-					Config: map[string]interface{}{
-						"address":                         "127.0.0.1:8200",
-						"tls_disable":                     true,
-						"proxy_protocol_behavior":         "allow_authorized",
-						"proxy_protocol_authorized_addrs": "127.0.0.1:8200",
-					},
-				},
-			},
+listener "tcp" {
+	address = "127.0.0.1:8200"
+	tls_disable = true
+	proxy_protocol_behavior = "allow_authorized"
+	proxy_protocol_authorized_addrs = "127.0.0.1:8200"
+}
 
-			Telemetry: &configutil.Telemetry{
-				PrometheusRetentionTime: configutil.PrometheusDefaultRetentionTime,
-				DisableHostname:         true,
-			},
-		},
-		EnableRawEndpoint: true,
+telemetry {
+	prometheus_retention_time = "24h"
+	disable_hostname = true
+}
 
-		Storage: &Storage{
-			Type: storageType,
-		},
+enable_raw_endpoint = true
 
-		EnableUI: true,
+storage "%s" {
+}
+
+enable_ui = true
+`
+
+	hclStr = fmt.Sprintf(hclStr, storageType)
+	parsed, err := ParseConfig(hclStr)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing dev config: %w", err)
 	}
-
-	return ret
+	return parsed, nil
 }
 
 // Storage is the underlying storage configuration for the server.
@@ -302,16 +300,12 @@ func LoadConfigFile(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	sharedConfig, err := configutil.ParseConfig(string(d))
-	if err != nil {
-		return nil, err
-	}
+
 	conf, err := ParseConfig(string(d))
 	if err != nil {
 		return nil, err
 	}
 
-	conf.SharedConfig = sharedConfig
 	return conf, nil
 }
 
@@ -327,6 +321,12 @@ func ParseConfig(d string) (*Config, error) {
 	if err := hcl.DecodeObject(result, obj); err != nil {
 		return nil, err
 	}
+
+	sharedConfig, err := configutil.ParseConfig(d)
+	if err != nil {
+		return nil, err
+	}
+	result.SharedConfig = sharedConfig
 
 	if result.MaxLeaseTTLRaw != nil {
 		if result.MaxLeaseTTL, err = parseutil.ParseDurationSecond(result.MaxLeaseTTLRaw); err != nil {
