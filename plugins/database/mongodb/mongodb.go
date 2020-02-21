@@ -28,26 +28,36 @@ var _ dbplugin.Database = &MongoDB{}
 
 // New returns a new MongoDB instance
 func New() (interface{}, error) {
-	db := new()
+	db, err := new()
+	if err != nil {
+		return nil, err
+	}
 	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 	return dbType, nil
 }
 
-func new() *MongoDB {
+func new() (*MongoDB, error) {
 	connProducer := &mongoDBConnectionProducer{}
 	connProducer.Type = mongoDBTypeName
 
-	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 15,
-		RoleNameLen:    15,
-		UsernameLen:    100,
-		Separator:      "-",
+	credsProducer, err := credsutil.NewUsernamePasswordProducer(
+		credsutil.UsernameOpts(
+			credsutil.UsernameTemplate("v-{{.DisplayName | truncate 15}}-{{.RoleName | truncate 15}}-{{rand 20}}-{{now_seconds}}"),
+			credsutil.UsernameMaxLength(100),
+		),
+		credsutil.PasswordOpts(
+			credsutil.PasswordLength(20),
+		),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create username & password producer: %w", err)
 	}
 
-	return &MongoDB{
+	m := &MongoDB{
 		mongoDBConnectionProducer: connProducer,
 		CredentialsProducer:       credsProducer,
 	}
+	return m, nil
 }
 
 // Run instantiates a MongoDB object, and runs the RPC server for the plugin

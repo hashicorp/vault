@@ -68,7 +68,7 @@ func redshiftEnv() (url string, user string, password string, errEmpty error) {
 	return url, user, password, nil
 }
 
-func TestPostgreSQL_Initialize(t *testing.T) {
+func TestRedshift_Initialize(t *testing.T) {
 	if os.Getenv(vaultACC) != "1" {
 		t.SkipNow()
 	}
@@ -83,7 +83,10 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 		"max_open_connections": 5,
 	}
 
-	db := newRedshift(true)
+	db, err := newRedshift(true)
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
 	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -111,7 +114,7 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 
 }
 
-func TestPostgreSQL_CreateUser(t *testing.T) {
+func TestRedshift_CreateUser(t *testing.T) {
 	if os.Getenv(vaultACC) != "1" {
 		t.SkipNow()
 	}
@@ -125,7 +128,10 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 		"connection_url": url,
 	}
 
-	db := newRedshift(true)
+	db, err := newRedshift(true)
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
 	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -169,7 +175,7 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 	}
 }
 
-func TestPostgreSQL_RenewUser(t *testing.T) {
+func TestRedshift_RenewUser(t *testing.T) {
 	if os.Getenv(vaultACC) != "1" {
 		t.SkipNow()
 	}
@@ -183,7 +189,10 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 		"connection_url": url,
 	}
 
-	db := newRedshift(true)
+	db, err := newRedshift(true)
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
 	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -242,7 +251,7 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 
 }
 
-func TestPostgreSQL_RevokeUser(t *testing.T) {
+func TestRedshift_RevokeUser(t *testing.T) {
 	if os.Getenv(vaultACC) != "1" {
 		t.SkipNow()
 	}
@@ -256,7 +265,10 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 		"connection_url": url,
 	}
 
-	db := newRedshift(true)
+	db, err := newRedshift(true)
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
 	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -311,7 +323,7 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 	}
 }
 
-func TestPostgresSQL_SetCredentials(t *testing.T) {
+func TestRedshift_SetCredentials(t *testing.T) {
 	if os.Getenv(vaultACC) != "1" {
 		t.SkipNow()
 	}
@@ -333,7 +345,10 @@ func TestPostgresSQL_SetCredentials(t *testing.T) {
 	dbUser := "vaultstatictest-" + fmt.Sprintf("%s", uid)
 	createTestPGUser(t, url, dbUser, "1Password", testRoleStaticCreate)
 
-	db := newRedshift(true)
+	db, err := newRedshift(true)
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
 	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -385,7 +400,7 @@ func TestPostgresSQL_SetCredentials(t *testing.T) {
 	}
 }
 
-func TestPostgreSQL_RotateRootCredentials(t *testing.T) {
+func TestRedshift_RotateRootCredentials(t *testing.T) {
 	/*
 		   Extra precaution is taken for rotating root creds because it's assumed that this
 		   test will run against a live redshift cluster. This test must run last because
@@ -408,7 +423,10 @@ func TestPostgreSQL_RotateRootCredentials(t *testing.T) {
 		"password":       adminPassword,
 	}
 
-	db := newRedshift(true)
+	db, err := newRedshift(true)
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
 
 	connProducer := db.SQLConnectionProducer
 

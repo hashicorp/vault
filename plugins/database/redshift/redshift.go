@@ -41,23 +41,31 @@ ALTER USER "{{username}}" WITH PASSWORD '{{password}}';
 // usernames.
 func New(lowercaseUsername bool) func() (interface{}, error) {
 	return func() (interface{}, error) {
-		db := newRedshift(lowercaseUsername)
+		db, err := newRedshift(lowercaseUsername)
+		if err != nil {
+			return nil, err
+		}
 		// Wrap the plugin with middleware to sanitize errors
 		dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
 		return dbType, nil
 	}
 }
 
-func newRedshift(lowercaseUsername bool) *RedShift {
+func newRedshift(lowercaseUsername bool) (*RedShift, error) {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = sqlTypeName
 
-	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen:    8,
-		RoleNameLen:       8,
-		UsernameLen:       63,
-		Separator:         "-",
-		LowercaseUsername: lowercaseUsername,
+	credsProducer, err := credsutil.NewUsernamePasswordProducer(
+		credsutil.UsernameOpts(
+			credsutil.UsernameTemplate("v-{{.DisplayName | truncate 8 | lowercase}}-{{.RoleName | truncate 8 | lowercase}}-{{rand 20 | lowercase}}-{{now_seconds}}"),
+			credsutil.UsernameMaxLength(63),
+		),
+		credsutil.PasswordOpts(
+			credsutil.PasswordLength(20),
+		),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create username & password producer: %w", err)
 	}
 
 	db := &RedShift{
@@ -65,7 +73,7 @@ func newRedshift(lowercaseUsername bool) *RedShift {
 		CredentialsProducer:   credsProducer,
 	}
 
-	return db
+	return db, nil
 }
 
 // Run instantiates a RedShift object, and runs the RPC server for the plugin

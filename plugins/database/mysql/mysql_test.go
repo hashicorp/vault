@@ -10,7 +10,6 @@ import (
 	stdmysql "github.com/go-sql-driver/mysql"
 	mysqlhelper "github.com/hashicorp/vault/helper/testhelpers/mysql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
@@ -25,8 +24,11 @@ func TestMySQL_Initialize(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new(MetadataLen, MetadataLen, UsernameLen)
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := newMySQL(DefaultTemplate, UsernameLen)
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -54,7 +56,10 @@ func TestMySQL_Initialize(t *testing.T) {
 
 func TestMySQL_CreateUser(t *testing.T) {
 	t.Run("missing creation statements", func(t *testing.T) {
-		db := new(MetadataLen, MetadataLen, UsernameLen)
+		db, err := newMySQL(DefaultTemplate, UsernameLen)
+		if err != nil {
+			t.Fatalf("no error expected, got: %s", err)
+		}
 
 		usernameConfig := dbplugin.UsernameConfig{
 			DisplayName: "test-long-displayname",
@@ -82,8 +87,12 @@ func TestMySQL_CreateUser(t *testing.T) {
 			"connection_url": connURL,
 		}
 
-		db := new(MetadataLen, MetadataLen, UsernameLen)
-		_, err := db.Init(context.Background(), connectionDetails, true)
+		db, err := newMySQL(DefaultTemplate, UsernameLen)
+		if err != nil {
+			t.Fatalf("no error expected, got: %s", err)
+		}
+
+		_, err = db.Init(context.Background(), connectionDetails, true)
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
@@ -100,8 +109,11 @@ func TestMySQL_CreateUser(t *testing.T) {
 			"connection_url": connURL,
 		}
 
-		db := new(credsutil.NoneLength, LegacyMetadataLen, LegacyUsernameLen)
-		_, err := db.Init(context.Background(), connectionDetails, true)
+		db, err := newMySQL(LegacyTemplate, LegacyUsernameLen)
+		if err != nil {
+			t.Fatalf("no error expected, got: %s", err)
+		}
+		_, err = db.Init(context.Background(), connectionDetails, true)
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
@@ -153,8 +165,8 @@ func testCreateUser(t *testing.T, db *MySQL, connURL string) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			usernameConfig := dbplugin.UsernameConfig{
-				DisplayName: "test-long-displayname",
-				RoleName:    "test-long-rolename",
+				DisplayName: "long-displayname",
+				RoleName:    "long-rolename",
 			}
 
 			statements := dbplugin.Statements{
@@ -219,8 +231,12 @@ func TestMySQL_RotateRootCredentials(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			db := new(MetadataLen, MetadataLen, UsernameLen)
-			_, err := db.Init(ctx, connectionDetails, true)
+			db, err := newMySQL(DefaultTemplate, UsernameLen)
+			if err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+
+			_, err = db.Init(ctx, connectionDetails, true)
 			if err != nil {
 				t.Fatalf("err: %s", err)
 			}
@@ -277,8 +293,12 @@ func TestMySQL_RevokeUser(t *testing.T) {
 	initCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	db := new(MetadataLen, MetadataLen, UsernameLen)
-	_, err := db.Init(initCtx, connectionDetails, true)
+	db, err := newMySQL(DefaultTemplate, UsernameLen)
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+
+	_, err = db.Init(initCtx, connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -368,8 +388,12 @@ func TestMySQL_SetCredentials(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			db := new(MetadataLen, MetadataLen, UsernameLen)
-			_, err := db.Init(ctx, connectionDetails, true)
+			db, err := newMySQL(DefaultTemplate, UsernameLen)
+			if err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+
+			_, err = db.Init(ctx, connectionDetails, true)
 			if err != nil {
 				t.Fatalf("err: %s", err)
 			}
@@ -425,8 +449,12 @@ func TestMySQL_Initialize_ReservedChars(t *testing.T) {
 		"password":       pw,
 	}
 
-	db := new(MetadataLen, MetadataLen, UsernameLen)
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := newMySQL(DefaultTemplate, UsernameLen)
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

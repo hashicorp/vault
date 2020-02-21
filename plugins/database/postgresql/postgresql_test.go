@@ -64,8 +64,11 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 		"max_open_connections": 5,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -93,7 +96,10 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 }
 
 func TestPostgreSQL_CreateUser_missingArgs(t *testing.T) {
-	db := new()
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
 
 	usernameConfig := dbplugin.UsernameConfig{
 		DisplayName: "test",
@@ -166,8 +172,11 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -233,13 +242,16 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new()
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
 
 	// Give a timeout just in case the test decides to be problematic
 	initCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	_, err := db.Init(initCtx, connectionDetails, true)
+	_, err = db.Init(initCtx, connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -317,7 +329,10 @@ func TestPostgreSQL_RotateRootCredentials(t *testing.T) {
 				"password":             "secret",
 			}
 
-			db := new()
+			db, err := new()
+			if err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
 
 			connProducer := db.SQLConnectionProducer
 
@@ -325,7 +340,7 @@ func TestPostgreSQL_RotateRootCredentials(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			_, err := db.Init(ctx, connectionDetails, true)
+			_, err = db.Init(ctx, connectionDetails, true)
 			if err != nil {
 				t.Fatalf("err: %s", err)
 			}
@@ -381,13 +396,16 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new()
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
 
 	// Give a timeout just in case the test decides to be problematic
 	initCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	_, err := db.Init(initCtx, connectionDetails, true)
+	_, err = db.Init(initCtx, connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -468,7 +486,10 @@ func TestPostgreSQL_SetCredentials_missingArgs(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			db := new()
+			db, err := new()
+			if err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
 
 			username, password, err := db.SetCredentials(context.Background(), test.statements, test.userConfig)
 			if err == nil {
@@ -517,13 +538,16 @@ func TestPostgresSQL_SetCredentials(t *testing.T) {
 				"connection_url": connURL,
 			}
 
-			db := new()
+			db, err := new()
+			if err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
 
 			// Give a timeout just in case the test decides to be problematic
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			_, err := db.Init(ctx, connectionDetails, true)
+			_, err = db.Init(ctx, connectionDetails, true)
 			if err != nil {
 				t.Fatalf("err: %s", err)
 			}

@@ -29,8 +29,11 @@ func TestMongoDB_Initialize(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -53,8 +56,11 @@ func TestMongoDB_CreateUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -87,8 +93,11 @@ func TestMongoDB_CreateUser_writeConcern(t *testing.T) {
 		"write_concern":  testMongoDBWriteConcern,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -120,8 +129,11 @@ func TestMongoDB_RevokeUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -177,8 +189,11 @@ func TestMongoDB_SetCredentials(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -305,7 +320,10 @@ func TestGetTLSAuth(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			c := new()
+			c, err := new()
+			if err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
 			c.Username = test.username
 			c.TLSCAData = test.tlsCAData
 			c.TLSCertificateKeyData = test.tlsKeyData

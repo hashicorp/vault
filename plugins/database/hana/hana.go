@@ -32,28 +32,38 @@ var _ dbplugin.Database = &HANA{}
 
 // New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
-	db := new()
+	db, err := new()
+	if err != nil {
+		return nil, err
+	}
 	// Wrap the plugin with middleware to sanitize errors
 	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
 
 	return dbType, nil
 }
 
-func new() *HANA {
+func new() (*HANA, error) {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = hanaTypeName
 
-	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 32,
-		RoleNameLen:    20,
-		UsernameLen:    128,
-		Separator:      "_",
+	credsProducer, err := credsutil.NewUsernamePasswordProducer(
+		credsutil.UsernameOpts(
+			credsutil.UsernameTemplate("v_{{.DisplayName | truncate 32}}_{{.RoleName | truncate 20}}_{{rand 20}}_{{now_seconds}}"),
+			credsutil.UsernameMaxLength(128),
+		),
+		credsutil.PasswordOpts(
+			credsutil.PasswordLength(20),
+		),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create username & password producer: %w", err)
 	}
 
-	return &HANA{
+	h := &HANA{
 		SQLConnectionProducer: connProducer,
 		CredentialsProducer:   credsProducer,
 	}
+	return h, nil
 }
 
 // Run instantiates a HANA object, and runs the RPC server for the plugin

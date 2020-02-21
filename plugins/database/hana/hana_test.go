@@ -22,8 +22,11 @@ func TestHANA_Initialize(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -49,8 +52,11 @@ func TestHANA_CreateUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -90,8 +96,11 @@ func TestHANA_RevokeUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

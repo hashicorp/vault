@@ -2,6 +2,7 @@ package influxdb
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -31,27 +32,37 @@ type Influxdb struct {
 
 // New returns a new Cassandra instance
 func New() (interface{}, error) {
-	db := new()
+	db, err := new()
+	if err != nil {
+		return nil, err
+	}
 	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 
 	return dbType, nil
 }
 
-func new() *Influxdb {
+func new() (*Influxdb, error) {
 	connProducer := &influxdbConnectionProducer{}
 	connProducer.Type = influxdbTypeName
 
-	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 15,
-		RoleNameLen:    15,
-		UsernameLen:    100,
-		Separator:      "_",
+	credsProducer, err := credsutil.NewUsernamePasswordProducer(
+		credsutil.UsernameOpts(
+			credsutil.UsernameTemplate("v_{{.DisplayName | truncate 15}}_{{.RoleName | truncate 15}}_{{rand 20}}_{{now_seconds}}"),
+			credsutil.UsernameMaxLength(100),
+		),
+		credsutil.PasswordOpts(
+			credsutil.PasswordLength(20),
+		),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create username & password producer: %w", err)
 	}
 
-	return &Influxdb{
+	idb := &Influxdb{
 		influxdbConnectionProducer: connProducer,
 		CredentialsProducer:        credsProducer,
 	}
+	return idb, nil
 }
 
 // Run instantiates a Influxdb object, and runs the RPC server for the plugin

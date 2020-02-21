@@ -31,28 +31,38 @@ type MSSQL struct {
 }
 
 func New() (interface{}, error) {
-	db := new()
+	db, err := new()
+	if err != nil {
+		return nil, err
+	}
 	// Wrap the plugin with middleware to sanitize errors
 	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
 
 	return dbType, nil
 }
 
-func new() *MSSQL {
+func new() (*MSSQL, error) {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = msSQLTypeName
 
-	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 20,
-		RoleNameLen:    20,
-		UsernameLen:    128,
-		Separator:      "-",
+	credsProducer, err := credsutil.NewUsernamePasswordProducer(
+		credsutil.UsernameOpts(
+			credsutil.UsernameTemplate("v-{{.DisplayName | truncate 20}}-{{.RoleName | truncate 20}}-{{rand 20}}-{{now_seconds}}"),
+			credsutil.UsernameMaxLength(128),
+		),
+		credsutil.PasswordOpts(
+			credsutil.PasswordLength(20),
+		),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create username & password producer: %w", err)
 	}
 
-	return &MSSQL{
+	m := &MSSQL{
 		SQLConnectionProducer: connProducer,
 		CredentialsProducer:   credsProducer,
 	}
+	return m, nil
 }
 
 // Run instantiates a MSSQL object, and runs the RPC server for the plugin

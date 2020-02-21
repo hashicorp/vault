@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -32,7 +33,13 @@ const (
 var (
 	MetadataLen       int = 10
 	LegacyMetadataLen int = 4
-	UsernameLen       int = 32
+)
+
+const (
+	DefaultTemplate     = "v-{{.DisplayName | truncate 10}}-{{.RoleName | truncate 10}}-{{rand 20}}-{{now_seconds}}"
+	UsernameLen     int = 32
+
+	LegacyTemplate        = "v-{{.RoleName | truncate 4}}-{{rand 20}}-{{now_seconds}}"
 	LegacyUsernameLen int = 16
 )
 
@@ -44,9 +51,12 @@ type MySQL struct {
 }
 
 // New implements builtinplugins.BuiltinFactory
-func New(displayNameLen, roleNameLen, usernameLen int) func() (interface{}, error) {
+func New(tmpl string, maxLen int) func() (interface{}, error) {
 	return func() (interface{}, error) {
-		db := new(displayNameLen, roleNameLen, usernameLen)
+		db, err := newMySQL(tmpl, maxLen)
+		if err != nil {
+			return nil, err
+		}
 		// Wrap the plugin with middleware to sanitize errors
 		dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
 
@@ -54,21 +64,28 @@ func New(displayNameLen, roleNameLen, usernameLen int) func() (interface{}, erro
 	}
 }
 
-func new(displayNameLen, roleNameLen, usernameLen int) *MySQL {
+func newMySQL(tmpl string, maxLen int) (*MySQL, error) {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = mySQLTypeName
 
-	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: displayNameLen,
-		RoleNameLen:    roleNameLen,
-		UsernameLen:    usernameLen,
-		Separator:      "-",
+	credsProducer, err := credsutil.NewUsernamePasswordProducer(
+		credsutil.UsernameOpts(
+			credsutil.UsernameTemplate(tmpl),
+			credsutil.UsernameMaxLength(maxLen),
+		),
+		credsutil.PasswordOpts(
+			credsutil.PasswordLength(20),
+		),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create username & password producer: %w", err)
 	}
 
-	return &MySQL{
+	m := &MySQL{
 		SQLConnectionProducer: connProducer,
 		CredentialsProducer:   credsProducer,
 	}
+	return m, nil
 }
 
 // Run instantiates a MySQL object, and runs the RPC server for the plugin
@@ -84,9 +101,9 @@ func RunLegacy(apiTLSConfig *api.TLSConfig) error {
 func runCommon(legacy bool, apiTLSConfig *api.TLSConfig) error {
 	var f func() (interface{}, error)
 	if legacy {
-		f = New(credsutil.NoneLength, LegacyMetadataLen, LegacyUsernameLen)
+		f = New(LegacyTemplate, LegacyUsernameLen)
 	} else {
-		f = New(MetadataLen, MetadataLen, UsernameLen)
+		f = New(DefaultTemplate, UsernameLen)
 	}
 	dbType, err := f()
 	if err != nil {

@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -31,27 +32,38 @@ type Cassandra struct {
 
 // New returns a new Cassandra instance
 func New() (interface{}, error) {
-	db := new()
+	db, err := new()
+	if err != nil {
+		return nil, err
+	}
 	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 
 	return dbType, nil
 }
 
-func new() *Cassandra {
+func new() (*Cassandra, error) {
 	connProducer := &cassandraConnectionProducer{}
 	connProducer.Type = cassandraTypeName
 
-	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 15,
-		RoleNameLen:    15,
-		UsernameLen:    100,
-		Separator:      "_",
+	credsProducer, err := credsutil.NewUsernamePasswordProducer(
+		credsutil.UsernameOpts(
+			credsutil.UsernameTemplate("v_{{.DisplayName | truncate 15}}_{{.RoleName | truncate 15}}_{{rand 20}}_{{now_seconds}}"),
+			credsutil.UsernameMaxLength(100),
+		),
+		credsutil.PasswordOpts(
+			credsutil.PasswordLength(20),
+		),
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("unable to create username & password producer: %w", err)
 	}
 
-	return &Cassandra{
+	c := &Cassandra{
 		cassandraConnectionProducer: connProducer,
 		CredentialsProducer:         credsProducer,
 	}
+	return c, nil
 }
 
 // Run instantiates a Cassandra object, and runs the RPC server for the plugin

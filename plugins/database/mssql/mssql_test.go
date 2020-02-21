@@ -22,8 +22,11 @@ func TestMSSQL_Initialize(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -59,8 +62,11 @@ func TestMSSQL_CreateUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -102,11 +108,14 @@ func TestMSSQL_RotateRootCredentials(t *testing.T) {
 		"password":       "yourStrong(!)Password",
 	}
 
-	db := new()
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
 
 	connProducer := db.SQLConnectionProducer
 
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -139,8 +148,11 @@ func TestMSSQL_RevokeUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

@@ -75,7 +75,10 @@ net:
 
 	// //////////////////////////////////////////////////////
 	// Test
-	mongo := new()
+	mongo, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
 
 	conf := map[string]interface{}{
 		"connection_url":      retURL,
@@ -87,7 +90,7 @@ net:
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := mongo.Init(ctx, conf, true)
+	_, err = mongo.Init(ctx, conf, true)
 	if err != nil {
 		t.Fatalf("Unable to initialize mongo engine: %s", err)
 	}

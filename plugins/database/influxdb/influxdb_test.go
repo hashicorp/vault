@@ -81,8 +81,11 @@ func TestInfluxdb_Initialize(t *testing.T) {
 		"password": "influx-root",
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -124,8 +127,11 @@ func TestInfluxdb_CreateUser(t *testing.T) {
 		"password": "influx-root",
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -163,8 +169,11 @@ func TestMyInfluxdb_RenewUser(t *testing.T) {
 		"password": "influx-root",
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -209,8 +218,11 @@ func TestInfluxdb_RevokeDeletedUser(t *testing.T) {
 		"password": "influx-root",
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -257,8 +269,11 @@ func TestInfluxdb_RevokeUser(t *testing.T) {
 		"password": "influx-root",
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -305,11 +320,14 @@ func TestInfluxdb_RotateRootCredentials(t *testing.T) {
 		"password": "influx-root",
 	}
 
-	db := new()
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
 
 	connProducer := db.influxdbConnectionProducer
 
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

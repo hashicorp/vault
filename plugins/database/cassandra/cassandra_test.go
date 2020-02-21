@@ -84,8 +84,11 @@ func TestCassandra_Initialize(t *testing.T) {
 		"protocol_version": 4,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -129,8 +132,11 @@ func TestCassandra_CreateUser(t *testing.T) {
 		"protocol_version": 4,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -169,8 +175,11 @@ func TestMyCassandra_RenewUser(t *testing.T) {
 		"protocol_version": 4,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -214,8 +223,11 @@ func TestCassandra_RevokeUser(t *testing.T) {
 		"protocol_version": 4,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -264,11 +276,14 @@ func TestCassandra_RotateRootCredentials(t *testing.T) {
 		"protocol_version": 4,
 	}
 
-	db := new()
+	db, err := new()
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
 
 	connProducer := db.cassandraConnectionProducer
 
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

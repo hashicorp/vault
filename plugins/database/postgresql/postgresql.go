@@ -33,21 +33,30 @@ var _ dbplugin.Database = &PostgreSQL{}
 
 // New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
-	db := new()
+	db, err := new()
+	if err != nil {
+		return nil, err
+	}
 	// Wrap the plugin with middleware to sanitize errors
 	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
 	return dbType, nil
 }
 
-func new() *PostgreSQL {
+func new() (*PostgreSQL, error) {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = postgreSQLTypeName
 
-	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 8,
-		RoleNameLen:    8,
-		UsernameLen:    63,
-		Separator:      "-",
+	credsProducer, err := credsutil.NewUsernamePasswordProducer(
+		credsutil.UsernameOpts(
+			credsutil.UsernameTemplate("v-{{.DisplayName | truncate 8}}-{{.RoleName | truncate 8}}-{{rand 20}}-{{now_seconds}}"),
+			credsutil.UsernameMaxLength(63),
+		),
+		credsutil.PasswordOpts(
+			credsutil.PasswordLength(20),
+		),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create username & password producer: %w", err)
 	}
 
 	db := &PostgreSQL{
@@ -55,7 +64,7 @@ func new() *PostgreSQL {
 		CredentialsProducer:   credsProducer,
 	}
 
-	return db
+	return db, nil
 }
 
 // Run instantiates a PostgreSQL object, and runs the RPC server for the plugin
