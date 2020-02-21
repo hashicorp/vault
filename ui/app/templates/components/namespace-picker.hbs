@@ -23,27 +23,31 @@
         />
       </D.trigger>
       <D.content @class="namespace-picker-content">
+        <div class="is-mobile level-left">
+          {{#if (not isUserRootNamespace)}}
+            <NamespaceLink @targetNamespace={{or (object-at (dec 2 menuLeaves.length) lastMenuLeaves) auth.authData.userRootNamespace}} @class="namespace-link is-current button is-ghost icon">
+              <Chevron
+                @direction="left"
+                @class="has-text-grey"
+              />
+            </NamespaceLink>
+          {{/if}}
+          <h5 class="list-header">Current namespace</h5>
+        </div>
         <div class="namespace-header-bar level is-mobile">
           <div class="level-left">
-            {{#if (not isUserRootNamespace)}}
-              <NamespaceLink @targetNamespace={{or (object-at (dec 2 menuLeaves.length) lastMenuLeaves) auth.authData.userRootNamespace}} @class="namespace-link button is-ghost icon">
-                <Chevron
-                  @direction="left"
-                  @class="has-text-info"
-                />
-              </NamespaceLink>
-            {{/if}}
+            
+              <header >
+                <div class="level is-mobile namespace-link">
+                  <span class="level-left" data-test-current-namespace>{{if namespacePath (concat namespacePath "/") "root"}}</span>
+                  <span class="level-right">
+                    <Icon @glyph="check-circle-outline" class="has-text-success" />
+                  </span>
+                </div>
+              </header>
           </div>
-        </div>
-        <header class="current-namespace">
-          <h5 class="list-header">Current namespace</h5>
-          <div class="level is-mobile namespace-link">
-            <span class="level-left" data-test-current-namespace>{{if namespacePath (concat namespacePath "/") "root"}}</span>
-            <span class="level-right">
-              <Icon @glyph="check-circle-outline" class="has-text-success" />
-            </span>
           </div>
-        </header>
+        
         <div class="namespace-list {{if isAnimating "animated-list"}}">
           {{#if (contains '' lastMenuLeaves)}}
             {{!-- leaf is '' which is the root namespace, and then we need to iterate the root leaves --}}
