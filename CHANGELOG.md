@@ -1,16 +1,16 @@
-## 1.4 (Unreleased)
+## 1.4 Beta1 (February 20th, 2020)
 
 FEATURES:
 
-* **Kerberos Authentication**: We now support Kerberos authentication using a SPNEGO token. 
+* **Kerberos Authentication**: Vault now supports Kerberos authentication using a SPNEGO token. 
    Login can be performed using the Vault CLI, API, or agent.
-* **Optional service_registration stanza**: We have introduced a new optional `service_registration` configuration stanza, that allows for service registration to be configured separately from the storage backend. For more, see [#7887](https://github.com/hashicorp/vault/pull/7887/).   
-* **Kubernetes Service Discovery**: We now support Kubernetes service discovery where, if 
+* **Kubernetes Service Discovery**: A new Kubernetes service discovery feature where, if 
    configured, Vault will tag Vault pods with their current health status. For more, see [#8249](https://github.com/hashicorp/vault/pull/8249).
-* **MongoDB Atlas Secrets**: We now support generating dynamic credentials for both MongoDB Atlas databases
+* **MongoDB Atlas Secrets**: Vault can now generate dynamic credentials for both MongoDB Atlas databases
   as well as the [Atlas programmatic interface](https://docs.atlas.mongodb.com/tutorial/manage-programmatic-access/).
-* **Redshift Database Secrets Engine**: We now support static and dynamic secrets for the Amazon Web Services (AWS) Redshift service.
 * **OpenLDAP Secrets Engine**: We now support password management of existing OpenLDAP user entries. For more, see [#8360](https://github.com/hashicorp/vault/pull/8360/).
+* **Redshift Database Secrets Engine**: The database secrets engine now supports static and dynamic secrets for the Amazon Web Services (AWS) Redshift service.
+* **Service Registration Config**: A newly introduced `service_registration` configuration stanza, that allows for service registration to be configured separately from the storage backend. For more, see [#7887](https://github.com/hashicorp/vault/pull/7887/).  
 
 IMPROVEMENTS:
 
@@ -29,6 +29,7 @@ IMPROVEMENTS:
   new types of service discovery not coupled to storage [[GH-7887](https://github.com/hashicorp/vault/pull/7887)]
 * core: Add support for telemetry option `metrics_prefix` [[GH-8340](https://github.com/hashicorp/vault/pull/8340)]
 * core: Entropy Augmentation can now be used with AWS KMS and Vault Transit seals
+* core: Allow tls_min_version to be set to TLS 1.3 [[GH-8305](https://github.com/hashicorp/vault/pull/8305)]
 * cli: Incorrect TLS configuration will now correctly fail [[GH-8025](https://github.com/hashicorp/vault/pull/8025)]
 * identity: Allow specifying a custom `client_id` for identity tokens [[GH-8165](https://github.com/hashicorp/vault/pull/8165)]
 * replication: Fix race condition causing clusters with high throughput writes to sometimes
@@ -41,13 +42,14 @@ IMPROVEMENTS:
   API
 * secrets/database/mongodb: Switched internal MongoDB driver to mongo-driver [[GH-8140](https://github.com/hashicorp/vault/pull/8140)]
 * secrets/database/mongodb: Add support for x509 client authorization to MongoDB [[GH-8329](https://github.com/hashicorp/vault/pull/8329)]
+* secrets/database/oracle: Add support for static credential rotation [[GH-26](https://github.com/hashicorp/vault-plugin-database-oracle/pull/26)]
 * secrets/consul: Add support to specify TLS options per Consul backend [[GH-4800](https://github.com/hashicorp/vault/pull/4800)]
 * secrets/gcp: Allow specifying the TTL for a service key [[GH-54](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/54)]
 * secrets/gcp: Add support for rotating root keys [[GH-53](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/53)]
 * secrets/gcp: Handle version 3 policies for Resource Manager IAM requests [[GH-77](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/77)]
 * secrets/nomad: Add support to specify TLS options per Nomad backend [[GH-8083](https://github.com/hashicorp/vault/pull/8083)]
-* secrets/ssh: Identity propogation in ssh secrets engine [[GH-7548](https://github.com/hashicorp/vault/pull/7548)]
-* secrets/transit: Adding RSA3072 implementation [[GH-8151](https://github.com/hashicorp/vault/pull/8151)]
+* secrets/ssh: Allowed users can now be templated with identity information [[GH-7548](https://github.com/hashicorp/vault/pull/7548)]
+* secrets/transit: Adding RSA3072 key support [[GH-8151](https://github.com/hashicorp/vault/pull/8151)]
 * storage/consul: Vault returns now a more descriptive error message when only a client cert or
   a client key has been provided [[GH-4930]](https://github.com/hashicorp/vault/pull/8084)
 * storage/raft: Nodes in the raft cluster can all be given possible leader
@@ -66,6 +68,7 @@ BUG FIXES:
 * cli: Support autocompletion for nested mounts [[GH-8303](https://github.com/hashicorp/vault/pull/8303)]
 * cli: Fix CLI namespace autocompletion [[GH-8315](https://github.com/hashicorp/vault/pull/8315)]
 * replication: Fix issue causing cubbyholes in namespaces on performance secondaries to not work.
+* seal (enterprise): Fix seal migration when transactional seal wrap backend is in use.
 * secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [GH-8282]
 * secrets/database/mysql: Ensures default static credential rotation statements are used [[GH-8240](https://github.com/hashicorp/vault/pull/8240)]
 * secrets/database/mysql: Fix inconsistent query parameter names: {{name}} or {{username}} for
