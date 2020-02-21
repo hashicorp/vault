@@ -238,6 +238,7 @@ export default [
       { category: 'identity' },
       { category: 'mongodbatlas' },
       { category: 'nomad' },
+      { category: 'openldap' },
       { category: 'pki' },
       { category: 'rabbitmq' },
       {
