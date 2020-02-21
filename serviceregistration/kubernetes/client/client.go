@@ -264,14 +264,8 @@ func replaceBadCharsWithDashes(r rune) rune {
 	if unicode.IsNumber(r) {
 		return r
 	}
-	char := string(r)
-	if char == "-" {
-		return r
-	}
-	if char == "_" {
-		return r
-	}
-	if char == "." {
+	switch string(r) {
+	case "-", "_", ".":
 		return r
 	}
 	return '-'
