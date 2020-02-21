@@ -8,7 +8,7 @@ SelectableCardContainer components are used to hold SelectableCard components.  
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
 | counters | <code>Object</code> | <code></code> | Counters is an object that returns total entities, tokens, and an array of objects with the total https request per month. |
-| gridContainer | <code>Boolean</code> | <code>false</code> | gridContainer is optional.  If true, it's telling the container it will have a nested CSS grid. const MODEL = {  totalEntities: 0,  httpsRequests: [{ start_time: '2019-04-01T00:00:00Z', total: 5500 }],  totalTokens: 1, }; |
+| gridContainer | <code>Boolean</code> | <code>false</code> | gridContainer is optional.  If true, it's telling the container it will have a nested CSS grid. |
 
 **Example**
   
