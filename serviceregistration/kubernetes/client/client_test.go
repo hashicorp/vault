@@ -95,7 +95,7 @@ func (e *env) TestUpdatePodTagsNotFound(t *testing.T) {
 }
 
 func TestSanitize(t *testing.T) {
-	expected := "fizzbuzz"
+	expected := "fizz-buzz"
 	result := Sanitize("fizz+buzz")
 	if result != expected {
 		t.Fatalf("expected %q but received %q", expected, result)
@@ -119,13 +119,13 @@ func TestSanitize(t *testing.T) {
 		t.Fatalf("expected %q but received %q", expected, result)
 	}
 
-	expected = "123-fhd"
+	expected = "123--fhd"
 	result = Sanitize("123-*fhd")
 	if result != expected {
 		t.Fatalf("expected %q but received %q", expected, result)
 	}
 
-	expected = "1.4.0-beta1ent"
+	expected = "1.4.0-beta1-ent"
 	result = Sanitize("1.4.0-beta1+ent")
 	if result != expected {
 		t.Fatalf("expected %q but received %q", expected, result)

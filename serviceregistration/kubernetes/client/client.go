@@ -257,6 +257,8 @@ func Sanitize(val string) string {
 	for _, ru := range val {
 		if isAllowable(ru) {
 			allowable += string(ru)
+		} else {
+			allowable += "-"
 		}
 	}
 	return allowable
