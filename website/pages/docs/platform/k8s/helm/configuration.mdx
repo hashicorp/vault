@@ -8,10 +8,10 @@ description: This section documents configuration options for the Vault Helm cha
 
 # Configuration
 
-~> **Important Note:** This chart is not compatible with Helm 3. Please use Helm 2 with this chart.
+~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3 with this chart.
 
 The chart is highly customizable using
-[Helm configuration values](https://docs.helm.sh/using_helm/#customizing-the-chart-before-installing).
+[Helm configuration values](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing).
 Each value has a default tuned for an optimal getting started experience
 with Vault. Before going into production, please review the parameters below
 and consider if they're appropriate for your deployment.
@@ -29,6 +29,8 @@ and consider if they're appropriate for your deployment.
 - `injector` - Values that configure running a Vault Agent Injector Admission Webhook Controller within Kubernetes.
 
   - `enabled` (`boolean: true`) - When set to `true`, the Vault Agent Injector Admission Webhook controller will be created.
+
+  - `externalVaultAddr` (`string: ""`) - External vault server address for the injector to use. Setting this will disable deployment of the vault server, and only deploy the injector.
 
   - `image` - Values that configure the Vault Agent Injector Docker image.
 
@@ -87,6 +89,7 @@ and consider if they're appropriate for your deployment.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
+    - `updateStrategyType` (`string: "OnDelete"`) - Configure the [Update Strategy Type](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies) for the StatefulSet.
 
     * `resources` (`string: null`) - The resource requests and limits (CPU, memory, etc.) for each of the server. This should be a multi-line string mapping directly to a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources.
 
@@ -147,7 +150,7 @@ and consider if they're appropriate for your deployment.
 
         - `enabled` (`boolean: true`) - When set to `true`, a readiness probe will be applied to the Vault pods.
 
-        - `path` (`string: ""`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe.  The http/https scheme is controled by the `tlsDisable` value.
+        - `path` (`string: ""`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe.  The http/https scheme is controlled by the `tlsDisable` value.
 
     ```yaml
      readinessProbe:
@@ -159,7 +162,7 @@ and consider if they're appropriate for your deployment.
 
         - `enabled` (`boolean: false`) - When set to `true`, a liveliness probe will be applied to the Vault pods.
 
-        - `path` (`string: "/v1/sys/health?standbyok=true"`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe.  The http/https scheme is controled by the `tlsDisable` value.
+        - `path` (`string: "/v1/sys/health?standbyok=true"`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe.  The http/https scheme is controlled by the `tlsDisable` value.
 
         - `initialDelaySeconds` (`int: 60`) - Sets the initial delay of the liveliness probe when the container starts.
 
@@ -169,6 +172,8 @@ and consider if they're appropriate for your deployment.
        path: /v1/sys/health?standbyok=true
        initialDelaySeconds: 60
     ```
+
+    - `preStopSleepSeconds` (`int: 5`) - Used to set the sleep time during the preStop step.
 
     * `extraContainers` (`array: []`) - The extra containers to be applied to the Vault server pods.
 
@@ -180,14 +185,6 @@ and consider if they're appropriate for your deployment.
            ...
     ```
 
-    ```yaml
-    # Extra Environment Variables are defined as key/value strings.
-     extraEnvironmentVars:
-       GOOGLE_REGION: global
-       GOOGLE_PROJECT: myproject
-       GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/myproject/myproject-creds.json
-    ```
-
     * `extraEnvironmentVars` - The extra environment variables to be applied to the Vault server.  This should be a multi-line key/value string.
 
     ```yaml
@@ -197,6 +194,8 @@ and consider if they're appropriate for your deployment.
        GOOGLE_PROJECT: myproject
        GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/myproject/myproject-creds.json
     ```
+
+    - `shareProcessNamespace` (`boolean: false`) - Enables process namespace sharing between Vault and the extraContainers. This is useful if Vault must be signaled, e.g. to send a SIGHUP for log rotation.
 
     * `extraArgs` (`string: null`) - The extra arguments to be applied to the Vault server startup command.
 
@@ -404,7 +403,7 @@ and consider if they're appropriate for your deployment.
         The number of pods to deploy to create a highly available cluster of Vault servers.
 
         - `updatePartition` (`int: 0`) -
-        If an updatePartition is specified, all Pods with an ordinal that is greater than or equal to the partition will be updated when the StatefulSet’s `.spec.template` is updated.  If set to `0`, this disables parition updates.  For more information see the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#rolling-updates).
+        If an updatePartition is specified, all Pods with an ordinal that is greater than or equal to the partition will be updated when the StatefulSet’s `.spec.template` is updated.  If set to `0`, this disables partition updates.  For more information see the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#rolling-updates).
 
         - `config` (`string: "{}"`) -
         A raw string of extra HCL or JSON [configuration](/docs/configuration) for Vault servers.
