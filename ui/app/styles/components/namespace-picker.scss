@@ -86,9 +86,10 @@
   box-shadow: $box-shadow;
   font-weight: $font-weight-semibold;
   min-height: 32px;
-  .namespace-manage-link {
-    text-decoration: none;
-  }
+}
+
+.namespace-manage-link {
+  border-top: 1px solid rgba($black, 0.1);
 }
 
 .current-namespace {

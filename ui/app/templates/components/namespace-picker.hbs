@@ -34,13 +34,6 @@
               </NamespaceLink>
             {{/if}}
           </div>
-          <div class="level-right">
-            {{#if canList}}
-              {{#link-to "vault.cluster.access.namespaces" class="namespace-manage-link"}}
-                Manage
-              {{/link-to}}
-            {{/if}}
-          </div>
         </div>
         <header class="current-namespace">
           <h5 class="list-header">Current namespace</h5>
@@ -69,6 +62,25 @@
               <NamespaceLink @targetNamespace={{concat leaf "/" leafName}} @class="namespace-link" @showLastSegment={{true}} />
                 {{/each-in~}}</div>
           {{/each}}
+          {{#if canList}}
+            <div class="leaf-panel leaf-panel-current ">
+              <LinkTo
+                @params={{array "vault.cluster.access.namespaces"}}
+                {{!-- ARG TODO: clean up styles, put under namespace mange link? --}}
+                class="is-block namespace-link namespace-manage-link"
+                >
+                  <div class="level is-mobile">
+                    <span class="level-left">Manage namespaces</span>
+                    <span class="level-right">
+                      <button type="button" class="button is-ghost icon" onclick={{action "refreshNamespaceList"}}>
+                        <Icon @glyph="refresh-default" class="has-text-grey" />
+                      </button>
+                    </span>
+                  </div>
+                
+              </LinkTo>
+              </div>
+          {{/if}}
         </div>
       </D.content>
     </BasicDropdown>

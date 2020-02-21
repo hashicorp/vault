@@ -157,4 +157,10 @@ export default Component.extend({
     let parts = namespace.split('/');
     return parts[parts.length - 1];
   }),
+
+  actions: {
+    refreshNamespaceList() {
+      this.get('namespaceService.findNamespacesForUser').perform();
+    },
+  },
 });
