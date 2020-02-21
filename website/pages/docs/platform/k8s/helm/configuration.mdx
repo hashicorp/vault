@@ -29,6 +29,8 @@ and consider if they're appropriate for your deployment.
 
   - `enabled` (`boolean: true`) - When set to `true`, the Vault Agent Injector Admission Webhook controller will be created.
 
+  - `externalVaultAddr` (`string: ""`) - External vault server address for the injector to use. Setting this will disable deployment of the vault server, and only deploy the injector.
+
   - `image` - Values that configure the Vault Agent Injector Docker image.
 
     - `repository` (`string: "hashicorp/vault-k8s"`) - The name of the Docker image for Vault Agent Injector.
@@ -83,6 +85,8 @@ and consider if they're appropriate for your deployment.
     - `tag` (`string: "1.3.1"`) - The tag of the Docker image for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
+
+    - `updateStrategyType` (`string: "OnDelete"`) - Configure the [Update Strategy Type](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies) for the StatefulSet.
 
     - `resources` (`string: null`) - The resource requests and limits (CPU, memory, etc.) for each of the server. This should be a multi-line string mapping directly to a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources. **Setting this is highly recommended.**
 
@@ -164,6 +168,8 @@ and consider if they're appropriate for your deployment.
       initialDelaySeconds: 60
     ```
 
+    - `preStopSleepSeconds` (`int: 5`) - Used to set the sleep time during the preStop step.
+
     - `extraContainers` (`array: []`) - The extra containers to be applied to the Vault server pods.
 
     ```yaml
@@ -171,14 +177,6 @@ and consider if they're appropriate for your deployment.
       - name: mycontainer
         image: 'app:0.0.0'
         env: ...
-    ```
-
-    ```yaml
-    # Extra Environment Variables are defined as key/value strings.
-    extraEnvironmentVars:
-      GOOGLE_REGION: global
-      GOOGLE_PROJECT: myproject
-      GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/myproject/myproject-creds.json
     ```
 
     - `extraEnvironmentVars` - The extra environment variables to be applied to the Vault server. This should be a multi-line key/value string.
@@ -190,6 +188,8 @@ and consider if they're appropriate for your deployment.
       GOOGLE_PROJECT: myproject
       GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/myproject/myproject-creds.json
     ```
+
+    - `shareProcessNamespace` (`boolean: false`) - Enables process namespace sharing between Vault and the extraContainers. This is useful if Vault must be signaled, e.g. to send a SIGHUP for log rotation.
 
     - `extraArgs` (`string: null`) - The extra arguments to be applied to the Vault server startup command.
 
