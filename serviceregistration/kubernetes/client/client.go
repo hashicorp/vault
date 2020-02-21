@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 	"unicode"
 
@@ -253,35 +254,27 @@ func (e *ErrNotFound) Error() string {
 // Any other characters found in the original value will be stripped,
 // and the surrounding characters will be concatenated.
 func Sanitize(val string) string {
-	allowable := ""
-	for _, ru := range val {
-		if isAllowable(ru) {
-			allowable += string(ru)
-		} else {
-			allowable += "-"
-		}
-	}
-	return allowable
+	return strings.Map(replaceBadCharsWithDashes, val)
 }
 
-func isAllowable(r rune) bool {
+func replaceBadCharsWithDashes(r rune) rune {
 	if unicode.IsLetter(r) {
-		return true
+		return r
 	}
 	if unicode.IsNumber(r) {
-		return true
+		return r
 	}
 	char := string(r)
 	if char == "-" {
-		return true
+		return r
 	}
 	if char == "_" {
-		return true
+		return r
 	}
 	if char == "." {
-		return true
+		return r
 	}
-	return false
+	return '-'
 }
 
 // sanitizedDebuggingInfo provides a returnable string that can be used for debugging. This is intentionally somewhat vague
