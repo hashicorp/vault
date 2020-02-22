@@ -315,7 +315,15 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		return
 
 	case strings.HasPrefix(key, oidcTokensPrefix):
-		if err := i.oidcCache.Flush(noNamespace); err != nil {
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			i.logger.Error("error retrieving namespace", "error", err)
+			return
+		}
+
+		// Wipe the cache for the requested namespace. This will also clear
+		// the shared namespace as well.
+		if err := i.oidcCache.Flush(ns); err != nil {
 			i.logger.Error("error flushing oidc cache", "error", err)
 		}
 	}
