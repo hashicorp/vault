@@ -36,19 +36,28 @@
         </div>
         <div class="namespace-header-bar level is-mobile">
           <div class="level-left">
-            
-              <header >
-                <div class="level is-mobile namespace-link">
-                  <span class="level-left" data-test-current-namespace>{{if namespacePath (concat namespacePath "/") "root"}}</span>
-                  <span class="level-right">
-                    <Icon @glyph="check-circle-outline" class="has-text-success" />
-                  </span>
-                </div>
-              </header>
+            <header >
+              <div class="level is-mobile namespace-link">
+                <span class="level-left" data-test-current-namespace>{{if namespacePath (concat namespacePath "/") "root"}}</span>
+                <span class="level-right">
+                  <Icon @glyph="check-circle-outline" class="has-text-success" />
+                </span>
+              </div>
+            </header>
           </div>
-          </div>
-        
+        </div>
         <div class="namespace-list {{if isAnimating "animated-list"}}">
+          <div class="is-mobile level-left">
+          {{#if (not isUserRootNamespace)}}
+            <NamespaceLink @targetNamespace={{or (object-at (dec 2 menuLeaves.length) lastMenuLeaves) auth.authData.userRootNamespace}} @class="namespace-link is-current button is-ghost icon">
+              <Chevron
+                @direction="left"
+                @class="has-text-grey"
+              />
+            </NamespaceLink>
+          {{/if}}
+          <h5 class="list-header">Namespaces</h5>
+        </div>
           {{#if (contains '' lastMenuLeaves)}}
             {{!-- leaf is '' which is the root namespace, and then we need to iterate the root leaves --}}
             <div class="leaf-panel
@@ -70,7 +79,6 @@
             <div class="leaf-panel leaf-panel-current ">
               <LinkTo
                 @params={{array "vault.cluster.access.namespaces"}}
-                {{!-- ARG TODO: clean up styles, put under namespace mange link? --}}
                 class="is-block namespace-link namespace-manage-link"
                 >
                   <div class="level is-mobile">
@@ -81,8 +89,7 @@
                       </button>
                     </span>
                   </div>
-                
-              </LinkTo>
+                </LinkTo>
               </div>
           {{/if}}
         </div>

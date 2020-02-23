@@ -82,7 +82,7 @@
 }
 
 .namespace-header-bar {
-  padding: $size-11 $size-10;
+  padding: $size-11 $size-9;
   border-bottom: 1px solid rgba($black, 0.1);
   font-weight: $font-weight-semibold;
   min-height: 32px;
@@ -90,10 +90,6 @@
 
 .namespace-manage-link {
   border-top: 1px solid rgba($black, 0.1);
-}
-
-.current-namespace {
-  border-bottom: 1px solid rgba($black, 0.1);
 }
 
 .namespace-list {
@@ -105,7 +101,7 @@
   color: $black;
   text-decoration: none;
   font-weight: $font-weight-semibold;
-  padding: $size-10 $size-9;
+  padding: $size-10 $size-9 $size-10 0;
 }
 
 .namespace-link.is-current {
@@ -114,6 +110,7 @@
 }
 
 .leaf-panel {
+  padding: $size-11 $size-9;
   transition: transform ease-in-out 250ms;
   will-change: transform;
   transform: translateX(0);
