@@ -123,6 +123,14 @@ cluster is of size 1 which allows the node to self-elect as a leader. Once a
 leader is elected, other servers can be added to the peer set in a way that
 preserves consistency and safety. 
 
+The join process is how new nodes are added to the vault cluster, it uses an
+encrypted challenge/answer workflow. To accomplish this, all nodes in a single
+raft cluster must share the same seal configuration. If using an Auto Unseal the
+join process can use the configured seal to automatically decrypt the challenge
+and respond with the answer. If using a Shamir seal the unseal keys must be
+provided to the node attempting to join the cluster before it can decrypt the
+challenge and respond with the decrypted answer. 
+
 Since all servers participate as part of the peer set, they all know the current
 leader. When an API request arrives at a non-leader server, the request is
 forwarded to the leader.
