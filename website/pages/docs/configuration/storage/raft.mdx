@@ -76,7 +76,7 @@ set `ha_enabled = true`.
   consider reducing write throughput or the amount of data stored on Vault. The
   default value is 10000 which is suitable for all normal workloads.
 
-- `snapshot_threshold` `(integer: )` - This controls the minimum number of raft
+- `snapshot_threshold` `(integer: 8192)` - This controls the minimum number of raft
   commit entries between snapshots that are saved to disk. This is a low-level
   parameter that should rarely need to be changed. Very busy clusters
   experiencing excessive disk IO may increase this value to reduce disk IO, and
