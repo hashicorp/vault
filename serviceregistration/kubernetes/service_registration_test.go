@@ -12,7 +12,7 @@ import (
 	kubetest "github.com/hashicorp/vault/serviceregistration/kubernetes/testing"
 )
 
-var testVersion = "version 1"
+var testVersion = "version1"
 
 func TestServiceRegistration(t *testing.T) {
 	testState, testConf, closeFunc := kubetest.Server(t)
