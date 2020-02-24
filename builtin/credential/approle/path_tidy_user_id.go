@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -39,206 +40,228 @@ func (b *backend) tidySecretID(ctx context.Context, req *logical.Request) (*logi
 		return resp, nil
 	}
 
-	s := req.Storage
-
-	go func() {
-		defer atomic.StoreUint32(b.tidySecretIDCASGuard, 0)
-
-		logger := b.Logger().Named("tidy")
-
-		checkCount := 0
-
-		defer func() {
-			if b.testTidyDelay > 0 {
-				logger.Trace("done checking entries", "num_entries", checkCount)
-			}
-		}()
-
-		// Don't cancel when the original client request goes away
-		ctx = context.Background()
-
-		tidyFunc := func(secretIDPrefixToUse, accessorIDPrefixToUse string) error {
-			logger.Trace("listing role HMACs", "prefix", secretIDPrefixToUse)
-
-			roleNameHMACs, err := s.List(ctx, secretIDPrefixToUse)
-			if err != nil {
-				return err
-			}
-
-			logger.Trace("listing accessors", "prefix", accessorIDPrefixToUse)
-
-			// List all the accessors and add them all to a map
-			accessorHashes, err := s.List(ctx, accessorIDPrefixToUse)
-			if err != nil {
-				return err
-			}
-			accessorMap := make(map[string]bool, len(accessorHashes))
-			for _, accessorHash := range accessorHashes {
-				accessorMap[accessorHash] = true
-			}
-
-			time.Sleep(b.testTidyDelay)
-
-			secretIDCleanupFunc := func(secretIDHMAC, roleNameHMAC, secretIDPrefixToUse string) error {
-				checkCount++
-				lock := b.secretIDLock(secretIDHMAC)
-				lock.Lock()
-				defer lock.Unlock()
-
-				entryIndex := fmt.Sprintf("%s%s%s", secretIDPrefixToUse, roleNameHMAC, secretIDHMAC)
-				secretIDEntry, err := s.Get(ctx, entryIndex)
-				if err != nil {
-					return errwrap.Wrapf(fmt.Sprintf("error fetching SecretID %q: {{err}}", secretIDHMAC), err)
-				}
-
-				if secretIDEntry == nil {
-					logger.Error("entry for secret id was nil", "secret_id_hmac", secretIDHMAC)
-					return nil
-				}
-
-				if secretIDEntry.Value == nil || len(secretIDEntry.Value) == 0 {
-					return fmt.Errorf("found entry for SecretID %q but actual SecretID is empty", secretIDHMAC)
-				}
-
-				var result secretIDStorageEntry
-				if err := secretIDEntry.DecodeJSON(&result); err != nil {
-					return err
-				}
-
-				// If a secret ID entry does not have a corresponding accessor
-				// entry, revoke the secret ID immediately
-				accessorEntry, err := b.secretIDAccessorEntry(ctx, s, result.SecretIDAccessor, secretIDPrefixToUse)
-				if err != nil {
-					return errwrap.Wrapf("failed to read secret ID accessor entry: {{err}}", err)
-				}
-				if accessorEntry == nil {
-					logger.Trace("found nil accessor")
-					if err := s.Delete(ctx, entryIndex); err != nil {
-						return errwrap.Wrapf(fmt.Sprintf("error deleting secret ID %q from storage: {{err}}", secretIDHMAC), err)
-					}
-					return nil
-				}
-
-				// ExpirationTime not being set indicates non-expiring SecretIDs
-				if !result.ExpirationTime.IsZero() && time.Now().After(result.ExpirationTime) {
-					logger.Trace("found expired secret ID")
-					// Clean up the accessor of the secret ID first
-					err = b.deleteSecretIDAccessorEntry(ctx, s, result.SecretIDAccessor, secretIDPrefixToUse)
-					if err != nil {
-						return errwrap.Wrapf("failed to delete secret ID accessor entry: {{err}}", err)
-					}
-
-					if err := s.Delete(ctx, entryIndex); err != nil {
-						return errwrap.Wrapf(fmt.Sprintf("error deleting SecretID %q from storage: {{err}}", secretIDHMAC), err)
-					}
-
-					return nil
-				}
-
-				// At this point, the secret ID is not expired and is valid. Delete
-				// the corresponding accessor from the accessorMap. This will leave
-				// only the dangling accessors in the map which can then be cleaned
-				// up later.
-				salt, err := b.Salt(ctx)
-				if err != nil {
-					return err
-				}
-				delete(accessorMap, salt.SaltID(result.SecretIDAccessor))
-
-				return nil
-			}
-
-			for _, roleNameHMAC := range roleNameHMACs {
-				logger.Trace("listing secret ID HMACs", "role_hmac", roleNameHMAC)
-				secretIDHMACs, err := s.List(ctx, fmt.Sprintf("%s%s", secretIDPrefixToUse, roleNameHMAC))
-				if err != nil {
-					return err
-				}
-				for _, secretIDHMAC := range secretIDHMACs {
-					err = secretIDCleanupFunc(secretIDHMAC, roleNameHMAC, secretIDPrefixToUse)
-					if err != nil {
-						return err
-					}
-				}
-			}
-
-			// Accessor indexes were not getting cleaned up until 0.9.3. This is a fix
-			// to clean up the dangling accessor entries.
-			if len(accessorMap) > 0 {
-				for _, lock := range b.secretIDLocks {
-					lock.Lock()
-					defer lock.Unlock()
-				}
-				for accessorHash, _ := range accessorMap {
-					logger.Trace("found dangling accessor, verifying")
-					// Ideally, locking on accessors should be performed here too
-					// but for that, accessors are required in plaintext, which are
-					// not available. The code above helps but it may still be
-					// racy.
-					// ...
-					// Look up the secret again now that we have all the locks. The
-					// lock is held when writing accessor/secret so if we have the
-					// lock we know we're not in a
-					// wrote-accessor-but-not-yet-secret case, which can be racy.
-					var entry secretIDAccessorStorageEntry
-					entryIndex := accessorIDPrefixToUse + accessorHash
-					se, err := s.Get(ctx, entryIndex)
-					if err != nil {
-						return err
-					}
-					if se != nil {
-						err = se.DecodeJSON(&entry)
-						if err != nil {
-							return err
-						}
-
-						// The storage entry doesn't store the role ID, so we have
-						// to go about this the long way; fortunately we shouldn't
-						// actually hit this very often
-						var found bool
-					searchloop:
-						for _, roleNameHMAC := range roleNameHMACs {
-							secretIDHMACs, err := s.List(ctx, fmt.Sprintf("%s%s", secretIDPrefixToUse, roleNameHMAC))
-							if err != nil {
-								return err
-							}
-							for _, v := range secretIDHMACs {
-								if v == entry.SecretIDHMAC {
-									found = true
-									logger.Trace("accessor verified, not removing")
-									break searchloop
-								}
-							}
-						}
-						if !found {
-							logger.Trace("could not verify dangling accessor, removing")
-							err = s.Delete(ctx, entryIndex)
-							if err != nil {
-								return err
-							}
-						}
-					}
-				}
-			}
-
-			return nil
-		}
-
-		err := tidyFunc(secretIDPrefix, secretIDAccessorPrefix)
-		if err != nil {
-			logger.Error("error tidying global secret IDs", "error", err)
-			return
-		}
-		err = tidyFunc(secretIDLocalPrefix, secretIDAccessorLocalPrefix)
-		if err != nil {
-			logger.Error("error tidying local secret IDs", "error", err)
-			return
-		}
-	}()
+	go b.tidySecretIDbackground(req.Storage)
 
 	resp := &logical.Response{}
 	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
 	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
+
+}
+
+type tidyHelperSecretIDAccessor struct {
+	secretIDAccessorStorageEntry
+	saltedSecretIDAccessor string
+}
+
+func (b *backend) tidySecretIDbackground(s logical.Storage) {
+	defer atomic.StoreUint32(b.tidySecretIDCASGuard, 0)
+
+	logger := b.Logger().Named("tidy")
+
+	checkCount := 0
+
+	defer func() {
+		if b.testTidyDelay > 0 {
+			logger.Trace("done checking entries", "num_entries", checkCount)
+		}
+	}()
+
+	// Don't cancel when the original client request goes away
+	ctx := context.Background()
+
+	salt, err := b.Salt(ctx)
+	if err != nil {
+		logger.Error("error tidying secret IDs", "error", err)
+		return
+	}
+
+	tidyFunc := func(secretIDPrefixToUse, accessorIDPrefixToUse string) error {
+		logger.Trace("listing role HMACs", "prefix", secretIDPrefixToUse)
+
+		roleNameHMACs, err := s.List(ctx, secretIDPrefixToUse)
+		if err != nil {
+			return err
+		}
+
+		logger.Trace("listing accessors", "prefix", accessorIDPrefixToUse)
+
+		// List all the accessors and add them all to a map
+		// These hashes are the result of salting the accessor id.
+		accessorHashes, err := s.List(ctx, accessorIDPrefixToUse)
+		if err != nil {
+			return err
+		}
+		skipHashes := make(map[string]bool, len(accessorHashes))
+		accHashesByLockID := make([][]tidyHelperSecretIDAccessor, 256)
+		for _, accessorHash := range accessorHashes {
+			var entry secretIDAccessorStorageEntry
+			entryIndex := accessorIDPrefixToUse + accessorHash
+			se, err := s.Get(ctx, entryIndex)
+			if err != nil {
+				return err
+			}
+			if se == nil {
+				continue
+			}
+			err = se.DecodeJSON(&entry)
+			if err != nil {
+				return err
+			}
+
+			lockIdx := locksutil.LockIndexForKey(entry.SecretIDHMAC)
+			accHashesByLockID[lockIdx] = append(accHashesByLockID[lockIdx], tidyHelperSecretIDAccessor{
+				secretIDAccessorStorageEntry: entry,
+				saltedSecretIDAccessor:       accessorHash,
+			})
+		}
+
+		time.Sleep(b.testTidyDelay)
+
+		secretIDCleanupFunc := func(secretIDHMAC, roleNameHMAC, secretIDPrefixToUse string) error {
+			checkCount++
+			lock := b.secretIDLock(secretIDHMAC)
+			lock.Lock()
+			defer lock.Unlock()
+
+			entryIndex := fmt.Sprintf("%s%s%s", secretIDPrefixToUse, roleNameHMAC, secretIDHMAC)
+			secretIDEntry, err := s.Get(ctx, entryIndex)
+			if err != nil {
+				return errwrap.Wrapf(fmt.Sprintf("error fetching SecretID %q: {{err}}", secretIDHMAC), err)
+			}
+
+			if secretIDEntry == nil {
+				logger.Error("entry for secret id was nil", "secret_id_hmac", secretIDHMAC)
+				return nil
+			}
+
+			if secretIDEntry.Value == nil || len(secretIDEntry.Value) == 0 {
+				return fmt.Errorf("found entry for SecretID %q but actual SecretID is empty", secretIDHMAC)
+			}
+
+			var result secretIDStorageEntry
+			if err := secretIDEntry.DecodeJSON(&result); err != nil {
+				return err
+			}
+
+			// If a secret ID entry does not have a corresponding accessor
+			// entry, revoke the secret ID immediately
+			accessorEntry, err := b.secretIDAccessorEntry(ctx, s, result.SecretIDAccessor, secretIDPrefixToUse)
+			if err != nil {
+				return errwrap.Wrapf("failed to read secret ID accessor entry: {{err}}", err)
+			}
+			if accessorEntry == nil {
+				logger.Trace("found nil accessor")
+				if err := s.Delete(ctx, entryIndex); err != nil {
+					return errwrap.Wrapf(fmt.Sprintf("error deleting secret ID %q from storage: {{err}}", secretIDHMAC), err)
+				}
+				return nil
+			}
+
+			// ExpirationTime not being set indicates non-expiring SecretIDs
+			if !result.ExpirationTime.IsZero() && time.Now().After(result.ExpirationTime) {
+				logger.Trace("found expired secret ID")
+				// Clean up the accessor of the secret ID first
+				err = b.deleteSecretIDAccessorEntry(ctx, s, result.SecretIDAccessor, secretIDPrefixToUse)
+				if err != nil {
+					return errwrap.Wrapf("failed to delete secret ID accessor entry: {{err}}", err)
+				}
+
+				if err := s.Delete(ctx, entryIndex); err != nil {
+					return errwrap.Wrapf(fmt.Sprintf("error deleting SecretID %q from storage: {{err}}", secretIDHMAC), err)
+				}
+
+				return nil
+			}
+
+			// At this point, the secret ID is not expired and is valid. Flag
+			// the corresponding accessor as not needing attention.
+			skipHashes[salt.SaltID(result.SecretIDAccessor)] = true
+
+			return nil
+		}
+
+		for _, roleNameHMAC := range roleNameHMACs {
+			logger.Trace("listing secret ID HMACs", "role_hmac", roleNameHMAC)
+			secretIDHMACs, err := s.List(ctx, fmt.Sprintf("%s%s", secretIDPrefixToUse, roleNameHMAC))
+			if err != nil {
+				return err
+			}
+			for _, secretIDHMAC := range secretIDHMACs {
+				err = secretIDCleanupFunc(secretIDHMAC, roleNameHMAC, secretIDPrefixToUse)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		// Accessor indexes were not getting cleaned up until 0.9.3. This is a fix
+		// to clean up the dangling accessor entries.
+		if len(accessorHashes) > len(skipHashes) {
+			// There is some raciness here because we're querying secretids for
+			// roles without having a lock while doing so.  Because
+			// accHashesByLockID was populated previously, at worst this may
+			// mean that we fail to clean up something we ought to.
+			var allSecretIDHMACs = make(map[string]struct{})
+			for _, roleNameHMAC := range roleNameHMACs {
+				secretIDHMACs, err := s.List(ctx, secretIDPrefixToUse+roleNameHMAC)
+				if err != nil {
+					return err
+				}
+				for _, v := range secretIDHMACs {
+					allSecretIDHMACs[v] = struct{}{}
+				}
+			}
+
+			tidyEntries := func(entries []tidyHelperSecretIDAccessor) error {
+				for _, entry := range entries {
+					// Don't clean up accessor index entry if secretid cleanup func
+					// determined that it should stay.
+					if _, ok := skipHashes[entry.saltedSecretIDAccessor]; ok {
+						continue
+					}
+
+					// Don't clean up accessor index entry if referenced in role.
+					if _, ok := allSecretIDHMACs[entry.SecretIDHMAC]; ok {
+						continue
+					}
+
+					if err := s.Delete(context.Background(), accessorIDPrefixToUse+entry.saltedSecretIDAccessor); err != nil {
+						return err
+					}
+				}
+				return nil
+			}
+
+			for lockIdx, entries := range accHashesByLockID {
+				// Ideally, locking on accessors should be performed here too
+				// but for that, accessors are required in plaintext, which are
+				// not available.
+				// ...
+				// The lock is held when writing accessor/secret so if we have
+				// the lock we know we're not in a
+				// wrote-accessor-but-not-yet-secret case, which can be racy.
+				b.secretIDLocks[lockIdx].Lock()
+				err = tidyEntries(entries)
+				b.secretIDLocks[lockIdx].Unlock()
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	}
+
+	err = tidyFunc(secretIDPrefix, secretIDAccessorPrefix)
+	if err != nil {
+		logger.Error("error tidying global secret IDs", "error", err)
+		return
+	}
+	err = tidyFunc(secretIDLocalPrefix, secretIDAccessorLocalPrefix)
+	if err != nil {
+		logger.Error("error tidying local secret IDs", "error", err)
+		return
+	}
 }
 
 // pathTidySecretIDUpdate is used to delete the expired SecretID entries
