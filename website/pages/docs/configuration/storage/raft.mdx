@@ -56,7 +56,7 @@ set `ha_enabled = true`.
   servers to scale key Raft timing parameters. Omitting this value or setting it
   to 0 uses default timing described below. Lower values are used to tighten
   timing and increase sensitivity while higher values relax timings and reduce
-  sensitivity. Tuning this affects the time it takes Vault to detect leader
+  sensitivity. Tuning this, affects the time it takes Vault to detect leader
   failures and to perform leader elections, at the expense of requiring more
   network and CPU resources for better performance.
 
