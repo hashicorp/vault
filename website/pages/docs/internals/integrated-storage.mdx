@@ -91,7 +91,7 @@ log is compacted. Because of the FSM abstraction, restoring the state of the FSM
 result in the same state as a replay of old logs. This allows Raft to capture the FSM
 state at a point in time and then remove all the logs that were used to reach that
 state. This is performed automatically without user intervention and prevents unbounded
-disk usage while also minimizing time spent replaying logs. One of the advantages of
+disk usage while also minimizing the time spent replaying logs. One of the advantages of
 using BoltDB is that it allows Vault's snapshots to be very light weight. Since
 Vault's data is already persisted to disk in BoltDB the snapshot process just
 needs to truncate the raft logs.
@@ -187,4 +187,3 @@ failure scenario.
     <td>3</td>
   </tr>
 </table>
-
