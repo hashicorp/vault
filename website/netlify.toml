@@ -11,3 +11,8 @@
 
 [context.deploy-preview]
   environment = { HASHI_ENV = "staging" }
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
