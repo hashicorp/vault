@@ -84,6 +84,6 @@ set `ha_enabled = true`.
   Increasing this trades off disk IO for disk space since the log will grow much
   larger and the space in the raft.db file can't be reclaimed till the next
   snapshot. Servers may take longer to recover from crashes or failover if this
-  is increased significantly as more logs will need to be replayed
+  is increased significantly as more logs will need to be replayed.
 
 [raft]: https://raft.github.io/ 'The Raft Consensus Algorithm'
