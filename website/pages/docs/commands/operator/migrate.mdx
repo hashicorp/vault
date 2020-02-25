@@ -71,7 +71,7 @@ storage_destination "consul" {
 
 The below configuration will migrate away from consul storage to integrated
 raft storage. The raft data will be stored on the local filesystem in the
-defined `path`. NodeID can optionally be set to identify this node.
+defined `path`. `node_id` can optionally be set to identify this node.
 [cluster_addr](/docs/configuration/#inlinecode-cluster_addr) must be set to the
 cluster hostname of this node. For more configuration options see the [raft
 storage configuration documentation](/docs/configuration/storage/raft).
