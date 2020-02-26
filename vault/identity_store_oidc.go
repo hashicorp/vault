@@ -1555,8 +1555,6 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 	var nextRun time.Time
 	now := time.Now()
 
-	nsPaths := i.listNamespacePaths()
-
 	v, ok, err := i.oidcCache.Get(noNamespace, "nextRun")
 	if err != nil {
 		i.Logger().Error("error reading oidc cache", "err", err)
@@ -1576,7 +1574,9 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 		// based on key rotation times.
 		nextRun = now.Add(24 * time.Hour)
 
-		for _, nsPath := range nsPaths {
+		for _, ns := range i.listNamespaces() {
+			nsPath := ns.Path
+
 			s := i.core.router.MatchingStorageByAPIPath(ctx, nsPath+"identity/oidc")
 
 			if s == nil {
@@ -1593,7 +1593,7 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 				i.Logger().Warn("error expiring OIDC public keys", "err", err)
 			}
 
-			if err := i.oidcCache.Flush(noNamespace); err != nil {
+			if err := i.oidcCache.Flush(ns); err != nil {
 				i.Logger().Error("error flushing oidc cache", "err", err)
 			}
 
@@ -1644,6 +1644,7 @@ func (c *oidcCache) Flush(ns *namespace.Namespace) error {
 		return errNilNamespace
 	}
 
+	// Remove all items from the provided namespace as well as the shared, "no namespace" section.
 	for itemKey := range c.c.Items() {
 		if isTargetNamespacedKey(itemKey, []string{noNamespace.ID, ns.ID}) {
 			c.c.Delete(itemKey)
