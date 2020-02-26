@@ -217,7 +217,7 @@ func (c *Client) performLdapFilterGroupsSearch(cfg *ConfigEntry, conn Connection
 
 	var renderedQuery bytes.Buffer
 	if err := t.Execute(&renderedQuery, context); err != nil {
-		return nil, errwrap.Wrapf("LDAP search failed due to template parsing error: {{error}}", err)
+		return nil, errwrap.Wrapf("LDAP search failed due to template parsing error: {{err}}", err)
 	}
 
 	if c.Logger.IsDebug() {
