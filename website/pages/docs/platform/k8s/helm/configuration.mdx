@@ -362,30 +362,27 @@ and consider if they're appropriate for your deployment.
       - `enabled` (`boolean: true`) -
         Enables `standalone` mode for the Vault server. This mode uses the `file` storage backend and requires a volume for persistence (`dataStorage`).
 
-      - `config` (`string: "{}"`) -
-        A raw string of extra HCL or JSON [configuration](/docs/configuration) for Vault servers.
-        This will be saved as-is into a ConfigMap that is read by the Vault servers.
+      - `config` -
+        A list of values to define the configuration for Vault servers.
+        This will be saved as a JSON into a ConfigMap that is read by the Vault servers.
         This can be used to add additional configuration that isn't directly exposed by the chart.
 
       ```yaml
-      # ExtraConfig values are formatted as a multi-line string:
-      config: |
-        api_addr = "http://POD_IP:8200"
-
-        listener "tcp" {
-          tls_disable = 1
-          address     = "0.0.0.0:8200"
-        }
-
-        storage "file" {
-          path = "/vault/data"
-        }
+      config:
+        api_addr: "http://POD_IP:8200"
+        listener:
+          tcp:
+            tls_disable: 1
+            address: "0.0.0.0:8200"
+        storage:
+          file:
+            path: "/vault/data"
       ```
 
-      This can also be set using Helm's `--set` flag (vault-helm v0.1.0 and later), using the following syntax:
+      New parameters can be set using Helm's `--set` flag (vault-helm v0.1.0 and later), using the following syntax:
 
       ```shell
-      --set server.standalone.config='{ listener "tcp" { address = "0.0.0.0:8200" }'
+      --set server.standalone.config.ui=true --set server.standalone.config.listener.tcp.tls_disable=0
       ```
 
     - `ha` - This configures `ha` mode for the Vault server.
@@ -399,32 +396,27 @@ and consider if they're appropriate for your deployment.
       - `updatePartition` (`int: 0`) -
         If an updatePartition is specified, all Pods with an ordinal that is greater than or equal to the partition will be updated when the StatefulSet’s `.spec.template` is updated. If set to `0`, this disables partition updates. For more information see the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#rolling-updates).
 
-      - `config` (`string: "{}"`) -
-        A raw string of extra HCL or JSON [configuration](/docs/configuration) for Vault servers.
-        This will be saved as-is into a ConfigMap that is read by the Vault servers.
+      - `config` -
+        A list of values to define the configuration for Vault servers.
+        This will be saved as a JSON into a ConfigMap that is read by the Vault servers.
         This can be used to add additional configuration that isn't directly exposed by the chart.
 
       ```yaml
-      # ExtraConfig values are formatted as a multi-line string:
-      config: |
-        ui = true
-        api_addr = "http://POD_IP:8200"
-        listener "tcp" {
-            tls_disable = 1
-            address     = "0.0.0.0:8200"
-        }
-
-        storage "consul" {
-            path = "vault"
-            address = "HOST_IP:8500"
-        }
+      config:
+        api_addr: "http://POD_IP:8200"
+        listener:
+          tcp:
+            tls_disable: 1
+            address: "0.0.0.0:8200"
+        storage:
+          consul:
+            path: vault
+            address: "HOST_IP:8500"
       ```
-
-      This can also be set using Helm's `--set` flag (vault-helm v0.1.0 and later), using the following syntax:
+      New parameters can be set using Helm's `--set` flag (vault-helm v0.1.0 and later), using the following syntax:
 
       ```shell
-      --set server.ha.config='{ listener "tcp" { address = "0.0.0.0:8200" }'
-      ```
+      --set server.standalone.config.ui=true --set server.standalone.config.listener.tcp.tls_disable=0
 
     * `disruptionBudget` - Values that configures the disruption budget policy. See the [official Kubernetes documentation](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) for more information.
 
