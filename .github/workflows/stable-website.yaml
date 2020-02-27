@@ -1,0 +1,21 @@
+on:
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  stable_website_cherry_pick:
+    if: github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'docs-cherrypick')
+    runs-on: ubuntu-latest
+    name: Cherry pick to stable-website branch
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        ref: stable-website
+    - run: |
+        git fetch --no-tags --prune origin +refs/heads/*:refs/remotes/origin/*
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git cherry-pick ${{ github.sha }}
+        git push origin stable-website
