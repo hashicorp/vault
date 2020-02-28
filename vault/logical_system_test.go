@@ -2730,3 +2730,17 @@ func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 }
+
+func TestSystemBackend_PathMountRead(t *testing.T) {
+
+	_, b, _ := testCoreSystemBackend(t)
+
+	ctx := namespace.RootContext(nil)
+
+	req := logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/cubbyhole")
+	req.ClientToken = ""
+	_, err := b.HandleRequest(ctx, req)
+	if err == nil || !strings.Contains(err.Error(), "permission denied") {
+		t.Fatalf("expected 403, got err: %v", err)
+	}
+}

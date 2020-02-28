@@ -3048,7 +3048,8 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	// Load the ACL policies so we can walk the prefix for this mount
 	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
-		return nil, err
+		b.logger.Warn("permission denied as the token is missing or invalid")
+		return errResp, logical.ErrPermissionDenied
 	}
 	if entity != nil && entity.Disabled {
 		b.logger.Warn("permission denied as the entity on the token is disabled")
