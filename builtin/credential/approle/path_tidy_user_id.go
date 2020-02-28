@@ -61,9 +61,7 @@ func (b *backend) tidySecretIDbackground(s logical.Storage) {
 	checkCount := 0
 
 	defer func() {
-		if b.testTidyDelay > 0 {
-			logger.Trace("done checking entries", "num_entries", checkCount)
-		}
+		logger.Trace("done checking entries", "num_entries", checkCount)
 	}()
 
 	// Don't cancel when the original client request goes away
@@ -114,8 +112,6 @@ func (b *backend) tidySecretIDbackground(s logical.Storage) {
 				saltedSecretIDAccessor:       accessorHash,
 			})
 		}
-
-		time.Sleep(b.testTidyDelay)
 
 		secretIDCleanupFunc := func(secretIDHMAC, roleNameHMAC, secretIDPrefixToUse string) error {
 			checkCount++
