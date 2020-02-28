@@ -143,6 +143,8 @@ type SecurityBarrier interface {
 
 	// SecurityBarrier must provide the encryption APIs
 	BarrierEncryptor
+
+	BatchDelete(ctx context.Context, keys []string) error
 }
 
 // BarrierStorage is the storage only interface required for a Barrier.

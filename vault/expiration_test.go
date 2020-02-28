@@ -46,6 +46,7 @@ func TestExpiration_Tidy(t *testing.T) {
 	logger := log.New(&log.LoggerOptions{
 		Output: logOut,
 	})
+	testLogger := logging.NewVaultLogger(log.Debug).Named(t.Name())
 
 	testCore := TestCore(t)
 	testCore.baseLogger = logger
@@ -97,6 +98,7 @@ func TestExpiration_Tidy(t *testing.T) {
 		t.Fatalf("bad: lease count; expected:1 actual:%d", count)
 	}
 
+	testLogger.Info("starting tidy")
 	// Run the tidy operation
 	err = exp.Tidy(namespace.RootContext(nil))
 	if err != nil {
@@ -174,7 +176,9 @@ func TestExpiration_Tidy(t *testing.T) {
 		t.Fatalf("bad: lease count; expected:0 actual:%d", count)
 	}
 
-	for i := 0; i < 1000; i++ {
+	numInvalid := 10
+	testLogger.Info("registering invalid")
+	for i := 0; i < numInvalid; i++ {
 		req := &logical.Request{
 			Operation:   logical.ReadOperation,
 			Path:        "invalid/lease/" + fmt.Sprintf("%d", i+1),
@@ -203,10 +207,11 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 
 	// Check that there are 1000 leases now
-	if count != 1000 {
-		t.Fatalf("bad: lease count; expected:1000 actual:%d", count)
+	if count != numInvalid {
+		t.Fatalf("bad: lease count; expected:%d actual:%d", numInvalid, count)
 	}
 
+	testLogger.Info("invalid leases registered, starting parallel tidies")
 	errCh1 := make(chan error)
 	errCh2 := make(chan error)
 
@@ -247,6 +252,8 @@ func TestExpiration_Tidy(t *testing.T) {
 	if err = exp.persistEntry(namespace.RootContext(nil), le); err != nil {
 		t.Fatalf("error persisting entry: %v", err)
 	}
+
+	testLogger.Info("tidying with new root token that should be skipped")
 
 	// Run the tidy operation
 	err = exp.Tidy(namespace.RootContext(nil))
@@ -746,7 +753,7 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
-					TTL: 20 * time.Millisecond,
+					TTL: 20 * time.Second,
 				},
 			},
 			Data: map[string]interface{}{
@@ -766,11 +773,11 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 	}
 
 	if len(noop.Requests) != 3 {
-		t.Fatalf("Bad: %v", noop.Requests)
+		t.Fatalf("Bad: %#v", noop.Requests)
 	}
 	for _, req := range noop.Requests {
 		if req.Operation != logical.RevokeOperation {
-			t.Fatalf("Bad: %v", req)
+			t.Fatalf("Bad: %#v", req)
 		}
 	}
 
@@ -1486,7 +1493,7 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(1300 * time.Millisecond)
 
 	out, err := exp.tokenStore.Lookup(namespace.RootContext(nil), le.ClientToken)
 	if err != nil {
@@ -1650,7 +1657,7 @@ func TestExpiration_revokeEntry_rejected(t *testing.T) {
 	}
 
 	// Now let the revocation actually process
-	time.Sleep(1 * time.Second)
+	time.Sleep(2300 * time.Millisecond)
 
 	le, err = exp.FetchLeaseTimes(namespace.RootContext(nil), le.LeaseID)
 	if err != nil {

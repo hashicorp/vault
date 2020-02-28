@@ -28,6 +28,11 @@ type Storage interface {
 	Delete(context.Context, string) error
 }
 
+type BatchStorage interface {
+	Storage
+	BatchDelete(context.Context, []string) error
+}
+
 // StorageEntry is the entry for an item in a Storage implementation.
 type StorageEntry struct {
 	Key      string

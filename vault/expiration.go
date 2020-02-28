@@ -58,6 +58,78 @@ type pendingInfo struct {
 	timer            *time.Timer
 }
 
+type deleteRequest struct {
+	key     string
+	errChan chan error
+}
+
+type deleter struct {
+	timer    *time.Ticker
+	batchMax int
+	submit   chan deleteRequest
+	quitCh   chan struct{}
+	storage  *BarrierView
+	logger   log.Logger
+	// TODO add activeContext
+}
+
+func newDeleter(logger log.Logger, storage *BarrierView, quitCh chan struct{}) *deleter {
+	return &deleter{
+		logger:   logger,
+		timer:    time.NewTicker(100 * time.Millisecond),
+		batchMax: 64, // consul only allows 64
+		submit:   make(chan deleteRequest),
+		quitCh:   quitCh,
+		storage:  storage,
+	}
+}
+
+func (d *deleter) start() {
+	var reqs []deleteRequest
+	for {
+		select {
+		case <-d.quitCh:
+			// Should we write to accumulated reqs errChans?
+			return
+		case req := <-d.submit:
+			reqs = append(reqs, req)
+			if len(reqs) >= d.batchMax {
+				d.run(reqs)
+				reqs = reqs[:0]
+			}
+		case <-d.timer.C:
+			if len(reqs) > 0 {
+				d.run(reqs)
+				reqs = reqs[:0]
+			}
+		}
+	}
+}
+
+func (d *deleter) delete(key string) error {
+	errChan := make(chan error)
+	d.submit <- deleteRequest{
+		key:     key,
+		errChan: errChan,
+	}
+	err := <-errChan
+	close(errChan)
+	return err
+}
+
+func (d *deleter) run(reqs []deleteRequest) {
+	keys := make([]string, len(reqs))
+	for i := range reqs {
+		keys[i] = reqs[i].key
+	}
+	// TODO should we eliminate dups?
+	d.logger.Info("deleting", "batch", keys)
+	err := d.storage.BatchDelete(context.Background(), keys)
+	for i := range reqs {
+		reqs[i].errChan <- err
+	}
+}
+
 // ExpirationManager is used by the Core to manage leases. Secrets
 // can provide a lease, meaning that they can be renewed or revoked.
 // If a secret is not renewed in timely manner, it may be expired, and
@@ -93,6 +165,7 @@ type ExpirationManager struct {
 	// RegisterAuth to simulate a partial failure during a token creation
 	// request. This value should only be set by tests.
 	testRegisterAuthFailure uberAtomic.Bool
+	idDeleter               *deleter
 }
 
 type ExpireLeaseStrategy func(context.Context, *ExpirationManager, *leaseEntry)
@@ -141,10 +214,13 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
 func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger) *ExpirationManager {
+	idView := view.SubView(leaseViewPrefix)
+	idView.logger = logger
+	quitCh := make(chan struct{})
 	exp := &ExpirationManager{
 		core:       c,
 		router:     c.router,
-		idView:     view.SubView(leaseViewPrefix),
+		idView:     idView,
 		tokenView:  view.SubView(tokenViewPrefix),
 		tokenStore: c.tokenStore,
 		logger:     logger,
@@ -155,7 +231,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		// restore mode
 		restoreMode:  new(int32),
 		restoreLocks: locksutil.CreateLocks(),
-		quitCh:       make(chan struct{}),
+		quitCh:       quitCh,
 
 		coreStateLock:     &c.stateLock,
 		quitContext:       c.activeContext,
@@ -163,7 +239,10 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
 		expireFunc:          e,
+		idDeleter:           newDeleter(logger, idView, quitCh),
 	}
+	go exp.idDeleter.start()
+
 	*exp.restoreMode = 1
 
 	if exp.logger == nil {
@@ -1531,8 +1610,8 @@ func (m *ExpirationManager) persistEntry(ctx context.Context, le *leaseEntry) er
 
 // deleteEntry is used to delete a lease entry
 func (m *ExpirationManager) deleteEntry(ctx context.Context, le *leaseEntry) error {
-	view := m.leaseView(le.namespace)
-	if err := view.Delete(ctx, le.LeaseID); err != nil {
+	//view := m.leaseView(le.namespace)
+	if err := m.idDeleter.delete(le.LeaseID); err != nil {
 		return errwrap.Wrapf("failed to delete lease entry: {{err}}", err)
 	}
 	return nil

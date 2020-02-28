@@ -195,6 +195,8 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 
 // Used to run multiple entries via a transaction
 func (c *ConsulBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
+	defer metrics.MeasureSince([]string{"consul", "txn"}, time.Now())
+
 	if len(txns) == 0 {
 		return nil
 	}

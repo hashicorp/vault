@@ -840,6 +840,28 @@ func (b *AESGCMBarrier) Delete(ctx context.Context, key string) error {
 	return b.backend.Delete(ctx, key)
 }
 
+func (b *AESGCMBarrier) BatchDelete(ctx context.Context, keys []string) error {
+	if tb, ok := b.backend.(physical.TransactionalBackend); ok {
+		defer metrics.MeasureSince([]string{"barrier", "txn"}, time.Now())
+		txn := make([]*physical.TxnEntry, len(keys))
+		for i, key := range keys {
+			txn[i] = &physical.TxnEntry{
+				Operation: physical.DeleteOperation,
+				Entry: &physical.Entry{
+					Key: key,
+				},
+			}
+		}
+		return tb.Transaction(ctx, txn)
+	}
+	for _, key := range keys {
+		if err := b.backend.Delete(ctx, key); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // List is used ot list all the keys under a given
 // prefix, up to the next prefix.
 func (b *AESGCMBarrier) List(ctx context.Context, prefix string) ([]string, error) {
