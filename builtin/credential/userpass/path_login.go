@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
-	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -139,10 +138,6 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	if user == nil {
 		// User no longer exists, do not renew
 		return nil, nil
-	}
-
-	if !policyutil.EquivalentPolicies(user.TokenPolicies, req.Auth.TokenPolicies) {
-		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
 	resp := &logical.Response{Auth: req.Auth}

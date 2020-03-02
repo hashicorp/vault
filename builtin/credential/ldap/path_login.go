@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
-	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -132,18 +131,9 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.InternalData["password"].(string)
 
-	loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password)
+	_, resp, groupNames, err := b.Login(ctx, req, username, password)
 	if err != nil || (resp != nil && resp.IsError()) {
 		return resp, err
-	}
-
-	finalPolicies := cfg.TokenPolicies
-	if len(loginPolicies) > 0 {
-		finalPolicies = append(finalPolicies, loginPolicies...)
-	}
-
-	if !policyutil.EquivalentPolicies(finalPolicies, req.Auth.TokenPolicies) {
-		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
 	resp.Auth = req.Auth

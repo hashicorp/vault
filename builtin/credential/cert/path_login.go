@@ -14,7 +14,6 @@ import (
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
@@ -155,10 +154,6 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	if cert == nil {
 		// User no longer exists, do not renew
 		return nil, nil
-	}
-
-	if !policyutil.EquivalentPolicies(cert.TokenPolicies, req.Auth.TokenPolicies) {
-		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
 	resp := &logical.Response{Auth: req.Auth}

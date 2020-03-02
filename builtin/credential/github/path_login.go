@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
-	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -118,9 +117,6 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return resp, nil
 	} else {
 		verifyResp = verifyResponse
-	}
-	if !policyutil.EquivalentPolicies(verifyResp.Policies, req.Auth.TokenPolicies) {
-		return nil, fmt.Errorf("policies do not match")
 	}
 
 	resp := &logical.Response{Auth: req.Auth}

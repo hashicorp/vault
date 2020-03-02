@@ -1881,7 +1881,7 @@ func Test_Renew(t *testing.T) {
 		t.Fatalf("got error: %#v", *resp)
 	}
 
-	// Change the policies -- this should fail
+	// Change the policies -- this should be okay
 	fd.Raw["policies"] = "zip,zap"
 	resp, err = b.pathCertWrite(context.Background(), req, fd)
 	if err != nil {
@@ -1889,8 +1889,8 @@ func Test_Renew(t *testing.T) {
 	}
 
 	resp, err = b.pathLoginRenew(context.Background(), req, empty_login_fd)
-	if err == nil {
-		t.Fatal("expected error")
+	if err != nil {
+		t.Fatal("expected no error")
 	}
 
 	// Put the policies back, this should be okay
