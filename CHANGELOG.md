@@ -32,14 +32,16 @@ IMPROVEMENTS:
 * core: Allow tls_min_version to be set to TLS 1.3 [[GH-8305](https://github.com/hashicorp/vault/pull/8305)]
 * cli: Incorrect TLS configuration will now correctly fail [[GH-8025](https://github.com/hashicorp/vault/pull/8025)]
 * identity: Allow specifying a custom `client_id` for identity tokens [[GH-8165](https://github.com/hashicorp/vault/pull/8165)]
-* replication: Fix race condition causing clusters with high throughput writes to sometimes
+* replication (enterprise): Fix race condition causing clusters with high throughput writes to sometimes
   fail to enter streaming-wal mode
-* replication: Secondary clusters can now perfrom an extra gRPC call to all nodes in a primary 
+* replication (enterprise): Secondary clusters can now perfrom an extra gRPC call to all nodes in a primary 
   cluster in an attempt to resolve the active node's address
-* replication: The replication status API now outputs `last_performance_wal`, `last_dr_wal`, 
+* replication (enterprise): The replication status API now outputs `last_performance_wal`, `last_dr_wal`, 
   and `connection_state` values
-* replication: DR secondary clusters can now be recovered by the `replication/dr/secondary/recover`
+* replication (enterprise): DR secondary clusters can now be recovered by the `replication/dr/secondary/recover`
   API
+* replication (enterprise): We now allow for an alternate means to create a Disaster Recovery token, by using a batch
+  token that is created with an ACL that allows for access to one or more of the DR endpoints.
 * secrets/database/mongodb: Switched internal MongoDB driver to mongo-driver [[GH-8140](https://github.com/hashicorp/vault/pull/8140)]
 * secrets/database/mongodb: Add support for x509 client authorization to MongoDB [[GH-8329](https://github.com/hashicorp/vault/pull/8329)]
 * secrets/database/oracle: Add support for static credential rotation [[GH-26](https://github.com/hashicorp/vault-plugin-database-oracle/pull/26)]
@@ -56,7 +58,6 @@ IMPROVEMENTS:
   addresses for them to continuously try and join one of them, thus automating
   the process of join to a greater extent [[GH-7856](https://github.com/hashicorp/vault/pull/7856)]
 * storage/etcd: Bumped etcd client API SDK [[GH-7931](https://github.com/hashicorp/vault/pull/7931) & [GH-4961](https://github.com/hashicorp/vault/pull/4961) & [GH-4349](https://github.com/hashicorp/vault/pull/4349) & [GH-7582](https://github.com/hashicorp/vault/pull/7582)]
-* sys: We now allow for an alternate means to create a Disaster Recovery token, by using a batch token that is created with an ACL that allows for access to one or more of the DR endpoints.
 * ui: Make Transit Key actions more prominent [[GH-8304](https://github.com/hashicorp/vault/pull/8304)]
 * ui: Add Core Usage Metrics [[GH-8347](https://github.com/hashicorp/vault/pull/8347)]
 
