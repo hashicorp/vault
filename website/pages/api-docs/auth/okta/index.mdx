@@ -33,7 +33,8 @@ distinction between the `create` and `update` capabilities inside ACL policies.
   groups will be enabled.
   **Support for okta auth without api_token is deprecated in Vault 1.4**
 - `base_url` `(string: "")` - If set, will be used as the base domain
-  for API requests. Examples are okta.com, oktapreview.com, and okta-emea.com.
+  for API requests. If unset, "okta.com" will be used. Other valid examples
+  are oktapreview.com, and okta-emea.com.
 - `bypass_okta_mfa` `(bool: false)` - Whether to bypass an Okta MFA request.
   Useful if using one of Vault's built-in MFA mechanisms, but this will also
   cause certain other statuses to be ignored, such as `PASSWORD_EXPIRED`.
@@ -84,11 +85,18 @@ $ curl \
   "lease_duration": 0,
   "renewable": false,
   "data": {
-    "org_name": "example",
-    "api_token": "abc123",
     "base_url": "okta.com",
-    "ttl": "",
-    "max_ttl": ""
+    "bypass_okta_mfa": false,
+    "org_name": "example",
+    "token_bound_cidrs": [],
+    "token_explicit_max_ttl": 0,
+    "token_max_ttl": 0,
+    "token_no_default_policy": false,
+    "token_num_uses": 0,
+    "token_period": 0,
+    "token_policies": [],
+    "token_ttl": 0,
+    "token_type": "default"
   },
   "warnings": null
 }

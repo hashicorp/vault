@@ -27,6 +27,7 @@ export default [
           'influxdb',
           'hanadb',
           'mongodb',
+          'mongodbatlas',
           'mssql',
           'mysql-maria',
           'postgresql',
@@ -51,7 +52,9 @@ export default [
           'lookup'
         ]
       },
+      { category: 'mongodbatlas' },
       { category: 'nomad' },
+      { category: 'openldap' },
       { category: 'pki' },
       { category: 'rabbitmq' },
       { category: 'ssh' },
