@@ -34,7 +34,7 @@
       {{/if}}
       <p class="has-text-grey is-size-6 item-c">Since last month</p>
     </div>
-    <HttpRequestsBarChartSmall @counters={{filteredHttpsRequests}}/>
+    <HttpRequestsBarChartSimple @counters={{filteredHttpsRequests}}/>
     {{#link-to "vault.cluster.metrics.http-requests" class="card-details"}} View Details {{/link-to}}      
   {{/if}}
   </SelectableCard>
