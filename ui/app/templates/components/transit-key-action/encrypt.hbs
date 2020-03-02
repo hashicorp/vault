@@ -1,17 +1,28 @@
-<form {{action 'doSubmit' (hash plaintext=plaintext context=context nonce=nonce key_version=key_version) on="submit"}}>
+<form {{action 'doSubmit' (hash plaintext=plaintext context=context nonce=nonce key_version=key_version encodedBase64=encodedBase64) on="submit"}}>
   {{#if (and plaintext ciphertext)}}
     <div class="box is-sideless is-fullwidth is-marginless">
       <div class="field">
         <label for="ciphertext" class="is-label">Ciphertext</label>
         <div class="control is-expanded">
-          <textarea readonly class="textarea" id="ciphertext" data-test-transit-input="ciphertext">{{ciphertext}}</textarea>
+          {{ivy-codemirror
+            value=ciphertext
+            id="ciphertext"
+            options=(hash
+              readOnly=true
+              lineNumbers=true
+              tabSize=2
+              mode='ruby'
+              theme='hashi'
+            )
+            data-test-transit-input="ciphertext"
+          }}
         </div>
       </div>
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
         {{#copy-button
-          clipboardTarget="#ciphertext"
+          clipboardText=ciphertext
           class="button is-primary"
           buttonType="button"
           success=(action (set-flash-message 'Ciphertext copied!'))
@@ -38,9 +49,23 @@
           Plaintext
         </label>
         <div class="control is-relative">
-          {{textarea id="plaintext" value=plaintext class="textarea" data-test-transit-input="plaintext"}}
-          {{b64-toggle value=plaintext isInput=false data-test-transit-b64-toggle="plaintext"}}
+          {{ivy-codemirror
+            id="plaintext"
+            value=plaintext
+            valueUpdated=(action (mut plaintext))
+            options=(hash
+              lineNumbers=true
+              tabSize=2
+              mode='ruby'
+              theme='hashi'
+            )
+            data-test-transit-input="plaintext"
+          }}
         </div>
+      </div>
+      <div class="field">
+        {{input type="checkbox" id="encodedBase64" checked=encodedBase64 data-test-transit-input="encodedBase64"}}
+        <label for="encodedBase64">This data is already encoded in base64</label>
       </div>
       {{#if key.derived}}
         <div class="field">

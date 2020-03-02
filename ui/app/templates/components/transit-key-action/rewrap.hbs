@@ -9,7 +9,16 @@
     <div class="field">
       <label for="ciphertext" class="is-label">Ciphertext</label>
       <div class="control is-expanded">
-        {{textarea name="ciphertext" class="textarea" id="ciphertext" value=ciphertext}}
+        {{ivy-codemirror
+            value=ciphertext
+            id="ciphertext"
+            options=(hash
+              lineNumbers=true
+              tabSize=2
+              mode='ruby'
+              theme='hashi'
+            )
+          }}
       </div>
     </div>
     {{#if key.derived}}
