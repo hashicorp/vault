@@ -32,6 +32,9 @@ func NewServiceRegistration(config map[string]string, logger hclog.Logger, state
 	if err != nil {
 		return nil, err
 	}
+	// The Vault version must be sanitized because it can contain special
+	// characters like "+" which aren't acceptable by the Kube API.
+	state.VaultVersion = client.Sanitize(state.VaultVersion)
 	return &serviceRegistration{
 		logger:       logger,
 		namespace:    namespace,
