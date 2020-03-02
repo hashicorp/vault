@@ -10,7 +10,7 @@ const FILTERED_HTTPS_REQUESTS = [
   { start_time: '2019-02-01T00:00:00Z', total: 5000 },
 ];
 
-module('Integration | Component | http-requests-bar-chart-small', function(hooks) {
+module('Integration | Component | http-requests-bar-chart-simple', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
@@ -18,9 +18,9 @@ module('Integration | Component | http-requests-bar-chart-small', function(hooks
   });
 
   test('it renders and the correct number of bars are showing', async function(assert) {
-    await render(hbs`<HttpRequestsBarChartSmall @counters={{filteredHttpsRequests}}/>`);
+    await render(hbs`<HttpRequestsBarChartSimple @counters={{filteredHttpsRequests}}/>`);
 
     assert.dom('rect').exists({ count: FILTERED_HTTPS_REQUESTS.length });
-    assert.dom('.http-requests-bar-chart-small').exists();
+    assert.dom('.http-requests-bar-chart-simple').exists();
   });
 });

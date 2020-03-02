@@ -108,7 +108,7 @@ SECURITY:
 
 IMPROVEMENTS:
  * auth/aws: Add aws metadata to identity alias [[GH-7975](https://github.com/hashicorp/vault/pull/7975)]
- * auth/kubernetes: Allow both names and namespaces to be set to "*" [[GH-78](https://github.com/hashicorp/vault/pull/78)]
+ * auth/kubernetes: Allow both names and namespaces to be set to "*" [[GH-78](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/78)]
 
 BUG FIXES:
 
