@@ -7,12 +7,11 @@ import { computed } from '@ember/object';
  *
  * @example
  * ```js
- * <SelectableCard @cardTitle="Tokens" @total={{totalHttpRequests}} @subText="Total" @gridContainer={{gridContainer}}/>
+ * <SelectableCard @cardTitle="Tokens" @total={{totalHttpRequests}} @subText="Total"/>
  * ```
  * @param cardTitle=null {String} - cardTitle displays the card title
  * @param total=0 {Number} - the Total number displays like a title, it's the largest text in the component
  * @param subText=null {String} - subText describes the total
- * @param gridContainer=false {Boolean} - Optional parameter used to display CSS grid item class.
  */
 
 export default Component.extend({

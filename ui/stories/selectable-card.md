@@ -11,12 +11,11 @@ They are designed to be used in containers that act as flexbox or css grid conta
 | cardTitle | <code>String</code> | <code></code> | cardTitle displays the card title |
 | total | <code>Number</code> | <code>0</code> | the Total number displays like a title, it's the largest text in the component |
 | subText | <code>String</code> | <code></code> | subText describes the total |
-| gridContainer | <code>Boolean</code> | <code>false</code> | Optional parameter used to display CSS grid item class. |
 
 **Example**
   
 ```js
-<SelectableCard @cardTitle="Tokens" @total={{totalHttpRequests}} @subText="Total" @gridContainer={{gridContainer}}/>
+<SelectableCard @cardTitle="Tokens" @total={{totalHttpRequests}} @subText="Total"/>
 ```
 
 **See**
