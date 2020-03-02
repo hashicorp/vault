@@ -11,6 +11,7 @@ import (
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	sealhelper "github.com/hashicorp/vault/helper/testhelpers/seal"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/vault"
@@ -41,10 +42,10 @@ func TestSealMigration_AutoToShamir(t *testing.T) {
 }
 
 func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupMutator) {
-	tcluster := newTransitSealServer(t)
+	tcluster := sealhelper.NewTransitSealServer(t)
 	defer tcluster.Cleanup()
 
-	tcluster.makeKey(t, "key1")
+	tcluster.MakeKey(t, "key1")
 	var seals []vault.Seal
 	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
 		DisableSealWrap: true,
@@ -53,7 +54,7 @@ func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupM
 		SkipInit:    true,
 		NumCores:    3,
 		SealFunc: func() vault.Seal {
-			tseal := tcluster.makeSeal(t, "key1")
+			tseal := tcluster.MakeSeal(t, "key1")
 			seals = append(seals, tseal)
 			return tseal
 		},
