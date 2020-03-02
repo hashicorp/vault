@@ -52,4 +52,49 @@ set `ha_enabled = true`.
 - `node_id` `(string: "")` - The identifier for the node in the Raft cluster.
   This value can be overridden by setting the `VAULT_RAFT_NODE_ID` environment variable.
 
+- `retry_join` `(list: [])` - There can be one or more `retry_join` stanzas.
+When the raft cluster is getting bootstrapped, if the connection details of all
+the nodes are known beforehand, then specifying this config stanzas enables the
+nodes to automatically form a raft cluster. All the nodes would mention all
+other nodes that they could join using this config. When one of the nodes is
+initialized, it becomes the leader and all the other nodes will join the
+initialized node to form the cluster. See the section below that describes the
+parameters accepted by the `retry_join` stanza.
+
+ ### `retry_join` stanza
+
+- `leader_api_addr` `(string: "")` - Address of a possible leader node
+
+- `leader_ca_cert` `(string: "")` - CA cert of the possible leader node
+
+- `leader_client_cert` `(string: "")` - Client certificate for the follower node to establish client authentication with the possible leader node
+
+- `leader_client_key` `(string:"")` - Client key for the follower node to establish client authentication with the possible leader node
+
+Example Configuration:
+```
+storage "raft" {
+  path    = "/Users/foo/raft/"
+  node_id = "node1"
+  retry_join {
+    leader_api_addr = "http://127.0.0.2:8200"
+    leader_ca_cert = "/path/to/ca1"
+    leader_client_cert = "/path/to/client/cert1"
+    leader_client_key = "/path/to/client/key1"
+  }
+  retry_join {
+    leader_api_addr = "http://127.0.0.3:8200"
+    leader_ca_cert = "/path/to/ca2"
+    leader_client_cert = "/path/to/client/cert2"
+    leader_client_key = "/path/to/client/key2"
+  }
+  retry_join {
+    leader_api_addr = "http://127.0.0.4:8200"
+    leader_ca_cert = "/path/to/ca3"
+    leader_client_cert = "/path/to/client/cert3"
+    leader_client_key = "/path/to/client/key3"
+  }
+}
+```
+
 [raft]: https://raft.github.io/ 'The Raft Consensus Algorithm'
