@@ -40,7 +40,7 @@ func (b *backend) tidySecretID(ctx context.Context, req *logical.Request) (*logi
 		return resp, nil
 	}
 
-	go b.tidySecretIDbackground(req.Storage)
+	go b.tidySecretIDinternal(req.Storage)
 
 	resp := &logical.Response{}
 	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
@@ -53,7 +53,7 @@ type tidyHelperSecretIDAccessor struct {
 	saltedSecretIDAccessor string
 }
 
-func (b *backend) tidySecretIDbackground(s logical.Storage) {
+func (b *backend) tidySecretIDinternal(s logical.Storage) {
 	defer atomic.StoreUint32(b.tidySecretIDCASGuard, 0)
 
 	logger := b.Logger().Named("tidy")
@@ -74,13 +74,6 @@ func (b *backend) tidySecretIDbackground(s logical.Storage) {
 	}
 
 	tidyFunc := func(secretIDPrefixToUse, accessorIDPrefixToUse string) error {
-		logger.Trace("listing role HMACs", "prefix", secretIDPrefixToUse)
-
-		roleNameHMACs, err := s.List(ctx, secretIDPrefixToUse)
-		if err != nil {
-			return err
-		}
-
 		logger.Trace("listing accessors", "prefix", accessorIDPrefixToUse)
 
 		// List all the accessors and add them all to a map
@@ -174,6 +167,13 @@ func (b *backend) tidySecretIDbackground(s logical.Storage) {
 			skipHashes[salt.SaltID(result.SecretIDAccessor)] = true
 
 			return nil
+		}
+
+		logger.Trace("listing role HMACs", "prefix", secretIDPrefixToUse)
+
+		roleNameHMACs, err := s.List(ctx, secretIDPrefixToUse)
+		if err != nil {
+			return err
 		}
 
 		for _, roleNameHMAC := range roleNameHMACs {
