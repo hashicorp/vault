@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-hclog"
@@ -245,6 +247,28 @@ type ErrNotFound struct {
 
 func (e *ErrNotFound) Error() string {
 	return e.debuggingInfo
+}
+
+// Sanitize is for "data" being sent to the Kubernetes API.
+// Data must consist of alphanumeric characters, '-', '_' or '.'.
+// Any other characters found in the original value will be stripped,
+// and the surrounding characters will be concatenated.
+func Sanitize(val string) string {
+	return strings.Map(replaceBadCharsWithDashes, val)
+}
+
+func replaceBadCharsWithDashes(r rune) rune {
+	if unicode.IsLetter(r) {
+		return r
+	}
+	if unicode.IsNumber(r) {
+		return r
+	}
+	switch string(r) {
+	case "-", "_", ".":
+		return r
+	}
+	return '-'
 }
 
 // sanitizedDebuggingInfo provides a returnable string that can be used for debugging. This is intentionally somewhat vague

@@ -141,28 +141,45 @@ These `telemetry` parameters apply to
 
 ### `prometheus`
 
-~> **Note:** The `/v1/sys/metrics` endpoint is only accessible on active nodes
-and automatically disabled on standby nodes. You can enable the `/v1/sys/metrics`
-endpoint on standby nodes by [enabling unauthenticated metrics access][telemetry-tcp].
-
 These `telemetry` parameters apply to
 [prometheus](https://prometheus.io).
 
 - `prometheus_retention_time` `(string: "24h")` - Specifies the amount of time that
-  prometheus metrics are retained in memory. It is recommended to also enable the option
-  `disable_hostname` to avoid having prefixed metrics with hostname. Vault does not use the
-  default Prometheus path, so Prometheus must be configured as follows. Note that using
-  `?format=prometheus` in the path won't work as "?" will be escaped, so it must be specified
-  as a parameter. Additionally a Vault token is required to access /v1/sys/metrics. The prometheus
-  `bearer_token` or `bearer_token_file` options must be added to the scrape job.
+  Prometheus metrics are retained in memory. 
+- `disable_hostname` `(bool: false)` -  It is recommended to also enable the option
+  `disable_hostname` to avoid having prefixed metrics with hostname. 
+
+The `/v1/sys/metrics` endpoint is only accessible on active nodes
+and automatically disabled on standby nodes. You can enable the `/v1/sys/metrics`
+endpoint on standby nodes by [enabling unauthenticated metrics access][telemetry-tcp].
+
+Vault does not use the default Prometheus path, so Prometheus must be configured 
+with the path below. 
+Note that using `?format=prometheus` in the path won't work as "?" will be 
+escaped, so it must be specified as a parameter. 
+
+A Vault token is required with `capabilities = ["read", "list"]` to 
+/v1/sys/metrics. The Prometheus `bearer_token` or `bearer_token_file` options 
+must be added to the scrape job. 
+
+An example job_name stanza required in the [Prometheus config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config) is provided below. 
 
 ```
-metrics_path: "/v1/sys/metrics"
-params:
-  format: ['prometheus']
-bearer_token: your_vault_token_here
-
+# prometheus.yml 
+scrape_configs:
+  - job_name: 'vault'
+    metrics_path: "/v1/sys/metrics"
+    params:
+      format: ['prometheus']
+    scheme: https
+    tls_config:
+      ca_file: your_ca_here.pem
+    bearer_token: "your_vault_token_here"
+    static_configs:
+    - targets: ['your_vault_server_here:8200']
 ```
+
+  An example telemetry configuration to be added to Vault's configuration file is shown below:
 
 ```hcl
 telemetry {
@@ -212,3 +229,4 @@ telemetry {
 ```
 
 [telemetry-tcp]: /docs/configuration/listener/tcp#telemetry
+ 
