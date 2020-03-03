@@ -3,9 +3,8 @@
     <div class="box is-sideless is-fullwidth is-marginless">
       <div class="field">
         <label for="hmac" class="is-label">HMAC</label>
-        <div class="control">
+        <div id="hmac-control" class="control">
           {{ivy-codemirror
-            id="hmac"
             value=hmac
             options=(hash
               readOnly=true
@@ -47,11 +46,10 @@
         <label for="input" class="is-label">
           Input
         </label>
-        <div class="control is-relative">
+        <div id="input-control" class="control is-relative">
           {{ivy-codemirror
             value=input
             valueUpdated=(action (mut input))
-            id="input"
             options=(hash
               lineNumbers=true
               tabSize=2
@@ -60,8 +58,6 @@
             )
             data-test-transit-input="input"
           }}
-          {{!-- {{textarea id="input" name="input" value=input class="textarea" data-test-transit-input="input"}} --}}
-          {{!-- {{b64-toggle value=input isInput=false data-test-transit-b64-toggle="input"}} --}}
         </div>
       </div>
       <div class="field">

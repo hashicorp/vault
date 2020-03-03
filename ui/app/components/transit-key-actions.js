@@ -187,15 +187,17 @@ export default Component.extend(TRANSIT_PARAMS, {
     doSubmit(data, options = {}) {
       const { backend, id } = this.getModelInfo();
       const action = this.get('selectedAction');
-      const { encodedBase64, ...formData } = data;
-      if (action === 'encrypt' && !encodedBase64) {
-        formData.plaintext = encodeString(formData.plaintext);
-      }
-      if (action === 'hmac' && !encodedBase64) {
-        formData.input = encodeString(formData.input);
-      }
-      if (action === 'verify' && !encodedBase64) {
-        formData.input = encodeString(formData.input);
+      const { encodedBase64, ...formData } = data || {};
+      if (!encodedBase64) {
+        if (action === 'encrypt' && !!formData.plaintext) {
+          formData.plaintext = encodeString(formData.plaintext);
+        }
+        if (action === 'hmac' && !!formData.input) {
+          formData.input = encodeString(formData.input);
+        }
+        if (action === 'verify' && !!formData.input) {
+          formData.input = encodeString(formData.input);
+        }
       }
       let payload = formData ? this.compactData(formData) : null;
       this.setProperties({

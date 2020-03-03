@@ -5,11 +5,10 @@
         <label for="plaintext" class="is-label">
           Plaintext
         </label>
-        <div class="control is-relative">
+        <div id="plaintext-control" class="control is-relative">
           {{ivy-codemirror
             value=plaintext
             options=(hash
-              id="plaintext"
               readOnly=true
               lineNumbers=true
               tabSize=2
@@ -43,7 +42,7 @@
     <div class="box is-sideless is-fullwidth is-marginless">
       <div class="field">
         <label for="ciphertext" class="is-label">Ciphertext</label>
-        <div class="control">
+        <div id="ciphertext-control" class="control">
           {{ivy-codemirror
             value=ciphertext
             valueUpdated=(action (mut ciphertext))
@@ -55,7 +54,6 @@
             )
             data-test-transit-input="ciphertext"
           }}
-          {{!-- {{textarea id="ciphertext" name="ciphertext" value=ciphertext class="textarea" data-test-transit-input="ciphertext"}} --}}
         </div>
       </div>
       {{#if key.derived}}

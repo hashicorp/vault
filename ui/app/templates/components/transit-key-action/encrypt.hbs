@@ -3,10 +3,9 @@
     <div class="box is-sideless is-fullwidth is-marginless">
       <div class="field">
         <label for="ciphertext" class="is-label">Ciphertext</label>
-        <div class="control is-expanded">
+        <div id="ciphertext-control" class="control is-expanded">
           {{ivy-codemirror
             value=ciphertext
-            id="ciphertext"
             options=(hash
               readOnly=true
               lineNumbers=true
@@ -31,7 +30,7 @@
         {{/copy-button}}
       </div>
       <div class="control">
-        <button {{action "onClear"}} type="button" class="button">
+        <button {{action "onClear"}} type="button" class="button" data-test-encrypt-back-button>
           Back
         </button>
       </div>
@@ -48,9 +47,8 @@
         <label for="plaintext" class="is-label">
           Plaintext
         </label>
-        <div class="control is-relative">
+        <div id="plaintext-control" class="control is-relative">
           {{ivy-codemirror
-            id="plaintext"
             value=plaintext
             valueUpdated=(action (mut plaintext))
             options=(hash
