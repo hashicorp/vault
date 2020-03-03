@@ -11,7 +11,7 @@
       <div class="control is-expanded">
         {{ivy-codemirror
             value=ciphertext
-            id="ciphertext"
+            valueUpdated=(action (mut ciphertext))
             options=(hash
               lineNumbers=true
               tabSize=2
