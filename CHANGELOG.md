@@ -1,3 +1,13 @@
+## Next
+
+IMPROVEMENTS:
+
+* auth/azure: subscription ID, resource group, vm and vmss names are now stored in alias metadata [[GH-30](https://github.com/hashicorp/vault-plugin-auth-azure/pull/30)]
+
+BUG FIXES:
+
+* identity: Fix incorrect caching of identity token JWKS responses [[GH-8412](https://github.com/hashicorp/vault/pull/8412)]
+
 ## 1.4 Beta1 (February 20th, 2020)
 
 FEATURES:
