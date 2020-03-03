@@ -224,6 +224,32 @@ func TestHandler_CacheControlNoStore(t *testing.T) {
 	}
 }
 
+// TestHandler_MissingToken tests the response / error code if a request comes
+// in with a missing client token. See
+// https://github.com/hashicorp/vault/issues/8377
+func TestHandler_MissingToken(t *testing.T) {
+	// core, _, token := vault.TestCoreUnsealed(t)
+	core, _, _ := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	req, err := http.NewRequest("GET", addr+"/v1/sys/internal/ui/mounts/cubbyhole", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	// req.Header.Set(consts.AuthHeaderName, token)
+	req.Header.Set(WrapTTLHeaderName, "60s")
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != 400 {
+		t.Fatalf("expected code 400, got: %d", resp.StatusCode)
+	}
+}
+
 func TestHandler_Accepted(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
