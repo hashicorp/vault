@@ -96,7 +96,7 @@ using BoltDB is that it allows Vault's snapshots to be very light weight. Since
 Vault's data is already persisted to disk in BoltDB the snapshot process just
 needs to truncate the raft logs.
 
-Consensus is fault-tolerant up to the point where quorum is available.
+Consensus is fault-tolerant while a cluster has quorum.
 If a quorum of nodes is unavailable, it is impossible to process log entries or reason
 about peer membership. For example, suppose there are only 2 peers: A and B. The quorum
 size is also 2, meaning both nodes must agree to commit a log entry. If either A or B
