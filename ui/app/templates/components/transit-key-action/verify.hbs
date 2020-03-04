@@ -90,7 +90,12 @@
                 <div class="level-right">
                   {{#unless (eq verification 'HMAC')}}
                     <div class="control is-flex">
-                      {{input  id="prehashed" type="checkbox" name="prehashed" class="switch is-rounded is-success is-small" checked=prehashed }}
+                      {{input
+                        id="prehashed"
+                        type="checkbox"
+                        name="prehashed"
+                        class="switch is-rounded is-success is-small"
+                        checked=prehashed }}
                       <label for="prehashed">Prehashed</label>
                     </div>
                   {{/unless}}
