@@ -14,6 +14,7 @@ export default [
     content: [
       'architecture',
       'high-availability',
+      'integrated-storage',
       'security',
       'telemetry',
       'token',
