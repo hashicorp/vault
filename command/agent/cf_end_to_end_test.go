@@ -8,7 +8,6 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	log "github.com/hashicorp/go-hclog"
 	credCF "github.com/hashicorp/vault-plugin-auth-cf"
 	"github.com/hashicorp/vault-plugin-auth-cf/testing/certificates"
 	cfAPI "github.com/hashicorp/vault-plugin-auth-cf/testing/cf"
@@ -29,7 +28,6 @@ func TestCFEndToEnd(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"cf": credCF.Factory,
 		},

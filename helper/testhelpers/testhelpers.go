@@ -457,3 +457,25 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 
 	WaitForNCoresUnsealed(t, cluster, 3)
 }
+
+func GenerateDebugLogs(t testing.T, stopCh chan struct{}, client *api.Client) {
+	t.Helper()
+
+	go func() {
+		for {
+			select {
+			case <-stopCh:
+				return
+			default:
+			}
+
+			_, err := client.Sys().Health()
+
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			time.Sleep(1 * time.Second)
+		}
+	}()
+}

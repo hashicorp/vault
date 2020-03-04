@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/ldap"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
@@ -21,7 +20,6 @@ func TestPolicy_NoDefaultPolicy(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       hclog.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"ldap": ldap.Factory,
 		},
@@ -98,7 +96,6 @@ func TestPolicy_NoConfiguredPolicy(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       hclog.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"ldap": ldap.Factory,
 		},
