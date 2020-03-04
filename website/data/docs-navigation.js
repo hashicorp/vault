@@ -327,12 +327,12 @@ export default [
               {
                 category: 'examples',
                 content: [
+                  'enterprise-best-practice',
+                  'ha-with-consul',
+                  'standalone-audit',
                   'standalone-load-balanced-ui',
                   'standalone-tls',
-                  'standalone-audit',
-                  'ha-with-consul',
-                  'kubernetes-auth',
-                  'enterprise-best-practice'
+                  'kubernetes-auth'
                 ]
               },
             ],
