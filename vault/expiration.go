@@ -143,7 +143,6 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
 func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger) *ExpirationManager {
-	quitCh := make(chan struct{})
 	exp := &ExpirationManager{
 		core:       c,
 		router:     c.router,
@@ -158,7 +157,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		// restore mode
 		restoreMode:  new(int32),
 		restoreLocks: locksutil.CreateLocks(),
-		quitCh:       quitCh,
+		quitCh:       make(chan struct{}),
 
 		coreStateLock:     &c.stateLock,
 		quitContext:       c.activeContext,
@@ -167,7 +166,6 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
 		expireFunc:          e,
 	}
-
 	*exp.restoreMode = 1
 
 	if exp.logger == nil {
