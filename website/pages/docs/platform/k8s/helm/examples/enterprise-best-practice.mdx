@@ -111,13 +111,13 @@ server:
       }
 
       storage "consul" {
-        path = "vault"
+        path = "vault-us-east"
         address = "HOST_IP:8500"
         token = "45a3bd52-07c7-47a4-52fd-0745e0cfe967"
       }
 
       seal "awskms" {
-        region     = "us-west-2"
+        region     = "us-east-2"
         kms_key_id = "19ec80b0-dfdd-4d97-8164-c6examplekey"
       }
 EOF
@@ -126,7 +126,7 @@ EOF
 Next, point Helm to the chart release and specify the `values-custom.yaml` file:
 
 ```
-helm install \
+helm install --name="vault-us-east" \
   -f values-custom.yaml \
   https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
 ```
@@ -140,15 +140,32 @@ alternatively be set using the Downward API. Please see
 [Kubernetes Service Registration](/docs/configuration/service-registration/kubernetes)
 for elaboration.
 
+Lastly, note that the `path` for `consul` is set to `vault-us-east`. This is because, in
+a replicated environment, we would expect other clusters to be in other regions such as
+`vault-us-west`. A similar distinction was made in the `helm install` command's naming
+convention.
+
+After bringing up the first cluster (and each cluster thereafter), Vault enterprise
+requires a license to be installed within a limited time window, as shown
+[here](/api-docs/system/license/#install-license).
+
 ## Setting Up a Disaster Replication (DR) Cluster
 
 Setting up a DR cluster follows an identical process and configuration for
-creating the cluster itself. Once the cluster is up, add it as a follower to
-the leader cluster. See [Disaster Recovery Replication Setup](https://learn.hashicorp.com/vault/operations/ops-disaster-recovery)
+creating the cluster itself, but presumably in a different region. This would
+necessitate changing the value under `consul` and `path` to one relevant to the
+region for the DR cluster, such as `vault-us-west`, as well as the `--name` used
+in the `helm install` command.
+
+Once the cluster is up and the license is added, add it as a follower to the leader
+cluster. See [Disaster Recovery Replication Setup](https://learn.hashicorp.com/vault/operations/ops-disaster-recovery)
 for more.
 
 ## Setting Up a Performance Cluster
 
 Setting up a performance cluster also follows an identical process and configuration
-for creating the cluster itself. See [Setting Up Performance Replication](https://learn.hashicorp.com/vault/operations/ops-replication)
+for creating the cluster itself, with the region differentiations noted above.
+
+Once the cluster is up and the license is added, add it as a follower to the leader
+cluster. See [Setting Up Performance Replication](https://learn.hashicorp.com/vault/operations/ops-replication)
 for more on how to configure a cluster to follow the primary once it is up.
