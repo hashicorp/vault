@@ -20,7 +20,6 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"ldap": ldapcred.Factory,
 		},

@@ -49,7 +49,6 @@ func TestExpiration_Tidy(t *testing.T) {
 
 	testCore := TestCore(t)
 	testCore.baseLogger = logger
-	testCore.logger = logger.Named("core")
 	testCoreUnsealed(t, testCore)
 
 	exp := testCore.expiration

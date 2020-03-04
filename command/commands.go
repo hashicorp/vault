@@ -662,6 +662,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"monitor": func() (cli.Command, error) {
+			return &MonitorCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 	}
 }
 

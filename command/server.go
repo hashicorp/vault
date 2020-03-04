@@ -92,7 +92,7 @@ type ServerCommand struct {
 
 	logOutput   io.Writer
 	gatedWriter *gatedwriter.Writer
-	logger      log.Logger
+	logger      log.InterceptLogger
 
 	cleanupGuard sync.Once
 
@@ -428,7 +428,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		return 1
 	}
 
-	c.logger = log.New(&log.LoggerOptions{
+	c.logger = log.NewInterceptLogger(&log.LoggerOptions{
 		Output: c.gatedWriter,
 		Level:  level,
 		// Note that if logFormat is either unspecified or standard, then
@@ -851,14 +851,16 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	config.LogFormat = logFormat.String()
+
 	if c.flagDevThreeNode || c.flagDevFourCluster {
-		c.logger = log.New(&log.LoggerOptions{
+		c.logger = log.NewInterceptLogger(&log.LoggerOptions{
 			Mutex:  &sync.Mutex{},
 			Output: c.gatedWriter,
 			Level:  log.Trace,
 		})
 	} else {
-		c.logger = log.New(&log.LoggerOptions{
+		c.logger = log.NewInterceptLogger(&log.LoggerOptions{
 			Output: c.gatedWriter,
 			Level:  level,
 			// Note that if logFormat is either unspecified or standard, then

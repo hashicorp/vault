@@ -356,7 +356,7 @@ type Core struct {
 	// baseLogger is used to avoid ResetNamed as it strips useful prefixes in
 	// e.g. testing
 	baseLogger log.Logger
-	logger     log.Logger
+	logger     log.InterceptLogger
 
 	// cachingDisabled indicates whether caches are disabled
 	cachingDisabled bool
@@ -546,7 +546,7 @@ type CoreConfig struct {
 
 	SecureRandomReader io.Reader
 
-	Logger log.Logger
+	Logger log.InterceptLogger
 
 	// Disables the LRU cache on the physical backend
 	DisableCache bool
@@ -716,22 +716,23 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		entCore:                      entCore{},
-		devToken:                     conf.DevToken,
-		physical:                     conf.Physical,
-		serviceRegistration:          conf.GetServiceRegistration(),
-		underlyingPhysical:           conf.Physical,
-		storageType:                  conf.StorageType,
-		redirectAddr:                 conf.RedirectAddr,
-		clusterAddr:                  new(atomic.Value),
-		clusterListener:              new(atomic.Value),
-		seal:                         conf.Seal,
-		router:                       NewRouter(),
-		sealed:                       new(uint32),
-		sealMigrated:                 new(uint32),
-		standby:                      true,
-		baseLogger:                   conf.Logger,
-		logger:                       conf.Logger.Named("core"),
+		entCore:             entCore{},
+		devToken:            conf.DevToken,
+		physical:            conf.Physical,
+		serviceRegistration: conf.GetServiceRegistration(),
+		underlyingPhysical:  conf.Physical,
+		storageType:         conf.StorageType,
+		redirectAddr:        conf.RedirectAddr,
+		clusterAddr:         new(atomic.Value),
+		clusterListener:     new(atomic.Value),
+		seal:                conf.Seal,
+		router:              NewRouter(),
+		sealed:              new(uint32),
+		sealMigrated:        new(uint32),
+		standby:             true,
+		baseLogger:          conf.Logger,
+		logger:              conf.Logger.NamedIntercept("core"),
+
 		defaultLeaseTTL:              conf.DefaultLeaseTTL,
 		maxLeaseTTL:                  conf.MaxLeaseTTL,
 		cachingDisabled:              conf.DisableCache,
@@ -2116,7 +2117,7 @@ func (c *Core) StorageType() string {
 	return c.storageType
 }
 
-func (c *Core) Logger() log.Logger {
+func (c *Core) Logger() log.InterceptLogger {
 	return c.logger
 }
 

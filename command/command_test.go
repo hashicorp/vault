@@ -71,7 +71,6 @@ func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 	client, _, closer := testVaultServerCoreConfig(tb, &vault.CoreConfig{
 		DisableMlock:       true,
 		DisableCache:       true,
-		Logger:             defaultVaultLogger,
 		CredentialBackends: credentialBackends,
 		AuditBackends:      auditBackends,
 		LogicalBackends:    logicalBackends,
@@ -88,7 +87,6 @@ func testVaultServerUnseal(tb testing.TB) (*api.Client, []string, func()) {
 	return testVaultServerCoreConfig(tb, &vault.CoreConfig{
 		DisableMlock:       true,
 		DisableCache:       true,
-		Logger:             defaultVaultLogger,
 		CredentialBackends: defaultVaultCredentialBackends,
 		AuditBackends:      defaultVaultAuditBackends,
 		LogicalBackends:    defaultVaultLogicalBackends,
@@ -105,7 +103,6 @@ func testVaultServerPluginDir(tb testing.TB, pluginDir string) (*api.Client, []s
 	return testVaultServerCoreConfig(tb, &vault.CoreConfig{
 		DisableMlock:       true,
 		DisableCache:       true,
-		Logger:             defaultVaultLogger,
 		CredentialBackends: defaultVaultCredentialBackends,
 		AuditBackends:      defaultVaultAuditBackends,
 		LogicalBackends:    defaultVaultLogicalBackends,
@@ -155,7 +152,6 @@ func testVaultServerUninit(tb testing.TB) (*api.Client, func()) {
 	core, err := vault.NewCore(&vault.CoreConfig{
 		DisableMlock:       true,
 		DisableCache:       true,
-		Logger:             defaultVaultLogger,
 		Physical:           inm,
 		CredentialBackends: defaultVaultCredentialBackends,
 		AuditBackends:      defaultVaultAuditBackends,
