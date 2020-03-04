@@ -1,3 +1,13 @@
+## Next
+
+IMPROVEMENTS:
+
+* auth/azure: subscription ID, resource group, vm and vmss names are now stored in alias metadata [[GH-30](https://github.com/hashicorp/vault-plugin-auth-azure/pull/30)]
+
+BUG FIXES:
+
+* identity: Fix incorrect caching of identity token JWKS responses [[GH-8412](https://github.com/hashicorp/vault/pull/8412)]
+
 ## 1.4 Beta1 (February 20th, 2020)
 
 FEATURES:
@@ -83,6 +93,7 @@ BUG FIXES:
 * ui: Fix broken popup menu on the transit secrets list page [[GH-8348](https://github.com/hashicorp/vault/pull/8348)]
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [[GH-8035](https://github.com/hashicorp/vault/pull/8035)]
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
+* ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
 
 
 ## 1.3.3 (Unreleased)
