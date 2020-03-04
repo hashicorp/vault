@@ -82,7 +82,7 @@ func (d *Batcher) Put(ctx context.Context, entry *Entry) error {
 		return d.storage.Put(ctx, entry)
 	}
 
-	errChan := make(chan error)
+	errChan := make(chan error, 1)
 	d.submit <- batchRequest{
 		op:      PutOperation,
 		entry:   *entry,
@@ -90,11 +90,8 @@ func (d *Batcher) Put(ctx context.Context, entry *Entry) error {
 	}
 	select {
 	case err := <-errChan:
-		close(errChan)
 		return err
 	case <-ctx.Done():
-		// Make sure we don't block the run goroutine's attempt to send the error
-		go func() { <-errChan }()
 		return ctx.Err()
 	}
 }
