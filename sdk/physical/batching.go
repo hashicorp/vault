@@ -9,10 +9,13 @@ type batchValue struct{}
 
 var contextBatch batchValue = struct{}{}
 
+// ContextBatch yields a context that will satisfy IsBatchContext.
 func ContextBatch(ctx context.Context) context.Context {
 	return context.WithValue(ctx, contextBatch, "1")
 }
 
+// IsBatchContext indicates that with a transactional backends,
+// Put and Delete operations will be grouped into transactions.
 func IsBatchContext(ctx context.Context) bool {
 	if ctx == nil {
 		return false
@@ -27,6 +30,9 @@ type batchRequest struct {
 	errChan chan error
 }
 
+// A Batcher wraps a physical Backend such that if the backend supports
+// transactions, Put and Delete will batch requests into transactions
+// if they're called with a context that satisfies IsBatchContext.
 type Batcher struct {
 	timer         *time.Ticker
 	batchMax      int
@@ -46,6 +52,8 @@ func NewBatcher(storage Backend) *Batcher {
 	}
 }
 
+// Start runs the Batcher service until ctx is done.  It should normally be
+// run as a goroutine.
 func (d *Batcher) Start(ctx context.Context) {
 	d.activeContext = ctx
 	var reqs []batchRequest
@@ -99,6 +107,8 @@ func (d *Batcher) Delete(ctx context.Context, key string) error {
 }
 
 func (d *Batcher) sendRequest(ctx context.Context, op Operation, entry Entry) error {
+	// Use a buffered channel to ensure we don't block the writer if we return
+	// due to context being done.
 	errChan := make(chan error, 1)
 	d.submit <- batchRequest{
 		op:      op,
@@ -107,7 +117,6 @@ func (d *Batcher) sendRequest(ctx context.Context, op Operation, entry Entry) er
 	}
 	select {
 	case err := <-errChan:
-		close(errChan)
 		return err
 	case <-ctx.Done():
 		return ctx.Err()
@@ -115,7 +124,6 @@ func (d *Batcher) sendRequest(ctx context.Context, op Operation, entry Entry) er
 }
 
 func (d *Batcher) run(reqs []batchRequest) {
-	// TODO should we eliminate dups?
 	txn := make([]*TxnEntry, len(reqs))
 	for i, req := range reqs {
 		txn[i] = &TxnEntry{
