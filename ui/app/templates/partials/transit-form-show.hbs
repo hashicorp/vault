@@ -99,35 +99,49 @@
       (eq key.type "chacha20-poly1305")
     )
   }}
-    <div class="columns is-mobile is-gapless is-marginless table">
-      <div class="column is-half thead">
-        <div class="th">
-          Version
-        </div>
-      </div>
-      <div class="column is-half thead">
-        <div class="th">
-          Created at
-        </div>
-      </div>
-    </div>
     {{#each-in key.keys as |version creationTimestamp|}}
-      <div class="columns is-mobile is-gapless is-marginless table" data-test-transit-key-version-row={{version}}>
-        <div class="column is-half td">
-          <div class="td is-borderless">
-            {{version}}
-            {{#if (coerce-eq key.minDecryptionVersion version)}}
-              <p class="help has-text-grey">(current minimum decryption version)</p>
-            {{/if}}
+      <div class="linked-block list-item-row" data-test-transit-key-version-row={{version}}>
+        <div class="columns is-mobile">
+          <div class="column is-3">
+            <div class="level level-left">
+              <Icon @glyph="history" class="has-text-grey-light is-padded" @size="l" />
+              <strong class="has-padding is-size-6">Version {{version}}</strong>
+            </div>
           </div>
-        </div>
-        <div class="column is-half td">
-          <div class="td is-borderless">
-            {{date-format creationTimestamp 'MMM DD, YYYY hh:mm:ss A'}}
-            <br />
-            <small class="is-font-mono has-text-grey">
-              {{date-format creationTimestamp }}
-            </small>
+          <div class="column is-4">
+            <div class="td is-borderless">
+              <small class="help has-text-grey">
+                {{date-from-now creationTimestamp addSuffix=true }}
+              </small>
+            </div>
+          </div>
+          <div class="column is-4">
+            <div class="td is-borderless">
+              {{#if (coerce-eq key.minDecryptionVersion version)}}
+                <p class="help level level-left">
+                  <Icon @glyph="check-circle-fill" class="has-text-success" />
+                  Current minimum decryption version
+                </p>
+              {{/if}}
+            </div>
+          </div>
+          <div class="column is-1 is-flex-end">
+            <PopupMenu name="secret-menu">
+              <nav class="menu">
+                <ul class="menu-list">
+                  <li class="action">
+                    {{#copy-button
+                      clipboardText=(get key.keys version)
+                      class="link button is-transparent"
+                      buttonType="button"
+                      success=(action (set-flash-message 'Public key copied!'))
+                    }}
+                      Copy Public Key
+                    {{/copy-button}}
+                  </li>
+                </ul>
+              </nav>
+            </PopupMenu>
           </div>
         </div>
       </div>
