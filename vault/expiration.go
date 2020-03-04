@@ -103,7 +103,7 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 	for attempt := uint(0); attempt < maxRevokeAttempts; attempt++ {
 		revokeCtx, cancel := context.WithTimeout(ctx, DefaultMaxRequestDuration)
 		revokeCtx = namespace.ContextWithNamespace(revokeCtx, le.namespace)
-		revokeCtx = physical.ContextBatchDelete(revokeCtx)
+		revokeCtx = physical.ContextBatch(revokeCtx)
 
 		go func() {
 			select {

@@ -1405,7 +1405,7 @@ func (ts *TokenStore) revokeInternal(ctx context.Context, saltedID string, skipO
 
 	revokeCtx := namespace.ContextWithNamespace(ts.quitContext, tokenNS)
 	if skipOrphan {
-		revokeCtx = physical.ContextBatchDelete(revokeCtx)
+		revokeCtx = physical.ContextBatch(revokeCtx)
 	}
 	if err := ts.expiration.RevokeByToken(revokeCtx, entry); err != nil {
 		return err
