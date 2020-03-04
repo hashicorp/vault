@@ -100,6 +100,7 @@ BUG FIXES:
 
 BUG FIXES:
 
+* approle: Fix excessive locking during tidy, which could potentially block new approle logins for long enough to cause an outage [[GH-8418](https://github.com/hashicorp/vault/pull/8418)]
 * cli: Fix issue where Raft snapshots from standby nodes created an empty backup file [[GH-8097](https://github.com/hashicorp/vault/pull/8097)]
 * identity: Fix incorrect caching of identity token JWKS responses [[GH-8412](https://github.com/hashicorp/vault/pull/8412)]
 * secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [GH-8282]
