@@ -84,7 +84,10 @@ export default [
       },
       {
         category: 'service-registration',
-        content: ['consul']
+        content: [
+          'consul',
+          'kubernetes'
+        ]
       },
       'telemetry',
       { category: 'ui' },
@@ -235,6 +238,7 @@ export default [
       { category: 'identity' },
       { category: 'mongodbatlas' },
       { category: 'nomad' },
+      { category: 'openldap' },
       { category: 'pki' },
       { category: 'rabbitmq' },
       {

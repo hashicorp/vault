@@ -97,7 +97,7 @@ const testConvergentEncryption = async function(assert, keyName) {
       decodeAfterDecrypt: false,
       assertAfterEncrypt: key => {
         assert.ok(
-          /vault:/.test(find('[data-test-transit-input="ciphertext"]').value),
+          /vault:/.test(find('#ciphertext-control .CodeMirror').CodeMirror.getValue()),
           `${key}: ciphertext shows a vault-prefixed ciphertext`
         );
       },
@@ -111,12 +111,11 @@ const testConvergentEncryption = async function(assert, keyName) {
       },
 
       assertAfterDecrypt: key => {
-        assert
-          .dom('[data-test-transit-input="plaintext"]')
-          .hasValue(
-            'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
-            `${key}: the ui shows the base64-encoded plaintext`
-          );
+        assert.equal(
+          find('#plaintext-control .CodeMirror').CodeMirror.getValue(),
+          'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
+          `${key}: the ui shows the base64-encoded plaintext`
+        );
       },
     },
     // raw bytes for plaintext, string for context
@@ -128,7 +127,7 @@ const testConvergentEncryption = async function(assert, keyName) {
       decodeAfterDecrypt: false,
       assertAfterEncrypt: key => {
         assert.ok(
-          /vault:/.test(find('[data-test-transit-input="ciphertext"]').value),
+          /vault:/.test(find('#ciphertext-control .CodeMirror').CodeMirror.getValue()),
           `${key}: ciphertext shows a vault-prefixed ciphertext`
         );
       },
@@ -138,12 +137,11 @@ const testConvergentEncryption = async function(assert, keyName) {
           .hasValue(encodeString('context'), `${key}: the ui shows the input context`);
       },
       assertAfterDecrypt: key => {
-        assert
-          .dom('[data-test-transit-input="plaintext"]')
-          .hasValue(
-            'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
-            `${key}: the ui shows the base64-encoded plaintext`
-          );
+        assert.equal(
+          find('#plaintext-control .CodeMirror').CodeMirror.getValue(),
+          'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
+          `${key}: the ui shows the base64-encoded plaintext`
+        );
       },
     },
     // base64 input
@@ -155,7 +153,7 @@ const testConvergentEncryption = async function(assert, keyName) {
       decodeAfterDecrypt: true,
       assertAfterEncrypt: key => {
         assert.ok(
-          /vault:/.test(find('[data-test-transit-input="ciphertext"]').value),
+          /vault:/.test(find('#ciphertext-control .CodeMirror').CodeMirror.getValue()),
           `${key}: ciphertext shows a vault-prefixed ciphertext`
         );
       },
@@ -165,9 +163,11 @@ const testConvergentEncryption = async function(assert, keyName) {
           .hasValue(encodeString('context'), `${key}: the ui shows the input context`);
       },
       assertAfterDecrypt: key => {
-        assert
-          .dom('[data-test-transit-input="plaintext"]')
-          .hasValue('This is the secret', `${key}: the ui decodes plaintext`);
+        assert.equal(
+          find('#plaintext-control .CodeMirror').CodeMirror.getValue(),
+          'This is the secret',
+          `${key}: the ui decodes plaintext`
+        );
       },
     },
 
@@ -181,7 +181,7 @@ const testConvergentEncryption = async function(assert, keyName) {
       assertAfterEncrypt: key => {
         assert.ok(find('[data-test-transit-input="ciphertext"]'), `${key}: ciphertext box shows`);
         assert.ok(
-          /vault:/.test(find('[data-test-transit-input="ciphertext"]').value),
+          /vault:/.test(find('#ciphertext-control .CodeMirror').CodeMirror.getValue()),
           `${key}: ciphertext shows a vault-prefixed ciphertext`
         );
       },
@@ -192,19 +192,22 @@ const testConvergentEncryption = async function(assert, keyName) {
       },
       assertAfterDecrypt: key => {
         assert.ok(find('[data-test-transit-input="plaintext"]'), `${key}: plaintext box shows`);
-        assert
-          .dom('[data-test-transit-input="plaintext"]')
-          .hasValue('There are many secrets 🤐', `${key}: the ui decodes plaintext`);
+        assert.equal(
+          find('#plaintext-control .CodeMirror').CodeMirror.getValue(),
+          'There are many secrets 🤐',
+          `${key}: the ui decodes plaintext`
+        );
       },
     },
   ];
 
   for (let testCase of tests) {
     await click('[data-test-transit-action-link="encrypt"]');
-    await fillIn('[data-test-transit-input="plaintext"]', testCase.plaintext);
+    find('#plaintext-control .CodeMirror').CodeMirror.setValue(testCase.plaintext);
     await fillIn('[data-test-transit-input="context"]', testCase.context);
-    if (testCase.encodePlaintext) {
-      await click('[data-test-transit-b64-toggle="plaintext"]');
+    if (!testCase.encodePlaintext) {
+      // If value is already encoded, check the box
+      await click('input[data-test-transit-input="encodedBase64"]');
     }
     if (testCase.encodeContext) {
       await click('[data-test-transit-b64-toggle="context"]');
