@@ -143,24 +143,6 @@ type SecurityBarrier interface {
 
 	// SecurityBarrier must provide the encryption APIs
 	BarrierEncryptor
-
-	BatchDelete(ctx context.Context, keys []string) error
-}
-
-// BarrierStorage is the storage only interface required for a Barrier.
-type BarrierStorage interface {
-	// Put is used to insert or update an entry
-	Put(ctx context.Context, entry *logical.StorageEntry) error
-
-	// Get is used to fetch an entry
-	Get(ctx context.Context, key string) (*logical.StorageEntry, error)
-
-	// Delete is used to permanently delete an entry
-	Delete(ctx context.Context, key string) error
-
-	// List is used ot list all the keys under a given
-	// prefix, up to the next prefix.
-	List(ctx context.Context, prefix string) ([]string, error)
 }
 
 // BarrierEncryptor is the in memory only interface that does not actually

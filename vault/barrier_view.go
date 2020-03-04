@@ -17,7 +17,6 @@ import (
 // durable storage mechanism for logical views.
 type BarrierView struct {
 	storage         *logical.StorageView
-	logger          hclog.Logger
 	readOnlyErr     error
 	readOnlyErrLock sync.RWMutex
 	iCheck          interface{}
@@ -25,7 +24,7 @@ type BarrierView struct {
 
 // NewBarrierView takes an underlying security barrier and returns
 // a view of it that can only operate with the given prefix.
-func NewBarrierView(barrier logical.BatchStorage, prefix string) *BarrierView {
+func NewBarrierView(barrier logical.Storage, prefix string) *BarrierView {
 	return &BarrierView{
 		storage: logical.NewStorageView(barrier, prefix),
 	}
@@ -89,24 +88,6 @@ func (v *BarrierView) Delete(ctx context.Context, key string) error {
 	}
 
 	return v.storage.Delete(ctx, key)
-}
-
-func (v *BarrierView) BatchDelete(ctx context.Context, keys []string) error {
-	for _, key := range keys {
-		expandedKey := v.storage.ExpandKey(key)
-
-		roErr := v.getReadOnlyErr()
-		if roErr != nil {
-			if runICheck(v, expandedKey, roErr) {
-				return roErr
-			}
-		}
-	}
-
-	if v.logger != nil {
-		v.logger.Info("batch delete", "keys", keys)
-	}
-	return v.storage.BatchDelete(ctx, keys)
 }
 
 // SubView constructs a nested sub-view using the given prefix

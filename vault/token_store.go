@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"github.com/mitchellh/mapstructure"
 )
@@ -1403,6 +1404,9 @@ func (ts *TokenStore) revokeInternal(ctx context.Context, saltedID string, skipO
 	}
 
 	revokeCtx := namespace.ContextWithNamespace(ts.quitContext, tokenNS)
+	if skipOrphan {
+		revokeCtx = physical.ContextBatchDelete(revokeCtx)
+	}
 	if err := ts.expiration.RevokeByToken(revokeCtx, entry); err != nil {
 		return err
 	}

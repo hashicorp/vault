@@ -4,7 +4,6 @@ package vault
 
 import (
 	"context"
-
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -43,6 +42,7 @@ func coreInit(c *Core, conf *CoreConfig) error {
 	if !conf.DisableKeyEncodingChecks {
 		c.physical = physical.NewStorageEncoding(c.physical)
 	}
+	c.physical = physical.NewBatcher(c.physical)
 	return nil
 }
 func (c *Core) setupReplicationResolverHandler() error {
@@ -79,6 +79,9 @@ func postUnsealPhysical(c *Core) error {
 		c.sealUnwrapper.(*sealUnwrapper).runUnwraps()
 	case *transactionalSealUnwrapper:
 		c.sealUnwrapper.(*transactionalSealUnwrapper).runUnwraps()
+	}
+	if b, ok := c.physical.(*physical.Batcher); ok {
+		go b.Start(c.activeContext)
 	}
 	return nil
 }

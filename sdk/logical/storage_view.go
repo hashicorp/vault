@@ -7,7 +7,7 @@ import (
 )
 
 type StorageView struct {
-	storage BatchStorage
+	storage Storage
 	prefix  string
 }
 
@@ -15,7 +15,7 @@ var (
 	ErrRelativePath = errors.New("relative paths not supported")
 )
 
-func NewStorageView(storage BatchStorage, prefix string) *StorageView {
+func NewStorageView(storage Storage, prefix string) *StorageView {
 	return &StorageView{
 		storage: storage,
 		prefix:  prefix,
@@ -83,19 +83,6 @@ func (s *StorageView) Delete(ctx context.Context, key string) error {
 	expandedKey := s.ExpandKey(key)
 
 	return s.storage.Delete(ctx, expandedKey)
-}
-
-func (s *StorageView) BatchDelete(ctx context.Context, keys []string) error {
-	xkeys := make([]string, len(keys))
-	for i, key := range keys {
-		if err := s.SanityCheck(key); err != nil {
-			return err
-		}
-
-		xkeys[i] = s.ExpandKey(key)
-	}
-
-	return s.storage.BatchDelete(ctx, xkeys)
 }
 
 func (s *StorageView) Prefix() string {
