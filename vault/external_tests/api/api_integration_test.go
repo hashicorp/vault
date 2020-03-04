@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
@@ -39,7 +38,6 @@ func testVaultServerUnseal(t testing.TB) (*api.Client, []string, func()) {
 	return testVaultServerCoreConfig(t, &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": credUserpass.Factory,
 		},
