@@ -119,8 +119,7 @@ module('Integration | Component | transit key actions', function(hooks) {
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
     await render(hbs`{{transit-key-actions selectedAction=selectedAction key=key}}`);
 
-    await fillIn('#plaintext', 'plaintext');
-    await click('[data-test-transit-b64-toggle="plaintext"]');
+    find('#plaintext-control .CodeMirror').CodeMirror.setValue('plaintext');
     await click('button[type="submit"]');
     assert.deepEqual(
       this.get('storeService.callArgs'),
@@ -135,7 +134,28 @@ module('Integration | Component | transit key actions', function(hooks) {
       'passes expected args to the adapter'
     );
 
-    assert.equal(find('#ciphertext').value, 'secret');
+    assert.equal(find('#ciphertext-control .CodeMirror').CodeMirror.getValue(), 'secret');
+
+    const preEncodedValue = encodeString('plaintext');
+    // Click back button
+    await click('[data-test-encrypt-back-button]');
+    // Encrypt again, with pre-encoded value and checkbox selected
+    find('#plaintext-control .CodeMirror').CodeMirror.setValue(preEncodedValue);
+    await click('input[data-test-transit-input="encodedBase64"]');
+    await click('button[type="submit"]');
+
+    assert.deepEqual(
+      this.get('storeService.callArgs'),
+      {
+        action: 'encrypt',
+        backend: 'transit',
+        id: 'akey',
+        payload: {
+          plaintext: preEncodedValue,
+        },
+      },
+      'passes expected args to the adapter'
+    );
   }
 
   test('it encrypts', doEncrypt);
@@ -148,8 +168,7 @@ module('Integration | Component | transit key actions', function(hooks) {
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
     await render(hbs`{{transit-key-actions selectedAction="encrypt" key=key}}`);
 
-    await fillIn('#plaintext', 'plaintext');
-    await click('[data-test-transit-b64-toggle="plaintext"]');
+    findAll('.CodeMirror')[0].CodeMirror.setValue('plaintext');
     assert.equal(findAll('#key_version').length, 1, 'it renders the key version selector');
 
     await triggerEvent('#key_version', 'change');
@@ -177,9 +196,8 @@ module('Integration | Component | transit key actions', function(hooks) {
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
     await render(hbs`{{transit-key-actions selectedAction="encrypt" key=key}}`);
 
-    await fillIn('#plaintext', 'plaintext');
-    await click('[data-test-transit-b64-toggle="plaintext"]');
-
+    // await fillIn('#plaintext', 'plaintext');
+    find('#plaintext-control .CodeMirror').CodeMirror.setValue('plaintext');
     assert.equal(
       findAll('#key_version').length,
       0,
@@ -193,10 +211,18 @@ module('Integration | Component | transit key actions', function(hooks) {
 
     this.set('storeService.keyActionReturnVal', { plaintext });
     this.set('selectedAction', 'decrypt');
-    assert.equal(find('#ciphertext').value, 'secret', 'keeps ciphertext value');
+    assert.equal(
+      find('#ciphertext-control .CodeMirror').CodeMirror.getValue(),
+      'secret',
+      'keeps ciphertext value'
+    );
 
     await click('button[type="submit"]');
-    assert.equal(find('#plaintext').value, plaintext, 'renders decrypted value');
+    assert.equal(
+      find('#plaintext-control .CodeMirror').CodeMirror.getValue(),
+      plaintext,
+      'renders decrypted value'
+    );
   });
 
   const setupExport = async function() {
