@@ -77,28 +77,17 @@ func (d *Batcher) Get(ctx context.Context, key string) (*Entry, error) {
 	return d.storage.Get(ctx, key)
 }
 
+func (d *Batcher) isTransactional() bool {
+	_, ok := d.storage.(Transactional)
+	return ok
+}
+
 func (d *Batcher) Put(ctx context.Context, entry *Entry) error {
 	if !IsBatchContext(ctx) || !d.isTransactional() {
 		return d.storage.Put(ctx, entry)
 	}
 
-	errChan := make(chan error, 1)
-	d.submit <- batchRequest{
-		op:      PutOperation,
-		entry:   *entry,
-		errChan: errChan,
-	}
-	select {
-	case err := <-errChan:
-		return err
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
-func (d *Batcher) isTransactional() bool {
-	_, ok := d.storage.(Transactional)
-	return ok
+	return d.sendRequest(ctx, PutOperation, *entry)
 }
 
 func (d *Batcher) Delete(ctx context.Context, key string) error {
@@ -106,10 +95,14 @@ func (d *Batcher) Delete(ctx context.Context, key string) error {
 		return d.storage.Delete(ctx, key)
 	}
 
-	errChan := make(chan error)
+	return d.sendRequest(ctx, DeleteOperation, Entry{Key: key})
+}
+
+func (d *Batcher) sendRequest(ctx context.Context, op Operation, entry Entry) error {
+	errChan := make(chan error, 1)
 	d.submit <- batchRequest{
-		op:      DeleteOperation,
-		entry:   Entry{Key: key},
+		op:      op,
+		entry:   entry,
 		errChan: errChan,
 	}
 	select {
@@ -117,8 +110,6 @@ func (d *Batcher) Delete(ctx context.Context, key string) error {
 		close(errChan)
 		return err
 	case <-ctx.Done():
-		// Make sure we don't block the run goroutine's attempt to send the error
-		go func() { <-errChan }()
 		return ctx.Err()
 	}
 }
