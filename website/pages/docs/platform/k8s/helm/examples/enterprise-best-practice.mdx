@@ -66,14 +66,16 @@ TLS certificate generation is covered [here](/docs/platform/k8s/helm/examples/st
 
 ## Setting Up the Primary Cluster
 
-The below `values.yaml` can be used to set up a three server Vault cluster using
+The below `values-custom.yaml` can be used to set up a three server Vault cluster using
 Consul as a highly available storage backend, with AWS KMS for Auto Unseal.
 
-```yaml
+```
+# Create a values-custom.yaml to override default values
+cat << EOF > values-custom.yaml
 server:
   image:
     repository: "hashicorp/vault-enterprise"
-    tag: "1.3.1_ent"
+    tag: "1.4.0_ent"
 
   affinity: |
     podAntiAffinity:
@@ -95,6 +97,11 @@ server:
     config: |
       ui = true
 
+      service_registration "kubernetes" {
+        namespace      = "my-namespace"
+        pod_name       = "my-pod-name"
+      }
+
       listener "tcp" {
         tls_cert_file = "/path/to/fullchain.pem"
         tls_key_file  = "/path/to/privkey.pem"
@@ -113,11 +120,25 @@ server:
         region     = "us-west-2"
         kms_key_id = "19ec80b0-dfdd-4d97-8164-c6examplekey"
       }
+EOF
+```
+
+Next, point Helm to the chart release and specify the `values-custom.yaml` file:
+
+```
+helm install \
+  -f values-custom.yaml \
+  https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
 ```
 
 Note that in the above seal stanza, the AWS key and secret are omitted. That's because
 Vault picks them up from the node group's Instance Metadata, which in this example has
 been configured to provide credentials for the "EKSNodeGroupForAutoUnseal" role.
+
+Also note that the `namespace` and `pod_name` in the service registration stanza can
+alternatively be set using the Downward API. Please see
+[Kubernetes Service Registration](/docs/configuration/service-registration/kubernetes)
+for elaboration.
 
 ## Setting Up a Disaster Replication (DR) Cluster
 
