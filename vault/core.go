@@ -2321,6 +2321,11 @@ func (c *Core) SanitizedConfig() map[string]interface{} {
 	return c.rawConfig.Sanitized()
 }
 
+// LogFormat returns the log format current in use.
+func (c *Core) LogFormat() string {
+	return c.rawConfig.LogFormat
+}
+
 // MetricsHelper returns the global metrics helper which allows external
 // packages to access Vault's internal metrics.
 func (c *Core) MetricsHelper() *metricsutil.MetricsHelper {
