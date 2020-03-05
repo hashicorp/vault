@@ -5,14 +5,36 @@
     <div class="field">
       <label for="plaintext" class="is-label">Plaintext</label>
       <div class="control">
-        <textarea readonly class="textarea" id="plaintext">{{plaintext}}</textarea>
+        {{ivy-codemirror
+          id="plaintext"
+          value=plaintext
+          valueUpdated=(action (mut plaintext))
+          options=(hash
+            lineNumbers=true
+            tabSize=2
+            mode='ruby'
+            theme='hashi'
+            readonly=true
+          )
+        }}
       </div>
     </div>
     {{/if}}
     <div class="field">
       <label for="ciphertext" class="is-label">Ciphertext</label>
       <div class="control">
-        <textarea readonly class="textarea" id="ciphertext">{{ciphertext}}</textarea>
+      {{ivy-codemirror
+        id="ciphertext"
+        value=ciphertext
+        valueUpdated=(action (mut ciphertext))
+        options=(hash
+          lineNumbers=true
+          tabSize=2
+          mode='ruby'
+          theme='hashi'
+          readonly=true
+        )
+      }}
       </div>
     </div>
   </div>
@@ -128,15 +150,17 @@
       {{#if (eq param 'plaintext')}}
           <p>Plaintext</p>
           <p>{{plaintext}}</p>
+          <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{plaintext}}
+            @buttonType="button" @success={{action "toggleModal"}}>
+            Copy Plaintext & Close
+          </CopyButton>
       {{/if}}
       <p>Ciphertext</p>
       <p>{{ciphertext}}</p>
+      <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{ciphertext}}
+        @buttonType="button" @success={{action "toggleModal"}}>
+        Copy Ciphertext & Close
+      </CopyButton>
     </div>
   </section>
-  <footer class="modal-card-foot">
-    <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{ciphertext}}
-      @buttonType="button" @success={{action "toggleModal"}}>
-      Copy & Close
-    </CopyButton>
-  </footer>
 </Modal>
