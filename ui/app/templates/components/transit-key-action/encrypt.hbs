@@ -67,15 +67,31 @@
       </div>
     </div>
 </form>
-<Modal @title="Copy Your Token" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
+<Modal
+  @title="Copy Your Token"
+  @onClose={{action (mut isModalActive) false}}
+  @isActive={{isModalActive}}>
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
-      <p>{{ciphertext}}</p>
+      <h2 class="title is-6">Ciphertext</h2>
+      <span><code>{{ciphertext}}</code></span>
+      <CopyButton
+        class="button is-compact is-transparent"
+        data-test-button="modal-copy"
+        @clipboardText={{ciphertext}}
+        @buttonType="button"
+        @success={{action (set-flash-message 'Ciphertext copied!')}}>
+        <Icon @glyph="copy-action" aria-label="Copy" />
+      </CopyButton>
     </div>
   </section>
   <footer class="modal-card-foot">
-    <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{ciphertext}}
-      @buttonType="button" @success={{action "toggleModal"}}>
+    <CopyButton
+      class="button is-primary"
+      data-test-button="modal-copy-close"
+      @clipboardText={{ciphertext}}
+      @buttonType="button"
+      @success={{action "toggleModal"}}>
       Copy & Close
     </CopyButton>
   </footer>
