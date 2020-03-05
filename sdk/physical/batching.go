@@ -110,16 +110,20 @@ func (d *Batcher) sendRequest(ctx context.Context, op Operation, entry Entry) er
 	// Use a buffered channel to ensure we don't block the writer if we return
 	// due to context being done.
 	errChan := make(chan error, 1)
-	d.submit <- batchRequest{
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case d.submit <- batchRequest{
 		op:      op,
 		entry:   entry,
 		errChan: errChan,
+	}:
 	}
 	select {
-	case err := <-errChan:
-		return err
 	case <-ctx.Done():
 		return ctx.Err()
+	case err := <-errChan:
+		return err
 	}
 }
 
