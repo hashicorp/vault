@@ -1,4 +1,4 @@
-<form {{action "doSubmit" (hash input=input signature=signature signature_algorithm=signature_algorithm hmac=hmac hash_algorithm=hash_algorithm context=context prehashed=prehashed) on="submit"}}>
+<form {{action "doSubmit" (hash input=input signature=signature signature_algorithm=signature_algorithm hmac=hmac hash_algorithm=hash_algorithm context=context prehashed=prehashed encodedBase64=encodedBase64) on="submit"}}>
   {{#if (not-eq valid null)}}
     <div class="box is-sideless is-fullwidth is-marginless">
       <h4 class="is-label">Verified</h4>
@@ -25,9 +25,23 @@
           Input
         </label>
         <div class="control is-relative">
-          {{textarea id="input" name="input" value=input class="textarea" data-test-transit-input="input"}}
-          {{b64-toggle value=input isInput=false data-test-transit-b64-toggle="input"}}
+          {{ivy-codemirror
+            id="input"
+            value=input
+            valueUpdated=(action (mut input))
+            options=(hash
+              lineNumbers=true
+              tabSize=2
+              mode='ruby'
+              theme='hashi'
+            )
+            data-test-transit-input="input"
+          }}
         </div>
+      </div>
+      <div class="field">
+        {{input type="checkbox" id="encodedBase64" checked=encodedBase64 data-test-transit-input="encodedBase64"}}
+        <label for="encodedBase64">This data is already encoded in base64</label>
       </div>
       {{#if (and key.supportsSigning key.derived (not hmac))}}
         <div class="field">
@@ -76,7 +90,12 @@
                 <div class="level-right">
                   {{#unless (eq verification 'HMAC')}}
                     <div class="control is-flex">
-                      {{input  id="prehashed" type="checkbox" name="prehashed" class="switch is-rounded is-success is-small" checked=prehashed }}
+                      {{input
+                        id="prehashed"
+                        type="checkbox"
+                        name="prehashed"
+                        class="switch is-rounded is-success is-small"
+                        checked=prehashed }}
                       <label for="prehashed">Prehashed</label>
                     </div>
                   {{/unless}}
@@ -126,14 +145,34 @@
               <div class="field is-flex-column is-flex-1">
                 <label for="hmac" class="is-label">HMAC</label>
                 <div class="control is-flex-column is-flex-1">
-                  {{textarea class="textarea is-flex-1" id="hmac" value=hmac}}
+                  {{ivy-codemirror
+                    id="hmac"
+                    value=hmac
+                    valueUpdated=(action (mut hmac))
+                    options=(hash
+                      lineNumbers=true
+                      tabSize=2
+                      mode='ruby'
+                      theme='hashi'
+                    )
+                  }}
                 </div>
               </div>
             {{else}}
               <div class="field is-flex-column is-flex-1">
                 <label for="signature" class="is-label">Signature</label>
                 <div class="control is-flex-column is-flex-1">
-                  {{textarea id="signature" class="textarea is-flex-1" value=signature}}
+                  {{ivy-codemirror
+                    id="signature"
+                    value=signature
+                    valueUpdated=(action (mut signature))
+                    options=(hash
+                      lineNumbers=true
+                      tabSize=2
+                      mode='ruby'
+                      theme='hashi'
+                    )
+                  }}
                 </div>
               </div>
             {{/if}}
@@ -143,7 +182,17 @@
         <div class="field">
           <label for="hmac" class="is-label">HMAC</label>
           <div class="control">
-            {{textarea class="textarea" id="hmac" value=hmac}}
+            {{ivy-codemirror
+              id="hmac"
+              value=hmac
+              valueUpdated=(action (mut hmac))
+              options=(hash
+                lineNumbers=true
+                tabSize=2
+                mode='ruby'
+                theme='hashi'
+              )
+            }}
           </div>
         </div>
         <div class="field">

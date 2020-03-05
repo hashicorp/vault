@@ -4,6 +4,7 @@ import { assert } from '@ember/debug';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { set, get, computed } from '@ember/object';
+import { encodeString } from 'vault/utils/b64';
 
 const TRANSIT_PARAMS = {
   hash_algorithm: 'sha2-256',
@@ -25,6 +26,7 @@ const TRANSIT_PARAMS = {
   random_bytes: null,
   signature: null,
   sum: null,
+  encodedBase64: false,
   exportKeyType: null,
   exportKeyVersion: null,
   wrappedToken: null,
@@ -120,6 +122,7 @@ export default Component.extend(TRANSIT_PARAMS, {
       paramsToKeep.forEach(param => delete params[param]);
     }
     //resets params still left in the object to defaults
+    this.clearErrors();
     this.setProperties(params);
     if (action === 'export') {
       this.setExportKeyDefaults();
@@ -128,6 +131,10 @@ export default Component.extend(TRANSIT_PARAMS, {
 
   handleError(e) {
     this.set('errors', e.errors);
+  },
+
+  clearErrors() {
+    this.set('errors', null);
   },
 
   handleSuccess(resp, options, action) {
@@ -180,7 +187,16 @@ export default Component.extend(TRANSIT_PARAMS, {
     doSubmit(data, options = {}) {
       const { backend, id } = this.getModelInfo();
       const action = this.get('selectedAction');
-      let payload = data ? this.compactData(data) : null;
+      const { encodedBase64, ...formData } = data || {};
+      if (!encodedBase64) {
+        if (action === 'encrypt' && !!formData.plaintext) {
+          formData.plaintext = encodeString(formData.plaintext);
+        }
+        if ((action === 'hmac' || action === 'verify') && !!formData.input) {
+          formData.input = encodeString(formData.input);
+        }
+      }
+      let payload = formData ? this.compactData(formData) : null;
       this.setProperties({
         errors: null,
         result: null,

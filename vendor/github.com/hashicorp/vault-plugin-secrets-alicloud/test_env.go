@@ -141,7 +141,10 @@ func (e *testEnv) AddPolicyBasedRole(t *testing.T) {
 		Path:      "role/policy-based",
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
-			"remote_policies": []string{"name:AliyunOSSReadOnlyAccess,type:System"},
+			"remote_policies": []string{
+				"name:AliyunOSSReadOnlyAccess,type:System",
+				"name:AliyunRDSReadOnlyAccess,type:System",
+			},
 			"inline_policies": rawInlinePolicies,
 		},
 	}
@@ -203,12 +206,22 @@ func (e *testEnv) ReadPolicyBasedRole(t *testing.T) {
 	}
 
 	remotePolicies := resp.Data["remote_policies"].([]*remotePolicy)
-	for _, remotePol := range remotePolicies {
-		if remotePol.Name != "AliyunOSSReadOnlyAccess" {
-			t.Fatalf("received unexpected policy name of %s", remotePol.Name)
-		}
-		if remotePol.Type != "System" {
-			t.Fatalf("received unexpected policy type of %s", remotePol.Type)
+	for i, remotePol := range remotePolicies {
+		switch i {
+		case 0:
+			if remotePol.Name != "AliyunOSSReadOnlyAccess" {
+				t.Fatalf("received unexpected policy name of %s", remotePol.Name)
+			}
+			if remotePol.Type != "System" {
+				t.Fatalf("received unexpected policy type of %s", remotePol.Type)
+			}
+		case 1:
+			if remotePol.Name != "AliyunRDSReadOnlyAccess" {
+				t.Fatalf("received unexpected policy name of %s", remotePol.Name)
+			}
+			if remotePol.Type != "System" {
+				t.Fatalf("received unexpected policy type of %s", remotePol.Type)
+			}
 		}
 	}
 

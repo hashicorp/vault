@@ -13,11 +13,19 @@ const (
 type Policy struct {
 	Bindings []*Binding `json:"bindings,omitempty"`
 	Etag     string     `json:"etag,omitempty"`
+	Version  int        `json:"version,omitempty"`
 }
 
 type Binding struct {
-	Members []string `json:"members,omitempty"`
-	Role    string   `json:"role,omitempty"`
+	Members   []string   `json:"members,omitempty"`
+	Role      string     `json:"role,omitempty"`
+	Condition *Condition `json:"condition,omitempty"`
+}
+
+type Condition struct {
+	Title       string `json:"title,omitempty"`
+	Description string `json:"description,omitempty"`
+	Expression  string `json:"expression,omitempty"`
 }
 
 type PolicyDelta struct {

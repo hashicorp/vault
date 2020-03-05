@@ -45,7 +45,7 @@ func pathRoleSet(b *backend) *framework.Path {
 				Description: `List of OAuth scopes to assign to credentials generated under this role set`,
 			},
 		},
-		ExistenceCheck: b.pathRoleSetExistenceCheck,
+		ExistenceCheck: b.pathRoleSetExistenceCheck("name"),
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathRoleSetDelete,
@@ -89,7 +89,7 @@ func pathRoleSetRotateAccount(b *backend) *framework.Path {
 				Description: "Name of the role.",
 			},
 		},
-		ExistenceCheck: b.pathRoleSetExistenceCheck,
+		ExistenceCheck: b.pathRoleSetExistenceCheck("name"),
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathRoleSetRotateAccount,
@@ -109,7 +109,7 @@ func pathRoleSetRotateKey(b *backend) *framework.Path {
 				Description: "Name of the role.",
 			},
 		},
-		ExistenceCheck: b.pathRoleSetExistenceCheck,
+		ExistenceCheck: b.pathRoleSetExistenceCheck("name"),
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathRoleSetRotateKey,
@@ -120,18 +120,21 @@ func pathRoleSetRotateKey(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathRoleSetExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
-	nameRaw, ok := d.GetOk("name")
-	if !ok {
-		return false, errors.New("roleset name is required")
-	}
+func (b *backend) pathRoleSetExistenceCheck(rolesetFieldName string) framework.ExistenceFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+		// check for either name or roleset
+		nameRaw, ok := d.GetOk(rolesetFieldName)
+		if !ok {
+			return false, errors.New("roleset name is required")
+		}
 
-	rs, err := getRoleSet(nameRaw.(string), ctx, req.Storage)
-	if err != nil {
-		return false, err
-	}
+		rs, err := getRoleSet(nameRaw.(string), ctx, req.Storage)
+		if err != nil {
+			return false, err
+		}
 
-	return rs != nil, nil
+		return rs != nil, nil
+	}
 }
 
 func (b *backend) pathRoleSetRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

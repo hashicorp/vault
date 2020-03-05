@@ -95,7 +95,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.13.7
+    - GO_VERSION: 1.13.8
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
   test-ui:
@@ -166,6 +166,17 @@ jobs:
     steps:
     - run:
         command: |
+          # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
+            # stop the job from this step
+            circleci-agent step halt
+          }
+          # exit with success either way
+          exit 0
+        name: Check branch name
+        working_directory: ~/
+    - run:
+        command: |
           [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
@@ -229,7 +240,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.13.7
+    - GO_VERSION: 1.13.8
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
   test-go-race:
@@ -302,7 +313,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.13.7
+    - GO_VERSION: 1.13.8
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
   website-docker-image:
@@ -324,7 +335,10 @@ jobs:
             echo "Not building website docker image for branch '$CIRCLE_BRANCH' - we only build it for master."
             exit 0
           }
-          PACKAGE_LOCK_CHANGED=$(git diff --name-only $(git log --pretty=format:'%h' -n1 HEAD~1)...HEAD | grep -c website/package-lock.json)
+          PACKAGE_LOCK_CHANGED="$( \
+            git diff --name-only $(git log --pretty=format:'%h' -n1 HEAD~1)...HEAD | \
+            grep -c website/package-lock.json; \
+          )" || true
           [ $PACKAGE_LOCK_CHANGED -gt 0 ] || {
             echo "Not building a new website docker image - dependencies have not changed."
             exit 0
@@ -360,6 +374,11 @@ workflows:
         requires:
         - build-go-dev
     - test-go-race:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-go-dev
     - website-docker-image:
@@ -368,6 +387,21 @@ workflows:
 
 # Original config.yml file:
 # commands:
+#   check-branch-name:
+#     description: |
+#       Check if branch name starts with ui/ or docs/ and if so, exit.
+#     steps:
+#     - run:
+#         command: |
+#           # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
+#           [[ \"$CIRCLE_BRANCH\" = ui/* || \"$CIRCLE_BRANCH\" = docs/* ]] && {
+#             # stop the job from this step
+#             circleci-agent step halt
+#           }
+#           # exit with success either way
+#           exit 0
+#         name: Check branch name
+#         working_directory: ~/
 #   go_test:
 #     description: run go tests
 #     parameters:
@@ -456,7 +490,7 @@ workflows:
 #     environment:
 #       CIRCLECI_CLI_VERSION: 0.1.5546
 #       GO_TAGS: \"\"
-#       GO_VERSION: 1.13.7
+#       GO_VERSION: 1.13.8
 #       GO111MODULE: \"off\"
 #       GOTESTSUM_VERSION: 0.3.3
 #     machine: true
@@ -540,6 +574,7 @@ workflows:
 #     executor: go-machine
 #     parallelism: 2
 #     steps:
+#     - check-branch-name
 #     - setup-go
 #     - checkout
 #     - go_test
@@ -625,7 +660,10 @@ workflows:
 #             echo \"Not building website docker image for branch '$CIRCLE_BRANCH' - we only build it for master.\"
 #             exit 0
 #           }
-#           PACKAGE_LOCK_CHANGED=$(git diff --name-only $(git log --pretty=format:'%h' -n1 HEAD~1)...HEAD | grep -c website/package-lock.json)
+#           PACKAGE_LOCK_CHANGED=\"$( \\
+#             git diff --name-only $(git log --pretty=format:'%h' -n1 HEAD~1)...HEAD | \\
+#             grep -c website/package-lock.json; \\
+#           )\" || true
 #           [ $PACKAGE_LOCK_CHANGED -gt 0 ] || {
 #             echo \"Not building a new website docker image - dependencies have not changed.\"
 #             exit 0
@@ -668,6 +706,11 @@ workflows:
 #         requires:
 #         - build-go-dev
 #     - test-go-race:
+#         filters:
+#           branches:
+#             ignore:
+#             - /^docs\\/.*/
+#             - /^ui\\/.*/
 #         requires:
 #         - build-go-dev
 #     - website-docker-image:
