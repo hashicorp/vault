@@ -104,6 +104,8 @@ management tool.
 - `starttls` (bool, optional) - If true, issues a `StartTLS` command after establishing an unencrypted connection.
 - `insecure_tls` - (bool, optional) - If true, skips LDAP server SSL certificate verification - insecure, use with caution!
 - `certificate` - (string, optional) - CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded.
+- `clientcertificate` - (string, optional) - Client certificate to use when connecting to LDAP server, must be x509 PEM encoded.
+- `clientkey` - (string, optional) - Private key for Client certificate, must be x509 PEM encoded.
 
 ### Binding parameters
 
@@ -210,6 +212,25 @@ $ vault write auth/ldap/config \
     discoverdn=true \
     groupdn="ou=Groups,dc=example,dc=com" \
     certificate=@ldap_ca_cert.pem \
+    insecure_tls=false \
+    starttls=true
+...
+```
+
+### Scenario 4
+
+- G-Suite ldap service
+
+```
+$ vault write auth/ldap/config \
+    url="ldap://ldap.google.com" \
+    userdn="ou=Users,dc=example,dc=com" \
+    groupdn="ou=Groups,dc=example,dc=com" \
+    groupfilter="(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))" \
+    userattr="uid" \
+    groupattr="cn" \
+    clientcertificate=@Google_2023_02_05_35779.crt \
+    clientkey=@Google_2023_02_05_35779.key \
     insecure_tls=false \
     starttls=true
 ...

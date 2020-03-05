@@ -107,6 +107,16 @@ Default: cn`,
 			Description: "CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded (optional)",
 		},
 
+		"clientcertificate": {
+			Type:        framework.TypeString,
+			Description: "Client certificate to use when connecting to LDAP server, must be x509 PEM encoded (optional)",
+		},
+
+		"clientkey": {
+			Type:        framework.TypeString,
+			Description: "Client certificate key to use when connecting to LDAP server, must be x509 PEM encoded (optional)",
+		},
+
 		"discoverdn": {
 			Type:        framework.TypeBool,
 			Description: "Use anonymous bind to discover the bind DN of a user (optional)",
@@ -250,6 +260,37 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg.Certificate = certificate
 	}
 
+	if _, ok := d.Raw["clientcertificate"]; ok || !hadExisting {
+		certificate := d.Get("clientcertificate").(string)
+		if certificate != "" {
+			block, _ := pem.Decode([]byte(certificate))
+
+			if block == nil || block.Type != "CERTIFICATE" {
+				return nil, errors.New("failed to decode PEM block in the client certificate")
+			}
+
+			_, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				return nil, errwrap.Wrapf("failed to parse client certificate: {{err}}", err)
+			}
+		}
+
+		cfg.ClientCertificate = certificate
+	}
+
+	if _, ok := d.Raw["clientkey"]; ok || !hadExisting {
+		clientkey := d.Get("clientkey").(string)
+		if clientkey != "" {
+			block, _ := pem.Decode([]byte(clientkey))
+
+			if block == nil || block.Type != "PRIVATE KEY" {
+				return nil, errors.New("failed to decode PEM block in the client key")
+			}
+		}
+
+		cfg.ClientKey = clientkey
+	}
+
 	if _, ok := d.Raw["insecure_tls"]; ok || !hadExisting {
 		cfg.InsecureTLS = d.Get("insecure_tls").(bool)
 	}
@@ -324,6 +365,8 @@ type ConfigEntry struct {
 	UPNDomain                string `json:"upndomain"`
 	UserAttr                 string `json:"userattr"`
 	Certificate              string `json:"certificate"`
+	ClientCertificate        string `json:"clientcertificate"`
+	ClientKey                string `json:"clientkey"`
 	InsecureTLS              bool   `json:"insecure_tls"`
 	StartTLS                 bool   `json:"starttls"`
 	BindDN                   string `json:"binddn"`
@@ -359,6 +402,8 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 		"upndomain":        c.UPNDomain,
 		"userattr":         c.UserAttr,
 		"certificate":      c.Certificate,
+		"clientcertificate":c.ClientCertificate,
+		"clientkey":        c.ClientKey,
 		"insecure_tls":     c.InsecureTLS,
 		"starttls":         c.StartTLS,
 		"binddn":           c.BindDN,
