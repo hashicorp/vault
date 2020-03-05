@@ -98,7 +98,7 @@ BUG FIXES:
 * ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
 
 
-## 1.3.3 (Unreleased)
+## 1.3.3 (March 5th, 2020)
 
 BUG FIXES:
 
