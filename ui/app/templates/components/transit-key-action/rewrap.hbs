@@ -10,7 +10,6 @@
       <label for="ciphertext" class="is-label">Ciphertext</label>
       <div class="control is-expanded">
         {{ivy-codemirror
-            value=ciphertext
             valueUpdated=(action (mut ciphertext))
             options=(hash
               lineNumbers=true
