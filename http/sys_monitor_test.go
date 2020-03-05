@@ -38,47 +38,39 @@ func TestSysMonitorStreamingLogs(t *testing.T) {
 	defer cluster.Cleanup()
 
 	stopCh := make(chan struct{})
+	defer close(stopCh)
+
 	success := make(chan struct{})
 	client := cluster.Cores[0].Client
 
 	// Make requests that generate logs
 	testhelpers.GenerateDebugLogs(t, stopCh, client)
 
-	// Watch for logs that match what we want
-	go func() {
-		debugCount := 0
-		client := cluster.Cores[0].Client
-		logCh, err := client.Sys().Monitor("DEBUG", stopCh)
+	debugCount := 0
+	logCh, err := client.Sys().Monitor("DEBUG", stopCh)
 
-		if err != nil {
-			t.Fatal(err)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for {
+		select {
+		case log := <-logCh:
+			if strings.Contains(log, "[DEBUG]") {
+				debugCount++
+			}
+		case <-stopCh:
+			return
+		case <-time.After(5 * time.Second):
+			close(stopCh)
+			t.Fatal("Failed to get a DEBUG message after 5 seconds")
 		}
 
-		for {
-			select {
-			case log := <-logCh:
-				if strings.Contains(log, "[DEBUG]") {
-					debugCount++
-				}
-			case <-stopCh:
-				return
-			}
-
-			// If we've seen multiple lines that match what we want,
-			// it's probably safe to assume streaming is working
-			if debugCount > 3 {
-				close(success)
-				return
-			}
+		// If we've seen multiple lines that match what we want,
+		// it's probably safe to assume streaming is working
+		if debugCount > 3 {
+			close(success)
+			break
 		}
-	}()
-
-	select {
-	case <-success:
-		close(stopCh)
-		return
-	case <-time.After(5 * time.Second):
-		close(stopCh)
-		t.Fatal("Failed to get a DEBUG message after 5 seconds")
 	}
 }
