@@ -1,41 +1,4 @@
 <form {{action 'doSubmit' (hash plaintext=plaintext context=context nonce=nonce key_version=key_version encodedBase64=encodedBase64) on="submit"}}>
-  {{#if (and plaintext ciphertext)}}
-    <div class="box is-sideless is-fullwidth is-marginless">
-      <div class="field">
-        <label for="ciphertext" class="is-label">Ciphertext</label>
-        <div id="ciphertext-control" class="control is-expanded">
-          {{ivy-codemirror
-            value=ciphertext
-            options=(hash
-              readOnly=true
-              lineNumbers=true
-              tabSize=2
-              mode='ruby'
-              theme='hashi'
-            )
-            data-test-transit-input="ciphertext"
-          }}
-        </div>
-      </div>
-    </div>
-    <div class="field is-grouped box is-fullwidth is-bottomless">
-      <div class="control">
-        {{#copy-button
-          clipboardText=ciphertext
-          class="button is-primary"
-          buttonType="button"
-          success=(action (set-flash-message 'Ciphertext copied!'))
-        }}
-          Copy
-        {{/copy-button}}
-      </div>
-      <div class="control">
-        <button {{action "onClear"}} type="button" class="button" data-test-encrypt-back-button>
-          Back
-        </button>
-      </div>
-    </div>
-  {{else}}
     <div class="box is-sideless is-fullwidth is-marginless">
       <NamespaceReminder @mode="perform" @noun="encryption" />
       {{key-version-select
@@ -103,16 +66,11 @@
         </button>
       </div>
     </div>
-  {{/if}}
 </form>
 <Modal @title="Copy Your Token" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
-      {{#if (and plaintext ciphertext)}}
-        <p>{{ciphertext}}</p>
-      {{else}}
-        <p>{{plaintext}}</p>
-      {{/if}}
+      <p>{{ciphertext}}</p>
     </div>
   </section>
   <footer class="modal-card-foot">
