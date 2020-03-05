@@ -45,6 +45,7 @@ const PARAMS_FOR_ACTION = {
 };
 export default Component.extend(TRANSIT_PARAMS, {
   store: service(),
+  flashMessages: service(),
 
   // public attrs
   selectedAction: null,
@@ -188,6 +189,7 @@ export default Component.extend(TRANSIT_PARAMS, {
 
     toggleModal() {
       console.log('close');
+      this.get('flashMessages').success('Ciphertext copied!');
       this.toggleProperty('isModalActive');
     },
 
