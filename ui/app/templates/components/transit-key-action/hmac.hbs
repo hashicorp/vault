@@ -62,9 +62,11 @@
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       {{#if hmac}}
-        <p>{{hmac}}</p>
+        <h2 class="title is-6">HMAC</h2>
+        <span><code>{{hmac}}</code></span>
       {{else}}
-        <p>{{input}}</p>
+        <h2 class="title is-6">Input</h2>
+        <span><code>{{input}}</code></span>
       {{/if}}
     </div>
   </section>
