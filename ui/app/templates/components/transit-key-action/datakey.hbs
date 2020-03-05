@@ -148,19 +148,23 @@
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       {{#if (eq param 'plaintext')}}
-          <p>Plaintext</p>
-          <p>{{plaintext}}</p>
-          <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{plaintext}}
-            @buttonType="button" @success={{action "toggleModal"}}>
-            Copy Plaintext & Close
-          </CopyButton>
+        <p>Plaintext</p>
+        <p>{{plaintext}}</p>
+        <p>Ciphertext</p>
+        <p>{{ciphertext}}</p>
+        <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{plaintext}}
+          @buttonType="button" @success={{action (set-flash-message 'Plaintext copied!')}}>
+          Copy Plaintext
+        </CopyButton>
+      {{else}}
+        <p>Ciphertext</p>
+        <p>{{ciphertext}}</p>
       {{/if}}
-      <p>Ciphertext</p>
-      <p>{{ciphertext}}</p>
       <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{ciphertext}}
-        @buttonType="button" @success={{action "toggleModal"}}>
-        Copy Ciphertext & Close
+        @buttonType="button" @success={{action (set-flash-message 'Ciphertext copied!')}}>
+        Copy Ciphertext
       </CopyButton>
+      <button type="submit" class="button is-secondary" onclick={{action (mut isModalActive) false}}>Close</button>
     </div>
   </section>
 </Modal>
