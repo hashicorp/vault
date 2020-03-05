@@ -38,7 +38,7 @@ export default Component.extend({
 
   fetchListCapability: task(function*() {
     try {
-      let capability = yield this.store.findRecord('capabilities', `sys/namespaces/`);
+      let capability = yield this.store.findRecord('capabilities', 'sys/namespaces/');
       this.set('listCapability', capability);
       this.set('canList', true);
     } catch (e) {
