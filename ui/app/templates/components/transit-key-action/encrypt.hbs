@@ -105,3 +105,20 @@
     </div>
   {{/if}}
 </form>
+<Modal @title="Copy Your Token" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
+  <section class="modal-card-body">
+    <div class="box is-shadowless is-fullwidth is-sideless">
+      {{#if (and plaintext ciphertext)}}
+        <p>{{ciphertext}}</p>
+      {{else}}
+        <p>{{plaintext}}</p>
+      {{/if}}
+    </div>
+  </section>
+  <footer class="modal-card-foot">
+    <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{ciphertext}}
+      @buttonType="button" @success={{action "toggleModal"}}>
+      Copy & Close
+    </CopyButton>
+  </footer>
+</Modal>

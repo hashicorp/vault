@@ -96,3 +96,20 @@
     </div>
   {{/if}}
 </form>
+<Modal @title="Copy your unwrapped data" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
+  <section class="modal-card-body">
+    <div class="box is-shadowless is-fullwidth is-sideless">
+      {{#if hmac}}
+        <p>{{hmac}}</p>
+      {{else}}
+        <p>{{input}}</p>
+      {{/if}}
+    </div>
+  </section>
+  <footer class="modal-card-foot">
+    <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{hmac}}
+      @buttonType="button" @success={{action "toggleModal"}}>
+      Copy & Close
+    </CopyButton>
+  </footer>
+</Modal>

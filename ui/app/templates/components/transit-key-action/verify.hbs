@@ -1,23 +1,16 @@
 <form {{action "doSubmit" (hash input=input signature=signature signature_algorithm=signature_algorithm hmac=hmac hash_algorithm=hash_algorithm context=context prehashed=prehashed encodedBase64=encodedBase64) on="submit"}}>
   {{#if (not-eq valid null)}}
-    <div class="box is-sideless is-fullwidth is-marginless">
-      <h4 class="is-label">Verified</h4>
-      <div class="box">
-        <div class="columns is-centered">
-          <div class="column is-half has-text-centered">
-            <p class="box is-shadowless {{if valid 'has-text-success' 'has-text-danger'}}" data-test-transit-verify="true">
+    <Modal @title="Copy your unwrapped data" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
+      <section class="modal-card-body">
+        <div class="box is-shadowless is-fullwidth is-sideless">
+          <h4 class="is-label">Verified</h4>
+          <p class="box is-shadowless {{if valid 'has-text-success' 'has-text-danger'}}" data-test-transit-verify="true">
             <Icon @glyph={{if valid "check-plain" "cancel-plain"}} />
             The input is <b>{{if valid 'valid' 'not valid'}}</b> for the given {{if signature 'signature' 'hmac'}}.
-            </p>
-          </div>
+          </p>
         </div>
-      </div>
-    </div>
-    <div class="field is-grouped box is-fullwidth is-bottomless">
-      <button {{action 'onClear'}} type="button" class="button">
-        Back
-      </button>
-    </div>
+      </section>
+    </Modal>
   {{else}}
     <div class="box is-sideless is-fullwidth is-marginless">
       <div class="field">
