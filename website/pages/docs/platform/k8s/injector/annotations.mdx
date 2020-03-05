@@ -26,8 +26,9 @@ The following are the available annotations for the injector.
   not needed. Defaults to `vault:1.3.2`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent 
-  init container first.  This is useful when other init containers need pre-populated 
-  secrets.  This should be set to a `true` or `false` value.  Defaults to `false`.
+  init container first if `true` (last if `false`).  This is useful when other init 
+  containers need pre-populated secrets.  This should be set to a `true` or `false` 
+  value.  Defaults to `false`. 
 
 - `vault.hashicorp.com/agent-inject-command` - configures Vault Agent
   to run a command after the template has been rendered.  To map a command to a specific 
