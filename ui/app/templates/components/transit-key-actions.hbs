@@ -26,14 +26,14 @@
     </div>
     </section>
     <footer class="modal-card-foot">
-      {{#copy-button
-        data-test-button="modal-copy-close"
-        clipboardText=ciphertext
+      <CopyButton
         class="button is-primary"
-        buttonType="button"
-        success=(action (set-flash-message 'Ciphertext copied!'))
-      }}
+        data-test-button="modal-copy-close"
+        @clipboardText={{ciphertext}}
+        @buttonType="button"
+        @success={{action "toggleModal"}}
+      >
         Copy & Close
-      {{/copy-button}}
+      </CopyButton>
     </footer>
 </Modal>
