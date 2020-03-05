@@ -51,7 +51,7 @@ The following are the available annotations for the injector.
   a default generic template is used.
 
 - `vault.hashicorp.com/agent-inject-token` - configures Vault Agent to share the Vault 
-  token with other containers in the mode.  This is helpful when other containers 
+  token with other containers in the pod.  This is helpful when other containers 
   communicate directly with Vault but require auto-authentication provided by Vault 
   Agent.  This should be set to a `true` or `false` value.  Defaults to `false`.
 
