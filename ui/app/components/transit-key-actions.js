@@ -188,8 +188,7 @@ export default Component.extend(TRANSIT_PARAMS, {
     },
 
     toggleModal() {
-      console.log('close');
-      this.get('flashMessages').success('Ciphertext copied!');
+      this.get('flashMessages').success('Text copied!');
       this.toggleProperty('isModalActive');
     },
 
