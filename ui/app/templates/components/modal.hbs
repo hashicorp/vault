@@ -2,16 +2,11 @@
   <div class="modal {{if isActive 'is-active'}}" aria-modal="true">
     <div class="modal-background" onclick={{onClose}} data-test-modal-background></div>
     <div class="modal-card">
-      <header class="modal-card-head">
-        <p class="modal-card-title" data-test-modal-title>{{title}}</p>
-        <button class="delete" aria-label="close" onclick={{onClose}}></button>
-      </header>
-      <section class="modal-card-body">
-        {{yield}}
-      </section>
-      <footer class="modal-card-foot">
-        <button class="button is-success" onclick={{onClose}} data-test-button="modal-copy-close">Copy & Close</button>
-      </footer>
+        <header class="modal-card-head">
+          <p class="modal-card-title" data-test-modal-title>{{title}}</p>
+          <button class="delete" aria-label="close" onclick={{onClose}}></button>
+        </header>
+      {{yield}}
     </div>
   </div>
 {{/ember-wormhole}}

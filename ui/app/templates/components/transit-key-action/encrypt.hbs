@@ -98,20 +98,10 @@
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
-        <button type="submit" class="button is-primary" data-test-button-encrypt onsubmit={{action "toggleModal"}}>
+        <button type="submit" class="button is-primary" data-test-button-encrypt>
           Encrypt
         </button>
       </div>
     </div>
   {{/if}}
 </form>
-<Modal
-  @title="Copy Your Token"
-  @onClose={{action "toggleModal"}}
-  @isActive={{isModalActive}}>
-  <p>Ciphertext</p>
-  <div class="box is-shadowless is-fullwidth is-sideless">
-    <InfoTableRow @label="TTL" @value="8 hours, 30 minutes" />
-    <InfoTableRow @label="Expires" @value="8 hours, 30 minutes" />
-  </div>
-</Modal>

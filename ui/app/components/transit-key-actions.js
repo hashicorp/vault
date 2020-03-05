@@ -49,7 +49,7 @@ export default Component.extend(TRANSIT_PARAMS, {
   // public attrs
   selectedAction: null,
   key: null,
-  isModalActive: true,
+  isModalActive: false,
 
   onRefresh() {},
   init() {
@@ -150,6 +150,7 @@ export default Component.extend(TRANSIT_PARAMS, {
     if (options.wrapTTL) {
       props = assign({}, props, { wrappedToken: resp.wrap_info.token });
     }
+    this.toggleProperty('isModalActive');
     this.setProperties(props);
     if (action === 'rotate') {
       this.get('onRefresh')();
