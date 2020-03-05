@@ -5,8 +5,18 @@
         <label for="plaintext" class="is-label">
           Plaintext
         </label>
-        <div class="control is-relative">
-          {{textarea id="plaintext" value=plaintext readonly=true class="textarea" data-test-transit-input="plaintext"}}
+        <div id="plaintext-control" class="control is-relative">
+          {{ivy-codemirror
+            value=plaintext
+            options=(hash
+              readOnly=true
+              lineNumbers=true
+              tabSize=2
+              mode='ruby'
+              theme='hashi'
+            )
+            data-test-transit-input="plaintext"
+          }}
           {{b64-toggle value=plaintext isInput=false initialEncoding="base64" data-test-transit-b64-toggle="plaintext"}}
         </div>
       </div>
@@ -32,8 +42,18 @@
     <div class="box is-sideless is-fullwidth is-marginless">
       <div class="field">
         <label for="ciphertext" class="is-label">Ciphertext</label>
-        <div class="control">
-          {{textarea id="ciphertext" name="ciphertext" value=ciphertext class="textarea" data-test-transit-input="ciphertext"}}
+        <div id="ciphertext-control" class="control">
+          {{ivy-codemirror
+            value=ciphertext
+            valueUpdated=(action (mut ciphertext))
+            options=(hash
+              lineNumbers=true
+              tabSize=2
+              mode='ruby'
+              theme='hashi'
+            )
+            data-test-transit-input="ciphertext"
+          }}
         </div>
       </div>
       {{#if key.derived}}
