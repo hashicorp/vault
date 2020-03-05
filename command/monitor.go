@@ -109,12 +109,11 @@ START:
 	}
 
 	go func() {
-	OUTER:
 		for {
 			select {
-			case log := <-logCh:
-				if log == "" {
-					break OUTER
+			case log, ok := <-logCh:
+				if !ok {
+					return
 				}
 				c.UI.Info(log)
 			case <-stopCh:
