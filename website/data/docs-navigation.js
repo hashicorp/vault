@@ -326,7 +326,7 @@ export default [
           },
           {
             category: 'injector',
-            content: ['installation', 'examples']
+            content: ['annotations', 'installation', 'examples']
           }
         ]
       },
