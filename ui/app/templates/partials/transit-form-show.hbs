@@ -115,7 +115,7 @@
               </small>
             </div>
           </div>
-          <div class="column is-4">
+          <div class="column is-5">
             <div class="td is-borderless">
               {{#if (coerce-eq key.minDecryptionVersion version)}}
                 <p class="help level level-left">
@@ -124,24 +124,6 @@
                 </p>
               {{/if}}
             </div>
-          </div>
-          <div class="column is-1 is-flex-end">
-            <PopupMenu name="secret-menu">
-              <nav class="menu">
-                <ul class="menu-list">
-                  <li class="action">
-                    {{#copy-button
-                      clipboardText=(get key.keys version)
-                      class="link button is-transparent"
-                      buttonType="button"
-                      success=(action (set-flash-message 'Public key copied!'))
-                    }}
-                      Copy Public Key
-                    {{/copy-button}}
-                  </li>
-                </ul>
-              </nav>
-            </PopupMenu>
           </div>
         </div>
       </div>
