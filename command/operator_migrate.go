@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
+	"path"
 	"sort"
 	"strings"
 	"time"
@@ -44,6 +45,9 @@ type migratorConfig struct {
 	StorageSource      *server.Storage `hcl:"-"`
 	StorageDestination *server.Storage `hcl:"-"`
 	ClusterAddr        string          `hcl:"cluster_addr"`
+	PathRoots          []string        `hcl:"path_roots"`
+	ExcludePaths       []string        `hcl:"exclude_paths"`
+	UnsafeNoLock       bool            `hcl:"unsafe_no_lock"`
 }
 
 func (c *OperatorMigrateCommand) Synopsis() string {
@@ -172,17 +176,19 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 		return fmt.Errorf("Storage migration in progress (started: %s).", migrationStatus.Start.Format(time.RFC3339))
 	}
 
-	if err := SetStorageMigration(from, true); err != nil {
-		return errwrap.Wrapf("error setting migration lock: {{err}}", err)
-	}
+	if !config.UnsafeNoLock {
+		if err := SetStorageMigration(from, true); err != nil {
+			return errwrap.Wrapf("error setting migration lock: {{err}}", err)
+		}
 
-	defer SetStorageMigration(from, false)
+		defer SetStorageMigration(from, false)
+	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
 	doneCh := make(chan error)
 	go func() {
-		doneCh <- c.migrateAll(ctx, from, to)
+		doneCh <- c.migrateAll(ctx, config.PathRoots, config.ExcludePaths, from, to)
 	}()
 
 	select {
@@ -197,14 +203,21 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 	}
 }
 
-// migrateAll copies all keys in lexicographic order.
-func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.Backend, to physical.Backend) error {
-	return dfsScan(ctx, from, func(ctx context.Context, path string) error {
-		if path < c.flagStart || path == storageMigrationLock || path == vault.CoreLockPath {
+type visitFunc func(ctx context.Context, pathName string) error
+
+func (c *OperatorMigrateCommand) visitor(exclude []string, from, to physical.Backend) visitFunc {
+	return func(ctx context.Context, pathName string) error {
+		if pathName < c.flagStart || pathName == storageMigrationLock || pathName == vault.CoreLockPath {
 			return nil
 		}
 
-		entry, err := from.Get(ctx, path)
+		for _, e := range exclude {
+			if match, err := path.Match(e, pathName); match && err == nil {
+				return nil
+			}
+		}
+
+		entry, err := from.Get(ctx, pathName)
 
 		if err != nil {
 			return errwrap.Wrapf("error reading entry: {{err}}", err)
@@ -217,9 +230,25 @@ func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.B
 		if err := to.Put(ctx, entry); err != nil {
 			return errwrap.Wrapf("error writing entry: {{err}}", err)
 		}
-		c.logger.Info("copied key", "path", path)
+		c.logger.Info("copied key", "path", pathName)
 		return nil
-	})
+	}
+}
+
+// migrateAll copies all keys in lexicographic order.
+func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, roots []string, exclude []string, from physical.Backend, to physical.Backend) error {
+	if len(roots) == 0 {
+		return dfsScan(ctx, "", from, c.visitor(exclude, from, to))
+	}
+
+	for _, root := range roots {
+		err := dfsScan(ctx, root, from, c.visitor(exclude, from, to))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (c *OperatorMigrateCommand) newBackend(kind string, conf map[string]string) (physical.Backend, error) {
@@ -339,11 +368,11 @@ func parseStorage(result *migratorConfig, list *ast.ObjectList, name string) err
 
 // dfsScan will invoke cb with every key from source.
 // Keys will be traversed in lexicographic, depth-first order.
-func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.Context, path string) error) error {
-	dfs := []string{""}
+func dfsScan(ctx context.Context, root string, source physical.Backend, visit visitFunc) error {
+	stack := []string{root}
 
-	for l := len(dfs); l > 0; l = len(dfs) {
-		key := dfs[len(dfs)-1]
+	for l := len(stack); l > 0; l = len(stack) {
+		key := stack[len(stack)-1]
 		if key == "" || strings.HasSuffix(key, "/") {
 			children, err := source.List(ctx, key)
 			if err != nil {
@@ -352,19 +381,19 @@ func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.C
 			sort.Strings(children)
 
 			// remove List-triggering key and add children in reverse order
-			dfs = dfs[:len(dfs)-1]
+			stack = stack[:len(stack)-1]
 			for i := len(children) - 1; i >= 0; i-- {
 				if children[i] != "" {
-					dfs = append(dfs, key+children[i])
+					stack = append(stack, key+children[i])
 				}
 			}
 		} else {
-			err := cb(ctx, key)
+			err := visit(ctx, key)
 			if err != nil {
 				return err
 			}
 
-			dfs = dfs[:len(dfs)-1]
+			stack = stack[:len(stack)-1]
 		}
 
 		select {

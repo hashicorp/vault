@@ -59,11 +59,92 @@ func TestMigration(t *testing.T) {
 		cmd := OperatorMigrateCommand{
 			logger: log.NewNullLogger(),
 		}
-		if err := cmd.migrateAll(context.Background(), from, to); err != nil {
+		if err := cmd.migrateAll(context.Background(), []string{""}, nil, from, to); err != nil {
 			t.Fatal(err)
 		}
 
 		if err := compareStoredData(to, data, ""); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("Exclude", func(t *testing.T) {
+		data := generateData()
+		data["a/x/b/y/d"] = []byte{}
+
+		fromFactory := physicalBackends["file"]
+
+		folder := filepath.Join(os.TempDir(), testhelpers.RandomWithPrefix("migrator"))
+		defer os.RemoveAll(folder)
+		confFrom := map[string]string{
+			"path": folder,
+		}
+
+		from, err := fromFactory(confFrom, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := storeData(from, data); err != nil {
+			t.Fatal(err)
+		}
+
+		toFactory := physicalBackends["inmem"]
+		confTo := map[string]string{}
+		to, err := toFactory(confTo, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := OperatorMigrateCommand{
+			logger: log.NewNullLogger(),
+		}
+		if err := cmd.migrateAll(context.Background(), []string{""}, []string{"a/*/b/*/d"}, from, to); err != nil {
+			t.Fatal(err)
+		}
+
+		delete(data, "a/x/b/y/d")
+
+		if err := compareStoredData(to, data, ""); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("Roots", func(t *testing.T) {
+		data := generateData()
+		data["abcd/efgh"] = []byte{}
+		data["abcd"] = []byte{}
+
+		fromFactory := physicalBackends["file"]
+
+		folder := filepath.Join(os.TempDir(), testhelpers.RandomWithPrefix("migrator"))
+		defer os.RemoveAll(folder)
+		confFrom := map[string]string{
+			"path": folder,
+		}
+
+		from, err := fromFactory(confFrom, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := storeData(from, data); err != nil {
+			t.Fatal(err)
+		}
+
+		toFactory := physicalBackends["inmem"]
+		confTo := map[string]string{}
+		to, err := toFactory(confTo, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := OperatorMigrateCommand{
+			logger: log.NewNullLogger(),
+		}
+		if err := cmd.migrateAll(context.Background(), []string{"abcd/"}, nil, from, to); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := compareStoredData(to, map[string][]byte{"abcd/efgh": {}}, ""); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -99,7 +180,7 @@ func TestMigration(t *testing.T) {
 			logger:    log.NewNullLogger(),
 			flagStart: start,
 		}
-		if err := cmd.migrateAll(context.Background(), from, to); err != nil {
+		if err := cmd.migrateAll(context.Background(), []string{""}, nil, from, to); err != nil {
 			t.Fatal(err)
 		}
 
@@ -119,7 +200,12 @@ storage_source "src_type" {
 
 storage_destination "dest_type" {
   path = "dest_path"
-}`), 0644)
+}
+
+path_roots = ["core/"]
+exclude_paths = ["logical/*/certs/*"]
+unsafe_no_lock = true
+`), 0644)
 		defer os.Remove(cfgName)
 
 		expCfg := &migratorConfig{
@@ -135,6 +221,9 @@ storage_destination "dest_type" {
 					"path": "dest_path",
 				},
 			},
+			PathRoots:    []string{"core/"},
+			ExcludePaths: []string{"logical/*/certs/*"},
+			UnsafeNoLock: true,
 		}
 		cfg, err := cmd.loadMigratorConfig(cfgName)
 		if err != nil {
@@ -206,7 +295,7 @@ storage_destination "dest_type2" {
 		l := randomLister{s}
 
 		var out []string
-		dfsScan(context.Background(), l, func(ctx context.Context, path string) error {
+		dfsScan(context.Background(), "", l, func(ctx context.Context, path string) error {
 			out = append(out, path)
 			return nil
 		})
@@ -217,6 +306,41 @@ storage_destination "dest_type2" {
 		var keys []string
 		for key := range data {
 			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		if !reflect.DeepEqual(keys, out) {
+			t.Fatalf("expected equal: %v, %v", keys, out)
+		}
+	})
+	t.Run("DFS Scan with root", func(t *testing.T) {
+		s, _ := physicalBackends["inmem"](map[string]string{}, nil)
+
+		data := generateData()
+		data["cc"] = []byte{}
+		data["c/d/e/f"] = []byte{}
+		data["c/d/e/g"] = []byte{}
+		data["c"] = []byte{}
+		data["d"] = []byte{}
+		data["d/e"] = []byte{}
+		data["d/e/c"] = []byte{}
+		storeData(s, data)
+
+		l := randomLister{s}
+
+		var out []string
+		dfsScan(context.Background(), "d/", l, func(ctx context.Context, path string) error {
+			out = append(out, path)
+			return nil
+		})
+
+		delete(data, trailing_slash_key)
+		delete(data, "")
+
+		var keys []string
+		for key := range data {
+			if strings.HasPrefix(key, "d/") {
+				keys = append(keys, key)
+			}
 		}
 		sort.Strings(keys)
 		if !reflect.DeepEqual(keys, out) {
