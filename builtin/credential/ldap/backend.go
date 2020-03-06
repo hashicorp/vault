@@ -132,6 +132,14 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		return nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 
+	if cfg.AnonymousGroupSearch {
+		c, err = ldapClient.DialLDAP(cfg.ConfigEntry)
+		if err != nil {
+			return nil, logical.ErrorResponse("ldap operation failed"), nil, nil
+		}
+		defer c.Close() // Defer closing of this connection as the deferal above closes the other defined connection
+	}
+
 	ldapGroups, err := ldapClient.GetLdapGroups(cfg.ConfigEntry, c, userDN, username)
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil, nil
