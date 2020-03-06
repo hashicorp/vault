@@ -574,7 +574,7 @@ func NewMySQLLock(in *MySQLBackend, l log.Logger, key, value string) (*MySQLLock
 	conn, _ := NewMySQLClient(in.conf, in.logger)
 
 	// If multiple instances of Vault deployment trying to use the same MySQL
-	// DB endpoint first deployment will hold lock forever and others
+	// DB endpoint, the first deployment will hold lock forever and others
 	// deployment will fail to insert record in the lock table,
 	// the unique lock key will resolve this problem.
 	lockKey := key + "/" + in.conf["database"] + "/" + in.conf["table"]
