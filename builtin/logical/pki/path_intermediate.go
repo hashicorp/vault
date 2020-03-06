@@ -81,7 +81,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		switch err.(type) {
 		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), nil
-		case errutil.InternalError:
+		default:
 			return nil, err
 		}
 	}
