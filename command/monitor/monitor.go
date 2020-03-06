@@ -2,7 +2,7 @@ package monitor
 
 import (
 	"fmt"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
@@ -23,9 +23,6 @@ type Monitor interface {
 
 // monitor implements the Monitor interface
 type monitor struct {
-	// protects droppedCount and logCh
-	sync.Mutex
-
 	sink log.SinkAdapter
 
 	// logger is the logger we will be monitoring
@@ -39,13 +36,12 @@ type monitor struct {
 
 	// droppedCount is the current count of messages
 	// that were dropped from the logCh buffer.
-	// only access under lock
-	droppedCount int
+	droppedCount uint64
 	bufSize      int
-	// droppedDuration is the amount of time we should
+	// dropCheckInterval is the amount of time we should
 	// wait to check for dropped messages. Defaults
 	// to 3 seconds
-	droppedDuration time.Duration
+	dropCheckInterval time.Duration
 }
 
 // New creates a new Monitor. Start must be called in order to actually start
@@ -60,7 +56,7 @@ func new(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) *monitor 
 		logCh:           make(chan []byte, buf),
 		doneCh:          make(chan struct{}, 1),
 		bufSize:         buf,
-		droppedDuration: 3 * time.Second,
+		dropCheckInterval: 3 * time.Second,
 	}
 
 	opts.Output = sw
@@ -112,15 +108,14 @@ func (d *monitor) Start() <-chan []byte {
 			select {
 			case <-d.doneCh:
 				return
-			case <-time.After(d.droppedDuration):
-				d.Lock()
-
+			case <-time.After(d.dropCheckInterval):
 				// Check if there have been any dropped messages.
-				if d.droppedCount > 0 {
-					dropped := fmt.Sprintf("[WARN] Monitor dropped %d logs during monitor request\n", d.droppedCount)
+				dc := atomic.LoadUint64(&d.droppedCount)
+
+				if dc > 0 {
+					dropped := fmt.Sprintf("[WARN] Monitor dropped %d logs during monitor request\n", dc)
 					select {
 					case <-d.doneCh:
-						d.Unlock()
 						return
 					// Try sending dropped message count to logCh in case
 					// there is room in the buffer now.
@@ -129,16 +124,15 @@ func (d *monitor) Start() <-chan []byte {
 						// Drop a log message to make room for "Monitor dropped.." message
 						select {
 						case <-d.logCh:
-							d.droppedCount++
-							dropped = fmt.Sprintf("[WARN] Monitor dropped %d logs during monitor request\n", d.droppedCount)
+							atomic.AddUint64(&d.droppedCount, 1)
+							dc := atomic.LoadUint64(&d.droppedCount)
+							dropped = fmt.Sprintf("[WARN] Monitor dropped %d logs during monitor request\n", dc)
 						default:
 						}
 						d.logCh <- []byte(dropped)
 					}
-					d.droppedCount = 0
+					atomic.SwapUint64(&d.droppedCount, 0)
 				}
-				// unlock after handling dropped message
-				d.Unlock()
 			}
 		}
 	}()
@@ -149,9 +143,6 @@ func (d *monitor) Start() <-chan []byte {
 // Write attempts to send latest log to logCh
 // it drops the log if channel is unavailable to receive
 func (d *monitor) Write(p []byte) (n int, err error) {
-	d.Lock()
-	defer d.Unlock()
-
 	// ensure logCh is still open
 	select {
 	case <-d.doneCh:
@@ -165,7 +156,7 @@ func (d *monitor) Write(p []byte) (n int, err error) {
 	select {
 	case d.logCh <- bytes:
 	default:
-		d.droppedCount++
+		atomic.AddUint64(&d.droppedCount, 1)
 	}
 
 	return len(p), nil
