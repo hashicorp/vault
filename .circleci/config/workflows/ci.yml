@@ -32,3 +32,7 @@ jobs:
             - /^ui\/.*/
   - website-docker-image:
       context: vault-docs
+      filters:
+        branches:
+          only:
+            - master
