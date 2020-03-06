@@ -1,0 +1,19 @@
+.modal-card {
+  box-shadow: $box-shadow, $box-shadow-middle;
+
+  &-head {
+    border-radius: 0;
+    background-color: $grey-lightest;
+    border-bottom: 1px solid $grey-light;
+  }
+
+  &-foot {
+    border-radius: 0;
+    border: 0;
+    background-color: white;
+  }
+
+  &-title.title {
+    margin: 0;
+  }
+}
