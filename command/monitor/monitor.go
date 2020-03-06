@@ -80,32 +80,19 @@ func (d *monitor) Start() <-chan []byte {
 
 	streamCh := make(chan []byte, d.bufSize)
 
-	// run a go routine that listens for streamed
-	// log messages and sends them to streamCh
+	// Run a go routine that listens for streamed
+	// log messages and sends them to streamCh.
+	//
+	// It also periodically checks for dropped
+	// messages and makes room on the logCh to add
+	// a dropped message count warning
 	go func() {
 		defer close(streamCh)
 
 		for {
 			select {
-			case log := <-d.logCh:
-				select {
-				case <-d.doneCh:
-					return
-				case streamCh <- log:
-				}
-			case <-d.doneCh:
-				return
-			}
-		}
-	}()
-
-	// run a go routine that periodically checks for
-	// dropped messages and makes room on the logCh
-	// to add a dropped message count warning
-	go func() {
-		// loop and check for dropped messages
-		for {
-			select {
+			case l := <-d.logCh:
+				streamCh <- l
 			case <-d.doneCh:
 				return
 			case <-time.After(d.dropCheckInterval):
@@ -115,8 +102,6 @@ func (d *monitor) Start() <-chan []byte {
 				if dc > 0 {
 					dropped := fmt.Sprintf("[WARN] Monitor dropped %d logs during monitor request\n", dc)
 					select {
-					case <-d.doneCh:
-						return
 					// Try sending dropped message count to logCh in case
 					// there is room in the buffer now.
 					case d.logCh <- []byte(dropped):
