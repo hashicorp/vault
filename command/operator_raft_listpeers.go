@@ -66,6 +66,7 @@ func (c *OperatorRaftListPeersCommand) Run(args []string) int {
 		return 2
 	}
 	if secret == nil {
+		c.UI.Error("No raft cluster configuration found")
 		return 2
 	}
 
