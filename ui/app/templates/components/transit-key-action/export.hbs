@@ -5,11 +5,26 @@
 >
   {{#if (or keys wrappedToken) }}
     <div class="box is-sideless is-fullwidth is-marginless">
+      <div class="box is-borderless">
+        <p>You can rewrap the provided ciphertext using the latest version of <code>{{key.name}}</code> as the encryption key.
+        </p>
+      </div>
       <div class="field">
         {{#if wrapTTL}}
           <label for="export" class="is-label">Wrapped Key</label>
           <div class="control">
-            <textarea readonly nowrap wrap="off" class="textarea" id="export">{{wrappedToken}}</textarea>
+            {{ivy-codemirror
+              id="export"
+              value=wrappedToken
+              valueUpdated=(action (mut wrappedToken))
+              options=(hash
+                lineNumbers=true
+                tabSize=2
+                mode='ruby'
+                theme='hashi'
+                readOnly=true
+              )
+            }}
           </div>
         {{else}}
           <label class="is-label">Exported Key</label>
@@ -41,6 +56,10 @@
     </div>
   {{else}}
     <div class="box is-sideless is-fullwidth is-marginless">
+      <div class="box is-borderless">
+        <p>You can rewrap the provided ciphertext using the latest version of <code>{{key.name}}</code> as the encryption key.
+        </p>
+      </div>
       <div class="field">
         <label for="type" class="is-label">Key type</label>
         <div class="control is-expanded">
@@ -101,3 +120,23 @@
     </div>
   {{/if}}
 </form>
+<Modal @title="Copy your wrapped key" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
+  <section class="modal-card-body">
+    <div class="box is-shadowless is-fullwidth is-sideless">
+      <h2 class="title is-6">Wrapped Key</h2>
+      <div class="copy-text level">
+        <code class="level-left">{{wrappedToken}}</code>
+        <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
+          @clipboardText={{wrappedToken}} @buttonType="button" @success={{action (set-flash-message 'Token copied!')}}>
+          <Icon @glyph="copy-action" aria-label="Copy" />
+        </CopyButton>
+      </div>
+    </div>
+  </section>
+  <footer class="modal-card-foot">
+    <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{wrappedToken}}
+      @buttonType="button" @success={{action "toggleModal"}}>
+      Copy & Close
+    </CopyButton>
+  </footer>
+</Modal>
