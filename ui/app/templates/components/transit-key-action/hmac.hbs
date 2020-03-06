@@ -62,13 +62,14 @@
 <Modal @title="Copy your unwrapped data" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
-      {{#if hmac}}
-        <h2 class="title is-6">HMAC</h2>
-        <span><code>{{hmac}}</code></span>
-      {{else}}
-        <h2 class="title is-6">Input</h2>
-        <span><code>{{input}}</code></span>
-      {{/if}}
+      <h2 class="title is-6">HMAC</h2>
+      <div class="copy-text level">
+        <code class="level-left">{{hmac}}</code>
+        <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
+          @clipboardText={{hmac}} @buttonType="button" @success={{action (set-flash-message 'HMAC copied!')}}>
+          <Icon @glyph="copy-action" aria-label="Copy" />
+        </CopyButton>
+      </div>
     </div>
   </section>
   <footer class="modal-card-foot">
