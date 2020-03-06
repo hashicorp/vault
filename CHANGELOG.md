@@ -1,5 +1,10 @@
 ## Next
 
+CHANGES:
+
+* cli: The raft configuration command has been renamed to list-peers to avoid
+  confusion.
+
 IMPROVEMENTS:
 
 * auth/azure: subscription ID, resource group, vm and vmss names are now stored in alias metadata [[GH-30](https://github.com/hashicorp/vault-plugin-auth-azure/pull/30)]

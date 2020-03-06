@@ -8,45 +8,45 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorRaftConfigurationCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorRaftConfigurationCommand)(nil)
+var _ cli.Command = (*OperatorRaftListPeersCommand)(nil)
+var _ cli.CommandAutocomplete = (*OperatorRaftListPeersCommand)(nil)
 
-type OperatorRaftConfigurationCommand struct {
+type OperatorRaftListPeersCommand struct {
 	*BaseCommand
 }
 
-func (c *OperatorRaftConfigurationCommand) Synopsis() string {
-	return "Returns the raft cluster configuration"
+func (c *OperatorRaftListPeersCommand) Synopsis() string {
+	return "Returns the raft peer set"
 }
 
-func (c *OperatorRaftConfigurationCommand) Help() string {
+func (c *OperatorRaftListPeersCommand) Help() string {
 	helpText := `
-Usage: vault operator raft configuration
+Usage: vault operator raft list-peers
 
   Provides the details of all the peers in the raft cluster.
 
-	  $ vault operator raft configuration
+	  $ vault operator raft list-peers
 
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
 }
 
-func (c *OperatorRaftConfigurationCommand) Flags() *FlagSets {
+func (c *OperatorRaftListPeersCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	return set
 }
 
-func (c *OperatorRaftConfigurationCommand) AutocompleteArgs() complete.Predictor {
+func (c *OperatorRaftListPeersCommand) AutocompleteArgs() complete.Predictor {
 	return complete.PredictAnything
 }
 
-func (c *OperatorRaftConfigurationCommand) AutocompleteFlags() complete.Flags {
+func (c *OperatorRaftListPeersCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *OperatorRaftConfigurationCommand) Run(args []string) int {
+func (c *OperatorRaftListPeersCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
