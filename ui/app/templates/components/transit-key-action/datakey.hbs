@@ -149,9 +149,9 @@
     <div class="box is-shadowless is-fullwidth is-sideless">
       {{#if (eq param 'plaintext')}}
         <h2 class="title is-6">Plaintext</h2>
-        <span><code>{{plaintext}}</code></span>
+        <div class="copy-text"><code>{{plaintext}}</code></div>
         <h2 class="title is-6">Ciphertext</h2>
-        <span><code>{{ciphertext}}</code></span>
+        <div class="copy-text"><code>{{ciphertext}}</code></div>
         <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{plaintext}}
           @buttonType="button" @success={{action (set-flash-message 'Plaintext copied!')}}>
           Copy Plaintext

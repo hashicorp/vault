@@ -57,7 +57,13 @@
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       <h2 class="title is-6">Plaintext</h2>
-      <span><code>{{plaintext}}</code></span>
+      <div class="copy-text">
+        <code>{{plaintext}}</code>
+        <CopyButton class="button is-compact is-transparent" data-test-button="modal-copy" @clipboardText={{plaintext}}
+          @buttonType="button" @success={{action (set-flash-message 'Plaintext copied!')}}>
+          <Icon @glyph="copy-action" aria-label="Copy" />
+        </CopyButton>
+      </div>
     </div>
   </section>
   <footer class="modal-card-foot">
