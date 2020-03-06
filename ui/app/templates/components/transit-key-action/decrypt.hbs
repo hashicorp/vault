@@ -1,5 +1,6 @@
 <form {{action 'doSubmit' (hash ciphertext=ciphertext context=context nonce=nonce) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
+    <p>You can decrypt ciphertext using <code>{{key.name}}</code> as the encryption key.</p>
     <div class="field">
       <label for="ciphertext" class="is-label">Ciphertext</label>
       <div id="ciphertext-control" class="control">
@@ -57,9 +58,9 @@
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       <h2 class="title is-6">Plaintext</h2>
-      <div class="copy-text">
-        <code>{{plaintext}}</code>
-        <CopyButton class="button is-compact is-transparent" data-test-button="modal-copy" @clipboardText={{plaintext}}
+      <div class="copy-text level">
+        <pre class="level-left">{{plaintext}}</pre>
+        <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy" @clipboardText={{plaintext}}
           @buttonType="button" @success={{action (set-flash-message 'Plaintext copied!')}}>
           <Icon @glyph="copy-action" aria-label="Copy" />
         </CopyButton>
