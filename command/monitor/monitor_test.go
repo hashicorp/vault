@@ -29,14 +29,12 @@ func TestMonitor_Start(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}()
 
-	for {
-		select {
-		case log := <-logCh:
-			require.Contains(t, string(log), "[DEBUG] test log")
-			return
-		case <-time.After(3 * time.Second):
-			t.Fatal("Expected to receive from log channel")
-		}
+	select {
+	case l := <-logCh:
+		require.Contains(t, string(l), "[DEBUG] test log")
+		return
+	case <-time.After(3 * time.Second):
+		t.Fatal("Expected to receive from log channel")
 	}
 }
 
