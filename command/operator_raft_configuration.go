@@ -65,8 +65,28 @@ func (c *OperatorRaftConfigurationCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Error reading the raft cluster configuration: %s", err))
 		return 2
 	}
+	if secret == nil {
+		return 2
+	}
 
-	OutputSecret(c.UI, secret)
+	if Format(c.UI) != "table" {
+		return OutputSecret(c.UI, secret)
+	}
 
+	config := secret.Data["config"].(map[string]interface{})
+
+	servers := config["servers"].([]interface{})
+	out := []string{"Node | Address | State | Voter"}
+	for _, serverRaw := range servers {
+		server := serverRaw.(map[string]interface{})
+		state := "follower"
+		if server["leader"].(bool) {
+			state = "leader"
+		}
+
+		out = append(out, fmt.Sprintf("%s | %s | %s | %t", server["node_id"].(string), server["address"].(string), state, server["voter"].(bool)))
+	}
+
+	c.UI.Output(tableOutput(out, nil))
 	return 0
 }
