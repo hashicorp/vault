@@ -44,6 +44,19 @@ the [auth method](/docs/auth) documentation.
 The following flags are available in addition to the [standard set of
 flags](/docs/commands) included on all commands.
 
+- `-audit-non-hmac-request-keys` `(string: "")` -  Comma-separated
+  string or list of keys that will not be HMAC'd by audit devices in the
+  request data object.
+
+- `-audit-non-hmac-response-keys` `(string: "")` - Comma-separated
+  string or list of keys that will not be HMAC'd by audit devices in the
+  response data object.
+
+- `-default-lease-ttl` `(duration: "")` - The default lease TTL for this auth
+  method. If unspecified, this defaults to the Vault server's globally
+  configured default lease TTL, or a previously configured value for the auth
+  method.
+
 - `-description` `(string: "")` - Human-friendly description for the purpose of
   this auth method.
 
