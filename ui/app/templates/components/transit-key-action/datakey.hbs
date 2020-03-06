@@ -69,6 +69,7 @@
   </div>
   {{else}}
     <div class="box is-sideless is-fullwidth is-marginless">
+      <p>Generate a new high-entropy key and value using <code>{{key.name}}</code> as the encryption key.</p>
       <NamespaceReminder @mode="perform" @noun="datakey creation" />
       <div class="field">
         <label for="param" class="is-label">Output format</label>
@@ -149,9 +150,9 @@
     <div class="box is-shadowless is-fullwidth is-sideless">
       {{#if (eq param 'plaintext')}}
         <h2 class="title is-6">Plaintext</h2>
-        <div class="copy-text"><code>{{plaintext}}</code></div>
+        <div class="copy-text"><pre>{{plaintext}}</pre></div>
         <h2 class="title is-6">Ciphertext</h2>
-        <div class="copy-text"><code>{{ciphertext}}</code></div>
+        <div class="copy-text"><pre>{{ciphertext}}</pre></div>
         <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{plaintext}}
           @buttonType="button" @success={{action (set-flash-message 'Plaintext copied!')}}>
           Copy Plaintext
@@ -163,7 +164,7 @@
         <button type="submit" class="button is-secondary" onclick={{action (mut isModalActive) false}}>Close</button>
       {{else}}
         <h2 class="title is-6">Ciphertext</h2>
-        <span><code>{{ciphertext}}</code></span>
+        <span><pre>{{ciphertext}}</pre></span>
         <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{ciphertext}}
           @buttonType="button" @success={{action "toggleModal"}}>
           Copy & Close
