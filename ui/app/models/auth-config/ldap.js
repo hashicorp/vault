@@ -20,8 +20,11 @@ export default AuthConfig.extend({
           'tlsMinVersion',
           'tlsMaxVersion',
           'certificate',
+          'clientTlsCert',
+          'clientTlsKey',
           'userattr',
           'upndomain',
+          'anonymousGroupSearch',
         ],
       },
       {
