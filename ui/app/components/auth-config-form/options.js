@@ -30,6 +30,9 @@ export default AuthConfigComponent.extend({
       if (err instanceof DS.AdapterError === false) {
         throw err;
       }
+      // because we're not calling model.save the model never updates with
+      // the error.  Forcing the error message by manually setting the errorMessage
+      this.model.set('errorMessage', err.errors.firstObject);
       return;
     }
     if (this.wizard.currentMachine === 'authentication' && this.wizard.featureState === 'config') {
