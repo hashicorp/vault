@@ -46,11 +46,11 @@ type monitor struct {
 
 // New creates a new Monitor. Start must be called in order to actually start
 // streaming logs
-func New(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) Monitor {
-	return new(buf, logger, opts)
+func NewMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) Monitor {
+	return newMonitor(buf, logger, opts)
 }
 
-func new(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) *monitor {
+func newMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) *monitor {
 	sw := &monitor{
 		logger:          logger,
 		logCh:           make(chan []byte, buf),

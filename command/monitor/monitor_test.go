@@ -17,7 +17,7 @@ func TestMonitor_Start(t *testing.T) {
 		Level: log.Error,
 	})
 
-	m := New(512, logger, &log.LoggerOptions{
+	m := NewMonitor(512, logger, &log.LoggerOptions{
 		Level: log.Debug,
 	})
 
@@ -48,7 +48,7 @@ func TestMonitor_DroppedMessages(t *testing.T) {
 		Level: log.Warn,
 	})
 
-	m := new(5, logger, &log.LoggerOptions{
+	m := newMonitor(5, logger, &log.LoggerOptions{
 		Level: log.Debug,
 	})
 	m.dropCheckInterval = 5 * time.Millisecond
