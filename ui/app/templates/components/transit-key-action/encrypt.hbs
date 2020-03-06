@@ -74,15 +74,17 @@
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       <h2 class="title is-6">Ciphertext</h2>
-      <span><code>{{ciphertext}}</code></span>
-      <CopyButton
-        class="button is-compact is-transparent"
-        data-test-button="modal-copy"
-        @clipboardText={{ciphertext}}
-        @buttonType="button"
-        @success={{action (set-flash-message 'Ciphertext copied!')}}>
-        <Icon @glyph="copy-action" aria-label="Copy" />
-      </CopyButton>
+      <div class="copy-text">
+        <code>{{ciphertext}}</code>
+        <CopyButton
+          class="button is-compact is-transparent"
+          data-test-button="modal-copy"
+          @clipboardText={{ciphertext}}
+          @buttonType="button"
+          @success={{action (set-flash-message 'Ciphertext copied!')}}>
+          <Icon @glyph="copy-action" aria-label="Copy" />
+        </CopyButton>
+      </div>
     </div>
   </section>
   <footer class="modal-card-foot">
