@@ -126,7 +126,7 @@ EOF
 Next, point Helm to the chart release and specify the `values-custom.yaml` file:
 
 ```
-helm install --name="vault-us-east" \
+helm install vault-us-east \
   -f values-custom.yaml \
   https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
 ```
