@@ -61,6 +61,7 @@ func TestMonitorCommand_Run(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			client, closer := testVaultServer(t)
 			defer closer()
 
@@ -70,7 +71,7 @@ func TestMonitorCommand_Run(t *testing.T) {
 			var code int
 			stopCh := make(chan struct{})
 
-			testhelpers.GenerateDebugLogs(t, stopCh, client)
+			go testhelpers.GenerateDebugLogs(t, stopCh, client)
 
 			go func() {
 				code = cmd.Run(tc.args)
