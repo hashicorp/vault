@@ -489,5 +489,14 @@ func getTLSConfig(cfg *ConfigEntry, host string) (*tls.Config, error) {
 		}
 		tlsConfig.RootCAs = caPool
 	}
+	if cfg.ClientTLSCert != "" && cfg.ClientTLSKey != "" {
+		certificate, err := tls.X509KeyPair([]byte(cfg.ClientTLSCert), []byte(cfg.ClientTLSKey))
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to parse client X509 key pair: {{err}}", err)
+		}
+		tlsConfig.Certificates = append(tlsConfig.Certificates, certificate)
+	} else if cfg.ClientTLSCert != "" || cfg.ClientTLSKey != "" {
+		return nil, fmt.Errorf("both client_tls_cert and client_tls_key must be set")
+	}
 	return tlsConfig, nil
 }
