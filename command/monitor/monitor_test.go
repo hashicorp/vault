@@ -51,7 +51,7 @@ func TestMonitor_DroppedMessages(t *testing.T) {
 	m := new(5, logger, &log.LoggerOptions{
 		Level: log.Debug,
 	})
-	m.droppedDuration = 5 * time.Millisecond
+	m.dropCheckInterval = 5 * time.Millisecond
 
 	doneCh := make(chan struct{})
 	defer close(doneCh)
