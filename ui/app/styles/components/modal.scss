@@ -25,7 +25,12 @@
   .copy-text {
     background-color: $grey-lightest;
     padding: $spacing-s;
-    width: max-content;
     margin-bottom: $spacing-s;
+
+    code {
+      overflow: scroll;
+      max-width: calc(100% - 36px);
+      background-color: inherit;
+    }
   }
 }
