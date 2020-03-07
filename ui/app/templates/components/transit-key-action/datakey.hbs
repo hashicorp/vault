@@ -69,8 +69,10 @@
   </div>
   {{else}}
     <div class="box is-sideless is-fullwidth is-marginless">
-      <p>Generate a new high-entropy key and value using <code>{{key.name}}</code> as the encryption key.</p>
       <NamespaceReminder @mode="perform" @noun="datakey creation" />
+      <div class="content">
+        <p>Generate a new high-entropy key and value using <code>{{key.name}}</code> as the encryption key.</p>
+      </div>
       <div class="field">
         <label for="param" class="is-label">Output format</label>
         <div class="control is-expanded">

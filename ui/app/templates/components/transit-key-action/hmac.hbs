@@ -1,7 +1,9 @@
 <form {{action 'doSubmit' (hash input=input algorithm=algorithm key_version=key_version) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    <p>Generate the digest of given data using the specified hash algorithm and <code>{{key.name}}</code> as the named key.</p>
     <NamespaceReminder @mode="perform" @noun="HMAC creation" />
+    <div class="content">
+      <p>Generate the digest of given data using the specified hash algorithm and <code>{{key.name}}</code> as the named key.</p>
+    </div>
     {{key-version-select
       key=key
       onVersionChange=(action (mut key_version))

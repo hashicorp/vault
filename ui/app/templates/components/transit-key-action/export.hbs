@@ -5,8 +5,8 @@
 >
   {{#if (or keys wrappedToken) }}
     <div class="box is-sideless is-fullwidth is-marginless">
-      <div class="box is-borderless">
-        <p>You can rewrap the provided ciphertext using the latest version of <code>{{key.name}}</code> as the encryption key.
+      <div class="content">
+        <p>Export a key using <code>{{key.name}}</code> as the encryption key.
         </p>
       </div>
       <div class="field">
@@ -56,9 +56,8 @@
     </div>
   {{else}}
     <div class="box is-sideless is-fullwidth is-marginless">
-      <div class="box is-borderless">
-        <p>You can rewrap the provided ciphertext using the latest version of <code>{{key.name}}</code> as the encryption key.
-        </p>
+      <div class="content">
+        <p>Export a key using <code>{{key.name}}</code> as the encryption key.</p>
       </div>
       <div class="field">
         <label for="type" class="is-label">Key type</label>
@@ -140,3 +139,5 @@
     </CopyButton>
   </footer>
 </Modal>
+
+{{!-- show eithe wrapped key or exported key --}}

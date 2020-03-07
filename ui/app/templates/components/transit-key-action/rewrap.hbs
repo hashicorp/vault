@@ -1,7 +1,7 @@
 <form {{action 'doSubmit' (hash ciphertext=ciphertext context=context nonce=nonce key_version=key_version) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="rewrap" />
-      <div class="transit-description">
+      <div class="content">
         <p>You can rewrap the provided ciphertext using the latest version of <code>{{key.name}}</code> as the encryption key.</p>
       </div>
     {{key-version-select

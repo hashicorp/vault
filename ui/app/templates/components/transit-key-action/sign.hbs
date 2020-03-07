@@ -28,6 +28,9 @@
   {{else}}
     <div class="box is-sideless is-fullwidth is-marginless">
       <NamespaceReminder @mode="perform" @noun="signing" />
+      <div class="content">
+        <p>Return the cryptographic signature of the given data using <code>{{key.name}}</code> as the encryption key and the specified hash algorithm.</p>
+      </div>
       {{key-version-select
         key=key
         onVersionChange=(action (mut key_version))
