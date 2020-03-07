@@ -357,8 +357,8 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"operator raft configuration": func() (cli.Command, error) {
-			return &OperatorRaftConfigurationCommand{
+		"operator raft list-peers": func() (cli.Command, error) {
+			return &OperatorRaftListPeersCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
