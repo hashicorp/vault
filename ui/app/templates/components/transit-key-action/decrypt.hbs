@@ -1,6 +1,8 @@
 <form {{action 'doSubmit' (hash ciphertext=ciphertext context=context nonce=nonce) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    <p>You can decrypt ciphertext using <code>{{key.name}}</code> as the encryption key.</p>
+    <div class="content">
+      <p>You can decrypt ciphertext using <code>{{key.name}}</code> as the encryption key.</p>
+    </div>
     <div class="field">
       <label for="ciphertext" class="is-label">Ciphertext</label>
       <div id="ciphertext-control" class="control">

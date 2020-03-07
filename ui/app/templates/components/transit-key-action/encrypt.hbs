@@ -1,7 +1,9 @@
 <form {{action 'doSubmit' (hash plaintext=plaintext context=context nonce=nonce key_version=key_version encodedBase64=encodedBase64) on="submit"}}>
     <div class="box is-sideless is-fullwidth is-marginless">
-      <p>You can encrypt plaintext data using <code>{{key.name}}</code> as the encryption key.</p>
       <NamespaceReminder @mode="perform" @noun="encryption" />
+      <div class="content">
+        <p>You can encrypt plaintext data using <code>{{key.name}}</code> as the encryption key.</p>
+      </div>
       {{key-version-select
         key=key
         onVersionChange=(action (mut key_version))

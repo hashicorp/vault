@@ -1,6 +1,8 @@
 <form {{action "doSubmit" (hash input=input signature=signature signature_algorithm=signature_algorithm hmac=hmac hash_algorithm=hash_algorithm context=context prehashed=prehashed encodedBase64=encodedBase64) on="submit"}}>
     <div class="box is-sideless is-fullwidth is-marginless">
-      <p>Check whether the provided signature is valid for the given data.</p>
+      <div class="content">
+        <p>Check whether the provided signature is valid for the given data.</p>
+      </div>
       <div class="field">
         <label for="input" class="is-label">
           Input
