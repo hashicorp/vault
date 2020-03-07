@@ -150,9 +150,21 @@
     <div class="box is-shadowless is-fullwidth is-sideless">
       {{#if (eq param 'plaintext')}}
         <h2 class="title is-6">Plaintext</h2>
-        <div class="copy-text"><pre>{{plaintext}}</pre></div>
+        <div class="copy-text level">
+          <code class="level-left">{{plaintext}}</code>
+          <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
+            @clipboardText={{plaintext}} @buttonType="button" @success={{action (set-flash-message 'Plaintext copied!')}}>
+            <Icon @glyph="copy-action" aria-label="Copy" />
+          </CopyButton>
+        </div>
         <h2 class="title is-6">Ciphertext</h2>
-        <div class="copy-text"><pre>{{ciphertext}}</pre></div>
+        <div class="copy-text level">
+          <code class="level-left">{{ciphertext}}</code>
+          <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
+            @clipboardText={{ciphertext}} @buttonType="button" @success={{action (set-flash-message 'Ciphertext copied!')}}>
+            <Icon @glyph="copy-action" aria-label="Copy" />
+          </CopyButton>
+        </div>
         <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{plaintext}}
           @buttonType="button" @success={{action (set-flash-message 'Plaintext copied!')}}>
           Copy Plaintext
@@ -164,10 +176,16 @@
         <button type="submit" class="button is-secondary" onclick={{action (mut isModalActive) false}}>Close</button>
       {{else}}
         <h2 class="title is-6">Ciphertext</h2>
-        <span><pre>{{ciphertext}}</pre></span>
-        <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{ciphertext}}
+        <div class="copy-text level">
+          <code class="level-left">{{ciphertext}}</code>
+          <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
+            @clipboardText={{ciphertext}} @buttonType="button" @success={{action (set-flash-message 'Ciphertext copied!')}}>
+            <Icon @glyph="copy-action" aria-label="Copy" />
+          </CopyButton>
+        </div>
+        <CopyButton class="button is-primary copy-close" data-test-button="modal-copy-close" @clipboardText={{ciphertext}}
           @buttonType="button" @success={{action "toggleModal"}}>
-          Copy & Close
+          Copy &amp; Close
         </CopyButton>
       {{/if}}
     </div>
