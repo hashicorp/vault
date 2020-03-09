@@ -60,7 +60,7 @@ The MSSQL database plugin supports connection URL in three forms
   - `server=localhost\\SQLExpress;user id=yourdomain\youruser;password=yourpassword;database=master;app name=MyAppName`
 
 - `ODBC` `key/value style` - Key/Value pair format with `odbc:` prefix, for example
-  - odbc:server=localhost\\SQLExpress;user id=sa;password=yourpassword;database=master;app name=MyAppName
+  - `odbc:server=localhost\\SQLExpress;user id=sa;password=yourpassword;database=master;app name=MyAppName`
   - odbc:server=localhost\\SQLExpress;user id=yourdomain\youruser;password=yourpassword;database=master;app name=MyAppName
 
 ##### NOTES:
