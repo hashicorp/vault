@@ -90,6 +90,25 @@ func LevelFromString(levelStr string) Level {
 	}
 }
 
+func (l Level) String() string {
+	switch l {
+	case Trace:
+		return "trace"
+	case Debug:
+		return "debug"
+	case Info:
+		return "info"
+	case Warn:
+		return "warn"
+	case Error:
+		return "error"
+	case NoLevel:
+		return "none"
+	default:
+		return "unknown"
+	}
+}
+
 // Logger describes the interface that must be implemeted by all loggers.
 type Logger interface {
 	// Args are alternating key, val pairs
