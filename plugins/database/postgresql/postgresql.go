@@ -206,6 +206,22 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 
 	// Execute each query
 	for _, stmt := range statements.Creation {
+		// A postgres query may have multi lines, and if so, it will include the word
+		// "END". For example, this statement should be run as one transaction:
+		// "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE my_role; END IF; END $$"
+		if strings.Contains(stmt, "END") {
+			m := map[string]string{
+				"name":       username,
+				"username":   username,
+				"password":   password,
+				"expiration": expirationStr,
+			}
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, stmt); err != nil {
+				return "", "", err
+			}
+			continue
+		}
+		// Otherwise, it's fine to split the statements on the semicolon.
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {
