@@ -33,6 +33,7 @@ Usage: vault monitor [options]
 	for log levels that may be filtered out of the server logs. For example,
 	the server may be logging at the INFO level, but with the monitor command
 	you can set -log-level=DEBUG.
+
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
