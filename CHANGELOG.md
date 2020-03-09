@@ -1,5 +1,10 @@
 ## Next
 
+CHANGES:
+
+* cli: The raft configuration command has been renamed to list-peers to avoid
+  confusion.
+
 IMPROVEMENTS:
 
 * auth/azure: subscription ID, resource group, vm and vmss names are now stored in alias metadata [[GH-30](https://github.com/hashicorp/vault-plugin-auth-azure/pull/30)]
@@ -46,7 +51,7 @@ IMPROVEMENTS:
 * identity: Allow specifying a custom `client_id` for identity tokens [[GH-8165](https://github.com/hashicorp/vault/pull/8165)]
 * replication (enterprise): Fix race condition causing clusters with high throughput writes to sometimes
   fail to enter streaming-wal mode
-* replication (enterprise): Secondary clusters can now perfrom an extra gRPC call to all nodes in a primary 
+* replication (enterprise): Secondary clusters can now perform an extra gRPC call to all nodes in a primary 
   cluster in an attempt to resolve the active node's address
 * replication (enterprise): The replication status API now outputs `last_performance_wal`, `last_dr_wal`, 
   and `connection_state` values
