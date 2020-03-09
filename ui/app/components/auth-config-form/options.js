@@ -34,7 +34,6 @@ export default AuthConfigComponent.extend({
       // the error.  Forcing the error message by manually setting the errorMessage
       try {
         this.model.set('errorMessage', err.errors.firstObject);
-        return;
       } catch {
         // do nothing
       }
