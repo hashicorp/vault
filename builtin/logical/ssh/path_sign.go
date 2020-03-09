@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"context"
-	"crypto/dsa"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
@@ -432,9 +431,6 @@ func (b *backend) validateSignedKeyRequirements(publickey ssh.PublicKey, role *s
 			case *rsa.PublicKey:
 				kstr = "rsa"
 				kbits = k.N.BitLen()
-			case *dsa.PublicKey:
-				kstr = "dsa"
-				kbits = k.Parameters.P.BitLen()
 			case *ecdsa.PublicKey:
 				kstr = "ecdsa"
 				kbits = k.Curve.Params().BitSize
@@ -451,10 +447,6 @@ func (b *backend) validateSignedKeyRequirements(publickey ssh.PublicKey, role *s
 			var pass bool
 			switch kstr {
 			case "rsa":
-				if kbits == value {
-					pass = true
-				}
-			case "dsa":
 				if kbits == value {
 					pass = true
 				}
