@@ -1,0 +1,23 @@
+name: sustain
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Maybe move an issue to the project board
+      uses: actions/github-script@0.4.0
+      if: github.event.label.name == 'bug'
+      with: 
+        github-token: ${{secrets.GITHUB_TOKEN}}
+      env: 
+        column_id: ${{ secrets.PROJECT_COLUMN_ID }}
+        script: |            
+            github.projects.createCard({
+              column_id: ${COLUMN_ID},
+              content_id: context.payload.issue.id,
+              content_type: "Issue"
+            })
