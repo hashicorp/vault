@@ -14,6 +14,7 @@ export default [
     content: [
       'architecture',
       'high-availability',
+      'integrated-storage',
       'security',
       'telemetry',
       'token',
@@ -331,14 +332,15 @@ export default [
                   'standalone-tls',
                   'standalone-audit',
                   'ha-with-consul',
-                  'kubernetes-auth'
+                  'kubernetes-auth',
+                  'enterprise-best-practice'
                 ]
               },
             ],
           },
           {
             category: 'injector',
-            content: ['installation', 'examples']
+            content: ['annotations', 'installation', 'examples']
           }
         ]
       },

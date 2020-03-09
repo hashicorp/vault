@@ -3,15 +3,24 @@
     <div class="box is-sideless is-fullwidth is-marginless">
       <div class="field">
         <label for="hmac" class="is-label">HMAC</label>
-        <div class="control">
-          <textarea readonly class="textarea" id="hmac">{{hmac}}</textarea>
+        <div id="hmac-control" class="control">
+          {{ivy-codemirror
+            value=hmac
+            options=(hash
+              readOnly=true
+              lineNumbers=true
+              tabSize=2
+              mode='ruby'
+              theme='hashi'
+            )
+          }}
         </div>
       </div>
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
         {{#copy-button
-          clipboardTarget="#hmac"
+          clipboardText=hmac
           class="button is-primary"
           buttonType="button"
           success=(action (set-flash-message 'HMAC copied!'))
@@ -37,10 +46,27 @@
         <label for="input" class="is-label">
           Input
         </label>
-        <div class="control is-relative">
-          {{textarea id="input" name="input" value=input class="textarea" data-test-transit-input="input"}}
-          {{b64-toggle value=input isInput=false data-test-transit-b64-toggle="input"}}
+        <div id="input-control" class="control is-relative">
+          {{ivy-codemirror
+            value=input
+            valueUpdated=(action (mut input))
+            options=(hash
+              lineNumbers=true
+              tabSize=2
+              mode='ruby'
+              theme='hashi'
+            )
+            data-test-transit-input="input"
+          }}
         </div>
+      </div>
+      <div class="field">
+        {{input
+          type="checkbox"
+          id="encodedBase64"
+          checked=encodedBase64
+          data-test-transit-input="encodedBase64" }}
+        <label for="encodedBase64">This data is already encoded in base64</label>
       </div>
       <div class="field">
         <label for="algorithm" class="is-label">Hash Algorithm</label>

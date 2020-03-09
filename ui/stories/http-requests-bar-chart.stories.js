@@ -1,4 +1,3 @@
-
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import { withKnobs, object } from '@storybook/addon-knobs';
@@ -10,19 +9,19 @@ const COUNTERS = [
   { start_time: '2019-06-01T00:00:00Z', total: 5000 },
 ];
 
-storiesOf('HttpRequests/BarChart/', module)
+storiesOf('HttpRequests/BarChart/Regular', module)
   .addParameters({ options: { showPanel: true } })
-  .addDecorator(
-    withKnobs()
-  )
-  .add(`HttpRequestsBarChart`, () => ({
-    template: hbs`
+  .addDecorator(withKnobs())
+  .add(
+    `HttpRequestsBarChart`,
+    () => ({
+      template: hbs`
         <h5 class="title is-5">Http Requests Bar Chart</h5>
         <HttpRequestsBarChart @counters={{counters}}/>
     `,
-    context: {
-      counters: object('counters', COUNTERS)
-    },
-  }),
-  {notes}
-);
+      context: {
+        counters: object('counters', COUNTERS),
+      },
+    }),
+    { notes }
+  );
