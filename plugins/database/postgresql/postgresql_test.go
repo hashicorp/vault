@@ -668,3 +668,73 @@ func createTestPGUser(t *testing.T, connURL string, username, password, query st
 		t.Fatal(err)
 	}
 }
+
+func TestContainsMultilineStatement(t *testing.T) {
+	type testCase struct {
+		Input    string
+		Expected bool
+	}
+
+	testCases := map[string]*testCase{
+		"issue 6098 repro": {
+			Input:    `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE my_role; END IF; END $$`,
+			Expected: true,
+		},
+		"docs example": {
+			Input: `CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; \
+        GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";`,
+			Expected: false,
+		},
+	}
+
+	for tName, tCase := range testCases {
+		t.Run(tName, func(t *testing.T) {
+			if containsMultilineStatement(tCase.Input) != tCase.Expected {
+				t.Fatalf("%q should be %t for multiline input", tCase.Input, tCase.Expected)
+			}
+		})
+	}
+}
+
+func TestExtractQuotedStrings(t *testing.T) {
+	type testCase struct {
+		Input    string
+		Expected []string
+	}
+
+	testCases := map[string]*testCase{
+		"no quotes": {
+			Input:    `Five little monkeys jumping on the bed`,
+			Expected: []string{},
+		},
+		"two of both quote types": {
+			Input:    `"Five" little 'monkeys' "jumping on" the' 'bed`,
+			Expected: []string{`"Five"`, `"jumping on"`, `'monkeys'`, `' '`},
+		},
+		"one single quote": {
+			Input:    `Five little monkeys 'jumping on the bed`,
+			Expected: []string{},
+		},
+		"empty string": {
+			Input:    ``,
+			Expected: []string{},
+		},
+	}
+
+	for tName, tCase := range testCases {
+		t.Run(tName, func(t *testing.T) {
+			results, err := extractQuotedStrings(tCase.Input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(results) != len(tCase.Expected) {
+				t.Fatalf("%s isn't equal to %s", results, tCase.Expected)
+			}
+			for i := range results {
+				if results[i] != tCase.Expected[i] {
+					t.Fatalf(`expected %q but received %q`, tCase.Expected, results[i])
+				}
+			}
+		})
+	}
+}

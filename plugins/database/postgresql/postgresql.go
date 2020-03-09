@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -206,10 +207,8 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 
 	// Execute each query
 	for _, stmt := range statements.Creation {
-		// A postgres query may have multi lines, and if so, it will include the word
-		// "END". For example, this statement should be run as one transaction:
-		// "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE my_role; END IF; END $$"
-		if strings.Contains(stmt, "END") {
+		if containsMultilineStatement(stmt) {
+			// Execute it as-is.
 			m := map[string]string{
 				"name":       username,
 				"username":   username,
@@ -516,4 +515,49 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 
 	p.RawConfig["password"] = password
 	return p.RawConfig, nil
+}
+
+// containsMultilineStatement is a best effort to determine whether
+// a particular statement is multiline, and therefore should not be
+// split upon semicolons. If it's unsure, it defaults to false.
+func containsMultilineStatement(stmt string) bool {
+	// We're going to look for the word "END", but first let's ignore
+	// anything the user provided within single or double quotes since
+	// we're looking for an "END" within the Postgres syntax.
+	literals, err := extractQuotedStrings(stmt)
+	if err != nil {
+		return false
+	}
+	stmtWithoutLiterals := ""
+	for _, literal := range literals {
+		stmtWithoutLiterals = strings.Replace(stmt, literal, "", -1)
+	}
+	// Now look for the word "END" specifically. This will miss any
+	// representations of END that aren't surrounded by spaces, but
+	// it should be easy to deal with. This approach was chosen to
+	// avoid accidently matching with unintended words like "APPEND".
+	return strings.Contains(stmtWithoutLiterals, " END ")
+}
+
+// extractQuotedStrings extracts 0 or many substrings
+// that have been single- or double-quoted. Ex:
+// `"Hello", silly 'elephant' from the "zoo".`
+// returns [ `"Hello"`, `'elephant'`, `"zoo"` ]
+func extractQuotedStrings(s string) ([]string, error) {
+	var result []string
+
+	// Find all double-quoted sub-strings.
+	reg, err := regexp.Compile(`"(.*?)"`)
+	if err != nil {
+		return nil, err
+	}
+	result = append(result, reg.FindAllString(s, -1)...)
+
+	// Find all single-quoted sub-strings.
+	reg, err = regexp.Compile(`'(.*?)'`)
+	if err != nil {
+		return nil, err
+	}
+	result = append(result, reg.FindAllString(s, -1)...)
+	return result, nil
 }
