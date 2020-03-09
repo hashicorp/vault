@@ -46,8 +46,6 @@ func (c *Sys) Monitor(logLevel string, stopCh chan struct{}) (chan string, error
 				// we happen to ingest an empty line.
 				if text := scanner.Text(); text != "" {
 					logCh <- text
-				} else {
-					logCh <- " "
 				}
 			} else {
 				// If Scan() returns false, that means the context deadline was exceeded, so
