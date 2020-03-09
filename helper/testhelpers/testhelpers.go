@@ -465,6 +465,9 @@ func GenerateDebugLogs(t testing.T, stopCh chan struct{}, client *api.Client) {
 		select {
 		case <-stopCh:
 			return
+		case <-time.After(10 * time.Second):
+			t.Log("Stopping the generation of debug logs after 10 seconds")
+			return
 		default:
 		}
 
