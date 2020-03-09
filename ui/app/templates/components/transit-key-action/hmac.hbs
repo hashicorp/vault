@@ -66,7 +66,7 @@
     <div class="box is-shadowless is-fullwidth is-sideless">
       <h2 class="title is-6">HMAC</h2>
       <div class="copy-text level">
-        <code class="level-left">{{hmac}}</code>
+        <code class="level-left" data-test-encrypted-value="hmac">{{hmac}}</code>
         <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
           @clipboardText={{hmac}} @buttonType="button" @success={{action (set-flash-message 'HMAC copied!')}}>
           <Icon @glyph="copy-action" aria-label="Copy" />

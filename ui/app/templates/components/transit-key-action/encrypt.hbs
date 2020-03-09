@@ -73,12 +73,13 @@
 <Modal
   @title="Copy your token"
   @onClose={{action (mut isModalActive) false}}
-  @isActive={{isModalActive}}>
+  @isActive={{isModalActive}}
+  data-test-encrypt-modal>
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       <h2 class="title is-6">Ciphertext</h2>
       <div class="copy-text level">
-        <code class="level-left">{{ciphertext}}</code>
+        <code class="level-left" data-test-encrypted-value="ciphertext">{{ciphertext}}</code>
         <CopyButton
           class="button is-compact is-transparent level-right"
           data-test-button="modal-copy"
