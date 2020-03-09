@@ -1,7 +1,7 @@
 <form {{action (perform saveModel) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
+    <MessageError @model={{model}} @errorMessage={{model.errorMessage}}/>
     <NamespaceReminder @mode="save" @noun="Auth Method" />
-    {{message-error model=model}}
     {{#each model.tuneAttrs as |attr|}}
       {{form-field data-test-field attr=attr model=model}}
     {{/each}}
