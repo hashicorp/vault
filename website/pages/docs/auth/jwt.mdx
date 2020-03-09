@@ -170,11 +170,14 @@ Complete the login via your OIDC provider. Launching browser to:
 The browser will open to the generated URL to complete the provider's login. The
 URL may be entered manually if the browser cannot be automatically opened.
 
-The callback listener may be customized with the following optional parameters (typically not required):
+The callback listener may be customized with the following optional parameters. These are typically
+not required to be set:
 
+- `mount` (default: "oidc")
+- `listenaddress` (default: "localhost")
+- `port` (default: 8250)
 - `callbackhost` (default: "localhost")
 - `callbackmethod` (default: "http")
-- `port` (default: 8250)
 - `callbackport` (default: value set for `port`). This value is used in the `redirect_uri`, whereas
   `port` is the localhost port that the listener is using. These two may be different in advanced setups.
 
