@@ -156,6 +156,12 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 				GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO "{{username}}";`,
 			},
 		},
+		"reproduce https://github.com/hashicorp/vault/issues/6098": {
+			createStmts: []string{
+				// NOTE: "rolname" in the following line is not a typo.
+				"DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE my_role; END IF; END $$",
+			},
+		},
 	}
 
 	// Shared test container for speed - there should not be any overlap between the tests
@@ -190,6 +196,11 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 			username, password, err := db.CreateUser(ctx, statements, usernameConfig, time.Now().Add(time.Minute))
 			if err != nil {
 				t.Fatalf("err: %s", err)
+			}
+
+			if name == "reproduce https://github.com/hashicorp/vault/issues/6098" {
+				// This test doesn't create creds, so we don't need to test them.
+				return
 			}
 
 			if err = testCredsExist(t, connURL, username, password); err != nil {
