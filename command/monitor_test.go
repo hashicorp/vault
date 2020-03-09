@@ -94,10 +94,3 @@ func TestMonitorCommand_Run(t *testing.T) {
 		})
 	}
 }
-
-func TestMonitorCommand_NoTabs(t *testing.T) {
-	t.Parallel()
-
-	_, cmd := testMonitorCommand(t)
-	assertNoTabs(t, cmd)
-}
