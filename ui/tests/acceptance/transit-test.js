@@ -1,4 +1,4 @@
-import { click, fillIn, find, currentURL, settled, visit, pauseTest } from '@ember/test-helpers';
+import { click, fillIn, find, currentURL, settled, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { encodeString } from 'vault/utils/b64';
