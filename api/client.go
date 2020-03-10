@@ -729,6 +729,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 			Host:   host,
 			Path:   path.Join(addr.Path, requestPath),
 		},
+		Host:        addr.Host,
 		ClientToken: token,
 		Params:      make(map[string][]string),
 	}
