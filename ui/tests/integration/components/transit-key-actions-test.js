@@ -45,7 +45,10 @@ module('Integration | Component | transit key actions', function(hooks) {
 
   test('it requires `key`', async function(assert) {
     let promise = waitForError();
-    render(hbs`{{transit-key-actions}}`);
+    render(hbs`
+      {{transit-key-actions}}
+      <div id="modal-wormhole"></div>
+    `);
     let err = await promise;
     assert.ok(err.message.includes('`key` is required for'), 'asserts without key');
   });
@@ -241,7 +244,10 @@ module('Integration | Component | transit key actions', function(hooks) {
       exportKeyTypes: ['encryption'],
       validKeyVersions: [1],
     });
-    await render(hbs`{{transit-key-actions key=key}}`);
+    await render(hbs`
+      {{transit-key-actions key=key}}
+      <div id="modal-wormhole"></div>
+    `);
   };
 
   test('it can export a key:default behavior', async function(assert) {
@@ -262,7 +268,7 @@ module('Integration | Component | transit key actions', function(hooks) {
       'passes expected args to the adapter'
     );
     assert.equal(this.get('storeService.callArgsOptions.wrapTTL'), '30m', 'passes value for wrapTTL');
-    assert.equal(find('#export').value, 'wrapped-token', 'wraps by default');
+    assert.equal(find('[data-test-encrypted-value="export"]').innerText, 'wrapped-token', 'wraps by default');
   });
 
   test('it can export a key:unwrapped behavior', async function(assert) {

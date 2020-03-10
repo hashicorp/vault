@@ -192,10 +192,6 @@ export default Component.extend(TRANSIT_PARAMS, {
       this.toggleProperty('isModalActive');
     },
 
-    test() {
-      console.log('================= you clicked the test =================');
-    },
-
     doSubmit(data, options = {}) {
       const { backend, id } = this.getModelInfo();
       const action = this.get('selectedAction');
