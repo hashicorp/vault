@@ -547,14 +547,14 @@ func extractQuotedStrings(s string) ([]string, error) {
 	var result []string
 
 	// Find all double-quoted sub-strings.
-	reg, err := regexp.Compile(`"(.*?)"`)
+	reg, err := regexp.Compile(`(".*?")`)
 	if err != nil {
 		return nil, err
 	}
 	result = append(result, reg.FindAllString(s, -1)...)
 
 	// Find all single-quoted sub-strings.
-	reg, err = regexp.Compile(`'(.*?)'`)
+	reg, err = regexp.Compile(`('.*?')`)
 	if err != nil {
 		return nil, err
 	}
