@@ -44,7 +44,7 @@ func TestSysMonitorStreamingLogs(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Make requests that generate logs
-	testhelpers.GenerateDebugLogs(t, stopCh, client)
+	go testhelpers.GenerateDebugLogs(t, stopCh, client)
 
 	debugCount := 0
 	logCh, err := client.Sys().Monitor("DEBUG", stopCh)
