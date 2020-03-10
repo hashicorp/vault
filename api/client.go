@@ -711,14 +711,14 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	policyOverride := c.policyOverride
 	c.modifyLock.RUnlock()
 
+	var host = addr.Host
 	// if SRV records exist (see https://tools.ietf.org/html/draft-andrews-http-srv-02), lookup the SRV
 	// record and take the highest match; this is not designed for high-availability, just discovery
-	var host string = addr.Host
-	if addr.Port() == "" {
-			// Internet Draft specifies that the SRV record is ignored if a port is given
-			_, addrs, err := net.LookupSRV("http", "tcp", addr.Hostname())
-			if err == nil && len(addrs) > 0 {
-				host = fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
+	// Internet Draft specifies that the SRV record is ignored if a port is given
+	if addr.Port() == "" && c.config.SRVLookup {
+		_, addrs, err := net.LookupSRV("http", "tcp", addr.Hostname())
+		if err == nil && len(addrs) > 0 {
+			host = fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
 		}
 	}
 
