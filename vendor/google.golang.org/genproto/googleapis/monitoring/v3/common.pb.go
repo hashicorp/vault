@@ -10,7 +10,6 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	duration "github.com/golang/protobuf/ptypes/duration"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-	_ "google.golang.org/genproto/googleapis/api/annotations"
 	distribution "google.golang.org/genproto/googleapis/api/distribution"
 )
 
@@ -25,24 +24,24 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-// Specifies an ordering relationship on two arguments, here called left and
-// right.
+// Specifies an ordering relationship on two arguments, called `left` and
+// `right`.
 type ComparisonType int32
 
 const (
 	// No ordering relationship is specified.
 	ComparisonType_COMPARISON_UNSPECIFIED ComparisonType = 0
-	// The left argument is greater than the right argument.
+	// True if the left argument is greater than the right argument.
 	ComparisonType_COMPARISON_GT ComparisonType = 1
-	// The left argument is greater than or equal to the right argument.
+	// True if the left argument is greater than or equal to the right argument.
 	ComparisonType_COMPARISON_GE ComparisonType = 2
-	// The left argument is less than the right argument.
+	// True if the left argument is less than the right argument.
 	ComparisonType_COMPARISON_LT ComparisonType = 3
-	// The left argument is less than or equal to the right argument.
+	// True if the left argument is less than or equal to the right argument.
 	ComparisonType_COMPARISON_LE ComparisonType = 4
-	// The left argument is equal to the right argument.
+	// True if the left argument is equal to the right argument.
 	ComparisonType_COMPARISON_EQ ComparisonType = 5
-	// The left argument is not equal to the right argument.
+	// True if the left argument is not equal to the right argument.
 	ComparisonType_COMPARISON_NE ComparisonType = 6
 )
 
@@ -117,140 +116,146 @@ func (ServiceTier) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_013c57c1dcbb8d65, []int{1}
 }
 
-// The Aligner describes how to bring the data points in a single
-// time series into temporal alignment.
+// The `Aligner` specifies the operation that will be applied to the data
+// points in each alignment period in a time series. Except for
+// `ALIGN_NONE`, which specifies that no operation be applied, each alignment
+// operation replaces the set of data values in each alignment period with
+// a single value: the result of applying the operation to the data values.
+// An aligned time series has a single data value at the end of each
+// `alignment_period`.
+//
+// An alignment operation can change the data type of the values, too. For
+// example, if you apply a counting operation to boolean values, the data
+// `value_type` in the original time series is `BOOLEAN`, but the `value_type`
+// in the aligned result is `INT64`.
 type Aggregation_Aligner int32
 
 const (
-	// No alignment. Raw data is returned. Not valid if cross-time
-	// series reduction is requested. The value type of the result is
-	// the same as the value type of the input.
+	// No alignment. Raw data is returned. Not valid if cross-series reduction
+	// is requested. The `value_type` of the result is the same as the
+	// `value_type` of the input.
 	Aggregation_ALIGN_NONE Aggregation_Aligner = 0
-	// Align and convert to delta metric type. This alignment is valid
-	// for cumulative metrics and delta metrics. Aligning an existing
-	// delta metric to a delta metric requires that the alignment
-	// period be increased. The value type of the result is the same
-	// as the value type of the input.
+	// Align and convert to
+	// [DELTA][google.api.MetricDescriptor.MetricKind.DELTA].
+	// The output is `delta = y1 - y0`.
 	//
-	// One can think of this aligner as a rate but without time units; that
-	// is, the output is conceptually (second_point - first_point).
+	// This alignment is valid for
+	// [CUMULATIVE][google.api.MetricDescriptor.MetricKind.CUMULATIVE] and
+	// `DELTA` metrics. If the selected alignment period results in periods
+	// with no data, then the aligned value for such a period is created by
+	// interpolation. The `value_type`  of the aligned result is the same as
+	// the `value_type` of the input.
 	Aggregation_ALIGN_DELTA Aggregation_Aligner = 1
-	// Align and convert to a rate. This alignment is valid for
-	// cumulative metrics and delta metrics with numeric values. The output is a
-	// gauge metric with value type
-	// [DOUBLE][google.api.MetricDescriptor.ValueType.DOUBLE].
+	// Align and convert to a rate. The result is computed as
+	// `rate = (y1 - y0)/(t1 - t0)`, or "delta over time".
+	// Think of this aligner as providing the slope of the line that passes
+	// through the value at the start and at the end of the `alignment_period`.
 	//
-	// One can think of this aligner as conceptually providing the slope of
-	// the line that passes through the value at the start and end of the
-	// window. In other words, this is conceptually ((y1 - y0)/(t1 - t0)),
-	// and the output unit is one that has a "/time" dimension.
+	// This aligner is valid for `CUMULATIVE`
+	// and `DELTA` metrics with numeric values. If the selected alignment
+	// period results in periods with no data, then the aligned value for
+	// such a period is created by interpolation. The output is a `GAUGE`
+	// metric with `value_type` `DOUBLE`.
 	//
-	// If, by rate, you are looking for percentage change, see the
-	// `ALIGN_PERCENT_CHANGE` aligner option.
+	// If, by "rate", you mean "percentage change", see the
+	// `ALIGN_PERCENT_CHANGE` aligner instead.
 	Aggregation_ALIGN_RATE Aggregation_Aligner = 2
-	// Align by interpolating between adjacent points around the
-	// period boundary. This alignment is valid for gauge
-	// metrics with numeric values. The value type of the result is the same
-	// as the value type of the input.
+	// Align by interpolating between adjacent points around the alignment
+	// period boundary. This aligner is valid for `GAUGE` metrics with
+	// numeric values. The `value_type` of the aligned result is the same as the
+	// `value_type` of the input.
 	Aggregation_ALIGN_INTERPOLATE Aggregation_Aligner = 3
-	// Align by shifting the oldest data point before the period
-	// boundary to the boundary. This alignment is valid for gauge
-	// metrics. The value type of the result is the same as the
-	// value type of the input.
+	// Align by moving the most recent data point before the end of the
+	// alignment period to the boundary at the end of the alignment
+	// period. This aligner is valid for `GAUGE` metrics. The `value_type` of
+	// the aligned result is the same as the `value_type` of the input.
 	Aggregation_ALIGN_NEXT_OLDER Aggregation_Aligner = 4
-	// Align time series via aggregation. The resulting data point in
-	// the alignment period is the minimum of all data points in the
-	// period. This alignment is valid for gauge and delta metrics with numeric
-	// values. The value type of the result is the same as the value
-	// type of the input.
+	// Align the time series by returning the minimum value in each alignment
+	// period. This aligner is valid for `GAUGE` and `DELTA` metrics with
+	// numeric values. The `value_type` of the aligned result is the same as
+	// the `value_type` of the input.
 	Aggregation_ALIGN_MIN Aggregation_Aligner = 10
-	// Align time series via aggregation. The resulting data point in
-	// the alignment period is the maximum of all data points in the
-	// period. This alignment is valid for gauge and delta metrics with numeric
-	// values. The value type of the result is the same as the value
-	// type of the input.
+	// Align the time series by returning the maximum value in each alignment
+	// period. This aligner is valid for `GAUGE` and `DELTA` metrics with
+	// numeric values. The `value_type` of the aligned result is the same as
+	// the `value_type` of the input.
 	Aggregation_ALIGN_MAX Aggregation_Aligner = 11
-	// Align time series via aggregation. The resulting data point in
-	// the alignment period is the average or arithmetic mean of all
-	// data points in the period. This alignment is valid for gauge and delta
-	// metrics with numeric values. The value type of the output is
-	// [DOUBLE][google.api.MetricDescriptor.ValueType.DOUBLE].
+	// Align the time series by returning the mean value in each alignment
+	// period. This aligner is valid for `GAUGE` and `DELTA` metrics with
+	// numeric values. The `value_type` of the aligned result is `DOUBLE`.
 	Aggregation_ALIGN_MEAN Aggregation_Aligner = 12
-	// Align time series via aggregation. The resulting data point in
-	// the alignment period is the count of all data points in the
-	// period. This alignment is valid for gauge and delta metrics with numeric
-	// or Boolean values. The value type of the output is
-	// [INT64][google.api.MetricDescriptor.ValueType.INT64].
+	// Align the time series by returning the number of values in each alignment
+	// period. This aligner is valid for `GAUGE` and `DELTA` metrics with
+	// numeric or Boolean values. The `value_type` of the aligned result is
+	// `INT64`.
 	Aggregation_ALIGN_COUNT Aggregation_Aligner = 13
-	// Align time series via aggregation. The resulting data point in
-	// the alignment period is the sum of all data points in the
-	// period. This alignment is valid for gauge and delta metrics with numeric
-	// and distribution values. The value type of the output is the
-	// same as the value type of the input.
+	// Align the time series by returning the sum of the values in each
+	// alignment period. This aligner is valid for `GAUGE` and `DELTA`
+	// metrics with numeric and distribution values. The `value_type` of the
+	// aligned result is the same as the `value_type` of the input.
 	Aggregation_ALIGN_SUM Aggregation_Aligner = 14
-	// Align time series via aggregation. The resulting data point in
-	// the alignment period is the standard deviation of all data
-	// points in the period. This alignment is valid for gauge and delta metrics
-	// with numeric values. The value type of the output is
-	// [DOUBLE][google.api.MetricDescriptor.ValueType.DOUBLE].
+	// Align the time series by returning the standard deviation of the values
+	// in each alignment period. This aligner is valid for `GAUGE` and
+	// `DELTA` metrics with numeric values. The `value_type` of the output is
+	// `DOUBLE`.
 	Aggregation_ALIGN_STDDEV Aggregation_Aligner = 15
-	// Align time series via aggregation. The resulting data point in
-	// the alignment period is the count of True-valued data points in the
-	// period. This alignment is valid for gauge metrics with
-	// Boolean values. The value type of the output is
-	// [INT64][google.api.MetricDescriptor.ValueType.INT64].
+	// Align the time series by returning the number of `True` values in
+	// each alignment period. This aligner is valid for `GAUGE` metrics with
+	// Boolean values. The `value_type` of the output is `INT64`.
 	Aggregation_ALIGN_COUNT_TRUE Aggregation_Aligner = 16
-	// Align time series via aggregation. The resulting data point in
-	// the alignment period is the count of False-valued data points in the
-	// period. This alignment is valid for gauge metrics with
-	// Boolean values. The value type of the output is
-	// [INT64][google.api.MetricDescriptor.ValueType.INT64].
+	// Align the time series by returning the number of `False` values in
+	// each alignment period. This aligner is valid for `GAUGE` metrics with
+	// Boolean values. The `value_type` of the output is `INT64`.
 	Aggregation_ALIGN_COUNT_FALSE Aggregation_Aligner = 24
-	// Align time series via aggregation. The resulting data point in
-	// the alignment period is the fraction of True-valued data points in the
-	// period. This alignment is valid for gauge metrics with Boolean values.
-	// The output value is in the range [0, 1] and has value type
-	// [DOUBLE][google.api.MetricDescriptor.ValueType.DOUBLE].
+	// Align the time series by returning the ratio of the number of `True`
+	// values to the total number of values in each alignment period. This
+	// aligner is valid for `GAUGE` metrics with Boolean values. The output
+	// value is in the range [0.0, 1.0] and has `value_type` `DOUBLE`.
 	Aggregation_ALIGN_FRACTION_TRUE Aggregation_Aligner = 17
-	// Align time series via aggregation. The resulting data point in
-	// the alignment period is the 99th percentile of all data
-	// points in the period. This alignment is valid for gauge and delta metrics
-	// with distribution values. The output is a gauge metric with value type
-	// [DOUBLE][google.api.MetricDescriptor.ValueType.DOUBLE].
+	// Align the time series by using [percentile
+	// aggregation](https://en.wikipedia.org/wiki/Percentile). The resulting
+	// data point in each alignment period is the 99th percentile of all data
+	// points in the period. This aligner is valid for `GAUGE` and `DELTA`
+	// metrics with distribution values. The output is a `GAUGE` metric with
+	// `value_type` `DOUBLE`.
 	Aggregation_ALIGN_PERCENTILE_99 Aggregation_Aligner = 18
-	// Align time series via aggregation. The resulting data point in
-	// the alignment period is the 95th percentile of all data
-	// points in the period. This alignment is valid for gauge and delta metrics
-	// with distribution values. The output is a gauge metric with value type
-	// [DOUBLE][google.api.MetricDescriptor.ValueType.DOUBLE].
+	// Align the time series by using [percentile
+	// aggregation](https://en.wikipedia.org/wiki/Percentile). The resulting
+	// data point in each alignment period is the 95th percentile of all data
+	// points in the period. This aligner is valid for `GAUGE` and `DELTA`
+	// metrics with distribution values. The output is a `GAUGE` metric with
+	// `value_type` `DOUBLE`.
 	Aggregation_ALIGN_PERCENTILE_95 Aggregation_Aligner = 19
-	// Align time series via aggregation. The resulting data point in
-	// the alignment period is the 50th percentile of all data
-	// points in the period. This alignment is valid for gauge and delta metrics
-	// with distribution values. The output is a gauge metric with value type
-	// [DOUBLE][google.api.MetricDescriptor.ValueType.DOUBLE].
+	// Align the time series by using [percentile
+	// aggregation](https://en.wikipedia.org/wiki/Percentile). The resulting
+	// data point in each alignment period is the 50th percentile of all data
+	// points in the period. This aligner is valid for `GAUGE` and `DELTA`
+	// metrics with distribution values. The output is a `GAUGE` metric with
+	// `value_type` `DOUBLE`.
 	Aggregation_ALIGN_PERCENTILE_50 Aggregation_Aligner = 20
-	// Align time series via aggregation. The resulting data point in
-	// the alignment period is the 5th percentile of all data
-	// points in the period. This alignment is valid for gauge and delta metrics
-	// with distribution values. The output is a gauge metric with value type
-	// [DOUBLE][google.api.MetricDescriptor.ValueType.DOUBLE].
+	// Align the time series by using [percentile
+	// aggregation](https://en.wikipedia.org/wiki/Percentile). The resulting
+	// data point in each alignment period is the 5th percentile of all data
+	// points in the period. This aligner is valid for `GAUGE` and `DELTA`
+	// metrics with distribution values. The output is a `GAUGE` metric with
+	// `value_type` `DOUBLE`.
 	Aggregation_ALIGN_PERCENTILE_05 Aggregation_Aligner = 21
-	// Align and convert to a percentage change. This alignment is valid for
-	// gauge and delta metrics with numeric values. This alignment conceptually
-	// computes the equivalent of "((current - previous)/previous)*100"
-	// where previous value is determined based on the alignmentPeriod.
-	// In the event that previous is 0 the calculated value is infinity with the
-	// exception that if both (current - previous) and previous are 0 the
-	// calculated value is 0.
-	// A 10 minute moving mean is computed at each point of the time window
+	// Align and convert to a percentage change. This aligner is valid for
+	// `GAUGE` and `DELTA` metrics with numeric values. This alignment returns
+	// `((current - previous)/previous) * 100`, where the value of `previous` is
+	// determined based on the `alignment_period`.
+	//
+	// If the values of `current` and `previous` are both 0, then the returned
+	// value is 0. If only `previous` is 0, the returned value is infinity.
+	//
+	// A 10-minute moving mean is computed at each point of the alignment period
 	// prior to the above calculation to smooth the metric and prevent false
-	// positives from very short lived spikes.
-	// Only applicable for data that is >= 0. Any values < 0 are treated as
-	// no data. While delta metrics are accepted by this alignment special care
-	// should be taken that the values for the metric will always be positive.
-	// The output is a gauge metric with value type
-	// [DOUBLE][google.api.MetricDescriptor.ValueType.DOUBLE].
+	// positives from very short-lived spikes. The moving mean is only
+	// applicable for data whose values are `>= 0`. Any values `< 0` are
+	// treated as a missing datapoint, and are ignored. While `DELTA`
+	// metrics are accepted by this alignment, special care should be taken that
+	// the values for the metric will always be positive. The output is a
+	// `GAUGE` metric with `value_type` `DOUBLE`.
 	Aggregation_ALIGN_PERCENT_CHANGE Aggregation_Aligner = 23
 )
 
@@ -306,80 +311,87 @@ func (Aggregation_Aligner) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_013c57c1dcbb8d65, []int{2, 0}
 }
 
-// A Reducer describes how to aggregate data points from multiple
-// time series into a single time series.
+// A Reducer operation describes how to aggregate data points from multiple
+// time series into a single time series, where the value of each data point
+// in the resulting series is a function of all the already aligned values in
+// the input time series.
 type Aggregation_Reducer int32
 
 const (
-	// No cross-time series reduction. The output of the aligner is
+	// No cross-time series reduction. The output of the `Aligner` is
 	// returned.
 	Aggregation_REDUCE_NONE Aggregation_Reducer = 0
-	// Reduce by computing the mean across time series for each
-	// alignment period. This reducer is valid for delta and
-	// gauge metrics with numeric or distribution values. The value type of the
-	// output is [DOUBLE][google.api.MetricDescriptor.ValueType.DOUBLE].
+	// Reduce by computing the mean value across time series for each
+	// alignment period. This reducer is valid for
+	// [DELTA][google.api.MetricDescriptor.MetricKind.DELTA] and
+	// [GAUGE][google.api.MetricDescriptor.MetricKind.GAUGE] metrics with
+	// numeric or distribution values. The `value_type` of the output is
+	// [DOUBLE][google.api.MetricDescriptor.ValueType.DOUBLE].
 	Aggregation_REDUCE_MEAN Aggregation_Reducer = 1
-	// Reduce by computing the minimum across time series for each
-	// alignment period. This reducer is valid for delta and
-	// gauge metrics with numeric values. The value type of the output
-	// is the same as the value type of the input.
+	// Reduce by computing the minimum value across time series for each
+	// alignment period. This reducer is valid for `DELTA` and `GAUGE` metrics
+	// with numeric values. The `value_type` of the output is the same as the
+	// `value_type` of the input.
 	Aggregation_REDUCE_MIN Aggregation_Reducer = 2
-	// Reduce by computing the maximum across time series for each
-	// alignment period. This reducer is valid for delta and
-	// gauge metrics with numeric values. The value type of the output
-	// is the same as the value type of the input.
+	// Reduce by computing the maximum value across time series for each
+	// alignment period. This reducer is valid for `DELTA` and `GAUGE` metrics
+	// with numeric values. The `value_type` of the output is the same as the
+	// `value_type` of the input.
 	Aggregation_REDUCE_MAX Aggregation_Reducer = 3
 	// Reduce by computing the sum across time series for each
-	// alignment period. This reducer is valid for delta and
-	// gauge metrics with numeric and distribution values. The value type of
-	// the output is the same as the value type of the input.
+	// alignment period. This reducer is valid for `DELTA` and `GAUGE` metrics
+	// with numeric and distribution values. The `value_type` of the output is
+	// the same as the `value_type` of the input.
 	Aggregation_REDUCE_SUM Aggregation_Reducer = 4
 	// Reduce by computing the standard deviation across time series
-	// for each alignment period. This reducer is valid for delta
-	// and gauge metrics with numeric or distribution values. The value type of
-	// the output is [DOUBLE][google.api.MetricDescriptor.ValueType.DOUBLE].
+	// for each alignment period. This reducer is valid for `DELTA` and
+	// `GAUGE` metrics with numeric or distribution values. The `value_type`
+	// of the output is `DOUBLE`.
 	Aggregation_REDUCE_STDDEV Aggregation_Reducer = 5
-	// Reduce by computing the count of data points across time series
-	// for each alignment period. This reducer is valid for delta
-	// and gauge metrics of numeric, Boolean, distribution, and string value
-	// type. The value type of the output is
-	// [INT64][google.api.MetricDescriptor.ValueType.INT64].
+	// Reduce by computing the number of data points across time series
+	// for each alignment period. This reducer is valid for `DELTA` and
+	// `GAUGE` metrics of numeric, Boolean, distribution, and string
+	// `value_type`. The `value_type` of the output is `INT64`.
 	Aggregation_REDUCE_COUNT Aggregation_Reducer = 6
-	// Reduce by computing the count of True-valued data points across time
-	// series for each alignment period. This reducer is valid for delta
-	// and gauge metrics of Boolean value type. The value type of
-	// the output is [INT64][google.api.MetricDescriptor.ValueType.INT64].
+	// Reduce by computing the number of `True`-valued data points across time
+	// series for each alignment period. This reducer is valid for `DELTA` and
+	// `GAUGE` metrics of Boolean `value_type`. The `value_type` of the output
+	// is `INT64`.
 	Aggregation_REDUCE_COUNT_TRUE Aggregation_Reducer = 7
-	// Reduce by computing the count of False-valued data points across time
-	// series for each alignment period. This reducer is valid for delta
-	// and gauge metrics of Boolean value type. The value type of
-	// the output is [INT64][google.api.MetricDescriptor.ValueType.INT64].
+	// Reduce by computing the number of `False`-valued data points across time
+	// series for each alignment period. This reducer is valid for `DELTA` and
+	// `GAUGE` metrics of Boolean `value_type`. The `value_type` of the output
+	// is `INT64`.
 	Aggregation_REDUCE_COUNT_FALSE Aggregation_Reducer = 15
-	// Reduce by computing the fraction of True-valued data points across time
-	// series for each alignment period. This reducer is valid for delta
-	// and gauge metrics of Boolean value type. The output value is in the
-	// range [0, 1] and has value type
-	// [DOUBLE][google.api.MetricDescriptor.ValueType.DOUBLE].
+	// Reduce by computing the ratio of the number of `True`-valued data points
+	// to the total number of data points for each alignment period. This
+	// reducer is valid for `DELTA` and `GAUGE` metrics of Boolean `value_type`.
+	// The output value is in the range [0.0, 1.0] and has `value_type`
+	// `DOUBLE`.
 	Aggregation_REDUCE_FRACTION_TRUE Aggregation_Reducer = 8
-	// Reduce by computing 99th percentile of data points across time series
-	// for each alignment period. This reducer is valid for gauge and delta
-	// metrics of numeric and distribution type. The value of the output is
-	// [DOUBLE][google.api.MetricDescriptor.ValueType.DOUBLE]
+	// Reduce by computing the [99th
+	// percentile](https://en.wikipedia.org/wiki/Percentile) of data points
+	// across time series for each alignment period. This reducer is valid for
+	// `GAUGE` and `DELTA` metrics of numeric and distribution type. The value
+	// of the output is `DOUBLE`.
 	Aggregation_REDUCE_PERCENTILE_99 Aggregation_Reducer = 9
-	// Reduce by computing 95th percentile of data points across time series
-	// for each alignment period. This reducer is valid for gauge and delta
-	// metrics of numeric and distribution type. The value of the output is
-	// [DOUBLE][google.api.MetricDescriptor.ValueType.DOUBLE]
+	// Reduce by computing the [95th
+	// percentile](https://en.wikipedia.org/wiki/Percentile) of data points
+	// across time series for each alignment period. This reducer is valid for
+	// `GAUGE` and `DELTA` metrics of numeric and distribution type. The value
+	// of the output is `DOUBLE`.
 	Aggregation_REDUCE_PERCENTILE_95 Aggregation_Reducer = 10
-	// Reduce by computing 50th percentile of data points across time series
-	// for each alignment period. This reducer is valid for gauge and delta
-	// metrics of numeric and distribution type. The value of the output is
-	// [DOUBLE][google.api.MetricDescriptor.ValueType.DOUBLE]
+	// Reduce by computing the [50th
+	// percentile](https://en.wikipedia.org/wiki/Percentile) of data points
+	// across time series for each alignment period. This reducer is valid for
+	// `GAUGE` and `DELTA` metrics of numeric and distribution type. The value
+	// of the output is `DOUBLE`.
 	Aggregation_REDUCE_PERCENTILE_50 Aggregation_Reducer = 11
-	// Reduce by computing 5th percentile of data points across time series
-	// for each alignment period. This reducer is valid for gauge and delta
-	// metrics of numeric and distribution type. The value of the output is
-	// [DOUBLE][google.api.MetricDescriptor.ValueType.DOUBLE]
+	// Reduce by computing the [5th
+	// percentile](https://en.wikipedia.org/wiki/Percentile) of data points
+	// across time series for each alignment period. This reducer is valid for
+	// `GAUGE` and `DELTA` metrics of numeric and distribution type. The value
+	// of the output is `DOUBLE`.
 	Aggregation_REDUCE_PERCENTILE_05 Aggregation_Reducer = 12
 )
 
@@ -553,9 +565,24 @@ func (*TypedValue) XXX_OneofWrappers() []interface{} {
 	}
 }
 
-// A time interval extending just after a start time through an end time.
-// If the start time is the same as the end time, then the interval
-// represents a single point in time.
+// A closed time interval. It extends from the start time to the end time, and includes both: `[startTime, endTime]`. Valid time intervals depend on the [`MetricKind`](/monitoring/api/ref_v3/rest/v3/projects.metricDescriptors#MetricKind) of the metric value. In no case can the end time be earlier than the start time.
+//
+// * For a `GAUGE` metric, the `startTime` value is technically optional; if
+//   no value is specified, the start time defaults to the value of the
+//   end time, and the interval represents a single point in time. If both
+//   start and end times are specified, they must be identical. Such an
+//   interval is valid only for `GAUGE` metrics, which are point-in-time
+//   measurements.
+//
+// * For `DELTA` and `CUMULATIVE` metrics, the start time must be earlier
+//   than the end time.
+//
+// * In all cases, the start time of the next interval must be
+//   at least a microsecond after the end time of the previous interval.
+//   Because the interval is closed, if the start time of a new interval
+//   is the same as the end time of the previous interval, data written
+//   at the new start time could overwrite data written at the previous
+//   end time.
 type TimeInterval struct {
 	// Required. The end of the time interval.
 	EndTime *timestamp.Timestamp `protobuf:"bytes,2,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
@@ -607,59 +634,89 @@ func (m *TimeInterval) GetStartTime() *timestamp.Timestamp {
 	return nil
 }
 
-// Describes how to combine multiple time series to provide different views of
-// the data.  Aggregation consists of an alignment step on individual time
-// series (`alignment_period` and `per_series_aligner`) followed by an optional
-// reduction step of the data across the aligned time series
-// (`cross_series_reducer` and `group_by_fields`).  For more details, see
-// [Aggregation](/monitoring/api/learn_more#aggregation).
+// Describes how to combine multiple time series to provide a different view of
+// the data.  Aggregation of time series is done in two steps. First, each time
+// series in the set is _aligned_ to the same time interval boundaries, then the
+// set of time series is optionally _reduced_ in number.
+//
+// Alignment consists of applying the `per_series_aligner` operation
+// to each time series after its data has been divided into regular
+// `alignment_period` time intervals. This process takes _all_ of the data
+// points in an alignment period, applies a mathematical transformation such as
+// averaging, minimum, maximum, delta, etc., and converts them into a single
+// data point per period.
+//
+// Reduction is when the aligned and transformed time series can optionally be
+// combined, reducing the number of time series through similar mathematical
+// transformations. Reduction involves applying a `cross_series_reducer` to
+// all the time series, optionally sorting the time series into subsets with
+// `group_by_fields`, and applying the reducer to each subset.
+//
+// The raw time series data can contain a huge amount of information from
+// multiple sources. Alignment and reduction transforms this mass of data into
+// a more manageable and representative collection of data, for example "the
+// 95% latency across the average of all tasks in a cluster". This
+// representative data can be more easily graphed and comprehended, and the
+// individual time series data is still available for later drilldown. For more
+// details, see [Aggregating Time
+// Series](/monitoring/api/v3/metrics#aggregating_time_series).
 type Aggregation struct {
-	// The alignment period for per-[time series][google.monitoring.v3.TimeSeries]
-	// alignment. If present, `alignmentPeriod` must be at least 60
-	// seconds.  After per-time series alignment, each time series will
-	// contain data points only on the period boundaries. If
-	// `perSeriesAligner` is not specified or equals `ALIGN_NONE`, then
-	// this field is ignored. If `perSeriesAligner` is specified and
-	// does not equal `ALIGN_NONE`, then this field must be defined;
-	// otherwise an error is returned.
+	// The `alignment_period` specifies a time interval, in seconds, that is used
+	// to divide the data in all the
+	// [time series][google.monitoring.v3.TimeSeries] into consistent blocks of
+	// time. This will be done before the per-series aligner can be applied to
+	// the data.
+	//
+	// The value must be at least 60 seconds. If a per-series aligner other than
+	// `ALIGN_NONE` is specified, this field is required or an error is returned.
+	// If no per-series aligner is specified, or the aligner `ALIGN_NONE` is
+	// specified, then this field is ignored.
 	AlignmentPeriod *duration.Duration `protobuf:"bytes,1,opt,name=alignment_period,json=alignmentPeriod,proto3" json:"alignment_period,omitempty"`
-	// The approach to be used to align individual time series. Not all
-	// alignment functions may be applied to all time series, depending
-	// on the metric type and value type of the original time
-	// series. Alignment may change the metric type or the value type of
+	// An `Aligner` describes how to bring the data points in a single
+	// time series into temporal alignment. Except for `ALIGN_NONE`, all
+	// alignments cause all the data points in an `alignment_period` to be
+	// mathematically grouped together, resulting in a single data point for
+	// each `alignment_period` with end timestamp at the end of the period.
+	//
+	// Not all alignment operations may be applied to all time series. The valid
+	// choices depend on the `metric_kind` and `value_type` of the original time
+	// series. Alignment can change the `metric_kind` or the `value_type` of
 	// the time series.
 	//
 	// Time series data must be aligned in order to perform cross-time
-	// series reduction. If `crossSeriesReducer` is specified, then
-	// `perSeriesAligner` must be specified and not equal `ALIGN_NONE`
-	// and `alignmentPeriod` must be specified; otherwise, an error is
+	// series reduction. If `cross_series_reducer` is specified, then
+	// `per_series_aligner` must be specified and not equal to `ALIGN_NONE`
+	// and `alignment_period` must be specified; otherwise, an error is
 	// returned.
 	PerSeriesAligner Aggregation_Aligner `protobuf:"varint,2,opt,name=per_series_aligner,json=perSeriesAligner,proto3,enum=google.monitoring.v3.Aggregation_Aligner" json:"per_series_aligner,omitempty"`
-	// The approach to be used to combine time series. Not all reducer
-	// functions may be applied to all time series, depending on the
-	// metric type and the value type of the original time
-	// series. Reduction may change the metric type of value type of the
-	// time series.
+	// The reduction operation to be used to combine time series into a single
+	// time series, where the value of each data point in the resulting series is
+	// a function of all the already aligned values in the input time series.
 	//
-	// Time series data must be aligned in order to perform cross-time
-	// series reduction. If `crossSeriesReducer` is specified, then
-	// `perSeriesAligner` must be specified and not equal `ALIGN_NONE`
-	// and `alignmentPeriod` must be specified; otherwise, an error is
-	// returned.
+	// Not all reducer operations can be applied to all time series. The valid
+	// choices depend on the `metric_kind` and the `value_type` of the original
+	// time series. Reduction can yield a time series with a different
+	// `metric_kind` or `value_type` than the input time series.
+	//
+	// Time series data must first be aligned (see `per_series_aligner`) in order
+	// to perform cross-time series reduction. If `cross_series_reducer` is
+	// specified, then `per_series_aligner` must be specified, and must not be
+	// `ALIGN_NONE`. An `alignment_period` must also be specified; otherwise, an
+	// error is returned.
 	CrossSeriesReducer Aggregation_Reducer `protobuf:"varint,4,opt,name=cross_series_reducer,json=crossSeriesReducer,proto3,enum=google.monitoring.v3.Aggregation_Reducer" json:"cross_series_reducer,omitempty"`
-	// The set of fields to preserve when `crossSeriesReducer` is
-	// specified. The `groupByFields` determine how the time series are
+	// The set of fields to preserve when `cross_series_reducer` is
+	// specified. The `group_by_fields` determine how the time series are
 	// partitioned into subsets prior to applying the aggregation
-	// function. Each subset contains time series that have the same
+	// operation. Each subset contains time series that have the same
 	// value for each of the grouping fields. Each individual time
 	// series is a member of exactly one subset. The
-	// `crossSeriesReducer` is applied to each subset of time series.
+	// `cross_series_reducer` is applied to each subset of time series.
 	// It is not possible to reduce across different resource types, so
 	// this field implicitly contains `resource.type`.  Fields not
-	// specified in `groupByFields` are aggregated away.  If
-	// `groupByFields` is not specified and all the time series have
+	// specified in `group_by_fields` are aggregated away.  If
+	// `group_by_fields` is not specified and all the time series have
 	// the same resource type, then the time series are aggregated into
-	// a single output time series. If `crossSeriesReducer` is not
+	// a single output time series. If `cross_series_reducer` is not
 	// defined, this field is ignored.
 	GroupByFields        []string `protobuf:"bytes,5,rep,name=group_by_fields,json=groupByFields,proto3" json:"group_by_fields,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -730,68 +787,70 @@ func init() {
 	proto.RegisterType((*Aggregation)(nil), "google.monitoring.v3.Aggregation")
 }
 
-func init() { proto.RegisterFile("google/monitoring/v3/common.proto", fileDescriptor_013c57c1dcbb8d65) }
+func init() {
+	proto.RegisterFile("google/monitoring/v3/common.proto", fileDescriptor_013c57c1dcbb8d65)
+}
 
 var fileDescriptor_013c57c1dcbb8d65 = []byte{
-	// 957 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x95, 0xc1, 0x6e, 0xe3, 0x44,
-	0x18, 0xc7, 0xe3, 0x64, 0xdb, 0x34, 0x9f, 0xdb, 0x66, 0x3a, 0xdb, 0xed, 0x86, 0x68, 0x61, 0xb3,
-	0x45, 0x42, 0x61, 0x0f, 0x4e, 0xd5, 0x12, 0xa4, 0x0a, 0x09, 0xc9, 0x75, 0xa6, 0xad, 0xa5, 0xc4,
-	0x09, 0x13, 0xa7, 0x54, 0x50, 0xc9, 0x72, 0x9a, 0x59, 0xcb, 0x52, 0xe2, 0xb1, 0x6c, 0xa7, 0x52,
-	0x6f, 0xdc, 0x79, 0x07, 0x2e, 0xdc, 0xb8, 0xf1, 0x1a, 0x3c, 0x0c, 0x17, 0x5e, 0x00, 0x79, 0xc6,
-	0x59, 0x3b, 0x21, 0x08, 0x8e, 0xdf, 0xef, 0xff, 0xff, 0xbe, 0x99, 0xf9, 0x8f, 0x35, 0x86, 0x77,
-	0x1e, 0xe7, 0xde, 0x9c, 0x75, 0x16, 0x3c, 0xf0, 0x13, 0x1e, 0xf9, 0x81, 0xd7, 0x79, 0xba, 0xe8,
-	0x3c, 0xf2, 0xc5, 0x82, 0x07, 0x5a, 0x18, 0xf1, 0x84, 0xe3, 0x63, 0x69, 0xd1, 0x72, 0x8b, 0xf6,
-	0x74, 0xd1, 0x7c, 0x93, 0x35, 0xba, 0xa1, 0xdf, 0x71, 0x83, 0x80, 0x27, 0x6e, 0xe2, 0xf3, 0x20,
-	0x96, 0x3d, 0xcd, 0x4f, 0x0b, 0xea, 0xcc, 0x8f, 0x93, 0xc8, 0x9f, 0x2e, 0x53, 0x3d, 0x93, 0x3f,
-	0xcb, 0x64, 0x51, 0x4d, 0x97, 0x1f, 0x3a, 0xb3, 0x65, 0xe4, 0x16, 0xf4, 0xb7, 0x9b, 0x7a, 0xe2,
-	0x2f, 0x58, 0x9c, 0xb8, 0x8b, 0x50, 0x1a, 0x4e, 0xff, 0x54, 0x00, 0xec, 0xe7, 0x90, 0xcd, 0xee,
-	0xdc, 0xf9, 0x92, 0xe1, 0xb7, 0x00, 0x53, 0xce, 0xe7, 0xce, 0x53, 0x5a, 0x35, 0x94, 0x96, 0xd2,
-	0xde, 0xbb, 0x2d, 0xd1, 0x5a, 0xca, 0xa4, 0xe1, 0x1d, 0xa8, 0x7e, 0x90, 0x7c, 0xfd, 0x55, 0xe6,
-	0x28, 0xb7, 0x94, 0x76, 0xe5, 0xb6, 0x44, 0x41, 0x40, 0x69, 0xf9, 0x1c, 0xf6, 0x67, 0x7c, 0x39,
-	0x9d, 0xb3, 0xcc, 0x53, 0x69, 0x29, 0x6d, 0xe5, 0xb6, 0x44, 0x55, 0x49, 0x3f, 0x9a, 0xd2, 0xc3,
-	0x04, 0x5e, 0x66, 0x7a, 0xd1, 0x52, 0xda, 0xb5, 0xd4, 0x24, 0xa9, 0x34, 0x99, 0x80, 0x8b, 0x67,
-	0xce, 0xac, 0x3b, 0x2d, 0xa5, 0xad, 0x9e, 0x37, 0xb4, 0x2c, 0x4d, 0x37, 0xf4, 0xb5, 0x5e, 0xc1,
-	0x75, 0x5b, 0xa2, 0x47, 0xc5, 0x2e, 0x31, 0xea, 0xaa, 0x0a, 0x3b, 0xa2, 0xfb, 0xf4, 0x27, 0x05,
-	0xf6, 0x6d, 0x7f, 0xc1, 0xcc, 0x20, 0x61, 0xd1, 0x93, 0x3b, 0xc7, 0x5d, 0xd8, 0x63, 0xc1, 0xcc,
-	0x49, 0x83, 0x11, 0xc7, 0x51, 0xcf, 0x9b, 0xab, 0xd1, 0xab, 0xd4, 0x34, 0x7b, 0x95, 0x1a, 0xad,
-	0xb2, 0x60, 0x96, 0x56, 0xf8, 0x12, 0x20, 0x4e, 0xdc, 0x28, 0x91, 0x8d, 0xca, 0x7f, 0x36, 0xd6,
-	0x84, 0x3b, 0xad, 0x4f, 0xff, 0xaa, 0x82, 0xaa, 0x7b, 0x5e, 0xc4, 0x3c, 0x71, 0x55, 0xb8, 0x07,
-	0xc8, 0x9d, 0xfb, 0x5e, 0xb0, 0x60, 0x41, 0xe2, 0x84, 0x2c, 0xf2, 0xf9, 0x2c, 0x1b, 0xf8, 0xc9,
-	0x3f, 0x06, 0xf6, 0xb2, 0xfb, 0xa5, 0xf5, 0x8f, 0x2d, 0x23, 0xd1, 0x81, 0xbf, 0x07, 0x1c, 0xb2,
-	0xc8, 0x89, 0x59, 0xe4, 0xb3, 0xd8, 0x11, 0x2a, 0x8b, 0xc4, 0x89, 0x0e, 0xcf, 0xbf, 0xd4, 0xb6,
-	0x7d, 0x7a, 0x5a, 0x61, 0x13, 0x9a, 0x2e, 0x1b, 0x28, 0x0a, 0x59, 0x34, 0x16, 0x33, 0x32, 0x82,
-	0x7f, 0x84, 0xe3, 0xc7, 0x88, 0xc7, 0xf1, 0x6a, 0x74, 0xc4, 0x66, 0xcb, 0x47, 0x16, 0x89, 0x2b,
-	0xfb, 0x5f, 0xa3, 0xa9, 0x6c, 0xa0, 0x58, 0x8c, 0x91, 0xc3, 0x33, 0x86, 0xbf, 0x80, 0xba, 0x17,
-	0xf1, 0x65, 0xe8, 0x4c, 0x9f, 0x9d, 0x0f, 0x3e, 0x9b, 0xcf, 0xe2, 0xc6, 0x4e, 0xab, 0xd2, 0xae,
-	0xd1, 0x03, 0x81, 0xaf, 0x9e, 0xaf, 0x05, 0x3c, 0xfd, 0xb9, 0x02, 0xd5, 0xd5, 0x86, 0x0e, 0x01,
-	0xf4, 0xbe, 0x79, 0x63, 0x39, 0xd6, 0xd0, 0x22, 0xa8, 0x84, 0xeb, 0xa0, 0xca, 0xba, 0x47, 0xfa,
-	0xb6, 0x8e, 0x94, 0xdc, 0x40, 0x75, 0x9b, 0xa0, 0x32, 0x7e, 0x05, 0x47, 0xb2, 0x36, 0x2d, 0x9b,
-	0xd0, 0xd1, 0xb0, 0x9f, 0xe2, 0x0a, 0x3e, 0x06, 0x94, 0xcd, 0x21, 0xf7, 0xb6, 0x33, 0xec, 0xf7,
-	0x08, 0x45, 0x2f, 0xf0, 0x01, 0xd4, 0x24, 0x1d, 0x98, 0x16, 0x82, 0x42, 0xa9, 0xdf, 0x23, 0x35,
-	0x1f, 0x3d, 0x20, 0xba, 0x85, 0xf6, 0xf3, 0xb5, 0x8d, 0xe1, 0xc4, 0xb2, 0xd1, 0x41, 0xee, 0x1f,
-	0x4f, 0x06, 0xe8, 0x10, 0x23, 0xd8, 0xcf, 0x4a, 0xbb, 0xd7, 0x23, 0x77, 0xa8, 0x9e, 0xaf, 0x2a,
-	0x3a, 0x1c, 0x9b, 0x4e, 0x08, 0x42, 0xf9, 0x16, 0x25, 0xbd, 0xd6, 0xfb, 0x63, 0x82, 0x1a, 0xf8,
-	0x35, 0xbc, 0x94, 0xf8, 0x9a, 0xea, 0x86, 0x6d, 0x0e, 0x2d, 0xe9, 0x3f, 0xca, 0x85, 0x11, 0xa1,
-	0x06, 0xb1, 0x6c, 0xb3, 0x4f, 0x9c, 0xcb, 0x4b, 0x84, 0xb7, 0x0b, 0x5d, 0xf4, 0x72, 0xab, 0xd0,
-	0x3d, 0x43, 0xc7, 0x5b, 0x85, 0xb3, 0x2e, 0x7a, 0x85, 0x1b, 0x70, 0xbc, 0x26, 0x38, 0xc6, 0xad,
-	0x6e, 0xdd, 0x10, 0xf4, 0xfa, 0xf4, 0xf7, 0x32, 0x54, 0x57, 0x37, 0x58, 0x07, 0x95, 0x92, 0xde,
-	0xc4, 0x20, 0x85, 0xeb, 0xc8, 0x80, 0xc8, 0x48, 0x5c, 0xc7, 0x0a, 0x98, 0x16, 0x2a, 0x17, 0x6b,
-	0xfd, 0x1e, 0x55, 0x0a, 0x75, 0x9a, 0xd9, 0x0b, 0x7c, 0x04, 0x07, 0xab, 0x5a, 0x86, 0xb6, 0x93,
-	0xc6, 0x98, 0x21, 0x99, 0xf3, 0x6e, 0x1a, 0x58, 0x91, 0xc8, 0x5c, 0xaa, 0xf8, 0x04, 0xf0, 0x1a,
-	0x96, 0x41, 0xd6, 0xd3, 0xb3, 0x64, 0x7c, 0x3d, 0xc9, 0xbd, 0x82, 0xb2, 0x1e, 0x65, 0xed, 0x5f,
-	0x94, 0x2e, 0x82, 0xed, 0x4a, 0xf7, 0x0c, 0xa9, 0xdb, 0x95, 0xb3, 0x2e, 0xda, 0x7f, 0xff, 0x8b,
-	0x02, 0x87, 0x06, 0x5f, 0x84, 0x6e, 0xe4, 0xc7, 0x3c, 0x48, 0xdf, 0x5c, 0xdc, 0x84, 0x13, 0x63,
-	0x38, 0x18, 0xe9, 0xd4, 0x1c, 0x0f, 0x2d, 0x67, 0x62, 0x8d, 0x47, 0xc4, 0x30, 0xaf, 0x4d, 0xd2,
-	0x43, 0xa5, 0x34, 0x84, 0x82, 0x76, 0x63, 0x23, 0x65, 0x13, 0xa5, 0x5f, 0xf6, 0x3a, 0xea, 0xdb,
-	0xa8, 0xb2, 0x89, 0x88, 0x0c, 0xb4, 0x80, 0xc8, 0x77, 0x68, 0x67, 0x03, 0x59, 0x04, 0xed, 0xbe,
-	0x77, 0x41, 0x1d, 0xb3, 0xe8, 0xc9, 0x7f, 0x64, 0xb6, 0xcf, 0x22, 0xfc, 0x06, 0x1a, 0x63, 0x42,
-	0xef, 0x4c, 0x83, 0x38, 0xb6, 0x49, 0xe8, 0xc6, 0xf6, 0x4e, 0x00, 0xaf, 0xa9, 0x57, 0xfa, 0xd8,
-	0x34, 0x90, 0x92, 0x9e, 0x7f, 0x8d, 0x8f, 0x28, 0x19, 0x98, 0x93, 0x01, 0x2a, 0x37, 0xcb, 0x0d,
-	0xe5, 0xea, 0x57, 0x05, 0x1a, 0x8f, 0x7c, 0xb1, 0xf5, 0xc9, 0xb8, 0x52, 0x0d, 0xf1, 0xb3, 0x1c,
-	0xa5, 0x4f, 0xdd, 0x48, 0xf9, 0xe1, 0xdb, 0xcc, 0xe4, 0xf1, 0xb9, 0x1b, 0x78, 0x1a, 0x8f, 0xbc,
-	0x8e, 0xc7, 0x02, 0xf1, 0x10, 0x76, 0xa4, 0xe4, 0x86, 0x7e, 0xbc, 0xfe, 0xbf, 0xfd, 0x26, 0xaf,
-	0x7e, 0x2b, 0x37, 0x6f, 0xe4, 0x00, 0x63, 0xce, 0x97, 0x33, 0x6d, 0x90, 0xaf, 0x75, 0x77, 0xf1,
-	0xc7, 0x4a, 0x7c, 0x10, 0xe2, 0x43, 0x2e, 0x3e, 0xdc, 0x5d, 0x4c, 0x77, 0xc5, 0x22, 0x17, 0x7f,
-	0x07, 0x00, 0x00, 0xff, 0xff, 0x8d, 0x78, 0xd9, 0x96, 0xd3, 0x07, 0x00, 0x00,
+	// 946 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x95, 0x41, 0x6f, 0xe2, 0xc6,
+	0x1b, 0xc6, 0x31, 0x24, 0x21, 0xbc, 0x4e, 0xc2, 0x64, 0x36, 0x9b, 0xe5, 0x8f, 0xfe, 0xed, 0xb2,
+	0xa9, 0x54, 0xd1, 0x3d, 0x98, 0x28, 0x29, 0x95, 0xa2, 0x4a, 0x95, 0x1c, 0x33, 0x49, 0x2c, 0x81,
+	0xa1, 0x83, 0x49, 0xa3, 0x36, 0x92, 0x65, 0xc2, 0xac, 0x65, 0x09, 0x6c, 0x6b, 0x30, 0x91, 0x72,
+	0xeb, 0xbd, 0xdf, 0xa1, 0x97, 0xde, 0x7a, 0xeb, 0xd7, 0xe8, 0x87, 0xe9, 0xa5, 0x5f, 0xa0, 0xf2,
+	0x8c, 0xbd, 0x36, 0x94, 0xaa, 0x3d, 0xbe, 0xbf, 0xe7, 0x79, 0xdf, 0x99, 0x79, 0xc6, 0x1a, 0xc3,
+	0x3b, 0x2f, 0x0c, 0xbd, 0x39, 0xeb, 0x2c, 0xc2, 0xc0, 0x8f, 0x43, 0xee, 0x07, 0x5e, 0xe7, 0xf9,
+	0xb2, 0xf3, 0x14, 0x2e, 0x16, 0x61, 0xa0, 0x45, 0x3c, 0x8c, 0x43, 0x7c, 0x22, 0x2d, 0x5a, 0x6e,
+	0xd1, 0x9e, 0x2f, 0x9b, 0x9f, 0xa4, 0x8d, 0x6e, 0xe4, 0x77, 0x66, 0xfe, 0x32, 0xe6, 0xfe, 0x74,
+	0x15, 0xfb, 0x59, 0x53, 0xf3, 0xd3, 0x54, 0x16, 0xd5, 0x74, 0xf5, 0xa1, 0x33, 0x5b, 0x71, 0xb7,
+	0xa0, 0xbf, 0xdd, 0xd4, 0x63, 0x7f, 0xc1, 0x96, 0xb1, 0xbb, 0x88, 0xa4, 0xe1, 0xec, 0x0f, 0x05,
+	0xc0, 0x7e, 0x89, 0xd8, 0xec, 0xde, 0x9d, 0xaf, 0x18, 0x7e, 0x0b, 0x30, 0x0d, 0xc3, 0xb9, 0xf3,
+	0x9c, 0x54, 0x0d, 0xa5, 0xa5, 0xb4, 0xf7, 0xef, 0x4a, 0xb4, 0x96, 0x30, 0x69, 0x78, 0x07, 0xaa,
+	0x1f, 0xc4, 0x5f, 0x7d, 0x99, 0x3a, 0xca, 0x2d, 0xa5, 0x5d, 0xb9, 0x2b, 0x51, 0x10, 0x50, 0x5a,
+	0x3e, 0x83, 0x83, 0x59, 0xb8, 0x9a, 0xce, 0x59, 0xea, 0xa9, 0xb4, 0x94, 0xb6, 0x72, 0x57, 0xa2,
+	0xaa, 0xa4, 0x1f, 0x4d, 0xc9, 0x61, 0x02, 0x2f, 0x35, 0xed, 0xb4, 0x94, 0x76, 0x2d, 0x31, 0x49,
+	0x2a, 0x4d, 0x26, 0xe0, 0xe2, 0x99, 0x53, 0xeb, 0x6e, 0x4b, 0x69, 0xab, 0x17, 0x0d, 0x2d, 0xcd,
+	0xcb, 0x8d, 0x7c, 0xad, 0x57, 0x70, 0xdd, 0x95, 0xe8, 0x71, 0xb1, 0x4b, 0x8c, 0xba, 0xae, 0xc2,
+	0xae, 0xe8, 0x3e, 0xfb, 0x51, 0x81, 0x03, 0xdb, 0x5f, 0x30, 0x33, 0x88, 0x19, 0x7f, 0x76, 0xe7,
+	0xb8, 0x0b, 0xfb, 0x2c, 0x98, 0x39, 0x49, 0x30, 0xe2, 0x38, 0xea, 0x45, 0x33, 0x1b, 0x9d, 0xa5,
+	0xa6, 0xd9, 0x59, 0x6a, 0xb4, 0xca, 0x82, 0x59, 0x52, 0xe1, 0x2b, 0x80, 0x65, 0xec, 0xf2, 0x58,
+	0x36, 0x2a, 0xff, 0xda, 0x58, 0x13, 0xee, 0xa4, 0x3e, 0xfb, 0xb3, 0x0a, 0xaa, 0xee, 0x79, 0x9c,
+	0x79, 0xe2, 0xaa, 0x70, 0x0f, 0x90, 0x3b, 0xf7, 0xbd, 0x60, 0xc1, 0x82, 0xd8, 0x89, 0x18, 0xf7,
+	0xc3, 0x59, 0x3a, 0xf0, 0x7f, 0x7f, 0x1b, 0xd8, 0x4b, 0xef, 0x97, 0xd6, 0x3f, 0xb6, 0x8c, 0x44,
+	0x07, 0xfe, 0x0e, 0x70, 0xc4, 0xb8, 0xb3, 0x64, 0xdc, 0x67, 0x4b, 0x47, 0xa8, 0x8c, 0x8b, 0x13,
+	0x1d, 0x5d, 0x7c, 0xa1, 0x6d, 0xfb, 0xb8, 0xb4, 0xc2, 0x26, 0x34, 0x5d, 0x36, 0x50, 0x14, 0x31,
+	0x3e, 0x16, 0x33, 0x52, 0x82, 0x7f, 0x80, 0x93, 0x27, 0x1e, 0x2e, 0x97, 0xd9, 0x68, 0xce, 0x66,
+	0xab, 0x27, 0xc6, 0xc5, 0x95, 0xfd, 0xa7, 0xd1, 0x54, 0x36, 0x50, 0x2c, 0xc6, 0xc8, 0xe1, 0x29,
+	0xc3, 0x9f, 0x43, 0xdd, 0xe3, 0xe1, 0x2a, 0x72, 0xa6, 0x2f, 0xce, 0x07, 0x9f, 0xcd, 0x67, 0xcb,
+	0xc6, 0x6e, 0xab, 0xd2, 0xae, 0xd1, 0x43, 0x81, 0xaf, 0x5f, 0x6e, 0x04, 0x3c, 0xfb, 0xa9, 0x02,
+	0xd5, 0x6c, 0x43, 0x47, 0x00, 0x7a, 0xdf, 0xbc, 0xb5, 0x1c, 0x6b, 0x68, 0x11, 0x54, 0xc2, 0x75,
+	0x50, 0x65, 0xdd, 0x23, 0x7d, 0x5b, 0x47, 0x4a, 0x6e, 0xa0, 0xba, 0x4d, 0x50, 0x19, 0xbf, 0x86,
+	0x63, 0x59, 0x9b, 0x96, 0x4d, 0xe8, 0x68, 0xd8, 0x4f, 0x70, 0x05, 0x9f, 0x00, 0x4a, 0xe7, 0x90,
+	0x07, 0xdb, 0x19, 0xf6, 0x7b, 0x84, 0xa2, 0x1d, 0x7c, 0x08, 0x35, 0x49, 0x07, 0xa6, 0x85, 0xa0,
+	0x50, 0xea, 0x0f, 0x48, 0xcd, 0x47, 0x0f, 0x88, 0x6e, 0xa1, 0x83, 0x7c, 0x6d, 0x63, 0x38, 0xb1,
+	0x6c, 0x74, 0x98, 0xfb, 0xc7, 0x93, 0x01, 0x3a, 0xc2, 0x08, 0x0e, 0xd2, 0xd2, 0xee, 0xf5, 0xc8,
+	0x3d, 0xaa, 0xe7, 0xab, 0x8a, 0x0e, 0xc7, 0xa6, 0x13, 0x82, 0x50, 0xbe, 0x45, 0x49, 0x6f, 0xf4,
+	0xfe, 0x98, 0xa0, 0x06, 0x7e, 0x03, 0xaf, 0x24, 0xbe, 0xa1, 0xba, 0x61, 0x9b, 0x43, 0x4b, 0xfa,
+	0x8f, 0x73, 0x61, 0x44, 0xa8, 0x41, 0x2c, 0xdb, 0xec, 0x13, 0xe7, 0xea, 0x0a, 0xe1, 0xed, 0x42,
+	0x17, 0xbd, 0xda, 0x2a, 0x74, 0xcf, 0xd1, 0xc9, 0x56, 0xe1, 0xbc, 0x8b, 0x5e, 0xe3, 0x06, 0x9c,
+	0xac, 0x09, 0x8e, 0x71, 0xa7, 0x5b, 0xb7, 0x04, 0xbd, 0x39, 0xfb, 0xad, 0x0c, 0xd5, 0xec, 0x06,
+	0xeb, 0xa0, 0x52, 0xd2, 0x9b, 0x18, 0xa4, 0x70, 0x1d, 0x29, 0x10, 0x19, 0x89, 0xeb, 0xc8, 0x80,
+	0x69, 0xa1, 0x72, 0xb1, 0xd6, 0x1f, 0x50, 0xa5, 0x50, 0x27, 0x99, 0xed, 0xe0, 0x63, 0x38, 0xcc,
+	0x6a, 0x19, 0xda, 0x6e, 0x12, 0x63, 0x8a, 0x64, 0xce, 0x7b, 0x49, 0x60, 0x45, 0x22, 0x73, 0xa9,
+	0xe2, 0x53, 0xc0, 0x6b, 0x58, 0x06, 0x59, 0x4f, 0xce, 0x92, 0xf2, 0xf5, 0x24, 0xf7, 0x0b, 0xca,
+	0x7a, 0x94, 0xb5, 0x7f, 0x50, 0xba, 0x08, 0xb6, 0x2b, 0xdd, 0x73, 0xa4, 0x6e, 0x57, 0xce, 0xbb,
+	0xe8, 0xe0, 0xfd, 0xcf, 0x0a, 0x1c, 0x19, 0xe1, 0x22, 0x72, 0xb9, 0xbf, 0x0c, 0x83, 0xe4, 0xcd,
+	0xc5, 0x4d, 0x38, 0x35, 0x86, 0x83, 0x91, 0x4e, 0xcd, 0xf1, 0xd0, 0x72, 0x26, 0xd6, 0x78, 0x44,
+	0x0c, 0xf3, 0xc6, 0x24, 0x3d, 0x54, 0x4a, 0x42, 0x28, 0x68, 0xb7, 0x36, 0x52, 0x36, 0x51, 0xf2,
+	0x65, 0xaf, 0xa3, 0xbe, 0x8d, 0x2a, 0x9b, 0x88, 0xc8, 0x40, 0x0b, 0x88, 0x7c, 0x8b, 0x76, 0x37,
+	0x90, 0x45, 0xd0, 0xde, 0x7b, 0x17, 0xd4, 0x31, 0xe3, 0xcf, 0xfe, 0x13, 0xb3, 0x7d, 0xc6, 0xf1,
+	0xff, 0xa1, 0x31, 0x26, 0xf4, 0xde, 0x34, 0x88, 0x63, 0x9b, 0x84, 0x6e, 0x6c, 0xef, 0x14, 0xf0,
+	0x9a, 0x7a, 0xad, 0x8f, 0x4d, 0x03, 0x29, 0xc9, 0xf9, 0xd7, 0xf8, 0x88, 0x92, 0x81, 0x39, 0x19,
+	0xa0, 0x72, 0xb3, 0xdc, 0x50, 0xae, 0x7f, 0x51, 0xa0, 0xf1, 0x14, 0x2e, 0xb6, 0x3e, 0x19, 0xd7,
+	0xaa, 0x21, 0x7e, 0x87, 0xa3, 0xe4, 0xa9, 0x1b, 0x29, 0xdf, 0x7f, 0x93, 0x9a, 0xbc, 0x70, 0xee,
+	0x06, 0x9e, 0x16, 0x72, 0xaf, 0xe3, 0xb1, 0x40, 0x3c, 0x84, 0x1d, 0x29, 0xb9, 0x91, 0xbf, 0x5c,
+	0xff, 0xa3, 0x7e, 0x9d, 0x57, 0xbf, 0x96, 0x9b, 0xb7, 0x72, 0x80, 0x31, 0x0f, 0x57, 0x33, 0x6d,
+	0x90, 0xaf, 0x75, 0x7f, 0xf9, 0x7b, 0x26, 0x3e, 0x0a, 0xf1, 0x31, 0x17, 0x1f, 0xef, 0x2f, 0xa7,
+	0x7b, 0x62, 0x91, 0xcb, 0xbf, 0x02, 0x00, 0x00, 0xff, 0xff, 0xf5, 0x70, 0xc6, 0x75, 0xb5, 0x07,
+	0x00, 0x00,
 }

@@ -7,7 +7,10 @@ replace github.com/hashicorp/vault/api => ./api
 replace github.com/hashicorp/vault/sdk => ./sdk
 
 require (
-	cloud.google.com/go v0.39.0
+	cloud.google.com/go v0.54.0
+	cloud.google.com/go/pubsub v1.3.0 // indirect
+	cloud.google.com/go/spanner v1.2.1
+	cloud.google.com/go/storage v1.6.0
 	github.com/Azure/azure-sdk-for-go v36.2.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.9.2
 	github.com/DataDog/zstd v1.4.4 // indirect
@@ -45,7 +48,7 @@ require (
 	github.com/go-test/deep v1.0.2
 	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
 	github.com/gogo/protobuf v1.2.1
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.3.4
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.0.0-20190816035513-b52628e82e2a
 	github.com/hashicorp/consul-template v0.22.0
@@ -64,7 +67,7 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hashicorp/golang-lru v0.5.3
+	github.com/hashicorp/golang-lru v0.5.4
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
 	github.com/hashicorp/raft v1.1.2-0.20191002163536-9c6bd3e3eb17
@@ -138,10 +141,12 @@ require (
 	go.mongodb.org/mongo-driver v1.2.1
 	go.uber.org/atomic v1.4.0
 	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad
-	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
-	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	google.golang.org/api v0.14.0
-	google.golang.org/grpc v1.23.1
+	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/tools v0.0.0-20200309202150-20ab64c0d93f // indirect
+	google.golang.org/api v0.20.0
+	google.golang.org/genproto v0.0.0-20200309141739-5b75447e413d // indirect
+	google.golang.org/grpc v1.27.1
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.4.1
