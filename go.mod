@@ -45,7 +45,7 @@ require (
 	github.com/go-test/deep v1.0.2
 	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
 	github.com/gogo/protobuf v1.2.1
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.3.4
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.0.0-20190816035513-b52628e82e2a
 	github.com/hashicorp/consul-template v0.22.0
@@ -53,8 +53,8 @@ require (
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-gcp-common v0.6.0
-	github.com/hashicorp/go-hclog v0.12.0
-	github.com/hashicorp/go-kms-wrapping v0.5.3
+	github.com/hashicorp/go-hclog v0.12.1
+	github.com/hashicorp/go-kms-wrapping v0.5.5
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.0.0
@@ -88,8 +88,8 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.4-beta1
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.0-beta1
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.0-beta1.0.20200306174116-e7553b03b931
-	github.com/hashicorp/vault/api v1.0.5-0.20200215224050-f6547fa8e820
-	github.com/hashicorp/vault/sdk v0.1.14-0.20200220181328-627cbfe69505
+	github.com/hashicorp/vault/api v1.0.5-0.20200310200600-24eb321f53d4
+	github.com/hashicorp/vault/sdk v0.1.14-0.20200310200600-24eb321f53d4
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
