@@ -82,7 +82,7 @@ type ExpirationManager struct {
 	restoreLoaded      sync.Map
 	quitCh             chan struct{}
 
-	coreStateLock     *sync.RWMutex
+	coreStateLock     *DeadlockRWMutex
 	quitContext       context.Context
 	leaseCheckCounter *uint32
 
