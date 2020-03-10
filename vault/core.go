@@ -256,7 +256,7 @@ type Core struct {
 	auditBackends map[string]audit.Factory
 
 	// stateLock protects mutable state
-	stateLock DeadlockMutexRW
+	stateLock DeadlockRWMutex
 	sealed    *uint32
 
 	standby              bool
