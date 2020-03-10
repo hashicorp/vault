@@ -686,12 +686,6 @@ func (c *Client) SetPolicyOverride(override bool) {
 	c.policyOverride = override
 }
 
-// portMap defines the standard port map
-var portMap = map[string]string{
-	"http":  "80",
-	"https": "443",
-}
-
 // NewRequest creates a new raw request object to query the Vault server
 // configured for this client. This is an advanced method and generally
 // doesn't need to be called externally.
@@ -708,16 +702,10 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	// record and take the highest match; this is not designed for high-availability, just discovery
 	var host string = addr.Host
 	if addr.Port() == "" {
-		// Avoid lookup of SRV record if scheme is known
-		port, ok := portMap[addr.Scheme]
-		if ok {
-			host = net.JoinHostPort(host, port)
-		} else {
 			// Internet Draft specifies that the SRV record is ignored if a port is given
 			_, addrs, err := net.LookupSRV("http", "tcp", addr.Hostname())
 			if err == nil && len(addrs) > 0 {
 				host = fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
-			}
 		}
 	}
 
