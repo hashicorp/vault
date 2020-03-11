@@ -77,10 +77,12 @@ There is currently a small bug with new page creation - if you create a new page
 
 ### Editing Existing Content
 
-There is currently an issue with hot-reload when certain editors, such as GoLand and Vim, that cause the edited page to fail loading.
-This is due to "safe write" behavior in such editors which conflicts with NodeJS' file watching system.
+There is currently an issue with hot-reload when certain editors, such as GoLand
+and Vim, are used to edit content that causes the edited page to fail loading.
+This is due to "safe write" behavior in such editors which conflicts with
+NodeJS' file watching system.
 
-If you encounter a error similar to the one below, restarting the server will resolve the issue.
+If you encounter an error similar to the one below, restarting the server will resolve the issue.
 
 ```text
 [ error ] ./pages/docs/commands/operator/migrate.mdx
