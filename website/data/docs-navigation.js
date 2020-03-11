@@ -301,18 +301,6 @@ export default [
   {
     category: 'partnerships'
   },
-  {
-    category: 'vs',
-    content: [
-      'chef-puppet-etc',
-      'hsm',
-      'dropbox',
-      'consul',
-      'kms',
-      'keywhiz',
-      'custom'
-    ]
-  },
   '----------------',
   {
     category: 'platform',
