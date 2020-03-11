@@ -3,6 +3,7 @@ package openldap
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/hashicorp/vault-plugin-secrets-openldap/client"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -13,6 +14,7 @@ import (
 const (
 	configPath            = "config"
 	defaultPasswordLength = 64
+	defaultSchema         = "openldap"
 	defaultTLSVersion     = "tls12"
 )
 
@@ -71,6 +73,11 @@ func (b *backend) configFields() map[string]*framework.FieldSchema {
 		Default:     defaultPasswordLength,
 		Description: "The desired length of passwords that Vault generates.",
 	}
+	fields["schema"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Default:     defaultSchema,
+		Description: "The desired OpenLDAP schema used when modifying user account passwords.",
+	}
 	return fields
 }
 
@@ -92,9 +99,20 @@ func (b *backend) configCreateUpdateOperation(ctx context.Context, req *logical.
 		return nil, errors.New("url is required")
 	}
 
+	schema := fieldData.Get("schema").(string)
+	if schema == "" {
+		return nil, errors.New("schema is required")
+	}
+
+	if !client.ValidSchema(schema) {
+		return nil, fmt.Errorf("the configured schema %s is not valid.  Supported schemas: %s",
+			schema, client.SupportedSchemas())
+	}
+
 	config := &config{
 		LDAP: &client.Config{
 			ConfigEntry: ldapConf,
+			Schema:      schema,
 		},
 		PasswordLength: length,
 	}

@@ -40,8 +40,7 @@ cluster_addr = "http://127.0.0.1:8201"
 between the nodes in the Raft cluster.
 
 ~> **Note:** Raft cannot be used as the configured `ha_storage` backend at this
-time. To use Raft for HA coordination users must also use Raft for storage and
-set `ha_enabled = true`.
+time. To use Raft for HA coordination users must also use Raft for storage.
 
 ## `raft` Parameters
 
@@ -51,5 +50,84 @@ set `ha_enabled = true`.
 
 - `node_id` `(string: "")` - The identifier for the node in the Raft cluster.
   This value can be overridden by setting the `VAULT_RAFT_NODE_ID` environment variable.
+
+- `performance_multiplier` `(integer: 0)` - An integer multiplier used by
+  servers to scale key Raft timing parameters. Tuning this affects the time it
+  takes Vault to detect leader failures and to perform leader elections, at the
+  expense of requiring more network and CPU resources for better performance.
+  Omitting this value or setting it to 0 uses default timing described below.
+  Lower values are used to tighten timing and increase sensitivity while higher
+  values relax timings and reduce sensitivity. 
+
+  By default, Vault will use a lower-performance timing that's suitable for
+  minimal Vault servers, currently equivalent to setting this to a value of 5
+  (this default may be changed in future versions of Vault, depending if the
+  target minimum server profile changes). Setting this to a value of 1 will
+  configure Raft to its highest-performance mode and is recommended for
+  production Vault servers. The maximum allowed value is 10.
+
+- `trailing_logs` `(integer: 10000)` - This controls how many log entries are
+  left in the log store on disk after a snapshot is made. This should only be
+  adjusted when followers cannot catch up to the leader due to a very large
+  snapshot size and high write throughput causing log truncation before a
+  snapshot can be fully installed. If you need to use this to recover a cluster,
+  consider reducing write throughput or the amount of data stored on Vault. The
+  default value is 10000 which is suitable for all normal workloads.
+
+- `snapshot_threshold` `(integer: 8192)` - This controls the minimum number of raft
+  commit entries between snapshots that are saved to disk. This is a low-level
+  parameter that should rarely need to be changed. Very busy clusters
+  experiencing excessive disk IO may increase this value to reduce disk IO and
+  minimize the chances of all servers taking snapshots at the same time.
+  Increasing this trades off disk IO for disk space since the log will grow much
+  larger and the space in the raft.db file can't be reclaimed till the next
+  snapshot. Servers may take longer to recover from crashes or failover if this
+  is increased significantly as more logs will need to be replayed.
+
+- `retry_join` `(list: [])` - There can be one or more `retry_join` stanzas.
+  When the raft cluster is getting bootstrapped, if the connection details of all
+  the nodes are known beforehand, then specifying this config stanzas enables the
+  nodes to automatically join a raft cluster. All the nodes would mention all
+  other nodes that they could join using this config. When one of the nodes is
+  initialized, it becomes the leader and all the other nodes will join the
+  leader node to form the cluster. When using Shamir seal, the joined nodes will
+  still need to be unsealed manually. See the section below that describes the
+  parameters accepted by the `retry_join` stanza.
+
+### `retry_join` stanza
+
+- `leader_api_addr` `(string: "")` - Address of a possible leader node
+
+- `leader_ca_cert` `(string: "")` - CA cert of the possible leader node
+
+- `leader_client_cert` `(string: "")` - Client certificate for the follower node to establish client authentication with the possible leader node
+
+- `leader_client_key` `(string: "")` - Client key for the follower node to establish client authentication with the possible leader node
+
+Example Configuration:
+```
+storage "raft" {
+  path    = "/Users/foo/raft/"
+  node_id = "node1"
+  retry_join {
+    leader_api_addr = "http://127.0.0.2:8200"
+    leader_ca_cert = "/path/to/ca1"
+    leader_client_cert = "/path/to/client/cert1"
+    leader_client_key = "/path/to/client/key1"
+  }
+  retry_join {
+    leader_api_addr = "http://127.0.0.3:8200"
+    leader_ca_cert = "/path/to/ca2"
+    leader_client_cert = "/path/to/client/cert2"
+    leader_client_key = "/path/to/client/key2"
+  }
+  retry_join {
+    leader_api_addr = "http://127.0.0.4:8200"
+    leader_ca_cert = "/path/to/ca3"
+    leader_client_cert = "/path/to/client/cert3"
+    leader_client_key = "/path/to/client/key3"
+  }
+}
+```
 
 [raft]: https://raft.github.io/ 'The Raft Consensus Algorithm'

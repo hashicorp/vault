@@ -1,3 +1,24 @@
+## Next
+
+CHANGES:
+
+* cli: The raft configuration command has been renamed to list-peers to avoid
+  confusion.
+
+IMPROVEMENTS:
+
+* auth/azure: subscription ID, resource group, vm and vmss names are now stored in alias metadata [[GH-30](https://github.com/hashicorp/vault-plugin-auth-azure/pull/30)]
+* ui: Update transit actions to codeblocks & automatically encode plaintext unless indicated [[GH-8462](https://github.com/hashicorp/vault/pull/8462)]
+* prometheus: improve performance with high volume of metrics updates [[GH-8507](https://github.com/hashicorp/vault/pull/8507)]
+
+BUG FIXES:
+
+* auth/jwt: Use lower case role names for `default_role` to match the `role` case convention [[GH-100](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/100)]
+* identity: Fix incorrect caching of identity token JWKS responses [[GH-8412](https://github.com/hashicorp/vault/pull/8412)]
+* ui: Show Error messages on Auth Configuration page when you hit permission errors [[GH-8500](https://github.com/hashicorp/vault/pull/8500)]
+* ui: Remove duplicate form inputs for the GitHub config [[GH-8519](https://github.com/hashicorp/vault/pull/8519)]
+* ui: Correct HMAC capitalization [[GH-8528](https://github.com/hashicorp/vault/pull/8528)]
+
 ## 1.4 Beta1 (February 20th, 2020)
 
 FEATURES:
@@ -32,14 +53,16 @@ IMPROVEMENTS:
 * core: Allow tls_min_version to be set to TLS 1.3 [[GH-8305](https://github.com/hashicorp/vault/pull/8305)]
 * cli: Incorrect TLS configuration will now correctly fail [[GH-8025](https://github.com/hashicorp/vault/pull/8025)]
 * identity: Allow specifying a custom `client_id` for identity tokens [[GH-8165](https://github.com/hashicorp/vault/pull/8165)]
-* replication: Fix race condition causing clusters with high throughput writes to sometimes
+* replication (enterprise): Fix race condition causing clusters with high throughput writes to sometimes
   fail to enter streaming-wal mode
-* replication: Secondary clusters can now perfrom an extra gRPC call to all nodes in a primary 
+* replication (enterprise): Secondary clusters can now perform an extra gRPC call to all nodes in a primary 
   cluster in an attempt to resolve the active node's address
-* replication: The replication status API now outputs `last_performance_wal`, `last_dr_wal`, 
+* replication (enterprise): The replication status API now outputs `last_performance_wal`, `last_dr_wal`, 
   and `connection_state` values
-* replication: DR secondary clusters can now be recovered by the `replication/dr/secondary/recover`
+* replication (enterprise): DR secondary clusters can now be recovered by the `replication/dr/secondary/recover`
   API
+* replication (enterprise): We now allow for an alternate means to create a Disaster Recovery token, by using a batch
+  token that is created with an ACL that allows for access to one or more of the DR endpoints.
 * secrets/database/mongodb: Switched internal MongoDB driver to mongo-driver [[GH-8140](https://github.com/hashicorp/vault/pull/8140)]
 * secrets/database/mongodb: Add support for x509 client authorization to MongoDB [[GH-8329](https://github.com/hashicorp/vault/pull/8329)]
 * secrets/database/oracle: Add support for static credential rotation [[GH-26](https://github.com/hashicorp/vault-plugin-database-oracle/pull/26)]
@@ -56,9 +79,9 @@ IMPROVEMENTS:
   addresses for them to continuously try and join one of them, thus automating
   the process of join to a greater extent [[GH-7856](https://github.com/hashicorp/vault/pull/7856)]
 * storage/etcd: Bumped etcd client API SDK [[GH-7931](https://github.com/hashicorp/vault/pull/7931) & [GH-4961](https://github.com/hashicorp/vault/pull/4961) & [GH-4349](https://github.com/hashicorp/vault/pull/4349) & [GH-7582](https://github.com/hashicorp/vault/pull/7582)]
-* sys: We now allow for an alternate means to create a Disaster Recovery token, by using a batch token that is created with an ACL that allows for access to one or more of the DR endpoints.
 * ui: Make Transit Key actions more prominent [[GH-8304](https://github.com/hashicorp/vault/pull/8304)]
 * ui: Add Core Usage Metrics [[GH-8347](https://github.com/hashicorp/vault/pull/8347)]
+* ui: Add refresh Namespace list on the Namespace dropdown, and redesign of Namespace dropdown menu [[GH-8442](https://github.com/hashicorp/vault/pull/8442)]
 
 BUG FIXES:
 
@@ -82,20 +105,24 @@ BUG FIXES:
 * ui: Fix broken popup menu on the transit secrets list page [[GH-8348](https://github.com/hashicorp/vault/pull/8348)]
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [[GH-8035](https://github.com/hashicorp/vault/pull/8035)]
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
+* ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
 
 
-## 1.3.3 (Unreleased)
+## 1.3.3 (March 5th, 2020)
 
 BUG FIXES:
 
+* approle: Fix excessive locking during tidy, which could potentially block new approle logins for long enough to cause an outage [[GH-8418](https://github.com/hashicorp/vault/pull/8418)]
 * cli: Fix issue where Raft snapshots from standby nodes created an empty backup file [[GH-8097](https://github.com/hashicorp/vault/pull/8097)]
+* identity: Fix incorrect caching of identity token JWKS responses [[GH-8412](https://github.com/hashicorp/vault/pull/8412)]
+* kmip: role read now returns tls_client_ttl
+* kmip: fix panic when templateattr not provided in rekey request
+* secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [[GH-8282](https://github.com/hashicorp/vault/pull/8282)]
+* storage/mysql: Fix potential crash when using MySQL as coordination for high availability [[GH-8300](https://github.com/hashicorp/vault/pull/8300)]
+* storage/raft: Fix potential crash when using Raft as coordination for high availability [[GH-8356](https://github.com/hashicorp/vault/pull/8356)]
 * ui: Fix missing License menu item [[GH-8230](https://github.com/hashicorp/vault/pull/8230)]
 * ui: Fix bug where default auth method on login is defaulted to auth method that is listing-visibility=unauth instead of “other” [[GH-8218](https://github.com/hashicorp/vault/pull/8218)]
 * ui: Fix bug where KMIP details were not shown in the UI Wizard [[GH-8255](https://github.com/hashicorp/vault/pull/8255)]
-* secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [GH-8282]
-* storage/mysql: Fix potential crash when using MySQL as coordination for high availability [[GH-8300](https://github.com/hashicorp/vault/pull/8300)]
-* storage/raft: Fix potential crash when using Raft as coordination for high availability [[GH-8356](https://github.com/hashicorp/vault/pull/8356)]
-* ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
 
 ## 1.3.2 (January 22nd, 2020)
 
@@ -107,7 +134,7 @@ SECURITY:
 
 IMPROVEMENTS:
  * auth/aws: Add aws metadata to identity alias [[GH-7975](https://github.com/hashicorp/vault/pull/7975)]
- * auth/kubernetes: Allow both names and namespaces to be set to "*" [[GH-78](https://github.com/hashicorp/vault/pull/78)]
+ * auth/kubernetes: Allow both names and namespaces to be set to "*" [[GH-78](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/78)]
 
 BUG FIXES:
 

@@ -15,6 +15,7 @@ use with selectors. Service registration is only available when Vault is running
 
 - **HashiCorp Supported** – Kubernetes Service Registration is officially supported
   by HashiCorp.
+
 ## Configuration
 
 ```hcl
@@ -38,6 +39,22 @@ you're using Kubernetes must still exist to indicate your intentions:
 
 ```
 service_registration "kubernetes" {}
+```
+
+For service registration to succeed, Vault must be able to apply labels to pods
+in Kubernetes. The following RBAC rules are required to allow the service account
+associated with the Vault pods to update its own pod specification:
+
+```
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: mynamespace
+  name: vault-service-account
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "update"]
 ```
 
 ## Examples
