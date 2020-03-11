@@ -185,69 +185,134 @@ func TestPolicy_NoConfiguredPolicy(t *testing.T) {
 }
 
 func TestPolicy_TokenRenewal(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": credUserpass.Factory,
+	cases := []struct {
+		name             string
+		tokenPolicies    []string
+		identityPolicies []string
+	}{
+		{
+			"default only",
+			nil,
+			nil,
+		},
+		{
+			"with token policies",
+			[]string{"token-policy"},
+			nil,
+		},
+		{
+			"with identity policies",
+			nil,
+			[]string{"identity-policy"},
+		},
+		{
+			"with token and identity policies",
+			[]string{"token-policy"},
+			[]string{"identity-policy"},
 		},
 	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
-	client := cluster.Cores[0].Client
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			coreConfig := &vault.CoreConfig{
+				CredentialBackends: map[string]logical.Factory{
+					"userpass": credUserpass.Factory,
+				},
+			}
+			cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+				HandlerFunc: vaulthttp.Handler,
+			})
+			cluster.Start()
+			defer cluster.Cleanup()
 
-	// Enable userpass auth
-	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
-		Type: "userpass",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+			core := cluster.Cores[0].Core
+			vault.TestWaitActive(t, core)
+			client := cluster.Cores[0].Client
 
-	// Add a user to userpass backend
-	_, err = client.Logical().Write("auth/userpass/users/testuser", map[string]interface{}{
-		"password": "testpassword",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+			// Enable userpass auth
+			err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+				Type: "userpass",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	// Authenticate
-	secret, err := client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
-		"password": "testpassword",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	clientToken := secret.Auth.ClientToken
+			// Add a user to userpass backend
+			data := map[string]interface{}{
+				"password": "testpassword",
+			}
+			if len(tc.tokenPolicies) > 0 {
+				data["token_policies"] = tc.tokenPolicies
+			}
+			_, err = client.Logical().Write("auth/userpass/users/testuser", data)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	// Verify the policy exists in the login response
-	if !strutil.EquivalentSlices(secret.Auth.TokenPolicies, []string{"default"}) {
-		t.Fatalf("policy mismatch, got token policies: %v", secret.Auth.TokenPolicies)
-	}
+			// Set up entity if we're testing against an identity_policies
+			if len(tc.identityPolicies) > 0 {
+				auths, err := client.Sys().ListAuth()
+				if err != nil {
+					t.Fatal(err)
+				}
+				userpassAccessor := auths["userpass/"].Accessor
 
-	if !strutil.EquivalentSlices(secret.Auth.Policies, []string{"default"}) {
-		t.Fatalf("policy mismatch, got token policies: %v", secret.Auth.Policies)
-	}
+				resp, err := client.Logical().Write("identity/entity", map[string]interface{}{
+					"name":     "test-entity",
+					"policies": tc.identityPolicies,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				entityID := resp.Data["id"].(string)
 
-	// Renew token
-	secret, err = client.Logical().Write("auth/token/renew", map[string]interface{}{
-		"token": clientToken,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+				// Create an alias
+				resp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
+					"name":           "testuser",
+					"mount_accessor": userpassAccessor,
+					"canonical_id":   entityID,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
 
-	// Verify the policy exists in the renewal response
-	if !strutil.EquivalentSlices(secret.Auth.TokenPolicies, []string{"default"}) {
-		t.Fatalf("policy mismatch, got token policies: %v", secret.Auth.TokenPolicies)
-	}
+			// Authenticate
+			secret, err := client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
+				"password": "testpassword",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			clientToken := secret.Auth.ClientToken
 
-	if !strutil.EquivalentSlices(secret.Auth.Policies, []string{"default"}) {
-		t.Fatalf("policy mismatch, got token policies: %v", secret.Auth.Policies)
+			// Verify the policies exist in the login response
+			expectedTokenPolicies := append([]string{"default"}, tc.tokenPolicies...)
+			if !strutil.EquivalentSlices(secret.Auth.TokenPolicies, expectedTokenPolicies) {
+				t.Fatalf("policy mismatch:\nexpected: %v\ngot: %v", expectedTokenPolicies, secret.Auth.TokenPolicies)
+			}
+
+			expectedPolicies := append(expectedTokenPolicies, tc.identityPolicies...)
+			if !strutil.EquivalentSlices(secret.Auth.Policies, expectedPolicies) {
+				t.Fatalf("policy mismatch:\nexpected: %v\ngot: %v", expectedPolicies, secret.Auth.Policies)
+			}
+
+			// Renew token
+			secret, err = client.Logical().Write("auth/token/renew", map[string]interface{}{
+				"token": clientToken,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Verify the policies exist in the renewal response
+			if !strutil.EquivalentSlices(secret.Auth.TokenPolicies, expectedTokenPolicies) {
+				t.Fatalf("policy mismatch:\nexpected: %v\ngot: %v", expectedTokenPolicies, secret.Auth.TokenPolicies)
+			}
+
+			if !strutil.EquivalentSlices(secret.Auth.Policies, expectedPolicies) {
+				t.Fatalf("policy mismatch:\nexpected: %v\ngot: %v", expectedPolicies, secret.Auth.Policies)
+			}
+		})
 	}
 }
