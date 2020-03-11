@@ -665,6 +665,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"monitor": func() (cli.Command, error) {
 			return &MonitorCommand{
 				BaseCommand: getBaseCommand(),
+				ShutdownCh:  MakeShutdownCh(),
 			}, nil
 		},
 	}
