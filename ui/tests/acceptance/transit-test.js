@@ -96,12 +96,14 @@ const testConvergentEncryption = async function(assert, keyName) {
       encodeContext: false,
       decodeAfterDecrypt: false,
       assertAfterEncrypt: key => {
+        assert.dom('.modal.is-active').exists(`${key}: Modal opens after encrypt`);
         assert.ok(
-          /vault:/.test(find('#ciphertext-control .CodeMirror').CodeMirror.getValue()),
+          /vault:/.test(find('[data-test-encrypted-value="ciphertext"]').innerText),
           `${key}: ciphertext shows a vault-prefixed ciphertext`
         );
       },
       assertBeforeDecrypt: key => {
+        assert.dom('.modal.is-active').doesNotExist(`${key}: Modal not open before decrypt`);
         assert
           .dom('[data-test-transit-input="context"]')
           .hasValue(
@@ -111,8 +113,9 @@ const testConvergentEncryption = async function(assert, keyName) {
       },
 
       assertAfterDecrypt: key => {
+        assert.dom('.modal.is-active').exists(`${key}: Modal opens after decrypt`);
         assert.equal(
-          find('#plaintext-control .CodeMirror').CodeMirror.getValue(),
+          find('[data-test-encrypted-value="plaintext"]').innerText,
           'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
           `${key}: the ui shows the base64-encoded plaintext`
         );
@@ -126,19 +129,22 @@ const testConvergentEncryption = async function(assert, keyName) {
       encodeContext: false,
       decodeAfterDecrypt: false,
       assertAfterEncrypt: key => {
+        assert.dom('.modal.is-active').exists(`${key}: Modal opens after encrypt`);
         assert.ok(
-          /vault:/.test(find('#ciphertext-control .CodeMirror').CodeMirror.getValue()),
+          /vault:/.test(find('[data-test-encrypted-value="ciphertext"]').innerText),
           `${key}: ciphertext shows a vault-prefixed ciphertext`
         );
       },
       assertBeforeDecrypt: key => {
+        assert.dom('.modal.is-active').doesNotExist(`${key}: Modal not open before decrypt`);
         assert
           .dom('[data-test-transit-input="context"]')
           .hasValue(encodeString('context'), `${key}: the ui shows the input context`);
       },
       assertAfterDecrypt: key => {
+        assert.dom('.modal.is-active').exists(`${key}: Modal opens after decrypt`);
         assert.equal(
-          find('#plaintext-control .CodeMirror').CodeMirror.getValue(),
+          find('[data-test-encrypted-value="plaintext"]').innerText,
           'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
           `${key}: the ui shows the base64-encoded plaintext`
         );
@@ -150,22 +156,25 @@ const testConvergentEncryption = async function(assert, keyName) {
       context: encodeString('context'),
       encodePlaintext: false,
       encodeContext: false,
-      decodeAfterDecrypt: true,
+      decodeAfterDecrypt: false,
       assertAfterEncrypt: key => {
+        assert.dom('.modal.is-active').exists(`${key}: Modal opens after encrypt`);
         assert.ok(
-          /vault:/.test(find('#ciphertext-control .CodeMirror').CodeMirror.getValue()),
+          /vault:/.test(find('[data-test-encrypted-value="ciphertext"]').innerText),
           `${key}: ciphertext shows a vault-prefixed ciphertext`
         );
       },
       assertBeforeDecrypt: key => {
+        assert.dom('.modal.is-active').doesNotExist(`${key}: Modal not open before decrypt`);
         assert
           .dom('[data-test-transit-input="context"]')
           .hasValue(encodeString('context'), `${key}: the ui shows the input context`);
       },
       assertAfterDecrypt: key => {
+        assert.dom('.modal.is-active').exists(`${key}: Modal opens after decrypt`);
         assert.equal(
-          find('#plaintext-control .CodeMirror').CodeMirror.getValue(),
-          'This is the secret',
+          find('[data-test-encrypted-value="plaintext"]').innerText,
+          encodeString('This is the secret'),
           `${key}: the ui decodes plaintext`
         );
       },
@@ -177,24 +186,25 @@ const testConvergentEncryption = async function(assert, keyName) {
       context: 'secret 2',
       encodePlaintext: true,
       encodeContext: true,
-      decodeAfterDecrypt: true,
+      decodeAfterDecrypt: false,
       assertAfterEncrypt: key => {
-        assert.ok(find('[data-test-transit-input="ciphertext"]'), `${key}: ciphertext box shows`);
+        assert.dom('.modal.is-active').exists(`${key}: Modal opens after encrypt`);
         assert.ok(
-          /vault:/.test(find('#ciphertext-control .CodeMirror').CodeMirror.getValue()),
+          /vault:/.test(find('[data-test-encrypted-value="ciphertext"]').innerText),
           `${key}: ciphertext shows a vault-prefixed ciphertext`
         );
       },
       assertBeforeDecrypt: key => {
+        assert.dom('.modal.is-active').doesNotExist(`${key}: Modal not open before decrypt`);
         assert
           .dom('[data-test-transit-input="context"]')
           .hasValue(encodeString('secret 2'), `${key}: the ui shows the encoded context`);
       },
       assertAfterDecrypt: key => {
-        assert.ok(find('[data-test-transit-input="plaintext"]'), `${key}: plaintext box shows`);
+        assert.dom('.modal.is-active').exists(`${key}: Modal opens after decrypt`);
         assert.equal(
-          find('#plaintext-control .CodeMirror').CodeMirror.getValue(),
-          'There are many secrets 🤐',
+          find('[data-test-encrypted-value="plaintext"]').innerText,
+          encodeString('There are many secrets 🤐'),
           `${key}: the ui decodes plaintext`
         );
       },
@@ -212,27 +222,39 @@ const testConvergentEncryption = async function(assert, keyName) {
     if (testCase.encodeContext) {
       await click('[data-test-transit-b64-toggle="context"]');
     }
+    assert.dom('.modal.is-active').doesNotExist(`${name}: is not open before encrypt`);
     await click('[data-test-button-encrypt]');
     await settled();
     if (testCase.assertAfterEncrypt) {
       testCase.assertAfterEncrypt(keyName);
     }
+    // store ciphertext for decryption step
+    const copiedCiphertext = find('[data-test-encrypted-value="ciphertext"]').innerText;
+    await click('[data-test-modal-background]');
+    await settled();
+    assert.dom('.modal.is-active').doesNotExist(`${name}: Modal closes after background clicked`);
     await click('[data-test-transit-action-link="decrypt"]');
     await settled();
     if (testCase.assertBeforeDecrypt) {
       testCase.assertBeforeDecrypt(keyName);
     }
+    find('#ciphertext-control .CodeMirror').CodeMirror.setValue(copiedCiphertext);
     await click('[data-test-button-decrypt]');
     await settled();
 
     if (testCase.assertAfterDecrypt) {
       if (testCase.decodeAfterDecrypt) {
+        // The decrypted modal no longer has a way to decode from base64
         await click('[data-test-transit-b64-toggle="plaintext"]');
         testCase.assertAfterDecrypt(keyName);
       } else {
         testCase.assertAfterDecrypt(keyName);
       }
     }
+
+    await click('[data-test-modal-background]');
+    await settled();
+    assert.dom('.modal.is-active').doesNotExist(`${name}: Modal closes after background clicked`);
   }
 };
 module('Acceptance | transit', function(hooks) {

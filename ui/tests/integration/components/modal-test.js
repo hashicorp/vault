@@ -10,15 +10,16 @@ module('Integration | Component | modal', function(hooks) {
     // Set any properties with this.set('myProperty', 'value');
     // Handle any actions with this.set('myAction', function(val) { ... });
 
-    await render(hbs`{{modal}}`);
+    await render(hbs`<Modal></Modal><div id="modal-wormhole"></div>`);
 
     assert.equal(this.element.textContent.trim(), '');
 
     // Template block usage:
     await render(hbs`
-      {{#modal}}
+      <Modal>
         template block text
-      {{/modal}}
+      </Modal>
+      <div id="modal-wormhole"></div>
     `);
 
     assert.equal(this.element.textContent.trim(), 'template block text');
