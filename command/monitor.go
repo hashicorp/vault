@@ -2,10 +2,7 @@ package command
 
 import (
 	"fmt"
-	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/mitchellh/cli"
@@ -19,6 +16,9 @@ type MonitorCommand struct {
 	*BaseCommand
 
 	logLevel string
+
+	// ShutdownCh is used to capture interrupt signal and end streaming
+	ShutdownCh chan struct{}
 }
 
 func (c *MonitorCommand) Synopsis() string {
@@ -95,9 +95,6 @@ func (c *MonitorCommand) Run(args []string) int {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	signalCh := make(chan os.Signal, 1)
-	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
-
 	// Receiving input on stopCh means either the API client
 	// was stopped on purpose, or (more likely) the context
 	// deadline expired. If that happens, we want to restart
@@ -124,7 +121,7 @@ START:
 	}()
 
 	select {
-	case <-signalCh:
+	case <-c.ShutdownCh:
 		return 0
 	case <- stopCh:
 		goto START
