@@ -289,7 +289,11 @@ func TestPolicy_TokenRenewal(t *testing.T) {
 			// Verify the policies exist in the login response
 			expectedTokenPolicies := append([]string{"default"}, tc.tokenPolicies...)
 			if !strutil.EquivalentSlices(secret.Auth.TokenPolicies, expectedTokenPolicies) {
-				t.Fatalf("policy mismatch:\nexpected: %v\ngot: %v", expectedTokenPolicies, secret.Auth.TokenPolicies)
+				t.Fatalf("token policy mismatch:\nexpected: %v\ngot: %v", expectedTokenPolicies, secret.Auth.TokenPolicies)
+			}
+
+			if !strutil.EquivalentSlices(secret.Auth.IdentityPolicies, tc.identityPolicies) {
+				t.Fatalf("identity policy mismatch:\nexpected: %v\ngot: %v", tc.identityPolicies, secret.Auth.IdentityPolicies)
 			}
 
 			expectedPolicies := append(expectedTokenPolicies, tc.identityPolicies...)
@@ -308,6 +312,10 @@ func TestPolicy_TokenRenewal(t *testing.T) {
 			// Verify the policies exist in the renewal response
 			if !strutil.EquivalentSlices(secret.Auth.TokenPolicies, expectedTokenPolicies) {
 				t.Fatalf("policy mismatch:\nexpected: %v\ngot: %v", expectedTokenPolicies, secret.Auth.TokenPolicies)
+			}
+
+			if !strutil.EquivalentSlices(secret.Auth.IdentityPolicies, tc.identityPolicies) {
+				t.Fatalf("identity policy mismatch:\nexpected: %v\ngot: %v", tc.identityPolicies, secret.Auth.IdentityPolicies)
 			}
 
 			if !strutil.EquivalentSlices(secret.Auth.Policies, expectedPolicies) {
