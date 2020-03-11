@@ -86,7 +86,13 @@
         </div>
         <div class="transit-description">
           <h2 class="title is-6" data-test-transit-action-title={{supportedAction.name}}>
-            {{if (eq supportedAction.name 'export') 'Export Key' (humanize supportedAction.name)}}
+            {{#if (eq supportedAction.name 'export')}}
+              Export Key
+            {{else if (eq supportedAction.name 'hmac')}}
+              HMAC
+            {{else}}
+              {{humanize supportedAction.name}}
+            {{/if}}
           </h2>
           <p class="transit-action-description">{{supportedAction.description}}</p>
         </div>
