@@ -528,7 +528,7 @@ func containsMultilineStatement(stmt string) bool {
 	if err != nil {
 		return false
 	}
-	stmtWithoutLiterals := ""
+	stmtWithoutLiterals := stmt
 	for _, literal := range literals {
 		stmtWithoutLiterals = strings.Replace(stmt, literal, "", -1)
 	}
