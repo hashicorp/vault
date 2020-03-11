@@ -288,6 +288,13 @@ this environment variable is most useful when using the Go
 The namespace to use for the command. Setting this is not necessary
 but allows using relative paths.
 
+### `VAULT_SRV_LOOKUP`
+
+Enables the client to lookup the host through DNS SRV look up as described in this
+[draft](https://tools.ietf.org/html/draft-andrews-http-srv-02).
+This is not designed for high-availability, just discovery.
+The draft specifies that the SRV record lookup is ignored if a port is given.
+
 ### `VAULT_MFA`
 
 **ENTERPRISE ONLY**
