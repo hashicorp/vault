@@ -65,17 +65,8 @@ func TestMonitorCommand_Run(t *testing.T) {
 			client, closer := testVaultServer(t)
 			defer closer()
 
-			// If we are past the minimum duration + some grace, trigger shutdown
-			// to prevent hanging
-			grace := 10 * time.Second
-			shutdownCh := make(chan struct{})
-			go func() {
-				time.AfterFunc(grace, func() {
-					close(shutdownCh)
-				})
-			}()
-
 			var code int64
+			shutdownCh := make(chan struct{})
 			stopCh := make(chan struct{})
 
 			ui, cmd := testMonitorCommand(t)
