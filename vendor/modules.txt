@@ -662,6 +662,8 @@ github.com/ory/dockertest/docker/types/strslice
 github.com/ory/dockertest/docker/types/versions
 # github.com/patrickmn/go-cache v2.1.0+incompatible
 github.com/patrickmn/go-cache
+# github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5
+github.com/petermattis/goid
 # github.com/pierrec/lz4 v2.2.6+incompatible
 github.com/pierrec/lz4
 github.com/pierrec/lz4/internal/xxh32
@@ -701,6 +703,8 @@ github.com/ryanuber/columnize
 github.com/ryanuber/go-glob
 # github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec
 github.com/samuel/go-zookeeper/zk
+# github.com/sasha-s/go-deadlock v0.2.0
+github.com/sasha-s/go-deadlock
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
 # github.com/shirou/gopsutil v2.19.9+incompatible
