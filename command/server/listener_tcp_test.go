@@ -30,8 +30,7 @@ func TestTCPListener(t *testing.T) {
 	testListenerImpl(t, ln, connFn, "")
 }
 
-// TestTCPListener_tls tests both TLS generally and also the reload capability
-// of core, system backend, and the listener logic
+// TestTCPListener_tls tests TLS generally
 func TestTCPListener_tls(t *testing.T) {
 	wd, _ := os.Getwd()
 	wd += "/test-fixtures/reload/"
