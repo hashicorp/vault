@@ -117,19 +117,32 @@ func (c *mongoDBConnectionProducer) Connection(ctx context.Context) (interface{}
 		_ = c.client.Disconnect(ctx)
 	}
 
-	if c.clientOptions == nil {
-		c.clientOptions = options.Client()
+	vars := map[string]string{
+		"username": c.Username,
+		"password": c.Password,
 	}
-	c.clientOptions.SetSocketTimeout(1 * time.Minute)
-	c.clientOptions.SetConnectTimeout(1 * time.Minute)
-
-	var err error
-	opts := c.clientOptions.ApplyURI(c.ConnectionURL)
-	c.client, err = mongo.Connect(ctx, opts)
+	connURL := dbutil.QueryHelper(c.ConnectionURL, vars)
+	client, err := createClient(ctx, connURL, c.clientOptions)
 	if err != nil {
 		return nil, err
 	}
+	c.client = client
 	return c.client, nil
+}
+
+func createClient(ctx context.Context, connURL string, clientOptions *options.ClientOptions) (client *mongo.Client, err error) {
+	if clientOptions == nil {
+		clientOptions = options.Client()
+	}
+	clientOptions.SetSocketTimeout(1 * time.Minute)
+	clientOptions.SetConnectTimeout(1 * time.Minute)
+
+	opts := clientOptions.ApplyURI(connURL)
+	client, err = mongo.Connect(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
 }
 
 // Close terminates the database connection.

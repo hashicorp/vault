@@ -3,7 +3,6 @@ package mongodb
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -227,25 +226,77 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 
 // RotateRootCredentials is not currently supported on MongoDB
 func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	return nil, errors.New("root credential rotation is not currently implemented in this database secrets engine")
+	// Grab the lock
+	m.Lock()
+	defer m.Unlock()
+
+	if m.Username == "" {
+		return m.RawConfig, fmt.Errorf("username not specified for root credentials")
+	}
+
+	client, err := m.getConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	password, err := m.GeneratePassword()
+	if err != nil {
+		return nil, err
+	}
+
+	changeUserCmd := &updateUserCommand{
+		Username: m.Username,
+		Password: password,
+	}
+
+	if err := runCommandWithRetry(ctx, client, "admin", changeUserCmd); err != nil {
+		return nil, err
+	}
+
+	m.RawConfig["password"] = password
+	return m.RawConfig, nil
 }
 
 // runCommandWithRetry runs a command with retry.
 func runCommandWithRetry(ctx context.Context, client *mongo.Client, db string, cmd interface{}) error {
-	timeout := time.Now().Add(1 * time.Minute)
-	backoffTime := 3
+	maxTime := 1 * time.Minute
+	timeout := time.NewTimer(maxTime)
+	defer timeout.Stop()
+
+	// Update the context to ensure it has a timeout on it
+	ctx, cancel := context.WithTimeout(ctx, maxTime)
+	defer cancel()
+
+	nextAttemptTime := 3 * time.Second
+	nextAttemptIncrement := 3 * time.Second
+	nextAttempt := time.NewTimer(nextAttemptTime)
+	defer nextAttempt.Stop()
+
 	for {
-		// Run command
-		result := client.Database(db).RunCommand(ctx, cmd, nil)
-		if result.Err() == nil {
-			break
+		cmdCtx, cancel := context.WithTimeout(context.Background(), nextAttemptIncrement)
+
+		err := runCommand(cmdCtx, client, db, cmd)
+		if err == nil {
+			cancel()
+			return nil
 		}
 
-		if time.Now().After(timeout) {
-			return result.Err()
+		select {
+		case <-timeout.C:
+			cancel()
+			return fmt.Errorf("timed out executing command - last error was: %s", err)
+		case <-ctx.Done():
+			cancel()
+			return fmt.Errorf("timed out executing command - last error was: %s", err)
+		case <-nextAttempt.C:
+			nextAttemptTime += nextAttemptIncrement
+			nextAttempt.Reset(nextAttemptTime)
+			cancel()
 		}
-		time.Sleep(time.Duration(backoffTime) * time.Second)
-		backoffTime += backoffTime
 	}
-	return nil
+}
+
+func runCommand(ctx context.Context, client *mongo.Client, db string, cmd interface{}) error {
+	result := client.Database(db).RunCommand(ctx, cmd, nil)
+	return result.Err()
 }
