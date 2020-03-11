@@ -8,8 +8,10 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/ldap"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	ldaphelper "github.com/hashicorp/vault/helper/testhelpers/ldap"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -179,5 +181,73 @@ func TestPolicy_NoConfiguredPolicy(t *testing.T) {
 	// Verify that the lease renewal extended the duration properly.
 	if float64(secret.Auth.LeaseDuration) < (1 * time.Hour).Seconds() {
 		t.Fatalf("failed to renew lease, got: %v", secret.Auth.LeaseDuration)
+	}
+}
+
+func TestPolicy_TokenRenewal(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": credUserpass.Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	vault.TestWaitActive(t, core)
+	client := cluster.Cores[0].Client
+
+	// Enable userpass auth
+	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Add a user to userpass backend
+	_, err = client.Logical().Write("auth/userpass/users/testuser", map[string]interface{}{
+		"password": "testpassword",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Authenticate
+	secret, err := client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
+		"password": "testpassword",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	clientToken := secret.Auth.ClientToken
+
+	// Verify the policy exists in the login response
+	if !strutil.EquivalentSlices(secret.Auth.TokenPolicies, []string{"default"}) {
+		t.Fatalf("policy mismatch, got token policies: %v", secret.Auth.TokenPolicies)
+	}
+
+	if !strutil.EquivalentSlices(secret.Auth.Policies, []string{"default"}) {
+		t.Fatalf("policy mismatch, got token policies: %v", secret.Auth.Policies)
+	}
+
+	// Renew token
+	secret, err = client.Logical().Write("auth/token/renew", map[string]interface{}{
+		"token": clientToken,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify the policy exists in the renewal response
+	if !strutil.EquivalentSlices(secret.Auth.TokenPolicies, []string{"default"}) {
+		t.Fatalf("policy mismatch, got token policies: %v", secret.Auth.TokenPolicies)
+	}
+
+	if !strutil.EquivalentSlices(secret.Auth.Policies, []string{"default"}) {
+		t.Fatalf("policy mismatch, got token policies: %v", secret.Auth.Policies)
 	}
 }
