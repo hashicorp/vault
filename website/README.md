@@ -64,10 +64,27 @@ To nest sidebar items, you'll want to add a new `category` key/value accompanied
 - `category` values will be **directory names** within the `pages` directory
 - `content` values will be **file names** within their appropriately nested directory.
 
-### Creating New Pages
-
-There is currently a small bug with new page creation - if you create a new page and link it up via subnav data while the server is running, it will report an error saying the page was not found. This can be resolved by restarting the server.
 
 ### Deployment
 
 This website is hosted on Netlify and configured to automatically deploy anytime you push code to the `stable-website` branch. Any time a pull request is submitted that changes files within the `website` folder, a deployment preview will appear in the github checks which can be used to validate the way docs changes will look live. Deployments from `stable-website` will look and behave the same way as deployment previews.
+
+## Known Issues
+
+### Creating New Pages
+
+There is currently a small bug with new page creation - if you create a new page and link it up via subnav data while the server is running, it will report an error saying the page was not found. This can be resolved by restarting the server.
+
+### Editing Existing Content
+
+There is currently an issue with hot-reload when certain editors, such as GoLand and Vim, that cause the edited page to fail loading.
+This is due to "safe write" behavior in such editors which conflicts with NodeJS' file watching system.
+
+If you encounter and error similar to the one below, restarting the server will resolve the issue.
+
+```text
+[ error ] ./pages/docs/commands/operator/migrate.mdx
+Error: Cannot find module '/website/node_modules/babel-plugin-transform-define/lib/index.js' from '/website'
+    at Array.map (<anonymous>)
+    at cachedFunction.next (<anonymous>)
+```
