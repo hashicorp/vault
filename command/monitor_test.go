@@ -2,7 +2,7 @@ package command
 
 import (
 	"strings"
-	"syscall"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -28,7 +28,7 @@ func TestMonitorCommand_Run(t *testing.T) {
 		name string
 		args []string
 		out  string
-		code int
+		code int64
 	}{
 		{
 			"valid",
@@ -65,25 +65,36 @@ func TestMonitorCommand_Run(t *testing.T) {
 			client, closer := testVaultServer(t)
 			defer closer()
 
+			// If we are past the minimum duration + some grace, trigger shutdown
+			// to prevent hanging
+			grace := 10 * time.Second
+			shutdownCh := make(chan struct{})
+			go func() {
+				time.AfterFunc(grace, func() {
+					close(shutdownCh)
+				})
+			}()
+
+			var code int64
+			stopCh := make(chan struct{})
+
 			ui, cmd := testMonitorCommand(t)
 			cmd.client = client
-
-			var code int
-			stopCh := make(chan struct{})
+			cmd.ShutdownCh = shutdownCh
 
 			go testhelpers.GenerateDebugLogs(t, stopCh, client)
 
 			go func() {
-				code = cmd.Run(tc.args)
+				atomic.StoreInt64(&code, int64(cmd.Run(tc.args)))
 			}()
 
 			select {
 			case <-time.After(3 * time.Second):
 				close(stopCh)
-				syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
+				close(shutdownCh)
 			}
 
-			if code != tc.code {
+			if atomic.LoadInt64(&code) != tc.code {
 				t.Errorf("expected %d to be %d", code, tc.code)
 			}
 
