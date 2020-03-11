@@ -193,7 +193,7 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 
 // Get fetches an entry. If there is no entry, this function returns nil.
 func (b *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) {
-	defer metrics.MeasureSince(metricList, time.Now())
+	defer metrics.MeasureSince(metricGet, time.Now())
 
 	// Pooling
 	b.permitPool.Acquire()
