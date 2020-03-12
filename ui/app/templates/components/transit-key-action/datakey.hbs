@@ -1,151 +1,81 @@
 <form {{action 'doSubmit' (hash param=param context=context nonce=nonce bits=bits) on="submit"}}>
-  {{#if ciphertext}}
   <div class="box is-sideless is-fullwidth is-marginless">
-    {{#if (eq param 'plaintext')}}
+    <NamespaceReminder @mode="perform" @noun="datakey creation" />
+    <div class="content">
+      <p>Generate a new high-entropy key and value using <code>{{key.name}}</code> as the encryption key.</p>
+    </div>
     <div class="field">
-      <label for="plaintext" class="is-label">Plaintext</label>
-      <div class="control">
-        {{ivy-codemirror
-          id="plaintext"
-          value=plaintext
-          valueUpdated=(action (mut plaintext))
-          options=(hash
-            lineNumbers=true
-            tabSize=2
-            mode='ruby'
-            theme='hashi'
-            readonly=true
-          )
-        }}
+      <label for="param" class="is-label">Output format</label>
+      <div class="control is-expanded">
+        <div class="select is-fullwidth">
+          <select
+            name="param"
+            id="param"
+            onchange={{action (mut param) value="target.value"}}
+          >
+            {{#each (array "plaintext" "wrapped") as |paramOption|}}
+              <option selected={{eq param paramOption}} value={{paramOption}}>
+                {{paramOption}}
+              </option>
+            {{/each}}
+          </select>
+        </div>
       </div>
     </div>
+    {{#if key.derived}}
+      <div class="field">
+        <label for="context" class="is-label">
+          Context
+        </label>
+        <div class="field has-addons">
+          <div class="control">
+            {{input type="text" id="context" value=context class="input" data-test-transit-input="context"}}
+          </div>
+          <div class="control">
+            {{b64-toggle value=context data-test-transit-b64-toggle="context"}}
+          </div>
+        </div>
+      </div>
+    {{/if}}
+    {{#if (eq key.convergentEncryptionVersion 1)}}
+      <div class="field">
+        <label for="nonce" class="is-label">Nonce</label>
+        <div class="field has-addons">
+          <div class="control">
+            {{input type="text" id="nonce" value=nonce class="input" data-test-transit-input="nonce"}}
+          </div>
+          <div class="control">
+            {{b64-toggle value=nonce data-test-transit-b64-toggle="nonce"}}
+          </div>
+        </div>
+      </div>
     {{/if}}
     <div class="field">
-      <label for="ciphertext" class="is-label">Ciphertext</label>
-      <div class="control">
-      {{ivy-codemirror
-        id="ciphertext"
-        value=ciphertext
-        valueUpdated=(action (mut ciphertext))
-        options=(hash
-          lineNumbers=true
-          tabSize=2
-          mode='ruby'
-          theme='hashi'
-          readonly=true
-        )
-      }}
+      <label for="bits" class="is-label">Bits</label>
+      <div class="control is-expanded">
+        <div class="select is-fullwidth">
+        <select
+          name="bits"
+          id="bits"
+          onchange={{action (mut bits) value="target.value"}}
+        >
+          {{#each (array 128 256 512) as |bitOption|}}
+            <option selected={{eq bits bitOption}} value={{bitOption}}>
+              <code>{{bitOption}}</code>
+            </option>
+          {{/each}}
+        </select>
+        </div>
       </div>
     </div>
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    {{#if (eq param 'plaintext')}}
-      <div class="control">
-        {{#copy-button
-        clipboardTarget="#plaintext"
-        class="button is-primary"
-        buttonType="button"
-        success=(action (set-flash-message 'Plaintext copied!'))
-        }}
-        Copy plaintext
-        {{/copy-button}}
-      </div>
-    {{/if}}
     <div class="control">
-      {{#copy-button
-      clipboardTarget="#ciphertext"
-      class=(concat "button is-primary " (if (eq param "plaintext") "is-outlined" ""))
-      buttonType="button"
-      success=(action (set-flash-message 'Ciphertext copied!'))
-      }}
-      Copy ciphertext
-      {{/copy-button}}
-    </div>
-    <div class="control">
-      <button {{action 'onClear'}} type="button" class="button">
-        Back
+      <button type="submit" class="button is-primary">
+        Create datakey
       </button>
     </div>
   </div>
-  {{else}}
-    <div class="box is-sideless is-fullwidth is-marginless">
-      <NamespaceReminder @mode="perform" @noun="datakey creation" />
-      <div class="content">
-        <p>Generate a new high-entropy key and value using <code>{{key.name}}</code> as the encryption key.</p>
-      </div>
-      <div class="field">
-        <label for="param" class="is-label">Output format</label>
-        <div class="control is-expanded">
-          <div class="select is-fullwidth">
-            <select
-              name="param"
-              id="param"
-              onchange={{action (mut param) value="target.value"}}
-            >
-              {{#each (array "plaintext" "wrapped") as |paramOption|}}
-                <option selected={{eq param paramOption}} value={{paramOption}}>
-                  {{paramOption}}
-                </option>
-              {{/each}}
-            </select>
-          </div>
-        </div>
-      </div>
-      {{#if key.derived}}
-        <div class="field">
-          <label for="context" class="is-label">
-            Context
-          </label>
-          <div class="field has-addons">
-            <div class="control">
-              {{input type="text" id="context" value=context class="input" data-test-transit-input="context"}}
-            </div>
-            <div class="control">
-              {{b64-toggle value=context data-test-transit-b64-toggle="context"}}
-            </div>
-          </div>
-        </div>
-      {{/if}}
-      {{#if (eq key.convergentEncryptionVersion 1)}}
-        <div class="field">
-          <label for="nonce" class="is-label">Nonce</label>
-          <div class="field has-addons">
-            <div class="control">
-              {{input type="text" id="nonce" value=nonce class="input" data-test-transit-input="nonce"}}
-            </div>
-            <div class="control">
-              {{b64-toggle value=nonce data-test-transit-b64-toggle="nonce"}}
-            </div>
-          </div>
-        </div>
-      {{/if}}
-      <div class="field">
-        <label for="bits" class="is-label">Bits</label>
-        <div class="control is-expanded">
-          <div class="select is-fullwidth">
-          <select
-            name="bits"
-            id="bits"
-            onchange={{action (mut bits) value="target.value"}}
-          >
-            {{#each (array 128 256 512) as |bitOption|}}
-              <option selected={{eq bits bitOption}} value={{bitOption}}>
-                <code>{{bitOption}}</code>
-              </option>
-            {{/each}}
-          </select>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="field is-grouped box is-fullwidth is-bottomless">
-      <div class="control">
-        <button type="submit" class="button is-primary">
-          Create datakey
-        </button>
-      </div>
-    </div>
-  {{/if}}
 </form>
 <Modal @title="Copy your generated key" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
   <section class="modal-card-body">
