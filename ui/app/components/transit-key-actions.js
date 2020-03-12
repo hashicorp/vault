@@ -202,8 +202,10 @@ export default Component.extend(TRANSIT_PARAMS, {
       arr.forEach(param => this.set(param, null));
     },
 
-    toggleModal() {
-      this.get('flashMessages').success('Text copied!');
+    toggleModal(successMessage) {
+      if (!!successMessage && typeof successMessage === 'string') {
+        this.get('flashMessages').success(successMessage);
+      }
       this.toggleProperty('isModalActive');
     },
 
