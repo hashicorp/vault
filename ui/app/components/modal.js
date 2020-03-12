@@ -4,16 +4,17 @@
  *
  * @example
  * ```js
- * <Modal @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <Modal @title={'myTitle'} @showCloseButton={true} @onClose={() => {}}/>
  * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
+ * @param {function} onClose - onClose is the action taken when someone clicks the modal background or close button (if shown).
+ * @param {string} [title] - This text shows up in the header section of the modal.
+ * @param {boolean} [showCloseButton=false] - controls whether the close button in the top right corner shows.
  */
 
 import Component from '@ember/component';
 
 export default Component.extend({
   title: null,
+  showCloseButton: false,
   onClose: () => {},
 });
