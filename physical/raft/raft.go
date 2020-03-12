@@ -999,12 +999,18 @@ type RaftLock struct {
 func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}, leaderNotifyCh <-chan bool) <-chan struct{} {
 	leaderLost := make(chan struct{})
 	go func() {
-		select {
-		case isLeader := <-leaderNotifyCh:
-			if !isLeader {
-				close(leaderLost)
+		for {
+			select {
+			case isLeader := <-leaderNotifyCh:
+				// if isLeader is true we want to continue to loop until we see
+				// a notification that we lost leadership.
+				if !isLeader {
+					close(leaderLost)
+					return
+				}
+			case <-stopCh:
+				return
 			}
-		case <-stopCh:
 		}
 	}()
 	return leaderLost
