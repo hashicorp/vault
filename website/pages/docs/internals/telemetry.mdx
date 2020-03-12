@@ -322,6 +322,61 @@ These metrics relate to the supported [storage backends][storage-backends].
 | `vault.zookeeper.delete`    | Duration of a DELETE operation against the [ZooKeeper storage backend][zookeeper-storage-backend]                      | ms   | summary |
 | `vault.zookeeper.list`      | Duration of a LIST operation against the [ZooKeeper storage backend][zookeeper-storage-backend]                        | ms   | summary |
 
+
+## Integrated Raft Storage Metrics
+
+These metrics relate to raft based [integrated storage][integrated-storage].
+
+| Metric                                          | Description                                                                                                                                                                                         | Unit | Type    |
+| :---------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--- | :------ |
+| `vault.raft.apply`															|| ms | counter |
+| `vault.raft.barrier`														|| ms | counter |
+| `vault.raft.candidate.electSelf`								|| ms | summary |
+| `vault.raft.commitNumLogs`											|| ms | gauge   |
+| `vault.raft.commitTime`													|| ms | summary |
+| `vault.raft.compactLogs`												|| ms | summary |
+| `vault.raft.delete`															|| ms | summary |
+| `vault.raft.delete_prefix`											|| ms | summary |
+| `vault.raft.fsm.apply`													|| ms | summary |
+| `vault.raft.fsm.applyBatch`											|| ms | summary |
+| `vault.raft.fsm.applyBatchNum`									|| ms | summary |
+| `vault.raft.fsm.enqueue`												|| ms | summary |
+| `vault.raft.fsm.restore`												|| ms | summary |
+| `vault.raft.fsm.snapshot`												|| ms | summary |
+| `vault.raft.fsm.store_config`										|| ms | summary |
+| `vault.raft.get`										  					|| ms | summary |
+| `vault.raft.leader.dispatchLog`									|| ms | summary |
+| `vault.raft.leader.dispatchNumLogs`							|| ms | gauge   |
+| `vault.raft.leader.lastContact`									|| ms | summary |
+| `vault.raft.list`											  				|| ms | summary |
+| `vault.raft.put`												  			|| ms | summary |
+| `vault.raft.replication.appendEntries.log`			|| ms | counter |
+| `vault.raft.replication.appendEntries.rpc`			|| ms | summary |
+| `vault.raft.replication.heartbeat`							|| ms | summary |
+| `vault.raft.replication.installSnapshot`				|| ms | summary |
+| `vault.raft.restore`											     	|| ms | counter |
+| `vault.raft.restoreUserSnapshot`								|| ms | summary |
+| `vault.raft.rpc.appendEntries`									|| ms | summary |
+| `vault.raft.rpc.appendEntries.processLogs`			|| ms | summary |
+| `vault.raft.rpc.appendEntries.storeLogs`				|| ms | summary |
+| `vault.raft.rpc.installSnapshot`								|| ms | summary |
+| `vault.raft.rpc.processHeartbeat`								|| ms | summary |
+| `vault.raft.rpc.requestVote`						  			|| ms | summary |
+| `vault.raft.snapshot.create`										|| ms | summary |
+| `vault.raft.snapshot.persist`										|| ms | summary |
+| `vault.raft.snapshot.takeSnapshot`				  		|| ms | summary |
+| `vault.raft.state.candidate`										|| ms | counter |
+| `vault.raft.state.follower`											|| ms | counter |
+| `vault.raft.state.leader`												|| ms | counter |
+| `vault.raft.transition.heartbeat_timeout`				|| ms | counter |
+| `vault.raft.transition.leader_lease_timeout`		|| ms | counter |
+| `vault.raft.verify_leader`											|| ms | counter |
+| `vault.raft-storage.delete`											|| ms | summary |
+| `vault.raft-storage.get`									   		|| ms | summary |
+| `vault.raft-storage.put`												|| ms | summary |
+| `vault.raft-storage.list`												|| ms | summary |
+| `vault.raft-storage.transaction`								|| ms | summary |
+
 [secrets-engines]: /docs/secrets
 [storage-backends]: /docs/configuration/storage
 [telemetry-stanza]: /docs/configuration/telemetry
@@ -344,3 +399,4 @@ These metrics relate to the supported [storage backends][storage-backends].
 [s3-storage-backend]: /docs/configuration/storage/s3
 [swift-storage-backend]: /docs/configuration/storage/swift
 [zookeeper-storage-backend]: /docs/configuration/storage/zookeeper
+[integrated-storage]: /docs/configuration/storage/raft
