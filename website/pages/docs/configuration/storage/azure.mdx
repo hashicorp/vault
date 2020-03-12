@@ -42,7 +42,9 @@ The current implementation is limited to a maximum of 4 megabytes per blob.
 - `accountName` `(string: <required>)` – Specifies the Azure Storage account
   name.
 
-- `accountKey` `(string: <required>)` – Specifies the Azure Storage account key.
+- `accountKey` `(string: "")` – Specifies the Azure Storage account key. 
+  ( required in case no servicePrincipal or Managed Identity is used: if 
+  not defined `subcription_id` and `resource_group_name` must be set )
 
 - `container` `(string: <required>)` – Specifies the Azure Storage Blob
   container name.
@@ -54,6 +56,12 @@ The current implementation is limited to a maximum of 4 megabytes per blob.
 - `arm_endpoint` `(string: "")` - Specifies the cloud environment
   the storage account belongs to by way of the Azure Resource Manager endpoint
   URL.
+
+- `subcription_id` `(string: "")` - Specifies the Azure Cloud Subscription ID 
+  ( only needed in case `accountKey` is not set)
+
+- `resource_group_name` `(string: "")` - Specifies the Azure ResourceGroup in which the storageAccount resides 
+  ( only needed in case `accountKey` is not set)
 
 - `max_parallel` `(string: "128")` – Specifies The maximum number of concurrent
   requests to Azure.
@@ -69,6 +77,17 @@ storage "azure" {
   accountKey   = "abcd1234"
   container    = "container-efgh5678"
   max_parallel = 512
+}
+```
+
+or 
+
+```hcl
+storage "azure" {
+  accountName         = "my-storage-account"
+  container           = "container-efgh5678"
+  subcription_id      = "46646709-b63e-4747-be42-516edeaf1e14"
+  resource_group_name = "my-rg"
 }
 ```
 

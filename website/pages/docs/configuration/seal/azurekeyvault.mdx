@@ -40,7 +40,7 @@ seal "azurekeyvault" {
 
 These parameters apply to the `seal` stanza in the Vault configuration file:
 
-- `tenant_id` `(string: <required>)`: The tenant id for the Azure Active Directory organization. May
+- `tenant_id` `(string: <required> or MSI)`: The tenant id for the Azure Active Directory organization. May
   also be specified by the `AZURE_TENANT_ID` environment variable.
 
 - `client_id` `(string: <required or MSI>)`: The client id for credentials to query the Azure APIs.

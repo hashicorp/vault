@@ -35,12 +35,12 @@ func TestAzureBackend(t *testing.T) {
 	accountName := os.Getenv("AZURE_ACCOUNT_NAME")
 	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
 	environmentName := os.Getenv("AZURE_ENVIRONMENT")
-	environmentUrl := os.Getenv("AZURE_ARM_ENDPOINT")
+	environmentURL := os.Getenv("AZURE_ARM_ENDPOINT")
 
 	ts := time.Now().UnixNano()
 	name := fmt.Sprintf("vault-test-%d", ts)
 
-	cleanupEnvironment, err := environmentForCleanupClient(environmentName, environmentUrl)
+	cleanupEnvironment, err := environmentForCleanupClient(environmentName, environmentURL)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -54,7 +54,7 @@ func TestAzureBackend(t *testing.T) {
 		"accountName":  accountName,
 		"accountKey":   accountKey,
 		"environment":  environmentName,
-		"arm_endpoint": environmentUrl,
+		"arm_endpoint": environmentURL,
 	}, logger)
 
 	defer func() {
@@ -80,12 +80,12 @@ func TestAzureBackend_ListPaging(t *testing.T) {
 	accountName := os.Getenv("AZURE_ACCOUNT_NAME")
 	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
 	environmentName := os.Getenv("AZURE_ENVIRONMENT")
-	environmentUrl := os.Getenv("AZURE_ARM_ENDPOINT")
+	environmentURL := os.Getenv("AZURE_ARM_ENDPOINT")
 
 	ts := time.Now().UnixNano()
 	name := fmt.Sprintf("vault-test-%d", ts)
 
-	cleanupEnvironment, err := environmentForCleanupClient(environmentName, environmentUrl)
+	cleanupEnvironment, err := environmentForCleanupClient(environmentName, environmentURL)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -99,7 +99,7 @@ func TestAzureBackend_ListPaging(t *testing.T) {
 		"accountName":  accountName,
 		"accountKey":   accountKey,
 		"environment":  environmentName,
-		"arm_endpoint": environmentUrl,
+		"arm_endpoint": environmentURL,
 	}, logger)
 
 	defer func() {

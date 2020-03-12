@@ -59,14 +59,6 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 
-	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
-	if accountKey == "" {
-		accountKey = conf["accountKey"]
-		if accountKey == "" {
-			return nil, fmt.Errorf("'accountKey' must be set")
-		}
-	}
-
 	environmentName := os.Getenv("AZURE_ENVIRONMENT")
 	if environmentName == "" {
 		environmentName = conf["environment"]
@@ -96,6 +88,29 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			errorMsg := fmt.Sprintf("failed to look up Azure environment descriptor for name %q: {{err}}",
 				environmentName)
 			return nil, errwrap.Wrapf(errorMsg, err)
+		}
+	}
+
+	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
+	if accountKey == "" {
+		accountKey = conf["accountKey"]
+	}
+
+	if accountKey == "" {
+		logger.Info("'accountKey' is not set either on the configuration file or via AZURE_ACCOUNT_KEY env var. Trying with servicePrincipal or Managed Identity")
+		subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
+		subscriptionID = conf["subcription_id"]
+		if subscriptionID == "" {
+			return nil, fmt.Errorf("'AZURE_SUBSCRIPTION_ID' env var or `subcription_id` configuration must be set")
+		}
+		resourceGroupName := os.Getenv("AZURE_RESOURCE_GROUP")
+		resourceGroupName = conf["resource_group_name"]
+		if resourceGroupName == "" {
+			return nil, fmt.Errorf("'AZURE_RESOURCE_GROUP' env var or `resource_group_name` configuration must be set")
+		}
+		accountKey, err = GetStorageAccountKey(accountName, subscriptionID, resourceGroupName)
+		if err != nil {
+			return nil, fmt.Errorf("'accountKey' couldn't be retrieved by servicePrinciple or Managed Identiy. Make sure 'Microsoft.Storage/storageAccounts/listkeys/action' permission is granted. Error: %s", err)
 		}
 	}
 
