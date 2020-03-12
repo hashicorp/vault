@@ -20,8 +20,9 @@ func (c *OperatorRaftSnapshotCommand) Help() string {
 	helpText := `
 Usage: vault operator raft snapshot <subcommand> [options] [args]
 
-  This command groups subcommands for operators interacting with the snapshot functionality of
-  the raft storage backend. Here are a few examples of the raft snapshot operator commands:
+  This command groups subcommands for operators interacting with the snapshot
+  functionality of the raft storage backend. Here are a few examples of the raft
+  snapshot operator commands:
 
   Installs the provided snapshot, returning the cluster to the state defined in it:
 

@@ -138,6 +138,7 @@ export default [
           'init',
           'key-status',
           'migrate',
+          'raft',
           'rekey',
           'rotate',
           'seal',
