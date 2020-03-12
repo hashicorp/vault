@@ -4,7 +4,9 @@
     <div class="modal-card">
         <header class="modal-card-head">
           <h2 class="modal-card-title title is-5" data-test-modal-title>{{title}}</h2>
-          <button class="delete" aria-label="close" onclick={{onClose}}></button>
+          {{#if showCloseButton}}
+            <button class="delete" aria-label="close" onclick={{onClose}} data-test-modal-close-button></button>
+          {{/if}}
         </header>
       {{yield}}
     </div>

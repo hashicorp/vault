@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, find, findAll, pauseTest } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 module('Integration | Component | modal', function(hooks) {
@@ -12,16 +12,18 @@ module('Integration | Component | modal', function(hooks) {
 
     await render(hbs`<Modal></Modal><div id="modal-wormhole"></div>`);
 
-    assert.equal(this.element.textContent.trim(), '');
+    assert.equal(this.element.textContent.trim(), '', 'renders without interior content');
+    assert.equal(findAll('[data-test-modal-close-button]').length, 0, 'does not render close modal button');
 
     // Template block usage:
     await render(hbs`
-      <Modal>
+      <Modal @showCloseButton={{true}}>
         template block text
       </Modal>
       <div id="modal-wormhole"></div>
     `);
 
-    assert.equal(this.element.textContent.trim(), 'template block text');
+    assert.equal(this.element.textContent.trim(), 'template block text', 'renders with interior content');
+    assert.equal(findAll('[data-test-modal-close-button]').length, 1, 'renders close modal button');
   });
 });
