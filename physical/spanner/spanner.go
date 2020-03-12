@@ -64,6 +64,9 @@ var (
 
 	// metricPut is the key for the metric for measuring a Put call.
 	metricPut = []string{"spanner", "put"}
+
+	// metricTxn is the key for the metric for measuring a Transaction call.
+	metricTxn = []string{"spanner", "txn"}
 )
 
 // Backend implements physical.Backend and describes the steps necessary to
@@ -293,6 +296,8 @@ func (b *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 
 // Transaction runs multiple entries via a single transaction.
 func (b *Backend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
+	defer metrics.MeasureSince(metricTxn, time.Now())
+
 	// Quit early if we can
 	if len(txns) == 0 {
 		return nil
