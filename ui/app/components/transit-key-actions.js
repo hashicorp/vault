@@ -43,6 +43,14 @@ const PARAMS_FOR_ACTION = {
   decrypt: ['ciphertext', 'context', 'nonce'],
   rewrap: ['ciphertext', 'context', 'nonce', 'key_version'],
 };
+const SUCCESS_MESSAGE_FOR_ACTION = {
+  sign: 'Generated your key',
+  // verify doesn't trigger a success message
+  hmac: 'Created your hash output',
+  encrypt: 'Created a wrapped token for your data',
+  decrypt: 'Decrypted the data from your token',
+  rewrap: 'Created a new token for your data',
+};
 export default Component.extend(TRANSIT_PARAMS, {
   store: service(),
   flashMessages: service(),
@@ -139,6 +147,12 @@ export default Component.extend(TRANSIT_PARAMS, {
     this.set('errors', null);
   },
 
+  triggerSuccessMessage(action) {
+    const message = SUCCESS_MESSAGE_FOR_ACTION[action];
+    if (!message) return;
+    this.get('flashMessages').success(message);
+  },
+
   handleSuccess(resp, options, action) {
     let props = {};
     if (resp && resp.data) {
@@ -156,6 +170,7 @@ export default Component.extend(TRANSIT_PARAMS, {
     if (action === 'rotate') {
       this.get('onRefresh')();
     }
+    this.triggerSuccessMessage(action);
   },
 
   compactData(data) {
