@@ -20,6 +20,11 @@ module.exports = withHashicorp({
         source: '/intro',
         destination: '/intro/getting-started',
         permanent: false
+      },
+      {
+        source: '/docs/vs/:path*',
+        destination: '/docs/vs',
+        permanent: true
       }
     ]
   },
