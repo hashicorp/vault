@@ -92,7 +92,7 @@ BUG FIXES:
 * cli: Fix CLI namespace autocompletion [[GH-8315](https://github.com/hashicorp/vault/pull/8315)]
 * replication: Fix issue causing cubbyholes in namespaces on performance secondaries to not work.
 * seal (enterprise): Fix seal migration when transactional seal wrap backend is in use.
-* secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [GH-8282]
+* secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [[GH-8282](https://github.com/hashicorp/vault/pull/8282)]
 * secrets/database/mysql: Ensures default static credential rotation statements are used [[GH-8240](https://github.com/hashicorp/vault/pull/8240)]
 * secrets/database/mysql: Fix inconsistent query parameter names: {{name}} or {{username}} for
   different queries. Now it allows for either for backwards compatibility [[GH-8240](https://github.com/hashicorp/vault/pull/8240)]
