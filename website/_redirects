@@ -160,16 +160,23 @@
 
 # Rearranged out of `guides` but still on `.io`
 /guides/partnerships/index.html /docs/partnerships
-/intro/use-cases.html /docs/use-cases
-/intro/vs/index.html  /docs/vs
-/intro/vs/chef-puppet-etc.html /docs/vs/chef-puppet-etc
-/intro/vs/consul.html /docs/vs/consul
-/intro/vs/custom.html /docs/vs/custom
-/intro/vs/dropbox.html /docs/vs/dropbox
-/intro/vs/hsm.html /docs/vs/hsm
-/intro/vs/index.html /docs/vs
-/intro/vs/keywhiz.html /docs/vs/keywhiz
-/intro/vs/kms.html /docs/vs/kms
+/intro/use-cases.html           /docs/use-cases
+/intro/vs/index.html            /docs/vs
+/intro/vs/chef-puppet-etc.html  /docs/vs
+/docs/vs/chef-puppet-etc        /docs/vs
+/intro/vs/consul.html           /docs/vs
+/docs/vs/consul                 /docs/vs
+/intro/vs/custom.html           /docs/vs
+/docs/vs/custom                 /docs/vs
+/intro/vs/dropbox.html          /docs/vs
+/docs/vs/dropbox                /docs/vs
+/intro/vs/hsm.html              /docs/vs
+/docs/vs/hsm                    /docs/vs
+/intro/vs/index.html            /docs/vs
+/intro/vs/keywhiz.html          /docs/vs
+/docs/vs/keywhiz                /docs/vs
+/intro/vs/kms.html              /docs/vs
+/docs/vs/kms                    /docs/vs
 /intro/what-is-vault/index.html /docs/what-is-vault
 
 # Intro getting started content -> Learn
