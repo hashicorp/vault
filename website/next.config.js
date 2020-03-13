@@ -8,7 +8,8 @@ module.exports = withHashicorp({
 })({
   experimental: {
     css: true,
-    granularChunks: true,
+    modern: true,
+    polyfillsOptimization: true,
     rewrites: () => [
       {
         source: '/api/:path*',
@@ -24,23 +25,6 @@ module.exports = withHashicorp({
     ]
   },
   exportTrailingSlash: true,
-  webpack(config) {
-    // Add polyfills
-    const originalEntry = config.entry
-    config.entry = async () => {
-      const entries = await originalEntry()
-      let polyEntry = entries['static/runtime/polyfills.js']
-      if (polyEntry && !polyEntry.includes('./lib/polyfills.js')) {
-        if (!Array.isArray(polyEntry)) {
-          entries['static/runtime/polyfills.js'] = [polyEntry]
-        }
-        entries['static/runtime/polyfills.js'].unshift('./lib/polyfills.js')
-      }
-      return entries
-    }
-
-    return config
-  },
   env: {
     HASHI_ENV: process.env.HASHI_ENV
   }
