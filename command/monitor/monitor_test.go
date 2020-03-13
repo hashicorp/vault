@@ -74,13 +74,9 @@ func TestMonitor_DroppedMessages(t *testing.T) {
 		}
 	}()
 
-TEST:
-	for {
-		select {
-		case <-passed:
-			break TEST
-		case <-time.After(2 * time.Second):
-			require.Fail(t, "expected to see warn dropped messages")
-		}
+	select {
+	case <-passed:
+	case <-time.After(2 * time.Second):
+		require.Fail(t, "expected to see warn dropped messages")
 	}
 }
