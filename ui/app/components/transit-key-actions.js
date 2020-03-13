@@ -50,6 +50,8 @@ const SUCCESS_MESSAGE_FOR_ACTION = {
   encrypt: 'Created a wrapped token for your data',
   decrypt: 'Decrypted the data from your token',
   rewrap: 'Created a new token for your data',
+  datakey: 'Generated your key',
+  export: 'Exported your key',
 };
 export default Component.extend(TRANSIT_PARAMS, {
   store: service(),
