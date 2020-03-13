@@ -55,7 +55,7 @@ export default function SecretsManagmentUseCase() {
                 <div className="slider-frame single">
                   <div className="case-study">
                     <div className="feature-image">
-                      <a href="/resources/adobe-100-trillion-transactions-hashicorp-vault">
+                      <a href="https://www.hashicorp.com/resources/adobe-100-trillion-transactions-hashicorp-vault">
                         <picture>
                           <source
                             type="image/webp"
@@ -91,7 +91,7 @@ export default function SecretsManagmentUseCase() {
                       </p>
                       <a
                         className="g-btn primary-hashicorp-light"
-                        href="/resources/adobe-100-trillion-transactions-hashicorp-vault"
+                        href="https://www.hashicorp.com/resources/adobe-100-trillion-transactions-hashicorp-vault"
                       >
                         Read Case Study
                       </a>

@@ -62,7 +62,23 @@ The structure of the sidebars are controlled by files in the [`/data` directory]
 To nest sidebar items, you'll want to add a new `category` key/value accompanied by the appropriate embedded `content` values.
 
 - `category` values will be **directory names** within the `pages` directory
-- `content` values will be **file names** within their appropriately nested directory.
+- `content` values will be **file names** within their appropriately nested
+  directory.
+
+## Deployment
+
+This website is hosted on Netlify and configured to automatically deploy anytime
+you push code to the `stable-website` branch. Any time a pull request is
+submitted that changes files within the `website` folder, a deployment preview
+will appear in the github checks which can be used to validate the way docs
+changes will look live. Deployments from `stable-website` will look and behave
+the same way as deployment previews.
+
+## Checking for Broken Links
+
+There is a local script that can be used to check for broken links on the _current product website_ - you can start it by running `npm run linkcheck`. There will be a version of this script added as a github check in the near future!
+
+## Known Issues
 
 ### Creating New Pages
 
