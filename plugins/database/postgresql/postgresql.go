@@ -556,7 +556,7 @@ func containsMultilineStatement(stmt string) bool {
 // extractQuotedStrings extracts 0 or many substrings
 // that have been single- or double-quoted. Ex:
 // `"Hello", silly 'elephant' from the "zoo".`
-// returns [ `doubleQuotedPhrases.FindAllString(s, -1)`, `'elephant'`, `"zoo"` ]
+// returns [ `Hello`, `'elephant'`, `"zoo"` ]
 func extractQuotedStrings(s string) ([]string, error) {
 	var found []string
 	toFind := []*regexp.Regexp{
