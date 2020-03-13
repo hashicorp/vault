@@ -62,7 +62,9 @@ module('Integration | Component | transit key actions', function(hooks) {
     assert.equal(findAll('[data-test-transit-action="encrypt"]').length, 1, 'renders encrypt');
 
     this.set('key', { backend: 'transit', supportedActions: ['sign'] });
-    await render(hbs`{{transit-key-actions selectedAction="sign" key=key}}`);
+    await render(hbs`
+      {{transit-key-actions selectedAction="sign" key=key}}
+      <div id="modal-wormhole"></div>`);
     assert.equal(findAll('[data-test-transit-action="sign"]').length, 1, 'renders sign');
   });
 
@@ -107,7 +109,10 @@ module('Integration | Component | transit key actions', function(hooks) {
 
   test('it renders: rotate', async function(assert) {
     this.set('key', { backend: 'transit', id: 'akey', supportedActions: ['rotate'] });
-    await render(hbs`{{transit-key-actions selectedAction="rotate" key=key}}`);
+    await render(hbs`
+      {{transit-key-actions selectedAction="rotate" key=key}}
+      <div id="modal-wormhole"></div>
+    `);
 
     assert.equal(find('*').textContent.trim(), '', 'renders an empty div');
 
@@ -278,9 +283,10 @@ module('Integration | Component | transit key actions', function(hooks) {
     await click('#wrap-response');
     await triggerEvent('#wrap-response', 'change');
     await click('button[type="submit"]');
+    assert.dom('.modal.is-active').exists('Modal opens after export');
     assert.deepEqual(
-      JSON.parse(findAll('.CodeMirror')[0].CodeMirror.getValue()),
-      response,
+      find('.modal [data-test-encrypted-value="export"]').innerText,
+      JSON.stringify(response, null, 2),
       'prints json response'
     );
   });
@@ -294,9 +300,10 @@ module('Integration | Component | transit key actions', function(hooks) {
     await click('#exportVersion');
     await triggerEvent('#exportVersion', 'change');
     await click('button[type="submit"]');
+    assert.dom('.modal.is-active').exists('Modal opens after export');
     assert.deepEqual(
-      JSON.parse(findAll('.CodeMirror')[0].CodeMirror.getValue()),
-      response,
+      find('.modal [data-test-encrypted-value="export"]').innerText,
+      JSON.stringify(response, null, 2),
       'prints json response'
     );
     assert.deepEqual(
