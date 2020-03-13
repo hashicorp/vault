@@ -1,6 +1,7 @@
 /**
  * @module Modal
- * Modal components are used to...
+ * Modal components are used to overlay content on top of the page. Has a darkened background,
+ * a title, and in order to close it you must pass an onClose function.
  *
  * @example
  * ```js
