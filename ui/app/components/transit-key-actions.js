@@ -217,7 +217,7 @@ export default Component.extend(TRANSIT_PARAMS, {
         if (action === 'encrypt' && !!formData.plaintext) {
           formData.plaintext = encodeString(formData.plaintext);
         }
-        if ((action === 'hmac' || action === 'verify') && !!formData.input) {
+        if ((action === 'hmac' || action === 'verify' || action === 'sign') && !!formData.input) {
           formData.input = encodeString(formData.input);
         }
       }
