@@ -42,7 +42,6 @@ func fetchStatusCode(r *http.Request, field string) (int, bool, bool) {
 }
 
 func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	core.Logger().Debug("Checking system health")
 	code, body, err := getSysHealth(core, r)
 
 	if err != nil {

@@ -44,7 +44,7 @@ type monitor struct {
 	dropCheckInterval time.Duration
 }
 
-// New creates a new Monitor. Start must be called in order to actually start
+// NewMonitor creates a new Monitor. Start must be called in order to actually start
 // streaming logs
 func NewMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) Monitor {
 	return newMonitor(buf, logger, opts)
@@ -89,35 +89,29 @@ func (d *monitor) Start() <-chan []byte {
 	go func() {
 		defer close(streamCh)
 
+		ticker := time.NewTicker(d.dropCheckInterval)
+
 		for {
+			var logMessage []byte
+
 			select {
-			case l := <-d.logCh:
-				streamCh <- l
-			case <-d.doneCh:
-				return
-			case <-time.After(d.dropCheckInterval):
+			case <-ticker.C:
 				// Check if there have been any dropped messages.
 				dc := atomic.LoadUint64(&d.droppedCount)
 
 				if dc > 0 {
-					dropped := fmt.Sprintf("[WARN] Monitor dropped %d logs during monitor request\n", dc)
-					select {
-					// Try sending dropped message count to logCh in case
-					// there is room in the buffer now.
-					case d.logCh <- []byte(dropped):
-					default:
-						// Drop a log message to make room for "Monitor dropped.." message
-						select {
-						case <-d.logCh:
-							atomic.AddUint64(&d.droppedCount, 1)
-							dc := atomic.LoadUint64(&d.droppedCount)
-							dropped = fmt.Sprintf("[WARN] Monitor dropped %d logs during monitor request\n", dc)
-						default:
-						}
-						d.logCh <- []byte(dropped)
-					}
+					logMessage = []byte(fmt.Sprintf("[WARN] Monitor dropped %d logs during monitor request\n", dc))
 					atomic.SwapUint64(&d.droppedCount, 0)
 				}
+			case logMessage = <-d.logCh:
+			case <-d.doneCh:
+				return
+			}
+
+			select {
+			case <-d.doneCh:
+				return
+			case streamCh <- logMessage:
 			}
 		}
 	}()

@@ -40,7 +40,6 @@ func TestSysMonitorStreamingLogs(t *testing.T) {
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 
-	success := make(chan struct{})
 	client := cluster.Cores[0].Client
 
 	// Make requests that generate logs
@@ -53,6 +52,8 @@ func TestSysMonitorStreamingLogs(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	timeCh := time.After(5 * time.Second)
+
 	for {
 		select {
 		case log := <-logCh:
@@ -61,15 +62,13 @@ func TestSysMonitorStreamingLogs(t *testing.T) {
 			}
 		case <-stopCh:
 			return
-		case <-time.After(5 * time.Second):
-			close(stopCh)
+		case <-timeCh:
 			t.Fatal("Failed to get a DEBUG message after 5 seconds")
 		}
 
 		// If we've seen multiple lines that match what we want,
 		// it's probably safe to assume streaming is working
 		if debugCount > 3 {
-			close(success)
 			break
 		}
 	}
