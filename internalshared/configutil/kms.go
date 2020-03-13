@@ -6,6 +6,8 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
@@ -17,6 +19,10 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/ocikms"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/transit"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/hcl"
+	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -43,13 +49,80 @@ type KMS struct {
 	// Purpose can be used to allow a string-based specification of what this
 	// KMS is designated for, in situations where we want to allow more than
 	// one KMS to be specified
-	Purpose  string
+	Purpose []string `hcl:"-"`
+
 	Disabled bool
 	Config   map[string]string
 }
 
 func (k *KMS) GoString() string {
 	return fmt.Sprintf("*%#v", *k)
+}
+
+func parseKMS(result *SharedConfig, list *ast.ObjectList, blockName string, maxKMS int) error {
+	if len(list.Items) > maxKMS {
+		return fmt.Errorf("only two or less %q blocks are permitted", blockName)
+	}
+
+	seals := make([]*KMS, 0, len(list.Items))
+	for _, item := range list.Items {
+		key := blockName
+		if len(item.Keys) > 0 {
+			key = item.Keys[0].Token.Value().(string)
+		}
+
+		// We first decode into a map[string]interface{} because purpose isn't
+		// necessarily a string. Then we migrate everything else over to
+		// map[string]string and error if it doesn't work.
+		var m map[string]interface{}
+		if err := hcl.DecodeObject(&m, item.Val); err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+		}
+
+		var purpose []string
+		var err error
+		if v, ok := m["purpose"]; ok {
+			if purpose, err = parseutil.ParseCommaStringSlice(v); err != nil {
+				return multierror.Prefix(fmt.Errorf("unable to parse 'purpose' in kms type %q: %w", key, err), fmt.Sprintf("%s.%s:", blockName, key))
+			}
+			for i, p := range purpose {
+				purpose[i] = strings.ToLower(p)
+			}
+			delete(m, "purpose")
+		}
+
+		strMap := make(map[string]string, len(m))
+		for k, v := range m {
+			if vs, ok := v.(string); ok {
+				strMap[k] = vs
+			} else {
+				return multierror.Prefix(fmt.Errorf("unable to parse 'purpose' in kms type %q: value could not be parsed as string", key), fmt.Sprintf("%s.%s:", blockName, key))
+			}
+		}
+
+		var disabled bool
+		if v, ok := strMap["disabled"]; ok {
+			disabled, err = strconv.ParseBool(v)
+			if err != nil {
+				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+			}
+			delete(strMap, "disabled")
+		}
+
+		seal := &KMS{
+			Type:     strings.ToLower(key),
+			Purpose:  purpose,
+			Disabled: disabled,
+		}
+		if len(strMap) > 0 {
+			seal.Config = strMap
+		}
+		seals = append(seals, seal)
+	}
+
+	result.Seals = append(result.Seals, seals...)
+
+	return nil
 }
 
 func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]string, logger hclog.Logger) (wrapping.Wrapper, error) {
@@ -114,8 +187,8 @@ var GetAEADKMSFunc = func(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wra
 	info := make(map[string]string)
 	if wrapperInfo != nil {
 		str := "AEAD Type"
-		if kms.Purpose != "" {
-			str = fmt.Sprintf("%s %s", kms.Purpose, str)
+		if len(kms.Purpose) > 0 {
+			str = fmt.Sprintf("%v %s", kms.Purpose, str)
 		}
 		info[str] = wrapperInfo["aead_type"]
 	}

@@ -3,12 +3,9 @@ package configutil
 import (
 	"fmt"
 	"io/ioutil"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -126,78 +123,6 @@ func ParseConfig(d string) (*SharedConfig, error) {
 	}
 
 	return &result, nil
-}
-
-func parseKMS(result *SharedConfig, list *ast.ObjectList, blockName string, maxKMS int) error {
-	if len(list.Items) > maxKMS {
-		return fmt.Errorf("only two or less %q blocks are permitted", blockName)
-	}
-
-	seals := make([]*KMS, 0, len(list.Items))
-	for _, item := range list.Items {
-		key := blockName
-		if len(item.Keys) > 0 {
-			key = item.Keys[0].Token.Value().(string)
-		}
-
-		var m map[string]string
-		if err := hcl.DecodeObject(&m, item.Val); err != nil {
-			return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
-		}
-		var disabled bool
-		var err error
-		if v, ok := m["disabled"]; ok {
-			disabled, err = strconv.ParseBool(v)
-			if err != nil {
-				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
-			}
-			delete(m, "disabled")
-		}
-		seals = append(seals, &KMS{
-			Type:     strings.ToLower(key),
-			Purpose:  strings.ToLower(m["purpose"]),
-			Disabled: disabled,
-			Config:   m,
-		})
-	}
-
-	result.Seals = seals
-
-	return nil
-}
-
-func parseTelemetry(result *SharedConfig, list *ast.ObjectList) error {
-	if len(list.Items) > 1 {
-		return fmt.Errorf("only one 'telemetry' block is permitted")
-	}
-
-	// Get our one item
-	item := list.Items[0]
-
-	var t Telemetry
-	if err := hcl.DecodeObject(&t, item.Val); err != nil {
-		return multierror.Prefix(err, "telemetry:")
-	}
-
-	if result.Telemetry == nil {
-		result.Telemetry = &Telemetry{}
-	}
-
-	if err := hcl.DecodeObject(&result.Telemetry, item.Val); err != nil {
-		return multierror.Prefix(err, "telemetry:")
-	}
-
-	if result.Telemetry.PrometheusRetentionTimeRaw != nil {
-		var err error
-		if result.Telemetry.PrometheusRetentionTime, err = parseutil.ParseDurationSecond(result.Telemetry.PrometheusRetentionTimeRaw); err != nil {
-			return err
-		}
-		result.Telemetry.PrometheusRetentionTimeRaw = nil
-	} else {
-		result.Telemetry.PrometheusRetentionTime = PrometheusDefaultRetentionTime
-	}
-
-	return nil
 }
 
 // Sanitized returns a copy of the config with all values that are considered

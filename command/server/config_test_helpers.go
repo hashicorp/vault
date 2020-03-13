@@ -72,6 +72,24 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 			PidFile: "./pidfile",
 
 			ClusterName: "testcluster",
+
+			Seals: []*configutil.KMS{
+				{
+					Type: "nopurpose",
+				},
+				{
+					Type:    "stringpurpose",
+					Purpose: []string{"foo"},
+				},
+				{
+					Type:    "commastringpurpose",
+					Purpose: []string{"foo", "bar"},
+				},
+				{
+					Type:    "slicepurpose",
+					Purpose: []string{"zip", "zap"},
+				},
+			},
 		},
 
 		Storage: &Storage{

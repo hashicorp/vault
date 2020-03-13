@@ -12,6 +12,10 @@ import (
 	"github.com/armon/go-metrics/prometheus"
 	stackdriver "github.com/google/go-metrics-stackdriver"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/hcl"
+	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/cli"
 	"google.golang.org/api/option"
 )
@@ -126,6 +130,40 @@ type Telemetry struct {
 
 func (t *Telemetry) GoString() string {
 	return fmt.Sprintf("*%#v", *t)
+}
+
+func parseTelemetry(result *SharedConfig, list *ast.ObjectList) error {
+	if len(list.Items) > 1 {
+		return fmt.Errorf("only one 'telemetry' block is permitted")
+	}
+
+	// Get our one item
+	item := list.Items[0]
+
+	var t Telemetry
+	if err := hcl.DecodeObject(&t, item.Val); err != nil {
+		return multierror.Prefix(err, "telemetry:")
+	}
+
+	if result.Telemetry == nil {
+		result.Telemetry = &Telemetry{}
+	}
+
+	if err := hcl.DecodeObject(&result.Telemetry, item.Val); err != nil {
+		return multierror.Prefix(err, "telemetry:")
+	}
+
+	if result.Telemetry.PrometheusRetentionTimeRaw != nil {
+		var err error
+		if result.Telemetry.PrometheusRetentionTime, err = parseutil.ParseDurationSecond(result.Telemetry.PrometheusRetentionTimeRaw); err != nil {
+			return err
+		}
+		result.Telemetry.PrometheusRetentionTimeRaw = nil
+	} else {
+		result.Telemetry.PrometheusRetentionTime = PrometheusDefaultRetentionTime
+	}
+
+	return nil
 }
 
 // SetupTelemetry is used to setup the telemetry sub-systems and returns the

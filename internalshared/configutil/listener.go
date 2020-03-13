@@ -121,6 +121,9 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				if l.Purpose, err = parseutil.ParseCommaStringSlice(l.PurposeRaw); err != nil {
 					return multierror.Prefix(fmt.Errorf("unable to parse 'purpose' in listener type %q: %w", l.Type, err), fmt.Sprintf("listeners.%d:", i))
 				}
+				for i, v := range l.Purpose {
+					l.Purpose[i] = strings.ToLower(v)
+				}
 			}
 		}
 
