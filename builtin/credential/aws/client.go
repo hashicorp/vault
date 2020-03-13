@@ -250,12 +250,19 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 	if err != nil {
 		return nil, err
 	}
+	if stsRole == "" {
+		b.Logger().Debug(fmt.Sprintf("no stsRole found for %s", accountID))
+	} else {
+		b.Logger().Debug(fmt.Sprintf("found stsRole %s for account %s", stsRole, accountID))
+	}
 	b.configMutex.RLock()
 	if b.IAMClientsMap[region] != nil && b.IAMClientsMap[region][stsRole] != nil {
 		defer b.configMutex.RUnlock()
 		// If the client object was already created, return it
+		b.Logger().Debug(fmt.Sprintf("returning cached client for region %s and stsRole %s", region, stsRole))
 		return b.IAMClientsMap[region][stsRole], nil
 	}
+	b.Logger().Debug(fmt.Sprintf("no cached client for region %s and stsRole %s", region, stsRole))
 
 	// Release the read lock and acquire the write lock
 	b.configMutex.RUnlock()
