@@ -44,7 +44,7 @@ const PARAMS_FOR_ACTION = {
   rewrap: ['ciphertext', 'context', 'nonce', 'key_version'],
 };
 const SUCCESS_MESSAGE_FOR_ACTION = {
-  sign: 'Generated your key',
+  sign: 'Signed your data',
   // verify doesn't trigger a success message
   hmac: 'Created your hash output',
   encrypt: 'Created a wrapped token for your data',
