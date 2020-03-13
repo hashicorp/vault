@@ -206,14 +206,12 @@
       </div>
     </div>
 </form>
-<Modal @title="Copy your unwrapped data" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
+<Modal @title="Results" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
   <section class="modal-card-body">
-    <div class="box is-shadowless is-fullwidth is-sideless">
-      <h4 class="is-label">Verified</h4>
-      <p class="box is-shadowless {{if valid 'has-text-success' 'has-text-danger'}}" data-test-transit-verify="true">
-        <Icon @glyph={{if valid "check-plain" "cancel-plain"}} />
-        The input is <b>{{if valid 'valid' 'not valid'}}</b> for the given {{if signature 'signature' 'hmac'}}.
-      </p>
-    </div>
+    <AlertBanner
+      @type={{if valid 'success' 'danger'}}
+      @title={{if valid 'Valid' 'Not Valid'}}
+      @message="The input is {{if valid 'valid' 'not valid'}} for the given {{if signature 'signature' 'hmac'}}"
+      data-test-transit-verify="true"/>
   </section>
 </Modal>
