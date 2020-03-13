@@ -15,9 +15,11 @@
   }
 
   & #inner {
-    margin: 64px 0;
-    overflow: auto;
-    width: 100%;
+    @media screen {
+      margin: 64px 0;
+      overflow: auto;
+      width: 100%;
+    }
 
     @media (min-width: 940px) {
       flex: 1;
@@ -42,7 +44,9 @@
     /* TODO: this should be applied in global styles, temporary override here */
     & pre,
     & code {
-      font-size: 0.875em;
+      @media screen {
+        font-size: 0.875em;
+      }
     }
 
     & pre code {
