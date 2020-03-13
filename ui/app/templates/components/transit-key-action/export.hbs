@@ -81,10 +81,8 @@
   </section>
   <footer class="modal-card-foot">
     <CopyButton class="button is-primary copy-close" data-test-button="modal-copy-close" @clipboardText={{if wrapTTL wrappedToken (stringify keys)}}
-      @buttonType="button" @success={{action "toggleModal"}}>
+      @buttonType="button" @success={{action "toggleModal" "Token copied!"}}>
       Copy &amp; Close
     </CopyButton>
   </footer>
 </Modal>
-
-{{!-- show eithe wrapped key or exported key --}}
