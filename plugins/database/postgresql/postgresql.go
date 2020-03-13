@@ -30,7 +30,22 @@ ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
 `
 )
 
-var _ dbplugin.Database = &PostgreSQL{}
+var (
+	_ dbplugin.Database = &PostgreSQL{}
+
+	// postgresEndStatement is basically the word "END" but
+	// surrounded by a word boundary to differentiate it from
+	// other words like "APPEND".
+	postgresEndStatement = regexp.MustCompile(`\bEND\b`)
+
+	// doubleQuotedPhrases finds substrings like "hello"
+	// and pulls them out with the quotes included.
+	doubleQuotedPhrases = regexp.MustCompile(`(".*?")`)
+
+	// singleQuotedPhrases finds substrings like 'hello'
+	// and pulls them out with the quotes included.
+	singleQuotedPhrases = regexp.MustCompile(`('.*?')`)
+)
 
 // New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
@@ -534,30 +549,22 @@ func containsMultilineStatement(stmt string) bool {
 	}
 	// Now look for the word "END" specifically. This will miss any
 	// representations of END that aren't surrounded by spaces, but
-	// it should be easy to deal with. This approach was chosen to
-	// avoid accidently matching with unintended words like "APPEND".
-	return strings.Contains(stmtWithoutLiterals, " END ")
+	// it should be easy to change on the user's side.
+	return postgresEndStatement.MatchString(stmtWithoutLiterals)
 }
 
 // extractQuotedStrings extracts 0 or many substrings
 // that have been single- or double-quoted. Ex:
 // `"Hello", silly 'elephant' from the "zoo".`
-// returns [ `"Hello"`, `'elephant'`, `"zoo"` ]
+// returns [ `doubleQuotedPhrases.FindAllString(s, -1)`, `'elephant'`, `"zoo"` ]
 func extractQuotedStrings(s string) ([]string, error) {
-	var result []string
-
-	// Find all double-quoted sub-strings.
-	reg, err := regexp.Compile(`(".*?")`)
-	if err != nil {
-		return nil, err
+	var found []string
+	toFind := []*regexp.Regexp{
+		doubleQuotedPhrases,
+		singleQuotedPhrases,
 	}
-	result = append(result, reg.FindAllString(s, -1)...)
-
-	// Find all single-quoted sub-strings.
-	reg, err = regexp.Compile(`('.*?')`)
-	if err != nil {
-		return nil, err
+	for _, typeOfPhrase := range toFind {
+		found = append(found, typeOfPhrase.FindAllString(s, -1)...)
 	}
-	result = append(result, reg.FindAllString(s, -1)...)
-	return result, nil
+	return found, nil
 }
