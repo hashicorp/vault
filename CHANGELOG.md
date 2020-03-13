@@ -19,6 +19,7 @@ BUG FIXES:
 * ui: Show Error messages on Auth Configuration page when you hit permission errors [[GH-8500](https://github.com/hashicorp/vault/pull/8500)]
 * ui: Remove duplicate form inputs for the GitHub config [[GH-8519](https://github.com/hashicorp/vault/pull/8519)]
 * ui: Correct HMAC capitalization [[GH-8528](https://github.com/hashicorp/vault/pull/8528)]
+* ui: Fix danger message in DR [[GH-8555](https://github.com/hashicorp/vault/pull/8555)]
 
 ## 1.4 Beta1 (February 20th, 2020)
 
