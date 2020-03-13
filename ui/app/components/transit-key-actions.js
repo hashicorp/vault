@@ -45,7 +45,7 @@ const PARAMS_FOR_ACTION = {
 };
 const SUCCESS_MESSAGE_FOR_ACTION = {
   sign: 'Signed your data',
-  // verify doesn't trigger a success message
+  // the verify action doesn't trigger a success message
   hmac: 'Created your hash output',
   encrypt: 'Created a wrapped token for your data',
   decrypt: 'Decrypted the data from your token',
