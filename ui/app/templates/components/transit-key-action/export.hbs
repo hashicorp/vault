@@ -71,7 +71,7 @@
     <div class="box is-shadowless is-fullwidth is-sideless">
       <h2 class="title is-6">Wrapped Key</h2>
       <div class="copy-text level">
-        <code data-test-encrypted-value="export" class="level-left">{{if wrapTTL wrappedToken (stringify keys)}}</code>
+        <pre data-test-encrypted-value="export" class="level-left">{{if wrapTTL wrappedToken (stringify keys)}}</pre>
         <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
           @clipboardText={{if wrapTTL wrappedToken (stringify keys)}} @buttonType="button" @success={{action (set-flash-message 'Token copied!')}}>
           <Icon @glyph="copy-action" aria-label="Copy" />
