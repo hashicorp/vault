@@ -1,6 +1,6 @@
 # Vault Website
 
-[![Netlify Status](https://img.shields.io/netlify/f7fa8963-0022-4a0e-9ccf-f5385355906b?style=flat-square)](https://app.netlify.com/sites/vault-docs-platform/deploys)
+[![Netlify Status](https://img.shields.io/netlify/d72a27d2-aba4-46fd-bf70-d7da0b19b578?style=flat-square)](https://app.netlify.com/sites/vault-www/deploys)
 
 This subdirectory contains the entire source for the [Vault Website](https://vaultproject.io/). This is a [NextJS](https://nextjs.org/) project, which builds a static site from these source files.
 
