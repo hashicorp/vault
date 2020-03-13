@@ -999,12 +999,21 @@ type RaftLock struct {
 func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}, leaderNotifyCh <-chan bool) <-chan struct{} {
 	leaderLost := make(chan struct{})
 	go func() {
-		select {
-		case isLeader := <-leaderNotifyCh:
-			if !isLeader {
-				close(leaderLost)
+		for {
+			select {
+			case isLeader := <-leaderNotifyCh:
+				// leaderNotifyCh may deliver a true value initially if this
+				// server is already the leader prior to RaftLock.Lock call
+				// (the true message was already queued). The next message is
+				// always going to be false. The for loop should loop at most
+				// twice.
+				if !isLeader {
+					close(leaderLost)
+					return
+				}
+			case <-stopCh:
+				return
 			}
-		case <-stopCh:
 		}
 	}()
 	return leaderLost
