@@ -40,7 +40,7 @@ it is highly recommended that you
 of Vault. This provides a less complicated out-of-box experience for new users,
 but is not appropriate for a production setup. It is highly recommended to use
 a [properly secured Kubernetes cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/).
-See the [architecture reference](/docs/platform/k8s/run#architecture)
+See the [architecture reference](#architecture)
 for a production deployment checklist.
 
 ## How-To
@@ -402,7 +402,7 @@ When upgrading to new versions, new servers with the upgraded version of Vault
 are brought online. They are attached to the same shared storage backend and
 unsealed. Then the old servers are destroyed. This reduces the need for remote
 access and upgrade orchestration which may introduce security gaps. See the
-[upgrade section](/docs/platform/k8s/run#how-to) for instructions
+[upgrade section](#how-to) for instructions
 on upgrading Vault on Kubernetes.
 
 _Upgrade Frequently._ Vault is actively developed, and updating frequently is
