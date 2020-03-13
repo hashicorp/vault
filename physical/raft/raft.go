@@ -1002,8 +1002,11 @@ func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}, leaderNotifyCh <-ch
 		for {
 			select {
 			case isLeader := <-leaderNotifyCh:
-				// if isLeader is true we want to continue to loop until we see
-				// a notification that we lost leadership.
+				// leaderNotifyCh may deliver a true value initially if this
+				// server is already the leader prior to RaftLock.Lock call
+				// (the true message was already queued). The next message is
+				// always going to be false. The for loop should loop at most
+				// twice.
 				if !isLeader {
 					close(leaderLost)
 					return
