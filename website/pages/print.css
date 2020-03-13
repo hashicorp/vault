@@ -1,0 +1,240 @@
+/* Print Styles - Hide Elements */
+@media print {
+    iframe,
+    .g-mega-nav,
+    .g-product-subnav,
+    .g-footer,
+    [aria-hidden='true'],
+    [id='sidebar'],
+    [id='edit-this-page'],
+    [id='jump-to-section'],
+    [id='__next-build-watcher'] {
+      display: none !important;
+    }
+  }
+  
+  /* Print Styles - Page Spacing */
+  @media print {
+    @page {
+      margin: 2cm 0.5cm;
+    }
+  
+    @page :first {
+      margin-top: 0;
+    }
+  
+    @page :last {
+      margin-top: 0;
+    }
+  
+    blockquote {
+      break-inside: avoid;
+    }
+  
+    body {
+      margin-bottom: 2cm;
+      margin-top: 2cm;
+    }
+  
+    dl,
+    ol,
+    ul {
+      break-before: avoid;
+    }
+  
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      break-after: avoid;
+      break-inside: avoid;
+    }
+  
+    img {
+      break-inside: avoid;
+      break-after: avoid;
+    }
+  
+    pre,
+    table {
+      break-inside: avoid;
+    }
+  
+    pre {
+      white-space: pre-wrap;
+    }
+  }
+  
+  @media print {
+    /* @todo: remove alongside @hashicorp/react-global-styles/_temporary-to-remove/layout.css */
+    .g-container {
+      /*
+      * A “measure” is the number of characters in a line of text.
+      * Long lines fatique readers as they find the start of a new line of text.
+      * It seems widely accepted that an ideal measure is 66 characters per line.
+      * An average character takes up .5em, and so we define a measure of 33em.
+      * See: https://webtypography.net/2.1.2
+      */
+      max-width: 33em;
+      padding-left: 0;
+      padding-right: 0;
+      word-break: break-word;
+    }
+  
+    /* @todo: remove alongside @hashicorp/react-global-styles/_temporary-to-remove/tables.css */
+    table {
+      margin-bottom: 0;
+      margin-top: 20px;
+    }
+  }
+  
+  /* @todo: move print styles to @hashicorp/react-global-styles/global.css */
+  @media print {
+    pre code,
+    code,
+    pre {
+      font-weight: inherit;
+    }
+  
+    pre {
+      background: transparent;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+      color: inherit;
+      padding: 0.5em;
+  
+      & > code {
+        white-space: inherit;
+      }
+    }
+  }
+  
+  /* @todo: move print styles to @hashicorp/react-content/dist/style.css */
+  @media print {
+    .g-content {
+      & a {
+        color: inherit;
+        font-weight: 700;
+  
+        &:not(.anchor) {
+          &::after {
+            background-color: transparent;
+            position: static;
+            opacity: 1;
+          }
+        }
+  
+        &[href^='http'] {
+          &::after {
+            content: ' <' attr(href) '>';
+            font-size: 0.8em;
+            font-style: italic;
+            letter-spacing: -0.01875em;
+            vertical-align: top;
+          }
+        }
+  
+        &:not([href^='http']) {
+          text-decoration: underline;
+        }
+  
+        & > code {
+          color: inherit;
+          font-weight: 700;
+  
+          &::before,
+          &::after {
+            content: none;
+          }
+        }
+      }
+  
+      & h1,
+      & h2,
+      & h3,
+      & h4,
+      & h5,
+      & h6 {
+        & code {
+          background: none;
+          font-size: 1em;
+          padding: 0;
+        }
+      }
+  
+      & h2 {
+        margin: 1em 0 0;
+      }
+  
+      & h3 {
+        margin: 1em 0 0;
+        padding-bottom: 0.25em;
+      }
+  
+      & img {
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+        margin: 1em 0 0;
+      }
+  
+      & ol,
+      & ul {
+        margin: 1em 0 0;
+  
+        & li {
+          margin-bottom: 0;
+          margin-top: 0.5em;
+  
+          & p:first-child {
+            margin-top: 0;
+          }
+        }
+      }
+  
+      & p {
+        margin: 1em 0 0;
+      }
+  
+      & pre {
+        background-color: transparent;
+        border-radius: 0;
+        margin: 1.5em 0 0;
+  
+        & code {
+          background: transparent;
+          color: inherit;
+        }
+      }
+  
+      & dd,
+      & dt,
+      & li,
+      & p,
+      & td,
+      & th {
+        & > :not(pre) code,
+        & > code {
+          background: transparent;
+          font-weight: 700;
+          padding: 0;
+        }
+      }
+  
+      & .alert.alert-danger,
+      & .alert.alert-info,
+      & .alert.alert-success,
+      & .alert.alert-warning {
+        background-color: transparent;
+      }
+    }
+  }
+  
+  /* @todo: move print styles to @hashicorp/react-global-styles/code-highlighting.css */
+  @media print {
+    .hljs {
+      & * {
+        color: inherit;
+      }
+    }
+  }
+  
