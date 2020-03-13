@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -91,41 +92,26 @@ func (c *MonitorCommand) Run(args []string) int {
 		return 2
 	}
 
-	var logCh chan string
-	stopCh := make(chan struct{})
-	defer close(stopCh)
-
 	// Receiving input on stopCh means either the API client
 	// was stopped on purpose, or (more likely) the context
 	// deadline expired. If that happens, we want to restart
 	// this process.
-START:
-	logCh, err = client.Sys().Monitor(c.logLevel, stopCh)
+	var logCh chan string
+	logCh, err = client.Sys().Monitor(context.Background(), c.logLevel)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error starting monitor: %s", err))
 		return 1
 	}
 
-	go func() {
-		for {
-			select {
-			case log, ok := <-logCh:
-				if !ok {
-					return
-				}
-				c.UI.Info(log)
-			case <-stopCh:
-				return
+	for {
+		select {
+		case log, ok := <-logCh:
+			if !ok {
+				return 0
 			}
+			c.UI.Info(log)
+		case <-c.ShutdownCh:
+			return 0
 		}
-	}()
-
-	select {
-	case <-c.ShutdownCh:
-		return 0
-	case <- stopCh:
-		goto START
 	}
-
-	return 0
 }
