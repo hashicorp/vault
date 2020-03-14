@@ -74,13 +74,18 @@ func TestMonitorCommand_Run(t *testing.T) {
 			cmd.ShutdownCh = shutdownCh
 
 			go testhelpers.GenerateDebugLogs(t, stopCh, client)
-
 			go func() {
 				atomic.StoreInt64(&code, int64(cmd.Run(tc.args)))
 			}()
 
+			// This is possibly just an artifact of how this test
+			// and testhelpers.GenerateDebugLogs are written, but this
+			// turns out to be fairly timing dependent. 4 seconds seems to
+			// be the magic number here. Less, and the ticker in the test
+			// helper keeps ticking before the channel is detected as closed,
+			// so you get connection refused errors from the tests.
 			select {
-			case <-time.After(3 * time.Second):
+			case <-time.After(4 * time.Second):
 				close(stopCh)
 				close(shutdownCh)
 			}
