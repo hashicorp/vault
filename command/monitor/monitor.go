@@ -90,6 +90,7 @@ func (d *monitor) Start() <-chan []byte {
 		defer close(streamCh)
 
 		ticker := time.NewTicker(d.dropCheckInterval)
+		defer ticker.Stop()
 
 		for {
 			var logMessage []byte

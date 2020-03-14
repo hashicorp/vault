@@ -33,6 +33,7 @@ func (c *Sys) Monitor(ctx context.Context, logLevel string) (chan string, error)
 			if !scanner.Scan() {
 				return
 			}
+
 			// An empty string signals to the caller that
 			// the scan is done, so make sure we only emit
 			// that when the scanner says it's done, not if

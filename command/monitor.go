@@ -92,10 +92,6 @@ func (c *MonitorCommand) Run(args []string) int {
 		return 2
 	}
 
-	// Receiving input on stopCh means either the API client
-	// was stopped on purpose, or (more likely) the context
-	// deadline expired. If that happens, we want to restart
-	// this process.
 	var logCh chan string
 	logCh, err = client.Sys().Monitor(context.Background(), c.logLevel)
 	if err != nil {
