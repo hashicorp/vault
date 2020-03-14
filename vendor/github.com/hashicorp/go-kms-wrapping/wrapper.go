@@ -8,6 +8,7 @@ import (
 
 // These values define known types of Wrappers
 const (
+	AEAD          = "aead"
 	Shamir        = "shamir"
 	PKCS11        = "pkcs11"
 	AliCloudKMS   = "alicloudkms"
