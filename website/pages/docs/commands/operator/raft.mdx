@@ -132,7 +132,8 @@ Subcommands:
 
 ### snapshot save
 
-Takes a snapshot of the Raft cluster state.
+Takes a snapshot of the Vault data. The snapshot can be used to restore Vault to
+the point in time when a snapshot was taken.
 
 ```text
 Usage: vault operator raft snapshot save <snapshot_file>
