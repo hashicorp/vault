@@ -161,7 +161,8 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 			},
 			shouldTestCredsExist: true,
 		},
-		"reproduce https://github.com/hashicorp/vault/issues/6098": {
+		// https://github.com/hashicorp/vault/issues/6098
+		"reproduce GH-6098": {
 			createStmts: []string{
 				// NOTE: "rolname" in the following line is not a typo.
 				"DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE my_role; END IF; END $$",
