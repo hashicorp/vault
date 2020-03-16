@@ -1,4 +1,5 @@
 import { computed } from '@ember/object';
+
 import DS from 'ember-data';
 import AuthConfig from '../auth-config';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
