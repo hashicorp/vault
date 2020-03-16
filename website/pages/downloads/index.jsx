@@ -23,7 +23,7 @@ export default function DownloadsPage({ downloadData }) {
   )
 }
 
-export async function unstable_getStaticProps() {
+export async function getStaticProps() {
   return fetch(`https://releases.hashicorp.com/vault/${VERSION}/index.json`)
     .then(r => r.json())
     .then(r => {
