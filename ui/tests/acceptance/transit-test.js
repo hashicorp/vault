@@ -94,7 +94,6 @@ const testConvergentEncryption = async function(assert, keyName) {
       context: 'nqR8LiVgNh/lwO2rArJJE9F9DMhh0lKo4JX9DAAkCDw=',
       encodePlaintext: false,
       encodeContext: false,
-      decodeAfterDecrypt: false,
       assertAfterEncrypt: key => {
         assert.dom('.modal.is-active').exists(`${key}: Modal opens after encrypt`);
         assert.ok(
@@ -127,7 +126,6 @@ const testConvergentEncryption = async function(assert, keyName) {
       context: encodeString('context'),
       encodePlaintext: false,
       encodeContext: false,
-      decodeAfterDecrypt: false,
       assertAfterEncrypt: key => {
         assert.dom('.modal.is-active').exists(`${key}: Modal opens after encrypt`);
         assert.ok(
@@ -156,7 +154,6 @@ const testConvergentEncryption = async function(assert, keyName) {
       context: encodeString('context'),
       encodePlaintext: false,
       encodeContext: false,
-      decodeAfterDecrypt: false,
       assertAfterEncrypt: key => {
         assert.dom('.modal.is-active').exists(`${key}: Modal opens after encrypt`);
         assert.ok(
@@ -186,7 +183,6 @@ const testConvergentEncryption = async function(assert, keyName) {
       context: 'secret 2',
       encodePlaintext: true,
       encodeContext: true,
-      decodeAfterDecrypt: false,
       assertAfterEncrypt: key => {
         assert.dom('.modal.is-active').exists(`${key}: Modal opens after encrypt`);
         assert.ok(
@@ -243,13 +239,7 @@ const testConvergentEncryption = async function(assert, keyName) {
     await settled();
 
     if (testCase.assertAfterDecrypt) {
-      if (testCase.decodeAfterDecrypt) {
-        // The decrypted modal no longer has a way to decode from base64
-        await click('[data-test-transit-b64-toggle="plaintext"]');
-        testCase.assertAfterDecrypt(keyName);
-      } else {
-        testCase.assertAfterDecrypt(keyName);
-      }
+      testCase.assertAfterDecrypt(keyName);
     }
 
     await click('[data-test-modal-background]');
