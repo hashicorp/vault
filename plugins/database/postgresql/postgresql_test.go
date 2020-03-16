@@ -114,7 +114,8 @@ func TestPostgreSQL_CreateUser_missingArgs(t *testing.T) {
 
 func TestPostgreSQL_CreateUser(t *testing.T) {
 	type testCase struct {
-		createStmts []string
+		createStmts          []string
+		shouldTestCredsExist bool
 	}
 
 	tests := map[string]testCase{
@@ -126,6 +127,7 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 				  VALID UNTIL '{{expiration}}';
 				GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
 			},
+			shouldTestCredsExist: true,
 		},
 		"admin username": {
 			createStmts: []string{`
@@ -135,6 +137,7 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 				  VALID UNTIL '{{expiration}}';
 				GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{username}}";`,
 			},
+			shouldTestCredsExist: true,
 		},
 		"read only name": {
 			createStmts: []string{`
@@ -145,6 +148,7 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 				GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";
 				GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO "{{name}}";`,
 			},
+			shouldTestCredsExist: true,
 		},
 		"read only username": {
 			createStmts: []string{`
@@ -155,12 +159,22 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 				GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{username}}";
 				GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO "{{username}}";`,
 			},
+			shouldTestCredsExist: true,
 		},
 		"reproduce https://github.com/hashicorp/vault/issues/6098": {
 			createStmts: []string{
 				// NOTE: "rolname" in the following line is not a typo.
 				"DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE my_role; END IF; END $$",
 			},
+			// This test statement doesn't generate creds.
+			shouldTestCredsExist: false,
+		},
+		"reproduce issue with template": {
+			createStmts: []string{
+				`DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE "{{username}}"; END IF; END $$`,
+			},
+			// This test statement doesn't generate creds.
+			shouldTestCredsExist: false,
 		},
 	}
 
@@ -198,8 +212,8 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 				t.Fatalf("err: %s", err)
 			}
 
-			if name == "reproduce https://github.com/hashicorp/vault/issues/6098" {
-				// This test doesn't create creds, so we don't need to test them.
+			if !test.shouldTestCredsExist {
+				// We're done here.
 				return
 			}
 
@@ -680,6 +694,10 @@ func TestContainsMultilineStatement(t *testing.T) {
 			Input:    `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE my_role; END IF; END $$`,
 			Expected: true,
 		},
+		"multiline with template fields": {
+			Input:    `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname=\"{{name}}\") THEN CREATE ROLE {{name}}; END IF; END $$`,
+			Expected: true,
+		},
 		"docs example": {
 			Input: `CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; \
         GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";`,
@@ -718,6 +736,10 @@ func TestExtractQuotedStrings(t *testing.T) {
 		"empty string": {
 			Input:    ``,
 			Expected: []string{},
+		},
+		"templated field": {
+			Input:    `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname=\"{{name}}\") THEN CREATE ROLE {{name}}; END IF; END $$`,
+			Expected: []string{`"{{name}}\"`},
 		},
 	}
 
