@@ -1,6 +1,6 @@
 # Vault Website
 
-[![Netlify Status](https://img.shields.io/netlify/f7fa8963-0022-4a0e-9ccf-f5385355906b?style=flat-square)](https://app.netlify.com/sites/vault-docs-platform/deploys)
+[![Netlify Status](https://img.shields.io/netlify/d72a27d2-aba4-46fd-bf70-d7da0b19b578?style=flat-square)](https://app.netlify.com/sites/vault-www/deploys)
 
 This subdirectory contains the entire source for the [Vault
 Website](https://vaultproject.io/). This is a [NextJS](https://nextjs.org/)
@@ -72,12 +72,12 @@ description: "A thorough, yet succinct description of the page's contents"
 The significant keys in the YAML frontmatter are:
 
 - `title` `(string)` - This is the title of the page that will be set in the
-HTML title.
+  HTML title.
 - `description` `(string)` - This is a description of the page that will be set
-in the HTML description.
+  in the HTML description.
 
 > ⚠️Since `api` is a reserved directory within NextJS, all `/api/**` pages are
-listed under the `/pages/api-docs` path.
+> listed under the `/pages/api-docs` path.
 
 ### Editing Sidebars
 
@@ -92,9 +92,44 @@ by the appropriate embedded `content` values.
 
 - `category` values will be **directory names** within the `pages` directory
 - `content` values will be **file names** within their appropriately nested
-directory.
+  directory.
 
-### Deployment
+### Changing the Release Version
+
+To change the version of Vault displayed for download on the website, head over to `data/version.js` and change the number there. It's important to note that the version number must match a version that has been released and is live on `releases.hashicorp.com` -- if it does not, the website will be unable to fetch links to the binaries and will not compile. So this version number should be changed _only after a release_.
+
+### Displaying a Prerelease
+
+If there is a prerelease of any type that should be displayed on the downloads page, this can be done by editing `pages/downloads/index.jsx`. By default, the download component might look something like this:
+
+```jsx
+<ProductDownloader product="Vault" version={VERSION} downloads={downloadData} />
+```
+
+To add a prerelease, an extra `prerelease` property can be added to the component as such:
+
+```jsx
+<ProductDownloader
+  product="Vault"
+  version={VERSION}
+  downloads={downloadData}
+  prerelease={{
+    type: 'release candidate', // the type of prerelease: beta, release candidate, etc.
+    name: 'v1.0.0', // the name displayed in text on the website
+    version: '1.0.0-rc1' // the actual version tag that was pushed to releases.hashicorp.com
+  }}
+/>
+```
+
+This configuration would display something like the following text on the website, emphasis added to the configurable parameters:
+
+```
+A {{ release candidate }} for Vault {{ v1.0.0 }} is available! The release can be <a href='https://releases.hashicorp.com/vault/{{ 1.0.0-rc1 }}'>downloaded here</a>.
+```
+
+You may customize the parameters in any way you'd like. To remove a prerelease from the website, simply delete the `prerelease` paremeter from the above component.
+
+## Deployment
 
 This website is hosted on Netlify and configured to automatically deploy anytime
 you push code to the `stable-website` branch. Any time a pull request is
@@ -102,6 +137,10 @@ submitted that changes files within the `website` folder, a deployment preview
 will appear in the github checks which can be used to validate the way docs
 changes will look live. Deployments from `stable-website` will look and behave
 the same way as deployment previews.
+
+## Checking for Broken Links
+
+There is a local script that can be used to check for broken links on the _current product website_ - you can start it by running `npm run linkcheck`. There will be a version of this script added as a github check in the near future!
 
 ## Known Issues
 
