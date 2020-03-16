@@ -163,6 +163,7 @@
     "lodash": "^4.17.13",
     "merge": "^1.2.1",
     "minimatch": "^3.0.2",
+    "minimist": "^1.2.2",
     "growl": "^1.10.0",
     "serialize-javascript": "^2.1.1"
   },
