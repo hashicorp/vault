@@ -696,12 +696,12 @@ func TestContainsMultilineStatement(t *testing.T) {
 			Expected: true,
 		},
 		"multiline with template fields": {
-			Input:    `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname=\"{{name}}\") THEN CREATE ROLE {{name}}; END IF; END $$`,
+			Input:    `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname="{{name}}") THEN CREATE ROLE {{name}}; END IF; END $$`,
 			Expected: true,
 		},
 		"docs example": {
-			Input: `CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; \
-        GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";`,
+			Input: `CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; \
+        GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
 			Expected: false,
 		},
 	}
@@ -739,8 +739,8 @@ func TestExtractQuotedStrings(t *testing.T) {
 			Expected: []string{},
 		},
 		"templated field": {
-			Input:    `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname=\"{{name}}\") THEN CREATE ROLE {{name}}; END IF; END $$`,
-			Expected: []string{`"{{name}}\"`},
+			Input:    `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname="{{name}}") THEN CREATE ROLE {{name}}; END IF; END $$`,
+			Expected: []string{`"{{name}}"`},
 		},
 	}
 
