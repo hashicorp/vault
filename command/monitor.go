@@ -92,6 +92,9 @@ func (c *MonitorCommand) Run(args []string) int {
 		return 2
 	}
 
+	// Remove the default 60 second timeout so we can stream indefinitely
+	client.SetClientTimeout(0)
+
 	var logCh chan string
 	logCh, err = client.Sys().Monitor(context.Background(), c.logLevel)
 	if err != nil {

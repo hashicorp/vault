@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -11,6 +12,9 @@ import (
 
 func handleSysMonitor(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Remove the default 90 second timeout so clients can stream indefinitely
+		r = r.Clone(context.Background())
+
 		ll := r.URL.Query().Get("log_level")
 		if ll == "" {
 			ll = "INFO"
