@@ -13,6 +13,8 @@ IMPROVEMENTS:
 * storage/raft: Fix a potential deadlock that could occure on leadership transition [[GH-8547](https://github.com/hashicorp/vault/pull/8547)]
 * storage/raft: Refresh TLS keyring on snapshot restore [[GH-8546](https://github.com/hashicorp/vault/pull/8546)]
 * ui: Update transit actions to codeblocks & automatically encode plaintext unless indicated [[GH-8462](https://github.com/hashicorp/vault/pull/8462)]
+* ui: Display the results of transit key actions in a modal window [[GH-8462](https://github.com/hashicorp/vault/pull/8575)]
+
 
 BUG FIXES:
 
