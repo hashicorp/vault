@@ -1,0 +1,44 @@
+.modal-background {
+  background: rgb(235, 238, 242, 0.9);
+}
+
+.modal-card {
+  box-shadow: $box-shadow-highest;
+  border: 1px solid $grey-light;
+
+  &-head {
+    border-radius: 0;
+    background-color: $grey-lightest;
+    border-bottom: 1px solid $grey-light;
+  }
+
+  &-foot {
+    border-radius: 0;
+    border: 0;
+    background-color: $white;
+  }
+
+  &-title.title {
+    margin: 0;
+  }
+
+  .copy-text {
+    background-color: $grey-lightest;
+    padding: $spacing-s;
+    margin-bottom: $spacing-s;
+
+    code {
+      overflow: scroll;
+      max-width: calc(100% - 36px);
+      background-color: inherit;
+    }
+  }
+
+  .copy-close {
+    margin-top: $spacing-s;
+  }
+}
+
+pre {
+  background-color: inherit;
+}
