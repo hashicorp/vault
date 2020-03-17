@@ -27,7 +27,9 @@ Subcommands:
 ## join
 
 This command is used to join a new node as a peer to the Raft cluster. In order
-to join, there must be at least one existing member of the cluster.
+to join, there must be at least one existing member of the cluster. If Shamir
+seal is in use, then this API will request for the unseal keys to be supplied to
+join the cluster.
 
 ```text
 Usage: vault operator raft join [options] <leader-api-addr>
