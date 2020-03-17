@@ -44,8 +44,8 @@ func new() *PostgreSQL {
 	connProducer.Type = postgreSQLTypeName
 
 	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 8,
-		RoleNameLen:    8,
+		DisplayNameLen: 30,
+		RoleNameLen:    6,
 		UsernameLen:    63,
 		Separator:      "-",
 	}
