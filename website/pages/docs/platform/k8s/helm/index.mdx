@@ -9,7 +9,7 @@ description: >-
 
 # Helm Chart
 
-~> **Important Note:** This chart is not compatible with Helm 3. Please use Helm 2 with this chart.
+~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3 with this chart.
 
 The [Vault Helm chart](https://github.com/hashicorp/vault-helm)
 is the recommended way to install and configure Vault on Kubernetes.
@@ -17,7 +17,7 @@ In addition to running Vault itself, the Helm chart is the primary
 method for installing and configuring Vault to integrate with other
 services such as Consul for High Availability deployments.
 
-This page assumes general knowledge of [Helm](https://v2.helm.sh/) and
+This page assumes general knowledge of [Helm](https://helm.sh/) and
 how to use it. Using Helm to install Vault will require that Helm is
 properly installed and configured with your Kubernetes cluster.
 
@@ -29,7 +29,7 @@ may still change significantly over time. Please always run Helm with
 of Vault. This provides a less complicated out-of-box experience for new users,
 but is not appropriate for a production setup. It is highly recommended to use
 a [properly secured Kubernetes cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/).
-See the [architecture reference](/docs/platform/k8s/run#architecture)
+See the [architecture reference](/docs/platform/k8s/helm/run#architecture)
 for a Vault Helm production deployment checklist.
 
 ## Using the Helm Chart
@@ -54,8 +54,8 @@ $ git clone https://github.com/hashicorp/vault-helm.git
 $ cd vault-helm
 
 # Checkout a tagged version
-$ git checkout v0.3.3
+$ git checkout v0.4.0
 
 # Run Helm
-$ helm install --dry-run ./
+$ helm install vault ./
 ```

@@ -1650,7 +1650,13 @@ func (e *iamEntity) canonicalArn() string {
 // This returns the "full" ARN of an iamEntity, how it would be referred to in AWS proper
 func (b *backend) fullArn(ctx context.Context, e *iamEntity, s logical.Storage) (string, error) {
 	// Not assuming path is reliable for any entity types
-	client, err := b.clientIAM(ctx, s, getAnyRegionForAwsPartition(e.Partition).ID(), e.AccountNumber)
+
+	region := b.partitionToRegionMap[e.Partition]
+	if region == nil {
+		return "", fmt.Errorf("unable to resolve partition %q to a region", e.Partition)
+	}
+
+	client, err := b.clientIAM(ctx, s, region.ID(), e.AccountNumber)
 	if err != nil {
 		return "", errwrap.Wrapf("error creating IAM client: {{err}}", err)
 	}

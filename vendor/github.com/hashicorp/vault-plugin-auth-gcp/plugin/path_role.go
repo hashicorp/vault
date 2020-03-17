@@ -56,7 +56,7 @@ func baseRoleFieldSchema() map[string]*framework.FieldSchema {
 		},
 		"ttl": {
 			Type:        framework.TypeDurationSecond,
-			Description: tokenutil.DeprecationText("token_max_ttl"),
+			Description: tokenutil.DeprecationText("token_ttl"),
 			Deprecated:  true,
 		},
 		"max_ttl": {

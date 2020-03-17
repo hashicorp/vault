@@ -10,12 +10,12 @@ import (
 	"net"
 
 	"github.com/hashicorp/vault/helper/proxyutil"
-	"github.com/hashicorp/vault/helper/reload"
+	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/mitchellh/cli"
 )
 
 // ListenerFactory is the factory function to create a listener.
-type ListenerFactory func(map[string]interface{}, io.Writer, cli.Ui) (net.Listener, map[string]string, reload.ReloadFunc, error)
+type ListenerFactory func(map[string]interface{}, io.Writer, cli.Ui) (net.Listener, map[string]string, reloadutil.ReloadFunc, error)
 
 // BuiltinListeners is the list of built-in listener types.
 var BuiltinListeners = map[string]ListenerFactory{
@@ -24,7 +24,7 @@ var BuiltinListeners = map[string]ListenerFactory{
 
 // NewListener creates a new listener of the given type with the given
 // configuration. The type is looked up in the BuiltinListeners map.
-func NewListener(t string, config map[string]interface{}, logger io.Writer, ui cli.Ui) (net.Listener, map[string]string, reload.ReloadFunc, error) {
+func NewListener(t string, config map[string]interface{}, logger io.Writer, ui cli.Ui) (net.Listener, map[string]string, reloadutil.ReloadFunc, error) {
 	f, ok := BuiltinListeners[t]
 	if !ok {
 		return nil, nil, nil, fmt.Errorf("unknown listener type: %q", t)

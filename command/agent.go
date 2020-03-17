@@ -35,8 +35,8 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
 	"github.com/hashicorp/vault/command/agent/template"
+	"github.com/hashicorp/vault/internalshared/gatedwriter"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/gatedwriter"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -464,7 +464,7 @@ func (c *AgentCommand) Run(args []string) int {
 			})
 		}
 
-		var proxyVaultToken = !config.Cache.UseAutoAuthTokenEnforce
+		var proxyVaultToken = !config.Cache.ForceAutoAuthToken
 
 		// Create the request handler
 		cacheHandler := cache.Handler(ctx, cacheLogger, leaseCache, inmemSink, proxyVaultToken)

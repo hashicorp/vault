@@ -94,7 +94,7 @@ github.com/apple/foundationdb/bindings/go/src/fdb
 github.com/apple/foundationdb/bindings/go/src/fdb/directory
 github.com/apple/foundationdb/bindings/go/src/fdb/subspace
 github.com/apple/foundationdb/bindings/go/src/fdb/tuple
-# github.com/armon/go-metrics v0.3.1
+# github.com/armon/go-metrics v0.3.3
 github.com/armon/go-metrics
 github.com/armon/go-metrics/circonus
 github.com/armon/go-metrics/datadog
@@ -189,7 +189,7 @@ github.com/cloudfoundry-community/go-cfclient
 github.com/cockroachdb/cockroach-go/crdb
 # github.com/containerd/continuity v0.0.0-20190426062206-aaeac12a7ffc
 github.com/containerd/continuity/pathdriver
-# github.com/coreos/go-oidc v2.0.0+incompatible
+# github.com/coreos/go-oidc v2.1.0+incompatible
 github.com/coreos/go-oidc
 # github.com/coreos/go-semver v0.2.0
 github.com/coreos/go-semver/semver
@@ -276,8 +276,9 @@ github.com/golang/protobuf/ptypes/wrappers
 github.com/golang/snappy
 # github.com/google/go-github v17.0.0+incompatible
 github.com/google/go-github/github
-# github.com/google/go-metrics-stackdriver v0.0.0-20190816035513-b52628e82e2a
+# github.com/google/go-metrics-stackdriver v0.2.0
 github.com/google/go-metrics-stackdriver
+github.com/google/go-metrics-stackdriver/vault
 # github.com/google/go-querystring v1.0.0
 github.com/google/go-querystring/query
 # github.com/google/gofuzz v1.0.0
@@ -309,15 +310,14 @@ github.com/hashicorp/consul/api
 github.com/hashicorp/errwrap
 # github.com/hashicorp/go-cleanhttp v0.5.1
 github.com/hashicorp/go-cleanhttp
-# github.com/hashicorp/go-gcp-common v0.5.0
+# github.com/hashicorp/go-gcp-common v0.6.0
 github.com/hashicorp/go-gcp-common/gcputil
 # github.com/hashicorp/go-hclog v0.12.0
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.1.0
 github.com/hashicorp/go-immutable-radix
-# github.com/hashicorp/go-kms-wrapping v0.5.0
+# github.com/hashicorp/go-kms-wrapping v0.5.1
 github.com/hashicorp/go-kms-wrapping
-github.com/hashicorp/go-kms-wrapping/entropy
 github.com/hashicorp/go-kms-wrapping/internal/xor
 github.com/hashicorp/go-kms-wrapping/wrappers/aead
 github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms
@@ -326,6 +326,8 @@ github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault
 github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms
 github.com/hashicorp/go-kms-wrapping/wrappers/ocikms
 github.com/hashicorp/go-kms-wrapping/wrappers/transit
+# github.com/hashicorp/go-kms-wrapping/entropy v0.1.0
+github.com/hashicorp/go-kms-wrapping/entropy
 # github.com/hashicorp/go-memdb v1.0.2
 github.com/hashicorp/go-memdb
 # github.com/hashicorp/go-msgpack v0.5.5
@@ -376,57 +378,60 @@ github.com/hashicorp/raft
 github.com/hashicorp/raft-snapshot
 # github.com/hashicorp/serf v0.8.3
 github.com/hashicorp/serf/coordinate
-# github.com/hashicorp/vault-plugin-auth-alicloud v0.5.2-0.20190814210027-93970f08f2ec
+# github.com/hashicorp/vault-plugin-auth-alicloud v0.5.4-beta1
 github.com/hashicorp/vault-plugin-auth-alicloud
 github.com/hashicorp/vault-plugin-auth-alicloud/tools
-# github.com/hashicorp/vault-plugin-auth-azure v0.5.2-0.20191119151105-86f21fbc96e3
+# github.com/hashicorp/vault-plugin-auth-azure v0.5.4-beta1
 github.com/hashicorp/vault-plugin-auth-azure
-# github.com/hashicorp/vault-plugin-auth-centrify v0.5.2-0.20190814210042-090ec2ed93ce
+# github.com/hashicorp/vault-plugin-auth-centrify v0.5.4-beta1
 github.com/hashicorp/vault-plugin-auth-centrify
-# github.com/hashicorp/vault-plugin-auth-cf v0.0.0-20190821162840-1c2205826fee
+# github.com/hashicorp/vault-plugin-auth-cf v0.5.3-beta1
 github.com/hashicorp/vault-plugin-auth-cf
 github.com/hashicorp/vault-plugin-auth-cf/models
 github.com/hashicorp/vault-plugin-auth-cf/signatures
 github.com/hashicorp/vault-plugin-auth-cf/testing/certificates
 github.com/hashicorp/vault-plugin-auth-cf/testing/cf
 github.com/hashicorp/vault-plugin-auth-cf/util
-# github.com/hashicorp/vault-plugin-auth-gcp v0.5.2-0.20190930204802-acfd134850c2
+# github.com/hashicorp/vault-plugin-auth-gcp v0.6.0-beta1
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
-# github.com/hashicorp/vault-plugin-auth-jwt v0.5.2-0.20191010173058-65cf93bad3f2
+# github.com/hashicorp/vault-plugin-auth-jwt v0.6.0-beta1
 github.com/hashicorp/vault-plugin-auth-jwt
-# github.com/hashicorp/vault-plugin-auth-kerberos v0.1.2
+# github.com/hashicorp/vault-plugin-auth-kerberos v0.1.4-beta1
 github.com/hashicorp/vault-plugin-auth-kerberos
-# github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.2-0.20190925162726-2e5b0b8184e6
+# github.com/hashicorp/vault-plugin-auth-kubernetes v0.6.0-beta1
 github.com/hashicorp/vault-plugin-auth-kubernetes
-# github.com/hashicorp/vault-plugin-auth-oci v0.0.0-20190904175623-97c0c0187c5c
+# github.com/hashicorp/vault-plugin-auth-oci v0.5.3-beta1
 github.com/hashicorp/vault-plugin-auth-oci
-# github.com/hashicorp/vault-plugin-database-elasticsearch v0.0.0-20190814210117-e079e01fbb93
+# github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.3-beta1
 github.com/hashicorp/vault-plugin-database-elasticsearch
-# github.com/hashicorp/vault-plugin-database-mongodbatlas v0.0.0-20200124191841-a128333dc5d5
+# github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.0-beta1
 github.com/hashicorp/vault-plugin-database-mongodbatlas
-# github.com/hashicorp/vault-plugin-secrets-ad v0.6.2
+# github.com/hashicorp/vault-plugin-secrets-ad v0.6.4-beta1
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/client
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/util
-# github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.2-0.20190814210129-4d18bec92f56
+# github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.4-beta1
 github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
-# github.com/hashicorp/vault-plugin-secrets-azure v0.5.3-0.20191119150734-45c076c82f1d
+# github.com/hashicorp/vault-plugin-secrets-azure v0.5.5-beta1
 github.com/hashicorp/vault-plugin-secrets-azure
-# github.com/hashicorp/vault-plugin-secrets-gcp v0.5.3-0.20191128235941-556b7c55d6db
+# github.com/hashicorp/vault-plugin-secrets-gcp v0.6.0-beta1
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
-# github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.2-0.20190814210149-315cdbf5de6e
+# github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.4-beta1
 github.com/hashicorp/vault-plugin-secrets-gcpkms
-# github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20191017213228-e8cf7060a4d0
+# github.com/hashicorp/vault-plugin-secrets-kv v0.5.4-beta1
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.0.0-20200124190647-0026e6bed4fb
+# github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.0-beta1
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas
-# github.com/hashicorp/vault/api v1.0.5-0.20200124174203-d7d4084c8670 => ./api
+# github.com/hashicorp/vault-plugin-secrets-openldap v0.1.0-beta1.0.20200306174116-e7553b03b931
+github.com/hashicorp/vault-plugin-secrets-openldap
+github.com/hashicorp/vault-plugin-secrets-openldap/client
+# github.com/hashicorp/vault/api v1.0.5-0.20200215224050-f6547fa8e820 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20200124174203-d7d4084c8670 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20200220181328-627cbfe69505 => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/database/helper/credsutil
@@ -441,7 +446,6 @@ github.com/hashicorp/vault/sdk/helper/consts
 github.com/hashicorp/vault/sdk/helper/cryptoutil
 github.com/hashicorp/vault/sdk/helper/dbtxn
 github.com/hashicorp/vault/sdk/helper/errutil
-github.com/hashicorp/vault/sdk/helper/gatedwriter
 github.com/hashicorp/vault/sdk/helper/hclutil
 github.com/hashicorp/vault/sdk/helper/identitytpl
 github.com/hashicorp/vault/sdk/helper/jsonutil
@@ -473,7 +477,7 @@ github.com/hashicorp/vault/sdk/plugin/mock
 github.com/hashicorp/vault/sdk/plugin/pb
 github.com/hashicorp/vault/sdk/queue
 github.com/hashicorp/vault/sdk/version
-# github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb
+# github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d
 github.com/hashicorp/yamux
 # github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 github.com/influxdata/influxdb/client/v2
@@ -659,6 +663,8 @@ github.com/ory/dockertest/docker/types/strslice
 github.com/ory/dockertest/docker/types/versions
 # github.com/patrickmn/go-cache v2.1.0+incompatible
 github.com/patrickmn/go-cache
+# github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5
+github.com/petermattis/goid
 # github.com/pierrec/lz4 v2.2.6+incompatible
 github.com/pierrec/lz4
 github.com/pierrec/lz4/internal/xxh32
@@ -698,6 +704,8 @@ github.com/ryanuber/columnize
 github.com/ryanuber/go-glob
 # github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec
 github.com/samuel/go-zookeeper/zk
+# github.com/sasha-s/go-deadlock v0.2.0
+github.com/sasha-s/go-deadlock
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
 # github.com/shirou/gopsutil v2.19.9+incompatible
@@ -884,7 +892,6 @@ google.golang.org/api/internal
 google.golang.org/api/internal/gensupport
 google.golang.org/api/internal/third_party/uritemplates
 google.golang.org/api/iterator
-google.golang.org/api/oauth2/v2
 google.golang.org/api/option
 google.golang.org/api/storage/v1
 google.golang.org/api/transport
@@ -982,7 +989,7 @@ gopkg.in/mgo.v2/internal/sasl
 gopkg.in/mgo.v2/internal/scram
 # gopkg.in/ory-am/dockertest.v3 v3.3.4
 gopkg.in/ory-am/dockertest.v3
-# gopkg.in/square/go-jose.v2 v2.3.1
+# gopkg.in/square/go-jose.v2 v2.4.1
 gopkg.in/square/go-jose.v2
 gopkg.in/square/go-jose.v2/cipher
 gopkg.in/square/go-jose.v2/json

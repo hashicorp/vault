@@ -20,9 +20,9 @@ upgrade the installation using `helm upgrade` for existing installs or
 To install a new instance of Vault and the Vault Agent Injector, run the following:
 
 ```bash
-helm install --name=vault \
+helm install vault \
   --set="injector.enabled=true" \
-  https://github.com/hashicorp/vault-helm/archive/v0.3.3.tar.gz
+  https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
 ```
 
 Other values in the Helm chart can be used to limit the namespaces the injector
@@ -40,7 +40,7 @@ the Vault Agent Injector supports two TLS options:
 
 By default, the Vault Agent Injector will bootstrap TLS by generating a certificate
 authority and creating a certificate/key to be used by the controller. If using
-Vault Helm, the chart will automatically create the neccessary DNS entries for the
+Vault Helm, the chart will automatically create the necessary DNS entries for the
 controller's service used to verify the certificate.
 
 ### Manual TLS

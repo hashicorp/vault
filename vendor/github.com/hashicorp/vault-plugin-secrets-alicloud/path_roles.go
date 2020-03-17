@@ -44,7 +44,7 @@ as a trusted actor.`,
 				Description: "JSON of policies to be dynamically applied to users of this role.",
 			},
 			"remote_policies": {
-				Type: framework.TypeCommaStringSlice,
+				Type: framework.TypeStringSlice,
 				Description: `The name and type of each remote policy to be applied. 
 Example: "name:AliyunRDSReadOnlyAccess,type:System".`,
 			},

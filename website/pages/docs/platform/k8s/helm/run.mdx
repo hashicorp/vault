@@ -4,7 +4,7 @@ page_title: Running Vault - Kubernetes
 sidebar_title: Running Vault
 description: >-
   Vault can run directly on Kubernetes in various configurations.  For
-  pure-Kubernetes worloads, this enables Vault to also exist purely within
+  pure-Kubernetes workloads, this enables Vault to also exist purely within
   Kubernetes.
 ---
 
@@ -16,10 +16,7 @@ within Kubernetes.
 
 This page starts with a large how-to section for various specific tasks.
 
-!> **IMPORTANT NOTE:** Vault Enterprise is currently not supported. We are actively
-working a version for Vault Enterprise and it will be available in the future.
-
-~> **Important Note:** This chart is not compatible with Helm 3. Please use Helm 2 with this chart.
+~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3 with this chart.
 
 ## Helm Chart
 
@@ -43,7 +40,7 @@ it is highly recommended that you
 of Vault. This provides a less complicated out-of-box experience for new users,
 but is not appropriate for a production setup. It is highly recommended to use
 a [properly secured Kubernetes cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/).
-See the [architecture reference](/docs/platform/k8s/run#architecture)
+See the [architecture reference](#architecture)
 for a production deployment checklist.
 
 ## How-To
@@ -63,10 +60,10 @@ $ git clone https://github.com/hashicorp/vault-helm.git
 $ cd vault-helm
 
 # Checkout a tagged version
-$ git checkout v0.3.3
+$ git checkout v0.4.0
 
 # Run Helm
-$ helm install --name vault ./
+$ helm install vault ./
 ...
 ```
 
@@ -109,11 +106,11 @@ the [`ui.service` chart values](/docs/platform/k8s/helm#v-ui).
 
 To upgrade Vault on Kubernetes, we follow the same pattern as
 [generally upgrading Vault](/docs/upgrading), except we can use
-the Helm chart to update the Vault server Statefulset. It is important to understand
+the Helm chart to update the Vault server StatefulSet. It is important to understand
 how to [generally upgrade Vault](/docs/upgrading) before reading this
 section.
 
-The Vault Statefulset uses `OnDelete` update strategy. It is critical to use `OnDelete` instead
+The Vault StatefulSet uses `OnDelete` update strategy. It is critical to use `OnDelete` instead
 of `RollingUpdate` because standbys must be updated before the active primary. A
 failover to an older version of Vault must always be avoided.
 
@@ -149,7 +146,7 @@ $ helm upgrade vault ./
 This should cause no changes (although the resource will be updated). If
 everything is stable, `helm upgrade` can be run.
 
-The `helm upgrade` command should have updated the Statefulset template for
+The `helm upgrade` command should have updated the StatefulSet template for
 the Vault servers, however, no pods have been deleted. The pods must be manually
 deleted to upgrade. Deleting the pods will not delete any persisted data.
 
@@ -161,7 +158,7 @@ $ kubectl delete pod <name of Vault pod>
 ```
 
 If Vault is deployed using `ha` mode, the standby pods must be upgraded first.
-To identify which pod is currently the active primary, run the following commad
+To identify which pod is currently the active primary, run the following command
 on each Vault pod:
 
 ```bash
@@ -232,7 +229,7 @@ Finally, mount this secret as an extra volume and add an additional `-config` fl
 to the Vault startup command:
 
 ```bash
-helm install --name=vault \
+helm install vault \
   --set='server.extraVolumes[0].type=secret' \
   --set='server.extraVolumes[0].name=vault-storage-config' \
   --set='server.extraArgs=-config=/vault/userconfig/vault-storage-config/config.hcl' .
@@ -405,7 +402,7 @@ When upgrading to new versions, new servers with the upgraded version of Vault
 are brought online. They are attached to the same shared storage backend and
 unsealed. Then the old servers are destroyed. This reduces the need for remote
 access and upgrade orchestration which may introduce security gaps. See the
-[upgrade section](/docs/platform/k8s/run#how-to) for instructions
+[upgrade section](#how-to) for instructions
 on upgrading Vault on Kubernetes.
 
 _Upgrade Frequently._ Vault is actively developed, and updating frequently is

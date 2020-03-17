@@ -27,10 +27,12 @@ export default [
           'influxdb',
           'hanadb',
           'mongodb',
+          'mongodbatlas',
           'mssql',
           'mysql-maria',
+          'oracle',
           'postgresql',
-          'oracle'
+          'redshift'
         ]
       },
       { category: 'gcp' },
@@ -51,7 +53,9 @@ export default [
           'lookup'
         ]
       },
+      { category: 'mongodbatlas' },
       { category: 'nomad' },
+      { category: 'openldap' },
       { category: 'pki' },
       { category: 'rabbitmq' },
       { category: 'ssh' },
@@ -107,6 +111,7 @@ export default [
       'health',
       'host-info',
       'init',
+      'internal-counters',
       'internal-specs-openapi',
       'internal-ui-mounts',
       'key-status',

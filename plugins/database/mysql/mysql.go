@@ -297,8 +297,8 @@ func (m *MySQL) SetCredentials(ctx context.Context, statements dbplugin.Statemen
 }
 
 // executePreparedStatmentsWithMap loops through the given templated SQL statements and
-// applies the a map to them, interpolating values into the templates,returning
-// tthe resulting username and password
+// applies the map to them, interpolating values into the templates, returning
+// the resulting username and password
 func (m *MySQL) executePreparedStatmentsWithMap(ctx context.Context, statements []string, queryMap map[string]string) error {
 	// Grab the lock
 	m.Lock()

@@ -66,6 +66,7 @@ import (
 
 	sr "github.com/hashicorp/vault/serviceregistration"
 	csr "github.com/hashicorp/vault/serviceregistration/consul"
+	ksr "github.com/hashicorp/vault/serviceregistration/kubernetes"
 )
 
 const (
@@ -161,7 +162,8 @@ var (
 	}
 
 	serviceRegistrations = map[string]sr.Factory{
-		"consul": csr.NewServiceRegistration,
+		"consul":     csr.NewServiceRegistration,
+		"kubernetes": ksr.NewServiceRegistration,
 	}
 )
 
@@ -355,8 +357,8 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"operator raft configuration": func() (cli.Command, error) {
-			return &OperatorRaftConfigurationCommand{
+		"operator raft list-peers": func() (cli.Command, error) {
+			return &OperatorRaftListPeersCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

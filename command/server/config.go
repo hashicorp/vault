@@ -25,6 +25,8 @@ const (
 
 // Config is the configuration for the vault server.
 type Config struct {
+	entConfig
+
 	Listeners []*Listener `hcl:"-"`
 	Storage   *Storage    `hcl:"-"`
 	HAStorage *Storage    `hcl:"-"`
@@ -179,8 +181,9 @@ type Telemetry struct {
 	StatsiteAddr string `hcl:"statsite_address"`
 	StatsdAddr   string `hcl:"statsd_address"`
 
-	DisableHostname     bool `hcl:"disable_hostname"`
-	EnableHostnameLabel bool `hcl:"enable_hostname_label"`
+	DisableHostname     bool   `hcl:"disable_hostname"`
+	EnableHostnameLabel bool   `hcl:"enable_hostname_label"`
+	MetricsPrefix       string `hcl:"metrics_prefix"`
 
 	// Circonus: see https://github.com/circonus-labs/circonus-gometrics
 	// for more details on the various configuration options.
@@ -275,6 +278,8 @@ type Telemetry struct {
 	StackdriverLocation string `hcl:"stackdriver_location"`
 	// StackdriverNamespace is the namespace identifier, such as a cluster name.
 	StackdriverNamespace string `hcl:"stackdriver_namespace"`
+	// StackdriverDebugLogs will write additional stackdriver related debug logs to stderr.
+	StackdriverDebugLogs bool `hcl:"stackdriver_debug_logs"`
 }
 
 func (s *Telemetry) GoString() string {
@@ -638,6 +643,11 @@ func ParseConfig(d string) (*Config, error) {
 		if err := parseTelemetry(&result, o); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'telemetry': {{err}}", err)
 		}
+	}
+
+	entConfig := &(result.entConfig)
+	if err := entConfig.parseConfig(list); err != nil {
+		return nil, errwrap.Wrapf("error parsing enterprise config: {{err}}", err)
 	}
 
 	return &result, nil
@@ -1099,6 +1109,7 @@ func (c *Config) Sanitized() map[string]interface{} {
 			"statsite_address":                       c.Telemetry.StatsiteAddr,
 			"statsd_address":                         c.Telemetry.StatsdAddr,
 			"disable_hostname":                       c.Telemetry.DisableHostname,
+			"metrics_prefix":                         c.Telemetry.MetricsPrefix,
 			"circonus_api_token":                     "",
 			"circonus_api_app":                       c.Telemetry.CirconusAPIApp,
 			"circonus_api_url":                       c.Telemetry.CirconusAPIURL,
@@ -1118,6 +1129,7 @@ func (c *Config) Sanitized() map[string]interface{} {
 			"stackdriver_project_id":                 c.Telemetry.StackdriverProjectID,
 			"stackdriver_location":                   c.Telemetry.StackdriverLocation,
 			"stackdriver_namespace":                  c.Telemetry.StackdriverNamespace,
+			"stackdriver_debug_logs":                 c.Telemetry.StackdriverDebugLogs,
 		}
 		result["telemetry"] = sanitizedTelemetry
 	}

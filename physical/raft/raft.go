@@ -999,12 +999,21 @@ type RaftLock struct {
 func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}, leaderNotifyCh <-chan bool) <-chan struct{} {
 	leaderLost := make(chan struct{})
 	go func() {
-		select {
-		case isLeader := <-leaderNotifyCh:
-			if !isLeader {
-				close(leaderLost)
+		for {
+			select {
+			case isLeader := <-leaderNotifyCh:
+				// leaderNotifyCh may deliver a true value initially if this
+				// server is already the leader prior to RaftLock.Lock call
+				// (the true message was already queued). The next message is
+				// always going to be false. The for loop should loop at most
+				// twice.
+				if !isLeader {
+					close(leaderLost)
+					return
+				}
+			case <-stopCh:
+				return
 			}
-		case <-stopCh:
 		}
 	}()
 	return leaderLost
@@ -1017,6 +1026,13 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 	// Cache the notifyCh locally
 	leaderNotifyCh := l.b.raftNotifyCh
+
+	// TODO: Remove when Raft can server as the ha_storage backend. The internal
+	// raft pointer should not be nil here, but the nil check is a guard against
+	// https://github.com/hashicorp/vault/issues/8206
+	if l.b.raft == nil {
+		return nil, errors.New("attempted to grab a lock on a nil raft backend")
+	}
 
 	// Check to see if we are already leader.
 	if l.b.raft.State() == raft.Leader {

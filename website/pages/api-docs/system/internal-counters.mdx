@@ -1,0 +1,132 @@
+---
+layout: api
+page_title: /sys/internal/counters - HTTP API
+sidebar_title: <code>/sys/internal/counters</code>
+description: >-
+  The `/sys/internal/counters` endpoints are used to return data about Vault usage.
+---
+
+# `/sys/internal/counters`
+
+The `/sys/internal/counters` endpoints are used to return data about the number of Http Requests, Tokens, and Entities in Vault.
+
+~> **NOTE**: This endpoint is only available in Vault version 1.3+.  Backwards compatibility is not guaranteed.  These endpoints are subject to change or may disappear without notice.
+
+## Http Requests
+
+This endpoint lists the number of Http Requests made per month.
+
+| Method | Path                |
+| :----- | :------------------ |
+| `GET` | `/sys/internal/counters/requests` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/internal/counters/requests
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "75cbaa46-e741-3eba-2be2-325b1ba8f03f",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "counters": [
+      {
+        "start_time": "2019-05-01T00:00:00Z",
+        "total": 50
+      },
+      {
+        "start_time": "2019-04-01T00:00:00Z",
+        "total": 45
+      }
+    ]
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+## Entities
+
+This endpoint returns the total number of Entities.
+
+| Method | Path                |
+| :----- | :------------------ |
+| `GET` | `/sys/internal/counters/entities` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/internal/counters/entities
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "75cbaa46-e741-3eba-2be2-325b1ba8f03f",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "counters": {
+      "entities": {
+        "total": 1
+      }
+    }
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+## Tokens
+
+This endpoint returns the total number of Tokens.
+
+| Method | Path                |
+| :----- | :------------------ |
+| `GET` | `/sys/internal/counters/tokens` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/internal/counters/tokens
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "75cbaa46-e741-3eba-2be2-325b1ba8f03f",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "counters": {
+      "service_tokens": {
+        "total": 1
+      }
+    }
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
