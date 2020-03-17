@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -470,6 +471,7 @@ func GenerateDebugLogs(t testing.T, stopCh chan struct{}, client *api.Client) {
 	// if I'm doing something wrong here, or if that's just the way this goes.
 	ticker := time.NewTicker(1500 * time.Millisecond)
 	var err error
+	var m sync.Mutex
 
 	for {
 		select {
@@ -477,6 +479,8 @@ func GenerateDebugLogs(t testing.T, stopCh chan struct{}, client *api.Client) {
 			ticker.Stop()
 			return
 		case <-ticker.C:
+			m.Lock()
+
 			err = client.Sys().Mount("foo", &api.MountInput{
 				Type: "kv",
 				Options: map[string]string{
@@ -484,13 +488,17 @@ func GenerateDebugLogs(t testing.T, stopCh chan struct{}, client *api.Client) {
 				},
 			})
 			if err != nil {
+				m.Unlock()
 				t.Fatal(err)
 			}
 
 			err = client.Sys().Unmount("foo")
 			if err != nil {
+				m.Unlock()
 				t.Fatal(err)
 			}
+
+			m.Unlock()
 		}
 	}
 }
