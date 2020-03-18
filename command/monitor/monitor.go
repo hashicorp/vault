@@ -113,7 +113,11 @@ func (d *monitor) Start() <-chan []byte {
 			}
 
 			if len(logMessage) > 0 {
-				streamCh <- logMessage
+				select {
+				case <-d.doneCh:
+					return
+				case streamCh <- logMessage:
+				}
 			}
 		}
 	}()
