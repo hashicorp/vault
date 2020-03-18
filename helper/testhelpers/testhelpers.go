@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -462,16 +461,8 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 func GenerateDebugLogs(t testing.T, stopCh chan struct{}, client *api.Client) {
 	t.Helper()
 
-	// This ticker value was chosen after some trial and error trying to figure
-	// out why the ticker wasn't stopping when stopCh was closed. It turns out
-	// there's some kind of delay between closing a channel in a different
-	// goroutine and detecting that it was closed in this one. This ticker interval
-	// turned out to be the right value in combination with a 4 second delay
-	// in my other goroutine to let this helper produce log output. I'm not sure
-	// if I'm doing something wrong here, or if that's just the way this goes.
-	ticker := time.NewTicker(1500 * time.Millisecond)
+	ticker := time.NewTicker(time.Second)
 	var err error
-	var m sync.Mutex
 
 	for {
 		select {
@@ -479,8 +470,6 @@ func GenerateDebugLogs(t testing.T, stopCh chan struct{}, client *api.Client) {
 			ticker.Stop()
 			return
 		case <-ticker.C:
-			m.Lock()
-
 			err = client.Sys().Mount("foo", &api.MountInput{
 				Type: "kv",
 				Options: map[string]string{
@@ -488,17 +477,13 @@ func GenerateDebugLogs(t testing.T, stopCh chan struct{}, client *api.Client) {
 				},
 			})
 			if err != nil {
-				m.Unlock()
 				t.Fatal(err)
 			}
 
 			err = client.Sys().Unmount("foo")
 			if err != nil {
-				m.Unlock()
 				t.Fatal(err)
 			}
-
-			m.Unlock()
 		}
 	}
 }
