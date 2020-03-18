@@ -93,20 +93,25 @@ func (d *monitor) Start() <-chan []byte {
 		defer ticker.Stop()
 
 		for {
+			// This will initialize logMessage to its zero value (empty slice)
+			// on every loop iteration, which is what makes the below for loop
+			// work.
 			var logMessage []byte
 
-			select {
-			case <-ticker.C:
-				// Check if there have been any dropped messages.
-				dc := atomic.LoadUint64(&d.droppedCount)
+			for len(logMessage) == 0 {
+				select {
+				case <-ticker.C:
+					// Check if there have been any dropped messages.
+					dc := atomic.LoadUint64(&d.droppedCount)
 
-				if dc > 0 {
-					logMessage = []byte(fmt.Sprintf("[WARN] Monitor dropped %d logs during monitor request\n", dc))
-					atomic.SwapUint64(&d.droppedCount, 0)
+					if dc > 0 {
+						logMessage = []byte(fmt.Sprintf("[WARN] Monitor dropped %d logs during monitor request\n", dc))
+						atomic.SwapUint64(&d.droppedCount, 0)
+					}
+				case logMessage = <-d.logCh:
+				case <-d.doneCh:
+					return
 				}
-			case logMessage = <-d.logCh:
-			case <-d.doneCh:
-				return
 			}
 
 			select {
