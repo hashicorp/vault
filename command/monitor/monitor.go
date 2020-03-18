@@ -54,7 +54,7 @@ func newMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) *m
 	sw := &monitor{
 		logger:          logger,
 		logCh:           make(chan []byte, buf),
-		doneCh:          make(chan struct{}, 1),
+		doneCh:          make(chan struct{}),
 		bufSize:         buf,
 		dropCheckInterval: 3 * time.Second,
 	}
