@@ -41,7 +41,7 @@ func TestMonitor_Start(t *testing.T) {
 			case l := <-logCh:
 				require.Contains(t, string(l), "[DEBUG] test log")
 				return
-			case <-time.After(3 * time.Second):
+			case <-time.After(5 * time.Second):
 				t.Fatal("Expected to receive from log channel")
 			}
 		})
