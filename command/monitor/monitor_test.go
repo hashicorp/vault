@@ -51,10 +51,8 @@ func TestMonitor_DroppedMessages(t *testing.T) {
 	})
 	m.dropCheckInterval = 5 * time.Millisecond
 
-	doneCh := make(chan struct{})
-	defer close(doneCh)
-
 	logCh := m.Start()
+	defer m.Stop()
 
 	for i := 0; i <= 100; i++ {
 		logger.Debug(fmt.Sprintf("test message %d", i))
@@ -62,13 +60,10 @@ func TestMonitor_DroppedMessages(t *testing.T) {
 
 	passed := make(chan struct{})
 	go func() {
-		for {
-			select {
-			case recv := <-logCh:
-				if strings.Contains(string(recv), "[WARN] Monitor dropped") {
-					close(passed)
-					return
-				}
+		for recv := range logCh {
+			if strings.Contains(string(recv), "[WARN] Monitor dropped") {
+				close(passed)
+				return
 			}
 		}
 	}()
