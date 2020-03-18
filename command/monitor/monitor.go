@@ -45,7 +45,7 @@ type monitor struct {
 }
 
 // NewMonitor creates a new Monitor. Start must be called in order to actually start
-// streaming logs
+// streaming logs. buf is the buffer size of the channel that sends log messages.
 func NewMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) Monitor {
 	return newMonitor(buf, logger, opts)
 }

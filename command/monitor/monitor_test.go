@@ -13,28 +13,38 @@ import (
 func TestMonitor_Start(t *testing.T) {
 	t.Parallel()
 
-	logger := log.NewInterceptLogger(&log.LoggerOptions{
-		Level: log.Error,
-	})
+	bufferSizes := []int{512, 0}
 
-	m := NewMonitor(512, logger, &log.LoggerOptions{
-		Level: log.Debug,
-	})
+	for _, b := range bufferSizes {
+		b := b
 
-	logCh := m.Start()
-	defer m.Stop()
+		t.Run(fmt.Sprintf("Start_with_buffer_size_%d", b), func(t *testing.T) {
+			t.Parallel()
 
-	go func() {
-		logger.Debug("test log")
-		time.Sleep(10 * time.Millisecond)
-	}()
+			logger := log.NewInterceptLogger(&log.LoggerOptions{
+				Level: log.Error,
+			})
 
-	select {
-	case l := <-logCh:
-		require.Contains(t, string(l), "[DEBUG] test log")
-		return
-	case <-time.After(3 * time.Second):
-		t.Fatal("Expected to receive from log channel")
+			m := NewMonitor(b, logger, &log.LoggerOptions{
+				Level: log.Debug,
+			})
+
+			logCh := m.Start()
+			defer m.Stop()
+
+			go func() {
+				logger.Debug("test log")
+				time.Sleep(10 * time.Millisecond)
+			}()
+
+			select {
+			case l := <-logCh:
+				require.Contains(t, string(l), "[DEBUG] test log")
+				return
+			case <-time.After(3 * time.Second):
+				t.Fatal("Expected to receive from log channel")
+			}
+		})
 	}
 }
 
