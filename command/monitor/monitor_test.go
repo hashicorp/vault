@@ -60,15 +60,14 @@ func TestMonitor_DroppedMessages(t *testing.T) {
 		logger.Debug(fmt.Sprintf("test message %d", i))
 	}
 
-	received := ""
 	passed := make(chan struct{})
 	go func() {
 		for {
 			select {
 			case recv := <-logCh:
-				received += string(recv)
-				if strings.Contains(received, "[WARN] Monitor dropped") {
+				if strings.Contains(string(recv), "[WARN] Monitor dropped") {
 					close(passed)
+					return
 				}
 			}
 		}
