@@ -29,6 +29,7 @@ require (
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/coreos/go-semver v0.2.0
+	github.com/coreos/go-systemd v0.0.0-20181012123002-c6f51f82210d // indirect
 	github.com/denisenkom/go-mssqldb v0.0.0-20190412130859-3b1d194e553a
 	github.com/dnaeon/go-vcr v1.0.1 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
@@ -69,27 +70,27 @@ require (
 	github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
 	github.com/hashicorp/raft v1.1.2-0.20191002163536-9c6bd3e3eb17
 	github.com/hashicorp/raft-snapshot v1.0.2-0.20190827162939-8117efcc5aab
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.4-beta1
-	github.com/hashicorp/vault-plugin-auth-azure v0.5.4-beta1
-	github.com/hashicorp/vault-plugin-auth-centrify v0.5.4-beta1
-	github.com/hashicorp/vault-plugin-auth-cf v0.5.3-beta1
-	github.com/hashicorp/vault-plugin-auth-gcp v0.6.0-beta1
-	github.com/hashicorp/vault-plugin-auth-jwt v0.6.0-beta1
-	github.com/hashicorp/vault-plugin-auth-kerberos v0.1.4-beta1
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.6.0-beta1
-	github.com/hashicorp/vault-plugin-auth-oci v0.5.3-beta1
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.3-beta1
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.0-beta1
-	github.com/hashicorp/vault-plugin-secrets-ad v0.6.4-beta1
-	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.4-beta1
-	github.com/hashicorp/vault-plugin-secrets-azure v0.5.5-beta1
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.0-beta1
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.4-beta1
-	github.com/hashicorp/vault-plugin-secrets-kv v0.5.4-beta1
-	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.0-beta1
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.0-beta1.0.20200306174116-e7553b03b931
-	github.com/hashicorp/vault/api v1.0.5-0.20200215224050-f6547fa8e820
-	github.com/hashicorp/vault/sdk v0.1.14-0.20200220181328-627cbfe69505
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.4
+	github.com/hashicorp/vault-plugin-auth-azure v0.5.4
+	github.com/hashicorp/vault-plugin-auth-centrify v0.5.4
+	github.com/hashicorp/vault-plugin-auth-cf v0.5.3
+	github.com/hashicorp/vault-plugin-auth-gcp v0.6.0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.6.1
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.1.4
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.6.0
+	github.com/hashicorp/vault-plugin-auth-oci v0.5.3
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.3
+	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.0
+	github.com/hashicorp/vault-plugin-secrets-ad v0.6.4
+	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.4
+	github.com/hashicorp/vault-plugin-secrets-azure v0.5.5
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.0
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.4
+	github.com/hashicorp/vault-plugin-secrets-kv v0.5.4
+	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.0
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.1
+	github.com/hashicorp/vault/api v1.0.5-0.20200317185738-82f498082f02
+	github.com/hashicorp/vault/sdk v0.1.14-0.20200317185738-82f498082f02
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
@@ -137,7 +138,6 @@ require (
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20191023171146-3cf2f69b5738
 	go.mongodb.org/mongo-driver v1.2.1
 	go.uber.org/atomic v1.4.0
-	golang.org/x/build v0.0.0-20190314133821-5284462c4bec // indirect
 	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad
 	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
