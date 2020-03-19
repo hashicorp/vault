@@ -12,26 +12,28 @@ storiesOf('Switch/', module)
       template: hbs`
       <h5 class="title is-5">Switch</h5>
       <Switch
-        @id={{id}}
-        @name={{name}}
+        @inputId={{inputId}}
         @isChecked={{isChecked}}
+        @onChange={{onChange}}
         @disabled={{disabled}}
         @size={{size}}
+        @status={{status}}
         @round={{round}}
       >
         {{yielded}}
       </Switch>
     `,
       context: {
-        id: text('id', 'my-switch'),
+        inputId: text('id', 'my-switch'),
         name: text('name', 'my-checkbox'),
-        yielded: text('yield', 'Inner content here'),
-        isChecked: boolean('isChecked', false),
+        yielded: text('yield', 'Label content here ✔️'),
+        isChecked: boolean('isChecked', true),
         disabled: boolean('disabled', false),
         size: select('size', ['small', 'medium', 'large'], 'small'),
+        status: select('status', ['normal', 'success'], 'normal'),
         round: boolean('round', true),
-        onChange(key, value) {
-          console.log(`${key} =  ${value}`);
+        onChange() {
+          this.set('isChecked', !this.isChecked);
         },
       },
     }),
