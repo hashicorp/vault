@@ -52,10 +52,10 @@ func NewMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) Mo
 
 func newMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) *monitor {
 	sw := &monitor{
-		logger:          logger,
-		logCh:           make(chan []byte, buf),
-		doneCh:          make(chan struct{}),
-		bufSize:         buf,
+		logger:            logger,
+		logCh:             make(chan []byte, buf),
+		doneCh:            make(chan struct{}),
+		bufSize:           buf,
 		dropCheckInterval: 3 * time.Second,
 	}
 
@@ -92,32 +92,32 @@ func (d *monitor) Start() <-chan []byte {
 		ticker := time.NewTicker(d.dropCheckInterval)
 		defer ticker.Stop()
 
+		var logMessage []byte
 		for {
-			// This will initialize logMessage to its zero value (empty slice)
-			// on every loop iteration, which is what makes the below for loop
-			// work.
-			var logMessage []byte
-
-			for len(logMessage) == 0 {
-				select {
-				case <-ticker.C:
-					// Check if there have been any dropped messages.
-					dc := atomic.LoadUint64(&d.droppedCount)
-
-					if dc > 0 {
-						logMessage = []byte(fmt.Sprintf("[WARN] Monitor dropped %d logs during monitor request\n", dc))
-						atomic.SwapUint64(&d.droppedCount, 0)
-					}
-				case logMessage = <-d.logCh:
-				case <-d.doneCh:
-					return
-				}
-			}
+			// Reset the byte slice on every loop iteration, which is what makes
+			// the below for loop work.
+			logMessage = nil
 
 			select {
+			case <-ticker.C:
+				// Check if there have been any dropped messages.
+				dc := atomic.LoadUint64(&d.droppedCount)
+
+				if dc > 0 {
+					logMessage = []byte(fmt.Sprintf("[WARN] Monitor dropped %d logs during monitor request\n", dc))
+					atomic.SwapUint64(&d.droppedCount, 0)
+				}
+			case logMessage = <-d.logCh:
 			case <-d.doneCh:
 				return
-			case streamCh <- logMessage:
+			}
+
+			if len(logMessage) > 0 {
+				select {
+				case <-d.doneCh:
+					return
+				case streamCh <- logMessage:
+				}
 			}
 		}
 	}()
