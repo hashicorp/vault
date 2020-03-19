@@ -35,7 +35,7 @@ func handleSysMonitor(core *vault.Core) http.Handler {
 		}
 
 		isJson := core.LogFormat() == "json"
-		monitor := monitor.NewMonitor(512, core.Logger(), &log.LoggerOptions{
+		monitor, _ := monitor.NewMonitor(512, core.Logger(), &log.LoggerOptions{
 			Level:      logLevel,
 			JSONFormat: isJson,
 		})

@@ -13,38 +13,48 @@ import (
 func TestMonitor_Start(t *testing.T) {
 	t.Parallel()
 
-	bufferSizes := []int{512, 0}
+	logger := log.NewInterceptLogger(&log.LoggerOptions{
+		Level: log.Error,
+	})
 
-	for _, b := range bufferSizes {
-		b := b
+	m, _ := NewMonitor(512, logger, &log.LoggerOptions{
+		Level: log.Debug,
+	})
 
-		t.Run(fmt.Sprintf("Start_with_buffer_size_%d", b), func(t *testing.T) {
-			t.Parallel()
+	logCh := m.Start()
+	defer m.Stop()
 
-			logger := log.NewInterceptLogger(&log.LoggerOptions{
-				Level: log.Error,
-			})
+	go func() {
+		logger.Debug("test log")
+		time.Sleep(10 * time.Millisecond)
+	}()
 
-			m := NewMonitor(b, logger, &log.LoggerOptions{
-				Level: log.Debug,
-			})
+	select {
+	case l := <-logCh:
+		require.Contains(t, string(l), "[DEBUG] test log")
+		return
+	case <-time.After(5 * time.Second):
+		t.Fatal("Expected to receive from log channel")
+	}
+}
 
-			logCh := m.Start()
-			defer m.Stop()
+func TestMonitor_Start_Unbuffered(t *testing.T) {
+	t.Parallel()
 
-			go func() {
-				logger.Debug("test log")
-				time.Sleep(10 * time.Millisecond)
-			}()
+	logger := log.NewInterceptLogger(&log.LoggerOptions{
+		Level: log.Error,
+	})
 
-			select {
-			case l := <-logCh:
-				require.Contains(t, string(l), "[DEBUG] test log")
-				return
-			case <-time.After(5 * time.Second):
-				t.Fatal("Expected to receive from log channel")
-			}
-		})
+	_, err := NewMonitor(0, logger, &log.LoggerOptions{
+		Level: log.Debug,
+	})
+
+	if err == nil {
+		t.Fatal("expected to get an error, but didn't")
+	} else {
+		if !strings.Contains(err.Error(), "greater than zero") {
+			t.Fatal("expected an error about buf being greater than zero")
+		}
 	}
 }
 
@@ -56,7 +66,7 @@ func TestMonitor_DroppedMessages(t *testing.T) {
 		Level: log.Warn,
 	})
 
-	m := newMonitor(5, logger, &log.LoggerOptions{
+	m, _ := newMonitor(5, logger, &log.LoggerOptions{
 		Level: log.Debug,
 	})
 	m.dropCheckInterval = 5 * time.Millisecond

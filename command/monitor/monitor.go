@@ -46,11 +46,15 @@ type monitor struct {
 
 // NewMonitor creates a new Monitor. Start must be called in order to actually start
 // streaming logs. buf is the buffer size of the channel that sends log messages.
-func NewMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) Monitor {
+func NewMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) (Monitor, error) {
 	return newMonitor(buf, logger, opts)
 }
 
-func newMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) *monitor {
+func newMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) (*monitor, error) {
+	if buf == 0 {
+		return nil, fmt.Errorf("buf must be greater than zero")
+	}
+
 	sw := &monitor{
 		logger:            logger,
 		logCh:             make(chan []byte, buf),
@@ -63,7 +67,7 @@ func newMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) *m
 	sink := log.NewSinkAdapter(opts)
 	sw.sink = sink
 
-	return sw
+	return sw, nil
 }
 
 // Stop deregisters the sink and stops the monitoring process
