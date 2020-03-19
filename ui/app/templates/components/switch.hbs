@@ -1,23 +1,9 @@
 {{input
-  id="curly"
+  id=this.inputId
   type="checkbox"
-  checked=this.isChecked
-  change=(action "handleChange")
+  checked=isChecked
+  change=(action "handleChange" value='target.checked')
+  class=inputClasses
+  disabled=this.disabled
 }}
-<label for="curly" class="has-text-grey">Curly</label>
-<br/>
-<input
-  class="switch is-small"
-  type="checkbox"
-  value="angle-bracket"
-  checked={{this.isChecked}}
-  {{action "handleChange"}}
-  id="angle"
-/>
-<label for="angle" class="has-text-grey">Angle</label>
-{{!-- {{!-- id={{id}}
-  type="checkbox"
-  name={{this.name}}
-  class={{this.classNames}}
-  checked={{this.isChecked}} --}} {{!-- disabled={{this.disabled}} --}}
-  {{!-- ...attributes --}}
+<label for={{this.inputId}} class="has-text-grey">{{yield}}</label>
