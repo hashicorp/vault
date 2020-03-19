@@ -94,8 +94,6 @@ func (d *monitor) Start() <-chan []byte {
 
 		var logMessage []byte
 		for {
-			// Reset the byte slice on every loop iteration, which is what makes
-			// the below for loop work.
 			logMessage = nil
 
 			select {
