@@ -72,8 +72,10 @@ type ExpirationManager struct {
 
 	// Although the data structure itself is atomic,
 	// pendingLock should be held to ensure lease modifications
-	// are atomic (with respect to storage, expiration time, etc.)
+	// are atomic (with respect to storage, expiration time,
+	// and particularly the lease count.)
 	pending     sync.Map
+	leaseCount  int
 	pendingLock sync.RWMutex
 
 	tidyLock *int32
@@ -152,6 +154,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		tokenStore: c.tokenStore,
 		logger:     logger,
 		pending:    sync.Map{},
+		leaseCount: 0,
 		tidyLock:   new(int32),
 
 		// new instances of the expiration manager will go immediately into
@@ -247,6 +250,7 @@ func (m *ExpirationManager) invalidate(key string) {
 			pending := info.(pendingInfo)
 			pending.timer.Stop()
 			m.pending.Delete(leaseID)
+			m.leaseCount--
 		}
 		m.pendingLock.Unlock()
 	}
@@ -562,6 +566,7 @@ func (m *ExpirationManager) Stop() error {
 		info := value.(pendingInfo)
 		info.timer.Stop()
 		m.pending.Delete(key)
+		m.leaseCount--
 		return true
 	})
 	m.pendingLock.Unlock()
@@ -664,6 +669,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 		pending := info.(pendingInfo)
 		pending.timer.Stop()
 		m.pending.Delete(leaseID)
+		m.leaseCount--
 	}
 	m.pendingLock.Unlock()
 
@@ -1337,6 +1343,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal tim
 		if ok {
 			info.(pendingInfo).timer.Stop()
 			m.pending.Delete(le.LeaseID)
+			m.leaseCount--
 		}
 		return
 	}
@@ -1345,6 +1352,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal tim
 	if ok {
 		pending = info.(pendingInfo)
 		pending.timer.Reset(leaseTotal)
+		// No change to lease count in this case
 	} else {
 		timer := time.AfterFunc(leaseTotal, func() {
 			m.expireFunc(m.quitContext, m, le)
@@ -1352,6 +1360,8 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal tim
 		pending = pendingInfo{
 			timer: timer,
 		}
+		// new lease
+		m.leaseCount++
 	}
 
 	// Extend the timer by the lease total
@@ -1792,11 +1802,11 @@ func (m *ExpirationManager) lookupLeasesByToken(ctx context.Context, te *logical
 
 // emitMetrics is invoked periodically to emit statistics
 func (m *ExpirationManager) emitMetrics() {
-	num := 0
-	m.pending.Range(func(_, _ interface{}) bool {
-		num += 1
-		return true
-	})
+	// All updates of this value are with the pendingLock held.
+	m.pendingLock.RLock()
+	num := m.leaseCount
+	m.pendingLock.RUnlock()
+
 	metrics.SetGauge([]string{"expire", "num_leases"}, float32(num))
 	// Check if lease count is greater than the threshold
 	if num > maxLeaseThreshold {
