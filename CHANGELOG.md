@@ -27,6 +27,7 @@ BUG FIXES:
 * ui: Correct HMAC capitalization [[GH-8528](https://github.com/hashicorp/vault/pull/8528)]
 * ui: Fix danger message in DR [[GH-8555](https://github.com/hashicorp/vault/pull/8555)]
 * ui: Fix certificate field for LDAP config [[GH-8573](https://github.com/hashicorp/vault/pull/8573)]
+* api: Restore and fix DNS SRV Lookup [[GH-8520](https://github.com/hashicorp/vault/pull/8520)]
 
 ## 1.4 Beta1 (February 20th, 2020)
 
