@@ -2,9 +2,14 @@
 // Vault settings
 //-------------------------------------------------------------------
 
+variable "download-version" {
+    default = "1.3.4"
+    description = "Vault version to download from the official release site"
+}
+
 variable "download-url" {
-    default = "https://releases.hashicorp.com/vault/1.3.4/vault_1.3.4_linux_amd64.zip"
-    description = "URL to download Vault"
+    default = ""
+    description = "URL to download Vault. Overrides download-version if provided."
 }
 
 variable "config" {

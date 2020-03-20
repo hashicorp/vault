@@ -2,9 +2,10 @@ resource "template_file" "install" {
     template = "${file("${path.module}/scripts/install.sh.tpl")}"
 
     vars {
-        download_url  = "${var.download-url}"
-        config        = "${var.config}"
-        extra-install = "${var.extra-install}"
+        download_version  = "${var.download-version}"
+        download_url      = "${var.download-url}"
+        config            = "${var.config}"
+        extra-install     = "${var.extra-install}"
     }
 }
 
