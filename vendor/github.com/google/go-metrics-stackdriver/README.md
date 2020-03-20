@@ -25,5 +25,9 @@ ss.AddSample([]string{"method", "const"}, 200)
 
 The [full example](example/main.go) can be run from a cloud shell console to test how metrics are collected and displayed.
 
+You can also try out the example using Cloud Run!
+
+[![Run on Google Cloud](https://storage.googleapis.com/cloudrun/button.svg)](https://console.cloud.google.com/cloudshell/editor?shellonly=true&cloudshell_image=gcr.io/cloudrun/button&cloudshell_git_repo=https://github.com/google/go-metrics-stackdriver.git&cloudshell_working_dir=example)
+
 
 __This is not an officially supported Google product.__

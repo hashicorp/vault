@@ -42,6 +42,9 @@
 @import './community/style.css';
 @import './use-cases/style.css';
 
+/* Print Styles */
+@import './print.css';
+
 /* Layout Styles */
 .g-section-block section {
   padding-top: 96px;
