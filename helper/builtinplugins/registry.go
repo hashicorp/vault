@@ -40,14 +40,15 @@ import (
 	logicalGcpKms "github.com/hashicorp/vault-plugin-secrets-gcpkms"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalMongoAtlas "github.com/hashicorp/vault-plugin-secrets-mongodbatlas"
+	logicalOpenLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
 	logicalAws "github.com/hashicorp/vault/builtin/logical/aws"
+	logicalBare "github.com/hashicorp/vault/builtin/logical/barebones"
 	logicalCass "github.com/hashicorp/vault/builtin/logical/cassandra"
 	logicalConsul "github.com/hashicorp/vault/builtin/logical/consul"
 	logicalMongo "github.com/hashicorp/vault/builtin/logical/mongodb"
 	logicalMssql "github.com/hashicorp/vault/builtin/logical/mssql"
 	logicalMysql "github.com/hashicorp/vault/builtin/logical/mysql"
 	logicalNomad "github.com/hashicorp/vault/builtin/logical/nomad"
-	logicalOpenLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
 	logicalPki "github.com/hashicorp/vault/builtin/logical/pki"
 	logicalPostgres "github.com/hashicorp/vault/builtin/logical/postgresql"
 	logicalRabbit "github.com/hashicorp/vault/builtin/logical/rabbitmq"
@@ -113,6 +114,7 @@ func newRegistry() *registry {
 			"alicloud":     logicalAlicloud.Factory,
 			"aws":          logicalAws.Factory,
 			"azure":        logicalAzure.Factory,
+			"barebones":    logicalBare.Factory,
 			"cassandra":    logicalCass.Factory, // Deprecated
 			"consul":       logicalConsul.Factory,
 			"gcp":          logicalGcp.Factory,
