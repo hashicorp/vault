@@ -138,6 +138,7 @@ export default [
           'init',
           'key-status',
           'migrate',
+          'raft',
           'rekey',
           'rotate',
           'seal',
@@ -224,8 +225,9 @@ export default [
           'mongodbatlas',
           'mssql',
           'mysql-maria',
-          'postgresql',
           'oracle',
+          'postgresql',
+          'redshift',
           'custom'
         ]
       },
@@ -300,18 +302,6 @@ export default [
   },
   {
     category: 'partnerships'
-  },
-  {
-    category: 'vs',
-    content: [
-      'chef-puppet-etc',
-      'hsm',
-      'dropbox',
-      'consul',
-      'kms',
-      'keywhiz',
-      'custom'
-    ]
   },
   '----------------',
   {

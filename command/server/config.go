@@ -278,6 +278,8 @@ type Telemetry struct {
 	StackdriverLocation string `hcl:"stackdriver_location"`
 	// StackdriverNamespace is the namespace identifier, such as a cluster name.
 	StackdriverNamespace string `hcl:"stackdriver_namespace"`
+	// StackdriverDebugLogs will write additional stackdriver related debug logs to stderr.
+	StackdriverDebugLogs bool `hcl:"stackdriver_debug_logs"`
 }
 
 func (s *Telemetry) GoString() string {
@@ -1127,6 +1129,7 @@ func (c *Config) Sanitized() map[string]interface{} {
 			"stackdriver_project_id":                 c.Telemetry.StackdriverProjectID,
 			"stackdriver_location":                   c.Telemetry.StackdriverLocation,
 			"stackdriver_namespace":                  c.Telemetry.StackdriverNamespace,
+			"stackdriver_debug_logs":                 c.Telemetry.StackdriverDebugLogs,
 		}
 		result["telemetry"] = sanitizedTelemetry
 	}

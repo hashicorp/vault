@@ -276,8 +276,9 @@ github.com/golang/protobuf/ptypes/wrappers
 github.com/golang/snappy
 # github.com/google/go-github v17.0.0+incompatible
 github.com/google/go-github/github
-# github.com/google/go-metrics-stackdriver v0.0.0-20190816035513-b52628e82e2a
+# github.com/google/go-metrics-stackdriver v0.2.0
 github.com/google/go-metrics-stackdriver
+github.com/google/go-metrics-stackdriver/vault
 # github.com/google/go-querystring v1.0.0
 github.com/google/go-querystring/query
 # github.com/google/gofuzz v1.0.0
@@ -662,6 +663,8 @@ github.com/ory/dockertest/docker/types/strslice
 github.com/ory/dockertest/docker/types/versions
 # github.com/patrickmn/go-cache v2.1.0+incompatible
 github.com/patrickmn/go-cache
+# github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5
+github.com/petermattis/goid
 # github.com/pierrec/lz4 v2.2.6+incompatible
 github.com/pierrec/lz4
 github.com/pierrec/lz4/internal/xxh32
@@ -701,6 +704,8 @@ github.com/ryanuber/columnize
 github.com/ryanuber/go-glob
 # github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec
 github.com/samuel/go-zookeeper/zk
+# github.com/sasha-s/go-deadlock v0.2.0
+github.com/sasha-s/go-deadlock
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
 # github.com/shirou/gopsutil v2.19.9+incompatible

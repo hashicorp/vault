@@ -30,8 +30,9 @@ export default [
           'mongodbatlas',
           'mssql',
           'mysql-maria',
+          'oracle',
           'postgresql',
-          'oracle'
+          'redshift'
         ]
       },
       { category: 'gcp' },
