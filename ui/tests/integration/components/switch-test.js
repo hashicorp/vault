@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, find, pauseTest } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 module('Integration | Component | switch', function(hooks) {
@@ -17,10 +17,11 @@ module('Integration | Component | switch', function(hooks) {
     // Template block usage:
     await render(hbs`
       {{#switch}}
-        template block text
+        <span id="test-value" class="has-text-grey">template block text</span>
       {{/switch}}
     `);
-
-    assert.equal(this.element.textContent.trim(), 'template block text');
+    await pauseTest();
+    assert.dom('[data-test-switch-label]').exists('switch label exists');
+    assert.equal(find('#test-value').textContent.trim(), 'template block text', 'yielded text renders');
   });
 });
