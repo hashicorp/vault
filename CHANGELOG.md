@@ -1,34 +1,9 @@
-## Next
+## 1.4 RC1 (March 19th, 2020)
 
 CHANGES:
 
 * cli: The raft configuration command has been renamed to list-peers to avoid
   confusion.
-
-IMPROVEMENTS:
-
-* auth/azure: subscription ID, resource group, vm and vmss names are now stored in alias metadata [[GH-30](https://github.com/hashicorp/vault-plugin-auth-azure/pull/30)]
-* auth/jwt: add optional client_nonce to authorization flow [[GH-104](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/104)]
-* prometheus: improve performance with high volume of metrics updates [[GH-8507](https://github.com/hashicorp/vault/pull/8507)]
-* storage/raft: Fix a potential deadlock that could occure on leadership transition [[GH-8547](https://github.com/hashicorp/vault/pull/8547)]
-* storage/raft: Refresh TLS keyring on snapshot restore [[GH-8546](https://github.com/hashicorp/vault/pull/8546)]
-* ui: Update transit actions to codeblocks & automatically encode plaintext unless indicated [[GH-8462](https://github.com/hashicorp/vault/pull/8462)]
-* ui: Display the results of transit key actions in a modal window [[GH-8462](https://github.com/hashicorp/vault/pull/8575)]
-* ui: Transit key version styling updates & ability to copy key from dropdown [[GH-8480](https://github.com/hashicorp/vault/pull/8480)]
-
-
-BUG FIXES:
-
-* auth/jwt: Use lower case role names for `default_role` to match the `role` case convention [[GH-100](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/100)]
-* identity: Fix incorrect caching of identity token JWKS responses [[GH-8412](https://github.com/hashicorp/vault/pull/8412)]
-* metrics/stackdriver: Fix issue that prevents the stackdriver metrics library to create unnecessary stackdriver descriptors [[GH-7928](https://github.com/hashicorp/vault/pull/8073)]
-* ui: Show Error messages on Auth Configuration page when you hit permission errors [[GH-8500](https://github.com/hashicorp/vault/pull/8500)]
-* ui: Remove duplicate form inputs for the GitHub config [[GH-8519](https://github.com/hashicorp/vault/pull/8519)]
-* ui: Correct HMAC capitalization [[GH-8528](https://github.com/hashicorp/vault/pull/8528)]
-* ui: Fix danger message in DR [[GH-8555](https://github.com/hashicorp/vault/pull/8555)]
-* ui: Fix certificate field for LDAP config [[GH-8573](https://github.com/hashicorp/vault/pull/8573)]
-
-## 1.4 Beta1 (February 20th, 2020)
 
 FEATURES:
 
@@ -45,14 +20,17 @@ FEATURES:
 IMPROVEMENTS:
 
 * agent: add option to force the use of the auth-auth token, and ignore the Vault token in the request [[GH-8101](https://github.com/hashicorp/vault/pull/8101)]
+* api: Restore and fix DNS SRV Lookup [[GH-8520](https://github.com/hashicorp/vault/pull/8520)]
 * audit: HMAC http_raw_body in audit log; this ensures that large authenticated Prometheus metrics responses get
   replaced with short HMAC values [[GH-8130](https://github.com/hashicorp/vault/pull/8130)]
 * audit: Generate-root, generate-recovery-token, and generate-dr-operation-token requests and responses are now audited. [[GH-8301](https://github.com/hashicorp/vault/pull/8301)]
 * auth/aws: Reduce the number of simultaneous STS client credentials needed  [[GH-8161](https://github.com/hashicorp/vault/pull/8161)]
+* auth/azure: subscription ID, resource group, vm and vmss names are now stored in alias metadata [[GH-30](https://github.com/hashicorp/vault-plugin-auth-azure/pull/30)]
 * auth/jwt: Additional OIDC callback parameters available for CLI logins [[GH-80](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/80) & [GH-86](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/86)]
 * auth/jwt: Bound claims may be optionally configured using globs [[GH-89](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/89)]
 * auth/jwt: Timeout during OIDC CLI login if process doesn't complete within 2 minutes [[GH-97](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/97)]
 * auth/jwt: Add support for the `form_post` response mode [[GH-98](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/98)]
+* auth/jwt: add optional client_nonce to authorization flow [[GH-104](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/104)]
 * auth/okta: Upgrade okta sdk lib, which should improve handling of groups [[GH-8143](https://github.com/hashicorp/vault/pull/8143)]
 * aws: Add support for v2 of the instance metadata service (see [issue 7924](https://github.com/hashicorp/vault/issues/7924) for all linked PRs)
 * core: Separate out service discovery interface from storage interface to allow
@@ -62,6 +40,7 @@ IMPROVEMENTS:
 * core: Allow tls_min_version to be set to TLS 1.3 [[GH-8305](https://github.com/hashicorp/vault/pull/8305)]
 * cli: Incorrect TLS configuration will now correctly fail [[GH-8025](https://github.com/hashicorp/vault/pull/8025)]
 * identity: Allow specifying a custom `client_id` for identity tokens [[GH-8165](https://github.com/hashicorp/vault/pull/8165)]
+* metrics/prometheus: improve performance with high volume of metrics updates [[GH-8507](https://github.com/hashicorp/vault/pull/8507)]
 * replication (enterprise): Fix race condition causing clusters with high throughput writes to sometimes
   fail to enter streaming-wal mode
 * replication (enterprise): Secondary clusters can now perform an extra gRPC call to all nodes in a primary 
@@ -87,18 +66,26 @@ IMPROVEMENTS:
 * storage/raft: Nodes in the raft cluster can all be given possible leader
   addresses for them to continuously try and join one of them, thus automating
   the process of join to a greater extent [[GH-7856](https://github.com/hashicorp/vault/pull/7856)]
+* storage/raft: Fix a potential deadlock that could occure on leadership transition [[GH-8547](https://github.com/hashicorp/vault/pull/8547)]
+* storage/raft: Refresh TLS keyring on snapshot restore [[GH-8546](https://github.com/hashicorp/vault/pull/8546)]
 * storage/etcd: Bumped etcd client API SDK [[GH-7931](https://github.com/hashicorp/vault/pull/7931) & [GH-4961](https://github.com/hashicorp/vault/pull/4961) & [GH-4349](https://github.com/hashicorp/vault/pull/4349) & [GH-7582](https://github.com/hashicorp/vault/pull/7582)]
 * ui: Make Transit Key actions more prominent [[GH-8304](https://github.com/hashicorp/vault/pull/8304)]
 * ui: Add Core Usage Metrics [[GH-8347](https://github.com/hashicorp/vault/pull/8347)]
 * ui: Add refresh Namespace list on the Namespace dropdown, and redesign of Namespace dropdown menu [[GH-8442](https://github.com/hashicorp/vault/pull/8442)]
+* ui: Update transit actions to codeblocks & automatically encode plaintext unless indicated [[GH-8462](https://github.com/hashicorp/vault/pull/8462)]
+* ui: Display the results of transit key actions in a modal window [[GH-8462](https://github.com/hashicorp/vault/pull/8575)]
+* ui: Transit key version styling updates & ability to copy key from dropdown [[GH-8480](https://github.com/hashicorp/vault/pull/8480)]
 
 BUG FIXES:
 
 * agent: Fix issue where TLS options are ignored for agent template feature [[GH-7889](https://github.com/hashicorp/vault/pull/7889)]
+* auth/jwt: Use lower case role names for `default_role` to match the `role` case convention [[GH-100](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/100)]
 * auth/ldap: Fix a bug where the UPNDOMAIN parameter was wrongly used to lookup the group
   membership of the given user [[GH-6325]](https://github.com/hashicorp/vault/pull/8333)
 * cli: Support autocompletion for nested mounts [[GH-8303](https://github.com/hashicorp/vault/pull/8303)]
 * cli: Fix CLI namespace autocompletion [[GH-8315](https://github.com/hashicorp/vault/pull/8315)]
+* identity: Fix incorrect caching of identity token JWKS responses [[GH-8412](https://github.com/hashicorp/vault/pull/8412)]
+* metrics/stackdriver: Fix issue that prevents the stackdriver metrics library to create unnecessary stackdriver descriptors [[GH-8073](https://github.com/hashicorp/vault/pull/8073)]
 * replication: Fix issue causing cubbyholes in namespaces on performance secondaries to not work.
 * seal (enterprise): Fix seal migration when transactional seal wrap backend is in use.
 * secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [[GH-8282](https://github.com/hashicorp/vault/pull/8282)]
@@ -116,6 +103,12 @@ BUG FIXES:
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
 * ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
 
+## 1.3.4 (March 19th, 2020)
+
+SECURITY:
+
+* A vulnerability was identified in Vault and Vault Enterprise such that, under certain circumstances,  an Entity's Group membership may inadvertently include Groups the Entity no longer has permissions to. This vulnerability, CVE-2020-10660, affects Vault and Vault Enterprise versions 0.9.0 and newer, and is fixed in 1.3.4.
+* A vulnerability was identified in Vault Enterprise such that, under certain circumstances, existing nested-path policies may give access to Namespaces created after-the-fact. This vulnerability, CVE-2020-10661, affects Vault Enterprise versions 0.11 and newer, and is fixed in 1.3.4.
 
 ## 1.3.3 (March 5th, 2020)
 
@@ -132,6 +125,11 @@ BUG FIXES:
 * ui: Fix missing License menu item [[GH-8230](https://github.com/hashicorp/vault/pull/8230)]
 * ui: Fix bug where default auth method on login is defaulted to auth method that is listing-visibility=unauth instead of “other” [[GH-8218](https://github.com/hashicorp/vault/pull/8218)]
 * ui: Fix bug where KMIP details were not shown in the UI Wizard [[GH-8255](https://github.com/hashicorp/vault/pull/8255)]
+* ui: Show Error messages on Auth Configuration page when you hit permission errors [[GH-8500](https://github.com/hashicorp/vault/pull/8500)]
+* ui: Remove duplicate form inputs for the GitHub config [[GH-8519](https://github.com/hashicorp/vault/pull/8519)]
+* ui: Correct HMAC capitalization [[GH-8528](https://github.com/hashicorp/vault/pull/8528)]
+* ui: Fix danger message in DR [[GH-8555](https://github.com/hashicorp/vault/pull/8555)]
+* ui: Fix certificate field for LDAP config [[GH-8573](https://github.com/hashicorp/vault/pull/8573)]
 
 ## 1.3.2 (January 22nd, 2020)
 
