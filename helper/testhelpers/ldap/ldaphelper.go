@@ -47,7 +47,7 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 		cfg.BindDN = "cn=admin,dc=planetexpress,dc=com"
 		cfg.BindPassword = "GoodNewsEveryone"
 		cfg.GroupDN = "ou=people,dc=planetexpress,dc=com"
-		cfg.GroupAttr = "memberOf"
+		cfg.GroupAttr = "cn"
 		cfg.RequestTimeout = 60
 		conn, err := client.DialLDAP(cfg)
 		if err != nil {
