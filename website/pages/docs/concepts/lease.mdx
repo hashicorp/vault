@@ -31,7 +31,7 @@ example, with the [AWS secrets engine](/docs/secrets/aws), the
 access keys will be deleted from AWS the moment a lease is revoked. This
 renders the access keys invalid from that point forward.
 
-Revocation can happen manually via the API, via the `vault revoke` cli command,
+Revocation can happen manually via the API, via the `vault lease revoke` cli command,
 or automatically by Vault. When a lease is expired, Vault will automatically
 revoke that lease. When a token is revoked, Vault will revoke all leases that
 were created using that token.
@@ -43,7 +43,7 @@ lease duration; see the documentation for more information.
 ## Lease IDs
 
 When reading a dynamic secret, such as via `vault read`, Vault always returns a
-`lease_id`. This is the ID used with commands such as `vault renew` and `vault revoke` to manage the lease of the secret.
+`lease_id`. This is the ID used with commands such as `vault lease renew` and `vault lease revoke` to manage the lease of the secret.
 
 ## Lease Durations and Renewal
 
