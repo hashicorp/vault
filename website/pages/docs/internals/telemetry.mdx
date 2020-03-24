@@ -105,7 +105,8 @@ These metrics represent runtime aspects of the running Vault instance.
 | `vault.runtime.malloc_count`      | Cumulative count of allocated heap objects                                                                                                                   | objects    | gauge   |
 | `vault.runtime.num_goroutines`    | Number of goroutines. This serves as a general system load indicator worth establishing a baseline and thresholds for alerting.                              | goroutines | gauge   |
 | `vault.runtime.sys_bytes`         | Number of bytes allocated to Vault. This includes what is being used by Vault's heap and what has been reclaimed but not given back to the operating system. | bytes      | gauge   |
-| `vault.runtime.total_gc_pause_ns` | The total garbage collector pause time since Vault was last started                                                                                          | ms         | summary |
+| `vault.runtime.total_gc_pause_ns` | The total garbage collector pause time since Vault was last started                                                                                          | ns         | gauge |
+| `vault.runtime.gc_pause_ns` | Total duration of the last garbage collection run | ns | sample |
 | `vault.runtime.total_gc_runs`     | Total number of garbage collection runs since Vault was last started                                                                                         | operations | gauge   |
 
 ## Policy and Token Metrics
