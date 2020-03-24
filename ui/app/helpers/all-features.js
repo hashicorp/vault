@@ -1,15 +1,18 @@
 import { helper as buildHelper } from '@ember/component/helper';
 
 const ALL_FEATURES = [
-  'HSM',
-  'Performance Replication',
+  'Control Groups',
   'DR Replication',
+  'Entropy Augmentation',
+  'HSM',
+  'KMIP',
   'MFA',
+  'Namespaces',
+  'Performance Replication',
+  'Performance Standby',
   'Sentinel',
   'Seal Wrapping',
-  'Control Groups',
-  'Performance Standby',
-  'Namespaces',
+  'Transform Secrets Engine',
 ];
 
 export function allFeatures() {
