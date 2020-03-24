@@ -4,6 +4,7 @@ import { assert } from '@ember/debug';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { set, get, computed } from '@ember/object';
+import { encodeString } from 'vault/utils/b64';
 
 const TRANSIT_PARAMS = {
   hash_algorithm: 'sha2-256',
@@ -25,6 +26,7 @@ const TRANSIT_PARAMS = {
   random_bytes: null,
   signature: null,
   sum: null,
+  encodedBase64: false,
   exportKeyType: null,
   exportKeyVersion: null,
   wrappedToken: null,
@@ -41,12 +43,24 @@ const PARAMS_FOR_ACTION = {
   decrypt: ['ciphertext', 'context', 'nonce'],
   rewrap: ['ciphertext', 'context', 'nonce', 'key_version'],
 };
+const SUCCESS_MESSAGE_FOR_ACTION = {
+  sign: 'Signed your data',
+  // the verify action doesn't trigger a success message
+  hmac: 'Created your hash output',
+  encrypt: 'Created a wrapped token for your data',
+  decrypt: 'Decrypted the data from your token',
+  rewrap: 'Created a new token for your data',
+  datakey: 'Generated your key',
+  export: 'Exported your key',
+};
 export default Component.extend(TRANSIT_PARAMS, {
   store: service(),
+  flashMessages: service(),
 
   // public attrs
   selectedAction: null,
   key: null,
+  isModalActive: false,
 
   onRefresh() {},
   init() {
@@ -135,6 +149,12 @@ export default Component.extend(TRANSIT_PARAMS, {
     this.set('errors', null);
   },
 
+  triggerSuccessMessage(action) {
+    const message = SUCCESS_MESSAGE_FOR_ACTION[action];
+    if (!message) return;
+    this.get('flashMessages').success(message);
+  },
+
   handleSuccess(resp, options, action) {
     let props = {};
     if (resp && resp.data) {
@@ -147,10 +167,12 @@ export default Component.extend(TRANSIT_PARAMS, {
     if (options.wrapTTL) {
       props = assign({}, props, { wrappedToken: resp.wrap_info.token });
     }
+    this.toggleProperty('isModalActive');
     this.setProperties(props);
     if (action === 'rotate') {
       this.get('onRefresh')();
     }
+    this.triggerSuccessMessage(action);
   },
 
   compactData(data) {
@@ -182,10 +204,26 @@ export default Component.extend(TRANSIT_PARAMS, {
       arr.forEach(param => this.set(param, null));
     },
 
+    toggleModal(successMessage) {
+      if (!!successMessage && typeof successMessage === 'string') {
+        this.get('flashMessages').success(successMessage);
+      }
+      this.toggleProperty('isModalActive');
+    },
+
     doSubmit(data, options = {}) {
       const { backend, id } = this.getModelInfo();
       const action = this.get('selectedAction');
-      let payload = data ? this.compactData(data) : null;
+      const { encodedBase64, ...formData } = data || {};
+      if (!encodedBase64) {
+        if (action === 'encrypt' && !!formData.plaintext) {
+          formData.plaintext = encodeString(formData.plaintext);
+        }
+        if ((action === 'hmac' || action === 'verify' || action === 'sign') && !!formData.input) {
+          formData.input = encodeString(formData.input);
+        }
+      }
+      let payload = formData ? this.compactData(formData) : null;
       this.setProperties({
         errors: null,
         result: null,

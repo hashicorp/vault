@@ -217,7 +217,7 @@ func (c *Client) performLdapFilterGroupsSearch(cfg *ConfigEntry, conn Connection
 
 	var renderedQuery bytes.Buffer
 	if err := t.Execute(&renderedQuery, context); err != nil {
-		return nil, errwrap.Wrapf("LDAP search failed due to template parsing error: {{error}}", err)
+		return nil, errwrap.Wrapf("LDAP search failed due to template parsing error: {{err}}", err)
 	}
 
 	if c.Logger.IsDebug() {
@@ -488,6 +488,15 @@ func getTLSConfig(cfg *ConfigEntry, host string) (*tls.Config, error) {
 			return nil, fmt.Errorf("could not append CA certificate")
 		}
 		tlsConfig.RootCAs = caPool
+	}
+	if cfg.ClientTLSCert != "" && cfg.ClientTLSKey != "" {
+		certificate, err := tls.X509KeyPair([]byte(cfg.ClientTLSCert), []byte(cfg.ClientTLSKey))
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to parse client X509 key pair: {{err}}", err)
+		}
+		tlsConfig.Certificates = append(tlsConfig.Certificates, certificate)
+	} else if cfg.ClientTLSCert != "" || cfg.ClientTLSKey != "" {
+		return nil, fmt.Errorf("both client_tls_cert and client_tls_key must be set")
 	}
 	return tlsConfig, nil
 }

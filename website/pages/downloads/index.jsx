@@ -14,16 +14,16 @@ export default function DownloadsPage({ downloadData }) {
         version={VERSION}
         downloads={downloadData}
         prerelease={{
-          type: 'beta release',
+          type: 'release candidate',
           name: '1.4.0',
-          version: '1.4.0-beta1'
+          version: '1.4.0-rc1'
         }}
       />
     </div>
   )
 }
 
-export async function unstable_getStaticProps() {
+export async function getStaticProps() {
   return fetch(`https://releases.hashicorp.com/vault/${VERSION}/index.json`)
     .then(r => r.json())
     .then(r => {
@@ -35,4 +35,15 @@ export async function unstable_getStaticProps() {
       }, {})
     })
     .then(r => ({ props: { downloadData: r } }))
+    .catch(() => {
+      throw new Error(
+        `--------------------------------------------------------
+        Unable to resolve version ${VERSION} on releases.hashicorp.com from link
+        <https://releases.hashicorp.com/vault/${VERSION}/index.json>. Usually this
+        means that the specified version has not yet been released. The downloads page
+        version can only be updated after the new version has been released, to ensure
+        that it works for all users.
+        ----------------------------------------------------------`
+      )
+    })
 }

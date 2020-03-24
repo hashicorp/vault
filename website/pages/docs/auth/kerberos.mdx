@@ -143,7 +143,8 @@ $ vault login -method=kerberos \
     service=HTTP/my-service \
     realm=MATRIX.LAN \
     keytab_path=/etc/krb5/krb5.keytab  \
-    krb5conf_path=/etc/krb5.conf
+    krb5conf_path=/etc/krb5.conf \
+    disable_fast_negotiation=false
 ```
 
 - `krb5conf_path` is the path to a valid `krb5.conf` file describing how to
@@ -157,6 +158,11 @@ $ vault login -method=kerberos \
   gaining a SPNEGO token. This service must exist in LDAP.
 - `realm` is the name of the Kerberos realm. This realm must match the UPNDomain
   configured on the LDAP connection. This check is case-sensitive.
+- `disable_fast_negotiation` is for disabling the Kerberos auth method's default
+  of using FAST negotiation. FAST is a pre-authentication framework for Kerberos.
+  It includes a mechanism for tunneling pre-authentication exchanges using armoured
+  KDC messages. FAST provides increased resistance to passive password guessing attacks.
+  Some common Kerberos implementations do not support FAST negotiation.
 
 ## Troubleshooting
 

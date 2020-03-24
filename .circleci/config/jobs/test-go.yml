@@ -1,6 +1,7 @@
 executor: go-machine
 parallelism: 2
 steps:
+  - check-branch-name
   - setup-go
   - checkout
   - go_test

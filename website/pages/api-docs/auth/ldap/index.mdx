@@ -47,6 +47,10 @@ This endpoint configures the LDAP auth method.
   verification - insecure, use with caution!
 - `certificate` `(string: "")` – CA certificate to use when verifying LDAP server
   certificate, must be x509 PEM encoded.
+- `client_tls_cert` `(string "")` - Client certificate to provide to the LDAP
+  server, must be x509 PEM encoded (optional).
+- `client_tls_key` `(string "")` - Client certificate key to provide to the LDAP
+  server, must be x509 PEM encoded (optional).
 - `binddn` `(string: "")` – Distinguished name of object to bind when performing
   user search. Example: `cn=vault,ou=Users,dc=example,dc=com`
 - `bindpass` `(string: "")` – Password to use along with `binddn` when performing
@@ -63,6 +67,9 @@ This endpoint configures the LDAP auth method.
   string for the authenticating user. The constructed UPN will appear as
   `[username]@UPNDomain`. Example: `example.com`, which will cause vault to bind
   as `username@example.com`.
+- `anonymous_group_search` `(bool: false)` - Use anonymous binds when performing
+  LDAP group searches (note: even when `true`, the initial credentials will still
+  be used for the initial connection test).
 - `groupfilter` `(string: "")` – Go template used when constructing the group
   membership query. The template can access the following context variables:
   \[`UserDN`, `Username`\]. The default is

@@ -10,7 +10,6 @@ import { ConsentManager, open } from '@hashicorp/react-consent-manager'
 import consentManagerConfig from '../lib/consent-manager-config'
 import bugsnagClient from '../lib/bugsnag'
 import Error from './_error'
-import subnavLinks from '../data/subnav'
 
 Router.events.on('routeChangeStart', NProgress.start)
 Router.events.on('routeChangeError', NProgress.done)
@@ -36,21 +35,17 @@ class NextApp extends App {
       }
     }
 
-    return { pageProps, path: ctx.asPath }
+    return { pageProps }
   }
 
   render() {
-    const { Component, pageProps, path } = this.props
+    const { Component, pageProps } = this.props
 
     return (
       <ErrorBoundary FallbackComponent={Error}>
         <DefaultHeadTags />
         <MegaNav product="Vault" />
-        <ProductSubnav
-          links={subnavLinks}
-          currentPath={path}
-          rootUrl="vaultproject.io"
-        />
+        <ProductSubnav />
         <Component {...pageProps} />
         <Footer openConsentManager={open} />
         <ConsentManager {...consentManagerConfig} />

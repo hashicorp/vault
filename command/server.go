@@ -26,6 +26,7 @@ import (
 	"github.com/armon/go-metrics/datadog"
 	"github.com/armon/go-metrics/prometheus"
 	stackdriver "github.com/google/go-metrics-stackdriver"
+	stackdrivervault "github.com/google/go-metrics-stackdriver/vault"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
@@ -2457,9 +2458,12 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 			return nil, fmt.Errorf("Failed to create stackdriver client: %v", err)
 		}
 		sink := stackdriver.NewSink(client, &stackdriver.Config{
-			ProjectID: telConfig.StackdriverProjectID,
-			Location:  telConfig.StackdriverLocation,
-			Namespace: telConfig.StackdriverNamespace,
+			LabelExtractor: stackdrivervault.Extractor,
+			Bucketer:       stackdrivervault.Bucketer,
+			ProjectID:      telConfig.StackdriverProjectID,
+			Location:       telConfig.StackdriverLocation,
+			Namespace:      telConfig.StackdriverNamespace,
+			DebugLogs:      telConfig.StackdriverDebugLogs,
 		})
 		fanout = append(fanout, sink)
 	}

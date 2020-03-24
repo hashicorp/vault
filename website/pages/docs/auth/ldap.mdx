@@ -104,6 +104,8 @@ management tool.
 - `starttls` (bool, optional) - If true, issues a `StartTLS` command after establishing an unencrypted connection.
 - `insecure_tls` - (bool, optional) - If true, skips LDAP server SSL certificate verification - insecure, use with caution!
 - `certificate` - (string, optional) - CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded.
+- `client_tls_cert` - (string, optional) - Client certificate to provide to the LDAP server, must be x509 PEM encoded.
+- `client_tls_key` - (string, optional) - Client certificate key to provide to the LDAP server, must be x509 PEM encoded.
 
 ### Binding parameters
 
@@ -122,6 +124,7 @@ There are two alternate methods of resolving the user object used to authenticat
 - `userdn` (string, optional) - Base DN under which to perform user search. Example: `ou=Users,dc=example,dc=com`
 - `userattr` (string, optional) - Attribute on user attribute object matching the username passed when authenticating. Examples: `sAMAccountName`, `cn`, `uid`
 - `deny_null_bind` (bool, optional) - This option prevents users from bypassing authentication when providing an empty password. The default is `true`.
+- `anonymous_group_search` (bool, optional) - Use anonymous binds when performing LDAP group searches. Defaults to `false`.
 
 #### Binding - User Principal Name (AD)
 

@@ -14,6 +14,7 @@ export default [
     content: [
       'architecture',
       'high-availability',
+      'integrated-storage',
       'security',
       'telemetry',
       'token',
@@ -137,6 +138,7 @@ export default [
           'init',
           'key-status',
           'migrate',
+          'raft',
           'rekey',
           'rotate',
           'seal',
@@ -223,8 +225,9 @@ export default [
           'mongodbatlas',
           'mssql',
           'mysql-maria',
-          'postgresql',
           'oracle',
+          'postgresql',
+          'redshift',
           'custom'
         ]
       },
@@ -300,18 +303,6 @@ export default [
   {
     category: 'partnerships'
   },
-  {
-    category: 'vs',
-    content: [
-      'chef-puppet-etc',
-      'hsm',
-      'dropbox',
-      'consul',
-      'kms',
-      'keywhiz',
-      'custom'
-    ]
-  },
   '----------------',
   {
     category: 'platform',
@@ -331,14 +322,15 @@ export default [
                   'standalone-tls',
                   'standalone-audit',
                   'ha-with-consul',
-                  'kubernetes-auth'
+                  'kubernetes-auth',
+                  'enterprise-best-practice'
                 ]
               },
             ],
           },
           {
             category: 'injector',
-            content: ['installation', 'examples']
+            content: ['annotations', 'installation', 'examples']
           }
         ]
       },

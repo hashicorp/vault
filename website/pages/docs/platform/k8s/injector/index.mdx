@@ -168,6 +168,8 @@ password: A1a-BUEuQR52oAqPrP1J
 username: v-kubernet-pg-app-q0Z7WPfVNqqTJuoDqCTY-1576529094
 ```
 
+~> Some secrets such as KV are stored in maps.  Their data can be accessed using `.Data.data.<NAME>`
+
 #### Vault Agent Configuration Map
 
 For advanced use cases, it may be required to define Vault Agent configuration
@@ -181,91 +183,3 @@ The configuration map must contain either one or both of the following files:
 - `config.hcl` used by the sidecar container. This must have `exit_after_auth` set to `false`.
 
 An example of mounting a Vault Agent configmap [can be found here](/docs/platform/k8s/injector/examples#configmap-example).
-
-## Annotations
-
-- `vault.hashicorp.com/agent-inject` - configures whether injection is explicitly
-  enabled or disabled for a pod. This should be set to a `true` or `false` value.
-  Defaults to `false`.
-
-- `vault.hashicorp.com/agent-inject-status` - blocks further mutations
-  by adding the value `injected` to the pod after a successful mutation.
-
-- `vault.hashicorp.com/agent-inject-secret` - configures Vault Agent
-  to retrieve the secrets from Vault required by the container. The name of the
-  secret is any unique string after `vault.hashicorp.com/agent-inject-secret-`,
-  such as `vault.hashicorp.com/agent-inject-secret-foobar`. The value is the path
-  in Vault where the secret is located.
-
-- `vault.hashicorp.com/agent-inject-template` - configures Vault Agent
-  what template to use for rendering the secrets. The name of the template is any
-  unique string after `vault.hashicorp.com/agent-inject-template-`, such as
-  `vault.hashicorp.com/agent-inject-template-foobar`. This should map to the same
-  unique value provided in `vault.hashicorp.com/agent-inject-secret-`. If not provided,
-  a default generic template is used.
-
-- `vault.hashicorp.com/auth-path` - configures the auth path for the Kubernetes 
-  auth method.  Defaults to `kubernetes`.
-
-- `vault.hashicorp.com/role` - configures the Vault role used by the Vault Agent
-  auto-auth method. Required when `vault.hashicorp.com/agent-configmap` is not set.
-
-- `vault.hashicorp.com/agent-configmap` - name of the configuration map where Vault
-  Agent configuration file and templates can be found.
-
-- `vault.hashicorp.com/agent-pre-populate` - configures whether an init container
-  is included to pre-populate the shared memory volume with secrets prior to the
-  containers starting.
-
-- `vault.hashicorp.com/agent-pre-populate-only` - configures whether an init container
-  is the only injected container. If true, no sidecar container will be injected
-  at runtime of the pod.
-
-- `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
-  value overrides the default image configured in the controller and is usually
-  not needed. Defaults to `vault:1.3.1`.
-
-- `vault.hashicorp.com/service` - name of the Vault service to use. This value
-  overrides the default service configured in the controller and is usually not
-  needed.
-
-- `vault.hashicorp.com/agent-limits-cpu` - configures the CPU limits on the Vault
-  Agent containers. Defaults to `500m`.
-
-- `vault.hashicorp.com/agent-limits-mem` - configures the memory limits on the Vault
-  Agent containers. Defaults to `128Mi`.
-
-- `vault.hashicorp.com/agent-requests-cpu` - configures the CPU requests on the
-  Vault Agent containers. Defaults to `250m`.
-
-- `vault.hashicorp.com/agent-requests-mem` - configures the memory requests on the
-  Vault Agent containers. Defaults to `64Mi`.
-
-- `vault.hashicorp.com/tls-secret` - name of the Kubernetes secret containing TLS
-  Client and CA certificates and keys. This is mounted to `/vault/tls`.
-
-- `vault.hashicorp.com/tls-server-name` - name of the Vault server to verify the
-  authenticity of the server when communicating with Vault over TLS.
-
-- `vault.hashicorp.com/tls-skip-verify` - if true, configures the Vault Agent to
-  skip verification of Vault's TLS certificate. It's not recommended to set this
-  value to true in a production environment.
-
-- `vault.hashicorp.com/ca-cert` - path of the CA certificate used to verify Vault's
-  TLS.
-
-- `vault.hashicorp.com/ca-key` - path of the CA public key used to verify Vault's
-  TLS.
-
-- `vault.hashicorp.com/client-cert` - path of the client certificate used when
-  communicating with Vault via mTLS.
-
-- `vault.hashicorp.com/client-key` - path of the client public key used when communicating
-  with Vault via mTLS.
-
-- `vault.hashicorp.com/client-max-retries` - configures number of Vault Agent retry
-  attempts when 5xx errors are encountered. Defaults to 2.
-
-- `vault.hashicorp.com/client-timeout` - configures the request timeout threshold,
-  in seconds, of the Vault Agent when communicating with Vault. Defaults to `60s`
-  and accepts value types of `60`, `60s` or `1m`.
