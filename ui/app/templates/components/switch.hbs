@@ -1,9 +1,0 @@
-{{input
-  id=this.inputId
-  type="checkbox"
-  checked=isChecked
-  change=(action "handleChange" value='target.checked')
-  class=inputClasses
-  disabled=this.disabled
-}}
-<label data-test-switch-label="switch" for={{this.inputId}}>{{yield}}</label>
