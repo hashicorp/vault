@@ -14,9 +14,9 @@ export default function DownloadsPage({ downloadData }) {
         version={VERSION}
         downloads={downloadData}
         prerelease={{
-          type: 'beta release',
+          type: 'release candidate',
           name: '1.4.0',
-          version: '1.4.0-beta1'
+          version: '1.4.0-rc1'
         }}
       />
     </div>
