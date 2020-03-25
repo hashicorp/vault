@@ -12,7 +12,6 @@ const ALL_FEATURES = [
   'Performance Standby',
   'Sentinel',
   'Seal Wrapping',
-  'Transform Secrets Engine',
 ];
 
 export function allFeatures() {
