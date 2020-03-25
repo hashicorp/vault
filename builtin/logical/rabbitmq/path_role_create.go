@@ -3,10 +3,9 @@ package rabbitmq
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 
-	"github.com/hashicorp/errwrap"
-	multierror "github.com/hashicorp/go-multierror"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	rabbithole "github.com/michaelklishin/rabbit-hole"
@@ -69,27 +68,63 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Register the generated credentials in the backend, with the RabbitMQ server
-	if _, err = client.PutUser(username, rabbithole.UserSettings{
+	resp, err := client.PutUser(username, rabbithole.UserSettings{
 		Password: password,
 		Tags:     role.Tags,
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, fmt.Errorf("failed to create a new user with the generated credentials")
 	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			b.Logger().Error(fmt.Sprintf("unable to close response body: %s", err))
+		}
+	}()
+	if !isIn200s(resp.StatusCode) {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return nil, fmt.Errorf("error putting user %s - %d: %s", username, resp.StatusCode, body)
+	}
+
+	success := false
+	defer func() {
+		if success {
+			return
+		}
+		// Delete the user because it's in an unknown state.
+		resp, err := client.DeleteUser(username)
+		if err != nil {
+			b.Logger().Error(fmt.Sprintf("failed to delete %s: %s", username, err))
+		}
+		if !isIn200s(resp.StatusCode) {
+			body, _ := ioutil.ReadAll(resp.Body)
+			b.Logger().Error(fmt.Sprintf("error deleting %s - %d: %s", username, resp.StatusCode, body))
+		}
+	}()
 
 	// If the role had vhost permissions specified, assign those permissions
 	// to the created username for respective vhosts.
 	for vhost, permission := range role.VHosts {
-		if _, err := client.UpdatePermissionsIn(vhost, username, rabbithole.Permissions{
-			Configure: permission.Configure,
-			Write:     permission.Write,
-			Read:      permission.Read,
-		}); err != nil {
-			outerErr := errwrap.Wrapf(fmt.Sprintf("failed to update permissions to the %q user: {{err}}", username), err)
-			// Delete the user because it's in an unknown state
-			if _, rmErr := client.DeleteUser(username); rmErr != nil {
-				return nil, multierror.Append(errwrap.Wrapf("failed to delete user: {{err}}", rmErr), outerErr)
+		if err := func() error {
+			resp, err := client.UpdatePermissionsIn(vhost, username, rabbithole.Permissions{
+				Configure: permission.Configure,
+				Write:     permission.Write,
+				Read:      permission.Read,
+			})
+			if err != nil {
+				return err
 			}
-			return nil, outerErr
+			defer func() {
+				if err := resp.Body.Close(); err != nil {
+					b.Logger().Error(fmt.Sprintf("unable to close response body: %s", err))
+				}
+			}()
+			if !isIn200s(resp.StatusCode) {
+				body, _ := ioutil.ReadAll(resp.Body)
+				return fmt.Errorf("error updating vhost permissions for %s - %d: %s", vhost, resp.StatusCode, body)
+			}
+			return nil
+		}(); err != nil {
+			return nil, err
 		}
 	}
 
@@ -97,23 +132,34 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	// to the created username for respective vhosts and exchange.
 	for vhost, permissions := range role.VHostTopics {
 		for exchange, permission := range permissions {
-			if _, err := client.UpdateTopicPermissionsIn(vhost, username, rabbithole.TopicPermissions{
-				Exchange: exchange,
-				Write:    permission.Write,
-				Read:     permission.Read,
-			}); err != nil {
-				outerErr := errwrap.Wrapf(fmt.Sprintf("failed to update topic permissions to the %q user: {{err}}", username), err)
-				// Delete the user because it's in an unknown state
-				if _, rmErr := client.DeleteUser(username); rmErr != nil {
-					return nil, multierror.Append(errwrap.Wrapf("failed to delete user: {{err}}", rmErr), outerErr)
+			if err := func() error {
+				resp, err := client.UpdateTopicPermissionsIn(vhost, username, rabbithole.TopicPermissions{
+					Exchange: exchange,
+					Write:    permission.Write,
+					Read:     permission.Read,
+				})
+				if err != nil {
+					return err
 				}
-				return nil, outerErr
+				defer func() {
+					if err := resp.Body.Close(); err != nil {
+						b.Logger().Error(fmt.Sprintf("unable to close response body: %s", err))
+					}
+				}()
+				if !isIn200s(resp.StatusCode) {
+					body, _ := ioutil.ReadAll(resp.Body)
+					return fmt.Errorf("error updating vhost permissions for %s - %d: %s", vhost, resp.StatusCode, body)
+				}
+				return nil
+			}(); err != nil {
+				return nil, err
 			}
 		}
 	}
+	success = true
 
 	// Return the secret
-	resp := b.Secret(SecretCredsType).Response(map[string]interface{}{
+	response := b.Secret(SecretCredsType).Response(map[string]interface{}{
 		"username": username,
 		"password": password,
 	}, map[string]interface{}{
@@ -127,11 +173,15 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	if lease != nil {
-		resp.Secret.TTL = lease.TTL
-		resp.Secret.MaxTTL = lease.MaxTTL
+		response.Secret.TTL = lease.TTL
+		response.Secret.MaxTTL = lease.MaxTTL
 	}
 
-	return resp, nil
+	return response, nil
+}
+
+func isIn200s(respStatus int) bool {
+	return respStatus >= 200 && respStatus < 300
 }
 
 const pathRoleCreateReadHelpSyn = `
