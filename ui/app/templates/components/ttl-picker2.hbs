@@ -6,14 +6,13 @@
   @onChange={{action (mut enableTTL)}}
   @checked={{enableTTL}}
 >
-  <span class="is-strong is-large">Time to live (TTL)</span><br/>
+  <span class="is-strong is-large">{{label}}</span><br/>
   <span class="has-text-grey">{{helperText}}</span>
 </Toggle>
 {{#if enableTTL}}
-  <div>
-    <h1>yo</h1>
+  <div class="has-padding">
     <div class="field is-grouped">
-      <div class="control is-expanded">
+      <div class="control is-marginless">
         <input
           data-test-ttl-value
           value={{time}}
@@ -21,19 +20,24 @@
           type="text"
           name="time"
           class="input"
-          oninput={{action (action 'changedValue' 'time') value="target.value"}}
+          oninput={{action (action 'updateTime') value="target.value"}}
           pattern="[0-9]*"
         />
       </div>
-      <div class="control is-expanded">
+      <div class="control">
         <Select
           @name='ttl-unit'
           @options={{unitOptions}}
-          @onChange={{action 'handleChange' 'unit'}}
+          @onChange={{action 'updateUnit'}}
           @selectedValue={{unit}}
           @isFullwidth={{true}}
           />
       </div>
     </div>
   </div>
+  {{yield}}
 {{/if}}
+<pre>
+  Seconds: {{seconds}}
+  Time: {{time}} {{unit}}
+</pre>

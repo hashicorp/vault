@@ -14,11 +14,39 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 
+const TEMP_timeUpdatedRecently = false;
+
+const convertToSeconds = (time, unit) => {
+  const toSeconds = {
+    s: 1,
+    m: 60,
+    h: 3600,
+    d: 86400,
+  };
+
+  console.log('CONVERT TO SECONDS', time, unit);
+  return time * toSeconds[unit];
+};
+
+const convertFromSeconds = (seconds, unit) => {
+  const fromSeconds = {
+    s: 1,
+    m: 60,
+    h: 3600,
+    d: 86400,
+  };
+  const cfromSeconds = seconds / fromSeconds[unit];
+  console.log(seconds, unit);
+  console.log({ cfromSeconds });
+  return cfromSeconds;
+};
+
 export default Component.extend({
-  enableTTL: false,
+  enableTTL: true,
+  time: 30,
+  unit: 'm',
   unitOptions: computed(function() {
     return [
-      { label: 'foo', value: 'bar' },
       { label: 'seconds', value: 's' },
       { label: 'minutes', value: 'm' },
       { label: 'hours', value: 'h' },
@@ -26,25 +54,36 @@ export default Component.extend({
     ];
   }),
 
-  seconds: computed('time', 'unit', function() {
-    return this.convertToSeconds(this.time, this.unit);
-  }),
+  recalculateTime(newUnit) {
+    // get converted value from current seconds value
+    const newTime = convertFromSeconds(this.seconds, newUnit);
+    this.setProperties({
+      time: newTime,
+      unit: newUnit,
+    });
+  },
 
-  helperTextUnset: 'Allow tokens to be used indefinitely',
-  helperTextSet: 'Disable the use of the token after',
+  seconds: computed('time', 'unit', function() {
+    return convertToSeconds(this.time, this.unit);
+  }),
+  label: 'Time to live (TTL)',
+  helperTextDisabled: 'Allow tokens to be used indefinitely',
+  helperTextEnabled: 'Disable the use of the token after',
   helperText: computed('enableTTL', 'helperTextUnset', 'helperTextSet', function() {
-    return this.enableTTL ? this.helperTextSet : this.helperTextUnset;
+    return this.enableTTL ? this.helperTextEnabled : this.helperTextDisabled;
   }),
   errorMessage: null,
   actions: {
-    toggleTTL(value) {
-      this.set('enableTTL', value);
+    updateUnit(newUnit) {
+      console.log(newUnit);
+      if (TEMP_timeUpdatedRecently) {
+        this.set('unit', newUnit);
+      } else {
+        this.recalculateTime(newUnit);
+      }
     },
-    changedValue(data) {
-      console.log({ data });
-    },
-    handleChange(unit) {
-      console.log({ unit });
+    updateTime(newTime) {
+      this.set('time', newTime);
     },
   },
 });
