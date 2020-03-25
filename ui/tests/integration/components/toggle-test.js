@@ -47,4 +47,18 @@ module('Integration | Component | toggle', function(hooks) {
     `);
     assert.dom('.toggle.is-small').exists('toggle has is-small class');
   });
+
+  test('it sets the id of the input correctly', async function(assert) {
+    this.set('handler', sinon.spy(handler));
+    await render(hbs`
+    <Toggle
+      @onChange={{handler}}
+      @name="my toggle"
+    >
+      Label
+    </Toggle>
+    `);
+    assert.dom('#toggle-mytoggle').exists('input has correct ID');
+    assert.dom('label').hasAttribute('for', 'toggle-mytoggle', 'label has correct for attribute');
+  });
 });
