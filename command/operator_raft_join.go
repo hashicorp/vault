@@ -13,23 +13,24 @@ var _ cli.Command = (*OperatorRaftJoinCommand)(nil)
 var _ cli.CommandAutocomplete = (*OperatorRaftJoinCommand)(nil)
 
 type OperatorRaftJoinCommand struct {
-	flagRaftRetry        bool
+	flagRetry            bool
 	flagLeaderCACert     string
 	flagLeaderClientCert string
 	flagLeaderClientKey  string
+	flagNonVoter         bool
 	*BaseCommand
 }
 
 func (c *OperatorRaftJoinCommand) Synopsis() string {
-	return "Joins a node to the raft cluster"
+	return "Joins a node to the Raft cluster"
 }
 
 func (c *OperatorRaftJoinCommand) Help() string {
 	helpText := `
 Usage: vault operator raft join [options] <leader-api-addr>
 
-  Join the current node as a peer to the raft cluster by providing the address
-  of the raft leader node.
+  Join the current node as a peer to the Raft cluster by providing the address
+  of the Raft leader node.
 
 	  $ vault operator raft join "http://127.0.0.2:8200"
 
@@ -47,28 +48,35 @@ func (c *OperatorRaftJoinCommand) Flags() *FlagSets {
 		Name:       "leader-ca-cert",
 		Target:     &c.flagLeaderCACert,
 		Completion: complete.PredictNothing,
-		Usage:      "CA cert to communicate with raft leader.",
+		Usage:      "CA cert to communicate with Raft leader.",
 	})
 
 	f.StringVar(&StringVar{
 		Name:       "leader-client-cert",
 		Target:     &c.flagLeaderClientCert,
 		Completion: complete.PredictNothing,
-		Usage:      "Client cert to to authenticate to raft leader.",
+		Usage:      "Client cert to to authenticate to Raft leader.",
 	})
 
 	f.StringVar(&StringVar{
 		Name:       "leader-client-key",
 		Target:     &c.flagLeaderClientKey,
 		Completion: complete.PredictNothing,
-		Usage:      "Client key to to authenticate to raft leader.",
+		Usage:      "Client key to to authenticate to Raft leader.",
 	})
 
 	f.BoolVar(&BoolVar{
 		Name:    "retry",
-		Target:  &c.flagRaftRetry,
+		Target:  &c.flagRetry,
 		Default: false,
-		Usage:   "Continuously retry joining the raft cluster upon failures.",
+		Usage:   "Continuously retry joining the Raft cluster upon failures.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "non-voter",
+		Target:  &c.flagNonVoter,
+		Default: false,
+		Usage:   "(Enterprise-only) This flag is used to make the server not participate in the Raft quorum, and have it only receive the data replication stream. This can be used to add read scalability to a cluster in cases where a high volume of reads to servers are needed.",
 	})
 
 	return set
@@ -117,10 +125,11 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 		LeaderCACert:     c.flagLeaderCACert,
 		LeaderClientCert: c.flagLeaderClientCert,
 		LeaderClientKey:  c.flagLeaderClientKey,
-		Retry:            c.flagRaftRetry,
+		Retry:            c.flagRetry,
+		NonVoter:         c.flagNonVoter,
 	})
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error joining the node to the raft cluster: %s", err))
+		c.UI.Error(fmt.Sprintf("Error joining the node to the Raft cluster: %s", err))
 		return 2
 	}
 

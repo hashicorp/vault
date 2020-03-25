@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"reflect"
 	"sync"
@@ -14,6 +13,10 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-msgpack/codec"
+)
+
+var (
+	userSnapshotErrorsOnNoData = true
 )
 
 // Return configurations optimized for in-memory
@@ -151,12 +154,18 @@ func (a *testLoggerAdapter) Write(d []byte) (int, error) {
 	return len(d), nil
 }
 
-func newTestLogger(t *testing.T) *log.Logger {
-	return log.New(&testLoggerAdapter{t: t}, "", log.Lmicroseconds)
+func newTestLogger(t *testing.T) hclog.Logger {
+	return hclog.New(&hclog.LoggerOptions{
+		Output: &testLoggerAdapter{t: t},
+		Level:  hclog.DefaultLevel,
+	})
 }
 
-func newTestLoggerWithPrefix(t *testing.T, prefix string) *log.Logger {
-	return log.New(&testLoggerAdapter{t: t, prefix: prefix}, "", log.Lmicroseconds)
+func newTestLoggerWithPrefix(t *testing.T, prefix string) hclog.Logger {
+	return hclog.New(&hclog.LoggerOptions{
+		Output: &testLoggerAdapter{t: t, prefix: prefix},
+		Level:  hclog.DefaultLevel,
+	})
 }
 
 func newTestLeveledLogger(t *testing.T) hclog.Logger {
@@ -185,7 +194,7 @@ type cluster struct {
 	conf             *Config
 	propagateTimeout time.Duration
 	longstopTimeout  time.Duration
-	logger           *log.Logger
+	logger           hclog.Logger
 	startTime        time.Time
 
 	failedLock sync.Mutex
@@ -222,7 +231,7 @@ func (c *cluster) notifyFailed() {
 // thread to block until all goroutines have completed in order to reliably
 // fail tests using this function.
 func (c *cluster) Failf(format string, args ...interface{}) {
-	c.logger.Printf(format, args...)
+	c.logger.Error(fmt.Sprintf(format, args...))
 	c.t.Fail()
 	c.notifyFailed()
 }
@@ -233,7 +242,7 @@ func (c *cluster) Failf(format string, args ...interface{}) {
 // other goroutines created during the test. Calling FailNowf does not stop
 // those other goroutines.
 func (c *cluster) FailNowf(format string, args ...interface{}) {
-	c.logger.Printf(format, args...)
+	c.logger.Error(fmt.Sprintf(format, args...))
 	c.t.FailNow()
 }
 
@@ -254,7 +263,7 @@ func (c *cluster) Close() {
 
 	for _, f := range futures {
 		if err := f.Error(); err != nil {
-			c.FailNowf("[ERR] shutdown future err: %v", err)
+			c.FailNowf("shutdown future err: %v", err)
 		}
 	}
 
@@ -316,7 +325,7 @@ CHECK:
 			c.t.FailNow()
 
 		case <-limitCh:
-			c.FailNowf("[ERR] Timeout waiting for replication")
+			c.FailNowf("timeout waiting for replication")
 
 		case <-ch:
 			for _, fsmRaw := range c.fsms {
@@ -354,7 +363,7 @@ func (c *cluster) pollState(s RaftState) ([]*Raft, uint64) {
 // GetInState polls the state of the cluster and attempts to identify when it has
 // settled into the given state.
 func (c *cluster) GetInState(s RaftState) []*Raft {
-	c.logger.Printf("[INFO] Starting stability test for raft state: %+v", s)
+	c.logger.Info("starting stability test", "raft-state", s)
 	limitCh := time.After(c.longstopTimeout)
 
 	// An election should complete after 2 * max(HeartbeatTimeout, ElectionTimeout)
@@ -411,17 +420,18 @@ func (c *cluster) GetInState(s RaftState) []*Raft {
 			c.t.FailNow()
 
 		case <-limitCh:
-			c.FailNowf("[ERR] Timeout waiting for stable %s state", s)
+			c.FailNowf("timeout waiting for stable %s state", s)
 
 		case <-c.WaitEventChan(filter, 0):
-			c.logger.Printf("[DEBUG] Resetting stability timeout")
+			c.logger.Debug("resetting stability timeout")
 
 		case t, ok := <-timer.C:
 			if !ok {
-				c.FailNowf("[ERR] Timer channel errored")
+				c.FailNowf("timer channel errored")
 			}
-			c.logger.Printf("[INFO] Stable state for %s reached at %s (%d nodes), %s from start of poll, %s from cluster start. Timeout at %s, %s after stability",
-				s, inStateTime, len(inState), inStateTime.Sub(pollStartTime), inStateTime.Sub(c.startTime), t, t.Sub(inStateTime))
+
+			c.logger.Info(fmt.Sprintf("stable state for %s reached at %s (%d nodes), %s from start of poll, %s from cluster start. Timeout at %s, %s after stability",
+				s, inStateTime, len(inState), inStateTime.Sub(pollStartTime), inStateTime.Sub(c.startTime), t, t.Sub(inStateTime)))
 			return inState
 		}
 	}
@@ -431,7 +441,7 @@ func (c *cluster) GetInState(s RaftState) []*Raft {
 func (c *cluster) Leader() *Raft {
 	leaders := c.GetInState(Leader)
 	if len(leaders) != 1 {
-		c.FailNowf("[ERR] expected one leader: %v", leaders)
+		c.FailNowf("expected one leader: %v", leaders)
 	}
 	return leaders[0]
 }
@@ -442,14 +452,14 @@ func (c *cluster) Followers() []*Raft {
 	expFollowers := len(c.rafts) - 1
 	followers := c.GetInState(Follower)
 	if len(followers) != expFollowers {
-		c.FailNowf("[ERR] timeout waiting for %d followers (followers are %v)", expFollowers, followers)
+		c.FailNowf("timeout waiting for %d followers (followers are %v)", expFollowers, followers)
 	}
 	return followers
 }
 
 // FullyConnect connects all the transports together.
 func (c *cluster) FullyConnect() {
-	c.logger.Printf("[DEBUG] Fully Connecting")
+	c.logger.Debug("fully connecting")
 	for i, t1 := range c.trans {
 		for j, t2 := range c.trans {
 			if i != j {
@@ -462,7 +472,7 @@ func (c *cluster) FullyConnect() {
 
 // Disconnect disconnects all transports from the given address.
 func (c *cluster) Disconnect(a ServerAddress) {
-	c.logger.Printf("[DEBUG] Disconnecting %v", a)
+	c.logger.Debug("disconnecting", "address", a)
 	for _, t := range c.trans {
 		if t.LocalAddr() == a {
 			t.DisconnectAll()
@@ -475,7 +485,7 @@ func (c *cluster) Disconnect(a ServerAddress) {
 // Partition keeps the given list of addresses connected but isolates them
 // from the other members of the cluster.
 func (c *cluster) Partition(far []ServerAddress) {
-	c.logger.Printf("[DEBUG] Partitioning %v", far)
+	c.logger.Debug("partitioning", "addresses", far)
 
 	// Gather the set of nodes on the "near" side of the partition (we
 	// will call the supplied list of nodes the "far" side).
@@ -500,7 +510,7 @@ OUTER:
 				t.Disconnect(a)
 			}
 		} else {
-			for a, _ := range near {
+			for a := range near {
 				t.Disconnect(a)
 			}
 		}
@@ -530,15 +540,15 @@ func (c *cluster) EnsureLeader(t *testing.T, expect ServerAddress) {
 				leader = "[none]"
 			}
 			if expect == "" {
-				c.logger.Printf("[ERR] Peer %s sees leader %v expected [none]", r, leader)
+				c.logger.Error("peer sees incorrect leader", "peer", r, "leader", leader, "expected-leader", "[none]")
 			} else {
-				c.logger.Printf("[ERR] Peer %s sees leader %v expected %v", r, leader, expect)
+				c.logger.Error("peer sees incorrect leader", "peer", r, "leader", leader, "expected-leader", expect)
 			}
 			fail = true
 		}
 	}
 	if fail {
-		c.FailNowf("[ERR] At least one peer has the wrong notion of leader")
+		c.FailNowf("at least one peer has the wrong notion of leader")
 	}
 }
 
@@ -559,7 +569,7 @@ CHECK:
 		if len(first.logs) != len(fsm.logs) {
 			fsm.Unlock()
 			if time.Now().After(limit) {
-				c.FailNowf("[ERR] FSM log length mismatch: %d %d",
+				c.FailNowf("FSM log length mismatch: %d %d",
 					len(first.logs), len(fsm.logs))
 			} else {
 				goto WAIT
@@ -570,7 +580,7 @@ CHECK:
 			if bytes.Compare(first.logs[idx], fsm.logs[idx]) != 0 {
 				fsm.Unlock()
 				if time.Now().After(limit) {
-					c.FailNowf("[ERR] FSM log mismatch at index %d", idx)
+					c.FailNowf("FSM log mismatch at index %d", idx)
 				} else {
 					goto WAIT
 				}
@@ -579,7 +589,7 @@ CHECK:
 		if len(first.configurations) != len(fsm.configurations) {
 			fsm.Unlock()
 			if time.Now().After(limit) {
-				c.FailNowf("[ERR] FSM configuration length mismatch: %d %d",
+				c.FailNowf("FSM configuration length mismatch: %d %d",
 					len(first.logs), len(fsm.logs))
 			} else {
 				goto WAIT
@@ -590,7 +600,7 @@ CHECK:
 			if !reflect.DeepEqual(first.configurations[idx], fsm.configurations[idx]) {
 				fsm.Unlock()
 				if time.Now().After(limit) {
-					c.FailNowf("[ERR] FSM configuration mismatch at index %d: %v, %v", idx, first.configurations[idx], fsm.configurations[idx])
+					c.FailNowf("FSM configuration mismatch at index %d: %v, %v", idx, first.configurations[idx], fsm.configurations[idx])
 				} else {
 					goto WAIT
 				}
@@ -613,7 +623,7 @@ WAIT:
 func (c *cluster) getConfiguration(r *Raft) Configuration {
 	future := r.GetConfiguration()
 	if err := future.Error(); err != nil {
-		c.FailNowf("[ERR] failed to get configuration: %v", err)
+		c.FailNowf("failed to get configuration: %v", err)
 		return Configuration{}
 	}
 
@@ -634,7 +644,7 @@ CHECK:
 		otherSet := c.getConfiguration(raft)
 		if !reflect.DeepEqual(peerSet, otherSet) {
 			if time.Now().After(limit) {
-				c.FailNowf("[ERR] peer mismatch: %+v %+v", peerSet, otherSet)
+				c.FailNowf("peer mismatch: %+v %+v", peerSet, otherSet)
 			} else {
 				goto WAIT
 			}
@@ -687,7 +697,7 @@ func makeCluster(t *testing.T, opts *MakeClusterOpts) *cluster {
 	for i := 0; i < opts.Peers; i++ {
 		dir, err := ioutil.TempDir("", "raft")
 		if err != nil {
-			c.FailNowf("[ERR] err: %v ", err)
+			c.FailNowf("err: %v", err)
 		}
 
 		store := NewInmemStore()
@@ -742,18 +752,18 @@ func makeCluster(t *testing.T, opts *MakeClusterOpts) *cluster {
 		if opts.Bootstrap {
 			err := BootstrapCluster(peerConf, logs, store, snap, trans, configuration)
 			if err != nil {
-				c.FailNowf("[ERR] BootstrapCluster failed: %v", err)
+				c.FailNowf("BootstrapCluster failed: %v", err)
 			}
 		}
 
 		raft, err := NewRaft(peerConf, c.fsms[i], logs, store, snap, trans)
 		if err != nil {
-			c.FailNowf("[ERR] NewRaft failed: %v", err)
+			c.FailNowf("NewRaft failed: %v", err)
 		}
 
 		raft.RegisterObserver(NewObserver(c.observationCh, false, nil))
 		if err != nil {
-			c.FailNowf("[ERR] RegisterObserver failed: %v", err)
+			c.FailNowf("RegisterObserver failed: %v", err)
 		}
 		c.rafts = append(c.rafts, raft)
 	}

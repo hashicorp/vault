@@ -59,8 +59,8 @@ Developing Vault
 --------------------
 
 If you wish to work on Vault itself or any of its built-in systems, you'll
-first need [Go](https://www.golang.org) installed on your machine (version
-1.12.1+ is *required*).
+first need [Go](https://www.golang.org) installed on your machine. Go version
+1.13.7+ is *required*.
 
 For local dev first make sure Go is properly installed, including setting up a
 [GOPATH](https://golang.org/doc/code.html#GOPATH). Ensure that `$GOPATH/bin` is in
@@ -79,16 +79,6 @@ put the Vault binary in the `bin` and `$GOPATH/bin` folders:
 
 ```sh
 $ make dev
-...
-$ bin/vault
-...
-```
-
-To compile a development version of Vault Enterprise, run `make premdev`. Keep in mind this binary will contain a perpetual built-in license and should thus be protected from unauthorized use. Running `make premdev` will
-put the Vault binary in the `bin` and `$GOPATH/bin` folders:
-
-```sh
-$ make premdev
 ...
 $ bin/vault
 ...

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"mime"
 	"net"
 	"net/http"
 	"net/textproto"
@@ -111,42 +112,63 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	// Create the muxer to handle the actual endpoints
 	mux := http.NewServeMux()
 
-	// Handle pprof paths
-	mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core))
+	switch {
+	case props.RecoveryMode:
+		raw := vault.NewRawBackend(core)
+		strategy := vault.GenerateRecoveryTokenStrategy(props.RecoveryToken)
+		mux.Handle("/v1/sys/raw/", handleLogicalRecovery(raw, props.RecoveryToken))
+		mux.Handle("/v1/sys/generate-recovery-token/attempt", handleSysGenerateRootAttempt(core, strategy))
+		mux.Handle("/v1/sys/generate-recovery-token/update", handleSysGenerateRootUpdate(core, strategy))
+	default:
+		// Handle non-forwarded paths
+		mux.Handle("/v1/sys/config/state/", handleLogicalNoForward(core))
+		mux.Handle("/v1/sys/host-info", handleLogicalNoForward(core))
+		mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core))
 
-	mux.Handle("/v1/sys/init", handleSysInit(core))
-	mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
-	mux.Handle("/v1/sys/seal", handleSysSeal(core))
-	mux.Handle("/v1/sys/step-down", handleRequestForwarding(core, handleSysStepDown(core)))
-	mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
-	mux.Handle("/v1/sys/leader", handleSysLeader(core))
-	mux.Handle("/v1/sys/health", handleSysHealth(core))
-	mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy)))
-	mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core, handleSysGenerateRootUpdate(core, vault.GenerateStandardRootTokenStrategy)))
-	mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
-	mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
-	mux.Handle("/v1/sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
-	mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
-	mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
-	mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
-	mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
-	for _, path := range injectDataIntoTopRoutes {
-		mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core)))
-	}
-	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core)))
-	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core)))
-	if core.UIEnabled() == true {
-		if uiBuiltIn {
-			mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
-			mux.Handle("/robots.txt", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))
-		} else {
-			mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
+		mux.Handle("/v1/sys/init", handleSysInit(core))
+		mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
+		mux.Handle("/v1/sys/seal", handleSysSeal(core))
+		mux.Handle("/v1/sys/step-down", handleRequestForwarding(core, handleSysStepDown(core)))
+		mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
+		mux.Handle("/v1/sys/leader", handleSysLeader(core))
+		mux.Handle("/v1/sys/health", handleSysHealth(core))
+		mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core,
+			handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))
+		mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core,
+			handleAuditNonLogical(core, handleSysGenerateRootUpdate(core, vault.GenerateStandardRootTokenStrategy))))
+		mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
+		mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
+		mux.Handle("/v1/sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
+		mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
+		mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
+		mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
+		mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
+		for _, path := range injectDataIntoTopRoutes {
+			mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core)))
 		}
-		mux.Handle("/ui", handleUIRedirect())
-		mux.Handle("/", handleUIRedirect())
-	}
+		mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core)))
+		mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core)))
+		if core.UIEnabled() == true {
+			if uiBuiltIn {
+				mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
+				mux.Handle("/robots.txt", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))
+			} else {
+				mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
+			}
+			mux.Handle("/ui", handleUIRedirect())
+			mux.Handle("/", handleUIRedirect())
 
-	additionalRoutes(mux, core)
+		}
+
+		// Register metrics path without authentication if enabled
+		if props.UnauthenticatedMetricsAccess {
+			mux.Handle("/v1/sys/metrics", handleMetricsUnauthenticated(core))
+		} else {
+			mux.Handle("/v1/sys/metrics", handleLogicalNoForward(core))
+		}
+
+		additionalRoutes(mux, core)
+	}
 
 	// Wrap the handler in another handler to trigger all help paths.
 	helpWrappedHandler := wrapHelpHandler(mux, core)
@@ -162,6 +184,69 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	}
 
 	return printablePathCheckHandler
+}
+
+type copyResponseWriter struct {
+	wrapped    http.ResponseWriter
+	statusCode int
+	body       *bytes.Buffer
+}
+
+// newCopyResponseWriter returns an initialized newCopyResponseWriter
+func newCopyResponseWriter(wrapped http.ResponseWriter) *copyResponseWriter {
+	w := &copyResponseWriter{
+		wrapped:    wrapped,
+		body:       new(bytes.Buffer),
+		statusCode: 200,
+	}
+	return w
+}
+
+func (w *copyResponseWriter) Header() http.Header {
+	return w.wrapped.Header()
+}
+
+func (w *copyResponseWriter) Write(buf []byte) (int, error) {
+	w.body.Write(buf)
+	return w.wrapped.Write(buf)
+}
+
+func (w *copyResponseWriter) WriteHeader(code int) {
+	w.statusCode = code
+	w.wrapped.WriteHeader(code)
+}
+
+func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origBody := new(bytes.Buffer)
+		reader := ioutil.NopCloser(io.TeeReader(r.Body, origBody))
+		r.Body = reader
+		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+		if err != nil || status != 0 {
+			respondError(w, status, err)
+			return
+		}
+		if origBody != nil {
+			r.Body = ioutil.NopCloser(origBody)
+		}
+		input := &logical.LogInput{
+			Request: req,
+		}
+
+		core.AuditLogger().AuditRequest(r.Context(), input)
+		cw := newCopyResponseWriter(w)
+		h.ServeHTTP(cw, r)
+		data := make(map[string]interface{})
+		err = jsonutil.DecodeJSON(cw.body.Bytes(), &data)
+		if err != nil {
+			// best effort, ignore
+		}
+		httpResp := &logical.HTTPResponse{Data: data, Headers: cw.Header()}
+		input.Response = logical.HTTPResponseToLogicalResponse(httpResp)
+		core.AuditLogger().AuditResponse(r.Context(), input)
+		return
+	})
+
 }
 
 // wrapGenericHandler wraps the handler with an extra layer of handler where
@@ -424,7 +509,7 @@ func handleUIStub() http.Handler {
 	<p>To get Vault UI do one of the following:</p>
 	<ul>
 	<li><a href="https://www.vaultproject.io/downloads.html">Download an official release</a></li>
-	<li>Run <code>make release</code> to create your own release binaries.
+	<li>Run <code>make bin</code> to create your own release binaries.
 	<li>Run <code>make dev-ui</code> to create a development binary with the UI.
 	</ul>
 	</div>
@@ -482,7 +567,7 @@ func parseQuery(values url.Values) map[string]interface{} {
 	return nil
 }
 
-func parseRequest(core *vault.Core, r *http.Request, w http.ResponseWriter, out interface{}) (io.ReadCloser, error) {
+func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, out interface{}) (io.ReadCloser, error) {
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
 	reader := r.Body
@@ -498,7 +583,7 @@ func parseRequest(core *vault.Core, r *http.Request, w http.ResponseWriter, out 
 		}
 	}
 	var origBody io.ReadWriter
-	if core.PerfStandby() {
+	if perfStandby {
 		// Since we're checking PerfStandby here we key on origBody being nil
 		// or not later, so we need to always allocate so it's non-nil
 		origBody = new(bytes.Buffer)
@@ -512,6 +597,44 @@ func parseRequest(core *vault.Core, r *http.Request, w http.ResponseWriter, out 
 		return ioutil.NopCloser(origBody), err
 	}
 	return nil, err
+}
+
+// parseFormRequest parses values from a form POST.
+//
+// A nil map will be returned if the format is empty or invalid.
+func parseFormRequest(r *http.Request) (map[string]interface{}, error) {
+	maxRequestSize := r.Context().Value("max_request_size")
+	if maxRequestSize != nil {
+		max, ok := maxRequestSize.(int64)
+		if !ok {
+			return nil, errors.New("could not parse max_request_size from request context")
+		}
+		if max > 0 {
+			r.Body = ioutil.NopCloser(io.LimitReader(r.Body, max))
+		}
+	}
+	if err := r.ParseForm(); err != nil {
+		return nil, err
+	}
+
+	var data map[string]interface{}
+
+	if len(r.PostForm) != 0 {
+		data = make(map[string]interface{}, len(r.PostForm))
+		for k, v := range r.PostForm {
+			switch len(v) {
+			case 0:
+			case 1:
+				data[k] = v[0]
+			default:
+				// Almost anywhere taking in a string list can take in comma
+				// separated values, and really this is super niche anyways
+				data[k] = strings.Join(v, ",")
+			}
+		}
+	}
+
+	return data, nil
 }
 
 // handleRequestForwarding determines whether to forward a request or not,
@@ -874,6 +997,40 @@ func parseMFAHeader(req *logical.Request) error {
 	}
 
 	return nil
+}
+
+// isForm tries to determine whether the request should be
+// processed as a form or as JSON.
+//
+// Virtually all existing use cases have assumed processing as JSON,
+// and there has not been a Content-Type requirement in the API. In order to
+// maintain backwards compatibility, this will err on the side of JSON.
+// The request will be considered a form only if:
+//
+//   1. The content type is "application/x-www-form-urlencoded"
+//   2. The start of the request doesn't look like JSON. For this test we
+//      we expect the body to begin with { or [, ignoring leading whitespace.
+func isForm(head []byte, contentType string) bool {
+	contentType, _, err := mime.ParseMediaType(contentType)
+
+	if err != nil || contentType != "application/x-www-form-urlencoded" {
+		return false
+	}
+
+	// Look for the start of JSON or not-JSON, skipping any insignificant
+	// whitespace (per https://tools.ietf.org/html/rfc7159#section-2).
+	for _, c := range head {
+		switch c {
+		case ' ', '\t', '\n', '\r':
+			continue
+		case '[', '{': // JSON
+			return false
+		default: // not JSON
+			return true
+		}
+	}
+
+	return true
 }
 
 func respondError(w http.ResponseWriter, status int, err error) {

@@ -2,7 +2,9 @@ package framework
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"regexp"
@@ -13,7 +15,9 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-kms-wrapping/entropy"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -222,6 +226,21 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 	if path.Operations != nil {
 		if op, ok := path.Operations[req.Operation]; ok {
+
+			// Check whether this operation should be forwarded
+			if sysView := b.System(); sysView != nil {
+				replState := sysView.ReplicationState()
+				props := op.Properties()
+
+				if props.ForwardPerformanceStandby && replState.HasState(consts.ReplicationPerformanceStandby) {
+					return nil, logical.ErrReadOnly
+				}
+
+				if props.ForwardPerformanceSecondary && !sysView.LocalMount() && replState.HasState(consts.ReplicationPerformanceSecondary) {
+					return nil, logical.ErrReadOnly
+				}
+			}
+
 			callback = op.Handler()
 		}
 	} else {
@@ -277,6 +296,17 @@ func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) erro
 	b.logger = config.Logger
 	b.system = config.System
 	return nil
+}
+
+// GetRandomReader returns an io.Reader to use for generating key material in
+// backends. If the backend has access to an external entropy source it will
+// return that, otherwise it returns crypto/rand.Reader.
+func (b *Backend) GetRandomReader() io.Reader {
+	if sourcer, ok := b.System().(entropy.Sourcer); ok {
+		return entropy.NewReader(sourcer)
+	}
+
+	return rand.Reader
 }
 
 // Logger can be used to get the logger. If no logger has been set,

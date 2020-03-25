@@ -12,12 +12,13 @@ export const expandOpenApiProps = function(props) {
     if (deprecated === true) {
       continue;
     }
-    let { name, value, group, sensitive } = prop['x-vault-displayAttrs'] || {};
+    let { name, value, group, sensitive, editType } = prop['x-vault-displayAttrs'] || {};
 
     if (type === 'integer') {
       type = 'number';
     }
-    let editType = type;
+
+    editType = editType || type;
 
     if (format === 'seconds') {
       editType = 'ttl';
@@ -28,7 +29,6 @@ export const expandOpenApiProps = function(props) {
     let attrDefn = {
       editType,
       helpText: description,
-      sensitive: sensitive,
       possibleValues: prop['enum'],
       fieldValue: isId ? 'id' : null,
       fieldGroup: group || 'default',
@@ -36,13 +36,22 @@ export const expandOpenApiProps = function(props) {
       defaultValue: value || null,
     };
 
-    attrDefn.label = capitalize(name || propName);
+    if (sensitive) {
+      attrDefn.sensitive = true;
+    }
+
+    //only set a label if we have one from OpenAPI
+    //otherwise the propName will be humanized by the form-field component
+    if (name) {
+      attrDefn.label = name;
+    }
 
     // ttls write as a string and read as a number
     // so setting type on them runs the wrong transform
     if (editType !== 'ttl' && type !== 'array') {
       attrDefn.type = type;
     }
+
     // loop to remove empty vals
     for (let attrProp in attrDefn) {
       if (attrDefn[attrProp] == null) {

@@ -18,11 +18,16 @@ ha_backend "consul" {
     disable_clustering = "true"
 }
 
+service_registration "consul" {
+    foo = "bar"
+}
+
 telemetry {
     statsd_address = "bar"
     statsite_address = "foo"
     dogstatsd_addr = "127.0.0.1:7254"
     dogstatsd_tags = ["tag_1:val_1", "tag_2:val_2"]
+    metrics_prefix = "myprefix"
 }
 
 max_lease_ttl = "10h"

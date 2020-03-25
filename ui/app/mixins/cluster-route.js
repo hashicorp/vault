@@ -9,6 +9,7 @@ const CLUSTER = 'vault.cluster';
 const CLUSTER_INDEX = 'vault.cluster.index';
 const OIDC_CALLBACK = 'vault.cluster.oidc-callback';
 const DR_REPLICATION_SECONDARY = 'vault.cluster.replication-dr-promote';
+const EXCLUDED_REDIRECT_URLS = ['/vault/logout'];
 
 export { INIT, UNSEAL, AUTH, CLUSTER, CLUSTER_INDEX, DR_REPLICATION_SECONDARY };
 
@@ -29,7 +30,8 @@ export default Mixin.create({
       if (
         // only want to redirect if we're going to authenticate
         targetRoute === AUTH &&
-        transition.targetName !== CLUSTER_INDEX
+        transition.targetName !== CLUSTER_INDEX &&
+        !EXCLUDED_REDIRECT_URLS.includes(this.router.currentURL)
       ) {
         return this.transitionTo(targetRoute, { queryParams: { redirect_to: this.router.currentURL } });
       }

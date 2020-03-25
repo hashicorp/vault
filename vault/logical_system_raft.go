@@ -8,13 +8,13 @@ import (
 	"strings"
 
 	proto "github.com/golang/protobuf/proto"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/vault/seal"
 )
 
 // raftStoragePaths returns paths for use when raft is the storage mechanism.
@@ -32,6 +32,9 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 				"cluster_addr": {
 					Type: framework.TypeString,
+				},
+				"non_voter": {
+					Type: framework.TypeBool,
 				},
 			},
 
@@ -93,15 +96,15 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-remove-peer"][0]),
-			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-remove-peer"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-configuration"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-configuration"][1]),
 		},
 		{
 			Pattern: "storage/raft/snapshot",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleStorageRaftSnapshotRead(),
-					Summary:  "Retruns a snapshot of the current state of vault.",
+					Summary:  "Returns a snapshot of the current state of vault.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleStorageRaftSnapshotWrite(false),
@@ -109,8 +112,8 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-remove-peer"][0]),
-			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-remove-peer"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-snapshot"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-snapshot"][1]),
 		},
 		{
 			Pattern: "storage/raft/snapshot-force",
@@ -121,8 +124,8 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-remove-peer"][0]),
-			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-remove-peer"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-snapshot-force"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-snapshot-force"][1]),
 		},
 	}
 }
@@ -173,23 +176,24 @@ func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 
 func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		_, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
-		if !ok {
-			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
-		}
-
 		serverID := d.Get("server_id").(string)
 		if len(serverID) == 0 {
 			return logical.ErrorResponse("no server id provided"), logical.ErrInvalidRequest
 		}
 
-		uuid, err := uuid.GenerateRandomBytes(16)
-		if err != nil {
-			return nil, err
+		answer, ok := b.Core.pendingRaftPeers[serverID]
+		if !ok {
+			var err error
+			answer, err = uuid.GenerateRandomBytes(16)
+			if err != nil {
+				return nil, err
+			}
+			b.Core.pendingRaftPeers[serverID] = answer
 		}
 
 		sealAccess := b.Core.seal.GetAccess()
-		eBlob, err := sealAccess.Encrypt(ctx, uuid)
+
+		eBlob, err := sealAccess.Encrypt(ctx, answer, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -198,7 +202,6 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 			return nil, err
 		}
 
-		b.Core.pendingRaftPeers[serverID] = uuid
 		sealConfig, err := b.Core.seal.BarrierConfig(ctx)
 		if err != nil {
 			return nil, err
@@ -233,6 +236,8 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return logical.ErrorResponse("no cluster_addr provided"), logical.ErrInvalidRequest
 		}
 
+		nonVoter := d.Get("non_voter").(bool)
+
 		answer, err := base64.StdEncoding.DecodeString(answerRaw)
 		if err != nil {
 			return logical.ErrorResponse("could not base64 decode answer"), logical.ErrInvalidRequest
@@ -261,9 +266,16 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return nil, errors.New("could not decode raft TLS configuration")
 		}
 
-		if err := raftStorage.AddPeer(ctx, serverID, clusterAddr); err != nil {
+		switch nonVoter {
+		case true:
+			err = raftStorage.AddNonVotingPeer(ctx, serverID, clusterAddr)
+		default:
+			err = raftStorage.AddPeer(ctx, serverID, clusterAddr)
+		}
+		if err != nil {
 			return nil, err
 		}
+
 		if b.Core.raftFollowerStates != nil {
 			b.Core.raftFollowerStates.update(serverID, 0)
 		}
@@ -272,6 +284,8 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 		if err != nil {
 			return nil, err
 		}
+
+		b.logger.Info("follower node answered the raft bootstrap challenge", "follower_server_id", serverID)
 
 		return &logical.Response{
 			Data: map[string]interface{}{
@@ -325,7 +339,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 		case err == nil:
 		case strings.Contains(err.Error(), "failed to open the sealed hashes"):
 			switch b.Core.seal.BarrierType() {
-			case seal.Shamir:
+			case wrapping.Shamir:
 				return logical.ErrorResponse("could not verify hash file, possibly the snapshot is using a different set of unseal keys; use the snapshot-force API to bypass this check"), logical.ErrInvalidRequest
 			default:
 				return logical.ErrorResponse("could not verify hash file, possibly the snapshot is using a different autoseal key; use the snapshot-force API to bypass this check"), logical.ErrInvalidRequest
@@ -424,8 +438,20 @@ var sysRaftHelp = map[string][2]string{
 		"Accepts an answer from the peer to be joined to the fact cluster.",
 		"",
 	},
+	"raft-configuration": {
+		"Returns the raft cluster configuration.",
+		"",
+	},
 	"raft-remove-peer": {
 		"Removes a peer from the raft cluster.",
+		"",
+	},
+	"raft-snapshot": {
+		"Restores and saves snapshots from the raft cluster.",
+		"",
+	},
+	"raft-snapshot-force": {
+		"Force restore a raft cluster snapshot",
 		"",
 	},
 }

@@ -28,6 +28,7 @@ import (
 	credCF "github.com/hashicorp/vault-plugin-auth-cf"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credOIDC "github.com/hashicorp/vault-plugin-auth-jwt"
+	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
 	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
@@ -62,6 +63,10 @@ import (
 	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
+
+	sr "github.com/hashicorp/vault/serviceregistration"
+	csr "github.com/hashicorp/vault/serviceregistration/consul"
+	ksr "github.com/hashicorp/vault/serviceregistration/kubernetes"
 )
 
 const (
@@ -88,6 +93,9 @@ const (
 	// flagNameTLSSkipVerify is the flag used in the base command to read in
 	// the option to ignore TLS certificate verification.
 	flagNameTLSSkipVerify = "tls-skip-verify"
+	// flagTLSServerName is the flag used in the base command to read in
+	// the TLS server name.
+	flagTLSServerName = "tls-server-name"
 	// flagNameAuditNonHMACRequestKeys is the flag name used for auth/secrets enable
 	flagNameAuditNonHMACRequestKeys = "audit-non-hmac-request-keys"
 	// flagNameAuditNonHMACResponseKeys is the flag name used for auth/secrets enable
@@ -152,6 +160,11 @@ var (
 		"raft":                   physRaft.NewRaftBackend,
 		"zookeeper":              physZooKeeper.NewZooKeeperBackend,
 	}
+
+	serviceRegistrations = map[string]sr.Factory{
+		"consul":     csr.NewServiceRegistration,
+		"kubernetes": ksr.NewServiceRegistration,
+	}
 )
 
 // Commands is the mapping of all the available commands.
@@ -166,6 +179,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"cf":       &credCF.CLIHandler{},
 		"gcp":      &credGcp.CLIHandler{},
 		"github":   &credGitHub.CLIHandler{},
+		"kerberos": &credKerb.CLIHandler{},
 		"ldap":     &credLdap.CLIHandler{},
 		"oci":      &credOCI.CLIHandler{},
 		"oidc":     &credOIDC.CLIHandler{},
@@ -247,6 +261,12 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"auth list": func() (cli.Command, error) {
 			return &AuthListCommand{
 				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"debug": func() (cli.Command, error) {
+			return &DebugCommand{
+				BaseCommand: getBaseCommand(),
+				ShutdownCh:  MakeShutdownCh(),
 			}, nil
 		},
 		"delete": func() (cli.Command, error) {
@@ -337,8 +357,8 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"operator raft configuration": func() (cli.Command, error) {
-			return &OperatorRaftConfigurationCommand{
+		"operator raft list-peers": func() (cli.Command, error) {
+			return &OperatorRaftListPeersCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -508,9 +528,12 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				CredentialBackends: credentialBackends,
 				LogicalBackends:    logicalBackends,
 				PhysicalBackends:   physicalBackends,
-				ShutdownCh:         MakeShutdownCh(),
-				SighupCh:           MakeSighupCh(),
-				SigUSR2Ch:          MakeSigUSR2Ch(),
+
+				ServiceRegistrations: serviceRegistrations,
+
+				ShutdownCh: MakeShutdownCh(),
+				SighupCh:   MakeSighupCh(),
+				SigUSR2Ch:  MakeSigUSR2Ch(),
 			}, nil
 		},
 		"ssh": func() (cli.Command, error) {

@@ -4,6 +4,7 @@ import { task } from 'ember-concurrency';
 const BASE_64_REGEX = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/gi;
 
 export default Component.extend({
+  'data-test-pgp-file': true,
   classNames: ['box', 'is-fullwidth', 'is-marginless', 'is-shadowless'],
   key: null,
   index: null,

@@ -57,9 +57,9 @@ func toStringValue(v reflect.Value, field reflect.StructField) (string, error) {
 	case reflect.String:
 		return v.String(), nil
 	case reflect.Float32:
-		return strconv.FormatFloat(v.Float(), 'f', 6, 32), nil
+		return strconv.FormatFloat(v.Float(), 'f', -1, 32), nil
 	case reflect.Float64:
-		return strconv.FormatFloat(v.Float(), 'f', 6, 64), nil
+		return strconv.FormatFloat(v.Float(), 'f', -1, 64), nil
 	default:
 		return "", fmt.Errorf("marshaling structure to a http.Request does not support field named: %s of type: %v",
 			field.Name, v.Type().String())

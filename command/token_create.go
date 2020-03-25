@@ -69,8 +69,8 @@ func (c *TokenCreateCommand) Flags() *FlagSets {
 		Name:       "id",
 		Target:     &c.flagID,
 		Completion: complete.PredictAnything,
-		Usage: "Value for the token. By default, this is an auto-generated 36 " +
-			"character UUID. Specifying this value requires sudo permissions.",
+		Usage: "Value for the token. By default, this is an auto-generated " +
+			"string. Specifying this value requires sudo permissions.",
 	})
 
 	f.StringVar(&StringVar{

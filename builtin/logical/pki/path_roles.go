@@ -575,14 +575,17 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		NotBeforeDuration:             time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 	}
 
-	otherSANs := data.Get("allowed_other_sans").([]string)
-	if len(otherSANs) > 0 {
-		_, err := parseOtherSANs(otherSANs)
+	allowedOtherSANs := data.Get("allowed_other_sans").([]string)
+	switch {
+	case len(allowedOtherSANs) == 0:
+	case len(allowedOtherSANs) == 1 && allowedOtherSANs[0] == "*":
+	default:
+		_, err := parseOtherSANs(allowedOtherSANs)
 		if err != nil {
 			return logical.ErrorResponse(errwrap.Wrapf("error parsing allowed_other_sans: {{err}}", err).Error()), nil
 		}
-		entry.AllowedOtherSANs = otherSANs
 	}
+	entry.AllowedOtherSANs = allowedOtherSANs
 
 	// no_store implies generate_lease := false
 	if entry.NoStore {
@@ -723,7 +726,7 @@ type roleEntry struct {
 	MaxTTL                        time.Duration `json:"max_ttl_duration" mapstructure:"max_ttl_duration"`
 	AllowLocalhost                bool          `json:"allow_localhost" mapstructure:"allow_localhost"`
 	AllowedBaseDomain             string        `json:"allowed_base_domain" mapstructure:"allowed_base_domain"`
-	AllowedDomainsOld             string        `json:"allowed_domains,omit_empty"`
+	AllowedDomainsOld             string        `json:"allowed_domains,omitempty"`
 	AllowedDomains                []string      `json:"allowed_domains_list" mapstructure:"allowed_domains"`
 	AllowBaseDomain               bool          `json:"allow_base_domain"`
 	AllowBareDomains              bool          `json:"allow_bare_domains" mapstructure:"allow_bare_domains"`

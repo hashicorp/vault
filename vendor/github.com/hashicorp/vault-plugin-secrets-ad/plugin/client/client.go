@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-errors/errors"
-	"github.com/go-ldap/ldap"
+	"github.com/go-ldap/ldap/v3"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"golang.org/x/text/encoding/unicode"
@@ -26,9 +26,9 @@ type Client struct {
 	ldap *ldaputil.Client
 }
 
-func (c *Client) Search(cfg *ADConf, filters map[*Field][]string) ([]*Entry, error) {
+func (c *Client) Search(cfg *ADConf, baseDN string, filters map[*Field][]string) ([]*Entry, error) {
 	req := &ldap.SearchRequest{
-		BaseDN:    cfg.UserDN,
+		BaseDN:    baseDN,
 		Scope:     ldap.ScopeWholeSubtree,
 		Filter:    toString(filters),
 		SizeLimit: math.MaxInt32,
@@ -56,8 +56,8 @@ func (c *Client) Search(cfg *ADConf, filters map[*Field][]string) ([]*Entry, err
 	return entries, nil
 }
 
-func (c *Client) UpdateEntry(cfg *ADConf, filters map[*Field][]string, newValues map[*Field][]string) error {
-	entries, err := c.Search(cfg, filters)
+func (c *Client) UpdateEntry(cfg *ADConf, baseDN string, filters map[*Field][]string, newValues map[*Field][]string) error {
+	entries, err := c.Search(cfg, baseDN, filters)
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (c *Client) UpdateEntry(cfg *ADConf, filters map[*Field][]string, newValues
 // Active Directory doesn't recognize the passwordModify method.
 // See https://github.com/go-ldap/ldap/issues/106
 // for more.
-func (c *Client) UpdatePassword(cfg *ADConf, filters map[*Field][]string, newPassword string) error {
+func (c *Client) UpdatePassword(cfg *ADConf, baseDN string, filters map[*Field][]string, newPassword string) error {
 	pwdEncoded, err := formatPassword(newPassword)
 	if err != nil {
 		return err
@@ -99,7 +99,7 @@ func (c *Client) UpdatePassword(cfg *ADConf, filters map[*Field][]string, newPas
 		FieldRegistry.UnicodePassword: {pwdEncoded},
 	}
 
-	return c.UpdateEntry(cfg, filters, newValues)
+	return c.UpdateEntry(cfg, baseDN, filters, newValues)
 }
 
 // According to the MS docs, the password needs to be utf16 and enclosed in quotes.

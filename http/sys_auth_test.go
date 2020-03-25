@@ -27,8 +27,9 @@ func TestSysAuth(t *testing.T) {
 		"auth":           nil,
 		"data": map[string]interface{}{
 			"token/": map[string]interface{}{
-				"description": "token based credentials",
-				"type":        "token",
+				"description":             "token based credentials",
+				"type":                    "token",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -41,8 +42,9 @@ func TestSysAuth(t *testing.T) {
 			},
 		},
 		"token/": map[string]interface{}{
-			"description": "token based credentials",
-			"type":        "token",
+			"description":             "token based credentials",
+			"type":                    "token",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -101,8 +103,9 @@ func TestSysEnableAuth(t *testing.T) {
 		"auth":           nil,
 		"data": map[string]interface{}{
 			"foo/": map[string]interface{}{
-				"description": "foo",
-				"type":        "noop",
+				"description":             "foo",
+				"type":                    "noop",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -114,8 +117,9 @@ func TestSysEnableAuth(t *testing.T) {
 				"options":   map[string]interface{}{},
 			},
 			"token/": map[string]interface{}{
-				"description": "token based credentials",
-				"type":        "token",
+				"description":             "token based credentials",
+				"type":                    "token",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -128,8 +132,9 @@ func TestSysEnableAuth(t *testing.T) {
 			},
 		},
 		"foo/": map[string]interface{}{
-			"description": "foo",
-			"type":        "noop",
+			"description":             "foo",
+			"type":                    "noop",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -141,8 +146,9 @@ func TestSysEnableAuth(t *testing.T) {
 			"options":   map[string]interface{}{},
 		},
 		"token/": map[string]interface{}{
-			"description": "token based credentials",
-			"type":        "token",
+			"description":             "token based credentials",
+			"type":                    "token",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
@@ -210,11 +216,12 @@ func TestSysDisableAuth(t *testing.T) {
 					"token_type":        "default-service",
 					"force_no_cache":    false,
 				},
-				"description": "token based credentials",
-				"type":        "token",
-				"local":       false,
-				"seal_wrap":   false,
-				"options":     interface{}(nil),
+				"description":             "token based credentials",
+				"type":                    "token",
+				"external_entropy_access": false,
+				"local":                   false,
+				"seal_wrap":               false,
+				"options":                 interface{}(nil),
 			},
 		},
 		"token/": map[string]interface{}{
@@ -224,11 +231,12 @@ func TestSysDisableAuth(t *testing.T) {
 				"token_type":        "default-service",
 				"force_no_cache":    false,
 			},
-			"description": "token based credentials",
-			"type":        "token",
-			"local":       false,
-			"seal_wrap":   false,
-			"options":     interface{}(nil),
+			"description":             "token based credentials",
+			"type":                    "token",
+			"external_entropy_access": false,
+			"local":                   false,
+			"seal_wrap":               false,
+			"options":                 interface{}(nil),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -285,6 +293,7 @@ func TestSysTuneAuth_nonHMACKeys(t *testing.T) {
 		"warnings":       nil,
 		"auth":           nil,
 		"data": map[string]interface{}{
+			"description":                  "token based credentials",
 			"default_lease_ttl":            json.Number("2764800"),
 			"max_lease_ttl":                json.Number("2764800"),
 			"force_no_cache":               false,
@@ -292,6 +301,7 @@ func TestSysTuneAuth_nonHMACKeys(t *testing.T) {
 			"audit_non_hmac_response_keys": []interface{}{"bar"},
 			"token_type":                   "default-service",
 		},
+		"description":                  "token based credentials",
 		"default_lease_ttl":            json.Number("2764800"),
 		"max_lease_ttl":                json.Number("2764800"),
 		"force_no_cache":               false,
@@ -328,11 +338,13 @@ func TestSysTuneAuth_nonHMACKeys(t *testing.T) {
 		"warnings":       nil,
 		"auth":           nil,
 		"data": map[string]interface{}{
+			"description":       "token based credentials",
 			"default_lease_ttl": json.Number("2764800"),
 			"max_lease_ttl":     json.Number("2764800"),
 			"force_no_cache":    false,
 			"token_type":        "default-service",
 		},
+		"description":       "token based credentials",
 		"default_lease_ttl": json.Number("2764800"),
 		"max_lease_ttl":     json.Number("2764800"),
 		"force_no_cache":    false,
@@ -364,11 +376,13 @@ func TestSysTuneAuth_showUIMount(t *testing.T) {
 		"warnings":       nil,
 		"auth":           nil,
 		"data": map[string]interface{}{
+			"description":       "token based credentials",
 			"default_lease_ttl": json.Number("2764800"),
 			"max_lease_ttl":     json.Number("2764800"),
 			"force_no_cache":    false,
 			"token_type":        "default-service",
 		},
+		"description":       "token based credentials",
 		"default_lease_ttl": json.Number("2764800"),
 		"max_lease_ttl":     json.Number("2764800"),
 		"force_no_cache":    false,
@@ -392,6 +406,7 @@ func TestSysTuneAuth_showUIMount(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
+		"description":    "token based credentials",
 		"lease_id":       "",
 		"renewable":      false,
 		"lease_duration": json.Number("0"),
@@ -399,6 +414,7 @@ func TestSysTuneAuth_showUIMount(t *testing.T) {
 		"warnings":       nil,
 		"auth":           nil,
 		"data": map[string]interface{}{
+			"description":        "token based credentials",
 			"default_lease_ttl":  json.Number("2764800"),
 			"max_lease_ttl":      json.Number("2764800"),
 			"force_no_cache":     false,

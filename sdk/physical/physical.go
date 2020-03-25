@@ -3,7 +3,6 @@ package physical
 import (
 	"context"
 	"strings"
-	"sync"
 
 	log "github.com/hashicorp/go-hclog"
 )
@@ -23,9 +22,6 @@ const (
 const (
 	ErrValueTooLarge = "put failed due to value being too large"
 )
-
-// ShutdownSignal
-type ShutdownChannel chan struct{}
 
 // Backend is the interface required for a physical
 // backend. A physical backend is used to durably store
@@ -74,35 +70,6 @@ type ToggleablePurgemonster interface {
 type RedirectDetect interface {
 	// DetectHostAddr is used to detect the host address
 	DetectHostAddr() (string, error)
-}
-
-// Callback signatures for RunServiceDiscovery
-type ActiveFunction func() bool
-type SealedFunction func() bool
-type PerformanceStandbyFunction func() bool
-
-// ServiceDiscovery is an optional interface that an HABackend can implement.
-// If they do, the state of a backend is advertised to the service discovery
-// network.
-type ServiceDiscovery interface {
-	// NotifyActiveStateChange is used by Core to notify a backend
-	// capable of ServiceDiscovery that this Vault instance has changed
-	// its status to active or standby.
-	NotifyActiveStateChange() error
-
-	// NotifySealedStateChange is used by Core to notify a backend
-	// capable of ServiceDiscovery that Vault has changed its Sealed
-	// status to sealed or unsealed.
-	NotifySealedStateChange() error
-
-	// NotifyPerformanceStandbyStateChange is used by Core to notify a backend
-	// capable of ServiceDiscovery that this Vault instance has changed it
-	// status to performance standby or standby.
-	NotifyPerformanceStandbyStateChange() error
-
-	// Run executes any background service discovery tasks until the
-	// shutdown channel is closed.
-	RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, redirectAddr string, activeFunc ActiveFunction, sealedFunc SealedFunction, perfStandbyFunc PerformanceStandbyFunction) error
 }
 
 type Lock interface {

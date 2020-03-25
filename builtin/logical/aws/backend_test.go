@@ -207,7 +207,11 @@ func getAccountID() (string, error) {
 		Region:     aws.String("us-east-1"),
 		HTTPClient: cleanhttp.DefaultClient(),
 	}
-	svc := sts.New(session.New(awsConfig))
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return "", err
+	}
+	svc := sts.New(sess)
 
 	params := &sts.GetCallerIdentityInput{}
 	res, err := svc.GetCallerIdentity(params)
@@ -240,7 +244,11 @@ func createRole(t *testing.T, roleName, awsAccountID string, policyARNs []string
 		Region:     aws.String("us-east-1"),
 		HTTPClient: cleanhttp.DefaultClient(),
 	}
-	svc := iam.New(session.New(awsConfig))
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := iam.New(sess)
 	trustPolicy := fmt.Sprintf(testRoleAssumePolicy, awsAccountID)
 
 	params := &iam.CreateRoleInput{
@@ -250,9 +258,7 @@ func createRole(t *testing.T, roleName, awsAccountID string, policyARNs []string
 	}
 
 	log.Printf("[INFO] AWS CreateRole: %s", roleName)
-	_, err := svc.CreateRole(params)
-
-	if err != nil {
+	if _, err := svc.CreateRole(params); err != nil {
 		t.Fatalf("AWS CreateRole failed: %v", err)
 	}
 
@@ -303,14 +309,16 @@ func createUser(t *testing.T, userName string, accessKey *awsAccessKey) {
 		Region:     aws.String("us-east-1"),
 		HTTPClient: cleanhttp.DefaultClient(),
 	}
-	svc := iam.New(session.New(awsConfig))
-
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := iam.New(sess)
 	createUserInput := &iam.CreateUserInput{
 		UserName: aws.String(userName),
 	}
 	log.Printf("[INFO] AWS CreateUser: %s", userName)
-	_, err := svc.CreateUser(createUserInput)
-	if err != nil {
+	if _, err := svc.CreateUser(createUserInput); err != nil {
 		t.Fatalf("AWS CreateUser failed: %v", err)
 	}
 
@@ -354,8 +362,11 @@ func deleteTestRole(roleName string) error {
 		Region:     aws.String("us-east-1"),
 		HTTPClient: cleanhttp.DefaultClient(),
 	}
-	svc := iam.New(session.New(awsConfig))
-
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return err
+	}
+	svc := iam.New(sess)
 	listAttachmentsInput := &iam.ListAttachedRolePoliciesInput{
 		RoleName: aws.String(roleName),
 	}
@@ -372,8 +383,7 @@ func deleteTestRole(roleName string) error {
 		}
 		return true
 	}
-	err := svc.ListAttachedRolePoliciesPages(listAttachmentsInput, detacher)
-	if err != nil {
+	if err := svc.ListAttachedRolePoliciesPages(listAttachmentsInput, detacher); err != nil {
 		log.Printf("[WARN] AWS DetachRolePolicy failed: %v", err)
 	}
 
@@ -396,14 +406,16 @@ func deleteTestUser(accessKey *awsAccessKey, userName string) error {
 		Region:     aws.String("us-east-1"),
 		HTTPClient: cleanhttp.DefaultClient(),
 	}
-	svc := iam.New(session.New(awsConfig))
-
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return err
+	}
+	svc := iam.New(sess)
 	userDetachment := &iam.DetachUserPolicyInput{
 		PolicyArn: aws.String("arn:aws:iam::aws:policy/AdministratorAccess"),
 		UserName:  aws.String(userName),
 	}
-	_, err := svc.DetachUserPolicy(userDetachment)
-	if err != nil {
+	if _, err := svc.DetachUserPolicy(userDetachment); err != nil {
 		log.Printf("[WARN] AWS DetachUserPolicy failed: %v", err)
 		return err
 	}
@@ -490,10 +502,13 @@ func testAccStepRotateRoot(oldAccessKey *awsAccessKey) logicaltest.TestStep {
 			oldAccessKey.AccessKeyID = newAccessKeyID
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
-			svc := sts.New(session.New(awsConfig))
+			sess, err := session.NewSession(awsConfig)
+			if err != nil {
+				return err
+			}
+			svc := sts.New(sess)
 			params := &sts.GetCallerIdentityInput{}
-			_, err := svc.GetCallerIdentity(params)
-			if err == nil {
+			if _, err := svc.GetCallerIdentity(params); err == nil {
 				return fmt.Errorf("bad: old credentials succeeded after rotate")
 			}
 			if aerr, ok := err.(awserr.Error); ok {
@@ -556,7 +571,11 @@ func describeInstancesTest(accessKey, secretKey, token string) error {
 		Region:      aws.String("us-east-1"),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}
-	client := ec2.New(session.New(awsConfig))
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return err
+	}
+	client := ec2.New(sess)
 	log.Printf("[WARN] Verifying that the generated credentials work with ec2:DescribeInstances...")
 	return retryUntilSuccess(func() error {
 		_, err := client.DescribeInstances(&ec2.DescribeInstancesInput{})
@@ -571,7 +590,11 @@ func describeAzsTestUnauthorized(accessKey, secretKey, token string) error {
 		Region:      aws.String("us-east-1"),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}
-	client := ec2.New(session.New(awsConfig))
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return err
+	}
+	client := ec2.New(sess)
 	log.Printf("[WARN] Verifying that the generated credentials don't work with ec2:DescribeAvailabilityZones...")
 	return retryUntilSuccess(func() error {
 		_, err := client.DescribeAvailabilityZones(&ec2.DescribeAvailabilityZonesInput{})
@@ -595,7 +618,11 @@ func assertCreatedIAMUser(accessKey, secretKey, token string) error {
 		Region:      aws.String("us-east-1"),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}
-	client := iam.New(session.New(awsConfig))
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return err
+	}
+	client := iam.New(sess)
 	log.Printf("[WARN] Checking if IAM User is created properly...")
 	userOutput, err := client.GetUser(&iam.GetUserInput{})
 	if err != nil {
@@ -616,7 +643,11 @@ func listIamUsersTest(accessKey, secretKey, token string) error {
 		Region:      aws.String("us-east-1"),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}
-	client := iam.New(session.New(awsConfig))
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return err
+	}
+	client := iam.New(sess)
 	log.Printf("[WARN] Verifying that the generated credentials work with iam:ListUsers...")
 	return retryUntilSuccess(func() error {
 		_, err := client.ListUsers(&iam.ListUsersInput{})
@@ -631,7 +662,11 @@ func listDynamoTablesTest(accessKey, secretKey, token string) error {
 		Region:      aws.String("us-east-1"),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}
-	client := dynamodb.New(session.New(awsConfig))
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return err
+	}
+	client := dynamodb.New(sess)
 	log.Printf("[WARN] Verifying that the generated credentials work with dynamodb:ListTables...")
 	return retryUntilSuccess(func() error {
 		_, err := client.ListTables(&dynamodb.ListTablesInput{})

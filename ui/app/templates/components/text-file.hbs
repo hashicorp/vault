@@ -4,6 +4,13 @@
       <label class="is-label" data-test-text-label=true>
         {{#if label}}
           {{label}}
+          {{#if helpText}}
+            {{#info-tooltip}}
+              <span data-test-help-text>
+                {{helpText}}
+              </span>
+            {{/info-tooltip}}
+          {{/if}}
         {{else}}
           File
         {{/if}}

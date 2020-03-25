@@ -132,7 +132,7 @@ func (b *backend) saveRoleSetWithNewAccount(ctx context.Context, s logical.Stora
 		return nil, err
 	}
 
-	iamAdmin, err := b.IAMClient(s)
+	iamAdmin, err := b.IAMAdminClient(s)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +217,7 @@ func (b *backend) saveRoleSetWithNewTokenKey(ctx context.Context, s logical.Stor
 		return "", fmt.Errorf("a key is not saved or used for non-access-token role set '%s'", rs.Name)
 	}
 
-	iamAdmin, err := b.IAMClient(s)
+	iamAdmin, err := b.IAMAdminClient(s)
 	if err != nil {
 		return "", err
 	}

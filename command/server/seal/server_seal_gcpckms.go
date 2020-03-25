@@ -3,14 +3,17 @@ package seal
 import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/hashicorp/vault/vault/seal/gcpckms"
+	"github.com/hashicorp/vault/vault/seal"
 )
 
 func configureGCPCKMSSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (vault.Seal, error) {
-	kms := gcpckms.NewSeal(logger)
+	kms := gcpckms.NewWrapper(nil)
+	configSeal.Config["user_agent"] = useragent.String()
 	kmsInfo, err := kms.SetConfig(configSeal.Config)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
@@ -18,7 +21,9 @@ func configureGCPCKMSSeal(configSeal *server.Seal, infoKeys *[]string, info *map
 			return nil, err
 		}
 	}
-	autoseal := vault.NewAutoSeal(kms)
+	autoseal := vault.NewAutoSeal(&seal.Access{
+		Wrapper: kms,
+	})
 	if kmsInfo != nil {
 		*infoKeys = append(*infoKeys, "Seal Type", "GCP KMS Project", "GCP KMS Region", "GCP KMS Key Ring", "GCP KMS Crypto Key")
 		(*info)["Seal Type"] = configSeal.Type

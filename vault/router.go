@@ -10,7 +10,7 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	radix "github.com/armon/go-radix"
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -416,7 +416,7 @@ func (r *Router) MatchingSystemView(ctx context.Context, path string) logical.Sy
 	r.l.RLock()
 	_, raw, ok := r.root.LongestPrefix(path)
 	r.l.RUnlock()
-	if !ok {
+	if !ok || raw.(*routeEntry).backend == nil {
 		return nil
 	}
 	return raw.(*routeEntry).backend.System()

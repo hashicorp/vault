@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -649,6 +650,9 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			if ok && !force {
 				return nil, fmt.Errorf("conflicting MFA config ID %q in entity ID %q", configID, fromEntity.ID)
 			} else {
+				if toEntity.MFASecrets == nil {
+					toEntity.MFASecrets = make(map[string]*mfa.Secret)
+				}
 				toEntity.MFASecrets[configID] = configSecret
 			}
 		}

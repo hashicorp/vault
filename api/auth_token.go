@@ -115,6 +115,26 @@ func (c *TokenAuth) LookupSelf() (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+func (c *TokenAuth) RenewAccessor(accessor string, increment int) (*Secret, error) {
+	r := c.c.NewRequest("POST", "/v1/auth/token/renew-accessor")
+	if err := r.SetJSONBody(map[string]interface{}{
+		"accessor":  accessor,
+		"increment": increment,
+	}); err != nil {
+		return nil, err
+	}
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	resp, err := c.c.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}
+
 func (c *TokenAuth) Renew(token string, increment int) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/renew")
 	if err := r.SetJSONBody(map[string]interface{}{

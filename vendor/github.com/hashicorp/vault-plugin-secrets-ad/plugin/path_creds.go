@@ -59,7 +59,7 @@ func (b *backend) pathCreds() *framework.Path {
 func (b *backend) credReadOperation(ctx context.Context, req *logical.Request, fieldData *framework.FieldData) (*logical.Response, error) {
 	cred := make(map[string]interface{})
 
-	engineConf, err := b.readConfig(ctx, req.Storage)
+	engineConf, err := readConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}

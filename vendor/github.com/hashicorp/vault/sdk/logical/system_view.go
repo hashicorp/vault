@@ -62,6 +62,10 @@ type SystemView interface {
 	// for the given entity id
 	EntityInfo(entityID string) (*Entity, error)
 
+	// GroupsForEntity returns the group membership information for the provided
+	// entity id
+	GroupsForEntity(entityID string) ([]*Group, error)
+
 	// PluginEnv returns Vault environment information used by plugins
 	PluginEnv(context.Context) (*PluginEnvironment, error)
 }
@@ -82,6 +86,7 @@ type StaticSystemView struct {
 	LocalMountVal       bool
 	ReplicationStateVal consts.ReplicationState
 	EntityVal           *Entity
+	GroupsVal           []*Group
 	Features            license.Features
 	VaultVersion        string
 	PluginEnvironment   *PluginEnvironment
@@ -147,6 +152,10 @@ func (d StaticSystemView) MlockEnabled() bool {
 
 func (d StaticSystemView) EntityInfo(entityID string) (*Entity, error) {
 	return d.EntityVal, nil
+}
+
+func (d StaticSystemView) GroupsForEntity(entityID string) ([]*Group, error) {
+	return d.GroupsVal, nil
 }
 
 func (d StaticSystemView) HasFeature(feature license.Features) bool {

@@ -8,6 +8,7 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -20,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/patrickmn/go-cache"
@@ -78,16 +80,19 @@ type idToken struct {
 //
 // https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata
 type discovery struct {
-	Issuer      string   `json:"issuer"`
-	Keys        string   `json:"jwks_uri"`
-	Subjects    []string `json:"subject_types_supported"`
-	IDTokenAlgs []string `json:"id_token_signing_alg_values_supported"`
+	Issuer        string   `json:"issuer"`
+	Keys          string   `json:"jwks_uri"`
+	ResponseTypes []string `json:"response_types_supported"`
+	Subjects      []string `json:"subject_types_supported"`
+	IDTokenAlgs   []string `json:"id_token_signing_alg_values_supported"`
 }
 
 // oidcCache is a thin wrapper around go-cache to partition by namespace
 type oidcCache struct {
 	c *cache.Cache
 }
+
+var errNilNamespace = errors.New("nil namespace in oidc cache request")
 
 const (
 	issuerPath           = "identity/oidc"
@@ -110,7 +115,7 @@ var supportedAlgs = []string{
 }
 
 // pseudo-namespace for cache items that don't belong to any real namespace.
-var nilNamespace = &namespace.Namespace{ID: "__NIL_NAMESPACE"}
+var noNamespace = &namespace.Namespace{ID: "__NO_NAMESPACE"}
 
 func oidcPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
@@ -202,7 +207,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				logical.ReadOperation: i.pathOIDCDiscovery,
 			},
 			HelpSynopsis:    "Query OIDC configurations",
-			HelpDescription: "Query this path to retrieve the configured OIDC Issuer and Keys endpoints, Subjects, and signing algorithms used by the OIDC backend.",
+			HelpDescription: "Query this path to retrieve the configured OIDC Issuer and Keys endpoints, response types, subject types, and signing algorithms used by the OIDC backend.",
 		},
 		{
 			Pattern: "oidc/.well-known/keys/?$",
@@ -245,6 +250,10 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeDurationSecond,
 					Description: "TTL of the tokens generated against the role.",
 					Default:     "24h",
+				},
+				"client_id": {
+					Type:        framework.TypeString,
+					Description: "Optional client_id",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -369,7 +378,9 @@ func (i *IdentityStore) pathOIDCUpdateConfig(ctx context.Context, req *logical.R
 		return nil, err
 	}
 
-	i.oidcCache.Flush(ns)
+	if err := i.oidcCache.Flush(ns); err != nil {
+		return nil, err
+	}
 
 	return resp, nil
 }
@@ -380,7 +391,12 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 		return nil, err
 	}
 
-	if v, ok := i.oidcCache.Get(ns, "config"); ok {
+	v, ok, err := i.oidcCache.Get(ns, "config")
+	if err != nil {
+		return nil, err
+	}
+
+	if ok {
 		return v.(*oidcConfig), nil
 	}
 
@@ -403,7 +419,9 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 
 	c.effectiveIssuer += "/v1/" + ns.Path + issuerPath
 
-	i.oidcCache.SetDefault(ns, "config", &c)
+	if err := i.oidcCache.SetDefault(ns, "config", &c); err != nil {
+		return nil, err
+	}
 
 	return &c, nil
 }
@@ -414,8 +432,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 	if err != nil {
 		return nil, err
 	}
-
-	defer i.oidcCache.Flush(ns)
 
 	name := d.Get("name").(string)
 
@@ -491,6 +507,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		if err := saveOIDCPublicKey(ctx, req.Storage, signingKey.Public()); err != nil {
 			return nil, err
 		}
+	}
+
+	if err := i.oidcCache.Flush(ns); err != nil {
+		return nil, err
 	}
 
 	// store named key
@@ -589,7 +609,9 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	i.oidcCache.Flush(ns)
+	if err := i.oidcCache.Flush(ns); err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }
@@ -644,7 +666,9 @@ func (i *IdentityStore) pathOIDCRotateKey(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	i.oidcCache.Flush(ns)
+	if err := i.oidcCache.Flush(ns); err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }
@@ -682,7 +706,12 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 
 	var key *namedKey
 
-	if keyRaw, found := i.oidcCache.Get(ns, "namedKeys/"+role.Key); found {
+	keyRaw, found, err := i.oidcCache.Get(ns, "namedKeys/"+role.Key)
+	if err != nil {
+		return nil, err
+	}
+
+	if found {
 		key = keyRaw.(*namedKey)
 	} else {
 		entry, _ := req.Storage.Get(ctx, namedKeyConfigPath+role.Key)
@@ -694,7 +723,9 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 			return nil, err
 		}
 
-		i.oidcCache.SetDefault(ns, "namedKeys/"+role.Key, key)
+		if err := i.oidcCache.SetDefault(ns, "namedKeys/"+role.Key, key); err != nil {
+			return nil, err
+		}
 	}
 	// Validate that the role is allowed to sign with its key (the key could have been updated)
 	if !strutil.StrListContains(key.AllowedClientIDs, "*") && !strutil.StrListContains(key.AllowedClientIDs, role.ClientID) {
@@ -768,11 +799,11 @@ func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity
 	// Parse and integrate the populated role template. Structural errors with the template _should_
 	// be caught during role configuration. Error found during runtime will be logged, but they will
 	// not block generation of the basic ID token. They should not be returned to the requester.
-	_, populatedTemplate, err := identity.PopulateString(identity.PopulateStringInput{
-		Mode:   identity.JSONTemplating,
+	_, populatedTemplate, err := identitytpl.PopulateString(identitytpl.PopulateStringInput{
+		Mode:   identitytpl.JSONTemplating,
 		String: template,
-		Entity: entity,
-		Groups: groups,
+		Entity: identity.ToSDKEntity(entity),
+		Groups: identity.ToSDKGroups(groups),
 		// namespace?
 	})
 
@@ -873,11 +904,11 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 
 	// Validate that template can be parsed and results in valid JSON
 	if role.Template != "" {
-		_, populatedTemplate, err := identity.PopulateString(identity.PopulateStringInput{
-			Mode:   identity.JSONTemplating,
+		_, populatedTemplate, err := identitytpl.PopulateString(identitytpl.PopulateStringInput{
+			Mode:   identitytpl.JSONTemplating,
 			String: role.Template,
-			Entity: new(identity.Entity),
-			Groups: make([]*identity.Group, 0),
+			Entity: new(logical.Entity),
+			Groups: make([]*logical.Group, 0),
 			// namespace?
 		})
 
@@ -904,6 +935,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		role.TokenTTL = time.Duration(d.Get("ttl").(int)) * time.Second
 	}
 
+	if clientID, ok := d.GetOk("client_id"); ok {
+		role.ClientID = clientID.(string)
+	}
+
 	// create role path
 	if role.ClientID == "" {
 		clientID, err := base62.Random(26)
@@ -922,7 +957,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		return nil, err
 	}
 
-	i.oidcCache.Flush(ns)
+	if err := i.oidcCache.Flush(ns); err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -993,7 +1031,12 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	if v, ok := i.oidcCache.Get(ns, "discoveryResponse"); ok {
+	v, ok, err := i.oidcCache.Get(ns, "discoveryResponse")
+	if err != nil {
+		return nil, err
+	}
+
+	if ok {
 		data = v.([]byte)
 	} else {
 		c, err := i.getOIDCConfig(ctx, req.Storage)
@@ -1002,10 +1045,11 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 		}
 
 		disc := discovery{
-			Issuer:      c.effectiveIssuer,
-			Keys:        c.effectiveIssuer + "/.well-known/keys",
-			Subjects:    []string{"public"},
-			IDTokenAlgs: supportedAlgs,
+			Issuer:        c.effectiveIssuer,
+			Keys:          c.effectiveIssuer + "/.well-known/keys",
+			ResponseTypes: []string{"id_token"},
+			Subjects:      []string{"public"},
+			IDTokenAlgs:   supportedAlgs,
 		}
 
 		data, err = json.Marshal(disc)
@@ -1013,7 +1057,9 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 			return nil, err
 		}
 
-		i.oidcCache.SetDefault(ns, "discoveryResponse", data)
+		if err := i.oidcCache.SetDefault(ns, "discoveryResponse", data); err != nil {
+			return nil, err
+		}
 	}
 
 	resp := &logical.Response{
@@ -1038,7 +1084,12 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 		return nil, err
 	}
 
-	if v, ok := i.oidcCache.Get(ns, "jwksResponse"); ok {
+	v, ok, err := i.oidcCache.Get(ns, "jwksResponse")
+	if err != nil {
+		return nil, err
+	}
+
+	if ok {
 		data = v.([]byte)
 	} else {
 		jwks, err := i.generatePublicJWKS(ctx, req.Storage)
@@ -1051,7 +1102,9 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 			return nil, err
 		}
 
-		i.oidcCache.SetDefault(ns, "jwksResponse", data)
+		if err := i.oidcCache.SetDefault(ns, "jwksResponse", data); err != nil {
+			return nil, err
+		}
 	}
 
 	resp := &logical.Response{
@@ -1070,7 +1123,12 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 		return nil, err
 	}
 	if len(keys) > 0 {
-		if v, ok := i.oidcCache.Get(nilNamespace, "nextRun"); ok {
+		v, ok, err := i.oidcCache.Get(noNamespace, "nextRun")
+		if err != nil {
+			return nil, err
+		}
+
+		if ok {
 			now := time.Now()
 			expireAt := v.(time.Time)
 			if expireAt.After(now) {
@@ -1309,7 +1367,12 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		return nil, err
 	}
 
-	if jwksRaw, ok := i.oidcCache.Get(ns, "jwks"); ok {
+	jwksRaw, ok, err := i.oidcCache.Get(ns, "jwks")
+	if err != nil {
+		return nil, err
+	}
+
+	if ok {
 		return jwksRaw.(*jose.JSONWebKeySet), nil
 	}
 
@@ -1334,7 +1397,9 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		jwks.Keys = append(jwks.Keys, *key)
 	}
 
-	i.oidcCache.SetDefault(ns, "jwks", jwks)
+	if err := i.oidcCache.SetDefault(ns, "jwks", jwks); err != nil {
+		return nil, err
+	}
 
 	return jwks, nil
 }
@@ -1433,7 +1498,9 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 	}
 
 	if didUpdate {
-		i.oidcCache.Flush(ns)
+		if err := i.oidcCache.Flush(ns); err != nil {
+			i.Logger().Error("error flushing oidc cache", "error", err)
+		}
 	}
 
 	return nextExpiration, nil
@@ -1497,9 +1564,13 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 	var nextRun time.Time
 	now := time.Now()
 
-	nsPaths := i.listNamespacePaths()
+	v, ok, err := i.oidcCache.Get(noNamespace, "nextRun")
+	if err != nil {
+		i.Logger().Error("error reading oidc cache", "err", err)
+		return
+	}
 
-	if v, ok := i.oidcCache.Get(nilNamespace, "nextRun"); ok {
+	if ok {
 		nextRun = v.(time.Time)
 	}
 
@@ -1512,7 +1583,9 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 		// based on key rotation times.
 		nextRun = now.Add(24 * time.Hour)
 
-		for _, nsPath := range nsPaths {
+		for _, ns := range i.listNamespaces() {
+			nsPath := ns.Path
+
 			s := i.core.router.MatchingStorageByAPIPath(ctx, nsPath+"identity/oidc")
 
 			if s == nil {
@@ -1529,7 +1602,9 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 				i.Logger().Warn("error expiring OIDC public keys", "err", err)
 			}
 
-			i.oidcCache.Flush(nilNamespace)
+			if err := i.oidcCache.Flush(ns); err != nil {
+				i.Logger().Error("error flushing oidc cache", "err", err)
+			}
 
 			// re-run at the soonest expiration or rotation time
 			if nextRotation.Before(nextRun) {
@@ -1540,7 +1615,9 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 				nextRun = nextExpiration
 			}
 		}
-		i.oidcCache.SetDefault(nilNamespace, "nextRun", nextRun)
+		if err := i.oidcCache.SetDefault(noNamespace, "nextRun", nextRun); err != nil {
+			i.Logger().Error("error setting oidc cache", "err", err)
+		}
 	}
 }
 
@@ -1554,20 +1631,36 @@ func (c *oidcCache) nskey(ns *namespace.Namespace, key string) string {
 	return fmt.Sprintf("v0:%s:%s", ns.ID, key)
 }
 
-func (c *oidcCache) Get(ns *namespace.Namespace, key string) (interface{}, bool) {
-	return c.c.Get(c.nskey(ns, key))
+func (c *oidcCache) Get(ns *namespace.Namespace, key string) (interface{}, bool, error) {
+	if ns == nil {
+		return nil, false, errNilNamespace
+	}
+	v, found := c.c.Get(c.nskey(ns, key))
+	return v, found, nil
 }
 
-func (c *oidcCache) SetDefault(ns *namespace.Namespace, key string, obj interface{}) {
+func (c *oidcCache) SetDefault(ns *namespace.Namespace, key string, obj interface{}) error {
+	if ns == nil {
+		return errNilNamespace
+	}
 	c.c.SetDefault(c.nskey(ns, key), obj)
+
+	return nil
 }
 
-func (c *oidcCache) Flush(ns *namespace.Namespace) {
+func (c *oidcCache) Flush(ns *namespace.Namespace) error {
+	if ns == nil {
+		return errNilNamespace
+	}
+
+	// Remove all items from the provided namespace as well as the shared, "no namespace" section.
 	for itemKey := range c.c.Items() {
-		if isTargetNamespacedKey(itemKey, []string{nilNamespace.ID, ns.ID}) {
+		if isTargetNamespacedKey(itemKey, []string{noNamespace.ID, ns.ID}) {
 			c.c.Delete(itemKey)
 		}
 	}
+
+	return nil
 }
 
 // isTargetNamespacedKey returns true for a properly constructed namespaced key (<version>:<nsID>:<key>)

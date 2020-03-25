@@ -10,7 +10,9 @@
 /bower_components/
 /node_modules/
 /.storybook/
+/.yarn/
 /stories/
+/storybook-static/
 
 # misc
 /coverage/
