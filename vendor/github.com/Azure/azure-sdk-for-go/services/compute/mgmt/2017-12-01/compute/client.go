@@ -1,4 +1,4 @@
-// Package compute implements the Azure ARM Compute service API version 2017-12-01.
+// Package compute implements the Azure ARM Compute service API version .
 //
 // Compute Client
 package compute

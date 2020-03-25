@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -14,15 +13,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	proto "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/net/http2"
@@ -484,6 +484,12 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 		// Purge the cache so we make sure we are operating on fresh data
 		c.physicalCache.Purge(ctx)
 
+		// Refresh the raft TLS keys
+		if err := c.checkRaftTLSKeyUpgrades(ctx); err != nil {
+			c.logger.Info("failed to perform TLS key upgrades, sealing", "error", err)
+			return err
+		}
+
 		// Reload the keyring in case it changed. If this fails it's likely
 		// we've changed master keys.
 		err := c.performKeyUpgrades(ctx)
@@ -491,13 +497,14 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 			// The snapshot contained a master key or keyring we couldn't
 			// recover
 			switch c.seal.BarrierType() {
-			case seal.Shamir:
+			case wrapping.Shamir:
 				// If we are a shamir seal we can't do anything. Just
 				// seal all nodes.
 
 				// Seal ourselves
 				c.logger.Info("failed to perform key upgrades, sealing", "error", err)
 				return err
+
 			default:
 				// If we are using an auto-unseal we can try to use the seal to
 				// unseal again. If the auto-unseal mechanism has changed then
@@ -524,18 +531,43 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 	}
 }
 
-func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, tlsConfig *tls.Config, retry, nonVoter bool) (bool, error) {
-	if len(leaderAddr) == 0 {
-		return false, errors.New("No leader address provided")
+func (c *Core) InitiateRetryJoin(ctx context.Context) error {
+	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
+	if !ok {
+		return errors.New("raft storage not configured")
 	}
 
+	if raftStorage.Initialized() {
+		return nil
+	}
+
+	leaderInfos, err := raftStorage.JoinConfig()
+	if err != nil {
+		return err
+	}
+
+	// Nothing to do if config wasn't supplied
+	if len(leaderInfos) == 0 {
+		return nil
+	}
+
+	c.logger.Info("raft retry join initiated")
+
+	if _, err = c.JoinRaftCluster(ctx, leaderInfos, false); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJoinInfo, nonVoter bool) (bool, error) {
 	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
 	if !ok {
 		return false, errors.New("raft storage not configured")
 	}
 
 	if raftStorage.Initialized() {
-		return false, errors.New("raft is already initialized")
+		return false, errors.New("raft storage is already initialized")
 	}
 
 	init, err := c.Initialized(ctx)
@@ -543,103 +575,174 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, tlsConfig
 		return false, errwrap.Wrapf("failed to check if core is initialized: {{err}}", err)
 	}
 	if init {
-		return false, errwrap.Wrapf("join can't be invoked on an initialized cluster: {{err}}", ErrAlreadyInit)
+		return true, nil
 	}
 
-	transport := cleanhttp.DefaultPooledTransport()
-	if tlsConfig != nil {
-		transport.TLSClientConfig = tlsConfig.Clone()
-		if err := http2.ConfigureTransport(transport); err != nil {
-			return false, errwrap.Wrapf("failed to configure TLS: {{err}}", err)
-		}
-	}
-	client := &http.Client{
-		Transport: transport,
-	}
-	config := api.DefaultConfig()
-	if config.Error != nil {
-		return false, errwrap.Wrapf("failed to create api client: {{err}}", config.Error)
-	}
-	config.Address = leaderAddr
-	config.HttpClient = client
-	config.MaxRetries = 0
-	apiClient, err := api.NewClient(config)
-	if err != nil {
-		return false, errwrap.Wrapf("failed to create api client: {{err}}", err)
-	}
+	join := func(retry bool) error {
+		joinLeader := func(leaderInfo *raft.LeaderJoinInfo) error {
+			if leaderInfo == nil {
+				return errors.New("raft leader information is nil")
+			}
+			if len(leaderInfo.LeaderAPIAddr) == 0 {
+				return errors.New("raft leader address not provided")
+			}
 
-	join := func() error {
-		// Unwrap the token
-		secret, err := apiClient.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
-			"server_id": raftStorage.NodeID(),
-		})
-		if err != nil {
-			return errwrap.Wrapf("error during bootstrap init call: {{err}}", err)
-		}
-		if secret == nil {
-			return errors.New("could not retrieve bootstrap package")
-		}
+			init, err := c.Initialized(ctx)
+			if err != nil {
+				return errwrap.Wrapf("failed to check if core is initialized: {{err}}", err)
+			}
+			if init {
+				c.logger.Info("returning from raft join as the node is initialized")
+				return nil
+			}
+			if !c.Sealed() {
+				c.logger.Info("returning from raft join as the node is unsealed")
+				return nil
+			}
 
-		var sealConfig SealConfig
-		err = mapstructure.Decode(secret.Data["seal_config"], &sealConfig)
-		if err != nil {
-			return err
-		}
+			c.logger.Info("attempting to join possible raft leader node", "leader_addr", leaderInfo.LeaderAPIAddr)
 
-		if sealConfig.Type != c.seal.BarrierType() {
-			return fmt.Errorf("mismatching seal types between leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierType())
-		}
+			// Create an API client to interact with the leader node
+			transport := cleanhttp.DefaultPooledTransport()
 
-		challengeB64, ok := secret.Data["challenge"]
-		if !ok {
-			return errors.New("error during raft bootstrap call, no challenge given")
-		}
-		challengeRaw, err := base64.StdEncoding.DecodeString(challengeB64.(string))
-		if err != nil {
-			return errwrap.Wrapf("error decoding challenge: {{err}}", err)
-		}
+			if leaderInfo.TLSConfig == nil && (len(leaderInfo.LeaderCACert) != 0 || len(leaderInfo.LeaderClientCert) != 0 || len(leaderInfo.LeaderClientKey) != 0) {
+				leaderInfo.TLSConfig, err = tlsutil.ClientTLSConfig([]byte(leaderInfo.LeaderCACert), []byte(leaderInfo.LeaderClientCert), []byte(leaderInfo.LeaderClientKey))
+				if err != nil {
+					return errwrap.Wrapf("failed to create TLS config: {{err}}", err)
+				}
+			}
 
-		eBlob := &physical.EncryptedBlobInfo{}
-		if err := proto.Unmarshal(challengeRaw, eBlob); err != nil {
-			return errwrap.Wrapf("error decoding challenge: {{err}}", err)
-		}
-		raftInfo := &raftInformation{
-			challenge:           eBlob,
-			leaderClient:        apiClient,
-			leaderBarrierConfig: &sealConfig,
-			nonVoter:            nonVoter,
-		}
-		if c.seal.BarrierType() == seal.Shamir {
-			c.raftInfo = raftInfo
-			c.seal.SetBarrierConfig(ctx, &sealConfig)
+			if leaderInfo.TLSConfig != nil {
+				transport.TLSClientConfig = leaderInfo.TLSConfig.Clone()
+				if err := http2.ConfigureTransport(transport); err != nil {
+					return errwrap.Wrapf("failed to configure TLS: {{err}}", err)
+				}
+			}
+
+			client := &http.Client{
+				Transport: transport,
+			}
+			config := api.DefaultConfig()
+			if config.Error != nil {
+				return errwrap.Wrapf("failed to create api client: {{err}}", config.Error)
+			}
+			config.Address = leaderInfo.LeaderAPIAddr
+			config.HttpClient = client
+			config.MaxRetries = 0
+			apiClient, err := api.NewClient(config)
+			if err != nil {
+				return errwrap.Wrapf("failed to create api client: {{err}}", err)
+			}
+
+			// Attempt to join the leader by requesting for the bootstrap challenge
+			secret, err := apiClient.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
+				"server_id": raftStorage.NodeID(),
+			})
+			if err != nil {
+				return errwrap.Wrapf("error during raft bootstrap init call: {{err}}", err)
+			}
+			if secret == nil {
+				return errors.New("could not retrieve raft bootstrap package")
+			}
+
+			var sealConfig SealConfig
+			err = mapstructure.Decode(secret.Data["seal_config"], &sealConfig)
+			if err != nil {
+				return err
+			}
+
+			if sealConfig.Type != c.seal.BarrierType() {
+				return fmt.Errorf("mismatching seal types between raft leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierType())
+			}
+
+			challengeB64, ok := secret.Data["challenge"]
+			if !ok {
+				return errors.New("error during raft bootstrap call, no challenge given")
+			}
+			challengeRaw, err := base64.StdEncoding.DecodeString(challengeB64.(string))
+			if err != nil {
+				return errwrap.Wrapf("error decoding raft bootstrap challenge: {{err}}", err)
+			}
+
+			eBlob := &wrapping.EncryptedBlobInfo{}
+			if err := proto.Unmarshal(challengeRaw, eBlob); err != nil {
+				return errwrap.Wrapf("error decoding raft bootstrap challenge: {{err}}", err)
+			}
+			raftInfo := &raftInformation{
+				challenge:           eBlob,
+				leaderClient:        apiClient,
+				leaderBarrierConfig: &sealConfig,
+				nonVoter:            nonVoter,
+			}
+
+			if c.seal.BarrierType() == wrapping.Shamir {
+				c.raftInfo = raftInfo
+				if err := c.seal.SetBarrierConfig(ctx, &sealConfig); err != nil {
+					return err
+				}
+
+				if !retry {
+					return nil
+				}
+
+				// Wait until unseal keys are supplied
+				c.raftInfo.joinInProgress = true
+				if atomic.LoadUint32(c.postUnsealStarted) != 1 {
+					return errors.New("waiting for unseal keys to be supplied")
+				}
+			}
+
+			if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), raftInfo); err != nil {
+				return errwrap.Wrapf("failed to send answer to raft leader node: {{err}}", err)
+			}
+
+			if c.seal.BarrierType() == wrapping.Shamir {
+				// Reset the state
+				c.raftInfo = nil
+
+				// In case of Shamir unsealing, inform the unseal process that raft join is completed
+				close(c.raftJoinDoneCh)
+			}
+
+			c.logger.Info("successfully joined the raft cluster", "leader_addr", leaderInfo.LeaderAPIAddr)
 			return nil
 		}
 
-		if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), raftInfo); err != nil {
-			return errwrap.Wrapf("failed to send answer to leader node: {{err}}", err)
+		// Each join try goes through all the possible leader nodes and attempts to join
+		// them, until one of the attempt succeeds.
+		for _, leaderInfo := range leaderInfos {
+			err = joinLeader(leaderInfo)
+			if err == nil {
+				return nil
+			}
+			c.logger.Info("join attempt failed", "error", err)
 		}
 
-		return nil
+		return errors.New("failed to join any raft leader node")
 	}
 
-	switch retry {
+	switch leaderInfos[0].Retry {
 	case true:
 		go func() {
 			for {
-				// TODO add a way to shut this down
-				err := join()
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+				err := join(true)
 				if err == nil {
 					return
 				}
-				c.logger.Error("failed to join raft cluster", "error", err)
-				time.Sleep(time.Second * 2)
+				c.logger.Error("failed to retry join raft cluster", "retry", "2s")
+				time.Sleep(2 * time.Second)
 			}
 		}()
 
 		// Backgrounded so return false
 		return false, nil
 	default:
-		if err := join(); err != nil {
+		if err := join(false); err != nil {
 			c.logger.Error("failed to join raft cluster", "error", err)
 			return false, errwrap.Wrapf("failed to join raft cluster: {{err}}", err)
 		}
@@ -651,7 +754,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, tlsConfig
 // This is used in tests to override the cluster address
 var UpdateClusterAddrForTests uint32
 
-func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, raftInfo *raftInformation) error {
+func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, raftInfo *raftInformation) error {
 	if raftInfo.challenge == nil {
 		return errors.New("raft challenge is nil")
 	}
@@ -665,7 +768,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, r
 		return errors.New("raft is already initialized")
 	}
 
-	plaintext, err := sealAccess.Decrypt(ctx, raftInfo.challenge)
+	plaintext, err := sealAccess.Decrypt(ctx, raftInfo.challenge, nil)
 	if err != nil {
 		return errwrap.Wrapf("error decrypting challenge: {{err}}", err)
 	}

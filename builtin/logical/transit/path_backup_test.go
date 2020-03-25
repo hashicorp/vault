@@ -13,6 +13,7 @@ func TestTransit_BackupRestore(t *testing.T) {
 	testBackupRestore(t, "aes256-gcm96", "encrypt-decrypt")
 	testBackupRestore(t, "chacha20-poly1305", "encrypt-decrypt")
 	testBackupRestore(t, "rsa-2048", "encrypt-decrypt")
+	testBackupRestore(t, "rsa-3072", "encrypt-decrypt")
 	testBackupRestore(t, "rsa-4096", "encrypt-decrypt")
 
 	// Test signing/verification after a restore for supported keys
@@ -21,6 +22,7 @@ func TestTransit_BackupRestore(t *testing.T) {
 	testBackupRestore(t, "ecdsa-p521", "sign-verify")
 	testBackupRestore(t, "ed25519", "sign-verify")
 	testBackupRestore(t, "rsa-2048", "sign-verify")
+	testBackupRestore(t, "rsa-3072", "sign-verify")
 	testBackupRestore(t, "rsa-4096", "sign-verify")
 
 	// Test HMAC/verification after a restore for all key types
@@ -32,6 +34,7 @@ func TestTransit_BackupRestore(t *testing.T) {
 	testBackupRestore(t, "ecdsa-p521", "hmac-verify")
 	testBackupRestore(t, "ed25519", "hmac-verify")
 	testBackupRestore(t, "rsa-2048", "hmac-verify")
+	testBackupRestore(t, "rsa-3072", "hmac-verify")
 	testBackupRestore(t, "rsa-4096", "hmac-verify")
 }
 

@@ -22,9 +22,14 @@ ha_backend "consul" {
   token = "foo"
 }
 
+service_registration "consul" {
+  token = "foo"
+}
+
 telemetry {
   statsd_address = "bar"
   circonus_api_token = "baz"
+  metrics_prefix = "pfx"
 }
 
 seal "awskms" {

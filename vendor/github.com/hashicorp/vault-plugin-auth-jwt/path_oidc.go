@@ -3,7 +3,9 @@ package jwtauth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -13,7 +15,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/oauth2"
@@ -21,11 +22,15 @@ import (
 
 var oidcStateTimeout = 10 * time.Minute
 
-// OIDC error prefixes. These are searched for specifically by the UI, so any
-// changes to them must be aligned with a UI change.
-const errLoginFailed = "Vault login failed."
-const errNoResponse = "No response from provider."
-const errTokenVerification = "Token verification failed."
+const (
+	// OIDC error prefixes. These are searched for specifically by the UI, so any
+	// changes to them must be aligned with a UI change.
+	errLoginFailed       = "Vault login failed."
+	errNoResponse        = "No response from provider."
+	errTokenVerification = "Token verification failed."
+
+	noCode = "no_code"
+)
 
 // oidcState is created when an authURL is requested. The state identifier is
 // passed throughout the OAuth process.
@@ -33,6 +38,8 @@ type oidcState struct {
 	rolename    string
 	nonce       string
 	redirectURI string
+	code        string
+	idToken     string
 }
 
 func pathOIDC(b *jwtAuthBackend) []*framework.Path {
@@ -46,12 +53,25 @@ func pathOIDC(b *jwtAuthBackend) []*framework.Path {
 				"code": {
 					Type: framework.TypeString,
 				},
+				"id_token": {
+					Type: framework.TypeString,
+				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathCallback,
 					Summary:  "Callback endpoint to complete an OIDC login.",
+
+					// state is cached so don't process OIDC logins on perf standbys
+					ForwardPerformanceStandby: true,
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathCallbackPost,
+					Summary:  "Callback endpoint to handle form_posts.",
+
+					// state is cached so don't process OIDC logins on perf standbys
+					ForwardPerformanceStandby: true,
 				},
 			},
 		},
@@ -71,20 +91,69 @@ func pathOIDC(b *jwtAuthBackend) []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.authURL,
 					Summary:  "Request an authorization URL to start an OIDC login flow.",
+
+					// state is cached so don't process OIDC logins on perf standbys
+					ForwardPerformanceStandby: true,
 				},
 			},
 		},
 	}
 }
 
-func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
-	// Because the state is cached, don't process OIDC logins on perf standbys
-	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
-		return nil, logical.ErrReadOnly
+func (b *jwtAuthBackend) pathCallbackPost(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	config, err := b.config(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if config == nil {
+		return logical.ErrorResponse(errLoginFailed + " Could not load configuration."), nil
 	}
 
-	state := b.verifyState(d.Get("state").(string))
+	if config.OIDCResponseMode != responseModeFormPost {
+		return logical.RespondWithStatusCode(nil, req, http.StatusMethodNotAllowed)
+	}
+
+	stateID := d.Get("state").(string)
+	code := d.Get("code").(string)
+	idToken := d.Get("id_token").(string)
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPContentType: "text/html",
+			logical.HTTPStatusCode:  http.StatusOK,
+		},
+	}
+
+	// Store the provided code and/or token into state, which must already exist.
+	state, err := b.amendState(stateID, code, idToken)
+	if err != nil {
+		resp.Data[logical.HTTPRawBody] = []byte(errorHTML(errLoginFailed, "Expired or missing OAuth state."))
+		resp.Data[logical.HTTPStatusCode] = http.StatusBadRequest
+	} else {
+		mount := parseMount(state.redirectURI)
+		if mount == "" {
+			resp.Data[logical.HTTPRawBody] = []byte(errorHTML(errLoginFailed, "Invalid redirect path."))
+			resp.Data[logical.HTTPStatusCode] = http.StatusBadRequest
+		} else {
+			resp.Data[logical.HTTPRawBody] = []byte(formpostHTML(mount, noCode, stateID))
+		}
+	}
+
+	return resp, nil
+}
+
+func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	config, err := b.config(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if config == nil {
+		return logical.ErrorResponse(errLoginFailed + " Could not load configuration"), nil
+	}
+
+	stateID := d.Get("state").(string)
+
+	state := b.verifyState(stateID)
 	if state == nil {
 		return logical.ErrorResponse(errLoginFailed + " Expired or missing OAuth state."), nil
 	}
@@ -96,14 +165,6 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 	}
 	if role == nil {
 		return logical.ErrorResponse(errLoginFailed + " Role could not be found"), nil
-	}
-
-	config, err := b.config(ctx, req.Storage)
-	if err != nil {
-		return nil, err
-	}
-	if config == nil {
-		return logical.ErrorResponse(errLoginFailed + " Could not load configuration"), nil
 	}
 
 	if len(role.TokenBoundCIDRs) > 0 {
@@ -134,21 +195,33 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 		Scopes:       []string{oidc.ScopeOpenID},
 	}
 
+	var rawToken string
+	var oauth2Token *oauth2.Token
+
 	code := d.Get("code").(string)
+	if code == noCode {
+		code = state.code
+	}
+
 	if code == "" {
-		return logical.ErrorResponse(errLoginFailed + " OAuth code parameter not provided"), nil
+		if state.idToken == "" {
+			return logical.ErrorResponse(errLoginFailed + " No code or id_token received."), nil
+		}
+		rawToken = state.idToken
+	} else {
+		oauth2Token, err = oauth2Config.Exchange(oidcCtx, code)
+		if err != nil {
+			return logical.ErrorResponse(errLoginFailed+" Error exchanging oidc code: %q.", err.Error()), nil
+		}
+
+		// Extract the ID Token from OAuth2 token.
+		var ok bool
+		rawToken, ok = oauth2Token.Extra("id_token").(string)
+		if !ok {
+			return logical.ErrorResponse(errTokenVerification + " No id_token found in response."), nil
+		}
 	}
 
-	oauth2Token, err := oauth2Config.Exchange(oidcCtx, code)
-	if err != nil {
-		return logical.ErrorResponse(errLoginFailed+" Error exchanging oidc code: %q.", err.Error()), nil
-	}
-
-	// Extract the ID Token from OAuth2 token.
-	rawToken, ok := oauth2Token.Extra("id_token").(string)
-	if !ok {
-		return logical.ErrorResponse(errTokenVerification + " No id_token found in response."), nil
-	}
 	if role.VerboseOIDCLogging {
 		b.Logger().Debug("OIDC provider response", "ID token", rawToken)
 	}
@@ -164,17 +237,19 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 	}
 	delete(allClaims, "nonce")
 
-	// Attempt to fetch information from the /userinfo endpoint and merge it with
-	// the existing claims data. A failure to fetch additional information from this
-	// endpoint will not invalidate the authorization flow.
-	if userinfo, err := provider.UserInfo(oidcCtx, oauth2.StaticTokenSource(oauth2Token)); err == nil {
-		_ = userinfo.Claims(&allClaims)
-	} else {
-		logFunc := b.Logger().Warn
-		if strings.Contains(err.Error(), "user info endpoint is not supported") {
-			logFunc = b.Logger().Info
+	// If we have a token, attempt to fetch information from the /userinfo endpoint
+	// and merge it with the existing claims data. A failure to fetch additional information
+	// from this endpoint will not invalidate the authorization flow.
+	if oauth2Token != nil {
+		if userinfo, err := provider.UserInfo(oidcCtx, oauth2.StaticTokenSource(oauth2Token)); err == nil {
+			_ = userinfo.Claims(&allClaims)
+		} else {
+			logFunc := b.Logger().Warn
+			if strings.Contains(err.Error(), "user info endpoint is not supported") {
+				logFunc = b.Logger().Info
+			}
+			logFunc("error reading /userinfo endpoint", "error", err)
 		}
-		logFunc("error reading /userinfo endpoint", "error", err)
 	}
 
 	if role.VerboseOIDCLogging {
@@ -185,7 +260,7 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 		}
 	}
 
-	if err := validateBoundClaims(b.Logger(), role.BoundClaims, allClaims); err != nil {
+	if err := validateBoundClaims(b.Logger(), role.BoundClaimsType, role.BoundClaims, allClaims); err != nil {
 		return logical.ErrorResponse("error validating claims: %s", err.Error()), nil
 	}
 
@@ -234,11 +309,6 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	logger := b.Logger()
 
-	// Because the state is cached, don't process OIDC logins on perf standbys
-	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
-		return nil, logical.ErrReadOnly
-	}
-
 	// default response for most error/invalid conditions
 	resp := &logical.Response{
 		Data: map[string]interface{}{
@@ -284,6 +354,15 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 		return resp, nil
 	}
 
+	// If configured for form_post, redirect directly to Vault instead of the UI,
+	// if this was initiated by the UI (which currently has no knowledge of mode).
+	///
+	// TODO: it would be better to convey this to the UI and have it send the
+	// correct URL directly.
+	if config.OIDCResponseMode == responseModeFormPost {
+		redirectURI = strings.Replace(redirectURI, "ui/vault", "v1", 1)
+	}
+
 	provider, err := b.getProvider(config)
 	if err != nil {
 		logger.Warn("error getting provider for login operation", "error", err)
@@ -308,7 +387,33 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 		return resp, nil
 	}
 
-	resp.Data["auth_url"] = oauth2Config.AuthCodeURL(stateID, oidc.Nonce(nonce))
+	authCodeOpts := []oauth2.AuthCodeOption{
+		oidc.Nonce(nonce),
+	}
+
+	// Add "form_post" param if requested. Note: the operator is allowed to configure "query"
+	// as well, but that is the default for the AuthCode method and needn't be explicitly added.
+	if config.OIDCResponseMode == responseModeFormPost {
+		authCodeOpts = append(authCodeOpts, oauth2.SetAuthURLParam("response_mode", responseModeFormPost))
+	}
+
+	// Build the final authorization URL. oauth2Config doesn't support response types other than
+	// code, so some manual tweaking is required.
+	urlStr := oauth2Config.AuthCodeURL(stateID, authCodeOpts...)
+
+	var rt string
+	if config.hasType(responseTypeCode) {
+		rt += responseTypeCode + " "
+	}
+	if config.hasType(responseTypeIDToken) {
+		rt += responseTypeIDToken + " "
+	}
+
+	rt = strings.TrimSpace(rt)
+	urlStr = strings.Replace(urlStr, "response_type=code",
+		fmt.Sprintf("response_type=%s", url.QueryEscape(rt)), 1)
+
+	resp.Data["auth_url"] = urlStr
 
 	return resp, nil
 }
@@ -333,6 +438,21 @@ func (b *jwtAuthBackend) createState(rolename, redirectURI string) (string, stri
 	})
 
 	return stateID, nonce, nil
+}
+
+func (b *jwtAuthBackend) amendState(stateID, code, idToken string) (*oidcState, error) {
+	stateRaw, ok := b.oidcStates.Get(stateID)
+	if !ok {
+		return nil, errors.New("OIDC state not found")
+	}
+
+	state := stateRaw.(*oidcState)
+	state.code = code
+	state.idToken = idToken
+
+	b.oidcStates.SetDefault(stateID, state)
+
+	return state, nil
 }
 
 // verifyState tests whether the provided state ID is valid and returns the
@@ -378,4 +498,16 @@ func validRedirect(uri string, allowed []string) bool {
 	}
 
 	return false
+}
+
+// parseMount attempts to extract the mount path from a redirect URI.
+func parseMount(redirectURI string) string {
+	parts := strings.Split(redirectURI, "/")
+
+	for i := 0; i+2 < len(parts); i++ {
+		if parts[i] == "v1" && parts[i+1] == "auth" {
+			return parts[i+2]
+		}
+	}
+	return ""
 }

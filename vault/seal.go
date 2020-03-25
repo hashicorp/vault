@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
@@ -49,35 +50,12 @@ const (
 	RecoveryTypeShamir      = "shamir"
 )
 
-type StoredKeysSupport int
-
-const (
-	// The 0 value of StoredKeysSupport is an invalid option
-	StoredKeysInvalid StoredKeysSupport = iota
-	StoredKeysNotSupported
-	StoredKeysSupportedGeneric
-	StoredKeysSupportedShamirMaster
-)
-
-func (s StoredKeysSupport) String() string {
-	switch s {
-	case StoredKeysNotSupported:
-		return "Old-style Shamir"
-	case StoredKeysSupportedGeneric:
-		return "AutoUnseal"
-	case StoredKeysSupportedShamirMaster:
-		return "New-style Shamir"
-	default:
-		return "Invalid StoredKeys type"
-	}
-}
-
 type Seal interface {
 	SetCore(*Core)
 	Init(context.Context) error
 	Finalize(context.Context) error
 
-	StoredKeysSupported() StoredKeysSupport
+	StoredKeysSupported() seal.StoredKeysSupport
 	SealWrapable() bool
 	SetStoredKeys(context.Context, [][]byte) error
 	GetStoredKeys(context.Context) ([][]byte, error)
@@ -96,16 +74,16 @@ type Seal interface {
 	SetRecoveryKey(context.Context, []byte) error
 	VerifyRecoveryKey(context.Context, []byte) error
 
-	GetAccess() seal.Access
+	GetAccess() *seal.Access
 }
 
 type defaultSeal struct {
-	access seal.Access
+	access *seal.Access
 	config atomic.Value
 	core   *Core
 }
 
-func NewDefaultSeal(lowLevel seal.Access) Seal {
+func NewDefaultSeal(lowLevel *seal.Access) Seal {
 	ret := &defaultSeal{
 		access: lowLevel,
 	}
@@ -124,11 +102,11 @@ func (d *defaultSeal) checkCore() error {
 	return nil
 }
 
-func (d *defaultSeal) GetAccess() seal.Access {
+func (d *defaultSeal) GetAccess() *seal.Access {
 	return d.access
 }
 
-func (d *defaultSeal) SetAccess(access seal.Access) {
+func (d *defaultSeal) SetAccess(access *seal.Access) {
 	d.access = access
 }
 
@@ -145,22 +123,22 @@ func (d *defaultSeal) Finalize(ctx context.Context) error {
 }
 
 func (d *defaultSeal) BarrierType() string {
-	return seal.Shamir
+	return wrapping.Shamir
 }
 
-func (d *defaultSeal) StoredKeysSupported() StoredKeysSupport {
+func (d *defaultSeal) StoredKeysSupported() seal.StoredKeysSupport {
 	isLegacy, err := d.LegacySeal()
 	if err != nil {
 		if d.core != nil && d.core.logger != nil {
 			d.core.logger.Error("no seal config found, can't determine if legacy or new-style shamir")
 		}
-		return StoredKeysInvalid
+		return seal.StoredKeysInvalid
 	}
 	switch {
 	case isLegacy:
-		return StoredKeysNotSupported
+		return seal.StoredKeysNotSupported
 	default:
-		return StoredKeysSupportedShamirMaster
+		return seal.StoredKeysSupportedShamirMaster
 	}
 }
 
@@ -438,7 +416,7 @@ func (s *SealConfig) Clone() *SealConfig {
 	return ret
 }
 
-func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor seal.Encryptor, keys [][]byte) error {
+func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor *seal.Access, keys [][]byte) error {
 	if keys == nil {
 		return fmt.Errorf("keys were nil")
 	}
@@ -452,7 +430,7 @@ func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor se
 	}
 
 	// Encrypt and marshal the keys
-	blobInfo, err := encryptor.Encrypt(ctx, buf)
+	blobInfo, err := encryptor.Encrypt(ctx, buf, nil)
 	if err != nil {
 		return errwrap.Wrapf("failed to encrypt keys for storage: {{err}}", err)
 	}
@@ -475,7 +453,7 @@ func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor se
 	return nil
 }
 
-func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor seal.Encryptor) ([][]byte, error) {
+func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor *seal.Access) ([][]byte, error) {
 	pe, err := storage.Get(ctx, StoredBarrierKeysPath)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to fetch stored keys: {{err}}", err)
@@ -487,12 +465,12 @@ func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor sea
 		return nil, nil
 	}
 
-	blobInfo := &physical.EncryptedBlobInfo{}
+	blobInfo := &wrapping.EncryptedBlobInfo{}
 	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
 		return nil, errwrap.Wrapf("failed to proto decode stored keys: {{err}}", err)
 	}
 
-	pt, err := encryptor.Decrypt(ctx, blobInfo)
+	pt, err := encryptor.Decrypt(ctx, blobInfo, nil)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to decrypt encrypted stored keys: {{err}}", err)
 	}

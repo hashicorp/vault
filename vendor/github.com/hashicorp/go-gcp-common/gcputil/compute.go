@@ -7,19 +7,21 @@ import (
 	"time"
 )
 
+var gcpLabelRegex = regexp.MustCompile("^(?P<key>[a-z]([\\w-]+)?):(?P<value>[\\w-]*)$")
+
 func ParseGcpLabels(labels []string) (parsed map[string]string, invalid []string) {
 	parsed = map[string]string{}
 	invalid = []string{}
 
-	re := regexp.MustCompile(labelRegex)
+
 	for _, labelStr := range labels {
-		matches := re.FindStringSubmatch(labelStr)
+		matches := gcpLabelRegex.FindStringSubmatch(labelStr)
 		if len(matches) == 0 {
 			invalid = append(invalid, labelStr)
 			continue
 		}
 
-		captureNames := re.SubexpNames()
+		captureNames := gcpLabelRegex.SubexpNames()
 		var keyPtr, valPtr *string
 		for i, name := range captureNames {
 			if name == "key" {

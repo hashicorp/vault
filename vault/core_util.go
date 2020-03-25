@@ -13,6 +13,11 @@ import (
 )
 
 type entCore struct{}
+type entCoreConfig struct{}
+
+func (e entCoreConfig) Clone() entCoreConfig {
+	return entCoreConfig{}
+}
 
 type LicensingConfig struct {
 	AdditionalPublicKeys []interface{}
@@ -40,8 +45,12 @@ func coreInit(c *Core, conf *CoreConfig) error {
 	}
 	return nil
 }
+func (c *Core) setupReplicationResolverHandler() error {
+	return nil
+}
 
-func createSecondaries(*Core, *CoreConfig) {}
+func (c *Core) teardownReplicationResolverHandler() {}
+func createSecondaries(*Core, *CoreConfig)          {}
 
 func addExtraLogicalBackends(*Core, map[string]logical.Factory) {}
 

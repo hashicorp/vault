@@ -1639,10 +1639,20 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 }
 
 func (c *Core) IsBatchTokenCreationRequest(ctx context.Context, path string) (bool, error) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+
+	if c.tokenStore == nil {
+		return false, fmt.Errorf("no token store")
+	}
+
 	name := strings.TrimPrefix(path, "auth/token/create/")
 	roleEntry, err := c.tokenStore.tokenStoreRole(ctx, name)
 	if err != nil {
 		return false, err
+	}
+	if roleEntry == nil {
+		return false, fmt.Errorf("unknown role")
 	}
 	return roleEntry.TokenType == logical.TokenTypeBatch, nil
 }

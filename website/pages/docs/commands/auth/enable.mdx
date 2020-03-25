@@ -1,0 +1,68 @@
+---
+layout: docs
+page_title: auth enable - Command
+sidebar_title: <code>enable</code>
+description: |-
+  The "auth enable" command enables an auth method at a given path. If an auth
+  method already exists at the given path, an error is returned. After the auth
+  method is enabled, it usually needs configuration.
+---
+
+# auth enable
+
+The `auth enable` command enables an auth method at a given path. If an auth
+method already exists at the given path, an error is returned. After the auth
+method is enabled, it usually needs configuration. The configuration varies by
+auth method.
+
+An auth method is responsible for authenticating users or machines and assigning
+them policies and a token with which they can access Vault. Authentication is
+usually mapped to policy. Please see the [policies
+concepts](/docs/concepts/policies) page for more information.
+
+## Examples
+
+Enable the auth method "userpass" enabled at "userpass/":
+
+```text
+$ vault auth enable userpass
+Success! Enabled the userpass auth method at: userpass/
+```
+
+Create a user:
+
+```text
+$ vault write auth/userpass/users/sethvargo password=secret
+Success! Data written to: auth/userpass/users/sethvargo
+```
+
+For more information on the specific configuration options and paths, please see
+the [auth method](/docs/auth) documentation.
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/docs/commands) included on all commands.
+
+- `-audit-non-hmac-request-keys` `(string: "")` -  Comma-separated
+  string or list of keys that will not be HMAC'd by audit devices in the
+  request data object.
+
+- `-audit-non-hmac-response-keys` `(string: "")` - Comma-separated
+  string or list of keys that will not be HMAC'd by audit devices in the
+  response data object.
+
+- `-default-lease-ttl` `(duration: "")` - The default lease TTL for this auth
+  method. If unspecified, this defaults to the Vault server's globally
+  configured default lease TTL, or a previously configured value for the auth
+  method.
+
+- `-description` `(string: "")` - Human-friendly description for the purpose of
+  this auth method.
+
+- `-local` `(bool: false)` - Mark the auth method as local-only. Local auth
+  methods are not replicated nor removed by replication.
+
+- `-path` `(string: "")` - Place where the auth method will be accessible. This
+  must be unique across all auth methods. This defaults to the "type" of the
+  auth method. The auth method will be accessible at `/auth/<path>`.

@@ -19,125 +19,122 @@ const (
 	rolesetStoragePrefix = "roleset"
 )
 
-func pathsRoleSet(b *backend) []*framework.Path {
-	return []*framework.Path{
-		{
-			Pattern: fmt.Sprintf("roleset/%s", framework.GenericNameRegex("name")),
-			Fields: map[string]*framework.FieldSchema{
-				"name": {
-					Type:        framework.TypeString,
-					Description: "Required. Name of the role.",
-				},
-				"secret_type": {
-					Type:        framework.TypeString,
-					Description: fmt.Sprintf("Type of secret generated for this role set. Defaults to '%s'", SecretTypeAccessToken),
-					Default:     SecretTypeAccessToken,
-				},
-				"project": {
-					Type:        framework.TypeString,
-					Description: "Name of the GCP project that this roleset's service account will belong to.",
-				},
-				"bindings": {
-					Type:        framework.TypeString,
-					Description: "Bindings configuration string.",
-				},
-				"token_scopes": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: `List of OAuth scopes to assign to credentials generated under this role set`,
-				},
+func pathRoleSet(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: fmt.Sprintf("roleset/%s", framework.GenericNameRegex("name")),
+		Fields: map[string]*framework.FieldSchema{
+			"name": {
+				Type:        framework.TypeString,
+				Description: "Required. Name of the role.",
 			},
-			ExistenceCheck: b.pathRoleSetExistenceCheck,
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.DeleteOperation: &framework.PathOperation{
-					Callback: b.pathRoleSetDelete,
-				},
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.pathRoleSetRead,
-				},
-				logical.CreateOperation: &framework.PathOperation{
-					Callback: b.pathRoleSetCreateUpdate,
-				},
-				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.pathRoleSetCreateUpdate,
-				},
+			"secret_type": {
+				Type:        framework.TypeString,
+				Description: fmt.Sprintf("Type of secret generated for this role set. Defaults to '%s'", SecretTypeAccessToken),
+				Default:     SecretTypeAccessToken,
 			},
-			HelpSynopsis:    pathRoleSetHelpSyn,
-			HelpDescription: pathRoleSetHelpDesc,
+			"project": {
+				Type:        framework.TypeString,
+				Description: "Name of the GCP project that this roleset's service account will belong to.",
+			},
+			"bindings": {
+				Type:        framework.TypeString,
+				Description: "Bindings configuration string.",
+			},
+			"token_scopes": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: `List of OAuth scopes to assign to credentials generated under this role set`,
+			},
 		},
-		// Path to rotate role set service accounts
-		{
-			Pattern: fmt.Sprintf("roleset/%s/rotate", framework.GenericNameRegex("name")),
-			Fields: map[string]*framework.FieldSchema{
-				"name": {
-					Type:        framework.TypeString,
-					Description: "Name of the role.",
-				},
+		ExistenceCheck: b.pathRoleSetExistenceCheck("name"),
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathRoleSetDelete,
 			},
-			ExistenceCheck: b.pathRoleSetExistenceCheck,
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.pathRoleSetRotateAccount,
-				},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathRoleSetRead,
 			},
-			HelpSynopsis:    pathRoleSetRotateHelpSyn,
-			HelpDescription: pathRoleSetRotateHelpDesc,
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathRoleSetCreateUpdate,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathRoleSetCreateUpdate,
+			},
 		},
-		// Path to rotating role set service account key used to generate access tokens
-		{
-			Pattern: fmt.Sprintf("roleset/%s/rotate-key", framework.GenericNameRegex("name")),
-			Fields: map[string]*framework.FieldSchema{
-				"name": {
-					Type:        framework.TypeString,
-					Description: "Name of the role.",
-				},
-			},
-			ExistenceCheck: b.pathRoleSetExistenceCheck,
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.pathRoleSetRotateKey,
-				},
-			},
-			HelpSynopsis:    pathRoleSetRotateKeyHelpSyn,
-			HelpDescription: pathRoleSetRotateKeyHelpDesc,
-		},
-		// Paths for listing role sets
-		{
-			Pattern: "rolesets/?",
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ListOperation: &framework.PathOperation{
-					Callback: b.pathRoleSetList,
-				},
-			},
-
-			HelpSynopsis:    pathListRoleSetHelpSyn,
-			HelpDescription: pathListRoleSetHelpDesc,
-		},
-		{
-			Pattern: "roleset/?",
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ListOperation: &framework.PathOperation{
-					Callback: b.pathRoleSetList,
-				},
-			},
-
-			HelpSynopsis:    pathListRoleSetHelpSyn,
-			HelpDescription: pathListRoleSetHelpDesc,
-		},
+		HelpSynopsis:    pathRoleSetHelpSyn,
+		HelpDescription: pathRoleSetHelpDesc,
 	}
 }
 
-func (b *backend) pathRoleSetExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
-	nameRaw, ok := d.GetOk("name")
-	if !ok {
-		return false, errors.New("roleset name is required")
+func pathRoleSetList(b *backend) *framework.Path {
+	// Paths for listing role sets
+	return &framework.Path{
+		Pattern: "rolesets?/?",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathRoleSetList,
+			},
+		},
+		HelpSynopsis:    pathListRoleSetHelpSyn,
+		HelpDescription: pathListRoleSetHelpDesc,
 	}
+}
 
-	rs, err := getRoleSet(nameRaw.(string), ctx, req.Storage)
-	if err != nil {
-		return false, err
+func pathRoleSetRotateAccount(b *backend) *framework.Path {
+	return &framework.Path{
+		// Path to rotate role set service accounts
+		Pattern: fmt.Sprintf("roleset/%s/rotate", framework.GenericNameRegex("name")),
+		Fields: map[string]*framework.FieldSchema{
+			"name": {
+				Type:        framework.TypeString,
+				Description: "Name of the role.",
+			},
+		},
+		ExistenceCheck: b.pathRoleSetExistenceCheck("name"),
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathRoleSetRotateAccount,
+			},
+		},
+		HelpSynopsis:    pathRoleSetRotateAccountHelpSyn,
+		HelpDescription: pathRoleSetRotateAccountHelpDesc,
 	}
+}
 
-	return rs != nil, nil
+func pathRoleSetRotateKey(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: fmt.Sprintf("roleset/%s/rotate-key", framework.GenericNameRegex("name")),
+		Fields: map[string]*framework.FieldSchema{
+			"name": {
+				Type:        framework.TypeString,
+				Description: "Name of the role.",
+			},
+		},
+		ExistenceCheck: b.pathRoleSetExistenceCheck("name"),
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathRoleSetRotateKey,
+			},
+		},
+		HelpSynopsis:    pathRoleSetRotateKeyHelpSyn,
+		HelpDescription: pathRoleSetRotateKeyHelpDesc,
+	}
+}
+
+func (b *backend) pathRoleSetExistenceCheck(rolesetFieldName string) framework.ExistenceFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+		// check for either name or roleset
+		nameRaw, ok := d.GetOk(rolesetFieldName)
+		if !ok {
+			return false, errors.New("roleset name is required")
+		}
+
+		rs, err := getRoleSet(nameRaw.(string), ctx, req.Storage)
+		if err != nil {
+			return false, err
+		}
+
+		return rs != nil, nil
+	}
 }
 
 func (b *backend) pathRoleSetRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -347,11 +344,18 @@ func (b *backend) pathRoleSetCreateUpdate(ctx context.Context, req *logical.Requ
 
 	// Bindings
 	bRaw, newBindings := d.GetOk("bindings")
-	if len(bRaw.(string)) == 0 {
-		return logical.ErrorResponse("given empty bindings string"), nil
+
+	if newBindings {
+		bindings, ok := bRaw.(string)
+		if !ok {
+			return logical.ErrorResponse("bindings are not a string"), nil
+		}
+		if bindings == "" {
+			return logical.ErrorResponse("bindings are empty"), nil
+		}
 	}
 
-	if isCreate && newBindings == false {
+	if isCreate && !newBindings {
 		return logical.ErrorResponse("bindings are required for new role set"), nil
 	}
 
@@ -474,18 +478,6 @@ func getRoleSet(name string, ctx context.Context, s logical.Storage) (*RoleSet, 
 }
 
 const pathRoleSetHelpSyn = `Read/write sets of IAM roles to be given to generated credentials for specified GCP resources.`
-const pathListRoleSetHelpSyn = `List existing rolesets.`
-const pathRoleSetRotateHelpSyn = `Rotate the service account (and key for access token roleset) created and used to generate secrets`
-const pathRoleSetRotateKeyHelpSyn = `Rotate only the service account key used by an access token roleset to generate tokens`
-
-const pathRoleSetRotateHelpDesc = `
-This path allows you to rotate (i.e. recreate) the service account used to
-generate secrets for a given role set.`
-const pathRoleSetRotateKeyHelpDesc = `
-This path allows you to rotate (i.e. recreate) the service account
-key used to generate access tokens under a given role set. This
-path only applies to role sets that generate access tokens `
-
 const pathRoleSetHelpDesc = `
 This path allows you create role sets, which bind sets of IAM roles
 to specific GCP resources. Secrets (either service account keys or
@@ -540,4 +532,21 @@ The given resource can have the following
 	Example (Pubsub subscription):
 		projects/myproject/subscriptions/mysub
 `
-const pathListRoleSetHelpDesc = `List role sets by role set name`
+
+const pathListRoleSetHelpSyn = `List existing rolesets.`
+const pathListRoleSetHelpDesc = `List created role sets.`
+
+const pathRoleSetRotateAccountHelpSyn = `Rotates or recreates the service account bound to a roleset.`
+const pathRoleSetRotateAccountHelpDesc = `
+This path allows you to rotate (i.e. recreate) the service account used to
+generate secrets for a given role set. This will delete and recreate
+the service account, invalidating any old keys/credentials
+generated previously.
+`
+
+const pathRoleSetRotateKeyHelpSyn = `Rotate the service account key used to generate access tokens for a roleset.`
+const pathRoleSetRotateKeyHelpDesc = `
+This path allows you to rotate (i.e. recreate) the service account key 
+used to generate access tokens under a given role set. This path only
+applies to role sets that generate access tokens and will not delete
+the associated service account.`

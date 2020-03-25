@@ -65,8 +65,9 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 		Path:      "oidc/role/test-role1",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"template": "{\"some-key\":\"some-value\"}",
-			"ttl":      "2h",
+			"template":  "{\"some-key\":\"some-value\"}",
+			"ttl":       "2h",
+			"client_id": "my_custom_id",
 		},
 		Storage: storage,
 	})
@@ -83,7 +84,7 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 		"key":       "test-key",
 		"ttl":       int64(7200),
 		"template":  "{\"some-key\":\"some-value\"}",
-		"client_id": resp.Data["client_id"],
+		"client_id": "my_custom_id",
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -619,7 +620,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			currentCycle = currentCycle + 1
 
 			// sleep until we are in the next cycle - where a next run will happen
-			v, _ := c.identityStore.oidcCache.Get(nilNamespace, "nextRun")
+			v, _, _ := c.identityStore.oidcCache.Get(noNamespace, "nextRun")
 			nextRun := v.(time.Time)
 			now := time.Now()
 			diff := nextRun.Sub(now)
@@ -1012,7 +1013,7 @@ func TestOIDC_isTargetNamespacedKey(t *testing.T) {
 func TestOIDC_Flush(t *testing.T) {
 	c := newOIDCCache()
 	ns := []*namespace.Namespace{
-		nilNamespace, //ns[0] is nilNamespace
+		noNamespace, //ns[0] is nilNamespace
 		&namespace.Namespace{ID: "ns1"},
 		&namespace.Namespace{ID: "ns2"},
 	}
@@ -1021,7 +1022,9 @@ func TestOIDC_Flush(t *testing.T) {
 	populateNs := func() {
 		for i := range ns {
 			for _, val := range []string{"keyA", "keyB", "keyC"} {
-				c.SetDefault(ns[i], val, struct{}{})
+				if err := c.SetDefault(ns[i], val, struct{}{}); err != nil {
+					t.Fatal(err)
+				}
 			}
 		}
 	}
@@ -1052,15 +1055,35 @@ func TestOIDC_Flush(t *testing.T) {
 
 	// flushing ns1 should flush ns1 and nilNamespace but not ns2
 	populateNs()
-	c.Flush(ns[1])
+	if err := c.Flush(ns[1]); err != nil {
+		t.Fatal(err)
+	}
 	items := c.c.Items()
 	verify(items, []*namespace.Namespace{ns[2]}, []*namespace.Namespace{ns[0], ns[1]})
 
 	// flushing nilNamespace should flush nilNamespace but not ns1 or ns2
 	populateNs()
-	c.Flush(ns[0])
+	if err := c.Flush(ns[0]); err != nil {
+		t.Fatal(err)
+	}
 	items = c.c.Items()
 	verify(items, []*namespace.Namespace{ns[1], ns[2]}, []*namespace.Namespace{ns[0]})
+}
+
+func TestOIDC_CacheNamespaceNilCheck(t *testing.T) {
+	cache := newOIDCCache()
+
+	if _, _, err := cache.Get(nil, "foo"); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	if err := cache.SetDefault(nil, "foo", 42); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	if err := cache.Flush(nil); err == nil {
+		t.Fatal("expected error, got nil")
+	}
 }
 
 // some helpers

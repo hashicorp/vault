@@ -22,8 +22,8 @@ import (
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -137,7 +137,7 @@ func (b *backend) instanceIamRoleARN(iamClient *iam.IAM, instanceProfileName str
 		InstanceProfileName: aws.String(instanceProfileName),
 	})
 	if err != nil {
-		return "", awsutil.AppendLogicalError(err)
+		return "", awsutil.AppendAWSError(err)
 	}
 	if profile == nil {
 		return "", fmt.Errorf("nil output while getting instance profile details")
@@ -839,6 +839,12 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		},
 		Alias: &logical.Alias{
 			Name: identityAlias,
+			Metadata: map[string]string{
+				"instance_id": identityDocParsed.InstanceID,
+				"region":      identityDocParsed.Region,
+				"account_id":  identityDocParsed.AccountID,
+				"ami_id":      identityDocParsed.AmiID,
+			},
 		},
 	}
 	roleEntry.PopulateTokenAuth(auth)
@@ -1359,6 +1365,16 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		DisplayName: entity.FriendlyName,
 		Alias: &logical.Alias{
 			Name: identityAlias,
+			Metadata: map[string]string{
+				"client_arn":           callerID.Arn,
+				"canonical_arn":        entity.canonicalArn(),
+				"client_user_id":       callerUniqueId,
+				"auth_type":            iamAuthType,
+				"inferred_entity_type": inferredEntityType,
+				"inferred_entity_id":   inferredEntityID,
+				"inferred_aws_region":  roleEntry.InferredAWSRegion,
+				"account_id":           entity.AccountNumber,
+			},
 		},
 	}
 	roleEntry.PopulateTokenAuth(auth)
@@ -1634,7 +1650,13 @@ func (e *iamEntity) canonicalArn() string {
 // This returns the "full" ARN of an iamEntity, how it would be referred to in AWS proper
 func (b *backend) fullArn(ctx context.Context, e *iamEntity, s logical.Storage) (string, error) {
 	// Not assuming path is reliable for any entity types
-	client, err := b.clientIAM(ctx, s, getAnyRegionForAwsPartition(e.Partition).ID(), e.AccountNumber)
+
+	region := b.partitionToRegionMap[e.Partition]
+	if region == nil {
+		return "", fmt.Errorf("unable to resolve partition %q to a region", e.Partition)
+	}
+
+	client, err := b.clientIAM(ctx, s, region.ID(), e.AccountNumber)
 	if err != nil {
 		return "", errwrap.Wrapf("error creating IAM client: {{err}}", err)
 	}

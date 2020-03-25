@@ -10,10 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/vault/vault/seal/shamir"
-
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -23,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/vault/seal"
 	"github.com/oklog/run"
 )
 
@@ -387,6 +387,7 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 // active.
 func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stopCh chan struct{}) {
 	var manualStepDown bool
+	var firstIteration = true
 	for {
 		// Check for a shutdown
 		select {
@@ -399,19 +400,24 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			if manualStepDown {
 				time.Sleep(manualStepDownSleepPeriod)
 				manualStepDown = false
+			} else if !firstIteration {
+				// If we restarted the for loop due to an error, wait a second
+				// so that we don't busy loop if the error persists.
+				time.Sleep(1 * time.Second)
 			}
 		}
+		firstIteration = false
 
 		// Create a lock
 		uuid, err := uuid.GenerateUUID()
 		if err != nil {
 			c.logger.Error("failed to generate uuid", "error", err)
-			return
+			continue
 		}
 		lock, err := c.ha.LockWith(CoreLockPath, uuid)
 		if err != nil {
 			c.logger.Error("failed to create lock", "error", err)
-			return
+			continue
 		}
 
 		// Attempt the acquisition
@@ -461,6 +467,18 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		activeCtx, activeCtxCancel := context.WithCancel(namespace.RootContext(nil))
 		c.activeContext = activeCtx
 		c.activeContextCancelFunc.Store(activeCtxCancel)
+
+		// Perform seal migration
+		if err := c.migrateSeal(c.activeContext); err != nil {
+			c.logger.Error("seal migration error", "error", err)
+			c.barrier.Seal()
+			c.logger.Warn("vault is sealed")
+			c.heldHALock = nil
+			lock.Unlock()
+			close(continueCh)
+			c.stateLock.Unlock()
+			return
+		}
 
 		// This block is used to wipe barrier/seal state and verify that
 		// everything is sane. If we have no sanity in the barrier, we actually
@@ -781,9 +799,9 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 	}
 	var shamirKey []byte
 	switch c.seal.StoredKeysSupported() {
-	case StoredKeysSupportedGeneric:
+	case seal.StoredKeysSupportedGeneric:
 		return nil
-	case StoredKeysSupportedShamirMaster:
+	case seal.StoredKeysSupportedShamirMaster:
 		entry, err := c.barrier.Get(ctx, shamirKekPath)
 		if err != nil {
 			return err
@@ -792,14 +810,14 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 			return nil
 		}
 		shamirKey = entry.Value
-	case StoredKeysNotSupported:
+	case seal.StoredKeysNotSupported:
 		keyring, err := c.barrier.Keyring()
 		if err != nil {
 			return errwrap.Wrapf("failed to update seal access: {{err}}", err)
 		}
 		shamirKey = keyring.masterKey
 	}
-	return c.seal.GetAccess().(*shamir.ShamirSeal).SetKey(shamirKey)
+	return c.seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(shamirKey)
 }
 
 func (c *Core) performKeyUpgrades(ctx context.Context) error {
@@ -924,9 +942,8 @@ func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-
 		return err
 	}
 
-	sd, ok := c.ha.(physical.ServiceDiscovery)
-	if ok {
-		if err := sd.NotifyActiveStateChange(); err != nil {
+	if c.serviceRegistration != nil {
+		if err := c.serviceRegistration.NotifyActiveStateChange(true); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify active status", "error", err)
 			}
@@ -960,9 +977,8 @@ func (c *Core) clearLeader(uuid string) error {
 	err := c.barrier.Delete(context.Background(), key)
 
 	// Advertise ourselves as a standby
-	sd, ok := c.ha.(physical.ServiceDiscovery)
-	if ok {
-		if err := sd.NotifyActiveStateChange(); err != nil {
+	if c.serviceRegistration != nil {
+		if err := c.serviceRegistration.NotifyActiveStateChange(false); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify standby status", "error", err)
 			}

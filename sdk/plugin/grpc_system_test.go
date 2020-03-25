@@ -183,6 +183,34 @@ func TestSystem_GRPC_entityInfo(t *testing.T) {
 	}
 }
 
+func TestSystem_GRPC_groupsForEntity(t *testing.T) {
+	sys := logical.TestSystemView()
+	sys.GroupsVal = []*logical.Group{
+		{
+			ID:   "group1-id",
+			Name: "group1",
+			Metadata: map[string]string{
+				"group-metadata": "metadata-value",
+			},
+		},
+	}
+	client, _ := plugin.TestGRPCConn(t, func(s *grpc.Server) {
+		pb.RegisterSystemViewServer(s, &gRPCSystemViewServer{
+			impl: sys,
+		})
+	})
+	defer client.Close()
+	testSystemView := newGRPCSystemView(client)
+
+	actual, err := testSystemView.GroupsForEntity("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(sys.GroupsVal[0], actual[0]) {
+		t.Fatalf("expected: %v, got: %v", sys.GroupsVal, actual)
+	}
+}
+
 func TestSystem_GRPC_pluginEnv(t *testing.T) {
 	sys := logical.TestSystemView()
 	sys.PluginEnvironment = &logical.PluginEnvironment{

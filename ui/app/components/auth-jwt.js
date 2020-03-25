@@ -109,13 +109,18 @@ export default Component.extend({
   },
 
   exchangeOIDC: task(function*(event, oidcWindow) {
-    if (event.key !== 'oidcState') {
+    // in non-incognito mode we need to use a timeout because it takes time before oidcState is written to local storage.
+    let oidcState = Ember.testing
+      ? event.storageArea.getItem('oidcState')
+      : yield timeout(1000).then(() => event.storageArea.getItem('oidcState'));
+
+    if (oidcState === null || oidcState === undefined) {
       return;
     }
     this.onLoading(true);
     // get the info from the event fired by the other window and
     // then remove it from localStorage
-    let { namespace, path, state, code } = JSON.parse(event.newValue);
+    let { namespace, path, state, code } = JSON.parse(oidcState);
     this.getWindow().localStorage.removeItem('oidcState');
 
     // defer closing of the window, but continue executing the task

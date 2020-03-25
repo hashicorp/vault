@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -27,6 +28,8 @@ const (
 // Client is used to lookup a client certificate.
 type Client interface {
 	ClientLookup(context.Context, *tls.CertificateRequestInfo) (*tls.Certificate, error)
+	ServerName() string
+	CACert(ctx context.Context) *x509.Certificate
 }
 
 // Handler exposes functions for looking up TLS configuration and handing
@@ -48,6 +51,7 @@ type ClusterHook interface {
 	StopHandler(alpn string)
 	TLSConfig(ctx context.Context) (*tls.Config, error)
 	Addr() net.Addr
+	GetDialerFunc(ctx context.Context, alpnProto string) func(string, time.Duration) (net.Conn, error)
 }
 
 // Listener is the source of truth for cluster handlers and connection
@@ -60,13 +64,13 @@ type Listener struct {
 	shutdownWg *sync.WaitGroup
 	server     *http2.Server
 
-	listenerAddrs []*net.TCPAddr
-	cipherSuites  []uint16
-	logger        log.Logger
-	l             sync.RWMutex
+	networkLayer NetworkLayer
+	cipherSuites []uint16
+	logger       log.Logger
+	l            sync.RWMutex
 }
 
-func NewListener(addrs []*net.TCPAddr, cipherSuites []uint16, logger log.Logger) *Listener {
+func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Logger) *Listener {
 	// Create the HTTP/2 server that will be shared by both RPC and regular
 	// duties. Doing it this way instead of listening via the server and gRPC
 	// allows us to re-use the same port via ALPN. We can just tell the server
@@ -84,19 +88,22 @@ func NewListener(addrs []*net.TCPAddr, cipherSuites []uint16, logger log.Logger)
 		shutdownWg: &sync.WaitGroup{},
 		server:     h2Server,
 
-		listenerAddrs: addrs,
-		cipherSuites:  cipherSuites,
-		logger:        logger,
+		networkLayer: networkLayer,
+		cipherSuites: cipherSuites,
+		logger:       logger,
 	}
 }
 
-// TODO: This probably isn't correct
 func (cl *Listener) Addr() net.Addr {
-	return cl.listenerAddrs[0]
+	addrs := cl.Addrs()
+	if len(addrs) == 0 {
+		return nil
+	}
+	return addrs[0]
 }
 
-func (cl *Listener) Addrs() []*net.TCPAddr {
-	return cl.listenerAddrs
+func (cl *Listener) Addrs() []net.Addr {
+	return cl.networkLayer.Addrs()
 }
 
 // AddClient adds a new client for an ALPN name
@@ -236,29 +243,15 @@ func (cl *Listener) Run(ctx context.Context) error {
 	// The server supports all of the possible protos
 	tlsConfig.NextProtos = []string{"h2", consts.RequestForwardingALPN, consts.PerfStandbyALPN, consts.PerformanceReplicationALPN, consts.DRReplicationALPN}
 
-	for i, laddr := range cl.listenerAddrs {
+	for _, ln := range cl.networkLayer.Listeners() {
 		// closeCh is used to shutdown the spawned goroutines once this
 		// function returns
 		closeCh := make(chan struct{})
 
-		if cl.logger.IsInfo() {
-			cl.logger.Info("starting listener", "listener_address", laddr)
-		}
-
-		// Create a TCP listener. We do this separately and specifically
-		// with TCP so that we can set deadlines.
-		tcpLn, err := net.ListenTCP("tcp", laddr)
-		if err != nil {
-			cl.logger.Error("error starting listener", "error", err)
-			continue
-		}
-		if laddr.String() != tcpLn.Addr().String() {
-			// If we listened on port 0, record the port the OS gave us.
-			cl.listenerAddrs[i] = tcpLn.Addr().(*net.TCPAddr)
-		}
+		localLn := ln
 
 		// Wrap the listener with TLS
-		tlsLn := tls.NewListener(tcpLn, tlsConfig)
+		tlsLn := tls.NewListener(localLn, tlsConfig)
 
 		if cl.logger.IsInfo() {
 			cl.logger.Info("serving cluster requests", "cluster_listen_address", tlsLn.Addr())
@@ -281,7 +274,7 @@ func (cl *Listener) Run(ctx context.Context) error {
 				// Set the deadline for the accept call. If it passes we'll get
 				// an error, causing us to check the condition at the top
 				// again.
-				tcpLn.SetDeadline(time.Now().Add(ListenerAcceptDeadline))
+				localLn.SetDeadline(time.Now().Add(ListenerAcceptDeadline))
 
 				// Accept the connection
 				conn, err := tlsLn.Accept()
@@ -354,7 +347,7 @@ func (cl *Listener) Run(ctx context.Context) error {
 	return nil
 }
 
-// Stop stops the cluster listner
+// Stop stops the cluster listener
 func (cl *Listener) Stop() {
 	// Set the shutdown flag. This will cause the listeners to shut down
 	// within the deadline in clusterListenerAcceptDeadline
@@ -364,4 +357,68 @@ func (cl *Listener) Stop() {
 	// Wait for them all to shut down
 	cl.shutdownWg.Wait()
 	cl.logger.Info("rpc listeners successfully shut down")
+}
+
+// GetDialerFunc returns a function that looks up the TLS information for the
+// provided alpn name and calls the network layer's dial function.
+func (cl *Listener) GetDialerFunc(ctx context.Context, alpn string) func(string, time.Duration) (net.Conn, error) {
+	return func(addr string, timeout time.Duration) (net.Conn, error) {
+		tlsConfig, err := cl.TLSConfig(ctx)
+		if err != nil {
+			cl.logger.Error("failed to get tls configuration", "error", err)
+			return nil, err
+		}
+
+		if tlsConfig == nil {
+			return nil, errors.New("no tls config found")
+		}
+
+		cl.l.RLock()
+		client, ok := cl.clients[alpn]
+		cl.l.RUnlock()
+		if !ok {
+			return nil, fmt.Errorf("no client configured for alpn: %q", alpn)
+		}
+
+		serverName := client.ServerName()
+		if serverName != "" {
+			tlsConfig.ServerName = serverName
+		}
+
+		caCert := client.CACert(ctx)
+		if caCert != nil {
+			pool := x509.NewCertPool()
+			pool.AddCert(caCert)
+			tlsConfig.RootCAs = pool
+			tlsConfig.ClientCAs = pool
+		}
+
+		tlsConfig.NextProtos = []string{alpn}
+		cl.logger.Debug("creating rpc dialer", "alpn", alpn, "host", tlsConfig.ServerName)
+
+		return cl.networkLayer.Dial(addr, timeout, tlsConfig)
+	}
+}
+
+// NetworkListener is used by the network layer to define a net.Listener for use
+// in the cluster listener.
+type NetworkListener interface {
+	net.Listener
+
+	SetDeadline(t time.Time) error
+}
+
+// NetworkLayer is the network abstraction used in the cluster listener.
+// Abstracting the network layer out allows us to swap the underlying
+// implementations for tests.
+type NetworkLayer interface {
+	Addrs() []net.Addr
+	Listeners() []NetworkListener
+	Dial(address string, timeout time.Duration, tlsConfig *tls.Config) (*tls.Conn, error)
+	Close() error
+}
+
+// NetworkLayerSet is used for returning a slice of layers to a caller.
+type NetworkLayerSet interface {
+	Layers() []NetworkLayer
 }
