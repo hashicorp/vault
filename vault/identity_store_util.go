@@ -150,6 +150,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 			for _, memberEntityID := range group.MemberEntityIDs {
 				entity, err := i.MemDBEntityByID(memberEntityID, false)
 				if err != nil {
+					txn.Abort()
 					return err
 				}
 				if entity == nil {
