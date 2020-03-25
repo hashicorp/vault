@@ -11,7 +11,7 @@ storiesOf('TtlPicker2/', module)
     () => ({
       template: hbs`
       <h5 class="title is-5">Ttl Picker2</h5>
-      <TtlPicker2 />
+      <TtlPicker2 @unit="h" />
     `,
       context: {
         enabled: boolean('enabled', false),
