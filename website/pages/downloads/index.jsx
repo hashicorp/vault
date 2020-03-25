@@ -2,13 +2,12 @@ import fetch from 'isomorphic-unfetch'
 import { VERSION } from '../../data/version.js'
 import ProductDownloader from '@hashicorp/react-product-downloader'
 import Head from 'next/head'
+import HashiHead from '@hashicorp/react-head'
 
 export default function DownloadsPage({ downloadData }) {
   return (
     <div id="p-downloads" className="g-container">
-      <Head>
-        <title key="title">Downloads | Vault by HashiCorp</title>
-      </Head>
+      <HashiHead is={Head} title="Downloads | Vault by Hashicorp" />
       <ProductDownloader
         product="Vault"
         version={VERSION}
