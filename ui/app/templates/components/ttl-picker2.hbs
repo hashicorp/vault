@@ -1,0 +1,39 @@
+<MessageError @errorMessage={{errorMessage}} data-test-ttl-error />
+<Toggle
+  @name="Enable TTL"
+  @status="success"
+  @size="small"
+  @onChange={{action (mut enableTTL)}}
+  @checked={{enableTTL}}
+>
+  <span class="is-strong is-large">Time to live (TTL)</span><br/>
+  <span class="has-text-grey">{{helperText}}</span>
+</Toggle>
+{{#if enableTTL}}
+  <div>
+    <h1>yo</h1>
+    <div class="field is-grouped">
+      <div class="control is-expanded">
+        <input
+          data-test-ttl-value
+          value={{time}}
+          id="time-{{elementId}}"
+          type="text"
+          name="time"
+          class="input"
+          oninput={{action (action 'changedValue' 'time') value="target.value"}}
+          pattern="[0-9]*"
+        />
+      </div>
+      <div class="control is-expanded">
+        <Select
+          @name='ttl-unit'
+          @options={{unitOptions}}
+          @onChange={{action 'handleChange' 'unit'}}
+          @selectedValue={{unit}}
+          @isFullwidth={{true}}
+          />
+      </div>
+    </div>
+  </div>
+{{/if}}
