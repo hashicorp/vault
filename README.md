@@ -10,6 +10,9 @@
 -	IRC: `#vault-tool` on Freenode
 -	Announcement list: [Google Groups](https://groups.google.com/group/hashicorp-announce)
 -	Discussion list: [Google Groups](https://groups.google.com/group/vault-tool)
+- [Documentation](https://www.vaultproject.io/docs/)
+- [Training](https://learn.hashicorp.com/vault)
+- [Certification Exams](https://www.hashicorp.com/certification/#hashicorp-certified-vault-associate)
 
 <img width="300" alt="Vault Logo" src="https://github.com/hashicorp/vault/blob/f22d202cde2018f9455dec755118a9b84586e082/Vault_PrimaryLogo_Black.png">
 
@@ -47,13 +50,20 @@ The key features of Vault are:
   Revocation assists in key rolling as well as locking down systems in the
   case of an intrusion.
 
-For more information, see the [getting started guide](https://learn.hashicorp.com/vault/)
-on Hashicorp's learning platform.
-
-Getting Started & Documentation
+Documentation, Getting Started, and Certification Exams
 -------------------------------
 
-All documentation is available on the [Vault website](https://www.vaultproject.io).
+Documentation is available on the [Vault website](https://www.vaultproject.io/docs/).
+
+If you're new to Vault and want to get started with security automation, please
+check out our [Getting Started guides](https://learn.hashicorp.com/vault?track=getting-started#getting-started)
+on HashiCorp's learning platform. There are also [additional guides](https://learn.hashicorp.com/vault?track=getting-started#operations-and-development)
+to continue your learning.
+
+Show off your Vault knowledge by passing a certification exam. Visit the
+[certification page](https://www.hashicorp.com/certification/#hashicorp-certified-vault-associate)
+for information about exams and find [study materials](https://learn.hashicorp.com/vault/certification/vault-associate)
+on HashiCorp's learning platform.
 
 Developing Vault
 --------------------
