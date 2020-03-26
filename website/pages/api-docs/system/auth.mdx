@@ -99,6 +99,18 @@ For example, enable the "foo" auth method will make it accessible at
   - `allowed_response_headers` `(array: [])` - Comma-separated list of headers
     to whitelist, allowing a plugin to include them in the response.
 
+  - `token_type` `(string: "")` – Specifies the type of tokens that should be
+    returned by the mount. The following values are available:
+
+    - `default-service`: Unless the auth method requests a different type, issue
+      service tokens
+    - `default-batch`: Unless the auth method requests a different type, issue
+      batch tokens
+    - `service`: Override any auth method preference and always issue service
+      tokens from this mount
+    - `batch`: Override any auth method preference and always issue batch tokens
+      from this mount
+
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
 
