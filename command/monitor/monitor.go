@@ -13,7 +13,7 @@ import (
 // at a different log level than what is set on the logger.
 type Monitor interface {
 	// Start returns a channel of log messages which are sent
-	// ever time a log message occurs
+	// every time a log message occurs
 	Start() <-chan []byte
 
 	// Stop de-registers the sink from the InterceptLogger
@@ -36,7 +36,7 @@ type monitor struct {
 
 	// droppedCount is the current count of messages
 	// that were dropped from the logCh buffer.
-	droppedCount uint64
+	droppedCount uint32
 	bufSize      int
 	// dropCheckInterval is the amount of time we should
 	// wait to check for dropped messages. Defaults
@@ -51,7 +51,7 @@ func NewMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) (M
 }
 
 func newMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) (*monitor, error) {
-	if buf == 0 {
+	if buf <= 0 {
 		return nil, fmt.Errorf("buf must be greater than zero")
 	}
 
@@ -103,11 +103,11 @@ func (d *monitor) Start() <-chan []byte {
 			select {
 			case <-ticker.C:
 				// Check if there have been any dropped messages.
-				dc := atomic.LoadUint64(&d.droppedCount)
+				dc := atomic.LoadUint32(&d.droppedCount)
 
 				if dc > 0 {
 					logMessage = []byte(fmt.Sprintf("[WARN] Monitor dropped %d logs during monitor request\n", dc))
-					atomic.SwapUint64(&d.droppedCount, 0)
+					atomic.SwapUint32(&d.droppedCount, 0)
 				}
 			case logMessage = <-d.logCh:
 			case <-d.doneCh:
@@ -143,7 +143,7 @@ func (d *monitor) Write(p []byte) (n int, err error) {
 	select {
 	case d.logCh <- bytes:
 	default:
-		atomic.AddUint64(&d.droppedCount, 1)
+		atomic.AddUint32(&d.droppedCount, 1)
 	}
 
 	return len(p), nil

@@ -14,7 +14,8 @@ func handleSysMonitor(core *vault.Core) http.Handler {
 		// Remove the default 90 second timeout so clients can stream indefinitely.
 		// Using core.activeContext means that this will get cancelled properly
 		// when the server shuts down.
-		c, _ := core.GetContext()
+		c, cancelFunc := core.GetContext()
+		defer cancelFunc()
 		r = r.Clone(c)
 
 		ll := r.URL.Query().Get("log_level")
@@ -39,6 +40,7 @@ func handleSysMonitor(core *vault.Core) http.Handler {
 			Level:      logLevel,
 			JSONFormat: isJson,
 		})
+		defer monitor.Stop()
 
 		logCh := monitor.Start()
 		w.WriteHeader(http.StatusOK)
@@ -52,10 +54,14 @@ func handleSysMonitor(core *vault.Core) http.Handler {
 		for {
 			select {
 			case <-r.Context().Done():
-				monitor.Stop()
 				return
 			case log := <-logCh:
-				fmt.Fprint(w, string(log))
+				_, err := fmt.Fprint(w, string(log))
+
+				if err != nil {
+					return
+				}
+
 				flusher.Flush()
 			}
 		}

@@ -96,7 +96,9 @@ func (c *MonitorCommand) Run(args []string) int {
 	client.SetClientTimeout(0)
 
 	var logCh chan string
-	logCh, err = client.Sys().Monitor(context.Background(), c.logLevel)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	logCh, err = client.Sys().Monitor(ctx, c.logLevel)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error starting monitor: %s", err))
 		return 1
