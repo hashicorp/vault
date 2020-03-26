@@ -11,7 +11,7 @@
 -	Announcement list: [Google Groups](https://groups.google.com/group/hashicorp-announce)
 -	Discussion list: [Google Groups](https://groups.google.com/group/vault-tool)
 - Documentation: [https://www.vaultproject.io/docs/](https://www.vaultproject.io/docs/)
-- Training: [HashiCorp's Learn Platform](https://learn.hashicorp.com/vault)
+- Tutorials: [HashiCorp's Learn Platform](https://learn.hashicorp.com/vault)
 - Certification Exam: [Vault Associate](https://www.hashicorp.com/certification/#hashicorp-certified-vault-associate)
 
 <img width="300" alt="Vault Logo" src="https://github.com/hashicorp/vault/blob/f22d202cde2018f9455dec755118a9b84586e082/Vault_PrimaryLogo_Black.png">
