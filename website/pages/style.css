@@ -27,12 +27,12 @@
 @import '~@hashicorp/react-text-and-content/dist/style.css';
 @import '~@hashicorp/react-code-block/dist/style.css';
 @import '~@hashicorp/react-consent-manager/dist/style.css';
+@import '~@hashicorp/react-docs-page/dist/style.css';
 
 /* Global Components - Transpiled */
 @import '~@hashicorp/react-mega-nav/style.css';
 
 /* Local Components */
-@import '../components/docs-page/style.css';
 @import '../components/before-after-diagram/style.css';
 @import '../components/use-case-cta-section/style.css';
 @import '../components/subnav/style.css';
