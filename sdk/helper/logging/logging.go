@@ -46,7 +46,7 @@ func NewVaultLoggerWithWriter(w io.Writer, level log.Level) log.Logger {
 		Output:     w,
 		JSONFormat: ParseEnvLogFormat() == JSONFormat,
 	}
-	return log.NewInterceptLogger(opts)
+	return log.New(opts)
 }
 
 // ParseLogFormat parses the log format from the provided string.
