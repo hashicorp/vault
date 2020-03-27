@@ -82,7 +82,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	}()
 	if !isIn200s(resp.StatusCode) {
 		body, _ := ioutil.ReadAll(resp.Body)
-		return nil, fmt.Errorf("error putting user %s - %d: %s", username, resp.StatusCode, body)
+		return nil, fmt.Errorf("error creating user %s - %d: %s", username, resp.StatusCode, body)
 	}
 
 	success := false
