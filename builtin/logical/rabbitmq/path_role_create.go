@@ -93,11 +93,11 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 		// Delete the user because it's in an unknown state.
 		resp, err := client.DeleteUser(username)
 		if err != nil {
-			b.Logger().Error(fmt.Sprintf("failed to delete %s: %s", username, err))
+			b.Logger().Error(fmt.Sprintf("deleting %s due to permissions being in an unknown state, but failed: %s", username, err))
 		}
 		if !isIn200s(resp.StatusCode) {
 			body, _ := ioutil.ReadAll(resp.Body)
-			b.Logger().Error(fmt.Sprintf("error deleting %s - %d: %s", username, resp.StatusCode, body))
+			b.Logger().Error(fmt.Sprintf("deleting %s due to permissions being in an unknown state, but error deleting: %d: %s", username, resp.StatusCode, body))
 		}
 	}()
 
