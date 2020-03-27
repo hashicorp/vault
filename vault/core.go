@@ -356,7 +356,7 @@ type Core struct {
 	// baseLogger is used to avoid ResetNamed as it strips useful prefixes in
 	// e.g. testing
 	baseLogger log.Logger
-	logger     log.InterceptLogger
+	logger     log.Logger
 
 	// cachingDisabled indicates whether caches are disabled
 	cachingDisabled bool
@@ -546,7 +546,7 @@ type CoreConfig struct {
 
 	SecureRandomReader io.Reader
 
-	Logger log.InterceptLogger
+	Logger log.Logger
 
 	// Disables the LRU cache on the physical backend
 	DisableCache bool
@@ -731,7 +731,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		sealMigrated:        new(uint32),
 		standby:             true,
 		baseLogger:          conf.Logger,
-		logger:              conf.Logger.NamedIntercept("core"),
+		logger:              conf.Logger.Named("core"),
 
 		defaultLeaseTTL:              conf.DefaultLeaseTTL,
 		maxLeaseTTL:                  conf.MaxLeaseTTL,
@@ -2117,7 +2117,7 @@ func (c *Core) StorageType() string {
 	return c.storageType
 }
 
-func (c *Core) Logger() log.InterceptLogger {
+func (c *Core) Logger() log.Logger {
 	return c.logger
 }
 

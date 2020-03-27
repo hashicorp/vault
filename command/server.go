@@ -93,7 +93,7 @@ type ServerCommand struct {
 
 	logOutput   io.Writer
 	gatedWriter *gatedwriter.Writer
-	logger      log.InterceptLogger
+	logger      log.Logger
 
 	cleanupGuard sync.Once
 

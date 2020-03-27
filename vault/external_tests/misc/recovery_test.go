@@ -27,6 +27,7 @@ func TestRecovery(t *testing.T) {
 	{
 		conf := vault.CoreConfig{
 			Physical: inm,
+			Logger:   logger,
 		}
 		opts := vault.TestClusterOptions{
 			HandlerFunc: http.Handler,
@@ -69,6 +70,7 @@ func TestRecovery(t *testing.T) {
 		var tokenRef atomic.String
 		conf := vault.CoreConfig{
 			Physical:     inm,
+			Logger:   logger,
 			RecoveryMode: true,
 		}
 		opts := vault.TestClusterOptions{
@@ -112,6 +114,7 @@ func TestRecovery(t *testing.T) {
 		// Now go back to regular mode and verify that our changes are present
 		conf := vault.CoreConfig{
 			Physical: inm,
+			Logger:   logger,
 		}
 		opts := vault.TestClusterOptions{
 			HandlerFunc: http.Handler,

@@ -65,6 +65,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
+		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"approle": credAppRole.Factory,
 		},
@@ -407,6 +408,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
+		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"approle": credAppRole.Factory,
 		},

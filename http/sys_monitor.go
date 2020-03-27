@@ -36,13 +36,15 @@ func handleSysMonitor(core *vault.Core) http.Handler {
 		}
 
 		isJson := core.LogFormat() == "json"
-		monitor, _ := monitor.NewMonitor(512, core.Logger(), &log.LoggerOptions{
+		logger := core.Logger().(log.InterceptLogger)
+
+		mon, _ := monitor.NewMonitor(512, logger, &log.LoggerOptions{
 			Level:      logLevel,
 			JSONFormat: isJson,
 		})
-		defer monitor.Stop()
+		defer mon.Stop()
 
-		logCh := monitor.Start()
+		logCh := mon.Start()
 		w.WriteHeader(http.StatusOK)
 
 		// 0 byte write is needed before the Flush call so that if we are using
@@ -55,8 +57,8 @@ func handleSysMonitor(core *vault.Core) http.Handler {
 			select {
 			case <-r.Context().Done():
 				return
-			case log := <-logCh:
-				_, err := fmt.Fprint(w, string(log))
+			case l := <-logCh:
+				_, err := fmt.Fprint(w, string(l))
 
 				if err != nil {
 					return

@@ -28,6 +28,7 @@ func TestCFEndToEnd(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
+		Logger:       hclog.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"cf": credCF.Factory,
 		},

@@ -25,22 +25,24 @@ func TestSealUnwrapper(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	performTestSealUnwrapper(t, phys)
+	performTestSealUnwrapper(t, phys, logger)
 
 	// Test with transactions
 	tPhys, err := inmem.NewTransactionalInmemHA(nil, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
-	performTestSealUnwrapper(t, tPhys)
+	performTestSealUnwrapper(t, tPhys, logger)
 }
 
-func performTestSealUnwrapper(t *testing.T, phys physical.Backend) {
+func performTestSealUnwrapper(t *testing.T, phys physical.Backend, logger log.Logger) {
 	ctx := context.Background()
 	base := &CoreConfig{
 		Physical: phys,
 	}
-	cluster := NewTestCluster(t, base, &TestClusterOptions{})
+	cluster := NewTestCluster(t, base, &TestClusterOptions{
+		Logger: logger,
+	})
 	cluster.Start()
 	defer cluster.Cleanup()
 

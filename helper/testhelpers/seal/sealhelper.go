@@ -29,7 +29,7 @@ func NewTransitSealServer(t testing.T) *TransitSealServer {
 	opts := &vault.TestClusterOptions{
 		NumCores:    1,
 		HandlerFunc: http.Handler,
-		Logger:      logging.NewVaultLogger(hclog.Trace).NamedIntercept(t.Name()).NamedIntercept("transit"),
+		Logger:      logging.NewVaultLogger(hclog.Trace).Named(t.Name()).Named("transit"),
 	}
 	teststorage.InmemBackendSetup(conf, opts)
 	cluster := vault.NewTestCluster(t, conf, opts)

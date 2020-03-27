@@ -3,6 +3,7 @@ package vault
 import (
 	"testing"
 
+	log "github.com/hashicorp/go-hclog"
 	ldapcred "github.com/hashicorp/vault/builtin/credential/ldap"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -14,6 +15,7 @@ func TestIdentity_BackendTemplating(t *testing.T) {
 	coreConfig := &CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
+		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"ldap": ldapcred.Factory,
 		},

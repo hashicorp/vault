@@ -184,7 +184,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	return c
 }
 
-func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.InterceptLogger) *CoreConfig {
+func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Logger) *CoreConfig {
 	t.Helper()
 	noopAudits := map[string]audit.Factory{
 		"noop": func(_ context.Context, config *audit.BackendConfig) (audit.Backend, error) {
@@ -813,7 +813,7 @@ type TestCluster struct {
 	RootCAs            *x509.CertPool
 	TempDir            string
 	ClientAuthRequired bool
-	Logger             log.InterceptLogger
+	Logger             log.Logger
 	CleanupFunc        func()
 	SetupFunc          func()
 }
@@ -1052,7 +1052,7 @@ type TestClusterOptions struct {
 	BaseListenAddress        string
 	NumCores                 int
 	SealFunc                 func() Seal
-	Logger                   log.InterceptLogger
+	Logger                   log.Logger
 	TempDir                  string
 	CACert                   []byte
 	CAKey                    *ecdsa.PrivateKey
@@ -1135,7 +1135,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	if opts != nil && opts.Logger != nil {
 		testCluster.Logger = opts.Logger
 	} else {
-		testCluster.Logger = logging.NewVaultLogger(log.Trace).NamedIntercept(t.Name())
+		testCluster.Logger = logging.NewVaultLogger(log.Trace).Named(t.Name())
 	}
 
 	if opts != nil && opts.TempDir != "" {
@@ -1481,7 +1481,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 
 		if coreConfig.Logger == nil || (opts != nil && opts.Logger != nil) {
-			localConfig.Logger = testCluster.Logger.NamedIntercept(fmt.Sprintf("core%d", i))
+			localConfig.Logger = testCluster.Logger.Named(fmt.Sprintf("core%d", i))
 		}
 		if opts != nil && opts.PhysicalFactory != nil {
 			physBundle := opts.PhysicalFactory(t, i, localConfig.Logger)
