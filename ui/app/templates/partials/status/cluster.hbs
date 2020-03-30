@@ -62,6 +62,31 @@
             </nav>
             <hr/>
           {{/if}}
+        {{else}}
+          {{#if (has-permission 'status' routeParams='replication')}}
+            <nav class="menu">
+              <p class="menu-label">Replication</p>
+              <ul>
+                {{#if cluster.anyReplicationEnabled}}
+                  <li>
+                    {{!-- ARG this link to has to change --}}
+                    {{#link-to
+                      "vault.cluster.replication-dr-promote.details"
+                      disabled=(not currentToken)
+                      invokeAction=(action onLinkClick)
+                    }}
+                      {{replication-mode-summary
+                        mode="dr"
+                        display='menu'
+                        cluster=cluster
+                      }}
+                    {{/link-to}}
+                  </li>
+                {{/if}}
+              </ul>
+            </nav>
+            <hr/>
+          {{/if}}
         {{/if}}
       {{/if}}
     {{/unless}}
