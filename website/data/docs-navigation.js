@@ -254,6 +254,7 @@ export default [
       },
       { category: 'totp' },
       { category: 'transit' },
+      { category: 'venafi' },
       '------------------------',
       { category: 'cassandra' },
       { category: 'mongodb' },

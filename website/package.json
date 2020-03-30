@@ -15,6 +15,7 @@
     "@hashicorp/react-docs-sitemap": "^1.0.0",
     "@hashicorp/react-footer": "3.1.11",
     "@hashicorp/react-global-styles": "^4.0.10",
+    "@hashicorp/react-head": "^0.1.1",
     "@hashicorp/react-hero": "3.0.4",
     "@hashicorp/react-image": "^2.0.1",
     "@hashicorp/react-inline-svg": "^1.0.0",
