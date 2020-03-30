@@ -69,7 +69,6 @@
               <ul>
                 {{#if cluster.anyReplicationEnabled}}
                   <li>
-                    {{!-- ARG this link to has to change --}}
                     {{#link-to
                       "vault.cluster.replication-dr-promote.details"
                       disabled=(not currentToken)
