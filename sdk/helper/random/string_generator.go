@@ -9,6 +9,31 @@ import (
 	"time"
 )
 
+var (
+	DefaultStringGenerator = StringGenerator{
+		Length:  20,
+		Charset: []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"),
+		Rules: []Rule{
+			CharsetRestriction{
+				Charset:  []rune("abcdefghijklmnopqrstuvwxyz"),
+				MinChars: 1,
+			},
+			CharsetRestriction{
+				Charset:  []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+				MinChars: 1,
+			},
+			CharsetRestriction{
+				Charset:  []rune("0123456789"),
+				MinChars: 1,
+			},
+			CharsetRestriction{
+				Charset:  []rune("-"),
+				MinChars: 1,
+			},
+		},
+	}
+)
+
 type Rule interface {
 	Pass(value []rune) bool
 }
@@ -21,7 +46,7 @@ type StringGenerator struct {
 	rng io.Reader
 }
 
-func (g *StringGenerator) Generate(ctx context.Context) (str string, err error) {
+func (g StringGenerator) Generate(ctx context.Context) (str string, err error) {
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second) // Ensure there's a timeout on the context
 	defer cancel()
 
@@ -43,7 +68,7 @@ LOOP:
 	}
 }
 
-func (g *StringGenerator) generate() (str string, err error) {
+func (g StringGenerator) generate() (str string, err error) {
 	// If performance improvements need to be made, this can be changed to read a batch of
 	// potential strings at once rather than one at a time. This will significantly
 	// improve performance, but at the cost of added complexity.

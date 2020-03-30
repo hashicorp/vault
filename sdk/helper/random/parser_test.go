@@ -79,19 +79,19 @@ func TestParser_Parse(t *testing.T) {
 
 	tests := map[string]testCase{
 		"empty config": {
-			registry:  defaultRules,
+			registry:  defaultRuleNameMapping,
 			rawConfig: "",
 			expected:  StringGenerator{},
 			expectErr: true,
 		},
 		"bogus config": {
-			registry:  defaultRules,
+			registry:  defaultRuleNameMapping,
 			rawConfig: "asdf",
 			expected:  StringGenerator{},
 			expectErr: true,
 		},
 		"config with length and charset": {
-			registry: defaultRules,
+			registry: defaultRuleNameMapping,
 			rawConfig: `
 				length = 20
 				charset = "abcde"`,
@@ -102,7 +102,7 @@ func TestParser_Parse(t *testing.T) {
 			expectErr: false,
 		},
 		"config with negative length": {
-			registry: defaultRules,
+			registry: defaultRuleNameMapping,
 			rawConfig: `
 				length = -2
 				charset = "abcde"`,
@@ -113,7 +113,7 @@ func TestParser_Parse(t *testing.T) {
 			expectErr: true,
 		},
 		"charset restrictions": {
-			registry: defaultRules,
+			registry: defaultRuleNameMapping,
 			rawConfig: `
 				length = 20
 				charset = "abcde"
@@ -189,7 +189,7 @@ func TestParser_Parse(t *testing.T) {
 			expectErr: false,
 		},
 		"unrecognized rule": {
-			registry: defaultRules,
+			registry: defaultRuleNameMapping,
 			rawConfig: `
 				length = 20
 				charset = "abcde"
@@ -252,7 +252,7 @@ func TestParser_Parse(t *testing.T) {
 			expectErr: false,
 		},
 		"JSON unrecognized rule": {
-			registry: defaultRules,
+			registry: defaultRuleNameMapping,
 			rawConfig: `
 				{
 					"charset": "abcde",
@@ -311,19 +311,19 @@ func TestParseRules(t *testing.T) {
 
 	tests := map[string]testCase{
 		"nil rule data": {
-			registry:      defaultRules,
+			registry:      defaultRuleNameMapping,
 			rawRules:      nil,
 			expectedRules: nil,
 			expectErr:     false,
 		},
 		"empty rule data": {
-			registry:      defaultRules,
+			registry:      defaultRuleNameMapping,
 			rawRules:      []map[string]interface{}{},
 			expectedRules: nil,
 			expectErr:     false,
 		},
 		"invalid rule data": {
-			registry: defaultRules,
+			registry: defaultRuleNameMapping,
 			rawRules: []map[string]interface{}{
 				{
 					"testrule": map[string]interface{}{
@@ -335,7 +335,7 @@ func TestParseRules(t *testing.T) {
 			expectErr:     true,
 		},
 		"unrecognized rule data": {
-			registry: defaultRules,
+			registry: defaultRuleNameMapping,
 			rawRules: []map[string]interface{}{
 				{
 					"testrule": []map[string]interface{}{
@@ -700,7 +700,7 @@ func BenchmarkParser_Parse(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		parser := Parser{
 			RuleRegistry: Registry{
-				Rules: defaultRules,
+				Rules: defaultRuleNameMapping,
 			},
 		}
 		_, err := parser.Parse(config)

@@ -8,10 +8,10 @@ import (
 
 // CharsetRestriction requires a certain number of characters from the specified charset
 type CharsetRestriction struct {
-	Charset []rune `mapstructure:"charset" json:"charset"`
+	Charset []rune `mapstructure:"charset"`
 
 	// MinChars indicates the minimum (inclusive) number of characters from the charset that should appear in the string
-	MinChars int `mapstructure:"min-chars" json:"min-chars"`
+	MinChars int `mapstructure:"min-chars"`
 }
 
 func NewCharsetRestriction(data map[string]interface{}) (rule Rule, err error) {
@@ -30,6 +30,7 @@ func NewCharsetRestriction(data map[string]interface{}) (rule Rule, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse charset restriction: %w", err)
 	}
+
 	return cr, nil
 }
 
@@ -44,6 +45,7 @@ func (c CharsetRestriction) Pass(value []rune) bool {
 
 	count := 0
 	for _, r := range value {
+		// charIn is faster than a map lookup because the data is so small
 		if charIn(r, c.Charset) {
 			count++
 			if count >= c.MinChars {

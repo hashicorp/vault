@@ -15,7 +15,7 @@ import (
 func Parse(raw string) (strs StringGenerator, err error) {
 	parser := Parser{
 		RuleRegistry: Registry{
-			Rules: defaultRules,
+			Rules: defaultRuleNameMapping,
 		},
 	}
 	return parser.Parse(raw)

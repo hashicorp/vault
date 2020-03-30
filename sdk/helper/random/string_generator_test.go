@@ -312,3 +312,60 @@ func TestRandomRunes_errors(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkStringGenerator_Generate(b *testing.B) {
+	lengths := []int{
+		8, 12, 16, 20, 24, 28,
+	}
+
+	b.Run("default string generator", func(b *testing.B) {
+		for _, length := range lengths {
+			b.Run(fmt.Sprintf("length=%d", length), func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+					DefaultStringGenerator.Generate(ctx)
+					cancel()
+				}
+			})
+		}
+	})
+	b.Run("large symbol set", func(b *testing.B) {
+		sg := StringGenerator{
+			Length:  20,
+			Charset: []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"),
+			Rules: []Rule{
+				CharsetRestriction{
+					Charset:  []rune("abcdefghijklmnopqrstuvwxyz"),
+					MinChars: 1,
+				},
+				CharsetRestriction{
+					Charset:  []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+					MinChars: 1,
+				},
+				CharsetRestriction{
+					Charset:  []rune("0123456789"),
+					MinChars: 1,
+				},
+				CharsetRestriction{
+					Charset:  []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"),
+					MinChars: 1,
+				},
+			},
+		}
+		for _, length := range lengths {
+			b.Run(fmt.Sprintf("length=%d", length), func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+					str, err := sg.Generate(ctx)
+					cancel()
+					if err != nil {
+						b.Fatalf("Failed to generate string: %s", err)
+					}
+					if str == "" {
+						b.Fatalf("Didn't error but didn't generate a string")
+					}
+				}
+			})
+		}
+	})
+}

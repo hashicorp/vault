@@ -8,10 +8,10 @@ type ruleConstructor func(map[string]interface{}) (Rule, error)
 
 var (
 	defaultRegistry = Registry{
-		Rules: defaultRules,
+		Rules: defaultRuleNameMapping,
 	}
 
-	defaultRules = map[string]ruleConstructor{
+	defaultRuleNameMapping = map[string]ruleConstructor{
 		"CharsetRestriction": NewCharsetRestriction,
 	}
 )
