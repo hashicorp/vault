@@ -318,20 +318,24 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 		8, 12, 16, 20, 24, 28,
 	}
 
+	b.Run("no rules", func(b *testing.B) {
+		for _, length := range lengths {
+			b.Run(fmt.Sprintf("length=%d", length), func(b *testing.B) {
+				sg := StringGenerator{
+					Length:  length,
+					Charset: []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz"),
+					Rules:   []Rule{},
+				}
+				b.ResetTimer()
+				benchmarkStringGenerator(b, sg)
+			})
+		}
+	})
+
 	b.Run("default string generator", func(b *testing.B) {
 		for _, length := range lengths {
 			b.Run(fmt.Sprintf("length=%d", length), func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
-					ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-					str, err := DefaultStringGenerator.Generate(ctx)
-					cancel()
-					if err != nil {
-						b.Fatalf("Failed to generate string: %s", err)
-					}
-					if str == "" {
-						b.Fatalf("Didn't error but didn't generate a string")
-					}
-				}
+				benchmarkStringGenerator(b, DefaultStringGenerator)
 			})
 		}
 	})
@@ -360,57 +364,53 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 		}
 		for _, length := range lengths {
 			b.Run(fmt.Sprintf("length=%d", length), func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
-					ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-					str, err := sg.Generate(ctx)
-					cancel()
-					if err != nil {
-						b.Fatalf("Failed to generate string: %s", err)
-					}
-					if str == "" {
-						b.Fatalf("Didn't error but didn't generate a string")
-					}
-				}
+				benchmarkStringGenerator(b, sg)
 			})
 		}
 	})
 	b.Run("max symbol set", func(b *testing.B) {
-		sg := StringGenerator{
-			Length: 20,
-			Charset: []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" +
-				"`abcdefghijklmnopqrstuvwxyz{|}~ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠ" +
-				"ġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒœŔŕŖŗŘřŚśŜŝŞşŠ" +
-				"šŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ℀℁ℂ℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔ℕ№℗℘ℙℚℛℜℝ℞℟",
-			),
-			Rules: []Rule{
-				CharsetRestriction{
-					Charset:  []rune("abcdefghijklmnopqrstuvwxyz"),
-					MinChars: 1,
-				},
-				CharsetRestriction{
-					Charset:  []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
-					MinChars: 1,
-				},
-				CharsetRestriction{
-					Charset:  []rune("ĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒ"),
-					MinChars: 1,
-				},
-			},
-		}
 		for _, length := range lengths {
 			b.Run(fmt.Sprintf("length=%d", length), func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
-					ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-					str, err := sg.Generate(ctx)
-					cancel()
-					if err != nil {
-						b.Fatalf("Failed to generate string: %s", err)
-					}
-					if str == "" {
-						b.Fatalf("Didn't error but didn't generate a string")
-					}
+				sg := StringGenerator{
+					Length: length,
+					Charset: []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" +
+						"`abcdefghijklmnopqrstuvwxyz{|}~ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠ" +
+						"ġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒœŔŕŖŗŘřŚśŜŝŞşŠ" +
+						"šŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ℀℁ℂ℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔ℕ№℗℘ℙℚℛℜℝ℞℟",
+					),
+					Rules: []Rule{
+						CharsetRestriction{
+							Charset:  []rune("abcdefghijklmnopqrstuvwxyz"),
+							MinChars: 1,
+						},
+						CharsetRestriction{
+							Charset:  []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+							MinChars: 1,
+						},
+						CharsetRestriction{
+							Charset:  []rune("ĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒ"),
+							MinChars: 1,
+						},
+					},
 				}
+
+				b.ResetTimer()
+				benchmarkStringGenerator(b, sg)
 			})
 		}
 	})
+}
+
+func benchmarkStringGenerator(b *testing.B, sg StringGenerator) {
+	for i := 0; i < b.N; i++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		str, err := sg.Generate(ctx)
+		cancel()
+		if err != nil {
+			b.Fatalf("Failed to generate string: %s", err)
+		}
+		if str == "" {
+			b.Fatalf("Didn't error but didn't generate a string")
+		}
+	}
 }
