@@ -1,16 +1,17 @@
 <MessageError @errorMessage={{errorMessage}} data-test-ttl-error />
 <Toggle
-  @name="Enable TTL"
+  @name={{label}}
   @status="success"
   @size="small"
   @onChange={{action (mut enableTTL)}}
   @checked={{enableTTL}}
 >
-  <span class="is-strong is-large">{{label}}</span><br/>
+  <span class="ttl-picker-label is-large">{{label}}</span><br/>
   <span class="has-text-grey">{{helperText}}</span>
+  <span>Being Updated? {{timeUpdatedRecently}}</span>
 </Toggle>
 {{#if enableTTL}}
-  <div class="has-padding">
+  <div class="ttl-show-picker">
     <div class="field is-grouped">
       <div class="control is-marginless">
         <input
