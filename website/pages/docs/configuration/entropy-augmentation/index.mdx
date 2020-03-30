@@ -9,7 +9,7 @@ description: >-
 
 # `Entropy Augmentation` Seal
 
-Entropy augmentation enables Vault to sample entropy from  external cryptographic modules.
+Entropy augmentation enables Vault to sample entropy from external cryptographic modules.
 Sourcing external entropy is done by configuring a supported [Seal](/docs/configuration/seal) type which
 include: [PKCS11 seal](/docs/configuration/seal/pkcs11), [AWS KMS](/docs/configuration/seal/awskms), and
 [Vault Transit](/docs/configuration/seal/transit).
@@ -22,13 +22,13 @@ A valid Vault Enterprise license is required for Entropy Augmentation
 
 Additionally, the following software packages and enterprise modules are required for sourcing entropy
 via the [PKCS11 seal](/docs/configuration/seal/pkcs11):
+
 - Governance and Policy module
 - PKCS#11 compatible HSM integration library. Vault targets version 2.2 or
   higher of PKCS#11. Depending on any given HSM, some functions (such as key
   generation) may have to be performed manually.
 - The [GNU libltdl library](https://www.gnu.org/software/libtool/manual/html_node/Using-libltdl)
   — ensure that it is installed for the correct architecture of your servers
-
 
 ## `entropy` Example
 
@@ -54,4 +54,4 @@ These parameters apply to the `entropy` stanza in the Vault configuration file:
 
 - `mode` `(string: <required>)`: The mode determines which Vault operations requiring
   entropy will sample entropy from the external source. Currently, the only mode supported
-  is `augmentation` which sources entropy for [Critical Security Parameters (CSPs)](</docs/enterprise/entropy-augmentation/index#Critical-Security-Parameters-(CSPs)>).
+  is `augmentation` which sources entropy for [Critical Security Parameters (CSPs)](/docs/enterprise/entropy-augmentation#critical-security-parameters-csps).
