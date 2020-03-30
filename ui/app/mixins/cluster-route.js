@@ -72,10 +72,11 @@ export default Mixin.create({
     }
     if (get(cluster, 'dr.isSecondary')) {
       if (transition && transition.targetName === DR_REPLICATION_SECONDARY_DETAILS) {
-        console.log('here2');
         return DR_REPLICATION_SECONDARY_DETAILS;
       }
-      console.log('here1');
+      if (this.router.currentRouteName === DR_REPLICATION_SECONDARY_DETAILS) {
+        return DR_REPLICATION_SECONDARY_DETAILS;
+      }
       return DR_REPLICATION_SECONDARY;
     }
     if (!isAuthed) {
