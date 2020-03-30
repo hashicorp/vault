@@ -15,6 +15,7 @@
 
 import Component from '@ember/component';
 import { computed } from '@ember/object';
+import { task, timeout } from 'ember-concurrency';
 
 const secondsMap = {
   s: 1,
@@ -30,7 +31,7 @@ const convertFromSeconds = (seconds, unit) => {
 };
 
 export default Component.extend({
-  enableTTL: true,
+  enableTTL: false,
   label: 'Time to live (TTL)',
   helperTextDisabled: 'Allow tokens to be used indefinitely',
   helperTextEnabled: 'Disable the use of the token after',
@@ -44,6 +45,13 @@ export default Component.extend({
       { label: 'days', value: 'd' },
     ];
   }),
+
+  updateTime: task(function*(newTime) {
+    this.set('time', newTime);
+    this.set('timeUpdatedRecently', true);
+    yield timeout(5000);
+    this.set('timeUpdatedRecently', false);
+  }).restartable(),
 
   recalculateTime(newUnit) {
     const newTime = convertFromSeconds(this.seconds, newUnit);
@@ -68,9 +76,6 @@ export default Component.extend({
       } else {
         this.recalculateTime(newUnit);
       }
-    },
-    updateTime(newTime) {
-      this.set('time', newTime);
     },
   },
 });
