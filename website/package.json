@@ -22,7 +22,7 @@
     "@hashicorp/react-mega-nav": "^4.0.1-2",
     "@hashicorp/react-product-downloader": "^3.0.2",
     "@hashicorp/react-section-header": "^2.0.0",
-    "@hashicorp/react-subnav": "^2.0.2",
+    "@hashicorp/react-subnav": "^2.2.0",
     "@hashicorp/react-text-and-content": "^4.0.6",
     "@hashicorp/react-use-cases": "^1.0.4",
     "@hashicorp/react-vertical-text-block-list": "^2.0.1",
