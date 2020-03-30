@@ -323,8 +323,14 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 			b.Run(fmt.Sprintf("length=%d", length), func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
 					ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-					DefaultStringGenerator.Generate(ctx)
+					str, err := DefaultStringGenerator.Generate(ctx)
 					cancel()
+					if err != nil {
+						b.Fatalf("Failed to generate string: %s", err)
+					}
+					if str == "" {
+						b.Fatalf("Didn't error but didn't generate a string")
+					}
 				}
 			})
 		}
@@ -348,6 +354,45 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 				},
 				CharsetRestriction{
 					Charset:  []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"),
+					MinChars: 1,
+				},
+			},
+		}
+		for _, length := range lengths {
+			b.Run(fmt.Sprintf("length=%d", length), func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+					str, err := sg.Generate(ctx)
+					cancel()
+					if err != nil {
+						b.Fatalf("Failed to generate string: %s", err)
+					}
+					if str == "" {
+						b.Fatalf("Didn't error but didn't generate a string")
+					}
+				}
+			})
+		}
+	})
+	b.Run("max symbol set", func(b *testing.B) {
+		sg := StringGenerator{
+			Length: 20,
+			Charset: []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" +
+				"`abcdefghijklmnopqrstuvwxyz{|}~ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠ" +
+				"ġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒœŔŕŖŗŘřŚśŜŝŞşŠ" +
+				"šŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ℀℁ℂ℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔ℕ№℗℘ℙℚℛℜℝ℞℟",
+			),
+			Rules: []Rule{
+				CharsetRestriction{
+					Charset:  []rune("abcdefghijklmnopqrstuvwxyz"),
+					MinChars: 1,
+				},
+				CharsetRestriction{
+					Charset:  []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+					MinChars: 1,
+				},
+				CharsetRestriction{
+					Charset:  []rune("ĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒ"),
 					MinChars: 1,
 				},
 			},

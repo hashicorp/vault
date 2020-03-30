@@ -159,7 +159,7 @@ func TestParser_Parse(t *testing.T) {
 		"test rule and charset restrictions": {
 			registry: map[string]ruleConstructor{
 				"testrule":           newTestRule,
-				"CharsetRestriction": NewCharsetRestriction,
+				"CharsetRestriction": ParseCharsetRestriction,
 			},
 			rawConfig: `
 				length = 20
@@ -210,7 +210,7 @@ func TestParser_Parse(t *testing.T) {
 		"JSON test rule and charset restrictions": {
 			registry: map[string]ruleConstructor{
 				"testrule":           newTestRule,
-				"CharsetRestriction": NewCharsetRestriction,
+				"CharsetRestriction": ParseCharsetRestriction,
 			},
 			rawConfig: `
 				{

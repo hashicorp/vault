@@ -12,6 +12,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+// Parse is a convenience function for parsing HCL into a StringGenerator. See Parser.Parse for details.
 func Parse(raw string) (strs StringGenerator, err error) {
 	parser := Parser{
 		RuleRegistry: Registry{
@@ -21,10 +22,13 @@ func Parse(raw string) (strs StringGenerator, err error) {
 	return parser.Parse(raw)
 }
 
+// Parser parses string generator configuration from HCL.
 type Parser struct {
+	// RuleRegistry maps rule names in HCL to Rule constructors.
 	RuleRegistry Registry
 }
 
+// Parse parses the provided HCL into a StringGenerator.
 func (p Parser) Parse(raw string) (strs StringGenerator, err error) {
 	rawData := map[string]interface{}{}
 	err = hcl.Decode(&rawData, raw)

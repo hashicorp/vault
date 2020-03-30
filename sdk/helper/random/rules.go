@@ -6,15 +6,17 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// CharsetRestriction requires a certain number of characters from the specified charset
+// CharsetRestriction requires a certain number of characters from the specified charset.
 type CharsetRestriction struct {
+	// Charset is the list of rules that candidate strings must contain a minimum number of.
 	Charset []rune `mapstructure:"charset"`
 
-	// MinChars indicates the minimum (inclusive) number of characters from the charset that should appear in the string
+	// MinChars indicates the minimum (inclusive) number of characters from the charset that should appear in the string.
 	MinChars int `mapstructure:"min-chars"`
 }
 
-func NewCharsetRestriction(data map[string]interface{}) (rule Rule, err error) {
+// ParseCharsetRestriction from the provided data map. The data map is expected to be parsed from HCL.
+func ParseCharsetRestriction(data map[string]interface{}) (rule Rule, err error) {
 	cr := &CharsetRestriction{}
 
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
@@ -34,10 +36,13 @@ func NewCharsetRestriction(data map[string]interface{}) (rule Rule, err error) {
 	return cr, nil
 }
 
+// Chars returns the charset that this rule is looking for.
 func (c CharsetRestriction) Chars() []rune {
 	return c.Charset
 }
 
+// Pass returns true if the provided candidate string has a minimum number of chars in it.
+// This adheres to the Rule interface
 func (c CharsetRestriction) Pass(value []rune) bool {
 	if c.MinChars <= 0 {
 		return true
@@ -45,7 +50,9 @@ func (c CharsetRestriction) Pass(value []rune) bool {
 
 	count := 0
 	for _, r := range value {
-		// charIn is faster than a map lookup because the data is so small
+		// charIn is sometimes faster than a map lookup because the data is so small
+		// This is being kept rather than converted to a map to keep the code cleaner,
+		// otherwise there would need to be additional parsing logic.
 		if charIn(r, c.Charset) {
 			count++
 			if count >= c.MinChars {

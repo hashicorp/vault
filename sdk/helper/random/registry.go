@@ -7,15 +7,14 @@ import (
 type ruleConstructor func(map[string]interface{}) (Rule, error)
 
 var (
-	defaultRegistry = Registry{
-		Rules: defaultRuleNameMapping,
-	}
-
+	// defaultRuleNameMapping is the default mapping of HCL rule names to the appropriate rule constructor.
+	// Add to this map when adding a new Rule type to be recognized in HCL.
 	defaultRuleNameMapping = map[string]ruleConstructor{
-		"CharsetRestriction": NewCharsetRestriction,
+		"CharsetRestriction": ParseCharsetRestriction,
 	}
 )
 
+// Registry of HCL rule names to rule constructors.
 type Registry struct {
 	Rules map[string]ruleConstructor
 }

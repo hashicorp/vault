@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	// DefaultStringGenerator has reasonable default rules for generating strings
 	DefaultStringGenerator = StringGenerator{
 		Length:  20,
 		Charset: []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"),
@@ -34,18 +35,29 @@ var (
 	}
 )
 
+// Rule to assert on string values.
 type Rule interface {
+	// Pass should return true if the provided value passes any assertions this Rule is making.
 	Pass(value []rune) bool
 }
 
+// StringGenerator generats random strings from the provided charset & adhering to a set of rules. The set of rules
+// are things like CharsetRestriction which requires a certain number of characters from a sub-charset.
 type StringGenerator struct {
-	Length  int    `mapstructure:"length"`
-	Charset []rune `mapstructure:"charset"`
-	Rules   []Rule `mapstructure:"-"`
+	// Length of the string to generate.
+	Length int `mapstructure:"length"`
 
+	// Charset to choose runes from.
+	Charset []rune `mapstructure:"charset"`
+
+	// Rules the generated strings must adhere to.
+	Rules []Rule `mapstructure:"-"`
+
+	// rng for testing purposes to ensure error handling from the crypto/rand package is working properly.
 	rng io.Reader
 }
 
+// Generate a random string from the charset and adhering to the provided rules.
 func (g StringGenerator) Generate(ctx context.Context) (str string, err error) {
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second) // Ensure there's a timeout on the context
 	defer cancel()
