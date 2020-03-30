@@ -212,28 +212,29 @@ func TestParser_Parse(t *testing.T) {
 				"testrule":           newTestRule,
 				"CharsetRestriction": NewCharsetRestriction,
 			},
-			rawConfig: `{
-						  "charset": "abcde",
-						  "length": 20,
-						  "rule": [
-							{
-							  "testrule": [
+			rawConfig: `
+				{
+					"charset": "abcde",
+					"length": 20,
+					"rule": [
+						{
+							"testrule": [
 								{
-								  "string": "omgwtfbbq",
-								  "int": 123
+									"string": "omgwtfbbq",
+									"int": 123
 								}
-							  ],
-							},
-							{
-							  "CharsetRestriction": [
+							]
+						},
+						{
+							"CharsetRestriction": [
 								{
-								  "charset": "abcde",
-								  "min-chars": 2
+									"charset": "abcde",
+									"min-chars": 2
 								}
-							  ]
-							}
-						  ]
-						}`,
+							]
+						}
+					]
+				}`,
 			expected: StringGenerator{
 				Length:  20,
 				Charset: []rune("abcde"),
@@ -252,20 +253,21 @@ func TestParser_Parse(t *testing.T) {
 		},
 		"JSON unrecognized rule": {
 			registry: defaultRules,
-			rawConfig: `{
-						  "charset": "abcde",
-						  "length": 20,
-						  "rule": [
-							{
-							  "testrule": [
+			rawConfig: `
+				{
+					"charset": "abcde",
+					"length": 20,
+					"rule": [
+						{
+							"testrule": [
 								{
-								  "string": "omgwtfbbq",
-								  "int": 123
+									"string": "omgwtfbbq",
+									"int": 123
 								}
-							  ],
-							}
-						  ]
-						}`,
+							],
+						}
+					]
+				}`,
 			expected: StringGenerator{
 				Length:  20,
 				Charset: []rune("abcde"),
