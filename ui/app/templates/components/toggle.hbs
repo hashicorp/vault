@@ -8,4 +8,10 @@
   disabled=disabled
   data-test-toggle-input=name
 }}
-<label data-test-toggle-label={{name}} for={{safeId}}>{{yield}}</label>
+<label data-test-toggle-label={{name}} for={{safeId}}>
+  {{#if (has-block)}}
+    {{yield}}
+  {{else}}
+    {{name}}
+  {{/if}}
+</label>
