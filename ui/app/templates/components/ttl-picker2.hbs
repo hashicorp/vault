@@ -3,12 +3,11 @@
   @name={{label}}
   @status="success"
   @size="small"
-  @onChange={{action (mut enableTTL)}}
+  @onChange={{action 'toggleEnabled'}}
   @checked={{enableTTL}}
 >
   <span class="ttl-picker-label is-large">{{label}}</span><br/>
   <span class="has-text-grey">{{helperText}}</span>
-  <span>Being Updated? {{timeUpdatedRecently}}</span>
 </Toggle>
 {{#if enableTTL}}
   <div class="ttl-show-picker">

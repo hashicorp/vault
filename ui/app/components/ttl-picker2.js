@@ -1,11 +1,12 @@
 /**
  * @module TtlPicker2
- * TtlPicker2 components are used to...
+ * TtlPicker2 components are used to enable and select TTL
  *
  * @example
  * ```js
  * <TtlPicker2 @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
  * ```
+ * @param {function} onChange - This function will be passed a TTL object, which includes enabled{bool}, seconds{number}, timeString{string}.
  * @param {string} [label='Time to live (TTL)'] - Label is the main label that lives next to the toggle.
  * @param {string} [helperTextDisabled='Allow tokens to be used indefinitely'] - This helper text is shown under the label when the toggle is switched off
  * @param {string} [helperTextEnabled='Disable the use of the token after'] - This helper text is shown under the label when the toggle is switched on
@@ -13,6 +14,7 @@
  * @param {string} [unit='s'] - This is the unit key which will show by default on the form. Can be one of `s` (seconds), `m` (minutes), `h` (hours), `d` (days)
  */
 
+import Ember from 'ember';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { task, timeout } from 'ember-concurrency';
@@ -46,11 +48,25 @@ export default Component.extend({
     ];
   }),
 
+  onChange: ttl => {
+    console.log({ ttl });
+  },
+
+  TTL: computed('enableTTL', 'seconds', function() {
+    let { time, unit, enableTTL, seconds } = this.getProperties('time', 'unit', 'enableTTL', 'seconds');
+    return {
+      enabled: enableTTL,
+      seconds,
+      timeString: time + unit,
+    };
+  }),
+
   updateTime: task(function*(newTime) {
     this.set('time', newTime);
-    this.set('timeUpdatedRecently', true);
+    this.onChange(this.TTL);
+    this.set('recalculateSeconds', true);
     yield timeout(5000);
-    this.set('timeUpdatedRecently', false);
+    this.set('recalculateSeconds', false);
   }).restartable(),
 
   recalculateTime(newUnit) {
@@ -68,14 +84,19 @@ export default Component.extend({
     return this.enableTTL ? this.helperTextEnabled : this.helperTextDisabled;
   }),
   errorMessage: null,
-  timeUpdatedRecently: false,
+  recalculateSeconds: false,
   actions: {
     updateUnit(newUnit) {
-      if (this.timeUpdatedRecently) {
+      if (this.recalculateSeconds) {
         this.set('unit', newUnit);
       } else {
         this.recalculateTime(newUnit);
       }
+      this.onChange(this.TTL);
+    },
+    toggleEnabled() {
+      this.toggleProperty('enableTTL');
+      this.onChange(this.TTL);
     },
   },
 });
