@@ -54,9 +54,7 @@ func TestSealMigration_ShamirToTransit(t *testing.T) {
 
 func testSealMigrationShamirToTransit(t *testing.T, setup teststorage.ClusterSetupMutator) {
 
-	////////////////////////////////////////////////////////
 	// Create a cluster that uses shamir.
-
 	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
 		DisableSealWrap: true,
 	}, &vault.TestClusterOptions{
@@ -71,9 +69,7 @@ func testSealMigrationShamirToTransit(t *testing.T, setup teststorage.ClusterSet
 	cluster.Start()
 	defer cluster.Cleanup()
 
-	////////////////////////////////////////////////////////
-	// Initialize the cluster.
-
+	// Initialize the cluster, and unseal it using the shamir keys.
 	client := cluster.Cores[0].Client
 	initResp, err := client.Sys().Init(&api.InitRequest{
 		SecretShares:    5,
@@ -105,24 +101,18 @@ func testSealMigrationShamirToTransit(t *testing.T, setup teststorage.ClusterSet
 		t.Fatal(err)
 	}
 
-	////////////////////////////////////////////////////////
 	// Create the transit server.
-
 	tcluster := seal.NewTransitSealServer(t)
 	defer tcluster.Cleanup()
 	tcluster.MakeKey(t, "key1")
 	transitSeal := tcluster.MakeSeal(t, "key1")
 
-	////////////////////////////////////////////////////////
-	// Transition to transit seal
-
+	// Transition to transit seal.
 	if err := adjustCoreForSealMigration(cluster.Logger, cluster.Cores[0].Core, transitSeal, nil); err != nil {
 		t.Fatal(err)
 	}
 
-	////////////////////////////////////////////////////////
-	// Unseal Transit
-
+	// Unseal Transit.
 	for _, key := range initResp.KeysB64 {
 		resp, err = client.Sys().UnsealWithOptions(&api.UnsealOpts{Key: key})
 		if err == nil {
@@ -142,19 +132,17 @@ func testSealMigrationShamirToTransit(t *testing.T, setup teststorage.ClusterSet
 
 	testhelpers.WaitForActiveNode(t, cluster)
 
-	// Seal
+	// Seal the cluster.
 	if err := client.Sys().Seal(); err != nil {
 		t.Fatal(err)
 	}
 
-	////////////////////////////////////////////////////////
-	// Now the barrier unseal keys are actually the recovery keys.
-
-	// Seal the transit cluster; we expect the unseal of our other cluster
+	// Seal the transit cluster; we expect the unseal of our main cluster
 	// to fail as a result.
 	tcluster.EnsureCoresSealed(t)
 
-	// Verify that we cannot unseal
+	// Verify that we cannot unseal.  Now the barrier unseal keys are actually
+	// the recovery keys.
 	for _, key := range initResp.KeysB64 {
 		resp, err = client.Sys().UnsealWithOptions(&api.UnsealOpts{Key: key})
 		if err != nil {
@@ -168,10 +156,11 @@ func testSealMigrationShamirToTransit(t *testing.T, setup teststorage.ClusterSet
 		t.Fatalf("expected sealed state; got %#v", resp)
 	}
 
-	// Unseal the transit server; we expect the unseal to work now on the cluster.
+	// Unseal the transit server; we expect the unseal to work now on our main
+	// cluster.
 	tcluster.UnsealCores(t)
 
-	// Verify that we can unseal
+	// Verify that we can unseal.
 	for _, key := range initResp.KeysB64 {
 		resp, err = client.Sys().UnsealWithOptions(&api.UnsealOpts{Key: key})
 		if err != nil {
@@ -185,10 +174,7 @@ func testSealMigrationShamirToTransit(t *testing.T, setup teststorage.ClusterSet
 		t.Fatalf("expected unsealed state; got %#v", resp)
 	}
 
-	////////////////////////////////////////////////////////
-	// Verify the barrier configuration
-
-	// Make sure the seal configs were updated correctly
+	// Make sure the seal configs were updated correctly.
 	b, r, err := cluster.Cores[0].Core.PhysicalSealConfigs(context.Background())
 	if err != nil {
 		t.Fatal(err)
