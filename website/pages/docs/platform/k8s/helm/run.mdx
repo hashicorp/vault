@@ -172,7 +172,7 @@ guide demonstrates using an external Vault within a Kubernetes cluster.
 
 The Vault UI is enabled but NOT exposed as service for security reasons. The
 Vault UI can also be exposed via port-forwarding or through a [`ui`
-configuration value](/docs/platform/k8s/helm#v-ui).
+configuration value](/docs/platform/k8s/helm/configuration/#ui).
 
 Expose the Vault UI with port-forwarding:
 
@@ -518,14 +518,14 @@ _End-to-End TLS._ Vault should always be used with TLS in production. If
 intermediate load balancers or reverse proxies are used to front Vault,
 they should not terminate TLS. This way traffic is always encrypted in transit
 to Vault and minimizes risks introduced by intermediate layers. See the
-[official documentation](/docs/platform/k8s/helm#standalone-server-with-tls)
+[official documentation](/docs/platform/k8s/helm/examples/standalone-tls/)
 for example on configuring Vault Helm to use TLS.
 
 _Single Tenancy._ Vault should be the only main process running on a machine.
 This reduces the risk that another process running on the same machine is
 compromised and can interact with Vault. This can be accomplished by using Vault
 Helm's `affinity` configurable. See the
-[official documentation](/docs/platform/k8s/helm#highly-available-vault-cluster-with-consul)
+[official documentation](/docs/platform/k8s/helm/examples/ha-with-consul/)
 for example on configuring Vault Helm to use affinity rules.
 
 _Enable Auditing._ Vault supports several auditing backends. Enabling auditing
@@ -534,7 +534,7 @@ trail in the case of misuse or compromise. Audit logs securely hash any sensitiv
 data, but access should still be restricted to prevent any unintended disclosures.
 Vault Helm includes a configurable `auditStorage` option that provisions a persistent
 volume to store audit logs. See the
-[official documentation](/docs/platform/k8s/helm#standalone-server-with-audit-storage)
+[official documentation](/docs/platform/k8s/helm/examples/standalone-audit/)
 for an example on configuring Vault Helm to use auditing.
 
 _Immutable Upgrades._ Vault relies on an external storage backend for persistence,
