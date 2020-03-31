@@ -1,12 +1,13 @@
 <!--THIS FILE IS AUTO GENERATED. This file is generated from JSDoc comments in app/components/ttl-picker2.js. To make changes, first edit that file and run "yarn gen-story-md ttl-picker2" to re-generate the content.-->
 
 ## TtlPicker2
-TtlPicker2 components are used to...
+TtlPicker2 components are used to enable and select TTL
 
 **Params**
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
+| onChange | <code>function</code> |  | This function will be passed a TTL object, which includes enabled{bool}, seconds{number}, timeString{string}. |
 | [label] | <code>string</code> | <code>&quot;&#x27;Time to live (TTL)&#x27;&quot;</code> | Label is the main label that lives next to the toggle. |
 | [helperTextDisabled] | <code>string</code> | <code>&quot;&#x27;Allow tokens to be used indefinitely&#x27;&quot;</code> | This helper text is shown under the label when the toggle is switched off |
 | [helperTextEnabled] | <code>string</code> | <code>&quot;&#x27;Disable the use of the token after&#x27;&quot;</code> | This helper text is shown under the label when the toggle is switched on |
