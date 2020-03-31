@@ -100,12 +100,29 @@ func (p Parser) parseRules(rawRules []map[string]interface{}) (rules []Rule, err
 }
 
 func validate(strs StringGenerator) (err error) {
+	type minLengthProvider interface {
+		MinLength() int
+	}
+
 	merr := &multierror.Error{}
 	if strs.Length < 1 {
 		merr = multierror.Append(merr, fmt.Errorf("length must be >= 1"))
 	}
 	if len(strs.Charset) == 0 {
 		merr = multierror.Append(merr, fmt.Errorf("no charset specified"))
+	}
+
+	minLengthRules := 0
+	for _, rule := range strs.Rules {
+		mlp, ok := rule.(minLengthProvider)
+		if !ok {
+			continue
+		}
+		minLengthRules += mlp.MinLength()
+	}
+
+	if minLengthRules > strs.Length {
+		merr = multierror.Append(merr, fmt.Errorf("specified rules require at least %d characters but %d is specified", minLengthRules, strs.Length))
 	}
 
 	for _, r := range strs.Charset {
@@ -124,11 +141,11 @@ func getChars(rules []Rule) (chars []rune) {
 	}
 
 	for _, rule := range rules {
-		cv, ok := rule.(charsetProvider)
+		cp, ok := rule.(charsetProvider)
 		if !ok {
 			continue
 		}
-		chars = append(chars, cv.Chars()...)
+		chars = append(chars, cp.Chars()...)
 	}
 	return chars
 }

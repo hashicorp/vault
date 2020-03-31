@@ -41,6 +41,10 @@ func (c CharsetRestriction) Chars() []rune {
 	return c.Charset
 }
 
+func (c CharsetRestriction) MinLength() int {
+	return c.MinChars
+}
+
 // Pass returns true if the provided candidate string has a minimum number of chars in it.
 // This adheres to the Rule interface
 func (c CharsetRestriction) Pass(value []rune) bool {

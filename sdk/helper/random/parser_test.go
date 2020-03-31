@@ -396,6 +396,86 @@ func TestParseRules(t *testing.T) {
 	}
 }
 
+func TestValidate(t *testing.T) {
+	type testCase struct {
+		generator StringGenerator
+		expectErr bool
+	}
+
+	tests := map[string]testCase{
+		"default generator": {
+			generator: DefaultStringGenerator,
+			expectErr: false,
+		},
+		"length is 0": {
+			generator: StringGenerator{
+				Length:  0,
+				Charset: []rune("abcde"),
+			},
+			expectErr: true,
+		},
+		"length is negative": {
+			generator: StringGenerator{
+				Length:  -2,
+				Charset: []rune("abcde"),
+			},
+			expectErr: true,
+		},
+		"nil charset": {
+			generator: StringGenerator{
+				Length:  5,
+				Charset: nil,
+			},
+			expectErr: true,
+		},
+		"zero length charset": {
+			generator: StringGenerator{
+				Length:  5,
+				Charset: []rune{},
+			},
+			expectErr: true,
+		},
+		"rules require password longer than length": {
+			generator: StringGenerator{
+				Length:  5,
+				Charset: []rune("abcde"),
+				Rules: []Rule{
+					CharsetRestriction{
+						Charset:  []rune("abcde"),
+						MinChars: 6,
+					},
+				},
+			},
+			expectErr: true,
+		},
+		"charset has non-printable characters": {
+			generator: StringGenerator{
+				Length: 0,
+				Charset: []rune{
+					'a',
+					'b',
+					0, // Null character
+					'd',
+					'e',
+				},
+			},
+			expectErr: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := validate(test.generator)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+		})
+	}
+}
+
 func TestGetChars(t *testing.T) {
 	type testCase struct {
 		rules    []Rule
