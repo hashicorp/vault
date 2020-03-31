@@ -5,6 +5,7 @@
   @size="small"
   @onChange={{action 'toggleEnabled'}}
   @checked={{enableTTL}}
+  data-test-ttl-toggle
 >
   <span class="ttl-picker-label is-large">{{label}}</span><br/>
   <span class="has-text-grey">{{helperText}}</span>
@@ -26,6 +27,7 @@
       </div>
       <div class="control">
         <Select
+          data-test-ttl-unit
           @name='ttl-unit'
           @options={{unitOptions}}
           @onChange={{action 'updateUnit'}}
@@ -37,7 +39,3 @@
   </div>
   {{yield}}
 {{/if}}
-<pre>
-  Seconds: {{seconds}}
-  Time: {{time}} {{unit}}
-</pre>

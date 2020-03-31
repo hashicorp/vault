@@ -64,6 +64,9 @@ export default Component.extend({
   updateTime: task(function*(newTime) {
     this.set('time', newTime);
     this.onChange(this.TTL);
+    if (Ember.testing) {
+      return;
+    }
     this.set('recalculateSeconds', true);
     yield timeout(5000);
     this.set('recalculateSeconds', false);
