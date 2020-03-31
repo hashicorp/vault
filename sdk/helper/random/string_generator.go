@@ -59,8 +59,11 @@ type StringGenerator struct {
 
 // Generate a random string from the charset and adhering to the provided rules.
 func (g StringGenerator) Generate(ctx context.Context) (str string, err error) {
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Second) // Ensure there's a timeout on the context
-	defer cancel()
+	if _, hasTimeout := ctx.Deadline(); !hasTimeout {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(ctx, 1*time.Second) // Ensure there's a timeout on the context
+		defer cancel()
+	}
 
 LOOP:
 	for {

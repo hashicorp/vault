@@ -318,99 +318,134 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 		8, 12, 16, 20, 24, 28,
 	}
 
-	b.Run("no rules", func(b *testing.B) {
-		for _, length := range lengths {
-			b.Run(fmt.Sprintf("length=%d", length), func(b *testing.B) {
-				sg := StringGenerator{
-					Length:  length,
-					Charset: []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz"),
-					Rules:   []Rule{},
-				}
-				b.ResetTimer()
-				benchmarkStringGenerator(b, sg)
-			})
-		}
-	})
+	type testCase struct {
+		generator StringGenerator
+	}
 
-	b.Run("default string generator", func(b *testing.B) {
-		for _, length := range lengths {
-			b.Run(fmt.Sprintf("length=%d", length), func(b *testing.B) {
-				benchmarkStringGenerator(b, DefaultStringGenerator)
-			})
-		}
-	})
-	b.Run("large symbol set", func(b *testing.B) {
-		sg := StringGenerator{
-			Length:  20,
-			Charset: []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"),
-			Rules: []Rule{
-				CharsetRestriction{
-					Charset:  []rune("abcdefghijklmnopqrstuvwxyz"),
-					MinChars: 1,
-				},
-				CharsetRestriction{
-					Charset:  []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
-					MinChars: 1,
-				},
-				CharsetRestriction{
-					Charset:  []rune("0123456789"),
-					MinChars: 1,
-				},
-				CharsetRestriction{
-					Charset:  []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"),
-					MinChars: 1,
+	benches := map[string]testCase{
+		"no rules": {
+			generator: StringGenerator{
+				Charset: []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz"),
+				Rules:   []Rule{},
+			},
+		},
+		"default generator": {
+			generator: DefaultStringGenerator,
+		},
+		"large symbol set": {
+			generator: StringGenerator{
+				Charset: []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"),
+				Rules: []Rule{
+					CharsetRestriction{
+						Charset:  []rune("abcdefghijklmnopqrstuvwxyz"),
+						MinChars: 1,
+					},
+					CharsetRestriction{
+						Charset:  []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+						MinChars: 1,
+					},
+					CharsetRestriction{
+						Charset:  []rune("0123456789"),
+						MinChars: 1,
+					},
+					CharsetRestriction{
+						Charset:  []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"),
+						MinChars: 1,
+					},
 				},
 			},
-		}
-		for _, length := range lengths {
-			b.Run(fmt.Sprintf("length=%d", length), func(b *testing.B) {
-				benchmarkStringGenerator(b, sg)
-			})
-		}
-	})
-	b.Run("max symbol set", func(b *testing.B) {
-		for _, length := range lengths {
-			b.Run(fmt.Sprintf("length=%d", length), func(b *testing.B) {
-				sg := StringGenerator{
-					Length: length,
-					Charset: []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" +
-						"`abcdefghijklmnopqrstuvwxyz{|}~ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠ" +
-						"ġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒœŔŕŖŗŘřŚśŜŝŞşŠ" +
-						"šŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ℀℁ℂ℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔ℕ№℗℘ℙℚℛℜℝ℞℟",
-					),
-					Rules: []Rule{
-						CharsetRestriction{
-							Charset:  []rune("abcdefghijklmnopqrstuvwxyz"),
-							MinChars: 1,
-						},
-						CharsetRestriction{
-							Charset:  []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
-							MinChars: 1,
-						},
-						CharsetRestriction{
-							Charset:  []rune("ĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒ"),
-							MinChars: 1,
-						},
+		},
+		"max symbol set": {
+			generator: StringGenerator{
+				Charset: []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" +
+					"`abcdefghijklmnopqrstuvwxyz{|}~ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠ" +
+					"ġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒœŔŕŖŗŘřŚśŜŝŞşŠ" +
+					"šŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ℀℁ℂ℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔ℕ№℗℘ℙℚℛℜℝ℞℟",
+				),
+				Rules: []Rule{
+					CharsetRestriction{
+						Charset:  []rune("abcdefghijklmnopqrstuvwxyz"),
+						MinChars: 1,
 					},
-				}
+					CharsetRestriction{
+						Charset:  []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+						MinChars: 1,
+					},
+					CharsetRestriction{
+						Charset:  []rune("ĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒ"),
+						MinChars: 1,
+					},
+				},
+			},
+		},
+		"restrictive charset rules": {
+			generator: StringGenerator{
+				Charset: []rune("-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"),
+				Rules: []Rule{
+					CharsetRestriction{
+						Charset:  []rune("A"),
+						MinChars: 1,
+					},
+					CharsetRestriction{
+						Charset:  []rune("1"),
+						MinChars: 1,
+					},
+					CharsetRestriction{
+						Charset:  []rune("a"),
+						MinChars: 1,
+					},
+					CharsetRestriction{
+						Charset:  []rune("-"),
+						MinChars: 1,
+					},
+				},
+			},
+		},
+	}
 
-				b.ResetTimer()
-				benchmarkStringGenerator(b, sg)
-			})
+	for name, bench := range benches {
+		b.Run(name, func(b *testing.B) {
+			for _, length := range lengths {
+				bench.generator.Length = length
+				b.Run(fmt.Sprintf("length=%d", length), func(b *testing.B) {
+					ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+					defer cancel()
+
+					b.ResetTimer()
+					for i := 0; i < b.N; i++ {
+						str, err := bench.generator.Generate(ctx)
+						if err != nil {
+							b.Fatalf("Failed to generate string: %s", err)
+						}
+						if str == "" {
+							b.Fatalf("Didn't error but didn't generate a string")
+						}
+					}
+				})
+			}
+		})
+	}
+
+	b.Run("SQLCredentialsProducer", func(b *testing.B) {
+		sg := StringGenerator{
+			Length:  16, // 16 because the SQLCredentialsProducer prepends 4 characters to a 20 character password
+			Charset: []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"),
+			Rules:   nil,
+			rng:     rand.Reader,
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			str, err := sg.Generate(ctx)
+			if err != nil {
+				b.Fatalf("Failed to generate string: %s", err)
+			}
+			if str == "" {
+				b.Fatalf("Didn't error but didn't generate a string")
+			}
 		}
 	})
-}
-
-func benchmarkStringGenerator(b *testing.B, sg StringGenerator) {
-	for i := 0; i < b.N; i++ {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-		str, err := sg.Generate(ctx)
-		cancel()
-		if err != nil {
-			b.Fatalf("Failed to generate string: %s", err)
-		}
-		if str == "" {
-			b.Fatalf("Didn't error but didn't generate a string")
-		}
-	}
 }
