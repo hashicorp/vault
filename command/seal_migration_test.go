@@ -2,8 +2,6 @@ package command
 
 import (
 	"context"
-	"encoding/base64"
-	"path"
 	"testing"
 
 	wrapping "github.com/hashicorp/go-kms-wrapping"
@@ -31,30 +29,30 @@ func verifyBarrierConfig(t *testing.T, cfg *vault.SealConfig, sealType string, s
 	}
 }
 
-func TestSealMigration_ShamirToAuto(t *testing.T) {
+func TestSealMigration_ShamirToTransit(t *testing.T) {
 	t.Parallel()
 	t.Run("inmem", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationShamirToAuto(t, teststorage.InmemBackendSetup)
+		testSealMigrationShamirToTransit(t, teststorage.InmemBackendSetup)
 	})
 
 	t.Run("file", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationShamirToAuto(t, teststorage.FileBackendSetup)
+		testSealMigrationShamirToTransit(t, teststorage.FileBackendSetup)
 	})
 
 	t.Run("consul", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationShamirToAuto(t, teststorage.ConsulBackendSetup)
+		testSealMigrationShamirToTransit(t, teststorage.ConsulBackendSetup)
 	})
 
 	t.Run("raft", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationShamirToAuto(t, teststorage.RaftBackendSetup)
+		testSealMigrationShamirToTransit(t, teststorage.RaftBackendSetup)
 	})
 }
 
-func testSealMigrationShamirToAuto(t *testing.T, setup teststorage.ClusterSetupMutator) {
+func testSealMigrationShamirToTransit(t *testing.T, setup teststorage.ClusterSetupMutator) {
 	tcluster := seal.NewTransitSealServer(t)
 	defer tcluster.Cleanup()
 
@@ -172,31 +170,30 @@ func testSealMigrationShamirToAuto(t *testing.T, setup teststorage.ClusterSetupM
 }
 
 /*
-func TestSealMigration_AutoToAuto(t *testing.T) {
+func TestSealMigration_TransitToTransit(t *testing.T) {
 	t.Parallel()
 	t.Run("inmem", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationAutoToAuto(t, teststorage.InmemBackendSetup)
+		testSealMigrationTransitToTransit(t, teststorage.InmemBackendSetup)
 	})
 
 	t.Run("file", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationAutoToAuto(t, teststorage.FileBackendSetup)
+		testSealMigrationTransitToTransit(t, teststorage.FileBackendSetup)
 	})
 
 	t.Run("consul", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationAutoToAuto(t, teststorage.ConsulBackendSetup)
+		testSealMigrationTransitToTransit(t, teststorage.ConsulBackendSetup)
 	})
 
 	t.Run("raft", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationAutoToAuto(t, teststorage.RaftBackendSetup)
+		testSealMigrationTransitToTransit(t, teststorage.RaftBackendSetup)
 	})
 }
-*/
 
-func testSealMigrationAutoToAuto(t *testing.T, setup teststorage.ClusterSetupMutator) {
+func testSealMigrationTransitToTransit(t *testing.T, setup teststorage.ClusterSetupMutator) {
 	tcluster := seal.NewTransitSealServer(t)
 	defer tcluster.Cleanup()
 	tcluster.MakeKey(t, "key1")
@@ -287,3 +284,4 @@ func testSealMigrationAutoToAuto(t *testing.T, setup teststorage.ClusterSetupMut
 		t.Fatal(err)
 	}
 }
+*/

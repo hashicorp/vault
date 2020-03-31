@@ -18,30 +18,30 @@ import (
 	"github.com/hashicorp/vault/vault/seal"
 )
 
-func TestSealMigration_AutoToShamir(t *testing.T) {
+func TestSealMigration_TransitToShamir(t *testing.T) {
 	t.Parallel()
 	t.Run("inmem", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationAutoToShamir(t, teststorage.InmemBackendSetup)
+		testSealMigrationTransitToShamir(t, teststorage.InmemBackendSetup)
 	})
 
 	t.Run("file", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationAutoToShamir(t, teststorage.FileBackendSetup)
+		testSealMigrationTransitToShamir(t, teststorage.FileBackendSetup)
 	})
 
 	t.Run("consul", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationAutoToShamir(t, teststorage.ConsulBackendSetup)
+		testSealMigrationTransitToShamir(t, teststorage.ConsulBackendSetup)
 	})
 
 	t.Run("raft", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationAutoToShamir(t, teststorage.RaftBackendSetup)
+		testSealMigrationTransitToShamir(t, teststorage.RaftBackendSetup)
 	})
 }
 
-func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupMutator) {
+func testSealMigrationTransitToShamir(t *testing.T, setup teststorage.ClusterSetupMutator) {
 	tcluster := sealhelper.NewTransitSealServer(t)
 	defer tcluster.Cleanup()
 
