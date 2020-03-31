@@ -24,6 +24,7 @@ export default function ProductSubnav() {
       currentPath={router.pathname}
       menuItems={menuItems}
       menuItemsAlign="right"
+      constrainWidth
     />
   )
 }

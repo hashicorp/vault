@@ -11,7 +11,7 @@ description: >-
 # `Entropy Augmentation` Seal
 
 Entropy augmentation enables Vault to sample entropy from an external cryptographic modules.
-Currently, sourcing external entropy is done through a configured [PKCS11 seal](/docs/configuration/seal/pkcs11.html).
+Currently, sourcing external entropy is done through a configured [PKCS11 seal](/docs/configuration/seal/pkcs11).
 Vault Enterprises's external entropy support is activated by the presence of an `entropy "seal"`
 block in Vault's configuration file.
 
@@ -47,4 +47,4 @@ These parameters apply to the `entropy` stanza in the Vault configuration file:
 
 - `mode` `(string: <required>)`: The mode determines which Vault operations requiring
   entropy will sample entropy from the external source. Currently, the only mode supported
-  is `augmentation` which sources entropy for [Critical Security Parameters (CSPs)](</docs/enterprise/entropy-augmentation/index.html#Critical-Security-Parameters-(CSPs)>).
+  is `augmentation` which sources entropy for [Critical Security Parameters (CSPs)](/docs/enterprise/entropy-augmentation#critical-security-parameters-csps).
