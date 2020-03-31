@@ -222,9 +222,10 @@ func (c *Core) startForwarding(ctx context.Context) error {
 }
 
 func (c *Core) stopForwarding() {
-	if c.getClusterListener() != nil {
-		c.getClusterListener().StopHandler(consts.RequestForwardingALPN)
-		c.getClusterListener().StopHandler(consts.PerfStandbyALPN)
+	clusterListener := c.getClusterListener()
+	if clusterListener != nil {
+		clusterListener.StopHandler(consts.RequestForwardingALPN)
+		clusterListener.StopHandler(consts.PerfStandbyALPN)
 	}
 	c.removeAllPerfStandbySecondaries()
 }
