@@ -1,12 +1,13 @@
 <section class="section">
   <div class="container is-widescreen">
     {{!-- ARG TODO setup error state and return --}}
-    <Replication as |Dashboard|>
-      <Dashboard.header 
+    <ReplicationPage as |Page|>
+      <Page.header 
         @showTabs={{false}} 
-        @data={{model}}
+        @model={{model}}
       />
-      <Dashboard.toggle />
-    </Replication>
+      <Page.toggle />
+      <Page.content />
+    </ReplicationPage>
 </div>
 </section>
