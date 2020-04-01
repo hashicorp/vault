@@ -2,8 +2,7 @@
   <div class="container is-widescreen">
     {{!-- ARG TODO setup error state and return --}}
     <Replication as |Dashboard|>
-      <Dashboard.header />
-      <Dashboard.tabs />
+      <Dashboard.header @showTabs={{false}} />
       <Dashboard.toggle />
     </Replication>
 </div>
