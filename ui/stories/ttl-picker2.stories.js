@@ -12,17 +12,17 @@ storiesOf('TtlPicker2/', module)
       template: hbs`
       <h5 class="title is-5">Ttl Picker2</h5>
       <TtlPicker2
-        @unit={{unit}}
         @enableTTL={{enableTTL}}
+        @unit={{unit}}
+        @time={{time}}
         @label={{label}}
         @helperTextDisabled={{helperTextDisabled}}
         @helperTextEnabled={{helperTextEnabled}}
         @onChange={{onChange}}
-        @time={{time}}
       />
     `,
       context: {
-        enableTTL: boolean('enableTTL', false),
+        enableTTL: boolean('enableTTL', true),
         unit: select('unit', ['s', 'm', 'h', 'd'], 'm'),
         time: text('time', '40'),
         label: text('label', 'Main label of TTL'),
@@ -40,7 +40,7 @@ storiesOf('TtlPicker2/', module)
     () => ({
       template: hbs`
       <h5 class="title is-5">Ttl Picker2</h5>
-      <TtlPicker2 @unit="m" @enableTTL={{enableTTL}}>
+      <TtlPicker2>
         <TtlPicker2
           @label="Maximum time to live (Max TTL)"
           @helperTextDisabled="Allow tokens to be renewed indefinitely"
