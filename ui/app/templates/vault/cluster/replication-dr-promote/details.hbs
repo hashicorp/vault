@@ -4,8 +4,7 @@
     <Replication as |Dashboard|>
       <Dashboard.header 
         @showTabs={{false}} 
-        @replicationMode={{model.dr.mode}}
-        @unsealed={{model.unsealed}}
+        @data={{model}}
       />
       <Dashboard.toggle />
     </Replication>

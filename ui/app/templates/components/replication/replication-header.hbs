@@ -1,5 +1,5 @@
 {{!-- DR Secondary has a different Nav Header with access only to the Status menu --}}
-{{#if (if replicationMode 'secondary')}}
+{{#if (and (eq data.rm.mode 'dr') (eq data.dr.mode 'secondary') )}}
   <NavHeader as |Nav|>
     <Nav.home>
       <HomeLink @class="navbar-item splash-page-logo has-text-white">
@@ -7,7 +7,7 @@
       </HomeLink>
     </Nav.home>
     <Nav.items>
-      <div class="navbar-item status-indicator-button" data-status="{{if unsealed "good" "bad"}}">
+      <div class="navbar-item status-indicator-button" data-status="{{if data.unsealed "good" "bad"}}">
         <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
       </div>
     </Nav.items>
@@ -35,7 +35,10 @@
     <h1 class="title is-3">
       Details
       <span class="tag">
-        {{model.dr.mode}}
+        {{data.dr.mode}}
+      </span>
+      <span class="tag">
+        {{data.dr.clusterIdDisplay}}
       </span>
     </h1>
   </p.levelLeft>
