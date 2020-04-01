@@ -1,3 +1,9 @@
+## Next
+
+CHANGES:
+
+* token: Token renewals will now return token policies within the `token_policies` , identity policies within `identity_policies`, and the full policy set within `policies`. [[GH-8535](https://github.com/hashicorp/vault/pull/8535)]
+
 ## 1.4 RC1 (March 19th, 2020)
 
 CHANGES:
