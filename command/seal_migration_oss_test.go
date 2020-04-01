@@ -102,7 +102,7 @@ func testSealMigrationTransitToShamir(t *testing.T, setup teststorage.ClusterSet
 		t.Fatal(err)
 	}
 
-	// Unseal Shamir.
+	// Unseal and migrate to Shamir.
 	// Although we're unsealing using the recovery keys, this is still an
 	// autounseal; if we stopped the transit cluster this would fail.
 	var resp *api.SealStatusResponse
