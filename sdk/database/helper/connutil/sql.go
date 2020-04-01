@@ -16,6 +16,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+const DisableConnectionCaching = "disable_connection_caching"
+
 var _ ConnectionProducer = &SQLConnectionProducer{}
 
 // SQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
@@ -104,19 +106,36 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 	return c.RawConfig, nil
 }
 
+// Connection returns a connection for the caller to use. By default, database
+// connections are reused. However, this behavior may be disabled by setting a key
+// of "should_reuse" to false. This can help with failovers like the one discussed
+// in https://github.com/hashicorp/vault/issues/6792. Normally we would just pass
+// in a parameter to that effect, but we did it this way to avoid changing the
+// exported method.
 func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
 	if !c.Initialized {
 		return nil, ErrNotInitialized
 	}
 
-	// If we already have a DB, test it and return
-	if c.db != nil {
-		if err := c.db.PingContext(ctx); err == nil {
-			return c.db, nil
+	disableConnCaching := false
+	disableConnCachingIfc := ctx.Value(DisableConnectionCaching)
+	if disableConnCachingIfc != nil {
+		if b, ok := disableConnCachingIfc.(bool); ok {
+			disableConnCaching = b
 		}
-		// If the ping was unsuccessful, close it and ignore errors as we'll be
-		// reestablishing anyways
-		c.db.Close()
+	}
+
+	// If we already have a DB and should be reusing the connection, test it and return
+	if c.db != nil {
+		if !disableConnCaching {
+			if err := c.db.PingContext(ctx); err == nil {
+				return c.db, nil
+			}
+		}
+		// If the ping was unsuccessful or we're not caching connections,
+		// close the previous connection before establishing a new one
+		// below.
+		_ = c.db.Close()
 	}
 
 	// For mssql backend, switch to sqlserver instead

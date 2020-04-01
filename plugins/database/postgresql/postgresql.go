@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -89,6 +90,19 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 type PostgreSQL struct {
 	*connutil.SQLConnectionProducer
 	credsutil.CredentialsProducer
+	disableConnectionCaching bool
+}
+
+func (p *PostgreSQL) Init(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error) {
+	disableConnCachingIfc := config[connutil.DisableConnectionCaching]
+	if disableConnCachingIfc != nil {
+		if b, ok := disableConnCachingIfc.(string); ok {
+			if res, err := strconv.ParseBool(b); err == nil {
+				p.disableConnectionCaching = res
+			}
+		}
+	}
+	return p.SQLConnectionProducer.Init(ctx, config, verifyConnection)
 }
 
 func (p *PostgreSQL) Type() (string, error) {
@@ -96,6 +110,7 @@ func (p *PostgreSQL) Type() (string, error) {
 }
 
 func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
+	ctx = context.WithValue(ctx, connutil.DisableConnectionCaching, p.disableConnectionCaching)
 	db, err := p.Connection(ctx)
 	if err != nil {
 		return nil, err
