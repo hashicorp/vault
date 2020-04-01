@@ -1,6 +1,11 @@
 {{#if (or alwaysRender value)}}
   <div class="column is-one-quarter">
     <span class="is-label has-text-grey-dark" data-test-row-label="{{label}}">{{label}}</span>
+    {{#if helperText}}
+      <div>
+        <span class="is-label helper-text has-text-grey">{{helperText}}</span>
+      </div>
+    {{/if}}
   </div>
   <div class="column is-flex">
     {{#if (has-block)}}
