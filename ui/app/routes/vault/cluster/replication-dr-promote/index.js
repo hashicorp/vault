@@ -1,5 +1,5 @@
 import { inject as service } from '@ember/service';
-import Base from './cluster-route-base';
+import Base from '../cluster-route-base';
 
 export default Base.extend({
   replicationMode: service(),

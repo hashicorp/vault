@@ -127,7 +127,9 @@ Router.map(function() {
         this.route('show', { path: '/:policy_name' });
         this.route('edit', { path: '/:policy_name/edit' });
       });
-      this.route('replication-dr-promote');
+      this.route('replication-dr-promote', function() {
+        this.route('details');
+      });
       if (config.addRootMounts) {
         config.addRootMounts.call(this);
       }
