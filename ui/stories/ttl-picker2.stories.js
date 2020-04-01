@@ -40,8 +40,9 @@ storiesOf('TTL/TtlPicker2/', module)
     () => ({
       template: hbs`
       <h5 class="title is-5">Ttl Picker2</h5>
-      <TtlPicker2>
+      <TtlPicker2 @onChange={{onChange}}>
         <TtlPicker2
+          @onChange={{onChange}}
           @label="Maximum time to live (Max TTL)"
           @helperTextDisabled="Allow tokens to be renewed indefinitely"
           @unit="h"
@@ -49,7 +50,9 @@ storiesOf('TTL/TtlPicker2/', module)
       </TtlPicker2>
     `,
       context: {
-        enableTTL: boolean('enableTTL', true),
+        onChange: ttl => {
+          console.log('onChange fired', ttl);
+        },
       },
     }),
     { notes }
