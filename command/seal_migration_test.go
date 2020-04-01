@@ -7,7 +7,7 @@ import (
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/helper/testhelpers/seal"
+	sealhelper "github.com/hashicorp/vault/helper/testhelpers/seal"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/vault"
@@ -102,7 +102,7 @@ func testSealMigrationShamirToTransit(t *testing.T, setup teststorage.ClusterSet
 	}
 
 	// Create the transit server.
-	tcluster := seal.NewTransitSealServer(t)
+	tcluster := sealhelper.NewTransitSealServer(t)
 	defer tcluster.Cleanup()
 	tcluster.MakeKey(t, "key1")
 	transitSeal := tcluster.MakeSeal(t, "key1")
@@ -208,7 +208,7 @@ func TestSealMigration_TransitToTransit(t *testing.T) {
 }
 
 func testSealMigrationTransitToTransit(t *testing.T, setup teststorage.ClusterSetupMutator) {
-	tcluster := seal.NewTransitSealServer(t)
+	tcluster := sealhelper.NewTransitSealServer(t)
 	defer tcluster.Cleanup()
 	tcluster.MakeKey(t, "key1")
 	tcluster.MakeKey(t, "key2")
