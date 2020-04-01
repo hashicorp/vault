@@ -226,7 +226,7 @@ $ vault write auth/approle/role/<ROLE_NAME> [parameters]
 ```
 
 > There are a number of
-> [parameters](/api/auth/approle#create-new-approle) that you can set
+> [parameters](/api/auth/approle#create-update-approle) that you can set
 > on a role. If you want to limit the use of the generated secret ID, set
 > `secret_id_num_uses` or `secret_id_ttl` parameter values. Similarly, you can
 > specify `token_num_uses` and `token_ttl`. You may never want the app token to
@@ -295,7 +295,7 @@ $ curl --header "X-Vault-Token: ..." --request POST \
 ```
 
 > There are a number of
-> [parameters](/api/auth/approle#create-new-approle) that you can set
+> [parameters](/api/auth/approle#create-update-approle) that you can set
 > on a role. If you want to limit the use of the generated secret ID, set
 > `secret_id_num_uses` or `secret_id_ttl` parameter values. Similarly, you can
 > specify `token_num_uses` and `token_ttl`. You may never want the app token to

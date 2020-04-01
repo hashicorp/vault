@@ -18,35 +18,38 @@ import (
 	"github.com/hashicorp/vault/vault/seal"
 )
 
-func TestSealMigration_AutoToShamir(t *testing.T) {
+func TestSealMigration_TransitToShamir(t *testing.T) {
 	t.Parallel()
 	t.Run("inmem", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationAutoToShamir(t, teststorage.InmemBackendSetup)
+		testSealMigrationTransitToShamir(t, teststorage.InmemBackendSetup)
 	})
 
 	t.Run("file", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationAutoToShamir(t, teststorage.FileBackendSetup)
+		testSealMigrationTransitToShamir(t, teststorage.FileBackendSetup)
 	})
 
 	t.Run("consul", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationAutoToShamir(t, teststorage.ConsulBackendSetup)
+		testSealMigrationTransitToShamir(t, teststorage.ConsulBackendSetup)
 	})
 
 	t.Run("raft", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationAutoToShamir(t, teststorage.RaftBackendSetup)
+		testSealMigrationTransitToShamir(t, teststorage.RaftBackendSetup)
 	})
 }
 
-func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupMutator) {
+func testSealMigrationTransitToShamir(t *testing.T, setup teststorage.ClusterSetupMutator) {
+
+	// Create the transit server.
 	tcluster := sealhelper.NewTransitSealServer(t)
 	defer tcluster.Cleanup()
-
 	tcluster.MakeKey(t, "key1")
-	var seals []vault.Seal
+	var transitSeal vault.Seal
+
+	// Create a cluster that uses transit.
 	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
 		DisableSealWrap: true,
 	}, &vault.TestClusterOptions{
@@ -54,9 +57,8 @@ func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupM
 		SkipInit:    true,
 		NumCores:    3,
 		SealFunc: func() vault.Seal {
-			tseal := tcluster.MakeSeal(t, "key1")
-			seals = append(seals, tseal)
-			return tseal
+			transitSeal = tcluster.MakeSeal(t, "key1")
+			return transitSeal
 		},
 	},
 		setup,
@@ -66,6 +68,7 @@ func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupM
 	cluster.Start()
 	defer cluster.Cleanup()
 
+	// Initialize the cluster, and fetch the recovery keys.
 	client := cluster.Cores[0].Client
 	initResp, err := client.Sys().Init(&api.InitRequest{
 		RecoveryShares:    5,
@@ -78,7 +81,6 @@ func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupM
 		b, _ := base64.RawStdEncoding.DecodeString(k)
 		cluster.RecoveryKeys = append(cluster.RecoveryKeys, b)
 	}
-
 	testhelpers.WaitForActiveNode(t, cluster)
 
 	rootToken := initResp.RootToken
@@ -87,6 +89,7 @@ func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupM
 		t.Fatal(err)
 	}
 
+	// Create a Shamir seal.
 	logger := cluster.Logger.Named("shamir")
 	shamirSeal := vault.NewDefaultSeal(&seal.Access{
 		Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
@@ -94,10 +97,12 @@ func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupM
 		}),
 	})
 
-	if err := adjustCoreForSealMigration(logger, cluster.Cores[0].Core, shamirSeal, seals[0]); err != nil {
+	// Transition to Shamir seal.
+	if err := adjustCoreForSealMigration(logger, cluster.Cores[0].Core, shamirSeal, transitSeal); err != nil {
 		t.Fatal(err)
 	}
 
+	// Unseal and migrate to Shamir.
 	// Although we're unsealing using the recovery keys, this is still an
 	// autounseal; if we stopped the transit cluster this would fail.
 	var resp *api.SealStatusResponse
@@ -119,16 +124,18 @@ func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupM
 	}
 	testhelpers.WaitForActiveNode(t, cluster)
 
-	// Seal and unseal again to verify that things are working fine
+	// Seal the cluster.
 	if err := client.Sys().Seal(); err != nil {
 		t.Fatal(err)
 	}
 
+	// Nuke the transit server; assign nil to Cores so the deferred Cleanup
+	// doesn't break.
 	tcluster.Cleanup()
-	// Assign nil to Cores so the deferred Cleanup doesn't break.
 	tcluster.Cores = nil
 
-	// Now the recovery keys are actually the barrier unseal keys.
+	// Unseal the cluster. Now the recovery keys are actually the barrier
+	// unseal keys.
 	for _, key := range initResp.RecoveryKeysB64 {
 		resp, err = client.Sys().UnsealWithOptions(&api.UnsealOpts{Key: key})
 		if err != nil {
@@ -142,6 +149,7 @@ func testSealMigrationAutoToShamir(t *testing.T, setup teststorage.ClusterSetupM
 		t.Fatalf("expected unsealed state; got %#v", resp)
 	}
 
+	// Make sure the seal configs were updated correctly.
 	b, r, err := cluster.Cores[0].Core.PhysicalSealConfigs(context.Background())
 	if err != nil {
 		t.Fatal(err)
