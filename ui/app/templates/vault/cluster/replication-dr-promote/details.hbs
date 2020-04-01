@@ -2,7 +2,11 @@
   <div class="container is-widescreen">
     {{!-- ARG TODO setup error state and return --}}
     <Replication as |Dashboard|>
-      <Dashboard.header @showTabs={{false}} />
+      <Dashboard.header 
+        @showTabs={{false}} 
+        @replicationMode={{model.dr.mode}}
+        @unsealed={{model.unsealed}}
+      />
       <Dashboard.toggle />
     </Replication>
 </div>
