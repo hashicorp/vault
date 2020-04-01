@@ -34,19 +34,19 @@ func (l LogFormat) String() string {
 
 // NewVaultLogger creates a new logger with the specified level and a Vault
 // formatter
-func NewVaultLogger(level log.Level) log.InterceptLogger {
+func NewVaultLogger(level log.Level) log.Logger {
 	return NewVaultLoggerWithWriter(log.DefaultOutput, level)
 }
 
 // NewVaultLoggerWithWriter creates a new logger with the specified level and
 // writer and a Vault formatter
-func NewVaultLoggerWithWriter(w io.Writer, level log.Level) log.InterceptLogger {
+func NewVaultLoggerWithWriter(w io.Writer, level log.Level) log.Logger {
 	opts := &log.LoggerOptions{
 		Level:      level,
 		Output:     w,
 		JSONFormat: ParseEnvLogFormat() == JSONFormat,
 	}
-	return log.NewInterceptLogger(opts)
+	return log.New(opts)
 }
 
 // ParseLogFormat parses the log format from the provided string.

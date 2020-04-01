@@ -5,6 +5,8 @@ import (
 	"context"
 )
 
+// This function returns a channel that outputs strings containing the log messages
+// coming from the server.
 func (c *Sys) Monitor(ctx context.Context, logLevel string) (chan string, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/monitor")
 

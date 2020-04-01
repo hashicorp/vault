@@ -6,7 +6,9 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -34,7 +36,13 @@ func TestSysMonitorUnknownLogLevel(t *testing.T) {
 }
 
 func TestSysMonitorStreamingLogs(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{HandlerFunc: Handler})
+	logger := log.NewInterceptLogger(&log.LoggerOptions{
+		Output: log.DefaultOutput,
+		Level:  log.Debug,
+		JSONFormat: logging.ParseEnvLogFormat() == logging.JSONFormat,
+	})
+
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{HandlerFunc: Handler, Logger: logger})
 	cluster.Start()
 	defer cluster.Cleanup()
 

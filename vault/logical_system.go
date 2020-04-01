@@ -18,17 +18,17 @@ import (
 	"sync"
 	"time"
 
-	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/physical/raft"
-
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
+	multierror "github.com/hashicorp/go-multierror"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/command/monitor"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -158,6 +158,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.pprofPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.remountPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.monitorPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
 
 	if core.rawEnabled {
@@ -2512,6 +2513,66 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 		format = metricsutil.FormatFromRequest(req)
 	}
 	return b.Core.metricsHelper.ResponseForFormat(format), nil
+}
+
+// Note that although this is a streaming response, it times out and the client connection is closed
+// after 90 seconds. I haven't been able to find the place where that's set, or override it.
+func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	ll := data.Get("log_level").(string)
+	w := req.ResponseWriter
+	resp := &logical.Response{}
+
+	if ll == "" {
+		ll = "INFO"
+	}
+	logLevel := log.LevelFromString(ll)
+
+	if logLevel == log.NoLevel {
+		return logical.ErrorResponse("unknown log level"), nil
+	}
+
+	flusher, ok := w.ResponseWriter.(http.Flusher)
+	if !ok {
+		return logical.ErrorResponse("streaming not supported"), nil
+	}
+
+	isJson := b.Core.LogFormat() == "json"
+	logger := b.Core.Logger().(log.InterceptLogger)
+
+	mon, _ := monitor.NewMonitor(512, logger, &log.LoggerOptions{
+		Level:      logLevel,
+		JSONFormat: isJson,
+	})
+	defer mon.Stop()
+
+	logCh := mon.Start()
+	w.WriteHeader(http.StatusOK)
+
+	// 0 byte write is needed before the Flush call so that if we are using
+	// a gzip stream it will go ahead and write out the HTTP response header
+	_, err := w.Write([]byte(""))
+
+	if err != nil {
+		return resp, err
+	}
+
+	flusher.Flush()
+
+	// Stream logs until the connection is closed.
+	for {
+		select {
+		case <-ctx.Done():
+			return resp, nil
+		case l := <-logCh:
+			_, err = fmt.Fprint(w, string(l))
+
+			if err != nil {
+				return resp, err
+			}
+
+			flusher.Flush()
+		}
+	}
 }
 
 // handleHostInfo collects and returns host-related information, which includes
