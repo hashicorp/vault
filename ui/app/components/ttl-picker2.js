@@ -48,10 +48,6 @@ export default Component.extend({
     ];
   }),
 
-  onChange: ttl => {
-    console.log({ ttl });
-  },
-
   TTL: computed('enableTTL', 'seconds', function() {
     let { time, unit, enableTTL, seconds } = this.getProperties('time', 'unit', 'enableTTL', 'seconds');
     return {
@@ -62,7 +58,17 @@ export default Component.extend({
   }),
 
   updateTime: task(function*(newTime) {
-    this.set('time', newTime);
+    this.set('errorMessage', '');
+    let parsedTime;
+    parsedTime = parseInt(newTime, 10);
+    if (!newTime) {
+      this.set('errorMessage', 'This field is required');
+      return;
+    } else if (Number.isNaN(parsedTime)) {
+      this.set('errorMessage', 'Value must be a number');
+      return;
+    }
+    this.set('time', parsedTime);
     this.onChange(this.TTL);
     if (Ember.testing) {
       return;
