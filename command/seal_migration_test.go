@@ -193,17 +193,17 @@ func TestSealMigration_ShamirToTestSeal(t *testing.T) {
 
 	t.Run("file", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationShamirToTransit(t, teststorage.FileBackendSetup)
+		testSealMigrationShamirToTestSeal(t, teststorage.FileBackendSetup)
 	})
 
 	t.Run("consul", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationShamirToTransit(t, teststorage.ConsulBackendSetup)
+		testSealMigrationShamirToTestSeal(t, teststorage.ConsulBackendSetup)
 	})
 
 	t.Run("raft", func(t *testing.T) {
 		t.Parallel()
-		testSealMigrationShamirToTransit(t, teststorage.RaftBackendSetup)
+		testSealMigrationShamirToTestSeal(t, teststorage.RaftBackendSetup)
 	})
 }
 
