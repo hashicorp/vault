@@ -74,7 +74,7 @@ export default Component.extend({
       return;
     }
     this.set('recalculateSeconds', true);
-    yield timeout(5000);
+    yield timeout(this.recalculationTimeout);
     this.set('recalculateSeconds', false);
   }).restartable(),
 
@@ -94,6 +94,7 @@ export default Component.extend({
   }),
   errorMessage: null,
   recalculateSeconds: false,
+  recalculationTimeout: 5000,
   actions: {
     updateUnit(newUnit) {
       if (this.recalculateSeconds) {

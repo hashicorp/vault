@@ -3,7 +3,7 @@ import { storiesOf } from '@storybook/ember';
 import notes from './ttl-picker2.md';
 import { withKnobs, text, boolean, select } from '@storybook/addon-knobs';
 
-storiesOf('TtlPicker2/', module)
+storiesOf('TTL/TtlPicker2/', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
   .add(

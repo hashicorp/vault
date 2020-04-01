@@ -16,7 +16,6 @@ module('Integration | Component | ttl-picker2', function(hooks) {
         @enableTTL={{true}}
       />
     `);
-
     assert.dom('[data-test-ttl-value]').exists('TTL Picker time input exists');
     assert.dom('[data-test-ttl-unit]').exists('TTL Picker unit select exists');
   });
@@ -78,7 +77,7 @@ module('Integration | Component | ttl-picker2', function(hooks) {
         seconds: 360,
         timeString: '360s',
       }),
-      'Passes the default values back to onChange'
+      'Changes enabled to true on click'
     );
     await fillIn('[data-test-select="ttl-unit"]', 'm');
     assert.ok(
@@ -89,6 +88,8 @@ module('Integration | Component | ttl-picker2', function(hooks) {
       }),
       'Units and time update without changing seconds value'
     );
+    assert.dom('[data-test-ttl-value]').hasValue('6', 'time value shows as 6');
+    assert.dom('[data-test-select="ttl-unit"]').hasValue('m', 'unit value shows as m (minutes)');
   });
 
   test('it recalculates seconds when unit is changed and recalculateSeconds is on', async function(assert) {
