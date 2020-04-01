@@ -1,0 +1,17 @@
+<div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless">
+  <nav class="tabs">
+    <ul>
+      {{!-- ARG TODO EACH LOOP --}}
+      {{#link-to
+        "vault.cluster.replication-dr-promote"
+        tagName="li"
+        activeClass="is-active"
+        current-when=""
+      }}
+        {{#link-to "vault.cluster.replication-dr-promote"}}
+          Details
+        {{/link-to}}
+      {{/link-to}}
+    </ul>
+  </nav>
+</div>

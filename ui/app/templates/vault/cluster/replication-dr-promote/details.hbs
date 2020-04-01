@@ -1,13 +1,10 @@
-<SplashPage as |Page|>
-  <Page.header>
-  <h1 class="title is-4">
-  Disaster Recovery
-  </h1>
-</Page.header>
-<Page.content>
-  <LinkTo
-    @params={{array "vault.cluster.replication-dr-promote"}}
-    class="is-block">MEEP
-  </LinkTo>
-</Page.content>
-</SplashPage>
+<section class="section">
+  <div class="container is-widescreen">
+    {{!-- ARG TODO setup error state and return --}}
+    <Replication as |Dashboard|>
+      <Dashboard.header />
+      <Dashboard.tabs />
+      <Dashboard.toggle />
+    </Replication>
+</div>
+</section>
