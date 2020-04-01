@@ -90,9 +90,16 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 type PostgreSQL struct {
 	*connutil.SQLConnectionProducer
 	credsutil.CredentialsProducer
+
+	// By default, Vault caches one database connection and reuses
+	// it for the lifetime of the secrets engine. However, this can
+	// cause the engine to struggle with failovers. Thus, they can
+	// provide a config parameter disabling this behavior.
 	disableConnectionCaching bool
 }
 
+// Init reads in whether the user has disabled connection caching
+// before continuing on with normal initialization.
 func (p *PostgreSQL) Init(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error) {
 	disableConnCachingIfc := config[connutil.DisableConnectionCaching]
 	if disableConnCachingIfc != nil {
@@ -110,6 +117,7 @@ func (p *PostgreSQL) Type() (string, error) {
 }
 
 func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
+	// Pass in whether they've disabled connection caching.
 	ctx = context.WithValue(ctx, connutil.DisableConnectionCaching, p.disableConnectionCaching)
 	db, err := p.Connection(ctx)
 	if err != nil {

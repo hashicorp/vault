@@ -108,10 +108,10 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 
 // Connection returns a connection for the caller to use. By default, database
 // connections are reused. However, this behavior may be disabled by setting a key
-// of "should_reuse" to false. This can help with failovers like the one discussed
+// of "disable_connection_caching" to true. This can help with failovers like the one discussed
 // in https://github.com/hashicorp/vault/issues/6792. Normally we would just pass
 // in a parameter to that effect, but we did it this way to avoid changing the
-// exported method.
+// exported method, which only receives a ctx variable.
 func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
 	if !c.Initialized {
 		return nil, ErrNotInitialized
