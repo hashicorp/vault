@@ -119,8 +119,8 @@ func Print(priority Priority, format string, a ...interface{}) error {
 }
 
 func appendVariable(w io.Writer, name, value string) {
-	if err := validVarName(name); err != nil {
-		journalError(err.Error())
+	if !validVarName(name) {
+		journalError("variable name contains invalid character, ignoring")
 	}
 	if strings.ContainsRune(value, '\n') {
 		/* When the value contains a newline, we write:
@@ -137,23 +137,16 @@ func appendVariable(w io.Writer, name, value string) {
 	}
 }
 
-// validVarName validates a variable name to make sure it journald will accept it.
-// The variable name must be in uppercase and consist only of characters,
-// numbers and underscores, and may not begin with an underscore. (from the docs)
-// https://www.freedesktop.org/software/systemd/man/sd_journal_print.html
-func validVarName(name string) error {
-	if name == "" {
-		return errors.New("Empty variable name")
-	} else if name[0] == '_' {
-		return errors.New("Variable name begins with an underscore")
-	}
+func validVarName(name string) bool {
+	/* The variable name must be in uppercase and consist only of characters,
+	 * numbers and underscores, and may not begin with an underscore. (from the docs)
+	 */
 
+	valid := name[0] != '_'
 	for _, c := range name {
-		if !(('A' <= c && c <= 'Z') || ('0' <= c && c <= '9') || c == '_') {
-			return errors.New("Variable name contains invalid characters")
-		}
+		valid = valid && ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9') || c == '_'
 	}
-	return nil
+	return valid
 }
 
 func isSocketSpaceError(err error) bool {
