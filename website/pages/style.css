@@ -38,6 +38,7 @@
 @import '../components/subnav/style.css';
 
 /* Pages */
+@import './404/style.css';
 @import './downloads/style.css';
 @import './community/style.css';
 @import './use-cases/style.css';
