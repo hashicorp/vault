@@ -1,0 +1,12 @@
+.selectable-card-container.has-grid {
+  grid-template-columns: 1fr 2fr;
+}
+
+.replication.selectable-card {
+  display: initial;
+  line-height: normal;
+}
+
+.helper-text {
+  font-weight: normal;
+}

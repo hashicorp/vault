@@ -97,5 +97,8 @@
 @import './components/vlt-radio';
 @import './components/vlt-table';
 
+// import styles from ember engines
+@import './lib/replication/addon/styles/components/replication-summary';
+
 // bulma-free-zone
 @import './components/hs-icon';
