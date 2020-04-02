@@ -254,6 +254,7 @@ export default [
       },
       { category: 'totp' },
       { category: 'transit' },
+      { category: 'venafi' },
       '------------------------',
       { category: 'cassandra' },
       { category: 'mongodb' },
@@ -318,10 +319,12 @@ export default [
               {
                 category: 'examples',
                 content: [
+                  'development',
                   'standalone-load-balanced-ui',
                   'standalone-tls',
                   'standalone-audit',
                   'ha-with-consul',
+                  'external',
                   'kubernetes-auth',
                   'enterprise-best-practice'
                 ]

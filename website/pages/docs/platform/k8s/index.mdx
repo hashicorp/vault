@@ -7,16 +7,17 @@ description: This section documents the official integration between Vault and K
 
 # Kubernetes
 
-Vault can be deployed into Kubernetes using the official HashiCorp Vault Helm chart.  
-The helm chart allows users to deploy Vault in various configurations:
+Vault can be deployed into Kubernetes using the official HashiCorp Vault Helm chart.
+The Helm chart allows users to deploy Vault in various configurations:
 
-- Dev mode: a single in-memory Vault server for testing Vault
-- Standalone mode (default): a single Vault server persisting to a volume using the file storage backend
-- HA mode: a cluster of Vault servers that use an HA storage backend such as Consul (default)
+- Dev: a single in-memory Vault server for testing Vault
+- Standalone (default): a single Vault server persisting to a volume using the file storage backend
+- High-Availability (HA): a cluster of Vault servers that use an HA storage backend such as Consul (default)
+- External: a Vault Agent Injector server that depends on an external Vault server
 
 ## Use Cases
 
-**Running a Vault Service:** The Vault server cluster can run directly on Kubernetes.  
+**Running a Vault Service:** The Vault server cluster can run directly on Kubernetes.
 This can be used by applications running within Kubernetes as well as external to
 Kubernetes, as long as they can communicate to the server via the network.
 
