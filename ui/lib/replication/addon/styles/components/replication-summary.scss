@@ -12,6 +12,10 @@
 .replication.selectable-card {
   display: initial;
   line-height: normal;
+
+  .card-title {
+    margin-bottom: 2rem;
+  }
 }
 
 .helper-text {
