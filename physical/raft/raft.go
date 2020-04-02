@@ -522,7 +522,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	raftConfig.LocalID = raft.ServerID(b.localID)
 
 	// Set up a channel for reliable leader notifications.
-	raftNotifyCh := make(chan bool, 1)
+	raftNotifyCh := make(chan bool, 10)
 	raftConfig.NotifyCh = raftNotifyCh
 
 	// If we have a bootstrapConfig set we should bootstrap now.
