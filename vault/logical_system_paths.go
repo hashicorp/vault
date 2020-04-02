@@ -1444,6 +1444,61 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
 		},
+
+		{
+			Pattern: "policies/password/(?P<name>.+)/generate$",
+
+			Fields: map[string]*framework.FieldSchema{
+				"name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "The name of the password policy.",
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handlePoliciesPasswordGenerate,
+					Summary:  "Generate a password from an existing password policy.",
+				},
+			},
+
+			HelpSynopsis:    "Generate a password from an existing password policy.",
+			HelpDescription: "Generate a password from an existing password policy.",
+		},
+
+		{
+			Pattern: "policies/password/(?P<name>.+)$",
+
+			Fields: map[string]*framework.FieldSchema{
+				"name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "The name of the password policy.",
+				},
+				"policy": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "The password policy",
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handlePoliciesPasswordSet,
+					Summary:  "Add a new or update an existing password policy.",
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handlePoliciesPasswordGet,
+					Summary:  "Retrieve an existing password policy.",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handlePoliciesPasswordDelete,
+					Summary:  "Delete a password policy.",
+				},
+			},
+
+			HelpSynopsis: "Read, Modify, or Delete a password policy.",
+			HelpDescription: "Read the rules of an existing password policy, create or update " +
+				"the rules of a password policy, or delete a password policy.",
+		},
 	}
 }
 

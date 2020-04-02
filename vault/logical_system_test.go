@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -24,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/random"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -2729,4 +2731,590 @@ func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+}
+
+func TestHandlePoliciesPasswordSet(t *testing.T) {
+	type testStorage interface {
+		logical.Storage
+		getAll() map[string][]byte
+	}
+
+	type testCase struct {
+		storage       testStorage
+		data          *framework.FieldData
+		expectedResp  *logical.Response
+		expectErr     bool
+		expectedStore map[string][]byte
+	}
+
+	tests := map[string]testCase{
+		"missing policy name": {
+			storage: &fakeStorage{},
+			data: passwordPoliciesFieldData(map[string]interface{}{
+				"policy": "length = 20\ncharset=\"abcdefghij\"",
+			}),
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"error": "missing policy name",
+				},
+			},
+			expectErr: false,
+		},
+		"missing policy": {
+			storage: &fakeStorage{},
+			data: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+			}),
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"error": "missing policy",
+				},
+			},
+			expectErr: false,
+		},
+		"not base64 encoded": {
+			storage: &fakeStorage{},
+			data: passwordPoliciesFieldData(map[string]interface{}{
+				"name":   "testpolicy",
+				"policy": "length = 20\ncharset=\"abcdefghij\"",
+			}),
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					logical.HTTPContentType: "application/json",
+					logical.HTTPStatusCode:  http.StatusOK,
+				},
+			},
+			expectErr: false,
+			expectedStore: map[string][]byte{
+				"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+			},
+		},
+		"base64 encoded": {
+			storage: &fakeStorage{},
+			data: passwordPoliciesFieldData(map[string]interface{}{
+				"name":   "testpolicy",
+				"policy": base64Encode("length = 20\ncharset=\"abcdefghij\""),
+			}),
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					logical.HTTPContentType: "application/json",
+					logical.HTTPStatusCode:  http.StatusOK,
+				},
+			},
+			expectErr: false,
+			expectedStore: map[string][]byte{
+				"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+			},
+		},
+		"garbage policy": {
+			storage: &fakeStorage{},
+			data: passwordPoliciesFieldData(map[string]interface{}{
+				"name":   "testpolicy",
+				"policy": "hasdukfhiuashdfoiasjdf",
+			}),
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"error": "invalid password policy: unable to decode: At 1:24: key 'hasdukfhiuashdfoiasjdf' expected start of object ('{') or assignment ('=')",
+				},
+			},
+			expectErr: false,
+		},
+		"storage failure": {
+			storage: &fakeStorage{
+				putError: fmt.Errorf("test error"),
+			},
+			data: passwordPoliciesFieldData(map[string]interface{}{
+				"name":   "testpolicy",
+				"policy": "length = 20\ncharset=\"abcdefghij\"",
+			}),
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"error": "failed to save policy to storage backend: test error",
+				},
+			},
+			expectErr: false,
+		},
+		"impossible policy": {
+			storage: &fakeStorage{},
+			data: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+				"policy": `
+					length = 30
+					charset="lower-alpha"
+					rule "CharsetRestriction" {
+						charset = "a"
+						min-chars = 30
+					}`,
+			}),
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"error": "unable to generate password from provided policy in 1s: are the rules impossible?",
+				},
+			},
+			expectErr: false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+			defer cancel()
+
+			req := &logical.Request{
+				Storage: test.storage,
+			}
+
+			b := &SystemBackend{}
+
+			actualResp, err := b.handlePoliciesPasswordSet(ctx, req, test.data)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			if !reflect.DeepEqual(actualResp, test.expectedResp) {
+				t.Fatalf("Actual response: %#v\nExpected response: %#v", actualResp, test.expectedResp)
+			}
+
+			actualStore := test.storage.getAll()
+			if !reflect.DeepEqual(actualStore, test.expectedStore) {
+				t.Fatalf("Actual storage: %#v\nExpected storage: %#v", actualStore, test.expectedStore)
+			}
+		})
+	}
+}
+
+func TestHandlePoliciesPasswordGet(t *testing.T) {
+	type testCase struct {
+		storage      logical.Storage
+		data         *framework.FieldData
+		expectedResp *logical.Response
+		expectErr    bool
+	}
+
+	tests := map[string]testCase{
+		"missing policy name": {
+			storage: &fakeStorage{},
+			data:    passwordPoliciesFieldData(map[string]interface{}{}),
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"error": "missing policy name",
+				},
+			},
+			expectErr: false,
+		},
+		"storage error": {
+			storage: &fakeStorage{
+				getError: fmt.Errorf("test error"),
+			},
+			data: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+			}),
+			expectedResp: nil,
+			expectErr:    true,
+		},
+		"missing value": {
+			storage: &fakeStorage{},
+			data: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+			}),
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					logical.HTTPContentType: "application/json",
+					logical.HTTPStatusCode:  http.StatusNotFound,
+				},
+			},
+			expectErr: false,
+		},
+		"good value": {
+			storage: &fakeStorage{
+				data: map[string][]byte{
+					"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+				},
+			},
+			data: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+			}),
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"policy": "length = 20\ncharset=\"abcdefghij\"",
+				},
+			},
+			expectErr: false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+			defer cancel()
+
+			req := &logical.Request{
+				Storage: test.storage,
+			}
+
+			b := &SystemBackend{}
+
+			actualResp, err := b.handlePoliciesPasswordGet(ctx, req, test.data)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			if !reflect.DeepEqual(actualResp, test.expectedResp) {
+				t.Fatalf("Actual response: %#v\nExpected response: %#v", actualResp, test.expectedResp)
+			}
+		})
+	}
+}
+
+func TestHandlePoliciesPasswordDelete(t *testing.T) {
+	type testStorage interface {
+		logical.Storage
+		getAll() map[string][]byte
+	}
+
+	type testCase struct {
+		storage       testStorage
+		data          *framework.FieldData
+		expectedResp  *logical.Response
+		expectErr     bool
+		expectedStore map[string][]byte
+	}
+
+	tests := map[string]testCase{
+		"missing policy name": {
+			storage: &fakeStorage{
+				data: map[string][]byte{
+					"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+				},
+			},
+			data: passwordPoliciesFieldData(map[string]interface{}{}),
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"error": "missing policy name",
+				},
+			},
+			expectErr: false,
+			expectedStore: map[string][]byte{
+				"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+			},
+		},
+		"storage failure": {
+			storage: &fakeStorage{
+				data: map[string][]byte{
+					"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+				},
+				deleteError: fmt.Errorf("test error"),
+			},
+			data: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+			}),
+			expectedResp: nil,
+			expectErr:    true,
+			expectedStore: map[string][]byte{
+				"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+			},
+		},
+		"successful delete": {
+			storage: &fakeStorage{
+				data: map[string][]byte{
+					"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+				},
+			},
+			data: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+			}),
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					logical.HTTPContentType: "application/json",
+					logical.HTTPStatusCode:  http.StatusOK,
+				},
+			},
+			expectErr:     false,
+			expectedStore: map[string][]byte{},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+			defer cancel()
+
+			req := &logical.Request{
+				Storage: test.storage,
+			}
+
+			b := &SystemBackend{}
+
+			actualResp, err := b.handlePoliciesPasswordDelete(ctx, req, test.data)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			if !reflect.DeepEqual(actualResp, test.expectedResp) {
+				t.Fatalf("Actual response: %#v\nExpected response: %#v", actualResp, test.expectedResp)
+			}
+
+			actualStore := test.storage.getAll()
+			if !reflect.DeepEqual(actualStore, test.expectedStore) {
+				t.Fatalf("Actual storage: %#v\nExpected storage: %#v", actualStore, test.expectedStore)
+			}
+		})
+	}
+}
+
+func TestHandlePoliciesPasswordGenerate(t *testing.T) {
+	t.Run("errors", func(t *testing.T) {
+		type testCase struct {
+			timeout      time.Duration
+			storage      logical.Storage
+			data         *framework.FieldData
+			expectedResp *logical.Response
+			expectErr    bool
+		}
+
+		tests := map[string]testCase{
+			"missing policy name": {
+				storage: &fakeStorage{
+					data: map[string][]byte{
+						"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+					},
+				},
+				data: passwordPoliciesFieldData(map[string]interface{}{}),
+				expectedResp: &logical.Response{
+					Data: map[string]interface{}{
+						"error": "missing policy name",
+					},
+				},
+				expectErr: false,
+			},
+			"storage failure": {
+				storage: &fakeStorage{
+					data: map[string][]byte{
+						"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+					},
+					getError: fmt.Errorf("test error"),
+				},
+				data: passwordPoliciesFieldData(map[string]interface{}{
+					"name": "testpolicy",
+				}),
+				expectedResp: nil,
+				expectErr:    true,
+			},
+			"policy does not exist": {
+				storage: &fakeStorage{
+					data: map[string][]byte{},
+				},
+				data: passwordPoliciesFieldData(map[string]interface{}{
+					"name": "testpolicy",
+				}),
+				expectedResp: &logical.Response{
+					Data: map[string]interface{}{
+						logical.HTTPContentType: "application/json",
+						logical.HTTPStatusCode:  http.StatusNotFound,
+					},
+				},
+				expectErr: false,
+			},
+			"policy improperly saved": {
+				storage: &fakeStorage{
+					data: map[string][]byte{
+						"password_policy/testpolicy": []byte("{\"policy\":\"ahsdiofalsdjflkajsdf\"}\n"),
+					},
+				},
+				data: passwordPoliciesFieldData(map[string]interface{}{
+					"name": "testpolicy",
+				}),
+				expectedResp: nil,
+				expectErr:    true,
+			},
+			"failed to generate": {
+				timeout: 0 * time.Second,
+				storage: &fakeStorage{
+					data: map[string][]byte{
+						"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+					},
+				},
+				data: passwordPoliciesFieldData(map[string]interface{}{
+					"name": "testpolicy",
+				}),
+				expectedResp: nil,
+				expectErr:    true,
+			},
+		}
+
+		for name, test := range tests {
+			t.Run(name, func(t *testing.T) {
+				ctx, cancel := context.WithTimeout(context.Background(), test.timeout)
+				defer cancel()
+
+				req := &logical.Request{
+					Storage: test.storage,
+				}
+
+				b := &SystemBackend{}
+
+				actualResp, err := b.handlePoliciesPasswordGenerate(ctx, req, test.data)
+				if test.expectErr && err == nil {
+					t.Fatalf("err expected, got nil")
+				}
+				if !test.expectErr && err != nil {
+					t.Fatalf("no error expected, got: %s", err)
+				}
+				if !reflect.DeepEqual(actualResp, test.expectedResp) {
+					t.Fatalf("Actual response: %#v\nExpected response: %#v", actualResp, test.expectedResp)
+				}
+			})
+		}
+	})
+
+	t.Run("success", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+
+		storage := &fakeStorage{
+			data: map[string][]byte{
+				"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+			},
+		}
+
+		data := passwordPoliciesFieldData(map[string]interface{}{
+			"name": "testpolicy",
+		})
+
+		expectedPassLen := 20
+		expectedResp := &logical.Response{
+			Data: map[string]interface{}{
+				logical.HTTPContentType: "application/json",
+				logical.HTTPStatusCode:  http.StatusOK,
+			},
+		}
+
+		rules := []random.Rule{
+			random.CharsetRestriction{
+				Charset:  []rune("abcdefghij"),
+				MinChars: expectedPassLen,
+			},
+		}
+
+		// Run the test a bunch of times to help ensure we don't have flaky behavior
+		for i := 0; i < 1000; i++ {
+			req := &logical.Request{
+				Storage: storage,
+			}
+
+			b := &SystemBackend{}
+
+			actualResp, err := b.handlePoliciesPasswordGenerate(ctx, req, data)
+			if err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+
+			// Extract the password and then check the rest of the contents separate from the password
+			password, exists := actualResp.Data["password"].(string)
+			if !exists {
+				t.Fatalf("no password field found")
+			}
+
+			delete(actualResp.Data, "password")
+
+			if !reflect.DeepEqual(actualResp, expectedResp) {
+				t.Fatalf("Actual response: %#v\nExpected response: %#v", actualResp, expectedResp)
+			}
+
+			// Check to make sure the password is correctly formatted
+			passwordLength := len([]rune(password))
+			if passwordLength != expectedPassLen {
+				t.Fatalf("password is %d characters but should be %d", passwordLength, expectedPassLen)
+			}
+
+			for _, rule := range rules {
+				if !rule.Pass([]rune(password)) {
+					t.Fatalf("password %s does not have the correct characters", password)
+				}
+			}
+		}
+	})
+}
+
+func passwordPoliciesFieldData(raw map[string]interface{}) *framework.FieldData {
+	return &framework.FieldData{
+		Raw: raw,
+		Schema: map[string]*framework.FieldSchema{
+			"name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "The name of the password policy.",
+			},
+			"policy": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "The password policy",
+			},
+		},
+	}
+}
+
+type fakeStorage struct {
+	data map[string][]byte
+
+	getError    error
+	putError    error
+	deleteError error
+}
+
+func (f *fakeStorage) getAll() map[string][]byte {
+	return f.data
+}
+
+func (f *fakeStorage) List(ctx context.Context, prefix string) (keys []string, err error) {
+	return nil, fmt.Errorf("not yet implemented")
+}
+
+func (f *fakeStorage) Get(ctx context.Context, key string) (*logical.StorageEntry, error) {
+	if f.getError != nil {
+		return nil, f.getError
+	}
+
+	if f.data == nil {
+		return nil, nil
+	}
+
+	val, exists := f.data[key]
+	if !exists {
+		return nil, nil
+	}
+	entry := &logical.StorageEntry{
+		Key:   key,
+		Value: val,
+	}
+	return entry, nil
+}
+
+func (f *fakeStorage) Put(ctx context.Context, entry *logical.StorageEntry) error {
+	if f.putError != nil {
+		return f.putError
+	}
+
+	if f.data == nil {
+		f.data = map[string][]byte{}
+	}
+	f.data[entry.Key] = entry.Value
+	return nil
+}
+
+func (f *fakeStorage) Delete(ctx context.Context, key string) error {
+	if f.deleteError != nil {
+		return f.deleteError
+	}
+
+	delete(f.data, key)
+	return nil
+}
+
+func base64Encode(data string) string {
+	return base64.StdEncoding.EncodeToString([]byte(data))
 }
