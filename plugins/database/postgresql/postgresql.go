@@ -377,11 +377,32 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 		return nil
 	}
 
+	// First disable login, we need to do this first to avoid the case where a connection attemp is
+	// made between the 'drop connection' query and 'drop role query'
+	err = dbtxn.ExecuteDBQuery(ctx, db, nil, fmt.Sprintf(
+		`ALTER ROLE %s NOLOGIN;`, pq.QuoteIdentifier(username)));
+	if err != nil {
+		return err
+	}
+
+	// Drop all connections for role
+	stmt, err := db.PrepareContext(ctx, fmt.Sprintf(
+		`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE usename = %s;`,
+		pq.QuoteLiteral(username)))
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	if _, err := stmt.ExecContext(ctx); err != nil {
+		return err
+	}
+	
+
 	// Query for permissions; we need to revoke permissions before we can drop
 	// the role
 	// This isn't done in a transaction because even if we fail along the way,
 	// we want to remove as much access as possible
-	stmt, err := db.PrepareContext(ctx, "SELECT DISTINCT table_schema FROM information_schema.role_column_grants WHERE grantee=$1;")
+	stmt, err = db.PrepareContext(ctx, "SELECT DISTINCT table_schema FROM information_schema.role_column_grants WHERE grantee=$1;")
 	if err != nil {
 		return err
 	}
