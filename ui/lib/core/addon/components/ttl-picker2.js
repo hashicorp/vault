@@ -8,13 +8,13 @@
  * ```js
  * <TtlPicker2 @onChange={{handleChange}} @time={{defaultTime}} @unit={{defaultUnit}}/>
  * ```
- * @param {function} onChange - This function will be passed a TTL object, which includes enabled{bool}, seconds{number}, timeString{string}.
- * @param {string} [label='Time to live (TTL)'] - Label is the main label that lives next to the toggle.
- * @param {string} [helperTextDisabled='Allow tokens to be used indefinitely'] - This helper text is shown under the label when the toggle is switched off
- * @param {string} [helperTextEnabled='Disable the use of the token after'] - This helper text is shown under the label when the toggle is switched on
- * @param {number} [time=30] - The time (in the default units) which will be adjustable by the user of the form
- * @param {string} [unit='s'] - This is the unit key which will show by default on the form. Can be one of `s` (seconds), `m` (minutes), `h` (hours), `d` (days)
- * @param {number} [recalculationTimeout=5000] - This is the time, in milliseconds, that `recalculateSeconds` will be be true after time is updated
+ * @param onChange {Function} - This function will be passed a TTL object, which includes enabled{bool}, seconds{number}, timeString{string}.
+ * @param label="Time to live (TTL)" {String} - Label is the main label that lives next to the toggle.
+ * @param helperTextDisabled="Allow tokens to be used indefinitely" {String} - This helper text is shown under the label when the toggle is switched off
+ * @param helperTextEnabled="Disable the use of the token after" {String} - This helper text is shown under the label when the toggle is switched on
+ * @param time=30 {Number} - The time (in the default units) which will be adjustable by the user of the form
+ * @param unit="s" {String} - This is the unit key which will show by default on the form. Can be one of `s` (seconds), `m` (minutes), `h` (hours), `d` (days)
+ * @param recalculationTimeout=5000 {Number} - This is the time, in milliseconds, that `recalculateSeconds` will be be true after time is updated
  */
 
 import Ember from 'ember';
