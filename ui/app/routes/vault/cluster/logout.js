@@ -16,7 +16,7 @@ export default Route.extend(ModelBoundaryRoute, {
   }),
 
   beforeModel() {
-    const authType = this.auth.getAuthType();
+    let authType = this.auth.getAuthType();
     this.auth.deleteCurrentToken();
     this.controlGroup.deleteTokens();
     this.namespaceService.reset();
