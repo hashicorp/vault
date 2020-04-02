@@ -192,13 +192,13 @@ func getRuleInfo(rule map[string]interface{}) (data ruleInfo, err error) {
 var (
 	charsetShortcuts = map[string]string{
 		// Base
-		"lower-alpha": "abcdefghijklmnopqrstuvwxyz",
-		"upper-alpha": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-		"numeric":     "0123456789",
+		"lower-alpha": LowercaseCharset,
+		"upper-alpha": UppercaseCharset,
+		"numeric":     NumericCharset,
 
 		// Combinations
-		"lower-upper-alpha":        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
-		"lower-upper-alphanumeric": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+		"lower-upper-alpha":        AlphabeticCharset,
+		"lower-upper-alphanumeric": AlphaNumericCharset,
 	}
 )
 

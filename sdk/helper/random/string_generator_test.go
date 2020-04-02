@@ -22,18 +22,18 @@ func TestStringGenerator_Generate_successful(t *testing.T) {
 	tests := map[string]testCase{
 		"common rules": {
 			timeout: 1 * time.Second,
-			charset: []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"),
+			charset: AlphaNumericShortSymbolRuneset,
 			rules: []Rule{
 				CharsetRestriction{
-					Charset:  []rune("abcdefghijklmnopqrstuvwxyz"),
+					Charset:  LowercaseRuneset,
 					MinChars: 1,
 				},
 				CharsetRestriction{
-					Charset:  []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+					Charset:  UppercaseRuneset,
 					MinChars: 1,
 				},
 				CharsetRestriction{
-					Charset:  []rune("0123456789"),
+					Charset:  NumericRuneset,
 					MinChars: 1,
 				},
 			},
@@ -92,7 +92,7 @@ func TestStringGenerator_Generate_errors(t *testing.T) {
 	tests := map[string]testCase{
 		"already timed out": {
 			timeout: 0,
-			charset: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-",
+			charset: AlphaNumericShortSymbolCharset,
 			rules: []Rule{
 				testRule{
 					fail: false,
@@ -102,7 +102,7 @@ func TestStringGenerator_Generate_errors(t *testing.T) {
 		},
 		"impossible rules": {
 			timeout: 10 * time.Millisecond, // Keep this short so the test doesn't take too long
-			charset: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-",
+			charset: AlphaNumericShortSymbolCharset,
 			rules: []Rule{
 				testRule{
 					fail: true,
@@ -112,7 +112,7 @@ func TestStringGenerator_Generate_errors(t *testing.T) {
 		},
 		"bad RNG reader": {
 			timeout: 10 * time.Millisecond, // Keep this short so the test doesn't take too long
-			charset: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-",
+			charset: AlphaNumericShortSymbolCharset,
 			rules:   []Rule{},
 			rng:     badReader{},
 		},
@@ -161,9 +161,9 @@ func TestRandomRunes_deterministic(t *testing.T) {
 		},
 		"common charset": {
 			rngSeed:  1585593298447807001,
-			charset:  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-",
+			charset:  AlphaNumericShortSymbolCharset,
 			length:   20,
-			expected: "czyhWGUYm3jf-uMFmGp-",
+			expected: "CZYHwguyM3JF-UmfMgP-",
 		},
 		"max size charset": {
 			rngSeed: 1585593298447807002,
@@ -205,7 +205,7 @@ func TestRandomRunes_successful(t *testing.T) {
 			length:  20,
 		},
 		"common charset": {
-			charset: []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"),
+			charset: AlphaNumericShortSymbolRuneset,
 			length:  20,
 		},
 		"max size charset": {
@@ -248,12 +248,6 @@ func TestRandomRunes_successful(t *testing.T) {
 			}
 		})
 	}
-}
-
-type badReader struct{}
-
-func (badReader) Read([]byte) (int, error) {
-	return 0, fmt.Errorf("test error")
 }
 
 func TestRandomRunes_errors(t *testing.T) {
@@ -325,7 +319,7 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 	benches := map[string]testCase{
 		"no rules": {
 			generator: StringGenerator{
-				Charset: []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz"),
+				Charset: AlphaNumericFullSymbolRuneset,
 				Rules:   []Rule{},
 			},
 		},
@@ -334,22 +328,22 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 		},
 		"large symbol set": {
 			generator: StringGenerator{
-				Charset: []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"),
+				Charset: AlphaNumericFullSymbolRuneset,
 				Rules: []Rule{
 					CharsetRestriction{
-						Charset:  []rune("abcdefghijklmnopqrstuvwxyz"),
+						Charset:  LowercaseRuneset,
 						MinChars: 1,
 					},
 					CharsetRestriction{
-						Charset:  []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+						Charset:  UppercaseRuneset,
 						MinChars: 1,
 					},
 					CharsetRestriction{
-						Charset:  []rune("0123456789"),
+						Charset:  NumericRuneset,
 						MinChars: 1,
 					},
 					CharsetRestriction{
-						Charset:  []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"),
+						Charset:  FullSymbolRuneset,
 						MinChars: 1,
 					},
 				},
@@ -364,11 +358,11 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 				),
 				Rules: []Rule{
 					CharsetRestriction{
-						Charset:  []rune("abcdefghijklmnopqrstuvwxyz"),
+						Charset:  LowercaseRuneset,
 						MinChars: 1,
 					},
 					CharsetRestriction{
-						Charset:  []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+						Charset:  UppercaseRuneset,
 						MinChars: 1,
 					},
 					CharsetRestriction{
@@ -380,7 +374,7 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 		},
 		"restrictive charset rules": {
 			generator: StringGenerator{
-				Charset: []rune("-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"),
+				Charset: AlphaNumericShortSymbolRuneset,
 				Rules: []Rule{
 					CharsetRestriction{
 						Charset:  []rune("A"),
@@ -429,7 +423,7 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 	b.Run("SQLCredentialsProducer", func(b *testing.B) {
 		sg := StringGenerator{
 			Length:  16, // 16 because the SQLCredentialsProducer prepends 4 characters to a 20 character password
-			Charset: []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"),
+			Charset: AlphaNumericRuneset,
 			Rules:   nil,
 			rng:     rand.Reader,
 		}
@@ -448,4 +442,10 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 			}
 		}
 	})
+}
+
+type badReader struct{}
+
+func (badReader) Read([]byte) (int, error) {
+	return 0, fmt.Errorf("test error")
 }

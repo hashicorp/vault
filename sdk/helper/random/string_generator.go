@@ -9,26 +9,50 @@ import (
 	"time"
 )
 
+const (
+	LowercaseCharset   = "abcdefghijklmnopqrstuvwxyz"
+	UppercaseCharset   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	NumericCharset     = "0123456789"
+	FullSymbolCharset  = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+	ShortSymbolCharset = "-"
+
+	AlphabeticCharset              = UppercaseCharset + LowercaseCharset
+	AlphaNumericCharset            = AlphabeticCharset + NumericCharset
+	AlphaNumericShortSymbolCharset = AlphaNumericCharset + ShortSymbolCharset
+	AlphaNumericFullSymbolCharset  = AlphaNumericCharset + FullSymbolCharset
+)
+
 var (
+	LowercaseRuneset   = []rune(LowercaseCharset)
+	UppercaseRuneset   = []rune(UppercaseCharset)
+	NumericRuneset     = []rune(NumericCharset)
+	FullSymbolRuneset  = []rune(FullSymbolCharset)
+	ShortSymbolRuneset = []rune(ShortSymbolCharset)
+
+	AlphabeticRuneset              = []rune(AlphabeticCharset)
+	AlphaNumericRuneset            = []rune(AlphaNumericCharset)
+	AlphaNumericShortSymbolRuneset = []rune(AlphaNumericShortSymbolCharset)
+	AlphaNumericFullSymbolRuneset  = []rune(AlphaNumericFullSymbolCharset)
+
 	// DefaultStringGenerator has reasonable default rules for generating strings
 	DefaultStringGenerator = StringGenerator{
 		Length:  20,
-		Charset: []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"),
+		Charset: []rune(LowercaseCharset + UppercaseCharset + NumericCharset + ShortSymbolCharset),
 		Rules: []Rule{
 			CharsetRestriction{
-				Charset:  []rune("abcdefghijklmnopqrstuvwxyz"),
+				Charset:  LowercaseRuneset,
 				MinChars: 1,
 			},
 			CharsetRestriction{
-				Charset:  []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+				Charset:  UppercaseRuneset,
 				MinChars: 1,
 			},
 			CharsetRestriction{
-				Charset:  []rune("0123456789"),
+				Charset:  NumericRuneset,
 				MinChars: 1,
 			},
 			CharsetRestriction{
-				Charset:  []rune("-"),
+				Charset:  ShortSymbolRuneset,
 				MinChars: 1,
 			},
 		},
@@ -87,25 +111,25 @@ func (g StringGenerator) generate() (str string, err error) {
 	// If performance improvements need to be made, this can be changed to read a batch of
 	// potential strings at once rather than one at a time. This will significantly
 	// improve performance, but at the cost of added complexity.
-	runes, err := randomRunes(g.rng, g.Charset, g.Length)
+	candidate, err := randomRunes(g.rng, g.Charset, g.Length)
 	if err != nil {
 		return "", fmt.Errorf("unable to generate random characters: %w", err)
 	}
 
 	for _, rule := range g.Rules {
-		if !rule.Pass(runes) {
+		if !rule.Pass(candidate) {
 			return "", nil
 		}
 	}
 
 	// Passed all rules
-	return string(runes), nil
+	return string(candidate), nil
 }
 
 // randomRunes creates a random string based on the provided charset. The charset is limited to 255 characters, but
 // could be expanded if needed. Expanding the maximum charset size will decrease performance because it will need to
 // combine bytes into a larger integer using binary.BigEndian.Uint16() function.
-func randomRunes(rng io.Reader, charset []rune, length int) (randStr []rune, err error) {
+func randomRunes(rng io.Reader, charset []rune, length int) (candidate []rune, err error) {
 	if len(charset) == 0 {
 		return nil, fmt.Errorf("no charset specified")
 	}

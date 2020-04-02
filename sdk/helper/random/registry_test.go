@@ -43,7 +43,7 @@ func TestParseRule(t *testing.T) {
 			rules:    map[string]ruleConstructor{},
 			ruleType: "testrule",
 			ruleData: map[string]interface{}{
-				"string": "omgwtfbbq",
+				"string": "teststring",
 				"int":    123,
 			},
 			expectedRule: nil,
@@ -64,11 +64,11 @@ func TestParseRule(t *testing.T) {
 			},
 			ruleType: "testrule",
 			ruleData: map[string]interface{}{
-				"string": "omgwtfbbq",
+				"string": "teststring",
 				"int":    123,
 			},
 			expectedRule: &testRule{
-				String:  "omgwtfbbq",
+				String:  "teststring",
 				Integer: 123,
 			},
 			expectErr: false,

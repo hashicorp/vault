@@ -18,7 +18,7 @@ func TestParse(t *testing.T) {
 				length = 20
 				charset = "abcde"
 				rule "testrule" {
-					string = "omgwtfbbq"
+					string = "teststring"
 					int = 123
 				}`,
 			expected: StringGenerator{
@@ -141,7 +141,7 @@ func TestParser_Parse(t *testing.T) {
 				length = 20
 				charset = "abcde"
 				rule "testrule" {
-					string = "omgwtfbbq"
+					string = "teststring"
 					int = 123
 				}`,
 			expected: StringGenerator{
@@ -149,7 +149,7 @@ func TestParser_Parse(t *testing.T) {
 				Charset: []rune("abcde"),
 				Rules: []Rule{
 					&testRule{
-						String:  "omgwtfbbq",
+						String:  "teststring",
 						Integer: 123,
 					},
 				},
@@ -165,7 +165,7 @@ func TestParser_Parse(t *testing.T) {
 				length = 20
 				charset = "abcde"
 				rule "testrule" {
-					string = "omgwtfbbq"
+					string = "teststring"
 					int = 123
 				}
 				rule "CharsetRestriction" {
@@ -177,7 +177,7 @@ func TestParser_Parse(t *testing.T) {
 				Charset: []rune("abcde"),
 				Rules: []Rule{
 					&testRule{
-						String:  "omgwtfbbq",
+						String:  "teststring",
 						Integer: 123,
 					},
 					&CharsetRestriction{
@@ -194,7 +194,7 @@ func TestParser_Parse(t *testing.T) {
 				length = 20
 				charset = "abcde"
 				rule "testrule" {
-					string = "omgwtfbbq"
+					string = "teststring"
 					int = 123
 				}`,
 			expected: StringGenerator{
@@ -220,7 +220,7 @@ func TestParser_Parse(t *testing.T) {
 						{
 							"testrule": [
 								{
-									"string": "omgwtfbbq",
+									"string": "teststring",
 									"int": 123
 								}
 							]
@@ -240,7 +240,7 @@ func TestParser_Parse(t *testing.T) {
 				Charset: []rune("abcde"),
 				Rules: []Rule{
 					&testRule{
-						String:  "omgwtfbbq",
+						String:  "teststring",
 						Integer: 123,
 					},
 					&CharsetRestriction{
@@ -261,7 +261,7 @@ func TestParser_Parse(t *testing.T) {
 						{
 							"testrule": [
 								{
-									"string": "omgwtfbbq",
+									"string": "teststring",
 									"int": 123
 								}
 							],
@@ -327,7 +327,7 @@ func TestParseRules(t *testing.T) {
 			rawRules: []map[string]interface{}{
 				{
 					"testrule": map[string]interface{}{
-						"string": "omgwtfbbq",
+						"string": "teststring",
 					},
 				},
 			},
@@ -340,7 +340,7 @@ func TestParseRules(t *testing.T) {
 				{
 					"testrule": []map[string]interface{}{
 						{
-							"string": "omgwtfbbq",
+							"string": "teststring",
 							"int":    123,
 						},
 					},
@@ -357,7 +357,7 @@ func TestParseRules(t *testing.T) {
 				{
 					"testrule": []map[string]interface{}{
 						{
-							"string": "omgwtfbbq",
+							"string": "teststring",
 							"int":    123,
 						},
 					},
@@ -365,7 +365,7 @@ func TestParseRules(t *testing.T) {
 			},
 			expectedRules: []Rule{
 				&testRule{
-					String:  "omgwtfbbq",
+					String:  "teststring",
 					Integer: 123,
 				},
 			},
@@ -494,7 +494,7 @@ func TestGetChars(t *testing.T) {
 		"rule without chars": {
 			rules: []Rule{
 				testRule{
-					String:  "omgwtfbbq",
+					String:  "teststring",
 					Integer: 123,
 				},
 			},
@@ -670,10 +670,10 @@ func TestApplyShortcuts(t *testing.T) {
 		},
 		"non-matching key": {
 			input: map[string]interface{}{
-				"foo": "omgwtfbbq",
+				"foo": "teststring",
 			},
 			expected: map[string]interface{}{
-				"foo": "omgwtfbbq",
+				"foo": "teststring",
 			},
 		},
 		"matching key": {
@@ -681,17 +681,17 @@ func TestApplyShortcuts(t *testing.T) {
 				"charset": "lower-alpha",
 			},
 			expected: map[string]interface{}{
-				"charset": "abcdefghijklmnopqrstuvwxyz",
+				"charset": LowercaseCharset,
 			},
 		},
 		"matching and non-matching keys": {
 			input: map[string]interface{}{
 				"charset": "lower-alpha",
-				"foo":     "omgwtfbbq",
+				"foo":     "teststring",
 			},
 			expected: map[string]interface{}{
-				"charset": "abcdefghijklmnopqrstuvwxyz",
-				"foo":     "omgwtfbbq",
+				"charset": LowercaseCharset,
+				"foo":     "teststring",
 			},
 		},
 		"invalid value type": {
@@ -704,10 +704,10 @@ func TestApplyShortcuts(t *testing.T) {
 		},
 		"unrecognized shortcut": {
 			input: map[string]interface{}{
-				"charset": "abcdefghijklmnopqrstuvwxyz",
+				"charset": LowercaseCharset,
 			},
 			expected: map[string]interface{}{
-				"charset": "abcdefghijklmnopqrstuvwxyz",
+				"charset": LowercaseCharset,
 			},
 		},
 	}
@@ -761,8 +761,8 @@ func TestDeduplicateRunes(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			actual := deduplicateRunes([]rune(test.input))
-			if !reflect.DeepEqual(actual, []rune(test.expected)) {
+			actual := deduplicateRunes(test.input)
+			if !reflect.DeepEqual(actual, test.expected) {
 				t.Fatalf("Actual: %#v\nExpected:%#v", actual, test.expected)
 			}
 		})
