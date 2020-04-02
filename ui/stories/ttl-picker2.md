@@ -1,7 +1,9 @@
 <!--THIS FILE IS AUTO GENERATED. This file is generated from JSDoc comments in app/components/ttl-picker2.js. To make changes, first edit that file and run "yarn gen-story-md ttl-picker2" to re-generate the content.-->
 
 ## TtlPicker2
-TtlPicker2 components are used to enable and select TTL
+TtlPicker2 components are used to enable and select time to live values. Use this TtlPicker2 instead of TtlPicker if you:
+- Want the TTL to be enabled or disabled
+- Want to have the time recalculated by default when the unit changes (eg 60s -> 1m)
 
 **Params**
 
@@ -13,6 +15,7 @@ TtlPicker2 components are used to enable and select TTL
 | [helperTextEnabled] | <code>string</code> | <code>&quot;&#x27;Disable the use of the token after&#x27;&quot;</code> | This helper text is shown under the label when the toggle is switched on |
 | [time] | <code>number</code> | <code>30</code> | The time (in the default units) which will be adjustable by the user of the form |
 | [unit] | <code>string</code> | <code>&quot;&#x27;s&#x27;&quot;</code> | This is the unit key which will show by default on the form. Can be one of `s` (seconds), `m` (minutes), `h` (hours), `d` (days) |
+| [recalculationTimeout] | <code>number</code> | <code>5000</code> | This is the time, in milliseconds, that `recalculateSeconds` will be be true after time is updated |
 
 **Example**
   

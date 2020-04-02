@@ -1,6 +1,8 @@
 /**
  * @module TtlPicker2
- * TtlPicker2 components are used to enable and select TTL
+ * TtlPicker2 components are used to enable and select 'time to live' values. Use this TtlPicker2 instead of TtlPicker if you:
+ * - Want the TTL to be enabled or disabled
+ * - Want to have the time recalculated by default when the unit changes (eg 60s -> 1m)
  *
  * @example
  * ```js
@@ -12,6 +14,7 @@
  * @param {string} [helperTextEnabled='Disable the use of the token after'] - This helper text is shown under the label when the toggle is switched on
  * @param {number} [time=30] - The time (in the default units) which will be adjustable by the user of the form
  * @param {string} [unit='s'] - This is the unit key which will show by default on the form. Can be one of `s` (seconds), `m` (minutes), `h` (hours), `d` (days)
+ * @param {number} [recalculationTimeout=5000] - This is the time, in milliseconds, that `recalculateSeconds` will be be true after time is updated
  */
 
 import Ember from 'ember';
@@ -39,6 +42,7 @@ export default Component.extend({
   helperTextEnabled: 'Disable the use of the token after',
   time: 30,
   unit: 'm',
+  recalculationTimeout: 5000,
   unitOptions: computed(function() {
     return [
       { label: 'seconds', value: 's' },
@@ -94,7 +98,6 @@ export default Component.extend({
   }),
   errorMessage: null,
   recalculateSeconds: false,
-  recalculationTimeout: 5000,
   actions: {
     updateUnit(newUnit) {
       if (this.recalculateSeconds) {
