@@ -342,58 +342,62 @@
   {{#if (eq replicationAttrs.mode 'initializing')}}
     The cluster is initializing replication. This may take some time.
   {{else}}
-    <div class="replication selectable-card-container">
-      <div class="card-container">
-        <div class="replication selectable-card is-rounded">
-          <code class="card-title title is-5">state</code>
-          <div>
-            <span class="helper-text is-label has-text-grey">
-              Updated every ten seconds
-            </span>
-           <h3 class="title is-3">
-              {{!-- TODO make this dynamic --}}
-              <Icon @glyph="check-circle-outline" class="has-text-success" />
-             {{replicationAttrs.state}}
-            </h3>
-            {{info-table-row label="Replication state" value=replicationAttrs.replicationState}}
+    <div class="replication">
+      <div class="selectable-card-container">
+        <div class="card-container">
+          <div class="selectable-card is-rounded">
+            <code class="card-title title is-5">state</code>
+            <div>
+              <span class="helper-text is-label has-text-grey">
+                Updated every ten seconds
+              </span>
+            <h3 class="title is-3">
+                {{!-- TODO make this dynamic --}}
+                <Icon @glyph="check-circle-outline" class="has-text-success" />
+              {{replicationAttrs.state}}
+              </h3>
+              {{info-table-row label="Replication state" value=replicationAttrs.replicationState}}
+            </div>
+          </div>
+          <div class="selectable-card is-rounded">
+            <code class="card-title title is-5">Last WAL entry</code>
+            <div>
+              <span class="helper-text is-label has-text-grey">
+                Index of last Write Ahead Logs entry written on local storage.
+              </span>
+              <h3 class="title is-3">{{replicationAttrs.lastWAL}}</h3>
+              {{!-- TODO: do I need this? How is this different from lastWAL above? --}}
+              {{!-- {{info-table-row label="Last Remote WAL entry" value=replicationAttrs.lastRemoteWAL}} --}}
+            </div>
           </div>
         </div>
-        <div class="replication selectable-card is-rounded">
-          <code class="card-title title is-5">Last WAL entry</code>
+
+        <div class="selectable-card is-rounded">
+          <div class="level">
+          <code class="card-title title is-5">Known Secondaries</code>
+            <ToolbarLink @params={{array "vault.cluster.settings.auth.configure" model.id}} @data-test-manage-link="true">
+              Manage
+            </ToolbarLink>
+          </div>
           <div>
-            <span class="helper-text is-label has-text-grey">
-              Index of last Write Ahead Logs entry written on local storage.
-            </span>
-            <h3 class="title is-3">{{replicationAttrs.lastWAL}}</h3>
-            {{!-- TODO: do I need this? How is this different from lastWAL above? --}}
-            {{!-- {{info-table-row label="Last Remote WAL entry" value=replicationAttrs.lastRemoteWAL}} --}}
+            {{info-table-row label="Secondary ID" value="URL"}}
+            {{!-- TODO: make sure this works --}}
+            {{info-table-row label="Secondary ID" value=replicationAttrs.secondaryId}}
           </div>
         </div>
+
+
       </div>
-
-      <div class="replication selectable-card is-rounded">
-        <div class="level">
-        <code class="card-title title is-5">Known Secondaries</code>
-          <ToolbarLink @params={{array "vault.cluster.settings.auth.configure" model.id}} @data-test-manage-link="true">
-            Manage
-          </ToolbarLink>
-        </div>
-        <div>
-          {{info-table-row label="Secondary ID" value="URL"}}
-          {{info-table-row label="Secondary ID" value=replicationAttrs.secondaryId}}
-        </div>
+      <div>
+        {{info-table-row label="Merkle root index" helperText="A snapshot in time of the merkle tree's root hash. Changes on every update
+        to storage." value=replicationAttrs.merkleRoot}}
+        {{info-table-row label="Mode" value=replicationAttrs.mode}}
+        {{info-table-row label="Replication set" helperText="The ID for the group of clusters communicating for this replication mode" value=replicationAttrs.clusterId}}
       </div>
-
-
+      {{!-- TODO: move this to the right spot --}}
+      {{#if replicationAttrs.syncProgress}}
+        {{info-table-row label="Sync progress" value=(concat replicationAttrs.syncProgress.progress '/' replicationAttrs.syncProgress.total)}}
+      {{/if}}
     </div>
-    <div>
-      {{info-table-row label="Merkle root index" helperText="A snapshot in time of the merkle tree's root hash. Changes on every update
-      to storage." value=replicationAttrs.merkleRoot}}
-      {{info-table-row label="Mode" value=replicationAttrs.mode}}
-      {{info-table-row label="Replication set" helperText="The ID for the group of clusters communicating for this replication mode" value=replicationAttrs.clusterId}}
-    </div>
-    {{#if replicationAttrs.syncProgress}}
-      {{info-table-row label="Sync progress" value=(concat replicationAttrs.syncProgress.progress '/' replicationAttrs.syncProgress.total)}}
-    {{/if}}
   {{/if}}
 {{/if}}
