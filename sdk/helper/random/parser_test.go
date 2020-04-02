@@ -101,6 +101,17 @@ func TestParser_Parse(t *testing.T) {
 			},
 			expectErr: false,
 		},
+		"config with zero length": {
+			registry: defaultRuleNameMapping,
+			rawConfig: `
+				length = 0
+				charset = "abcde"`,
+			expected: StringGenerator{
+				Length:  0,
+				Charset: []rune("abcde"),
+			},
+			expectErr: true,
+		},
 		"config with negative length": {
 			registry: defaultRuleNameMapping,
 			rawConfig: `
