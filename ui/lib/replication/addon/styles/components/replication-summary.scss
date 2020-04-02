@@ -1,5 +1,12 @@
-.selectable-card-container.has-grid {
+.replication.selectable-card-container {
   grid-template-columns: 1fr 2fr;
+  grid-template-rows: initial;
+  margin: 2rem 0 2rem 0;
+}
+
+.card-container {
+  display: grid;
+  grid-gap: 2rem;
 }
 
 .replication.selectable-card {
