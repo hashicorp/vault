@@ -21,6 +21,7 @@ import Ember from 'ember';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { task, timeout } from 'ember-concurrency';
+import layout from '../templates/components/ttl-picker2';
 
 const secondsMap = {
   s: 1,
@@ -36,6 +37,7 @@ const convertFromSeconds = (seconds, unit) => {
 };
 
 export default Component.extend({
+  layout,
   enableTTL: false,
   label: 'Time to live (TTL)',
   helperTextDisabled: 'Allow tokens to be used indefinitely',
