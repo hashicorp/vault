@@ -179,7 +179,7 @@ outstanding Raft log entries, so it's also possible to commit data that was
 uncommitted before the failure.
 
 See the section below on manual recovery using peers.json for details of the
-recovery procedure. You simply include just the remaining servers in the
+recovery procedure. You include only the remaining servers in the
 raft/peers.json recovery file. The cluster should be able to elect a leader once
 the remaining servers are all restarted with an identical raft/peers.json
 configuration.
