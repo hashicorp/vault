@@ -7,7 +7,7 @@ description: Learn about the integrated raft storage in Vault.
 
 # Integrated Storage
 
-Vault supports a number of Storage options for the durable storage of Vault's
+Vault supports a number of storage options for the durable storage of Vault's
 information. As of Vault 1.4 an integrated storage option is offered. This
 storage backend does not rely on any third party systems, it implements high
 availability, supports Enterprise Replication features, and provides
@@ -138,4 +138,3 @@ is exchanged at join time and is rotated on a cadence.
 A requirement for integrated storage is that the
 [cluster_addr](/docs/concepts/ha/#per-node-cluster-address) configuration option
 is set. This allows Vault to assign an address to the node ID at join time.
-
