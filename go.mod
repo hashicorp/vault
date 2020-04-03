@@ -87,7 +87,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.4
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.4
-	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.0
+	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.1
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.1
 	github.com/hashicorp/vault/api v1.0.5-0.20200317185738-82f498082f02
 	github.com/hashicorp/vault/sdk v0.1.14-0.20200317185738-82f498082f02
