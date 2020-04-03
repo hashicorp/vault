@@ -1,0 +1,141 @@
+---
+layout: docs
+page_title: Integrated Storage
+sidebar_title: Integrated Storage
+description: Learn about the integrated raft storage in Vault.
+---
+
+# Integrated Storage
+
+Vault supports a number of Storage options for the durable storage of Vault's
+information. As of Vault 1.4 an integrated storage option is offered. This
+storage backend does not rely on any third party systems, it implements high
+availability, supports Enterprise Replication features, and provides
+backup/restore work flows.
+
+The integrated storage option stores Vault's data on the server's filesystem and
+uses a consensus protocol to replicate data to each server in the cluster. More
+information on the internals of integrated storage can be found in the
+[integrated storage internals
+documentation](/docs/internals/integrated-storage/). Also the 
+[Configuration](/docs/configuration/storage/raft/) docs can help in configuring
+Vault to used integrated storage.
+
+The sections below go into various details on how to operate Vault with
+integrated storage.
+
+## Cluster Membership
+
+This section will outline how to bootstrap and manage a cluster of Vault nodes
+running integrated storage. 
+
+Integrated storage is bootstrapped during the [initialization
+process](https://learn.hashicorp.com/vault/getting-started/deploy#initializing-the-vault),
+and results in a cluster of size 1. Depending on the [desired deployment
+size](/docs/internals/integrated-storage/#deployment-table), nodes can be joined
+to the active Vault node.
+
+### Joining Nodes
+
+Joining is the process of taking an uninitialized Vault node and making it a
+member of an existing cluster. In order to authenticate the new node to the
+cluster it must use the same seal mechanism. If using a Auto Unseal the node
+must be configured to use the same KMS provider and Key as the cluster it's
+attempting to join. If using a Shamir seal the unseal keys must be provided to
+the new node before the join process can complete. Once a node has successfully
+joined data from the active node can begin to replicate to it. Once a node has
+been joined it cannot be re-joined to a different cluster.
+
+You can either join the node automatically via the config file or manually through the
+API. When joining a node the API address for the leader node must be used. We
+recommend setting the [api_addr](docs/concepts/ha/#direct-access) configuration
+option on all nodes to make joining simpler. 
+
+#### retry_join Configuration
+
+This method enables setting one, or more, target leader nodes in the config file. When an
+uninitialized Vault server starts up it will attempt to join each potential
+leader that is defined, retrying until successful. When one of the specified
+leaders become active this node will successfully join. When using Shamir seal,
+the joined nodes will still need to be unsealed manually. When using Auto Unseal
+the node will be able to join and unseal automatically.
+
+An example config can be seen below:
+
+```hcl
+storage "raft" {
+  path    = "/var/raft/"
+  node_id = "node3"
+  retry_join {
+    leader_api_addr = "https://node1.vault.local:8200"
+  }
+  retry_join {
+    leader_api_addr = "https://node2.vault.local:8200"
+  }
+}
+```
+
+#### Join from the CLI
+
+Alternatively you can use the CLI or API to join a node. The active node's API
+address will need to be specified:
+
+```shell
+$ vault operator raft join https://node1.vault.local:8200
+```
+
+#### Non-Voting Nodes (Enterprise Only)
+
+Nodes that are joined to a cluster can be specified as non-voters. A non-voting
+node has all of Vault's data replicated to it, but does not contribute to the
+quorum count. This can be used in conjunction with [Performance
+Standby](/docs/enterprise/performance-standby/) nodes to add read scalability to
+a cluster in cases where a high volume of reads to servers are needed.
+
+```shell
+$ vault operator raft join -non-voter https://node1.vault.local:8200
+```
+
+### Removing Peers
+
+Removing a peer node is a necessary step when you no longer want the node in the
+cluster. This could happen if the node is rotated for a new one, the hostname
+permanently changes and can no longer be accessed, you're attempting to shrink
+the size of the cluster, or for many other reasons. Removing the peer will
+ensure the cluster stays at the desired size, and that quorum is maintained. 
+
+To remove the peer you can issue a
+[remove-peer](/docs/commands/operator/raft/#remove-peer) command and provide the
+node ID you wish to remove:
+
+```shell
+$ vault operator raft remove-peer node1
+Peer removed successfully!
+```
+
+### Listing Peers
+
+To see the current peer set for the cluster you can issue a
+[list-peers](/docs/commands/operator/raft/#list-peers) command. All the voting
+nodes that are listed here contribute to the quorum and a majority must be alive
+for integrated storage to continue to operate. 
+
+```shell
+$ vault operator raft list-peers
+Node     Address                   State       Voter
+----     -------                   -----       -----
+node1    node1.vault.local:8201    follower    true
+node2    node2.vault.local:8201    follower    true
+node3    node3.vault.local:8201    leader      true
+```
+
+## Server-to-Server Communication
+
+Once nodes are joined to one another they begin to communicate using mTLS over
+Vault's cluster port. The cluster port defaults to `8201`. The TLS information
+is exchanged at join time and is rotated on a cadence. 
+
+A requirement for integrated storage is that the
+[cluster_addr](/docs/concepts/ha/#per-node-cluster-address) configuration option
+is set. This allows Vault to assign an address to the node ID at join time.
+
