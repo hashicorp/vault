@@ -46,12 +46,8 @@ func TestSysMonitorStreamingLogs(t *testing.T) {
 	cluster.Start()
 	defer cluster.Cleanup()
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
-
 	client := cluster.Cores[0].Client
-
-	go testhelpers.GenerateDebugLogs(t, stopCh, client)
+	stopCh := testhelpers.GenerateDebugLogs(t, client)
 
 	debugCount := 0
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
@@ -70,8 +66,6 @@ func TestSysMonitorStreamingLogs(t *testing.T) {
 			if strings.Contains(log, "[DEBUG]") {
 				debugCount++
 			}
-		case <-stopCh:
-			return
 		case <-timeCh:
 			t.Fatal("Failed to get a DEBUG message after 5 seconds")
 		}
@@ -79,7 +73,10 @@ func TestSysMonitorStreamingLogs(t *testing.T) {
 		// If we've seen multiple lines that match what we want,
 		// it's probably safe to assume streaming is working
 		if debugCount > 3 {
+			stopCh <- struct{}{}
 			break
 		}
 	}
+
+	<-stopCh
 }

@@ -67,17 +67,12 @@ func TestMonitorCommand_Run(t *testing.T) {
 
 			var code int64
 			shutdownCh := make(chan struct{})
-			stopCh := make(chan struct{})
-			doneCh := make(chan struct{})
 
 			ui, cmd := testMonitorCommand(t)
 			cmd.client = client
 			cmd.ShutdownCh = shutdownCh
 
-			go func() {
-				testhelpers.GenerateDebugLogs(t, stopCh, client)
-				close(doneCh)
-			}()
+			stopCh := testhelpers.GenerateDebugLogs(t, client)
 
 			go func() {
 				atomic.StoreInt64(&code, int64(cmd.Run(tc.args)))
@@ -85,7 +80,7 @@ func TestMonitorCommand_Run(t *testing.T) {
 
 			select {
 			case <-time.After(3 * time.Second):
-				close(stopCh)
+				stopCh <- struct{}{}
 				close(shutdownCh)
 			}
 
@@ -98,7 +93,7 @@ func TestMonitorCommand_Run(t *testing.T) {
 				t.Fatalf("expected %q to contain %q", combined, tc.out)
 			}
 
-			<-doneCh
+			<-stopCh
 		})
 	}
 }

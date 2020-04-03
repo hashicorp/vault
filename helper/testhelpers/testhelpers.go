@@ -458,32 +458,38 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	WaitForNCoresUnsealed(t, cluster, 3)
 }
 
-func GenerateDebugLogs(t testing.T, stopCh chan struct{}, client *api.Client) {
+func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
 	t.Helper()
 
+	stopCh := make(chan struct{})
 	ticker := time.NewTicker(time.Second)
 	var err error
 
-	for {
-		select {
-		case <-stopCh:
-			ticker.Stop()
-			return
-		case <-ticker.C:
-			err = client.Sys().Mount("foo", &api.MountInput{
-				Type: "kv",
-				Options: map[string]string{
-					"version": "1",
-				},
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
+	go func() {
+		for {
+			select {
+			case <-stopCh:
+				ticker.Stop()
+				stopCh <- struct{}{}
+				return
+			case <-ticker.C:
+				err = client.Sys().Mount("foo", &api.MountInput{
+					Type: "kv",
+					Options: map[string]string{
+						"version": "1",
+					},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
 
-			err = client.Sys().Unmount("foo")
-			if err != nil {
-				t.Fatal(err)
+				err = client.Sys().Unmount("foo")
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 		}
-	}
+	}()
+
+	return stopCh
 }
