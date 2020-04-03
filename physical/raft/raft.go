@@ -560,7 +560,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		// error out to indicate that it isn't allowed.
 		for idx := range recoveryConfig.Servers {
 			if !nonVotersAllowed && recoveryConfig.Servers[idx].Suffrage == raft.Nonvoter {
-				return fmt.Errorf("raft recovery failed: `non_voter` is only supported in enterprise")
+				return fmt.Errorf("raft recovery failed to parse configuration for node %q: setting `non_voter` is only supported in enterprise", recoveryConfig.Servers[idx].ID)
 			}
 		}
 
