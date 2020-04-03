@@ -556,7 +556,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			return errwrap.Wrapf("raft recovery failed to parse peers.json: {{err}}", err)
 		}
 
-		// Non-voting servers are only allowed in enterprise. If Suffage is disabled,
+		// Non-voting servers are only allowed in enterprise. If Suffrage is disabled,
 		// error out to indicate that it isn't allowed.
 		for idx := range recoveryConfig.Servers {
 			if !nonVotersAllowed && recoveryConfig.Servers[idx].Suffrage == raft.Nonvoter {
