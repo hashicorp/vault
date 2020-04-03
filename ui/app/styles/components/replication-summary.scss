@@ -1,7 +1,5 @@
 .replication {
   .selectable-card-container {
-    grid-template-columns: 1fr minmax(240px, 2fr);
-    grid-template-rows: initial;
     margin: 2rem 0 2rem 0;
   }
 
@@ -16,6 +14,11 @@
 
     .card-title {
       margin-bottom: 2rem;
+    }
+
+    &.secondaries {
+      grid-column-start: 3;
+      grid-column-end: 6;
     }
   }
 
