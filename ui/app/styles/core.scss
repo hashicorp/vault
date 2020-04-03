@@ -78,6 +78,7 @@
 @import './components/radio-card';
 @import './components/radial-progress';
 @import './components/raft-join';
+@import './components/replication-summary';
 @import './components/role-item';
 @import './components/search-select';
 @import './components/selectable-card';
@@ -96,9 +97,6 @@
 @import './components/vault-loading';
 @import './components/vlt-radio';
 @import './components/vlt-table';
-
-// import styles from ember engines
-@import './lib/replication/addon/styles/components/replication-summary';
 
 // bulma-free-zone
 @import './components/hs-icon';
