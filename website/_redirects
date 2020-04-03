@@ -112,49 +112,85 @@
 
 /guides/operations/index.html                   https://learn.hashicorp.com/vault/?track=operations#operations 301!
 /guides/operations/reference-architecture.html  https://learn.hashicorp.com/vault/operations/ops-reference-architecture 301!
+/guides/operations/reference-architecture       https://learn.hashicorp.com/vault/operations/ops-reference-architecture 301!
 /guides/operations/deployment-guide.html        https://learn.hashicorp.com/vault/operations/ops-deployment-guide 301!
+/guides/operations/deployment-guide             https://learn.hashicorp.com/vault/operations/ops-deployment-guide 301!
 /guides/operations/vault-ha-consul.html         https://learn.hashicorp.com/vault/operations/ops-vault-ha-consul 301!
+/guides/operations/vault-ha-consul              https://learn.hashicorp.com/vault/operations/ops-vault-ha-consul 301!
 /guides/operations/production.html              https://learn.hashicorp.com/vault/operations/production-hardening 301!
+/guides/operations/production                   https://learn.hashicorp.com/vault/operations/production-hardening 301!
 /guides/operations/generate-root.html           https://learn.hashicorp.com/vault/operations/ops-generate-root 301!
+/guides/operations/generate-root                https://learn.hashicorp.com/vault/operations/ops-generate-root 301!
 /guides/operations/rekeying-and-rotating.html   https://learn.hashicorp.com/vault/operations/ops-rekeying-and-rotating 301!
+/guides/operations/rekeying-and-rotating        https://learn.hashicorp.com/vault/operations/ops-rekeying-and-rotating 301!
 /guides/operations/plugin-backends.html         https://learn.hashicorp.com/vault/developer/plugin-backends 301!
+/guides/operations/plugin-backends              https://learn.hashicorp.com/vault/developer/plugin-backends 301!
 /guides/operations/replication.html             https://learn.hashicorp.com/vault/operations/ops-replication 301!
+/guides/operations/replication                  https://learn.hashicorp.com/vault/operations/ops-replication 301!
 /guides/operations/disaster-recovery.html       https://learn.hashicorp.com/vault/operations/ops-disaster-recovery 301!
+/guides/operations/disaster-recovery            https://learn.hashicorp.com/vault/operations/ops-disaster-recovery 301!
 /guides/operations/mount-filter.html            https://learn.hashicorp.com/vault/operations/mount-filter 301!
+/guides/operations/mount-filter                 https://learn.hashicorp.com/vault/operations/mount-filter 301!
 /guides/operations/performance-nodes.html       https://learn.hashicorp.com/vault/operations/performance-standbys 301!
+/guides/operations/performance-nodes            https://learn.hashicorp.com/vault/operations/performance-standbys 301!
 /guides/operations/multi-tenant.html            https://learn.hashicorp.com/vault/operations/namespaces 301!
+/guides/operations/multi-tenant                 https://learn.hashicorp.com/vault/operations/namespaces 301!
 /guides/operations/autounseal-aws-kms.html      https://learn.hashicorp.com/vault/operations/ops-autounseal-aws-kms 301!
+/guides/operations/autounseal-aws-kms           https://learn.hashicorp.com/vault/operations/ops-autounseal-aws-kms 301!
 /guides/operations/seal-wrap.html               https://learn.hashicorp.com/vault/operations/ops-seal-wrap 301!
+/guides/operations/seal-wrap                    https://learn.hashicorp.com/vault/operations/ops-seal-wrap 301!
 /guides/operations/monitoring.html              https://learn.hashicorp.com/vault/operations/monitoring 301!
+/guides/operations/monitoring                   https://learn.hashicorp.com/vault/operations/monitoring 301!
 
 # Identity
 /guides/identity/index.html                     https://learn.hashicorp.com/vault?track=identity-access-management#identity-access-management 301!
 /guides/identity/secure-intro.html              https://learn.hashicorp.com/vault/identity-access-management/iam-secure-intro 301!
+/guides/identity/secure-intro                   https://learn.hashicorp.com/vault/identity-access-management/iam-secure-intro 301!
 /guides/identity/policies.html                  https://learn.hashicorp.com/vault/identity-access-management/iam-policies 301!
+/guides/identity/policies                       https://learn.hashicorp.com/vault/identity-access-management/iam-policies 301!
 /guides/identity/policy-templating.html         https://learn.hashicorp.com/vault/identity-access-management/policy-templating 301!
+/guides/identity/policy-templating              https://learn.hashicorp.com/vault/identity-access-management/policy-templating 301!
 /guides/identity/authentication.html            https://learn.hashicorp.com/vault/identity-access-management/iam-authentication 301!
+/guides/identity/authentication                 https://learn.hashicorp.com/vault/identity-access-management/iam-authentication 301!
 /guides/identity/approle-trusted-entities.html  https://learn.hashicorp.com/vault/identity-access-management/iam-approle-trusted-entities 301!
-/guides/identity/lease.html                     https://learn.hashicorp.com/vault/secrets-management/sm-lease 301!
+/guides/identity/approle-trusted-entities       https://learn.hashicorp.com/vault/identity-access-management/iam-approle-trusted-entities 301!
+/guides/identity/lease.html                     https://learn.hashicorp.com/vault/identity-access-management/tokens 301!
+/guides/identity/lease                          https://learn.hashicorp.com/vault/identity-access-management/tokens 301!
 /guides/identity/identity.html                  https://learn.hashicorp.com/vault/identity-access-management/iam-identity 301!
+/guides/identity/identity                       https://learn.hashicorp.com/vault/identity-access-management/iam-identity 301!
 /guides/identity/sentinel.html                  https://learn.hashicorp.com/vault/identity-access-management/iam-sentinel 301!
+/guides/identity/sentinel                       https://learn.hashicorp.com/vault/identity-access-management/iam-sentinel 301!
 /guides/identity/control-groups.html            https://learn.hashicorp.com/vault/identity-access-management/iam-control-groups 301!
+/guides/identity/control-groups                 https://learn.hashicorp.com/vault/identity-access-management/iam-control-groups 301!
 
 # Secret management
 /guides/secret-mgmt/index.html                  https://learn.hashicorp.com/vault/?track=secrets-management#secrets-management 301!
 /guides/secret-mgmt/static-secrets.html         https://learn.hashicorp.com/vault/secrets-management/sm-static-secrets 301!
+/guides/secret-mgmt/static-secrets              https://learn.hashicorp.com/vault/secrets-management/sm-static-secrets 301!
 /guides/secret-mgmt/versioned-kv.html           https://learn.hashicorp.com/vault/secrets-management/sm-versioned-kv 301!
+/guides/secret-mgmt/versioned-kv                https://learn.hashicorp.com/vault/secrets-management/sm-versioned-kv 301!
 /guides/secret-mgmt/dynamic-secrets.html        https://learn.hashicorp.com/vault/secrets-management/sm-dynamic-secrets 301!
+/guides/secret-mgmt/dynamic-secrets             https://learn.hashicorp.com/vault/secrets-management/sm-dynamic-secrets 301!
 /guides/secret-mgmt/db-root-rotation.html       https://learn.hashicorp.com/vault/secrets-management/db-root-rotation 301!
+/guides/secret-mgmt/db-root-rotation            https://learn.hashicorp.com/vault/secrets-management/db-root-rotation 301!
 /guides/secret-mgmt/cubbyhole.html              https://learn.hashicorp.com/vault/secrets-management/sm-cubbyhole 301!
+/guides/secret-mgmt/cubbyhole                   https://learn.hashicorp.com/vault/secrets-management/sm-cubbyhole 301!
 /guides/secret-mgmt/ssh-otp.html                https://learn.hashicorp.com/vault/secrets-management/sm-ssh-otp 301!
+/guides/secret-mgmt/ssh-otp                     https://learn.hashicorp.com/vault/secrets-management/sm-ssh-otp 301!
 /guides/secret-mgmt/pki-engine.html             https://learn.hashicorp.com/vault/secrets-management/sm-pki-engine 301!
+/guides/secret-mgmt/pki-engine                  https://learn.hashicorp.com/vault/secrets-management/sm-pki-engine 301!
 /guides/secret-mgmt/app-integration.html        https://learn.hashicorp.com/vault/developer/sm-app-integration 301!
+/guides/secret-mgmt/app-integration             https://learn.hashicorp.com/vault/developer/sm-app-integration 301!
 
 # Encryption
 /guides/encryption/index.html                   https://learn.hashicorp.com/vault/?track=encryption-as-a-service#encryption-as-a-service 301!
+/guides/encryption/index                        https://learn.hashicorp.com/vault/?track=encryption-as-a-service#encryption-as-a-service 301!
 /guides/encryption/transit.html                 https://learn.hashicorp.com/vault/encryption-as-a-service/eaas-transit 301!
+/guides/encryption/transit                      https://learn.hashicorp.com/vault/encryption-as-a-service/eaas-transit 301!
 /guides/encryption/spring-demo.html             https://learn.hashicorp.com/vault/encryption-as-a-service/eaas-spring-demo 301!
+/guides/encryption/spring-demo                  https://learn.hashicorp.com/vault/encryption-as-a-service/eaas-spring-demo 301!
 /guides/encryption/transit-rewrap.html          https://learn.hashicorp.com/vault/encryption-as-a-service/eaas-transit-rewrap 301!
+/guides/encryption/transit-rewrap               https://learn.hashicorp.com/vault/encryption-as-a-service/eaas-transit-rewrap 301!
 
 # Rearranged out of `guides` but still on `.io`
 /guides/partnerships/index.html /docs/partnerships 301!
