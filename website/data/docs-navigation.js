@@ -34,6 +34,7 @@ export default [
       'response-wrapping',
       'policies',
       'ha',
+      'integrated-storage',
       'pgp-gpg-keybase',
       'recovery-mode'
     ]
