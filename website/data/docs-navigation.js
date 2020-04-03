@@ -324,8 +324,12 @@ export default [
                   'standalone-tls',
                   'standalone-audit',
                   'ha-with-consul',
+                  'ha-with-raft',
                   'external',
                   'kubernetes-auth',
+                  'enterprise-with-raft.mdx',
+                  'enterprise-dr-with-raft.mdx',
+                  'enterprise-perf-with-raft.mdx',
                   'enterprise-best-practice'
                 ]
               },
