@@ -7,48 +7,65 @@
     margin-top: 40px;
   }
 
-  .card-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: repeat(2, 1fr);
-    grid-gap: 2rem;
+  .selectable-card {
+    line-height: normal;
+
+    .title-number {
+      font-size: 28px;
+      align-self: end;
+    }
   }
 
-  .grid-inside-card-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1.5fr 1fr 0.8fr;
-    padding: $spacing-l 0 18px $spacing-l;
+  .helper-text {
+    font-weight: normal;
+  }
 
-    .grid-item-title {
-      grid-column-start: 1;
-      grid-column-end: 2;
-      grid-row-start: 1;
-      grid-row-end: 1;
-    }
-    .grid-item-state {
-      grid-column-start: 1;
-      grid-column-end: 1;
-      grid-row-start: 2;
-      grid-row-end: 2;
-    }
-    .grid-item-wal {
-      grid-column-start: 2;
-      grid-column-end: 2;
-      grid-row-start: 2;
-      grid-row-end: 2;
-    }
-    .grid-item-stream {
-      grid-column-start: 1;
-      grid-column-end: 1;
-      grid-row-start: 3;
-      grid-row-end: 3;
-    }
-    .grid-item-status {
-      grid-column-start: 2;
-      grid-column-end: 2;
-      grid-row-start: 3;
-      grid-row-end: 3;
+  .selectable-card-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-rows: 1fr;
+    grid-gap: 2rem;
+
+    .card-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr 0.8fr;
+      padding: $spacing-l 0 18px $spacing-l;
+
+      .grid-item-title {
+        grid-column-start: 1;
+        grid-column-end: 2;
+        grid-row-start: 1;
+        grid-row-end: 1;
+      }
+      .grid-item-state {
+        grid-column-start: 1;
+        grid-column-end: 1;
+        grid-row-start: 2;
+        grid-row-end: 2;
+
+        line-height: 1.5;
+      }
+      .grid-item-wal {
+        grid-column-start: 2;
+        grid-column-end: 2;
+        grid-row-start: 2;
+        grid-row-end: 2;
+
+        line-height: 1.5;
+      }
+      .grid-item-stream {
+        grid-column-start: 1;
+        grid-column-end: 1;
+        grid-row-start: 3;
+        grid-row-end: 3;
+      }
+      .grid-item-status {
+        grid-column-start: 2;
+        grid-column-end: 2;
+        grid-row-start: 3;
+        grid-row-end: 3;
+      }
     }
   }
 }
