@@ -307,8 +307,13 @@ func generatePartitionToRegionMap() map[string]*endpoints.Region {
 	partitions := resolver.(endpoints.EnumPartitions).Partitions()
 
 	for _, p := range partitions {
-		// Choose a single region randomly from the partition
+		// For most partitions, it's fine to choose a single region randomly.
+		// However, for the "aws" partition, it's best to choose "us-east-1"
+		// because it also support STS out of the box.
 		for _, r := range p.Regions() {
+			if p.ID() == "aws" && r.ID() != "us-east-1" {
+				continue
+			}
 			partitionToRegion[p.ID()] = &r
 			break
 		}
