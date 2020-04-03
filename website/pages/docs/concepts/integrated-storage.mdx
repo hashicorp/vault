@@ -228,12 +228,13 @@ wish to be in the cluster.
 ```
 
 * id (string: <required>) - Specifies the node ID of the server. This can be
-  found in the logs when the server starts up if it was auto-generated, and it
-  can also be found inside the node-id file in the server's data directory.
+  found in the config file, or inside the node-id file in the server's data
+  directory if it was auto-generated.
 * address (string: <required>) - Specifies the host and port of the server. The
   port is the server's cluster port.
 * non_voter (bool: <false>) - This controls whether the server is a non-voter.
-  If omitted, it will default to false, which is typical for most clusters.
+  If omitted, it will default to false, which is typical for most clusters. This
+  is an enterprise only feature.
 
 Create entries for all servers. You must confirm that servers you do not
 include here have indeed failed and will not later rejoin the cluster. Ensure
