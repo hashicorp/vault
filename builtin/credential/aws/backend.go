@@ -309,7 +309,7 @@ func generatePartitionToRegionMap() map[string]*endpoints.Region {
 	for _, p := range partitions {
 		// For most partitions, it's fine to choose a single region randomly.
 		// However, for the "aws" partition, it's best to choose "us-east-1"
-		// because it also support STS out of the box.
+		// because it is always enabled (and enabled for STS) by default.
 		for _, r := range p.Regions() {
 			if p.ID() == "aws" && r.ID() != "us-east-1" {
 				continue
