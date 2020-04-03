@@ -43,7 +43,7 @@ cluster it must use the same seal mechanism. If using a Auto Unseal the node
 must be configured to use the same KMS provider and Key as the cluster it's
 attempting to join. If using a Shamir seal the unseal keys must be provided to
 the new node before the join process can complete. Once a node has successfully
-joined data from the active node can begin to replicate to it. Once a node has
+joined, data from the active node can begin to replicate to it. Once a node has
 been joined it cannot be re-joined to a different cluster.
 
 You can either join the node automatically via the config file or manually through the
