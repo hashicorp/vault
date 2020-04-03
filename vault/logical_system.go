@@ -2077,12 +2077,12 @@ func getPasswordPolicyKey(policyName string) string {
 func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	policyName := data.Get("name").(string)
 	if policyName == "" {
-		return logical.ErrorResponse("missing policy name"), nil
+		return nil, logical.CodedError(http.StatusBadRequest, "missing policy name")
 	}
 
 	rawPolicy := data.Get("policy").(string)
 	if rawPolicy == "" {
-		return logical.ErrorResponse("missing policy"), nil
+		return nil, logical.CodedError(http.StatusBadRequest, "missing policy")
 	}
 
 	// Optionally decode base64 string
@@ -2094,7 +2094,7 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 	// Parse the policy to ensure that it's valid
 	rng, err := random.Parse(rawPolicy)
 	if err != nil {
-		return logical.ErrorResponse("invalid password policy: %s", err), nil
+		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("invalid password policy: %s", err))
 	}
 
 	// Generate some passwords to ensure that we're confident that the policy isn't impossible
@@ -2112,7 +2112,7 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 	}
 
 	if failed == attempts {
-		return logical.ErrorResponse("unable to generate password from provided policy in %s: are the rules impossible?", timeout), nil
+		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("unable to generate password from provided policy in %s: are the rules impossible?", timeout))
 	}
 
 	var resp *logical.Response
@@ -2129,12 +2129,12 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 	}
 	entry, err := logical.StorageEntryJSON(getPasswordPolicyKey(policyName), cfg)
 	if err != nil {
-		return logical.ErrorResponse("unable to save password policy: %s", err), nil
+		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Sprintf("unable to save password policy: %s", err))
 	}
 
 	err = req.Storage.Put(ctx, entry)
 	if err != nil {
-		return logical.ErrorResponse("failed to save policy to storage backend: %s", err), nil
+		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Sprintf("failed to save policy to storage backend: %s", err))
 	}
 
 	return logical.RespondWithStatusCode(resp, req, http.StatusOK)
@@ -2144,7 +2144,7 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 func (*SystemBackend) handlePoliciesPasswordGet(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	policyName := data.Get("name").(string)
 	if policyName == "" {
-		return logical.ErrorResponse("missing policy name"), nil
+		return nil, logical.CodedError(http.StatusBadRequest, "missing policy name")
 	}
 
 	cfg, err := retrievePasswordPolicy(ctx, req.Storage, policyName)
@@ -2152,7 +2152,7 @@ func (*SystemBackend) handlePoliciesPasswordGet(ctx context.Context, req *logica
 		return nil, logical.CodedError(http.StatusInternalServerError, "failed to retrieve password policy")
 	}
 	if cfg == nil {
-		return logical.RespondWithStatusCode(nil, req, http.StatusNotFound)
+		return nil, logical.CodedError(http.StatusNotFound, "policy does not exist")
 	}
 
 	resp := &logical.Response{
@@ -2161,7 +2161,7 @@ func (*SystemBackend) handlePoliciesPasswordGet(ctx context.Context, req *logica
 		},
 	}
 
-	return resp, nil
+	return logical.RespondWithStatusCode(resp, req, http.StatusOK)
 }
 
 // retrievePasswordPolicy retrieves a password policy from the logical storage
@@ -2187,7 +2187,7 @@ func retrievePasswordPolicy(ctx context.Context, storage logical.Storage, policy
 func (*SystemBackend) handlePoliciesPasswordDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	policyName := data.Get("name").(string)
 	if policyName == "" {
-		return logical.ErrorResponse("missing policy name"), nil
+		return nil, logical.CodedError(http.StatusBadRequest, "missing policy name")
 	}
 
 	err := req.Storage.Delete(ctx, getPasswordPolicyKey(policyName))
@@ -2202,7 +2202,7 @@ func (*SystemBackend) handlePoliciesPasswordDelete(ctx context.Context, req *log
 func (*SystemBackend) handlePoliciesPasswordGenerate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	policyName := data.Get("name").(string)
 	if policyName == "" {
-		return logical.ErrorResponse("missing policy name"), nil
+		return nil, logical.CodedError(http.StatusBadRequest, "missing policy name")
 	}
 
 	cfg, err := retrievePasswordPolicy(ctx, req.Storage, policyName)
@@ -2210,7 +2210,7 @@ func (*SystemBackend) handlePoliciesPasswordGenerate(ctx context.Context, req *l
 		return nil, logical.CodedError(http.StatusInternalServerError, "failed to retrieve password policy")
 	}
 	if cfg == nil {
-		return logical.RespondWithStatusCode(nil, req, http.StatusNotFound)
+		return nil, logical.CodedError(http.StatusNotFound, "policy does not exist")
 	}
 
 	rsg, err := random.Parse(cfg.HCLPolicy)
@@ -2225,12 +2225,10 @@ func (*SystemBackend) handlePoliciesPasswordGenerate(ctx context.Context, req *l
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"password":              password,
-			logical.HTTPContentType: "application/json",
-			logical.HTTPStatusCode:  http.StatusOK,
+			"password": password,
 		},
 	}
-	return resp, nil
+	return logical.RespondWithStatusCode(resp, req, http.StatusOK)
 }
 
 // handleAuditTable handles the "audit" endpoint to provide the audit table
