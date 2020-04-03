@@ -556,13 +556,15 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			return errwrap.Wrapf("raft recovery failed to parse peers.json: {{err}}", err)
 		}
 
-		b.logger.Info("raft recovery found new config", "config", recoveryConfig)
-
-		for _, server := range recoveryConfig.Servers {
-			if server.Suffrage == raft.Nonvoter && !nonVotersAllowed {
-				server.Suffrage = raft.Voter
+		// Non-voting servers are only allowed in enterprise. If Suffage is disabled in
+		// the recovery configuration, enable it back again.
+		for idx := range recoveryConfig.Servers {
+			if recoveryConfig.Servers[idx].Suffrage == raft.Nonvoter && !nonVotersAllowed {
+				recoveryConfig.Servers[idx].Suffrage = raft.Voter
 			}
 		}
+
+		b.logger.Info("raft recovery found new config", "config", recoveryConfig)
 
 		err = raft.RecoverCluster(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport, recoveryConfig)
 		if err != nil {
