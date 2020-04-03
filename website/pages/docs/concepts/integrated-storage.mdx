@@ -171,7 +171,7 @@ If the failed servers are recoverable, the best option is to bring them back
 online and have them reconnect to the cluster using the same host addresses.
 This will return the cluster to a fully healthy state. 
 
-If the failed servers are not recoveryable partial recovery is possible using
+If the failed servers are not recoverable, partial recovery is possible using
 data on the remaining servers in the cluster. There may be data loss in this
 situation because multiple servers were lost, so information about what's
 committed could be incomplete. The recovery process implicitly commits all
