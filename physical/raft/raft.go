@@ -559,7 +559,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		// Non-voting servers are only allowed in enterprise. If Suffage is disabled in
 		// the recovery configuration, enable it back again.
 		for idx := range recoveryConfig.Servers {
-			if recoveryConfig.Servers[idx].Suffrage == raft.Nonvoter && !nonVotersAllowed {
+			if !nonVotersAllowed && recoveryConfig.Servers[idx].Suffrage == raft.Nonvoter {
 				recoveryConfig.Servers[idx].Suffrage = raft.Voter
 			}
 		}
