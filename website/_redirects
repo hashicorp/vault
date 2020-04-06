@@ -4,6 +4,7 @@
 /api/system/revoke-force.html /api/system/leases 301!
 /api/system/revoke-prefix.html  /api/system/leases 301!
 /api/system/revoke.html /api/system/leases 301!
+/community.html /community 301!
 /docs/auth/aws-ec2.html /docs/auth/aws 301!
 /docs/commands/environment.html  /docs/commands/#environment-variables 301!
 /docs/commands/help.html  /docs/commands/path-help 301!
@@ -27,6 +28,7 @@
 /docs/guides/upgrading/upgrade-to-0.6.3.html /docs/upgrading/upgrade-to-0.6.3 301!
 /docs/guides/upgrading/upgrade-to-0.6.4.html /docs/upgrading/upgrade-to-0.6.4 301!
 /docs/guides/upgrading/upgrade-to-0.7.0.html /docs/upgrading/upgrade-to-0.7.0 301!
+/downloads.html /downloads 301!
 /guides/upgrading/upgrade-to-0.5.0.html /docs/upgrading/upgrade-to-0.5.0 301!
 /guides/upgrading/upgrade-to-0.5.1.html /docs/upgrading/upgrade-to-0.5.1 301!
 /guides/upgrading/upgrade-to-0.6.0.html /docs/upgrading/upgrade-to-0.6.0 301!
