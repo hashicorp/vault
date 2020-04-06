@@ -1,13 +1,13 @@
 import Component from '@ember/component';
-import layout from '../templates/components/vlt-table';
+import layout from '../templates/components/replication-table';
 
 /**
- * @module VltTable
- * VltTable components are used to...
+ * @module ReplicationTable
+ * ReplicationTable components are used to...
  *
  * @example
  * ```js
- * <VltTable @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <ReplicationTable @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
  * ```
  * @param {object} requiredParam - requiredParam is...
  * @param {string} [optionalParam] - optionalParam is...
