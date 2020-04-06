@@ -1,23 +1,23 @@
 .replication-dashboard {
   .has-margin-bottom {
-    padding-bottom: 9px;
+    padding-bottom: $spacing-xs;
   }
 
   .has-large-margin-top {
-    margin-top: 40px;
+    margin-top: $spacing-xl;
   }
 
   .selectable-card {
     line-height: normal;
 
     .title-number {
-      font-size: 28px;
+      font-size: $size-3;
       align-self: end;
     }
   }
 
   .helper-text {
-    font-weight: normal;
+    font-weight: $font-weight-normal;
   }
 
   .selectable-card-container {

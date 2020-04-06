@@ -5,7 +5,7 @@
     {{info-table-row label="Mode" value=metric_2}}
     {{info-table-row label="Replication set" helperText="The ID for the group of clusters communicating for this replication mode" value=metric_3}}
 </div>
-{{!-- ARG TODO: move this to the right spot --}}
+
 {{#if syncProgress}}
 {{!-- ARG TODO: need to test this --}}
   {{info-table-row label="Sync progress" value=(concat syncProgress.progress '/' syncProgress.total)}}
