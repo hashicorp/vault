@@ -1,6 +1,11 @@
 .replication {
   .selectable-card-container {
     margin: 2rem 0 2rem 0;
+    grid-template-columns: 1fr 2fr;
+
+    @include until($mobile) {
+      grid-template-columns: 1fr;
+    }
   }
 
   .selectable-card {
@@ -12,8 +17,13 @@
     }
 
     &.secondaries {
-      grid-column: 2/4;
+      grid-column: 2/3;
       grid-row: 1/3;
+
+      @include until($mobile) {
+        grid-column: 1/1;
+        grid-row: 1/1;
+      }
     }
   }
 
