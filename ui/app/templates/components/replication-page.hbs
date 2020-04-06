@@ -1,4 +1,6 @@
 {{yield (hash 
-  header=(component 'replication-page/replication-header')
-  toggle=(component 'replication-page/replication-toggle')
+  header=(component 'replication-page/replication-header' model=model)
+  toggle=(component 'replication-page/replication-toggle' model=model)
+  dashboard=(component 'replication-page/replication-dashboard/dashboard' model=model)
 )}}
+{{!-- ARG TODO, not all of these need model or everything on it.  Clean up --}}

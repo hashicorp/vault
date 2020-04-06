@@ -1,0 +1,74 @@
+.replication-dashboard {
+  .has-margin-bottom {
+    padding-bottom: $spacing-xs;
+  }
+
+  .has-large-margin-top {
+    margin-top: $spacing-xl;
+  }
+
+  .selectable-card {
+    line-height: normal;
+
+    .title-number {
+      font-size: $size-3;
+      align-self: end;
+    }
+  }
+
+  .helper-text {
+    font-weight: $font-weight-normal;
+  }
+
+  .selectable-card-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-rows: 1fr;
+    grid-gap: 2rem;
+
+    .card-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr 0.8fr;
+      padding: $spacing-l 0 18px $spacing-l;
+
+      // If descriptions are smaller then height is affected, this keeps the cards consistent
+      min-height: 200px;
+
+      .grid-item-title {
+        grid-column-start: 1;
+        grid-column-end: 2;
+        grid-row-start: 1;
+        grid-row-end: 1;
+      }
+      .grid-item-state {
+        grid-column-start: 1;
+        grid-column-end: 1;
+        grid-row-start: 2;
+        grid-row-end: 2;
+
+        line-height: 1.5;
+      }
+      .grid-item-wal {
+        grid-column-start: 2;
+        grid-column-end: 2;
+        grid-row-start: 2;
+        grid-row-end: 2;
+
+        line-height: 1.5;
+      }
+      .grid-item-stream {
+        grid-column-start: 1;
+        grid-column-end: 1;
+        grid-row-start: 3;
+        grid-row-end: 3;
+      }
+      .grid-item-status {
+        grid-column-start: 2;
+        grid-column-end: 2;
+        grid-row-start: 3;
+        grid-row-end: 3;
+      }
+    }
+  }
+}
