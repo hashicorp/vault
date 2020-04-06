@@ -327,9 +327,9 @@ export default [
                   'ha-with-raft',
                   'external',
                   'kubernetes-auth',
-                  'enterprise-with-raft.mdx',
-                  'enterprise-dr-with-raft.mdx',
-                  'enterprise-perf-with-raft.mdx',
+                  'enterprise-with-raft',
+                  'enterprise-dr-with-raft',
+                  'enterprise-perf-with-raft',
                   'enterprise-best-practice'
                 ]
               },
