@@ -3,11 +3,6 @@
     margin: 2rem 0 2rem 0;
   }
 
-  .card-container {
-    display: grid;
-    grid-gap: 2rem;
-  }
-
   .selectable-card {
     display: initial;
     line-height: normal;
@@ -17,8 +12,8 @@
     }
 
     &.secondaries {
-      grid-column-start: 3;
-      grid-column-end: 6;
+      grid-column: 2/4;
+      grid-row: 1/3;
     }
   }
 
