@@ -9,19 +9,12 @@
 
   <div class="selectable-card-container has-large-margin-top">
     {{!-- TURN THESE INTO COMPONENTS --}}
-    <div class="selectable-card is-rounded card-container">
-      <h3 class="title is-4 grid-item-title card-title">States</h3>
-      <div class="grid-item-state">
-        <code class="has-text-black">state</code>
-        <p class="has-text-grey is-size-8">Description of state, goes across multiple lines, probably.</p>
-      </div>
-      <div class="grid-item-wal">
-        <code class="has-text-black">connection state</code>
-        <p class="has-text-grey is-size-8">Description of connection_state and its implications will be here.</p>
-      </div>
-      <h2 class="title-number grid-item-stream">stream_wals</h2>
-      <h2 class="title-number is-5 grid-item-status">ready</h2>
-    </div>
+    {{yield (hash 
+      card=(
+        component 'replication-page/replication-dashboard/replication-selectable-card'
+        model=model
+      )
+    )}}
 
     <div class="selectable-card is-rounded card-container">
       <h3 class="title is-4 grid-item-title">Write-Ahead Logs (WALs)</h3>
@@ -49,5 +42,4 @@
   {{#if replicationAttrs.syncProgress}}
     {{info-table-row label="Sync progress" value=(concat replicationAttrs.syncProgress.progress '/' replicationAttrs.syncProgress.total)}}
   {{/if}}
-
 </div>

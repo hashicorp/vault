@@ -1,14 +1,15 @@
 <section class="section">
   <div class="container is-widescreen">
     {{!-- ARG TODO setup error state and return --}}
-    <ReplicationPage as |Page|>
+    <ReplicationPage @model={{model}} as |Page|>
       <Page.header 
         @showTabs={{false}} 
-        @model={{model}}
+        @model={{data}}
       />
       <Page.toggle />
-      <Page.content />
-      <Page.dashboard @model={{model}} />
+      <Page.dashboard as |Dashboard|>
+        <Dashboard.card @title="State"/>
+      </Page.dashboard>
     </ReplicationPage>
 </div>
 </section>
