@@ -32,6 +32,9 @@
       grid-template-rows: 1fr 1fr 0.8fr;
       padding: $spacing-l 0 18px $spacing-l;
 
+      // If descriptions are smaller then height is affected, this keeps the cards consistent
+      min-height: 200px;
+
       .grid-item-title {
         grid-column-start: 1;
         grid-column-end: 2;
