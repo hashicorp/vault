@@ -12,25 +12,6 @@
     border-top: 0px;
   }
 
-  .selectable-card {
-    display: initial;
-    line-height: normal;
-
-    .card-title {
-      margin-bottom: 2rem;
-    }
-
-    &.secondaries {
-      grid-column: 2/3;
-      grid-row: 1/3;
-
-      @include until($mobile) {
-        grid-column: 1/1;
-        grid-row: 1/1;
-      }
-    }
-  }
-
   .helper-text {
     font-weight: normal;
   }
