@@ -370,7 +370,13 @@
           </div>
         </div>
       </div>
-      <div>
+      <ReplicationTableRows
+          @metric_1={{if model.dr.merkleRoot model.dr.merkleRoot 'unknown' }}
+          @metric_2={{if model.dr.mode model.dr.mode 'unknown' }}
+          @metric_3={{if model.dr.clusterId model.dr.clusterId 'unknown' }}
+          @syncProgress={{if model.dr.syncProgress syncProgress false }}/>
+      {{!--
+        <div>
         {{info-table-row label="Merkle root index" helperText="A snapshot in time of the merkle tree's root hash. Changes on every update
         to storage." value=replicationAttrs.merkleRoot}}
         {{info-table-row label="Mode" value=replicationAttrs.mode}}
@@ -380,6 +386,7 @@
       {{#if replicationAttrs.syncProgress}}
         {{info-table-row label="Sync progress" value=(concat replicationAttrs.syncProgress.progress '/' replicationAttrs.syncProgress.total)}}
       {{/if}}
+      --}}
     </div>
   {{/if}}
 {{/if}}
