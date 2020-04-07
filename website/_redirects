@@ -231,4 +231,6 @@
 /docs/secrets/postgresql/index.html     /docs/secrets/databases/postgresql 301!
 /docs/secrets/postgresql                /docs/secrets/databases/postgresql 301!
 
+/downloads.html /downloads
+
 /api/*  /api-docs/:splat 200
