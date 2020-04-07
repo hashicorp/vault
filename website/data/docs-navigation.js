@@ -325,9 +325,13 @@ export default [
                   'standalone-load-balanced-ui',
                   'standalone-tls',
                   'standalone-audit',
-                  'ha-with-consul',
                   'external',
                   'kubernetes-auth',
+                  'ha-with-consul',
+                  'ha-with-raft',
+                  'enterprise-with-raft',
+                  'enterprise-dr-with-raft',
+                  'enterprise-perf-with-raft',
                   'enterprise-best-practice'
                 ]
               },
