@@ -345,7 +345,7 @@
     <div class="replication">
       <ReplicationToggle />
       <div class="selectable-card-container">
-        {{!-- TODO: there are 2 attributes for both state and lastWAL. which one do i use? --}}
+        {{!-- TODO: there are 2 attributes for both state and lastWAL. which one do I use? --}}
         <ReplicationPrimaryCard
           @title='State'
           @description='Updated every ten seconds.'
@@ -356,6 +356,7 @@
           @metric={{replicationAttrs.lastWAL}}
           />
 
+        {{!-- TODO: move this into its own component --}}
         <div class="selectable-card is-rounded secondaries">
           <div class="level">
           <code class="card-title title is-5">Known Secondaries</code>
@@ -363,30 +364,19 @@
               Manage
             </ToolbarLink>
           </div>
-          <div>
+        <div>
+
+            {{!-- TODO: pass in model or model.dr to populate with real data --}}
             <ReplicationTable />
-            {{!-- TODO: make sure this works --}}
-            {{!-- {{info-table-row label="Secondary ID" value=replicationAttrs.secondaryId}} --}}
           </div>
         </div>
       </div>
+      {{!-- TODO: improve this API to pass in model.dr, or rename metric_1 to merkleRoot etc --}}
       <ReplicationTableRows
           @metric_1={{if model.dr.merkleRoot model.dr.merkleRoot 'unknown' }}
           @metric_2={{if model.dr.mode model.dr.mode 'unknown' }}
           @metric_3={{if model.dr.clusterId model.dr.clusterId 'unknown' }}
           @syncProgress={{if model.dr.syncProgress syncProgress false }}/>
-      {{!--
-        <div>
-        {{info-table-row label="Merkle root index" helperText="A snapshot in time of the merkle tree's root hash. Changes on every update
-        to storage." value=replicationAttrs.merkleRoot}}
-        {{info-table-row label="Mode" value=replicationAttrs.mode}}
-        {{info-table-row label="Replication set" helperText="The ID for the group of clusters communicating for this replication mode" value=replicationAttrs.clusterId}}
-      </div>
-      {{!-- TODO: move this to the right spot --}}
-      {{#if replicationAttrs.syncProgress}}
-        {{info-table-row label="Sync progress" value=(concat replicationAttrs.syncProgress.progress '/' replicationAttrs.syncProgress.total)}}
-      {{/if}}
-      --}}
     </div>
   {{/if}}
 {{/if}}
