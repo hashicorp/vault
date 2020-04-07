@@ -2,7 +2,7 @@
   box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
   display: flex;
   justify-content: space-between;
-  padding: $spacing-l;
+  padding: $spacing-l 0 $spacing-l $spacing-l;
   line-height: 0;
 
   &:hover {
