@@ -2,12 +2,12 @@
   <div class="container is-widescreen">
     {{!-- ARG TODO setup error state and return --}}
     <ReplicationPage @model={{model}} as |Page|>
-      <Page.header
-        @showTabs={{false}}
+      <Page.header 
+        @showTabs={{false}} 
         @model={{data}}
       />
       <Page.toggle />
-      <Page.dashboard
+      <Page.dashboard 
       {{!-- passing in component to render so that the yielded components are flexible based on the dashboard --}}
         @componentToRender='replication-page/replication-dashboard/replication-card' as |Dashboard|>
         <Dashboard.card
@@ -19,7 +19,7 @@
           @metric_1={{if model.dr.state model.dr.state 'unknown'}}
           @metric_2={{if model.drStateDisplay model.drStateDisplay 'unknown'}}
         />
-        <Dashboard.card
+        <Dashboard.card 
           @title="Write-Ahead Logs (WALs)"
           @property_1="Last Remote WAL"
           @property_2="Last WAL entry from primary"
