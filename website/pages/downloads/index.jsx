@@ -12,11 +12,6 @@ export default function DownloadsPage({ downloadData }) {
         product="Vault"
         version={VERSION}
         downloads={downloadData}
-        prerelease={{
-          type: 'release candidate',
-          name: '1.4.0',
-          version: '1.4.0-rc1'
-        }}
       />
     </div>
   )
