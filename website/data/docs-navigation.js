@@ -254,6 +254,7 @@ export default [
         ]
       },
       { category: 'totp' },
+      { category: 'transform' },
       { category: 'transit' },
       { category: 'venafi' },
       '------------------------',
