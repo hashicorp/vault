@@ -1,0 +1,13 @@
+<div class="selectable-card is-rounded {{dasherize title}}">
+  <code class="card-title title is-5">{{title}}</code>
+  <div>
+    <span class="helper-text is-label has-text-grey">
+      {{description}}
+    </span>
+    <h3 class="title is-3">
+      {{!-- TODO make this dynamic --}}
+      <Icon @glyph="check-circle-outline" class="has-text-success" />
+      {{metric}}
+    </h3>
+  </div>
+</div>

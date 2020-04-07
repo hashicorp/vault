@@ -344,31 +344,17 @@
   {{else}}
     <div class="replication">
       <div class="selectable-card-container">
-        <div class="selectable-card is-rounded state">
-          <code class="card-title title is-5">state</code>
-          <div>
-            <span class="helper-text is-label has-text-grey">
-              Updated every ten seconds
-            </span>
-          <h3 class="title is-3">
-              {{!-- TODO make this dynamic --}}
-              <Icon @glyph="check-circle-outline" class="has-text-success" />
-            {{replicationAttrs.state}}
-            </h3>
-            {{info-table-row label="Replication state" value=replicationAttrs.replicationState}}
-          </div>
-        </div>
-        <div class="selectable-card is-rounded last_wal">
-          <code class="card-title title is-5">Last WAL entry</code>
-          <div>
-            <span class="helper-text is-label has-text-grey">
-              Index of last Write Ahead Logs entry written on local storage.
-            </span>
-            <h3 class="title is-3">{{replicationAttrs.lastWAL}}</h3>
-            {{!-- TODO: do I need this? How is this different from lastWAL above? --}}
-            {{!-- {{info-table-row label="Last Remote WAL entry" value=replicationAttrs.lastRemoteWAL}} --}}
-          </div>
-        </div>
+        {{!-- TODO: there are 2 attributes for both state and lastWAL. which one do i use? --}}
+        <ReplicationPrimaryCard
+          @title='State'
+          @description='Updated every ten seconds.'
+          @metric={{replicationAttrs.state}} />
+        <ReplicationPrimaryCard
+          @title='Last WAL entry'
+          @description='Index of last Write Ahead Logs entry written on local storage.'
+          @metric={{replicationAttrs.lastWAL}}
+          />
+
         <div class="selectable-card is-rounded secondaries">
           <div class="level">
           <code class="card-title title is-5">Known Secondaries</code>
@@ -378,7 +364,6 @@
           </div>
           <div>
             <ReplicationTable />
-            {{!-- {{info-table-row label="Secondary ID" value="URL"}} --}}
             {{!-- TODO: make sure this works --}}
             {{!-- {{info-table-row label="Secondary ID" value=replicationAttrs.secondaryId}} --}}
           </div>
