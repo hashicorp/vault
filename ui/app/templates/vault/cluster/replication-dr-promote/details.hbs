@@ -9,7 +9,7 @@
       <Page.toggle />
       <Page.dashboard 
       {{!-- passing in component to render so that the yielded components are flexible based on the dashboard --}}
-        @componentToRender='replication-page/replication-dashboard/replication-card-secondary' as |Dashboard|>
+        @componentToRender='replication-page/replication-dashboard/replication-secondary-card' as |Dashboard|>
         <Dashboard.card
           @title="States"
           @property_1="state"
