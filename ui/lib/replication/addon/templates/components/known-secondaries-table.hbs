@@ -1,0 +1,28 @@
+<div class="replication vlt-table">
+  <table class="is-fullwidth">
+    <caption class="is-collapsed">Known Secondaries</caption>
+    <thead class="has-text-weight-semibold">
+      <tr>
+        <th scope="col">Secondary ID</th>
+        <th scope="col">URL</th>
+        <th scope="col">Connected?</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{!-- TODO: populate rows with real data via replicationAttrs.secondaryId}} --}}
+      {{#each in data.knownSecondaries as |secondary|}}
+          <tr>
+            <th scope="row">
+              <code>{{secondary}}</code>
+            </th>
+            <td>
+              <code class="is-word-break">http://localhost:4200/ui/vault/replication/dr</code>
+            </td>
+            <td>
+              <code>Yes</code>
+            </td>
+          </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>

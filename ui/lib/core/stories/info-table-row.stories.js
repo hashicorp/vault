@@ -11,11 +11,12 @@ storiesOf('InfoTableRow/', module)
     () => ({
       template: hbs`
       <h5 class="title is-5">Info Table Row</h5>
-      <InfoTableRow @value={{value}} @label={{label}} @alwaysRender={{alwaysRender}} />
+      <InfoTableRow @value={{value}} @label={{label}} @helperText={{helperText}} @alwaysRender={{alwaysRender}} />
     `,
       context: {
         label: text('Label', 'TTL'),
         value: text('Value', '30m'),
+        helperText: text('helperText', 'A short description'),
         alwaysRender: boolean('Always render?', false),
       },
     }),
@@ -26,11 +27,12 @@ storiesOf('InfoTableRow/', module)
     () => ({
       template: hbs`
       <h5 class="title is-5">Info Table Row</h5>
-      <InfoTableRow @value={{value}} @label={{label}} @alwaysRender={{alwaysRender}} />
+      <InfoTableRow @value={{value}} @label={{label}} @helperText={{helperText}} @alwaysRender={{alwaysRender}} />
     `,
       context: {
         label: 'Local mount?',
         value: boolean('Value', true),
+        helperText: text('helperText', 'A short description'),
         alwaysRender: boolean('Always render?', true),
       },
     }),

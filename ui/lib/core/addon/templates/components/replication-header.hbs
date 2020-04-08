@@ -1,0 +1,66 @@
+{{!-- DR Secondary has a different Nav Header with access only to the Status menu --}}
+{{!-- ARG TODO all links are hard coded as well as titles right now, they will need to by dynamic --}}
+{{#if (and (eq model.rm.mode 'dr') (eq model.dr.mode 'secondary') )}}
+  <NavHeader as |Nav|>
+    <Nav.home>
+      <HomeLink @class="navbar-item splash-page-logo has-text-white">
+        <LogoEdition />
+      </HomeLink>
+    </Nav.home>
+    <Nav.items>
+      <div class="navbar-item status-indicator-button" data-status="{{if model.unsealed "good" "bad"}}">
+        <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
+      </div>
+    </Nav.items>
+  </NavHeader>
+{{/if}}
+
+<PageHeader as |p|>
+  <p.top>
+    {{#key-value-header
+      baseKey=baseKey
+      path="vault.cluster.replication-dr-promote"
+      root=backendCrumb
+    }}
+      <li>
+        <span class="sep">
+          /
+        </span>
+        {{#link-to "vault.cluster.replication-dr-promote"}}
+          Disaster Recovery
+        {{/link-to}}
+      </li>
+    {{/key-value-header}}
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Details
+      <span class="tag">
+        {{model.dr.mode}}
+      </span>
+      <span class="tag">
+        {{model.dr.clusterIdDisplay}}
+      </span>
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if showTabs}}
+  <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless">
+    <nav class="tabs">
+      <ul>
+        {{!-- TODO should map over array of options with link and title --}}
+        {{#link-to
+          "vault.cluster.replication-dr-promote"
+          tagName="li"
+          activeClass="is-active"
+          current-when=""
+        }}
+          {{#link-to "vault.cluster.replication-dr-promote"}}
+            Details
+          {{/link-to}}
+        {{/link-to}}
+      </ul>
+    </nav>
+  </div>
+{{/if}}

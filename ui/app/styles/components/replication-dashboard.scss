@@ -10,6 +10,10 @@
   .selectable-card {
     line-height: normal;
 
+    &:hover {
+      box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
+    }
+
     .title-number {
       font-size: $size-3;
       align-self: end;
