@@ -365,18 +365,17 @@
             </ToolbarLink>
           </div>
         <div>
-
-            {{!-- TODO: pass in model or model.dr to populate with real data --}}
-            <ReplicationTable />
+            {{!-- TODO: rename to KnownSecondariesTable and pass in model or model.dr to populate with real data --}}
+            <KnownSecondariesTable @replicationAttrs={{replicationAttrs}}/>
           </div>
         </div>
       </div>
       {{!-- TODO: improve this API to pass in model.dr, or rename metric_1 to merkleRoot etc --}}
       <ReplicationTableRows
-          @metric_1={{if model.dr.merkleRoot model.dr.merkleRoot 'unknown' }}
-          @metric_2={{if model.dr.mode model.dr.mode 'unknown' }}
-          @metric_3={{if model.dr.clusterId model.dr.clusterId 'unknown' }}
-          @syncProgress={{if model.dr.syncProgress syncProgress false }}/>
+        @merkleRoot={{if model.dr.merkleRoot model.dr.merkleRoot 'unknown' }}
+        @mode={{if model.dr.mode model.dr.mode 'unknown' }}
+        @clusterId={{if model.dr.clusterId model.dr.clusterId 'unknown' }}
+        @syncProgress={{if model.dr.syncProgress syncProgress false }}/>
     </div>
   {{/if}}
 {{/if}}

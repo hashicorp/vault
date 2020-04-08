@@ -10,17 +10,19 @@
     </thead>
     <tbody>
       {{!-- TODO: populate rows with real data via replicationAttrs.secondaryId}} --}}
-      <tr>
-        <th scope="row">
-          <code>secondary_id_1</code>
-        </th>
-        <td>
-          <code class="is-word-break">http://localhost:4200/ui/vault/replication/dr</code>
-        </td>
-        <td>
-          <code>Yes</code>
-        </td>
-      </tr>
+      {{#each in replicationAttrs.knownSecondaries as |secondary|}}
+          <tr>
+            <th scope="row">
+              <code>{{secondary}}</code>
+            </th>
+            <td>
+              <code class="is-word-break">http://localhost:4200/ui/vault/replication/dr</code>
+            </td>
+            <td>
+              <code>Yes</code>
+            </td>
+          </tr>
+      {{/each}}
     </tbody>
   </table>
 </div>
