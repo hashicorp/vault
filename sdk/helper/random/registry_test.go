@@ -26,6 +26,7 @@ func newTestRule(data map[string]interface{}) (rule Rule, err error) {
 }
 
 func (tr testRule) Pass([]rune) bool { return !tr.fail }
+func (tr testRule) Type() string     { return "testrule" }
 
 func TestParseRule(t *testing.T) {
 	type testCase struct {
@@ -93,5 +94,18 @@ func TestParseRule(t *testing.T) {
 				t.Fatalf("Actual: %#v\nExpected:%#v", actualRule, test.expectedRule)
 			}
 		})
+	}
+}
+
+// Ensure the mappings in the defaultRuleNameMapping are consistent between the keys
+// in the map and the Type() calls on the Rule values
+func TestDefaultRuleNameMapping(t *testing.T) {
+	for expectedType, constructor := range defaultRuleNameMapping {
+		// In this case, we don't care about the error since we're checking the types, not the contents
+		instance, _ := constructor(map[string]interface{}{})
+		actualType := instance.Type()
+		if actualType != expectedType {
+			t.Fatalf("Default registry mismatched types: Actual: %s Expected: %s", actualType, expectedType)
+		}
 	}
 }

@@ -9,10 +9,10 @@ import (
 // CharsetRestriction requires a certain number of characters from the specified charset.
 type CharsetRestriction struct {
 	// Charset is the list of rules that candidate strings must contain a minimum number of.
-	Charset []rune `mapstructure:"charset"`
+	Charset runes `mapstructure:"charset" json:"charset"`
 
 	// MinChars indicates the minimum (inclusive) number of characters from the charset that should appear in the string.
-	MinChars int `mapstructure:"min-chars"`
+	MinChars int `mapstructure:"min-chars" json:"min-chars"`
 }
 
 // ParseCharsetRestriction from the provided data map. The data map is expected to be parsed from HCL.
@@ -34,6 +34,10 @@ func ParseCharsetRestriction(data map[string]interface{}) (rule Rule, err error)
 	}
 
 	return cr, nil
+}
+
+func (c CharsetRestriction) Type() string {
+	return "CharsetRestriction"
 }
 
 // Chars returns the charset that this rule is looking for.

@@ -1,6 +1,7 @@
 package random
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 )
@@ -218,7 +219,7 @@ func TestParser_Parse(t *testing.T) {
 
 		// /////////////////////////////////////////////////
 		// JSON data
-		"JSON test rule and charset restrictions": {
+		"manually JSONified HCL": {
 			registry: map[string]ruleConstructor{
 				"testrule":           newTestRule,
 				"CharsetRestriction": ParseCharsetRestriction,
@@ -246,6 +247,41 @@ func TestParser_Parse(t *testing.T) {
 						}
 					]
 				}`,
+			expected: StringGenerator{
+				Length:  20,
+				Charset: []rune("abcde"),
+				Rules: []Rule{
+					&testRule{
+						String:  "teststring",
+						Integer: 123,
+					},
+					&CharsetRestriction{
+						Charset:  []rune("abcde"),
+						MinChars: 2,
+					},
+				},
+			},
+			expectErr: false,
+		},
+		"JSONified HCL": {
+			registry: map[string]ruleConstructor{
+				"testrule":           newTestRule,
+				"CharsetRestriction": ParseCharsetRestriction,
+			},
+			rawConfig: toJSON(t, StringGenerator{
+				Length:  20,
+				Charset: []rune("abcde"),
+				Rules: []Rule{
+					&testRule{
+						String:  "teststring",
+						Integer: 123,
+					},
+					&CharsetRestriction{
+						Charset:  []rune("abcde"),
+						MinChars: 2,
+					},
+				},
+			}),
 			expected: StringGenerator{
 				Length:  20,
 				Charset: []rune("abcde"),
@@ -799,4 +835,13 @@ func BenchmarkParser_Parse(b *testing.B) {
 			b.Fatalf("Failed to parse: %s", err)
 		}
 	}
+}
+
+func toJSON(t *testing.T, val interface{}) string {
+	t.Helper()
+	b, err := json.Marshal(val)
+	if err != nil {
+		t.Fatalf("unable to marshal to JSON: %s", err)
+	}
+	return string(b)
 }

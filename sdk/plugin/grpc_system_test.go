@@ -2,17 +2,17 @@ package plugin
 
 import (
 	"context"
-	"testing"
-
-	"google.golang.org/grpc"
-
 	"reflect"
+	"testing"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/random"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	"google.golang.org/grpc"
 )
 
 func TestSystem_GRPC_GRPC_impl(t *testing.T) {
@@ -237,5 +237,58 @@ func TestSystem_GRPC_pluginEnv(t *testing.T) {
 
 	if !proto.Equal(expected, actual) {
 		t.Fatalf("expected: %v, got: %v", expected, actual)
+	}
+}
+
+func TestSystem_GRPC_passwordPolicy(t *testing.T) {
+	policyName := "testpolicy"
+	expectedPolicy := random.StringGenerator{
+		Length:  8,
+		Charset: random.AlphaNumericShortSymbolRuneset,
+		Rules: []random.Rule{
+			&random.CharsetRestriction{
+				Charset:  random.LowercaseRuneset,
+				MinChars: 1,
+			},
+			&random.CharsetRestriction{
+				Charset:  random.UppercaseRuneset,
+				MinChars: 1,
+			},
+			&random.CharsetRestriction{
+				Charset:  random.NumericRuneset,
+				MinChars: 1,
+			},
+			&random.CharsetRestriction{
+				Charset:  random.ShortSymbolRuneset,
+				MinChars: 1,
+			},
+		},
+	}
+	sys := &logical.StaticSystemView{
+		PasswordPolicies: map[string]logical.PasswordPolicy{
+			policyName: expectedPolicy,
+		},
+	}
+
+	client, server := plugin.TestGRPCConn(t, func(s *grpc.Server) {
+		pb.RegisterSystemViewServer(s, &gRPCSystemViewServer{
+			impl: sys,
+		})
+	})
+	defer server.Stop()
+	defer client.Close()
+
+	testSystemView := newGRPCSystemView(client)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	actualPolicy, err := testSystemView.PasswordPolicy(ctx, policyName)
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+
+	if !reflect.DeepEqual(actualPolicy, expectedPolicy) {
+		t.Fatalf("Actual: %#v\nExpected: %#v", actualPolicy, expectedPolicy)
 	}
 }

@@ -1,7 +1,12 @@
 package vault
 
 import (
+	"context"
+	"fmt"
+	"io"
+	"reflect"
 	"testing"
+	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	ldapcred "github.com/hashicorp/vault/builtin/credential/ldap"
@@ -148,4 +153,162 @@ func TestIdentity_BackendTemplating(t *testing.T) {
 			t.Fatalf("got %q, expected %q", out, tCase.expected)
 		}
 	}
+}
+
+func TestDynamicSystemView_PasswordPolicy(t *testing.T) {
+	type testCase struct {
+		policyName     string
+		getEntry       *logical.StorageEntry
+		getErr         error
+		expectedPolicy string
+		expectErr      bool
+	}
+
+	tests := map[string]testCase{
+		"no policy name": {
+			policyName:     "",
+			expectedPolicy: "",
+			expectErr:      true,
+		},
+		"no policy found": {
+			policyName:     "testpolicy",
+			getEntry:       nil,
+			getErr:         nil,
+			expectedPolicy: "",
+			expectErr:      true,
+		},
+		"error retrieving policy": {
+			policyName:     "testpolicy",
+			getEntry:       nil,
+			getErr:         fmt.Errorf("a test error"),
+			expectedPolicy: "",
+			expectErr:      true,
+		},
+		"saved policy is malformed": {
+			policyName: "testpolicy",
+			getEntry: &logical.StorageEntry{
+				Key:   getPasswordPolicyKey("testpolicy"),
+				Value: []byte(`{"policy":"asdfahsdfasdf"}`),
+			},
+			getErr:         nil,
+			expectedPolicy: "",
+			expectErr:      true,
+		},
+		"good saved policy": {
+			policyName: "testpolicy",
+			getEntry: &logical.StorageEntry{
+				Key:   getPasswordPolicyKey("testpolicy"),
+				Value: []byte(`{"policy":"length=8\ncharset=\"ABCDE\""}`),
+			},
+			getErr:         nil,
+			expectedPolicy: "length=8\ncharset=\"ABCDE\"",
+			expectErr:      false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			testStorage := fakeBarrier{
+				getEntry: test.getEntry,
+				getErr:   test.getErr,
+			}
+
+			dsv := dynamicSystemView{
+				core: &Core{
+					barrier: testStorage,
+				},
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+			defer cancel()
+			actualPolicy, err := dsv.PasswordPolicy(ctx, test.policyName)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+
+			if !reflect.DeepEqual(actualPolicy, test.expectedPolicy) {
+				t.Fatalf("Actual Policy: %#v\nExpected Policy: %#v", actualPolicy, test.expectedPolicy)
+			}
+		})
+	}
+}
+
+type fakeBarrier struct {
+	getEntry *logical.StorageEntry
+	getErr   error
+}
+
+func (b fakeBarrier) Get(context.Context, string) (*logical.StorageEntry, error) {
+	return b.getEntry, b.getErr
+}
+func (b fakeBarrier) List(context.Context, string) ([]string, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) Put(context.Context, *logical.StorageEntry) error {
+	return fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) Delete(context.Context, string) error {
+	return fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) Initialized(ctx context.Context) (bool, error) {
+	return false, fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) Initialize(ctx context.Context, masterKey []byte, sealKey []byte, random io.Reader) error {
+	return fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) GenerateKey(io.Reader) ([]byte, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) KeyLength() (int, int) {
+	return 0, 0
+}
+func (b fakeBarrier) Sealed() (bool, error) {
+	return false, fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) Unseal(ctx context.Context, key []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) VerifyMaster(key []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) SetMasterKey(key []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) ReloadKeyring(ctx context.Context) error {
+	return fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) ReloadMasterKey(ctx context.Context) error {
+	return fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) Seal() error {
+	return fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) Rotate(ctx context.Context, reader io.Reader) (uint32, error) {
+	return 0, fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) CreateUpgrade(ctx context.Context, term uint32) error {
+	return fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) DestroyUpgrade(ctx context.Context, term uint32) error {
+	return fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) CheckUpgrade(ctx context.Context) (bool, uint32, error) {
+	return false, 0, fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) ActiveKeyInfo() (*KeyInfo, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) Rekey(context.Context, []byte) error {
+	return fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) Keyring() (*Keyring, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) Decrypt(ctx context.Context, key string, ciphertext []byte) ([]byte, error) {
+	return nil, fmt.Errorf("not implemented")
 }

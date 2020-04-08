@@ -2073,8 +2073,13 @@ func getPasswordPolicyKey(policyName string) string {
 	return fmt.Sprintf("password_policy/%s", policyName)
 }
 
+const (
+	minPasswordLength = 4
+	maxPasswordLength = 100
+)
+
 // handlePoliciesPasswordSet saves/updates password policies
-func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
 	policyName := data.Get("name").(string)
 	if policyName == "" {
 		return nil, logical.CodedError(http.StatusBadRequest, "missing policy name")
@@ -2097,6 +2102,11 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("invalid password policy: %s", err))
 	}
 
+	if rng.Length > maxPasswordLength || rng.Length < minPasswordLength {
+		return nil, logical.CodedError(http.StatusBadRequest,
+			fmt.Sprintf("passwords must be between %d and %d characters", minPasswordLength, maxPasswordLength))
+	}
+
 	// Generate some passwords to ensure that we're confident that the policy isn't impossible
 	timeout := 1 * time.Second
 	genCtx, cancel := context.WithTimeout(ctx, timeout)
@@ -2112,10 +2122,10 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 	}
 
 	if failed == attempts {
-		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("unable to generate password from provided policy in %s: are the rules impossible?", timeout))
+		return nil, logical.CodedError(http.StatusBadRequest,
+			fmt.Sprintf("unable to generate password from provided policy in %s: are the rules impossible?", timeout))
 	}
 
-	var resp *logical.Response
 	if failed > 0 {
 		resp = &logical.Response{
 			Warnings: []string{
@@ -2134,7 +2144,8 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 
 	err = req.Storage.Put(ctx, entry)
 	if err != nil {
-		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Sprintf("failed to save policy to storage backend: %s", err))
+		return nil, logical.CodedError(http.StatusInternalServerError,
+			fmt.Sprintf("failed to save policy to storage backend: %s", err))
 	}
 
 	return logical.RespondWithStatusCode(resp, req, http.StatusOK)
@@ -2192,7 +2203,8 @@ func (*SystemBackend) handlePoliciesPasswordDelete(ctx context.Context, req *log
 
 	err := req.Storage.Delete(ctx, getPasswordPolicyKey(policyName))
 	if err != nil {
-		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Sprintf("failed to delete password policy: %s", err))
+		return nil, logical.CodedError(http.StatusInternalServerError,
+			fmt.Sprintf("failed to delete password policy: %s", err))
 	}
 
 	return logical.RespondWithStatusCode(nil, req, http.StatusOK)
@@ -2215,12 +2227,14 @@ func (*SystemBackend) handlePoliciesPasswordGenerate(ctx context.Context, req *l
 
 	rsg, err := random.Parse(cfg.HCLPolicy)
 	if err != nil {
-		return nil, logical.CodedError(http.StatusInternalServerError, "stored password policy configuration failed to parse")
+		return nil, logical.CodedError(http.StatusInternalServerError,
+			"stored password policy configuration failed to parse")
 	}
 
 	password, err := rsg.Generate(ctx)
 	if err != nil {
-		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Sprintf("failed to generate password from policy: %s", err))
+		return nil, logical.CodedError(http.StatusInternalServerError,
+			fmt.Sprintf("failed to generate password from policy: %s", err))
 	}
 
 	resp := &logical.Response{

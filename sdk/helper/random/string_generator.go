@@ -6,23 +6,22 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"sort"
 	"time"
 )
 
-const (
-	LowercaseCharset   = "abcdefghijklmnopqrstuvwxyz"
-	UppercaseCharset   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	NumericCharset     = "0123456789"
-	FullSymbolCharset  = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
-	ShortSymbolCharset = "-"
-
-	AlphabeticCharset              = UppercaseCharset + LowercaseCharset
-	AlphaNumericCharset            = AlphabeticCharset + NumericCharset
-	AlphaNumericShortSymbolCharset = AlphaNumericCharset + ShortSymbolCharset
-	AlphaNumericFullSymbolCharset  = AlphaNumericCharset + FullSymbolCharset
-)
-
 var (
+	LowercaseCharset   = sortCharset("abcdefghijklmnopqrstuvwxyz")
+	UppercaseCharset   = sortCharset("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	NumericCharset     = sortCharset("0123456789")
+	FullSymbolCharset  = sortCharset("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~")
+	ShortSymbolCharset = sortCharset("-")
+
+	AlphabeticCharset              = sortCharset(UppercaseCharset + LowercaseCharset)
+	AlphaNumericCharset            = sortCharset(AlphabeticCharset + NumericCharset)
+	AlphaNumericShortSymbolCharset = sortCharset(AlphaNumericCharset + ShortSymbolCharset)
+	AlphaNumericFullSymbolCharset  = sortCharset(AlphaNumericCharset + FullSymbolCharset)
+
 	LowercaseRuneset   = []rune(LowercaseCharset)
 	UppercaseRuneset   = []rune(UppercaseCharset)
 	NumericRuneset     = []rune(NumericCharset)
@@ -59,23 +58,32 @@ var (
 	}
 )
 
+func sortCharset(chars string) string {
+	r := runes(chars)
+	sort.Sort(r)
+	return string(r)
+}
+
 // Rule to assert on string values.
 type Rule interface {
 	// Pass should return true if the provided value passes any assertions this Rule is making.
 	Pass(value []rune) bool
+
+	// Type returns the name of the rule as associated in the registry
+	Type() string
 }
 
 // StringGenerator generats random strings from the provided charset & adhering to a set of rules. The set of rules
 // are things like CharsetRestriction which requires a certain number of characters from a sub-charset.
 type StringGenerator struct {
 	// Length of the string to generate.
-	Length int `mapstructure:"length"`
+	Length int `mapstructure:"length" json:"length"`
 
 	// Charset to choose runes from.
-	Charset []rune `mapstructure:"charset"`
+	Charset runes `mapstructure:"charset" json:"charset"`
 
 	// Rules the generated strings must adhere to.
-	Rules []Rule `mapstructure:"-"`
+	Rules serializableRules `mapstructure:"-" json:"rule"` // This is "rule" in JSON so it matches the HCL property type
 
 	// rng for testing purposes to ensure error handling from the crypto/rand package is working properly.
 	rng io.Reader

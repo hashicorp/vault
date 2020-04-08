@@ -13,13 +13,17 @@ import (
 )
 
 // Parse is a convenience function for parsing HCL into a StringGenerator. See Parser.Parse for details.
-func Parse(raw string) (strs StringGenerator, err error) {
+func Parse(raw string) (gen StringGenerator, err error) {
 	parser := Parser{
 		RuleRegistry: Registry{
 			Rules: defaultRuleNameMapping,
 		},
 	}
 	return parser.Parse(raw)
+}
+
+func ParseBytes(raw []byte) (gen StringGenerator, err error) {
+	return Parse(string(raw))
 }
 
 // Parser parses string generator configuration from HCL.
@@ -246,12 +250,6 @@ func deduplicateRunes(original []rune) (deduped []rune) {
 	sort.Sort(runes(dedupedRunes))
 	return dedupedRunes
 }
-
-type runes []rune
-
-func (r runes) Len() int           { return len(r) }
-func (r runes) Less(i, j int) bool { return r[i] < r[j] }
-func (r runes) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
 
 func stringToRunesFunc(from reflect.Kind, to reflect.Kind, data interface{}) (interface{}, error) {
 	if from != reflect.String || to != reflect.Slice {

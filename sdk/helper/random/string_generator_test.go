@@ -3,6 +3,7 @@ package random
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"io"
 	MRAND "math/rand"
@@ -163,7 +164,7 @@ func TestRandomRunes_deterministic(t *testing.T) {
 			rngSeed:  1585593298447807001,
 			charset:  AlphaNumericShortSymbolCharset,
 			length:   20,
-			expected: "CZYHwguyM3JF-UmfMgP-",
+			expected: "1ON6lVjnBs84zJbUBVEz",
 		},
 		"max size charset": {
 			rngSeed: 1585593298447807002,
@@ -442,6 +443,46 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 			}
 		}
 	})
+}
+
+// Ensure the StringGenerator can be properly JSON-ified
+func TestStringGenerator_JSON(t *testing.T) {
+	expected := StringGenerator{
+		Length:  20,
+		Charset: AlphaNumericShortSymbolRuneset,
+		Rules: []Rule{
+			&testRule{
+				String:  "teststring",
+				Integer: 123,
+			},
+			&CharsetRestriction{
+				Charset:  ShortSymbolRuneset,
+				MinChars: 1,
+			},
+		},
+	}
+
+	b, err := json.Marshal(expected)
+	if err != nil {
+		t.Fatalf("Failed to marshal to JSON: %s", err)
+	}
+
+	parser := Parser{
+		RuleRegistry: Registry{
+			Rules: map[string]ruleConstructor{
+				"testrule":           newTestRule,
+				"CharsetRestriction": ParseCharsetRestriction,
+			},
+		},
+	}
+	actual, err := parser.Parse(string(b))
+	if err != nil {
+		t.Fatalf("Failed to parse JSON: %s", err)
+	}
+
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("Actual: %#v\nExpected: %#v", actual, expected)
+	}
 }
 
 type badReader struct{}
