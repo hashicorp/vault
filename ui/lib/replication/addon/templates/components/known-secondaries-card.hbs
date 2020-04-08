@@ -6,6 +6,12 @@
     </ToolbarLink>
   </div>
   <div>
-    <KnownSecondariesTable @data={{replicationAttrs}} />
+    {{#unless replicationAttrs.knownSecondaries}}
+      <EmptyState
+        @title="No known {{replicationAttrs.mode}} secondary clusters associated with this cluster"
+        @message="Associated secondary clusters will be listed here. Add your first secondary cluster to get started." />
+    {{else}}
+      <KnownSecondariesTable @data={{replicationAttrs}} />
+    {{/unless}}
   </div>
 </div>
