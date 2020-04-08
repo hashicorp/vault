@@ -4,12 +4,12 @@
     <ReplicationPage @model={{model}} as |Page|>
       <Page.header 
         @showTabs={{false}} 
-        @model={{data}}
+        @model={{model}}
       />
       <Page.toggle />
       <Page.dashboard 
       {{!-- passing in component to render so that the yielded components are flexible based on the dashboard --}}
-        @componentToRender='replication-page/replication-dashboard/replication-card' as |Dashboard|>
+        @componentToRender='replication-page/replication-dashboard/replication-card-secondary' as |Dashboard|>
         <Dashboard.card
           @title="States"
           @property_1="state"
@@ -17,24 +17,27 @@
           @description_1="How this cluster is communicating with others at this moment."
           @description_2="coming"
           @metric_1={{if model.dr.state model.dr.state 'unknown'}}
+          {{!-- ARG TODO this might be wrong, could be connection_state --}}
           @metric_2={{if model.drStateDisplay model.drStateDisplay 'unknown'}}
         />
         <Dashboard.card 
           @title="Write-Ahead Logs (WALs)"
-          @property_1="Last Remote WAL"
-          @property_2="Last WAL entry from primary"
+          @property_1="last_wal"
+          @property_2="last_remote_wal"
           @property_3="Delta"
-          @description_1="The difference between the last remote WAL and the last WAL entry from the primary."
-          @metric_1={{if model.dr.lastRemoteWAL model.dr.lastRemoteWAL '0' }}
-          @metric_2={{if model.dr.lastWAL model.dr.lastWAL '0'}}
+          @description_3="The difference between the last remote WAL and the last WAL entry from the primary."
+          {{!-- last_wal which comes from the primary --}}
+          @metric_1={{if model.dr.lastWAL (format-number model.dr.lastWAL) '0'}}
+          {{!-- last_remote_wal which comes from the secondary --}}
+          @metric_2={{if model.dr.lastRemoteWAL (format-number model.dr.lastRemoteWAL) '0'}} 
           {{!-- angel calc using computed in controller --}}
           @metric_3=0
         />
         <Dashboard.rows
-          @metric_1={{if model.dr.merkleRoot model.dr.merkleRoot 'unknown' }}
-          @metric_2={{if model.dr.mode model.dr.mode 'unknown' }}
-          @metric_3={{if model.dr.clusterId model.dr.clusterId 'unknown' }}
-          @syncProgress={{if model.dr.syncProgress syncProgress false }}
+          @metric_1={{if model.dr.merkleRoot model.dr.merkleRoot 'unknown'}}
+          @metric_2={{if model.dr.mode model.dr.mode 'unknown'}}
+          @metric_3={{if model.dr.clusterId model.dr.clusterId 'unknown'}}
+          @syncProgress={{if model.dr.syncProgress syncProgress false}}
         />
       </Page.dashboard>
     </ReplicationPage>

@@ -1,8 +1,13 @@
 <div class="selectable-card is-rounded card-container">
   <h3 class="title is-4 grid-item-title card-title">{{title}}</h3>
   <div class="grid-item-state">
-    <code class="has-text-black">{{property_1}}</code>
-    <p class="has-text-grey is-size-8">{{description_1}}</p>
+    {{#if property_3}}
+      <code class="has-text-black">{{property_3}}</code>
+      <p class="has-text-grey is-size-8">{{description_3}}</p>
+    {{else}}
+      <code class="has-text-black">{{property_1}}</code>
+      <p class="has-text-grey is-size-8">{{description_1}}</p>
+    {{/if}}
   </div>
   <div class="grid-item-wal">
     {{!-- Check if card is for showing Delta information --}}

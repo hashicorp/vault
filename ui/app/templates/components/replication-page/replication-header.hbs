@@ -1,5 +1,4 @@
 {{!-- DR Secondary has a different Nav Header with access only to the Status menu --}}
-{{!-- ARG TODO all links are hard coded as well as titles right now, they will need to by dynamic --}}
 {{#if (and (eq model.rm.mode 'dr') (eq model.dr.mode 'secondary') )}}
   <NavHeader as |Nav|>
     <Nav.home>
@@ -14,7 +13,6 @@
     </Nav.items>
   </NavHeader>
 {{/if}}
-
 <PageHeader as |p|>
   <p.top>
     {{#key-value-header
@@ -49,7 +47,6 @@
   <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless">
     <nav class="tabs">
       <ul>
-        {{!-- TODO should map over array of options with link and title --}}
         {{#link-to
           "vault.cluster.replication-dr-promote"
           tagName="li"
