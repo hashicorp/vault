@@ -366,16 +366,12 @@
           </div>
         <div>
             {{!-- TODO: rename to KnownSecondariesTable and pass in model or model.dr to populate with real data --}}
-            <KnownSecondariesTable @replicationAttrs={{replicationAttrs}}/>
+            <KnownSecondariesTable @data={{replicationAttrs}}/>
           </div>
         </div>
       </div>
       {{!-- TODO: improve this API to pass in model.dr, or rename metric_1 to merkleRoot etc --}}
-      <ReplicationTableRows
-        @merkleRoot={{if model.dr.merkleRoot model.dr.merkleRoot 'unknown' }}
-        @mode={{if model.dr.mode model.dr.mode 'unknown' }}
-        @clusterId={{if model.dr.clusterId model.dr.clusterId 'unknown' }}
-        @syncProgress={{if model.dr.syncProgress syncProgress false }}/>
+      <ReplicationTableRows @data={{replicationAttrs}}/>
     </div>
   {{/if}}
 {{/if}}
