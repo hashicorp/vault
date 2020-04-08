@@ -23,10 +23,12 @@
           @title="Write-Ahead Logs (WALs)"
           @property_1="Last Remote WAL"
           @property_2="Last WAL entry from primary"
-          @description_1="Index of the last Write-Ahead Logs (WAL) entry written on the local storage."
-          @description_2="Index of the last WAL entry from  the primary."
-          @metric_1={{if model.dr.lastRemoteWAL model.dr.lastRemoteWAL 'unknown' }}
-          @metric_2={{if model.dr.lastWAL model.dr.lastWAL 'unknown'}}
+          @property_3="Delta"
+          @description_1="The difference between the last remote WAL and the last WAL entry from the primary."
+          @metric_1={{if model.dr.lastRemoteWAL model.dr.lastRemoteWAL '0' }}
+          @metric_2={{if model.dr.lastWAL model.dr.lastWAL '0'}}
+          {{!-- angel calc using computed in controller --}}
+          @metric_3=0
         />
         <Dashboard.rows
           @metric_1={{if model.dr.merkleRoot model.dr.merkleRoot 'unknown' }}

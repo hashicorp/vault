@@ -31,6 +31,7 @@
       grid-template-columns: 1fr 1fr;
       grid-template-rows: 1fr 1fr 0.8fr;
       padding: $spacing-l 0 18px $spacing-l;
+      line-height: 1.5;
 
       // If descriptions are smaller then height is affected, this keeps the cards consistent
       min-height: 200px;
@@ -46,22 +47,22 @@
         grid-column-end: 1;
         grid-row-start: 2;
         grid-row-end: 2;
-
-        line-height: 1.5;
       }
       .grid-item-wal {
         grid-column-start: 2;
         grid-column-end: 2;
         grid-row-start: 2;
         grid-row-end: 2;
-
-        line-height: 1.5;
       }
       .grid-item-stream {
         grid-column-start: 1;
         grid-column-end: 1;
         grid-row-start: 3;
         grid-row-end: 3;
+
+        .hs-icon {
+          margin-bottom: 5px;
+        }
       }
       .grid-item-status {
         grid-column-start: 2;
@@ -70,5 +71,9 @@
         grid-row-end: 3;
       }
     }
+  }
+
+  .has-text-highlight {
+    color: $yellow-500;
   }
 }
