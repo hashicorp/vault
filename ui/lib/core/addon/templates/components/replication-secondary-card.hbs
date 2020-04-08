@@ -21,13 +21,33 @@
   </div>
 
   {{#if @property_3}}
-    <h2 class="title-number grid-item-stream">{{metric_3}}
-      <Icon 
-        @glyph={{if false "check-circle-outline" "alert-triangle"}} 
-        class={{if false "has-text-success" "has-text-highlight"}} 
-        @aria-label="success"
-        @size="l"
-      />
+    <h2 class="title-number grid-item-stream">{{delta}}
+      <ToolTip @verticalPosition="above" @closeDelay="2000ms" as |T|>
+        <T.trigger>
+          <Icon 
+          {{!-- ARG TODO replace false and true with correct variable --}}
+            @glyph={{if (gt delta 0) "alert-triangle" "check-circle-outline" }} 
+            @size="l" 
+            class={{if (gt delta 0) "has-text-highlight" "has-text-success"}}
+          />
+        </T.trigger>
+        <T.content @class="tool-tip">
+          <div class="box">
+            {{#if (gt delta 0)}}
+              There is a difference between last remote WAL and last WAL entry from primary.
+              This maybe a syncing issue.
+              <LearnLink 
+                @path="/vault/operations/monitor-replication#are-my-dr-clusters-in-sync"
+                @class="has-text-white"
+              >
+                Learn more
+              </LearnLink>
+            {{else}}
+              Everything is up to date!
+            {{/if}}
+          </div>
+        </T.content>
+      </ToolTip>
     </h2>
   {{else}}
     <h2 class="title-number grid-item-stream">{{metric_1}}</h2>

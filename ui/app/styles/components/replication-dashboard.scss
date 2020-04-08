@@ -69,9 +69,8 @@
         grid-row-start: 3;
         grid-row-end: 3;
 
-        .hs-icon {
-          margin-bottom: 5px;
-        }
+        display: flex;
+        align-items: center;
       }
       .grid-item-status {
         grid-column-start: 2;
