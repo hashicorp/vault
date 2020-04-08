@@ -11,7 +11,7 @@ import layout from '../templates/components/info-table-row';
  *
  * @example
  * ```js
- * <InfoTableRow @value={{5}} @label="TTL" @helperText="Some description"/>/>
+ * <InfoTableRow @value={{5}} @label="TTL" @helperText="Some description"/>
  * ```
  *
  * @param value=null {any} - The the data to be displayed - by default the content of the component will only show if there is a value. Also note that special handling is given to boolean values - they will render `Yes` for true and `No` for false.
