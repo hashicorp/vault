@@ -36,6 +36,9 @@ cluster_addr = "http://127.0.0.1:8201"
 `cluster_addr` to indicate the address and port to be used for communication
 between the nodes in the Raft cluster.
 
+~> **Note:** When using the Raft storage backend, a separate `ha_storage`
+backend cannot be declared.
+
 ~> **Note:** Raft cannot be used as the configured `ha_storage` backend at this
 time. To use Raft for HA coordination users must also use Raft for storage.
 
@@ -54,7 +57,7 @@ time. To use Raft for HA coordination users must also use Raft for storage.
   expense of requiring more network and CPU resources for better performance.
   Omitting this value or setting it to 0 uses default timing described below.
   Lower values are used to tighten timing and increase sensitivity while higher
-  values relax timings and reduce sensitivity. 
+  values relax timings and reduce sensitivity.
 
   By default, Vault will use a lower-performance timing that's suitable for
   minimal Vault servers, currently equivalent to setting this to a value of 5
