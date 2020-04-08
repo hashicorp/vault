@@ -4,6 +4,12 @@ CHANGES:
 
 * token: Token renewals will now return token policies within the `token_policies` , identity policies within `identity_policies`, and the full policy set within `policies`. [[GH-8535](https://github.com/hashicorp/vault/pull/8535)]
 
+## 1.4.1 (TBD)
+
+CHANGES: 
+
+* storage/raft: Disallow `ha_storage` to be specified if `raft` is set as the `storage` type. [[GH-8707](https://github.com/hashicorp/vault/pull/8707)]
+
 ## 1.4.0 (April 7th, 2020)
 
 CHANGES:
