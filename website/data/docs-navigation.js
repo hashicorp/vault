@@ -381,7 +381,8 @@ export default [
       'upgrade-to-1.2.0',
       'upgrade-to-1.2.1',
       'upgrade-to-1.2.4',
-      'upgrade-to-1.3.0'
+      'upgrade-to-1.3.0',
+      'upgrade-to-1.4.0'
     ]
   },
   '----------------',
