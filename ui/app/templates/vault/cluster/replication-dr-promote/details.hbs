@@ -30,8 +30,6 @@
           @metric_1={{if model.dr.lastWAL (format-number model.dr.lastWAL) '0'}}
           {{!-- last_remote_wal which comes from the secondary --}}
           @metric_2={{if model.dr.lastRemoteWAL (format-number model.dr.lastRemoteWAL) '0'}} 
-          {{!-- angel calc using computed in controller --}}
-          @metric_3=0
         />
         <Dashboard.rows
           @metric_1={{if model.dr.merkleRoot model.dr.merkleRoot 'unknown'}}
