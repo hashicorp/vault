@@ -1,8 +1,8 @@
 ---
-layout: "docs"
-page_title: "Highly Available Vault Enterprise Performance Clusters with Raft"
-sidebar_current: "docs-platform-k8s-examples-enterprise-perf-with-raft"
-sidebar_title: "HA Enterprise Performance Clusters with Raft"
+layout: 'docs'
+page_title: 'Highly Available Vault Enterprise Performance Clusters with Raft'
+sidebar_current: 'docs-platform-k8s-examples-enterprise-perf-with-raft'
+sidebar_title: 'HA Enterprise Performance Clusters with Raft'
 description: |-
   Describes how to set up Performance clusters with Integrated Storage (Raft)
 ---
@@ -13,7 +13,7 @@ description: |-
 
 The following is an example of creating a performance cluster using Vault Helm.
 
-For more information on Disaster Recovery, [see the official documentation](docs/enterprise/replication/).
+For more information on Disaster Recovery, [see the official documentation](/docs/enterprise/replication/).
 
 ## Primary Cluster
 
@@ -35,8 +35,8 @@ kubectl exec -ti vault-primary-0 -- vault operator init
 kubectl exec -ti vault-primary-0 -- vault operator unseal
 ```
 
-Finally, join the remaining pods to the Raft cluster and unseal them.  The pods 
-will need to communicate directly so we'll configure the pods to use the internal 
+Finally, join the remaining pods to the Raft cluster and unseal them. The pods
+will need to communicate directly so we'll configure the pods to use the internal
 service provided by the Helm chart:
 
 ```shell
@@ -87,7 +87,7 @@ kubectl exec -ti vault-secondary-0 -- vault operator init
 kubectl exec -ti vault-secondary-0 -- vault operator unseal
 ```
 
-Finally, join the remaining pods to the Raft cluster and unseal them.  The pods
+Finally, join the remaining pods to the Raft cluster and unseal them. The pods
 will need to communicate directly so we'll configure the pods to use the internal
 service provided by the Helm chart:
 
@@ -145,7 +145,7 @@ Using the token created in the last step, enable performance replication on the 
 kubectl exec -ti vault-secondary-0 -- vault write sys/replication/performance/secondary/enable token=<TOKEN FROM PRIMARY>
 ```
 
-Last, delete the remainder secondary pods and unseal them using the primary unseal token 
+Last, delete the remainder secondary pods and unseal them using the primary unseal token
 after Kubernetes reschedules them:
 
 ```shell

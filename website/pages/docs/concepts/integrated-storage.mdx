@@ -17,7 +17,7 @@ The integrated storage option stores Vault's data on the server's filesystem and
 uses a consensus protocol to replicate data to each server in the cluster. More
 information on the internals of integrated storage can be found in the
 [integrated storage internals
-documentation](/docs/internals/integrated-storage/). Additionally, the 
+documentation](/docs/internals/integrated-storage/). Additionally, the
 [Configuration](/docs/configuration/storage/raft/) docs can help in configuring
 Vault to use integrated storage.
 
@@ -27,7 +27,7 @@ integrated storage.
 ## Cluster Membership
 
 This section will outline how to bootstrap and manage a cluster of Vault nodes
-running integrated storage. 
+running integrated storage.
 
 Integrated storage is bootstrapped during the [initialization
 process](https://learn.hashicorp.com/vault/getting-started/deploy#initializing-the-vault),
@@ -48,8 +48,8 @@ been joined it cannot be re-joined to a different cluster.
 
 You can either join the node automatically via the config file or manually through the
 API (both methods described below). When joining a node, the API address of the leader node must be used. We
-recommend setting the [api_addr](/docs/concepts/ha/#direct-access) configuration
-option on all nodes to make joining simpler. 
+recommend setting the [api_addr](/docs/concepts/ha#direct-access) configuration
+option on all nodes to make joining simpler.
 
 #### retry_join Configuration
 
@@ -60,7 +60,7 @@ leaders become active this node will successfully join. When using Shamir seal,
 the joined nodes will still need to be unsealed manually. When using Auto Unseal
 the node will be able to join and unseal automatically.
 
-An example [retry_join](/docs/configuration/storage/raft/#retry_join-stanza)
+An example [retry_join](/docs/configuration/storage/raft#retry_join-stanza)
 config can be seen below:
 
 ```hcl
@@ -104,10 +104,10 @@ Removing a peer node is a necessary step when you no longer want the node in the
 cluster. This could happen if the node is rotated for a new one, the hostname
 permanently changes and can no longer be accessed, you're attempting to shrink
 the size of the cluster, or for many other reasons. Removing the peer will
-ensure the cluster stays at the desired size, and that quorum is maintained. 
+ensure the cluster stays at the desired size, and that quorum is maintained.
 
 To remove the peer you can issue a
-[remove-peer](/docs/commands/operator/raft/#remove-peer) command and provide the
+[remove-peer](/docs/commands/operator/raft#remove-peer) command and provide the
 node ID you wish to remove:
 
 ```shell
@@ -118,9 +118,9 @@ Peer removed successfully!
 ### Listing Peers
 
 To see the current peer set for the cluster you can issue a
-[list-peers](/docs/commands/operator/raft/#list-peers) command. All the voting
+[list-peers](/docs/commands/operator/raft#list-peers) command. All the voting
 nodes that are listed here contribute to the quorum and a majority must be alive
-for integrated storage to continue to operate. 
+for integrated storage to continue to operate.
 
 ```shell
 $ vault operator raft list-peers
@@ -135,10 +135,10 @@ node3    node3.vault.local:8201    leader      true
 
 Once nodes are joined to one another they begin to communicate using mTLS over
 Vault's cluster port. The cluster port defaults to `8201`. The TLS information
-is exchanged at join time and is rotated on a cadence. 
+is exchanged at join time and is rotated on a cadence.
 
 A requirement for integrated storage is that the
-[cluster_addr](/docs/concepts/ha/#per-node-cluster-address) configuration option
+[cluster_addr](/docs/concepts/ha#per-node-cluster-address) configuration option
 is set. This allows Vault to assign an address to the node ID at join time.
 
 ## Outage Recovery
@@ -148,11 +148,11 @@ is set. This allows Vault to assign an address to the node ID at join time.
 This section outlines the steps to take when a single server or multiple servers
 are in a failed state but quorum is still maintained. This means the remaining
 alive servers are still operational, can elect a leader, and are able to process
-write requests. 
+write requests.
 
 If the failed server is recoverable, the best option is to bring it back online
 and have it reconnect to the cluster with the same host address. This will return
-the cluster to a fully healthy state. 
+the cluster to a fully healthy state.
 
 If this is impractical, you need to remove the failed server. Usually, you can
 issue a remove-peer command to remove the failed server if it's still a member
@@ -169,7 +169,7 @@ complete outage, partial recovery is still possible.
 
 If the failed servers are recoverable, the best option is to bring them back
 online and have them reconnect to the cluster using the same host addresses.
-This will return the cluster to a fully healthy state. 
+This will return the cluster to a fully healthy state.
 
 If the failed servers are not recoverable, partial recovery is possible using
 data on the remaining servers in the cluster. There may be data loss in this
@@ -198,7 +198,7 @@ implicitly committed, so this should only be used after an outage where no other
 option is available to recover a lost server. Make sure you don't have any
 automated processes that will put the peers file in place on a periodic basis.
 
-To begin, stop all remaining servers. 
+To begin, stop all remaining servers.
 
 The next step is to go to the [configured data
 path](/docs/configuration/storage/raft/#path) of each Vault server. Inside that
@@ -227,12 +227,12 @@ wish to be in the cluster.
 ]
 ```
 
-* `id` `(string: <required>)` - Specifies the node ID of the server. This can be
+- `id` `(string: <required>)` - Specifies the node ID of the server. This can be
   found in the config file, or inside the node-id file in the server's data
   directory if it was auto-generated.
-* `address` `(string: <required>)` - Specifies the host and port of the server. The
+- `address` `(string: <required>)` - Specifies the host and port of the server. The
   port is the server's cluster port.
-* `non_voter` `(bool: <false>)` - This controls whether the server is a non-voter.
+- `non_voter` `(bool: <false>)` - This controls whether the server is a non-voter.
   If omitted, it will default to false, which is typical for most clusters. This
   is an enterprise only feature.
 
@@ -242,7 +242,7 @@ that this file is the same across all remaining server nodes.
 
 At this point, you can restart all the remaining servers. The cluster should be
 in an operable state again. One of the nodes should claim leadership and become
-active. 
+active.
 
 ### Other Recovery Methods
 

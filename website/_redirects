@@ -1,5 +1,6 @@
 /downloads.html /downloads 301!
 /community.html /community 301!
+/api-docs/index /api-docs 301!
 /intro /intro/getting-started 301!
 /api/secret/generic/index.html  /api/secret/kv 301!
 /api/system/renew.html  /api/system/leases 301!
