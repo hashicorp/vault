@@ -1144,6 +1144,11 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the separate HA storage backend, if it exists
 	var ok bool
 	if config.HAStorage != nil {
+		if config.Storage.Type == "raft" {
+			c.UI.Error("HA storage cannot be declared when Raft is the storage type")
+			return 1
+		}
+
 		// TODO: Remove when Raft can server as the ha_storage backend.
 		// See https://github.com/hashicorp/vault/issues/8206
 		if config.HAStorage.Type == "raft" {
