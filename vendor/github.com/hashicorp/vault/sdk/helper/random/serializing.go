@@ -51,6 +51,20 @@ func (r serializableRules) MarshalJSON() (b []byte, err error) {
 	return b, err
 }
 
+func (r *serializableRules) UnmarshalJSON(data []byte) (err error) {
+	mapData := []map[string]interface{}{}
+	err = json.Unmarshal(data, &mapData)
+	if err != nil {
+		return err
+	}
+	rules, err := parseRules(defaultRegistry, mapData)
+	if err != nil {
+		return err
+	}
+	*r = rules
+	return nil
+}
+
 type runes []rune
 
 func (r runes) Len() int           { return len(r) }
