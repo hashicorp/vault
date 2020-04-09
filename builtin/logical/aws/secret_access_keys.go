@@ -67,7 +67,20 @@ func genUsername(displayName, policyName, userType string) (ret string, warning 
 
 func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 	displayName, policyName, policy string, policyARNs []string,
-	lifeTimeInSeconds int64) (*logical.Response, error) {
+	iamGroups []string, lifeTimeInSeconds int64) (*logical.Response, error) {
+
+	groupPolicies, groupPolicyARNs, err := b.getGroupPolicies(iamGroups)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+	if groupPolicies != nil {
+		groupPolicies = append(groupPolicies, policy)
+		policy, err = combinePolicyDocuments(groupPolicies...)
+	}
+	if len(groupPolicyARNs) > 0 {
+		policyARNs = append(policyARNs, groupPolicyARNs...)
+	}
+
 	stsClient, err := b.clientSTS(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -126,7 +139,22 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string, policyARNs []string,
-	lifeTimeInSeconds int64) (*logical.Response, error) {
+	iamGroups []string, lifeTimeInSeconds int64) (*logical.Response, error) {
+
+	// grab any IAM group policies associated with the vault role, both inline
+	// and managed
+	groupPolicies, groupPolicyARNs, err := b.getGroupPolicies(iamGroups)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+	if groupPolicies != nil {
+		groupPolicies = append(groupPolicies, policy)
+		policy, err = combinePolicyDocuments(groupPolicies...)
+	}
+	if len(groupPolicyARNs) > 0 {
+		policyARNs = append(policyARNs, groupPolicyARNs...)
+	}
+
 	stsClient, err := b.clientSTS(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -243,6 +271,18 @@ func (b *backend) secretAccessKeysCreate(
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"Error putting user policy: %s", err)), awsutil.CheckAWSError(err)
+		}
+	}
+
+	for _, group := range role.IAMGroups {
+		// Add user to IAM groups
+		_, err = iamClient.AddUserToGroup(&iam.AddUserToGroupInput{
+			UserName:  aws.String(username),
+			GroupName: aws.String(group),
+		})
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"Error adding user to group: %s", err)), awsutil.CheckAWSError(err)
 		}
 	}
 

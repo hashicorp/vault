@@ -80,6 +80,11 @@ will be passed in as the Policy parameter to the AssumeRole or
 GetFederationToken API call, acting as a filter on permissions available.`,
 			},
 
+			"iam_groups": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: `Names of IAM groups that generated IAM users will be added to.`,
+			},
+
 			"default_sts_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Description: fmt.Sprintf("Default TTL for %s and %s credential types when no TTL is explicitly requested with the credentials", assumedRoleCred, federationTokenCred),
@@ -284,6 +289,10 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		roleEntry.PermissionsBoundaryARN = permissionsBoundaryARNRaw.(string)
 	}
 
+	if iamGroups, ok := d.GetOk("iam_groups"); ok {
+		roleEntry.IAMGroups = iamGroups.([]string)
+	}
+
 	if legacyRole != "" {
 		roleEntry = upgradeLegacyPolicyEntry(legacyRole)
 		if roleEntry.InvalidData != "" {
@@ -468,6 +477,7 @@ type awsRoleEntry struct {
 	PolicyArns               []string      `json:"policy_arns"`                           // ARNs of managed policies to attach to an IAM user
 	RoleArns                 []string      `json:"role_arns"`                             // ARNs of roles to assume for AssumedRole credentials
 	PolicyDocument           string        `json:"policy_document"`                       // JSON-serialized inline policy to attach to IAM users and/or to specify as the Policy parameter in AssumeRole calls
+	IAMGroups                []string      `json:"iam_groups"`                            // Names of IAM groups that generated IAM users will be added to
 	InvalidData              string        `json:"invalid_data,omitempty"`                // Invalid role data. Exists to support converting the legacy role data into the new format
 	ProhibitFlexibleCredPath bool          `json:"prohibit_flexible_cred_path,omitempty"` // Disallow accessing STS credentials via the creds path and vice verse
 	Version                  int           `json:"version"`                               // Version number of the role format
@@ -483,6 +493,7 @@ func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 		"policy_arns":              r.PolicyArns,
 		"role_arns":                r.RoleArns,
 		"policy_document":          r.PolicyDocument,
+		"iam_groups":               r.IAMGroups,
 		"default_sts_ttl":          int64(r.DefaultSTSTTL.Seconds()),
 		"max_sts_ttl":              int64(r.MaxSTSTTL.Seconds()),
 		"user_path":                r.UserPath,
