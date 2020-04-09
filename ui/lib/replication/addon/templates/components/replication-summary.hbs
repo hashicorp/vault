@@ -354,7 +354,7 @@
           @title='Last WAL entry'
           @description='Index of last Write Ahead Logs entry written on local storage.'
           @metric={{replicationAttrs.lastWAL}}/>
-        <KnownSecondariesCard @replicationAttrs={{replicationAttrs}} />
+        <KnownSecondariesCard @cluster={{cluster}} @replicationAttrs={{replicationAttrs}} />
       </div>
       <ReplicationTableRows @data={{replicationAttrs}}/>
     </div>
