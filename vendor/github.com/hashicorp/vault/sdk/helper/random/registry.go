@@ -12,10 +12,6 @@ var (
 	defaultRuleNameMapping = map[string]ruleConstructor{
 		"CharsetRestriction": ParseCharsetRestriction,
 	}
-
-	defaultRegistry = Registry{
-		Rules: defaultRuleNameMapping,
-	}
 )
 
 // Registry of HCL rule names to rule constructors.

@@ -10,10 +10,13 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/random"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func newGRPCSystemView(conn *grpc.ClientConn) *gRPCSystemViewClient {
@@ -161,6 +164,21 @@ func (s *gRPCSystemViewClient) PluginEnv(ctx context.Context) (*logical.PluginEn
 	return reply.PluginEnvironment, nil
 }
 
+func (s *gRPCSystemViewClient) PasswordPolicy(ctx context.Context, policyName string) (policy logical.PasswordPolicy, err error) {
+	req := &pb.PasswordPolicyRequest{
+		PolicyName: policyName,
+	}
+	resp, err := s.client.PasswordPolicy(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	passPolicy, err := random.ParseBytes(resp.RawPolicy)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse password policy: %w", err)
+	}
+	return passPolicy, nil
+}
+
 type gRPCSystemViewServer struct {
 	impl logical.SystemView
 }
@@ -273,4 +291,23 @@ func (s *gRPCSystemViewServer) PluginEnv(ctx context.Context, _ *pb.Empty) (*pb.
 	return &pb.PluginEnvReply{
 		PluginEnvironment: pluginEnv,
 	}, nil
+}
+
+func (s *gRPCSystemViewServer) PasswordPolicy(ctx context.Context, req *pb.PasswordPolicyRequest) (*pb.PasswordPolicyResponse, error) {
+	policy, err := s.impl.PasswordPolicy(ctx, req.PolicyName)
+	if err != nil {
+		return &pb.PasswordPolicyResponse{}, status.Errorf(codes.Internal, "unable to retrieve password policy: %s", err)
+	}
+	if policy == nil {
+		return &pb.PasswordPolicyResponse{}, status.Errorf(codes.NotFound, "policy not found")
+	}
+
+	b, err := json.Marshal(policy)
+	if err != nil {
+		return &pb.PasswordPolicyResponse{}, status.Errorf(codes.Internal, "unable to serialize password policy: %s", err)
+	}
+	resp := &pb.PasswordPolicyResponse{
+		RawPolicy: b,
+	}
+	return resp, nil
 }

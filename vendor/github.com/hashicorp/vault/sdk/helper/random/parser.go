@@ -60,7 +60,7 @@ func (p Parser) Parse(raw string) (strs StringGenerator, err error) {
 		return strs, fmt.Errorf("unable to retrieve rules: %w", err)
 	}
 
-	rules, err := parseRules(p.RuleRegistry, rawRules)
+	rules, err := p.parseRules(rawRules)
 	if err != nil {
 		return strs, fmt.Errorf("unable to parse rules: %w", err)
 	}
@@ -83,7 +83,7 @@ func (p Parser) Parse(raw string) (strs StringGenerator, err error) {
 	return strs, nil
 }
 
-func parseRules(registry Registry, rawRules []map[string]interface{}) (rules []Rule, err error) {
+func (p Parser) parseRules(rawRules []map[string]interface{}) (rules []Rule, err error) {
 	for _, rawRule := range rawRules {
 		info, err := getRuleInfo(rawRule)
 		if err != nil {
@@ -93,7 +93,7 @@ func parseRules(registry Registry, rawRules []map[string]interface{}) (rules []R
 		// Map names like "lower-alpha" to lowercase alphabetical characters
 		applyShortcuts(info.data)
 
-		rule, err := registry.parseRule(info.ruleType, info.data)
+		rule, err := p.RuleRegistry.parseRule(info.ruleType, info.data)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse rule %s: %w", info.ruleType, err)
 		}
@@ -163,12 +163,12 @@ func getMapSlice(m map[string]interface{}, key string) (mapSlice []map[string]in
 		return nil, nil
 	}
 
-	mapSlice = []map[string]interface{}{}
-	err = mapstructure.Decode(rawSlice, &mapSlice)
-	if err != nil {
-		return nil, err
+	slice, ok := rawSlice.([]map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("key %s is not a []map[string]interface{}", key)
 	}
-	return mapSlice, nil
+
+	return slice, nil
 }
 
 type ruleInfo struct {

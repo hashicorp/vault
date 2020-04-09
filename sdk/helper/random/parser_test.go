@@ -422,13 +422,11 @@ func TestParseRules(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			parser := Parser{
-				RuleRegistry: Registry{
-					Rules: test.registry,
-				},
+			registry := Registry{
+				Rules: test.registry,
 			}
 
-			actualRules, err := parser.parseRules(test.rawRules)
+			actualRules, err := parseRules(registry, test.rawRules)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}

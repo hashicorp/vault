@@ -554,6 +554,14 @@ message PluginEnvReply {
 	string err = 2;
 }
 
+message PasswordPolicyRequest {
+	string policy_name = 1;
+}
+
+message PasswordPolicyResponse {
+	bytes raw_policy = 1;
+}
+
 // SystemView exposes system configuration information in a safe way for plugins
 // to consume. Plugins should implement the client for this service.
 service SystemView {
@@ -603,6 +611,9 @@ service SystemView {
 	// GroupsForEntity returns the group membership information for the given
 	// entity id
 	rpc GroupsForEntity(EntityInfoArgs) returns (GroupsForEntityReply);
+
+	// PasswordPolicy returns a password policy if one exists
+	rpc PasswordPolicy(PasswordPolicyRequest) returns (PasswordPolicyResponse);
 }
 
 message Connection {
