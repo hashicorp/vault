@@ -1,0 +1,23 @@
+<div class="selectable-card is-rounded secondaries">
+  <div class="level">
+    <code class="card-title title is-5">Known Secondaries</code>
+    <ToolbarLink @params={{array "mode.manage" cluster.replicationMode}} @data-test-manage-link="true">
+      Manage
+    </ToolbarLink>
+  </div>
+  <div>
+    {{#unless replicationAttrs.knownSecondaries}}
+      <EmptyState
+        @title="No known {{cluster.replicationMode}} secondary clusters associated with this cluster"
+        @message="Associated secondary clusters will be listed here. Add your first secondary cluster to get started." />
+    {{else}}
+      <KnownSecondariesTable @replicationAttrs={{replicationAttrs}} />
+    {{/unless}}
+  </div>
+  {{#if cluster.canAddSecondary}}
+    {{#link-to "mode.secondaries.add" cluster.replicationMode class="link add-secondaries"}}
+      Add secondary
+    {{/link-to}}
+  {{/if}}
+</div>
+

@@ -1,4 +1,6 @@
 .vlt-table {
+  margin-bottom: $spacing-m;
+
   .is-collapsed {
     visibility: collapse;
     height: 0;
