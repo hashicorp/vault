@@ -171,6 +171,14 @@ auth_type is ec2.`,
         'auth/aws-ec2/identity-whitelist/<instance_id>' endpoint. This is only
         applicable when auth_type is ec2.`,
 			},
+			"include_alias_metadata": {
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: `If set to true, adds multiple metadata fields to each Vault identity alias
+used for retrieving a Vault token, improving the ease of attributing tokens to particular people or machines. 
+However, enabling this causes Vault to consult storage any time an identity alias' metadata changes, so it does 
+cause a performance toll. If not enabled, identical information can be obtained from Vault's audit logs.'`,
+			},
 		},
 
 		ExistenceCheck: b.pathRoleExistenceCheck,
@@ -720,6 +728,10 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		roleEntry.InferredAWSRegion = inferredAWSRegionRaw.(string)
 	}
 
+	if includeAliasMetadataRaw, ok := data.GetOk("include_alias_metadata"); ok {
+		roleEntry.IncludeAliasMetadata = includeAliasMetadataRaw.(bool)
+	}
+
 	// auth_type is a special case as it's immutable and can't be changed once a role is created
 	if authTypeRaw, ok := data.GetOk("auth_type"); ok {
 		// roleEntry.AuthType should only be "" when it's a new role; existing roles without an
@@ -963,6 +975,7 @@ type awsRoleEntry struct {
 	RoleTag                     string   `json:"role_tag"`
 	AllowInstanceMigration      bool     `json:"allow_instance_migration"`
 	DisallowReauthentication    bool     `json:"disallow_reauthentication"`
+	IncludeAliasMetadata        bool     `json:"include_alias_metadata"`
 	HMACKey                     string   `json:"hmac_key"`
 	Version                     int      `json:"version"`
 

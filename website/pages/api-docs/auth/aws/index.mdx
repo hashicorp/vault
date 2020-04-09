@@ -751,6 +751,15 @@ list in order to satisfy that constraint.
   `auth/aws/identity-whitelist/<instance_id>` endpoint. Defaults to 'false'.
   This only applies to authentications via the ec2 auth method. This is mutually
   exclusive with `allow_instance_migration`.
+- `include_alias_metadata` `(bool: false)` - If set to true, adds multiple metadata
+  fields to each Vault identity alias used for retrieving a Vault token, improving the
+  ease of attributing tokens to particular people or machines. However, enabling this
+  causes Vault to consult storage any time an identity alias' metadata changes, so it
+  does cause a performance toll. If not enabled, identical information can be obtained
+  from Vault's audit logs. The specific fields added for `iam` logins are `client_arn`,
+  `canonical_arn`, `client_user_id`, `auth_type`, `inferred_entity_type`,
+  `inferred_entity_id`, `inferred_aws_region`, and `account_id`. The specific fields
+  added for `ec2` logins are `instance_id`, `region`, `account_id`, and `ami_id`.
 
 @include 'partials/tokenfields.mdx'
 

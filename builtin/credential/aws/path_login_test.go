@@ -216,8 +216,9 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 
 	// create a role entry
 	roleEntry := &awsRoleEntry{
-		Version:  currentRoleStorageVersion,
-		AuthType: iamAuthType,
+		Version:              currentRoleStorageVersion,
+		AuthType:             iamAuthType,
+		IncludeAliasMetadata: true,
 	}
 
 	if err := b.setRole(context.Background(), storage, testValidRoleName, roleEntry); err != nil {
