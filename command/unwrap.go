@@ -89,8 +89,10 @@ func (c *UnwrapCommand) Run(args []string) int {
 		return 2
 	}
 	if secret == nil {
-		c.UI.Error("Could not find wrapped response")
-		return 2
+		if Format(c.UI) == "table" {
+			c.UI.Info("Successfully unwrapped. There was no data in the wrapped token.")
+		}
+		return 0
 	}
 
 	// Handle single field output
