@@ -90,7 +90,7 @@ func (c *UnwrapCommand) Run(args []string) int {
 	}
 	if secret == nil {
 		if Format(c.UI) == "table" {
-			c.UI.Info("Successfully unwrapped. There was no data in the wrapped token.")
+			c.UI.Info("Successfully unwrapped. There was no data in the wrapped secret.")
 		}
 		return 0
 	}
