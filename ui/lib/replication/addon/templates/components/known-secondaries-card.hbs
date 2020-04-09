@@ -11,7 +11,7 @@
         @title="No known {{cluster.replicationMode}} secondary clusters associated with this cluster"
         @message="Associated secondary clusters will be listed here. Add your first secondary cluster to get started." />
     {{else}}
-      <KnownSecondariesTable @data={{replicationAttrs}} />
+      <KnownSecondariesTable @replicationAttrs={{replicationAttrs}} />
     {{/unless}}
   </div>
   {{#if cluster.canAddSecondary}}
