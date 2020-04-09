@@ -304,7 +304,7 @@ func (l *raftLayer) CALookup(context.Context) ([]*x509.Certificate, error) {
 	return ret, nil
 }
 
-// Stop shutsdown the raft layer.
+// Stop shuts down the raft layer.
 func (l *raftLayer) Stop() error {
 	l.Close()
 	return nil

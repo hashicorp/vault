@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/forwarding"
-	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/replication"
 )
@@ -82,9 +81,9 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 		ReplicationState: uint32(s.core.ReplicationState()),
 	}
 
-	if raftStorage, ok := s.core.underlyingPhysical.(*raft.RaftBackend); ok {
-		reply.RaftAppliedIndex = raftStorage.AppliedIndex()
-		reply.RaftNodeID = raftStorage.NodeID()
+	if raftBackend := s.core.getRaftBackend(); raftBackend != nil {
+		reply.RaftAppliedIndex = raftBackend.AppliedIndex()
+		reply.RaftNodeID = raftBackend.NodeID()
 	}
 
 	return reply, nil
@@ -111,9 +110,9 @@ func (c *forwardingClient) startHeartbeat() {
 				ClusterAddr: clusterAddr,
 			}
 
-			if raftStorage, ok := c.core.underlyingPhysical.(*raft.RaftBackend); ok {
-				req.RaftAppliedIndex = raftStorage.AppliedIndex()
-				req.RaftNodeID = raftStorage.NodeID()
+			if raftBackend := c.core.getRaftBackend(); raftBackend != nil {
+				req.RaftAppliedIndex = raftBackend.AppliedIndex()
+				req.RaftNodeID = raftBackend.NodeID()
 			}
 
 			ctx, cancel := context.WithTimeout(c.echoContext, 2*time.Second)

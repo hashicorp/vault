@@ -1149,19 +1149,21 @@ func (c *ServerCommand) Run(args []string) int {
 			return 1
 		}
 
-		// TODO: Remove when Raft can server as the ha_storage backend.
-		// See https://github.com/hashicorp/vault/issues/8206
-		if config.HAStorage.Type == "raft" {
-			c.UI.Error("Raft cannot be used as seperate HA storage at this time")
+		if config.Storage.Type == "raft" && config.HAStorage.Type == "raft" {
+			c.UI.Error("Raft cannot be declared as HA storage separately when also declared as the storage type to use")
 			return 1
 		}
+
 		factory, exists := c.PhysicalBackends[config.HAStorage.Type]
 		if !exists {
 			c.UI.Error(fmt.Sprintf("Unknown HA storage type %s", config.HAStorage.Type))
 			return 1
 
 		}
-		habackend, err := factory(config.HAStorage.Config, c.logger)
+
+		namedHALogger := c.logger.Named("ha." + config.HAStorage.Type)
+		allLoggers = append(allLoggers, namedHALogger)
+		habackend, err := factory(config.HAStorage.Config, namedHALogger)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf(
 				"Error initializing HA storage of type %s: %s", config.HAStorage.Type, err))

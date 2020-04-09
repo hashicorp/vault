@@ -1034,6 +1034,7 @@ type TestClusterCore struct {
 	TLSConfig            *tls.Config
 	UnderlyingStorage    physical.Backend
 	UnderlyingRawStorage physical.Backend
+	UnderlyingHAStorage  physical.HABackend
 	Barrier              SecurityBarrier
 	NodeID               string
 }
@@ -1490,10 +1491,15 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			case physBundle == nil && coreConfig.Physical == nil:
 				t.Fatal("PhysicalFactory produced no physical and none in CoreConfig")
 			case physBundle != nil:
-				testCluster.Logger.Info("created physical backend", "instance", i)
-				coreConfig.Physical = physBundle.Backend
-				localConfig.Physical = physBundle.Backend
-				base.Physical = physBundle.Backend
+				// Set physical backend
+				if physBundle.Backend != nil {
+					testCluster.Logger.Info("created physical backend", "instance", i)
+					coreConfig.Physical = physBundle.Backend
+					localConfig.Physical = physBundle.Backend
+					base.Physical = physBundle.Backend
+				}
+
+				// Set HA backend
 				haBackend := physBundle.HABackend
 				if haBackend == nil {
 					if ha, ok := physBundle.Backend.(physical.HABackend); ok {
@@ -1502,6 +1508,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 				}
 				coreConfig.HAPhysical = haBackend
 				localConfig.HAPhysical = haBackend
+
+				// Add cleanup function
 				if physBundle.Cleanup != nil {
 					cleanupFuncs = append(cleanupFuncs, physBundle.Cleanup)
 				}
@@ -1769,6 +1777,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Barrier:              cores[i].barrier,
 			NodeID:               fmt.Sprintf("core-%d", i),
 			UnderlyingRawStorage: coreConfigs[i].Physical,
+			UnderlyingHAStorage:  coreConfigs[i].HAPhysical,
 		}
 		tcc.ReloadFuncs = &cores[i].reloadFuncs
 		tcc.ReloadFuncsLock = &cores[i].reloadFuncsLock

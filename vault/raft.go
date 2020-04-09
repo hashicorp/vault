@@ -31,6 +31,9 @@ import (
 var (
 	raftTLSStoragePath    = "core/raft/tls"
 	raftTLSRotationPeriod = 24 * time.Hour
+
+	// TestingUpdateClusterAddr is used in tests to override the cluster address
+	TestingUpdateClusterAddr uint32
 )
 
 type raftFollowerStates struct {
@@ -76,14 +79,11 @@ func (s *raftFollowerStates) minIndex() uint64 {
 	return min
 }
 
-// startRaftStorage will call SetupCluster in the raft backend which starts raft
+// startRaftBackend will call SetupCluster in the raft backend which starts raft
 // up and enables the cluster handler.
-func (c *Core) startRaftStorage(ctx context.Context) (retErr error) {
-	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
-	if !ok {
-		return nil
-	}
-	if raftStorage.Initialized() {
+func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil || raftBackend.Initialized() {
 		return nil
 	}
 
@@ -121,8 +121,8 @@ func (c *Core) startRaftStorage(ctx context.Context) (retErr error) {
 		}
 	}
 
-	raftStorage.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
-	if err := raftStorage.SetupCluster(ctx, raft.SetupOpts{
+	raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
+	if err := raftBackend.SetupCluster(ctx, raft.SetupOpts{
 		TLSKeyring:      raftTLS,
 		ClusterListener: c.getClusterListener(),
 		StartAsLeader:   creating,
@@ -133,7 +133,7 @@ func (c *Core) startRaftStorage(ctx context.Context) (retErr error) {
 	defer func() {
 		if retErr != nil {
 			c.logger.Info("stopping raft server")
-			if err := raftStorage.TeardownCluster(c.getClusterListener()); err != nil {
+			if err := raftBackend.TeardownCluster(c.getClusterListener()); err != nil {
 				c.logger.Error("failed to stop raft server", "error", err)
 			}
 		}
@@ -188,8 +188,8 @@ func (c *Core) stopRaftActiveNode() {
 // to reconnect with the cluster. Additionally, only one outstanding key
 // is allowed for this same reason (max keyring size of 2).
 func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
-	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
-	if !ok {
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
 		return nil
 	}
 
@@ -199,12 +199,12 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 	}
 
 	// Pre-populate the follower list with the set of peers.
-	raftConfig, err := raftStorage.GetConfiguration(ctx)
+	raftConfig, err := raftBackend.GetConfiguration(ctx)
 	if err != nil {
 		return err
 	}
 	for _, server := range raftConfig.Servers {
-		if server.NodeID != raftStorage.NodeID() {
+		if server.NodeID != raftBackend.NodeID() {
 			followerStates.update(server.NodeID, 0)
 		}
 	}
@@ -244,8 +244,8 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 		case len(keyring.Keys) == 2 && keyring.Keys[1].AppliedIndex == 0:
 			// If this case is hit then the second write to add the applied
 			// index failed. Attempt to write it again.
-			keyring.Keys[1].AppliedIndex = raftStorage.AppliedIndex()
-			keyring.AppliedIndex = raftStorage.AppliedIndex()
+			keyring.Keys[1].AppliedIndex = raftBackend.AppliedIndex()
+			keyring.AppliedIndex = raftBackend.AppliedIndex()
 			entry, err := logical.StorageEntryJSON(raftTLSStoragePath, keyring)
 			if err != nil {
 				return time.Time{}, errwrap.Wrapf("failed to json encode keyring: {{err}}", err)
@@ -285,8 +285,8 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 
 		// Write the keyring again with the new applied index. This allows us to
 		// track if standby nodes receive the update.
-		keyring.Keys[1].AppliedIndex = raftStorage.AppliedIndex()
-		keyring.AppliedIndex = raftStorage.AppliedIndex()
+		keyring.Keys[1].AppliedIndex = raftBackend.AppliedIndex()
+		keyring.AppliedIndex = raftBackend.AppliedIndex()
 		entry, err = logical.StorageEntryJSON(raftTLSStoragePath, keyring)
 		if err != nil {
 			return time.Time{}, errwrap.Wrapf("failed to json encode keyring: {{err}}", err)
@@ -334,7 +334,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 		}
 
 		// Update the TLS Key in the backend
-		if err := raftStorage.SetTLSKeyring(keyring); err != nil {
+		if err := raftBackend.SetTLSKeyring(keyring); err != nil {
 			return errwrap.Wrapf("failed to install keyring: {{err}}", err)
 		}
 
@@ -395,7 +395,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 }
 
 func (c *Core) createRaftTLSKeyring(ctx context.Context) error {
-	if _, ok := c.underlyingPhysical.(*raft.RaftBackend); !ok {
+	if raftBackend := c.getRaftBackend(); raftBackend == nil {
 		return nil
 	}
 
@@ -428,8 +428,8 @@ func (c *Core) stopPeriodicRaftTLSRotate() {
 }
 
 func (c *Core) checkRaftTLSKeyUpgrades(ctx context.Context) error {
-	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
-	if !ok {
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
 		return nil
 	}
 
@@ -446,7 +446,7 @@ func (c *Core) checkRaftTLSKeyUpgrades(ctx context.Context) error {
 		return err
 	}
 
-	if err := raftStorage.SetTLSKeyring(&keyring); err != nil {
+	if err := raftBackend.SetTLSKeyring(&keyring); err != nil {
 		return err
 	}
 
@@ -532,16 +532,16 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 }
 
 func (c *Core) InitiateRetryJoin(ctx context.Context) error {
-	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
-	if !ok {
-		return errors.New("raft storage not configured")
-	}
-
-	if raftStorage.Initialized() {
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
 		return nil
 	}
 
-	leaderInfos, err := raftStorage.JoinConfig()
+	if raftBackend.Initialized() {
+		return nil
+	}
+
+	leaderInfos, err := raftBackend.JoinConfig()
 	if err != nil {
 		return err
 	}
@@ -561,12 +561,12 @@ func (c *Core) InitiateRetryJoin(ctx context.Context) error {
 }
 
 func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJoinInfo, nonVoter bool) (bool, error) {
-	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
-	if !ok {
-		return false, errors.New("raft storage not configured")
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
+		return false, errors.New("raft backend not in use")
 	}
 
-	if raftStorage.Initialized() {
+	if raftBackend.Initialized() {
 		return false, errors.New("raft storage is already initialized")
 	}
 
@@ -574,7 +574,10 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	if err != nil {
 		return false, errwrap.Wrapf("failed to check if core is initialized: {{err}}", err)
 	}
-	if init {
+
+	_, isRaftStorage := c.underlyingPhysical.(*raft.RaftBackend)
+
+	if init && isRaftStorage {
 		return true, nil
 	}
 
@@ -591,7 +594,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			if err != nil {
 				return errwrap.Wrapf("failed to check if core is initialized: {{err}}", err)
 			}
-			if init {
+			if init && isRaftStorage {
 				c.logger.Info("returning from raft join as the node is initialized")
 				return nil
 			}
@@ -636,7 +639,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 
 			// Attempt to join the leader by requesting for the bootstrap challenge
 			secret, err := apiClient.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
-				"server_id": raftStorage.NodeID(),
+				"server_id": raftBackend.NodeID(),
 			})
 			if err != nil {
 				return errwrap.Wrapf("error during raft bootstrap init call: {{err}}", err)
@@ -751,20 +754,31 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	return true, nil
 }
 
-// This is used in tests to override the cluster address
-var UpdateClusterAddrForTests uint32
+func (c *Core) getRaftBackend() *raft.RaftBackend {
+	var raftBackend *raft.RaftBackend
+
+	if raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
+		raftBackend = raftStorage
+	}
+
+	if raftHA, ok := c.ha.(*raft.RaftBackend); ok {
+		raftBackend = raftHA
+	}
+
+	return raftBackend
+}
 
 func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, raftInfo *raftInformation) error {
 	if raftInfo.challenge == nil {
 		return errors.New("raft challenge is nil")
 	}
 
-	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
-	if !ok {
-		return errors.New("raft storage not in use")
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
+		return errors.New("raft backend is not in use")
 	}
 
-	if raftStorage.Initialized() {
+	if raftBackend.Initialized() {
 		return errors.New("raft is already initialized")
 	}
 
@@ -778,7 +792,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return errwrap.Wrapf("error parsing cluster address: {{err}}", err)
 	}
 	clusterAddr := parsedClusterAddr.Host
-	if atomic.LoadUint32(&UpdateClusterAddrForTests) == 1 && strings.HasSuffix(clusterAddr, ":0") {
+	if atomic.LoadUint32(&TestingUpdateClusterAddr) == 1 && strings.HasSuffix(clusterAddr, ":0") {
 		// We are testing and have an address provider, so just create a random
 		// addr, it will be overwritten later.
 		var err error
@@ -792,7 +806,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 	if err := answerReq.SetJSONBody(map[string]interface{}{
 		"answer":       base64.StdEncoding.EncodeToString(plaintext),
 		"cluster_addr": clusterAddr,
-		"server_id":    raftStorage.NodeID(),
+		"server_id":    raftBackend.NodeID(),
 		"non_voter":    raftInfo.nonVoter,
 	}); err != nil {
 		return err
@@ -811,20 +825,52 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return err
 	}
 
-	raftStorage.Bootstrap(ctx, answerResp.Data.Peers)
+	if err := raftBackend.Bootstrap(ctx, answerResp.Data.Peers); err != nil {
+		return err
+	}
 
 	err = c.startClusterListener(ctx)
 	if err != nil {
 		return errwrap.Wrapf("error starting cluster: {{err}}", err)
 	}
 
-	raftStorage.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
-	err = raftStorage.SetupCluster(ctx, raft.SetupOpts{
+	raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
+	err = raftBackend.SetupCluster(ctx, raft.SetupOpts{
 		TLSKeyring:      answerResp.Data.TLSKeyring,
 		ClusterListener: c.getClusterListener(),
 	})
 	if err != nil {
 		return errwrap.Wrapf("failed to setup raft cluster: {{err}}", err)
+	}
+
+	return nil
+}
+
+func (c *Core) raftBootstrap(ctx context.Context) error {
+	raftBackend := c.getRaftBackend()
+
+	// No raft backend found, no-op
+	if raftBackend == nil {
+		return nil
+	}
+
+	parsedClusterAddr, err := url.Parse(c.ClusterAddr())
+	if err != nil {
+		return errwrap.Wrapf("error parsing cluster address: {{err}}", err)
+	}
+	if err := raftBackend.Bootstrap(ctx, []raft.Peer{
+		{
+			ID:      raftBackend.NodeID(),
+			Address: parsedClusterAddr.Host,
+		},
+	}); err != nil {
+		return errwrap.Wrapf("could not bootstrap clustered storage: {{err}}", err)
+	}
+
+	if err := raftBackend.SetupCluster(ctx, raft.SetupOpts{
+		StartAsLeader: true,
+	}); err != nil {
+		return errwrap.Wrapf("could not start clustered storage: {{err}}", err)
 	}
 
 	return nil
