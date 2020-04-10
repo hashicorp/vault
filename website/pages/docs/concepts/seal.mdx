@@ -150,9 +150,8 @@ complete the seal migration process. If a leadership change happens after the
 seal migration is complete, the new leader will detect the fact and does not
 repeat the seal migration.
 
-4. Any new node joining to the cluster at this point will not require manual
-running of the unseal command. The join will ensure auto-unsealing of the node
-through KMS key.
+4. Any new node joining to the cluster will not require manual running of the
+unseal command. The join will ensure auto-unsealing of the node through KMS key.
 
 ### Migration From KMS Seal to Shamir Seal
 
@@ -240,8 +239,7 @@ seal migration process. If a leadership change happens after the seal migration
 is complete, the new leader will detect the fact and does not repeat the seal
 migration.
 
-4. Any new node joining the cluster at this point will not require the old KMS
-seal blocks. The join will ensure auto-unsealing of the nodes through the new
-KMS key.
+4. Any new node joining the cluster will not require the old KMS seal blocks.
+The join will ensure auto-unsealing of the nodes through the new KMS key.
 
 [raft]: https://raft.github.io/ 'The Raft Consensus Algorithm'
