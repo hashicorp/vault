@@ -92,7 +92,7 @@ For a list of examples and supported providers, please see the
 ## Recovery Key Rekeying
 
 During the KMS Seal initialization process, a set of Shamir keys called Recovery Keys are
-generated which are used for operations that still require a quorum of users.
+generated which are used for operations that still require a quorum of keyholders.
 
 Recovery Keys can be rekeyed to change the number of shares or thresholds. When using the
 Vault CLI, this is performed by using the `-target=recovery` flag to `vault operator rekey`.
