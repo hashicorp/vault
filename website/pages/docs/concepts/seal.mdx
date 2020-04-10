@@ -91,7 +91,7 @@ For a list of examples and supported providers, please see the
 
 ## Recovery Key Rekeying
 
-During Auto Seal initialization process, a set of Shamir keys called Recovery Keys are
+During KMS Seal initialization process, a set of Shamir keys called Recovery Keys are
 generated which are used for operations that still require a quorum of users.
 
 Recovery Keys can be rekeyed to change the number of shares or thresholds. When using the
@@ -197,7 +197,7 @@ leader node and this leader node will complete the seal migration process. If a
 leadership change happens after the seal migration is complete, the new leader
 will detect the fact and does not repeat the seal migration.
 
-### Migration From Auto Unseal to Auto Unseal
+### Migration From KMS Seal to another KMS Seal
 
 ~> **NOTE**: Migration between same Auto Unseal types is not currently
 supported. We plan to support this officially in a future release.
