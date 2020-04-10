@@ -9,11 +9,13 @@ description: |-
 
 # Install Vault
 
-Installing Vault is simple. There are two approaches to installing Vault:
+Installing Vault is simple. There are three approaches to installing Vault:
 
 1. Using a [precompiled binary](#precompiled-binaries)
 
 1. Installing [from source](#compiling-from-source)
+
+1. Running a Docker container
 
 Downloading a precompiled binary is easiest, and we provide downloads over TLS
 along with SHA256 sums to verify the binary. We also distribute a PGP signature
@@ -74,3 +76,31 @@ on your PATH or you may get an error about Vault not being found.
 ```shell
 $ vault -h
 ```
+
+## Docker container
+
+To start a new Vault container in developement mode, run:
+
+```shell
+docker run --cap-add=IPC_LOCK -d -p 8200:8200 --name=dev-vault vault
+```
+This runs a completely in-memory Vault server, which is useful for development but should not be used in production.
+
+When running in development mode, the root token id can be set via environment variables:
+
+```shell
+docker run --cap-add=IPC_LOCK -d -p 8200:8200 -e 'VAULT_DEV_ROOT_TOKEN_ID=root' --name=dev-vault vault
+```
+
+The UI is accessible at [127.0.0.1:8200/ui](127.0.0.1:8200/ui) for logging in with the root token id set at container launch.
+
+
+## Accessing the container shell to run CLI commands
+
+The Vault Docker image is built on top of Alpine Linux, so in order to enter the shell launch:
+
+```shell
+docker exec -it dev-vault /bin/sh
+```
+
+Now you're ready to go and have a fully functional Vault instance.
