@@ -5,18 +5,37 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
-
 	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/vault"
+
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 )
 
 func TestRaft_HA_NewCluster(t *testing.T) {
+	t.Parallel()
+	t.Run("inmem", func(t *testing.T) {
+		t.Parallel()
+		testRaftHANewCluster(t, teststorage.InmemBackendOnHARaftSetup)
+	})
+
+	t.Run("file", func(t *testing.T) {
+		t.Parallel()
+		testRaftHANewCluster(t, teststorage.FileBackendOnHARaftSetup)
+	})
+
+	t.Run("consul", func(t *testing.T) {
+		t.Parallel()
+		testRaftHANewCluster(t, teststorage.ConsulBackendOnHARaftSetup)
+	})
+}
+
+func testRaftHANewCluster(t *testing.T, setup teststorage.ClusterSetupMutator) {
 	var conf vault.CoreConfig
 	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
-	teststorage.RaftHASetup(&conf, &opts)
+	// teststorage.FileBackendOnHARaftSetup(&conf, &opts)
+	setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
 	cluster.Start()
 	defer cluster.Cleanup()
