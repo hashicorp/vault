@@ -84,17 +84,17 @@ to decrypt the master key at startup and unseal automatically.
 When using Auto Unseal there are certain operations in Vault that still
 require a quorum of users to perform an operation such as generating a root token.
 During the initialization process, a set of Shamir keys are generated that are called
-Recovery Keys and are used for these operations.
+recovery keys and are used for these operations.
 
 For a list of examples and supported providers, please see the
 [seal documentation](/docs/configuration/seal).
 
 ## Recovery Key Rekeying
 
-During KMS Seal initialization process, a set of Shamir keys called Recovery Keys are
+During KMS Seal initialization process, a set of Shamir keys called recovery keys are
 generated which are used for operations that still require a quorum of users.
 
-Recovery Keys can be rekeyed to change the number of shares or thresholds. When using the
+Recovery keys can be rekeyed to change the number of shares or thresholds. When using the
 Vault CLI, this is performed by using the `-target=recovery` flag to `vault operator rekey`.
 
 ## Seal Migration
@@ -209,8 +209,8 @@ supported. We plan to support this officially in a future release.
 2. Add `disabled = "true"` to the old KMS [seal block](/docs/configuration/seal)
 and add the desired new seal block in the config file of one of the nodes.
 
-3. Bring this one node back up and run the unseal command using the Recovery
-Keys of the old KMS seal along with supplying the `-migrate` flat for each
+3. Bring this one node back up and run the unseal command using the recovery
+keys of the old KMS seal along with supplying the `-migrate` flat for each
 recovery key. This node will be the active node and completes the seal migration
 process. The recovery keys of the old KMS seal supplied here will be migrated as
 the recovery keys for the new KMS seal.
