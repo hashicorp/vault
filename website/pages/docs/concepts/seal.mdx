@@ -89,71 +89,6 @@ Recovery Keys and are used for these operations.
 For a list of examples and supported providers, please see the
 [seal documentation](/docs/configuration/seal).
 
-## Seal Migration
-
-The seal can be migrated from Shamir keys to Auto Unseal, Auto Unseal to Shamir
-keys and Auto Unseal to another Auto Unseal.
-
-~> **NOTE**: The migration operation will require both seals to be available
-during the migration. For example, a migration from a cloud KMS seal to
-Shamir will require that the cloud KMS be accessible during the migration.
-
-### Migration From Shamir to Auto Unseal
-
-To migrate from Shamir keys to Auto Unseal, take your server cluster offline and update
-the [seal configuration](/docs/configuration/seal) with the appropriate seal
-configuration. Bring your server back up and leave the rest of the nodes offline if
-using multi-server mode, then run the unseal process with the `-migrate` flag and bring
-the rest of the cluster online.
-
-All unseal commands must specify the `-migrate` flag. Once the required threshold of
-unseal keys are entered, unseal keys will be migrated to recovery keys.
-
-```
-$ vault operator unseal -migrate
-```
-
-### Migration From Auto Unseal to Shamir
-
-~> **NOTE**: Migration to Shamir seal is not currently supported when using
-Vault Enterprise. We plan to support this officially in a future release.
-
-To migrate from Auto Unseal to Shamir keys, take your server cluster offline and update
-the [seal configuration](/docs/configuration/seal) and add `disabled = "true"`
-to the seal block. This allows the migration to use this information to decrypt the key
-but will not unseal Vault. When you bring your server back up, run the unseal process
-with the `-migrate` flag and use the Recovery Keys to perform the migration. All unseal
-commands must specify the `-migrate` flag. Once the required threshold of recovery keys
-are entered, the recovery keys will be migrated to be used as unseal keys.
-
-### Migration From Auto Unseal to Auto Unseal
-
-~> **NOTE**: Migration between same Auto Unseal types is not currently
-supported. We plan to support this officially in a future release.
-
-To migrate from Auto Unseal to a different Auto Unseal configuration, take your server
-cluster offline and update the existing [seal configuration](/docs/configuration/seal)
-and add `disabled = "true"` to the seal block.  Then add another seal block to describe
-the new seal.
-
-When you bring your server back up, run the unseal process with the `-migrate` flag and
-use the Recovery Keys to perform the migration. All unseal commands must specify
-the `-migrate` flag. Once the required threshold of recovery keys are entered,
-the recovery keys will be kept and used as recovery keys in the new seal.
-
-### Migration with Integrated Storage
-
-Integrated Storage uses the Raft protocol underneath, which requires a quorum of
-servers to be online before the cluster is functional. Therefore, bring the
-cluster back up one node at a time with the seal configuration updated, will not
-work in this case. Follow the same steps for each kind of migration described
-above with the exception that after the cluster is taken offline, update the
-seal configurations of all the nodes appropriately and bring them all back up.
-When the quorum of nodes are back up, Raft will elect a leader and the leader
-node will perform the migration. The migrated information will be replicated to
-all other cluster peers and when the peers eventually become the leader,
-migration will not happen again on the peer nodes.
-
 ## Recovery Key Rekeying
 
 During Auto Seal initialization process, a set of Shamir keys called Recovery Keys are
@@ -161,3 +96,152 @@ generated which are used for operations that still require a quorum of users.
 
 Recovery Keys can be rekeyed to change the number of shares or thresholds. When using the
 Vault CLI, this is performed by using the `-target=recovery` flag to `vault operator rekey`.
+
+## Seal Migration
+
+The seal can be migrated from Shamir Seal to KMS Seal, KMS Seal to Shamir Seal
+and KMS Seal to another KMS Seal.
+
+~> **NOTE**: The seal migration process cannot be performed without downtime.
+Due to the intricate technical underpinnings of the seal feature, it is at this
+point not possible to perform seal migration without bringing the whole cluster
+down. We understand that it can be painful for many users to bring the full
+cluster down. But, we believe that switching seals is a very rare event and
+hence hope for the downtime to be considered as an acceptable trade-off.
+
+~> **NOTE**: The migration operation will require both seals to be available
+during the migration. For example, a migration from a KMS seal to Shamir will
+require that the KMS key be accessible during the migration.
+
+### Migration From Shamir Seal to KMS Seal
+
+#### When **not** using Integrated Storage
+
+1. Take your server cluster offline.
+
+2. Add the desired KMS [seal block](/docs/configuration/seal) to the
+configuration file of one of the nodes.
+
+3. Bring this one node back up and run the unseal command by supplying the
+`-migrate` flag for each unseal key. This node will be the active node and
+completes the seal migration process. The Shamir unseal keys supplied here will
+be migrated as the recovery keys for the KMS seal.
+
+4. Standby nodes can join the active node's cluster using the new seal blocks.
+Note that by the time standby nodes join the cluster, the migration process is
+already complete. Hence, the standby nodes will be auto-unsealed through the KMS
+key and will not require an explicit unseal command.
+
+#### When using Integrated Storage
+
+Integrated Storage is implemented using the [Raft Consensus Algorithm][raft] and
+would require a quorum of nodes to be fully operational.
+
+1. Take your server cluster offline.
+
+2. Add the desired KMS [seal block](/docs/configuration/seal) to the
+configuration files of quorum number of nodes in the cluster.
+
+3. Bring the quorum number of nodes back up. On each of these nodes, run the
+unseal command by supplying the `-migrate` flag for each unseal key. The Shamir
+unseal keys supplied here will be migrated as the recovery keys for the KMS
+seal. Raft protocol will then elect a leader node and this leader node will
+complete the seal migration process. If a leadership change happens after the
+seal migration is complete, the new leader will detect the fact and does not
+repeat the seal migration.
+
+4. Any new node joining to the cluster at this point will not require manual
+running of the unseal command. The join will ensure auto-unsealing of the node
+through KMS key.
+
+### Migration From KMS Seal to Shamir Seal
+
+~> **NOTE**: Migration to Shamir seal is not currently supported when using
+Vault Enterprise. We plan to support this officially in a future release.
+
+#### When **not** using Integrated Storage
+
+1. Take your server cluster offline.
+
+2. Add `disabled = "true"` to the old KMS [seal block](/docs/configuration/seal)
+in the config file of one of the nodes. Shamir seal does not require an explicit
+seal block.
+
+3. Bring this one node back up and run the unseal command using the recovery
+keys of the KMS seal along with supplying the `-migrate` flag for each recovery
+key. This node will be the active node and completes the seal migration process.
+The recovery keys supplied here will be migrated as the unseal keys for the
+Shamir seal.
+
+4. Standby nodes can join the active node's cluster without the KMS seal blocks.
+Note that by the time standby nodes join the cluster, the migration process is
+already complete. Hence, the standby nodes will not require the `-migrate` flag
+to be unsealed.
+
+#### When using Integrated Storage
+
+Integrated Storage is implemented using the [Raft Consensus Algorithm][raft] and
+would require a quorum of nodes to be fully operational.
+
+1. Take your server cluster offline.
+
+2. Add `disabled = "true"` to the old KMS [seal block](/docs/configuration/seal)
+to the configuration files of quorum number of nodes in the cluster. Shamir seal
+does not require an explicit seal block.
+
+3. Bring the quorum number of nodes back up. On each of these nodes, run the
+unseal command using the recovery keys of the KMS seal along with supplying the
+`-migrate` flag for each recovery key. The recovery keys supplied here will be
+migrated as the unseal keys for the Shamir seal. Raft protocol will then elect a
+leader node and this leader node will complete the seal migration process. If a
+leadership change happens after the seal migration is complete, the new leader
+will detect the fact and does not repeat the seal migration.
+
+### Migration From Auto Unseal to Auto Unseal
+
+~> **NOTE**: Migration between same Auto Unseal types is not currently
+supported. We plan to support this officially in a future release.
+
+#### When **not** using Integrated Storage
+
+1. Take your server cluster offline.
+
+2. Add `disabled = "true"` to the old KMS [seal block](/docs/configuration/seal)
+and add the desired new seal block in the config file of one of the nodes.
+
+3. Bring this one node back up and run the unseal command using the Recovery
+Keys of the old KMS seal along with supplying the `-migrate` flat for each
+recovery key. This node will be the active node and completes the seal migration
+process. The recovery keys of the old KMS seal supplied here will be migrated as
+the recovery keys for the new KMS seal.
+
+4. Standby nodes can join the active node's cluster without the old KMS seal
+blocks. Note that by the time standby nodes join the cluster, the migration
+process is already complete. Hence, the standby nodes will be auto-unsealed
+through the new KMS key.
+
+#### When using Integrated Storage
+
+Integrated Storage is implemented using the [Raft Consensus Algorithm][raft] and
+would require a quorum of nodes to be fully operational.
+
+1. Take your server cluster offline.
+
+2. Add `disabled = "true"` to the old KMS [seal block](/docs/configuration/seal)
+and add the desired new seal block in the config file of quorum number of nodes
+in the cluster.
+
+3. Bring the quorum number of nodes back up. On each of these nodes, run the
+unseal command using the recovery keys of the old KMS seal along with supplying
+the `-migrate` flat for each recovery key. The recovery keys of the old KMS seal
+supplied here will be migrated as the recovery keys for the new KMS seal. Raft
+protocol will then elect a leader node and this leader node will complete the
+seal migration process. If a leadership change happens after the seal migration
+is complete, the new leader will detect the fact and does not repeat the seal
+migration.
+
+4. Any new node joining the cluster at this point will not require the old KMS
+seal blocks. The join will ensure auto-unsealing of the nodes through the new
+KMS key.
+
+[raft]: https://raft.github.io/ 'The Raft Consensus Algorithm'
