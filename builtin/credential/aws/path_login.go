@@ -1204,6 +1204,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 
 	endpoint := "https://sts.amazonaws.com"
 
+	maxRetries := awsClient.DefaultRetryerMaxNumRetries
 	if config != nil {
 		if config.IAMServerIdHeaderValue != "" {
 			err = validateVaultHeaderValue(headers, parsedUrl, config.IAMServerIdHeaderValue)
@@ -1214,12 +1215,11 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		if config.STSEndpoint != "" {
 			endpoint = config.STSEndpoint
 		}
+		if config.MaxRetries >= 0 {
+			maxRetries = config.MaxRetries
+		}
 	}
 
-	maxRetries := awsClient.DefaultRetryerMaxNumRetries
-	if config.MaxRetries >= 0 {
-		maxRetries = config.MaxRetries
-	}
 	callerID, err := submitCallerIdentityRequest(ctx, maxRetries, method, endpoint, parsedUrl, body, headers)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error making upstream request: %v", err)), nil
