@@ -102,16 +102,24 @@ Vault CLI, this is performed by using the `-target=recovery` flag to `vault oper
 The seal can be migrated from Shamir Seal to KMS Seal, KMS Seal to Shamir Seal,
 and KMS Seal to another KMS Seal.
 
-~> **NOTE**: The seal migration process cannot be performed without downtime.
-Due to the intricate technical underpinnings of the seal feature, it is at this
-point not possible to perform seal migration without bringing the whole cluster
-down. We understand that it can be painful for many users to bring the full
-cluster down. But, we believe that switching seals is a very rare event and
-hence hope for the downtime to be considered as an acceptable trade-off.
+~> **NOTE**: Seal migration process cannot be performed without downtime. Due to
+the intricate technical underpinnings of the seal feature, it is at this point
+not possible to perform seal migration without bringing the whole cluster down.
+We understand that it can be painful for many users to bring the full cluster
+down. But, we believe that switching seals is a very rare event and hence hope
+for the downtime to be considered as an acceptable trade-off.
 
-~> **NOTE**: The migration operation will require both seals to be available
+~> **NOTE**: Seal migration operation will require both seals to be available
 during the migration. For example, a migration from a KMS seal to Shamir will
 require that the KMS key be accessible during the migration.
+
+~> **NOTE**: Seal migration from KMS seal to Shamir seal is not currently
+supported when using Vault Enterprise. We plan to support this officially in a
+future release.
+
+~> **NOTE**: Seal migration from KMS seal to KMS seal of same kind is not
+currently supported when using Vault Enterprise. We plan to support this
+officially in a future release.
 
 ### Migration From Shamir Seal to KMS Seal
 
@@ -154,9 +162,6 @@ repeat the seal migration.
 unseal command. The join will ensure auto-unsealing of the node through KMS key.
 
 ### Migration From KMS Seal to Shamir Seal
-
-~> **NOTE**: Migration to Shamir seal is not currently supported when using
-Vault Enterprise. We plan to support this officially in a future release.
 
 #### When **not** using Integrated Storage
 
