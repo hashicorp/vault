@@ -91,7 +91,7 @@ For a list of examples and supported providers, please see the
 
 ## Recovery Key Rekeying
 
-During KMS Seal initialization process, a set of Shamir keys called recovery keys are
+During the KMS Seal initialization process, a set of Shamir keys called recovery keys are
 generated which are used for operations that still require a quorum of users.
 
 Recovery keys can be rekeyed to change the number of shares or thresholds. When using the
@@ -99,7 +99,7 @@ Vault CLI, this is performed by using the `-target=recovery` flag to `vault oper
 
 ## Seal Migration
 
-The seal can be migrated from Shamir Seal to KMS Seal, KMS Seal to Shamir Seal
+The seal can be migrated from Shamir Seal to KMS Seal, KMS Seal to Shamir Seal,
 and KMS Seal to another KMS Seal.
 
 ~> **NOTE**: The seal migration process cannot be performed without downtime.
@@ -209,7 +209,7 @@ supported. We plan to support this officially in a future release.
 and add the desired new seal block in the config file of one of the nodes.
 
 3. Bring this one node back up and run the unseal command using the recovery
-keys of the old KMS seal along with supplying the `-migrate` flat for each
+keys of the old KMS seal along with supplying the `-migrate` flag for each
 recovery key. This node will be the active node and completes the seal migration
 process. The recovery keys of the old KMS seal supplied here will be migrated as
 the recovery keys for the new KMS seal.
@@ -222,17 +222,17 @@ through the new KMS key.
 #### When using Integrated Storage
 
 Integrated Storage is implemented using the [Raft Consensus Algorithm][raft] and
-would require a quorum of nodes to be fully operational.
+requires a quorum of nodes to be fully operational.
 
 1. Take your server cluster offline.
 
 2. Add `disabled = "true"` to the old KMS [seal block](/docs/configuration/seal)
-and add the desired new seal block in the config file of quorum number of nodes
+and add the desired new seal block in the config file of a quorum number of nodes
 in the cluster.
 
 3. Bring the quorum number of nodes back up. On each of these nodes, run the
 unseal command using the recovery keys of the old KMS seal along with supplying
-the `-migrate` flat for each recovery key. The recovery keys of the old KMS seal
+the `-migrate` flag for each recovery key. The recovery keys of the old KMS seal
 supplied here will be migrated as the recovery keys for the new KMS seal. Raft
 protocol will then elect a leader node and this leader node will complete the
 seal migration process. If a leadership change happens after the seal migration
