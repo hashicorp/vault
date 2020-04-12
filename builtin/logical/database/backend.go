@@ -6,6 +6,7 @@ import (
 	"net/rpc"
 	"strings"
 	"sync"
+	"time"
 
 	log "github.com/hashicorp/go-hclog"
 
@@ -24,6 +25,7 @@ const (
 	databaseConfigPath     = "database/config/"
 	databaseRolePath       = "role/"
 	databaseStaticRolePath = "static-role/"
+	minRootCredRollbackAge = 10 * time.Second
 )
 
 type dbPluginInstance struct {
@@ -93,9 +95,11 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		Secrets: []*framework.Secret{
 			secretCreds(&b),
 		},
-		Clean:       b.clean,
-		Invalidate:  b.invalidate,
-		BackendType: logical.TypeLogical,
+		Clean:             b.clean,
+		Invalidate:        b.invalidate,
+		WALRollback:       b.walRollback,
+		WALRollbackMinAge: minRootCredRollbackAge,
+		BackendType:       logical.TypeLogical,
 	}
 
 	b.logger = conf.Logger
@@ -222,7 +226,20 @@ func (b *databaseBackend) invalidate(ctx context.Context, key string) {
 	}
 }
 
-func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, name string) (*dbPluginInstance, error) {
+func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage,
+	name string) (*dbPluginInstance, error) {
+
+	config, err := b.DatabaseConfig(ctx, s, name)
+	if err != nil {
+		return nil, err
+	}
+
+	return b.GetConnectionWithConfig(ctx, name, config)
+}
+
+func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name string,
+	config *DatabaseConfig) (*dbPluginInstance, error) {
+
 	b.RLock()
 	unlockFunc := b.RUnlock
 	defer func() { unlockFunc() }()
@@ -240,11 +257,6 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 	db, ok = b.connections[name]
 	if ok {
 		return db, nil
-	}
-
-	config, err := b.DatabaseConfig(ctx, s, name)
-	if err != nil {
-		return nil, err
 	}
 
 	dbp, err := dbplugin.PluginFactory(ctx, config.PluginName, b.System(), b.logger)
