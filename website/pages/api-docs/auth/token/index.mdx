@@ -74,8 +74,8 @@ during this call.
   If not specified, defaults to all the policies of the calling token.
 - `meta` `(map: {})` – A map of string to string valued metadata. This is
   passed through to the audit devices.
-- `no_parent` `(bool: false)` - If true and set by a root caller, the token will
-  not have the parent token of the caller. This creates a token with no parent.
+- `no_parent` `(bool: false)` - This argument only has effect if used by a root
+  or sudo caller. When set to true, the token created will not have a parent.
 - `no_default_policy` `(bool: false)` - If true the `default` policy will not be
   contained in this token's policy set.
 - `renewable` `(bool: true)` - Set to `false` to disable the ability of the token
@@ -99,7 +99,7 @@ during this call.
   limit to the number of uses.
 - `period` `(string: "")` - If specified, the token will be periodic; it will have
   no maximum TTL (unless an "explicit-max-ttl" is also set) but every renewal
-  will use the given period. Requires a root/sudo token to use.
+  will use the given period. Requires a root token or one with the sudo capability.
 - `entity_alias` `(string: "")` - Name of the entity alias to associate with
   during token creation. Only works in combination with `role_name` argument
   and used entity alias must be listed in `allowed_entity_aliases`. If this has
