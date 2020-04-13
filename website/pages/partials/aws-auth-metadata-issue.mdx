@@ -5,7 +5,7 @@ Users of the AWS Auth Engine should be cautious with this upgrade, because in
 metadata does help with tying tokens to a particular person or machine, it
 also can also take a performance toll.
 
-Whether there's a performance toll depends on if/how you've configured the
+Whether there's a performance toll depends on if and how you've configured the
 `auth/aws/config/identity` endpoint. To determine if you could be effected:
 
 - Read your identity configuration: `$ vault read auth/aws/config/identity`
