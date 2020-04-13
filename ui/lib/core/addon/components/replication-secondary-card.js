@@ -17,4 +17,17 @@ export default Component.extend({
     let lastRemoteWAL = this.data.dr.lastRemoteWAL ? this.data.dr.lastRemoteWAL : 0;
     return Math.abs(lastWAL - lastRemoteWAL);
   }),
+  errorClass: computed('data', function() {
+    let dr = this.data.dr;
+
+    if (!dr) {
+      return false;
+    }
+
+    if (this.title === 'States') {
+      if (dr.state === 'idle' || this.data.drStateDisplay === 'Streaming') {
+        return true;
+      }
+    }
+  }),
 });

@@ -70,6 +70,10 @@
         grid-row: 3/3;
       }
     }
+
+    .has-border-danger {
+      border: 1px solid $danger;
+    }
   }
 
   .has-text-highlight {

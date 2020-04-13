@@ -1,17 +1,51 @@
-<div class="selectable-card is-rounded card-container">
+<div class="selectable-card is-rounded card-container {{if errorClass "has-border-danger"}}">
   {{!-- Check if State or WAL Card --}}
   {{#if (eq title "States")}}
     <h3 class="title is-4 grid-item-title card-title">{{title}}</h3>
     <div class="grid-item-left">
-      <code class="has-text-black">state</code>
-      <p class="has-text-grey is-size-8">How this cluster is communicating with others at this moment.</p>
+      {{#if (eq data.dr.state "idle")}}
+          <code class="has-text-danger">state</code>
+          <AlertInline
+            @type="danger"
+            @message="Please check your server logs."
+          />
+      {{else}}
+        <code class="has-text-black">state</code>
+        <p class="has-text-grey is-size-8">How this cluster is communicating with others at this moment.</p>
+      {{/if}}
     </div>
     <div class="grid-item-right">
-      <code class="has-text-black">connection_state</code>
-      <p class="has-text-grey is-size-8">The health of the connection between this cluster and others.</p>
+      {{!-- ARG TODO replace with transient failure --}}
+      {{#if (eq data.drStateDisplay "transient failure")}}
+        <code class="has-text-danger">connection_state</code>
+        <AlertInline
+          @type="danger"
+          @message="ARG TODO: waiting on feedback to fill this in"
+        />
+      {{else}}
+        <code class="has-text-black">connection_state</code>
+        <p class="has-text-grey is-size-8">The health of the connection between this cluster and others.</p>
+      {{/if}}
     </div>
     {{!-- ARG TODO connection state is likely wrong here, waiting for reply from RFC --}}
-      <h2 class="title-number grid-item-left-bottom">{{if data.dr.state data.dr.state 'unknown'}}</h2>
+      <h2 class="title-number grid-item-left-bottom">{{if data.dr.state data.dr.state 'unknown'}}
+        {{#if (eq data.dr.state "stream-wals")}}
+          <ToolTip @verticalPosition="above" as |T|>
+            <T.trigger>
+              <Icon 
+                @glyph={{"check-circle-outline" }} 
+                @size="m" 
+                class={{"has-text-success"}}
+              />
+            </T.trigger>
+            <T.content @class="tool-tip">
+              <div class="box">
+                Everything is in sync!
+              </div>
+            </T.content>
+          </ToolTip>
+        {{/if}}
+      </h2>
       <h2 class="title-number is-5 grid-item-right-bottom">{{if data.drStateDisplay data.drStateDisplay 'unknown'}}</h2>
   {{else}}
     <h3 class="title is-4 grid-item-title card-title">{{title}}
