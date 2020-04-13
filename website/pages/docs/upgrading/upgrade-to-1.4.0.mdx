@@ -7,4 +7,24 @@ description: |-
   for Vault 1.4.0. Please read it carefully.
 ---
 
-There are no version-specific upgrade procedures associated with version 1.4.0.
+# Overview
+
+This page contains the list of deprecations and important or breaking changes
+for Vault 1.3.4 compared to 1.4.0. Please read it carefully.
+
+## The AWS Auth Engine
+
+Users of the AWS Auth Engine should be cautious with this upgrade, because in
+1.4.0 we began adding metadata to tokens issued with this method. While the
+metadata does help with tying tokens to a particular person or machine, it
+also can also take a performance toll.
+
+The specific fields added for `iam` tokens were `client_arn`, `canonical_arn`,
+`client_user_id`, `auth_type`, `inferred_entity_type`, `inferred_entity_id`,
+`inferred_aws_region`, and `account_id`. The specific fields added for `ec2`
+logins were `instance_id`, `region`, `account_id`, and `ami_id`.
+
+Companies who may experience a high rate of change in these fields for a role
+may also experience a performance hit due to an increased number of storage
+writes. For those companies, we recommend waiting until a patch is released
+providing greater flexibility around whether to use this functionality.
