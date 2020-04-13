@@ -377,7 +377,7 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 		return nil
 	}
 
-	// First disable login, we need to do this first to avoid the case where a connection attemp is
+	// First disable login, we need to do this first to avoid the case where a connection attempt is
 	// made between the 'drop connection' query and 'drop role query'
 	err = dbtxn.ExecuteDBQuery(ctx, db, nil, fmt.Sprintf(
 		`ALTER ROLE %s NOLOGIN;`, pq.QuoteIdentifier(username)));
