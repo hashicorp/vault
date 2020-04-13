@@ -12,31 +12,13 @@
         @componentToRender='replication-secondary-card' as |Dashboard|>
         <Dashboard.card
           @title="States"
-          @property_1="state"
-          @property_2="connection_state"
-          @description_1="How this cluster is communicating with others at this moment."
-          @description_2="coming"
-          @metric_1={{if model.dr.state model.dr.state 'unknown'}}
-          {{!-- ARG TODO this might be wrong, could be connection_state --}}
-          @metric_2={{if model.drStateDisplay model.drStateDisplay 'unknown'}}
+          @data={{model}}
         />
-        <Dashboard.card 
+        <Dashboard.card
           @title="Write-Ahead Logs (WALs)"
-          @property_1="last_wal"
-          @property_2="last_remote_wal"
-          @property_3="Delta"
-          @description_3="The difference between the last remote WAL and the last WAL entry from the primary."
-          {{!-- last_wal which comes from the primary --}}
-          @metric_1={{if model.dr.lastWAL (format-number model.dr.lastWAL) '0'}}
-          {{!-- last_remote_wal which comes from the secondary --}}
-          @metric_2={{if model.dr.lastRemoteWAL (format-number model.dr.lastRemoteWAL) '0'}} 
+          @data={{model}}
         />
-        <Dashboard.rows
-          @metric_1={{if model.dr.merkleRoot model.dr.merkleRoot 'unknown'}}
-          @metric_2={{if model.dr.mode model.dr.mode 'unknown'}}
-          @metric_3={{if model.dr.clusterId model.dr.clusterId 'unknown'}}
-          @syncProgress={{if model.dr.syncProgress syncProgress false}}
-        />
+        <Dashboard.rows @data={{model.dr}}/>
       </Page.dashboard>
     </ReplicationPage>
   </div>

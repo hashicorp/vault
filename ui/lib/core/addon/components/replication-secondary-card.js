@@ -10,7 +10,11 @@ import layout from '../templates/components/replication-secondary-card';
 
 export default Component.extend({
   layout,
-  delta: computed(function() {
-    return Math.abs(this.metric_1 - this.metric_2);
+  delta: computed('data', function() {
+    // last_wal
+    let lastWAL = this.data.dr.lastWAL || 0;
+    // last_remote_wal
+    let lastRemoteWAL = this.data.dr.lastRemoteWAL || 0;
+    return Math.abs(lastWAL - lastRemoteWAL);
   }),
 });
