@@ -19,17 +19,13 @@ export default Component.extend({
   }),
   lastWAL: computed('data', function() {
     let dr = this.data.dr;
-    return dr.lastWAL ? dr.lastWAL : '0';
+    return dr && dr.lastWAL ? dr.lastWAL : 0;
   }),
   lastRemoteWAL: computed('data', function() {
     let dr = this.data.dr;
-    return dr.lastRemoteWAL ? dr.lastRemoteWAL : '0';
+    return dr && dr.lastRemoteWAL ? dr.lastRemoteWAL : 0;
   }),
   delta: computed('data', function() {
-    let dr = this.data.dr;
-    let lastWAL = dr && dr.lastWAL ? dr.lastWAL : 0;
-    let lastRemoteWAL = dr && dr.lastRemoteWAL ? dr.lastRemoteWAL : 0;
-
-    return Math.abs(lastWAL - lastRemoteWAL);
+    return Math.abs(this.get('lastWAL') - this.get('lastRemoteWAL'));
   }),
 });
