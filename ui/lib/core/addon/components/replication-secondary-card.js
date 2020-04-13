@@ -13,7 +13,7 @@ export default Component.extend({
   delta: computed('data', function() {
     let dr = this.data.dr;
     let lastWAL = dr && dr.lastWAL ? dr.lastWAL : 0;
-    let lastRemoteWAL = dr.lastRemoteWAL ? dr.lastRemoteWAL : 0;
+    let lastRemoteWAL = dr && dr.lastRemoteWAL ? dr.lastRemoteWAL : 0;
 
     return Math.abs(lastWAL - lastRemoteWAL);
   }),
