@@ -12,7 +12,7 @@ export default Component.extend({
   layout,
   state: computed('data', function() {
     let dr = this.data.dr;
-    return dr.state ? dr.state : 'unknown';
+    return dr && dr.state ? dr.state : 'unknown';
   }),
   connection: computed('data', function() {
     return this.data.drStateDisplay ? this.data.drStateDisplay : 'unknown';
