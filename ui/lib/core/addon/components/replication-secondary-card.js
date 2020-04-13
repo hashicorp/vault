@@ -10,12 +10,23 @@ import layout from '../templates/components/replication-secondary-card';
 
 export default Component.extend({
   layout,
-  delta: computed('data', function() {
+  state: computed('data', function() {
     let dr = this.data.dr;
-    let lastWAL = dr && dr.lastWAL ? dr.lastWAL : 0;
-    let lastRemoteWAL = dr && dr.lastRemoteWAL ? dr.lastRemoteWAL : 0;
-
-    return Math.abs(lastWAL - lastRemoteWAL);
+    return dr && dr.state ? dr.state : 'unknown';
+  }),
+  connection: computed('data', function() {
+    return this.data.drStateDisplay ? this.data.drStateDisplay : 'unknown';
+  }),
+  lastWAL: computed('data', function() {
+    let dr = this.data.dr;
+    return dr && dr.lastWAL ? dr.lastWAL : 0;
+  }),
+  lastRemoteWAL: computed('data', function() {
+    let dr = this.data.dr;
+    return dr && dr.lastRemoteWAL ? dr.lastRemoteWAL : 0;
+  }),
+  delta: computed('data', function() {
+    return Math.abs(this.get('lastWAL') - this.get('lastRemoteWAL'));
   }),
   errorClass: computed('data', 'title', 'state', 'connection', function() {
     let dr = this.data.dr;

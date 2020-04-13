@@ -13,14 +13,10 @@
         <Dashboard.card
           @title="States"
           @data={{model}}
-          @state={{if model.dr.state model.dr.state "unknown"}}
-          @connection={{if model.drStateDisplay model.drStateDisplay 'unknown'}}
         />
         <Dashboard.card
           @title="Write-Ahead Logs (WALs)"
           @data={{model}}
-          @lastWAL={{if model.dr.lastWAL (format-number model.dr.lastWAL) '0'}}
-          @lastRemoteWAL={{if model.dr.lastRemoteWAL (format-number model.dr.lastRemoteWAL) '0'}}
         />
         <Dashboard.rows @data={{model.dr}}/>
       </Page.dashboard>
