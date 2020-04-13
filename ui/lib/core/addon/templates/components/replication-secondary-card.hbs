@@ -3,7 +3,7 @@
   {{#if (eq title "States")}}
     <h3 class="title is-4 grid-item-title card-title">{{title}}</h3>
     <div class="grid-item-left">
-      {{#if (eq data.dr.state "idle")}}
+      {{#if (eq state "idle")}}
           <code class="has-text-danger">state</code>
           <AlertInline
             @type="danger"
@@ -16,7 +16,7 @@
     </div>
     <div class="grid-item-right">
       {{!-- ARG TODO replace with transient failure --}}
-      {{#if (eq data.drStateDisplay "transient failure")}}
+      {{#if (eq connection "transient-failure")}}
         <code class="has-text-danger">connection_state</code>
         <AlertInline
           @type="danger"
@@ -27,9 +27,8 @@
         <p class="has-text-grey is-size-8">The health of the connection between this cluster and others.</p>
       {{/if}}
     </div>
-    {{!-- ARG TODO connection state is likely wrong here, waiting for reply from RFC --}}
-      <h2 class="title-number grid-item-left-bottom">{{if data.dr.state data.dr.state 'unknown'}}
-        {{#if (eq data.dr.state "stream-wals")}}
+      <h2 class="title-number grid-item-left-bottom">{{state}}
+        {{#if (eq state "stream-wals")}}
           <ToolTip @verticalPosition="above" as |T|>
             <T.trigger>
               <Icon 
@@ -46,7 +45,7 @@
           </ToolTip>
         {{/if}}
       </h2>
-      <h2 class="title-number is-5 grid-item-right-bottom">{{if data.drStateDisplay data.drStateDisplay 'unknown'}}</h2>
+      <h2 class="title-number is-5 grid-item-right-bottom">{{connection}}</h2>
   {{else}}
     <h3 class="title is-4 grid-item-title card-title">{{title}}
       <ToolTip @verticalPosition="above" @closeDelay="2000ms" as |T|>
@@ -76,12 +75,12 @@
     </div>
     <div class="grid-item-right">
       <code class="has-text-black">last_wal</code>
-      <p class="has-text-grey is-size-8">{{if data.dr.lastWAL (format-number data.dr.lastWAL) '0'}}</p>
+      <p class="has-text-grey is-size-8">{{lastWAL}}</p>
     </div>
     <h2 class="title-number grid-item-left-bottom">{{format-number delta}}</h2>
     <div class="grid-item-right-bottom">
       <code class="has-text-black">last_remote_wal</code>
-      <p class="has-text-grey is-size-8">{{if data.dr.lastRemoteWAL (format-number data.dr.lastRemoteWAL) '0'}}</p>
+      <p class="has-text-grey is-size-8">{{lastRemoteWAL}}</p>
     </div>
   {{/if}}
 </div>

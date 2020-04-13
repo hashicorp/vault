@@ -11,13 +11,13 @@ import layout from '../templates/components/replication-secondary-card';
 export default Component.extend({
   layout,
   delta: computed('data', function() {
-    // last_wal
-    let lastWAL = this.data.dr.lastWAL ? this.data.dr.lastWAL : 0;
-    // last_remote_wal
-    let lastRemoteWAL = this.data.dr.lastRemoteWAL ? this.data.dr.lastRemoteWAL : 0;
+    let dr = this.data.dr;
+    let lastWAL = dr && dr.lastWAL ? dr.lastWAL : 0;
+    let lastRemoteWAL = dr && dr.lastRemoteWAL ? dr.lastRemoteWAL : 0;
+
     return Math.abs(lastWAL - lastRemoteWAL);
   }),
-  errorClass: computed('data', function() {
+  errorClass: computed('data', 'title', 'state', 'connection', function() {
     let dr = this.data.dr;
 
     if (!dr) {
@@ -25,7 +25,7 @@ export default Component.extend({
     }
 
     if (this.title === 'States') {
-      if (dr.state === 'idle' || this.data.drStateDisplay === 'Streaming') {
+      if (this.state === 'idle' || this.connection === 'transient-failure') {
         return true;
       }
     }
