@@ -11,16 +11,5 @@
     .card-title {
       margin-bottom: 2rem;
     }
-
-    // TODO: move this when it is its own component
-    &.secondaries {
-      grid-column: 2/3;
-      grid-row: 1/3;
-
-      @include until($mobile) {
-        grid-column: 1/1;
-        grid-row: 1/1;
-      }
-    }
   }
 }
