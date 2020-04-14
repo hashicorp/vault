@@ -340,7 +340,11 @@ func testSealMigrationTransitToTestSeal(t *testing.T, setup teststorage.ClusterS
 
 	// Create the transit server.
 	tcluster := sealhelper.NewTransitSealServer(t)
-	defer tcluster.Cleanup()
+	defer func() {
+		if tcluster != nil {
+			tcluster.Cleanup()
+		}
+	}()
 	tcluster.MakeKey(t, "key1")
 	var transitSeal vault.Seal
 
@@ -433,6 +437,7 @@ func testSealMigrationTransitToTestSeal(t *testing.T, setup teststorage.ClusterS
 	if resp == nil || resp.Sealed {
 		t.Fatalf("expected unsealed state; got %#v", resp)
 	}
+	testhelpers.WaitForActiveNode(t, cluster)
 
 	// Make sure the seal configs were updated correctly.
 	b, r, err := cluster.Cores[0].Core.PhysicalSealConfigs(context.Background())
@@ -441,6 +446,27 @@ func testSealMigrationTransitToTestSeal(t *testing.T, setup teststorage.ClusterS
 	}
 	verifyBarrierConfig(t, b, wrapping.Test, 1, 1, 1)
 	verifyBarrierConfig(t, r, wrapping.Shamir, 5, 3, 0)
+
+	// Now that migration is done, we can stop the transit cluster, since we
+	// can seal/unseal without it.
+	tcluster.Cleanup()
+	tcluster = nil
+
+	if err := client.Sys().Seal(); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range initResp.RecoveryKeysB64 {
+		resp, err = client.Sys().UnsealWithOptions(&api.UnsealOpts{Key: key})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil || !resp.Sealed {
+			break
+		}
+	}
+	if resp == nil || resp.Sealed {
+		t.Fatalf("expected unsealed state; got %#v", resp)
+	}
 }
 
 func TestSealMigration_TransitToShamir(t *testing.T) {
@@ -470,7 +496,11 @@ func testSealMigrationTransitToShamir(t *testing.T, setup teststorage.ClusterSet
 
 	// Create the transit server.
 	tcluster := sealhelper.NewTransitSealServer(t)
-	defer tcluster.Cleanup()
+	defer func() {
+		if tcluster != nil {
+			tcluster.Cleanup()
+		}
+	}()
 	tcluster.MakeKey(t, "key1")
 	var transitSeal vault.Seal
 
@@ -568,6 +598,7 @@ func testSealMigrationTransitToShamir(t *testing.T, setup teststorage.ClusterSet
 	if resp == nil || resp.Sealed {
 		t.Fatalf("expected unsealed state; got %#v", resp)
 	}
+	testhelpers.WaitForActiveNode(t, cluster)
 
 	// Make sure the seal configs were updated correctly.
 	b, r, err := cluster.Cores[0].Core.PhysicalSealConfigs(context.Background())
@@ -577,6 +608,27 @@ func testSealMigrationTransitToShamir(t *testing.T, setup teststorage.ClusterSet
 	verifyBarrierConfig(t, b, wrapping.Shamir, 5, 3, 1)
 	if r != nil {
 		t.Fatalf("expected nil recovery config, got: %#v", r)
+	}
+
+	// Now that migration is done, we can stop the transit cluster, since we
+	// can seal/unseal without it.
+	tcluster.Cleanup()
+	tcluster = nil
+
+	if err := client.Sys().Seal(); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range initResp.RecoveryKeysB64 {
+		resp, err = client.Sys().UnsealWithOptions(&api.UnsealOpts{Key: key})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil || !resp.Sealed {
+			break
+		}
+	}
+	if resp == nil || resp.Sealed {
+		t.Fatalf("expected unsealed state; got %#v", resp)
 	}
 }
 
