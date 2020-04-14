@@ -40,7 +40,11 @@ export default Component.extend({
   }),
   hasErrorClass: computed('data', 'title', 'state', 'connection', function() {
     if (this.title === 'States') {
-      if (this.state === 'idle' || this.connection === 'transient failure') {
+      if (
+        this.state === 'idle' ||
+        this.connection === 'transient-failure' ||
+        this.connection === 'shutdown'
+      ) {
         return true;
       }
     }

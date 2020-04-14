@@ -17,7 +17,11 @@ export default Component.extend({
   data: null,
   isSecondary: computed('data', function() {
     let data = this.data;
-    if (data.dr.mode === 'secondary' && data.rm.mode == 'dr') {
+    let dr = this.data.dr;
+    if (!dr) {
+      return false;
+    }
+    if (dr.mode === 'secondary' && data.rm.mode == 'dr') {
       return true;
     }
   }),

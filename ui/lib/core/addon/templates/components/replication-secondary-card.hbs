@@ -15,11 +15,11 @@
       {{/if}}
     </div>
     <div class="grid-item-right">
-      {{#if (eq connection "transient failure")}}
+      {{#if (or (eq connection "transient-failure") (eq connection "shutdown"))}}
         <code class="has-text-danger">connection_state</code>
         <AlertInline
           @type="danger"
-          @message="ARG TODO: waiting on feedback to fill this in"
+          @message="ARG TODO: waiting on feedback to fill this in."
         />
       {{else}}
         <code class="has-text-black">connection_state</code>

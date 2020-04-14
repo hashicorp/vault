@@ -47,6 +47,7 @@
 
       // If descriptions are smaller then height is affected, this keeps the cards consistent
       min-height: 220px;
+      max-height: 220px;
 
       @include until(1320px) {
         // prevent an issue with the card descriptions wrapping and expanding height
