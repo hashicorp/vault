@@ -74,6 +74,7 @@ VERSION=$(vault status -format=json | jq -r .version)
 if [[ $VERSION =~ prem|ent ]]
 then
   vault secrets enable kmip
+  vault secrets enable transform
 fi
 
 # Output OpenAPI, optionally formatted
