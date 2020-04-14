@@ -13,7 +13,7 @@ export default Component.extend({
     return dr;
   }),
   isSyncing: computed('data', function() {
-    if (this.dr.state === 'merkle_sync' || this.dr.state === 'merkle-diff') {
+    if (this.dr.state === 'merkle-sync' || this.dr.state === 'merkle-diff') {
       return true;
     }
   }),
