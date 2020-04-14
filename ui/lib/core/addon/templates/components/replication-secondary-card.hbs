@@ -1,4 +1,4 @@
-<div class="selectable-card is-rounded card-container {{if errorClass "has-border-danger"}}">
+<div class="selectable-card is-rounded card-container {{if hasErrorClass "has-border-danger"}}">
   {{!-- Check if State or WAL Card --}}
   {{#if (eq title "States")}}
     <h3 class="title is-4 grid-item-title card-title">{{title}}</h3>
@@ -11,7 +11,24 @@
       <p class="has-text-grey is-size-8">The health of the connection between this cluster and others.</p>
     </div>
     {{!-- ARG TODO connection state is likely wrong here, waiting for reply from RFC --}}
-      <h2 class="title-number grid-item-left-bottom">{{state}}</h2>
+      <h2 class="title-number grid-item-left-bottom">{{state}}
+        {{#if inSyncState }}
+          <ToolTip @verticalPosition="above" as |T|>
+            <T.trigger>
+              <Icon 
+                @glyph={{"check-circle-outline" }} 
+                @size="m" 
+                class={{"has-text-success"}}
+              />
+            </T.trigger>
+            <T.content @class="tool-tip">
+              <div class="box">
+                Everything is in sync!
+              </div>
+            </T.content>
+          </ToolTip>
+        {{/if}}
+      </h2>
       <h2 class="title-number is-5 grid-item-right-bottom">{{connection}}</h2>
   {{else}}
     <h3 class="title is-4 grid-item-title card-title">{{title}}

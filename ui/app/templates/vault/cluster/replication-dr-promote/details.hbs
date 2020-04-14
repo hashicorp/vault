@@ -3,8 +3,7 @@
     {{!-- ARG TODO setup error state and return --}}
     <ReplicationPage @model={{model}} as |Page|>
       <Page.header 
-        @showTabs={{false}} 
-        @model={{model}}
+        @showTabs={{false}}
       />
       <Page.toggle />
       <Page.dashboard 
@@ -12,13 +11,11 @@
         @componentToRender='replication-secondary-card' as |Dashboard|>
         <Dashboard.card
           @title="States"
-          @data={{model}}
         />
         <Dashboard.card
           @title="Write-Ahead Logs (WALs)"
-          @data={{model}}
         />
-        <Dashboard.rows @data={{model.dr}}/>
+        <Dashboard.rows/>
       </Page.dashboard>
     </ReplicationPage>
   </div>
