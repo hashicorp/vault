@@ -16,7 +16,6 @@ import (
 )
 
 var (
-	onEnterprise                 = false
 	createSecureRandomReaderFunc = createSecureRandomReader
 	adjustCoreConfigForEnt       = adjustCoreConfigForEntNoop
 )
@@ -60,10 +59,6 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 
 	if existBarrierSealConfig.Type != wrapping.Shamir && existRecoverySealConfig == nil {
 		return errors.New(`Recovery seal configuration not found for existing seal`)
-	}
-
-	if onEnterprise && barrierSeal.BarrierType() == wrapping.Shamir {
-		return errors.New("Migrating from autoseal to Shamir seal is not currently supported on Vault Enterprise")
 	}
 
 	var migrationSeal vault.Seal
