@@ -193,7 +193,7 @@ github.com/containerd/continuity/pathdriver
 github.com/coreos/go-oidc
 # github.com/coreos/go-semver v0.2.0
 github.com/coreos/go-semver/semver
-# github.com/coreos/go-systemd v0.0.0-20181012123002-c6f51f82210d
+# github.com/coreos/go-systemd v0.0.0-20180511133405-39ca1b05acc7
 github.com/coreos/go-systemd/journal
 # github.com/coreos/pkg v0.0.0-20160727233714-3ac0863d7acf
 github.com/coreos/pkg/capnslog
@@ -276,8 +276,9 @@ github.com/golang/protobuf/ptypes/wrappers
 github.com/golang/snappy
 # github.com/google/go-github v17.0.0+incompatible
 github.com/google/go-github/github
-# github.com/google/go-metrics-stackdriver v0.0.0-20190816035513-b52628e82e2a
+# github.com/google/go-metrics-stackdriver v0.2.0
 github.com/google/go-metrics-stackdriver
+github.com/google/go-metrics-stackdriver/vault
 # github.com/google/go-querystring v1.0.0
 github.com/google/go-querystring/query
 # github.com/google/gofuzz v1.0.0
@@ -423,14 +424,14 @@ github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
 github.com/hashicorp/vault-plugin-secrets-gcpkms
 # github.com/hashicorp/vault-plugin-secrets-kv v0.5.4-beta1
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.0-beta1
+# github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.1
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas
 # github.com/hashicorp/vault-plugin-secrets-openldap v0.1.0-beta1.0.20200306174116-e7553b03b931
 github.com/hashicorp/vault-plugin-secrets-openldap
 github.com/hashicorp/vault-plugin-secrets-openldap/client
 # github.com/hashicorp/vault/api v1.0.5-0.20200215224050-f6547fa8e820 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20200220181328-627cbfe69505 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20200305172021-03a3749f220d => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/database/helper/credsutil
@@ -662,6 +663,8 @@ github.com/ory/dockertest/docker/types/strslice
 github.com/ory/dockertest/docker/types/versions
 # github.com/patrickmn/go-cache v2.1.0+incompatible
 github.com/patrickmn/go-cache
+# github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5
+github.com/petermattis/goid
 # github.com/pierrec/lz4 v2.2.6+incompatible
 github.com/pierrec/lz4
 github.com/pierrec/lz4/internal/xxh32
@@ -701,6 +704,8 @@ github.com/ryanuber/columnize
 github.com/ryanuber/go-glob
 # github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec
 github.com/samuel/go-zookeeper/zk
+# github.com/sasha-s/go-deadlock v0.2.0
+github.com/sasha-s/go-deadlock
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
 # github.com/shirou/gopsutil v2.19.9+incompatible

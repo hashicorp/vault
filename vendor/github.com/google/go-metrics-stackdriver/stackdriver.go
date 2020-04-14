@@ -14,12 +14,12 @@
 package stackdriver
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"log"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -50,10 +50,12 @@ type Sink struct {
 	counters   map[string]*counter
 	histograms map[string]*histogram
 
-	bucketer BucketFn
-	taskInfo *taskInfo
+	bucketer  BucketFn
+	extractor ExtractLabelsFn
+	taskInfo  *taskInfo
 
-	mu sync.Mutex
+	mu        sync.Mutex
+	debugLogs bool
 }
 
 // Config options for the stackdriver Sink.
@@ -62,9 +64,14 @@ type Config struct {
 	// Optional. GCP instance metadata is used to determine the ProjectID if
 	// not set.
 	ProjectID string
+	// The label extractor provides a way to rewrite metric key into a new key
+	// with multiple labels. This is useful if the instrumented code includes
+	// variable parameters within a metric name.
+	// Optional. Defaults to DefaultLabelExtractor.
+	LabelExtractor ExtractLabelsFn
 	// The bucketer is used to determine histogram bucket boundaries
-	// for the sampled metrics.
-	// Optional. Defaults to DefaultBucketer
+	// for the sampled metrics. This will execute before the LabelExtractor.
+	// Optional. Defaults to DefaultBucketer.
 	Bucketer BucketFn
 	// The interval between sampled metric points. Must be > 1 minute.
 	// https://cloud.google.com/monitoring/custom-metrics/creating-metrics#writing-ts
@@ -88,6 +95,11 @@ type Config struct {
 	// https://cloud.google.com/monitoring/api/resources#tag_generic_task
 	// Optional. Defaults to a combination of hostname+pid.
 	TaskID string
+
+	// Debug logging. Errors will be logged to stderr, but setting this to true
+	// will log additional information that is helpful when debugging errors.
+	// Optional. Defaults to false.
+	DebugLogs bool
 }
 
 type taskInfo struct {
@@ -100,21 +112,43 @@ type taskInfo struct {
 
 // BucketFn returns the histogram bucket thresholds based on the given metric
 // name.
-type BucketFn func(string) []float64
+type BucketFn func([]string) []float64
+
+// ExtractLabelsFn converts a given metric name and type into a new metric
+// name and optionally additional labels. Errors will prevent the metric from
+// writing to stackdriver.
+type ExtractLabelsFn func([]string, string) ([]string, []metrics.Label, error)
 
 // DefaultBucketer is the default BucketFn used to determing bucketing values
 // for metrics.
-func DefaultBucketer(name string) []float64 {
+func DefaultBucketer(key []string) []float64 {
 	return []float64{10.0, 25.0, 50.0, 100.0, 150.0, 200.0, 250.0, 300.0, 500.0, 1000.0, 1500.0, 2000.0, 3000.0, 4000.0, 5000.0}
+}
+
+// DefaultLabelExtractor is the default ExtractLabelsFn and is a direct
+// passthrough. Counter and Gauge metrics are renamed to include the type in
+// their name to avoid duplicate metrics with the same name but different
+// types (which is allowed by go-metrics but not by Stackdriver).
+func DefaultLabelExtractor(key []string, kind string) ([]string, []metrics.Label, error) {
+	switch kind {
+	case "counter":
+		return append(key, "counter"), nil, nil
+	case "gauge":
+		return append(key, "gauge"), nil, nil
+	case "histogram":
+		return key, nil, nil
+	}
+	return nil, nil, fmt.Errorf("Unknown metric kind: %s", kind)
 }
 
 // NewSink creates a Sink to flush metrics to stackdriver every interval. The
 // interval should be greater than 1 minute.
 func NewSink(client *monitoring.MetricClient, config *Config) *Sink {
 	s := &Sink{
-		client:   client,
-		bucketer: config.Bucketer,
-		interval: config.ReportingInterval,
+		client:    client,
+		extractor: config.LabelExtractor,
+		bucketer:  config.Bucketer,
+		interval:  config.ReportingInterval,
 		taskInfo: &taskInfo{
 			ProjectID: config.ProjectID,
 			Location:  config.Location,
@@ -122,9 +156,13 @@ func NewSink(client *monitoring.MetricClient, config *Config) *Sink {
 			Job:       config.Job,
 			TaskID:    config.TaskID,
 		},
+		debugLogs: config.DebugLogs,
 	}
 
 	// apply defaults if not configured explicitly
+	if s.extractor == nil {
+		s.extractor = DefaultLabelExtractor
+	}
 	if s.bucketer == nil {
 		s.bucketer = DefaultBucketer
 	}
@@ -249,10 +287,18 @@ func (s *Sink) report(ctx context.Context) {
 	ts := []*monitoringpb.TimeSeries{}
 
 	for _, v := range rCounters {
+		name, labels, err := v.name.labelMap(s.extractor, "counter")
+		if err != nil {
+			log.Printf("Could not extract labels from %s: %v", v.name.hash, err)
+			continue
+		}
+		if s.debugLogs {
+			log.Printf("%v is now %s + (%v)\n", v.name.key, name, labels)
+		}
 		ts = append(ts, &monitoringpb.TimeSeries{
 			Metric: &metricpb.Metric{
-				Type:   path.Join("custom.googleapis.com", "go-metrics", v.name.name),
-				Labels: v.name.labelMap(),
+				Type:   path.Join("custom.googleapis.com", "go-metrics", name),
+				Labels: labels,
 			},
 			MetricKind: metric.MetricDescriptor_GAUGE,
 			Resource:   resource,
@@ -274,10 +320,18 @@ func (s *Sink) report(ctx context.Context) {
 	}
 
 	for _, v := range rGauges {
+		name, labels, err := v.name.labelMap(s.extractor, "gauge")
+		if err != nil {
+			log.Printf("Could not extract labels from %s: %v", v.name.hash, err)
+			continue
+		}
+		if s.debugLogs {
+			log.Printf("%v is now %s + (%v)\n", v.name.key, name, labels)
+		}
 		ts = append(ts, &monitoringpb.TimeSeries{
 			Metric: &metricpb.Metric{
-				Type:   path.Join("custom.googleapis.com", "go-metrics", v.name.name),
-				Labels: v.name.labelMap(),
+				Type:   path.Join("custom.googleapis.com", "go-metrics", name),
+				Labels: labels,
 			},
 			MetricKind: metric.MetricDescriptor_GAUGE,
 			Resource:   resource,
@@ -299,6 +353,15 @@ func (s *Sink) report(ctx context.Context) {
 	}
 
 	for _, v := range rHistograms {
+		name, labels, err := v.name.labelMap(s.extractor, "histogram")
+		if err != nil {
+			log.Printf("Could not extract labels from %s: %v", v.name.hash, err)
+			continue
+		}
+		if s.debugLogs {
+			log.Printf("%v is now %s + (%v)\n", v.name.key, name, labels)
+		}
+
 		var count int64
 		count = 0
 		for _, i := range v.counts {
@@ -307,8 +370,8 @@ func (s *Sink) report(ctx context.Context) {
 
 		ts = append(ts, &monitoringpb.TimeSeries{
 			Metric: &metricpb.Metric{
-				Type:   path.Join("custom.googleapis.com", "go-metrics", v.name.name),
-				Labels: v.name.labelMap(),
+				Type:   path.Join("custom.googleapis.com", "go-metrics", name),
+				Labels: labels,
 			},
 			MetricKind: metric.MetricDescriptor_CUMULATIVE,
 			Resource:   resource,
@@ -353,13 +416,19 @@ func (s *Sink) report(ctx context.Context) {
 			end = len(ts)
 		}
 
-		err := s.client.CreateTimeSeries(ctx, &monitoringpb.CreateTimeSeriesRequest{
+		req := &monitoringpb.CreateTimeSeriesRequest{
 			Name:       fmt.Sprintf("projects/%s", s.taskInfo.ProjectID),
 			TimeSeries: ts[i:end],
-		})
+		}
+		err := s.client.CreateTimeSeries(ctx, req)
 
 		if err != nil {
 			log.Printf("Failed to write time series data: %v", err)
+			if s.debugLogs {
+				for i, a := range req.TimeSeries {
+					log.Printf("request timeseries[%d]: %v", i, a)
+				}
+			}
 		}
 	}
 }
@@ -381,7 +450,7 @@ func (s *Sink) SetGaugeWithLabels(key []string, val float32, labels []metrics.La
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.gauges[n.key] = g
+	s.gauges[n.hash] = g
 }
 
 // Should emit a Key/Value pair for each call.
@@ -401,11 +470,11 @@ func (s *Sink) IncrCounterWithLabels(key []string, val float32, labels []metrics
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	c, ok := s.counters[n.key]
+	c, ok := s.counters[n.hash]
 	if ok {
 		c.value += float64(val)
 	} else {
-		s.counters[n.key] = &counter{
+		s.counters[n.hash] = &counter{
 			name:  n,
 			value: float64(val),
 		}
@@ -424,13 +493,13 @@ func (s *Sink) AddSampleWithLabels(key []string, val float32, labels []metrics.L
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	h, ok := s.histograms[n.key]
+	h, ok := s.histograms[n.hash]
 	if ok {
 		h.addSample(val)
 	} else {
-		h = newHistogram(n, s.bucketer)
+		h = newHistogram(n, key, s.bucketer)
 		h.addSample(val)
-		s.histograms[n.key] = h
+		s.histograms[n.hash] = h
 	}
 }
 
@@ -438,42 +507,45 @@ var _ metrics.MetricSink = (*Sink)(nil)
 
 // Series holds the naming for a timeseries metric.
 type series struct {
-	key    string
-	name   string
+	key    []string
 	labels []metrics.Label
+	hash   string
 }
 
+var forbiddenChars = regexp.MustCompile("[ .=\\-/]")
+
 func newSeries(key []string, labels []metrics.Label) *series {
-	buf := &bytes.Buffer{}
-	replacer := strings.NewReplacer(" ", "_")
-
-	if len(key) > 0 {
-		replacer.WriteString(buf, key[0])
-	}
-	for _, k := range key[1:] {
-		replacer.WriteString(buf, ".")
-		replacer.WriteString(buf, k)
-	}
-
-	name := buf.String()
-
+	hash := strings.Join(key, "_")
+	hash = forbiddenChars.ReplaceAllString(hash, "_")
 	for _, label := range labels {
-		replacer.WriteString(buf, fmt.Sprintf(";%s=%s", label.Name, label.Value))
+		hash += fmt.Sprintf(";%s=%s", label.Name, label.Value)
 	}
 
 	return &series{
-		key:    buf.String(),
-		name:   name,
+		key:    key,
 		labels: labels,
+		hash:   hash,
 	}
 }
 
-func (s *series) labelMap() map[string]string {
+func (s *series) labelMap(extractor ExtractLabelsFn, kind string) (string, map[string]string, error) {
+	// extract labels from the key
+	key, extractedLabels, err := extractor(s.key, kind)
+	if err != nil {
+		return "", nil, err
+	}
+
+	name := strings.Join(key, "_")
+	name = forbiddenChars.ReplaceAllString(name, "_")
+
 	o := make(map[string]string, len(s.labels))
 	for _, v := range s.labels {
 		o[v.Name] = v.Value
 	}
-	return o
+	for _, v := range extractedLabels {
+		o[v.Name] = v.Value
+	}
+	return name, o, nil
 }
 
 // https://cloud.google.com/monitoring/api/ref_v3/rest/v3/TimeSeries#point
@@ -495,10 +567,10 @@ type histogram struct {
 	counts  []int64
 }
 
-func newHistogram(name *series, bucketer BucketFn) *histogram {
+func newHistogram(name *series, key []string, bucketer BucketFn) *histogram {
 	h := &histogram{
 		name:    name,
-		buckets: bucketer(name.name),
+		buckets: bucketer(key),
 	}
 	h.counts = make([]int64, len(h.buckets))
 	return h

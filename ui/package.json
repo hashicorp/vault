@@ -114,6 +114,7 @@
     "ember-svg-jar": "^2.1.0",
     "ember-test-selectors": "^2.1.0",
     "ember-truth-helpers": "^2.1.0",
+    "ember-wormhole": "^0.5.5",
     "escape-string-regexp": "^2.0.0",
     "eslint": "^6.1.0",
     "eslint-config-prettier": "^6.0.0",
@@ -151,7 +152,7 @@
     "@storybook/ember": "^5.1.10",
     "babel-loader": "^8.0.6",
     "jsdoc-to-markdown": "^5.0.0",
-    "lint-staged": "^9.2.1"
+    "lint-staged": "^10.1.2"
   },
   "resolutions": {
     "handlebars": "^4.3.0",
@@ -163,6 +164,7 @@
     "lodash": "^4.17.13",
     "merge": "^1.2.1",
     "minimatch": "^3.0.2",
+    "minimist": "^1.2.2",
     "growl": "^1.10.0",
     "serialize-javascript": "^2.1.1"
   },

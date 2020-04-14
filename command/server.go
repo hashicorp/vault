@@ -26,6 +26,7 @@ import (
 	"github.com/armon/go-metrics/datadog"
 	"github.com/armon/go-metrics/prometheus"
 	stackdriver "github.com/google/go-metrics-stackdriver"
+	stackdrivervault "github.com/google/go-metrics-stackdriver/vault"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
@@ -1143,6 +1144,11 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the separate HA storage backend, if it exists
 	var ok bool
 	if config.HAStorage != nil {
+		if config.Storage.Type == "raft" {
+			c.UI.Error("HA storage cannot be declared when Raft is the storage type")
+			return 1
+		}
+
 		// TODO: Remove when Raft can server as the ha_storage backend.
 		// See https://github.com/hashicorp/vault/issues/8206
 		if config.HAStorage.Type == "raft" {
@@ -2457,9 +2463,12 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 			return nil, fmt.Errorf("Failed to create stackdriver client: %v", err)
 		}
 		sink := stackdriver.NewSink(client, &stackdriver.Config{
-			ProjectID: telConfig.StackdriverProjectID,
-			Location:  telConfig.StackdriverLocation,
-			Namespace: telConfig.StackdriverNamespace,
+			LabelExtractor: stackdrivervault.Extractor,
+			Bucketer:       stackdrivervault.Bucketer,
+			ProjectID:      telConfig.StackdriverProjectID,
+			Location:       telConfig.StackdriverLocation,
+			Namespace:      telConfig.StackdriverNamespace,
+			DebugLogs:      telConfig.StackdriverDebugLogs,
 		})
 		fanout = append(fanout, sink)
 	}

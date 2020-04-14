@@ -522,7 +522,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	raftConfig.LocalID = raft.ServerID(b.localID)
 
 	// Set up a channel for reliable leader notifications.
-	raftNotifyCh := make(chan bool, 1)
+	raftNotifyCh := make(chan bool, 10)
 	raftConfig.NotifyCh = raftNotifyCh
 
 	// If we have a bootstrapConfig set we should bootstrap now.
@@ -556,7 +556,16 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			return errwrap.Wrapf("raft recovery failed to parse peers.json: {{err}}", err)
 		}
 
-		b.logger.Info("raft recovery: found new config", "config", recoveryConfig)
+		// Non-voting servers are only allowed in enterprise. If Suffrage is disabled,
+		// error out to indicate that it isn't allowed.
+		for idx := range recoveryConfig.Servers {
+			if !nonVotersAllowed && recoveryConfig.Servers[idx].Suffrage == raft.Nonvoter {
+				return fmt.Errorf("raft recovery failed to parse configuration for node %q: setting `non_voter` is only supported in enterprise", recoveryConfig.Servers[idx].ID)
+			}
+		}
+
+		b.logger.Info("raft recovery found new config", "config", recoveryConfig)
+
 		err = raft.RecoverCluster(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport, recoveryConfig)
 		if err != nil {
 			return errwrap.Wrapf("raft recovery failed: {{err}}", err)
@@ -999,12 +1008,21 @@ type RaftLock struct {
 func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}, leaderNotifyCh <-chan bool) <-chan struct{} {
 	leaderLost := make(chan struct{})
 	go func() {
-		select {
-		case isLeader := <-leaderNotifyCh:
-			if !isLeader {
-				close(leaderLost)
+		for {
+			select {
+			case isLeader := <-leaderNotifyCh:
+				// leaderNotifyCh may deliver a true value initially if this
+				// server is already the leader prior to RaftLock.Lock call
+				// (the true message was already queued). The next message is
+				// always going to be false. The for loop should loop at most
+				// twice.
+				if !isLeader {
+					close(leaderLost)
+					return
+				}
+			case <-stopCh:
+				return
 			}
-		case <-stopCh:
 		}
 	}()
 	return leaderLost
