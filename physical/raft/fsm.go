@@ -241,7 +241,7 @@ func (f *FSM) witnessSnapshot(index, term, configurationIndex uint64, configurat
 
 // Delete deletes the given key from the bolt file.
 func (f *FSM) Delete(ctx context.Context, path string) error {
-	defer metrics.MeasureSince([]string{"raft", "delete"}, time.Now())
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "delete"}, time.Now())
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -253,7 +253,7 @@ func (f *FSM) Delete(ctx context.Context, path string) error {
 
 // Delete deletes the given key from the bolt file.
 func (f *FSM) DeletePrefix(ctx context.Context, prefix string) error {
-	defer metrics.MeasureSince([]string{"raft", "delete_prefix"}, time.Now())
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "delete_prefix"}, time.Now())
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -277,7 +277,7 @@ func (f *FSM) DeletePrefix(ctx context.Context, prefix string) error {
 
 // Get retrieves the value at the given path from the bolt file.
 func (f *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
-	defer metrics.MeasureSince([]string{"raft", "get"}, time.Now())
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "get"}, time.Now())
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -311,7 +311,7 @@ func (f *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
 
 // Put writes the given entry to the bolt file.
 func (f *FSM) Put(ctx context.Context, entry *physical.Entry) error {
-	defer metrics.MeasureSince([]string{"raft", "put"}, time.Now())
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "put"}, time.Now())
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -324,7 +324,7 @@ func (f *FSM) Put(ctx context.Context, entry *physical.Entry) error {
 
 // List retrieves the set of keys with the given prefix from the bolt file.
 func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
-	defer metrics.MeasureSince([]string{"raft", "list"}, time.Now())
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "list"}, time.Now())
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -531,6 +531,8 @@ type writeErrorCloser interface {
 // (size, checksum, etc) and a second for the sink of the data. We also use a
 // proto delimited writer so we can stream proto messages to the sink.
 func (f *FSM) writeTo(ctx context.Context, metaSink writeErrorCloser, sink writeErrorCloser) {
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "write_snapshot"}, time.Now())
+
 	protoWriter := protoio.NewDelimitedWriter(sink)
 	metadataProtoWriter := protoio.NewDelimitedWriter(metaSink)
 
@@ -589,6 +591,8 @@ func (f *FSM) SetNoopRestore(enabled bool) {
 // first deletes the existing bucket to clear all existing data, then recreates
 // it so we can copy in the snapshot.
 func (f *FSM) Restore(r io.ReadCloser) error {
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "restore_snapshot"}, time.Now())
+
 	if f.noopRestore == true {
 		return nil
 	}
@@ -599,41 +603,63 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 	f.l.Lock()
 	defer f.l.Unlock()
 
-	// Start a write transaction.
+	// Delete the existing data bucket and create a new one.
+	f.logger.Debug("snapshot restore: deleting bucket")
 	err := f.db.Update(func(tx *bolt.Tx) error {
 		err := tx.DeleteBucket(dataBucketName)
 		if err != nil {
 			return err
 		}
 
-		b, err := tx.CreateBucket(dataBucketName)
+		_, err = tx.CreateBucket(dataBucketName)
 		if err != nil {
 			return err
-		}
-
-		for {
-			s := new(pb.StorageEntry)
-			err := protoReader.ReadMsg(s)
-			if err != nil {
-				if err == io.EOF {
-					return nil
-				}
-				return err
-			}
-
-			err = b.Put([]byte(s.Key), s.Value)
-			if err != nil {
-				return err
-			}
 		}
 
 		return nil
 	})
 	if err != nil {
-		f.logger.Error("could not restore snapshot", "error", err)
+		f.logger.Error("could not restore snapshot: could not clear existing bucket", "error", err)
 		return err
 	}
 
+	f.logger.Debug("snapshot restore: deleting bucket done")
+	f.logger.Debug("snapshot restore: writing keys")
+
+	var done bool
+	for !done {
+		err := f.db.Update(func(tx *bolt.Tx) error {
+			b := tx.Bucket(dataBucketName)
+			s := new(pb.StorageEntry)
+
+			// Commit in batches of 50k. Bolt wont split pages until commit so
+			// we do incremental writes. This is safe since we have a write lock
+			// on the fsm's lock.
+			for i := 0; i < 50000; i++ {
+				err := protoReader.ReadMsg(s)
+				if err != nil {
+					if err == io.EOF {
+						done = true
+						return nil
+					}
+					return err
+				}
+
+				err = b.Put([]byte(s.Key), s.Value)
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
+		})
+		if err != nil {
+			f.logger.Error("could not restore snapshot", "error", err)
+			return err
+		}
+	}
+
+	f.logger.Debug("snapshot restore: writing keys done")
 	return nil
 }
 
