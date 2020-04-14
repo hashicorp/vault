@@ -113,6 +113,11 @@ export default Component.extend({
       this.send('setAndBroadcast', path, valueToSet);
     },
 
+    setAndBroadcastTtl(path, value) {
+      let valueToSet = value.enabled === true ? value.seconds : undefined;
+      this.send('setAndBroadcast', path, valueToSet);
+    },
+
     codemirrorUpdated(path, isString, value, codemirror) {
       codemirror.performLint();
       const hasErrors = codemirror.state.lint.marked.length > 0;
