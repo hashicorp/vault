@@ -193,6 +193,9 @@ type DisplayAttributes struct {
 	// EditType is the optional type of form field needed for a property
 	// This is only necessary for a "textarea" or "file"
 	EditType string `json:"editType,omitempty"`
+
+	// HelpText is the optional helper text for display on the UI
+	HelpText string `json:"helpText,omitempty"`
 }
 
 // RequestExample is example of request data.
