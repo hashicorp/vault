@@ -1,10 +1,18 @@
 .replication-dashboard {
-  .has-margin-bottom {
-    padding-bottom: $spacing-xs;
+  .has-margin-bottom-xs {
+    margin-bottom: $spacing-xs;
+  }
+
+  .has-margin-bottom-s {
+    margin-bottom: $spacing-s;
   }
 
   .has-large-margin-top {
     margin-top: $spacing-xl;
+  }
+
+  .documentation-link {
+    float: right;
   }
 
   .selectable-card {
