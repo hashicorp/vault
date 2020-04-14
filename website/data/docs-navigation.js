@@ -34,6 +34,7 @@ export default [
       'response-wrapping',
       'policies',
       'ha',
+      'integrated-storage',
       'pgp-gpg-keybase',
       'recovery-mode'
     ]
@@ -253,6 +254,7 @@ export default [
         ]
       },
       { category: 'totp' },
+      { category: 'transform' },
       { category: 'transit' },
       { category: 'venafi' },
       '------------------------',
@@ -323,9 +325,13 @@ export default [
                   'standalone-load-balanced-ui',
                   'standalone-tls',
                   'standalone-audit',
-                  'ha-with-consul',
                   'external',
                   'kubernetes-auth',
+                  'ha-with-consul',
+                  'ha-with-raft',
+                  'enterprise-with-raft',
+                  'enterprise-dr-with-raft',
+                  'enterprise-perf-with-raft',
                   'enterprise-best-practice'
                 ]
               },
@@ -375,7 +381,11 @@ export default [
       'upgrade-to-1.2.0',
       'upgrade-to-1.2.1',
       'upgrade-to-1.2.4',
-      'upgrade-to-1.3.0'
+      'upgrade-to-1.3.0',
+      'upgrade-to-1.3.2',
+      'upgrade-to-1.3.3',
+      'upgrade-to-1.3.4',
+      'upgrade-to-1.4.0'
     ]
   },
   '----------------',

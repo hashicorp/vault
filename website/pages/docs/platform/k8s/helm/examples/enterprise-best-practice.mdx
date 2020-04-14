@@ -1,8 +1,8 @@
 ---
-layout: "docs"
-page_title: "Enterprise Best Practice"
-sidebar_current: "docs-platform-k8s-examples-enterprise-best-practice"
-sidebar_title: "Enterprise Best Practice"
+layout: 'docs'
+page_title: 'Enterprise Best Practice'
+sidebar_current: 'docs-platform-k8s-examples-enterprise-best-practice'
+sidebar_title: 'Enterprise Best Practice'
 description: |-
   Describes how to set up a best practices Vault Enterprise cluster
 ---
@@ -25,17 +25,17 @@ mechanism may be used.
 
 1. Create an EKS cluster. This walk-through will assume it's named "vault-cluster".
 2. While the cluster is launching, create a role for Vault's node group to use.
-[AWS's docs](https://docs.aws.amazon.com/eks/latest/userguide/worker_node_IAM_role.html)
-should be considered the authority on the policies that need to be attached, but at the time
-of writing, the required policies are the `AmazonEKSWorkerNodePolicy`, the `AmazonEKS_CNI_Policy`,
-and the `AmazonEC2ContainerRegistryReadOnly`. For the purposes of this walk-through, we will
-assume you name this new role, "EKSNodeGroupForAutoUnseal".
+   [AWS's docs](https://docs.aws.amazon.com/eks/latest/userguide/worker_node_IAM_role.html)
+   should be considered the authority on the policies that need to be attached, but at the time
+   of writing, the required policies are the `AmazonEKSWorkerNodePolicy`, the `AmazonEKS_CNI_Policy`,
+   and the `AmazonEC2ContainerRegistryReadOnly`. For the purposes of this walk-through, we will
+   assume you name this new role, "EKSNodeGroupForAutoUnseal".
 3. While the cluster is launching, also create a KMS key that will be used for auto-unseal.
-Under "Define key usage permissions", search for "EKSNodeGroupForAutoUnseal" and add a check
-next to it.
+   Under "Define key usage permissions", search for "EKSNodeGroupForAutoUnseal" and add a check
+   next to it.
 4. One you've finished creating the key, return to IAM. Create a new policy called
-"UnsealKeyUsageForVault" and attach it to the "EKSNodeGroupForAutoUnseal" role. The policy
-contents should be:
+   "UnsealKeyUsageForVault" and attach it to the "EKSNodeGroupForAutoUnseal" role. The policy
+   contents should be:
 
 ```
 {
@@ -56,9 +56,9 @@ contents should be:
 ```
 
 5. Return to EKS and add a node group. While launching it, under "Node IAM Role Name", select
-"EKSNodeGroupForAutoUnseal".
+   "EKSNodeGroupForAutoUnseal".
 6. While the nodes are creating, point your local `kubectl` at your new cluster as shown
-[here](https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html).
+   [here](https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html).
 
 ## Generate TLS Certificates
 
@@ -144,7 +144,7 @@ convention.
 
 After bringing up the first cluster (and each cluster thereafter), Vault enterprise
 requires a license to be installed within a limited time window, as shown
-[here](/api-docs/system/license/#install-license).
+[here](/api-docs/system/license#install-license).
 
 ## Setting Up a Disaster Replication (DR) Cluster
 

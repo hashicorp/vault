@@ -4,7 +4,21 @@ CHANGES:
 
 * token: Token renewals will now return token policies within the `token_policies` , identity policies within `identity_policies`, and the full policy set within `policies`. [[GH-8535](https://github.com/hashicorp/vault/pull/8535)]
 
-## 1.4 RC1 (March 19th, 2020)
+## 1.4.1 (TBD)
+
+CHANGES: 
+
+* storage/raft: Disallow `ha_storage` to be specified if `raft` is set as the `storage` type. [[GH-8707](https://github.com/hashicorp/vault/pull/8707)]
+
+IMPROVEMENTS:
+
+* auth/azure: Enable login from Azure VMs with user-assigned identities [[GH-33](https://github.com/hashicorp/vault-plugin-auth-azure/pull/33)]
+
+BUG FIXES:
+
+* sys/wrapping: Allow unwrapping of wrapping tokens which contain nil data [[GH-8714](https://github.com/hashicorp/vault/pull/8714)]
+
+## 1.4.0 (April 7th, 2020)
 
 CHANGES:
 
@@ -21,7 +35,9 @@ FEATURES:
   as well as the [Atlas programmatic interface](https://docs.atlas.mongodb.com/tutorial/manage-programmatic-access/).
 * **OpenLDAP Secrets Engine**: We now support password management of existing OpenLDAP user entries. For more, see [#8360](https://github.com/hashicorp/vault/pull/8360/).
 * **Redshift Database Secrets Engine**: The database secrets engine now supports static and dynamic secrets for the Amazon Web Services (AWS) Redshift service.
-* **Service Registration Config**: A newly introduced `service_registration` configuration stanza, that allows for service registration to be configured separately from the storage backend. For more, see [#7887](https://github.com/hashicorp/vault/pull/7887/).  
+* **Service Registration Config**: A newly introduced `service_registration` configuration stanza, that allows for service registration to be configured separately from the storage backend. For more, see [#7887](https://github.com/hashicorp/vault/pull/7887/).
+* **Transform Secrets Engine (Enterprise)**: A new secrets engine that handles secure data transformation and tokenization against provided input value.
+* **Integrated Storage**: Promoted out of beta and into general availability for both open-source and enterprise workloads.
 
 IMPROVEMENTS:
 
@@ -72,7 +88,7 @@ IMPROVEMENTS:
 * storage/raft: Nodes in the raft cluster can all be given possible leader
   addresses for them to continuously try and join one of them, thus automating
   the process of join to a greater extent [[GH-7856](https://github.com/hashicorp/vault/pull/7856)]
-* storage/raft: Fix a potential deadlock that could occure on leadership transition [[GH-8547](https://github.com/hashicorp/vault/pull/8547)]
+* storage/raft: Fix a potential deadlock that could occur on leadership transition [[GH-8547](https://github.com/hashicorp/vault/pull/8547)]
 * storage/raft: Refresh TLS keyring on snapshot restore [[GH-8546](https://github.com/hashicorp/vault/pull/8546)]
 * storage/etcd: Bumped etcd client API SDK [[GH-7931](https://github.com/hashicorp/vault/pull/7931) & [GH-4961](https://github.com/hashicorp/vault/pull/4961) & [GH-4349](https://github.com/hashicorp/vault/pull/4349) & [GH-7582](https://github.com/hashicorp/vault/pull/7582)]
 * ui: Make Transit Key actions more prominent [[GH-8304](https://github.com/hashicorp/vault/pull/8304)]
