@@ -49,7 +49,8 @@ requested. The lease duration controls the expiration
 of certificates issued by this backend. Defaults to
 the value of max_ttl.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "TTL",
+					Name:     "TTL",
+					HelpText: "Vault will by default set this value to match Max TTL",
 				},
 			},
 
@@ -57,7 +58,8 @@ the value of max_ttl.`,
 				Type:        framework.TypeDurationSecond,
 				Description: "The maximum allowed lease duration",
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "Max TTL",
+					Name:     "Max TTL",
+					HelpText: "Vault will by default set this value to match Max TTL for the secrets engine",
 				},
 			},
 
