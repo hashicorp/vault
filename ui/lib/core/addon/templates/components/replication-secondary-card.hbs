@@ -3,12 +3,28 @@
   {{#if (eq title "States")}}
     <h3 class="title is-4 grid-item-title card-title">{{title}}</h3>
     <div class="grid-item-left">
-      <code class="has-text-black">state</code>
-      <p class="has-text-grey is-size-8">How this cluster is communicating with others at this moment.</p>
+      {{#if (eq state "idle")}}
+          <code class="has-text-danger">state</code>
+          <AlertInline
+            @type="danger"
+            @message="Please check your server logs."
+          />
+      {{else}}
+        <code class="has-text-black">state</code>
+        <p class="has-text-grey is-size-8">How this cluster is communicating with others at this moment.</p>
+      {{/if}}
     </div>
     <div class="grid-item-right">
-      <code class="has-text-black">connection_state</code>
-      <p class="has-text-grey is-size-8">The health of the connection between this cluster and others.</p>
+      {{#if (eq connection "transient failure")}}
+        <code class="has-text-danger">connection_state</code>
+        <AlertInline
+          @type="danger"
+          @message="ARG TODO: waiting on feedback to fill this in"
+        />
+      {{else}}
+        <code class="has-text-black">connection_state</code>
+        <p class="has-text-grey is-size-8">The health of the connection between this cluster and others.</p>
+      {{/if}}
     </div>
     {{!-- ARG TODO connection state is likely wrong here, waiting for reply from RFC --}}
       <h2 class="title-number grid-item-left-bottom">{{state}}
