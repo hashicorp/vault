@@ -4,36 +4,21 @@
     <ReplicationPage @model={{model}} as |Page|>
       <Page.header 
         @showTabs={{false}} 
-        @model={{data}}
+        @model={{model}}
       />
       <Page.toggle />
       <Page.dashboard 
       {{!-- passing in component to render so that the yielded components are flexible based on the dashboard --}}
-        @componentToRender='replication-page/replication-dashboard/replication-card' as |Dashboard|>
+        @componentToRender='replication-secondary-card' as |Dashboard|>
         <Dashboard.card
           @title="States"
-          @property_1="state"
-          @property_2="connection_state"
-          @description_1="How this cluster is communicating with others at this moment."
-          @description_2="coming"
-          @metric_1={{if model.dr.state model.dr.state 'unknown'}}
-          @metric_2={{if model.drStateDisplay model.drStateDisplay 'unknown'}}
+          @data={{model}}
         />
-        <Dashboard.card 
+        <Dashboard.card
           @title="Write-Ahead Logs (WALs)"
-          @property_1="Last Remote WAL"
-          @property_2="Last WAL entry from primary"
-          @description_1="Index of the last Write-Ahead Logs (WAL) entry written on the local storage."
-          @description_2="Index of the last WAL entry from  the primary."
-          @metric_1={{if model.dr.lastRemoteWAL model.dr.lastRemoteWAL 'unknown' }}
-          @metric_2={{if model.dr.lastWAL model.dr.lastWAL 'unknown'}}
+          @data={{model}}
         />
-        <Dashboard.rows
-          @metric_1={{if model.dr.merkleRoot model.dr.merkleRoot 'unknown' }}
-          @metric_2={{if model.dr.mode model.dr.mode 'unknown' }}
-          @metric_3={{if model.dr.clusterId model.dr.clusterId 'unknown' }}
-          @syncProgress={{if model.dr.syncProgress syncProgress false }}
-        />
+        <Dashboard.rows @data={{model.dr}}/>
       </Page.dashboard>
     </ReplicationPage>
   </div>
