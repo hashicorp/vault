@@ -13,6 +13,7 @@ import layout from '../templates/components/alert-banner';
  * ```
  *
  * @param type=null {String} - The banner type. This comes from the message-types helper.
+ * @param secondIconType=null {String} - Optional. If you want a second icon to appear to the right of the title. This comes from the message-types helper.
  * @param [message=null {String}] - The message to display within the banner.
  * @param [title=null {String}] - A title to show above the message. If this is not provided, there are default values for each type of alert.
  *
@@ -23,6 +24,7 @@ export default Component.extend({
   type: null,
   message: null,
   title: null,
+  secondIconType: null,
   yieldWithoutColumn: false,
   classNameBindings: ['containerClass'],
 
@@ -32,5 +34,9 @@ export default Component.extend({
 
   alertType: computed('type', function() {
     return messageTypes([this.get('type')]);
+  }),
+
+  secondAlertType: computed('secondIconType', function() {
+    return messageTypes([this.get('secondIconType')]);
   }),
 });
