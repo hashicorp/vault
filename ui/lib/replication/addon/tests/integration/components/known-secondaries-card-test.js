@@ -31,6 +31,7 @@ module('Integration | Component | replication known-secondaries-card', function(
     const noSecondaries = {
       knownSecondaries: null,
     };
+    this.set('replicationAttrs', noSecondaries);
     await render(hbs`<KnownSecondariesCard @cluster={{cluster}} @replicationAttrs={{replicationAttrs}} />`);
 
     assert.dom('.empty-state').exists();
