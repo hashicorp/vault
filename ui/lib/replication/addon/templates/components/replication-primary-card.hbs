@@ -5,8 +5,9 @@
       {{description}}
     </span>
     <h3 class="title is-3">
-      {{!-- TODO make this dynamic --}}
-      <Icon @glyph="check-circle-outline" class="has-text-success" />
+      {{#if glyph}}
+        <Icon @glyph={{glyph}} class="has-text-success" />
+      {{/if}}
       {{metric}}
     </h3>
   </div>
