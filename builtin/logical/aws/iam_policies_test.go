@@ -13,7 +13,9 @@ import (
 )
 
 const ec2DescribePolicy = `{"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": ["ec2:DescribeInstances"], "Resource": "*"}]}`
-const ec2AllPolicy = `{"Version": "2012-10-17","Statement": [{"Effect": "Allow", "Action": ["ec2:*"], "Resource": "*"}]}`
+
+// ec2AllPolicy also uses a string instead of a list for the Action
+const ec2AllPolicy = `{"Version": "2012-10-17","Statement": [{"Effect": "Allow", "Action": "ec2:*", "Resource": "*"}]}`
 
 type mockGroupIAMClient struct {
 	iamiface.IAMAPI
@@ -150,7 +152,7 @@ func Test_combinePolicyDocuments(t *testing.T) {
 			input: []string{
 				ec2AllPolicy,
 			},
-			expectedOutput: `{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["ec2:*"],"Resource":"*"}]}`,
+			expectedOutput: `{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"ec2:*","Resource":"*"}]}`,
 			expectedErr:    false,
 		},
 		{
@@ -160,7 +162,7 @@ func Test_combinePolicyDocuments(t *testing.T) {
 				ec2DescribePolicy,
 			},
 			expectedOutput: `{"Version": "2012-10-17", "Statement":[
-				{"Effect": "Allow", "Action": ["ec2:*"], "Resource": "*"},
+				{"Effect": "Allow", "Action": "ec2:*", "Resource": "*"},
 				{"Effect": "Allow", "Action": ["ec2:DescribeInstances"], "Resource": "*"}]}`,
 			expectedErr: false,
 		},
@@ -170,13 +172,13 @@ func Test_combinePolicyDocuments(t *testing.T) {
 				ec2AllPolicy,
 				`{"Version": "2012-10-17", "Statement": []}`,
 			},
-			expectedOutput: `{"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": ["ec2:*"], "Resource": "*"}]}`,
+			expectedOutput: `{"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "ec2:*", "Resource": "*"}]}`,
 			expectedErr:    false,
 		},
 		{
 			description: "malformed json",
 			input: []string{
-				`"Version": "2012-10-17","Statement": [{"Effect": "Allow", "Action": ["ec2:*"], "Resource": "*"}]}`,
+				`"Version": "2012-10-17","Statement": [{"Effect": "Allow", "Action": "ec2:*", "Resource": "*"}]}`,
 				`{"Version": "2012-10-17", "Statement": []}`,
 			},
 			expectedOutput: ``,

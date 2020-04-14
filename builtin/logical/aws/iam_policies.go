@@ -13,10 +13,12 @@ type PolicyDocument struct {
 	Statement []StatementEntry
 }
 
-// StatementEntry represents a statement in an IAM policy document
+// StatementEntry represents a statement in an IAM policy document. Note that
+// Action can be either a list or a string, so we represent it here as
+// interface{}.
 type StatementEntry struct {
 	Effect   string
-	Action   []string
+	Action   interface{}
 	Resource string
 }
 
