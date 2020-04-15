@@ -29,7 +29,6 @@ func TestHABackend(t *testing.T) {
 		{name: "WithPrefix", prefix: "some-prefix"},
 		{name: "WithPrefixWithTrailingObjectDelimiter", prefix: "some-prefix-with-trailing-object-delimiter" + objectDelimiter},
 	}
-	t.Parallel()
 	for _, variant := range variants {
 		t.Run(variant.name, func(t *testing.T) {
 			r := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
