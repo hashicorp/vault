@@ -18,16 +18,16 @@ export default Component.extend({
     }
     return dr;
   }),
-  state: computed('data', function() {
+  state: computed('dr', function() {
     return this.dr && this.dr.state ? this.dr.state : 'unknown';
   }),
   connection: computed('data', function() {
     return this.data.drStateDisplay ? this.data.drStateDisplay : 'unknown';
   }),
-  lastWAL: computed('data', function() {
+  lastWAL: computed('dr', function() {
     return this.dr && this.dr.lastWAL ? this.dr.lastWAL : 0;
   }),
-  lastRemoteWAL: computed('data', function() {
+  lastRemoteWAL: computed('dr', function() {
     return this.dr && this.dr.lastRemoteWAL ? this.dr.lastRemoteWAL : 0;
   }),
   delta: computed('data', function() {
