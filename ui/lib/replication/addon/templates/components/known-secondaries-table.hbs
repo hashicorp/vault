@@ -9,17 +9,17 @@
       </tr>
     </thead>
     <tbody>
-      {{!-- TODO: figure out what goes in URL and connected --}}
+      {{!-- TODO: use real values for URL and connected --}}
       {{#each knownSecondaries as |secondary|}}
           <tr>
-            <th scope="row">
-              <code>{{secondary}}</code>
+            <th scope="row" data-test-secondaries-row={{secondary}}>
+              <code>{{or secondary.id secondary}}</code>
             </th>
             <td>
-              <code class="is-word-break">http://localhost:4200/ui/vault/replication/dr</code>
+              <code class="is-word-break" data-test-url>{{or secondary.url 'unknown'}}</code>
             </td>
             <td>
-              <code>Yes</code>
+              <code>{{or secondary.connected 'unknown'}}</code>
             </td>
           </tr>
       {{/each}}

@@ -5,36 +5,39 @@ import engineResolverFor from 'ember-engines/test-support/engine-resolver-for';
 import hbs from 'htmlbars-inline-precompile';
 const resolver = engineResolverFor('replication');
 
-const CLUSTER = {
-  canAddSecondary: true,
-  replicationMode: 'dr',
-};
-
 const REPLICATION_ATTRS = {
-  knownSecondaries: [5, 4343, 3432],
+  knownSecondaries: ['firstSecondary', 'secondary-2'],
 };
 
-module('Integration | Component | replication known-secondaries-card', function(hooks) {
+module('Integration | Component | replication known-secondaries-table', function(hooks) {
   setupRenderingTest(hooks, { resolver });
 
   hooks.beforeEach(function() {
-    this.set('cluster', CLUSTER);
     this.set('replicationAttrs', REPLICATION_ATTRS);
   });
 
-  test('it renders with secondary ids', async function(assert) {
-    await render(hbs`<KnownSecondariesCard @cluster={{cluster}} @replicationAttrs={{replicationAttrs}} />`);
+  test('it renders with a table of known secondaries', async function(assert) {
+    await render(hbs`<KnownSecondariesCard @replicationAttrs={{replicationAttrs}} />`);
 
-    assert.dom('.secondaries').exists();
+    assert.dom('[data-test-known-secondaries-table]').exists();
+    REPLICATION_ATTRS.knownSecondaries.forEach(secondaryId => {
+      assert
+        .dom(`[data-test-secondaries-row=${secondaryId}]`)
+        .exists('shows a table row for each known secondary');
+    });
   });
 
-  test('it renders an empty state if there are no known secondaries', async function(assert) {
-    const noSecondaries = {
-      knownSecondaries: null,
+  test('shows unknown if url or connection are unknown', async function(assert) {
+    // TODO: update this test  once we know what the shape of knownSecondaries is & how we will access the url and connection
+    const secondaryDetailsMissing = {
+      knownSecondaries: ['firstSecondary', { id: 'secondary-2', url: 'http://stuff.com/' }],
     };
-    this.set('replicationAttrs', noSecondaries);
-    await render(hbs`<KnownSecondariesCard @cluster={{cluster}} @replicationAttrs={{replicationAttrs}} />`);
+    this.set('replicationAttrs', secondaryDetailsMissing);
+    await render(hbs`<KnownSecondariesCard @replicationAttrs={{replicationAttrs}} />`);
 
-    assert.dom('.empty-state').exists();
+    this.element.querySelectorAll('[data-test-url]').forEach((td, i) => {
+      let expectedUrl = secondaryDetailsMissing.knownSecondaries[i].url || 'unknown';
+      return assert.equal(td.textContent.trim(), expectedUrl);
+    });
   });
 });
