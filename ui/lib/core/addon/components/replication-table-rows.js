@@ -4,6 +4,7 @@ import layout from '../templates/components/replication-table-rows';
 
 export default Component.extend({
   layout,
+  classNames: ['replication-table-rows'],
   data: null,
   clusterDetails: computed('data', function() {
     const { data } = this.data;
