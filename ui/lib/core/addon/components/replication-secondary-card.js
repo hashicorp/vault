@@ -8,6 +8,13 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 import layout from '../templates/components/replication-secondary-card';
 
+const STATES = {
+  streamWals: 'stream-wals',
+  idle: 'idle',
+  transientFailure: 'transient-failure',
+  shutdown: 'shutdown',
+};
+
 export default Component.extend({
   layout,
   data: null,
@@ -34,16 +41,16 @@ export default Component.extend({
     return Math.abs(this.get('lastWAL') - this.get('lastRemoteWAL'));
   }),
   inSyncState: computed('state', function() {
-    if (this.state === 'stream-wals') {
+    if (this.state === STATES.streamWals) {
       return true;
     }
   }),
   hasErrorClass: computed('data', 'title', 'state', 'connection', function() {
     if (this.title === 'States') {
       if (
-        this.state === 'idle' ||
-        this.connection === 'transient-failure' ||
-        this.connection === 'shutdown'
+        this.state === STATES.idle ||
+        this.connection === STATES.transientFailure ||
+        this.connection === STATES.shutdown
       ) {
         return true;
       }
