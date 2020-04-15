@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"google.golang.org/grpc/codes"
@@ -25,7 +26,7 @@ type rotateRootCredentialsWAL struct {
 func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request, kind string,
 	data interface{}) error {
 	if kind != rootWALKey {
-		return nil
+		return fmt.Errorf("unknown type to rollback")
 	}
 
 	// Decode the WAL data
@@ -57,7 +58,9 @@ func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request,
 	return nil
 }
 
-func (b *databaseBackend) rollbackDatabasePassword(ctx context.Context, config *DatabaseConfig, entry rotateRootCredentialsWAL) error {
+func (b *databaseBackend) rollbackDatabasePassword(ctx context.Context, config *DatabaseConfig,
+	entry rotateRootCredentialsWAL) error {
+
 	// Get a connection using the new password
 	config.ConnectionDetails["password"] = entry.NewPassword
 	dbc, err := b.GetConnectionWithConfig(ctx, entry.ConnectionName, config)
