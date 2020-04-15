@@ -11,7 +11,7 @@ const CLUSTER = {
 };
 
 const REPLICATION_ATTRS = {
-  knownSecondaries: [5, 4343, 3432],
+  knownSecondaries: ['firstSecondary', 'secondary-2', '3'],
 };
 
 module('Integration | Component | replication known-secondaries-card', function(hooks) {
