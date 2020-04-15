@@ -3,6 +3,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import engineResolverFor from 'ember-engines/test-support/engine-resolver-for';
 import hbs from 'htmlbars-inline-precompile';
+const resolver = engineResolverFor('replication');
 
 const CLUSTER = {
   canAddSecondary: true,
@@ -14,17 +15,20 @@ const REPLICATION_ATTRS = {
 };
 
 module('Integration | Component | replication known-secondaries-card', function(hooks) {
-  setupRenderingTest(hooks, { resolver: engineResolverFor('replication') });
+  setupRenderingTest(hooks, { resolver });
 
   hooks.beforeEach(function() {
     this.set('cluster', CLUSTER);
     this.set('replicationAttrs', REPLICATION_ATTRS);
   });
 
-  test('it renders with secondary ids', async function(assert) {
+  test('it renders with a table of known secondaries', async function(assert) {
     await render(hbs`<KnownSecondariesCard @cluster={{cluster}} @replicationAttrs={{replicationAttrs}} />`);
 
-    assert.dom('.secondaries').exists();
+    assert
+      .dom('[data-test-known-secondaries-table]')
+      .exists('shows known secondaries table when there are known secondaries');
+    assert.dom('[data-test-manage-link]').exists('shows manage link');
   });
 
   test('it renders an empty state if there are no known secondaries', async function(assert) {
@@ -34,6 +38,20 @@ module('Integration | Component | replication known-secondaries-card', function(
     this.set('replicationAttrs', noSecondaries);
     await render(hbs`<KnownSecondariesCard @cluster={{cluster}} @replicationAttrs={{replicationAttrs}} />`);
 
+    assert.dom('[data-test-known-secondaries-table]').doesNotExist();
     assert.dom('.empty-state').exists();
+    assert
+      .dom('.empty-state')
+      .includesText('No known dr secondary clusters', 'has a message with the replication mode');
+  });
+
+  test('it renders an Add secondary link if user has capabilites', async function(assert) {
+    const noSecondaries = {
+      knownSecondaries: null,
+    };
+    this.set('replicationAttrs', noSecondaries);
+    await render(hbs`<KnownSecondariesCard @cluster={{cluster}} @replicationAttrs={{replicationAttrs}} />`);
+
+    assert.dom('.add-secondaries').exists();
   });
 });
