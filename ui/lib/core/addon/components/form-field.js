@@ -115,7 +115,7 @@ export default Component.extend({
 
     setAndBroadcastTtl(path, value) {
       let valueToSet = value.enabled === true ? value.seconds : undefined;
-      this.send('setAndBroadcast', path, valueToSet);
+      this.send('setAndBroadcast', path, `${valueToSet}s`);
     },
 
     codemirrorUpdated(path, isString, value, codemirror) {
