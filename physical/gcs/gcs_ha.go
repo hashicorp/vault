@@ -194,7 +194,7 @@ func (l *Lock) Unlock() error {
 			MetagenerationMatch: r.attrs.Metageneration,
 		}
 
-		obj := l.backend.client.Bucket(l.backend.bucket).Object(l.key)
+		obj := l.backend.client.Bucket(l.backend.bucket).Object(l.backend.withPrefix(l.key))
 		if err := obj.If(conds).Delete(ctx); err != nil {
 			// If the pre-condition failed, it means that someone else has already
 			// acquired the lock and we don't want to delete it.
@@ -376,7 +376,7 @@ func (l *Lock) writeLock() (bool, error) {
 	}
 
 	// Write the object
-	obj := l.backend.client.Bucket(l.backend.bucket).Object(l.key)
+	obj := l.backend.client.Bucket(l.backend.bucket).Object(l.backend.withPrefix(l.key))
 	w := obj.If(conds).NewWriter(ctx)
 	w.ObjectAttrs.CacheControl = "no-cache; no-store; max-age=0"
 	w.ObjectAttrs.Metadata = map[string]string{
@@ -400,12 +400,12 @@ func (l *Lock) get(ctx context.Context) (*LockRecord, error) {
 	defer l.backend.permitPool.Release()
 
 	// Read
-	attrs, err := l.backend.client.Bucket(l.backend.bucket).Object(l.key).Attrs(ctx)
+	attrs, err := l.backend.client.Bucket(l.backend.bucket).Object(l.backend.withPrefix(l.key)).Attrs(ctx)
 	if err == storage.ErrObjectNotExist {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read attrs for %q: {{err}}", l.key), err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read attrs for %q: {{err}}", l.backend.withPrefix(l.key)), err)
 	}
 
 	// If we got this far, we have attributes, meaning the lockfile exists.

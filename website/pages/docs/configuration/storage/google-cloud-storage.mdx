@@ -99,6 +99,10 @@ https://www.googleapis.com/auth/devstorage.read_write
 - `bucket` `(string: <required>)` – Specifies the name of the bucket to use for
   storage.
 
+- `prefix` `(string: "")` - Arbitrary prefix to use when storing object in
+  the bucket. The prefix is added as is, to simulate a directory
+  add a trailing `/` to the prefix.
+
 - `chunk_size` `(string: "8192")` – Specifies the maximum size (in kilobytes) to
   send in a single request. If set to 0, it will attempt to send the whole
   object at once, but will not retry any failures. If you are not storing large
@@ -141,6 +145,18 @@ will increase the number of outbound requests.
 storage "gcs" {
   bucket     = "mycompany-vault-data"
   chunk_size = "512"
+}
+```
+
+### Custom Prefix
+
+This example shows setting a custom prefix. All Vault data will be stored under the
+prefix `some-prefix/`.
+
+```hcl
+storage "gcs" {
+  bucket     = "mycompany-vault-data"
+  prefix     = "some-prefix/"
 }
 ```
 

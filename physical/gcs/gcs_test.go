@@ -33,42 +33,61 @@ func TestBackend(t *testing.T) {
 		t.Skip("GOOGLE_PROJECT_ID not set")
 	}
 
-	r := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
-	bucket := fmt.Sprintf("vault-gcs-testacc-%d", r)
-
-	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
-	if err != nil {
-		t.Fatal(err)
+	variants := []struct {
+		name       string
+		prefix     string
+		useDefault bool
+	}{
+		{name: "Default", useDefault: true},
+		{name: "WithPrefix", prefix: "some-prefix"},
+		{name: "WithPrefixWithTrailingObjectDelimiter", prefix: "some-prefix-with-trailing-object-delimiter" + objectDelimiter},
 	}
+	t.Parallel()
+	for _, variant := range variants {
+		t.Run(variant.name, func(t *testing.T) {
+			r := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
+			bucket := fmt.Sprintf("vault-gcs-testacc-%d", r)
 
-	testCleanup(t, client, bucket)
-	defer testCleanup(t, client, bucket)
+			ctx := context.Background()
+			client, err := storage.NewClient(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	b := client.Bucket(bucket)
-	if err := b.Create(context.Background(), projectID, nil); err != nil {
-		t.Fatal(err)
+			testCleanup(t, client, bucket)
+			defer testCleanup(t, client, bucket)
+
+			b := client.Bucket(bucket)
+			if err := b.Create(context.Background(), projectID, nil); err != nil {
+				t.Fatal(err)
+			}
+
+			config := map[string]string{
+				"bucket":     bucket,
+				"ha_enabled": "false",
+			}
+			if !variant.useDefault {
+				config["prefix"] = variant.prefix
+			}
+
+			backend, err := NewBackend(config, logging.NewVaultLogger(log.Trace))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Verify chunkSize is set correctly on the Backend
+			be := backend.(*Backend)
+			expectedChunkSize, err := strconv.Atoi(defaultChunkSize)
+			if err != nil {
+				t.Fatalf("failed to convert defaultChunkSize to int: %s", err)
+			}
+			expectedChunkSize = expectedChunkSize * 1024
+			if be.chunkSize != expectedChunkSize {
+				t.Fatalf("expected chunkSize to be %d. got=%d", expectedChunkSize, be.chunkSize)
+			}
+
+			physical.ExerciseBackend(t, backend)
+			physical.ExerciseBackend_ListPrefix(t, backend)
+		})
 	}
-
-	backend, err := NewBackend(map[string]string{
-		"bucket":     bucket,
-		"ha_enabled": "false",
-	}, logging.NewVaultLogger(log.Trace))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Verify chunkSize is set correctly on the Backend
-	be := backend.(*Backend)
-	expectedChunkSize, err := strconv.Atoi(defaultChunkSize)
-	if err != nil {
-		t.Fatalf("failed to convert defaultChunkSize to int: %s", err)
-	}
-	expectedChunkSize = expectedChunkSize * 1024
-	if be.chunkSize != expectedChunkSize {
-		t.Fatalf("expected chunkSize to be %d. got=%d", expectedChunkSize, be.chunkSize)
-	}
-
-	physical.ExerciseBackend(t, backend)
-	physical.ExerciseBackend_ListPrefix(t, backend)
 }

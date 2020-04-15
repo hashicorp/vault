@@ -32,6 +32,10 @@ const (
 	// storage bucket name.
 	envBucket = "GOOGLE_STORAGE_BUCKET"
 
+	// envPrefix is the name of the environment variable to search for the
+	// prefix.
+	envPrefix = "GOOGLE_STORAGE_PREFIX"
+
 	// envChunkSize is the environment variable to serach for the chunk size for
 	// requests.
 	envChunkSize = "GOOGLE_STORAGE_CHUNK_SIZE"
@@ -46,6 +50,9 @@ const (
 
 	// objectDelimiter is the string to use to delimit objects.
 	objectDelimiter = "/"
+
+	// defaultChunkSize default prefix to use when reading/writing objects.
+	defaultPrefix = ""
 )
 
 var (
@@ -67,6 +74,9 @@ var (
 type Backend struct {
 	// bucket is the name of the bucket to use for data storage and retrieval.
 	bucket string
+
+	// prefix to use when reading/writing objects.
+	prefix string
 
 	// chunkSize is the chunk size to use for requests.
 	chunkSize int
@@ -96,6 +106,15 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	}
 	if bucket == "" {
 		return nil, errors.New("missing bucket name")
+	}
+
+	// Prefix
+	prefix := os.Getenv(envPrefix)
+	if prefix == "" {
+		prefix = c["prefix"]
+	}
+	if prefix == "" {
+		prefix = defaultPrefix
 	}
 
 	// Chunk size
@@ -136,6 +155,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 
 	logger.Debug("configuration",
 		"bucket", bucket,
+		"prefix", prefix,
 		"chunk_size", chunkSize,
 		"ha_enabled", haEnabled,
 		"max_parallel", maxParallel,
@@ -159,12 +179,18 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 
 	return &Backend{
 		bucket:     bucket,
+		prefix:     prefix,
 		haEnabled:  haEnabled,
 		chunkSize:  chunkSize,
 		client:     client,
 		permitPool: physical.NewPermitPool(maxParallel),
 		logger:     logger,
 	}, nil
+}
+
+// withPrefix prefix the string with the defined value.
+func (b *Backend) withPrefix(object string) string {
+	return b.prefix + object
 }
 
 // Put is used to insert or update an entry
@@ -176,7 +202,7 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) (retErr error)
 	defer b.permitPool.Release()
 
 	// Insert
-	w := b.client.Bucket(b.bucket).Object(entry.Key).NewWriter(ctx)
+	w := b.client.Bucket(b.bucket).Object(b.withPrefix(entry.Key)).NewWriter(ctx)
 	w.ChunkSize = b.chunkSize
 	md5Array := md5.Sum(entry.Value)
 	w.MD5 = md5Array[:]
@@ -202,7 +228,7 @@ func (b *Backend) Get(ctx context.Context, key string) (retEntry *physical.Entry
 	defer b.permitPool.Release()
 
 	// Read
-	r, err := b.client.Bucket(b.bucket).Object(key).NewReader(ctx)
+	r, err := b.client.Bucket(b.bucket).Object(b.withPrefix(key)).NewReader(ctx)
 	if err == storage.ErrObjectNotExist {
 		return nil, nil
 	}
@@ -237,7 +263,7 @@ func (b *Backend) Delete(ctx context.Context, key string) error {
 	defer b.permitPool.Release()
 
 	// Delete
-	err := b.client.Bucket(b.bucket).Object(key).Delete(ctx)
+	err := b.client.Bucket(b.bucket).Object(b.withPrefix(key)).Delete(ctx)
 	if err != nil && err != storage.ErrObjectNotExist {
 		return errwrap.Wrapf(fmt.Sprintf("failed to delete key %q: {{err}}", key), err)
 	}
@@ -254,7 +280,7 @@ func (b *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer b.permitPool.Release()
 
 	iter := b.client.Bucket(b.bucket).Objects(ctx, &storage.Query{
-		Prefix:    prefix,
+		Prefix:    b.withPrefix(prefix),
 		Delimiter: objectDelimiter,
 		Versions:  false,
 	})
@@ -279,6 +305,8 @@ func (b *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 			path = objAttrs.Name
 		}
 
+		// Here don't confuse the `prefix` to list with the `b.prefix` of the backend in GCS.
+		path = strings.TrimPrefix(path, b.prefix)
 		// get relative file/dir just like "basename"
 		key := strings.TrimPrefix(path, prefix)
 		keys = append(keys, key)

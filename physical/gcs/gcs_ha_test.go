@@ -20,40 +20,57 @@ func TestHABackend(t *testing.T) {
 		t.Skip("GOOGLE_PROJECT_ID not set")
 	}
 
-	r := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
-	bucket := fmt.Sprintf("vault-gcs-testacc-%d", r)
-
-	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
-	if err != nil {
-		t.Fatal(err)
+	variants := []struct {
+		name       string
+		prefix     string
+		useDefault bool
+	}{
+		{name: "Default", useDefault: true},
+		{name: "WithPrefix", prefix: "some-prefix"},
+		{name: "WithPrefixWithTrailingObjectDelimiter", prefix: "some-prefix-with-trailing-object-delimiter" + objectDelimiter},
 	}
+	t.Parallel()
+	for _, variant := range variants {
+		t.Run(variant.name, func(t *testing.T) {
+			r := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
+			bucket := fmt.Sprintf("vault-gcs-testacc-%d", r)
 
-	testCleanup(t, client, bucket)
-	defer testCleanup(t, client, bucket)
+			ctx := context.Background()
+			client, err := storage.NewClient(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	bh := client.Bucket(bucket)
-	if err := bh.Create(context.Background(), projectID, nil); err != nil {
-		t.Fatal(err)
+			testCleanup(t, client, bucket)
+			defer testCleanup(t, client, bucket)
+
+			bh := client.Bucket(bucket)
+			if err := bh.Create(context.Background(), projectID, nil); err != nil {
+				t.Fatal(err)
+			}
+
+			logger := logging.NewVaultLogger(log.Trace)
+			config := map[string]string{
+				"bucket":     bucket,
+				"ha_enabled": "true",
+			}
+			if !variant.useDefault {
+				config["prefix"] = variant.prefix
+			}
+
+			b, err := NewBackend(config, logger)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			b2, err := NewBackend(config, logger)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			physical.ExerciseBackend(t, b)
+			physical.ExerciseBackend_ListPrefix(t, b)
+			physical.ExerciseHABackend(t, b.(physical.HABackend), b2.(physical.HABackend))
+		})
 	}
-
-	logger := logging.NewVaultLogger(log.Trace)
-	config := map[string]string{
-		"bucket":     bucket,
-		"ha_enabled": "true",
-	}
-
-	b, err := NewBackend(config, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	b2, err := NewBackend(config, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	physical.ExerciseBackend(t, b)
-	physical.ExerciseBackend_ListPrefix(t, b)
-	physical.ExerciseHABackend(t, b.(physical.HABackend), b2.(physical.HABackend))
 }
