@@ -943,7 +943,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	c.clusterListener.Store((*cluster.Listener)(nil))
 
-	err = c.adjustForSealMigration(conf.UnwrapSeal)
+	err = c.adjustForSealMigration(conf.Seal, conf.UnwrapSeal)
 	if err != nil {
 		return nil, err
 	}
@@ -2230,10 +2230,7 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 	return barrierConf, recoveryConf, nil
 }
 
-func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
-
-	barrierSeal := c.seal
-
+func (c *Core) adjustForSealMigration(barrierSeal, unwrapSeal Seal) error {
 	existBarrierSealConfig, existRecoverySealConfig, err := c.PhysicalSealConfigs(context.Background())
 	if err != nil {
 		return fmt.Errorf("Error checking for existing seal: %s", err)
@@ -2276,7 +2273,7 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	case wrapping.Shamir:
 		// The value reflected in config is what we're going to
 		migrationSeal = NewDefaultSeal(&vaultseal.Access{
-			Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
+			Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
 				Logger: c.logger.Named("shamir"),
 			}),
 		})
@@ -2337,6 +2334,8 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 }
 
 func (c *Core) setSealsForMigration(migrationSeal, newSeal, unwrapSeal Seal) {
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
 	c.unwrapSeal = unwrapSeal
 	if c.unwrapSeal != nil {
 		c.unwrapSeal.SetCore(c)
