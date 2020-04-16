@@ -1,21 +1,20 @@
 {{#unless data}}
-  <EmptyState @title="Data not available" />
+  <EmptyState
+    @title="Data not available"
+  />
 {{else}}
-  <div class="has-large-margin-top"
+  <div class="has-top-margin-xl has-bottom-margin-s"
     data-test-table-rows>
     {{info-table-row
       label="Merkle root index"
       helperText="A snapshot in time of the merkle tree's root hash. Changes on every update to storage."
-      data-test-attr=merkleRoot
       value=merkleRoot}}
     {{info-table-row
       label="Mode"
-      data-test-attr=mode
       value=mode}}
     {{info-table-row
       label="Replication set"
       helperText="The ID for the group of clusters communicating for this replication mode"
-      data-test-attr=clusterId
       value=clusterId}}
   </div>
 

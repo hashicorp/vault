@@ -143,6 +143,18 @@
   font-size: $size-8;
   text-transform: lowercase;
 }
-.has-bottom-margin {
+.has-bottom-margin-xs {
+  margin-bottom: $spacing-xs;
+}
+.has-bottom-margin-s {
+  margin-bottom: $spacing-s;
+}
+.has-bottom-margin-m {
   margin-bottom: $spacing-m;
+}
+.has-top-margin-xl {
+  margin-top: $spacing-xl;
+}
+.has-border-danger {
+  border: 1px solid $danger;
 }
