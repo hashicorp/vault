@@ -29,7 +29,7 @@ export default Component.extend({
     return this.dr && this.dr.state ? this.dr.state : 'unknown';
   }),
   connection: computed('data', function() {
-    return this.data.drStateDisplay ? this.data.drStateDisplay : 'unknown';
+    return this.dr.connection_state ? this.dr.connection_state : 'unknown';
   }),
   lastWAL: computed('dr', function() {
     return this.dr && this.dr.lastWAL ? this.dr.lastWAL : 0;
