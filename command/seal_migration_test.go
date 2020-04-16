@@ -58,15 +58,14 @@ func TestSealMigration_ShamirToTransit(t *testing.T) {
 func testSealMigrationShamirToTransit(t *testing.T, setup teststorage.ClusterSetupMutator) {
 
 	// Create a cluster that uses shamir.
-	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
-		DisableSealWrap: true,
-	}, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		SkipInit:    true,
-		NumCores:    3,
-	},
-		setup,
-	)
+	conf, opts := teststorage.ClusterSetup(
+		&vault.CoreConfig{},
+		&vault.TestClusterOptions{
+			HandlerFunc: vaulthttp.Handler,
+			SkipInit:    true,
+			NumCores:    3,
+		},
+		setup)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
@@ -212,14 +211,13 @@ func TestSealMigration_ShamirToTestSeal(t *testing.T) {
 func testSealMigrationShamirToTestSeal(t *testing.T, setup teststorage.ClusterSetupMutator) {
 
 	// Create a cluster that uses shamir.
-	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
-		DisableSealWrap: true,
-	}, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		SkipInit:    true,
-		NumCores:    3,
-	},
-		setup,
+	conf, opts := teststorage.ClusterSetup(
+		&vault.CoreConfig{},
+		&vault.TestClusterOptions{
+			HandlerFunc: vaulthttp.Handler,
+			SkipInit:    true,
+			NumCores:    3,
+		}, setup,
 	)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, conf, opts)
@@ -349,19 +347,18 @@ func testSealMigrationTransitToTestSeal(t *testing.T, setup teststorage.ClusterS
 	var transitSeal vault.Seal
 
 	// Create a cluster that uses transit.
-	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
-		DisableSealWrap: true,
-	}, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		SkipInit:    true,
-		NumCores:    3,
-		SealFunc: func() vault.Seal {
-			transitSeal = tcluster.MakeSeal(t, "key1")
-			return transitSeal
+	conf, opts := teststorage.ClusterSetup(
+		&vault.CoreConfig{},
+		&vault.TestClusterOptions{
+			HandlerFunc: vaulthttp.Handler,
+			SkipInit:    true,
+			NumCores:    3,
+			SealFunc: func() vault.Seal {
+				transitSeal = tcluster.MakeSeal(t, "key1")
+				return transitSeal
+			},
 		},
-	},
-		setup,
-	)
+		setup)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
@@ -505,19 +502,17 @@ func testSealMigrationTransitToShamir(t *testing.T, setup teststorage.ClusterSet
 	var transitSeal vault.Seal
 
 	// Create a cluster that uses transit.
-	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
-		DisableSealWrap: true,
-	}, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		SkipInit:    true,
-		NumCores:    3,
-		SealFunc: func() vault.Seal {
-			transitSeal = tcluster.MakeSeal(t, "key1")
-			return transitSeal
-		},
-	},
-		setup,
-	)
+	conf, opts := teststorage.ClusterSetup(
+		&vault.CoreConfig{},
+		&vault.TestClusterOptions{
+			HandlerFunc: vaulthttp.Handler,
+			SkipInit:    true,
+			NumCores:    3,
+			SealFunc: func() vault.Seal {
+				transitSeal = tcluster.MakeSeal(t, "key1")
+				return transitSeal
+			},
+		}, setup)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
@@ -663,9 +658,9 @@ func testSealMigrationTransitToTransit(t *testing.T, setup teststorage.ClusterSe
 	tcluster.MakeKey(t, "key2")
 	var seals []vault.Seal
 
-	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
-		DisableSealWrap: true,
-	}, &vault.TestClusterOptions{
+	conf, opts := teststorage.ClusterSetup(
+&vault.CoreConfig{ },
+&vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 		SkipInit:    true,
 		NumCores:    3,
@@ -674,9 +669,7 @@ func testSealMigrationTransitToTransit(t *testing.T, setup teststorage.ClusterSe
 			seals = append(seals, tseal)
 			return tseal
 		},
-	},
-		setup,
-	)
+	}, setup)
 	opts.SetupFunc = nil
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
