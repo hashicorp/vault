@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-func TestBackend_RotateRootCredentials_WAL(t *testing.T) {
+func TestBackend_RotateRootCredentials_WALRollback(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -31,11 +31,10 @@ func TestBackend_RotateRootCredentials_WAL(t *testing.T) {
 
 	connectionName := "plugin-test"
 	roleName := "plugin-role-test"
-	userName := "postgres"
+	userName := "postgres" // TODO: Const?
 	oldPassword := "secret"
 	newPassword := "newSecret"
 
-	// Create a database connection to postgres
 	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, lb)
 	defer cleanup()
 
@@ -58,7 +57,6 @@ func TestBackend_RotateRootCredentials_WAL(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	// Create a role
 	data = map[string]interface{}{
 		"db_name":             connectionName,
 		"creation_statements": testRole,
@@ -75,7 +73,6 @@ func TestBackend_RotateRootCredentials_WAL(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	// Read database credentials
 	credReq := &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      fmt.Sprintf("creds/%s", roleName),
@@ -87,17 +84,23 @@ func TestBackend_RotateRootCredentials_WAL(t *testing.T) {
 		t.Fatalf("err:%s resp:%v\n", err, credRes)
 	}
 
-	// Set database root credentials to "newSecret"
 	pluginConn, err := dbBackend.GetConnection(context.Background(),
 		config.StorageView, connectionName)
 	if err != nil {
 		t.Fatal(err)
 	}
-	pluginConn.SetCredentials(context.Background(), dbplugin.Statements{}, dbplugin.StaticUserConfig{
+
+	_, _, err = pluginConn.SetCredentials(context.Background(), dbplugin.Statements{}, dbplugin.StaticUserConfig{
 		Username: userName,
 		Password: newPassword,
 	})
-	dbBackend.ClearConnection(connectionName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = dbBackend.ClearConnection(connectionName)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Reading credentials should not work because the credentials changes
 	credRes, err = lb.HandleRequest(namespace.RootContext(nil), credReq)
@@ -112,7 +115,10 @@ func TestBackend_RotateRootCredentials_WAL(t *testing.T) {
 		OldPassword:    oldPassword,
 		NewPassword:    newPassword,
 	}
-	framework.PutWAL(context.Background(), config.StorageView, rootWALKey, walEntry)
+	_, err = framework.PutWAL(context.Background(), config.StorageView, rootWALKey, walEntry)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Trigger an immediate rollback operation
 	_, err = lb.HandleRequest(context.Background(), &logical.Request{
@@ -133,3 +139,5 @@ func TestBackend_RotateRootCredentials_WAL(t *testing.T) {
 		t.Fatalf("err:%s resp:%v\n", err, credRes)
 	}
 }
+
+// TODO: test for non-rollback condition

@@ -25,7 +25,7 @@ const (
 	databaseConfigPath     = "database/config/"
 	databaseRolePath       = "role/"
 	databaseStaticRolePath = "static-role/"
-	minRootCredRollbackAge = 10 * time.Second
+	minRootCredRollbackAge = 1 * time.Minute
 )
 
 type dbPluginInstance struct {
