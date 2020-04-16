@@ -943,7 +943,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	c.clusterListener.Store((*cluster.Listener)(nil))
 
-	err = c.adjustForSealMigration(conf.Seal, conf.UnwrapSeal)
+	err = c.adjustForSealMigration(conf.UnwrapSeal)
 	if err != nil {
 		return nil, err
 	}
@@ -2230,7 +2230,7 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 	return barrierConf, recoveryConf, nil
 }
 
-func (c *Core) adjustForSealMigration(barrierSeal, unwrapSeal Seal) error {
+func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	existBarrierSealConfig, existRecoverySealConfig, err := c.PhysicalSealConfigs(context.Background())
 	if err != nil {
 		return fmt.Errorf("Error checking for existing seal: %s", err)
@@ -2245,13 +2245,13 @@ func (c *Core) adjustForSealMigration(barrierSeal, unwrapSeal Seal) error {
 	if unwrapSeal == nil {
 		// We have the same barrier type and the unwrap seal is nil so we're not
 		// migrating from same to same, IOW we assume it's not a migration
-		if existBarrierSealConfig.Type == barrierSeal.BarrierType() {
+		if existBarrierSealConfig.Type == c.seal.BarrierType() {
 			return nil
 		}
 
 		// If we're not coming from Shamir, and the existing type doesn't match
 		// the barrier type, we need both the migration seal and the new seal
-		if existBarrierSealConfig.Type != wrapping.Shamir && barrierSeal.BarrierType() != wrapping.Shamir {
+		if existBarrierSealConfig.Type != wrapping.Shamir && c.seal.BarrierType() != wrapping.Shamir {
 			return errors.New(`Trying to migrate from auto-seal to auto-seal but no "disabled" seal stanza found`)
 		}
 	} else {
@@ -2285,13 +2285,13 @@ func (c *Core) adjustForSealMigration(barrierSeal, unwrapSeal Seal) error {
 	}
 
 	// newSeal will be the barrierSeal
-	newSeal = barrierSeal
+	newSeal = c.seal
 
 	if migrationSeal != nil && newSeal != nil && migrationSeal.BarrierType() == newSeal.BarrierType() {
 		return errors.New("Migrating between same seal types is currently not supported")
 	}
 
-	if unwrapSeal != nil && existBarrierSealConfig.Type == barrierSeal.BarrierType() {
+	if unwrapSeal != nil && existBarrierSealConfig.Type == c.seal.BarrierType() {
 		// In this case our migration seal is set so we are using it
 		// (potentially) for unwrapping. Set it on core for that purpose then
 		// exit.

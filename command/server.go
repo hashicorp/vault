@@ -551,6 +551,8 @@ func (c *ServerCommand) runRecoveryMode() int {
 		}
 	}
 
+	//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 	if err := core.InitializeRecovery(context.Background()); err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing core in recovery mode: %s", err))
 		return 1
@@ -1359,34 +1361,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 	}
 
-	// Attempt unsealing in a background goroutine. This is needed for when a
-	// Vault cluster with multiple servers is configured with auto-unseal but is
-	// uninitialized. Once one server initializes the storage backend, this
-	// goroutine will pick up the unseal keys and unseal this instance.
-	if !core.IsInSealMigration() {
-		go func() {
-			for {
-				err := core.UnsealWithStoredKeys(context.Background())
-				if err == nil {
-					return
-				}
-
-				if vault.IsFatalError(err) {
-					c.logger.Error("error unsealing core", "error", err)
-					return
-				} else {
-					c.logger.Warn("failed to unseal core", "error", err)
-				}
-
-				select {
-				case <-c.ShutdownCh:
-					return
-				case <-time.After(5 * time.Second):
-				}
-			}
-		}()
-	}
-
 	// Copy the reload funcs pointers back
 	c.reloadFuncs = coreConfig.ReloadFuncs
 	c.reloadFuncsLock = coreConfig.ReloadFuncsLock
@@ -1556,6 +1530,34 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	core.SetClusterHandler(vaulthttp.Handler(&vault.HandlerProperties{
 		Core: core,
 	}))
+
+	// Attempt unsealing in a background goroutine. This is needed for when a
+	// Vault cluster with multiple servers is configured with auto-unseal but is
+	// uninitialized. Once one server initializes the storage backend, this
+	// goroutine will pick up the unseal keys and unseal this instance.
+	if !core.IsInSealMigration() {
+		go func() {
+			for {
+				err := core.UnsealWithStoredKeys(context.Background())
+				if err == nil {
+					return
+				}
+
+				if vault.IsFatalError(err) {
+					c.logger.Error("error unsealing core", "error", err)
+					return
+				} else {
+					c.logger.Warn("failed to unseal core", "error", err)
+				}
+
+				select {
+				case <-c.ShutdownCh:
+					return
+				case <-time.After(5 * time.Second):
+				}
+			}
+		}()
+	}
 
 	// When the underlying storage is raft, kick off retry join if it was specified
 	// in the configuration
