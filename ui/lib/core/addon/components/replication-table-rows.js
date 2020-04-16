@@ -7,7 +7,7 @@ export default Component.extend({
   classNames: ['replication-table-rows'],
   data: null,
   clusterDetails: computed('data', function() {
-    const { data } = this.data;
+    const { data } = this;
     return data.dr || data;
   }),
   mode: computed('clusterDetails', function() {

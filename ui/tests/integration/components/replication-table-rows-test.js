@@ -3,7 +3,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-const REPLICATION_ATTRS = {
+const DATA = {
   clusterId: 'b829d963-6835-33eb-a903-57376024b97a',
   mode: 'primary',
   merkleRoot: 'c21c8428a0a06135cef6ae25bf8e0267ff1592a6',
@@ -13,28 +13,35 @@ module('Integration | Component | replication-table-rows', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
-    this.set('data', REPLICATION_ATTRS);
+    this.set('data', DATA);
   });
 
   test('it renders', async function(assert) {
-    await render(hbs`<ReplicationTableRows @data={{replicationAttrs}}/>`);
+    await render(hbs`<ReplicationTableRows @data={{data}}/>`);
 
-    assert.dom('.replication-table-rows').exists();
+    assert.dom('[data-test-table-rows]').exists();
   });
 
-  // it renders with merkle root, mode, replication set
-  // test('', async function(assert) {
-  //   await render(hbs`<ReplicationTableRows @data={{replicationAttrs}}/>`);
+  test('it renders with merkle root, mode, replication set', async function(assert) {
+    await render(hbs`<ReplicationTableRows @data={{data}}/>`);
 
-  //   Object.keys(REPLICATION_ATTRS).forEach(attr => {
-  //     let expected = REPLICATION_ATTRS[attr];
-  //     let found = this.element.querySelector(`[data-test-attr-${expected}]`);
+    assert.dom('.empty-state').doesNotExist('does not show empty state when data is found');
 
-  //     debugger;
+    Object.keys(DATA).forEach(attr => {
+      let expected = DATA[attr];
+      assert.dom(`[data-test-attr="${expected}"]`).includesText(expected, `shows the correct ${attr}`);
+    });
+  });
 
-  //     assert.equal(found.textContent.trim(), expected);
-  //   });
-  // });
+  test('it renders unknown if values cannot be found', async function(assert) {
+    const noAttrs = {
+      clusterId: null,
+      mode: null,
+      merkleRoot: null,
+    };
+    this.set('data', noAttrs);
+    await render(hbs`<ReplicationTableRows @data={{data}}/>`);
 
-  // it renders unknown if values cannot be found
+    assert.dom('[data-test-table-rows]').includesText('unknown');
+  });
 });

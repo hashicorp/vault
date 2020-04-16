@@ -1,7 +1,8 @@
 {{#unless data}}
-  <EmptyState />
+  <EmptyState @title="Data not available" />
 {{else}}
-  <div class="has-large-margin-top">
+  <div class="has-large-margin-top"
+    data-test-table-rows>
     {{info-table-row
       label="Merkle root index"
       helperText="A snapshot in time of the merkle tree's root hash. Changes on every update to storage."
