@@ -11,19 +11,15 @@ export default Component.extend({
     return data.dr || data;
   }),
   mode: computed('clusterDetails', function() {
-    const { clusterDetails } = this;
-    return clusterDetails.mode || 'unknown';
+    return this.clusterDetails.mode || 'unknown';
   }),
   merkleRoot: computed('clusterDetails', function() {
-    const { clusterDetails } = this;
-    return clusterDetails.merkleRoot || 'unknown';
+    return this.clusterDetails.merkleRoot || 'unknown';
   }),
   clusterId: computed('clusterDetails', function() {
-    const { clusterDetails } = this;
-    return clusterDetails.clusterId || 'unknown';
+    return this.clusterDetails.clusterId || 'unknown';
   }),
   syncProgress: computed('clusterDetails', function() {
-    const { clusterDetails } = this;
-    return clusterDetails.syncProgress || false;
+    return this.clusterDetails.syncProgress || false;
   }),
 });
