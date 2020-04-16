@@ -1,5 +1,5 @@
 {{!-- DR Secondary has a different Nav Header with access only to the Status menu --}}
-{{#if (and (eq data.rm.mode 'dr') (eq data.dr.mode 'secondary') )}}
+{{#if isSecondary}}
   <NavHeader as |Nav|>
     <Nav.home>
       <HomeLink @class="navbar-item splash-page-logo has-text-white">
