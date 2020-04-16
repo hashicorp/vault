@@ -4,6 +4,10 @@ CHANGES:
 
 * token: Token renewals will now return token policies within the `token_policies` , identity policies within `identity_policies`, and the full policy set within `policies`. [[GH-8535](https://github.com/hashicorp/vault/pull/8535)]
 
+IMPROVEMENTS:
+
+* secrets/gcp: Support BigQuery dataset ACLs in absence of IAM endpoints [[GH-78](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/78)]
+
 ## 1.4.1 (TBD)
 
 CHANGES: 
