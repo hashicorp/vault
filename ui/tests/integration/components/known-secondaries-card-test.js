@@ -41,7 +41,6 @@ module('Integration | Enterprise | Component | replication known-secondaries-car
     assert
       .dom('[data-test-known-secondaries-table]')
       .doesNotExist('does not show the known secondaries table');
-    assert.dom('.empty-state').exists();
     assert
       .dom('.empty-state')
       .includesText('No known dr secondary clusters', 'has a message with the replication mode');
