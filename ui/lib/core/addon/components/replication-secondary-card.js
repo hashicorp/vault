@@ -18,13 +18,6 @@ const STATES = {
 export default Component.extend({
   layout,
   data: null,
-  dr: computed('data', function() {
-    let dr = this.data.dr;
-    if (!dr) {
-      return false;
-    }
-    return dr;
-  }),
   state: computed('dr', function() {
     return this.dr && this.dr.state ? this.dr.state : 'unknown';
   }),
