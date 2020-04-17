@@ -71,16 +71,17 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
   }),
 
   submit: task(function*() {
+    let mode;
     try {
-      yield this.submitHandler.perform(...arguments);
+      mode = yield this.submitHandler.perform(...arguments);
     } catch (e) {
       // TODO handle error
     }
     // Take transitionTo outside of a yield because it unmounts the cluster and yield cannot return anything
-    this.transitionTo();
-    // ARG TODO these are even getting called.
-    let wizard = this.get('wizard');
-    wizard.transitionFeatureMachine(wizard.get('featureState'), 'ENABLEREPLICATION');
+    // if Secondary, handle transition here, if not, handle transition in mixin Enable
+    if (mode === 'secondary') {
+      this.transitionTo();
+    }
   }),
 
   actions: {
