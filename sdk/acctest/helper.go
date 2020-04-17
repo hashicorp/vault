@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-var testHelper *Helper
+var TestHelper *Helper
 
 // Helper is intended as a per-package singleton created in TestMain which
 // other tests in a package can use to create Terraform execution contexts
@@ -42,8 +42,8 @@ func UseDocker(name, src string) *Helper {
 // nil, Run will call the cleanup after tests complete.
 func Run(m *testing.M) {
 	stat := m.Run()
-	if testHelper != nil && testHelper.Cluster != nil {
-		testHelper.Cluster.Cleanup()
+	if TestHelper != nil && TestHelper.Cluster != nil {
+		TestHelper.Cluster.Cleanup()
 	}
 	os.Exit(stat)
 }
@@ -100,7 +100,7 @@ func Setup(name string) error {
 
 		sha256value := fmt.Sprintf("%x", h.Sum(nil))
 
-		testHelper = &Helper{
+		TestHelper = &Helper{
 			Client: client,
 		}
 		// use client to mount plugin
