@@ -115,7 +115,7 @@ func TestBackend_RotateRootCredentials_WALRollback(t *testing.T) {
 		OldPassword:    oldPassword,
 		NewPassword:    newPassword,
 	}
-	_, err = framework.PutWAL(context.Background(), config.StorageView, rootWALKey, walEntry)
+	_, err = framework.PutWAL(context.Background(), config.StorageView, rotateRootWALKey, walEntry)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -320,7 +320,9 @@ func (mw *DatabaseErrorSanitizerMiddleware) sanitize(err error) error {
 			if k == "" {
 				continue
 			}
-			// Attempt to keep the status code attached to the error
+
+			// Attempt to keep the status code attached to the
+			// error without changing the actual error message
 			s, ok := status.FromError(err)
 			if ok {
 				err = status.Error(s.Code(), strings.Replace(s.Message(), k, v.(string), -1))

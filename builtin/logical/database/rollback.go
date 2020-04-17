@@ -11,9 +11,10 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// WAL storage key used for root credential rotations on database plugins
-const rootWALKey = "rootRotationKey"
+// WAL storage key used for the rollback of root database credentials
+const rotateRootWALKey = "rotateRootWALKey"
 
+// WAL entry used for the rollback of root database credentials
 type rotateRootCredentialsWAL struct {
 	ConnectionName string
 	UserName       string
@@ -21,10 +22,14 @@ type rotateRootCredentialsWAL struct {
 	OldPassword    string
 }
 
-// TODO: Considerations for HA and Replication?
+// walRollback handles WAL entries that result from partial failures
+// to rotate the root credentials of a database. It is responsible
+// for rolling back root database credentials when doing so would
+// reconcile the credentials with Vault storage.
 func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request, kind string,
 	data interface{}) error {
-	if kind != rootWALKey {
+
+	if kind != rotateRootWALKey {
 		return errors.New("unknown type to rollback")
 	}
 
@@ -35,56 +40,56 @@ func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request,
 		return err
 	}
 
-	// Get the current database configuration from Vault storage
+	// Get the current database configuration from storage
 	config, err := b.DatabaseConfig(ctx, req.Storage, entry.ConnectionName)
 	if err != nil {
 		return err
 	}
 
-	// The password in Vault storage does not match the new password
-	// in the WAL entry. This means there was a partial failure where
-	// the database password was updated but Vault storage was not.
-	// To reconcile the password between Vault and the database, roll
-	// back the database password to the old password.
+	// The password in storage doesn't match the new password
+	// in the WAL entry. This means there was a partial failure
+	// to update either the database or storage.
 	if config.ConnectionDetails["password"] != entry.NewPassword {
-		return b.rollbackDatabasePassword(ctx, req, config, entry)
+		// Clear any cached connection to inform the rollback decision
+		err := b.ClearConnection(entry.ConnectionName)
+		if err != nil {
+			return err
+		}
+
+		// Attempt to get a connection with the current configuration.
+		// If successful, the WAL entry can be deleted. This means
+		// the root credentials according to the database and storage
+		// are the same.
+		_, err = b.GetConnection(ctx, req.Storage, entry.ConnectionName)
+		if err == nil {
+			return nil
+		}
+
+		return b.rollbackDatabaseCredentials(ctx, config, entry)
 	}
 
-	// The password in Vault storage matches the new password
-	// in the WAL entry, so there is nothing to roll back. This
+	// The password in storage matches the new password in
+	// the WAL entry, so there is nothing to roll back. This
 	// means the new password was successfully updated in the
-	// database and Vault storage, but the WAL was not deleted.
+	// database and storage, but the WAL wasn't deleted.
 	return nil
 }
 
-func (b *databaseBackend) rollbackDatabasePassword(ctx context.Context, req *logical.Request,
-	config *DatabaseConfig, entry rotateRootCredentialsWAL) error {
+// rollbackDatabaseCredentials rolls back root database credentials for
+// the connection associated with the passed WAL entry. It will creates
+// a connection to the database using the WAL entry new password in
+// order to alter the password to be the WAL entry old password.
+func (b *databaseBackend) rollbackDatabaseCredentials(ctx context.Context, config *DatabaseConfig,
+	entry rotateRootCredentialsWAL) error {
 
-	// Clear any cached plugin connection
-	err := b.ClearConnection(entry.ConnectionName)
-	if err != nil {
-		return err
-	}
-
-	// Attempt to connect with the current configuration.
-	// If successful, the WAL can be delete because the root
-	// credentials according to the database and Vault storage
-	// are the same.
-	_, err = b.GetConnection(ctx, req.Storage, entry.ConnectionName)
-	if err == nil {
-		return nil
-	}
-
-	// The root credentials are different according to the database and
-	// Vault storage. Attempt to connect with the new password from the
-	// WAL entry.
+	// Attempt to get a connection with the WAL entry new password.
 	config.ConnectionDetails["password"] = entry.NewPassword
 	dbc, err := b.GetConnectionWithConfig(ctx, entry.ConnectionName, config)
 	if err != nil {
 		return err
 	}
 
-	// Always clear the connection used to roll back the database password
+	// Ensure the connection used to roll back the database password is not cached
 	defer func() {
 		if err := b.ClearConnection(entry.ConnectionName); err != nil {
 			b.Logger().Error("error closing database plugin connection", "err", err)
@@ -92,7 +97,6 @@ func (b *databaseBackend) rollbackDatabasePassword(ctx context.Context, req *log
 	}()
 
 	// Roll back the database password to the WAL entry old password
-	// in order to reconcile the database and Vault storage.
 	statements := dbplugin.Statements{Rotation: config.RootCredentialsRotateStatements}
 	userConfig := dbplugin.StaticUserConfig{
 		Username: entry.UserName,
@@ -100,9 +104,10 @@ func (b *databaseBackend) rollbackDatabasePassword(ctx context.Context, req *log
 	}
 	_, _, err = dbc.SetCredentials(ctx, statements, userConfig)
 
-	// If SetCredentials is unimplemented in the plugin, this means that
-	// the root credential rotation happened via the RotateRootCredentials
-	// RPC. Delete the WAL by returning nil.
+	// If the database plugin doesn't implement SetCredentials,
+	// the root credentials can't be rolled back. This means
+	// the root credential rotation happened via the plugin
+	// RotateRootCredentials RPC.
 	if err != nil && status.Code(err) == codes.Unimplemented {
 		return nil
 	}

@@ -94,7 +94,7 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 		config.ConnectionDetails["password"] = newPassword
 
 		// Write a WAL entry
-		walID, err := framework.PutWAL(ctx, req.Storage, rootWALKey, &rotateRootCredentialsWAL{
+		walID, err := framework.PutWAL(ctx, req.Storage, rotateRootWALKey, &rotateRootCredentialsWAL{
 			ConnectionName: name,
 			UserName:       userName,
 			OldPassword:    oldPassword,
@@ -104,7 +104,7 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 			return nil, err
 		}
 
-		// Attempt to use SetCredentials for the rotation
+		// Attempt to use SetCredentials for the root credential rotation
 		statements := dbplugin.Statements{Rotation: config.RootCredentialsRotateStatements}
 		userConfig := dbplugin.StaticUserConfig{
 			Username: userName,
@@ -118,12 +118,12 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 				config.RootCredentialsRotateStatements)
 		}
 
-		// Handle any error from rotating root credentials on the database
+		// Handle any error from the root credential rotation
 		if err != nil {
 			return nil, err
 		}
 
-		// Update Vault storage with the new root credentials
+		// Update storage with the new root credentials
 		entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/%s", name), config)
 		if err != nil {
 			return nil, err
@@ -137,7 +137,7 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 			b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walID)
 		}
 
-		// Close the plugin connection
+		// Close the plugin
 		db.closed = true
 		if err := db.Database.Close(); err != nil {
 			b.Logger().Error("error closing the database plugin connection", "err", err)
