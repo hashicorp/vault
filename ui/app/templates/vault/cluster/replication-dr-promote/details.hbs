@@ -1,6 +1,5 @@
 <section class="section">
   <div class="container is-widescreen">
-    {{!-- ARG TODO setup error state and return --}}
     <ReplicationPage @model={{model}} as |Page|>
       {{#if Page.isDisabled}}
         <EmptyState
