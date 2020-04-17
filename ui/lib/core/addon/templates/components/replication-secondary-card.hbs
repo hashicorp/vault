@@ -15,18 +15,23 @@
       {{/if}}
     </div>
     <div class="grid-item-right">
-      {{#if (or (eq connection "transient-failure") (eq connection "shutdown"))}}
+      {{#if (eq connection "transient-failure")}}
         <code class="has-text-danger">connection_state</code>
         <AlertInline
           @type="danger"
-          @message="ARG TODO: waiting on feedback to fill this in."
+          @message="There has been some transient failure.  Your cluster will eventually switch back to connection and try to establish a connection again."
+        />
+      {{else if (eq connection "shutdown")}}
+        <code class="has-text-danger">connection_state</code>
+        <AlertInline
+          @type="danger"
+          @message="Your connection has shut down. This may be because the application explicitly requested a shutdown or a non-recoverable error has happened during attempts to communicate."
         />
       {{else}}
-        <code class="has-text-black">connection_state</code>
+        <code>connection_state</code>
         <p class="has-text-grey is-size-8">The health of the connection between this cluster and others.</p>
       {{/if}}
     </div>
-    {{!-- ARG TODO connection state is likely wrong here, waiting for reply from RFC --}}
       <h2 class="title-number grid-item-left-bottom">{{state}}
         {{#if inSyncState }}
           <ToolTip @verticalPosition="above" as |T|>
