@@ -114,8 +114,9 @@ export default Component.extend({
     },
 
     setAndBroadcastTtl(path, value) {
-      let valueToSet = value.enabled === true ? value.seconds : undefined;
-      this.send('setAndBroadcast', path, `${valueToSet}s`);
+      const alwaysSendValue = path === 'expiry' || path === 'safetyBuffer';
+      let valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : undefined;
+      this.send('setAndBroadcast', path, `${valueToSet}`);
     },
 
     codemirrorUpdated(path, isString, value, codemirror) {
