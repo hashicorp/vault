@@ -290,17 +290,21 @@
       Disaster Recovery (DR)
     </h3>
     {{#if cluster.dr.replicationEnabled}}
-      {{#link-to
-        "mode.index"
-        "dr"
-        class="link-plain"
-      }}
-        {{replication-mode-summary
-          mode="dr"
-          cluster=cluster
-          tagName="span"
+      {{#if submit.isRunning }} 
+          <LayoutLoading />
+      {{else}}
+        {{#link-to
+          "mode.index"
+          "dr"
+          class="link-plain"
         }}
-      {{/link-to}}
+          {{replication-mode-summary
+            mode="dr"
+            cluster=cluster
+            tagName="span"
+          }}
+        {{/link-to}}
+      {{/if}}
     {{else}}
       {{replication-mode-summary
         mode="dr"
@@ -309,35 +313,37 @@
       }}
     {{/if}}
   </div>
-  <div class="box is-bottomless is-fullwidth is-marginless">
-    <h3 class="title is-flex-center is-5 is-marginless">
-      <Icon
-        @size="xl"
-        aria-hidden="true"
-        @glyph="perf-replication"
-      />
-      Performance
-    </h3>
-    {{#if cluster.dr.replicationEnabled}}
-      {{#link-to
-        "mode.index"
-        "performance"
-        class="link-plain"
-      }}
+  {{#unless (and submit.isRunning (eq cluster.dr.mode "bootstrapping"))}}
+    <div class="box is-bottomless is-fullwidth is-marginless">
+      <h3 class="title is-flex-center is-5 is-marginless">
+        <Icon
+          @size="xl"
+          aria-hidden="true"
+          @glyph="perf-replication"
+        />
+        Performance
+      </h3>
+      {{#if cluster.dr.replicationEnabled}}
+        {{#link-to
+          "mode.index"
+          "performance"
+          class="link-plain"
+        }}
+          {{replication-mode-summary
+            mode="performance"
+            cluster=cluster
+            tagName="span"
+          }}
+        {{/link-to}}
+      {{else}}
         {{replication-mode-summary
           mode="performance"
           cluster=cluster
-          tagName="span"
+          tagName="div"
         }}
-      {{/link-to}}
-    {{else}}
-      {{replication-mode-summary
-        mode="performance"
-        cluster=cluster
-        tagName="div"
-      }}
-    {{/if}}
-  </div>
+      {{/if}}
+    </div>
+  {{/unless}}
 {{else}}
   {{#if (eq replicationAttrs.mode 'initializing')}}
     The cluster is initializing replication. This may take some time.
