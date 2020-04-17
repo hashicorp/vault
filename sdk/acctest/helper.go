@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
+	"github.com/y0ssar1an/q"
 )
 
 var TestHelper *Helper
@@ -41,10 +42,20 @@ func UseDocker(name, src string) *Helper {
 // Run runs tests after setup is complete. If the package test helper is not
 // nil, Run will call the cleanup after tests complete.
 func Run(m *testing.M) {
+	q.Q("==> acctest.Run start")
 	stat := m.Run()
-	if TestHelper != nil && TestHelper.Cluster != nil {
-		TestHelper.Cluster.Cleanup()
+	if TestHelper != nil {
+		q.Q("==> ==> acctest.Run Cleanup")
+		if TestHelper.Cluster != nil {
+			q.Q("==> ==> acctest.Run Cleanup")
+			TestHelper.Cluster.Cleanup()
+		} else {
+			q.Q("==> ==> acctest.Run Cluster was nil")
+		}
+	} else {
+		q.Q("==> ==> acctest Helper nil")
 	}
+	q.Q("==> acctest.Run finish")
 	os.Exit(stat)
 }
 
@@ -101,7 +112,8 @@ func Setup(name string) error {
 		sha256value := fmt.Sprintf("%x", h.Sum(nil))
 
 		TestHelper = &Helper{
-			Client: client,
+			Client:  client,
+			Cluster: cluster,
 		}
 		// use client to mount plugin
 
