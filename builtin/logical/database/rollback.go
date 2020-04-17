@@ -60,7 +60,7 @@ func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request,
 func (b *databaseBackend) rollbackDatabasePassword(ctx context.Context, req *logical.Request,
 	config *DatabaseConfig, entry rotateRootCredentialsWAL) error {
 
-	// Clear the current connection
+	// Clear any cached plugin connection
 	err := b.ClearConnection(entry.ConnectionName)
 	if err != nil {
 		return err
@@ -75,8 +75,8 @@ func (b *databaseBackend) rollbackDatabasePassword(ctx context.Context, req *log
 		return nil
 	}
 
-	// The root credentials according to the database and Vault storage
-	// are different. Attempt to connect with the new password from the
+	// The root credentials are different according to the database and
+	// Vault storage. Attempt to connect with the new password from the
 	// WAL entry.
 	config.ConnectionDetails["password"] = entry.NewPassword
 	dbc, err := b.GetConnectionWithConfig(ctx, entry.ConnectionName, config)
@@ -84,7 +84,7 @@ func (b *databaseBackend) rollbackDatabasePassword(ctx context.Context, req *log
 		return err
 	}
 
-	// Clear the connection used to roll back the database password
+	// Always clear the connection used to roll back the database password
 	defer func() {
 		if err := b.ClearConnection(entry.ConnectionName); err != nil {
 			b.Logger().Error("error closing database plugin connection", "err", err)
