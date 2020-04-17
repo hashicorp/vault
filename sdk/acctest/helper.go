@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
-	"github.com/y0ssar1an/q"
 )
 
 var TestHelper *Helper
@@ -31,6 +30,13 @@ type Helper struct {
 	SourceDir string
 }
 
+// Cleanup cals the Cluster Cleanup method, if Cluster is not nil
+func (h *Helper) Cleanup() {
+	if h.Cluster != nil {
+		h.Cluster.Cleanup()
+	}
+}
+
 // UseDocker setups docker, copying the plugin test binary
 func UseDocker(name, src string) *Helper {
 	return &Helper{
@@ -42,20 +48,10 @@ func UseDocker(name, src string) *Helper {
 // Run runs tests after setup is complete. If the package test helper is not
 // nil, Run will call the cleanup after tests complete.
 func Run(m *testing.M) {
-	q.Q("==> acctest.Run start")
 	stat := m.Run()
 	if TestHelper != nil {
-		q.Q("==> ==> acctest.Run Cleanup")
-		if TestHelper.Cluster != nil {
-			q.Q("==> ==> acctest.Run Cleanup")
-			TestHelper.Cluster.Cleanup()
-		} else {
-			q.Q("==> ==> acctest.Run Cluster was nil")
-		}
-	} else {
-		q.Q("==> ==> acctest Helper nil")
+		TestHelper.Cleanup()
 	}
-	q.Q("==> acctest.Run finish")
 	os.Exit(stat)
 }
 
