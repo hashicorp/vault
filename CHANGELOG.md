@@ -21,6 +21,9 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * config/seal: Fix segfault when seal block is removed[[GH-8517](https://github.com/hashicorp/vault/pull/8517)]
+* core: Fix blocked requests if a SIGHUP is issued during a long-running request has the state lock held. 
+  Also fixes deadlock that can happen if `vault debug` with the config target is ran during this time.
+  [[GH-8755](https://github.com/hashicorp/vault/pull/8755)]
 * sys/wrapping: Allow unwrapping of wrapping tokens which contain nil data [[GH-8714](https://github.com/hashicorp/vault/pull/8714)]
 
 ## 1.4.0 (April 7th, 2020)
