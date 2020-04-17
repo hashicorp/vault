@@ -66,8 +66,19 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
     this.setProperties(DEFAULTS);
   },
 
+  transitionTo: computed('mode', 'replicationMode', function() {
+    return () => this.router.transitionTo('vault.cluster');
+  }),
+
   submit: task(function*() {
-    yield this.submitHandler(...arguments);
+    try {
+      yield this.submitHandler.perform(...arguments);
+    } catch (e) {
+      // TODO handle error
+    }
+    // Take transitionTo outside of a yield because it unmounts the cluster and yield cannot return anything
+    this.transitionTo();
+    // ARG TODO these are even getting called.
     let wizard = this.get('wizard');
     wizard.transitionFeatureMachine(wizard.get('featureState'), 'ENABLEREPLICATION');
   }),

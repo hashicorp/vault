@@ -39,7 +39,7 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
 
   actions: {
     onSubmit() {
-      return this.submitHandler(...arguments);
+      return this.submitHandler.perform(...arguments);
     },
     clear() {
       this.reset();
