@@ -551,8 +551,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 		}
 	}
 
-	//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 	if err := core.InitializeRecovery(context.Background()); err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing core in recovery mode: %s", err))
 		return 1
