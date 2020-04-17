@@ -41,7 +41,7 @@ export default Mixin.create({
     } catch (e) {
       return this.submitError(e);
     }
-    yield this.submitSuccess.perform(resp, action, clusterMode);
+    return yield this.submitSuccess.perform(resp, action, clusterMode);
   }).drop(),
 
   submitSuccess: task(function*(resp, action, mode) {
@@ -90,8 +90,8 @@ export default Mixin.create({
       yield this.onDisable();
     }
     if (mode === 'secondary' && replicationMode === 'dr') {
-      // return out, do not want to run action enable
-      return;
+      // return mode so you can properly handle the transition
+      return mode;
     }
     if (action === 'enable') {
       try {
