@@ -240,25 +240,24 @@ func TestSystem_GRPC_pluginEnv(t *testing.T) {
 	}
 }
 
-func TestSystem_GRPC_passwordPolicy(t *testing.T) {
+func TestSystem_GRPC_GeneratePasswordFromPolicy(t *testing.T) {
 	policyName := "testpolicy"
-	expectedPolicy := random.StringGenerator{
-		Length:  8,
-		Charset: random.AlphaNumericShortSymbolRuneset,
+	expectedPolicy := &random.StringGenerator{
+		Length: 8,
 		Rules: []random.Rule{
-			&random.CharsetRestriction{
+			&random.Charset{
 				Charset:  random.LowercaseRuneset,
 				MinChars: 1,
 			},
-			&random.CharsetRestriction{
+			&random.Charset{
 				Charset:  random.UppercaseRuneset,
 				MinChars: 1,
 			},
-			&random.CharsetRestriction{
+			&random.Charset{
 				Charset:  random.NumericRuneset,
 				MinChars: 1,
 			},
-			&random.CharsetRestriction{
+			&random.Charset{
 				Charset:  random.ShortSymbolRuneset,
 				MinChars: 1,
 			},
@@ -266,7 +265,7 @@ func TestSystem_GRPC_passwordPolicy(t *testing.T) {
 	}
 	sys := &logical.StaticSystemView{
 		PasswordPolicies: map[string]logical.PasswordPolicy{
-			policyName: expectedPolicy,
+			policyName: logical.PasswordPolicy(expectedPolicy),
 		},
 	}
 
@@ -283,12 +282,20 @@ func TestSystem_GRPC_passwordPolicy(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	actualPolicy, err := testSystemView.PasswordPolicy(ctx, policyName)
+	password, err := testSystemView.GeneratePasswordFromPolicy(ctx, policyName)
 	if err != nil {
 		t.Fatalf("no error expected, got: %s", err)
 	}
 
-	if !reflect.DeepEqual(actualPolicy, expectedPolicy) {
-		t.Fatalf("Actual: %#v\nExpected: %#v", actualPolicy, expectedPolicy)
+	passRunes := []rune(password)
+
+	if len(passRunes) != expectedPolicy.Length {
+		t.Fatalf("Generated password should have length %d but was %d", expectedPolicy.Length, len(passRunes))
+	}
+
+	for _, rule := range expectedPolicy.Rules {
+		if !rule.Pass(passRunes) {
+			t.Fatalf("Password [%s] did not pass rule: %#v", password, rule)
+		}
 	}
 }

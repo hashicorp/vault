@@ -2752,7 +2752,10 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 		"missing policy name": {
 			storage: &fakeStorage{},
 			data: passwordPoliciesFieldData(map[string]interface{}{
-				"policy": "length = 20\ncharset=\"abcdefghij\"",
+				"policy": `length = 20
+							rule "Charset" {
+								charset="abcdefghij"
+							}`,
 			}),
 			expectedResp: nil,
 			expectErr:    true,
@@ -2779,8 +2782,11 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 				putError: fmt.Errorf("test error"),
 			},
 			data: passwordPoliciesFieldData(map[string]interface{}{
-				"name":   "testpolicy",
-				"policy": "length = 20\ncharset=\"abcdefghij\"",
+				"name": "testpolicy",
+				"policy": "length = 20\n" +
+					"rule \"Charset\" {\n" +
+					"	charset=\"abcdefghij\"\n" +
+					"}",
 			}),
 			expectedResp: nil,
 			expectErr:    true,
@@ -2789,13 +2795,11 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 			storage: &fakeStorage{},
 			data: passwordPoliciesFieldData(map[string]interface{}{
 				"name": "testpolicy",
-				"policy": `
-					length = 30
-					charset="lower-alpha"
-					rule "CharsetRestriction" {
-						charset = "a"
-						min-chars = 30
-					}`,
+				"policy": "length = 20\n" +
+					"rule \"Charset\" {\n" +
+					"	charset=\"a\"\n" +
+					"	min-chars = 30\n" +
+					"}",
 			}),
 			expectedResp: nil,
 			expectErr:    true,
@@ -2803,8 +2807,11 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 		"not base64 encoded": {
 			storage: &fakeStorage{},
 			data: passwordPoliciesFieldData(map[string]interface{}{
-				"name":   "testpolicy",
-				"policy": "length = 20\ncharset=\"abcdefghij\"",
+				"name": "testpolicy",
+				"policy": "length = 20\n" +
+					"rule \"Charset\" {\n" +
+					"	charset=\"abcdefghij\"\n" +
+					"}",
 			}),
 			expectedResp: &logical.Response{
 				Data: map[string]interface{}{
@@ -2814,14 +2821,21 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 			},
 			expectErr: false,
 			expectedStore: map[string][]byte{
-				"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+				"password_policy/testpolicy": toJson(t, map[string]interface{}{
+					"policy": "length = 20\n" +
+						"rule \"Charset\" {\n" +
+						"	charset=\"abcdefghij\"\n" +
+						"}"}),
 			},
 		},
 		"base64 encoded": {
 			storage: &fakeStorage{},
 			data: passwordPoliciesFieldData(map[string]interface{}{
-				"name":   "testpolicy",
-				"policy": base64Encode("length = 20\ncharset=\"abcdefghij\""),
+				"name": "testpolicy",
+				"policy": base64Encode("length = 20\n" +
+					"rule \"Charset\" {\n" +
+					"	charset=\"abcdefghij\"\n" +
+					"}"),
 			}),
 			expectedResp: &logical.Response{
 				Data: map[string]interface{}{
@@ -2831,14 +2845,18 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 			},
 			expectErr: false,
 			expectedStore: map[string][]byte{
-				"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+				"password_policy/testpolicy": toJson(t, map[string]interface{}{
+					"policy": "length = 20\n" +
+						"rule \"Charset\" {\n" +
+						"	charset=\"abcdefghij\"\n" +
+						"}"}),
 			},
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 			defer cancel()
 
 			req := &logical.Request{
@@ -2859,11 +2877,22 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 			}
 
 			actualStore := test.storage.getAll()
+
 			if !reflect.DeepEqual(actualStore, test.expectedStore) {
 				t.Fatalf("Actual storage: %#v\nExpected storage: %#v", actualStore, test.expectedStore)
 			}
 		})
 	}
+}
+
+func toJson(t *testing.T, val interface{}) []byte {
+	t.Helper()
+
+	b, err := jsonutil.EncodeJSON(val)
+	if err != nil {
+		t.Fatalf("Unable to marshal to JSON: %s", err)
+	}
+	return b
 }
 
 func TestHandlePoliciesPasswordGet(t *testing.T) {
@@ -2960,20 +2989,32 @@ func TestHandlePoliciesPasswordDelete(t *testing.T) {
 		"missing policy name": {
 			storage: &fakeStorage{
 				data: map[string][]byte{
-					"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+					"password_policy/testpolicy": toJson(t, map[string]interface{}{
+						"policy": `length = 20
+							rule "Charset" {
+								charset="abcdefghij"
+							}`}),
 				},
 			},
 			data:         passwordPoliciesFieldData(map[string]interface{}{}),
 			expectedResp: nil,
 			expectErr:    true,
 			expectedStore: map[string][]byte{
-				"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+				"password_policy/testpolicy": toJson(t, map[string]interface{}{
+					"policy": `length = 20
+							rule "Charset" {
+								charset="abcdefghij"
+							}`}),
 			},
 		},
 		"storage failure": {
 			storage: &fakeStorage{
 				data: map[string][]byte{
-					"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+					"password_policy/testpolicy": toJson(t, map[string]interface{}{
+						"policy": `length = 20
+							rule "Charset" {
+								charset="abcdefghij"
+							}`}),
 				},
 				deleteError: fmt.Errorf("test error"),
 			},
@@ -2983,13 +3024,21 @@ func TestHandlePoliciesPasswordDelete(t *testing.T) {
 			expectedResp: nil,
 			expectErr:    true,
 			expectedStore: map[string][]byte{
-				"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+				"password_policy/testpolicy": toJson(t, map[string]interface{}{
+					"policy": `length = 20
+							rule "Charset" {
+								charset="abcdefghij"
+							}`}),
 			},
 		},
 		"successful delete": {
 			storage: &fakeStorage{
 				data: map[string][]byte{
-					"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+					"password_policy/testpolicy": toJson(t, map[string]interface{}{
+						"policy": `length = 20
+							rule "Charset" {
+								charset="abcdefghij"
+							}`}),
 				},
 			},
 			data: passwordPoliciesFieldData(map[string]interface{}{
@@ -3050,7 +3099,11 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 			"missing policy name": {
 				storage: &fakeStorage{
 					data: map[string][]byte{
-						"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+						"password_policy/testpolicy": toJson(t, map[string]interface{}{
+							"policy": `length = 20
+							rule "Charset" {
+								charset="abcdefghij"
+							}`}),
 					},
 				},
 				data:         passwordPoliciesFieldData(map[string]interface{}{}),
@@ -3060,7 +3113,11 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 			"storage failure": {
 				storage: &fakeStorage{
 					data: map[string][]byte{
-						"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+						"password_policy/testpolicy": toJson(t, map[string]interface{}{
+							"policy": `length = 20
+							rule "Charset" {
+								charset="abcdefghij"
+							}`}),
 					},
 					getError: fmt.Errorf("test error"),
 				},
@@ -3083,7 +3140,7 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 			"policy improperly saved": {
 				storage: &fakeStorage{
 					data: map[string][]byte{
-						"password_policy/testpolicy": []byte("{\"policy\":\"ahsdiofalsdjflkajsdf\"}\n"),
+						"password_policy/testpolicy": toJson(t, map[string]interface{}{"policy": "asdfasdf"}),
 					},
 				},
 				data: passwordPoliciesFieldData(map[string]interface{}{
@@ -3093,10 +3150,14 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 				expectErr:    true,
 			},
 			"failed to generate": {
-				timeout: 0 * time.Second,
+				timeout: 0 * time.Second, // Timeout immediately
 				storage: &fakeStorage{
 					data: map[string][]byte{
-						"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+						"password_policy/testpolicy": toJson(t, map[string]interface{}{
+							"policy": `length = 20
+							rule "Charset" {
+								charset="abcdefghij"
+							}`}),
 					},
 				},
 				data: passwordPoliciesFieldData(map[string]interface{}{
@@ -3137,7 +3198,11 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 		defer cancel()
 		storage := &fakeStorage{
 			data: map[string][]byte{
-				"password_policy/testpolicy": []byte("{\"policy\":\"length = 20\\ncharset=\\\"abcdefghij\\\"\"}\n"),
+				"password_policy/testpolicy": toJson(t, map[string]interface{}{
+					"policy": `length = 20
+							rule "Charset" {
+								charset="abcdefghij"
+							}`}),
 			},
 		}
 		data := passwordPoliciesFieldData(map[string]interface{}{
@@ -3161,7 +3226,7 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 		// Password assertions
 		expectedPassLen := 20
 		rules := []random.Rule{
-			random.CharsetRestriction{
+			random.Charset{
 				Charset:  []rune("abcdefghij"),
 				MinChars: expectedPassLen,
 			},

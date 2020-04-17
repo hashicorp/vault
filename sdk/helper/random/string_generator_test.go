@@ -15,27 +15,53 @@ import (
 
 func TestStringGenerator_Generate_successful(t *testing.T) {
 	type testCase struct {
-		timeout time.Duration
-		charset []rune
-		rules   []Rule
+		timeout   time.Duration
+		generator *StringGenerator
 	}
 
 	tests := map[string]testCase{
 		"common rules": {
 			timeout: 1 * time.Second,
-			charset: AlphaNumericShortSymbolRuneset,
-			rules: []Rule{
-				CharsetRestriction{
-					Charset:  LowercaseRuneset,
-					MinChars: 1,
+			generator: &StringGenerator{
+				Length: 20,
+				Rules: []Rule{
+					Charset{
+						Charset:  LowercaseRuneset,
+						MinChars: 1,
+					},
+					Charset{
+						Charset:  UppercaseRuneset,
+						MinChars: 1,
+					},
+					Charset{
+						Charset:  NumericRuneset,
+						MinChars: 1,
+					},
+					Charset{
+						Charset:  ShortSymbolRuneset,
+						MinChars: 1,
+					},
 				},
-				CharsetRestriction{
-					Charset:  UppercaseRuneset,
-					MinChars: 1,
-				},
-				CharsetRestriction{
-					Charset:  NumericRuneset,
-					MinChars: 1,
+				charset: AlphaNumericShortSymbolRuneset,
+			},
+		},
+		"charset not explicitly specified": {
+			timeout: 1 * time.Second,
+			generator: &StringGenerator{
+				Length: 20,
+				Rules: []Rule{
+					Charset{
+						Charset:  LowercaseRuneset,
+						MinChars: 1,
+					},
+					Charset{
+						Charset:  UppercaseRuneset,
+						MinChars: 1,
+					},
+					Charset{
+						Charset:  NumericRuneset,
+						MinChars: 1,
+					},
 				},
 			},
 		},
@@ -43,12 +69,6 @@ func TestStringGenerator_Generate_successful(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			sg := StringGenerator{
-				Length:  20,
-				Charset: test.charset,
-				Rules:   test.rules,
-			}
-
 			// One context to rule them all, one context to find them, one context to bring them all and in the darkness bind them.
 			ctx, cancel := context.WithTimeout(context.Background(), test.timeout)
 			defer cancel()
@@ -56,8 +76,8 @@ func TestStringGenerator_Generate_successful(t *testing.T) {
 			runeset := map[rune]bool{}
 			runesFound := []rune{}
 
-			for i := 0; i < 10000; i++ {
-				actual, err := sg.Generate(ctx)
+			for i := 0; i < 100; i++ {
+				actual, err := test.generator.Generate(ctx)
 				if err != nil {
 					t.Fatalf("no error expected, but got: %s", err)
 				}
@@ -72,11 +92,10 @@ func TestStringGenerator_Generate_successful(t *testing.T) {
 
 			sort.Sort(runes(runesFound))
 
-			// Sort the input too just to ensure that they can be compared
-			sort.Sort(runes(test.charset))
+			expectedCharset := getChars(test.generator.Rules)
 
-			if !reflect.DeepEqual(runesFound, test.charset) {
-				t.Fatalf("Didn't find all characters from the charset\nActual  : [%s]\nExpected: [%s]", string(runesFound), string(test.charset))
+			if !reflect.DeepEqual(runesFound, expectedCharset) {
+				t.Fatalf("Didn't find all characters from the charset\nActual  : [%s]\nExpected: [%s]", string(runesFound), string(expectedCharset))
 			}
 		})
 	}
@@ -84,55 +103,98 @@ func TestStringGenerator_Generate_successful(t *testing.T) {
 
 func TestStringGenerator_Generate_errors(t *testing.T) {
 	type testCase struct {
-		timeout time.Duration
-		charset string
-		rules   []Rule
-		rng     io.Reader
+		timeout   time.Duration
+		generator *StringGenerator
 	}
 
 	tests := map[string]testCase{
 		"already timed out": {
 			timeout: 0,
-			charset: AlphaNumericShortSymbolCharset,
-			rules: []Rule{
-				testRule{
-					fail: false,
+			generator: &StringGenerator{
+				Length: 20,
+				Rules: []Rule{
+					testCharsetRule{
+						fail: false,
+					},
 				},
+				charset: AlphaNumericShortSymbolRuneset,
+				rng:     rand.Reader,
 			},
-			rng: rand.Reader,
 		},
 		"impossible rules": {
 			timeout: 10 * time.Millisecond, // Keep this short so the test doesn't take too long
-			charset: AlphaNumericShortSymbolCharset,
-			rules: []Rule{
-				testRule{
-					fail: true,
+			generator: &StringGenerator{
+				Length: 20,
+				Rules: []Rule{
+					testCharsetRule{
+						fail: true,
+					},
 				},
+				charset: AlphaNumericShortSymbolRuneset,
+				rng:     rand.Reader,
 			},
-			rng: rand.Reader,
 		},
 		"bad RNG reader": {
 			timeout: 10 * time.Millisecond, // Keep this short so the test doesn't take too long
-			charset: AlphaNumericShortSymbolCharset,
-			rules:   []Rule{},
-			rng:     badReader{},
+			generator: &StringGenerator{
+				Length:  20,
+				Rules:   []Rule{},
+				charset: AlphaNumericShortSymbolRuneset,
+				rng:     badReader{},
+			},
+		},
+		"0 length": {
+			timeout: 10 * time.Millisecond,
+			generator: &StringGenerator{
+				Length: 0,
+				Rules: []Rule{
+					Charset{
+						Charset:  []rune("abcde"),
+						MinChars: 0,
+					},
+				},
+				charset: []rune("abcde"),
+				rng:     rand.Reader,
+			},
+		},
+		"-1 length": {
+			timeout: 10 * time.Millisecond,
+			generator: &StringGenerator{
+				Length: -1,
+				Rules: []Rule{
+					Charset{
+						Charset:  []rune("abcde"),
+						MinChars: 0,
+					},
+				},
+				charset: []rune("abcde"),
+				rng:     rand.Reader,
+			},
+		},
+		"no charset": {
+			timeout: 10 * time.Millisecond,
+			generator: &StringGenerator{
+				Length: 20,
+				Rules:  []Rule{},
+				rng:    rand.Reader,
+			},
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			sg := StringGenerator{
-				Length:  20,
-				Charset: []rune(test.charset),
-				Rules:   test.rules,
-				rng:     test.rng,
-			}
+			// sg := StringGenerator{
+			// 	Length:  20,
+			// 	charset: []rune(test.charset),
+			// 	Rules:   test.rules,
+			// 	rng:     test.rng,
+			// }
 
 			// One context to rule them all, one context to find them, one context to bring them all and in the darkness bind them.
 			ctx, cancel := context.WithTimeout(context.Background(), test.timeout)
 			defer cancel()
 
-			actual, err := sg.Generate(ctx)
+			actual, err := test.generator.Generate(ctx)
 			if err == nil {
 				t.Fatalf("Expected error but none found")
 			}
@@ -320,7 +382,7 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 	benches := map[string]testCase{
 		"no rules": {
 			generator: StringGenerator{
-				Charset: AlphaNumericFullSymbolRuneset,
+				charset: AlphaNumericFullSymbolRuneset,
 				Rules:   []Rule{},
 			},
 		},
@@ -329,21 +391,21 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 		},
 		"large symbol set": {
 			generator: StringGenerator{
-				Charset: AlphaNumericFullSymbolRuneset,
+				charset: AlphaNumericFullSymbolRuneset,
 				Rules: []Rule{
-					CharsetRestriction{
+					Charset{
 						Charset:  LowercaseRuneset,
 						MinChars: 1,
 					},
-					CharsetRestriction{
+					Charset{
 						Charset:  UppercaseRuneset,
 						MinChars: 1,
 					},
-					CharsetRestriction{
+					Charset{
 						Charset:  NumericRuneset,
 						MinChars: 1,
 					},
-					CharsetRestriction{
+					Charset{
 						Charset:  FullSymbolRuneset,
 						MinChars: 1,
 					},
@@ -352,21 +414,21 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 		},
 		"max symbol set": {
 			generator: StringGenerator{
-				Charset: []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" +
+				charset: []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" +
 					"`abcdefghijklmnopqrstuvwxyz{|}~ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠ" +
 					"ġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒœŔŕŖŗŘřŚśŜŝŞşŠ" +
 					"šŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ℀℁ℂ℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔ℕ№℗℘ℙℚℛℜℝ℞℟",
 				),
 				Rules: []Rule{
-					CharsetRestriction{
+					Charset{
 						Charset:  LowercaseRuneset,
 						MinChars: 1,
 					},
-					CharsetRestriction{
+					Charset{
 						Charset:  UppercaseRuneset,
 						MinChars: 1,
 					},
-					CharsetRestriction{
+					Charset{
 						Charset:  []rune("ĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒ"),
 						MinChars: 1,
 					},
@@ -375,21 +437,21 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 		},
 		"restrictive charset rules": {
 			generator: StringGenerator{
-				Charset: AlphaNumericShortSymbolRuneset,
+				charset: AlphaNumericShortSymbolRuneset,
 				Rules: []Rule{
-					CharsetRestriction{
+					Charset{
 						Charset:  []rune("A"),
 						MinChars: 1,
 					},
-					CharsetRestriction{
+					Charset{
 						Charset:  []rune("1"),
 						MinChars: 1,
 					},
-					CharsetRestriction{
+					Charset{
 						Charset:  []rune("a"),
 						MinChars: 1,
 					},
-					CharsetRestriction{
+					Charset{
 						Charset:  []rune("-"),
 						MinChars: 1,
 					},
@@ -421,10 +483,11 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 		})
 	}
 
+	// Mimic what the SQLCredentialsProducer is doing
 	b.Run("SQLCredentialsProducer", func(b *testing.B) {
 		sg := StringGenerator{
 			Length:  16, // 16 because the SQLCredentialsProducer prepends 4 characters to a 20 character password
-			Charset: AlphaNumericRuneset,
+			charset: AlphaNumericRuneset,
 			Rules:   nil,
 			rng:     rand.Reader,
 		}
@@ -449,13 +512,13 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 func TestStringGenerator_JSON(t *testing.T) {
 	expected := StringGenerator{
 		Length:  20,
-		Charset: AlphaNumericShortSymbolRuneset,
+		charset: deduplicateRunes([]rune("teststring" + ShortSymbolCharset)),
 		Rules: []Rule{
-			&testRule{
+			testCharsetRule{
 				String:  "teststring",
 				Integer: 123,
 			},
-			&CharsetRestriction{
+			Charset{
 				Charset:  ShortSymbolRuneset,
 				MinChars: 1,
 			},
@@ -470,8 +533,8 @@ func TestStringGenerator_JSON(t *testing.T) {
 	parser := Parser{
 		RuleRegistry: Registry{
 			Rules: map[string]ruleConstructor{
-				"testrule":           newTestRule,
-				"CharsetRestriction": ParseCharsetRestriction,
+				"testrule": newTestRule,
+				"Charset":  ParseCharset,
 			},
 		},
 	}
@@ -489,4 +552,180 @@ type badReader struct{}
 
 func (badReader) Read([]byte) (int, error) {
 	return 0, fmt.Errorf("test error")
+}
+
+func TestValidate(t *testing.T) {
+	type testCase struct {
+		generator StringGenerator
+		expectErr bool
+	}
+
+	tests := map[string]testCase{
+		"default generator": {
+			generator: DefaultStringGenerator,
+			expectErr: false,
+		},
+		"length is 0": {
+			generator: StringGenerator{
+				Length: 0,
+			},
+			expectErr: true,
+		},
+		"length is negative": {
+			generator: StringGenerator{
+				Length: -2,
+			},
+			expectErr: true,
+		},
+		"nil charset, no rules": {
+			generator: StringGenerator{
+				Length:  5,
+				charset: nil,
+			},
+			expectErr: true,
+		},
+		"zero length charset, no rules": {
+			generator: StringGenerator{
+				Length:  5,
+				charset: []rune{},
+			},
+			expectErr: true,
+		},
+		"rules require password longer than length": {
+			generator: StringGenerator{
+				Length:  5,
+				charset: []rune("abcde"),
+				Rules: []Rule{
+					Charset{
+						Charset:  []rune("abcde"),
+						MinChars: 6,
+					},
+				},
+			},
+			expectErr: true,
+		},
+		"charset has non-printable characters": {
+			generator: StringGenerator{
+				Length: 0,
+				charset: []rune{
+					'a',
+					'b',
+					0, // Null character
+					'd',
+					'e',
+				},
+			},
+			expectErr: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := test.generator.validateConfig()
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+		})
+	}
+}
+
+type testNonCharsetRule struct {
+	String string `mapstructure:"string" json:"string"`
+}
+
+func (tr testNonCharsetRule) Pass([]rune) bool { return true }
+func (tr testNonCharsetRule) Type() string     { return "testNonCharsetRule" }
+
+func TestGetChars(t *testing.T) {
+	type testCase struct {
+		rules    []Rule
+		expected []rune
+	}
+
+	tests := map[string]testCase{
+		"nil rules": {
+			rules:    nil,
+			expected: []rune(nil),
+		},
+		"empty rules": {
+			rules:    []Rule{},
+			expected: []rune(nil),
+		},
+		"rule without chars": {
+			rules: []Rule{
+				testNonCharsetRule{
+					String: "teststring",
+				},
+			},
+			expected: []rune(nil),
+		},
+		"rule with chars": {
+			rules: []Rule{
+				Charset{
+					Charset:  []rune("abcdefghij"),
+					MinChars: 1,
+				},
+			},
+			expected: []rune("abcdefghij"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			actual := getChars(test.rules)
+			if !reflect.DeepEqual(actual, test.expected) {
+				t.Fatalf("Actual: %v\nExpected: %v", actual, test.expected)
+			}
+		})
+	}
+}
+
+func TestDeduplicateRunes(t *testing.T) {
+	type testCase struct {
+		input    []rune
+		expected []rune
+	}
+
+	tests := map[string]testCase{
+		"empty string": {
+			input:    []rune(""),
+			expected: []rune(nil),
+		},
+		"no duplicates": {
+			input:    []rune("abcde"),
+			expected: []rune("abcde"),
+		},
+		"in order duplicates": {
+			input:    []rune("aaaabbbbcccccccddddeeeee"),
+			expected: []rune("abcde"),
+		},
+		"out of order duplicates": {
+			input:    []rune("abcdeabcdeabcdeabcde"),
+			expected: []rune("abcde"),
+		},
+		"unicode no duplicates": {
+			input:    []rune("日本語"),
+			expected: []rune("日本語"),
+		},
+		"unicode in order duplicates": {
+			input:    []rune("日日日日本本本語語語語語"),
+			expected: []rune("日本語"),
+		},
+		"unicode out of order duplicates": {
+			input:    []rune("日本語日本語日本語日本語"),
+			expected: []rune("日本語"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			actual := deduplicateRunes(test.input)
+			if !reflect.DeepEqual(actual, test.expected) {
+				t.Fatalf("Actual: %#v\nExpected:%#v", actual, test.expected)
+			}
+		})
+	}
 }

@@ -70,8 +70,9 @@ type SystemView interface {
 	// PluginEnv returns Vault environment information used by plugins
 	PluginEnv(context.Context) (*PluginEnvironment, error)
 
-	// PasswordPolicy retrieves the password policy associated with the policy name
-	PasswordPolicy(ctx context.Context, policyName string) (PasswordPolicy, error)
+	// GeneratePasswordFromPolicy generates a password from the policy referenced.
+	// If the policy does not exist, this will return an error.
+	GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error)
 }
 
 type PasswordPolicy interface {
@@ -176,19 +177,19 @@ func (d StaticSystemView) PluginEnv(_ context.Context) (*PluginEnvironment, erro
 	return d.PluginEnvironment, nil
 }
 
-func (d StaticSystemView) PasswordPolicy(ctx context.Context, policyName string) (policy PasswordPolicy, err error) {
+func (d StaticSystemView) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("context timed out")
+		return "", fmt.Errorf("context timed out")
 	default:
 	}
 
 	if d.PasswordPolicies == nil {
-		return nil, fmt.Errorf("password policy not found")
+		return "", fmt.Errorf("password policy not found")
 	}
 	policy, exists := d.PasswordPolicies[policyName]
 	if !exists {
-		return nil, fmt.Errorf("password policy not found")
+		return "", fmt.Errorf("password policy not found")
 	}
-	return policy, nil
+	return policy.Generate(ctx)
 }

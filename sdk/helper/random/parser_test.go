@@ -17,32 +17,26 @@ func TestParse(t *testing.T) {
 		"unrecognized rule": {
 			rawConfig: `
 				length = 20
-				charset = "abcde"
 				rule "testrule" {
 					string = "teststring"
 					int = 123
 				}`,
-			expected: StringGenerator{
-				Length:  20,
-				Charset: []rune("abcde"),
-				Rules:   nil,
-			},
+			expected:  StringGenerator{},
 			expectErr: true,
 		},
 
 		"charset restrictions": {
 			rawConfig: `
 				length = 20
-				charset = "abcde"
-				rule "CharsetRestriction" {
+				rule "Charset" {
 					charset = "abcde"
-					min-chars = 2
+					min_chars = 2
 				}`,
 			expected: StringGenerator{
 				Length:  20,
-				Charset: []rune("abcde"),
+				charset: []rune("abcde"),
 				Rules: []Rule{
-					&CharsetRestriction{
+					Charset{
 						Charset:  []rune("abcde"),
 						MinChars: 2,
 					},
@@ -91,53 +85,46 @@ func TestParser_Parse(t *testing.T) {
 			expected:  StringGenerator{},
 			expectErr: true,
 		},
-		"config with length and charset": {
+		"config with only length": {
 			registry: defaultRuleNameMapping,
 			rawConfig: `
-				length = 20
-				charset = "abcde"`,
-			expected: StringGenerator{
-				Length:  20,
-				Charset: []rune("abcde"),
-			},
-			expectErr: false,
+				length = 20`,
+			expected:  StringGenerator{},
+			expectErr: true,
 		},
 		"config with zero length": {
 			registry: defaultRuleNameMapping,
 			rawConfig: `
 				length = 0
-				charset = "abcde"`,
-			expected: StringGenerator{
-				Length:  0,
-				Charset: []rune("abcde"),
-			},
+				rule "Charset" {
+					charset = "abcde"
+				}`,
+			expected:  StringGenerator{},
 			expectErr: true,
 		},
 		"config with negative length": {
 			registry: defaultRuleNameMapping,
 			rawConfig: `
 				length = -2
-				charset = "abcde"`,
-			expected: StringGenerator{
-				Length:  -2,
-				Charset: []rune("abcde"),
-			},
+				rule "Charset" {
+					charset = "abcde"
+				}`,
+			expected:  StringGenerator{},
 			expectErr: true,
 		},
 		"charset restrictions": {
 			registry: defaultRuleNameMapping,
 			rawConfig: `
 				length = 20
-				charset = "abcde"
-				rule "CharsetRestriction" {
+				rule "Charset" {
 					charset = "abcde"
-					min-chars = 2
+					min_chars = 2
 				}`,
 			expected: StringGenerator{
 				Length:  20,
-				Charset: []rune("abcde"),
+				charset: []rune("abcde"),
 				Rules: []Rule{
-					&CharsetRestriction{
+					Charset{
 						Charset:  []rune("abcde"),
 						MinChars: 2,
 					},
@@ -151,16 +138,15 @@ func TestParser_Parse(t *testing.T) {
 			},
 			rawConfig: `
 				length = 20
-				charset = "abcde"
 				rule "testrule" {
 					string = "teststring"
 					int = 123
 				}`,
 			expected: StringGenerator{
 				Length:  20,
-				Charset: []rune("abcde"),
+				charset: deduplicateRunes([]rune("teststring")),
 				Rules: []Rule{
-					&testRule{
+					testCharsetRule{
 						String:  "teststring",
 						Integer: 123,
 					},
@@ -170,29 +156,28 @@ func TestParser_Parse(t *testing.T) {
 		},
 		"test rule and charset restrictions": {
 			registry: map[string]ruleConstructor{
-				"testrule":           newTestRule,
-				"CharsetRestriction": ParseCharsetRestriction,
+				"testrule": newTestRule,
+				"Charset":  ParseCharset,
 			},
 			rawConfig: `
 				length = 20
-				charset = "abcde"
 				rule "testrule" {
 					string = "teststring"
 					int = 123
 				}
-				rule "CharsetRestriction" {
+				rule "Charset" {
 					charset = "abcde"
-					min-chars = 2
+					min_chars = 2
 				}`,
 			expected: StringGenerator{
 				Length:  20,
-				Charset: []rune("abcde"),
+				charset: deduplicateRunes([]rune("abcdeteststring")),
 				Rules: []Rule{
-					&testRule{
+					testCharsetRule{
 						String:  "teststring",
 						Integer: 123,
 					},
-					&CharsetRestriction{
+					Charset{
 						Charset:  []rune("abcde"),
 						MinChars: 2,
 					},
@@ -204,16 +189,11 @@ func TestParser_Parse(t *testing.T) {
 			registry: defaultRuleNameMapping,
 			rawConfig: `
 				length = 20
-				charset = "abcde"
 				rule "testrule" {
 					string = "teststring"
 					int = 123
 				}`,
-			expected: StringGenerator{
-				Length:  20,
-				Charset: []rune("abcde"),
-				Rules:   nil,
-			},
+			expected:  StringGenerator{},
 			expectErr: true,
 		},
 
@@ -221,8 +201,8 @@ func TestParser_Parse(t *testing.T) {
 		// JSON data
 		"manually JSONified HCL": {
 			registry: map[string]ruleConstructor{
-				"testrule":           newTestRule,
-				"CharsetRestriction": ParseCharsetRestriction,
+				"testrule": newTestRule,
+				"Charset":  ParseCharset,
 			},
 			rawConfig: `
 				{
@@ -238,10 +218,10 @@ func TestParser_Parse(t *testing.T) {
 							]
 						},
 						{
-							"CharsetRestriction": [
+							"Charset": [
 								{
 									"charset": "abcde",
-									"min-chars": 2
+									"min_chars": 2
 								}
 							]
 						}
@@ -249,13 +229,13 @@ func TestParser_Parse(t *testing.T) {
 				}`,
 			expected: StringGenerator{
 				Length:  20,
-				Charset: []rune("abcde"),
+				charset: deduplicateRunes([]rune("abcdeteststring")),
 				Rules: []Rule{
-					&testRule{
+					testCharsetRule{
 						String:  "teststring",
 						Integer: 123,
 					},
-					&CharsetRestriction{
+					Charset{
 						Charset:  []rune("abcde"),
 						MinChars: 2,
 					},
@@ -265,18 +245,17 @@ func TestParser_Parse(t *testing.T) {
 		},
 		"JSONified HCL": {
 			registry: map[string]ruleConstructor{
-				"testrule":           newTestRule,
-				"CharsetRestriction": ParseCharsetRestriction,
+				"testrule": newTestRule,
+				"Charset":  ParseCharset,
 			},
 			rawConfig: toJSON(t, StringGenerator{
-				Length:  20,
-				Charset: []rune("abcde"),
+				Length: 20,
 				Rules: []Rule{
-					&testRule{
+					testCharsetRule{
 						String:  "teststring",
 						Integer: 123,
 					},
-					&CharsetRestriction{
+					Charset{
 						Charset:  []rune("abcde"),
 						MinChars: 2,
 					},
@@ -284,13 +263,13 @@ func TestParser_Parse(t *testing.T) {
 			}),
 			expected: StringGenerator{
 				Length:  20,
-				Charset: []rune("abcde"),
+				charset: deduplicateRunes([]rune("abcdeteststring")),
 				Rules: []Rule{
-					&testRule{
+					testCharsetRule{
 						String:  "teststring",
 						Integer: 123,
 					},
-					&CharsetRestriction{
+					Charset{
 						Charset:  []rune("abcde"),
 						MinChars: 2,
 					},
@@ -315,11 +294,7 @@ func TestParser_Parse(t *testing.T) {
 						}
 					]
 				}`,
-			expected: StringGenerator{
-				Length:  20,
-				Charset: []rune("abcde"),
-				Rules:   nil,
-			},
+			expected:  StringGenerator{},
 			expectErr: true,
 		},
 	}
@@ -411,7 +386,7 @@ func TestParseRules(t *testing.T) {
 				},
 			},
 			expectedRules: []Rule{
-				&testRule{
+				testCharsetRule{
 					String:  "teststring",
 					Integer: 123,
 				},
@@ -436,131 +411,6 @@ func TestParseRules(t *testing.T) {
 
 			if !reflect.DeepEqual(actualRules, test.expectedRules) {
 				t.Fatalf("Actual: %#v\nExpected:%#v", actualRules, test.expectedRules)
-			}
-		})
-	}
-}
-
-func TestValidate(t *testing.T) {
-	type testCase struct {
-		generator StringGenerator
-		expectErr bool
-	}
-
-	tests := map[string]testCase{
-		"default generator": {
-			generator: DefaultStringGenerator,
-			expectErr: false,
-		},
-		"length is 0": {
-			generator: StringGenerator{
-				Length:  0,
-				Charset: []rune("abcde"),
-			},
-			expectErr: true,
-		},
-		"length is negative": {
-			generator: StringGenerator{
-				Length:  -2,
-				Charset: []rune("abcde"),
-			},
-			expectErr: true,
-		},
-		"nil charset": {
-			generator: StringGenerator{
-				Length:  5,
-				Charset: nil,
-			},
-			expectErr: true,
-		},
-		"zero length charset": {
-			generator: StringGenerator{
-				Length:  5,
-				Charset: []rune{},
-			},
-			expectErr: true,
-		},
-		"rules require password longer than length": {
-			generator: StringGenerator{
-				Length:  5,
-				Charset: []rune("abcde"),
-				Rules: []Rule{
-					CharsetRestriction{
-						Charset:  []rune("abcde"),
-						MinChars: 6,
-					},
-				},
-			},
-			expectErr: true,
-		},
-		"charset has non-printable characters": {
-			generator: StringGenerator{
-				Length: 0,
-				Charset: []rune{
-					'a',
-					'b',
-					0, // Null character
-					'd',
-					'e',
-				},
-			},
-			expectErr: true,
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			err := validate(test.generator)
-			if test.expectErr && err == nil {
-				t.Fatalf("err expected, got nil")
-			}
-			if !test.expectErr && err != nil {
-				t.Fatalf("no error expected, got: %s", err)
-			}
-		})
-	}
-}
-
-func TestGetChars(t *testing.T) {
-	type testCase struct {
-		rules    []Rule
-		expected []rune
-	}
-
-	tests := map[string]testCase{
-		"nil rules": {
-			rules:    nil,
-			expected: []rune(nil),
-		},
-		"empty rules": {
-			rules:    []Rule{},
-			expected: []rune(nil),
-		},
-		"rule without chars": {
-			rules: []Rule{
-				testRule{
-					String:  "teststring",
-					Integer: 123,
-				},
-			},
-			expected: []rune(nil),
-		},
-		"rule with chars": {
-			rules: []Rule{
-				CharsetRestriction{
-					Charset:  []rune("abcdefghij"),
-					MinChars: 1,
-				},
-			},
-			expected: []rune("abcdefghij"),
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			actual := getChars(test.rules)
-			if !reflect.DeepEqual(actual, test.expected) {
-				t.Fatalf("Actual: %v\nExpected: %v", actual, test.expected)
 			}
 		})
 	}
@@ -698,128 +548,11 @@ func TestGetRuleInfo(t *testing.T) {
 	}
 }
 
-func TestApplyShortcuts(t *testing.T) {
-	type testCase struct {
-		input    map[string]interface{}
-		expected map[string]interface{}
-	}
-
-	tests := map[string]testCase{
-		"nil map": {
-			input:    nil,
-			expected: nil,
-		},
-		"empty map": {
-			input:    map[string]interface{}{},
-			expected: map[string]interface{}{},
-		},
-		"non-matching key": {
-			input: map[string]interface{}{
-				"foo": "teststring",
-			},
-			expected: map[string]interface{}{
-				"foo": "teststring",
-			},
-		},
-		"matching key": {
-			input: map[string]interface{}{
-				"charset": "lower-alpha",
-			},
-			expected: map[string]interface{}{
-				"charset": LowercaseCharset,
-			},
-		},
-		"matching and non-matching keys": {
-			input: map[string]interface{}{
-				"charset": "lower-alpha",
-				"foo":     "teststring",
-			},
-			expected: map[string]interface{}{
-				"charset": LowercaseCharset,
-				"foo":     "teststring",
-			},
-		},
-		"invalid value type": {
-			input: map[string]interface{}{
-				"charset": 123,
-			},
-			expected: map[string]interface{}{
-				"charset": 123,
-			},
-		},
-		"unrecognized shortcut": {
-			input: map[string]interface{}{
-				"charset": LowercaseCharset,
-			},
-			expected: map[string]interface{}{
-				"charset": LowercaseCharset,
-			},
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			applyShortcuts(test.input)
-			if !reflect.DeepEqual(test.input, test.expected) {
-				t.Fatalf("Actual: %#v\nExpected:%#v", test.input, test.expected)
-			}
-		})
-	}
-}
-
-func TestDeduplicateRunes(t *testing.T) {
-	type testCase struct {
-		input    []rune
-		expected []rune
-	}
-
-	tests := map[string]testCase{
-		"empty string": {
-			input:    []rune(""),
-			expected: []rune(nil),
-		},
-		"no duplicates": {
-			input:    []rune("abcde"),
-			expected: []rune("abcde"),
-		},
-		"in order duplicates": {
-			input:    []rune("aaaabbbbcccccccddddeeeee"),
-			expected: []rune("abcde"),
-		},
-		"out of order duplicates": {
-			input:    []rune("abcdeabcdeabcdeabcde"),
-			expected: []rune("abcde"),
-		},
-		"unicode no duplicates": {
-			input:    []rune("日本語"),
-			expected: []rune("日本語"),
-		},
-		"unicode in order duplicates": {
-			input:    []rune("日日日日本本本語語語語語"),
-			expected: []rune("日本語"),
-		},
-		"unicode out of order duplicates": {
-			input:    []rune("日本語日本語日本語日本語"),
-			expected: []rune("日本語"),
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			actual := deduplicateRunes(test.input)
-			if !reflect.DeepEqual(actual, test.expected) {
-				t.Fatalf("Actual: %#v\nExpected:%#v", actual, test.expected)
-			}
-		})
-	}
-}
-
 func BenchmarkParser_Parse(b *testing.B) {
 	config := `length = 20
-               charset = "abcde"
-               rule "CharsetRestriction" {
+               rule "Charset" {
                    charset = "abcde"
-                   min-chars = 2
+                   min_chars = 2
                }`
 
 	for i := 0; i < b.N; i++ {

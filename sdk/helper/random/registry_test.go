@@ -8,7 +8,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-type testRule struct {
+type testCharsetRule struct {
 	String  string `mapstructure:"string" json:"string"`
 	Integer int    `mapstructure:"int"    json:"int"`
 
@@ -17,16 +17,17 @@ type testRule struct {
 }
 
 func newTestRule(data map[string]interface{}) (rule Rule, err error) {
-	tr := &testRule{}
+	tr := &testCharsetRule{}
 	err = mapstructure.Decode(data, tr)
 	if err != nil {
 		return nil, fmt.Errorf("unable to decode test rule")
 	}
-	return tr, nil
+	return *tr, nil
 }
 
-func (tr testRule) Pass([]rune) bool { return !tr.fail }
-func (tr testRule) Type() string     { return "testrule" }
+func (tr testCharsetRule) Pass([]rune) bool { return !tr.fail }
+func (tr testCharsetRule) Type() string     { return "testrule" }
+func (tr testCharsetRule) Chars() []rune    { return []rune(tr.String) }
 
 func TestParseRule(t *testing.T) {
 	type testCase struct {
@@ -56,7 +57,7 @@ func TestParseRule(t *testing.T) {
 			},
 			ruleType:     "testrule",
 			ruleData:     nil,
-			expectedRule: &testRule{},
+			expectedRule: testCharsetRule{},
 			expectErr:    false,
 		},
 		"good rule": {
@@ -68,7 +69,7 @@ func TestParseRule(t *testing.T) {
 				"string": "teststring",
 				"int":    123,
 			},
-			expectedRule: &testRule{
+			expectedRule: testCharsetRule{
 				String:  "teststring",
 				Integer: 123,
 			},

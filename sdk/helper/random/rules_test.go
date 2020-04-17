@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestCharsetRestriction(t *testing.T) {
+func TestCharset(t *testing.T) {
 	type testCase struct {
 		charset  string
 		minChars int
@@ -77,7 +77,7 @@ func TestCharsetRestriction(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			cr := CharsetRestriction{
+			cr := Charset{
 				Charset:  []rune(test.charset),
 				MinChars: test.minChars,
 			}

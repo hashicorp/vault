@@ -329,9 +329,9 @@ func (d dynamicSystemView) PluginEnv(_ context.Context) (*logical.PluginEnvironm
 	}, nil
 }
 
-func (d dynamicSystemView) PasswordPolicy(ctx context.Context, policyName string) (policy logical.PasswordPolicy, err error) {
+func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {
 	if policyName == "" {
-		return nil, fmt.Errorf("missing password policy name")
+		return "", fmt.Errorf("missing password policy name")
 	}
 
 	// Ensure there's a timeout on the context of some sort
@@ -343,17 +343,17 @@ func (d dynamicSystemView) PasswordPolicy(ctx context.Context, policyName string
 
 	policyCfg, err := retrievePasswordPolicy(ctx, d.core.systemBarrierView, policyName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve password policy: %w", err)
+		return "", fmt.Errorf("failed to retrieve password policy: %w", err)
 	}
 
 	if policyCfg == nil {
-		return nil, nil
+		return "", fmt.Errorf("no password policy found")
 	}
 
 	passPolicy, err := random.Parse(policyCfg.HCLPolicy)
 	if err != nil {
-		return nil, fmt.Errorf("stored password policy is invalid: %w", err)
+		return "", fmt.Errorf("stored password policy is invalid: %w", err)
 	}
 
-	return passPolicy, nil
+	return passPolicy.Generate(ctx)
 }

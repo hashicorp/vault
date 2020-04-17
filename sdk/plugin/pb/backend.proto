@@ -554,12 +554,12 @@ message PluginEnvReply {
 	string err = 2;
 }
 
-message PasswordPolicyRequest {
+message GeneratePasswordFromPolicyRequest {
 	string policy_name = 1;
 }
 
-message PasswordPolicyResponse {
-	bytes raw_policy = 1;
+message GeneratePasswordFromPolicyReply {
+	string password = 1;
 }
 
 // SystemView exposes system configuration information in a safe way for plugins
@@ -567,7 +567,7 @@ message PasswordPolicyResponse {
 service SystemView {
   	// DefaultLeaseTTL returns the default lease TTL set in Vault configuration
 	rpc DefaultLeaseTTL(Empty) returns (TTLReply);
-	
+
    	// MaxLeaseTTL returns the max lease TTL set in Vault configuration; backend
 	// authors should take care not to issue credentials that last longer than
 	// this value, as Vault will revoke them
@@ -612,8 +612,8 @@ service SystemView {
 	// entity id
 	rpc GroupsForEntity(EntityInfoArgs) returns (GroupsForEntityReply);
 
-	// PasswordPolicy returns a password policy if one exists
-	rpc PasswordPolicy(PasswordPolicyRequest) returns (PasswordPolicyResponse);
+	// GeneratePasswordFromPolicy generates a password from an existing password policy
+	rpc GeneratePasswordFromPolicy(GeneratePasswordFromPolicyRequest) returns (GeneratePasswordFromPolicyReply);
 }
 
 message Connection {

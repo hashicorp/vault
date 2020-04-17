@@ -8,6 +8,9 @@ import (
 	"math"
 	"sort"
 	"time"
+	"unicode"
+
+	"github.com/hashicorp/go-multierror"
 )
 
 var (
@@ -35,22 +38,21 @@ var (
 
 	// DefaultStringGenerator has reasonable default rules for generating strings
 	DefaultStringGenerator = StringGenerator{
-		Length:  20,
-		Charset: []rune(LowercaseCharset + UppercaseCharset + NumericCharset + ShortSymbolCharset),
+		Length: 20,
 		Rules: []Rule{
-			CharsetRestriction{
+			Charset{
 				Charset:  LowercaseRuneset,
 				MinChars: 1,
 			},
-			CharsetRestriction{
+			Charset{
 				Charset:  UppercaseRuneset,
 				MinChars: 1,
 			},
-			CharsetRestriction{
+			Charset{
 				Charset:  NumericRuneset,
 				MinChars: 1,
 			},
-			CharsetRestriction{
+			Charset{
 				Charset:  ShortSymbolRuneset,
 				MinChars: 1,
 			},
@@ -74,27 +76,33 @@ type Rule interface {
 }
 
 // StringGenerator generats random strings from the provided charset & adhering to a set of rules. The set of rules
-// are things like CharsetRestriction which requires a certain number of characters from a sub-charset.
+// are things like Charset which requires a certain number of characters from a sub-charset.
 type StringGenerator struct {
 	// Length of the string to generate.
 	Length int `mapstructure:"length" json:"length"`
 
-	// Charset to choose runes from.
-	Charset runes `mapstructure:"charset" json:"charset"`
-
 	// Rules the generated strings must adhere to.
 	Rules serializableRules `mapstructure:"-" json:"rule"` // This is "rule" in JSON so it matches the HCL property type
+
+	// Charset to choose runes from. This is computed from the rules, not directly configurable
+	charset runes
 
 	// rng for testing purposes to ensure error handling from the crypto/rand package is working properly.
 	rng io.Reader
 }
 
 // Generate a random string from the charset and adhering to the provided rules.
-func (g StringGenerator) Generate(ctx context.Context) (str string, err error) {
+func (g *StringGenerator) Generate(ctx context.Context) (str string, err error) {
 	if _, hasTimeout := ctx.Deadline(); !hasTimeout {
 		var cancel func()
 		ctx, cancel = context.WithTimeout(ctx, 1*time.Second) // Ensure there's a timeout on the context
 		defer cancel()
+	}
+
+	// Ensure the generator is configured well since it may be manually created rather than parsed from HCL
+	err = g.validateConfig()
+	if err != nil {
+		return "", err
 	}
 
 LOOP:
@@ -115,11 +123,11 @@ LOOP:
 	}
 }
 
-func (g StringGenerator) generate() (str string, err error) {
+func (g *StringGenerator) generate() (str string, err error) {
 	// If performance improvements need to be made, this can be changed to read a batch of
 	// potential strings at once rather than one at a time. This will significantly
 	// improve performance, but at the cost of added complexity.
-	candidate, err := randomRunes(g.rng, g.Charset, g.Length)
+	candidate, err := randomRunes(g.rng, g.charset, g.Length)
 	if err != nil {
 		return "", fmt.Errorf("unable to generate random characters: %w", err)
 	}
@@ -166,4 +174,88 @@ func randomRunes(rng io.Reader, charset []rune, length int) (candidate []rune, e
 	}
 
 	return runes, nil
+}
+
+// validateConfig of the generator to ensure that we can successfully generate a string.
+func (g *StringGenerator) validateConfig() (err error) {
+	merr := &multierror.Error{}
+
+	// Ensure the sum of minimum lengths in the rules doesn't exceed the length specified
+	minLen := getMinLength(g.Rules)
+	if g.Length <= 0 {
+		merr = multierror.Append(merr, fmt.Errorf("length must be > 0"))
+	} else if g.Length < minLen {
+		merr = multierror.Append(merr, fmt.Errorf("specified rules require at least %d characters but %d is specified", minLen, g.Length))
+	}
+
+	// Ensure we have a charset & all characters are printable
+	if len(g.charset) == 0 {
+		// Yes this is mutating the generator but this is done so we don't have to compute this on every generation
+		g.charset = getChars(g.Rules)
+	}
+	if len(g.charset) == 0 {
+		merr = multierror.Append(merr, fmt.Errorf("no charset specified"))
+	} else {
+		for _, r := range g.charset {
+			if !unicode.IsPrint(r) {
+				merr = multierror.Append(merr, fmt.Errorf("non-printable character in charset"))
+				break
+			}
+		}
+	}
+	return merr.ErrorOrNil()
+}
+
+// getMinLength from the rules using the optional interface: `MinLength() int`
+func getMinLength(rules []Rule) (minLen int) {
+	type minLengthProvider interface {
+		MinLength() int
+	}
+
+	for _, rule := range rules {
+		mlp, ok := rule.(minLengthProvider)
+		if !ok {
+			continue
+		}
+		minLen += mlp.MinLength()
+	}
+	return minLen
+}
+
+// getChars from the rules using the optional interface: `Chars() []rune`
+func getChars(rules []Rule) (chars []rune) {
+	type charsetProvider interface {
+		Chars() []rune
+	}
+
+	for _, rule := range rules {
+		cp, ok := rule.(charsetProvider)
+		if !ok {
+			continue
+		}
+		chars = append(chars, cp.Chars()...)
+	}
+	return deduplicateRunes(chars)
+}
+
+// deduplicateRunes returns a new slice of sorted & de-duplicated runes
+func deduplicateRunes(original []rune) (deduped []rune) {
+	if len(original) == 0 {
+		return nil
+	}
+
+	m := map[rune]bool{}
+	dedupedRunes := []rune(nil)
+
+	for _, r := range original {
+		if m[r] {
+			continue
+		}
+		m[r] = true
+		dedupedRunes = append(dedupedRunes, r)
+	}
+
+	// They don't have to be sorted, but this is being done to make the charset easier to visualize
+	sort.Sort(runes(dedupedRunes))
+	return dedupedRunes
 }

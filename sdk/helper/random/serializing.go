@@ -23,10 +23,10 @@ func (r serializableRules) MarshalJSON() (b []byte, err error) {
 	//     ]
 	//   },
 	//   {
-	//     "CharsetRestriction": [
+	//     "Charset": [
 	//       {
 	//         "charset": "abcde",
-	//         "min-chars": 2
+	//         "min_chars": 2
 	//       }
 	//     ]
 	//   }

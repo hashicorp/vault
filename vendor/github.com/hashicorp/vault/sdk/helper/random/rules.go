@@ -6,8 +6,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// CharsetRestriction requires a certain number of characters from the specified charset.
-type CharsetRestriction struct {
+// Charset requires a certain number of characters from the specified charset.
+type Charset struct {
 	// Charset is the list of rules that candidate strings must contain a minimum number of.
 	Charset runes `mapstructure:"charset" json:"charset"`
 
@@ -15,9 +15,9 @@ type CharsetRestriction struct {
 	MinChars int `mapstructure:"min-chars" json:"min-chars"`
 }
 
-// ParseCharsetRestriction from the provided data map. The data map is expected to be parsed from HCL.
-func ParseCharsetRestriction(data map[string]interface{}) (rule Rule, err error) {
-	cr := &CharsetRestriction{}
+// ParseCharset from the provided data map. The data map is expected to be parsed from HCL.
+func ParseCharset(data map[string]interface{}) (rule Rule, err error) {
+	cr := &Charset{}
 
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		Metadata:   nil,
@@ -33,25 +33,25 @@ func ParseCharsetRestriction(data map[string]interface{}) (rule Rule, err error)
 		return nil, fmt.Errorf("failed to parse charset restriction: %w", err)
 	}
 
-	return cr, nil
+	return *cr, nil
 }
 
-func (c CharsetRestriction) Type() string {
-	return "CharsetRestriction"
+func (c Charset) Type() string {
+	return "Charset"
 }
 
 // Chars returns the charset that this rule is looking for.
-func (c CharsetRestriction) Chars() []rune {
+func (c Charset) Chars() []rune {
 	return c.Charset
 }
 
-func (c CharsetRestriction) MinLength() int {
+func (c Charset) MinLength() int {
 	return c.MinChars
 }
 
 // Pass returns true if the provided candidate string has a minimum number of chars in it.
 // This adheres to the Rule interface
-func (c CharsetRestriction) Pass(value []rune) bool {
+func (c Charset) Pass(value []rune) bool {
 	if c.MinChars <= 0 {
 		return true
 	}

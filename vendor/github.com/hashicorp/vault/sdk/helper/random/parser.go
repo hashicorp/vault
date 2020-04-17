@@ -3,11 +3,8 @@ package random
 import (
 	"fmt"
 	"reflect"
-	"sort"
-	"unicode"
 	"unicode/utf8"
 
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/mitchellh/mapstructure"
 )
@@ -33,54 +30,50 @@ type Parser struct {
 }
 
 // Parse parses the provided HCL into a StringGenerator.
-func (p Parser) Parse(raw string) (strs StringGenerator, err error) {
+func (p Parser) Parse(raw string) (sg StringGenerator, err error) {
 	rawData := map[string]interface{}{}
 	err = hcl.Decode(&rawData, raw)
 	if err != nil {
-		return strs, fmt.Errorf("unable to decode: %w", err)
+		return sg, fmt.Errorf("unable to decode: %w", err)
 	}
 
 	// Decode the top level items
+	gen := StringGenerator{}
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-		Result:     &strs,
+		Result:     &gen,
 		DecodeHook: stringToRunesFunc,
 	})
 	if err != nil {
-		return strs, fmt.Errorf("unable to decode configuration: %w", err)
+		return sg, fmt.Errorf("unable to decode configuration: %w", err)
 	}
 
 	err = decoder.Decode(rawData)
 	if err != nil {
-		return strs, fmt.Errorf("failed to decode configuration: %w", err)
+		return sg, fmt.Errorf("failed to decode configuration: %w", err)
 	}
 
 	// Decode & parse rules
 	rawRules, err := getMapSlice(rawData, "rule")
 	if err != nil {
-		return strs, fmt.Errorf("unable to retrieve rules: %w", err)
+		return sg, fmt.Errorf("unable to retrieve rules: %w", err)
 	}
 
 	rules, err := parseRules(p.RuleRegistry, rawRules)
 	if err != nil {
-		return strs, fmt.Errorf("unable to parse rules: %w", err)
+		return sg, fmt.Errorf("unable to parse rules: %w", err)
 	}
 
-	// Add any charsets found in rules to the overall charset & deduplicate
-	cs := append(strs.Charset, getChars(rules)...)
-	cs = deduplicateRunes(cs)
-
-	strs = StringGenerator{
-		Length:  strs.Length,
-		Charset: cs,
-		Rules:   rules,
+	gen = StringGenerator{
+		Length: gen.Length,
+		Rules:  rules,
 	}
 
-	err = validate(strs)
+	err = gen.validateConfig()
 	if err != nil {
-		return strs, err
+		return sg, err
 	}
 
-	return strs, nil
+	return gen, nil
 }
 
 func parseRules(registry Registry, rawRules []map[string]interface{}) (rules []Rule, err error) {
@@ -91,7 +84,7 @@ func parseRules(registry Registry, rawRules []map[string]interface{}) (rules []R
 		}
 
 		// Map names like "lower-alpha" to lowercase alphabetical characters
-		applyShortcuts(info.data)
+		// applyShortcuts(info.data)
 
 		rule, err := registry.parseRule(info.ruleType, info.data)
 		if err != nil {
@@ -101,57 +94,6 @@ func parseRules(registry Registry, rawRules []map[string]interface{}) (rules []R
 	}
 
 	return rules, nil
-}
-
-func validate(strs StringGenerator) (err error) {
-	type minLengthProvider interface {
-		MinLength() int
-	}
-
-	merr := &multierror.Error{}
-	if strs.Length < 1 {
-		merr = multierror.Append(merr, fmt.Errorf("length must be >= 1"))
-	}
-	if len(strs.Charset) == 0 {
-		merr = multierror.Append(merr, fmt.Errorf("no charset specified"))
-	}
-
-	minLengthRules := 0
-	for _, rule := range strs.Rules {
-		mlp, ok := rule.(minLengthProvider)
-		if !ok {
-			continue
-		}
-		minLengthRules += mlp.MinLength()
-	}
-
-	if minLengthRules > strs.Length {
-		merr = multierror.Append(merr, fmt.Errorf("specified rules require at least %d characters but %d is specified", minLengthRules, strs.Length))
-	}
-
-	for _, r := range strs.Charset {
-		if !unicode.IsPrint(r) {
-			merr = multierror.Append(merr, fmt.Errorf("non-printable character in charset"))
-			break
-		}
-	}
-
-	return merr.ErrorOrNil()
-}
-
-func getChars(rules []Rule) (chars []rune) {
-	type charsetProvider interface {
-		Chars() []rune
-	}
-
-	for _, rule := range rules {
-		cp, ok := rule.(charsetProvider)
-		if !ok {
-			continue
-		}
-		chars = append(chars, cp.Chars()...)
-	}
-	return chars
 }
 
 // getMapSlice from the provided map. This will retrieve and type-assert a []map[string]interface{} from the map
@@ -191,64 +133,6 @@ func getRuleInfo(rule map[string]interface{}) (data ruleInfo, err error) {
 		return data, nil
 	}
 	return data, fmt.Errorf("rule is empty")
-}
-
-var (
-	charsetShortcuts = map[string]string{
-		// Base
-		"lower-alpha": LowercaseCharset,
-		"upper-alpha": UppercaseCharset,
-		"numeric":     NumericCharset,
-
-		// Combinations
-		"lower-upper-alpha":        AlphabeticCharset,
-		"lower-upper-alphanumeric": AlphaNumericCharset,
-	}
-)
-
-// applyShortcuts to the provided map. This will look for a "charset" key. If it exists and equals one of the keys
-// in `charsetShortcuts`, it replaces the value with the value found in the `charsetShortcuts` map. For instance:
-//
-// Input map:
-// map[string]interface{}{
-//   "charset": "upper-alpha",
-// }
-//
-// This will convert it to:
-// map[string]interface{}{
-//   "charset": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-// }
-func applyShortcuts(m map[string]interface{}) {
-	rawCharset, exists := m["charset"]
-	if !exists {
-		return
-	}
-	charset, ok := rawCharset.(string)
-	if !ok {
-		return
-	}
-	newCharset, shortcutExists := charsetShortcuts[charset]
-	if !shortcutExists {
-		return
-	}
-	m["charset"] = newCharset
-}
-
-func deduplicateRunes(original []rune) (deduped []rune) {
-	m := map[rune]bool{}
-	dedupedRunes := []rune(nil)
-
-	for _, r := range original {
-		if m[r] {
-			continue
-		}
-		m[r] = true
-		dedupedRunes = append(dedupedRunes, r)
-	}
-
-	// They don't have to be sorted, but this is being done to make the charset easier to visualize
-	sort.Sort(runes(dedupedRunes))
-	return dedupedRunes
 }
 
 func stringToRunesFunc(from reflect.Kind, to reflect.Kind, data interface{}) (interface{}, error) {

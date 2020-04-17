@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
-	"github.com/hashicorp/vault/sdk/helper/random"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
@@ -164,19 +163,15 @@ func (s *gRPCSystemViewClient) PluginEnv(ctx context.Context) (*logical.PluginEn
 	return reply.PluginEnvironment, nil
 }
 
-func (s *gRPCSystemViewClient) PasswordPolicy(ctx context.Context, policyName string) (policy logical.PasswordPolicy, err error) {
-	req := &pb.PasswordPolicyRequest{
+func (s *gRPCSystemViewClient) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {
+	req := &pb.GeneratePasswordFromPolicyRequest{
 		PolicyName: policyName,
 	}
-	resp, err := s.client.PasswordPolicy(ctx, req)
+	resp, err := s.client.GeneratePasswordFromPolicy(ctx, req)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	passPolicy, err := random.ParseBytes(resp.RawPolicy)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse password policy: %w", err)
-	}
-	return passPolicy, nil
+	return resp.Password, nil
 }
 
 type gRPCSystemViewServer struct {
@@ -293,21 +288,19 @@ func (s *gRPCSystemViewServer) PluginEnv(ctx context.Context, _ *pb.Empty) (*pb.
 	}, nil
 }
 
-func (s *gRPCSystemViewServer) PasswordPolicy(ctx context.Context, req *pb.PasswordPolicyRequest) (*pb.PasswordPolicyResponse, error) {
-	policy, err := s.impl.PasswordPolicy(ctx, req.PolicyName)
-	if err != nil {
-		return &pb.PasswordPolicyResponse{}, status.Errorf(codes.Internal, "unable to retrieve password policy: %s", err)
-	}
-	if policy == nil {
-		return &pb.PasswordPolicyResponse{}, status.Errorf(codes.NotFound, "policy not found")
+func (s *gRPCSystemViewServer) GeneratePasswordFromPolicy(ctx context.Context, req *pb.GeneratePasswordFromPolicyRequest) (*pb.GeneratePasswordFromPolicyReply, error) {
+	policyName := req.PolicyName
+	if policyName == "" {
+		return &pb.GeneratePasswordFromPolicyReply{}, status.Errorf(codes.InvalidArgument, "no password policy specified")
 	}
 
-	b, err := json.Marshal(policy)
+	password, err := s.impl.GeneratePasswordFromPolicy(ctx, policyName)
 	if err != nil {
-		return &pb.PasswordPolicyResponse{}, status.Errorf(codes.Internal, "unable to serialize password policy: %s", err)
+		return &pb.GeneratePasswordFromPolicyReply{}, status.Errorf(codes.Internal, "failed to generate password")
 	}
-	resp := &pb.PasswordPolicyResponse{
-		RawPolicy: b,
+
+	resp := &pb.GeneratePasswordFromPolicyReply{
+		Password: password,
 	}
 	return resp, nil
 }

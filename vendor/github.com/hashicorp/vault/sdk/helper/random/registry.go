@@ -10,7 +10,7 @@ var (
 	// defaultRuleNameMapping is the default mapping of HCL rule names to the appropriate rule constructor.
 	// Add to this map when adding a new Rule type to be recognized in HCL.
 	defaultRuleNameMapping = map[string]ruleConstructor{
-		"CharsetRestriction": ParseCharsetRestriction,
+		"Charset": ParseCharset,
 	}
 
 	defaultRegistry = Registry{
@@ -29,5 +29,6 @@ func (r Registry) parseRule(ruleType string, ruleData map[string]interface{}) (r
 		return nil, fmt.Errorf("unrecognized rule type %s", ruleType)
 	}
 
-	return constructor(ruleData)
+	rule, err = constructor(ruleData)
+	return rule, err
 }
