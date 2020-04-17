@@ -1,13 +1,7 @@
 package acctest
 
 import (
-	"bytes"
-	"os"
-	"os/exec"
-	"path"
-
 	"github.com/hashicorp/vault/api"
-	"github.com/y0ssar1an/q"
 )
 
 // Helper is intended as a per-package singleton created in TestMain which
@@ -37,21 +31,19 @@ func Setup(name string) error {
 	// if err != nil {
 	// 	return err
 	// }
-	// q.Q("==> setup tempdir:", tempDir)
 
-	wd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	q.Q("==> Setup cwd:", wd)
-	wd = path.Join(wd, "vault/plugins/uuid")
-	cmd := exec.Command("go", "build", "-o", "./vault/plugins/uuid", "/Users/clint/go-src/github.com/catsby/vault-plugin-secrets-uuid/cmd/uuid/main.go")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64")
-	err = cmd.Run()
-	if err != nil {
-		panic(err)
-	}
+	// wd, err := os.Getwd()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// wd = path.Join(wd, "vault/plugins/uuid")
+	// cmd := exec.Command("go", "build", "-o", "./vault/plugins/uuid", "/Users/clint/go-src/github.com/catsby/vault-plugin-secrets-uuid/cmd/uuid/main.go")
+	// var out bytes.Buffer
+	// cmd.Stdout = &out
+	// cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64")
+	// err = cmd.Run()
+	// if err != nil {
+	// 	panic(err)
+	// }
 	return nil
 }

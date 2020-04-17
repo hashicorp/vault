@@ -32,7 +32,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/hashicorp/vault/vault"
-	"github.com/y0ssar1an/q"
 	"golang.org/x/net/http2"
 
 	docker "github.com/docker/docker/client"
@@ -150,7 +149,7 @@ func (rc *DockerCluster) Initialize(ctx context.Context) error {
 	if resp == nil {
 		return fmt.Errorf("nil response to init request")
 	}
-	q.Q("--> docker setup init response:", resp)
+
 	for _, k := range resp.Keys {
 		raw, err := hex.DecodeString(k)
 		if err != nil {
@@ -166,7 +165,6 @@ func (rc *DockerCluster) Initialize(ctx context.Context) error {
 		rc.RecoveryKeys = append(rc.RecoveryKeys, raw)
 	}
 	rc.RootToken = resp.RootToken
-	q.Q("--> docker init root token:", rc.RootToken)
 
 	// Write root token and barrier keys
 	err = ioutil.WriteFile(filepath.Join(rc.TempDir, "root_token"), []byte(rc.RootToken), 0755)
@@ -591,10 +589,9 @@ func (n *DockerClusterNode) Start(cli *docker.Client, caDir, netName string, net
 		// strip "test" from the source
 		base := path.Base(pluginBinPath)
 		// dest := strings.TrimSuffix(base, ".test")
-		// q.Q("--> acctest dest:", dest)
 		copyFromTo[pluginBinPath] = filepath.Join("/vault/config", base)
 	}
-	q.Q("end copyFrom:", copyFromTo)
+
 	r := &Runner{
 		dockerAPI: cli,
 		ContainerConfig: &container.Config{
@@ -796,10 +793,7 @@ func NewDockerCluster(name string, base *vault.CoreConfig, opts *DockerClusterOp
 		// TODO: add test image path here to copy-from-CopyFromToto
 		pluginBinPath := ""
 		if opts != nil {
-			q.Q("opts bin path in testing/new:", opts.PluginTestBin)
 			pluginBinPath = opts.PluginTestBin
-		} else {
-			q.Q("opts nil in cluster node start")
 		}
 
 		// TODO: maybe don't need plugin here due to replication.. but need it on 1
