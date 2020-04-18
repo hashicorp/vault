@@ -4,11 +4,27 @@ CHANGES:
 
 * token: Token renewals will now return token policies within the `token_policies` , identity policies within `identity_policies`, and the full policy set within `policies`. [[GH-8535](https://github.com/hashicorp/vault/pull/8535)]
 
+IMPROVEMENTS:
+
+* secrets/gcp: Support BigQuery dataset ACLs in absence of IAM endpoints [[GH-78](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/78)]
+
 ## 1.4.1 (TBD)
 
 CHANGES: 
 
 * storage/raft: Disallow `ha_storage` to be specified if `raft` is set as the `storage` type. [[GH-8707](https://github.com/hashicorp/vault/pull/8707)]
+
+IMPROVEMENTS:
+
+* auth/azure: Enable login from Azure VMs with user-assigned identities [[GH-33](https://github.com/hashicorp/vault-plugin-auth-azure/pull/33)]
+
+BUG FIXES:
+
+* config/seal: Fix segfault when seal block is removed[[GH-8517](https://github.com/hashicorp/vault/pull/8517)]
+* core: Fix blocked requests if a SIGHUP is issued during a long-running request has the state lock held. 
+  Also fixes deadlock that can happen if `vault debug` with the config target is ran during this time.
+  [[GH-8755](https://github.com/hashicorp/vault/pull/8755)]
+* sys/wrapping: Allow unwrapping of wrapping tokens which contain nil data [[GH-8714](https://github.com/hashicorp/vault/pull/8714)]
 
 ## 1.4.0 (April 7th, 2020)
 
