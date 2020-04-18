@@ -59,22 +59,22 @@ func (b *backend) pathEncrypt() *framework.Path {
 	return &framework.Path{
 		Pattern: "encrypt/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the policy",
 			},
 
-			"plaintext": &framework.FieldSchema{
+			"plaintext": {
 				Type:        framework.TypeString,
 				Description: "Base64 encoded plaintext value to be encrypted",
 			},
 
-			"context": &framework.FieldSchema{
+			"context": {
 				Type:        framework.TypeString,
 				Description: "Base64 encoded context for key derivation. Required if key derivation is enabled",
 			},
 
-			"nonce": &framework.FieldSchema{
+			"nonce": {
 				Type: framework.TypeString,
 				Description: `
 Base64 encoded nonce value. Must be provided if convergent encryption is
@@ -85,7 +85,7 @@ encryption key) this nonce value is **never reused**.
 `,
 			},
 
-			"type": &framework.FieldSchema{
+			"type": {
 				Type:    framework.TypeString,
 				Default: "aes256-gcm96",
 				Description: `
@@ -94,7 +94,7 @@ When performing an upsert operation, the type of key to create. Currently,
 "aes128-gcm96" (symmetric) and "aes256-gcm96" (symmetric) are the only types supported. Defaults to "aes256-gcm96".`,
 			},
 
-			"convergent_encryption": &framework.FieldSchema{
+			"convergent_encryption": {
 				Type: framework.TypeBool,
 				Description: `
 This parameter will only be used when a key is expected to be created.  Whether
@@ -107,7 +107,7 @@ you ensure that all nonces are unique for a given context.  Failing to do so
 will severely impact the ciphertext's security.`,
 			},
 
-			"key_version": &framework.FieldSchema{
+			"key_version": {
 				Type: framework.TypeInt,
 				Description: `The version of the key to use for encryption.
 Must be 0 (for latest) or a value greater than or equal
@@ -125,6 +125,80 @@ to the min_encryption_version configured on the key.`,
 		HelpSynopsis:    pathEncryptHelpSyn,
 		HelpDescription: pathEncryptHelpDesc,
 	}
+}
+
+// decodeBatchRequestItems is a fast path alternative to mapstructure.Decode to decode []BatchRequestItem.
+func decodeBatchRequestItems(src interface{}, dest *[]BatchRequestItem) error {
+	if src == nil || dest == nil {
+		return nil
+	}
+
+	items, ok := src.([]interface{})
+	if !ok {
+		return fmt.Errorf("source data must be an array or slice, got %T", src)
+	}
+
+	if len(items) == 0 {
+		return nil
+	}
+
+	*dest = make([]BatchRequestItem, len(items))
+
+	var errs mapstructure.Error
+
+	for i, iitem := range items {
+		item, ok := iitem.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("[%d] expected a map, got '%T'", i, iitem)
+		}
+
+		if v, has := item["context"]; has {
+			if casted, ok := v.(string); ok {
+				(*dest)[i].Context = casted
+			} else {
+
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].context' expected type 'string', got unconvertible type '%T'", i, item["context"]))
+			}
+		}
+
+		if v, has := item["ciphertext"]; has {
+			if casted, ok := v.(string); ok {
+				(*dest)[i].Ciphertext = casted
+			} else {
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].ciphertext' expected type 'string', got unconvertible type '%T'", i, item["ciphertext"]))
+			}
+		}
+
+		if v, has := item["plaintext"]; has {
+			if casted, ok := v.(string); ok {
+				(*dest)[i].Plaintext = casted
+			} else {
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].plaintext' expected type 'string', got unconvertible type '%T'", i, item["plaintext"]))
+			}
+		}
+
+		if v, has := item["nonce"]; has {
+			if casted, ok := v.(string); ok {
+				(*dest)[i].Nonce = casted
+			} else {
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].nonce' expected type 'string', got unconvertible type '%T'", i, item["nonce"]))
+			}
+		}
+
+		if v, has := item["key_version"]; has {
+			if casted, ok := v.(int); ok {
+				(*dest)[i].KeyVersion = casted
+			} else {
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].key_version' expected type 'int', got unconvertible type '%T'", i, item["key_version"]))
+			}
+		}
+	}
+
+	if len(errs.Errors) > 0 {
+		return &errs
+	}
+
+	return nil
 }
 
 func (b *backend) pathEncryptExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
@@ -146,11 +220,10 @@ func (b *backend) pathEncryptExistenceCheck(ctx context.Context, req *logical.Re
 func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	var err error
-
 	batchInputRaw := d.Raw["batch_input"]
 	var batchInputItems []BatchRequestItem
 	if batchInputRaw != nil {
-		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
+		err = decodeBatchRequestItems(batchInputRaw, &batchInputItems)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
 		}

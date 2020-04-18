@@ -9,32 +9,31 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/mitchellh/mapstructure"
 )
 
 func (b *backend) pathDecrypt() *framework.Path {
 	return &framework.Path{
 		Pattern: "decrypt/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the policy",
 			},
 
-			"ciphertext": &framework.FieldSchema{
+			"ciphertext": {
 				Type: framework.TypeString,
 				Description: `
 The ciphertext to decrypt, provided as returned by encrypt.`,
 			},
 
-			"context": &framework.FieldSchema{
+			"context": {
 				Type: framework.TypeString,
 				Description: `
 Base64 encoded context for key derivation. Required if key derivation is
 enabled.`,
 			},
 
-			"nonce": &framework.FieldSchema{
+			"nonce": {
 				Type: framework.TypeString,
 				Description: `
 Base64 encoded nonce value used during encryption. Must be provided if
@@ -57,7 +56,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 	var batchInputItems []BatchRequestItem
 	var err error
 	if batchInputRaw != nil {
-		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
+		err = decodeBatchRequestItems(batchInputRaw, &batchInputItems)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
 		}
