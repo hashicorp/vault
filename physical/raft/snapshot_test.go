@@ -345,6 +345,87 @@ func TestRaft_Snapshot_Restart(t *testing.T) {
 	compareFSMs(t, raft1.fsm, raft2.fsm)
 }
 
+func TestRaft_Snapshot_ErrorRecovery(t *testing.T) {
+	raft1, dir := getRaft(t, true, false)
+	raft2, dir2 := getRaft(t, false, false)
+	raft3, dir3 := getRaft(t, false, false)
+	defer os.RemoveAll(dir)
+	defer os.RemoveAll(dir2)
+	defer os.RemoveAll(dir3)
+
+	// Add raft2 to the cluster
+	addPeer(t, raft1, raft2)
+
+	// Write some data
+	for i := 0; i < 100; i++ {
+		err := raft1.Put(context.Background(), &physical.Entry{
+			Key:   fmt.Sprintf("key-%d", i),
+			Value: []byte(fmt.Sprintf("value-%d", i)),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Take a snapshot
+	snapFuture := raft1.raft.Snapshot()
+	if err := snapFuture.Error(); err != nil {
+		t.Fatal(err)
+	}
+	// Advance FSM's index past configuration change
+	raft1.Put(context.Background(), &physical.Entry{
+		Key:   "key",
+		Value: []byte("value"),
+	})
+
+	// Error on snapshot restore
+	raft3.fsm.testSnapshotRestoreError = true
+
+	// Add raft3 to the cluster
+	addPeer(t, raft1, raft3)
+
+	time.Sleep(2 * time.Second)
+
+	// Restart the failing node to make sure fresh state does not have invalid
+	// values.
+	if err := raft3.TeardownCluster(nil); err != nil {
+		t.Fatal(err)
+	}
+
+	// Ensure the databases are not equal
+	if err := compareFSMsWithErr(t, raft1.fsm, raft3.fsm); err == nil {
+		t.Fatal("nil error")
+	}
+
+	// Remove error and make sure we can reconcile state
+	raft3.fsm.testSnapshotRestoreError = false
+
+	// Shutdown raft1
+	if err := raft1.TeardownCluster(nil); err != nil {
+		t.Fatal(err)
+	}
+
+	// Start Raft1
+	if err := raft1.SetupCluster(context.Background(), SetupOpts{}); err != nil {
+		t.Fatal(err)
+	}
+
+	connectPeers(raft1, raft2)
+	waitForLeader(t, raft1, raft2)
+
+	// Start Raft3
+	if err := raft3.SetupCluster(context.Background(), SetupOpts{}); err != nil {
+		t.Fatal(err)
+	}
+
+	connectPeers(raft1, raft2, raft3)
+	waitForLeader(t, raft1, raft2)
+
+	time.Sleep(5 * time.Second)
+	// Make sure state gets re-replicated.
+	compareFSMs(t, raft1.fsm, raft3.fsm)
+}
+
 func TestRaft_Snapshot_Take_Restore(t *testing.T) {
 	raft1, dir := getRaft(t, true, false)
 	defer os.RemoveAll(dir)

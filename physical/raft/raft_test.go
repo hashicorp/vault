@@ -76,22 +76,56 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 	return backend, raftDir
 }
 
+func connectPeers(nodes ...*RaftBackend) {
+	for _, node := range nodes {
+		for _, peer := range nodes {
+			if node == peer {
+				continue
+			}
+
+			node.raftTransport.(*raft.InmemTransport).Connect(raft.ServerAddress(peer.NodeID()), peer.raftTransport)
+			peer.raftTransport.(*raft.InmemTransport).Connect(raft.ServerAddress(node.NodeID()), node.raftTransport)
+		}
+	}
+}
+
+func waitForLeader(t *testing.T, nodes ...*RaftBackend) *RaftBackend {
+	timeout := time.Now().Add(time.Second * 10)
+	for !time.Now().After(timeout) {
+		for _, node := range nodes {
+			if node.raft.Leader() == raft.ServerAddress(node.NodeID()) {
+				return node
+			}
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	t.Fatal("no leader")
+	return nil
+}
+
 func compareFSMs(t *testing.T, fsm1, fsm2 *FSM) {
+	if err := compareFSMsWithErr(t, fsm1, fsm2); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func compareFSMsWithErr(t *testing.T, fsm1, fsm2 *FSM) error {
 	t.Helper()
 	index1, config1 := fsm1.LatestState()
 	index2, config2 := fsm2.LatestState()
 
 	if !proto.Equal(index1, index2) {
-		t.Fatalf("indexes did not match: %+v != %+v", index1, index2)
+		return fmt.Errorf("indexes did not match: %+v != %+v", index1, index2)
 	}
 	if !proto.Equal(config1, config2) {
-		t.Fatalf("configs did not match: %+v != %+v", config1, config2)
+		return fmt.Errorf("configs did not match: %+v != %+v", config1, config2)
 	}
 
-	compareDBs(t, fsm1.db, fsm2.db)
+	return compareDBs(t, fsm1.db, fsm2.db)
 }
 
-func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB) {
+func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB) error {
 	db1 := make(map[string]string)
 	db2 := make(map[string]string)
 
@@ -135,8 +169,10 @@ func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB) {
 	}
 
 	if diff := deep.Equal(db1, db2); diff != nil {
-		t.Fatal(diff)
+		return fmt.Errorf("%+v", diff)
 	}
+
+	return nil
 }
 
 func TestRaft_Backend(t *testing.T) {
