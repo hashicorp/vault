@@ -58,8 +58,8 @@ func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request,
 
 		// Attempt to get a connection with the current configuration.
 		// If successful, the WAL entry can be deleted. This means
-		// the root credentials according to the database and storage
-		// are the same.
+		// the root credentials are the same according to the database
+		// and storage.
 		_, err = b.GetConnection(ctx, req.Storage, entry.ConnectionName)
 		if err == nil {
 			return nil
