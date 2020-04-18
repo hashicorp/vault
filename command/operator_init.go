@@ -489,13 +489,21 @@ func (c *OperatorInitCommand) status(client *api.Client) int {
 		return 1 // Normally we'd return 2, but 2 means something special here
 	}
 
-	if inited {
-		c.UI.Output("Vault is initialized")
-		return 0
+	message := "Vault is initialized"
+	errorCode := 0
+
+	if !inited {
+		message = "Vault is not initialized"
+		errorCode = 2
 	}
 
-	c.UI.Output("Vault is not initialized")
-	return 2
+	switch Format(c.UI) {
+	case "table":
+		c.UI.Output(message)
+	default:
+		OutputData(c.UI, message)
+	}
+	return errorCode
 }
 
 // machineInit is used to output information about the init command.
