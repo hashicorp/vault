@@ -2,7 +2,6 @@ package transit
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -692,8 +691,6 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 			gotDest := tt.dest
 
 			if !reflect.DeepEqual(expectedErr, gotErr) {
-				fmt.Println(expectedErr.Error() == gotErr.Error())
-				fmt.Printf("%T", expectedErr)
 				t.Errorf("decodeBatchRequestItems unexpected error value, want: '%v', got: '%v'", expectedErr, gotErr)
 			}
 
