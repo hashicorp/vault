@@ -59,22 +59,22 @@ func (b *backend) pathEncrypt() *framework.Path {
 	return &framework.Path{
 		Pattern: "encrypt/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": {
+			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Name of the policy",
 			},
 
-			"plaintext": {
+			"plaintext": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Base64 encoded plaintext value to be encrypted",
 			},
 
-			"context": {
+			"context": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Base64 encoded context for key derivation. Required if key derivation is enabled",
 			},
 
-			"nonce": {
+			"nonce": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `
 Base64 encoded nonce value. Must be provided if convergent encryption is
@@ -85,7 +85,7 @@ encryption key) this nonce value is **never reused**.
 `,
 			},
 
-			"type": {
+			"type": &framework.FieldSchema{
 				Type:    framework.TypeString,
 				Default: "aes256-gcm96",
 				Description: `
@@ -94,7 +94,7 @@ When performing an upsert operation, the type of key to create. Currently,
 "aes128-gcm96" (symmetric) and "aes256-gcm96" (symmetric) are the only types supported. Defaults to "aes256-gcm96".`,
 			},
 
-			"convergent_encryption": {
+			"convergent_encryption": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `
 This parameter will only be used when a key is expected to be created.  Whether
@@ -107,7 +107,7 @@ you ensure that all nonces are unique for a given context.  Failing to do so
 will severely impact the ciphertext's security.`,
 			},
 
-			"key_version": {
+			"key_version": &framework.FieldSchema{
 				Type: framework.TypeInt,
 				Description: `The version of the key to use for encryption.
 Must be 0 (for latest) or a value greater than or equal

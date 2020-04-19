@@ -15,25 +15,25 @@ func (b *backend) pathDecrypt() *framework.Path {
 	return &framework.Path{
 		Pattern: "decrypt/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": {
+			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Name of the policy",
 			},
 
-			"ciphertext": {
+			"ciphertext": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `
 The ciphertext to decrypt, provided as returned by encrypt.`,
 			},
 
-			"context": {
+			"context": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `
 Base64 encoded context for key derivation. Required if key derivation is
 enabled.`,
 			},
 
-			"nonce": {
+			"nonce": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `
 Base64 encoded nonce value used during encryption. Must be provided if
