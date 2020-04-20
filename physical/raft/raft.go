@@ -499,7 +499,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		_, b.raftTransport = raft.NewInmemTransportWithTimeout(raft.ServerAddress(b.localID), time.Second)
 	case opts.TLSKeyring == nil:
 		return errors.New("no keyring provided")
-	case opts.ClusterListener == nil:
+	case opts.ClusterListener == nil || opts.ClusterListener.(*cluster.Listener) == nil:
 		return errors.New("no cluster listener provided")
 	default:
 		// Set the local address and localID in the streaming layer and the raft config.
