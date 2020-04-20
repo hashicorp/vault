@@ -251,9 +251,7 @@ func (rc *DockerCluster) Initialize(ctx context.Context) error {
 		if i == 0 {
 			err = TestWaitLeaderMatches(ctx, node.Client, func(leader *api.LeaderResponse) error {
 				if !leader.IsSelf {
-					// TODO node name here?
-					// return fmt.Errorf("node %d leader=%v, expected=%v", leader.IsSelf, true)
-					return fmt.Errorf("node leader=%v, expected=%v", leader.IsSelf, true)
+					return fmt.Errorf("node %d leader=%v, expected=%v", i, leader.IsSelf, true)
 				}
 
 				return nil
@@ -268,9 +266,7 @@ func (rc *DockerCluster) Initialize(ctx context.Context) error {
 		expectLeader := i == 0
 		err = TestWaitLeaderMatches(ctx, node.Client, func(leader *api.LeaderResponse) error {
 			if expectLeader != leader.IsSelf {
-				// TODO node name here?
-				// return fmt.Errorf("node %d leader=%v, expected=%v", leader.IsSelf, expectLeader)
-				return fmt.Errorf("node leader=%v, expected=%v", leader.IsSelf, expectLeader)
+				return fmt.Errorf("node %d leader=%v, expected=%v", i, leader.IsSelf, expectLeader)
 			}
 
 			return nil
@@ -706,6 +702,7 @@ func TestWaitLeaderMatches(ctx context.Context, client *api.Client, ready func(r
 
 // TODO: change back to 3
 // var DefaultNumCores = 3
+
 var DefaultNumCores = 1
 
 // NewDockerCluster creates a managed docker container running Vault

@@ -61,7 +61,7 @@ func Run(m *testing.M) {
 func compilePlugin(name, srcDir, tmpDir string) (string, string, error) {
 	binPath := path.Join(tmpDir, name)
 
-	cmd := exec.Command("go", "build", "-o", path.Join(tmpDir, "uuid"), path.Join(srcDir, fmt.Sprintf("cmd/%s/main.go", name)))
+	cmd := exec.Command("go", "build", "-o", path.Join(tmpDir, name), path.Join(srcDir, fmt.Sprintf("cmd/%s/main.go", name)))
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64")
@@ -93,8 +93,7 @@ func compilePlugin(name, srcDir, tmpDir string) (string, string, error) {
 // Setup creates any temp dir and compiles the binary for copying to Docker
 func Setup(name string) error {
 	if os.Getenv("VAULT_ACC") == "1" {
-		// TODO: break compile out
-		// compile
+		// get the working directory of the plugin being tested.
 		srcDir, err := os.Getwd()
 		if err != nil {
 			panic(err)
@@ -111,13 +110,12 @@ func Setup(name string) error {
 			panic(err)
 		}
 
-		//TODO: cleanup working dir
 		coreConfig := &vault.CoreConfig{
 			DisableMlock: true,
 		}
 
 		dOpts := &DockerClusterOptions{PluginTestBin: binPath}
-		cluster, err := NewDockerCluster("test-uuid", coreConfig, dOpts)
+		cluster, err := NewDockerCluster(fmt.Sprintf("test-%s", name), coreConfig, dOpts)
 		if err != nil {
 			panic(err)
 		}
@@ -129,12 +127,12 @@ func Setup(name string) error {
 			Client:  client,
 			Cluster: cluster,
 		}
-		// use client to mount plugin
 
+		// use client to mount plugin
 		err = client.Sys().RegisterPlugin(&api.RegisterPluginInput{
-			Name:    "uuid",
+			Name:    name,
 			Type:    consts.PluginTypeSecrets,
-			Command: "uuid",
+			Command: name,
 			SHA256:  sha256value,
 		})
 		if err != nil {
