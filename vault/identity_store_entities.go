@@ -495,7 +495,7 @@ func (i *IdentityStore) handleEntityBatchDelete() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		entityIDs := d.Get("entity_ids").([]string)
 		if len(entityIDs) == 0 {
-			return logical.ErrorResponse("missing entity ids to merge from"), nil
+			return logical.ErrorResponse("missing entity ids to delete"), nil
 		}
 
 		// Sort the ids by the bucket they will be deleted from
