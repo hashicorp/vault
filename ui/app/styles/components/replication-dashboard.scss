@@ -62,4 +62,9 @@
       }
     }
   }
+
+  // prevent double lines at the bottom of the dashboard
+  &.box {
+    padding-bottom: 0;
+  }
 }
