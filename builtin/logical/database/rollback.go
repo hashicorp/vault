@@ -36,7 +36,6 @@ func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request,
 	// Decode the WAL data
 	var entry rotateRootCredentialsWAL
 	if err := mapstructure.Decode(data, &entry); err != nil {
-		b.Logger().Info("error decoding WAL data", "data", data)
 		return err
 	}
 
