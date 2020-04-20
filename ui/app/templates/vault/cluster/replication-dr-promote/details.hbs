@@ -3,9 +3,26 @@
     <ReplicationPage @model={{model}} as |Page|>
       {{#if Page.isDisabled}}
         <EmptyState
-          @title="This cluster is not setup as DR Secondary"
-          @message="... No idea what to put here"
-        />
+          @title="Disaster Recovery secondary not set up"
+          @message="This Disaster Recovery secondary has not been enabled.  You can do so from the Disaster Recovery Primary."
+          @icon="alert-circle-outline"
+        >
+          <nav class="breadcrumb">
+            <ul class="is-grouped-split">
+              <li>
+                {{#link-to "vault.cluster.secrets.backends" }}
+                  <span class="sep"/>
+                  Go back
+                {{/link-to}}
+              </li>
+              <li>
+                <LearnLink @path="/vault/operations/ops-disaster-recovery">
+                  Need help?
+                </LearnLink>
+              </li>
+            </ul>
+          </nav>
+        </EmptyState>
       {{else}}
         <Page.header 
           @showTabs={{false}}
