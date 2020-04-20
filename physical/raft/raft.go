@@ -491,15 +491,31 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		return err
 	}
 
+	listenerIsNil := func(cl cluster.ClusterHook) bool {
+		switch {
+		case opts.ClusterListener == nil:
+			return true
+		default:
+			// Concrete type checks
+			switch cl.(type) {
+			case *cluster.Listener:
+				if cl.(*cluster.Listener) == nil {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
 	switch {
-	case opts.TLSKeyring == nil && opts.ClusterListener == nil:
+	case opts.TLSKeyring == nil && listenerIsNil(opts.ClusterListener):
 		// If we don't have a provided network we use an in-memory one.
 		// This allows us to bootstrap a node without bringing up a cluster
 		// network. This will be true during bootstrap, tests and dev modes.
 		_, b.raftTransport = raft.NewInmemTransportWithTimeout(raft.ServerAddress(b.localID), time.Second)
 	case opts.TLSKeyring == nil:
 		return errors.New("no keyring provided")
-	case opts.ClusterListener == nil || opts.ClusterListener.(*cluster.Listener) == nil:
+	case listenerIsNil(opts.ClusterListener):
 		return errors.New("no cluster listener provided")
 	default:
 		// Set the local address and localID in the streaming layer and the raft config.
