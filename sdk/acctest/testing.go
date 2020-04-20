@@ -515,7 +515,6 @@ func (n *DockerClusterNode) CreateAPIClient() (*api.Client, error) {
 
 func (n *DockerClusterNode) Cleanup() {
 	if err := n.dockerAPI.ContainerKill(context.Background(), n.container.ID, "KILL"); err != nil {
-		// TODO handle
 		panic(err)
 	}
 }
