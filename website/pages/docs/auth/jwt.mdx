@@ -207,7 +207,7 @@ vault write auth/oidc/role/demo -<<EOF
   "role_type": "oidc",
   "policies": "demo",
   "ttl": "1h",
-  "bound_claims": { "groups": ["myawesomegroup/myawesomesubgroup"] }
+  "bound_claims": { "groups": ["mygroup/mysubgroup"] }
 }
 EOF
 ```
