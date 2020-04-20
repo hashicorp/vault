@@ -1,8 +1,4 @@
 .replication-dashboard {
-  .documentation-link {
-    float: right;
-  }
-
   .selectable-card {
     line-height: normal;
 
@@ -65,5 +61,10 @@
         grid-row: 3/3;
       }
     }
+  }
+
+  // prevent double lines at the bottom of the dashboard
+  &.box {
+    padding-bottom: 0;
   }
 }

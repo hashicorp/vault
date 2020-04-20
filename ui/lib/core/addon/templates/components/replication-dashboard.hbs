@@ -9,23 +9,15 @@
   {{/if}}
 
   <div class="selectable-card-container has-top-margin-xl">
-    {{yield (hash 
+    {{yield (hash
       card=(component componentToRender data=data)
     )}}
   </div>
-  
-  {{yield (hash 
+
+  {{yield (hash
     isSyncing=isSyncing
     rows=(component 'replication-table-rows' data=data)
   )}}
 
-  <div class="documentation-link">
-    <p class="has-text-grey">We have additional timeseries telemetry that can be found 
-      <LearnLink 
-        @path="/vault/operations/monitor-replication#key-monitoring-metrics"
-      > in our documentation</LearnLink>
-      .
-    </p>
-  </div>
-
+  <ReplicationDocLink />
 </div>
