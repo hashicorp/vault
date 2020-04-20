@@ -194,20 +194,22 @@ func (i *influxdbConnectionProducer) createClient() (influx.Client, error) {
 			if err != nil || tlsConfig == nil {
 				return nil, errwrap.Wrapf(fmt.Sprintf("failed to get TLS configuration: tlsConfig:%#v err:{{err}}", tlsConfig), err)
 			}
-			tlsConfig.InsecureSkipVerify = i.InsecureTLS
-
-			if i.TLSMinVersion != "" {
-				var ok bool
-				tlsConfig.MinVersion, ok = tlsutil.TLSLookup[i.TLSMinVersion]
-				if !ok {
-					return nil, fmt.Errorf("invalid 'tls_min_version' in config")
-				}
-			} else {
-				// MinVersion was not being set earlier. Reset it to
-				// zero to gracefully handle upgrades.
-				tlsConfig.MinVersion = 0
-			}
 		}
+		
+		tlsConfig.InsecureSkipVerify = i.InsecureTLS
+
+		if i.TLSMinVersion != "" {
+			var ok bool
+			tlsConfig.MinVersion, ok = tlsutil.TLSLookup[i.TLSMinVersion]
+			if !ok {
+				return nil, fmt.Errorf("invalid 'tls_min_version' in config")
+			}
+		} else {
+			// MinVersion was not being set earlier. Reset it to
+			// zero to gracefully handle upgrades.
+			tlsConfig.MinVersion = 0
+		}
+		
 		clientConfig.TLSConfig = tlsConfig
 		clientConfig.Addr = fmt.Sprintf("https://%s:%s", i.Host, i.Port)
 	}
