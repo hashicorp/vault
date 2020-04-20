@@ -499,9 +499,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			// Concrete type checks
 			switch cl.(type) {
 			case *cluster.Listener:
-				if cl.(*cluster.Listener) == nil {
-					return true
-				}
+				return cl.(*cluster.Listener) == nil
 			}
 		}
 		return false
