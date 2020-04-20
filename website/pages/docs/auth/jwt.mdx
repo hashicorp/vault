@@ -204,10 +204,10 @@ vault write auth/oidc/role/demo -<<EOF
 {
   "user_claim": "sub",
   "bound_audiences": "abc123",
-  "role_type" : "oidc",
-  "policies" : "demo",
-  "ttl" : "1h",
-  "bound_claims" : { "groups": ["myawesomegroup/myawesomesubgroup"] }
+  "role_type": "oidc",
+  "policies": "demo",
+  "ttl": "1h",
+  "bound_claims": { "groups": ["myawesomegroup/myawesomesubgroup"] }
 }
 EOF
 ```
