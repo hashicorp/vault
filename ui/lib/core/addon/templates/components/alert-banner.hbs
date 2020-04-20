@@ -14,6 +14,14 @@
       <div class="column">
         <div class="message-title">
           {{or @title this.alertType.text}}
+          {{#if @secondIconType}}
+            <Icon
+              @size="l"
+              class="{{secondAlertType.glyphClass}}"
+              aria-hidden=true
+              @glyph={{secondAlertType.glyph}}
+            />
+          {{/if}}
         </div>
         {{#if @message}}
           <p class="message-body">

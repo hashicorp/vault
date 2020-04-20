@@ -21,7 +21,7 @@ export default Fragment.extend({
 
   // secondary attrs
   isSecondary: match('mode', /secondary/),
-
+  connection_state: attr('string'),
   modeForUrl: computed('mode', function() {
     const mode = this.get('mode');
     return mode === 'bootstrapping'

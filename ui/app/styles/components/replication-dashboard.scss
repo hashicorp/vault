@@ -1,10 +1,6 @@
 .replication-dashboard {
-  .has-margin-bottom {
-    padding-bottom: $spacing-xs;
-  }
-
-  .has-large-margin-top {
-    margin-top: $spacing-xl;
+  .documentation-link {
+    float: right;
   }
 
   .selectable-card {
@@ -37,8 +33,7 @@
       padding: $spacing-l 0 18px $spacing-l;
       line-height: 1.5;
 
-      // If descriptions are smaller then height is affected, this keeps the cards consistent
-      min-height: 220px;
+      height: 220px;
 
       @include until(1320px) {
         // prevent an issue with the card descriptions wrapping and expanding height
@@ -70,9 +65,5 @@
         grid-row: 3/3;
       }
     }
-  }
-
-  .has-text-highlight {
-    color: $yellow-500;
   }
 }

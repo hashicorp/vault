@@ -8,6 +8,7 @@
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
 | type | <code>String</code> | <code></code> | The banner type. This comes from the message-types helper. |
+| secondIconType | <code>String</code> | <code></code> | Optional. If you want a second icon to appear to the right of the title. This comes from the message-types helper. |
 | [message] | <code>String</code> | <code></code> | The message to display within the banner. |
 | [title] | <code>String</code> | <code></code> | A title to show above the message. If this is not provided, there are default values for each type of alert. |
 
