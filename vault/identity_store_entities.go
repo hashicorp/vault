@@ -94,7 +94,7 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"entity_ids": {
 					Type:        framework.TypeCommaStringSlice,
-					Description: "Entity IDs which needs to get merged",
+					Description: "Entity IDs to delete",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
