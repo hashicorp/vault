@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -56,33 +58,65 @@ func Run(m *testing.M) {
 	os.Exit(stat)
 }
 
+func compilePlugin(name, srcDir, tmpDir string) (string, string, error) {
+	binPath := path.Join(tmpDir, name)
+
+	cmd := exec.Command("go", "build", "-o", path.Join(tmpDir, "uuid"), path.Join(srcDir, fmt.Sprintf("cmd/%s/main.go", name)))
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64")
+	err := cmd.Run()
+	if err != nil {
+		return "", "", err
+	}
+
+	// calculate sha256
+	f, err := os.Open(binPath)
+	if err != nil {
+		return "", "", err
+	}
+
+	defer func() {
+		_ = f.Close()
+	}()
+
+	h := sha256.New()
+	if _, ioErr := io.Copy(h, f); ioErr != nil {
+		panic(ioErr)
+	}
+
+	sha256value := fmt.Sprintf("%x", h.Sum(nil))
+
+	return binPath, sha256value, err
+}
+
 // Setup creates any temp dir and compiles the binary for copying to Docker
 func Setup(name string) error {
 	if os.Getenv("VAULT_ACC") == "1" {
-		// setup docker, send src and name
-		// run tests
+		// TODO: break compile out
+		// compile
+		srcDir, err := os.Getwd()
+		if err != nil {
+			panic(err)
+		}
+
+		tmpDir, err := ioutil.TempDir("", "bin")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer os.RemoveAll(tmpDir) // clean up
+
+		binPath, sha256value, err := compilePlugin(name, srcDir, tmpDir)
+		if err != nil {
+			panic(err)
+		}
+
+		//TODO: cleanup working dir
 		coreConfig := &vault.CoreConfig{
 			DisableMlock: true,
 		}
 
-		wd, err := os.Getwd()
-		if err != nil {
-			panic(err)
-		}
-		wd = path.Join(wd, "vault/plugins/uuid")
-		cmd := exec.Command("go", "build", "-o", "./vault/plugins/uuid", "/Users/clint/go-src/github.com/catsby/vault-plugin-secrets-uuid/cmd/uuid/main.go")
-		var out bytes.Buffer
-		cmd.Stdout = &out
-		cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64")
-		err = cmd.Run()
-		if err != nil {
-			panic(err)
-		}
-
-		// cluster, err := acctest.NewDockerCluster(t.Name(), coreConfig, nil)
-		// dOpts := &acctest.DockerClusterOptions{PluginTestBin: absPluginExecPath}
-		//TODO: cleanup working dir
-		dOpts := &DockerClusterOptions{PluginTestBin: wd}
+		dOpts := &DockerClusterOptions{PluginTestBin: binPath}
 		cluster, err := NewDockerCluster("test-uuid", coreConfig, dOpts)
 		if err != nil {
 			panic(err)
@@ -90,23 +124,6 @@ func Setup(name string) error {
 
 		cores := cluster.ClusterNodes
 		client := cores[0].Client
-		// calculate sha256 of binary/vault/plugins/uuid
-		pPath := "/Users/clint/go-src/github.com/catsby/vault-plugin-secrets-uuid/vault/plugins/uuid"
-
-		f, err := os.Open(pPath)
-		if err != nil {
-			panic(err)
-		}
-		defer func() {
-			_ = f.Close()
-		}()
-
-		h := sha256.New()
-		if _, ioErr := io.Copy(h, f); ioErr != nil {
-			panic(ioErr)
-		}
-
-		sha256value := fmt.Sprintf("%x", h.Sum(nil))
 
 		TestHelper = &Helper{
 			Client:  client,
@@ -123,11 +140,6 @@ func Setup(name string) error {
 		if err != nil {
 			panic(err)
 		}
-
-		// run tests
-		// stat := m.Run()
-		// cluster.Cleanup()
-		// os.Exit(stat)
 	}
 	return nil
 }
