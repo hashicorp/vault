@@ -845,15 +845,15 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		},
 		Alias: &logical.Alias{
 			Name: identityAlias,
-			Metadata: map[string]string{
-				"instance_id": identityDocParsed.InstanceID,
-				"region":      identityDocParsed.Region,
-				"account_id":  identityDocParsed.AccountID,
-				"ami_id":      identityDocParsed.AmiID,
-			},
 		},
 	}
 	roleEntry.PopulateTokenAuth(auth)
+	identityConfigEntry.PopulateDesiredAliasMetadata(auth, map[string]string{
+		"instance_id": identityDocParsed.InstanceID,
+		"region":      identityDocParsed.Region,
+		"account_id":  identityDocParsed.AccountID,
+		"ami_id":      identityDocParsed.AmiID,
+	})
 
 	resp := &logical.Response{
 		Auth: auth,
@@ -1375,19 +1375,23 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		DisplayName: entity.FriendlyName,
 		Alias: &logical.Alias{
 			Name: identityAlias,
-			Metadata: map[string]string{
-				"client_arn":           callerID.Arn,
-				"canonical_arn":        entity.canonicalArn(),
-				"client_user_id":       callerUniqueId,
-				"auth_type":            iamAuthType,
-				"inferred_entity_type": inferredEntityType,
-				"inferred_entity_id":   inferredEntityID,
-				"inferred_aws_region":  roleEntry.InferredAWSRegion,
-				"account_id":           entity.AccountNumber,
-			},
 		},
 	}
 	roleEntry.PopulateTokenAuth(auth)
+	if err := identityConfigEntry.PopulateDesiredAliasMetadata(auth, map[string]string{
+		"client_arn":           callerID.Arn,
+		"canonical_arn":        entity.canonicalArn(),
+		"client_user_id":       callerUniqueId,
+		"auth_type":            iamAuthType,
+		"inferred_entity_type": inferredEntityType,
+		"inferred_entity_id":   inferredEntityID,
+		"inferred_aws_region":  roleEntry.InferredAWSRegion,
+		"account_id":           entity.AccountNumber,
+	}); err != nil {
+		if b.Logger().IsWarn() {
+			b.Logger().Warn(fmt.Sprintf("unable to set alias metadata due to %s", err))
+		}
+	}
 
 	return &logical.Response{
 		Auth: auth,

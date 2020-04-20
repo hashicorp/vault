@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/sdk/helper/aliasmetadata"
+
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -214,8 +216,35 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Configure identity.
+	_, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/identity",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			aliasmetadata.FieldName: []string{
+				"default",
+				"ami_id",
+				"canonical_arn",
+				"client_arn",
+				"client_user_id",
+				"inferred_aws_region",
+				"inferred_entity_id",
+				"inferred_entity_type",
+				"instance_id",
+				"region",
+			},
+			"iam_alias": "role_id",
+			"ec2_alias": "role_id",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// create a role entry
 	roleEntry := &awsRoleEntry{
+		RoleID:   "foo",
 		Version:  currentRoleStorageVersion,
 		AuthType: iamAuthType,
 	}
