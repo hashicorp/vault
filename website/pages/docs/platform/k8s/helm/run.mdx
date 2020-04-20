@@ -37,9 +37,7 @@ cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/
 options](/docs/platform/k8s/helm/configuration), and read the [production deployment
 checklist](/docs/platform/k8s/helm/secure#architecture).
 
-## How-To
-
-### Install Vault
+## Install Vault
 
 Helm must be installed and configured on your machine. Please refer to the [Helm
 documentation](https://helm.sh/) or the [Vault Installation to Minikube via
@@ -104,7 +102,7 @@ $ helm install vault \
     https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
 ```
 
-#### Dev mode
+### Dev mode
 
 The Helm chart may run a Vault server in development. This installs a single
 Vault server with a memory storage backend.
@@ -120,7 +118,7 @@ $ helm install vault \
     https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
 ```
 
-#### Standalone mode
+### Standalone mode
 
 The Helm chart defaults to run in `standalone` mode. This installs a single
 Vault server with a file storage backend.
@@ -131,7 +129,7 @@ Install the Vault Helm chart version 0.4.0 in standalone mode.
 $ helm install vault https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
 ```
 
-#### HA mode
+### HA mode
 
 The Helm chart may be run in high availability (HA) mode. This installs three
 Vault servers with an existing Consul storage backend. It is suggested that
@@ -150,7 +148,7 @@ $ helm install vault \
 Helm](https://learn.hashicorp.com/vault/getting-started-k8s/minikube) guide
 demonstrates the setup of Consul and Vault in HA mode.
 
-#### External mode
+### External mode
 
 The Helm chart may be run in external mode. This installs no Vault server and
 relies on a network addressable Vault server to exist.
@@ -168,7 +166,7 @@ External
 Vault](https://learn.hashicorp.com/vault/getting-started-k8s/external-vault)
 guide demonstrates using an external Vault within a Kubernetes cluster.
 
-### View the Vault UI
+## View the Vault UI
 
 The Vault UI is enabled but NOT exposed as service for security reasons. The
 Vault UI can also be exposed via port-forwarding or through a [`ui`
