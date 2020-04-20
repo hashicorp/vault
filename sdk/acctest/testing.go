@@ -457,7 +457,7 @@ func (n *DockerClusterNode) setupCert() error {
 		NextProtos:     []string{"h2", "http/1.1"},
 		GetCertificate: certGetter.GetCertificate,
 	}
-	tlsConfig.BuildNameToCertificate()
+
 	if n.Cluster.ClientAuthRequired {
 		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
 	}

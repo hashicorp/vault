@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -16,6 +15,8 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
+// TestHelper is a package global that plugins will use to extract Vault
+// and Docker Clients after setup
 var TestHelper *Helper
 
 // Helper is intended as a per-package singleton created in TestMain which
@@ -58,14 +59,12 @@ func Run(m *testing.M) {
 // Setup creates any temp dir and compiles the binary for copying to Docker
 func Setup(name string) error {
 	if os.Getenv("VAULT_ACC") == "1" {
-		absPluginExecPath, _ := filepath.Abs(os.Args[0])
-		pluginName := path.Base(absPluginExecPath)
-		os.Link(absPluginExecPath, path.Join("/Users/clint/Desktop/plugins", pluginName))
 		// setup docker, send src and name
 		// run tests
 		coreConfig := &vault.CoreConfig{
 			DisableMlock: true,
 		}
+
 		wd, err := os.Getwd()
 		if err != nil {
 			panic(err)
@@ -98,11 +97,13 @@ func Setup(name string) error {
 		if err != nil {
 			panic(err)
 		}
-		defer f.Close()
+		defer func() {
+			_ = f.Close()
+		}()
 
 		h := sha256.New()
-		if _, err := io.Copy(h, f); err != nil {
-			panic(err)
+		if _, ioErr := io.Copy(h, f); ioErr != nil {
+			panic(ioErr)
 		}
 
 		sha256value := fmt.Sprintf("%x", h.Sum(nil))
