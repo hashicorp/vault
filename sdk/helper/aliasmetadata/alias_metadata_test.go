@@ -10,6 +10,7 @@ import (
 )
 
 var testFields = &Fields{
+	FieldName:      "some-field-name",
 	Default:        []string{"fizz", "buzz"},
 	AvailableToAdd: []string{"foo", "bar"},
 }
@@ -25,8 +26,8 @@ func TestFieldSchema(t *testing.T) {
 	if schema.DisplayAttrs == nil {
 		t.Fatal("expected display attributes")
 	}
-	if schema.DisplayAttrs.Name != FieldName {
-		t.Fatalf("expected name of %s", FieldName)
+	if schema.DisplayAttrs.Name != testFields.FieldName {
+		t.Fatalf("expected name of %s", testFields.FieldName)
 	}
 	if schema.DisplayAttrs.Value != "default,field1,field2" {
 		t.Fatal("expected default,field1,field2")
@@ -51,10 +52,10 @@ func TestParseAliasMetadata(t *testing.T) {
 	h := NewHandler(testFields)
 	data := &framework.FieldData{
 		Raw: map[string]interface{}{
-			FieldName: []string{"default"},
+			testFields.FieldName: []string{"default"},
 		},
 		Schema: map[string]*framework.FieldSchema{
-			FieldName: FieldSchema(testFields),
+			testFields.FieldName: FieldSchema(testFields),
 		},
 	}
 	if err := h.ParseAliasMetadata(data); err != nil {
@@ -73,10 +74,10 @@ func TestPopulateDesiredAliasMetadata(t *testing.T) {
 	h := NewHandler(testFields)
 	data := &framework.FieldData{
 		Raw: map[string]interface{}{
-			FieldName: []string{"foo"},
+			testFields.FieldName: []string{"foo"},
 		},
 		Schema: map[string]*framework.FieldSchema{
-			FieldName: FieldSchema(testFields),
+			testFields.FieldName: FieldSchema(testFields),
 		},
 	}
 	if err := h.ParseAliasMetadata(data); err != nil {

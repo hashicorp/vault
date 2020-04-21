@@ -47,7 +47,7 @@ func TestAcceptance(t *testing.T) {
 	if resp == nil || resp.Data == nil {
 		t.Fatal("expected non-nil response")
 	}
-	if !reflect.DeepEqual(resp.Data[FieldName], []string{"role_name"}) {
+	if !reflect.DeepEqual(resp.Data[aliasMetadataFields.FieldName], []string{"role_name"}) {
 		t.Fatal("expected default field of role_name to be returned")
 	}
 
@@ -86,7 +86,7 @@ func TestAcceptance(t *testing.T) {
 			RemoteAddr: "http://foo.com",
 		},
 		Data: map[string]interface{}{
-			FieldName: []string{},
+			aliasMetadataFields.FieldName: []string{},
 		},
 	})
 	if err != nil {
@@ -111,7 +111,7 @@ func TestAcceptance(t *testing.T) {
 	if resp == nil || resp.Data == nil {
 		t.Fatal("expected non-nil response")
 	}
-	if !reflect.DeepEqual(resp.Data[FieldName], []string{}) {
+	if !reflect.DeepEqual(resp.Data[aliasMetadataFields.FieldName], []string{}) {
 		t.Fatal("expected no fields to be returned")
 	}
 
@@ -147,7 +147,7 @@ func TestAcceptance(t *testing.T) {
 			RemoteAddr: "http://foo.com",
 		},
 		Data: map[string]interface{}{
-			FieldName: []string{"default"},
+			aliasMetadataFields.FieldName: []string{"default"},
 		},
 	})
 	if err != nil {
@@ -172,7 +172,7 @@ func TestAcceptance(t *testing.T) {
 	if resp == nil || resp.Data == nil {
 		t.Fatal("expected non-nil response")
 	}
-	if !reflect.DeepEqual(resp.Data[FieldName], []string{"role_name"}) {
+	if !reflect.DeepEqual(resp.Data[aliasMetadataFields.FieldName], []string{"role_name"}) {
 		t.Fatal("expected default field of role_name to be returned")
 	}
 
@@ -210,7 +210,7 @@ func TestAcceptance(t *testing.T) {
 			RemoteAddr: "http://foo.com",
 		},
 		Data: map[string]interface{}{
-			FieldName: []string{"default", "remote_addr"},
+			aliasMetadataFields.FieldName: []string{"default", "remote_addr"},
 		},
 	})
 	if err != nil {
@@ -238,10 +238,10 @@ func TestAcceptance(t *testing.T) {
 	}
 	expected := []string{"role_name", "remote_addr"}
 	sort.Strings(expected)
-	actual := resp.Data[FieldName].([]string)
+	actual := resp.Data[aliasMetadataFields.FieldName].([]string)
 	sort.Strings(actual)
 	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("unexpectedly received %s", resp.Data[FieldName])
+		t.Fatalf("unexpectedly received %s", resp.Data[aliasMetadataFields.FieldName])
 	}
 
 	// They both should now appear on the login.
@@ -281,7 +281,7 @@ func TestAcceptance(t *testing.T) {
 			RemoteAddr: "http://foo.com",
 		},
 		Data: map[string]interface{}{
-			FieldName: []string{"remote_addr"},
+			aliasMetadataFields.FieldName: []string{"remote_addr"},
 		},
 	})
 	if err != nil {
@@ -306,7 +306,7 @@ func TestAcceptance(t *testing.T) {
 	if resp == nil || resp.Data == nil {
 		t.Fatal("expected non-nil response")
 	}
-	if !reflect.DeepEqual(resp.Data[FieldName], []string{"remote_addr"}) {
+	if !reflect.DeepEqual(resp.Data[aliasMetadataFields.FieldName], []string{"remote_addr"}) {
 		t.Fatal("expected remote_addr to be returned")
 	}
 
@@ -345,7 +345,7 @@ func TestAcceptance(t *testing.T) {
 			RemoteAddr: "http://foo.com",
 		},
 		Data: map[string]interface{}{
-			FieldName: []string{"asl;dfkj"},
+			aliasMetadataFields.FieldName: []string{"asl;dfkj"},
 		},
 	})
 	if err == nil {
@@ -376,6 +376,7 @@ type fakeBackend struct {
 // We expect each back-end to explicitly define the fields that
 // will be included by default, and optionally available.
 var aliasMetadataFields = &Fields{
+	FieldName: "some_field_name",
 	Default: []string{
 		"role_name", // This would likely never change because the alias is the role name.
 	},
@@ -388,7 +389,7 @@ func configPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "config",
 		Fields: map[string]*framework.FieldSchema{
-			FieldName: FieldSchema(aliasMetadataFields),
+			aliasMetadataFields.FieldName: FieldSchema(aliasMetadataFields),
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -410,7 +411,7 @@ func configPath() *framework.Path {
 					// alias metadata is when unconfigured.
 					return &logical.Response{
 						Data: map[string]interface{}{
-							FieldName: conf.GetAliasMetadata(),
+							aliasMetadataFields.FieldName: conf.GetAliasMetadata(),
 						},
 					}, nil
 				},

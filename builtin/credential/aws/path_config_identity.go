@@ -10,12 +10,12 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// iamAliasMetadataFields is a list of the default alias metadata
-// added to tokens during login. The default alias type used
-// by this back-end is the role ID. Subsequently, the default
-// fields included are expected to have a low rate of change
-// when the role ID is in use.
 var (
+	// iamAliasMetadataFields is a list of the default alias metadata
+	// added to tokens during login. The default alias type used
+	// by this back-end is the role ID. Subsequently, the default
+	// fields included are expected to have a low rate of change
+	// when the role ID is in use.
 	iamAliasMetadataFields = &aliasmetadata.Fields{
 		FieldName: "iam_metadata",
 		Default: []string{
@@ -32,6 +32,11 @@ var (
 		},
 	}
 
+	// ec2AliasMetadataFields is a list of the default alias metadata
+	// added to tokens during login. The default alias type used
+	// by this back-end is the role ID. Subsequently, the default
+	// fields included are expected to have a low rate of change
+	// when the role ID is in use.
 	ec2AliasMetadataFields = &aliasmetadata.Fields{
 		FieldName: "ec2_metadata",
 		Default: []string{
@@ -54,12 +59,12 @@ func (b *backend) pathConfigIdentity() *framework.Path {
 				Default:     identityAliasIAMUniqueID,
 				Description: fmt.Sprintf("Configure how the AWS auth method generates entity aliases when using IAM auth. Valid values are %q, %q, and %q. Defaults to %q.", identityAliasRoleID, identityAliasIAMUniqueID, identityAliasIAMFullArn, identityAliasRoleID),
 			},
+			iamAliasMetadataFields.FieldName: aliasmetadata.FieldSchema(iamAliasMetadataFields),
 			"ec2_alias": {
 				Type:        framework.TypeString,
 				Default:     identityAliasEC2InstanceID,
 				Description: fmt.Sprintf("Configure how the AWS auth method generates entity alias when using EC2 auth. Valid values are %q, %q, and %q. Defaults to %q.", identityAliasRoleID, identityAliasEC2InstanceID, identityAliasEC2ImageID, identityAliasRoleID),
 			},
-			iamAliasMetadataFields.FieldName: aliasmetadata.FieldSchema(iamAliasMetadataFields),
 			ec2AliasMetadataFields.FieldName: aliasmetadata.FieldSchema(ec2AliasMetadataFields),
 		},
 
