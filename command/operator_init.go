@@ -489,20 +489,24 @@ func (c *OperatorInitCommand) status(client *api.Client) int {
 		return 1 // Normally we'd return 2, but 2 means something special here
 	}
 
-	message := "Vault is initialized"
 	errorCode := 0
 
 	if !inited {
-		message = "Vault is not initialized"
 		errorCode = 2
 	}
 
 	switch Format(c.UI) {
 	case "table":
-		c.UI.Output(message)
+		if inited {
+			c.UI.Output("Vault is initialized")
+		} else {
+			c.UI.Output("Vault it not initialized")
+		}
 	default:
-		OutputData(c.UI, message)
+		data := api.InitStatusResponse{Initialized: inited}
+		OutputData(c.UI, data)
 	}
+
 	return errorCode
 }
 
