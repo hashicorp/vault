@@ -137,7 +137,7 @@ func (s *StoragePacker) DeleteMultipleItems(ctx context.Context, logger hclog.Lo
 		logger = hclog.NewNullLogger()
 	}
 
-	// Sort the ids by the bucket the will be deleted from
+	// Sort the ids by the bucket they will be deleted from
 	lockKeys := make([]string, 0)
 	byBucket := make(map[string]map[string]struct{})
 	for _, id := range itemIDs {
