@@ -1,10 +1,14 @@
 package aws
 
 import (
+	"context"
 	"encoding/json"
+	"net/url"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // PolicyDocument represents an IAM policy document
@@ -13,25 +17,25 @@ type PolicyDocument struct {
 	Statement []StatementEntry
 }
 
-// StatementEntry represents a statement in an IAM policy document. Note that
-// Action can be either a list or a string, so we represent it here as
-// interface{}.
-type StatementEntry struct {
-	Effect   string
-	Action   interface{}
-	Resource string
-}
+// StatementEntry represents a statement in an IAM policy document
+type StatementEntry interface{}
 
 // getGroupPolicies takes a list of IAM Group names and returns a list of the
 // inline policy documents, and a list of the attached managed policy ARNs
-func (b *backend) getGroupPolicies(iamGroups []string) (groupPolicies []string, groupPolicyARNs []string, err error) {
+func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGroups []string) (groupPolicies []string, groupPolicyARNs []string, err error) {
 	var agp *iam.ListAttachedGroupPoliciesOutput
 	var inlinePolicies *iam.ListGroupPoliciesOutput
 	var inlinePolicyDoc *iam.GetGroupPolicyOutput
+	var iamClient iamiface.IAMAPI
+
+	iamClient, err = b.clientIAM(ctx, s)
+	if err != nil {
+		return
+	}
 
 	for _, g := range iamGroups {
 		// Collect managed policy ARNs from configured IAM Groups
-		agp, err = b.iamClient.ListAttachedGroupPolicies(&iam.ListAttachedGroupPoliciesInput{
+		agp, err = iamClient.ListAttachedGroupPolicies(&iam.ListAttachedGroupPoliciesInput{
 			GroupName: aws.String(g),
 		})
 		if err != nil {
@@ -42,14 +46,14 @@ func (b *backend) getGroupPolicies(iamGroups []string) (groupPolicies []string, 
 		}
 
 		// Collect inline policy names from configured IAM Groups
-		inlinePolicies, err = b.iamClient.ListGroupPolicies(&iam.ListGroupPoliciesInput{
+		inlinePolicies, err = iamClient.ListGroupPolicies(&iam.ListGroupPoliciesInput{
 			GroupName: aws.String(g),
 		})
 		if err != nil {
 			return
 		}
 		for _, iP := range inlinePolicies.PolicyNames {
-			inlinePolicyDoc, err = b.iamClient.GetGroupPolicy(&iam.GetGroupPolicyInput{
+			inlinePolicyDoc, err = iamClient.GetGroupPolicy(&iam.GetGroupPolicyInput{
 				GroupName:  &g,
 				PolicyName: iP,
 			})
@@ -57,7 +61,11 @@ func (b *backend) getGroupPolicies(iamGroups []string) (groupPolicies []string, 
 				return
 			}
 			if inlinePolicyDoc != nil && inlinePolicyDoc.PolicyDocument != nil {
-				groupPolicies = append(groupPolicies, *inlinePolicyDoc.PolicyDocument)
+				var policyStr string
+				if policyStr, err = url.QueryUnescape(*inlinePolicyDoc.PolicyDocument); err != nil {
+					return
+				}
+				groupPolicies = append(groupPolicies, policyStr)
 			}
 		}
 	}
@@ -74,6 +82,9 @@ func combinePolicyDocuments(policies ...string) (policy string, err error) {
 	newPolicy.Statement = make([]StatementEntry, 0)
 
 	for _, p := range policies {
+		if len(p) == 0 {
+			continue
+		}
 		var tmpDoc PolicyDocument
 		err = json.Unmarshal([]byte(p), &tmpDoc)
 		if err != nil {

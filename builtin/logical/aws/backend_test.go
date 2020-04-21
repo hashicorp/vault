@@ -1149,6 +1149,63 @@ func TestBackend_AssumedRoleWithPolicyARN(t *testing.T) {
 	})
 }
 
+func TestBackend_AssumedRoleWithGroups(t *testing.T) {
+	t.Parallel()
+	roleName := generateUniqueName(t.Name())
+	groupName := generateUniqueName(t.Name())
+	// This looks a bit curious. The policy document and the role document act
+	// as a logical intersection of policies. The role allows ec2:Describe*
+	// (among other permissions). This policy allows everything BUT
+	// ec2:DescribeAvailabilityZones. Thus, the logical intersection of the two
+	// is all ec2:Describe* EXCEPT ec2:DescribeAvailabilityZones, and so the
+	// describeAZs call should fail
+	allowAllButDescribeAzs := `{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"NotAction": "ec2:DescribeAvailabilityZones",
+			"Resource": "*"
+		}
+	]
+}`
+	awsAccountID, err := getAccountID()
+	if err != nil {
+		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
+		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
+	}
+
+	roleData := map[string]interface{}{
+		"iam_groups":      []string{groupName},
+		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)},
+		"credential_type": assumedRoleCred,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn})
+			createGroup(t, groupName, allowAllButDescribeAzs, []string{})
+			// Sleep sometime because AWS is eventually consistent
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+		},
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
+		},
+		Teardown: func() error {
+			if err := deleteTestGroup(groupName); err != nil {
+				return err
+			}
+			return deleteTestRole(roleName)
+		},
+	})
+}
+
 func TestBackend_FederationTokenWithPolicyARN(t *testing.T) {
 	t.Parallel()
 	userName := generateUniqueName(t.Name())

@@ -2,7 +2,6 @@ package aws
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -131,7 +130,7 @@ func Test_getGroupPolicies(t *testing.T) {
 			}
 
 			// run the test and compare results
-			groupPolicies, groupPolicyARNs, err := b.getGroupPolicies([]string{"ignored"})
+			groupPolicies, groupPolicyARNs, err := b.getGroupPolicies(context.TODO(), config.StorageView, []string{"ignored"})
 			assert.Equal(t, tc.wantGroupPolicies, groupPolicies)
 			assert.Equal(t, tc.wantGroupPolicyARNs, groupPolicyARNs)
 			assert.Equal(t, tc.wantErr, err != nil)
@@ -152,7 +151,7 @@ func Test_combinePolicyDocuments(t *testing.T) {
 			input: []string{
 				ec2AllPolicy,
 			},
-			expectedOutput: `{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"ec2:*","Resource":"*"}]}`,
+			expectedOutput: `{"Version":"2012-10-17","Statement":[{"Action":"ec2:*","Effect":"Allow","Resource":"*"}]}`,
 			expectedErr:    false,
 		},
 		{
@@ -162,8 +161,8 @@ func Test_combinePolicyDocuments(t *testing.T) {
 				ec2DescribePolicy,
 			},
 			expectedOutput: `{"Version": "2012-10-17", "Statement":[
-				{"Effect": "Allow", "Action": "ec2:*", "Resource": "*"},
-				{"Effect": "Allow", "Action": ["ec2:DescribeInstances"], "Resource": "*"}]}`,
+				{"Action": "ec2:*", "Effect": "Allow", "Resource": "*"},
+				{"Action": ["ec2:DescribeInstances"], "Effect": "Allow", "Resource": "*"}]}`,
 			expectedErr: false,
 		},
 		{
@@ -172,7 +171,7 @@ func Test_combinePolicyDocuments(t *testing.T) {
 				ec2AllPolicy,
 				`{"Version": "2012-10-17", "Statement": []}`,
 			},
-			expectedOutput: `{"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "ec2:*", "Resource": "*"}]}`,
+			expectedOutput: `{"Version": "2012-10-17", "Statement": [{"Action": "ec2:*", "Effect": "Allow", "Resource": "*"}]}`,
 			expectedErr:    false,
 		},
 		{
@@ -184,6 +183,23 @@ func Test_combinePolicyDocuments(t *testing.T) {
 			expectedOutput: ``,
 			expectedErr:    true,
 		},
+		{
+			description: "not action",
+			input: []string{
+				`{"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "NotAction": "ec2:DescribeAvailabilityZones", "Resource": "*"}]}`,
+			},
+			expectedOutput: `{"Version": "2012-10-17","Statement":[{"Effect": "Allow","NotAction": "ec2:DescribeAvailabilityZones",	"Resource": "*"}]}`,
+			expectedErr: false,
+		},
+		{
+			description: "one blank policy",
+			input: []string{
+				"",
+				`{"Version": "2012-10-17", "Statement": []}`,
+			},
+			expectedOutput: `{"Version": "2012-10-17", "Statement": []}`,
+			expectedErr:    false,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -193,7 +209,10 @@ func Test_combinePolicyDocuments(t *testing.T) {
 				t.Fatalf("got unexpected error: %s", err)
 			}
 			// remove whitespace
-			tc.expectedOutput = strings.Join(strings.Fields(tc.expectedOutput), "")
+			tc.expectedOutput, err = compactJSON(tc.expectedOutput)
+			if (err != nil) != tc.expectedErr {
+				t.Fatalf("got unexpected error: %s", err)
+			}
 			if policyOut != tc.expectedOutput {
 				t.Fatalf("did not receive expected output: want %s, got %s", tc.expectedOutput, policyOut)
 			}

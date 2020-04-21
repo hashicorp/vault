@@ -69,13 +69,16 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 	displayName, policyName, policy string, policyARNs []string,
 	iamGroups []string, lifeTimeInSeconds int64) (*logical.Response, error) {
 
-	groupPolicies, groupPolicyARNs, err := b.getGroupPolicies(iamGroups)
+	groupPolicies, groupPolicyARNs, err := b.getGroupPolicies(ctx, s, iamGroups)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 	if groupPolicies != nil {
 		groupPolicies = append(groupPolicies, policy)
 		policy, err = combinePolicyDocuments(groupPolicies...)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
 	}
 	if len(groupPolicyARNs) > 0 {
 		policyARNs = append(policyARNs, groupPolicyARNs...)
@@ -143,13 +146,16 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 
 	// grab any IAM group policies associated with the vault role, both inline
 	// and managed
-	groupPolicies, groupPolicyARNs, err := b.getGroupPolicies(iamGroups)
+	groupPolicies, groupPolicyARNs, err := b.getGroupPolicies(ctx, s, iamGroups)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
-	if groupPolicies != nil {
+	if len(groupPolicies) > 0 {
 		groupPolicies = append(groupPolicies, policy)
 		policy, err = combinePolicyDocuments(groupPolicies...)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
 	}
 	if len(groupPolicyARNs) > 0 {
 		policyARNs = append(policyARNs, groupPolicyARNs...)
