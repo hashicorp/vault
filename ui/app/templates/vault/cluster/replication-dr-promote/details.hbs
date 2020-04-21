@@ -7,7 +7,7 @@
         {{#if Page.isDisabled}}
           <EmptyState
             @title="Disaster Recovery secondary not set up"
-            @message="This Disaster Recovery secondary has not been enabled.  You can do so from the Disaster Recovery Primary."
+            @message={{Page.message}}
             @icon="alert-circle-outline"
             @backgroundColor={{false}}
             @bottomBorder={{true}}

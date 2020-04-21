@@ -1,6 +1,7 @@
 {{yield (hash 
-  header=(component 'replication-header' data=model)
+  header=(component 'replication-header' data=model title=title)
   toggle=(component 'replication-toggle')
   dashboard=(component 'replication-dashboard' data=model dr=dr)
   isDisabled=isDisabled
+  message=message
 )}}

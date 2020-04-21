@@ -17,4 +17,16 @@ export default Component.extend({
     }
     return false;
   }),
+  title: computed('model', function() {
+    let mode = this.model.rm.mode;
+    if (mode === 'dr') {
+      return 'Disaster Recovery';
+    } else if (mode === 'performance') {
+      return 'Performance';
+    }
+    return 'unknown';
+  }),
+  message: computed('model', function() {
+    return 'This Disaster Recovery secondary has not been enabled.  You can do so from the Disaster Recovery Primary.';
+  }),
 });
