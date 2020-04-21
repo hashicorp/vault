@@ -89,7 +89,26 @@ func connectPeers(nodes ...*RaftBackend) {
 	}
 }
 
+func stepDownLeader(t *testing.T, node *RaftBackend) {
+	t.Helper()
+
+	if err := node.raft.LeadershipTransfer().Error(); err != nil {
+		t.Fatal(err)
+	}
+
+	timeout := time.Now().Add(time.Second * 10)
+	for !time.Now().After(timeout) {
+		if err := node.raft.VerifyLeader().Error(); err != nil {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	t.Fatal("still leader")
+}
+
 func waitForLeader(t *testing.T, nodes ...*RaftBackend) *RaftBackend {
+	t.Helper()
 	timeout := time.Now().Add(time.Second * 10)
 	for !time.Now().After(timeout) {
 		for _, node := range nodes {
@@ -105,6 +124,7 @@ func waitForLeader(t *testing.T, nodes ...*RaftBackend) *RaftBackend {
 }
 
 func compareFSMs(t *testing.T, fsm1, fsm2 *FSM) {
+	t.Helper()
 	if err := compareFSMsWithErr(t, fsm1, fsm2); err != nil {
 		t.Fatal(err)
 	}
@@ -126,6 +146,7 @@ func compareFSMsWithErr(t *testing.T, fsm1, fsm2 *FSM) error {
 }
 
 func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB) error {
+	t.Helper()
 	db1 := make(map[string]string)
 	db2 := make(map[string]string)
 

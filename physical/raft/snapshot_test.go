@@ -367,13 +367,22 @@ func TestRaft_Snapshot_ErrorRecovery(t *testing.T) {
 		}
 	}
 
-	// Take a snapshot
+	// Take a snapshot on each node to ensure we no longer have older logs
 	snapFuture := raft1.raft.Snapshot()
 	if err := snapFuture.Error(); err != nil {
 		t.Fatal(err)
 	}
-	// Advance FSM's index past configuration change
-	raft1.Put(context.Background(), &physical.Entry{
+
+	stepDownLeader(t, raft1)
+	leader := waitForLeader(t, raft1, raft2)
+
+	snapFuture = leader.raft.Snapshot()
+	if err := snapFuture.Error(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Advance FSM's index past snapshot index
+	leader.Put(context.Background(), &physical.Entry{
 		Key:   "key",
 		Value: []byte("value"),
 	})
@@ -382,7 +391,7 @@ func TestRaft_Snapshot_ErrorRecovery(t *testing.T) {
 	raft3.fsm.testSnapshotRestoreError = true
 
 	// Add raft3 to the cluster
-	addPeer(t, raft1, raft3)
+	addPeer(t, leader, raft3)
 
 	time.Sleep(2 * time.Second)
 
@@ -393,25 +402,16 @@ func TestRaft_Snapshot_ErrorRecovery(t *testing.T) {
 	}
 
 	// Ensure the databases are not equal
-	if err := compareFSMsWithErr(t, raft1.fsm, raft3.fsm); err == nil {
+	if err := compareFSMsWithErr(t, leader.fsm, raft3.fsm); err == nil {
 		t.Fatal("nil error")
 	}
 
 	// Remove error and make sure we can reconcile state
 	raft3.fsm.testSnapshotRestoreError = false
 
-	// Shutdown raft1
-	if err := raft1.TeardownCluster(nil); err != nil {
-		t.Fatal(err)
-	}
-
-	// Start Raft1
-	if err := raft1.SetupCluster(context.Background(), SetupOpts{}); err != nil {
-		t.Fatal(err)
-	}
-
-	connectPeers(raft1, raft2)
-	waitForLeader(t, raft1, raft2)
+	// Step down leader node
+	stepDownLeader(t, leader)
+	leader = waitForLeader(t, raft1, raft2)
 
 	// Start Raft3
 	if err := raft3.SetupCluster(context.Background(), SetupOpts{}); err != nil {
@@ -422,6 +422,7 @@ func TestRaft_Snapshot_ErrorRecovery(t *testing.T) {
 	waitForLeader(t, raft1, raft2)
 
 	time.Sleep(5 * time.Second)
+
 	// Make sure state gets re-replicated.
 	compareFSMs(t, raft1.fsm, raft3.fsm)
 }
