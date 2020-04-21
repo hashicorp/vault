@@ -646,10 +646,9 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 			b := tx.Bucket(dataBucketName)
 			s := new(pb.StorageEntry)
 
-			// Commit in batches of 50k. Bolt wont split pages until commit and
-			// holds
-			// we do incremental writes. This is safe since we have a write lock
-			// on the fsm's lock.
+			// Commit in batches of 50k. Bolt holds all the data in memory and
+			// doesn't split the pages until commit so we do incremental writes.
+			// This is safe since we have a write lock on the fsm's lock.
 			for i := 0; i < 50000; i++ {
 				err := protoReader.ReadMsg(s)
 				if err != nil {
