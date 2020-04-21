@@ -355,7 +355,6 @@
         <ReplicationPrimaryCard
           @title='State'
           @description='Updated every ten seconds.'
-          @glyph={{get cluster (concat replicationMode 'StateGlyph')}}
           @metric={{replicationAttrs.state}}/>
         <ReplicationPrimaryCard
           @title='Last WAL entry'
@@ -364,7 +363,6 @@
         <KnownSecondariesCard @cluster={{cluster}} @replicationAttrs={{replicationAttrs}} />
       </div>
       <ReplicationTableRows @data={{replicationAttrs}}/>
-      <ReplicationDocLink />
     </div>
   {{/if}}
 {{/if}}

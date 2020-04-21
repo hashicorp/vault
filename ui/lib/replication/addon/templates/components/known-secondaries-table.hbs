@@ -1,4 +1,4 @@
-<div class="replication vlt-table" data-test-known-secondaries-table>
+<div class="replication vlt-table">
   <table class="is-fullwidth">
     <caption class="is-collapsed">Known Secondaries</caption>
     <thead class="has-text-weight-semibold">
@@ -9,17 +9,17 @@
       </tr>
     </thead>
     <tbody>
-      {{!-- TODO: use real values for URL and connected --}}
+      {{!-- TODO: figure out what goes in URL and connected --}}
       {{#each knownSecondaries as |secondary|}}
           <tr>
-            <th scope="row" data-test-secondaries-row={{secondary}}>
-              <code>{{or secondary.id secondary}}</code>
+            <th scope="row">
+              <code>{{secondary}}</code>
             </th>
             <td>
-              <code class="is-word-break" data-test-url>{{or secondary.url 'unknown'}}</code>
+              <code class="is-word-break">http://localhost:4200/ui/vault/replication/dr</code>
             </td>
             <td>
-              <code>{{or secondary.connected 'unknown'}}</code>
+              <code>Yes</code>
             </td>
           </tr>
       {{/each}}

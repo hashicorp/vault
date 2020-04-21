@@ -4,22 +4,25 @@ import layout from '../templates/components/replication-table-rows';
 
 export default Component.extend({
   layout,
-  classNames: ['replication-table-rows'],
   data: null,
   clusterDetails: computed('data', function() {
-    const { data } = this;
+    const { data } = this.data;
     return data.dr || data;
   }),
   mode: computed('clusterDetails', function() {
-    return this.clusterDetails.mode || 'unknown';
+    const { clusterDetails } = this;
+    return clusterDetails.mode || 'unknown';
   }),
   merkleRoot: computed('clusterDetails', function() {
-    return this.clusterDetails.merkleRoot || 'unknown';
+    const { clusterDetails } = this;
+    return clusterDetails.merkleRoot || 'unknown';
   }),
   clusterId: computed('clusterDetails', function() {
-    return this.clusterDetails.clusterId || 'unknown';
+    const { clusterDetails } = this;
+    return clusterDetails.clusterId || 'unknown';
   }),
   syncProgress: computed('clusterDetails', function() {
-    return this.clusterDetails.syncProgress || false;
+    const { clusterDetails } = this;
+    return clusterDetails.syncProgress || false;
   }),
 });
