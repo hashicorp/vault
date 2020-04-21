@@ -501,13 +501,15 @@ func (i *IdentityStore) handleEntityBatchDelete() framework.OperationFunc {
 		// Sort the ids by the bucket they will be deleted from
 		byBucket := make(map[string]map[string]struct{})
 		for _, id := range entityIDs {
-			bucket, ok := byBucket[i.entityPacker.BucketKey(id)]
+			bucketKey := i.entityPacker.BucketKey(id)
+
+			bucket, ok := byBucket[bucketKey]
 			if !ok {
 				bucket = make(map[string]struct{})
+				byBucket[bucketKey] = bucket
 			}
 
 			bucket[id] = struct{}{}
-			byBucket[i.entityPacker.BucketKey(id)] = bucket
 		}
 
 		deleteIdsForBucket := func(entityIDs []string) error {

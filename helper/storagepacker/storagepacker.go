@@ -145,11 +145,13 @@ func (s *StoragePacker) DeleteMultipleItems(ctx context.Context, logger hclog.Lo
 		bucket, ok := byBucket[bucketKey]
 		if !ok {
 			bucket = make(map[string]struct{})
+			byBucket[bucketKey] = bucket
+
+			// Add the lock key once
+			lockKeys = append(lockKeys, bucketKey)
 		}
 
 		bucket[id] = struct{}{}
-		byBucket[bucketKey] = bucket
-		lockKeys = append(lockKeys, bucketKey)
 	}
 
 	locks := locksutil.LocksForKeys(s.storageLocks, lockKeys)
