@@ -364,6 +364,12 @@ func TestOIDC_PublicKeys(t *testing.T) {
 		t.Fatalf("expected 1 public key but instead got %d", len(responseJWKS.Keys))
 	}
 
+	if len(responseJWKS.Keys[0].Certificates) != 1 {
+		t.Fatalf("expected 1 certificate but instead got %d", len(responseJWKS.Keys[0].Certificates))
+	}
+
+	firstCert := responseJWKS.Keys[0].Certificates[0]
+
 	// rotate test-key a few times, each rotate should increase the length of public keys returned
 	// by the .well-known endpoint
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -390,6 +396,12 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
 	if len(responseJWKS.Keys) != 3 {
 		t.Fatalf("expected 3 public keys but instead got %d", len(responseJWKS.Keys))
+	}
+
+	// certificates should be regenerated when rotating keys
+	thirdCert := responseJWKS.Keys[2].Certificates[0]
+	if firstCert == thirdCert {
+		t.Fatalf("expected certificates to be different, but they are equal. %v == %v", firstCert, thirdCert)
 	}
 
 	// create another named key

@@ -6,10 +6,13 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"net/url"
 	"strings"
 	"time"
@@ -836,7 +839,8 @@ func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity
 
 func (k *namedKey) signPayload(payload []byte) (string, error) {
 	signingKey := jose.SigningKey{Key: k.SigningKey, Algorithm: jose.SignatureAlgorithm(k.Algorithm)}
-	signer, err := jose.NewSigner(signingKey, &jose.SignerOptions{})
+	signerOptions := jose.SignerOptions{}
+	signer, err := jose.NewSigner(signingKey, signerOptions.WithHeader("typ", "JWT"))
 	if err != nil {
 		return "", err
 	}
@@ -1323,7 +1327,35 @@ func generateKeys(algorithm string) (*jose.JSONWebKey, error) {
 		Use:       "sig",
 	}
 
+	// generate certificate
+	cert, err := generateCertificate(jwk)
+	if err != nil {
+		return nil, err
+	}
+	jwk.Certificates = append(jwk.Certificates, cert)
+
 	return jwk, nil
+}
+
+func generateCertificate(key *jose.JSONWebKey) (*x509.Certificate, error) {
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Organization: []string{"Acme Co"},
+		},
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().Add(time.Hour * 24 * 10000),
+
+		KeyUsage:              x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		BasicConstraintsValid: true,
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, key.Public().Key, key.Key)
+	if err != nil {
+		return nil, err
+	}
+	return x509.ParseCertificate(derBytes)
 }
 
 func saveOIDCPublicKey(ctx context.Context, s logical.Storage, key jose.JSONWebKey) error {
