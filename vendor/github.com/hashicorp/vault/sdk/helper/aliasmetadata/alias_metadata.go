@@ -24,14 +24,15 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// FieldName is the user-facing name for the field.
-const FieldName = "alias_metadata"
-
 // Fields is for configuring a back-end's available
 // default and additional fields. These are used for
 // providing a verbose field description, and for parsing
 // user input.
 type Fields struct {
+	// The field name as it'll be reflected in the user-facing
+	// schema.
+	FieldName string
+
 	// Default is a list of the default fields that should
 	// be included if a user sends "default" in their list
 	// of desired fields. These fields should all have a
@@ -56,7 +57,7 @@ func FieldSchema(fields *Fields) *framework.FieldSchema {
 		Type:        framework.TypeCommaStringSlice,
 		Description: description(fields),
 		DisplayAttrs: &framework.DisplayAttributes{
-			Name:  FieldName,
+			Name:  fields.FieldName,
 			Value: "default,field1,field2",
 		},
 		Default: []string{"default"},
@@ -108,7 +109,7 @@ func (h *handler) GetAliasMetadata() []string {
 // converts it to a list of explicit fields, and adds it to the handler
 // for later storage.
 func (h *handler) ParseAliasMetadata(data *framework.FieldData) error {
-	userProvided, ok := data.GetOk(FieldName)
+	userProvided, ok := data.GetOk(h.fields.FieldName)
 	if !ok {
 		// Nothing further to do here.
 		return nil

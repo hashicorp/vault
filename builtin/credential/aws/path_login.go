@@ -848,12 +848,16 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		},
 	}
 	roleEntry.PopulateTokenAuth(auth)
-	identityConfigEntry.PopulateDesiredAliasMetadata(auth, map[string]string{
+	if err := identityConfigEntry.EC2AliasMetadataHandler.PopulateDesiredAliasMetadata(auth, map[string]string{
 		"instance_id": identityDocParsed.InstanceID,
 		"region":      identityDocParsed.Region,
 		"account_id":  identityDocParsed.AccountID,
 		"ami_id":      identityDocParsed.AmiID,
-	})
+	}); err != nil {
+		if b.Logger().IsWarn() {
+			b.Logger().Warn(fmt.Sprintf("unable to set alias metadata due to %s", err))
+		}
+	}
 
 	resp := &logical.Response{
 		Auth: auth,
@@ -1378,7 +1382,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		},
 	}
 	roleEntry.PopulateTokenAuth(auth)
-	if err := identityConfigEntry.PopulateDesiredAliasMetadata(auth, map[string]string{
+	if err := identityConfigEntry.IAMAliasMetadataHandler.PopulateDesiredAliasMetadata(auth, map[string]string{
 		"client_arn":           callerID.Arn,
 		"canonical_arn":        entity.canonicalArn(),
 		"client_user_id":       callerUniqueId,
