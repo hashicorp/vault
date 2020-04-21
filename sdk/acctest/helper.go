@@ -31,12 +31,17 @@ type Helper struct {
 	Name string
 	// sourceDir is the dir containing the plugin test binary
 	SourceDir string
+	// temp dir where plugin is compiled
+	buildDir string
 }
 
 // Cleanup cals the Cluster Cleanup method, if Cluster is not nil
 func (h *Helper) Cleanup() {
 	if h.Cluster != nil {
 		h.Cluster.Cleanup()
+	}
+	if h.buildDir != "" {
+		_ = os.RemoveAll(h.buildDir) // clean up
 	}
 }
 
@@ -64,6 +69,8 @@ func compilePlugin(name, srcDir, tmpDir string) (string, string, error) {
 	cmd := exec.Command("go", "build", "-o", path.Join(tmpDir, name), path.Join(srcDir, fmt.Sprintf("cmd/%s/main.go", name)))
 	var out bytes.Buffer
 	cmd.Stdout = &out
+
+	// match the target architecture of the docker container
 	cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64")
 	err := cmd.Run()
 	if err != nil {
@@ -76,14 +83,12 @@ func compilePlugin(name, srcDir, tmpDir string) (string, string, error) {
 		return "", "", err
 	}
 
-	defer func() {
-		_ = f.Close()
-	}()
-
 	h := sha256.New()
 	if _, ioErr := io.Copy(h, f); ioErr != nil {
 		panic(ioErr)
 	}
+
+	_ = f.Close()
 
 	sha256value := fmt.Sprintf("%x", h.Sum(nil))
 
@@ -99,11 +104,11 @@ func Setup(name string) error {
 			panic(err)
 		}
 
+		// tmpDir gets cleaned up when the cluster is cleaned up
 		tmpDir, err := ioutil.TempDir("", "bin")
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer os.RemoveAll(tmpDir) // clean up
 
 		binPath, sha256value, err := compilePlugin(name, srcDir, tmpDir)
 		if err != nil {
@@ -124,8 +129,9 @@ func Setup(name string) error {
 		client := cores[0].Client
 
 		TestHelper = &Helper{
-			Client:  client,
-			Cluster: cluster,
+			Client:   client,
+			Cluster:  cluster,
+			buildDir: tmpDir,
 		}
 
 		// use client to mount plugin

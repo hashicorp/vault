@@ -526,11 +526,7 @@ func (n *DockerClusterNode) Start(cli *docker.Client, caDir, netName string, net
 	if err != nil {
 		return err
 	}
-	//joinConfig := n.Cluster.raftJoinConfig()
-	//joinConfigStr, err := jsonutil.EncodeJSON(joinConfig)
-	//if err != nil {
-	//	return err
-	//}
+
 	vaultCfg := map[string]interface{}{
 		"listener": map[string]interface{}{
 			"tcp": map[string]interface{}{
@@ -576,14 +572,9 @@ func (n *DockerClusterNode) Start(cli *docker.Client, caDir, netName string, net
 	copyFromTo := map[string]string{
 		n.WorkDir: "/vault/config",
 		caDir:     "/usr/local/share/ca-certificates/",
-		// "/Users/ncc/bin/vault-1.4-linux-prem": "/bin/vault",
-		// TODO: find plugin binary pth and copy into container
 	}
 	if pluginBinPath != "" {
-		// from -> to
-		// strip "test" from the source
 		base := path.Base(pluginBinPath)
-		// dest := strings.TrimSuffix(base, ".test")
 		copyFromTo[pluginBinPath] = filepath.Join("/vault/config", base)
 	}
 
@@ -593,13 +584,9 @@ func (n *DockerClusterNode) Start(cli *docker.Client, caDir, netName string, net
 			Image: "vault",
 			Entrypoint: []string{"/bin/sh", "-c", "update-ca-certificates && " +
 				"exec /usr/local/bin/docker-entrypoint.sh vault server -log-level=trace -dev-plugin-dir=./vault/config -config /vault/config/local.json"},
-			//Cmd:	[]string{"vault", "server", "-config=/vault/config/local.json"},
 			Env: []string{
 				"VAULT_CLUSTER_INTERFACE=eth0",
-				//"VAULT_REDIRECT_INTERFACE=eth0",
-				//"VAULT_REDIRECT_ADDR=https://0.0.0.0:8200",
 				// TODO: api addr set is funny
-				//"VAULT_API_ADDR=https://0.0.0.0:8200",
 				"VAULT_API_ADDR=https://127.0.0.1:8200",
 				fmt.Sprintf("VAULT_REDIRECT_ADDR=https://%s:8200", n.Name()),
 			},
@@ -608,13 +595,8 @@ func (n *DockerClusterNode) Start(cli *docker.Client, caDir, netName string, net
 		},
 		ContainerName: n.Name(),
 		NetName:       netName,
-		//IP:              n.Address.IP.String(),
-		CopyFromTo: copyFromTo,
+		CopyFromTo:    copyFromTo,
 	}
-
-	//if vaultPath, err := exec.LookPath("vault"); err != nil {
-	//	r.CopyFromTo[vaultPath] = "/bin/"
-	//}
 
 	n.container, err = r.Start(context.Background())
 	if err != nil {
@@ -730,12 +712,6 @@ func NewDockerCluster(name string, base *vault.CoreConfig, opts *DockerClusterOp
 		return nil, err
 	}
 
-	// // TODO: compiling with command here
-	// buildDir := filepath.Join(cluster.TempDir, "build")
-	// if err := os.MkdirAll(caDir, 0755); err != nil {
-	// 	return nil, err
-	// }
-
 	var numCores int
 	if opts == nil || opts.NumCores == 0 {
 		numCores = DefaultNumCores
@@ -748,19 +724,10 @@ func NewDockerCluster(name string, base *vault.CoreConfig, opts *DockerClusterOp
 	}
 
 	cidr := "192.168.128.0/20"
-	//baseIP, _, err := net.ParseCIDR(cidr)
-	//baseIPv4 := baseIP.To4()
-	//if err != nil {
-	//	return nil, err
-	//}
 	for i := 0; i < numCores; i++ {
 		nodeID := fmt.Sprintf("vault-%d", i)
 		node := &DockerClusterNode{
-			NodeID: nodeID,
-			//Address: &net.TCPAddr{
-			//	IP: net.IPv4(baseIPv4[0], baseIPv4[1], baseIPv4[2], byte(i+2)),
-			//	Port: 8200,
-			//},
+			NodeID:  nodeID,
 			Cluster: &cluster,
 			WorkDir: filepath.Join(cluster.TempDir, nodeID),
 		}
@@ -786,14 +753,11 @@ func NewDockerCluster(name string, base *vault.CoreConfig, opts *DockerClusterOp
 	}
 
 	for _, node := range cluster.ClusterNodes {
-		// TODO: add test image path here to copy-from-CopyFromToto
 		pluginBinPath := ""
 		if opts != nil {
 			pluginBinPath = opts.PluginTestBin
 		}
 
-		// TODO: maybe don't need plugin here due to replication.. but need it on 1
-		// at least
 		err := node.Start(cli, caDir, netName, node, pluginBinPath)
 		if err != nil {
 			return nil, err
