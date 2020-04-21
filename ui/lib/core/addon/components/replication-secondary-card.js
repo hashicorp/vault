@@ -11,7 +11,7 @@ import layout from '../templates/components/replication-secondary-card';
 const STATES = {
   streamWals: 'stream-wals',
   idle: 'idle',
-  transientFailure: 'transient-failure',
+  transientFailure: 'transient_failure',
   shutdown: 'shutdown',
 };
 

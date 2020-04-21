@@ -12,7 +12,7 @@ export default Component.extend({
     return dr;
   }),
   isDisabled: computed('dr', function() {
-    if (this.dr.mode === 'disabled') {
+    if (this.dr.mode === 'disabled' || this.dr.mode === 'primary') {
       return true;
     }
     return false;

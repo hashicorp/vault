@@ -67,6 +67,7 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
   },
 
   transitionTo: computed('mode', 'replicationMode', function() {
+    // Take transitionTo outside of a yield because it unmounts the cluster and yield cannot return anything
     return () => this.router.transitionTo('vault.cluster');
   }),
 
@@ -77,7 +78,6 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
     } catch (e) {
       // TODO handle error
     }
-    // Take transitionTo outside of a yield because it unmounts the cluster and yield cannot return anything
     // if Secondary, handle transition here, if not, handle transition in mixin Enable
     if (mode === 'secondary') {
       this.transitionTo();
