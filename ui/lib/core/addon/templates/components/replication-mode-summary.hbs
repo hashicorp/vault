@@ -31,11 +31,11 @@
     </div>
     <div class="level-right">
       {{#if replicationEnabled}}
-        {{#if (get cluster (concat mode 'StateGlyph'))}}
-          <span class="{{if (get cluster (concat mode 'HasOkState')) "has-text-success" "has-text-danger"}}">
+        {{#if (cluster-states modeState)}}
+          <span class="{{if (get (cluster-states modeState) "isOk") "has-text-success" "has-text-danger"}}">
             <Icon
               aria-hidden="true"
-              @glyph={{get cluster (concat mode 'StateGlyph')}}
+              @glyph={{get (cluster-states modeState) "glyph"}}
             />
           </span>
         {{else if syncProgress}}
@@ -104,10 +104,8 @@
       {{#link-to "vault.cluster.replication.mode.index" cluster.name mode class="button is-primary"}}
         Enable
       {{/link-to}}
-    {{else if (eq mode 'dr')}}
-      {{cluster.drStateDisplay}}
-    {{else if (eq mode 'performance')}}
-      {{cluster.performanceStateDisplay}}
+    {{else}}
+      {{get (cluster-states modeState) "display"}}
     {{/if}}
   </div>
 {{/if}}

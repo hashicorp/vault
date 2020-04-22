@@ -48,4 +48,7 @@ export default Component.extend({
   clusterIdDisplay: replicationAttr('clusterIdDisplay'),
   mode: null,
   cluster: null,
+  modeState: computed('cluster', function() {
+    return this.cluster.modeState;
+  }),
 });

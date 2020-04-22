@@ -348,16 +348,16 @@
         <ReplicationPrimaryCard
           @title='State'
           @description='Updated every ten seconds.'
-          @glyph={{get cluster (concat replicationMode 'StateGlyph')}}
-          @hasOkState={{get cluster (concat replicationMode 'HasOkState')}}
-          @metric={{replicationAttrs.state}}/>
-        <ReplicationPrimaryCard
-          @title='Last WAL entry'
+          @glyph={{get (cluster-states replicationAttrs.state) "glyph"}}
+          @metric={{replicationAttrs.state}} />
+        <ReplicationPrimaryCard @title='Last WAL entry'
           @description='Index of last Write Ahead Logs entry written on local storage.'
-          @metric={{replicationAttrs.lastWAL}}/>
-        <KnownSecondariesCard @cluster={{cluster}} @replicationAttrs={{replicationAttrs}} />
+          @metric={{replicationAttrs.lastWAL}} />
+        <KnownSecondariesCard
+          @cluster={{cluster}}
+          @replicationAttrs={{replicationAttrs}} />
       </div>
-      <ReplicationTableRows @data={{replicationAttrs}}/>
+      <ReplicationTableRows @data={{replicationAttrs}} />
       <ReplicationDocLink />
     </div>
   {{/if}}

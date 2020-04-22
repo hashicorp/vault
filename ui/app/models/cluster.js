@@ -50,37 +50,17 @@ export default DS.Model.extend({
 
   anyReplicationEnabled: or('{dr,performance}.replicationEnabled'),
 
-  drStateDisplay: computed('dr.state', function() {
-    if (!state) {
-      return null;
+  modeState: computed(
+    'dr.mode',
+    'performance.mode',
+    'replicationMode',
+    'dr.state',
+    'performance.state',
+    function() {
+      const mode = this.replicationMode;
+      return this.get(`${mode}.state`);
     }
-
-    return clusterStates([this.get('dr.state')]).display || 'Synced';
-  }),
-
-  performanceStateDisplay: computed('performance.state', function() {
-    if (!state) {
-      return null;
-    }
-
-    return clusterStates([this.get('performance.state')]).display || 'Synced';
-  }),
-
-  drStateGlyph: computed('dr.state', function() {
-    return clusterStates([this.get('dr.state')]).glyph || 'check-circle-outline';
-  }),
-
-  performanceStateGlyph: computed('performance.state', function() {
-    return clusterStates([this.get('performance.state')]).glyph || 'check-circle-outline';
-  }),
-
-  drHasOkState: computed('dr.state', function() {
-    return clusterStates([this.get('dr.state')]).isOk || false;
-  }),
-
-  performanceHasOkState: computed('performance.state', function() {
-    return clusterStates([this.get('performance.state')]).isOk || false;
-  }),
+  ),
 
   dr: fragment('replication-attributes'),
   performance: fragment('replication-attributes'),
