@@ -15,7 +15,8 @@ import { computed } from '@ember/object';
  * ```
  * @param {string} [title=null] - The title to be displayed on the top left corner of the card.
  * @param {string} [description=null] - Helper text to describe the metric on the card.
- * @param {object} [glyph=null] - The glyph to display beside the metric.
+ * @param {string} [glyph=null] - The glyph to display beside the metric.
+ * @param {boolean} [hasOkState=true] - Whether or not the cluster is in an okay state. This comes from the cluster model.
  * @param {string} metric=null - The main metric to highlight on the card.
  */
 
@@ -25,11 +26,9 @@ export default Component.extend({
   description: null,
   metric: null,
   glyph: null,
-  hasError: computed('title', 'metric', function() {
-    // TODO: can we make a map somewhere in the cluster that keeps track of all the good and bad states
-    // as well as their glyphs? this could replace the cluster StateDiplay and StateGlyph
-    // TODO: then add tests to ensure we show the correct error msg
-    return this.title === 'State' && this.metric !== 'running';
+  hasOkState: true,
+  hasError: computed('hasOkState', 'title', 'metric', function() {
+    return this.title === 'State' && !this.hasOkState;
   }),
   errorMessage: computed('hasError', function() {
     // TODO figure out if we need another error message

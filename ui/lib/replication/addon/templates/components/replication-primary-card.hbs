@@ -9,7 +9,7 @@
     </span>
     <h3 class="title is-3">
       {{metric}}
-      {{#if glyph}}
+      {{#if (and glyph (not hasError))}}
         <Icon @glyph={{glyph}} class="has-text-success" />
       {{/if}}
     </h3>

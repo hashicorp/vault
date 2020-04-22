@@ -349,6 +349,7 @@
           @title='State'
           @description='Updated every ten seconds.'
           @glyph={{get cluster (concat replicationMode 'StateGlyph')}}
+          @hasOkState={{get cluster (concat replicationMode 'HasOkState')}}
           @metric={{replicationAttrs.state}}/>
         <ReplicationPrimaryCard
           @title='Last WAL entry'
