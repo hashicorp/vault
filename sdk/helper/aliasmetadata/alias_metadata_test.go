@@ -41,7 +41,7 @@ func TestGetAliasMetadata(t *testing.T) {
 	h := NewHandler(testFields)
 	expected := []string{"fizz", "buzz"}
 	sort.Strings(expected)
-	actual := h.GetAliasMetadata()
+	actual := h.AliasMetadata()
 	sort.Strings(actual)
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("expected %s but received %s", expected, actual)
@@ -63,7 +63,7 @@ func TestParseAliasMetadata(t *testing.T) {
 	}
 	expected := []string{"fizz", "buzz"}
 	sort.Strings(expected)
-	actual := h.GetAliasMetadata()
+	actual := h.AliasMetadata()
 	sort.Strings(actual)
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("expected %s but received %s", expected, actual)

@@ -15,6 +15,7 @@ package aliasmetadata
 */
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -64,51 +65,42 @@ func FieldSchema(fields *Fields) *framework.FieldSchema {
 	}
 }
 
-// NewHandler instantiates a Handler to be embedded in your config.
-func NewHandler(fields *Fields) Handler {
-	return &handler{
+func NewHandler(fields *Fields) *Handler {
+	return &Handler{
 		fields: fields,
 	}
 }
 
-// Handler is an interface for the helper methods you get on your
-// config when you embed the Handler.
-type Handler interface {
-	GetAliasMetadata() []string
-	ParseAliasMetadata(data *framework.FieldData) error
-	PopulateDesiredAliasMetadata(auth *logical.Auth, fieldValues map[string]string) error
-}
-
-type handler struct {
-	// AliasMetadata is an explicit list of all the user's configured
+type Handler struct {
+	// aliasMetadata is an explicit list of all the user's configured
 	// fields that are being added to alias metadata. It will never
 	// include the "default" parameter, and instead includes the actual
 	// fields behind "default", if selected. If it has never been set,
 	// the pointer will be nil.
-	AliasMetadata *[]string `json:"alias_metadata"`
+	aliasMetadata []string
 
 	// fields is a list of the configured default and available
 	// fields. It's intentionally not jsonified.
 	fields *Fields
 }
 
-// GetAliasMetadata is intended to be used on config reads.
+// AliasMetadata is intended to be used on config reads.
 // It gets an explicit list of all the user's configured
 // fields that are being added to alias metadata. It will never
 // include the "default" parameter, and instead includes the actual
 // fields behind "default", if selected.
-func (h *handler) GetAliasMetadata() []string {
-	if h.AliasMetadata == nil {
+func (h *Handler) AliasMetadata() []string {
+	if h.aliasMetadata == nil {
 		return h.fields.Default
 	}
-	return *h.AliasMetadata
+	return h.aliasMetadata
 }
 
 // ParseAliasMetadata is intended to be used on config create/update.
 // It takes a user's selected fields (or lack thereof),
-// converts it to a list of explicit fields, and adds it to the handler
+// converts it to a list of explicit fields, and adds it to the Handler
 // for later storage.
-func (h *handler) ParseAliasMetadata(data *framework.FieldData) error {
+func (h *Handler) ParseAliasMetadata(data *framework.FieldData) error {
 	userProvided, ok := data.GetOk(h.fields.FieldName)
 	if !ok {
 		// Nothing further to do here.
@@ -144,7 +136,7 @@ func (h *handler) ParseAliasMetadata(data *framework.FieldData) error {
 	// Fulfilling the pointer here flags that the user has made
 	// an explicit selection so we shouldn't just fall back to
 	// our defaults.
-	h.AliasMetadata = &aliasMetadata
+	h.aliasMetadata = aliasMetadata
 	return nil
 }
 
@@ -152,7 +144,7 @@ func (h *handler) ParseAliasMetadata(data *framework.FieldData) error {
 // just before returning an auth.
 // It takes the available alias metadata and,
 // if the auth should have it, adds it to the auth's alias metadata.
-func (h *handler) PopulateDesiredAliasMetadata(auth *logical.Auth, available map[string]string) error {
+func (h *Handler) PopulateDesiredAliasMetadata(auth *logical.Auth, available map[string]string) error {
 	if auth == nil {
 		return errors.New("auth is nil")
 	}
@@ -168,14 +160,35 @@ func (h *handler) PopulateDesiredAliasMetadata(auth *logical.Auth, available map
 		auth.Alias.Metadata = make(map[string]string)
 	}
 	fieldsToInclude := h.fields.Default
-	if h.AliasMetadata != nil {
-		fieldsToInclude = *h.AliasMetadata
+	if h.aliasMetadata != nil {
+		fieldsToInclude = h.aliasMetadata
 	}
 	for availableField, itsValue := range available {
 		if strutil.StrListContains(fieldsToInclude, availableField) {
 			auth.Alias.Metadata[availableField] = itsValue
 		}
 	}
+	return nil
+}
+
+func (h *Handler) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		AliasMetadata []string `json:"alias_metadata"`
+	}{
+		AliasMetadata: h.aliasMetadata,
+	})
+}
+
+func (h *Handler) UnmarshalJSON(data []byte) error {
+	jsonable := &struct {
+		AliasMetadata []string `json:"alias_metadata"`
+	}{
+		AliasMetadata: h.aliasMetadata,
+	}
+	if err := json.Unmarshal(data, jsonable); err != nil {
+		return err
+	}
+	h.aliasMetadata = jsonable.AliasMetadata
 	return nil
 }
 

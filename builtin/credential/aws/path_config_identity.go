@@ -118,9 +118,9 @@ func pathConfigIdentityRead(ctx context.Context, req *logical.Request, _ *framew
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"iam_alias":                      config.IAMAlias,
-			iamAliasMetadataFields.FieldName: config.IAMAliasMetadataHandler.GetAliasMetadata(),
+			iamAliasMetadataFields.FieldName: config.IAMAliasMetadataHandler.AliasMetadata(),
 			"ec2_alias":                      config.EC2Alias,
-			ec2AliasMetadataFields.FieldName: config.EC2AliasMetadataHandler.GetAliasMetadata(),
+			ec2AliasMetadataFields.FieldName: config.EC2AliasMetadataHandler.AliasMetadata(),
 		},
 	}, nil
 }
@@ -171,10 +171,10 @@ func pathConfigIdentityUpdate(ctx context.Context, req *logical.Request, data *f
 }
 
 type identityConfig struct {
-	IAMAlias                string                `json:"iam_alias"`
-	IAMAliasMetadataHandler aliasmetadata.Handler `json:"iam_alias_metadata_handler"`
-	EC2Alias                string                `json:"ec2_alias"`
-	EC2AliasMetadataHandler aliasmetadata.Handler `json:"ec2_alias_metadata_handler"`
+	IAMAlias                string                 `json:"iam_alias"`
+	IAMAliasMetadataHandler *aliasmetadata.Handler `json:"iam_alias_metadata_handler"`
+	EC2Alias                string                 `json:"ec2_alias"`
+	EC2AliasMetadataHandler *aliasmetadata.Handler `json:"ec2_alias_metadata_handler"`
 }
 
 const identityAliasIAMUniqueID = "unique_id"

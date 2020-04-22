@@ -359,14 +359,14 @@ func TestAcceptance(t *testing.T) {
 	}
 }
 
-// We expect people to embed the handler on their
+// We expect people to embed the Handler on their
 // config so it automatically makes its helper methods
 // available and easy to find wherever the config is
 // needed. Explicitly naming it in json avoids it
 // automatically being named "Handler" by Go's JSON
 // marshalling library.
 type fakeConfig struct {
-	Handler `json:"alias_metadata_handler"`
+	*Handler `json:"alias_metadata_handler"`
 }
 
 type fakeBackend struct {
@@ -411,7 +411,7 @@ func configPath() *framework.Path {
 					// alias metadata is when unconfigured.
 					return &logical.Response{
 						Data: map[string]interface{}{
-							aliasMetadataFields.FieldName: conf.GetAliasMetadata(),
+							aliasMetadataFields.FieldName: conf.AliasMetadata(),
 						},
 					}, nil
 				},
