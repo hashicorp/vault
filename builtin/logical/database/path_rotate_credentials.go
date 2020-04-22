@@ -76,6 +76,16 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 			return nil, err
 		}
 
+		defer func() {
+			// Close the plugin
+			db.closed = true
+			if err := db.Database.Close(); err != nil {
+				b.Logger().Error("error closing the database plugin connection", "err", err)
+			}
+			// Even on error, still remove the connection
+			delete(b.connections, name)
+		}()
+
 		// Take out the backend lock since we are swapping out the connection
 		b.Lock()
 		defer b.Unlock()
@@ -134,14 +144,6 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 		if err := framework.DeleteWAL(ctx, req.Storage, walID); err != nil {
 			b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walID)
 		}
-
-		// Close the plugin
-		db.closed = true
-		if err := db.Database.Close(); err != nil {
-			b.Logger().Error("error closing the database plugin connection", "err", err)
-		}
-		// Even on error, still remove the connection
-		delete(b.connections, name)
 
 		return nil, nil
 	}
