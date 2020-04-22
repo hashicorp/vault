@@ -8,12 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/grpc/status"
-
-	"github.com/hashicorp/errwrap"
-
 	metrics "github.com/armon/go-metrics"
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"google.golang.org/grpc/status"
 )
 
 // ---- Tracing Middleware Domain ----

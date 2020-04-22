@@ -226,9 +226,7 @@ func (b *databaseBackend) invalidate(ctx context.Context, key string) {
 	}
 }
 
-func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage,
-	name string) (*dbPluginInstance, error) {
-
+func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, name string) (*dbPluginInstance, error) {
 	config, err := b.DatabaseConfig(ctx, s, name)
 	if err != nil {
 		return nil, err
@@ -237,9 +235,7 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage,
 	return b.GetConnectionWithConfig(ctx, name, config)
 }
 
-func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name string,
-	config *DatabaseConfig) (*dbPluginInstance, error) {
-
+func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name string, config *DatabaseConfig) (*dbPluginInstance, error) {
 	b.RLock()
 	unlockFunc := b.RUnlock
 	defer func() { unlockFunc() }()

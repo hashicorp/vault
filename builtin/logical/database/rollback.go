@@ -3,12 +3,12 @@ package database
 import (
 	"context"
 	"errors"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // WAL storage key used for the rollback of root database credentials
@@ -26,9 +26,7 @@ type rotateRootCredentialsWAL struct {
 // to rotate the root credentials of a database. It is responsible
 // for rolling back root database credentials when doing so would
 // reconcile the credentials with Vault storage.
-func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request, kind string,
-	data interface{}) error {
-
+func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request, kind string, data interface{}) error {
 	if kind != rotateRootWALKey {
 		return errors.New("unknown type to rollback")
 	}
@@ -78,9 +76,7 @@ func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request,
 // the connection associated with the passed WAL entry. It will creates
 // a connection to the database using the WAL entry new password in
 // order to alter the password to be the WAL entry old password.
-func (b *databaseBackend) rollbackDatabaseCredentials(ctx context.Context, config *DatabaseConfig,
-	entry rotateRootCredentialsWAL) error {
-
+func (b *databaseBackend) rollbackDatabaseCredentials(ctx context.Context, config *DatabaseConfig, entry rotateRootCredentialsWAL) error {
 	// Attempt to get a connection with the WAL entry new password.
 	config.ConnectionDetails["password"] = entry.NewPassword
 	dbc, err := b.GetConnectionWithConfig(ctx, entry.ConnectionName, config)
@@ -101,15 +97,16 @@ func (b *databaseBackend) rollbackDatabaseCredentials(ctx context.Context, confi
 		Username: entry.UserName,
 		Password: entry.OldPassword,
 	}
-	_, _, err = dbc.SetCredentials(ctx, statements, userConfig)
+	if _, _, err := dbc.SetCredentials(ctx, statements, userConfig); err != nil {
+		// If the database plugin doesn't implement SetCredentials, the root
+		// credentials can't be rolled back. This means the root credential
+		// rotation happened via the plugin RotateRootCredentials RPC.
+		if status.Code(err) == codes.Unimplemented {
+			return nil
+		}
 
-	// If the database plugin doesn't implement SetCredentials,
-	// the root credentials can't be rolled back. This means
-	// the root credential rotation happened via the plugin
-	// RotateRootCredentials RPC.
-	if err != nil && status.Code(err) == codes.Unimplemented {
-		return nil
+		return err
 	}
 
-	return err
+	return nil
 }

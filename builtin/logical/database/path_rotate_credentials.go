@@ -110,17 +110,15 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 			Username: userName,
 			Password: newPassword,
 		}
-		_, _, err = db.SetCredentials(ctx, statements, userConfig)
-
-		// Fall back to using RotateRootCredentials if unimplemented
-		if err != nil && status.Code(err) == codes.Unimplemented {
-			config.ConnectionDetails, err = db.RotateRootCredentials(ctx,
-				config.RootCredentialsRotateStatements)
-		}
-
-		// Handle any error from the root credential rotation
-		if err != nil {
-			return nil, err
+		if _, _, err := db.SetCredentials(ctx, statements, userConfig); err != nil {
+			if status.Code(err) == codes.Unimplemented {
+				// Fall back to using RotateRootCredentials if unimplemented
+				config.ConnectionDetails, err = db.RotateRootCredentials(ctx,
+					config.RootCredentialsRotateStatements)
+			}
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		// Update storage with the new root credentials
