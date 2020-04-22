@@ -1,5 +1,8 @@
 import { helper as buildHelper } from '@ember/component/helper';
 
+// A hash of cluster states to ensure that the status menu and replication dashboards
+// display states and glyphs consistently
+
 export const CLUSTER_STATES = {
   running: {
     glyph: 'check-circle-outline',
@@ -7,7 +10,7 @@ export const CLUSTER_STATES = {
     isSyncing: false,
   },
   'stream-wals': {
-    glyph: 'android-sync',
+    glyph: 'check-circle-outline',
     display: 'Streaming',
     isOk: true,
     isSyncing: false,
