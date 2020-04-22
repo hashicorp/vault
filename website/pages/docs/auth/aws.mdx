@@ -236,8 +236,10 @@ Here are some comparisons that illustrate why `iam` method is preferred over
     are launched in an IAM role, or even EC2 instances that are launched in an
     IAM instance profile. However, because it authenticates more generalized IAM
     principals, this method doesn't offer more granular controls beyond binding
-    to a given IAM principal without the use of inferencing.
-- How the entities are authenticated
+    to a given IAM principal without the use of inferencing. Because it is not
+    possible to authenticate IAM groups with `GetCallerIdentity`, users can only
+    be authenticated directly by an IAM user or an assumed IAM role.
+- How the entities are authenticated:
   - The ec2 auth method authenticates instances by making use of the EC2
     instance identity document, which is a cryptographically signed document
     containing metadata about the instance. This document changes relatively
@@ -584,7 +586,7 @@ The IAM account or role to which the credentials map must allow the
 $ vault write auth/aws/config/client secret_key=vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj access_key=VKIAJBRHKH6EVTTNXDHA
 ```
 
-#### Configure the policies on the role.
+#### Configure the policies on the role
 
 ```
 $ vault write auth/aws/role/dev-role auth_type=ec2 bound_ami_id=ami-fce3c696 policies=prod,dev max_ttl=500h
@@ -615,16 +617,23 @@ $ vault login -method=aws header_value=vault.example.com role=dev-role-iam
 
 This assumes you have AWS credentials configured in the standard locations AWS
 SDKs search for credentials (environment variables, ~/.aws/credentials, IAM
-instance profile, or ECS task role, in that order). If you do not have IAM
-credentials available at any of these locations, you can explicitly pass them
-in on the command line (though this is not recommended), omitting
-`aws_security_token` if not applicable.
+instance profile, or ECS task role, in that order; note that ~/.aws/config is
+ignored). If you do not have IAM credentials available at any of these
+locations, you can explicitly pass them in on the command line (though this is
+not recommended), omitting `aws_security_token` if not applicable.
 
 ```
 $ vault login -method=aws header_value=vault.example.com role=dev-role-iam \
         aws_access_key_id=<access_key> \
         aws_secret_access_key=<secret_key> \
         aws_security_token=<security_token>
+```
+
+To authenticate as a user you can either setup IAM principal to your IAM user or
+assume an IAM role. To manually assume an IAM role using AWS CLI use:
+
+```
+$ aws sts assume-role --role-arn arn:aws:iam::123456789012:role/MyRole --role-session-name MyRole
 ```
 
 The region used defaults to `us-east-1`, but you can specify a custom region like so:
