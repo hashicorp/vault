@@ -5,6 +5,17 @@ import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
 const { hasMany, attr } = DS;
 
+const STATES = {
+  running: { glyph: 'check-circle-outline', isOk: true },
+  'stream-wals': { glyph: 'android-sync', display: 'Streaming', isOk: true },
+  'merkle-diff': { glyph: 'android-sync', display: 'Determining sync status', isOk: true },
+  connecting: { glyph: 'android-sync', display: 'Streaming', isOk: true },
+  'merkle-sync': { glyph: 'android-sync', display: 'Syncing', isOk: true },
+  idle: { glyph: 'cancel-circle-fill', isOk: false },
+  'transient-failure': { glyph: 'cancel-circle-fill', isOk: false },
+  shutdown: { glyph: 'cancel-circle-fill', isOk: false },
+};
+
 export default DS.Model.extend({
   version: service(),
 
@@ -54,13 +65,8 @@ export default DS.Model.extend({
       return null;
     }
     const defaultDisp = 'Synced';
-    const displays = {
-      'stream-wals': 'Streaming',
-      'merkle-diff': 'Determining sync status',
-      'merkle-sync': 'Syncing',
-    };
 
-    return displays[state] || defaultDisp;
+    return STATES[state].display || defaultDisp;
   },
 
   drStateDisplay: computed('dr.state', function() {
@@ -73,14 +79,7 @@ export default DS.Model.extend({
 
   stateGlyph(state) {
     const glyph = 'check-circle-outline';
-
-    const glyphs = {
-      'stream-wals': 'android-sync',
-      'merkle-diff': 'android-sync',
-      'merkle-sync': null,
-    };
-
-    return glyphs[state] || glyph;
+    return STATES[state].glyph || glyph;
   },
 
   drStateGlyph: computed('dr.state', function() {
@@ -89,6 +88,18 @@ export default DS.Model.extend({
 
   performanceStateGlyph: computed('performance.state', function() {
     return this.stateGlyph(this.get('performance.state'));
+  }),
+
+  hasOkState(state) {
+    return STATES[state].isOk || false;
+  },
+
+  drHasOkState: computed('dr.state', function() {
+    return this.hasOkState(this.get('dr.state'));
+  }),
+
+  performanceHasOkState: computed('performance.state', function() {
+    return this.hasOkState(this.get('performance.state'));
   }),
 
   dr: fragment('replication-attributes'),

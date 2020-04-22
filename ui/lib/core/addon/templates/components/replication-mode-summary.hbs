@@ -32,7 +32,7 @@
     <div class="level-right">
       {{#if replicationEnabled}}
         {{#if (get cluster (concat mode 'StateGlyph'))}}
-          <span class="has-text-success">
+          <span class="{{if (get cluster (concat mode 'HasOkState')) "has-text-success" "has-text-danger"}}">
             <Icon
               aria-hidden="true"
               @glyph={{get cluster (concat mode 'StateGlyph')}}
