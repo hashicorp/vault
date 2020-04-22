@@ -4,17 +4,7 @@ import { get, computed } from '@ember/object';
 import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
 const { hasMany, attr } = DS;
-
-const STATES = {
-  running: { glyph: 'check-circle-outline', isOk: true },
-  'stream-wals': { glyph: 'android-sync', display: 'Streaming', isOk: true },
-  'merkle-diff': { glyph: 'android-sync', display: 'Determining sync status', isOk: true },
-  connecting: { glyph: 'android-sync', display: 'Streaming', isOk: true },
-  'merkle-sync': { glyph: 'android-sync', display: 'Syncing', isOk: true },
-  idle: { glyph: 'cancel-circle-fill', isOk: false },
-  'transient-failure': { glyph: 'cancel-circle-fill', isOk: false },
-  shutdown: { glyph: 'cancel-circle-fill', isOk: false },
-};
+import { clusterStates } from 'core/helpers/cluster-states';
 
 export default DS.Model.extend({
   version: service(),
@@ -66,7 +56,7 @@ export default DS.Model.extend({
     }
     const defaultDisp = 'Synced';
 
-    return STATES[state].display || defaultDisp;
+    return clusterStates([state]).display || defaultDisp;
   },
 
   drStateDisplay: computed('dr.state', function() {
@@ -79,7 +69,7 @@ export default DS.Model.extend({
 
   stateGlyph(state) {
     const glyph = 'check-circle-outline';
-    return STATES[state].glyph || glyph;
+    return clusterStates([state]).glyph || glyph;
   },
 
   drStateGlyph: computed('dr.state', function() {
@@ -91,7 +81,7 @@ export default DS.Model.extend({
   }),
 
   hasOkState(state) {
-    return STATES[state].isOk || false;
+    return clusterStates([state]).isOk || false;
   },
 
   drHasOkState: computed('dr.state', function() {
