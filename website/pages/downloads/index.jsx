@@ -5,6 +5,9 @@ import Head from 'next/head'
 import HashiHead from '@hashicorp/react-head'
 
 export default function DownloadsPage({ downloadData }) {
+  const changelogUrl = CHANGELOG_URL.length
+    ? CHANGELOG_URL
+    : `https://github.com/hashicorp/vault/blob/v${VERSION}/CHANGELOG.md`
   return (
     <div id="p-downloads" className="g-container">
       <HashiHead is={Head} title="Downloads | Vault by Hashicorp" />
@@ -12,7 +15,7 @@ export default function DownloadsPage({ downloadData }) {
         product="Vault"
         version={VERSION}
         downloads={downloadData}
-        changelog={CHANGELOG_URL}
+        changelog={changelogUrl}
       />
     </div>
   )
