@@ -85,7 +85,7 @@ type handler struct {
 	// include the "default" parameter, and instead includes the actual
 	// fields behind "default", if selected. If it has never been set,
 	// the pointer will be nil.
-	AliasMetadata *[]string `json:"alias_metadata"`
+	AliasMetadata []string `json:"alias_metadata"`
 
 	// fields is a list of the configured default and available
 	// fields. It's intentionally not jsonified.
@@ -101,7 +101,7 @@ func (h *handler) GetAliasMetadata() []string {
 	if h.AliasMetadata == nil {
 		return h.fields.Default
 	}
-	return *h.AliasMetadata
+	return h.AliasMetadata
 }
 
 // ParseAliasMetadata is intended to be used on config create/update.
@@ -144,7 +144,7 @@ func (h *handler) ParseAliasMetadata(data *framework.FieldData) error {
 	// Fulfilling the pointer here flags that the user has made
 	// an explicit selection so we shouldn't just fall back to
 	// our defaults.
-	h.AliasMetadata = &aliasMetadata
+	h.AliasMetadata = aliasMetadata
 	return nil
 }
 
@@ -169,7 +169,7 @@ func (h *handler) PopulateDesiredAliasMetadata(auth *logical.Auth, available map
 	}
 	fieldsToInclude := h.fields.Default
 	if h.AliasMetadata != nil {
-		fieldsToInclude = *h.AliasMetadata
+		fieldsToInclude = h.AliasMetadata
 	}
 	for availableField, itsValue := range available {
 		if strutil.StrListContains(fieldsToInclude, availableField) {
