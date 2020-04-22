@@ -108,8 +108,6 @@ func TestBackend_basicSTS(t *testing.T) {
 			testAccStepReadSTSWithArnPolicy(t, "test"),
 			testAccStepWriteArnRoleRef(t, "test2", roleName, awsAccountID),
 			testAccStepRead(t, "sts", "test2", []credentialTestFunc{describeInstancesTest}),
-			// TODO(tvoran): add testAccStepWriteGroupRoleRef?
-			// testAccStepRead(t, "sts", "test3", []credentialTestFunc{}),
 		},
 		Teardown: func() error {
 			if err := deleteTestRole(roleName); err != nil {
@@ -1232,6 +1230,42 @@ func TestBackend_FederationTokenWithPolicyARN(t *testing.T) {
 			testAccStepRead(t, "creds", "test", []credentialTestFunc{listDynamoTablesTest, describeAzsTestUnauthorized}),
 		},
 		Teardown: func() error {
+			return deleteTestUser(accessKey, userName)
+		},
+	})
+}
+
+func TestBackend_FederationTokenWithGroups(t *testing.T) {
+	t.Parallel()
+	userName := generateUniqueName(t.Name())
+	groupName := generateUniqueName(t.Name())
+	accessKey := &awsAccessKey{}
+
+	roleData := map[string]interface{}{
+		"iam_groups":      []string{groupName},
+		"credential_type": federationTokenCred,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createUser(t, userName, accessKey)
+			createGroup(t, groupName, "", []string{dynamoPolicyArn})
+			// Sleep sometime because AWS is eventually consistent
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+		},
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigWithCreds(t, accessKey),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{listDynamoTablesTest, describeAzsTestUnauthorized}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{listDynamoTablesTest, describeAzsTestUnauthorized}),
+		},
+		Teardown: func() error {
+			if err := deleteTestGroup(groupName); err != nil {
+				return err
+			}
 			return deleteTestUser(accessKey, userName)
 		},
 	})
