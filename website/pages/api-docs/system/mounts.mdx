@@ -29,48 +29,78 @@ $ curl \
 
 ```json
 {
-  "aws/": {
-    "type": "aws",
-    "description": "AWS keys",
-    "config": {
-      "default_lease_ttl": 0,
-      "max_lease_ttl": 0,
-      "force_no_cache": false,
-      "seal_wrap": false
-    }
-  },
-  "sys/": {
-    "type": "system",
-    "description": "system endpoint",
-    "config": {
-      "default_lease_ttl": 0,
-      "max_lease_ttl": 0,
-      "force_no_cache": false,
-      "seal_wrap": false
-    }
-  },
+  "request_id": "48d2c601-97a0-3904-f549-4fcbc740d718",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
   "data": {
-    "aws/": {
-      "type": "aws",
-      "description": "AWS keys",
+    "cubbyhole/": {
+      "accessor": "cubbyhole_eb4503de",
       "config": {
         "default_lease_ttl": 0,
-        "max_lease_ttl": 0,
         "force_no_cache": false,
-        "seal_wrap": false
-      }
+        "max_lease_ttl": 0
+      },
+      "description": "per-token private secret storage",
+      "external_entropy_access": false,
+      "local": true,
+      "options": null,
+      "seal_wrap": false,
+      "type": "cubbyhole",
+      "uuid": "79ddaa52-fa07-6f19-653a-f0777f6439fd"
+    },
+    "identity/": {
+      "accessor": "identity_68a03448",
+      "config": {
+        "default_lease_ttl": 0,
+        "force_no_cache": false,
+        "max_lease_ttl": 0
+      },
+      "description": "identity store",
+      "external_entropy_access": false,
+      "local": false,
+      "options": null,
+      "seal_wrap": false,
+      "type": "identity",
+      "uuid": "45f79a67-58f7-3f87-892c-9032084e7801"
+    },
+    "secret/": {
+      "accessor": "kv_aedd93c1",
+      "config": {
+        "default_lease_ttl": 0,
+        "force_no_cache": false,
+        "max_lease_ttl": 0
+      },
+      "description": "key/value secret storage",
+      "external_entropy_access": false,
+      "local": false,
+      "options": {
+        "version": "2"
+      },
+      "seal_wrap": false,
+      "type": "kv",
+      "uuid": "8074a73f-6921-c0cd-589a-016405dc46ec"
     },
     "sys/": {
-      "type": "system",
-      "description": "system endpoint",
+      "accessor": "system_f8df2902",
       "config": {
         "default_lease_ttl": 0,
-        "max_lease_ttl": 0,
         "force_no_cache": false,
-        "seal_wrap": false
-      }
+        "max_lease_ttl": 0,
+        "passthrough_request_headers": [
+          "Accept"
+        ]
+      },
+      "description": "system endpoints used for control, policy and debugging",
+      "external_entropy_access": false,
+      "local": false,
+      "options": null,
+      "seal_wrap": false,
+      "type": "system",
+      "uuid": "c79f4f66-4cfa-4521-9d31-b1238b0a6800"
     }
-  }
+  },
+  "warnings": null
 }
 ```
 
