@@ -50,46 +50,36 @@ export default DS.Model.extend({
 
   anyReplicationEnabled: or('{dr,performance}.replicationEnabled'),
 
-  stateDisplay(state) {
+  drStateDisplay: computed('dr.state', function() {
     if (!state) {
       return null;
     }
-    const defaultDisp = 'Synced';
 
-    return clusterStates([state]).display || defaultDisp;
-  },
-
-  drStateDisplay: computed('dr.state', function() {
-    return this.stateDisplay(this.get('dr.state'));
+    return clusterStates([this.get('dr.state')]).display || 'Synced';
   }),
 
   performanceStateDisplay: computed('performance.state', function() {
-    return this.stateDisplay(this.get('performance.state'));
+    if (!state) {
+      return null;
+    }
+
+    return clusterStates([this.get('performance.state')]).display || 'Synced';
   }),
 
-  stateGlyph(state) {
-    const glyph = 'check-circle-outline';
-    return clusterStates([state]).glyph || glyph;
-  },
-
   drStateGlyph: computed('dr.state', function() {
-    return this.stateGlyph(this.get('dr.state'));
+    return clusterStates([this.get('dr.state')]).glyph || 'check-circle-outline';
   }),
 
   performanceStateGlyph: computed('performance.state', function() {
-    return this.stateGlyph(this.get('performance.state'));
+    return clusterStates([this.get('performance.state')]).glyph || 'check-circle-outline';
   }),
 
-  hasOkState(state) {
-    return clusterStates([state]).isOk || false;
-  },
-
   drHasOkState: computed('dr.state', function() {
-    return this.hasOkState(this.get('dr.state'));
+    return clusterStates([this.get('dr.state')]).isOk || false;
   }),
 
   performanceHasOkState: computed('performance.state', function() {
-    return this.hasOkState(this.get('performance.state'));
+    return clusterStates([this.get('performance.state')]).isOk || false;
   }),
 
   dr: fragment('replication-attributes'),
