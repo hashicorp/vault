@@ -2,11 +2,11 @@
   <div class="container is-widescreen">
     {{!-- ARG TODO setup error state and return --}}
     <ReplicationPage @model={{model}} as |Page|>
-      <Page.header 
+      <Page.header
         @showTabs={{false}}
       />
       <Page.toggle />
-      <Page.dashboard 
+      <Page.dashboard
       {{!-- passing in component to render so that the yielded components are flexible based on the dashboard --}}
         @componentToRender='replication-secondary-card' as |Dashboard|>
         <Dashboard.card
@@ -16,7 +16,7 @@
           @title="Write-Ahead Logs (WALs)"
         />
         {{#if Dashboard.isSyncing }}
-          <AlertBanner 
+          <AlertBanner
             @title="Syncing in progress"
             @type="info"
             @secondIconType="loading"
