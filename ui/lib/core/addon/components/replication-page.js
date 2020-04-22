@@ -2,8 +2,17 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 import layout from '../templates/components/replication-page';
 
+const MODE = {
+  dr: 'Disaster Recovery',
+  performance: 'Performance',
+};
+
 export default Component.extend({
   layout,
+  mode: computed('model', function() {
+    let mode = this.model.rm.mode;
+    return MODE[mode];
+  }),
   dr: computed('model', function() {
     let dr = this.model.dr;
     if (!dr) {
@@ -17,16 +26,10 @@ export default Component.extend({
     }
     return false;
   }),
-  title: computed('model', function() {
-    let mode = this.model.rm.mode;
-    if (mode === 'dr') {
-      return 'Disaster Recovery';
-    } else if (mode === 'performance') {
-      return 'Performance';
-    }
-    return 'unknown';
-  }),
   message: computed('model', function() {
-    return 'This Disaster Recovery secondary has not been enabled.  You can do so from the Disaster Recovery Primary.';
+    if (this.model.anyReplicationEnabled) {
+      return 'This Disaster Recovery secondary has not been enabled.  You can do so from the Disaster Recovery Primary.';
+    }
+    return `This cluster has not been enabled as a ${this.mode} Secondary. You can do so by enabling replication and adding a secondary from the ${this.mode} Primary.`;
   }),
 });
