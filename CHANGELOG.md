@@ -9,6 +9,10 @@ IMPROVEMENTS:
 
 * secrets/gcp: Support BigQuery dataset ACLs in absence of IAM endpoints [[GH-78](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/78)]
 
+BUG FIXES:
+
+* secrets/database: Fix issue where rotating root database credentials while Vault's storage backend is unavailable causes Vault to lose access to the database [[GH-8782](https://github.com/hashicorp/vault/pull/8782)]
+
 ## 1.4.1 (TBD)
 
 CHANGES: 
