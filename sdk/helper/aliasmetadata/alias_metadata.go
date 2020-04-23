@@ -75,8 +75,8 @@ type Handler struct {
 	// aliasMetadata is an explicit list of all the user's configured
 	// fields that are being added to alias metadata. It will never
 	// include the "default" parameter, and instead includes the actual
-	// fields behind "default", if selected. If it has never been set,
-	// the pointer will be nil.
+	// fields behind "default", if selected. If it has never been set
+	// or only the default fields are desired, it is nil.
 	aliasMetadata []string
 
 	// fields is a list of the configured default and available
@@ -101,18 +101,30 @@ func (h *Handler) AliasMetadata() []string {
 // converts it to a list of explicit fields, and adds it to the Handler
 // for later storage.
 func (h *Handler) ParseAliasMetadata(data *framework.FieldData) error {
-	userProvided, ok := data.GetOk(h.fields.FieldName)
+	userProvidedRaw, ok := data.GetOk(h.fields.FieldName)
 	if !ok {
 		// Nothing further to do here.
+		return nil
+	}
+	userProvided, ok := userProvidedRaw.([]string)
+	if !ok {
+		return fmt.Errorf("%s is an unexpected type of %T", userProvidedRaw, userProvidedRaw)
+	}
+
+	// If the only field the user has chosen was the default field,
+	// we don't store anything so we won't have to do a storage
+	// migration if the default changes.
+	if len(userProvided) == 1 && userProvided[0] == "default" {
+		h.aliasMetadata = nil
 		return nil
 	}
 
 	// uniqueFields protects against weird edge cases like if
 	// a user provided "default,field1,field2,default".
 	uniqueFields := make(map[string]bool)
-	for _, field := range userProvided.([]string) {
+	for _, field := range userProvided {
 		if field == "default" {
-			// Add the fields that "default" represents, rather
+			// Add the field that "default" represents, rather
 			// than the explicit field.
 			for _, dfltField := range h.fields.Default {
 				uniqueFields[dfltField] = true
@@ -134,8 +146,7 @@ func (h *Handler) ParseAliasMetadata(data *framework.FieldData) error {
 		i++
 	}
 	// Fulfilling the pointer here flags that the user has made
-	// an explicit selection so we shouldn't just fall back to
-	// our defaults.
+	// a non-default selection.
 	h.aliasMetadata = aliasMetadata
 	return nil
 }
