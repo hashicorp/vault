@@ -76,6 +76,7 @@ enabled while creating or updating a role.
 - `enable_local_secret_ids` `(bool: false)` - If set, the secret IDs generated
   using this role will be cluster local. This can only be set during role
   creation and once set, it can't be reset later.
+- `policies` `(array: [] or comma-delimited string: "")` - List of policies to encode onto generated tokens. Depending on the auth method, this list may be supplemented by user/group/other values.
 
 @include 'partials/tokenfields.mdx'
 
@@ -85,7 +86,7 @@ enabled while creating or updating a role.
 {
   "token_ttl": "10m",
   "token_max_ttl": "15m",
-  "token_policies": ["default"],
+  "policies": ["default"],
   "period": 0,
   "bind_secret_id": true
 }
