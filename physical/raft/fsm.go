@@ -281,6 +281,8 @@ func (f *FSM) DeletePrefix(ctx context.Context, prefix string) error {
 
 // Get retrieves the value at the given path from the bolt file.
 func (f *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
+	// TODO: Remove this outdated metric name in an older release
+	defer metrics.MeasureSince([]string{"raft", "get"}, time.Now())
 	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "get"}, time.Now())
 
 	f.l.RLock()
@@ -328,6 +330,8 @@ func (f *FSM) Put(ctx context.Context, entry *physical.Entry) error {
 
 // List retrieves the set of keys with the given prefix from the bolt file.
 func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
+	// TODO: Remove this outdated metric name in an older release
+	defer metrics.MeasureSince([]string{"raft", "list"}, time.Now())
 	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "list"}, time.Now())
 
 	f.l.RLock()
