@@ -81,8 +81,12 @@ GetFederationToken API call, acting as a filter on permissions available.`,
 			},
 
 			"iam_groups": &framework.FieldSchema{
-				Type:        framework.TypeCommaStringSlice,
-				Description: `Names of IAM groups that generated IAM users will be added to.`,
+				Type: framework.TypeCommaStringSlice,
+				Description: `Names of IAM groups that generated IAM users will be added to. For a credential
+type of assumed_role or federation_token, the policies sent to the
+corresponding AWS call (sts:AssumeRole or sts:GetFederation) will be the
+policies from each group in iam_groups combined with the policy_document
+and policy_arns parameters.`,
 			},
 
 			"default_sts_ttl": &framework.FieldSchema{
