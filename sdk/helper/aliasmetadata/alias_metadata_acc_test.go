@@ -12,31 +12,39 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+type environment struct {
+	ctx     context.Context
+	storage logical.Storage
+	backend logical.Backend
+}
+
 func TestAcceptance(t *testing.T) {
 	ctx := context.Background()
 	storage := &logical.InmemStorage{}
-
-	b := &fakeBackend{
-		Backend: &framework.Backend{
-			Paths: []*framework.Path{
-				configPath(),
-				loginPath(),
-			},
-		},
-	}
-	if err := b.Setup(ctx, &logical.BackendConfig{
-		StorageView: storage,
-		Logger:      hclog.Default(),
-	}); err != nil {
+	b, err := backend(ctx, storage)
+	if err != nil {
 		t.Fatal(err)
 	}
+	env := &environment{
+		ctx:     ctx,
+		storage: storage,
+		backend: b,
+	}
+	t.Run("test initial fields are default", env.TestInitialFieldsAreDefault)
+	t.Run("test fields can be unset", env.TestAliasMetadataCanBeUnset)
+	t.Run("test defaults can be restored", env.TestDefaultCanBeReused)
+	t.Run("test default plus more can be selected", env.TestDefaultPlusMoreCanBeSelected)
+	t.Run("test only non-defaults can be selected", env.TestOnlyNonDefaultsCanBeSelected)
+	t.Run("test bad field results in useful error", env.TestAddingBadField)
+}
 
+func (e *environment) TestInitialFieldsAreDefault(t *testing.T) {
 	// On the first read of alias_metadata, when nothing has been touched,
 	// we should receive the default field(s) if a read is performed.
-	resp, err := b.HandleRequest(ctx, &logical.Request{
+	resp, err := e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "config",
-		Storage:   storage,
+		Storage:   e.storage,
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
@@ -52,10 +60,10 @@ func TestAcceptance(t *testing.T) {
 	}
 
 	// The auth should only have the default metadata.
-	resp, err = b.HandleRequest(ctx, &logical.Request{
+	resp, err = e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
-		Storage:   storage,
+		Storage:   e.storage,
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
@@ -75,13 +83,15 @@ func TestAcceptance(t *testing.T) {
 	if resp.Auth.Alias.Metadata["role_name"] != "something" {
 		t.Fatal("expected role_name to be something")
 	}
+}
 
+func (e *environment) TestAliasMetadataCanBeUnset(t *testing.T) {
 	// We should be able to set the alias_metadata to empty by sending an
 	// explicitly empty array.
-	resp, err = b.HandleRequest(ctx, &logical.Request{
+	resp, err := e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
-		Storage:   storage,
+		Storage:   e.storage,
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
@@ -97,10 +107,10 @@ func TestAcceptance(t *testing.T) {
 	}
 
 	// Now we should receive no fields for alias_metadata.
-	resp, err = b.HandleRequest(ctx, &logical.Request{
+	resp, err = e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "config",
-		Storage:   storage,
+		Storage:   e.storage,
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
@@ -116,10 +126,10 @@ func TestAcceptance(t *testing.T) {
 	}
 
 	// The auth should have no metadata.
-	resp, err = b.HandleRequest(ctx, &logical.Request{
+	resp, err = e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
-		Storage:   storage,
+		Storage:   e.storage,
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
@@ -136,13 +146,15 @@ func TestAcceptance(t *testing.T) {
 	if len(resp.Auth.Alias.Metadata) != 0 {
 		t.Fatal("expected 0 fields")
 	}
+}
 
+func (e *environment) TestDefaultCanBeReused(t *testing.T) {
 	// Now if we set it to "default", the default fields should
 	// be restored.
-	resp, err = b.HandleRequest(ctx, &logical.Request{
+	resp, err := e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
-		Storage:   storage,
+		Storage:   e.storage,
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
@@ -158,10 +170,10 @@ func TestAcceptance(t *testing.T) {
 	}
 
 	// Let's make sure we've returned to the default fields.
-	resp, err = b.HandleRequest(ctx, &logical.Request{
+	resp, err = e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "config",
-		Storage:   storage,
+		Storage:   e.storage,
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
@@ -177,10 +189,10 @@ func TestAcceptance(t *testing.T) {
 	}
 
 	// We should again only receive the default field on the login.
-	resp, err = b.HandleRequest(ctx, &logical.Request{
+	resp, err = e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
-		Storage:   storage,
+		Storage:   e.storage,
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
@@ -200,12 +212,14 @@ func TestAcceptance(t *testing.T) {
 	if resp.Auth.Alias.Metadata["role_name"] != "something" {
 		t.Fatal("expected role_name to be something")
 	}
+}
 
+func (e *environment) TestDefaultPlusMoreCanBeSelected(t *testing.T) {
 	// We should be able to set it to "default" plus 1 optional field.
-	resp, err = b.HandleRequest(ctx, &logical.Request{
+	resp, err := e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
-		Storage:   storage,
+		Storage:   e.storage,
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
@@ -222,10 +236,10 @@ func TestAcceptance(t *testing.T) {
 
 	// Let's make sure the default and optional field are being stored
 	// correctly.
-	resp, err = b.HandleRequest(ctx, &logical.Request{
+	resp, err = e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "config",
-		Storage:   storage,
+		Storage:   e.storage,
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
@@ -245,10 +259,10 @@ func TestAcceptance(t *testing.T) {
 	}
 
 	// They both should now appear on the login.
-	resp, err = b.HandleRequest(ctx, &logical.Request{
+	resp, err = e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
-		Storage:   storage,
+		Storage:   e.storage,
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
@@ -271,12 +285,14 @@ func TestAcceptance(t *testing.T) {
 	if resp.Auth.Alias.Metadata["remote_addr"] != "http://foo.com" {
 		t.Fatal("expected remote_addr to be http://foo.com")
 	}
+}
 
+func (e *environment) TestOnlyNonDefaultsCanBeSelected(t *testing.T) {
 	// Omit all default fields and just select one.
-	resp, err = b.HandleRequest(ctx, &logical.Request{
+	resp, err := e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
-		Storage:   storage,
+		Storage:   e.storage,
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
@@ -292,10 +308,10 @@ func TestAcceptance(t *testing.T) {
 	}
 
 	// Make sure that worked.
-	resp, err = b.HandleRequest(ctx, &logical.Request{
+	resp, err = e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "config",
-		Storage:   storage,
+		Storage:   e.storage,
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
@@ -312,10 +328,10 @@ func TestAcceptance(t *testing.T) {
 
 	// Ensure only the selected one is on logins.
 	// They both should now appear on the login.
-	resp, err = b.HandleRequest(ctx, &logical.Request{
+	resp, err = e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
-		Storage:   storage,
+		Storage:   e.storage,
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
@@ -335,12 +351,14 @@ func TestAcceptance(t *testing.T) {
 	if resp.Auth.Alias.Metadata["remote_addr"] != "http://foo.com" {
 		t.Fatal("expected remote_addr to be http://foo.com")
 	}
+}
 
+func (e *environment) TestAddingBadField(t *testing.T) {
 	// Try adding an unsupported field.
-	resp, err = b.HandleRequest(ctx, &logical.Request{
+	resp, err := e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
-		Storage:   storage,
+		Storage:   e.storage,
 		Connection: &logical.Connection{
 			RemoteAddr: "http://foo.com",
 		},
@@ -494,4 +512,22 @@ func loginPath() *framework.Path {
 			},
 		},
 	}
+}
+
+func backend(ctx context.Context, storage logical.Storage) (logical.Backend, error) {
+	b := &fakeBackend{
+		Backend: &framework.Backend{
+			Paths: []*framework.Path{
+				configPath(),
+				loginPath(),
+			},
+		},
+	}
+	if err := b.Setup(ctx, &logical.BackendConfig{
+		StorageView: storage,
+		Logger:      hclog.Default(),
+	}); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
