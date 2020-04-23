@@ -330,7 +330,7 @@ func (f *FSM) Put(ctx context.Context, entry *physical.Entry) error {
 
 // List retrieves the set of keys with the given prefix from the bolt file.
 func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
-	// TODO: Remove this outdated metric name in an older release
+	// TODO: Remove this outdated metric name in a future release
 	defer metrics.MeasureSince([]string{"raft", "list"}, time.Now())
 	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "list"}, time.Now())
 
