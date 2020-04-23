@@ -8,7 +8,6 @@ require (
 	github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
-	github.com/hashicorp/go-hclog v0.12.0
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-retryablehttp v0.6.2
 	github.com/hashicorp/go-rootcerts v1.0.1

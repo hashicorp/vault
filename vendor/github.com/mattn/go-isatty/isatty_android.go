@@ -1,5 +1,4 @@
-// +build darwin freebsd openbsd netbsd dragonfly
-// +build !appengine
+// +build android
 
 package isatty
 
@@ -8,7 +7,7 @@ import (
 	"unsafe"
 )
 
-const ioctlReadTermios = syscall.TIOCGETA
+const ioctlReadTermios = syscall.TCGETS
 
 // IsTerminal return true if the file descriptor is terminal.
 func IsTerminal(fd uintptr) bool {
