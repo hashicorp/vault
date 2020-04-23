@@ -1,6 +1,8 @@
 package aliasmetadata
 
 import (
+	"encoding/json"
+	"fmt"
 	"reflect"
 	"sort"
 	"testing"
@@ -100,5 +102,27 @@ func TestPopulateDesiredAliasMetadata(t *testing.T) {
 	}
 	if auth.Alias.Metadata["foo"] != "fooval" {
 		t.Fatal("expected foova;")
+	}
+}
+
+func TestMarshalJSON(t *testing.T) {
+	h := NewHandler(&Fields{})
+	h.aliasMetadata = []string{"fizz", "buzz"}
+	b, err := json.Marshal(h)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(b) != `{"alias_metadata":["fizz","buzz"]}` {
+		t.Fatal(`expected {"alias_metadata":["fizz","buzz"]}`)
+	}
+}
+
+func TestUnmarshalJSON(t *testing.T) {
+	h := NewHandler(&Fields{})
+	if err := json.Unmarshal([]byte(`{"alias_metadata":["fizz","buzz"]}`), h); err != nil {
+		t.Fatal(err)
+	}
+	if fmt.Sprintf("%s", h.aliasMetadata) != `[fizz buzz]` {
+		t.Fatal(`expected [fizz buzz]`)
 	}
 }
