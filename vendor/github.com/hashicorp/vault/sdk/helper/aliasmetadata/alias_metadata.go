@@ -119,36 +119,29 @@ func (h *Handler) ParseAliasMetadata(data *framework.FieldData) error {
 		return nil
 	}
 
-	// uniqueFields protects against weird edge cases like if
-	// a user provided "default,field1,field2,default".
-	uniqueFields := make(map[string]bool)
+	userProvided = h.expandDefaultField(userProvided)
+	userProvided = strutil.RemoveDuplicates(userProvided, true)
+	if !strutil.StrListSubset(h.fields.all(), userProvided) {
+		return fmt.Errorf("%q contains an unavailable field, please select from %q",
+			strings.Join(userProvided, ", "), strings.Join(h.fields.all(), ", "))
+	}
+	h.aliasMetadata = userProvided
+	return nil
+}
+
+// expandDefaultField looks for the field "default" and, if exists,
+// replaces it with the actual default fields signified.
+func (h *Handler) expandDefaultField(userProvided []string) (expanded []string) {
 	for _, field := range userProvided {
-		if field == "default" {
-			// Add the field that "default" represents, rather
-			// than the explicit field.
-			for _, dfltField := range h.fields.Default {
-				uniqueFields[dfltField] = true
-			}
-		} else {
-			// Make sure they've sent a supported field so we can
-			// error early if not.
-			if !strutil.StrListContains(h.fields.all(), field) {
-				return fmt.Errorf("%q is not an available field, please select from: %s", field, strings.Join(h.fields.all(), ", "))
-			}
-			uniqueFields[field] = true
+		if field != "default" {
+			expanded = append(expanded, field)
+			continue
+		}
+		for _, dfltField := range h.fields.Default {
+			expanded = append(expanded, dfltField)
 		}
 	}
-	// Attach the fields we've received so they'll be stored.
-	aliasMetadata := make([]string, len(uniqueFields))
-	i := 0
-	for fieldName := range uniqueFields {
-		aliasMetadata[i] = fieldName
-		i++
-	}
-	// Fulfilling the pointer here flags that the user has made
-	// a non-default selection.
-	h.aliasMetadata = aliasMetadata
-	return nil
+	return expanded
 }
 
 // PopulateDesiredAliasMetadata is intended to be used during login
