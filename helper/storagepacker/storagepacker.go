@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
@@ -129,6 +131,7 @@ func (s *StoragePacker) DeleteItem(_ context.Context, itemID string) error {
 }
 
 func (s *StoragePacker) DeleteMultipleItems(ctx context.Context, logger hclog.Logger, itemIDs []string) error {
+	defer metrics.MeasureSince([]string{"storage_packer", "delete_items"}, time.Now())
 	if len(itemIDs) == 0 {
 		return nil
 	}
@@ -226,6 +229,7 @@ func (s *StoragePacker) DeleteMultipleItems(ctx context.Context, logger hclog.Lo
 }
 
 func (s *StoragePacker) putBucket(ctx context.Context, bucket *Bucket) error {
+	defer metrics.MeasureSince([]string{"storage_packer", "put_bucket"}, time.Now())
 	if bucket == nil {
 		return fmt.Errorf("nil bucket entry")
 	}
@@ -265,6 +269,8 @@ func (s *StoragePacker) putBucket(ctx context.Context, bucket *Bucket) error {
 // GetItem fetches the storage entry for a given key from its corresponding
 // bucket.
 func (s *StoragePacker) GetItem(itemID string) (*Item, error) {
+	defer metrics.MeasureSince([]string{"storage_packer", "get_item"}, time.Now())
+
 	if itemID == "" {
 		return nil, fmt.Errorf("empty item ID")
 	}
@@ -292,6 +298,8 @@ func (s *StoragePacker) GetItem(itemID string) (*Item, error) {
 
 // PutItem stores the given item in its respective bucket
 func (s *StoragePacker) PutItem(_ context.Context, item *Item) error {
+	defer metrics.MeasureSince([]string{"storage_packer", "put_item"}, time.Now())
+
 	if item == nil {
 		return fmt.Errorf("nil item")
 	}

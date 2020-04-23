@@ -9,6 +9,7 @@ export default {
   hasTitle: isPresent('[data-test-title]'),
   hasError: isPresent('[data-test-error]'),
   submit: clickable('[data-test-submit]'),
+  enableTtl: clickable('[data-test-toggle-input]'),
   fillInValue: fillable('[data-test-ttl-value]'),
   fillInUnit: fillable('[data-test-select="ttl-unit"]'),
 };
