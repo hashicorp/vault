@@ -2539,19 +2539,22 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 	isJson := b.Core.LogFormat() == "json"
 	logger := b.Core.Logger().(log.InterceptLogger)
 
-	mon, _ := monitor.NewMonitor(512, logger, &log.LoggerOptions{
+	mon, err := monitor.NewMonitor(512, logger, &log.LoggerOptions{
 		Level:      logLevel,
 		JSONFormat: isJson,
 	})
 	defer mon.Stop()
+
+	if err != nil {
+		return resp, err
+	}
 
 	logCh := mon.Start()
 	w.WriteHeader(http.StatusOK)
 
 	// 0 byte write is needed before the Flush call so that if we are using
 	// a gzip stream it will go ahead and write out the HTTP response header
-	_, err := w.Write([]byte(""))
-
+	_, err = w.Write([]byte(""))
 	if err != nil {
 		return resp, err
 	}
