@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	oktaold "github.com/chrismalek/oktasdk-go/okta"
@@ -282,6 +283,9 @@ func (new *oktaShimNew) Client() *oktanew.Client {
 }
 
 func (new *oktaShimNew) NewRequest(method string, url string, body interface{}) (*http.Request, error) {
+	if !strings.HasPrefix(url, "/") {
+		url = "/api/v1/" + url
+	}
 	return new.client.GetRequestExecutor().NewRequest(method, url, body)
 }
 
