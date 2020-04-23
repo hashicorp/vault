@@ -225,12 +225,12 @@ func (c *Sys) DeregisterPlugin(i *DeregisterPluginInput) error {
 	return err
 }
 
-//ReloadPluginInput is used as input fo the ReloadPlugin function.
+// ReloadPluginInput is used as input fo the ReloadPlugin function.
 type ReloadPluginInput struct {
-	//Plugin is the name of the plugin to reload, as registered in the plugin catalog
+	// Plugin is the name of the plugin to reload, as registered in the plugin catalog
 	Plugin string `json:"plugin"`
 
-	//Mounts is the array of string mount paths of the plugin backends to reload
+	// Mounts is the array of string mount paths of the plugin backends to reload
 	Mounts []string `json:"mounts"`
 }
 

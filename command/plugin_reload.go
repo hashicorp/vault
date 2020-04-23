@@ -31,7 +31,7 @@ Usage: vault plugin reload [options]
 
   Reload the plugin named my-custom-plugin:
 
-	  $ vault plugin reload --plugin=my-custom-plugin
+	  $ vault plugin reload -plugin=my-custom-plugin
 
 ` + c.Flags().Help()
 
