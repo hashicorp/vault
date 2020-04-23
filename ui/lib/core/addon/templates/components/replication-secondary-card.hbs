@@ -3,49 +3,41 @@
   {{#if (eq title "States")}}
     <h3 class="title is-4 grid-item-title card-title">{{title}}</h3>
     <div class="grid-item-left">
-      {{#if (eq state "idle")}}
-          <code class="has-text-danger">state</code>
-          <AlertInline
-            @type="danger"
-            @message="Please check your server logs."
-          />
-      {{else}}
+      {{#if (get (cluster-states state) "isOk")}}
         <code class="has-text-black">state</code>
         <p class="has-text-grey is-size-8">How this cluster is communicating with others at this moment.</p>
+      {{else}}
+        <code class="has-text-danger">state</code>
+        <AlertInline @type="danger" @message="Please check your server logs." />
       {{/if}}
     </div>
     <div class="grid-item-right">
-      {{#if (or (eq connection "transient-failure") (eq connection "shutdown"))}}
-        <code class="has-text-danger">connection_state</code>
-        <AlertInline
-          @type="danger"
-          @message="ARG TODO: waiting on feedback to fill this in."
-        />
-      {{else}}
+      {{#if (get (cluster-states connection) "isOk")}}
         <code class="has-text-black">connection_state</code>
-        <p class="has-text-grey is-size-8">The health of the connection between this cluster and others.</p>
+        <p class="has-text-grey is-size-8">
+          The health of the connection between this cluster and others.
+        </p>
+      {{else}}
+        <code class="has-text-danger">connection_state</code>
+        <AlertInline @type="danger" @message="ARG TODO: waiting on feedback to fill this in." />
       {{/if}}
     </div>
     {{!-- ARG TODO connection state is likely wrong here, waiting for reply from RFC --}}
-      <h2 class="title-number grid-item-left-bottom">{{state}}
-        {{#if inSyncState }}
-          <ToolTip @verticalPosition="above" as |T|>
-            <T.trigger>
-              <Icon 
-                @glyph={{"check-circle-outline" }} 
-                @size="m" 
-                class={{"has-text-success"}}
-              />
-            </T.trigger>
-            <T.content @class="tool-tip">
-              <div class="box">
-                Everything is in sync
-              </div>
-            </T.content>
-          </ToolTip>
-        {{/if}}
-      </h2>
-      <h2 class="title-number is-5 grid-item-right-bottom">{{connection}}</h2>
+    <h2 class="title-number grid-item-left-bottom">{{state}}
+      {{#if inSyncState }}
+        <ToolTip @verticalPosition="above" as |T|>
+          <T.trigger>
+            <Icon @glyph={{"check-circle-outline" }} @size="m" class={{"has-text-success"}} />
+          </T.trigger>
+          <T.content @class="tool-tip">
+            <div class="box">
+              Everything is in sync
+            </div>
+          </T.content>
+        </ToolTip>
+      {{/if}}
+    </h2>
+    <h2 class="title-number is-5 grid-item-right-bottom">{{connection}}</h2>
   {{else}}
     <h3 class="title is-4 grid-item-title card-title">{{title}}
       <ToolTip @verticalPosition="above" @closeDelay="2000ms" as |T|>

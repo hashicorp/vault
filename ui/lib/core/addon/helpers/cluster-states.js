@@ -38,7 +38,7 @@ export const CLUSTER_STATES = {
     isOk: false,
     isSyncing: false,
   },
-  'transient-failure': {
+  transient_failure: {
     glyph: 'cancel-circle-fill',
     isOk: false,
     isSyncing: false,
