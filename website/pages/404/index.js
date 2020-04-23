@@ -12,7 +12,7 @@ function FourOhFour() {
       globalThis.analytics.track({
         event: '404 Response',
         action: globalThis.location.href,
-        label: globalThis.document.referrer
+        label: globalThis.document.referrer,
       })
     /* eslint-enable no-undef */
   }, [])

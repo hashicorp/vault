@@ -10,18 +10,18 @@ import MegaNav from '@hashicorp/react-mega-nav'
 import Footer from '@hashicorp/react-footer'
 import { ConsentManager, open } from '@hashicorp/react-consent-manager'
 import consentManagerConfig from '../lib/consent-manager-config'
-import bugsnagClient from '../lib/bugsnag'
+import Bugsnag from '../lib/bugsnag'
 import Error from './_error'
 
 Router.events.on('routeChangeStart', NProgress.start)
 Router.events.on('routeChangeError', NProgress.done)
-Router.events.on('routeChangeComplete', url => {
+Router.events.on('routeChangeComplete', (url) => {
   setTimeout(() => window.analytics.page(url), 0)
   NProgress.done()
 })
 
 // Bugsnag
-const ErrorBoundary = bugsnagClient.getPlugin('react')
+const ErrorBoundary = Bugsnag.getPlugin('react')
 
 class NextApp extends App {
   static async getInitialProps({ Component, ctx }) {
@@ -55,34 +55,34 @@ class NextApp extends App {
             { href: '/css/nprogress.css' },
             {
               href:
-                'https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700&display=swap'
-            }
+                'https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700&display=swap',
+            },
           ]}
           icon={[
             {
               href:
                 'https://www.datocms-assets.com/2885/1527033389-favicon.png?h=16&w=16',
               type: 'image/png',
-              sizes: '16x16'
+              sizes: '16x16',
             },
             {
               href:
                 'https://www.datocms-assets.com/2885/1527033389-favicon.png?h=32&w=32',
               type: 'image/png',
-              sizes: '32x32'
+              sizes: '32x32',
             },
             {
               href:
                 'https://www.datocms-assets.com/2885/1527033389-favicon.png?h=96&w=96',
               type: 'image/png',
-              sizes: '96x96'
+              sizes: '96x96',
             },
             {
               href:
                 'https://www.datocms-assets.com/2885/1527033389-favicon.png?h=192&w=192',
               type: 'image/png',
-              sizes: '192x192'
-            }
+              sizes: '192x192',
+            },
           ]}
         />
         <MegaNav product="Vault" />
