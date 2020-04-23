@@ -70,7 +70,7 @@ func TestRecovery(t *testing.T) {
 		var tokenRef atomic.String
 		conf := vault.CoreConfig{
 			Physical:     inm,
-			Logger:   logger,
+			Logger:       logger,
 			RecoveryMode: true,
 		}
 		opts := vault.TestClusterOptions{
