@@ -1,4 +1,5 @@
 import './style.css'
+import '../lib/globalThis'
 import App from 'next/app'
 import NProgress from 'nprogress'
 import Router from 'next/router'

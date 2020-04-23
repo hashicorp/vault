@@ -1,6 +1,8 @@
-package seal
+package sealhelper
 
 import (
+	"path"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/transit"
@@ -10,9 +12,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	seal2 "github.com/hashicorp/vault/vault/seal"
+	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/go-testing-interface"
-	"path"
 )
 
 type TransitSealServer struct {
@@ -69,7 +70,7 @@ func (tss *TransitSealServer) MakeSeal(t testing.T, key string) vault.Seal {
 		t.Fatalf("error setting wrapper config: %v", err)
 	}
 
-	return vault.NewAutoSeal(&seal2.Access{
+	return vault.NewAutoSeal(&vaultseal.Access{
 		Wrapper: transitSeal,
 	})
 }

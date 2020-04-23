@@ -38,12 +38,30 @@
 @import '../components/subnav/style.css';
 
 /* Pages */
+@import './404/style.css';
 @import './downloads/style.css';
 @import './community/style.css';
 @import './use-cases/style.css';
 
 /* Print Styles */
 @import './print.css';
+
+/*
+ * About this selector:
+ * `.g-subnav ~ *` finds all elements after the navigation.
+ * `:target` finds the active permalink on the page.
+ *
+ * About this style:
+ * `scroll-margin-top` adjusts the vertical scroll of a permalink.
+ * `64px` adjusts the scroll to account for the navigation.
+ * `0.5em` further adjusts the scroll to give the permalink breathing room.
+ *
+ * See: https://developer.mozilla.org/en-US/docs/Web/CSS/:target
+ * See: https://developer.mozilla.org/en-US/docs/Web/CSS/scroll-margin-top
+ */
+.g-subnav ~ * :target {
+  scroll-margin-top: calc(64px + 0.5em);
+}
 
 /* Layout Styles */
 .g-section-block section {

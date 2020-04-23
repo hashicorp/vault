@@ -1,4 +1,43 @@
-## 1.4 RC1 (March 19th, 2020)
+## Next
+
+CHANGES:
+
+* token: Token renewals will now return token policies within the `token_policies` , identity policies within `identity_policies`, and the full policy set within `policies`. [[GH-8535](https://github.com/hashicorp/vault/pull/8535)]
+* kv: Return the value of delete_version_after when reading kv/config, even if it is set to the default. [[GH-42](https://github.com/hashicorp/vault-plugin-secrets-kv/pull/42)]
+
+IMPROVEMENTS:
+
+* secrets/gcp: Support BigQuery dataset ACLs in absence of IAM endpoints [[GH-78](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/78)]
+
+BUG FIXES:
+
+* secrets/database: Fix issue where rotating root database credentials while Vault's storage backend is unavailable causes Vault to lose access to the database [[GH-8782](https://github.com/hashicorp/vault/pull/8782)]
+
+## 1.4.1 (TBD)
+
+CHANGES: 
+
+* storage/raft: Disallow `ha_storage` to be specified if `raft` is set as the `storage` type. [[GH-8707](https://github.com/hashicorp/vault/pull/8707)]
+
+IMPROVEMENTS:
+
+* auth/azure: Enable login from Azure VMs with user-assigned identities [[GH-33](https://github.com/hashicorp/vault-plugin-auth-azure/pull/33)]
+
+BUG FIXES:
+
+* auth/okta: Fix MFA regression (introduced in [GH-8143](https://github.com/hashicorp/vault/pull/8143)) from 1.4.0 [[GH-8807](https://github.com/hashicorp/vault/pull/8807)]
+* auth/userpass: Fix upgrade value for `token_bound_cidrs` being ignored due to incorrect key provided [[GH-8826](https://github.com/hashicorp/vault/pull/8826/files)]
+* config/seal: Fix segfault when seal block is removed [[GH-8517](https://github.com/hashicorp/vault/pull/8517)]
+* core: Fix an issue where users attempting to build Vault could receive Go module checksum errors [[GH-8770](https://github.com/hashicorp/vault/pull/8770)]
+* core: Fix blocked requests if a SIGHUP is issued during a long-running request has the state lock held. 
+  Also fixes deadlock that can happen if `vault debug` with the config target is ran during this time.
+  [[GH-8755](https://github.com/hashicorp/vault/pull/8755)]
+* http: Fix superflous call messages from the http package on logs caused by missing returns after
+  `respondError` calls [[GH-8796](https://github.com/hashicorp/vault/pull/8796)]
+* raft: Fix panic that could occur if `disable_clustering` was set to true on Raft storage cluster [[GH-8784](https://github.com/hashicorp/vault/pull/8784)]
+* sys/wrapping: Allow unwrapping of wrapping tokens which contain nil data [[GH-8714](https://github.com/hashicorp/vault/pull/8714)]
+
+## 1.4.0 (April 7th, 2020)
 
 CHANGES:
 
@@ -15,7 +54,9 @@ FEATURES:
   as well as the [Atlas programmatic interface](https://docs.atlas.mongodb.com/tutorial/manage-programmatic-access/).
 * **OpenLDAP Secrets Engine**: We now support password management of existing OpenLDAP user entries. For more, see [#8360](https://github.com/hashicorp/vault/pull/8360/).
 * **Redshift Database Secrets Engine**: The database secrets engine now supports static and dynamic secrets for the Amazon Web Services (AWS) Redshift service.
-* **Service Registration Config**: A newly introduced `service_registration` configuration stanza, that allows for service registration to be configured separately from the storage backend. For more, see [#7887](https://github.com/hashicorp/vault/pull/7887/).  
+* **Service Registration Config**: A newly introduced `service_registration` configuration stanza, that allows for service registration to be configured separately from the storage backend. For more, see [#7887](https://github.com/hashicorp/vault/pull/7887/).
+* **Transform Secrets Engine (Enterprise)**: A new secrets engine that handles secure data transformation and tokenization against provided input value.
+* **Integrated Storage**: Promoted out of beta and into general availability for both open-source and enterprise workloads.
 
 IMPROVEMENTS:
 
@@ -66,7 +107,7 @@ IMPROVEMENTS:
 * storage/raft: Nodes in the raft cluster can all be given possible leader
   addresses for them to continuously try and join one of them, thus automating
   the process of join to a greater extent [[GH-7856](https://github.com/hashicorp/vault/pull/7856)]
-* storage/raft: Fix a potential deadlock that could occure on leadership transition [[GH-8547](https://github.com/hashicorp/vault/pull/8547)]
+* storage/raft: Fix a potential deadlock that could occur on leadership transition [[GH-8547](https://github.com/hashicorp/vault/pull/8547)]
 * storage/raft: Refresh TLS keyring on snapshot restore [[GH-8546](https://github.com/hashicorp/vault/pull/8546)]
 * storage/etcd: Bumped etcd client API SDK [[GH-7931](https://github.com/hashicorp/vault/pull/7931) & [GH-4961](https://github.com/hashicorp/vault/pull/4961) & [GH-4349](https://github.com/hashicorp/vault/pull/4349) & [GH-7582](https://github.com/hashicorp/vault/pull/7582)]
 * ui: Make Transit Key actions more prominent [[GH-8304](https://github.com/hashicorp/vault/pull/8304)]
@@ -146,7 +187,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * auth/azure: Fix Azure compute client to use correct base URL [[GH-8072](https://github.com/hashicorp/vault/pull/8072)]
-* auth/ldap: Fix renewal of tokens without cofigured policies that are
+* auth/ldap: Fix renewal of tokens without configured policies that are
   generated by an LDAP login [[GH-8072](https://github.com/hashicorp/vault/pull/8072)]
 * auth/okta: Fix renewal of tokens without configured policies that are
   generated by an Okta login [[GH-8072](https://github.com/hashicorp/vault/pull/8072)]
