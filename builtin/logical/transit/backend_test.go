@@ -17,6 +17,7 @@ import (
 
 	uuid "github.com/hashicorp/go-uuid"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/acctest"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -288,6 +289,16 @@ func testTransit_RSA(t *testing.T, keyType string) {
 	if !resp.Data["valid"].(bool) {
 		t.Fatalf("failed to verify the RSA signature")
 	}
+}
+
+func TestMain(m *testing.M) {
+	// Setup will create the docker cluster, then compile the plugin and register
+	// it. Setup will panic if something fails (for now at least)
+	acctest.Setup("transit")
+
+	// acctest.Run wraps the normal m.Run() all with optional call to
+	// acctest.TestHelper.Cleanup() to tear down the Docker cluster
+	acctest.Run(m)
 }
 
 func TestBackend_basic(t *testing.T) {

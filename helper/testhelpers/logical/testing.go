@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/acctest"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
@@ -128,6 +129,17 @@ func Test(tt TestT, c TestCase) {
 	// We require verbose mode so that the user knows what is going on.
 	if c.AcceptanceTest && !testTesting && !testing.Verbose() {
 		tt.Fatal("Acceptance tests must be run with the -v flag on tests")
+		return
+	}
+
+	// //
+	// TODO
+	// Test break here - Docker vs. Normal
+	// //
+	if acctest.TestHelper != nil {
+		// branch
+		// q.Q("--> Launch docker test")
+		dockerTest(tt, c)
 		return
 	}
 
