@@ -30,7 +30,7 @@ func TestParse(t *testing.T) {
 				length = 20
 				rule "Charset" {
 					charset = "abcde"
-					min_chars = 2
+					min-chars = 2
 				}`,
 			expected: StringGenerator{
 				Length:  20,
@@ -118,7 +118,7 @@ func TestParser_Parse(t *testing.T) {
 				length = 20
 				rule "Charset" {
 					charset = "abcde"
-					min_chars = 2
+					min-chars = 2
 				}`,
 			expected: StringGenerator{
 				Length:  20,
@@ -167,7 +167,7 @@ func TestParser_Parse(t *testing.T) {
 				}
 				rule "Charset" {
 					charset = "abcde"
-					min_chars = 2
+					min-chars = 2
 				}`,
 			expected: StringGenerator{
 				Length:  20,
@@ -221,7 +221,7 @@ func TestParser_Parse(t *testing.T) {
 							"Charset": [
 								{
 									"charset": "abcde",
-									"min_chars": 2
+									"min-chars": 2
 								}
 							]
 						}
@@ -552,7 +552,7 @@ func BenchmarkParser_Parse(b *testing.B) {
 	config := `length = 20
                rule "Charset" {
                    charset = "abcde"
-                   min_chars = 2
+                   min-chars = 2
                }`
 
 	for i := 0; i < b.N; i++ {

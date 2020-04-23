@@ -26,7 +26,7 @@ func (r serializableRules) MarshalJSON() (b []byte, err error) {
 	//     "Charset": [
 	//       {
 	//         "charset": "abcde",
-	//         "min_chars": 2
+	//         "min-chars": 2
 	//       }
 	//     ]
 	//   }
