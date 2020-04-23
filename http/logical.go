@@ -235,6 +235,7 @@ func handleLogicalRecovery(raw *vault.RawBackend, token *atomic.String) http.Han
 		reqToken := r.Header.Get(consts.AuthHeaderName)
 		if reqToken == "" || token.Load() == "" || reqToken != token.Load() {
 			respondError(w, http.StatusForbidden, nil)
+			return
 		}
 
 		resp, err := raw.HandleRequest(r.Context(), req)
@@ -382,6 +383,7 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 		case strings.HasPrefix(req.Path, "sys/metrics"):
 			if isStandby, _ := core.Standby(); isStandby {
 				respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
+				return
 			}
 		}
 
