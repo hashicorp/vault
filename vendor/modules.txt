@@ -16,7 +16,7 @@ cloud.google.com/go/storage
 # code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f
 code.cloudfoundry.org/gofileutils/fileutils
 # github.com/Azure/azure-sdk-for-go v36.2.0+incompatible
-github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute
+github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-07-01/compute
 github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac
 github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault
 github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-01-01-preview/authorization
@@ -381,7 +381,7 @@ github.com/hashicorp/serf/coordinate
 # github.com/hashicorp/vault-plugin-auth-alicloud v0.5.5
 github.com/hashicorp/vault-plugin-auth-alicloud
 github.com/hashicorp/vault-plugin-auth-alicloud/tools
-# github.com/hashicorp/vault-plugin-auth-azure v0.5.5
+# github.com/hashicorp/vault-plugin-auth-azure v0.5.6-0.20200422235613-1b5c70f9ef68
 github.com/hashicorp/vault-plugin-auth-azure
 # github.com/hashicorp/vault-plugin-auth-centrify v0.5.5
 github.com/hashicorp/vault-plugin-auth-centrify
