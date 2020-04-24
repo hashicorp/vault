@@ -331,7 +331,8 @@
           @description='Updated every ten seconds.'
           @glyph={{get (cluster-states replicationAttrs.state) "glyph"}}
           @metric={{replicationAttrs.state}} />
-        <ReplicationPrimaryCard @title='Last WAL entry'
+        <ReplicationPrimaryCard
+          @title='Last WAL entry'
           @description='Index of last Write Ahead Logs entry written on local storage.'
           @metric={{replicationAttrs.lastWAL}} />
         <KnownSecondariesCard
