@@ -501,7 +501,7 @@ type Core struct {
 	pendingRaftPeers map[string][]byte
 
 	// rawConfig stores the config as-is from the provided server configuration.
-	rawConfig *server.Config
+	rawConfig *atomic.Value
 
 	coreNumber int
 
@@ -759,7 +759,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterLeaderParams:          new(atomic.Value),
 		metricsHelper:                conf.MetricsHelper,
 		secureRandomReader:           conf.SecureRandomReader,
-		rawConfig:                    conf.RawConfig,
+		rawConfig:                    new(atomic.Value),
 		counters: counters{
 			requests:     new(uint64),
 			syncInterval: syncInterval,
@@ -768,6 +768,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		postUnsealStarted: new(uint32),
 		raftJoinDoneCh:    make(chan struct{}),
 	}
+
+	c.rawConfig.Store(conf.RawConfig)
 
 	atomic.StoreUint32(c.sealed, 1)
 	c.allLoggers = append(c.allLoggers, c.logger)
@@ -2308,17 +2310,17 @@ func (c *Core) SetLogLevel(level log.Level) {
 
 // SetConfig sets core's config object to the newly provided config.
 func (c *Core) SetConfig(conf *server.Config) {
-	c.stateLock.Lock()
-	c.rawConfig = conf
-	c.stateLock.Unlock()
+	c.rawConfig.Store(conf)
 }
 
 // SanitizedConfig returns a sanitized version of the current config.
 // See server.Config.Sanitized for specific values omitted.
 func (c *Core) SanitizedConfig() map[string]interface{} {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	return c.rawConfig.Sanitized()
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return nil
+	}
+	return conf.(*server.Config).Sanitized()
 }
 
 // LogFormat returns the log format current in use.

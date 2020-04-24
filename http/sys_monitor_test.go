@@ -37,8 +37,8 @@ func TestSysMonitorUnknownLogLevel(t *testing.T) {
 
 func TestSysMonitorStreamingLogs(t *testing.T) {
 	logger := log.NewInterceptLogger(&log.LoggerOptions{
-		Output: log.DefaultOutput,
-		Level:  log.Debug,
+		Output:     log.DefaultOutput,
+		Level:      log.Debug,
 		JSONFormat: logging.ParseEnvLogFormat() == logging.JSONFormat,
 	})
 

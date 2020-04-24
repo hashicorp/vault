@@ -2405,6 +2405,11 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 		Data: map[string]interface{}{},
 	}
 
+	if len(response) == 0 {
+		resp.Data[logical.HTTPStatusCode] = 204
+		return resp, nil
+	}
+
 	// Most of the time we want to just send over the marshalled HTTP bytes.
 	// However there is a sad separate case: if the original response was using
 	// bare values we need to use those or else what comes back is garbled.
@@ -2450,13 +2455,9 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 		return resp, nil
 	}
 
-	if len(response) == 0 {
-		resp.Data[logical.HTTPStatusCode] = 204
-	} else {
-		resp.Data[logical.HTTPStatusCode] = 200
-		resp.Data[logical.HTTPRawBody] = []byte(response)
-		resp.Data[logical.HTTPContentType] = "application/json"
-	}
+	resp.Data[logical.HTTPStatusCode] = 200
+	resp.Data[logical.HTTPRawBody] = []byte(response)
+	resp.Data[logical.HTTPContentType] = "application/json"
 
 	return resp, nil
 }

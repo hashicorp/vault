@@ -86,8 +86,8 @@ func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 func testVaultServerUnseal(tb testing.TB) (*api.Client, []string, func()) {
 	tb.Helper()
 	logger := log.NewInterceptLogger(&log.LoggerOptions{
-		Output: log.DefaultOutput,
-		Level:  log.Debug,
+		Output:     log.DefaultOutput,
+		Level:      log.Debug,
 		JSONFormat: logging.ParseEnvLogFormat() == logging.JSONFormat,
 	})
 
