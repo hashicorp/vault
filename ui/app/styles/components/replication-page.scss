@@ -1,0 +1,10 @@
+.replication-page {
+  .empty-state {
+    background: none;
+
+    .empty-state-message {
+      padding-bottom: $spacing-s;
+      border-bottom: 1px solid $grey-light;
+    }
+  }
+}

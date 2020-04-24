@@ -14,8 +14,6 @@ import layout from '../templates/components/empty-state';
  * @param title=null{String} - A short label for the empty state
  * @param message=null{String} - A description of why a user might be seeing the empty state and possibly instructions for actions they may take.
  * @param [icon='']{String} - A optional param to display icon to the right of the title
- * @param [backgroundColor=true]{Boolean} - whether there is a light grey background color
- *
  */
 
 export default Component.extend({
@@ -23,6 +21,5 @@ export default Component.extend({
   tagName: '',
   title: null,
   message: null,
-  backgroundColor: true,
   icon: '',
 });

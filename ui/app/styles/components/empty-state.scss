@@ -1,14 +1,11 @@
 .empty-state {
   align-items: center;
   color: $grey;
+  background: $ui-gray-010;
   display: flex;
   justify-content: center;
   padding: $spacing-xxl $spacing-s;
   box-shadow: 0 -2px 0 -1px $ui-gray-300;
-}
-
-.empty-state-background {
-  background: $ui-gray-010;
 }
 
 .empty-state-content {
@@ -43,9 +40,4 @@
 .empty-state-icon > .hs-icon {
   float: left;
   margin-right: $spacing-xs;
-}
-
-.empty-state-message-border {
-  padding-bottom: $spacing-s;
-  border-bottom: 1px solid $grey-light;
 }

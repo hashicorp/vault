@@ -1,4 +1,4 @@
-<div data-test-component="empty-state" class="empty-state {{if backgroundColor "empty-state-background"}}" ...attributes>
+<div data-test-component="empty-state" class="empty-state" ...attributes>
   <div class="empty-state-content">
     {{#if icon}}
       <div class="empty-state-icon">
@@ -13,7 +13,7 @@
     </h3>
     {{/if}}
     {{#if message}}
-    <p class="empty-state-message {{if bottomBorder "empty-state-message-border"}}" data-test-empty-state-message>
+    <p class="empty-state-message" data-test-empty-state-message>
       {{message}}
     </p>
     {{/if}}
