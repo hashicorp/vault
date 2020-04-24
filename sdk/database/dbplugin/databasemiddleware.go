@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/errwrap"
-
 	metrics "github.com/armon/go-metrics"
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"google.golang.org/grpc/status"
 )
 
 // ---- Tracing Middleware Domain ----
@@ -318,6 +318,15 @@ func (mw *DatabaseErrorSanitizerMiddleware) sanitize(err error) error {
 			if k == "" {
 				continue
 			}
+
+			// Attempt to keep the status code attached to the
+			// error without changing the actual error message
+			s, ok := status.FromError(err)
+			if ok {
+				err = status.Error(s.Code(), strings.Replace(s.Message(), k, v.(string), -1))
+				continue
+			}
+
 			err = errors.New(strings.Replace(err.Error(), k, v.(string), -1))
 		}
 	}

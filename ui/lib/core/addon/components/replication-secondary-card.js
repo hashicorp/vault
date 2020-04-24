@@ -1,9 +1,3 @@
-/**
- * @module ReplicationSecondaryCard
- * ARG TODO finish
- *
- */
-
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import layout from '../templates/components/replication-secondary-card';
@@ -12,13 +6,6 @@ import { clusterStates } from 'core/helpers/cluster-states';
 export default Component.extend({
   layout,
   data: null,
-  dr: computed('data', function() {
-    let dr = this.data.dr;
-    if (!dr) {
-      return false;
-    }
-    return dr;
-  }),
   state: computed('dr', function() {
     return this.dr && this.dr.state ? this.dr.state : 'unknown';
   }),

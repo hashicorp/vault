@@ -68,12 +68,12 @@ vault secrets enable ssh
 vault secrets enable totp
 vault secrets enable transit
 
-# Enterprise backends
-VERSION=$(vault status -format=json | jq -r .version)
-
-if [[ $VERSION =~ prem|ent ]]
+# Enable enterprise features
+if [[ ! -z "$VAULT_LICENSE" ]]
 then
+  vault write sys/license text="$VAULT_LICENSE"
   vault secrets enable kmip
+  vault secrets enable transform
 fi
 
 # Output OpenAPI, optionally formatted

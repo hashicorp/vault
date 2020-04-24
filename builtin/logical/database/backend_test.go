@@ -71,7 +71,7 @@ func preparePostgresTestContainer(t *testing.T, s logical.Storage, b logical.Bac
 		})
 		if err != nil || (resp != nil && resp.IsError()) {
 			// It's likely not up and running yet, so return error and try again
-			return fmt.Errorf("err:%#v resp:%#v", err, resp)
+			return fmt.Errorf("err:%#v resp:%+v", err, resp)
 		}
 		if resp == nil {
 			t.Fatal("expected warning")

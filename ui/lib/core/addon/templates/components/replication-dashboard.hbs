@@ -2,15 +2,15 @@
   <h2 class="has-text-weight-semibold is-size-4 has-bottom-margin-xs">Primary Cluster</h2>
   <p class="has-text-grey is-size-8">If you set a primary_cluster_addr when enabling replication, it will appear here.</p>
 
-  {{#if model.dr.primaryClusterAddr}}
-    <code>{{model.dr.primaryClusterAddr}}</code>
+  {{#if data.dr.primaryClusterAddr}}
+    <code>{{data.dr.primaryClusterAddr}}</code>
   {{else}}
     <code>no known primary cluster address</code>
   {{/if}}
 
   <div class="selectable-card-container has-top-margin-xl">
-    {{yield (hash
-      card=(component componentToRender data=data)
+    {{yield (hash 
+      card=(component componentToRender data=data dr=dr)
     )}}
   </div>
 

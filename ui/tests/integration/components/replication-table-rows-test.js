@@ -27,10 +27,13 @@ module('Integration | Enterprise | Component | replication-table-rows', function
 
     assert.dom('.empty-state').doesNotExist('does not show empty state when data is found');
 
-    Object.keys(DATA).forEach(attr => {
-      let expected = DATA[attr];
-      assert.dom(`[data-test-attr="${expected}"]`).includesText(expected, `shows the correct ${attr}`);
-    });
+    assert
+      .dom('[data-test-row-value="Merkle root index"]')
+      .includesText(DATA.merkleRoot, `shows the correct Merkle Root`);
+    assert.dom('[data-test-row-value="Mode"]').includesText(DATA.mode, `shows the correct Merkle Root`);
+    assert
+      .dom('[data-test-row-value="Replication set"]')
+      .includesText(DATA.clusterId, `shows the correct Merkle Root`);
   });
 
   test('it renders unknown if values cannot be found', async function(assert) {
