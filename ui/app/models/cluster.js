@@ -49,17 +49,10 @@ export default DS.Model.extend({
 
   anyReplicationEnabled: or('{dr,performance}.replicationEnabled'),
 
-  modeState: computed(
-    'dr.mode',
-    'performance.mode',
-    'replicationMode',
-    'dr.state',
-    'performance.state',
-    function() {
-      const mode = this.replicationMode;
-      return this.get(`${mode}.state`);
-    }
-  ),
+  modeState: computed('dr.{mode,state}', 'performance.{mode,state}', 'replicationMode', function() {
+    const mode = this.replicationMode;
+    return this.get(`${mode}.state`);
+  }),
 
   dr: fragment('replication-attributes'),
   performance: fragment('replication-attributes'),
