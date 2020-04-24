@@ -114,7 +114,7 @@ jobs:
     - checkout
     - restore_cache:
         keys:
-        - go-test-cache-v1-branch-{{ .Branch }}
+        - go-test-cache-v2-branch-{{ .Branch }}
     - run:
         command: |
           set -x
@@ -161,7 +161,7 @@ jobs:
         name: Run Go tests
         no_output_timeout: 60m
     - save_cache:
-        key: go-test-cache-v1-branch-{{ .Branch }}
+        key: go-test-cache-v2-branch-{{ .Branch }}
         paths:
         - /tmp/go-cache
     - run:
@@ -219,7 +219,7 @@ workflows:
 #     steps:
 #     - restore_cache:
 #         keys:
-#         - go-test-cache-v1-branch-{{ .Branch }}
+#         - go-test-cache-v2-branch-{{ .Branch }}
 #     - run:
 #         command: |
 #           set -x
@@ -266,7 +266,7 @@ workflows:
 #         name: Run Go tests
 #         no_output_timeout: 60m
 #     - save_cache:
-#         key: go-test-cache-v1-branch-{{ .Branch }}
+#         key: go-test-cache-v2-branch-{{ .Branch }}
 #         paths:
 #         - << parameters.cache_dir >>
 #     - run:
