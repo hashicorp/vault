@@ -42,7 +42,7 @@ steps:
           VAULT_TOKEN= \
           VAULT_DEV_ROOT_TOKEN_ID= \
           VAULT_ACC= \
-          GOCACHE=go-test-cache
+          GOCACHE=$(pwd)/go-test-cache
           gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
             -tags "${GO_TAGS}" \
             -timeout=60m \
