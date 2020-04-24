@@ -58,10 +58,10 @@ export const CLUSTER_STATES = {
 
 export function clusterStates([state]) {
   const defaultDisplay = {
-    glyph: 'check-circle-outline',
+    glyph: '',
     display: '',
-    isOk: true,
-    isSyncing: false,
+    isOk: null,
+    isSyncing: null,
   };
   return CLUSTER_STATES[state] || defaultDisplay;
 }
