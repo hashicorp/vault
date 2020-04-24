@@ -855,7 +855,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		"ami_id":      identityDocParsed.AmiID,
 	}); err != nil {
 		if b.Logger().IsWarn() {
-			b.Logger().Warn(fmt.Sprintf("unable to set alias metadata due to %s", err))
+			b.Logger().Warn("unable to set alias metadata", "err", err))
 		}
 	}
 
