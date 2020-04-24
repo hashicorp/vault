@@ -2,9 +2,15 @@ import { helper as buildHelper } from '@ember/component/helper';
 
 // A hash of cluster states to ensure that the status menu and replication dashboards
 // display states and glyphs consistently
+// this includes states for the primary vault cluster and the connection_state
 
 export const CLUSTER_STATES = {
   running: {
+    glyph: 'check-circle-outline',
+    isOk: true,
+    isSyncing: false,
+  },
+  ready: {
     glyph: 'check-circle-outline',
     isOk: true,
     isSyncing: false,
@@ -51,7 +57,13 @@ export const CLUSTER_STATES = {
 };
 
 export function clusterStates([state]) {
-  return CLUSTER_STATES[state];
+  const defaultDisplay = {
+    glyph: 'check-circle-outline',
+    display: '',
+    isOk: true,
+    isSyncing: false,
+  };
+  return CLUSTER_STATES[state] || defaultDisplay;
 }
 
 export default buildHelper(clusterStates);
