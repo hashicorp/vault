@@ -32,17 +32,6 @@ func StrListContains(haystack []string, needle string) bool {
 	return false
 }
 
-// StrListContainsNoCase looks for a string in a list of strings
-// in a case insensitive way.
-func StrListContainsNoCase(haystack []string, needle string) bool {
-	for _, item := range haystack {
-		if strings.ToLower(item) == strings.ToLower(needle) {
-			return true
-		}
-	}
-	return false
-}
-
 // StrListSubset checks if a given list is a subset
 // of another set
 func StrListSubset(super, sub []string) bool {

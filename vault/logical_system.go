@@ -23,10 +23,10 @@ import (
 	memdb "github.com/hashicorp/go-memdb"
 	multierror "github.com/hashicorp/go-multierror"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/monitor"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/helper/monitor"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -2524,7 +2524,7 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 	resp := &logical.Response{}
 
 	if ll == "" {
-		ll = "INFO"
+		ll = "info"
 	}
 	logLevel := log.LevelFromString(ll)
 

@@ -79,9 +79,9 @@ func (c *MonitorCommand) Run(args []string) int {
 		return 1
 	}
 
-	c.logLevel = strings.ToUpper(c.logLevel)
-	validLevels := []string{"TRACE", "DEBUG", "INFO", "WARN", "ERROR"}
-	if !strutil.StrListContainsNoCase(validLevels, c.logLevel) {
+	c.logLevel = strings.ToLower(c.logLevel)
+	validLevels := []string{"trace", "debug", "info", "warn", "error"}
+	if !strutil.StrListContains(validLevels, c.logLevel) {
 		c.UI.Error(fmt.Sprintf("%s is an unknown log level. Valid log levels are: %s", c.logLevel, validLevels))
 		return 1
 	}

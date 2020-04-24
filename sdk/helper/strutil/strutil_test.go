@@ -89,27 +89,6 @@ func TestStrutil_ListContainsGlob(t *testing.T) {
 
 }
 
-func TestStrutil_ListContainsNoCase(t *testing.T) {
-	haystack := []string{
-		"dev",
-		"Ops",
-		"PROD",
-		"rOoT",
-	}
-	if StrListContainsNoCase(haystack, "tubez") {
-		t.Fatalf("Bad")
-	}
-	if !StrListContainsNoCase(haystack, "root") {
-		t.Fatalf("Bad")
-	}
-	if !StrListContainsNoCase(haystack, "prod") {
-		t.Fatalf("Bad")
-	}
-	if !StrListContainsNoCase(haystack, "OPS") {
-		t.Fatalf("Bad")
-	}
-}
-
 func TestStrutil_ListContains(t *testing.T) {
 	haystack := []string{
 		"dev",

@@ -11,7 +11,7 @@ func (c *Sys) Monitor(ctx context.Context, logLevel string) (chan string, error)
 	r := c.c.NewRequest("GET", "/v1/sys/monitor")
 
 	if logLevel == "" {
-		r.Params.Add("log_level", "INFO")
+		r.Params.Add("log_level", "info")
 	} else {
 		r.Params.Add("log_level", logLevel)
 	}
