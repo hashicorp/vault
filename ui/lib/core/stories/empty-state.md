@@ -10,8 +10,7 @@ encounters a state that would usually be blank.
 | --- | --- | --- | --- |
 | title | <code>String</code> | <code></code> | A short label for the empty state |
 | message | <code>String</code> | <code></code> | A description of why a user might be seeing the empty state and possibly instructions for actions they may take. |
-| [icon] | <code>String</code> |  | A optional param to display icon to the right of the title |
-| [backgroundColor] | <code>Boolean</code> |  | whether there is a light grey background color |
+| [icon] | <code>String</code> | <code>&#x27;&#x27;</code> | A optional param to display icon to the right of the title |
 
 **Example**
   
