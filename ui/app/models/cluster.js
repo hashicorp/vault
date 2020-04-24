@@ -4,7 +4,6 @@ import { get, computed } from '@ember/object';
 import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
 const { hasMany, attr } = DS;
-import { clusterStates } from 'core/helpers/cluster-states';
 
 export default DS.Model.extend({
   version: service(),
