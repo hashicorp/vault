@@ -2,10 +2,10 @@ package monitor
 
 import (
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"go.uber.org/atomic"
 )
 
 // Monitor provides a mechanism to stream logs using go-hclog
@@ -21,7 +21,8 @@ type Monitor interface {
 	Stop()
 }
 
-// monitor implements the Monitor interface
+// monitor implements the Monitor interface. Note that this
+// struct is not threadsafe.
 type monitor struct {
 	sink log.SinkAdapter
 
@@ -36,12 +37,18 @@ type monitor struct {
 
 	// droppedCount is the current count of messages
 	// that were dropped from the logCh buffer.
-	droppedCount uint32
+	droppedCount *atomic.Uint32
 	bufSize      int
+
 	// dropCheckInterval is the amount of time we should
 	// wait to check for dropped messages. Defaults
 	// to 3 seconds
 	dropCheckInterval time.Duration
+
+	// started is whether the monitor has been started or not.
+	// This is to ensure that we don't start it again until
+	// it has been shut down.
+	started *atomic.Bool
 }
 
 // NewMonitor creates a new Monitor. Start must be called in order to actually start
@@ -61,6 +68,8 @@ func newMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) (*
 		doneCh:            make(chan struct{}),
 		bufSize:           buf,
 		dropCheckInterval: 3 * time.Second,
+		droppedCount:      atomic.NewUint32(0),
+		started:           atomic.NewBool(false),
 	}
 
 	opts.Output = sw
@@ -74,11 +83,18 @@ func newMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) (*
 func (d *monitor) Stop() {
 	d.logger.DeregisterSink(d.sink)
 	close(d.doneCh)
+	d.started.Store(false)
 }
 
 // Start registers a sink on the monitor's logger and starts sending
 // received log messages over the returned channel.
 func (d *monitor) Start() <-chan []byte {
+	// Check to see if this has already been started. If not, flag
+	// it and proceed. If so, bail out early.
+	if !d.started.CAS(false, true) {
+		return nil
+	}
+
 	// register our sink with the logger
 	d.logger.RegisterSink(d.sink)
 
@@ -103,11 +119,11 @@ func (d *monitor) Start() <-chan []byte {
 			select {
 			case <-ticker.C:
 				// Check if there have been any dropped messages.
-				dc := atomic.LoadUint32(&d.droppedCount)
+				dc := d.droppedCount.Load()
 
 				if dc > 0 {
-					logMessage = []byte(fmt.Sprintf("[WARN] Monitor dropped %d logs during monitor request\n", dc))
-					atomic.SwapUint32(&d.droppedCount, 0)
+					logMessage = []byte(fmt.Sprintf("Monitor dropped %d logs during monitor request\n", dc))
+					d.droppedCount.Swap(0)
 				}
 			case logMessage = <-d.logCh:
 			case <-d.doneCh:
@@ -143,7 +159,7 @@ func (d *monitor) Write(p []byte) (n int, err error) {
 	select {
 	case d.logCh <- bytes:
 	default:
-		atomic.AddUint32(&d.droppedCount, 1)
+		d.droppedCount.Add(1)
 	}
 
 	return len(p), nil

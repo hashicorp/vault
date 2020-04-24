@@ -21,7 +21,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
@@ -2549,13 +2549,18 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 	}
 
 	logCh := mon.Start()
+
+	if logCh == nil {
+		return resp, fmt.Errorf("error trying to start a monitor that's already been started")
+	}
+
 	w.WriteHeader(http.StatusOK)
 
 	// 0 byte write is needed before the Flush call so that if we are using
 	// a gzip stream it will go ahead and write out the HTTP response header
 	_, err = w.Write([]byte(""))
 	if err != nil {
-		return resp, err
+		return resp, fmt.Errorf("error seeding flusher: %w", err)
 	}
 
 	flusher.Flush()
