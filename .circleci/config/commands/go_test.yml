@@ -6,7 +6,9 @@ parameters:
 steps:
   - restore_cache:
       #      Do we want to include env vars in the key? Which ones?
-      key: go-test-cache-v1-TODO_BRANCH_HERE
+      keys:
+        - go-test-cache-{{ .Branch }}-{{ .Environment.CIRCLE_PREVIOUS_BUILD_NUM }}
+        - go-test-cache-{{ .Branch }}
   - run:
       name: Run Go tests
       no_output_timeout: 60m
@@ -41,7 +43,7 @@ steps:
           VAULT_TOKEN= \
           VAULT_DEV_ROOT_TOKEN_ID= \
           VAULT_ACC= \
-          GOCACHE=./go-test-cache
+          GOCACHE=/tmp/go/cache
           gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
             -tags "${GO_TAGS}" \
             -timeout=60m \
@@ -51,7 +53,7 @@ steps:
   - save_cache:
 #      Do we want to include env vars in the key? Which ones?
 #      We should also store extra_flags.
-      key: go-test-cache-v1-TODO_BRANCH_HERE
+      key: go-test-cache-{{ .Branch }}-{{ .BuildNum }}
       paths:
-      - go-test-cache
+      - /tmp/go/cache
 

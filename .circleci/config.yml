@@ -194,7 +194,9 @@ jobs:
         working_directory: ~/
     - checkout
     - restore_cache:
-        key: go-test-cache-v1-TODO_BRANCH_HERE
+        keys:
+        - go-test-cache-{{ .Branch }}-{{ .Environment.CIRCLE_PREVIOUS_BUILD_NUM }}
+        - go-test-cache-{{ .Branch }}
     - run:
         command: |
           set -x
@@ -227,7 +229,7 @@ jobs:
             VAULT_TOKEN= \
             VAULT_DEV_ROOT_TOKEN_ID= \
             VAULT_ACC= \
-            GOCACHE=./go-test-cache
+            GOCACHE=/tmp/go/cache
             gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
               -tags "${GO_TAGS}" \
               -timeout=60m \
@@ -237,9 +239,9 @@ jobs:
         name: Run Go tests
         no_output_timeout: 60m
     - save_cache:
-        key: go-test-cache-v1-TODO_BRANCH_HERE
+        key: go-test-cache-{{ .Branch }}-{{ .BuildNum }}
         paths:
-        - go-test-cache
+        - /tmp/go/cache
     - store_artifacts:
         path: test-results
     - store_test_results:
@@ -330,7 +332,9 @@ workflows:
 #         type: string
 #     steps:
 #     - restore_cache:
-#         key: go-test-cache-v1-TODO_BRANCH_HERE
+#         keys:
+#         - go-test-cache-{{ .Branch }}-{{ .Environment.CIRCLE_PREVIOUS_BUILD_NUM }}
+#         - go-test-cache-{{ .Branch }}
 #     - run:
 #         command: |
 #           set -x
@@ -363,7 +367,7 @@ workflows:
 #             VAULT_TOKEN= \\
 #             VAULT_DEV_ROOT_TOKEN_ID= \\
 #             VAULT_ACC= \\
-#             GOCACHE=./go-test-cache
+#             GOCACHE=/tmp/go/cache
 #             gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \\
 #               -tags \"${GO_TAGS}\" \\
 #               -timeout=60m \\
@@ -373,9 +377,9 @@ workflows:
 #         name: Run Go tests
 #         no_output_timeout: 60m
 #     - save_cache:
-#         key: go-test-cache-v1-TODO_BRANCH_HERE
+#         key: go-test-cache-{{ .Branch }}-{{ .BuildNum }}
 #         paths:
-#         - go-test-cache
+#         - /tmp/go/cache
 #   restore_yarn_cache:
 #     steps:
 #     - restore_cache:
