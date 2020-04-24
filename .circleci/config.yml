@@ -230,7 +230,7 @@ jobs:
             VAULT_TOKEN= \
             VAULT_DEV_ROOT_TOKEN_ID= \
             VAULT_ACC= \
-            GOCACHE=/tmp/go-cache
+            GOCACHE=/tmp/go-cache \
             gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
               -tags "${GO_TAGS}" \
               -timeout=60m \
@@ -378,7 +378,7 @@ workflows:
 #             VAULT_TOKEN= \\
 #             VAULT_DEV_ROOT_TOKEN_ID= \\
 #             VAULT_ACC= \\
-#             GOCACHE=<< parameters.cache_dir >>
+#             GOCACHE=<< parameters.cache_dir >> \\
 #             gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \\
 #               -tags \"${GO_TAGS}\" \\
 #               -timeout=60m \\
