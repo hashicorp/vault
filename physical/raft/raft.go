@@ -491,15 +491,29 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		return err
 	}
 
+	listenerIsNil := func(cl cluster.ClusterHook) bool {
+		switch {
+		case opts.ClusterListener == nil:
+			return true
+		default:
+			// Concrete type checks
+			switch cl.(type) {
+			case *cluster.Listener:
+				return cl.(*cluster.Listener) == nil
+			}
+		}
+		return false
+	}
+
 	switch {
-	case opts.TLSKeyring == nil && opts.ClusterListener == nil:
+	case opts.TLSKeyring == nil && listenerIsNil(opts.ClusterListener):
 		// If we don't have a provided network we use an in-memory one.
 		// This allows us to bootstrap a node without bringing up a cluster
 		// network. This will be true during bootstrap, tests and dev modes.
 		_, b.raftTransport = raft.NewInmemTransportWithTimeout(raft.ServerAddress(b.localID), time.Second)
 	case opts.TLSKeyring == nil:
 		return errors.New("no keyring provided")
-	case opts.ClusterListener == nil:
+	case listenerIsNil(opts.ClusterListener):
 		return errors.New("no cluster listener provided")
 	default:
 		// Set the local address and localID in the streaming layer and the raft config.
@@ -522,7 +536,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	raftConfig.LocalID = raft.ServerID(b.localID)
 
 	// Set up a channel for reliable leader notifications.
-	raftNotifyCh := make(chan bool, 1)
+	raftNotifyCh := make(chan bool, 10)
 	raftConfig.NotifyCh = raftNotifyCh
 
 	// If we have a bootstrapConfig set we should bootstrap now.
@@ -556,7 +570,16 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			return errwrap.Wrapf("raft recovery failed to parse peers.json: {{err}}", err)
 		}
 
-		b.logger.Info("raft recovery: found new config", "config", recoveryConfig)
+		// Non-voting servers are only allowed in enterprise. If Suffrage is disabled,
+		// error out to indicate that it isn't allowed.
+		for idx := range recoveryConfig.Servers {
+			if !nonVotersAllowed && recoveryConfig.Servers[idx].Suffrage == raft.Nonvoter {
+				return fmt.Errorf("raft recovery failed to parse configuration for node %q: setting `non_voter` is only supported in enterprise", recoveryConfig.Servers[idx].ID)
+			}
+		}
+
+		b.logger.Info("raft recovery found new config", "config", recoveryConfig)
+
 		err = raft.RecoverCluster(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport, recoveryConfig)
 		if err != nil {
 			return errwrap.Wrapf("raft recovery failed: {{err}}", err)

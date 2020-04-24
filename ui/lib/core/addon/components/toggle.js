@@ -24,10 +24,11 @@ export default Component.extend({
   tagName: '',
   checked: false,
   disabled: false,
+  name: '',
   size: 'normal',
   status: 'normal',
   safeId: computed('name', function() {
-    return `toggle-${this.name}`;
+    return `toggle-${this.name.replace(/\W/g, '')}`;
   }),
   inputClasses: computed('size', 'status', function() {
     const sizeClass = `is-${this.size}`;

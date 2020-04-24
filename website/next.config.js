@@ -4,7 +4,7 @@ const path = require('path')
 module.exports = withHashicorp({
   defaultLayout: true,
   transpileModules: ['is-absolute-url', '@hashicorp/react-mega-nav'],
-  mdx: { resolveIncludes: path.join(__dirname, 'pages') }
+  mdx: { resolveIncludes: path.join(__dirname, 'pages') },
 })({
   experimental: {
     css: true,
@@ -13,19 +13,18 @@ module.exports = withHashicorp({
     rewrites: () => [
       {
         source: '/api/:path*',
-        destination: '/api-docs/:path*'
-      }
+        destination: '/api-docs/:path*',
+      },
     ],
     redirects: () => [
       {
         source: '/intro',
         destination: '/intro/getting-started',
-        permanent: false
-      }
-    ]
+        permanent: false,
+      },
+    ],
   },
-  exportTrailingSlash: true,
   env: {
-    HASHI_ENV: process.env.HASHI_ENV
-  }
+    HASHI_ENV: process.env.HASHI_ENV,
+  },
 })

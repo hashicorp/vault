@@ -344,8 +344,7 @@ func (c *Core) stopClusterListener() {
 	c.logger.Info("stopping cluster listeners")
 
 	clusterListener.Stop()
-	var nilCL *cluster.Listener
-	c.clusterListener.Store(nilCL)
+	c.clusterListener.Store((*cluster.Listener)(nil))
 
 	c.logger.Info("cluster listeners successfully shut down")
 }

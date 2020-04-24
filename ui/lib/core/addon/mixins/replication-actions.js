@@ -10,7 +10,7 @@ export default Mixin.create({
   loading: or('save.isRunning', 'submitSuccess.isRunning'),
   onEnable() {},
   onDisable() {},
-  submitHandler(action, clusterMode, data, event) {
+  submitHandler: task(function*(action, clusterMode, data, event) {
     let replicationMode = (data && data.replicationMode) || this.get('replicationMode');
     if (event && event.preventDefault) {
       event.preventDefault();
@@ -29,8 +29,8 @@ export default Mixin.create({
       delete data.replicationMode;
     }
 
-    return this.save.perform(action, replicationMode, clusterMode, data);
-  },
+    return yield this.save.perform(action, replicationMode, clusterMode, data);
+  }),
 
   save: task(function*(action, replicationMode, clusterMode, data) {
     let resp;
@@ -41,7 +41,7 @@ export default Mixin.create({
     } catch (e) {
       return this.submitError(e);
     }
-    yield this.submitSuccess.perform(resp, action, clusterMode);
+    return yield this.submitSuccess.perform(resp, action, clusterMode);
   }).drop(),
 
   submitSuccess: task(function*(resp, action, mode) {
@@ -89,12 +89,16 @@ export default Mixin.create({
     if (action === 'disable') {
       yield this.onDisable();
     }
-    if (action === 'enable') {
-      yield this.onEnable(replicationMode);
-    }
-
     if (mode === 'secondary' && replicationMode === 'dr') {
-      yield this.router.transitionTo('vault.cluster');
+      // return mode so you can properly handle the transition
+      return mode;
+    }
+    if (action === 'enable') {
+      try {
+        yield this.onEnable(replicationMode); // should not be called for dr secondary
+      } catch (e) {
+        // TODO handle error
+      }
     }
   }).drop(),
 

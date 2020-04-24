@@ -200,7 +200,8 @@ func (c *Core) startForwarding(ctx context.Context) error {
 	c.clearForwardingClients()
 	c.requestForwardingConnectionLock.Unlock()
 
-	if c.ha == nil || c.getClusterListener() == nil {
+	clusterListener := c.getClusterListener()
+	if c.ha == nil || clusterListener == nil {
 		c.logger.Debug("request forwarding not setup")
 		return nil
 	}
@@ -210,20 +211,21 @@ func (c *Core) startForwarding(ctx context.Context) error {
 		return err
 	}
 
-	handler, err := NewRequestForwardingHandler(c, c.getClusterListener().Server(), perfStandbySlots, perfStandbyRepCluster)
+	handler, err := NewRequestForwardingHandler(c, clusterListener.Server(), perfStandbySlots, perfStandbyRepCluster)
 	if err != nil {
 		return err
 	}
 
-	c.getClusterListener().AddHandler(consts.RequestForwardingALPN, handler)
+	clusterListener.AddHandler(consts.RequestForwardingALPN, handler)
 
 	return nil
 }
 
 func (c *Core) stopForwarding() {
-	if c.getClusterListener() != nil {
-		c.getClusterListener().StopHandler(consts.RequestForwardingALPN)
-		c.getClusterListener().StopHandler(consts.PerfStandbyALPN)
+	clusterListener := c.getClusterListener()
+	if clusterListener != nil {
+		clusterListener.StopHandler(consts.RequestForwardingALPN)
+		clusterListener.StopHandler(consts.PerfStandbyALPN)
 	}
 	c.removeAllPerfStandbySecondaries()
 }
