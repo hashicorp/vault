@@ -22,4 +22,4 @@ written with `0640` permissions as default, but can be overridden with the optio
 ## Configuration
 
 - `path` `(string: required)` - The path to use to write the token file
-- `mode` `(int: optional)` - A string containing an octal number representing the bit pattern for the file mode, similar to chmod. Set to "0000" to prevent Vault from modifying the file mode
+- `mode` `(int: optional)` - A string containing an octal number representing the bit pattern for the file mode, similar to chmod. Set to `0000` to prevent Vault from modifying the file mode. Note: This configuration option is only available in Vault 1.3.0 and above. 
