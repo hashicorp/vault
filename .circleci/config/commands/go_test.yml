@@ -7,7 +7,7 @@ steps:
   - restore_cache:
       #      Do we want to include env vars in the key? Which ones?
       keys:
-        - go-test-cache-branch-{{ .Branch }}
+        - go-test-cache-v1-branch-{{ .Branch }}
   - run:
       name: Run Go tests
       no_output_timeout: 60m
@@ -42,7 +42,7 @@ steps:
           VAULT_TOKEN= \
           VAULT_DEV_ROOT_TOKEN_ID= \
           VAULT_ACC= \
-          GOCACHE=/tmp/go/cache
+          GOCACHE=go-test-cache
           gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
             -tags "${GO_TAGS}" \
             -timeout=60m \
@@ -50,14 +50,14 @@ steps:
             << parameters.extra_flags >> \
             github.com/hashicorp/vault/builtin/credential/ldap
 
-        du -sh /tmp/go/cache
+        du -sh go-test-cache
   - save_cache:
 #      Do we want to include env vars in the key? Which ones?
 #      We should also store extra_flags.
-      key: go-test-cache-branch-{{ .Branch }}
+      key: go-test-cache-v1-branch-{{ .Branch }}
       paths:
-      - /tmp/go/cache
+      - go-test-cache
   - run:
       name: Check cache
       command: |
-        du -sh /tmp/go/cache
+        du -sh go-test-cache
