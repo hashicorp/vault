@@ -51,7 +51,7 @@ func (c *MonitorCommand) Flags() *FlagSets {
 		Completion: complete.PredictSet("TRACE", "DEBUG", "INFO", "WARN", "ERROR"),
 		Usage: "If passed, the log level to monitor logs. Supported values" +
 			"(in order of detail) are \"TRACE\", \"DEBUG\", \"INFO\", \"WARN\"" +
-			" and \"ERROR\".",
+			" and \"ERROR\". These are not case sensitive.",
 	})
 
 	return set
@@ -81,7 +81,7 @@ func (c *MonitorCommand) Run(args []string) int {
 
 	c.logLevel = strings.ToUpper(c.logLevel)
 	validLevels := []string{"TRACE", "DEBUG", "INFO", "WARN", "ERROR"}
-	if !strutil.StrListContains(validLevels, c.logLevel) {
+	if !strutil.StrListContainsNoCase(validLevels, c.logLevel) {
 		c.UI.Error(fmt.Sprintf("%s is an unknown log level. Valid log levels are: %s", c.logLevel, validLevels))
 		return 1
 	}
