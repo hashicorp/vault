@@ -29,9 +29,9 @@ export default Component.extend({
   hasError: computed('title', 'metric', function() {
     const { title, metric } = this;
 
-    // only show errors on the state card
+    // only show errors on the state card if state is not ok
     if (title === 'State') {
-      return !clusterStates([metric]).isOk;
+      return metric && !clusterStates([metric]).isOk;
     }
     return false;
   }),

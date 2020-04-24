@@ -13,7 +13,8 @@ export default Component.extend({
     }
     return dr;
   }),
-  isSyncing: computed('data', function() {
-    return clusterStates([this.dr.state]).isSyncing;
+  isSyncing: computed('dr', function() {
+    const { state } = this.dr;
+    return state && clusterStates([state]).isSyncing;
   }),
 });
