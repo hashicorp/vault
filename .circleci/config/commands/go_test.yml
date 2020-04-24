@@ -7,8 +7,7 @@ steps:
   - restore_cache:
       #      Do we want to include env vars in the key? Which ones?
       keys:
-        - go-test-cache-{{ .Branch }}-{{ .Environment.CIRCLE_PREVIOUS_BUILD_NUM }}
-        - go-test-cache-{{ .Branch }}
+        - go-test-cache-branch-{{ .Branch }}
   - run:
       name: Run Go tests
       no_output_timeout: 60m
@@ -53,7 +52,7 @@ steps:
   - save_cache:
 #      Do we want to include env vars in the key? Which ones?
 #      We should also store extra_flags.
-      key: go-test-cache-{{ .Branch }}-{{ .BuildNum }}
+      key: go-test-cache-branch-{{ .Branch }}
       paths:
       - /tmp/go/cache
 

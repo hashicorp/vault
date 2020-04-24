@@ -195,8 +195,7 @@ jobs:
     - checkout
     - restore_cache:
         keys:
-        - go-test-cache-{{ .Branch }}-{{ .Environment.CIRCLE_PREVIOUS_BUILD_NUM }}
-        - go-test-cache-{{ .Branch }}
+        - go-test-cache-branch-{{ .Branch }}
     - run:
         command: |
           set -x
@@ -239,7 +238,7 @@ jobs:
         name: Run Go tests
         no_output_timeout: 60m
     - save_cache:
-        key: go-test-cache-{{ .Branch }}-{{ .BuildNum }}
+        key: go-test-cache-branch-{{ .Branch }}
         paths:
         - /tmp/go/cache
     - store_artifacts:
@@ -333,8 +332,7 @@ workflows:
 #     steps:
 #     - restore_cache:
 #         keys:
-#         - go-test-cache-{{ .Branch }}-{{ .Environment.CIRCLE_PREVIOUS_BUILD_NUM }}
-#         - go-test-cache-{{ .Branch }}
+#         - go-test-cache-branch-{{ .Branch }}
 #     - run:
 #         command: |
 #           set -x
@@ -377,7 +375,7 @@ workflows:
 #         name: Run Go tests
 #         no_output_timeout: 60m
 #     - save_cache:
-#         key: go-test-cache-{{ .Branch }}-{{ .BuildNum }}
+#         key: go-test-cache-branch-{{ .Branch }}
 #         paths:
 #         - /tmp/go/cache
 #   restore_yarn_cache:
