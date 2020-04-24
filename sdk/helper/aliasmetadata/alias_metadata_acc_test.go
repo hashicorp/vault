@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"sort"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
@@ -33,7 +32,7 @@ func TestAcceptance(t *testing.T) {
 	t.Run("test initial fields are default", env.TestInitialFieldsAreDefault)
 	t.Run("test fields can be unset", env.TestAliasMetadataCanBeUnset)
 	t.Run("test defaults can be restored", env.TestDefaultCanBeReused)
-	t.Run("test default plus more can be selected", env.TestDefaultPlusMoreCanBeSelected)
+	t.Run("test default plus more cannot be selected", env.TestDefaultPlusMoreCannotBeSelected)
 	t.Run("test only non-defaults can be selected", env.TestOnlyNonDefaultsCanBeSelected)
 	t.Run("test bad field results in useful error", env.TestAddingBadField)
 }
@@ -214,9 +213,9 @@ func (e *environment) TestDefaultCanBeReused(t *testing.T) {
 	}
 }
 
-func (e *environment) TestDefaultPlusMoreCanBeSelected(t *testing.T) {
-	// We should be able to set it to "default" plus 1 optional field.
-	resp, err := e.backend.HandleRequest(e.ctx, &logical.Request{
+func (e *environment) TestDefaultPlusMoreCannotBeSelected(t *testing.T) {
+	// We should not be able to set it to "default" plus 1 optional field.
+	_, err := e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Storage:   e.storage,
@@ -227,63 +226,8 @@ func (e *environment) TestDefaultPlusMoreCanBeSelected(t *testing.T) {
 			aliasMetadataFields.FieldName: []string{"default", "remote_addr"},
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp != nil {
-		t.Fatal("expected nil response")
-	}
-
-	// Let's make sure the default and optional field are being stored
-	// correctly.
-	resp, err = e.backend.HandleRequest(e.ctx, &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "config",
-		Storage:   e.storage,
-		Connection: &logical.Connection{
-			RemoteAddr: "http://foo.com",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || resp.Data == nil {
-		t.Fatal("expected non-nil response")
-	}
-	expected := []string{"role_name", "remote_addr"}
-	sort.Strings(expected)
-	actual := resp.Data[aliasMetadataFields.FieldName].([]string)
-	sort.Strings(actual)
-	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("unexpectedly received %s", resp.Data[aliasMetadataFields.FieldName])
-	}
-
-	// They both should now appear on the login.
-	resp, err = e.backend.HandleRequest(e.ctx, &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "login",
-		Storage:   e.storage,
-		Connection: &logical.Connection{
-			RemoteAddr: "http://foo.com",
-		},
-		Data: map[string]interface{}{
-			"role_name": "something",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || resp.Auth == nil || resp.Auth.Alias == nil || resp.Auth.Alias.Metadata == nil {
-		t.Fatal("expected alias metadata")
-	}
-	if len(resp.Auth.Alias.Metadata) != 2 {
-		t.Fatal("expected 2 fields")
-	}
-	if resp.Auth.Alias.Metadata["role_name"] != "something" {
-		t.Fatal("expected role_name to be something")
-	}
-	if resp.Auth.Alias.Metadata["remote_addr"] != "http://foo.com" {
-		t.Fatal("expected remote_addr to be http://foo.com")
+	if err == nil {
+		t.Fatal("expected err")
 	}
 }
 

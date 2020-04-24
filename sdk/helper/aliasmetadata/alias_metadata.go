@@ -110,6 +110,7 @@ func (h *Handler) ParseAliasMetadata(data *framework.FieldData) error {
 	if !ok {
 		return fmt.Errorf("%s is an unexpected type of %T", userProvidedRaw, userProvidedRaw)
 	}
+	userProvided = strutil.RemoveDuplicates(userProvided, true)
 
 	// If the only field the user has chosen was the default field,
 	// we don't store anything so we won't have to do a storage
@@ -119,8 +120,11 @@ func (h *Handler) ParseAliasMetadata(data *framework.FieldData) error {
 		return nil
 	}
 
-	userProvided = h.expandDefaultField(userProvided)
-	userProvided = strutil.RemoveDuplicates(userProvided, true)
+	// Validate and store the input.
+	if strutil.StrListContains(userProvided, "default") {
+		return fmt.Errorf("%q contains default - default can't be used in combination with other fields",
+			userProvided)
+	}
 	if !strutil.StrListSubset(h.fields.all(), userProvided) {
 		return fmt.Errorf("%q contains an unavailable field, please select from %q",
 			strings.Join(userProvided, ", "), strings.Join(h.fields.all(), ", "))

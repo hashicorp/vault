@@ -854,9 +854,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		"account_id":  identityDocParsed.AccountID,
 		"ami_id":      identityDocParsed.AmiID,
 	}); err != nil {
-		if b.Logger().IsWarn() {
-			b.Logger().Warn("unable to set alias metadata", "err", err))
-		}
+		b.Logger().Warn("unable to set alias metadata", "err", err)
 	}
 
 	resp := &logical.Response{
@@ -1392,9 +1390,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		"inferred_aws_region":  roleEntry.InferredAWSRegion,
 		"account_id":           entity.AccountNumber,
 	}); err != nil {
-		if b.Logger().IsWarn() {
-			b.Logger().Warn(fmt.Sprintf("unable to set alias metadata due to %s", err))
-		}
+		b.Logger().Warn(fmt.Sprintf("unable to set alias metadata due to %s", err))
 	}
 
 	return &logical.Response{
