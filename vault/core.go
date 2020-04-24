@@ -2337,7 +2337,8 @@ func (c *Core) SanitizedConfig() map[string]interface{} {
 
 // LogFormat returns the log format current in use.
 func (c *Core) LogFormat() string {
-	return c.rawConfig.LogFormat
+	conf := c.rawConfig.Load()
+	return conf.(*server.Config).LogFormat
 }
 
 // MetricsHelper returns the global metrics helper which allows external

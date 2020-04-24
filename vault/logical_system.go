@@ -2516,8 +2516,6 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 	return b.Core.metricsHelper.ResponseForFormat(format), nil
 }
 
-// Note that although this is a streaming response, it times out and the client connection is closed
-// after 90 seconds. I haven't been able to find the place where that's set, or override it.
 func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	ll := data.Get("log_level").(string)
 	w := req.ResponseWriter
