@@ -222,7 +222,8 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 		Data: map[string]interface{}{
 			"iam_alias": "role_id",
 			"iam_metadata": []string{
-				"default",
+				"account_id",
+				"auth_type",
 				"canonical_arn",
 				"client_arn",
 				"client_user_id",
@@ -232,7 +233,7 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 			},
 			"ec2_alias": "role_id",
 			"ec2_metadata": []string{
-				"default",
+				"account_id",
 				"ami_id",
 				"instance_id",
 				"region",
