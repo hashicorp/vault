@@ -36,7 +36,7 @@ steps:
 
         # Run tests
         make prep
-        mkdir -p test-results/go-test go-test-cache
+        mkdir -p test-results/go-test
         CGO_ENABLED= \
           VAULT_ADDR= \
           VAULT_TOKEN= \
@@ -49,10 +49,15 @@ steps:
             -parallel=20 \
             << parameters.extra_flags >> \
             github.com/hashicorp/vault/builtin/credential/ldap
+
+        du -sh /tmp/go/cache
   - save_cache:
 #      Do we want to include env vars in the key? Which ones?
 #      We should also store extra_flags.
       key: go-test-cache-branch-{{ .Branch }}
       paths:
       - /tmp/go/cache
-
+  - run:
+      name: Check cache
+      command: |
+        du -sh /tmp/go/cache

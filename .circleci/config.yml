@@ -222,7 +222,7 @@ jobs:
 
           # Run tests
           make prep
-          mkdir -p test-results/go-test go-test-cache
+          mkdir -p test-results/go-test
           CGO_ENABLED= \
             VAULT_ADDR= \
             VAULT_TOKEN= \
@@ -235,12 +235,18 @@ jobs:
               -parallel=20 \
                \
               github.com/hashicorp/vault/builtin/credential/ldap
+
+          du -sh /tmp/go/cache
         name: Run Go tests
         no_output_timeout: 60m
     - save_cache:
         key: go-test-cache-branch-{{ .Branch }}
         paths:
         - /tmp/go/cache
+    - run:
+        command: |
+          du -sh /tmp/go/cache
+        name: Check cache
     - store_artifacts:
         path: test-results
     - store_test_results:
@@ -359,7 +365,7 @@ workflows:
 # 
 #           # Run tests
 #           make prep
-#           mkdir -p test-results/go-test go-test-cache
+#           mkdir -p test-results/go-test
 #           CGO_ENABLED= \\
 #             VAULT_ADDR= \\
 #             VAULT_TOKEN= \\
@@ -372,12 +378,18 @@ workflows:
 #               -parallel=20 \\
 #               << parameters.extra_flags >> \\
 #               github.com/hashicorp/vault/builtin/credential/ldap
+# 
+#           du -sh /tmp/go/cache
 #         name: Run Go tests
 #         no_output_timeout: 60m
 #     - save_cache:
 #         key: go-test-cache-branch-{{ .Branch }}
 #         paths:
 #         - /tmp/go/cache
+#     - run:
+#         command: |
+#           du -sh /tmp/go/cache
+#         name: Check cache
 #   restore_yarn_cache:
 #     steps:
 #     - restore_cache:
