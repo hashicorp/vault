@@ -5,15 +5,14 @@
     &:hover {
       box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
     }
-
-    .title-number {
-      font-size: $size-3;
-      align-self: end;
-    }
   }
 
   .helper-text {
     font-weight: $font-weight-normal;
+  }
+
+  .title.is-6 {
+    margin-bottom: $spacing-xs;
   }
 
   .selectable-card-container {
@@ -24,9 +23,10 @@
 
     .card-container {
       display: grid;
+      grid-gap: 2rem;
       grid-template-columns: 1fr 1fr;
       grid-template-rows: 1fr 1fr 0.8fr;
-      padding: $spacing-l 0 18px $spacing-l;
+      padding: $spacing-l;
       line-height: 1.5;
 
       height: 220px;
@@ -38,7 +38,6 @@
 
       .grid-item-title {
         grid-column: 1 / span 2;
-
         display: flex;
       }
       .grid-item-left {
