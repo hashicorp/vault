@@ -33,27 +33,6 @@ jobs:
         name: Install CircleCI CLI
     - run:
         command: make ci-verify
-  install-ui-dependencies:
-    docker:
-    - environment:
-        JOBS: 2
-      image: node:10-buster
-    shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
-    steps:
-    - checkout
-    - restore_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
-    - run:
-        command: |
-          cd ui
-          yarn install
-          npm rebuild node-sass
-        name: Install UI dependencies
-    - save_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
-        paths:
-        - ui/node_modules
   build-go-dev:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
@@ -98,66 +77,6 @@ jobs:
     - GO_VERSION: 1.13.8
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
-  test-ui:
-    docker:
-    - environment:
-        JOBS: 2
-      image: node:10-buster
-    shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
-    resource_class: medium+
-    steps:
-    - checkout
-    - restore_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
-    - attach_workspace:
-        at: .
-    - run:
-        command: |
-          set -x
-
-          # Install Chrome
-          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub \
-            | apt-key add -
-          echo "deb http://dl.google.com/linux/chrome/deb/ stable main" \
-            | tee /etc/apt/sources.list.d/google-chrome.list
-          apt-get update
-          apt-get -y install google-chrome-stable
-          rm /etc/apt/sources.list.d/google-chrome.list
-          rm -rf /var/lib/apt/lists/* /var/cache/apt/*
-
-          # Add ./bin to the PATH so vault binary can be run by Ember tests
-          export PATH="${PWD}/bin:${PATH}"
-
-          # Run Ember tests
-          cd ui
-          mkdir -p test-results/qunit
-          yarn test:oss
-        name: Test UI
-    - store_artifacts:
-        path: ui/test-results
-    - store_test_results:
-        path: ui/test-results
-  test-ui-browserstack:
-    docker:
-    - environment:
-        JOBS: 2
-      image: node:10-buster
-    shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
-    resource_class: medium+
-    steps:
-    - checkout
-    - restore_cache:
-        key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
-    - attach_workspace:
-        at: .
-    - run:
-        command: |
-          # Add ./bin to the PATH so vault binary can be found.
-          export PATH="${PWD}"/bin:${PATH}
-          make test-ui-browserstack
-        name: Run Browserstack Tests
   test-go:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
@@ -259,59 +178,16 @@ jobs:
     - GO_VERSION: 1.13.8
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
-  website-docker-image:
-    docker:
-    - image: circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    steps:
-    - checkout
-    - setup_remote_docker
-    - run:
-        command: |
-          IMAGE_TAG="$(git rev-list -n1 HEAD -- website/Dockerfile website/package-lock.json)"
-          echo "Using $IMAGE_TAG"
-          if  [ "$CIRCLE_REPOSITORY_URL" != "git@github.com:hashicorp/vault.git" ]; then
-            echo "Not Vault OSS Repo, not building website docker image"
-          elif curl https://hub.docker.com/v2/repositories/hashicorp/vault-website/tags/$IMAGE_TAG -fsL > /dev/null; then
-              echo "Dependencies have not changed, not building a new website docker image."
-          else
-              cd website/
-              docker build -t hashicorp/vault-website:$IMAGE_TAG .
-              docker tag hashicorp/vault-website:$IMAGE_TAG hashicorp/vault-website:latest
-              docker login -u $WEBSITE_DOCKER_USER -p $WEBSITE_DOCKER_PASS
-              docker push hashicorp/vault-website
-          fi
-        name: Build Docker Image if Necessary
 workflows:
   ci:
     jobs:
     - pre-flight-checks
-    - install-ui-dependencies:
-        requires:
-        - pre-flight-checks
     - build-go-dev:
         requires:
         - pre-flight-checks
-    - test-ui:
-        requires:
-        - install-ui-dependencies
-        - build-go-dev
-    - test-ui-browserstack:
-        filters:
-          branches:
-            ignore: /pull\/[0-9]+/
-        requires:
-        - install-ui-dependencies
-        - build-go-dev
     - test-go:
         requires:
         - build-go-dev
-    - website-docker-image:
-        filters:
-          branches:
-            only:
-            - master
-        context: vault-docs
   version: 2
 
 # Original config.yml file:
@@ -623,29 +499,9 @@ workflows:
 #   ci:
 #     jobs:
 #     - pre-flight-checks
-#     - install-ui-dependencies:
-#         requires:
-#         - pre-flight-checks
 #     - build-go-dev:
 #         requires:
 #         - pre-flight-checks
-#     - test-ui:
-#         requires:
-#         - install-ui-dependencies
-#         - build-go-dev
-#     - test-ui-browserstack:
-#         filters:
-#           branches:
-#             ignore: /pull\\/[0-9]+/
-#         requires:
-#         - install-ui-dependencies
-#         - build-go-dev
 #     - test-go:
 #         requires:
 #         - build-go-dev
-#     - website-docker-image:
-#         context: vault-docs
-#         filters:
-#           branches:
-#             only:
-#             - master
