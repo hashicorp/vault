@@ -75,9 +75,9 @@ export default DS.Model.extend({
     const glyph = 'check-circle-outline';
 
     const glyphs = {
-      'stream-wals': 'android-sync',
+      'stream-wals': 'check-circle-outline',
       'merkle-diff': 'android-sync',
-      'merkle-sync': null,
+      'merkle-sync': 'android-sync',
     };
 
     return glyphs[state] || glyph;

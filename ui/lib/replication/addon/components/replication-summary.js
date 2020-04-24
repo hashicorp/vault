@@ -66,10 +66,22 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
     this.setProperties(DEFAULTS);
   },
 
+  transitionTo: computed('mode', 'replicationMode', function() {
+    // Take transitionTo outside of a yield because it unmounts the cluster and yield cannot return anything
+    return () => this.router.transitionTo('vault.cluster');
+  }),
+
   submit: task(function*() {
-    yield this.submitHandler(...arguments);
-    let wizard = this.get('wizard');
-    wizard.transitionFeatureMachine(wizard.get('featureState'), 'ENABLEREPLICATION');
+    let mode;
+    try {
+      mode = yield this.submitHandler.perform(...arguments);
+    } catch (e) {
+      // TODO handle error
+    }
+    // if Secondary, handle transition here, if not, handle transition in mixin Enable
+    if (mode === 'secondary') {
+      this.transitionTo();
+    }
   }),
 
   actions: {
