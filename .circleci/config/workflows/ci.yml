@@ -21,15 +21,15 @@ jobs:
   - test-go:
       requires:
         - build-go-dev
-  - test-go-race:
-      requires:
-        - build-go-dev
-      filters:
-        branches:
-          # UI and Docs-only branches should skip go tests
-          ignore:
-            - /^docs\/.*/
-            - /^ui\/.*/
+#  - test-go-race:
+#      requires:
+#        - build-go-dev
+#      filters:
+#        branches:
+#          # UI and Docs-only branches should skip go tests
+#          ignore:
+#            - /^docs\/.*/
+#            - /^ui\/.*/
   - website-docker-image:
       context: vault-docs
       filters:

@@ -4,6 +4,9 @@ parameters:
     type: string
     default: ""
 steps:
+  - restore_cache:
+      #      Do we want to include env vars in the key? Which ones?
+      key: go-test-cache-v1-TODO_BRANCH_HERE
   - run:
       name: Run Go tests
       no_output_timeout: 60m
@@ -32,16 +35,23 @@ steps:
 
         # Run tests
         make prep
-        mkdir -p test-results/go-test
+        mkdir -p test-results/go-test go-test-cache
         CGO_ENABLED= \
           VAULT_ADDR= \
           VAULT_TOKEN= \
           VAULT_DEV_ROOT_TOKEN_ID= \
           VAULT_ACC= \
+          GOCACHE=./go-test-cache
           gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
             -tags "${GO_TAGS}" \
             -timeout=60m \
             -parallel=20 \
             << parameters.extra_flags >> \
-            ${package_names}
+            github.com/hashicorp/vault/builtin/credential/ldap
+  - save_cache:
+#      Do we want to include env vars in the key? Which ones?
+#      We should also store extra_flags.
+      key: go-test-cache-v1-TODO_BRANCH_HERE
+      paths:
+      - go-test-cache
 
