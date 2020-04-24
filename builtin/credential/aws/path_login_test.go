@@ -263,7 +263,7 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedAliasMetadata := map[string]string{
+	expectedAuthMetadata := map[string]string{
 		"account_id":     "123456789012",
 		"auth_type":      "iam",
 		"canonical_arn":  "arn:aws:iam::123456789012:user/valid-role",
@@ -370,8 +370,8 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 				t.Errorf("un expected failed login:\nresp: %#v\n\nerr: %v", resp, err)
 			}
 
-			if !reflect.DeepEqual(expectedAliasMetadata, resp.Auth.Alias.Metadata) {
-				t.Errorf("expected metadata (%#v) to match (%#v)", expectedAliasMetadata, resp.Auth.Alias.Metadata)
+			if !reflect.DeepEqual(expectedAuthMetadata, resp.Auth.Alias.Metadata) {
+				t.Errorf("expected metadata (%#v) to match (%#v)", expectedAuthMetadata, resp.Auth.Alias.Metadata)
 			}
 		})
 	}

@@ -1,10 +1,10 @@
-package aliasmetadata
+package authmetadata
 
 /*
-	aliasmetadata is a package offering convenience and
-	standardization when supporting an `alias_metadata`
+	authmetadata is a package offering convenience and
+	standardization when supporting an `auth_metadata`
 	field in a plugin's configuration. This then controls
-	what alias metadata is added to an Auth during login.
+	what metadata is added to an Auth during login.
 
 	To see an example of how to add and use it, check out
 	how these structs and fields are used in the AWS auth
@@ -52,14 +52,14 @@ func (f *Fields) all() []string {
 
 // FieldSchema takes the default and additionally available
 // fields, and uses them to generate a verbose description
-// regarding how to use the "alias_metadata" field.
+// regarding how to use the "auth_metadata" field.
 func FieldSchema(fields *Fields) *framework.FieldSchema {
 	return &framework.FieldSchema{
 		Type:        framework.TypeCommaStringSlice,
 		Description: description(fields),
 		DisplayAttrs: &framework.DisplayAttributes{
 			Name:  fields.FieldName,
-			Value: "default,field1,field2",
+			Value: "field1,field2",
 		},
 		Default: []string{"default"},
 	}
@@ -72,35 +72,32 @@ func NewHandler(fields *Fields) *Handler {
 }
 
 type Handler struct {
-	// aliasMetadata is an explicit list of all the user's configured
-	// fields that are being added to alias metadata. It will never
-	// include the "default" parameter, and instead includes the actual
-	// fields behind "default", if selected. If it has never been set
-	// or only the default fields are desired, it is nil.
-	aliasMetadata []string
+	// authMetadata is an explicit list of all the user's configured
+	// fields that are being added to auth metadata. If it is set to
+	// default or unconfigured, it will be nil. Otherwise, it will
+	// hold the explicit fields set by the user.
+	authMetadata []string
 
 	// fields is a list of the configured default and available
-	// fields. It's intentionally not jsonified.
+	// fields.
 	fields *Fields
 }
 
-// AliasMetadata is intended to be used on config reads.
+// AuthMetadata is intended to be used on config reads.
 // It gets an explicit list of all the user's configured
-// fields that are being added to alias metadata. It will never
-// include the "default" parameter, and instead includes the actual
-// fields behind "default", if selected.
-func (h *Handler) AliasMetadata() []string {
-	if h.aliasMetadata == nil {
+// fields that are being added to auth metadata.
+func (h *Handler) AuthMetadata() []string {
+	if h.authMetadata == nil {
 		return h.fields.Default
 	}
-	return h.aliasMetadata
+	return h.authMetadata
 }
 
-// ParseAliasMetadata is intended to be used on config create/update.
+// ParseAuthMetadata is intended to be used on config create/update.
 // It takes a user's selected fields (or lack thereof),
 // converts it to a list of explicit fields, and adds it to the Handler
 // for later storage.
-func (h *Handler) ParseAliasMetadata(data *framework.FieldData) error {
+func (h *Handler) ParseAuthMetadata(data *framework.FieldData) error {
 	userProvidedRaw, ok := data.GetOk(h.fields.FieldName)
 	if !ok {
 		// Nothing further to do here.
@@ -116,7 +113,7 @@ func (h *Handler) ParseAliasMetadata(data *framework.FieldData) error {
 	// we don't store anything so we won't have to do a storage
 	// migration if the default changes.
 	if len(userProvided) == 1 && userProvided[0] == "default" {
-		h.aliasMetadata = nil
+		h.authMetadata = nil
 		return nil
 	}
 
@@ -129,50 +126,34 @@ func (h *Handler) ParseAliasMetadata(data *framework.FieldData) error {
 		return fmt.Errorf("%q contains an unavailable field, please select from %q",
 			strings.Join(userProvided, ", "), strings.Join(h.fields.all(), ", "))
 	}
-	h.aliasMetadata = userProvided
+	h.authMetadata = userProvided
 	return nil
 }
 
-// expandDefaultField looks for the field "default" and, if exists,
-// replaces it with the actual default fields signified.
-func (h *Handler) expandDefaultField(userProvided []string) (expanded []string) {
-	for _, field := range userProvided {
-		if field != "default" {
-			expanded = append(expanded, field)
-			continue
-		}
-		for _, dfltField := range h.fields.Default {
-			expanded = append(expanded, dfltField)
-		}
-	}
-	return expanded
-}
-
-// PopulateDesiredAliasMetadata is intended to be used during login
+// PopulateDesiredMetadata is intended to be used during login
 // just before returning an auth.
-// It takes the available alias metadata and,
-// if the auth should have it, adds it to the auth's alias metadata.
-func (h *Handler) PopulateDesiredAliasMetadata(auth *logical.Auth, available map[string]string) error {
+// It takes the available auth metadata and,
+// if the auth should have it, adds it to the auth's metadata.
+func (h *Handler) PopulateDesiredMetadata(auth *logical.Auth, available map[string]string) error {
 	if auth == nil {
 		return errors.New("auth is nil")
 	}
-	if auth.Alias == nil {
-		return errors.New("auth alias is nil")
+	if auth.Metadata == nil {
+		auth.Metadata = make(map[string]string)
 	}
-	if auth.Alias.Name == "" {
-		// We need the caller to set the alias name or there will
-		// be nothing for these fields to operate upon.
-		return errors.New("auth alias name must be set")
+	if auth.Alias == nil {
+		auth.Alias = &logical.Alias{}
 	}
 	if auth.Alias.Metadata == nil {
 		auth.Alias.Metadata = make(map[string]string)
 	}
 	fieldsToInclude := h.fields.Default
-	if h.aliasMetadata != nil {
-		fieldsToInclude = h.aliasMetadata
+	if h.authMetadata != nil {
+		fieldsToInclude = h.authMetadata
 	}
 	for availableField, itsValue := range available {
 		if strutil.StrListContains(fieldsToInclude, availableField) {
+			auth.Metadata[availableField] = itsValue
 			auth.Alias.Metadata[availableField] = itsValue
 		}
 	}
@@ -181,27 +162,27 @@ func (h *Handler) PopulateDesiredAliasMetadata(auth *logical.Auth, available map
 
 func (h *Handler) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
-		AliasMetadata []string `json:"alias_metadata"`
+		AuthMetadata []string `json:"auth_metadata"`
 	}{
-		AliasMetadata: h.aliasMetadata,
+		AuthMetadata: h.authMetadata,
 	})
 }
 
 func (h *Handler) UnmarshalJSON(data []byte) error {
 	jsonable := &struct {
-		AliasMetadata []string `json:"alias_metadata"`
+		AuthMetadata []string `json:"auth_metadata"`
 	}{
-		AliasMetadata: h.aliasMetadata,
+		AuthMetadata: h.authMetadata,
 	}
 	if err := json.Unmarshal(data, jsonable); err != nil {
 		return err
 	}
-	h.aliasMetadata = jsonable.AliasMetadata
+	h.authMetadata = jsonable.AuthMetadata
 	return nil
 }
 
 func description(fields *Fields) string {
-	desc := "The metadata to include on the aliases generated by this plugin."
+	desc := "The metadata to include on the aliases and audit logs generated by this plugin."
 	if len(fields.Default) > 0 {
 		desc += fmt.Sprintf(" When set to 'default', includes: %s.", strings.Join(fields.Default, ", "))
 	}
@@ -209,8 +190,7 @@ func description(fields *Fields) string {
 		desc += fmt.Sprintf(" These fields are available to add: %s.", strings.Join(fields.AvailableToAdd, ", "))
 	}
 	desc += " Not editing this field means the 'default' fields are included." +
-		" Explicitly setting this field to empty overrides the 'default' and means no alias metadata will be included." +
-		" Add fields by sending, 'default,field1,field2'." +
-		" We advise only including fields that change rarely because each change triggers a storage write."
+		" Explicitly setting this field to empty overrides the 'default' and means no metadata will be included." +
+		" If not using 'default', explicit fields must be sent like: 'field1,field2'."
 	return desc
 }

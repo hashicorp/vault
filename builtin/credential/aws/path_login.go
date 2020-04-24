@@ -836,19 +836,15 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 
 	auth := &logical.Auth{
 		Metadata: map[string]string{
-			"instance_id":      identityDocParsed.InstanceID,
-			"region":           identityDocParsed.Region,
-			"account_id":       identityDocParsed.AccountID,
 			"role_tag_max_ttl": rTagMaxTTL.String(),
 			"role":             roleName,
-			"ami_id":           identityDocParsed.AmiID,
 		},
 		Alias: &logical.Alias{
 			Name: identityAlias,
 		},
 	}
 	roleEntry.PopulateTokenAuth(auth)
-	if err := identityConfigEntry.EC2AliasMetadataHandler.PopulateDesiredAliasMetadata(auth, map[string]string{
+	if err := identityConfigEntry.EC2AuthMetadataHandler.PopulateDesiredMetadata(auth, map[string]string{
 		"instance_id": identityDocParsed.InstanceID,
 		"region":      identityDocParsed.Region,
 		"account_id":  identityDocParsed.AccountID,
@@ -1360,15 +1356,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 
 	auth := &logical.Auth{
 		Metadata: map[string]string{
-			"client_arn":           callerID.Arn,
-			"canonical_arn":        entity.canonicalArn(),
-			"client_user_id":       callerUniqueId,
-			"auth_type":            iamAuthType,
-			"inferred_entity_type": inferredEntityType,
-			"inferred_entity_id":   inferredEntityID,
-			"inferred_aws_region":  roleEntry.InferredAWSRegion,
-			"account_id":           entity.AccountNumber,
-			"role_id":              roleEntry.RoleID,
+			"role_id": roleEntry.RoleID,
 		},
 		InternalData: map[string]interface{}{
 			"role_name": roleName,
@@ -1380,7 +1368,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		},
 	}
 	roleEntry.PopulateTokenAuth(auth)
-	if err := identityConfigEntry.IAMAliasMetadataHandler.PopulateDesiredAliasMetadata(auth, map[string]string{
+	if err := identityConfigEntry.IAMAuthMetadataHandler.PopulateDesiredMetadata(auth, map[string]string{
 		"client_arn":           callerID.Arn,
 		"canonical_arn":        entity.canonicalArn(),
 		"client_user_id":       callerUniqueId,

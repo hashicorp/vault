@@ -5,18 +5,18 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/aliasmetadata"
+	"github.com/hashicorp/vault/sdk/helper/authmetadata"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var (
-	// iamAliasMetadataFields is a list of the default alias metadata
+	// iamAuthMetadataFields is a list of the default auth metadata
 	// added to tokens during login. The default alias type used
 	// by this back-end is the role ID. Subsequently, the default
 	// fields included are expected to have a low rate of change
 	// when the role ID is in use.
-	iamAliasMetadataFields = &aliasmetadata.Fields{
+	iamAuthMetadataFields = &authmetadata.Fields{
 		FieldName: "iam_metadata",
 		Default: []string{
 			"account_id",
@@ -32,12 +32,12 @@ var (
 		},
 	}
 
-	// ec2AliasMetadataFields is a list of the default alias metadata
+	// ec2AuthMetadataFields is a list of the default auth metadata
 	// added to tokens during login. The default alias type used
 	// by this back-end is the role ID. Subsequently, the default
 	// fields included are expected to have a low rate of change
 	// when the role ID is in use.
-	ec2AliasMetadataFields = &aliasmetadata.Fields{
+	ec2AuthMetadataFields = &authmetadata.Fields{
 		FieldName: "ec2_metadata",
 		Default: []string{
 			"account_id",
@@ -59,13 +59,13 @@ func (b *backend) pathConfigIdentity() *framework.Path {
 				Default:     identityAliasIAMUniqueID,
 				Description: fmt.Sprintf("Configure how the AWS auth method generates entity aliases when using IAM auth. Valid values are %q, %q, and %q. Defaults to %q.", identityAliasRoleID, identityAliasIAMUniqueID, identityAliasIAMFullArn, identityAliasRoleID),
 			},
-			iamAliasMetadataFields.FieldName: aliasmetadata.FieldSchema(iamAliasMetadataFields),
+			iamAuthMetadataFields.FieldName: authmetadata.FieldSchema(iamAuthMetadataFields),
 			"ec2_alias": {
 				Type:        framework.TypeString,
 				Default:     identityAliasEC2InstanceID,
 				Description: fmt.Sprintf("Configure how the AWS auth method generates entity alias when using EC2 auth. Valid values are %q, %q, and %q. Defaults to %q.", identityAliasRoleID, identityAliasEC2InstanceID, identityAliasEC2ImageID, identityAliasRoleID),
 			},
-			ec2AliasMetadataFields.FieldName: aliasmetadata.FieldSchema(ec2AliasMetadataFields),
+			ec2AuthMetadataFields.FieldName: authmetadata.FieldSchema(ec2AuthMetadataFields),
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -89,8 +89,8 @@ func identityConfigEntry(ctx context.Context, s logical.Storage) (*identityConfi
 	}
 
 	entry := &identityConfig{
-		IAMAliasMetadataHandler: aliasmetadata.NewHandler(iamAliasMetadataFields),
-		EC2AliasMetadataHandler: aliasmetadata.NewHandler(ec2AliasMetadataFields),
+		IAMAuthMetadataHandler: authmetadata.NewHandler(iamAuthMetadataFields),
+		EC2AuthMetadataHandler: authmetadata.NewHandler(ec2AuthMetadataFields),
 	}
 	if entryRaw != nil {
 		if err := entryRaw.DecodeJSON(entry); err != nil {
@@ -117,10 +117,10 @@ func pathConfigIdentityRead(ctx context.Context, req *logical.Request, _ *framew
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"iam_alias":                      config.IAMAlias,
-			iamAliasMetadataFields.FieldName: config.IAMAliasMetadataHandler.AliasMetadata(),
-			"ec2_alias":                      config.EC2Alias,
-			ec2AliasMetadataFields.FieldName: config.EC2AliasMetadataHandler.AliasMetadata(),
+			"iam_alias":                     config.IAMAlias,
+			iamAuthMetadataFields.FieldName: config.IAMAuthMetadataHandler.AuthMetadata(),
+			"ec2_alias":                     config.EC2Alias,
+			ec2AuthMetadataFields.FieldName: config.EC2AuthMetadataHandler.AuthMetadata(),
 		},
 	}, nil
 }
@@ -150,10 +150,10 @@ func pathConfigIdentityUpdate(ctx context.Context, req *logical.Request, data *f
 		}
 		config.EC2Alias = ec2Alias
 	}
-	if err := config.IAMAliasMetadataHandler.ParseAliasMetadata(data); err != nil {
+	if err := config.IAMAuthMetadataHandler.ParseAuthMetadata(data); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
-	if err := config.EC2AliasMetadataHandler.ParseAliasMetadata(data); err != nil {
+	if err := config.EC2AuthMetadataHandler.ParseAuthMetadata(data); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
@@ -171,10 +171,10 @@ func pathConfigIdentityUpdate(ctx context.Context, req *logical.Request, data *f
 }
 
 type identityConfig struct {
-	IAMAlias                string                 `json:"iam_alias"`
-	IAMAliasMetadataHandler *aliasmetadata.Handler `json:"iam_alias_metadata_handler"`
-	EC2Alias                string                 `json:"ec2_alias"`
-	EC2AliasMetadataHandler *aliasmetadata.Handler `json:"ec2_alias_metadata_handler"`
+	IAMAlias               string                `json:"iam_alias"`
+	IAMAuthMetadataHandler *authmetadata.Handler `json:"iam_auth_metadata_handler"`
+	EC2Alias               string                `json:"ec2_alias"`
+	EC2AuthMetadataHandler *authmetadata.Handler `json:"ec2_auth_metadata_handler"`
 }
 
 const identityAliasIAMUniqueID = "unique_id"

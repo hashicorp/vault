@@ -1,4 +1,4 @@
-package aliasmetadata
+package authmetadata
 
 import (
 	"context"
@@ -30,7 +30,7 @@ func TestAcceptance(t *testing.T) {
 		backend: b,
 	}
 	t.Run("test initial fields are default", env.TestInitialFieldsAreDefault)
-	t.Run("test fields can be unset", env.TestAliasMetadataCanBeUnset)
+	t.Run("test fields can be unset", env.TestAuthMetadataCanBeUnset)
 	t.Run("test defaults can be restored", env.TestDefaultCanBeReused)
 	t.Run("test default plus more cannot be selected", env.TestDefaultPlusMoreCannotBeSelected)
 	t.Run("test only non-defaults can be selected", env.TestOnlyNonDefaultsCanBeSelected)
@@ -38,7 +38,7 @@ func TestAcceptance(t *testing.T) {
 }
 
 func (e *environment) TestInitialFieldsAreDefault(t *testing.T) {
-	// On the first read of alias_metadata, when nothing has been touched,
+	// On the first read of auth_metadata, when nothing has been touched,
 	// we should receive the default field(s) if a read is performed.
 	resp, err := e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.ReadOperation,
@@ -54,7 +54,7 @@ func (e *environment) TestInitialFieldsAreDefault(t *testing.T) {
 	if resp == nil || resp.Data == nil {
 		t.Fatal("expected non-nil response")
 	}
-	if !reflect.DeepEqual(resp.Data[aliasMetadataFields.FieldName], []string{"role_name"}) {
+	if !reflect.DeepEqual(resp.Data[authMetadataFields.FieldName], []string{"role_name"}) {
 		t.Fatal("expected default field of role_name to be returned")
 	}
 
@@ -84,8 +84,8 @@ func (e *environment) TestInitialFieldsAreDefault(t *testing.T) {
 	}
 }
 
-func (e *environment) TestAliasMetadataCanBeUnset(t *testing.T) {
-	// We should be able to set the alias_metadata to empty by sending an
+func (e *environment) TestAuthMetadataCanBeUnset(t *testing.T) {
+	// We should be able to set the auth_metadata to empty by sending an
 	// explicitly empty array.
 	resp, err := e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -95,7 +95,7 @@ func (e *environment) TestAliasMetadataCanBeUnset(t *testing.T) {
 			RemoteAddr: "http://foo.com",
 		},
 		Data: map[string]interface{}{
-			aliasMetadataFields.FieldName: []string{},
+			authMetadataFields.FieldName: []string{},
 		},
 	})
 	if err != nil {
@@ -105,7 +105,7 @@ func (e *environment) TestAliasMetadataCanBeUnset(t *testing.T) {
 		t.Fatal("expected nil response")
 	}
 
-	// Now we should receive no fields for alias_metadata.
+	// Now we should receive no fields for auth_metadata.
 	resp, err = e.backend.HandleRequest(e.ctx, &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "config",
@@ -120,7 +120,7 @@ func (e *environment) TestAliasMetadataCanBeUnset(t *testing.T) {
 	if resp == nil || resp.Data == nil {
 		t.Fatal("expected non-nil response")
 	}
-	if !reflect.DeepEqual(resp.Data[aliasMetadataFields.FieldName], []string{}) {
+	if !reflect.DeepEqual(resp.Data[authMetadataFields.FieldName], []string{}) {
 		t.Fatal("expected no fields to be returned")
 	}
 
@@ -158,7 +158,7 @@ func (e *environment) TestDefaultCanBeReused(t *testing.T) {
 			RemoteAddr: "http://foo.com",
 		},
 		Data: map[string]interface{}{
-			aliasMetadataFields.FieldName: []string{"default"},
+			authMetadataFields.FieldName: []string{"default"},
 		},
 	})
 	if err != nil {
@@ -183,7 +183,7 @@ func (e *environment) TestDefaultCanBeReused(t *testing.T) {
 	if resp == nil || resp.Data == nil {
 		t.Fatal("expected non-nil response")
 	}
-	if !reflect.DeepEqual(resp.Data[aliasMetadataFields.FieldName], []string{"role_name"}) {
+	if !reflect.DeepEqual(resp.Data[authMetadataFields.FieldName], []string{"role_name"}) {
 		t.Fatal("expected default field of role_name to be returned")
 	}
 
@@ -223,7 +223,7 @@ func (e *environment) TestDefaultPlusMoreCannotBeSelected(t *testing.T) {
 			RemoteAddr: "http://foo.com",
 		},
 		Data: map[string]interface{}{
-			aliasMetadataFields.FieldName: []string{"default", "remote_addr"},
+			authMetadataFields.FieldName: []string{"default", "remote_addr"},
 		},
 	})
 	if err == nil {
@@ -241,7 +241,7 @@ func (e *environment) TestOnlyNonDefaultsCanBeSelected(t *testing.T) {
 			RemoteAddr: "http://foo.com",
 		},
 		Data: map[string]interface{}{
-			aliasMetadataFields.FieldName: []string{"remote_addr"},
+			authMetadataFields.FieldName: []string{"remote_addr"},
 		},
 	})
 	if err != nil {
@@ -266,7 +266,7 @@ func (e *environment) TestOnlyNonDefaultsCanBeSelected(t *testing.T) {
 	if resp == nil || resp.Data == nil {
 		t.Fatal("expected non-nil response")
 	}
-	if !reflect.DeepEqual(resp.Data[aliasMetadataFields.FieldName], []string{"remote_addr"}) {
+	if !reflect.DeepEqual(resp.Data[authMetadataFields.FieldName], []string{"remote_addr"}) {
 		t.Fatal("expected remote_addr to be returned")
 	}
 
@@ -307,7 +307,7 @@ func (e *environment) TestAddingBadField(t *testing.T) {
 			RemoteAddr: "http://foo.com",
 		},
 		Data: map[string]interface{}{
-			aliasMetadataFields.FieldName: []string{"asl;dfkj"},
+			authMetadataFields.FieldName: []string{"asl;dfkj"},
 		},
 	})
 	if err == nil {
@@ -328,7 +328,7 @@ func (e *environment) TestAddingBadField(t *testing.T) {
 // automatically being named "Handler" by Go's JSON
 // marshalling library.
 type fakeConfig struct {
-	*Handler `json:"alias_metadata_handler"`
+	*Handler `json:"auth_metadata_handler"`
 }
 
 type fakeBackend struct {
@@ -337,7 +337,7 @@ type fakeBackend struct {
 
 // We expect each back-end to explicitly define the fields that
 // will be included by default, and optionally available.
-var aliasMetadataFields = &Fields{
+var authMetadataFields = &Fields{
 	FieldName: "some_field_name",
 	Default: []string{
 		"role_name", // This would likely never change because the alias is the role name.
@@ -351,7 +351,7 @@ func configPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "config",
 		Fields: map[string]*framework.FieldSchema{
-			aliasMetadataFields.FieldName: FieldSchema(aliasMetadataFields),
+			authMetadataFields.FieldName: FieldSchema(authMetadataFields),
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -361,7 +361,7 @@ func configPath() *framework.Path {
 						return nil, err
 					}
 					conf := &fakeConfig{
-						Handler: NewHandler(aliasMetadataFields),
+						Handler: NewHandler(authMetadataFields),
 					}
 					if entryRaw != nil {
 						if err := entryRaw.DecodeJSON(conf); err != nil {
@@ -370,10 +370,10 @@ func configPath() *framework.Path {
 					}
 					// Note that even if the config entry was nil, we return
 					// a populated response to give info on what the default
-					// alias metadata is when unconfigured.
+					// auth metadata is when unconfigured.
 					return &logical.Response{
 						Data: map[string]interface{}{
-							aliasMetadataFields.FieldName: conf.AliasMetadata(),
+							authMetadataFields.FieldName: conf.AuthMetadata(),
 						},
 					}, nil
 				},
@@ -385,15 +385,15 @@ func configPath() *framework.Path {
 						return nil, err
 					}
 					conf := &fakeConfig{
-						Handler: NewHandler(aliasMetadataFields),
+						Handler: NewHandler(authMetadataFields),
 					}
 					if entryRaw != nil {
 						if err := entryRaw.DecodeJSON(conf); err != nil {
 							return nil, err
 						}
 					}
-					// This is where we read in the user's given alias metadata.
-					if err := conf.ParseAliasMetadata(fd); err != nil {
+					// This is where we read in the user's given auth metadata.
+					if err := conf.ParseAuthMetadata(fd); err != nil {
 						// Since this will only error on bad input, it's best to give
 						// a 400 response with the explicit problem included.
 						return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
@@ -429,7 +429,7 @@ func loginPath() *framework.Path {
 						return nil, err
 					}
 					conf := &fakeConfig{
-						Handler: NewHandler(aliasMetadataFields),
+						Handler: NewHandler(authMetadataFields),
 					}
 					if entryRaw != nil {
 						if err := entryRaw.DecodeJSON(conf); err != nil {
@@ -443,7 +443,7 @@ func loginPath() *framework.Path {
 					}
 					// Here we provide everything and let the method strip out
 					// the undesired stuff.
-					if err := conf.PopulateDesiredAliasMetadata(auth, map[string]string{
+					if err := conf.PopulateDesiredMetadata(auth, map[string]string{
 						"role_name":   fd.Get("role_name").(string),
 						"remote_addr": req.Connection.RemoteAddr,
 					}); err != nil {
