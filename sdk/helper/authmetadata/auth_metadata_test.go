@@ -1,7 +1,6 @@
 package authmetadata
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
@@ -108,7 +107,7 @@ func TestPopulateDesiredAuthMetadata(t *testing.T) {
 func TestMarshalJSON(t *testing.T) {
 	h := NewHandler(&Fields{})
 	h.authMetadata = []string{"fizz", "buzz"}
-	b, err := json.Marshal(h)
+	b, err := h.MarshalJSON()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +118,7 @@ func TestMarshalJSON(t *testing.T) {
 
 func TestUnmarshalJSON(t *testing.T) {
 	h := NewHandler(&Fields{})
-	if err := json.Unmarshal([]byte(`{"auth_metadata":["fizz","buzz"]}`), h); err != nil {
+	if err := h.UnmarshalJSON([]byte(`{"auth_metadata":["fizz","buzz"]}`)); err != nil {
 		t.Fatal(err)
 	}
 	if fmt.Sprintf("%s", h.authMetadata) != `[fizz buzz]` {
