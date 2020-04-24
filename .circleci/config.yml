@@ -223,12 +223,14 @@ jobs:
           # Run tests
           make prep
           mkdir -p test-results/go-test
+          du -sh /tmp/go-cache || true
+
           CGO_ENABLED= \
             VAULT_ADDR= \
             VAULT_TOKEN= \
             VAULT_DEV_ROOT_TOKEN_ID= \
             VAULT_ACC= \
-            GOCACHE=$(pwd)/go-test-cache
+            GOCACHE=/tmp/go-cache
             gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
               -tags "${GO_TAGS}" \
               -timeout=60m \
@@ -236,16 +238,16 @@ jobs:
                \
               github.com/hashicorp/vault/builtin/credential/ldap
 
-          du -sh go-test-cache
+          du -sh /tmp/go-cache || true
         name: Run Go tests
         no_output_timeout: 60m
     - save_cache:
         key: go-test-cache-v1-branch-{{ .Branch }}
         paths:
-        - go-test-cache
+        - /tmp/go-cache
     - run:
         command: |
-          du -sh go-test-cache
+          du -sh /tmp/go-cache
         name: Check cache
     - store_artifacts:
         path: test-results
@@ -332,6 +334,9 @@ workflows:
 #   go_test:
 #     description: run go tests
 #     parameters:
+#       cache_dir:
+#         default: /tmp/go-cache
+#         type: string
 #       extra_flags:
 #         default: \"\"
 #         type: string
@@ -366,12 +371,14 @@ workflows:
 #           # Run tests
 #           make prep
 #           mkdir -p test-results/go-test
+#           du -sh << parameters.cache_dir >> || true
+# 
 #           CGO_ENABLED= \\
 #             VAULT_ADDR= \\
 #             VAULT_TOKEN= \\
 #             VAULT_DEV_ROOT_TOKEN_ID= \\
 #             VAULT_ACC= \\
-#             GOCACHE=$(pwd)/go-test-cache
+#             GOCACHE=<< parameters.cache_dir >>
 #             gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \\
 #               -tags \"${GO_TAGS}\" \\
 #               -timeout=60m \\
@@ -379,16 +386,16 @@ workflows:
 #               << parameters.extra_flags >> \\
 #               github.com/hashicorp/vault/builtin/credential/ldap
 # 
-#           du -sh go-test-cache
+#           du -sh << parameters.cache_dir >> || true
 #         name: Run Go tests
 #         no_output_timeout: 60m
 #     - save_cache:
 #         key: go-test-cache-v1-branch-{{ .Branch }}
 #         paths:
-#         - go-test-cache
+#         - << parameters.cache_dir >>
 #     - run:
 #         command: |
-#           du -sh go-test-cache
+#           du -sh << parameters.cache_dir >>
 #         name: Check cache
 #   restore_yarn_cache:
 #     steps:

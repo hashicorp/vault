@@ -3,6 +3,9 @@ parameters:
   extra_flags:
     type: string
     default: ""
+  cache_dir:
+    type: string
+    default: /tmp/go-cache
 steps:
   - restore_cache:
       #      Do we want to include env vars in the key? Which ones?
@@ -37,12 +40,14 @@ steps:
         # Run tests
         make prep
         mkdir -p test-results/go-test
+        du -sh << parameters.cache_dir >> || true
+
         CGO_ENABLED= \
           VAULT_ADDR= \
           VAULT_TOKEN= \
           VAULT_DEV_ROOT_TOKEN_ID= \
           VAULT_ACC= \
-          GOCACHE=$(pwd)/go-test-cache
+          GOCACHE=<< parameters.cache_dir >>
           gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
             -tags "${GO_TAGS}" \
             -timeout=60m \
@@ -50,14 +55,14 @@ steps:
             << parameters.extra_flags >> \
             github.com/hashicorp/vault/builtin/credential/ldap
 
-        du -sh go-test-cache
+        du -sh << parameters.cache_dir >> || true
   - save_cache:
 #      Do we want to include env vars in the key? Which ones?
 #      We should also store extra_flags.
       key: go-test-cache-v1-branch-{{ .Branch }}
       paths:
-      - go-test-cache
+      - << parameters.cache_dir >>
   - run:
       name: Check cache
       command: |
-        du -sh go-test-cache
+        du -sh << parameters.cache_dir >>
