@@ -155,6 +155,8 @@ func TestBackend_CSRValues(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps:          []logicaltest.TestStep{},
+		PluginName:     "pki",
+		Driver:         "Docker",
 	}
 
 	intdata := map[string]interface{}{}

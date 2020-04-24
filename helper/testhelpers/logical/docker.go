@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/vault/sdk/acctest"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/y0ssar1an/q"
 )
 
 func dockerTest(tt TestT, c TestCase) {
@@ -20,14 +21,14 @@ func dockerTest(tt TestT, c TestCase) {
 	client := acctest.TestHelper.Client
 
 	// TODO custom path to avoid conflict
-	err := client.Sys().Mount("plug-transit", &api.MountInput{
-		Type: "transit",
+	err := client.Sys().Mount(c.PluginName, &api.MountInput{
+		Type: c.PluginName,
 	})
 	if err != nil {
 		tt.Fatal(err)
 	}
 	defer func() {
-		err := client.Sys().Unmount("plug-transit")
+		err := client.Sys().Unmount(c.PluginName)
 		if err != nil {
 			tt.Fatal(err)
 		}
@@ -55,23 +56,14 @@ func dockerTest(tt TestT, c TestCase) {
 			logger.Warn("Executing test step", "step_number", i+1)
 		}
 
-		// Create the request
-		// TODO translate into client.Logical.Write/et. al
-		// req := &logical.Request{
-		// 	Operation: s.Operation,
-		// 	Path:      s.Path,
-		// 	Data:      s.Data,
-		// }
-
 		// TODO hard coded path here:
-		path := fmt.Sprintf("plug-transit/%s", s.Path)
+		path := fmt.Sprintf("transit/%s", s.Path)
 		var err error
 		var resp *api.Secret
 		// TODO should check expect none here?
 		var lr *logical.Response
 		switch s.Operation {
 		case logical.CreateOperation, logical.UpdateOperation:
-			// resp, err = client.Logical().Write(s.Path, s.Data)
 			resp, err = client.Logical().Write(path, s.Data)
 		case logical.ReadOperation:
 			resp, err = client.Logical().Read(path)
@@ -85,6 +77,11 @@ func dockerTest(tt TestT, c TestCase) {
 			panic("bad operation")
 		}
 
+		ty := "nil"
+		if resp != nil {
+			ty = fmt.Sprintf("%T", resp)
+		}
+		q.Q(">>- response type:", s.Operation, ty)
 		// TODO: verify this check
 		// error at this point is a problem with the request?
 		if err != nil && !s.ErrorOk {
@@ -117,7 +114,7 @@ func dockerTest(tt TestT, c TestCase) {
 
 		// Make sure to prefix the path with where we mounted the thing
 		// TODO setup needs to know prefix/mount
-		// prefix := "transit"
+		// prefix := c.PluginName
 		// req.Path = fmt.Sprintf("%s/%s", prefix, req.Path)
 
 		// if isAuthBackend {

@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
+	"github.com/y0ssar1an/q"
 )
 
 // TestHelper is a package global that plugins will use to extract Vault
@@ -91,6 +92,7 @@ func compilePlugin(name, srcDir, tmpDir string) (string, string, error) {
 	_ = f.Close()
 
 	sha256value := fmt.Sprintf("%x", h.Sum(nil))
+	q.Q("=> compiled, sha:", name, sha256value)
 
 	return binPath, sha256value, err
 }

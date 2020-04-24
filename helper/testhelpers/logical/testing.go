@@ -61,7 +61,23 @@ type TestCase struct {
 	// the environment variable VAULT_ACC is set. If not this test case
 	// will be run as a unit test.
 	AcceptanceTest bool
+
+	//TODO new fields for docker
+	PluginName string
+	Driver     string
 }
+
+// UseDocker is a tmp method for using Docker as a testing backend.
+// TODO: refactor to be generic? use interface to support Kube, AWS, other
+// drivers
+// func (tc *TestCase) UseDocker(name string) error {
+// 	err:=acctest.Setup("name")
+
+// 	if TestHelper != nil {
+// 		TestHelper.Cleanup()
+// 	}
+// 	return err
+// }
 
 // TestStep is a single step within a TestCase.
 type TestStep struct {
@@ -136,10 +152,23 @@ func Test(tt TestT, c TestCase) {
 	// TODO
 	// Test break here - Docker vs. Normal
 	// //
+	// if driver setup, setup
+	// TODO hacky
+	if c.Driver == "Docker" {
+		// TODO derive plugin name?
+		if c.PluginName == "" {
+			tt.Fatal("plugin name required to use Docker driver")
+		}
+		err := acctest.Setup(c.PluginName)
+		if err != nil {
+			tt.Fatal(err)
+		}
+	}
 	if acctest.TestHelper != nil {
-		// branch
-		// q.Q("--> Launch docker test")
 		dockerTest(tt, c)
+		if acctest.TestHelper != nil {
+			acctest.TestHelper.Cleanup()
+		}
 		return
 	}
 

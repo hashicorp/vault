@@ -17,11 +17,11 @@ import (
 
 	uuid "github.com/hashicorp/go-uuid"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
-	"github.com/hashicorp/vault/sdk/acctest"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
+	"github.com/y0ssar1an/q"
 )
 
 const (
@@ -291,16 +291,6 @@ func testTransit_RSA(t *testing.T, keyType string) {
 	}
 }
 
-func TestMain(m *testing.M) {
-	// Setup will create the docker cluster, then compile the plugin and register
-	// it. Setup will panic if something fails (for now at least)
-	acctest.Setup("transit")
-
-	// acctest.Run wraps the normal m.Run() all with optional call to
-	// acctest.TestHelper.Cleanup() to tear down the Docker cluster
-	acctest.Run(m)
-}
-
 func TestBackend_basic(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -431,8 +421,19 @@ func testBackendRotation(t *testing.T) {
 }
 
 func TestBackend_basic_derived(t *testing.T) {
+	q.Q("---------")
+	q.Q("starting")
+	q.Q("---------")
+	defer func() {
+		q.Q("---------")
+		q.Q("end")
+		q.Q("---------")
+		q.Q("")
+	}()
 	decryptData := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
+		Driver:         "Docker",
+		PluginName:     "transit",
 		LogicalFactory: Factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepListPolicy(t, "test", true),
@@ -467,6 +468,7 @@ func testAccStepListPolicy(t *testing.T, name string, expectNone bool) logicalte
 		Operation: logical.ListOperation,
 		Path:      "keys",
 		Check: func(resp *logical.Response) error {
+			q.Q("==> expect none:", expectNone)
 			if resp == nil {
 				return fmt.Errorf("missing response")
 			}
