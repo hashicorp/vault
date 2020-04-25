@@ -9,6 +9,10 @@ IMPROVEMENTS:
 
 * secrets/gcp: Support BigQuery dataset ACLs in absence of IAM endpoints [[GH-78](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/78)]
 
+BUG FIXES:
+
+* secrets/database: Fix issue where rotating root database credentials while Vault's storage backend is unavailable causes Vault to lose access to the database [[GH-8782](https://github.com/hashicorp/vault/pull/8782)]
+
 ## 1.4.1 (TBD)
 
 CHANGES: 
@@ -21,7 +25,9 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
-* config/seal: Fix segfault when seal block is removed[[GH-8517](https://github.com/hashicorp/vault/pull/8517)]
+* auth/okta: Fix MFA regression (introduced in [GH-8143](https://github.com/hashicorp/vault/pull/8143)) from 1.4.0 [[GH-8807](https://github.com/hashicorp/vault/pull/8807)]
+* auth/userpass: Fix upgrade value for `token_bound_cidrs` being ignored due to incorrect key provided [[GH-8826](https://github.com/hashicorp/vault/pull/8826/files)]
+* config/seal: Fix segfault when seal block is removed [[GH-8517](https://github.com/hashicorp/vault/pull/8517)]
 * core: Fix an issue where users attempting to build Vault could receive Go module checksum errors [[GH-8770](https://github.com/hashicorp/vault/pull/8770)]
 * core: Fix blocked requests if a SIGHUP is issued during a long-running request has the state lock held. 
   Also fixes deadlock that can happen if `vault debug` with the config target is ran during this time.
@@ -29,6 +35,8 @@ BUG FIXES:
 * http: Fix superflous call messages from the http package on logs caused by missing returns after
   `respondError` calls [[GH-8796](https://github.com/hashicorp/vault/pull/8796)]
 * raft: Fix panic that could occur if `disable_clustering` was set to true on Raft storage cluster [[GH-8784](https://github.com/hashicorp/vault/pull/8784)]
+* seal/gcpkms: Fix panic that could occur if all seal parameters were provided via environment
+  variables [[GH-8840](https://github.com/hashicorp/vault/pull/8840)]
 * sys/wrapping: Allow unwrapping of wrapping tokens which contain nil data [[GH-8714](https://github.com/hashicorp/vault/pull/8714)]
 
 ## 1.4.0 (April 7th, 2020)
