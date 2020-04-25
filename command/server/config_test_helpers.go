@@ -38,6 +38,7 @@ func testConfigRaftRetryJoin(t *testing.T) {
 			},
 		},
 	}
+	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -140,6 +141,7 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 	if entropy != nil {
 		expected.Entropy = entropy
 	}
+	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -221,6 +223,8 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 	if entropy != nil {
 		expected.Entropy = entropy
 	}
+	config.Listeners[0].RawConfig = nil
+	config.Listeners[1].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -364,6 +368,7 @@ func testLoadConfigFile(t *testing.T) {
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
 	}
+	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -438,6 +443,7 @@ func testLoadConfigFile_json(t *testing.T) {
 		DisableSealWrap:      true,
 		DisableSealWrapRaw:   true,
 	}
+	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -493,6 +499,7 @@ func testLoadConfigDir(t *testing.T) {
 		MaxLeaseTTL:     10 * time.Hour,
 		DefaultLeaseTTL: 10 * time.Hour,
 	}
+	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -581,6 +588,7 @@ func testConfig_Sanitized(t *testing.T) {
 			"statsite_address":                       ""},
 	}
 
+	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(sanitizedConfig, expected); len(diff) > 0 {
 		t.Fatalf("bad, diff: %#v", diff)
 	}
@@ -632,6 +640,7 @@ listener "tcp" {
 			},
 		},
 	}
+	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, *expected); diff != nil {
 		t.Fatal(diff)
 	}

@@ -21,7 +21,7 @@ type ListenerTelemetry struct {
 
 // Listener is the listener configuration for the server.
 type Listener struct {
-	rawConfig map[string]interface{}
+	RawConfig map[string]interface{}
 
 	Type       string
 	Purpose    []string    `hcl:"-"`
@@ -98,7 +98,7 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 		if err := hcl.DecodeObject(&m, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("listeners.%d:", i))
 		}
-		l.rawConfig = m
+		l.RawConfig = m
 
 		// Base values
 		{

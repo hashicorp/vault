@@ -156,7 +156,7 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 		for _, ln := range c.Listeners {
 			cleanLn := map[string]interface{}{
 				"type":   ln.Type,
-				"config": ln.rawConfig,
+				"config": ln.RawConfig,
 			}
 			sanitizedListeners = append(sanitizedListeners, cleanLn)
 		}
