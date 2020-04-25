@@ -202,6 +202,7 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 			"stackdriver_project_id":                 c.Telemetry.StackdriverProjectID,
 			"stackdriver_location":                   c.Telemetry.StackdriverLocation,
 			"stackdriver_namespace":                  c.Telemetry.StackdriverNamespace,
+			"stackdriver_debug_logs":                 c.Telemetry.StackdriverDebugLogs,
 		}
 		result["telemetry"] = sanitizedTelemetry
 	}

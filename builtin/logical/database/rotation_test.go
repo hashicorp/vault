@@ -477,7 +477,7 @@ func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
 		t.Fatalf("error with PutWAL: %s", err)
 	}
 
-	assertWALCount(t, config.StorageView, 1)
+	assertWALCount(t, config.StorageView, 1, staticWALKey)
 
 	b, err := Factory(ctx, config)
 	if err != nil {
@@ -496,7 +496,7 @@ func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
 		t.Fatalf("expected zero queue items, got: %d", bd.credRotationQueue.Len())
 	}
 
-	assertWALCount(t, config.StorageView, 0)
+	assertWALCount(t, config.StorageView, 0, staticWALKey)
 }
 
 // Second scenario, WAL contains a role name that does exist, but the role's
@@ -597,7 +597,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 		t.Fatalf("error with PutWAL: %s", err)
 	}
 
-	assertWALCount(t, config.StorageView, 1)
+	assertWALCount(t, config.StorageView, 1, staticWALKey)
 
 	// Reload backend
 	lb, err = Factory(context.Background(), config)
@@ -614,7 +614,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 	time.Sleep(time.Second * 12)
 
 	// PopulateQueue should have processed the entry
-	assertWALCount(t, config.StorageView, 0)
+	assertWALCount(t, config.StorageView, 0, staticWALKey)
 
 	// Read the role
 	data = map[string]interface{}{}
@@ -656,7 +656,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 }
 
 // Helper to assert the number of WAL entries is what we expect
-func assertWALCount(t *testing.T, s logical.Storage, expected int) {
+func assertWALCount(t *testing.T, s logical.Storage, expected int, key string) {
 	var count int
 	ctx := context.Background()
 	keys, err := framework.ListWAL(ctx, s)
@@ -671,7 +671,7 @@ func assertWALCount(t *testing.T, s logical.Storage, expected int) {
 			continue
 		}
 
-		if walEntry.Kind != staticWALKey {
+		if walEntry.Kind != key {
 			continue
 		}
 		count++

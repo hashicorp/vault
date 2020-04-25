@@ -584,6 +584,7 @@ func testConfig_Sanitized(t *testing.T) {
 			"stackdriver_location":                   "",
 			"stackdriver_namespace":                  "",
 			"stackdriver_project_id":                 "",
+			"stackdriver_debug_logs":                 false,
 			"statsd_address":                         "bar",
 			"statsite_address":                       ""},
 	}

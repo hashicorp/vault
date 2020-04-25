@@ -30,8 +30,9 @@ export default [
           'mongodbatlas',
           'mssql',
           'mysql-maria',
+          'oracle',
           'postgresql',
-          'oracle'
+          'redshift'
         ]
       },
       { category: 'gcp' },
@@ -59,6 +60,7 @@ export default [
       { category: 'rabbitmq' },
       { category: 'ssh' },
       { category: 'totp' },
+      { category: 'transform' },
       { category: 'transit' },
       '-----------------------',
       { category: 'cassandra' },

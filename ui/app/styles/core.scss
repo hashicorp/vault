@@ -35,6 +35,7 @@
 @import './core/tables';
 @import './core/tags';
 @import './core/title';
+@import './core/toggle';
 
 // bulma additions
 @import './core/layout';
@@ -68,6 +69,7 @@
 @import './components/loader';
 @import './components/login-form';
 @import './components/masked-input';
+@import './components/modal';
 @import './components/namespace-picker';
 @import './components/namespace-reminder';
 @import './components/navigate-input';
@@ -89,6 +91,7 @@
 @import './components/toolbar';
 @import './components/tool-tip';
 @import './components/transit-card';
+@import './components/ttl-picker2';
 @import './components/unseal-warning';
 @import './components/ui-wizard';
 @import './components/vault-loading';

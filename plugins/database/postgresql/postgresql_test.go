@@ -114,7 +114,8 @@ func TestPostgreSQL_CreateUser_missingArgs(t *testing.T) {
 
 func TestPostgreSQL_CreateUser(t *testing.T) {
 	type testCase struct {
-		createStmts []string
+		createStmts          []string
+		shouldTestCredsExist bool
 	}
 
 	tests := map[string]testCase{
@@ -126,6 +127,7 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 				  VALID UNTIL '{{expiration}}';
 				GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
 			},
+			shouldTestCredsExist: true,
 		},
 		"admin username": {
 			createStmts: []string{`
@@ -135,6 +137,7 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 				  VALID UNTIL '{{expiration}}';
 				GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{username}}";`,
 			},
+			shouldTestCredsExist: true,
 		},
 		"read only name": {
 			createStmts: []string{`
@@ -145,6 +148,7 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 				GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";
 				GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO "{{name}}";`,
 			},
+			shouldTestCredsExist: true,
 		},
 		"read only username": {
 			createStmts: []string{`
@@ -155,6 +159,23 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 				GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{username}}";
 				GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO "{{username}}";`,
 			},
+			shouldTestCredsExist: true,
+		},
+		// https://github.com/hashicorp/vault/issues/6098
+		"reproduce GH-6098": {
+			createStmts: []string{
+				// NOTE: "rolname" in the following line is not a typo.
+				"DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE my_role; END IF; END $$",
+			},
+			// This test statement doesn't generate creds.
+			shouldTestCredsExist: false,
+		},
+		"reproduce issue with template": {
+			createStmts: []string{
+				`DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE "{{username}}"; END IF; END $$`,
+			},
+			// This test statement doesn't generate creds.
+			shouldTestCredsExist: false,
 		},
 	}
 
@@ -190,6 +211,11 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 			username, password, err := db.CreateUser(ctx, statements, usernameConfig, time.Now().Add(time.Minute))
 			if err != nil {
 				t.Fatalf("err: %s", err)
+			}
+
+			if !test.shouldTestCredsExist {
+				// We're done here.
+				return
 			}
 
 			if err = testCredsExist(t, connURL, username, password); err != nil {
@@ -655,5 +681,83 @@ func createTestPGUser(t *testing.T, connURL string, username, password, query st
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestContainsMultilineStatement(t *testing.T) {
+	type testCase struct {
+		Input    string
+		Expected bool
+	}
+
+	testCases := map[string]*testCase{
+		"issue 6098 repro": {
+			Input:    `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE my_role; END IF; END $$`,
+			Expected: true,
+		},
+		"multiline with template fields": {
+			Input:    `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname="{{name}}") THEN CREATE ROLE {{name}}; END IF; END $$`,
+			Expected: true,
+		},
+		"docs example": {
+			Input: `CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; \
+        GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
+			Expected: false,
+		},
+	}
+
+	for tName, tCase := range testCases {
+		t.Run(tName, func(t *testing.T) {
+			if containsMultilineStatement(tCase.Input) != tCase.Expected {
+				t.Fatalf("%q should be %t for multiline input", tCase.Input, tCase.Expected)
+			}
+		})
+	}
+}
+
+func TestExtractQuotedStrings(t *testing.T) {
+	type testCase struct {
+		Input    string
+		Expected []string
+	}
+
+	testCases := map[string]*testCase{
+		"no quotes": {
+			Input:    `Five little monkeys jumping on the bed`,
+			Expected: []string{},
+		},
+		"two of both quote types": {
+			Input:    `"Five" little 'monkeys' "jumping on" the' 'bed`,
+			Expected: []string{`"Five"`, `"jumping on"`, `'monkeys'`, `' '`},
+		},
+		"one single quote": {
+			Input:    `Five little monkeys 'jumping on the bed`,
+			Expected: []string{},
+		},
+		"empty string": {
+			Input:    ``,
+			Expected: []string{},
+		},
+		"templated field": {
+			Input:    `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname="{{name}}") THEN CREATE ROLE {{name}}; END IF; END $$`,
+			Expected: []string{`"{{name}}"`},
+		},
+	}
+
+	for tName, tCase := range testCases {
+		t.Run(tName, func(t *testing.T) {
+			results, err := extractQuotedStrings(tCase.Input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(results) != len(tCase.Expected) {
+				t.Fatalf("%s isn't equal to %s", results, tCase.Expected)
+			}
+			for i := range results {
+				if results[i] != tCase.Expected[i] {
+					t.Fatalf(`expected %q but received %q`, tCase.Expected, results[i])
+				}
+			}
+		})
 	}
 }

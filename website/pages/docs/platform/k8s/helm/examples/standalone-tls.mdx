@@ -128,7 +128,7 @@ TMPDIR=/tmp
 3. Retrieve Kubernetes CA.
 
     ```bash
-    kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[].cluster.certificate-authority-data}' | base64 -D > ${TMPDIR}/vault.ca
+    kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[].cluster.certificate-authority-data}' | base64 -d > ${TMPDIR}/vault.ca
     ```
 
 3. Store the key, cert, and Kubernetes CA into Kubernetes secrets.

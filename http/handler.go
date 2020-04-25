@@ -523,7 +523,7 @@ func handleUIStub() http.Handler {
 	<p>To get Vault UI do one of the following:</p>
 	<ul>
 	<li><a href="https://www.vaultproject.io/downloads.html">Download an official release</a></li>
-	<li>Run <code>make release</code> to create your own release binaries.
+	<li>Run <code>make bin</code> to create your own release binaries.
 	<li>Run <code>make dev-ui</code> to create a development binary with the UI.
 	</ul>
 	</div>

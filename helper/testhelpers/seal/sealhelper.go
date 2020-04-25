@@ -1,4 +1,4 @@
-package seal
+package sealhelper
 
 import (
 	"path"

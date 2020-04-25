@@ -11,6 +11,7 @@ import (
 	"github.com/armon/go-metrics/datadog"
 	"github.com/armon/go-metrics/prometheus"
 	stackdriver "github.com/google/go-metrics-stackdriver"
+	stackdrivervault "github.com/google/go-metrics-stackdriver/vault"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
@@ -126,6 +127,8 @@ type Telemetry struct {
 	StackdriverLocation string `hcl:"stackdriver_location"`
 	// StackdriverNamespace is the namespace identifier, such as a cluster name.
 	StackdriverNamespace string `hcl:"stackdriver_namespace"`
+	// StackdriverDebugLogs will write additional stackdriver related debug logs to stderr.
+	StackdriverDebugLogs bool `hcl:"stackdriver_debug_logs"`
 }
 
 func (t *Telemetry) GoString() string {
@@ -282,9 +285,12 @@ func SetupTelemetry(telConfig *Telemetry, ui cli.Ui, serviceName, displayName, u
 			return nil, false, fmt.Errorf("Failed to create stackdriver client: %v", err)
 		}
 		sink := stackdriver.NewSink(client, &stackdriver.Config{
-			ProjectID: telConfig.StackdriverProjectID,
-			Location:  telConfig.StackdriverLocation,
-			Namespace: telConfig.StackdriverNamespace,
+			LabelExtractor: stackdrivervault.Extractor,
+			Bucketer:       stackdrivervault.Bucketer,
+			ProjectID:      telConfig.StackdriverProjectID,
+			Location:       telConfig.StackdriverLocation,
+			Namespace:      telConfig.StackdriverNamespace,
+			DebugLogs:      telConfig.StackdriverDebugLogs,
 		})
 		fanout = append(fanout, sink)
 	}
