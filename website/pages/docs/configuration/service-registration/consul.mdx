@@ -12,12 +12,14 @@ description: >-
 # Consul Service Registration
 
 Consul Service Registration registers Vault as a service in [Consul][consul] with
-a default health check.
+a default health check. 
+
+`service_registration` is not needed when using Consul as Vault's storage backend, as consul will automatically register Vault as a consul service. 
 
 - **HashiCorp Supported** – Consul Service Registration is officially supported
   by HashiCorp.
 
-~> **Version information** Service Registration is only available on Vault 1.4.0 and above.
+~> **Version information** `service_registration` configuration option was introduced in Vault 1.4.0.
 
 ```hcl
 service_registration "consul" {
