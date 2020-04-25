@@ -3,84 +3,18 @@ package command
 import (
 	"context"
 	"encoding/base64"
-	"path"
 	"testing"
 
-	hclog "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	sealhelper "github.com/hashicorp/vault/helper/testhelpers/seal"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/hashicorp/vault/vault/seal"
+	vaultseal "github.com/hashicorp/vault/vault/seal"
 )
-
-type transitSealServer struct {
-	*vault.TestCluster
-}
-
-func newTransitSealServer(t *testing.T) *transitSealServer {
-	conf := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"transit": transit.Factory,
-		},
-	}
-	opts := &vault.TestClusterOptions{
-		NumCores:    1,
-		HandlerFunc: vaulthttp.Handler,
-		Logger:      logging.NewVaultLogger(hclog.Trace).Named(t.Name()).Named("transit"),
-	}
-	teststorage.InmemBackendSetup(conf, opts)
-	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-
-	if err := cluster.Cores[0].Client.Sys().Mount("transit", &api.MountInput{
-		Type: "transit",
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	return &transitSealServer{cluster}
-}
-
-func (tss *transitSealServer) makeKey(t *testing.T, key string) {
-	client := tss.Cores[0].Client
-	// Create default aesgcm key
-	if _, err := client.Logical().Write(path.Join("transit", "keys", key), nil); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := client.Logical().Write(path.Join("transit", "keys", key, "config"), map[string]interface{}{
-		"deletion_allowed": true,
-	}); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func (tss *transitSealServer) makeSeal(t *testing.T, key string) vault.Seal {
-	client := tss.Cores[0].Client
-	wrapperConfig := map[string]string{
-		"address":     client.Address(),
-		"token":       client.Token(),
-		"mount_path":  "transit",
-		"key_name":    key,
-		"tls_ca_cert": tss.CACertPEMFile,
-	}
-	kms, _, err := configutil.GetTransitKMSFunc(nil, &configutil.KMS{Config: wrapperConfig})
-	if err != nil {
-		t.Fatalf("error setting wrapper config: %v", err)
-	}
-
-	return vault.NewAutoSeal(&seal.Access{
-		Wrapper: kms,
-	})
-}
 
 func verifyBarrierConfig(t *testing.T, cfg *vault.SealConfig, sealType string, shares, threshold, stored int) {
 	t.Helper()
@@ -126,9 +60,10 @@ func testSealMigrationShamirToTransit(t *testing.T, setup teststorage.ClusterSet
 	// Create a cluster that uses shamir.
 	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
 		DisableSealWrap: true,
-		HandlerFunc:     vaulthttp.Handler,
-		SkipInit:        true,
-		NumCores:        3,
+	}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		SkipInit:    true,
+		NumCores:    3,
 	},
 		setup,
 	)
