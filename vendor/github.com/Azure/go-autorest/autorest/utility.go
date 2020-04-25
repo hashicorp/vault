@@ -20,7 +20,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -141,18 +140,18 @@ func MapToValues(m map[string]interface{}) url.Values {
 	return v
 }
 
-// AsStringSlice method converts interface{} to []string.
-// s must be of type slice or array or an error is returned.
-// Each element of s will be converted to its string representation.
+// AsStringSlice method converts interface{} to []string. This expects a
+//that the parameter passed to be a slice or array of a type that has the underlying
+//type a string.
 func AsStringSlice(s interface{}) ([]string, error) {
 	v := reflect.ValueOf(s)
 	if v.Kind() != reflect.Slice && v.Kind() != reflect.Array {
-		return nil, NewError("autorest", "AsStringSlice", "the value's type is not a slice or array.")
+		return nil, NewError("autorest", "AsStringSlice", "the value's type is not an array.")
 	}
 	stringSlice := make([]string, 0, v.Len())
 
 	for i := 0; i < v.Len(); i++ {
-		stringSlice = append(stringSlice, fmt.Sprintf("%v", v.Index(i)))
+		stringSlice = append(stringSlice, v.Index(i).String())
 	}
 	return stringSlice, nil
 }
@@ -226,14 +225,4 @@ func IsTemporaryNetworkError(err error) bool {
 		return true
 	}
 	return false
-}
-
-// DrainResponseBody reads the response body then closes it.
-func DrainResponseBody(resp *http.Response) error {
-	if resp != nil && resp.Body != nil {
-		_, err := io.Copy(ioutil.Discard, resp.Body)
-		resp.Body.Close()
-		return err
-	}
-	return nil
 }

@@ -24,7 +24,6 @@ package adal
 */
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -102,14 +101,7 @@ type deviceToken struct {
 
 // InitiateDeviceAuth initiates a device auth flow. It returns a DeviceCode
 // that can be used with CheckForUserCompletion or WaitForUserCompletion.
-// Deprecated: use InitiateDeviceAuthWithContext() instead.
 func InitiateDeviceAuth(sender Sender, oauthConfig OAuthConfig, clientID, resource string) (*DeviceCode, error) {
-	return InitiateDeviceAuthWithContext(context.Background(), sender, oauthConfig, clientID, resource)
-}
-
-// InitiateDeviceAuthWithContext initiates a device auth flow. It returns a DeviceCode
-// that can be used with CheckForUserCompletion or WaitForUserCompletion.
-func InitiateDeviceAuthWithContext(ctx context.Context, sender Sender, oauthConfig OAuthConfig, clientID, resource string) (*DeviceCode, error) {
 	v := url.Values{
 		"client_id": []string{clientID},
 		"resource":  []string{resource},
@@ -125,7 +117,7 @@ func InitiateDeviceAuthWithContext(ctx context.Context, sender Sender, oauthConf
 
 	req.ContentLength = int64(len(s))
 	req.Header.Set(contentType, mimeTypeFormPost)
-	resp, err := sender.Do(req.WithContext(ctx))
+	resp, err := sender.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("%s %s: %s", logPrefix, errCodeSendingFails, err.Error())
 	}
@@ -159,14 +151,7 @@ func InitiateDeviceAuthWithContext(ctx context.Context, sender Sender, oauthConf
 
 // CheckForUserCompletion takes a DeviceCode and checks with the Azure AD OAuth endpoint
 // to see if the device flow has: been completed, timed out, or otherwise failed
-// Deprecated: use CheckForUserCompletionWithContext() instead.
 func CheckForUserCompletion(sender Sender, code *DeviceCode) (*Token, error) {
-	return CheckForUserCompletionWithContext(context.Background(), sender, code)
-}
-
-// CheckForUserCompletionWithContext takes a DeviceCode and checks with the Azure AD OAuth endpoint
-// to see if the device flow has: been completed, timed out, or otherwise failed
-func CheckForUserCompletionWithContext(ctx context.Context, sender Sender, code *DeviceCode) (*Token, error) {
 	v := url.Values{
 		"client_id":  []string{code.ClientID},
 		"code":       []string{*code.DeviceCode},
@@ -184,7 +169,7 @@ func CheckForUserCompletionWithContext(ctx context.Context, sender Sender, code 
 
 	req.ContentLength = int64(len(s))
 	req.Header.Set(contentType, mimeTypeFormPost)
-	resp, err := sender.Do(req.WithContext(ctx))
+	resp, err := sender.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("%s %s: %s", logPrefix, errTokenSendingFails, err.Error())
 	}
@@ -228,19 +213,12 @@ func CheckForUserCompletionWithContext(ctx context.Context, sender Sender, code 
 
 // WaitForUserCompletion calls CheckForUserCompletion repeatedly until a token is granted or an error state occurs.
 // This prevents the user from looping and checking against 'ErrDeviceAuthorizationPending'.
-// Deprecated: use WaitForUserCompletionWithContext() instead.
 func WaitForUserCompletion(sender Sender, code *DeviceCode) (*Token, error) {
-	return WaitForUserCompletionWithContext(context.Background(), sender, code)
-}
-
-// WaitForUserCompletionWithContext calls CheckForUserCompletion repeatedly until a token is granted or an error
-// state occurs.  This prevents the user from looping and checking against 'ErrDeviceAuthorizationPending'.
-func WaitForUserCompletionWithContext(ctx context.Context, sender Sender, code *DeviceCode) (*Token, error) {
 	intervalDuration := time.Duration(*code.Interval) * time.Second
 	waitDuration := intervalDuration
 
 	for {
-		token, err := CheckForUserCompletionWithContext(ctx, sender, code)
+		token, err := CheckForUserCompletion(sender, code)
 
 		if err == nil {
 			return token, nil
@@ -259,11 +237,6 @@ func WaitForUserCompletionWithContext(ctx context.Context, sender Sender, code *
 			return nil, fmt.Errorf("%s Error waiting for user to complete device flow. Server told us to slow_down too much", logPrefix)
 		}
 
-		select {
-		case <-time.After(waitDuration):
-			// noop
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		}
+		time.Sleep(waitDuration)
 	}
 }

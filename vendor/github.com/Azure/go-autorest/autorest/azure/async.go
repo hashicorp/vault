@@ -258,17 +258,7 @@ func (f Future) GetResult(sender autorest.Sender) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := sender.Do(req)
-	if err == nil && resp.Body != nil {
-		// copy the body and close it so callers don't have to
-		defer resp.Body.Close()
-		b, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return resp, err
-		}
-		resp.Body = ioutil.NopCloser(bytes.NewReader(b))
-	}
-	return resp, err
+	return sender.Do(req)
 }
 
 type pollingTracker interface {

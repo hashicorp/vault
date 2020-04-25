@@ -51,13 +51,9 @@ type User struct {
 
 const azureProfileJSON = "azureProfile.json"
 
-func configDir() string {
-	return os.Getenv("AZURE_CONFIG_DIR")
-}
-
 // ProfilePath returns the path where the Azure Profile is stored from the Azure CLI
 func ProfilePath() (string, error) {
-	if cfgDir := configDir(); cfgDir != "" {
+	if cfgDir := os.Getenv("AZURE_CONFIG_DIR"); cfgDir != "" {
 		return filepath.Join(cfgDir, azureProfileJSON), nil
 	}
 	return homedir.Expand("~/.azure/" + azureProfileJSON)
