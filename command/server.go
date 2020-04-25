@@ -1989,6 +1989,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 			},
 		}
 		resp, err := core.HandleRequest(ctx, req)
+		_, err = logical.RespondErrorCommon(req, resp, err)
 		if err != nil {
 			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create root token with ID %q: {{err}}", coreConfig.DevToken), err)
 		}
@@ -2005,6 +2006,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		req.Path = "auth/token/revoke-self"
 		req.Data = nil
 		resp, err = core.HandleRequest(ctx, req)
+		_, err = logical.RespondErrorCommon(req, resp, err)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to revoke initial root token: {{err}}", err)
 		}
@@ -2039,11 +2041,9 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		},
 	}
 	resp, err := core.HandleRequest(ctx, req)
+	_, err = logical.RespondErrorCommon(req, resp, err)
 	if err != nil {
 		return nil, errwrap.Wrapf("error creating default K/V store: {{err}}", err)
-	}
-	if resp.IsError() {
-		return nil, errwrap.Wrapf("failed to create default K/V store: {{err}}", resp.Error())
 	}
 
 	return init, nil
@@ -2117,6 +2117,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 			},
 		}
 		resp, err := testCluster.Cores[0].HandleRequest(ctx, req)
+		_, err = logical.RespondErrorCommon(req, resp, err)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("failed to create root token with ID %s: %s", base.DevToken, err))
 			return 1
@@ -2136,6 +2137,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		req.Path = "auth/token/revoke-self"
 		req.Data = nil
 		resp, err = testCluster.Cores[0].HandleRequest(ctx, req)
+		_, err = logical.RespondErrorCommon(req, resp, err)
 		if err != nil {
 			c.UI.Output(fmt.Sprintf("failed to revoke initial root token: %s", err))
 			return 1
@@ -2271,7 +2273,9 @@ func (c *ServerCommand) addPlugin(path, token string, core *vault.Core) error {
 		},
 	}
 	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
-	if _, err := core.HandleRequest(ctx, req); err != nil {
+	resp, err := core.HandleRequest(ctx, req)
+	_, err = logical.RespondErrorCommon(req, resp, err)
+	if err != nil {
 		return err
 	}
 

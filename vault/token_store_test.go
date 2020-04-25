@@ -248,7 +248,7 @@ func TestTokenStore_ServiceTokenPrefix(t *testing.T) {
 		t.Fatalf("token %q does not have a 's.' prefix", resp.Auth.ClientToken)
 	}
 
-	// Ensure that using a custon token ID results in a warning
+	// Ensure that using a custom token ID results in a warning
 	resp, err = ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
 		ClientToken: initToken,
 		Path:        "create",
@@ -274,9 +274,6 @@ func TestTokenStore_ServiceTokenPrefix(t *testing.T) {
 			"id": "s.foobar",
 		},
 	})
-	if err == nil {
-		t.Fatalf("expected an error")
-	}
 	if resp.Error().Error() != "custom token ID cannot have the 's.' prefix" {
 		t.Fatalf("expected input error not present in error response")
 	}

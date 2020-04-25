@@ -2708,7 +2708,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 	// Create the token
 	if err := ts.create(ctx, &te); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	// Generate the response
