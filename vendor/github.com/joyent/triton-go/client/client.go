@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2018, Joyent, Inc. All rights reserved.
+// Copyright 2019 Joyent, Inc.
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -225,12 +225,12 @@ func doNotFollowRedirects(*http.Request, []*http.Request) error {
 }
 
 // DecodeError decodes a backend Triton error into a more usable Go error type
-func (c *Client) DecodeError(resp *http.Response, requestMethod string) error {
+func (c *Client) DecodeError(resp *http.Response, requestMethod string, consumeBody bool) error {
 	err := &errors.APIError{
 		StatusCode: resp.StatusCode,
 	}
 
-	if requestMethod != http.MethodHead && resp.Body != nil {
+	if requestMethod != http.MethodHead && resp.Body != nil && consumeBody {
 		errorDecoder := json.NewDecoder(resp.Body)
 		if err := errorDecoder.Decode(err); err != nil {
 			return pkgerrors.Wrapf(err, "unable to decode error response")
@@ -267,6 +267,9 @@ type RequestInput struct {
 	Query   *url.Values
 	Headers *http.Header
 	Body    interface{}
+
+	// If the response has the HTTP status code 410 (i.e., "Gone"), should we preserve the contents of the body for the caller?
+	PreserveGone bool
 }
 
 func (c *Client) ExecuteRequestURIParams(ctx context.Context, inputs RequestInput) (io.ReadCloser, error) {
@@ -330,7 +333,7 @@ func (c *Client) ExecuteRequestURIParams(ctx context.Context, inputs RequestInpu
 		return resp.Body, nil
 	}
 
-	return nil, c.DecodeError(resp, req.Method)
+	return nil, c.DecodeError(resp, req.Method, true)
 }
 
 func (c *Client) ExecuteRequest(ctx context.Context, inputs RequestInput) (io.ReadCloser, error) {
@@ -398,7 +401,13 @@ func (c *Client) ExecuteRequestRaw(ctx context.Context, inputs RequestInput) (*h
 		return resp, nil
 	}
 
-	return nil, c.DecodeError(resp, req.Method)
+	// GetMachine returns a HTTP 410 response for deleted instances, but the body of the response is still a valid machine object with a State value of "deleted". Return the object to the caller as well as an error.
+	if inputs.PreserveGone && resp.StatusCode == http.StatusGone {
+		// Do not consume the response body.
+		return resp, c.DecodeError(resp, req.Method, false)
+	}
+
+	return nil, c.DecodeError(resp, req.Method, true)
 }
 
 func (c *Client) ExecuteRequestStorage(ctx context.Context, inputs RequestInput) (io.ReadCloser, http.Header, error) {
@@ -468,7 +477,7 @@ func (c *Client) ExecuteRequestStorage(ctx context.Context, inputs RequestInput)
 		return resp.Body, resp.Header, nil
 	}
 
-	return nil, nil, c.DecodeError(resp, req.Method)
+	return nil, nil, c.DecodeError(resp, req.Method, true)
 }
 
 type RequestNoEncodeInput struct {
@@ -535,7 +544,7 @@ func (c *Client) ExecuteRequestNoEncode(ctx context.Context, inputs RequestNoEnc
 		return resp.Body, resp.Header, nil
 	}
 
-	return nil, nil, c.DecodeError(resp, req.Method)
+	return nil, nil, c.DecodeError(resp, req.Method, true)
 }
 
 func (c *Client) ExecuteRequestTSG(ctx context.Context, inputs RequestInput) (io.ReadCloser, error) {

@@ -125,13 +125,28 @@ func (b *azureAuthBackend) pathLogin(ctx context.Context, req *logical.Request, 
 		DisplayName: idToken.Subject,
 		Alias: &logical.Alias{
 			Name: idToken.Subject,
+			Metadata: map[string]string{
+				"resource_group_name": resourceGroupName,
+				"subscription_id":     subscriptionID,
+			},
 		},
 		InternalData: map[string]interface{}{
 			"role": roleName,
 		},
 		Metadata: map[string]string{
-			"role": roleName,
+			"role":                roleName,
+			"resource_group_name": resourceGroupName,
+			"subscription_id":     subscriptionID,
 		},
+	}
+
+	if vmName != "" {
+		auth.Alias.Metadata["vm_name"] = vmName
+		auth.Metadata["vm_name"] = vmName
+	}
+	if vmssName != "" {
+		auth.Alias.Metadata["vmss_name"] = vmssName
+		auth.Metadata["vmss_name"] = vmssName
 	}
 
 	role.PopulateTokenAuth(auth)

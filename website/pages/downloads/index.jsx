@@ -1,10 +1,13 @@
 import fetch from 'isomorphic-unfetch'
-import { VERSION } from '../../data/version.js'
+import { VERSION, CHANGELOG_URL } from '../../data/version.js'
 import ProductDownloader from '@hashicorp/react-product-downloader'
 import Head from 'next/head'
 import HashiHead from '@hashicorp/react-head'
 
 export default function DownloadsPage({ downloadData }) {
+  const changelogUrl = CHANGELOG_URL.length
+    ? CHANGELOG_URL
+    : `https://github.com/hashicorp/vault/blob/v${VERSION}/CHANGELOG.md`
   return (
     <div id="p-downloads" className="g-container">
       <HashiHead is={Head} title="Downloads | Vault by Hashicorp" />
@@ -12,6 +15,7 @@ export default function DownloadsPage({ downloadData }) {
         product="Vault"
         version={VERSION}
         downloads={downloadData}
+        changelog={changelogUrl}
       />
     </div>
   )
@@ -19,8 +23,8 @@ export default function DownloadsPage({ downloadData }) {
 
 export async function getStaticProps() {
   return fetch(`https://releases.hashicorp.com/vault/${VERSION}/index.json`)
-    .then(r => r.json())
-    .then(r => {
+    .then((r) => r.json())
+    .then((r) => {
       // TODO: restructure product-downloader to run this logic internally
       return r.builds.reduce((acc, build) => {
         if (!acc[build.os]) acc[build.os] = {}
@@ -28,7 +32,7 @@ export async function getStaticProps() {
         return acc
       }, {})
     })
-    .then(r => ({ props: { downloadData: r } }))
+    .then((r) => ({ props: { downloadData: r } }))
     .catch(() => {
       throw new Error(
         `--------------------------------------------------------

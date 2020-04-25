@@ -217,7 +217,7 @@ func TestStoragePacker_DeleteMultiple(t *testing.T) {
 		itemsToDelete = append(itemsToDelete, fmt.Sprintf("item%d", i))
 	}
 
-	err = storagePacker.DeleteMultipleItems(ctx, nil, itemsToDelete...)
+	err = storagePacker.DeleteMultipleItems(ctx, nil, itemsToDelete)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,6 +234,59 @@ func TestStoragePacker_DeleteMultiple(t *testing.T) {
 		}
 		if i%2 == 1 && fetchedItem != nil {
 			t.Fatalf("failed to delete item")
+		}
+	}
+}
+
+func TestStoragePacker_DeleteMultiple_ALL(t *testing.T) {
+	storagePacker, err := NewStoragePacker(&logical.InmemStorage{}, log.New(&log.LoggerOptions{Name: "storagepackertest"}), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+
+	// Persist a storage entry
+	itemsToDelete := make([]string, 0, 10000)
+	for i := 0; i < 10000; i++ {
+		item := &Item{
+			ID: fmt.Sprintf("item%d", i),
+		}
+
+		err = storagePacker.PutItem(ctx, item)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Verify that it can be read
+		fetchedItem, err := storagePacker.GetItem(item.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if fetchedItem == nil {
+			t.Fatalf("failed to read the stored item")
+		}
+
+		if item.ID != fetchedItem.ID {
+			t.Fatalf("bad: item ID; expected: %q\n actual: %q\n", item.ID, fetchedItem.ID)
+		}
+
+		itemsToDelete = append(itemsToDelete, fmt.Sprintf("item%d", i))
+	}
+
+	err = storagePacker.DeleteMultipleItems(ctx, nil, itemsToDelete)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that the deletion was successful
+	for _, item := range itemsToDelete {
+		fetchedItem, err := storagePacker.GetItem(item)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if fetchedItem != nil {
+			t.Fatal("item not deleted")
 		}
 	}
 }
