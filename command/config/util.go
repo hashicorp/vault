@@ -13,7 +13,7 @@ func DefaultTokenHelper() (token.TokenHelper, error) {
 
 	path := config.TokenHelper
 	if path == "" {
-		return &token.InternalTokenHelper{}, nil
+		return token.NewInternalTokenHelper()
 	}
 
 	path, err = token.ExternalTokenHelperPath(path)
