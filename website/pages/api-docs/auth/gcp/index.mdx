@@ -142,6 +142,11 @@ The following parameters are only valid when the role is of type `"iam"`:
   allow GCE instances to authenticate by inferring service accounts from the
   GCE identity metadata token.
 
+- `iam_alias` `(string: unique_id)` - Must be either `unique_id` or `role_id`.
+  If `unique_id` is specified, the service account's unique ID will be used for
+  alias names. If `role_id` is specified, the ID of the Vault role will be used.
+  Only used if `type` is `iam`.
+
 #### `gce`-only Parameters
 
 The following parameters are only valid when the role is of type `"gce"`:
@@ -163,6 +168,11 @@ The following parameters are only valid when the role is of type `"gce"`:
   as "key:value" strings that must be set on authorized GCE instances. Because
   GCP labels are not currently ACL'd, we recommend that this be used in
   conjunction with other restrictions.
+
+- `gce_alias` `(string: instance_id)` - Must be either `instance_id` or `role_id`.
+  If `instance_id` is specified, the GCE instance ID will be used for alias names.
+  If `role_id` is specified, the ID of the Vault role will be used. Only used if
+  `type` is `gce`.
 
 ### Sample Payload
 
@@ -316,9 +326,11 @@ $ curl \
     },
     "bound_service_accounts": ["dev-1@project-123456.iam.gserviceaccount.com"],
     "bound_zones": ["eu-west2-a", "us-east1-b"],
+    "gce_alias": "instance_id",
     "max_ttl": 86400,
     "policies": ["prod"],
     "project_id": "project-123456",
+    "role_id": "6bbfab2b-ca32-6044-4829-4515728d87b1",
     "type": "gce",
     "ttl": 1800
   }

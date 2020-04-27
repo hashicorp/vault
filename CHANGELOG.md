@@ -2,6 +2,9 @@
 
 CHANGES:
 
+* token: Token creation with custom token ID via `id` will no longer allow periods (`.`) as part of the input string. 
+  The final generated token value may contain periods, such as the `s.` prefix for service token 
+  indication. [[GH-8646](https://github.com/hashicorp/vault/pull/8646/files)]
 * token: Token renewals will now return token policies within the `token_policies` , identity policies within `identity_policies`, and the full policy set within `policies`. [[GH-8535](https://github.com/hashicorp/vault/pull/8535)]
 * kv: Return the value of delete_version_after when reading kv/config, even if it is set to the default. [[GH-42](https://github.com/hashicorp/vault-plugin-secrets-kv/pull/42)]
 
@@ -35,6 +38,8 @@ BUG FIXES:
 * http: Fix superflous call messages from the http package on logs caused by missing returns after
   `respondError` calls [[GH-8796](https://github.com/hashicorp/vault/pull/8796)]
 * raft: Fix panic that could occur if `disable_clustering` was set to true on Raft storage cluster [[GH-8784](https://github.com/hashicorp/vault/pull/8784)]
+* seal/gcpkms: Fix panic that could occur if all seal parameters were provided via environment
+  variables [[GH-8840](https://github.com/hashicorp/vault/pull/8840)]
 * sys/wrapping: Allow unwrapping of wrapping tokens which contain nil data [[GH-8714](https://github.com/hashicorp/vault/pull/8714)]
 
 ## 1.4.0 (April 7th, 2020)
