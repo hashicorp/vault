@@ -269,10 +269,6 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 		"canonical_arn":  "arn:aws:iam::123456789012:user/valid-role",
 		"client_arn":     "arn:aws:iam::123456789012:user/valid-role",
 		"client_user_id": "ASOMETHINGSOMETHINGSOMETHING",
-		// Note there is no inferred entity, so these fields should be empty
-		"inferred_aws_region":  "",
-		"inferred_entity_id":   "",
-		"inferred_entity_type": "",
 	}
 
 	// expected errors for certain tests

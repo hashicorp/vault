@@ -849,6 +849,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		"region":      identityDocParsed.Region,
 		"account_id":  identityDocParsed.AccountID,
 		"ami_id":      identityDocParsed.AmiID,
+		"auth_type":   ec2AuthType,
 	}); err != nil {
 		b.Logger().Warn("unable to set alias metadata", "err", err)
 	}

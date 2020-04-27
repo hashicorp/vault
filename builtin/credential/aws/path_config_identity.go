@@ -41,6 +41,7 @@ var (
 		FieldName: "ec2_metadata",
 		Default: []string{
 			"account_id",
+			"auth_type",
 		},
 		AvailableToAdd: []string{
 			"ami_id",
