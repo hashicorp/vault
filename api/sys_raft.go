@@ -92,7 +92,6 @@ func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 	// to determine if the body contains error message.
 	var result *Response
 	resp, err := c.c.config.HttpClient.Do(req)
-
 	if err != nil {
 		return err
 	}
