@@ -40,17 +40,17 @@ export const CLUSTER_STATES = {
     isSyncing: true,
   },
   idle: {
-    glyph: 'cancel-circle-fill',
+    glyph: 'cancel-square-outline',
     isOk: false,
     isSyncing: false,
   },
   transient_failure: {
-    glyph: 'cancel-circle-fill',
+    glyph: 'cancel-circle-outline',
     isOk: false,
     isSyncing: false,
   },
   shutdown: {
-    glyph: 'cancel-circle-fill',
+    glyph: 'cancel-circle-outline',
     isOk: false,
     isSyncing: false,
   },
