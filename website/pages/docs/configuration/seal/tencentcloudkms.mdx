@@ -1,0 +1,75 @@
+---
+layout: docs
+page_title: TencentCloud KMS - Seals -Configuration
+sidebar_title: TencentCloud KMS
+description: >-
+  The TencentCloud KMS seal configures Vault to use TencentCloud KMS as the seal wrapping mechanism.
+---
+
+# `tencentcloudkms` Seal
+
+The TencentCloud KMS seal configures Vault to use TencentCloud KMS as the seal wrapping mechanism.
+The TencentCloud KMS seal is activated by one of the following:
+
+- The presence of a `seal "tencentcloudkms"` block in Vault's configuration file.
+- The presence of the environment variable `VAULT_SEAL_TYPE` set to `tencentcloudkms`.
+  If enabling via environment variable, all other required values specific to
+  TencentCloud KMS (i.e. `TENCENTCLOUD_KMS_KEY_ID`) must be also supplied, as well as all
+  other TencentCloud-related environment variables that lends to successful authentication.
+
+## `tencentcloudkms` Example
+
+This example shows configuring TencentCloud KMS seal through the Vault configuration file
+by providing all the required values:
+
+```hcl
+seal "tencentcloudkms" {
+  region     = "Your-KMS-region"
+  access_key = "Your-SecretId"
+  secret_key = "Your-SecretKey"
+  kms_key_id = "Your-KMS-KeyId"
+}
+```
+
+## `tencentcloudkms` Parameters
+
+These parameters apply to the `seal` stanza in the Vault configuration file:
+
+- `region` `(string: <required> "ap-guangzhou")`: The TencentCloud region where the encryption key
+  lives. My also be specified by the `TENCENTCLOUD_REGION` environment variable.
+
+- `access_key` `(string: <required>)`: The TencentCloud secret id to use. May also be specified by
+  `TENCENTCLOUD_SECRET_ID` environment variable.
+
+- `secret_key` `(string: <required>)`: The TencentCloud secret key to use. May also be specified by
+  `TENCENTCLOUD_SECRET_KEY` environment variable.
+
+- `kms_key_id` `(string: <required>)`: The TencentCloud KMS key id to use for encryption and decryption.
+  May also be specified by `TENCENTCLOUD_KMS_KEY_ID` environment variable.
+
+## Authentication
+
+Authentication-related values must be provided, either as environment variables or
+as configuration parameters.
+
+~> **Note:** Although the configuration file allows you to pass in
+`TENCENTCLOUD_SECRET_ID` and `TENCENTCLOUD_SECRET_KEY` as part of the seal's parameters,
+it is _strongly_ recommended to set these values as environment variables.
+
+TencentCloud authentication values:
+
+- `TENCENTCLOUD_REGION`
+- `TENCENTCLOUD_SECRET_ID`
+- `TENCENTCLOUD_SECRET_KEY`
+
+Note: The client uses the official TencentCloud SDK and will use environment credentials,
+the specified credentials, or CAM role credentials in that order.
+
+## `tencentcloudkms` Environment Variables
+
+Alternatively, the TencentCloud KMS seal can be activated by providing the following environment variables:
+
+Vault seal specific values:
+
+- `VAULT_SEAL_TYPE`
+- `TENCENTCLOUD_KMS_KEY_ID`

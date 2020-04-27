@@ -55,6 +55,7 @@ export default [
           'gcpckms',
           'ocikms',
           'pkcs11',
+          'tencentcloudkms',
           'transit'
         ]
       },

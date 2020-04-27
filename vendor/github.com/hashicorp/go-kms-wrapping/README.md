@@ -40,9 +40,11 @@ as they may have been used for past encryption operations.
   * * AEAD using AES-GCM and a provided key
   * * Alibaba Cloud KMS (uses envelopes)
   * * AWS KMS (uses envelopes)
-  * * GCP CKMS (uses envelopes)
   * * Azure KeyVault (uses envelopes)
+  * * GCP CKMS (uses envelopes)
+  * * Huawei Cloud KMS (uses envelopes)
   * * OCI KMS (uses envelopes)
+  * * Tencent Cloud KMS (uses envelopes)
   * * Vault Transit mount
   * Transparently supports multiple decryption targets, allowing for key rotation
   * Supports Additional Authenticated Data (AAD) for all KMSes except Vault Transit.

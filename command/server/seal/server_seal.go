@@ -30,6 +30,9 @@ func configureSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string
 	case wrapping.OCIKMS:
 		return configureOCIKMSSeal(configSeal, infoKeys, info, logger, inseal)
 
+	case wrapping.TencentCloudKMS:
+		return configureTencentCloudKMSSeal(configSeal, infoKeys, info, logger, inseal)
+
 	case wrapping.Transit:
 		return configureTransitSeal(configSeal, infoKeys, info, logger, inseal)
 
