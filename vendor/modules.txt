@@ -613,6 +613,8 @@ github.com/modern-go/reflect2
 github.com/mongodb/go-client-mongodb-atlas/mongodbatlas
 # github.com/mwielbut/pointy v1.1.0
 github.com/mwielbut/pointy
+# github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
+github.com/natefinch/atomic
 # github.com/ncw/swift v1.0.47
 github.com/ncw/swift
 # github.com/nwaples/rardecode v1.0.0
