@@ -207,6 +207,6 @@ work in this case. Follow the same steps for each kind of migration described
 above with the exception that after the cluster is taken offline, update the
 seal configurations of all the nodes appropriately and bring them all back up.
 When the quorum of nodes are back up, Raft will elect a leader and the leader
-node will perform the migration. The migrated information will be replicated to
+node that will perform the migration. The migrated information will be replicated to
 all other cluster peers and when the peers eventually become the leader,
 migration will not happen again on the peer nodes.
