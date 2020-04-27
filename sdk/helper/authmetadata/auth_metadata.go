@@ -152,6 +152,10 @@ func (h *Handler) PopulateDesiredMetadata(auth *logical.Auth, available map[stri
 		fieldsToInclude = h.authMetadata
 	}
 	for availableField, itsValue := range available {
+		if itsValue == "" {
+			// Don't bother setting fields for which there is no value.
+			continue
+		}
 		if strutil.StrListContains(fieldsToInclude, availableField) {
 			auth.Metadata[availableField] = itsValue
 			auth.Alias.Metadata[availableField] = itsValue
