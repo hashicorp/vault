@@ -146,7 +146,7 @@ node to witness the completion of the seal migration process.
 
 4. Seal migration is now completed. Update the config of the old active node
 (that is still down) to use the new seal blocks (completely unaware of the old
-seal type) and bring it. It will be auto-unsealed if the new seal is one of the
+seal type) and bring it up. It will be auto-unsealed if the new seal is one of the
 KMS seals or will require unseal keys if the new seal is Shamir.
 
 5. At this point, config files of all the nodes can be updated to only have the
