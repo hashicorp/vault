@@ -3,6 +3,7 @@ package ldap
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"testing"
@@ -40,6 +41,7 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 
 func TestLdapAuthBackend_Listing(t *testing.T) {
 	b, storage := createBackendWithStorage(t)
+	os.Getenv("testvar")
 
 	// Create group "testgroup"
 	resp, err := b.HandleRequest(namespace.RootContext(nil), &logical.Request{
