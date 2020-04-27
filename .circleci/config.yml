@@ -145,7 +145,6 @@ jobs:
           du -sh /tmp/go-cache || true
 
           CGO_ENABLED= \
-            newvar= \
             VAULT_ADDR= \
             VAULT_TOKEN= \
             VAULT_DEV_ROOT_TOKEN_ID= \
@@ -251,7 +250,6 @@ workflows:
 #           du -sh << parameters.cache_dir >> || true
 # 
 #           CGO_ENABLED= \\
-#             newvar= \\
 #             VAULT_ADDR= \\
 #             VAULT_TOKEN= \\
 #             VAULT_DEV_ROOT_TOKEN_ID= \\
