@@ -244,6 +244,8 @@ func (m *MongoDB) runCommandWithRetry(ctx context.Context, db string, cmd interf
 		if err := result.Err(); err != nil {
 			return err
 		}
+	default:
+		return err
 	}
 
 	return nil
