@@ -36,7 +36,12 @@ message Alias {
 	// Name is the identifier of this identity in its authentication source
 	string name = 3;
 
-	// Metadata represents the custom data tied to this alias
+	// Metadata represents the custom data tied to this alias. Fields added
+	// to it should have a low rate of change (or no change) because each
+	// change incurs a storage write, so quickly-changing fields can have
+	// a significant performance impact at scale. See the SDK's
+	// "aliasmetadata" package for a helper that eases and standardizes
+	// using this safely.
 	map<string, string> metadata = 4;
 
 	// ID is the unique identifier for the alias
