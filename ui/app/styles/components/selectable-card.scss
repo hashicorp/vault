@@ -73,6 +73,10 @@
   border-radius: $radius;
 }
 
+.selectable-card.has-border-danger {
+  box-shadow: none;
+}
+
 .change-metric-icon.is-decrease {
   transform: rotate(135deg);
 }
