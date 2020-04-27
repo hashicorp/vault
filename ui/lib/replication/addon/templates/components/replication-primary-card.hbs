@@ -8,7 +8,11 @@
       {{description}}
     </span>
     <h3 class="title is-3" data-test-metric>
-      {{metric}}
+      {{#if metric}}
+        {{metric}}
+      {{else}}
+        unknown
+      {{/if}}
       {{#if (and glyph (not hasError))}}
         <Icon @glyph={{glyph}} class="has-text-success" data-test-icon />
       {{/if}}
