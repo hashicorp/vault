@@ -35,6 +35,7 @@ BUG FIXES:
 * core: Fix blocked requests if a SIGHUP is issued during a long-running request has the state lock held. 
   Also fixes deadlock that can happen if `vault debug` with the config target is ran during this time.
   [[GH-8755](https://github.com/hashicorp/vault/pull/8755)]
+* core: Always rewrite the .vault-token file as part of a `vault login` to ensure permissions and ownership are set correctly [[GH-8867](https://github.com/hashicorp/vault/pull/8867)]
 * database/mongodb: Fix context deadline error that may result due to retry attempts on failed commands
   [[GH-8863](https://github.com/hashicorp/vault/pull/8863)]
 * http: Fix superflous call messages from the http package on logs caused by missing returns after
