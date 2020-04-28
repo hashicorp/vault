@@ -124,6 +124,8 @@ ci-config:
 ci-verify:
 	@$(MAKE) -C .circleci ci-verify
 
+GO_CMD := go
+
 # bootstrap the build by downloading additional tools needed to build
 ci-bootstrap:
 	@for tool in  $(EXTERNAL_TOOLS_CI) ; do \
