@@ -151,6 +151,16 @@ BUG FIXES:
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
 * ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
 
+## 1.3.5 (TBD)
+
+CHANGES: 
+
+* auth/aws: The default set ofmetadata fields added in 1.3.2 has been changed to `account_id` and `auth_type` [[GH-8783](https://github.com/hashicorp/vault/pull/8783)]
+
+IMPROVEMENTS:
+
+* auth/aws: The set of metadata stored during login is now configurable [[GH-8783](https://github.com/hashicorp/vault/pull/8783)]
+
 ## 1.3.4 (March 19th, 2020)
 
 SECURITY:
