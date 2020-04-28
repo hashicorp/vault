@@ -7,10 +7,11 @@ export default Component.extend({
   layout,
   data: null,
   mode: null,
+  replicationDetails: null,
   isSecondary: null,
   dr: null,
-  isSyncing: computed('dr', 'isSecondary', function() {
-    const { state } = this.dr;
+  isSyncing: computed('replicationDetails', 'isSecondary', function() {
+    const { state } = this.replicationDetails;
     const isSecondary = this.isSecondary;
     return isSecondary && state && clusterStates([state]).isSyncing;
   }),

@@ -6,8 +6,8 @@
     <p class="has-text-grey is-size-8">
       If you set a primary_cluster_addr when enabling replication, it will appear here.
     </p>
-    {{#if data.dr.primaryClusterAddr}}
-      <code>{{data.dr.primaryClusterAddr}}</code>
+    {{#if replicationDetails.primaryClusterAddr}}
+      <code>{{replicationDetails.primaryClusterAddr}}</code>
     {{else}}
       <code>no known primary cluster address</code>
     {{/if}}
@@ -26,7 +26,7 @@
   <div class="selectable-card-container has-top-margin-xl">
     {{!-- TODO remove dr from being passed in automatically because we don't need it on perf dashboards --}}
     {{yield (hash
-      card=(component componentToRender data=data dr=dr)
+      card=(component componentToRender data=data replicationDetails=replicationDetails)
     )}}
     {{#if (not isSecondary)}}
       {{yield (hash secondaryCard=(component 'known-secondaries-card'))}}

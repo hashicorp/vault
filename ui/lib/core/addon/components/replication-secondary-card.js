@@ -6,17 +6,22 @@ import { clusterStates } from 'core/helpers/cluster-states';
 export default Component.extend({
   layout,
   data: null,
-  state: computed('dr', function() {
-    return this.dr && this.dr.state ? this.dr.state : 'unknown';
+  replicationDetails: null,
+  state: computed('replicationDetails', function() {
+    return this.replicationDetails && this.replicationDetails.state
+      ? this.replicationDetails.state
+      : 'unknown';
   }),
   connection: computed('data', function() {
-    return this.dr.connection_state ? this.dr.connection_state : 'unknown';
+    return this.replicationDetails.connection_state ? this.replicationDetails.connection_state : 'unknown';
   }),
-  lastWAL: computed('dr', function() {
-    return this.dr && this.dr.lastWAL ? this.dr.lastWAL : 0;
+  lastWAL: computed('replicationDetails', function() {
+    return this.replicationDetails && this.replicationDetails.lastWAL ? this.replicationDetails.lastWAL : 0;
   }),
-  lastRemoteWAL: computed('dr', function() {
-    return this.dr && this.dr.lastRemoteWAL ? this.dr.lastRemoteWAL : 0;
+  lastRemoteWAL: computed('replicationDetails', function() {
+    return this.replicationDetails && this.replicationDetails.lastRemoteWAL
+      ? this.replicationDetails.lastRemoteWAL
+      : 0;
   }),
   delta: computed('data', function() {
     return Math.abs(this.get('lastWAL') - this.get('lastRemoteWAL'));

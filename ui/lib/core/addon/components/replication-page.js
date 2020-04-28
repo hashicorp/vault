@@ -17,24 +17,20 @@ export default Component.extend({
     const { model } = this;
     return model.replicationAttrs.isSecondary;
   }),
-  dr: computed('model', function() {
-    let dr = this.model.dr;
-    if (!dr) {
-      return false;
-    }
-    return dr;
+  replicationDetails: computed('model', function() {
+    const { model } = this;
+    const replicationMode = this.model.replicationMode;
+    return model[replicationMode];
   }),
-
-  isDisabled: computed('dr', function() {
-    // this conditional only applies to DR secondaries.
-    if (this.dr.mode === 'disabled' || this.dr.mode === 'primary') {
+  isDisabled: computed('replicationDetails', function() {
+    if (this.replicationDetails.mode === 'disabled' || this.replicationDetails.mode === 'primary') {
       return true;
     }
     return false;
   }),
   message: computed('model', function() {
     if (this.model.anyReplicationEnabled) {
-      return `This ${this.mode} secondary has not been enabled.  You can do so from the Disaster Recovery Primary.`;
+      return `This ${this.mode} secondary has not been enabled.  You can do so from the ${this.mode} Primary.`;
     }
     return `This cluster has not been enabled as a ${this.mode} Secondary. You can do so by enabling replication and adding a secondary from the ${this.mode} Primary.`;
   }),
