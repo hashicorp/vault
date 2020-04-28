@@ -1,4 +1,5 @@
 <div class="replication-dashboard box is-sideless is-fullwidth is-marginless">
+  {{!-- TODO this section is only needed for secondaries --}}
   <h2 class="has-text-weight-semibold is-size-4 has-bottom-margin-xs">Primary Cluster</h2>
   <p class="has-text-grey is-size-8">If you set a primary_cluster_addr when enabling replication, it will appear here.</p>
 
@@ -9,9 +10,16 @@
   {{/if}}
 
   <div class="selectable-card-container has-top-margin-xl">
-    {{yield (hash 
+    {{!-- TODO remove dr from being passed in automatically because we don't need it on perf dashboards --}}
+    {{yield (hash
       card=(component componentToRender data=data dr=dr)
     )}}
+
+    {{!-- TODO is there another way I can yield whatever I want in here without having to specify every component inside this hash? --}}
+    {{!-- TODO change this to check whether the dashboard is for a primary or secondary --}}
+    {{#if true}}
+      {{yield (hash secondaryCard=(component 'known-secondaries-card'))}}
+    {{/if}}
   </div>
 
   {{yield (hash
