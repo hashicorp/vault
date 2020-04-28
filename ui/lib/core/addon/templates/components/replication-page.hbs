@@ -2,7 +2,7 @@
 {{yield (hash
   header=(component 'replication-header' data=model title=mode isSecondary=isSecondary)
   toggle=(component 'replication-toggle')
-  dashboard=(component 'replication-dashboard' data=model dr=dr isSecondary=isSecondary)
+  dashboard=(component 'replication-dashboard' data=model dr=dr isSecondary=isSecondary mode=mode)
   isDisabled=isDisabled
   message=message
 )}}
