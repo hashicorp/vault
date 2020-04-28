@@ -6,7 +6,14 @@ import layout from '../templates/components/replication-dashboard';
 export default Component.extend({
   layout,
   data: null,
-  mode: computed('data', function() {}),
+  mode: computed('data', function() {
+    const { data } = this;
+    return data.replicationMode;
+  }),
+  isSecondary: computed('data', function() {
+    const { data } = this;
+    return data.replicationAttrs.isSecondary;
+  }),
   dr: computed('data', function() {
     let dr = this.data.dr;
     if (!dr) {
@@ -14,11 +21,13 @@ export default Component.extend({
     }
     return dr;
   }),
-  isSyncing: computed('dr', function() {
+  isSyncing: computed('dr', 'isSecondary', function() {
     const { state } = this.dr;
-    return state && clusterStates([state]).isSyncing;
+    const isSecondary = this.isSecondary;
+    return isSecondary && state && clusterStates([state]).isSyncing;
   }),
   isReindexing: computed('data', function() {
+    // TODO: make this a real value
     return true;
   }),
 });
