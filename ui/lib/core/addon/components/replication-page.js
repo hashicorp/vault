@@ -13,11 +13,11 @@ export default Component.extend({
     const { model } = this;
     return model.replicationAttrs.isSecondary;
   }),
-  clusterMode: computed('model', function() {
+  clusterMode: computed('model.{replicationAttrs}', function() {
     const { model } = this;
     return model.replicationAttrs.mode;
   }),
-  replicationDetails: computed('model', function() {
+  replicationDetails: computed('model.{replicationMode}', function() {
     const { model } = this;
     const replicationMode = model.replicationMode;
     return model[replicationMode];
@@ -28,11 +28,11 @@ export default Component.extend({
     }
     return false;
   }),
-  mode: computed('model', function() {
+  mode: computed('model.{replicationMode}', function() {
     let mode = this.model.replicationMode;
     return MODE[mode];
   }),
-  message: computed('model', 'mode', function() {
+  message: computed('model.{anyReplicationEnabled}', 'mode', function() {
     if (this.model.anyReplicationEnabled) {
       return `This ${this.mode} secondary has not been enabled.  You can do so from the ${this.mode} Primary.`;
     }
