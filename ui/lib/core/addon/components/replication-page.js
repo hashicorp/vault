@@ -10,8 +10,12 @@ const MODE = {
 export default Component.extend({
   layout,
   mode: computed('model', function() {
-    let mode = this.model.rm.mode;
+    let mode = this.model.replicationMode;
     return MODE[mode];
+  }),
+  isSecondary: computed('model', function() {
+    const { model } = this;
+    return model.replicationAttrs.isSecondary;
   }),
   dr: computed('model', function() {
     let dr = this.model.dr;
@@ -20,6 +24,7 @@ export default Component.extend({
     }
     return dr;
   }),
+
   isDisabled: computed('dr', function() {
     // this conditional only applies to DR secondaries.
     if (this.dr.mode === 'disabled' || this.dr.mode === 'primary') {

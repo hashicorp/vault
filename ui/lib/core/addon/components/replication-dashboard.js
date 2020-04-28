@@ -10,10 +10,7 @@ export default Component.extend({
     const { data } = this;
     return data.replicationMode;
   }),
-  isSecondary: computed('data', function() {
-    const { data } = this;
-    return data.replicationAttrs.isSecondary;
-  }),
+  isSecondary: null,
   dr: computed('data', function() {
     let dr = this.data.dr;
     if (!dr) {

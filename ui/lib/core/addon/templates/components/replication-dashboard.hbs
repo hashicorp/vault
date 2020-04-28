@@ -1,5 +1,4 @@
 <div class="replication-dashboard box is-sideless is-fullwidth is-marginless">
-  {{!-- TODO this section is only needed for secondaries --}}
   {{#if isSecondary}}
     <h2 class="has-text-weight-semibold is-size-4 has-bottom-margin-xs">
         Primary Cluster
@@ -29,7 +28,7 @@
     {{yield (hash
       card=(component componentToRender data=data dr=dr)
     )}}
-    {{#if true}}
+    {{#if (not isSecondary)}}
       {{yield (hash secondaryCard=(component 'known-secondaries-card'))}}
     {{/if}}
 
