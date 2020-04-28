@@ -1,13 +1,7 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import layout from '../templates/components/replication-secondary-card';
-
-const STATES = {
-  streamWals: 'stream-wals',
-  idle: 'idle',
-  transientFailure: 'transient_failure',
-  shutdown: 'shutdown',
-};
+import { clusterStates } from 'core/helpers/cluster-states';
 
 export default Component.extend({
   layout,
@@ -28,19 +22,20 @@ export default Component.extend({
     return Math.abs(this.get('lastWAL') - this.get('lastRemoteWAL'));
   }),
   inSyncState: computed('state', function() {
-    if (this.state === STATES.streamWals) {
-      return true;
-    }
+    // if our definition of what is considered 'synced' changes,
+    // we should use the clusterStates helper instead
+    return this.state === 'stream-wals';
   }),
+
   hasErrorClass: computed('data', 'title', 'state', 'connection', function() {
-    if (this.title === 'States') {
-      if (
-        this.state === STATES.idle ||
-        this.connection === STATES.transientFailure ||
-        this.connection === STATES.shutdown
-      ) {
-        return true;
-      }
+    const { title, state, connection } = this;
+
+    // only show errors on the state card
+    if (title === 'States') {
+      const currentClusterisOk = clusterStates([state]).isOk;
+      const primaryIsOk = clusterStates([connection]).isOk;
+      return !(currentClusterisOk && primaryIsOk);
     }
+    return false;
   }),
 });

@@ -24,6 +24,7 @@ export default Component.extend({
   tagName: '',
   checked: false,
   disabled: false,
+  name: '',
   size: 'normal',
   status: 'normal',
   safeId: computed('name', function() {

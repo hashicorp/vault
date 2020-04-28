@@ -1,73 +1,60 @@
 <div class="selectable-card is-rounded card-container {{if hasErrorClass "has-border-danger"}}">
   {{!-- Check if State or WAL Card --}}
   {{#if (eq title "States")}}
-    <h3 class="title is-4 grid-item-title card-title">{{title}}</h3>
+    <h3 class="title is-5 grid-item-title card-title">{{title}}</h3>
     <div class="grid-item-left">
-      {{#if (eq state "idle")}}
-          <code class="has-text-danger">state</code>
-          <AlertInline
-            @type="danger"
-            @message="Please check your server logs."
-          />
-      {{else}}
-        <code class="has-text-black">state</code>
+      {{#if (get (cluster-states state) "isOk")}}
+        <h6 class="title is-6">state</h6>
         <p class="has-text-grey is-size-8">How this cluster is communicating with others at this moment.</p>
+      {{else}}
+        <h6 class="has-text-danger">state</h6>
+        <AlertInline
+          @type="danger"
+          @message="Please check your server logs." />
       {{/if}}
     </div>
     <div class="grid-item-right">
       {{#if (eq connection "transient_failure")}}
-        <code class="has-text-danger">connection_state</code>
+        <h6 class="title is-6 has-text-danger">connection_state</h6>
         <AlertInline
           @type="danger"
-          @message="There has been some transient failure.  Your cluster will eventually switch back to connection and try to establish a connection again."
-        />
+          @message="There has been some transient failure.  Your cluster will eventually switch back to connection and try to establish a connection again." />
       {{else if (eq connection "shutdown")}}
-        <code class="has-text-danger">connection_state</code>
+        <h6 class="title is-6 has-text-danger">connection_state</h6>
         <AlertInline
           @type="danger"
-          @message="Your connection has shut down. This may be because the application explicitly requested a shutdown or a non-recoverable error has happened during attempts to communicate."
-        />
+          @message="Your connection has shut down. This may be because the application explicitly requested a shutdown or a non-recoverable error has happened during attempts to communicate." />
       {{else}}
-        <code>connection_state</code>
+        <h6 class="title is-6">connection_state</h6>
         <p class="has-text-grey is-size-8">The health of the connection between this cluster and others.</p>
       {{/if}}
     </div>
-      <h2 class="title-number grid-item-left-bottom">{{state}}
-        {{#if inSyncState }}
-          <ToolTip @verticalPosition="above" as |T|>
-            <T.trigger>
-              <Icon 
-                @glyph={{"check-circle-outline" }} 
-                @size="m" 
-                class={{"has-text-success"}}
-              />
-            </T.trigger>
-            <T.content @class="tool-tip">
-              <div class="box">
-                Everything is in sync
-              </div>
-            </T.content>
-          </ToolTip>
-        {{/if}}
-      </h2>
-      <h2 class="title-number is-5 grid-item-right-bottom">{{connection}}</h2>
+    <h2 class="title is-3 grid-item-left-bottom">{{state}}
+      {{#if inSyncState }}
+        <ToolTip @verticalPosition="above" as |T|>
+          <T.trigger>
+            <Icon @glyph={{"check-circle-outline" }} @size="m" class={{"has-text-success"}} />
+          </T.trigger>
+          <T.content @class="tool-tip">
+            <div class="box">
+              Everything is in sync
+            </div>
+          </T.content>
+        </ToolTip>
+      {{/if}}
+    </h2>
+    <h2 class="title is-3 grid-item-right-bottom">{{connection}}</h2>
   {{else}}
-    <h3 class="title is-4 grid-item-title card-title">{{title}}
+    <h3 class="title is-5 grid-item-title card-title">{{title}}
       <ToolTip @verticalPosition="above" @closeDelay="2000ms" as |T|>
         <T.trigger>
-          <Icon 
-            @glyph={{"check-circle-outline" }} 
-            @size="m" 
-            class={{"has-text-grey"}}
-          />
+          <Icon @glyph={{"check-circle-outline" }} @size="m" class={{"has-text-grey"}} />
         </T.trigger>
         <T.content @class="tool-tip">
           <div class="box">
-            There may be a difference between last remote WAL and last WAL entry from primary. If it persists over time, investigate.
-            <LearnLink 
-              @path="/vault/operations/monitor-replication#are-my-dr-clusters-in-sync"
-              @class="has-text-white"
-            >
+            There may be a difference between last remote WAL and last WAL entry from primary. If it persists over time,
+            investigate.
+            <LearnLink @path="/vault/operations/monitor-replication#are-my-dr-clusters-in-sync" @class="has-text-white">
               Learn more
             </LearnLink>
           </div>
@@ -75,16 +62,16 @@
       </ToolTip>
     </h3>
     <div class="grid-item-left">
-      <code class="has-text-black">Delta</code>
+      <h6 class="title is-6">Delta</h6>
       <p class="has-text-grey is-size-8">The difference between the last remote WAL and the last WAL entry from the primary.</p>
     </div>
     <div class="grid-item-right">
-      <code class="has-text-black">last_wal</code>
+      <h6 class="title is-6">last_wal</h6>
       <p class="has-text-grey is-size-8">{{lastWAL}}</p>
     </div>
-    <h2 class="title-number grid-item-left-bottom">{{format-number delta}}</h2>
+    <code class="title is-3 grid-item-left-bottom">{{format-number delta}}</code>
     <div class="grid-item-right-bottom">
-      <code class="has-text-black">last_remote_wal</code>
+      <h6 class="title is-6">last_remote_wal</h6>
       <p class="has-text-grey is-size-8">{{lastRemoteWAL}}</p>
     </div>
   {{/if}}

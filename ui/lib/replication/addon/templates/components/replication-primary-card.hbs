@@ -1,13 +1,20 @@
-<div class="selectable-card is-rounded {{dasherize title}}">
-  <code class="card-title title is-5">{{title}}</code>
+<div class="selectable-card is-rounded {{dasherize title}} {{if hasError "has-border-danger"}}">
+  <h3 class="card-title title is-5">{{title}}</h3>
   <div>
-    <span class="helper-text is-label has-text-grey">
+    {{#if hasError}}
+      <AlertInline @type="danger" @message={{errorMessage}} data-test-hasError />
+    {{/if}}
+    <span class="helper-text is-label has-text-grey" data-test-description>
       {{description}}
     </span>
-    <h3 class="title is-3">
-      {{metric}}
-      {{#if glyph}}
-        <Icon @glyph={{glyph}} class="has-text-success" />
+    <h3 class="title is-3" data-test-metric>
+      {{#if metric}}
+        {{metric}}
+      {{else}}
+        unknown
+      {{/if}}
+      {{#if (and glyph (not hasError))}}
+        <Icon @glyph={{glyph}} class="has-text-success" data-test-icon />
       {{/if}}
     </h3>
   </div>

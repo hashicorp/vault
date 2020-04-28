@@ -49,46 +49,9 @@ export default DS.Model.extend({
 
   anyReplicationEnabled: or('{dr,performance}.replicationEnabled'),
 
-  stateDisplay(state) {
-    if (!state) {
-      return null;
-    }
-    const defaultDisp = 'Synced';
-    const displays = {
-      'stream-wals': 'Streaming',
-      'merkle-diff': 'Determining sync status',
-      'merkle-sync': 'Syncing',
-    };
-
-    return displays[state] || defaultDisp;
-  },
-
-  drStateDisplay: computed('dr.state', function() {
-    return this.stateDisplay(this.get('dr.state'));
-  }),
-
-  performanceStateDisplay: computed('performance.state', function() {
-    return this.stateDisplay(this.get('performance.state'));
-  }),
-
-  stateGlyph(state) {
-    const glyph = 'check-circle-outline';
-
-    const glyphs = {
-      'stream-wals': 'check-circle-outline',
-      'merkle-diff': 'android-sync',
-      'merkle-sync': 'android-sync',
-    };
-
-    return glyphs[state] || glyph;
-  },
-
-  drStateGlyph: computed('dr.state', function() {
-    return this.stateGlyph(this.get('dr.state'));
-  }),
-
-  performanceStateGlyph: computed('performance.state', function() {
-    return this.stateGlyph(this.get('performance.state'));
+  modeState: computed('dr.{mode,state}', 'performance.{mode,state}', 'replicationMode', function() {
+    const mode = this.replicationMode;
+    return this.get(`${mode}.state`);
   }),
 
   dr: fragment('replication-attributes'),
