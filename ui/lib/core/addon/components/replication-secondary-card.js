@@ -5,14 +5,14 @@ import { clusterStates } from 'core/helpers/cluster-states';
 
 export default Component.extend({
   layout,
-  data: null,
+  title: null,
   replicationDetails: null,
   state: computed('replicationDetails', function() {
     return this.replicationDetails && this.replicationDetails.state
       ? this.replicationDetails.state
       : 'unknown';
   }),
-  connection: computed('data', function() {
+  connection: computed('replicationDetails', function() {
     return this.replicationDetails.connection_state ? this.replicationDetails.connection_state : 'unknown';
   }),
   lastWAL: computed('replicationDetails', function() {
@@ -23,7 +23,7 @@ export default Component.extend({
       ? this.replicationDetails.lastRemoteWAL
       : 0;
   }),
-  delta: computed('data', function() {
+  delta: computed('replicationDetails', function() {
     return Math.abs(this.get('lastWAL') - this.get('lastRemoteWAL'));
   }),
   inSyncState: computed('state', function() {
@@ -32,7 +32,7 @@ export default Component.extend({
     return this.state === 'stream-wals';
   }),
 
-  hasErrorClass: computed('data', 'title', 'state', 'connection', function() {
+  hasErrorClass: computed('replicationDetails', 'title', 'state', 'connection', function() {
     const { title, state, connection } = this;
 
     // only show errors on the state card

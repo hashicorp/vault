@@ -24,7 +24,7 @@
 
   <div class="selectable-card-container has-top-margin-xl">
     {{yield (hash
-      card=(component componentToRender data=data replicationDetails=replicationDetails)
+      card=(component componentToRender replicationDetails=replicationDetails)
     )}}
     {{#if (not isSecondary)}}
       {{yield (hash secondaryCard=(component 'known-secondaries-card'))}}
