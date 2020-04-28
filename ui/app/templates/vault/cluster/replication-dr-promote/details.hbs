@@ -38,15 +38,6 @@
           <Dashboard.card
             @title="Write-Ahead Logs (WALs)"
           />
-          {{#if Dashboard.isSyncing }}
-            <AlertBanner
-              @title="Syncing in progress"
-              @type="info"
-              @secondIconType="loading"
-              @message="The cluster is syncing. This happens when the secondary is too far behind the primary to use the normal stream-wals state for catching up."
-              @class="has-top-margin-xl"
-            />
-          {{/if}}
           <Dashboard.rows/>
         </Page.dashboard>
       {{/if}}

@@ -1,12 +1,35 @@
 <div class="replication-dashboard box is-sideless is-fullwidth is-marginless">
   {{!-- TODO this section is only needed for secondaries --}}
-  <h2 class="has-text-weight-semibold is-size-4 has-bottom-margin-xs">Primary Cluster</h2>
-  <p class="has-text-grey is-size-8">If you set a primary_cluster_addr when enabling replication, it will appear here.</p>
+  {{#if isSecondary}}
+    <h2 class="has-text-weight-semibold is-size-4 has-bottom-margin-xs">
+        Primary Cluster
+    </h2>
+    <p class="has-text-grey is-size-8">
+      If you set a primary_cluster_addr when enabling replication, it will appear here.
+    </p>
+    {{#if data.dr.primaryClusterAddr}}
+      <code>{{data.dr.primaryClusterAddr}}</code>
+    {{else}}
+      <code>no known primary cluster address</code>
+    {{/if}}
+  {{/if}}
 
-  {{#if data.dr.primaryClusterAddr}}
-    <code>{{data.dr.primaryClusterAddr}}</code>
-  {{else}}
-    <code>no known primary cluster address</code>
+  {{!-- TODO check for actual reindexing status --}}
+  {{#if isReindexing}}
+    <AlertBanner
+      @title="Re-indexing in progress: Scanning"
+      @type="info"
+      @secondIconType="loading"
+      @message="This can cause a delay depending on the size of the data store. You can use Vault during this time."
+      @class="has-top-margin-xl" />
+  {{/if}}
+  {{#if isSyncing}}
+    <AlertBanner
+      @title="Syncing in progress"
+      @type="info"
+      @secondIconType="loading"
+      @message="The cluster is syncing. This happens when the secondary is too far behind the primary to use the normal stream-wals state for catching up."
+      @class="has-top-margin-xl" />
   {{/if}}
 
   <div class="selectable-card-container has-top-margin-xl">
@@ -23,7 +46,6 @@
   </div>
 
   {{yield (hash
-    isSyncing=isSyncing
     rows=(component 'replication-table-rows' data=data)
   )}}
 
