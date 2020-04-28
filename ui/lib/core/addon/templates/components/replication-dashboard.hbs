@@ -23,6 +23,17 @@
       @message="This can cause a delay depending on the size of the data store. You can use Vault during this time."
       @class="has-top-margin-xl" />
   {{/if}}
+
+  <div class="selectable-card-container has-top-margin-xl">
+    {{!-- TODO remove dr from being passed in automatically because we don't need it on perf dashboards --}}
+    {{yield (hash
+      card=(component componentToRender data=data dr=dr)
+    )}}
+    {{#if true}}
+      {{yield (hash secondaryCard=(component 'known-secondaries-card'))}}
+    {{/if}}
+
+  </div>
   {{#if isSyncing}}
     <AlertBanner
       @title="Syncing in progress"
@@ -31,23 +42,6 @@
       @message="The cluster is syncing. This happens when the secondary is too far behind the primary to use the normal stream-wals state for catching up."
       @class="has-top-margin-xl" />
   {{/if}}
-
-  <div class="selectable-card-container has-top-margin-xl">
-    {{!-- TODO remove dr from being passed in automatically because we don't need it on perf dashboards --}}
-    {{yield (hash
-      card=(component componentToRender data=data dr=dr)
-    )}}
-
-    {{!-- TODO is there another way I can yield whatever I want in here without having to specify every component inside this hash? --}}
-    {{!-- TODO change this to check whether the dashboard is for a primary or secondary --}}
-    {{#if true}}
-      {{yield (hash secondaryCard=(component 'known-secondaries-card'))}}
-    {{/if}}
-  </div>
-
-  {{yield (hash
-    rows=(component 'replication-table-rows' data=data)
-  )}}
-
+  <ReplicationTableRows @data={{data}} />
   <ReplicationDocLink />
 </div>
