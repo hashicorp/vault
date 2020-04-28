@@ -24,7 +24,6 @@
   {{/if}}
 
   <div class="selectable-card-container has-top-margin-xl">
-    {{!-- TODO remove dr from being passed in automatically because we don't need it on perf dashboards --}}
     {{yield (hash
       card=(component componentToRender data=data replicationDetails=replicationDetails)
     )}}
@@ -41,6 +40,8 @@
       @message="The cluster is syncing. This happens when the secondary is too far behind the primary to use the normal stream-wals state for catching up."
       @class="has-top-margin-xl" />
   {{/if}}
-  <ReplicationTableRows @data={{data}} />
+  <ReplicationTableRows
+    @replicationDetails={{replicationDetails}}
+    @clusterMode={{clusterMode}} />
   <ReplicationDocLink />
 </div>

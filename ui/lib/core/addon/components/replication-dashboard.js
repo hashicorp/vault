@@ -6,7 +6,6 @@ import layout from '../templates/components/replication-dashboard';
 export default Component.extend({
   layout,
   data: null,
-  mode: null,
   replicationDetails: null,
   isSecondary: null,
   dr: null,
