@@ -6,18 +6,9 @@ import layout from '../templates/components/replication-dashboard';
 export default Component.extend({
   layout,
   data: null,
-  mode: computed('data', function() {
-    const { data } = this;
-    return data.replicationMode;
-  }),
+  mode: null,
   isSecondary: null,
-  dr: computed('data', function() {
-    let dr = this.data.dr;
-    if (!dr) {
-      return false;
-    }
-    return dr;
-  }),
+  dr: null,
   isSyncing: computed('dr', 'isSecondary', function() {
     const { state } = this.dr;
     const isSecondary = this.isSecondary;
