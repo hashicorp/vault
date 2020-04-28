@@ -157,7 +157,8 @@ The following parameters are used on backends that support [high availability][h
 
 - `disable_clustering` `(bool: false)` – Specifies whether clustering features
   such as request forwarding are enabled. Setting this to true on one Vault node
-  will disable these features _only when that node is the active node_.
+  will disable these features _only when that node is the active node_. This
+  parameter cannot be set to `true` if `raft` is the storage type.
 
 ### Vault Enterprise Parameters
 

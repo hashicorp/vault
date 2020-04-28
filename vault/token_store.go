@@ -817,8 +817,13 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			}
 		}
 
-		if userSelectedID && strings.HasPrefix(entry.ID, "s.") {
-			return fmt.Errorf("custom token ID cannot have the 's.' prefix")
+		if userSelectedID {
+			switch {
+			case strings.HasPrefix(entry.ID, "s."):
+				return fmt.Errorf("custom token ID cannot have the 's.' prefix")
+			case strings.Contains(entry.ID, "."):
+				return fmt.Errorf("custom token ID cannot have a '.' in the value")
+			}
 		}
 
 		if !userSelectedID {

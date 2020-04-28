@@ -15,12 +15,15 @@
  * @param time=30 {Number} - The time (in the default units) which will be adjustable by the user of the form
  * @param unit="s" {String} - This is the unit key which will show by default on the form. Can be one of `s` (seconds), `m` (minutes), `h` (hours), `d` (days)
  * @param recalculationTimeout=5000 {Number} - This is the time, in milliseconds, that `recalculateSeconds` will be be true after time is updated
+ * @param initialValue {String} - This is the value set initially (particularly from a string like '30h')
  */
 
 import Ember from 'ember';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { task, timeout } from 'ember-concurrency';
+import { typeOf } from '@ember/utils';
+import Duration from 'Duration.js';
 import layout from '../templates/components/ttl-picker2';
 
 const secondsMap = {
@@ -43,8 +46,34 @@ export default Component.extend({
   helperTextDisabled: 'Allow tokens to be used indefinitely',
   helperTextEnabled: 'Disable the use of the token after',
   time: 30,
-  unit: 'm',
+  unit: 's',
   recalculationTimeout: 5000,
+  initialValue: null,
+
+  init() {
+    this._super(...arguments);
+    const value = this.initialValue;
+    // if initial value is unset use params passed in as defaults
+    if (!value && value !== 0) {
+      return;
+    }
+
+    let seconds = 30;
+    if (typeOf(value) === 'number') {
+      seconds = value;
+    } else {
+      try {
+        seconds = Duration.parse(value).seconds();
+      } catch (e) {
+        console.error(e);
+        // if parsing fails leave as default 30
+      }
+    }
+    this.setProperties({
+      time: seconds,
+      unit: 's',
+    });
+  },
   unitOptions: computed(function() {
     return [
       { label: 'seconds', value: 's' },
@@ -53,16 +82,15 @@ export default Component.extend({
       { label: 'days', value: 'd' },
     ];
   }),
-
-  TTL: computed('enableTTL', 'seconds', function() {
+  handleChange() {
     let { time, unit, enableTTL, seconds } = this.getProperties('time', 'unit', 'enableTTL', 'seconds');
-    return {
+    const ttl = {
       enabled: enableTTL,
       seconds,
       timeString: time + unit,
     };
-  }),
-
+    this.onChange(ttl);
+  },
   updateTime: task(function*(newTime) {
     this.set('errorMessage', '');
     let parsedTime;
@@ -75,7 +103,7 @@ export default Component.extend({
       return;
     }
     this.set('time', parsedTime);
-    this.onChange(this.TTL);
+    this.handleChange();
     if (Ember.testing) {
       return;
     }
@@ -107,11 +135,11 @@ export default Component.extend({
       } else {
         this.recalculateTime(newUnit);
       }
-      this.onChange(this.TTL);
+      this.handleChange();
     },
     toggleEnabled() {
       this.toggleProperty('enableTTL');
-      this.onChange(this.TTL);
+      this.handleChange();
     },
   },
 });

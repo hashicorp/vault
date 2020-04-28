@@ -10,11 +10,11 @@
   <span class="has-text-grey">{{helperText}}</span>
 </Toggle>
 {{#if enableTTL}}
-  <div class="ttl-show-picker">
+  <div class="ttl-show-picker" data-test-ttl-picker-group="{{label}}">
     <div class="field is-grouped is-marginless">
       <div class="control is-marginless">
         <input
-          data-test-ttl-value
+          data-test-ttl-value="{{label}}"
           value={{time}}
           id="time-{{elementId}}"
           type="text"
@@ -26,7 +26,7 @@
       </div>
       <div class="control">
         <Select
-          data-test-ttl-unit
+          data-test-ttl-unit="{{label}}"
           @name='ttl-unit'
           @options={{unitOptions}}
           @onChange={{action 'updateUnit'}}
