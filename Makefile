@@ -12,7 +12,8 @@ VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf 
 EXTERNAL_TOOLS_CI=\
 	github.com/elazarl/go-bindata-assetfs/... \
 	github.com/hashicorp/go-bindata/... \
-	github.com/mitchellh/gox
+	github.com/mitchellh/gox \
+	golang.org/x/tools/cmd/goimports
 EXTERNAL_TOOLS=\
 	golang.org/x/tools/cmd/goimports \
 	github.com/client9/misspell/cmd/misspell \
