@@ -332,15 +332,6 @@
     <div class="replication">
       <ReplicationToggle />
       <ReplicationDashboard @data={{cluster}} @componentToRender='replication-primary-card' as |Dashboard|>
-        {{!-- TODO check for actual reindexing status --}}
-        {{#if true}}
-          <AlertBanner
-            @title="Re-indexing in progress: Scanning"
-            @type="info"
-            @secondIconType="loading"
-            @message="This can cause a delay depending on the size of the data store. You can use Vault during this time."
-            @class="has-top-margin-xl" />
-        {{/if}}
         <Dashboard.card
           @title='State'
           @description='Updated every ten seconds.'
