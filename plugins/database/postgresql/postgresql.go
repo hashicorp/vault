@@ -112,7 +112,7 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 // Vault's storage.
 func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
 	if len(statements.Rotation) == 0 {
-		return "", "", errors.New("empty rotation statements")
+		statements.Rotation = []string{defaultPostgresRotateRootCredentialsSQL}
 	}
 
 	username = staticUser.Username

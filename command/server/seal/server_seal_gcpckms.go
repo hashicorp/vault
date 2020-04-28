@@ -12,8 +12,16 @@ import (
 )
 
 func configureGCPCKMSSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (vault.Seal, error) {
-	kms := gcpckms.NewWrapper(nil)
+	// The config map can be nil if all other seal params were provided via env
+	// vars so we nil check here before setting user_agent down below.
+	if configSeal.Config == nil {
+		configSeal.Config = map[string]string{}
+	}
+	// This is not exposed at the moment so we always override user_agent
+	// with Vault's internal value.
 	configSeal.Config["user_agent"] = useragent.String()
+
+	kms := gcpckms.NewWrapper(nil)
 	kmsInfo, err := kms.SetConfig(configSeal.Config)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error

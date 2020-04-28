@@ -2069,6 +2069,7 @@ func stopReplicationImpl(c *Core) error {
 func (c *Core) emitMetrics(stopCh chan struct{}) {
 	emitTimer := time.Tick(time.Second)
 	writeTimer := time.Tick(c.counters.syncInterval)
+	identityCountTimer := time.Tick(time.Minute * 10)
 
 	for {
 		select {
@@ -2094,6 +2095,17 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 				}
 			}
 			c.stateLock.RUnlock()
+		case <-identityCountTimer:
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+				defer cancel()
+				entities, err := c.countActiveEntities(ctx)
+				if err != nil {
+					c.logger.Error("error counting identity entities", "err", err)
+				} else {
+					metrics.SetGauge([]string{"identity", "num_entities"}, float32(entities.Entities.Total))
+				}
+			}()
 
 		case <-stopCh:
 			return
