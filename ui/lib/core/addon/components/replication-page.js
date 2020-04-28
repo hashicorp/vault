@@ -9,13 +9,19 @@ const MODE = {
 
 export default Component.extend({
   layout,
-  isSecondary: computed('model', function() {
-    const { model } = this;
-    return model.replicationAttrs.isSecondary;
+  replicationMode: computed('model.{replicationMode}', function() {
+    // dr or performance 🤯
+    let mode = this.model.replicationMode;
+    return MODE[mode];
   }),
   clusterMode: computed('model.{replicationAttrs}', function() {
+    // primary or secondary
     const { model } = this;
     return model.replicationAttrs.mode;
+  }),
+  isSecondary: computed('clusterMode', function() {
+    const { clusterMode } = this;
+    return clusterMode === 'secondary';
   }),
   replicationDetails: computed('model.{replicationMode}', function() {
     const { model } = this;
@@ -28,14 +34,10 @@ export default Component.extend({
     }
     return false;
   }),
-  mode: computed('model.{replicationMode}', function() {
-    let mode = this.model.replicationMode;
-    return MODE[mode];
-  }),
-  message: computed('model.{anyReplicationEnabled}', 'mode', function() {
+  message: computed('model.{anyReplicationEnabled}', 'replicationMode', function() {
     if (this.model.anyReplicationEnabled) {
-      return `This ${this.mode} secondary has not been enabled.  You can do so from the ${this.mode} Primary.`;
+      return `This ${this.replicationMode} secondary has not been enabled.  You can do so from the ${this.replicationMode} Primary.`;
     }
-    return `This cluster has not been enabled as a ${this.mode} Secondary. You can do so by enabling replication and adding a secondary from the ${this.mode} Primary.`;
+    return `This cluster has not been enabled as a ${this.replicationMode} Secondary. You can do so by enabling replication and adding a secondary from the ${this.replicationMode} Primary.`;
   }),
 });
