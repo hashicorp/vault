@@ -9,17 +9,17 @@ const MODE = {
 
 export default Component.extend({
   layout,
-  mode: computed('model', function() {
-    let mode = this.model.replicationMode;
-    return MODE[mode];
-  }),
   isSecondary: computed('model', function() {
     const { model } = this;
     return model.replicationAttrs.isSecondary;
   }),
+  clusterMode: computed('model', function() {
+    const { model } = this;
+    return model.replicationAttrs.mode;
+  }),
   replicationDetails: computed('model', function() {
     const { model } = this;
-    const replicationMode = this.model.replicationMode;
+    const replicationMode = model.replicationMode;
     return model[replicationMode];
   }),
   isDisabled: computed('replicationDetails', function() {
@@ -28,7 +28,11 @@ export default Component.extend({
     }
     return false;
   }),
-  message: computed('model', function() {
+  mode: computed('model', function() {
+    let mode = this.model.replicationMode;
+    return MODE[mode];
+  }),
+  message: computed('model', 'mode', function() {
     if (this.model.anyReplicationEnabled) {
       return `This ${this.mode} secondary has not been enabled.  You can do so from the ${this.mode} Primary.`;
     }
