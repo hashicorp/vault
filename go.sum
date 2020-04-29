@@ -237,6 +237,8 @@ github.com/golang/groupcache v0.0.0-20160516000752-02826c3e7903/go.mod h1:cIg4er
 github.com/golang/lint v0.0.0-20180702182130-06c8688daad7/go.mod h1:tluoj9z5200jBnyusfRPU2LqT6J+DAorxEvtC7LHB+E=
 github.com/golang/mock v1.1.1/go.mod h1:oTYuIxOrZwtPieC+H1uAHpcLFnEyAGVDL/k47Jfbm0A=
 github.com/golang/mock v1.2.0/go.mod h1:oTYuIxOrZwtPieC+H1uAHpcLFnEyAGVDL/k47Jfbm0A=
+github.com/golang/mock v1.4.3 h1:GV+pQPG/EUUbkh47niozDcADz6go/dUwhVzdUQHIVRw=
+github.com/golang/mock v1.4.3/go.mod h1:UOMv5ysSaYNkG+OFQykRIcU/QvvxJf3p21QfJ2Bt3cw=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/protobuf v1.3.1/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/protobuf v1.3.2 h1:6nsPYzhq5kReh6QImI3k5qWzO4PEbvbIW2cwSfR/6xs=
@@ -401,8 +403,8 @@ github.com/hashicorp/vault-plugin-auth-centrify v0.5.5/go.mod h1:GfRoy7NHsuR/ogm
 github.com/hashicorp/vault-plugin-auth-cf v0.5.4 h1:2wl+qK7cLpr4u/lkv5DgvkNoKKhHC69H1QmoXOnArLw=
 github.com/hashicorp/vault-plugin-auth-cf v0.5.4/go.mod h1:idkFYHc6ske2BE7fe00SpH+SBIlqDKz8vk/IPLJuX2o=
 github.com/hashicorp/vault-plugin-auth-gcp v0.5.1/go.mod h1:eLj92eX8MPI4vY1jaazVLF2sVbSAJ3LRHLRhF/pUmlI=
-github.com/hashicorp/vault-plugin-auth-gcp v0.6.1 h1:WXTuja3WC2BdZekYCnzuZGoVvZTAGH8kSDUHzOK2PQY=
-github.com/hashicorp/vault-plugin-auth-gcp v0.6.1/go.mod h1:8eBRzg+JIhAaDBfDndDAQKIhDrQ3WW8OPklxAYftNFs=
+github.com/hashicorp/vault-plugin-auth-gcp v0.6.2-0.20200428223335-82bd3a3ad5b3 h1:GTQYSsqv/2jjdTm0DawBSljMmZTc/js6zLer+9A5e2U=
+github.com/hashicorp/vault-plugin-auth-gcp v0.6.2-0.20200428223335-82bd3a3ad5b3/go.mod h1:U0fkAlxWTEyQ74lx8wlGdD493lP1DD/qpMjXgOEbwj0=
 github.com/hashicorp/vault-plugin-auth-jwt v0.6.2 h1:fp6Rk89iPjDS8dyEK7lEauYE/UhkgkHbmwRZKuQA01U=
 github.com/hashicorp/vault-plugin-auth-jwt v0.6.2/go.mod h1:SFadxIfoLGzugEjwUUmUaCGbsYEz2/jJymZDDQjEqYg=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.1.5 h1:knWedzZ51g8Aj6Hyi1ATlQ/7jEx6nJeqFoCoHSrbQFI=
@@ -806,6 +808,7 @@ golang.org/x/sys v0.0.0-20191008105621-543471e840be/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20191026070338-33540a1f6037/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200122134326-e047566fdf82 h1:ywK/j/KkyTHcdyYSZNXGjMwgmDSfjglYZ3vStQ/gSCU=
 golang.org/x/sys v0.0.0-20200122134326-e047566fdf82/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/text v0.0.0-20170915032832-14c0d48ead0c/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.1-0.20181227161524-e6919f6577db/go.mod h1:bEr9sfX3Q8Zfm5fL9x+3itogRgK3+ptLWKqgva+5dAk=
@@ -824,6 +827,7 @@ golang.org/x/tools v0.0.0-20190226205152-f727befe758c/go.mod h1:9Yl7xja0Znq3iFh3
 golang.org/x/tools v0.0.0-20190311212946-11955173bddd/go.mod h1:LCzVGOaR6xXOjkQ3onu1FJEFr0SW1gC7cKk1uF8kGRs=
 golang.org/x/tools v0.0.0-20190312170243-e65039ee4138/go.mod h1:LCzVGOaR6xXOjkQ3onu1FJEFr0SW1gC7cKk1uF8kGRs=
 golang.org/x/tools v0.0.0-20190328211700-ab21143f2384/go.mod h1:LCzVGOaR6xXOjkQ3onu1FJEFr0SW1gC7cKk1uF8kGRs=
+golang.org/x/tools v0.0.0-20190425150028-36563e24a262/go.mod h1:RgjU9mgBXZiqYHBnxXauZ1Gv1EHHAz9KjViQ78xBX0Q=
 golang.org/x/tools v0.0.0-20190506145303-2d16b83fe98c/go.mod h1:RgjU9mgBXZiqYHBnxXauZ1Gv1EHHAz9KjViQ78xBX0Q=
 golang.org/x/tools v0.0.0-20190524140312-2c0ae7006135/go.mod h1:RgjU9mgBXZiqYHBnxXauZ1Gv1EHHAz9KjViQ78xBX0Q=
 golang.org/x/tools v0.0.0-20190718200317-82a3ea8a504c/go.mod h1:jcCCGcm9btYwXyDqrUWc6MKQKKGJCWEQ3AfLSRIbEuI=
@@ -919,5 +923,7 @@ k8s.io/klog v0.0.0-20190306015804-8e90cee79f82/go.mod h1:Gq+BEi5rUBO/HRz0bTSXDUc
 k8s.io/kube-openapi v0.0.0-20190228160746-b3a7cee44a30/go.mod h1:BXM9ceUBTj2QnfH2MK1odQs778ajze1RxcmP6S8RVVc=
 layeh.com/radius v0.0.0-20190322222518-890bc1058917 h1:BDXFaFzUt5EIqe/4wrTc4AcYZWP6iC6Ult+jQWLh5eU=
 layeh.com/radius v0.0.0-20190322222518-890bc1058917/go.mod h1:fywZKyu//X7iRzaxLgPWsvc0L26IUpVvE/aeIL2JtIQ=
+rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
+rsc.io/sampler v1.3.0/go.mod h1:T1hPZKmBbMNahiBKFy5HrXp6adAjACjK9JXDnKaTXpA=
 sigs.k8s.io/yaml v1.1.0 h1:4A07+ZFc2wgJwo8YNlQpr1rVlgUDlxXHhPJciaPY5gs=
 sigs.k8s.io/yaml v1.1.0/go.mod h1:UJmg0vDUVViEyp3mgSv9WPwZCDxu4rQW1olrI1uml+o=

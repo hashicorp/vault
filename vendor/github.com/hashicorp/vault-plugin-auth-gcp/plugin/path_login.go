@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -59,7 +60,7 @@ GCE identity metadata token ('iam', 'gce' roles).`,
 func (b *GcpAuthBackend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Validate we didn't get extraneous fields
 	if err := validateFields(req, data); err != nil {
-		return nil, logical.CodedError(422, err.Error())
+		return nil, logical.CodedError(http.StatusUnprocessableEntity, err.Error())
 	}
 
 	loginInfo, err := b.parseAndValidateJwt(ctx, req, data)
@@ -315,14 +316,25 @@ func (b *GcpAuthBackend) pathIamLogin(ctx context.Context, req *logical.Request,
 		return nil, errors.New("service account is empty")
 	}
 
+	conf, err := b.config(ctx, req.Storage)
+	if err != nil {
+		return logical.ErrorResponse("unable to retrieve GCP configuration"), nil
+	}
+
+	alias, err := conf.getIAMAlias(role, serviceAccount)
+	if err != nil {
+		return logical.ErrorResponse("unable to create alias: %s", err), nil
+	}
+
 	if req.Operation == logical.AliasLookaheadOperation {
-		return &logical.Response{
+		resp := &logical.Response{
 			Auth: &logical.Auth{
 				Alias: &logical.Alias{
-					Name: serviceAccount.UniqueId,
+					Name: alias,
 				},
 			},
-		}, nil
+		}
+		return resp, nil
 	}
 
 	// Validate service account can login against role.
@@ -332,13 +344,14 @@ func (b *GcpAuthBackend) pathIamLogin(ctx context.Context, req *logical.Request,
 
 	auth := &logical.Auth{
 		Alias: &logical.Alias{
-			Name: serviceAccount.UniqueId,
+			Name: alias,
 		},
-		Metadata:    authMetadata(loginInfo, serviceAccount),
 		DisplayName: serviceAccount.Email,
 	}
-
 	role.PopulateTokenAuth(auth)
+	if err := conf.IAMAuthMetadata.PopulateDesiredMetadata(auth, authMetadata(loginInfo, serviceAccount)); err != nil {
+		b.Logger().Warn("unable to populate iam metadata", "err", err.Error())
+	}
 
 	resp := &logical.Response{
 		Auth: auth,
@@ -449,11 +462,21 @@ func (b *GcpAuthBackend) pathGceLogin(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
+	conf, err := b.config(ctx, req.Storage)
+	if err != nil {
+		return logical.ErrorResponse("unable to retrieve GCP configuration"), nil
+	}
+
+	alias, err := conf.getGCEAlias(role, instance)
+	if err != nil {
+		return logical.ErrorResponse("unable to create alias: %s", err), nil
+	}
+
 	if req.Operation == logical.AliasLookaheadOperation {
 		return &logical.Response{
 			Auth: &logical.Auth{
 				Alias: &logical.Alias{
-					Name: fmt.Sprintf("gce-%s", strconv.FormatUint(instance.Id, 10)),
+					Name: alias,
 				},
 			},
 		}, nil
@@ -475,13 +498,14 @@ func (b *GcpAuthBackend) pathGceLogin(ctx context.Context, req *logical.Request,
 	auth := &logical.Auth{
 		InternalData: map[string]interface{}{},
 		Alias: &logical.Alias{
-			Name: fmt.Sprintf("gce-%s", strconv.FormatUint(instance.Id, 10)),
+			Name: alias,
 		},
-		Metadata:    authMetadata(loginInfo, serviceAccount),
 		DisplayName: instance.Name,
 	}
-
 	role.PopulateTokenAuth(auth)
+	if err := conf.GCEAuthMetadata.PopulateDesiredMetadata(auth, authMetadata(loginInfo, serviceAccount)); err != nil {
+		b.Logger().Warn("unable to populate gce metadata", "err", err.Error())
+	}
 
 	resp := &logical.Response{
 		Auth: auth,
