@@ -165,7 +165,6 @@ iam.serviceAccounts.get
 iam.serviceAccountKeys.get
 compute.instances.get
 compute.instanceGroups.list
-resourcemanager.projects.get
 ```
 
 These allow Vault to:
@@ -177,6 +176,9 @@ These allow Vault to:
 - verify authenticating GCE instances exist
 - compare bound fields for GCE roles (zone/region, labels, or membership
   in given instance groups)
+
+If you are using Group Aliases as described below, you will also need to add the
+`resourcemanager.projects.get` permission.
 
 #### Permissions For Authenticating Against Vault
 
@@ -204,6 +206,9 @@ will include the following aliases:
   "organization-$ORG_ID"
 ]
 ```
+
+If you are using a custom role for Vault server, you will need to add the
+`resourcemanager.projects.get` permission to your custom role.
 
 ## Implementation Details
 
