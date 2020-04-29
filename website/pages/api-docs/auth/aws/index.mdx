@@ -160,12 +160,31 @@ This configures the way that Vault interacts with the
   Vault won't be aware and any identity aliases set up for the role name will
   still be valid.
 
+- `iam_metadata` `(string: "default")` - The metadata to include on the token
+  returned by the `login` endpoint. This metadata will be added to both audit logs,
+  and on the `iam_alias`. By default, it includes `account_id` and `auth_type`.
+  Additionally, `canonical_arn`, `client_arn`, `client_user_id`, `inferred_aws_region`,
+  `inferred_entity_id`, and `inferred_entity_type` are available. To include no metadata,
+  set to `""` via the CLI or `[]` via the API. To use only particular fields, select
+  the explicit fields. To restore to defaults, send only a field of `default`.
+  **Only select fields that will have a low rate of change** for your `iam_alias` because
+  each change triggers a storage write and can have a performance impact at scale.
+
 - `ec2_alias` `(string: "role_id")` - Configures how to generate the identity
   alias when using the `ec2` auth method. Valid choices are `role_id`,
   `instance_id`, and `image_id`. When `role_id` is selected, the randomly
   generated ID of the role is used. When `instance_id` is selected, the
   instance identifier is used as the identity alias name. When `image_id` is
   selected, AMI ID of the instance is used as the identity alias name.
+
+- `ec2_metadata` `(string: "default")` - The metadata to include on the token
+  returned by the `login` endpoint. This metadata will be added to both audit logs,
+  and on the `ec2_alias`. By default, it includes `account_id` and `auth_type`.
+  Additionally, `ami_id`, `instance_id`, and `region`, are available. To include no metadata,
+  set to `""` via the CLI or `[]` via the API. To use only particular fields, select
+  the explicit fields. To restore to defaults, send only a field of `default`.
+  **Only select fields that will have a low rate of change** for your `ec2_alias` because
+  each change triggers a storage write and can have a performance impact at scale.
 
 ### Sample Payload
 
