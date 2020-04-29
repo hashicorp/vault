@@ -14,7 +14,7 @@ const REPLICATION_ATTRS = {
   knownSecondaries: ['firstSecondary', 'secondary-2', '3'],
 };
 
-module('Integration | Enterprise | Component | replication known-secondaries-card', function(hooks) {
+module('Integration | Component | replication known-secondaries-card', function(hooks) {
   setupRenderingTest(hooks, { resolver });
 
   hooks.beforeEach(function() {

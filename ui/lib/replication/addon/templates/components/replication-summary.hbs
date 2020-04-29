@@ -276,7 +276,7 @@
     </h3>
     {{#if cluster.dr.replicationEnabled}}
       {{#if submit.isRunning }}
-          <LayoutLoading />
+        <LayoutLoading />
       {{else}}
         {{#link-to
           "mode.index"
@@ -301,11 +301,7 @@
   {{#unless (and submit.isRunning (eq cluster.dr.mode "bootstrapping"))}}
     <div class="box is-bottomless is-fullwidth is-marginless">
       <h3 class="title is-flex-center is-5 is-marginless">
-        <Icon
-          @size="xl"
-          aria-hidden="true"
-          @glyph="perf-replication"
-        />
+        <Icon @size="xl" aria-hidden="true" @glyph="perf-replication" />
         Performance
       </h3>
       {{#if cluster.dr.replicationEnabled}}
@@ -334,23 +330,23 @@
     The cluster is initializing replication. This may take some time.
   {{else}}
     <div class="replication">
-      <ReplicationToggle />
-      <div class="selectable-card-container">
-        <ReplicationPrimaryCard
-          @title='State'
-          @description='Updated every ten seconds.'
-          @glyph={{get (cluster-states replicationAttrs.state) "glyph"}}
-          @metric={{replicationAttrs.state}} />
-        <ReplicationPrimaryCard
-          @title='Last WAL entry'
-          @description='Index of last Write Ahead Logs entry written on local storage.'
-          @metric={{replicationAttrs.lastWAL}} />
-        <KnownSecondariesCard
-          @cluster={{cluster}}
-          @replicationAttrs={{replicationAttrs}} />
-      </div>
-      <ReplicationTableRows @data={{replicationAttrs}} />
-      <ReplicationDocLink />
+      <ReplicationPage @model={{cluster}} as |Page|>
+        <Page.toggle />
+        <Page.dashboard @data={{cluster}} @componentToRender='replication-primary-card' as |Dashboard|>
+          <Dashboard.card
+            @title='State'
+            @description='Updated every ten seconds.'
+            @glyph={{get (cluster-states replicationAttrs.state) "glyph"}}
+            @metric={{replicationAttrs.state}} />
+          <Dashboard.card
+            @title='Last WAL entry'
+            @description='Index of last Write Ahead Logs entry written on local storage.'
+            @metric={{replicationAttrs.lastWAL}} />
+          <Dashboard.secondaryCard
+            @cluster={{cluster}}
+            @replicationAttrs={{replicationAttrs}} />
+        </Page.dashboard>
+      </ReplicationPage>
     </div>
   {{/if}}
 {{/if}}

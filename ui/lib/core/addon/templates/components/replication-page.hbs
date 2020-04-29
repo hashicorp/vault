@@ -1,8 +1,8 @@
 <div class="replication-page">
-{{yield (hash 
-  header=(component 'replication-header' data=model title=mode)
+{{yield (hash
+  header=(component 'replication-header' data=model title=replicationMode isSecondary=isSecondary)
   toggle=(component 'replication-toggle')
-  dashboard=(component 'replication-dashboard' data=model dr=dr)
+  dashboard=(component 'replication-dashboard' data=model isSecondary=isSecondary replicationDetails=replicationDetails clusterMode=clusterMode)
   isDisabled=isDisabled
   message=message
 )}}

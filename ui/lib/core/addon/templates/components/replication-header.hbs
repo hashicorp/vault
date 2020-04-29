@@ -34,7 +34,7 @@
     <h1 class="title is-3">
       {{title}}
       <span class="tag">
-        {{data.dr.mode}}
+        {{if isSecondary 'Secondary' 'Primary'}}
       </span>
       <span class="tag">
         {{data.dr.clusterIdDisplay}}

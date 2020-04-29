@@ -1,27 +1,14 @@
-{{#unless data}}
-  <EmptyState
-    @title="Data not available"
-  />
-{{else}}
-  <div class="has-top-margin-xl has-bottom-margin-s"
-    data-test-table-rows>
-    {{info-table-row
-      label="Merkle root index"
-      helperText="A snapshot in time of the merkle tree's root hash. Changes on every update to storage."
-      value=merkleRoot}}
-    {{info-table-row
-      label="Mode"
-      value=mode}}
-    {{info-table-row
-      label="Replication set"
-      helperText="The ID for the group of clusters communicating for this replication mode"
-      value=clusterId}}
-  </div>
-
-  {{#if syncProgress}}
-  {{!-- ARG TODO: need to test this --}}
-    {{info-table-row
-      label="Sync progress"
-      value=(concat syncProgress.progress '/' syncProgress.total)}}
-  {{/if}}
-{{/unless}}
+<div class="has-top-margin-xl has-bottom-margin-s"
+  data-test-table-rows>
+  {{info-table-row
+    label="Merkle root index"
+    helperText="A snapshot in time of the merkle tree's root hash. Changes on every update to storage."
+    value=merkleRoot}}
+  {{info-table-row
+    label="Mode"
+    value=clusterMode}}
+  {{info-table-row
+    label="Replication set"
+    helperText="The ID for the group of clusters communicating for this replication mode"
+    value=clusterId}}
+</div>

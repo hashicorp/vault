@@ -9,28 +9,35 @@ const MODE = {
 
 export default Component.extend({
   layout,
-  mode: computed('model', function() {
-    let mode = this.model.rm.mode;
+  replicationMode: computed('model.{replicationMode}', function() {
+    // dr or performance 🤯
+    let mode = this.model.replicationMode;
     return MODE[mode];
   }),
-  dr: computed('model', function() {
-    let dr = this.model.dr;
-    if (!dr) {
-      return false;
-    }
-    return dr;
+  clusterMode: computed('model.{replicationAttrs}', function() {
+    // primary or secondary
+    const { model } = this;
+    return model.replicationAttrs.mode;
   }),
-  isDisabled: computed('dr', function() {
-    // this conditional only applies to DR secondaries.
-    if (this.dr.mode === 'disabled' || this.dr.mode === 'primary') {
+  isSecondary: computed('clusterMode', function() {
+    const { clusterMode } = this;
+    return clusterMode === 'secondary';
+  }),
+  replicationDetails: computed('model.{replicationMode}', function() {
+    const { model } = this;
+    const replicationMode = model.replicationMode;
+    return model[replicationMode];
+  }),
+  isDisabled: computed('replicationDetails', function() {
+    if (this.replicationDetails.mode === 'disabled' || this.replicationDetails.mode === 'primary') {
       return true;
     }
     return false;
   }),
-  message: computed('model', function() {
+  message: computed('model.{anyReplicationEnabled}', 'replicationMode', function() {
     if (this.model.anyReplicationEnabled) {
-      return `This ${this.mode} secondary has not been enabled.  You can do so from the Disaster Recovery Primary.`;
+      return `This ${this.replicationMode} secondary has not been enabled.  You can do so from the ${this.replicationMode} Primary.`;
     }
-    return `This cluster has not been enabled as a ${this.mode} Secondary. You can do so by enabling replication and adding a secondary from the ${this.mode} Primary.`;
+    return `This cluster has not been enabled as a ${this.replicationMode} Secondary. You can do so by enabling replication and adding a secondary from the ${this.replicationMode} Primary.`;
   }),
 });
