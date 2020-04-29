@@ -13,10 +13,9 @@ EXTERNAL_TOOLS_CI=\
 	github.com/elazarl/go-bindata-assetfs/... \
 	github.com/hashicorp/go-bindata/... \
 	github.com/mitchellh/gox
-EXTERNAL_TOOLS=\
 	golang.org/x/tools/cmd/goimports \
-	github.com/client9/misspell/cmd/misspell \
-	github.com/golangci/golangci-lint/cmd/golangci-lint
+EXTERNAL_TOOLS=\
+	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
