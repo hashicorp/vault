@@ -23,11 +23,12 @@
 
     .card-container {
       display: grid;
-      grid-gap: 2rem;
+      grid-gap: 1.5rem;
       grid-template-columns: 1fr 1fr;
       grid-template-rows: 1fr 1fr 0.8fr;
       padding: $spacing-l;
       line-height: 1.5;
+      height: 230px;
 
       @include until(1320px) {
         // prevent an issue with the card descriptions wrapping and expanding height
@@ -41,10 +42,18 @@
       .grid-item-left {
         grid-column: 1/1;
         grid-row: 2/2;
+
+        height: 75px;
+        max-height: 75px;
+        overflow: auto;
       }
       .grid-item-right {
         grid-column: 2/2;
         grid-row: 2/2;
+
+        height: 75px;
+        max-height: 75px;
+        overflow: auto;
       }
       .grid-item-left-bottom {
         grid-column: 1/1;
