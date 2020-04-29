@@ -47,6 +47,7 @@ BUG FIXES:
 * http: Fix superflous call messages from the http package on logs caused by missing returns after
   `respondError` calls [[GH-8796](https://github.com/hashicorp/vault/pull/8796)]
 * raft: Fix panic that could occur if `disable_clustering` was set to true on Raft storage cluster [[GH-8784](https://github.com/hashicorp/vault/pull/8784)]
+* raft: Handle errors returned from the API during snapshot operations [[GH-8861](https://github.com/hashicorp/vault/pull/8861)]
 * seal/gcpkms: Fix panic that could occur if all seal parameters were provided via environment
   variables [[GH-8840](https://github.com/hashicorp/vault/pull/8840)]
 * storage/raft: Fix memory allocation and incorrect metadata tracking issues with snapshots [[GH-8793](https://github.com/hashicorp/vault/pull/8793)]
