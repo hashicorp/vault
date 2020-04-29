@@ -177,6 +177,9 @@ These allow Vault to:
 - compare bound fields for GCE roles (zone/region, labels, or membership
   in given instance groups)
 
+If you are using Group Aliases as described below, you will also need to add the
+`resourcemanager.projects.get` permission.
+
 #### Permissions For Authenticating Against Vault
 
 Note that the previously mentioned permissions are given to the _Vault servers_.
@@ -203,6 +206,9 @@ will include the following aliases:
   "organization-$ORG_ID"
 ]
 ```
+
+If you are using a custom role for Vault server, you will need to add the
+`resourcemanager.projects.get` permission to your custom role.
 
 ## Implementation Details
 
