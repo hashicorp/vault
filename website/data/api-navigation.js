@@ -60,6 +60,7 @@ export default [
       { category: 'rabbitmq' },
       { category: 'ssh' },
       { category: 'totp' },
+      { category: 'transform' },
       { category: 'transit' },
       '-----------------------',
       { category: 'cassandra' },

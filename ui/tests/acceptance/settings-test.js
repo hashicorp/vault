@@ -31,8 +31,9 @@ module('Acceptance | settings', function(hooks) {
       .next()
       .path(path)
       .toggleOptions()
-      .defaultTTLVal(100)
+      .enableDefaultTtl()
       .defaultTTLUnit('s')
+      .defaultTTLVal(100)
       .submit();
     assert.ok(
       find('[data-test-flash-message]').textContent.trim(),

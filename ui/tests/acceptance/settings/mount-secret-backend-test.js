@@ -12,7 +12,7 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
     return authPage.login();
   });
 
-  test('it sets the ttl corrects when mounting', async function(assert) {
+  test('it sets the ttl correctly when mounting', async function(assert) {
     // always force the new mount to the top of the list
     const path = `kv-${new Date().getTime()}`;
     const defaultTTLHours = 100;
@@ -24,17 +24,17 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
 
     assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('kv');
-
     await page
       .next()
       .path(path)
       .toggleOptions()
-      .defaultTTLVal(defaultTTLHours)
+      .enableDefaultTtl()
       .defaultTTLUnit('h')
-      .maxTTLVal(maxTTLHours)
+      .defaultTTLVal(defaultTTLHours)
+      .enableMaxTtl()
       .maxTTLUnit('h')
+      .maxTTLVal(maxTTLHours)
       .submit();
-
     await configPage.visit({ backend: path });
     assert.equal(configPage.defaultTTL, defaultTTLSeconds, 'shows the proper TTL');
     assert.equal(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');

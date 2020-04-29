@@ -115,4 +115,20 @@ module('Integration | Component | ttl-picker2', function(hooks) {
       'Seconds value is recalculated based on time and unit'
     );
   });
+
+  test('it sets default value to seconds of parsed value when set', async function(assert) {
+    let changeSpy = sinon.spy();
+    this.set('onChange', changeSpy);
+    await render(hbs`
+      <TtlPicker2
+        @onChange={{onChange}}
+        @initialValue="2h"
+        @enableTTL={{true}}
+        @time=4
+        @unit="d"
+      />
+    `);
+    assert.dom('[data-test-ttl-value]').hasValue('7200', 'time value is initialValue as seconds');
+    assert.dom('[data-test-select="ttl-unit"]').hasValue('s', 'unit is seconds');
+  });
 });
