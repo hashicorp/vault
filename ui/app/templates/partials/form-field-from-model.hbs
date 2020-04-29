@@ -45,6 +45,8 @@
   <TtlPicker2
     @initialValue={{or (get model attr.name) attr.options.defaultValue}}
     @label={{or attr.options.label (humanize (dasherize attr.name))}}
+    @helperTextDisabled="Vault will use the default duration"
+    @helperTextEnabled="Disable lease after"
     @onChange={{action "updateTtl" attr.name}}
   />
   {{else if (or (eq attr.type "number") (eq attr.type "string"))}}
