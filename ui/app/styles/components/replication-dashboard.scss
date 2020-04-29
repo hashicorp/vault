@@ -29,8 +29,6 @@
       padding: $spacing-l;
       line-height: 1.5;
 
-      height: 230px;
-
       @include until(1320px) {
         // prevent an issue with the card descriptions wrapping and expanding height
         min-height: 250px;
