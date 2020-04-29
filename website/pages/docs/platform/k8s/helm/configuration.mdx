@@ -115,20 +115,19 @@ and consider if they're appropriate for your deployment.
 
         - `host` (`string: required`): Name of the host to use for Ingress.
 
-        - `paths` (`string: required`): This value defines the types of host rules for the Ingress service.
+        - `paths` (`array: []`): A list of paths that will be directed to the Vault service. At least one path is required.
 
         ```yaml
         paths:
-          - backend:
-            serviceName: service2
-            servicePort: 80
+          - /
+          - /vault
         ```
 
     * `tls` - Values that configure the Ingress TLS rules.
 
-      - `hosts` (`string: null)`: Name of the hosts defined in the Common Name of the TLS Certificate. This should be formated as a multi-line string.
+      - `hosts` (`array: []`): List of the hosts defined in the Common Name of the TLS Certificate.
 
-      - `secretName` (`string: null)`: Name of the secret containing the required TLS files such as certificates and keys.
+      - `secretName` (`string: null`): Name of the secret containing the required TLS files such as certificates and keys.
 
       ```yaml
       hosts:
