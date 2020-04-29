@@ -20,11 +20,23 @@ BUG FIXES:
 
 CHANGES: 
 
+* auth/aws: The default set of metadata fields added in 1.4.1 has been changed to `account_id` and `auth_type` [[GH-8783](https://github.com/hashicorp/vault/pull/8783)]
 * storage/raft: Disallow `ha_storage` to be specified if `raft` is set as the `storage` type. [[GH-8707](https://github.com/hashicorp/vault/pull/8707)]
 
 IMPROVEMENTS:
 
+* auth/aws: The set of metadata stored during login is now configurable [[GH-8783](https://github.com/hashicorp/vault/pull/8783)]
+* auth/aws: Improve region selection to avoid errors seen if the account hasn't enabled some newer AWS regions [[GH-8679](https://github.com/hashicorp/vault/pull/8679)]
 * auth/azure: Enable login from Azure VMs with user-assigned identities [[GH-33](https://github.com/hashicorp/vault-plugin-auth-azure/pull/33)]
+* auth/gcp: The set of metadata stored during login is now configurable [[GH-92](https://github.com/hashicorp/vault-plugin-auth-gcp/pull/92)]
+* auth/gcp: The type of alias name used during login is now configurable [[GH-95](https://github.com/hashicorp/vault-plugin-auth-gcp/pull/95)]
+* auth/ldap: Improve error messages during LDAP operation failures [[GH-8740](https://github.com/hashicorp/vault/pull/8740)]
+* identity: Add a batch delete API for identity entities [[GH-8785]](https://github.com/hashicorp/vault/pull/8785)
+* identity: Improve performance of logins when no group updates are needed [[GH-8795]](https://github.com/hashicorp/vault/pull/8795)
+* metrics: Add `vault.identity.num_entities` metric [[GH-8816]](https://github.com/hashicorp/vault/pull/8816)
+* secrets/kv: Allow `delete-version-after` to be reset to 0 via the CLI [[GH-8635](https://github.com/hashicorp/vault/pull/8635)]
+* secrets/rabbitmq: Improve error handling and reporting [[GH-8619](https://github.com/hashicorp/vault/pull/8619)]
+* ui: Provide One Time Password during Operation Token generation process [[GH-8630]](https://github.com/hashicorp/vault/pull/8630)
 
 BUG FIXES:
 
@@ -36,13 +48,16 @@ BUG FIXES:
   Also fixes deadlock that can happen if `vault debug` with the config target is ran during this time.
   [[GH-8755](https://github.com/hashicorp/vault/pull/8755)]
 * core: Always rewrite the .vault-token file as part of a `vault login` to ensure permissions and ownership are set correctly [[GH-8867](https://github.com/hashicorp/vault/pull/8867)]
+* core: Fix namespace listing to return `key_info` when a scoping namespace is also provided. 
 * database/mongodb: Fix context deadline error that may result due to retry attempts on failed commands
   [[GH-8863](https://github.com/hashicorp/vault/pull/8863)]
 * http: Fix superflous call messages from the http package on logs caused by missing returns after
   `respondError` calls [[GH-8796](https://github.com/hashicorp/vault/pull/8796)]
 * raft: Fix panic that could occur if `disable_clustering` was set to true on Raft storage cluster [[GH-8784](https://github.com/hashicorp/vault/pull/8784)]
+* raft: Handle errors returned from the API during snapshot operations [[GH-8861](https://github.com/hashicorp/vault/pull/8861)]
 * seal/gcpkms: Fix panic that could occur if all seal parameters were provided via environment
   variables [[GH-8840](https://github.com/hashicorp/vault/pull/8840)]
+* storage/raft: Fix memory allocation and incorrect metadata tracking issues with snapshots [[GH-8793](https://github.com/hashicorp/vault/pull/8793)]
 * sys/wrapping: Allow unwrapping of wrapping tokens which contain nil data [[GH-8714](https://github.com/hashicorp/vault/pull/8714)]
 
 ## 1.4.0 (April 7th, 2020)
@@ -156,7 +171,7 @@ BUG FIXES:
 
 CHANGES: 
 
-* auth/aws: The default set ofmetadata fields added in 1.3.2 has been changed to `account_id` and `auth_type` [[GH-8783](https://github.com/hashicorp/vault/pull/8783)]
+* auth/aws: The default set of metadata fields added in 1.3.2 has been changed to `account_id` and `auth_type` [[GH-8783](https://github.com/hashicorp/vault/pull/8783)]
 
 IMPROVEMENTS:
 
