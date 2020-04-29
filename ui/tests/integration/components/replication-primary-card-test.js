@@ -6,7 +6,7 @@ import { CLUSTER_STATES } from 'core/helpers/cluster-states';
 import hbs from 'htmlbars-inline-precompile';
 const resolver = engineResolverFor('replication');
 
-module('Integration | Enterprise | Component | replication-primary-card', function(hooks) {
+module('Integration | Component | replication-primary-card', function(hooks) {
   setupRenderingTest(hooks, { resolver });
 
   test('it renders', async function(assert) {

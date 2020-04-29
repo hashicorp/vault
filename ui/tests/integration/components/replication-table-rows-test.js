@@ -9,7 +9,7 @@ const DATA = {
   merkleRoot: 'c21c8428a0a06135cef6ae25bf8e0267ff1592a6',
 };
 
-module('Integration | Enterprise | Component | replication-table-rows', function(hooks) {
+module('Integration | Component | replication-table-rows', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
