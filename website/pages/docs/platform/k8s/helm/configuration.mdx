@@ -125,9 +125,9 @@ and consider if they're appropriate for your deployment.
 
     * `tls` - Values that configure the Ingress TLS rules.
 
-      - `hosts` (`string: null)`: Name of the hosts defined in the Common Name of the TLS Certificate. This should be formated as a multi-line string.
+      - `hosts` (`array: []`): List of the hosts defined in the Common Name of the TLS Certificate.
 
-      - `secretName` (`string: null)`: Name of the secret containing the required TLS files such as certificates and keys.
+      - `secretName` (`string: null`): Name of the secret containing the required TLS files such as certificates and keys.
 
       ```yaml
       hosts:
