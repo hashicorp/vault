@@ -1,4 +1,4 @@
-<div class="selectable-card is-rounded card-container {{if hasErrorClass "has-border-danger"}}">
+<div class="selectable-card is-rounded card-container {{if hasErrorClass "has-border-danger"}}" data-test-replication-secondary-card>
   {{!-- Check if State or WAL Card --}}
   {{#if (eq title "States")}}
     <h3 class="title is-5 grid-item-title card-title">{{title}}</h3>
@@ -7,7 +7,7 @@
         <h6 class="title is-6">state</h6>
         <p class="has-text-grey is-size-8">How this cluster is communicating with others at this moment.</p>
       {{else}}
-        <h6 class="has-text-danger">state</h6>
+        <h6 class="has-text-danger" data-test-error>state</h6>
         <AlertInline
           @type="danger"
           @message="Please check your server logs." />
@@ -20,7 +20,7 @@
           @type="danger"
           @message="There has been some transient failure.  Your cluster will eventually switch back to connection and try to establish a connection again." />
       {{else if (eq connection "shutdown")}}
-        <h6 class="title is-6 has-text-danger">connection_state</h6>
+        <h6 class="title is-6 has-text-danger" data-test-error>connection_state</h6>
         <AlertInline
           @type="danger"
           @message="Your connection has shut down. This may be because the application explicitly requested a shutdown or a non-recoverable error has happened during attempts to communicate." />
@@ -29,11 +29,11 @@
         <p class="has-text-grey is-size-8">The health of the connection between this cluster and others.</p>
       {{/if}}
     </div>
-    <h2 class="title is-3 grid-item-left-bottom">{{state}}
+    <h2 class="title is-3 grid-item-left-bottom" data-test-state>{{state}}
       {{#if inSyncState }}
         <ToolTip @verticalPosition="above" as |T|>
           <T.trigger>
-            <Icon @glyph={{"check-circle-outline" }} @size="m" class={{"has-text-success"}} />
+            <Icon @glyph={{"check-circle-outline" }} @size="m" class={{"has-text-success"}} data-test-glyph />
           </T.trigger>
           <T.content @class="tool-tip">
             <div class="box">
@@ -43,7 +43,7 @@
         </ToolTip>
       {{/if}}
     </h2>
-    <h2 class="title is-3 grid-item-right-bottom">{{connection}}</h2>
+    <h2 class="title is-3 grid-item-right-bottom" data-test-connection>{{connection}}</h2>
   {{else}}
     <h3 class="title is-5 grid-item-title card-title">{{title}}
       <ToolTip @verticalPosition="above" @closeDelay="2000ms" as |T|>
@@ -67,12 +67,12 @@
     </div>
     <div class="grid-item-right">
       <h6 class="title is-6">last_wal</h6>
-      <p class="has-text-grey is-size-8">{{lastWAL}}</p>
+      <p class="has-text-grey is-size-8" data-test-lastWAL>{{lastWAL}}</p>
     </div>
-    <code class="title is-3 grid-item-left-bottom">{{format-number delta}}</code>
+    <code class="title is-3 grid-item-left-bottom" data-test-delta>{{format-number delta}}</code>
     <div class="grid-item-right-bottom">
       <h6 class="title is-6">last_remote_wal</h6>
-      <p class="has-text-grey is-size-8">{{lastRemoteWAL}}</p>
+      <p class="has-text-grey is-size-8" data-test-lastRemoteWAL>{{lastRemoteWAL}}</p>
     </div>
   {{/if}}
 </div>
