@@ -12,6 +12,7 @@
  * @param label="Time to live (TTL)" {String} - Label is the main label that lives next to the toggle.
  * @param helperTextDisabled="Allow tokens to be used indefinitely" {String} - This helper text is shown under the label when the toggle is switched off
  * @param helperTextEnabled="Disable the use of the token after" {String} - This helper text is shown under the label when the toggle is switched on
+ * @param description="Longer description about this value, what it does, and why it is useful. Shows up in tooltip next to helpertext"
  * @param time=30 {Number} - The time (in the default units) which will be adjustable by the user of the form
  * @param unit="s" {String} - This is the unit key which will show by default on the form. Can be one of `s` (seconds), `m` (minutes), `h` (hours), `d` (days)
  * @param recalculationTimeout=5000 {Number} - This is the time, in milliseconds, that `recalculateSeconds` will be be true after time is updated
@@ -45,6 +46,7 @@ export default Component.extend({
   label: 'Time to live (TTL)',
   helperTextDisabled: 'Allow tokens to be used indefinitely',
   helperTextEnabled: 'Disable the use of the token after',
+  description: '',
   time: 30,
   unit: 's',
   recalculationTimeout: 5000,
