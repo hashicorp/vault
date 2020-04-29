@@ -329,6 +329,7 @@
   {{#if (eq replicationAttrs.mode 'initializing')}}
     The cluster is initializing replication. This may take some time.
   {{else}}
+    <p>{{cluster.replicationModeStatus.cluster_id}}</p>
     <div class="replication">
       <ReplicationPage @model={{cluster}} as |Page|>
         <Page.toggle />

@@ -1,6 +1,8 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import layout from '../templates/components/replication-page';
+import { inject as service } from '@ember/service';
+import { task } from 'ember-concurrency';
 
 const MODE = {
   dr: 'Disaster Recovery',
@@ -9,6 +11,26 @@ const MODE = {
 
 export default Component.extend({
   layout,
+  store: service(),
+  reindexingDetails: null,
+
+  didReceiveAttrs() {
+    this._super(arguments);
+    this.getReplicationModeStatus.perform();
+  },
+  getReplicationModeStatus: task(function*() {
+    let resp;
+    const { replicationMode } = this.model;
+    try {
+      resp = yield this.get('store')
+        .adapterFor('replication-mode')
+        .fetchStatus(replicationMode);
+    } catch (e) {
+      console.log(e);
+    }
+    this.set('reindexingDetails', resp);
+  }),
+
   replicationMode: computed('model.{replicationMode}', function() {
     // dr or performance 🤯
     let mode = this.model.replicationMode;

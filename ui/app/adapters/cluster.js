@@ -159,7 +159,7 @@ export default ApplicationAdapter.extend({
 
   urlForReplication(replicationMode, clusterMode, endpoint) {
     let suffix;
-    const errString = `Calls to replication ${endpoint} endpoint are not currently allowed in the vault cluster adapter`;
+    const errString = `Calls to replication ${endpoint} endpoint are not currently allowed in the vault cluster adapater`;
     if (clusterMode) {
       assert(errString, REPLICATION_ENDPOINTS[clusterMode].includes(endpoint));
       suffix = `${replicationMode}/${clusterMode}/${endpoint}`;
