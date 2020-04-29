@@ -1,4 +1,4 @@
-<div class="replication-dashboard box is-sideless is-fullwidth is-marginless">
+<div class="replication-dashboard box is-sideless is-fullwidth is-marginless" data-test-replication-dashboard>
   {{#if isSecondary}}
     <h2 class="has-text-weight-semibold is-size-4 has-bottom-margin-xs">
         Primary Cluster
@@ -42,5 +42,5 @@
   <ReplicationTableRows
     @replicationDetails={{replicationDetails}}
     @clusterMode={{clusterMode}} />
-  <ReplicationDocLink />
+  <ReplicationDocLink data-test-replication-doc-link/>
 </div>
