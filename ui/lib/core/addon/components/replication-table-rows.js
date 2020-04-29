@@ -13,7 +13,4 @@ export default Component.extend({
   clusterId: computed('replicationDetails', function() {
     return this.replicationDetails.clusterId || 'unknown';
   }),
-  syncProgress: computed('replicationDetails', function() {
-    return this.replicationDetails.syncProgress || false;
-  }),
 });

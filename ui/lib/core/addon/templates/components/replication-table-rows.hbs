@@ -12,10 +12,3 @@
     helperText="The ID for the group of clusters communicating for this replication mode"
     value=clusterId}}
 </div>
-
-{{#if syncProgress}}
-{{!-- ARG TODO: need to test this --}}
-  {{info-table-row
-    label="Sync progress"
-    value=(concat syncProgress.progress '/' syncProgress.total)}}
-{{/if}}

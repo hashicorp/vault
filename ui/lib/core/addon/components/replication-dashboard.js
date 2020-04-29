@@ -16,6 +16,6 @@ export default Component.extend({
   }),
   isReindexing: computed('data', function() {
     // TODO: make this a real value
-    return true;
+    return false;
   }),
 });
