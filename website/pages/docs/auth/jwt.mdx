@@ -195,6 +195,22 @@ collection of provider configuration steps has been collected to help get starte
 This amount of configuration required for OIDC is relatively small, but it can be tricky to debug
 why things aren't working. Some tips for setting up OIDC:
 
+- If a role parameter (e.g. `bound_claims`) requires a map value, it can't be set individually using
+  the Vault CLI. In these cases the best approach is to write the entire configuration as a single
+  JSON object:
+
+```text
+vault write auth/oidc/role/demo -<<EOF
+{
+  "user_claim": "sub",
+  "bound_audiences": "abc123",
+  "role_type": "oidc",
+  "policies": "demo",
+  "ttl": "1h",
+  "bound_claims": { "groups": ["mygroup/mysubgroup"] }
+}
+EOF
+```
 - Monitor Vault's log output. Important information about OIDC validation failures will be emitted.
 - Ensure Redirect URIs are correct in Vault and on the provider. They need to match exactly. Check:
   http/https, 127.0.0.1/localhost, port numbers, whether trailing slashes are present.

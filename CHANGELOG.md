@@ -2,6 +2,9 @@
 
 CHANGES:
 
+* token: Token creation with custom token ID via `id` will no longer allow periods (`.`) as part of the input string. 
+  The final generated token value may contain periods, such as the `s.` prefix for service token 
+  indication. [[GH-8646](https://github.com/hashicorp/vault/pull/8646/files)]
 * token: Token renewals will now return token policies within the `token_policies` , identity policies within `identity_policies`, and the full policy set within `policies`. [[GH-8535](https://github.com/hashicorp/vault/pull/8535)]
 * kv: Return the value of delete_version_after when reading kv/config, even if it is set to the default. [[GH-42](https://github.com/hashicorp/vault-plugin-secrets-kv/pull/42)]
 
@@ -32,6 +35,9 @@ BUG FIXES:
 * core: Fix blocked requests if a SIGHUP is issued during a long-running request has the state lock held. 
   Also fixes deadlock that can happen if `vault debug` with the config target is ran during this time.
   [[GH-8755](https://github.com/hashicorp/vault/pull/8755)]
+* core: Always rewrite the .vault-token file as part of a `vault login` to ensure permissions and ownership are set correctly [[GH-8867](https://github.com/hashicorp/vault/pull/8867)]
+* database/mongodb: Fix context deadline error that may result due to retry attempts on failed commands
+  [[GH-8863](https://github.com/hashicorp/vault/pull/8863)]
 * http: Fix superflous call messages from the http package on logs caused by missing returns after
   `respondError` calls [[GH-8796](https://github.com/hashicorp/vault/pull/8796)]
 * raft: Fix panic that could occur if `disable_clustering` was set to true on Raft storage cluster [[GH-8784](https://github.com/hashicorp/vault/pull/8784)]
@@ -145,6 +151,16 @@ BUG FIXES:
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [[GH-8035](https://github.com/hashicorp/vault/pull/8035)]
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
 * ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
+
+## 1.3.5 (April 28th, 2020)
+
+CHANGES: 
+
+* auth/aws: The default set ofmetadata fields added in 1.3.2 has been changed to `account_id` and `auth_type` [[GH-8783](https://github.com/hashicorp/vault/pull/8783)]
+
+IMPROVEMENTS:
+
+* auth/aws: The set of metadata stored during login is now configurable [[GH-8783](https://github.com/hashicorp/vault/pull/8783)]
 
 ## 1.3.4 (March 19th, 2020)
 
