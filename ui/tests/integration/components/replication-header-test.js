@@ -38,7 +38,7 @@ module('Integration | Enterprise | Component | replication-header', function(hoo
       .dom('[data-test-clusterId]')
       .includesText(DATA.dr.clusterIdDisplay, `shows the correct clusterId value`);
 
-    assert.dom('[data-test-mode]').includesText(DATA.dr.mode, `shows the correct mode value`);
+    assert.dom('[data-test-mode]').includesText('Secondary', `shows the correct mode value`);
   });
 
   test('it does not show tabs when showTabs is not set', async function(assert) {
