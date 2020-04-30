@@ -11,13 +11,11 @@ import { clusterStates } from 'core/helpers/cluster-states';
  * ```js
  * <ReplicationSecondaryCard
     @title='States'
-    @data=data
-    @dr=dr
+    @replicationDetails=replicationDetails
     />
  * ```
  * @param {string} [title=null] - The title to be displayed on the top left corner of the card.
- * @param data=null{DS.Model} - An Ember data model that will be used to compute the metrics used inside the card.
- * @param dr=null{DS.Model.dr} - An Ember data object off the Ember data model.  It is computed at the parent component and passed through to this component.
+ * @param replicationDetails=null{DS.Model.replicationDetails} - An Ember data object off the Ember data model.  It is computed at the parent component and passed through to this component.
  */
 
 export default Component.extend({

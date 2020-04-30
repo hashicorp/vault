@@ -1,19 +1,8 @@
-import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { pauseTest, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-const DATATEST = EmberObject.create({
-  dr: {
-    mode: 'secondary',
-    rm: {
-      mode: 'dr',
-    },
-    clusterIdDisplay: 12345,
-  },
-  unsealed: 'good',
-});
 const DATA = {
   dr: {
     mode: 'secondary',
@@ -31,7 +20,7 @@ module('Integration | Enterprise | Component | replication-header', function(hoo
   hooks.beforeEach(function() {
     this.set('data', DATA);
   });
-  console.log(DATATEST);
+  console.log(DATA);
   test('it renders', async function(assert) {
     await render(
       hbs`<ReplicationHeader @data={{data}} @isSecondary={{true}} @title={{'Disaster Recover'}}/>`
