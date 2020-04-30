@@ -103,7 +103,10 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 
 	dbPath := filepath.Join(path, "vault.db")
 
-	boltDB, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: 1 * time.Second})
+	boltDB, err := bolt.Open(dbPath, 0666, &bolt.Options{
+		Timeout:      1 * time.Second,
+		FreelistType: bolt.FreelistMapType,
+	})
 	if err != nil {
 		return nil, err
 	}
