@@ -112,9 +112,13 @@ jobs:
         name: Setup Go
         working_directory: ~/
     - checkout
+    - run:
+        command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
     - restore_cache:
         keys:
-        - go-test-cache-v2-branch-{{ .Branch }}
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - run:
         command: |
           set -x
@@ -161,7 +165,7 @@ jobs:
         name: Run Go tests
         no_output_timeout: 60m
     - save_cache:
-        key: go-test-cache-v2-branch-{{ .Branch }}
+        key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
         paths:
         - /tmp/go-cache
     - run:
@@ -217,9 +221,13 @@ workflows:
 #         default: \"\"
 #         type: string
 #     steps:
+#     - run:
+#         command: |
+#           TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+#         name: Compute test cache key
 #     - restore_cache:
 #         keys:
-#         - go-test-cache-v2-branch-{{ .Branch }}
+#         - go-test-cache-date-v1-{{ checksum \"/tmp/go-cache-key\" }}
 #     - run:
 #         command: |
 #           set -x
@@ -266,7 +274,7 @@ workflows:
 #         name: Run Go tests
 #         no_output_timeout: 60m
 #     - save_cache:
-#         key: go-test-cache-v2-branch-{{ .Branch }}
+#         key: go-test-cache-date-v1-{{ checksum \"/tmp/go-cache-key\" }}
 #         paths:
 #         - << parameters.cache_dir >>
 #     - run:
