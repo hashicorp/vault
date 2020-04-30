@@ -1,38 +1,38 @@
 jobs:
   - pre-flight-checks
-#  - install-ui-dependencies:
-#      requires:
-#        - pre-flight-checks
+  - install-ui-dependencies:
+      requires:
+        - pre-flight-checks
   - build-go-dev:
       requires:
         - pre-flight-checks
-#  - test-ui:
-#      requires:
-#        - install-ui-dependencies
-#        - build-go-dev
-#  - test-ui-browserstack:
-#      requires:
-#        - install-ui-dependencies
-#        - build-go-dev
-#      filters:
-#        branches:
-#          # Forked pull requests have CIRCLE_BRANCH set to pull/XXX
-#          ignore: /pull\/[0-9]+/
+  - test-ui:
+      requires:
+        - install-ui-dependencies
+        - build-go-dev
+  - test-ui-browserstack:
+      requires:
+        - install-ui-dependencies
+        - build-go-dev
+      filters:
+        branches:
+          # Forked pull requests have CIRCLE_BRANCH set to pull/XXX
+          ignore: /pull\/[0-9]+/
   - test-go:
       requires:
         - build-go-dev
-#  - test-go-race:
-#      requires:
-#        - build-go-dev
-#      filters:
-#        branches:
-#          # UI and Docs-only branches should skip go tests
-#          ignore:
-#            - /^docs\/.*/
-#            - /^ui\/.*/
-#  - website-docker-image:
-#      context: vault-docs
-#      filters:
-#        branches:
-#          only:
-#            - master
+  - test-go-race:
+      requires:
+        - build-go-dev
+      filters:
+        branches:
+          # UI and Docs-only branches should skip go tests
+          ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
+  - website-docker-image:
+      context: vault-docs
+      filters:
+        branches:
+          only:
+            - master

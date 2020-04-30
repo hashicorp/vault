@@ -43,7 +43,6 @@ steps:
         # Run tests
         make prep
         mkdir -p test-results/go-test
-        du -sh << parameters.cache_dir >> || true
 
         CGO_ENABLED= \
           VAULT_ADDR= \
@@ -58,14 +57,7 @@ steps:
             << parameters.extra_flags >> \
             github.com/hashicorp/vault/builtin/credential/ldap
 
-        du -sh << parameters.cache_dir >> || true
   - save_cache:
-#      Do we want to include env vars in the key? Which ones?
-#      We should also store extra_flags.
       key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
       paths:
       - << parameters.cache_dir >>
-  - run:
-      name: Check cache
-      command: |
-        du -sh << parameters.cache_dir >>

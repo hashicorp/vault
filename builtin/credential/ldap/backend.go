@@ -69,7 +69,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	}
 
 	if cfg.DenyNullBind && len(password) == 0 {
-		return nil, logical.ErrorResponse("password cannot be of zero length when passwordless binds are being denied!"), nil, nil
+		return nil, logical.ErrorResponse("password cannot be of zero length when passwordless binds are being denied"), nil, nil
 	}
 
 	ldapClient := ldaputil.Client{
