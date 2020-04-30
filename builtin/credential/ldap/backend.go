@@ -201,6 +201,10 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	return policies, ldapResponse, allGroups, nil
 }
 
+func dummy() string {
+	return "test"
+}
+
 const backendHelp = `
 The "ldap" credential provider allows authentication querying
 a LDAP server, checking username and password, and associating groups
