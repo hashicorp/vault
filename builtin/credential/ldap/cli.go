@@ -109,7 +109,3 @@ func usernameFromEnv() string {
 	}
 	return ""
 }
-
-func dummy() string {
-	return "test"
-}
