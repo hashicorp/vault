@@ -14,7 +14,7 @@ export default Component.extend({
 
   normalizedNamespace: computed('targetNamespace', function() {
     let ns = this.get('targetNamespace');
-    return (ns || '').replace(/\.+/g, '/').replace('☃', '.');
+    return (ns || '').replace(/\.+/g, '/').replace(/\☃/g, '.');
   }),
 
   namespaceDisplay: computed('normalizedNamespace', 'showLastSegment', function() {
