@@ -55,7 +55,7 @@ steps:
             -timeout=60m \
             -parallel=20 \
             << parameters.extra_flags >> \
-            github.com/hashicorp/vault/builtin/credential/ldap
+            ${package_names}
 
   - save_cache:
       key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}

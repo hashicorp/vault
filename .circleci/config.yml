@@ -239,7 +239,7 @@ jobs:
               -timeout=60m \
               -parallel=20 \
                \
-              github.com/hashicorp/vault/builtin/credential/ldap
+              ${package_names}
         name: Run Go tests
         no_output_timeout: 60m
     - save_cache:
@@ -325,7 +325,7 @@ jobs:
               -timeout=60m \
               -parallel=20 \
               -race \
-              github.com/hashicorp/vault/builtin/credential/ldap
+              ${package_names}
         name: Run Go tests
         no_output_timeout: 60m
     - save_cache:
@@ -478,7 +478,7 @@ workflows:
 #               -timeout=60m \\
 #               -parallel=20 \\
 #               << parameters.extra_flags >> \\
-#               github.com/hashicorp/vault/builtin/credential/ldap
+#               ${package_names}
 #         name: Run Go tests
 #         no_output_timeout: 60m
 #     - save_cache:
