@@ -28,7 +28,7 @@ func TestParse(t *testing.T) {
 		"charset restrictions": {
 			rawConfig: `
 				length = 20
-				rule "Charset" {
+				rule "charset" {
 					charset = "abcde"
 					min-chars = 2
 				}`,
@@ -96,7 +96,7 @@ func TestParser_Parse(t *testing.T) {
 			registry: defaultRuleNameMapping,
 			rawConfig: `
 				length = 0
-				rule "Charset" {
+				rule "charset" {
 					charset = "abcde"
 				}`,
 			expected:  StringGenerator{},
@@ -106,7 +106,7 @@ func TestParser_Parse(t *testing.T) {
 			registry: defaultRuleNameMapping,
 			rawConfig: `
 				length = -2
-				rule "Charset" {
+				rule "charset" {
 					charset = "abcde"
 				}`,
 			expected:  StringGenerator{},
@@ -116,7 +116,7 @@ func TestParser_Parse(t *testing.T) {
 			registry: defaultRuleNameMapping,
 			rawConfig: `
 				length = 20
-				rule "Charset" {
+				rule "charset" {
 					charset = "abcde"
 					min-chars = 2
 				}`,
@@ -157,7 +157,7 @@ func TestParser_Parse(t *testing.T) {
 		"test rule and charset restrictions": {
 			registry: map[string]ruleConstructor{
 				"testrule": newTestRule,
-				"Charset":  ParseCharset,
+				"charset":  ParseCharset,
 			},
 			rawConfig: `
 				length = 20
@@ -165,7 +165,7 @@ func TestParser_Parse(t *testing.T) {
 					string = "teststring"
 					int = 123
 				}
-				rule "Charset" {
+				rule "charset" {
 					charset = "abcde"
 					min-chars = 2
 				}`,
@@ -202,7 +202,7 @@ func TestParser_Parse(t *testing.T) {
 		"manually JSONified HCL": {
 			registry: map[string]ruleConstructor{
 				"testrule": newTestRule,
-				"Charset":  ParseCharset,
+				"charset":  ParseCharset,
 			},
 			rawConfig: `
 				{
@@ -218,7 +218,7 @@ func TestParser_Parse(t *testing.T) {
 							]
 						},
 						{
-							"Charset": [
+							"charset": [
 								{
 									"charset": "abcde",
 									"min-chars": 2
@@ -246,7 +246,7 @@ func TestParser_Parse(t *testing.T) {
 		"JSONified HCL": {
 			registry: map[string]ruleConstructor{
 				"testrule": newTestRule,
-				"Charset":  ParseCharset,
+				"charset":  ParseCharset,
 			},
 			rawConfig: toJSON(t, StringGenerator{
 				Length: 20,
@@ -550,7 +550,7 @@ func TestGetRuleInfo(t *testing.T) {
 
 func BenchmarkParser_Parse(b *testing.B) {
 	config := `length = 20
-               rule "Charset" {
+               rule "charset" {
                    charset = "abcde"
                    min-chars = 2
                }`

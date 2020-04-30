@@ -37,7 +37,7 @@ func ParseCharset(data map[string]interface{}) (rule Rule, err error) {
 }
 
 func (c Charset) Type() string {
-	return "Charset"
+	return "charset"
 }
 
 // Chars returns the charset that this rule is looking for.

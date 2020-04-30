@@ -2753,7 +2753,7 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 			storage: &fakeStorage{},
 			data: passwordPoliciesFieldData(map[string]interface{}{
 				"policy": `length = 20
-							rule "Charset" {
+							rule "charset" {
 								charset="abcdefghij"
 							}`,
 			}),
@@ -2784,7 +2784,7 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 			data: passwordPoliciesFieldData(map[string]interface{}{
 				"name": "testpolicy",
 				"policy": "length = 20\n" +
-					"rule \"Charset\" {\n" +
+					"rule \"charset\" {\n" +
 					"	charset=\"abcdefghij\"\n" +
 					"}",
 			}),
@@ -2796,7 +2796,7 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 			data: passwordPoliciesFieldData(map[string]interface{}{
 				"name": "testpolicy",
 				"policy": "length = 20\n" +
-					"rule \"Charset\" {\n" +
+					"rule \"charset\" {\n" +
 					"	charset=\"a\"\n" +
 					"	min-chars = 30\n" +
 					"}",
@@ -2809,7 +2809,7 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 			data: passwordPoliciesFieldData(map[string]interface{}{
 				"name": "testpolicy",
 				"policy": "length = 20\n" +
-					"rule \"Charset\" {\n" +
+					"rule \"charset\" {\n" +
 					"	charset=\"abcdefghij\"\n" +
 					"}",
 			}),
@@ -2823,7 +2823,7 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 			expectedStore: map[string][]byte{
 				"password_policy/testpolicy": toJson(t, map[string]interface{}{
 					"policy": "length = 20\n" +
-						"rule \"Charset\" {\n" +
+						"rule \"charset\" {\n" +
 						"	charset=\"abcdefghij\"\n" +
 						"}"}),
 			},
@@ -2833,7 +2833,7 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 			data: passwordPoliciesFieldData(map[string]interface{}{
 				"name": "testpolicy",
 				"policy": base64Encode("length = 20\n" +
-					"rule \"Charset\" {\n" +
+					"rule \"charset\" {\n" +
 					"	charset=\"abcdefghij\"\n" +
 					"}"),
 			}),
@@ -2847,7 +2847,7 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 			expectedStore: map[string][]byte{
 				"password_policy/testpolicy": toJson(t, map[string]interface{}{
 					"policy": "length = 20\n" +
-						"rule \"Charset\" {\n" +
+						"rule \"charset\" {\n" +
 						"	charset=\"abcdefghij\"\n" +
 						"}"}),
 			},
@@ -2991,7 +2991,7 @@ func TestHandlePoliciesPasswordDelete(t *testing.T) {
 				data: map[string][]byte{
 					"password_policy/testpolicy": toJson(t, map[string]interface{}{
 						"policy": `length = 20
-							rule "Charset" {
+							rule "charset" {
 								charset="abcdefghij"
 							}`}),
 				},
@@ -3002,7 +3002,7 @@ func TestHandlePoliciesPasswordDelete(t *testing.T) {
 			expectedStore: map[string][]byte{
 				"password_policy/testpolicy": toJson(t, map[string]interface{}{
 					"policy": `length = 20
-							rule "Charset" {
+							rule "charset" {
 								charset="abcdefghij"
 							}`}),
 			},
@@ -3012,7 +3012,7 @@ func TestHandlePoliciesPasswordDelete(t *testing.T) {
 				data: map[string][]byte{
 					"password_policy/testpolicy": toJson(t, map[string]interface{}{
 						"policy": `length = 20
-							rule "Charset" {
+							rule "charset" {
 								charset="abcdefghij"
 							}`}),
 				},
@@ -3026,7 +3026,7 @@ func TestHandlePoliciesPasswordDelete(t *testing.T) {
 			expectedStore: map[string][]byte{
 				"password_policy/testpolicy": toJson(t, map[string]interface{}{
 					"policy": `length = 20
-							rule "Charset" {
+							rule "charset" {
 								charset="abcdefghij"
 							}`}),
 			},
@@ -3036,7 +3036,7 @@ func TestHandlePoliciesPasswordDelete(t *testing.T) {
 				data: map[string][]byte{
 					"password_policy/testpolicy": toJson(t, map[string]interface{}{
 						"policy": `length = 20
-							rule "Charset" {
+							rule "charset" {
 								charset="abcdefghij"
 							}`}),
 				},
@@ -3101,7 +3101,7 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 					data: map[string][]byte{
 						"password_policy/testpolicy": toJson(t, map[string]interface{}{
 							"policy": `length = 20
-							rule "Charset" {
+							rule "charset" {
 								charset="abcdefghij"
 							}`}),
 					},
@@ -3115,7 +3115,7 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 					data: map[string][]byte{
 						"password_policy/testpolicy": toJson(t, map[string]interface{}{
 							"policy": `length = 20
-							rule "Charset" {
+							rule "charset" {
 								charset="abcdefghij"
 							}`}),
 					},
@@ -3155,7 +3155,7 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 					data: map[string][]byte{
 						"password_policy/testpolicy": toJson(t, map[string]interface{}{
 							"policy": `length = 20
-							rule "Charset" {
+							rule "charset" {
 								charset="abcdefghij"
 							}`}),
 					},
@@ -3200,7 +3200,7 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 			data: map[string][]byte{
 				"password_policy/testpolicy": toJson(t, map[string]interface{}{
 					"policy": `length = 20
-							rule "Charset" {
+							rule "charset" {
 								charset="abcdefghij"
 							}`}),
 			},

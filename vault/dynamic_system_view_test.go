@@ -160,15 +160,15 @@ func TestDynamicSystemView_GeneratePasswordFromPolicy_successful(t *testing.T) {
 	policyName := "testpolicy"
 	rawPolicy := map[string]interface{}{
 		"policy": `length = 20
-rule "Charset" {
+rule "charset" {
 	charset = "abcdefghijklmnopqrstuvwxyz"
 	min_chars = 1
 }
-rule "Charset" {
+rule "charset" {
 	charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	min_chars = 1
 }
-rule "Charset" {
+rule "charset" {
 	charset = "0123456789"
 	min_chars = 1
 }`,

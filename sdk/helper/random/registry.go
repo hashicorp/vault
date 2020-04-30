@@ -10,7 +10,7 @@ var (
 	// defaultRuleNameMapping is the default mapping of HCL rule names to the appropriate rule constructor.
 	// Add to this map when adding a new Rule type to be recognized in HCL.
 	defaultRuleNameMapping = map[string]ruleConstructor{
-		"Charset": ParseCharset,
+		"charset": ParseCharset,
 	}
 
 	defaultRegistry = Registry{

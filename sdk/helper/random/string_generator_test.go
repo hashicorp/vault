@@ -534,7 +534,7 @@ func TestStringGenerator_JSON(t *testing.T) {
 		RuleRegistry: Registry{
 			Rules: map[string]ruleConstructor{
 				"testrule": newTestRule,
-				"Charset":  ParseCharset,
+				"charset":  ParseCharset,
 			},
 		},
 	}
