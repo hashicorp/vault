@@ -63,7 +63,7 @@ func pathSecretServiceAccountKey(b *backend) *framework.Path {
 				Description: "Lifetime of the service account key",
 			},
 		},
-		ExistenceCheck: b.pathRoleSetExistenceCheck,
+		ExistenceCheck: b.pathRoleSetExistenceCheck("roleset"),
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation:   &framework.PathOperation{Callback: b.pathServiceAccountKey},
 			logical.UpdateOperation: &framework.PathOperation{Callback: b.pathServiceAccountKey},

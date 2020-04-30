@@ -14,6 +14,7 @@ export default [
     content: [
       'architecture',
       'high-availability',
+      'integrated-storage',
       'security',
       'telemetry',
       'token',
@@ -33,6 +34,7 @@ export default [
       'response-wrapping',
       'policies',
       'ha',
+      'integrated-storage',
       'pgp-gpg-keybase',
       'recovery-mode'
     ]
@@ -84,7 +86,10 @@ export default [
       },
       {
         category: 'service-registration',
-        content: ['consul']
+        content: [
+          'consul',
+          'kubernetes'
+        ]
       },
       'telemetry',
       { category: 'ui' },
@@ -134,6 +139,7 @@ export default [
           'init',
           'key-status',
           'migrate',
+          'raft',
           'rekey',
           'rotate',
           'seal',
@@ -217,10 +223,12 @@ export default [
           'influxdb',
           'hanadb',
           'mongodb',
+          'mongodbatlas',
           'mssql',
           'mysql-maria',
-          'postgresql',
           'oracle',
+          'postgresql',
+          'redshift',
           'custom'
         ]
       },
@@ -232,7 +240,9 @@ export default [
         content: ['kv-v1', 'kv-v2']
       },
       { category: 'identity' },
+      { category: 'mongodbatlas' },
       { category: 'nomad' },
+      { category: 'openldap' },
       { category: 'pki' },
       { category: 'rabbitmq' },
       {
@@ -244,7 +254,9 @@ export default [
         ]
       },
       { category: 'totp' },
+      { category: 'transform' },
       { category: 'transit' },
+      { category: 'venafi' },
       '------------------------',
       { category: 'cassandra' },
       { category: 'mongodb' },
@@ -260,11 +272,11 @@ export default [
       'aws',
       'azure',
       'cf',
+      'github',
       'gcp',
       'jwt',
       'kerberos',
       'kubernetes',
-      'github',
       'ldap',
       'oci',
       'okta',
@@ -294,18 +306,6 @@ export default [
   {
     category: 'partnerships'
   },
-  {
-    category: 'vs',
-    content: [
-      'chef-puppet-etc',
-      'hsm',
-      'dropbox',
-      'consul',
-      'kms',
-      'keywhiz',
-      'custom'
-    ]
-  },
   '----------------',
   {
     category: 'platform',
@@ -321,18 +321,25 @@ export default [
               {
                 category: 'examples',
                 content: [
+                  'development',
                   'standalone-load-balanced-ui',
                   'standalone-tls',
                   'standalone-audit',
+                  'external',
+                  'kubernetes-auth',
                   'ha-with-consul',
-                  'kubernetes-auth'
+                  'ha-with-raft',
+                  'enterprise-with-raft',
+                  'enterprise-dr-with-raft',
+                  'enterprise-perf-with-raft',
+                  'enterprise-best-practice'
                 ]
               },
             ],
           },
           {
             category: 'injector',
-            content: ['installation', 'examples']
+            content: ['annotations', 'installation', 'examples']
           }
         ]
       },
@@ -374,7 +381,12 @@ export default [
       'upgrade-to-1.2.0',
       'upgrade-to-1.2.1',
       'upgrade-to-1.2.4',
-      'upgrade-to-1.3.0'
+      'upgrade-to-1.3.0',
+      'upgrade-to-1.3.2',
+      'upgrade-to-1.3.3',
+      'upgrade-to-1.3.4',
+      'upgrade-to-1.3.5',
+      'upgrade-to-1.4.0'
     ]
   },
   '----------------',

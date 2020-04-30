@@ -5,14 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/gokrb5/client"
-	"github.com/hashicorp/gokrb5/config"
-	"github.com/hashicorp/gokrb5/keytab"
-	"github.com/hashicorp/gokrb5/spnego"
 	"github.com/hashicorp/vault/api"
+	"github.com/jcmturner/gokrb5/v8/client"
+	"github.com/jcmturner/gokrb5/v8/config"
+	"github.com/jcmturner/gokrb5/v8/keytab"
+	"github.com/jcmturner/gokrb5/v8/spnego"
 )
 
 // CLIHandler fulfills Vault's LoginHandler interface.
@@ -44,13 +45,23 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	if krb5ConfPath == "" {
 		return nil, errors.New(`"krb5conf_path" is required`)
 	}
+	disableFAST := false
+	disableFASTNegotiation := m["disable_fast_negotiation"]
+	if disableFASTNegotiation != "" {
+		setting, err := strconv.ParseBool(disableFASTNegotiation)
+		if err != nil {
+			return nil, fmt.Errorf(`invalid value "%s" for disable_fast_negotiation, must be "true" or "false"`, disableFASTNegotiation)
+		}
+		disableFAST = setting
+	}
 
 	loginCfg := &LoginCfg{
-		Username:     username,
-		Service:      service,
-		Realm:        realm,
-		KeytabPath:   keytabPath,
-		Krb5ConfPath: krb5ConfPath,
+		Username:               username,
+		Service:                service,
+		Realm:                  realm,
+		KeytabPath:             keytabPath,
+		Krb5ConfPath:           krb5ConfPath,
+		DisableFASTNegotiation: disableFAST,
 	}
 
 	authHeaderVal, err := GetAuthHeaderVal(loginCfg)
@@ -115,6 +126,13 @@ Configuration:
 // GetAuthHeaderVal.
 type LoginCfg struct {
 	Username, Service, Realm, KeytabPath, Krb5ConfPath string
+
+	// FAST is a pre-authentication framework for Kerberos. It includes
+	// a mechanism for tunneling pre-authentication exchanges using armoured
+	// KDC messages. FAST provides increased resistance to passive password
+	// guessing attacks.
+	// Some common Kerberos implementations do not support FAST negotiation.
+	DisableFASTNegotiation bool
 }
 
 // GetAuthHeaderVal is a convenience function that takes a given loginCfg
@@ -131,7 +149,13 @@ func GetAuthHeaderVal(loginCfg *LoginCfg) (string, error) {
 		return "", errwrap.Wrapf("couldn't parse krb5Conf: {{err}}", err)
 	}
 
-	cl := client.NewClientWithKeytab(loginCfg.Username, loginCfg.Realm, kt, krb5Conf, client.AssumePreAuthentication(true))
+	settings := []func(*client.Settings){
+		client.AssumePreAuthentication(true),
+	}
+	if loginCfg.DisableFASTNegotiation {
+		settings = append(settings, client.DisablePAFXFAST(true))
+	}
+	cl := client.NewWithKeytab(loginCfg.Username, loginCfg.Realm, kt, krb5Conf, settings...)
 	if err := cl.Login(); err != nil {
 		return "", errwrap.Wrapf("couldn't log in: {{err}}", err)
 	}

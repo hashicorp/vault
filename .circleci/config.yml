@@ -86,7 +86,7 @@ jobs:
           mkdir ./pkg
 
           # Build dev binary
-          make bootstrap dev
+          make ci-bootstrap dev
         name: Build dev binary
     - persist_to_workspace:
         paths:
@@ -95,7 +95,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.12.14
+    - GO_VERSION: 1.13.8
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
   test-ui:
@@ -166,6 +166,17 @@ jobs:
     steps:
     - run:
         command: |
+          # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
+            # stop the job from this step
+            circleci-agent step halt
+          }
+          # exit with success either way
+          exit 0
+        name: Check branch name
+        working_directory: ~/
+    - run:
+        command: |
           [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
@@ -229,7 +240,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.12.14
+    - GO_VERSION: 1.13.8
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
   test-go-race:
@@ -302,7 +313,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.12.14
+    - GO_VERSION: 1.13.8
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
   website-docker-image:
@@ -314,18 +325,18 @@ jobs:
     - setup_remote_docker
     - run:
         command: |
-          echo 'export PACKAGE_LOCK_CHANGED=$(git diff --name-only $(git log --pretty=format:'%h' -n1 HEAD~1)...HEAD | grep -c website/package-lock.json)' >> $BASH_ENV
-        name: Diff package-lock.json
-    - run:
-        command: |
-          if [ "$CIRCLE_BRANCH" = "master" ] && [ $PACKAGE_LOCK_CHANGED -gt 0 ]; then
-            cd website/
-            docker build -t hashicorp/vault-website:$CIRCLE_SHA1 .
-            docker tag hashicorp/vault-website:$CIRCLE_SHA1 hashicorp/vault-website:latest
-            docker login -u $DOCKER_USER -p $DOCKER_PASS
-            docker push hashicorp/vault-website
+          IMAGE_TAG="$(git rev-list -n1 HEAD -- website/Dockerfile website/package-lock.json)"
+          echo "Using $IMAGE_TAG"
+          if  [ "$CIRCLE_REPOSITORY_URL" != "git@github.com:hashicorp/vault.git" ]; then
+            echo "Not Vault OSS Repo, not building website docker image"
+          elif curl https://hub.docker.com/v2/repositories/hashicorp/vault-website/tags/$IMAGE_TAG -fsL > /dev/null; then
+              echo "Dependencies have not changed, not building a new website docker image."
           else
-            echo "Not building a new website docker image - branch is not master and/or dependencies have not changed."
+              cd website/
+              docker build -t hashicorp/vault-website:$IMAGE_TAG .
+              docker tag hashicorp/vault-website:$IMAGE_TAG hashicorp/vault-website:latest
+              docker login -u $WEBSITE_DOCKER_USER -p $WEBSITE_DOCKER_PASS
+              docker push hashicorp/vault-website
           fi
         name: Build Docker Image if Necessary
 workflows:
@@ -353,13 +364,38 @@ workflows:
         requires:
         - build-go-dev
     - test-go-race:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-go-dev
-    - website-docker-image
+    - website-docker-image:
+        filters:
+          branches:
+            only:
+            - master
+        context: vault-docs
   version: 2
 
 # Original config.yml file:
 # commands:
+#   check-branch-name:
+#     description: |
+#       Check if branch name starts with ui/ or docs/ and if so, exit.
+#     steps:
+#     - run:
+#         command: |
+#           # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
+#           [[ \"$CIRCLE_BRANCH\" = ui/* || \"$CIRCLE_BRANCH\" = docs/* ]] && {
+#             # stop the job from this step
+#             circleci-agent step halt
+#           }
+#           # exit with success either way
+#           exit 0
+#         name: Check branch name
+#         working_directory: ~/
 #   go_test:
 #     description: run go tests
 #     parameters:
@@ -448,7 +484,7 @@ workflows:
 #     environment:
 #       CIRCLECI_CLI_VERSION: 0.1.5546
 #       GO_TAGS: \"\"
-#       GO_VERSION: 1.12.14
+#       GO_VERSION: 1.13.8
 #       GO111MODULE: \"off\"
 #       GOTESTSUM_VERSION: 0.3.3
 #     machine: true
@@ -481,7 +517,7 @@ workflows:
 #           mkdir ./pkg
 # 
 #           # Build dev binary
-#           make bootstrap dev
+#           make ci-bootstrap dev
 #         name: Build dev binary
 #     - persist_to_workspace:
 #         paths:
@@ -532,6 +568,7 @@ workflows:
 #     executor: go-machine
 #     parallelism: 2
 #     steps:
+#     - check-branch-name
 #     - setup-go
 #     - checkout
 #     - go_test
@@ -607,18 +644,18 @@ workflows:
 #     - setup_remote_docker
 #     - run:
 #         command: |
-#           echo 'export PACKAGE_LOCK_CHANGED=$(git diff --name-only $(git log --pretty=format:'%h' -n1 HEAD~1)...HEAD | grep -c website/package-lock.json)' >> $BASH_ENV
-#         name: Diff package-lock.json
-#     - run:
-#         command: |
-#           if [ \"$CIRCLE_BRANCH\" = \"master\" ] && [ $PACKAGE_LOCK_CHANGED -gt 0 ]; then
-#             cd website/
-#             docker build -t hashicorp/vault-website:$CIRCLE_SHA1 .
-#             docker tag hashicorp/vault-website:$CIRCLE_SHA1 hashicorp/vault-website:latest
-#             docker login -u $DOCKER_USER -p $DOCKER_PASS
-#             docker push hashicorp/vault-website
+#           IMAGE_TAG=\"$(git rev-list -n1 HEAD -- website/Dockerfile website/package-lock.json)\"
+#           echo \"Using $IMAGE_TAG\"
+#           if  [ \"$CIRCLE_REPOSITORY_URL\" != \"git@github.com:hashicorp/vault.git\" ]; then
+#             echo \"Not Vault OSS Repo, not building website docker image\"
+#           elif curl https://hub.docker.com/v2/repositories/hashicorp/vault-website/tags/$IMAGE_TAG -fsL > /dev/null; then
+#               echo \"Dependencies have not changed, not building a new website docker image.\"
 #           else
-#             echo \"Not building a new website docker image - branch is not master and/or dependencies have not changed.\"
+#               cd website/
+#               docker build -t hashicorp/vault-website:$IMAGE_TAG .
+#               docker tag hashicorp/vault-website:$IMAGE_TAG hashicorp/vault-website:latest
+#               docker login -u $WEBSITE_DOCKER_USER -p $WEBSITE_DOCKER_PASS
+#               docker push hashicorp/vault-website
 #           fi
 #         name: Build Docker Image if Necessary
 # references:
@@ -653,6 +690,16 @@ workflows:
 #         requires:
 #         - build-go-dev
 #     - test-go-race:
+#         filters:
+#           branches:
+#             ignore:
+#             - /^docs\\/.*/
+#             - /^ui\\/.*/
 #         requires:
 #         - build-go-dev
-#     - website-docker-image
+#     - website-docker-image:
+#         context: vault-docs
+#         filters:
+#           branches:
+#             only:
+#             - master

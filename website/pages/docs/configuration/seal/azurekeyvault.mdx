@@ -90,8 +90,11 @@ environment variables:
 
 ## Key Rotation
 
-This seal supports rotating keys defined in Azure Key Vault. Key metadata is stored with the
-encrypted data to ensure the correct key is used during decryption operations.
+This seal supports rotating keys defined in Azure Key Vault. Key metadata is
+stored with the encrypted data to ensure the correct key is used during
+decryption operations. Simply [set up Azure Key Vault with key
+rotation](https://docs.microsoft.com/en-us/azure/key-vault/key-vault-key-rotation-log-monitoring)
+using Azure Automation Account and Vault will recognize newly rotated keys.
 
 ## Learn
 

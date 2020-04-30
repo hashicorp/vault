@@ -21,6 +21,7 @@ var TLSLookup = map[string]uint16{
 	"tls10": tls.VersionTLS10,
 	"tls11": tls.VersionTLS11,
 	"tls12": tls.VersionTLS12,
+	"tls13": tls.VersionTLS13,
 }
 
 // cipherMap maps the cipher suite names to the internal cipher suite code.

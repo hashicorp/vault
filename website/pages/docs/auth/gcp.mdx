@@ -87,7 +87,7 @@ management tool.
 
    If you are using instance credentials or want to specify credentials via
    an environment variable, you can skip this step. To learn more, see the
-   [Google Cloud Authentication](#google-cloud-authentication) section below.
+   [Google Cloud Authentication](#authentication) section below.
 
 1. Create a named role:
 
@@ -165,7 +165,6 @@ iam.serviceAccounts.get
 iam.serviceAccountKeys.get
 compute.instances.get
 compute.instanceGroups.list
-compute.instanceGroups.listInstances
 ```
 
 These allow Vault to:
@@ -177,6 +176,9 @@ These allow Vault to:
 - verify authenticating GCE instances exist
 - compare bound fields for GCE roles (zone/region, labels, or membership
   in given instance groups)
+
+If you are using Group Aliases as described below, you will also need to add the
+`resourcemanager.projects.get` permission.
 
 #### Permissions For Authenticating Against Vault
 
@@ -205,6 +207,9 @@ will include the following aliases:
 ]
 ```
 
+If you are using a custom role for Vault server, you will need to add the
+`resourcemanager.projects.get` permission to your custom role.
+
 ## Implementation Details
 
 This section describes the implementation details for how Vault communicates
@@ -221,7 +226,7 @@ for IAM service accounts looks like this:
 
 1. The client generates a signed JWT using the IAM
    [`projects.serviceAccounts.signJwt`][signjwt-method] method. For examples of
-   how to do this, see the [Obtaining JWT Tokens](#obtaining-jwt-tokens) section.
+   how to do this, see the [Generating JWTs](#generating-jwts) section.
 
 2. The client sends this signed JWT to Vault along with a role name.
 

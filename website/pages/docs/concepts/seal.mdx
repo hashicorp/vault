@@ -91,12 +91,14 @@ For a list of examples and supported providers, please see the
 
 ## Seal Migration
 
-The seal can be migrated from Shamir keys to Auto Unseal and vice versa.
+The seal can be migrated from Shamir keys to Auto Unseal, Auto Unseal to Shamir
+keys and Auto Unseal to another Auto Unseal.
 
-~> **NOTE**: This is not currently supported when using Vault Enterprise Replication.
-While the primary can be migrated without issue, the secondaries, depending on
-which type of seal is being migrated from/to, may not work correctly. We plan
-to support this officially in a future release.
+~> **NOTE**: The migration operation will require both seals to be available
+during the migration. For example, a migration from a cloud KMS seal to
+Shamir will require that the cloud KMS be accessible during the migration.
+
+### Migration From Shamir to Auto Unseal
 
 To migrate from Shamir keys to Auto Unseal, take your server cluster offline and update
 the [seal configuration](/docs/configuration/seal) with the appropriate seal
@@ -111,6 +113,11 @@ unseal keys are entered, unseal keys will be migrated to recovery keys.
 $ vault operator unseal -migrate
 ```
 
+### Migration From Auto Unseal to Shamir
+
+~> **NOTE**: Migration to Shamir seal is not currently supported when using
+Vault Enterprise. We plan to support this officially in a future release.
+
 To migrate from Auto Unseal to Shamir keys, take your server cluster offline and update
 the [seal configuration](/docs/configuration/seal) and add `disabled = "true"`
 to the seal block. This allows the migration to use this information to decrypt the key
@@ -118,6 +125,34 @@ but will not unseal Vault. When you bring your server back up, run the unseal pr
 with the `-migrate` flag and use the Recovery Keys to perform the migration. All unseal
 commands must specify the `-migrate` flag. Once the required threshold of recovery keys
 are entered, the recovery keys will be migrated to be used as unseal keys.
+
+### Migration From Auto Unseal to Auto Unseal
+
+~> **NOTE**: Migration between same Auto Unseal types is not currently
+supported. We plan to support this officially in a future release.
+
+To migrate from Auto Unseal to a different Auto Unseal configuration, take your server
+cluster offline and update the existing [seal configuration](/docs/configuration/seal)
+and add `disabled = "true"` to the seal block.  Then add another seal block to describe
+the new seal.
+
+When you bring your server back up, run the unseal process with the `-migrate` flag and
+use the Recovery Keys to perform the migration. All unseal commands must specify
+the `-migrate` flag. Once the required threshold of recovery keys are entered,
+the recovery keys will be kept and used as recovery keys in the new seal.
+
+### Migration with Integrated Storage
+
+Integrated Storage uses the Raft protocol underneath, which requires a quorum of
+servers to be online before the cluster is functional. Therefore, bring the
+cluster back up one node at a time with the seal configuration updated, will not
+work in this case. Follow the same steps for each kind of migration described
+above with the exception that after the cluster is taken offline, update the
+seal configurations of all the nodes appropriately and bring them all back up.
+When the quorum of nodes are back up, Raft will elect a leader and the leader
+node will perform the migration. The migrated information will be replicated to
+all other cluster peers and when the peers eventually become the leader,
+migration will not happen again on the peer nodes.
 
 ## Recovery Key Rekeying
 

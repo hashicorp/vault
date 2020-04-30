@@ -347,7 +347,7 @@ func (cl *Listener) Run(ctx context.Context) error {
 	return nil
 }
 
-// Stop stops the cluster listner
+// Stop stops the cluster listener
 func (cl *Listener) Stop() {
 	// Set the shutdown flag. This will cause the listeners to shut down
 	// within the deadline in clusterListenerAcceptDeadline

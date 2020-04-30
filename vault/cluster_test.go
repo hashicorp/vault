@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -178,7 +179,11 @@ func TestCluster_ForwardRequests(t *testing.T) {
 
 	t.Run("inmemLayer", func(t *testing.T) {
 		// Run again with in-memory network
-		inmemCluster, err := cluster.NewInmemLayerCluster(3, nil)
+		inmemCluster, err := cluster.NewInmemLayerCluster("inmem-cluster", 3, log.New(&log.LoggerOptions{
+			Mutex: &sync.Mutex{},
+			Level: log.Trace,
+			Name:  "inmem-cluster",
+		}))
 		if err != nil {
 			t.Fatal(err)
 		}

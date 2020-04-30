@@ -4,22 +4,16 @@ page_title: Running Vault - Kubernetes
 sidebar_title: Running Vault
 description: >-
   Vault can run directly on Kubernetes in various configurations.  For
-  pure-Kubernetes worloads, this enables Vault to also exist purely within
+  pure-Kubernetes workloads, this enables Vault to also exist purely within
   Kubernetes.
 ---
 
-# Running Vault on Kubernetes
+# Run Vault on Kubernetes
 
-Vault can run directly on Kubernetes in various modes: `dev,` `standalone` and `ha`.
-For pure-Kubernetes workloads, this enables Vault to also exist purely
-within Kubernetes.
+Vault works with Kubernetes in various modes: `dev`, `standalone`, `ha`,
+and `external`.
 
-This page starts with a large how-to section for various specific tasks.
-
-!> **IMPORTANT NOTE:** Vault Enterprise is currently not supported. We are actively
-working a version for Vault Enterprise and it will be available in the future.
-
-~> **Important Note:** This chart is not compatible with Helm 3. Please use Helm 2 with this chart.
+~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3 with this chart.
 
 ## Helm Chart
 
@@ -27,35 +21,47 @@ The [Vault Helm chart](https://github.com/hashicorp/vault-helm)
 is the recommended way to install and configure Vault on Kubernetes.
 In addition to running Vault itself, the Helm chart is the primary
 method for installing and configuring Vault to integrate with other
-services such as Consul for High Availability deployments.
+services such as Consul for High Availability (HA) deployments.
 
-While the Helm chart exposes dozens of useful configurations and automatically
-sets up complex resources, it **does not automatically operate Vault.**
-You are still responsible for learning how to monitor, backup,
-upgrade, etc. the Vault cluster.
+While the Helm chart automatically sets up complex resources and exposes the
+configuration to meet your requirements, it **does not automatically operate
+Vault.** You are still responsible for learning how to monitor, backup, upgrade,
+etc. the Vault cluster.
 
-The Helm chart has no required configuration and will install a Vault
-cluster with sane defaults out of the box. Prior to going to production,
-it is highly recommended that you
-[learn about the configuration options](/docs/platform/k8s/helm/configuration).
-
-~> **Security Warning:** By default, the chart will install an insecure configuration
-of Vault. This provides a less complicated out-of-box experience for new users,
-but is not appropriate for a production setup. It is highly recommended to use
-a [properly secured Kubernetes cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/).
-See the [architecture reference](/docs/platform/k8s/run#architecture)
-for a production deployment checklist.
+~> **Security Warning:** By default, the chart runs in standalone mode. This
+mode uses a single Vault server with a file storage backend. This is a less
+secure and less resilent installation that is **NOT** appropriate for a
+production setup. It is highly recommended to use a [properly secured Kubernetes
+cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/),
+[learn the available configuration
+options](/docs/platform/k8s/helm/configuration), and read the [production deployment
+checklist](/docs/platform/k8s/helm/run#architecture).
 
 ## How-To
 
-### Installing Vault
+### Install Vault
 
-To install Vault, clone the vault-helm repository, checkout the latest release, and install
-Vault. You can run `helm install` with the `--dry-run` flag to see the
-resources it would configure. In a production environment, you should always
-use the `--dry-run` flag prior to making any changes to the Vault cluster
-via Helm. See the [chart configuration values](/docs/platform/k8s/helm/configuration)
-for additional configuration options.
+Helm must be installed and configured on your machine. Please refer to the [Helm
+documentation](https://helm.sh/) or the [Vault Installation to Minikube via
+Helm](https://learn.hashicorp.com/vault/getting-started-k8s/minikube) guide.
+
+To use the Helm chart, you can target a specific [release published to
+GitHub](https://github.com/hashicorp/vault-helm/releases) or download/clone the
+[vault-helm GitHub repository](https://github.com/hashicorp/vault-helm). In the
+future, we plan publishing to a public Helm repository.
+
+-> **Important:** The Helm chart is new and under significant development.
+Please always run Helm with `--dry-run` before any install or upgrade to verify
+changes.
+
+Install the Vault Helm chart version 0.4.0.
+
+```sh
+$ helm install vault https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
+```
+
+Or, clone the Vault Helm chart, check out tagged version v0.4.0, and install
+the Vault Helm chart from the filesystem.
 
 ```sh
 # Clone the chart repo
@@ -63,188 +69,186 @@ $ git clone https://github.com/hashicorp/vault-helm.git
 $ cd vault-helm
 
 # Checkout a tagged version
-$ git checkout v0.3.3
+$ git checkout v0.4.0
 
 # Run Helm
-$ helm install --name vault ./
-...
+$ helm install vault ./
 ```
 
-!> **IMPORTANT NOTE:** Vault Helm will not initialize and unseal Vault automatically.
-Initialization is required after installation followed by unsealing. Vault can be
-configured to auto-unseal using KMS providers such as
-[Google Cloud Platform](/docs/platform/k8s/helm/run#google-kms-auto-unseal). This
-allows the pods to auto unseal if they're rescheduled in Kubernetes.
+~> **NOTE:** We highly recommend you checkout a specific [tagged
+release](https://github.com/hashicorp/vault-helm/releases) of the chart to avoid
+any instabilities from master.
 
-If standalone is used, the Vault pod must be initialized and unsealed.
-For HA deployments, only one of the Vault pods needs to be initialized and, all Vault pods need to be unsealed.
+The `helm install` command accepts parameters to override default configuration
+values inline or defined in a file.
+
+Override the `server.dev.enabled` configuration value:
+
+```sh
+$ helm install vault \
+    --set "server.dev.enabled=true" \
+    https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
+```
+
+Override all the configuration found in a file:
+
+```sh
+$ cat override-values.yml
+server:
+  ha:
+    enabled: true
+    replicas: 5
+##
+$ helm install vault \
+    --values override-values.yml \
+    https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
+```
+
+#### Dev mode
+
+The Helm chart may run a Vault server in development. This installs a single
+Vault server with a memory storage backend.
+
+-> **Dev mode:** This is ideal for learning and demonstratation environmenta but
+NOT recommended for a production environment.
+
+Install the Vault Helm chart version 0.4.0 in development mode.
+
+```sh
+$ helm install vault \
+    --set "server.dev.enabled=true" \
+    https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
+```
+
+#### Standalone mode
+
+The Helm chart defaults to run in `standalone` mode. This installs a single
+Vault server with a file storage backend.
+
+Install the Vault Helm chart version 0.4.0 in standalone mode.
+
+```sh
+$ helm install vault https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
+```
+
+#### HA mode
+
+The Helm chart may be run in high availability (HA) mode. This installs three
+Vault servers with an existing Consul storage backend. It is suggested that
+Consul is installed via the [Consul Helm
+chart](https://github.com/hashicorp/consul-helm).
+
+Install the Vault Helm chart version 0.4.0 in HA mode.
+
+```sh
+$ helm install vault \
+    --set "server.ha.enabled=true" \
+    https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
+```
+
+-> **Step-by-step instructions:** The [Vault Installation to Minikube via
+Helm](https://learn.hashicorp.com/vault/getting-started-k8s/minikube) guide
+demonstrates set up of Consul and Vault in HA mode.
+
+#### External mode
+
+The Helm chart may be run in external mode. This installs no Vault server and
+relies on a network addressable Vault server to exist.
+
+Install the Vault Helm chart version 0.4.0 in external mode.
+
+```sh
+$ helm install vault \
+    --set "injector.externalVaultAddr=http://external-vault:8200" \
+    https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
+```
+
+-> **Step-by-step instructions:** The [Integrate a Kubernetes Cluster with an
+External
+Vault](https://learn.hashicorp.com/vault/getting-started-k8s/external-vault)
+guide demonstrates using an external Vault within a Kubernetes cluster.
+
+### View the Vault UI
+
+The Vault UI is enabled but NOT exposed as service for security reasons. The
+Vault UI can also be exposed via port-forwarding or through a [`ui`
+configuration value](/docs/platform/k8s/helm/configuration/#ui).
+
+Expose the Vault UI with port-forwarding:
+
+```sh
+$ kubectl port-forward vault-0 8200:8200
+Forwarding from 127.0.0.1:8200 -> 8200
+Forwarding from [::1]:8200 -> 8200
+##...
+```
+
+### Initialize and unseal Vault
+
+After the Vault Helm chart is installed in `standalone` or `ha` mode one of the
+Vault servers need to be
+[initialized](/docs/commands/operator/init). The
+initialization generates the credentials necessary to
+[unseal](/docs/concepts/seal#why) all the Vault
+servers.
+
+#### CLI initialize and unseal
+
+View all the Vault pods in the current namespace:
+
+```sh
+$ kubectl get pods -l app.kubernetes.io/name=vault
+NAME                                    READY   STATUS    RESTARTS   AGE
+vault-0                                 0/1     Running   0          1m49s
+vault-1                                 0/1     Running   0          1m49s
+vault-2                                 0/1     Running   0          1m49s
+```
+
+Initialize one Vault server with the default number of key shares and default
+key threshold:
 
 ```sh
 $ kubectl exec -ti vault-0 -- vault operator init
-$ kubectl exec -ti vault-0 -- vault operator unseal
+Unseal Key 1: MBFSDepD9E6whREc6Dj+k3pMaKJ6cCnCUWcySJQymObb
+Unseal Key 2: zQj4v22k9ixegS+94HJwmIaWLBL3nZHe1i+b/wHz25fr
+Unseal Key 3: 7dbPPeeGGW3SmeBFFo04peCKkXFuuyKc8b2DuntA4VU5
+Unseal Key 4: tLt+ME7Z7hYUATfWnuQdfCEgnKA2L173dptAwfmenCdf
+Unseal Key 5: vYt9bxLr0+OzJ8m7c7cNMFj7nvdLljj0xWRbpLezFAI9
+
+Initial Root Token: s.zJNwZlRrqISjyBHFMiEca6GF
+##...
 ```
 
-For HA deployments, unseal the remaining pods:
+The output displays the key shares and initial root key generated.
+
+Unseal the Vault server with the key shares until the key threshold is met:
 
 ```sh
-$ kubectl exec -ti <NAME OF POD> -- vault operator unseal
+## Unseal the first vault server until it reaches the key threshold
+$ kubectl exec -ti vault-0 -- vault operator unseal # ... Unseal Key 1
+$ kubectl exec -ti vault-0 -- vault operator unseal # ... Unseal Key 2
+$ kubectl exec -ti vault-0 -- vault operator unseal # ... Unseal Key 3
 ```
 
-### Viewing the Vault UI
+Repeat the unseal process for all Vault server pods. When all Vault server pods
+are unsealed they report READY `1/1`.
 
-The Vault UI is enabled by default when using the Helm chart.
-For security reasons, it isn't exposed via a Service by default so you must
-use `kubectl port-forward` to visit the UI. Once the port is forwarded as
-shown below, navigate your browser to `http://localhost:8200`.
-
-```
-$ kubectl port-forward vault-0 8200:8200
-...
-```
-
-The UI can also be exposed via a Kubernetes Service. To do this, configure
-the [`ui.service` chart values](/docs/platform/k8s/helm#v-ui).
-
-### Upgrading Vault on Kubernetes
-
-To upgrade Vault on Kubernetes, we follow the same pattern as
-[generally upgrading Vault](/docs/upgrading), except we can use
-the Helm chart to update the Vault server Statefulset. It is important to understand
-how to [generally upgrade Vault](/docs/upgrading) before reading this
-section.
-
-The Vault Statefulset uses `OnDelete` update strategy. It is critical to use `OnDelete` instead
-of `RollingUpdate` because standbys must be updated before the active primary. A
-failover to an older version of Vault must always be avoided.
-
-!> **IMPORTANT NOTE:** Always back up your data before upgrading! Vault does not
-make backward-compatibility guarantees for its data store. Simply replacing the
-newly-installed Vault binary with the previous version will not cleanly
-downgrade Vault, as upgrades may perform changes to the underlying data
-structure that make the data incompatible with a downgrade. If you need to roll
-back to a previous version of Vault, you should roll back your data store as
-well.
-
-#### Upgrading Vault Servers
-
-To initiate the upgrade, change the `server.image` values to the
-desired Vault version. For illustrative purposes, the example below will
-use `vault:123.456`.
-
-```yaml
-server:
-  image:
-    repository: 'vault'
-    tag: '123.456'
-```
-
-Next, run the upgrade. You should run this with `--dry-run` first to verify
-the changes that will be sent to the Kubernetes cluster.
-
-```shell
-$ helm upgrade vault ./
-...
-```
-
-This should cause no changes (although the resource will be updated). If
-everything is stable, `helm upgrade` can be run.
-
-The `helm upgrade` command should have updated the Statefulset template for
-the Vault servers, however, no pods have been deleted. The pods must be manually
-deleted to upgrade. Deleting the pods will not delete any persisted data.
-
-If Vault is not deployed using `ha` mode, the single Vault server may be deleted by
-running:
-
-```bash
-$ kubectl delete pod <name of Vault pod>
-```
-
-If Vault is deployed using `ha` mode, the standby pods must be upgraded first.
-To identify which pod is currently the active primary, run the following commad
-on each Vault pod:
-
-```bash
-$ kubectl exec -ti <name of pod> -- vault status | grep "HA Mode"
-```
-
-Next, delete every pod that is not the active primary:
-
-```bash
-$ kubectl delete pod <name of Vault pods>
-```
-
-If auto-unseal is not being used, the newly scheduled Vault standby pods will need
-to be unsealed:
-
-```bash
-$ kubectl exec -ti <name of pod> -- vault operator unseal
-```
-
-Finally, once the standby nodes have been updated and unsealed, delete the active
-primary:
-
-```bash
-$ kubectl delete pod <name of Vault primary>
-```
-
-Similar to the standby nodes, the former primary will also need to be unsealed:
-
-```bash
-$ kubectl exec -ti <name of pod> -- vault operator unseal
-```
-
-After a few moments the Vault cluster should elect a new active primary. The Vault
-cluster is now upgraded!
-
-### Protecting Sensitive Vault Configurations
-
-Vault Helm renders a Vault configuration file during installation and stores the
-file in a Kubernetes configmap. Some configurations require sensitive data to be
-included in the configuration file and would not be encrypted at rest once created
-in Kubernetes.
-
-The following example shows how to add extra configuration files to Vault Helm
-to protect sensitive configurations from being in plaintext at rest using Kubernetes
-secrets.
-
-First, create a partial Vault configuration with the sensitive settings Vault will
-load during startup:
-
-```yaml
-cat <<EOF >>config.hcl
-storage "mysql" {
-username = "user1234"
-password = "secret123!"
-database = "vault"
-}
-EOF
-```
-
-Next, create a Kubernetes secret containing this partial configuration:
-
-```bash
-kubectl create secret generic vault-storage-config \
-    --from-file=config.hcl
-```
-
-Finally, mount this secret as an extra volume and add an additional `-config` flag
-to the Vault startup command:
-
-```bash
-helm install --name=vault \
-  --set='server.extraVolumes[0].type=secret' \
-  --set='server.extraVolumes[0].name=vault-storage-config' \
-  --set='server.extraArgs=-config=/vault/userconfig/vault-storage-config/config.hcl' .
+```sh
+$ kubectl get pods -l app.kubernetes.io/name=vault
+NAME                                    READY   STATUS    RESTARTS   AGE
+vault-0                                 1/1     Running   0          1m49s
+vault-1                                 1/1     Running   0          1m49s
+vault-2                                 1/1     Running   0          1m49s
 ```
 
 #### Google KMS Auto Unseal
 
-The following example demonstrates configuring Vault Helm to use
-[Google KMS for Auto Unseal](/docs/configuration/seal/gcpckms).
+The Helm chart may be run with [Google KMS for Auto
+Unseal](/docs/configuration/seal/gcpckms). This enables Vault server pods to
+auto unseal if they are rescheduled.
 
-In order to authenticate and use KMS in Google Cloud, Vault Helm needs credentials. The `credentials.json`
-file will need to be mounted as a secret to the Vault container.
+Vault Helm requires the Google Cloud KMS credentials stored in
+`credentials.json` and mounted as a secret in each Vault server pod.
 
 ##### Create the Secret
 
@@ -254,11 +258,11 @@ First, create the secret in Kubernetes:
 kubectl create secret generic kms-creds --from-file=credentials.json
 ```
 
-Vault Helm will mount this to `/vault/userconfig/kms-creds/credentials.json`.
+Vault Helm mounts this to `/vault/userconfig/kms-creds/credentials.json`.
 
 ##### Config Example
 
-The following is an example of how to configure Vault Helm to use Google KMS:
+This is a Vault Helm configuration that uses Google KMS:
 
 ```yaml
 global:
@@ -306,25 +310,26 @@ server:
 
 #### Amazon EKS Auto Unseal
 
-The following example demonstrates configuring Vault Helm to use
-[AWS EKS for Auto Unseal](/docs/configuration/seal/awskms).
+The Helm chart may be run with [AWS EKS for Auto
+Unseal](/docs/configuration/seal/awskms). This enables Vault server pods to auto
+unseal if they are rescheduled.
 
-In order to authenticate and use EKS in AWS, Vault Helm needs credentials. The AWS access key
-ID and key will be mounted as secret environment variables in the Vault pods.
+Vault Helm requires the AWS credentials stored as environment variables that
+are defined in each Vault server pod.
 
 ##### Create the Secret
 
 First, create a secret with your EKS access key/secret:
 
-```bash
-kubectl create secret generic eks-creds\
-  --from-literal=AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID?}" \
-  --from-literal=AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY?}"
+```sh
+$ kubectl create secret generic eks-creds \
+    --from-literal=AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID?}" \
+    --from-literal=AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY?}"
 ```
 
 ##### Config Example
 
-The following is an example of how to configure Vault Helm to use AWS EKS:
+This is a Vault Helm configuration that uses AWS EKS:
 
 ```yaml
 global:
@@ -365,6 +370,139 @@ server:
       }
 ```
 
+### Upgrading Vault on Kubernetes
+
+To upgrade Vault on Kubernetes, we follow the same pattern as
+[generally upgrading Vault](/docs/upgrading), except we can use
+the Helm chart to update the Vault server StatefulSet. It is important to understand
+how to [generally upgrade Vault](/docs/upgrading) before reading this
+section.
+
+The Vault StatefulSet uses `OnDelete` update strategy. It is critical to use `OnDelete` instead
+of `RollingUpdate` because standbys must be updated before the active primary. A
+failover to an older version of Vault must always be avoided.
+
+!> **IMPORTANT NOTE:** Always back up your data before upgrading! Vault does not
+make backward-compatibility guarantees for its data store. Simply replacing the
+newly-installed Vault binary with the previous version not cleanly
+downgrade Vault, as upgrades may perform changes to the underlying data
+structure that make the data incompatible with a downgrade. If you need to roll
+back to a previous version of Vault, you should roll back your data store as
+well.
+
+#### Upgrading Vault Servers
+
+To initiate the upgrade, change the `server.image` values to the
+desired Vault version. For illustrative purposes, the example below uses
+`vault:123.456`.
+
+```yaml
+server:
+  image:
+    repository: 'vault'
+    tag: '123.456'
+```
+
+Next, run the upgrade. You should run this with `--dry-run` first to verify
+the changes sent to the Kubernetes cluster.
+
+```bash
+$ helm upgrade vault ./
+...
+```
+
+This should cause no changes (although the resource are updated). If
+everything is stable, `helm upgrade` can be run.
+
+The `helm upgrade` command should have updated the StatefulSet template for
+the Vault servers, however, no pods have been deleted. The pods must be manually
+deleted to upgrade. Deleting the pods does not delete any persisted data.
+
+If Vault is not deployed using `ha` mode, the single Vault server may be deleted by
+running:
+
+```bash
+$ kubectl delete pod <name of Vault pod>
+```
+
+If Vault is deployed using `ha` mode, the standby pods must be upgraded first.
+To identify which pod is currently the active primary, run the following command
+on each Vault pod:
+
+```bash
+$ kubectl exec -ti <name of pod> -- vault status | grep "HA Mode"
+```
+
+Next, delete every pod that is not the active primary:
+
+```bash
+$ kubectl delete pod <name of Vault pods>
+```
+
+If auto-unseal is not being used, the newly scheduled Vault standby pods needs
+to be unsealed:
+
+```bash
+$ kubectl exec -ti <name of pod> -- vault operator unseal
+```
+
+Finally, once the standby nodes have been updated and unsealed, delete the active
+primary:
+
+```bash
+$ kubectl delete pod <name of Vault primary>
+```
+
+Similar to the standby nodes, the former primary also needs to be unsealed:
+
+```bash
+$ kubectl exec -ti <name of pod> -- vault operator unseal
+```
+
+After a few moments the Vault cluster should elect a new active primary. The Vault
+cluster is now upgraded!
+
+### Protecting Sensitive Vault Configurations
+
+Vault Helm renders a Vault configuration file during installation and stores the
+file in a Kubernetes configmap. Some configurations require sensitive data to be
+included in the configuration file and would not be encrypted at rest once created
+in Kubernetes.
+
+The following example shows how to add extra configuration files to Vault Helm
+to protect sensitive configurations from being in plaintext at rest using Kubernetes
+secrets.
+
+First, create a partial Vault configuration with the sensitive settings Vault
+loads during startup:
+
+```sh
+$ cat <<EOF >>config.hcl
+storage "mysql" {
+username = "user1234"
+password = "secret123!"
+database = "vault"
+}
+EOF
+```
+
+Next, create a Kubernetes secret containing this partial configuration:
+
+```bash
+$ kubectl create secret generic vault-storage-config \
+    --from-file=config.hcl
+```
+
+Finally, mount this secret as an extra volume and add an additional `-config` flag
+to the Vault startup command:
+
+```bash
+$ helm install vault \
+  --set='server.extraVolumes[0].type=secret' \
+  --set='server.extraVolumes[0].name=vault-storage-config' \
+  --set='server.extraArgs=-config=/vault/userconfig/vault-storage-config/config.hcl' .
+```
+
 ## Architecture
 
 We recommend running Vault on Kubernetes with the same
@@ -380,23 +518,23 @@ _End-to-End TLS._ Vault should always be used with TLS in production. If
 intermediate load balancers or reverse proxies are used to front Vault,
 they should not terminate TLS. This way traffic is always encrypted in transit
 to Vault and minimizes risks introduced by intermediate layers. See the
-[official documentation](/docs/platform/k8s/helm#standalone-server-with-tls)
+[official documentation](/docs/platform/k8s/helm/examples/standalone-tls/)
 for example on configuring Vault Helm to use TLS.
 
 _Single Tenancy._ Vault should be the only main process running on a machine.
 This reduces the risk that another process running on the same machine is
 compromised and can interact with Vault. This can be accomplished by using Vault
 Helm's `affinity` configurable. See the
-[official documentation](/docs/platform/k8s/helm#highly-available-vault-cluster-with-consul)
+[official documentation](/docs/platform/k8s/helm/examples/ha-with-consul/)
 for example on configuring Vault Helm to use affinity rules.
 
 _Enable Auditing._ Vault supports several auditing backends. Enabling auditing
 provides a history of all operations performed by Vault and provides a forensics
 trail in the case of misuse or compromise. Audit logs securely hash any sensitive
 data, but access should still be restricted to prevent any unintended disclosures.
-Vault Helm includes a configurable `auditStorage` option that will provision a persistent
+Vault Helm includes a configurable `auditStorage` option that provisions a persistent
 volume to store audit logs. See the
-[official documentation](/docs/platform/k8s/helm#standalone-server-with-audit-storage)
+[official documentation](/docs/platform/k8s/helm/examples/standalone-audit/)
 for an example on configuring Vault Helm to use auditing.
 
 _Immutable Upgrades._ Vault relies on an external storage backend for persistence,
@@ -405,7 +543,7 @@ When upgrading to new versions, new servers with the upgraded version of Vault
 are brought online. They are attached to the same shared storage backend and
 unsealed. Then the old servers are destroyed. This reduces the need for remote
 access and upgrade orchestration which may introduce security gaps. See the
-[upgrade section](/docs/platform/k8s/run#how-to) for instructions
+[upgrade section](#how-to) for instructions
 on upgrading Vault on Kubernetes.
 
 _Upgrade Frequently._ Vault is actively developed, and updating frequently is

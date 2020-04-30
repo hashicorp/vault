@@ -1583,6 +1583,54 @@ func TestSystemBackend_disableAuth(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_tuneAuth(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{BackendType: logical.TypeCredential}, nil
+	}
+
+	req := logical.TestRequest(t, logical.ReadOperation, "auth/token/tune")
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("resp is nil")
+	}
+
+	exp := map[string]interface{}{
+		"description":       "token based credentials",
+		"default_lease_ttl": int(2764800),
+		"max_lease_ttl":     int(2764800),
+		"force_no_cache":    false,
+		"token_type":        "default-service",
+	}
+
+	if diff := deep.Equal(resp.Data, exp); diff != nil {
+		t.Fatal(diff)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/tune")
+	req.Data["description"] = ""
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "auth/token/tune")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("resp is nil")
+	}
+
+	if resp.Data["description"] != "" {
+		t.Fatalf("got: %#v expect: %#v", resp.Data["description"], "")
+	}
+}
+
 func TestSystemBackend_policyList(t *testing.T) {
 	b := testSystemBackend(t)
 	req := logical.TestRequest(t, logical.ReadOperation, "policy")

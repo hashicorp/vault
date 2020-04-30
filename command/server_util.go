@@ -16,9 +16,12 @@ import (
 )
 
 var (
-	onEnterprise                 = false
 	createSecureRandomReaderFunc = createSecureRandomReader
+	adjustCoreConfigForEnt       = adjustCoreConfigForEntNoop
 )
+
+func adjustCoreConfigForEntNoop(config *server.Config, coreConfig *vault.CoreConfig) {
+}
 
 func createSecureRandomReader(config *server.Config, seal *vault.Seal) (io.Reader, error) {
 	return rand.Reader, nil
@@ -54,20 +57,8 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 		}
 	}
 
-	if existBarrierSealConfig.Type == barrierSeal.BarrierType() {
-		// In this case our migration seal is set so we are using it
-		// (potentially) for unwrapping. Set it on core for that purpose then
-		// exit.
-		core.SetSealsForMigration(nil, nil, unwrapSeal)
-		return nil
-	}
-
 	if existBarrierSealConfig.Type != wrapping.Shamir && existRecoverySealConfig == nil {
 		return errors.New(`Recovery seal configuration not found for existing seal`)
-	}
-
-	if onEnterprise && barrierSeal.BarrierType() == wrapping.Shamir {
-		return errors.New("Migrating from autoseal to Shamir seal is not currently supported on Vault Enterprise")
 	}
 
 	var migrationSeal vault.Seal
@@ -93,19 +84,31 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 	// newSeal will be the barrierSeal
 	newSeal = barrierSeal
 
+	if migrationSeal != nil && newSeal != nil && migrationSeal.BarrierType() == newSeal.BarrierType() {
+		return errors.New("Migrating between same seal types is currently not supported")
+	}
+
+	if unwrapSeal != nil && existBarrierSealConfig.Type == barrierSeal.BarrierType() {
+		// In this case our migration seal is set so we are using it
+		// (potentially) for unwrapping. Set it on core for that purpose then
+		// exit.
+		core.SetSealsForMigration(nil, nil, unwrapSeal)
+		return nil
+	}
+
 	// Set the appropriate barrier and recovery configs.
 	switch {
-	case migrationSeal.RecoveryKeySupported() && newSeal.RecoveryKeySupported():
+	case migrationSeal != nil && newSeal != nil && migrationSeal.RecoveryKeySupported() && newSeal.RecoveryKeySupported():
 		// Migrating from auto->auto, copy the configs over
 		newSeal.SetCachedBarrierConfig(existBarrierSealConfig)
 		newSeal.SetCachedRecoveryConfig(existRecoverySealConfig)
-	case migrationSeal.RecoveryKeySupported():
+	case migrationSeal != nil && newSeal != nil && migrationSeal.RecoveryKeySupported():
 		// Migrating from auto->shamir, clone auto's recovery config and set
 		// stored keys to 1.
 		newSealConfig := existRecoverySealConfig.Clone()
 		newSealConfig.StoredShares = 1
 		newSeal.SetCachedBarrierConfig(newSealConfig)
-	case newSeal.RecoveryKeySupported():
+	case newSeal != nil && newSeal.RecoveryKeySupported():
 		// Migrating from shamir->auto, set a new barrier config and set
 		// recovery config to a clone of shamir's barrier config with stored
 		// keys set to 0.

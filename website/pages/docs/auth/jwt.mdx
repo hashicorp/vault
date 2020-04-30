@@ -69,6 +69,8 @@ To limit authorization to a set of email addresses:
 }
 ```
 
+Bound claims can optionally be configured with globs. See the [API documentation](/api-docs/auth/jwt#bound_claims_type) for more details.
+
 ### Claims as Metadata
 
 Data from claims can be copied into the resulting auth token and alias metadata by configuring `claim_mappings`. This role
@@ -170,10 +172,16 @@ Complete the login via your OIDC provider. Launching browser to:
 The browser will open to the generated URL to complete the provider's login. The
 URL may be entered manually if the browser cannot be automatically opened.
 
-The callback listener may be customized with the following optional parameters:
+The callback listener may be customized with the following optional parameters. These are typically
+not required to be set:
 
-- `callbackhost` (default: "localhost")
+- `mount` (default: "oidc")
+- `listenaddress` (default: "localhost")
 - `port` (default: 8250)
+- `callbackhost` (default: "localhost")
+- `callbackmethod` (default: "http")
+- `callbackport` (default: value set for `port`). This value is used in the `redirect_uri`, whereas
+  `port` is the localhost port that the listener is using. These two may be different in advanced setups.
 
 ### OIDC Provider Configuration
 
@@ -187,6 +195,22 @@ collection of provider configuration steps has been collected to help get starte
 This amount of configuration required for OIDC is relatively small, but it can be tricky to debug
 why things aren't working. Some tips for setting up OIDC:
 
+- If a role parameter (e.g. `bound_claims`) requires a map value, it can't be set individually using
+  the Vault CLI. In these cases the best approach is to write the entire configuration as a single
+  JSON object:
+
+```text
+vault write auth/oidc/role/demo -<<EOF
+{
+  "user_claim": "sub",
+  "bound_audiences": "abc123",
+  "role_type": "oidc",
+  "policies": "demo",
+  "ttl": "1h",
+  "bound_claims": { "groups": ["mygroup/mysubgroup"] }
+}
+EOF
+```
 - Monitor Vault's log output. Important information about OIDC validation failures will be emitted.
 - Ensure Redirect URIs are correct in Vault and on the provider. They need to match exactly. Check:
   http/https, 127.0.0.1/localhost, port numbers, whether trailing slashes are present.

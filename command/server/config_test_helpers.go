@@ -321,6 +321,7 @@ func testLoadConfigFile(t *testing.T) {
 			DogStatsDAddr:           "127.0.0.1:7254",
 			DogStatsDTags:           []string{"tag_1:val_1", "tag_2:val_2"},
 			PrometheusRetentionTime: prometheusDefaultRetentionTime,
+			MetricsPrefix:           "myprefix",
 		},
 
 		DisableCache:             true,
@@ -554,12 +555,14 @@ func testConfig_Sanitized(t *testing.T) {
 			"circonus_check_tags":                    "",
 			"circonus_submission_interval":           "",
 			"disable_hostname":                       false,
+			"metrics_prefix":                         "pfx",
 			"dogstatsd_addr":                         "",
 			"dogstatsd_tags":                         []string(nil),
 			"prometheus_retention_time":              24 * time.Hour,
 			"stackdriver_location":                   "",
 			"stackdriver_namespace":                  "",
 			"stackdriver_project_id":                 "",
+			"stackdriver_debug_logs":                 false,
 			"statsd_address":                         "bar",
 			"statsite_address":                       ""},
 	}

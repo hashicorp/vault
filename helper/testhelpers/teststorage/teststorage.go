@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/consul"
+	vaulthttp "github.com/hashicorp/vault/http"
 	physConsul "github.com/hashicorp/vault/physical/consul"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -82,7 +83,7 @@ func MakeFileBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBun
 }
 
 func MakeConsulBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
-	cleanup, consulAddress, consulToken := consul.PrepareTestContainer(t.(*realtesting.T), "1.4.0-rc1")
+	cleanup, consulAddress, consulToken := consul.PrepareTestContainer(t.(*realtesting.T), "")
 	consulConf := map[string]string{
 		"address":      consulAddress,
 		"token":        consulToken,
@@ -158,7 +159,27 @@ func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.KeepStandbysSealed = true
 	opts.PhysicalFactory = MakeRaftBackend
 	opts.SetupFunc = func(t testing.T, c *vault.TestCluster) {
-		testhelpers.RaftClusterJoinNodes(t, c)
-		time.Sleep(15 * time.Second)
+		if opts.NumCores != 1 {
+			testhelpers.RaftClusterJoinNodes(t, c)
+			time.Sleep(15 * time.Second)
+		}
 	}
+}
+
+func ClusterSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, setup ClusterSetupMutator) (*vault.CoreConfig, *vault.TestClusterOptions) {
+	var localConf vault.CoreConfig
+	if conf != nil {
+		localConf = *conf
+	}
+	localOpts := vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	}
+	if opts != nil {
+		localOpts = *opts
+	}
+	if setup == nil {
+		setup = InmemBackendSetup
+	}
+	setup(&localConf, &localOpts)
+	return &localConf, &localOpts
 }

@@ -7,10 +7,10 @@ description: This section documents configuration options for the Vault Helm cha
 
 # Configuration
 
-~> **Important Note:** This chart is not compatible with Helm 3. Please use Helm 2 with this chart.
+~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3 with this chart.
 
 The chart is highly customizable using
-[Helm configuration values](https://docs.helm.sh/using_helm/#customizing-the-chart-before-installing).
+[Helm configuration values](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing).
 Each value has a default tuned for an optimal getting started experience
 with Vault. Before going into production, please review the parameters below
 and consider if they're appropriate for your deployment.
@@ -29,11 +29,13 @@ and consider if they're appropriate for your deployment.
 
   - `enabled` (`boolean: true`) - When set to `true`, the Vault Agent Injector Admission Webhook controller will be created.
 
+  - `externalVaultAddr` (`string: ""`) - External vault server address for the injector to use. Setting this will disable deployment of the vault server, and only deploy the injector.
+
   - `image` - Values that configure the Vault Agent Injector Docker image.
 
     - `repository` (`string: "hashicorp/vault-k8s"`) - The name of the Docker image for Vault Agent Injector.
 
-    - `tag` (`string: "0.1.2"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `tag` (`string: "0.2.0"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
@@ -84,6 +86,8 @@ and consider if they're appropriate for your deployment.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
+    - `updateStrategyType` (`string: "OnDelete"`) - Configure the [Update Strategy Type](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies) for the StatefulSet.
+
     - `resources` (`string: null`) - The resource requests and limits (CPU, memory, etc.) for each of the server. This should be a multi-line string mapping directly to a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources. **Setting this is highly recommended.**
 
       ```yaml
@@ -111,20 +115,19 @@ and consider if they're appropriate for your deployment.
 
         - `host` (`string: required`): Name of the host to use for Ingress.
 
-        - `paths` (`string: required`): This value defines the types of host rules for the Ingress service.
+        - `paths` (`array: []`): A list of paths that will be directed to the Vault service. At least one path is required.
 
         ```yaml
         paths:
-          - backend:
-            serviceName: service2
-            servicePort: 80
+          - /
+          - /vault
         ```
 
     * `tls` - Values that configure the Ingress TLS rules.
 
-      - `hosts` (`string: null)`: Name of the hosts defined in the Common Name of the TLS Certificate. This should be formated as a multi-line string.
+      - `hosts` (`array: []`): List of the hosts defined in the Common Name of the TLS Certificate.
 
-      - `secretName` (`string: null)`: Name of the secret containing the required TLS files such as certificates and keys.
+      - `secretName` (`string: null`): Name of the secret containing the required TLS files such as certificates and keys.
 
       ```yaml
       hosts:
@@ -141,7 +144,7 @@ and consider if they're appropriate for your deployment.
 
       - `enabled` (`boolean: true`) - When set to `true`, a readiness probe will be applied to the Vault pods.
 
-      - `path` (`string: ""`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe. The http/https scheme is controled by the `tlsDisable` value.
+      - `path` (`string: ""`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe. The http/https scheme is controlled by the `tlsDisable` value.
 
     ```yaml
     readinessProbe:
@@ -153,7 +156,7 @@ and consider if they're appropriate for your deployment.
 
       - `enabled` (`boolean: false`) - When set to `true`, a liveliness probe will be applied to the Vault pods.
 
-      - `path` (`string: "/v1/sys/health?standbyok=true"`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe. The http/https scheme is controled by the `tlsDisable` value.
+      - `path` (`string: "/v1/sys/health?standbyok=true"`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe. The http/https scheme is controlled by the `tlsDisable` value.
 
       - `initialDelaySeconds` (`int: 60`) - Sets the initial delay of the liveliness probe when the container starts.
 
@@ -164,6 +167,8 @@ and consider if they're appropriate for your deployment.
       initialDelaySeconds: 60
     ```
 
+    - `preStopSleepSeconds` (`int: 5`) - Used to set the sleep time during the preStop step.
+
     - `extraContainers` (`array: []`) - The extra containers to be applied to the Vault server pods.
 
     ```yaml
@@ -171,14 +176,6 @@ and consider if they're appropriate for your deployment.
       - name: mycontainer
         image: 'app:0.0.0'
         env: ...
-    ```
-
-    ```yaml
-    # Extra Environment Variables are defined as key/value strings.
-    extraEnvironmentVars:
-      GOOGLE_REGION: global
-      GOOGLE_PROJECT: myproject
-      GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/myproject/myproject-creds.json
     ```
 
     - `extraEnvironmentVars` - The extra environment variables to be applied to the Vault server. This should be a multi-line key/value string.
@@ -190,6 +187,8 @@ and consider if they're appropriate for your deployment.
       GOOGLE_PROJECT: myproject
       GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/myproject/myproject-creds.json
     ```
+
+    - `shareProcessNamespace` (`boolean: false`) - Enables process namespace sharing between Vault and the extraContainers. This is useful if Vault must be signaled, e.g. to send a SIGHUP for log rotation.
 
     - `extraArgs` (`string: null`) - The extra arguments to be applied to the Vault server startup command.
 
@@ -393,11 +392,21 @@ and consider if they're appropriate for your deployment.
       - `enabled` (`boolean: false`) -
         Enables `ha` mode for the Vault server. This mode uses a highly available backend storage (such as Consul) to store Vault's data. By default this is configured to use [Consul Helm](https://github.com/hashicorp/consul-helm). For a complete list of storage backends, see the [Vault documentation](/docs/configuration).
 
+      - `raft` - This configures `raft` integrated storage mode for the Vault server.
+
+        - `enabled` (`boolean: false`) -
+          Enables `raft` integrated storage mode for the Vault server. This mode uses persistent volumes for storage.
+
+        - `config` (`string: "{}"`) -
+          A raw string of extra HCL or JSON [configuration](/docs/configuration) for Vault servers.
+          This will be saved as-is into a ConfigMap that is read by the Vault servers.
+          This can be used to add additional configuration that isn't directly exposed by the chart.
+
       - `replicas` (`int: 5`) -
         The number of pods to deploy to create a highly available cluster of Vault servers.
 
       - `updatePartition` (`int: 0`) -
-        If an updatePartition is specified, all Pods with an ordinal that is greater than or equal to the partition will be updated when the StatefulSet’s `.spec.template` is updated. If set to `0`, this disables parition updates. For more information see the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#rolling-updates).
+        If an updatePartition is specified, all Pods with an ordinal that is greater than or equal to the partition will be updated when the StatefulSet’s `.spec.template` is updated. If set to `0`, this disables partition updates. For more information see the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#rolling-updates).
 
       - `config` (`string: "{}"`) -
         A raw string of extra HCL or JSON [configuration](/docs/configuration) for Vault servers.

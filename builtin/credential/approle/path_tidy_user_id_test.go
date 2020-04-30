@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -91,8 +92,6 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
-	b.testTidyDelay = 300 * time.Millisecond
-
 	// Create a role
 	createRole(t, b, storage, "role1", "a,b,c")
 
@@ -109,14 +108,9 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 	count := 1
 
 	wg := &sync.WaitGroup{}
-	now := time.Now()
-	started := false
-	for {
-		if time.Now().Sub(now) > 700*time.Millisecond {
-			break
-		}
-		if time.Now().Sub(now) > 100*time.Millisecond && !started {
-			started = true
+	start := time.Now()
+	for time.Now().Sub(start) < 10*time.Second {
+		if time.Now().Sub(start) > 100*time.Millisecond && atomic.LoadUint32(b.tidySecretIDCASGuard) == 0 {
 			_, err = b.tidySecretID(context.Background(), &logical.Request{
 				Storage: storage,
 			})
@@ -137,23 +131,50 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 				t.Fatalf("err:%v resp:%#v", err, resp)
 			}
 		}()
+
+		entry, err := logical.StorageEntryJSON(
+			fmt.Sprintf("accessor/invalid%d", count),
+			&secretIDAccessorStorageEntry{
+				SecretIDHMAC: "samplesecretidhmac",
+			},
+		)
+		err = storage.Put(context.Background(), entry)
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		count++
+		time.Sleep(100 * time.Microsecond)
 	}
 
-	t.Logf("wrote %d entries", count)
+	logger := b.Logger().Named(t.Name())
+	logger.Info("wrote entries", "count", count)
 
 	wg.Wait()
 	// Let tidy finish
-	time.Sleep(1 * time.Second)
+	for atomic.LoadUint32(b.tidySecretIDCASGuard) != 0 {
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	logger.Info("running tidy again")
 
 	// Run tidy again
-	_, err = b.tidySecretID(context.Background(), &logical.Request{
+	secret, err := b.tidySecretID(context.Background(), &logical.Request{
 		Storage: storage,
 	})
-	if err != nil {
-		t.Fatal(err)
+	if err != nil || len(secret.Warnings) > 0 {
+		t.Fatal(err, secret.Warnings)
 	}
-	time.Sleep(2 * time.Second)
+
+	// Wait for tidy to start
+	for atomic.LoadUint32(b.tidySecretIDCASGuard) == 0 {
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	// Let tidy finish
+	for atomic.LoadUint32(b.tidySecretIDCASGuard) != 0 {
+		time.Sleep(100 * time.Millisecond)
+	}
 
 	accessorHashes, err := storage.List(context.Background(), "accessor/")
 	if err != nil {

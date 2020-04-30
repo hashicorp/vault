@@ -44,7 +44,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/reload"
+	"github.com/hashicorp/vault/internalshared/reloadutil"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -677,7 +677,7 @@ func (n *noopAudit) Salt(ctx context.Context) (*salt.Salt, error) {
 	return salt, nil
 }
 
-func AddNoopAudit(conf *CoreConfig) {
+func AddNoopAudit(conf *CoreConfig, records **[][]byte) {
 	conf.AuditBackends = map[string]audit.Factory{
 		"noop": func(_ context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 			view := &logical.InmemStorage{}
@@ -690,6 +690,9 @@ func AddNoopAudit(conf *CoreConfig) {
 			}
 			n.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
 				SaltFunc: n.Salt,
+			}
+			if records != nil {
+				*records = &n.records
 			}
 			return n, nil
 		},
@@ -891,7 +894,13 @@ func (c *TestCluster) UnsealCoresWithError(useStoredKeys bool) error {
 }
 
 func (c *TestCluster) UnsealCore(t testing.T, core *TestClusterCore) {
-	for _, key := range c.BarrierKeys {
+	var keys [][]byte
+	if core.seal.RecoveryKeySupported() {
+		keys = c.RecoveryKeys
+	} else {
+		keys = c.BarrierKeys
+	}
+	for _, key := range keys {
 		if _, err := core.Core.Unseal(TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
 		}
@@ -1014,7 +1023,7 @@ type TestClusterCore struct {
 	Client               *api.Client
 	Handler              http.Handler
 	Listeners            []*TestListener
-	ReloadFuncs          *map[string][]reload.ReloadFunc
+	ReloadFuncs          *map[string][]reloadutil.ReloadFunc
 	ReloadFuncsLock      *sync.RWMutex
 	Server               *http.Server
 	ServerCert           *x509.Certificate
@@ -1222,7 +1231,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Subject: pkix.Name{
 				CommonName: "localhost",
 			},
-			DNSNames:    []string{"localhost"},
+			// Include host.docker.internal for the sake of benchmark-vault running on MacOS/Windows.
+			// This allows Prometheus running in docker to scrape the cluster for metrics.
+			DNSNames:    []string{"localhost", "host.docker.internal"},
 			IPAddresses: certIPs,
 			ExtKeyUsage: []x509.ExtKeyUsage{
 				x509.ExtKeyUsageServerAuth,
@@ -1284,7 +1295,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	servers := []*http.Server{}
 	handlers := []http.Handler{}
 	tlsConfigs := []*tls.Config{}
-	certGetters := []*reload.CertificateGetter{}
+	certGetters := []*reloadutil.CertificateGetter{}
 	for i := 0; i < numCores; i++ {
 		baseAddr.Port = ports[i]
 		ln, err := net.ListenTCP("tcp", baseAddr)
@@ -1305,8 +1316,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		if err != nil {
 			t.Fatal(err)
 		}
-		certGetter := reload.NewCertificateGetter(certFile, keyFile, "")
+		certGetter := reloadutil.NewCertificateGetter(certFile, keyFile, "")
 		certGetters = append(certGetters, certGetter)
+		certGetter.Reload(nil)
 		tlsConfig := &tls.Config{
 			Certificates:   []tls.Certificate{tlsCert},
 			RootCAs:        testCluster.RootCAs,
@@ -1434,7 +1446,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	addAuditBackend := len(coreConfig.AuditBackends) == 0
 	if addAuditBackend {
-		AddNoopAudit(coreConfig)
+		AddNoopAudit(coreConfig, nil)
 	}
 
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {
@@ -1761,7 +1773,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		tcc.ReloadFuncs = &cores[i].reloadFuncs
 		tcc.ReloadFuncsLock = &cores[i].reloadFuncsLock
 		tcc.ReloadFuncsLock.Lock()
-		(*tcc.ReloadFuncs)["listener|tcp"] = []reload.ReloadFunc{certGetters[i].Reload}
+		(*tcc.ReloadFuncs)["listener|tcp"] = []reloadutil.ReloadFunc{certGetters[i].Reload}
 		tcc.ReloadFuncsLock.Unlock()
 
 		testAdjustTestCore(base, tcc)
@@ -1835,8 +1847,10 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		"mssql-database-plugin",
 		"cassandra-database-plugin",
 		"mongodb-database-plugin",
+		"mongodbatlas-database-plugin",
 		"hana-database-plugin",
 		"influxdb-database-plugin",
+		"redshift-database-plugin",
 	}
 }
 

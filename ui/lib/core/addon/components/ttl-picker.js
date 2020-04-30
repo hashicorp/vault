@@ -9,7 +9,11 @@ const ERROR_MESSAGE = 'TTLs must be specified in whole number increments, please
 
 /**
  * @module TtlPicker
- * `TtlPicker` components are used to expand and collapse content with a toggle.
+ * `TtlPicker` components are used to set the 'time to live'.
+ * This version is being deprecated and replaced by `TtlPicker2` which is an automatic-width version that
+ * automatically recalculates the time value when unit is updated unless time has been changed recently.
+ * Once all instances of TtlPicker are replaced with TtlPicker2, this component will be removed and
+ * TtlPicker2 will be renamed to TtlPicker.
  *
  * @example
  * ```js

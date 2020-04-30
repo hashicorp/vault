@@ -31,13 +31,16 @@ vault auth enable aws
 vault auth enable azure
 vault auth enable centrify
 vault auth enable cert
+vault auth enable cf
 vault auth enable gcp
 vault auth enable github
 vault auth enable jwt
+vault auth enable kerberos
 vault auth enable kubernetes
 vault auth enable ldap
+vault auth enable oci
+vault auth enable oidc
 vault auth enable okta
-vault auth enable pcf
 vault auth enable radius
 vault auth enable userpass
 
@@ -53,9 +56,11 @@ vault secrets enable gcp
 vault secrets enable gcpkms
 vault secrets enable kv
 vault secrets enable mongodb
+vault secrets enable mongodbatlas
 vault secrets enable mssql
 vault secrets enable mysql
 vault secrets enable nomad
+vault secrets enable openldap
 vault secrets enable pki
 vault secrets enable postgresql
 vault secrets enable rabbitmq
@@ -63,12 +68,12 @@ vault secrets enable ssh
 vault secrets enable totp
 vault secrets enable transit
 
-# Enterprise backends
-VERSION=$(vault status -format=json | jq -r .version)
-
-if [[ $VERSION =~ prem|ent ]]
+# Enable enterprise features
+if [[ ! -z "$VAULT_LICENSE" ]]
 then
+  vault write sys/license text="$VAULT_LICENSE"
   vault secrets enable kmip
+  vault secrets enable transform
 fi
 
 # Output OpenAPI, optionally formatted

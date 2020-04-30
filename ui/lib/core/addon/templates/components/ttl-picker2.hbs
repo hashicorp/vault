@@ -1,0 +1,55 @@
+<Toggle
+  @name={{label}}
+  @status="success"
+  @size="small"
+  @onChange={{action 'toggleEnabled'}}
+  @checked={{enableTTL}}
+  data-test-ttl-toggle
+>
+  <span class="ttl-picker-label is-large">{{label}}</span><br/>
+  <span class="has-text-grey">{{helperText}}</span>
+</Toggle>
+{{#if enableTTL}}
+  <div class="ttl-show-picker" data-test-ttl-picker-group="{{label}}">
+    <div class="field is-grouped is-marginless">
+      <div class="control is-marginless">
+        <input
+          data-test-ttl-value="{{label}}"
+          value={{time}}
+          id="time-{{elementId}}"
+          type="text"
+          name="time"
+          class="input{{if errorMessage " has-error"}}"
+          oninput={{perform updateTime value="target.value"}}
+          pattern="[0-9]*"
+        />
+      </div>
+      <div class="control">
+        <Select
+          data-test-ttl-unit="{{label}}"
+          @name='ttl-unit'
+          @options={{unitOptions}}
+          @onChange={{action 'updateUnit'}}
+          @selectedValue={{unit}}
+          @isFullwidth={{true}}
+          />
+      </div>
+    </div>
+    {{#if errorMessage}}
+      <div class="columns is-mobile is-variable is-1 ttl-value-error">
+        <div class="is-narrow message-icon">
+          <Icon
+            @size="s"
+            class="has-text-danger"
+            aria-hidden=true
+            @glyph="cancel-square-fill"
+          />
+        </div>
+        <div class="has-text-danger">
+          {{errorMessage}}
+        </div>
+      </div>
+    {{/if}}
+  </div>
+  {{yield}}
+{{/if}}
