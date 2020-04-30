@@ -7,7 +7,7 @@
       If you set a primary_cluster_addr when enabling replication, it will appear here.
     </p>
     {{#if replicationDetails.primaryClusterAddr}}
-      <code>{{replicationDetails.primaryClusterAddr}}</code>
+      <code data-test-primary-cluster-address>{{replicationDetails.primaryClusterAddr}}</code>
     {{else}}
       <code>no known primary cluster address</code>
     {{/if}}
