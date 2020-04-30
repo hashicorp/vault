@@ -8,6 +8,7 @@ module('Integration | Enterprise | Component | replication-page', function(hooks
 
   test('it renders', async function(assert) {
     await render(hbs`<ReplicationPage />`);
+
     assert.dom('[data-test-replication-page]').exists();
   });
 });
