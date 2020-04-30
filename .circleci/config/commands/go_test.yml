@@ -12,7 +12,6 @@ steps:
       command: |
         TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
   - restore_cache:
-      #      Do we want to include env vars in the key? Which ones?
       keys:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
   - run:
