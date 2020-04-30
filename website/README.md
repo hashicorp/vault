@@ -104,6 +104,11 @@ version number must match a version that has been released and is live on
 links to the binaries and will not compile. So this version number should be
 changed _only after a release_.
 
+The `data/version.js` also contains a global variable, `CHANGELOG_URL`, that
+should be updated to point to the latest changelog URL for the particular 
+release version. The URL should be based off the `master` blob such that
+it always reflects the most up-to-date changes.
+
 ### Displaying a Prerelease
 
 If there is a prerelease of any type that should be displayed on the downloads
