@@ -8,7 +8,6 @@ export default Component.extend({
   data: null,
   replicationDetails: null,
   isSecondary: null,
-  dr: null,
   isSyncing: computed('replicationDetails', 'isSecondary', function() {
     const { state } = this.replicationDetails;
     const isSecondary = this.isSecondary;

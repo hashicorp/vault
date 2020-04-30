@@ -37,10 +37,11 @@
       @type="info"
       @secondIconType="loading"
       @message="The cluster is syncing. This happens when the secondary is too far behind the primary to use the normal stream-wals state for catching up."
-      @class="has-top-margin-xl" />
+      @class="has-top-margin-xl" 
+      data-test-isSyncing/>
   {{/if}}
   <ReplicationTableRows
     @replicationDetails={{replicationDetails}}
-    @clusterMode={{clusterMode}} />
+    @clusterMode={{clusterMode}}/>
   <ReplicationDocLink data-test-replication-doc-link/>
 </div>
