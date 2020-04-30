@@ -16,7 +16,7 @@ BUG FIXES:
 
 * secrets/database: Fix issue where rotating root database credentials while Vault's storage backend is unavailable causes Vault to lose access to the database [[GH-8782](https://github.com/hashicorp/vault/pull/8782)]
 
-## 1.4.1 (TBD)
+## 1.4.1 (April 30, 2020)
 
 CHANGES: 
 
