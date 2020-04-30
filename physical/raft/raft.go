@@ -156,7 +156,7 @@ func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
 		var tlsConfig *tls.Config
 		var err error
 		if len(info.LeaderCACert) != 0 || len(info.LeaderClientCert) != 0 || len(info.LeaderClientKey) != 0 {
-			tlsConfig, err = tlsutil.ClientTLSConfig([]byte(info.LeaderCACert), []byte(info.LeaderClientCert), []byte(info.LeaderClientKey))
+			tlsConfig, err = tlsutil.LoadClientTLSConfig(info.LeaderCACert, info.LeaderClientCert, info.LeaderClientKey)
 			if err != nil {
 				return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node %q: {{err}}", info.LeaderAPIAddr), err)
 			}
