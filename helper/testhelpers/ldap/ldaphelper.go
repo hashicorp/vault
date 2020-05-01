@@ -41,7 +41,6 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 		client := ldaputil.Client{
 			LDAP:      ldaputil.NewLDAP(),
 			Logger:    logger,
-			DebugBind: true,
 		}
 
 		cfg = new(ldaputil.ConfigEntry)
