@@ -39,8 +39,8 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 	if err = pool.Retry(func() error {
 		logger := hclog.New(nil)
 		client := ldaputil.Client{
-			LDAP:      ldaputil.NewLDAP(),
-			Logger:    logger,
+			LDAP:   ldaputil.NewLDAP(),
+			Logger: logger,
 		}
 
 		cfg = new(ldaputil.ConfigEntry)
