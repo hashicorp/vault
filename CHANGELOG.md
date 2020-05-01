@@ -81,6 +81,7 @@ BUG FIXES:
 * ui: Fix broken popup menu on the transit secrets list page [[GH-8348](https://github.com/hashicorp/vault/pull/8348)]
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [[GH-8035](https://github.com/hashicorp/vault/pull/8035)]
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
+* ui: Fix snowman that appears when namespaces have more than one period [[GH-8915](https://github.com/hashicorp/vault/pull/8915)]
 
 
 ## 1.3.3 (Unreleased)
