@@ -15,6 +15,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * secrets/database: Fix issue where rotating root database credentials while Vault's storage backend is unavailable causes Vault to lose access to the database [[GH-8782](https://github.com/hashicorp/vault/pull/8782)]
+* ui: Fix snowman that appears when namespaces have more than one period
 
 ## 1.4.1 (April 30th, 2020)
 
