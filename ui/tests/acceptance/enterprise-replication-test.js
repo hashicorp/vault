@@ -49,6 +49,11 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     const mode = 'deny';
     let mountPath;
 
+    // confirm unable to visit dr secondary details page when both replications are disabled
+    await visit('/vault/replication-dr-promote/details');
+    await settled();
+    assert.dom('[data-test-component="empty-state"]').exists();
+
     await visit('/vault/replication');
     assert.equal(currentURL(), '/vault/replication');
 
@@ -58,6 +63,10 @@ module('Acceptance | Enterprise | replication', function(hooks) {
 
     await click('[data-test-replication-enable]');
     await pollCluster(this.owner);
+    await settled();
+
+    // confirm that the details dashboard shows
+    assert.dom('[data-test-replication-dashboard]').exists();
 
     // add a secondary with a mount filter config
     await click('[data-test-replication-link="secondaries"]');
@@ -104,6 +113,13 @@ module('Acceptance | Enterprise | replication', function(hooks) {
       `/vault/replication/performance/secondaries`,
       'redirects to the secondaries page'
     );
+    // nav back to details page and confirm secondary is in the know secondaries table
+    await click('[data-test-replication-link="details"]');
+    await settled();
+    assert
+      .dom(`[data-test-secondaries-row=${secondaryName}]`)
+      .exists('shows a table row the recently added secondary');
+    // ARG TODO when get connected state check here
 
     // nav to DR
     await visit('/vault/replication/dr');
@@ -123,6 +139,9 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('button[type="submit"]');
 
     await pollCluster(this.owner);
+    // empty state inside of know secondaries table
+    assert.dom('[data-test-empty-state-title]').exists();
+
     assert.ok(
       find('[data-test-replication-title]').textContent.includes('Disaster Recovery'),
       'it displays the replication type correctly'
@@ -160,5 +179,23 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await pollCluster(this.owner);
     await visit('/vault/replication/dr/manage');
     assert.ok(findAll('[data-test-demote-warning]').length, 'displays the demotion warning');
+  });
+
+  test('navigating to dr secondary details page', async function(assert) {
+    await visit('vault/replication/performance');
+    // enable perf replication
+    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
+    await click('[data-test-replication-enable]');
+    await pollCluster(this.owner);
+
+    // enable dr replication
+    await visit('/vault/replication/dr');
+    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
+    await click('[data-test-replication-enable]');
+    await pollCluster(this.owner);
+
+    await visit('/vault/replication-dr-promote/details');
+    await settled();
+    assert.dom('[data-test-component="empty-state"]').exists();
   });
 });
