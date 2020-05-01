@@ -7,6 +7,7 @@ CHANGES:
   indication. [[GH-8646](https://github.com/hashicorp/vault/pull/8646/files)]
 * token: Token renewals will now return token policies within the `token_policies` , identity policies within `identity_policies`, and the full policy set within `policies`. [[GH-8535](https://github.com/hashicorp/vault/pull/8535)]
 * kv: Return the value of delete_version_after when reading kv/config, even if it is set to the default. [[GH-42](https://github.com/hashicorp/vault-plugin-secrets-kv/pull/42)]
+* sentinel: Add a sentinel config section, and "additional_enabled_modules", a list of Sentinel modules that may be imported in addition to the defaults.
 
 IMPROVEMENTS:
 
@@ -15,6 +16,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * secrets/database: Fix issue where rotating root database credentials while Vault's storage backend is unavailable causes Vault to lose access to the database [[GH-8782](https://github.com/hashicorp/vault/pull/8782)]
+* ui: Fix snowman that appears when namespaces have more than one period [[GH-8910](https://github.com/hashicorp/vault/pull/8910)]
 
 ## 1.4.1 (April 30th, 2020)
 
