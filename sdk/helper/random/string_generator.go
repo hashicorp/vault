@@ -142,6 +142,12 @@ func (g *StringGenerator) generate() (str string, err error) {
 	return string(candidate), nil
 }
 
+const (
+	// maxCharsetLen is the maximum length a charset is allowed to be when generating a candidate string.
+	// This is the total number of numbers available for selecting an index out of the charset slice.
+	maxCharsetLen = 256
+)
+
 // randomRunes creates a random string based on the provided charset. The charset is limited to 255 characters, but
 // could be expanded if needed. Expanding the maximum charset size will decrease performance because it will need to
 // combine bytes into a larger integer using binary.BigEndian.Uint16() function.
@@ -149,11 +155,36 @@ func randomRunes(rng io.Reader, charset []rune, length int) (candidate []rune, e
 	if len(charset) == 0 {
 		return nil, fmt.Errorf("no charset specified")
 	}
-	if len(charset) > math.MaxUint8 {
+	if len(charset) > maxCharsetLen {
 		return nil, fmt.Errorf("charset is too long: limited to %d characters", math.MaxUint8)
 	}
 	if length <= 0 {
 		return nil, fmt.Errorf("unable to generate a zero or negative length runeset")
+	}
+
+	// This can't always select indexes from [0-maxCharsetLen) because it could introduce bias to the character selection.
+	// For instance, if the length of the charset is [a-zA-Z0-9-] (length of 63):
+	// RNG ranges: [0-62][63-125][126-188][189-251] will equally select from the entirety of the charset. However,
+	// the RNG values [252-255] will select the first 4 characters of the charset while ignoring the remaining 59.
+	// This results in a bias towards the front of the charset.
+	//
+	// To avoid this, we determine the largest integer multiplier of the charset length that is <= maxCharsetLen
+	// For instance, if the maxCharsetLen is 256 (the size of one byte) and the charset is length 63, the multiplier
+	// equals 4:
+	//   256/63 => 4.06
+	//   Trunc(4.06) => 4
+	// Multiply the multiplier by the charset length to get the maximum value we can generate to avoid bias: 252
+	// maxAllowedRNGValue := (maxCharsetLen / len(charset)) * len(charset)
+	maxAllowedRNGValue := len(charset) - 1
+
+	// rngBufferMultiplier increases the size of the RNG buffer to account for lost
+	// indexes due to the maxAllowedRNGValue
+	rngBufferMultiplier := 1.0
+
+	// Don't set a multiplier if we are able to use the entire range of indexes
+	if maxAllowedRNGValue < maxCharsetLen {
+		// Anything more complicated than an arbitrary percentage appears to have little practical performance benefit
+		rngBufferMultiplier = 1.5
 	}
 
 	if rng == nil {
@@ -161,16 +192,35 @@ func randomRunes(rng io.Reader, charset []rune, length int) (candidate []rune, e
 	}
 
 	charsetLen := byte(len(charset))
-	data := make([]byte, length)
-	_, err = rng.Read(data)
-	if err != nil {
-		return nil, err
-	}
 
 	runes := make([]rune, 0, length)
-	for i := 0; i < len(data); i++ {
-		r := charset[data[i]%charsetLen]
-		runes = append(runes, r)
+
+	for len(runes) < length {
+		// Generate a bunch of indexes
+		data := make([]byte, int(float64(length)*rngBufferMultiplier))
+		numBytes, err := rng.Read(data)
+		if err != nil {
+			return nil, err
+		}
+
+		// Append characters until either we're out of indexes or the length is long enough
+		for i := 0; i < numBytes; i++ {
+			// If the max allowed value is equal to the max byte size, we don't need to do any checking
+			// If we don't check this, the conversion of `byte(maxAllowedRNGValue)` may wrap from 256 -> 0
+			if maxAllowedRNGValue < maxCharsetLen {
+				if data[i] > byte(maxAllowedRNGValue) {
+					continue
+				}
+			}
+
+			// r := charset[data[i]%byte(len(charset))]
+			r := charset[data[i]%charsetLen]
+			runes = append(runes, r)
+
+			if len(runes) == length {
+				break
+			}
+		}
 	}
 
 	return runes, nil
