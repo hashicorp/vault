@@ -220,8 +220,8 @@ export default [
         content: [
           'cassandra',
           'elasticdb',
-          'influxdb',
           'hanadb',
+          'influxdb',
           'mongodb',
           'mongodbatlas',
           'mssql',
