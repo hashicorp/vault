@@ -1140,14 +1140,16 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	case opts != nil && opts.Logger != nil:
 		testCluster.Logger = opts.Logger
 	case logDir != "":
-		if err := os.MkdirAll(logDir, 0755); err != nil {
-			t.Fatal(err)
-		}
 		// This is not ideal because t.Name does not include the package, and
 		// there's no easy way to get it.  However, at present there aren't many
 		// tests that have the same name, and from what I can see there are no
 		// duplicates that call NewTestCluster.
 		logFileName = filepath.Join(logDir, t.Name()+".log")
+		// t.Name may include slashes.
+		dir, _ := filepath.Split(logFileName)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatal(err)
+		}
 		logFile, err = os.Create(logFileName)
 		if err != nil {
 			t.Fatal(err)
