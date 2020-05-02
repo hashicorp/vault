@@ -118,13 +118,27 @@ type LeaderJoinInfo struct {
 	// LeaderCACert is the CA cert of the leader node
 	LeaderCACert string `json:"leader_ca_cert"`
 
-	// LeaderClientCert is the client certificate for the follower node to establish
-	// client authentication during TLS
+	// LeaderClientCert is the client certificate for the follower node to
+	// establish client authentication during TLS
 	LeaderClientCert string `json:"leader_client_cert"`
 
-	// LeaderClientKey is the client key for the follower node to establish client
-	// authentication during TLS
+	// LeaderClientKey is the client key for the follower node to establish
+	// client authentication during TLS.
 	LeaderClientKey string `json:"leader_client_key"`
+
+	// LeaderCACert is the CA cert of the leader node. This should only be
+	// provided via Vault's configuration file.
+	LeaderCACertFile string `json:"leader_ca_cert_file"`
+
+	// LeaderClientCert is the client certificate for the follower node to
+	// establish client authentication during TLS. This should only be provided
+	// via Vault's configuration file.
+	LeaderClientCertFile string `json:"leader_client_cert_file"`
+
+	// LeaderClientKey is the client key for the follower node to establish
+	// client authentication during TLS. This should only be provided via
+	// Vault's configuration file.
+	LeaderClientKeyFile string `json:"leader_client_key_file"`
 
 	// Retry indicates if the join process should automatically be retried
 	Retry bool `json:"-"`
@@ -153,18 +167,33 @@ func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
 
 	for _, info := range leaderInfos {
 		info.Retry = true
-		var tlsConfig *tls.Config
-		var err error
-		if len(info.LeaderCACert) != 0 || len(info.LeaderClientCert) != 0 || len(info.LeaderClientKey) != 0 {
-			tlsConfig, err = tlsutil.LoadClientTLSConfig(info.LeaderCACert, info.LeaderClientCert, info.LeaderClientKey)
-			if err != nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node %q: {{err}}", info.LeaderAPIAddr), err)
-			}
+		info.TLSConfig, err = parseTLSInfo(info)
+		if err != nil {
+			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node %q: {{err}}", info.LeaderAPIAddr), err)
 		}
-		info.TLSConfig = tlsConfig
 	}
 
 	return leaderInfos, nil
+}
+
+// parseTLSInfo is a helper for parses the TLS information, preferring file
+// paths over raw certificate content.
+func parseTLSInfo(leaderInfo *LeaderJoinInfo) (*tls.Config, error) {
+	var tlsConfig *tls.Config
+	var err error
+	if len(leaderInfo.LeaderCACertFile) != 0 || len(leaderInfo.LeaderClientCertFile) != 0 || len(leaderInfo.LeaderClientKeyFile) != 0 {
+		tlsConfig, err = tlsutil.LoadClientTLSConfig(leaderInfo.LeaderCACertFile, leaderInfo.LeaderClientCertFile, leaderInfo.LeaderClientKeyFile)
+		if err != nil {
+			return nil, err
+		}
+	} else if len(leaderInfo.LeaderCACert) != 0 || len(leaderInfo.LeaderClientCert) != 0 || len(leaderInfo.LeaderClientKey) != 0 {
+		tlsConfig, err = tlsutil.ClientTLSConfig([]byte(leaderInfo.LeaderCACert), []byte(leaderInfo.LeaderClientCert), []byte(leaderInfo.LeaderClientKey))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return tlsConfig, nil
 }
 
 // EnsurePath is used to make sure a path exists
