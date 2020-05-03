@@ -1241,8 +1241,22 @@ func TestBackend_FederationTokenWithGroups(t *testing.T) {
 	groupName := generateUniqueName(t.Name())
 	accessKey := &awsAccessKey{}
 
+	// IAM policy where Statement is a single element, not a list
+	iamSingleStatementPolicy := `{
+		"Version": "2012-10-17",
+		"Statement": {
+			"Effect": "Allow",
+			"Action": [
+				"s3:Get*",
+				"s3:List*"
+			],
+			"Resource": "*"
+		}
+	}`
+
 	roleData := map[string]interface{}{
 		"iam_groups":      []string{groupName},
+		"policy_document": iamSingleStatementPolicy,
 		"credential_type": federationTokenCred,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -1259,8 +1273,8 @@ func TestBackend_FederationTokenWithGroups(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigWithCreds(t, accessKey),
 			testAccStepWriteRole(t, "test", roleData),
-			testAccStepRead(t, "sts", "test", []credentialTestFunc{listDynamoTablesTest, describeAzsTestUnauthorized}),
-			testAccStepRead(t, "creds", "test", []credentialTestFunc{listDynamoTablesTest, describeAzsTestUnauthorized}),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{listDynamoTablesTest, describeAzsTestUnauthorized, listS3BucketsTest}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{listDynamoTablesTest, describeAzsTestUnauthorized, listS3BucketsTest}),
 		},
 		Teardown: func() error {
 			if err := deleteTestGroup(groupName); err != nil {

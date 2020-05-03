@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/url"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -13,14 +14,39 @@ import (
 
 // PolicyDocument represents an IAM policy document
 type PolicyDocument struct {
-	Version   string
-	Statement []StatementEntry
+	Version    string           `json:"Version"`
+	Statements StatementEntries `json:"Statement"`
 }
 
-// StatementEntry represents a statement in an IAM policy document
-type StatementEntry interface{}
+// StatementEntries is a slice of statements that make up a PolicyDocument
+type StatementEntries []interface{}
 
-// getGroupPolicies takes a list of IAM Group names and returns a list of the
+// UnmarshalJSON is defined here for StatementEntries because the Statement
+// portion of an IAM Policy can either be a list or a single element, so if it's
+// a single element this wraps it in a []interface{} so that it's easy to
+// combine with other policy statements:
+// https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_statement.html
+func (se *StatementEntries) UnmarshalJSON(b []byte) error {
+	var out StatementEntries
+
+	var data interface{}
+	if err := json.Unmarshal(b, &data); err != nil {
+		return err
+	}
+
+	switch t := data.(type) {
+	case []interface{}:
+		out = t
+	case interface{}:
+		out = []interface{}{t}
+	default:
+		return fmt.Errorf("Unsupported data type %T for StatementEntries", t)
+	}
+	*se = out
+	return nil
+}
+
+// getGroupPolicies takes a list of IAM Group names and returns a list of their
 // inline policy documents, and a list of the attached managed policy ARNs
 func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGroups []string) (groupPolicies []string, groupPolicyARNs []string, err error) {
 	var agp *iam.ListAttachedGroupPoliciesOutput
@@ -30,7 +56,7 @@ func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGr
 
 	iamClient, err = b.clientIAM(ctx, s)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 
 	for _, g := range iamGroups {
@@ -39,7 +65,7 @@ func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGr
 			GroupName: aws.String(g),
 		})
 		if err != nil {
-			return
+			return nil, nil, err
 		}
 		for _, p := range agp.AttachedPolicies {
 			groupPolicyARNs = append(groupPolicyARNs, *p.PolicyArn)
@@ -50,7 +76,7 @@ func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGr
 			GroupName: aws.String(g),
 		})
 		if err != nil {
-			return
+			return nil, nil, err
 		}
 		for _, iP := range inlinePolicies.PolicyNames {
 			inlinePolicyDoc, err = iamClient.GetGroupPolicy(&iam.GetGroupPolicyInput{
@@ -58,12 +84,12 @@ func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGr
 				PolicyName: iP,
 			})
 			if err != nil {
-				return
+				return nil, nil, err
 			}
 			if inlinePolicyDoc != nil && inlinePolicyDoc.PolicyDocument != nil {
 				var policyStr string
 				if policyStr, err = url.QueryUnescape(*inlinePolicyDoc.PolicyDocument); err != nil {
-					return
+					return nil, nil, err
 				}
 				groupPolicies = append(groupPolicies, policyStr)
 			}
@@ -79,7 +105,7 @@ func combinePolicyDocuments(policies ...string) (policy string, err error) {
 	var newPolicy PolicyDocument = PolicyDocument{
 		Version: "2012-10-17",
 	}
-	newPolicy.Statement = make([]StatementEntry, 0)
+	newPolicy.Statements = make(StatementEntries, 0)
 
 	for _, p := range policies {
 		if len(p) == 0 {
@@ -90,7 +116,7 @@ func combinePolicyDocuments(policies ...string) (policy string, err error) {
 		if err != nil {
 			return
 		}
-		newPolicy.Statement = append(newPolicy.Statement, tmpDoc.Statement...)
+		newPolicy.Statements = append(newPolicy.Statements, tmpDoc.Statements...)
 	}
 
 	policyBytes, err = json.Marshal(&newPolicy)

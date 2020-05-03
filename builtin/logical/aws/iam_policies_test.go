@@ -16,6 +16,9 @@ const ec2DescribePolicy = `{"Version": "2012-10-17", "Statement": [{"Effect": "A
 // ec2AllPolicy also uses a string instead of a list for the Action
 const ec2AllPolicy = `{"Version": "2012-10-17","Statement": [{"Effect": "Allow", "Action": "ec2:*", "Resource": "*"}]}`
 
+// ec2SingleStatement is an example of the Statement portion containing a single statement that's not a list
+const ec2SingleStatement = `{"Version": "2012-10-17", "Statement": {"Effect": "Allow", "Action": ["ec2:DescribeInstances"], "Resource": "*"}}`
+
 type mockGroupIAMClient struct {
 	iamiface.IAMAPI
 	ListAttachedGroupPoliciesResp iam.ListAttachedGroupPoliciesOutput
@@ -200,6 +203,22 @@ func Test_combinePolicyDocuments(t *testing.T) {
 			expectedOutput: `{"Version": "2012-10-17", "Statement": []}`,
 			expectedErr:    false,
 		},
+		{
+			description: "when statement is not a list",
+			input: []string{
+				ec2SingleStatement,
+			},
+			expectedOutput: `{"Version": "2012-10-17", "Statement": [{"Action": ["ec2:DescribeInstances"], "Effect": "Allow", "Resource": "*"}]}`,
+			expectedErr:    false,
+		},
+		{
+			description: "statement is malformed json",
+			input: []string{
+				`{"Version": "2012-10-17", "Statement": {true}`,
+			},
+			expectedOutput: "",
+			expectedErr:    true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -208,11 +227,11 @@ func Test_combinePolicyDocuments(t *testing.T) {
 			if (err != nil) != tc.expectedErr {
 				t.Fatalf("got unexpected error: %s", err)
 			}
-			// remove whitespace
-			tc.expectedOutput, err = compactJSON(tc.expectedOutput)
 			if (err != nil) != tc.expectedErr {
 				t.Fatalf("got unexpected error: %s", err)
 			}
+			// remove whitespace
+			tc.expectedOutput, err = compactJSON(tc.expectedOutput)
 			if policyOut != tc.expectedOutput {
 				t.Fatalf("did not receive expected output: want %s, got %s", tc.expectedOutput, policyOut)
 			}
