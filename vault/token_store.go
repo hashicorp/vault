@@ -287,6 +287,29 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
+			Pattern: "renew-accessor",
+
+			Fields: map[string]*framework.FieldSchema{
+				"accessor": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Accessor of the token to renew (request body)",
+				},
+				"increment": &framework.FieldSchema{
+					Type:        framework.TypeDurationSecond,
+					Default:     0,
+					Description: "The desired increment in seconds to the token expiration",
+				},
+			},
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: ts.handleUpdateRenewAccessor,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(tokenRenewAccessorHelp),
+			HelpDescription: strings.TrimSpace(tokenRenewAccessorHelp),
+		},
+
+		{
 			Pattern: "renew-self$",
 
 			Fields: map[string]*framework.FieldSchema{
@@ -794,8 +817,13 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			}
 		}
 
-		if userSelectedID && strings.HasPrefix(entry.ID, "s.") {
-			return fmt.Errorf("custom token ID cannot have the 's.' prefix")
+		if userSelectedID {
+			switch {
+			case strings.HasPrefix(entry.ID, "s."):
+				return fmt.Errorf("custom token ID cannot have the 's.' prefix")
+			case strings.Contains(entry.ID, "."):
+				return fmt.Errorf("custom token ID cannot have a '.' in the value")
+			}
 		}
 
 		if !userSelectedID {
@@ -1616,10 +1644,20 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 }
 
 func (c *Core) IsBatchTokenCreationRequest(ctx context.Context, path string) (bool, error) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+
+	if c.tokenStore == nil {
+		return false, fmt.Errorf("no token store")
+	}
+
 	name := strings.TrimPrefix(path, "auth/token/create/")
 	roleEntry, err := c.tokenStore.tokenStoreRole(ctx, name)
 	if err != nil {
 		return false, err
+	}
+	if roleEntry == nil {
+		return false, fmt.Errorf("unknown role")
 	}
 	return roleEntry.TokenType == logical.TokenTypeBatch, nil
 }
@@ -2016,6 +2054,54 @@ func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logic
 	// Remove the token ID from the response
 	if resp.Data != nil {
 		resp.Data["id"] = ""
+	}
+
+	return resp, nil
+}
+
+func (ts *TokenStore) handleUpdateRenewAccessor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	accessor := data.Get("accessor").(string)
+	if accessor == "" {
+		return nil, &logical.StatusBadRequest{Err: "missing accessor"}
+	}
+
+	aEntry, err := ts.lookupByAccessor(ctx, accessor, false, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prepare the field data required for a lookup call
+	d := &framework.FieldData{
+		Raw: map[string]interface{}{
+			"token": aEntry.TokenID,
+		},
+		Schema: map[string]*framework.FieldSchema{
+			"token": {
+				Type: framework.TypeString,
+			},
+			"increment": {
+				Type: framework.TypeDurationSecond,
+			},
+		},
+	}
+	if inc, ok := data.GetOk("increment"); ok {
+		d.Raw["increment"] = inc
+	}
+
+	resp, err := ts.handleRenew(ctx, req, d)
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("failed to lookup the token")
+	}
+	if resp.IsError() {
+		return resp, nil
+	}
+
+	// Remove the token ID from the response
+	if resp.Auth != nil {
+		resp.Auth.ClientToken = ""
 	}
 
 	return resp, nil
@@ -3316,6 +3402,7 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenCreateRoleHelp      = `This token create path is used to create new tokens adhering to the given role.`
 	tokenListRolesHelp       = `This endpoint lists configured roles.`
 	tokenLookupAccessorHelp  = `This endpoint will lookup a token associated with the given accessor and its properties. Response will not contain the token ID.`
+	tokenRenewAccessorHelp   = `This endpoint will renew a token associated with the given accessor and its properties. Response will not contain the token ID.`
 	tokenLookupHelp          = `This endpoint will lookup a token and its properties.`
 	tokenPathRolesHelp       = `This endpoint allows creating, reading, and deleting roles.`
 	tokenRevokeAccessorHelp  = `This endpoint will delete the token associated with the accessor and all of its child tokens.`

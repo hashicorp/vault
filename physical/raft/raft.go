@@ -2,6 +2,7 @@ package raft
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -16,17 +17,19 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	snapshot "github.com/hashicorp/raft-snapshot"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
-
-	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // EnvVaultRaftNodeID is used to fetch the Raft node ID from the environment.
@@ -104,6 +107,64 @@ type RaftBackend struct {
 
 	// permitPool is used to limit the number of concurrent storage calls.
 	permitPool *physical.PermitPool
+}
+
+// LeaderJoinInfo contains information required by a node to join itself as a
+// follower to an existing raft cluster
+type LeaderJoinInfo struct {
+	// LeaderAPIAddr is the address of the leader node to connect to
+	LeaderAPIAddr string `json:"leader_api_addr"`
+
+	// LeaderCACert is the CA cert of the leader node
+	LeaderCACert string `json:"leader_ca_cert"`
+
+	// LeaderClientCert is the client certificate for the follower node to establish
+	// client authentication during TLS
+	LeaderClientCert string `json:"leader_client_cert"`
+
+	// LeaderClientKey is the client key for the follower node to establish client
+	// authentication during TLS
+	LeaderClientKey string `json:"leader_client_key"`
+
+	// Retry indicates if the join process should automatically be retried
+	Retry bool `json:"-"`
+
+	// TLSConfig for the API client to use when communicating with the leader node
+	TLSConfig *tls.Config `json:"-"`
+}
+
+// JoinConfig returns a list of information about possible leader nodes that
+// this node can join as a follower
+func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
+	config := b.conf["retry_join"]
+	if config == "" {
+		return nil, nil
+	}
+
+	var leaderInfos []*LeaderJoinInfo
+	err := jsonutil.DecodeJSON([]byte(config), &leaderInfos)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to decode retry_join config: {{err}}", err)
+	}
+
+	if len(leaderInfos) == 0 {
+		return nil, errors.New("invalid retry_join config")
+	}
+
+	for _, info := range leaderInfos {
+		info.Retry = true
+		var tlsConfig *tls.Config
+		var err error
+		if len(info.LeaderCACert) != 0 || len(info.LeaderClientCert) != 0 || len(info.LeaderClientKey) != 0 {
+			tlsConfig, err = tlsutil.ClientTLSConfig([]byte(info.LeaderCACert), []byte(info.LeaderClientCert), []byte(info.LeaderClientKey))
+			if err != nil {
+				return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node %q: {{err}}", info.LeaderAPIAddr), err)
+			}
+		}
+		info.TLSConfig = tlsConfig
+	}
+
+	return leaderInfos, nil
 }
 
 // EnsurePath is used to make sure a path exists
@@ -430,25 +491,33 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		return err
 	}
 
+	listenerIsNil := func(cl cluster.ClusterHook) bool {
+		switch {
+		case opts.ClusterListener == nil:
+			return true
+		default:
+			// Concrete type checks
+			switch cl.(type) {
+			case *cluster.Listener:
+				return cl.(*cluster.Listener) == nil
+			}
+		}
+		return false
+	}
+
 	switch {
-	case opts.TLSKeyring == nil && opts.ClusterListener == nil:
+	case opts.TLSKeyring == nil && listenerIsNil(opts.ClusterListener):
 		// If we don't have a provided network we use an in-memory one.
 		// This allows us to bootstrap a node without bringing up a cluster
 		// network. This will be true during bootstrap, tests and dev modes.
 		_, b.raftTransport = raft.NewInmemTransportWithTimeout(raft.ServerAddress(b.localID), time.Second)
 	case opts.TLSKeyring == nil:
 		return errors.New("no keyring provided")
-	case opts.ClusterListener == nil:
+	case listenerIsNil(opts.ClusterListener):
 		return errors.New("no cluster listener provided")
 	default:
-		// Load the base TLS config from the cluster listener.
-		baseTLSConfig, err := opts.ClusterListener.TLSConfig(ctx)
-		if err != nil {
-			return err
-		}
-
 		// Set the local address and localID in the streaming layer and the raft config.
-		streamLayer, err := NewRaftLayer(b.logger.Named("stream"), opts.TLSKeyring, opts.ClusterListener.Addr(), baseTLSConfig)
+		streamLayer, err := NewRaftLayer(b.logger.Named("stream"), opts.TLSKeyring, opts.ClusterListener)
 		if err != nil {
 			return err
 		}
@@ -467,7 +536,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	raftConfig.LocalID = raft.ServerID(b.localID)
 
 	// Set up a channel for reliable leader notifications.
-	raftNotifyCh := make(chan bool, 1)
+	raftNotifyCh := make(chan bool, 10)
 	raftConfig.NotifyCh = raftNotifyCh
 
 	// If we have a bootstrapConfig set we should bootstrap now.
@@ -501,7 +570,16 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			return errwrap.Wrapf("raft recovery failed to parse peers.json: {{err}}", err)
 		}
 
-		b.logger.Info("raft recovery: found new config", "config", recoveryConfig)
+		// Non-voting servers are only allowed in enterprise. If Suffrage is disabled,
+		// error out to indicate that it isn't allowed.
+		for idx := range recoveryConfig.Servers {
+			if !nonVotersAllowed && recoveryConfig.Servers[idx].Suffrage == raft.Nonvoter {
+				return fmt.Errorf("raft recovery failed to parse configuration for node %q: setting `non_voter` is only supported in enterprise", recoveryConfig.Servers[idx].ID)
+			}
+		}
+
+		b.logger.Info("raft recovery found new config", "config", recoveryConfig)
+
 		err = raft.RecoverCluster(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport, recoveryConfig)
 		if err != nil {
 			return errwrap.Wrapf("raft recovery failed: {{err}}", err)
@@ -658,7 +736,7 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 // Snapshot takes a raft snapshot, packages it into a archive file and writes it
 // to the provided writer. Seal access is used to encrypt the SHASUM file so we
 // can validate the snapshot was taken using the same master keys or not.
-func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access seal.Access) error {
+func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access *seal.Access) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -701,7 +779,7 @@ func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access seal.Acce
 // access is used to decrypt the SHASUM file in the archive to ensure this
 // snapshot has the same master key as the running instance. If the provided
 // access is nil then it will skip that validation.
-func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access seal.Access) (*os.File, func(), raft.SnapshotMeta, error) {
+func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access) (*os.File, func(), raft.SnapshotMeta, error) {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -944,12 +1022,21 @@ type RaftLock struct {
 func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}, leaderNotifyCh <-chan bool) <-chan struct{} {
 	leaderLost := make(chan struct{})
 	go func() {
-		select {
-		case isLeader := <-leaderNotifyCh:
-			if !isLeader {
-				close(leaderLost)
+		for {
+			select {
+			case isLeader := <-leaderNotifyCh:
+				// leaderNotifyCh may deliver a true value initially if this
+				// server is already the leader prior to RaftLock.Lock call
+				// (the true message was already queued). The next message is
+				// always going to be false. The for loop should loop at most
+				// twice.
+				if !isLeader {
+					close(leaderLost)
+					return
+				}
+			case <-stopCh:
+				return
 			}
-		case <-stopCh:
 		}
 	}()
 	return leaderLost
@@ -962,6 +1049,13 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 	// Cache the notifyCh locally
 	leaderNotifyCh := l.b.raftNotifyCh
+
+	// TODO: Remove when Raft can server as the ha_storage backend. The internal
+	// raft pointer should not be nil here, but the nil check is a guard against
+	// https://github.com/hashicorp/vault/issues/8206
+	if l.b.raft == nil {
+		return nil, errors.New("attempted to grab a lock on a nil raft backend")
+	}
 
 	// Check to see if we are already leader.
 	if l.b.raft.State() == raft.Leader {
@@ -1036,7 +1130,7 @@ func (l *RaftLock) Value() (bool, string, error) {
 // sealer implements the snapshot.Sealer interface and is used in the snapshot
 // process for encrypting/decrypting the SHASUM file in snapshot archives.
 type sealer struct {
-	access seal.Access
+	access *seal.Access
 }
 
 // Seal encrypts the data with using the seal access object.
@@ -1044,7 +1138,7 @@ func (s sealer) Seal(ctx context.Context, pt []byte) ([]byte, error) {
 	if s.access == nil {
 		return nil, errors.New("no seal access available")
 	}
-	eblob, err := s.access.Encrypt(ctx, pt)
+	eblob, err := s.access.Encrypt(ctx, pt, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1058,11 +1152,11 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 		return nil, errors.New("no seal access available")
 	}
 
-	var eblob physical.EncryptedBlobInfo
+	var eblob wrapping.EncryptedBlobInfo
 	err := proto.Unmarshal(ct, &eblob)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.access.Decrypt(ctx, &eblob)
+	return s.access.Decrypt(ctx, &eblob, nil)
 }

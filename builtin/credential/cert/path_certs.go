@@ -73,7 +73,7 @@ At least one must exist in the Common Name. Supports globbing.`,
 				Description: `A comma-separated list of DNS names.
 At least one must exist in the SANs. Supports globbing.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "Allowed DNS SANs",
+					Name:  "Allowed DNS SANs",
 					Group: "Constraints",
 				},
 			},
@@ -83,7 +83,7 @@ At least one must exist in the SANs. Supports globbing.`,
 				Description: `A comma-separated list of Email Addresses.
 At least one must exist in the SANs. Supports globbing.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "Allowed Email SANs",
+					Name:  "Allowed Email SANs",
 					Group: "Constraints",
 				},
 			},
@@ -93,7 +93,7 @@ At least one must exist in the SANs. Supports globbing.`,
 				Description: `A comma-separated list of URIs.
 At least one must exist in the SANs. Supports globbing.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "Allowed URI SANs",
+					Name:  "Allowed URI SANs",
 					Group: "Constraints",
 				},
 			},

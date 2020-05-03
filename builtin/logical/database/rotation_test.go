@@ -14,8 +14,9 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/lib/pq"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const (
@@ -476,7 +477,7 @@ func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
 		t.Fatalf("error with PutWAL: %s", err)
 	}
 
-	assertWALCount(t, config.StorageView, 1)
+	assertWALCount(t, config.StorageView, 1, staticWALKey)
 
 	b, err := Factory(ctx, config)
 	if err != nil {
@@ -495,7 +496,7 @@ func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
 		t.Fatalf("expected zero queue items, got: %d", bd.credRotationQueue.Len())
 	}
 
-	assertWALCount(t, config.StorageView, 0)
+	assertWALCount(t, config.StorageView, 0, staticWALKey)
 }
 
 // Second scenario, WAL contains a role name that does exist, but the role's
@@ -596,7 +597,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 		t.Fatalf("error with PutWAL: %s", err)
 	}
 
-	assertWALCount(t, config.StorageView, 1)
+	assertWALCount(t, config.StorageView, 1, staticWALKey)
 
 	// Reload backend
 	lb, err = Factory(context.Background(), config)
@@ -613,7 +614,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 	time.Sleep(time.Second * 12)
 
 	// PopulateQueue should have processed the entry
-	assertWALCount(t, config.StorageView, 0)
+	assertWALCount(t, config.StorageView, 0, staticWALKey)
 
 	// Read the role
 	data = map[string]interface{}{}
@@ -655,7 +656,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 }
 
 // Helper to assert the number of WAL entries is what we expect
-func assertWALCount(t *testing.T, s logical.Storage, expected int) {
+func assertWALCount(t *testing.T, s logical.Storage, expected int, key string) {
 	var count int
 	ctx := context.Background()
 	keys, err := framework.ListWAL(ctx, s)
@@ -670,7 +671,7 @@ func assertWALCount(t *testing.T, s logical.Storage, expected int) {
 			continue
 		}
 
-		if walEntry.Kind != staticWALKey {
+		if walEntry.Kind != key {
 			continue
 		}
 		count++
@@ -843,6 +844,11 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	// configure backend, add item and confirm length
 	cleanup, connURL := mongodb.PrepareTestContainerWithDatabase(t, "latest", "vaulttestdb")
 	defer cleanup()
+	testCases := []string{"65", "130", "5400"}
+	// Create database users ahead
+	for _, tc := range testCases {
+		testCreateDBUser(t, connURL, "vaulttestdb", "statictestMongo"+tc, "test")
+	}
 
 	// Configure a connection
 	data := map[string]interface{}{
@@ -865,7 +871,6 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	}
 
 	// create three static roles with different rotation periods
-	testCases := []string{"65", "130", "5400"}
 	for _, tc := range testCases {
 		roleName := "plugin-static-role-" + tc
 		data = map[string]interface{}{
@@ -956,6 +961,30 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	}
 }
 
+func testCreateDBUser(t testing.TB, connURL, db, username, password string) {
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connURL))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	createUserCmd := &createUserCommand{
+		Username: username,
+		Password: password,
+		Roles:    []interface{}{},
+	}
+	result := client.Database(db).RunCommand(ctx, createUserCmd, nil)
+	if result.Err() != nil {
+		t.Fatal(result.Err())
+	}
+}
+
+type createUserCommand struct {
+	Username string        `bson:"createUser"`
+	Password string        `bson:"pwd"`
+	Roles    []interface{} `bson:"roles"`
+}
+
 // Demonstrates a bug fix for the credential rotation not releasing locks
 func TestBackend_StaticRole_LockRegression(t *testing.T) {
 	cluster, sys := getCluster(t)
@@ -1023,6 +1052,99 @@ func TestBackend_StaticRole_LockRegression(t *testing.T) {
 		// sleeping is needed to trigger the deadlock, otherwise things are
 		// processed too quickly to trigger the rotation lock on so few roles
 		time.Sleep(500 * time.Millisecond)
+	}
+}
+
+func TestBackend_StaticRole_Rotate_Invalid_Role(t *testing.T) {
+	cluster, sys := getCluster(t)
+	defer cluster.Cleanup()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	lb, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, ok := lb.(*databaseBackend)
+	if !ok {
+		t.Fatal("could not convert to db backend")
+	}
+	defer b.Cleanup(context.Background())
+
+	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	defer cleanup()
+
+	// create the database user
+	createTestPGUser(t, connURL, dbUser, dbUserDefaultPassword, testRoleStaticCreate)
+
+	verifyPgConn(t, dbUser, dbUserDefaultPassword, connURL)
+
+	// Configure a connection
+	data := map[string]interface{}{
+		"connection_url":    connURL,
+		"plugin_name":       "postgresql-database-plugin",
+		"verify_connection": false,
+		"allowed_roles":     []string{"*"},
+		"name":              "plugin-test",
+	}
+
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	data = map[string]interface{}{
+		"name":                "plugin-role-test",
+		"db_name":             "plugin-test",
+		"rotation_statements": testRoleStaticUpdate,
+		"username":            dbUser,
+		"rotation_period":     "5400s",
+	}
+
+	req = &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "static-roles/plugin-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Pop manually key to emulate a queue without existing key
+	b.credRotationQueue.PopByKey("plugin-role-test")
+
+	// Make sure queue is empty
+	if b.credRotationQueue.Len() != 0 {
+		t.Fatalf("expected queue length to be 0 but is %d", b.credRotationQueue.Len())
+	}
+
+	// Trigger rotation
+	data = map[string]interface{}{"name": "plugin-role-test"}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "rotate-role/plugin-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Check if key is in queue
+	if b.credRotationQueue.Len() != 1 {
+		t.Fatalf("expected queue length to be 1 but is %d", b.credRotationQueue.Len())
 	}
 }
 

@@ -5,7 +5,7 @@
   )
 }}
   <div class="box is-fullwidth is-bottomless is-sideless is-paddingless" data-test-list-view-list>
-    {{#each (or items.content items) as |item|}}
+    {{#each items as |item|}}
       {{yield (hash item=item)}}
     {{else}}
       {{yield}}

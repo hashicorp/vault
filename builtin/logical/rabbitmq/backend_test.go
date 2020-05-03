@@ -23,6 +23,12 @@ const (
 	envRabbitMQPassword      = "RABBITMQ_PASSWORD"
 )
 
+const (
+	testTags        = "administrator"
+	testVHosts      = `{"/": {"configure": ".*", "write": ".*", "read": ".*"}}`
+	testVHostTopics = `{"/": {"amq.topic": {"write": ".*", "read": ".*"}}}`
+)
+
 func prepareRabbitMQTestContainer(t *testing.T) (func(), string, int) {
 	if os.Getenv(envRabbitMQConnectionURI) != "" {
 		return func() {}, os.Getenv(envRabbitMQConnectionURI), 0
@@ -91,6 +97,39 @@ func TestBackend_basic(t *testing.T) {
 
 }
 
+func TestBackend_returnsErrs(t *testing.T) {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+		return
+	}
+	b, _ := Factory(context.Background(), logical.TestBackendConfig())
+
+	cleanup, uri, _ := prepareRabbitMQTestContainer(t)
+	defer cleanup()
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		PreCheck:       testAccPreCheckFunc(t, uri),
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t, uri),
+			{
+				Operation: logical.CreateOperation,
+				Path:      "roles/web",
+				Data: map[string]interface{}{
+					"tags":         testTags,
+					"vhosts":       `{"invalid":{"write": ".*", "read": ".*"}}`,
+					"vhost_topics": testVHostTopics,
+				},
+			},
+			{
+				Operation: logical.ReadOperation,
+				Path:      "creds/web",
+				ErrorOk:   true,
+			},
+		},
+	})
+}
+
 func TestBackend_roleCrud(t *testing.T) {
 	if os.Getenv(logicaltest.TestEnvVar) == "" {
 		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
@@ -107,9 +146,9 @@ func TestBackend_roleCrud(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, uri),
 			testAccStepRole(t),
-			testAccStepReadRole(t, "web", "administrator", `{"/": {"configure": ".*", "write": ".*", "read": ".*"}}`),
+			testAccStepReadRole(t, "web", testTags, testVHosts, testVHostTopics),
 			testAccStepDeleteRole(t, "web"),
-			testAccStepReadRole(t, "web", "", ""),
+			testAccStepReadRole(t, "web", "", "", ""),
 		},
 	})
 }
@@ -148,8 +187,9 @@ func testAccStepRole(t *testing.T) logicaltest.TestStep {
 		Operation: logical.UpdateOperation,
 		Path:      "roles/web",
 		Data: map[string]interface{}{
-			"tags":   "administrator",
-			"vhosts": `{"/": {"configure": ".*", "write": ".*", "read": ".*"}}`,
+			"tags":         testTags,
+			"vhosts":       testVHosts,
+			"vhost_topics": testVHostTopics,
 		},
 	}
 }
@@ -218,13 +258,13 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, uri, name string) log
 	}
 }
 
-func testAccStepReadRole(t *testing.T, name, tags, rawVHosts string) logicaltest.TestStep {
+func testAccStepReadRole(t *testing.T, name, tags, rawVHosts string, rawVHostTopics string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "roles/" + name,
 		Check: func(resp *logical.Response) error {
 			if resp == nil {
-				if tags == "" && rawVHosts == "" {
+				if tags == "" && rawVHosts == "" && rawVHostTopics == "" {
 					return nil
 				}
 
@@ -232,8 +272,9 @@ func testAccStepReadRole(t *testing.T, name, tags, rawVHosts string) logicaltest
 			}
 
 			var d struct {
-				Tags   string                     `mapstructure:"tags"`
-				VHosts map[string]vhostPermission `mapstructure:"vhosts"`
+				Tags        string                                     `mapstructure:"tags"`
+				VHosts      map[string]vhostPermission                 `mapstructure:"vhosts"`
+				VHostTopics map[string]map[string]vhostTopicPermission `mapstructure:"vhost_topics"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
@@ -264,6 +305,33 @@ func testAccStepReadRole(t *testing.T, name, tags, rawVHosts string) logicaltest
 
 				if actualPermission.Read != permission.Read {
 					return fmt.Errorf("expected permission %s to be %s, got %s", "read", permission.Read, actualPermission.Read)
+				}
+			}
+
+			var vhostTopics map[string]map[string]vhostTopicPermission
+			if err := jsonutil.DecodeJSON([]byte(rawVHostTopics), &vhostTopics); err != nil {
+				return fmt.Errorf("bad expected vhostTopics %#v: %s", vhostTopics, err)
+			}
+
+			for host, permissions := range vhostTopics {
+				for exchange, permission := range permissions {
+					actualPermissions, ok := d.VHostTopics[host]
+					if !ok {
+						return fmt.Errorf("expected vhost topics: %s", host)
+					}
+
+					actualPermission, ok := actualPermissions[exchange]
+					if !ok {
+						return fmt.Errorf("expected vhost topic exchange: %s", exchange)
+					}
+
+					if actualPermission.Write != permission.Write {
+						return fmt.Errorf("expected permission %s to be %s, got %s", "write", permission.Write, actualPermission.Write)
+					}
+
+					if actualPermission.Read != permission.Read {
+						return fmt.Errorf("expected permission %s to be %s, got %s", "read", permission.Read, actualPermission.Read)
+					}
 				}
 			}
 

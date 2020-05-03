@@ -11,7 +11,7 @@ func TestLoadConfigFile(t *testing.T) {
 }
 
 func TestLoadConfigFile_topLevel(t *testing.T) {
-	testLoadConfigFile_topLevel(t,nil)
+	testLoadConfigFile_topLevel(t, nil)
 }
 
 func TestLoadConfigFile_json(t *testing.T) {
@@ -19,7 +19,7 @@ func TestLoadConfigFile_json(t *testing.T) {
 }
 
 func TestLoadConfigFile_json2(t *testing.T) {
-	testLoadConfigFile_json2(t,nil)
+	testLoadConfigFile_json2(t, nil)
 }
 
 func TestLoadConfigDir(t *testing.T) {
@@ -34,6 +34,10 @@ func TestParseListeners(t *testing.T) {
 	testParseListeners(t)
 }
 
-func TestParseEntropy(t *testing.T){
-	testParseEntropy(t,true)
+func TestParseEntropy(t *testing.T) {
+	testParseEntropy(t, true)
+}
+
+func TestConfigRaftRetryJoin(t *testing.T) {
+	testConfigRaftRetryJoin(t)
 }

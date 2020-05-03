@@ -4,18 +4,20 @@ package vault
 
 import (
 	"context"
-	"time"
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/replication"
-	cache "github.com/patrickmn/go-cache"
 )
 
 type entCore struct{}
+type entCoreConfig struct{}
+
+func (e entCoreConfig) Clone() entCoreConfig {
+	return entCoreConfig{}
+}
 
 type LicensingConfig struct {
 	AdditionalPublicKeys []interface{}
@@ -43,8 +45,12 @@ func coreInit(c *Core, conf *CoreConfig) error {
 	}
 	return nil
 }
+func (c *Core) setupReplicationResolverHandler() error {
+	return nil
+}
 
-func createSecondaries(*Core, *CoreConfig) {}
+func (c *Core) teardownReplicationResolverHandler() {}
+func createSecondaries(*Core, *CoreConfig)          {}
 
 func addExtraLogicalBackends(*Core, map[string]logical.Factory) {}
 
@@ -119,8 +125,8 @@ func (c *Core) removePerfStandbySecondary(context.Context, string) {}
 
 func (c *Core) removeAllPerfStandbySecondaries() {}
 
-func (c *Core) perfStandbyClusterHandler() (*replication.Cluster, *cache.Cache, chan struct{}, error) {
-	return nil, cache.New(2*cluster.HeartbeatInterval, 1*time.Second), make(chan struct{}), nil
+func (c *Core) perfStandbyClusterHandler() (*replication.Cluster, chan struct{}, error) {
+	return nil, make(chan struct{}), nil
 }
 
 func (c *Core) initSealsForMigration() {}

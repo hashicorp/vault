@@ -1,4 +1,58 @@
-## Changes Between 1.4.0 and 1.5.0 (unreleased)
+## Changes Between 2.0.0 and 2.1.0 (in development)
+
+No changes yet
+
+
+## Changes Between 1.5.0 and 2.0.0 (October 8th, 2019)
+
+### Go 1.9 through 1.11 Support Dropped
+
+This library now only supports Go 1.12 and 1.13 (two most recent minor GA releases).
+
+### Unroutable Message Metric Support
+
+The `drop_unroutable` metric is specific to RabbitMQ 3.8.
+
+Contributed by David Ansari and Feroz Jilla.
+
+### Support for Exchange Ingress and Egress Rates
+
+Contributed by Rajendra N Acharya.
+
+### Eager Synchronization of Classic Queue
+
+It is now possible to initiate an eager sync of a classic mirrored queue and cancel it.
+
+Contributed by Jaroslaw Bochniak.
+
+GitHub issue: [#143](https://github.com/michaelklishin/rabbit-hole/pull/143)
+
+### Queue Status JSON Serialization Fixed
+
+Contributed by Andrew Wang.
+
+### GET /api/consumers Support
+
+Contributed by Thomas Hudry.
+
+GitHub issue: [#140](https://github.com/michaelklishin/rabbit-hole/pull/140)
+
+### http.Transport Replaced by http.RoundTripper
+
+HTTP client configuration now uses `http.RoundTripper`.
+
+GitHub issue: [#123](https://github.com/michaelklishin/rabbit-hole/pull/123).
+
+Contributed by Radek Simko.
+
+### Go Modules Support
+
+GitHub issues: [#124](https://github.com/michaelklishin/rabbit-hole/pull/124), [#128](https://github.com/michaelklishin/rabbit-hole/pull/128).
+
+Contributed by Radek Simko and Gerhard Lazu.
+
+
+## Changes Between 1.4.0 and 1.5.0 (February 13th, 2019)
 
 ### More Binding Management Functions
 

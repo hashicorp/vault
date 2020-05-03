@@ -2,11 +2,12 @@ package ldap
 
 import (
 	"fmt"
-	"github.com/hashicorp/go-hclog"
+	"testing"
+
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/ory/dockertest"
-	"testing"
 )
 
 func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ldaputil.ConfigEntry) {
@@ -16,7 +17,9 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 	}
 
 	dockerOptions := &dockertest.RunOptions{
-		Repository: "rroemhild/test-openldap",
+		// Currently set to "michelvocks" until https://github.com/rroemhild/docker-test-openldap/pull/14
+		// has been merged.
+		Repository: "michelvocks/docker-test-openldap",
 		Tag:        version,
 		Privileged: true,
 		//Env:        []string{"LDAP_DEBUG_LEVEL=384"},
@@ -46,7 +49,8 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 		cfg.BindDN = "cn=admin,dc=planetexpress,dc=com"
 		cfg.BindPassword = "GoodNewsEveryone"
 		cfg.GroupDN = "ou=people,dc=planetexpress,dc=com"
-		cfg.GroupAttr = "memberOf"
+		cfg.GroupAttr = "cn"
+		cfg.RequestTimeout = 60
 		conn, err := client.DialLDAP(cfg)
 		if err != nil {
 			return err

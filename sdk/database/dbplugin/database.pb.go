@@ -959,6 +959,8 @@ type DatabaseClient interface {
 	Close(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 	SetCredentials(ctx context.Context, in *SetCredentialsRequest, opts ...grpc.CallOption) (*SetCredentialsResponse, error)
 	GenerateCredentials(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*GenerateCredentialsResponse, error)
+	//
+	// Deprecated: Do not use.
 	Initialize(ctx context.Context, in *InitializeRequest, opts ...grpc.CallOption) (*Empty, error)
 }
 
@@ -1072,6 +1074,8 @@ type DatabaseServer interface {
 	Close(context.Context, *Empty) (*Empty, error)
 	SetCredentials(context.Context, *SetCredentialsRequest) (*SetCredentialsResponse, error)
 	GenerateCredentials(context.Context, *Empty) (*GenerateCredentialsResponse, error)
+	//
+	// Deprecated: Do not use.
 	Initialize(context.Context, *InitializeRequest) (*Empty, error)
 }
 

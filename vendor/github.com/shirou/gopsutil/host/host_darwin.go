@@ -43,6 +43,11 @@ func InfoWithContext(ctx context.Context) (*InfoStat, error) {
 		ret.KernelVersion = kernelVersion
 	}
 
+	kernelArch, err := kernelArch()
+	if err == nil {
+		ret.KernelArch = kernelArch
+	}
+
 	platform, family, pver, err := PlatformInformation()
 	if err == nil {
 		ret.Platform = platform

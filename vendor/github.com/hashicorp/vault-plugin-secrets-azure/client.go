@@ -151,9 +151,13 @@ func (c *client) createSP(
 		return result, true, err
 	})
 
+	if err != nil {
+		return nil, "", errwrap.Wrapf("error creating service principal: {{err}}", err)
+	}
+
 	result := resultRaw.(graphrbac.ServicePrincipal)
 
-	return &result, password, err
+	return &result, password, nil
 }
 
 // addAppPassword adds a new password to an App's credentials list.
@@ -306,9 +310,73 @@ func (c *client) unassignRoles(ctx context.Context, roleIDs []string) error {
 	return merr.ErrorOrNil()
 }
 
+// addGroupMemberships adds the service principal to the Azure groups.
+func (c *client) addGroupMemberships(ctx context.Context, sp *graphrbac.ServicePrincipal, groups []*AzureGroup) error {
+	for _, group := range groups {
+		_, err := retry(ctx, func() (interface{}, bool, error) {
+			_, err := c.provider.AddGroupMember(ctx, group.ObjectID,
+				graphrbac.GroupAddMemberParameters{
+					URL: to.StringPtr(
+						fmt.Sprintf("%s%s/directoryObjects/%s",
+							c.settings.Environment.GraphEndpoint,
+							c.settings.TenantID,
+							*sp.ObjectID,
+						),
+					),
+				})
+
+			// Propagation delays within Azure can cause this error occasionally, so don't quit on it.
+			if err != nil && strings.Contains(err.Error(), "Request_ResourceNotFound") {
+				return nil, false, nil
+			}
+
+			return nil, true, err
+		})
+
+		if err != nil {
+			return errwrap.Wrapf("error while adding group membership: {{err}}", err)
+		}
+	}
+
+	return nil
+}
+
+// removeGroupMemberships removes the passed service principal from the passed
+// groups. This is a clean-up operation that isn't essential to revocation. As
+// such, an attempt is made to remove all memberships, and not return
+// immediately if there is an error.
+func (c *client) removeGroupMemberships(ctx context.Context, servicePrincipalObjectID string, groupIDs []string) error {
+	var merr *multierror.Error
+
+	for _, id := range groupIDs {
+		if _, err := c.provider.RemoveGroupMember(ctx, servicePrincipalObjectID, id); err != nil {
+			merr = multierror.Append(merr, errwrap.Wrapf("error removing group membership: {{err}}", err))
+		}
+	}
+
+	return merr.ErrorOrNil()
+}
+
+// groupObjectIDs is a helper for converting a list of AzureGroup
+// objects to a list of their object IDs.
+func groupObjectIDs(groups []*AzureGroup) []string {
+	groupIDs := make([]string, 0, len(groups))
+	for _, group := range groups {
+		groupIDs = append(groupIDs, group.ObjectID)
+
+	}
+	return groupIDs
+}
+
 // search for roles by name
 func (c *client) findRoles(ctx context.Context, roleName string) ([]authorization.RoleDefinition, error) {
 	return c.provider.ListRoles(ctx, fmt.Sprintf("subscriptions/%s", c.settings.SubscriptionID), fmt.Sprintf("roleName eq '%s'", roleName))
+}
+
+// findGroups is used to find a group by name. It returns all groups matching
+// the passsed name.
+func (c *client) findGroups(ctx context.Context, groupName string) ([]graphrbac.ADGroup, error) {
+	return c.provider.ListGroups(ctx, fmt.Sprintf("displayName eq '%s'", groupName))
 }
 
 // clientSettings is used by a client to configure the connections to Azure.

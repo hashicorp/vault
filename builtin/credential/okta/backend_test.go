@@ -6,17 +6,24 @@ import (
 	"os"
 	"strings"
 	"testing"
-
-	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/policyutil"
-
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// To run this test, set the following env variables:
+// VAULT_ACC=1
+// OKTA_ORG=dev-219337
+// OKTA_API_TOKEN=<find in 1password>
+// OKTA_USERNAME=test2@example.com
+// OKTA_PASSWORD=<find in 1password>
+//
+// You will need to install the Okta client app on your mobile device and
+// setup MFA.
 func TestBackend_Config(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 12
 	maxLeaseTTLVal := time.Hour * 24
@@ -36,31 +43,44 @@ func TestBackend_Config(t *testing.T) {
 	token := os.Getenv("OKTA_API_TOKEN")
 
 	configData := map[string]interface{}{
-		"organization": os.Getenv("OKTA_ORG"),
-		"base_url":     "oktapreview.com",
+		"org_name": os.Getenv("OKTA_ORG"),
+		"base_url": "oktapreview.com",
 	}
 
 	updatedDuration := time.Hour * 1
 	configDataToken := map[string]interface{}{
-		"token": token,
-		"ttl":   "1h",
+		"api_token": token,
+		"token_ttl": "1h",
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		LogicalBackend: b,
+		AcceptanceTest:    true,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testConfigCreate(t, configData),
+			// 2. Login with bad password, expect failure (E0000004=okta auth failure).
 			testLoginWrite(t, username, "wrong", "E0000004", 0, nil),
-			testLoginWrite(t, username, password, "user is not a member of any authorized policy", 0, nil),
+			// 3. Make our user belong to two groups and have one user-specific policy.
 			testAccUserGroups(t, username, "local_grouP,lOcal_group2", []string{"user_policy"}),
+			// 4. Create the group local_group, assign it a single policy.
 			testAccGroups(t, "local_groUp", "loCal_group_policy"),
+			// 5. Login with good password, expect user to have their user-specific
+			// policy and the policy of the one valid group they belong to.
 			testLoginWrite(t, username, password, "", defaultLeaseTTLVal, []string{"local_group_policy", "user_policy"}),
+			// 6. Create the group everyone, assign it two policies.  This is a
+			// magic group name in okta that always exists and which every
+			// user automatically belongs to.
 			testAccGroups(t, "everyoNe", "everyone_grouP_policy,eveRy_group_policy2"),
+			// 7. Login as before, expect same result
 			testLoginWrite(t, username, password, "", defaultLeaseTTLVal, []string{"local_group_policy", "user_policy"}),
+			// 8. Add API token so we can lookup groups
 			testConfigUpdate(t, configDataToken),
 			testConfigRead(t, token, configData),
+			// 10. Login should now lookup okta groups; since all okta users are
+			// in the "everyone" group, that should be returned; since we
+			// defined policies attached to the everyone group, we should now
+			// see those policies attached to returned vault token.
 			testLoginWrite(t, username, password, "", updatedDuration, []string{"everyone_group_policy", "every_group_policy2", "local_group_policy", "user_policy"}),
 			testAccGroups(t, "locAl_group2", "testgroup_group_policy"),
 			testLoginWrite(t, username, password, "", updatedDuration, []string{"everyone_group_policy", "every_group_policy2", "local_group_policy", "testgroup_group_policy", "user_policy"}),
@@ -81,6 +101,9 @@ func testLoginWrite(t *testing.T, username, password, reason string, expectedTTL
 				if reason == "" || !strings.Contains(resp.Error().Error(), reason) {
 					return resp.Error()
 				}
+			} else if reason != "" {
+				return fmt.Errorf("expected error containing %q, got no error", reason)
+
 			}
 
 			if resp.Auth != nil {
@@ -124,7 +147,7 @@ func testConfigRead(t *testing.T, token string, d map[string]interface{}) logica
 				return resp.Error()
 			}
 
-			if resp.Data["organization"] != d["organization"] {
+			if resp.Data["org_name"] != d["org_name"] {
 				return fmt.Errorf("org mismatch expected %s but got %s", d["organization"], resp.Data["Org"])
 			}
 

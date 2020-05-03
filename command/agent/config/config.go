@@ -38,11 +38,14 @@ type Vault struct {
 	TLSSkipVerifyRaw interface{} `hcl:"tls_skip_verify"`
 	ClientCert       string      `hcl:"client_cert"`
 	ClientKey        string      `hcl:"client_key"`
+	TLSServerName    string      `hcl:"tls_server_name"`
 }
 
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	UseAutoAuthToken bool `hcl:"use_auto_auth_token"`
+	UseAutoAuthTokenRaw interface{} `hcl:"use_auto_auth_token"`
+	UseAutoAuthToken    bool        `hcl:"-"`
+	ForceAutoAuthToken  bool        `hcl:"-"`
 }
 
 // Listener contains configuration for any Vault Agent listeners
@@ -216,6 +219,26 @@ func parseCache(result *Config, list *ast.ObjectList) error {
 	err := hcl.DecodeObject(&c, item.Val)
 	if err != nil {
 		return err
+	}
+
+	if c.UseAutoAuthTokenRaw != nil {
+		c.UseAutoAuthToken, err = parseutil.ParseBool(c.UseAutoAuthTokenRaw)
+		if err != nil {
+			// Could be a value of "force" instead of "true"/"false"
+			switch c.UseAutoAuthTokenRaw.(type) {
+			case string:
+				v := c.UseAutoAuthTokenRaw.(string)
+
+				if !strings.EqualFold(v, "force") {
+					return fmt.Errorf("value of 'use_auto_auth_token' can be either true/false/force, %q is an invalid option", c.UseAutoAuthTokenRaw)
+				}
+				c.UseAutoAuthToken = true
+				c.ForceAutoAuthToken = true
+
+			default:
+				return err
+			}
+		}
 	}
 
 	result.Cache = &c

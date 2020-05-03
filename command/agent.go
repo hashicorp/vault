@@ -27,15 +27,15 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/cf"
 	"github.com/hashicorp/vault/command/agent/auth/gcp"
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
+	"github.com/hashicorp/vault/command/agent/auth/kerberos"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
 	"github.com/hashicorp/vault/command/agent/cache"
-	"github.com/hashicorp/vault/command/agent/config"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
 	"github.com/hashicorp/vault/command/agent/template"
-	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
+	"github.com/hashicorp/vault/internalshared/gatedwriter"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -62,8 +62,9 @@ type AgentCommand struct {
 
 	startedCh chan (struct{}) // for tests
 
-	flagConfigs  []string
-	flagLogLevel string
+	flagConfigs       []string
+	flagLogLevel      string
+	flagExitAfterAuth bool
 
 	flagTestVerifyOnly bool
 	flagCombineLogs    bool
@@ -116,6 +117,15 @@ func (c *AgentCommand) Flags() *FlagSets {
 			"\"trace\", \"debug\", \"info\", \"warn\", and \"err\".",
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:    "exit-after-auth",
+		Target:  &c.flagExitAfterAuth,
+		Default: false,
+		Usage: "If set to true, the agent will exit with code 0 after a single " +
+			"successful auth, where success means that a token was retrieved and " +
+			"all sinks successfully wrote it",
+	})
+
 	// Internal-only flags to follow.
 	//
 	// Why hello there little source code reader! Welcome to the Vault source
@@ -162,7 +172,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
-	c.logGate = &gatedwriter.Writer{Writer: os.Stderr}
+	c.logGate = gatedwriter.NewWriter(os.Stderr)
 	c.logWriter = c.logGate
 	if c.flagCombineLogs {
 		c.logWriter = os.Stdout
@@ -223,42 +233,63 @@ func (c *AgentCommand) Run(args []string) int {
 	if config.Vault == nil {
 		config.Vault = new(agentConfig.Vault)
 	}
+
+	exitAfterAuth := config.ExitAfterAuth
+	f.Visit(func(fl *flag.Flag) {
+		if fl.Name == "exit-after-auth" {
+			exitAfterAuth = c.flagExitAfterAuth
+		}
+	})
+
 	c.setStringFlag(f, config.Vault.Address, &StringVar{
 		Name:    flagNameAddress,
 		Target:  &c.flagAddress,
 		Default: "https://127.0.0.1:8200",
 		EnvVar:  api.EnvVaultAddress,
 	})
+	config.Vault.Address = c.flagAddress
 	c.setStringFlag(f, config.Vault.CACert, &StringVar{
 		Name:    flagNameCACert,
 		Target:  &c.flagCACert,
 		Default: "",
 		EnvVar:  api.EnvVaultCACert,
 	})
+	config.Vault.CACert = c.flagCACert
 	c.setStringFlag(f, config.Vault.CAPath, &StringVar{
 		Name:    flagNameCAPath,
 		Target:  &c.flagCAPath,
 		Default: "",
 		EnvVar:  api.EnvVaultCAPath,
 	})
+	config.Vault.CAPath = c.flagCAPath
 	c.setStringFlag(f, config.Vault.ClientCert, &StringVar{
 		Name:    flagNameClientCert,
 		Target:  &c.flagClientCert,
 		Default: "",
 		EnvVar:  api.EnvVaultClientCert,
 	})
+	config.Vault.ClientCert = c.flagClientCert
 	c.setStringFlag(f, config.Vault.ClientKey, &StringVar{
 		Name:    flagNameClientKey,
 		Target:  &c.flagClientKey,
 		Default: "",
 		EnvVar:  api.EnvVaultClientKey,
 	})
+	config.Vault.ClientKey = c.flagClientKey
 	c.setBoolFlag(f, config.Vault.TLSSkipVerify, &BoolVar{
 		Name:    flagNameTLSSkipVerify,
 		Target:  &c.flagTLSSkipVerify,
 		Default: false,
 		EnvVar:  api.EnvVaultSkipVerify,
 	})
+	config.Vault.TLSSkipVerify = c.flagTLSSkipVerify
+	c.setStringFlag(f, config.Vault.TLSServerName, &StringVar{
+		Name:    flagTLSServerName,
+		Target:  &c.flagTLSServerName,
+		Default: "",
+		EnvVar:  api.EnvVaultTLSServerName,
+	})
+	config.Vault.TLSServerName = c.flagTLSServerName
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
@@ -361,6 +392,8 @@ func (c *AgentCommand) Run(args []string) int {
 			method, err = gcp.NewGCPAuthMethod(authConfig)
 		case "jwt":
 			method, err = jwt.NewJWTAuthMethod(authConfig)
+		case "kerberos":
+			method, err = kerberos.NewKerberosAuthMethod(authConfig)
 		case "kubernetes":
 			method, err = kubernetes.NewKubernetesAuthMethod(authConfig)
 		case "approle":
@@ -431,8 +464,10 @@ func (c *AgentCommand) Run(args []string) int {
 			})
 		}
 
+		var proxyVaultToken = !config.Cache.ForceAutoAuthToken
+
 		// Create the request handler
-		cacheHandler := cache.Handler(ctx, cacheLogger, leaseCache, inmemSink)
+		cacheHandler := cache.Handler(ctx, cacheLogger, leaseCache, inmemSink, proxyVaultToken)
 
 		var listeners []net.Listener
 		for i, lnConfig := range config.Listeners {
@@ -501,8 +536,7 @@ func (c *AgentCommand) Run(args []string) int {
 	// TODO: implement support for SIGHUP reloading of configuration
 	// signal.Notify(c.signalCh)
 
-	var ssDoneCh, ahDoneCh, tsDoneCh, unblockCh chan struct{}
-	var ts *template.Server
+	var ssDoneCh, ahDoneCh, tsDoneCh chan struct{}
 	// Start auto-auth and sink servers
 	if method != nil {
 		enableTokenCh := len(config.Templates) > 0
@@ -518,20 +552,19 @@ func (c *AgentCommand) Run(args []string) int {
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
 			Logger:        c.logger.Named("sink.server"),
 			Client:        client,
-			ExitAfterAuth: config.ExitAfterAuth,
+			ExitAfterAuth: exitAfterAuth,
 		})
 		ssDoneCh = ss.DoneCh
 
-		// create an independent vault configuration for Consul Template to use
-		vaultConfig := c.setupTemplateConfig()
-		ts = template.NewServer(&template.ServerConfig{
+		ts := template.NewServer(&template.ServerConfig{
 			Logger:        c.logger.Named("template.server"),
-			VaultConf:     vaultConfig,
+			LogLevel:      level,
+			LogWriter:     c.logWriter,
+			VaultConf:     config.Vault,
 			Namespace:     namespace,
-			ExitAfterAuth: config.ExitAfterAuth,
+			ExitAfterAuth: exitAfterAuth,
 		})
 		tsDoneCh = ts.DoneCh
-		unblockCh = ts.UnblockCh
 
 		go ah.Run(ctx, method)
 		go ss.Run(ctx, ah.OutputCh, sinks)
@@ -566,19 +599,14 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}()
 
-	// If the template server is running and we've assinged the Unblock channel,
-	// wait for the template to render
-	if unblockCh != nil {
-		select {
-		case <-ctx.Done():
-		case <-ts.UnblockCh:
-		}
-	}
-
 	select {
 	case <-ssDoneCh:
 		// This will happen if we exit-on-auth
 		c.logger.Info("sinks finished, exiting")
+		// allow any templates to be rendered
+		if tsDoneCh != nil {
+			<-tsDoneCh
+		}
 	case <-c.ShutdownCh:
 		c.UI.Output("==> Vault agent shutdown triggered")
 		cancelFunc()
@@ -690,22 +718,4 @@ func (c *AgentCommand) removePidFile(pidPath string) error {
 		return nil
 	}
 	return os.Remove(pidPath)
-}
-
-// setupTemplateConfig creates a config.Vault struct for use by Consul Template.
-// Consul Template does not currently allow us to pass in a configured API
-// client, unlike the AuthHandler and SinkServer that reuse the client created
-// in this Run() method. Here we build a config.Vault struct for use by the
-// Template Server that matches the configuration used to create the client
-// (c.client), but in a struct of type config.Vault so that Consul Template can
-// create it's own api client internally.
-func (c *AgentCommand) setupTemplateConfig() *config.Vault {
-	return &config.Vault{
-		Address:       c.flagAddress,
-		CACert:        c.flagCACert,
-		CAPath:        c.flagCAPath,
-		ClientCert:    c.flagClientCert,
-		ClientKey:     c.flagClientKey,
-		TLSSkipVerify: c.flagTLSSkipVerify,
-	}
 }

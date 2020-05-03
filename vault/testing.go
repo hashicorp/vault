@@ -31,6 +31,8 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/copystructure"
 
 	"golang.org/x/crypto/ed25519"
@@ -42,7 +44,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/reload"
+	"github.com/hashicorp/vault/internalshared/reloadutil"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -267,7 +269,7 @@ func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, handler http.Handl
 	}
 
 	switch core.seal.StoredKeysSupported() {
-	case StoredKeysNotSupported:
+	case seal.StoredKeysNotSupported:
 		barrierConfig.StoredShares = 0
 	default:
 		barrierConfig.StoredShares = 1
@@ -282,7 +284,7 @@ func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, handler http.Handl
 		BarrierConfig:  barrierConfig,
 		RecoveryConfig: recoveryConfig,
 	}
-	if core.seal.StoredKeysSupported() == StoredKeysNotSupported {
+	if core.seal.StoredKeysSupported() == seal.StoredKeysNotSupported {
 		initParams.LegacyShamirSeal = true
 	}
 	result, err := core.Initialize(context.Background(), initParams)
@@ -675,7 +677,7 @@ func (n *noopAudit) Salt(ctx context.Context) (*salt.Salt, error) {
 	return salt, nil
 }
 
-func AddNoopAudit(conf *CoreConfig) {
+func AddNoopAudit(conf *CoreConfig, records **[][]byte) {
 	conf.AuditBackends = map[string]audit.Factory{
 		"noop": func(_ context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 			view := &logical.InmemStorage{}
@@ -688,6 +690,9 @@ func AddNoopAudit(conf *CoreConfig) {
 			}
 			n.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
 				SaltFunc: n.Salt,
+			}
+			if records != nil {
+				*records = &n.records
 			}
 			return n, nil
 		},
@@ -889,7 +894,13 @@ func (c *TestCluster) UnsealCoresWithError(useStoredKeys bool) error {
 }
 
 func (c *TestCluster) UnsealCore(t testing.T, core *TestClusterCore) {
-	for _, key := range c.BarrierKeys {
+	var keys [][]byte
+	if core.seal.RecoveryKeySupported() {
+		keys = c.RecoveryKeys
+	} else {
+		keys = c.BarrierKeys
+	}
+	for _, key := range keys {
 		if _, err := core.Core.Unseal(TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
 		}
@@ -1012,7 +1023,7 @@ type TestClusterCore struct {
 	Client               *api.Client
 	Handler              http.Handler
 	Listeners            []*TestListener
-	ReloadFuncs          *map[string][]reload.ReloadFunc
+	ReloadFuncs          *map[string][]reloadutil.ReloadFunc
 	ReloadFuncsLock      *sync.RWMutex
 	Server               *http.Server
 	ServerCert           *x509.Certificate
@@ -1056,7 +1067,11 @@ type TestClusterOptions struct {
 	FirstCoreNumber   int
 	RequireClientAuth bool
 	// SetupFunc is called after the cluster is started.
-	SetupFunc func(t testing.T, c *TestCluster)
+	SetupFunc      func(t testing.T, c *TestCluster)
+	PR1103Disabled bool
+
+	// ClusterLayers are used to override the default cluster connection layer
+	ClusterLayers cluster.NetworkLayerSet
 }
 
 var DefaultNumCores = 3
@@ -1092,6 +1107,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		numCores = opts.NumCores
 	}
 
+	var disablePR1103 bool
+	if opts != nil && opts.PR1103Disabled {
+		disablePR1103 = true
+	}
+
 	var firstCoreNumber int
 	if opts != nil {
 		firstCoreNumber = opts.FirstCoreNumber
@@ -1112,9 +1132,30 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	var testCluster TestCluster
 
-	if opts != nil && opts.Logger != nil {
+	var logDir = os.Getenv("VAULT_TEST_LOG_DIR")
+	var logFileName string
+	var logFile *os.File
+
+	switch {
+	case opts != nil && opts.Logger != nil:
 		testCluster.Logger = opts.Logger
-	} else {
+	case logDir != "":
+		// This is not ideal because t.Name does not include the package, and
+		// there's no easy way to get it.  However, at present there aren't many
+		// tests that have the same name, and from what I can see there are no
+		// duplicates that call NewTestCluster.
+		logFileName = filepath.Join(logDir, t.Name()+".log")
+		// t.Name may include slashes.
+		dir, _ := filepath.Split(logFileName)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		logFile, err = os.Create(logFileName)
+		if err != nil {
+			t.Fatal(err)
+		}
+		testCluster.Logger = logging.NewVaultLoggerWithWriter(logFile, log.Trace)
+	default:
 		testCluster.Logger = logging.NewVaultLogger(log.Trace).Named(t.Name())
 	}
 
@@ -1211,7 +1252,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Subject: pkix.Name{
 				CommonName: "localhost",
 			},
-			DNSNames:    []string{"localhost"},
+			// Include host.docker.internal for the sake of benchmark-vault running on MacOS/Windows.
+			// This allows Prometheus running in docker to scrape the cluster for metrics.
+			DNSNames:    []string{"localhost", "host.docker.internal"},
 			IPAddresses: certIPs,
 			ExtKeyUsage: []x509.ExtKeyUsage{
 				x509.ExtKeyUsageServerAuth,
@@ -1273,7 +1316,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	servers := []*http.Server{}
 	handlers := []http.Handler{}
 	tlsConfigs := []*tls.Config{}
-	certGetters := []*reload.CertificateGetter{}
+	certGetters := []*reloadutil.CertificateGetter{}
 	for i := 0; i < numCores; i++ {
 		baseAddr.Port = ports[i]
 		ln, err := net.ListenTCP("tcp", baseAddr)
@@ -1294,8 +1337,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		if err != nil {
 			t.Fatal(err)
 		}
-		certGetter := reload.NewCertificateGetter(certFile, keyFile, "")
+		certGetter := reloadutil.NewCertificateGetter(certFile, keyFile, "")
 		certGetters = append(certGetters, certGetter)
+		certGetter.Reload(nil)
 		tlsConfig := &tls.Config{
 			Certificates:   []tls.Certificate{tlsCert},
 			RootCAs:        testCluster.RootCAs,
@@ -1423,7 +1467,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	addAuditBackend := len(coreConfig.AuditBackends) == 0
 	if addAuditBackend {
-		AddNoopAudit(coreConfig)
+		AddNoopAudit(coreConfig, nil)
 	}
 
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {
@@ -1485,6 +1529,10 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			}
 		}
 
+		if opts != nil && opts.ClusterLayers != nil {
+			localConfig.ClusterNetworkLayer = opts.ClusterLayers.Layers()[i]
+		}
+
 		switch {
 		case localConfig.LicensingConfig != nil:
 			if pubKey != nil {
@@ -1505,6 +1553,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			t.Fatalf("err: %v", err)
 		}
 		c.coreNumber = firstCoreNumber + i
+		c.PR1103disabled = disablePR1103
 		cores = append(cores, c)
 		coreConfigs = append(coreConfigs, &localConfig)
 		if opts != nil && opts.HandlerFunc != nil {
@@ -1745,7 +1794,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		tcc.ReloadFuncs = &cores[i].reloadFuncs
 		tcc.ReloadFuncsLock = &cores[i].reloadFuncsLock
 		tcc.ReloadFuncsLock.Lock()
-		(*tcc.ReloadFuncs)["listener|tcp"] = []reload.ReloadFunc{certGetters[i].Reload}
+		(*tcc.ReloadFuncs)["listener|tcp"] = []reloadutil.ReloadFunc{certGetters[i].Reload}
 		tcc.ReloadFuncsLock.Unlock()
 
 		testAdjustTestCore(base, tcc)
@@ -1760,6 +1809,13 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	testCluster.CleanupFunc = func() {
 		for _, c := range cleanupFuncs {
 			c()
+		}
+		if logFile != nil {
+			if t.Failed() {
+				logFile.Close()
+			} else {
+				os.Remove(logFileName)
+			}
 		}
 	}
 	if opts != nil {
@@ -1819,8 +1875,10 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		"mssql-database-plugin",
 		"cassandra-database-plugin",
 		"mongodb-database-plugin",
+		"mongodbatlas-database-plugin",
 		"hana-database-plugin",
 		"influxdb-database-plugin",
+		"redshift-database-plugin",
 	}
 }
 

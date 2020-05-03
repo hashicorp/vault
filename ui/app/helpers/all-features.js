@@ -10,6 +10,8 @@ const ALL_FEATURES = [
   'Control Groups',
   'Performance Standby',
   'Namespaces',
+  'KMIP',
+  'Entropy Augmentation',
 ];
 
 export function allFeatures() {

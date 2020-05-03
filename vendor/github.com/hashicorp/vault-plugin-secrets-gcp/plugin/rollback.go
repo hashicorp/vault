@@ -76,7 +76,7 @@ func (b *backend) serviceAccountRollback(ctx context.Context, req *logical.Reque
 	}
 
 	// Delete service account.
-	iamC, err := b.IAMClient(req.Storage)
+	iamC, err := b.IAMAdminClient(req.Storage)
 	if err != nil {
 		return err
 	}
@@ -93,51 +93,67 @@ func (b *backend) serviceAccountKeyRollback(ctx context.Context, req *logical.Re
 		return err
 	}
 
-	// If key is still being used, WAL entry was not
-	// deleted properly after a successful operation.
-	// Remove WAL entry.
+	b.Logger().Debug("checking roleset listed in WAL is access_token roleset")
+
+	var keyInUse string
+
+	// Get roleset for entry
 	rs, err := getRoleSet(entry.RoleSet, ctx, req.Storage)
 	if err != nil {
 		return err
 	}
-	if rs != nil && rs.TokenGen != nil && entry.KeyName == rs.TokenGen.KeyName {
-		return nil
+
+	// If roleset is not nil, get key in use.
+	if rs != nil {
+		if rs.SecretType == SecretTypeAccessToken {
+			// Don't clean keys if roleset generates key secrets.
+			return nil
+		}
+
+		if rs.TokenGen != nil {
+			keyInUse = rs.TokenGen.KeyName
+		}
 	}
 
-	iamC, err := b.IAMClient(req.Storage)
+	iamC, err := b.IAMAdminClient(req.Storage)
 	if err != nil {
 		return err
 	}
 
 	if entry.KeyName == "" {
-		if rs.SecretType != SecretTypeAccessToken {
-			// Do not clean up non-access-token role set keys.
-			return nil
-		}
-
-		// delete all keys not in use by role set
-		keys, err := iamC.Projects.ServiceAccounts.Keys.List(rs.AccountId.ResourceName()).KeyTypes("USER_MANAGED").Do()
-		if err != nil && !isGoogleAccountKeyNotFoundErr(err) {
+		// If given an empty key name, this means the WAL entry was created before the key was created.
+		// We list all keys and then delete any not in use by the current roleset.
+		keys, err := iamC.Projects.ServiceAccounts.Keys.List(entry.ServiceAccountName).KeyTypes("USER_MANAGED").Do()
+		if err != nil {
+			// If service account already deleted, no need to clean up keys.
+			if isGoogleAccountNotFoundErr(err) {
+				return nil
+			}
 			return err
-		} else if err != nil || keys == nil {
-			return nil
 		}
 
 		for _, k := range keys.Keys {
-			if rs.TokenGen != nil && rs.TokenGen.KeyName == k.Name {
+			// Skip deleting keys still in use (empty keyInUse means no key is in use)
+			if k.Name == keyInUse {
 				continue
 			}
-			// Delete all keys not being used by role set
+
 			_, err = iamC.Projects.ServiceAccounts.Keys.Delete(entry.KeyName).Do()
 			if err != nil && !isGoogleAccountKeyNotFoundErr(err) {
 				return err
 			}
 		}
-	} else {
-		_, err = iamC.Projects.ServiceAccounts.Keys.Delete(entry.KeyName).Do()
-		if err != nil && !isGoogleAccountKeyNotFoundErr(err) {
-			return err
-		}
+		return nil
+	}
+
+	// If key is still in use, don't delete (empty keyInUse means no key is in use)
+	if entry.KeyName == keyInUse {
+		return nil
+	}
+
+	_, err = iamC.Projects.ServiceAccounts.Keys.Delete(entry.KeyName).Do()
+	if err != nil && !isGoogleAccountKeyNotFoundErr(err) {
+		return err
 	}
 	return nil
 }
@@ -273,7 +289,7 @@ func isGoogleAccountKeyNotFoundErr(err error) bool {
 	return isGoogleApiErrorWithCodes(err, 403, 404)
 }
 
-func isGoogleApiErrorWithCodes(err error, validErrCodes... int) bool {
+func isGoogleApiErrorWithCodes(err error, validErrCodes ...int) bool {
 	if err == nil {
 		return false
 	}

@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
@@ -21,8 +25,12 @@ func pathRotateCredentials(b *databaseBackend) []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRotateCredentialsUpdate(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:                    b.pathRotateCredentialsUpdate(),
+					ForwardPerformanceSecondary: true,
+					ForwardPerformanceStandby:   true,
+				},
 			},
 
 			HelpSynopsis:    pathCredsCreateReadHelpSyn,
@@ -37,8 +45,12 @@ func pathRotateCredentials(b *databaseBackend) []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRotateRoleCredentialsUpdate(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:                    b.pathRotateRoleCredentialsUpdate(),
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
+				},
 			},
 
 			HelpSynopsis:    pathCredsCreateReadHelpSyn,
@@ -64,6 +76,16 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 			return nil, err
 		}
 
+		defer func() {
+			// Close the plugin
+			db.closed = true
+			if err := db.Database.Close(); err != nil {
+				b.Logger().Error("error closing the database plugin connection", "err", err)
+			}
+			// Even on error, still remove the connection
+			delete(b.connections, name)
+		}()
+
 		// Take out the backend lock since we are swapping out the connection
 		b.Lock()
 		defer b.Unlock()
@@ -72,12 +94,44 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 		db.Lock()
 		defer db.Unlock()
 
-		connectionDetails, err := db.RotateRootCredentials(ctx, config.RootCredentialsRotateStatements)
+		// Generate new credentials
+		userName := config.ConnectionDetails["username"].(string)
+		oldPassword := config.ConnectionDetails["password"].(string)
+		newPassword, err := db.GenerateCredentials(ctx)
+		if err != nil {
+			return nil, err
+		}
+		config.ConnectionDetails["password"] = newPassword
+
+		// Write a WAL entry
+		walID, err := framework.PutWAL(ctx, req.Storage, rotateRootWALKey, &rotateRootCredentialsWAL{
+			ConnectionName: name,
+			UserName:       userName,
+			OldPassword:    oldPassword,
+			NewPassword:    newPassword,
+		})
 		if err != nil {
 			return nil, err
 		}
 
-		config.ConnectionDetails = connectionDetails
+		// Attempt to use SetCredentials for the root credential rotation
+		statements := dbplugin.Statements{Rotation: config.RootCredentialsRotateStatements}
+		userConfig := dbplugin.StaticUserConfig{
+			Username: userName,
+			Password: newPassword,
+		}
+		if _, _, err := db.SetCredentials(ctx, statements, userConfig); err != nil {
+			if status.Code(err) == codes.Unimplemented {
+				// Fall back to using RotateRootCredentials if unimplemented
+				config.ConnectionDetails, err = db.RotateRootCredentials(ctx,
+					config.RootCredentialsRotateStatements)
+			}
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// Update storage with the new root credentials
 		entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/%s", name), config)
 		if err != nil {
 			return nil, err
@@ -86,17 +140,15 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 			return nil, err
 		}
 
-		// Close the plugin
-		db.closed = true
-		if err := db.Database.Close(); err != nil {
-			b.Logger().Error("error closing the database plugin connection", "err", err)
+		// Delete the WAL entry after successfully rotating root credentials
+		if err := framework.DeleteWAL(ctx, req.Storage, walID); err != nil {
+			b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walID)
 		}
-		// Even on error, still remove the connection
-		delete(b.connections, name)
 
 		return nil, nil
 	}
 }
+
 func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)

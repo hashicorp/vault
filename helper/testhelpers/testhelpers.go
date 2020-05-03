@@ -139,6 +139,14 @@ func EnsureCoresUnsealed(t testing.T, c *vault.TestCluster) {
 	}
 }
 
+func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClusterCore) {
+	t.Helper()
+	err := AttemptUnsealCore(c, core)
+	if err != nil {
+		t.Fatalf("failed to unseal core: %v", err)
+	}
+}
+
 func AttemptUnsealCores(c *vault.TestCluster) error {
 	for i, core := range c.Cores {
 		err := AttemptUnsealCore(c, core)
@@ -186,7 +194,16 @@ func AttemptUnsealCore(c *vault.TestCluster, core *vault.TestClusterCore) error 
 }
 
 func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
+	deriveStableActiveCore(t, cluster)
+}
+
+func DeriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
+	return deriveStableActiveCore(t, cluster)
+}
+
+func deriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
 	activeCore := DeriveActiveCore(t, cluster)
+	minDuration := time.NewTimer(3 * time.Second)
 
 	for i := 0; i < 30; i++ {
 		leaderResp, err := activeCore.Client.Sys().Leader()
@@ -194,10 +211,22 @@ func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
 			t.Fatal(err)
 		}
 		if !leaderResp.IsSelf {
-			t.Fatal("unstable active node")
+			minDuration.Reset(3 * time.Second)
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
+
+	select {
+	case <-minDuration.C:
+	default:
+		if stopped := minDuration.Stop(); stopped {
+			t.Fatal("unstable active node")
+		}
+		// Drain the value
+		<-minDuration.C
+	}
+
+	return activeCore
 }
 
 func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
@@ -284,6 +313,19 @@ func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClust
 
 	t.Fatalf("node did not become active")
 	return nil
+}
+
+func WaitForStandbyNode(t testing.T, core *vault.TestClusterCore) {
+	t.Helper()
+	for i := 0; i < 30; i++ {
+		if isLeader, _, clusterAddr, _ := core.Core.Leader(); isLeader != true && clusterAddr != "" {
+			return
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	t.Fatalf("node did not become standby")
 }
 
 func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]byte {
@@ -378,11 +420,19 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 		vault.TestWaitActive(t, leaderCore.Core)
 	}
 
+	leaderInfo := &raft.LeaderJoinInfo{
+		LeaderAPIAddr: leaderAPI,
+		TLSConfig:     leaderCore.TLSConfig,
+	}
+
 	// Join core1
 	{
 		core := cluster.Cores[1]
 		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderAPI, leaderCore.TLSConfig, false, false)
+		leaderInfos := []*raft.LeaderJoinInfo{
+			leaderInfo,
+		}
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -394,7 +444,10 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	{
 		core := cluster.Cores[2]
 		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderAPI, leaderCore.TLSConfig, false, false)
+		leaderInfos := []*raft.LeaderJoinInfo{
+			leaderInfo,
+		}
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
 		if err != nil {
 			t.Fatal(err)
 		}

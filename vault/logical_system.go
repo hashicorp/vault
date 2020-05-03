@@ -950,7 +950,7 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 		return nil, logical.ErrReadOnly
 	}
 
-	// We return success when the mount does not exists to not expose if the
+	// We return success when the mount does not exist to not expose if the
 	// mount existed or not
 	match := b.Core.router.MatchingMount(ctx, path)
 	if match == "" || ns.Path+path != match {
@@ -1075,6 +1075,7 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
+			"description":       mountEntry.Description,
 			"default_lease_ttl": int(sysView.DefaultLeaseTTL().Seconds()),
 			"max_lease_ttl":     int(sysView.MaxLeaseTTL().Seconds()),
 			"force_no_cache":    mountEntry.Config.ForceNoCache,
@@ -1873,7 +1874,7 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 		return nil, logical.ErrReadOnly
 	}
 
-	// We return success when the mount does not exists to not expose if the
+	// We return success when the mount does not exist to not expose if the
 	// mount existed or not
 	match := b.Core.router.MatchingMount(ctx, fullPath)
 	if match == "" || ns.Path+fullPath != match {
@@ -2403,6 +2404,11 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 		Data: map[string]interface{}{},
 	}
 
+	if len(response) == 0 {
+		resp.Data[logical.HTTPStatusCode] = 204
+		return resp, nil
+	}
+
 	// Most of the time we want to just send over the marshalled HTTP bytes.
 	// However there is a sad separate case: if the original response was using
 	// bare values we need to use those or else what comes back is garbled.
@@ -2448,13 +2454,9 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 		return resp, nil
 	}
 
-	if len(response) == 0 {
-		resp.Data[logical.HTTPStatusCode] = 204
-	} else {
-		resp.Data[logical.HTTPStatusCode] = 200
-		resp.Data[logical.HTTPRawBody] = []byte(response)
-		resp.Data[logical.HTTPContentType] = "application/json"
-	}
+	resp.Data[logical.HTTPStatusCode] = 200
+	resp.Data[logical.HTTPRawBody] = []byte(response)
+	resp.Data[logical.HTTPContentType] = "application/json"
 
 	return resp, nil
 }
@@ -2518,7 +2520,7 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 // returned by the collection method will be returned as response warnings.
 func (b *SystemBackend) handleHostInfo(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	resp := &logical.Response{}
-	info, err := hostutil.CollectHostInfo()
+	info, err := hostutil.CollectHostInfo(ctx)
 	if err != nil {
 		// If the error is a HostInfoError, we return them as response warnings
 		if errs, ok := err.(*multierror.Error); ok {

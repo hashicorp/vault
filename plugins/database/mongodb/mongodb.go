@@ -2,21 +2,20 @@ package mongodb
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"time"
 
-	"encoding/json"
-
-	"fmt"
-
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	mgo "gopkg.in/mgo.v2"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
+	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
 const mongoDBTypeName = "mongodb"
@@ -70,13 +69,13 @@ func (m *MongoDB) Type() (string, error) {
 	return mongoDBTypeName, nil
 }
 
-func (m *MongoDB) getConnection(ctx context.Context) (*mgo.Session, error) {
-	session, err := m.Connection(ctx)
+func (m *MongoDB) getConnection(ctx context.Context) (*mongo.Client, error) {
+	client, err := m.Connection(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return session.(*mgo.Session), nil
+	return client.(*mongo.Client), nil
 }
 
 // CreateUser generates the username/password on the underlying secret backend as instructed by
@@ -96,11 +95,6 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 
 	if len(statements.Creation) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
-	}
-
-	session, err := m.getConnection(ctx)
-	if err != nil {
-		return "", "", err
 	}
 
 	username, err = m.GenerateUsername(usernameConfig)
@@ -135,20 +129,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 		Roles:    mongoCS.Roles.toStandardRolesArray(),
 	}
 
-	err = session.DB(mongoCS.DB).Run(createUserCmd, nil)
-	switch {
-	case err == nil:
-	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
-		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
-		session, err := m.getConnection(ctx)
-		if err != nil {
-			return "", "", err
-		}
-		err = session.DB(mongoCS.DB).Run(createUserCmd, nil)
-		if err != nil {
-			return "", "", err
-		}
-	default:
+	if err := m.runCommandWithRetry(ctx, mongoCS.DB, createUserCmd); err != nil {
 		return "", "", err
 	}
 
@@ -166,39 +147,19 @@ func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statem
 	m.Lock()
 	defer m.Unlock()
 
-	session, err := m.getConnection(ctx)
-	if err != nil {
-		return "", "", err
-	}
-
 	username = staticUser.Username
 	password = staticUser.Password
 
-	dialInfo, err := parseMongoURL(m.ConnectionURL)
-	if err != nil {
-		return "", "", err
-	}
-
-	mongoUser := mgo.User{
+	changeUserCmd := &updateUserCommand{
 		Username: username,
 		Password: password,
 	}
 
-	err = session.DB(dialInfo.Database).UpsertUser(&mongoUser)
-
-	switch {
-	case err == nil:
-	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
-		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
-		session, err := m.getConnection(ctx)
-		if err != nil {
-			return "", "", err
-		}
-		err = session.DB(dialInfo.Database).UpsertUser(&mongoUser)
-		if err != nil {
-			return "", "", err
-		}
-	default:
+	cs, err := connstring.Parse(m.ConnectionURL)
+	if err != nil {
+		return "", "", err
+	}
+	if err := m.runCommandWithRetry(ctx, cs.Database, changeUserCmd); err != nil {
 		return "", "", err
 	}
 
@@ -219,11 +180,6 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 
 	statements = dbutil.StatementCompatibilityHelper(statements)
 
-	session, err := m.getConnection(ctx)
-	if err != nil {
-		return err
-	}
-
 	// If no revocation statements provided, pass in empty JSON
 	var revocationStatement string
 	switch len(statements.Revocation) {
@@ -237,7 +193,7 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 
 	// Unmarshal revocation statements into mongodbRoles
 	var mongoCS mongoDBStatement
-	err = json.Unmarshal([]byte(revocationStatement), &mongoCS)
+	err := json.Unmarshal([]byte(revocationStatement), &mongoCS)
 	if err != nil {
 		return err
 	}
@@ -248,19 +204,44 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 		db = "admin"
 	}
 
-	err = session.DB(db).RemoveUser(username)
+	dropUserCmd := &dropUserCommand{
+		Username:     username,
+		WriteConcern: writeconcern.New(writeconcern.WMajority()),
+	}
+
+	return m.runCommandWithRetry(ctx, db, dropUserCmd)
+}
+
+// RotateRootCredentials is not currently supported on MongoDB
+func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
+	return nil, errors.New("root credential rotation is not currently implemented in this database secrets engine")
+}
+
+// runCommandWithRetry runs a command and retries once more if there's a failure
+// on the first attempt. This should be called with the lock held
+func (m *MongoDB) runCommandWithRetry(ctx context.Context, db string, cmd interface{}) error {
+	// Get the client
+	client, err := m.getConnection(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Run command
+	result := client.Database(db).RunCommand(ctx, cmd, nil)
+
+	// Error check on the first attempt
+	err = result.Err()
 	switch {
-	case err == nil, err == mgo.ErrNotFound:
+	case err == nil:
+		return nil
 	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
-		if err := m.Close(); err != nil {
-			return errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
-		}
-		session, err := m.getConnection(ctx)
+		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
+		client, err = m.getConnection(ctx)
 		if err != nil {
 			return err
 		}
-		err = session.DB(db).RemoveUser(username)
-		if err != nil {
+		result = client.Database(db).RunCommand(ctx, cmd, nil)
+		if err := result.Err(); err != nil {
 			return err
 		}
 	default:
@@ -268,9 +249,4 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 	}
 
 	return nil
-}
-
-// RotateRootCredentials is not currently supported on MongoDB
-func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	return nil, errors.New("root credential rotation is not currently implemented in this database secrets engine")
 }

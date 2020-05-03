@@ -55,11 +55,15 @@ func TestTokenStore_CubbyholeDeletion(t *testing.T) {
 			Operation:   logical.UpdateOperation,
 			Path:        "create",
 			ClientToken: root,
+			Data: map[string]interface{}{
+				"ttl": "600s",
+			},
 		}
 		// Supplying token ID forces SHA1 hashing to be used
 		if i%2 == 0 {
 			tokenReq.Data = map[string]interface{}{
-				"id": "testroot",
+				"id":  "testroot",
+				"ttl": "600s",
 			}
 		}
 		resp := testMakeTokenViaRequest(t, ts, tokenReq)
@@ -111,6 +115,9 @@ func TestTokenStore_CubbyholeTidy(t *testing.T) {
 			Operation:   logical.UpdateOperation,
 			Path:        "create",
 			ClientToken: root,
+			Data: map[string]interface{}{
+				"ttl": "600s",
+			},
 		}
 
 		resp := testMakeTokenViaRequest(t, ts, tokenReq)
@@ -119,7 +126,8 @@ func TestTokenStore_CubbyholeTidy(t *testing.T) {
 		// Supplying token ID forces SHA1 hashing to be used
 		if i%3 == 0 {
 			tokenReq.Data = map[string]interface{}{
-				"id": "testroot",
+				"id":  "testroot",
+				"ttl": "600s",
 			}
 		}
 
@@ -205,7 +213,7 @@ func TestTokenStore_Salting(t *testing.T) {
 		t.Fatalf("expected sha2-256 hmac; got sha1 hash")
 	}
 
-	nsCtx := namespace.ContextWithNamespace(context.Background(), &namespace.Namespace{"testid", "ns1"})
+	nsCtx := namespace.ContextWithNamespace(context.Background(), &namespace.Namespace{ID: "testid", Path: "ns1"})
 	saltedID, err = ts.SaltID(nsCtx, "foo")
 	if err != nil {
 		t.Fatal(err)
@@ -220,57 +228,6 @@ func TestTokenStore_Salting(t *testing.T) {
 	}
 	if !strings.HasPrefix(saltedID, "h") {
 		t.Fatalf("expected sha2-256 hmac; got sha1 hash")
-	}
-}
-
-func TestTokenStore_ServiceTokenPrefix(t *testing.T) {
-	c, _, initToken := TestCoreUnsealed(t)
-	ts := c.tokenStore
-
-	// Ensure that a regular service token has a "s." prefix
-	resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
-		ClientToken: initToken,
-		Path:        "create",
-		Operation:   logical.UpdateOperation,
-	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
-	}
-	if !strings.HasPrefix(resp.Auth.ClientToken, "s.") {
-		t.Fatalf("token %q does not have a 's.' prefix", resp.Auth.ClientToken)
-	}
-
-	// Ensure that using a custon token ID results in a warning
-	resp, err = ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
-		ClientToken: initToken,
-		Path:        "create",
-		Operation:   logical.UpdateOperation,
-		Data: map[string]interface{}{
-			"id": "foobar",
-		},
-	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
-	}
-	expectedWarning := "Supplying a custom ID for the token uses the weaker SHA1 hashing instead of the more secure SHA2-256 HMAC for token obfuscation. SHA1 hashed tokens on the wire leads to less secure lookups."
-	if resp.Warnings[0] != expectedWarning {
-		t.Fatalf("expected warning not present")
-	}
-
-	// Ensure that custom token ID having a "s." prefix fails
-	resp, err = ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
-		ClientToken: initToken,
-		Path:        "create",
-		Operation:   logical.UpdateOperation,
-		Data: map[string]interface{}{
-			"id": "s.foobar",
-		},
-	})
-	if err == nil {
-		t.Fatalf("expected an error")
-	}
-	if resp.Error().Error() != "custom token ID cannot have the 's.' prefix" {
-		t.Fatalf("expected input error not present in error response")
 	}
 }
 
@@ -540,15 +497,13 @@ func getBackendConfig(c *Core) *logical.BackendConfig {
 	}
 }
 
-func testMakeBatchTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string) {
-	testMakeTokenViaBackend(t, ts, root, client, ttl, policy, true)
-}
-
 func testMakeServiceTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string) {
+	t.Helper()
 	testMakeTokenViaBackend(t, ts, root, client, ttl, policy, false)
 }
 
 func testMakeTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string, batch bool) {
+	t.Helper()
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 	if batch {
@@ -566,6 +521,7 @@ func testMakeTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl str
 }
 
 func testMakeTokenViaRequest(t testing.TB, ts *TokenStore, req *logical.Request) *logical.Response {
+	t.Helper()
 	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatal(err)
@@ -647,10 +603,6 @@ func testMakeServiceTokenViaCore(t testing.TB, c *Core, root, client, ttl string
 	testMakeTokenViaCore(t, c, root, client, ttl, policy, false, nil)
 }
 
-func testMakeBatchTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string) {
-	testMakeTokenViaCore(t, c, root, client, ttl, policy, true, nil)
-}
-
 func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string, batch bool, outAuth *logical.Auth) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
 	req.ClientToken = root
@@ -727,7 +679,7 @@ func TestTokenStore_HandleRequest_LookupAccessor(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
-	testMakeServiceTokenViaBackend(t, ts, root, "tokenid", "", []string{"foo"})
+	testMakeServiceTokenViaBackend(t, ts, root, "tokenid", "60s", []string{"foo"})
 	out, err := ts.Lookup(namespace.RootContext(nil), "tokenid")
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -765,7 +717,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 
 	testKeys := []string{"token1", "token2", "token3", "token4"}
 	for _, key := range testKeys {
-		testMakeServiceTokenViaBackend(t, ts, root, key, "", []string{"foo"})
+		testMakeServiceTokenViaBackend(t, ts, root, key, "60s", []string{"foo"})
 	}
 
 	// Revoke root to make the number of accessors match
@@ -844,7 +796,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 	}
 }
 
-func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
+func TestTokenStore_HandleRequest_Renew_Revoke_Accessor(t *testing.T) {
 	exp := mockExpiration(t)
 	ts := exp.tokenStore
 
@@ -885,7 +837,59 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-accessor")
+	lookupAccessor := func() int64 {
+		req := logical.TestRequest(t, logical.UpdateOperation, "lookup-accessor")
+		req.Data = map[string]interface{}{
+			"accessor": out.Accessor,
+		}
+		resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+		if resp.Data == nil {
+			t.Fatal("response should contain data")
+		}
+		if resp.Data["accessor"].(string) == "" {
+			t.Fatal("accessor should not be empty")
+		}
+		ttl := resp.Data["ttl"].(int64)
+		if ttl == 0 {
+			t.Fatal("ttl was zero")
+		}
+		return ttl
+	}
+
+	firstTTL := lookupAccessor()
+
+	// Sleep so we can verify renew behavior
+	time.Sleep(10 * time.Second)
+
+	secondTTL := lookupAccessor()
+	if secondTTL >= firstTTL {
+		t.Fatalf("second TTL %d was greater than first %d", secondTTL, firstTTL)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "renew-accessor")
+	req.Data = map[string]interface{}{
+		"accessor": out.Accessor,
+	}
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if resp.Auth == nil {
+		t.Fatal("resp auth is nil")
+	}
+	if resp.Auth.ClientToken != "" {
+		t.Fatal("client token found in response")
+	}
+
+	thirdTTL := lookupAccessor()
+	if thirdTTL <= secondTTL {
+		t.Fatalf("third TTL %d was not greater than second %d", thirdTTL, secondTTL)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "revoke-accessor")
 	req.Data = map[string]interface{}{
 		"accessor": out.Accessor,
 	}
@@ -2125,7 +2129,7 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	}
 	root := rootToken.ID
 
-	testMakeServiceTokenViaBackend(t, ts, root, "child", "", []string{"root", "foo"})
+	testMakeServiceTokenViaBackend(t, ts, root, "child", "60s", []string{"root", "foo"})
 
 	te, err := ts.Lookup(namespace.RootContext(nil), "child")
 	if err != nil {
@@ -2147,7 +2151,7 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "", []string{"foo"})
+	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "50s", []string{"foo"})
 
 	te, err = ts.Lookup(namespace.RootContext(nil), "sub-child")
 	if err != nil {
@@ -2201,8 +2205,8 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	}
 
 	// Now test without registering the tokens through the expiration manager
-	testMakeServiceTokenViaBackend(t, ts, root, "child", "", []string{"root", "foo"})
-	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "", []string{"foo"})
+	testMakeServiceTokenViaBackend(t, ts, root, "child", "60s", []string{"root", "foo"})
+	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "50s", []string{"foo"})
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "revoke")
 	req.Data = map[string]interface{}{
@@ -2239,8 +2243,8 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
-	testMakeServiceTokenViaBackend(t, ts, root, "child", "", []string{"root", "foo"})
-	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "", []string{"foo"})
+	testMakeServiceTokenViaBackend(t, ts, root, "child", "60s", []string{"root", "foo"})
+	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "50s", []string{"foo"})
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-orphan")
 	req.Data = map[string]interface{}{
@@ -2291,7 +2295,7 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
-	testMakeServiceTokenViaBackend(t, ts, root, "child", "", []string{"foo"})
+	testMakeServiceTokenViaBackend(t, ts, root, "child", "60s", []string{"foo"})
 
 	out, err := ts.Lookup(namespace.RootContext(nil), "child")
 	if err != nil {
@@ -2908,6 +2912,9 @@ func TestTokenStore_HandleRequest_CreateToken_NotAllowedEntityAlias(t *testing.T
 			"mount_accessor": tokenMountAccessor,
 		},
 	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
 
 	// Create token role
 	resp, err = core.HandleRequest(ctx, &logical.Request{
@@ -5574,4 +5581,88 @@ func TestTokenStore_Batch_NoCubbyhole(t *testing.T) {
 	if !resp.IsError() {
 		t.Fatalf("bad: expected error, got %#v", *resp)
 	}
+}
+
+func TestTokenStore_TokenID(t *testing.T) {
+	t.Run("no custom ID provided", func(t *testing.T) {
+		c, _, initToken := TestCoreUnsealed(t)
+		ts := c.tokenStore
+
+		// Ensure that a regular service token has a "s." prefix
+		resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: initToken,
+			Path:        "create",
+			Operation:   logical.UpdateOperation,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+		if !strings.HasPrefix(resp.Auth.ClientToken, "s.") {
+			t.Fatalf("token %q does not have a 's.' prefix", resp.Auth.ClientToken)
+		}
+	})
+
+	t.Run("plain custom ID", func(t *testing.T) {
+		core, _, root := TestCoreUnsealed(t)
+		ts := core.tokenStore
+
+		resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: root,
+			Path:        "create",
+			Operation:   logical.UpdateOperation,
+			Data: map[string]interface{}{
+				"id": "foobar",
+			},
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+
+		// Ensure that using a custom token ID results in a warning
+		expectedWarning := "Supplying a custom ID for the token uses the weaker SHA1 hashing instead of the more secure SHA2-256 HMAC for token obfuscation. SHA1 hashed tokens on the wire leads to less secure lookups."
+		if resp.Warnings[0] != expectedWarning {
+			t.Fatalf("expected warning not present")
+		}
+	})
+
+	t.Run("service token prefix in custom ID", func(t *testing.T) {
+		c, _, initToken := TestCoreUnsealed(t)
+		ts := c.tokenStore
+
+		// Ensure that custom token ID having a "s." prefix fails
+		resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: initToken,
+			Path:        "create",
+			Operation:   logical.UpdateOperation,
+			Data: map[string]interface{}{
+				"id": "s.foobar",
+			},
+		})
+		if err == nil {
+			t.Fatalf("expected an error")
+		}
+		if resp.Error().Error() != "custom token ID cannot have the 's.' prefix" {
+			t.Fatalf("expected input error not present in error response")
+		}
+	})
+
+	t.Run("period in custom ID", func(t *testing.T) {
+		core, _, root := TestCoreUnsealed(t)
+		ts := core.tokenStore
+
+		resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: root,
+			Path:        "create",
+			Operation:   logical.UpdateOperation,
+			Data: map[string]interface{}{
+				"id": "foobar.baz",
+			},
+		})
+		if err == nil {
+			t.Fatalf("expected an error")
+		}
+		if resp.Error().Error() != "custom token ID cannot have a '.' in the value" {
+			t.Fatalf("expected input error not present in error response")
+		}
+	})
 }

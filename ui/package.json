@@ -25,6 +25,7 @@
     "test:quick-oss": "yarn test:quick -f='!enterprise'",
     "build:storybook": "build-storybook -s ../pkg/web_ui",
     "storybook": "start-storybook -p 6006 -s ../pkg/web_ui",
+    "deploy:storybook": "yarn build && yarn build:storybook",
     "gen-story-md": "node scripts/gen-story-md.js"
   },
   "lint-staged": {
@@ -113,6 +114,7 @@
     "ember-svg-jar": "^2.1.0",
     "ember-test-selectors": "^2.1.0",
     "ember-truth-helpers": "^2.1.0",
+    "ember-wormhole": "^0.5.5",
     "escape-string-regexp": "^2.0.0",
     "eslint": "^6.1.0",
     "eslint-config-prettier": "^6.0.0",
@@ -129,6 +131,7 @@
     "prettier-eslint-cli": "^5.0.0",
     "qunit-dom": "^0.7.1",
     "route-recognizer": "^0.3.4",
+    "sass": "^1.25.0",
     "sass-svg-uri": "^1.0.0",
     "shell-quote": "^1.6.1",
     "string.prototype.endswith": "^0.2.0",
@@ -149,10 +152,21 @@
     "@storybook/ember": "^5.1.10",
     "babel-loader": "^8.0.6",
     "jsdoc-to-markdown": "^5.0.0",
-    "lint-staged": "^9.2.1"
+    "lint-staged": "^10.1.2"
   },
   "resolutions": {
-    "handlebars": "^4.1.2"
+    "handlebars": "^4.3.0",
+    "eslint-utils": "^1.4.1",
+    "lodash.defaultsdeep": "^4.6.1",
+    "lodash.merge": "^4.6.2",
+    "js-yaml": "^3.13.1",
+    "jquery": "^3.4.0",
+    "lodash": "^4.17.13",
+    "merge": "^1.2.1",
+    "minimatch": "^3.0.2",
+    "minimist": "^1.2.2",
+    "growl": "^1.10.0",
+    "serialize-javascript": "^2.1.1"
   },
   "engines": {
     "node": " >= 10.* <11"

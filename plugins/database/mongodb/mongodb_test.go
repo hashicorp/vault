@@ -2,14 +2,19 @@ package mongodb
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"gopkg.in/mgo.v2"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 const testMongoDBRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
@@ -152,18 +157,13 @@ func TestMongoDB_RevokeUser(t *testing.T) {
 
 func testCredsExist(t testing.TB, connURL, username, password string) error {
 	connURL = strings.Replace(connURL, "mongodb://", fmt.Sprintf("mongodb://%s:%s@", username, password), 1)
-	dialInfo, err := parseMongoURL(connURL)
-	if err != nil {
-		return err
-	}
 
-	session, err := mgo.DialWithInfo(dialInfo)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connURL))
 	if err != nil {
 		return err
 	}
-	session.SetSyncTimeout(1 * time.Minute)
-	session.SetSocketTimeout(1 * time.Minute)
-	return session.Ping()
+	return client.Ping(ctx, readpref.Primary())
 }
 
 func TestMongoDB_SetCredentials(t *testing.T) {
@@ -186,7 +186,7 @@ func TestMongoDB_SetCredentials(t *testing.T) {
 	// create the database user in advance, and test the connection
 	dbUser := "testmongouser"
 	startingPassword := "password"
-	testCreateDBUser(t, connURL, dbUser, startingPassword)
+	testCreateDBUser(t, connURL, "test", dbUser, startingPassword)
 	if err := testCredsExist(t, connURL, dbUser, startingPassword); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
@@ -219,24 +219,117 @@ func TestMongoDB_SetCredentials(t *testing.T) {
 	}
 }
 
-func testCreateDBUser(t testing.TB, connURL, username, password string) {
-	dialInfo, err := parseMongoURL(connURL)
+func testCreateDBUser(t testing.TB, connURL, db, username, password string) {
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connURL))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	session, err := mgo.DialWithInfo(dialInfo)
-	if err != nil {
-		t.Fatal(err)
-	}
-	session.SetSyncTimeout(1 * time.Minute)
-	session.SetSocketTimeout(1 * time.Minute)
-	mUser := mgo.User{
+	createUserCmd := &createUserCommand{
 		Username: username,
 		Password: password,
+		Roles:    []interface{}{},
+	}
+	result := client.Database(db).RunCommand(ctx, createUserCmd, nil)
+	if result.Err() != nil {
+		t.Fatal(result.Err())
+	}
+}
+
+func TestGetTLSAuth(t *testing.T) {
+	ca := newCert(t,
+		commonName("certificate authority"),
+		isCA(true),
+		selfSign(),
+	)
+	cert := newCert(t,
+		commonName("test cert"),
+		parent(ca),
+	)
+
+	type testCase struct {
+		username   string
+		tlsCAData  []byte
+		tlsKeyData []byte
+
+		expectOpts *options.ClientOptions
+		expectErr  bool
 	}
 
-	if err := session.DB(dialInfo.Database).UpsertUser(&mUser); err != nil {
-		t.Fatal(err)
+	tests := map[string]testCase{
+		"no TLS data set": {
+			expectOpts: nil,
+			expectErr:  false,
+		},
+		"bad CA": {
+			tlsCAData: []byte("foobar"),
+
+			expectOpts: nil,
+			expectErr:  true,
+		},
+		"bad key": {
+			tlsKeyData: []byte("foobar"),
+
+			expectOpts: nil,
+			expectErr:  true,
+		},
+		"good ca": {
+			tlsCAData: cert.pem,
+
+			expectOpts: options.Client().
+				SetTLSConfig(
+					&tls.Config{
+						RootCAs: appendToCertPool(t, x509.NewCertPool(), cert.pem),
+					},
+				),
+			expectErr: false,
+		},
+		"good key": {
+			username:   "unittest",
+			tlsKeyData: cert.CombinedPEM(),
+
+			expectOpts: options.Client().
+				SetTLSConfig(
+					&tls.Config{
+						Certificates: []tls.Certificate{cert.tlsCert},
+					},
+				).
+				SetAuth(options.Credential{
+					AuthMechanism: "MONGODB-X509",
+					Username:      "unittest",
+				}),
+			expectErr: false,
+		},
 	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			c := new()
+			c.Username = test.username
+			c.TLSCAData = test.tlsCAData
+			c.TLSCertificateKeyData = test.tlsKeyData
+
+			actual, err := c.getTLSAuth()
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			if !reflect.DeepEqual(actual, test.expectOpts) {
+				t.Fatalf("Actual:\n%#v\nExpected:\n%#v", actual, test.expectOpts)
+			}
+		})
+	}
+}
+
+func appendToCertPool(t *testing.T, pool *x509.CertPool, caPem []byte) *x509.CertPool {
+	t.Helper()
+
+	ok := pool.AppendCertsFromPEM(caPem)
+	if !ok {
+		t.Fatalf("Unable to append cert to cert pool")
+	}
+	return pool
 }

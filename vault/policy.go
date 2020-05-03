@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/hclutil"
+	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/copystructure"
 )
@@ -281,20 +282,20 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 
 		// Check the path
 		if performTemplating {
-			_, templated, err := identity.PopulateString(identity.PopulateStringInput{
-				Mode:      identity.ACLTemplating,
-				String:    key,
-				Entity:    entity,
-				Groups:    groups,
-				Namespace: result.namespace,
+			_, templated, err := identitytpl.PopulateString(identitytpl.PopulateStringInput{
+				Mode:        identitytpl.ACLTemplating,
+				String:      key,
+				Entity:      identity.ToSDKEntity(entity),
+				Groups:      identity.ToSDKGroups(groups),
+				NamespaceID: result.namespace.ID,
 			})
 			if err != nil {
 				continue
 			}
 			key = templated
 		} else {
-			hasTemplating, _, err := identity.PopulateString(identity.PopulateStringInput{
-				Mode:              identity.ACLTemplating,
+			hasTemplating, _, err := identitytpl.PopulateString(identitytpl.PopulateStringInput{
+				Mode:              identitytpl.ACLTemplating,
 				ValidityCheckOnly: true,
 				String:            key,
 			})

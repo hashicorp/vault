@@ -111,7 +111,7 @@ to the min_encryption_version configured on the key.`,
 
 			"prehashed": {
 				Type:        framework.TypeBool,
-				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
+				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
 			},
 
 			"signature_algorithm": {
@@ -193,7 +193,7 @@ Defaults to "sha2-256". Not valid for all key types.`,
 
 			"prehashed": {
 				Type:        framework.TypeBool,
-				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
+				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
 			},
 
 			"signature_algorithm": {

@@ -139,7 +139,9 @@ type SchedulerSetConfigurationResponse struct {
 
 // PreemptionConfig specifies whether preemption is enabled based on scheduler type
 type PreemptionConfig struct {
-	SystemSchedulerEnabled bool
+	SystemSchedulerEnabled  bool
+	BatchSchedulerEnabled   bool
+	ServiceSchedulerEnabled bool
 }
 
 // SchedulerGetConfiguration is used to query the current Scheduler configuration.

@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
+	metrics "github.com/armon/go-metrics"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -112,6 +114,11 @@ func (i *IdentityStore) paths() []*framework.Path {
 }
 
 func (i *IdentityStore) initialize(ctx context.Context, req *logical.InitializationRequest) error {
+	// Only primary should write the status
+	if i.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationPerformanceStandby | consts.ReplicationDRSecondary) {
+		return nil
+	}
+
 	entry, err := logical.StorageEntryJSON(caseSensitivityKey, &casesensitivity{
 		DisableLowerCasedNames: i.disableLowerCasedNames,
 	})
@@ -310,7 +317,17 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		return
 
 	case strings.HasPrefix(key, oidcTokensPrefix):
-		i.oidcCache.Flush(nil)
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			i.logger.Error("error retrieving namespace", "error", err)
+			return
+		}
+
+		// Wipe the cache for the requested namespace. This will also clear
+		// the shared namespace as well.
+		if err := i.oidcCache.Flush(ns); err != nil {
+			i.logger.Error("error flushing oidc cache", "error", err)
+		}
 	}
 }
 
@@ -463,6 +480,8 @@ func (i *IdentityStore) entityByAliasFactorsInTxn(txn *memdb.Txn, mountAccessor,
 // CreateOrFetchEntity creates a new entity. This is used by core to
 // associate each login attempt by an alias to a unified entity in Vault.
 func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.Alias) (*identity.Entity, error) {
+	defer metrics.MeasureSince([]string{"identity", "create_or_fetch_entity"}, time.Now())
+
 	var entity *identity.Entity
 	var err error
 	var update bool
