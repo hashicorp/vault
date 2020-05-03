@@ -1132,9 +1132,30 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	var testCluster TestCluster
 
-	if opts != nil && opts.Logger != nil {
+	var logDir = os.Getenv("VAULT_TEST_LOG_DIR")
+	var logFileName string
+	var logFile *os.File
+
+	switch {
+	case opts != nil && opts.Logger != nil:
 		testCluster.Logger = opts.Logger
-	} else {
+	case logDir != "":
+		// This is not ideal because t.Name does not include the package, and
+		// there's no easy way to get it.  However, at present there aren't many
+		// tests that have the same name, and from what I can see there are no
+		// duplicates that call NewTestCluster.
+		logFileName = filepath.Join(logDir, t.Name()+".log")
+		// t.Name may include slashes.
+		dir, _ := filepath.Split(logFileName)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		logFile, err = os.Create(logFileName)
+		if err != nil {
+			t.Fatal(err)
+		}
+		testCluster.Logger = logging.NewVaultLoggerWithWriter(logFile, log.Trace)
+	default:
 		testCluster.Logger = logging.NewVaultLogger(log.Trace).Named(t.Name())
 	}
 
@@ -1788,6 +1809,13 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	testCluster.CleanupFunc = func() {
 		for _, c := range cleanupFuncs {
 			c()
+		}
+		if logFile != nil {
+			if t.Failed() {
+				logFile.Close()
+			} else {
+				os.Remove(logFileName)
+			}
 		}
 	}
 	if opts != nil {
