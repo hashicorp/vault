@@ -99,7 +99,7 @@ func TestPluginReloadCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Success! Reloaded plugin/mounts: "
+		expected := "Success! Reloaded plugin: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
