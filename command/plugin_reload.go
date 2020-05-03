@@ -26,10 +26,11 @@ func (c *PluginReloadCommand) Help() string {
 	helpText := `
 Usage: vault plugin reload [options]
 
-  Reloads mounted plugin backends. Either the plugin name or the desired plugin 
-  backend mounts (mounts) must be provided, but not both.
+  Reloads mounted plugins. Either the plugin name or the desired plugin 
+  mount(s) must be provided, but not both. In case the plugin name is provided,
+  all of its corresponding mounted paths that use the plugin backend will be reloaded.
 
-  Reload the plugin named my-custom-plugin:
+  Reload the plugin named "my-custom-plugin":
 
 	  $ vault plugin reload -plugin=my-custom-plugin
 
@@ -99,6 +100,11 @@ func (c *PluginReloadCommand) Run(args []string) int {
 		return 2
 	}
 
-	c.UI.Output(fmt.Sprintf("Success! Reloaded plugin/mounts: %s%s", c.plugin, c.mounts))
+	if len(c.mounts) > 0 {
+		c.UI.Output(fmt.Sprintf("Success! Reloaded mounts: %s", c.mounts))
+	} else {
+		c.UI.Output(fmt.Sprintf("Success! Reloaded plugin: %s", c.plugin))
+	}
+
 	return 0
 }
