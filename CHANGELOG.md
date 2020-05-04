@@ -14,6 +14,7 @@ CHANGES:
 IMPROVEMENTS:
 
 * secrets/gcp: Support BigQuery dataset ACLs in absence of IAM endpoints [[GH-78](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/78)]
+* sdk/framework: Support accepting TypeFloat parameters over the API [[GH-8923](https://github.com/hashicorp/vault/pull/8923)]
 
 BUG FIXES:
 
