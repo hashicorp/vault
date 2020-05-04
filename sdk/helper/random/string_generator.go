@@ -173,9 +173,9 @@ func randomRunes(rng io.Reader, charset []rune, length int) (candidate []rune, e
 	// equals 4:
 	//   256/63 => 4.06
 	//   Trunc(4.06) => 4
-	// Multiply the multiplier by the charset length to get the maximum value we can generate to avoid bias: 252
-	// maxAllowedRNGValue := (maxCharsetLen / len(charset)) * len(charset)
-	maxAllowedRNGValue := len(charset) - 1
+	// Multiply by the charset length
+	// Subtract 1 to account for 0-based counting and you get the max index value: 251
+	maxAllowedRNGValue := (maxCharsetLen/len(charset))*len(charset) - 1
 
 	// rngBufferMultiplier increases the size of the RNG buffer to account for lost
 	// indexes due to the maxAllowedRNGValue
@@ -205,16 +205,16 @@ func randomRunes(rng io.Reader, charset []rune, length int) (candidate []rune, e
 
 		// Append characters until either we're out of indexes or the length is long enough
 		for i := 0; i < numBytes; i++ {
-			// If the max allowed value is equal to the max byte size, we don't need to do any checking
-			// If we don't check this, the conversion of `byte(maxAllowedRNGValue)` may wrap from 256 -> 0
-			if maxAllowedRNGValue < maxCharsetLen {
-				if data[i] > byte(maxAllowedRNGValue) {
-					continue
-				}
+			if data[i] > byte(maxAllowedRNGValue) {
+				continue
 			}
 
-			// r := charset[data[i]%byte(len(charset))]
-			r := charset[data[i]%charsetLen]
+			// Be careful about byte conversions - you don't want 256 to wrap to 0
+			index := data[i]
+			if len(charset) != maxCharsetLen {
+				index = index % charsetLen
+			}
+			r := charset[index]
 			runes = append(runes, r)
 
 			if len(runes) == length {

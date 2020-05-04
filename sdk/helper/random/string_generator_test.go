@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	MRAND "math/rand"
 	"reflect"
 	"sort"
@@ -183,13 +184,6 @@ func TestStringGenerator_Generate_errors(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			// sg := StringGenerator{
-			// 	Length:  20,
-			// 	charset: []rune(test.charset),
-			// 	Rules:   test.rules,
-			// 	rng:     test.rng,
-			// }
-
 			// One context to rule them all, one context to find them, one context to bring them all and in the darkness bind them.
 			ctx, cancel := context.WithTimeout(context.Background(), test.timeout)
 			defer cancel()
@@ -226,7 +220,7 @@ func TestRandomRunes_deterministic(t *testing.T) {
 			rngSeed:  1585593298447807001,
 			charset:  AlphaNumericShortSymbolCharset,
 			length:   20,
-			expected: "1ON6lVjnBs84zJbUBVEz",
+			expected: "ON6lVjnBs84zJbUBVEzb",
 		},
 		"max size charset": {
 			rngSeed: 1585593298447807002,
@@ -729,3 +723,101 @@ func TestDeduplicateRunes(t *testing.T) {
 		})
 	}
 }
+
+func TestRandomRunes_Bias(t *testing.T) {
+	type testCase struct {
+		charset   []rune
+		maxStdDev float64
+	}
+
+	tests := map[string]testCase{
+		"small charset": {
+			charset:   []rune("abcde"),
+			maxStdDev: 2700,
+		},
+		"lowercase characters": {
+			charset:   LowercaseRuneset,
+			maxStdDev: 1000,
+		},
+		"alphabetical characters": {
+			charset:   AlphabeticRuneset,
+			maxStdDev: 800,
+		},
+		"alphanumeric": {
+			charset:   AlphaNumericRuneset,
+			maxStdDev: 800,
+		},
+		"alphanumeric with symbol": {
+			charset:   AlphaNumericShortSymbolRuneset,
+			maxStdDev: 800,
+		},
+		"charset evenly divisible into 256": {
+			charset:   append(AlphaNumericRuneset, '!', '@'),
+			maxStdDev: 800,
+		},
+		"large charset": {
+			charset:   FullSymbolRuneset,
+			maxStdDev: 800,
+		},
+		"just under half size charset": {
+			charset: []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" +
+				"`abcdefghijklmnopqrstuvwxyz{|}~ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğ"),
+			maxStdDev: 800,
+		},
+		"half size charset": {
+			charset: []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" +
+				"`abcdefghijklmnopqrstuvwxyz{|}~ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠ"),
+			maxStdDev: 800,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(fmt.Sprintf("%s (%d chars)", name, len(test.charset)), func(t *testing.T) {
+			runeCounts := map[rune]int{}
+
+			generations := 50000
+			length := 100
+			for i := 0; i < generations; i++ {
+				str, err := randomRunes(nil, test.charset, length)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, r := range str {
+					runeCounts[r]++
+				}
+			}
+
+			chars := charCounts{}
+
+			var sum float64
+			for r, count := range runeCounts {
+				chars = append(chars, charCount{r, count})
+				sum += float64(count)
+			}
+
+			mean := sum / float64(len(runeCounts))
+			var stdDev float64
+			for _, count := range runeCounts {
+				stdDev += math.Pow(float64(count)-mean, 2)
+			}
+
+			stdDev = math.Sqrt(stdDev / float64(len(runeCounts)))
+			t.Logf("Mean  : %10.4f", mean)
+
+			if stdDev > test.maxStdDev {
+				t.Fatalf("Standard deviation is too large: %.2f > %.2f", stdDev, test.maxStdDev)
+			}
+		})
+	}
+}
+
+type charCount struct {
+	r     rune
+	count int
+}
+
+type charCounts []charCount
+
+func (s charCounts) Len() int           { return len(s) }
+func (s charCounts) Less(i, j int) bool { return s[i].r < s[j].r }
+func (s charCounts) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
