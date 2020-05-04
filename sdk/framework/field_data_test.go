@@ -802,6 +802,39 @@ func TestFieldDataGet(t *testing.T) {
 			"foo",
 			http.Header{},
 		},
+
+		"float type, positive with decimals, as string": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeFloat},
+			},
+			map[string]interface{}{
+				"foo": "1234567.891234567",
+			},
+			"foo",
+			1234567.891234567,
+		},
+
+		"float type, negative with decimals, as string": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeFloat},
+			},
+			map[string]interface{}{
+				"foo": "-1234567.891234567",
+			},
+			"foo",
+			-1234567.891234567,
+		},
+
+		"float type, positive without decimals": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeFloat},
+			},
+			map[string]interface{}{
+				"foo": 1234567,
+			},
+			"foo",
+			1234567.0,
+		},
 	}
 
 	for name, tc := range cases {
