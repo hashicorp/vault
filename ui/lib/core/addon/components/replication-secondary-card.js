@@ -7,31 +7,24 @@ export default Component.extend({
   layout,
   title: null,
   replicationDetails: null,
-  state: computed('replicationDetails', function() {
+  state: computed('replicationDetails.{state}', function() {
     return this.replicationDetails && this.replicationDetails.state
       ? this.replicationDetails.state
       : 'unknown';
   }),
-  connection: computed('replicationDetails', function() {
+  connection: computed('replicationDetails.{connection_state}', function() {
     return this.replicationDetails.connection_state ? this.replicationDetails.connection_state : 'unknown';
   }),
-  lastWAL: computed('replicationDetails', function() {
-    return this.replicationDetails && this.replicationDetails.lastWAL ? this.replicationDetails.lastWAL : 0;
-  }),
-  lastRemoteWAL: computed('replicationDetails', function() {
+  lastRemoteWAL: computed('replicationDetails.{lastRemoteWAL}', function() {
     return this.replicationDetails && this.replicationDetails.lastRemoteWAL
       ? this.replicationDetails.lastRemoteWAL
       : 0;
-  }),
-  delta: computed('replicationDetails', function() {
-    return Math.abs(this.get('lastWAL') - this.get('lastRemoteWAL'));
   }),
   inSyncState: computed('state', function() {
     // if our definition of what is considered 'synced' changes,
     // we should use the clusterStates helper instead
     return this.state === 'stream-wals';
   }),
-
   hasErrorClass: computed('replicationDetails', 'title', 'state', 'connection', function() {
     const { title, state, connection } = this;
 
@@ -42,5 +35,8 @@ export default Component.extend({
       return !(currentClusterisOk && primaryIsOk);
     }
     return false;
+  }),
+  primaryClusterAddr: computed('replicationDetails.{primaryClusterAddr}', function() {
+    return this.replicationDetails.primaryClusterAddr;
   }),
 });

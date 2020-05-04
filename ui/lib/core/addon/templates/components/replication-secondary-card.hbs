@@ -1,7 +1,7 @@
 <div class="selectable-card is-rounded card-container {{if hasErrorClass "has-border-danger"}}">
   {{!-- Check if State or WAL Card --}}
   {{#if (eq title "States")}}
-    <h3 class="title is-5 grid-item-title card-title">{{title}}</h3>
+    <h3 class="title is-4 grid-item-title card-title">{{title}}</h3>
     <div class="grid-item-left">
       {{#if (get (cluster-states state) "isOk")}}
         <h6 class="title is-6">state</h6>
@@ -45,34 +45,27 @@
     </h2>
     <h2 class="title is-3 grid-item-right-bottom">{{connection}}</h2>
   {{else}}
-    <h3 class="title is-5 grid-item-title card-title">{{title}}
-      <ToolTip @verticalPosition="above" @closeDelay="2000ms" as |T|>
-        <T.trigger>
-          <Icon @glyph={{"check-circle-outline" }} @size="m" class={{"has-text-grey"}} />
-        </T.trigger>
-        <T.content @class="tool-tip">
-          <div class="box">
-            There may be a difference between last remote WAL and last WAL entry from primary. If it persists over time,
-            investigate.
-            <LearnLink @path="/vault/operations/monitor-replication#are-my-dr-clusters-in-sync" @class="has-text-white">
-              Learn more
-            </LearnLink>
-          </div>
-        </T.content>
-      </ToolTip>
-    </h3>
+    <h3 class="title is-4 grid-item-title card-title" id="meep">{{title}}</h3>
     <div class="grid-item-left">
-      <h6 class="title is-6">Delta</h6>
-      <p class="has-text-grey is-size-8">The difference between the last remote WAL and the last WAL entry from the primary.</p>
+      <h6 class="title is-6">last_remote_wal</h6>
+      <p class="has-text-grey is-size-8">The last Write-Ahead Log (WAL) index that the secondary received from the primary.</p>
     </div>
     <div class="grid-item-right">
-      <h6 class="title is-6">last_wal</h6>
-      <p class="has-text-grey is-size-8">{{lastWAL}}</p>
+      <h6 class="title is-6">primary_cluster_addr</h6>
+      <span>
+        <a
+          href={{primaryClusterAddr}}
+          class="link"
+          target="_blank"
+          rel="noreferrer noopener" 
+        >
+          {{primaryClusterAddr}}
+        </a>
+      </span>
     </div>
-    <code class="title is-3 grid-item-left-bottom">{{format-number delta}}</code>
+    <h2 class="title is-3 grid-item-left-bottom">{{format-number lastRemoteWAL}}</h2>
     <div class="grid-item-right-bottom">
-      <h6 class="title is-6">last_remote_wal</h6>
-      <p class="has-text-grey is-size-8">{{lastRemoteWAL}}</p>
+        {{!-- Empty --}}
     </div>
   {{/if}}
 </div>

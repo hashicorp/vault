@@ -1,18 +1,4 @@
 <div class="replication-dashboard box is-sideless is-fullwidth is-marginless">
-  {{#if isSecondary}}
-    <h2 class="has-text-weight-semibold is-size-4 has-bottom-margin-xs">
-        Primary Cluster
-    </h2>
-    <p class="has-text-grey is-size-8">
-      If you set a primary_cluster_addr when enabling replication, it will appear here.
-    </p>
-    {{#if replicationDetails.primaryClusterAddr}}
-      <code>{{replicationDetails.primaryClusterAddr}}</code>
-    {{else}}
-      <code>no known primary cluster address</code>
-    {{/if}}
-  {{/if}}
-
   {{!-- TODO check for actual reindexing status --}}
   {{#if isReindexing}}
     <AlertBanner
