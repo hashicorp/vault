@@ -835,6 +835,15 @@ func TestFieldDataGet(t *testing.T) {
 			"foo",
 			1234567.0,
 		},
+
+		"type float, not supplied": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeFloat},
+			},
+			map[string]interface{}{},
+			"foo",
+			0.0,
+		},
 	}
 
 	for name, tc := range cases {
