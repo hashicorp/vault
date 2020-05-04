@@ -48,7 +48,10 @@ func (se *StatementEntries) UnmarshalJSON(b []byte) error {
 
 // getGroupPolicies takes a list of IAM Group names and returns a list of their
 // inline policy documents, and a list of the attached managed policy ARNs
-func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGroups []string) (groupPolicies []string, groupPolicyARNs []string, err error) {
+func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGroups []string) ([]string, []string, error) {
+	var groupPolicies []string
+	var groupPolicyARNs []string
+	var err error
 	var agp *iam.ListAttachedGroupPoliciesOutput
 	var inlinePolicies *iam.ListGroupPoliciesOutput
 	var inlinePolicyDoc *iam.GetGroupPolicyOutput
@@ -60,7 +63,7 @@ func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGr
 	}
 
 	for _, g := range iamGroups {
-		// Collect managed policy ARNs from configured IAM Groups
+		// Collect managed policy ARNs from the IAM Group
 		agp, err = iamClient.ListAttachedGroupPolicies(&iam.ListAttachedGroupPoliciesInput{
 			GroupName: aws.String(g),
 		})
@@ -71,7 +74,7 @@ func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGr
 			groupPolicyARNs = append(groupPolicyARNs, *p.PolicyArn)
 		}
 
-		// Collect inline policy names from configured IAM Groups
+		// Collect inline policy names from the IAM Group
 		inlinePolicies, err = iamClient.ListGroupPolicies(&iam.ListGroupPoliciesInput{
 			GroupName: aws.String(g),
 		})
@@ -95,7 +98,7 @@ func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGr
 			}
 		}
 	}
-	return
+	return groupPolicies, groupPolicyARNs, nil
 }
 
 // combinePolicyDocuments takes policy strings as input, and combines them into
