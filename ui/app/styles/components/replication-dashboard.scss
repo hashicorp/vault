@@ -23,7 +23,7 @@
 
     .card-container {
       display: grid;
-      grid-gap: 2rem;
+      grid-gap: 1rem;
       grid-template-columns: 1fr 1fr;
       grid-template-rows: 1fr 1fr 0.8fr;
       padding: $spacing-l;
