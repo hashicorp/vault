@@ -8,7 +8,6 @@ export default Component.extend({
   data: null,
   replicationDetails: null,
   isSecondary: null,
-  dr: null,
   isSyncing: computed('replicationDetails', 'isSecondary', function() {
     const { state } = this.replicationDetails;
     const isSecondary = this.isSecondary;
@@ -26,5 +25,18 @@ export default Component.extend({
       return `: ${stage}`;
     }
     return '';
+  }),
+  reindexingProgress: computed('replicationDetails', function() {
+    // TODO: use this value to display a progress bar
+    const { replicationDetails } = this;
+    const { reindex_building_progress, reindex_building_total } = replicationDetails;
+    let progress = '';
+
+    if (reindex_building_progress && reindex_building_total) {
+      // convert progress to a percentage
+      progress = (reindex_building_progress / reindex_building_total) * 100;
+    }
+
+    return progress;
   }),
 });
