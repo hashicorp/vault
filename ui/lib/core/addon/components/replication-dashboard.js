@@ -14,8 +14,17 @@ export default Component.extend({
     const isSecondary = this.isSecondary;
     return isSecondary && state && clusterStates([state]).isSyncing;
   }),
-  isReindexing: computed('data', function() {
-    // TODO: make this a real value
-    return false;
+  isReindexing: computed('replicationDetails', function() {
+    const { replicationDetails } = this;
+    return !!replicationDetails.reindex_in_progress;
+  }),
+  reindexingStage: computed('replicationDetails', function() {
+    const { replicationDetails } = this;
+    const stage = replicationDetails.reindex_stage;
+    // specify the stage if we have one
+    if (stage) {
+      return `: ${stage}`;
+    }
+    return '';
   }),
 });

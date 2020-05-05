@@ -16,7 +16,7 @@
   {{!-- TODO check for actual reindexing status --}}
   {{#if isReindexing}}
     <AlertBanner
-      @title="Re-indexing in progress: Scanning"
+      @title={{concat "Re-indexing in progress" reindexingStage}}
       @type="info"
       @secondIconType="loading"
       @message="This can cause a delay depending on the size of the data store. You can use Vault during this time."/>
