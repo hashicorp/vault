@@ -332,7 +332,6 @@
     <p>{{cluster.replicationModeStatus.cluster_id}}</p>
     <div class="replication">
       <ReplicationPage @model={{cluster}} as |Page|>
-        <Page.toggle />
         <Page.dashboard @data={{cluster}} @componentToRender='replication-primary-card' as |Dashboard|>
           <Dashboard.card
             @title='State'
