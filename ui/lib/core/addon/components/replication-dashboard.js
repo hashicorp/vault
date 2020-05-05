@@ -1,6 +1,7 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { clusterStates } from 'core/helpers/cluster-states';
+import { capitalize } from '@ember/string';
 import layout from '../templates/components/replication-dashboard';
 
 export default Component.extend({
@@ -22,7 +23,7 @@ export default Component.extend({
     const stage = replicationDetails.reindex_stage;
     // specify the stage if we have one
     if (stage) {
-      return `: ${stage}`;
+      return `: ${capitalize(stage)}`;
     }
     return '';
   }),
@@ -30,7 +31,7 @@ export default Component.extend({
     // TODO: use this value to display a progress bar
     const { replicationDetails } = this;
     const { reindex_building_progress, reindex_building_total } = replicationDetails;
-    let progress = '';
+    let progress = 0;
 
     if (reindex_building_progress && reindex_building_total) {
       // convert progress to a percentage
