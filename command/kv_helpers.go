@@ -51,7 +51,19 @@ func kvPreflightVersionRequest(client *api.Client, path string) (string, int, er
 	client.SetOutputCurlString(false)
 	defer client.SetOutputCurlString(currentOutputCurlString)
 
-	r := client.NewRequest("GET", "/v1/sys/internal/ui/mounts/"+path)
+	namespace, err := namespaceCheck(client, path)
+	if err != nil {
+		return "", 0, err
+	}
+
+	internalUIMountsPath := "/v1/sys/internal/ui/mounts/" + path
+
+	// If a namespace is found, construct the proper path for the sys/internal/ui/mounts request
+	if namespace != "" {
+		internalUIMountsPath = "/v1/" + namespace + "sys/internal/ui/mounts/" + strings.TrimPrefix(path, namespace)
+	}
+
+	r := client.NewRequest("GET", internalUIMountsPath)
 	resp, err := client.RawRequest(r)
 	if resp != nil {
 		defer resp.Body.Close()
@@ -94,6 +106,66 @@ func kvPreflightVersionRequest(client *api.Client, path string) (string, int, er
 	}
 
 	return mountPath, 1, nil
+}
+
+func namespaceCheck(client *api.Client, path string) (string, error) {
+	// Since this check requires a client token, we can short-circuit if the
+	// client does not have one.
+	if client.Token() == "" {
+		return "", nil
+	}
+
+	// We don't want to use a wrapping call here so save any custom value and
+	// restore after
+	currentWrappingLookupFunc := client.CurrentWrappingLookupFunc()
+	client.SetWrappingLookupFunc(nil)
+	defer client.SetWrappingLookupFunc(currentWrappingLookupFunc)
+	currentOutputCurlString := client.OutputCurlString()
+	client.SetOutputCurlString(false)
+	defer client.SetOutputCurlString(currentOutputCurlString)
+
+	// Make a request against internal/ui/namespaces to check whether the path
+	// contains a provided namespace
+	r := client.NewRequest("GET", "/v1/sys/internal/ui/namespaces")
+	resp, err := client.RawRequest(r)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		// If we get a 404 we are using an older version of vault, so we
+		// return immediately with no namespace nor error.
+		if resp != nil && resp.StatusCode == 404 {
+			return "", nil
+		}
+
+		return "", err
+	}
+
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+
+	secret, err := api.ParseSecret(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	if secret == nil {
+		return "", errors.New("nil response from namespace check request")
+	}
+	namespaces := secret.Data["keys"].([]interface{})
+
+	var retNamespace string
+	// Iterate through the keys and return the longest prefix match
+	// as the namespace. The keys are returned in sorted order.
+	for _, ns := range namespaces {
+		if nsStr, ok := ns.(string); ok {
+			if strings.HasPrefix(path, nsStr) {
+				retNamespace = nsStr
+			}
+		}
+	}
+
+	return retNamespace, nil
 }
 
 func isKVv2(path string, client *api.Client) (string, bool, error) {
