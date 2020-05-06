@@ -111,21 +111,21 @@ storage "raft" {
   node_id = "node1"
   retry_join {
     leader_api_addr = "http://127.0.0.2:8200"
-    leader_ca_cert = "/path/to/ca1"
-    leader_client_cert = "/path/to/client/cert1"
-    leader_client_key = "/path/to/client/key1"
+    leader_ca_cert = "ca_crt_data1"
+    leader_client_cert = "client_cert_data1"
+    leader_client_key = "client_key_data1"
   }
   retry_join {
     leader_api_addr = "http://127.0.0.3:8200"
-    leader_ca_cert = "/path/to/ca2"
-    leader_client_cert = "/path/to/client/cert2"
-    leader_client_key = "/path/to/client/key2"
+    leader_ca_cert = "ca_crt_data2"
+    leader_client_cert = "client_cert_data2"
+    leader_client_key = "client_key_data2"
   }
   retry_join {
     leader_api_addr = "http://127.0.0.4:8200"
-    leader_ca_cert = "/path/to/ca3"
-    leader_client_cert = "/path/to/client/cert3"
-    leader_client_key = "/path/to/client/key3"
+    leader_ca_cert = "ca_crt_data3"
+    leader_client_cert = "client_cert_data3"
+    leader_client_key = "client_key_data3"
   }
 }
 ```
