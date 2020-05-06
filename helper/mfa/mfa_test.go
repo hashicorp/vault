@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	logicaltest "github.com/hashicorp/vault/sdk/acctest"
+	logicaltest "github.com/hashicorp/vault/sdk/testing/stepwise"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )

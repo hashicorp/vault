@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
-	logicaltest "github.com/hashicorp/vault/sdk/acctest"
+	logicaltest "github.com/hashicorp/vault/sdk/testing/stepwise"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
