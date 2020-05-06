@@ -29,8 +29,7 @@ export default Component.extend({
   }),
   reindexingProgress: computed('replicationDetails', function() {
     // TODO: use this value to display a progress bar
-    const { replicationDetails } = this;
-    const { reindex_building_progress, reindex_building_total } = replicationDetails;
+    const { reindex_building_progress, reindex_building_total } = this.replicationDetails;
     let progress = 0;
 
     if (reindex_building_progress && reindex_building_total) {
