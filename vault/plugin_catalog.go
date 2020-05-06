@@ -53,6 +53,8 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 		c.logger.Error("error while upgrading plugin storage", "error", err)
 	}
 
+	// TODO: Start the cleanup goroutine
+
 	if c.logger.IsInfo() {
 		c.logger.Info("successfully setup plugin catalog", "plugin-directory", c.pluginDirectory)
 	}

@@ -441,12 +441,12 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 	}
 
 	if pluginName != "" {
-		err := b.Core.reloadMatchingPlugin(ctx, pluginName)
+		err := b.Core.reloadMatchingPlugin(ctx, pluginName, time.Now())
 		if err != nil {
 			return nil, err
 		}
 	} else if len(pluginMounts) > 0 {
-		err := b.Core.reloadMatchingPluginMounts(ctx, pluginMounts)
+		err := b.Core.reloadMatchingPluginMounts(ctx, pluginMounts, time.Now())
 		if err != nil {
 			return nil, err
 		}

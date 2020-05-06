@@ -232,6 +232,8 @@ type MountEntry struct {
 	// without separately managing their locks individually. See SyncCache() for
 	// the specific values that are being cached.
 	synthesizedConfigCache sync.Map
+
+	StartedTime time.Time
 }
 
 // MountConfig is used to hold settable options
@@ -1287,6 +1289,9 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		return nil, fmt.Errorf("nil backend of type %q returned from factory", t)
 	}
 	addLicenseCallback(c, b)
+
+	// Note the start time now that this mount's backend is configured
+	entry.StartedTime = time.Now()
 
 	return b, nil
 }
