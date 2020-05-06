@@ -4,7 +4,7 @@ import { currentURL, visit } from '@ember/test-helpers';
 
 import authPage from 'vault/tests/pages/auth';
 
-module('Acceptance | DR secondary details', function(hooks) {
+module('Acceptance | Enterprise | DR secondary details', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
