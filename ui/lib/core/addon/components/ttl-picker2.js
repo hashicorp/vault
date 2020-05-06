@@ -16,7 +16,8 @@
  * @param time=30 {Number} - The time (in the default units) which will be adjustable by the user of the form
  * @param unit="s" {String} - This is the unit key which will show by default on the form. Can be one of `s` (seconds), `m` (minutes), `h` (hours), `d` (days)
  * @param recalculationTimeout=5000 {Number} - This is the time, in milliseconds, that `recalculateSeconds` will be be true after time is updated
- * @param initialValue {String} - This is the value set initially (particularly from a string like '30h')
+ * @param initialValue=null {String} - This is the value set initially (particularly from a string like '30h')
+ * @param initialEnabled=null {Boolean} - Set this value if you want the toggle on when component is mounted
  */
 
 import Ember from 'ember';
@@ -55,12 +56,17 @@ export default Component.extend({
   init() {
     this._super(...arguments);
     const value = this.initialValue;
+    const enable = this.initialEnabled;
     // if initial value is unset use params passed in as defaults
     if (!value && value !== 0) {
       return;
     }
 
     let seconds = 30;
+    let setEnable = this.enableTTL;
+    if (typeOf(enable) === 'boolean') {
+      setEnable = enable;
+    }
     if (typeOf(value) === 'number') {
       seconds = value;
     } else {
@@ -74,8 +80,10 @@ export default Component.extend({
     this.setProperties({
       time: seconds,
       unit: 's',
+      enableTTL: setEnable,
     });
   },
+
   unitOptions: computed(function() {
     return [
       { label: 'seconds', value: 's' },
