@@ -17,14 +17,13 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
-    this.set('replicationDetails', REPLICATION_DETAILS);
-    this.set('replicationDetailsSyncing', REPLICATION_DETAILS_SYNCING);
-    this.set('componentToRender', 'replication-secondary-card');
     this.set('clusterMode', 'secondary');
     this.set('isSecondary', true);
   });
 
   test('it renders', async function(assert) {
+    this.set('replicationDetails', REPLICATION_DETAILS);
+
     await render(hbs`<ReplicationDashboard
     @replicationDetails={{replicationDetails}}
     @clusterMode={{clusterMode}}
@@ -43,11 +42,14 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
     assert.dom('[data-test-flash-message]').doesNotExist('no flash message is displayed on render');
   });
 
-  test('it renders alert banner if state is merkle-diff and isSecondary', async function(assert) {
+  test('it renders an alert banner if the dashboard is syncing', async function(assert) {
+    this.set('componentToRender', 'replication-secondary-card');
+    this.set('replicationDetailsSyncing', REPLICATION_DETAILS_SYNCING);
+
     await render(hbs`<ReplicationDashboard 
     @replicationDetails={{replicationDetailsSyncing}} 
     @clusterMode={{clusterMode}}
-    @isSecondary={{true}}
+    @isSecondary={{isSecondary}}
     @componentToRender={{componentToRender}}
     />`);
 
