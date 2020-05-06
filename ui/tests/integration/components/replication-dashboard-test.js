@@ -53,5 +53,6 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
     />`);
 
     assert.dom('[data-test-isSyncing]').exists();
+    assert.dom('[data-test-isReindexing]').doesNotExist();
   });
 });
