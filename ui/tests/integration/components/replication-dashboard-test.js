@@ -25,33 +25,22 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
   });
 
   test('it renders', async function(assert) {
-    await render(hbs`<ReplicationDashboard 
-    @replicationDetails={{replicationDetails}} 
-    />`);
-
-    assert.dom('[data-test-replication-dashboard]').exists();
-  });
-
-  test('it renders table rows', async function(assert) {
-    await render(hbs`<ReplicationDashboard @replicationDetails={{replicationDetails}}/>`);
-    assert.dom('[data-test-table-rows').exists();
-  });
-
-  test('it renders with primary cluster address when set, and documentation link', async function(assert) {
-    await render(hbs`<ReplicationDashboard 
-    @replicationDetails={{replicationDetails}} 
+    await render(hbs`<ReplicationDashboard
+    @replicationDetails={{replicationDetails}}
     @clusterMode={{clusterMode}}
     @isSecondary={{isSecondary}}
     />`);
 
+    assert.dom('[data-test-replication-dashboard]').exists();
+    assert.dom('[data-test-table-rows').exists();
     assert
       .dom('[data-test-primary-cluster-address]')
       .includesText(
         REPLICATION_DETAILS.primaryClusterAddr,
         `shows the correct primary cluster address value`
       );
-
     assert.dom('[data-test-replication-doc-link]').exists();
+    assert.dom('[data-test-flash-message]').doesNotExist('no flash message is displayed on render');
   });
 
   test('it renders alert banner if state is merkle-diff and isSecondary', async function(assert) {

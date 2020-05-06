@@ -6,7 +6,7 @@
         />
         {{#if Page.isDisabled}}
           <EmptyState
-            @title="Disaster Recovery secondary not set up"
+            @title="{{Page.replicationMode}} secondary not set up"
             @message={{Page.message}}
             @icon="alert-circle-outline"
             @bottomBorder={{true}}

@@ -51,8 +51,16 @@ module('Acceptance | Enterprise | replication', function(hooks) {
 
     // confirm unable to visit dr secondary details page when both replications are disabled
     await visit('/vault/replication-dr-promote/details');
-    await settled();
     assert.dom('[data-test-component="empty-state"]').exists();
+    assert
+      .dom('[data-test-empty-state-title]')
+      .includesText('Disaster Recovery secondary not set up', 'shows the correct title of the empty state');
+
+    assert.equal(
+      find('[data-test-empty-state-message]').textContent.trim(),
+      'This cluster has not been enabled as a Disaster Recovery Secondary. You can do so by enabling replication and adding a secondary from the Disaster Recovery Primary.',
+      'renders default message specific to when no replication is enabled'
+    );
 
     await visit('/vault/replication');
     assert.equal(currentURL(), '/vault/replication');
@@ -141,6 +149,12 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await pollCluster(this.owner);
     // empty state inside of know secondaries table
     assert.dom('[data-test-empty-state-title]').exists();
+    assert
+      .dom('[data-test-empty-state-title]')
+      .includesText(
+        'No known dr secondary clusters associated with this cluster',
+        'shows the correct title of the empty state'
+      );
 
     assert.ok(
       find('[data-test-replication-title]').textContent.includes('Disaster Recovery'),
@@ -182,12 +196,6 @@ module('Acceptance | Enterprise | replication', function(hooks) {
   });
 
   test('navigating to dr secondary details page', async function(assert) {
-    await visit('vault/replication/performance');
-    // enable perf replication
-    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
-    await click('[data-test-replication-enable]');
-    await pollCluster(this.owner);
-
     // enable dr replication
     await visit('/vault/replication/dr');
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
@@ -195,7 +203,11 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await pollCluster(this.owner);
 
     await visit('/vault/replication-dr-promote/details');
-    await settled();
     assert.dom('[data-test-component="empty-state"]').exists();
+    assert.equal(
+      find('[data-test-empty-state-message]').textContent.trim(),
+      'This Disaster Recovery secondary has not been enabled.  You can do so from the Disaster Recovery Primary.',
+      'renders default message specific to when no replication is enabled'
+    );
   });
 });

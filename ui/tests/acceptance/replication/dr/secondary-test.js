@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { pauseTest, currentURL, visit } from '@ember/test-helpers';
+import { currentURL, visit } from '@ember/test-helpers';
 
 import authPage from 'vault/tests/pages/auth';
 
@@ -13,7 +13,6 @@ module('Acceptance| Enterprise | DR secondary details', function(hooks) {
 
   test('it visits the Secondary Disaster Recovery Details page', async function(assert) {
     await visit('/vault/replication-dr-promote/details');
-    await pauseTest();
     assert.equal(currentURL(), '/vault/replication-dr-promote/details');
   });
 });

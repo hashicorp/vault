@@ -15,7 +15,7 @@
     </div>
     <div class="grid-item-right">
       {{#if (eq connection "transient_failure")}}
-        <h6 class="title is-6 has-text-danger">connection_state</h6>
+        <h6 class="title is-6 has-text-danger" data-test-error>connection_state</h6>
         <AlertInline
           @type="danger"
           @message="There has been some transient failure.  Your cluster will eventually switch back to connection and try to establish a connection again." />

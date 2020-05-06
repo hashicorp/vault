@@ -20,8 +20,8 @@ const STATE_ERROR = {
 };
 
 const CONNECTION_ERROR = {
-  state: 'idle',
-  connection_state: 'transient-failure',
+  state: 'stream-wals',
+  connection_state: 'transient_failure',
   lastWAL: 0,
   lastRemoteWAL: 10,
   delta: 10,
@@ -80,11 +80,20 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
 
   test('it renders hasErrorMessage when state is idle', async function(assert) {
     await render(hbs`<ReplicationSecondaryCard @replicationDetails={{stateError}} @title={{title}} />`);
-    assert.dom('[data-test-error]').hasClass('has-text-danger', `shows error class`);
+    assert.dom('[data-test-error]').includesText('state', 'show correct error title');
+    assert
+      .dom('[data-test-inline-error-message]')
+      .includesText('Please check your server logs.', 'show correct error message');
   });
 
-  test('it renders hasErrorMessage when connection is shutdown', async function(assert) {
+  test('it renders hasErrorMessage when connection is transient_failure', async function(assert) {
     await render(hbs`<ReplicationSecondaryCard @replicationDetails={{connectionError}} @title={{title}} />`);
-    assert.dom('[data-test-error]').hasClass('has-text-danger', `shows error class`);
+    assert.dom('[data-test-error]').includesText('connection_state', 'show correct error title');
+    assert
+      .dom('[data-test-inline-error-message]')
+      .includesText(
+        'There has been some transient failure.  Your cluster will eventually switch back to connection and try to establish a connection again.',
+        'show correct error message'
+      );
   });
 });
