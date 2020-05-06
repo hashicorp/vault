@@ -1,4 +1,4 @@
-package acctest
+package stepwise
 
 import (
 	"context"
