@@ -69,7 +69,7 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
   test('it renders hasErrorMessage when state is idle', async function(assert) {
     this.set('stateError', STATE_ERROR);
     await render(
-      hbs`<ReplicationSecondaryCard @replicationDetails={{stateError}} @title={{title}} @hasErrorClass={{true}}>`
+      hbs`<ReplicationSecondaryCard @replicationDetails={{stateError}} @title={{title}} @hasErrorClass={{true}} />`
     );
     assert.dom('[data-test-error]').includesText('state', 'show correct error title');
     assert
@@ -80,7 +80,7 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
   test('it renders hasErrorMessage when connection is transient_failure', async function(assert) {
     this.set('connectionError', CONNECTION_ERROR);
     await render(
-      hbs`<ReplicationSecondaryCard @replicationDetails={{connectionError}} @title={{title}} @hasErrorClass={{true}}/>`
+      hbs`<ReplicationSecondaryCard @replicationDetails={{connectionError}} @title={{title}} @hasErrorClass={{true}} />`
     );
     assert.dom('[data-test-error]').includesText('connection_state', 'show correct error title');
     assert

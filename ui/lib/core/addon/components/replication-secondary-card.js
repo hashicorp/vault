@@ -22,7 +22,6 @@ export default Component.extend({
   layout,
   title: null,
   replicationDetails: null,
-  hasErrorClass: false,
   state: computed('replicationDetails', function() {
     return this.replicationDetails && this.replicationDetails.state
       ? this.replicationDetails.state
