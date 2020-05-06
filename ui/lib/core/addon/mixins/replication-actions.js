@@ -28,7 +28,6 @@ export default Mixin.create({
       }, {});
       delete data.replicationMode;
     }
-
     return yield this.save.perform(action, replicationMode, clusterMode, data);
   }),
 
