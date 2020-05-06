@@ -1,18 +1,14 @@
-// Package stepwise offers types and functions to enable black-box style tests
-// that are executed in defined set of steps
 package stepwise
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"os"
-	"reflect"
-	"sort"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/http"
@@ -22,37 +18,38 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-// TestEnvVar must be set to a non-empty value for acceptance tests to run.
-const TestEnvVar = "VAULT_ACC"
+// This file contains items considered "legacy" and are not
+// actively being developed. These types and methods rely on internal types from
+// the logical package (Request, Response, Backend) which should be abstracted
+// or hidden from normal black-box testing.
+// Please use the newer types and methods offered in stepwise/testing.go which
+// rely on public API types.
 
-// TestTeardownFunc is the callback used for Teardown in TestCase.
-type TestTeardownFunc func() error
-
-// Step represents a single step of a test Case
-type Step struct{}
-
-// StepDriver is the interface Drivers need to implement to be used in
-// Case to execute each Step
-type StepDriver interface {
-	Setup()
-	Client()
-	Teardown()
-	Name() // maybe?
-}
-
-// Case is a single set of tests to run for a backend. A test Case
-// should generally map 1:1 to each test method for your integration
+// TestCase is a single set of tests to run for a backend. A TestCase
+// should generally map 1:1 to each test method for your acceptance
 // tests.
-type Case struct {
-	Driver StepDriver
-
+type TestCase struct {
 	// Precheck, if non-nil, will be called once before the test case
 	// runs at all. This can be used for some validation prior to the
 	// test running.
 	PreCheck func()
 
+	// LogicalBackend is the backend that will be mounted.
+	LogicalBackend logical.Backend
+
+	// LogicalFactory can be used instead of LogicalBackend if the
+	// backend requires more construction
+	LogicalFactory logical.Factory
+
+	// CredentialBackend is the backend that will be mounted.
+	CredentialBackend logical.Backend
+
+	// CredentialFactory can be used instead of CredentialBackend if the
+	// backend requires more construction
+	CredentialFactory logical.Factory
+
 	// Steps are the set of operations that are run for this test case.
-	Steps []Step
+	Steps []TestStep
 
 	// Teardown will be called before the test case is over regardless
 	// of if the test succeeded or failed. This should return an error
@@ -66,18 +63,55 @@ type Case struct {
 	AcceptanceTest bool
 }
 
-// Test performs an acceptance test on a backend with the given test case.
-//
-// Tests are not run unless an environmental variable "VAULT_ACC" is
-// set to some non-empty value. This is to avoid test cases surprising
-// a user by creating real resources.
-//
-// Tests will fail unless the verbose flag (`go test -v`, or explicitly
-// the "-test.v" flag) is set. Because some acceptance tests take quite
-// long, we require the verbose flag so users are able to see progress
-// output.
-func Run(tt TestT, c TestCase) {
-	// q.Q("==> here in testing.Test")
+// TestStep is a single step within a TestCase.
+type TestStep struct {
+	// Operation is the operation to execute
+	Operation logical.Operation
+
+	// Path is the request path. The mount prefix will be automatically added.
+	Path string
+
+	// Arguments to pass in
+	Data map[string]interface{}
+
+	// Check is called after this step is executed in order to test that
+	// the step executed successfully. If this is not set, then the next
+	// step will be called
+	Check TestCheckFunc
+
+	// PreFlight is called directly before execution of the request, allowing
+	// modification of the request parameters (e.g. Path) with dynamic values.
+	PreFlight PreFlightFunc
+
+	// ErrorOk, if true, will let erroneous responses through to the check
+	ErrorOk bool
+
+	// Unauthenticated, if true, will make the request unauthenticated.
+	Unauthenticated bool
+
+	// RemoteAddr, if set, will set the remote addr on the request.
+	RemoteAddr string
+
+	// ConnState, if set, will set the tls connection state
+	ConnState *tls.ConnectionState
+}
+
+// TestCheckFunc is the callback used for Check in TestStep.
+type TestCheckFunc func(*logical.Response) error
+
+// PreFlightFunc is used to modify request parameters directly before execution
+// in each TestStep.
+type PreFlightFunc func(*logical.Request) error
+
+// RunLegacyTest runs a TestCase using a legacy vault setup. This is used to
+// maintain backwards compatibility with existing tests that use the TestStep
+// type to construct their tests and use logical.Requests directly with a
+// backend's HandleRequest method. Please see stepwise.Test and stepwise.Step
+// for more information.
+// func RunLegacyTest(tt TestT, c TestCase) {}
+
+func Test(tt TestT, c TestCase) {
+	// q.Q("==> here in legacy testing.Test")
 	// We only run acceptance tests if an env var is set because they're
 	// slow and generally require some outside configuration.
 	if c.AcceptanceTest && os.Getenv(TestEnvVar) == "" {
@@ -406,74 +440,3 @@ func Run(tt TestT, c TestCase) {
 		}
 	}
 }
-
-// TestCheckMulti is a helper to have multiple checks.
-func TestCheckMulti(fs ...TestCheckFunc) TestCheckFunc {
-	return func(resp *logical.Response) error {
-		for _, f := range fs {
-			if err := f(resp); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}
-}
-
-// TestCheckAuth is a helper to check that a request generated an
-// auth token with the proper policies.
-func TestCheckAuth(policies []string) TestCheckFunc {
-	return func(resp *logical.Response) error {
-		if resp == nil || resp.Auth == nil {
-			return fmt.Errorf("no auth in response")
-		}
-		expected := make([]string, len(policies))
-		copy(expected, policies)
-		sort.Strings(expected)
-		ret := make([]string, len(resp.Auth.Policies))
-		copy(ret, resp.Auth.Policies)
-		sort.Strings(ret)
-		if !reflect.DeepEqual(ret, expected) {
-			return fmt.Errorf("invalid policies: expected %#v, got %#v", expected, ret)
-		}
-
-		return nil
-	}
-}
-
-// TestCheckAuthDisplayName is a helper to check that a request generated a
-// valid display name.
-func TestCheckAuthDisplayName(n string) TestCheckFunc {
-	return func(resp *logical.Response) error {
-		if resp.Auth == nil {
-			return fmt.Errorf("no auth in response")
-		}
-		if n != "" && resp.Auth.DisplayName != "mnt-"+n {
-			return fmt.Errorf("invalid display name: %#v", resp.Auth.DisplayName)
-		}
-
-		return nil
-	}
-}
-
-// TestCheckError is a helper to check that a response is an error.
-func TestCheckError() TestCheckFunc {
-	return func(resp *logical.Response) error {
-		if !resp.IsError() {
-			return fmt.Errorf("response should be error")
-		}
-
-		return nil
-	}
-}
-
-// TestT is the interface used to handle the test lifecycle of a test.
-//
-// Users should just use a *testing.T object, which implements this.
-type TestT interface {
-	Error(args ...interface{})
-	Fatal(args ...interface{})
-	Skip(args ...interface{})
-}
-
-var testTesting = false
