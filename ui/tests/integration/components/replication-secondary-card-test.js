@@ -46,13 +46,7 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
     );
 
     assert.dom('[data-test-replication-secondary-card]').exists();
-  });
-  test('it renders with state, and connection set', async function(assert) {
-    await render(
-      hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title={{title}} @hasErrorClass={{hasErrorClass}}/>`
-    );
     assert.dom('[data-test-state]').includesText(REPLICATION_DETAILS.state, `shows the correct state value`);
-
     assert
       .dom('[data-test-connection]')
       .includesText(REPLICATION_DETAILS.connection_state, `shows the correct connection value`);
