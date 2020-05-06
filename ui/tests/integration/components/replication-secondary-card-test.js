@@ -4,7 +4,6 @@ import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 const TITLE = 'States';
-const HAS_ERROR_CLASS = false;
 
 const REPLICATION_DETAILS = {
   state: 'stream-wals',
@@ -35,15 +34,13 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
 
   hooks.beforeEach(function() {
     this.set('replicationDetails', REPLICATION_DETAILS);
-    this.set('hasErrorClass', HAS_ERROR_CLASS);
     this.set('title', TITLE);
   });
 
   test('it renders', async function(assert) {
     await render(
-      hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title={{title}} @hasErrorClass={{hasErrorClass}}/>`
+      hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title={{title}} />`
     );
-
     assert.dom('[data-test-replication-secondary-card]').exists();
     assert.dom('[data-test-state]').includesText(REPLICATION_DETAILS.state, `shows the correct state value`);
     assert
@@ -52,9 +49,7 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
   });
 
   test('it renders with lastWAL, lastRemoteWAL and delta set when title is not States', async function(assert) {
-    await render(
-      hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @hasErrorClass={{hasErrorClass}}/>`
-    );
+    await render(hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} />`);
     assert
       .dom('[data-test-lastWAL]')
       .includesText(REPLICATION_DETAILS.lastWAL, `shows the correct lastWAL value`);
@@ -73,6 +68,7 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
 
   test('it renders hasErrorMessage when state is idle', async function(assert) {
     this.set('stateError', STATE_ERROR);
+    this.set('hasErrorClass', true);
     await render(hbs`<ReplicationSecondaryCard @replicationDetails={{stateError}} @title={{title}} />`);
     assert.dom('[data-test-error]').includesText('state', 'show correct error title');
     assert
@@ -82,6 +78,7 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
 
   test('it renders hasErrorMessage when connection is transient_failure', async function(assert) {
     this.set('connectionError', CONNECTION_ERROR);
+    this.set('hasErrorClass', true);
     await render(hbs`<ReplicationSecondaryCard @replicationDetails={{connectionError}} @title={{title}} />`);
     assert.dom('[data-test-error]').includesText('connection_state', 'show correct error title');
     assert
