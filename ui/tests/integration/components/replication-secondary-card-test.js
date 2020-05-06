@@ -3,6 +3,9 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
+const TITLE = 'States';
+const HAS_ERROR_CLASS = false;
+
 const REPLICATION_DETAILS = {
   state: 'stream-wals',
   connection_state: 'ready',
@@ -29,15 +32,11 @@ const CONNECTION_ERROR = {
 
 module('Integration | Enterprise | Component | replication-secondary-card', function(hooks) {
   setupRenderingTest(hooks);
-  const title = 'States';
-  const hasErrorClass = false;
 
   hooks.beforeEach(function() {
     this.set('replicationDetails', REPLICATION_DETAILS);
-    this.set('stateError', STATE_ERROR);
-    this.set('connectionError', CONNECTION_ERROR);
-    this.set('hasErrorClass', hasErrorClass);
-    this.set('title', title);
+    this.set('hasErrorClass', HAS_ERROR_CLASS);
+    this.set('title', TITLE);
   });
 
   test('it renders', async function(assert) {
@@ -73,6 +72,7 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
   });
 
   test('it renders hasErrorMessage when state is idle', async function(assert) {
+    this.set('stateError', STATE_ERROR);
     await render(hbs`<ReplicationSecondaryCard @replicationDetails={{stateError}} @title={{title}} />`);
     assert.dom('[data-test-error]').includesText('state', 'show correct error title');
     assert
@@ -81,6 +81,7 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
   });
 
   test('it renders hasErrorMessage when connection is transient_failure', async function(assert) {
+    this.set('connectionError', CONNECTION_ERROR);
     await render(hbs`<ReplicationSecondaryCard @replicationDetails={{connectionError}} @title={{title}} />`);
     assert.dom('[data-test-error]').includesText('connection_state', 'show correct error title');
     assert
