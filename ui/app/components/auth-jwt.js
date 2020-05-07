@@ -28,7 +28,6 @@ export default Component.extend({
   onNamespace() {},
 
   didReceiveAttrs() {
-    console.log(`didReceiveAttrs: ${this.errorMessage}`);
     let { oldSelectedAuthPath, selectedAuthPath } = this;
     let shouldDebounce = !oldSelectedAuthPath && !selectedAuthPath;
     if (oldSelectedAuthPath !== selectedAuthPath) {
@@ -45,7 +44,6 @@ export default Component.extend({
   // Assumes authentication using OIDC until it's known that the mount is
   // configured for JWT authentication via static keys, JWKS, or OIDC discovery.
   isOIDC: computed('errorMessage', function() {
-    console.log(`isOIDC: ${this.errorMessage}`);
     return this.errorMessage !== ERROR_JWT_LOGIN;
   }),
 
@@ -159,11 +157,9 @@ export default Component.extend({
       if (e && e.preventDefault) {
         e.preventDefault();
       }
-      if (!this.isOIDC) {
+      if (!this.isOIDC || !this.role || !this.role.authUrl) {
         return;
       }
-
-      console.log(`Role: ${this.role}`);
 
       await this.fetchRole.perform(this.roleName, { debounce: false });
       let win = this.getWindow();
