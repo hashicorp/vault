@@ -83,9 +83,6 @@ func parseRules(registry Registry, rawRules []map[string]interface{}) (rules []R
 			return nil, fmt.Errorf("unable to get rule info: %w", err)
 		}
 
-		// Map names like "lower-alpha" to lowercase alphabetical characters
-		// applyShortcuts(info.data)
-
 		rule, err := registry.parseRule(info.ruleType, info.data)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse rule %s: %w", info.ruleType, err)
