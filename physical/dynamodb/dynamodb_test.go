@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -14,7 +15,6 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/ory/dockertest"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -24,10 +24,10 @@ import (
 )
 
 func TestDynamoDBBackend(t *testing.T) {
-	cleanup, endpoint, credsProvider := prepareDynamoDBTestContainer(t)
+	cleanup, svccfg := prepareDynamoDBTestContainer(t)
 	defer cleanup()
 
-	creds, err := credsProvider.Get()
+	creds, err := svccfg.Credentials.Get()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -38,8 +38,8 @@ func TestDynamoDBBackend(t *testing.T) {
 	}
 
 	awsSession, err := session.NewSession(&aws.Config{
-		Credentials: credsProvider,
-		Endpoint:    aws.String(endpoint),
+		Credentials: svccfg.Credentials,
+		Endpoint:    aws.String(svccfg.URL().String()),
 		Region:      aws.String(region),
 	})
 	if err != nil {
@@ -65,7 +65,7 @@ func TestDynamoDBBackend(t *testing.T) {
 		"session_token": creds.SessionToken,
 		"table":         table,
 		"region":        region,
-		"endpoint":      endpoint,
+		"endpoint":      svccfg.URL().String(),
 	}, logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -114,10 +114,10 @@ func TestDynamoDBBackend(t *testing.T) {
 }
 
 func TestDynamoDBHABackend(t *testing.T) {
-	cleanup, endpoint, credsProvider := prepareDynamoDBTestContainer(t)
+	cleanup, svccfg := prepareDynamoDBTestContainer(t)
 	defer cleanup()
 
-	creds, err := credsProvider.Get()
+	creds, err := svccfg.Credentials.Get()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -128,8 +128,8 @@ func TestDynamoDBHABackend(t *testing.T) {
 	}
 
 	awsSession, err := session.NewSession(&aws.Config{
-		Credentials: credsProvider,
-		Endpoint:    aws.String(endpoint),
+		Credentials: svccfg.Credentials,
+		Endpoint:    aws.String(svccfg.URL().String()),
 		Region:      aws.String(region),
 	})
 	if err != nil {
@@ -154,7 +154,7 @@ func TestDynamoDBHABackend(t *testing.T) {
 		"session_token": creds.SessionToken,
 		"table":         table,
 		"region":        region,
-		"endpoint":      endpoint,
+		"endpoint":      svccfg.URL().String(),
 	}
 
 	b, err := NewDynamoDBBackend(config, logger)
@@ -362,43 +362,57 @@ func testDynamoDBLockRenewal(t *testing.T, ha physical.HABackend) {
 	newLock.Unlock()
 }
 
-func prepareDynamoDBTestContainer(t *testing.T) (cleanup func(), retAddress string, creds *credentials.Credentials) {
+type Config struct {
+	docker.ServiceURL
+	Credentials *credentials.Credentials
+}
+
+var _ docker.ServiceConfig = &Config{}
+
+func prepareDynamoDBTestContainer(t *testing.T) (func(), *Config) {
 	// If environment variable is set, assume caller wants to target a real
 	// DynamoDB.
-	if os.Getenv("AWS_DYNAMODB_ENDPOINT") != "" {
-		return func() {}, os.Getenv("AWS_DYNAMODB_ENDPOINT"), credentials.NewEnvCredentials()
+	if endpoint := os.Getenv("AWS_DYNAMODB_ENDPOINT"); endpoint != "" {
+		s, err := docker.NewServiceURLParse(endpoint)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return func() {}, &Config{*s, credentials.NewEnvCredentials()}
 	}
 
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-
-	resource, err := pool.Run("cnadiminti/dynamodb-local", "latest", []string{})
+	runner, err := docker.NewServiceRunner(docker.RunOptions{
+		ImageRepo:     "cnadiminti/dynamodb-local",
+		ImageTag:      "latest",
+		ContainerName: "dynamodb",
+		Ports:         []string{"8000/tcp"},
+	})
 	if err != nil {
 		t.Fatalf("Could not start local DynamoDB: %s", err)
 	}
 
-	retAddress = "http://localhost:" + resource.GetPort("8000/tcp")
-	cleanup = func() {
-		docker.CleanupResource(t, pool, resource)
+	svc, err := runner.StartService(context.Background(), connectDynamoDB)
+	if err != nil {
+		t.Fatalf("Could not start local DynamoDB: %s", err)
 	}
 
-	// exponential backoff-retry, because the DynamoDB may not be able to accept
-	// connections yet
-	if err := pool.Retry(func() error {
-		var err error
-		resp, err := http.Get(retAddress)
-		if err != nil {
-			return err
-		}
-		if resp.StatusCode != 400 {
-			return fmt.Errorf("expected DynamoDB to return status code 400, got (%s) instead", resp.Status)
-		}
-		return nil
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to docker: %s", err)
+	return svc.Cleanup, svc.Config.(*Config)
+}
+
+func connectDynamoDB(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+	u := url.URL{
+		Scheme: "http",
+		Host:   fmt.Sprintf("%s:%d", host, port),
 	}
-	return cleanup, retAddress, credentials.NewStaticCredentials("fake", "fake", "")
+	resp, err := http.Get(u.String())
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 400 {
+		return nil, err
+	}
+
+	return &Config{
+		ServiceURL:  *docker.NewServiceURL(u),
+		Credentials: credentials.NewStaticCredentials("fake", "fake", ""),
+	}, nil
 }

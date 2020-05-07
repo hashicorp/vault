@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/namespace"
+	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -31,7 +32,7 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	// create the database user
@@ -201,7 +202,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	// create the database user
@@ -394,7 +395,7 @@ func TestBackend_StaticRole_Role_name_check(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	// create the database user

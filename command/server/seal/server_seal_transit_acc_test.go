@@ -3,27 +3,27 @@ package seal_test
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"path"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/server/seal"
-	"github.com/ory/dockertest"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
 )
 
 func TestTransitWrapper_Lifecycle(t *testing.T) {
-	cleanup, retAddress, token, mountPath, keyName, _ := prepareTestContainer(t)
+	cleanup, config := prepareTestContainer(t)
 	defer cleanup()
 
 	wrapperConfig := map[string]string{
-		"address":    retAddress,
-		"token":      token,
-		"mount_path": mountPath,
-		"key_name":   keyName,
+		"address":    config.URL().String(),
+		"token":      config.token,
+		"mount_path": config.mountPath,
+		"key_name":   config.keyName,
 	}
 
 	s, _, err := seal.GetTransitKMSFunc(nil, wrapperConfig)
@@ -49,21 +49,14 @@ func TestTransitWrapper_Lifecycle(t *testing.T) {
 }
 
 func TestTransitSeal_TokenRenewal(t *testing.T) {
-	cleanup, retAddress, token, mountPath, keyName, tlsConfig := prepareTestContainer(t)
+	cleanup, config := prepareTestContainer(t)
 	defer cleanup()
 
-	clientConfig := &api.Config{
-		Address: retAddress,
-	}
-	if err := clientConfig.ConfigureTLS(tlsConfig); err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	remoteClient, err := api.NewClient(clientConfig)
+	remoteClient, err := api.NewClient(config.apiConfig())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	remoteClient.SetToken(token)
+	remoteClient.SetToken(config.token)
 
 	req := &api.TokenCreateRequest{
 		Period: "5s",
@@ -74,10 +67,10 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 	}
 
 	wrapperConfig := map[string]string{
-		"address":    retAddress,
+		"address":    config.URL().String(),
 		"token":      rsp.Auth.ClientToken,
-		"mount_path": mountPath,
-		"key_name":   keyName,
+		"mount_path": config.mountPath,
+		"key_name":   config.keyName,
 	}
 	s, _, err := seal.GetTransitKMSFunc(nil, wrapperConfig)
 	if err != nil {
@@ -103,8 +96,28 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 	}
 }
 
-func prepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, mountPath, keyName string, tlsConfig *api.TLSConfig) {
-	testToken, err := uuid.GenerateUUID()
+type Config struct {
+	docker.ServiceURL
+	token     string
+	mountPath string
+	keyName   string
+	tlsConfig *api.TLSConfig
+}
+
+func (c *Config) apiConfig() *api.Config {
+	vaultConfig := api.DefaultConfig()
+	vaultConfig.Address = c.URL().String()
+	if err := vaultConfig.ConfigureTLS(c.tlsConfig); err != nil {
+		panic("unable to configure TLS")
+	}
+
+	return vaultConfig
+}
+
+var _ docker.ServiceConfig = &Config{}
+
+func prepareTestContainer(t *testing.T) (func(), *Config) {
+	rootToken, err := uuid.GenerateUUID()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -117,72 +130,49 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, moun
 		t.Fatalf("err: %s", err)
 	}
 
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-
-	dockerOptions := &dockertest.RunOptions{
-		Repository: "vault",
-		Tag:        "latest",
-		Cmd: []string{"server", "-log-level=trace", "-dev", fmt.Sprintf("-dev-root-token-id=%s", testToken),
+	runner, err := docker.NewServiceRunner(docker.RunOptions{
+		ImageRepo: "vault",
+		ImageTag:  "latest",
+		Cmd: []string{"server", "-log-level=trace", "-dev", fmt.Sprintf("-dev-root-token-id=%s", rootToken),
 			"-dev-listen-address=0.0.0.0:8200"},
-	}
-	resource, err := pool.RunWithOptions(dockerOptions)
+		Ports: []string{"8200/tcp"},
+	})
 	if err != nil {
-		t.Fatalf("Could not start local Vault docker container: %s", err)
+		t.Fatalf("could not start docker vault: %s", err)
 	}
 
-	cleanup = func() {
-		var err error
-		for i := 0; i < 10; i++ {
-			err = pool.Purge(resource)
-			if err == nil {
-				return
-			}
-			time.Sleep(1 * time.Second)
+	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+		c := &Config{
+			ServiceURL: *docker.NewServiceURL(url.URL{Scheme: "http", Host: fmt.Sprintf("%s:%d", host, port)}),
+			tlsConfig: &api.TLSConfig{
+				Insecure: true,
+			},
+			token:     rootToken,
+			mountPath: testMountPath,
+			keyName:   testKeyName,
 		}
-
-		if strings.Contains(err.Error(), "No such container") {
-			return
-		}
-		t.Fatalf("Failed to cleanup local container: %s", err)
-	}
-
-	retAddress = fmt.Sprintf("http://127.0.0.1:%s", resource.GetPort("8200/tcp"))
-	tlsConfig = &api.TLSConfig{
-		Insecure: true,
-	}
-
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
-		vaultConfig := api.DefaultConfig()
-		vaultConfig.Address = retAddress
-		if err := vaultConfig.ConfigureTLS(tlsConfig); err != nil {
-			return err
-		}
-		vault, err := api.NewClient(vaultConfig)
+		vault, err := api.NewClient(c.apiConfig())
 		if err != nil {
-			return err
+			return nil, err
 		}
-		vault.SetToken(testToken)
+		vault.SetToken(rootToken)
 
 		// Set up transit
 		if err := vault.Sys().Mount(testMountPath, &api.MountInput{
 			Type: "transit",
 		}); err != nil {
-			return err
+			return nil, err
 		}
 
 		// Create default aesgcm key
 		if _, err := vault.Logical().Write(path.Join(testMountPath, "keys", testKeyName), map[string]interface{}{}); err != nil {
-			return err
+			return nil, err
 		}
 
-		return nil
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to vault: %s", err)
+		return c, nil
+	})
+	if err != nil {
+		t.Fatalf("could not start docker vault: %s", err)
 	}
-	return cleanup, retAddress, testToken, testMountPath, testKeyName, tlsConfig
+	return svc.Cleanup, svc.Config.(*Config)
 }

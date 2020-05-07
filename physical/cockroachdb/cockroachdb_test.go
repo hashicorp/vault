@@ -1,8 +1,10 @@
 package cockroachdb
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"os"
 	"testing"
 
@@ -10,71 +12,84 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/ory/dockertest"
 
 	_ "github.com/lib/pq"
 )
 
-func prepareCockroachDBTestContainer(t *testing.T) (cleanup func(), retURL, tableName string) {
-	tableName = os.Getenv("CR_TABLE")
+type Config struct {
+	docker.ServiceURL
+	TableName string
+}
+
+var _ docker.ServiceConfig = &Config{}
+
+func prepareCockroachDBTestContainer(t *testing.T) (func(), *Config) {
+	tableName := os.Getenv("CR_TABLE")
 	if tableName == "" {
 		tableName = "vault_kv_store"
 	}
-	retURL = os.Getenv("CR_URL")
-	if retURL != "" {
-		return func() {}, retURL, tableName
-	}
-
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-
-	dockerOptions := &dockertest.RunOptions{
-		Repository: "cockroachdb/cockroach",
-		Tag:        "release-1.0",
-		Cmd:        []string{"start", "--insecure"},
-	}
-	resource, err := pool.RunWithOptions(dockerOptions)
-	if err != nil {
-		t.Fatalf("Could not start local CockroachDB docker container: %s", err)
-	}
-
-	cleanup = func() {
-		docker.CleanupResource(t, pool, resource)
-	}
-
-	retURL = fmt.Sprintf("postgresql://root@localhost:%s/?sslmode=disable", resource.GetPort("26257/tcp"))
-	database := "database"
-	tableName = database + ".vault_kv"
-
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
-		var err error
-		db, err := sql.Open("postgres", retURL)
+	if retURL := os.Getenv("CR_URL"); retURL != "" {
+		s, err := docker.NewServiceURLParse(retURL)
 		if err != nil {
-			return err
+			t.Fatal(err)
 		}
-		defer db.Close()
-		_, err = db.Exec("CREATE DATABASE database")
-		return err
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to docker: %s", err)
+		return func() {}, &Config{*s, tableName}
 	}
-	return cleanup, retURL, tableName
+
+	runner, err := docker.NewServiceRunner(docker.RunOptions{
+		ImageRepo:     "cockroachdb/cockroach",
+		ImageTag:      "release-1.0",
+		ContainerName: "cockroachdb",
+		Cmd:           []string{"start", "--insecure"},
+		Ports:         []string{"26257/tcp"},
+	})
+	if err != nil {
+		t.Fatalf("Could not start docker CockroachDB: %s", err)
+	}
+	svc, err := runner.StartService(context.Background(), connectCockroachDB)
+	if err != nil {
+		t.Fatalf("Could not start docker CockroachDB: %s", err)
+	}
+
+	return svc.Cleanup, svc.Config.(*Config)
+}
+
+func connectCockroachDB(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+	u := url.URL{
+		Scheme:   "postgresql",
+		User:     url.UserPassword("root", ""),
+		Host:     fmt.Sprintf("%s:%d", host, port),
+		RawQuery: "sslmode=disable",
+	}
+
+	db, err := sql.Open("postgres", u.String())
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	database := "database"
+	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", database))
+	if err != nil {
+		return nil, err
+	}
+
+	return &Config{
+		ServiceURL: *docker.NewServiceURL(u),
+		TableName:  database + ".vault_kv",
+	}, nil
 }
 
 func TestCockroachDBBackend(t *testing.T) {
-	cleanup, connURL, table := prepareCockroachDBTestContainer(t)
+	cleanup, config := prepareCockroachDBTestContainer(t)
 	defer cleanup()
 
 	// Run vault tests
 	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewCockroachDBBackend(map[string]string{
-		"connection_url": connURL,
-		"table":          table,
+		"connection_url": config.URL().String(),
+		"table":          config.TableName,
 	}, logger)
 
 	if err != nil {

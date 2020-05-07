@@ -83,10 +83,11 @@ func MakeFileBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBun
 }
 
 func MakeConsulBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
-	cleanup, consulAddress, consulToken := consul.PrepareTestContainer(t.(*realtesting.T), "")
+	cleanup, config := consul.PrepareTestContainer(t.(*realtesting.T), "")
+
 	consulConf := map[string]string{
-		"address":      consulAddress,
-		"token":        consulToken,
+		"address":      config.Address(),
+		"token":        config.Token,
 		"max_parallel": "32",
 	}
 	consulBackend, err := physConsul.NewConsulBackend(consulConf, logger)

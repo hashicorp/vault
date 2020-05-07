@@ -1,9 +1,11 @@
-executor: go-machine
-parallelism: 2
+executor: docker-env
+parallelism: 8
 steps:
   - check-branch-name
   - setup-go
   - checkout
+  - setup_remote_docker:
+      docker_layer_caching: true
   - go_test:
       log_dir: "/tmp/testlogs"
   - store_artifacts:

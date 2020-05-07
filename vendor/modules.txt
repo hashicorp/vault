@@ -54,9 +54,11 @@ github.com/DataDog/zstd
 github.com/Jeffail/gabs
 # github.com/Masterminds/semver v1.4.2
 github.com/Masterminds/semver
-# github.com/Microsoft/go-winio v0.4.13
+# github.com/Microsoft/go-winio v0.4.15-0.20190919025122-fc70bd9a86b5
 github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/pkg/guid
+# github.com/Microsoft/hcsshim v0.8.9
+github.com/Microsoft/hcsshim/osversion
 # github.com/NYTimes/gziphandler v1.1.1
 github.com/NYTimes/gziphandler
 # github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5
@@ -169,6 +171,8 @@ github.com/briankassouf/jose/jws
 github.com/briankassouf/jose/jwt
 # github.com/cenkalti/backoff v2.2.1+incompatible
 github.com/cenkalti/backoff
+# github.com/cenkalti/backoff/v3 v3.0.0
+github.com/cenkalti/backoff/v3
 # github.com/centrify/cloud-golang-sdk v0.0.0-20190214225812-119110094d0f
 github.com/centrify/cloud-golang-sdk/oauth
 github.com/centrify/cloud-golang-sdk/restapi
@@ -187,8 +191,13 @@ github.com/circonus-labs/circonusllhist
 github.com/cloudfoundry-community/go-cfclient
 # github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 github.com/cockroachdb/cockroach-go/crdb
-# github.com/containerd/continuity v0.0.0-20190426062206-aaeac12a7ffc
+# github.com/containerd/containerd v1.3.4
+github.com/containerd/containerd/errdefs
+# github.com/containerd/continuity v0.0.0-20190827140505-75bee3e2ccb6
+github.com/containerd/continuity/fs
 github.com/containerd/continuity/pathdriver
+github.com/containerd/continuity/syscallx
+github.com/containerd/continuity/sysx
 # github.com/coreos/go-oidc v2.1.0+incompatible
 github.com/coreos/go-oidc
 # github.com/coreos/go-semver v0.2.0
@@ -206,8 +215,41 @@ github.com/denisenkom/go-mssqldb/internal/cp
 github.com/dgrijalva/jwt-go
 # github.com/dimchansky/utfbom v1.1.0
 github.com/dimchansky/utfbom
+# github.com/docker/distribution v2.7.1+incompatible
+github.com/docker/distribution/digestset
+github.com/docker/distribution/reference
+github.com/docker/distribution/registry/api/errcode
+# github.com/docker/docker v17.12.0-ce-rc1.0.20200309214505-aa6a9891b09c+incompatible
+github.com/docker/docker/api
+github.com/docker/docker/api/types
+github.com/docker/docker/api/types/blkiodev
+github.com/docker/docker/api/types/container
+github.com/docker/docker/api/types/events
+github.com/docker/docker/api/types/filters
+github.com/docker/docker/api/types/image
+github.com/docker/docker/api/types/mount
+github.com/docker/docker/api/types/network
+github.com/docker/docker/api/types/registry
+github.com/docker/docker/api/types/strslice
+github.com/docker/docker/api/types/swarm
+github.com/docker/docker/api/types/swarm/runtime
+github.com/docker/docker/api/types/time
+github.com/docker/docker/api/types/versions
+github.com/docker/docker/api/types/volume
+github.com/docker/docker/client
+github.com/docker/docker/errdefs
+github.com/docker/docker/pkg/archive
+github.com/docker/docker/pkg/fileutils
+github.com/docker/docker/pkg/idtools
+github.com/docker/docker/pkg/ioutils
+github.com/docker/docker/pkg/longpath
+github.com/docker/docker/pkg/mount
+github.com/docker/docker/pkg/pools
+github.com/docker/docker/pkg/system
 # github.com/docker/go-connections v0.4.0
 github.com/docker/go-connections/nat
+github.com/docker/go-connections/sockets
+github.com/docker/go-connections/tlsconfig
 # github.com/docker/go-units v0.4.0
 github.com/docker/go-units
 # github.com/dsnet/compress v0.0.1
@@ -256,7 +298,7 @@ github.com/gocql/gocql
 github.com/gocql/gocql/internal/lru
 github.com/gocql/gocql/internal/murmur
 github.com/gocql/gocql/internal/streams
-# github.com/gogo/protobuf v1.2.1
+# github.com/gogo/protobuf v1.3.1
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/io
 github.com/gogo/protobuf/proto
@@ -568,7 +610,7 @@ github.com/keybase/go-crypto/openpgp/errors
 github.com/keybase/go-crypto/openpgp/packet
 github.com/keybase/go-crypto/openpgp/s2k
 github.com/keybase/go-crypto/rsa
-# github.com/konsorten/go-windows-terminal-sequences v1.0.1
+# github.com/konsorten/go-windows-terminal-sequences v1.0.2
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/kr/pretty v0.1.0
 github.com/kr/pretty
@@ -631,7 +673,8 @@ github.com/opencontainers/go-digest
 # github.com/opencontainers/image-spec v1.0.1
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v0.1.1
+# github.com/opencontainers/runc v1.0.0-rc9
+github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/user
 # github.com/oracle/oci-go-sdk v12.5.0+incompatible
 github.com/oracle/oci-go-sdk/common
@@ -799,7 +842,7 @@ go.mongodb.org/mongo-driver/x/mongo/driver/session
 go.mongodb.org/mongo-driver/x/mongo/driver/topology
 go.mongodb.org/mongo-driver/x/mongo/driver/uuid
 go.mongodb.org/mongo-driver/x/mongo/driver/wiremessage
-# go.opencensus.io v0.21.0
+# go.opencensus.io v0.22.0
 go.opencensus.io
 go.opencensus.io/internal
 go.opencensus.io/internal/tagencoding
@@ -857,7 +900,9 @@ golang.org/x/net/http/httpproxy
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
+golang.org/x/net/internal/socks
 golang.org/x/net/internal/timeseries
+golang.org/x/net/proxy
 golang.org/x/net/trace
 # golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 golang.org/x/oauth2
@@ -867,6 +912,7 @@ golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
+golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
 # golang.org/x/sys v0.0.0-20200122134326-e047566fdf82
 golang.org/x/sys/cpu
@@ -997,7 +1043,7 @@ gopkg.in/square/go-jose.v2
 gopkg.in/square/go-jose.v2/cipher
 gopkg.in/square/go-jose.v2/json
 gopkg.in/square/go-jose.v2/jwt
-# gopkg.in/yaml.v2 v2.2.5
+# gopkg.in/yaml.v2 v2.2.8
 gopkg.in/yaml.v2
 # k8s.io/api v0.0.0-20190409092523-d687e77c8ae9
 k8s.io/api/authentication/v1

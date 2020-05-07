@@ -116,7 +116,7 @@ func TestMySQLHABackend(t *testing.T) {
 // https://github.com/hashicorp/vault/issues/8203 and patched in
 // https://github.com/hashicorp/vault/pull/8229
 func TestMySQLHABackend_LockFailPanic(t *testing.T) {
-	cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, false, "secret")
+	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
 
 	cfg, err := mysql.ParseDSN(connURL)
 	if err != nil {

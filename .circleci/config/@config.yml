@@ -4,6 +4,7 @@ version: 2.1
 references:
   images:
     node: &NODE_IMAGE node:10-buster # Pin Node.js to major version (ex: 10)
+    docker: &DOCKER_IMAGE "circleci/golang:1.13.10-buster"
 
   cache:
     go-sum: &GO_SUM_CACHE_KEY go-sum-v1-{{ checksum "go.sum" }}
@@ -50,3 +51,12 @@ executors:
       - image: alpine:3.10.2
     shell: /bin/sh
     working_directory: /go/src/github.com/hashicorp/vault
+  docker-env:
+    docker:
+      - image: *DOCKER_IMAGE
+    environment:
+      GO111MODULE: "off"
+      CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
+      GO_TAGS: enterprise ent
+    working_directory: /go/src/github.com/hashicorp/vault
+

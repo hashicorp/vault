@@ -3,8 +3,10 @@ package influxdb
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,77 +14,90 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	influx "github.com/influxdata/influxdb/client/v2"
-	"github.com/ory/dockertest"
 )
 
 const testInfluxRole = `CREATE USER "{{username}}" WITH PASSWORD '{{password}}';GRANT ALL ON "vault" TO "{{username}}";`
 
-func prepareInfluxdbTestContainer(t *testing.T) (func(), string, int) {
-	if os.Getenv("INFLUXDB_HOST") != "" {
-		return func() {}, os.Getenv("INFLUXDB_HOST"), 0
+type Config struct {
+	docker.ServiceURL
+	Username string
+	Password string
+}
+
+var _ docker.ServiceConfig = &Config{}
+
+func (c *Config) apiConfig() influx.HTTPConfig {
+	return influx.HTTPConfig{
+		Addr:     c.URL().String(),
+		Username: c.Username,
+		Password: c.Password,
+	}
+}
+
+func (c *Config) connectionParams() map[string]interface{} {
+	pieces := strings.Split(c.Address(), ":")
+	port, _ := strconv.Atoi(pieces[1])
+	return map[string]interface{}{
+		"host":     pieces[0],
+		"port":     port,
+		"username": c.Username,
+		"password": c.Password,
+	}
+}
+
+func prepareInfluxdbTestContainer(t *testing.T) (func(), *Config) {
+	c := &Config{
+		Username: "influx-root",
+		Password: "influx-root",
+	}
+	if host := os.Getenv("INFLUXDB_HOST"); host != "" {
+		c.ServiceURL = *docker.NewServiceURL(url.URL{Scheme: "http", Host: host})
+		return func() {}, c
 	}
 
-	pool, err := dockertest.NewPool("")
+	runner, err := docker.NewServiceRunner(docker.RunOptions{
+		ImageRepo: "influxdb",
+		ImageTag:  "alpine",
+		Env: []string{
+			"INFLUXDB_DB=vault",
+			"INFLUXDB_ADMIN_USER=" + c.Username,
+			"INFLUXDB_ADMIN_PASSWORD=" + c.Password,
+			"INFLUXDB_HTTP_AUTH_ENABLED=true"},
+		Ports: []string{"8086/tcp"},
+	})
 	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
+		t.Fatalf("Could not start docker InfluxDB: %s", err)
 	}
-
-	ro := &dockertest.RunOptions{
-		Repository: "influxdb",
-		Tag:        "alpine",
-		Env:        []string{"INFLUXDB_DB=vault", "INFLUXDB_ADMIN_USER=influx-root", "INFLUXDB_ADMIN_PASSWORD=influx-root", "INFLUXDB_HTTP_AUTH_ENABLED=true"},
-	}
-	resource, err := pool.RunWithOptions(ro)
-	if err != nil {
-		t.Fatalf("Could not start local influxdb docker container: %s", err)
-	}
-
-	cleanup := func() {
-		docker.CleanupResource(t, pool, resource)
-	}
-
-	port, _ := strconv.Atoi(resource.GetPort("8086/tcp"))
-	address := "127.0.0.1"
-
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
-		cli, err := influx.NewHTTPClient(influx.HTTPConfig{
-			Addr:     fmt.Sprintf("http://%s:%d", address, port),
-			Username: "influx-root",
-			Password: "influx-root",
+	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+		c.ServiceURL = *docker.NewServiceURL(url.URL{
+			Scheme: "http",
+			Host:   fmt.Sprintf("%s:%d", host, port),
 		})
+		cli, err := influx.NewHTTPClient(c.apiConfig())
 		if err != nil {
-			return errwrap.Wrapf("Error creating InfluxDB Client: ", err)
+			return nil, errwrap.Wrapf("error creating InfluxDB client: {{err}}", err)
 		}
 		defer cli.Close()
 		_, _, err = cli.Ping(1)
 		if err != nil {
-			return errwrap.Wrapf("error checking cluster status: {{err}}", err)
+			return nil, errwrap.Wrapf("error checking cluster status: {{err}}", err)
 		}
-		return nil
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to influxdb docker container: %s", err)
+
+		return c, nil
+	})
+	if err != nil {
+		t.Fatalf("Could not start docker InfluxDB: %s", err)
 	}
-	return cleanup, address, port
+
+	return svc.Cleanup, svc.Config.(*Config)
 }
 
 func TestInfluxdb_Initialize(t *testing.T) {
-	if os.Getenv("VAULT_ACC") == "" {
-		t.SkipNow()
-	}
-	cleanup, address, port := prepareInfluxdbTestContainer(t)
+	cleanup, config := prepareInfluxdbTestContainer(t)
 	defer cleanup()
 
-	connectionDetails := map[string]interface{}{
-		"host":     address,
-		"port":     port,
-		"username": "influx-root",
-		"password": "influx-root",
-	}
-
 	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	_, err := db.Init(context.Background(), config.connectionParams(), true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -96,36 +111,20 @@ func TestInfluxdb_Initialize(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	// test a string protocol
-	connectionDetails = map[string]interface{}{
-		"host":     address,
-		"port":     strconv.Itoa(port),
-		"username": "influx-root",
-		"password": "influx-root",
-	}
-
-	_, err = db.Init(context.Background(), connectionDetails, true)
+	connectionParams := config.connectionParams()
+	connectionParams["port"] = strconv.Itoa(connectionParams["port"].(int))
+	_, err = db.Init(context.Background(), connectionParams, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 }
 
 func TestInfluxdb_CreateUser(t *testing.T) {
-	if os.Getenv("VAULT_ACC") == "" {
-		t.SkipNow()
-	}
-	cleanup, address, port := prepareInfluxdbTestContainer(t)
+	cleanup, config := prepareInfluxdbTestContainer(t)
 	defer cleanup()
 
-	connectionDetails := map[string]interface{}{
-		"host":     address,
-		"port":     port,
-		"username": "influx-root",
-		"password": "influx-root",
-	}
-
 	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	_, err := db.Init(context.Background(), config.connectionParams(), true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -144,27 +143,18 @@ func TestInfluxdb_CreateUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(t, address, port, username, password); err != nil {
+	config.Username, config.Password = username, password
+	if err := testCredsExist(t, config); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 }
 
 func TestMyInfluxdb_RenewUser(t *testing.T) {
-	if os.Getenv("VAULT_ACC") == "" {
-		t.SkipNow()
-	}
-	cleanup, address, port := prepareInfluxdbTestContainer(t)
+	cleanup, config := prepareInfluxdbTestContainer(t)
 	defer cleanup()
 
-	connectionDetails := map[string]interface{}{
-		"host":     address,
-		"port":     port,
-		"username": "influx-root",
-		"password": "influx-root",
-	}
-
 	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	_, err := db.Init(context.Background(), config.connectionParams(), true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -183,7 +173,8 @@ func TestMyInfluxdb_RenewUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(t, address, port, username, password); err != nil {
+	config.Username, config.Password = username, password
+	if err = testCredsExist(t, config); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
@@ -197,20 +188,11 @@ func TestMyInfluxdb_RenewUser(t *testing.T) {
 // deleted externally. Guards against a panic, see
 // https://github.com/hashicorp/vault/issues/6734
 func TestInfluxdb_RevokeDeletedUser(t *testing.T) {
-	if os.Getenv("VAULT_ACC") == "" {
-		t.SkipNow()
-	}
-	cleanup, address, port := prepareInfluxdbTestContainer(t)
-
-	connectionDetails := map[string]interface{}{
-		"host":     address,
-		"port":     port,
-		"username": "influx-root",
-		"password": "influx-root",
-	}
+	cleanup, config := prepareInfluxdbTestContainer(t)
+	defer cleanup()
 
 	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	_, err := db.Init(context.Background(), config.connectionParams(), true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -229,7 +211,8 @@ func TestInfluxdb_RevokeDeletedUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err = testCredsExist(t, address, port, username, password); err != nil {
+	config.Username, config.Password = username, password
+	if err = testCredsExist(t, config); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
@@ -244,21 +227,11 @@ func TestInfluxdb_RevokeDeletedUser(t *testing.T) {
 }
 
 func TestInfluxdb_RevokeUser(t *testing.T) {
-	if os.Getenv("VAULT_ACC") == "" {
-		t.SkipNow()
-	}
-	cleanup, address, port := prepareInfluxdbTestContainer(t)
+	cleanup, config := prepareInfluxdbTestContainer(t)
 	defer cleanup()
 
-	connectionDetails := map[string]interface{}{
-		"host":     address,
-		"port":     port,
-		"username": "influx-root",
-		"password": "influx-root",
-	}
-
 	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	_, err := db.Init(context.Background(), config.connectionParams(), true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -277,39 +250,30 @@ func TestInfluxdb_RevokeUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err = testCredsExist(t, address, port, username, password); err != nil {
+	config.Username, config.Password = username, password
+	if err = testCredsExist(t, config); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
 	// Test default revoke statements
-	err = db.RevokeUser(context.Background(), statements, username)
+	err = db.RevokeUser(context.Background(), dbplugin.Statements{}, username)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err = testCredsExist(t, address, port, username, password); err == nil {
+	if err = testCredsExist(t, config); err == nil {
 		t.Fatal("Credentials were not revoked")
 	}
 }
 func TestInfluxdb_RotateRootCredentials(t *testing.T) {
-	if os.Getenv("VAULT_ACC") == "" {
-		t.SkipNow()
-	}
-	cleanup, address, port := prepareInfluxdbTestContainer(t)
+	cleanup, config := prepareInfluxdbTestContainer(t)
 	defer cleanup()
-
-	connectionDetails := map[string]interface{}{
-		"host":     address,
-		"port":     port,
-		"username": "influx-root",
-		"password": "influx-root",
-	}
 
 	db := new()
 
 	connProducer := db.influxdbConnectionProducer
 
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	_, err := db.Init(context.Background(), config.connectionParams(), true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -332,12 +296,8 @@ func TestInfluxdb_RotateRootCredentials(t *testing.T) {
 	}
 }
 
-func testCredsExist(t testing.TB, address string, port int, username, password string) error {
-	cli, err := influx.NewHTTPClient(influx.HTTPConfig{
-		Addr:     fmt.Sprintf("http://%s:%d", address, port),
-		Username: username,
-		Password: password,
-	})
+func testCredsExist(t testing.TB, c *Config) error {
+	cli, err := influx.NewHTTPClient(c.apiConfig())
 	if err != nil {
 		return errwrap.Wrapf("Error creating InfluxDB Client: ", err)
 	}

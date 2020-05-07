@@ -50,16 +50,12 @@ func testConsulServiceRegistrationConfig(t *testing.T, conf *consulConf) *servic
 
 // TestConsul_ServiceRegistration tests whether consul ServiceRegistration works
 func TestConsul_ServiceRegistration(t *testing.T) {
-
 	// Prepare a docker-based consul instance
-	cleanup, addr, token := consul.PrepareTestContainer(t, "")
+	cleanup, config := consul.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	// Create a consul client
-	cfg := api.DefaultConfig()
-	cfg.Address = addr
-	cfg.Token = token
-	client, err := api.NewClient(cfg)
+	client, err := api.NewClient(config.APIConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,8 +88,8 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 	// Create a ServiceRegistration that points to our consul instance
 	logger := logging.NewVaultLogger(log.Trace)
 	sd, err := NewServiceRegistration(map[string]string{
-		"address": addr,
-		"token":   token,
+		"address": config.Address(),
+		"token":   config.Token,
 	}, logger, sr.State{}, redirectAddr)
 	if err != nil {
 		t.Fatal(err)

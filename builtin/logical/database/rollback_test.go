@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"github.com/hashicorp/vault/helper/namespace"
+	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -38,7 +39,7 @@ func TestBackend_RotateRootCredentials_WAL_rollback(t *testing.T) {
 	}
 	defer lb.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, lb)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
@@ -173,7 +174,7 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_1(t *testing.T) {
 	}
 	defer lb.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, lb)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
@@ -281,7 +282,7 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_2(t *testing.T) {
 	}
 	defer lb.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, lb)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
