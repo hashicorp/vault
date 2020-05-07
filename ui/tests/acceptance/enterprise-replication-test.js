@@ -59,7 +59,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     assert.equal(
       find('[data-test-empty-state-message]').textContent.trim(),
       'This cluster has not been enabled as a Disaster Recovery Secondary. You can do so by enabling replication and adding a secondary from the Disaster Recovery Primary.',
-      'renders default message specific to when no replication is disabled'
+      'renders default message specific to when no replication is enabled'
     );
 
     await visit('/vault/replication');
