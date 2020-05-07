@@ -70,6 +70,10 @@ const (
 	// clusters that they need to perform a rekey operation synchronously; this
 	// isn't keyring-canary to avoid ignoring it when ignoring core/keyring
 	coreKeyringCanaryPath = "core/canary-keyring"
+
+	// pluginReloadRequestPath is used to write plugin reload requests that are
+	// satisfied by cluster replicas
+	pluginReloadRequestPath = "core/plugins/reload-request"
 )
 
 var (

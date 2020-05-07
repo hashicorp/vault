@@ -84,6 +84,9 @@ var (
 			},
 		}
 	}
+	handleClusterPluginReload = func(context.Context, string, []string) error {
+		return nil
+	}
 
 	checkRaw = func(b *SystemBackend, path string) error { return nil }
 )

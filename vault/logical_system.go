@@ -9,6 +9,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/logical"
 	"hash"
 	"net/http"
 	"path/filepath"
@@ -29,17 +36,11 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/helper/wrapping"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
 const maxBytes = 128 * 1024
+const clusterScope = "cluster"
 
 func systemBackendMemDBSchema() *memdb.DBSchema {
 	systemSchema := &memdb.DBSchema{
@@ -432,6 +433,7 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logi
 func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("plugin").(string)
 	pluginMounts := d.Get("mounts").([]string)
+	scope := d.Get("scope").(string)
 
 	if pluginName != "" && len(pluginMounts) > 0 {
 		return logical.ErrorResponse("plugin and mounts cannot be set at the same time"), nil
@@ -450,9 +452,43 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		return nil, nil
 	}
 
+	if scope == clusterScope {
+		return nil, handleClusterPluginReload(ctx, pluginName, pluginMounts)
+		if pluginName != "" {
+			if err := b.writePluginReloadRequest(ctx, "/plugin/"+pluginName); err != nil {
+				return nil, err
+			}
+		} else {
+			for _, mount := range pluginMounts {
+				if err := b.writePluginReloadRequest(ctx, "/mount/"+mount); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
 	return nil, nil
+}
+
+func (b *SystemBackend) writePluginReloadRequest(ctx context.Context, reqPath string) error {
+	now := time.Now()
+	nb, err := now.MarshalBinary()
+	if err != nil {
+		return err
+	}
+
+	// Write a plugin reload request
+	if err := b.Core.barrier.Put(ctx, &logical.StorageEntry{
+		Key:   pluginReloadRequestPath + reqPath,
+		Value: nb,
+	}); err != nil {
+		b.Core.logger.Error("error saving plugin reload request", "error", err)
+		return errwrap.Wrapf("failed to save plugin reload request: {{err}}", err)
+	}
+	return nil
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
