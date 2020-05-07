@@ -1,4 +1,4 @@
-<div class="replication-dashboard box is-sideless is-fullwidth is-marginless">
+<div class="replication-dashboard box is-sideless is-fullwidth is-marginless" data-test-replication-dashboard>
   {{#if isSecondary}}
     <h2 class="has-text-weight-semibold is-size-4 has-bottom-margin-xs">
         Primary Cluster
@@ -7,7 +7,7 @@
       If you set a primary_cluster_addr when enabling replication, it will appear here.
     </p>
     {{#if replicationDetails.primaryClusterAddr}}
-      <code>{{replicationDetails.primaryClusterAddr}}</code>
+      <code data-test-primary-cluster-address>{{replicationDetails.primaryClusterAddr}}</code>
     {{else}}
       <code>no known primary cluster address</code>
     {{/if}}
@@ -18,7 +18,8 @@
       @title={{concat "Re-indexing in progress" reindexingStage}}
       @type="info"
       @secondIconType="loading"
-      @message="This can cause a delay depending on the size of the data store. You can use Vault during this time."/>
+      @message="This can cause a delay depending on the size of the data store. You can use Vault during this time."
+      data-test-isReindexing/>
   {{/if}}
 
   <div class="selectable-card-container has-top-margin-xl">
@@ -36,10 +37,11 @@
       @type="info"
       @secondIconType="loading"
       @message="The cluster is syncing. This happens when the secondary is too far behind the primary to use the normal stream-wals state for catching up."
-      @class="has-top-margin-xl" />
+      @class="has-top-margin-xl" 
+      data-test-isSyncing/>
   {{/if}}
   <ReplicationTableRows
     @replicationDetails={{replicationDetails}}
-    @clusterMode={{clusterMode}} />
-  <ReplicationDocLink />
+    @clusterMode={{clusterMode}}/>
+  <ReplicationDocLink data-test-replication-doc-link/>
 </div>

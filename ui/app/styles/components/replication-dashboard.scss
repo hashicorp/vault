@@ -23,13 +23,11 @@
 
     .card-container {
       display: grid;
-      grid-gap: 2rem;
+      grid-gap: 1rem;
       grid-template-columns: 1fr 1fr;
-      grid-template-rows: 1fr 1fr 0.8fr;
+      grid-template-rows: 0.2fr 1fr 0.2fr;
       padding: $spacing-l;
       line-height: 1.5;
-
-      height: 230px;
 
       @include until(1320px) {
         // prevent an issue with the card descriptions wrapping and expanding height
