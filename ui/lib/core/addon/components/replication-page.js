@@ -50,7 +50,7 @@ export default Component.extend({
     const replicationMode = model.replicationMode;
     return model[replicationMode];
   }),
-  isDisabled: computed('replicationDetails', function() {
+  isDisabled: computed('replicationDetails.{mode}', function() {
     if (this.replicationDetails.mode === 'disabled' || this.replicationDetails.mode === 'primary') {
       return true;
     }

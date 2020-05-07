@@ -14,11 +14,11 @@ export default Component.extend({
     const isSecondary = this.isSecondary;
     return isSecondary && state && clusterStates([state]).isSyncing;
   }),
-  isReindexing: computed('replicationDetails', function() {
+  isReindexing: computed('replicationDetails.{reindex_in_progress}', function() {
     const { replicationDetails } = this;
     return !!replicationDetails.reindex_in_progress;
   }),
-  reindexingStage: computed('replicationDetails', function() {
+  reindexingStage: computed('replicationDetails.{reindex_stage}', function() {
     const { replicationDetails } = this;
     const stage = replicationDetails.reindex_stage;
     // specify the stage if we have one
@@ -27,16 +27,19 @@ export default Component.extend({
     }
     return '';
   }),
-  reindexingProgress: computed('replicationDetails', function() {
-    // TODO: use this value to display a progress bar
-    const { reindex_building_progress, reindex_building_total } = this.replicationDetails;
-    let progress = 0;
+  reindexingProgress: computed(
+    'replicationDetails.{reindex_building_progress,reindex_building_total}',
+    function() {
+      // TODO: use this value to display a progress bar
+      const { reindex_building_progress, reindex_building_total } = this.replicationDetails;
+      let progress = 0;
 
-    if (reindex_building_progress && reindex_building_total) {
-      // convert progress to a percentage
-      progress = (reindex_building_progress / reindex_building_total) * 100;
+      if (reindex_building_progress && reindex_building_total) {
+        // convert progress to a percentage
+        progress = (reindex_building_progress / reindex_building_total) * 100;
+      }
+
+      return progress;
     }
-
-    return progress;
-  }),
+  ),
 });

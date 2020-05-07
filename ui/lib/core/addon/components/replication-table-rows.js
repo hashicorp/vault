@@ -7,10 +7,10 @@ export default Component.extend({
   classNames: ['replication-table-rows'],
   replicationDetails: null,
   clusterMode: null,
-  merkleRoot: computed('replicationDetails', function() {
+  merkleRoot: computed('replicationDetails.{merkleRoot}', function() {
     return this.replicationDetails.merkleRoot || 'unknown';
   }),
-  clusterId: computed('replicationDetails', function() {
+  clusterId: computed('replicationDetails.{clusterId}', function() {
     return this.replicationDetails.clusterId || 'unknown';
   }),
 });
