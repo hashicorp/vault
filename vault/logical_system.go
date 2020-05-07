@@ -457,18 +457,7 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 	}
 
 	if scope == clusterScope {
-		return nil, handleClusterPluginReload(ctx, pluginName, pluginMounts)
-		if pluginName != "" {
-			if err := b.writePluginReloadRequest(ctx, "/plugin/"+pluginName); err != nil {
-				return nil, err
-			}
-		} else {
-			for _, mount := range pluginMounts {
-				if err := b.writePluginReloadRequest(ctx, "/mount/"+mount); err != nil {
-					return nil, err
-				}
-			}
-		}
+		return nil, handleClusterPluginReload(ctx, b, pluginName, pluginMounts)
 	}
 	return nil, nil
 }
