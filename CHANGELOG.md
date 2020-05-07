@@ -27,8 +27,9 @@ BUG FIXES:
 IMPROVEMENTS:
 
 * storage/raft: The storage stanza now accepts `leader_ca_cert_file`, `leader_client_cert_file`, and 
-  `leader_client_key_file` parameters to read and parse TLS certification information from paths on disk. 
-  
+  `leader_client_key_file` parameters to read and parse TLS certification information from paths on disk.
+  Existing non-path based parameters will continue to work, but their values will need to be provided as a 
+  single-line string with newlines delimited by `\n`.
 
 ## 1.4.1 (April 30th, 2020)
 
