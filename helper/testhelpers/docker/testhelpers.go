@@ -38,7 +38,7 @@ type RunOptions struct {
 }
 
 func NewServiceRunner(opts RunOptions) (*Runner, error) {
-	dapi, err := client.NewClientWithOpts(client.FromEnv, client.WithVersion("1.40"))
+	dapi, err := client.NewClientWithOpts(client.FromEnv, client.WithVersion("1.39"))
 	if err != nil {
 		return nil, err
 	}
