@@ -63,5 +63,6 @@
   // prevent double lines at the bottom of the dashboard
   &.box {
     padding-bottom: 0;
+    padding-top: 1px; // at least 1px so border still shows
   }
 }
