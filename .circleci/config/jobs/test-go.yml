@@ -4,6 +4,7 @@ steps:
   - check-branch-name
   - checkout
   - setup_remote_docker:
+      version: 18.09.3
       docker_layer_caching: true
   - go_test:
       log_dir: "/tmp/testlogs"
