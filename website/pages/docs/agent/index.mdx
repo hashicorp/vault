@@ -46,10 +46,10 @@ These are the currently-available general configuration option:
 
 - `listener` <code>([listener][listener]: <optional\>)</code> - Specifies the addresses and ports on which the Agent will respond to requests.
 
-- `pid_file` <code>(string: "")</code> - Path to the file in which the agent's Process ID
+- `pid_file` `(string: "")` - Path to the file in which the agent's Process ID
   (PID) should be stored
 
-- `exit_after_auth` <code>(bool: false)</code> - If set to `true`, the agent will exit
+- `exit_after_auth` `(bool: false)` - If set to `true`, the agent will exit
   with code `0` after a single successful auth, where success means that a
   token was retrieved and all sinks successfully wrote it
 
@@ -60,35 +60,35 @@ These are the currently-available general configuration option:
 There can at most be one top level `vault` block and it has the following
 configuration entries:
 
-- `address` <code>(string: <optional\>)</code> - The address of the Vault server. This should
+- `address` `(string: <optional\>)` - The address of the Vault server. This should
   be a complete URL such as `https://127.0.0.1:8200`. This value can be
   overridden by setting the `VAULT_ADDR` environment variable.
 
-- `ca_cert` <code>(string: <optional\>)</code> - Path on the local disk to a single PEM-encoded
+- `ca_cert` `(string: <optional\>)` - Path on the local disk to a single PEM-encoded
   CA certificate to verify the Vault server's SSL certificate. This value can
   be overridden by setting the `VAULT_CACERT` environment variable.
 
-- `ca_path` <code>(string: <optional\>)</code> - Path on the local disk to a directory of
+- `ca_path` `(string: <optional\>)` - Path on the local disk to a directory of
   PEM-encoded CA certificates to verify the Vault server's SSL certificate.
   This value can be overridden by setting the `VAULT_CAPATH` environment
   variable.
 
-- `client_cert` <code>(string: <optional\>)</code> - Path on the local disk to a single
+- `client_cert` `(string: <optional\>)` - Path on the local disk to a single
   PEM-encoded CA certificate to use for TLS authentication to the Vault server.
   This value can be overridden by setting the `VAULT_CLIENT_CERT` environment
   variable.
 
-- `client_key` <code>(string: <optional\>)</code> - Path on the local disk to a single
+- `client_key` `(string: <optional\>)` - Path on the local disk to a single
   PEM-encoded private key matching the client certificate from `client_cert`.
   This value can be overridden by setting the `VAULT_CLIENT_KEY` environment
   variable.
 
-- `tls_skip_verify` <code>(string: <optional\>)</code> - Disable verification of TLS
+- `tls_skip_verify` `(string: <optional\>)` - Disable verification of TLS
   certificates. Using this option is highly discouraged as it decreases the
   security of data transmissions to and from the Vault server. This value can
   be overridden by setting the `VAULT_SKIP_VERIFY` environment variable.
 
-- `tls_server_name` <code>(string: <optional\>)</code> - Name to use as the SNI host when
+- `tls_server_name` `(string: <optional\>)` - Name to use as the SNI host when
   connecting via TLS. This value can be overridden by setting the
   `VAULT_TLS_SERVER_NAME` environment variable.
 
@@ -98,7 +98,7 @@ Agent supports one or more [listener](listener_main) stanzas. In addition to
 the standard listener configuration, an Agent's listener configuration also
 supports an additional optional entry:
 
-- `require_request_header` <code>(bool: false)</code> - Require that all incoming HTTP
+- `require_request_header` `(bool: false)` - Require that all incoming HTTP
   requests on this listener must have an `X-Vault-Request: true` header entry.
   Using this option offers an additional layer of protection from Server Side
   Request Forgery attacks. Requests on the listener that do not have the proper
