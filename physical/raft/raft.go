@@ -126,18 +126,18 @@ type LeaderJoinInfo struct {
 	// client authentication during TLS.
 	LeaderClientKey string `json:"leader_client_key"`
 
-	// LeaderCACert is the CA cert of the leader node. This should only be
-	// provided via Vault's configuration file.
+	// LeaderCACertFile is the path on disk to the the CA cert file of the
+	// leader node. This should only be provided via Vault's configuration file.
 	LeaderCACertFile string `json:"leader_ca_cert_file"`
 
-	// LeaderClientCert is the client certificate for the follower node to
-	// establish client authentication during TLS. This should only be provided
-	// via Vault's configuration file.
+	// LeaderClientCertFile is the path on disk to the client certificate file
+	// for the follower node to establish client authentication during TLS. This
+	// should only be provided via Vault's configuration file.
 	LeaderClientCertFile string `json:"leader_client_cert_file"`
 
-	// LeaderClientKey is the client key for the follower node to establish
-	// client authentication during TLS. This should only be provided via
-	// Vault's configuration file.
+	// LeaderClientKeyFile is the path on disk to the client key file for the
+	// follower node to establish client authentication during TLS. This should
+	// only be provided via Vault's configuration file.
 	LeaderClientKeyFile string `json:"leader_client_key_file"`
 
 	// Retry indicates if the join process should automatically be retried
