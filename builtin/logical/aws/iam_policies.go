@@ -40,7 +40,7 @@ func (se *StatementEntries) UnmarshalJSON(b []byte) error {
 	case interface{}:
 		out = []interface{}{t}
 	default:
-		return fmt.Errorf("Unsupported data type %T for StatementEntries", t)
+		return fmt.Errorf("unsupported data type %T for StatementEntries", t)
 	}
 	*se = out
 	return nil
@@ -56,6 +56,12 @@ func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGr
 	var inlinePolicies *iam.ListGroupPoliciesOutput
 	var inlinePolicyDoc *iam.GetGroupPolicyOutput
 	var iamClient iamiface.IAMAPI
+
+	// Return early if there are no groups, to avoid creating an IAM client
+	// needlessly
+	if len(iamGroups) == 0 {
+		return nil, nil, nil
+	}
 
 	iamClient, err = b.clientIAM(ctx, s)
 	if err != nil {
@@ -103,9 +109,11 @@ func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGr
 
 // combinePolicyDocuments takes policy strings as input, and combines them into
 // a single policy document string
-func combinePolicyDocuments(policies ...string) (policy string, err error) {
+func combinePolicyDocuments(policies ...string) (string, error) {
+	var policy string
+	var err error
 	var policyBytes []byte
-	var newPolicy PolicyDocument = PolicyDocument{
+	var newPolicy = PolicyDocument{
 		Version: "2012-10-17",
 	}
 	newPolicy.Statements = make(StatementEntries, 0)
@@ -117,15 +125,15 @@ func combinePolicyDocuments(policies ...string) (policy string, err error) {
 		var tmpDoc PolicyDocument
 		err = json.Unmarshal([]byte(p), &tmpDoc)
 		if err != nil {
-			return
+			return "", err
 		}
 		newPolicy.Statements = append(newPolicy.Statements, tmpDoc.Statements...)
 	}
 
 	policyBytes, err = json.Marshal(&newPolicy)
 	if err != nil {
-		return
+		return "", err
 	}
 	policy = string(policyBytes)
-	return
+	return policy, nil
 }

@@ -87,6 +87,10 @@ type of assumed_role or federation_token, the policies sent to the
 corresponding AWS call (sts:AssumeRole or sts:GetFederation) will be the
 policies from each group in iam_groups combined with the policy_document
 and policy_arns parameters.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "IAM Groups",
+					Value: "group1,group2",
+				},
 			},
 
 			"default_sts_ttl": &framework.FieldSchema{

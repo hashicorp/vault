@@ -45,6 +45,7 @@ func Test_getGroupPolicies(t *testing.T) {
 		listAGPResp         iam.ListAttachedGroupPoliciesOutput
 		listGPResp          iam.ListGroupPoliciesOutput
 		getGPResp           iam.GetGroupPolicyOutput
+		iamGroupArg         []string
 		wantGroupPolicies   []string
 		wantGroupPolicyARNs []string
 		wantErr             bool
@@ -69,6 +70,7 @@ func Test_getGroupPolicies(t *testing.T) {
 				PolicyDocument: aws.String(ec2DescribePolicy),
 				PolicyName:     aws.String("ec2 describe"),
 			},
+			iamGroupArg:         []string{"testgroup1", "testgroup2"},
 			wantGroupPolicies:   []string{ec2DescribePolicy},
 			wantGroupPolicyARNs: []string{"abcdefghijklmnopqrst"},
 			wantErr:             false,
@@ -86,6 +88,7 @@ func Test_getGroupPolicies(t *testing.T) {
 				PolicyDocument: aws.String(ec2DescribePolicy),
 				PolicyName:     aws.String("ec2 describe"),
 			},
+			iamGroupArg:         []string{"testgroup1", "testgroup2"},
 			wantGroupPolicies:   []string{ec2DescribePolicy},
 			wantGroupPolicyARNs: []string(nil),
 			wantErr:             false,
@@ -102,6 +105,7 @@ func Test_getGroupPolicies(t *testing.T) {
 			},
 			listGPResp:          iam.ListGroupPoliciesOutput{},
 			getGPResp:           iam.GetGroupPolicyOutput{},
+			iamGroupArg:         []string{"testgroup1", "testgroup2"},
 			wantGroupPolicies:   []string(nil),
 			wantGroupPolicyARNs: []string{"abcdefghijklmnopqrst"},
 			wantErr:             false,
@@ -111,6 +115,17 @@ func Test_getGroupPolicies(t *testing.T) {
 			listAGPResp:         iam.ListAttachedGroupPoliciesOutput{},
 			listGPResp:          iam.ListGroupPoliciesOutput{},
 			getGPResp:           iam.GetGroupPolicyOutput{},
+			iamGroupArg:         []string{"testgroup1", "testgroup2"},
+			wantGroupPolicies:   []string(nil),
+			wantGroupPolicyARNs: []string(nil),
+			wantErr:             false,
+		},
+		{
+			description:         "empty iam_groups arg",
+			listAGPResp:         iam.ListAttachedGroupPoliciesOutput{},
+			listGPResp:          iam.ListGroupPoliciesOutput{},
+			getGPResp:           iam.GetGroupPolicyOutput{},
+			iamGroupArg:         []string{},
 			wantGroupPolicies:   []string(nil),
 			wantGroupPolicyARNs: []string(nil),
 			wantErr:             false,
@@ -133,7 +148,7 @@ func Test_getGroupPolicies(t *testing.T) {
 			}
 
 			// run the test and compare results
-			groupPolicies, groupPolicyARNs, err := b.getGroupPolicies(context.TODO(), config.StorageView, []string{"ignored"})
+			groupPolicies, groupPolicyARNs, err := b.getGroupPolicies(context.TODO(), config.StorageView, tc.iamGroupArg)
 			assert.Equal(t, tc.wantGroupPolicies, groupPolicies)
 			assert.Equal(t, tc.wantGroupPolicyARNs, groupPolicyARNs)
 			assert.Equal(t, tc.wantErr, err != nil)
