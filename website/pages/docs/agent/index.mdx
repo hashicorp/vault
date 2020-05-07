@@ -38,57 +38,57 @@ Please see the [Caching docs][caching] for information.
 
 These are the currently-available general configuration option:
 
-- `vault` <tt>([vault][vault]: <optional\>)</tt> - Specifies the remote Vault server the Agent connects to.
+- `vault` <code>([vault][vault]: <optional\>)</code> - Specifies the remote Vault server the Agent connects to.
 
-- `auto_auth` <tt>([auto_auth][autoauth]: <optional\>)</tt> - Specifies the method and other options used for Auto-Auth functionality.
+- `auto_auth` <code>([auto_auth][autoauth]: <optional\>)</code> - Specifies the method and other options used for Auto-Auth functionality.
 
-- `cache` <tt>([cache][caching]: <optional\>)</tt> - Specifies options used for Caching functionality.
+- `cache` <code>([cache][caching]: <optional\>)</code> - Specifies options used for Caching functionality.
 
-- `listener` <tt>([listener][listener]: <optional\>)</tt> - Specifies the addresses and ports on which the Agent will respond to requests.
+- `listener` <code>([listener][listener]: <optional\>)</code> - Specifies the addresses and ports on which the Agent will respond to requests.
 
-- `pid_file` <tt>(string: "")</tt> - Path to the file in which the agent's Process ID
+- `pid_file` <code>(string: "")</code> - Path to the file in which the agent's Process ID
   (PID) should be stored
 
-- `exit_after_auth` <tt>(bool: false)</tt> - If set to `true`, the agent will exit
+- `exit_after_auth` <code>(bool: false)</code> - If set to `true`, the agent will exit
   with code `0` after a single successful auth, where success means that a
   token was retrieved and all sinks successfully wrote it
 
-- `template` <tt>([template][template]: <optional\>)</tt> - Specifies options used for templating Vault secrets to files.
+- `template` <code>([template][template]: <optional\>)</code> - Specifies options used for templating Vault secrets to files.
 
 ### vault Stanza
 
 There can at most be one top level `vault` block and it has the following
 configuration entries:
 
-- `address` <tt>(string: <optional\>)</tt> - The address of the Vault server. This should
+- `address` <code>(string: <optional\>)</code> - The address of the Vault server. This should
   be a complete URL such as `https://127.0.0.1:8200`. This value can be
   overridden by setting the `VAULT_ADDR` environment variable.
 
-- `ca_cert` <tt>(string: <optional\>)</tt> - Path on the local disk to a single PEM-encoded
+- `ca_cert` <code>(string: <optional\>)</code> - Path on the local disk to a single PEM-encoded
   CA certificate to verify the Vault server's SSL certificate. This value can
   be overridden by setting the `VAULT_CACERT` environment variable.
 
-- `ca_path` <tt>(string: <optional\>)</tt> - Path on the local disk to a directory of
+- `ca_path` <code>(string: <optional\>)</code> - Path on the local disk to a directory of
   PEM-encoded CA certificates to verify the Vault server's SSL certificate.
   This value can be overridden by setting the `VAULT_CAPATH` environment
   variable.
 
-- `client_cert` <tt>(string: <optional\>)</tt> - Path on the local disk to a single
+- `client_cert` <code>(string: <optional\>)</code> - Path on the local disk to a single
   PEM-encoded CA certificate to use for TLS authentication to the Vault server.
   This value can be overridden by setting the `VAULT_CLIENT_CERT` environment
   variable.
 
-- `client_key` <tt>(string: <optional\>)</tt> - Path on the local disk to a single
+- `client_key` <code>(string: <optional\>)</code> - Path on the local disk to a single
   PEM-encoded private key matching the client certificate from `client_cert`.
   This value can be overridden by setting the `VAULT_CLIENT_KEY` environment
   variable.
 
-- `tls_skip_verify` <tt>(string: <optional\>)</tt> - Disable verification of TLS
+- `tls_skip_verify` <code>(string: <optional\>)</code> - Disable verification of TLS
   certificates. Using this option is highly discouraged as it decreases the
   security of data transmissions to and from the Vault server. This value can
   be overridden by setting the `VAULT_SKIP_VERIFY` environment variable.
 
-- `tls_server_name` <tt>(string: <optional\>)</tt> - Name to use as the SNI host when
+- `tls_server_name` <code>(string: <optional\>)</code> - Name to use as the SNI host when
   connecting via TLS. This value can be overridden by setting the
   `VAULT_TLS_SERVER_NAME` environment variable.
 
@@ -98,7 +98,7 @@ Agent supports one or more [listener](listener_main) stanzas. In addition to
 the standard listener configuration, an Agent's listener configuration also
 supports an additional optional entry:
 
-- `require_request_header` <tt>(bool: false)</tt> - Require that all incoming HTTP
+- `require_request_header` <code>(bool: false)</code> - Require that all incoming HTTP
   requests on this listener must have an `X-Vault-Request: true` header entry.
   Using this option offers an additional layer of protection from Server Side
   Request Forgery attacks. Requests on the listener that do not have the proper
