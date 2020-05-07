@@ -80,7 +80,6 @@ func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]in
 		return nil, err
 	}
 
-	c.ConnectionURL = c.getConnectionURL()
 	c.clientOptions = options.MergeClientOptions(writeOpts, authOpts)
 
 	// Set initialized to true at this point since all fields are set,
@@ -117,11 +116,7 @@ func (c *mongoDBConnectionProducer) Connection(ctx context.Context) (interface{}
 		_ = c.client.Disconnect(ctx)
 	}
 
-	vars := map[string]string{
-		"username": c.Username,
-		"password": c.Password,
-	}
-	connURL := dbutil.QueryHelper(c.ConnectionURL, vars)
+	connURL := c.getConnectionURL()
 	client, err := createClient(ctx, connURL, c.clientOptions)
 	if err != nil {
 		return nil, err

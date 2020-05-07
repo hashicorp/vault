@@ -162,7 +162,8 @@ func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statem
 		Password: password,
 	}
 
-	cs, err := connstring.Parse(m.ConnectionURL)
+	connURL := m.getConnectionURL()
+	cs, err := connstring.Parse(connURL)
 	if err != nil {
 		return "", "", err
 	}
@@ -254,18 +255,22 @@ func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string
 	}
 
 	m.RawConfig["password"] = password
+	m.Password = password
 	return m.RawConfig, nil
 }
 
+const (
+	defaultCommandTimeout = 1*time.Minute
+)
+
 // runCommandWithRetry runs a command with retry.
 func runCommandWithRetry(ctx context.Context, client *mongo.Client, db string, cmd interface{}) error {
-	maxTime := 1 * time.Minute
-	timeout := time.NewTimer(maxTime)
-	defer timeout.Stop()
-
-	// Update the context to ensure it has a timeout on it
-	ctx, cancel := context.WithTimeout(ctx, maxTime)
-	defer cancel()
+	// Ensure the context has a timeout on it
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(ctx, defaultCommandTimeout)
+		defer cancel()
+	}
 
 	nextAttemptTime := 3 * time.Second
 	nextAttemptIncrement := 3 * time.Second
@@ -273,30 +278,23 @@ func runCommandWithRetry(ctx context.Context, client *mongo.Client, db string, c
 	defer nextAttempt.Stop()
 
 	for {
-		cmdCtx, cancel := context.WithTimeout(context.Background(), nextAttemptIncrement)
+		cmdCtx, cmdCancel := context.WithTimeout(context.Background(), nextAttemptIncrement)
 
-		err := runCommand(cmdCtx, client, db, cmd)
+		result := client.Database(db).RunCommand(cmdCtx, cmd, nil)
+		err := result.Err()
 		if err == nil {
-			cancel()
+			cmdCancel()
 			return nil
 		}
 
 		select {
-		case <-timeout.C:
-			cancel()
-			return fmt.Errorf("timed out executing command - last error was: %s", err)
 		case <-ctx.Done():
-			cancel()
+			cmdCancel()
 			return fmt.Errorf("timed out executing command - last error was: %s", err)
 		case <-nextAttempt.C:
 			nextAttemptTime += nextAttemptIncrement
 			nextAttempt.Reset(nextAttemptTime)
-			cancel()
+			cmdCancel()
 		}
 	}
-}
-
-func runCommand(ctx context.Context, client *mongo.Client, db string, cmd interface{}) error {
-	result := client.Database(db).RunCommand(ctx, cmd, nil)
-	return result.Err()
 }
