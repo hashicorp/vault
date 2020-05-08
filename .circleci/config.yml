@@ -164,23 +164,21 @@ jobs:
           USE_DOCKER=0
           USE_DOCKER=1
 
+          # Split Go tests by prior test times.  If use_docker is true, only run
+          # tests that depend on docker, otherwise only those that don't.
           if [ $USE_DOCKER == 1 ]; then
             package_names=$(go list -test -json ./... |
               jq -r 'select(.Deps != null) |
                 select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
                 .ForTest | select(. != null)' |
-                sort -u)
+                sort -u | circleci tests split --split-by=timings --timings-type=classname)
           else
             package_names=$(go list -test -json ./... |
               jq -r 'select(.Deps != null) |
                 select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
                 .ForTest | select(. != null)' |
-                sort -u)
+                sort -u | circleci tests split --split-by=timings --timings-type=classname)
           fi
-
-          # Split Go tests by prior test times
-          package_names=$(echo $package_names |
-            circleci tests split --split-by=timings --timings-type=classname)
 
           # After running tests split step, we are now running the following steps
           # in multiple different containers, each getting a different subset of
@@ -278,23 +276,21 @@ jobs:
 
           USE_DOCKER=0
 
+          # Split Go tests by prior test times.  If use_docker is true, only run
+          # tests that depend on docker, otherwise only those that don't.
           if [ $USE_DOCKER == 1 ]; then
             package_names=$(go list -test -json ./... |
               jq -r 'select(.Deps != null) |
                 select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
                 .ForTest | select(. != null)' |
-                sort -u)
+                sort -u | circleci tests split --split-by=timings --timings-type=classname)
           else
             package_names=$(go list -test -json ./... |
               jq -r 'select(.Deps != null) |
                 select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
                 .ForTest | select(. != null)' |
-                sort -u)
+                sort -u | circleci tests split --split-by=timings --timings-type=classname)
           fi
-
-          # Split Go tests by prior test times
-          package_names=$(echo $package_names |
-            circleci tests split --split-by=timings --timings-type=classname)
 
           # After running tests split step, we are now running the following steps
           # in multiple different containers, each getting a different subset of
@@ -407,23 +403,21 @@ jobs:
 
           USE_DOCKER=0
 
+          # Split Go tests by prior test times.  If use_docker is true, only run
+          # tests that depend on docker, otherwise only those that don't.
           if [ $USE_DOCKER == 1 ]; then
             package_names=$(go list -test -json ./... |
               jq -r 'select(.Deps != null) |
                 select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
                 .ForTest | select(. != null)' |
-                sort -u)
+                sort -u | circleci tests split --split-by=timings --timings-type=classname)
           else
             package_names=$(go list -test -json ./... |
               jq -r 'select(.Deps != null) |
                 select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
                 .ForTest | select(. != null)' |
-                sort -u)
+                sort -u | circleci tests split --split-by=timings --timings-type=classname)
           fi
-
-          # Split Go tests by prior test times
-          package_names=$(echo $package_names |
-            circleci tests split --split-by=timings --timings-type=classname)
 
           # After running tests split step, we are now running the following steps
           # in multiple different containers, each getting a different subset of
