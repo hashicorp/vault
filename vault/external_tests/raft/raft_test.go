@@ -400,7 +400,6 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 
 	for _, tCase := range tCases {
 		t.Run(tCase.Name, func(t *testing.T) {
-			t.Parallel()
 			// bind locally
 			tCaseLocal := tCase
 			t.Parallel()
