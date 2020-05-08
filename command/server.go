@@ -2499,7 +2499,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 	}
 
 	// Intialize a wrapper around the global sing.
-	wrapper := metricsutil.ClusterMetricSink{
+	wrapper := &metricsutil.ClusterMetricSink{
 		ClusterName:         config.ClusterName,
 		MaxGaugeCardinality: 500,
 		GaugeInterval:       10 * time.Minute,
