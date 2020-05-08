@@ -15,7 +15,6 @@ import (
 var dataKeys = []string{"username", "password", "last_vault_rotation", "rotation_period"}
 
 func TestBackend_StaticRole_Config(t *testing.T) {
-	t.Parallel()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -186,7 +185,6 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Updates(t *testing.T) {
-	t.Parallel()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -380,7 +378,6 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Role_name_check(t *testing.T) {
-	t.Parallel()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 

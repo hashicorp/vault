@@ -190,6 +190,9 @@ jobs:
               -C /usr/local/bin \
               "circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64/circleci"
 
+          # TODO only run these tests with docker:
+          # go list -test -json  ./...  | jq 'select(.Deps != null) | select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) | .Dir'  |sort -u
+
           # Split Go tests by prior test times
           package_names=$(go list \
               -tags "${GO_TAGS}" \
@@ -282,6 +285,9 @@ jobs:
             | sudo tar --overwrite -xz \
               -C /usr/local/bin \
               "circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64/circleci"
+
+          # TODO only run these tests with docker:
+          # go list -test -json  ./...  | jq 'select(.Deps != null) | select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) | .Dir'  |sort -u
 
           # Split Go tests by prior test times
           package_names=$(go list \

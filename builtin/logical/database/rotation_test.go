@@ -28,7 +28,6 @@ const (
 )
 
 func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
-	t.Parallel()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -177,7 +176,6 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 // for non-static accounts, which doesn't make sense anyway, but doesn't hurt to
 // verify we return an error
 func TestBackend_StaticRole_Rotate_NonStaticError(t *testing.T) {
-	t.Parallel()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -282,7 +280,6 @@ func TestBackend_StaticRole_Rotate_NonStaticError(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Revoke_user(t *testing.T) {
-	t.Parallel()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -465,7 +462,6 @@ func verifyPgConn(t *testing.T, username, password, connURL string) {
 //
 // First scenario, WAL contains a role name that does not exist.
 func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
-	t.Parallel()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -507,7 +503,6 @@ func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
 // Second scenario, WAL contains a role name that does exist, but the role's
 // LastVaultRotation is greater than the WAL has
 func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) {
-	t.Parallel()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -692,7 +687,6 @@ func assertWALCount(t *testing.T, s logical.Storage, expected int, key string) {
 //
 
 func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
-	t.Parallel()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -829,8 +823,6 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
-	t.Parallel()
-
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -996,7 +988,6 @@ type createUserCommand struct {
 
 // Demonstrates a bug fix for the credential rotation not releasing locks
 func TestBackend_StaticRole_LockRegression(t *testing.T) {
-	t.Parallel()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -1066,7 +1057,6 @@ func TestBackend_StaticRole_LockRegression(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Rotate_Invalid_Role(t *testing.T) {
-	t.Parallel()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
