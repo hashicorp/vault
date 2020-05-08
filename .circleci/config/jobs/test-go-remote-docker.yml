@@ -1,5 +1,5 @@
 executor: docker-env
-parallelism: 4
+parallelism: 8
 steps:
   - check-branch-name
   - checkout
