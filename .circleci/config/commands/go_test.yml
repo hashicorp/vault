@@ -26,9 +26,9 @@ steps:
         # Split Go tests by prior test times
         package_names=$(go list \
             -tags "${GO_TAGS}" \
-            ./... \
+            -test ./... \
           | grep -v /integ \
-          | grep -v /vendor/ \
+          | grep '.test$' | sed 's/.test$/ \
           | sort \
           | circleci tests split --split-by=timings --timings-type=classname)
 
