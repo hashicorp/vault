@@ -3,6 +3,7 @@ package api
 import (
 	"bufio"
 	"context"
+	"fmt"
 )
 
 // Monitor returns a channel that outputs strings containing the log messages
@@ -22,10 +23,13 @@ func (c *Sys) Monitor(ctx context.Context, logLevel string) (chan string, error)
 	}
 
 	logCh := make(chan string, 64)
+
 	go func() {
+		scanner := bufio.NewScanner(resp.Body)
+		droppedCount := 0
+
 		defer close(logCh)
 		defer resp.Body.Close()
-		scanner := bufio.NewScanner(resp.Body)
 
 		for {
 			if ctx.Err() != nil {
@@ -36,12 +40,22 @@ func (c *Sys) Monitor(ctx context.Context, logLevel string) (chan string, error)
 				return
 			}
 
-			// An empty string signals to the caller that
-			// the scan is done, so make sure we only emit
-			// that when the scanner says it's done, not if
-			// we happen to ingest an empty line.
-			if text := scanner.Text(); text != "" {
-				logCh <- text
+			logMessage := scanner.Text()
+
+			if droppedCount > 0 {
+				select {
+				case logCh <- fmt.Sprintf("Monitor dropped %d logs during monitor request\n", droppedCount):
+					droppedCount = 0
+				default:
+					droppedCount++
+					continue
+				}
+			}
+
+			select {
+			case logCh <- logMessage:
+			default:
+				droppedCount++
 			}
 		}
 	}()

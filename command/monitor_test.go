@@ -52,7 +52,7 @@ func TestMonitorCommand_Run(t *testing.T) {
 			[]string{
 				"-log-level=haha",
 			},
-			"HAHA is an unknown log level",
+			"haha is an unknown log level",
 			1,
 		},
 	}
