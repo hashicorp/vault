@@ -388,6 +388,9 @@ well.
 
 #### Upgrading Vault Servers
 
+!> **IMPORTANT NOTE:** Helm will install the latest chart found in a repo by default. 
+It's recommended to specify the chart version when upgrading.
+
 To initiate the upgrade, set the `server.image` values to the desired Vault
 version, either in a values yaml file or on the command line. For illustrative
 purposes, the example below uses `vault:123.456`.
@@ -399,15 +402,22 @@ server:
     tag: '123.456'
 ```
 
+Next, list the Helm versions and choose the desire version to install.
+
+```bash
+helm search repo hashicorp/vault
+NAME           	CHART VERSION	APP VERSION	DESCRIPTION
+hashicorp/vault	0.5.0        	1.4.0		Install and configure Vault on Kubernetes.
+```
+
 Next, test the upgrade with `--dry-run` first to verify the changes sent to the
 Kubernetes cluster.
 
 ```bash
-$ helm upgrade vault hashicorp/vault \
+$ helm upgrade vault hashicorp/vault --version=0.5.0 \
     --set='server.image.repository=vault' \
     --set='server.image.tag=123.456' \
     --dry-run
-...
 ```
 
 This should cause no changes (although the resources are updated). If
