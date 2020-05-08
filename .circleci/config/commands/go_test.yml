@@ -3,6 +3,9 @@ parameters:
   extra_flags:
     type: string
     default: ""
+  log_dir:
+    type: string
+    default: "/tmp/testlogs"
 steps:
   - run:
       name: Run Go tests
@@ -38,6 +41,7 @@ steps:
           VAULT_TOKEN= \
           VAULT_DEV_ROOT_TOKEN_ID= \
           VAULT_ACC= \
+          VAULT_TEST_LOG_DIR=<< parameters.log_dir >> \
           gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
             -tags "${GO_TAGS}" \
             -timeout=60m \
