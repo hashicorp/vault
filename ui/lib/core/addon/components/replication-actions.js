@@ -10,7 +10,6 @@ const DEFAULTS = {
   primary_cluster_addr: null,
   errors: [],
   id: null,
-  replicationMode: null,
   force: false,
 };
 
@@ -19,7 +18,6 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
   replicationMode: null,
   model: null,
   cluster: alias('model'),
-
   reset() {
     if (!this || this.isDestroyed || this.isDestroying) {
       return;
