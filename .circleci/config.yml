@@ -646,7 +646,7 @@ workflows:
             - /^docs\/.*/
             - /^ui\/.*/
         requires:
-        - build-go-dev
+        - pre-flight-checks
     - test-go-remote-docker:
         filters:
           branches:
@@ -654,7 +654,7 @@ workflows:
             - /^docs\/.*/
             - /^ui\/.*/
         requires:
-        - build-go-dev
+        - pre-flight-checks
     - test-go-race:
         filters:
           branches:
@@ -662,7 +662,7 @@ workflows:
             - /^docs\/.*/
             - /^ui\/.*/
         requires:
-        - build-go-dev
+        - pre-flight-checks
     - test-go-race-remote-docker:
         filters:
           branches:
@@ -670,7 +670,7 @@ workflows:
             - /^docs\/.*/
             - /^ui\/.*/
         requires:
-        - build-go-dev
+        - pre-flight-checks
     - website-docker-image:
         filters:
           branches:

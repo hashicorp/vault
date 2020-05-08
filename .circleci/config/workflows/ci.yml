@@ -20,7 +20,7 @@ jobs:
           ignore: /pull\/[0-9]+/
   - test-go:
       requires:
-        - build-go-dev
+        - pre-flight-checks
       filters:
         branches:
           # UI and Docs-only branches should skip go tests
@@ -29,7 +29,7 @@ jobs:
             - /^ui\/.*/
   - test-go-remote-docker:
       requires:
-        - build-go-dev
+        - pre-flight-checks
       filters:
         branches:
           # UI and Docs-only branches should skip go tests
@@ -38,7 +38,7 @@ jobs:
             - /^ui\/.*/
   - test-go-race:
       requires:
-        - build-go-dev
+        - pre-flight-checks
       filters:
         branches:
           # UI and Docs-only branches should skip go tests
@@ -47,7 +47,7 @@ jobs:
             - /^ui\/.*/
   - test-go-race-remote-docker:
       requires:
-        - build-go-dev
+        - pre-flight-checks
       filters:
         branches:
           # UI and Docs-only branches should skip go tests
