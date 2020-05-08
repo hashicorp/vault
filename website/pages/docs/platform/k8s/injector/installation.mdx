@@ -7,26 +7,39 @@ description: The Vault Agent Sidecar Injector can be installed using Vault Helm.
 
 # Installing the Agent Injector
 
-The following are the different methods of installing the Agent Injector in
-Kubernetes.
+The [Vault Helm chart](/docs/platform/k8s/helm) is the recommended way to
+install and configure the Agent Injector in Kubernetes.
 
-~> The Vault Agent Injector requires Vault 1.3.1.
+~> The Vault Agent Injector requires Vault 1.3.1 or greater.
 
-To install the Vault Agent injector, enable the injection feature using
-[Helm values](/docs/platform/k8s/helm/configuration) and
-upgrade the installation using `helm upgrade` for existing installs or
-`helm install` for a fresh install.
+To install a new instance of Vault and the Vault Agent Injector, first add the
+Hashicorp helm repository and ensure you have access to the chart:
 
-To install a new instance of Vault and the Vault Agent Injector, run the following:
+```shell
+$ helm repo add hashicorp https://helm.releases.hashicorp.com
+"hashicorp" has been added to your repositories
 
-```bash
-helm install vault \
-  --set="injector.enabled=true" \
-  https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
+$ helm search repo hashicorp/vault
+NAME           	CHART VERSION	APP VERSION	DESCRIPTION
+hashicorp/vault	0.5.0        	           	Install and configure Vault on Kubernetes.
 ```
 
-Other values in the Helm chart can be used to limit the namespaces the injector
-runs in, TLS options and more.
+Then install the chart and enable the injection feature by setting the
+`injector.enabled` value to `true`:
+
+```bash
+helm install vault hashicorp/vault --set="injector.enabled=true"
+```
+
+Upgrades may be performed with `helm upgrade` on an existing install. Please
+always run Helm with `--dry-run` before any install or upgrade to verify
+changes.
+
+You can see all the available values settings by running `helm inspect values
+hashicorp/vault` or by reading the [Vault Helm Configuration
+Docs](/docs/platform/k8s/helm/configuration). Commonly used values in the Helm
+chart include limiting the namespaces the injector runs in, TLS options and
+more. 
 
 ## TLS Options
 
