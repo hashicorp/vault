@@ -70,5 +70,6 @@ steps:
 
   - run:
       name: Copy test results
+      when: always
       command: |
         docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
