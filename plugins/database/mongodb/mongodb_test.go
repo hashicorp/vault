@@ -428,7 +428,9 @@ func createUser(t *testing.T, connURL, username, password string) {
 			"readWriteAnyDatabase",
 		},
 	}
-	err = runCommandWithRetry(ctx, client, "admin", createUserCmd)
+
+	result := client.Database("admin").RunCommand(ctx, createUserCmd, nil)
+	err = result.Err()
 	if err != nil {
 		t.Fatalf("Unable to create admin user: %s", err)
 	}

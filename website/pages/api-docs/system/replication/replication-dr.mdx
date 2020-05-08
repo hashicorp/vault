@@ -379,6 +379,30 @@ $ curl \
 }
 ```
 
+## Disable DR Secondary
+
+This endpoint disables DR replication entirely on the cluster. The cluster will no
+longer be able to connect to the DR primary.
+
+!> Re-enabling this node as a DR primary or secondary will change its cluster ID;
+in the secondary case this means a wipe of the underlying storage when connected
+to a primary, and in the primary case, secondaries connecting back to the
+cluster (even if they have connected before) will require a wipe of the
+underlying storage.
+
+| Method | Path                                             |
+| :----- | :----------------------------------------------- |
+| `POST` | `/sys/replication/dr/secondary/disable` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/disable
+```
+
 ## Update DR Secondary's Primary
 
 This endpoint changes a DR secondary cluster's assigned primary cluster using a

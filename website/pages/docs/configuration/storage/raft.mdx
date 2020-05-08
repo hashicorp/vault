@@ -13,9 +13,6 @@ description: |-
 
 # Raft Storage Backend
 
-~> **NOTE:** Vault's Integrated Storage is currently a **_Beta_**
-feature and not recommended for deployment in production.
-
 The Raft storage backend is used to persist Vault's data. Unlike other storage
 backends, Raft storage does not operate from a single source of data. Instead
 all the nodes in a Vault cluster will have a replicated copy of Vault's data.
@@ -39,6 +36,9 @@ cluster_addr = "http://127.0.0.1:8201"
 `cluster_addr` to indicate the address and port to be used for communication
 between the nodes in the Raft cluster.
 
+~> **Note:** When using the Raft storage backend, a separate `ha_storage`
+backend cannot be declared.
+
 ~> **Note:** Raft cannot be used as the configured `ha_storage` backend at this
 time. To use Raft for HA coordination users must also use Raft for storage.
 
@@ -57,7 +57,7 @@ time. To use Raft for HA coordination users must also use Raft for storage.
   expense of requiring more network and CPU resources for better performance.
   Omitting this value or setting it to 0 uses default timing described below.
   Lower values are used to tighten timing and increase sensitivity while higher
-  values relax timings and reduce sensitivity. 
+  values relax timings and reduce sensitivity.
 
   By default, Vault will use a lower-performance timing that's suitable for
   minimal Vault servers, currently equivalent to setting this to a value of 5
@@ -96,13 +96,29 @@ time. To use Raft for HA coordination users must also use Raft for storage.
 
 ### `retry_join` stanza
 
-- `leader_api_addr` `(string: "")` - Address of a possible leader node
+- `leader_api_addr` `(string: "")` - Address of a possible leader node.
 
-- `leader_ca_cert` `(string: "")` - CA cert of the possible leader node
+- `leader_ca_cert_file` `(string: "")` - File path to the CA cert of the
+  possible leader node.
 
-- `leader_client_cert` `(string: "")` - Client certificate for the follower node to establish client authentication with the possible leader node
+- `leader_client_cert_file` `(string: "")` - File path to the client certificate
+for the follower node to establish client authentication with the possible
+leader node.
 
-- `leader_client_key` `(string: "")` - Client key for the follower node to establish client authentication with the possible leader node
+- `leader_client_key_file` `(string: "")` - File path to the client key for the
+follower node to establish client authentication with the possible leader node.
+
+- `leader_ca_cert` `(string: "")` - CA cert of the possible leader node.
+
+- `leader_client_cert` `(string: "")` - Client certificate for the follower node
+to establish client authentication with the possible leader node.
+
+- `leader_client_key` `(string: "")` - Client key for the follower node to
+establish client authentication with the possible leader node.
+
+Each `retry_join` block may provide TLS certificates via file paths or as a
+single-line certificate string value with newlines delimited by `\n`, but not a
+combination of both.
 
 Example Configuration:
 ```
@@ -111,21 +127,21 @@ storage "raft" {
   node_id = "node1"
   retry_join {
     leader_api_addr = "http://127.0.0.2:8200"
-    leader_ca_cert = "/path/to/ca1"
-    leader_client_cert = "/path/to/client/cert1"
-    leader_client_key = "/path/to/client/key1"
+    leader_ca_cer_file = "/path/to/ca1"
+    leader_client_cert_file = "/path/to/client/cert1"
+    leader_client_key_file = "/path/to/client/key1"
   }
   retry_join {
     leader_api_addr = "http://127.0.0.3:8200"
-    leader_ca_cert = "/path/to/ca2"
-    leader_client_cert = "/path/to/client/cert2"
-    leader_client_key = "/path/to/client/key2"
+    leader_ca_cert_file = "/path/to/ca2"
+    leader_client_cert_file = "/path/to/client/cert2"
+    leader_client_key_file = "/path/to/client/key2"
   }
   retry_join {
     leader_api_addr = "http://127.0.0.4:8200"
-    leader_ca_cert = "/path/to/ca3"
-    leader_client_cert = "/path/to/client/cert3"
-    leader_client_key = "/path/to/client/key3"
+    leader_ca_cert_file = "/path/to/ca3"
+    leader_client_cert_file = "/path/to/client/cert3"
+    leader_client_key_file = "/path/to/client/key3"
   }
 }
 ```

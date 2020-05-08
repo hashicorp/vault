@@ -16,14 +16,14 @@ type OperatorRaftListPeersCommand struct {
 }
 
 func (c *OperatorRaftListPeersCommand) Synopsis() string {
-	return "Returns the raft peer set"
+	return "Returns the Raft peer set"
 }
 
 func (c *OperatorRaftListPeersCommand) Help() string {
 	helpText := `
 Usage: vault operator raft list-peers
 
-  Provides the details of all the peers in the raft cluster.
+  Provides the details of all the peers in the Raft cluster.
 
 	  $ vault operator raft list-peers
 

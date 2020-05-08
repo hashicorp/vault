@@ -15,38 +15,41 @@ The [Vault Helm chart](https://github.com/hashicorp/vault-helm)
 is the recommended way to install and configure Vault on Kubernetes.
 In addition to running Vault itself, the Helm chart is the primary
 method for installing and configuring Vault to integrate with other
-services such as Consul for High Availability deployments.
+services such as Consul for High Availability (HA) deployments.
 
 This page assumes general knowledge of [Helm](https://helm.sh/) and
-how to use it. Using Helm to install Vault will require that Helm is
+how to use it. Using Helm to install Vault requires that Helm is
 properly installed and configured with your Kubernetes cluster.
-
--> **Important:** The Helm chart is new and
-may still change significantly over time. Please always run Helm with
-`--dry-run` before any install or upgrade to verify changes.
-
-~> **Security Warning:** By default, the chart will install an insecure configuration
-of Vault. This provides a less complicated out-of-box experience for new users,
-but is not appropriate for a production setup. It is highly recommended to use
-a [properly secured Kubernetes cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/).
-See the [architecture reference](/docs/platform/k8s/run#architecture)
-for a Vault Helm production deployment checklist.
 
 ## Using the Helm Chart
 
-To use the Helm chart, you must download or clone the
-[vault-helm GitHub repository](https://github.com/hashicorp/vault-helm)
-and run Helm against the directory. We plan to transition to using a real
-Helm repository soon. When running Helm, we highly recommend you always
-checkout a specific tagged release of the chart to avoid any
-instabilities from master.
+Helm must be installed and configured on your machine. Please refer to the [Helm
+documentation](https://helm.sh/) or the [Vault Installation to Minikube via
+Helm](https://learn.hashicorp.com/vault/getting-started-k8s/minikube) guide.
 
-Prior to this, you must have Helm installed and configured both in your
-Kubernetes cluster and locally on your machine. The steps to do this are
-out of the scope of this document. Please refer to the
-[Helm documentation](https://helm.sh/) for more information.
+To use the Helm chart, you can target a specific [release published to
+GitHub](https://github.com/hashicorp/vault-helm/releases) or download/clone the
+[vault-helm GitHub repository](https://github.com/hashicorp/vault-helm). In the
+future, we plan publishing to a public Helm repository.
+
+-> **Important:** The Helm chart is new and under significant development.
+Please always run Helm with `--dry-run` before any install or upgrade to verify
+changes.
 
 Example chart usage:
+
+Installing the Vault Helm chart version 0.4.0 with pods prefixed with the name
+`vault`.
+
+```sh
+$ helm install vault https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
+```
+
+Cloning the Vault Helm chart, checking out tagged version v0.4.0, and installing
+the Vault Helm chart from the filesystem.
+
+~> **NOTE:** We highly recommend you checkout a specific tagged release
+of the chart to avoid any instabilities from master.
 
 ```sh
 # Clone the chart repo
@@ -59,3 +62,18 @@ $ git checkout v0.4.0
 # Run Helm
 $ helm install vault ./
 ```
+
+~> **Security Warning:** By default, the chart runs in standalone mode. This
+mode uses a single Vault server with a file storage backend. This is a less
+secure and less resilent installation that is **NOT** appropriate for a
+production setup. It is highly recommended to use a [properly secured Kubernetes
+cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/),
+[learn the available configuration
+options](/docs/platform/k8s/helm/configuration), and read the [production deployment
+checklist](/docs/platform/k8s/helm/run#architecture).
+
+## Learn
+
+Refer to the [Run Vault on
+Kubernetes](https://learn.hashicorp.com/vault?track=getting-started-k8s#getting-started-k8s)
+guides for step-by-step tutorials.

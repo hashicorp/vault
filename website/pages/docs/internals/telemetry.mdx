@@ -105,7 +105,8 @@ These metrics represent runtime aspects of the running Vault instance.
 | `vault.runtime.malloc_count`      | Cumulative count of allocated heap objects                                                                                                                   | objects    | gauge   |
 | `vault.runtime.num_goroutines`    | Number of goroutines. This serves as a general system load indicator worth establishing a baseline and thresholds for alerting.                              | goroutines | gauge   |
 | `vault.runtime.sys_bytes`         | Number of bytes allocated to Vault. This includes what is being used by Vault's heap and what has been reclaimed but not given back to the operating system. | bytes      | gauge   |
-| `vault.runtime.total_gc_pause_ns` | The total garbage collector pause time since Vault was last started                                                                                          | ms         | summary |
+| `vault.runtime.total_gc_pause_ns` | The total garbage collector pause time since Vault was last started                                                                                          | ns         | gauge |
+| `vault.runtime.gc_pause_ns` | Total duration of the last garbage collection run | ns | sample |
 | `vault.runtime.total_gc_runs`     | Total number of garbage collection runs since Vault was last started                                                                                         | operations | gauge   |
 
 ## Policy and Token Metrics
@@ -322,6 +323,75 @@ These metrics relate to the supported [storage backends][storage-backends].
 | `vault.zookeeper.delete`    | Duration of a DELETE operation against the [ZooKeeper storage backend][zookeeper-storage-backend]                      | ms   | summary |
 | `vault.zookeeper.list`      | Duration of a LIST operation against the [ZooKeeper storage backend][zookeeper-storage-backend]                        | ms   | summary |
 
+
+## Integrated Raft Storage Health
+
+These metrics relate to raft based [integrated storage][integrated-storage].
+
+| Metric                                          | Description                                                                                                                                                                                                         | Unit                              | Type    |
+| :---------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :-------------------------------- | :------ |
+| `vault.raft.apply`															| Number of Raft transactions occurring over the interval, which is a general indicator of the write load on the Raft servers.                                                                                        | raft transactions / interval      | counter |
+| `vault.raft.barrier`														| Number of times the node has started the barrier i.e the number of times it has issued a blocking call, to ensure that the node has all the pending operations that were queued, to be applied to the node's FSM.   | blocks / interval                 | counter |
+| `vault.raft.candidate.electSelf`								| Time to request for a vote from a peer.                                                                                                                                                                             | ms                                | summary |
+| `vault.raft.commitNumLogs`											| Number of logs processed for application to the FSM in a single batch.                                                                                                                                              | logs                              | gauge   |
+| `vault.raft.commitTime`													| Time to commit a new entry to the Raft log on the leader.                                                                                                                                                           | ms                                | timer   |
+| `vault.raft.compactLogs`												| Time to trim the logs that are no longer needed.                                                                                                                                                                    | ms                                | summary |
+| `vault.raft.delete`															| Time to delete file from raft's underlying storage.                                                                                                                                                                 | ms                                | summary |
+| `vault.raft.delete_prefix`											| Time to delete files under a prefix from raft's underlying storage.                                                                                                                                                 | ms                                | summary |
+| `vault.raft.fsm.apply`													| Number of logs committed since the last interval.                                                                                                                                                                   | commit logs / interval            | summary |
+| `vault.raft.fsm.applyBatch`											| Time to apply batch of logs.                                                                                                                                                                                        | ms                                | summary |
+| `vault.raft.fsm.applyBatchNum`									| Number of logs applied in batch.                                                                                                                                                                                    | ms                                | summary |
+| `vault.raft.fsm.enqueue`												| Time to enqueue a batch of logs for the FSM to apply.                                                                                                                                                               | ms                                | timer   |
+| `vault.raft.fsm.restore`												| Time taken by the FSM to restore its state from a snapshot.                                                                                                                                                         | ms                                | summary |
+| `vault.raft.fsm.snapshot`												| Time taken by the FSM to record the current state for the snapshot.                                                                                                                                                 | ms                                | summary |
+| `vault.raft.fsm.store_config`										| Time to store the configuration.                                                                                                                                                                                    | ms                                | summary |
+| `vault.raft.get`										  					| Time to retrieve file from raft's underlying storage.                                                                                                                                                               | ms                                | summary |
+| `vault.raft.leader.dispatchLog`									| Time for the leader to write log entries to disk.                                                                                                                                                                   | ms                                | timer   |
+| `vault.raft.leader.dispatchNumLogs`							| Number of logs committed to disk in a batch.                                                                                                                                                                        | logs                              | gauge   |
+| `vault.raft.list`											  				| Time to retrieve list of keys from raft's underlying storage.                                                                                                                                                       | ms                                | summary |
+| `vault.raft.put`												  			| Time to persist key in raft's underlying storage.                                                                                                                                                                   | ms                                | summary |
+| `vault.raft.replication.appendEntries.log`			| Number of logs replicated to a node, to bring it up to speed with the leader's logs.                                                                                                                                | logs appended / interval          | counter |
+| `vault.raft.replication.appendEntries.rpc`			| Time taken by the append entries RFC, to replicate the log entries of a leader node onto its follower node(s).                                                                                                      | ms                                | timer   |
+| `vault.raft.replication.heartbeat`							| Time taken to invoke appendEntries on a peer, so that it doesn’t timeout on a periodic basis.                                                                                                                       | ms                                | timer   |
+| `vault.raft.replication.installSnapshot`				| Time taken to process the installSnapshot RPC call. This metric should only be seen on nodes which are currently in the follower state.                                                                             | ms                                | timer   |
+| `vault.raft.restore`											     	| Number of times the restore operation has been performed by the node. Here, restore refers to the action of raft consuming an external snapshot to restore its state.                                               | operation invoked / interval      | counter |
+| `vault.raft.restoreUserSnapshot`								| Time taken by the node to restore the FSM state from a user's snapshot.                                                                                                                                             | ms                                | timer   |
+| `vault.raft.rpc.appendEntries`									| Time taken to process an append entries RPC call from a node.                                                                                                                                                       | ms                                | timer   |
+| `vault.raft.rpc.appendEntries.processLogs`			| Time taken to process the outstanding log entries of a node.                                                                                                                                                        | ms                                | timer   |
+| `vault.raft.rpc.appendEntries.storeLogs`				| Time taken to add any outstanding logs for a node, since the last appendEntries was invoked.                                                                                                                        | ms                                | timer   |
+| `vault.raft.rpc.installSnapshot`								| Time taken to process the installSnapshot RPC call. This metric should only be seen on nodes which are currently in the follower state.                                                                             | ms                                | timer   |
+| `vault.raft.rpc.processHeartbeat`								| Time taken to process a heartbeat request.                                                                                                                                                                          | ms                                | timer   |
+| `vault.raft.rpc.requestVote`						  			| Time taken to complete requestVote RPC call.                                                                                                                                                                        | ms                                | summary |
+| `vault.raft.snapshot.create`										| Time taken to initialize the snapshot process.                                                                                                                                                                      | ms                                | timer   |
+| `vault.raft.snapshot.persist`										| Time taken to dump the current snapshot taken by the node to the disk.                                                                                                                                              | ms                                | timer   |
+| `vault.raft.snapshot.takeSnapshot`				  		| Total time involved in taking the current snapshot (creating one and persisting it) by the node.                                                                                                                    | ms                                | timer   |
+| `vault.raft.state.follower`											| Number of times node has entered the follower mode. This happens when a new node joins the cluster or after the end of a leader election.                                                                           | follower state entered / interval | counter |
+| `vault.raft.transition.heartbeat_timeout`				| Number of times node has transitioned to the Candidate state, after receive no heartbeat messages from the last known leader.                                                                                       | timeouts / interval               | counter |
+| `vault.raft.transition.leader_lease_timeout`		| Number of times quorum of nodes were not able to be contacted.                                                                                                                                                      | contact failures                  | counter |
+| `vault.raft.verify_leader`											| Number of times node checks whether it is still the leader or not.                                                                                                                                                  | checks / interval                 | counter |
+| `vault.raft-storage.delete`											| Time to insert log entry to delete path.                                                                                                                                                                            | ms                                | timer   |
+| `vault.raft-storage.get`									   		| Time to retrieve value for path from FSM.                                                                                                                                                                           | ms                                | timer   |
+| `vault.raft-storage.put`												| Time to insert log entry to persist path.                                                                                                                                                                           | ms                                | timer   |
+| `vault.raft-storage.list`												| Time to list all entries under the prefix from the FSM.                                                                                                                                                             | ms                                | timer   |
+| `vault.raft-storage.transaction`								| Time to insert operations into a single log.                                                                                                                                                                        | ms                                | timer   |
+
+## Integrated Raft Storage Leadership Changes
+
+| Metric                                          | Description                                                                                                   | Unit  | Type    |
+| :---------------------------------------------- | :------------------------------------------------------------------------------------------------------------ | :---  | :------ |
+| `vault.raft.leader.lastContact`									| Measures the time since the leader was last able to contact the follower nodes when checking its leader lease | ms    | summary |
+| `vault.raft.state.candidate`										| Increments whenever raft server starts an election                                                            | Elections | counter |
+| `vault.raft.state.leader`												| Increments whenever raft server becomes a leader                                                              | Leaders | counter |
+
+**Why they're important**: Normally, your raft cluster should have a stable
+leader. If there are frequent elections or leadership changes, it would likely
+indicate network issues between the raft nodes, or that the raft servers
+themselves are unable to keep up with the load.
+
+**What to look for**: For a healthy cluster, you're looking for a lastContact
+lower than 200ms, leader > 0 and candidate == 0. Deviations from this might
+indicate flapping leadership.
+
 [secrets-engines]: /docs/secrets
 [storage-backends]: /docs/configuration/storage
 [telemetry-stanza]: /docs/configuration/telemetry
@@ -344,3 +414,4 @@ These metrics relate to the supported [storage backends][storage-backends].
 [s3-storage-backend]: /docs/configuration/storage/s3
 [swift-storage-backend]: /docs/configuration/storage/swift
 [zookeeper-storage-backend]: /docs/configuration/storage/zookeeper
+[integrated-storage]: /docs/configuration/storage/raft

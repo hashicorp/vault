@@ -34,6 +34,7 @@ export default [
       'response-wrapping',
       'policies',
       'ha',
+      'integrated-storage',
       'pgp-gpg-keybase',
       'recovery-mode'
     ]
@@ -138,6 +139,7 @@ export default [
           'init',
           'key-status',
           'migrate',
+          'raft',
           'rekey',
           'rotate',
           'seal',
@@ -218,14 +220,15 @@ export default [
         content: [
           'cassandra',
           'elasticdb',
-          'influxdb',
           'hanadb',
+          'influxdb',
           'mongodb',
           'mongodbatlas',
           'mssql',
           'mysql-maria',
-          'postgresql',
           'oracle',
+          'postgresql',
+          'redshift',
           'custom'
         ]
       },
@@ -251,7 +254,9 @@ export default [
         ]
       },
       { category: 'totp' },
+      { category: 'transform' },
       { category: 'transit' },
+      { category: 'venafi' },
       '------------------------',
       { category: 'cassandra' },
       { category: 'mongodb' },
@@ -267,11 +272,11 @@ export default [
       'aws',
       'azure',
       'cf',
+      'github',
       'gcp',
       'jwt',
       'kerberos',
       'kubernetes',
-      'github',
       'ldap',
       'oci',
       'okta',
@@ -301,18 +306,6 @@ export default [
   {
     category: 'partnerships'
   },
-  {
-    category: 'vs',
-    content: [
-      'chef-puppet-etc',
-      'hsm',
-      'dropbox',
-      'consul',
-      'kms',
-      'keywhiz',
-      'custom'
-    ]
-  },
   '----------------',
   {
     category: 'platform',
@@ -328,11 +321,17 @@ export default [
               {
                 category: 'examples',
                 content: [
+                  'development',
                   'standalone-load-balanced-ui',
                   'standalone-tls',
                   'standalone-audit',
-                  'ha-with-consul',
+                  'external',
                   'kubernetes-auth',
+                  'ha-with-consul',
+                  'ha-with-raft',
+                  'enterprise-with-raft',
+                  'enterprise-dr-with-raft',
+                  'enterprise-perf-with-raft',
                   'enterprise-best-practice'
                 ]
               },
@@ -382,7 +381,12 @@ export default [
       'upgrade-to-1.2.0',
       'upgrade-to-1.2.1',
       'upgrade-to-1.2.4',
-      'upgrade-to-1.3.0'
+      'upgrade-to-1.3.0',
+      'upgrade-to-1.3.2',
+      'upgrade-to-1.3.3',
+      'upgrade-to-1.3.4',
+      'upgrade-to-1.3.5',
+      'upgrade-to-1.4.0'
     ]
   },
   '----------------',

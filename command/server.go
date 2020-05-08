@@ -26,6 +26,7 @@ import (
 	"github.com/armon/go-metrics/datadog"
 	"github.com/armon/go-metrics/prometheus"
 	stackdriver "github.com/google/go-metrics-stackdriver"
+	stackdrivervault "github.com/google/go-metrics-stackdriver/vault"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
@@ -1143,10 +1144,15 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the separate HA storage backend, if it exists
 	var ok bool
 	if config.HAStorage != nil {
+		if config.Storage.Type == "raft" {
+			c.UI.Error("HA storage cannot be declared when Raft is the storage type")
+			return 1
+		}
+
 		// TODO: Remove when Raft can server as the ha_storage backend.
 		// See https://github.com/hashicorp/vault/issues/8206
 		if config.HAStorage.Type == "raft" {
-			c.UI.Error("Raft cannot be used as seperate HA storage at this time")
+			c.UI.Error("Raft cannot be used as separate HA storage at this time")
 			return 1
 		}
 		factory, exists := c.PhysicalBackends[config.HAStorage.Type]
@@ -1174,6 +1180,9 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 
 		coreConfig.RedirectAddr = config.HAStorage.RedirectAddr
+
+		// TODO: Check for raft and disableClustering case when Raft on HA
+		//       Storage support is added.
 		disableClustering = config.HAStorage.DisableClustering
 		if !disableClustering {
 			coreConfig.ClusterAddr = config.HAStorage.ClusterAddr
@@ -1182,6 +1191,12 @@ func (c *ServerCommand) Run(args []string) int {
 		if coreConfig.HAPhysical, ok = backend.(physical.HABackend); ok {
 			coreConfig.RedirectAddr = config.Storage.RedirectAddr
 			disableClustering = config.Storage.DisableClustering
+
+			if config.Storage.Type == "raft" && disableClustering {
+				c.UI.Error("Disable clustering cannot be set to true when Raft is the storage type")
+				return 1
+			}
+
 			if !disableClustering {
 				coreConfig.ClusterAddr = config.Storage.ClusterAddr
 			}
@@ -2457,9 +2472,12 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 			return nil, fmt.Errorf("Failed to create stackdriver client: %v", err)
 		}
 		sink := stackdriver.NewSink(client, &stackdriver.Config{
-			ProjectID: telConfig.StackdriverProjectID,
-			Location:  telConfig.StackdriverLocation,
-			Namespace: telConfig.StackdriverNamespace,
+			LabelExtractor: stackdrivervault.Extractor,
+			Bucketer:       stackdrivervault.Bucketer,
+			ProjectID:      telConfig.StackdriverProjectID,
+			Location:       telConfig.StackdriverLocation,
+			Namespace:      telConfig.StackdriverNamespace,
+			DebugLogs:      telConfig.StackdriverDebugLogs,
 		})
 		fanout = append(fanout, sink)
 	}

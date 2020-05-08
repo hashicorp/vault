@@ -115,20 +115,19 @@ and consider if they're appropriate for your deployment.
 
         - `host` (`string: required`): Name of the host to use for Ingress.
 
-        - `paths` (`string: required`): This value defines the types of host rules for the Ingress service.
+        - `paths` (`array: []`): A list of paths that will be directed to the Vault service. At least one path is required.
 
         ```yaml
         paths:
-          - backend:
-            serviceName: service2
-            servicePort: 80
+          - /
+          - /vault
         ```
 
     * `tls` - Values that configure the Ingress TLS rules.
 
-      - `hosts` (`string: null)`: Name of the hosts defined in the Common Name of the TLS Certificate. This should be formated as a multi-line string.
+      - `hosts` (`array: []`): List of the hosts defined in the Common Name of the TLS Certificate.
 
-      - `secretName` (`string: null)`: Name of the secret containing the required TLS files such as certificates and keys.
+      - `secretName` (`string: null`): Name of the secret containing the required TLS files such as certificates and keys.
 
       ```yaml
       hosts:
@@ -392,6 +391,16 @@ and consider if they're appropriate for your deployment.
 
       - `enabled` (`boolean: false`) -
         Enables `ha` mode for the Vault server. This mode uses a highly available backend storage (such as Consul) to store Vault's data. By default this is configured to use [Consul Helm](https://github.com/hashicorp/consul-helm). For a complete list of storage backends, see the [Vault documentation](/docs/configuration).
+
+      - `raft` - This configures `raft` integrated storage mode for the Vault server.
+
+        - `enabled` (`boolean: false`) -
+          Enables `raft` integrated storage mode for the Vault server. This mode uses persistent volumes for storage.
+
+        - `config` (`string: "{}"`) -
+          A raw string of extra HCL or JSON [configuration](/docs/configuration) for Vault servers.
+          This will be saved as-is into a ConfigMap that is read by the Vault servers.
+          This can be used to add additional configuration that isn't directly exposed by the chart.
 
       - `replicas` (`int: 5`) -
         The number of pods to deploy to create a highly available cluster of Vault servers.

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
+	metrics "github.com/armon/go-metrics"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
@@ -150,6 +152,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 			for _, memberEntityID := range group.MemberEntityIDs {
 				entity, err := i.MemDBEntityByID(memberEntityID, false)
 				if err != nil {
+					txn.Abort()
 					return err
 				}
 				if entity == nil {
@@ -329,6 +332,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 // updated, in which case, callers should send in both entity and
 // previousEntity.
 func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, entity *identity.Entity, previousEntity *identity.Entity, persist bool) error {
+	defer metrics.MeasureSince([]string{"identity", "upsert_entity_txn"}, time.Now())
 	var err error
 
 	if txn == nil {
@@ -484,6 +488,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 // updated, in which case, callers should send in both entity and
 // previousEntity.
 func (i *IdentityStore) upsertEntity(ctx context.Context, entity *identity.Entity, previousEntity *identity.Entity, persist bool) error {
+	defer metrics.MeasureSince([]string{"identity", "upsert_entity"}, time.Now())
 
 	// Create a MemDB transaction to update both alias and entity
 	txn := i.db.Txn(true)
@@ -1364,6 +1369,8 @@ func (i *IdentityStore) MemDBGroupByName(ctx context.Context, groupName string, 
 }
 
 func (i *IdentityStore) UpsertGroup(ctx context.Context, group *identity.Group, persist bool) error {
+	defer metrics.MeasureSince([]string{"identity", "upsert_group"}, time.Now())
+
 	txn := i.db.Txn(true)
 	defer txn.Abort()
 
@@ -1378,6 +1385,8 @@ func (i *IdentityStore) UpsertGroup(ctx context.Context, group *identity.Group, 
 }
 
 func (i *IdentityStore) UpsertGroupInTxn(ctx context.Context, txn *memdb.Txn, group *identity.Group, persist bool) error {
+	defer metrics.MeasureSince([]string{"identity", "upsert_group_txn"}, time.Now())
+
 	var err error
 
 	if txn == nil {
@@ -1878,90 +1887,129 @@ func (i *IdentityStore) MemDBGroupByAliasID(aliasID string, clone bool) (*identi
 }
 
 func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Context, entityID string, groupAliases []*logical.Alias) ([]*logical.Alias, error) {
-	i.logger.Debug("refreshing external group memberships", "entity_id", entityID, "group_aliases", groupAliases)
+	defer metrics.MeasureSince([]string{"identity", "refresh_external_groups"}, time.Now())
+
 	if entityID == "" {
 		return nil, fmt.Errorf("empty entity ID")
 	}
 
-	i.groupLock.Lock()
-	defer i.groupLock.Unlock()
+	refreshFunc := func(dryRun bool) (bool, []*logical.Alias, error) {
 
-	txn := i.db.Txn(true)
-	defer txn.Abort()
+		if !dryRun {
+			i.groupLock.Lock()
+			defer i.groupLock.Unlock()
+		}
 
-	oldGroups, err := i.MemDBGroupsByMemberEntityIDInTxn(txn, entityID, true, true)
+		txn := i.db.Txn(!dryRun)
+		defer txn.Abort()
+
+		oldGroups, err := i.MemDBGroupsByMemberEntityIDInTxn(txn, entityID, true, true)
+		if err != nil {
+			return false, nil, err
+		}
+
+		mountAccessor := ""
+		if len(groupAliases) != 0 {
+			mountAccessor = groupAliases[0].MountAccessor
+		}
+
+		var newGroups []*identity.Group
+		var validAliases []*logical.Alias
+		for _, alias := range groupAliases {
+			aliasByFactors, err := i.MemDBAliasByFactorsInTxn(txn, alias.MountAccessor, alias.Name, true, true)
+			if err != nil {
+				return false, nil, err
+			}
+			if aliasByFactors == nil {
+				continue
+			}
+			mappingGroup, err := i.MemDBGroupByAliasIDInTxn(txn, aliasByFactors.ID, true)
+			if err != nil {
+				return false, nil, err
+			}
+			if mappingGroup == nil {
+				return false, nil, fmt.Errorf("group unavailable for a valid alias ID %q", aliasByFactors.ID)
+			}
+
+			newGroups = append(newGroups, mappingGroup)
+			validAliases = append(validAliases, alias)
+		}
+
+		diff := diffGroups(oldGroups, newGroups)
+
+		// Add the entity ID to all the new groups
+		for _, group := range diff.New {
+			if group.Type != groupTypeExternal {
+				continue
+			}
+
+			// We need to update a group, if we are in a dry run we should
+			// report back that a change needs to take place.
+			if dryRun {
+				return true, nil, nil
+			}
+
+			i.logger.Debug("adding member entity ID to external group", "member_entity_id", entityID, "group_id", group.ID)
+
+			group.MemberEntityIDs = append(group.MemberEntityIDs, entityID)
+
+			err = i.UpsertGroupInTxn(ctx, txn, group, true)
+			if err != nil {
+				return false, nil, err
+			}
+		}
+
+		// Remove the entity ID from all the deleted groups
+		for _, group := range diff.Deleted {
+			if group.Type != groupTypeExternal {
+				continue
+			}
+
+			// If the external group is from a different mount, don't remove the
+			// entity ID from it.
+			if mountAccessor != "" && group.Alias != nil && group.Alias.MountAccessor != mountAccessor {
+				continue
+			}
+
+			// We need to update a group, if we are in a dry run we should
+			// report back that a change needs to take place.
+			if dryRun {
+				return true, nil, nil
+			}
+
+			i.logger.Debug("removing member entity ID from external group", "member_entity_id", entityID, "group_id", group.ID)
+
+			group.MemberEntityIDs = strutil.StrListDelete(group.MemberEntityIDs, entityID)
+
+			err = i.UpsertGroupInTxn(ctx, txn, group, true)
+			if err != nil {
+				return false, nil, err
+			}
+		}
+
+		txn.Commit()
+		return false, validAliases, nil
+	}
+
+	// dryRun
+	needsUpdate, validAliases, err := refreshFunc(true)
 	if err != nil {
 		return nil, err
 	}
 
-	mountAccessor := ""
-	if len(groupAliases) != 0 {
-		mountAccessor = groupAliases[0].MountAccessor
+	if needsUpdate || len(groupAliases) > 0 {
+		i.logger.Debug("refreshing external group memberships", "entity_id", entityID, "group_aliases", groupAliases)
 	}
 
-	var newGroups []*identity.Group
-	var validAliases []*logical.Alias
-	for _, alias := range groupAliases {
-		aliasByFactors, err := i.MemDBAliasByFactors(alias.MountAccessor, alias.Name, true, true)
-		if err != nil {
-			return nil, err
-		}
-		if aliasByFactors == nil {
-			continue
-		}
-		mappingGroup, err := i.MemDBGroupByAliasID(aliasByFactors.ID, true)
-		if err != nil {
-			return nil, err
-		}
-		if mappingGroup == nil {
-			return nil, fmt.Errorf("group unavailable for a valid alias ID %q", aliasByFactors.ID)
-		}
-
-		newGroups = append(newGroups, mappingGroup)
-		validAliases = append(validAliases, alias)
+	if !needsUpdate {
+		return validAliases, nil
 	}
 
-	diff := diffGroups(oldGroups, newGroups)
-
-	// Add the entity ID to all the new groups
-	for _, group := range diff.New {
-		if group.Type != groupTypeExternal {
-			continue
-		}
-
-		i.logger.Debug("adding member entity ID to external group", "member_entity_id", entityID, "group_id", group.ID)
-
-		group.MemberEntityIDs = append(group.MemberEntityIDs, entityID)
-
-		err = i.UpsertGroupInTxn(ctx, txn, group, true)
-		if err != nil {
-			return nil, err
-		}
+	// Run the update
+	_, validAliases, err = refreshFunc(false)
+	if err != nil {
+		return nil, err
 	}
-
-	// Remove the entity ID from all the deleted groups
-	for _, group := range diff.Deleted {
-		if group.Type != groupTypeExternal {
-			continue
-		}
-
-		// If the external group is from a different mount, don't remove the
-		// entity ID from it.
-		if mountAccessor != "" && group.Alias != nil && group.Alias.MountAccessor != mountAccessor {
-			continue
-		}
-
-		i.logger.Debug("removing member entity ID from external group", "member_entity_id", entityID, "group_id", group.ID)
-
-		group.MemberEntityIDs = strutil.StrListDelete(group.MemberEntityIDs, entityID)
-
-		err = i.UpsertGroupInTxn(ctx, txn, group, true)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	txn.Commit()
 
 	return validAliases, nil
 }

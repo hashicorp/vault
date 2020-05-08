@@ -78,7 +78,7 @@ func (c *KVMetadataPutCommand) Flags() *FlagSets {
 	f.DurationVar(&DurationVar{
 		Name:       "delete-version-after",
 		Target:     &c.flagDeleteVersionAfter,
-		Default:    0,
+		Default:    -1,
 		EnvVar:     "",
 		Completion: complete.PredictAnything,
 		Usage: `Specifies the length of time before a version is deleted.
@@ -141,7 +141,7 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 		"cas_required": c.flagCASRequired,
 	}
 
-	if c.flagDeleteVersionAfter > 0 {
+	if c.flagDeleteVersionAfter >= 0 {
 		data["delete_version_after"] = c.flagDeleteVersionAfter.String()
 	}
 
