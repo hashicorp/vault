@@ -1,0 +1,102 @@
+---
+layout: docs
+page_title: Upgrading Vault - Kubernetes
+sidebar_title: Upgrading Vault
+description: >-
+  Vault upgrades in Kubernetes follow the same upgrade path of running Vault
+  outside this platform with a few exceptions.
+---
+
+
+# Upgrading Vault on Kubernetes
+
+To upgrade Vault on Kubernetes, we follow the same pattern as
+[generally upgrading Vault](/docs/upgrading), except we can use
+the Helm chart to update the Vault server StatefulSet. It is important to understand
+how to [generally upgrade Vault](/docs/upgrading) before reading this
+section.
+
+The Vault StatefulSet uses the `OnDelete` update strategy. It is critical to use
+`OnDelete` instead of `RollingUpdate` because standbys must be updated before
+the active primary. A failover to an older version of Vault must always be
+avoided.
+
+!> **IMPORTANT NOTE:** Always back up your data before upgrading! Vault does not
+make backward-compatibility guarantees for its data store. Simply replacing the
+newly-installed Vault binary with the previous version not cleanly
+downgrade Vault, as upgrades may perform changes to the underlying data
+structure that makes the data incompatible with a downgrade. If you need to roll
+back to a previous version of Vault, you should roll back your data store as
+well.
+
+## Upgrading Vault Servers
+
+To initiate the upgrade, change the `server.image` values to the
+desired Vault version. For illustrative purposes, the example below uses
+`vault:123.456`.
+
+```yaml
+server:
+  image:
+    repository: 'vault'
+    tag: '123.456'
+```
+
+Next, run the upgrade. You should run this with `--dry-run` first to verify
+the changes sent to the Kubernetes cluster.
+
+```bash
+$ helm upgrade vault ./
+...
+```
+
+This should cause no changes (although the resources are updated). If
+everything is stable, `helm upgrade` can be run.
+
+The `helm upgrade` command should have updated the StatefulSet template for
+the Vault servers, however, no pods have been deleted. The pods must be manually
+deleted to upgrade. Deleting the pods does not delete any persisted data.
+
+If Vault is not deployed using `ha` mode, the single Vault server may be deleted by
+running:
+
+```bash
+$ kubectl delete pod <name of Vault pod>
+```
+
+If Vault is deployed using `ha` mode, the standby pods must be upgraded first.
+To identify which pod is currently the active primary, run the following command
+on each Vault pod:
+
+```bash
+$ kubectl exec -ti <name of pod> -- vault status | grep "HA Mode"
+```
+
+Next, delete every pod that is not the active primary:
+
+```bash
+$ kubectl delete pod <name of Vault pods>
+```
+
+If auto-unseal is not being used, the newly scheduled Vault standby pods needs
+to be unsealed:
+
+```bash
+$ kubectl exec -ti <name of pod> -- vault operator unseal
+```
+
+Finally, once the standby nodes have been updated and unsealed, delete the active
+primary:
+
+```bash
+$ kubectl delete pod <name of Vault primary>
+```
+
+Similar to the standby nodes, the former primary also needs to be unsealed:
+
+```bash
+$ kubectl exec -ti <name of pod> -- vault operator unseal
+```
+
+After a few moments the Vault cluster should elect a new active primary. The Vault
+cluster is now upgraded!

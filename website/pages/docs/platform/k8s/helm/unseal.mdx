@@ -1,0 +1,194 @@
+---
+layout: docs
+page_title: Unsealing Vault - Kubernetes
+sidebar_title: Unsealing Vault
+description: >-
+  Initialize Vault and unseal each deployed pod or use automatic a cloud
+  provider's auto-unseal to ensure new pods are automatically unsealed.
+---
+
+# Initialize and unseal Vault
+
+After the Vault Helm chart is [installed](/docs/platform/k8s/helm/run) in
+`standalone` or `ha` mode one of the Vault servers need to be
+[initialized](/docs/commands/operator/init). The initialization generates the
+credentials necessary to [unseal](/docs/concepts/seal#why) all the Vault
+servers.
+
+## CLI initialize and unseal
+
+View all the Vault pods in the current namespace:
+
+```sh
+$ kubectl get pods -l app.kubernetes.io/name=vault
+NAME                                    READY   STATUS    RESTARTS   AGE
+vault-0                                 0/1     Running   0          1m49s
+vault-1                                 0/1     Running   0          1m49s
+vault-2                                 0/1     Running   0          1m49s
+```
+
+Initialize one Vault server with the default number of key shares and default
+key threshold:
+
+```sh
+$ kubectl exec -ti vault-0 -- vault operator init
+Unseal Key 1: MBFSDepD9E6whREc6Dj+k3pMaKJ6cCnCUWcySJQymObb
+Unseal Key 2: zQj4v22k9ixegS+94HJwmIaWLBL3nZHe1i+b/wHz25fr
+Unseal Key 3: 7dbPPeeGGW3SmeBFFo04peCKkXFuuyKc8b2DuntA4VU5
+Unseal Key 4: tLt+ME7Z7hYUATfWnuQdfCEgnKA2L173dptAwfmenCdf
+Unseal Key 5: vYt9bxLr0+OzJ8m7c7cNMFj7nvdLljj0xWRbpLezFAI9
+
+Initial Root Token: s.zJNwZlRrqISjyBHFMiEca6GF
+##...
+```
+
+The output displays the key shares and initial root key generated.
+
+Unseal the Vault server with the key shares until the key threshold is met:
+
+```sh
+## Unseal the first vault server until it reaches the key threshold
+$ kubectl exec -ti vault-0 -- vault operator unseal # ... Unseal Key 1
+$ kubectl exec -ti vault-0 -- vault operator unseal # ... Unseal Key 2
+$ kubectl exec -ti vault-0 -- vault operator unseal # ... Unseal Key 3
+```
+
+Repeat the unseal process for all Vault server pods. When all Vault server pods
+are unsealed, they report READY `1/1`.
+
+```sh
+$ kubectl get pods -l app.kubernetes.io/name=vault
+NAME                                    READY   STATUS    RESTARTS   AGE
+vault-0                                 1/1     Running   0          1m49s
+vault-1                                 1/1     Running   0          1m49s
+vault-2                                 1/1     Running   0          1m49s
+```
+
+## Google KMS Auto Unseal
+
+The Helm chart may be run with [Google KMS for Auto
+Unseal](/docs/configuration/seal/gcpckms). This enables Vault server pods to
+auto unseal if they are rescheduled.
+
+Vault Helm requires the Google Cloud KMS credentials stored in
+`credentials.json` and mounted as a secret in each Vault server pod.
+
+### Create the Secret
+
+First, create the secret in Kubernetes:
+
+```bash
+kubectl create secret generic kms-creds --from-file=credentials.json
+```
+
+Vault Helm mounts this to `/vault/userconfig/kms-creds/credentials.json`.
+
+### Config Example
+
+This is a Vault Helm configuration that uses Google KMS:
+
+```yaml
+global:
+  enabled: true
+
+server:
+  image:
+    repository: 'vault'
+    tag: '1.3.1'
+
+  extraEnvironmentVars:
+    GOOGLE_REGION: global
+    GOOGLE_PROJECT: <PROJECT NAME>
+    GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/kms-creds/credentials.json
+
+  extraVolumes:
+    - type: 'secret'
+      name: 'kms-creds'
+
+  ha:
+    enabled: true
+    replicas: 3
+
+    config: |
+      ui = true
+
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+
+      seal "gcpckms" {
+        project     = "<NAME OF PROJECT>"
+        region      = "global"
+        key_ring    = "<NAME OF KEYRING>"
+        crypto_key  = "<NAME OF KEY>"
+      }
+
+      storage "consul" {
+        path = "vault"
+        address = "HOST_IP:8500"
+      }
+```
+
+## Amazon EKS Auto Unseal
+
+The Helm chart may be run with [AWS EKS for Auto
+Unseal](/docs/configuration/seal/awskms). This enables Vault server pods to auto
+unseal if they are rescheduled.
+
+Vault Helm requires the AWS credentials stored as environment variables that
+are defined in each Vault server pod.
+
+### Create the Secret
+
+First, create a secret with your EKS access key/secret:
+
+```sh
+$ kubectl create secret generic eks-creds \
+    --from-literal=AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID?}" \
+    --from-literal=AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY?}"
+```
+
+### Config Example
+
+This is a Vault Helm configuration that uses AWS EKS:
+
+```yaml
+global:
+  enabled: true
+
+server:
+  image:
+    repository: 'vault'
+    tag: '1.3.1'
+
+  extraSecretEnvironmentVars:
+    - envName: AWS_ACCESS_KEY_ID
+      secretName: eks-creds
+      secretKey: AWS_ACCESS_KEY_ID
+    - envName: AWS_SECRET_ACCESS_KEY
+      secretName: eks-creds
+      secretKey: AWS_SECRET_ACCESS_KEY
+
+  ha:
+    enabled: true
+    config: |
+      ui = true
+
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+
+      seal "awskms" {
+        region     = "KMS_REGION_HERE"
+        kms_key_id = "KMS_KEY_ID_HERE"
+      }
+
+      storage "consul" {
+        path = "vault"
+        address = "HOST_IP:8500"
+      }
+```

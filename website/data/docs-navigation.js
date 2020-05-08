@@ -317,6 +317,9 @@ export default [
             category: 'helm',
             content: [
               'run',
+              'unseal',
+              'upgrade',
+              'secure',
               'configuration',
               {
                 category: 'examples',
