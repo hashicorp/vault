@@ -79,6 +79,8 @@ func GetCipherName(cipher uint16) (string, error) {
 	return "", fmt.Errorf("unsupported cipher %d", cipher)
 }
 
+// ClientTLSConfig parses the CA certificate, and optionally a public/private
+// client certificate key pair. The certificates must be in PEM encoded format.
 func ClientTLSConfig(caCert []byte, clientCert []byte, clientKey []byte) (*tls.Config, error) {
 	var tlsConfig *tls.Config
 	var pool *x509.CertPool
@@ -107,6 +109,55 @@ func ClientTLSConfig(caCert []byte, clientCert []byte, clientKey []byte) (*tls.C
 	var err error
 	if len(clientCert) != 0 && len(clientKey) != 0 {
 		cert, err = tls.X509KeyPair(clientCert, clientKey)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+	tlsConfig.BuildNameToCertificate()
+
+	return tlsConfig, nil
+}
+
+// LoadClientTLSConfig loads and parse the CA certificate, and optionally a
+// public/private client certificate key pair. The certificates must be in PEM
+// encoded format.
+func LoadClientTLSConfig(caCert, clientCert, clientKey string) (*tls.Config, error) {
+	var tlsConfig *tls.Config
+	var pool *x509.CertPool
+
+	switch {
+	case len(caCert) != 0:
+		// Valid
+	case len(clientCert) != 0 && len(clientKey) != 0:
+		// Valid
+	default:
+		return nil, ErrInvalidCertParams
+	}
+
+	if len(caCert) != 0 {
+		pool = x509.NewCertPool()
+
+		data, err := ioutil.ReadFile(caCert)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to read CA file: {{err}}", err)
+		}
+
+		if !pool.AppendCertsFromPEM(data) {
+			return nil, fmt.Errorf("failed to parse CA certificate")
+		}
+	}
+
+	tlsConfig = &tls.Config{
+		RootCAs:    pool,
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		MinVersion: tls.VersionTLS12,
+	}
+
+	var cert tls.Certificate
+	var err error
+	if len(clientCert) != 0 && len(clientKey) != 0 {
+		cert, err = tls.LoadX509KeyPair(clientCert, clientKey)
 		if err != nil {
 			return nil, err
 		}

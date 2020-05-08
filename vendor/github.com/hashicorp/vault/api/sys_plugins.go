@@ -225,7 +225,11 @@ func (c *Sys) DeregisterPlugin(i *DeregisterPluginInput) error {
 	return err
 }
 
+<<<<<<< HEAD
 // ReloadPluginInput is used as input to the ReloadPlugin function.
+=======
+// ReloadPluginInput is used as input fo the ReloadPlugin function.
+>>>>>>> origin/master
 type ReloadPluginInput struct {
 	// Plugin is the name of the plugin to reload, as registered in the plugin catalog
 	Plugin string `json:"plugin"`
@@ -247,10 +251,9 @@ func (c *Sys) ReloadPlugin(i *ReloadPluginInput) error {
 	defer cancelFunc()
 
 	resp, err := c.c.RawRequestWithContext(ctx, req)
-	if err != nil {
-		return err
+	if err == nil {
+		defer resp.Body.Close()
 	}
-	defer resp.Body.Close()
 	return err
 }
 

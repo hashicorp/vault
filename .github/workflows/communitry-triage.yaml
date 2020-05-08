@@ -1,0 +1,21 @@
+on:
+  issues:
+    types: [milestoned]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env: 
+      PROJECT_COLUMN_ID: ${{secrets.PROJECT_TRIAGE_COLUMN_ID}}
+    steps:
+    - name: Move an issue to the project board for triage
+      uses: actions/github-script@0.8.0
+      if: github.event.milestone.title == 'triaged'
+      with: 
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |            
+            github.projects.createCard({
+              column_id: process.env.PROJECT_COLUMN_ID,
+              content_id: context.payload.issue.id,
+              content_type: "Issue"
+            })
