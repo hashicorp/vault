@@ -505,6 +505,119 @@ jobs:
         name: Install CircleCI CLI
     - run:
         command: make ci-verify
+  test-go-race-remote-docker:
+    docker:
+    - image: circleci/golang:1.13.10-buster
+    working_directory: /go/src/github.com/hashicorp/vault
+    parallelism: 8
+    steps:
+    - run:
+        command: |
+          # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
+            # stop the job from this step
+            circleci-agent step halt
+          }
+          # exit with success either way
+          exit 0
+        name: Check branch name
+        working_directory: ~/
+    - checkout
+    - setup_remote_docker:
+        docker_layer_caching: true
+        version: 18.09.3
+    - run:
+        command: |
+          set -x
+
+          # Install CircleCI CLI
+          curl -sSL \
+              "https://github.com/CircleCI-Public/circleci-cli/releases/download/v${CIRCLECI_CLI_VERSION}/circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64.tar.gz" \
+            | sudo tar --overwrite -xz \
+              -C /usr/local/bin \
+              "circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64/circleci"
+
+          USE_DOCKER=0
+          USE_DOCKER=1
+
+          # Split Go tests by prior test times.  If use_docker is true, only run
+          # tests that depend on docker, otherwise only those that don't.
+          if [ $USE_DOCKER == 1 ]; then
+            package_names=$(go list -test -json ./... |
+              jq -r 'select(.Deps != null) |
+                select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
+                .ForTest | select(. != null)' |
+                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+          else
+            package_names=$(go list -test -json ./... |
+              jq -r 'select(.Deps != null) |
+                select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
+                .ForTest | select(. != null)' |
+                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+          fi
+
+          # After running tests split step, we are now running the following steps
+          # in multiple different containers, each getting a different subset of
+          # the test packages in their package_names variable.  Each container
+          # has its own remote docker VM.
+
+          make prep
+          mkdir -p test-results/go-test
+
+          # Create a docker network for our testcontainer
+          if [ $USE_DOCKER == 1 ]; then
+            export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
+            if [ -z $TEST_DOCKER_NETWORK_ID ]; then
+              TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
+            fi
+
+            # Start a docker testcontainer to run the tests in
+            docker run -d -e TEST_DOCKER_NETWORK_ID \
+              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+              -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
+              --network vaulttest --name \
+              testcontainer circleci/golang:1.13.10-buster \
+              tail -f /dev/null
+
+            # Run tests
+            docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
+            docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
+            docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
+
+            docker exec -w /go/src/github.com/hashicorp/vault/ \
+              -e GO111MODULE -e CIRCLECI \
+              testcontainer \
+              gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
+                -tags "${GO_TAGS}" \
+                -timeout=15m \
+                -parallel=20 \
+                -race \
+                ${package_names}
+          else
+            gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
+              -tags "${GO_TAGS}" \
+              -timeout=15m \
+              -parallel=20 \
+              -race \
+              ${package_names}
+          fi
+        name: Run Go tests
+        no_output_timeout: 60m
+    - run:
+        command: |
+          docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
+        name: Copy test results
+        when: always
+    - store_artifacts:
+        path: test-results
+    - store_test_results:
+        path: test-results
+    - store_artifacts:
+        path: /tmp/testlogs
+    environment:
+    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_TAGS: ''
+    - GO111MODULE: 'off'
 workflows:
   ci:
     jobs:
@@ -527,12 +640,30 @@ workflows:
         - install-ui-dependencies
         - build-go-dev
     - test-go:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-go-dev
     - test-go-remote-docker:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - build-go-dev
     - test-go-race:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
+        requires:
+        - build-go-dev
+    - test-go-race-remote-docker:
         filters:
           branches:
             ignore:

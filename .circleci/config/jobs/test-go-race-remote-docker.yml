@@ -1,0 +1,18 @@
+executor: docker-env
+parallelism: 8
+steps:
+  - check-branch-name
+  - checkout
+  - setup_remote_docker:
+      version: 18.09.3
+      docker_layer_caching: true
+  - go_test:
+      extra_flags: "-race"
+      log_dir: "/tmp/testlogs"
+      use_docker: true
+  - store_artifacts:
+      path: test-results
+  - store_test_results:
+      path: test-results
+  - store_artifacts:
+      path: "/tmp/testlogs"
