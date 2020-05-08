@@ -59,7 +59,7 @@ steps:
         docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
         docker exec -w /go/src/github.com/hashicorp/vault/ \
-          -e GO111MODULE \
+          -e GO111MODULE -e CIRCLECI \
           testcontainer \
           gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
             -tags "${GO_TAGS}" \
