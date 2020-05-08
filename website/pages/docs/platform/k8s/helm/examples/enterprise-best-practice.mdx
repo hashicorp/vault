@@ -123,9 +123,7 @@ EOF
 Next, point Helm to the chart release and specify the `values-custom.yaml` file:
 
 ```
-helm install vault-us-east \
-  -f values-custom.yaml \
-  https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
+helm install vault-us-east hashicorp/vault -f values-custom.yaml
 ```
 
 Note that in the above seal stanza, the AWS key and secret are omitted. That's because
