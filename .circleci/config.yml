@@ -230,16 +230,16 @@ jobs:
             testcontainer \
             gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
               -tags "${GO_TAGS}" \
-              -timeout=60m \
+              -timeout=15m \
               -parallel=20 \
                \
-              ${package_names} || true
-
-          echo "Copying test results"
-          docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
-          ls -lR test-results
+              ${package_names}
         name: Run Go tests
         no_output_timeout: 60m
+    - run:
+        command: |
+          docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
+        name: Copy test results
     - store_artifacts:
         path: test-results
     - store_test_results:
@@ -251,28 +251,26 @@ jobs:
     - GO_TAGS: ''
     - GO111MODULE: 'off'
   test-go-race:
-    machine: true
-    shell: /usr/bin/env bash -euo pipefail -c
+    docker:
+    - image: circleci/golang:1.13.10-buster
     working_directory: /go/src/github.com/hashicorp/vault
+    parallelism: 8
     steps:
     - run:
         command: |
-          [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
-          # Install Go
-          curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
-          sudo rm -rf /usr/local/go
-          sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
-          rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          GOPATH="/go"
-          mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
-          echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
-          echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
-
-          echo "$ go version"
-          go version
-        name: Setup Go
+          # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
+            # stop the job from this step
+            circleci-agent step halt
+          }
+          # exit with success either way
+          exit 0
+        name: Check branch name
         working_directory: ~/
     - checkout
+    - setup_remote_docker:
+        docker_layer_caching: true
+        version: 18.09.3
     - run:
         command: |
           set -x
@@ -324,16 +322,16 @@ jobs:
             testcontainer \
             gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
               -tags "${GO_TAGS}" \
-              -timeout=60m \
+              -timeout=15m \
               -parallel=20 \
               -race \
-              ${package_names} || true
-
-          echo "Copying test results"
-          docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
-          ls -lR test-results
+              ${package_names}
         name: Run Go tests
         no_output_timeout: 60m
+    - run:
+        command: |
+          docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
+        name: Copy test results
     - store_artifacts:
         path: test-results
     - store_test_results:
@@ -343,9 +341,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.13.8
     - GO111MODULE: 'off'
-    - GOTESTSUM_VERSION: 0.3.3
   website-docker-image:
     docker:
     - image: circleci/buildpack-deps

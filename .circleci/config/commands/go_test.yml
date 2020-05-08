@@ -63,11 +63,12 @@ steps:
           testcontainer \
           gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
             -tags "${GO_TAGS}" \
-            -timeout=60m \
+            -timeout=15m \
             -parallel=20 \
             << parameters.extra_flags >> \
-            ${package_names} || true
+            ${package_names}
 
-        echo "Copying test results"
+  - run:
+      name: Copy test results
+      command: |
         docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
-        ls -lR test-results
