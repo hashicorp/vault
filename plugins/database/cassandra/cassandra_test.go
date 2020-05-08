@@ -22,6 +22,7 @@ func getCassandra(t *testing.T, protocolVersion interface{}) (*Cassandra, func()
 		"username":         "cassandra",
 		"password":         "cassandra",
 		"protocol_version": protocolVersion,
+		"connect_timeout":  "20s",
 	}
 
 	db := new()
