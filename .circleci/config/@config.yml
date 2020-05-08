@@ -57,6 +57,6 @@ executors:
     environment:
       GO111MODULE: "off"
       CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
-      GO_TAGS: enterprise ent
+      GO_TAGS: ""
     working_directory: /go/src/github.com/hashicorp/vault
 
