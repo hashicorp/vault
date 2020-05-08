@@ -46,13 +46,7 @@ export default DS.Model.extend({
   //otherwise the particular mode will have the relevant mode attr through replication-attributes
   mode: attr('string'),
   allReplicationDisabled: and('{dr,performance}.replicationDisabled'),
-
   anyReplicationEnabled: or('{dr,performance}.replicationEnabled'),
-
-  modeState: computed('dr.{mode,state}', 'performance.{mode,state}', 'replicationMode', function() {
-    const mode = this.replicationMode;
-    return this.get(`${mode}.state`);
-  }),
 
   dr: fragment('replication-attributes'),
   performance: fragment('replication-attributes'),
