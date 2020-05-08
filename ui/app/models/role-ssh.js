@@ -76,12 +76,6 @@ export default DS.Model.extend({
     helpText:
       'List of domains for which a client can request a certificate (e.g. `example.com`, or `*` to allow all)',
   }),
-  ttl: attr({
-    label: 'Set custom TTL',
-  }),
-  maxTtl: attr({
-    label: 'Set custom Max TTL',
-  }),
   cidrList: attr('string', {
     helpText: 'List of CIDR blocks for which this role is applicable',
   }),

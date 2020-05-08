@@ -64,8 +64,9 @@ export default Component.extend({
 
     let seconds = 30;
     let setEnable = this.enableTTL;
-    if (typeOf(enable) === 'boolean') {
-      setEnable = enable;
+    if (!!enable || typeOf(enable) === 'boolean') {
+      // This allows non-boolean values passed in to be evaluated for truthiness
+      setEnable = !!enable;
     }
     if (typeOf(value) === 'number') {
       seconds = value;

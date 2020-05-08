@@ -149,4 +149,19 @@ module('Integration | Component | ttl-picker2', function(hooks) {
     assert.dom('[data-test-ttl-value]').doesNotExist('Value no longer shows after toggle');
     assert.dom('[data-test-ttl-unit]').doesNotExist('Unit no longer shows after toggle');
   });
+
+  test('it is enabled on init if initialEnabled evals to truthy', async function(assert) {
+    let changeSpy = sinon.spy();
+    this.set('onChange', changeSpy);
+    await render(hbs`
+      <TtlPicker2
+        @label="inittest"
+        @onChange={{onChange}}
+        @initialValue="100m"
+        @initialEnabled="true"
+      />
+    `);
+    assert.dom('[data-test-ttl-value]').hasValue('6000', 'time value is initialValue as seconds');
+    assert.dom('[data-test-ttl-unit]').exists('Unit is shown on mount');
+  });
 });

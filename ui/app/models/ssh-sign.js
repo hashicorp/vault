@@ -23,7 +23,7 @@ export default DS.Model.extend({
     editType: 'textarea',
   }),
   ttl: attr({
-    label: 'Set custom TTL',
+    label: 'TTL',
     editType: 'ttl',
   }),
   validPrincipals: attr('string'),
