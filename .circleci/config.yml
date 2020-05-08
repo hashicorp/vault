@@ -195,7 +195,7 @@ jobs:
               -tags "${GO_TAGS}" \
               -test ./... \
             | grep -v /integ \
-            | grep '.test$' | sed 's/.test$/' \
+            | grep '.test$' | sed 's/.test$//' \
             | sort \
             | circleci tests split --split-by=timings --timings-type=classname)
 
@@ -288,7 +288,7 @@ jobs:
               -tags "${GO_TAGS}" \
               -test ./... \
             | grep -v /integ \
-            | grep '.test$' | sed 's/.test$/' \
+            | grep '.test$' | sed 's/.test$//' \
             | sort \
             | circleci tests split --split-by=timings --timings-type=classname)
 
