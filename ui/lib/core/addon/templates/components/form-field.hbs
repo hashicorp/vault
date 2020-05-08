@@ -99,8 +99,9 @@
   <TtlPicker2
     @onChange={{action (action "setAndBroadcastTtl" valuePath)}}
     @label={{labelString}}
-    @helperTextDisabled={{or attr.helpText "Vault will use the default lease duration"}}
+    @helperTextDisabled="Vault will use the default lease duration"
     @helperTextEnabled="Lease will expire after"
+    @description={{attr.helpText}}
     @initialValue={{or (get model valuePath) attr.options.setDefault}}
   />
 {{else if (eq attr.options.editType "stringArray")}}
