@@ -51,6 +51,7 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 }
 
 func TestBackend_PluginMain_Postgres(t *testing.T) {
+	t.Parallel()
 	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
 		return
 	}
@@ -70,6 +71,7 @@ func TestBackend_PluginMain_Postgres(t *testing.T) {
 }
 
 func TestBackend_PluginMain_Mongo(t *testing.T) {
+	t.Parallel()
 	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
 		return
 	}
@@ -92,6 +94,7 @@ func TestBackend_PluginMain_Mongo(t *testing.T) {
 }
 
 func TestBackend_RoleUpgrade(t *testing.T) {
+	t.Parallel()
 
 	storage := &logical.InmemStorage{}
 	backend := &databaseBackend{}
@@ -146,6 +149,7 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 }
 
 func TestBackend_config_connection(t *testing.T) {
+	t.Parallel()
 	var resp *logical.Response
 	var err error
 
@@ -330,6 +334,7 @@ func TestBackend_config_connection(t *testing.T) {
 }
 
 func TestBackend_BadConnectionString(t *testing.T) {
+	t.Parallel()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -379,6 +384,7 @@ func TestBackend_BadConnectionString(t *testing.T) {
 }
 
 func TestBackend_basic(t *testing.T) {
+	t.Parallel()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -586,6 +592,7 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_connectionCrud(t *testing.T) {
+	t.Parallel()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -760,6 +767,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
+	t.Parallel()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -1012,6 +1020,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	}
 }
 func TestBackend_allowedRoles(t *testing.T) {
+	t.Parallel()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -1209,6 +1218,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 }
 
 func TestBackend_RotateRootCredentials(t *testing.T) {
+	t.Parallel()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
