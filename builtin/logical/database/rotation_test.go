@@ -2,6 +2,9 @@ package database
 
 import (
 	"context"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/dbtxn"
+	"github.com/hashicorp/vault/sdk/logical"
 	"log"
 	"strings"
 	"testing"
@@ -12,9 +15,6 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/dbtxn"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/lib/pq"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -690,6 +690,10 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
+	// Configure backend, add item and confirm length
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	defer cleanup()
+
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
@@ -705,10 +709,7 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 		t.Fatal("database backend had no credential rotation queue")
 	}
 
-	// Configure backend, add item and confirm length
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
-	defer cleanup()
-	testCases := []string{"65", "130", "5400"}
+	testCases := []string{"10", "20", "100"}
 	// Create database users ahead
 	for _, tc := range testCases {
 		createTestPGUser(t, connURL, dbUser+tc, dbUserDefaultPassword, testRoleStaticCreate)
@@ -784,37 +785,35 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 	pws := make(map[string][]string, 0)
 	pws = capturePasswords(t, b, config, testCases, pws)
 
-	// Sleep to make sure the 65s role will be up for rotation by the time the
-	// periodic function ticks
-	time.Sleep(7 * time.Second)
-
-	// Sleep 75 to make sure the periodic func has time to actually run
-	time.Sleep(75 * time.Second)
+	// Sleep to make sure the 10s role will be have rotated
+	time.Sleep(15 * time.Second)
 	pws = capturePasswords(t, b, config, testCases, pws)
 
-	// Sleep more, this should allow both sr65 and sr130 to rotate
-	time.Sleep(140 * time.Second)
+	// Sleep more, this should allow both sr10 and sr20 to rotate
+	time.Sleep(10 * time.Second)
 	pws = capturePasswords(t, b, config, testCases, pws)
 
 	// Verify all pws are as they should
 	pass := true
 	for k, v := range pws {
 		switch {
-		case k == "plugin-static-role-65":
+		case k == "plugin-static-role-10":
 			// expect all passwords to be different
 			if v[0] == v[1] || v[1] == v[2] || v[0] == v[2] {
 				pass = false
 			}
-		case k == "plugin-static-role-130":
+		case k == "plugin-static-role-20":
 			// expect the first two to be equal, but different from the third
 			if v[0] != v[1] || v[0] == v[2] {
 				pass = false
 			}
-		case k == "plugin-static-role-5400":
+		case k == "plugin-static-role-100":
 			// expect all passwords to be equal
 			if v[0] != v[1] || v[1] != v[2] {
 				pass = false
 			}
+		default:
+			t.Fatalf("unexpected password key: %v", k)
 		}
 	}
 	if !pass {
@@ -830,6 +829,11 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
 
+	// configure backend, add item and confirm length
+	cleanup, connURL := mongodb.PrepareTestContainerWithDatabase(t, "latest", "vaulttestdb")
+	defer cleanup()
+
+	// Rotation ticker starts running in Factory call
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -842,10 +846,7 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 		t.Fatal("database backend had no credential rotation queue")
 	}
 
-	// configure backend, add item and confirm length
-	cleanup, connURL := mongodb.PrepareTestContainerWithDatabase(t, "latest", "vaulttestdb")
-	defer cleanup()
-	testCases := []string{"65", "130", "5400"}
+	testCases := []string{"10", "20", "100"}
 	// Create database users ahead
 	for _, tc := range testCases {
 		testCreateDBUser(t, connURL, "vaulttestdb", "statictestMongo"+tc, "test")
@@ -921,16 +922,12 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	pws := make(map[string][]string, 0)
 	pws = capturePasswords(t, b, config, testCases, pws)
 
-	// sleep to make sure the 65s role will be up for rotation by the time the
-	// periodic function ticks
-	time.Sleep(7 * time.Second)
-
-	// sleep 75 to make sure the periodic func has time to actually run
-	time.Sleep(75 * time.Second)
+	// sleep to make sure the periodic func has time to actually run
+	time.Sleep(15 * time.Second)
 	pws = capturePasswords(t, b, config, testCases, pws)
 
-	// sleep more, this should allow both sr65 and sr130 to rotate
-	time.Sleep(140 * time.Second)
+	// sleep more, this should allow both sr10 and sr20 to rotate
+	time.Sleep(10 * time.Second)
 	pws = capturePasswords(t, b, config, testCases, pws)
 
 	// verify all pws are as they should
@@ -940,21 +937,23 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 			t.Fatalf("expected to find 3 passwords for (%s), only found (%d)", k, len(v))
 		}
 		switch {
-		case k == "plugin-static-role-65":
+		case k == "plugin-static-role-10":
 			// expect all passwords to be different
 			if v[0] == v[1] || v[1] == v[2] || v[0] == v[2] {
 				pass = false
 			}
-		case k == "plugin-static-role-130":
+		case k == "plugin-static-role-20":
 			// expect the first two to be equal, but different from the third
 			if v[0] != v[1] || v[0] == v[2] {
 				pass = false
 			}
-		case k == "plugin-static-role-5400":
+		case k == "plugin-static-role-100":
 			// expect all passwords to be equal
 			if v[0] != v[1] || v[1] != v[2] {
 				pass = false
 			}
+		default:
+			t.Fatalf("unexpected password key: %v", k)
 		}
 	}
 	if !pass {
