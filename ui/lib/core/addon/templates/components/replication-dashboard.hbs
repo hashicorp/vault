@@ -7,8 +7,7 @@
       @message="This can cause a delay depending on the size of the data store. You can use Vault during this time."
       data-test-isReindexing/>
   {{/if}}
-
-  <div class="selectable-card-container has-top-margin-xl">
+  <div class="selectable-card-container {{if isSecondary 'secondary' 'primary'}} has-top-margin-xl">
     {{yield (hash
       card=(component componentToRender replicationDetails=replicationDetails)
     )}}

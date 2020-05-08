@@ -17,9 +17,20 @@
 
   .selectable-card-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    grid-template-rows: 1fr;
-    grid-gap: 2rem;
+
+    &.primary {
+      margin: 2rem 0 2rem 0;
+      grid-template-columns: 1fr 2fr;
+
+      @include until($mobile) {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    &.secondary {
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      grid-gap: 2rem;
+    }
 
     .card-container {
       display: grid;
