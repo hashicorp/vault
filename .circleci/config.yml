@@ -343,11 +343,6 @@ jobs:
           fi
         name: Run Go tests
         no_output_timeout: 60m
-    - run:
-        command: |
-          docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
-        name: Copy test results
-        when: always
     - store_artifacts:
         path: test-results
     - store_test_results:
@@ -477,11 +472,6 @@ jobs:
           fi
         name: Run Go tests
         no_output_timeout: 60m
-    - run:
-        command: |
-          docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
-        name: Copy test results
-        when: always
     - store_artifacts:
         path: test-results
     - store_test_results:
