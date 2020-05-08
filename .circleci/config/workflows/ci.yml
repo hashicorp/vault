@@ -21,6 +21,9 @@ jobs:
   - test-go:
       requires:
         - build-go-dev
+  - test-go-remote-docker:
+      requires:
+        - build-go-dev
   - test-go-race:
       requires:
         - build-go-dev

@@ -9,6 +9,9 @@ parameters:
   go_image:
     type: string
     default: "circleci/golang:1.13.10-buster"
+  use_docker:
+    type: boolean
+    default: false
 steps:
   - run:
       name: Run Go tests
@@ -23,17 +26,28 @@ steps:
             -C /usr/local/bin \
             "circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64/circleci"
 
-        # TODO only run these tests with docker:
-        # go list -test -json  ./...  | jq 'select(.Deps != null) | select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) | .Dir'  |sort -u
+        USE_DOCKER=0
+        <<# parameters.use_docker >>
+        USE_DOCKER=1
+        <</ parameters.use_docker >>
+
+        if [ $USE_DOCKER == 1 ]; then
+          package_names=$(go list -test -json ./... |
+            jq -r 'select(.Deps != null) |
+              select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
+              .ForTest | select(. != null)' |
+              sort -u)
+        else
+          package_names=$(go list -test -json ./... |
+            jq -r 'select(.Deps != null) |
+              select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
+              .ForTest | select(. != null)' |
+              sort -u)
+        fi
 
         # Split Go tests by prior test times
-        package_names=$(go list \
-            -tags "${GO_TAGS}" \
-            -test ./... \
-          | grep -v /integ \
-          | grep '.test$' | sed 's/.test$//' \
-          | sort \
-          | circleci tests split --split-by=timings --timings-type=classname)
+        package_names=$(echo $package_names |
+          circleci tests split --split-by=timings --timings-type=classname)
 
         # After running tests split step, we are now running the following steps
         # in multiple different containers, each getting a different subset of
