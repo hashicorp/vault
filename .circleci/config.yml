@@ -162,7 +162,7 @@ jobs:
     docker:
     - image: circleci/golang:1.13.10-buster
     working_directory: /go/src/github.com/hashicorp/vault
-    parallelism: 32
+    parallelism: 8
     steps:
     - run:
         command: |
@@ -258,7 +258,7 @@ jobs:
     docker:
     - image: circleci/golang:1.13.10-buster
     working_directory: /go/src/github.com/hashicorp/vault
-    parallelism: 32
+    parallelism: 8
     steps:
     - run:
         command: |
