@@ -277,7 +277,7 @@ func WaitForNCoresUnsealed(t testing.T, cluster *vault.TestCluster, n int) {
 		time.Sleep(time.Second)
 	}
 
-	t.Fatalf("%d cores were not sealed", n)
+	t.Fatalf("%d cores were not unsealed", n)
 }
 
 func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {

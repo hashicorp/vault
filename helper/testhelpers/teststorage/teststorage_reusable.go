@@ -144,10 +144,8 @@ func SetRaftAddressProviders(t mtesting.T, cluster *vault.TestCluster) {
 	}
 }
 
-// JoinRaftFollowers joins the followers to the leader
-func JoinRaftFollowers(t *testing.T, cluster *vault.TestCluster) {
-
-	leader := cluster.Cores[0]
+// JoinRaftFollower joins a follower to the cluster
+func JoinRaftFollower(t *testing.T, cluster *vault.TestCluster, leader, follower *vault.TestClusterCore) {
 
 	info := []*raft.LeaderJoinInfo{
 		&raft.LeaderJoinInfo{
@@ -157,11 +155,8 @@ func JoinRaftFollowers(t *testing.T, cluster *vault.TestCluster) {
 	}
 
 	ctx := namespace.RootContext(context.Background())
-
-	for i := 1; i < vault.DefaultNumCores; i++ {
-		_, err := cluster.Cores[i].JoinRaftCluster(ctx, info, false)
-		if err != nil {
-			t.Fatal(err)
-		}
+	_, err := follower.JoinRaftCluster(ctx, info, false)
+	if err != nil {
+		t.Fatal(err)
 	}
 }

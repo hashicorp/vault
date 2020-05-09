@@ -3,11 +3,13 @@ package physical
 import (
 	"encoding/base64"
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -30,12 +32,21 @@ func TestReusableStorage(t *testing.T) {
 		storage, cleanup := teststorage.MakeReusableStorage(
 			t, logger, teststorage.MakeInmemBackend(t, logger))
 		defer cleanup()
-
 		testReusableStorage(t, logger, storage)
 	})
+
+	//t.Run("raft", func(t *testing.T) {
+	//	t.Parallel()
+
+	//	logger := logger.Named("raft")
+	//	storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger)
+	//	defer cleanup()
+	//	testReusableStorage(t, logger, storage)
+	//})
 }
 
 func testReusableStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage) {
+	//initializeStorage(t, logger, storage)
 	rootToken, keys := initializeStorage(t, logger, storage)
 	reuseStorage(t, logger, storage, rootToken, keys)
 }
@@ -64,7 +75,7 @@ func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.Re
 	leader := cluster.Cores[0]
 	client := leader.Client
 
-	// Initialize the cluster.
+	// Initialize leader
 	resp, err := client.Sys().Init(&api.InitRequest{
 		SecretShares:    keyShares,
 		SecretThreshold: keyThreshold,
@@ -76,15 +87,29 @@ func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.Re
 
 	// Unseal
 	cluster.BarrierKeys = decodeKeys(t, resp.KeysB64)
-	//if storage.isRaft {
-	//	cluster.UnsealCore(t, leader)
-	//	vault.TestWaitActive(t, leader.Core)
+	if storage.IsRaft {
 
-	//	joinRaftFollowers(t, cluster)
-	//	time.Sleep(10 * time.Second)
-	//} else {
-	cluster.UnsealCores(t)
-	//}
+		// Unseal leader
+		cluster.UnsealCore(t, leader)
+		time.Sleep(10 * time.Second)
+		//testhelpers.WaitForCoreUnsealed(t, leader)
+		//testhelpers.WaitForActiveNode(t, cluster)
+
+		// Join the followers to the raft cluster
+		for i := 1; i < vault.DefaultNumCores; i++ {
+			follower := cluster.Cores[i]
+			teststorage.JoinRaftFollower(t, cluster, leader, follower)
+
+			cluster.UnsealCore(t, follower)
+			//testhelpers.WaitForActiveNode(t, follower)
+			//testhelpers.WaitForCoreUnsealed(t, follower)
+		}
+		time.Sleep(10 * time.Second)
+	} else {
+		cluster.UnsealCores(t)
+	}
+	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
+	//testhelpers.WaitForActiveNode(t, cluster)
 
 	// Mount kv
 	err = client.Sys().Mount("secret", &api.MountInput{
@@ -106,18 +131,6 @@ func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.Re
 	cluster.EnsureCoresSealed(t)
 
 	return client.Token(), cluster.BarrierKeys
-}
-
-func decodeKeys(t *testing.T, keysB64 []string) [][]byte {
-	keys := make([][]byte, len(keysB64))
-	for i, k := range keysB64 {
-		b, err := base64.RawStdEncoding.DecodeString(k)
-		if err != nil {
-			t.Fatal(err)
-		}
-		keys[i] = b
-	}
-	return keys
 }
 
 // reuseStorage re-uses a pre-populated backend.
@@ -146,6 +159,7 @@ func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.Reusabl
 	// Unseal
 	cluster.BarrierKeys = keys
 	cluster.UnsealCores(t)
+	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
 
 	// Read the secret
 	secret, err := client.Logical().Read("secret/foo")
@@ -158,4 +172,16 @@ func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.Reusabl
 
 	// Seal the cluster
 	cluster.EnsureCoresSealed(t)
+}
+
+func decodeKeys(t *testing.T, keysB64 []string) [][]byte {
+	keys := make([][]byte, len(keysB64))
+	for i, k := range keysB64 {
+		b, err := base64.RawStdEncoding.DecodeString(k)
+		if err != nil {
+			t.Fatal(err)
+		}
+		keys[i] = b
+	}
+	return keys
 }
