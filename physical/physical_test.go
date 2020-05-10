@@ -1,7 +1,6 @@
 package physical
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -47,10 +46,10 @@ func TestReusableStorage(t *testing.T) {
 
 func testReusableStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage) {
 	rootToken, keys := initializeStorage(t, logger, storage)
-	fmt.Printf("rootToken %v, keys %v\n", rootToken, keys)
+	reuseStorage(t, logger, storage, rootToken, keys)
 }
 
-// initializeStorage initializes a brand new backend.
+// initializeStorage initializes a brand new backend storage.
 func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage) (string, [][]byte) {
 
 	var conf = vault.CoreConfig{
@@ -91,6 +90,26 @@ func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.Re
 	cluster.EnsureCoresSealed(t)
 
 	return cluster.RootToken, cluster.BarrierKeys
+}
+
+// reuseStorage uses a pre-populated backend storage.
+func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, rootToken string, keys [][]byte) {
+
+	var conf = vault.CoreConfig{
+		Logger: logger.Named("reuseStorage"),
+	}
+	var opts = vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		SkipInit:    true,
+	}
+	storage.Setup(&conf, &opts)
+	cluster := vault.NewTestCluster(t, &conf, &opts)
+	cluster.Start()
+	defer func() {
+		storage.Cleanup(t, cluster)
+		cluster.Cleanup()
+	}()
+
 }
 
 func verifyRaftConfiguration(t *testing.T, client *api.Client) {
