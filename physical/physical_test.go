@@ -6,7 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
+
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -66,9 +69,10 @@ func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.Re
 		cluster.Cleanup()
 	}()
 
+	leader := cluster.Cores[0]
+	client := leader.Client
+
 	//// Initialize leader
-	//leader := cluster.Cores[0]
-	//client := leader.Client
 	//resp, err := client.Sys().Init(&api.InitRequest{
 	//	SecretShares:    keyShares,
 	//	SecretThreshold: keyThreshold,
@@ -87,11 +91,46 @@ func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.Re
 	// Join raft cluster
 	testhelpers.RaftClusterJoinNodes(t, cluster)
 	time.Sleep(15 * time.Second)
+	verifyRaftConfiguration(t, client)
 
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
 
 	return rootToken, keys
+}
+
+func verifyRaftConfiguration(t *testing.T, client *api.Client) {
+
+	resp, err := client.Logical().Read("sys/storage/raft/configuration")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	servers := resp.Data["config"].(map[string]interface{})["servers"].([]interface{})
+
+	type config struct {
+		nodeID   string
+		isLeader bool
+	}
+
+	actual := []config{}
+	for _, s := range servers {
+		server := s.(map[string]interface{})
+		actual = append(actual, config{
+			nodeID:   server["node_id"].(string),
+			isLeader: server["leader"].(bool),
+		})
+	}
+
+	var expected = []config{
+		{nodeID: "core-0", isLeader: true},
+		{nodeID: "core-1", isLeader: false},
+		{nodeID: "core-2", isLeader: false},
+	}
+
+	if diff := deep.Equal(actual, expected); len(diff) > 0 {
+		t.Fatal(diff)
+	}
 }
 
 func decodeKeys(t *testing.T, keysB64 []string) [][]byte {
