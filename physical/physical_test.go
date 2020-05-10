@@ -1,7 +1,6 @@
 package physical
 
 import (
-	"encoding/base64"
 	"fmt"
 	"testing"
 	"time"
@@ -59,7 +58,6 @@ func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.Re
 	}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
-		//SkipInit:    true,
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
@@ -72,31 +70,27 @@ func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.Re
 	leader := cluster.Cores[0]
 	client := leader.Client
 
-	//// Initialize leader
-	//resp, err := client.Sys().Init(&api.InitRequest{
-	//	SecretShares:    keyShares,
-	//	SecretThreshold: keyThreshold,
-	//})
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//client.SetToken(resp.RootToken)
-	//cluster.BarrierKeys = decodeKeys(t, resp.KeysB64)
-	//// Unseal leader
-	//cluster.UnsealCore(t, leader)
-
-	rootToken := cluster.RootToken
-	keys := cluster.BarrierKeys
-
 	// Join raft cluster
 	testhelpers.RaftClusterJoinNodes(t, cluster)
 	time.Sleep(15 * time.Second)
 	verifyRaftConfiguration(t, client)
 
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	// Wait until unsealed
+	vault.TestWaitActive(t, leader.Core)
 	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
 
-	return rootToken, keys
+	// Write a secret that we will read back out later.
+	_, err := client.Logical().Write(
+		"secret/foo",
+		map[string]interface{}{"zork": "quux"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Seal the cluster
+	cluster.EnsureCoresSealed(t)
+
+	return cluster.RootToken, cluster.BarrierKeys
 }
 
 func verifyRaftConfiguration(t *testing.T, client *api.Client) {
@@ -105,7 +99,6 @@ func verifyRaftConfiguration(t *testing.T, client *api.Client) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	servers := resp.Data["config"].(map[string]interface{})["servers"].([]interface{})
 
 	type config struct {
@@ -131,18 +124,6 @@ func verifyRaftConfiguration(t *testing.T, client *api.Client) {
 	if diff := deep.Equal(actual, expected); len(diff) > 0 {
 		t.Fatal(diff)
 	}
-}
-
-func decodeKeys(t *testing.T, keysB64 []string) [][]byte {
-	keys := make([][]byte, len(keysB64))
-	for i, k := range keysB64 {
-		b, err := base64.RawStdEncoding.DecodeString(k)
-		if err != nil {
-			t.Fatal(err)
-		}
-		keys[i] = b
-	}
-	return keys
 }
 
 //////////////////////////////////////////////////////////////////////////////
