@@ -2,21 +2,62 @@ package physical
 
 import (
 	"testing"
+	"time"
 
+	mtesting "github.com/mitchellh/go-testing-interface"
+
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
 )
 
 func TestReusableStorage(t *testing.T) {
 
+	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
+
+	//t.Run("inmem", func(t *testing.T) {
+	//	t.Parallel()
+
+	//	logger := logger.Named("inmem")
+	//	storage, cleanup := teststorage.MakeReusableStorage(
+	//		t, logger, teststorage.MakeInmemBackend(t, logger))
+	//	defer cleanup()
+	//	testReusableStorage(t, logger, storage)
+	//})
+
+	t.Run("raft", func(t *testing.T) {
+		t.Parallel()
+
+		logger := logger.Named("raft")
+		storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger)
+		defer cleanup()
+		testReusableStorage(t, logger, storage)
+	})
+}
+
+func testReusableStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage) {
+
 	var conf vault.CoreConfig
 	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
-	teststorage.RaftBackendSetup(&conf, &opts)
+	opts.SetupFunc = func(t mtesting.T, c *vault.TestCluster) {
+		logger.Debug("begin RaftClusterJoinNodes")
+		testhelpers.RaftClusterJoinNodes(t, c)
+		logger.Debug("sleep RaftClusterJoinNodes")
+		time.Sleep(15 * time.Second)
+		logger.Debug("end RaftClusterJoinNodes")
+	}
+	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
 	cluster.Start()
+	defer func() {
+		storage.Cleanup(t, cluster)
+		cluster.Cleanup()
+	}()
+
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
-	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
 		if c.Core.Sealed() {
@@ -24,6 +65,11 @@ func TestReusableStorage(t *testing.T) {
 		}
 	}
 }
+
+//// initializeStorage initializes a brand new backend.
+//func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage) (string, [][]byte) {
+
+//////////////////////////////////////////////////////////////////////////////
 
 //import (
 //	"encoding/base64"

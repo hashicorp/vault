@@ -1,19 +1,15 @@
 package teststorage
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"runtime/debug"
-	"sync/atomic"
 	"testing"
 
 	mtesting "github.com/mitchellh/go-testing-interface"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/vault"
 )
@@ -28,9 +24,7 @@ type ReusableStorage struct {
 
 // MakeReusableStorage makes a backend that can be re-used across
 // multiple test clusters in sequence.
-func MakeReusableStorage(
-	t *testing.T, logger hclog.Logger, bundle *vault.PhysicalBackendBundle,
-) (ReusableStorage, func()) {
+func MakeReusableStorage(t *testing.T, logger hclog.Logger, bundle *vault.PhysicalBackendBundle) (ReusableStorage, func()) {
 
 	storage := ReusableStorage{
 		IsRaft: false,
@@ -69,7 +63,7 @@ func MakeReusableRaftStorage(t *testing.T, logger hclog.Logger) (ReusableStorage
 
 	raftDirs := make([]string, vault.DefaultNumCores)
 	for i := 0; i < vault.DefaultNumCores; i++ {
-		raftDirs[i] = MakeRaftDir(t)
+		raftDirs[i] = makeRaftDir(t)
 	}
 
 	storage := ReusableStorage{
@@ -79,15 +73,14 @@ func MakeReusableRaftStorage(t *testing.T, logger hclog.Logger) (ReusableStorage
 			conf.DisablePerformanceStandby = true
 			opts.KeepStandbysSealed = true
 			opts.PhysicalFactory = func(t mtesting.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
-				return MakeReusableRaftBackend(t, coreIdx, logger, raftDirs[coreIdx])
+				return makeReusableRaftBackend(t, coreIdx, logger, raftDirs[coreIdx])
 			}
-			opts.SetupFunc = SetRaftAddressProviders
 		},
 
 		Cleanup: func(t *testing.T, cluster *vault.TestCluster) {
+			// Close open files.
 			for _, core := range cluster.Cores {
 				raftStorage := core.UnderlyingRawStorage.(*raft.RaftBackend)
-				// Let go of open files.
 				if err := raftStorage.Close(); err != nil {
 					t.Fatal(err)
 				}
@@ -104,7 +97,7 @@ func MakeReusableRaftStorage(t *testing.T, logger hclog.Logger) (ReusableStorage
 	return storage, cleanup
 }
 
-func MakeRaftDir(t *testing.T) string {
+func makeRaftDir(t *testing.T) string {
 	raftDir, err := ioutil.TempDir("", "vault-raft-")
 	if err != nil {
 		t.Fatal(err)
@@ -113,7 +106,7 @@ func MakeRaftDir(t *testing.T) string {
 	return raftDir
 }
 
-func MakeReusableRaftBackend(t mtesting.T, coreIdx int, logger hclog.Logger, raftDir string) *vault.PhysicalBackendBundle {
+func makeReusableRaftBackend(t mtesting.T, coreIdx int, logger hclog.Logger, raftDir string) *vault.PhysicalBackendBundle {
 	nodeID := fmt.Sprintf("core-%d", coreIdx)
 
 	conf := map[string]string{
@@ -133,30 +126,30 @@ func MakeReusableRaftBackend(t mtesting.T, coreIdx int, logger hclog.Logger, raf
 	}
 }
 
-// SetRaftAddressProviders sets a ServerAddressProvider for all the raft cores
-func SetRaftAddressProviders(t mtesting.T, cluster *vault.TestCluster) {
-
-	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
-	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
-
-	for _, core := range cluster.Cores {
-		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-	}
-}
-
-// JoinRaftFollower joins a follower to the cluster
-func JoinRaftFollower(t *testing.T, cluster *vault.TestCluster, leader, follower *vault.TestClusterCore) {
-
-	info := []*raft.LeaderJoinInfo{
-		&raft.LeaderJoinInfo{
-			LeaderAPIAddr: leader.Client.Address(),
-			TLSConfig:     leader.TLSConfig,
-		},
-	}
-
-	ctx := namespace.RootContext(context.Background())
-	_, err := follower.JoinRaftCluster(ctx, info, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
+//// SetRaftAddressProviders sets a ServerAddressProvider for all the raft cores
+//func SetRaftAddressProviders(t mtesting.T, cluster *vault.TestCluster) {
+//
+//	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
+//	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
+//
+//	for _, core := range cluster.Cores {
+//		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+//	}
+//}
+//
+//// JoinRaftFollower joins a follower to the cluster
+//func JoinRaftFollower(t *testing.T, cluster *vault.TestCluster, leader, follower *vault.TestClusterCore) {
+//
+//	info := []*raft.LeaderJoinInfo{
+//		&raft.LeaderJoinInfo{
+//			LeaderAPIAddr: leader.Client.Address(),
+//			TLSConfig:     leader.TLSConfig,
+//		},
+//	}
+//
+//	ctx := namespace.RootContext(context.Background())
+//	_, err := follower.JoinRaftCluster(ctx, info, false)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//}
