@@ -38,7 +38,7 @@ func TestReusableStorage(t *testing.T) {
 
 func testReusableStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage) {
 	rootToken, keys := initializeStorage(t, logger, storage)
-	logger.Debug("storage was initialized", "rootToken", rootToken, "key", keys)
+	println("rootToken, keys", rootToken, keys)
 }
 
 // initializeStorage initializes a brand new backend.
