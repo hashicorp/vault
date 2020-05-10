@@ -1,6 +1,8 @@
 package physical
 
 import (
+	"encoding/base64"
+	"fmt"
 	"testing"
 	"time"
 
@@ -10,6 +12,11 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
+)
+
+const (
+	keyShares    = 5
+	keyThreshold = 3
 )
 
 func TestReusableStorage(t *testing.T) {
@@ -38,7 +45,7 @@ func TestReusableStorage(t *testing.T) {
 
 func testReusableStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage) {
 	rootToken, keys := initializeStorage(t, logger, storage)
-	println("rootToken, keys", rootToken, keys)
+	fmt.Printf("rootToken %v, keys %v\n", rootToken, keys)
 }
 
 // initializeStorage initializes a brand new backend.
@@ -49,6 +56,7 @@ func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.Re
 	}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
+		//SkipInit:    true,
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
@@ -58,13 +66,44 @@ func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.Re
 		cluster.Cleanup()
 	}()
 
+	//// Initialize leader
+	//leader := cluster.Cores[0]
+	//client := leader.Client
+	//resp, err := client.Sys().Init(&api.InitRequest{
+	//	SecretShares:    keyShares,
+	//	SecretThreshold: keyThreshold,
+	//})
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//client.SetToken(resp.RootToken)
+	//cluster.BarrierKeys = decodeKeys(t, resp.KeysB64)
+	//// Unseal leader
+	//cluster.UnsealCore(t, leader)
+
+	rootToken := cluster.RootToken
+	keys := cluster.BarrierKeys
+
+	// Join raft cluster
 	testhelpers.RaftClusterJoinNodes(t, cluster)
 	time.Sleep(15 * time.Second)
 
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
 
-	return cluster.RootToken, cluster.BarrierKeys
+	return rootToken, keys
+}
+
+func decodeKeys(t *testing.T, keysB64 []string) [][]byte {
+	keys := make([][]byte, len(keysB64))
+	for i, k := range keysB64 {
+		b, err := base64.RawStdEncoding.DecodeString(k)
+		if err != nil {
+			t.Fatal(err)
+		}
+		keys[i] = b
+	}
+	return keys
 }
 
 //////////////////////////////////////////////////////////////////////////////
