@@ -4,8 +4,6 @@ import (
 	"testing"
 	"time"
 
-	mtesting "github.com/mitchellh/go-testing-interface"
-
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
@@ -39,15 +37,18 @@ func TestReusableStorage(t *testing.T) {
 }
 
 func testReusableStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage) {
+	rootToken, keys := initializeStorage(t, logger, storage)
+	logger.Debug("storage was initialized", "rootToken", rootToken, "key", keys)
+}
 
-	var conf vault.CoreConfig
-	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
-	opts.SetupFunc = func(t mtesting.T, c *vault.TestCluster) {
-		logger.Debug("begin RaftClusterJoinNodes")
-		testhelpers.RaftClusterJoinNodes(t, c)
-		logger.Debug("sleep RaftClusterJoinNodes")
-		time.Sleep(15 * time.Second)
-		logger.Debug("end RaftClusterJoinNodes")
+// initializeStorage initializes a brand new backend.
+func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage) (string, [][]byte) {
+
+	var conf = vault.CoreConfig{
+		Logger: logger.Named("initializeStorage"),
+	}
+	var opts = vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
@@ -57,17 +58,14 @@ func testReusableStorage(t *testing.T, logger hclog.Logger, storage teststorage.
 		cluster.Cleanup()
 	}()
 
+	testhelpers.RaftClusterJoinNodes(t, cluster)
+	time.Sleep(15 * time.Second)
+
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
 
-	for i, c := range cluster.Cores {
-		if c.Core.Sealed() {
-			t.Fatalf("failed to unseal core %d", i)
-		}
-	}
+	return cluster.RootToken, cluster.BarrierKeys
 }
-
-//// initializeStorage initializes a brand new backend.
-//func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage) (string, [][]byte) {
 
 //////////////////////////////////////////////////////////////////////////////
 
