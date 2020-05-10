@@ -457,3 +457,14 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 
 	WaitForNCoresUnsealed(t, cluster, 3)
 }
+
+// RaftClusterSetAddressProviders sets a ServerAddressProvider for all the raft cores
+func RaftClusterSetAddressProviders(t testing.T, cluster *vault.TestCluster) {
+
+	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
+	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
+
+	for _, core := range cluster.Cores {
+		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+	}
+}

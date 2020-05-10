@@ -56,7 +56,8 @@ func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.Re
 		Logger: logger.Named("initializeStorage"),
 	}
 	var opts = vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
+		HandlerFunc:       vaulthttp.Handler,
+		BaseListenAddress: "127.0.0.1:50000",
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
@@ -99,8 +100,9 @@ func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.Reusabl
 		Logger: logger.Named("reuseStorage"),
 	}
 	var opts = vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		SkipInit:    true,
+		HandlerFunc:       vaulthttp.Handler,
+		BaseListenAddress: "127.0.0.1:50000",
+		SkipInit:          true,
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
@@ -109,7 +111,6 @@ func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.Reusabl
 		storage.Cleanup(t, cluster)
 		cluster.Cleanup()
 	}()
-
 }
 
 func verifyRaftConfiguration(t *testing.T, client *api.Client) {
