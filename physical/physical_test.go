@@ -15,11 +15,6 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-const (
-	keyShares    = 5
-	keyThreshold = 3
-)
-
 func TestReusableStorage(t *testing.T) {
 
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
@@ -46,6 +41,7 @@ func TestReusableStorage(t *testing.T) {
 
 func testReusableStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage) {
 	rootToken, keys := initializeStorage(t, logger, storage)
+	println("===================================================================")
 	reuseStorage(t, logger, storage, rootToken, keys)
 }
 
@@ -111,6 +107,24 @@ func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.Reusabl
 		storage.Cleanup(t, cluster)
 		cluster.Cleanup()
 	}()
+
+	for i, c := range cluster.Cores {
+		if !c.Core.Sealed() {
+			t.Fatalf("core is not sealed %d", i)
+		}
+	}
+
+	// Set Raft address providers
+	testhelpers.RaftClusterSetAddressProviders(t, cluster)
+
+	// Unseal cores
+	cluster.BarrierKeys = keys
+	cluster.UnsealCores(t)
+
+	// Wait until unsealed
+	leader := cluster.Cores[0]
+	vault.TestWaitActive(t, leader.Core)
+	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
 }
 
 func verifyRaftConfiguration(t *testing.T, client *api.Client) {

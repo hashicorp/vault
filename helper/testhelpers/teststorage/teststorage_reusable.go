@@ -107,8 +107,8 @@ func makeRaftDir(t *testing.T) string {
 }
 
 func makeReusableRaftBackend(t mtesting.T, coreIdx int, logger hclog.Logger, raftDir string) *vault.PhysicalBackendBundle {
-	nodeID := fmt.Sprintf("core-%d", coreIdx)
 
+	nodeID := fmt.Sprintf("core-%d", coreIdx)
 	conf := map[string]string{
 		"path":                   raftDir,
 		"node_id":                nodeID,
