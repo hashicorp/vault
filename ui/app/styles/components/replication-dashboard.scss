@@ -15,7 +15,13 @@
     margin-bottom: $spacing-xs;
   }
 
+  .reindexing-alert,
+  .syncing-alert {
+    margin-top: 2rem;
+  }
+
   .selectable-card-container {
+    margin-top: 2rem;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     grid-template-rows: 1fr;
