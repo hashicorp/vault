@@ -10,18 +10,19 @@
         <span class="tag is-light has-text-grey-dark" data-test-replication-mode-display=true>
             {{model.replicationAttrs.modeForUrl}}
         </span>
-        {{#if secondaryId}}
+        {{#if model.replicationAttrs.secondaryId}}
           <span class="tag is-light has-text-grey-dark">
             <code>
               {{model.replicationAttrs.secondaryId}}
             </code>
           </span>
+        {{else}}
+          <span class="tag is-light">
+            <code class="has-text-grey-dark">
+              {{model.replicationAttrs.clusterIdDisplay}}
+            </code>
+          </span>
         {{/if}}
-        <span class="tag is-light">
-          <code class="has-text-grey-dark">
-            {{model.replicationAttrs.clusterIdDisplay}}
-          </code>
-        </span>
       </h1>
     </p.levelLeft>
   </PageHeader>

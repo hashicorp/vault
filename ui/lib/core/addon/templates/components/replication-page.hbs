@@ -1,7 +1,12 @@
 <div class="replication-page" data-test-replication-page>
   {{yield
     (hash
-      header=(component 'replication-header' data=model title=replicationMode isSecondary=isSecondary)
+      header=(component 'replication-header'
+        data=model
+        title=replicationMode
+        isSecondary=isSecondary
+        secondaryId=replicationDetails.secondaryId
+      )
       dashboard=(component
         'replication-dashboard'
         data=model
