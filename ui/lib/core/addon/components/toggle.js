@@ -17,11 +17,14 @@
 
 import Component from '@ember/component';
 import { computed } from '@ember/object';
+import layout from '../templates/components/toggle';
 
 export default Component.extend({
+  layout,
   tagName: '',
   checked: false,
   disabled: false,
+  name: '',
   size: 'normal',
   status: 'normal',
   safeId: computed('name', function() {
