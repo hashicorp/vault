@@ -42,14 +42,14 @@
       </div>
     </div>
   {{else if (eq attr.options.editType "ttl")}}
-    {{ttl-picker
-      initialValue=(or (get model attr.name) attr.options.defaultValue)
-      labelText=(if
-        attr.options.label attr.options.label (humanize (dasherize attr.name))
-      )
-      setDefaultValue=false
-      onChange=(action (mut (get model attr.name)))
-    }}
+  <TtlPicker2
+    @initialValue={{or (get model attr.name) attr.options.defaultValue}}
+    @initialEnabled={{or (get model attr.name) false}}
+    @label={{or attr.options.label (humanize (dasherize attr.name))}}
+    @helperTextDisabled="If this is not set, the engine default will be used."
+    @helperTextEnabled="Disable lease after"
+    @onChange={{action "updateTtl" attr.name}}
+  />
   {{else if (or (eq attr.type "number") (eq attr.type "string"))}}
     <div class="control">
       {{input
