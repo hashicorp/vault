@@ -183,10 +183,6 @@ func (b *CubbyholeBackend) handleDelete(ctx context.Context, req *logical.Reques
 
 	path := data.Get("path").(string)
 
-	if path == "" {
-		return nil, fmt.Errorf("missing path")
-	}
-
 	// Delete the key at the request path
 	if err := req.Storage.Delete(ctx, req.ClientToken+"/"+path); err != nil {
 		return nil, err
