@@ -10,7 +10,7 @@ CHANGES:
 * plugin: Add SDK method, `Sys.ReloadPlugin`, and CLI command, `vault plugin reload`, 
   for reloading plugins. [[GH-8777](https://github.com/hashicorp/vault/pull/8777)]
 * sentinel: Add a sentinel config section, and "additional_enabled_modules", a list of Sentinel modules that may be imported in addition to the defaults.
-
+* cubbyhole: Reject reads and writes to an empty ("") path. [[GH-8971](https://github.com/hashicorp/vault/pull/8971)]
 IMPROVEMENTS:
 
 * secrets/gcp: Support BigQuery dataset ACLs in absence of IAM endpoints [[GH-78](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/78)]
