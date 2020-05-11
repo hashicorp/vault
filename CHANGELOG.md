@@ -15,12 +15,29 @@ IMPROVEMENTS:
 
 * secrets/gcp: Support BigQuery dataset ACLs in absence of IAM endpoints [[GH-78](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/78)]
 * sdk/framework: Support accepting TypeFloat parameters over the API [[GH-8923](https://github.com/hashicorp/vault/pull/8923)]
+* ui: Update TTL picker styling on SSH secret engine [[GH-8891](https://github.com/hashicorp/vault/pull/8891)]
+* ui: Only render the JWT input field of the Vault login form on mounts configured for JWT auth [[GH-8952](https://github.com/hashicorp/vault/pull/8952)]
 
 BUG FIXES:
 
 * secrets/database: Fix issue where rotating root database credentials while Vault's storage backend is unavailable causes Vault to lose access to the database [[GH-8782](https://github.com/hashicorp/vault/pull/8782)]
 * ui: Fix snowman that appears when namespaces have more than one period [[GH-8910](https://github.com/hashicorp/vault/pull/8910)]
 * ui: Add Toggle component into core addon so it is available in KMIP and other Ember Engines.[[GH-8913]](https://github.com/hashicorp/vault/pull/8913)
+
+## 1.4.2 (TBD)
+
+IMPROVEMENTS:
+
+* storage/raft: The storage stanza now accepts `leader_ca_cert_file`, `leader_client_cert_file`, and 
+  `leader_client_key_file` parameters to read and parse TLS certificate information from paths on disk.
+  Existing non-path based parameters will continue to work, but their values will need to be provided as a 
+  single-line string with newlines delimited by `\n`.  [[GH-8894](https://github.com/hashicorp/vault/pull/8894)]
+  
+BUG FIXES:
+
+* sys: The path provided in `sys/internal/ui/mounts/:path` is now namespace-aware. This fixes an issue
+  with `vault kv` subcommands that had namespaces provided in the path returning permission denied all the time.
+  [[GH-8962](https://github.com/hashicorp/vault/pull/8962)]
 
 ## 1.4.1 (April 30th, 2020)
 
