@@ -8,7 +8,9 @@
       data-test-isReindexing
       @class="has-top-margin-xl"/>
   {{/if}}
-  <div class="selectable-card-container {{if isSecondary 'secondary' 'primary'}} has-top-margin-xl">
+  <div
+    class="selectable-card-container {{if isSecondary 'secondary' 'primary'}} has-top-margin-xl"
+    data-test-selectable-card-container={{if isSecondary 'secondary' 'primary'}}>
     {{yield (hash
       card=(component componentToRender replicationDetails=replicationDetails)
     )}}
