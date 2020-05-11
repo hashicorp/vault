@@ -1,17 +1,18 @@
 package physical
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
-
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
 )
@@ -72,7 +73,7 @@ func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.Re
 	// Join raft cluster
 	testhelpers.RaftClusterJoinNodes(t, cluster)
 	time.Sleep(15 * time.Second)
-	verifyRaftConfiguration(t, client)
+	verifyRaftConfiguration(t, leader)
 
 	// Wait until unsealed
 	vault.TestWaitActive(t, leader.Core)
@@ -117,6 +118,10 @@ func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.Reusabl
 		}
 	}
 
+	//leader := cluster.Cores[0]
+	//client := leader.Client
+	//client.SetToken(rootToken)
+
 	// Set Raft address providers
 	testhelpers.RaftClusterSetAddressProviders(t, cluster)
 
@@ -124,6 +129,7 @@ func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.Reusabl
 	cluster.BarrierKeys = keys
 	for _, core := range cluster.Cores {
 		cluster.UnsealCore(t, core)
+		verifyRaftConfiguration(t, core)
 		vault.TestWaitActive(t, core.Core)
 	}
 
@@ -131,37 +137,98 @@ func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.Reusabl
 	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
 }
 
-func verifyRaftConfiguration(t *testing.T, client *api.Client) {
+//func getRaftConfiguration(t *testing.T, client *api.Client) []*raft.RaftServer {
+//
+//	resp, err := client.Logical().Read("sys/storage/raft/configuration")
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//	raw := resp.Data["config"].(map[string]interface{})["servers"].([]interface{})
+//
+//	servers := []*raft.RaftServer{}
+//	for _, r := range raw {
+//		rs := r.(map[string]interface{})
+//		servers = append(servers, &raft.RaftServer{
+//			NodeID:          rs["node_id"].(string),
+//			Address:         rs["address"].(string),
+//			Leader:          rs["leader"].(bool),
+//			ProtocolVersion: rs["protocol_version"].(string),
+//			Voter:           rs["voter"].(bool),
+//		})
+//	}
+//	return servers
+//}
 
-	resp, err := client.Logical().Read("sys/storage/raft/configuration")
+func printRaftConfiguration(servers []*raft.RaftServer) string {
+	var b strings.Builder
+	for _, server := range servers {
+		fmt.Fprintf(&b, "{\n")
+		fmt.Fprintf(&b, "	NodeID:          %q,\n", server.NodeID)
+		fmt.Fprintf(&b, "	Address:         %q,\n", server.Address)
+		fmt.Fprintf(&b, "	Leader:          %t,\n", server.Leader)
+		fmt.Fprintf(&b, "	ProtocolVersion: %q,\n", server.ProtocolVersion)
+		fmt.Fprintf(&b, "	Voter:           %t,\n", server.Voter)
+		fmt.Fprintf(&b, "},\n")
+	}
+	return b.String()
+}
+
+func verifyRaftConfiguration(t *testing.T, core *vault.TestClusterCore) {
+
+	//servers := getRaftConfiguration(t, client)
+
+	backend := core.UnderlyingRawStorage.(*raft.RaftBackend)
+	ctx := namespace.RootContext(context.Background())
+	config, err := backend.GetConfiguration(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	servers := resp.Data["config"].(map[string]interface{})["servers"].([]interface{})
 
-	type config struct {
-		nodeID   string
-		isLeader bool
-	}
+	fmt.Printf("-----------------------------------------------------------------\n")
+	fmt.Printf("%s\n", printRaftConfiguration(config.Servers))
 
-	actual := []config{}
-	for _, s := range servers {
-		server := s.(map[string]interface{})
-		actual = append(actual, config{
-			nodeID:   server["node_id"].(string),
-			isLeader: server["leader"].(bool),
-		})
-	}
+	//resp, err := client.Logical().Read("sys/storage/raft/configuration")
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//servers := resp.Data["config"].(map[string]interface{})["servers"].([]interface{})
 
-	var expected = []config{
-		{nodeID: "core-0", isLeader: true},
-		{nodeID: "core-1", isLeader: false},
-		{nodeID: "core-2", isLeader: false},
-	}
+	//actual := []config{}
+	//for _, s := range servers {
+	//	server := s.(map[string]interface{})
+	//	actual = append(actual, config{
+	//		nodeID:   server[NodeID].(string),
+	//		isLeader: server[Leader].(bool),
+	//	})
+	//}
 
-	if diff := deep.Equal(actual, expected); len(diff) > 0 {
-		t.Fatal(diff)
-	}
+	//var expected = []raft.RaftServer{
+	//	{
+	//		NodeID:          "node1",
+	//		Address:         "127.0.0.1:8201",
+	//		Leader:          false,
+	//		ProtocolVersion: "3",
+	//		Voter:           true,
+	//	},
+	//	{
+	//		NodeID:          "node2",
+	//		Address:         "127.0.0.2:8201",
+	//		Leader:          true,
+	//		ProtocolVersion: "3",
+	//		Voter:           true,
+	//	},
+	//	{
+	//		NodeID:          "node3",
+	//		Address:         "127.0.0.3:8201",
+	//		Leader:          false,
+	//		ProtocolVersion: "3",
+	//		Voter:           true,
+	//	},
+	//}
+
+	//if diff := deep.Equal(actual, expected); len(diff) > 0 {
+	//	t.Fatal(diff)
+	//}
 }
 
 //////////////////////////////////////////////////////////////////////////////

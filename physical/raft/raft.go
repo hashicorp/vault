@@ -520,6 +520,10 @@ func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error
 func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	b.logger.Trace("setting up raft cluster")
 
+	fmt.Printf("=======================================================================================\n")
+	fmt.Printf("raft.SetupCluster %#v\n", b.serverAddressProvider)
+	debug.PrintStack()
+
 	b.l.Lock()
 	defer b.l.Unlock()
 
@@ -646,10 +650,6 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			return errwrap.Wrapf("recovering raft cluster failed: {{err}}", err)
 		}
 	}
-
-	fmt.Printf("=======================================================================================\n")
-	fmt.Printf("raft.NewRaft %s\n", b.raftTransport.LocalAddr())
-	debug.PrintStack()
 
 	raftObj, err := raft.NewRaft(raftConfig, b.fsm.chunker, b.logStore, b.stableStore, b.snapStore, b.raftTransport)
 	b.fsm.SetNoopRestore(false)
