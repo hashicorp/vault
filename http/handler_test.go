@@ -237,7 +237,7 @@ func TestHandler_MissingToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	// req.Header.Set(consts.AuthHeaderName, token)
+
 	req.Header.Set(WrapTTLHeaderName, "60s")
 
 	client := cleanhttp.DefaultClient()
