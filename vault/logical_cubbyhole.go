@@ -147,6 +147,10 @@ func (b *CubbyholeBackend) handleWrite(ctx context.Context, req *logical.Request
 
 	path := data.Get("path").(string)
 
+	if path == "" {
+		return nil, fmt.Errorf("missing path")
+	}
+
 	// JSON encode the data
 	buf, err := json.Marshal(req.Data)
 	if err != nil {
