@@ -17,18 +17,23 @@ function CommunityPage() {
           {
             header: 'Discussion List',
             body:
-              '[Vault Community Forum](https://discuss.hashicorp.com/c/vault)'
+              '[Vault Community Forum](https://discuss.hashicorp.com/c/vault)',
           },
           {
             header: 'Bug Tracker',
             body:
-              '[Issue tracker on GitHub](https://github.com/hashicorp/vault/issues) for reporting bugs. Use IRC or the mailing list for general help.'
+              '[Issue tracker on GitHub](https://github.com/hashicorp/vault/issues) for reporting bugs. Use IRC or the mailing list for general help.',
           },
           {
             header: 'Training',
             body:
-              '[Paid HashiCorp](https://www.hashicorp.com/training) training courses are available in a city near you. Private training courses are also available.'
-          }
+              '[Paid HashiCorp](https://www.hashicorp.com/training) training courses are available in a city near you. Private training courses are also available.',
+          },
+          {
+            header: 'Certification',
+            body:
+              "Learn more about our [Cloud Engineer Certification program](https://www.hashicorp.com/certification/) and [HashiCorp's Security Automation Certification](https://www.hashicorp.com/certification/vault-associate/) exams.",
+          },
         ]}
       />
     </div>
