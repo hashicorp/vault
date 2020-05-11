@@ -7,6 +7,8 @@
       @message="This can cause a delay depending on the size of the data store. You can use Vault during this time."
       data-test-isReindexing/>
   {{/if}}
+  <br />
+  <progress value={{3}} max={{4}} class="progress is-success"></progress>
 
   <div class="selectable-card-container has-top-margin-xl">
     {{yield (hash
@@ -23,7 +25,7 @@
       @type="info"
       @secondIconType="loading"
       @message="The cluster is syncing. This happens when the secondary is too far behind the primary to use the normal stream-wals state for catching up."
-      @class="has-top-margin-xl" 
+      @class="has-top-margin-xl"
       data-test-isSyncing/>
   {{/if}}
   <ReplicationTableRows

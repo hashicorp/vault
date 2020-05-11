@@ -1,9 +1,6 @@
-.progress[value]::-webkit-progress-bar,
-.progress[value]::-webkit-progress-value {
-  border-radius: 2px;
-}
 .progress {
-  border-radius: 0;
+  background: $progress-bar-background-color;
+  border-radius: $radius;
   margin-bottom: 0;
   &.is-small {
     height: 0.5rem;
@@ -12,9 +9,13 @@
     width: 30px;
   }
 }
-.progress.is-rounded {
-  border-radius: 2px;
+
+// style the container
+.progress[value]::-webkit-progress-bar {
+  box-shadow: inset 0 0 0 1px $ui-gray-200;
 }
-.progress.is-bordered {
-  box-shadow: 0 0 0 4px $progress-bar-background-color;
+
+// style the progress bar
+.progress[value]::-webkit-progress-value {
+  border-radius: $radius;
 }
