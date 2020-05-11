@@ -130,6 +130,7 @@ export default [
       'plugins-catalog',
       'policy',
       'policies',
+      'policies-password',
       'pprof',
       'raw',
       'rekey',

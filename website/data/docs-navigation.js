@@ -33,6 +33,7 @@ export default [
       'tokens',
       'response-wrapping',
       'policies',
+      'password-policies',
       'ha',
       'integrated-storage',
       'pgp-gpg-keybase',
