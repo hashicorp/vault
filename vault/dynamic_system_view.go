@@ -349,10 +349,10 @@ func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, polic
 		return "", fmt.Errorf("no password policy found")
 	}
 
-	passPolicy, err := random.Parse(policyCfg.HCLPolicy)
+	passPolicy, err := random.ParsePolicy(policyCfg.HCLPolicy)
 	if err != nil {
 		return "", fmt.Errorf("stored password policy is invalid: %w", err)
 	}
 
-	return passPolicy.Generate(ctx)
+	return passPolicy.Generate(ctx, nil)
 }

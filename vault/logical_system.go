@@ -2096,12 +2096,12 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 	}
 
 	// Parse the policy to ensure that it's valid
-	rng, err := random.Parse(rawPolicy)
+	policy, err := random.ParsePolicy(rawPolicy)
 	if err != nil {
 		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("invalid password policy: %s", err))
 	}
 
-	if rng.Length > maxPasswordLength || rng.Length < minPasswordLength {
+	if policy.Length > maxPasswordLength || policy.Length < minPasswordLength {
 		return nil, logical.CodedError(http.StatusBadRequest,
 			fmt.Sprintf("passwords must be between %d and %d characters", minPasswordLength, maxPasswordLength))
 	}
@@ -2114,7 +2114,7 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 	attempts := 10
 	failed := 0
 	for i := 0; i < attempts; i++ {
-		_, err = rng.Generate(genCtx)
+		_, err = policy.Generate(genCtx, nil)
 		if err != nil {
 			failed++
 		}
@@ -2126,11 +2126,8 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 	}
 
 	if failed > 0 {
-		resp = &logical.Response{
-			Warnings: []string{
-				fmt.Sprintf("failed to generate passwords %d times out of %d attempts", failed, attempts),
-			},
-		}
+		return nil, logical.CodedError(http.StatusBadRequest,
+			fmt.Sprintf("failed to generate passwords %d times out of %d attempts in %s - is the policy too restrictive?", failed, attempts, timeout))
 	}
 
 	cfg := passwordPolicyConfig{
@@ -2147,7 +2144,7 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 			fmt.Sprintf("failed to save policy to storage backend: %s", err))
 	}
 
-	return logical.RespondWithStatusCode(resp, req, http.StatusOK)
+	return logical.RespondWithStatusCode(nil, req, http.StatusNoContent)
 }
 
 // handlePoliciesPasswordGet retrieves a password policy if it exists
@@ -2171,7 +2168,7 @@ func (*SystemBackend) handlePoliciesPasswordGet(ctx context.Context, req *logica
 		},
 	}
 
-	return logical.RespondWithStatusCode(resp, req, http.StatusOK)
+	return resp, nil
 }
 
 // retrievePasswordPolicy retrieves a password policy from the logical storage
@@ -2206,7 +2203,7 @@ func (*SystemBackend) handlePoliciesPasswordDelete(ctx context.Context, req *log
 			fmt.Sprintf("failed to delete password policy: %s", err))
 	}
 
-	return logical.RespondWithStatusCode(nil, req, http.StatusOK)
+	return nil, nil
 }
 
 // handlePoliciesPasswordGenerate generates a password from the specified password policy
@@ -2224,13 +2221,13 @@ func (*SystemBackend) handlePoliciesPasswordGenerate(ctx context.Context, req *l
 		return nil, logical.CodedError(http.StatusNotFound, "policy does not exist")
 	}
 
-	rsg, err := random.Parse(cfg.HCLPolicy)
+	policy, err := random.ParsePolicy(cfg.HCLPolicy)
 	if err != nil {
 		return nil, logical.CodedError(http.StatusInternalServerError,
 			"stored password policy configuration failed to parse")
 	}
 
-	password, err := rsg.Generate(ctx)
+	password, err := policy.Generate(ctx, nil)
 	if err != nil {
 		return nil, logical.CodedError(http.StatusInternalServerError,
 			fmt.Sprintf("failed to generate password from policy: %s", err))
@@ -2241,7 +2238,7 @@ func (*SystemBackend) handlePoliciesPasswordGenerate(ctx context.Context, req *l
 			"password": password,
 		},
 	}
-	return logical.RespondWithStatusCode(resp, req, http.StatusOK)
+	return resp, nil
 }
 
 // handleAuditTable handles the "audit" endpoint to provide the audit table

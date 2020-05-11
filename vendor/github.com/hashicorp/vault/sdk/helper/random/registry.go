@@ -20,6 +20,7 @@ var (
 
 // Registry of HCL rule names to rule constructors.
 type Registry struct {
+	// Rules maps names of rules to a constructor for the rule
 	Rules map[string]ruleConstructor
 }
 

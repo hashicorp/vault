@@ -36,7 +36,7 @@ func TestParse(t *testing.T) {
 				Length:  20,
 				charset: []rune("abcde"),
 				Rules: []Rule{
-					Charset{
+					CharsetRule{
 						Charset:  []rune("abcde"),
 						MinChars: 2,
 					},
@@ -48,7 +48,7 @@ func TestParse(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			actual, err := Parse(test.rawConfig)
+			actual, err := ParsePolicy(test.rawConfig)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -124,7 +124,7 @@ func TestParser_Parse(t *testing.T) {
 				Length:  20,
 				charset: []rune("abcde"),
 				Rules: []Rule{
-					Charset{
+					CharsetRule{
 						Charset:  []rune("abcde"),
 						MinChars: 2,
 					},
@@ -177,7 +177,7 @@ func TestParser_Parse(t *testing.T) {
 						String:  "teststring",
 						Integer: 123,
 					},
-					Charset{
+					CharsetRule{
 						Charset:  []rune("abcde"),
 						MinChars: 2,
 					},
@@ -235,7 +235,7 @@ func TestParser_Parse(t *testing.T) {
 						String:  "teststring",
 						Integer: 123,
 					},
-					Charset{
+					CharsetRule{
 						Charset:  []rune("abcde"),
 						MinChars: 2,
 					},
@@ -255,7 +255,7 @@ func TestParser_Parse(t *testing.T) {
 						String:  "teststring",
 						Integer: 123,
 					},
-					Charset{
+					CharsetRule{
 						Charset:  []rune("abcde"),
 						MinChars: 2,
 					},
@@ -269,7 +269,7 @@ func TestParser_Parse(t *testing.T) {
 						String:  "teststring",
 						Integer: 123,
 					},
-					Charset{
+					CharsetRule{
 						Charset:  []rune("abcde"),
 						MinChars: 2,
 					},
@@ -301,13 +301,13 @@ func TestParser_Parse(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			parser := Parser{
+			parser := PolicyParser{
 				RuleRegistry: Registry{
 					Rules: test.registry,
 				},
 			}
 
-			actual, err := parser.Parse(test.rawConfig)
+			actual, err := parser.ParsePolicy(test.rawConfig)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -556,12 +556,12 @@ func BenchmarkParser_Parse(b *testing.B) {
                }`
 
 	for i := 0; i < b.N; i++ {
-		parser := Parser{
+		parser := PolicyParser{
 			RuleRegistry: Registry{
 				Rules: defaultRuleNameMapping,
 			},
 		}
-		_, err := parser.Parse(config)
+		_, err := parser.ParsePolicy(config)
 		if err != nil {
 			b.Fatalf("Failed to parse: %s", err)
 		}

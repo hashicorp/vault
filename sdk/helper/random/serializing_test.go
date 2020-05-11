@@ -8,19 +8,19 @@ import (
 
 func TestJSONMarshalling(t *testing.T) {
 	expected := serializableRules{
-		Charset{
+		CharsetRule{
 			Charset:  LowercaseRuneset,
 			MinChars: 1,
 		},
-		Charset{
+		CharsetRule{
 			Charset:  UppercaseRuneset,
 			MinChars: 1,
 		},
-		Charset{
+		CharsetRule{
 			Charset:  NumericRuneset,
 			MinChars: 1,
 		},
-		Charset{
+		CharsetRule{
 			Charset:  ShortSymbolRuneset,
 			MinChars: 1,
 		},

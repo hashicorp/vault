@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -77,7 +78,7 @@ type SystemView interface {
 
 type PasswordPolicy interface {
 	// Generate a random password
-	Generate(context.Context) (string, error)
+	Generate(context.Context, io.Reader) (string, error)
 }
 
 type ExtendedSystemView interface {
@@ -191,5 +192,5 @@ func (d StaticSystemView) GeneratePasswordFromPolicy(ctx context.Context, policy
 	if !exists {
 		return "", fmt.Errorf("password policy not found")
 	}
-	return policy.Generate(ctx)
+	return policy.Generate(ctx, nil)
 }

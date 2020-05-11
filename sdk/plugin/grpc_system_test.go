@@ -245,19 +245,19 @@ func TestSystem_GRPC_GeneratePasswordFromPolicy(t *testing.T) {
 	expectedPolicy := &random.StringGenerator{
 		Length: 8,
 		Rules: []random.Rule{
-			&random.Charset{
+			&random.CharsetRule{
 				Charset:  random.LowercaseRuneset,
 				MinChars: 1,
 			},
-			&random.Charset{
+			&random.CharsetRule{
 				Charset:  random.UppercaseRuneset,
 				MinChars: 1,
 			},
-			&random.Charset{
+			&random.CharsetRule{
 				Charset:  random.NumericRuneset,
 				MinChars: 1,
 			},
-			&random.Charset{
+			&random.CharsetRule{
 				Charset:  random.ShortSymbolRuneset,
 				MinChars: 1,
 			},

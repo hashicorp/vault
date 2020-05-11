@@ -26,19 +26,19 @@ func TestStringGenerator_Generate_successful(t *testing.T) {
 			generator: &StringGenerator{
 				Length: 20,
 				Rules: []Rule{
-					Charset{
+					CharsetRule{
 						Charset:  LowercaseRuneset,
 						MinChars: 1,
 					},
-					Charset{
+					CharsetRule{
 						Charset:  UppercaseRuneset,
 						MinChars: 1,
 					},
-					Charset{
+					CharsetRule{
 						Charset:  NumericRuneset,
 						MinChars: 1,
 					},
-					Charset{
+					CharsetRule{
 						Charset:  ShortSymbolRuneset,
 						MinChars: 1,
 					},
@@ -51,15 +51,15 @@ func TestStringGenerator_Generate_successful(t *testing.T) {
 			generator: &StringGenerator{
 				Length: 20,
 				Rules: []Rule{
-					Charset{
+					CharsetRule{
 						Charset:  LowercaseRuneset,
 						MinChars: 1,
 					},
-					Charset{
+					CharsetRule{
 						Charset:  UppercaseRuneset,
 						MinChars: 1,
 					},
-					Charset{
+					CharsetRule{
 						Charset:  NumericRuneset,
 						MinChars: 1,
 					},
@@ -78,7 +78,7 @@ func TestStringGenerator_Generate_successful(t *testing.T) {
 			runesFound := []rune{}
 
 			for i := 0; i < 100; i++ {
-				actual, err := test.generator.Generate(ctx)
+				actual, err := test.generator.Generate(ctx, nil)
 				if err != nil {
 					t.Fatalf("no error expected, but got: %s", err)
 				}
@@ -106,6 +106,7 @@ func TestStringGenerator_Generate_errors(t *testing.T) {
 	type testCase struct {
 		timeout   time.Duration
 		generator *StringGenerator
+		rng io.Reader
 	}
 
 	tests := map[string]testCase{
@@ -119,8 +120,8 @@ func TestStringGenerator_Generate_errors(t *testing.T) {
 					},
 				},
 				charset: AlphaNumericShortSymbolRuneset,
-				rng:     rand.Reader,
 			},
+				rng:     rand.Reader,
 		},
 		"impossible rules": {
 			timeout: 10 * time.Millisecond, // Keep this short so the test doesn't take too long
@@ -132,8 +133,8 @@ func TestStringGenerator_Generate_errors(t *testing.T) {
 					},
 				},
 				charset: AlphaNumericShortSymbolRuneset,
-				rng:     rand.Reader,
 			},
+				rng:     rand.Reader,
 		},
 		"bad RNG reader": {
 			timeout: 10 * time.Millisecond, // Keep this short so the test doesn't take too long
@@ -141,44 +142,44 @@ func TestStringGenerator_Generate_errors(t *testing.T) {
 				Length:  20,
 				Rules:   []Rule{},
 				charset: AlphaNumericShortSymbolRuneset,
-				rng:     badReader{},
 			},
+				rng:     badReader{},
 		},
 		"0 length": {
 			timeout: 10 * time.Millisecond,
 			generator: &StringGenerator{
 				Length: 0,
 				Rules: []Rule{
-					Charset{
+					CharsetRule{
 						Charset:  []rune("abcde"),
 						MinChars: 0,
 					},
 				},
 				charset: []rune("abcde"),
-				rng:     rand.Reader,
 			},
+				rng:     rand.Reader,
 		},
 		"-1 length": {
 			timeout: 10 * time.Millisecond,
 			generator: &StringGenerator{
 				Length: -1,
 				Rules: []Rule{
-					Charset{
+					CharsetRule{
 						Charset:  []rune("abcde"),
 						MinChars: 0,
 					},
 				},
 				charset: []rune("abcde"),
-				rng:     rand.Reader,
 			},
+				rng:     rand.Reader,
 		},
 		"no charset": {
 			timeout: 10 * time.Millisecond,
 			generator: &StringGenerator{
 				Length: 20,
 				Rules:  []Rule{},
-				rng:    rand.Reader,
 			},
+			rng:    rand.Reader,
 		},
 	}
 
@@ -188,7 +189,7 @@ func TestStringGenerator_Generate_errors(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), test.timeout)
 			defer cancel()
 
-			actual, err := test.generator.Generate(ctx)
+			actual, err := test.generator.Generate(ctx, test.rng)
 			if err == nil {
 				t.Fatalf("Expected error but none found")
 			}
@@ -227,7 +228,7 @@ func TestRandomRunes_deterministic(t *testing.T) {
 			charset: " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" +
 				"`abcdefghijklmnopqrstuvwxyz{|}~ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠ" +
 				"ġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒœŔŕŖŗŘřŚśŜŝŞşŠ" +
-				"šŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ℀℁ℂ℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔ℕ№℗℘ℙℚℛℜℝ℞℟",
+				"šŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ℀℁ℂ℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔ℕ№℗℘ℙℚℛℜℝ℞℟℠",
 			length:   20,
 			expected: "tųŎ℄ņ℃Œ.@řHš-ℍ}ħGĲLℏ",
 		},
@@ -270,7 +271,7 @@ func TestRandomRunes_successful(t *testing.T) {
 				" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" +
 					"`abcdefghijklmnopqrstuvwxyz{|}~ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠ" +
 					"ġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒœŔŕŖŗŘřŚśŜŝŞşŠ" +
-					"šŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ℀℁ℂ℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔ℕ№℗℘ℙℚℛℜℝ℞℟",
+					"šŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ℀℁ℂ℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔ℕ№℗℘ℙℚℛℜℝ℞℟℠",
 			),
 			length: 20,
 		},
@@ -329,9 +330,10 @@ func TestRandomRunes_errors(t *testing.T) {
 			charset: []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" +
 				"`abcdefghijklmnopqrstuvwxyz{|}~ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠ" +
 				"ġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒœŔŕŖŗŘřŚśŜŝŞşŠ" +
-				"šŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ℀℁ℂ℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔ℕ№℗℘ℙℚℛℜℝ℞℟" +
+				"šŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ℀℁ℂ℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔ℕ№℗℘ℙℚℛℜℝ℞℟℠" +
 				"Σ",
 			),
+			length:20,
 			rng: rand.Reader,
 		},
 		"length is zero": {
@@ -387,19 +389,19 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 			generator: StringGenerator{
 				charset: AlphaNumericFullSymbolRuneset,
 				Rules: []Rule{
-					Charset{
+					CharsetRule{
 						Charset:  LowercaseRuneset,
 						MinChars: 1,
 					},
-					Charset{
+					CharsetRule{
 						Charset:  UppercaseRuneset,
 						MinChars: 1,
 					},
-					Charset{
+					CharsetRule{
 						Charset:  NumericRuneset,
 						MinChars: 1,
 					},
-					Charset{
+					CharsetRule{
 						Charset:  FullSymbolRuneset,
 						MinChars: 1,
 					},
@@ -411,18 +413,18 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 				charset: []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" +
 					"`abcdefghijklmnopqrstuvwxyz{|}~ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠ" +
 					"ġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒœŔŕŖŗŘřŚśŜŝŞşŠ" +
-					"šŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ℀℁ℂ℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔ℕ№℗℘ℙℚℛℜℝ℞℟",
+					"šŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ℀℁ℂ℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔ℕ№℗℘ℙℚℛℜℝ℞℟℠",
 				),
 				Rules: []Rule{
-					Charset{
+					CharsetRule{
 						Charset:  LowercaseRuneset,
 						MinChars: 1,
 					},
-					Charset{
+					CharsetRule{
 						Charset:  UppercaseRuneset,
 						MinChars: 1,
 					},
-					Charset{
+					CharsetRule{
 						Charset:  []rune("ĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒ"),
 						MinChars: 1,
 					},
@@ -433,19 +435,19 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 			generator: StringGenerator{
 				charset: AlphaNumericShortSymbolRuneset,
 				Rules: []Rule{
-					Charset{
+					CharsetRule{
 						Charset:  []rune("A"),
 						MinChars: 1,
 					},
-					Charset{
+					CharsetRule{
 						Charset:  []rune("1"),
 						MinChars: 1,
 					},
-					Charset{
+					CharsetRule{
 						Charset:  []rune("a"),
 						MinChars: 1,
 					},
-					Charset{
+					CharsetRule{
 						Charset:  []rune("-"),
 						MinChars: 1,
 					},
@@ -464,7 +466,7 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 
 					b.ResetTimer()
 					for i := 0; i < b.N; i++ {
-						str, err := bench.generator.Generate(ctx)
+						str, err := bench.generator.Generate(ctx, nil)
 						if err != nil {
 							b.Fatalf("Failed to generate string: %s", err)
 						}
@@ -483,7 +485,6 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 			Length:  16, // 16 because the SQLCredentialsProducer prepends 4 characters to a 20 character password
 			charset: AlphaNumericRuneset,
 			Rules:   nil,
-			rng:     rand.Reader,
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -491,7 +492,7 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			str, err := sg.Generate(ctx)
+			str, err := sg.Generate(ctx, nil)
 			if err != nil {
 				b.Fatalf("Failed to generate string: %s", err)
 			}
@@ -512,7 +513,7 @@ func TestStringGenerator_JSON(t *testing.T) {
 				String:  "teststring",
 				Integer: 123,
 			},
-			Charset{
+			CharsetRule{
 				Charset:  ShortSymbolRuneset,
 				MinChars: 1,
 			},
@@ -524,7 +525,7 @@ func TestStringGenerator_JSON(t *testing.T) {
 		t.Fatalf("Failed to marshal to JSON: %s", err)
 	}
 
-	parser := Parser{
+	parser := PolicyParser{
 		RuleRegistry: Registry{
 			Rules: map[string]ruleConstructor{
 				"testrule": newTestRule,
@@ -532,7 +533,7 @@ func TestStringGenerator_JSON(t *testing.T) {
 			},
 		},
 	}
-	actual, err := parser.Parse(string(b))
+	actual, err := parser.ParsePolicy(string(b))
 	if err != nil {
 		t.Fatalf("Failed to parse JSON: %s", err)
 	}
@@ -590,7 +591,7 @@ func TestValidate(t *testing.T) {
 				Length:  5,
 				charset: []rune("abcde"),
 				Rules: []Rule{
-					Charset{
+					CharsetRule{
 						Charset:  []rune("abcde"),
 						MinChars: 6,
 					},
@@ -658,7 +659,7 @@ func TestGetChars(t *testing.T) {
 		},
 		"rule with chars": {
 			rules: []Rule{
-				Charset{
+				CharsetRule{
 					Charset:  []rune("abcdefghij"),
 					MinChars: 1,
 				},

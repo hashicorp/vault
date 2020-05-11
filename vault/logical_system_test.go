@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -2750,7 +2749,7 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 
 	tests := map[string]testCase{
 		"missing policy name": {
-			storage: &fakeStorage{},
+			storage: &fakeStorage{}	,
 			data: passwordPoliciesFieldData(map[string]interface{}{
 				"policy": `length = 20
 							rule "charset" {
@@ -2816,7 +2815,7 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 			expectedResp: &logical.Response{
 				Data: map[string]interface{}{
 					logical.HTTPContentType: "application/json",
-					logical.HTTPStatusCode:  http.StatusOK,
+					logical.HTTPStatusCode:  http.StatusNoContent,
 				},
 			},
 			expectErr: false,
@@ -2840,7 +2839,7 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 			expectedResp: &logical.Response{
 				Data: map[string]interface{}{
 					logical.HTTPContentType: "application/json",
-					logical.HTTPStatusCode:  http.StatusOK,
+					logical.HTTPStatusCode:  http.StatusNoContent,
 				},
 			},
 			expectErr: false,
@@ -2937,11 +2936,11 @@ func TestHandlePoliciesPasswordGet(t *testing.T) {
 			data: passwordPoliciesFieldData(map[string]interface{}{
 				"name": "testpolicy",
 			}),
-			expectedResp: toHTTPResponse(t, http.StatusOK,
-				&logical.Response{
-					Data: map[string]interface{}{
-						"policy": "length = 20\ncharset=\"abcdefghij\"",
-					}}),
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"policy": "length = 20\ncharset=\"abcdefghij\"",
+				},
+			},
 			expectErr: false,
 		},
 	}
@@ -3044,12 +3043,7 @@ func TestHandlePoliciesPasswordDelete(t *testing.T) {
 			data: passwordPoliciesFieldData(map[string]interface{}{
 				"name": "testpolicy",
 			}),
-			expectedResp: &logical.Response{
-				Data: map[string]interface{}{
-					logical.HTTPContentType: "application/json",
-					logical.HTTPStatusCode:  http.StatusOK,
-				},
-			},
+			expectedResp: nil,
 			expectErr:     false,
 			expectedStore: map[string][]byte{},
 		},
@@ -3211,14 +3205,6 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 
 		expectedResp := &logical.Response{
 			Data: map[string]interface{}{
-				logical.HTTPContentType: "application/json",
-				logical.HTTPStatusCode:  http.StatusOK,
-				// Not the body as that needs to be pulled out and compared as a non-string
-			},
-		}
-
-		expectedBody := &logical.HTTPResponse{
-			Data: map[string]interface{}{
 				// Doesn't include the password as that's pulled out and compared separately
 			},
 		}
@@ -3226,7 +3212,7 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 		// Password assertions
 		expectedPassLen := 20
 		rules := []random.Rule{
-			random.Charset{
+			random.CharsetRule{
 				Charset:  []rune("abcdefghij"),
 				MinChars: expectedPassLen,
 			},
@@ -3247,26 +3233,13 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 
 			assert(t, actualResp != nil, "response is nil")
 			assert(t, actualResp.Data != nil, "expected data, got nil")
-			assertHasKey(t, actualResp.Data, logical.HTTPRawBody, "key %s not found in data", logical.HTTPRawBody)
-			assertIsString(t, actualResp.Data[logical.HTTPRawBody], "key %s should have a string value", logical.HTTPRawBody)
-			rawBody := actualResp.Data[logical.HTTPRawBody].(string)
+			assertHasKey(t, actualResp.Data, "password", "password key not found in data")
+			assertIsString(t, actualResp.Data["password"], "password key should have a string value")
+			password := actualResp.Data["password"].(string)
 
-			// Delete the body so the rest of the response can be compared
-			delete(actualResp.Data, logical.HTTPRawBody)
+			// Delete the password so the rest of the response can be compared
+			delete(actualResp.Data, "password")
 			assert(t, reflect.DeepEqual(actualResp, expectedResp), "Actual response: %#v\nExpected response: %#v", actualResp, expectedResp)
-
-			actualBody := &logical.HTTPResponse{}
-			err = json.Unmarshal([]byte(rawBody), actualBody)
-			assert(t, err == nil, "unable to unmarshal response body: %s", err)
-
-			assert(t, actualBody.Data != nil, "expected data field in body, got nil")
-			assertHasKey(t, actualBody.Data, "password", "expected data in body to have 'password' field")
-			assertIsString(t, actualBody.Data["password"], "password field should be a string")
-			password := actualBody.Data["password"].(string)
-
-			// delete the password field so the rest of the body can be compared
-			delete(actualBody.Data, "password")
-			assert(t, reflect.DeepEqual(actualBody, expectedBody), "Actual body: %#v\nExpected body: %#v", actualBody, expectedBody)
 
 			// Check to make sure the password is correctly formatted
 			passwordLength := len([]rune(password))

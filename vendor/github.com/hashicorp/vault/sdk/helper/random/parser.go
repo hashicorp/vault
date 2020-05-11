@@ -9,28 +9,31 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// Parse is a convenience function for parsing HCL into a StringGenerator. See Parser.Parse for details.
-func Parse(raw string) (gen StringGenerator, err error) {
-	parser := Parser{
+// ParsePolicy is a convenience function for parsing HCL into a StringGenerator.
+// See PolicyParser.ParsePolicy for details.
+func ParsePolicy(raw string) (gen StringGenerator, err error) {
+	parser := PolicyParser{
 		RuleRegistry: Registry{
 			Rules: defaultRuleNameMapping,
 		},
 	}
-	return parser.Parse(raw)
+	return parser.ParsePolicy(raw)
 }
 
-func ParseBytes(raw []byte) (gen StringGenerator, err error) {
-	return Parse(string(raw))
+// ParsePolicyBytes is a convenience function for parsing HCL into a StringGenerator.
+// See PolicyParser.ParsePolicy for details.
+func ParsePolicyBytes(raw []byte) (gen StringGenerator, err error) {
+	return ParsePolicy(string(raw))
 }
 
-// Parser parses string generator configuration from HCL.
-type Parser struct {
+// PolicyParser parses string generator configuration from HCL.
+type PolicyParser struct {
 	// RuleRegistry maps rule names in HCL to Rule constructors.
 	RuleRegistry Registry
 }
 
-// Parse parses the provided HCL into a StringGenerator.
-func (p Parser) Parse(raw string) (sg StringGenerator, err error) {
+// ParsePolicy parses the provided HCL into a StringGenerator.
+func (p PolicyParser) ParsePolicy(raw string) (sg StringGenerator, err error) {
 	rawData := map[string]interface{}{}
 	err = hcl.Decode(&rawData, raw)
 	if err != nil {
@@ -83,9 +86,6 @@ func parseRules(registry Registry, rawRules []map[string]interface{}) (rules []R
 			return nil, fmt.Errorf("unable to get rule info: %w", err)
 		}
 
-		// Map names like "lower-alpha" to lowercase alphabetical characters
-		// applyShortcuts(info.data)
-
 		rule, err := registry.parseRule(info.ruleType, info.data)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse rule %s: %w", info.ruleType, err)
@@ -135,6 +135,7 @@ func getRuleInfo(rule map[string]interface{}) (data ruleInfo, err error) {
 	return data, fmt.Errorf("rule is empty")
 }
 
+// stringToRunesFunc converts a string to a []rune for use in the mapstructure library
 func stringToRunesFunc(from reflect.Kind, to reflect.Kind, data interface{}) (interface{}, error) {
 	if from != reflect.String || to != reflect.Slice {
 		return data, nil

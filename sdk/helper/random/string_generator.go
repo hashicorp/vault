@@ -40,19 +40,19 @@ var (
 	DefaultStringGenerator = StringGenerator{
 		Length: 20,
 		Rules: []Rule{
-			Charset{
+			CharsetRule{
 				Charset:  LowercaseRuneset,
 				MinChars: 1,
 			},
-			Charset{
+			CharsetRule{
 				Charset:  UppercaseRuneset,
 				MinChars: 1,
 			},
-			Charset{
+			CharsetRule{
 				Charset:  NumericRuneset,
 				MinChars: 1,
 			},
-			Charset{
+			CharsetRule{
 				Charset:  ShortSymbolRuneset,
 				MinChars: 1,
 			},
@@ -66,17 +66,8 @@ func sortCharset(chars string) string {
 	return string(r)
 }
 
-// Rule to assert on string values.
-type Rule interface {
-	// Pass should return true if the provided value passes any assertions this Rule is making.
-	Pass(value []rune) bool
-
-	// Type returns the name of the rule as associated in the registry
-	Type() string
-}
-
 // StringGenerator generats random strings from the provided charset & adhering to a set of rules. The set of rules
-// are things like Charset which requires a certain number of characters from a sub-charset.
+// are things like CharsetRule which requires a certain number of characters from a sub-charset.
 type StringGenerator struct {
 	// Length of the string to generate.
 	Length int `mapstructure:"length" json:"length"`
@@ -84,15 +75,13 @@ type StringGenerator struct {
 	// Rules the generated strings must adhere to.
 	Rules serializableRules `mapstructure:"-" json:"rule"` // This is "rule" in JSON so it matches the HCL property type
 
-	// Charset to choose runes from. This is computed from the rules, not directly configurable
+	// CharsetRule to choose runes from. This is computed from the rules, not directly configurable
 	charset runes
-
-	// rng for testing purposes to ensure error handling from the crypto/rand package is working properly.
-	rng io.Reader
 }
 
 // Generate a random string from the charset and adhering to the provided rules.
-func (g *StringGenerator) Generate(ctx context.Context) (str string, err error) {
+// The io.Reader is optional. If not provided, it will default to the reader from crypto/rand
+func (g *StringGenerator) Generate(ctx context.Context, rng io.Reader) (str string, err error) {
 	if _, hasTimeout := ctx.Deadline(); !hasTimeout {
 		var cancel func()
 		ctx, cancel = context.WithTimeout(ctx, 1*time.Second) // Ensure there's a timeout on the context
@@ -111,7 +100,7 @@ LOOP:
 		case <-ctx.Done():
 			return "", fmt.Errorf("timed out generating string")
 		default:
-			str, err = g.generate()
+			str, err = g.generate(rng)
 			if err != nil {
 				return "", err
 			}
@@ -123,11 +112,11 @@ LOOP:
 	}
 }
 
-func (g *StringGenerator) generate() (str string, err error) {
+func (g *StringGenerator) generate(rng io.Reader) (str string, err error) {
 	// If performance improvements need to be made, this can be changed to read a batch of
 	// potential strings at once rather than one at a time. This will significantly
 	// improve performance, but at the cost of added complexity.
-	candidate, err := randomRunes(g.rng, g.charset, g.Length)
+	candidate, err := randomRunes(rng, g.charset, g.Length)
 	if err != nil {
 		return "", fmt.Errorf("unable to generate random characters: %w", err)
 	}
@@ -187,6 +176,7 @@ func randomRunes(rng io.Reader, charset []rune, length int) (candidate []rune, e
 		rngBufferMultiplier = 1.5
 	}
 
+	// Default to the standard crypto reader if one isn't provided
 	if rng == nil {
 		rng = rand.Reader
 	}
