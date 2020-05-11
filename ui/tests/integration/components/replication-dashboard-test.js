@@ -40,21 +40,15 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
 
     assert.dom('[data-test-replication-dashboard]').exists();
     assert.dom('[data-test-table-rows').exists();
-    assert
-      .dom('[data-test-primary-cluster-address]')
-      .includesText(
-        REPLICATION_DETAILS.primaryClusterAddr,
-        `shows the correct primary cluster address value`
-      );
     assert.dom('[data-test-replication-doc-link]').exists();
     assert.dom('[data-test-flash-message]').doesNotExist('no flash message is displayed on render');
   });
 
   test('it renders an alert banner if the dashboard is syncing', async function(assert) {
-    this.set('replicationDetailsSyncing', IS_SYNCING);
+    this.set('replicationDetails', IS_SYNCING);
 
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetailsSyncing}}
+      @replicationDetails={{replicationDetails}}
       @clusterMode={{clusterMode}}
       @isSecondary={{isSecondary}}
       @componentToRender='replication-secondary-card'
