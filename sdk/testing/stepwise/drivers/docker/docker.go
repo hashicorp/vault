@@ -12,8 +12,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/big"
 	mathrand "math/rand"
 	"net"
@@ -27,18 +29,30 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/strslice"
+	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/testing/stepwise"
 	"github.com/hashicorp/vault/vault"
+	"github.com/y0ssar1an/q"
 	"golang.org/x/net/http2"
 
 	docker "github.com/docker/docker/client"
 )
 
+var _ stepwise.StepDriver = &DockerCluster{}
+
 // DockerCluster is used to managing the lifecycle of the test Vault cluster
 type DockerCluster struct {
+	// PluginName is the input from the test case
+	PluginName string
+	// ClusterName is a UUID name of the cluster. Docker ID?
+	CluterName string
+
 	RaftStorage        bool
 	ClientAuthRequired bool
 	BarrierKeys        [][]byte
@@ -59,12 +73,34 @@ type DockerCluster struct {
 	ClusterNodes       []*DockerClusterNode
 }
 
-// Cleanup stops all the containers.
+// Teardown stops all the containers.
 // TODO: error/logging
-func (rc *DockerCluster) Cleanup() {
+func (rc *DockerCluster) Teardown() error {
+	q.Q("//-> driver teardown")
 	for _, node := range rc.ClusterNodes {
 		node.Cleanup()
 	}
+	// TODO should return something
+	return nil
+}
+
+func (dc *DockerCluster) Name() string {
+	// TODO return UUID cluster name
+	return dc.PluginName
+}
+
+func (dc *DockerCluster) Client() (*api.Client, error) {
+	if len(dc.ClusterNodes) > 0 {
+		if dc.ClusterNodes[0].Client != nil {
+			c, err := dc.ClusterNodes[0].Client.Clone()
+			if err != nil {
+				return nil, err
+			}
+			return c, nil
+		}
+	}
+
+	return nil, errors.New("no configured client found")
 }
 
 func (rc *DockerCluster) GetBarrierOrRecoveryKeys() [][]byte {
@@ -514,7 +550,9 @@ func (n *DockerClusterNode) CreateAPIClient() (*api.Client, error) {
 }
 
 func (n *DockerClusterNode) Cleanup() {
+	q.Q("==> calling cleanup")
 	if err := n.dockerAPI.ContainerKill(context.Background(), n.container.ID, "KILL"); err != nil {
+		q.Q("====> should panic")
 		panic(err)
 	}
 }
@@ -821,4 +859,158 @@ func createNetwork(cli *docker.Client, netName, cidr string) (string, error) {
 	}
 
 	return resp.ID, nil
+}
+
+func NewDockerDriver(name string) *DockerCluster {
+	return &DockerCluster{
+		PluginName:  name,
+		RaftStorage: true,
+	}
+}
+
+// Setup creates any temp dir and compiles the binary for copying to Docker
+func (dc *DockerCluster) Setup() error {
+	// TODO many not use name here
+	name := dc.PluginName
+	// get the working directory of the plugin being tested.
+	srcDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	// tmpDir gets cleaned up when the cluster is cleaned up
+	tmpDir, err := ioutil.TempDir("", "bin")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	binPath, sha256value, err := stepwise.CompilePlugin(name, srcDir, tmpDir)
+	if err != nil {
+		panic(err)
+	}
+
+	coreConfig := &vault.CoreConfig{
+		DisableMlock: true,
+	}
+
+	dOpts := &DockerClusterOptions{PluginTestBin: binPath}
+	cluster, err := NewDockerCluster(fmt.Sprintf("test-%s", name), coreConfig, dOpts)
+	if err != nil {
+		panic(err)
+	}
+
+	cores := cluster.ClusterNodes
+	client := cores[0].Client
+
+	// TODO maybe not use / need global here
+	// TODO: likely not a safe way of setting this either
+	stepwise.TestHelper = &stepwise.Helper{
+		Client: client,
+		// Cluster:  cluster,
+		// TODO: maybe not needed
+		BuildDir: tmpDir,
+	}
+
+	// use client to mount plugin
+	err = client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+		Name:    name,
+		Type:    consts.PluginTypeSecrets,
+		Command: name,
+		SHA256:  sha256value,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return nil
+}
+
+// Runner manages the lifecycle of the Docker container
+type Runner struct {
+	dockerAPI       *docker.Client
+	ContainerConfig *container.Config
+	ContainerName   string
+	NetName         string
+	IP              string
+	CopyFromTo      map[string]string
+}
+
+func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, error) {
+	hostConfig := &container.HostConfig{
+		PublishAllPorts: true,
+		// AutoRemove:      false,
+		// TODO: configure auto remove
+		AutoRemove: true,
+	}
+
+	networkingConfig := &network.NetworkingConfig{}
+	switch d.NetName {
+	case "":
+	case "host":
+		hostConfig.NetworkMode = "host"
+	default:
+		es := &network.EndpointSettings{
+			//Links:               nil,
+			Aliases: []string{d.ContainerName},
+		}
+		if len(d.IP) != 0 {
+			es.IPAMConfig = &network.EndpointIPAMConfig{
+				IPv4Address: d.IP,
+			}
+		}
+		networkingConfig.EndpointsConfig = map[string]*network.EndpointSettings{
+			d.NetName: es,
+		}
+	}
+
+	// best-effort pull
+	resp, _ := d.dockerAPI.ImageCreate(ctx, d.ContainerConfig.Image, types.ImageCreateOptions{})
+	if resp != nil {
+		_, _ = ioutil.ReadAll(resp)
+	}
+
+	cfg := *d.ContainerConfig
+	hostConfig.CapAdd = strslice.StrSlice{"IPC_LOCK"}
+	cfg.Hostname = d.ContainerName
+	//fullName := d.NetName + "." + d.ContainerName
+	fullName := d.ContainerName
+	container, err := d.dockerAPI.ContainerCreate(ctx, &cfg, hostConfig, networkingConfig, fullName)
+	if err != nil {
+		return nil, fmt.Errorf("container create failed: %v", err)
+	}
+
+	for from, to := range d.CopyFromTo {
+		srcInfo, err := archive.CopyInfoSourcePath(from, false)
+		if err != nil {
+			return nil, fmt.Errorf("error copying from source %q: %v", from, err)
+		}
+
+		srcArchive, err := archive.TarResource(srcInfo)
+		if err != nil {
+			return nil, fmt.Errorf("error creating tar from source %q: %v", from, err)
+		}
+		defer srcArchive.Close()
+
+		dstInfo := archive.CopyInfo{Path: to}
+
+		dstDir, content, err := archive.PrepareArchiveCopy(srcArchive, srcInfo, dstInfo)
+		if err != nil {
+			return nil, fmt.Errorf("error preparing copy from %q -> %q: %v", from, to, err)
+		}
+		defer content.Close()
+		err = d.dockerAPI.CopyToContainer(ctx, container.ID, dstDir, content, types.CopyToContainerOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("error copying from %q -> %q: %v", from, to, err)
+		}
+	}
+
+	err = d.dockerAPI.ContainerStart(ctx, container.ID, types.ContainerStartOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("container start failed: %v", err)
+	}
+
+	inspect, err := d.dockerAPI.ContainerInspect(ctx, container.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &inspect, nil
 }

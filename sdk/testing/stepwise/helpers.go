@@ -5,16 +5,11 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	dockerDriver "github.com/hashicorp/vault/sdk/testing/stepwise/drivers/docker"
-	"github.com/hashicorp/vault/vault"
 )
 
 // TestHelper is a package global that plugins will use to extract Vault
@@ -25,23 +20,23 @@ var TestHelper *Helper
 // other tests in a package can use to create Terraform execution contexts
 type Helper struct {
 	// api client for use
-	Client  *api.Client
-	Cluster *dockerDriver.DockerCluster
+	Client *api.Client
+	// Cluster *dockerDriver.DockerCluster
 	// name for plugin in test
 	Name string
 	// sourceDir is the dir containing the plugin test binary
 	SourceDir string
 	// temp dir where plugin is compiled
-	buildDir string
+	BuildDir string
 }
 
 // Cleanup cals the Cluster Cleanup method, if Cluster is not nil
 func (h *Helper) Cleanup() {
-	if h.Cluster != nil {
-		h.Cluster.Cleanup()
-	}
-	if h.buildDir != "" {
-		_ = os.RemoveAll(h.buildDir) // clean up
+	// if h.Cluster != nil {
+	// 	h.Cluster.Cleanup()
+	// }
+	if h.BuildDir != "" {
+		_ = os.RemoveAll(h.BuildDir) // clean up
 	}
 }
 
@@ -64,7 +59,8 @@ func UseDocker(name, src string) *Helper {
 // 	os.Exit(stat)
 // }
 
-func compilePlugin(name, srcDir, tmpDir string) (string, string, error) {
+// CompilePlugin is a helper method to compile a sourc plugin
+func CompilePlugin(name, srcDir, tmpDir string) (string, string, error) {
 	binPath := path.Join(tmpDir, name)
 
 	cmd := exec.Command("go", "build", "-o", path.Join(tmpDir, name), path.Join(srcDir, fmt.Sprintf("cmd/%s/main.go", name)))
@@ -95,57 +91,4 @@ func compilePlugin(name, srcDir, tmpDir string) (string, string, error) {
 	// q.Q("=> compiled, sha:", name, sha256value)
 
 	return binPath, sha256value, err
-}
-
-// Setup creates any temp dir and compiles the binary for copying to Docker
-func Setup(name string) error {
-	if os.Getenv("VAULT_ACC") == "1" {
-		// get the working directory of the plugin being tested.
-		srcDir, err := os.Getwd()
-		if err != nil {
-			panic(err)
-		}
-
-		// tmpDir gets cleaned up when the cluster is cleaned up
-		tmpDir, err := ioutil.TempDir("", "bin")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		binPath, sha256value, err := compilePlugin(name, srcDir, tmpDir)
-		if err != nil {
-			panic(err)
-		}
-
-		coreConfig := &vault.CoreConfig{
-			DisableMlock: true,
-		}
-
-		dOpts := &dockerDriver.DockerClusterOptions{PluginTestBin: binPath}
-		cluster, err := dockerDriver.NewDockerCluster(fmt.Sprintf("test-%s", name), coreConfig, dOpts)
-		if err != nil {
-			panic(err)
-		}
-
-		cores := cluster.ClusterNodes
-		client := cores[0].Client
-
-		TestHelper = &Helper{
-			Client:   client,
-			Cluster:  cluster,
-			buildDir: tmpDir,
-		}
-
-		// use client to mount plugin
-		err = client.Sys().RegisterPlugin(&api.RegisterPluginInput{
-			Name:    name,
-			Type:    consts.PluginTypeSecrets,
-			Command: name,
-			SHA256:  sha256value,
-		})
-		if err != nil {
-			panic(err)
-		}
-	}
-	return nil
 }

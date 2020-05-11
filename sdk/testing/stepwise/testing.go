@@ -73,10 +73,10 @@ type StepCheckFunc func(*api.Secret) error
 // StepDriver is the interface Drivers need to implement to be used in
 // Case to execute each Step
 type StepDriver interface {
-	Setup()
-	Client()
-	Teardown()
-	Name() // maybe?
+	Setup() error
+	Client() (*api.Client, error)
+	Teardown() error
+	Name() string // maybe?
 }
 
 // Case is a single set of tests to run for a backend. A test Case
@@ -149,6 +149,23 @@ func Run(tt TestT, c Case) {
 	}
 
 	// TODO setup on driver here
+	if c.Driver != nil {
+		q.Q("Found driver:", c.Driver)
+		err := c.Driver.Setup()
+		defer func() {
+			q.Q("==> calling driver teardown()")
+			err := c.Driver.Teardown()
+			if err != nil {
+				tt.Fatal(err)
+			}
+		}()
+		if err != nil {
+			tt.Fatal(err)
+		}
+	} else {
+		q.Q("nil driver")
+		tt.Fatal("nil driver")
+	}
 
 	// Create an in-memory Vault core
 	logger := logging.NewVaultLogger(log.Trace)

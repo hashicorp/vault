@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
+	dockerDriver "github.com/hashicorp/vault/sdk/testing/stepwise/drivers/docker"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -14,6 +15,7 @@ import (
 func TestBackend_basic_derived_docker(t *testing.T) {
 	// decryptData := make(map[string]interface{})
 	stepwise.Run(t, stepwise.Case{
+		Driver: dockerDriver.NewDockerDriver("transit"),
 		Steps: []stepwise.Step{
 			testAccStepwiseListPolicy(t, "test", true),
 			testAccStepwiseWritePolicy(t, "test", true),
