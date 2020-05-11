@@ -140,6 +140,7 @@ func Run(tt TestT, c Case) {
 
 	// Defer on the teardown, regardless of pass/fail at this point
 	if c.Teardown != nil {
+		q.Q(">> testing defer teardown")
 		defer func() {
 			err := c.Teardown()
 			if err != nil {
@@ -152,14 +153,8 @@ func Run(tt TestT, c Case) {
 	if c.Driver != nil {
 		q.Q("Found driver:", c.Driver)
 		err := c.Driver.Setup()
-		defer func() {
-			q.Q("==> calling driver teardown()")
-			err := c.Driver.Teardown()
-			if err != nil {
-				tt.Fatal(err)
-			}
-		}()
 		if err != nil {
+			c.Driver.Teardown()
 			tt.Fatal(err)
 		}
 	} else {
@@ -365,6 +360,12 @@ func Run(tt TestT, c Case) {
 					"still exist. Please verify:\n\n%#v",
 				s))
 		}
+	}
+
+	q.Q("==> calling driver teardown()")
+	err = c.Driver.Teardown()
+	if err != nil {
+		tt.Fatal(err)
 	}
 }
 

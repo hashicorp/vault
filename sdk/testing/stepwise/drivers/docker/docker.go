@@ -77,9 +77,11 @@ type DockerCluster struct {
 // TODO: error/logging
 func (rc *DockerCluster) Teardown() error {
 	q.Q("//-> driver teardown")
+	q.Q("node count:", len(rc.ClusterNodes))
 	for _, node := range rc.ClusterNodes {
 		node.Cleanup()
 	}
+	q.Q("==== done calling Driver Teardown()")
 	// TODO should return something
 	return nil
 }
@@ -555,6 +557,7 @@ func (n *DockerClusterNode) Cleanup() {
 		q.Q("====> should panic")
 		panic(err)
 	}
+	q.Q("=== done calling cleanup")
 }
 
 func (n *DockerClusterNode) Start(cli *docker.Client, caDir, netName string, netCIDR *DockerClusterNode, pluginBinPath string) error {
@@ -724,30 +727,26 @@ func TestWaitLeaderMatches(ctx context.Context, client *api.Client, ready func(r
 
 var DefaultNumCores = 1
 
-// NewDockerCluster creates a managed docker container running Vault
-func NewDockerCluster(name string, base *vault.CoreConfig, opts *DockerClusterOptions) (rc *DockerCluster, err error) {
-	cluster := DockerCluster{
-		ClusterName: name,
-		RaftStorage: true,
-	}
+// creates a managed docker container running Vault
+func (cluster *DockerCluster) setupDockerCluster(base *vault.CoreConfig, opts *DockerClusterOptions) error {
 
 	if opts != nil && opts.TempDir != "" {
 		if _, err := os.Stat(opts.TempDir); os.IsNotExist(err) {
 			if err := os.MkdirAll(opts.TempDir, 0700); err != nil {
-				return nil, err
+				return err
 			}
 		}
 		cluster.TempDir = opts.TempDir
 	} else {
 		tempDir, err := ioutil.TempDir("", "vault-test-cluster-")
 		if err != nil {
-			return nil, err
+			return err
 		}
 		cluster.TempDir = tempDir
 	}
 	caDir := filepath.Join(cluster.TempDir, "ca")
 	if err := os.MkdirAll(caDir, 0755); err != nil {
-		return nil, err
+		return err
 	}
 
 	var numCores int
@@ -766,28 +765,28 @@ func NewDockerCluster(name string, base *vault.CoreConfig, opts *DockerClusterOp
 		nodeID := fmt.Sprintf("vault-%d", i)
 		node := &DockerClusterNode{
 			NodeID:  nodeID,
-			Cluster: &cluster,
+			Cluster: cluster,
 			WorkDir: filepath.Join(cluster.TempDir, nodeID),
 		}
 		cluster.ClusterNodes = append(cluster.ClusterNodes, node)
 		if err := os.MkdirAll(node.WorkDir, 0700); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	err = cluster.setupCA(opts)
+	err := cluster.setupCA(opts)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	cli, err := docker.NewClientWithOpts(docker.FromEnv, docker.WithVersion("1.40"))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	netName := "vault-test"
 	_, err = SetupNetwork(cli, netName, cidr)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, node := range cluster.ClusterNodes {
@@ -798,17 +797,17 @@ func NewDockerCluster(name string, base *vault.CoreConfig, opts *DockerClusterOp
 
 		err := node.Start(cli, caDir, netName, node, pluginBinPath)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	if opts == nil || !opts.SkipInit {
 		if err := cluster.Initialize(context.Background()); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return &cluster, nil
+	return nil
 }
 
 // Docker networking functions
@@ -862,8 +861,10 @@ func createNetwork(cli *docker.Client, netName, cidr string) (string, error) {
 }
 
 func NewDockerDriver(name string) *DockerCluster {
+	// TODO consolidate newdockerdriver and newdocker cluster
 	return &DockerCluster{
 		PluginName:  name,
+		ClusterName: fmt.Sprintf("test-%s", name),
 		RaftStorage: true,
 	}
 }
@@ -894,12 +895,12 @@ func (dc *DockerCluster) Setup() error {
 	}
 
 	dOpts := &DockerClusterOptions{PluginTestBin: binPath}
-	cluster, err := NewDockerCluster(fmt.Sprintf("test-%s", name), coreConfig, dOpts)
+	err = dc.setupDockerCluster(coreConfig, dOpts)
 	if err != nil {
 		panic(err)
 	}
 
-	cores := cluster.ClusterNodes
+	cores := dc.ClusterNodes
 	client := cores[0].Client
 
 	// TODO maybe not use / need global here
