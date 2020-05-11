@@ -42,11 +42,14 @@ func TestReusableStorage(t *testing.T) {
 }
 
 func testReusableStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage) {
-	rootToken, keys := initializeStorage(t, logger, storage)
-	fmt.Printf("=======================================================================================\n")
-	fmt.Printf("=======================================================================================\n")
-	fmt.Printf("=======================================================================================\n")
-	reuseStorage(t, logger, storage, rootToken, keys)
+
+	initializeStorage(t, logger, storage)
+
+	//rootToken, keys := initializeStorage(t, logger, storage)
+	//fmt.Printf("=======================================================================================\n")
+	//fmt.Printf("=======================================================================================\n")
+	//fmt.Printf("=======================================================================================\n")
+	//reuseStorage(t, logger, storage, rootToken, keys)
 }
 
 // initializeStorage initializes a brand new backend storage.
@@ -56,8 +59,9 @@ func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.Re
 		Logger: logger.Named("initializeStorage"),
 	}
 	var opts = vault.TestClusterOptions{
-		HandlerFunc:       vaulthttp.Handler,
-		BaseListenAddress: "127.0.0.1:50000",
+		HandlerFunc:           vaulthttp.Handler,
+		BaseListenAddress:     "127.0.0.1:50000",
+		BaseClusterListenPort: 50100,
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
@@ -100,9 +104,10 @@ func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.Reusabl
 		Logger: logger.Named("reuseStorage"),
 	}
 	var opts = vault.TestClusterOptions{
-		HandlerFunc:       vaulthttp.Handler,
-		BaseListenAddress: "127.0.0.1:50000",
-		SkipInit:          true,
+		HandlerFunc:           vaulthttp.Handler,
+		BaseListenAddress:     "127.0.0.1:50000",
+		BaseClusterListenPort: 50100,
+		SkipInit:              true,
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
