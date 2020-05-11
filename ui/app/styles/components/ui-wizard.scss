@@ -176,7 +176,8 @@
   font-size: 12px;
 }
 
-.progress-container {
+// progress bar
+.wizard-progress-container {
   align-items: center;
   background: $white;
   bottom: 0;
@@ -190,8 +191,8 @@
   width: 100%;
 }
 
-.progress-bar {
-  background: $ui-gray-100;
+.wizard-progress-bar {
+  background: $progress-bar-background-color;
   box-shadow: inset 0 0 0 1px $ui-gray-200;
   display: flex;
   height: $wizard-progress-bar-height;
@@ -230,14 +231,14 @@
 .feature-progress-container:first-child {
   padding-left: 0;
 
-  .progress-bar,
+  .wizard-progress-bar,
   .feature-progress {
     border-radius: $wizard-progress-bar-height 0 0 $wizard-progress-bar-height;
   }
 }
 
 .feature-progress-container:first-child:last-child {
-  .progress-bar,
+  .wizard-progress-bar,
   .feature-progress {
     border-radius: $wizard-progress-bar-height;
   }
