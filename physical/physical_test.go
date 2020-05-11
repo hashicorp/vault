@@ -126,11 +126,6 @@ func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.Reusabl
 
 	// Wait until unsealed
 	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
-
-	// Wait until unsealed
-	leader := cluster.Cores[0]
-	vault.TestWaitActive(t, leader.Core)
-	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
 }
 
 func verifyRaftConfiguration(t *testing.T, client *api.Client) {
