@@ -55,6 +55,22 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
     />`);
 
     assert.dom('[data-test-isSyncing]').exists();
-    assert.dom('[data-test-isReindexing]').doesNotExist();
+    assert.dom('[data-test-isReindexing]').doesNotExist('does not show reindexing banner if cluster is ');
+  });
+
+  test('it shows an alert banner if the cluster is reindexing', async function(assert) {
+    this.set('replicationDetails', IS_REINDEXING);
+
+    await render(hbs`<ReplicationDashboard
+      @replicationDetails={{replicationDetails}}
+      @clusterMode={{clusterMode}}
+      @isSecondary={{isSecondary}}
+      @componentToRender='replication-secondary-card'
+    />`);
+
+    assert
+      .dom('[data-test-isSyncing]')
+      .doesNotExist('does not show syncing alert banner if cluster is not syncing');
+    assert.dom('[data-test-isReindexing]').exists();
   });
 });
