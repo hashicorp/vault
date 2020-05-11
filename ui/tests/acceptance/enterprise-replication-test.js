@@ -208,7 +208,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     assert.equal(
       find('[data-test-empty-state-message]').textContent.trim(),
       'This Disaster Recovery secondary has not been enabled.  You can do so from the Disaster Recovery Primary.',
-      'renders message when a replication is enabled'
+      'renders message when replication is enabled'
     );
   });
 
