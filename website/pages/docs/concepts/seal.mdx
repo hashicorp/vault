@@ -118,31 +118,38 @@ supported when using Vault Enterprise. We plan to support this officially in a
 future release.
 
 ~> **NOTE**: Seal migration from KMS seal to KMS seal of same kind is not
-currently supported when using Vault Enterprise. We plan to support this
-officially in a future release.
+currently supported. We plan to support this officially in a future release.
 
 ### Migration post Vault 1.4.0
 
 These steps are common for seal migrations between any supported kinds and for
 any storage backend.
 
-1. Take the standby nodes down, one node at a time and update the [seal
+1. Take a standby node down and update the [seal
 configuration](/docs/configuration/seal). If the migration is from Shamir seal
 to KMS seal, add the desired new KMS seal block to the config. If the migration
 is from KMS seal to Shamir seal, add `disabled = "true"` to the old seal block.
 If the migration is from KMS seal to another KMS seal, add `disabled = "true"`
-to the old seal block and add the desired new KMS seal block.
+to the old seal block and add the desired new KMS seal block. Now, bring the
+standby node back up and run the unseal command on each by supplying the
+`-migrate` flag. Supply Shamir unseal keys if old seal was Shamir, which will be
+migrated as the recovery keys for the KMS seal. Supply recovery keys if the old
+seal is one of KMS seals, which will be migrated as the recovery keys of the new
+KMS seal or as Shamir unseal keys if the new seal is Shamir.
 
-2. Bring the standby nodes back up one at a time and run the unseal command on
-each by supplying the `-migrate` flag. Supply Shamir unseal keys if old seal was
-Shamir, which will be migrated as the recovery keys for the KMS seal. Supply
-recovery keys if the old seal is one of KMS seals, which will be migrated as the
-recovery keys of the new KMS seal or as Shamir unseal keys if the new seal is
-Shamir.
+2. Perform step 1 for all the standby nodes, one at a time. It is necessary to
+bring back the downed standby node before moving on to the other standby nodes,
+specifically when integrated storage is in use for it helps to retain the
+quorum.
 
 3. Stop the active node. One of the standby nodes will become the active node
-and perform the migration. If possible, monitor the server log in the active
-node to witness the completion of the seal migration process.
+and perform the migration. When using Integrated Storage, ensure that quorum is
+reached and a leader is elected. Monitor the server log in the active node to
+witness the completion of the seal migration process. Wait for a little while
+for the migration information to replicate to all the nodes in case of
+Integrated Storage. In enterprise Vault, switching a KMS seal implies that the
+seal wrapped storage entries get re-wrapped. Monitor the log and wait until this
+process is complete (look for `seal re-wrap completed`).
 
 4. Seal migration is now completed. Update the config of the old active node
 (that is still down) to use the new seal blocks (completely unaware of the old
@@ -169,9 +176,6 @@ keys.
 ``` $ vault operator unseal -migrate ```
 
 #### Migration From Auto Unseal to Shamir
-
-~> **NOTE**: Migration to Shamir seal is not currently supported when using
-Vault Enterprise. We plan to support this officially in a future release.
 
 To migrate from Auto Unseal to Shamir keys, take your server cluster offline and
 update the [seal configuration](/docs/configuration/seal) and add `disabled =
