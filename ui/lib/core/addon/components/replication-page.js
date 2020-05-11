@@ -30,7 +30,6 @@ export default Component.extend({
     }
     this.set('reindexingDetails', resp);
   }),
-
   replicationMode: computed('model.{replicationMode}', function() {
     // dr or performance 🤯
     let mode = this.model.replicationMode;
