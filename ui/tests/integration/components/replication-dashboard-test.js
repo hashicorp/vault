@@ -25,9 +25,9 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
     this.set('replicationDetails', REPLICATION_DETAILS);
 
     await render(hbs`<ReplicationDashboard
-    @replicationDetails={{replicationDetails}}
-    @clusterMode={{clusterMode}}
-    @isSecondary={{isSecondary}}
+      @replicationDetails={{replicationDetails}}
+      @clusterMode={{clusterMode}}
+      @isSecondary={{isSecondary}}
     />`);
 
     assert.dom('[data-test-replication-dashboard]').exists();
@@ -45,11 +45,11 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
   test('it renders an alert banner if the dashboard is syncing', async function(assert) {
     this.set('replicationDetailsSyncing', REPLICATION_DETAILS_SYNCING);
 
-    await render(hbs`<ReplicationDashboard 
-    @replicationDetails={{replicationDetailsSyncing}} 
-    @clusterMode={{clusterMode}}
-    @isSecondary={{isSecondary}}
-    @componentToRender='replication-secondary-card'
+    await render(hbs`<ReplicationDashboard
+      @replicationDetails={{replicationDetailsSyncing}}
+      @clusterMode={{clusterMode}}
+      @isSecondary={{isSecondary}}
+      @componentToRender='replication-secondary-card'
     />`);
 
     assert.dom('[data-test-isSyncing]').exists();
