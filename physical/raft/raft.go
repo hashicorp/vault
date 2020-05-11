@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"sync"
 	"time"
@@ -645,6 +646,10 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			return errwrap.Wrapf("recovering raft cluster failed: {{err}}", err)
 		}
 	}
+
+	fmt.Printf("=======================================================================================\n")
+	fmt.Printf("raft.NewRaft %s\n", b.raftTransport.LocalAddr())
+	debug.PrintStack()
 
 	raftObj, err := raft.NewRaft(raftConfig, b.fsm.chunker, b.logStore, b.stableStore, b.snapStore, b.raftTransport)
 	b.fsm.SetNoopRestore(false)

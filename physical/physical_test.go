@@ -1,6 +1,7 @@
 package physical
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -41,7 +42,9 @@ func TestReusableStorage(t *testing.T) {
 
 func testReusableStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage) {
 	rootToken, keys := initializeStorage(t, logger, storage)
-	println("===================================================================")
+	fmt.Printf("=======================================================================================\n")
+	fmt.Printf("=======================================================================================\n")
+	fmt.Printf("=======================================================================================\n")
 	reuseStorage(t, logger, storage, rootToken, keys)
 }
 
