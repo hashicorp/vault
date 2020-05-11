@@ -3104,13 +3104,15 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	if filtered {
 		return errResp, logical.ErrPermissionDenied
 	}
-
 	resp := &logical.Response{
 		Data: mountInfo(me),
 	}
 	resp.Data["path"] = me.Path
+
+	fullMountPath := ns.Path + me.Path
 	if ns.ID != me.Namespace().ID {
 		resp.Data["path"] = me.Namespace().Path + me.Path
+		fullMountPath = ns.Path + me.Namespace().Path + me.Path
 	}
 
 	// Load the ACL policies so we can walk the prefix for this mount
@@ -3127,7 +3129,7 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		return nil, logical.ErrPermissionDenied
 	}
 
-	if !hasMountAccess(ctx, acl, ns.Path+me.Path) {
+	if !hasMountAccess(ctx, acl, fullMountPath) {
 		return errResp, logical.ErrPermissionDenied
 	}
 
@@ -3466,7 +3468,7 @@ This path responds to the following HTTP methods.
         Sets the header value for the UI.
     DELETE /<header>
         Clears the header value for UI.
-        
+
     LIST /
         List the headers configured for the UI.
         `,
