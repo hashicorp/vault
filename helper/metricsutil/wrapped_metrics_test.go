@@ -17,18 +17,6 @@ func isLabelPresent(toFind Label, ls []Label) bool {
 }
 
 func TestClusterLabelPresent(t *testing.T) {
-	// With only one test method, we can check that sending a metric
-	// before SetGlobalSink doesn't crash anything.
-	// If we had multiple test methods, I don't know how we would check that
-	// since we can't guarantee order?
-
-	SetGaugeWithLabels([]string{"test", "gauge"},
-		1.0,
-		[]Label{
-			{"label", "value"},
-		},
-	)
-
 	testClusterName := "test-cluster"
 
 	// Use a ridiculously long time to minimize the chance
@@ -43,8 +31,6 @@ func TestClusterLabelPresent(t *testing.T) {
 		Sink:        inmemSink,
 	}
 
-	SetGlobalSink(clusterSink)
-
 	key1 := []string{"aaa", "bbb"}
 	key2 := []string{"ccc", "ddd"}
 	key3 := []string{"eee", "fff"}
@@ -56,9 +42,9 @@ func TestClusterLabelPresent(t *testing.T) {
 	expectedKey2 := "ccc.ddd;dim2=val2;cluster=" + testClusterName
 	expectedKey3 := "eee.fff;dim3=val3;cluster=" + testClusterName
 
-	SetGaugeWithLabels(key1, 1.0, labels1)
-	IncrCounterWithLabels(key2, 2.0, labels2)
-	AddSampleWithLabels(key3, 3.0, labels3)
+	clusterSink.SetGaugeWithLabels(key1, 1.0, labels1)
+	clusterSink.IncrCounterWithLabels(key2, 2.0, labels2)
+	clusterSink.AddSampleWithLabels(key3, 3.0, labels3)
 
 	intervals := inmemSink.Data()
 	// If we start very close to the end of an interval, then our metrics might be

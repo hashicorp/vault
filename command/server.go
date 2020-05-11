@@ -918,7 +918,7 @@ func (c *ServerCommand) Run(args []string) int {
 				"in a Docker container, provide the IPC_LOCK cap to the container."))
 	}
 
-	metricsHelper, err := c.setupTelemetry(config)
+	metricsHelper, metricSink, err := c.setupTelemetry(config)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
 		return 1
@@ -1111,6 +1111,7 @@ func (c *ServerCommand) Run(args []string) int {
 		BuiltinRegistry:           builtinplugins.Registry,
 		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
 		MetricsHelper:             metricsHelper,
+		MetricSink:                metricSink,
 		SecureRandomReader:        secureRandomReader,
 	}
 	if c.flagDev {
@@ -2352,7 +2353,7 @@ func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 }
 
 // setupTelemetry is used to setup the telemetry sub-systems and returns the in-memory sink to be used in http configuration
-func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.MetricsHelper, error) {
+func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.MetricsHelper, *metricsutil.ClusterMetricSink, error) {
 	/* Setup telemetry
 	Aggregate on 10 second intervals for 1 minute. Expose the
 	metrics over stderr when there is a SIGUSR1 received.
@@ -2389,7 +2390,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 
 		sink, err := prometheus.NewPrometheusSinkFrom(prometheusOpts)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		fanout = append(fanout, sink)
 	}
@@ -2399,7 +2400,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 	if telConfig.StatsiteAddr != "" {
 		sink, err := metrics.NewStatsiteSink(telConfig.StatsiteAddr)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		fanout = append(fanout, sink)
 	}
@@ -2408,7 +2409,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 	if telConfig.StatsdAddr != "" {
 		sink, err := metrics.NewStatsdSink(telConfig.StatsdAddr)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		fanout = append(fanout, sink)
 	}
@@ -2444,7 +2445,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 
 		sink, err := circonus.NewCirconusSink(cfg)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		sink.Start()
 		fanout = append(fanout, sink)
@@ -2459,7 +2460,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 
 		sink, err := datadog.NewDogStatsdSink(telConfig.DogStatsDAddr, metricsConf.HostName)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
+			return nil, nil, errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
 		}
 		sink.SetTags(tags)
 		fanout = append(fanout, sink)
@@ -2469,7 +2470,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 	if telConfig.StackdriverProjectID != "" {
 		client, err := monitoring.NewMetricClient(context.Background(), option.WithUserAgent(useragent.String()))
 		if err != nil {
-			return nil, fmt.Errorf("Failed to create stackdriver client: %v", err)
+			return nil, nil, fmt.Errorf("Failed to create stackdriver client: %v", err)
 		}
 		sink := stackdriver.NewSink(client, &stackdriver.Config{
 			LabelExtractor: stackdrivervault.Extractor,
@@ -2495,19 +2496,19 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 	_, err := metrics.NewGlobal(metricsConf, fanout)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	// Intialize a wrapper around the global sing.
+	// Intialize a wrapper around the global sink; this will be passed to Core
+	// and to any backend.
 	wrapper := &metricsutil.ClusterMetricSink{
 		ClusterName:         config.ClusterName,
 		MaxGaugeCardinality: 500,
 		GaugeInterval:       10 * time.Minute,
 		Sink:                fanout,
 	}
-	metricsutil.SetGlobalSink(wrapper)
 
-	return metricHelper, nil
+	return metricHelper, wrapper, nil
 }
 
 func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]reloadutil.ReloadFunc, configPath []string) error {

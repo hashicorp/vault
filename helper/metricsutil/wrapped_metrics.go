@@ -42,39 +42,18 @@ func (m *ClusterMetricSink) AddSampleWithLabels(key []string, val float32, label
 		append(labels, Label{"cluster", m.ClusterName}))
 }
 
-var globalClusterMetrics *ClusterMetricSink
-
-func init() {
-	// Default to a black-hole sink.
-	// This will be changed during server init, but there might be unit
-	// tests or other cases that didn't initialize metrics.
-	globalClusterMetrics = &ClusterMetricSink{
+// BlackholeSink is a default suitable for use in unit tests.
+func BlackholeSink() *ClusterMetricSink {
+	return &ClusterMetricSink{
 		ClusterName: "",
 		Sink:        &metrics.BlackholeSink{},
 	}
 }
 
-func SetGlobalSink(newGlobal *ClusterMetricSink) {
-	globalClusterMetrics = newGlobal
-}
-
-// SetDefaultClusterName sets ClusterName if it was not specified in the configuration.
-// At the time the metrics are set up, the cluster name may not yet have been read from
-// storage (or generated for the first time.)
-func SetDefaultClusterName(clusterName string) {
-	if globalClusterMetrics.ClusterName == "" {
-		globalClusterMetrics.ClusterName = clusterName
+// SetDefaultClusterName changes the cluster name from its default value,
+// if it has not previously been configured.
+func (m *ClusterMetricSink) SetDefaultClusterName(clusterName string) {
+	if m.ClusterName == "" {
+		m.ClusterName = clusterName
 	}
-}
-
-func SetGaugeWithLabels(key []string, val float32, labels []Label) {
-	globalClusterMetrics.SetGaugeWithLabels(key, val, labels)
-}
-
-func IncrCounterWithLabels(key []string, val float32, labels []Label) {
-	globalClusterMetrics.IncrCounterWithLabels(key, val, labels)
-}
-
-func AddSampleWithLabels(key []string, val float32, labels []Label) {
-	globalClusterMetrics.AddSampleWithLabels(key, val, labels)
 }
