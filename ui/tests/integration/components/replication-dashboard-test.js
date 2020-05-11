@@ -8,9 +8,17 @@ const REPLICATION_DETAILS = {
   primaryClusterAddr: 'https://127.0.0.1:8201',
 };
 
-const REPLICATION_DETAILS_SYNCING = {
+const IS_SYNCING = {
   state: 'merkle-diff',
   primaryClusterAddr: 'https://127.0.0.1:8201',
+};
+
+const IS_REINDEXING = {
+  reindex_building_progress: 26838,
+  reindex_building_total: 305443,
+  reindex_in_progress: true,
+  reindexing_stage: 'building',
+  state: 'running',
 };
 
 module('Integration | Enterprise | Component | replication-dashboard', function(hooks) {
@@ -43,7 +51,7 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
   });
 
   test('it renders an alert banner if the dashboard is syncing', async function(assert) {
-    this.set('replicationDetailsSyncing', REPLICATION_DETAILS_SYNCING);
+    this.set('replicationDetailsSyncing', IS_SYNCING);
 
     await render(hbs`<ReplicationDashboard
       @replicationDetails={{replicationDetailsSyncing}}
