@@ -821,7 +821,8 @@ type TestCluster struct {
 func (c *TestCluster) Start() {
 	for _, core := range c.Cores {
 		if core.Server != nil {
-			for _, ln := range core.Listeners {
+			for i, ln := range core.Listeners {
+				c.Logger.Info("starting listener for test core", "core", i, "port", ln.Address.Port)
 				go core.Server.Serve(ln)
 			}
 		}
@@ -1050,6 +1051,7 @@ type TestClusterOptions struct {
 	HandlerFunc              func(*HandlerProperties) http.Handler
 	DefaultHandlerProperties HandlerProperties
 	BaseListenAddress        string
+	BaseClusterListenPort    int
 	NumCores                 int
 	SealFunc                 func() Seal
 	Logger                   log.Logger
@@ -1160,6 +1162,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			t.Fatal("could not parse given base IP")
 		}
 		certIPs = append(certIPs, baseAddr.IP)
+	}
+
+	baseClusterListenPort := 0
+	if opts != nil {
+		baseClusterListenPort = opts.BaseClusterListenPort
 	}
 
 	var testCluster TestCluster
@@ -1588,12 +1595,12 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	//
 	// Clustering setup
 	//
-	clusterAddrGen := func(lns []*TestListener) []*net.TCPAddr {
+	clusterAddrGen := func(lns []*TestListener, port int) []*net.TCPAddr {
 		ret := make([]*net.TCPAddr, len(lns))
 		for i, ln := range lns {
 			ret[i] = &net.TCPAddr{
 				IP:   ln.Address.IP,
-				Port: 0,
+				Port: port,
 			}
 		}
 		return ret
@@ -1601,7 +1608,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	for i := 0; i < numCores; i++ {
 		if coreConfigs[i].ClusterAddr != "" {
-			cores[i].SetClusterListenerAddrs(clusterAddrGen(listeners[i]))
+			port := 0
+			if baseClusterListenPort != 0 {
+				port = baseClusterListenPort + i
+			}
+			cores[i].SetClusterListenerAddrs(clusterAddrGen(listeners[i], port))
 			cores[i].SetClusterHandler(handlers[i])
 		}
 	}
