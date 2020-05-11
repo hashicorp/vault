@@ -61,9 +61,11 @@ func TestClusterLabelPresent(t *testing.T) {
 	AddSampleWithLabels(key3, 3.0, labels3)
 
 	intervals := inmemSink.Data()
+	// If we start very close to the end of an interval, then our metrics might be
+	// split across two different buckets. We won't write the code to try to handle that.
+	// 100000-hours = at most once every 4167 days
 	if len(intervals) > 1 {
-		t.Log("Skipping test, detected interval crossing.")
-		return
+		t.Skip("Detected interval crossing.")
 	}
 
 	// Check Gauge
