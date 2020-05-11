@@ -119,7 +119,13 @@ func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.Reusabl
 
 	// Unseal cores
 	cluster.BarrierKeys = keys
-	cluster.UnsealCores(t)
+	for _, core := range cluster.Cores {
+		cluster.UnsealCore(t, core)
+		vault.TestWaitActive(t, core.Core)
+	}
+
+	// Wait until unsealed
+	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
 
 	// Wait until unsealed
 	leader := cluster.Cores[0]
