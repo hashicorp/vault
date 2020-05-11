@@ -111,6 +111,10 @@ func (b *CubbyholeBackend) handleRead(ctx context.Context, req *logical.Request,
 
 	path := data.Get("path").(string)
 
+	if path == "" {
+		return nil, fmt.Errorf("missing path")
+	}
+
 	// Read the path
 	out, err := req.Storage.Get(ctx, req.ClientToken+"/"+path)
 	if err != nil {
@@ -178,6 +182,10 @@ func (b *CubbyholeBackend) handleDelete(ctx context.Context, req *logical.Reques
 	}
 
 	path := data.Get("path").(string)
+
+	if path == "" {
+		return nil, fmt.Errorf("missing path")
+	}
 
 	// Delete the key at the request path
 	if err := req.Storage.Delete(ctx, req.ClientToken+"/"+path); err != nil {
