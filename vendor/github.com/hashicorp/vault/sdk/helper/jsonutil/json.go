@@ -16,12 +16,8 @@ func EncodeJSON(in interface{}) ([]byte, error) {
 	if in == nil {
 		return nil, fmt.Errorf("input for encoding is nil")
 	}
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	if err := enc.Encode(in); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+
+	return json.Marshal(in)
 }
 
 // EncodeJSONAndCompress encodes the given input into JSON and compresses the
