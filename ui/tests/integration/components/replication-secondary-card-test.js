@@ -8,25 +8,20 @@ const TITLE = 'States';
 const REPLICATION_DETAILS = {
   state: 'stream-wals',
   connection_state: 'ready',
-  lastWAL: 0,
   lastRemoteWAL: 10,
-  delta: 10,
+  primaryClusterAddr: 'https://127.0.0.1:8201',
 };
 
 const STATE_ERROR = {
   state: 'idle',
   connection_state: 'ready',
-  lastWAL: 0,
   lastRemoteWAL: 10,
-  delta: 10,
 };
 
 const CONNECTION_ERROR = {
   state: 'stream-wals',
   connection_state: 'transient_failure',
-  lastWAL: 0,
   lastRemoteWAL: 10,
-  delta: 10,
 };
 
 module('Integration | Enterprise | Component | replication-secondary-card', function(hooks) {
@@ -48,15 +43,14 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
       .includesText(REPLICATION_DETAILS.connection_state, `shows the correct connection value`);
   });
 
-  test('it renders with lastWAL, lastRemoteWAL and delta set when title is not States', async function(assert) {
+  test('it renders with lastRemoteWAL and primaryAddress set when title is not States', async function(assert) {
     await render(hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} />`);
-    assert
-      .dom('[data-test-lastWAL]')
-      .includesText(REPLICATION_DETAILS.lastWAL, `shows the correct lastWAL value`);
     assert
       .dom('[data-test-lastRemoteWAL]')
       .includesText(REPLICATION_DETAILS.lastRemoteWAL, `shows the correct lastRemoteWAL value`);
-    assert.dom('[data-test-delta]').includesText(REPLICATION_DETAILS.delta, `shows the correct delta value`);
+    assert
+      .dom('[data-test-primaryClusterAddr]')
+      .includesText(REPLICATION_DETAILS.primaryClusterAddr, `shows the correct primaryClusterAddr value`);
   });
 
   test('it renders tooltip with check-circle-outline when state is stream-wals', async function(assert) {

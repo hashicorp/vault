@@ -182,7 +182,6 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await visit('vault/replication/performance');
     // enable perf replication
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
-
     await click('[data-test-replication-enable]');
     await pollCluster(this.owner);
 
@@ -192,22 +191,46 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-replication-enable]');
     await pollCluster(this.owner);
     await visit('/vault/replication/dr/manage');
+
     assert.ok(findAll('[data-test-demote-warning]').length, 'displays the demotion warning');
   });
 
-  test('navigating to dr secondary details page', async function(assert) {
+  test('navigating to dr secondary details page when dr secondary is not enabled', async function(assert) {
     // enable dr replication
+
     await visit('/vault/replication/dr');
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
     await click('[data-test-replication-enable]');
     await pollCluster(this.owner);
-
     await visit('/vault/replication-dr-promote/details');
+
     assert.dom('[data-test-component="empty-state"]').exists();
     assert.equal(
       find('[data-test-empty-state-message]').textContent.trim(),
       'This Disaster Recovery secondary has not been enabled.  You can do so from the Disaster Recovery Primary.',
-      'renders default message specific to when no replication is enabled'
+      'renders message when a replication is enabled'
     );
+  });
+
+  test('render performance secondary and navigate to the details page', async function(assert) {
+    // const secondaryName = 'firstSecondary';
+
+    // enable perf replication
+    await visit('/vault/replication');
+    await click('[data-test-replication-type-select="performance"]');
+    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
+    await click('[data-test-replication-enable]');
+    await pollCluster(this.owner);
+    await settled();
+    await click('[data-test-replication-link="manage"]');
+
+    let demote = document.querySelectorAll('[data-test-confirm-action-trigger="true"]')[1];
+    await click(demote);
+    await click('[data-test-confirm-button="true"]');
+    await click('[data-test-replication-link="details"]');
+    assert.dom('[data-test-replication-dashboard]').exists();
+
+    assert.dom('[data-test-selectable-card-container="secondary"]').exists();
+    // ARG TODO: when designs updated to show where cluster name goes, add as something you search for e.g. "secondaryName"
   });
 });
