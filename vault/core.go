@@ -648,7 +648,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 // not exist.
 func (c *CoreConfig) GetServiceRegistration() sr.ServiceRegistration {
 
-	// Check whether there is a ServiceRegistration explictly configured
+	// Check whether there is a ServiceRegistration explicitly configured
 	if c.ServiceRegistration != nil {
 		return c.ServiceRegistration
 	}

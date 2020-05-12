@@ -26,7 +26,7 @@ type State struct {
 // The config is the key/value pairs set _inside_ the service registration config stanza.
 // The state is the initial state.
 // The redirectAddr is Vault core's RedirectAddr.
-type Factory func(config map[string]string, logger log.Logger, state State, redirectAddr string) (ServiceRegistration, error)
+type Factory func(config map[string]string, logger log.Logger, state State) (ServiceRegistration, error)
 
 // ServiceRegistration is an interface that advertises the state of Vault to a
 // service discovery network.
@@ -60,7 +60,7 @@ type ServiceRegistration interface {
 	//		}()
 	//		return nil
 	//	}
-	Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup) error
+	Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup, redirectAddr string) error
 
 	// NotifyActiveStateChange is used by Core to notify that this Vault
 	// instance has changed its status on whether it's active or is
