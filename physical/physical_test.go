@@ -3,14 +3,12 @@ package physical
 import (
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
 
 	"github.com/hashicorp/go-hclog"
-	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
@@ -40,31 +38,37 @@ func TestReusableStorage(t *testing.T) {
 		logger := logger.Named("raft")
 		storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger)
 		defer cleanup()
-		testReusableStorage(t, logger, storage)
+		testReusableStorage(t, logger, storage, 50400)
 	})
 }
 
-func testReusableStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage) {
+func testReusableStorage(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int) {
 
 	//initializeStorage(t, logger, storage)
 
-	rootToken, keys := initializeStorage(t, logger, storage)
+	rootToken, keys := initializeStorage(t, logger, storage, basePort)
 	fmt.Printf("=======================================================================================\n")
 	fmt.Printf("=======================================================================================\n")
 	fmt.Printf("=======================================================================================\n")
-	reuseStorage(t, logger, storage, rootToken, keys)
+	reuseStorage(t, logger, storage, basePort, rootToken, keys)
 }
 
 // initializeStorage initializes a brand new backend storage.
-func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage) (string, [][]byte) {
+func initializeStorage(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int) (string, [][]byte) {
+
+	var baseClusterPort = basePort + 10
 
 	var conf = vault.CoreConfig{
 		Logger: logger.Named("initializeStorage"),
 	}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
-		BaseListenAddress:     "127.0.0.1:50000",
-		BaseClusterListenPort: 50100,
+		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
+		BaseClusterListenPort: baseClusterPort,
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
@@ -100,15 +104,20 @@ func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.Re
 }
 
 // reuseStorage uses a pre-populated backend storage.
-func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, rootToken string, keys [][]byte) {
+func reuseStorage(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int,
+	rootToken string, keys [][]byte) {
+
+	var baseClusterPort = basePort + 10
 
 	var conf = vault.CoreConfig{
 		Logger: logger.Named("reuseStorage"),
 	}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
-		BaseListenAddress:     "127.0.0.1:50000",
-		BaseClusterListenPort: 50100,
+		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
+		BaseClusterListenPort: baseClusterPort,
 		SkipInit:              true,
 	}
 	storage.Setup(&conf, &opts)
@@ -119,31 +128,18 @@ func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.Reusabl
 		cluster.Cleanup()
 	}()
 
-	for i, c := range cluster.Cores {
-		if !c.Core.Sealed() {
-			t.Fatalf("core is not sealed %d", i)
-		}
-	}
-
 	leader := cluster.Cores[0]
 	client := leader.Client
 	client.SetToken(rootToken)
 
-	// Set Raft address providers
-	provider := &testhelpers.ServerAddressProvider{
-		Entries: map[raftlib.ServerID]raftlib.ServerAddress{
-			"core-0": "127.0.0.1:50100",
-			"core-1": "127.0.0.1:50101",
-			"core-2": "127.0.0.1:50102",
-		},
-	}
+	// Set predetermined Raft address providers
+	provider := testhelpers.NewServerAddressProvider(baseClusterPort)
 	testhelpers.SetRaftAddressProviders(t, cluster, provider)
 
 	// Unseal cores
 	cluster.BarrierKeys = keys
 	for _, core := range cluster.Cores {
 		cluster.UnsealCore(t, core)
-		//vault.TestWaitActive(t, core.Core)
 	}
 	time.Sleep(15 * time.Second)
 	verifyRaftConfiguration(t, leader)
@@ -164,45 +160,7 @@ func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.Reusabl
 	cluster.EnsureCoresSealed(t)
 }
 
-//func getRaftConfiguration(t *testing.T, client *api.Client) []*raft.RaftServer {
-//
-//	resp, err := client.Logical().Read("sys/storage/raft/configuration")
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//	raw := resp.Data["config"].(map[string]interface{})["servers"].([]interface{})
-//
-//	servers := []*raft.RaftServer{}
-//	for _, r := range raw {
-//		rs := r.(map[string]interface{})
-//		servers = append(servers, &raft.RaftServer{
-//			NodeID:          rs["node_id"].(string),
-//			Address:         rs["address"].(string),
-//			Leader:          rs["leader"].(bool),
-//			ProtocolVersion: rs["protocol_version"].(string),
-//			Voter:           rs["voter"].(bool),
-//		})
-//	}
-//	return servers
-//}
-
-func printRaftConfiguration(servers []*raft.RaftServer) string {
-	var b strings.Builder
-	for _, server := range servers {
-		fmt.Fprintf(&b, "{\n")
-		fmt.Fprintf(&b, "	NodeID:          %q,\n", server.NodeID)
-		fmt.Fprintf(&b, "	Address:         %q,\n", server.Address)
-		fmt.Fprintf(&b, "	Leader:          %t,\n", server.Leader)
-		fmt.Fprintf(&b, "	ProtocolVersion: %q,\n", server.ProtocolVersion)
-		fmt.Fprintf(&b, "	Voter:           %t,\n", server.Voter)
-		fmt.Fprintf(&b, "},\n")
-	}
-	return b.String()
-}
-
 func verifyRaftConfiguration(t *testing.T, core *vault.TestClusterCore) {
-
-	//servers := getRaftConfiguration(t, client)
 
 	backend := core.UnderlyingRawStorage.(*raft.RaftBackend)
 	ctx := namespace.RootContext(context.Background())
@@ -210,52 +168,25 @@ func verifyRaftConfiguration(t *testing.T, core *vault.TestClusterCore) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	servers := config.Servers
 
-	fmt.Printf("-----------------------------------------------------------------\n")
-	fmt.Printf("%s\n", printRaftConfiguration(config.Servers))
+	if len(servers) != vault.DefaultNumCores {
+		t.Fatalf("Found %d servers, not %d", len(servers), vault.DefaultNumCores)
+	}
 
-	//resp, err := client.Logical().Read("sys/storage/raft/configuration")
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//servers := resp.Data["config"].(map[string]interface{})["servers"].([]interface{})
+	leaders := 0
+	for i, s := range servers {
+		if diff := deep.Equal(s.NodeID, fmt.Sprintf("core-%d", i)); len(diff) > 0 {
+			t.Fatal(diff)
+		}
+		if s.Leader {
+			leaders++
+		}
+	}
 
-	//actual := []config{}
-	//for _, s := range servers {
-	//	server := s.(map[string]interface{})
-	//	actual = append(actual, config{
-	//		nodeID:   server[NodeID].(string),
-	//		isLeader: server[Leader].(bool),
-	//	})
-	//}
-
-	//var expected = []raft.RaftServer{
-	//	{
-	//		NodeID:          "node1",
-	//		Address:         "127.0.0.1:8201",
-	//		Leader:          false,
-	//		ProtocolVersion: "3",
-	//		Voter:           true,
-	//	},
-	//	{
-	//		NodeID:          "node2",
-	//		Address:         "127.0.0.2:8201",
-	//		Leader:          true,
-	//		ProtocolVersion: "3",
-	//		Voter:           true,
-	//	},
-	//	{
-	//		NodeID:          "node3",
-	//		Address:         "127.0.0.3:8201",
-	//		Leader:          false,
-	//		ProtocolVersion: "3",
-	//		Voter:           true,
-	//	},
-	//}
-
-	//if diff := deep.Equal(actual, expected); len(diff) > 0 {
-	//	t.Fatal(diff)
-	//}
+	if leaders != 1 {
+		t.Fatalf("Found %d leaders, not 1", leaders)
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////////

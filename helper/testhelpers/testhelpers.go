@@ -386,7 +386,7 @@ func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]by
 	return newKeys
 }
 
-// ClusterServerAddressProvider is a raft library ServerAddressProvider that
+// ClusterServerAddressProvider is a raftlib.ServerAddressProvider that
 // uses the ClusterAddr() of each node to provide addresses.
 type ClusterServerAddressProvider struct {
 	Cluster *vault.TestCluster
@@ -461,8 +461,11 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	WaitForNCoresUnsealed(t, cluster, 3)
 }
 
-// ServerAddressProvider is a raft library ServerAddressProvider that uses a
-// predetermined map of node addresses.
+// ServerAddressProvider is a raftlib.ServerAddressProvider that uses a
+// predetermined map of node addresses.  It is useful in cases where the
+// configuration is known ahead of time, but some of the cores have not yet had
+// their cluster listener started (via either unsealing or raft joining), and
+// thus do not yet have a ClusterAddr() assigned.
 type ServerAddressProvider struct {
 	Entries map[raftlib.ServerID]raftlib.ServerAddress
 }
@@ -472,6 +475,23 @@ func (p *ServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.ServerA
 		return addr, nil
 	}
 	return "", errors.New("could not find cluster addr")
+}
+
+// NewServerAddressProvider is a convenience function that makes a
+// predetermined ServerAddressProvider from a given cluster address base port.
+func NewServerAddressProvider(baseClusterPort int) raftlib.ServerAddressProvider {
+
+	entries := make(map[raftlib.ServerID]raftlib.ServerAddress)
+
+	for i := 0; i < vault.DefaultNumCores; i++ {
+		id := fmt.Sprintf("core-%d", i)
+		addr := fmt.Sprintf("127.0.0.1:%d", baseClusterPort+i)
+		entries[raftlib.ServerID(id)] = raftlib.ServerAddress(addr)
+	}
+
+	return &ServerAddressProvider{
+		entries,
+	}
 }
 
 // SetRaftAddressProviders sets a ServerAddressProvider for all the nodes in a
