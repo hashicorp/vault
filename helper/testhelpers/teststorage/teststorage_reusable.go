@@ -22,10 +22,10 @@ type ReusableStorage struct {
 	// IsRaft specifies whether the storage is using a raft backend.
 	IsRaft bool
 
-	// Setup should be called just after a test cluster is started.
+	// Setup should be called just before a new TestCluster is created.
 	Setup ClusterSetupMutator
 
-	// Cleanup should be called after test cluster is no longer
+	// Cleanup should be called after a TestCluster is no longer
 	// needed -- generally in a defer, just before the call to
 	// cluster.Cleanup().
 	Cleanup func(t testing.T, cluster *vault.TestCluster)
