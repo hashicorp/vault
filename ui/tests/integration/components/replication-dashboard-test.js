@@ -17,7 +17,7 @@ const IS_REINDEXING = {
   reindex_building_progress: 26838,
   reindex_building_total: 305443,
   reindex_in_progress: true,
-  reindexing_stage: 'building',
+  reindex_stage: 'building',
   state: 'running',
 };
 
@@ -55,7 +55,9 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
     />`);
 
     assert.dom('[data-test-isSyncing]').exists();
-    assert.dom('[data-test-isReindexing]').doesNotExist('does not show reindexing banner if cluster is ');
+    assert
+      .dom('[data-test-isReindexing]')
+      .doesNotExist('does not show reindexing banner if cluster is cluster is not reindexing');
   });
 
   test('it shows an alert banner if the cluster is reindexing', async function(assert) {
@@ -68,9 +70,13 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
       @componentToRender='replication-secondary-card'
     />`);
 
-    assert
-      .dom('[data-test-isSyncing]')
-      .doesNotExist('does not show syncing alert banner if cluster is not syncing');
     assert.dom('[data-test-isReindexing]').exists();
+    assert.dom('.message-title').includesText('Building', 'shows reindexing stage if there is one');
+    assert
+      .dom('.message-title>.progress')
+      .hasValue(
+        IS_REINDEXING.reindex_building_progress,
+        'shows the reindexing progress inside the alert banner'
+      );
   });
 });
