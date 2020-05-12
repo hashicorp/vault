@@ -81,10 +81,15 @@ func initializeStorage(
 	leader := cluster.Cores[0]
 	client := leader.Client
 
-	// Join raft cluster
-	testhelpers.RaftClusterJoinNodes(t, cluster)
-	time.Sleep(15 * time.Second)
-	verifyRaftConfiguration(t, leader)
+	if storage.IsRaft {
+		// Join raft cluster
+		testhelpers.RaftClusterJoinNodes(t, cluster)
+		time.Sleep(15 * time.Second)
+		verifyRaftConfiguration(t, leader)
+	} else {
+		// Unseal
+		cluster.UnsealCores(t)
+	}
 
 	// Wait until unsealed
 	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
@@ -132,17 +137,22 @@ func reuseStorage(
 	client := leader.Client
 	client.SetToken(rootToken)
 
-	// Set predetermined Raft address providers
-	provider := testhelpers.NewServerAddressProvider(baseClusterPort)
-	testhelpers.SetRaftAddressProviders(t, cluster, provider)
-
-	// Unseal cores
 	cluster.BarrierKeys = keys
-	for _, core := range cluster.Cores {
-		cluster.UnsealCore(t, core)
+	if storage.IsRaft {
+		// Set predetermined Raft address providers
+		provider := testhelpers.NewServerAddressProvider(baseClusterPort)
+		testhelpers.SetRaftAddressProviders(t, cluster, provider)
+
+		// Unseal cores
+		for _, core := range cluster.Cores {
+			cluster.UnsealCore(t, core)
+		}
+		time.Sleep(15 * time.Second)
+		verifyRaftConfiguration(t, leader)
+	} else {
+		// Unseal
+		cluster.UnsealCores(t)
 	}
-	time.Sleep(15 * time.Second)
-	verifyRaftConfiguration(t, leader)
 
 	// Wait until unsealed
 	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
