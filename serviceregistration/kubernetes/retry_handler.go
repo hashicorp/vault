@@ -93,8 +93,6 @@ func (r *retryHandler) setInitialState(shutdownCh <-chan struct{}) {
 	case <-doneCh:
 	case <-shutdownCh:
 	}
-
-	return nil
 }
 
 // Notify adds a patch to be retried until it's either completed without
