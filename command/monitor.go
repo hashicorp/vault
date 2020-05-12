@@ -47,11 +47,11 @@ func (c *MonitorCommand) Flags() *FlagSets {
 	f.StringVar(&StringVar{
 		Name:       "log-level",
 		Target:     &c.logLevel,
-		Default:    "INFO",
-		Completion: complete.PredictSet("TRACE", "DEBUG", "INFO", "WARN", "ERROR"),
+		Default:    "info",
+		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
 		Usage: "If passed, the log level to monitor logs. Supported values" +
-			"(in order of detail) are \"TRACE\", \"DEBUG\", \"INFO\", \"WARN\"" +
-			" and \"ERROR\". These are not case sensitive.",
+			"(in order of detail) are \"trace\", \"debug\", \"info\", \"warn\"" +
+			" and \"error\". These are not case sensitive.",
 	})
 
 	return set
