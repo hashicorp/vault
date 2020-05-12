@@ -819,9 +819,9 @@ type TestCluster struct {
 }
 
 func (c *TestCluster) Start() {
-	for _, core := range c.Cores {
+	for i, core := range c.Cores {
 		if core.Server != nil {
-			for i, ln := range core.Listeners {
+			for _, ln := range core.Listeners {
 				c.Logger.Info("starting listener for test core", "core", i, "port", ln.Address.Port)
 				go core.Server.Serve(ln)
 			}
@@ -1050,14 +1050,23 @@ type TestClusterOptions struct {
 	SkipInit                 bool
 	HandlerFunc              func(*HandlerProperties) http.Handler
 	DefaultHandlerProperties HandlerProperties
-	BaseListenAddress        string
-	BaseClusterListenPort    int
-	NumCores                 int
-	SealFunc                 func() Seal
-	Logger                   log.Logger
-	TempDir                  string
-	CACert                   []byte
-	CAKey                    *ecdsa.PrivateKey
+
+	// BaseListenAddress is used to assign ports in sequence to the listener
+	// of each core.  It shoud be a string of the form "127.0.0.1:50000"
+	BaseListenAddress string
+
+	// BaseClusterListenPort is used to assign ports in sequence to the
+	// cluster listener of each core.  If BaseClusterListenPort is specified,
+	// then BaseListenAddress must also be specified.  Each cluster listener
+	// will use the same host as the one specified in BaseListenAddress.
+	BaseClusterListenPort int
+
+	NumCores int
+	SealFunc func() Seal
+	Logger   log.Logger
+	TempDir  string
+	CACert   []byte
+	CAKey    *ecdsa.PrivateKey
 	// PhysicalFactory is used to create backends.
 	// The int argument is the index of the core within the cluster, i.e. first
 	// core in cluster will have 0, second 1, etc.
@@ -1166,6 +1175,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	baseClusterListenPort := 0
 	if opts != nil {
+		if opts.BaseListenAddress == "" {
+			t.Fatal("BaseListenAddress is not specified")
+		}
 		baseClusterListenPort = opts.BaseClusterListenPort
 	}
 
@@ -1612,6 +1624,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			if baseClusterListenPort != 0 {
 				port = baseClusterListenPort + i
 			}
+			cores[i].Logger().Info("assigning cluster listener for test core", "core", i, "port", port)
 			cores[i].SetClusterListenerAddrs(clusterAddrGen(listeners[i], port))
 			cores[i].SetClusterHandler(handlers[i])
 		}

@@ -77,6 +77,7 @@ func initializeStorage(
 
 	var baseClusterPort = basePort + 10
 
+	// Start the cluster
 	var conf = vault.CoreConfig{
 		Logger: logger.Named("initializeStorage"),
 	}
@@ -131,6 +132,7 @@ func reuseStorage(
 
 	var baseClusterPort = basePort + 10
 
+	// Start the cluster
 	var conf = vault.CoreConfig{
 		Logger: logger.Named("reuseStorage"),
 	}

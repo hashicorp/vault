@@ -58,6 +58,7 @@ func MakeReusableStorage(t testing.T, logger hclog.Logger, bundle *vault.Physica
 			}
 		},
 
+		// No-op
 		Cleanup: func(t testing.T, cluster *vault.TestCluster) {
 		},
 	}
@@ -91,8 +92,8 @@ func MakeReusableRaftStorage(t testing.T, logger hclog.Logger) (ReusableStorage,
 			}
 		},
 
+		// Close open files being used by raft.
 		Cleanup: func(t testing.T, cluster *vault.TestCluster) {
-			// Close open files.
 			for _, core := range cluster.Cores {
 				raftStorage := core.UnderlyingRawStorage.(*raft.RaftBackend)
 				if err := raftStorage.Close(); err != nil {
