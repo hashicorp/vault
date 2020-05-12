@@ -57,42 +57,23 @@ export default function DataEncryptionUseCase() {
           </div>
           <div className="content logo-grid">
             <ul className="g-logo-grid large">
-              <li key="aws">
-                <img src={require('./img/logos/aws.png')} alt="company logo" />
-              </li>
-              <li key="azure">
-                <img
-                  src={require('./img/logos/azure.png')}
-                  alt="company logo"
-                />
-              </li>
-              <li key="gcp">
-                <img src={require('./img/logos/gcp.png')} alt="company logo" />
-              </li>
-              <li key="kubernetes">
-                <img
-                  src={require('./img/logos/kubernetes.png')}
-                  alt="company logo"
-                />
-              </li>
-              <li key="nomad">
-                <img
-                  src={require('./img/logos/nomad.png')}
-                  alt="company logo"
-                />
-              </li>
-              <li key="okta">
-                <img src={require('./img/logos/okta.png')} alt="company logo" />
-              </li>
-              <li key="pivotalcf">
-                <img
-                  src={require('./img/logos/pivotalcf.png')}
-                  alt="company logo"
-                />
-              </li>
-              <li key="ssh">
-                <img src={require('./img/logos/ssh.png')} alt="company logo" />
-              </li>
+              {[
+                'aws',
+                'azure',
+                'gcp',
+                'kubernetes',
+                'nomad',
+                'okta',
+                'pivotalcf',
+                'ssh',
+              ].map((logo) => (
+                <li key={logo}>
+                  <img
+                    src={require(`./img/logos/${logo}.png`)}
+                    alt="company logo"
+                  />
+                </li>
+              ))}
             </ul>
           </div>
         </div>

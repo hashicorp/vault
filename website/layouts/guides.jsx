@@ -5,7 +5,7 @@ import { MDXProvider } from '@mdx-js/react'
 import Head from 'next/head'
 import Link from 'next/link'
 import Tabs, { Tab } from '../components/tabs'
-import EnterpriseAlert from '@hashicorp/react-enterprise-alert'
+import EnterpriseAlert from '../components/enterprise-alert'
 
 const DEFAULT_COMPONENTS = { Tabs, Tab, EnterpriseAlert }
 
