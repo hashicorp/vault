@@ -15,12 +15,6 @@ const REPLICATION_DETAILS_SYNCING = {
   primaryClusterAddr: 'https://127.0.0.1:8201',
 };
 
-const REPLICATION_DETAILS_REINDEXING = {
-  state: 'stream-wals',
-  reindex_in_progress: true,
-  primaryClusterAddr: 'https://127.0.0.1:8201',
-};
-
 module('Integration | Enterprise | Component | replication-dashboard', function(hooks) {
   setupRenderingTest(hooks);
 
@@ -56,19 +50,5 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
 
     assert.dom('[data-test-isSyncing]').exists();
     assert.dom('[data-test-isReindexing]').doesNotExist();
-  });
-
-  test('it renders an alert banner if the dashboard is reIndexing', async function(assert) {
-    this.set('replicationDetailsReindexing', REPLICATION_DETAILS_REINDEXING);
-
-    await render(hbs`<ReplicationDashboard 
-    @replicationDetails={{replicationDetailsReindexing}} 
-    @clusterMode={{clusterMode}}
-    @isSecondary={{isSecondary}}
-    @componentToRender='replication-primary-card'
-    />`);
-
-    assert.dom('[data-test-isSyncing]').doesNotExist();
-    assert.dom('[data-test-isReindexing]').exists();
   });
 });
