@@ -398,6 +398,7 @@ func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib
 				return "", err
 			}
 
+			fmt.Printf("ServerAddr %s %s\n", id, parsed.Host)
 			return raftlib.ServerAddress(parsed.Host), nil
 		}
 	}
@@ -458,13 +459,23 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	WaitForNCoresUnsealed(t, cluster, 3)
 }
 
-// RaftClusterSetAddressProviders sets a ServerAddressProvider for all the raft cores
-func RaftClusterSetAddressProviders(t testing.T, cluster *vault.TestCluster) {
+type FooServerAddressProvider struct {
+	Entries map[raftlib.ServerID]raftlib.ServerAddress
+}
 
-	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
+func (p *FooServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.ServerAddress, error) {
+	if addr, ok := p.Entries[id]; ok {
+		return addr, nil
+	}
+	return "", errors.New("could not find cluster addr")
+}
+
+// SetRaftAddressProviders sets a ServerAddressProvider for all the raft cores
+func SetRaftAddressProviders(t testing.T, cluster *vault.TestCluster, provider raftlib.ServerAddressProvider) {
+
 	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
 
 	for _, core := range cluster.Cores {
-		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(provider)
 	}
 }

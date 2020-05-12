@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
@@ -43,13 +44,13 @@ func TestReusableStorage(t *testing.T) {
 
 func testReusableStorage(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage) {
 
-	initializeStorage(t, logger, storage)
+	//initializeStorage(t, logger, storage)
 
-	//rootToken, keys := initializeStorage(t, logger, storage)
-	//fmt.Printf("=======================================================================================\n")
-	//fmt.Printf("=======================================================================================\n")
-	//fmt.Printf("=======================================================================================\n")
-	//reuseStorage(t, logger, storage, rootToken, keys)
+	rootToken, keys := initializeStorage(t, logger, storage)
+	fmt.Printf("=======================================================================================\n")
+	fmt.Printf("=======================================================================================\n")
+	fmt.Printf("=======================================================================================\n")
+	reuseStorage(t, logger, storage, rootToken, keys)
 }
 
 // initializeStorage initializes a brand new backend storage.
@@ -128,14 +129,23 @@ func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.Reusabl
 	//client.SetToken(rootToken)
 
 	// Set Raft address providers
-	testhelpers.RaftClusterSetAddressProviders(t, cluster)
+	provider := &testhelpers.FooServerAddressProvider{
+		Entries: map[raftlib.ServerID]raftlib.ServerAddress{
+			"core-0": "127.0.0.1:50100",
+			"core-1": "127.0.0.1:50101",
+			"core-2": "127.0.0.1:50102",
+		},
+	}
+	testhelpers.SetRaftAddressProviders(t, cluster, provider)
+
+	//ServerAddr
 
 	// Unseal cores
 	cluster.BarrierKeys = keys
 	for _, core := range cluster.Cores {
 		cluster.UnsealCore(t, core)
 		verifyRaftConfiguration(t, core)
-		vault.TestWaitActive(t, core.Core)
+		//vault.TestWaitActive(t, core.Core)
 	}
 
 	// Wait until unsealed
