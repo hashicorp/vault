@@ -1174,7 +1174,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	baseClusterListenPort := 0
-	if opts != nil {
+	if opts != nil && opts.BaseClusterListenPort != 0 {
 		if opts.BaseListenAddress == "" {
 			t.Fatal("BaseListenAddress is not specified")
 		}
