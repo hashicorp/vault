@@ -214,6 +214,29 @@ func Run(tt TestT, c Case) {
 			// Path:      s.Path,
 			// Data:      s.Data,
 		}
+
+		// TODO hard coded path here, need mount point. Will it be dynamic? probabaly
+		// needs to be
+		path := fmt.Sprintf("transit/%s", s.Path)
+		var err error
+		var resp *api.Secret
+		// TODO should check expect none here?
+		var lr *logical.Response
+		switch s.Operation {
+		case logical.CreateOperation, logical.UpdateOperation:
+			resp, err = client.Logical().Write(path, s.Data)
+		case logical.ReadOperation:
+			resp, err = client.Logical().Read(path)
+		case logical.ListOperation:
+			resp, err = client.Logical().List(path)
+			// TODO why though
+			lr = &logical.Response{}
+		case logical.DeleteOperation:
+			resp, err = client.Logical().Delete(path)
+		default:
+			panic("bad operation")
+		}
+		q.Q("test resp:", resp)
 		// if !s.Unauthenticated {
 		// 	// req.ClientToken = client.Token()
 		// 	// req.SetTokenEntry(&logical.TokenEntry{
