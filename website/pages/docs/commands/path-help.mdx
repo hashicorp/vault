@@ -33,7 +33,7 @@ exact.
 
 Get help output for the KV secrets engine:
 
-```text
+```shell-session
 $ vault path-help secret
 ## DESCRIPTION
 
@@ -61,7 +61,7 @@ you may or may not be able to access certain paths.
 Once you've found a path you like, you can learn more about it by using `vault path-help <path>` where "path" is a path that matches one of the regular
 expressions from the backend help.
 
-```text
+```shell-session
 $ vault path-help secret/password
 Request:        password
 Matching Route: ^.*$

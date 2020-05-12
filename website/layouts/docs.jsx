@@ -1,23 +1,41 @@
-import DocsPage, { getInitialProps } from '../components/docs-page'
-import orderData from '../data/docs-navigation.js'
-import { frontMatter } from '../pages/docs/**/*.mdx'
+import DocsPage from '@hashicorp/react-docs-page'
+import order from '../data/docs-navigation.js'
+import { frontMatter as data } from '../pages/docs/**/*.mdx'
+import { MDXProvider } from '@mdx-js/react'
+import Head from 'next/head'
+import Link from 'next/link'
+import Tabs, { Tab } from '../components/tabs'
+import EnterpriseAlert from '@hashicorp/react-enterprise-alert'
 
-function DocsLayoutWrapper(pageMeta) {
+const DEFAULT_COMPONENTS = { Tabs, Tab, EnterpriseAlert }
+
+export default function DocsLayoutWrapper(pageMeta) {
   function DocsLayout(props) {
     return (
-      <DocsPage
-        {...props}
-        orderData={orderData}
-        frontMatter={frontMatter}
-        category="docs"
-        pageMeta={pageMeta}
-      />
+      <MDXProvider components={DEFAULT_COMPONENTS}>
+        <DocsPage
+          {...props}
+          product="vault"
+          head={{
+            is: Head,
+            title: `${pageMeta.page_title} | Vault by HashiCorp`,
+            description: pageMeta.description,
+            siteName: 'Vault by HashiCorp',
+          }}
+          sidenav={{
+            Link,
+            category: 'docs',
+            currentPage: props.path,
+            data,
+            order,
+          }}
+          resourceURL={`https://github.com/hashicorp/vault/blob/master/website/pages/${pageMeta.__resourcePath}`}
+        />
+      </MDXProvider>
     )
   }
 
-  DocsLayout.getInitialProps = getInitialProps
+  DocsLayout.getInitialProps = ({ asPath }) => ({ path: asPath })
 
   return DocsLayout
 }
-
-export default DocsLayoutWrapper

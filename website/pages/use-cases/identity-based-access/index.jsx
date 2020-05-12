@@ -27,13 +27,13 @@ export default function DataEncryptionUseCase() {
           <BeforeAfterDiagram
             beforeImage={{
               url: require('./img/challenge.png'),
-              format: 'png'
+              format: 'png',
             }}
             beforeHeadline="The Challenge"
             beforeContent="With the proliferation of different clouds, services, and systems all with their own identity providers, organizations need a way to manage identity sprawl"
             afterImage={{
               url: require('./img/solution.png'),
-              format: 'png'
+              format: 'png',
             }}
             afterHeadline="The Solution"
             afterContent="Vault merges identities across providers and uses a unified ACL system to broker access to systems and secrets"
@@ -57,23 +57,42 @@ export default function DataEncryptionUseCase() {
           </div>
           <div className="content logo-grid">
             <ul className="g-logo-grid large">
-              {[
-                'aws',
-                'azure',
-                'gcp',
-                'kubernetes',
-                'nomad',
-                'okta',
-                'pivotalcf',
-                'ssh'
-              ].map(logo => (
-                <li key={logo}>
-                  <img
-                    src={require(`./img/logos/${logo}.png`)}
-                    alt="company logo"
-                  />
-                </li>
-              ))}
+              <li key="aws">
+                <img src={require('./img/logos/aws.png')} alt="company logo" />
+              </li>
+              <li key="azure">
+                <img
+                  src={require('./img/logos/azure.png')}
+                  alt="company logo"
+                />
+              </li>
+              <li key="gcp">
+                <img src={require('./img/logos/gcp.png')} alt="company logo" />
+              </li>
+              <li key="kubernetes">
+                <img
+                  src={require('./img/logos/kubernetes.png')}
+                  alt="company logo"
+                />
+              </li>
+              <li key="nomad">
+                <img
+                  src={require('./img/logos/nomad.png')}
+                  alt="company logo"
+                />
+              </li>
+              <li key="okta">
+                <img src={require('./img/logos/okta.png')} alt="company logo" />
+              </li>
+              <li key="pivotalcf">
+                <img
+                  src={require('./img/logos/pivotalcf.png')}
+                  alt="company logo"
+                />
+              </li>
+              <li key="ssh">
+                <img src={require('./img/logos/ssh.png')} alt="company logo" />
+              </li>
             </ul>
           </div>
         </div>
@@ -88,9 +107,9 @@ Integrated identities across platforms and using this information for policy and
               __typename: 'SbcImageRecord',
               image: {
                 url: require('./img/screenshot-entities.png'),
-                format: 'png'
-              }
-            }
+                format: 'png',
+              },
+            },
           }}
         />
 
@@ -103,9 +122,9 @@ Require multiple Identity Entities or members of Identity Groups to authorize an
               __typename: 'SbcImageRecord',
               image: {
                 url: require('./img/screenshot-control-groups.png'),
-                format: 'png'
-              }
-            }
+                format: 'png',
+              },
+            },
           }}
         />
 
@@ -148,8 +167,8 @@ path "group-kv/metadata" {
 
 path "identity/group/id" {
   capabilities = [ "list" ]
-}`
-            }
+}`,
+            },
           }}
         />
 
@@ -163,9 +182,9 @@ Group trusted identities into logical groups for group-based access control.`,
               __typename: 'SbcImageRecord',
               image: {
                 url: require('./img/screenshot-identity-groups.png'),
-                format: 'png'
-              }
-            }
+                format: 'png',
+              },
+            },
           }}
         />
 
@@ -180,8 +199,8 @@ Enforce MFA workflows when accessing a secret or a secret path`,
               code: `$ curl \
 --header "X-Vault-Token: ..." \\
 --header "X-Vault-MFA:my_totp:695452" \\
-http://127.0.0.1:8200/v1/secret/foo`
-            }
+http://127.0.0.1:8200/v1/secret/foo`,
+            },
           }}
         />
       </section>

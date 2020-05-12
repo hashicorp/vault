@@ -146,7 +146,7 @@ You are going to perform the following:
 operators who have the privileges to create policies and configure entities and
 groups.
 
-### <a name="step1"></a>Step 1: Implement a control group
+### Step 1: Implement a control group ((#step1))
 
 (**Persona:** admin)
 
@@ -212,7 +212,7 @@ groups.
     $ vault kv put EU_GDPR_data/orders/acct1 order_number="12345678" product_id="987654321"
     ```
 
-### <a name="step2"></a>Step 2: Deploy the policies
+### Step 2: Deploy the policies ((#step2))
 
 (**Persona:** admin)
 
@@ -275,7 +275,7 @@ then login.
 
 1. Repeat the steps to create a policy for **`acct_manager`**.
 
-### <a name="step3"></a>Step 3: Setup entities and a group
+### Step 3: Setup entities and a group ((#step3))
 
 (**Persona:** admin)
 
@@ -393,7 +393,7 @@ $ vault write identity/group name="acct_manager" \
 1.  Enter the `Ellen Wright` entity ID in the **Member Entity IDs** field, and
     then click **Create**.
 
-### <a name="step4"></a>Step 4: Verification
+### Step 4: Verification ((#step4))
 
 (**Persona:** bob and ellen)
 
@@ -607,7 +607,7 @@ Groups](/img/vault-ctrl-grp-6.png)
 > Bob needs to request data access via CLI or API. Once the access request was
 > approved, use the CLI or API to unwrap the secrets.
 
-### <a name="step5"></a>Step 5: ACL Policy vs. Sentinel Policy
+### Step 5: ACL Policy vs. Sentinel Policy ((#step5))
 
 Although the [**`read-gdpr-order.hcl`**](#step1) was written as ACL policy, you
 can implement Control Groups in either ACL or Sentinel policies.

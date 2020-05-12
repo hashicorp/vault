@@ -31,7 +31,7 @@ If a role is specified, the role may override parameters specified here.
 
 Create a token attached to specific policies:
 
-```text
+```shell-session
 $ vault token create -policy=my-policy -policy=other-policy
 Key                Value
 ---                -----
@@ -44,7 +44,7 @@ token_policies     [default my-policy other-policy]
 
 Create a periodic token:
 
-```text
+```shell-session
 $ vault token create -period=30m
 Key                Value
 ---                -----

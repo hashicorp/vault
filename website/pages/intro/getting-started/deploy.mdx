@@ -52,7 +52,7 @@ Starting a local Consul instance takes only a few minutes. Just follow the
 [Consul Getting Started Guide](https://www.consul.io/intro/getting-started/install)
 up to the point where you have installed Consul and started it with this command:
 
-```text
+```shell-session
 $ consul agent -dev
 ```
 
@@ -62,7 +62,7 @@ With the configuration in place, starting the server is simple, as shown below.
 Modify the `-config` flag to point to the proper path where you saved the
 configuration above.
 
-```text
+```shell-session
 $ vault server -config=config.hcl
 ==> Vault server configuration:
 
@@ -87,7 +87,7 @@ by _initializing_ it.
 
 On Linux, Vault may fail to start with the following error:
 
-```text
+```shell-session
 $ vault server -config=example.hcl
 Error initializing core: Failed to lock memory: cannot allocate memory
 
@@ -114,7 +114,7 @@ During initialization, the encryption keys are generated, unseal keys are
 created, and the initial root token is setup. To initialize Vault use `vault operator init`. This is an _unauthenticated_ request, but it only works on brand new
 Vaults with no data:
 
-```text
+```shell-session
 $ vault operator init
 Unseal Key 1: E4GnjX+VP9G50uWQNcwpCflzGAMKGR38BbQywgq4I6L8
 Unseal Key 2: PYMxcCOswEYMNz7N6UW53Up6nu6y+SjAPwTJOTtkju3d
@@ -171,7 +171,7 @@ can it be reconstructed and your data finally accessed.
 
 Begin unsealing the Vault:
 
-```text
+```shell-session
 $ vault operator unseal
 Unseal Key (will be hidden):
 Key                Value
@@ -203,7 +203,7 @@ the vault you must use three _different_ keys, the same key repeated will not
 work. As you use keys, as long as they are correct, you should soon see output
 like this:
 
-```text
+```shell-session
 $ vault operator unseal
 Unseal Key (will be hidden):
 # ...
@@ -234,7 +234,7 @@ orders, etc. in order to understand the unseal process.
 Finally, authenticate as the initial root token (it was included in the output
 with the unseal keys):
 
-```text
+```shell-session
 $ vault login 14d1316e-78f6-910b-a4cc-9ba6697ec814
 Success! You are now authenticated. The token information displayed below
 is already stored in the token helper. You do NOT need to run "vault login"
