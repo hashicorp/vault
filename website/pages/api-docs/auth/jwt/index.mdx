@@ -143,6 +143,9 @@ entities attempting to login. At least one of the bound values must be set.
 - `verbose_oidc_logging` `(bool: false)` - Log received OIDC tokens and claims when debug-level
   logging is active. Not recommended in production since sensitive information may be present
   in OIDC responses.
+- `policies_claim` `(string: <optional>)` - The claim to use to uniquely identify
+  the set of policies that should be applied to the token upon successful login. 
+  The claim value must be a list of strings that correspond to existing policy names.
 
 @include 'partials/tokenfields.mdx'
 
@@ -155,6 +158,7 @@ entities attempting to login. At least one of the bound values must be set.
   "bound_audiences": "https://myco.test",
   "user_claim": "https://vault/user",
   "groups_claim": "https://vault/groups",
+  "policies_claim": "https://vault/policies",
   "bound_claims": {
     "department": "engineering",
     "sector": "7g"
@@ -208,6 +212,7 @@ $ curl \
     "bound_cidrs": [],
     "user_claim": "https://vault/user",
     "groups_claim": "https://vault/groups",
+    "policies_claim": "https://vault/policies",
     "policies": [
       "dev",
       "prod"
