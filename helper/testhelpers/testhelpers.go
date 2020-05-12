@@ -389,7 +389,7 @@ func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]by
 // TestRaftServerAddressProvider is a ServerAddressProvider that uses the
 // ClusterAddr() of each node to provide raft addresses.
 //
-// Note that TestRaftServerAddressProvider  should only be used in cases where
+// Note that TestRaftServerAddressProvider should only be used in cases where
 // cores that are part of a raft configuration have already had
 // startClusterListener() called (via either unsealing or raft joining).
 type TestRaftServerAddressProvider struct {

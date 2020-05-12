@@ -14,16 +14,31 @@ import (
 )
 
 // ReusableStorage is a physical backend that can be re-used across
-// multiple test clusters in sequence.
+// multiple test clusters in sequence.  It is useful for testing things like
+// seal migration, wherein a given physical backend must be re-used as several
+// test clusters are sequentially created, tested, and discarded.
 type ReusableStorage struct {
-	IsRaft  bool
-	Setup   ClusterSetupMutator
+
+	// IsRaft specifies whether the storage is using a raft backend.
+	IsRaft bool
+
+	// Setup should be called just after a test cluster is started.
+	Setup ClusterSetupMutator
+
+	// Cleanup should be called after test cluster is no longer
+	// needed -- generally in a defer, just before the call to
+	// cluster.Cleanup().
 	Cleanup func(t testing.T, cluster *vault.TestCluster)
 }
 
+// StorageCleanup is a function that should be called once -- at the very end
+// of a given unit test, after each of the sequence of clusters have been
+// created, tested, and discarded.
+type StorageCleanup func()
+
 // MakeReusableStorage makes a physical backend that can be re-used across
 // multiple test clusters in sequence.
-func MakeReusableStorage(t testing.T, logger hclog.Logger, bundle *vault.PhysicalBackendBundle) (ReusableStorage, func()) {
+func MakeReusableStorage(t testing.T, logger hclog.Logger, bundle *vault.PhysicalBackendBundle) (ReusableStorage, StorageCleanup) {
 
 	storage := ReusableStorage{
 		IsRaft: false,
@@ -58,7 +73,7 @@ func MakeReusableStorage(t testing.T, logger hclog.Logger, bundle *vault.Physica
 
 // MakeReusableRaftStorage makes a physical raft backend that can be re-used
 // across multiple test clusters in sequence.
-func MakeReusableRaftStorage(t testing.T, logger hclog.Logger) (ReusableStorage, func()) {
+func MakeReusableRaftStorage(t testing.T, logger hclog.Logger) (ReusableStorage, StorageCleanup) {
 
 	raftDirs := make([]string, vault.DefaultNumCores)
 	for i := 0; i < vault.DefaultNumCores; i++ {
