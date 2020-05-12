@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
+
 	"github.com/hashicorp/go-hclog"
 	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -81,7 +83,6 @@ func initializeStorage(t *testing.T, logger hclog.Logger, storage teststorage.Re
 	verifyRaftConfiguration(t, leader)
 
 	// Wait until unsealed
-	vault.TestWaitActive(t, leader.Core)
 	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
 
 	// Write a secret that we will read back out later.
@@ -124,12 +125,12 @@ func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.Reusabl
 		}
 	}
 
-	//leader := cluster.Cores[0]
-	//client := leader.Client
-	//client.SetToken(rootToken)
+	leader := cluster.Cores[0]
+	client := leader.Client
+	client.SetToken(rootToken)
 
 	// Set Raft address providers
-	provider := &testhelpers.FooServerAddressProvider{
+	provider := &testhelpers.ServerAddressProvider{
 		Entries: map[raftlib.ServerID]raftlib.ServerAddress{
 			"core-0": "127.0.0.1:50100",
 			"core-1": "127.0.0.1:50101",
@@ -138,18 +139,29 @@ func reuseStorage(t *testing.T, logger hclog.Logger, storage teststorage.Reusabl
 	}
 	testhelpers.SetRaftAddressProviders(t, cluster, provider)
 
-	//ServerAddr
-
 	// Unseal cores
 	cluster.BarrierKeys = keys
 	for _, core := range cluster.Cores {
 		cluster.UnsealCore(t, core)
-		verifyRaftConfiguration(t, core)
 		//vault.TestWaitActive(t, core.Core)
 	}
+	time.Sleep(15 * time.Second)
+	verifyRaftConfiguration(t, leader)
 
 	// Wait until unsealed
 	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
+
+	// Read the secret
+	secret, err := client.Logical().Read("secret/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(secret.Data, map[string]interface{}{"zork": "quux"}); len(diff) > 0 {
+		t.Fatal(diff)
+	}
+
+	// Seal the cluster
+	cluster.EnsureCoresSealed(t)
 }
 
 //func getRaftConfiguration(t *testing.T, client *api.Client) []*raft.RaftServer {

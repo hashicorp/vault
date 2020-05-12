@@ -43,7 +43,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 	cluster.Start()
 	defer cluster.Cleanup()
 
-	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
+	addressProvider := &testhelpers.ClusterServerAddressProvider{Cluster: cluster}
 
 	leaderCore := cluster.Cores[0]
 	leaderAPI := leaderCore.Client.Address()
@@ -122,7 +122,7 @@ func TestRaft_Join(t *testing.T) {
 	cluster.Start()
 	defer cluster.Cleanup()
 
-	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
+	addressProvider := &testhelpers.ClusterServerAddressProvider{Cluster: cluster}
 
 	leaderCore := cluster.Cores[0]
 	leaderAPI := leaderCore.Client.Address()

@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strconv"
 	"sync"
 	"time"
@@ -519,10 +518,6 @@ func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error
 // the raft nodes to communicate.
 func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	b.logger.Trace("setting up raft cluster")
-
-	fmt.Printf("=======================================================================================\n")
-	fmt.Printf("raft.SetupCluster %#v\n", b.serverAddressProvider)
-	debug.PrintStack()
 
 	b.l.Lock()
 	defer b.l.Unlock()

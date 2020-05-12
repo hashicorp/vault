@@ -5,9 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 	"runtime/debug"
-	"testing"
 
-	mtesting "github.com/mitchellh/go-testing-interface"
+	"github.com/mitchellh/go-testing-interface"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/physical/raft"
@@ -19,18 +18,18 @@ import (
 type ReusableStorage struct {
 	IsRaft  bool
 	Setup   ClusterSetupMutator
-	Cleanup func(t *testing.T, cluster *vault.TestCluster)
+	Cleanup func(t testing.T, cluster *vault.TestCluster)
 }
 
-// MakeReusableStorage makes a backend that can be re-used across
+// MakeReusableStorage makes a physical backend that can be re-used across
 // multiple test clusters in sequence.
-func MakeReusableStorage(t *testing.T, logger hclog.Logger, bundle *vault.PhysicalBackendBundle) (ReusableStorage, func()) {
+func MakeReusableStorage(t testing.T, logger hclog.Logger, bundle *vault.PhysicalBackendBundle) (ReusableStorage, func()) {
 
 	storage := ReusableStorage{
 		IsRaft: false,
 
 		Setup: func(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
-			opts.PhysicalFactory = func(t mtesting.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
 				if coreIdx == 0 {
 					// We intentionally do not clone the backend's Cleanup func,
 					// because we don't want it to be run until the entire test has
@@ -44,7 +43,7 @@ func MakeReusableStorage(t *testing.T, logger hclog.Logger, bundle *vault.Physic
 			}
 		},
 
-		Cleanup: func(t *testing.T, cluster *vault.TestCluster) {
+		Cleanup: func(t testing.T, cluster *vault.TestCluster) {
 		},
 	}
 
@@ -57,9 +56,9 @@ func MakeReusableStorage(t *testing.T, logger hclog.Logger, bundle *vault.Physic
 	return storage, cleanup
 }
 
-// MakeReusableRaftStorage makes a raft backend that can be re-used across
-// multiple test clusters in sequence.
-func MakeReusableRaftStorage(t *testing.T, logger hclog.Logger) (ReusableStorage, func()) {
+// MakeReusableRaftStorage makes a physical raft backend that can be re-used
+// across multiple test clusters in sequence.
+func MakeReusableRaftStorage(t testing.T, logger hclog.Logger) (ReusableStorage, func()) {
 
 	raftDirs := make([]string, vault.DefaultNumCores)
 	for i := 0; i < vault.DefaultNumCores; i++ {
@@ -72,12 +71,12 @@ func MakeReusableRaftStorage(t *testing.T, logger hclog.Logger) (ReusableStorage
 		Setup: func(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 			conf.DisablePerformanceStandby = true
 			opts.KeepStandbysSealed = true
-			opts.PhysicalFactory = func(t mtesting.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
 				return makeReusableRaftBackend(t, coreIdx, logger, raftDirs[coreIdx])
 			}
 		},
 
-		Cleanup: func(t *testing.T, cluster *vault.TestCluster) {
+		Cleanup: func(t testing.T, cluster *vault.TestCluster) {
 			// Close open files.
 			for _, core := range cluster.Cores {
 				raftStorage := core.UnderlyingRawStorage.(*raft.RaftBackend)
@@ -97,7 +96,7 @@ func MakeReusableRaftStorage(t *testing.T, logger hclog.Logger) (ReusableStorage
 	return storage, cleanup
 }
 
-func makeRaftDir(t *testing.T) string {
+func makeRaftDir(t testing.T) string {
 	raftDir, err := ioutil.TempDir("", "vault-raft-")
 	if err != nil {
 		t.Fatal(err)
@@ -106,7 +105,7 @@ func makeRaftDir(t *testing.T) string {
 	return raftDir
 }
 
-func makeReusableRaftBackend(t mtesting.T, coreIdx int, logger hclog.Logger, raftDir string) *vault.PhysicalBackendBundle {
+func makeReusableRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, raftDir string) *vault.PhysicalBackendBundle {
 
 	nodeID := fmt.Sprintf("core-%d", coreIdx)
 	conf := map[string]string{
@@ -125,31 +124,3 @@ func makeReusableRaftBackend(t mtesting.T, coreIdx int, logger hclog.Logger, raf
 		Backend: backend,
 	}
 }
-
-//// SetRaftAddressProviders sets a ServerAddressProvider for all the raft cores
-//func SetRaftAddressProviders(t mtesting.T, cluster *vault.TestCluster) {
-//
-//	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
-//	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
-//
-//	for _, core := range cluster.Cores {
-//		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-//	}
-//}
-//
-//// JoinRaftFollower joins a follower to the cluster
-//func JoinRaftFollower(t *testing.T, cluster *vault.TestCluster, leader, follower *vault.TestClusterCore) {
-//
-//	info := []*raft.LeaderJoinInfo{
-//		&raft.LeaderJoinInfo{
-//			LeaderAPIAddr: leader.Client.Address(),
-//			TLSConfig:     leader.TLSConfig,
-//		},
-//	}
-//
-//	ctx := namespace.RootContext(context.Background())
-//	_, err := follower.JoinRaftCluster(ctx, info, false)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//}

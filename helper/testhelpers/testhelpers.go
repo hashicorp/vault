@@ -386,11 +386,13 @@ func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]by
 	return newKeys
 }
 
-type TestRaftServerAddressProvider struct {
+// ClusterServerAddressProvider is a raft library ServerAddressProvider that
+// uses the ClusterAddr() of each node to provide addresses.
+type ClusterServerAddressProvider struct {
 	Cluster *vault.TestCluster
 }
 
-func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.ServerAddress, error) {
+func (p *ClusterServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.ServerAddress, error) {
 	for _, core := range p.Cluster.Cores {
 		if core.NodeID == string(id) {
 			parsed, err := url.Parse(core.ClusterAddr())
@@ -398,7 +400,6 @@ func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib
 				return "", err
 			}
 
-			fmt.Printf("ServerAddr %s %s\n", id, parsed.Host)
 			return raftlib.ServerAddress(parsed.Host), nil
 		}
 	}
@@ -406,8 +407,9 @@ func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib
 	return "", errors.New("could not find cluster addr")
 }
 
+// RaftClusterJoinNodes does a raft join on the nodes of a cluster.
 func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
-	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
+	addressProvider := &ClusterServerAddressProvider{Cluster: cluster}
 
 	leaderCore := cluster.Cores[0]
 	leaderAPI := leaderCore.Client.Address()
@@ -459,18 +461,21 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	WaitForNCoresUnsealed(t, cluster, 3)
 }
 
-type FooServerAddressProvider struct {
+// ServerAddressProvider is a raft library ServerAddressProvider that uses a
+// predetermined map of node addresses.
+type ServerAddressProvider struct {
 	Entries map[raftlib.ServerID]raftlib.ServerAddress
 }
 
-func (p *FooServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.ServerAddress, error) {
+func (p *ServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.ServerAddress, error) {
 	if addr, ok := p.Entries[id]; ok {
 		return addr, nil
 	}
 	return "", errors.New("could not find cluster addr")
 }
 
-// SetRaftAddressProviders sets a ServerAddressProvider for all the raft cores
+// SetRaftAddressProviders sets a ServerAddressProvider for all the nodes in a
+// cluster.
 func SetRaftAddressProviders(t testing.T, cluster *vault.TestCluster, provider raftlib.ServerAddressProvider) {
 
 	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
