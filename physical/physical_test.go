@@ -154,8 +154,8 @@ func reuseStorage(
 
 	cluster.BarrierKeys = keys
 	if storage.IsRaft {
-		// Set predetermined Raft address providers
-		provider := testhelpers.NewServerAddressProvider(baseClusterPort)
+		// Set hardcoded Raft address providers
+		provider := testhelpers.NewHardcodedServerAddressProvider(baseClusterPort)
 		testhelpers.SetRaftAddressProviders(t, cluster, provider)
 
 		// Unseal cores

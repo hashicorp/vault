@@ -386,13 +386,13 @@ func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]by
 	return newKeys
 }
 
-// ClusterServerAddressProvider is a raftlib.ServerAddressProvider that
+// TestRaftServerAddressProvider is a raftlib.ServerAddressProvider that
 // uses the ClusterAddr() of each node to provide addresses.
-type ClusterServerAddressProvider struct {
+type TestRaftServerAddressProvider struct {
 	Cluster *vault.TestCluster
 }
 
-func (p *ClusterServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.ServerAddress, error) {
+func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.ServerAddress, error) {
 	for _, core := range p.Cluster.Cores {
 		if core.NodeID == string(id) {
 			parsed, err := url.Parse(core.ClusterAddr())
@@ -409,7 +409,7 @@ func (p *ClusterServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.
 
 // RaftClusterJoinNodes does a raft join on the nodes of a cluster.
 func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
-	addressProvider := &ClusterServerAddressProvider{Cluster: cluster}
+	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
 
 	leaderCore := cluster.Cores[0]
 	leaderAPI := leaderCore.Client.Address()
@@ -461,25 +461,25 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	WaitForNCoresUnsealed(t, cluster, 3)
 }
 
-// ServerAddressProvider is a raftlib.ServerAddressProvider that uses a
-// predetermined map of node addresses.  It is useful in cases where the
-// configuration is known ahead of time, but some of the cores have not yet had
-// their cluster listener started (via either unsealing or raft joining), and
-// thus do not yet have a ClusterAddr() assigned.
-type ServerAddressProvider struct {
+// HardcodedServerAddressProvider is a raftlib.ServerAddressProvider that uses
+// a hardcoded map of raft node addresses.  It is useful in cases where the
+// raft configuration is known ahead of time, but some of the cores have not
+// yet had their cluster listener started (via either unsealing or raft
+// joining), and thus do not yet have a ClusterAddr() assigned.
+type HardcodedServerAddressProvider struct {
 	Entries map[raftlib.ServerID]raftlib.ServerAddress
 }
 
-func (p *ServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.ServerAddress, error) {
+func (p *HardcodedServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.ServerAddress, error) {
 	if addr, ok := p.Entries[id]; ok {
 		return addr, nil
 	}
 	return "", errors.New("could not find cluster addr")
 }
 
-// NewServerAddressProvider is a convenience function that makes a
-// predetermined ServerAddressProvider from a given cluster address base port.
-func NewServerAddressProvider(baseClusterPort int) raftlib.ServerAddressProvider {
+// NewHardcodedServerAddressProvider is a convenience function that makes a
+// ServerAddressProvider from a given cluster address base port.
+func NewHardcodedServerAddressProvider(baseClusterPort int) raftlib.ServerAddressProvider {
 
 	entries := make(map[raftlib.ServerID]raftlib.ServerAddress)
 
@@ -489,7 +489,7 @@ func NewServerAddressProvider(baseClusterPort int) raftlib.ServerAddressProvider
 		entries[raftlib.ServerID(id)] = raftlib.ServerAddress(addr)
 	}
 
-	return &ServerAddressProvider{
+	return &HardcodedServerAddressProvider{
 		entries,
 	}
 }
