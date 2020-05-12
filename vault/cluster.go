@@ -315,9 +315,7 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 	}
 	if strings.HasSuffix(c.ClusterAddr(), ":0") {
 		// If we listened on port 0, record the port the OS gave us.
-		addr := fmt.Sprintf("https://%s", c.getClusterListener().Addr())
-		c.logger.Debug("cluster listener is using OS-provided port", "addr", addr)
-		c.clusterAddr.Store(addr)
+		c.clusterAddr.Store(fmt.Sprintf("https://%s", c.getClusterListener().Addr()))
 	}
 	return nil
 }
