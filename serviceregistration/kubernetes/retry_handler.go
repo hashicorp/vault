@@ -123,8 +123,8 @@ func (r *retryHandler) Notify(patch *client.Patch) {
 	}
 }
 
-// setInitialState sets the initial state remotely. This should be called with
-// the lock held.
+// setInitialStateInternal sets the initial state remotely. This should be
+// called with the lock held.
 func (r *retryHandler) setInitialStateInternal() error {
 	// If this is set, we return immediately
 	if r.initialStateSet {
