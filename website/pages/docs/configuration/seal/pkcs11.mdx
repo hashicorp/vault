@@ -112,6 +112,11 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   - `0x0009` `CKM_RSA_PKCS_OAEP`
   - `0x0001` `CKM_RSA_PKCS`
 
+  ~> **Warning**: CKM_RSA_PKCS specifies the PKCS #1 v1.5 padding scheme, which is
+  subject to several padding oracle attacks.  Use of CKM_RSA_PKCS_OAEP is
+  recommended over CKM_RSA_PKCS.
+
+
 - `hmac_mechanism` `(string: "0x0251")`: The encryption/decryption mechanism to
   use, specified as a decimal or hexadecimal (prefixed by `0x`) string.
   Currently only `0x0251` (corresponding to `CKM_SHA256_HMAC` from the
