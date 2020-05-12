@@ -386,8 +386,12 @@ func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]by
 	return newKeys
 }
 
-// TestRaftServerAddressProvider is a raftlib.ServerAddressProvider that
-// uses the ClusterAddr() of each node to provide addresses.
+// TestRaftServerAddressProvider is a ServerAddressProvider that uses the
+// ClusterAddr() of each node to provide raft addresses.
+//
+// Note that TestRaftServerAddressProvider  should only be used in cases where
+// cores that are part of a raft configuration have already had
+// startClusterListener() called (via either unsealing or raft joining).
 type TestRaftServerAddressProvider struct {
 	Cluster *vault.TestCluster
 }
@@ -407,7 +411,6 @@ func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib
 	return "", errors.New("could not find cluster addr")
 }
 
-// RaftClusterJoinNodes does a raft join on the nodes of a cluster.
 func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
 
@@ -461,11 +464,13 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	WaitForNCoresUnsealed(t, cluster, 3)
 }
 
-// HardcodedServerAddressProvider is a raftlib.ServerAddressProvider that uses
-// a hardcoded map of raft node addresses.  It is useful in cases where the
-// raft configuration is known ahead of time, but some of the cores have not
-// yet had their cluster listener started (via either unsealing or raft
-// joining), and thus do not yet have a ClusterAddr() assigned.
+// HardcodedServerAddressProvider is a ServerAddressProvider that uses
+// a hardcoded map of raft node addresses.
+//
+// It is useful in cases where the raft configuration is known ahead of time,
+// but some of the cores have not yet had startClusterListener() called (via
+// either unsealing or raft joining), and thus do not yet have a ClusterAddr()
+// assigned.
 type HardcodedServerAddressProvider struct {
 	Entries map[raftlib.ServerID]raftlib.ServerAddress
 }
