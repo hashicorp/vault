@@ -35,6 +35,10 @@
       padding: $spacing-l;
       line-height: 1.5;
 
+      &.has-border-danger:hover {
+        box-shadow: none;
+      }
+
       @include until(1320px) {
         // prevent an issue with the card descriptions wrapping and expanding height
         min-height: 250px;
