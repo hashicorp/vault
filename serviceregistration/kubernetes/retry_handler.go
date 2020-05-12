@@ -73,7 +73,7 @@ func (r *retryHandler) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup) {
 	}()
 }
 
-func (r *retryHandler) setInitialState(shutdownCh <-chan struct{}) error {
+func (r *retryHandler) setInitialState(shutdownCh <-chan struct{}) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
@@ -126,6 +126,11 @@ func (r *retryHandler) Notify(patch *client.Patch) {
 // setInitialState sets the initial state remotely. This should be called with
 // the lock held.
 func (r *retryHandler) setInitialStateInternal() error {
+	// If this is set, we return immediately
+	if r.initialStateSet {
+		return nil
+	}
+
 	// Verify that the pod exists and our configuration looks good.
 	pod, err := r.client.GetPod(r.namespace, r.podName)
 	if err != nil {
@@ -187,6 +192,7 @@ func (r *retryHandler) setInitialStateInternal() error {
 			return err
 		}
 	}
+	r.initialStateSet = true
 	return nil
 }
 
@@ -213,17 +219,14 @@ func (r *retryHandler) updateState() {
 
 	// Initial state must be set first, or subsequent notifications we've
 	// received could get smashed by a late-arriving initial state.
-	if !r.initialStateSet {
-		if err := r.setInitialStateInternal(); err != nil {
-			if r.logger.IsWarn() {
-				r.logger.Warn(fmt.Sprintf("unable to set initial state due to %s, will retry", err.Error()))
-			}
-			// On failure, we leave the initial state func populated for
-			// the next retry.
-			return
+	// If the state is already set, this is a no-op.
+	if err := r.setInitialStateInternal(); err != nil {
+		if r.logger.IsWarn() {
+			r.logger.Warn(fmt.Sprintf("unable to set initial state due to %s, will retry", err.Error()))
 		}
-		// On success, we set it to nil and allow the logic to continue.
-		r.initialStateSet = true
+		// On failure, we leave the initial state func populated for
+		// the next retry.
+		return
 	}
 
 	if len(r.patchesToRetry) == 0 {
