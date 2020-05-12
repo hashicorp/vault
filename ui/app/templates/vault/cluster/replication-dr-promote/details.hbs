@@ -28,7 +28,6 @@
             </nav>
           </EmptyState>
         {{else}}
-        <Page.toggle />
         <Page.dashboard
         {{!-- passing in component to render so that the yielded components are flexible based on the dashboard --}}
           @componentToRender='replication-secondary-card' as |Dashboard|>
