@@ -17,19 +17,19 @@
 
   .reindexing-alert,
   .syncing-alert {
-    margin-top: 2rem;
+    margin-top: $spacing-xl;
   }
 
   .selectable-card-container {
-    margin-top: 2rem;
+    margin-top: $spacing-xl;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     grid-template-rows: 1fr;
-    grid-gap: 2rem;
+    grid-gap: $spacing-xl;
 
     .card-container {
       display: grid;
-      grid-gap: 1rem;
+      grid-gap: $spacing-s;
       grid-template-columns: 1fr 1fr;
       grid-template-rows: 0.2fr 1fr 0.2fr;
       padding: $spacing-l;
