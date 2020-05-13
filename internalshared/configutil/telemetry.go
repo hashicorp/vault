@@ -2,6 +2,7 @@ package configutil
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/cli"
 	"google.golang.org/api/option"
@@ -169,11 +171,24 @@ func parseTelemetry(result *SharedConfig, list *ast.ObjectList) error {
 	return nil
 }
 
+type SetupTelemetryOpts struct {
+	Config      *Telemetry
+	Ui          cli.Ui
+	ServiceName string
+	DisplayName string
+	UserAgent   string
+	ClusterName string
+}
+
 // SetupTelemetry is used to setup the telemetry sub-systems and returns the
 // in-memory sink to be used in http configuration
-func SetupTelemetry(telConfig *Telemetry, ui cli.Ui, serviceName, displayName, useragent string) (*metrics.InmemSink, bool, error) {
-	if telConfig == nil {
-		telConfig = &Telemetry{}
+func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.ClusterMetricSink, bool, error) {
+	if opts == nil {
+		return nil, nil, false, errors.New("nil opts passed into SetupTelemetry")
+	}
+
+	if opts.Config == nil {
+		opts.Config = &Telemetry{}
 	}
 
 	/* Setup telemetry
@@ -183,114 +198,114 @@ func SetupTelemetry(telConfig *Telemetry, ui cli.Ui, serviceName, displayName, u
 	inm := metrics.NewInmemSink(10*time.Second, time.Minute)
 	metrics.DefaultInmemSignal(inm)
 
-	if telConfig.MetricsPrefix != "" {
-		serviceName = telConfig.MetricsPrefix
+	if opts.Config.MetricsPrefix != "" {
+		opts.ServiceName = opts.Config.MetricsPrefix
 	}
 
-	metricsConf := metrics.DefaultConfig(serviceName)
-	metricsConf.EnableHostname = !telConfig.DisableHostname
-	metricsConf.EnableHostnameLabel = telConfig.EnableHostnameLabel
+	metricsConf := metrics.DefaultConfig(opts.ServiceName)
+	metricsConf.EnableHostname = !opts.Config.DisableHostname
+	metricsConf.EnableHostnameLabel = opts.Config.EnableHostnameLabel
 
 	// Configure the statsite sink
 	var fanout metrics.FanoutSink
 	var prometheusEnabled bool
 
 	// Configure the Prometheus sink
-	if telConfig.PrometheusRetentionTime != 0 {
+	if opts.Config.PrometheusRetentionTime != 0 {
 		prometheusEnabled = true
 		prometheusOpts := prometheus.PrometheusOpts{
-			Expiration: telConfig.PrometheusRetentionTime,
+			Expiration: opts.Config.PrometheusRetentionTime,
 		}
 
 		sink, err := prometheus.NewPrometheusSinkFrom(prometheusOpts)
 		if err != nil {
-			return nil, false, err
+			return nil, nil, false, err
 		}
 		fanout = append(fanout, sink)
 	}
 
-	if telConfig.StatsiteAddr != "" {
-		sink, err := metrics.NewStatsiteSink(telConfig.StatsiteAddr)
+	if opts.Config.StatsiteAddr != "" {
+		sink, err := metrics.NewStatsiteSink(opts.Config.StatsiteAddr)
 		if err != nil {
-			return nil, false, err
+			return nil, nil, false, err
 		}
 		fanout = append(fanout, sink)
 	}
 
 	// Configure the statsd sink
-	if telConfig.StatsdAddr != "" {
-		sink, err := metrics.NewStatsdSink(telConfig.StatsdAddr)
+	if opts.Config.StatsdAddr != "" {
+		sink, err := metrics.NewStatsdSink(opts.Config.StatsdAddr)
 		if err != nil {
-			return nil, false, err
+			return nil, nil, false, err
 		}
 		fanout = append(fanout, sink)
 	}
 
 	// Configure the Circonus sink
-	if telConfig.CirconusAPIToken != "" || telConfig.CirconusCheckSubmissionURL != "" {
+	if opts.Config.CirconusAPIToken != "" || opts.Config.CirconusCheckSubmissionURL != "" {
 		cfg := &circonus.Config{}
-		cfg.Interval = telConfig.CirconusSubmissionInterval
-		cfg.CheckManager.API.TokenKey = telConfig.CirconusAPIToken
-		cfg.CheckManager.API.TokenApp = telConfig.CirconusAPIApp
-		cfg.CheckManager.API.URL = telConfig.CirconusAPIURL
-		cfg.CheckManager.Check.SubmissionURL = telConfig.CirconusCheckSubmissionURL
-		cfg.CheckManager.Check.ID = telConfig.CirconusCheckID
-		cfg.CheckManager.Check.ForceMetricActivation = telConfig.CirconusCheckForceMetricActivation
-		cfg.CheckManager.Check.InstanceID = telConfig.CirconusCheckInstanceID
-		cfg.CheckManager.Check.SearchTag = telConfig.CirconusCheckSearchTag
-		cfg.CheckManager.Check.DisplayName = telConfig.CirconusCheckDisplayName
-		cfg.CheckManager.Check.Tags = telConfig.CirconusCheckTags
-		cfg.CheckManager.Broker.ID = telConfig.CirconusBrokerID
-		cfg.CheckManager.Broker.SelectTag = telConfig.CirconusBrokerSelectTag
+		cfg.Interval = opts.Config.CirconusSubmissionInterval
+		cfg.CheckManager.API.TokenKey = opts.Config.CirconusAPIToken
+		cfg.CheckManager.API.TokenApp = opts.Config.CirconusAPIApp
+		cfg.CheckManager.API.URL = opts.Config.CirconusAPIURL
+		cfg.CheckManager.Check.SubmissionURL = opts.Config.CirconusCheckSubmissionURL
+		cfg.CheckManager.Check.ID = opts.Config.CirconusCheckID
+		cfg.CheckManager.Check.ForceMetricActivation = opts.Config.CirconusCheckForceMetricActivation
+		cfg.CheckManager.Check.InstanceID = opts.Config.CirconusCheckInstanceID
+		cfg.CheckManager.Check.SearchTag = opts.Config.CirconusCheckSearchTag
+		cfg.CheckManager.Check.DisplayName = opts.Config.CirconusCheckDisplayName
+		cfg.CheckManager.Check.Tags = opts.Config.CirconusCheckTags
+		cfg.CheckManager.Broker.ID = opts.Config.CirconusBrokerID
+		cfg.CheckManager.Broker.SelectTag = opts.Config.CirconusBrokerSelectTag
 
 		if cfg.CheckManager.API.TokenApp == "" {
-			cfg.CheckManager.API.TokenApp = serviceName
+			cfg.CheckManager.API.TokenApp = opts.ServiceName
 		}
 
 		if cfg.CheckManager.Check.DisplayName == "" {
-			cfg.CheckManager.Check.DisplayName = displayName
+			cfg.CheckManager.Check.DisplayName = opts.DisplayName
 		}
 
 		if cfg.CheckManager.Check.SearchTag == "" {
-			cfg.CheckManager.Check.SearchTag = fmt.Sprintf("service:%s", serviceName)
+			cfg.CheckManager.Check.SearchTag = fmt.Sprintf("service:%s", opts.ServiceName)
 		}
 
 		sink, err := circonus.NewCirconusSink(cfg)
 		if err != nil {
-			return nil, false, err
+			return nil, nil, false, err
 		}
 		sink.Start()
 		fanout = append(fanout, sink)
 	}
 
-	if telConfig.DogStatsDAddr != "" {
+	if opts.Config.DogStatsDAddr != "" {
 		var tags []string
 
-		if telConfig.DogStatsDTags != nil {
-			tags = telConfig.DogStatsDTags
+		if opts.Config.DogStatsDTags != nil {
+			tags = opts.Config.DogStatsDTags
 		}
 
-		sink, err := datadog.NewDogStatsdSink(telConfig.DogStatsDAddr, metricsConf.HostName)
+		sink, err := datadog.NewDogStatsdSink(opts.Config.DogStatsDAddr, metricsConf.HostName)
 		if err != nil {
-			return nil, false, errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
+			return nil, nil, false, errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
 		}
 		sink.SetTags(tags)
 		fanout = append(fanout, sink)
 	}
 
 	// Configure the stackdriver sink
-	if telConfig.StackdriverProjectID != "" {
-		client, err := monitoring.NewMetricClient(context.Background(), option.WithUserAgent(useragent))
+	if opts.Config.StackdriverProjectID != "" {
+		client, err := monitoring.NewMetricClient(context.Background(), option.WithUserAgent(opts.UserAgent))
 		if err != nil {
-			return nil, false, fmt.Errorf("Failed to create stackdriver client: %v", err)
+			return nil, nil, false, fmt.Errorf("Failed to create stackdriver client: %v", err)
 		}
 		sink := stackdriver.NewSink(client, &stackdriver.Config{
 			LabelExtractor: stackdrivervault.Extractor,
 			Bucketer:       stackdrivervault.Bucketer,
-			ProjectID:      telConfig.StackdriverProjectID,
-			Location:       telConfig.StackdriverLocation,
-			Namespace:      telConfig.StackdriverNamespace,
-			DebugLogs:      telConfig.StackdriverDebugLogs,
+			ProjectID:      opts.Config.StackdriverProjectID,
+			Location:       opts.Config.StackdriverLocation,
+			Namespace:      opts.Config.StackdriverNamespace,
+			DebugLogs:      opts.Config.StackdriverDebugLogs,
 		})
 		fanout = append(fanout, sink)
 	}
@@ -298,8 +313,8 @@ func SetupTelemetry(telConfig *Telemetry, ui cli.Ui, serviceName, displayName, u
 	// Initialize the global sink
 	if len(fanout) > 1 {
 		// Hostname enabled will create poor quality metrics name for prometheus
-		if !telConfig.DisableHostname {
-			ui.Warn("telemetry.disable_hostname has been set to false. Recommended setting is true for Prometheus to avoid poorly named metrics.")
+		if !opts.Config.DisableHostname {
+			opts.Ui.Warn("telemetry.disable_hostname has been set to false. Recommended setting is true for Prometheus to avoid poorly named metrics.")
 		}
 	} else {
 		metricsConf.EnableHostname = false
@@ -308,8 +323,17 @@ func SetupTelemetry(telConfig *Telemetry, ui cli.Ui, serviceName, displayName, u
 	_, err := metrics.NewGlobal(metricsConf, fanout)
 
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 
-	return inm, prometheusEnabled, nil
+	// Intialize a wrapper around the global sink; this will be passed to Core
+	// and to any backend.
+	wrapper := &metricsutil.ClusterMetricSink{
+		ClusterName:         opts.ClusterName,
+		MaxGaugeCardinality: 500,
+		GaugeInterval:       10 * time.Minute,
+		Sink:                fanout,
+	}
+
+	return inm, wrapper, prometheusEnabled, nil
 }

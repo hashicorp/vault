@@ -911,7 +911,14 @@ func (c *ServerCommand) Run(args []string) int {
 				"in a Docker container, provide the IPC_LOCK cap to the container."))
 	}
 
-	inmemMetrics, prometheusEnabled, err := configutil.SetupTelemetry(config.Telemetry, c.UI, "vault", "Vault", useragent.String())
+	inmemMetrics, metricSink, prometheusEnabled, err := configutil.SetupTelemetry(&configutil.SetupTelemetryOpts{
+		Config:      config.Telemetry,
+		Ui:          c.UI,
+		ServiceName: "vault",
+		DisplayName: "Vault",
+		UserAgent:   useragent.String(),
+		ClusterName: config.ClusterName,
+	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
 		return 1
