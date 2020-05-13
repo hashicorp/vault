@@ -58,7 +58,8 @@
             href={{primaryClusterAddr}}
             class="link"
             target="_blank"
-            rel="noreferrer noopener"
+            rel="noreferrer noopener" 
+            data-test-primaryClusterAddr
           >
             {{primaryClusterAddr}}
           </a>
@@ -67,7 +68,7 @@
         <p class="has-text-grey is-size-8">unknown</p>
       {{/if}}
     </div>
-    <h2 class="title is-3 grid-item-left-bottom">{{format-number lastRemoteWAL}}</h2>
+    <h2 class="title is-3 grid-item-left-bottom" data-test-lastRemoteWAL>{{format-number lastRemoteWAL}}</h2>
     <div class="grid-item-right-bottom">
         {{!-- Empty --}}
     </div>

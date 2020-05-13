@@ -332,19 +332,31 @@
     <p>{{cluster.replicationModeStatus.cluster_id}}</p>
     <div class="replication">
       <ReplicationPage @model={{cluster}} as |Page|>
-        <Page.dashboard @data={{cluster}} @componentToRender='replication-primary-card' as |Dashboard|>
-          <Dashboard.card
-            @title='State'
-            @description='Updated every ten seconds.'
-            @glyph={{get (cluster-states replicationAttrs.state) "glyph"}}
-            @metric={{replicationAttrs.state}} />
-          <Dashboard.card
-            @title='Last WAL entry'
-            @description='Index of last Write Ahead Logs entry written on local storage.'
-            @metric={{replicationAttrs.lastWAL}} />
-          <Dashboard.secondaryCard
-            @cluster={{cluster}}
-            @replicationAttrs={{replicationAttrs}} />
+        <Page.dashboard 
+          @data={{cluster}}
+          @componentToRender={{if (eq replicationAttrs.mode 'secondary') 'replication-secondary-card' 'replication-primary-card' }}
+          as |Dashboard|>
+          {{#if (eq replicationAttrs.mode 'secondary')}}
+            <Dashboard.card
+              @title="States"
+            />
+            <Dashboard.card
+              @title="Primary cluster"
+            />
+          {{else}}
+            <Dashboard.card
+              @title='State'
+              @description='Updated every ten seconds.'
+              @glyph={{get (cluster-states replicationAttrs.state) "glyph"}}
+              @metric={{replicationAttrs.state}} />
+            <Dashboard.card
+              @title='Last WAL entry'
+              @description='Index of last Write Ahead Logs entry written on local storage.'
+              @metric={{replicationAttrs.lastWAL}} />
+            <Dashboard.secondaryCard
+              @cluster={{cluster}}
+              @replicationAttrs={{replicationAttrs}} />
+          {{/if}}
         </Page.dashboard>
       </ReplicationPage>
     </div>

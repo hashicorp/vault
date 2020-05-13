@@ -23,9 +23,20 @@
   .selectable-card-container {
     margin-top: $spacing-xl;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    grid-template-rows: 1fr;
-    grid-gap: $spacing-xl;
+
+    &.primary {
+      margin: 2rem 0 2rem 0;
+      grid-template-columns: 1fr 2fr;
+
+      @include until($mobile) {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    &.secondary {
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      grid-gap: $spacing-xl; //ARG TODO double check ok
+    }
 
     .card-container {
       display: grid;

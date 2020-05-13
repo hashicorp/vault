@@ -9,15 +9,15 @@
         data-test-isReindexing />
     </div>
   {{/if}}
-
-  <div class="selectable-card-container">
+  <div
+    class="selectable-card-container {{if isSecondary 'secondary' 'primary'}}"
+    data-test-selectable-card-container={{if isSecondary 'secondary' 'primary'}}>
     {{yield (hash
       card=(component componentToRender replicationDetails=replicationDetails)
     )}}
     {{#if (not isSecondary)}}
       {{yield (hash secondaryCard=(component 'known-secondaries-card'))}}
     {{/if}}
-
   </div>
   {{#if isSyncing}}
     <div class="syncing-alert">

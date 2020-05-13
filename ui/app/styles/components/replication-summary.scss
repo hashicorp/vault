@@ -1,12 +1,4 @@
 .replication {
-  .selectable-card-container {
-    grid-template-columns: 1fr 2fr;
-
-    @include until($mobile) {
-      grid-template-columns: 1fr;
-    }
-  }
-
   .toolbar {
     border-top: 0px;
   }

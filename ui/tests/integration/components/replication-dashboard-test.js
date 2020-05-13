@@ -6,6 +6,8 @@ import hbs from 'htmlbars-inline-precompile';
 const REPLICATION_DETAILS = {
   state: 'stream-wals',
   primaryClusterAddr: 'https://127.0.0.1:8201',
+  merkleRoot: '352f6e58ba2e8ec3935e05da1d142653dc76fe17',
+  clusterId: '68999e13-a09d-b5e4-d66c-b35da566a177',
 };
 
 const IS_SYNCING = {
@@ -40,8 +42,22 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
 
     assert.dom('[data-test-replication-dashboard]').exists();
     assert.dom('[data-test-table-rows').exists();
+    assert.dom('[data-test-selectable-card-container="secondary"]').exists();
     assert.dom('[data-test-replication-doc-link]').exists();
     assert.dom('[data-test-flash-message]').doesNotExist('no flash message is displayed on render');
+  });
+
+  test('it renders the primary selectable-card-container when the cluster is a primary', async function(assert) {
+    this.set('replicationDetails', REPLICATION_DETAILS);
+    this.set('isSecondary', false);
+
+    await render(hbs`<ReplicationDashboard
+      @replicationDetails={{replicationDetails}}
+      @clusterMode={{clusterMode}}
+      @isSecondary={{isSecondary}}
+    />`);
+
+    assert.dom('[data-test-selectable-card-container="primary"]').exists();
   });
 
   test('it renders an alert banner if the dashboard is syncing', async function(assert) {
