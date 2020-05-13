@@ -1111,6 +1111,7 @@ func (c *ServerCommand) Run(args []string) int {
 		BuiltinRegistry:           builtinplugins.Registry,
 		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
 		MetricsHelper:             metricsHelper,
+		MetricSink:                metricSink,
 		SecureRandomReader:        secureRandomReader,
 	}
 	if c.flagDev {

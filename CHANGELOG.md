@@ -10,6 +10,7 @@ CHANGES:
 * plugin: Add SDK method, `Sys.ReloadPlugin`, and CLI command, `vault plugin reload`, 
   for reloading plugins. [[GH-8777](https://github.com/hashicorp/vault/pull/8777)]
 * sentinel: Add a sentinel config section, and "additional_enabled_modules", a list of Sentinel modules that may be imported in addition to the defaults.
+* cubbyhole: Reject reads and writes to an empty ("") path. [[GH-8971](https://github.com/hashicorp/vault/pull/8971)]
 
 IMPROVEMENTS:
 
@@ -174,6 +175,7 @@ BUG FIXES:
 * identity: Fix incorrect caching of identity token JWKS responses [[GH-8412](https://github.com/hashicorp/vault/pull/8412)]
 * metrics/stackdriver: Fix issue that prevents the stackdriver metrics library to create unnecessary stackdriver descriptors [[GH-8073](https://github.com/hashicorp/vault/pull/8073)]
 * replication: Fix issue causing cubbyholes in namespaces on performance secondaries to not work.
+* replication (enterprise): Unmounting a dynamic secrets backend could sometimes lead to replication errors.  Change the order of operations to prevent that.
 * seal (enterprise): Fix seal migration when transactional seal wrap backend is in use.
 * secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [[GH-8282](https://github.com/hashicorp/vault/pull/8282)]
 * secrets/database/mysql: Ensures default static credential rotation statements are used [[GH-8240](https://github.com/hashicorp/vault/pull/8240)]

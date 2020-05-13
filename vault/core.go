@@ -350,6 +350,10 @@ type Core struct {
 	// metrics emission and sealing leading to a nil pointer
 	metricsMutex sync.Mutex
 
+	// metricSink is the destination for all metrics that have
+	// a cluster label.
+	metricSink *metricsutil.ClusterMetricSink
+
 	defaultLeaseTTL time.Duration
 	maxLeaseTTL     time.Duration
 
@@ -598,6 +602,7 @@ type CoreConfig struct {
 
 	// Telemetry objects
 	MetricsHelper *metricsutil.MetricsHelper
+	MetricSink    *metricsutil.ClusterMetricSink
 
 	CounterSyncInterval time.Duration
 
@@ -699,6 +704,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		conf.Logger = logging.NewVaultLogger(log.Trace)
 	}
 
+	// Make a default metric sink if not provided
+	if conf.MetricSink == nil {
+		conf.MetricSink = metricsutil.BlackholeSink()
+	}
+
 	// Instantiate a non-nil raw config if none is provided
 	if conf.RawConfig == nil {
 		conf.RawConfig = new(server.Config)
@@ -757,6 +767,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		neverBecomeActive:            new(uint32),
 		clusterLeaderParams:          new(atomic.Value),
 		metricsHelper:                conf.MetricsHelper,
+		metricSink:                   conf.MetricSink,
 		secureRandomReader:           conf.SecureRandomReader,
 		rawConfig:                    new(atomic.Value),
 		counters: counters{
@@ -2338,6 +2349,11 @@ func (c *Core) SanitizedConfig() map[string]interface{} {
 // packages to access Vault's internal metrics.
 func (c *Core) MetricsHelper() *metricsutil.MetricsHelper {
 	return c.metricsHelper
+}
+
+// MetricSink returns the metrics wrapper with which Core has been configured.
+func (c *Core) MetricSink() *metricsutil.ClusterMetricSink {
+	return c.metricSink
 }
 
 // BuiltinRegistry is an interface that allows the "vault" package to use
