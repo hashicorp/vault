@@ -16,6 +16,8 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
+const numTestCores = 5
+
 func TestShamir(t *testing.T) {
 	testVariousBackends(t, testShamir)
 }
@@ -40,34 +42,34 @@ func testVariousBackends(t *testing.T, tf testFunc) {
 		tf(t, logger, storage, 51000)
 	})
 
-	//t.Run("file", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("file", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("file")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeFileBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 52000)
-	//})
+		logger := logger.Named("file")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeFileBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 52000)
+	})
 
-	//t.Run("consul", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("consul", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("consul")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeConsulBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 53000)
-	//})
+		logger := logger.Named("consul")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeConsulBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 53000)
+	})
 
-	//t.Run("raft", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("raft", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("raft")
-	//	storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger)
-	//	defer cleanup()
-	//	tf(t, logger, storage, 54000)
-	//})
+		logger := logger.Named("raft")
+		storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores)
+		defer cleanup()
+		tf(t, logger, storage, 54000)
+	})
 }
 
 func testShamir(
@@ -109,6 +111,7 @@ func initializeShamir(
 	}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
+		NumCores:              numTestCores,
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
 		BaseClusterListenPort: baseClusterPort,
 	}
@@ -126,13 +129,13 @@ func initializeShamir(
 	// Unseal
 	if storage.IsRaft {
 		testhelpers.RaftClusterJoinNodes(t, cluster)
-		if err := testhelpers.VerifyRaftConfiguration(t, leader); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(t, leader, numTestCores); err != nil {
 			t.Fatal(err)
 		}
 	} else {
 		cluster.UnsealCores(t)
 	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
+	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
 
 	// Write a secret that we will read back out later.
 	_, err := client.Logical().Write(
@@ -162,6 +165,7 @@ func reuseShamir(
 	}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
+		NumCores:              numTestCores,
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
 		BaseClusterListenPort: baseClusterPort,
 		SkipInit:              true,
@@ -181,7 +185,7 @@ func reuseShamir(
 	// Unseal
 	cluster.BarrierKeys = barrierKeys
 	if storage.IsRaft {
-		provider := testhelpers.NewHardcodedServerAddressProvider(baseClusterPort)
+		provider := testhelpers.NewHardcodedServerAddressProvider(cluster, baseClusterPort)
 		testhelpers.SetRaftAddressProviders(t, cluster, provider)
 
 		for _, core := range cluster.Cores {
@@ -189,13 +193,13 @@ func reuseShamir(
 		}
 		time.Sleep(15 * time.Second)
 
-		if err := testhelpers.VerifyRaftConfiguration(t, leader); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(t, leader, numTestCores); err != nil {
 			t.Fatal(err)
 		}
 	} else {
 		cluster.UnsealCores(t)
 	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
+	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
 
 	// Read the secret
 	secret, err := client.Logical().Read("secret/foo")
@@ -226,6 +230,7 @@ func initializeTransit(
 	}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
+		NumCores:              numTestCores,
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
 		BaseClusterListenPort: baseClusterPort,
 		SealFunc: func() vault.Seal {
@@ -250,13 +255,13 @@ func initializeTransit(
 	// Unseal
 	if storage.IsRaft {
 		testhelpers.RaftClusterJoinNodes(t, cluster)
-		if err := testhelpers.VerifyRaftConfiguration(t, leader); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(t, leader, numTestCores); err != nil {
 			t.Fatal(err)
 		}
 	} else {
 		cluster.UnsealCores(t)
 	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
+	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
 
 	// Write a secret that we will read back out later.
 	_, err := client.Logical().Write(
