@@ -78,6 +78,9 @@ type Listener struct {
 	SocketGroup string `hcl:"socket_group"`
 
 	Telemetry ListenerTelemetry `hcl:"telemetry"`
+
+	// RandomPort is used only for some testing purposes
+	RandomPort bool `hcl:"-"`
 }
 
 func (l *Listener) GoString() string {
