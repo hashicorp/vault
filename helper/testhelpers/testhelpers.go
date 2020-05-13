@@ -494,9 +494,10 @@ func SetRaftAddressProviders(t testing.T, cluster *vault.TestCluster, provider r
 	}
 }
 
-// VerifyRaftConfiguration checks that we have a valid raft configuration,
-// i.e. three servers with one leader and two followers.
-func VerifyRaftConfiguration(t testing.T, core *vault.TestClusterCore) error {
+// VerifyRaftConfiguration checks that we have a valid raft configuration, i.e.
+// the correct number of servers, having the correct NodeIDs, and exactly one
+// leader.
+func VerifyRaftConfiguration(t testing.T, core *vault.TestClusterCore, numCores int) error {
 
 	backend := core.UnderlyingRawStorage.(*raft.RaftBackend)
 	ctx := namespace.RootContext(context.Background())
@@ -506,8 +507,8 @@ func VerifyRaftConfiguration(t testing.T, core *vault.TestClusterCore) error {
 	}
 
 	servers := config.Servers
-	if len(servers) != vault.DefaultNumCores {
-		return fmt.Errorf("Found %d servers, not %d", len(servers), vault.DefaultNumCores)
+	if len(servers) != numCores {
+		return fmt.Errorf("Found %d servers, not %d", len(servers), numCores)
 	}
 
 	leaders := 0
