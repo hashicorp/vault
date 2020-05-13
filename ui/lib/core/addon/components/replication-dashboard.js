@@ -27,19 +27,17 @@ export default Component.extend({
     }
     return '';
   }),
-  reindexingProgress: computed(
-    'replicationDetails.{reindex_building_progress,reindex_building_total}',
-    function() {
-      // TODO: use this value to display a progress bar
-      const { reindex_building_progress, reindex_building_total } = this.replicationDetails;
-      let progress = 0;
+  progressBar: computed('replicationDetails.{reindex_building_progress,reindex_building_total}', function() {
+    const { reindex_building_progress, reindex_building_total } = this.replicationDetails;
+    let progressBar = null;
 
-      if (reindex_building_progress && reindex_building_total) {
-        // convert progress to a percentage
-        progress = (reindex_building_progress / reindex_building_total) * 100;
-      }
-
-      return progress;
+    if (reindex_building_progress && reindex_building_total) {
+      progressBar = {
+        value: reindex_building_progress,
+        max: reindex_building_total,
+      };
     }
-  ),
+
+    return progressBar;
+  }),
 });

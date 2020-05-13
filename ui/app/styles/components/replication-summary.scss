@@ -1,6 +1,5 @@
 .replication {
   .selectable-card-container {
-    margin: 2rem 0 2rem 0;
     grid-template-columns: 1fr 2fr;
 
     @include until($mobile) {
