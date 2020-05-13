@@ -9,6 +9,13 @@ import (
 	log "github.com/hashicorp/go-hclog"
 )
 
+// Function bindings to allow unit tests to not
+// proceed in real-time.
+var (
+	timeNow   = time.Now
+	newTicker = time.NewTicker
+)
+
 // GaugeLabelValues is one gauge in a set sharing a single key, that
 // are measured in a batch.
 type GaugeLabelValues struct {
@@ -45,7 +52,7 @@ type GaugeCollectionProcess struct {
 
 // NewGaugeCollectionProcess creates a new collection process for the callback
 // function given as an argument, and starts it running.
-// A label should be provided for metrics about this collection process.
+// A label should be provided for metrics *about* this collection process.
 func (m *ClusterMetricSink) NewGaugeCollectionProcess(
 	key []string,
 	id []Label,
@@ -72,7 +79,9 @@ func (m *ClusterMetricSink) NewGaugeCollectionProcess(
 // evenly, but a new one could be added per secret engine.
 func (p *GaugeCollectionProcess) delayStart() bool {
 	randomDelay := time.Duration(rand.Intn(int(p.currentInterval)))
-	delayTick := time.NewTimer(randomDelay)
+	// FIXME: a Timer might be better, but then we'd have to simulate
+	// one of those too?
+	delayTick := newTicker(randomDelay)
 	defer delayTick.Stop()
 
 	select {
@@ -90,7 +99,7 @@ func (p *GaugeCollectionProcess) resetTicker() {
 	if p.ticker != nil {
 		p.ticker.Stop()
 	}
-	p.ticker = time.NewTicker(p.currentInterval)
+	p.ticker = newTicker(p.currentInterval)
 }
 
 // collectAndFilterGauges executes the callback function,
@@ -102,11 +111,12 @@ func (p *GaugeCollectionProcess) collectAndFilterGauges() {
 		timeout)
 	defer cancel()
 
-	start := time.Now()
+	start := timeNow()
 	values, err := p.collector(ctx)
-	end := time.Now()
+	end := timeNow()
 	duration := end.Sub(start)
 
+	// Report how long it took to perform the operation.
 	p.sink.AddDurationWithLabels([]string{"metrics", "collection"},
 		duration,
 		p.labels)
@@ -140,7 +150,7 @@ func (p *GaugeCollectionProcess) collectAndFilterGauges() {
 	// Let's smooth things out over the course of a second.
 	// 1 second / 500 = 2 ms each, so we can send 25 per 50 milliseconds.
 	// That should be one or two packets.
-	sendTick := time.NewTicker(50 * time.Millisecond)
+	sendTick := newTicker(50 * time.Millisecond)
 	batchSize := 25
 	for i, lv := range values {
 		if i > 0 && i%batchSize == 0 {
