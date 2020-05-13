@@ -15,7 +15,13 @@
     margin-bottom: $spacing-xs;
   }
 
+  .reindexing-alert,
+  .syncing-alert {
+    margin-top: $spacing-xl;
+  }
+
   .selectable-card-container {
+    margin-top: $spacing-xl;
     display: grid;
 
     &.primary {
@@ -29,16 +35,20 @@
 
     &.secondary {
       grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      grid-gap: 2rem;
+      grid-gap: $spacing-xl; //ARG TODO double check ok
     }
 
     .card-container {
       display: grid;
-      grid-gap: 1rem;
+      grid-gap: $spacing-s;
       grid-template-columns: 1fr 1fr;
       grid-template-rows: 0.2fr 1fr 0.2fr;
       padding: $spacing-l;
       line-height: 1.5;
+
+      &.has-border-danger:hover {
+        box-shadow: none;
+      }
 
       @include until(1320px) {
         // prevent an issue with the card descriptions wrapping and expanding height

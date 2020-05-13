@@ -20,4 +20,18 @@ storiesOf('Alerts/AlertBanner/', module)
       },
     }),
     { notes }
+  )
+  .add(
+    'AlertBanner with Progress Bar',
+    () => ({
+      template: hbs`
+      <AlertBanner @type={{type}} @message={{message}} @progressBar={{progressBar}} />
+    `,
+      context: {
+        type: 'info',
+        message: 'Here is a message.',
+        progressBar: { value: 75, max: 100 },
+      },
+    }),
+    { notes }
   );

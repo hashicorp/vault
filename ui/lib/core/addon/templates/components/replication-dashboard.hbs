@@ -1,11 +1,13 @@
 <div class="replication-dashboard box is-sideless is-fullwidth is-marginless" data-test-replication-dashboard>
   {{#if isReindexing}}
-    <AlertBanner
-      @title={{concat "Re-indexing in progress" reindexingStage}}
-      @type="info"
-      @secondIconType="loading"
-      @message="This can cause a delay depending on the size of the data store. You can use Vault during this time."
-      @class="has-top-margin-xl"/>
+    <div class="reindexing-alert">
+      <AlertBanner
+        @title={{concat "Re-indexing in progress" reindexingStage}}
+        @type="info"
+        @progressBar={{progressBar}}
+        @message="This can cause a delay depending on the size of the data store. You can use Vault during this time."
+        data-test-isReindexing />
+    </div>
   {{/if}}
   <div
     class="selectable-card-container {{if isSecondary 'secondary' 'primary'}}"
@@ -16,16 +18,16 @@
     {{#if (not isSecondary)}}
       {{yield (hash secondaryCard=(component 'known-secondaries-card'))}}
     {{/if}}
-
   </div>
   {{#if isSyncing}}
-    <AlertBanner
-      @title="Syncing in progress"
-      @type="info"
-      @secondIconType="loading"
-      @message="The cluster is syncing. This happens when the secondary is too far behind the primary to use the normal stream-wals state for catching up."
-      @class="has-top-margin-xl" 
-      data-test-isSyncing/>
+    <div class="syncing-alert">
+      <AlertBanner
+        @title="Syncing in progress"
+        @type="info"
+        @secondIconType="loading"
+        @message="The cluster is syncing. This happens when the secondary is too far behind the primary to use the normal stream-wals state for catching up."
+        data-test-isSyncing/>
+    </div>
   {{/if}}
   <ReplicationTableRows
     @replicationDetails={{replicationDetails}}
