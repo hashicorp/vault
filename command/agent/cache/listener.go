@@ -57,7 +57,7 @@ func StartListener(lnConfig *configutil.Listener) (net.Listener, *tls.Config, er
 	}
 
 	props := map[string]string{"addr": ln.Addr().String()}
-	tlsConf, _, err := listenerutil.GetTLSConfig(ln, lnConfig, props, nil)
+	tlsConf, _, err := listenerutil.TLSConfig(ln, lnConfig, props, nil)
 	if err != nil {
 		return nil, nil, err
 	}
