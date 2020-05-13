@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"runtime/debug"
 
 	"github.com/mitchellh/go-testing-interface"
 
@@ -132,7 +131,6 @@ func makeReusableRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, raft
 
 	backend, err := raft.NewRaftBackend(conf, logger)
 	if err != nil {
-		debug.PrintStack()
 		t.Fatal(err)
 	}
 
