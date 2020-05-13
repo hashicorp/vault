@@ -500,6 +500,9 @@ func (c *ServerCommand) runRecoveryMode() int {
 		sealType = configSeal.Type
 	}
 
+	infoKeys = append(infoKeys, "Seal Type")
+	info["Seal Type"] = sealType
+
 	var seal vault.Seal
 	defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
 		Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
@@ -522,9 +525,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 			Wrapper: wrapper,
 		})
 	}
-	infoKeys = append(infoKeys, "Seal Type")
-	info["Seal Type"] = configSeal.Type
-
 	barrierSeal = seal
 
 	// Ensure that the seal finalizer is called, even if using verify-only
