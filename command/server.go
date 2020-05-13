@@ -1030,7 +1030,7 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			var seal vault.Seal
-			sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal-%s", sealType))
+			sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
 			allLoggers = append(allLoggers, sealLogger)
 			defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
 				Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
