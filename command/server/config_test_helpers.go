@@ -266,7 +266,9 @@ func testParseEntropy(t *testing.T, oss bool) {
 		},
 	}
 
-	var config Config
+	config := Config{
+		SharedConfig: &configutil.SharedConfig{},
+	}
 
 	for _, test := range tests {
 		obj, _ := hcl.Parse(strings.TrimSpace(test.inConfig))
