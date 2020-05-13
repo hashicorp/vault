@@ -1,7 +1,6 @@
 package seal_migration
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -9,11 +8,9 @@ import (
 	"github.com/go-test/deep"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
 )
@@ -106,8 +103,9 @@ func initializeShamir(
 	if storage.IsRaft {
 		// Join raft cluster
 		testhelpers.RaftClusterJoinNodes(t, cluster)
-		time.Sleep(15 * time.Second)
-		verifyRaftConfiguration(t, leader)
+		if err := testhelpers.VerifyRaftConfiguration(t, leader); err != nil {
+			t.Fatal(err)
+		}
 	} else {
 		// Unseal
 		cluster.UnsealCores(t)
@@ -170,8 +168,11 @@ func reuseShamir(
 		for _, core := range cluster.Cores {
 			cluster.UnsealCore(t, core)
 		}
+		// It saddens me that this is necessary
 		time.Sleep(15 * time.Second)
-		verifyRaftConfiguration(t, leader)
+		if err := testhelpers.VerifyRaftConfiguration(t, leader); err != nil {
+			t.Fatal(err)
+		}
 	} else {
 		// Unseal
 		cluster.UnsealCores(t)
@@ -191,33 +192,4 @@ func reuseShamir(
 
 	// Seal the cluster
 	cluster.EnsureCoresSealed(t)
-}
-
-func verifyRaftConfiguration(t *testing.T, core *vault.TestClusterCore) {
-
-	backend := core.UnderlyingRawStorage.(*raft.RaftBackend)
-	ctx := namespace.RootContext(context.Background())
-	config, err := backend.GetConfiguration(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	servers := config.Servers
-
-	if len(servers) != vault.DefaultNumCores {
-		t.Fatalf("Found %d servers, not %d", len(servers), vault.DefaultNumCores)
-	}
-
-	leaders := 0
-	for i, s := range servers {
-		if diff := deep.Equal(s.NodeID, fmt.Sprintf("core-%d", i)); len(diff) > 0 {
-			t.Fatal(diff)
-		}
-		if s.Leader {
-			leaders++
-		}
-	}
-
-	if leaders != 1 {
-		t.Fatalf("Found %d leaders, not 1", leaders)
-	}
 }
