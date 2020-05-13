@@ -18,6 +18,8 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
+const numTestCores = 5
+
 func TestReusableStorage(t *testing.T) {
 
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
@@ -56,7 +58,7 @@ func TestReusableStorage(t *testing.T) {
 		t.Parallel()
 
 		logger := logger.Named("raft")
-		storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger)
+		storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores)
 		defer cleanup()
 		testReusableStorage(t, logger, storage, 54000)
 	})
@@ -83,6 +85,7 @@ func initializeStorage(
 	}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
+		NumCores:              numTestCores,
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
 		BaseClusterListenPort: baseClusterPort,
 	}
@@ -108,7 +111,7 @@ func initializeStorage(
 	}
 
 	// Wait until unsealed
-	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
+	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
 
 	// Write a secret that we will read back out later.
 	_, err := client.Logical().Write(
@@ -138,6 +141,7 @@ func reuseStorage(
 	}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
+		NumCores:              numTestCores,
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
 		BaseClusterListenPort: baseClusterPort,
 		SkipInit:              true,
@@ -157,7 +161,7 @@ func reuseStorage(
 	cluster.BarrierKeys = keys
 	if storage.IsRaft {
 		// Set hardcoded Raft address providers
-		provider := testhelpers.NewHardcodedServerAddressProvider(baseClusterPort)
+		provider := testhelpers.NewHardcodedServerAddressProvider(cluster, baseClusterPort)
 		testhelpers.SetRaftAddressProviders(t, cluster, provider)
 
 		// Unseal cores
@@ -172,7 +176,7 @@ func reuseStorage(
 	}
 
 	// Wait until unsealed
-	testhelpers.WaitForNCoresUnsealed(t, cluster, vault.DefaultNumCores)
+	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
 
 	// Read the secret
 	secret, err := client.Logical().Read("secret/foo")
@@ -197,8 +201,8 @@ func verifyRaftConfiguration(t *testing.T, core *vault.TestClusterCore) {
 	}
 	servers := config.Servers
 
-	if len(servers) != vault.DefaultNumCores {
-		t.Fatalf("Found %d servers, not %d", len(servers), vault.DefaultNumCores)
+	if len(servers) != numTestCores {
+		t.Fatalf("Found %d servers, not %d", len(servers), numTestCores)
 	}
 
 	leaders := 0

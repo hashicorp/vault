@@ -73,10 +73,10 @@ func MakeReusableStorage(t testing.T, logger hclog.Logger, bundle *vault.Physica
 
 // MakeReusableRaftStorage makes a physical raft backend that can be re-used
 // across multiple test clusters in sequence.
-func MakeReusableRaftStorage(t testing.T, logger hclog.Logger) (ReusableStorage, StorageCleanup) {
+func MakeReusableRaftStorage(t testing.T, logger hclog.Logger, numCores int) (ReusableStorage, StorageCleanup) {
 
-	raftDirs := make([]string, vault.DefaultNumCores)
-	for i := 0; i < vault.DefaultNumCores; i++ {
+	raftDirs := make([]string, numCores)
+	for i := 0; i < numCores; i++ {
 		raftDirs[i] = makeRaftDir(t)
 	}
 
