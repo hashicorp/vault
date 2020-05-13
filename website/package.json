@@ -46,10 +46,10 @@
   },
   "main": "index.js",
   "scripts": {
-    "build": "node --max-old-space-size=2048 ./node_modules/.bin/next build",
+    "build": "next build",
     "clear_babel_cache": "rm -rf .next/cache/next-babel-loader",
     "dynamic": "NODE_ENV=production next build && next start",
-    "export": "node --max-old-space-size=2048 ./node_modules/.bin/next export",
+    "export": "next export",
     "format": "next-hashicorp format",
     "generate:component": "next-hashicorp generate component",
     "linkcheck": "linkcheck https://www.vaultproject.io",
