@@ -2,11 +2,12 @@ package random
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
 )
 
-func TestParse(t *testing.T) {
+func TestParsePolicy(t *testing.T) {
 	type testCase struct {
 		rawConfig string
 		expected  StringGenerator
@@ -63,7 +64,7 @@ func TestParse(t *testing.T) {
 	}
 }
 
-func TestParser_Parse(t *testing.T) {
+func TestParser_ParsePolicy(t *testing.T) {
 	type testCase struct {
 		registry map[string]ruleConstructor
 

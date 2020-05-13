@@ -210,6 +210,9 @@ proto:
 	sed -i -e 's/Id/ID/' vault/request_forwarding_service.pb.go
 	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/protobuf:"/sentinel:"" protobuf:"/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go 
 
+mock:
+	mockgen -destination vault/logical_mock_test.go -package vault github.com/hashicorp/vault/sdk/logical Storage
+
 fmtcheck:
 	@true
 #@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
