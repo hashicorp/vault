@@ -29,9 +29,6 @@ type Config struct {
 
 	ServiceRegistration *ServiceRegistration `hcl:"-"`
 
-	Seals   []*configutil.KMS   `hcl:"-"`
-	Entropy *configutil.Entropy `hcl:"-"`
-
 	CacheSize                int         `hcl:"cache_size"`
 	DisableCache             bool        `hcl:"-"`
 	DisableCacheRaw          interface{} `hcl:"disable_cache"`
