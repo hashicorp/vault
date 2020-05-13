@@ -32,7 +32,7 @@ module('Integration | Enterprise | Component | replication-header', function(hoo
     assert.dom('[data-test-replication-header]').exists();
   });
 
-  test('it renders with mode when set', async function(assert) {
+  test('it renders with mode and secondaryId when set', async function(assert) {
     await render(
       hbs`<ReplicationHeader @data={{data}} @isSecondary={{isSecondary}} @title={{title}} @secondaryId={{secondaryId}}/>`
     );
