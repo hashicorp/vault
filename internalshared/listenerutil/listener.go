@@ -73,7 +73,6 @@ func UnixSocketListener(path string, unixSocketsConfig *UnixSocketsConfig) (net.
 }
 
 func TLSConfig(
-	ln net.Listener,
 	l *configutil.Listener,
 	props map[string]string,
 	ui cli.Ui) (*tls.Config, reloadutil.ReloadFunc, error) {

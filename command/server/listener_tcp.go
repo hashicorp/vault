@@ -63,7 +63,7 @@ func tcpListenerFactory(l *configutil.Listener, _ io.Writer, ui cli.Ui) (net.Lis
 		}
 	}
 
-	tlsConfig, reloadFunc, err := listenerutil.TLSConfig(ln, l, props, ui)
+	tlsConfig, reloadFunc, err := listenerutil.TLSConfig(l, props, ui)
 	if err != nil {
 		return nil, nil, nil, err
 	}
