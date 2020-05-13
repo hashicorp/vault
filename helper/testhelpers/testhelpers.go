@@ -446,7 +446,7 @@ func raftClusterJoinNodes(t testing.T, cluster *vault.TestCluster, useStoredKeys
 	}
 
 	// Join followers
-	for i := 1; i < len(cluster.Cores); i++ {
+	for i := 1; i < vault.DefaultNumCores; i++ {
 		core := cluster.Cores[i]
 		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
 		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
@@ -463,7 +463,7 @@ func raftClusterJoinNodes(t testing.T, cluster *vault.TestCluster, useStoredKeys
 		}
 	}
 
-	WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
+	WaitForNCoresUnsealed(t, cluster, 3)
 }
 
 func awaitUnsealWithStoredKeys(t testing.T, core *vault.TestClusterCore) {
@@ -505,11 +505,11 @@ func (p *HardcodedServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftli
 
 // NewHardcodedServerAddressProvider is a convenience function that makes a
 // ServerAddressProvider from a given cluster address base port.
-func NewHardcodedServerAddressProvider(cluster *vault.TestCluster, baseClusterPort int) raftlib.ServerAddressProvider {
+func NewHardcodedServerAddressProvider(baseClusterPort int) raftlib.ServerAddressProvider {
 
 	entries := make(map[raftlib.ServerID]raftlib.ServerAddress)
 
-	for i := 0; i < len(cluster.Cores); i++ {
+	for i := 0; i < vault.DefaultNumCores; i++ {
 		id := fmt.Sprintf("core-%d", i)
 		addr := fmt.Sprintf("127.0.0.1:%d", baseClusterPort+i)
 		entries[raftlib.ServerID(id)] = raftlib.ServerAddress(addr)
