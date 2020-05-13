@@ -1642,6 +1642,10 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// Initialize the HTTP servers
 	for _, ln := range lns {
+		if ln.Config == nil {
+			c.UI.Error("Found nil listener config after parsing")
+			return 1
+		}
 		handler := vaulthttp.Handler(&vault.HandlerProperties{
 			Core:                  core,
 			ListenerConfig:        ln.Config,
