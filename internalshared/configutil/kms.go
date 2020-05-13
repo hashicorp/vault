@@ -178,7 +178,7 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 	return wrapper, nil
 }
 
-var GetAEADKMSFunc = func(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
+func GetAEADKMSFunc(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := aeadwrapper.NewWrapper(opts)
 	wrapperInfo, err := wrapper.SetConfig(kms.Config)
 	if err != nil {
@@ -195,7 +195,7 @@ var GetAEADKMSFunc = func(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wra
 	return wrapper, info, nil
 }
 
-var GetAliCloudKMSFunc = func(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
+func GetAliCloudKMSFunc(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := alicloudkms.NewWrapper(opts)
 	wrapperInfo, err := wrapper.SetConfig(kms.Config)
 	if err != nil {
@@ -215,7 +215,7 @@ var GetAliCloudKMSFunc = func(opts *wrapping.WrapperOptions, kms *KMS) (wrapping
 	return wrapper, info, nil
 }
 
-var GetAWSKMSFunc = func(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
+func GetAWSKMSFunc(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := awskms.NewWrapper(opts)
 	wrapperInfo, err := wrapper.SetConfig(kms.Config)
 	if err != nil {
@@ -235,7 +235,7 @@ var GetAWSKMSFunc = func(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrap
 	return wrapper, info, nil
 }
 
-var GetAzureKeyVaultKMSFunc = func(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
+func GetAzureKeyVaultKMSFunc(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := azurekeyvault.NewWrapper(opts)
 	wrapperInfo, err := wrapper.SetConfig(kms.Config)
 	if err != nil {
@@ -253,7 +253,7 @@ var GetAzureKeyVaultKMSFunc = func(opts *wrapping.WrapperOptions, kms *KMS) (wra
 	return wrapper, info, nil
 }
 
-var GetGCPCKMSKMSFunc = func(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
+func GetGCPCKMSKMSFunc(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := gcpckms.NewWrapper(opts)
 	wrapperInfo, err := wrapper.SetConfig(kms.Config)
 	if err != nil {
@@ -272,7 +272,7 @@ var GetGCPCKMSKMSFunc = func(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.
 	return wrapper, info, nil
 }
 
-var GetOCIKMSKMSFunc = func(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
+func GetOCIKMSKMSFunc(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := ocikms.NewWrapper(opts)
 	wrapperInfo, err := wrapper.SetConfig(kms.Config)
 	if err != nil {
@@ -288,7 +288,7 @@ var GetOCIKMSKMSFunc = func(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.W
 	return wrapper, info, nil
 }
 
-var GetTransitKMSFunc = func(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
+func GetTransitKMSFunc(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := transit.NewWrapper(opts)
 	wrapperInfo, err := wrapper.SetConfig(kms.Config)
 	if err != nil {
