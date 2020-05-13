@@ -285,9 +285,13 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 		return c, e
 	}
 
-	if len(c.Seals) == 2 &&
-		(c.Seals[0].Disabled && c.Seals[1].Disabled || !c.Seals[0].Disabled && !c.Seals[1].Disabled) {
-		return nil, errors.New("seals: two seals provided but both are disabled or neither are disabled")
+	if len(c.Seals) == 2 {
+		switch {
+		case c.Seals[0].Disabled && c.Seals[1].Disabled:
+			return nil, errors.New("seals: two seals provided but both are disabled")
+		case !c.Seals[0].Disabled && !c.Seals[1].Disabled:
+			return nil, errors.New("seals: two seals provided but neither is disabled")
+		}
 	}
 
 	return c, nil
