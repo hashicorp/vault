@@ -1649,7 +1649,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			RecoveryMode:          c.flagRecovery,
 		})
 
-		// We perform validation on the config earlier, we can just cast here
 		if len(ln.Config.XForwardedForAuthorizedAddrs) > 0 {
 			handler = vaulthttp.WrapForwardedForHandler(handler, ln.Config)
 		}
