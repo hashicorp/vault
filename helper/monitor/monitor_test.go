@@ -81,7 +81,7 @@ func TestMonitor_DroppedMessages(t *testing.T) {
 	passed := make(chan struct{})
 	go func() {
 		for recv := range logCh {
-			if strings.Contains(string(recv), "[WARN] Monitor dropped") {
+			if strings.Contains(string(recv), "Monitor dropped") {
 				close(passed)
 				return
 			}
