@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
@@ -91,6 +90,15 @@ func parseKMS(result *SharedConfig, list *ast.ObjectList, blockName string, maxK
 			delete(m, "purpose")
 		}
 
+		var disabled bool
+		if v, ok := m["disabled"]; ok {
+			disabled, err = parseutil.ParseBool(v)
+			if err != nil {
+				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+			}
+			delete(m, "disabled")
+		}
+
 		strMap := make(map[string]string, len(m))
 		for k, v := range m {
 			if vs, ok := v.(string); ok {
@@ -98,15 +106,6 @@ func parseKMS(result *SharedConfig, list *ast.ObjectList, blockName string, maxK
 			} else {
 				return multierror.Prefix(fmt.Errorf("unable to parse 'purpose' in kms type %q: value could not be parsed as string", key), fmt.Sprintf("%s.%s:", blockName, key))
 			}
-		}
-
-		var disabled bool
-		if v, ok := strMap["disabled"]; ok {
-			disabled, err = strconv.ParseBool(v)
-			if err != nil {
-				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
-			}
-			delete(strMap, "disabled")
 		}
 
 		seal := &KMS{
