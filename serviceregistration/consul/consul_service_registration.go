@@ -73,8 +73,12 @@ type serviceRegistration struct {
 	notifyActiveCh      chan struct{}
 	notifySealedCh      chan struct{}
 	notifyPerfStandbyCh chan struct{}
+	notifyInitializedCh chan struct{}
 
-	isActive, isSealed, isPerfStandby *atomicB.Bool
+	isActive      *atomicB.Bool
+	isSealed      *atomicB.Bool
+	isPerfStandby *atomicB.Bool
+	isInitialized *atomicB.Bool
 }
 
 // NewConsulServiceRegistration constructs a Consul-based ServiceRegistration.
@@ -213,10 +217,12 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 		notifyActiveCh:      make(chan struct{}),
 		notifySealedCh:      make(chan struct{}),
 		notifyPerfStandbyCh: make(chan struct{}),
+		notifyInitializedCh: make(chan struct{}),
 
 		isActive:      atomicB.NewBool(state.IsActive),
 		isSealed:      atomicB.NewBool(state.IsSealed),
 		isPerfStandby: atomicB.NewBool(state.IsPerformanceStandby),
+		isInitialized: atomicB.NewBool(state.IsInitialized),
 	}
 	return c, nil
 }
@@ -272,9 +278,15 @@ func (c *serviceRegistration) NotifySealedStateChange(isSealed bool) error {
 }
 
 func (c *serviceRegistration) NotifyInitializedStateChange(isInitialized bool) error {
-	// This is not implemented because to date, Consul service registration has
-	// never reported out on whether Vault was initialized. We may someday want to
-	// do this, but it has not yet been requested.
+	c.isInitialized.Store(isInitialized)
+	select {
+	case c.notifyInitializedCh <- struct{}{}:
+	default:
+		// NOTE: If this occurs Vault's initialized status could be out of
+		// sync with Consul until checkTimer expires.
+		c.logger.Warn("concurrent initalize state change notify dropped")
+	}
+
 	return nil
 }
 
@@ -332,7 +344,10 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 			// Run check timer immediately upon a seal state change notification
 			checkTimer.Reset(0)
 		case <-c.notifyPerfStandbyCh:
-			// Run check timer immediately upon a seal state change notification
+			// Run check timer immediately upon a perfstandby state change notification
+			checkTimer.Reset(0)
+		case <-c.notifyInitializedCh:
+			// Run check timer immediately upon an initialized state change notification
 			checkTimer.Reset(0)
 		case <-reconcileTimer.C:
 			// Unconditionally rearm the reconcileTimer
@@ -431,7 +446,7 @@ func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (servi
 		}
 	}
 
-	tags := c.fetchServiceTags(c.isActive.Load(), c.isPerfStandby.Load())
+	tags := c.fetchServiceTags(c.isActive.Load(), c.isPerfStandby.Load(), c.isInitialized.Load())
 
 	var reregister bool
 
@@ -508,7 +523,7 @@ func (c *serviceRegistration) runCheck(sealed bool) error {
 }
 
 // fetchServiceTags returns all of the relevant tags for Consul.
-func (c *serviceRegistration) fetchServiceTags(active bool, perfStandby bool) []string {
+func (c *serviceRegistration) fetchServiceTags(active, perfStandby, initialized bool) []string {
 	activeTag := "standby"
 	if active {
 		activeTag = "active"
@@ -518,6 +533,10 @@ func (c *serviceRegistration) fetchServiceTags(active bool, perfStandby bool) []
 
 	if perfStandby {
 		result = append(c.serviceTags, "performance-standby")
+	}
+
+	if initialized {
+		result = append(result, "initialized")
 	}
 
 	return result

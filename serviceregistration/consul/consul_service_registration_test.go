@@ -12,7 +12,6 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers/consul"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	sr "github.com/hashicorp/vault/serviceregistration"
@@ -143,63 +142,8 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 
 	waitForServices(t, map[string][]string{
 		"consul": []string{},
-		"vault":  []string{"active"},
+		"vault":  []string{"active", "initialized"},
 	})
-}
-
-func TestConsul_ServiceTags(t *testing.T) {
-	consulConfig := map[string]string{
-		"path":                 "seaTech/",
-		"service":              "astronomy",
-		"service_tags":         "deadbeef, cafeefac, deadc0de, feedface",
-		"redirect_addr":        "http://127.0.0.2:8200",
-		"check_timeout":        "6s",
-		"address":              "127.0.0.2",
-		"scheme":               "https",
-		"token":                "deadbeef-cafeefac-deadc0de-feedface",
-		"max_parallel":         "4",
-		"disable_registration": "false",
-	}
-	logger := logging.NewVaultLogger(log.Debug)
-
-	shutdownCh := make(chan struct{})
-	defer func() {
-		close(shutdownCh)
-	}()
-
-	be, err := NewServiceRegistration(consulConfig, logger, sr.State{}, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := be.Run(shutdownCh, &sync.WaitGroup{}); err != nil {
-		t.Fatal(err)
-	}
-
-	c, ok := be.(*serviceRegistration)
-	if !ok {
-		t.Fatalf("failed to create physical Consul backend")
-	}
-
-	expected := []string{"deadbeef", "cafeefac", "deadc0de", "feedface"}
-	actual := c.fetchServiceTags(false, false)
-	if !strutil.EquivalentSlices(actual, append(expected, "standby")) {
-		t.Fatalf("bad: expected:%s actual:%s", append(expected, "standby"), actual)
-	}
-
-	actual = c.fetchServiceTags(true, false)
-	if !strutil.EquivalentSlices(actual, append(expected, "active")) {
-		t.Fatalf("bad: expected:%s actual:%s", append(expected, "active"), actual)
-	}
-
-	actual = c.fetchServiceTags(false, true)
-	if !strutil.EquivalentSlices(actual, append(expected, "performance-standby")) {
-		t.Fatalf("bad: expected:%s actual:%s", append(expected, "performance-standby"), actual)
-	}
-
-	actual = c.fetchServiceTags(true, true)
-	if !strutil.EquivalentSlices(actual, append(expected, "performance-standby")) {
-		t.Fatalf("bad: expected:%s actual:%s", append(expected, "performance-standby"), actual)
-	}
 }
 
 func TestConsul_ServiceAddress(t *testing.T) {
@@ -416,34 +360,63 @@ func TestConsul_serviceTags(t *testing.T) {
 	tests := []struct {
 		active      bool
 		perfStandby bool
+		initialized bool
 		tags        []string
 	}{
 		{
 			active:      true,
 			perfStandby: false,
+			initialized: false,
 			tags:        []string{"active"},
 		},
 		{
 			active:      false,
 			perfStandby: false,
+			initialized: false,
 			tags:        []string{"standby"},
 		},
 		{
 			active:      false,
 			perfStandby: true,
+			initialized: false,
 			tags:        []string{"performance-standby"},
 		},
 		{
 			active:      true,
 			perfStandby: true,
+			initialized: false,
 			tags:        []string{"performance-standby"},
+		},
+		{
+			active:      true,
+			perfStandby: false,
+			initialized: true,
+			tags:        []string{"active", "initialized"},
+		},
+		{
+			active:      false,
+			perfStandby: false,
+			initialized: true,
+			tags:        []string{"standby", "initialized"},
+		},
+		{
+			active:      false,
+			perfStandby: true,
+			initialized: true,
+			tags:        []string{"performance-standby", "initialized"},
+		},
+		{
+			active:      true,
+			perfStandby: true,
+			initialized: true,
+			tags:        []string{"performance-standby", "initialized"},
 		},
 	}
 
 	c := testConsulServiceRegistration(t)
 
 	for _, test := range tests {
-		tags := c.fetchServiceTags(test.active, test.perfStandby)
+		tags := c.fetchServiceTags(test.active, test.perfStandby, test.initialized)
 		if !reflect.DeepEqual(tags[:], test.tags[:]) {
 			t.Errorf("Bad %v: %v %v", test.active, tags, test.tags)
 		}
