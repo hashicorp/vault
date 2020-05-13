@@ -3,12 +3,14 @@ package database
 import (
 	"context"
 	"log"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"database/sql"
 
+	"github.com/Sectorbob/mlab-ns2/gae/ns/digest"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
@@ -16,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/lib/pq"
+	mongodbatlasapi "github.com/mongodb/go-client-mongodb-atlas/mongodbatlas"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -713,6 +716,52 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	})
 }
 
+func TestBackend_StaticRole_Rotations_MongoDBAtlas(t *testing.T) {
+	projID := os.Getenv("VAULT_MONGODBATLAS_PROJECT_ID")
+	privKey := os.Getenv("VAULT_MONGODBATLAS_PRIVATE_KEY")
+	pubKey := os.Getenv("VAULT_MONGODBATLAS_PUBLIC_KEY")
+	if projID == "" {
+		t.Logf("Skipping MongoDB Atlas test because VAULT_MONGODBATLAS_PROJECT_ID not set")
+		t.SkipNow()
+	}
+
+	transport := digest.NewTransport(pubKey, privKey)
+	cl, err := transport.Client()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	api, err := mongodbatlasapi.New(cl)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	uc := userCreator(func(t *testing.T, username, password string) {
+		// Delete the user in case it's still there from an earlier run
+		_, err = api.DatabaseUsers.Delete(context.Background(), projID, username)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		req := &mongodbatlasapi.DatabaseUser{
+			Username:     username,
+			Password:     password,
+			DatabaseName: "admin",
+			Roles:        []mongodbatlasapi.Role{{RoleName: "atlasAdmin", DatabaseName: "admin"}},
+		}
+		_, _, err = api.DatabaseUsers.Create(context.Background(), projID, req)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+	testBackend_StaticRole_Rotations(t, uc, map[string]interface{}{
+		"plugin_name": "mongodbatlas-database-plugin",
+		"project_id":  projID,
+		"private_key": privKey,
+		"public_key":  pubKey,
+	})
+}
+
 func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts map[string]interface{}) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
@@ -734,17 +783,10 @@ func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts
 		t.Fatal("database backend had no credential rotation queue")
 	}
 
-	testCases := []string{"10", "20", "100"}
-	// Create database users ahead
-	for _, tc := range testCases {
-		createUser(t, "statictest"+tc, "test")
-	}
-
 	// Configure a connection
 	data := map[string]interface{}{
 		"verify_connection": false,
 		"allowed_roles":     []string{"*"},
-		"name":              "plugin-test",
 	}
 	for k, v := range opts {
 		data[k] = v
@@ -759,6 +801,12 @@ func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	testCases := []string{"10", "20", "100"}
+	// Create database users ahead
+	for _, tc := range testCases {
+		createUser(t, "statictest"+tc, "test")
 	}
 
 	// create three static roles with different rotation periods
