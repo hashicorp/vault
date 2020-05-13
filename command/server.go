@@ -506,7 +506,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 			Logger: c.logger.Named("shamir"),
 		}),
 	})
-	sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal-%s", sealType))
+	sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
 	wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &infoKeys, &info, sealLogger)
 	if sealConfigError != nil {
 		if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
