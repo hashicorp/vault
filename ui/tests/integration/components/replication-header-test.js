@@ -9,7 +9,6 @@ const DATA = {
     rm: {
       mode: 'dr',
     },
-    clusterIdDisplay: 12345,
   },
   unsealed: 'good',
 };
@@ -31,14 +30,9 @@ module('Integration | Enterprise | Component | replication-header', function(hoo
     assert.dom('[data-test-replication-header]').exists();
   });
 
-  test('it renders with clusterId and mode when set', async function(assert) {
+  test('it renders with secondaryId and mode when set', async function(assert) {
     await render(hbs`<ReplicationHeader @data={{data}} @isSecondary={{isSecondary}} @title={{title}}/>`);
-
-    assert
-      .dom('[data-test-clusterId]')
-      .includesText(DATA.dr.clusterIdDisplay, `shows the correct clusterId value`);
-
-    assert.dom('[data-test-mode]').includesText('Secondary', `shows the correct mode value`);
+    assert.dom('[data-test-mode]').includesText('secondary', `shows the correct mode value`);
   });
 
   test('it does not show tabs when showTabs is not set', async function(assert) {

@@ -39,11 +39,25 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
       @clusterMode={{clusterMode}}
       @isSecondary={{isSecondary}}
     />`);
+
     assert.dom('[data-test-replication-dashboard]').exists();
     assert.dom('[data-test-table-rows').exists();
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
     assert.dom('[data-test-replication-doc-link]').exists();
     assert.dom('[data-test-flash-message]').doesNotExist('no flash message is displayed on render');
+  });
+
+  test('it renders the primary selectable-card-container when the cluster is a primary', async function(assert) {
+    this.set('replicationDetails', REPLICATION_DETAILS);
+    this.set('isSecondary', false);
+
+    await render(hbs`<ReplicationDashboard
+      @replicationDetails={{replicationDetails}}
+      @clusterMode={{clusterMode}}
+      @isSecondary={{isSecondary}}
+    />`);
+
+    assert.dom('[data-test-selectable-card-container="primary"]').exists();
   });
 
   test('it renders an alert banner if the dashboard is syncing', async function(assert) {
