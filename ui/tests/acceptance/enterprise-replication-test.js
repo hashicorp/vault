@@ -213,8 +213,6 @@ module('Acceptance | Enterprise | replication', function(hooks) {
   });
 
   test('render performance secondary and navigate to the details page', async function(assert) {
-    // const secondaryName = 'firstSecondary';
-
     // enable perf replication
     await visit('/vault/replication');
     await click('[data-test-replication-type-select="performance"]');
@@ -228,9 +226,12 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click(demote);
     await click('[data-test-confirm-button="true"]');
     await click('[data-test-replication-link="details"]');
-    assert.dom('[data-test-replication-dashboard]').exists();
 
+    assert.dom('[data-test-replication-dashboard]').exists();
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
-    // ARG TODO: when designs updated to show where cluster name goes, add as something you search for e.g. "secondaryName"
+    assert.ok(
+      find('[data-test-replication-mode-display]').textContent.includes('secondary'),
+      'it displays the cluster mode correctly'
+    );
   });
 });
