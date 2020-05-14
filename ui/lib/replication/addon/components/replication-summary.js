@@ -28,6 +28,7 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
     if (initialReplicationMode) {
       this.set('replicationMode', initialReplicationMode);
     }
+    console.log('did the summary receive new attrs?');
   },
   showModeSummary: false,
   initialReplicationMode: null,
