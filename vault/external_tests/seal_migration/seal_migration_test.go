@@ -32,35 +32,35 @@ func testVariousBackends(t *testing.T, tf testFunc) {
 
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
 
-	//t.Run("inmem", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("inmem", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("inmem")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeInmemBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 51000)
-	//})
+		logger := logger.Named("inmem")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeInmemBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 51000)
+	})
 
-	//t.Run("file", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("file", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("file")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeFileBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 52000)
-	//})
+		logger := logger.Named("file")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeFileBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 52000)
+	})
 
-	//t.Run("consul", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("consul", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("consul")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeConsulBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 53000)
-	//})
+		logger := logger.Named("consul")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeConsulBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 53000)
+	})
 
 	t.Run("raft", func(t *testing.T) {
 		t.Parallel()
@@ -187,6 +187,9 @@ func runShamir(
 		for _, core := range cluster.Cores {
 			cluster.UnsealCore(t, core)
 		}
+
+		// This is apparently necessary for the raft cluster to get itself
+		// situated.
 		time.Sleep(15 * time.Second)
 
 		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
@@ -280,7 +283,7 @@ func runTransit(
 
 	// Start the cluster
 	var conf = vault.CoreConfig{
-		Logger: logger.Named("runShamir"),
+		Logger: logger.Named("runTransit"),
 		Seal:   transitSeal,
 	}
 	var opts = vault.TestClusterOptions{
@@ -311,6 +314,9 @@ func runTransit(
 		for _, core := range cluster.Cores {
 			cluster.UnsealCoreWithStoredKeys(t, core)
 		}
+
+		// This is apparently necessary for the raft cluster to get itself
+		// situated.
 		time.Sleep(15 * time.Second)
 
 		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
@@ -322,8 +328,6 @@ func runTransit(
 		}
 	}
 	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
-
-	testhelpers.DebugCores(t, cluster)
 
 	// Read the secret
 	secret, err := client.Logical().Read("secret/foo")
