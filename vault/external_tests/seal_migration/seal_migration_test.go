@@ -302,13 +302,16 @@ func runTransit(
 	client := leader.Client
 	client.SetToken(rootToken)
 
-	// Even though we are using autounseal, we have to unseal explicitly
-	// because we are using SkipInit.
+	// Unseal.  Even though we are using autounseal, we have to unseal
+	// explicitly because we are using SkipInit.
 	if storage.IsRaft {
+		provider := testhelpers.NewHardcodedServerAddressProvider(cluster, baseClusterPort)
+		testhelpers.SetRaftAddressProviders(t, cluster, provider)
+
 		for _, core := range cluster.Cores {
 			cluster.UnsealCoreWithStoredKeys(t, core)
 		}
-		//time.Sleep(15 * time.Second)
+		time.Sleep(15 * time.Second)
 
 		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
 			t.Fatal(err)
@@ -322,14 +325,14 @@ func runTransit(
 
 	testhelpers.DebugCores(t, cluster)
 
-	//// Read the secret
-	//secret, err := client.Logical().Read("secret/foo")
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//if diff := deep.Equal(secret.Data, map[string]interface{}{"zork": "quux"}); len(diff) > 0 {
-	//	t.Fatal(diff)
-	//}
+	// Read the secret
+	secret, err := client.Logical().Read("secret/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(secret.Data, map[string]interface{}{"zork": "quux"}); len(diff) > 0 {
+		t.Fatal(diff)
+	}
 
 	// Seal the cluster
 	cluster.EnsureCoresSealed(t)
