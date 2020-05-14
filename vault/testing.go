@@ -909,6 +909,12 @@ func (c *TestCluster) UnsealCore(t testing.T, core *TestClusterCore) {
 	}
 }
 
+func (c *TestCluster) UnsealCoreWithStoredKeys(t testing.T, core *TestClusterCore) {
+	if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func (c *TestCluster) EnsureCoresSealed(t testing.T) {
 	t.Helper()
 	if err := c.ensureCoresSealed(); err != nil {
