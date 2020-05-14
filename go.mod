@@ -27,13 +27,14 @@ require (
 	github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
+	github.com/client9/misspell v0.3.4
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/coreos/go-semver v0.2.0
 	github.com/denisenkom/go-mssqldb v0.0.0-20190412130859-3b1d194e553a
 	github.com/dnaeon/go-vcr v1.0.1 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
-	github.com/elazarl/go-bindata-assetfs v1.0.0
+	github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
 	github.com/fatih/color v1.7.0
 	github.com/fatih/structs v1.1.0
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
@@ -51,6 +52,7 @@ require (
 	github.com/hashicorp/consul-template v0.22.0
 	github.com/hashicorp/consul/api v1.2.1-0.20200128105449-6681be918a6e
 	github.com/hashicorp/errwrap v1.0.0
+	github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-gcp-common v0.6.0
 	github.com/hashicorp/go-hclog v0.13.0
@@ -106,6 +108,7 @@ require (
 	github.com/mitchellh/copystructure v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/go-testing-interface v1.0.0
+	github.com/mitchellh/gox v1.0.1
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/mitchellh/reflectwalk v1.0.1
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
@@ -140,6 +143,7 @@ require (
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
 	golang.org/x/net v0.0.0-20200513185701-a91f0712d120
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/tools v0.0.0-20200416214402-fc959738d646
 	google.golang.org/api v0.24.0
 	google.golang.org/grpc v1.28.1
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
