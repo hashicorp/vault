@@ -193,6 +193,9 @@ github.com/circonus-labs/circonus-gometrics/api/config
 github.com/circonus-labs/circonus-gometrics/checkmgr
 # github.com/circonus-labs/circonusllhist v0.1.3
 github.com/circonus-labs/circonusllhist
+# github.com/client9/misspell v0.3.4
+github.com/client9/misspell
+github.com/client9/misspell/cmd/misspell
 # github.com/cloudfoundry-community/go-cfclient v0.0.0-20190201205600-f136f9222381
 github.com/cloudfoundry-community/go-cfclient
 # github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
@@ -228,7 +231,7 @@ github.com/dsnet/compress/internal/prefix
 # github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 github.com/duosecurity/duo_api_golang
 github.com/duosecurity/duo_api_golang/authapi
-# github.com/elazarl/go-bindata-assetfs v1.0.0
+# github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
 github.com/elazarl/go-bindata-assetfs
 # github.com/fatih/color v1.7.0
 github.com/fatih/color
@@ -264,7 +267,7 @@ github.com/gocql/gocql
 github.com/gocql/gocql/internal/lru
 github.com/gocql/gocql/internal/murmur
 github.com/gocql/gocql/internal/streams
-# github.com/gogo/protobuf v1.2.1
+# github.com/gogo/protobuf v1.3.1
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/io
 github.com/gogo/protobuf/proto
@@ -326,6 +329,8 @@ github.com/hashicorp/consul-template/watch
 github.com/hashicorp/consul/api
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
+# github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible
+github.com/hashicorp/go-bindata
 # github.com/hashicorp/go-cleanhttp v0.5.1
 github.com/hashicorp/go-cleanhttp
 # github.com/hashicorp/go-gcp-common v0.6.0
@@ -620,8 +625,12 @@ github.com/mitchellh/copystructure
 github.com/mitchellh/go-homedir
 # github.com/mitchellh/go-testing-interface v1.0.0
 github.com/mitchellh/go-testing-interface
+# github.com/mitchellh/gox v1.0.1
+github.com/mitchellh/gox
 # github.com/mitchellh/hashstructure v1.0.0
 github.com/mitchellh/hashstructure
+# github.com/mitchellh/iochan v1.0.0
+github.com/mitchellh/iochan
 # github.com/mitchellh/mapstructure v1.1.2
 github.com/mitchellh/mapstructure
 # github.com/mitchellh/pointerstructure v0.0.0-20190430161007-f252a8fd71c8
