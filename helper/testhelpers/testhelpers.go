@@ -475,6 +475,9 @@ func awaitUnsealWithStoredKeys(t testing.T, core *vault.TestClusterCore) {
 		if time.Now().After(timeout) {
 			t.Fatal("raft join: timeout waiting for core to unseal")
 		}
+		// Its actually ok for an error to happen here the first couple of
+		// times -- it means the raft join hasn't gotten around to initializing
+		// the backend yet.
 		err := core.UnsealWithStoredKeys(context.Background())
 		if err == nil {
 			return
