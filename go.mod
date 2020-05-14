@@ -9,7 +9,7 @@ replace github.com/hashicorp/vault/sdk => ./sdk
 require (
 	cloud.google.com/go v0.39.0
 	github.com/Azure/azure-sdk-for-go v36.2.0+incompatible
-	github.com/Azure/go-autorest/autorest v0.9.2
+	github.com/Azure/go-autorest/autorest v0.9.6
 	github.com/DataDog/zstd v1.4.4 // indirect
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/SAP/go-hdb v0.14.1
@@ -43,7 +43,7 @@ require (
 	github.com/go-test/deep v1.0.2
 	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
 	github.com/gogo/protobuf v1.2.1
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.3.4
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/hashicorp/consul-template v0.22.0
@@ -51,8 +51,8 @@ require (
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-gcp-common v0.6.0
-	github.com/hashicorp/go-hclog v0.12.0
-	github.com/hashicorp/go-kms-wrapping v0.5.1
+	github.com/hashicorp/go-hclog v0.12.1
+	github.com/hashicorp/go-kms-wrapping v0.5.5
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.0.0
@@ -86,8 +86,8 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.5
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.2
-	github.com/hashicorp/vault/api v1.0.5-0.20200317185738-82f498082f02
-	github.com/hashicorp/vault/sdk v0.1.14-0.20200317185738-82f498082f02
+	github.com/hashicorp/vault/api v1.0.5-0.20200425175256-972b211f3e96
+	github.com/hashicorp/vault/sdk v0.1.14-0.20200425175256-972b211f3e96
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
