@@ -238,7 +238,7 @@ github.com/ghodss/yaml
 github.com/go-asn1-ber/asn1-ber
 # github.com/go-errors/errors v1.0.1
 github.com/go-errors/errors
-# github.com/go-ldap/ldap/v3 v3.1.3
+# github.com/go-ldap/ldap/v3 v3.1.10
 github.com/go-ldap/ldap/v3
 # github.com/go-ole/go-ole v1.2.1
 github.com/go-ole/go-ole
@@ -439,6 +439,7 @@ github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/database/helper/credsutil
 github.com/hashicorp/vault/sdk/database/helper/dbutil
 github.com/hashicorp/vault/sdk/framework
+github.com/hashicorp/vault/sdk/helper/authmetadata
 github.com/hashicorp/vault/sdk/helper/awsutil
 github.com/hashicorp/vault/sdk/helper/base62
 github.com/hashicorp/vault/sdk/helper/certutil
@@ -616,6 +617,8 @@ github.com/modern-go/reflect2
 github.com/mongodb/go-client-mongodb-atlas/mongodbatlas
 # github.com/mwielbut/pointy v1.1.0
 github.com/mwielbut/pointy
+# github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
+github.com/natefinch/atomic
 # github.com/ncw/swift v1.0.47
 github.com/ncw/swift
 # github.com/nwaples/rardecode v1.0.0
