@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"runtime/debug"
 	"sync/atomic"
 
 	wrapping "github.com/hashicorp/go-kms-wrapping"
@@ -415,6 +416,10 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	c.unsealWithStoredKeysLock.Lock()
 	defer c.unsealWithStoredKeysLock.Unlock()
+
+	fmt.Printf("--------------------------------------------------------------------------\n")
+	fmt.Printf("Core.UnsealWithStoredKeys\n")
+	debug.PrintStack()
 
 	if c.seal.BarrierType() == wrapping.Shamir {
 		return nil

@@ -426,11 +426,14 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 		vault.TestWaitActive(t, leader.Core)
 	}
 
-	leaderInfo := &raft.LeaderJoinInfo{
-		LeaderAPIAddr: leader.Client.Address(),
-		TLSConfig:     leader.TLSConfig,
+	leaderInfos := []*raft.LeaderJoinInfo{
+		&raft.LeaderJoinInfo{
+			LeaderAPIAddr: leader.Client.Address(),
+			TLSConfig:     leader.TLSConfig,
+		},
 	}
 
+	// Join followers
 	for i := 1; i < len(cluster.Cores); i++ {
 		core := cluster.Cores[i]
 		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
@@ -453,8 +456,59 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 
 func RaftClusterJoinNodesWithStoredKeys(t testing.T, cluster *vault.TestCluster) {
 
+	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
+	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
+
 	leader := cluster.Cores[0]
+
+	// Seal the leader so we can install an address provider
+	{
+		EnsureCoreSealed(t, leader)
+		leader.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		if err := leader.UnsealWithStoredKeys(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+		vault.TestWaitActive(t, leader.Core)
+	}
+
+	leaderInfo := &raft.LeaderJoinInfo{
+		LeaderAPIAddr: leader.Client.Address(),
+		TLSConfig:     leader.TLSConfig,
+	}
+
+	for i := 1; i < len(cluster.Cores); i++ {
+		core := cluster.Cores[i]
+		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		leaderInfos := []*raft.LeaderJoinInfo{
+			leaderInfo,
+		}
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// The raft backend is not initialized right away after the join.  We
+		// need to wait briefly before we can unseal.
+		timeout := time.Now().Add(30 * time.Second)
+		for {
+			if time.Now().After(timeout) {
+				t.Fatal("timeout waiting for core to unseal")
+			}
+			err := core.UnsealWithStoredKeys(context.Background())
+			if err == nil {
+				return
+			}
+			core.Logger().Warn("failed to unseal core", "error", err)
+			time.Sleep(time.Second)
+		}
+	}
+
 	debugRaftConfiguration(t, leader)
+	for i, c := range cluster.Cores {
+		fmt.Printf(">>> core sealed %d %t\n", i, c.Core.Sealed())
+	}
+
+	WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
 }
 
 // HardcodedServerAddressProvider is a ServerAddressProvider that uses
