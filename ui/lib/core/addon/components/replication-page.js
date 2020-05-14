@@ -17,7 +17,6 @@ export default Component.extend({
   didReceiveAttrs() {
     this._super(arguments);
     this.getReplicationModeStatus.perform();
-    console.log('did the page receive new attrs???');
   },
   getReplicationModeStatus: task(function*() {
     let resp;

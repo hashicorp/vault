@@ -9,12 +9,6 @@ export default Component.extend({
   data: null,
   replicationDetails: null,
   isSecondary: null,
-
-  didReceiveAttrs() {
-    this._super(arguments);
-    console.log('the dashboard component received new attrs!');
-  },
-
   isSyncing: computed('replicationDetails.{state}', 'isSecondary', function() {
     const { state } = this.replicationDetails;
     const isSecondary = this.isSecondary;
