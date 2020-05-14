@@ -257,8 +257,9 @@ func initializeTransit(
 		//if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
 		//	t.Fatal(err)
 		//}
+	} else {
+		testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
 	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
 
 	// Write a secret that we will read back out later.
 	_, err := client.Logical().Write(
