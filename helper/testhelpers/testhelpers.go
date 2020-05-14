@@ -431,9 +431,7 @@ func raftClusterJoinNodes(t testing.T, cluster *vault.TestCluster, useStoredKeys
 		EnsureCoreSealed(t, leader)
 		leader.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
 		if useStoredKeys {
-			if err := leader.UnsealWithStoredKeys(context.Background()); err != nil {
-				t.Fatal(err)
-			}
+			cluster.UnsealCoreWithStoredKeys(t, leader)
 		} else {
 			cluster.UnsealCore(t, leader)
 		}

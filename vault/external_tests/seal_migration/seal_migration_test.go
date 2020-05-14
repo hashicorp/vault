@@ -32,15 +32,15 @@ func testVariousBackends(t *testing.T, tf testFunc) {
 
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
 
-	t.Run("inmem", func(t *testing.T) {
-		t.Parallel()
+	//t.Run("inmem", func(t *testing.T) {
+	//	t.Parallel()
 
-		logger := logger.Named("inmem")
-		storage, cleanup := teststorage.MakeReusableStorage(
-			t, logger, teststorage.MakeInmemBackend(t, logger))
-		defer cleanup()
-		tf(t, logger, storage, 51000)
-	})
+	//	logger := logger.Named("inmem")
+	//	storage, cleanup := teststorage.MakeReusableStorage(
+	//		t, logger, teststorage.MakeInmemBackend(t, logger))
+	//	defer cleanup()
+	//	tf(t, logger, storage, 51000)
+	//})
 
 	//t.Run("file", func(t *testing.T) {
 	//	t.Parallel()
@@ -62,14 +62,14 @@ func testVariousBackends(t *testing.T, tf testFunc) {
 	//	tf(t, logger, storage, 53000)
 	//})
 
-	//t.Run("raft", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("raft", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("raft")
-	//	storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores)
-	//	defer cleanup()
-	//	tf(t, logger, storage, 54000)
-	//})
+		logger := logger.Named("raft")
+		storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores)
+		defer cleanup()
+		tf(t, logger, storage, 54000)
+	})
 }
 
 func testShamir(
@@ -248,7 +248,7 @@ func initializeTransit(
 	leader := cluster.Cores[0]
 	client := leader.Client
 
-	// Unseal
+	// Join raft
 	if storage.IsRaft {
 		testhelpers.RaftClusterJoinNodesWithStoredKeys(t, cluster)
 		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
@@ -305,25 +305,31 @@ func runTransit(
 	// Even though we are using autounseal, we have to unseal explicitly
 	// because we are using SkipInit.
 	if storage.IsRaft {
-		panic("dasfdsf")
+		for _, core := range cluster.Cores {
+			cluster.UnsealCoreWithStoredKeys(t, core)
+		}
+		//time.Sleep(15 * time.Second)
+
+		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+			t.Fatal(err)
+		}
 	} else {
 		if err := cluster.UnsealCoresWithError(true); err != nil {
 			t.Fatal(err)
 		}
-		//for i, c := range cluster.Cores {
-		//	fmt.Printf(">>> core sealed %d %t\n", i, c.Core.Sealed())
-		//}
 	}
 	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
 
-	// Read the secret
-	secret, err := client.Logical().Read("secret/foo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if diff := deep.Equal(secret.Data, map[string]interface{}{"zork": "quux"}); len(diff) > 0 {
-		t.Fatal(diff)
-	}
+	testhelpers.DebugCores(t, cluster)
+
+	//// Read the secret
+	//secret, err := client.Logical().Read("secret/foo")
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//if diff := deep.Equal(secret.Data, map[string]interface{}{"zork": "quux"}); len(diff) > 0 {
+	//	t.Fatal(diff)
+	//}
 
 	// Seal the cluster
 	cluster.EnsureCoresSealed(t)
