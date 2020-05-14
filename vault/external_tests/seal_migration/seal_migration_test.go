@@ -32,35 +32,35 @@ func testVariousBackends(t *testing.T, tf testFunc) {
 
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
 
-	t.Run("inmem", func(t *testing.T) {
-		t.Parallel()
+	//t.Run("inmem", func(t *testing.T) {
+	//	t.Parallel()
 
-		logger := logger.Named("inmem")
-		storage, cleanup := teststorage.MakeReusableStorage(
-			t, logger, teststorage.MakeInmemBackend(t, logger))
-		defer cleanup()
-		tf(t, logger, storage, 51000)
-	})
+	//	logger := logger.Named("inmem")
+	//	storage, cleanup := teststorage.MakeReusableStorage(
+	//		t, logger, teststorage.MakeInmemBackend(t, logger))
+	//	defer cleanup()
+	//	tf(t, logger, storage, 51000)
+	//})
 
-	t.Run("file", func(t *testing.T) {
-		t.Parallel()
+	//t.Run("file", func(t *testing.T) {
+	//	t.Parallel()
 
-		logger := logger.Named("file")
-		storage, cleanup := teststorage.MakeReusableStorage(
-			t, logger, teststorage.MakeFileBackend(t, logger))
-		defer cleanup()
-		tf(t, logger, storage, 52000)
-	})
+	//	logger := logger.Named("file")
+	//	storage, cleanup := teststorage.MakeReusableStorage(
+	//		t, logger, teststorage.MakeFileBackend(t, logger))
+	//	defer cleanup()
+	//	tf(t, logger, storage, 52000)
+	//})
 
-	t.Run("consul", func(t *testing.T) {
-		t.Parallel()
+	//t.Run("consul", func(t *testing.T) {
+	//	t.Parallel()
 
-		logger := logger.Named("consul")
-		storage, cleanup := teststorage.MakeReusableStorage(
-			t, logger, teststorage.MakeConsulBackend(t, logger))
-		defer cleanup()
-		tf(t, logger, storage, 53000)
-	})
+	//	logger := logger.Named("consul")
+	//	storage, cleanup := teststorage.MakeReusableStorage(
+	//		t, logger, teststorage.MakeConsulBackend(t, logger))
+	//	defer cleanup()
+	//	tf(t, logger, storage, 53000)
+	//})
 
 	t.Run("raft", func(t *testing.T) {
 		t.Parallel()
@@ -95,7 +95,6 @@ func testTransit(
 
 	rootToken, recoveryKeys, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
 	println("rootToken, recoveryKeys, transitSeal", rootToken, recoveryKeys, transitSeal)
-	//reuseShamir(t, logger, storage, basePort, rootToken, barrierKeys)
 }
 
 // initializeShamir initializes a brand new backend storage with Shamir.
@@ -129,7 +128,7 @@ func initializeShamir(
 	// Unseal
 	if storage.IsRaft {
 		testhelpers.RaftClusterJoinNodes(t, cluster)
-		if err := testhelpers.VerifyRaftConfiguration(t, leader, numTestCores); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
 			t.Fatal(err)
 		}
 	} else {
@@ -193,7 +192,7 @@ func reuseShamir(
 		}
 		time.Sleep(15 * time.Second)
 
-		if err := testhelpers.VerifyRaftConfiguration(t, leader, numTestCores); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
 			t.Fatal(err)
 		}
 	} else {
@@ -254,12 +253,10 @@ func initializeTransit(
 
 	// Unseal
 	if storage.IsRaft {
-		testhelpers.RaftClusterJoinNodes(t, cluster)
-		if err := testhelpers.VerifyRaftConfiguration(t, leader, numTestCores); err != nil {
-			t.Fatal(err)
-		}
-	} else {
-		cluster.UnsealCores(t)
+		testhelpers.RaftClusterJoinNodesWithStoredKeys(t, cluster)
+		//if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+		//	t.Fatal(err)
+		//}
 	}
 	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
 

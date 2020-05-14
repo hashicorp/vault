@@ -412,14 +412,6 @@ func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib
 }
 
 func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
-	raftClusterJoinNodes(t, cluster, false)
-}
-
-func RaftClusterJoinNodesWithStoredKeys(t testing.T, cluster *vault.TestCluster) {
-	raftClusterJoinNodes(t, cluster, true)
-}
-
-func raftClusterJoinNodes(t testing.T, cluster *vault.TestCluster, useStoredKeys bool) {
 
 	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
 	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
@@ -430,19 +422,13 @@ func raftClusterJoinNodes(t testing.T, cluster *vault.TestCluster, useStoredKeys
 	{
 		EnsureCoreSealed(t, leader)
 		leader.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		if useStoredKeys {
-			cluster.UnsealCoreWithStoredKeys(t, leader)
-		} else {
-			cluster.UnsealCore(t, leader)
-		}
+		cluster.UnsealCore(t, leader)
 		vault.TestWaitActive(t, leader.Core)
 	}
 
-	leaderInfos := []*raft.LeaderJoinInfo{
-		&raft.LeaderJoinInfo{
-			LeaderAPIAddr: leader.Client.Address(),
-			TLSConfig:     leader.TLSConfig,
-		},
+	leaderInfo := &raft.LeaderJoinInfo{
+		LeaderAPIAddr: leader.Client.Address(),
+		TLSConfig:     leader.TLSConfig,
 	}
 
 	for i := 1; i < len(cluster.Cores); i++ {
@@ -465,23 +451,10 @@ func raftClusterJoinNodes(t testing.T, cluster *vault.TestCluster, useStoredKeys
 	WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
 }
 
-func awaitUnsealWithStoredKeys(t testing.T, core *vault.TestClusterCore) {
+func RaftClusterJoinNodesWithStoredKeys(t testing.T, cluster *vault.TestCluster) {
 
-	timeout := time.Now().Add(30 * time.Second)
-	for {
-		if time.Now().After(timeout) {
-			t.Fatal("raft join: timeout waiting for core to unseal")
-		}
-		// Its actually ok for an error to happen here the first couple of
-		// times -- it means the raft join hasn't gotten around to initializing
-		// the backend yet.
-		err := core.UnsealWithStoredKeys(context.Background())
-		if err == nil {
-			return
-		}
-		core.Logger().Warn("raft join: failed to unseal core", "error", err)
-		time.Sleep(time.Second)
-	}
+	leader := cluster.Cores[0]
+	debugRaftConfiguration(t, leader)
 }
 
 // HardcodedServerAddressProvider is a ServerAddressProvider that uses
@@ -533,7 +506,7 @@ func SetRaftAddressProviders(t testing.T, cluster *vault.TestCluster, provider r
 // VerifyRaftConfiguration checks that we have a valid raft configuration, i.e.
 // the correct number of servers, having the correct NodeIDs, and exactly one
 // leader.
-func VerifyRaftConfiguration(t testing.T, core *vault.TestClusterCore, numCores int) error {
+func VerifyRaftConfiguration(core *vault.TestClusterCore, numCores int) error {
 
 	backend := core.UnderlyingRawStorage.(*raft.RaftBackend)
 	ctx := namespace.RootContext(context.Background())
