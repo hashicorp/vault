@@ -412,23 +412,23 @@ func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib
 }
 
 func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
-	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
 
-	leaderCore := cluster.Cores[0]
-	leaderAPI := leaderCore.Client.Address()
+	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
 	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
+
+	leader := cluster.Cores[0]
 
 	// Seal the leader so we can install an address provider
 	{
-		EnsureCoreSealed(t, leaderCore)
-		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		cluster.UnsealCore(t, leaderCore)
-		vault.TestWaitActive(t, leaderCore.Core)
+		EnsureCoreSealed(t, leader)
+		leader.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		cluster.UnsealCore(t, leader)
+		vault.TestWaitActive(t, leader.Core)
 	}
 
 	leaderInfo := &raft.LeaderJoinInfo{
-		LeaderAPIAddr: leaderAPI,
-		TLSConfig:     leaderCore.TLSConfig,
+		LeaderAPIAddr: leader.Client.Address(),
+		TLSConfig:     leader.TLSConfig,
 	}
 
 	for i := 1; i < len(cluster.Cores); i++ {
@@ -446,6 +446,12 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	}
 
 	WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
+}
+
+func RaftClusterJoinNodesWithStoredKeys(t testing.T, cluster *vault.TestCluster) {
+
+	leader := cluster.Cores[0]
+	debugRaftConfiguration(t, leader)
 }
 
 // HardcodedServerAddressProvider is a ServerAddressProvider that uses
@@ -497,7 +503,7 @@ func SetRaftAddressProviders(t testing.T, cluster *vault.TestCluster, provider r
 // VerifyRaftConfiguration checks that we have a valid raft configuration, i.e.
 // the correct number of servers, having the correct NodeIDs, and exactly one
 // leader.
-func VerifyRaftConfiguration(t testing.T, core *vault.TestClusterCore, numCores int) error {
+func VerifyRaftConfiguration(core *vault.TestClusterCore, numCores int) error {
 
 	backend := core.UnderlyingRawStorage.(*raft.RaftBackend)
 	ctx := namespace.RootContext(context.Background())
