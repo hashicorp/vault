@@ -43,11 +43,10 @@ type retryHandler struct {
 
 // Run must be called for retries to be started.
 func (r *retryHandler) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup) {
-	wait.Add(1)
-
 	r.setInitialState(shutdownCh)
 
 	// Run this in a go func so this call doesn't block.
+	wait.Add(1)
 	go func() {
 		// Make sure Vault will give us time to finish up here.
 		defer wait.Done()
@@ -55,10 +54,16 @@ func (r *retryHandler) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup) {
 		var g run.Group
 
 		// This run group watches for the shutdownCh
+		shutdownActorStop := make(chan struct{})
 		g.Add(func() error {
-			<-shutdownCh
+			select {
+			case <-shutdownCh:
+			case <-shutdownActorStop:
+			}
 			return nil
-		}, func(error) {})
+		}, func(error) {
+			close(shutdownActorStop)
+		})
 
 		checkUpdateStateStop := make(chan struct{})
 		g.Add(func() error {
@@ -69,7 +74,9 @@ func (r *retryHandler) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup) {
 			r.client.Shutdown()
 		})
 
-		g.Run()
+		if err := g.Run(); err != nil {
+			r.logger.Error("error encountered during periodic state update", "error", err)
+		}
 	}()
 }
 
