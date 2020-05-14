@@ -28,13 +28,12 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
+    this.set('replicationDetails', REPLICATION_DETAILS);
     this.set('clusterMode', 'secondary');
     this.set('isSecondary', true);
   });
 
   test('it renders', async function(assert) {
-    this.set('replicationDetails', REPLICATION_DETAILS);
-
     await render(hbs`<ReplicationDashboard
       @replicationDetails={{replicationDetails}}
       @clusterMode={{clusterMode}}
@@ -48,8 +47,22 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
     assert.dom('[data-test-flash-message]').doesNotExist('no flash message is displayed on render');
   });
 
+  test('it updates the dashboard when the replication mode has changed', async function(assert) {
+    await render(hbs`<ReplicationDashboard
+      @replicationDetails={{replicationDetails}}
+      @clusterMode={{clusterMode}}
+      @isSecondary={{isSecondary}}
+    />`);
+
+    assert.dom('[data-test-selectable-card-container="secondary"]').exists();
+
+    this.set('clusterMode', 'primary');
+    this.set('isSecondary', false);
+
+    assert.dom('[data-test-selectable-card-container="primary"]').exists();
+  });
+
   test('it renders the primary selectable-card-container when the cluster is a primary', async function(assert) {
-    this.set('replicationDetails', REPLICATION_DETAILS);
     this.set('isSecondary', false);
 
     await render(hbs`<ReplicationDashboard
