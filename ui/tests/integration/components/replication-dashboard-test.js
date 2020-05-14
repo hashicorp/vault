@@ -1,6 +1,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
+import { assign } from '@ember/polyfills';
 import hbs from 'htmlbars-inline-precompile';
 
 const REPLICATION_DETAILS = {
@@ -94,5 +95,12 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
         IS_REINDEXING.reindex_building_progress,
         'shows the reindexing progress inside the alert banner'
       );
+
+    const reindexingInProgress = assign({}, IS_REINDEXING, { reindex_building_progress: 27000 });
+    this.set('replicationDetails', reindexingInProgress);
+
+    assert
+      .dom('.message-title>.progress')
+      .hasValue(reindexingInProgress.reindex_building_progress, 'updates the reindexing progress');
   });
 });

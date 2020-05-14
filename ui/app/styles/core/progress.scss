@@ -21,4 +21,5 @@
 // style the progress bar
 .progress[value]::-webkit-progress-value {
   border-radius: $radius;
+  transition: width 1s ease-out;
 }
