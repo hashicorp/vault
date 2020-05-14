@@ -1,4 +1,4 @@
-package physical
+package teststorage
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -28,8 +27,8 @@ func TestReusableStorage(t *testing.T) {
 		t.Parallel()
 
 		logger := logger.Named("inmem")
-		storage, cleanup := teststorage.MakeReusableStorage(
-			t, logger, teststorage.MakeInmemBackend(t, logger))
+		storage, cleanup := MakeReusableStorage(
+			t, logger, MakeInmemBackend(t, logger))
 		defer cleanup()
 		testReusableStorage(t, logger, storage, 51000)
 	})
@@ -38,8 +37,8 @@ func TestReusableStorage(t *testing.T) {
 		t.Parallel()
 
 		logger := logger.Named("file")
-		storage, cleanup := teststorage.MakeReusableStorage(
-			t, logger, teststorage.MakeFileBackend(t, logger))
+		storage, cleanup := MakeReusableStorage(
+			t, logger, MakeFileBackend(t, logger))
 		defer cleanup()
 		testReusableStorage(t, logger, storage, 52000)
 	})
@@ -48,8 +47,8 @@ func TestReusableStorage(t *testing.T) {
 		t.Parallel()
 
 		logger := logger.Named("consul")
-		storage, cleanup := teststorage.MakeReusableStorage(
-			t, logger, teststorage.MakeConsulBackend(t, logger))
+		storage, cleanup := MakeReusableStorage(
+			t, logger, MakeConsulBackend(t, logger))
 		defer cleanup()
 		testReusableStorage(t, logger, storage, 53000)
 	})
@@ -58,7 +57,7 @@ func TestReusableStorage(t *testing.T) {
 		t.Parallel()
 
 		logger := logger.Named("raft")
-		storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores)
+		storage, cleanup := MakeReusableRaftStorage(t, logger, numTestCores)
 		defer cleanup()
 		testReusableStorage(t, logger, storage, 54000)
 	})
@@ -66,7 +65,7 @@ func TestReusableStorage(t *testing.T) {
 
 func testReusableStorage(
 	t *testing.T, logger hclog.Logger,
-	storage teststorage.ReusableStorage, basePort int) {
+	storage ReusableStorage, basePort int) {
 
 	rootToken, keys := initializeStorage(t, logger, storage, basePort)
 	reuseStorage(t, logger, storage, basePort, rootToken, keys)
@@ -75,7 +74,7 @@ func testReusableStorage(
 // initializeStorage initializes a brand new backend storage.
 func initializeStorage(
 	t *testing.T, logger hclog.Logger,
-	storage teststorage.ReusableStorage, basePort int) (string, [][]byte) {
+	storage ReusableStorage, basePort int) (string, [][]byte) {
 
 	var baseClusterPort = basePort + 10
 
@@ -130,7 +129,7 @@ func initializeStorage(
 // reuseStorage uses a pre-populated backend storage.
 func reuseStorage(
 	t *testing.T, logger hclog.Logger,
-	storage teststorage.ReusableStorage, basePort int,
+	storage ReusableStorage, basePort int,
 	rootToken string, keys [][]byte) {
 
 	var baseClusterPort = basePort + 10
