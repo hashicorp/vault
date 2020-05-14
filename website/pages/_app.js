@@ -1,7 +1,6 @@
 import './style.css'
 import '@hashicorp/nextjs-scripts/lib/nprogress/style.css'
 
-import '../lib/globalThis'
 import Router from 'next/router'
 import Head from 'next/head'
 import { ErrorBoundary } from '@hashicorp/nextjs-scripts/lib/bugsnag'
