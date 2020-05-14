@@ -212,7 +212,7 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 	return m.runCommandWithRetry(ctx, db, dropUserCmd)
 }
 
-// RotateRootCredentials is not currently supported on MongoDB
+// RotateRootCredentials in MongoDB
 func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
 	// Grab the lock
 	m.Lock()
