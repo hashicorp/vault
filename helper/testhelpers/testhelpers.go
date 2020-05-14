@@ -412,6 +412,14 @@ func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib
 }
 
 func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
+	raftClusterJoinNodes(t, cluster, false)
+}
+
+func RaftClusterJoinNodesWithStoredKeys(t testing.T, cluster *vault.TestCluster) {
+	raftClusterJoinNodes(t, cluster, true)
+}
+
+func raftClusterJoinNodes(t testing.T, cluster *vault.TestCluster, useStoredKeys bool) {
 
 	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
 	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
@@ -422,7 +430,13 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	{
 		EnsureCoreSealed(t, leader)
 		leader.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		cluster.UnsealCore(t, leader)
+		if useStoredKeys {
+			if err := leader.UnsealWithStoredKeys(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			cluster.UnsealCore(t, leader)
+		}
 		vault.TestWaitActive(t, leader.Core)
 	}
 
@@ -442,67 +456,32 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 			t.Fatal(err)
 		}
 
-		cluster.UnsealCore(t, core)
+		if useStoredKeys {
+			// For autounseal, the raft backend is not initialized right away
+			// after the join.  We need to wait briefly before we can unseal.
+			awaitUnsealWithStoredKeys(t, core)
+		} else {
+			cluster.UnsealCore(t, core)
+		}
 	}
 
 	WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
 }
 
-func RaftClusterJoinNodesWithStoredKeys(t testing.T, cluster *vault.TestCluster) {
+func awaitUnsealWithStoredKeys(t testing.T, core *vault.TestClusterCore) {
 
-	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
-	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
-
-	leader := cluster.Cores[0]
-
-	// Seal the leader so we can install an address provider
-	{
-		EnsureCoreSealed(t, leader)
-		leader.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		if err := leader.UnsealWithStoredKeys(context.Background()); err != nil {
-			t.Fatal(err)
+	timeout := time.Now().Add(30 * time.Second)
+	for {
+		if time.Now().After(timeout) {
+			t.Fatal("raft join: timeout waiting for core to unseal")
 		}
-		vault.TestWaitActive(t, leader.Core)
-	}
-
-	leaderInfo := &raft.LeaderJoinInfo{
-		LeaderAPIAddr: leader.Client.Address(),
-		TLSConfig:     leader.TLSConfig,
-	}
-
-	for i := 1; i < len(cluster.Cores); i++ {
-		core := cluster.Cores[i]
-		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		leaderInfos := []*raft.LeaderJoinInfo{
-			leaderInfo,
+		err := core.UnsealWithStoredKeys(context.Background())
+		if err == nil {
+			return
 		}
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// The raft backend is not initialized right away after the join.  We
-		// need to wait briefly before we can unseal.
-		timeout := time.Now().Add(30 * time.Second)
-		for {
-			if time.Now().After(timeout) {
-				t.Fatal("timeout waiting for core to unseal")
-			}
-			err := core.UnsealWithStoredKeys(context.Background())
-			if err == nil {
-				return
-			}
-			core.Logger().Warn("failed to unseal core", "error", err)
-			time.Sleep(time.Second)
-		}
+		core.Logger().Warn("raft join: failed to unseal core", "error", err)
+		time.Sleep(time.Second)
 	}
-
-	debugRaftConfiguration(t, leader)
-	for i, c := range cluster.Cores {
-		fmt.Printf(">>> core sealed %d %t\n", i, c.Core.Sealed())
-	}
-
-	WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
 }
 
 // HardcodedServerAddressProvider is a ServerAddressProvider that uses

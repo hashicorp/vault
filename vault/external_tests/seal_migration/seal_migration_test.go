@@ -32,35 +32,35 @@ func testVariousBackends(t *testing.T, tf testFunc) {
 
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
 
-	//t.Run("inmem", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("inmem", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("inmem")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeInmemBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 51000)
-	//})
+		logger := logger.Named("inmem")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeInmemBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 51000)
+	})
 
-	//t.Run("file", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("file", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("file")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeFileBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 52000)
-	//})
+		logger := logger.Named("file")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeFileBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 52000)
+	})
 
-	//t.Run("consul", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("consul", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("consul")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeConsulBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 53000)
-	//})
+		logger := logger.Named("consul")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeConsulBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 53000)
+	})
 
 	t.Run("raft", func(t *testing.T) {
 		t.Parallel()
@@ -254,9 +254,9 @@ func initializeTransit(
 	// Unseal
 	if storage.IsRaft {
 		testhelpers.RaftClusterJoinNodesWithStoredKeys(t, cluster)
-		//if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
-		//	t.Fatal(err)
-		//}
+		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+			t.Fatal(err)
+		}
 	} else {
 		testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
 	}
