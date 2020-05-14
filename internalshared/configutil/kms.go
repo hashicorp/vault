@@ -214,7 +214,7 @@ func GetAliCloudKMSFunc(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapp
 	return wrapper, info, nil
 }
 
-func GetAWSKMSFunc(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
+var GetAWSKMSFunc = func(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := awskms.NewWrapper(opts)
 	wrapperInfo, err := wrapper.SetConfig(kms.Config)
 	if err != nil {
@@ -287,7 +287,7 @@ func GetOCIKMSKMSFunc(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper
 	return wrapper, info, nil
 }
 
-func GetTransitKMSFunc(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
+var GetTransitKMSFunc = func(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := transit.NewWrapper(opts)
 	wrapperInfo, err := wrapper.SetConfig(kms.Config)
 	if err != nil {
