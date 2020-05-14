@@ -1,5 +1,3 @@
-// +build !enterprise
-
 package configutil
 
 import (
