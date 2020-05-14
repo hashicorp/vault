@@ -26,11 +26,12 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package io
+package raft
 
 import (
-	"github.com/gogo/protobuf/proto"
 	"io"
+
+	"google.golang.org/protobuf/proto"
 )
 
 type Writer interface {
