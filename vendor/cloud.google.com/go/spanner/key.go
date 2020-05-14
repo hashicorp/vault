@@ -135,11 +135,18 @@ func (key Key) String() string {
 			if v != nil {
 				fmt.Fprintf(b, "%q", v)
 			} else {
-				fmt.Fprint(b, "<null>")
+				fmt.Fprint(b, nullString)
 			}
-		case NullInt64, NullFloat64, NullBool, NullString, NullTime, NullDate:
+		case NullInt64, NullFloat64, NullBool:
 			// The above types implement fmt.Stringer.
 			fmt.Fprintf(b, "%s", v)
+		case NullString, NullDate, NullTime:
+			// Quote the returned string if it is not null.
+			if v.(NullableValue).IsNull() {
+				fmt.Fprintf(b, "%s", nullString)
+			} else {
+				fmt.Fprintf(b, "%q", v)
+			}
 		case civil.Date:
 			fmt.Fprintf(b, "%q", v)
 		case time.Time:
