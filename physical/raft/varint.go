@@ -53,25 +53,7 @@ type varintWriter struct {
 }
 
 func (this *varintWriter) WriteMsg(msg proto.Message) (err error) {
-	var data []byte
-	if m, ok := msg.(marshaler); ok {
-		n, ok := getSize(m)
-		if ok {
-			if n+binary.MaxVarintLen64 >= len(this.buffer) {
-				this.buffer = make([]byte, n+binary.MaxVarintLen64)
-			}
-			lenOff := binary.PutUvarint(this.buffer, uint64(n))
-			_, err = m.MarshalTo(this.buffer[lenOff:])
-			if err != nil {
-				return err
-			}
-			_, err = this.w.Write(this.buffer[:lenOff+n])
-			return err
-		}
-	}
-
-	// fallback
-	data, err = proto.Marshal(msg)
+	data, err := proto.Marshal(msg)
 	if err != nil {
 		return err
 	}
