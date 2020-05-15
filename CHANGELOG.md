@@ -36,6 +36,9 @@ IMPROVEMENTS:
   
 BUG FIXES:
 
+* serviceregistration: Fix a regression for Consul service registration that ignored using the listener address as
+  the redirect address unless api_addr was provided. It now properly uses the same redirect address as the one
+  used by Vault's Core object. [[GH-8976](https://github.com/hashicorp/vault/pull/8976)] 
 * sys: The path provided in `sys/internal/ui/mounts/:path` is now namespace-aware. This fixes an issue
   with `vault kv` subcommands that had namespaces provided in the path returning permission denied all the time.
   [[GH-8962](https://github.com/hashicorp/vault/pull/8962)]
@@ -175,6 +178,7 @@ BUG FIXES:
 * identity: Fix incorrect caching of identity token JWKS responses [[GH-8412](https://github.com/hashicorp/vault/pull/8412)]
 * metrics/stackdriver: Fix issue that prevents the stackdriver metrics library to create unnecessary stackdriver descriptors [[GH-8073](https://github.com/hashicorp/vault/pull/8073)]
 * replication: Fix issue causing cubbyholes in namespaces on performance secondaries to not work.
+* replication (enterprise): Unmounting a dynamic secrets backend could sometimes lead to replication errors.  Change the order of operations to prevent that.
 * seal (enterprise): Fix seal migration when transactional seal wrap backend is in use.
 * secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [[GH-8282](https://github.com/hashicorp/vault/pull/8282)]
 * secrets/database/mysql: Ensures default static credential rotation statements are used [[GH-8240](https://github.com/hashicorp/vault/pull/8240)]

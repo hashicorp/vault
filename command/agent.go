@@ -482,15 +482,8 @@ func (c *AgentCommand) Run(args []string) int {
 			// Parse 'require_request_header' listener config option, and wrap
 			// the request handler if necessary
 			muxHandler := cacheHandler
-			if v, ok := lnConfig.Config[agentConfig.RequireRequestHeader]; ok {
-				switch v {
-				case true:
-					muxHandler = verifyRequestHeader(muxHandler)
-				case false /* noop */ :
-				default:
-					c.UI.Error(fmt.Sprintf("Invalid value for 'require_request_header': %v", v))
-					return 1
-				}
+			if lnConfig.RequireRequestHeader {
+				muxHandler = verifyRequestHeader(muxHandler)
 			}
 
 			// Create a muxer and add paths relevant for the lease cache layer
