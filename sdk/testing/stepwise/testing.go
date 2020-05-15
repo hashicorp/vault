@@ -125,7 +125,6 @@ func Run(tt TestT, c Case) {
 		q.Q("---------")
 		q.Q("")
 	}()
-	// q.Q("==> here in testing.Test")
 	// We only run acceptance tests if an env var is set because they're
 	// slow and generally require some outside configuration.
 	if c.AcceptanceTest && os.Getenv(TestEnvVar) == "" {
@@ -148,7 +147,6 @@ func Run(tt TestT, c Case) {
 
 	// Defer on the teardown, regardless of pass/fail at this point
 	if c.Teardown != nil {
-		q.Q(">> testing defer teardown")
 		defer func() {
 			terr := c.Teardown()
 			if terr != nil {
@@ -159,20 +157,17 @@ func Run(tt TestT, c Case) {
 
 	// TODO setup on driver here
 	if c.Driver != nil {
-		q.Q("Found driver:", c.Driver.Name())
 		err := c.Driver.Setup()
 		if err != nil {
 			c.Driver.Teardown()
 			tt.Fatal(err)
 		}
 	} else {
-		q.Q("nil driver")
 		tt.Fatal("nil driver")
 	}
 
 	// Create an in-memory Vault core
 	logger := logging.NewVaultLogger(log.Trace)
-	q.Q("==> Run here")
 
 	// prefix := "mnt"
 	isAuthBackend := false
@@ -223,13 +218,6 @@ func Run(tt TestT, c Case) {
 			logger.Warn("Executing test step", "step_number", i+1)
 		}
 
-		// // Create the request
-		// req := &logical.Request{
-		// 	// Operation: s.Operation,
-		// 	// Path:      s.Path,
-		// 	// Data:      s.Data,
-		// }
-
 		// TODO hard coded path here, need mount point. Will it be dynamic? probabaly
 		// needs to be
 		path := fmt.Sprintf("transit/%s", s.Path)
@@ -243,20 +231,24 @@ func Run(tt TestT, c Case) {
 		// var lr *logical.Response
 		switch s.Operation {
 		case WriteOperation, UpdateOperation:
+			q.Q("===> Write/Update operation")
 			resp, err = client.Logical().Write(path, s.Data)
 		case ReadOperation:
+			q.Q("===> Read operation")
 			// resp, err = client.Logical().ReadWithData(path, s.Data)
 			resp, err = client.Logical().Read(path)
 		case ListOperation:
+			q.Q("===> List operation")
 			resp, err = client.Logical().List(path)
 			// TODO why though
 			// lr = &logical.Response{}
 		case DeleteOperation:
+			q.Q("===> Delete operation")
 			resp, err = client.Logical().Delete(path)
 		default:
 			panic("bad operation")
 		}
-		q.Q("test resp:", resp)
+		// q.Q("test resp,err:", resp, err)
 		// if !s.Unauthenticated {
 		// 	// req.ClientToken = client.Token()
 		// 	// req.SetTokenEntry(&logical.TokenEntry{
@@ -288,16 +280,6 @@ func Run(tt TestT, c Case) {
 			// Prepend the path with "auth"
 			// req.Path = "auth/" + req.Path
 		}
-
-		// Make the request
-		// resp, err := core.HandleRequest(namespace.RootContext(nil), req)
-		// if resp != nil && resp.Secret != nil {
-		// 	// Revoke this secret later
-		// 	revoke = append(revoke, &logical.Request{
-		// 		Operation: logical.UpdateOperation,
-		// 		Path:      "sys/revoke/" + resp.Secret.LeaseID,
-		// 	})
-		// }
 
 		// TODO
 		// - test returned error check here
@@ -400,13 +382,12 @@ func Run(tt TestT, c Case) {
 		}
 	}
 
-	q.Q("==> calling driver teardown()")
 	if err := c.Driver.Teardown(); err != nil {
 		tt.Fatal(err)
 	}
 }
 
-// CheckMulti is a helper to have multiple checks.
+// TestCheckMulti is a helper to have multiple checks.
 func TestCheckMulti(fs ...TestCheckFunc) TestCheckFunc {
 	return func(resp *logical.Response) error {
 		for _, f := range fs {
@@ -419,7 +400,7 @@ func TestCheckMulti(fs ...TestCheckFunc) TestCheckFunc {
 	}
 }
 
-// CheckAuth is a helper to check that a request generated an
+// TestCheckAuth is a helper to check that a request generated an
 // auth token with the proper policies.
 func TestCheckAuth(policies []string) TestCheckFunc {
 	return func(resp *logical.Response) error {

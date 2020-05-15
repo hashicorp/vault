@@ -76,12 +76,9 @@ type DockerCluster struct {
 // Teardown stops all the containers.
 // TODO: error/logging
 func (rc *DockerCluster) Teardown() error {
-	q.Q("//-> driver teardown")
-	q.Q("node count:", len(rc.ClusterNodes))
 	for _, node := range rc.ClusterNodes {
 		node.Cleanup()
 	}
-	q.Q("==== done calling Driver Teardown()")
 	// TODO should return something
 	return nil
 }
@@ -556,12 +553,9 @@ func (n *DockerClusterNode) CreateAPIClient() (*api.Client, error) {
 }
 
 func (n *DockerClusterNode) Cleanup() {
-	q.Q("==> calling cleanup")
 	if err := n.dockerAPI.ContainerKill(context.Background(), n.container.ID, "KILL"); err != nil {
-		q.Q("====> should panic")
 		panic(err)
 	}
-	q.Q("=== done calling cleanup")
 }
 
 func (n *DockerClusterNode) Start(cli *docker.Client, caDir, netName string, netCIDR *DockerClusterNode, pluginBinPath string) error {
@@ -882,7 +876,7 @@ func (dc *DockerCluster) Setup() error {
 	if err != nil {
 		panic(err)
 	}
-	q.Q("=== setup wd:", srcDir)
+	// q.Q("=== setup wd:", srcDir)
 
 	// tmpDir gets cleaned up when the cluster is cleaned up
 	tmpDir, err := ioutil.TempDir("", "bin")
@@ -891,7 +885,7 @@ func (dc *DockerCluster) Setup() error {
 	}
 
 	binPath, sha256value, err := stepwise.CompilePlugin(name, srcDir, tmpDir)
-	q.Q("=== setup binPath, sha:", binPath, sha256value)
+	// q.Q("=== setup binPath, sha:", binPath, sha256value)
 	if err != nil {
 		panic(err)
 	}
@@ -919,7 +913,6 @@ func (dc *DockerCluster) Setup() error {
 	}
 
 	// use client to mount plugin
-	q.Q("=== setup plugin register:", name)
 	err = client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 		Name:    name,
 		Type:    consts.PluginTypeSecrets,
@@ -930,7 +923,7 @@ func (dc *DockerCluster) Setup() error {
 		panic(err)
 	}
 
-	q.Q("=== mounting in setup")
+	// q.Q("=== mounting in setup")
 	err = client.Sys().Mount(name, &api.MountInput{
 		Type: name,
 	})

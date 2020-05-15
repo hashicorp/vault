@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
 	dockerDriver "github.com/hashicorp/vault/sdk/testing/stepwise/drivers/docker"
 	"github.com/mitchellh/mapstructure"
+	"github.com/y0ssar1an/q"
 )
 
 // TestBackend_basic_derived_docker is an example test using the Docker Driver
@@ -38,6 +39,10 @@ func testAccStepwiseWritePolicy(t *testing.T, name string, derived bool) stepwis
 		Data: map[string]interface{}{
 			"derived": derived,
 		},
+		Check: func(resp *api.Secret) error {
+			q.Q("--> stepwise write policy check func")
+			return nil
+		},
 	}
 	if os.Getenv("TRANSIT_ACC_KEY_TYPE") == "CHACHA" {
 		ts.Data["type"] = "chacha20-poly1305"
@@ -50,20 +55,20 @@ func testAccStepwiseListPolicy(t *testing.T, name string, expectNone bool) stepw
 		Operation: stepwise.ListOperation,
 		Path:      "keys",
 		Check: func(resp *api.Secret) error {
-			if resp == nil {
+			q.Q("--> stepwise list check func")
+			q.Q("resp in check:", resp)
+			if (resp == nil || len(resp.Data) == 0) && !expectNone {
 				return fmt.Errorf("missing response")
 			}
-			if expectNone {
-				keysRaw, ok := resp.Data["keys"]
-				if ok || keysRaw != nil {
-					return fmt.Errorf("response data when expecting none")
-				}
-				return nil
-			}
-			if len(resp.Data) == 0 {
-				return fmt.Errorf("no data returned")
+			if expectNone && resp != nil {
+				return fmt.Errorf("response data when expecting none")
 			}
 
+			if expectNone && resp == nil {
+				return nil
+			}
+
+			q.Q("--> --> stepwise checking keys list")
 			var d struct {
 				Keys []string `mapstructure:"keys"`
 			}
@@ -76,6 +81,7 @@ func testAccStepwiseListPolicy(t *testing.T, name string, expectNone bool) stepw
 			if len(d.Keys) != 1 {
 				return fmt.Errorf("only 1 key expected, %d returned", len(d.Keys))
 			}
+			q.Q("--> --> stepwise does with check")
 			return nil
 		},
 	}
