@@ -13,9 +13,8 @@ export default Component.extend({
   layout,
   store: service(),
   reindexingDetails: null,
-
   didReceiveAttrs() {
-    this._super(arguments);
+    this._super(...arguments);
     this.getReplicationModeStatus.perform();
   },
   getReplicationModeStatus: task(function*() {
@@ -26,7 +25,7 @@ export default Component.extend({
         .adapterFor('replication-mode')
         .fetchStatus(replicationMode);
     } catch (e) {
-      console.log(e);
+      // do not handle error
     }
     this.set('reindexingDetails', resp);
   }),
