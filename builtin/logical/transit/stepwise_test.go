@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
 	dockerDriver "github.com/hashicorp/vault/sdk/testing/stepwise/drivers/docker"
 	"github.com/mitchellh/mapstructure"
@@ -21,7 +22,7 @@ func TestBackend_basic_derived_docker(t *testing.T) {
 			testAccStepwiseListPolicy(t, "test", true),
 			testAccStepwiseWritePolicy(t, "test", true),
 			testAccStepwiseListPolicy(t, "test", false),
-			// testAccStepReadPolicy(t, "test", false, true),
+			testAccStepwiseReadPolicy(t, "test", false, true),
 			// testAccStepEncryptContext(t, "test", testPlaintext, "my-cool-context", decryptData),
 			// testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			// testAccStepEnableDeletion(t, "test"),
@@ -82,6 +83,78 @@ func testAccStepwiseListPolicy(t *testing.T, name string, expectNone bool) stepw
 				return fmt.Errorf("only 1 key expected, %d returned", len(d.Keys))
 			}
 			q.Q("--> --> stepwise does with check")
+			return nil
+		},
+	}
+}
+
+func testAccStepwiseReadPolicy(t *testing.T, name string, expectNone, derived bool) stepwise.Step {
+	return testAccStepwiseReadPolicyWithVersions(t, name, expectNone, derived, 1, 0)
+}
+
+func testAccStepwiseReadPolicyWithVersions(t *testing.T, name string, expectNone, derived bool, minDecryptionVersion int, minEncryptionVersion int) stepwise.Step {
+	return stepwise.Step{
+		Operation: stepwise.ReadOperation,
+		Path:      "keys/" + name,
+		Check: func(resp *api.Secret) error {
+			q.Q("--> read policy check")
+			if resp == nil && !expectNone {
+				return fmt.Errorf("missing response")
+			} else if expectNone {
+				if resp != nil {
+					return fmt.Errorf("response when expecting none")
+				}
+				return nil
+			}
+			var d struct {
+				Name                 string           `mapstructure:"name"`
+				Key                  []byte           `mapstructure:"key"`
+				Keys                 map[string]int64 `mapstructure:"keys"`
+				Type                 string           `mapstructure:"type"`
+				Derived              bool             `mapstructure:"derived"`
+				KDF                  string           `mapstructure:"kdf"`
+				DeletionAllowed      bool             `mapstructure:"deletion_allowed"`
+				ConvergentEncryption bool             `mapstructure:"convergent_encryption"`
+				MinDecryptionVersion int              `mapstructure:"min_decryption_version"`
+				MinEncryptionVersion int              `mapstructure:"min_encryption_version"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+
+			if d.Name != name {
+				return fmt.Errorf("bad name: %#v", d)
+			}
+			if os.Getenv("TRANSIT_ACC_KEY_TYPE") == "CHACHA" {
+				if d.Type != keysutil.KeyType(keysutil.KeyType_ChaCha20_Poly1305).String() {
+					return fmt.Errorf("bad key type: %#v", d)
+				}
+			} else if d.Type != keysutil.KeyType(keysutil.KeyType_AES256_GCM96).String() {
+				return fmt.Errorf("bad key type: %#v", d)
+			}
+			// Should NOT get a key back
+			if d.Key != nil {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			if d.Keys == nil {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			if d.MinDecryptionVersion != minDecryptionVersion {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			if d.MinEncryptionVersion != minEncryptionVersion {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			if d.DeletionAllowed == true {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			if d.Derived != derived {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			if derived && d.KDF != "hkdf_sha256" {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			q.Q("--> read policy check OK")
 			return nil
 		},
 	}
