@@ -19,7 +19,7 @@ and consider if they're appropriate for your deployment.
 
   - `enabled` (`boolean: true`) - The master enabled/disabled configuration. If this is true, most components will be installed by default. If this is false, no components will be installed by default and manually opting-in is required, such as by setting `server.enabled` to true.
 
-  - `imagePullSecrets` (`array: []`) - References secrets to be used when pulling images from private registries. See (Pull an Image from a Private Registry)[https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/] for more details.
+  - `imagePullSecrets` (`array: []`) - References secrets to be used when pulling images from private registries. See [Pull an Image from a Private Registry](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) for more details.
 
     - `name`: (`string: required`) - Name of the secret containing files required for authentication to private image registries.
 
