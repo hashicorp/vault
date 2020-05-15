@@ -2,7 +2,6 @@ package random
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"testing"
 )
