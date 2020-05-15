@@ -193,11 +193,6 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	return m, nil
 }
 
-// Error to warn against plaintext credentials being sent
-var (
-	ErrPlaintextTransmission = errors.New("mysql: plaintext credentials would be sent")
-)
-
 func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) {
 	var err error
 
@@ -266,7 +261,7 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) 
 	}
 	_, pt_ok := conf["plaintext_connection_allowed"]
 	if !(pt_ok || tls_ok) {
-		return nil, ErrPlaintextTransmission
+		logger.Warn("No TLS specified, credentials will be sent in plaintext. To mute this warning add 'plaintext_connection_allowed' with a true value to your MySQL configuration in your config file.")
 	}
 
 	// Create MySQL handle for the database.

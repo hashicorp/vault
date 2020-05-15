@@ -1,8 +1,9 @@
 package mysql
 
 import (
-	"errors"
+	"bytes"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -36,9 +37,12 @@ func TestMySQLPlaintextCatch(t *testing.T) {
 	password := os.Getenv("MYSQL_PASSWORD")
 
 	// Run vault tests
+	var buf bytes.Buffer
+	log.DefaultOutput = &buf
+
 	logger := logging.NewVaultLogger(log.Debug)
 
-	_, err := NewMySQLBackend(map[string]string{
+	NewMySQLBackend(map[string]string{
 		"address":  address,
 		"database": database,
 		"table":    table,
@@ -46,12 +50,12 @@ func TestMySQLPlaintextCatch(t *testing.T) {
 		"password": password,
 	}, logger)
 
-	if errors.Is(err, ErrPlaintextTransmission) {
-		return
-	} else if err != nil {
-		t.Fatalf("Failed to find plaintext error, found: '%v' instead", err)
-	} else {
-		t.Fatalf("Failed to find plaintext error and server started without acknowledging plaintext transmission of credentials")
+	str := buf.String()
+	dataIdx := strings.IndexByte(str, ' ')
+	rest := str[dataIdx+1:]
+
+	if !strings.Contains(rest, "credentials will be sent in plaintext") {
+		t.Fatalf("No warning of plaintext credentials occurred")
 	}
 }
 func TestMySQLBackend(t *testing.T) {
