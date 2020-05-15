@@ -26,26 +26,29 @@ type State struct {
 // The config is the key/value pairs set _inside_ the service registration config stanza.
 // The state is the initial state.
 // The redirectAddr is Vault core's RedirectAddr.
-type Factory func(config map[string]string, logger log.Logger, state State, redirectAddr string) (ServiceRegistration, error)
+type Factory func(config map[string]string, logger log.Logger, state State) (ServiceRegistration, error)
 
 // ServiceRegistration is an interface that advertises the state of Vault to a
 // service discovery network.
 type ServiceRegistration interface {
-	// Run provides a shutdownCh and wait WaitGroup. The shutdownCh
-	// is for monitoring when a shutdown occurs and initiating any actions needed
-	// to leave service registration in a final state. When finished, signalling
-	// that with wait means that Vault will wait until complete.
+	// Run provides a shutdownCh, wait WaitGroup, and redirectAddr. The
+	// shutdownCh is for monitoring when a shutdown occurs and initiating any
+	// actions needed to leave service registration in a final state. When
+	// finished, signalling that with wait means that Vault will wait until
+	// complete. The redirectAddr is an optional parameter for implementations
+	// that might need to communicate with Vault's listener via this address.
+	//
 	// Run is called just after Factory instantiation so can be relied upon
 	// for controlling shutdown behavior.
 	// Here is an example of its intended use:
-	//	func Run(shutdownCh <-chan struct{}, wait sync.WaitGroup) error {
+	//	func Run(shutdownCh <-chan struct{}, wait sync.WaitGroup, redirectAddr string) error {
+	//
+	//		// Since we are going to want Vault to wait to shutdown
+	//		// until after we do cleanup...
+	//		wait.Add(1)
 	//
 	//		// Run shutdown code in a goroutine so Run doesn't block.
 	//		go func(){
-	//			// Since we are going to want Vault to wait to shutdown
-	//			// until after we do cleanup...
-	//			wait.Add(1)
-	//
 	//			// Ensure that when this ends, no matter how it ends,
 	//			// we don't cause Vault to hang on shutdown.
 	//			defer wait.Done()
@@ -60,7 +63,7 @@ type ServiceRegistration interface {
 	//		}()
 	//		return nil
 	//	}
-	Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup) error
+	Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup, redirectAddr string) error
 
 	// NotifyActiveStateChange is used by Core to notify that this Vault
 	// instance has changed its status on whether it's active or is

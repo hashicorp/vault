@@ -68,7 +68,6 @@ type serviceRegistration struct {
 	serviceAddress      *string
 	disableRegistration bool
 	checkTimeout        time.Duration
-	redirectAddr        string
 
 	notifyActiveCh      chan struct{}
 	notifySealedCh      chan struct{}
@@ -78,8 +77,7 @@ type serviceRegistration struct {
 }
 
 // NewConsulServiceRegistration constructs a Consul-based ServiceRegistration.
-func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.State, redirectAddr string) (sr.ServiceRegistration, error) {
-
+func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.State) (sr.ServiceRegistration, error) {
 	// Allow admins to disable consul integration
 	disableReg, ok := conf["disable_registration"]
 	var disableRegistration bool
@@ -208,7 +206,6 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 		serviceAddress:      serviceAddr,
 		checkTimeout:        checkTimeout,
 		disableRegistration: disableRegistration,
-		redirectAddr:        redirectAddr,
 
 		notifyActiveCh:      make(chan struct{}),
 		notifySealedCh:      make(chan struct{}),
@@ -221,9 +218,9 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 	return c, nil
 }
 
-func (c *serviceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup) error {
+func (c *serviceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup, redirectAddr string) error {
 	go func() {
-		if err := c.runServiceRegistration(wait, shutdownCh, c.redirectAddr); err != nil {
+		if err := c.runServiceRegistration(wait, shutdownCh, redirectAddr); err != nil {
 			if c.logger.IsError() {
 				c.logger.Error(fmt.Sprintf("error running service registration: %s", err))
 			}
@@ -290,12 +287,12 @@ func (c *serviceRegistration) runServiceRegistration(waitGroup *sync.WaitGroup, 
 	// 'server' command will wait for the below goroutine to complete
 	waitGroup.Add(1)
 
-	go c.runEventDemuxer(waitGroup, shutdownCh, redirectAddr)
+	go c.runEventDemuxer(waitGroup, shutdownCh)
 
 	return nil
 }
 
-func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh <-chan struct{}, redirectAddr string) {
+func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh <-chan struct{}) {
 	// This defer statement should be executed last. So push it first.
 	defer waitGroup.Done()
 
