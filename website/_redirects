@@ -89,6 +89,10 @@
 /docs/vault-enterprise/mfa/mfa-totp.html /docs/enterprise/mfa/mfa-totp 301!
 /docs/vault-enterprise/replication/index.html  /docs/enterprise/replication 301!
 /docs/vault-enterprise/ui/index.html  /docs/configuration/ui 301!
+/docs/secrets/cassandra /docs/secrets/databases/cassandra 301!
+/docs/secrets/mongodb /docs/secrets/databases/mongodb 301!
+/docs/secrets/mssql /docs/secrets/databases/mssql 301!
+/docs/secrets/mysql /docs/secrets/databases/mysql-maria 301!
 /guides/authentication.html /guides/identity/authentication 301!
 /guides/configuration/authentication.html  /guides/identity/authentication 301!
 /guides/configuration/generate-root.html /guides/operations/generate-root 301!
@@ -217,19 +221,31 @@
 /intro/what-is-vault/index.html /docs/what-is-vault 301!
 
 # Intro getting started content -> Learn
-/intro/index.html https://learn.hashicorp.com/vault/#getting-started 301!
-/intro/getting-started/ https://learn.hashicorp.com/vault/getting-started/install 301!
-/intro/getting-started/index.html https://learn.hashicorp.com/vault/getting-started/install 301!
-/intro/getting-started/dev-server.html https://learn.hashicorp.com/vault/getting-started/dev-server 301!
-/intro/getting-started/first-secret.html https://learn.hashicorp.com/vault/getting-started/first-secret 301!
-/intro/getting-started/secrets-engines.html https://learn.hashicorp.com/vault/getting-started/secrets-engines 301!
-/intro/getting-started/dynamic-secrets.html https://learn.hashicorp.com/vault/getting-started/dynamic-secrets 301!
-/intro/getting-started/help.html https://learn.hashicorp.com/vault/getting-started/help 301!
-/intro/getting-started/authentication.html https://learn.hashicorp.com/vault/getting-started/authentication 301!
-/intro/getting-started/policies.html https://learn.hashicorp.com/vault/getting-started/policies 301!
-/intro/getting-started/deploy.html https://learn.hashicorp.com/vault/getting-started/deploy 301!
-/intro/getting-started/apis.html https://learn.hashicorp.com/vault/getting-started/apis 301!
-/intro/getting-started/next-steps.html https://learn.hashicorp.com/vault/getting-started/next-steps 301!
+/intro/index.html                                https://learn.hashicorp.com/vault/#getting-started 301!
+/intro/getting-started/                          https://learn.hashicorp.com/vault/getting-started/install 301!
+/intro/getting-started/index.html                https://learn.hashicorp.com/vault/getting-started/install 301!
+/intro/getting-started/index                     https://learn.hashicorp.com/vault/getting-started/install 301!
+/intro/getting-started/dev-server.html           https://learn.hashicorp.com/vault/getting-started/dev-server 301!
+/intro/getting-started/dev-server                https://learn.hashicorp.com/vault/getting-started/dev-server 301!
+/intro/getting-started/first-secret.html         https://learn.hashicorp.com/vault/getting-started/first-secret 301!
+/intro/getting-started/first-secret              https://learn.hashicorp.com/vault/getting-started/first-secret 301!
+/intro/getting-started/secrets-engines.html      https://learn.hashicorp.com/vault/getting-started/secrets-engines 301!
+/intro/getting-started/secrets-engines           https://learn.hashicorp.com/vault/getting-started/secrets-engines 301!
+/intro/getting-started/dynamic-secrets.html      https://learn.hashicorp.com/vault/getting-started/dynamic-secrets 301!
+/intro/getting-started/dynamic-secrets           https://learn.hashicorp.com/vault/getting-started/dynamic-secrets 301!
+/intro/getting-started/help.html                 https://learn.hashicorp.com/vault/getting-started/help 301!
+/intro/getting-started/help                      https://learn.hashicorp.com/vault/getting-started/help 301!
+/intro/getting-started/authentication.html       https://learn.hashicorp.com/vault/getting-started/authentication 301!
+/intro/getting-started/authentication            https://learn.hashicorp.com/vault/getting-started/authentication 301!
+/intro/getting-started/policies.html             https://learn.hashicorp.com/vault/getting-started/policies 301!
+/intro/getting-started/policies                  https://learn.hashicorp.com/vault/getting-started/policies 301!
+/intro/getting-started/deploy.html               https://learn.hashicorp.com/vault/getting-started/deploy 301!
+/intro/getting-started/deploy                    https://learn.hashicorp.com/vault/getting-started/deploy 301!
+/intro/getting-started/apis.html                 https://learn.hashicorp.com/vault/getting-started/apis 301!
+/intro/getting-started/apis                      https://learn.hashicorp.com/vault/getting-started/apis 301!
+/intro/getting-started/next-steps.html           https://learn.hashicorp.com/vault/getting-started/next-steps 301!
+/intro/getting-started/next-steps                https://learn.hashicorp.com/vault/getting-started/next-steps 301!
+
 
 /docs/secrets/postgresql/index.html     /docs/secrets/databases/postgresql 301!
 /docs/secrets/postgresql                /docs/secrets/databases/postgresql 301!

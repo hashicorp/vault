@@ -20,12 +20,11 @@ For more information on Disaster Recovery, [see the official documentation](/doc
 First, create the primary cluster:
 
 ```shell
-helm install vault-primary \
+helm install vault-primary hashicorp/vault \
   --set='server.image.repository=hashicorp/vault-enterprise' \
   --set='server.image.tag=1.4.0_ent' \
   --set='server.ha.enabled=true' \
-  --set='server.ha.raft.enabled=true' \
-  https://github.com/hashicorp/vault-helm/archive/v0.5.0.tar.gz
+  --set='server.ha.raft.enabled=true'
 ```
 
 Next, initialize and unseal `vault-primary-0` pod:

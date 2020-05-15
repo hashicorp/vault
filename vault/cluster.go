@@ -185,6 +185,10 @@ func (c *Core) setupCluster(ctx context.Context) error {
 		modified = true
 	}
 
+	// This is the first point at which the stored (or newly generated)
+	// cluster name is known.
+	c.metricSink.SetDefaultClusterName(cluster.Name)
+
 	if cluster.ID == "" {
 		c.logger.Debug("cluster ID not found, generating new")
 		// Generate a clusterID

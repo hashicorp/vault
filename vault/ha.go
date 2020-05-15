@@ -817,7 +817,7 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 		}
 		shamirKey = keyring.masterKey
 	}
-	return c.seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(shamirKey)
+	return c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(shamirKey)
 }
 
 func (c *Core) performKeyUpgrades(ctx context.Context) error {
