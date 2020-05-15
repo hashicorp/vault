@@ -51,6 +51,10 @@ func (s *SimulatedTime) waitForTicker(t *testing.T) *SimulatedTicker {
 	}
 }
 
+func (s *SimulatedTime) allowTickers(n int) {
+	s.tickerBarrier = make(chan *SimulatedTicker, n)
+}
+
 func startSimulatedTime() *SimulatedTime {
 	s := &SimulatedTime{
 		now:           time.Now(),
@@ -96,6 +100,9 @@ func (s *SimulatedCollector) EmptyCollectionFunction(ctx context.Context) ([]Gau
 }
 
 func TestGauge_StartDelay(t *testing.T) {
+	// Work through an entire startup sequence, up to collecting
+	// the first batch of gauges.
+
 	s := startSimulatedTime()
 	defer stopSimulatedTime()
 
@@ -142,6 +149,107 @@ func TestGauge_StartDelay(t *testing.T) {
 		t.Errorf("Collection function called %v times, expected %v.", c.numCalls, 1)
 	}
 
-	p.Stop <- true
+	p.Stop <- struct{}{}
+}
 
+func waitForStopped(t *testing.T, p *GaugeCollectionProcess) {
+	timeout := time.After(100 * time.Millisecond)
+	select {
+	case <-timeout:
+		t.Fatal("Timeout waiting for process to stop.")
+	case <-p.stopped:
+		return
+	}
+}
+
+func TestGauge_StoppedDuringInitialDelay(t *testing.T) {
+	// Stop the process before it gets into its main loop
+	s := startSimulatedTime()
+	defer stopSimulatedTime()
+
+	c := newSimulatedCollector()
+
+	sink := BlackholeSink()
+	sink.GaugeInterval = 2 * time.Hour
+
+	p, err := sink.NewGaugeCollectionProcess(
+		[]string{"example", "count"},
+		[]Label{{"gauge", "test"}},
+		c.EmptyCollectionFunction,
+		log.Default(),
+	)
+	if err != nil {
+		t.Fatalf("Error creating collection process: %v", err)
+	}
+
+	// Stop during the initial delay, check that goroutine exits
+	s.waitForTicker(t)
+	p.Stop <- struct{}{}
+	waitForStopped(t, p)
+}
+
+func TestGauge_StoppedAfterInitialDelay(t *testing.T) {
+	// Stop the process during its main loop
+	s := startSimulatedTime()
+	defer stopSimulatedTime()
+
+	c := newSimulatedCollector()
+
+	sink := BlackholeSink()
+	sink.GaugeInterval = 2 * time.Hour
+
+	p, err := sink.NewGaugeCollectionProcess(
+		[]string{"example", "count"},
+		[]Label{{"gauge", "test"}},
+		c.EmptyCollectionFunction,
+		log.Default(),
+	)
+	if err != nil {
+		t.Fatalf("Error creating collection process: %v", err)
+	}
+
+	// Get through initial delay, wait for interval ticker
+	delayTicker := s.waitForTicker(t)
+	delayTicker.sender <- time.Now()
+
+	s.waitForTicker(t)
+	p.Stop <- struct{}{}
+	waitForStopped(t, p)
+}
+
+func TestGauge_Backoff(t *testing.T) {
+	s := startSimulatedTime()
+	s.allowTickers(100)
+	defer stopSimulatedTime()
+
+	c := newSimulatedCollector()
+
+	sink := BlackholeSink()
+	sink.GaugeInterval = 2 * time.Hour
+
+	threshold := time.Duration(int(sink.GaugeInterval) / 100)
+	f := func(ctx context.Context) ([]GaugeLabelValues, error) {
+		atomic.AddUint32(&c.numCalls, 1)
+		// Move time forward by more than 1% of the gauge interval
+		s.now = s.now.Add(threshold).Add(time.Second)
+		c.callBarrier <- c.numCalls
+		return []GaugeLabelValues{}, nil
+	}
+
+	p, err := sink.NewGaugeCollectionProcess(
+		[]string{"example", "count"},
+		[]Label{{"gauge", "test"}},
+		f,
+		log.Default(),
+	)
+	if err != nil {
+		t.Fatalf("Error creating collection process: %v", err)
+	}
+	p.collectAndFilterGauges()
+
+	if p.currentInterval != 2*p.originalInterval {
+		t.Errorf("Current interval is %v, should be 2x%v.",
+			p.currentInterval,
+			p.originalInterval)
+	}
 }

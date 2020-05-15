@@ -39,7 +39,8 @@ const collectionTarget = 0.01
 // It handles a delay on initial startup; limiting the cardinality; and exponential
 // backoff on the requested interval.
 type GaugeCollectionProcess struct {
-	Stop             chan bool
+	Stop             chan struct{}
+	stopped          chan struct{}
 	key              []string
 	labels           []Label
 	collector        GaugeCollector
@@ -60,7 +61,8 @@ func (m *ClusterMetricSink) NewGaugeCollectionProcess(
 	logger log.Logger,
 ) (*GaugeCollectionProcess, error) {
 	process := &GaugeCollectionProcess{
-		Stop:             make(chan bool),
+		Stop:             make(chan struct{}, 1),
+		stopped:          make(chan struct{}, 1),
 		key:              key,
 		labels:           id,
 		collector:        collector,
@@ -145,6 +147,10 @@ func (p *GaugeCollectionProcess) collectAndFilterGauges() {
 		values = values[:p.sink.MaxGaugeCardinality]
 	}
 
+	p.streamGaugesToSink(values)
+}
+
+func (p *GaugeCollectionProcess) streamGaugesToSink(values []GaugeLabelValues) {
 	// Dumping 500 metrics in one big chunk is somewhat unfriendly to UDP-based
 	// transport, and to the rest of the metrics trying to get through.
 	// Let's smooth things out over the course of a second.
@@ -162,9 +168,11 @@ func (p *GaugeCollectionProcess) collectAndFilterGauges() {
 }
 
 func (p *GaugeCollectionProcess) Run() {
+	defer close(p.stopped)
+
 	// Wait a random amount of time
-	stopped := p.delayStart()
-	if stopped {
+	stopReceived := p.delayStart()
+	if stopReceived {
 		return
 	}
 
@@ -177,11 +185,11 @@ func (p *GaugeCollectionProcess) Run() {
 		case <-p.ticker.C:
 			p.collectAndFilterGauges()
 		case <-p.Stop:
-			break
+			// Can't use defer because this might
+			// not be the original ticker.
+			p.ticker.Stop()
+			return
 		}
 	}
 
-	// Can't use defer because this might
-	// not be the original ticker.
-	p.ticker.Stop()
 }
