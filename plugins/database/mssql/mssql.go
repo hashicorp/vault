@@ -202,12 +202,12 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	}
 
 	// First disable server login
-	disableStmt, err := db.PrepareContext(ctx, fmt.Sprintf("ALTER LOGIN [%s] DISABLE;", username))
+	disableStmt, err := db.PrepareContext(ctx, "ALTER LOGIN [?] DISABLE;")
 	if err != nil {
 		return err
 	}
 	defer disableStmt.Close()
-	if _, err := disableStmt.ExecContext(ctx); err != nil {
+	if _, err := disableStmt.ExecContext(ctx, username); err != nil {
 		return err
 	}
 
@@ -215,14 +215,14 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	// sessions.  There cannot be any active sessions before we drop the logins
 	// This isn't done in a transaction because even if we fail along the way,
 	// we want to remove as much access as possible
-	sessionStmt, err := db.PrepareContext(ctx, fmt.Sprintf(
-		"SELECT session_id FROM sys.dm_exec_sessions WHERE login_name = '%s';", username))
+	sessionStmt, err := db.PrepareContext(ctx,
+		"SELECT session_id FROM sys.dm_exec_sessions WHERE login_name = '?';")
 	if err != nil {
 		return err
 	}
 	defer sessionStmt.Close()
 
-	sessionRows, err := sessionStmt.QueryContext(ctx)
+	sessionRows, err := sessionStmt.QueryContext(ctx, username)
 	if err != nil {
 		return err
 	}
@@ -243,13 +243,13 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	// we need to drop the database users before we can drop the login and the role
 	// This isn't done in a transaction because even if we fail along the way,
 	// we want to remove as much access as possible
-	stmt, err := db.PrepareContext(ctx, fmt.Sprintf("EXEC master.dbo.sp_msloginmappings '%s';", username))
+	stmt, err := db.PrepareContext(ctx, "EXEC master.dbo.sp_msloginmappings '?';")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.QueryContext(ctx)
+	rows, err := stmt.QueryContext(ctx, username)
 	if err != nil {
 		return err
 	}
@@ -285,12 +285,12 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	}
 
 	// Drop this login
-	stmt, err = db.PrepareContext(ctx, fmt.Sprintf(dropLoginSQL, username, username))
+	stmt, err = db.PrepareContext(ctx, dropLoginSQL)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	if _, err := stmt.ExecContext(ctx); err != nil {
+	if _, err := stmt.ExecContext(ctx, username, username); err != nil {
 		return err
 	}
 
@@ -372,9 +372,9 @@ const dropLoginSQL = `
 IF EXISTS
   (SELECT name
    FROM master.sys.server_principals
-   WHERE name = N'%s')
+   WHERE name = N'?')
 BEGIN
-  DROP LOGIN [%s]
+  DROP LOGIN [?]
 END
 `
 

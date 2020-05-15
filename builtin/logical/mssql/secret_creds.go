@@ -64,12 +64,12 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	}
 
 	// First disable server login
-	disableStmt, err := db.Prepare(fmt.Sprintf("ALTER LOGIN [%s] DISABLE;", username))
+	disableStmt, err := db.Prepare("ALTER LOGIN [?] DISABLE;")
 	if err != nil {
 		return nil, err
 	}
 	defer disableStmt.Close()
-	if _, err := disableStmt.Exec(); err != nil {
+	if _, err := disableStmt.Exec(username); err != nil {
 		return nil, err
 	}
 
@@ -77,14 +77,13 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	// sessions.  There cannot be any active sessions before we drop the logins
 	// This isn't done in a transaction because even if we fail along the way,
 	// we want to remove as much access as possible
-	sessionStmt, err := db.Prepare(fmt.Sprintf(
-		"SELECT session_id FROM sys.dm_exec_sessions WHERE login_name = '%s';", username))
+	sessionStmt, err := db.Prepare("SELECT session_id FROM sys.dm_exec_sessions WHERE login_name = '?';")
 	if err != nil {
 		return nil, err
 	}
 	defer sessionStmt.Close()
 
-	sessionRows, err := sessionStmt.Query()
+	sessionRows, err := sessionStmt.Query(username)
 	if err != nil {
 		return nil, err
 	}
@@ -105,13 +104,13 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	// we need to drop the database users before we can drop the login and the role
 	// This isn't done in a transaction because even if we fail along the way,
 	// we want to remove as much access as possible
-	stmt, err := db.Prepare(fmt.Sprintf("EXEC master.dbo.sp_msloginmappings '%s';", username))
+	stmt, err := db.Prepare("EXEC master.dbo.sp_msloginmappings '?';")
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query()
+	rows, err := stmt.Query(username)
 	if err != nil {
 		return nil, err
 	}
@@ -149,12 +148,12 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	}
 
 	// Drop this login
-	stmt, err = db.Prepare(fmt.Sprintf(dropLoginSQL, username, username))
+	stmt, err = db.Prepare(dropLoginSQL)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	if _, err := stmt.Exec(); err != nil {
+	if _, err := stmt.Exec(username, username); err != nil {
 		return nil, err
 	}
 
@@ -176,8 +175,8 @@ const dropLoginSQL = `
 IF EXISTS
   (SELECT name
    FROM master.sys.server_principals
-   WHERE name = N'%s')
+   WHERE name = N'?')
 BEGIN
-  DROP LOGIN [%s]
+  DROP LOGIN [?]
 END
 `
