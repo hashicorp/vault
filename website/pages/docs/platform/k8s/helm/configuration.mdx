@@ -53,7 +53,7 @@ and consider if they're appropriate for your deployment.
 
   - `revokeOnShutdown` (`boolean: false`) - Configures all Vault Agent sidecars to revoke their token when shutting down.
 
-  - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each container of the server. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources.<br /> **Setting this is highly recommended.**
+  - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each container of the server. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources.<br /> **Setting this is highly recommended.**
 
     ```yaml
     resources:
@@ -103,7 +103,7 @@ and consider if they're appropriate for your deployment.
 
     - `updateStrategyType` (`string: "OnDelete"`) - Configure the [Update Strategy Type](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies) for the StatefulSet.
 
-    - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each container of the server. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources. **Setting this is highly recommended.**
+    - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each container of the server. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources. **Setting this is highly recommended.**
 
       ```yaml
       resources:
