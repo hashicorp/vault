@@ -102,8 +102,8 @@ func (cl *Listener) SetAdvertiseAddr(addr string) error {
 	if err != nil {
 		return errwrap.Wrapf("failed to parse advertise address: {{err}}", err)
 	}
-	cl.advertise = &clusterAddr{
-		host: u.Host,
+	cl.advertise = &NetAddr{
+		Host: u.Host,
 	}
 
 	return nil
@@ -442,14 +442,14 @@ type NetworkLayerSet interface {
 	Layers() []NetworkLayer
 }
 
-type clusterAddr struct {
-	host string
+type NetAddr struct {
+	Host string
 }
 
-func (c *clusterAddr) String() string {
-	return c.host
+func (c *NetAddr) String() string {
+	return c.Host
 }
 
-func (*clusterAddr) Network() string {
+func (*NetAddr) Network() string {
 	return "tcp"
 }
