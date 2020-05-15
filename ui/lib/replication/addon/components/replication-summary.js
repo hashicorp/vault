@@ -16,7 +16,7 @@ const DEFAULTS = {
   primary_cluster_addr: null,
   ca_file: null,
   ca_path: null,
-  replicationMode: 'dr',
+  // replicationMode: 'dr', // ARG this messes up the mode setting, but removing it messes up the radio button default select.  Fix the later via some other property.
 };
 
 export default Component.extend(ReplicationActions, DEFAULTS, {
@@ -66,24 +66,26 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
     this.setProperties(DEFAULTS);
   },
 
-  transitionTo: computed('mode', 'replicationMode', function() {
-    // Take transitionTo outside of a yield because it unmounts the cluster and yield cannot return anything
-    return () => this.router.transitionTo('vault.cluster');
-  }),
-
   submit: task(function*() {
-    let mode;
+    let modeObject;
     try {
-      mode = yield this.submitHandler.perform(...arguments);
+      modeObject = yield this.submitHandler.perform(...arguments);
     } catch (e) {
       // TODO handle error
     }
-    // if Secondary, handle transition here, if not, handle transition in mixin Enable
-    if (mode === 'secondary') {
-      this.transitionTo();
+    if (modeObject && modeObject.mode === 'secondary') {
+      return yield this.get('transitionTo').perform(modeObject);
     }
+    // ARG TODO handle other non-secondary situations.
   }),
-
+  transitionTo: task(function*(modeObject) {
+    // Take transitionTo outside of a yield because it unmounts the cluster and yield cannot return anything
+    if (modeObject.replicationMode === 'dr') {
+      return () => this.router.transitionTo('vault.cluster');
+    }
+    // ARG TODO some loading here while waiting for data, might be component level if no data returned or set property on store of mode="bootstrapping"
+    // ARG experiment a bit more on if you need return () => this.router.transitionTo('vault.cluster'); or nothing
+  }),
   actions: {
     onSubmit(/*action, mode, data, event*/) {
       this.get('submit').perform(...arguments);

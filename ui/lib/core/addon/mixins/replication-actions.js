@@ -36,7 +36,7 @@ export default Mixin.create({
     try {
       resp = yield this.get('store')
         .adapterFor('cluster')
-        .replicationAction(action, replicationMode, clusterMode, data);
+        .replicationAction(action, replicationMode, clusterMode, data); // ARG replicationAction is in cluster.js which is what makes the POST request.  Might be key to adding loading states.
     } catch (e) {
       return this.submitError(e);
     }
@@ -63,6 +63,7 @@ export default Mixin.create({
       return cluster;
     }
     if (this.reset) {
+      // resets mode to primary
       this.reset();
     }
     if (action === 'enable') {
@@ -70,7 +71,7 @@ export default Mixin.create({
       cluster.set(
         replicationMode,
         store.createFragment('replication-attributes', {
-          mode: 'bootstrapping',
+          mode: 'bootstrapping', // ARG TODO: off of model.performance.mode whereas model.rm.mode = perofrmance and rm.mode = performance
         })
       );
       if (mode === 'secondary' && replicationMode === 'performance') {
@@ -84,19 +85,26 @@ export default Mixin.create({
     } catch (e) {
       // no error handling here
     }
+    // ARG TODO: this seems to incorrrectly clear out the replicationAttr.mode from bootstraping to blank.
     cluster.rollbackAttributes();
     if (action === 'disable') {
       yield this.onDisable();
     }
-    if (mode === 'secondary' && replicationMode === 'dr') {
-      // return mode so you can properly handle the transition
-      return mode;
+    if (mode === 'secondary') {
+      let modeObject = {};
+      // return mode and replicationMode so you can properly handle the transition
+      return (modeObject = {
+        mode,
+        replicationMode,
+      });
     }
+    // ARG TODO: but should never be called, all things should be returned
+    // enable is a method off the controller/replication-mode.js
     if (action === 'enable') {
       try {
-        yield this.onEnable(replicationMode); // should not be called for dr secondary
+        yield this.onEnable(replicationMode);
       } catch (e) {
-        // TODO handle error
+        console.log(e);
       }
     }
   }).drop(),
