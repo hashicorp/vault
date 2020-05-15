@@ -56,7 +56,7 @@ type LeaderResponse struct {
 	PerfStandbyLastRemoteWAL uint64 `json:"performance_standby_last_remote_wal"`
 	LastWAL                  uint64 `json:"last_wal,omitempty"`
 
-	// Raft Indexs for this node
+	// Raft Indexes for this node
 	RaftCommittedIndex uint64 `json:"raft_committed_index,omitempty"`
 	RaftAppliedIndex   uint64 `json:"raft_applied_index,omitempty"`
 }
