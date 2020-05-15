@@ -310,20 +310,14 @@ func Run(tt TestT, c Case) {
 			// or not. Set the err to nil. If the error is a logical.ErrorResponse,
 			// it will be handled later.
 			if s.ErrorOk {
-				// err = nil
+				q.Q("===> error ok, setting to nil")
+				err = nil
 			} else {
 				// // If the error is not expected, fail right away.
-				// tt.Error(fmt.Sprintf("Failed step %d: %s", i+1, err))
-				// break
+				tt.Error(fmt.Sprintf("Failed step %d: %s", i+1, err))
+				break
 			}
 		}
-
-		// If the error is a 'logical.ErrorResponse' and if error was not expected,
-		// set the error so that this can be caught below.
-		// TODO resp error check
-		// if resp.IsError() && !s.ErrorOk {
-		// 	err = fmt.Errorf("erroneous response:\n\n%#v", resp)
-		// }
 
 		// TODO
 		// - test check func here
@@ -335,11 +329,11 @@ func Run(tt TestT, c Case) {
 		// TODO: This works perfectly for now, but it would be better if 'Check'
 		// function takes in both the response object and the error, and decide on
 		// the action on its own.
-		// if err == nil && s.Check != nil {
-		// 	// Call the test method
-		// 	// TODO check here
-		// 	// err = s.Check(resp)
-		// }
+		if err == nil && s.Check != nil {
+			// Call the test method
+			// TODO check here
+			err = s.Check(resp)
+		}
 
 		if err != nil {
 			tt.Error(fmt.Sprintf("Failed step %d: %s", i+1, err))
