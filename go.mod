@@ -106,6 +106,7 @@ require (
 	github.com/mitchellh/go-testing-interface v1.0.0
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/mitchellh/reflectwalk v1.0.1
+	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 	github.com/ncw/swift v1.0.47
 	github.com/nwaples/rardecode v1.0.0 // indirect
@@ -143,5 +144,6 @@ require (
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.4.1
+	gotest.tools/v3 v3.0.2 // indirect
 	layeh.com/radius v0.0.0-20190322222518-890bc1058917
 )

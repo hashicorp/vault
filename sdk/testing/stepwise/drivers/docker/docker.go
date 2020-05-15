@@ -94,11 +94,14 @@ func (dc *DockerCluster) Name() string {
 func (dc *DockerCluster) Client() (*api.Client, error) {
 	if len(dc.ClusterNodes) > 0 {
 		if dc.ClusterNodes[0].Client != nil {
+			// TODO is clone needed here?
 			c, err := dc.ClusterNodes[0].Client.Clone()
 			if err != nil {
 				return nil, err
 			}
+			c.SetToken(dc.ClusterNodes[0].Client.Token())
 			return c, nil
+			// return dc.ClusterNodes[0].Client, nil
 		}
 	}
 
@@ -203,6 +206,7 @@ func (rc *DockerCluster) Initialize(ctx context.Context) error {
 		rc.RecoveryKeys = append(rc.RecoveryKeys, raw)
 	}
 	rc.RootToken = resp.RootToken
+	q.Q("===> docker vault root token:", resp.RootToken)
 
 	// Write root token and barrier keys
 	err = ioutil.WriteFile(filepath.Join(rc.TempDir, "root_token"), []byte(rc.RootToken), 0755)
@@ -878,6 +882,7 @@ func (dc *DockerCluster) Setup() error {
 	if err != nil {
 		panic(err)
 	}
+	q.Q("=== setup wd:", srcDir)
 
 	// tmpDir gets cleaned up when the cluster is cleaned up
 	tmpDir, err := ioutil.TempDir("", "bin")
@@ -886,6 +891,7 @@ func (dc *DockerCluster) Setup() error {
 	}
 
 	binPath, sha256value, err := stepwise.CompilePlugin(name, srcDir, tmpDir)
+	q.Q("=== setup binPath, sha:", binPath, sha256value)
 	if err != nil {
 		panic(err)
 	}
@@ -913,11 +919,20 @@ func (dc *DockerCluster) Setup() error {
 	}
 
 	// use client to mount plugin
+	q.Q("=== setup plugin register:", name)
 	err = client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 		Name:    name,
 		Type:    consts.PluginTypeSecrets,
 		Command: name,
 		SHA256:  sha256value,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	q.Q("=== mounting in setup")
+	err = client.Sys().Mount(name, &api.MountInput{
+		Type: name,
 	})
 	if err != nil {
 		panic(err)

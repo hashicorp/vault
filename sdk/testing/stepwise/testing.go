@@ -23,23 +23,23 @@ const TestEnvVar = "VAULT_ACC"
 // TestTeardownFunc is the callback used for Teardown in TestCase.
 type TestTeardownFunc func() error
 
-// Define operations
+// StepOperation defines operations each step could preform
 type StepOperation string
 
 const (
 	// The operations below are called per path
-	WriteOperation StepOperation = "create"
-	ReadOperation                = "read"
-	// UpdateOperation                   = "update"
-	DeleteOperation = "delete"
-	ListOperation   = "list"
-	HelpOperation   = "help"
+	WriteOperation  StepOperation = "create"
+	ReadOperation                 = "read"
+	UpdateOperation               = "update"
+	DeleteOperation               = "delete"
+	ListOperation                 = "list"
+	HelpOperation                 = "help"
 	// AliasLookaheadOperation           = "alias-lookahead"
 
 	// The operations below are called globally, the path is less relevant.
-	// RevokeOperation   Operation = "revoke"
-	// RenewOperation              = "renew"
-	// RollbackOperation           = "rollback"
+	RevokeOperation   StepOperation = "revoke"
+	RenewOperation                  = "renew"
+	RollbackOperation               = "rollback"
 )
 
 // Step represents a single step of a test Case
@@ -105,7 +105,7 @@ type Case struct {
 	AcceptanceTest bool
 }
 
-// Test performs an acceptance test on a backend with the given test case.
+// Run performs an acceptance test on a backend with the given test case.
 //
 // Tests are not run unless an environmental variable "VAULT_ACC" is
 // set to some non-empty value. This is to avoid test cases surprising
@@ -116,7 +116,15 @@ type Case struct {
 // long, we require the verbose flag so users are able to see progress
 // output.
 func Run(tt TestT, c Case) {
-	var err error
+	q.Q("---------")
+	q.Q("Stepwise starting...")
+	q.Q("---------")
+	defer func() {
+		q.Q("---------")
+		q.Q("end")
+		q.Q("---------")
+		q.Q("")
+	}()
 	// q.Q("==> here in testing.Test")
 	// We only run acceptance tests if an env var is set because they're
 	// slow and generally require some outside configuration.
@@ -142,16 +150,16 @@ func Run(tt TestT, c Case) {
 	if c.Teardown != nil {
 		q.Q(">> testing defer teardown")
 		defer func() {
-			err := c.Teardown()
-			if err != nil {
-				tt.Error("failed to tear down:", err)
+			terr := c.Teardown()
+			if terr != nil {
+				tt.Error("failed to tear down:", terr)
 			}
 		}()
 	}
 
 	// TODO setup on driver here
 	if c.Driver != nil {
-		q.Q("Found driver:", c.Driver)
+		q.Q("Found driver:", c.Driver.Name())
 		err := c.Driver.Setup()
 		if err != nil {
 			c.Driver.Teardown()
@@ -166,7 +174,7 @@ func Run(tt TestT, c Case) {
 	logger := logging.NewVaultLogger(log.Trace)
 	q.Q("==> Run here")
 
-	prefix := "mnt"
+	// prefix := "mnt"
 	isAuthBackend := false
 	// if c.CredentialBackend != nil || c.CredentialFactory != nil {
 	// 	isAuthBackend = true
@@ -199,6 +207,13 @@ func Run(tt TestT, c Case) {
 	//	Steps here
 	// TODO - go through steps after setting up docker
 	//
+	// TODO mounting
+	// merr := client.Sys().Mount(c.Driver.Name(), &api.MountInput{
+	// 	Type: c.Driver.Name(),
+	// })
+	// if merr != nil {
+	// 	tt.Fatal(merr)
+	// }
 
 	// Make requests
 	var revoke []*logical.Request
@@ -392,13 +407,12 @@ func Run(tt TestT, c Case) {
 	}
 
 	q.Q("==> calling driver teardown()")
-	err = c.Driver.Teardown()
-	if err != nil {
+	if err := c.Driver.Teardown(); err != nil {
 		tt.Fatal(err)
 	}
 }
 
-// TestCheckMulti is a helper to have multiple checks.
+// CheckMulti is a helper to have multiple checks.
 func TestCheckMulti(fs ...TestCheckFunc) TestCheckFunc {
 	return func(resp *logical.Response) error {
 		for _, f := range fs {
@@ -411,7 +425,7 @@ func TestCheckMulti(fs ...TestCheckFunc) TestCheckFunc {
 	}
 }
 
-// TestCheckAuth is a helper to check that a request generated an
+// CheckAuth is a helper to check that a request generated an
 // auth token with the proper policies.
 func TestCheckAuth(policies []string) TestCheckFunc {
 	return func(resp *logical.Response) error {
