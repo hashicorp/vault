@@ -193,6 +193,11 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	return m, nil
 }
 
+// Error to warn against plaintext credentials being sent
+var (
+	ErrPlaintextTransmission = errors.New("mysql: plaintext credentials would be sent")
+)
+
 func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) {
 	var err error
 
@@ -251,13 +256,17 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) 
 	}
 
 	dsnParams := url.Values{}
-	tlsCaFile, ok := conf["tls_ca_file"]
-	if ok {
+	tlsCaFile, tls_ok := conf["tls_ca_file"]
+	if tls_ok {
 		if err := setupMySQLTLSConfig(tlsCaFile); err != nil {
 			return nil, errwrap.Wrapf("failed register TLS config: {{err}}", err)
 		}
 
 		dsnParams.Add("tls", mysqlTLSKey)
+	}
+	_, pt_ok := conf["plaintext_connection_allowed"]
+	if !(pt_ok || tls_ok) {
+		return nil, ErrPlaintextTransmission
 	}
 
 	// Create MySQL handle for the database.

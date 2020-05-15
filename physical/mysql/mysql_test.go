@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -15,6 +16,44 @@ import (
 	mysqlhelper "github.com/hashicorp/vault/helper/testhelpers/mysql"
 )
 
+func TestMySQLPlaintextCatch(t *testing.T) {
+	address := os.Getenv("MYSQL_ADDR")
+	if address == "" {
+		t.SkipNow()
+	}
+
+	database := os.Getenv("MYSQL_DB")
+	if database == "" {
+		database = "test"
+	}
+
+	table := os.Getenv("MYSQL_TABLE")
+	if table == "" {
+		table = "test"
+	}
+
+	username := os.Getenv("MYSQL_USERNAME")
+	password := os.Getenv("MYSQL_PASSWORD")
+
+	// Run vault tests
+	logger := logging.NewVaultLogger(log.Debug)
+
+	_, err := NewMySQLBackend(map[string]string{
+		"address":  address,
+		"database": database,
+		"table":    table,
+		"username": username,
+		"password": password,
+	}, logger)
+
+	if errors.Is(err, ErrPlaintextTransmission) {
+		return
+	} else if err != nil {
+		t.Fatalf("Failed to find plaintext error, found: '%v' instead", err)
+	} else {
+		t.Fatalf("Failed to find plaintext error and server started without acknowledging plaintext transmission of credentials")
+	}
+}
 func TestMySQLBackend(t *testing.T) {
 	address := os.Getenv("MYSQL_ADDR")
 	if address == "" {
@@ -43,6 +82,7 @@ func TestMySQLBackend(t *testing.T) {
 		"table":    table,
 		"username": username,
 		"password": password,
+		"plaintext_connection_allowed": "true",
 	}, logger)
 
 	if err != nil {
@@ -89,6 +129,7 @@ func TestMySQLHABackend(t *testing.T) {
 		"username":   username,
 		"password":   password,
 		"ha_enabled": "true",
+		"plaintext_connection_allowed": "true",
 	}
 
 	b, err := NewMySQLBackend(config, logger)
@@ -136,6 +177,7 @@ func TestMySQLHABackend_LockFailPanic(t *testing.T) {
 		"username":   cfg.User,
 		"password":   cfg.Passwd,
 		"ha_enabled": "true",
+		"plaintext_connection_allowed": "true",
 	}
 
 	b, err := NewMySQLBackend(config, logger)
