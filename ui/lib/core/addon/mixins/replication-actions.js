@@ -98,8 +98,8 @@ export default Mixin.create({
         replicationMode,
       });
     }
-    // ARG TODO: but should never be called, all things should be returned
-    // enable is a method off the controller/replication-mode.js
+    // ARG TODO: I would argue onEnable should never be called here, because it uses the transitionTo method which demounts the cluster and makes it so this concurrency function never returns anything.
+    // onEnable is a method off the controller/replication-mode.js
     if (action === 'enable') {
       try {
         yield this.onEnable(replicationMode);
