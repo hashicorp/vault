@@ -655,7 +655,6 @@ func testNonPrintable(t *testing.T, disable bool) {
 	ln, addr := TestListener(t)
 	props := &vault.HandlerProperties{
 		Core:                  core,
-		MaxRequestSize:        DefaultMaxRequestSize,
 		DisablePrintableCheck: disable,
 	}
 	TestServerWithListenerAndProperties(t, ln, addr, core, props)

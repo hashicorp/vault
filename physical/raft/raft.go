@@ -316,6 +316,24 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	}, nil
 }
 
+// Close is used to gracefully close all file resources.  N.B. This method
+// should only be called if you are sure the RaftBackend will never be used
+// again.
+func (b *RaftBackend) Close() error {
+	b.l.Lock()
+	defer b.l.Unlock()
+
+	if err := b.fsm.db.Close(); err != nil {
+		return err
+	}
+
+	if err := b.stableStore.(*raftboltdb.BoltStore).Close(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // RaftServer has information about a server in the Raft configuration
 type RaftServer struct {
 	// NodeID is the name of the server

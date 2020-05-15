@@ -84,80 +84,133 @@ to decrypt the master key at startup and unseal automatically.
 When using Auto Unseal there are certain operations in Vault that still
 require a quorum of users to perform an operation such as generating a root token.
 During the initialization process, a set of Shamir keys are generated that are called
-Recovery Keys and are used for these operations.
+recovery keys and are used for these operations.
 
 For a list of examples and supported providers, please see the
 [seal documentation](/docs/configuration/seal).
 
+## Recovery Key Rekeying
+
+During the KMS Seal initialization process, a set of Shamir keys called recovery keys are
+generated which are used for operations that still require a quorum of users.
+
+Recovery keys can be rekeyed to change the number of shares or thresholds. When using the
+Vault CLI, this is performed by using the `-target=recovery` flag to `vault operator rekey`.
+
 ## Seal Migration
 
-The seal can be migrated from Shamir keys to Auto Unseal, Auto Unseal to Shamir
-keys and Auto Unseal to another Auto Unseal.
+The seal can be migrated from Shamir Seal to KMS Seal, KMS Seal to Shamir Seal,
+and KMS Seal to another KMS Seal.
 
-~> **NOTE**: The migration operation will require both seals to be available
-during the migration. For example, a migration from a cloud KMS seal to
-Shamir will require that the cloud KMS be accessible during the migration.
+~> **NOTE**: Seal migration process cannot be performed without downtime. Due to
+the technical underpinnings of the seal implementations, it is at this point not
+possible to perform seal migration without briefly bringing the whole cluster
+down. We understand that it can be hard for many deployments to face downtime,
+but we believe that switching seals is a rare event and hence we hope for the
+downtime to be considered as an acceptable trade-off.
 
-### Migration From Shamir to Auto Unseal
+~> **NOTE**: Seal migration operation will require both old and new seals to be
+available during the migration. For example, migration from KMS seal to Shamir
+seal will require that the KMS key be accessible during the migration.
 
-To migrate from Shamir keys to Auto Unseal, take your server cluster offline and update
-the [seal configuration](/docs/configuration/seal) with the appropriate seal
-configuration. Bring your server back up and leave the rest of the nodes offline if
-using multi-server mode, then run the unseal process with the `-migrate` flag and bring
-the rest of the cluster online.
+~> **NOTE**: Seal migration from KMS seal to Shamir seal is not currently
+supported when using Vault Enterprise. We plan to support this officially in a
+future release.
 
-All unseal commands must specify the `-migrate` flag. Once the required threshold of
-unseal keys are entered, unseal keys will be migrated to recovery keys.
+~> **NOTE**: Seal migration from KMS seal to KMS seal of same kind is not
+currently supported. We plan to support this officially in a future release.
 
-```
-$ vault operator unseal -migrate
-```
+### Migration post Vault 1.4.0
 
-### Migration From Auto Unseal to Shamir
+These steps are common for seal migrations between any supported kinds and for
+any storage backend.
 
-~> **NOTE**: Migration to Shamir seal is not currently supported when using
-Vault Enterprise. We plan to support this officially in a future release.
+1. Take a standby node down and update the [seal
+configuration](/docs/configuration/seal). If the migration is from Shamir seal
+to KMS seal, add the desired new KMS seal block to the config. If the migration
+is from KMS seal to Shamir seal, add `disabled = "true"` to the old seal block.
+If the migration is from KMS seal to another KMS seal, add `disabled = "true"`
+to the old seal block and add the desired new KMS seal block. Now, bring the
+standby node back up and run the unseal command on each by supplying the
+`-migrate` flag. Supply Shamir unseal keys if old seal was Shamir, which will be
+migrated as the recovery keys for the KMS seal. Supply recovery keys if the old
+seal is one of KMS seals, which will be migrated as the recovery keys of the new
+KMS seal or as Shamir unseal keys if the new seal is Shamir.
 
-To migrate from Auto Unseal to Shamir keys, take your server cluster offline and update
-the [seal configuration](/docs/configuration/seal) and add `disabled = "true"`
-to the seal block. This allows the migration to use this information to decrypt the key
-but will not unseal Vault. When you bring your server back up, run the unseal process
-with the `-migrate` flag and use the Recovery Keys to perform the migration. All unseal
-commands must specify the `-migrate` flag. Once the required threshold of recovery keys
-are entered, the recovery keys will be migrated to be used as unseal keys.
+2. Perform step 1 for all the standby nodes, one at a time. It is necessary to
+bring back the downed standby node before moving on to the other standby nodes,
+specifically when integrated storage is in use for it helps to retain the
+quorum.
 
-### Migration From Auto Unseal to Auto Unseal
+3. Stop the active node. One of the standby nodes will become the active node
+and perform the migration. When using Integrated Storage, ensure that quorum is
+reached and a leader is elected. Monitor the server log in the active node to
+witness the completion of the seal migration process. Wait for a little while
+for the migration information to replicate to all the nodes in case of
+Integrated Storage. In enterprise Vault, switching a KMS seal implies that the
+seal wrapped storage entries get re-wrapped. Monitor the log and wait until this
+process is complete (look for `seal re-wrap completed`).
+
+4. Seal migration is now completed. Update the config of the old active node
+(that is still down) to use the new seal blocks (completely unaware of the old
+seal type) and bring it up. It will be auto-unsealed if the new seal is one of the
+KMS seals or will require unseal keys if the new seal is Shamir.
+
+5. At this point, config files of all the nodes can be updated to only have the
+new seal information. Standby nodes can be restarted right away and the active
+node can be restarted upon a leadership change.
+
+### Migration pre 1.4
+
+#### Migration From Shamir to Auto Unseal
+To migrate from Shamir keys to Auto Unseal, take your server cluster offline and
+update the [seal configuration](/docs/configuration/seal) with the appropriate
+seal configuration. Bring your server back up and leave the rest of the nodes
+offline if using multi-server mode, then run the unseal process with the
+`-migrate` flag and bring the rest of the cluster online.
+
+All unseal commands must specify the `-migrate` flag. Once the required
+threshold of unseal keys are entered, unseal keys will be migrated to recovery
+keys.
+
+``` $ vault operator unseal -migrate ```
+
+#### Migration From Auto Unseal to Shamir
+
+To migrate from Auto Unseal to Shamir keys, take your server cluster offline and
+update the [seal configuration](/docs/configuration/seal) and add `disabled =
+"true"` to the seal block. This allows the migration to use this information to
+decrypt the key but will not unseal Vault. When you bring your server back up,
+run the unseal process with the `-migrate` flag and use the Recovery Keys to
+perform the migration. All unseal commands must specify the `-migrate` flag.
+Once the required threshold of recovery keys are entered, the recovery keys will
+be migrated to be used as unseal keys.
+
+#### Migration From Auto Unseal to Auto Unseal
 
 ~> **NOTE**: Migration between same Auto Unseal types is not currently
 supported. We plan to support this officially in a future release.
 
-To migrate from Auto Unseal to a different Auto Unseal configuration, take your server
-cluster offline and update the existing [seal configuration](/docs/configuration/seal)
-and add `disabled = "true"` to the seal block.  Then add another seal block to describe
-the new seal.
+To migrate from Auto Unseal to a different Auto Unseal configuration, take your
+server cluster offline and update the existing [seal
+configuration](/docs/configuration/seal) and add `disabled = "true"` to the seal
+block.  Then add another seal block to describe the new seal.
 
-When you bring your server back up, run the unseal process with the `-migrate` flag and
-use the Recovery Keys to perform the migration. All unseal commands must specify
-the `-migrate` flag. Once the required threshold of recovery keys are entered,
-the recovery keys will be kept and used as recovery keys in the new seal.
+When you bring your server back up, run the unseal process with the `-migrate`
+flag and use the Recovery Keys to perform the migration. All unseal commands
+must specify the `-migrate` flag. Once the required threshold of recovery keys
+are entered, the recovery keys will be kept and used as recovery keys in the new
+seal.
 
-### Migration with Integrated Storage
+#### Migration with Integrated Storage
 
 Integrated Storage uses the Raft protocol underneath, which requires a quorum of
-servers to be online before the cluster is functional. Therefore, bring the
+servers to be online before the cluster is functional. Therefore, bringing the
 cluster back up one node at a time with the seal configuration updated, will not
 work in this case. Follow the same steps for each kind of migration described
 above with the exception that after the cluster is taken offline, update the
 seal configurations of all the nodes appropriately and bring them all back up.
 When the quorum of nodes are back up, Raft will elect a leader and the leader
-node will perform the migration. The migrated information will be replicated to
+node that will perform the migration. The migrated information will be replicated to
 all other cluster peers and when the peers eventually become the leader,
 migration will not happen again on the peer nodes.
-
-## Recovery Key Rekeying
-
-During Auto Seal initialization process, a set of Shamir keys called Recovery Keys are
-generated which are used for operations that still require a quorum of users.
-
-Recovery Keys can be rekeyed to change the number of shares or thresholds. When using the
-Vault CLI, this is performed by using the `-target=recovery` flag to `vault operator rekey`.

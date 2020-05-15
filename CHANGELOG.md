@@ -10,12 +10,14 @@ CHANGES:
 * plugin: Add SDK method, `Sys.ReloadPlugin`, and CLI command, `vault plugin reload`, 
   for reloading plugins. [[GH-8777](https://github.com/hashicorp/vault/pull/8777)]
 * sentinel: Add a sentinel config section, and "additional_enabled_modules", a list of Sentinel modules that may be imported in addition to the defaults.
+* cubbyhole: Reject reads and writes to an empty ("") path. [[GH-8971](https://github.com/hashicorp/vault/pull/8971)]
 
 IMPROVEMENTS:
 
 * secrets/gcp: Support BigQuery dataset ACLs in absence of IAM endpoints [[GH-78](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/78)]
 * sdk/framework: Support accepting TypeFloat parameters over the API [[GH-8923](https://github.com/hashicorp/vault/pull/8923)]
 * ui: Update TTL picker styling on SSH secret engine [[GH-8891](https://github.com/hashicorp/vault/pull/8891)]
+* ui: Only render the JWT input field of the Vault login form on mounts configured for JWT auth [[GH-8952](https://github.com/hashicorp/vault/pull/8952)]
 
 BUG FIXES:
 
@@ -30,7 +32,16 @@ IMPROVEMENTS:
 * storage/raft: The storage stanza now accepts `leader_ca_cert_file`, `leader_client_cert_file`, and 
   `leader_client_key_file` parameters to read and parse TLS certificate information from paths on disk.
   Existing non-path based parameters will continue to work, but their values will need to be provided as a 
-  single-line string with newlines delimited by `\n`.
+  single-line string with newlines delimited by `\n`.  [[GH-8894](https://github.com/hashicorp/vault/pull/8894)]
+  
+BUG FIXES:
+
+* serviceregistration: Fix a regression for Consul service registration that ignored using the listener address as
+  the redirect address unless api_addr was provided. It now properly uses the same redirect address as the one
+  used by Vault's Core object. [[GH-8976](https://github.com/hashicorp/vault/pull/8976)] 
+* sys: The path provided in `sys/internal/ui/mounts/:path` is now namespace-aware. This fixes an issue
+  with `vault kv` subcommands that had namespaces provided in the path returning permission denied all the time.
+  [[GH-8962](https://github.com/hashicorp/vault/pull/8962)]
 
 ## 1.4.1 (April 30th, 2020)
 
@@ -167,6 +178,7 @@ BUG FIXES:
 * identity: Fix incorrect caching of identity token JWKS responses [[GH-8412](https://github.com/hashicorp/vault/pull/8412)]
 * metrics/stackdriver: Fix issue that prevents the stackdriver metrics library to create unnecessary stackdriver descriptors [[GH-8073](https://github.com/hashicorp/vault/pull/8073)]
 * replication: Fix issue causing cubbyholes in namespaces on performance secondaries to not work.
+* replication (enterprise): Unmounting a dynamic secrets backend could sometimes lead to replication errors.  Change the order of operations to prevent that.
 * seal (enterprise): Fix seal migration when transactional seal wrap backend is in use.
 * secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [[GH-8282](https://github.com/hashicorp/vault/pull/8282)]
 * secrets/database/mysql: Ensures default static credential rotation statements are used [[GH-8240](https://github.com/hashicorp/vault/pull/8240)]

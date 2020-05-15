@@ -13,7 +13,7 @@ import (
 )
 
 // ReloadFunc are functions that are called when a reload is requested
-type ReloadFunc func(map[string]interface{}) error
+type ReloadFunc func() error
 
 // CertificateGetter satisfies ReloadFunc and its GetCertificate method
 // satisfies the tls.GetCertificate function signature.  Currently it does not
@@ -36,7 +36,7 @@ func NewCertificateGetter(certFile, keyFile, passphrase string) *CertificateGett
 	}
 }
 
-func (cg *CertificateGetter) Reload(_ map[string]interface{}) error {
+func (cg *CertificateGetter) Reload() error {
 	certPEMBlock, err := ioutil.ReadFile(cg.certFile)
 	if err != nil {
 		return err
