@@ -84,8 +84,8 @@ type ServiceRegistration interface {
 	// in the face of errors.
 	NotifyPerformanceStandbyStateChange(isStandby bool) error
 
-	// NotifyInitializedStateChange is used by Core to notify that the core is
-	// initialized.
+	// NotifyInitializedStateChange is used by Core to notify that storage
+	// has been initialized.  An unsealed core will always also be initialized.
 	// If errors are returned, Vault only logs a warning, so it is
 	// the implementation's responsibility to retry updating state
 	// in the face of errors.
