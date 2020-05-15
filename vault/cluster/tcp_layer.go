@@ -3,6 +3,7 @@ package cluster
 import (
 	"crypto/tls"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -64,7 +65,14 @@ func (l *TCPLayer) Listeners() []NetworkListener {
 			l.logger.Info("starting listener", "listener_address", laddr)
 		}
 
-		tcpLn, err := net.ListenTCP("tcp", laddr)
+		// If they've passed 0.0.0.0, we only want to bind on IPv4
+		// rather than golang's dual stack default
+		bindProto := "tcp"
+		if strings.HasPrefix(laddr.String(), "0.0.0.0:") {
+			bindProto = "tcp4"
+		}
+
+		tcpLn, err := net.ListenTCP(bindProto, laddr)
 		if err != nil {
 			l.logger.Error("error starting listener", "error", err)
 			continue
