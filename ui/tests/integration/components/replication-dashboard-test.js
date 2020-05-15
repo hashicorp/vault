@@ -55,11 +55,13 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
     />`);
 
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
+    assert.dom('[data-test-selectable-card-container="primary"]').doesNotExist();
 
     this.set('clusterMode', 'primary');
     this.set('isSecondary', false);
 
     assert.dom('[data-test-selectable-card-container="primary"]').exists();
+    assert.dom('[data-test-selectable-card-container="secondary"]').doesNotExist();
   });
 
   test('it renders the primary selectable-card-container when the cluster is a primary', async function(assert) {
@@ -72,6 +74,7 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
     />`);
 
     assert.dom('[data-test-selectable-card-container="primary"]').exists();
+    assert.dom('[data-test-selectable-card-container="secondary"]').doesNotExist();
   });
 
   test('it renders an alert banner if the dashboard is syncing', async function(assert) {
