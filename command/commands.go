@@ -330,6 +330,22 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"operator config": func() (cli.Command, error) {
+			return &OperatorConfigCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator config decrypt": func() (cli.Command, error) {
+			return &OperatorConfigEncryptDecryptCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator config encrypt": func() (cli.Command, error) {
+			return &OperatorConfigEncryptDecryptCommand{
+				BaseCommand: getBaseCommand(),
+				encrypt:     true,
+			}, nil
+		},
 		"operator generate-root": func() (cli.Command, error) {
 			return &OperatorGenerateRootCommand{
 				BaseCommand: getBaseCommand(),

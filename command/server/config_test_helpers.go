@@ -13,7 +13,7 @@ import (
 )
 
 func testConfigRaftRetryJoin(t *testing.T) {
-	config, err := LoadConfigFile("./test-fixtures/raft_retry_join.hcl")
+	config, err := LoadConfigFile("./test-fixtures/raft_retry_join.hcl", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func testConfigRaftRetryJoin(t *testing.T) {
 }
 
 func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
-	config, err := LoadConfigFile("./test-fixtures/config2.hcl")
+	config, err := LoadConfigFile("./test-fixtures/config2.hcl", nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -148,7 +148,7 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 }
 
 func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
-	config, err := LoadConfigFile("./test-fixtures/config2.hcl.json")
+	config, err := LoadConfigFile("./test-fixtures/config2.hcl.json", nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -266,9 +266,7 @@ func testParseEntropy(t *testing.T, oss bool) {
 		},
 	}
 
-	config := Config{
-		SharedConfig: &configutil.SharedConfig{},
-	}
+	config := NewConfig()
 
 	for _, test := range tests {
 		obj, _ := hcl.Parse(strings.TrimSpace(test.inConfig))
@@ -295,7 +293,7 @@ func testParseEntropy(t *testing.T, oss bool) {
 }
 
 func testLoadConfigFile(t *testing.T) {
-	config, err := LoadConfigFile("./test-fixtures/config.hcl")
+	config, err := LoadConfigFile("./test-fixtures/config.hcl", nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -377,7 +375,7 @@ func testLoadConfigFile(t *testing.T) {
 }
 
 func testLoadConfigFile_json(t *testing.T) {
-	config, err := LoadConfigFile("./test-fixtures/config.hcl.json")
+	config, err := LoadConfigFile("./test-fixtures/config.hcl.json", nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -452,7 +450,7 @@ func testLoadConfigFile_json(t *testing.T) {
 }
 
 func testLoadConfigDir(t *testing.T) {
-	config, err := LoadConfigDir("./test-fixtures/config-dir")
+	config, err := LoadConfigDir("./test-fixtures/config-dir", nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -508,7 +506,7 @@ func testLoadConfigDir(t *testing.T) {
 }
 
 func testConfig_Sanitized(t *testing.T) {
-	config, err := LoadConfigFile("./test-fixtures/config3.hcl")
+	config, err := LoadConfigFile("./test-fixtures/config3.hcl", nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
