@@ -80,7 +80,6 @@ func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]in
 		return nil, err
 	}
 
-	c.ConnectionURL = c.getConnectionURL()
 	c.clientOptions = options.MergeClientOptions(writeOpts, authOpts)
 
 	// Set initialized to true at this point since all fields are set,
@@ -117,19 +116,28 @@ func (c *mongoDBConnectionProducer) Connection(ctx context.Context) (interface{}
 		_ = c.client.Disconnect(ctx)
 	}
 
-	if c.clientOptions == nil {
-		c.clientOptions = options.Client()
-	}
-	c.clientOptions.SetSocketTimeout(1 * time.Minute)
-	c.clientOptions.SetConnectTimeout(1 * time.Minute)
-
-	var err error
-	opts := c.clientOptions.ApplyURI(c.ConnectionURL)
-	c.client, err = mongo.Connect(ctx, opts)
+	connURL := c.getConnectionURL()
+	client, err := createClient(ctx, connURL, c.clientOptions)
 	if err != nil {
 		return nil, err
 	}
+	c.client = client
 	return c.client, nil
+}
+
+func createClient(ctx context.Context, connURL string, clientOptions *options.ClientOptions) (client *mongo.Client, err error) {
+	if clientOptions == nil {
+		clientOptions = options.Client()
+	}
+	clientOptions.SetSocketTimeout(1 * time.Minute)
+	clientOptions.SetConnectTimeout(1 * time.Minute)
+
+	opts := clientOptions.ApplyURI(connURL)
+	client, err = mongo.Connect(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
 }
 
 // Close terminates the database connection.
