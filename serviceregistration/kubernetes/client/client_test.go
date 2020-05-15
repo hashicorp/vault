@@ -22,7 +22,7 @@ func TestClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	client, err := New(hclog.Default(), make(chan struct{}))
+	client, err := New(hclog.Default())
 	if err != nil {
 		t.Fatal(err)
 	}
