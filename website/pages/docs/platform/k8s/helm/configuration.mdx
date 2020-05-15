@@ -19,7 +19,7 @@ and consider if they're appropriate for your deployment.
 
   - `enabled` (`boolean: true`) - The master enabled/disabled configuration. If this is true, most components will be installed by default. If this is false, no components will be installed by default and manually opting-in is required, such as by setting `server.enabled` to true.
 
-  - `imagePullSecrets` (`array: []`) - References secrets to be used when pulling images from private registries. See (Pull an Image from a Private Registry)[https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/] for more details.
+  - `imagePullSecrets` (`array: []`) - References secrets to be used when pulling images from private registries. See [Pull an Image from a Private Registry](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) for more details.
 
     - `name`: (`string: required`) - Name of the secret containing files required for authentication to private image registries.
 
@@ -45,7 +45,7 @@ and consider if they're appropriate for your deployment.
 
     - `tag` (`string: "1.3.1"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
 
-  - `authPath` (`string: "auth/kubernetes"`) - Mount Path of the Vault Kubernetes Auth Method.
+  - `authPath` (`string: "auth/kubernetes"`) - Mount path of the Vault Kubernetes Auth Method.
 
   - `logLevel` (`string: "info"`) - Configures the log verbosity of the injector. Supported log levels: trace, debug, error, warn, info.
 
