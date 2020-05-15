@@ -208,30 +208,35 @@ func Run(tt TestT, c Case) {
 			logger.Warn("Executing test step", "step_number", i+1)
 		}
 
-		// Create the request
-		req := &logical.Request{
-			// Operation: s.Operation,
-			// Path:      s.Path,
-			// Data:      s.Data,
-		}
+		// // Create the request
+		// req := &logical.Request{
+		// 	// Operation: s.Operation,
+		// 	// Path:      s.Path,
+		// 	// Data:      s.Data,
+		// }
 
 		// TODO hard coded path here, need mount point. Will it be dynamic? probabaly
 		// needs to be
 		path := fmt.Sprintf("transit/%s", s.Path)
 		var err error
 		var resp *api.Secret
+		client, cerr := c.Driver.Client()
+		if cerr != nil {
+			tt.Fatal(cerr)
+		}
 		// TODO should check expect none here?
-		var lr *logical.Response
+		// var lr *logical.Response
 		switch s.Operation {
-		case logical.CreateOperation, logical.UpdateOperation:
+		case WriteOperation, UpdateOperation:
 			resp, err = client.Logical().Write(path, s.Data)
-		case logical.ReadOperation:
+		case ReadOperation:
+			// resp, err = client.Logical().ReadWithData(path, s.Data)
 			resp, err = client.Logical().Read(path)
-		case logical.ListOperation:
+		case ListOperation:
 			resp, err = client.Logical().List(path)
 			// TODO why though
-			lr = &logical.Response{}
-		case logical.DeleteOperation:
+			// lr = &logical.Response{}
+		case DeleteOperation:
 			resp, err = client.Logical().Delete(path)
 		default:
 			panic("bad operation")
@@ -262,7 +267,7 @@ func Run(tt TestT, c Case) {
 		// }
 
 		// Make sure to prefix the path with where we mounted the thing
-		req.Path = fmt.Sprintf("%s/%s", prefix, req.Path)
+		// req.Path = fmt.Sprintf("%s/%s", prefix, req.Path)
 
 		if isAuthBackend {
 			// Prepend the path with "auth"
@@ -289,13 +294,13 @@ func Run(tt TestT, c Case) {
 			// regardless of whether the error is a 'logical.ErrorResponse'
 			// or not. Set the err to nil. If the error is a logical.ErrorResponse,
 			// it will be handled later.
-			// if s.ErrorOk {
-			// 	// err = nil
-			// } else {
-			// 	// // If the error is not expected, fail right away.
-			// 	// tt.Error(fmt.Sprintf("Failed step %d: %s", i+1, err))
-			// 	// break
-			// }
+			if s.ErrorOk {
+				// err = nil
+			} else {
+				// // If the error is not expected, fail right away.
+				// tt.Error(fmt.Sprintf("Failed step %d: %s", i+1, err))
+				// break
+			}
 		}
 
 		// If the error is a 'logical.ErrorResponse' and if error was not expected,
@@ -327,6 +332,7 @@ func Run(tt TestT, c Case) {
 		}
 	}
 
+	// TODO
 	// TODO
 	// - Revoking things here
 	//
