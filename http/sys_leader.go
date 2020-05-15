@@ -42,6 +42,8 @@ func handleSysLeaderGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 		resp.LastWAL = vault.LastWAL(core)
 	}
 
+	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexes()
+
 	respondOk(w, resp)
 }
 
@@ -53,4 +55,8 @@ type LeaderResponse struct {
 	PerfStandby              bool   `json:"performance_standby"`
 	PerfStandbyLastRemoteWAL uint64 `json:"performance_standby_last_remote_wal"`
 	LastWAL                  uint64 `json:"last_wal,omitempty"`
+
+	// Raft Indexs for this node
+	RaftCommittedIndex uint64 `json:"raft_committed_index,omitempty"`
+	RaftAppliedIndex   uint64 `json:"raft_applied_index,omitempty"`
 }
