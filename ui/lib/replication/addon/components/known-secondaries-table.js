@@ -9,13 +9,15 @@ import { computed } from '@ember/object';
  * ```js
  * <KnownSecondariesTable @replicationAttrs={{replicationAttrs}} />
  * ```
- * @param {object} replicationAttrs=null - The attributes passed directly from the cluster model used to access the array of known secondaries.
+ * @param {object} replicationAttrs=null - The attributes passed directly from the cluster model used to access the array of known secondaries. We use this to grab the secondaries.
  */
 
 export default Component.extend({
   replicationAttrs: null,
-  knownSecondaries: computed('replicationAttrs', function() {
+  secondaries: computed('replicationAttrs', function() {
     const { replicationAttrs } = this;
-    return replicationAttrs.knownSecondaries;
+    // TODO: when the backend changes are merged we will only need replicationAttrs.secondaries instead of knownSecondaries
+    const secondaries = replicationAttrs.secondaries || replicationAttrs.knownSecondaries;
+    return secondaries;
   }),
 });
