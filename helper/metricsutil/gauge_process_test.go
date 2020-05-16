@@ -2,8 +2,10 @@ package metricsutil
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
+	"reflect"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -93,6 +95,44 @@ func (s *SimulatedCollector) EmptyCollectionFunction(ctx context.Context) ([]Gau
 	atomic.AddUint32(&s.numCalls, 1)
 	s.callBarrier <- s.numCalls
 	return []GaugeLabelValues{}, nil
+}
+
+func TestGauge_Creation(t *testing.T) {
+	c := newSimulatedCollector()
+	sink := BlackholeSink()
+	sink.GaugeInterval = 33 * time.Minute
+
+	key := []string{"example", "count"}
+	labels := []Label{{"gauge", "test"}}
+
+	p, err := sink.NewGaugeCollectionProcess(
+		key,
+		labels,
+		c.EmptyCollectionFunction,
+		log.Default(),
+	)
+	if err != nil {
+		t.Fatalf("Error creating collection process: %v", err)
+	}
+
+	if _, ok := p.clock.(defaultClock); !ok {
+		t.Error("Default clock not installed.")
+	}
+
+	if !reflect.DeepEqual(p.key, key) {
+		t.Errorf("Key not initialized, got %v but expected %v",
+			p.key, key)
+	}
+
+	if !reflect.DeepEqual(p.labels, labels) {
+		t.Errorf("Labels not initialized, got %v but expected %v",
+			p.key, key)
+	}
+
+	if p.originalInterval != sink.GaugeInterval || p.currentInterval != sink.GaugeInterval {
+		t.Errorf("Intervals not initialized, got %v and %v, expected %v",
+			p.originalInterval, p.currentInterval, sink.GaugeInterval)
+	}
 }
 
 func TestGauge_StartDelay(t *testing.T) {
@@ -250,6 +290,39 @@ func TestGauge_Backoff(t *testing.T) {
 	}
 }
 
+func TestGauge_RestartTimer(t *testing.T) {
+	s := startSimulatedTime()
+	c := newSimulatedCollector()
+	sink := BlackholeSink()
+	sink.GaugeInterval = 2 * time.Hour
+
+	p, err := sink.newGcpWithClock(
+		[]string{"example", "count"},
+		[]Label{{"gauge", "test"}},
+		c.EmptyCollectionFunction,
+		log.Default(),
+		s,
+	)
+	if err != nil {
+		t.Fatalf("Error creating collection process: %v", err)
+	}
+
+	p.resetTicker()
+	t1 := s.waitForTicker(t)
+	if t1.duration != p.currentInterval {
+		t.Fatalf("Bad ticker interval, got %v expected %v",
+			t1.duration, p.currentInterval)
+	}
+
+	p.currentInterval = 4 * p.originalInterval
+	p.resetTicker()
+	t2 := s.waitForTicker(t)
+	if t2.duration != p.currentInterval {
+		t.Fatalf("Bad ticker interval, got %v expected %v",
+			t1.duration, p.currentInterval)
+	}
+}
+
 func waitForDone(t *testing.T,
 	tick chan<- time.Time,
 	done <-chan struct{},
@@ -359,5 +432,59 @@ func TestGauge_MaximumMeasurements(t *testing.T) {
 			t.Errorf("Gauge %v with value %v should not have been included.", v.Labels, v.Value)
 			break
 		}
+	}
+}
+
+func TestGauge_MeasurementError(t *testing.T) {
+	s := startSimulatedTime()
+	c := newSimulatedCollector()
+	inmemSink := metrics.NewInmemSink(
+		1000000*time.Hour,
+		2000000*time.Hour)
+	sink := &ClusterMetricSink{
+		ClusterName:         "test",
+		MaxGaugeCardinality: 500,
+		GaugeInterval:       2 * time.Hour,
+		Sink:                inmemSink,
+	}
+	// Create a small report so we don't have to deal with batching.
+	numGauges := 10
+	values := make([]GaugeLabelValues, numGauges)
+	for i := range values {
+		values[i].Labels = []Label{
+			{"test", "true"},
+			{"which", fmt.Sprintf("%v", i)},
+		}
+		values[i].Value = float32(i + 1)
+	}
+
+	f := func(ctx context.Context) ([]GaugeLabelValues, error) {
+		atomic.AddUint32(&c.numCalls, 1)
+		c.callBarrier <- c.numCalls
+		return values, errors.New("test error")
+	}
+
+	p, err := sink.newGcpWithClock(
+		[]string{"example", "count"},
+		[]Label{{"gauge", "test"}},
+		f,
+		log.Default(),
+		s,
+	)
+	if err != nil {
+		t.Fatalf("Error creating collection process: %v", err)
+	}
+
+	p.collectAndFilterGauges()
+
+	// We should see no data in the sink
+	intervals := inmemSink.Data()
+	if len(intervals) > 1 {
+		t.Skip("Detected interval crossing.")
+	}
+
+	if len(intervals[0].Gauges) != 0 {
+		t.Errorf("Found %v gauges, expected %v.",
+			len(intervals[0].Gauges), 0)
 	}
 }
