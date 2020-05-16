@@ -2,10 +2,13 @@ package metricsutil
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 )
 
@@ -60,14 +63,7 @@ func startSimulatedTime() *SimulatedTime {
 		now:           time.Now(),
 		tickerBarrier: make(chan *SimulatedTicker, 1),
 	}
-	timeNow = s.Now
-	newTicker = s.NewTicker
 	return s
-}
-
-func stopSimulatedTime() {
-	timeNow = time.Now
-	newTicker = time.NewTicker
 }
 
 type SimulatedCollector struct {
@@ -102,24 +98,23 @@ func (s *SimulatedCollector) EmptyCollectionFunction(ctx context.Context) ([]Gau
 func TestGauge_StartDelay(t *testing.T) {
 	// Work through an entire startup sequence, up to collecting
 	// the first batch of gauges.
-
 	s := startSimulatedTime()
-	defer stopSimulatedTime()
-
 	c := newSimulatedCollector()
 
 	sink := BlackholeSink()
 	sink.GaugeInterval = 2 * time.Hour
 
-	p, err := sink.NewGaugeCollectionProcess(
+	p, err := sink.newGcpWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		c.EmptyCollectionFunction,
 		log.Default(),
+		s,
 	)
 	if err != nil {
 		t.Fatalf("Error creating collection process: %v", err)
 	}
+	go p.Run()
 
 	delayTicker := s.waitForTicker(t)
 	if delayTicker.duration > sink.GaugeInterval {
@@ -165,22 +160,22 @@ func waitForStopped(t *testing.T, p *GaugeCollectionProcess) {
 func TestGauge_StoppedDuringInitialDelay(t *testing.T) {
 	// Stop the process before it gets into its main loop
 	s := startSimulatedTime()
-	defer stopSimulatedTime()
-
 	c := newSimulatedCollector()
 
 	sink := BlackholeSink()
 	sink.GaugeInterval = 2 * time.Hour
 
-	p, err := sink.NewGaugeCollectionProcess(
+	p, err := sink.newGcpWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		c.EmptyCollectionFunction,
 		log.Default(),
+		s,
 	)
 	if err != nil {
 		t.Fatalf("Error creating collection process: %v", err)
 	}
+	go p.Run()
 
 	// Stop during the initial delay, check that goroutine exits
 	s.waitForTicker(t)
@@ -191,22 +186,22 @@ func TestGauge_StoppedDuringInitialDelay(t *testing.T) {
 func TestGauge_StoppedAfterInitialDelay(t *testing.T) {
 	// Stop the process during its main loop
 	s := startSimulatedTime()
-	defer stopSimulatedTime()
-
 	c := newSimulatedCollector()
 
 	sink := BlackholeSink()
 	sink.GaugeInterval = 2 * time.Hour
 
-	p, err := sink.NewGaugeCollectionProcess(
+	p, err := sink.newGcpWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		c.EmptyCollectionFunction,
 		log.Default(),
+		s,
 	)
 	if err != nil {
 		t.Fatalf("Error creating collection process: %v", err)
 	}
+	go p.Run()
 
 	// Get through initial delay, wait for interval ticker
 	delayTicker := s.waitForTicker(t)
@@ -220,7 +215,6 @@ func TestGauge_StoppedAfterInitialDelay(t *testing.T) {
 func TestGauge_Backoff(t *testing.T) {
 	s := startSimulatedTime()
 	s.allowTickers(100)
-	defer stopSimulatedTime()
 
 	c := newSimulatedCollector()
 
@@ -236,20 +230,134 @@ func TestGauge_Backoff(t *testing.T) {
 		return []GaugeLabelValues{}, nil
 	}
 
-	p, err := sink.NewGaugeCollectionProcess(
+	p, err := sink.newGcpWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		f,
 		log.Default(),
+		s,
 	)
 	if err != nil {
 		t.Fatalf("Error creating collection process: %v", err)
 	}
+	// Do not run, we'll just going to call an internal function.
 	p.collectAndFilterGauges()
 
 	if p.currentInterval != 2*p.originalInterval {
 		t.Errorf("Current interval is %v, should be 2x%v.",
 			p.currentInterval,
 			p.originalInterval)
+	}
+}
+
+func waitForDone(t *testing.T,
+	tick chan<- time.Time,
+	done <-chan struct{},
+) int {
+	timeout := time.After(100 * time.Millisecond)
+
+	numTicks := 0
+	for {
+		select {
+		case <-timeout:
+			t.Fatal("Timeout waiting for metrics to be sent.")
+		case tick <- time.Now():
+			numTicks += 1
+		case <-done:
+			return numTicks
+		}
+	}
+}
+
+func TestGauge_MaximumMeasurements(t *testing.T) {
+	s := startSimulatedTime()
+	c := newSimulatedCollector()
+
+	// Long bucket time == low chance of crossing interval
+	inmemSink := metrics.NewInmemSink(
+		1000000*time.Hour,
+		2000000*time.Hour)
+
+	sink := &ClusterMetricSink{
+		ClusterName:         "test",
+		MaxGaugeCardinality: 500,
+		GaugeInterval:       2 * time.Hour,
+		Sink:                inmemSink,
+	}
+
+	// Create a report larger than the default limit
+	excessGauges := 100
+	values := make([]GaugeLabelValues, sink.MaxGaugeCardinality+excessGauges)
+	for i := range values {
+		values[i].Labels = []Label{
+			{"test", "true"},
+			{"which", fmt.Sprintf("%v", i)},
+		}
+		values[i].Value = float32(i + 1)
+	}
+	rand.Shuffle(len(values), func(i, j int) {
+		values[i], values[j] = values[j], values[i]
+	})
+
+	f := func(ctx context.Context) ([]GaugeLabelValues, error) {
+		atomic.AddUint32(&c.numCalls, 1)
+
+		// Move time forward by 0.5% of the gauge interval
+		timeUsed := time.Duration(int(sink.GaugeInterval) / 200)
+		s.now = s.now.Add(timeUsed)
+
+		c.callBarrier <- c.numCalls
+		return values, nil
+	}
+
+	p, err := sink.newGcpWithClock(
+		[]string{"example", "count"},
+		[]Label{{"gauge", "test"}},
+		f,
+		log.Default(),
+		s,
+	)
+	if err != nil {
+		t.Fatalf("Error creating collection process: %v", err)
+	}
+
+	// This needs a ticker in order to do its thing,
+	// so run it in the background and we'll send the ticks
+	// from here.
+	done := make(chan struct{}, 1)
+	go func() {
+		p.collectAndFilterGauges()
+		close(done)
+	}()
+
+	sendTicker := s.waitForTicker(t)
+	numTicksSent := waitForDone(t, sendTicker.sender, done)
+
+	// 500 items, one delay after after each 25, means that
+	// 19 ticks are consumed, so 19 or 20 must be sent.
+	expectedTicks := sink.MaxGaugeCardinality/25 - 1
+	if numTicksSent < expectedTicks || numTicksSent > expectedTicks+1 {
+		t.Errorf("Number of ticks = %v, expected %v.", numTicksSent, expectedTicks)
+	}
+
+	// If we start close to the end of an interval, metrics will
+	// be split across two buckets.
+	intervals := inmemSink.Data()
+	if len(intervals) > 1 {
+		t.Skip("Detected interval crossing.")
+	}
+
+	if len(intervals[0].Gauges) != sink.MaxGaugeCardinality {
+		t.Errorf("Found %v gauges, expected %v.",
+			len(intervals[0].Gauges),
+			sink.MaxGaugeCardinality)
+	}
+
+	minVal := float32(excessGauges)
+	for _, v := range intervals[0].Gauges {
+		if v.Value < minVal {
+			t.Errorf("Gauge %v with value %v should not have been included.", v.Labels, v.Value)
+			break
+		}
 	}
 }

@@ -9,12 +9,22 @@ import (
 	log "github.com/hashicorp/go-hclog"
 )
 
-// Function bindings to allow unit tests to not
-// proceed in real-time.
-var (
-	timeNow   = time.Now
-	newTicker = time.NewTicker
-)
+// This interface allows unit tests to substitute in a simulated clock.
+type clock interface {
+	Now() time.Time
+	NewTicker(time.Duration) *time.Ticker
+}
+
+type defaultClock struct {
+}
+
+func (_ defaultClock) Now() time.Time {
+	return time.Now()
+}
+
+func (_ defaultClock) NewTicker(d time.Duration) *time.Ticker {
+	return time.NewTicker(d)
+}
 
 // GaugeLabelValues is one gauge in a set sharing a single key, that
 // are measured in a batch.
@@ -36,29 +46,60 @@ const collectionBound = 0.02
 const collectionTarget = 0.01
 
 // A GaugeCollectionProcess is responsible for one particular gauge metric.
-// It handles a delay on initial startup; limiting the cardinality; and exponential
-// backoff on the requested interval.
+// It handles a delay on initial startup; limiting the cardinality; and
+// exponential backoff on the requested interval.
 type GaugeCollectionProcess struct {
-	Stop             chan struct{}
-	stopped          chan struct{}
-	key              []string
-	labels           []Label
-	collector        GaugeCollector
-	sink             *ClusterMetricSink
+	Stop    chan struct{}
+	stopped chan struct{}
+
+	// gauge name
+	key []string
+	// labels to use when reporting
+	labels []Label
+
+	// callback function
+	collector GaugeCollector
+
+	// destination for metrics
+	sink   *ClusterMetricSink
+	logger log.Logger
+
+	// time between collections
 	originalInterval time.Duration
 	currentInterval  time.Duration
 	ticker           *time.Ticker
-	logger           log.Logger
+
+	// time source
+	clock clock
 }
 
 // NewGaugeCollectionProcess creates a new collection process for the callback
 // function given as an argument, and starts it running.
 // A label should be provided for metrics *about* this collection process.
+//
+// The Run() method must be called to start the process.
 func (m *ClusterMetricSink) NewGaugeCollectionProcess(
 	key []string,
 	id []Label,
 	collector GaugeCollector,
 	logger log.Logger,
+) (*GaugeCollectionProcess, error) {
+	return m.newGcpWithClock(
+		key,
+		id,
+		collector,
+		logger,
+		defaultClock{},
+	)
+}
+
+// test version allows an alternative clock implementation
+func (m *ClusterMetricSink) newGcpWithClock(
+	key []string,
+	id []Label,
+	collector GaugeCollector,
+	logger log.Logger,
+	clock clock,
 ) (*GaugeCollectionProcess, error) {
 	process := &GaugeCollectionProcess{
 		Stop:             make(chan struct{}, 1),
@@ -70,8 +111,8 @@ func (m *ClusterMetricSink) NewGaugeCollectionProcess(
 		originalInterval: m.GaugeInterval,
 		currentInterval:  m.GaugeInterval,
 		logger:           logger,
+		clock:            clock,
 	}
-	go process.Run()
 	return process, nil
 }
 
@@ -83,7 +124,7 @@ func (p *GaugeCollectionProcess) delayStart() bool {
 	randomDelay := time.Duration(rand.Intn(int(p.currentInterval)))
 	// FIXME: a Timer might be better, but then we'd have to simulate
 	// one of those too?
-	delayTick := newTicker(randomDelay)
+	delayTick := p.clock.NewTicker(randomDelay)
 	defer delayTick.Stop()
 
 	select {
@@ -101,7 +142,7 @@ func (p *GaugeCollectionProcess) resetTicker() {
 	if p.ticker != nil {
 		p.ticker.Stop()
 	}
-	p.ticker = newTicker(p.currentInterval)
+	p.ticker = p.clock.NewTicker(p.currentInterval)
 }
 
 // collectAndFilterGauges executes the callback function,
@@ -113,9 +154,9 @@ func (p *GaugeCollectionProcess) collectAndFilterGauges() {
 		timeout)
 	defer cancel()
 
-	start := timeNow()
+	start := p.clock.Now()
 	values, err := p.collector(ctx)
-	end := timeNow()
+	end := p.clock.Now()
 	duration := end.Sub(start)
 
 	// Report how long it took to perform the operation.
@@ -156,7 +197,7 @@ func (p *GaugeCollectionProcess) streamGaugesToSink(values []GaugeLabelValues) {
 	// Let's smooth things out over the course of a second.
 	// 1 second / 500 = 2 ms each, so we can send 25 per 50 milliseconds.
 	// That should be one or two packets.
-	sendTick := newTicker(50 * time.Millisecond)
+	sendTick := p.clock.NewTicker(50 * time.Millisecond)
 	batchSize := 25
 	for i, lv := range values {
 		if i > 0 && i%batchSize == 0 {
