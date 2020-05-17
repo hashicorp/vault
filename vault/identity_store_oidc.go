@@ -44,21 +44,23 @@ type expireableKey struct {
 }
 
 type namedKey struct {
-	name             string
-	Algorithm        string           `json:"signing_algorithm"`
-	VerificationTTL  time.Duration    `json:"verification_ttl"`
-	RotationPeriod   time.Duration    `json:"rotation_period"`
-	KeyRing          []*expireableKey `json:"key_ring"`
-	SigningKey       *jose.JSONWebKey `json:"signing_key"`
-	NextRotation     time.Time        `json:"next_rotation"`
-	AllowedClientIDs []string         `json:"allowed_client_ids"`
+	name               string
+	Algorithm          string           `json:"signing_algorithm"`
+	VerificationTTL    time.Duration    `json:"verification_ttl"`
+	RotationPeriod     time.Duration    `json:"rotation_period"`
+	KeyRing            []*expireableKey `json:"key_ring"`
+	SigningKey         *jose.JSONWebKey `json:"signing_key"`
+	NextRotation       time.Time        `json:"next_rotation"`
+	AllowedClientIDs   []string         `json:"allowed_client_ids"`
+	AllowImpersonation bool             `json:"bool"`
 }
 
 type role struct {
-	TokenTTL time.Duration `json:"token_ttl"`
-	Key      string        `json:"key"`
-	Template string        `json:"template"`
-	ClientID string        `json:"client_id"`
+	TokenTTL           time.Duration `json:"token_ttl"`
+	Key                string        `json:"key"`
+	Template           string        `json:"template"`
+	ClientID           string        `json:"client_id"`
+	AllowImpersonation bool          `json:"bool"`
 }
 
 // idToken contains the required OIDC fields.
@@ -164,6 +166,12 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeCommaStringSlice,
 					Description: "Comma separated string or array of role client ids allowed to use this key for signing. If empty no roles are allowed. If \"*\" all roles are allowed.",
 				},
+
+				"allow_impersonation": {
+					Type:        framework.TypeBool,
+					Description: "Specifies if the token generation endpoint allows impersonation for this key. Must also be enabled for applicable roles.",
+					Default:     false,
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.CreateOperation: i.pathOIDCCreateUpdateKey,
@@ -224,6 +232,18 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "Name of the role",
 				},
+				"subject": {
+					Type:        framework.TypeString,
+					Description: "Subject to use for impersonation",
+				},
+				"issuer": {
+					Type:        framework.TypeString,
+					Description: "Issuer to use for impersonation",
+				},
+				"claims": {
+					Type:        framework.TypeString,
+					Description: "Custom claims to override for impersonation. This may be in string-ified JSON or base64 format.",
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.pathOIDCGenerateToken,
@@ -254,6 +274,11 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				"client_id": {
 					Type:        framework.TypeString,
 					Description: "Optional client_id",
+				},
+				"allow_impersonation": {
+					Type:        framework.TypeBool,
+					Description: "Specifies if the token generation endpoint allows impersonation for this role. Must also be enabled for the associated key.",
+					Default:     false,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -488,6 +513,12 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		return logical.ErrorResponse("unknown signing algorithm %q", key.Algorithm), nil
 	}
 
+	if allowImpersonationRaw, ok := d.GetOk("allow_impersonation"); ok {
+		key.AllowImpersonation = allowImpersonationRaw.(bool)
+	} else if req.Operation == logical.CreateOperation {
+		key.AllowImpersonation = d.Get("allow_impersonation").(bool)
+	}
+
 	// Update next rotation time if it is unset or now earlier than previously set.
 	nextRotation := time.Now().Add(key.RotationPeriod)
 	if key.NextRotation.IsZero() || nextRotation.Before(key.NextRotation) {
@@ -547,10 +578,11 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 	}
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"rotation_period":    int64(storedNamedKey.RotationPeriod.Seconds()),
-			"verification_ttl":   int64(storedNamedKey.VerificationTTL.Seconds()),
-			"algorithm":          storedNamedKey.Algorithm,
-			"allowed_client_ids": storedNamedKey.AllowedClientIDs,
+			"rotation_period":     int64(storedNamedKey.RotationPeriod.Seconds()),
+			"verification_ttl":    int64(storedNamedKey.VerificationTTL.Seconds()),
+			"algorithm":           storedNamedKey.Algorithm,
+			"allowed_client_ids":  storedNamedKey.AllowedClientIDs,
+			"allow_impersonation": storedNamedKey.AllowImpersonation,
 		},
 	}, nil
 }
@@ -752,6 +784,29 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		IssuedAt:  now.Unix(),
 	}
 
+	var claims string
+	if role.AllowImpersonation {
+		// Validate the key allows impersonation
+		if !key.AllowImpersonation {
+			return logical.ErrorResponse("the key %q does not allow impersonation", role.Key), nil
+		}
+
+		// Override subject
+		if subjectRaw, ok := d.GetOk("subject"); ok {
+			idToken.Subject = subjectRaw.(string)
+		}
+
+		// Override issuer
+		if issuerRaw, ok := d.GetOk("issuer"); ok {
+			idToken.Issuer = issuerRaw.(string)
+		}
+
+		// Pass custom claims
+		if claimsRaw, ok := d.GetOk("claims"); ok {
+			claims = claimsRaw.(string)
+		}
+	}
+
 	e, err := i.MemDBEntityByID(req.EntityID, true)
 	if err != nil {
 		return nil, err
@@ -767,7 +822,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 
 	groups = append(groups, inheritedGroups...)
 
-	payload, err := idToken.generatePayload(i.Logger(), role.Template, e, groups)
+	payload, err := idToken.generatePayload(i.Logger(), role.Template, e, groups, claims)
 	if err != nil {
 		i.Logger().Warn("error populating OIDC token template", "error", err)
 	}
@@ -786,7 +841,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 	}, nil
 }
 
-func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity *identity.Entity, groups []*identity.Group) ([]byte, error) {
+func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity *identity.Entity, groups []*identity.Group, claims string) ([]byte, error) {
 	output := map[string]interface{}{
 		"iss":       tok.Issuer,
 		"namespace": tok.Namespace,
@@ -822,6 +877,21 @@ func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity
 				output[k] = v
 			} else {
 				logger.Warn("invalid top level OIDC template key", "template", template, "key", k)
+			}
+		}
+	}
+
+	if claims != "" {
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(claims), &parsed); err != nil {
+			logger.Warn("error parsing claims", "claims", claims, "err", err)
+		}
+
+		for k, v := range parsed {
+			if !strutil.StrListContains(requiredClaims, k) {
+				output[k] = v
+			} else {
+				logger.Warn("invalid top level claims key", "claims", claims, "key", k)
 			}
 		}
 	}
@@ -939,6 +1009,12 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		role.ClientID = clientID.(string)
 	}
 
+	if allowImpersonationRaw, ok := d.GetOk("allow_impersonation"); ok {
+		role.AllowImpersonation = allowImpersonationRaw.(bool)
+	} else if req.Operation == logical.CreateOperation {
+		role.AllowImpersonation = d.Get("allow_impersonation").(bool)
+	}
+
 	// create role path
 	if role.ClientID == "" {
 		clientID, err := base62.Random(26)
@@ -978,10 +1054,11 @@ func (i *IdentityStore) pathOIDCReadRole(ctx context.Context, req *logical.Reque
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"client_id": role.ClientID,
-			"key":       role.Key,
-			"template":  role.Template,
-			"ttl":       int64(role.TokenTTL.Seconds()),
+			"client_id":           role.ClientID,
+			"key":                 role.Key,
+			"template":            role.Template,
+			"ttl":                 int64(role.TokenTTL.Seconds()),
+			"allow_impersonation": role.AllowImpersonation,
 		},
 	}, nil
 }
