@@ -540,6 +540,97 @@ func TestOIDC_SignIDToken(t *testing.T) {
 	if err := parsedToken.Claims(responseJWKS.Keys[0], claims); err != nil {
 		t.Fatalf("unable to validate signed token, err:\n%#v", err)
 	}
+
+	// Test passing a subject to the token generation endpoint - should fail
+	// without impersonation enabled for role
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/token/test-role",
+		Operation: logical.ReadOperation,
+		Data: map[string]interface{}{
+			"subject": "foo",
+		},
+		Storage:   storage,
+		EntityID:  "test-entity-id",
+	})
+	expectError(t, resp, err)
+	expectedStrings = map[string]interface{}{
+		"the role \"test-role\" does not allow impersonation": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// Enable impersonation for role
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"allow_impersonation": "true",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Test passing a subject to the token generation endpoint - should fail
+	// without impersonation enabled for key
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/token/test-role",
+		Operation: logical.ReadOperation,
+		Data: map[string]interface{}{
+			"subject": "foo",
+		},
+		Storage:   storage,
+		EntityID:  "test-entity-id",
+	})
+	expectError(t, resp, err)
+	expectedStrings = map[string]interface{}{
+		"the key \"test-key\" does not allow impersonation": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// Enable impersonation for key
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"allow_impersonation": "true",
+		},
+		Storage: storage,
+	})
+
+	// Test passing a subject to the token generation endpoint - should pass
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/token/test-role",
+		Operation: logical.ReadOperation,
+		Data: map[string]interface{}{
+			"subject": "foo",
+			"issuer": "bar",
+			"claims": "{\"foo\":\"bar\"}",
+		},
+		Storage:   storage,
+		EntityID:  "test-entity-id",
+	})
+	expectSuccess(t, resp, err)
+
+	// Validate claims
+	parsedToken, err = jwt.ParseSigned(resp.Data["token"].(string))
+	if err != nil {
+		t.Fatalf("error parsing token: %s", err.Error())
+	}
+	claims = &jwt.Claims{}
+	customClaims := struct {
+		Foo string `json:"foo"`
+	}{}
+	if err := parsedToken.Claims(responseJWKS.Keys[0], claims, &customClaims); err != nil {
+		t.Fatalf("unable to validate signed token, err:\n%#v", err)
+	}
+	if claims.Subject != "foo" {
+		t.Fatalf("Subject claim not overridden: %s", claims.Subject)
+	}
+	if claims.Issuer != "bar" {
+		t.Fatalf("Issuer claim not overridden: %s", claims.Issuer)
+	}
+	if customClaims.Foo != "bar" {
+		t.Fatalf("Custom claim not overridden: %s", customClaims.Foo)
+	}
 }
 
 // TestOIDC_PeriodicFunc tests timing logic for running key

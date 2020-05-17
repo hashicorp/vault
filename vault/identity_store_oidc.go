@@ -784,26 +784,36 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		IssuedAt:  now.Unix(),
 	}
 
+	// Override subject
+	impersonating := false
+	if subjectRaw, ok := d.GetOk("subject"); ok {
+		idToken.Subject = subjectRaw.(string)
+		impersonating = true
+	}
+
+	// Override issuer
+	if issuerRaw, ok := d.GetOk("issuer"); ok {
+		idToken.Issuer = issuerRaw.(string)
+		impersonating = true
+	}
+
+	// Pass custom claims
 	var claims string
-	if role.AllowImpersonation {
+	if claimsRaw, ok := d.GetOk("claims"); ok {
+		claims = claimsRaw.(string)
+		impersonating = true
+	}
+
+	// Check impersonation is allowed
+	if impersonating {
+		// Validate the role allows impersonation
+		if !role.AllowImpersonation {
+			return logical.ErrorResponse("the role %q does not allow impersonation", roleName), nil
+		}
+
 		// Validate the key allows impersonation
 		if !key.AllowImpersonation {
 			return logical.ErrorResponse("the key %q does not allow impersonation", role.Key), nil
-		}
-
-		// Override subject
-		if subjectRaw, ok := d.GetOk("subject"); ok {
-			idToken.Subject = subjectRaw.(string)
-		}
-
-		// Override issuer
-		if issuerRaw, ok := d.GetOk("issuer"); ok {
-			idToken.Issuer = issuerRaw.(string)
-		}
-
-		// Pass custom claims
-		if claimsRaw, ok := d.GetOk("claims"); ok {
-			claims = claimsRaw.(string)
 		}
 	}
 
