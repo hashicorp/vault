@@ -32,14 +32,15 @@ type Config struct {
 
 // Vault contains configuration for connnecting to Vault servers
 type Vault struct {
-	Address          string      `hcl:"address"`
-	CACert           string      `hcl:"ca_cert"`
-	CAPath           string      `hcl:"ca_path"`
-	TLSSkipVerify    bool        `hcl:"-"`
-	TLSSkipVerifyRaw interface{} `hcl:"tls_skip_verify"`
-	ClientCert       string      `hcl:"client_cert"`
-	ClientKey        string      `hcl:"client_key"`
-	TLSServerName    string      `hcl:"tls_server_name"`
+	Address          string                `hcl:"address" mapstructure:"address"`
+	CACert           string                `hcl:"ca_cert" mapstructure:"ca_cert"`
+	CAPath           string                `hcl:"ca_path" mapstructure:"ca_path"`
+	TLSSkipVerify    bool                  `hcl:"-" mapstructure:"-"`
+	TLSSkipVerifyRaw interface{}           `hcl:"tls_skip_verify" mapstructure:"tls_skip_verify"`
+	ClientCert       string                `hcl:"client_cert" mapstructure:"client_cert"`
+	ClientKey        string                `hcl:"client_key" mapstructure:"client_key"`
+	TLSServerName    string                `hcl:"tls_server_name" mapstructure:"tls_server_name"`
+	Retry            *ctconfig.RetryConfig `hcl:"-" mapstructure:"retry"`
 }
 
 // Cache contains any configuration needed for Cache mode
@@ -113,10 +114,6 @@ func LoadConfig(path string) (*Config, error) {
 
 	// Start building the result
 	result := NewConfig()
-	if err := hcl.DecodeObject(result, obj); err != nil {
-		return nil, err
-	}
-
 	sharedConfig, err := configutil.ParseConfig(string(d))
 	if err != nil {
 		return nil, err
@@ -183,9 +180,45 @@ func parseVault(result *Config, list *ast.ObjectList) error {
 
 	item := vaultList.Items[0]
 
+	var shadow interface{}
+	if err := hcl.DecodeObject(&shadow, item.Val); err != nil {
+		return fmt.Errorf("error decoding config: %s", err)
+	}
+
+	parsed, ok := shadow.(map[string]interface{})
+	if !ok {
+		return errors.New("error converting config")
+	}
+
+	// flatten the retry field. The initial "retry" value, if given, is a
+	// []map[string]interface{}, but we need it to be map[string]interface{}.
+	// Consul Template has a method flattenKeys that walks all of parsed and
+	// flattens every key. For Vault Agent, we only care about the retry input.
+	// Only one retry stanza is supported, however Consul Template does not error
+	// with multiple instead it flattens them down, with last value winning.
+	// Here we take the last element of the parsed["retry"] slice to keep
+	// consistency with Consul Template behavior.
+	retry, ok := parsed["retry"].([]map[string]interface{})
+	if ok {
+		parsed["retry"] = retry[len(retry)-1]
+	}
+
 	var v Vault
-	err := hcl.DecodeObject(&v, item.Val)
+	// Use mapstructure to populate the retry config fields
+	var md mapstructure.Metadata
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			mapstructure.StringToTimeDurationHookFunc(),
+		),
+		ErrorUnused: true,
+		Metadata:    &md,
+		Result:      &v,
+	})
 	if err != nil {
+		return errors.New("mapstructure decoder creation failed")
+	}
+
+	if err := decoder.Decode(parsed); err != nil {
 		return err
 	}
 

@@ -539,3 +539,26 @@ func TestLoadConfigFile_Template(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadConfigFile_Retry(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/retry.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{},
+		Vault: &Vault{
+			Retry: &ctconfig.RetryConfig{
+				Enabled:    pointerutil.BoolPtr(true),
+				Attempts:   pointerutil.IntPtr(6),
+				Backoff:    pointerutil.TimeDurationPtr("1s"),
+				MaxBackoff: pointerutil.TimeDurationPtr("1s"),
+			},
+		},
+	}
+
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}

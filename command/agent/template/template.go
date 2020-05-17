@@ -224,6 +224,10 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		}
 	}
 
+	if sc.VaultConf.Retry != nil {
+		conf.Vault.Retry = sc.VaultConf.Retry
+	}
+
 	conf.Finalize()
 
 	// setup log level from TemplateServer config
