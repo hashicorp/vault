@@ -51,10 +51,11 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"key":       "test-key",
-		"ttl":       int64(86400),
-		"template":  "",
-		"client_id": resp.Data["client_id"],
+		"key":                 "test-key",
+		"ttl":                 int64(86400),
+		"template":            "",
+		"client_id":           resp.Data["client_id"],
+		"allow_impersonation": false,
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -65,9 +66,10 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 		Path:      "oidc/role/test-role1",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"template":  "{\"some-key\":\"some-value\"}",
-			"ttl":       "2h",
-			"client_id": "my_custom_id",
+			"template":           "{\"some-key\":\"some-value\"}",
+			"ttl":                "2h",
+			"client_id":          "my_custom_id",
+			"allow_impersonation": true,
 		},
 		Storage: storage,
 	})
@@ -81,10 +83,11 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"key":       "test-key",
-		"ttl":       int64(7200),
-		"template":  "{\"some-key\":\"some-value\"}",
-		"client_id": "my_custom_id",
+		"key":                "test-key",
+		"ttl":                int64(7200),
+		"template":           "{\"some-key\":\"some-value\"}",
+		"client_id":          "my_custom_id",
+		"allow_impersonation": true,
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -205,10 +208,11 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"rotation_period":    int64(86400),
-		"verification_ttl":   int64(86400),
-		"algorithm":          "RS256",
-		"allowed_client_ids": []string{},
+		"rotation_period":     int64(86400),
+		"verification_ttl":    int64(86400),
+		"algorithm":           "RS256",
+		"allowed_client_ids":  []string{},
+		"allow_impersonation": false,
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -219,9 +223,10 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Path:      "oidc/key/test-key",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"rotation_period":    "10m",
-			"verification_ttl":   "1h",
-			"allowed_client_ids": "allowed-test-role",
+			"rotation_period":     "10m",
+			"verification_ttl":    "1h",
+			"allowed_client_ids":  "allowed-test-role",
+			"allow_impersonation": true,
 		},
 		Storage: storage,
 	})
@@ -235,10 +240,11 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"rotation_period":    int64(600),
-		"verification_ttl":   int64(3600),
-		"algorithm":          "RS256",
-		"allowed_client_ids": []string{"allowed-test-role"},
+		"rotation_period":     int64(600),
+		"verification_ttl":    int64(3600),
+		"algorithm":           "RS256",
+		"allowed_client_ids":  []string{"allowed-test-role"},
+		"allow_impersonation": true,
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
