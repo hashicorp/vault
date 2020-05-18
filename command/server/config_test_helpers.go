@@ -17,7 +17,7 @@ func testConfigRaftRetryJoin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	retryJoinConfig := `[{"leader_api_addr":"http://127.0.0.1:8200"},{"leader_api_addr":"http://127.0.0.2:8200"},{"leader_api_addr":"http://127.0.0.3:8200"}]`
+	retryJoinConfig := `[{"leader_api_addr":"http://127.0.0.1:8200"},{"leader_api_addr":"http://127.0.0.2:8200"},{"leader_api_addr":"http://127.0.0.3:8200"}]` + "\n"
 	expected := &Config{
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
