@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"testing"
@@ -15,7 +16,7 @@ import (
 
 // TestBackend_basic_derived_docker is an example test using the Docker Driver
 func TestBackend_basic_derived_docker(t *testing.T) {
-	// decryptData := make(map[string]interface{})
+	decryptData := make(map[string]interface{})
 	stepwise.Run(t, stepwise.Case{
 		Driver: dockerDriver.NewDockerDriver("transit"),
 		Steps: []stepwise.Step{
@@ -23,8 +24,8 @@ func TestBackend_basic_derived_docker(t *testing.T) {
 			testAccStepwiseWritePolicy(t, "test", true),
 			testAccStepwiseListPolicy(t, "test", false),
 			testAccStepwiseReadPolicy(t, "test", false, true),
-			// testAccStepEncryptContext(t, "test", testPlaintext, "my-cool-context", decryptData),
-			// testAccStepDecrypt(t, "test", testPlaintext, decryptData),
+			testAccStepwiseEncryptContext(t, "test", testPlaintext, "my-cool-context", decryptData),
+			testAccStepwiseDecrypt(t, "test", testPlaintext, decryptData),
 			// testAccStepEnableDeletion(t, "test"),
 			// testAccStepDeletePolicy(t, "test"),
 			// testAccStepReadPolicy(t, "test", true, true),
@@ -155,6 +156,60 @@ func testAccStepwiseReadPolicyWithVersions(t *testing.T, name string, expectNone
 				return fmt.Errorf("bad: %#v", d)
 			}
 			q.Q("--> read policy check OK")
+			return nil
+		},
+	}
+}
+
+func testAccStepwiseEncryptContext(
+	t *testing.T, name, plaintext, context string, decryptData map[string]interface{}) stepwise.Step {
+	return stepwise.Step{
+		Operation: stepwise.UpdateOperation,
+		Path:      "encrypt/" + name,
+		Data: map[string]interface{}{
+			"plaintext": base64.StdEncoding.EncodeToString([]byte(plaintext)),
+			"context":   base64.StdEncoding.EncodeToString([]byte(context)),
+		},
+		Check: func(resp *api.Secret) error {
+			var d struct {
+				Ciphertext string `mapstructure:"ciphertext"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+			if d.Ciphertext == "" {
+				return fmt.Errorf("missing ciphertext")
+			}
+			decryptData["ciphertext"] = d.Ciphertext
+			decryptData["context"] = base64.StdEncoding.EncodeToString([]byte(context))
+			return nil
+		},
+	}
+}
+
+func testAccStepwiseDecrypt(
+	t *testing.T, name, plaintext string, decryptData map[string]interface{}) stepwise.Step {
+	return stepwise.Step{
+		Operation: stepwise.UpdateOperation,
+		Path:      "decrypt/" + name,
+		Data:      decryptData,
+		Check: func(resp *api.Secret) error {
+			var d struct {
+				Plaintext string `mapstructure:"plaintext"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+
+			// Decode the base64
+			plainRaw, err := base64.StdEncoding.DecodeString(d.Plaintext)
+			if err != nil {
+				return err
+			}
+
+			if string(plainRaw) != plaintext {
+				return fmt.Errorf("plaintext mismatch: %s expect: %s, decryptData was %#v", plainRaw, plaintext, decryptData)
+			}
 			return nil
 		},
 	}
