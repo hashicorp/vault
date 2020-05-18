@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/awsutil"
@@ -56,13 +57,13 @@ type backend struct {
 	// This avoids the overhead of creating a client object for every login request.
 	// When the credentials are modified or deleted, all the cached client objects
 	// will be flushed. The empty STS role signifies the master account
-	EC2ClientsMap map[string]map[string]ec2Client
+	EC2ClientsMap map[string]map[string]*ec2.EC2
 
 	// Map to hold the IAM client objects indexed by region and STS role.
 	// This avoids the overhead of creating a client object for every login request.
 	// When the credentials are modified or deleted, all the cached client objects
 	// will be flushed. The empty STS role signifies the master account
-	IAMClientsMap map[string]map[string]iamClient
+	IAMClientsMap map[string]map[string]*iam.IAM
 
 	// Map to associate a partition to a random region in that partition. Users of
 	// this don't care what region in the partition they use, but there is some client
@@ -96,8 +97,8 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 		// Setting the periodic func to be run once in an hour.
 		// If there is a real need, this can be made configurable.
 		tidyCooldownPeriod:    time.Hour,
-		EC2ClientsMap:         make(map[string]map[string]ec2Client),
-		IAMClientsMap:         make(map[string]map[string]iamClient),
+		EC2ClientsMap:         make(map[string]map[string]*ec2.EC2),
+		IAMClientsMap:         make(map[string]map[string]*iam.IAM),
 		iamUserIdToArnCache:   cache.New(7*24*time.Hour, 24*time.Hour),
 		tidyBlacklistCASGuard: new(uint32),
 		tidyWhitelistCASGuard: new(uint32),

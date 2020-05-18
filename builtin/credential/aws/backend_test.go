@@ -1488,7 +1488,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		return
 	}
 
-	stsService := newSTSClient(awsSession)
+	stsService := sts.New(awsSession)
 	stsInputParams := &sts.GetCallerIdentityInput{}
 
 	testIdentity, err := stsService.GetCallerIdentity(stsInputParams)

@@ -515,7 +515,7 @@ func defaultLoginData() (map[string]interface{}, error) {
 		return nil, fmt.Errorf("failed to create session: %s", err)
 	}
 
-	stsService := newSTSClient(awsSession)
+	stsService := sts.New(awsSession)
 	stsInputParams := &sts.GetCallerIdentityInput{}
 	stsRequestValid, _ := stsService.GetCallerIdentityRequest(stsInputParams)
 	stsRequestValid.HTTPRequest.Header.Add(iamServerIdHeader, testVaultHeaderValue)
