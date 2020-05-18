@@ -3,12 +3,12 @@ package okta
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/go-cleanhttp"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-cleanhttp"
 	oktaold "github.com/chrismalek/oktasdk-go/okta"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"

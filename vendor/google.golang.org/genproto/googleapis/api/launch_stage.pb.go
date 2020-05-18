@@ -91,7 +91,9 @@ func init() {
 	proto.RegisterEnum("google.api.LaunchStage", LaunchStage_name, LaunchStage_value)
 }
 
-func init() { proto.RegisterFile("google/api/launch_stage.proto", fileDescriptor_6b5f68b6c1cefff8) }
+func init() {
+	proto.RegisterFile("google/api/launch_stage.proto", fileDescriptor_6b5f68b6c1cefff8)
+}
 
 var fileDescriptor_6b5f68b6c1cefff8 = []byte{
 	// 225 bytes of a gzipped FileDescriptorProto
