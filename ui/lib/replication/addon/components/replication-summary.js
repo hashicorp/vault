@@ -69,7 +69,6 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
 
   submit: task(function*() {
     let modeObject;
-    console.log('8a. should hit this');
     try {
       yield this.submitHandler.perform(...arguments);
     } catch (e) {
