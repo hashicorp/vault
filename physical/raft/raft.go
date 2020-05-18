@@ -937,6 +937,12 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 // Put inserts an entry in the log for the put operation
 func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "put"}, time.Now())
+
+	valueLen := len(entry.Value)
+	if uint64(valueLen) > b.kvMaxValueSize {
+		return fmt.Errorf("value size too large; got %d bytes, max: %d bytes", valueLen, b.kvMaxValueSize)
+	}
+
 	command := &LogData{
 		Operations: []*LogOperation{
 			&LogOperation{
