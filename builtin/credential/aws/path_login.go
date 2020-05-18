@@ -131,7 +131,7 @@ needs to be supplied along with 'identity' parameter.`,
 
 // instanceIamRoleARN fetches the IAM role ARN associated with the given
 // instance profile name
-func (b *backend) instanceIamRoleARN(iamClient *iam.IAM, instanceProfileName string) (string, error) {
+func (b *backend) instanceIamRoleARN(iamClient iamClient, instanceProfileName string) (string, error) {
 	if iamClient == nil {
 		return "", fmt.Errorf("nil iamClient")
 	}
