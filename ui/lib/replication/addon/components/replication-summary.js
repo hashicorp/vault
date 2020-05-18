@@ -16,10 +16,10 @@ const DEFAULTS = {
   primary_cluster_addr: null,
   ca_file: null,
   ca_path: null,
-  // replicationMode: 'dr', // ARG this messes up the mode setting, but removing it messes up the radio button default select.  Fix the later via some other property.
 };
 
 export default Component.extend(ReplicationActions, DEFAULTS, {
+  replicationMode: 'dr',
   wizard: service(),
   version: service(),
   didReceiveAttrs() {
