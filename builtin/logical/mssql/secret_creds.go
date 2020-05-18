@@ -64,12 +64,12 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	}
 
 	// First disable server login
-	disableStmt, err := db.Prepare("ALTER LOGIN [?] DISABLE;")
+	disableStmt, err := db.Prepare(fmt.Sprintf("ALTER LOGIN [%s] DISABLE;", username))
 	if err != nil {
 		return nil, err
 	}
 	defer disableStmt.Close()
-	if _, err := disableStmt.Exec(username); err != nil {
+	if _, err := disableStmt.Exec(); err != nil {
 		return nil, err
 	}
 
@@ -104,13 +104,13 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	// we need to drop the database users before we can drop the login and the role
 	// This isn't done in a transaction because even if we fail along the way,
 	// we want to remove as much access as possible
-	stmt, err := db.Prepare("EXEC master.dbo.sp_msloginmappings '?';")
+	stmt, err := db.Prepare(fmt.Sprintf("EXEC master.dbo.sp_msloginmappings '%s';", username))
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(username)
+	rows, err := stmt.Query()
 	if err != nil {
 		return nil, err
 	}
@@ -148,12 +148,12 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	}
 
 	// Drop this login
-	stmt, err = db.Prepare(dropLoginSQL)
+	stmt, err = db.Prepare(fmt.Sprintf(dropLoginSQL, username, username))
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	if _, err := stmt.Exec(username, username); err != nil {
+	if _, err := stmt.Exec(); err != nil {
 		return nil, err
 	}
 
@@ -175,8 +175,8 @@ const dropLoginSQL = `
 IF EXISTS
   (SELECT name
    FROM master.sys.server_principals
-   WHERE name = N'?')
+   WHERE name = N'%s')
 BEGIN
-  DROP LOGIN [?]
+  DROP LOGIN [%s]
 END
 `
