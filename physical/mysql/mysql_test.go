@@ -48,6 +48,7 @@ func TestMySQLPlaintextCatch(t *testing.T) {
 		"table":    table,
 		"username": username,
 		"password": password,
+		"plaintext_connection_allowed": "false",
 	}, logger)
 
 	str := buf.String()
