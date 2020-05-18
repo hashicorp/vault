@@ -696,11 +696,10 @@ func logProxyEnvironmentVariables(logger hclog.Logger) {
 			// about the former.
 			continue
 		}
-		if user := u.User.Username(); user != "" {
-			u.User = url.User("redacted-username")
-		}
 		if _, ok := u.User.Password(); ok {
 			u.User = url.UserPassword("redacted-username", "redacted-password")
+		} else if user := u.User.Username(); user != "" {
+			u.User = url.User("redacted-username")
 		}
 		cfgMap[k] = u.String()
 	}
