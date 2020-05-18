@@ -309,13 +309,14 @@ func testLoadConfigFileIntegerAndBooleanValuesCommon(t *testing.T, path string) 
 	}
 
 	expected := &Config{
-		Listeners: []*Listener{
-			&Listener{
-				Type: "tcp",
-				Config: map[string]interface{}{
-					"address": "127.0.0.1:8200",
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:    "tcp",
+					Address: "127.0.0.1:8200",
 				},
 			},
+			DisableMlock: true,
 		},
 
 		Storage: &Storage{
@@ -334,16 +335,14 @@ func testLoadConfigFileIntegerAndBooleanValuesCommon(t *testing.T, path string) 
 
 		DisableCache:    true,
 		DisableCacheRaw: true,
-		DisableMlock:    true,
-		DisableMlockRaw: true,
 		EnableUI:        true,
 		EnableUIRaw:     true,
 	}
 
-	if !reflect.DeepEqual(config, expected) {
-		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
+	config.Listeners[0].RawConfig = nil
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
 	}
-
 }
 
 func testLoadConfigFile(t *testing.T) {
