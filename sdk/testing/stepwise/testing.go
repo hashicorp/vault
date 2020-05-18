@@ -98,11 +98,6 @@ type Case struct {
 	// in the case that the test can't guarantee all resources were
 	// properly cleaned up.
 	Teardown TestTeardownFunc
-
-	// AcceptanceTest, if set, the test case will be run only if
-	// the environment variable VAULT_ACC is set. If not this test case
-	// will be run as a unit test.
-	AcceptanceTest bool
 }
 
 // Run performs an acceptance test on a backend with the given test case.
@@ -125,9 +120,10 @@ func Run(tt TestT, c Case) {
 		q.Q("---------")
 		q.Q("")
 	}()
+
 	// We only run acceptance tests if an env var is set because they're
 	// slow and generally require some outside configuration.
-	if c.AcceptanceTest && os.Getenv(TestEnvVar) == "" {
+	if os.Getenv(TestEnvVar) == "" {
 		tt.Skip(fmt.Sprintf(
 			"Acceptance tests skipped unless env '%s' set",
 			TestEnvVar))
@@ -135,7 +131,7 @@ func Run(tt TestT, c Case) {
 	}
 
 	// We require verbose mode so that the user knows what is going on.
-	if c.AcceptanceTest && !testTesting && !testing.Verbose() {
+	if !testTesting && !testing.Verbose() {
 		tt.Fatal("Acceptance tests must be run with the -v flag on tests")
 		return
 	}
@@ -148,9 +144,9 @@ func Run(tt TestT, c Case) {
 	// Defer on the teardown, regardless of pass/fail at this point
 	if c.Teardown != nil {
 		defer func() {
-			terr := c.Teardown()
-			if terr != nil {
-				tt.Error("failed to tear down:", terr)
+			err := c.Teardown()
+			if err != nil {
+				tt.Error("failed to tear down:", err)
 			}
 		}()
 	}
@@ -163,53 +159,14 @@ func Run(tt TestT, c Case) {
 			tt.Fatal(err)
 		}
 	} else {
-		tt.Fatal("nil driver")
+		tt.Fatal("nil driver in acceptance test")
 	}
 
 	// Create an in-memory Vault core
+	// TODO use test logger if available?
 	logger := logging.NewVaultLogger(log.Trace)
 
-	// prefix := "mnt"
-	isAuthBackend := false
-	// if c.CredentialBackend != nil || c.CredentialFactory != nil {
-	// 	isAuthBackend = true
-
-	// 	// Enable the test auth method
-	// 	opts := &api.EnableAuthOptions{
-	// 		Type: "test",
-	// 	}
-	// 	if err := client.Sys().EnableAuthWithOptions(prefix, opts); err != nil {
-	// 		tt.Fatal("error enabling backend: ", err)
-	// 		return
-	// 	}
-	// }
-
-	// tokenInfo, err := client.Auth().Token().LookupSelf()
-	// if err != nil {
-	// 	tt.Fatal("error looking up token: ", err)
-	// 	return
-	// }
-	// var tokenPolicies []string
-	// if tokenPoliciesRaw, ok := tokenInfo.Data["policies"]; ok {
-	// 	if tokenPoliciesSliceRaw, ok := tokenPoliciesRaw.([]interface{}); ok {
-	// 		for _, p := range tokenPoliciesSliceRaw {
-	// 			tokenPolicies = append(tokenPolicies, p.(string))
-	// 		}
-	// 	}
-	// }
-
-	// TODO
-	//	Steps here
-	// TODO - go through steps after setting up docker
-	//
-	// TODO mounting
-	// merr := client.Sys().Mount(c.Driver.Name(), &api.MountInput{
-	// 	Type: c.Driver.Name(),
-	// })
-	// if merr != nil {
-	// 	tt.Fatal(merr)
-	// }
-
+	// Steps here
 	// Make requests
 	var revoke []*logical.Request
 	for i, s := range c.Steps {
@@ -275,11 +232,6 @@ func Run(tt TestT, c Case) {
 
 		// Make sure to prefix the path with where we mounted the thing
 		// req.Path = fmt.Sprintf("%s/%s", prefix, req.Path)
-
-		if isAuthBackend {
-			// Prepend the path with "auth"
-			// req.Path = "auth/" + req.Path
-		}
 
 		// TODO
 		// - test returned error check here
