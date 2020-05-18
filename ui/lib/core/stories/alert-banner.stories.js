@@ -1,10 +1,16 @@
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import notes from './alert-banner.md';
+import { withKnobs, object } from '@storybook/addon-knobs';
 import { MESSAGE_TYPES } from '../addon/helpers/message-types.js';
 
 storiesOf('Alerts/AlertBanner/', module)
   .addParameters({ options: { showPanel: false } })
+  .addDecorator(
+    withKnobs({
+      escapeHTML: false,
+    })
+  )
   .add(
     'AlertBanner',
     () => ({
@@ -30,7 +36,7 @@ storiesOf('Alerts/AlertBanner/', module)
       context: {
         type: 'info',
         message: 'Here is a message.',
-        progressBar: { value: 75, max: 100 },
+        progressBar: object('Progress Bar', { value: 75, max: 100 }),
       },
     }),
     { notes }

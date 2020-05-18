@@ -1,6 +1,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
+import { assign } from '@ember/polyfills';
 import hbs from 'htmlbars-inline-precompile';
 
 const REPLICATION_DETAILS = {
@@ -27,13 +28,12 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
+    this.set('replicationDetails', REPLICATION_DETAILS);
     this.set('clusterMode', 'secondary');
     this.set('isSecondary', true);
   });
 
   test('it renders', async function(assert) {
-    this.set('replicationDetails', REPLICATION_DETAILS);
-
     await render(hbs`<ReplicationDashboard
       @replicationDetails={{replicationDetails}}
       @clusterMode={{clusterMode}}
@@ -47,8 +47,24 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
     assert.dom('[data-test-flash-message]').doesNotExist('no flash message is displayed on render');
   });
 
+  test('it updates the dashboard when the replication mode has changed', async function(assert) {
+    await render(hbs`<ReplicationDashboard
+      @replicationDetails={{replicationDetails}}
+      @clusterMode={{clusterMode}}
+      @isSecondary={{isSecondary}}
+    />`);
+
+    assert.dom('[data-test-selectable-card-container="secondary"]').exists();
+    assert.dom('[data-test-selectable-card-container="primary"]').doesNotExist();
+
+    this.set('clusterMode', 'primary');
+    this.set('isSecondary', false);
+
+    assert.dom('[data-test-selectable-card-container="primary"]').exists();
+    assert.dom('[data-test-selectable-card-container="secondary"]').doesNotExist();
+  });
+
   test('it renders the primary selectable-card-container when the cluster is a primary', async function(assert) {
-    this.set('replicationDetails', REPLICATION_DETAILS);
     this.set('isSecondary', false);
 
     await render(hbs`<ReplicationDashboard
@@ -58,6 +74,7 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
     />`);
 
     assert.dom('[data-test-selectable-card-container="primary"]').exists();
+    assert.dom('[data-test-selectable-card-container="secondary"]').doesNotExist();
   });
 
   test('it renders an alert banner if the dashboard is syncing', async function(assert) {
@@ -94,5 +111,12 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
         IS_REINDEXING.reindex_building_progress,
         'shows the reindexing progress inside the alert banner'
       );
+
+    const reindexingInProgress = assign({}, IS_REINDEXING, { reindex_building_progress: 27000 });
+    this.set('replicationDetails', reindexingInProgress);
+
+    assert
+      .dom('.message-title>.progress')
+      .hasValue(reindexingInProgress.reindex_building_progress, 'updates the reindexing progress');
   });
 });
