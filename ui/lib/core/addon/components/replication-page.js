@@ -14,7 +14,7 @@ export default Component.extend({
   store: service(),
   reindexingDetails: null,
   didReceiveAttrs() {
-    this._super(...arguments);
+    this._super(arguments);
     this.getReplicationModeStatus.perform();
   },
   getReplicationModeStatus: task(function*() {
