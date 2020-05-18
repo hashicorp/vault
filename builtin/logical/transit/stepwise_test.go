@@ -26,9 +26,9 @@ func TestBackend_basic_derived_docker(t *testing.T) {
 			testAccStepwiseReadPolicy(t, "test", false, true),
 			testAccStepwiseEncryptContext(t, "test", testPlaintext, "my-cool-context", decryptData),
 			testAccStepwiseDecrypt(t, "test", testPlaintext, decryptData),
-			// testAccStepEnableDeletion(t, "test"),
-			// testAccStepDeletePolicy(t, "test"),
-			// testAccStepReadPolicy(t, "test", true, true),
+			testAccStepwiseEnableDeletion(t, "test"),
+			testAccStepwiseDeletePolicy(t, "test"),
+			testAccStepwiseReadPolicy(t, "test", true, true),
 		},
 	})
 }
@@ -122,6 +122,7 @@ func testAccStepwiseReadPolicyWithVersions(t *testing.T, name string, expectNone
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
 			}
+			q.Q("d after read:", d)
 
 			if d.Name != name {
 				return fmt.Errorf("bad name: %#v", d)
@@ -212,5 +213,22 @@ func testAccStepwiseDecrypt(
 			}
 			return nil
 		},
+	}
+}
+
+func testAccStepwiseEnableDeletion(t *testing.T, name string) stepwise.Step {
+	return stepwise.Step{
+		Operation: stepwise.UpdateOperation,
+		Path:      "keys/" + name + "/config",
+		Data: map[string]interface{}{
+			"deletion_allowed": true,
+		},
+	}
+}
+
+func testAccStepwiseDeletePolicy(t *testing.T, name string) stepwise.Step {
+	return stepwise.Step{
+		Operation: stepwise.DeleteOperation,
+		Path:      "keys/" + name,
 	}
 }
