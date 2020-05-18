@@ -1,4 +1,9 @@
-<div class="selectable-card">
-  <p><strong>Some stuff here: {{value}}</strong></p>
-  <p>y u no update</p>
+<div class="selectable-card is-rounded action-block">
+  <div class="action-block-info">
+    <p class="action-block-title">{{title}}</p>
+    <p>{{description}}</p>
+  </div>
+  <div class="action-block-action">
+    {{yield}}
+  </div>
 </div>

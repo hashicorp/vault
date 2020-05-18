@@ -1,0 +1,36 @@
+@mixin stacked-grid {
+  grid-template-columns: 1fr;
+  grid-row: 1/1;
+}
+@mixin stacked-content {
+  margin-bottom: $spacing-l;
+}
+
+.selectable-card.action-block {
+  grid-template-columns: 2fr 1fr;
+  display: grid;
+  padding: $spacing-m $spacing-l;
+  line-height: inherit;
+
+  @include until($mobile) {
+    @include stacked-grid();
+  }
+}
+
+.action-block-info {
+  @include until($mobile) {
+    @include stacked-grid();
+  }
+}
+
+.selectable-card.action-block.stacked {
+  @include stacked-grid();
+}
+.stacked > .action-block-info {
+  @include stacked-content();
+}
+
+.action-block-title {
+  font-size: $size-5;
+  font-weight: $font-weight-bold;
+}
