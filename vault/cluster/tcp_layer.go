@@ -3,7 +3,6 @@ package cluster
 import (
 	"crypto/tls"
 	"net"
-	"strings"
 	"sync"
 	"time"
 
