@@ -63,7 +63,6 @@ export default Mixin.create({
       return cluster;
     }
     if (this.reset) {
-      // resets mode to primary
       this.reset();
     }
     if (action === 'enable') {
@@ -80,34 +79,17 @@ export default Mixin.create({
         store.unloadAll('secret-engine');
       }
     }
-    if (mode !== 'secondary') {
-      // data is not ready at this point for reload during secondary and causes error
-      try {
-        yield cluster.reload();
-      } catch (e) {
-        // no error handling here
-      }
+    try {
+      yield cluster.reload();
+    } catch (e) {
+      // no error handling here
     }
     cluster.rollbackAttributes();
     if (action === 'disable') {
       yield this.onDisable();
     }
-    if (mode === 'secondary') {
-      let modeObject = {};
-      // return mode and replicationMode so you can properly handle the transition
-      return (modeObject = {
-        mode,
-        replicationMode,
-      });
-    }
-    // ARG TODO: I would argue onEnable should never be called here, because it uses the transitionTo method which demounts the cluster and makes it so this concurrency function never returns anything.
-    // onEnable is a method off the controller/replication-mode.js
     if (action === 'enable') {
-      try {
-        yield this.onEnable(replicationMode);
-      } catch (e) {
-        console.log(e);
-      }
+      yield this.onEnable(replicationMode, mode);
     }
   }).drop(),
 

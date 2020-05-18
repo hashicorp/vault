@@ -7,7 +7,6 @@ import ReplicationActions from 'core/mixins/replication-actions';
 import { task } from 'ember-concurrency';
 
 const DEFAULTS = {
-  mode: 'primary',
   token: null,
   id: null,
   loading: false,
@@ -20,6 +19,8 @@ const DEFAULTS = {
 
 export default Component.extend(ReplicationActions, DEFAULTS, {
   replicationMode: 'dr',
+  mode: 'primary',
+  router: service(),
   wizard: service(),
   version: service(),
   didReceiveAttrs() {
@@ -68,23 +69,12 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
 
   submit: task(function*() {
     let modeObject;
+    console.log('8a. should hit this');
     try {
-      modeObject = yield this.submitHandler.perform(...arguments);
+      yield this.submitHandler.perform(...arguments);
     } catch (e) {
       // TODO handle error
     }
-    if (modeObject && modeObject.mode === 'secondary') {
-      return yield this.get('transitionTo').perform(modeObject);
-    }
-    // ARG TODO handle other non-secondary situations.
-  }),
-  transitionTo: task(function*(modeObject) {
-    // take transitionTo outside of a yield because it unmounts the cluster and yield cannot return anything
-    if (modeObject.replicationMode === 'dr') {
-      // secondary dr is on a new cluster and you want to route to the top level of that cluster
-      return () => this.router.transitionTo('vault.cluster');
-    }
-    return () => this.router.transitionTo('vault.cluster.mode.index');
   }),
   actions: {
     onSubmit(/*action, mode, data, event*/) {

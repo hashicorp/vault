@@ -6,8 +6,11 @@ export default Controller.extend({
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),
   actions: {
-    onEnable(mode) {
-      return this.transitionToRoute('mode', mode);
+    onEnable(replicationMode, mode) {
+      if (replicationMode == 'dr' && mode === 'secondary') {
+        this.router.transitionTo('vault.cluster');
+      }
+      return this.transitionToRoute('mode', replicationMode);
     },
     onDisable() {
       return this.transitionToRoute('index');
