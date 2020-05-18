@@ -36,7 +36,7 @@ export default Mixin.create({
     try {
       resp = yield this.get('store')
         .adapterFor('cluster')
-        .replicationAction(action, replicationMode, clusterMode, data); // ARG replicationAction is in cluster.js which is what makes the POST request.  Might be key to adding loading states.
+        .replicationAction(action, replicationMode, clusterMode, data);
     } catch (e) {
       return this.submitError(e);
     }
@@ -71,7 +71,7 @@ export default Mixin.create({
       cluster.set(
         replicationMode,
         store.createFragment('replication-attributes', {
-          mode: 'bootstrapping', // ARG TODO: off of model.performance.mode whereas model.rm.mode = perofrmance and rm.mode = performance
+          mode: 'bootstrapping',
         })
       );
       if (mode === 'secondary' && replicationMode === 'performance') {
@@ -80,12 +80,14 @@ export default Mixin.create({
         store.unloadAll('secret-engine');
       }
     }
-    try {
-      yield cluster.reload();
-    } catch (e) {
-      // no error handling here
+    if (mode !== 'secondary') {
+      // data is not ready at this point for reload during secondary and causes error
+      try {
+        yield cluster.reload();
+      } catch (e) {
+        // no error handling here
+      }
     }
-    // ARG TODO: this seems to incorrrectly clear out the replicationAttr.mode from bootstraping to blank.
     cluster.rollbackAttributes();
     if (action === 'disable') {
       yield this.onDisable();

@@ -79,12 +79,12 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
     // ARG TODO handle other non-secondary situations.
   }),
   transitionTo: task(function*(modeObject) {
-    // Take transitionTo outside of a yield because it unmounts the cluster and yield cannot return anything
+    // take transitionTo outside of a yield because it unmounts the cluster and yield cannot return anything
     if (modeObject.replicationMode === 'dr') {
+      // secondary dr is on a new cluster and you want to route to the top level of that cluster
       return () => this.router.transitionTo('vault.cluster');
     }
-    // ARG TODO some loading here while waiting for data, might be component level if no data returned or set property on store of mode="bootstrapping"
-    // ARG experiment a bit more on if you need return () => this.router.transitionTo('vault.cluster'); or nothing
+    return () => this.router.transitionTo('vault.cluster.mode.index');
   }),
   actions: {
     onSubmit(/*action, mode, data, event*/) {
