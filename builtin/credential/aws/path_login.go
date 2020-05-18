@@ -1011,7 +1011,7 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 			}
 			accountID, err := getMetadataValue(req.Auth, "account_id")
 			if err != nil {
-				return nil, err
+				b.Logger().Debug("account_id not present during iam renewal attempt, continuing to attempt validation")
 			}
 			if _, err := b.validateInstance(ctx, req.Storage, instanceID, instanceRegion, accountID); err != nil {
 				return nil, errwrap.Wrapf(fmt.Sprintf("failed to verify instance ID %q: {{err}}", instanceID), err)
@@ -1089,7 +1089,7 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, _
 	}
 	accountID, err := getMetadataValue(req.Auth, "account_id")
 	if err != nil {
-		return nil, err
+		b.Logger().Debug("account_id not present during ec2 renewal attempt, continuing to attempt validation")
 	}
 
 	// Cross check that the instance is still in 'running' state
