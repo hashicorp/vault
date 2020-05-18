@@ -22,7 +22,7 @@ type SimulatedTime struct {
 	now           time.Time
 	tickerBarrier chan *SimulatedTicker
 }
-
+var _ clock = &SimulatedTime{}
 type SimulatedTicker struct {
 	ticker   *time.Ticker
 	duration time.Duration
@@ -44,6 +44,7 @@ func (s *SimulatedTime) NewTicker(d time.Duration) *time.Ticker {
 }
 
 func (s *SimulatedTime) waitForTicker(t *testing.T) *SimulatedTicker {
+        t.Helper()
 	// System under test should create a ticker within 100ms,
 	// wait for it to show up or else fail the test.
 	timeout := time.After(100 * time.Millisecond)
@@ -188,6 +189,7 @@ func TestGauge_StartDelay(t *testing.T) {
 }
 
 func waitForStopped(t *testing.T, p *GaugeCollectionProcess) {
+        t.Helper()
 	timeout := time.After(100 * time.Millisecond)
 	select {
 	case <-timeout:
@@ -327,6 +329,7 @@ func waitForDone(t *testing.T,
 	tick chan<- time.Time,
 	done <-chan struct{},
 ) int {
+        t.Helper()
 	timeout := time.After(100 * time.Millisecond)
 
 	numTicks := 0
