@@ -492,6 +492,8 @@ github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4 h1:YE4qndazWmYGp
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4/go.mod h1:QjGrrxcRXv/4XkEZAlM0VMZEa3uxKAICFqDj27FP/48=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.1 h1:fA6cFH8lIPH2M4KNTEzf1bpc6Tbyy5ZvoYP8H/TI9ts=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.1/go.mod h1:MP3kfr0N+7miOTZFwKv952b9VkXM4S2Q6YtQCiNKWq8=
+github.com/hashicorp/vault-plugin-secrets-ad v0.6.4-beta1.0.20200518124111-3dceeb3ce90e h1:0GK1BNBfglD2sydZ4XXMjJElhY8bC2TDdc0vk1Q9zbA=
+github.com/hashicorp/vault-plugin-secrets-ad v0.6.4-beta1.0.20200518124111-3dceeb3ce90e/go.mod h1:SCsKcChP8yrtOHXOeTD7oRk0oflj3IxA9y9zTOGtQ8s=
 github.com/hashicorp/vault-plugin-secrets-ad v0.6.5 h1:wrHzXSD6qmKvkuHaQn+BNj89+HGhMNchxAckGnd7YTc=
 github.com/hashicorp/vault-plugin-secrets-ad v0.6.5/go.mod h1:kk98nB+cwDbt3I7UGQq3ota7+eHZrGSTQZfSRGpluvA=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5 h1:BOOtSls+BQ1EtPmpE9LoqZztsEZ1fRWVSkHWtRIrCB4=
