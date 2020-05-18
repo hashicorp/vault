@@ -52,6 +52,8 @@ var (
 	snapshotsRetained = 2
 
 	restoreOpDelayDuration = 5 * time.Second
+
+	defaultKVMaxValueSize = uint64(3 * raftchunking.ChunkSize)
 )
 
 // RaftBackend implements the backend interfaces and uses the raft protocol to
@@ -107,6 +109,10 @@ type RaftBackend struct {
 
 	// permitPool is used to limit the number of concurrent storage calls.
 	permitPool *physical.PermitPool
+
+	// kvMaxValueSize imposes a limit on values in individual KV operations. It is
+	// suggested to use a value of 3x the Raft chunking size for optimal performance.
+	kvMaxValueSize uint64
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -226,6 +232,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	var log raft.LogStore
 	var stable raft.StableStore
 	var snap raft.SnapshotStore
+
 	var devMode bool
 	if devMode {
 		store := raft.NewInmemStore()
@@ -303,16 +310,27 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 	}
 
+	kvMaxValueSize := defaultKVMaxValueSize
+	if kvMaxValueSizeCfg := conf["kv_max_value_size"]; len(kvMaxValueSizeCfg) != 0 {
+		i, err := strconv.Atoi(kvMaxValueSizeCfg)
+		if err != nil {
+			return nil, err
+		}
+
+		kvMaxValueSize = uint64(i)
+	}
+
 	return &RaftBackend{
-		logger:      logger,
-		fsm:         fsm,
-		conf:        conf,
-		logStore:    log,
-		stableStore: stable,
-		snapStore:   snap,
-		dataDir:     path,
-		localID:     localID,
-		permitPool:  physical.NewPermitPool(physical.DefaultParallelOperations),
+		logger:         logger,
+		fsm:            fsm,
+		conf:           conf,
+		logStore:       log,
+		stableStore:    stable,
+		snapStore:      snap,
+		dataDir:        path,
+		localID:        localID,
+		permitPool:     physical.NewPermitPool(physical.DefaultParallelOperations),
+		kvMaxValueSize: kvMaxValueSize,
 	}, nil
 }
 
