@@ -314,7 +314,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	if kvMaxValueSizeCfg := conf["kv_max_value_size"]; len(kvMaxValueSizeCfg) != 0 {
 		i, err := strconv.Atoi(kvMaxValueSizeCfg)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse 'kv_max_value_size': %w", err)
 		}
 
 		kvMaxValueSize = uint64(i)
