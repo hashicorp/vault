@@ -34,6 +34,8 @@ IMPROVEMENTS:
   `leader_client_key_file` parameters to read and parse TLS certificate information from paths on disk.
   Existing non-path based parameters will continue to work, but their values will need to be provided as a 
   single-line string with newlines delimited by `\n`.  [[GH-8894](https://github.com/hashicorp/vault/pull/8894)]
+* storage/raft: The `vault status` CLI command and the `sys/leader` API now contain the committed and applied
+  raft indexes. [[GH-9011](https://github.com/hashicorp/vault/pull/9011)]
   
 BUG FIXES:
 

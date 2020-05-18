@@ -76,6 +76,18 @@ func (s *raftFollowerStates) minIndex() uint64 {
 	return min
 }
 
+func (c *Core) GetRaftIndexes() (committed uint64, applied uint64) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+
+	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
+	if !ok {
+		return 0, 0
+	}
+
+	return raftStorage.CommittedIndex(), raftStorage.AppliedIndex()
+}
+
 // startRaftStorage will call SetupCluster in the raft backend which starts raft
 // up and enables the cluster handler.
 func (c *Core) startRaftStorage(ctx context.Context) (retErr error) {
