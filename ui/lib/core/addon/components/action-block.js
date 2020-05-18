@@ -12,7 +12,10 @@
  */
 
 import Component from '@ember/component';
+import layout from '../templates/components/action-block';
 
 export default Component.extend({
-  value: 'this',
+  layout,
+  title: 'this',
+  description: 'thing',
 });
