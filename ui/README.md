@@ -68,6 +68,11 @@ long-form version of the npm script:
 
 Make use of the many generators for code, try `ember help generate` for more details. If you're using a component that can be widely-used, consider making it an `addon` component instead (see [this PR](https://github.com/hashicorp/vault/pull/6629) for more details)
 
+eg. a reusable component named foo that you'd like in the core engine
+
+- `ember g component foo --in lib/core`
+- `echo "export { default } from 'core/components/foo';" > lib/core/app/components/foo.js`
+
 ### Running Tests
 
 Running tests will spin up a Vault dev server on port 9200 via a
