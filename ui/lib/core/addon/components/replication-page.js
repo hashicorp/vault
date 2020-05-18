@@ -39,6 +39,18 @@ export default Component.extend({
     const { model } = this;
     return model.replicationAttrs.mode;
   }),
+  isLoadingData: computed('clusterMode', 'model.{replicationAttrs}', function() {
+    // if clusterMode is bootstrapping
+    // if no clusterId, the data hasn't loaded yet, wait for another status endpoint to be called
+    const { clusterMode } = this;
+    const { model } = this;
+    const clusterId = model.replicationAttrs.clusterId;
+    console.log(clusterId, 'clusterID');
+    if (clusterMode === 'bootstrapping' || !clusterId) {
+      return true;
+    }
+    return false;
+  }),
   isSecondary: computed('clusterMode', function() {
     const { clusterMode } = this;
     return clusterMode === 'secondary';
