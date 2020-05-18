@@ -1730,7 +1730,7 @@ func getMetadataValue(fromAuth *logical.Auth, forKey string) (string, error) {
 	if val, ok := fromAuth.Metadata[forKey]; ok {
 		return val, nil
 	}
-	return "", fmt.Errorf("%q unfound in auth metadata", forKey)
+	return "", fmt.Errorf("%q not found in auth metadata", forKey)
 }
 
 const iamServerIdHeader = "X-Vault-AWS-IAM-Server-ID"
