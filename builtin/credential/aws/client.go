@@ -6,11 +6,13 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/sdk/helper/awsutil"
@@ -21,25 +23,10 @@ var (
 	// These variables are intended to be set by tests. If set, the given
 	// client will override the AWS client, allowing client responses to
 	// be mocked out.
-	mockEC2Client ec2Client = nil
-	mockIAMClient iamClient = nil
-	mockSTSClient stsClient = nil
+	mockEC2Client ec2iface.EC2API = nil
+	mockIAMClient iamiface.IAMAPI = nil
+	mockSTSClient stsiface.STSAPI = nil
 )
-
-type ec2Client interface {
-	DescribeInstances(*ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error)
-}
-
-type iamClient interface {
-	GetInstanceProfile(*iam.GetInstanceProfileInput) (*iam.GetInstanceProfileOutput, error)
-	GetRole(*iam.GetRoleInput) (*iam.GetRoleOutput, error)
-	GetUser(*iam.GetUserInput) (*iam.GetUserOutput, error)
-}
-
-type stsClient interface {
-	GetCallerIdentity(*sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error)
-	GetCallerIdentityRequest(*sts.GetCallerIdentityInput) (req *request.Request, output *sts.GetCallerIdentityOutput)
-}
 
 // getRawClientConfig creates a aws-sdk-go config, which is used to create client
 // that can interact with AWS API. This builds credentials in the following
@@ -217,7 +204,7 @@ func (b *backend) stsRoleForAccount(ctx context.Context, s logical.Storage, acco
 }
 
 // clientEC2 creates a client to interact with AWS EC2 API
-func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, accountID string) (ec2Client, error) {
+func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, accountID string) (ec2iface.EC2API, error) {
 	stsRole, err := b.stsRoleForAccount(ctx, s, accountID)
 	if err != nil {
 		return nil, err
@@ -261,7 +248,7 @@ func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, acco
 		return nil, fmt.Errorf("could not obtain ec2 client")
 	}
 	if _, ok := b.EC2ClientsMap[region]; !ok {
-		b.EC2ClientsMap[region] = map[string]ec2Client{stsRole: client}
+		b.EC2ClientsMap[region] = map[string]ec2iface.EC2API{stsRole: client}
 	} else {
 		b.EC2ClientsMap[region][stsRole] = client
 	}
@@ -270,7 +257,7 @@ func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, acco
 }
 
 // clientIAM creates a client to interact with AWS IAM API
-func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, accountID string) (iamClient, error) {
+func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, accountID string) (iamiface.IAMAPI, error) {
 	stsRole, err := b.stsRoleForAccount(ctx, s, accountID)
 	if err != nil {
 		return nil, err
@@ -321,7 +308,7 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 		return nil, fmt.Errorf("could not obtain iam client")
 	}
 	if _, ok := b.IAMClientsMap[region]; !ok {
-		b.IAMClientsMap[region] = map[string]iamClient{stsRole: client}
+		b.IAMClientsMap[region] = map[string]iamiface.IAMAPI{stsRole: client}
 	} else {
 		b.IAMClientsMap[region][stsRole] = client
 	}
@@ -331,53 +318,53 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 // newEC2Client should be used instead of using ec2.New()
 // directly because it allows us to mock out the EC2 client
 // as needed for testing.
-func newEC2Client(sess *session.Session) ec2Client {
+func newEC2Client(sess *session.Session) ec2iface.EC2API {
 	if mockEC2Client != nil {
 		return &replacableEC2Client{
-			ec2Client: mockEC2Client,
+			EC2API: mockEC2Client,
 		}
 	}
 	return &replacableEC2Client{
-		ec2Client: ec2.New(sess),
+		EC2API: ec2.New(sess),
 	}
 }
 
 type replacableEC2Client struct {
-	ec2Client
+	ec2iface.EC2API
 }
 
 // newIAMClient should be used instead of using iam.New()
 // directly because it allows us to mock out the IAM client
 // as needed for testing.
-func newIAMClient(sess *session.Session) iamClient {
+func newIAMClient(sess *session.Session) iamiface.IAMAPI {
 	if mockIAMClient != nil {
 		return &replacableIAMClient{
-			iamClient: mockIAMClient,
+			IAMAPI: mockIAMClient,
 		}
 	}
 	return &replacableIAMClient{
-		iamClient: iam.New(sess),
+		IAMAPI: iam.New(sess),
 	}
 }
 
 type replacableIAMClient struct {
-	iamClient
+	iamiface.IAMAPI
 }
 
 // newSTSClient should be used instead of using sts.New()
 // directly because it allows us to mock out the STS client
 // as needed for testing.
-func newSTSClient(sess *session.Session) stsClient {
+func newSTSClient(sess *session.Session) stsiface.STSAPI {
 	if mockSTSClient != nil {
 		return &replacableSTSClient{
-			stsClient: mockSTSClient,
+			STSAPI: mockSTSClient,
 		}
 	}
 	return &replacableSTSClient{
-		stsClient: sts.New(sess),
+		STSAPI: sts.New(sess),
 	}
 }
 
 type replacableSTSClient struct {
-	stsClient
+	stsiface.STSAPI
 }

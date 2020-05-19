@@ -16,6 +16,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -307,6 +311,7 @@ type testEnvironment struct {
 }
 
 type fakeSTSClient struct {
+	stsiface.STSAPI
 	getCallerIdentityOutputToReturn  *sts.GetCallerIdentityOutput
 	getCallerIdentityRequestToReturn *request.Request
 }
@@ -320,6 +325,7 @@ func (f *fakeSTSClient) GetCallerIdentityRequest(*sts.GetCallerIdentityInput) (r
 }
 
 type fakeEC2Client struct {
+	ec2iface.EC2API
 	describeInstanceOutputToReturn *ec2.DescribeInstancesOutput
 }
 
@@ -328,6 +334,7 @@ func (f *fakeEC2Client) DescribeInstances(*ec2.DescribeInstancesInput) (*ec2.Des
 }
 
 type fakeIAMClient struct {
+	iamiface.IAMAPI
 	roleOutputToReturn *iam.GetRoleOutput
 }
 
