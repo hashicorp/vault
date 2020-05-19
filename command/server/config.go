@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -16,7 +17,6 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
 
@@ -535,7 +535,7 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 			m[key] = valStr
 			continue
 		}
-		valBytes, err := jsonutil.EncodeJSON(val)
+		valBytes, err := json.Marshal(val)
 		if err != nil {
 			return err
 		}
