@@ -936,7 +936,7 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 		valueLen := len(entry.Value)
 		if uint64(valueLen) > b.kvMaxValueSize {
 			b.logger.Warn(
-				"retrieved entry value is too large. See https://www.vaultproject.io/docs/configuration/storage/raft#raft-parameters",
+				"retrieved entry value is too large; see https://www.vaultproject.io/docs/configuration/storage/raft#raft-parameters",
 				"size", valueLen, "suggested", b.kvMaxValueSize,
 			)
 		}
