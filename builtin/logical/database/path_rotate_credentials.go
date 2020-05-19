@@ -133,6 +133,9 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			RoleName: name,
 			Role:     role,
 		})
+		// if err is not nil, we need to attempt to update the priority and place
+		// this item back on the queue. The err should still be returned at the end
+		// of this method.
 		if err != nil {
 			b.logger.Warn("unable to rotate credentials in rotate-role", "error", err)
 			// Update the priority to re-try this rotation and re-add the item to
@@ -152,7 +155,8 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			return nil, err
 		}
 
-		return nil, nil
+		// return any err from the setStaticAccount call
+		return nil, err
 	}
 }
 
