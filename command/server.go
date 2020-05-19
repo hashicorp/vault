@@ -445,9 +445,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		vault.DefaultMaxRequestDuration = config.DefaultMaxRequestDuration
 	}
 
-	proxyCfg := httpproxy.FromEnvironment()
-	c.logger.Info("proxy environment", "http_proxy", proxyCfg.HTTPProxy,
-		"https_proxy", proxyCfg.HTTPSProxy, "no_proxy", proxyCfg.NoProxy)
+	logProxyEnvironmentVariables(c.logger)
 
 	// Initialize the storage backend
 	factory, exists := c.PhysicalBackends[config.Storage.Type]
@@ -684,6 +682,31 @@ func (c *ServerCommand) runRecoveryMode() int {
 	return 0
 }
 
+func logProxyEnvironmentVariables(logger hclog.Logger) {
+	proxyCfg := httpproxy.FromEnvironment()
+	cfgMap := map[string]string{
+		"http_proxy":  proxyCfg.HTTPProxy,
+		"https_proxy": proxyCfg.HTTPSProxy,
+		"no_proxy":    proxyCfg.NoProxy,
+	}
+	for k, v := range cfgMap {
+		u, err := url.Parse(v)
+		if err != nil {
+			// Env vars may contain URLs or host:port values.  We only care
+			// about the former.
+			continue
+		}
+		if _, ok := u.User.Password(); ok {
+			u.User = url.UserPassword("redacted-username", "redacted-password")
+		} else if user := u.User.Username(); user != "" {
+			u.User = url.User("redacted-username")
+		}
+		cfgMap[k] = u.String()
+	}
+	logger.Info("proxy environment", "http_proxy", cfgMap["http_proxy"],
+		"https_proxy", cfgMap["https_proxy"], "no_proxy", cfgMap["no_proxy"])
+}
+
 func (c *ServerCommand) adjustLogLevel(config *server.Config, logLevelWasNotSet bool) (string, error) {
 	var logLevelString string
 	if config.LogLevel != "" && logLevelWasNotSet {
@@ -894,10 +917,7 @@ func (c *ServerCommand) Run(args []string) int {
 		vault.DefaultMaxRequestDuration = config.DefaultMaxRequestDuration
 	}
 
-	// log proxy settings
-	proxyCfg := httpproxy.FromEnvironment()
-	c.logger.Info("proxy environment", "http_proxy", proxyCfg.HTTPProxy,
-		"https_proxy", proxyCfg.HTTPSProxy, "no_proxy", proxyCfg.NoProxy)
+	logProxyEnvironmentVariables(c.logger)
 
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
@@ -967,9 +987,6 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Instantiate the wait group
-	c.WaitGroup = &sync.WaitGroup{}
-
 	// Initialize the Service Discovery, if there is one
 	var configSR sr.ServiceRegistration
 	if config.ServiceRegistration != nil {
@@ -991,13 +1008,9 @@ func (c *ServerCommand) Run(args []string) int {
 			IsActive:             false,
 			IsPerformanceStandby: false,
 		}
-		configSR, err = sdFactory(config.ServiceRegistration.Config, namedSDLogger, state, config.Storage.RedirectAddr)
+		configSR, err = sdFactory(config.ServiceRegistration.Config, namedSDLogger, state)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing service_registration of type %s: %s", config.ServiceRegistration.Type, err))
-			return 1
-		}
-		if err := configSR.Run(c.ShutdownCh, c.WaitGroup); err != nil {
-			c.UI.Error(fmt.Sprintf("Error running service_registration of type %s: %s", config.ServiceRegistration.Type, err))
 			return 1
 		}
 	}
@@ -1319,7 +1332,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// If ServiceRegistration is configured, then the backend must support HA
 	isBackendHA := coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled()
-	if !c.flagDev && (coreConfig.ServiceRegistration != nil) && !isBackendHA {
+	if !c.flagDev && (coreConfig.GetServiceRegistration() != nil) && !isBackendHA {
 		c.UI.Output("service_registration is configured, but storage does not support HA")
 		return 1
 	}
@@ -1543,6 +1556,18 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}
 
 	// Perform initialization of HTTP server after the verifyOnly check.
+
+	// Instantiate the wait group
+	c.WaitGroup = &sync.WaitGroup{}
+
+	// If service discovery is available, run service discovery
+	if sd := coreConfig.GetServiceRegistration(); sd != nil {
+		if err := configSR.Run(c.ShutdownCh, c.WaitGroup, coreConfig.RedirectAddr); err != nil {
+			c.UI.Error(fmt.Sprintf("Error running service_registration of type %s: %s", config.ServiceRegistration.Type, err))
+			return 1
+		}
+	}
+
 	// If we're in Dev mode, then initialize the core
 	if c.flagDev && !c.flagDevSkipInit {
 		init, err := c.enableDev(core, coreConfig)

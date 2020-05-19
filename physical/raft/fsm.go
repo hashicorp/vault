@@ -15,7 +15,7 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
-	proto "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-raftchunking"

@@ -502,7 +502,7 @@ type Core struct {
 	// Stop channel for raft TLS rotations
 	raftTLSRotationStopCh chan struct{}
 	// Stores the pending peers we are waiting to give answers
-	pendingRaftPeers map[string][]byte
+	pendingRaftPeers *sync.Map
 
 	// rawConfig stores the config as-is from the provided server configuration.
 	rawConfig *atomic.Value
@@ -653,7 +653,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 // not exist.
 func (c *CoreConfig) GetServiceRegistration() sr.ServiceRegistration {
 
-	// Check whether there is a ServiceRegistration explictly configured
+	// Check whether there is a ServiceRegistration explicitly configured
 	if c.ServiceRegistration != nil {
 		return c.ServiceRegistration
 	}
