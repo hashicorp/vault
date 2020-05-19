@@ -22,7 +22,9 @@ type SimulatedTime struct {
 	now           time.Time
 	tickerBarrier chan *SimulatedTicker
 }
+
 var _ clock = &SimulatedTime{}
+
 type SimulatedTicker struct {
 	ticker   *time.Ticker
 	duration time.Duration
@@ -44,7 +46,7 @@ func (s *SimulatedTime) NewTicker(d time.Duration) *time.Ticker {
 }
 
 func (s *SimulatedTime) waitForTicker(t *testing.T) *SimulatedTicker {
-        t.Helper()
+	t.Helper()
 	// System under test should create a ticker within 100ms,
 	// wait for it to show up or else fail the test.
 	timeout := time.After(100 * time.Millisecond)
@@ -145,7 +147,7 @@ func TestGauge_StartDelay(t *testing.T) {
 	sink := BlackholeSink()
 	sink.GaugeInterval = 2 * time.Hour
 
-	p, err := sink.newGcpWithClock(
+	p, err := sink.newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		c.EmptyCollectionFunction,
@@ -185,11 +187,11 @@ func TestGauge_StartDelay(t *testing.T) {
 		t.Errorf("Collection function called %v times, expected %v.", c.numCalls, 1)
 	}
 
-	p.Stop <- struct{}{}
+	p.Stop()
 }
 
 func waitForStopped(t *testing.T, p *GaugeCollectionProcess) {
-        t.Helper()
+	t.Helper()
 	timeout := time.After(100 * time.Millisecond)
 	select {
 	case <-timeout:
@@ -207,7 +209,7 @@ func TestGauge_StoppedDuringInitialDelay(t *testing.T) {
 	sink := BlackholeSink()
 	sink.GaugeInterval = 2 * time.Hour
 
-	p, err := sink.newGcpWithClock(
+	p, err := sink.newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		c.EmptyCollectionFunction,
@@ -221,7 +223,7 @@ func TestGauge_StoppedDuringInitialDelay(t *testing.T) {
 
 	// Stop during the initial delay, check that goroutine exits
 	s.waitForTicker(t)
-	p.Stop <- struct{}{}
+	p.Stop()
 	waitForStopped(t, p)
 }
 
@@ -233,7 +235,7 @@ func TestGauge_StoppedAfterInitialDelay(t *testing.T) {
 	sink := BlackholeSink()
 	sink.GaugeInterval = 2 * time.Hour
 
-	p, err := sink.newGcpWithClock(
+	p, err := sink.newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		c.EmptyCollectionFunction,
@@ -250,7 +252,7 @@ func TestGauge_StoppedAfterInitialDelay(t *testing.T) {
 	delayTicker.sender <- time.Now()
 
 	s.waitForTicker(t)
-	p.Stop <- struct{}{}
+	p.Stop()
 	waitForStopped(t, p)
 }
 
@@ -272,7 +274,7 @@ func TestGauge_Backoff(t *testing.T) {
 		return []GaugeLabelValues{}, nil
 	}
 
-	p, err := sink.newGcpWithClock(
+	p, err := sink.newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		f,
@@ -298,7 +300,7 @@ func TestGauge_RestartTimer(t *testing.T) {
 	sink := BlackholeSink()
 	sink.GaugeInterval = 2 * time.Hour
 
-	p, err := sink.newGcpWithClock(
+	p, err := sink.newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		c.EmptyCollectionFunction,
@@ -329,7 +331,7 @@ func waitForDone(t *testing.T,
 	tick chan<- time.Time,
 	done <-chan struct{},
 ) int {
-        t.Helper()
+	t.Helper()
 	timeout := time.After(100 * time.Millisecond)
 
 	numTicks := 0
@@ -342,6 +344,85 @@ func waitForDone(t *testing.T,
 		case <-done:
 			return numTicks
 		}
+	}
+}
+
+func makeLabels(numLabels int) []GaugeLabelValues {
+	values := make([]GaugeLabelValues, numLabels)
+	for i := range values {
+		values[i].Labels = []Label{
+			{"test", "true"},
+			{"which", fmt.Sprintf("%v", i)},
+		}
+		values[i].Value = float32(i + 1)
+	}
+	return values
+}
+
+func TestGauge_InterruptedStreaming(t *testing.T) {
+	s := startSimulatedTime()
+	// Long bucket time == low chance of crossing interval
+	inmemSink := metrics.NewInmemSink(
+		1000000*time.Hour,
+		2000000*time.Hour)
+
+	sink := &ClusterMetricSink{
+		ClusterName:         "test",
+		MaxGaugeCardinality: 500,
+		GaugeInterval:       2 * time.Hour,
+		Sink:                inmemSink,
+	}
+	p, err := sink.newGaugeCollectionProcessWithClock(
+		[]string{"example", "count"},
+		[]Label{{"gauge", "test"}},
+		nil, // shouldn't be called
+		log.Default(),
+		s,
+	)
+	if err != nil {
+		t.Fatalf("Error creating collection process: %v", err)
+	}
+
+	// We'll queue up at least two batches; only one will be sent
+	// unless we give a ticker.
+	values := makeLabels(75)
+	done := make(chan struct{})
+	go func() {
+		p.streamGaugesToSink(values)
+		close(done)
+	}()
+
+	p.Stop()
+	// a nil channel is never writeable
+	waitForDone(t, nil, done)
+
+	// If we start close to the end of an interval, metrics will
+	// be split across two buckets.
+	intervals := inmemSink.Data()
+	if len(intervals) > 1 {
+		t.Skip("Detected interval crossing.")
+	}
+
+	if len(intervals[0].Gauges) == len(values) {
+		t.Errorf("Found %v gauges, expected fewer.",
+			len(intervals[0].Gauges))
+	}
+
+}
+
+// helper function to create a closure that's a GaugeCollector.
+func (c *SimulatedCollector) makeFunctionForValues(
+	values []GaugeLabelValues,
+	s *SimulatedTime,
+	advanceTime time.Duration,
+) GaugeCollector {
+	// A function that returns a static list
+	return func(ctx context.Context) ([]GaugeLabelValues, error) {
+		atomic.AddUint32(&c.numCalls, 1)
+		// TODO: this seems like a data race?
+		s.now = s.now.Add(advanceTime)
+		c.callBarrier <- c.numCalls
+		return values, nil
 	}
 }
 
@@ -363,33 +444,17 @@ func TestGauge_MaximumMeasurements(t *testing.T) {
 
 	// Create a report larger than the default limit
 	excessGauges := 100
-	values := make([]GaugeLabelValues, sink.MaxGaugeCardinality+excessGauges)
-	for i := range values {
-		values[i].Labels = []Label{
-			{"test", "true"},
-			{"which", fmt.Sprintf("%v", i)},
-		}
-		values[i].Value = float32(i + 1)
-	}
+	values := makeLabels(sink.MaxGaugeCardinality + excessGauges)
 	rand.Shuffle(len(values), func(i, j int) {
 		values[i], values[j] = values[j], values[i]
 	})
 
-	f := func(ctx context.Context) ([]GaugeLabelValues, error) {
-		atomic.AddUint32(&c.numCalls, 1)
-
-		// Move time forward by 0.5% of the gauge interval
-		timeUsed := time.Duration(int(sink.GaugeInterval) / 200)
-		s.now = s.now.Add(timeUsed)
-
-		c.callBarrier <- c.numCalls
-		return values, nil
-	}
-
-	p, err := sink.newGcpWithClock(
+	// Advance time by 0.5% of duration
+	advance := time.Duration(int(0.005 * float32(sink.GaugeInterval)))
+	p, err := sink.newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
-		f,
+		c.makeFunctionForValues(values, s, advance),
 		log.Default(),
 		s,
 	)
@@ -467,7 +532,7 @@ func TestGauge_MeasurementError(t *testing.T) {
 		return values, errors.New("test error")
 	}
 
-	p, err := sink.newGcpWithClock(
+	p, err := sink.newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		f,

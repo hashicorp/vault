@@ -49,7 +49,7 @@ const collectionTarget = 0.01
 // It handles a delay on initial startup; limiting the cardinality; and
 // exponential backoff on the requested interval.
 type GaugeCollectionProcess struct {
-	Stop    chan struct{}
+	stop    chan struct{}
 	stopped chan struct{}
 
 	// gauge name
@@ -84,7 +84,7 @@ func (m *ClusterMetricSink) NewGaugeCollectionProcess(
 	collector GaugeCollector,
 	logger log.Logger,
 ) (*GaugeCollectionProcess, error) {
-	return m.newGcpWithClock(
+	return m.newGaugeCollectionProcessWithClock(
 		key,
 		id,
 		collector,
@@ -94,7 +94,7 @@ func (m *ClusterMetricSink) NewGaugeCollectionProcess(
 }
 
 // test version allows an alternative clock implementation
-func (m *ClusterMetricSink) newGcpWithClock(
+func (m *ClusterMetricSink) newGaugeCollectionProcessWithClock(
 	key []string,
 	id []Label,
 	collector GaugeCollector,
@@ -102,7 +102,7 @@ func (m *ClusterMetricSink) newGcpWithClock(
 	clock clock,
 ) (*GaugeCollectionProcess, error) {
 	process := &GaugeCollectionProcess{
-		Stop:             make(chan struct{}, 1),
+		stop:             make(chan struct{}, 1),
 		stopped:          make(chan struct{}, 1),
 		key:              key,
 		labels:           id,
@@ -122,13 +122,13 @@ func (m *ClusterMetricSink) newGcpWithClock(
 // evenly, but a new one could be added per secret engine.
 func (p *GaugeCollectionProcess) delayStart() bool {
 	randomDelay := time.Duration(rand.Intn(int(p.currentInterval)))
-	// FIXME: a Timer might be better, but then we'd have to simulate
+	// A Timer might be better, but then we'd have to simulate
 	// one of those too?
 	delayTick := p.clock.NewTicker(randomDelay)
 	defer delayTick.Stop()
 
 	select {
-	case <-p.Stop:
+	case <-p.stop:
 		return true
 	case <-delayTick.C:
 		break
@@ -153,6 +153,10 @@ func (p *GaugeCollectionProcess) collectAndFilterGauges() {
 	ctx, cancel := context.WithTimeout(context.Background(),
 		timeout)
 	defer cancel()
+
+	p.sink.AddDurationWithLabels([]string{"metrics", "collection", "interval"},
+		p.currentInterval,
+		p.labels)
 
 	start := p.clock.Now()
 	values, err := p.collector(ctx)
@@ -201,13 +205,23 @@ func (p *GaugeCollectionProcess) streamGaugesToSink(values []GaugeLabelValues) {
 	batchSize := 25
 	for i, lv := range values {
 		if i > 0 && i%batchSize == 0 {
-			<-sendTick.C
+			select {
+			case <-p.stop:
+				// because the channel is closed,
+				// the main loop will successfully
+				// read from p.stop too, and exit.
+				return
+			case <-sendTick.C:
+				break
+			}
+
 		}
 		p.sink.SetGaugeWithLabels(p.key, lv.Value, lv.Labels)
 	}
 	sendTick.Stop()
 }
 
+// Run should be called as a goroutine.
 func (p *GaugeCollectionProcess) Run() {
 	defer close(p.stopped)
 
@@ -225,12 +239,16 @@ func (p *GaugeCollectionProcess) Run() {
 		select {
 		case <-p.ticker.C:
 			p.collectAndFilterGauges()
-		case <-p.Stop:
+		case <-p.stop:
 			// Can't use defer because this might
 			// not be the original ticker.
 			p.ticker.Stop()
 			return
 		}
 	}
+}
 
+// Stop the collection process
+func (p *GaugeCollectionProcess) Stop() {
+	close(p.stop)
 }
