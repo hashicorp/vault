@@ -218,6 +218,14 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for put entry")
 	}
+
+	out, err := b.Get(context.Background(), entry.Key)
+	if err != nil {
+		t.Errorf("unexpected error after failed put: %v", err)
+	}
+	if out != nil {
+		t.Error("expected response entry to be nil after a failed put")
+	}
 }
 
 func TestRaft_Backend_ListPrefix(t *testing.T) {
