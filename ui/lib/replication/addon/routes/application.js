@@ -15,6 +15,7 @@ export default Route.extend(ClusterRoute, {
         return this._super(...arguments);
       });
   },
+
   model() {
     return this.store.findRecord('cluster', 'vault');
   },
