@@ -41,7 +41,7 @@ func testAccStepwiseWritePolicy(t *testing.T, name string, derived bool) stepwis
 		Data: map[string]interface{}{
 			"derived": derived,
 		},
-		Check: func(resp *api.Secret) error {
+		Check: func(resp *api.Secret, err error) error {
 			q.Q("--> stepwise write policy check func")
 			return nil
 		},
@@ -56,7 +56,7 @@ func testAccStepwiseListPolicy(t *testing.T, name string, expectNone bool) stepw
 	return stepwise.Step{
 		Operation: stepwise.ListOperation,
 		Path:      "keys",
-		Check: func(resp *api.Secret) error {
+		Check: func(resp *api.Secret, err error) error {
 			q.Q("--> stepwise list check func")
 			q.Q("resp in check:", resp)
 			if (resp == nil || len(resp.Data) == 0) && !expectNone {
@@ -97,7 +97,7 @@ func testAccStepwiseReadPolicyWithVersions(t *testing.T, name string, expectNone
 	return stepwise.Step{
 		Operation: stepwise.ReadOperation,
 		Path:      "keys/" + name,
-		Check: func(resp *api.Secret) error {
+		Check: func(resp *api.Secret, err error) error {
 			q.Q("--> read policy check")
 			if resp == nil && !expectNone {
 				return fmt.Errorf("missing response")
@@ -171,7 +171,7 @@ func testAccStepwiseEncryptContext(
 			"plaintext": base64.StdEncoding.EncodeToString([]byte(plaintext)),
 			"context":   base64.StdEncoding.EncodeToString([]byte(context)),
 		},
-		Check: func(resp *api.Secret) error {
+		Check: func(resp *api.Secret, err error) error {
 			var d struct {
 				Ciphertext string `mapstructure:"ciphertext"`
 			}
@@ -194,7 +194,7 @@ func testAccStepwiseDecrypt(
 		Operation: stepwise.UpdateOperation,
 		Path:      "decrypt/" + name,
 		Data:      decryptData,
-		Check: func(resp *api.Secret) error {
+		Check: func(resp *api.Secret, err error) error {
 			var d struct {
 				Plaintext string `mapstructure:"plaintext"`
 			}

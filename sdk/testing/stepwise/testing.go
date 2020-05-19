@@ -68,7 +68,7 @@ type Step struct {
 }
 
 // StepCheckFunc is the callback used for Check in TestStep.
-type StepCheckFunc func(*api.Secret) error
+type StepCheckFunc func(*api.Secret, error) error
 
 // StepDriver is the interface Drivers need to implement to be used in
 // Case to execute each Step
@@ -98,6 +98,12 @@ type Case struct {
 	// in the case that the test can't guarantee all resources were
 	// properly cleaned up.
 	Teardown TestTeardownFunc
+}
+
+// Check wraps a StepCheckFunc with t.Helper() call
+func (c *Case) Check(tt TestT, s *api.Secret, err error, cf StepCheckFunc) error {
+	tt.Helper()
+	return cf(s, err)
 }
 
 // Run performs an acceptance test on a backend with the given test case.
@@ -197,8 +203,6 @@ func Run(tt TestT, c Case) {
 		case ListOperation:
 			q.Q("===> List operation")
 			resp, err = client.Logical().List(path)
-			// TODO why though
-			// lr = &logical.Response{}
 		case DeleteOperation:
 			q.Q("===> Delete operation")
 			resp, err = client.Logical().Delete(path)
@@ -238,20 +242,20 @@ func Run(tt TestT, c Case) {
 		//
 
 		// Test step returned an error.
-		if err != nil {
-			// But if an error is expected, do not fail the test step,
-			// regardless of whether the error is a 'logical.ErrorResponse'
-			// or not. Set the err to nil. If the error is a logical.ErrorResponse,
-			// it will be handled later.
-			if s.ErrorOk {
-				q.Q("===> error ok, setting to nil")
-				err = nil
-			} else {
-				// // If the error is not expected, fail right away.
-				tt.Error(fmt.Sprintf("Failed step %d: %s", i+1, err))
-				break
-			}
-		}
+		// if err != nil {
+		// 	// But if an error is expected, do not fail the test step,
+		// 	// regardless of whether the error is a 'logical.ErrorResponse'
+		// 	// or not. Set the err to nil. If the error is a logical.ErrorResponse,
+		// 	// it will be handled later.
+		// 	if s.ErrorOk {
+		// 		q.Q("===> error ok, setting to nil")
+		// 		err = nil
+		// 	} else {
+		// 		// // If the error is not expected, fail right away.
+		// 		tt.Error(fmt.Sprintf("Failed step %d: %s", i+1, err))
+		// 		break
+		// 	}
+		// }
 
 		// TODO
 		// - test check func here
@@ -260,13 +264,13 @@ func Run(tt TestT, c Case) {
 		// Either the 'err' was nil or if an error was expected, it was set to nil.
 		// Call the 'Check' function if there is one.
 		//
-		// TODO: This works perfectly for now, but it would be better if 'Check'
-		// function takes in both the response object and the error, and decide on
-		// the action on its own.
-		if err == nil && s.Check != nil {
-			// Call the test method
-			// TODO check here
-			err = s.Check(resp)
+		var checkErr error
+		if s.Check != nil {
+			checkErr = c.Check(tt, resp, err, s.Check)
+			// checkErr = s.Check(resp,err)
+		}
+		if checkErr != nil {
+			tt.Error("test check error:", checkErr)
 		}
 
 		if err != nil {
@@ -406,6 +410,7 @@ type TestT interface {
 	Error(args ...interface{})
 	Fatal(args ...interface{})
 	Skip(args ...interface{})
+	Helper()
 }
 
 var testTesting = false
