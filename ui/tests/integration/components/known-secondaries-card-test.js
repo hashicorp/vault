@@ -11,7 +11,11 @@ const CLUSTER = {
 };
 
 const REPLICATION_ATTRS = {
-  knownSecondaries: ['firstSecondary', 'secondary-2', '3'],
+  secondaries: [
+    { id: 'secondary-1', api_address: 'https://stuff.com/', connection_status: 'connected' },
+    { id: '2nd', api_address: 'https://10.0.0.2:1234/', connection_status: 'disconnected' },
+    { id: '_three_', api_address: 'https://10.0.0.2:1000/', connection_status: 'connected' },
+  ],
 };
 
 module('Integration | Component | replication known-secondaries-card', function(hooks) {
@@ -31,9 +35,24 @@ module('Integration | Component | replication known-secondaries-card', function(
     assert.dom('[data-test-manage-link]').exists('shows manage link');
   });
 
+  // TODO: this test can be deleted once the 'secondaries' array replaces 'knownSecondaries'
+  // in the backend
+  test('it renders a known secondaries table even if api address and connection_status are missing', async function(assert) {
+    const missingSecondariesInfo = {
+      knownSecondaries: ['secondary-1', '2nd', '_three_'],
+    };
+    this.set('replicationAttrs', missingSecondariesInfo);
+
+    await render(hbs`<KnownSecondariesCard @cluster={{cluster}} @replicationAttrs={{replicationAttrs}} />`);
+
+    assert
+      .dom('[data-test-known-secondaries-table]')
+      .exists('shows known secondaries table when there are known secondaries');
+  });
+
   test('it renders an empty state if there are no known secondaries', async function(assert) {
     const noSecondaries = {
-      knownSecondaries: null,
+      secondaries: [],
     };
     this.set('replicationAttrs', noSecondaries);
     await render(hbs`<KnownSecondariesCard @cluster={{cluster}} @replicationAttrs={{replicationAttrs}} />`);

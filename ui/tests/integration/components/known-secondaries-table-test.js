@@ -6,7 +6,11 @@ import hbs from 'htmlbars-inline-precompile';
 const resolver = engineResolverFor('replication');
 
 const REPLICATION_ATTRS = {
-  knownSecondaries: ['firstSecondary', 'secondary-2'],
+  secondaries: [
+    { id: 'secondary-1', api_address: 'https://stuff.com/', connection_status: 'connected' },
+    { id: '2nd', api_address: 'https://10.0.0.2:1234/', connection_status: 'disconnected' },
+    { id: '_three_', api_address: 'https://10.0.0.2:1000/', connection_status: 'connected' },
+  ],
 };
 
 module('Integration | Component | replication known-secondaries-table', function(hooks) {
@@ -16,28 +20,35 @@ module('Integration | Component | replication known-secondaries-table', function
     this.set('replicationAttrs', REPLICATION_ATTRS);
   });
 
-  test('it renders with a table of known secondaries', async function(assert) {
-    await render(hbs`<KnownSecondariesCard @replicationAttrs={{replicationAttrs}} />`);
+  test('it renders a table of known secondaries', async function(assert) {
+    await render(hbs`<KnownSecondariesTable @replicationAttrs={{replicationAttrs}} />`);
 
     assert.dom('[data-test-known-secondaries-table]').exists();
-    REPLICATION_ATTRS.knownSecondaries.forEach(secondaryId => {
-      assert
-        .dom(`[data-test-secondaries-row=${secondaryId}]`)
-        .exists('shows a table row for each known secondary');
-    });
   });
 
-  test('shows unknown if url or connection are unknown', async function(assert) {
-    // TODO: update this test  once we know what the shape of knownSecondaries is & how we will access the url and connection
-    const secondaryDetailsMissing = {
-      knownSecondaries: ['firstSecondary', { id: 'secondary-2', url: 'http://stuff.com/' }],
-    };
-    this.set('replicationAttrs', secondaryDetailsMissing);
-    await render(hbs`<KnownSecondariesCard @replicationAttrs={{replicationAttrs}} />`);
+  test('it shows the secondary URL and connection_status', async function(assert) {
+    await render(hbs`<KnownSecondariesTable @replicationAttrs={{replicationAttrs}} />`);
 
-    this.element.querySelectorAll('[data-test-url]').forEach((td, i) => {
-      let expectedUrl = secondaryDetailsMissing.knownSecondaries[i].url || 'unknown';
-      return assert.equal(td.textContent.trim(), expectedUrl);
+    REPLICATION_ATTRS.secondaries.forEach(secondary => {
+      assert.equal(
+        this.element.querySelector(`[data-test-secondaries=row-for-${secondary.id}]`).innerHTML.trim(),
+        secondary.id,
+        'shows a table row and ID for each known secondary'
+      );
+
+      assert.equal(
+        this.element.querySelector(`[data-test-secondaries=api-address-for-${secondary.id}]`).href,
+        secondary.api_address,
+        'renders a URL to the secondary UI'
+      );
+
+      assert.equal(
+        this.element
+          .querySelector(`[data-test-secondaries=connection-status-for-${secondary.id}]`)
+          .innerHTML.trim(),
+        secondary.connection_status,
+        'shows the connection status'
+      );
     });
   });
 });

@@ -1,27 +1,40 @@
 <div class="replication vlt-table" data-test-known-secondaries-table>
   <table class="is-fullwidth">
-    <caption class="is-collapsed">Known Secondaries</caption>
+    <caption class="is-collapsed">
+      Known Secondaries
+    </caption>
     <thead class="has-text-weight-semibold">
       <tr>
-        <th scope="col">Secondary ID</th>
-        <th scope="col">URL</th>
-        <th scope="col">Connected?</th>
+        <th scope="col">
+          Secondary ID
+        </th>
+        <th scope="col">
+          URL
+        </th>
+        <th scope="col">
+          Connected?
+        </th>
       </tr>
     </thead>
     <tbody>
-      {{!-- TODO: use real values for URL and connected --}}
-      {{#each knownSecondaries as |secondary|}}
-          <tr>
-            <th scope="row" data-test-secondaries-row={{secondary}}>
-              <code>{{or secondary.id secondary}}</code>
-            </th>
-            <td>
-              <code class="is-word-break" data-test-url>{{or secondary.url 'unknown'}}</code>
-            </td>
-            <td>
-              <code>{{or secondary.connected 'unknown'}}</code>
-            </td>
-          </tr>
+      {{! TODO: this should be compliant with the new api attributes, but we should verify this
+      when those attributes are merged. At that point we can also get rid of all the 'or's in here. --}}
+      {{#each secondaries as |secondary|}}
+        <tr>
+          <th scope="row">
+            <code data-test-secondaries={{concat 'row-for-' (or secondary.id secondary)}}>
+              {{or secondary.id secondary}}
+            </code>
+          </th>
+          <td>
+            <a href={{secondary.api_address}} data-test-secondaries={{concat 'api-address-for-' secondary.id}}>
+              <code class="is-word-break">{{secondary.api_address}}</code>
+            </a>
+          </td>
+          <td>
+            <code data-test-secondaries={{concat 'connection-status-for-' (or secondary.id secondary)}}>{{secondary.connection_status}}</code>
+          </td>
+        </tr>
       {{/each}}
     </tbody>
   </table>

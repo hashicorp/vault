@@ -6,7 +6,8 @@
     </ToolbarLink>
   </div>
   <div class="secondaries-table">
-    {{#unless replicationAttrs.knownSecondaries}}
+    {{!-- TODO remove this or when backend api changes are merged --}}
+    {{#unless (or replicationAttrs.knownSecondaries replicationAttrs.secondaries)}}
       <EmptyState
         @title="No known {{cluster.replicationMode}} secondary clusters associated with this cluster"
         @message="Associated secondary clusters will be listed here. Add your first secondary cluster to get started." />
