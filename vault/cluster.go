@@ -322,8 +322,10 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 		c.clusterAddr.Store(fmt.Sprintf("https://%s", c.getClusterListener().Addr()))
 	}
 
-	if err := c.getClusterListener().SetAdvertiseAddr(c.ClusterAddr()); err != nil {
-		return err
+	if len(c.ClusterAddr()) != 0 {
+		if err := c.getClusterListener().SetAdvertiseAddr(c.ClusterAddr()); err != nil {
+			return err
+		}
 	}
 
 	return nil
