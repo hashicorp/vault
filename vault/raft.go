@@ -171,7 +171,7 @@ func (c *Core) startRaftStorage(ctx context.Context) (retErr error) {
 }
 
 func (c *Core) setupRaftActiveNode(ctx context.Context) error {
-	c.pendingRaftPeers = make(map[string][]byte)
+	c.pendingRaftPeers = &sync.Map{}
 	return c.startPeriodicRaftTLSRotate(ctx)
 }
 
