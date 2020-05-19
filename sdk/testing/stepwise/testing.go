@@ -100,12 +100,6 @@ type Case struct {
 	Teardown TestTeardownFunc
 }
 
-// Check wraps a StepCheckFunc with t.Helper() call
-func (c *Case) Check(tt TestT, s *api.Secret, err error, cf StepCheckFunc) error {
-	tt.Helper()
-	return cf(s, err)
-}
-
 // Run performs an acceptance test on a backend with the given test case.
 //
 // Tests are not run unless an environmental variable "VAULT_ACC" is
@@ -157,6 +151,9 @@ func Run(tt TestT, c Case) {
 		}()
 	}
 
+	// Create an in-memory Vault core
+	// TODO use test logger if available?
+	logger := logging.NewVaultLogger(log.Trace)
 	// TODO setup on driver here
 	if c.Driver != nil {
 		err := c.Driver.Setup()
@@ -164,13 +161,14 @@ func Run(tt TestT, c Case) {
 			c.Driver.Teardown()
 			tt.Fatal(err)
 		}
+		defer func() {
+			if err := c.Driver.Teardown(); err != nil {
+				logger.Error("error in driver teardown:", "error", err)
+			}
+		}()
 	} else {
 		tt.Fatal("nil driver in acceptance test")
 	}
-
-	// Create an in-memory Vault core
-	// TODO use test logger if available?
-	logger := logging.NewVaultLogger(log.Trace)
 
 	// Steps here
 	// Make requests
@@ -266,11 +264,11 @@ func Run(tt TestT, c Case) {
 		//
 		var checkErr error
 		if s.Check != nil {
-			checkErr = c.Check(tt, resp, err, s.Check)
-			// checkErr = s.Check(resp,err)
+			checkErr = s.Check(resp, err)
+			// TODO allow error
 		}
 		if checkErr != nil {
-			tt.Error("test check error:", checkErr)
+			tt.Fatal("test check error:", checkErr)
 		}
 
 		if err != nil {
@@ -338,9 +336,6 @@ func Run(tt TestT, c Case) {
 		}
 	}
 
-	if err := c.Driver.Teardown(); err != nil {
-		tt.Fatal(err)
-	}
 }
 
 // TestCheckMulti is a helper to have multiple checks.

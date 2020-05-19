@@ -41,10 +41,6 @@ func testAccStepwiseWritePolicy(t *testing.T, name string, derived bool) stepwis
 		Data: map[string]interface{}{
 			"derived": derived,
 		},
-		Check: func(resp *api.Secret, err error) error {
-			q.Q("--> stepwise write policy check func")
-			return nil
-		},
 	}
 	if os.Getenv("TRANSIT_ACC_KEY_TYPE") == "CHACHA" {
 		ts.Data["type"] = "chacha20-poly1305"
