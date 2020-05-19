@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -39,6 +40,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/mlock"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -92,6 +94,8 @@ type ServerCommand struct {
 	reloadFuncs     *map[string][]reloadutil.ReloadFunc
 	startedCh       chan (struct{}) // for tests
 	reloadedCh      chan (struct{}) // for tests
+
+	configKMS *configutil.KMS
 
 	// new stuff
 	flagConfigs            []string
@@ -372,10 +376,33 @@ func (c *ServerCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *ServerCommand) parseConfig() (*server.Config, error) {
-	// Load the configuration
-	var config *server.Config
+	if len(c.flagConfigs) == 0 {
+		return server.NewConfig(), nil
+	}
+
+	var kmses []*configutil.KMS
+
 	for _, path := range c.flagConfigs {
-		current, err := server.LoadConfig(path)
+		ks, err := configutil.LoadConfigKMSes(path)
+		if err != nil {
+			return nil, fmt.Errorf("error checking for config KMS block at path %s: %w", path, err)
+		}
+		kmses = append(kmses, ks...)
+	}
+
+	for _, kms := range kmses {
+		if strutil.StrListContains(kms.Purpose, "config") {
+			if c.configKMS != nil {
+				return nil, errors.New("only one seal/kms block marked for \"config\" purpose is allowed")
+			}
+			c.configKMS = kms
+		}
+	}
+
+	var config *server.Config
+	// Load the configuration
+	for _, path := range c.flagConfigs {
+		current, err := server.LoadConfig(path, c.configKMS)
 		if err != nil {
 			return nil, errwrap.Wrapf(fmt.Sprintf("error loading configuration from %s: {{err}}", path), err)
 		}
@@ -386,6 +413,7 @@ func (c *ServerCommand) parseConfig() (*server.Config, error) {
 			config = config.Merge(current)
 		}
 	}
+
 	return config, nil
 }
 
@@ -480,16 +508,42 @@ func (c *ServerCommand) runRecoveryMode() int {
 	var sealConfigError error
 	var wrapper wrapping.Wrapper
 
-	if len(config.Seals) == 0 {
+	var configSeal *configutil.KMS
+	switch len(config.Seals) {
+	case 0:
 		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
-	}
+		configSeal = config.Seals[0]
 
-	if len(config.Seals) > 1 {
-		c.UI.Error("Only one seal block is accepted in recovery mode")
+	case 1:
+		// If it's only used for config, we need to create a shamir one
+		if len(config.Seals[0].Purpose) == 1 && config.Seals[0].Purpose[0] == "config" {
+			config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
+			configSeal = config.Seals[1]
+		} else {
+			configSeal = config.Seals[0]
+		}
+
+	case 2:
+		for i, seal := range config.Seals {
+			if strutil.StrListContains(seal.Purpose, "config") {
+				if len(seal.Purpose) == 1 {
+					// Keep looking, this block only for config
+					continue
+				}
+				// Otherwise, this is meant for more than just config, but we
+				// also have another block, and we don't support more than one
+				// config-purpose seal, so bail
+				c.UI.Error("Only one seal block (and optionally one config KMS block) is accepted in recovery mode")
+				return 1
+			}
+			configSeal = config.Seals[i]
+		}
+
+	default:
+		c.UI.Error("Only one seal block (and optionally one config KMS block) is accepted in recovery mode")
 		return 1
 	}
 
-	configSeal := config.Seals[0]
 	sealType := wrapping.Shamir
 	if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
 		sealType = os.Getenv("VAULT_SEAL_TYPE")
@@ -1034,13 +1088,22 @@ func (c *ServerCommand) Run(args []string) int {
 		case 0:
 			config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
 		case 1:
-			// If there's only one seal and it's disabled assume they want to
-			// migrate to a shamir seal and simply didn't provide it
-			if config.Seals[0].Disabled {
+			// If the seal is only marked for config, treat like the zero
+			// length case for runtime
+			if len(config.Seals[0].Purpose) == 1 && config.Seals[0].Purpose[0] == "config" {
 				config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
+			} else {
+				// If there's only one seal and it's disabled assume they want to
+				// migrate to a shamir seal and simply didn't provide it
+				if config.Seals[0].Disabled {
+					config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
+				}
 			}
 		}
 		for _, configSeal := range config.Seals {
+			if len(configSeal.Purpose) == 1 && configSeal.Purpose[0] == "config" {
+				continue
+			}
 			sealType := wrapping.Shamir
 			if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
 				sealType = os.Getenv("VAULT_SEAL_TYPE")
@@ -1797,7 +1860,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			var config *server.Config
 			var level log.Level
 			for _, path := range c.flagConfigs {
-				current, err := server.LoadConfig(path)
+				current, err := server.LoadConfig(path, c.configKMS)
 				if err != nil {
 					c.logger.Error("could not reload config", "path", path, "error", err)
 					goto RUNRELOADFUNCS
