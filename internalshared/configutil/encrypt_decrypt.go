@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/gogo/protobuf/proto"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
+	"google.golang.org/protobuf/proto"
 )
 
 var (

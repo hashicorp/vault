@@ -1,10 +1,13 @@
 package configutil
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"testing"
 
 	wrapping "github.com/hashicorp/go-kms-wrapping"
+	"google.golang.org/protobuf/proto"
 )
 
 func getAEADTestKMS(t *testing.T) {
@@ -37,6 +40,32 @@ telemetry {
 	out, err := EncryptDecrypt(rawStr, false, false, reverser)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	first := true
+	locs := decryptRegex.FindAllIndex([]byte(out), -1)
+	for _, match := range locs {
+		matchBytes := []byte(out)[match[0]:match[1]]
+		matchBytes = bytes.TrimSuffix(bytes.TrimPrefix(matchBytes, []byte("{{decrypt(")), []byte(")}}"))
+		inMsg, err := base64.RawURLEncoding.DecodeString(string(matchBytes))
+		if err != nil {
+			t.Fatal(err)
+		}
+		inBlob := new(wrapping.EncryptedBlobInfo)
+		if err := proto.Unmarshal(inMsg, inBlob); err != nil {
+			t.Fatal(err)
+		}
+		ct := string(inBlob.Ciphertext)
+		if first {
+			if ct != "raboof" {
+				t.Fatal(ct)
+			}
+			first = false
+		} else {
+			if ct != "oofrab" {
+				t.Fatal(ct)
+			}
+		}
 	}
 
 	decOut, err := EncryptDecrypt(out, true, false, reverser)
