@@ -3,7 +3,6 @@ package mongodb
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -155,7 +154,8 @@ func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statem
 		Password: password,
 	}
 
-	cs, err := connstring.Parse(m.ConnectionURL)
+	connURL := m.getConnectionURL()
+	cs, err := connstring.Parse(connURL)
 	if err != nil {
 		return "", "", err
 	}
@@ -212,9 +212,33 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 	return m.runCommandWithRetry(ctx, db, dropUserCmd)
 }
 
-// RotateRootCredentials is not currently supported on MongoDB
+// RotateRootCredentials in MongoDB
 func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	return nil, errors.New("root credential rotation is not currently implemented in this database secrets engine")
+	// Grab the lock
+	m.Lock()
+	defer m.Unlock()
+
+	if m.Username == "" {
+		return m.RawConfig, fmt.Errorf("username not specified for root credentials")
+	}
+
+	password, err := m.GeneratePassword()
+	if err != nil {
+		return nil, err
+	}
+
+	changeUserCmd := &updateUserCommand{
+		Username: m.Username,
+		Password: password,
+	}
+
+	if err := m.runCommandWithRetry(ctx, "admin", changeUserCmd); err != nil {
+		return nil, err
+	}
+
+	m.RawConfig["password"] = password
+	m.Password = password
+	return m.RawConfig, nil
 }
 
 // runCommandWithRetry runs a command and retries once more if there's a failure

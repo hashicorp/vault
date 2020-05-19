@@ -547,7 +547,7 @@ func testSealMigrationTransitToShamir(t *testing.T, setup teststorage.ClusterSet
 	// Create a Shamir seal.
 	logger := cluster.Logger.Named("shamir")
 	shamirSeal := vault.NewDefaultSeal(&vaultseal.Access{
-		Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+		Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
 			Logger: logger,
 		}),
 	})
