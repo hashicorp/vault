@@ -117,7 +117,9 @@ func init() {
 	proto.RegisterType((*LabelDescriptor)(nil), "google.api.LabelDescriptor")
 }
 
-func init() { proto.RegisterFile("google/api/label.proto", fileDescriptor_f372a463e25ba151) }
+func init() {
+	proto.RegisterFile("google/api/label.proto", fileDescriptor_f372a463e25ba151)
+}
 
 var fileDescriptor_f372a463e25ba151 = []byte{
 	// 252 bytes of a gzipped FileDescriptorProto
