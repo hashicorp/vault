@@ -940,7 +940,7 @@ func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 
 	valueLen := len(entry.Value)
 	if uint64(valueLen) > b.kvMaxValueSize {
-		return fmt.Errorf("value size too large; got %d bytes, max: %d bytes", valueLen, b.kvMaxValueSize)
+		return fmt.Errorf("%s; got %d bytes, max: %d bytes", physical.ErrValueTooLarge, valueLen, b.kvMaxValueSize)
 	}
 
 	command := &LogData{
