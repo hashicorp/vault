@@ -45,7 +45,9 @@ export default Component.extend({
     const { clusterMode } = this;
     const { model } = this;
     const clusterId = model.replicationAttrs.clusterId;
-    if (clusterMode === 'bootstrapping' || !clusterId) {
+    const replicationDisabled = model.replicationAttrs.replicationDisabled;
+
+    if (clusterMode === 'bootstrapping' || (!clusterId && !replicationDisabled)) {
       return true;
     }
     return false;

@@ -17,7 +17,7 @@ export default Route.extend(ClusterRoute, {
   },
 
   model() {
-    return this.store.findRecord('cluster', 'vault');
+    return this.store.peekRecord('cluster', 1);
   },
 
   afterModel(model) {
@@ -38,6 +38,7 @@ export default Route.extend(ClusterRoute, {
   },
   actions: {
     refresh() {
+      console.log('this.refresh in app');
       this.refresh();
     },
   },
