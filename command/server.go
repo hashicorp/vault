@@ -674,7 +674,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	return 0
 }
 
-func logProxyEnvironmentVariables(logger hclog.Logger) {
+func logProxyEnvironmentVariables(logger log.Logger) {
 	proxyCfg := httpproxy.FromEnvironment()
 	cfgMap := map[string]string{
 		"http_proxy":  proxyCfg.HTTPProxy,
