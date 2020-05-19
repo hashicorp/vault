@@ -214,12 +214,43 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 	rand.Read(value)
 	entry := &physical.Entry{Key: "foo", Value: value}
 
-	err := b.Put(context.Background(), entry)
-	if err == nil {
+	if err := b.Put(context.Background(), entry); err == nil {
 		t.Error("expected error for put entry")
 	}
 
 	out, err := b.Get(context.Background(), entry.Key)
+	if err != nil {
+		t.Errorf("unexpected error after failed put: %v", err)
+	}
+	if out != nil {
+		t.Error("expected response entry to be nil after a failed put")
+	}
+}
+
+func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
+	b, dir := getRaft(t, true, true)
+	defer os.RemoveAll(dir)
+
+	t.Helper()
+
+	value := make([]byte, defaultKVMaxValueSize+1)
+	rand.Read(value)
+
+	txns := []*physical.TxnEntry{
+		&physical.TxnEntry{
+			Operation: physical.PutOperation,
+			Entry: &physical.Entry{
+				Key:   "foo",
+				Value: value,
+			},
+		},
+	}
+
+	if err := b.Transaction(context.Background(), txns); err == nil {
+		t.Error("expected error for transactions")
+	}
+
+	out, err := b.Get(context.Background(), txns[0].Entry.Key)
 	if err != nil {
 		t.Errorf("unexpected error after failed put: %v", err)
 	}
