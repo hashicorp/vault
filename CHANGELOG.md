@@ -22,7 +22,6 @@ BUG FIXES:
 
 * secrets/database: Fix issue where rotating root database credentials while Vault's storage backend is unavailable causes Vault to lose access to the database [[GH-8782](https://github.com/hashicorp/vault/pull/8782)]
 * secrets/kv: Return the value of delete_version_after when reading kv/config, even if it is set to the default. [[GH-42](https://github.com/hashicorp/vault-plugin-secrets-kv/pull/42)]
-* secrets/openldap: Forward all rotation requests from standbys to active clusters [[GH-9006](https://github.com/hashicorp/vault/pull/9006)]
 * ui: Fix snowman that appears when namespaces have more than one period [[GH-8910](https://github.com/hashicorp/vault/pull/8910)]
 * ui: Add Toggle component into core addon so it is available in KMIP and other Ember Engines.[[GH-8913]](https://github.com/hashicorp/vault/pull/8913)
 
@@ -42,6 +41,7 @@ BUG FIXES:
 * serviceregistration: Fix a regression for Consul service registration that ignored using the listener address as
   the redirect address unless api_addr was provided. It now properly uses the same redirect address as the one
   used by Vault's Core object. [[GH-8976](https://github.com/hashicorp/vault/pull/8976)] 
+* secrets/openldap: Forward all rotation requests from standbys to active clusters [[GH-9006](https://github.com/hashicorp/vault/pull/9006)]
 * storage/raft: Advertise the configured cluster address to the rest of the nodes in the raft cluster. This fixes
   an issue where a node advertising 0.0.0.0 is not using a unique hostname. [[GH-9008](https://github.com/hashicorp/vault/pull/9008)]
 * storage/raft: Fix panic when multiple nodes attempt to join the cluster at once. [[GH-9008](https://github.com/hashicorp/vault/pull/9008)]
