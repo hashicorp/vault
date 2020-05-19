@@ -931,7 +931,18 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
 
-	return b.fsm.Get(ctx, path)
+	entry, err := b.fsm.Get(ctx, path)
+	if entry != nil {
+		valueLen := len(entry.Value)
+		if uint64(valueLen) > b.kvMaxValueSize {
+			b.logger.Warn(
+				"retrieved entry value is too large. See https://www.vaultproject.io/docs/configuration/storage/raft#raft-parameters",
+				"size", valueLen, "suggested", b.kvMaxValueSize,
+			)
+		}
+	}
+
+	return entry, err
 }
 
 // Put inserts an entry in the log for the put operation. It will return an
