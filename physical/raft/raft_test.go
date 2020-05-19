@@ -7,6 +7,7 @@ import (
 	fmt "fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
@@ -201,6 +202,22 @@ func TestRaft_Backend(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	physical.ExerciseBackend(t, b)
+}
+
+func TestRaft_Backend_LargeValue(t *testing.T) {
+	b, dir := getRaft(t, true, true)
+	defer os.RemoveAll(dir)
+
+	t.Helper()
+
+	value := make([]byte, defaultKVMaxValueSize+1)
+	rand.Read(value)
+	entry := &physical.Entry{Key: "foo", Value: value}
+
+	err := b.Put(context.Background(), entry)
+	if err == nil {
+		t.Error("expected error for put entry")
+	}
 }
 
 func TestRaft_Backend_ListPrefix(t *testing.T) {
