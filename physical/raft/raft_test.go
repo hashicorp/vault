@@ -215,15 +215,15 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 	entry := &physical.Entry{Key: "foo", Value: value}
 
 	if err := b.Put(context.Background(), entry); err == nil {
-		t.Error("expected error for put entry")
+		t.Fatal("expected error for put entry")
 	}
 
 	out, err := b.Get(context.Background(), entry.Key)
 	if err != nil {
-		t.Errorf("unexpected error after failed put: %v", err)
+		t.Fatalf("unexpected error after failed put: %v", err)
 	}
 	if out != nil {
-		t.Error("expected response entry to be nil after a failed put")
+		t.Fatal("expected response entry to be nil after a failed put")
 	}
 }
 
@@ -247,15 +247,15 @@ func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 	}
 
 	if err := b.Transaction(context.Background(), txns); err == nil {
-		t.Error("expected error for transactions")
+		t.Fatal("expected error for transactions")
 	}
 
 	out, err := b.Get(context.Background(), txns[0].Entry.Key)
 	if err != nil {
-		t.Errorf("unexpected error after failed put: %v", err)
+		t.Fatalf("unexpected error after failed put: %v", err)
 	}
 	if out != nil {
-		t.Error("expected response entry to be nil after a failed put")
+		t.Fatal("expected response entry to be nil after a failed put")
 	}
 }
 
