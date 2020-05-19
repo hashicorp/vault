@@ -155,17 +155,20 @@
     "lint-staged": "^10.1.2"
   },
   "resolutions": {
-    "handlebars": "^4.3.0",
+    "acorn": "^6.4.1",
     "eslint-utils": "^1.4.1",
+    "growl": "^1.10.0",
+    "handlebars": "^4.3.0",
+    "https-proxy-agent": "^2.2.3",
+    "jquery": "^3.5.0",
+    "js-yaml": "^3.13.1",
+    "kind-of": "^6.0.3",
     "lodash.defaultsdeep": "^4.6.1",
     "lodash.merge": "^4.6.2",
-    "js-yaml": "^3.13.1",
-    "jquery": "^3.4.0",
     "lodash": "^4.17.13",
     "merge": "^1.2.1",
     "minimatch": "^3.0.2",
     "minimist": "^1.2.2",
-    "growl": "^1.10.0",
     "serialize-javascript": "^2.1.1"
   },
   "engines": {
