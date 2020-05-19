@@ -934,7 +934,9 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 	return b.fsm.Get(ctx, path)
 }
 
-// Put inserts an entry in the log for the put operation
+// Put inserts an entry in the log for the put operation. It will return an
+// error if the value exceeds the configured kv_max_value_size or if the call to
+// applyLog fails.
 func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "put"}, time.Now())
 
@@ -1014,6 +1016,13 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	if b.raft == nil {
 		return errors.New("raft storage backend is not initialized")
+	}
+
+	for _, op := range command.Operations {
+		valueLen := len(op.Value)
+		if uint64(valueLen) > b.kvMaxValueSize {
+			return fmt.Errorf("%s; got %d bytes, max: %d bytes", physical.ErrValueTooLarge, valueLen, b.kvMaxValueSize)
+		}
 	}
 
 	commandBytes, err := proto.Marshal(command)
