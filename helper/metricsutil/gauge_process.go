@@ -179,7 +179,7 @@ func (p *GaugeCollectionProcess) collectAndFilterGauges() {
 
 	if err != nil {
 		p.logger.Error("error collecting gauge", "id", p.labels, "error", err)
-		p.sink.IncrCountWithLabels([]string{"metrics", "collection", "error"},
+		p.sink.IncrCounterWithLabels([]string{"metrics", "collection", "error"},
 			1,
 			p.labels)
 		return
