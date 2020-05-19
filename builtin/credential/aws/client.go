@@ -320,17 +320,9 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 // as needed for testing.
 func newEC2Client(sess *session.Session) ec2iface.EC2API {
 	if mockEC2Client != nil {
-		return &replacableEC2Client{
-			EC2API: mockEC2Client,
-		}
+		return mockEC2Client
 	}
-	return &replacableEC2Client{
-		EC2API: ec2.New(sess),
-	}
-}
-
-type replacableEC2Client struct {
-	ec2iface.EC2API
+	return ec2.New(sess)
 }
 
 // newIAMClient should be used instead of using iam.New()
@@ -338,17 +330,9 @@ type replacableEC2Client struct {
 // as needed for testing.
 func newIAMClient(sess *session.Session) iamiface.IAMAPI {
 	if mockIAMClient != nil {
-		return &replacableIAMClient{
-			IAMAPI: mockIAMClient,
-		}
+		return mockIAMClient
 	}
-	return &replacableIAMClient{
-		IAMAPI: iam.New(sess),
-	}
-}
-
-type replacableIAMClient struct {
-	iamiface.IAMAPI
+	return iam.New(sess)
 }
 
 // newSTSClient should be used instead of using sts.New()
@@ -356,15 +340,7 @@ type replacableIAMClient struct {
 // as needed for testing.
 func newSTSClient(sess *session.Session) stsiface.STSAPI {
 	if mockSTSClient != nil {
-		return &replacableSTSClient{
-			STSAPI: mockSTSClient,
-		}
+		return mockSTSClient
 	}
-	return &replacableSTSClient{
-		STSAPI: sts.New(sess),
-	}
-}
-
-type replacableSTSClient struct {
-	stsiface.STSAPI
+	return sts.New(sess)
 }
