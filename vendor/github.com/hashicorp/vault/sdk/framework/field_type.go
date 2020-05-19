@@ -53,6 +53,9 @@ const (
 	// benevolent MITM for a request, and the headers are sent through and
 	// parsed.
 	TypeHeader
+
+	// TypeFloat parses both float32 and float64 values
+	TypeFloat
 )
 
 func (t FieldType) String() string {
@@ -77,6 +80,8 @@ func (t FieldType) String() string {
 		return "slice"
 	case TypeHeader:
 		return "header"
+	case TypeFloat:
+		return "float"
 	default:
 		return "unknown type"
 	}
