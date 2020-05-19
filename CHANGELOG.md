@@ -1,31 +1,3 @@
-## Next
-
-CHANGES:
-
-* token: Token creation with custom token ID via `id` will no longer allow periods (`.`) as part of the input string. 
-  The final generated token value may contain periods, such as the `s.` prefix for service token 
-  indication. [[GH-8646](https://github.com/hashicorp/vault/pull/8646/files)]
-* token: Token renewals will now return token policies within the `token_policies` , identity policies within `identity_policies`, and the full policy set within `policies`. [[GH-8535](https://github.com/hashicorp/vault/pull/8535)]
-* kv: Return the value of delete_version_after when reading kv/config, even if it is set to the default. [[GH-42](https://github.com/hashicorp/vault-plugin-secrets-kv/pull/42)]
-* plugin: Add SDK method, `Sys.ReloadPlugin`, and CLI command, `vault plugin reload`, 
-  for reloading plugins. [[GH-8777](https://github.com/hashicorp/vault/pull/8777)]
-* sentinel: Add a sentinel config section, and "additional_enabled_modules", a list of Sentinel modules that may be imported in addition to the defaults.
-* cubbyhole: Reject reads and writes to an empty ("") path. [[GH-8971](https://github.com/hashicorp/vault/pull/8971)]
-
-IMPROVEMENTS:
-
-* secrets/gcp: Support BigQuery dataset ACLs in absence of IAM endpoints [[GH-78](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/78)]
-* sdk/framework: Support accepting TypeFloat parameters over the API [[GH-8923](https://github.com/hashicorp/vault/pull/8923)]
-* ui: Update TTL picker styling on SSH secret engine [[GH-8891](https://github.com/hashicorp/vault/pull/8891)]
-* ui: Only render the JWT input field of the Vault login form on mounts configured for JWT auth [[GH-8952](https://github.com/hashicorp/vault/pull/8952)]
-
-BUG FIXES:
-
-* secrets/database: Fix issue where rotating root database credentials while Vault's storage backend is unavailable causes Vault to lose access to the database [[GH-8782](https://github.com/hashicorp/vault/pull/8782)]
-* secrets/openldap: Forward all rotation requests from standbys to active clusters [[GH-9006](https://github.com/hashicorp/vault/pull/9006)]
-* ui: Fix snowman that appears when namespaces have more than one period [[GH-8910](https://github.com/hashicorp/vault/pull/8910)]
-* ui: Add Toggle component into core addon so it is available in KMIP and other Ember Engines.[[GH-8913]](https://github.com/hashicorp/vault/pull/8913)
-
 ## 1.4.2 (TBD)
 
 IMPROVEMENTS:
