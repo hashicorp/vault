@@ -97,16 +97,12 @@ func Backend_config_connection(t *testing.T) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-	}
 	b, _ := Factory(context.Background(), logical.TestBackendConfig())
 
 	cleanup, connURL := prepareTestContainer(t)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
 		PreCheck:       testAccPreCheckFunc(t, connURL),
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
@@ -118,17 +114,12 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-	}
-
 	b := Backend()
 
 	cleanup, connURL := prepareTestContainer(t)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
 		PreCheck:       testAccPreCheckFunc(t, connURL),
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
@@ -142,17 +133,12 @@ func TestBackend_roleCrud(t *testing.T) {
 }
 
 func TestBackend_leaseWriteRead(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-	}
-
 	b := Backend()
 
 	cleanup, connURL := prepareTestContainer(t)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
 		PreCheck:       testAccPreCheckFunc(t, connURL),
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{

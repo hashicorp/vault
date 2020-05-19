@@ -54,10 +54,6 @@ func prepareTestContainer(t *testing.T) (func(), string) {
 }
 
 func TestMSSQL_Initialize(t *testing.T) {
-	if os.Getenv("VAULT_ACC") != "1" {
-		t.SkipNow()
-	}
-
 	cleanup, connURL := prepareTestContainer(t)
 	defer cleanup()
 
@@ -93,10 +89,6 @@ func TestMSSQL_Initialize(t *testing.T) {
 }
 
 func TestMSSQL_CreateUser(t *testing.T) {
-	if os.Getenv("VAULT_ACC") != "1" {
-		t.SkipNow()
-	}
-
 	cleanup, connURL := prepareTestContainer(t)
 	defer cleanup()
 
@@ -136,10 +128,6 @@ func TestMSSQL_CreateUser(t *testing.T) {
 }
 
 func TestMSSQL_RotateRootCredentials(t *testing.T) {
-	if os.Getenv("VAULT_ACC") != "1" {
-		t.SkipNow()
-	}
-
 	cleanup, connURL := prepareTestContainer(t)
 	defer cleanup()
 
@@ -177,10 +165,6 @@ func TestMSSQL_RotateRootCredentials(t *testing.T) {
 }
 
 func TestMSSQL_RevokeUser(t *testing.T) {
-	if os.Getenv("VAULT_ACC") != "1" {
-		t.SkipNow()
-	}
-
 	cleanup, connURL := prepareTestContainer(t)
 	defer cleanup()
 
