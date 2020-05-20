@@ -20,8 +20,6 @@ const DEFAULTS = {
 export default Component.extend(ReplicationActions, DEFAULTS, {
   replicationMode: 'dr',
   mode: 'primary',
-  auth: service(),
-  store: service(),
   wizard: service(),
   version: service(),
   didReceiveAttrs() {
@@ -34,13 +32,9 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
   showModeSummary: false,
   initialReplicationMode: null,
   cluster: null,
-  activeCluster: computed('auth.activeCluster', function() {
-    return this.get('store').peekRecord('cluster', this.get('auth.activeCluster'));
-  }),
-  // activeCluster uses peekRecord which watches for changes in cluster data record
-  replicationAttrs: computed('activeCluster', function() {
-    return this.activeCluster.replicationAttrs;
-  }),
+
+  replicationAttrs: alias('cluster.replicationAttrs'),
+
   tokenIncludesAPIAddr: computed('token', function() {
     const config = decodeConfigFromJWT(get(this, 'token'));
     return config && config.addr ? true : false;
