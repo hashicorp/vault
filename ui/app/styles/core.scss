@@ -41,7 +41,6 @@
 @import './core/layout';
 @import './core/lists';
 
-@import './components/action-block.scss';
 @import './components/auth-buttons';
 @import './components/auth-form';
 @import './components/b64-toggle';
@@ -89,6 +88,8 @@
 @import './components/search-select';
 @import './components/selectable-card';
 @import './components/selectable-card-container.scss';
+// action-block extends selectable-card
+@import './components/action-block.scss';
 @import './components/shamir-progress';
 @import './components/sidebar';
 @import './components/splash-page';
