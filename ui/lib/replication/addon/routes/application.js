@@ -17,7 +17,7 @@ export default Route.extend(ClusterRoute, {
       });
   },
 
-  model(params) {
+  model() {
     const activeClusterId = this.get('auth.activeCluster');
     return this.store.peekRecord('cluster', activeClusterId);
   },

@@ -29,7 +29,7 @@ export default Component.extend({
     }
     this.set('reindexingDetails', resp);
   }),
-  replicationMode: computed('model.{replicationMode}', function() {
+  formattedReplicationMode: computed('model.{replicationMode}', function() {
     // dr or performance 🤯
     let mode = this.model.replicationMode;
     return MODE[mode];
@@ -67,10 +67,10 @@ export default Component.extend({
     }
     return false;
   }),
-  message: computed('model.{anyReplicationEnabled}', 'replicationMode', function() {
+  message: computed('model.{anyReplicationEnabled}', 'formattedReplicationMode', function() {
     if (this.model.anyReplicationEnabled) {
-      return `This ${this.replicationMode} secondary has not been enabled.  You can do so from the ${this.replicationMode} Primary.`;
+      return `This ${this.formattedReplicationMode} secondary has not been enabled.  You can do so from the ${this.formattedReplicationMode} Primary.`;
     }
-    return `This cluster has not been enabled as a ${this.replicationMode} Secondary. You can do so by enabling replication and adding a secondary from the ${this.replicationMode} Primary.`;
+    return `This cluster has not been enabled as a ${this.formattedReplicationMode} Secondary. You can do so by enabling replication and adding a secondary from the ${this.formattedReplicationMode} Primary.`;
   }),
 });
