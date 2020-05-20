@@ -197,15 +197,12 @@ func (f *FSM) witnessIndex(i *IndexValue) {
 	}
 }
 
-func (f *FSM) witnessSnapshot(metadata *raft.SnapshotMeta) error {
-	var indexBytes []byte
-	latestIndex, _ := f.LatestState()
-
-	latestIndex.Index = metadata.Index
-	latestIndex.Term = metadata.Term
-
-	var err error
-	indexBytes, err = proto.Marshal(latestIndex)
+func writeSnapshotMetaToDB(metadata *raft.SnapshotMeta, db *bolt.DB) error {
+	latestIndex := &IndexValue{
+		Term:  metadata.Term,
+		Index: metadata.Index,
+	}
+	indexBytes, err := proto.Marshal(latestIndex)
 	if err != nil {
 		return err
 	}
@@ -216,21 +213,34 @@ func (f *FSM) witnessSnapshot(metadata *raft.SnapshotMeta) error {
 		return err
 	}
 
+	err = db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists(configBucketName)
+		if err != nil {
+			return err
+		}
+
+		err = b.Put(latestConfigKey, configBytes)
+		if err != nil {
+			return err
+		}
+
+		err = b.Put(latestIndexKey, indexBytes)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (f *FSM) witnessSnapshot(metadata *raft.SnapshotMeta) error {
 	if f.storeLatestState {
-		err = f.db.Update(func(tx *bolt.Tx) error {
-			b := tx.Bucket(configBucketName)
-			err := b.Put(latestConfigKey, configBytes)
-			if err != nil {
-				return err
-			}
-
-			err = b.Put(latestIndexKey, indexBytes)
-			if err != nil {
-				return err
-			}
-
-			return nil
-		})
+		err := writeSnapshotMetaToDB(metadata, f.db)
 		if err != nil {
 			return err
 		}
@@ -238,7 +248,7 @@ func (f *FSM) witnessSnapshot(metadata *raft.SnapshotMeta) error {
 
 	atomic.StoreUint64(f.latestIndex, metadata.Index)
 	atomic.StoreUint64(f.latestTerm, metadata.Term)
-	f.latestConfig.Store(protoConfig)
+	f.latestConfig.Store(raftConfigurationToProtoConfiguration(metadata.ConfigurationIndex, metadata.Configuration))
 
 	return nil
 }

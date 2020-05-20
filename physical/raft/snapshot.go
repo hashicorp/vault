@@ -6,9 +6,19 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"sync"
+	"time"
 
+	protoio "github.com/gogo/protobuf/io"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/plugin/pb"
+	bolt "go.etcd.io/bbolt"
+	"go.uber.org/atomic"
 
 	"github.com/hashicorp/raft"
 )
@@ -17,6 +27,8 @@ const (
 	// boltSnapshotID is the stable ID for any boltDB snapshot. Keeping the ID
 	// stable means there is only ever one bolt snapshot in the system
 	boltSnapshotID = "bolt-snapshot"
+	tmpSuffix      = ".tmp"
+	snapPath       = "snapshots"
 )
 
 // BoltSnapshotStore implements the SnapshotStore interface and allows
@@ -36,11 +48,7 @@ type BoltSnapshotStore struct {
 	// database.
 	fsm *FSM
 
-	// fileSnapStore is used to fall back to file snapshots when the data is
-	// being written from the raft library. This currently only happens on a
-	// follower during a snapshot install RPC.
-	fileSnapStore *raft.FileSnapshotStore
-	logger        log.Logger
+	logger log.Logger
 }
 
 // BoltSnapshotSink implements SnapshotSink optionally choosing to write to a
@@ -51,9 +59,16 @@ type BoltSnapshotSink struct {
 	meta   raft.SnapshotMeta
 	trans  raft.Transport
 
-	fileSink raft.SnapshotSink
-	l        sync.Mutex
-	closed   bool
+	// These fields will be used if we are writing a snapshot (vs. reading
+	// one)
+	written       atomic.Bool
+	writer        io.WriteCloser
+	dir           string
+	parentDir     string
+	doneWritingCh chan struct{}
+
+	l      sync.Mutex
+	closed bool
 }
 
 // NewBoltSnapshotStore creates a new BoltSnapshotStore based
@@ -67,16 +82,17 @@ func NewBoltSnapshotStore(base string, retain int, logger log.Logger, fsm *FSM) 
 		return nil, fmt.Errorf("no logger provided")
 	}
 
-	fileStore, err := raft.NewFileSnapshotStore(base, retain, nil)
-	if err != nil {
-		return nil, err
+	// Ensure our path exists
+	path := filepath.Join(base, snapPath)
+	if err := os.MkdirAll(path, 0755); err != nil && !os.IsExist(err) {
+		return nil, fmt.Errorf("snapshot path not accessible: %v", err)
 	}
 
 	// Setup the store
 	store := &BoltSnapshotStore{
-		logger:        logger,
-		fsm:           fsm,
-		fileSnapStore: fileStore,
+		logger: logger,
+		fsm:    fsm,
+		path:   path,
 	}
 
 	{
@@ -119,7 +135,6 @@ func (f *BoltSnapshotStore) Create(version raft.SnapshotVersion, index, term uin
 		trans: trans,
 	}
 
-	// Done
 	return sink, nil
 }
 
@@ -151,9 +166,7 @@ func (f *BoltSnapshotStore) getBoltSnapshotMeta() (*raft.SnapshotMeta, error) {
 	}
 
 	if latestConfig != nil {
-		index, configuration := protoConfigurationToRaftConfiguration(latestConfig)
-		meta.Configuration = configuration
-		meta.ConfigurationIndex = index
+		meta.ConfigurationIndex, meta.Configuration = protoConfigurationToRaftConfiguration(latestConfig)
 	}
 
 	return meta, nil
@@ -196,13 +209,13 @@ func (f *BoltSnapshotStore) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, 
 		meta.Size = n
 
 	default:
-		var err error
+		/*var err error
 		meta, readCloser, err = f.fileSnapStore.Open(id)
 		if err != nil {
 			return nil, nil, err
 		}
-
-		readCloser = &boltSnapshotMetadataReader{
+		*/
+		readCloser = &boltSnapshotReader{
 			meta:       meta,
 			ReadCloser: readCloser,
 		}
@@ -213,7 +226,32 @@ func (f *BoltSnapshotStore) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, 
 
 // ReapSnapshots reaps any snapshots beyond the retain count.
 func (f *BoltSnapshotStore) ReapSnapshots() error {
-	return f.fileSnapStore.ReapSnapshots()
+	snapshots, err := ioutil.ReadDir(f.path)
+	if err != nil {
+		f.logger.Error("failed to scan snapshot directory", "error", err)
+		return err
+	}
+
+	// Populate the metadata
+	for _, snap := range snapshots {
+		// Ignore any files
+		if !snap.IsDir() {
+			continue
+		}
+
+		// Ignore any temporary snapshots
+		dirName := snap.Name()
+		if strings.HasSuffix(dirName, tmpSuffix) {
+			f.logger.Warn("found temporary snapshot", "name", dirName)
+		}
+
+		if err := os.RemoveAll(snap.Name()); err != nil {
+			f.logger.Error("failed to reap snapshot", "path", snap.Name(), "error", err)
+			return err
+		}
+	}
+
+	return nil
 }
 
 // ID returns the ID of the snapshot, can be used with Open()
@@ -222,11 +260,87 @@ func (s *BoltSnapshotSink) ID() string {
 	s.l.Lock()
 	defer s.l.Unlock()
 
-	if s.fileSink != nil {
-		return s.fileSink.ID()
+	return s.meta.ID
+}
+
+func (s *BoltSnapshotSink) writeBoltDBFile() error {
+	// Create a new path
+	name := snapshotName(s.meta.Term, s.meta.Index)
+	path := filepath.Join(s.store.path, name+tmpSuffix)
+	s.logger.Info("creating new snapshot", "path", path)
+
+	// Make the directory
+	if err := os.MkdirAll(path, 0755); err != nil {
+		s.logger.Error("failed to make snapshot directory", "error", err)
+		return err
 	}
 
-	return s.meta.ID
+	dbPath := filepath.Join(path, "vault.db")
+	boltDB, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		return err
+	}
+
+	if err := writeSnapshotMetaToDB(&s.meta, boltDB); err != nil {
+		return err
+	}
+
+	s.meta.ID = name
+	s.dir = path
+	s.parentDir = s.store.path
+
+	reader, writer := io.Pipe()
+	s.writer = writer
+	s.doneWritingCh = make(chan struct{})
+
+	go func() {
+		defer close(s.doneWritingCh)
+		defer boltDB.Close()
+		protoReader := protoio.NewDelimitedReader(reader, math.MaxInt32)
+		defer protoReader.Close()
+
+		var done bool
+		var keys int
+		entry := new(pb.StorageEntry)
+		for !done {
+			err := boltDB.Update(func(tx *bolt.Tx) error {
+				b, err := tx.CreateBucketIfNotExists(dataBucketName)
+				if err != nil {
+					return err
+				}
+
+				// Commit in batches of 50k. Bolt holds all the data in memory and
+				// doesn't split the pages until commit so we do incremental writes.
+				// This is safe since we have a write lock on the fsm's lock.
+				for i := 0; i < 50000; i++ {
+					err := protoReader.ReadMsg(entry)
+					if err != nil {
+						if err == io.EOF {
+							done = true
+							return nil
+						}
+						return err
+					}
+
+					err = b.Put([]byte(entry.Key), entry.Value)
+					if err != nil {
+						return err
+					}
+					keys += 1
+				}
+
+				return nil
+			})
+			if err != nil {
+				s.logger.Error("snapshot write: failed to write transaction", "error", err)
+				return
+			}
+
+			s.logger.Trace("snapshot write: writing keys", "num_written", keys)
+		}
+	}()
+
+	return nil
 }
 
 // Write is used to append to the state file. We write to the
@@ -235,18 +349,20 @@ func (s *BoltSnapshotSink) Write(b []byte) (int, error) {
 	s.l.Lock()
 	defer s.l.Unlock()
 
-	// If someone is writing to this sink then we need to create a file sink to
-	// capture the data. This currently only happens when a follower is being
-	// sent a snapshot.
-	if s.fileSink == nil {
-		fileSink, err := s.store.fileSnapStore.Create(s.meta.Version, s.meta.Index, s.meta.Term, s.meta.Configuration, s.meta.ConfigurationIndex, s.trans)
-		if err != nil {
+	// If this is the first call to Write we need to setup the boltDB file and
+	// kickoff the pipeline write
+	if previouslyWritten := s.written.Swap(true); !previouslyWritten {
+		// Reap any old snapshots
+		if err := s.store.ReapSnapshots(); err != nil {
 			return 0, err
 		}
-		s.fileSink = fileSink
+
+		if err := s.writeBoltDBFile(); err != nil {
+			return 0, err
+		}
 	}
 
-	return s.fileSink.Write(b)
+	return s.writer.Write(b)
 }
 
 // Close is used to indicate a successful end.
@@ -260,8 +376,30 @@ func (s *BoltSnapshotSink) Close() error {
 	}
 	s.closed = true
 
-	if s.fileSink != nil {
-		return s.fileSink.Close()
+	if s.writer != nil {
+		s.writer.Close()
+		<-s.doneWritingCh
+
+		// Move the directory into place
+		newPath := strings.TrimSuffix(s.dir, tmpSuffix)
+		if err := os.Rename(s.dir, newPath); err != nil {
+			s.logger.Error("failed to move snapshot into place", "error", err)
+			return err
+		}
+
+		if runtime.GOOS != "windows" { // skipping fsync for directory entry edits on Windows, only needed for *nix style file systems
+			parentFH, err := os.Open(s.parentDir)
+			defer parentFH.Close()
+			if err != nil {
+				s.logger.Error("failed to open snapshot parent directory", "path", s.parentDir, "error", err)
+				return err
+			}
+
+			if err = parentFH.Sync(); err != nil {
+				s.logger.Error("failed syncing parent directory", "path", s.parentDir, "error", err)
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -278,8 +416,13 @@ func (s *BoltSnapshotSink) Cancel() error {
 	}
 	s.closed = true
 
-	if s.fileSink != nil {
-		return s.fileSink.Cancel()
+	if s.writer != nil {
+		s.writer.Close()
+		<-s.doneWritingCh
+
+		// Attempt to remove all artifacts
+		return os.RemoveAll(s.dir)
+
 	}
 
 	return nil
@@ -292,4 +435,11 @@ type boltSnapshotMetadataReader struct {
 
 func (r *boltSnapshotMetadataReader) Metadata() *raft.SnapshotMeta {
 	return r.meta
+}
+
+// snapshotName generates a name for the snapshot.
+func snapshotName(term, index uint64) string {
+	now := time.Now()
+	msec := now.UnixNano() / int64(time.Millisecond)
+	return fmt.Sprintf("%d-%d-%d", term, index, msec)
 }
