@@ -2,6 +2,8 @@
 
 CHANGES:
 
+* storage/raft: The storage configuration now accepts a new `kv_max_value_size` config that will limit
+  the total size in bytes of any entry commited via raft. It defaults to `"1572864"` -- three times the chunking size. [[GH-9027](https://github.com/hashicorp/vault/pull/9027)]
 * token: Token creation with custom token ID via `id` will no longer allow periods (`.`) as part of the input string. 
   The final generated token value may contain periods, such as the `s.` prefix for service token 
   indication. [[GH-8646](https://github.com/hashicorp/vault/pull/8646/files)]
