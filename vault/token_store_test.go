@@ -2179,7 +2179,7 @@ func TestTokenStore_HandleRequest_CreateToken_Metric(t *testing.T) {
 		"cluster":      "test-cluster",
 		"namespace":    "root",
 		"auth_method":  "token",
-		"mount_point":  "test/mount",
+		"mount_point":  req.MountPoint,
 		"creation_ttl": "1d",
 		"token_type":   "service",
 	}
