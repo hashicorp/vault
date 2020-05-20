@@ -28,6 +28,7 @@ var cacheExceptionsPaths = []string{
 	"sys/expire/",
 	"core/poison-pill",
 	"core/raft/tls",
+	"core/recovery-config",
 }
 
 // CacheRefreshContext returns a context with an added value denoting if the
