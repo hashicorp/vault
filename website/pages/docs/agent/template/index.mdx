@@ -20,7 +20,8 @@ The `template` stanza configures the templating engine in the Vault agent for re
 secrets to files using Consul Template markup language. Multiple `template` stanzas
 can be defined to render multiple files.
 
-When the agent is started with templating enabled, it will attempt to acquire a Vault token using the configured Method. On failure, it will back off for a short
+When the agent is started with templating enabled, it will attempt to acquire a
+Vault token using the configured Method. On failure, it will back off for a short
 while (including some randomness to help prevent thundering herd scenarios) and
 retry. On success, secrets defined in the templates will be retrieved from Vault and
 rendered locally.
