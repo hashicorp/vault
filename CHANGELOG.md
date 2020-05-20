@@ -38,6 +38,8 @@ IMPROVEMENTS:
   
 BUG FIXES:
 
+* secrets/transform (enterprise): Fix panic that could occur when accessing cached template entries, such as a requests
+  that accessed templates directly or indirectly from a performance standby node.
 * serviceregistration: Fix a regression for Consul service registration that ignored using the listener address as
   the redirect address unless api_addr was provided. It now properly uses the same redirect address as the one
   used by Vault's Core object. [[GH-8976](https://github.com/hashicorp/vault/pull/8976)] 
