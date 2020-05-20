@@ -959,8 +959,8 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 }
 
 // Put inserts an entry in the log for the put operation. It will return an
-// error if the value exceeds the configured max_entry_size or if the call to
-// applyLog fails.
+// error if the resulting entry encoding exceeds the configured max_entry_size
+// or if the call to applyLog fails.
 func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "put"}, time.Now())
 	command := &LogData{
