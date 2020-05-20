@@ -30,9 +30,7 @@ export default Fragment.extend({
   }),
   modeForHeader: computed('mode', function() {
     const mode = this.get('mode');
-    if (mode === 'bootstrapping') {
-      return 'bootstrapping';
-    } else if (!mode) {
+    if (!mode) {
       // mode will be false or undefined if it calls the status endpoint while still setting up the cluster
       return 'loading';
     }
