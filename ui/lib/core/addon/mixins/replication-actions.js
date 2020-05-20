@@ -89,6 +89,8 @@ export default Mixin.create({
       yield this.onDisable();
     }
     if (action === 'enable') {
+      /// onEnable is a method available only to route vault.cluster.replication.index
+      // if action 'enable' is called from vault.cluster.replication.mode.index this method is not called
       yield this.onEnable(replicationMode, mode);
     }
   }).drop(),

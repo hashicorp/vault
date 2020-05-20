@@ -40,7 +40,6 @@ export default Route.extend(ClusterRoute, {
   },
   actions: {
     refresh() {
-      console.log('this.refresh in app');
       this.refresh();
     },
   },
