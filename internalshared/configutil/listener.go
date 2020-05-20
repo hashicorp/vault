@@ -133,6 +133,8 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				for i, v := range l.Purpose {
 					l.Purpose[i] = strings.ToLower(v)
 				}
+
+				l.PurposeRaw = nil
 			}
 		}
 
