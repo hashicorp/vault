@@ -698,6 +698,18 @@ func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error
 	return future.Error()
 }
 
+// CommittedIndex returns the latest index committed to stable storage
+func (b *RaftBackend) CommittedIndex() uint64 {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.raft == nil {
+		return 0
+	}
+
+	return b.raft.LastIndex()
+}
+
 // AppliedIndex returns the latest index applied to the FSM
 func (b *RaftBackend) AppliedIndex() uint64 {
 	b.l.RLock()

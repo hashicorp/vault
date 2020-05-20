@@ -445,9 +445,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		vault.DefaultMaxRequestDuration = config.DefaultMaxRequestDuration
 	}
 
-	proxyCfg := httpproxy.FromEnvironment()
-	c.logger.Info("proxy environment", "http_proxy", proxyCfg.HTTPProxy,
-		"https_proxy", proxyCfg.HTTPSProxy, "no_proxy", proxyCfg.NoProxy)
+	logProxyEnvironmentVariables(c.logger)
 
 	// Initialize the storage backend
 	factory, exists := c.PhysicalBackends[config.Storage.Type]
@@ -684,6 +682,31 @@ func (c *ServerCommand) runRecoveryMode() int {
 	return 0
 }
 
+func logProxyEnvironmentVariables(logger hclog.Logger) {
+	proxyCfg := httpproxy.FromEnvironment()
+	cfgMap := map[string]string{
+		"http_proxy":  proxyCfg.HTTPProxy,
+		"https_proxy": proxyCfg.HTTPSProxy,
+		"no_proxy":    proxyCfg.NoProxy,
+	}
+	for k, v := range cfgMap {
+		u, err := url.Parse(v)
+		if err != nil {
+			// Env vars may contain URLs or host:port values.  We only care
+			// about the former.
+			continue
+		}
+		if _, ok := u.User.Password(); ok {
+			u.User = url.UserPassword("redacted-username", "redacted-password")
+		} else if user := u.User.Username(); user != "" {
+			u.User = url.User("redacted-username")
+		}
+		cfgMap[k] = u.String()
+	}
+	logger.Info("proxy environment", "http_proxy", cfgMap["http_proxy"],
+		"https_proxy", cfgMap["https_proxy"], "no_proxy", cfgMap["no_proxy"])
+}
+
 func (c *ServerCommand) adjustLogLevel(config *server.Config, logLevelWasNotSet bool) (string, error) {
 	var logLevelString string
 	if config.LogLevel != "" && logLevelWasNotSet {
@@ -894,10 +917,7 @@ func (c *ServerCommand) Run(args []string) int {
 		vault.DefaultMaxRequestDuration = config.DefaultMaxRequestDuration
 	}
 
-	// log proxy settings
-	proxyCfg := httpproxy.FromEnvironment()
-	c.logger.Info("proxy environment", "http_proxy", proxyCfg.HTTPProxy,
-		"https_proxy", proxyCfg.HTTPSProxy, "no_proxy", proxyCfg.NoProxy)
+	logProxyEnvironmentVariables(c.logger)
 
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
