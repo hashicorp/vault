@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -210,12 +211,17 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 
 	t.Helper()
 
-	value := make([]byte, defaultKVMaxValueSize+1)
+	value := make([]byte, defaultMaxEntrySize+1)
 	rand.Read(value)
 	entry := &physical.Entry{Key: "foo", Value: value}
 
-	if err := b.Put(context.Background(), entry); err == nil {
+	err := b.Put(context.Background(), entry)
+	if err == nil {
 		t.Fatal("expected error for put entry")
+	}
+
+	if !strings.Contains(err.Error(), physical.ErrValueTooLarge) {
+		t.Fatalf("expected %q, got %v", physical.ErrValueTooLarge, err)
 	}
 
 	out, err := b.Get(context.Background(), entry.Key)
@@ -233,7 +239,7 @@ func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 
 	t.Helper()
 
-	value := make([]byte, defaultKVMaxValueSize+1)
+	value := make([]byte, defaultMaxEntrySize+1)
 	rand.Read(value)
 
 	txns := []*physical.TxnEntry{
@@ -246,8 +252,13 @@ func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 		},
 	}
 
-	if err := b.Transaction(context.Background(), txns); err == nil {
+	err := b.Transaction(context.Background(), txns)
+	if err == nil {
 		t.Fatal("expected error for transactions")
+	}
+
+	if !strings.Contains(err.Error(), physical.ErrValueTooLarge) {
+		t.Fatalf("expected %q, got %v", physical.ErrValueTooLarge, err)
 	}
 
 	out, err := b.Get(context.Background(), txns[0].Entry.Key)

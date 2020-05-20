@@ -53,7 +53,7 @@ var (
 
 	restoreOpDelayDuration = 5 * time.Second
 
-	defaultKVMaxValueSize = uint64(3 * raftchunking.ChunkSize)
+	defaultMaxEntrySize = uint64(3 * raftchunking.ChunkSize)
 )
 
 // RaftBackend implements the backend interfaces and uses the raft protocol to
@@ -110,9 +110,10 @@ type RaftBackend struct {
 	// permitPool is used to limit the number of concurrent storage calls.
 	permitPool *physical.PermitPool
 
-	// kvMaxValueSize imposes a limit on values in individual KV operations. It is
-	// suggested to use a value of 3x the Raft chunking size for optimal performance.
-	kvMaxValueSize uint64
+	// maxEntrySize imposes a size limit (in bytes) on a raft entry (put or transaction).
+	// It is suggested to use a value of 3x the Raft chunking size for optimal
+	// performance.
+	maxEntrySize uint64
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -310,27 +311,27 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 	}
 
-	kvMaxValueSize := defaultKVMaxValueSize
-	if kvMaxValueSizeCfg := conf["kv_max_value_size"]; len(kvMaxValueSizeCfg) != 0 {
-		i, err := strconv.Atoi(kvMaxValueSizeCfg)
+	maxEntrySize := defaultMaxEntrySize
+	if maxEntrySizeCfg := conf["max_entry_size"]; len(maxEntrySizeCfg) != 0 {
+		i, err := strconv.Atoi(maxEntrySizeCfg)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse 'kv_max_value_size': %w", err)
+			return nil, fmt.Errorf("failed to parse 'max_entry_size': %w", err)
 		}
 
-		kvMaxValueSize = uint64(i)
+		maxEntrySize = uint64(i)
 	}
 
 	return &RaftBackend{
-		logger:         logger,
-		fsm:            fsm,
-		conf:           conf,
-		logStore:       log,
-		stableStore:    stable,
-		snapStore:      snap,
-		dataDir:        path,
-		localID:        localID,
-		permitPool:     physical.NewPermitPool(physical.DefaultParallelOperations),
-		kvMaxValueSize: kvMaxValueSize,
+		logger:       logger,
+		fsm:          fsm,
+		conf:         conf,
+		logStore:     log,
+		stableStore:  stable,
+		snapStore:    snap,
+		dataDir:      path,
+		localID:      localID,
+		permitPool:   physical.NewPermitPool(physical.DefaultParallelOperations),
+		maxEntrySize: maxEntrySize,
 	}, nil
 }
 
@@ -946,10 +947,10 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 	entry, err := b.fsm.Get(ctx, path)
 	if entry != nil {
 		valueLen := len(entry.Value)
-		if uint64(valueLen) > b.kvMaxValueSize {
+		if uint64(valueLen) > b.maxEntrySize {
 			b.logger.Warn(
 				"retrieved entry value is too large; see https://www.vaultproject.io/docs/configuration/storage/raft#raft-parameters",
-				"size", valueLen, "suggested", b.kvMaxValueSize,
+				"size", valueLen, "suggested", b.maxEntrySize,
 			)
 		}
 	}
@@ -958,16 +959,10 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 }
 
 // Put inserts an entry in the log for the put operation. It will return an
-// error if the value exceeds the configured kv_max_value_size or if the call to
+// error if the value exceeds the configured max_entry_size or if the call to
 // applyLog fails.
 func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "put"}, time.Now())
-
-	valueLen := len(entry.Value)
-	if uint64(valueLen) > b.kvMaxValueSize {
-		return fmt.Errorf("%s; got %d bytes, max: %d bytes", physical.ErrValueTooLarge, valueLen, b.kvMaxValueSize)
-	}
-
 	command := &LogData{
 		Operations: []*LogOperation{
 			&LogOperation{
@@ -1041,16 +1036,14 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 		return errors.New("raft storage backend is not initialized")
 	}
 
-	for _, op := range command.Operations {
-		valueLen := len(op.Value)
-		if uint64(valueLen) > b.kvMaxValueSize {
-			return fmt.Errorf("%s; got %d bytes, max: %d bytes", physical.ErrValueTooLarge, valueLen, b.kvMaxValueSize)
-		}
-	}
-
 	commandBytes, err := proto.Marshal(command)
 	if err != nil {
 		return err
+	}
+
+	cmdSize := len(commandBytes)
+	if uint64(cmdSize) > b.maxEntrySize {
+		return fmt.Errorf("%s; got %d bytes, max: %d bytes", physical.ErrValueTooLarge, cmdSize, b.maxEntrySize)
 	}
 
 	var chunked bool
