@@ -225,6 +225,35 @@ func (c *Sys) DeregisterPlugin(i *DeregisterPluginInput) error {
 	return err
 }
 
+// ReloadPluginInput is used as input to the ReloadPlugin function.
+type ReloadPluginInput struct {
+	// Plugin is the name of the plugin to reload, as registered in the plugin catalog
+	Plugin string `json:"plugin"`
+
+	// Mounts is the array of string mount paths of the plugin backends to reload
+	Mounts []string `json:"mounts"`
+}
+
+// ReloadPlugin reloads mounted plugin backends
+func (c *Sys) ReloadPlugin(i *ReloadPluginInput) error {
+	path := "/v1/sys/plugins/reload/backend"
+	req := c.c.NewRequest(http.MethodPut, path)
+
+	if err := req.SetJSONBody(i); err != nil {
+		return err
+	}
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
+	resp, err := c.c.RawRequestWithContext(ctx, req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return err
+}
+
 // catalogPathByType is a helper to construct the proper API path by plugin type
 func catalogPathByType(pluginType consts.PluginType, name string) string {
 	path := fmt.Sprintf("/v1/sys/plugins/catalog/%s/%s", pluginType, name)

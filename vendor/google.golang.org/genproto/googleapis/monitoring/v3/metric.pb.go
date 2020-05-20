@@ -8,8 +8,9 @@ import (
 	math "math"
 
 	proto "github.com/golang/protobuf/proto"
-	_ "google.golang.org/genproto/googleapis/api/annotations"
-	_ "google.golang.org/genproto/googleapis/api/label"
+	_ "github.com/golang/protobuf/ptypes/duration"
+	_ "google.golang.org/genproto/googleapis/api/distribution"
+	label "google.golang.org/genproto/googleapis/api/label"
 	metric "google.golang.org/genproto/googleapis/api/metric"
 	monitoredres "google.golang.org/genproto/googleapis/api/monitoredres"
 )
@@ -28,7 +29,8 @@ const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 // A single data point in a time series.
 type Point struct {
 	// The time interval to which the data point applies.  For `GAUGE` metrics,
-	// only the end time of the interval is used.  For `DELTA` metrics, the start
+	// the start time is optional, but if it is supplied, it must equal the
+	// end time.  For `DELTA` metrics, the start
 	// and end time should specify a non-zero interval, with subsequent points
 	// specifying contiguous and non-overlapping intervals.  For `CUMULATIVE`
 	// metrics, the start and end time should specify a non-zero interval, with
@@ -195,41 +197,603 @@ func (m *TimeSeries) GetPoints() []*Point {
 	return nil
 }
 
+// A descriptor for the labels and points in a timeseries.
+type TimeSeriesDescriptor struct {
+	// Descriptors for the labels.
+	LabelDescriptors []*label.LabelDescriptor `protobuf:"bytes,1,rep,name=label_descriptors,json=labelDescriptors,proto3" json:"label_descriptors,omitempty"`
+	// Descriptors for the point data value columns.
+	PointDescriptors     []*TimeSeriesDescriptor_ValueDescriptor `protobuf:"bytes,5,rep,name=point_descriptors,json=pointDescriptors,proto3" json:"point_descriptors,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                                `json:"-"`
+	XXX_unrecognized     []byte                                  `json:"-"`
+	XXX_sizecache        int32                                   `json:"-"`
+}
+
+func (m *TimeSeriesDescriptor) Reset()         { *m = TimeSeriesDescriptor{} }
+func (m *TimeSeriesDescriptor) String() string { return proto.CompactTextString(m) }
+func (*TimeSeriesDescriptor) ProtoMessage()    {}
+func (*TimeSeriesDescriptor) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c76199a3d2c4c21e, []int{2}
+}
+
+func (m *TimeSeriesDescriptor) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TimeSeriesDescriptor.Unmarshal(m, b)
+}
+func (m *TimeSeriesDescriptor) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TimeSeriesDescriptor.Marshal(b, m, deterministic)
+}
+func (m *TimeSeriesDescriptor) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TimeSeriesDescriptor.Merge(m, src)
+}
+func (m *TimeSeriesDescriptor) XXX_Size() int {
+	return xxx_messageInfo_TimeSeriesDescriptor.Size(m)
+}
+func (m *TimeSeriesDescriptor) XXX_DiscardUnknown() {
+	xxx_messageInfo_TimeSeriesDescriptor.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TimeSeriesDescriptor proto.InternalMessageInfo
+
+func (m *TimeSeriesDescriptor) GetLabelDescriptors() []*label.LabelDescriptor {
+	if m != nil {
+		return m.LabelDescriptors
+	}
+	return nil
+}
+
+func (m *TimeSeriesDescriptor) GetPointDescriptors() []*TimeSeriesDescriptor_ValueDescriptor {
+	if m != nil {
+		return m.PointDescriptors
+	}
+	return nil
+}
+
+// A descriptor for the value columns in a data point.
+type TimeSeriesDescriptor_ValueDescriptor struct {
+	// The value key.
+	Key string `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	// The value type.
+	ValueType metric.MetricDescriptor_ValueType `protobuf:"varint,2,opt,name=value_type,json=valueType,proto3,enum=google.api.MetricDescriptor_ValueType" json:"value_type,omitempty"`
+	// The value stream kind.
+	MetricKind           metric.MetricDescriptor_MetricKind `protobuf:"varint,3,opt,name=metric_kind,json=metricKind,proto3,enum=google.api.MetricDescriptor_MetricKind" json:"metric_kind,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                           `json:"-"`
+	XXX_unrecognized     []byte                             `json:"-"`
+	XXX_sizecache        int32                              `json:"-"`
+}
+
+func (m *TimeSeriesDescriptor_ValueDescriptor) Reset()         { *m = TimeSeriesDescriptor_ValueDescriptor{} }
+func (m *TimeSeriesDescriptor_ValueDescriptor) String() string { return proto.CompactTextString(m) }
+func (*TimeSeriesDescriptor_ValueDescriptor) ProtoMessage()    {}
+func (*TimeSeriesDescriptor_ValueDescriptor) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c76199a3d2c4c21e, []int{2, 0}
+}
+
+func (m *TimeSeriesDescriptor_ValueDescriptor) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TimeSeriesDescriptor_ValueDescriptor.Unmarshal(m, b)
+}
+func (m *TimeSeriesDescriptor_ValueDescriptor) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TimeSeriesDescriptor_ValueDescriptor.Marshal(b, m, deterministic)
+}
+func (m *TimeSeriesDescriptor_ValueDescriptor) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TimeSeriesDescriptor_ValueDescriptor.Merge(m, src)
+}
+func (m *TimeSeriesDescriptor_ValueDescriptor) XXX_Size() int {
+	return xxx_messageInfo_TimeSeriesDescriptor_ValueDescriptor.Size(m)
+}
+func (m *TimeSeriesDescriptor_ValueDescriptor) XXX_DiscardUnknown() {
+	xxx_messageInfo_TimeSeriesDescriptor_ValueDescriptor.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TimeSeriesDescriptor_ValueDescriptor proto.InternalMessageInfo
+
+func (m *TimeSeriesDescriptor_ValueDescriptor) GetKey() string {
+	if m != nil {
+		return m.Key
+	}
+	return ""
+}
+
+func (m *TimeSeriesDescriptor_ValueDescriptor) GetValueType() metric.MetricDescriptor_ValueType {
+	if m != nil {
+		return m.ValueType
+	}
+	return metric.MetricDescriptor_VALUE_TYPE_UNSPECIFIED
+}
+
+func (m *TimeSeriesDescriptor_ValueDescriptor) GetMetricKind() metric.MetricDescriptor_MetricKind {
+	if m != nil {
+		return m.MetricKind
+	}
+	return metric.MetricDescriptor_METRIC_KIND_UNSPECIFIED
+}
+
+// Represents the values of a time series associated with a
+// TimeSeriesDescriptor.
+type TimeSeriesData struct {
+	// The values of the labels in the time series identifier, given in the same
+	// order as the `label_descriptors` field of the TimeSeriesDescriptor
+	// associated with this object. Each value must have a value of the type
+	// given in the corresponding entry of `label_descriptors`.
+	LabelValues []*LabelValue `protobuf:"bytes,1,rep,name=label_values,json=labelValues,proto3" json:"label_values,omitempty"`
+	// The points in the time series.
+	PointData            []*TimeSeriesData_PointData `protobuf:"bytes,2,rep,name=point_data,json=pointData,proto3" json:"point_data,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                    `json:"-"`
+	XXX_unrecognized     []byte                      `json:"-"`
+	XXX_sizecache        int32                       `json:"-"`
+}
+
+func (m *TimeSeriesData) Reset()         { *m = TimeSeriesData{} }
+func (m *TimeSeriesData) String() string { return proto.CompactTextString(m) }
+func (*TimeSeriesData) ProtoMessage()    {}
+func (*TimeSeriesData) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c76199a3d2c4c21e, []int{3}
+}
+
+func (m *TimeSeriesData) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TimeSeriesData.Unmarshal(m, b)
+}
+func (m *TimeSeriesData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TimeSeriesData.Marshal(b, m, deterministic)
+}
+func (m *TimeSeriesData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TimeSeriesData.Merge(m, src)
+}
+func (m *TimeSeriesData) XXX_Size() int {
+	return xxx_messageInfo_TimeSeriesData.Size(m)
+}
+func (m *TimeSeriesData) XXX_DiscardUnknown() {
+	xxx_messageInfo_TimeSeriesData.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TimeSeriesData proto.InternalMessageInfo
+
+func (m *TimeSeriesData) GetLabelValues() []*LabelValue {
+	if m != nil {
+		return m.LabelValues
+	}
+	return nil
+}
+
+func (m *TimeSeriesData) GetPointData() []*TimeSeriesData_PointData {
+	if m != nil {
+		return m.PointData
+	}
+	return nil
+}
+
+// A point's value columns and time interval. Each point has one or more
+// point values corresponding to the entries in `point_descriptors` field in
+// the TimeSeriesDescriptor associated with this object.
+type TimeSeriesData_PointData struct {
+	// The values that make up the point.
+	Values []*TypedValue `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
+	// The time interval associated with the point.
+	TimeInterval         *TimeInterval `protobuf:"bytes,2,opt,name=time_interval,json=timeInterval,proto3" json:"time_interval,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
+	XXX_unrecognized     []byte        `json:"-"`
+	XXX_sizecache        int32         `json:"-"`
+}
+
+func (m *TimeSeriesData_PointData) Reset()         { *m = TimeSeriesData_PointData{} }
+func (m *TimeSeriesData_PointData) String() string { return proto.CompactTextString(m) }
+func (*TimeSeriesData_PointData) ProtoMessage()    {}
+func (*TimeSeriesData_PointData) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c76199a3d2c4c21e, []int{3, 0}
+}
+
+func (m *TimeSeriesData_PointData) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TimeSeriesData_PointData.Unmarshal(m, b)
+}
+func (m *TimeSeriesData_PointData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TimeSeriesData_PointData.Marshal(b, m, deterministic)
+}
+func (m *TimeSeriesData_PointData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TimeSeriesData_PointData.Merge(m, src)
+}
+func (m *TimeSeriesData_PointData) XXX_Size() int {
+	return xxx_messageInfo_TimeSeriesData_PointData.Size(m)
+}
+func (m *TimeSeriesData_PointData) XXX_DiscardUnknown() {
+	xxx_messageInfo_TimeSeriesData_PointData.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TimeSeriesData_PointData proto.InternalMessageInfo
+
+func (m *TimeSeriesData_PointData) GetValues() []*TypedValue {
+	if m != nil {
+		return m.Values
+	}
+	return nil
+}
+
+func (m *TimeSeriesData_PointData) GetTimeInterval() *TimeInterval {
+	if m != nil {
+		return m.TimeInterval
+	}
+	return nil
+}
+
+// A label value.
+type LabelValue struct {
+	// The label value can be a bool, int64, or string.
+	//
+	// Types that are valid to be assigned to Value:
+	//	*LabelValue_BoolValue
+	//	*LabelValue_Int64Value
+	//	*LabelValue_StringValue
+	Value                isLabelValue_Value `protobuf_oneof:"value"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
+}
+
+func (m *LabelValue) Reset()         { *m = LabelValue{} }
+func (m *LabelValue) String() string { return proto.CompactTextString(m) }
+func (*LabelValue) ProtoMessage()    {}
+func (*LabelValue) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c76199a3d2c4c21e, []int{4}
+}
+
+func (m *LabelValue) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_LabelValue.Unmarshal(m, b)
+}
+func (m *LabelValue) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_LabelValue.Marshal(b, m, deterministic)
+}
+func (m *LabelValue) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LabelValue.Merge(m, src)
+}
+func (m *LabelValue) XXX_Size() int {
+	return xxx_messageInfo_LabelValue.Size(m)
+}
+func (m *LabelValue) XXX_DiscardUnknown() {
+	xxx_messageInfo_LabelValue.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_LabelValue proto.InternalMessageInfo
+
+type isLabelValue_Value interface {
+	isLabelValue_Value()
+}
+
+type LabelValue_BoolValue struct {
+	BoolValue bool `protobuf:"varint,1,opt,name=bool_value,json=boolValue,proto3,oneof"`
+}
+
+type LabelValue_Int64Value struct {
+	Int64Value int64 `protobuf:"varint,2,opt,name=int64_value,json=int64Value,proto3,oneof"`
+}
+
+type LabelValue_StringValue struct {
+	StringValue string `protobuf:"bytes,3,opt,name=string_value,json=stringValue,proto3,oneof"`
+}
+
+func (*LabelValue_BoolValue) isLabelValue_Value() {}
+
+func (*LabelValue_Int64Value) isLabelValue_Value() {}
+
+func (*LabelValue_StringValue) isLabelValue_Value() {}
+
+func (m *LabelValue) GetValue() isLabelValue_Value {
+	if m != nil {
+		return m.Value
+	}
+	return nil
+}
+
+func (m *LabelValue) GetBoolValue() bool {
+	if x, ok := m.GetValue().(*LabelValue_BoolValue); ok {
+		return x.BoolValue
+	}
+	return false
+}
+
+func (m *LabelValue) GetInt64Value() int64 {
+	if x, ok := m.GetValue().(*LabelValue_Int64Value); ok {
+		return x.Int64Value
+	}
+	return 0
+}
+
+func (m *LabelValue) GetStringValue() string {
+	if x, ok := m.GetValue().(*LabelValue_StringValue); ok {
+		return x.StringValue
+	}
+	return ""
+}
+
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*LabelValue) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
+		(*LabelValue_BoolValue)(nil),
+		(*LabelValue_Int64Value)(nil),
+		(*LabelValue_StringValue)(nil),
+	}
+}
+
+// An error associated with a query in the time series query language format.
+type QueryError struct {
+	// The location of the time series query language text that this error applies
+	// to.
+	Locator *TextLocator `protobuf:"bytes,1,opt,name=locator,proto3" json:"locator,omitempty"`
+	// The error message.
+	Message              string   `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *QueryError) Reset()         { *m = QueryError{} }
+func (m *QueryError) String() string { return proto.CompactTextString(m) }
+func (*QueryError) ProtoMessage()    {}
+func (*QueryError) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c76199a3d2c4c21e, []int{5}
+}
+
+func (m *QueryError) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_QueryError.Unmarshal(m, b)
+}
+func (m *QueryError) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_QueryError.Marshal(b, m, deterministic)
+}
+func (m *QueryError) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_QueryError.Merge(m, src)
+}
+func (m *QueryError) XXX_Size() int {
+	return xxx_messageInfo_QueryError.Size(m)
+}
+func (m *QueryError) XXX_DiscardUnknown() {
+	xxx_messageInfo_QueryError.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_QueryError proto.InternalMessageInfo
+
+func (m *QueryError) GetLocator() *TextLocator {
+	if m != nil {
+		return m.Locator
+	}
+	return nil
+}
+
+func (m *QueryError) GetMessage() string {
+	if m != nil {
+		return m.Message
+	}
+	return ""
+}
+
+// A locator for text. Indicates a particular part of the text of a request or
+// of an object referenced in the request.
+//
+// For example, suppose the request field `text` contains:
+//
+//   text: "The quick brown fox jumps over the lazy dog."
+//
+// Then the locator:
+//
+//   source: "text"
+//   start_position {
+//     line: 1
+//     column: 17
+//   }
+//   end_position {
+//     line: 1
+//     column: 19
+//   }
+//
+// refers to the part of the text: "fox".
+type TextLocator struct {
+	// The source of the text. The source may be a field in the request, in which
+	// case its format is the format of the
+	// google.rpc.BadRequest.FieldViolation.field field in
+	// https://cloud.google.com/apis/design/errors#error_details. It may also be
+	// be a source other than the request field (e.g. a macro definition
+	// referenced in the text of the query), in which case this is the name of
+	// the source (e.g. the macro name).
+	Source string `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
+	// The position of the first byte within the text.
+	StartPosition *TextLocator_Position `protobuf:"bytes,2,opt,name=start_position,json=startPosition,proto3" json:"start_position,omitempty"`
+	// The position of the last byte within the text.
+	EndPosition *TextLocator_Position `protobuf:"bytes,3,opt,name=end_position,json=endPosition,proto3" json:"end_position,omitempty"`
+	// If `source`, `start_position`, and `end_position` describe a call on
+	// some object (e.g. a macro in the time series query language text) and a
+	// location is to be designated in that object's text, `nested_locator`
+	// identifies the location within that object.
+	NestedLocator *TextLocator `protobuf:"bytes,4,opt,name=nested_locator,json=nestedLocator,proto3" json:"nested_locator,omitempty"`
+	// When `nested_locator` is set, this field gives the reason for the nesting.
+	// Usually, the reason is a macro invocation. In that case, the macro name
+	// (including the leading '@') signals the location of the macro call
+	// in the text and a macro argument name (including the leading '$') signals
+	// the location of the macro argument inside the macro body that got
+	// substituted away.
+	NestingReason        string   `protobuf:"bytes,5,opt,name=nesting_reason,json=nestingReason,proto3" json:"nesting_reason,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *TextLocator) Reset()         { *m = TextLocator{} }
+func (m *TextLocator) String() string { return proto.CompactTextString(m) }
+func (*TextLocator) ProtoMessage()    {}
+func (*TextLocator) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c76199a3d2c4c21e, []int{6}
+}
+
+func (m *TextLocator) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TextLocator.Unmarshal(m, b)
+}
+func (m *TextLocator) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TextLocator.Marshal(b, m, deterministic)
+}
+func (m *TextLocator) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TextLocator.Merge(m, src)
+}
+func (m *TextLocator) XXX_Size() int {
+	return xxx_messageInfo_TextLocator.Size(m)
+}
+func (m *TextLocator) XXX_DiscardUnknown() {
+	xxx_messageInfo_TextLocator.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TextLocator proto.InternalMessageInfo
+
+func (m *TextLocator) GetSource() string {
+	if m != nil {
+		return m.Source
+	}
+	return ""
+}
+
+func (m *TextLocator) GetStartPosition() *TextLocator_Position {
+	if m != nil {
+		return m.StartPosition
+	}
+	return nil
+}
+
+func (m *TextLocator) GetEndPosition() *TextLocator_Position {
+	if m != nil {
+		return m.EndPosition
+	}
+	return nil
+}
+
+func (m *TextLocator) GetNestedLocator() *TextLocator {
+	if m != nil {
+		return m.NestedLocator
+	}
+	return nil
+}
+
+func (m *TextLocator) GetNestingReason() string {
+	if m != nil {
+		return m.NestingReason
+	}
+	return ""
+}
+
+// The position of a byte within the text.
+type TextLocator_Position struct {
+	// The line, starting with 1, where the byte is positioned.
+	Line int32 `protobuf:"varint,1,opt,name=line,proto3" json:"line,omitempty"`
+	// The column within the line, starting with 1, where the byte is
+	// positioned. This is a byte index even though the text is UTF-8.
+	Column               int32    `protobuf:"varint,2,opt,name=column,proto3" json:"column,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *TextLocator_Position) Reset()         { *m = TextLocator_Position{} }
+func (m *TextLocator_Position) String() string { return proto.CompactTextString(m) }
+func (*TextLocator_Position) ProtoMessage()    {}
+func (*TextLocator_Position) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c76199a3d2c4c21e, []int{6, 0}
+}
+
+func (m *TextLocator_Position) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TextLocator_Position.Unmarshal(m, b)
+}
+func (m *TextLocator_Position) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TextLocator_Position.Marshal(b, m, deterministic)
+}
+func (m *TextLocator_Position) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TextLocator_Position.Merge(m, src)
+}
+func (m *TextLocator_Position) XXX_Size() int {
+	return xxx_messageInfo_TextLocator_Position.Size(m)
+}
+func (m *TextLocator_Position) XXX_DiscardUnknown() {
+	xxx_messageInfo_TextLocator_Position.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TextLocator_Position proto.InternalMessageInfo
+
+func (m *TextLocator_Position) GetLine() int32 {
+	if m != nil {
+		return m.Line
+	}
+	return 0
+}
+
+func (m *TextLocator_Position) GetColumn() int32 {
+	if m != nil {
+		return m.Column
+	}
+	return 0
+}
+
 func init() {
 	proto.RegisterType((*Point)(nil), "google.monitoring.v3.Point")
 	proto.RegisterType((*TimeSeries)(nil), "google.monitoring.v3.TimeSeries")
+	proto.RegisterType((*TimeSeriesDescriptor)(nil), "google.monitoring.v3.TimeSeriesDescriptor")
+	proto.RegisterType((*TimeSeriesDescriptor_ValueDescriptor)(nil), "google.monitoring.v3.TimeSeriesDescriptor.ValueDescriptor")
+	proto.RegisterType((*TimeSeriesData)(nil), "google.monitoring.v3.TimeSeriesData")
+	proto.RegisterType((*TimeSeriesData_PointData)(nil), "google.monitoring.v3.TimeSeriesData.PointData")
+	proto.RegisterType((*LabelValue)(nil), "google.monitoring.v3.LabelValue")
+	proto.RegisterType((*QueryError)(nil), "google.monitoring.v3.QueryError")
+	proto.RegisterType((*TextLocator)(nil), "google.monitoring.v3.TextLocator")
+	proto.RegisterType((*TextLocator_Position)(nil), "google.monitoring.v3.TextLocator.Position")
 }
 
-func init() { proto.RegisterFile("google/monitoring/v3/metric.proto", fileDescriptor_c76199a3d2c4c21e) }
+func init() {
+	proto.RegisterFile("google/monitoring/v3/metric.proto", fileDescriptor_c76199a3d2c4c21e)
+}
 
 var fileDescriptor_c76199a3d2c4c21e = []byte{
-	// 441 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x92, 0x51, 0xab, 0xd3, 0x30,
-	0x14, 0xc7, 0xe9, 0xae, 0x9b, 0x33, 0x03, 0x1f, 0x82, 0x68, 0x99, 0x0a, 0x73, 0xa2, 0x0e, 0x1f,
-	0x5a, 0x58, 0x41, 0x10, 0xe1, 0x82, 0x57, 0x45, 0x45, 0x2e, 0x8c, 0x28, 0x7b, 0x90, 0xc1, 0xc8,
-	0x6d, 0x0f, 0x25, 0xd8, 0xe4, 0x84, 0x34, 0x2b, 0xdc, 0x27, 0x3f, 0x8c, 0x6f, 0x7e, 0x14, 0x3f,
-	0x93, 0x0f, 0xd2, 0x24, 0xdd, 0x76, 0xb1, 0xf7, 0xbe, 0xb5, 0xf9, 0xff, 0xfe, 0xe7, 0x7f, 0x72,
-	0x72, 0xc8, 0x93, 0x12, 0xb1, 0xac, 0x20, 0x95, 0xa8, 0x84, 0x45, 0x23, 0x54, 0x99, 0x36, 0x59,
-	0x2a, 0xc1, 0x1a, 0x91, 0x27, 0xda, 0xa0, 0x45, 0x7a, 0xcf, 0x23, 0xc9, 0x01, 0x49, 0x9a, 0x6c,
-	0xfa, 0x28, 0x18, 0xb9, 0x16, 0x29, 0x57, 0x0a, 0x2d, 0xb7, 0x02, 0x55, 0xed, 0x3d, 0xd3, 0xfb,
-	0x47, 0x6a, 0xc5, 0x2f, 0xa0, 0x0a, 0xe7, 0x0f, 0x8e, 0xce, 0x8f, 0x43, 0xa6, 0x4f, 0x8f, 0x05,
-	0x1f, 0x04, 0xc5, 0xd6, 0x40, 0x8d, 0x3b, 0x93, 0x43, 0x80, 0xfa, 0x9b, 0xcd, 0x51, 0x4a, 0x54,
-	0x1e, 0x99, 0xff, 0x24, 0xc3, 0x15, 0x0a, 0x65, 0xe9, 0x29, 0x19, 0x0b, 0x65, 0xc1, 0x34, 0xbc,
-	0x8a, 0xa3, 0x59, 0xb4, 0x98, 0x2c, 0xe7, 0x49, 0xdf, 0x45, 0x92, 0x6f, 0x42, 0xc2, 0xe7, 0x40,
-	0xb2, 0xbd, 0x87, 0xbe, 0x22, 0xc3, 0x86, 0x57, 0x3b, 0x88, 0x07, 0xce, 0x3c, 0xbb, 0xc6, 0x7c,
-	0xa9, 0xa1, 0x58, 0xb7, 0x1c, 0xf3, 0xf8, 0xfc, 0xef, 0x80, 0x90, 0xb6, 0xe4, 0x57, 0x30, 0x02,
-	0x6a, 0xfa, 0x92, 0x8c, 0xfc, 0x3d, 0x43, 0x13, 0xb4, 0xab, 0xc3, 0xb5, 0x48, 0xce, 0x9d, 0xc2,
-	0x02, 0x41, 0x5f, 0x93, 0x71, 0x77, 0xe1, 0x90, 0xfa, 0xf8, 0x0a, 0xdd, 0x8d, 0x85, 0x05, 0x88,
-	0xed, 0x71, 0xfa, 0x96, 0x8c, 0x25, 0x58, 0x5e, 0x70, 0xcb, 0xe3, 0xdb, 0xce, 0xfa, 0xec, 0x46,
-	0xeb, 0x79, 0x80, 0xd9, 0xde, 0x46, 0x3f, 0x91, 0x89, 0xef, 0x63, 0xfb, 0x43, 0xa8, 0x22, 0x3e,
-	0x99, 0x45, 0x8b, 0xbb, 0xcb, 0x17, 0xff, 0xb7, 0xfb, 0x1e, 0xea, 0xdc, 0x08, 0x6d, 0xd1, 0x84,
-	0x83, 0x2f, 0x42, 0x15, 0x8c, 0xc8, 0xfd, 0x37, 0xfd, 0x40, 0x88, 0x9b, 0xc5, 0xd6, 0x5e, 0x6a,
-	0x88, 0x6f, 0xb9, 0x42, 0xcf, 0x6f, 0x2c, 0xe4, 0x26, 0xd8, 0xce, 0x92, 0xdd, 0x69, 0xba, 0x4f,
-	0x9a, 0x91, 0x91, 0x6e, 0x9f, 0xb2, 0x8e, 0x87, 0xb3, 0x93, 0xc5, 0x64, 0xf9, 0xb0, 0xff, 0x09,
-	0xdc, 0x73, 0xb3, 0x80, 0x9e, 0xfd, 0x8a, 0x48, 0x9c, 0xa3, 0xec, 0x45, 0xcf, 0x26, 0x3e, 0x78,
-	0xd5, 0x6e, 0xca, 0x2a, 0xfa, 0x7e, 0x1a, 0xa0, 0x12, 0x2b, 0xae, 0xca, 0x04, 0x4d, 0x99, 0x96,
-	0xa0, 0xdc, 0x1e, 0xa5, 0x5e, 0xe2, 0x5a, 0xd4, 0x57, 0xb7, 0xed, 0xcd, 0xe1, 0xef, 0xf7, 0x60,
-	0xfa, 0xd1, 0x17, 0x78, 0x57, 0xe1, 0xae, 0xe8, 0x86, 0xdc, 0x66, 0xad, 0xb3, 0x3f, 0x9d, 0xb8,
-	0x71, 0xe2, 0xe6, 0x20, 0x6e, 0xd6, 0xd9, 0xc5, 0xc8, 0x85, 0x64, 0xff, 0x02, 0x00, 0x00, 0xff,
-	0xff, 0x5a, 0x88, 0xc9, 0x0b, 0x7e, 0x03, 0x00, 0x00,
+	// 879 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x55, 0xdd, 0x6e, 0x1b, 0x45,
+	0x14, 0x8e, 0xd7, 0xb1, 0x63, 0x9f, 0x4d, 0x42, 0x3b, 0xaa, 0xca, 0xca, 0x28, 0x90, 0xb8, 0x2a,
+	0x44, 0xbd, 0x58, 0x4b, 0x31, 0x8a, 0xc0, 0x95, 0x2a, 0x91, 0x52, 0xd5, 0x88, 0x46, 0x4a, 0x07,
+	0x94, 0x0b, 0x14, 0xc9, 0x1a, 0xef, 0x0e, 0xab, 0x51, 0x77, 0x67, 0x56, 0xb3, 0xb3, 0x16, 0xb9,
+	0x01, 0x9e, 0x80, 0x07, 0xe1, 0x1a, 0x9e, 0x80, 0x3b, 0x1e, 0x85, 0x2b, 0x1e, 0x80, 0x0b, 0x34,
+	0x3f, 0xfb, 0xe3, 0x90, 0x34, 0x01, 0x71, 0x37, 0x73, 0xce, 0x77, 0xbe, 0x73, 0xe6, 0x3b, 0x33,
+	0x67, 0xe0, 0x20, 0x11, 0x22, 0x49, 0xe9, 0x24, 0x13, 0x9c, 0x29, 0x21, 0x19, 0x4f, 0x26, 0xab,
+	0xe9, 0x24, 0xa3, 0x4a, 0xb2, 0x28, 0xcc, 0xa5, 0x50, 0x02, 0x3d, 0xb0, 0x90, 0xb0, 0x81, 0x84,
+	0xab, 0xe9, 0x68, 0xcf, 0x05, 0x92, 0x9c, 0x4d, 0x62, 0x56, 0x28, 0xc9, 0x96, 0xa5, 0x62, 0x82,
+	0xdb, 0xa0, 0xd1, 0xc3, 0x96, 0x3b, 0x25, 0x4b, 0x9a, 0x3a, 0xfb, 0xbb, 0x2d, 0x7b, 0x3b, 0xcb,
+	0xe8, 0x51, 0xdb, 0x61, 0x33, 0xd1, 0x78, 0x21, 0x69, 0x21, 0x4a, 0x19, 0x51, 0x07, 0xba, 0xbe,
+	0xda, 0x48, 0x64, 0x59, 0x9d, 0xf8, 0x7d, 0x07, 0x31, 0xbb, 0x65, 0xf9, 0xed, 0x24, 0x2e, 0x25,
+	0x69, 0x0a, 0x1b, 0xff, 0x00, 0xbd, 0x33, 0xc1, 0xb8, 0x42, 0xcf, 0x60, 0xc0, 0xb8, 0xa2, 0x72,
+	0x45, 0xd2, 0xa0, 0xb3, 0xdf, 0x39, 0xf4, 0x8f, 0xc6, 0xe1, 0x75, 0x27, 0x0d, 0xbf, 0x66, 0x19,
+	0xfd, 0xc2, 0x21, 0x71, 0x1d, 0x83, 0x8e, 0xa1, 0xb7, 0x22, 0x69, 0x49, 0x03, 0xcf, 0x04, 0xef,
+	0xdf, 0x10, 0x7c, 0x99, 0xd3, 0xf8, 0x5c, 0xe3, 0xb0, 0x85, 0x8f, 0xff, 0xf2, 0x00, 0x34, 0xe5,
+	0x57, 0x54, 0x32, 0x5a, 0xa0, 0x27, 0xd0, 0xb7, 0x3a, 0xb8, 0x22, 0x50, 0xc5, 0x43, 0x72, 0x16,
+	0x9e, 0x1a, 0x0f, 0x76, 0x08, 0xf4, 0x29, 0x0c, 0x2a, 0x41, 0x5c, 0xd6, 0xbd, 0x35, 0x74, 0x25,
+	0x1b, 0x76, 0x20, 0x5c, 0xc3, 0xd1, 0x67, 0x30, 0xc8, 0xa8, 0x22, 0x31, 0x51, 0x24, 0xd8, 0x32,
+	0xa1, 0x8f, 0xdf, 0x1a, 0x7a, 0xea, 0xc0, 0xb8, 0x0e, 0x43, 0x73, 0xf0, 0x6d, 0x1d, 0x8b, 0x37,
+	0x8c, 0xc7, 0x41, 0x77, 0xbf, 0x73, 0xb8, 0x7b, 0xf4, 0xd1, 0x3f, 0xcb, 0xfd, 0x9c, 0x16, 0x91,
+	0x64, 0xb9, 0x12, 0xd2, 0x19, 0xbe, 0x64, 0x3c, 0xc6, 0x90, 0xd5, 0x6b, 0xf4, 0x02, 0xc0, 0x68,
+	0xb1, 0x50, 0x97, 0x39, 0x0d, 0x36, 0x0d, 0xd1, 0x87, 0x6f, 0x25, 0x32, 0x0a, 0x6a, 0x2d, 0xf1,
+	0x70, 0x55, 0x2d, 0xd1, 0x14, 0xfa, 0xb9, 0x6e, 0x65, 0x11, 0xf4, 0xf6, 0xbb, 0x87, 0xfe, 0xd1,
+	0x7b, 0xd7, 0xb7, 0xc0, 0xb4, 0x1b, 0x3b, 0xe8, 0xf8, 0xc7, 0x2e, 0x3c, 0x68, 0xe4, 0x6f, 0x52,
+	0xa0, 0x39, 0xdc, 0x37, 0x17, 0x75, 0x11, 0xd7, 0xb6, 0x22, 0xe8, 0xac, 0x13, 0xeb, 0xda, 0x5e,
+	0x69, 0x50, 0x13, 0x87, 0xef, 0xa5, 0xeb, 0x86, 0x02, 0x25, 0x70, 0xdf, 0x24, 0x5b, 0x63, 0xb2,
+	0x25, 0xce, 0x6e, 0xbe, 0x62, 0x57, 0x0b, 0xb2, 0x67, 0x6e, 0x27, 0x32, 0xa4, 0xad, 0x44, 0xa3,
+	0x5f, 0x3a, 0xf0, 0xce, 0x15, 0x14, 0xba, 0x07, 0xdd, 0x37, 0xf4, 0xd2, 0x5c, 0xa6, 0x21, 0xd6,
+	0xcb, 0x2b, 0x6a, 0x7b, 0xff, 0x55, 0xed, 0xff, 0xad, 0xfd, 0xe3, 0x5f, 0x3d, 0xd8, 0x6d, 0x9d,
+	0x58, 0xdf, 0xad, 0xe7, 0xb0, 0x6d, 0xc5, 0x37, 0xf9, 0x2a, 0xdd, 0x6f, 0x78, 0x53, 0xa6, 0x03,
+	0xf6, 0x4d, 0xf9, 0x69, 0xbd, 0x2e, 0xd0, 0x29, 0x80, 0xd3, 0x5d, 0xdf, 0x72, 0xcf, 0x50, 0x84,
+	0xb7, 0x0a, 0x4e, 0x14, 0xb1, 0x57, 0x44, 0xaf, 0xf0, 0x30, 0xaf, 0x96, 0xa3, 0x9f, 0x3a, 0x30,
+	0xac, 0x1d, 0xe8, 0x13, 0xe8, 0xdf, 0xa5, 0xb6, 0xd6, 0x7b, 0x77, 0x78, 0xf4, 0x12, 0x76, 0x14,
+	0xcb, 0xe8, 0xa2, 0x9e, 0x36, 0xde, 0x9d, 0xa7, 0xcd, 0xb6, 0x6a, 0xed, 0xc6, 0xdf, 0x03, 0x34,
+	0x47, 0x47, 0x1f, 0x00, 0x2c, 0x85, 0x70, 0x8a, 0x99, 0x7e, 0x0f, 0xe6, 0x1b, 0x78, 0xa8, 0x6d,
+	0x16, 0x70, 0x00, 0x3e, 0xe3, 0xea, 0xf8, 0xe3, 0x45, 0x33, 0xa6, 0xba, 0xf3, 0x0d, 0x0c, 0xc6,
+	0x68, 0x21, 0x8f, 0x60, 0x5b, 0x4f, 0x6e, 0x9e, 0x38, 0x8c, 0x6e, 0xea, 0x70, 0xbe, 0x81, 0x7d,
+	0x6b, 0x35, 0xa0, 0x93, 0x2d, 0x37, 0xe8, 0xc6, 0x11, 0xc0, 0xeb, 0x92, 0xca, 0xcb, 0x17, 0x52,
+	0x0a, 0x89, 0x9e, 0xc2, 0x56, 0x2a, 0x22, 0xa2, 0x84, 0x74, 0x93, 0xeb, 0xe0, 0x86, 0x03, 0xd1,
+	0xef, 0xd4, 0x2b, 0x0b, 0xc4, 0x55, 0x04, 0x0a, 0x60, 0x2b, 0xa3, 0x45, 0x41, 0x12, 0x5b, 0xd7,
+	0x10, 0x57, 0xdb, 0xf1, 0x9f, 0x1e, 0xf8, 0xad, 0x10, 0xf4, 0x10, 0xfa, 0x6e, 0xe2, 0xd9, 0x2b,
+	0xed, 0x76, 0xe8, 0x35, 0xec, 0x16, 0x8a, 0x48, 0xb5, 0xc8, 0x45, 0xc1, 0xf4, 0x7c, 0x77, 0xb2,
+	0x3e, 0xb9, 0xb5, 0x8a, 0xf0, 0xcc, 0x45, 0xe0, 0x1d, 0xc3, 0x50, 0x6d, 0xd1, 0x29, 0x6c, 0x53,
+	0x1e, 0x37, 0x84, 0xdd, 0x7f, 0x4d, 0xe8, 0x53, 0x1e, 0xd7, 0x74, 0x73, 0xd8, 0xe5, 0xb4, 0x50,
+	0x34, 0x5e, 0x54, 0x3a, 0x6d, 0xde, 0x55, 0xa7, 0x1d, 0x1b, 0x58, 0x69, 0xf0, 0xd8, 0x32, 0xe9,
+	0x3e, 0x49, 0x4a, 0x0a, 0xc1, 0x83, 0x9e, 0xd1, 0x62, 0xc7, 0x59, 0xb1, 0x31, 0x8e, 0x8e, 0x61,
+	0x50, 0x27, 0x47, 0xb0, 0x99, 0x32, 0x6e, 0x45, 0xeb, 0x61, 0xb3, 0xd6, 0x52, 0x46, 0x22, 0x2d,
+	0x33, 0x2b, 0x55, 0x0f, 0xbb, 0xdd, 0xc9, 0x6f, 0x1d, 0x08, 0x22, 0x91, 0x5d, 0x5b, 0xd6, 0x89,
+	0x6f, 0x1f, 0xf1, 0x99, 0xfe, 0x3c, 0xcf, 0x3a, 0xdf, 0x3c, 0x73, 0xa0, 0x44, 0xa4, 0x84, 0x27,
+	0xa1, 0x90, 0xc9, 0x24, 0xa1, 0xdc, 0x7c, 0xad, 0x13, 0xeb, 0x22, 0x39, 0x2b, 0xd6, 0x3f, 0xe8,
+	0xa7, 0xcd, 0xee, 0x67, 0x6f, 0xf4, 0xd2, 0x12, 0x3c, 0x4f, 0x45, 0x19, 0x57, 0xff, 0x8e, 0xce,
+	0x75, 0x3e, 0xfd, 0xbd, 0x72, 0x5e, 0x18, 0xe7, 0x45, 0xe3, 0xbc, 0x38, 0x9f, 0xfe, 0xe1, 0xed,
+	0x59, 0xe7, 0x6c, 0x66, 0xbc, 0xb3, 0x59, 0xe3, 0x9e, 0xcd, 0xce, 0xa7, 0xcb, 0xbe, 0x29, 0x62,
+	0xfa, 0x77, 0x00, 0x00, 0x00, 0xff, 0xff, 0xbb, 0x05, 0xa3, 0xa2, 0xd2, 0x08, 0x00, 0x00,
 }

@@ -225,6 +225,7 @@ jobs:
             VAULT_TOKEN= \
             VAULT_DEV_ROOT_TOKEN_ID= \
             VAULT_ACC= \
+            VAULT_TEST_LOG_DIR=/tmp/testlogs \
             gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
               -tags "${GO_TAGS}" \
               -timeout=60m \
@@ -237,6 +238,8 @@ jobs:
         path: test-results
     - store_test_results:
         path: test-results
+    - store_artifacts:
+        path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
@@ -298,6 +301,7 @@ jobs:
             VAULT_TOKEN= \
             VAULT_DEV_ROOT_TOKEN_ID= \
             VAULT_ACC= \
+            VAULT_TEST_LOG_DIR=/tmp/testlogs \
             gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
               -tags "${GO_TAGS}" \
               -timeout=60m \
@@ -310,6 +314,8 @@ jobs:
         path: test-results
     - store_test_results:
         path: test-results
+    - store_artifacts:
+        path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
@@ -402,6 +408,9 @@ workflows:
 #       extra_flags:
 #         default: \"\"
 #         type: string
+#       log_dir:
+#         default: /tmp/testlogs
+#         type: string
 #     steps:
 #     - run:
 #         command: |
@@ -435,6 +444,7 @@ workflows:
 #             VAULT_TOKEN= \\
 #             VAULT_DEV_ROOT_TOKEN_ID= \\
 #             VAULT_ACC= \\
+#             VAULT_TEST_LOG_DIR=<< parameters.log_dir >> \\
 #             gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \\
 #               -tags \"${GO_TAGS}\" \\
 #               -timeout=60m \\
@@ -571,11 +581,14 @@ workflows:
 #     - check-branch-name
 #     - setup-go
 #     - checkout
-#     - go_test
+#     - go_test:
+#         log_dir: /tmp/testlogs
 #     - store_artifacts:
 #         path: test-results
 #     - store_test_results:
 #         path: test-results
+#     - store_artifacts:
+#         path: /tmp/testlogs
 #   test-go-race:
 #     executor: go-machine
 #     steps:
@@ -583,10 +596,13 @@ workflows:
 #     - checkout
 #     - go_test:
 #         extra_flags: -race
+#         log_dir: /tmp/testlogs
 #     - store_artifacts:
 #         path: test-results
 #     - store_test_results:
 #         path: test-results
+#     - store_artifacts:
+#         path: /tmp/testlogs
 #   test-ui:
 #     executor: node
 #     resource_class: medium+
