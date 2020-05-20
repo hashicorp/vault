@@ -202,6 +202,12 @@ BUG FIXES:
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
 * ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
 
+## 1.3.6 (TBD)
+
+BUG FIXES:
+
+* auth/aws: Fix token renewal issues caused by the metadata changes in 1.3.5 [[GH-8991](https://github.com/hashicorp/vault/pull/8991)] 
+
 ## 1.3.5 (April 28th, 2020)
 
 CHANGES: 
