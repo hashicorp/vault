@@ -35,7 +35,7 @@ require (
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 	github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
-	github.com/fatih/color v1.7.0
+	github.com/fatih/color v1.9.0
 	github.com/fatih/structs v1.1.0
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
@@ -49,8 +49,8 @@ require (
 	github.com/golang/protobuf v1.4.1
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
-	github.com/hashicorp/consul-template v0.22.0
-	github.com/hashicorp/consul/api v1.2.1-0.20200128105449-6681be918a6e
+	github.com/hashicorp/consul-template v0.25.0
+	github.com/hashicorp/consul/api v1.4.0
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible
 	github.com/hashicorp/go-cleanhttp v0.5.1
@@ -98,7 +98,7 @@ require (
 	github.com/jefferai/jsonx v1.0.0
 	github.com/joyent/triton-go v1.7.1-0.20200416154420-6801d15b779f
 	github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f
-	github.com/kr/pretty v0.1.0
+	github.com/kr/pretty v0.2.0
 	github.com/kr/text v0.1.0
 	github.com/lib/pq v1.2.0
 	github.com/mattn/go-colorable v0.1.4
