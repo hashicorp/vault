@@ -42,3 +42,13 @@
 pre {
   background-color: inherit;
 }
+
+.is-highlight {
+  .modal-card-head {
+    background: $yellow-010;
+    border: 1px solid $yellow-100;
+  }
+  .modal-card-title {
+    color: $yellow-dark;
+  }
+}
