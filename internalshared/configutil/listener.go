@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 )
 
@@ -81,6 +82,11 @@ type Listener struct {
 
 	// RandomPort is used only for some testing purposes
 	RandomPort bool `hcl:"-"`
+
+	CorsEnabledRaw     interface{} `hcl:"cors_enabled"`
+	CorsEnabled        bool        `hcl:"-"`
+	CorsAllowedOrigins []string    `hcl:"cors_allowed_origins"`
+	CorsAllowedHeaders []string    `hcl:"cors_allowed_headers"`
 }
 
 func (l *Listener) GoString() string {
@@ -305,6 +311,21 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				}
 
 				l.Telemetry.UnauthenticatedMetricsAccessRaw = nil
+			}
+		}
+
+		// CORS
+		{
+			if l.CorsEnabledRaw != nil {
+				if l.CorsEnabled, err = parseutil.ParseBool(l.CorsEnabledRaw); err != nil {
+					return multierror.Prefix(fmt.Errorf("invalid value for cors_enabled: %w", err), fmt.Sprintf("listeners.%d", i))
+				}
+
+				l.CorsEnabledRaw = nil
+			}
+
+			if strutil.StrListContains(l.CorsAllowedOrigins, "*") && len(l.CorsAllowedOrigins) > 1 {
+				return multierror.Prefix(errors.New("cors_allowed_origins must only contain a wildcard or only non-wildcard values"), fmt.Sprintf("listeners.%d", i))
 			}
 		}
 
