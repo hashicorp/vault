@@ -489,10 +489,6 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 	defer os.Remove(roleIDPath)
 	defer os.Remove(secretIDPath)
 
-	// Get a temp file path we can use for the sink
-	sinkPath := makeTempFile(t, "sink.txt", "")
-	defer os.Remove(sinkPath)
-
 	// Create a config file
 	config := `
 auto_auth {
@@ -530,7 +526,7 @@ listener "tcp" {
     require_request_header = true
 }
 `
-	config = fmt.Sprintf(config, roleIDPath, secretIDPath, sinkPath)
+	config = fmt.Sprintf(config, roleIDPath, secretIDPath)
 	configPath := makeTempFile(t, "config.hcl", config)
 	defer os.Remove(configPath)
 
@@ -743,10 +739,6 @@ func TestAgent_Template_Basic(t *testing.T) {
 	}`)
 	request(t, serverClient, req, 200)
 
-	// Get a temp file path we can use for the sink
-	sinkPath := makeTempFile(t, "sink.txt", "")
-	defer os.Remove(sinkPath)
-
 	// make a temp directory to hold renders. Each test will create a temp dir
 	// inside this one
 	tmpDirRoot, err := ioutil.TempDir("", "agent-test-renders")
@@ -819,12 +811,6 @@ auto_auth {
 						remove_secret_id_file_after_reading = false
         }
     }
-
-    sink "file" {
-        config = {
-            path = "%s"
-        }
-    }
 }
 
 %s
@@ -841,7 +827,7 @@ auto_auth {
 			// flatten the template configs
 			templateConfig := strings.Join(templateConfigStrings, " ")
 
-			config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, sinkPath, templateConfig, exitAfterAuth)
+			config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, templateConfig, exitAfterAuth)
 			configPath := makeTempFile(t, "config.hcl", config)
 			defer os.Remove(configPath)
 
@@ -1032,10 +1018,6 @@ func TestAgent_Template_ExitCounter(t *testing.T) {
 	}`)
 	request(t, serverClient, req, 200)
 
-	// Get a temp file path we can use for the sink
-	sinkPath := makeTempFile(t, "sink.txt", "")
-	defer os.Remove(sinkPath)
-
 	// make a temp directory to hold renders. Each test will create a temp dir
 	// inside this one
 	tmpDirRoot, err := ioutil.TempDir("", "agent-test-renders")
@@ -1066,12 +1048,6 @@ auto_auth {
 						remove_secret_id_file_after_reading = false
         }
     }
-
-    sink "file" {
-        config = {
-            path = "%s"
-        }
-    }
 }
 
 template {
@@ -1100,7 +1076,7 @@ EOF
 exit_after_auth = true
 `
 
-	config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, sinkPath, tmpDir, tmpDir, tmpDir)
+	config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, tmpDir, tmpDir, tmpDir)
 	configPath := makeTempFile(t, "config.hcl", config)
 	defer os.Remove(configPath)
 
