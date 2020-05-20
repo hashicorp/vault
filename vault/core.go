@@ -350,6 +350,10 @@ type Core struct {
 	// metrics emission and sealing leading to a nil pointer
 	metricsMutex sync.Mutex
 
+	// metricSink is the destination for all metrics that have
+	// a cluster label.
+	metricSink *metricsutil.ClusterMetricSink
+
 	defaultLeaseTTL time.Duration
 	maxLeaseTTL     time.Duration
 
@@ -498,10 +502,10 @@ type Core struct {
 	// Stop channel for raft TLS rotations
 	raftTLSRotationStopCh chan struct{}
 	// Stores the pending peers we are waiting to give answers
-	pendingRaftPeers map[string][]byte
+	pendingRaftPeers *sync.Map
 
 	// rawConfig stores the config as-is from the provided server configuration.
-	rawConfig *server.Config
+	rawConfig *atomic.Value
 
 	coreNumber int
 
@@ -598,6 +602,7 @@ type CoreConfig struct {
 
 	// Telemetry objects
 	MetricsHelper *metricsutil.MetricsHelper
+	MetricSink    *metricsutil.ClusterMetricSink
 
 	CounterSyncInterval time.Duration
 
@@ -648,7 +653,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 // not exist.
 func (c *CoreConfig) GetServiceRegistration() sr.ServiceRegistration {
 
-	// Check whether there is a ServiceRegistration explictly configured
+	// Check whether there is a ServiceRegistration explicitly configured
 	if c.ServiceRegistration != nil {
 		return c.ServiceRegistration
 	}
@@ -697,6 +702,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	// Make a default logger if not provided
 	if conf.Logger == nil {
 		conf.Logger = logging.NewVaultLogger(log.Trace)
+	}
+
+	// Make a default metric sink if not provided
+	if conf.MetricSink == nil {
+		conf.MetricSink = metricsutil.BlackholeSink()
 	}
 
 	// Instantiate a non-nil raw config if none is provided
@@ -757,8 +767,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		neverBecomeActive:            new(uint32),
 		clusterLeaderParams:          new(atomic.Value),
 		metricsHelper:                conf.MetricsHelper,
+		metricSink:                   conf.MetricSink,
 		secureRandomReader:           conf.SecureRandomReader,
-		rawConfig:                    conf.RawConfig,
+		rawConfig:                    new(atomic.Value),
 		counters: counters{
 			requests:     new(uint64),
 			syncInterval: syncInterval,
@@ -767,6 +778,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		postUnsealStarted: new(uint32),
 		raftJoinDoneCh:    make(chan struct{}),
 	}
+
+	c.rawConfig.Store(conf.RawConfig)
 
 	atomic.StoreUint32(c.sealed, 1)
 	c.allLoggers = append(c.allLoggers, c.logger)
@@ -816,7 +829,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	if c.seal == nil {
 		c.seal = NewDefaultSeal(&vaultseal.Access{
-			Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+			Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
 				Logger: c.logger.Named("shamir"),
 			}),
 		})
@@ -1056,7 +1069,7 @@ func (c *Core) unseal(key []byte, useRecoveryKeys bool) (bool, error) {
 		if sealToUse.BarrierType() == wrapping.Shamir && c.migrationInfo == nil {
 			// If this is a legacy shamir seal this serves no purpose but it
 			// doesn't hurt.
-			err = sealToUse.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(masterKey)
+			err = sealToUse.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(masterKey)
 			if err != nil {
 				return false, err
 			}
@@ -1273,7 +1286,7 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 		c.migrationInfo.shamirCombinedKey = make([]byte, len(recoveredKey))
 		copy(c.migrationInfo.shamirCombinedKey, recoveredKey)
 		if seal.StoredKeysSupported() == vaultseal.StoredKeysSupportedShamirMaster {
-			err = seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(recoveredKey)
+			err = seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(recoveredKey)
 			if err != nil {
 				return nil, errwrap.Wrapf("failed to set master key in seal: {{err}}", err)
 			}
@@ -1347,7 +1360,7 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 
 		// We have recovery keys; we're going to use them as the new
 		// shamir KeK.
-		err := c.seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(c.migrationInfo.recoveryKey)
+		err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(c.migrationInfo.recoveryKey)
 		if err != nil {
 			return errwrap.Wrapf("failed to set master key in seal: {{err}}", err)
 		}
@@ -2067,6 +2080,7 @@ func stopReplicationImpl(c *Core) error {
 func (c *Core) emitMetrics(stopCh chan struct{}) {
 	emitTimer := time.Tick(time.Second)
 	writeTimer := time.Tick(c.counters.syncInterval)
+	identityCountTimer := time.Tick(time.Minute * 10)
 
 	for {
 		select {
@@ -2092,6 +2106,17 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 				}
 			}
 			c.stateLock.RUnlock()
+		case <-identityCountTimer:
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+				defer cancel()
+				entities, err := c.countActiveEntities(ctx)
+				if err != nil {
+					c.logger.Error("error counting identity entities", "err", err)
+				} else {
+					metrics.SetGauge([]string{"identity", "num_entities"}, float32(entities.Entities.Total))
+				}
+			}()
 
 		case <-stopCh:
 			return
@@ -2239,7 +2264,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, combinedKey []byte) ([]
 
 	case vaultseal.StoredKeysSupportedShamirMaster:
 		testseal := NewDefaultSeal(&vaultseal.Access{
-			Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+			Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
 				Logger: c.logger.Named("testseal"),
 			}),
 		})
@@ -2249,7 +2274,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, combinedKey []byte) ([]
 			return nil, errwrap.Wrapf("failed to setup test barrier config: {{err}}", err)
 		}
 		testseal.SetCachedBarrierConfig(cfg)
-		err = testseal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(combinedKey)
+		err = testseal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(combinedKey)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to setup unseal key: {{err}}", err)
 		}
@@ -2307,23 +2332,28 @@ func (c *Core) SetLogLevel(level log.Level) {
 
 // SetConfig sets core's config object to the newly provided config.
 func (c *Core) SetConfig(conf *server.Config) {
-	c.stateLock.Lock()
-	c.rawConfig = conf
-	c.stateLock.Unlock()
+	c.rawConfig.Store(conf)
 }
 
 // SanitizedConfig returns a sanitized version of the current config.
 // See server.Config.Sanitized for specific values omitted.
 func (c *Core) SanitizedConfig() map[string]interface{} {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	return c.rawConfig.Sanitized()
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return nil
+	}
+	return conf.(*server.Config).Sanitized()
 }
 
 // MetricsHelper returns the global metrics helper which allows external
 // packages to access Vault's internal metrics.
 func (c *Core) MetricsHelper() *metricsutil.MetricsHelper {
 	return c.metricsHelper
+}
+
+// MetricSink returns the metrics wrapper with which Core has been configured.
+func (c *Core) MetricSink() *metricsutil.ClusterMetricSink {
+	return c.metricSink
 }
 
 // BuiltinRegistry is an interface that allows the "vault" package to use

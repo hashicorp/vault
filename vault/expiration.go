@@ -1017,9 +1017,7 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 	resp.Auth.ClientToken = te.ID
 
 	// Refresh groups
-	if resp.Auth.EntityID != "" &&
-		resp.Auth.GroupAliases != nil &&
-		m.core.identityStore != nil {
+	if resp.Auth.EntityID != "" && m.core.identityStore != nil {
 		validAliases, err := m.core.identityStore.refreshExternalGroupMembershipsByEntityID(ctx, resp.Auth.EntityID, resp.Auth.GroupAliases)
 		if err != nil {
 			return nil, err

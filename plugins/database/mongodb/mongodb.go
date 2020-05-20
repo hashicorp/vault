@@ -3,8 +3,9 @@ package mongodb
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"io"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/api"
@@ -95,11 +96,6 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
-	client, err := m.getConnection(ctx)
-	if err != nil {
-		return "", "", err
-	}
-
 	username, err = m.GenerateUsername(usernameConfig)
 	if err != nil {
 		return "", "", err
@@ -132,7 +128,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 		Roles:    mongoCS.Roles.toStandardRolesArray(),
 	}
 
-	if err := runCommandWithRetry(ctx, client, mongoCS.DB, createUserCmd); err != nil {
+	if err := m.runCommandWithRetry(ctx, mongoCS.DB, createUserCmd); err != nil {
 		return "", "", err
 	}
 
@@ -150,11 +146,6 @@ func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statem
 	m.Lock()
 	defer m.Unlock()
 
-	client, err := m.getConnection(ctx)
-	if err != nil {
-		return "", "", err
-	}
-
 	username = staticUser.Username
 	password = staticUser.Password
 
@@ -163,11 +154,12 @@ func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statem
 		Password: password,
 	}
 
-	cs, err := connstring.Parse(m.ConnectionURL)
+	connURL := m.getConnectionURL()
+	cs, err := connstring.Parse(connURL)
 	if err != nil {
 		return "", "", err
 	}
-	if err := runCommandWithRetry(ctx, client, cs.Database, changeUserCmd); err != nil {
+	if err := m.runCommandWithRetry(ctx, cs.Database, changeUserCmd); err != nil {
 		return "", "", err
 	}
 
@@ -188,11 +180,6 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 
 	statements = dbutil.StatementCompatibilityHelper(statements)
 
-	client, err := m.getConnection(ctx)
-	if err != nil {
-		return err
-	}
-
 	// If no revocation statements provided, pass in empty JSON
 	var revocationStatement string
 	switch len(statements.Revocation) {
@@ -206,7 +193,7 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 
 	// Unmarshal revocation statements into mongodbRoles
 	var mongoCS mongoDBStatement
-	err = json.Unmarshal([]byte(revocationStatement), &mongoCS)
+	err := json.Unmarshal([]byte(revocationStatement), &mongoCS)
 	if err != nil {
 		return err
 	}
@@ -222,30 +209,68 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 		WriteConcern: writeconcern.New(writeconcern.WMajority()),
 	}
 
-	return runCommandWithRetry(ctx, client, db, dropUserCmd)
+	return m.runCommandWithRetry(ctx, db, dropUserCmd)
 }
 
-// RotateRootCredentials is not currently supported on MongoDB
+// RotateRootCredentials in MongoDB
 func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	return nil, errors.New("root credential rotation is not currently implemented in this database secrets engine")
+	// Grab the lock
+	m.Lock()
+	defer m.Unlock()
+
+	if m.Username == "" {
+		return m.RawConfig, fmt.Errorf("username not specified for root credentials")
+	}
+
+	password, err := m.GeneratePassword()
+	if err != nil {
+		return nil, err
+	}
+
+	changeUserCmd := &updateUserCommand{
+		Username: m.Username,
+		Password: password,
+	}
+
+	if err := m.runCommandWithRetry(ctx, "admin", changeUserCmd); err != nil {
+		return nil, err
+	}
+
+	m.RawConfig["password"] = password
+	m.Password = password
+	return m.RawConfig, nil
 }
 
-// runCommandWithRetry runs a command with retry.
-func runCommandWithRetry(ctx context.Context, client *mongo.Client, db string, cmd interface{}) error {
-	timeout := time.Now().Add(1 * time.Minute)
-	backoffTime := 3
-	for {
-		// Run command
-		result := client.Database(db).RunCommand(ctx, cmd, nil)
-		if result.Err() == nil {
-			break
-		}
-
-		if time.Now().After(timeout) {
-			return result.Err()
-		}
-		time.Sleep(time.Duration(backoffTime) * time.Second)
-		backoffTime += backoffTime
+// runCommandWithRetry runs a command and retries once more if there's a failure
+// on the first attempt. This should be called with the lock held
+func (m *MongoDB) runCommandWithRetry(ctx context.Context, db string, cmd interface{}) error {
+	// Get the client
+	client, err := m.getConnection(ctx)
+	if err != nil {
+		return err
 	}
+
+	// Run command
+	result := client.Database(db).RunCommand(ctx, cmd, nil)
+
+	// Error check on the first attempt
+	err = result.Err()
+	switch {
+	case err == nil:
+		return nil
+	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
+		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
+		client, err = m.getConnection(ctx)
+		if err != nil {
+			return err
+		}
+		result = client.Database(db).RunCommand(ctx, cmd, nil)
+		if err := result.Err(); err != nil {
+			return err
+		}
+	default:
+		return err
+	}
+
 	return nil
 }

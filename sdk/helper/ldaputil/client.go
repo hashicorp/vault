@@ -171,10 +171,9 @@ func (c *Client) GetUserDN(cfg *ConfigEntry, conn Connection, bindDN, username s
 		if err != nil {
 			return userDN, errwrap.Wrapf("LDAP search failed for detecting user: {{err}}", err)
 		}
-		if len(result.Entries) != 1 {
-			return userDN, fmt.Errorf("LDAP search for userdn 0 or not unique")
+		for _, e := range result.Entries {
+			userDN = e.DN
 		}
-		userDN = result.Entries[0].DN
 	} else {
 		userDN = bindDN
 	}
@@ -217,7 +216,7 @@ func (c *Client) performLdapFilterGroupsSearch(cfg *ConfigEntry, conn Connection
 
 	var renderedQuery bytes.Buffer
 	if err := t.Execute(&renderedQuery, context); err != nil {
-		return nil, errwrap.Wrapf("LDAP search failed due to template parsing error: {{error}}", err)
+		return nil, errwrap.Wrapf("LDAP search failed due to template parsing error: {{err}}", err)
 	}
 
 	if c.Logger.IsDebug() {

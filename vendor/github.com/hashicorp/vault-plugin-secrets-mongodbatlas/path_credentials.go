@@ -36,9 +36,9 @@ func (b *Backend) pathCredentials() *framework.Path {
 }
 
 func (b *Backend) pathCredentialsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	userName := d.Get("name").(string)
+	role := d.Get("name").(string)
 
-	cred, err := b.credentialRead(ctx, req.Storage, userName)
+	cred, err := b.credentialRead(ctx, req.Storage, role)
 	if err != nil {
 		return nil, errwrap.Wrapf("error retrieving credential: {{err}}", err)
 	}
@@ -47,18 +47,18 @@ func (b *Backend) pathCredentialsRead(ctx context.Context, req *logical.Request,
 		return nil, errors.New("error retrieving credential: credential is nil")
 	}
 
-	return b.programmaticAPIKeyCreate(ctx, req.Storage, userName, cred)
+	return b.programmaticAPIKeyCreate(ctx, req.Storage, role, cred)
 
 }
 
 type walEntry struct {
-	UserName             string
-	ProjectID            string
-	OrganizationID       string
-	ProgrammaticAPIKeyID string
+	Role                 string
+	ProjectID            string `mapstructure:"project_id"`
+	OrganizationID       string `mapstructure:"organization_id"`
+	ProgrammaticAPIKeyID string `mapstructure:"programmatic_api_key_id"`
 }
 
-func genUsername(displayName string) (string, error) {
+func genAPIKeyDescription(displayName string) (string, error) {
 
 	midString := displayNameRegex.ReplaceAllString(displayName, "_")
 

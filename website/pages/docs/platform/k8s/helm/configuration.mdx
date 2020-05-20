@@ -19,7 +19,7 @@ and consider if they're appropriate for your deployment.
 
   - `enabled` (`boolean: true`) - The master enabled/disabled configuration. If this is true, most components will be installed by default. If this is false, no components will be installed by default and manually opting-in is required, such as by setting `server.enabled` to true.
 
-  - `imagePullSecrets` (`string: ""`) - Defines secrets to be used when pulling images from private registries.
+  - `imagePullSecrets` (`array: []`) - References secrets to be used when pulling images from private registries. See [Pull an Image from a Private Registry](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) for more details.
 
     - `name`: (`string: required`) - Name of the secret containing files required for authentication to private image registries.
 
@@ -45,23 +45,30 @@ and consider if they're appropriate for your deployment.
 
     - `tag` (`string: "1.3.1"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
 
-  - `resources` (`string: ""`) - The resource requests and limits (CPU, memory, etc.) for each of the server. This should be a multi-line string mapping directly to a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources.<br /> **Setting this is highly recommended.**
+  - `authPath` (`string: "auth/kubernetes"`) - Mount path of the Vault Kubernetes Auth Method.
+
+  - `logLevel` (`string: "info"`) - Configures the log verbosity of the injector. Supported log levels: trace, debug, error, warn, info.
+
+  - `logFormat` (`string: "standard"`) - Configures the log format of the injector. Supported log formats: "standard", "json".
+
+  - `revokeOnShutdown` (`boolean: false`) - Configures all Vault Agent sidecars to revoke their token when shutting down.
+
+  - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each container of the server. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources.<br /> **Setting this is highly recommended.**
 
     ```yaml
-    # Resources are defined as a formatted multi-line string:
-    resources: |
+    resources:
       requests:
         memory: "10Gi"
       limits:
         memory: "10Gi"
     ```
 
-  - `namespaceSelector` (`string: ""`) - The selector used by the admission webhook controller to limit what namespaces where injection can happen. If set to null, all non-system namespaces are eligible for injection.
+  - `namespaceSelector` (`dictionary: {}`) - The selector used by the admission webhook controller to limit what namespaces where injection can happen. If set to null, all non-system namespaces are eligible for injection.
 
     ```yaml
-    # Selectors are defined as a formatted multi-line string.
+    # Selectors are defined as a YAML dictionary.
     # In this example, all namespaces with the label "injection: enabled" are eligible:
-    namespaceSelector: |
+    namespaceSelector:
       matchLabels:
         injection: enabled
     ```
@@ -76,6 +83,14 @@ and consider if they're appropriate for your deployment.
 
     - `keyName` (`string: "tls.key"`) - The name of the key file within the `secretName` secret.
 
+  - `extraEnvironmentVars` (`dictionary: {}`) - Extra environment variables to set in the injector deployment.
+
+  - `affinity` (`string: null`) - Affinity Settings for injector pods. This should be a multi-line string matching the affinity section of a PodSpec.
+
+  - `tolerations` (`string: null`) - Toleration Settings for injector pods. This should be a multi-line string matching the Toleration array in a PodSpec.
+
+  - `nodeSelector` (`string: null`) - nodeSelector labels for injector pod assignment, formatted as a muli-line string.
+
 - `server` - Values that configure running a Vault server within Kubernetes.
 
   - `image` - Values that configure the Vault Docker image.
@@ -88,11 +103,10 @@ and consider if they're appropriate for your deployment.
 
     - `updateStrategyType` (`string: "OnDelete"`) - Configure the [Update Strategy Type](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies) for the StatefulSet.
 
-    - `resources` (`string: null`) - The resource requests and limits (CPU, memory, etc.) for each of the server. This should be a multi-line string mapping directly to a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources. **Setting this is highly recommended.**
+    - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each container of the server. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources. **Setting this is highly recommended.**
 
       ```yaml
-      # Resources are defined as a formatted multi-line string:
-      resources: |
+      resources:
         requests:
           memory: "10Gi"
         limits:
@@ -102,6 +116,8 @@ and consider if they're appropriate for your deployment.
     * `ingress` - Values that configure Ingress services for Vault.
 
       - `enabled` (`boolean: false`) - When set to `true`, an [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) service will be created.
+
+      - `labels` (`dictionary: {}`) - Labels for the ingress service.
 
       - `annotations` (`string`) - This value defines additional annotations to add to the Ingress service. This should be formatted as a multi-line string.
 
@@ -115,20 +131,19 @@ and consider if they're appropriate for your deployment.
 
         - `host` (`string: required`): Name of the host to use for Ingress.
 
-        - `paths` (`string: required`): This value defines the types of host rules for the Ingress service.
+        - `paths` (`array: []`): A list of paths that will be directed to the Vault service. At least one path is required.
 
         ```yaml
         paths:
-          - backend:
-            serviceName: service2
-            servicePort: 80
+          - /
+          - /vault
         ```
 
     * `tls` - Values that configure the Ingress TLS rules.
 
-      - `hosts` (`string: null)`: Name of the hosts defined in the Common Name of the TLS Certificate. This should be formated as a multi-line string.
+      - `hosts` (`array: []`): List of the hosts defined in the Common Name of the TLS Certificate.
 
-      - `secretName` (`string: null)`: Name of the secret containing the required TLS files such as certificates and keys.
+      - `secretName` (`string: null`): Name of the secret containing the required TLS files such as certificates and keys.
 
       ```yaml
       hosts:
@@ -179,7 +194,7 @@ and consider if they're appropriate for your deployment.
         env: ...
     ```
 
-    - `extraEnvironmentVars` - The extra environment variables to be applied to the Vault server. This should be a multi-line key/value string.
+    - `extraEnvironmentVars` (`dictionary: {}`) - The extra environment variables to be applied to the Vault server.
 
     ```yaml
     # Extra Environment Variables are defined as key/value strings.
@@ -269,10 +284,10 @@ and consider if they're appropriate for your deployment.
       disktype: ssd
     ```
 
-    - `extraLabels` - This value defines additional labels for server pods. This should be formatted as a multi-line string.
+    - `extraLabels` (`dictionary: {}`) - This value defines additional labels for server pods.
 
     ```yaml
-    extraLabels: |
+    extraLabels:
       "sample/label1": "foo"
       "sample/label2": "bar"
     ```
@@ -392,6 +407,16 @@ and consider if they're appropriate for your deployment.
 
       - `enabled` (`boolean: false`) -
         Enables `ha` mode for the Vault server. This mode uses a highly available backend storage (such as Consul) to store Vault's data. By default this is configured to use [Consul Helm](https://github.com/hashicorp/consul-helm). For a complete list of storage backends, see the [Vault documentation](/docs/configuration).
+
+      - `raft` - This configures `raft` integrated storage mode for the Vault server.
+
+        - `enabled` (`boolean: false`) -
+          Enables `raft` integrated storage mode for the Vault server. This mode uses persistent volumes for storage.
+
+        - `config` (`string: "{}"`) -
+          A raw string of extra HCL or JSON [configuration](/docs/configuration) for Vault servers.
+          This will be saved as-is into a ConfigMap that is read by the Vault servers.
+          This can be used to add additional configuration that isn't directly exposed by the chart.
 
       - `replicas` (`int: 5`) -
         The number of pods to deploy to create a highly available cluster of Vault servers.

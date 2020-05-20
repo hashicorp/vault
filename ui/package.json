@@ -152,7 +152,7 @@
     "@storybook/ember": "^5.1.10",
     "babel-loader": "^8.0.6",
     "jsdoc-to-markdown": "^5.0.0",
-    "lint-staged": "^9.2.1"
+    "lint-staged": "^10.1.2"
   },
   "resolutions": {
     "handlebars": "^4.3.0",

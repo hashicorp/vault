@@ -16,11 +16,13 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	awsClient "github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/fullsailor/pkcs7"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-retryablehttp"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/awsutil"
@@ -35,6 +37,10 @@ const (
 	iamAuthType                   = "iam"
 	ec2AuthType                   = "ec2"
 	ec2EntityType                 = "ec2_instance"
+
+	// Retry configuration
+	retryWaitMin = 500 * time.Millisecond
+	retryWaitMax = 30 * time.Second
 )
 
 func (b *backend) pathLogin() *framework.Path {
@@ -830,24 +836,28 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 
 	auth := &logical.Auth{
 		Metadata: map[string]string{
-			"instance_id":      identityDocParsed.InstanceID,
-			"region":           identityDocParsed.Region,
-			"account_id":       identityDocParsed.AccountID,
 			"role_tag_max_ttl": rTagMaxTTL.String(),
 			"role":             roleName,
-			"ami_id":           identityDocParsed.AmiID,
 		},
 		Alias: &logical.Alias{
 			Name: identityAlias,
-			Metadata: map[string]string{
-				"instance_id": identityDocParsed.InstanceID,
-				"region":      identityDocParsed.Region,
-				"account_id":  identityDocParsed.AccountID,
-				"ami_id":      identityDocParsed.AmiID,
-			},
+		},
+		InternalData: map[string]interface{}{
+			"instance_id": identityDocParsed.InstanceID,
+			"region":      identityDocParsed.Region,
+			"account_id":  identityDocParsed.AccountID,
 		},
 	}
 	roleEntry.PopulateTokenAuth(auth)
+	if err := identityConfigEntry.EC2AuthMetadataHandler.PopulateDesiredMetadata(auth, map[string]string{
+		"instance_id": identityDocParsed.InstanceID,
+		"region":      identityDocParsed.Region,
+		"account_id":  identityDocParsed.AccountID,
+		"ami_id":      identityDocParsed.AmiID,
+		"auth_type":   ec2AuthType,
+	}); err != nil {
+		b.Logger().Warn("unable to set alias metadata", "err", err)
+	}
 
 	resp := &logical.Response{
 		Auth: auth,
@@ -958,9 +968,9 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 }
 
 func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	canonicalArn := req.Auth.Metadata["canonical_arn"]
-	if canonicalArn == "" {
-		return nil, fmt.Errorf("unable to retrieve canonical ARN from metadata during renewal")
+	canonicalArn, err := getMetadataValue(req.Auth, "canonical_arn")
+	if err != nil {
+		return nil, err
 	}
 
 	roleName := ""
@@ -991,16 +1001,19 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 	// renew existing tokens.
 	if roleEntry.InferredEntityType != "" {
 		if roleEntry.InferredEntityType == ec2EntityType {
-			instanceID, ok := req.Auth.Metadata["inferred_entity_id"]
-			if !ok {
-				return nil, fmt.Errorf("no inferred entity ID in auth metadata")
-			}
-			instanceRegion, ok := req.Auth.Metadata["inferred_aws_region"]
-			if !ok {
-				return nil, fmt.Errorf("no inferred AWS region in auth metadata")
-			}
-			_, err := b.validateInstance(ctx, req.Storage, instanceID, instanceRegion, req.Auth.Metadata["account_id"])
+			instanceID, err := getMetadataValue(req.Auth, "inferred_entity_id")
 			if err != nil {
+				return nil, err
+			}
+			instanceRegion, err := getMetadataValue(req.Auth, "inferred_aws_region")
+			if err != nil {
+				return nil, err
+			}
+			accountID, err := getMetadataValue(req.Auth, "account_id")
+			if err != nil {
+				b.Logger().Debug("account_id not present during iam renewal attempt, continuing to attempt validation")
+			}
+			if _, err := b.validateInstance(ctx, req.Storage, instanceID, instanceRegion, accountID); err != nil {
 				return nil, errwrap.Wrapf(fmt.Sprintf("failed to verify instance ID %q: {{err}}", instanceID), err)
 			}
 		} else {
@@ -1022,9 +1035,9 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 		//    implies that roleEntry.ResolveAWSUniqueIDs is true)
 		// 2: roleEntry.ResolveAWSUniqueIDs is false and canonical_arn is in roleEntry.BoundIamPrincipalARNs
 		// 3: Full ARN matches one of the wildcard globs in roleEntry.BoundIamPrincipalARNs
-		clientUserId, ok := req.Auth.Metadata["client_user_id"]
+		clientUserId, err := getMetadataValue(req.Auth, "client_user_id")
 		switch {
-		case ok && strutil.StrListContains(roleEntry.BoundIamPrincipalIDs, clientUserId): // check 1 passed
+		case err == nil && strutil.StrListContains(roleEntry.BoundIamPrincipalIDs, clientUserId): // check 1 passed
 		case !roleEntry.ResolveAWSUniqueIDs && strutil.StrListContains(roleEntry.BoundIamPrincipalARNs, canonicalArn): // check 2 passed
 		default:
 			// check 3 is a bit more complex, so we do it last
@@ -1065,28 +1078,22 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 	return resp, nil
 }
 
-func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	instanceID := req.Auth.Metadata["instance_id"]
-	if instanceID == "" {
-		return nil, fmt.Errorf("unable to fetch instance ID from metadata during renewal")
+func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	instanceID, err := getMetadataValue(req.Auth, "instance_id")
+	if err != nil {
+		return nil, err
 	}
-
-	region := req.Auth.Metadata["region"]
-	if region == "" {
-		return nil, fmt.Errorf("unable to fetch region from metadata during renewal")
+	region, err := getMetadataValue(req.Auth, "region")
+	if err != nil {
+		return nil, err
 	}
-
-	// Ensure backwards compatibility for older clients without account_id saved in metadata
-	accountID, ok := req.Auth.Metadata["account_id"]
-	if ok {
-		if accountID == "" {
-			return nil, fmt.Errorf("unable to fetch account_id from metadata during renewal")
-		}
+	accountID, err := getMetadataValue(req.Auth, "account_id")
+	if err != nil {
+		b.Logger().Debug("account_id not present during ec2 renewal attempt, continuing to attempt validation")
 	}
 
 	// Cross check that the instance is still in 'running' state
-	_, err := b.validateInstance(ctx, req.Storage, instanceID, region, accountID)
-	if err != nil {
+	if _, err := b.validateInstance(ctx, req.Storage, instanceID, region, accountID); err != nil {
 		return nil, errwrap.Wrapf(fmt.Sprintf("failed to verify instance ID %q: {{err}}", instanceID), err)
 	}
 
@@ -1198,6 +1205,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 
 	endpoint := "https://sts.amazonaws.com"
 
+	maxRetries := awsClient.DefaultRetryerMaxNumRetries
 	if config != nil {
 		if config.IAMServerIdHeaderValue != "" {
 			err = validateVaultHeaderValue(headers, parsedUrl, config.IAMServerIdHeaderValue)
@@ -1208,9 +1216,12 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		if config.STSEndpoint != "" {
 			endpoint = config.STSEndpoint
 		}
+		if config.MaxRetries >= 0 {
+			maxRetries = config.MaxRetries
+		}
 	}
 
-	callerID, err := submitCallerIdentityRequest(method, endpoint, parsedUrl, body, headers)
+	callerID, err := submitCallerIdentityRequest(ctx, maxRetries, method, endpoint, parsedUrl, body, headers)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error making upstream request: %v", err)), nil
 	}
@@ -1348,36 +1359,35 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 
 	auth := &logical.Auth{
 		Metadata: map[string]string{
-			"client_arn":           callerID.Arn,
-			"canonical_arn":        entity.canonicalArn(),
-			"client_user_id":       callerUniqueId,
-			"auth_type":            iamAuthType,
-			"inferred_entity_type": inferredEntityType,
-			"inferred_entity_id":   inferredEntityID,
-			"inferred_aws_region":  roleEntry.InferredAWSRegion,
-			"account_id":           entity.AccountNumber,
-			"role_id":              roleEntry.RoleID,
+			"role_id": roleEntry.RoleID,
 		},
 		InternalData: map[string]interface{}{
-			"role_name": roleName,
-			"role_id":   roleEntry.RoleID,
+			"role_name":           roleName,
+			"role_id":             roleEntry.RoleID,
+			"canonical_arn":       entity.canonicalArn(),
+			"client_user_id":      callerUniqueId,
+			"inferred_entity_id":  inferredEntityID,
+			"inferred_aws_region": roleEntry.InferredAWSRegion,
+			"account_id":          entity.AccountNumber,
 		},
 		DisplayName: entity.FriendlyName,
 		Alias: &logical.Alias{
 			Name: identityAlias,
-			Metadata: map[string]string{
-				"client_arn":           callerID.Arn,
-				"canonical_arn":        entity.canonicalArn(),
-				"client_user_id":       callerUniqueId,
-				"auth_type":            iamAuthType,
-				"inferred_entity_type": inferredEntityType,
-				"inferred_entity_id":   inferredEntityID,
-				"inferred_aws_region":  roleEntry.InferredAWSRegion,
-				"account_id":           entity.AccountNumber,
-			},
 		},
 	}
 	roleEntry.PopulateTokenAuth(auth)
+	if err := identityConfigEntry.IAMAuthMetadataHandler.PopulateDesiredMetadata(auth, map[string]string{
+		"client_arn":           callerID.Arn,
+		"canonical_arn":        entity.canonicalArn(),
+		"client_user_id":       callerUniqueId,
+		"auth_type":            iamAuthType,
+		"inferred_entity_type": inferredEntityType,
+		"inferred_entity_id":   inferredEntityID,
+		"inferred_aws_region":  roleEntry.InferredAWSRegion,
+		"account_id":           entity.AccountNumber,
+	}); err != nil {
+		b.Logger().Warn(fmt.Sprintf("unable to set alias metadata due to %s", err))
+	}
 
 	return &logical.Response{
 		Auth: auth,
@@ -1555,18 +1565,31 @@ func parseGetCallerIdentityResponse(response string) (GetCallerIdentityResponse,
 	return result, err
 }
 
-func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) (*GetCallerIdentityResult, error) {
+func submitCallerIdentityRequest(ctx context.Context, maxRetries int, method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) (*GetCallerIdentityResult, error) {
 	// NOTE: We need to ensure we're calling STS, instead of acting as an unintended network proxy
 	// The protection against this is that this method will only call the endpoint specified in the
 	// client config (defaulting to sts.amazonaws.com), so it would require a Vault admin to override
 	// the endpoint to talk to alternate web addresses
 	request := buildHttpRequest(method, endpoint, parsedUrl, body, headers)
+	retryableReq, err := retryablehttp.FromRequest(request)
+	if err != nil {
+		return nil, err
+	}
+	retryableReq = retryableReq.WithContext(ctx)
 	client := cleanhttp.DefaultClient()
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 		return http.ErrUseLastResponse
 	}
+	retryingClient := &retryablehttp.Client{
+		HTTPClient:   client,
+		RetryWaitMin: retryWaitMin,
+		RetryWaitMax: retryWaitMax,
+		RetryMax:     maxRetries,
+		CheckRetry:   retryablehttp.DefaultRetryPolicy,
+		Backoff:      retryablehttp.DefaultBackoff,
+	}
 
-	response, err := client.Do(request)
+	response, err := retryingClient.Do(retryableReq)
 	if err != nil {
 		return nil, errwrap.Wrapf("error making request: {{err}}", err)
 	}
@@ -1691,6 +1714,23 @@ func (b *backend) fullArn(ctx context.Context, e *iamEntity, s logical.Storage) 
 	default:
 		return "", fmt.Errorf("unrecognized entity type: %s", e.Type)
 	}
+}
+
+// getMetadataValue attempts to get a metadata key from
+// auth.InternalData and if unset, auth.Metadata. If not
+// found, returns "".
+func getMetadataValue(fromAuth *logical.Auth, forKey string) (string, error) {
+	if raw, ok := fromAuth.InternalData[forKey]; ok {
+		if val, ok := raw.(string); ok {
+			return val, nil
+		} else {
+			return "", fmt.Errorf("unable to fetch %q from auth metadata due to type of %T", forKey, raw)
+		}
+	}
+	if val, ok := fromAuth.Metadata[forKey]; ok {
+		return val, nil
+	}
+	return "", fmt.Errorf("%q not found in auth metadata", forKey)
 }
 
 const iamServerIdHeader = "X-Vault-AWS-IAM-Server-ID"

@@ -14,9 +14,8 @@ Azure Active Directory credentials. It treats Azure as a Trusted Third Party
 and expects a [JSON Web Token (JWT)](https://tools.ietf.org/html/rfc7519)
 signed by Azure Active Directory for the configured tenant.
 
-Currently supports authentication for:
-
-- [Azure Managed Service Identity (MSI)](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/overview)
+This method supports authentication for system-assigned and user-assigned
+managed identities. See [Azure Managed Service Identity (MSI)](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/overview) for more information about these resources.
 
 ## Prerequisites:
 
@@ -36,7 +35,7 @@ If Vault is hosted on Azure, Vault can use MSI to access Azure instead of a shar
 The next sections review how the authN/Z workflows work. If you
 have already reviewed these sections, here are some quick links to:
 
-- [Usage](#usage)
+- [Usage](/docs/secrets/azure#usage)
 - [API documentation](/api/auth/azure) docs.
 
 ## Authentication

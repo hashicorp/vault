@@ -14,7 +14,7 @@ export default {
   hasStringList: isPresent('[data-test-component=string-list]'),
   hasSearchSelect: isPresent('[data-test-component=search-select]'),
   hasTextFile: isPresent('[data-test-component=text-file]'),
-  hasTTLPicker: isPresent('[data-test-component=ttl-picker]'),
+  hasTTLPicker: isPresent('[data-test-toggle-input="Foo"]'),
   hasJSONEditor: isPresent('[data-test-component=json-editor]'),
   hasSelect: isPresent('select'),
   hasInput: isPresent('input'),
@@ -27,9 +27,11 @@ export default {
 
   fields: collection('[data-test-field]', {
     clickLabel: clickable('label'),
+    toggleTtl: clickable('[data-test-toggle-input="Foo"]'),
     for: attribute('for', 'label', { multiple: true }),
     labelText: text('label', { multiple: true }),
     input: fillable('input'),
+    ttlTime: fillable('[data-test-ttl-value]'),
     select: fillable('select'),
     textarea: fillable('textarea'),
     change: triggerable('keyup', '.input'),

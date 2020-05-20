@@ -118,13 +118,27 @@ type LeaderJoinInfo struct {
 	// LeaderCACert is the CA cert of the leader node
 	LeaderCACert string `json:"leader_ca_cert"`
 
-	// LeaderClientCert is the client certificate for the follower node to establish
-	// client authentication during TLS
+	// LeaderClientCert is the client certificate for the follower node to
+	// establish client authentication during TLS
 	LeaderClientCert string `json:"leader_client_cert"`
 
-	// LeaderClientKey is the client key for the follower node to establish client
-	// authentication during TLS
+	// LeaderClientKey is the client key for the follower node to establish
+	// client authentication during TLS.
 	LeaderClientKey string `json:"leader_client_key"`
+
+	// LeaderCACertFile is the path on disk to the the CA cert file of the
+	// leader node. This should only be provided via Vault's configuration file.
+	LeaderCACertFile string `json:"leader_ca_cert_file"`
+
+	// LeaderClientCertFile is the path on disk to the client certificate file
+	// for the follower node to establish client authentication during TLS. This
+	// should only be provided via Vault's configuration file.
+	LeaderClientCertFile string `json:"leader_client_cert_file"`
+
+	// LeaderClientKeyFile is the path on disk to the client key file for the
+	// follower node to establish client authentication during TLS. This should
+	// only be provided via Vault's configuration file.
+	LeaderClientKeyFile string `json:"leader_client_key_file"`
 
 	// Retry indicates if the join process should automatically be retried
 	Retry bool `json:"-"`
@@ -153,18 +167,33 @@ func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
 
 	for _, info := range leaderInfos {
 		info.Retry = true
-		var tlsConfig *tls.Config
-		var err error
-		if len(info.LeaderCACert) != 0 || len(info.LeaderClientCert) != 0 || len(info.LeaderClientKey) != 0 {
-			tlsConfig, err = tlsutil.ClientTLSConfig([]byte(info.LeaderCACert), []byte(info.LeaderClientCert), []byte(info.LeaderClientKey))
-			if err != nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node %q: {{err}}", info.LeaderAPIAddr), err)
-			}
+		info.TLSConfig, err = parseTLSInfo(info)
+		if err != nil {
+			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node %q: {{err}}", info.LeaderAPIAddr), err)
 		}
-		info.TLSConfig = tlsConfig
 	}
 
 	return leaderInfos, nil
+}
+
+// parseTLSInfo is a helper for parses the TLS information, preferring file
+// paths over raw certificate content.
+func parseTLSInfo(leaderInfo *LeaderJoinInfo) (*tls.Config, error) {
+	var tlsConfig *tls.Config
+	var err error
+	if len(leaderInfo.LeaderCACertFile) != 0 || len(leaderInfo.LeaderClientCertFile) != 0 || len(leaderInfo.LeaderClientKeyFile) != 0 {
+		tlsConfig, err = tlsutil.LoadClientTLSConfig(leaderInfo.LeaderCACertFile, leaderInfo.LeaderClientCertFile, leaderInfo.LeaderClientKeyFile)
+		if err != nil {
+			return nil, err
+		}
+	} else if len(leaderInfo.LeaderCACert) != 0 || len(leaderInfo.LeaderClientCert) != 0 || len(leaderInfo.LeaderClientKey) != 0 {
+		tlsConfig, err = tlsutil.ClientTLSConfig([]byte(leaderInfo.LeaderCACert), []byte(leaderInfo.LeaderClientCert), []byte(leaderInfo.LeaderClientKey))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return tlsConfig, nil
 }
 
 // EnsurePath is used to make sure a path exists
@@ -285,6 +314,24 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		localID:     localID,
 		permitPool:  physical.NewPermitPool(physical.DefaultParallelOperations),
 	}, nil
+}
+
+// Close is used to gracefully close all file resources.  N.B. This method
+// should only be called if you are sure the RaftBackend will never be used
+// again.
+func (b *RaftBackend) Close() error {
+	b.l.Lock()
+	defer b.l.Unlock()
+
+	if err := b.fsm.db.Close(); err != nil {
+		return err
+	}
+
+	if err := b.stableStore.(*raftboltdb.BoltStore).Close(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // RaftServer has information about a server in the Raft configuration
@@ -491,15 +538,29 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		return err
 	}
 
+	listenerIsNil := func(cl cluster.ClusterHook) bool {
+		switch {
+		case opts.ClusterListener == nil:
+			return true
+		default:
+			// Concrete type checks
+			switch cl.(type) {
+			case *cluster.Listener:
+				return cl.(*cluster.Listener) == nil
+			}
+		}
+		return false
+	}
+
 	switch {
-	case opts.TLSKeyring == nil && opts.ClusterListener == nil:
+	case opts.TLSKeyring == nil && listenerIsNil(opts.ClusterListener):
 		// If we don't have a provided network we use an in-memory one.
 		// This allows us to bootstrap a node without bringing up a cluster
 		// network. This will be true during bootstrap, tests and dev modes.
 		_, b.raftTransport = raft.NewInmemTransportWithTimeout(raft.ServerAddress(b.localID), time.Second)
 	case opts.TLSKeyring == nil:
 		return errors.New("no keyring provided")
-	case opts.ClusterListener == nil:
+	case listenerIsNil(opts.ClusterListener):
 		return errors.New("no cluster listener provided")
 	default:
 		// Set the local address and localID in the streaming layer and the raft config.
@@ -522,7 +583,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	raftConfig.LocalID = raft.ServerID(b.localID)
 
 	// Set up a channel for reliable leader notifications.
-	raftNotifyCh := make(chan bool, 1)
+	raftNotifyCh := make(chan bool, 10)
 	raftConfig.NotifyCh = raftNotifyCh
 
 	// If we have a bootstrapConfig set we should bootstrap now.
@@ -556,7 +617,16 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			return errwrap.Wrapf("raft recovery failed to parse peers.json: {{err}}", err)
 		}
 
-		b.logger.Info("raft recovery: found new config", "config", recoveryConfig)
+		// Non-voting servers are only allowed in enterprise. If Suffrage is disabled,
+		// error out to indicate that it isn't allowed.
+		for idx := range recoveryConfig.Servers {
+			if !nonVotersAllowed && recoveryConfig.Servers[idx].Suffrage == raft.Nonvoter {
+				return fmt.Errorf("raft recovery failed to parse configuration for node %q: setting `non_voter` is only supported in enterprise", recoveryConfig.Servers[idx].ID)
+			}
+		}
+
+		b.logger.Info("raft recovery found new config", "config", recoveryConfig)
+
 		err = raft.RecoverCluster(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport, recoveryConfig)
 		if err != nil {
 			return errwrap.Wrapf("raft recovery failed: {{err}}", err)
@@ -608,6 +678,18 @@ func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error
 	b.l.Unlock()
 
 	return future.Error()
+}
+
+// CommittedIndex returns the latest index committed to stable storage
+func (b *RaftBackend) CommittedIndex() uint64 {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.raft == nil {
+		return 0
+	}
+
+	return b.raft.LastIndex()
 }
 
 // AppliedIndex returns the latest index applied to the FSM

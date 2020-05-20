@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "wrapping";
+option go_package = "github.com/hashicorp/go-kms-wrapping;wrapping";
 
 package github.com.hashicorp.go.kms.wrapping.types;
 

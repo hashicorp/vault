@@ -25,10 +25,14 @@ func (b *backend) pathRotateCredentials() []*framework.Path {
 			Fields:  map[string]*framework.FieldSchema{},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.pathRotateCredentialsUpdate,
+					Callback:                    b.pathRotateCredentialsUpdate,
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 				logical.CreateOperation: &framework.PathOperation{
-					Callback: b.pathRotateCredentialsUpdate,
+					Callback:                    b.pathRotateCredentialsUpdate,
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 			},
 			HelpSynopsis:    pathRotateCredentialsUpdateHelpSyn,
@@ -44,10 +48,14 @@ func (b *backend) pathRotateCredentials() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.pathRotateRoleCredentialsUpdate,
+					Callback:                    b.pathRotateRoleCredentialsUpdate,
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 				logical.CreateOperation: &framework.PathOperation{
-					Callback: b.pathRotateRoleCredentialsUpdate,
+					Callback:                    b.pathRotateRoleCredentialsUpdate,
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 			},
 			HelpSynopsis:    pathRotateRoleCredentialsUpdateHelpSyn,
@@ -137,14 +145,17 @@ func (b *backend) pathRotateRoleCredentialsUpdate(ctx context.Context, req *logi
 		item.Priority = resp.RotationTime.Add(role.StaticAccount.RotationPeriod).Unix()
 	}
 
-	// Add their rotation to the queue
-	if err := b.pushItem(item); err != nil {
-		return nil, err
+	// Add their rotation to the queue. We use pushErr here to distinguish between
+	// the error returned from setStaticAccount. They are scoped differently but
+	// it's more clear to developers that err above can still be non nil, and not
+	// overwritten or reused here.
+	if pushErr := b.pushItem(item); pushErr != nil {
+		return nil, pushErr
 	}
 
 	// We're not returning creds here because we do not know if its been processed
 	// by the queue.
-	return nil, nil
+	return nil, err
 }
 
 // rollBackPassword uses naive exponential backoff to retry updating to an old password,

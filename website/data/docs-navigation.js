@@ -7,7 +7,7 @@
 
 export default [
   {
-    category: 'install'
+    category: 'install',
   },
   {
     category: 'internals',
@@ -20,8 +20,8 @@ export default [
       'token',
       'rotation',
       'replication',
-      'plugins'
-    ]
+      'plugins',
+    ],
   },
   {
     category: 'concepts',
@@ -34,16 +34,17 @@ export default [
       'response-wrapping',
       'policies',
       'ha',
+      'integrated-storage',
       'pgp-gpg-keybase',
-      'recovery-mode'
-    ]
+      'recovery-mode',
+    ],
   },
   {
     category: 'configuration',
     content: [
       {
         category: 'listener',
-        content: ['tcp']
+        content: ['tcp'],
       },
       {
         category: 'seal',
@@ -54,8 +55,8 @@ export default [
           'gcpckms',
           'ocikms',
           'pkcs11',
-          'transit'
-        ]
+          'transit',
+        ],
       },
       {
         category: 'storage',
@@ -80,20 +81,17 @@ export default [
           'raft',
           's3',
           'swift',
-          'zookeeper'
-        ]
+          'zookeeper',
+        ],
       },
       {
         category: 'service-registration',
-        content: [
-          'consul',
-          'kubernetes'
-        ]
+        content: ['consul', 'kubernetes'],
       },
       'telemetry',
       { category: 'ui' },
-      { category: 'entropy-augmentation' }
-    ]
+      { category: 'entropy-augmentation' },
+    ],
   },
   {
     category: 'commands',
@@ -101,11 +99,11 @@ export default [
       'agent',
       {
         category: 'audit',
-        content: ['disable', 'enable', 'list']
+        content: ['disable', 'enable', 'list'],
       },
       {
         category: 'auth',
-        content: ['disable', 'enable', 'help', 'list', 'tune']
+        content: ['disable', 'enable', 'help', 'list', 'tune'],
       },
       'debug',
       'delete',
@@ -121,12 +119,12 @@ export default [
           'patch',
           'put',
           'rollback',
-          'undelete'
-        ]
+          'undelete',
+        ],
       },
       {
         category: 'lease',
-        content: ['renew', 'revoke']
+        content: ['renew', 'revoke'],
       },
       'list',
       'login',
@@ -143,35 +141,35 @@ export default [
           'rotate',
           'seal',
           'step-down',
-          'unseal'
-        ]
+          'unseal',
+        ],
       },
       'path-help',
       {
         category: 'plugin',
-        content: ['deregister', 'info', 'list', 'register']
+        content: ['deregister', 'info', 'list', 'register'],
       },
       {
         category: 'policy',
-        content: ['delete', 'fmt', 'list', 'read', 'write']
+        content: ['delete', 'fmt', 'list', 'read', 'write'],
       },
       'read',
       {
         category: 'secrets',
-        content: ['disable', 'enable', 'list', 'move', 'tune']
+        content: ['disable', 'enable', 'list', 'move', 'tune'],
       },
       'server',
       'ssh',
       'status',
       {
         category: 'token',
-        content: ['capabilities', 'create', 'lookup', 'renew', 'revoke']
+        content: ['capabilities', 'create', 'lookup', 'renew', 'revoke'],
       },
       'unwrap',
       'version',
       'write',
-      'token-helper'
-    ]
+      'token-helper',
+    ],
   },
   {
     category: 'agent',
@@ -191,18 +189,18 @@ export default [
               'gcp',
               'jwt',
               'kerberos',
-              'kubernetes'
-            ]
+              'kubernetes',
+            ],
           },
           {
             category: 'sinks',
-            content: ['file']
-          }
-        ]
+            content: ['file'],
+          },
+        ],
       },
       { category: 'caching' },
-      { category: 'template' }
-    ]
+      { category: 'template' },
+    ],
   },
   '----------------',
   {
@@ -219,8 +217,8 @@ export default [
         content: [
           'cassandra',
           'elasticdb',
-          'influxdb',
           'hanadb',
+          'influxdb',
           'mongodb',
           'mongodbatlas',
           'mssql',
@@ -228,15 +226,15 @@ export default [
           'oracle',
           'postgresql',
           'redshift',
-          'custom'
-        ]
+          'custom',
+        ],
       },
       { category: 'gcp' },
       { category: 'gcpkms' },
       { category: 'kmip' },
       {
         category: 'kv',
-        content: ['kv-v1', 'kv-v2']
+        content: ['kv-v1', 'kv-v2'],
       },
       { category: 'identity' },
       { category: 'mongodbatlas' },
@@ -249,17 +247,14 @@ export default [
         content: [
           'signed-ssh-certificates',
           'one-time-ssh-passwords',
-          'dynamic-ssh-keys'
-        ]
+          'dynamic-ssh-keys',
+        ],
       },
       { category: 'totp' },
+      { category: 'transform' },
       { category: 'transit' },
-      '------------------------',
-      { category: 'cassandra' },
-      { category: 'mongodb' },
-      { category: 'mssql' },
-      { category: 'mysql' }
-    ]
+      { category: 'venafi' },
+    ],
   },
   {
     category: 'auth',
@@ -269,11 +264,11 @@ export default [
       'aws',
       'azure',
       'cf',
+      'github',
       'gcp',
       'jwt',
       'kerberos',
       'kubernetes',
-      'github',
       'ldap',
       'oci',
       'okta',
@@ -283,25 +278,25 @@ export default [
       'userpass',
       '---------',
       'app-id',
-      'mfa'
-    ]
+      'mfa',
+    ],
   },
   {
     category: 'audit',
-    content: ['file', 'syslog', 'socket']
+    content: ['file', 'syslog', 'socket'],
   },
   {
-    category: 'plugin'
+    category: 'plugin',
   },
   '----------------',
   {
-    category: 'what-is-vault'
+    category: 'what-is-vault',
   },
   {
-    category: 'use-cases'
+    category: 'use-cases',
   },
   {
-    category: 'partnerships'
+    category: 'partnerships',
   },
   '----------------',
   {
@@ -318,27 +313,33 @@ export default [
               {
                 category: 'examples',
                 content: [
+                  'development',
                   'standalone-load-balanced-ui',
                   'standalone-tls',
                   'standalone-audit',
-                  'ha-with-consul',
+                  'external',
                   'kubernetes-auth',
-                  'enterprise-best-practice'
-                ]
+                  'ha-with-consul',
+                  'ha-with-raft',
+                  'enterprise-with-raft',
+                  'enterprise-dr-with-raft',
+                  'enterprise-perf-with-raft',
+                  'enterprise-best-practice',
+                ],
               },
             ],
           },
           {
             category: 'injector',
-            content: ['annotations', 'installation', 'examples']
-          }
-        ]
+            content: ['annotations', 'installation', 'examples'],
+          },
+        ],
       },
       {
         category: 'aws-mp',
-        content: ['run']
-      }
-    ]
+        content: ['run'],
+      },
+    ],
   },
   '----------------',
   {
@@ -372,8 +373,14 @@ export default [
       'upgrade-to-1.2.0',
       'upgrade-to-1.2.1',
       'upgrade-to-1.2.4',
-      'upgrade-to-1.3.0'
-    ]
+      'upgrade-to-1.3.0',
+      'upgrade-to-1.3.2',
+      'upgrade-to-1.3.3',
+      'upgrade-to-1.3.4',
+      'upgrade-to-1.3.5',
+      'upgrade-to-1.4.0',
+      'upgrade-to-1.4.1',
+    ],
   },
   '----------------',
   {
@@ -382,7 +389,7 @@ export default [
       { category: 'replication' },
       {
         category: 'hsm',
-        content: ['behavior', 'security']
+        content: ['behavior', 'security'],
       },
       { category: 'entropy-augmentation' },
       { category: 'sealwrap' },
@@ -391,12 +398,12 @@ export default [
       { category: 'control-groups' },
       {
         category: 'mfa',
-        content: ['mfa-duo', 'mfa-okta', 'mfa-pingid', 'mfa-totp']
+        content: ['mfa-duo', 'mfa-okta', 'mfa-pingid', 'mfa-totp'],
       },
       {
         category: 'sentinel',
-        content: ['examples', 'properties']
-      }
-    ]
-  }
+        content: ['examples', 'properties'],
+      },
+    ],
+  },
 ]

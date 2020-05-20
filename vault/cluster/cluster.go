@@ -7,10 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"golang.org/x/net/http2"
@@ -66,6 +68,7 @@ type Listener struct {
 
 	networkLayer NetworkLayer
 	cipherSuites []uint16
+	advertise    net.Addr
 	logger       log.Logger
 	l            sync.RWMutex
 }
@@ -94,7 +97,23 @@ func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Lo
 	}
 }
 
+func (cl *Listener) SetAdvertiseAddr(addr string) error {
+	u, err := url.ParseRequestURI(addr)
+	if err != nil {
+		return errwrap.Wrapf("failed to parse advertise address: {{err}}", err)
+	}
+	cl.advertise = &NetAddr{
+		Host: u.Host,
+	}
+
+	return nil
+}
+
 func (cl *Listener) Addr() net.Addr {
+	if cl.advertise != nil {
+		return cl.advertise
+	}
+
 	addrs := cl.Addrs()
 	if len(addrs) == 0 {
 		return nil
@@ -421,4 +440,16 @@ type NetworkLayer interface {
 // NetworkLayerSet is used for returning a slice of layers to a caller.
 type NetworkLayerSet interface {
 	Layers() []NetworkLayer
+}
+
+type NetAddr struct {
+	Host string
+}
+
+func (c *NetAddr) String() string {
+	return c.Host
+}
+
+func (*NetAddr) Network() string {
+	return "tcp"
 }
