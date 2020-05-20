@@ -42,6 +42,7 @@ import (
 	"golang.org/x/net/http2"
 
 	docker "github.com/docker/docker/client"
+	uuid "github.com/hashicorp/go-uuid"
 )
 
 var _ stepwise.StepDriver = &DockerCluster{}
@@ -52,6 +53,10 @@ type DockerCluster struct {
 	PluginName string
 	// ClusterName is a UUID name of the cluster. Docker ID?
 	CluterName string
+
+	// DriverOptions are a set of options from the Stepwise test using this
+	// cluster
+	DriverOptions stepwise.DriverOptions
 
 	RaftStorage        bool
 	ClientAuthRequired bool
@@ -81,6 +86,15 @@ func (rc *DockerCluster) Teardown() error {
 	}
 	// TODO should return something
 	return nil
+}
+
+func (dc *DockerCluster) ExpandPath(path string) string {
+	// TODO mount point
+	if dc.DriverOptions.PluginType == stepwise.PluginTypeCredential {
+		path = fmt.Sprintf("%s/%s", "auth", path)
+		// TODO prefix with namespace
+	}
+	return path
 }
 
 func (dc *DockerCluster) Name() string {
@@ -859,18 +873,28 @@ func createNetwork(cli *docker.Client, netName, cidr string) (string, error) {
 }
 
 func NewDockerDriver(name string, do *stepwise.DriverOptions) *DockerCluster {
-	// TODO consolidate newdockerdriver and newdocker cluster
+	clusterUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(err)
+	}
+
+	if do == nil {
+		// set empty values
+		do = &stepwise.DriverOptions{}
+	}
 	return &DockerCluster{
-		PluginName:  name,
-		ClusterName: fmt.Sprintf("test-%s", name),
-		RaftStorage: true,
+		PluginName:    name,
+		ClusterName:   fmt.Sprintf("test-%s-%s", name, clusterUUID),
+		RaftStorage:   true,
+		DriverOptions: *do,
 	}
 }
 
 // Setup creates any temp dir and compiles the binary for copying to Docker
 func (dc *DockerCluster) Setup() error {
 	// TODO many not use name here
-	name := dc.PluginName
+	// TODO make PluginName give random name with prefix if given
+	name := dc.DriverOptions.PluginName
 	// get the working directory of the plugin being tested.
 	srcDir, err := os.Getwd()
 	if err != nil {

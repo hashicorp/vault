@@ -19,8 +19,10 @@ func TestBackend_stepwise_UserCrud(t *testing.T) {
 		Name:       "userpass",
 		PluginType: stepwise.PluginTypeCredential,
 		PluginName: "userpass",
+		MountPath:  "userpass",
 	}
 	q.Q("testing:", stepwise.PluginTypeCredential.String())
+	q.Q("do testing:", driverOptions.PluginType.String())
 	stepwise.Run(t, stepwise.Case{
 		Driver: dockerDriver.NewDockerDriver("userpass", driverOptions),
 		Steps: []stepwise.Step{

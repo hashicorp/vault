@@ -78,6 +78,9 @@ type StepDriver interface {
 	Client() (*api.Client, error)
 	Teardown() error
 	Name() string // maybe?
+
+	// ExpandPath adds any Namespace or mount path to the user defined path
+	ExpandPath(string) string
 }
 
 // PluginType defines the types of plugins supported
@@ -126,13 +129,20 @@ type DriverOptions struct {
 	// TODO verify this is needed
 	Name string
 
-	// PluginType is the optional type of plugin. Can be "secret" or "auth". If
-	// omitted, the default is "secret"
-	// TODO are there constants for those types?
+	// PluginType is the optional type of plugin. See PluginType const defined
+	// above
 	PluginType PluginType
 	// TODO verify needed
 	PluginName string
 }
+
+// PluginType returns the configured plugin type, or default "secrets"
+// TODO is this needed or is not specifying it give it a defualt?
+// func (do *DriverOptions) PluginType() PluginType {
+// if do.PluginType == PluginTypeUnknown {
+
+// }
+// }
 
 // func (do *StepDriverOptions) MountPath() string{
 // 	if do.mountPath==nil{
