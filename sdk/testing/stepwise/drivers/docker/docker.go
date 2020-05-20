@@ -858,7 +858,7 @@ func createNetwork(cli *docker.Client, netName, cidr string) (string, error) {
 	return resp.ID, nil
 }
 
-func NewDockerDriver(name string) *DockerCluster {
+func NewDockerDriver(name string, do *stepwise.DriverOptions) *DockerCluster {
 	// TODO consolidate newdockerdriver and newdocker cluster
 	return &DockerCluster{
 		PluginName:  name,

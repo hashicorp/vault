@@ -13,6 +13,7 @@ import (
 	"github.com/y0ssar1an/q"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -27,10 +28,10 @@ type TestTeardownFunc func() error
 type StepOperation string
 
 const (
-	// The operations below are called per path
+	// WriteOperation and UpdateOperation should be the same
 	WriteOperation  StepOperation = "create"
-	ReadOperation                 = "read"
 	UpdateOperation               = "update"
+	ReadOperation                 = "read"
 	DeleteOperation               = "delete"
 	ListOperation                 = "list"
 	HelpOperation                 = "help"
@@ -78,6 +79,74 @@ type StepDriver interface {
 	Teardown() error
 	Name() string // maybe?
 }
+
+// PluginType defines the types of plugins supported
+// This type re-create constants as a convienence so users don't need to import/use
+// the consts package. Example:
+//	driverOptions := &stepwise.DriverOptions{
+//		PluginType: stepwise.PluginTypeCredential,
+//	}
+// versus:
+//	driverOptions := &stepwise.DriverOptions{
+//		PluginType: consts.PluginTypeCredential,
+//	}
+// These are originally defined in sdk/helper/consts/plugin_types.go
+type PluginType consts.PluginType
+
+const (
+	PluginTypeUnknown PluginType = iota
+	PluginTypeCredential
+	PluginTypeDatabase
+	PluginTypeSecrets
+)
+
+func (p PluginType) String() string {
+	switch p {
+	case PluginTypeUnknown:
+		return "unknown"
+	case PluginTypeCredential:
+		return "auth"
+	case PluginTypeDatabase:
+		return "database"
+	case PluginTypeSecrets:
+		return "secret"
+	default:
+		return "unsupported"
+	}
+}
+
+// DriverOptions are a collection of options each step driver should
+// support
+type DriverOptions struct {
+	// MountPath is an optional string to specify the mount path for the plugin.
+	// Defaults to a random string
+	MountPath string
+
+	// Name is the name of the plugin to be tested.
+	// TODO verify this is needed
+	Name string
+
+	// PluginType is the optional type of plugin. Can be "secret" or "auth". If
+	// omitted, the default is "secret"
+	// TODO are there constants for those types?
+	PluginType PluginType
+	// TODO verify needed
+	PluginName string
+}
+
+// func (do *StepDriverOptions) MountPath() string{
+// 	if do.mountPath==nil{
+
+// 	}
+// 	return *do.MountPath
+// }
+
+// func (do *StepDriverOptions) SetMountPath(path string) error{
+// 	if path!=""{
+// 		*do.mountPath = path
+// 	}
+// 	return nil
+// }
 
 // Case is a single set of tests to run for a backend. A test Case
 // should generally map 1:1 to each test method for your integration
@@ -158,8 +227,11 @@ func Run(tt TestT, c Case) {
 	if c.Driver != nil {
 		err := c.Driver.Setup()
 		if err != nil {
-			c.Driver.Teardown()
-			tt.Fatal(err)
+			driverErr := fmt.Errorf("error setting up driver: %w", err)
+			if err := c.Driver.Teardown(); err != nil {
+				driverErr = fmt.Errorf("error during driver teardown: %w", driverErr)
+			}
+			tt.Fatal(driverErr)
 		}
 		defer func() {
 			if err := c.Driver.Teardown(); err != nil {

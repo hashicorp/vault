@@ -18,7 +18,7 @@ import (
 func TestBackend_basic_derived_docker(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	stepwise.Run(t, stepwise.Case{
-		Driver: dockerDriver.NewDockerDriver("transit"),
+		Driver: dockerDriver.NewDockerDriver("transit", nil),
 		Steps: []stepwise.Step{
 			testAccStepwiseListPolicy(t, "test", true),
 			testAccStepwiseWritePolicy(t, "test", true),
