@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/base62"
@@ -2715,6 +2716,20 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	if err := ts.create(ctx, &te); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
+
+	// Count the successful token creation.
+	ttl_label := metricsutil.TTLBucket(te.TTL)
+	ts.core.metricSink.IncrCounterWithLabels(
+		[]string{"token", "creation"},
+		1,
+		[]metrics.Label{
+			{"namespace", ns.ID},
+			{"auth_method", "token"},
+			{"mount_point", req.MountPoint}, // path, not accessor
+			{"creation_ttl", ttl_label},
+			{"token_type", tokenType.String()},
+		},
+	)
 
 	// Generate the response
 	resp.Auth = &logical.Auth{
