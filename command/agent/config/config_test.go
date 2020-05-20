@@ -525,3 +525,96 @@ func TestLoadConfigFile_Template(t *testing.T) {
 		})
 	}
 }
+
+// TestLoadConfigFile_Template_NoSinks tests template definitions without sinks in Vault Agent
+func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
+	testCases := map[string]struct {
+		fixturePath       string
+		expectedTemplates []*ctconfig.TemplateConfig
+	}{
+		"min": {
+			fixturePath: "./test-fixtures/config-template-min-nosink.hcl",
+			expectedTemplates: []*ctconfig.TemplateConfig{
+				&ctconfig.TemplateConfig{
+					Source:      pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
+					Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
+				},
+			},
+		},
+		"full": {
+			fixturePath: "./test-fixtures/config-template-full-nosink.hcl",
+			expectedTemplates: []*ctconfig.TemplateConfig{
+				&ctconfig.TemplateConfig{
+					Backup:         pointerutil.BoolPtr(true),
+					Command:        pointerutil.StringPtr("restart service foo"),
+					CommandTimeout: pointerutil.TimeDurationPtr("60s"),
+					Contents:       pointerutil.StringPtr("{{ keyOrDefault \"service/redis/maxconns@east-aws\" \"5\" }}"),
+					CreateDestDirs: pointerutil.BoolPtr(true),
+					Destination:    pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
+					ErrMissingKey:  pointerutil.BoolPtr(true),
+					LeftDelim:      pointerutil.StringPtr("<<"),
+					Perms:          pointerutil.FileModePtr(0655),
+					RightDelim:     pointerutil.StringPtr(">>"),
+					SandboxPath:    pointerutil.StringPtr("/path/on/disk/where"),
+
+					Wait: &ctconfig.WaitConfig{
+						Min: pointerutil.TimeDurationPtr("10s"),
+						Max: pointerutil.TimeDurationPtr("40s"),
+					},
+				},
+			},
+		},
+		"many": {
+			fixturePath: "./test-fixtures/config-template-many-nosink.hcl",
+			expectedTemplates: []*ctconfig.TemplateConfig{
+				&ctconfig.TemplateConfig{
+					Source:         pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
+					Destination:    pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
+					ErrMissingKey:  pointerutil.BoolPtr(false),
+					CreateDestDirs: pointerutil.BoolPtr(true),
+					Command:        pointerutil.StringPtr("restart service foo"),
+					Perms:          pointerutil.FileModePtr(0600),
+				},
+				&ctconfig.TemplateConfig{
+					Source:      pointerutil.StringPtr("/path/on/disk/to/template2.ctmpl"),
+					Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render2.txt"),
+					Backup:      pointerutil.BoolPtr(true),
+					Perms:       pointerutil.FileModePtr(0755),
+					Wait: &ctconfig.WaitConfig{
+						Min: pointerutil.TimeDurationPtr("2s"),
+						Max: pointerutil.TimeDurationPtr("10s"),
+					},
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			config, err := LoadConfig(tc.fixturePath)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			expected := &Config{
+				AutoAuth: &AutoAuth{
+					Method: &Method{
+						Type:      "aws",
+						MountPath: "auth/aws",
+						Namespace: "my-namespace/",
+						Config: map[string]interface{}{
+							"role": "foobar",
+						},
+					},
+					Sinks: nil,
+				},
+				Templates: tc.expectedTemplates,
+				PidFile:   "./pidfile",
+			}
+
+			if diff := deep.Equal(config, expected); diff != nil {
+				t.Fatal(diff)
+			}
+		})
+	}
+}
