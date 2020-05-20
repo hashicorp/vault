@@ -49,6 +49,8 @@ BUG FIXES:
 * sys: The path provided in `sys/internal/ui/mounts/:path` is now namespace-aware. This fixes an issue
   with `vault kv` subcommands that had namespaces provided in the path returning permission denied all the time.
   [[GH-8962](https://github.com/hashicorp/vault/pull/8962)]
+* transform (enterprise): Fix panic that could occur when accessing cached template entries, such as a requests
+  that accessed templates directly or indirectly from a performance standby node.
 
 ## 1.4.1 (April 30th, 2020)
 
