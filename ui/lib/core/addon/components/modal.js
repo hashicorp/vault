@@ -13,8 +13,10 @@
  */
 
 import Component from '@ember/component';
+import layout from '../templates/components/modal';
 
 export default Component.extend({
+  layout,
   title: null,
   showCloseButton: false,
   onClose: () => {},
