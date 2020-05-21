@@ -216,7 +216,7 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	// This isn't done in a transaction because even if we fail along the way,
 	// we want to remove as much access as possible
 	sessionStmt, err := db.PrepareContext(ctx,
-		"SELECT session_id FROM sys.dm_exec_sessions WHERE login_name = '?';")
+		"SELECT session_id FROM sys.dm_exec_sessions WHERE login_name = @p1;")
 	if err != nil {
 		return err
 	}
