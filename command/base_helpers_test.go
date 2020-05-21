@@ -200,11 +200,11 @@ func TestParseFlagFile(t *testing.T) {
 		t.Run(tc.value, func(t *testing.T) {
 			content, err := parseFlagFile(tc.value)
 			if err != nil {
-				t.Errorf("unexpected error parsing flag value: %v", err)
+				t.Fatalf("unexpected error parsing flag value: %v", err)
 			}
 
 			if content != tc.exp {
-				t.Errorf("expected %s to be %s", content, tc.exp)
+				t.Fatalf("expected %s to be %s", content, tc.exp)
 			}
 		})
 	}
