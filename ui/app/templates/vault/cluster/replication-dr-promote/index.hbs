@@ -1,62 +1,41 @@
-<SplashPage as |Page|>
-  <Page.header>
-    <h1 class="title is-4">
-     Disaster Recovery secondary is&nbsp;enabled
-    </h1>
-  </Page.header>
-  <Page.content>
-    <nav class="tabs sub-nav is-marginless">
-      <ul>
-        <li class="{{if (eq action '') 'is-active'}}">
-          {{#link-to 'vault.cluster.replication-dr-promote' (query-params action='')}}
-            Operation token
-          {{/link-to}}
-        </li>
-        <li class="{{if (eq action 'update') 'is-active'}}">
-          {{#link-to 'vault.cluster.replication-dr-promote' (query-params action='update')}}
-            Update primary
-          {{/link-to}}
-        </li>
-        <li class="{{if (eq action 'promote') 'is-active'}}">
-          {{#link-to 'vault.cluster.replication-dr-promote' (query-params action='promote')}}
-            Promote
-          {{/link-to}}
-        </li>
-      </ul>
-    </nav>
-    {{#if (eq action 'promote')}}
-      <AlertBanner
-        @type="warning"
-        @title="Caution"
-        @message="Vault Replication is not designed for active-active usage and enabling two performance primaries should never be done, as it can lead to data loss if they or their secondaries are ever reconnected."
-        @class="unseal-warning"
-        data-test-cluster-status
+<section class="section">
+  <div class="container is-widescreen">
+    <ReplicationPage @model={{model}} as |Page|>
+      <Page.header
+        @showTabs={{true}}
       />
-      <ReplicationActions
-        @replicationMode="dr"
-        @selectedAction="promote"
-        @model={{model}}
-        />
-    {{/if}}
-    {{#if (eq action 'update')}}
-      <ReplicationActions
-        @replicationMode="dr"
-        @selectedAction="update-primary"
-        @model={{model}}
-        />
-    {{/if}}
-    {{#unless action}}
-      <ShamirFlow
-        @action="generate-dr-operation-token"
-        @buttonText="Promote cluster"
-        @fetchOnInit=true
-        @generateAction=true
-      >
-        <p>
-          Generate an Operation Token by entering a portion of the master key.
-          Once all portions are entered, the generated operation token may be used to manage your secondary Disaster Recovery cluster.
-        </p>
-      </ShamirFlow>
-    {{/unless}}
-  </Page.content>
-</SplashPage>
+      {{#if Page.isDisabled}}
+        <EmptyState
+          @title="Disaster Recovery secondary not set up"
+          @message={{Page.message}}
+          @icon="alert-circle-outline"
+          @bottomBorder={{true}}
+        >
+          <nav class="breadcrumb">
+            <ul class="is-grouped-split">
+              <li>
+                {{#link-to "vault.cluster.secrets.backends" }}
+                  <span class="sep"/>
+                  Go back
+                {{/link-to}}
+              </li>
+              <li>
+                <LearnLink @path="/vault/operations/ops-disaster-recovery" @class="has-text-grey">
+                  Need help?
+                </LearnLink>
+              </li>
+            </ul>
+          </nav>
+        </EmptyState>
+      {{else}}
+        <section>
+          <ReplicationActions
+            @replicationMode="dr"
+            @clusterMode="secondary"
+            @model={{model}}
+            />
+        </section>
+      {{/if}}
+    </ReplicationPage>
+  </div>
+</section>
