@@ -2,14 +2,29 @@
   <LayoutLoading />
 {{else}}
   <MessageError @errors={{errors}} />
-  {{#each (if selectedAction (array selectedAction) (replication-action-for-mode replicationMode model.replicationAttrs.modeForUrl)) as |replicationAction index|}}
-    <div class="box is-fullwidth is-marginless {{if (gt index 0) 'is-bottomless' 'is-shadowless'}}">
-      {{component (concat 'replication-action-' replicationAction)
-        onSubmit=(action "onSubmit")
-        replicationMode=replicationMode
-        model=model
-        replicationDisplayMode=replicationDisplayMode
-      }}
-    </div>
-  {{/each}}
+  {{#if selectedAction}}
+    {{#each (array selectedAction) as |replicationAction index|}}
+      <div class="box is-fullwidth is-marginless {{if (gt index 0) 'is-bottomless' 'is-shadowless'}}">
+        {{component (concat 'replication-action-' replicationAction)
+          onSubmit=(action "onSubmit")
+          replicationMode=replicationMode
+          model=model
+          replicationDisplayMode=replicationDisplayMode
+        }}
+      </div>
+    {{/each}}
+  {{else}}
+  <div class="replication-actions-grid-layout">
+    {{#each (if clusterMode (replication-action-for-mode replicationMode clusterMode) (replication-action-for-mode replicationMode model.replicationAttrs.modeForUrl)) as |replicationAction index|}}
+        <div class="replication-actions-grid-item">
+          {{component (concat 'replication-action-' replicationAction)
+            onSubmit=(action "onSubmit")
+            replicationMode=replicationMode
+            model=model
+            replicationDisplayMode=replicationDisplayMode
+          }}
+        </div>
+    {{/each}}
+  </div>
+  {{/if}}
 {{/if}}

@@ -8,7 +8,7 @@ const ACTIONS = {
   },
   dr: {
     primary: ['disable', 'recover', 'reindex', 'demote'],
-    secondary: ['promote'],
+    secondary: ['disable', 'promote'],
     bootstrapping: ['disable', 'recover', 'reindex'],
   },
 };
