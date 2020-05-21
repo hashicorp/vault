@@ -22,7 +22,7 @@ This endpoint returns the current Control Group configuration.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/config/control-group
@@ -58,7 +58,7 @@ This endpoint allows configuring control groups.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
@@ -76,7 +76,7 @@ This endpoint removes any control group configuration.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \

@@ -17,13 +17,13 @@ key (an "unseal key").
 The unseal key can be supplied as an argument to the command, but this is
 not recommended as the unseal key will be available in your history:
 
-```text
+```shell-session
 $ vault operator unseal IXyR0OJnSFobekZMMCKCoVEpT7wI6l+USMzE3IcyDyo=
 ```
 
 Instead, run the command with no arguments and it will prompt for the key:
 
-```text
+```shell-session
 $ vault operator unseal
 Key (will be hidden): IXyR0OJnSFobekZMMCKCoVEpT7wI6l+USMzE3IcyDyo=
 ```
@@ -35,7 +35,7 @@ page](/docs/concepts/seal).
 
 Provide an unseal key:
 
-```text
+```shell-session
 $ vault operator unseal
 Key (will be hidden):
 Sealed: false

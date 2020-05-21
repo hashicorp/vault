@@ -45,6 +45,13 @@ storage "mysql" {
 - `tls_ca_file` `(string: "")` – Specifies the path to the CA certificate to
   connect using TLS.
 
+- `plaintext_credentials_transmission` `(string: "")` - Provides authorization
+  to send credentials over plaintext. Failure to provide a value AND a failure
+  to provide a TLS CA certificate will warn that the credentials are being sent
+  over plain text. In the future, failure to do acknowledge or use TLS will
+  result in server start being prevented. This will be done to ensure credentials
+  are not leaked accidentally.
+
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests to MySQL.
 

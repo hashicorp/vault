@@ -70,7 +70,12 @@ type ExpirationManager struct {
 	tokenStore *TokenStore
 	logger     log.Logger
 
-	pending     map[string]pendingInfo
+	// Although the data structure itself is atomic,
+	// pendingLock should be held to ensure lease modifications
+	// are atomic (with respect to storage, expiration time,
+	// and particularly the lease count.)
+	pending     sync.Map
+	leaseCount  int
 	pendingLock sync.RWMutex
 
 	tidyLock *int32
@@ -148,7 +153,8 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		tokenView:  view.SubView(tokenViewPrefix),
 		tokenStore: c.tokenStore,
 		logger:     logger,
-		pending:    make(map[string]pendingInfo),
+		pending:    sync.Map{},
+		leaseCount: 0,
 		tidyLock:   new(int32),
 
 		// new instances of the expiration manager will go immediately into
@@ -240,9 +246,11 @@ func (m *ExpirationManager) invalidate(key string) {
 		// Clear from the pending expiration
 		leaseID := strings.TrimPrefix(key, leaseViewPrefix)
 		m.pendingLock.Lock()
-		if pending, ok := m.pending[leaseID]; ok {
+		if info, ok := m.pending.Load(leaseID); ok {
+			pending := info.(pendingInfo)
 			pending.timer.Stop()
-			delete(m.pending, leaseID)
+			m.pending.Delete(leaseID)
+			m.leaseCount--
 		}
 		m.pendingLock.Unlock()
 	}
@@ -554,10 +562,13 @@ func (m *ExpirationManager) Stop() error {
 	close(m.quitCh)
 
 	m.pendingLock.Lock()
-	for _, pending := range m.pending {
-		pending.timer.Stop()
-	}
-	m.pending = make(map[string]pendingInfo)
+	m.pending.Range(func(key, value interface{}) bool {
+		info := value.(pendingInfo)
+		info.timer.Stop()
+		m.pending.Delete(key)
+		m.leaseCount--
+		return true
+	})
 	m.pendingLock.Unlock()
 
 	if m.inRestoreMode() {
@@ -654,9 +665,11 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 
 	// Clear the expiration handler
 	m.pendingLock.Lock()
-	if pending, ok := m.pending[leaseID]; ok {
+	if info, ok := m.pending.Load(leaseID); ok {
+		pending := info.(pendingInfo)
 		pending.timer.Stop()
-		delete(m.pending, leaseID)
+		m.pending.Delete(leaseID)
+		m.leaseCount--
 	}
 	m.pendingLock.Unlock()
 
@@ -1267,12 +1280,9 @@ func (m *ExpirationManager) FetchLeaseTimesByToken(ctx context.Context, te *logi
 func (m *ExpirationManager) FetchLeaseTimes(ctx context.Context, leaseID string) (*leaseEntry, error) {
 	defer metrics.MeasureSince([]string{"expire", "fetch-lease-times"}, time.Now())
 
-	m.pendingLock.RLock()
-	val := m.pending[leaseID]
-	m.pendingLock.RUnlock()
-
-	if val.exportLeaseTimes != nil {
-		return val.exportLeaseTimes, nil
+	info, ok := m.pending.Load(leaseID)
+	if ok && info.(pendingInfo).exportLeaseTimes != nil {
+		return info.(pendingInfo).exportLeaseTimes, nil
 	}
 
 	// Load the entry
@@ -1319,23 +1329,28 @@ func (m *ExpirationManager) updatePending(le *leaseEntry, leaseTotal time.Durati
 // updatePendingInternal is the locked version of updatePending; do not call
 // this without a write lock on m.pending
 func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal time.Duration) {
+	var pending pendingInfo
+
 	// Check for an existing timer
-	pending, ok := m.pending[le.LeaseID]
+	info, ok := m.pending.Load(le.LeaseID)
 
 	// If there is no expiry time, don't do anything
 	if le.ExpireTime.IsZero() {
 		// if the timer happened to exist, stop the time and delete it from the
 		// pending timers.
 		if ok {
-			pending.timer.Stop()
-			delete(m.pending, le.LeaseID)
+			info.(pendingInfo).timer.Stop()
+			m.pending.Delete(le.LeaseID)
+			m.leaseCount--
 		}
 		return
 	}
 
 	// Create entry if it does not exist or reset if it does
 	if ok {
+		pending = info.(pendingInfo)
 		pending.timer.Reset(leaseTotal)
+		// No change to lease count in this case
 	} else {
 		timer := time.AfterFunc(leaseTotal, func() {
 			m.expireFunc(m.quitContext, m, le)
@@ -1343,12 +1358,14 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal tim
 		pending = pendingInfo{
 			timer: timer,
 		}
+		// new lease
+		m.leaseCount++
 	}
 
 	// Extend the timer by the lease total
 	pending.exportLeaseTimes = m.leaseTimesForExport(le)
 
-	m.pending[le.LeaseID] = pending
+	m.pending.Store(le.LeaseID, pending)
 }
 
 // revokeEntry is used to attempt revocation of an internal entry
@@ -1783,9 +1800,11 @@ func (m *ExpirationManager) lookupLeasesByToken(ctx context.Context, te *logical
 
 // emitMetrics is invoked periodically to emit statistics
 func (m *ExpirationManager) emitMetrics() {
+	// All updates of this value are with the pendingLock held.
 	m.pendingLock.RLock()
-	num := len(m.pending)
+	num := m.leaseCount
 	m.pendingLock.RUnlock()
+
 	metrics.SetGauge([]string{"expire", "num_leases"}, float32(num))
 	// Check if lease count is greater than the threshold
 	if num > maxLeaseThreshold {

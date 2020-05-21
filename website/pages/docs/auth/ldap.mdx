@@ -42,7 +42,7 @@ Directory](http://social.technet.microsoft.com/wiki/contents/articles/5312.activ
 
 ### Via the CLI
 
-```text
+```shell-session
 $ vault login -method=ldap username=mitchellh
 Password (will be hidden):
 Successfully authenticated! The policies that are associated
@@ -53,7 +53,7 @@ admins
 
 ### Via the API
 
-```shell
+```shell-session
 $ curl \
     --request POST \
     --data '{"password": "foo"}' \
@@ -154,7 +154,7 @@ Use `vault path-help` for more details.
 - Group search will start under `ou=Groups,dc=example,dc=com`. For all group objects under that path, the `member` attribute will be checked for a match against the authenticated user.
 - Group names are identified using their `cn` attribute.
 
-```
+```shell-session
 $ vault write auth/ldap/config \
     url="ldap://ldap.example.com" \
     userdn="ou=Users,dc=example,dc=com" \
@@ -179,7 +179,7 @@ $ vault write auth/ldap/config \
 - Username passed to vault when authenticating maps to the `sAMAccountName` attribute.
 - Group membership will be resolved via the `memberOf` attribute of _user_ objects. That search will begin under `ou=Users,dc=example,dc=com`.
 
-```
+```shell-session
 $ vault write auth/ldap/config \
     url="ldap://ldap.example.com" \
     userattr=sAMAccountName \
@@ -205,7 +205,7 @@ $ vault write auth/ldap/config \
 - Group membership will be resolved via any one of `memberUid`, `member`, or `uniqueMember` attributes. That search will begin under `ou=Groups,dc=example,dc=com`.
 - Group names are identified using the `cn` attribute.
 
-```
+```shell-session
 $ vault write auth/ldap/config \
     url="ldaps://ldap.example.com" \
     userattr="uid" \
@@ -222,7 +222,7 @@ $ vault write auth/ldap/config \
 
 Next we want to create a mapping from an LDAP group to a Vault policy:
 
-```
+```shell-session
 $ vault write auth/ldap/groups/scientists policies=foo,bar
 ```
 
@@ -230,7 +230,7 @@ This maps the LDAP group "scientists" to the "foo" and "bar" Vault policies.
 We can also add specific LDAP users to additional (potentially non-LDAP)
 groups. Note that policies can also be specified on LDAP users as well.
 
-```
+```shell-session
 $ vault write auth/ldap/groups/engineers policies=foobar
 $ vault write auth/ldap/users/tesla groups=engineers policies=zoobar
 ```
@@ -241,7 +241,7 @@ policy.
 
 Finally, we can test this by authenticating:
 
-```
+```shell-session
 $ vault login -method=ldap username=tesla
 Password (will be hidden):
 Successfully authenticated! The policies that are associated

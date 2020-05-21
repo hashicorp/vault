@@ -17,7 +17,7 @@ client to make API calls. For example, if you started the Vault server in
 [dev mode](/docs/concepts/dev-server), you could validate the
 initialization status like this:
 
-```text
+```shell-session
 $ curl http://127.0.0.1:8200/v1/sys/init
 ```
 
@@ -53,14 +53,14 @@ listener "tcp" {
 
 Save this file on disk as `config.hcl` and then start the Vault server:
 
-```text
+```shell-session
 $ vault server -config=config.hcl
 ```
 
 At this point, we can use Vault's API for all our interactions. For example, we
 can initialize Vault like this:
 
-```text
+```shell-session
 $ curl \
     --request POST \
     --data '{"secret_shares": 1, "secret_threshold": 1}' \
@@ -85,14 +85,14 @@ To make this guide easy to copy-and-paste, we will be using the environment
 variable `$VAULT_TOKEN` to store the root token. You can export this Vault
 token in your current shell like this:
 
-```sh
+```shell-session
 $ export VAULT_TOKEN=6fa4128e-8bd2-fd02-0ea8-a5e020d9b766
 ```
 
 Using the unseal key (not the root token) from above, you can unseal the Vault
 via the HTTP API:
 
-```text
+```shell-session
 $ curl \
     --request POST \
     --data '{"key": "Nz1QAnTdjrlSccsPho5N7SfZr6IF0XQdYLuXzXzi/kE="}' \
@@ -121,7 +121,7 @@ authentication.
 
 Start by enabling the AppRole authentication.
 
-```text
+```shell-session
 $ curl \
     --header "X-Vault-Token: $VAULT_TOKEN" \
     --request POST \
@@ -139,7 +139,7 @@ policies](/docs/concepts/policies). In the following command, it is being
 specified that the tokens issued under the AppRole `my-role`, should be
 associated with `dev-policy` and the `my-policy`.
 
-```text
+```shell-session
 $ curl \
     --header "X-Vault-Token: $VAULT_TOKEN" \
     --request POST \
@@ -151,7 +151,7 @@ The AppRole backend, in its default configuration expects two hard to guess
 credentials, a role ID and a secret ID. This command fetches the role ID of the
 `my-role`.
 
-```text
+```shell-session
 $ curl \
     --header "X-Vault-Token: $VAULT_TOKEN" \
      http://127.0.0.1:8200/v1/auth/approle/role/my-role/role-id
@@ -169,7 +169,7 @@ The response will include a `data` key with the `role_id`:
 
 This command creates a new secret ID under the `my-role`.
 
-```text
+```shell-session
 $ curl \
     --header "X-Vault-Token: $VAULT_TOKEN" \
     --request POST \
@@ -190,7 +190,7 @@ The response will include the `secret_id` in the `data` key:
 These two credentials can be supplied to the login endpoint to fetch a new
 Vault token.
 
-```text
+```shell-session
 $ curl \
     --request POST \
     --data '{"role_id": "86a32a73-1f2b-05e0-113a-dfa930145d72", "secret_id": "cd4b2002-3e3b-aceb-378d-5caa84dffd14"}' \
@@ -221,11 +221,11 @@ resources encompassed by the policies `default`, `dev-policy` and `my-policy`.
 The newly acquired token can be exported as a new `VAULT_TOKEN` and use it to
 authenticate Vault requests.
 
-```sh
+```shell-session
 $ export VAULT_TOKEN="50617721-dfb5-1916-7b13-4091e169d28c"
 ```
 
-```text
+```shell-session
 $ curl \
     --header "X-Vault-Token: $VAULT_TOKEN" \
     --request POST \
@@ -236,7 +236,7 @@ $ curl \
 This will create a new secret named "foo" with the given JSON contents. We can
 read this value back with the same token:
 
-```text
+```shell-session
 $ curl \
     --header "X-Vault-Token: $VAULT_TOKEN" \
     http://127.0.0.1:8200/v1/secret/foo
