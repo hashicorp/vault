@@ -24,7 +24,7 @@ To learn more about authentication, see the
 
 Auth methods can be enabled/disabled using the CLI or the API.
 
-```text
+```shell-session
 $ vault auth enable userpass
 ```
 
@@ -37,7 +37,7 @@ enable "github", then you can interact with it at `auth/github`. However, this
 path is customizable, allowing users with advanced use cases to mount a single
 auth method multiple times.
 
-```text
+```shell-session
 $ vault auth enable -path=my-login userpass
 ```
 

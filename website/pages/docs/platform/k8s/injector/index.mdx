@@ -116,7 +116,7 @@ the secret. The annotation must have the following format:
 
 ```yaml
 vault.hashicorp.com/agent-inject-template-<unique-name>: |
-  < 
+  <
     TEMPLATE
     HERE
   >
@@ -135,7 +135,7 @@ vault.hashicorp.com/role: 'app'
 
 The rendered secret would look like this within the container:
 
-```bash
+```shell-session
 $ cat /vault/secrets/foo
 postgres://v-kubernet-pg-app-q0Z7WPfVN:A1a-BUEuQR52oAqPrP1J@postgres:5432/mydb?sslmode=disable
 ```
@@ -162,13 +162,13 @@ vault.hashicorp.com/role: 'app'
 
 The rendered secret would look like this within the container:
 
-```bash
+```shell-session
 $ cat /vault/secrets/foo
 password: A1a-BUEuQR52oAqPrP1J
 username: v-kubernet-pg-app-q0Z7WPfVNqqTJuoDqCTY-1576529094
 ```
 
-~> Some secrets such as KV are stored in maps.  Their data can be accessed using `.Data.data.<NAME>`
+~> Some secrets such as KV are stored in maps. Their data can be accessed using `.Data.data.<NAME>`
 
 #### Vault Agent Configuration Map
 
