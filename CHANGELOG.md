@@ -40,7 +40,9 @@ IMPROVEMENTS:
   
 BUG FIXES:
 
-* auth/ldap: Fix 1.4.0 regression that could result in auth failures when LDAP auth config includes upndomain. [[GH-9041](https://github.com/hashicorp/vault/pull/9041)] 
+* auth/aws: Fix token renewal issues caused by the metadata changes in 1.4.1 [[GH-8991](https://github.com/hashicorp/vault/pull/8991)] 
+* auth/ldap: Fix 1.4.0 regression that could result in auth failures when LDAP auth config includes upndomain. [[GH-9041](https://github.com/hashicorp/vault/pull/9041)]
+* secrets/database: Prevent generation of usernames that are not allowed by the MongoDB Atlas API [[GH-9](https://github.com/hashicorp/vault-plugin-database-mongodbatlas/pull/9)]
 * secrets/transform (enterprise): Fix panic that could occur when accessing cached template entries, such as a requests
   that accessed templates directly or indirectly from a performance standby node.
 * serviceregistration: Fix a regression for Consul service registration that ignored using the listener address as
