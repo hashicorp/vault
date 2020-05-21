@@ -2,10 +2,8 @@ package command
 
 import (
 	"fmt"
-	"io/ioutil"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -124,19 +122,19 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 		return 1
 	}
 
-	leaderCACert, err := parseArg(c.flagLeaderCACert)
+	leaderCACert, err := parseFlagFile(c.flagLeaderCACert)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Failed to parse leader CA certificate: %s", err))
 		return 1
 	}
 
-	leaderClientCert, err := parseArg(c.flagLeaderClientCert)
+	leaderClientCert, err := parseFlagFile(c.flagLeaderClientCert)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Failed to parse leader client certificate: %s", err))
 		return 1
 	}
 
-	leaderClientKey, err := parseArg(c.flagLeaderClientKey)
+	leaderClientKey, err := parseFlagFile(c.flagLeaderClientKey)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Failed to parse leader client key: %s", err))
 		return 1
@@ -174,18 +172,4 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 	c.UI.Output(tableOutput(out, nil))
 
 	return 0
-}
-
-func parseArg(raw string) (string, error) {
-	// check if the provided argument should be read from file
-	if len(raw) > 0 && raw[0] == '@' {
-		contents, err := ioutil.ReadFile(raw[1:])
-		if err != nil {
-			return "", errwrap.Wrapf("error reading file: {{err}}", err)
-		}
-
-		return string(contents), nil
-	}
-
-	return raw, nil
 }

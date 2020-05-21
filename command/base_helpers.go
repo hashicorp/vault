@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	kvbuilder "github.com/hashicorp/vault/internalshared/kv-builder"
 	"github.com/kr/text"
@@ -272,4 +274,21 @@ func humanDurationInt(i interface{}) interface{} {
 
 	// If we don't know what type it is, just return the original value
 	return i
+}
+
+// parseFlagFile accepts a flag value returns the contets of that value. If the
+// value starts with '@', that indicates the value is a file and it's contets
+// should be read and returned. Otherwise, the raw value is returned.
+func parseFlagFile(raw string) (string, error) {
+	// check if the provided argument should be read from file
+	if len(raw) > 0 && raw[0] == '@' {
+		contents, err := ioutil.ReadFile(raw[1:])
+		if err != nil {
+			return "", errwrap.Wrapf("error reading file: {{err}}", err)
+		}
+
+		return string(contents), nil
+	}
+
+	return raw, nil
 }
