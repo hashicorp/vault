@@ -26,7 +26,7 @@ This endpoint returns the given UI header configuration.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/config/ui/headers/X-Custom-Header
@@ -64,7 +64,7 @@ This endpoint allows configuring the values to be returned for the UI header.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
@@ -82,7 +82,7 @@ This endpoint removes a UI header.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -99,7 +99,7 @@ This endpoint returns a list of configured UI headers.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \

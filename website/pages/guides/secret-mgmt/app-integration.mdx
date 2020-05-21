@@ -130,7 +130,7 @@ same information from Vault.
 1. [Use Consul Template to Populate DB Credentials](#step3)
 1. [Use Envconsul to Retrieve DB Credentials](#step4)
 
-### <a name="step1"></a>Step 1: Setup Database Secrets Engine
+### Step 1: Setup Database Secrets Engine ((#step1))
 
 In this step, you are going to enable and configure the `database` secrets
 engine using `postgresql-database-plugin` where the database connection URL is
@@ -211,7 +211,7 @@ $ curl --header "X-Vault-Token: ..." \
        http://127.0.0.1:8200/v1/database/roles/readonly
 ```
 
-### <a name="step2"></a>Step 2: Generate Client Token
+### Step 2: Generate Client Token ((#step2))
 
 Consul Template tool itself is a Vault client. Therefore, it must have a valid
 token with policies permitting it to retrieve secrets from `database` secret
@@ -300,7 +300,7 @@ $ curl --header "X-Vault-Token: ..." \
 **NOTE:** This is the token that Consul Template uses to talk to Vault.
 Copy the **`client_token`** value and proceed to [Step 3](#step3).
 
-### <a name="step3"></a>Step 3: Use Consul Template to Populate DB Credentials
+### Step 3: Use Consul Template to Populate DB Credentials ((#step3))
 
 Assume that your application requires PostgreSQL database credentials to read
 data. Its configuration file, **`config.yml`** looks like:
@@ -364,7 +364,7 @@ language](https://github.com/hashicorp/consul-template#templating-language).
 > so in comparison to writing an application which invokes Vault API to accomplish
 > the same.
 
-### <a name="step4"></a>Step 4: Use Envconsul to Retrieve DB Credentials
+### Step 4: Use Envconsul to Retrieve DB Credentials ((#step4))
 
 Create a file named, **`app.sh`** containing the following:
 
@@ -389,7 +389,7 @@ with key name.
 
 Run the Envconsul tool using the Vault token you generated at [Step 2](#step2).
 
-```plaintext
+```shell-session
 $ VAULT_TOKEN=<token> envconsul -upcase -secret database/creds/readonly ./app.sh
 
 My connection info is:

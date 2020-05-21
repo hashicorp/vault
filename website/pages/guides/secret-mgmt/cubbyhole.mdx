@@ -71,7 +71,7 @@ Started](/intro/getting-started/install) guide to install Vault. Make sure
 that your Vault server has been [initialized and
 unsealed](/intro/getting-started/deploy).
 
-### <a name="policy"></a>Policy requirements
+### Policy requirements ((#policy))
 
 -> **NOTE:** For the purpose of this guide, you can use **`root`** token to work
 with Vault. However, it is recommended that root tokens are only used for just
@@ -121,7 +121,7 @@ uses cubbyhole response wrapping. In this guide, you perform the following:
 about reading and writing secrets in Vault, refer to the [Static
 Secret](/guides/secret-mgmt/static-secrets) guide.
 
-### <a name="step1"></a>Step 1: Create and wrap a token
+### Step 1: Create and wrap a token ((#step1))
 
 (**Persona:** admin)
 
@@ -152,14 +152,14 @@ path "secret/dev" {
 
 First create an `apps` policy:
 
-```shell
+```shell-session
 $ vault policy write apps apps-policy.hcl
 Policy 'apps' written.
 ```
 
 To create a token using response wrapping:
 
-```shell
+```shell-session
 $ vault token create -policy=<POLICY_NAME> -wrap-ttl=<WRAP_TTL>
 ```
 
@@ -171,7 +171,7 @@ duration of seconds (15s), minutes (20m), or hours (25h).
 Generate a token for `apps` persona using response wrapping with TTL of 120
 seconds.
 
-```shell
+```shell-session
 $ vault token create -policy=apps -wrap-ttl=120
 
 Key                          	Value
@@ -190,7 +190,7 @@ the generated token from the `token create` command.
 
 First create an `apps` policy using `sys/policy` endpoint:
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: <TOKEN>" \
        --request PUT \
        --data <PAYLOAD> \
@@ -219,7 +219,7 @@ desired TTL for a response-wrapping token for that request. This is set using
 the **`X-Vault-Wrap-TTL`** header in the request and can be either an integer
 number of seconds or a string duration.
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Wrap-TTL: <TTL>" \
        --header "X-Vault-Token: <TOKEN>" \
        --request <HTTP_VERB> \
@@ -234,7 +234,7 @@ seconds (15s), minutes (20m), or hours (25h).
 
 To wrap the response of token create request:
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Wrap-TTL: 120" \
        --header "X-Vault-Token: ..." \
        --request POST \
@@ -261,7 +261,7 @@ $ curl --header "X-Vault-Wrap-TTL: 120" \
 This API call generates a token for `apps` persona using response wrapping with
 TTL of 60 seconds. The admin user does not even see the generated token.
 
-### <a name="step2"></a>Step 2: Unwrap the secret
+### Step 2: Unwrap the secret ((#step2))
 
 (**Persona:** apps)
 
@@ -315,19 +315,19 @@ Code: 403. Errors:
 
 The command to unwrap the wrapped secret is:
 
-```shell
+```shell-session
 $ vault unwrap <WRAPPING_TOKEN>
 ```
 
 Or
 
-```shell
+```shell-session
 $ VAULT_TOKEN=<WRAPPING_TOKEN> vault unwrap
 ```
 
 **Example:**
 
-```shell
+```shell-session
 $ VAULT_TOKEN=9ac59985-094f-a2de-aed8-bf688e436fbc vault unwrap
 
 Key            	Value
@@ -344,7 +344,7 @@ Verify that this token has `apps` policy attached.
 Once the client acquired the token, future requests can be made using this
 token.
 
-```shell
+```shell-session
 $ vault login 7bb915b2-8a44-48b0-a71d-72b590252016
 
 $ vault read secret/dev
@@ -385,7 +385,7 @@ $ curl --header "X-Vault-Token: 5fe14760-b0fd-22dc-403c-14a05003b67f" \
 
 Now, unwrap the secret using `/sys/wrapping/unwrap` endpoint:
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: <WRAPPING_TOKEN>" \
        --request POST \
        <VAULT_ADDRESS>/v1/sys/wrapping/unwrap
@@ -393,7 +393,7 @@ $ curl --header "X-Vault-Token: <WRAPPING_TOKEN>" \
 
 **Example:**
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: e095129f-123a-4fef-c007-1f6a487cfa78" \
        --request POST \
        http://127.0.0.1:8200/v1/sys/wrapping/unwrap | jq
@@ -422,7 +422,7 @@ $ curl --header "X-Vault-Token: e095129f-123a-4fef-c007-1f6a487cfa78" \
 Once the client acquired the token, future requests can be made using this
 token.
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: af5f7682-aa55-fa37-5039-ee116df56600" \
        --request GET \
        http://127.0.0.1:8200/v1/secret/dev | jq
@@ -488,7 +488,7 @@ token	123456789abcdefg87654321
 Now, try to access the secret using the `root` token. It should NOT return the
 secret.
 
-```shell
+```shell-session
 $ VAULT_TOKEN=<ROOT_TOKEN> vault read cubbyhole/private/access-token
 
 No value found at cubbyhole/private/access-token
@@ -498,7 +498,7 @@ No value found at cubbyhole/private/access-token
 
 The API to work with the `cubbyhole` secret engine is very similar to `secret` secret engine:
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: <TOKEN>" \
        --request POST \
        --data <SECRETS> \
@@ -535,7 +535,7 @@ $ curl --header "X-Vault-Token: e095129f-123a-4fef-c007-1f6a487cfa78" --request 
 Now, try to access the secret using the `root` token. It should NOT return the
 secret.
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: root" --request GET \
        http://127.0.0.1:8200/v1/cubbyhole/private/access-token  | jq
 {
