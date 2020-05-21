@@ -48,13 +48,22 @@
     <nav class="tabs">
       <ul>
         {{#link-to
+          "vault.cluster.replication-dr-promote.details"
+          tagName="li"
+          activeClass="is-active"
+        }}
+          {{#link-to "vault.cluster.replication-dr-promote.details"}}
+            Details
+          {{/link-to}}
+        {{/link-to}}
+        {{#link-to
           "vault.cluster.replication-dr-promote"
           tagName="li"
           activeClass="is-active"
-          current-when=""
+          current-when="vault.cluster.replication-dr-promote.index"
         }}
           {{#link-to "vault.cluster.replication-dr-promote"}}
-            Details
+            Manage
           {{/link-to}}
         {{/link-to}}
       </ul>
