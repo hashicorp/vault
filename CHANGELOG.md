@@ -47,8 +47,9 @@ BUG FIXES:
   that accessed templates directly or indirectly from a performance standby node.
 * serviceregistration: Fix a regression for Consul service registration that ignored using the listener address as
   the redirect address unless api_addr was provided. It now properly uses the same redirect address as the one
-  used by Vault's Core object. [[GH-8976](https://github.com/hashicorp/vault/pull/8976)] 
-* secrets/openldap: Forward all rotation requests from standbys to active clusters [[GH-9028](https://github.com/hashicorp/vault/pull/9028)] 
+  used by Vault's Core object. [[GH-8976](https://github.com/hashicorp/vault/pull/8976)]
+* secrets/ad: Forward rotation requests from standbys to active clusters [[GH-66](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/66)]
+* secrets/openldap: Forward all rotation requests from standbys to active clusters [[GH-9028](https://github.com/hashicorp/vault/pull/9028)]
 * secrets/database: Return an error if a manual rotation of static account credentials fails [[GH-9035](https://github.com/hashicorp/vault/pull/9035)]
 * storage/raft: Advertise the configured cluster address to the rest of the nodes in the raft cluster. This fixes
   an issue where a node advertising 0.0.0.0 is not using a unique hostname. [[GH-9008](https://github.com/hashicorp/vault/pull/9008)]
