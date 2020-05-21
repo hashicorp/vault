@@ -160,3 +160,52 @@ func TestTruncateToSeconds(t *testing.T) {
 		})
 	}
 }
+
+func TestParseFlagFile(t *testing.T) {
+	t.Parallel()
+
+	content := "some raw content"
+	tmpFile, err := ioutil.TempFile(os.TempDir(), "TestParseFlagFile")
+	if err != nil {
+		t.Fatalf("failed to create temporary file: %v", err)
+	}
+
+	defer os.Remove(tmpFile.Name())
+
+	if _, err := tmpFile.WriteString(content); err != nil {
+		t.Fatalf("failed to write to temporary file: %v", err)
+	}
+
+	cases := []struct {
+		value string
+		exp   string
+	}{
+		{
+			"",
+			"",
+		},
+		{
+			content,
+			content,
+		},
+		{
+			fmt.Sprintf("@%s", tmpFile.Name()),
+			content,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.value, func(t *testing.T) {
+			content, err := parseFlagFile(tc.value)
+			if err != nil {
+				t.Errorf("unexpected error parsing flag value: %v", err)
+			}
+
+			if content != tc.exp {
+				t.Errorf("expected %s to be %s", content, tc.exp)
+			}
+		})
+	}
+}
