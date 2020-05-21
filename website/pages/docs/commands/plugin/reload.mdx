@@ -9,14 +9,14 @@ description: |-
 # plugin reload
 
 The `plugin reload` command is used to reload mounted plugin backends. Either
-the plugin name (`plugin`) or the desired plugin  backend mounts (`mounts`)
+the plugin name (`plugin`) or the desired plugin backend mounts (`mounts`)
 must be provided, but not both.
 
 ## Examples
 
 Reload a plugin:
 
-```text
+```shell-session
 $ vault plugin reload -plugin my-custom-plugin
 Success! Reloaded plugin: my-custom-plugin
 ```

@@ -20,20 +20,20 @@ revoked, or if the token has already reached its maximum TTL.
 
 Renew a token (this uses the `/auth/token/renew` endpoint and permission):
 
-```text
+```shell-session
 $ vault token renew 96ddf4bc-d217-f3ba-f9bd-017055595017
 ```
 
 Renew the currently authenticated token (this uses the `/auth/token/renew-self`
 endpoint and permission):
 
-```text
+```shell-session
 $ vault token renew
 ```
 
 Renew a token requesting a specific increment value:
 
-```text
+```shell-session
 $ vault token renew -increment=30m 96ddf4bc-d217-f3ba-f9bd-017055595017
 ```
 

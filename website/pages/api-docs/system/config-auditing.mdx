@@ -22,7 +22,7 @@ This endpoint lists the request headers that are configured to be audited.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/config/auditing/request-headers
@@ -58,7 +58,7 @@ This endpoint lists the information for the given request header.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/config/auditing/request-headers/my-header
@@ -100,7 +100,7 @@ This endpoint enables auditing of a header.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
@@ -121,7 +121,7 @@ This endpoint disables auditing of the given request header.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \

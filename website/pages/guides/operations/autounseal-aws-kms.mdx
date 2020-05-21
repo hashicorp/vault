@@ -112,7 +112,7 @@ The working directory should contain the provided Terraform files:
 
 **Task 2:** Set your AWS credentials as environment variables:
 
-```plaintext
+```shell-session
 $ export AWS_ACCESS_KEY_ID = "<YOUR_AWS_ACCESS_KEY_ID>"
 
 $ export AWS_SECRET_ACCESS_KEY = "<YOUR_AWS_SECRET_ACCESS_KEY>"
@@ -132,7 +132,7 @@ resources. Then **`terraform plan`** to verify your changes and the resources th
 will be created. If all looks good, then perform a **`terraform apply`** to
 provision the resources.
 
-```plaintext
+```shell-session
 $ terraform init
 Initializing provider plugins...
 ...
@@ -161,7 +161,7 @@ your server as well as the Vault Enterprise web interface address.
 
 SSH into the provisioned EC2 instance.
 
-```plaintext
+```shell-session
 $ ssh ubuntu@192.0.2.1 -i private.key
 ...
 Are you sure you want to continue connecting (yes/no)? yes
@@ -172,7 +172,7 @@ When you are prompted, enter "yes" to continue.
 To verify that Vault has been installed, run `vault status` command which should
 return "_server is not yet initialized_" message.
 
-```plaintext
+```shell-session
 $ export VAULT_ADDR=http://127.0.0.1:8200
 
 $ vault status
@@ -187,7 +187,7 @@ Code: 400. Errors:
 Run the **`vault operator init`** command to initialize the Vault server by
 setting its key share to be **`1`** as follow:
 
-```plaintext
+```shell-session
 $ vault operator init -stored-shares=1 -recovery-shares=1 -recovery-threshold=1 -key-shares=1 -key-threshold=1
 Recovery Key 1: oOxAQfxcZitjqZfF3984De8rUckPeahQDUvmJ1A4JrQ=
 Initial Root Token: 54c4dbe3-d45b-79d9-18d0-602831a6a991
@@ -200,7 +200,7 @@ securely distribute the above keys.
 
 Stop and start the Vault server:
 
-```plaintext
+```shell-session
 $ sudo systemctl stop vault
 
 $ vault status
@@ -211,7 +211,7 @@ $ sudo systemctl start vault
 
 Check the Vault status to verify that it has been started and unsealed.
 
-```plaintext
+```shell-session
 $ vault status
 Type: shamir
 Sealed: false
@@ -228,7 +228,7 @@ High-Availability Enabled: false
 
 Log into Vault using the generated initial root token:
 
-```plaintext
+```shell-session
 $ vault login 54c4dbe3-d45b-79d9-18d0-602831a6a991
 Successfully authenticated! You are now logged in.
 token: 54c4dbe3-d45b-79d9-18d0-602831a6a991
@@ -238,7 +238,7 @@ token_policies: [root]
 
 Review the Vault configuration file (`/etc/vault.d/vault.hcl`).
 
-```plaintext
+```shell-session
 $ cat /etc/vault.d/vault.hcl
 storage "file" {
   path = "/opt/vault"
@@ -267,7 +267,7 @@ and log in with your initial root token.
 
 Once completed, execute the following commands to clean up:
 
-```plaintext
+```shell-session
 $ terraform destroy -force
 
 $ rm -rf .terraform terraform.tfstate* private.key
