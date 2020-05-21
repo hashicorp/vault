@@ -89,7 +89,7 @@ This endpoint configures the LDAP auth method.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -127,7 +127,7 @@ This endpoint retrieves the LDAP configuration for the auth method.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/ldap/config
@@ -174,7 +174,7 @@ This endpoint returns a list of existing groups in the method.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -211,7 +211,7 @@ This endpoint returns the policies associated with a LDAP group.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/ldap/groups/admins
@@ -258,7 +258,7 @@ This endpoint creates or updates LDAP group policies.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -280,7 +280,7 @@ This endpoint deletes the LDAP group and policy association.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -297,7 +297,7 @@ This endpoint returns a list of existing users in the method.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -334,7 +334,7 @@ This endpoint returns the policies associated with a LDAP user.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/ldap/users/mitchellh
@@ -384,7 +384,7 @@ This endpoint creates or updates LDAP users policies and group associations.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -406,7 +406,7 @@ This endpoint deletes the LDAP user and policy association.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -436,7 +436,7 @@ This endpoint allows you to log in with LDAP credentials
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request POST \
     --data @payload.json \

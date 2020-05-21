@@ -19,14 +19,14 @@ documentation](/docs/audit)
 
 Enable an audit device:
 
-```text
+```shell-session
 $ vault audit enable file file_path=/tmp/my-file.txt
 Success! Enabled the file audit device at: file/
 ```
 
 List all audit devices:
 
-```text
+```shell-session
 $ vault audit list
 Path     Type    Description
 ----     ----    -----------
@@ -35,7 +35,7 @@ file/    file    n/a
 
 Disable an audit device:
 
-```text
+```shell-session
 $ vault audit disable file/
 Success! Disabled audit device (if it was enabled) at: file/
 ```

@@ -26,7 +26,7 @@ Vault supports a number of auth methods. Some backends are targeted
 toward users while others are targeted toward machines. Most authentication
 backends must be enabled before use. To enable an auth method:
 
-```sh
+```shell-session
 $ vault write sys/auth/my-auth type=userpass
 ```
 
@@ -36,7 +36,7 @@ authentications at the same path as their name, but this is not a requirement.
 
 To learn more about this authentication, use the built-in `path-help` command:
 
-```sh
+```shell-session
 $ vault path-help auth/my-auth
 # ...
 ```
@@ -70,7 +70,7 @@ revoking tokens, and renewing tokens. This is all covered on the
 To authenticate with the CLI, `vault login` is used. This supports many
 of the built-in auth methods. For example, with GitHub:
 
-```
+```shell-session
 $ vault login -method=github token=<token>
 ...
 ```

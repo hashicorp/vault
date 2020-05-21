@@ -19,7 +19,7 @@ This endpoint lists all configured policies.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/policy
@@ -48,7 +48,7 @@ This endpoint retrieve the policy body for the named policy.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/policy/my-policy
@@ -89,7 +89,7 @@ updated, it takes effect immediately to all associated users.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
@@ -113,7 +113,7 @@ affect all users associated with this policy.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \

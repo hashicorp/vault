@@ -19,19 +19,19 @@ documentation](/docs/concepts/policies).
 
 List all enabled policies:
 
-```text
+```shell-session
 $ vault policy list
 ```
 
 Create a policy named "my-policy" from contents on local disk:
 
-```text
+```shell-session
 $ vault policy write my-policy ./my-policy.hcl
 ```
 
 Delete the policy named my-policy:
 
-```text
+```shell-session
 $ vault policy delete my-policy
 ```
 

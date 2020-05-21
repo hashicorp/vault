@@ -249,18 +249,18 @@ injected, and currently the `path` keys in policies allow injection.
 
 ### Parameters
 
-| Name                                                                   | Description                                                             |
-| :--------------------------------------------------------------------- | :---------------------------------------------------------------------- |
-| `identity.entity.id`                                                   | The entity's ID                                                         |
-| `identity.entity.name`                                                 | The entity's name                                                       |
-| `identity.entity.metadata.<<metadata key>>`                            | Metadata associated with the entity for the given key                   |
-| `identity.entity.aliases.<<mount accessor>>.id`                        | Entity alias ID for the given mount                                     |
-| `identity.entity.aliases.<<mount accessor>>.name`                      | Entity alias name for the given mount                                   |
-| `identity.entity.aliases.<<mount accessor>>.metadata.<<metadata key>>` | Metadata associated with the alias for the given mount and metadata key |
-| `identity.groups.ids.<<group id>>.name`                                | The group name for the given group ID                                   |
-| `identity.groups.names.<<group name>>.id`                              | The group ID for the given group name                                   |
-| `identity.groups.ids.<<group id>>.metadata.<<metadata key>>`           | Metadata associated with the group for the given key                    |
-| `identity.groups.names.<<group name>>.metadata.<<metadata key>>`       | Metadata associated with the group for the given key                    |
+| Name                                                               | Description                                                             |
+| :----------------------------------------------------------------- | :---------------------------------------------------------------------- |
+| `identity.entity.id`                                               | The entity's ID                                                         |
+| `identity.entity.name`                                             | The entity's name                                                       |
+| `identity.entity.metadata.<metadata key>`                          | Metadata associated with the entity for the given key                   |
+| `identity.entity.aliases.<mount accessor>.id`                      | Entity alias ID for the given mount                                     |
+| `identity.entity.aliases.<mount accessor>.name`                    | Entity alias name for the given mount                                   |
+| `identity.entity.aliases.<mount accessor>.metadata.<metadata key>` | Metadata associated with the alias for the given mount and metadata key |
+| `identity.groups.ids.<group id>.name`                              | The group name for the given group ID                                   |
+| `identity.groups.names.<group name>.id`                            | The group ID for the given group name                                   |
+| `identity.groups.ids.<group id>.metadata.<metadata key>`           | Metadata associated with the group for the given key                    |
+| `identity.groups.names.<group name>.metadata.<metadata key>`       | Metadata associated with the group for the given key                    |
 
 ### Examples
 
@@ -490,19 +490,19 @@ your Vault's `default` policy.
 To view all permissions granted by the default policy on your Vault
 installation, run:
 
-```sh
+```shell-session
 $ vault read sys/policy/default
 ```
 
 To disable attachment of the default policy:
 
-```sh
+```shell-session
 $ vault token create -no-default-policy
 ```
 
 or via the API:
 
-```sh
+```shell-session
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
@@ -524,13 +524,13 @@ controlled users and authentication should be used.
 
 To revoke a root token, run:
 
-```sh
+```shell-session
 $ vault token revoke "<token>"
 ```
 
 or via the API:
 
-```sh
+```shell-session
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
@@ -553,13 +553,13 @@ policies must be uploaded to Vault before they can be used.
 
 To list all registered policies in Vault:
 
-```sh
+```shell-session
 $ vault read sys/policy
 ```
 
 or via the API:
 
-```sh
+```shell-session
 $ curl \
   --header "X-Vault-Token: ..." \
   https://vault.hashicorp.rocks/v1/sys/policy
@@ -574,13 +574,13 @@ functionality but formats the output in a special manner.
 Policies may be created (uploaded) via the CLI or via the API. To create a new
 policy in Vault:
 
-```sh
+```shell-session
 $ vault policy write policy-name policy-file.hcl
 ```
 
 or via the API:
 
-```sh
+```shell-session
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
@@ -598,13 +598,13 @@ Existing policies may be updated to change permissions via the CLI or via the
 API. To update an existing policy in Vault, follow the same steps as creating a
 policy, but use an existing policy name:
 
-```sh
+```shell-session
 $ vault write sys/policy/my-existing-policy policy=@updated-policy.json
 ```
 
 or via the API:
 
-```sh
+```shell-session
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
@@ -616,13 +616,13 @@ $ curl \
 
 Existing policies may be deleted via the CLI or API. To delete a policy:
 
-```sh
+```shell-session
 $ vault delete sys/policy/policy-name
 ```
 
 or via the API:
 
-```sh
+```shell-session
 $ curl \
   --request DELETE \
   --header "X-Vault-Token: ..." \
@@ -642,7 +642,7 @@ auth method.
 A Vault administrator or someone from the security team would create the user in
 Vault with a list of associated policies:
 
-```sh
+```shell-session
 $ vault write auth/userpass/users/sethvargo \
     password="s3cr3t!" \
     policies="dev-readonly,logs"
@@ -654,7 +654,7 @@ of policies attached.
 
 The user wishing to authenticate would run
 
-```sh
+```shell-session
 $ vault login -method="userpass" username="sethvargo"
 Password (will be hidden): ...
 ```
@@ -667,7 +667,7 @@ authenticated user.
 
 Tokens are associated with their policies at creation time. For example:
 
-```sh
+```shell-session
 $ vault token create -policy=dev-readonly -policy=logs
 ```
 
