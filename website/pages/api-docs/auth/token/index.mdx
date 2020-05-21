@@ -782,10 +782,10 @@ For each parent token listed in the secondary index, tidy will check if the toke
 still exists in storage, and if not its child tokens that still exist will be
 made orphans, then the parent token will be removed from the secondary index.
 
-For each accessor listed in the accessor index, tidy will check if the corresponding
-token still exists in storage, and if not will delete the accessor from the index.
-If the token still exists in storage but shouldn't, tidy will try to revoke it
-and any child leases it might have, then delete the accessor entry.
+For each accessor found, tidy will check if the corresponding token still exists
+in storage, and if not will delete the accessor. If the token still exists in
+storage but shouldn't, tidy will try to revoke it and any child leases it might
+have, then delete the accessor.
 
 Finally, any cubbyhole entries that are associated with tokens which weren't deemed
 valid in the above steps will be deleted.
