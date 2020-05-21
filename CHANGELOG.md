@@ -24,7 +24,7 @@ BUG FIXES:
 * secrets/kv: Return the value of delete_version_after when reading kv/config, even if it is set to the default. [[GH-42](https://github.com/hashicorp/vault-plugin-secrets-kv/pull/42)]
 * ui: Add Toggle component into core addon so it is available in KMIP and other Ember Engines.[[GH-8913]](https://github.com/hashicorp/vault/pull/8913)
 
-## 1.4.2 (TBD)
+## 1.4.2 (May 21st, 2020)
 
 SECURITY:
 * core: proxy environment variables are now redacted before being logged, in case the URLs include a username:password [[GH-9022](https://github.com/hashicorp/vault/pull/9022)]
@@ -211,7 +211,7 @@ BUG FIXES:
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
 * ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
 
-## 1.3.6 (TBD)
+## 1.3.6 (May 21st, 2020)
 
 SECURITY:
 * core: proxy environment variables are now redacted before being logged, in case the URLs include a username:password [[GH-9022](https://github.com/hashicorp/vault/pull/9022)]
