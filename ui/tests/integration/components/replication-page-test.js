@@ -25,8 +25,13 @@ module('Integration | Enterprise | Component | replication-page', function(hooks
     assert.dom('[data-test-layout-loading]').doesNotExist();
   });
 
-  test('it renders loader when clusterId is unknown', async function(assert) {
+  test('it renders loader when either clusterId is unknown or mode is bootstrapping', async function(assert) {
     this.set('model.replicationAttrs.clusterId', '');
+    await render(hbs`<ReplicationPage @model={{model}} />`);
+    assert.dom('[data-test-layout-loading]').exists();
+
+    this.set('model.replicationAttrs.clusterId', '123456');
+    this.set('model.replicationAttrs.mode', 'bootstrapping');
     await render(hbs`<ReplicationPage @model={{model}} />`);
     assert.dom('[data-test-layout-loading]').exists();
   });
