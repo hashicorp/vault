@@ -254,6 +254,13 @@ func TestLoadConfigFile_Bad_AutoAuth_Wrapped_Multiple_Sinks(t *testing.T) {
 	}
 }
 
+func TestLoadConfigFile_Bad_AutoAuth_Nosinks_Nocache_Notemplates(t *testing.T) {
+	_, err := LoadConfig("./test-fixtures/bad-config-auto_auth-nosinks-nocache-notemplates.hcl")
+	if err == nil {
+		t.Fatal("LoadConfig should return an error when auto_auth configured and there are no sinks, caches or templates")
+	}
+}
+
 func TestLoadConfigFile_Bad_AutoAuth_Both_Wrapping_Types(t *testing.T) {
 	_, err := LoadConfig("./test-fixtures/bad-config-method-wrapping-and-sink-wrapping.hcl")
 	if err == nil {
