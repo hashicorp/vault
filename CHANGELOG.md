@@ -29,7 +29,8 @@ BUG FIXES:
 ## 1.4.2 (May 21st, 2020)
 
 SECURITY:
-* core: proxy environment variables are now redacted before being logged, in case the URLs include a username:password [[GH-9022](https://github.com/hashicorp/vault/pull/9022)]
+* core: proxy environment variables are now redacted before being logged, in case the URLs include a username:password. This vulnerability, CVE-2020-13223, is fixed in 1.3.6 and 1.4.2, but affects 1.4 and 1.4.2, as well as older versions of Vault [[GH-9022](https://github.com/hashicorp/vault/pull/9022)]
+* secrets/gcp: Fix a regression in 1.4.0 where the system TTLs were being used instead of the configured backend TTLs for dynamic service accounts. This vulnerability is CVE-2020-12757. [[GH-85](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/85)]
 
 IMPROVEMENTS:
 
@@ -216,7 +217,7 @@ BUG FIXES:
 ## 1.3.6 (May 21st, 2020)
 
 SECURITY:
-* core: proxy environment variables are now redacted before being logged, in case the URLs include a username:password [[GH-9022](https://github.com/hashicorp/vault/pull/9022)]
+* core: proxy environment variables are now redacted before being logged, in case the URLs include a username:password. This vulnerability, CVE-2020-13223, is fixed in 1.3.6 and 1.4.2, but affects 1.4 and 1.4.2, as well as older versions of Vault [[GH-9022](https://github.com/hashicorp/vault/pull/9022)]
 
 BUG FIXES:
 
