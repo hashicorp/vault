@@ -222,7 +222,7 @@ github.com/duosecurity/duo_api_golang
 github.com/duosecurity/duo_api_golang/authapi
 # github.com/elazarl/go-bindata-assetfs v1.0.0
 github.com/elazarl/go-bindata-assetfs
-# github.com/fatih/color v1.7.0
+# github.com/fatih/color v1.9.0
 github.com/fatih/color
 # github.com/fatih/structs v1.1.0
 github.com/fatih/structs
@@ -293,7 +293,7 @@ github.com/gorhill/cronexpr
 github.com/gorilla/websocket
 # github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed
 github.com/hailocab/go-hostpool
-# github.com/hashicorp/consul-template v0.22.0
+# github.com/hashicorp/consul-template v0.25.0
 github.com/hashicorp/consul-template/child
 github.com/hashicorp/consul-template/config
 github.com/hashicorp/consul-template/dependency
@@ -304,7 +304,7 @@ github.com/hashicorp/consul-template/signals
 github.com/hashicorp/consul-template/template
 github.com/hashicorp/consul-template/version
 github.com/hashicorp/consul-template/watch
-# github.com/hashicorp/consul/api v1.2.1-0.20200128105449-6681be918a6e
+# github.com/hashicorp/consul/api v1.4.0
 github.com/hashicorp/consul/api
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
@@ -407,7 +407,7 @@ github.com/hashicorp/vault-plugin-auth-oci
 github.com/hashicorp/vault-plugin-database-elasticsearch
 # github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2-0.20200520204052-f840e9d4895c
 github.com/hashicorp/vault-plugin-database-mongodbatlas
-# github.com/hashicorp/vault-plugin-secrets-ad v0.6.4-beta1.0.20200518124111-3dceeb3ce90e
+# github.com/hashicorp/vault-plugin-secrets-ad v0.6.6-0.20200520202259-fc6b89630f9f
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/client
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/util
@@ -570,7 +570,7 @@ github.com/keybase/go-crypto/openpgp/s2k
 github.com/keybase/go-crypto/rsa
 # github.com/konsorten/go-windows-terminal-sequences v1.0.1
 github.com/konsorten/go-windows-terminal-sequences
-# github.com/kr/pretty v0.1.0
+# github.com/kr/pretty v0.2.0
 github.com/kr/pretty
 # github.com/kr/text v0.1.0
 github.com/kr/text
@@ -580,7 +580,7 @@ github.com/lib/pq/oid
 github.com/lib/pq/scram
 # github.com/mattn/go-colorable v0.1.4
 github.com/mattn/go-colorable
-# github.com/mattn/go-isatty v0.0.10
+# github.com/mattn/go-isatty v0.0.12
 github.com/mattn/go-isatty
 # github.com/mattn/go-shellwords v1.0.5
 github.com/mattn/go-shellwords
@@ -864,7 +864,7 @@ golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20200122134326-e047566fdf82
+# golang.org/x/sys v0.0.0-20200124204421-9fbb57f87de9
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
@@ -993,7 +993,7 @@ gopkg.in/square/go-jose.v2
 gopkg.in/square/go-jose.v2/cipher
 gopkg.in/square/go-jose.v2/json
 gopkg.in/square/go-jose.v2/jwt
-# gopkg.in/yaml.v2 v2.2.5
+# gopkg.in/yaml.v2 v2.2.8
 gopkg.in/yaml.v2
 # k8s.io/api v0.0.0-20190409092523-d687e77c8ae9
 k8s.io/api/authentication/v1
