@@ -766,7 +766,7 @@ entirety of the token store into memory.  Depending on how much cleanup is
 required (usually very little) there may also be a large number of writes.
 Second, this will cause Vault's memory usage to balloon up, because the default
 Vault internal cache is unlimited in size and every value read from storage will
-be cached.  Listing the `/auto/token/accessors` endpoint is a good way to get
+be cached.  Listing the `/auth/token/accessors` endpoint is a good way to get
 some sense of the potential impact: tidy does this and more, so if this call creates problems
 for your cluster, it would be wise to give Vault more resources before attempting
 tidy.  Note that the request may time out depending on
