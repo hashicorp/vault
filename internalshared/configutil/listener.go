@@ -3,6 +3,7 @@ package configutil
 import (
 	"errors"
 	"fmt"
+	"net/textproto"
 	"strings"
 	"time"
 
@@ -83,10 +84,11 @@ type Listener struct {
 	// RandomPort is used only for some testing purposes
 	RandomPort bool `hcl:"-"`
 
-	CorsEnabledRaw     interface{} `hcl:"cors_enabled"`
-	CorsEnabled        bool        `hcl:"-"`
-	CorsAllowedOrigins []string    `hcl:"cors_allowed_origins"`
-	CorsAllowedHeaders []string    `hcl:"cors_allowed_headers"`
+	CorsEnabledRaw        interface{} `hcl:"cors_enabled"`
+	CorsEnabled           bool        `hcl:"-"`
+	CorsAllowedOrigins    []string    `hcl:"cors_allowed_origins"`
+	CorsAllowedHeaders    []string    `hcl:"-"`
+	CorsAllowedHeadersRaw []string    `hcl:"cors_allowed_headers"`
 }
 
 func (l *Listener) GoString() string {
@@ -328,6 +330,12 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 
 			if strutil.StrListContains(l.CorsAllowedOrigins, "*") && len(l.CorsAllowedOrigins) > 1 {
 				return multierror.Prefix(errors.New("cors_allowed_origins must only contain a wildcard or only non-wildcard values"), fmt.Sprintf("listeners.%d", i))
+			}
+
+			if len(l.CorsAllowedHeadersRaw) > 0 {
+				for _, header := range l.CorsAllowedHeadersRaw {
+					l.CorsAllowedHeaders = append(l.CorsAllowedHeaders, textproto.CanonicalMIMEHeaderKey(header))
+				}
 			}
 		}
 
