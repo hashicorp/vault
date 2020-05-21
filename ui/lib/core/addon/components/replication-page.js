@@ -31,7 +31,7 @@ export default Component.extend({
   }),
   formattedReplicationMode: computed('model.{replicationMode}', function() {
     // dr or performance 🤯
-    let mode = this.model.replicationMode;
+    const mode = this.model.replicationMode;
     return MODE[mode];
   }),
   clusterMode: computed('model.{replicationAttrs}', function() {
@@ -40,14 +40,14 @@ export default Component.extend({
     return model.replicationAttrs.mode;
   }),
   isLoadingData: computed('clusterMode', 'model.{replicationAttrs}', function() {
-    // if clusterMode is bootstrapping
-    // if no clusterId, the data hasn't loaded yet, wait for another status endpoint to be called
     const { clusterMode } = this;
     const { model } = this;
     const clusterId = model.replicationAttrs.clusterId;
     const replicationDisabled = model.replicationAttrs.replicationDisabled;
 
     if (clusterMode === 'bootstrapping' || (!clusterId && !replicationDisabled)) {
+      // if clusterMode is bootstrapping
+      // if no clusterId, the data hasn't loaded yet, wait for another status endpoint to be called
       return true;
     }
     return false;

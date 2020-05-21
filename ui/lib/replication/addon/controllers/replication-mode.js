@@ -16,11 +16,11 @@ export default Controller.extend({
     onEnable(replicationMode, mode) {
       if (replicationMode == 'dr' && mode === 'secondary') {
         return this.transitionToRoute('vault.cluster');
-      }
-      if (replicationMode === 'dr') {
+      } else if (replicationMode === 'dr') {
         return this.transitionToRoute('mode', replicationMode);
+      } else {
+        this.waitForNewClusterToInit.perform(replicationMode);
       }
-      this.waitForNewClusterToInit.perform(replicationMode);
     },
     onDisable() {
       return this.transitionToRoute('index');

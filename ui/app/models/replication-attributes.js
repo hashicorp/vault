@@ -29,7 +29,7 @@ export default Fragment.extend({
       : (this.get('isSecondary') && 'secondary') || (this.get('isPrimary') && 'primary');
   }),
   modeForHeader: computed('mode', function() {
-    const mode = this.get('mode');
+    const mode = this.mode;
     if (!mode) {
       // mode will be false or undefined if it calls the status endpoint while still setting up the cluster
       return 'loading';
