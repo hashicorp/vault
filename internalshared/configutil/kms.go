@@ -56,7 +56,7 @@ func (k *KMS) GoString() string {
 	return fmt.Sprintf("*%#v", *k)
 }
 
-func parseKMS(result *SharedConfig, list *ast.ObjectList, blockName string, maxKMS int) error {
+func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int) error {
 	if len(list.Items) > maxKMS {
 		return fmt.Errorf("only two or less %q blocks are permitted", blockName)
 	}
@@ -117,9 +117,45 @@ func parseKMS(result *SharedConfig, list *ast.ObjectList, blockName string, maxK
 		seals = append(seals, seal)
 	}
 
-	result.Seals = append(result.Seals, seals...)
+	*result = append(*result, seals...)
 
 	return nil
+}
+
+func ParseKMSes(d string) ([]*KMS, error) {
+	// Parse!
+	obj, err := hcl.Parse(d)
+	if err != nil {
+		return nil, err
+	}
+
+	// Start building the result
+	var result struct {
+		Seals []*KMS `hcl:"-"`
+	}
+
+	if err := hcl.DecodeObject(&result, obj); err != nil {
+		return nil, err
+	}
+
+	list, ok := obj.Node.(*ast.ObjectList)
+	if !ok {
+		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
+	}
+
+	if o := list.Filter("seal"); len(o.Items) > 0 {
+		if err := parseKMS(&result.Seals, o, "seal", 3); err != nil {
+			return nil, errwrap.Wrapf("error parsing 'seal': {{err}}", err)
+		}
+	}
+
+	if o := list.Filter("kms"); len(o.Items) > 0 {
+		if err := parseKMS(&result.Seals, o, "kms", 3); err != nil {
+			return nil, errwrap.Wrapf("error parsing 'kms': {{err}}", err)
+		}
+	}
+
+	return result.Seals, nil
 }
 
 func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]string, logger hclog.Logger) (wrapping.Wrapper, error) {
@@ -167,9 +203,11 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 		return nil, err
 	}
 
-	for k, v := range kmsInfo {
-		*infoKeys = append(*infoKeys, k)
-		(*info)[k] = v
+	if infoKeys != nil && info != nil {
+		for k, v := range kmsInfo {
+			*infoKeys = append(*infoKeys, k)
+			(*info)[k] = v
+		}
 	}
 
 	return wrapper, nil
