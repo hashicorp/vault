@@ -155,7 +155,6 @@
     "lint-staged": "^10.1.2"
   },
   "resolutions": {
-    "acorn": "^6.4.1",
     "eslint-utils": "^1.4.1",
     "growl": "^1.10.0",
     "handlebars": "^4.3.0",
