@@ -611,6 +611,9 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 			}
 
 			expected := &Config{
+				SharedConfig: &configutil.SharedConfig{
+					PidFile: "./pidfile",
+				},
 				AutoAuth: &AutoAuth{
 					Method: &Method{
 						Type:      "aws",
@@ -623,7 +626,6 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 					Sinks: nil,
 				},
 				Templates: tc.expectedTemplates,
-				PidFile:   "./pidfile",
 			}
 
 			if diff := deep.Equal(config, expected); diff != nil {
