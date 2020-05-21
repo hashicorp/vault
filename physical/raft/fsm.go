@@ -15,8 +15,7 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
-	protoio "github.com/gogo/protobuf/io"
-	proto "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-raftchunking"
@@ -88,6 +87,10 @@ type FSM struct {
 	storeLatestState bool
 
 	chunker *raftchunking.ChunkingBatchingFSM
+
+	// testSnapshotRestoreError is used in tests to simulate an error while
+	// restoring a snapshot.
+	testSnapshotRestoreError bool
 }
 
 // NewFSM constructs a FSM using the given directory
@@ -193,12 +196,12 @@ func (f *FSM) witnessIndex(i *IndexValue) {
 	}
 }
 
-func (f *FSM) witnessSnapshot(index, term, configurationIndex uint64, configuration raft.Configuration) error {
+func (f *FSM) witnessSnapshot(metadata *raft.SnapshotMeta) error {
 	var indexBytes []byte
 	latestIndex, _ := f.LatestState()
 
-	latestIndex.Index = index
-	latestIndex.Term = term
+	latestIndex.Index = metadata.Index
+	latestIndex.Term = metadata.Term
 
 	var err error
 	indexBytes, err = proto.Marshal(latestIndex)
@@ -206,7 +209,7 @@ func (f *FSM) witnessSnapshot(index, term, configurationIndex uint64, configurat
 		return err
 	}
 
-	protoConfig := raftConfigurationToProtoConfiguration(configurationIndex, configuration)
+	protoConfig := raftConfigurationToProtoConfiguration(metadata.ConfigurationIndex, metadata.Configuration)
 	configBytes, err := proto.Marshal(protoConfig)
 	if err != nil {
 		return err
@@ -232,8 +235,8 @@ func (f *FSM) witnessSnapshot(index, term, configurationIndex uint64, configurat
 		}
 	}
 
-	atomic.StoreUint64(f.latestIndex, index)
-	atomic.StoreUint64(f.latestTerm, term)
+	atomic.StoreUint64(f.latestIndex, metadata.Index)
+	atomic.StoreUint64(f.latestTerm, metadata.Term)
 	f.latestConfig.Store(protoConfig)
 
 	return nil
@@ -241,7 +244,7 @@ func (f *FSM) witnessSnapshot(index, term, configurationIndex uint64, configurat
 
 // Delete deletes the given key from the bolt file.
 func (f *FSM) Delete(ctx context.Context, path string) error {
-	defer metrics.MeasureSince([]string{"raft", "delete"}, time.Now())
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "delete"}, time.Now())
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -253,7 +256,7 @@ func (f *FSM) Delete(ctx context.Context, path string) error {
 
 // Delete deletes the given key from the bolt file.
 func (f *FSM) DeletePrefix(ctx context.Context, prefix string) error {
-	defer metrics.MeasureSince([]string{"raft", "delete_prefix"}, time.Now())
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "delete_prefix"}, time.Now())
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -277,7 +280,9 @@ func (f *FSM) DeletePrefix(ctx context.Context, prefix string) error {
 
 // Get retrieves the value at the given path from the bolt file.
 func (f *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
+	// TODO: Remove this outdated metric name in an older release
 	defer metrics.MeasureSince([]string{"raft", "get"}, time.Now())
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "get"}, time.Now())
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -311,7 +316,7 @@ func (f *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
 
 // Put writes the given entry to the bolt file.
 func (f *FSM) Put(ctx context.Context, entry *physical.Entry) error {
-	defer metrics.MeasureSince([]string{"raft", "put"}, time.Now())
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "put"}, time.Now())
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -324,7 +329,9 @@ func (f *FSM) Put(ctx context.Context, entry *physical.Entry) error {
 
 // List retrieves the set of keys with the given prefix from the bolt file.
 func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
+	// TODO: Remove this outdated metric name in a future release
 	defer metrics.MeasureSince([]string{"raft", "list"}, time.Now())
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "list"}, time.Now())
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -531,8 +538,10 @@ type writeErrorCloser interface {
 // (size, checksum, etc) and a second for the sink of the data. We also use a
 // proto delimited writer so we can stream proto messages to the sink.
 func (f *FSM) writeTo(ctx context.Context, metaSink writeErrorCloser, sink writeErrorCloser) {
-	protoWriter := protoio.NewDelimitedWriter(sink)
-	metadataProtoWriter := protoio.NewDelimitedWriter(metaSink)
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "write_snapshot"}, time.Now())
+
+	protoWriter := NewDelimitedWriter(sink)
+	metadataProtoWriter := NewDelimitedWriter(metaSink)
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -573,7 +582,9 @@ func (f *FSM) writeTo(ctx context.Context, metaSink writeErrorCloser, sink write
 
 // Snapshot implements the FSM interface. It returns a noop snapshot object.
 func (f *FSM) Snapshot() (raft.FSMSnapshot, error) {
-	return &noopSnapshotter{}, nil
+	return &noopSnapshotter{
+		fsm: f,
+	}, nil
 }
 
 // SetNoopRestore is used to disable restore operations on raft startup. Because
@@ -589,48 +600,91 @@ func (f *FSM) SetNoopRestore(enabled bool) {
 // first deletes the existing bucket to clear all existing data, then recreates
 // it so we can copy in the snapshot.
 func (f *FSM) Restore(r io.ReadCloser) error {
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "restore_snapshot"}, time.Now())
+
 	if f.noopRestore == true {
 		return nil
 	}
 
-	protoReader := protoio.NewDelimitedReader(r, math.MaxInt32)
+	snapMeta := r.(*boltSnapshotMetadataReader).Metadata()
+
+	protoReader := NewDelimitedReader(r, math.MaxInt32)
 	defer protoReader.Close()
 
 	f.l.Lock()
 	defer f.l.Unlock()
 
-	// Start a write transaction.
+	// Delete the existing data bucket and create a new one.
+	f.logger.Debug("snapshot restore: deleting bucket")
 	err := f.db.Update(func(tx *bolt.Tx) error {
 		err := tx.DeleteBucket(dataBucketName)
 		if err != nil {
 			return err
 		}
 
-		b, err := tx.CreateBucket(dataBucketName)
+		_, err = tx.CreateBucket(dataBucketName)
 		if err != nil {
 			return err
-		}
-
-		for {
-			s := new(pb.StorageEntry)
-			err := protoReader.ReadMsg(s)
-			if err != nil {
-				if err == io.EOF {
-					return nil
-				}
-				return err
-			}
-
-			err = b.Put([]byte(s.Key), s.Value)
-			if err != nil {
-				return err
-			}
 		}
 
 		return nil
 	})
 	if err != nil {
-		f.logger.Error("could not restore snapshot", "error", err)
+		f.logger.Error("could not restore snapshot: could not clear existing bucket", "error", err)
+		return err
+	}
+
+	// If we are testing a failed snapshot error here.
+	if f.testSnapshotRestoreError {
+		return errors.New("Test error")
+	}
+
+	f.logger.Debug("snapshot restore: deleting bucket done")
+	f.logger.Debug("snapshot restore: writing keys")
+
+	var done bool
+	var keys int
+	for !done {
+		err := f.db.Update(func(tx *bolt.Tx) error {
+			b := tx.Bucket(dataBucketName)
+			s := new(pb.StorageEntry)
+
+			// Commit in batches of 50k. Bolt holds all the data in memory and
+			// doesn't split the pages until commit so we do incremental writes.
+			// This is safe since we have a write lock on the fsm's lock.
+			for i := 0; i < 50000; i++ {
+				err := protoReader.ReadMsg(s)
+				if err != nil {
+					if err == io.EOF {
+						done = true
+						return nil
+					}
+					return err
+				}
+
+				err = b.Put([]byte(s.Key), s.Value)
+				if err != nil {
+					return err
+				}
+				keys += 1
+			}
+
+			return nil
+		})
+		if err != nil {
+			f.logger.Error("could not restore snapshot", "error", err)
+			return err
+		}
+
+		f.logger.Trace("snapshot restore: writing keys", "num_written", keys)
+	}
+
+	f.logger.Debug("snapshot restore: writing keys done")
+
+	// Write the metadata after we have applied all the snapshot data
+	f.logger.Debug("snapshot restore: writing metadata")
+	if err := f.witnessSnapshot(snapMeta); err != nil {
+		f.logger.Error("could not write metadata", "error", err)
 		return err
 	}
 
@@ -639,10 +693,23 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 
 // noopSnapshotter implements the fsm.Snapshot interface. It doesn't do anything
 // since our SnapshotStore reads data out of the FSM on Open().
-type noopSnapshotter struct{}
+type noopSnapshotter struct {
+	fsm *FSM
+}
 
-// Persist doesn't do anything.
+// Persist implements the fsm.Snapshot interface. It doesn't need to persist any
+// state data, but it does persist the raft metadata. This is necessary so we
+// can be sure to capture indexes for operation types that are not sent to the
+// FSM.
 func (s *noopSnapshotter) Persist(sink raft.SnapshotSink) error {
+	boltSnapshotSink := sink.(*BoltSnapshotSink)
+
+	// We are processing a snapshot, fastforward the index, term, and
+	// configuration to the latest seen by the raft system.
+	if err := s.fsm.witnessSnapshot(&boltSnapshotSink.meta); err != nil {
+		return err
+	}
+
 	return nil
 }
 

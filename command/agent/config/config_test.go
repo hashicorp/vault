@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-test/deep"
 	ctconfig "github.com/hashicorp/consul-template/config"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
@@ -17,6 +18,30 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 	}
 
 	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+			Listeners: []*configutil.Listener{
+				{
+					Type:        "unix",
+					Address:     "/path/to/socket",
+					TLSDisable:  true,
+					SocketMode:  "configmode",
+					SocketUser:  "configuser",
+					SocketGroup: "configgroup",
+				},
+				{
+					Type:       "tcp",
+					Address:    "127.0.0.1:8300",
+					TLSDisable: true,
+				},
+				{
+					Type:        "tcp",
+					Address:     "127.0.0.1:8400",
+					TLSKeyFile:  "/path/to/cakey.pem",
+					TLSCertFile: "/path/to/cacert.pem",
+				},
+			},
+		},
 		AutoAuth: &AutoAuth{
 			Method: &Method{
 				Type:      "aws",
@@ -26,7 +51,7 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 				},
 			},
 			Sinks: []*Sink{
-				&Sink{
+				{
 					Type:   "file",
 					DHType: "curve25519",
 					DHPath: "/tmp/file-foo-dhpath",
@@ -42,33 +67,6 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
 		},
-		Listeners: []*Listener{
-			&Listener{
-				Type: "unix",
-				Config: map[string]interface{}{
-					"address":      "/path/to/socket",
-					"tls_disable":  true,
-					"socket_mode":  "configmode",
-					"socket_user":  "configuser",
-					"socket_group": "configgroup",
-				},
-			},
-			&Listener{
-				Type: "tcp",
-				Config: map[string]interface{}{
-					"address":     "127.0.0.1:8300",
-					"tls_disable": true,
-				},
-			},
-			&Listener{
-				Type: "tcp",
-				Config: map[string]interface{}{
-					"address":       "127.0.0.1:8400",
-					"tls_key_file":  "/path/to/cakey.pem",
-					"tls_cert_file": "/path/to/cacert.pem",
-				},
-			},
-		},
 		Vault: &Vault{
 			Address:          "http://127.0.0.1:1111",
 			CACert:           "config_ca_cert",
@@ -78,9 +76,11 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			ClientCert:       "config_client_cert",
 			ClientKey:        "config_client_key",
 		},
-		PidFile: "./pidfile",
 	}
 
+	config.Listeners[0].RawConfig = nil
+	config.Listeners[1].RawConfig = nil
+	config.Listeners[2].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -91,6 +91,9 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 	}
 	expected.Vault.TLSSkipVerifyRaw = interface{}(true)
 
+	config.Listeners[0].RawConfig = nil
+	config.Listeners[1].RawConfig = nil
+	config.Listeners[2].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -112,6 +115,9 @@ func TestLoadConfigFile(t *testing.T) {
 	}
 
 	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
 		AutoAuth: &AutoAuth{
 			Method: &Method{
 				Type:      "aws",
@@ -122,7 +128,7 @@ func TestLoadConfigFile(t *testing.T) {
 				},
 			},
 			Sinks: []*Sink{
-				&Sink{
+				{
 					Type:   "file",
 					DHType: "curve25519",
 					DHPath: "/tmp/file-foo-dhpath",
@@ -131,7 +137,7 @@ func TestLoadConfigFile(t *testing.T) {
 						"path": "/tmp/file-foo",
 					},
 				},
-				&Sink{
+				{
 					Type:    "file",
 					WrapTTL: 5 * time.Minute,
 					DHType:  "curve25519",
@@ -143,7 +149,6 @@ func TestLoadConfigFile(t *testing.T) {
 				},
 			},
 		},
-		PidFile: "./pidfile",
 	}
 
 	if diff := deep.Equal(config, expected); diff != nil {
@@ -167,6 +172,9 @@ func TestLoadConfigFile_Method_Wrapping(t *testing.T) {
 	}
 
 	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
 		AutoAuth: &AutoAuth{
 			Method: &Method{
 				Type:      "aws",
@@ -177,7 +185,7 @@ func TestLoadConfigFile_Method_Wrapping(t *testing.T) {
 				},
 			},
 			Sinks: []*Sink{
-				&Sink{
+				{
 					Type: "file",
 					Config: map[string]interface{}{
 						"path": "/tmp/file-foo",
@@ -185,7 +193,6 @@ func TestLoadConfigFile_Method_Wrapping(t *testing.T) {
 				},
 			},
 		},
-		PidFile: "./pidfile",
 	}
 
 	if diff := deep.Equal(config, expected); diff != nil {
@@ -201,18 +208,19 @@ func TestLoadConfigFile_AgentCache_NoAutoAuth(t *testing.T) {
 
 	expected := &Config{
 		Cache: &Cache{},
-		Listeners: []*Listener{
-			&Listener{
-				Type: "tcp",
-				Config: map[string]interface{}{
-					"address":     "127.0.0.1:8300",
-					"tls_disable": true,
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+			Listeners: []*configutil.Listener{
+				{
+					Type:       "tcp",
+					Address:    "127.0.0.1:8300",
+					TLSDisable: true,
 				},
 			},
 		},
-		PidFile: "./pidfile",
 	}
 
+	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -267,6 +275,16 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 	}
 
 	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:       "tcp",
+					Address:    "127.0.0.1:8300",
+					TLSDisable: true,
+				},
+			},
+			PidFile: "./pidfile",
+		},
 		AutoAuth: &AutoAuth{
 			Method: &Method{
 				Type:      "aws",
@@ -281,18 +299,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
 		},
-		Listeners: []*Listener{
-			&Listener{
-				Type: "tcp",
-				Config: map[string]interface{}{
-					"address":     "127.0.0.1:8300",
-					"tls_disable": true,
-				},
-			},
-		},
-		PidFile: "./pidfile",
 	}
 
+	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -305,6 +314,16 @@ func TestLoadConfigFile_AgentCache_AutoAuth_Force(t *testing.T) {
 	}
 
 	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:       "tcp",
+					Address:    "127.0.0.1:8300",
+					TLSDisable: true,
+				},
+			},
+			PidFile: "./pidfile",
+		},
 		AutoAuth: &AutoAuth{
 			Method: &Method{
 				Type:      "aws",
@@ -319,18 +338,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_Force(t *testing.T) {
 			UseAutoAuthTokenRaw: "force",
 			ForceAutoAuthToken:  true,
 		},
-		Listeners: []*Listener{
-			&Listener{
-				Type: "tcp",
-				Config: map[string]interface{}{
-					"address":     "127.0.0.1:8300",
-					"tls_disable": true,
-				},
-			},
-		},
-		PidFile: "./pidfile",
 	}
 
+	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -343,6 +353,16 @@ func TestLoadConfigFile_AgentCache_AutoAuth_True(t *testing.T) {
 	}
 
 	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:       "tcp",
+					Address:    "127.0.0.1:8300",
+					TLSDisable: true,
+				},
+			},
+			PidFile: "./pidfile",
+		},
 		AutoAuth: &AutoAuth{
 			Method: &Method{
 				Type:      "aws",
@@ -357,18 +377,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_True(t *testing.T) {
 			UseAutoAuthTokenRaw: "true",
 			ForceAutoAuthToken:  false,
 		},
-		Listeners: []*Listener{
-			&Listener{
-				Type: "tcp",
-				Config: map[string]interface{}{
-					"address":     "127.0.0.1:8300",
-					"tls_disable": true,
-				},
-			},
-		},
-		PidFile: "./pidfile",
 	}
 
+	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -381,6 +392,16 @@ func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 	}
 
 	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:       "tcp",
+					Address:    "127.0.0.1:8300",
+					TLSDisable: true,
+				},
+			},
+			PidFile: "./pidfile",
+		},
 		AutoAuth: &AutoAuth{
 			Method: &Method{
 				Type:      "aws",
@@ -390,7 +411,7 @@ func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 				},
 			},
 			Sinks: []*Sink{
-				&Sink{
+				{
 					Type:   "file",
 					DHType: "curve25519",
 					DHPath: "/tmp/file-foo-dhpath",
@@ -406,18 +427,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 			UseAutoAuthTokenRaw: "false",
 			ForceAutoAuthToken:  false,
 		},
-		Listeners: []*Listener{
-			&Listener{
-				Type: "tcp",
-				Config: map[string]interface{}{
-					"address":     "127.0.0.1:8300",
-					"tls_disable": true,
-				},
-			},
-		},
-		PidFile: "./pidfile",
 	}
 
+	config.Listeners[0].RawConfig = nil
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -494,6 +506,9 @@ func TestLoadConfigFile_Template(t *testing.T) {
 			}
 
 			expected := &Config{
+				SharedConfig: &configutil.SharedConfig{
+					PidFile: "./pidfile",
+				},
 				AutoAuth: &AutoAuth{
 					Method: &Method{
 						Type:      "aws",
@@ -504,7 +519,7 @@ func TestLoadConfigFile_Template(t *testing.T) {
 						},
 					},
 					Sinks: []*Sink{
-						&Sink{
+						{
 							Type:   "file",
 							DHType: "curve25519",
 							DHPath: "/tmp/file-foo-dhpath",
@@ -516,7 +531,6 @@ func TestLoadConfigFile_Template(t *testing.T) {
 					},
 				},
 				Templates: tc.expectedTemplates,
-				PidFile:   "./pidfile",
 			}
 
 			if diff := deep.Equal(config, expected); diff != nil {

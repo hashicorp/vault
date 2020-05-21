@@ -233,3 +233,45 @@ data:
       "client_key" = "/vault/tls/client.key"
     }
 ```
+
+## Environment Variable Example
+
+The following example demonstrates how templates can be used to create environment 
+variables.  A template should be created that exports a Vault secret as an environment 
+variable and the application container should source those files during startup.
+
+```yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-deployment
+  labels:
+    app: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "web"
+        vault.hashicorp.com/agent-inject-secret-config: "secret/data/web"
+        # Environment variable export template
+        vault.hashicorp.com/agent-inject-template-config: |
+          {{ with secret "secret/data/web" -}}
+            export api_key="{{ .Data.data.payments_api_key }}"
+          {{- end }}
+    spec:
+      serviceAccountName: web
+      containers:
+        - name: web
+          image: alpine:latest
+          args: ["sh", "-c", "source /vault/secrets/config && <entrypoint script>"]
+          ports:
+            - containerPort: 9090
+```
