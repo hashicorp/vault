@@ -28,7 +28,7 @@ BUG FIXES:
 ## 1.4.2 (TBD)
 
 SECURITY:
-* core: proxy environment variables are now redacted before being logged, in case the URLs include a username:password
+* core: proxy environment variables are now redacted before being logged, in case the URLs include a username:password [[GH-9022](https://github.com/hashicorp/vault/pull/9022)]
 
 IMPROVEMENTS:
 
@@ -211,7 +211,7 @@ BUG FIXES:
 ## 1.3.6 (TBD)
 
 SECURITY:
-* core: proxy environment variables are now redacted before being logged, in case the URLs include a username:password
+* core: proxy environment variables are now redacted before being logged, in case the URLs include a username:password [[GH-9022](https://github.com/hashicorp/vault/pull/9022)]
 
 BUG FIXES:
 
