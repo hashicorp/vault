@@ -28,6 +28,9 @@ BUG FIXES:
 
 ## 1.4.2 (TBD)
 
+SECURITY:
+* core: proxy environment variables are now redacted before being logged, in case the URLs include a username:password [[GH-9022](https://github.com/hashicorp/vault/pull/9022)]
+
 IMPROVEMENTS:
 
 * storage/raft: The storage stanza now accepts `leader_ca_cert_file`, `leader_client_cert_file`, and 
@@ -208,9 +211,13 @@ BUG FIXES:
 
 ## 1.3.6 (TBD)
 
+SECURITY:
+* core: proxy environment variables are now redacted before being logged, in case the URLs include a username:password [[GH-9022](https://github.com/hashicorp/vault/pull/9022)]
+
 BUG FIXES:
 
 * auth/aws: Fix token renewal issues caused by the metadata changes in 1.3.5 [[GH-8991](https://github.com/hashicorp/vault/pull/8991)] 
+* replication: Fix mount filter bug that allowed replication filters to hide local mounts on a performance secondary
 
 ## 1.3.5 (April 28th, 2020)
 
