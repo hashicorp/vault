@@ -88,16 +88,10 @@ export default Mixin.create({
     if (action === 'disable') {
       yield this.onDisable();
     }
-    if (mode === 'secondary' && replicationMode === 'dr') {
-      // return mode so you can properly handle the transition
-      return mode;
-    }
     if (action === 'enable') {
-      try {
-        yield this.onEnable(replicationMode); // should not be called for dr secondary
-      } catch (e) {
-        // TODO handle error
-      }
+      /// onEnable is a method available only to route vault.cluster.replication.index
+      // if action 'enable' is called from vault.cluster.replication.mode.index this method is not called
+      yield this.onEnable(replicationMode, mode);
     }
   }).drop(),
 

@@ -7,7 +7,6 @@ import ReplicationActions from 'core/mixins/replication-actions';
 import { task } from 'ember-concurrency';
 
 const DEFAULTS = {
-  mode: 'primary',
   token: null,
   id: null,
   loading: false,
@@ -16,10 +15,11 @@ const DEFAULTS = {
   primary_cluster_addr: null,
   ca_file: null,
   ca_path: null,
-  replicationMode: 'dr',
 };
 
 export default Component.extend(ReplicationActions, DEFAULTS, {
+  replicationMode: 'dr',
+  mode: 'primary',
   wizard: service(),
   version: service(),
   didReceiveAttrs() {
@@ -66,24 +66,13 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
     this.setProperties(DEFAULTS);
   },
 
-  transitionTo: computed('mode', 'replicationMode', function() {
-    // Take transitionTo outside of a yield because it unmounts the cluster and yield cannot return anything
-    return () => this.router.transitionTo('vault.cluster');
-  }),
-
   submit: task(function*() {
-    let mode;
     try {
-      mode = yield this.submitHandler.perform(...arguments);
+      yield this.submitHandler.perform(...arguments);
     } catch (e) {
       // TODO handle error
     }
-    // if Secondary, handle transition here, if not, handle transition in mixin Enable
-    if (mode === 'secondary') {
-      this.transitionTo();
-    }
   }),
-
   actions: {
     onSubmit(/*action, mode, data, event*/) {
       this.get('submit').perform(...arguments);

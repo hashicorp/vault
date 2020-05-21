@@ -28,6 +28,14 @@ export default Fragment.extend({
       ? 'bootstrapping'
       : (this.get('isSecondary') && 'secondary') || (this.get('isPrimary') && 'primary');
   }),
+  modeForHeader: computed('mode', function() {
+    const mode = this.mode;
+    if (!mode) {
+      // mode will be false or undefined if it calls the status endpoint while still setting up the cluster
+      return 'loading';
+    }
+    return mode;
+  }),
   secondaryId: attr('string'),
   primaryClusterAddr: attr('string'),
   knownPrimaryClusterAddrs: attr('array'),

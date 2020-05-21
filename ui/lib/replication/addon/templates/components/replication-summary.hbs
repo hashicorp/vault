@@ -332,7 +332,7 @@
     <p>{{cluster.replicationModeStatus.cluster_id}}</p>
     <div class="replication">
       <ReplicationPage @model={{cluster}} as |Page|>
-        <Page.dashboard 
+        <Page.dashboard
           @data={{cluster}}
           @componentToRender={{if (eq replicationAttrs.mode 'secondary') 'replication-secondary-card' 'replication-primary-card' }}
           as |Dashboard|>
@@ -352,7 +352,7 @@
             <Dashboard.card
               @title='Last WAL entry'
               @description='Index of last Write Ahead Logs entry written on local storage.'
-              @metric={{replicationAttrs.lastWAL}} />
+              @metric={{format-number replicationAttrs.lastWAL}} />
             <Dashboard.secondaryCard
               @cluster={{cluster}}
               @replicationAttrs={{replicationAttrs}} />
