@@ -132,7 +132,7 @@ Provisioning for this demo happens in 2 phases:
   - [Step 6: Write Secrets](#step-6-write-secrets)
 - [Phase 2 - Provision our Chef Node to Show AppRole Login](#phase2)
 
-## <a name="phase1"></a>Phase 1: Provision our Vault & Chef Server
+## Phase 1: Provision our Vault & Chef Server ((#phase1))
 
 ### Step 1: Provision the Vault and Chef Server
 
@@ -188,7 +188,7 @@ created. If all looks good, then perform a `terraform apply` to provision the
 resources. The Terraform output will display the public IP address to SSH into
 your server.
 
-```plaintext
+```shell-session
 $ terraform init
 Initializing provider plugins...
 ...
@@ -213,7 +213,7 @@ your server.
 
 For example:
 
-```plaintext
+```shell-session
 $ ssh -i "/path/to/EC2/private_key.pem" ubuntu@192.0.2.0
 ```
 
@@ -221,7 +221,7 @@ $ ssh -i "/path/to/EC2/private_key.pem" ubuntu@192.0.2.0
 SSH into your mgmt server, run `tail -f /var/log/tf-user-data.log` to see when
 the initial configuration is complete.
 
-```plaintext
+```shell-session
 $ tail -f /var/log/tf-user-data.log
 ```
 
@@ -246,7 +246,7 @@ your home directory:
 
 Before moving on, set your working environment variables in your mgmt server:
 
-```plaintext
+```shell-session
 $ export VAULT_ADDR=http://127.0.0.1:8200
 $ export VAULT_SKIP_VERIFY=true
 ```
@@ -359,7 +359,7 @@ $ curl --silent \
 
 **CLI command**
 
-```plaintext
+```shell-session
 $ vault auth enable -description="Demo AppRole auth method" approle
 ```
 
@@ -476,7 +476,7 @@ The token and associated metadata will be written out to the file
 `roleid-token.json`. The `client_token` value is what you'll give to Terraform.
 The file should look similar to the following:
 
-```plaintext
+```shell-session
 $ cat roleid-token.json | jq
 {
   "request_id": "2e1d05eb-988d-4cf7-7b6a-d2668de31536",
@@ -538,7 +538,7 @@ The token and associated metadata will be written out to the file
 `roleid-token.txt`. The `token` value is what you'll give to Terraform.
 The file should look similar to the following:
 
-```plaintext
+```shell-session
 $ cat roleid-token.txt
 Key                Value
 ---                -----
@@ -596,7 +596,7 @@ $ curl --silent \
 
 The resulting file should look like this:
 
-```plaintext
+```shell-session
 $ cat secretid-token.json | jq
 {
   "request_id": "6f6ad8a1-fedb-b838-60ce-87999f01aff6",
@@ -643,7 +643,7 @@ $ vault token create -policy="app-1-approle-secretid-create" \
 
 The resulting file should look like this:
 
-```plaintext
+```shell-session
 $ cat secretid-token.txt
 Key                Value
 ---                -----
@@ -667,7 +667,7 @@ corresponding `RoleID`.
 Now, create a Chef Data Bag and put the `SecretID` token (`secretid-token.json`)
 along with the rest of its metadata.
 
-```bash
+```shell-session
 $ cd /home/ubuntu/vault-chef-approle-demo/chef/
 
 # Use the path for where you created this file in the previous step
@@ -687,7 +687,7 @@ $ knife data bag show secretid-token approle-secretid-token
 
 The last step should show the following output:
 
-```plaintext
+```shell-session
 $ knife data bag show secretid-token approle-secretid-token
 WARNING: Unencrypted data bag detected, ignoring any provided secret options.
 auth:
@@ -773,7 +773,7 @@ username            app-1-user
 steps will only need to be performed upon initial creation of an AppRole, and
 would typically be done by a Vault administrator.
 
-## <a name="phase2"></a>Phase 2: Provision our Chef Node to Show AppRole Login
+## Phase 2: Provision our Chef Node to Show AppRole Login ((#phase2))
 
 To complete the demo, run the **`chef-node`** Terraform configuration to see how
 everything talks to each other.
@@ -784,7 +784,7 @@ Open another terminal on your host machine (**not** the `mgmt-node`)
 and `cd` into the `identity/vault-chef-approle/terraform-aws/chef-node`
 directory:
 
-```plaintext
+```shell-session
 $ cd identity/vault-chef-approle/terraform-aws/chef-node
 ```
 
@@ -803,7 +803,7 @@ Note the following:
     `client_token` in the `/home/ubuntu/vault-chef-approle-demo/roleid-token.json`
     file:
 
-```plaintext
+```shell-session
 $ cat ~/vault-chef-approle-demo/roleid-token.json | jq ".auth.client_token"
 ```
 

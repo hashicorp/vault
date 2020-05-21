@@ -116,7 +116,7 @@ func (c *Sys) DisableAudit(path string) error {
 	return err
 }
 
-// Structures for the requests/resposne are all down here. They aren't
+// Structures for the requests/response are all down here. They aren't
 // individually documented because the map almost directly to the raw HTTP API
 // documentation. Please refer to that documentation for more details.
 

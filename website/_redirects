@@ -1,3 +1,9 @@
+
+# REDIRECTS FILE
+#
+# See https://www.netlify.com/docs/redirects/ for documentation. Please do not
+# modify or delete existing redirects without first verifying internally.
+
 /downloads.html /downloads 301!
 /community.html /community 301!
 /api-docs/index /api-docs 301!
