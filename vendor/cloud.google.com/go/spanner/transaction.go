@@ -23,11 +23,11 @@ import (
 	"time"
 
 	"cloud.google.com/go/internal/trace"
+	vkit "cloud.google.com/go/spanner/apiv1"
+	"github.com/golang/protobuf/proto"
 	"google.golang.org/api/iterator"
 	sppb "google.golang.org/genproto/googleapis/spanner/v1"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 )
 
 // transactionID stores a transaction ID which uniquely identifies a transaction
@@ -55,6 +55,22 @@ type txReadOnly struct {
 
 	// Atomic. Only needed for DML statements, but used forall.
 	sequenceNumber int64
+
+	// replaceSessionFunc is a function that can be called to replace the
+	// session that is used by the transaction. This function should only be
+	// defined for single-use transactions that can safely be retried on a
+	// different session. All other transactions will set this function to nil.
+	replaceSessionFunc func(ctx context.Context) error
+
+	// sp is the session pool for allocating a session to execute the read-only
+	// transaction. It is set only once during initialization of the
+	// txReadOnly.
+	sp *sessionPool
+	// sh is the sessionHandle allocated from sp.
+	sh *sessionHandle
+
+	// qo provides options for executing a sql query.
+	qo QueryOptions
 }
 
 // errSessionClosed returns error for using a recycled/destroyed session
@@ -118,6 +134,7 @@ func (t *txReadOnly) ReadWithOptions(ctx context.Context, table string, keys Key
 	}
 	return stream(
 		contextWithOutgoingMetadata(ctx, sh.getMetadata()),
+		sh.session.logger,
 		func(ctx context.Context, resumeToken []byte) (streamingReceiver, error) {
 			return client.StreamingRead(ctx,
 				&sppb.ReadRequest{
@@ -142,6 +159,16 @@ func errRowNotFound(table string, key Key) error {
 	return spannerErrorf(codes.NotFound, "row not found(Table: %v, PrimaryKey: %v)", table, key)
 }
 
+// errRowNotFoundByIndex returns error for not being able to read the row by index.
+func errRowNotFoundByIndex(table string, key Key, index string) error {
+	return spannerErrorf(codes.NotFound, "row not found(Table: %v, IndexKey: %v, Index: %v)", table, key, index)
+}
+
+// errMultipleRowsFound returns error for receiving more than one row when reading a single row using an index.
+func errMultipleRowsFound(table string, key Key, index string) error {
+	return spannerErrorf(codes.FailedPrecondition, "more than one row found by index(Table: %v, IndexKey: %v, Index: %v)", table, key, index)
+}
+
 // ReadRow reads a single row from the database.
 //
 // If no row is present with the given key, then ReadRow returns an error where
@@ -160,6 +187,57 @@ func (t *txReadOnly) ReadRow(ctx context.Context, table string, key Key, columns
 	}
 }
 
+// ReadRowUsingIndex reads a single row from the database using an index.
+//
+// If no row is present with the given index, then ReadRowUsingIndex returns an
+// error where spanner.ErrCode(err) is codes.NotFound.
+//
+// If more than one row received with the given index, then ReadRowUsingIndex
+// returns an error where spanner.ErrCode(err) is codes.FailedPrecondition.
+func (t *txReadOnly) ReadRowUsingIndex(ctx context.Context, table string, index string, key Key, columns []string) (*Row, error) {
+	iter := t.ReadUsingIndex(ctx, table, index, key, columns)
+	defer iter.Stop()
+	row, err := iter.Next()
+	switch err {
+	case iterator.Done:
+		return nil, errRowNotFoundByIndex(table, key, index)
+	case nil:
+		// If more than one row found, return an error.
+		_, err := iter.Next()
+		switch err {
+		case iterator.Done:
+			return row, nil
+		case nil:
+			return nil, errMultipleRowsFound(table, key, index)
+		default:
+			return nil, err
+		}
+	default:
+		return nil, err
+	}
+}
+
+// QueryOptions provides options for executing a sql query from a database.
+type QueryOptions struct {
+	Mode    *sppb.ExecuteSqlRequest_QueryMode
+	Options *sppb.ExecuteSqlRequest_QueryOptions
+}
+
+// merge combines two QueryOptions that the input parameter will have higher
+// order of precedence.
+func (qo QueryOptions) merge(opts QueryOptions) QueryOptions {
+	merged := QueryOptions{
+		Mode:    qo.Mode,
+		Options: &sppb.ExecuteSqlRequest_QueryOptions{},
+	}
+	if opts.Mode != nil {
+		merged.Mode = opts.Mode
+	}
+	proto.Merge(merged.Options, qo.Options)
+	proto.Merge(merged.Options, opts.Options)
+	return merged
+}
+
 // Query executes a query against the database. It returns a RowIterator for
 // retrieving the resulting rows.
 //
@@ -167,19 +245,38 @@ func (t *txReadOnly) ReadRow(ctx context.Context, table string, key Key, columns
 // Use QueryWithStats to get rows along with the plan and statistics. Use
 // AnalyzeQuery to get just the plan.
 func (t *txReadOnly) Query(ctx context.Context, statement Statement) *RowIterator {
-	return t.query(ctx, statement, sppb.ExecuteSqlRequest_NORMAL)
+	mode := sppb.ExecuteSqlRequest_NORMAL
+	return t.query(ctx, statement, QueryOptions{
+		Mode:    &mode,
+		Options: t.qo.Options,
+	})
 }
 
-// Query executes a SQL statement against the database. It returns a RowIterator
-// for retrieving the resulting rows. The RowIterator will also be populated
-// with a query plan and execution statistics.
+// QueryWithOptions executes a SQL statment against the database. It returns
+// a RowIterator for retrieving the resulting rows. The sql query execution
+// will be optimized based on the given query options.
+func (t *txReadOnly) QueryWithOptions(ctx context.Context, statement Statement, opts QueryOptions) *RowIterator {
+	return t.query(ctx, statement, t.qo.merge(opts))
+}
+
+// QueryWithStats executes a SQL statement against the database. It returns
+// a RowIterator for retrieving the resulting rows. The RowIterator will also
+// be populated with a query plan and execution statistics.
 func (t *txReadOnly) QueryWithStats(ctx context.Context, statement Statement) *RowIterator {
-	return t.query(ctx, statement, sppb.ExecuteSqlRequest_PROFILE)
+	mode := sppb.ExecuteSqlRequest_PROFILE
+	return t.query(ctx, statement, QueryOptions{
+		Mode:    &mode,
+		Options: t.qo.Options,
+	})
 }
 
 // AnalyzeQuery returns the query plan for statement.
 func (t *txReadOnly) AnalyzeQuery(ctx context.Context, statement Statement) (*sppb.QueryPlan, error) {
-	iter := t.query(ctx, statement, sppb.ExecuteSqlRequest_PLAN)
+	mode := sppb.ExecuteSqlRequest_PLAN
+	iter := t.query(ctx, statement, QueryOptions{
+		Mode:    &mode,
+		Options: t.qo.Options,
+	})
 	defer iter.Stop()
 	for {
 		_, err := iter.Next()
@@ -196,25 +293,28 @@ func (t *txReadOnly) AnalyzeQuery(ctx context.Context, statement Statement) (*sp
 	return iter.QueryPlan, nil
 }
 
-func (t *txReadOnly) query(ctx context.Context, statement Statement, mode sppb.ExecuteSqlRequest_QueryMode) (ri *RowIterator) {
+func (t *txReadOnly) query(ctx context.Context, statement Statement, options QueryOptions) (ri *RowIterator) {
 	ctx = trace.StartSpan(ctx, "cloud.google.com/go/spanner.Query")
 	defer func() { trace.EndSpan(ctx, ri.err) }()
-	req, sh, err := t.prepareExecuteSQL(ctx, statement, mode)
+	req, sh, err := t.prepareExecuteSQL(ctx, statement, options)
 	if err != nil {
 		return &RowIterator{err: err}
 	}
 	client := sh.getClient()
-	return stream(
+	return streamWithReplaceSessionFunc(
 		contextWithOutgoingMetadata(ctx, sh.getMetadata()),
+		sh.session.logger,
 		func(ctx context.Context, resumeToken []byte) (streamingReceiver, error) {
 			req.ResumeToken = resumeToken
+			req.Session = t.sh.getID()
 			return client.ExecuteStreamingSql(ctx, req)
 		},
+		t.replaceSessionFunc,
 		t.setTimestamp,
 		t.release)
 }
 
-func (t *txReadOnly) prepareExecuteSQL(ctx context.Context, stmt Statement, mode sppb.ExecuteSqlRequest_QueryMode) (*sppb.ExecuteSqlRequest, *sessionHandle, error) {
+func (t *txReadOnly) prepareExecuteSQL(ctx context.Context, stmt Statement, options QueryOptions) (*sppb.ExecuteSqlRequest, *sessionHandle, error) {
 	sh, ts, err := t.acquire(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -229,14 +329,19 @@ func (t *txReadOnly) prepareExecuteSQL(ctx context.Context, stmt Statement, mode
 	if err != nil {
 		return nil, nil, err
 	}
+	mode := sppb.ExecuteSqlRequest_NORMAL
+	if options.Mode != nil {
+		mode = *options.Mode
+	}
 	req := &sppb.ExecuteSqlRequest{
-		Session:     sid,
-		Transaction: ts,
-		Sql:         stmt.SQL,
-		QueryMode:   mode,
-		Seqno:       atomic.AddInt64(&t.sequenceNumber, 1),
-		Params:      params,
-		ParamTypes:  paramTypes,
+		Session:      sid,
+		Transaction:  ts,
+		Sql:          stmt.SQL,
+		QueryMode:    mode,
+		Seqno:        atomic.AddInt64(&t.sequenceNumber, 1),
+		Params:       params,
+		ParamTypes:   paramTypes,
+		QueryOptions: options.Options,
 	}
 	return req, sh, nil
 }
@@ -294,10 +399,6 @@ type ReadOnlyTransaction struct {
 	txReadOnly
 	// singleUse indicates that the transaction can be used for only one read.
 	singleUse bool
-	// sp is the session pool for allocating a session to execute the read-only
-	// transaction. It is set only once during initialization of the
-	// ReadOnlyTransaction.
-	sp *sessionPool
 	// tx is the transaction ID in Cloud Spanner that uniquely identifies the
 	// ReadOnlyTransaction.
 	tx transactionID
@@ -306,8 +407,6 @@ type ReadOnlyTransaction struct {
 	txReadyOrClosed chan struct{}
 	// state is the current transaction status of the ReadOnly transaction.
 	state txState
-	// sh is the sessionHandle allocated from sp.
-	sh *sessionHandle
 	// rts is the read timestamp returned by transactional reads.
 	rts time.Time
 	// tb is the read staleness bound specification for transactional reads.
@@ -336,6 +435,7 @@ func (t *ReadOnlyTransaction) begin(ctx context.Context) error {
 		rts    time.Time
 		sh     *sessionHandle
 		err    error
+		res    *sppb.Transaction
 	)
 	defer func() {
 		if !locked {
@@ -353,19 +453,20 @@ func (t *ReadOnlyTransaction) begin(ctx context.Context) error {
 		if err != nil && sh != nil {
 			// Got a valid session handle, but failed to initialize transaction=
 			// on Cloud Spanner.
-			if shouldDropSession(err) {
+			if isSessionNotFoundError(err) {
 				sh.destroy()
 			}
 			// If sh.destroy was already executed, this becomes a noop.
 			sh.recycle()
 		}
 	}()
-	sh, err = t.sp.take(ctx)
-	if err != nil {
-		return err
-	}
-	err = runRetryable(contextWithOutgoingMetadata(ctx, sh.getMetadata()), func(ctx context.Context) error {
-		res, e := sh.getClient().BeginTransaction(ctx, &sppb.BeginTransactionRequest{
+	// Retry the BeginTransaction call if a 'Session not found' is returned.
+	for {
+		sh, err = t.sp.take(ctx)
+		if err != nil {
+			return err
+		}
+		res, err = sh.getClient().BeginTransaction(contextWithOutgoingMetadata(ctx, sh.getMetadata()), &sppb.BeginTransactionRequest{
 			Session: sh.getID(),
 			Options: &sppb.TransactionOptions{
 				Mode: &sppb.TransactionOptions_ReadOnly_{
@@ -373,15 +474,19 @@ func (t *ReadOnlyTransaction) begin(ctx context.Context) error {
 				},
 			},
 		})
-		if e != nil {
-			return e
+		if isSessionNotFoundError(err) {
+			sh.destroy()
+			continue
+		} else if err == nil {
+			tx = res.Id
+			if res.ReadTimestamp != nil {
+				rts = time.Unix(res.ReadTimestamp.Seconds, int64(res.ReadTimestamp.Nanos))
+			}
+		} else {
+			err = toSpannerError(err)
 		}
-		tx = res.Id
-		if res.ReadTimestamp != nil {
-			rts = time.Unix(res.ReadTimestamp.Seconds, int64(res.ReadTimestamp.Nanos))
-		}
-		return nil
-	})
+		break
+	}
 	t.mu.Lock()
 
 	// defer function will be executed with t.mu being held.
@@ -525,7 +630,7 @@ func (t *ReadOnlyTransaction) release(err error) {
 	sh := t.sh
 	t.mu.Unlock()
 	if sh != nil { // sh could be nil if t.acquire() fails.
-		if shouldDropSession(err) {
+		if isSessionNotFoundError(err) {
 			sh.destroy()
 		}
 		if t.singleUse {
@@ -655,9 +760,6 @@ func (t *ReadOnlyTransaction) WithTimestampBound(tb TimestampBound) *ReadOnlyTra
 type ReadWriteTransaction struct {
 	// txReadOnly contains methods for performing transactional reads.
 	txReadOnly
-	// sh is the sessionHandle allocated from sp. It is set only once during the
-	// initialization of ReadWriteTransaction.
-	sh *sessionHandle
 	// tx is the transaction ID in Cloud Spanner that uniquely identifies the
 	// ReadWriteTransaction. It is set only once in ReadWriteTransaction.begin()
 	// during the initialization of ReadWriteTransaction.
@@ -696,15 +798,30 @@ func (t *ReadWriteTransaction) BufferWrite(ms []*Mutation) error {
 // However, the query is executed, and any data read will be validated upon
 // commit.
 func (t *ReadWriteTransaction) Update(ctx context.Context, stmt Statement) (rowCount int64, err error) {
+	mode := sppb.ExecuteSqlRequest_NORMAL
+	return t.update(ctx, stmt, QueryOptions{
+		Mode:    &mode,
+		Options: t.qo.Options,
+	})
+}
+
+// UpdateWithOptions executes a DML statement against the database. It returns
+// the number of affected rows. The sql query execution will be optimized
+// based on the given query options.
+func (t *ReadWriteTransaction) UpdateWithOptions(ctx context.Context, stmt Statement, opts QueryOptions) (rowCount int64, err error) {
+	return t.update(ctx, stmt, t.qo.merge(opts))
+}
+
+func (t *ReadWriteTransaction) update(ctx context.Context, stmt Statement, opts QueryOptions) (rowCount int64, err error) {
 	ctx = trace.StartSpan(ctx, "cloud.google.com/go/spanner.Update")
 	defer func() { trace.EndSpan(ctx, err) }()
-	req, sh, err := t.prepareExecuteSQL(ctx, stmt, sppb.ExecuteSqlRequest_NORMAL)
+	req, sh, err := t.prepareExecuteSQL(ctx, stmt, opts)
 	if err != nil {
 		return 0, err
 	}
 	resultSet, err := sh.getClient().ExecuteSql(ctx, req)
 	if err != nil {
-		return 0, err
+		return 0, toSpannerError(err)
 	}
 	if resultSet.Stats == nil {
 		return 0, spannerErrorf(codes.InvalidArgument, "query passed to Update: %q", stmt.SQL)
@@ -753,7 +870,7 @@ func (t *ReadWriteTransaction) BatchUpdate(ctx context.Context, stmts []Statemen
 		Seqno:       atomic.AddInt64(&t.sequenceNumber, 1),
 	})
 	if err != nil {
-		return nil, err
+		return nil, toSpannerError(err)
 	}
 
 	var counts []int64
@@ -793,32 +910,27 @@ func (t *ReadWriteTransaction) release(err error) {
 	t.mu.Lock()
 	sh := t.sh
 	t.mu.Unlock()
-	if sh != nil && shouldDropSession(err) {
+	if sh != nil && isSessionNotFoundError(err) {
 		sh.destroy()
 	}
 }
 
-func beginTransaction(ctx context.Context, sid string, client sppb.SpannerClient) (transactionID, error) {
-	var tx transactionID
-	err := runRetryable(ctx, func(ctx context.Context) error {
-		res, e := client.BeginTransaction(ctx, &sppb.BeginTransactionRequest{
-			Session: sid,
-			Options: &sppb.TransactionOptions{
-				Mode: &sppb.TransactionOptions_ReadWrite_{
-					ReadWrite: &sppb.TransactionOptions_ReadWrite{},
-				},
+func beginTransaction(ctx context.Context, sid string, client *vkit.Client) (transactionID, error) {
+	res, err := client.BeginTransaction(ctx, &sppb.BeginTransactionRequest{
+		Session: sid,
+		Options: &sppb.TransactionOptions{
+			Mode: &sppb.TransactionOptions_ReadWrite_{
+				ReadWrite: &sppb.TransactionOptions_ReadWrite{},
 			},
-		})
-		if e != nil {
-			return e
-		}
-		tx = res.Id
-		return nil
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
-	return tx, nil
+	if res.Id == nil {
+		return nil, spannerErrorf(codes.Unknown, "BeginTransaction returned a transaction with a nil ID.")
+	}
+	return res.Id, nil
 }
 
 // begin starts a read-write transacton on Cloud Spanner, it is always called
@@ -834,7 +946,7 @@ func (t *ReadWriteTransaction) begin(ctx context.Context) error {
 		t.state = txActive
 		return nil
 	}
-	if shouldDropSession(err) {
+	if isSessionNotFoundError(err) {
 		t.sh.destroy()
 	}
 	return err
@@ -857,24 +969,21 @@ func (t *ReadWriteTransaction) commit(ctx context.Context) (time.Time, error) {
 	if sid == "" || client == nil {
 		return ts, errSessionClosed(t.sh)
 	}
-	err = runRetryable(contextWithOutgoingMetadata(ctx, t.sh.getMetadata()), func(ctx context.Context) error {
-		var trailer metadata.MD
-		res, e := client.Commit(ctx, &sppb.CommitRequest{
-			Session: sid,
-			Transaction: &sppb.CommitRequest_TransactionId{
-				TransactionId: t.tx,
-			},
-			Mutations: mPb,
-		}, grpc.Trailer(&trailer))
-		if e != nil {
-			return toSpannerErrorWithMetadata(e, trailer)
-		}
-		if tstamp := res.GetCommitTimestamp(); tstamp != nil {
-			ts = time.Unix(tstamp.Seconds, int64(tstamp.Nanos))
-		}
-		return nil
+
+	res, e := client.Commit(contextWithOutgoingMetadata(ctx, t.sh.getMetadata()), &sppb.CommitRequest{
+		Session: sid,
+		Transaction: &sppb.CommitRequest_TransactionId{
+			TransactionId: t.tx,
+		},
+		Mutations: mPb,
 	})
-	if shouldDropSession(err) {
+	if e != nil {
+		return ts, toSpannerErrorWithCommitInfo(e, true)
+	}
+	if tstamp := res.GetCommitTimestamp(); tstamp != nil {
+		ts = time.Unix(tstamp.Seconds, int64(tstamp.Nanos))
+	}
+	if isSessionNotFoundError(err) {
 		t.sh.destroy()
 	}
 	return ts, err
@@ -893,14 +1002,11 @@ func (t *ReadWriteTransaction) rollback(ctx context.Context) {
 	if sid == "" || client == nil {
 		return
 	}
-	err := runRetryable(contextWithOutgoingMetadata(ctx, t.sh.getMetadata()), func(ctx context.Context) error {
-		_, e := client.Rollback(ctx, &sppb.RollbackRequest{
-			Session:       sid,
-			TransactionId: t.tx,
-		})
-		return e
+	err := client.Rollback(contextWithOutgoingMetadata(ctx, t.sh.getMetadata()), &sppb.RollbackRequest{
+		Session:       sid,
+		TransactionId: t.tx,
 	})
-	if shouldDropSession(err) {
+	if isSessionNotFoundError(err) {
 		t.sh.destroy()
 	}
 }
@@ -908,24 +1014,35 @@ func (t *ReadWriteTransaction) rollback(ctx context.Context) {
 // runInTransaction executes f under a read-write transaction context.
 func (t *ReadWriteTransaction) runInTransaction(ctx context.Context, f func(context.Context, *ReadWriteTransaction) error) (time.Time, error) {
 	var (
-		ts  time.Time
-		err error
+		ts              time.Time
+		err             error
+		errDuringCommit bool
 	)
 	if err = f(context.WithValue(ctx, transactionInProgressKey{}, 1), t); err == nil {
 		// Try to commit if transaction body returns no error.
 		ts, err = t.commit(ctx)
+		errDuringCommit = err != nil
 	}
 	if err != nil {
 		if isAbortErr(err) {
 			// Retry the transaction using the same session on ABORT error.
 			// Cloud Spanner will create the new transaction with the previous
 			// one's wound-wait priority.
-			err = errRetry(err)
 			return ts, err
 		}
-		// Not going to commit, according to API spec, should rollback the
-		// transaction.
-		t.rollback(ctx)
+		if isSessionNotFoundError(err) {
+			t.sh.destroy()
+			return ts, err
+		}
+		// Rollback the transaction unless the error occurred during the
+		// commit. Executing a rollback after a commit has failed will
+		// otherwise cause an error. Note that transient errors, such as
+		// UNAVAILABLE, are already handled in the gRPC layer and do not show
+		// up here. Context errors (deadline exceeded / canceled) during
+		// commits are also not rolled back.
+		if !errDuringCommit {
+			t.rollback(ctx)
+		}
 		return ts, err
 	}
 	// err == nil, return commit timestamp.
@@ -956,19 +1073,21 @@ func (t *writeOnlyTransaction) applyAtLeastOnce(ctx context.Context, ms ...*Muta
 		// Malformed mutation found, just return the error.
 		return ts, err
 	}
-	err = runRetryable(ctx, func(ct context.Context) error {
-		var e error
-		var trailers metadata.MD
+
+	// Retry-loop for aborted transactions.
+	// TODO: Replace with generic retryer.
+	for {
 		if sh == nil || sh.getID() == "" || sh.getClient() == nil {
 			// No usable session for doing the commit, take one from pool.
-			sh, e = t.sp.take(ctx)
-			if e != nil {
+			sh, err = t.sp.take(ctx)
+			if err != nil {
 				// sessionPool.Take already retries for session
 				// creations/retrivals.
-				return e
+				return ts, err
 			}
+			defer sh.recycle()
 		}
-		res, e := sh.getClient().Commit(contextWithOutgoingMetadata(ctx, sh.getMetadata()), &sppb.CommitRequest{
+		res, err := sh.getClient().Commit(contextWithOutgoingMetadata(ctx, sh.getMetadata()), &sppb.CommitRequest{
 			Session: sh.getID(),
 			Transaction: &sppb.CommitRequest_SingleUseTransaction{
 				SingleUseTransaction: &sppb.TransactionOptions{
@@ -978,28 +1097,21 @@ func (t *writeOnlyTransaction) applyAtLeastOnce(ctx context.Context, ms ...*Muta
 				},
 			},
 			Mutations: mPb,
-		}, grpc.Trailer(&trailers))
-		if e != nil {
-			if isAbortErr(e) {
-				// Mask ABORT error as retryable, because aborted transactions
-				// are allowed to be retried.
-				return errRetry(toSpannerErrorWithMetadata(e, trailers))
-			}
-			if shouldDropSession(e) {
+		})
+		if err != nil && !isAbortErr(err) {
+			if isSessionNotFoundError(err) {
 				// Discard the bad session.
 				sh.destroy()
 			}
-			return e
+			return ts, toSpannerErrorWithCommitInfo(err, true)
+		} else if err == nil {
+			if tstamp := res.GetCommitTimestamp(); tstamp != nil {
+				ts = time.Unix(tstamp.Seconds, int64(tstamp.Nanos))
+			}
+			break
 		}
-		if tstamp := res.GetCommitTimestamp(); tstamp != nil {
-			ts = time.Unix(tstamp.Seconds, int64(tstamp.Nanos))
-		}
-		return nil
-	})
-	if sh != nil {
-		sh.recycle()
 	}
-	return ts, err
+	return ts, toSpannerError(err)
 }
 
 // isAbortedErr returns true if the error indicates that an gRPC call is

@@ -11,12 +11,17 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/jefferai/isbadcipher"
 	"github.com/mitchellh/cli"
 )
+
+type Listener struct {
+	net.Listener
+	Config *configutil.Listener
+}
 
 type UnixSocketsConfig struct {
 	User  string `hcl:"user"`
@@ -67,92 +72,69 @@ func UnixSocketListener(path string, unixSocketsConfig *UnixSocketsConfig) (net.
 	}, nil
 }
 
-func WrapTLS(
-	ln net.Listener,
+func TLSConfig(
+	l *configutil.Listener,
 	props map[string]string,
-	config map[string]interface{},
-	ui cli.Ui) (net.Listener, map[string]string, reloadutil.ReloadFunc, *tls.Config, error) {
+	ui cli.Ui) (*tls.Config, reloadutil.ReloadFunc, error) {
 	props["tls"] = "disabled"
 
-	if v, ok := config["tls_disable"]; ok {
-		disabled, err := parseutil.ParseBool(v)
-		if err != nil {
-			return nil, nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_disable': {{err}}", err)
-		}
-		if disabled {
-			return ln, props, nil, nil, nil
-		}
+	if l.TLSDisable {
+		return nil, nil, nil
 	}
 
-	certFileRaw, ok := config["tls_cert_file"]
-	if !ok {
-		return nil, nil, nil, nil, fmt.Errorf("'tls_cert_file' must be set")
-	}
-	certFile := certFileRaw.(string)
-	keyFileRaw, ok := config["tls_key_file"]
-	if !ok {
-		return nil, nil, nil, nil, fmt.Errorf("'tls_key_file' must be set")
-	}
-	keyFile := keyFileRaw.(string)
-
-	cg := reloadutil.NewCertificateGetter(certFile, keyFile, "")
-	if err := cg.Reload(config); err != nil {
+	cg := reloadutil.NewCertificateGetter(l.TLSCertFile, l.TLSKeyFile, "")
+	if err := cg.Reload(); err != nil {
 		// We try the key without a passphrase first and if we get an incorrect
 		// passphrase response, try again after prompting for a passphrase
 		if errwrap.Contains(err, x509.IncorrectPasswordError.Error()) {
 			var passphrase string
-			passphrase, err = ui.AskSecret(fmt.Sprintf("Enter passphrase for %s:", keyFile))
+			passphrase, err = ui.AskSecret(fmt.Sprintf("Enter passphrase for %s:", l.TLSKeyFile))
 			if err == nil {
-				cg = reloadutil.NewCertificateGetter(certFile, keyFile, passphrase)
-				if err = cg.Reload(config); err == nil {
+				cg = reloadutil.NewCertificateGetter(l.TLSCertFile, l.TLSKeyFile, passphrase)
+				if err = cg.Reload(); err == nil {
 					goto PASSPHRASECORRECT
 				}
 			}
 		}
-		return nil, nil, nil, nil, errwrap.Wrapf("error loading TLS cert: {{err}}", err)
+		return nil, nil, errwrap.Wrapf("error loading TLS cert: {{err}}", err)
 	}
 
 PASSPHRASECORRECT:
-	var tlsvers string
-	tlsversRaw, ok := config["tls_min_version"]
-	if !ok {
-		tlsvers = "tls12"
-	} else {
-		tlsvers = tlsversRaw.(string)
+	tlsConf := &tls.Config{
+		GetCertificate:           cg.GetCertificate,
+		NextProtos:               []string{"h2", "http/1.1"},
+		ClientAuth:               tls.RequestClientCert,
+		PreferServerCipherSuites: l.TLSPreferServerCipherSuites,
 	}
 
-	tlsConf := &tls.Config{}
-	tlsConf.GetCertificate = cg.GetCertificate
-	tlsConf.NextProtos = []string{"h2", "http/1.1"}
-	tlsConf.MinVersion, ok = tlsutil.TLSLookup[tlsvers]
-	if !ok {
-		return nil, nil, nil, nil, fmt.Errorf("'tls_min_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]", tlsvers)
+	if l.TLSMinVersion == "" {
+		l.TLSMinVersion = "tls12"
 	}
-	tlsConf.ClientAuth = tls.RequestClientCert
 
-	if v, ok := config["tls_cipher_suites"]; ok {
-		ciphers, err := tlsutil.ParseCiphers(v.(string))
-		if err != nil {
-			return nil, nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_cipher_suites': {{err}}", err)
-		}
+	var ok bool
+	tlsConf.MinVersion, ok = tlsutil.TLSLookup[l.TLSMinVersion]
+	if !ok {
+		return nil, nil, fmt.Errorf("'tls_min_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]", l.TLSMinVersion)
+	}
 
+	if len(l.TLSCipherSuites) > 0 {
 		// HTTP/2 with TLS 1.2 blacklists several cipher suites.
 		// https://tools.ietf.org/html/rfc7540#appendix-A
 		//
 		// Since the CLI (net/http) automatically uses HTTP/2 with TLS 1.2,
 		// we check here if all or some specified cipher suites are blacklisted.
 		badCiphers := []string{}
-		for _, cipher := range ciphers {
+		for _, cipher := range l.TLSCipherSuites {
 			if isbadcipher.IsBadCipher(cipher) {
 				// Get the name of the current cipher.
 				cipherStr, err := tlsutil.GetCipherName(cipher)
 				if err != nil {
-					return nil, nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_cipher_suites': {{err}}", err)
+					return nil, nil, errwrap.Wrapf("invalid value for 'tls_cipher_suites': {{err}}", err)
 				}
 				badCiphers = append(badCiphers, cipherStr)
 			}
 		}
-		if len(badCiphers) == len(ciphers) {
+		if len(badCiphers) == len(l.TLSCipherSuites) {
 			ui.Warn(`WARNING! All cipher suites defined by 'tls_cipher_suites' are blacklisted by the
 HTTP/2 specification. HTTP/2 communication with TLS 1.2 will not work as intended
 and Vault will be unavailable via the CLI.
@@ -163,54 +145,34 @@ blacklisted by the HTTP/2 specification:
 %v
 Please see https://tools.ietf.org/html/rfc7540#appendix-A for further information.`, badCiphers))
 		}
-		tlsConf.CipherSuites = ciphers
+		tlsConf.CipherSuites = l.TLSCipherSuites
 	}
-	if v, ok := config["tls_prefer_server_cipher_suites"]; ok {
-		preferServer, err := parseutil.ParseBool(v)
-		if err != nil {
-			return nil, nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_prefer_server_cipher_suites': {{err}}", err)
-		}
-		tlsConf.PreferServerCipherSuites = preferServer
-	}
-	var requireVerifyCerts bool
-	var err error
-	if v, ok := config["tls_require_and_verify_client_cert"]; ok {
-		requireVerifyCerts, err = parseutil.ParseBool(v)
-		if err != nil {
-			return nil, nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_require_and_verify_client_cert': {{err}}", err)
-		}
-		if requireVerifyCerts {
-			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
-		}
-		if tlsClientCaFile, ok := config["tls_client_ca_file"]; ok {
+
+	if l.TLSRequireAndVerifyClientCert {
+		tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
+		if l.TLSClientCAFile != "" {
 			caPool := x509.NewCertPool()
-			data, err := ioutil.ReadFile(tlsClientCaFile.(string))
+			data, err := ioutil.ReadFile(l.TLSClientCAFile)
 			if err != nil {
-				return nil, nil, nil, nil, errwrap.Wrapf("failed to read tls_client_ca_file: {{err}}", err)
+				return nil, nil, errwrap.Wrapf("failed to read tls_client_ca_file: {{err}}", err)
 			}
 
 			if !caPool.AppendCertsFromPEM(data) {
-				return nil, nil, nil, nil, fmt.Errorf("failed to parse CA certificate in tls_client_ca_file")
+				return nil, nil, fmt.Errorf("failed to parse CA certificate in tls_client_ca_file")
 			}
 			tlsConf.ClientCAs = caPool
 		}
 	}
-	if v, ok := config["tls_disable_client_certs"]; ok {
-		disableClientCerts, err := parseutil.ParseBool(v)
-		if err != nil {
-			return nil, nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_disable_client_certs': {{err}}", err)
+
+	if l.TLSDisableClientCerts {
+		if l.TLSRequireAndVerifyClientCert {
+			return nil, nil, fmt.Errorf("'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are mutually exclusive")
 		}
-		if disableClientCerts && requireVerifyCerts {
-			return nil, nil, nil, nil, fmt.Errorf("'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are mutually exclusive")
-		}
-		if disableClientCerts {
-			tlsConf.ClientAuth = tls.NoClientCert
-		}
+		tlsConf.ClientAuth = tls.NoClientCert
 	}
 
-	ln = tls.NewListener(ln, tlsConf)
 	props["tls"] = "enabled"
-	return ln, props, cg.Reload, tlsConf, nil
+	return tlsConf, cg.Reload, nil
 }
 
 // setFilePermissions handles configuring ownership and permissions
