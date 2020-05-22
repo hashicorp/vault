@@ -23,7 +23,8 @@ configuration endpoint (see example below).
 ## Known Issues
 
 The AWS metadata changes have caused an issue preventing renewal of tokens issued via AWS Auth.
-Until a fix is available, the issue may be addressed by configuring the required metadata explicitly:
+This has been fixed in Vault 1.3.6. The issue may be addressed in Vault 1.3.5 by configuring the
+required metadata explicitly:
 
 ```
 vault write auth/aws/config/identity \
