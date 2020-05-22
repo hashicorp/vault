@@ -5,7 +5,7 @@ import (
 	"os"
 	
 	"github.com/hashicorp/vault/api"
-	couchbase "github.com/fhitchen/vault-plugin-database-couchbase"
+	"github.com/hashicorp/vault/plugins/database/couchbase"
 )
 
 func main() {

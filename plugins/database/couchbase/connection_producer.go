@@ -148,14 +148,10 @@ func (c *couchbaseDBConnectionProducer) Connection(_ context.Context) (interface
 	return c.cluster, nil
 }
 
-// Close terminates the database connection.
-func (c *couchbaseDBConnectionProducer) Close() error {
-	//c.Lock() [TODO] Figure out why these cause deadlock
-	//c.Unlock()
+// close terminates the database connection 
+func (c *couchbaseDBConnectionProducer) close() error {
 
 	if c.cluster != nil {
-//		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-//		defer cancel()
 		if err := c.cluster.Close(&gocb.ClusterCloseOptions{}); err != nil {
 			return err
 		}
@@ -164,4 +160,11 @@ func (c *couchbaseDBConnectionProducer) Close() error {
 	c.cluster = nil
 	fmt.Println("Closed db")
 	return nil
+}
+
+func (c *couchbaseDBConnectionProducer) Close() error {
+	c.Lock()
+	defer c.Unlock()
+
+	return c.close()
 }

@@ -141,7 +141,7 @@ func (c *CouchbaseDB) SetCredentials(ctx context.Context, statements dbplugin.St
 	}
 
 	// Close the database connection to ensure no new connections come in
-	if err := c.Close(); err != nil {
+	if err := c.close(); err != nil {
 		return "", "", err
 	}
 
@@ -210,7 +210,7 @@ func (c *CouchbaseDB) CreateUser(ctx context.Context, statements dbplugin.Statem
 		return "", "", err
 	}
 	
-	//	c.Close()
+	c.close()
 
 	return username, password, nil
 }
@@ -236,8 +236,8 @@ func (p *CouchbaseDB) RevokeUser(ctx context.Context, statements dbplugin.Statem
 	return p.customRevokeUser(ctx, username, statements.Revocation)
 }
 
-func (p *CouchbaseDB) customRevokeUser(ctx context.Context, username string, revocationStmts []string) error {
-	db, err := p.getConnection(ctx)
+func (c *CouchbaseDB) customRevokeUser(ctx context.Context, username string, revocationStmts []string) error {
+	db, err := c.getConnection(ctx)
 	if err != nil {
 		return err
 	}
@@ -251,148 +251,18 @@ func (p *CouchbaseDB) customRevokeUser(ctx context.Context, username string, rev
 		panic(err)
 	}
 
-	db.Close(&gocb.ClusterCloseOptions{})
-	p.cluster = nil
+	c.close()
 	
 	return nil
-
-/*	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		tx.Rollback()
-	}()
-
-	for _, stmt := range revocationStmts {
-		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
-			query = strings.TrimSpace(query)
-			if len(query) == 0 {
-				continue
-			}
-
-			m := map[string]string{
-				"name":     username,
-				"username": username,
-			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-				return err
-			}
-		}
-	}
-
-	return tx.Commit()*/ return err
 }
 
-func (p *CouchbaseDB) defaultRevokeUser(ctx context.Context, username string) error {
-	db, err := p.getConnection(ctx)
+func (c *CouchbaseDB) defaultRevokeUser(ctx context.Context, username string) error {
+	_, err := c.getConnection(ctx)
 	if err != nil {
 		return err
 	}
-	db.Close(&gocb.ClusterCloseOptions{})
+	c.close()
 
-	// Check if the role exists
-/*	var exists bool
-	err = db.QueryRowContext(ctx, "SELECT exists (SELECT rolname FROM pg_roles WHERE rolname=$1);", username).Scan(&exists)
-	if err != nil && err != sql.ErrNoRows {
-		return err
-	}
-
-	if !exists {
-		return nil
-	}
-
-	// Query for permissions; we need to revoke permissions before we can drop
-	// the role
-	// This isn't done in a transaction because even if we fail along the way,
-	// we want to remove as much access as possible
-	stmt, err := db.PrepareContext(ctx, "SELECT DISTINCT table_schema FROM information_schema.role_column_grants WHERE grantee=$1;")
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	rows, err := stmt.QueryContext(ctx, username)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	const initialNumRevocations = 16
-	revocationStmts := make([]string, 0, initialNumRevocations)
-	for rows.Next() {
-		var schema string
-		err = rows.Scan(&schema)
-		if err != nil {
-			// keep going; remove as many permissions as possible right now
-			continue
-		}
-		revocationStmts = append(revocationStmts, fmt.Sprintf(
-			`REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA %s FROM %s;`,
-			schema,
-			username))
-
-		revocationStmts = append(revocationStmts, fmt.Sprintf(
-			`REVOKE USAGE ON SCHEMA %s FROM %s;`,
-			schema,
-			username))
-	}
-
-	// for good measure, revoke all privileges and usage on schema public
-	revocationStmts = append(revocationStmts, fmt.Sprintf(
-		`REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM %s;`,
-		username))
-
-	revocationStmts = append(revocationStmts, fmt.Sprintf(
-		"REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM %s;",
-		username))
-
-	revocationStmts = append(revocationStmts, fmt.Sprintf(
-		"REVOKE USAGE ON SCHEMA public FROM %s;",
-		username))
-
-	// get the current database name so we can issue a REVOKE CONNECT for
-	// this username
-	var dbname sql.NullString
-	if err := db.QueryRowContext(ctx, "SELECT current_database();").Scan(&dbname); err != nil {
-		return err
-	}
-
-	if dbname.Valid {
-		revocationStmts = append(revocationStmts, fmt.Sprintf(
-			`REVOKE CONNECT ON DATABASE %s FROM %s;`,
-			dbname.String,
-			username))
-	}
-
-	// again, here, we do not stop on error, as we want to remove as
-	// many permissions as possible right now
-	var lastStmtError error
-	for _, query := range revocationStmts {
-		if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
-			lastStmtError = err
-		}
-	}
-
-	// can't drop if not all privileges are revoked
-	if rows.Err() != nil {
-		return errwrap.Wrapf("could not generate revocation statements for all rows: {{err}}", rows.Err())
-	}
-	if lastStmtError != nil {
-		return errwrap.Wrapf("could not perform all revocation statements: {{err}}", lastStmtError)
-	}
-
-	// Drop this user
-	stmt, err = db.PrepareContext(ctx, fmt.Sprintf(
-		`DROP ROLE IF EXISTS %s;`, username))
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	if _, err := stmt.ExecContext(ctx); err != nil {
-		return err
-	}
-*/
 	return nil
 }
 
@@ -449,7 +319,7 @@ func (c *CouchbaseDB) RotateRootCredentials(ctx context.Context, statements []st
 	}
 
 	// Close the database connection to ensure no new connections come in
-	if err := c.Close(); err != nil {
+	if err := c.close(); err != nil {
 		return nil, err
 	}
 
