@@ -752,10 +752,6 @@ func TestAgent_Template_Basic(t *testing.T) {
 		templateCount int
 		exitAfterAuth bool
 	}{
-		"zero": {},
-		"zero-with-exit": {
-			exitAfterAuth: true,
-		},
 		"one": {
 			templateCount: 1,
 		},
