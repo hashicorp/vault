@@ -301,6 +301,8 @@ In addition to the standard set of capabilities, Vault offers finer-grained
 control over permissions at a given path. The capabilities associated with a
 path take precedence over permissions on parameters.
 
+!> The Fine-Grained Control mechanism is only supported by KV v1 Secret Engine, nevertheless a more sophisticated control is possible by  using Sentinel policies
+
 ### Parameter Constraints
 
 In Vault, data is represented as `key=value` pairs. Vault policies can
