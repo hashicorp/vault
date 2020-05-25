@@ -1,4 +1,4 @@
-module github.com/fhitchen/vault/plugins/database/couchbase
+module github.com/hashicorp/vault/plugins/database/couchbase
 
 go 1.14
 
