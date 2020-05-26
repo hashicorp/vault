@@ -38,7 +38,7 @@ export default Component.extend({
     // dr or performance 🤯
     const { isSummaryDashboard } = this;
     if (isSummaryDashboard) {
-      return 'Summary Dashboard';
+      return 'Disaster Recovery & Performance';
     }
     const mode = this.model.replicationMode;
     return MODE[mode];
