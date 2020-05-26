@@ -1,6 +1,7 @@
 import { computed } from '@ember/object';
 import Component from '@ember/component';
 import utils from 'vault/lib/key-utils';
+import layout from '../templates/components/key-value-header';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default Component.extend({
