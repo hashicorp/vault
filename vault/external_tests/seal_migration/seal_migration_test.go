@@ -52,15 +52,15 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 		tf(t, logger, storage, 52000)
 	})
 
-	//t.Run("consul", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("consul", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("consul")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeConsulBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 53000)
-	//})
+		logger := logger.Named("consul")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeConsulBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 53000)
+	})
 
 	if includeRaft {
 		t.Run("raft", func(t *testing.T) {
@@ -98,7 +98,8 @@ func testSealMigrationShamirToTransit_Pre14(
 	}()
 	tss.MakeKey(t, "transit-seal-key")
 
-	// Migrate the backend from transit to shamir
+	// Migrate the backend from shamir to transit.  Note that the barrier keys
+	// are now the recovery keys.
 	transitSeal := migrateFromShamirToTransit_Pre14(t, logger, storage, basePort, tss, rootToken, barrierKeys)
 
 	// Run the backend with transit.
@@ -108,7 +109,7 @@ func testSealMigrationShamirToTransit_Pre14(
 func migrateFromShamirToTransit_Pre14(
 	t *testing.T, logger hclog.Logger,
 	storage teststorage.ReusableStorage, basePort int,
-	tss *sealhelper.TransitSealServer, rootToken string, keys [][]byte,
+	tss *sealhelper.TransitSealServer, rootToken string, recoveryKeys [][]byte,
 ) vault.Seal {
 
 	var baseClusterPort = basePort + 10
@@ -145,12 +146,8 @@ func migrateFromShamirToTransit_Pre14(
 	client := leader.Client
 	client.SetToken(rootToken)
 
-	// Unseal with the recovery keys
-	cluster.RecoveryKeys = keys
-	for _, core := range cluster.Cores {
-		cluster.UnsealCore(t, core)
-	}
-	testhelpers.WaitForActiveNode(t, cluster)
+	// Unseal and migrate to Transit.
+	unsealMigrate(t, client, recoveryKeys, true)
 
 	// Wait for migration to finish.  Sadly there is no callback, and the
 	// test will fail later on if we don't do this.

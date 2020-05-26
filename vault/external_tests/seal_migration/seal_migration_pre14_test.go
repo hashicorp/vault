@@ -52,7 +52,7 @@ func testSealMigrationTransitToShamir_Pre14(
 	tss.Cleanup()
 	tss = nil
 
-	// Run the backend with shamir. Note that the recovery keys are now the
+	// Run the backend with shamir.  Note that the recovery keys are now the
 	// barrier keys.
 	runShamir(t, logger, storage, basePort, rootToken, recoveryKeys)
 }
