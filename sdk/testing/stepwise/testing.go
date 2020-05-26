@@ -123,16 +123,33 @@ func (p PluginType) String() string {
 type DriverOptions struct {
 	// MountPath is an optional string to specify the mount path for the plugin.
 	// Defaults to a random string
+	// TODO make mount path default to random
 	MountPath string
 
-	// Name is the name of the plugin to be tested.
-	// TODO verify this is needed
+	// Name is used to register the plugin. This can be arbitray but should be a
+	// reasonable value. For an example, if the plugin in test is a secret backend
+	// that generates UUIDs with the name "vault-plugin-secrets-uuid", then "uuid"
+	// or "test-uuid" would be reasonable. The name is used for lookups in the
+	// catalog. See "name" in the "Register Plugin" endpoint docs:
+	// - https://www.vaultproject.io/api-docs/system/plugins-catalog#register-plugin
 	Name string
 
 	// PluginType is the optional type of plugin. See PluginType const defined
 	// above
 	PluginType PluginType
-	// TODO verify needed
+
+	// PluginName represents the name of the plugin that gets compiled. In the
+	// standard plugin project file layout, it represents the folder under the
+	// cmd/ folder. In the below example UUID project, the PluginName would be
+	// "uuid":
+	//
+	// vault-plugin-secrets-uuid/
+	// - backend.go
+	// - cmd/
+	// ----uuid/
+	// ------main.go
+	// - path_generate.go
+	//
 	PluginName string
 }
 
@@ -221,13 +238,20 @@ func Run(tt TestT, c Case) {
 	}
 
 	// Defer on the teardown, regardless of pass/fail at this point
+	var checkErr error
 	if c.Teardown != nil {
-		defer func() {
+		defer func(testError error) {
+			q.Q("## teardown error check err:", testError)
+			if testError != nil {
+				q.Q("## test check err is not nil, skipping tearing down")
+				return
+			}
+			q.Q("## test check err is nil, tearing down...")
 			err := c.Teardown()
 			if err != nil {
 				tt.Error("failed to tear down:", err)
 			}
-		}()
+		}(checkErr)
 	}
 
 	// Create an in-memory Vault core
@@ -347,7 +371,6 @@ func Run(tt TestT, c Case) {
 		// Either the 'err' was nil or if an error was expected, it was set to nil.
 		// Call the 'Check' function if there is one.
 		//
-		var checkErr error
 		if s.Check != nil {
 			checkErr = s.Check(resp, err)
 			// TODO allow error
@@ -356,6 +379,7 @@ func Run(tt TestT, c Case) {
 			tt.Fatal("test check error:", checkErr)
 		}
 
+		// TODO which error is this?
 		if err != nil {
 			tt.Error(fmt.Sprintf("Failed step %d: %s", i+1, err))
 			break

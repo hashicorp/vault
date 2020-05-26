@@ -17,8 +17,14 @@ import (
 // TestBackend_basic_derived_docker is an example test using the Docker Driver
 func TestBackend_basic_derived_docker(t *testing.T) {
 	decryptData := make(map[string]interface{})
+	driverOptions := stepwise.DriverOptions{
+		Name:       "transit2",
+		PluginType: stepwise.PluginTypeSecrets,
+		PluginName: "transit",
+		MountPath:  "transit_temp",
+	}
 	stepwise.Run(t, stepwise.Case{
-		Driver: dockerDriver.NewDockerDriver("transit", nil),
+		Driver: dockerDriver.NewDockerDriver("transit", &driverOptions),
 		Steps: []stepwise.Step{
 			testAccStepwiseListPolicy(t, "test", true),
 			testAccStepwiseWritePolicy(t, "test", true),

@@ -8,8 +8,10 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/y0ssar1an/q"
 )
 
 // TestHelper is a package global that plugins will use to extract Vault
@@ -59,11 +61,19 @@ func UseDocker(name, src string) *Helper {
 // 	os.Exit(stat)
 // }
 
-// CompilePlugin is a helper method to compile a sourc plugin
-func CompilePlugin(name, srcDir, tmpDir string) (string, string, error) {
-	binPath := path.Join(tmpDir, name)
+const pluginPrefix = "vault-plugin-"
 
-	cmd := exec.Command("go", "build", "-o", path.Join(tmpDir, name), path.Join(srcDir, fmt.Sprintf("cmd/%s/main.go", name)))
+// CompilePlugin is a helper method to compile a sourc plugin
+// TODO refactor compile plugin input and output to be types
+func CompilePlugin(name, pluginName, srcDir, tmpDir string) (string, string, string, error) {
+	binName := name
+	if !strings.HasPrefix(binName, pluginPrefix) {
+		binName = fmt.Sprintf("%s%s", pluginPrefix, binName)
+	}
+	binPath := path.Join(tmpDir, binName)
+
+	q.Q("==> compile binpath:", binPath)
+	cmd := exec.Command("go", "build", "-o", binPath, path.Join(srcDir, fmt.Sprintf("cmd/%s/main.go", pluginName)))
 	var out bytes.Buffer
 	cmd.Stdout = &out
 
@@ -71,13 +81,13 @@ func CompilePlugin(name, srcDir, tmpDir string) (string, string, error) {
 	cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64")
 	err := cmd.Run()
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	// calculate sha256
 	f, err := os.Open(binPath)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	h := sha256.New()
@@ -88,7 +98,7 @@ func CompilePlugin(name, srcDir, tmpDir string) (string, string, error) {
 	_ = f.Close()
 
 	sha256value := fmt.Sprintf("%x", h.Sum(nil))
-	// q.Q("=> compiled, sha:", name, sha256value)
+	q.Q("=> compiled, sha:", binPath, sha256value)
 
-	return binPath, sha256value, err
+	return binName, binPath, sha256value, err
 }

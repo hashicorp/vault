@@ -221,6 +221,10 @@ func (rc *DockerCluster) Initialize(ctx context.Context) error {
 	}
 	rc.RootToken = resp.RootToken
 	q.Q("===> docker vault root token:", resp.RootToken)
+	q.Q("===> docker vault barrier keys:")
+	for i, key := range rc.GetBarrierKeys() {
+		q.Q(i, string(key))
+	}
 
 	// Write root token and barrier keys
 	err = ioutil.WriteFile(filepath.Join(rc.TempDir, "root_token"), []byte(rc.RootToken), 0755)
@@ -875,7 +879,9 @@ func createNetwork(cli *docker.Client, netName, cidr string) (string, error) {
 	return resp.ID, nil
 }
 
+// NewDockerDriver creats a new Stepwise Driver for executing tests
 func NewDockerDriver(name string, do *stepwise.DriverOptions) *DockerCluster {
+	// TODO name here should be name of the test?
 	clusterUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		panic(err)
@@ -896,8 +902,9 @@ func NewDockerDriver(name string, do *stepwise.DriverOptions) *DockerCluster {
 // Setup creates any temp dir and compiles the binary for copying to Docker
 func (dc *DockerCluster) Setup() error {
 	// TODO many not use name here
-	// TODO make PluginName give random name with prefix if given
 	name := dc.DriverOptions.PluginName
+	// TODO make PluginName give random name with prefix if given
+	pluginName := dc.DriverOptions.PluginName
 	// get the working directory of the plugin being tested.
 	srcDir, err := os.Getwd()
 	if err != nil {
@@ -910,10 +917,12 @@ func (dc *DockerCluster) Setup() error {
 		log.Fatal(err)
 	}
 
-	binPath, sha256value, err := stepwise.CompilePlugin(name, srcDir, tmpDir)
+	binName, binPath, sha256value, err := stepwise.CompilePlugin(name, pluginName, srcDir, tmpDir)
 	if err != nil {
 		panic(err)
 	}
+	q.Q("--> docker compile results:")
+	q.Q(binName, binPath, sha256value, err)
 
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
@@ -941,7 +950,7 @@ func (dc *DockerCluster) Setup() error {
 	err = client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 		Name:    name,
 		Type:    consts.PluginType(dc.DriverOptions.PluginType),
-		Command: name,
+		Command: binName,
 		SHA256:  sha256value,
 	})
 	if err != nil {
@@ -949,16 +958,17 @@ func (dc *DockerCluster) Setup() error {
 	}
 
 	var mountErr error
+	q.Q("==> mount name:", name)
 	switch dc.DriverOptions.PluginType {
 	case stepwise.PluginTypeCredential:
-		mountErr = client.Sys().EnableAuthWithOptions(name, &api.EnableAuthOptions{
+		mountErr = client.Sys().EnableAuthWithOptions(dc.DriverOptions.MountPath, &api.EnableAuthOptions{
 			Type: name,
 		})
 	case stepwise.PluginTypeDatabase:
 		// TODO database type
 		return errors.New("plugin type database not yet supported")
 	case stepwise.PluginTypeSecrets:
-		mountErr = client.Sys().Mount(name, &api.MountInput{
+		mountErr = client.Sys().Mount(dc.DriverOptions.MountPath, &api.MountInput{
 			Type: name,
 		})
 	default:
