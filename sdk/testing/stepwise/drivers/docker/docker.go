@@ -90,11 +90,14 @@ func (rc *DockerCluster) Teardown() error {
 
 func (dc *DockerCluster) ExpandPath(path string) string {
 	// TODO mount point
+	newPath := path
+	newPath = fmt.Sprintf("%s/%s", dc.DriverOptions.MountPath, newPath)
 	if dc.DriverOptions.PluginType == stepwise.PluginTypeCredential {
-		path = fmt.Sprintf("%s/%s", "auth", path)
+		q.Q("==> expanding path to include auth")
+		newPath = fmt.Sprintf("%s/%s", "auth", newPath)
 		// TODO prefix with namespace
 	}
-	return path
+	return newPath
 }
 
 func (dc *DockerCluster) Name() string {
@@ -900,7 +903,6 @@ func (dc *DockerCluster) Setup() error {
 	if err != nil {
 		panic(err)
 	}
-	// q.Q("=== setup wd:", srcDir)
 
 	// tmpDir gets cleaned up when the cluster is cleaned up
 	tmpDir, err := ioutil.TempDir("", "bin")
@@ -909,7 +911,6 @@ func (dc *DockerCluster) Setup() error {
 	}
 
 	binPath, sha256value, err := stepwise.CompilePlugin(name, srcDir, tmpDir)
-	// q.Q("=== setup binPath, sha:", binPath, sha256value)
 	if err != nil {
 		panic(err)
 	}
@@ -937,8 +938,6 @@ func (dc *DockerCluster) Setup() error {
 	}
 
 	// use client to mount plugin
-	q.Q("==> mount name: ", name)
-	q.Q("==> mount type: ", dc.DriverOptions.PluginType.String())
 	err = client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 		Name:    name,
 		Type:    consts.PluginType(dc.DriverOptions.PluginType),
@@ -946,11 +945,9 @@ func (dc *DockerCluster) Setup() error {
 		SHA256:  sha256value,
 	})
 	if err != nil {
-		q.Q("==> error at Register:", err)
 		panic(err)
 	}
 
-	q.Q("=== mounting in setup")
 	var mountErr error
 	switch dc.DriverOptions.PluginType {
 	case stepwise.PluginTypeCredential:
@@ -968,7 +965,6 @@ func (dc *DockerCluster) Setup() error {
 		return fmt.Errorf("unknown plugin type: %s", dc.DriverOptions.PluginType.String())
 	}
 	if mountErr != nil {
-		q.Q("==> panic in mount:", mountErr)
 		panic(mountErr)
 	}
 	return mountErr

@@ -263,7 +263,10 @@ func Run(tt TestT, c Case) {
 
 		// TODO hard coded path here, need mount point. Will it be dynamic? probabaly
 		// needs to be
-		path := fmt.Sprintf("transit/%s", s.Path)
+		// path := fmt.Sprintf("transit/%s", s.Path)
+		q.Q("--> test path:", s.Path)
+		path := c.Driver.ExpandPath(s.Path)
+		q.Q("--> test expanded path:", path)
 		var err error
 		var resp *api.Secret
 		client, cerr := c.Driver.Client()
