@@ -5,5 +5,6 @@ export default Component.extend({
   layout,
   isSecondary: null,
   secondaryId: null,
+  isSummaryDashboard: false,
   'data-test-replication-header': true,
 });

@@ -262,69 +262,92 @@
     {{/if}}
   </form>
 {{else if showModeSummary}}
-  <PageHeader as |p|>
-    <p.levelLeft>
-      <h1 class="title is-3">
-        Replication
-      </h1>
-    </p.levelLeft>
-  </PageHeader>
-  <div class="box is-sideless is-fullwidth is-marginless">
-    <h3 class="title is-flex-center is-5 is-marginless">
-      <Icon @size="xl" aria-hidden="true" @glyph="replication" />
-      Disaster Recovery (DR)
-    </h3>
-    {{#if cluster.dr.replicationEnabled}}
-      {{#if submit.isRunning }}
-        <LayoutLoading />
-      {{else}}
-        {{#link-to
-          "mode.index"
-          "dr"
-          class="link-plain"
-        }}
-          {{replication-mode-summary
-            mode="dr"
-            cluster=cluster
-            tagName="span"
-          }}
-        {{/link-to}}
-      {{/if}}
-    {{else}}
-      {{replication-mode-summary
-        mode="dr"
-        cluster=cluster
-        tagName="div"
-      }}
-    {{/if}}
-  </div>
-  {{#unless (and submit.isRunning (eq cluster.dr.mode "bootstrapping"))}}
-    <div class="box is-bottomless is-fullwidth is-marginless">
+  {{#unless (and cluster.dr.replicationEnabled cluster.performance.replicationEnabled)}}
+    <PageHeader as |p|>
+      <p.levelLeft>
+        <h1 class="title is-3">
+          Replication
+        </h1>
+      </p.levelLeft>
+    </PageHeader>
+  {{/unless}}
+
+  {{#if (and cluster.dr.replicationEnabled cluster.performance.replicationEnabled ) }}
+    <ReplicationPage @model={{cluster}} as |Page|>
+      <Page.header
+        @showTabs={{true}}
+      />
+      <Page.dashboard
+      {{!-- passing in component to render so that the yielded components are flexible based on the dashboard --}}
+        @componentToRender='replication-secondary-card' as |Dashboard|>
+        <Dashboard.card
+          @title="States"
+        />
+        <Dashboard.card
+          @title="Primary cluster"
+        />
+        <Dashboard.rows/>
+      </Page.dashboard>
+    </ReplicationPage>
+  {{else}}
+
+    <div class="box is-sideless is-fullwidth is-marginless">
       <h3 class="title is-flex-center is-5 is-marginless">
-        <Icon @size="xl" aria-hidden="true" @glyph="perf-replication" />
-        Performance
+        <Icon @size="xl" aria-hidden="true" @glyph="replication" />
+        Disaster Recovery (DR)
       </h3>
       {{#if cluster.dr.replicationEnabled}}
-        {{#link-to
-          "mode.index"
-          "performance"
-          class="link-plain"
-        }}
-          {{replication-mode-summary
-            mode="performance"
-            cluster=cluster
-            tagName="span"
+        {{#if submit.isRunning }}
+          <LayoutLoading />
+        {{else}}
+          {{#link-to
+            "mode.index"
+            "dr"
+            class="link-plain"
           }}
-        {{/link-to}}
+            {{replication-mode-summary
+              mode="dr"
+              cluster=cluster
+              tagName="span"
+            }}
+          {{/link-to}}
+        {{/if}}
       {{else}}
         {{replication-mode-summary
-          mode="performance"
+          mode="dr"
           cluster=cluster
           tagName="div"
         }}
       {{/if}}
     </div>
-  {{/unless}}
+      {{#unless (and submit.isRunning (eq cluster.dr.mode "bootstrapping"))}}
+      <div class="box is-bottomless is-fullwidth is-marginless">
+        <h3 class="title is-flex-center is-5 is-marginless">
+          <Icon @size="xl" aria-hidden="true" @glyph="perf-replication" />
+          Performance
+        </h3>
+        {{#if cluster.dr.replicationEnabled}}
+          {{#link-to
+            "mode.index"
+            "performance"
+            class="link-plain"
+          }}
+            {{replication-mode-summary
+              mode="performance"
+              cluster=cluster
+              tagName="span"
+            }}
+          {{/link-to}}
+        {{else}}
+          {{replication-mode-summary
+            mode="performance"
+            cluster=cluster
+            tagName="div"
+          }}
+        {{/if}}
+      </div>
+    {{/unless}}
+  {{/if}}
 {{else}}
   {{#if (eq replicationAttrs.mode 'initializing')}}
     The cluster is initializing replication. This may take some time.
