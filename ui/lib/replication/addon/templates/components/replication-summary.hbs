@@ -369,12 +369,12 @@
           {{else}}
             <Dashboard.card
               @title='State'
-              @description='Updated every ten seconds.'
+              @description='The cluster’s current operating state.'
               @glyph={{get (cluster-states replicationAttrs.state) "glyph"}}
               @metric={{replicationAttrs.state}} />
             <Dashboard.card
               @title='Last WAL entry'
-              @description='Index of last Write Ahead Logs entry written on local storage.'
+              @description='Index of last Write Ahead Logs entry written on local storage. Updates every ten seconds.'
               @metric={{format-number replicationAttrs.lastWAL}} />
             <Dashboard.secondaryCard
               @cluster={{cluster}}
