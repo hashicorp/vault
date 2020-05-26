@@ -1,0 +1,1 @@
+This memd library should be moved into gocbcore!
