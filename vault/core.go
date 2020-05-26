@@ -1293,7 +1293,8 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 		c.migrationInfo.shamirCombinedKey = make([]byte, len(recoveredKey))
 		copy(c.migrationInfo.shamirCombinedKey, recoveredKey)
 		if seal.StoredKeysSupported() == vaultseal.StoredKeysSupportedShamirMaster {
-			fmt.Printf("(c *Core) unsealPart zzz %T\n", seal.GetAccess().Wrapper)
+			fmt.Printf("test-debug (c *Core) unsealPart zzz %T\n", seal.GetAccess().Wrapper)
+			fmt.Printf("test-debug (c *Core) unsealPart zzz type %v\n", seal.GetAccess().Wrapper.Type())
 			err = seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(recoveredKey)
 			if err != nil {
 				return nil, errwrap.Wrapf("failed to set master key in seal: {{err}}", err)
