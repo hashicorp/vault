@@ -236,7 +236,6 @@ func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 	b, dir := getRaft(t, true, true)
 	defer os.RemoveAll(dir)
 
-	t.Helper()
 
 	value := make([]byte, defaultMaxEntrySize+1)
 	rand.Read(value)
