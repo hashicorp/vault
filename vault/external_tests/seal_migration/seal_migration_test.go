@@ -80,7 +80,7 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 func TestSealMigration_ShamirToTransit_Pre14(t *testing.T) {
 	// Note that we do not test integrated raft storage since this is
 	// a pre-1.4 test.
-	testVariousBackends(t, testSealMigrationTransitToShamir_Pre14, false)
+	testVariousBackends(t, testSealMigrationShamirToTransit_Pre14, false)
 }
 
 func testSealMigrationShamirToTransit_Pre14(
@@ -484,4 +484,33 @@ func runTransit(
 
 	// Seal the cluster
 	cluster.EnsureCoresSealed(t)
+}
+
+func TestShamir(t *testing.T) {
+	testVariousBackends(t, testShamir, true)
+}
+
+func testShamir(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int) {
+
+	rootToken, barrierKeys := initializeShamir(t, logger, storage, basePort)
+	runShamir(t, logger, storage, basePort, rootToken, barrierKeys)
+}
+
+func TestTransit(t *testing.T) {
+	testVariousBackends(t, testTransit, true)
+}
+
+func testTransit(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int) {
+
+	// Create the transit server.
+	tss := sealhelper.NewTransitSealServer(t)
+	defer tss.Cleanup()
+	tss.MakeKey(t, "transit-seal-key")
+
+	rootToken, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
+	runTransit(t, logger, storage, basePort, rootToken, transitSeal)
 }
