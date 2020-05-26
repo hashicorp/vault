@@ -31,3 +31,8 @@ func FileModePtr(o os.FileMode) *os.FileMode {
 func Int64Ptr(i int64) *int64 {
 	return &i
 }
+
+// IntPtr returns a pointer to an int value
+func IntPtr(i int) *int {
+	return &i
+}
