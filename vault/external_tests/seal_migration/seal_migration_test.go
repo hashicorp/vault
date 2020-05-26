@@ -42,36 +42,36 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 		tf(t, logger, storage, 51000)
 	})
 
-	//t.Run("file", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("file", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("file")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeFileBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 52000)
-	//})
+		logger := logger.Named("file")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeFileBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 52000)
+	})
 
-	//t.Run("consul", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("consul", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("consul")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeConsulBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 53000)
-	//})
+		logger := logger.Named("consul")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeConsulBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 53000)
+	})
 
-	//if includeRaft {
-	//	t.Run("raft", func(t *testing.T) {
-	//		t.Parallel()
+	if includeRaft {
+		t.Run("raft", func(t *testing.T) {
+			t.Parallel()
 
-	//		logger := logger.Named("raft")
-	//		storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores)
-	//		defer cleanup()
-	//		tf(t, logger, storage, 54000)
-	//	})
-	//}
+			logger := logger.Named("raft")
+			storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores)
+			defer cleanup()
+			tf(t, logger, storage, 54000)
+		})
+	}
 }
 
 // TestSealMigration_ShamirToTransit_Pre14 tests shamir-to-transit seal
@@ -363,8 +363,7 @@ func initializeTransit(
 	storage teststorage.ReusableStorage, basePort int,
 	tss *sealhelper.TransitSealServer) (string, [][]byte, vault.Seal) {
 
-	//var transitSeal vault.Seal
-	transitSeal := tss.MakeSeal(t, "transit-seal-key")
+	var transitSeal vault.Seal
 
 	var baseClusterPort = basePort + 10
 
@@ -378,6 +377,10 @@ func initializeTransit(
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
 		BaseClusterListenPort: baseClusterPort,
 		SealFunc: func() vault.Seal {
+			// Each core will create its own transit seal here.  Later
+			// on it won't matter which one of these we end up using, since
+			// they were all created from the same transit key.
+			transitSeal = tss.MakeSeal(t, "transit-seal-key")
 			return transitSeal
 		},
 	}
