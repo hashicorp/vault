@@ -937,24 +937,41 @@ func (dc *DockerCluster) Setup() error {
 	}
 
 	// use client to mount plugin
+	q.Q("==> mount name: ", name)
+	q.Q("==> mount type: ", dc.DriverOptions.PluginType.String())
 	err = client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 		Name:    name,
-		Type:    consts.PluginTypeSecrets,
+		Type:    consts.PluginType(dc.DriverOptions.PluginType),
 		Command: name,
 		SHA256:  sha256value,
 	})
 	if err != nil {
+		q.Q("==> error at Register:", err)
 		panic(err)
 	}
 
-	// q.Q("=== mounting in setup")
-	err = client.Sys().Mount(name, &api.MountInput{
-		Type: name,
-	})
-	if err != nil {
-		panic(err)
+	q.Q("=== mounting in setup")
+	var mountErr error
+	switch dc.DriverOptions.PluginType {
+	case stepwise.PluginTypeCredential:
+		mountErr = client.Sys().EnableAuthWithOptions(name, &api.EnableAuthOptions{
+			Type: name,
+		})
+	case stepwise.PluginTypeDatabase:
+		// TODO database type
+		return errors.New("plugin type database not yet supported")
+	case stepwise.PluginTypeSecrets:
+		mountErr = client.Sys().Mount(name, &api.MountInput{
+			Type: name,
+		})
+	default:
+		return fmt.Errorf("unknown plugin type: %s", dc.DriverOptions.PluginType.String())
 	}
-	return nil
+	if mountErr != nil {
+		q.Q("==> panic in mount:", mountErr)
+		panic(mountErr)
+	}
+	return mountErr
 }
 
 // Runner manages the lifecycle of the Docker container
