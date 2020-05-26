@@ -132,3 +132,32 @@ func migrateFromTransitToShamir_Pre14(
 
 	cluster.EnsureCoresSealed(t)
 }
+
+func TestShamir(t *testing.T) {
+	testVariousBackends(t, testShamir, true)
+}
+
+func testShamir(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int) {
+
+	rootToken, barrierKeys := initializeShamir(t, logger, storage, basePort)
+	runShamir(t, logger, storage, basePort, rootToken, barrierKeys)
+}
+
+func TestTransit(t *testing.T) {
+	testVariousBackends(t, testTransit, true)
+}
+
+func testTransit(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int) {
+
+	// Create the transit server.
+	tss := sealhelper.NewTransitSealServer(t)
+	defer tss.Cleanup()
+	tss.MakeKey(t, "transit-seal-key")
+
+	rootToken, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
+	runTransit(t, logger, storage, basePort, rootToken, transitSeal)
+}
