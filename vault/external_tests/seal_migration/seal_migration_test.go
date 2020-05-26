@@ -363,7 +363,8 @@ func initializeTransit(
 	storage teststorage.ReusableStorage, basePort int,
 	tss *sealhelper.TransitSealServer) (string, [][]byte, vault.Seal) {
 
-	var transitSeal vault.Seal
+	//var transitSeal vault.Seal
+	transitSeal := tss.MakeSeal(t, "transit-seal-key")
 
 	var baseClusterPort = basePort + 10
 
@@ -377,10 +378,6 @@ func initializeTransit(
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
 		BaseClusterListenPort: baseClusterPort,
 		SealFunc: func() vault.Seal {
-			// Each core will create its own transit seal here.  Later
-			// on it won't matter which one of these we end up using, since
-			// they were all created from the same transit key.
-			transitSeal = tss.MakeSeal(t, "transit-seal-key")
 			return transitSeal
 		},
 	}
