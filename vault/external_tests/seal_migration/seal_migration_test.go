@@ -52,15 +52,15 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 		tf(t, logger, storage, 52000)
 	})
 
-	t.Run("consul", func(t *testing.T) {
-		t.Parallel()
+	//t.Run("consul", func(t *testing.T) {
+	//	t.Parallel()
 
-		logger := logger.Named("consul")
-		storage, cleanup := teststorage.MakeReusableStorage(
-			t, logger, teststorage.MakeConsulBackend(t, logger))
-		defer cleanup()
-		tf(t, logger, storage, 53000)
-	})
+	//	logger := logger.Named("consul")
+	//	storage, cleanup := teststorage.MakeReusableStorage(
+	//		t, logger, teststorage.MakeConsulBackend(t, logger))
+	//	defer cleanup()
+	//	tf(t, logger, storage, 53000)
+	//})
 
 	if includeRaft {
 		t.Run("raft", func(t *testing.T) {
@@ -486,6 +486,8 @@ func runTransit(
 	cluster.EnsureCoresSealed(t)
 }
 
+// TestShamir is a temporary test that exercises the reusable raft storage.
+// It will be replace once we do the post-1.4 migration testing.
 func TestShamir(t *testing.T) {
 	testVariousBackends(t, testShamir, true)
 }
@@ -498,6 +500,8 @@ func testShamir(
 	runShamir(t, logger, storage, basePort, rootToken, barrierKeys)
 }
 
+// TestTransit is a temporary test that exercises the reusable raft storage.
+// It will be replace once we do the post-1.4 migration testing.
 func TestTransit(t *testing.T) {
 	testVariousBackends(t, testTransit, true)
 }
