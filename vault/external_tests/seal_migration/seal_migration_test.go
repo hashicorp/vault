@@ -1,6 +1,8 @@
 package seal_migration
 
 import (
+	"context"
+	"encoding/base64"
 	"fmt"
 	"testing"
 	"time"
@@ -8,6 +10,8 @@ import (
 	"github.com/go-test/deep"
 
 	"github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	sealhelper "github.com/hashicorp/vault/helper/testhelpers/seal"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
@@ -16,19 +20,15 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-const numTestCores = 5
-
-func TestShamir(t *testing.T) {
-	testVariousBackends(t, testShamir)
-}
-
-func TestTransit(t *testing.T) {
-	testVariousBackends(t, testTransit)
-}
+const (
+	numTestCores = 5
+	keyShares    = 3
+	keyThreshold = 3
+)
 
 type testFunc func(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int)
 
-func testVariousBackends(t *testing.T, tf testFunc) {
+func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
 
@@ -62,36 +62,226 @@ func testVariousBackends(t *testing.T, tf testFunc) {
 		tf(t, logger, storage, 53000)
 	})
 
-	t.Run("raft", func(t *testing.T) {
-		t.Parallel()
+	if includeRaft {
+		t.Run("raft", func(t *testing.T) {
+			t.Parallel()
 
-		logger := logger.Named("raft")
-		storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores)
-		defer cleanup()
-		tf(t, logger, storage, 54000)
-	})
+			logger := logger.Named("raft")
+			storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores)
+			defer cleanup()
+			tf(t, logger, storage, 54000)
+		})
+
+	}
 }
 
-func testShamir(
-	t *testing.T, logger hclog.Logger,
-	storage teststorage.ReusableStorage, basePort int) {
+//func TestShamir(t *testing.T) {
+//	testVariousBackends(t, testShamir, true)
+//}
+//
+//func testShamir(
+//	t *testing.T, logger hclog.Logger,
+//	storage teststorage.ReusableStorage, basePort int) {
+//
+//	rootToken, barrierKeys := initializeShamir(t, logger, storage, basePort)
+//	runShamir(t, logger, storage, basePort, rootToken, barrierKeys)
+//}
+//
+//func TestTransit(t *testing.T) {
+//	testVariousBackends(t, testTransit, true)
+//}
+//
+//func testTransit(
+//	t *testing.T, logger hclog.Logger,
+//	storage teststorage.ReusableStorage, basePort int) {
+//
+//	// Create the transit server.
+//	tss := sealhelper.NewTransitSealServer(t)
+//	defer tss.Cleanup()
+//	tss.MakeKey(t, "transit-seal-key")
+//
+//	rootToken, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
+//	//println("rootToken, recoveryKeys, transitSeal", rootToken, recoveryKeys, transitSeal)
+//	runTransit(t, logger, storage, basePort, rootToken, transitSeal)
+//}
 
-	rootToken, barrierKeys := initializeShamir(t, logger, storage, basePort)
-	runShamir(t, logger, storage, basePort, rootToken, barrierKeys)
+//---------------------------------------------------------
+
+// TODO skip enterprise --> merge in to double check
+
+func TestSealMigration_TransitToShamir_Pre14(t *testing.T) {
+	testVariousBackends(t, testSealMigrationTransitToShamir_Pre14, false)
 }
 
-func testTransit(
+func testSealMigrationTransitToShamir_Pre14(
 	t *testing.T, logger hclog.Logger,
 	storage teststorage.ReusableStorage, basePort int) {
 
 	// Create the transit server.
 	tss := sealhelper.NewTransitSealServer(t)
-	defer tss.Cleanup()
+	defer func() {
+		if tss != nil {
+			tss.Cleanup()
+		}
+	}()
 	tss.MakeKey(t, "transit-seal-key")
 
-	rootToken, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
-	//println("rootToken, recoveryKeys, transitSeal", rootToken, recoveryKeys, transitSeal)
-	runTransit(t, logger, storage, basePort, rootToken, transitSeal)
+	// Initialize the backend with transit.
+	rootToken, recoveryKeys, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
+
+	// Migrate the backend from transit to shamir
+	migrateFromTransitToShamir_Pre14(t, logger, storage, basePort, tss, transitSeal, rootToken, recoveryKeys)
+
+	// Now that migration is done, we can nuke the transit server, since we
+	// can unseal without it.
+	tss.Cleanup()
+	tss = nil
+
+	// Run the backend with shamir. Note that the recovery keys are now the
+	// barrier keys.
+	runShamir(t, logger, storage, basePort, rootToken, recoveryKeys)
+}
+
+// migrateFromTransitToShamir migrates the backend from transit to shamir
+func migrateFromTransitToShamir_Pre14(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int,
+	tss *sealhelper.TransitSealServer, transitSeal vault.Seal,
+	rootToken string, recoveryKeys [][]byte) {
+
+	var baseClusterPort = basePort + 10
+
+	var conf = vault.CoreConfig{
+		Logger: logger.Named("migrateFromTransitToShamir"),
+		// N.B. Providing an UnwrapSeal puts us in migration mode. This is the
+		// equivalent of doing the following in HCL:
+		//     seal "transit" {
+		//       // ...
+		//       disabled = "true"
+		//     }
+		UnwrapSeal: transitSeal,
+	}
+	var opts = vault.TestClusterOptions{
+		HandlerFunc:           vaulthttp.Handler,
+		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
+		BaseClusterListenPort: baseClusterPort,
+		SkipInit:              true,
+	}
+	storage.Setup(&conf, &opts)
+	cluster := vault.NewTestCluster(t, &conf, &opts)
+	cluster.Start()
+	defer func() {
+		storage.Cleanup(t, cluster)
+		cluster.Cleanup()
+	}()
+
+	leader := cluster.Cores[0]
+	client := leader.Client
+	client.SetToken(rootToken)
+
+	// Attempt to unseal while the transit server is unreachable.  Although
+	// we're unsealing using the recovery keys, this is still an
+	// autounseal, so it should fail.
+	tss.EnsureCoresSealed(t)
+	unsealMigrate(t, client, recoveryKeys, false)
+	tss.UnsealCores(t)
+	testhelpers.WaitForActiveNode(t, tss.TestCluster)
+
+	// Unseal and migrate to Shamir. Although we're unsealing using the
+	// recovery keys, this is still an autounseal.
+	//for _, node := range cluster.Cores {
+	//	nclient := node.Client
+	//	nclient.SetToken(rootToken)
+	//	unsealMigrate(t, nclient, recoveryKeys, true)
+	//}
+	unsealMigrate(t, client, recoveryKeys, true)
+	testhelpers.WaitForActiveNode(t, cluster)
+
+	// Wait for migration to finish.  Sadly there is no callback, and the
+	// test will fail later on if we don't do this.  TODO Maybe we should add a
+	// timeout loop of some kind here?
+	time.Sleep(10 * time.Second)
+
+	// Read the secret
+	secret, err := client.Logical().Read("secret/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(secret.Data, map[string]interface{}{"zork": "quux"}); len(diff) > 0 {
+		t.Fatal(diff)
+	}
+
+	// Make sure the seal configs were updated correctly.
+	b, r, err := cluster.Cores[0].Core.PhysicalSealConfigs(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	verifyBarrierConfig(t, b, wrapping.Shamir, keyShares, keyThreshold, 1)
+	if r != nil {
+		t.Fatalf("expected nil recovery config, got: %#v", r)
+	}
+
+	cluster.EnsureCoresSealed(t)
+}
+
+func unsealMigrate(t *testing.T, client *api.Client, keys [][]byte, transitServerAvailable bool) {
+
+	for i, key := range keys {
+
+		// Try to unseal with missing "migrate" parameter
+		_, err := client.Sys().UnsealWithOptions(&api.UnsealOpts{
+			Key: base64.StdEncoding.EncodeToString(key),
+		})
+		if err == nil {
+			t.Fatal("expected error due to lack of migrate parameter")
+		}
+
+		// Unseal with "migrate" parameter
+		resp, err := client.Sys().UnsealWithOptions(&api.UnsealOpts{
+			Key:     base64.StdEncoding.EncodeToString(key),
+			Migrate: true,
+		})
+
+		if i < keyThreshold-1 {
+			// Not enough keys have been provided yet.
+			if err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			if transitServerAvailable {
+				// The transit server is running.
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil || resp.Sealed {
+					t.Fatalf("expected unsealed state; got %#v", resp)
+				}
+			} else {
+				// The transit server is stopped.
+				if err == nil {
+					t.Fatal("expected error due to transit server being stopped.")
+				}
+			}
+			break
+		}
+	}
+}
+
+// verifyBarrierConfig verifies that a barrier configuration is correct.
+func verifyBarrierConfig(t *testing.T, cfg *vault.SealConfig, sealType string, shares, threshold, stored int) {
+	t.Helper()
+	if cfg.Type != sealType {
+		t.Fatalf("bad seal config: %#v, expected type=%q", cfg, sealType)
+	}
+	if cfg.SecretShares != shares {
+		t.Fatalf("bad seal config: %#v, expected SecretShares=%d", cfg, shares)
+	}
+	if cfg.SecretThreshold != threshold {
+		t.Fatalf("bad seal config: %#v, expected SecretThreshold=%d", cfg, threshold)
+	}
+	if cfg.StoredShares != stored {
+		t.Fatalf("bad seal config: %#v, expected StoredShares=%d", cfg, stored)
+	}
 }
 
 // initializeShamir initializes a brand new backend storage with Shamir.
