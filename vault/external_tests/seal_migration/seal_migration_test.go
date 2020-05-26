@@ -71,45 +71,14 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 			defer cleanup()
 			tf(t, logger, storage, 54000)
 		})
-
 	}
 }
-
-//func TestShamir(t *testing.T) {
-//	testVariousBackends(t, testShamir, true)
-//}
-//
-//func testShamir(
-//	t *testing.T, logger hclog.Logger,
-//	storage teststorage.ReusableStorage, basePort int) {
-//
-//	rootToken, barrierKeys := initializeShamir(t, logger, storage, basePort)
-//	runShamir(t, logger, storage, basePort, rootToken, barrierKeys)
-//}
-//
-//func TestTransit(t *testing.T) {
-//	testVariousBackends(t, testTransit, true)
-//}
-//
-//func testTransit(
-//	t *testing.T, logger hclog.Logger,
-//	storage teststorage.ReusableStorage, basePort int) {
-//
-//	// Create the transit server.
-//	tss := sealhelper.NewTransitSealServer(t)
-//	defer tss.Cleanup()
-//	tss.MakeKey(t, "transit-seal-key")
-//
-//	rootToken, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
-//	//println("rootToken, recoveryKeys, transitSeal", rootToken, recoveryKeys, transitSeal)
-//	runTransit(t, logger, storage, basePort, rootToken, transitSeal)
-//}
-
-//---------------------------------------------------------
 
 // TODO skip enterprise --> merge in to double check
 
 func TestSealMigration_TransitToShamir_Pre14(t *testing.T) {
+	// Note that we do not test integrated raft storage since this is
+	// a pre-1.4  test.
 	testVariousBackends(t, testSealMigrationTransitToShamir_Pre14, false)
 }
 
@@ -142,7 +111,6 @@ func testSealMigrationTransitToShamir_Pre14(
 	runShamir(t, logger, storage, basePort, rootToken, recoveryKeys)
 }
 
-// migrateFromTransitToShamir migrates the backend from transit to shamir
 func migrateFromTransitToShamir_Pre14(
 	t *testing.T, logger hclog.Logger,
 	storage teststorage.ReusableStorage, basePort int,
@@ -163,6 +131,7 @@ func migrateFromTransitToShamir_Pre14(
 	}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
+		NumCores:              numTestCores,
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
 		BaseClusterListenPort: baseClusterPort,
 		SkipInit:              true,
@@ -189,17 +158,11 @@ func migrateFromTransitToShamir_Pre14(
 
 	// Unseal and migrate to Shamir. Although we're unsealing using the
 	// recovery keys, this is still an autounseal.
-	//for _, node := range cluster.Cores {
-	//	nclient := node.Client
-	//	nclient.SetToken(rootToken)
-	//	unsealMigrate(t, nclient, recoveryKeys, true)
-	//}
 	unsealMigrate(t, client, recoveryKeys, true)
 	testhelpers.WaitForActiveNode(t, cluster)
 
 	// Wait for migration to finish.  Sadly there is no callback, and the
-	// test will fail later on if we don't do this.  TODO Maybe we should add a
-	// timeout loop of some kind here?
+	// test will fail later on if we don't do this.
 	time.Sleep(10 * time.Second)
 
 	// Read the secret
@@ -222,6 +185,107 @@ func migrateFromTransitToShamir_Pre14(
 	}
 
 	cluster.EnsureCoresSealed(t)
+}
+
+func TestSealMigration_ShamirToTransit_Pre14(t *testing.T) {
+	// Note that we do not test integrated raft storage since this is
+	// a pre-1.4  test.
+	testVariousBackends(t, testSealMigrationTransitToShamir_Pre14, false)
+}
+
+func testSealMigrationShamirToTransit_Pre14(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int) {
+
+	// Initialize the backend using shamir
+	rootToken, barrierKeys := initializeShamir(t, logger, storage, basePort)
+
+	// Create the transit server.
+	tss := sealhelper.NewTransitSealServer(t)
+	defer func() {
+		tss.EnsureCoresSealed(t)
+		tss.Cleanup()
+	}()
+	tss.MakeKey(t, "transit-seal-key")
+
+	// Migrate the backend from transit to shamir
+	transitSeal := migrateFromShamirToTransit_Pre14(t, logger, storage, basePort, tss, rootToken, barrierKeys)
+
+	// Run the backend with transit.
+	runTransit(t, logger, storage, basePort, rootToken, transitSeal)
+}
+
+func migrateFromShamirToTransit_Pre14(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int,
+	tss *sealhelper.TransitSealServer, rootToken string, keys [][]byte,
+) vault.Seal {
+
+	var baseClusterPort = basePort + 10
+
+	var transitSeal vault.Seal
+
+	var conf = vault.CoreConfig{
+		Logger: logger.Named("migrateFromShamirToTransit"),
+	}
+	var opts = vault.TestClusterOptions{
+		HandlerFunc:           vaulthttp.Handler,
+		NumCores:              numTestCores,
+		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
+		BaseClusterListenPort: baseClusterPort,
+		SkipInit:              true,
+		// N.B. Providing a transit seal puts us in migration mode.
+		SealFunc: func() vault.Seal {
+			// Each core will create its own transit seal here.  Later
+			// on it won't matter which one of these we end up using, since
+			// they were all created from the same transit key.
+			transitSeal = tss.MakeSeal(t, "transit-seal-key")
+			return transitSeal
+		},
+	}
+	storage.Setup(&conf, &opts)
+	cluster := vault.NewTestCluster(t, &conf, &opts)
+	cluster.Start()
+	defer func() {
+		storage.Cleanup(t, cluster)
+		cluster.Cleanup()
+	}()
+
+	leader := cluster.Cores[0]
+	client := leader.Client
+	client.SetToken(rootToken)
+
+	// Unseal with the recovery keys
+	cluster.RecoveryKeys = keys
+	for _, core := range cluster.Cores {
+		cluster.UnsealCore(t, core)
+	}
+	testhelpers.WaitForActiveNode(t, cluster)
+
+	// Wait for migration to finish.  Sadly there is no callback, and the
+	// test will fail later on if we don't do this.
+	time.Sleep(10 * time.Second)
+
+	// Read the secret
+	secret, err := client.Logical().Read("secret/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(secret.Data, map[string]interface{}{"zork": "quux"}); len(diff) > 0 {
+		t.Fatal(diff)
+	}
+
+	// Make sure the seal configs were updated correctly.
+	b, r, err := leader.Core.PhysicalSealConfigs(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	verifyBarrierConfig(t, b, wrapping.Transit, 1, 1, 1)
+	verifyBarrierConfig(t, r, wrapping.Shamir, keyShares, keyThreshold, 0)
+
+	cluster.EnsureCoresSealed(t)
+
+	return transitSeal
 }
 
 func unsealMigrate(t *testing.T, client *api.Client, keys [][]byte, transitServerAvailable bool) {
