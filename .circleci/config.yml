@@ -86,7 +86,7 @@ jobs:
           mkdir ./pkg
 
           # Build dev binary
-          make ci-bootstrap dev
+          make bootstrap dev
         name: Build dev binary
     - persist_to_workspace:
         paths:
@@ -96,7 +96,7 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
     - GO_VERSION: 1.13.8
-    - GO111MODULE: 'off'
+    - GOFLAGS: -mod=vendor
     - GOTESTSUM_VERSION: 0.3.3
   test-ui:
     docker:
@@ -244,7 +244,7 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
     - GO_VERSION: 1.13.8
-    - GO111MODULE: 'off'
+    - GOFLAGS: -mod=vendor
     - GOTESTSUM_VERSION: 0.3.3
   test-go-race:
     machine: true
@@ -320,7 +320,7 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
     - GO_VERSION: 1.13.8
-    - GO111MODULE: 'off'
+    - GOFLAGS: -mod=vendor
     - GOTESTSUM_VERSION: 0.3.3
   website-docker-image:
     docker:
@@ -495,7 +495,7 @@ workflows:
 #       CIRCLECI_CLI_VERSION: 0.1.5546
 #       GO_TAGS: \"\"
 #       GO_VERSION: 1.13.8
-#       GO111MODULE: \"off\"
+#       GOFLAGS: -mod=vendor
 #       GOTESTSUM_VERSION: 0.3.3
 #     machine: true
 #     shell: /usr/bin/env bash -euo pipefail -c
@@ -527,7 +527,7 @@ workflows:
 #           mkdir ./pkg
 # 
 #           # Build dev binary
-#           make ci-bootstrap dev
+#           make bootstrap dev
 #         name: Build dev binary
 #     - persist_to_workspace:
 #         paths:

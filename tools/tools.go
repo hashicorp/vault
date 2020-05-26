@@ -22,10 +22,10 @@ import _ "golang.org/x/tools/cmd/goimports"
 //go:generate go install github.com/mitchellh/gox
 import _ "github.com/mitchellh/gox"
 
-//go:generate go install github.com/hashicorp/go-bindata
+//go:generate go install github.com/hashicorp/go-bindata/...
 import _ "github.com/hashicorp/go-bindata"
 
-//go:generate go install github.com/elazarl/go-bindata-assetfs
+//go:generate go install github.com/elazarl/go-bindata-assetfs/...
 import _ "github.com/elazarl/go-bindata-assetfs"
 
 //go:generate go install github.com/client9/misspell/cmd/misspell

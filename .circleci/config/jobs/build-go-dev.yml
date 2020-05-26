@@ -12,7 +12,7 @@ steps:
         mkdir ./pkg
 
         # Build dev binary
-        make ci-bootstrap dev
+        make bootstrap dev
   - persist_to_workspace:
       root: .
       paths:
