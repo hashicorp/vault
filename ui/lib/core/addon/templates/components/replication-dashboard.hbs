@@ -29,8 +29,10 @@
         data-test-isSyncing/>
     </div>
   {{/if}}
-  <ReplicationTableRows
-    @replicationDetails={{replicationDetails}}
-    @clusterMode={{clusterMode}}/>
-  <ReplicationDocLink data-test-replication-doc-link/>
+  {{#unless isSummaryDashboard}}
+    <ReplicationTableRows
+      @replicationDetails={{replicationDetails}}
+      @clusterMode={{clusterMode}}/>
+    <ReplicationDocLink data-test-replication-doc-link/>
+  {{/unless}}
 </div>
