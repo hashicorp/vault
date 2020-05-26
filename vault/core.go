@@ -31,7 +31,6 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
-	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -1447,7 +1446,7 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		return false, err
 	}
 
-	if err := c.startRaftStorage(ctx); err != nil {
+	if err := c.startRaftBackend(ctx); err != nil {
 		return false, err
 	}
 
@@ -1788,16 +1787,16 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 
 	// If the storage backend needs to be sealed
 	if shutdownRaft {
-		if raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
-			if err := raftStorage.TeardownCluster(c.getClusterListener()); err != nil {
+		if raftBackend := c.getRaftBackend(); raftBackend != nil {
+			if err := raftBackend.TeardownCluster(c.getClusterListener()); err != nil {
 				c.logger.Error("error stopping storage cluster", "error", err)
 				return err
 			}
 		}
-
-		// Stop the cluster listener
-		c.stopClusterListener()
 	}
+
+	// Stop the cluster listener
+	c.stopClusterListener()
 
 	c.logger.Debug("sealing barrier")
 	if err := c.barrier.Seal(); err != nil {

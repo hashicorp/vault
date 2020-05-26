@@ -14,7 +14,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/internalshared/configutil"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -27,6 +26,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/vault/internalshared/configutil"
 
 	"github.com/armon/go-metrics"
 	hclog "github.com/hashicorp/go-hclog"
@@ -1036,6 +1037,7 @@ type TestClusterCore struct {
 	TLSConfig            *tls.Config
 	UnderlyingStorage    physical.Backend
 	UnderlyingRawStorage physical.Backend
+	UnderlyingHAStorage  physical.HABackend
 	Barrier              SecurityBarrier
 	NodeID               string
 }
@@ -1829,6 +1831,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Barrier:              cores[i].barrier,
 			NodeID:               fmt.Sprintf("core-%d", i),
 			UnderlyingRawStorage: coreConfigs[i].Physical,
+			UnderlyingHAStorage:  coreConfigs[i].HAPhysical,
 		}
 		tcc.ReloadFuncs = &cores[i].reloadFuncs
 		tcc.ReloadFuncsLock = &cores[i].reloadFuncsLock

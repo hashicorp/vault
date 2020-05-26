@@ -208,32 +208,14 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		return nil, ErrAlreadyInit
 	}
 
-	// If we have clustered storage, set it up now
-	if raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
-		parsedClusterAddr, err := url.Parse(c.ClusterAddr())
+	// Bootstrap the raft backend if that's provided as the physical or
+	// HA backend.
+	if raftBackend := c.getRaftBackend(); raftBackend != nil {
+		err := c.RaftBootstrap(ctx)
 		if err != nil {
-			return nil, errwrap.Wrapf("error parsing cluster address: {{err}}", err)
+			c.logger.Error("failed to bootstrap raft", "error", err)
+			return nil, err
 		}
-		if err := raftStorage.Bootstrap(ctx, []raft.Peer{
-			{
-				ID:      raftStorage.NodeID(),
-				Address: parsedClusterAddr.Host,
-			},
-		}); err != nil {
-			return nil, errwrap.Wrapf("could not bootstrap clustered storage: {{err}}", err)
-		}
-
-		if err := raftStorage.SetupCluster(ctx, raft.SetupOpts{
-			StartAsLeader: true,
-		}); err != nil {
-			return nil, errwrap.Wrapf("could not start clustered storage: {{err}}", err)
-		}
-
-		defer func() {
-			if err := raftStorage.TeardownCluster(nil); err != nil {
-				c.logger.Error("failed to stop raft storage", "error", err)
-			}
-		}()
 	}
 
 	err = c.seal.Init(ctx)

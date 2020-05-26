@@ -416,7 +416,7 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 
 	leaderCore := cluster.Cores[0]
 	leaderAPI := leaderCore.Client.Address()
-	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
+	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
 
 	// Seal the leader so we can install an address provider
 	{
