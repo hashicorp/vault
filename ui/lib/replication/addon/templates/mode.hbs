@@ -8,8 +8,16 @@
               <li>
                 {{#link-to "index" }}
                   <span class="sep"/>
-                  Go back
+                  Replication
                 {{/link-to}}
+              </li>
+              <li>
+                <span class="sep"></span>
+                {{#if (eq replicationMode 'dr')}}
+                  Disaster Recovery
+                {{else if (eq replicationMode 'performance')}}
+                  Performance
+                {{/if}}
               </li>
             </ul>
           </nav>
