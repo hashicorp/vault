@@ -24,7 +24,7 @@
   @onClose={{action (mut isModalActive) false}}
   @isActive={{isModalActive}}
   @confirmText={{if (eq replicationDisplayMode "DR") "Disaster Recovery" replicationDisplayMode}}
-  @toConfirm="disabling {{replicationDisplayMode}} replication on this cluster"
+  @toConfirmMsg="disabling {{replicationDisplayMode}} replication on this cluster"
   @onConfirm={{action
     "onSubmit"
     "disable"
@@ -35,15 +35,18 @@
     )
   }}
 >
-  <p>
-    Disabling Performance replication entirely on this secondary cluster means that:
+  <p class="has-bottom-margin-m">
+    {{#if (and model.replicationAttrs.isPrimary (eq replicationDisplayMode "DR"))}}This cannot be undone. {{/if}}
+    Disabling {{replicationDisplayMode}} Replication entirely on this {{if (eq model.replicationAttrs.isPrimary true) "primary" "secondary"}} cluster means that:
   </p>
   <ul class="bullet">
+    {{#if model.replicationAttrs.isPrimary}}
+    <li>Secondaries will no longer be able to connect</li>
+    <li>We will wipe the underlying storage of connected secondaries</li>
+    <li>Secondaries connecting back to the cluster will require a wipe of the underlying storage</li>
+    {{else}}
     <li>We will wipe the underlying storage of this secondary when connected to a primary</li>
-    <li>Re-enabling this node will change its cluster ID</li>
+    {{/if}}
+    <li>Re-enabling this node as will change its cluster ID</li>
   </ul>
-  <AlertInline
-    @type="danger"
-    @message="Caution: re-enabling this node as a primary or secondary will change its cluster ID."
-  />
 </ConfirmationModal>
