@@ -82,6 +82,19 @@ export default Component.extend({
     const { isSummaryDashboard } = this;
     return clusterMode === 'secondary';
   }),
+  replicationDetailsSummary: computed('isSummaryDashboard', function() {
+    const { model } = this;
+    const { isSummaryDashboard } = this;
+    if (!isSummaryDashboard) {
+      return;
+    }
+    if (isSummaryDashboard) {
+      let combinedObject = {};
+      combinedObject.dr = model['dr'];
+      combinedObject.performance = model['performance'];
+      return combinedObject;
+    }
+  }),
   replicationDetails: computed('model.{replicationMode}', 'isSummaryDashboard', function() {
     const { model } = this;
     const { isSummaryDashboard } = this;

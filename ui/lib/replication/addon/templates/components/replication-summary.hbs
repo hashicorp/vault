@@ -279,12 +279,12 @@
       />
       <Page.dashboard
       {{!-- passing in component to render so that the yielded components are flexible based on the dashboard --}}
-        @componentToRender='replication-secondary-card' as |Dashboard|>
+        @componentToRender='replication-summary-card' as |Dashboard|>
         <Dashboard.card
-          @title="States"
+          @title="Disaster Recovery"
         />
         <Dashboard.card
-          @title="Primary cluster"
+          @title="Performance"
         />
         <Dashboard.rows/>
       </Page.dashboard>

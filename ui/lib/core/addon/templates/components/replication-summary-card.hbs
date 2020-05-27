@@ -1,0 +1,76 @@
+<div class="selectable-card is-rounded card-container {{if hasErrorClass "has-border-danger"}}" data-test-replication-summary-card>
+  {{!-- Check if DR or Performance Card --}}
+  {{#if (eq title "Disaster Recovery")}}
+    <h3 class="title is-5 grid-item-title card-title">{{title}}</h3>
+    <div class="grid-item-left">
+      {{#if (get (cluster-states stateDr) "isOk")}}
+        <h6 class="title is-6">state</h6>
+        <p class="has-text-grey is-size-8">How this cluster is communicating with others at this moment.</p>
+      {{else}}
+        <h6 class="has-text-danger" data-test-error>state</h6>
+        <AlertInline
+          @type="danger"
+          @message="Please check your server logs." />
+      {{/if}}
+    </div>
+    <div class="grid-item-right">
+      {{#if (eq connection "transient_failure")}}
+        <h6 class="title is-6 has-text-danger" data-test-error>connection_state</h6>
+        <AlertInline
+          @type="danger"
+          @message="There has been some transient failure.  Your cluster will eventually switch back to connection and try to establish a connection again." />
+      {{else if (eq connection "shutdown")}}
+        <h6 class="title is-6 has-text-danger" data-test-error>connection_state</h6>
+        <AlertInline
+          @type="danger"
+          @message="Your connection has shut down. This may be because the application explicitly requested a shutdown or a non-recoverable error has happened during attempts to communicate." />
+      {{else}}
+        <h6 class="title is-6">connection_state</h6>
+        <p class="has-text-grey is-size-8">The health of the connection between this cluster and others.</p>
+      {{/if}}
+    </div>
+    <h2 class="title is-3 grid-item-left-bottom" data-test-state>{{stateDr}}
+      {{#if inSyncState }}
+        <ToolTip @verticalPosition="above" as |T|>
+          <T.trigger>
+            <Icon @glyph={{"check-circle-outline" }} @size="m" class={{"has-text-success"}} data-test-glyph />
+          </T.trigger>
+          <T.content @class="tool-tip">
+            <div class="box">
+              Everything is in sync
+            </div>
+          </T.content>
+        </ToolTip>
+      {{/if}}
+    </h2>
+    <h2 class="title is-3 grid-item-right-bottom" data-test-connection>{{connection}}</h2>
+  {{else}}
+    <h3 class="title is-5 grid-item-title card-title">{{title}}</h3>
+    <div class="grid-item-left">
+      <h6 class="title is-6">last_remote_wal</h6>
+      <p class="has-text-grey is-size-8">The last WAL index that the secondary received from the primary. Updates every 10 seconds.</p>
+    </div>
+    <div class="grid-item-right">
+      <h6 class="title is-6">primary_cluster_addr</h6>
+      {{#if primaryClusterAddr}}
+        <span>
+          <a
+            href={{primaryClusterAddr}}
+            class="link"
+            target="_blank"
+            rel="noreferrer noopener" 
+            data-test-primaryClusterAddr
+          >
+            {{primaryClusterAddr}}
+          </a>
+        </span>
+      {{else}}
+        <p class="has-text-grey is-size-8">unknown</p>
+      {{/if}}
+    </div>
+    <h2 class="title is-3 grid-item-left-bottom" data-test-lastRemoteWAL>{{format-number lastRemoteWAL}}</h2>
+    <div class="grid-item-right-bottom">
+        {{!-- Empty --}}
+    </div>
+  {{/if}}
+</div>

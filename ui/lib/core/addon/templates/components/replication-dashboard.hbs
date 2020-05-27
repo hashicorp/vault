@@ -9,16 +9,26 @@
         data-test-isReindexing />
     </div>
   {{/if}}
-  <div
-    class="selectable-card-container {{if isSecondary 'secondary' 'primary'}}"
-    data-test-selectable-card-container={{if isSecondary 'secondary' 'primary'}}>
-    {{yield (hash
-      card=(component componentToRender replicationDetails=replicationDetails)
-    )}}
-    {{#if (not isSecondary)}}
-      {{yield (hash secondaryCard=(component 'known-secondaries-card'))}}
-    {{/if}}
-  </div>
+  {{#if isSummaryDashboard}}
+    <div
+      class="selectable-card-container secondary"
+      data-test-selectable-card-container-summary>
+        {{yield (hash
+          card=(component componentToRender replicationDetails=replicationDetailsSummary)
+        )}}
+    </div>
+  {{else}}
+    <div
+      class="selectable-card-container {{if isSecondary 'secondary' 'primary'}}"
+      data-test-selectable-card-container={{if isSecondary 'secondary' 'primary'}}>
+      {{yield (hash
+        card=(component componentToRender replicationDetails=replicationDetails)
+      )}}
+      {{#if (not isSecondary)}}
+        {{yield (hash secondaryCard=(component 'known-secondaries-card'))}}
+      {{/if}}
+    </div>
+  {{/if}}
   {{#if isSyncing}}
     <div class="syncing-alert">
       <AlertBanner
