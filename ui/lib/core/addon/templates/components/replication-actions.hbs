@@ -15,7 +15,7 @@
     {{/each}}
   {{else}}
   <div class="replication-actions-grid-layout">
-    {{#each (if clusterMode (replication-action-for-mode replicationMode clusterMode) (replication-action-for-mode replicationMode model.replicationAttrs.modeForUrl)) as |replicationAction index|}}
+    {{#each (if clusterMode (replication-action-for-mode replicationMode clusterMode) (replication-action-for-mode replicationMode model.replicationAttrs.modeForUrl)) as |replicationAction|}}
         <div class="replication-actions-grid-item">
           {{component (concat 'replication-action-' replicationAction)
             onSubmit=(action "onSubmit")
