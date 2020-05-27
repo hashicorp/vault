@@ -278,7 +278,6 @@
         @showTabs={{true}}
       />
       <Page.dashboard
-      {{!-- passing in component to render so that the yielded components are flexible based on the dashboard --}}
         @componentToRender='replication-summary-card' as |Dashboard|>
         <Dashboard.card
           @title="Disaster Recovery"
@@ -286,7 +285,6 @@
         <Dashboard.card
           @title="Performance"
         />
-        <Dashboard.rows/>
       </Page.dashboard>
     </ReplicationPage>
   {{else}}
