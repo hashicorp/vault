@@ -22,6 +22,11 @@
     margin-top: $spacing-xl;
   }
 
+  .summary-state {
+    padding-bottom: $spacing-l;
+    border-bottom: 1px solid rgba($grey-dark, 0.3);
+  }
+
   .selectable-card-container {
     margin-top: $spacing-xl;
     display: grid;
