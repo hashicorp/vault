@@ -24,7 +24,7 @@ This is an authenticated endpoint.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/status
 ```
@@ -95,7 +95,7 @@ result in data loss!
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -116,7 +116,7 @@ replication set without wiping local storage.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -138,7 +138,7 @@ they have connected before) will require a wipe of the underlying storage.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -178,7 +178,7 @@ identifier can later be used to revoke a secondary's access.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -229,7 +229,7 @@ will not be allowed to connect again unless given a new activation token.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -268,7 +268,7 @@ selected secondary. In deny mode, the mount and namespace paths are excluded.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -291,7 +291,7 @@ for a secondary.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/replication/performance/primary/paths-filter/mySecondaryID
@@ -320,7 +320,7 @@ This endpoint is used to delete the mount and namespace filters for a secondary.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -342,7 +342,7 @@ filtered for a secondary on the primary.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/replication/performance/primary/dynamic-filter/mySecondaryID
@@ -372,7 +372,7 @@ filtered for a secondary on the secondary.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/replication/performance/secondary/dynamic-filter/mySecondaryID
@@ -421,7 +421,7 @@ selected secondary. In blacklist mode, the mount paths are excluded.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -447,7 +447,7 @@ for a secondary.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/replication/performance/primary/mount-filter/us-east-1
@@ -479,7 +479,7 @@ This endpoint is used to delete the mount filters for a secondary.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -500,7 +500,7 @@ needing to make an API call to the primary during activation.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -547,7 +547,7 @@ token.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -584,7 +584,7 @@ primary at a time.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -609,7 +609,7 @@ underlying storage.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -655,7 +655,7 @@ secondary activation token. This does not wipe all data in the cluster.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \

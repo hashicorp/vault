@@ -16,7 +16,7 @@ The plugin's type of "auth", "database", or "secret" must be included.
 
 Register a plugin:
 
-```text
+```shell-session
 $ vault plugin register \
     -sha256=d3f0a8be02f6c074cf38c9c99d4d04c9c6466249 \
     auth my-custom-plugin
@@ -25,7 +25,7 @@ Success! Registered plugin: my-custom-plugin
 
 Register a plugin with custom args:
 
-```text
+```shell-session
 $ vault plugin register \
     -sha256=d3f0a8be02f6c074cf38c9c99d4d04c9c6466249 \
     -args=--with-glibc,--with-curl-bindings \

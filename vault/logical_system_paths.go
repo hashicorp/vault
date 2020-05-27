@@ -1199,6 +1199,25 @@ func (b *SystemBackend) metricsPath() *framework.Path {
 
 }
 
+func (b *SystemBackend) monitorPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "monitor",
+		Fields: map[string]*framework.FieldSchema{
+			"log_level": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Log level to view system logs at. Currently supported values are \"trace\", \"debug\", \"info\", \"warn\", \"error\".",
+				Query:       true,
+			},
+		},
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation: b.handleMonitor,
+		},
+		HelpSynopsis:    strings.TrimSpace(sysHelp["monitor"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["monitor"][1]),
+	}
+
+}
+
 func (b *SystemBackend) hostInfoPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "host-info/?",

@@ -28,13 +28,13 @@ output which corresponds to your version.
 
 To get help, run:
 
-```text
+```shell-session
 $ vault -h
 ```
 
 To get help for a subcommand, run:
 
-```text
+```shell-session
 $ vault <subcommand> -h
 ```
 
@@ -63,7 +63,7 @@ precedes the path (`auth/userpass/users/bob`) and its
 [argument](/api/auth/userpass#create-update-user)
 (`password="long-password"`) at last.
 
-```text
+```shell-session
 $ vault write -address="http://127.0.0.1:8200" auth/userpass/users/bob password="long-password"
 ```
 
@@ -71,7 +71,7 @@ If multiple options (`-address` and `-namespace`) and
 [arguments](/api/auth/userpass#create-update-user) (`password` and
 `policies`) are specified, the command would look like:
 
-```text
+```shell-session
 $ vault write -address="http://127.0.0.1:8200" -namespace="my-organization" \
         auth/userpass/users/bob password="long-password" policies="admin"
 ```
@@ -100,7 +100,7 @@ arguments (where supported).
 
 Enable autocompletion by running:
 
-```text
+```shell-session
 $ vault -autocomplete-install
 ```
 
@@ -133,7 +133,7 @@ the `kv get` and `kv put` commands.
 
 To write data to Vault, use the `vault kv put` command:
 
-```text
+```shell-session
 $ vault kv put secret/password value=itsasecret
 ```
 
@@ -146,14 +146,14 @@ restrictions where appropriate.
 Some commands in Vault can read data from stdin using `-` as the value. If `-`
 is the entire argument, Vault expects to read a JSON object from stdin:
 
-```text
+```shell-session
 $ echo -n '{"value":"itsasecret"}' | vault kv put secret/password -
 ```
 
 In addition to reading full JSON objects, Vault can read just a value from
 stdin:
 
-```text
+```shell-session
 $ echo -n "itsasecret" | vault kv put secret/password value=-
 ```
 
@@ -163,13 +163,13 @@ Some commands can also read data from a file on disk. The usage is similar to
 stdin as documented above. If an argument starts with `@`, Vault will read it as
 a file:
 
-```text
+```shell-session
 $ vault kv put secret/password @data.json
 ```
 
 Or specify the contents of a file as a value:
 
-```text
+```shell-session
 $ vault kv put secret/password value=@data.txt
 ```
 
@@ -177,7 +177,7 @@ $ vault kv put secret/password value=@data.txt
 
 After data is persisted, read it back using `vault kv get`:
 
-```
+```shell-session
 $ vault kv get secret/password
 Key                 Value
 ---                 -----
@@ -312,6 +312,6 @@ flags, such as those used for setting HTTP and output options, are available
 globally, while others are specific to a particular subcommand. For a completely
 list of available flags, run:
 
-```text
+```shell-session
 $ vault <subcommand> -h
 ```
