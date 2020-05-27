@@ -1080,16 +1080,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		numCores = opts.NumCores
 	}
 
-	var disablePR1103 bool
-	if opts != nil && opts.PR1103Disabled {
-		disablePR1103 = true
-	}
-
-	var firstCoreNumber int
-	if opts != nil {
-		firstCoreNumber = opts.FirstCoreNumber
-	}
-
 	certIPs := []net.IP{
 		net.IPv6loopback,
 		net.ParseIP("127.0.0.1"),
@@ -1453,87 +1443,22 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		t.Fatalf("err: %v", err)
 	}
 
+	// Create cores
 	cleanupFuncs := []func(){}
 	cores := []*Core{}
 	coreConfigs := []*CoreConfig{}
+
 	for i := 0; i < numCores; i++ {
-		localConfig := *coreConfig
-		localConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port)
+		port := listeners[i][0].Address.Port
+		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, port, pubKey)
 
-		// if opts.SealFunc is provided, use that to generate a seal for the config instead
-		if opts != nil && opts.SealFunc != nil {
-			localConfig.Seal = opts.SealFunc()
-		}
-
-		if coreConfig.Logger == nil || (opts != nil && opts.Logger != nil) {
-			localConfig.Logger = testCluster.Logger.Named(fmt.Sprintf("core%d", i))
-		}
-		if opts != nil && opts.PhysicalFactory != nil {
-			physBundle := opts.PhysicalFactory(t, i, localConfig.Logger)
-			switch {
-			case physBundle == nil && coreConfig.Physical != nil:
-			case physBundle == nil && coreConfig.Physical == nil:
-				t.Fatal("PhysicalFactory produced no physical and none in CoreConfig")
-			case physBundle != nil:
-				testCluster.Logger.Info("created physical backend", "instance", i)
-				coreConfig.Physical = physBundle.Backend
-				localConfig.Physical = physBundle.Backend
-				base.Physical = physBundle.Backend
-				haBackend := physBundle.HABackend
-				if haBackend == nil {
-					if ha, ok := physBundle.Backend.(physical.HABackend); ok {
-						haBackend = ha
-					}
-				}
-				coreConfig.HAPhysical = haBackend
-				localConfig.HAPhysical = haBackend
-				if physBundle.Cleanup != nil {
-					cleanupFuncs = append(cleanupFuncs, physBundle.Cleanup)
-				}
-			}
-		}
-
-		if opts != nil && opts.ClusterLayers != nil {
-			localConfig.ClusterNetworkLayer = opts.ClusterLayers.Layers()[i]
-		}
-
-		switch {
-		case localConfig.LicensingConfig != nil:
-			if pubKey != nil {
-				localConfig.LicensingConfig.AdditionalPublicKeys = append(localConfig.LicensingConfig.AdditionalPublicKeys, pubKey.(ed25519.PublicKey))
-			}
-		default:
-			localConfig.LicensingConfig = testGetLicensingConfig(pubKey)
-		}
-
-		if localConfig.MetricsHelper == nil {
-			inm := metrics.NewInmemSink(10*time.Second, time.Minute)
-			metrics.DefaultInmemSignal(inm)
-			localConfig.MetricsHelper = metricsutil.NewMetricsHelper(inm, false)
-		}
-
-		c, err := NewCore(&localConfig)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		c.coreNumber = firstCoreNumber + i
-		c.PR1103disabled = disablePR1103
+		cleanupFuncs = append(cleanupFuncs, cleanup)
 		cores = append(cores, c)
 		coreConfigs = append(coreConfigs, &localConfig)
-		if opts != nil && opts.HandlerFunc != nil {
-			props := opts.DefaultHandlerProperties
-			props.Core = c
-			if props.ListenerConfig != nil && props.ListenerConfig.MaxRequestDuration == 0 {
-				props.ListenerConfig.MaxRequestDuration = DefaultMaxRequestDuration
-			}
-			handlers[i] = opts.HandlerFunc(&props)
-			servers[i].Handler = handlers[i]
-		}
 
-		// Set this in case the Seal was manually set before the core was
-		// created
-		if localConfig.Seal != nil {
-			localConfig.Seal.SetCore(c)
+		if handler != nil {
+			handlers[i] = handler
+			servers[i].Handler = handlers[i]
 		}
 	}
 
@@ -1777,7 +1702,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	testCluster.CleanupFunc = func() {
 		for _, c := range cleanupFuncs {
-			c()
+			if c != nil {
+				c()
+			}
 		}
 		if l, ok := testCluster.Logger.(*TestLogger); ok {
 			if t.Failed() {
@@ -1796,6 +1723,107 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	return &testCluster
+}
+
+func (cluster *TestCluster) newCore(
+	t testing.T,
+	idx int,
+	coreConfig *CoreConfig,
+	opts *TestClusterOptions,
+	port int,
+	pubKey interface{},
+) (func(), *Core, CoreConfig, http.Handler) {
+
+	localConfig := *coreConfig
+	cleanupFunc := func() {}
+	var handler http.Handler
+
+	var disablePR1103 bool
+	if opts != nil && opts.PR1103Disabled {
+		disablePR1103 = true
+	}
+
+	var firstCoreNumber int
+	if opts != nil {
+		firstCoreNumber = opts.FirstCoreNumber
+	}
+
+	localConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", port)
+
+	// if opts.SealFunc is provided, use that to generate a seal for the config instead
+	if opts != nil && opts.SealFunc != nil {
+		localConfig.Seal = opts.SealFunc()
+	}
+
+	if coreConfig.Logger == nil || (opts != nil && opts.Logger != nil) {
+		localConfig.Logger = cluster.Logger.Named(fmt.Sprintf("core%d", idx))
+	}
+	if opts != nil && opts.PhysicalFactory != nil {
+		physBundle := opts.PhysicalFactory(t, idx, localConfig.Logger)
+		switch {
+		case physBundle == nil && coreConfig.Physical != nil:
+		case physBundle == nil && coreConfig.Physical == nil:
+			t.Fatal("PhysicalFactory produced no physical and none in CoreConfig")
+		case physBundle != nil:
+			cluster.Logger.Info("created physical backend", "instance", idx)
+			coreConfig.Physical = physBundle.Backend
+			localConfig.Physical = physBundle.Backend
+			//base.Physical = physBundle.Backend
+			haBackend := physBundle.HABackend
+			if haBackend == nil {
+				if ha, ok := physBundle.Backend.(physical.HABackend); ok {
+					haBackend = ha
+				}
+			}
+			coreConfig.HAPhysical = haBackend
+			localConfig.HAPhysical = haBackend
+			if physBundle.Cleanup != nil {
+				cleanupFunc = physBundle.Cleanup
+			}
+		}
+	}
+
+	if opts != nil && opts.ClusterLayers != nil {
+		localConfig.ClusterNetworkLayer = opts.ClusterLayers.Layers()[idx]
+	}
+
+	switch {
+	case localConfig.LicensingConfig != nil:
+		if pubKey != nil {
+			localConfig.LicensingConfig.AdditionalPublicKeys = append(localConfig.LicensingConfig.AdditionalPublicKeys, pubKey.(ed25519.PublicKey))
+		}
+	default:
+		localConfig.LicensingConfig = testGetLicensingConfig(pubKey)
+	}
+
+	if localConfig.MetricsHelper == nil {
+		inm := metrics.NewInmemSink(10*time.Second, time.Minute)
+		metrics.DefaultInmemSignal(inm)
+		localConfig.MetricsHelper = metricsutil.NewMetricsHelper(inm, false)
+	}
+
+	c, err := NewCore(&localConfig)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	c.coreNumber = firstCoreNumber + idx
+	c.PR1103disabled = disablePR1103
+	if opts != nil && opts.HandlerFunc != nil {
+		props := opts.DefaultHandlerProperties
+		props.Core = c
+		if props.ListenerConfig != nil && props.ListenerConfig.MaxRequestDuration == 0 {
+			props.ListenerConfig.MaxRequestDuration = DefaultMaxRequestDuration
+		}
+		handler = opts.HandlerFunc(&props)
+	}
+
+	// Set this in case the Seal was manually set before the core was
+	// created
+	if localConfig.Seal != nil {
+		localConfig.Seal.SetCore(c)
+	}
+
+	return cleanupFunc, c, localConfig, handler
 }
 
 func NewMockBuiltinRegistry() *mockBuiltinRegistry {

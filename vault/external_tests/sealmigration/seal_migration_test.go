@@ -517,7 +517,8 @@ func testTransit(
 }
 
 func TestFoo(t *testing.T) {
-	testVariousBackends(t, testFoo, true)
+	println("asdfasdfadsfadsfadfa")
+	//testVariousBackends(t, testFoo, true)
 }
 
 func testFoo(
