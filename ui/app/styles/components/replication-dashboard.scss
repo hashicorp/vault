@@ -67,6 +67,7 @@
       }
       .grid-item-top-right {
         grid-column: 2 / span 1;
+        justify-self: right;
       }
       .grid-item-left {
         grid-column: 1/1;
