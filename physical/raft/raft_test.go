@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/base64"
-	fmt "fmt"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"math/rand"

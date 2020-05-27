@@ -1046,6 +1046,8 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 		return fmt.Errorf("%s; got %d bytes, max: %d bytes", physical.ErrValueTooLarge, cmdSize, b.maxEntrySize)
 	}
 
+	defer metrics.AddSample([]string{"raft-storage", "entrySize"}, float32(cmdSize))
+
 	var chunked bool
 	var applyFuture raft.ApplyFuture
 	switch {
