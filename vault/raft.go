@@ -582,6 +582,8 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		return false, errors.New("raft storage is already initialized")
 	}
 
+	// NOTE: We need to support initialized core for the ha_storage case
+
 	init, err := c.Initialized(ctx)
 	if err != nil {
 		return false, errwrap.Wrapf("failed to check if core is initialized: {{err}}", err)
