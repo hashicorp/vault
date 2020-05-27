@@ -88,12 +88,18 @@ func (rc *DockerCluster) Teardown() error {
 	return nil
 }
 
+// ExpandPath accepts a user supplied path and prefixes it with the required
+// mount, auth, and namespace parts as needed. This enables drivers to create
+// random/unique mount and namespace paths while allowing tests to be written
+// with relative paths.
+// TODO should this be in stepwise and not per-driver? Maybe have Drivers give
+// mount, namespace returns and have stepwise do this so people aren't
+// re-inventing this
 func (dc *DockerCluster) ExpandPath(path string) string {
 	// TODO mount point
 	newPath := path
 	newPath = fmt.Sprintf("%s/%s", dc.DriverOptions.MountPath, newPath)
 	if dc.DriverOptions.PluginType == stepwise.PluginTypeCredential {
-		q.Q("==> expanding path to include auth")
 		newPath = fmt.Sprintf("%s/%s", "auth", newPath)
 		// TODO prefix with namespace
 	}
@@ -221,10 +227,10 @@ func (rc *DockerCluster) Initialize(ctx context.Context) error {
 	}
 	rc.RootToken = resp.RootToken
 	q.Q("===> docker vault root token:", resp.RootToken)
-	q.Q("===> docker vault barrier keys:")
-	for i, key := range rc.GetBarrierKeys() {
-		q.Q(i, string(key))
-	}
+	// q.Q("===> docker vault barrier keys:")
+	// for i, key := range rc.GetBarrierKeys() {
+	// 	q.Q(i, string(key))
+	// }
 
 	// Write root token and barrier keys
 	err = ioutil.WriteFile(filepath.Join(rc.TempDir, "root_token"), []byte(rc.RootToken), 0755)
@@ -921,8 +927,9 @@ func (dc *DockerCluster) Setup() error {
 	if err != nil {
 		panic(err)
 	}
-	q.Q("--> docker compile results:")
-	q.Q(binName, binPath, sha256value, err)
+
+	// q.Q("--> docker compile results:")
+	// q.Q(binName, binPath, sha256value, err)
 
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
@@ -937,14 +944,14 @@ func (dc *DockerCluster) Setup() error {
 	cores := dc.ClusterNodes
 	client := cores[0].Client
 
-	// TODO maybe not use / need global here
-	// TODO: likely not a safe way of setting this either
-	stepwise.TestHelper = &stepwise.Helper{
-		Client: client,
-		// Cluster:  cluster,
-		// TODO: maybe not needed
-		BuildDir: tmpDir,
-	}
+	// // TODO maybe not use / need global here
+	// // TODO: likely not a safe way of setting this either
+	// stepwise.TestHelper = &stepwise.Helper{
+	// 	Client: client,
+	// 	// Cluster:  cluster,
+	// 	// TODO: maybe not needed
+	// 	BuildDir: tmpDir,
+	// }
 
 	// use client to mount plugin
 	err = client.Sys().RegisterPlugin(&api.RegisterPluginInput{

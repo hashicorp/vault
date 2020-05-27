@@ -153,28 +153,6 @@ type DriverOptions struct {
 	PluginName string
 }
 
-// PluginType returns the configured plugin type, or default "secrets"
-// TODO is this needed or is not specifying it give it a defualt?
-// func (do *DriverOptions) PluginType() PluginType {
-// if do.PluginType == PluginTypeUnknown {
-
-// }
-// }
-
-// func (do *StepDriverOptions) MountPath() string{
-// 	if do.mountPath==nil{
-
-// 	}
-// 	return *do.MountPath
-// }
-
-// func (do *StepDriverOptions) SetMountPath(path string) error{
-// 	if path!=""{
-// 		*do.mountPath = path
-// 	}
-// 	return nil
-// }
-
 // Case is a single set of tests to run for a backend. A test Case
 // should generally map 1:1 to each test method for your integration
 // tests.
@@ -207,6 +185,7 @@ type Case struct {
 // long, we require the verbose flag so users are able to see progress
 // output.
 func Run(tt TestT, c Case) {
+	// tt.Helper()
 	q.Q("---------")
 	q.Q("Stepwise starting...")
 	q.Q("---------")
@@ -227,7 +206,7 @@ func Run(tt TestT, c Case) {
 	}
 
 	// We require verbose mode so that the user knows what is going on.
-	if !testTesting && !testing.Verbose() {
+	if !testing.Verbose() {
 		tt.Fatal("Acceptance tests must be run with the -v flag on tests")
 		return
 	}
@@ -238,6 +217,8 @@ func Run(tt TestT, c Case) {
 	}
 
 	// Defer on the teardown, regardless of pass/fail at this point
+	// TODO - checkErr is seperate right now b/c I wanted to stop Vault from being
+	// torndown if a test failed. This needs to be removed, or configurable
 	var checkErr error
 	if c.Teardown != nil {
 		defer func(testError error) {
@@ -257,7 +238,6 @@ func Run(tt TestT, c Case) {
 	// Create an in-memory Vault core
 	// TODO use test logger if available?
 	logger := logging.NewVaultLogger(log.Trace)
-	// TODO setup on driver here
 	if c.Driver != nil {
 		err := c.Driver.Setup()
 		if err != nil {
@@ -276,36 +256,38 @@ func Run(tt TestT, c Case) {
 		tt.Fatal("nil driver in acceptance test")
 	}
 
-	// Steps here
-	// Make requests
+	// retrieve the client from the Driver. If this returns an error, fail
+	// immediately
+	client, err := c.Driver.Client()
+	if err != nil {
+		tt.Fatal(err)
+	}
+
 	var revoke []*logical.Request
-	for i, s := range c.Steps {
-		q.Q("==> step:", s)
+	for i, step := range c.Steps {
+		// range is zero based, so add 1 for a human friendly output of steps.
+		// "index" here is only used for logging / output, and not to reference the
+		// step in the slice of steps.
+		index := i + 1
 		if logger.IsWarn() {
-			logger.Warn("Executing test step", "step_number", i+1)
+			logger.Warn("Executing test step", "step_number", index)
 		}
 
-		// TODO hard coded path here, need mount point. Will it be dynamic? probabaly
-		// needs to be
-		// path := fmt.Sprintf("transit/%s", s.Path)
-		q.Q("--> test path:", s.Path)
-		path := c.Driver.ExpandPath(s.Path)
-		q.Q("--> test expanded path:", path)
+		// ExpandPath will turn a test path into a full path, prefixing with the
+		// correct mount, namespaces, or "auth" if needed based on mount path and
+		// plugin type
+		path := c.Driver.ExpandPath(step.Path)
 		var err error
 		var resp *api.Secret
-		client, cerr := c.Driver.Client()
-		if cerr != nil {
-			tt.Fatal(cerr)
-		}
 		// TODO should check expect none here?
 		// var lr *logical.Response
-		switch s.Operation {
+		switch step.Operation {
 		case WriteOperation, UpdateOperation:
 			q.Q("===> Write/Update operation")
-			resp, err = client.Logical().Write(path, s.Data)
+			resp, err = client.Logical().Write(path, step.Data)
 		case ReadOperation:
 			q.Q("===> Read operation")
-			// resp, err = client.Logical().ReadWithData(path, s.Data)
+			// resp, err = client.Logical().ReadWithData(path, step.Data)
 			resp, err = client.Logical().Read(path)
 		case ListOperation:
 			q.Q("===> List operation")
@@ -364,29 +346,24 @@ func Run(tt TestT, c Case) {
 		// 	}
 		// }
 
-		// TODO
-		// - test check func here
-		//
-
 		// Either the 'err' was nil or if an error was expected, it was set to nil.
 		// Call the 'Check' function if there is one.
-		//
-		if s.Check != nil {
-			checkErr = s.Check(resp, err)
+		if step.Check != nil {
+			checkErr = step.Check(resp, err)
 			// TODO allow error
-		}
-		if checkErr != nil {
-			tt.Fatal("test check error:", checkErr)
+			if checkErr != nil {
+				// tt.Fatal("test check error:", checkErr)
+				tt.Error(fmt.Sprintf("Failed step %d: %s", index, checkErr))
+			}
 		}
 
 		// TODO which error is this?
 		if err != nil {
-			tt.Error(fmt.Sprintf("Failed step %d: %s", i+1, err))
+			tt.Error(fmt.Sprintf("Failed step %d: %s", index, err))
 			break
 		}
 	}
 
-	// TODO
 	// TODO
 	// - Revoking things here
 	//
@@ -516,5 +493,3 @@ type TestT interface {
 	Skip(args ...interface{})
 	Helper()
 }
-
-var testTesting = false

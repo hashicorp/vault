@@ -18,6 +18,9 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
+// testTesting is used for testing the legacy testing framework
+var testTesting = false
+
 // This file contains items considered "legacy" and are not
 // actively being developed. These types and methods rely on internal types from
 // the logical package (Request, Response, Backend) which should be abstracted
@@ -103,13 +106,11 @@ type TestCheckFunc func(*logical.Response) error
 // in each TestStep.
 type PreFlightFunc func(*logical.Request) error
 
-// RunLegacyTest runs a TestCase using a legacy vault setup. This is used to
+// Test runs a TestCase using a legacy vault setup. This is used to
 // maintain backwards compatibility with existing tests that use the TestStep
 // type to construct their tests and use logical.Requests directly with a
 // backend's HandleRequest method. Please see stepwise.Test and stepwise.Step
 // for more information.
-// func RunLegacyTest(tt TestT, c TestCase) {}
-
 func Test(tt TestT, c TestCase) {
 	// q.Q("==> here in legacy testing.Test")
 	// We only run acceptance tests if an env var is set because they're

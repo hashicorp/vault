@@ -16,6 +16,7 @@ import (
 
 // TestBackend_basic_derived_docker is an example test using the Docker Driver
 func TestBackend_basic_derived_docker(t *testing.T) {
+	// t.Helper()
 	decryptData := make(map[string]interface{})
 	driverOptions := stepwise.DriverOptions{
 		Name:       "transit2",
@@ -29,7 +30,7 @@ func TestBackend_basic_derived_docker(t *testing.T) {
 			testAccStepwiseListPolicy(t, "test", true),
 			testAccStepwiseWritePolicy(t, "test", true),
 			testAccStepwiseListPolicy(t, "test", false),
-			testAccStepwiseReadPolicy(t, "test", false, true),
+			testAccStepwiseReadPolicy(t, "test2", false, true),
 			testAccStepwiseEncryptContext(t, "test", testPlaintext, "my-cool-context", decryptData),
 			testAccStepwiseDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepwiseEnableDeletion(t, "test"),
@@ -92,14 +93,17 @@ func testAccStepwiseListPolicy(t *testing.T, name string, expectNone bool) stepw
 }
 
 func testAccStepwiseReadPolicy(t *testing.T, name string, expectNone, derived bool) stepwise.Step {
+	t.Helper()
 	return testAccStepwiseReadPolicyWithVersions(t, name, expectNone, derived, 1, 0)
 }
 
 func testAccStepwiseReadPolicyWithVersions(t *testing.T, name string, expectNone, derived bool, minDecryptionVersion int, minEncryptionVersion int) stepwise.Step {
+	t.Helper()
 	return stepwise.Step{
 		Operation: stepwise.ReadOperation,
 		Path:      "keys/" + name,
 		Check: func(resp *api.Secret, err error) error {
+			t.Helper()
 			q.Q("--> read policy check")
 			if resp == nil && !expectNone {
 				return fmt.Errorf("missing response")
