@@ -2,24 +2,24 @@ package couchbase
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
-	"encoding/json"
 
+	"github.com/couchbase/gocb/v2"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/mitchellh/mapstructure"
-	"github.com/couchbase/gocb/v2"
 )
 
 var _ = fmt.Printf
 
 const (
-	couchbaseTypeName      = "couchbase"
+	couchbaseTypeName        = "couchbase"
 	defaultCouchbaseUserRole = `[{"name":"ro_admin"}]`
 )
 
@@ -48,7 +48,7 @@ func new() *CouchbaseDB {
 
 	db := &CouchbaseDB{
 		couchbaseDBConnectionProducer: connProducer,
-		CredentialsProducer:   credsProducer,
+		CredentialsProducer:           credsProducer,
 	}
 
 	return db
@@ -121,18 +121,18 @@ func (c *CouchbaseDB) SetCredentials(ctx context.Context, statements dbplugin.St
 	if err != nil {
 		return "", "", err
 	}
-	
+
 	user := gocb.User{
-		Username: username,
-		Password: password,
-		Roles: userOpts.Roles,
-		Groups: userOpts.Groups,
+		Username:    username,
+		Password:    password,
+		Roles:       userOpts.Roles,
+		Groups:      userOpts.Groups,
 		DisplayName: userOpts.DisplayName,
 	}
-		
+
 	err = mgr.UpsertUser(user,
 		&gocb.UpsertUserOptions{
-			Timeout: 1 * time.Second,
+			Timeout:    1 * time.Second,
 			DomainName: string(userOpts.Domain),
 		})
 
@@ -172,7 +172,7 @@ func (c *CouchbaseDB) CreateUser(ctx context.Context, statements dbplugin.Statem
 	if err != nil {
 		return "", "", errwrap.Wrapf("error mapping roles: {{err}}", err)
 	}
-	
+
 	username, err = c.GenerateUsername(usernameConfig)
 	if err != nil {
 		return "", "", err
@@ -194,28 +194,28 @@ func (c *CouchbaseDB) CreateUser(ctx context.Context, statements dbplugin.Statem
 	mgr := db.Users()
 
 	user := gocb.User{
-		Username: username,
+		Username:    username,
 		DisplayName: usernameConfig.DisplayName,
-		Password: password,
-		Roles: roles,
-		Groups: []string{""},
+		Password:    password,
+		Roles:       roles,
+		Groups:      []string{""},
 	}
-		
+
 	err = mgr.UpsertUser(user,
 		&gocb.UpsertUserOptions{
-			Timeout: 1 * time.Second,
+			Timeout:    1 * time.Second,
 			DomainName: "local",
 		})
 	if err != nil {
 		return "", "", err
 	}
-	
+
 	c.close()
 
 	return username, password, nil
 }
 
-// RenewUser is not supported by Couchbase, so this is a no-op. 
+// RenewUser is not supported by Couchbase, so this is a no-op.
 func (p *CouchbaseDB) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
 	// NOOP
 
@@ -252,7 +252,7 @@ func (c *CouchbaseDB) customRevokeUser(ctx context.Context, username string, rev
 	}
 
 	c.close()
-	
+
 	return nil
 }
 
@@ -299,18 +299,18 @@ func (c *CouchbaseDB) RotateRootCredentials(ctx context.Context, statements []st
 	if err != nil {
 		return nil, err
 	}
-	
+
 	user := gocb.User{
-		Username: c.Username,
-		Password: password,
-		Roles: userOpts.Roles,
-		Groups: userOpts.Groups,
+		Username:    c.Username,
+		Password:    password,
+		Roles:       userOpts.Roles,
+		Groups:      userOpts.Groups,
 		DisplayName: userOpts.DisplayName,
 	}
-		
+
 	err = mgr.UpsertUser(user,
 		&gocb.UpsertUserOptions{
-			Timeout: 1 * time.Second,
+			Timeout:    1 * time.Second,
 			DomainName: string(userOpts.Domain),
 		})
 
@@ -324,6 +324,6 @@ func (c *CouchbaseDB) RotateRootCredentials(ctx context.Context, statements []st
 	}
 
 	c.rawConfig["password"] = password
-	
+
 	return c.rawConfig, nil
 }

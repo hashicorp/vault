@@ -2,50 +2,42 @@ package couchbase
 
 import (
 	"context"
-	//	"errors"
-	"sync"
 	"fmt"
-	//"os"
-	"time"
-	"encoding/base64"
+	"sync"
 	"crypto/x509"
+	"encoding/base64"
 	"strings"
-	
-//	"github.com/Sectorbob/mlab-ns2/gae/ns/digest"
+	"time"
+
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
-//	"github.com/mitchellh/mapstructure"
 	"github.com/couchbase/gocb/v2"
-	"github.com/mitchellh/mapstructure"
 	"github.com/hashicorp/errwrap"
-
-
+	"github.com/mitchellh/mapstructure"
 )
 
 type couchbaseDBConnectionProducer struct {
-	PublicKey  string `json:"public_key" structs:"public_key" mapstructure:"public_key"`
-	PrivateKey string `json:"private_key" structs:"private_key" mapstructure:"private_key"`
-	ProjectID  string `json:"project_id" structs:"project_id" mapstructure:"project_id"`
-	Hosts      string      `json:"hosts" structs:"hosts" mapstructure:"hosts"`
-	Port       int         `json:"port" structs:"port" mapstructure:"port"`
-	Username   string      `json:"username" structs:"username" mapstructure:"username"`
-	Password   string      `json:"password"   structs:"password" mapstructure:"password"`
-	TLS        bool        `json:"tls" structs:"tls" mapstructure:"tls"`
-	Insecure_TLS bool       `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
-	Base64Pem  string      `json:"base64pem" structs:"base64pem" mapstructure:"base64pem"`
-
+	PublicKey    string `json:"public_key" structs:"public_key" mapstructure:"public_key"`
+	PrivateKey   string `json:"private_key" structs:"private_key" mapstructure:"private_key"`
+	ProjectID    string `json:"project_id" structs:"project_id" mapstructure:"project_id"`
+	Hosts        string `json:"hosts" structs:"hosts" mapstructure:"hosts"`
+	Port         int    `json:"port" structs:"port" mapstructure:"port"`
+	Username     string `json:"username" structs:"username" mapstructure:"username"`
+	Password     string `json:"password"   structs:"password" mapstructure:"password"`
+	TLS          bool   `json:"tls" structs:"tls" mapstructure:"tls"`
+	Insecure_TLS bool   `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
+	Base64Pem    string `json:"base64pem" structs:"base64pem" mapstructure:"base64pem"`
 
 	Initialized bool
 	rawConfig   map[string]interface{}
 	Type        string
-	cluster      *gocb.Cluster
+	cluster     *gocb.Cluster
 	sync.Mutex
 }
 
-
 func (c *couchbaseDBConnectionProducer) secretValues() map[string]interface{} {
 	return map[string]interface{}{
-		c.Password:  "[password]",
-		c.Username : "[username]",
+		c.Password: "[password]",
+		c.Username: "[username]",
 	}
 }
 
@@ -74,8 +66,8 @@ func (c *couchbaseDBConnectionProducer) Init(ctx context.Context, config map[str
 		if len(c.Base64Pem) == 0 {
 			return nil, fmt.Errorf("base64pem cannot be empty")
 		}
-		
-		if ! strings.HasPrefix(c.Hosts, "couchbases://") {
+
+		if !strings.HasPrefix(c.Hosts, "couchbases://") {
 			return nil, fmt.Errorf("hosts list must start with couchbases:// for TLS connection")
 		}
 	}
@@ -91,7 +83,7 @@ func (c *couchbaseDBConnectionProducer) Init(ctx context.Context, config map[str
 	return config, nil
 }
 
-func (c *couchbaseDBConnectionProducer)  Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) error {
+func (c *couchbaseDBConnectionProducer) Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) error {
 	_, err := c.Init(ctx, config, verifyConnection)
 	return err
 }
@@ -117,11 +109,11 @@ func (c *couchbaseDBConnectionProducer) Connection(_ context.Context) (interface
 		}
 		rootCAs := x509.NewCertPool()
 		ok := rootCAs.AppendCertsFromPEM([]byte(PEM))
-		if ! ok {
+		if !ok {
 			return nil, fmt.Errorf("Failed to parse root certificate")
 		}
-		sec = gocb.SecurityConfig {
-			TLSRootCAs: rootCAs,
+		sec = gocb.SecurityConfig{
+			TLSRootCAs:    rootCAs,
 			TLSSkipVerify: c.Insecure_TLS,
 		}
 	}
@@ -129,14 +121,14 @@ func (c *couchbaseDBConnectionProducer) Connection(_ context.Context) (interface
 	c.cluster, err = gocb.Connect(
 		c.Hosts,
 		gocb.ClusterOptions{
-			Username: c.Username,
-			Password: c.Password,
+			Username:       c.Username,
+			Password:       c.Password,
 			SecurityConfig: sec,
 		})
 	if err != nil {
 		return nil, errwrap.Wrapf("error in Connection: {{err}}", err)
 	}
-	err = c.cluster.WaitUntilReady(5 * time.Second, nil)
+	err = c.cluster.WaitUntilReady(5*time.Second, nil)
 
 	s := fmt.Sprintf("Error, user %#v, error {{err}}", c)
 
@@ -148,7 +140,7 @@ func (c *couchbaseDBConnectionProducer) Connection(_ context.Context) (interface
 	return c.cluster, nil
 }
 
-// close terminates the database connection 
+// close terminates the database connection without locking
 func (c *couchbaseDBConnectionProducer) close() error {
 
 	if c.cluster != nil {
@@ -162,6 +154,7 @@ func (c *couchbaseDBConnectionProducer) close() error {
 	return nil
 }
 
+// Close terminates the database connection with locking
 func (c *couchbaseDBConnectionProducer) Close() error {
 	c.Lock()
 	defer c.Unlock()

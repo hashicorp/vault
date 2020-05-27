@@ -2,50 +2,93 @@ package couchbase
 
 import (
 	"context"
-//	"errors"
-//	"sync"
 	"testing"
 	"time"
-	//	"fmt"
 	"log"
 	"os"
 
+	docker "github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/ory/dockertest"
+	dc "github.com/ory/dockertest/docker"
 )
+
+var containerInitialized bool = false
+var cleanup func() = func(){}
 
 func prepareCouchbaseTestContainer(t *testing.T) (func(), string, int) {
 	if os.Getenv("COUCHBASE_HOST") != "" {
 		return func() {}, os.Getenv("COUCHBASE_HOST"), 0
 	}
 
-/*	pool, err := dockertest.NewPool("")
+	if containerInitialized == true {
+		return cleanup, "localhost", 0
+	}
+
+	pool, err := dockertest.NewPool("")
 	if err != nil {
 		t.Fatalf("Failed to connect to docker: %s", err)
 	}
 
-	cwd, _ := os.Getwd()
-	cassandraMountPath := fmt.Sprintf("%s/test-fixtures/:/etc/cassandra/", cwd)
+	//	cwd, _ := os.Getwd()
+
+	// 0.0.0.0:8091-8094->8091-8094/tcp, 0.0.0.0:11207->11207/tcp, 0.0.0.0:11210->11210/tcp, 0.0.0.0:18091-18096->18091-18096/tcp
 
 	ro := &dockertest.RunOptions{
-		Repository: "cassandra",
-		Tag:        "latest",
-		Env:        []string{"CASSANDRA_BROADCAST_ADDRESS=127.0.0.1"},
-		Mounts:     []string{cassandraMountPath},
+		Repository:   "docker.io/fhitchen/vault-couchbase",
+		Tag:          "latest",
+		ExposedPorts: []string{"8091", "8092", "8093", "8094", "11207", "11210", "18091", "18092", "18093", "18094"},
+		PortBindings: map[dc.Port][]dc.PortBinding{
+			"8091": {
+				{HostIP: "0.0.0.0", HostPort: "8091"},
+			},
+			"8092": {
+				{HostIP: "0.0.0.0", HostPort: "8092"},
+			},
+			"8093": {
+				{HostIP: "0.0.0.0", HostPort: "8093"},
+			},
+			"8094": {
+				{HostIP: "0.0.0.0", HostPort: "8094"},
+			},
+			"11207": {
+				{HostIP: "0.0.0.0", HostPort: "11207"},
+			},
+			"11210": {
+				{HostIP: "0.0.0.0", HostPort: "11210"},
+			},
+			"18091": {
+				{HostIP: "0.0.0.0", HostPort: "18091"},
+			},
+			"18092": {
+				{HostIP: "0.0.0.0", HostPort: "18092"},
+			},
+			"18093": {
+				{HostIP: "0.0.0.0", HostPort: "18093"},
+			},
+			"18094": {
+				{HostIP: "0.0.0.0", HostPort: "18094"},
+			},
+		},
 	}
 	resource, err := pool.RunWithOptions(ro)
 	if err != nil {
-		t.Fatalf("Could not start local cassandra docker container: %s", err)
+		t.Fatalf("Could not start local couchbase docker container: %s", err)
 	}
 
-	cleanup := func() {
+	cleanup = func() {
 		docker.CleanupResource(t, pool, resource)
 	}
 
-	port, _ := strconv.Atoi(resource.GetPort("9042/tcp"))
-	address := fmt.Sprintf("127.0.0.1:%d", port)
+	time.Sleep(30 * time.Second)
+
+	containerInitialized = true
+
+	//port, _ := strconv.Atoi(resource.GetPort("9042/tcp"))
+	//address  := fmt.Sprintf("127.0.0.1:%d", port)
 
 	// exponential backoff-retry
-	if err = pool.Retry(func() error {
+	/* if err = pool.Retry(func() error {
 		clusterConfig := gocql.NewCluster(address)
 		clusterConfig.Authenticator = gocql.PasswordAuthenticator{
 			Username: "cassandra",
@@ -62,16 +105,15 @@ func prepareCouchbaseTestContainer(t *testing.T) (func(), string, int) {
 		return nil
 	}); err != nil {
 		cleanup()
-		t.Fatalf("Could not connect to cassandra docker container: %s", err)
-	}
-	return cleanup, address, port */
-	return func() {}, "localhost", 0
+		t.Fatalf("Could not connect to couchbase docker container: %s", err)
+	}*/
+	return cleanup, "0.0.0.0", 0
 }
 
 func TestCouchbaseDB_Initialize(t *testing.T) {
 	log.Printf("Testing Init()")
-	cleanup, address, port := prepareCouchbaseTestContainer(t)
-	defer cleanup()
+	_, address, port := prepareCouchbaseTestContainer(t)
+	// defer cleanup()
 	address = "couchbases://localhost"
 	connectionDetails := map[string]interface{}{
 		"hosts":            address,
@@ -105,9 +147,9 @@ func TestCouchbaseDB_CreateUser(t *testing.T) {
 		t.SkipNow()
 	}
 	log.Printf("Testing CreateUser()")
-	
-	cleanup, address, port := prepareCouchbaseTestContainer(t)
-	defer cleanup()
+
+	_, address, port := prepareCouchbaseTestContainer(t)
+	// defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"hosts":            address,
@@ -142,24 +184,24 @@ func TestCouchbaseDB_CreateUser(t *testing.T) {
 	}
 
 	db.Close()
-	
-	if err := testCredsExist(t, address, port, username, password); err != nil {
+
+	if err := testCredsExist(t, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	err = testRevokeUser(t, address, port, username)
+	err = testRevokeUser(t, username)
 	if err != nil {
 		t.Fatalf("Could not revoke user: %s", username)
 	}
 }
 
-func testCredsExist(t *testing.T, address string, port int, username string, password string) (error) {
+func testCredsExist(t *testing.T, username string, password string) error {
 	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
 	log.Printf("Testing testCredsExist()")
-	cleanup, address, port := prepareCouchbaseTestContainer(t)
-	defer cleanup()
+	_, address, port := prepareCouchbaseTestContainer(t)
+	// defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"hosts":            address,
@@ -182,13 +224,13 @@ func testCredsExist(t *testing.T, address string, port int, username string, pas
 	return nil
 }
 
-func testRevokeUser(t *testing.T, address string, port int, username string) (error) {
+func testRevokeUser(t *testing.T, username string) error {
 	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
 	log.Printf("Testing RevokeUser()")
-	cleanup, address, port := prepareCouchbaseTestContainer(t)
-	defer cleanup()
+	_, address, port := prepareCouchbaseTestContainer(t)
+	// defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"hosts":            address,
@@ -209,7 +251,7 @@ func testRevokeUser(t *testing.T, address string, port int, username string) (er
 	}
 
 	statements := dbplugin.Statements{
-		Creation: []string{testCouchbaseRole},
+		Creation:   []string{testCouchbaseRole},
 		Revocation: []string{"foo"},
 	}
 
@@ -225,8 +267,8 @@ func TestCouchbaseDB_CreateUser_plusRole(t *testing.T) {
 		t.SkipNow()
 	}
 	log.Printf("Testing CreateUser_plusRole()")
-	cleanup, address, port := prepareCouchbaseTestContainer(t)
-	defer cleanup()
+	_, address, port := prepareCouchbaseTestContainer(t)
+	// defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"hosts":            address,
@@ -261,12 +303,12 @@ func TestCouchbaseDB_CreateUser_plusRole(t *testing.T) {
 	}
 
 	db.Close()
-	
-	if err := testCredsExist(t, address, port, username, password); err != nil {
+
+	if err := testCredsExist(t, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	err = testRevokeUser(t, address, port, username)
+	err = testRevokeUser(t, username)
 	if err != nil {
 		t.Fatalf("Could not revoke user: %s", username)
 	}
@@ -277,8 +319,8 @@ func TestCouchbaseDB_RotateRootCredentials(t *testing.T) {
 		t.SkipNow()
 	}
 	log.Printf("Testing RotateRootCredentials()")
-	cleanup, address, port := prepareCouchbaseTestContainer(t)
-	defer cleanup()
+	_, address, port := prepareCouchbaseTestContainer(t)
+	// defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"hosts":            address,
@@ -310,20 +352,20 @@ func TestCouchbaseDB_RotateRootCredentials(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(t, address, port, db.Username, password["password"].(string)); err != nil {
+	if err := testCredsExist(t, db.Username, password["password"].(string)); err != nil {
 		t.Fatalf("Could not connect with new RotatedRootcredentials: %s", err)
 	}
 	// Set password back
 	testCouchbaseDB_SetCredentials(t, "rotate-root", "rotate-rootpassword")
 
 	db.Close()
-	
+
 }
 
 func testCouchbaseDB_SetCredentials(t *testing.T, username, password string) {
-	
-	cleanup, address, port := prepareCouchbaseTestContainer(t)
-	defer cleanup()
+
+	_, address, port := prepareCouchbaseTestContainer(t)
+	// defer cleanup()
 	log.Printf("Testing SetCredentials()")
 
 	connectionDetails := map[string]interface{}{
@@ -347,7 +389,7 @@ func testCouchbaseDB_SetCredentials(t *testing.T, username, password string) {
 	statements := dbplugin.Statements{}
 
 	// test that SetCredentials fails if the user does not exist...
-	
+
 	staticUser := dbplugin.StaticUserConfig{
 		Username: "userThatDoesNotExist",
 		Password: password,
@@ -369,8 +411,8 @@ func testCouchbaseDB_SetCredentials(t *testing.T, username, password string) {
 	}
 
 	db.Close()
-	
-	if err := testCredsExist(t, address, port, username, password); err != nil {
+
+	if err := testCredsExist(t, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 }
@@ -379,8 +421,9 @@ func TestCouchbaseDB_SetCredentials(t *testing.T) {
 	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
-	
+
 	testCouchbaseDB_SetCredentials(t, "vault-edu", "password")
+	cleanup()
 }
 
 const testCouchbaseRole = `[{"name":"ro_admin"},{"name":"bucket_admin","bucket":"foo"}]`
