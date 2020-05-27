@@ -2,9 +2,7 @@ package command
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
-	"io"
 
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
@@ -16,15 +14,10 @@ import (
 )
 
 var (
-	createSecureRandomReaderFunc = createSecureRandomReader
-	adjustCoreConfigForEnt       = adjustCoreConfigForEntNoop
+	adjustCoreConfigForEnt = adjustCoreConfigForEntNoop
 )
 
 func adjustCoreConfigForEntNoop(config *server.Config, coreConfig *vault.CoreConfig) {
-}
-
-func createSecureRandomReader(config *server.Config, seal *vault.Seal) (io.Reader, error) {
-	return rand.Reader, nil
 }
 
 func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal, unwrapSeal vault.Seal) error {
@@ -70,7 +63,7 @@ func adjustCoreForSealMigration(logger log.Logger, core *vault.Core, barrierSeal
 	case wrapping.Shamir:
 		// The value reflected in config is what we're going to
 		migrationSeal = vault.NewDefaultSeal(&vaultseal.Access{
-			Wrapper: aeadwrapper.NewWrapper(&wrapping.WrapperOptions{
+			Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
 				Logger: logger.Named("shamir"),
 			}),
 		})

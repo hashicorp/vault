@@ -303,7 +303,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	switch c.seal.StoredKeysSupported() {
 	case seal.StoredKeysSupportedShamirMaster:
 		keysToStore := [][]byte{barrierKey}
-		if err := c.seal.GetAccess().Wrapper.(*aeadwrapper.Wrapper).SetAESGCMKeyBytes(sealKey); err != nil {
+		if err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(sealKey); err != nil {
 			c.logger.Error("failed to set seal key", "error", err)
 			return nil, errwrap.Wrapf("failed to set seal key: {{err}}", err)
 		}

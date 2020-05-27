@@ -122,6 +122,9 @@ func (d *VaultReadQuery) Stop() {
 
 // String returns the human-friendly version of this dependency.
 func (d *VaultReadQuery) String() string {
+	if v := d.queryValues["version"]; len(v) > 0 {
+		return fmt.Sprintf("vault.read(%s.v%s)", d.rawPath, v[0])
+	}
 	return fmt.Sprintf("vault.read(%s)", d.rawPath)
 }
 

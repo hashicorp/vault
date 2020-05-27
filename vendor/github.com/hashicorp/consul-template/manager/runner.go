@@ -556,23 +556,6 @@ func (r *Runner) Run() error {
 		}
 	}
 
-	// Check if we need to deliver any rendered signals
-	if wouldRenderAny || renderedAny {
-		// Send the signal that a template got rendered
-		select {
-		case r.renderedCh <- struct{}{}:
-		default:
-		}
-	}
-
-	// Check if we need to deliver any event signals
-	if newRenderEvent {
-		select {
-		case r.renderEventCh <- struct{}{}:
-		default:
-		}
-	}
-
 	// Perform the diff and update the known dependencies.
 	r.diffAndUpdateDeps(runCtx.depsMap)
 
@@ -598,6 +581,23 @@ func (r *Runner) Run() error {
 		}); err != nil {
 			s := fmt.Sprintf("failed to execute command %q from %s", command, t.Display())
 			errs = append(errs, errors.Wrap(err, s))
+		}
+	}
+
+	// Check if we need to deliver any rendered signals
+	if wouldRenderAny || renderedAny {
+		// Send the signal that a template got rendered
+		select {
+		case r.renderedCh <- struct{}{}:
+		default:
+		}
+	}
+
+	// Check if we need to deliver any event signals
+	if newRenderEvent {
+		select {
+		case r.renderEventCh <- struct{}{}:
+		default:
 		}
 	}
 
@@ -691,12 +691,20 @@ func (r *Runner) runTemplate(tmpl *template.Template, runCtx *templateRunCtx) (*
 	// Grab the list of used and missing dependencies.
 	missing, used := result.Missing, result.Used
 
+	if l := missing.Len(); l > 0 {
+		log.Printf("[DEBUG] (runner) missing data for %d dependencies", l)
+		for _, missingDependency := range missing.List() {
+			log.Printf("[DEBUG] (runner) missing dependency: %s", missingDependency)
+		}
+	}
+
 	// Add the dependency to the list of dependencies for this runner.
 	for _, d := range used.List() {
 		// If we've taken over leadership for a template, we may have data
 		// that is cached, but not have the watcher. We must treat this as
 		// missing so that we create the watcher and re-run the template.
 		if isLeader && !r.watcher.Watching(d) {
+			log.Printf("[DEBUG] (runner) add used dependency %s to missing since isLeader but do not have a watcher", d)
 			missing.Add(d)
 		}
 		if _, ok := runCtx.depsMap[d.String()]; !ok {
@@ -865,12 +873,21 @@ func (r *Runner) init() error {
 	// config templates is kept so templates can lookup their commands and output
 	// destinations.
 	for _, ctmpl := range *r.config.Templates {
+		leftDelim := config.StringVal(ctmpl.LeftDelim)
+		if leftDelim == "" {
+			leftDelim = config.StringVal(r.config.DefaultDelims.Left)
+		}
+		rightDelim := config.StringVal(ctmpl.RightDelim)
+		if rightDelim == "" {
+			rightDelim = config.StringVal(r.config.DefaultDelims.Right)
+		}
+
 		tmpl, err := template.NewTemplate(&template.NewTemplateInput{
 			Source:            config.StringVal(ctmpl.Source),
 			Contents:          config.StringVal(ctmpl.Contents),
 			ErrMissingKey:     config.BoolVal(ctmpl.ErrMissingKey),
-			LeftDelim:         config.StringVal(ctmpl.LeftDelim),
-			RightDelim:        config.StringVal(ctmpl.RightDelim),
+			LeftDelim:         leftDelim,
+			RightDelim:        rightDelim,
 			FunctionBlacklist: ctmpl.FunctionBlacklist,
 			SandboxPath:       config.StringVal(ctmpl.SandboxPath),
 		})
@@ -1232,6 +1249,7 @@ func newClientSet(c *config.Config) (*dep.ClientSet, error) {
 
 	if err := clients.CreateConsulClient(&dep.CreateConsulClientInput{
 		Address:                      config.StringVal(c.Consul.Address),
+		Namespace:                    config.StringVal(c.Consul.Namespace),
 		Token:                        config.StringVal(c.Consul.Token),
 		AuthEnabled:                  config.BoolVal(c.Consul.Auth.Enabled),
 		AuthUsername:                 config.StringVal(c.Consul.Auth.Username),
@@ -1288,6 +1306,7 @@ func newWatcher(c *config.Config, clients *dep.ClientSet, once bool) (*watch.Wat
 		Clients:             clients,
 		MaxStale:            config.TimeDurationVal(c.MaxStale),
 		Once:                c.Once,
+		BlockQueryWaitTime:  config.TimeDurationVal(c.BlockQueryWaitTime),
 		RenewVault:          clients.Vault().Token() != "" && config.BoolVal(c.Vault.RenewToken),
 		VaultAgentTokenFile: config.StringVal(c.Vault.VaultAgentTokenFile),
 		RetryFuncConsul:     watch.RetryFunc(c.Consul.Retry.RetryFunc()),
@@ -1295,7 +1314,6 @@ func newWatcher(c *config.Config, clients *dep.ClientSet, once bool) (*watch.Wat
 		// dependencies like reading a file from disk.
 		RetryFuncDefault: nil,
 		RetryFuncVault:   watch.RetryFunc(c.Vault.Retry.RetryFunc()),
-		VaultGrace:       config.TimeDurationVal(c.Vault.Grace),
 		VaultToken:       clients.Vault().Token(),
 	})
 	if err != nil {

@@ -18,17 +18,17 @@ import (
 	"sync"
 	"time"
 
-	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/physical/raft"
-
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-multierror"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/helper/monitor"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -158,6 +158,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.pprofPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.remountPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.monitorPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
 
 	if core.rawEnabled {
@@ -2515,6 +2516,72 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 	return b.Core.metricsHelper.ResponseForFormat(format), nil
 }
 
+func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	ll := data.Get("log_level").(string)
+	w := req.ResponseWriter
+	resp := &logical.Response{}
+
+	if ll == "" {
+		ll = "info"
+	}
+	logLevel := log.LevelFromString(ll)
+
+	if logLevel == log.NoLevel {
+		return logical.ErrorResponse("unknown log level"), nil
+	}
+
+	flusher, ok := w.ResponseWriter.(http.Flusher)
+	if !ok {
+		return logical.ErrorResponse("streaming not supported"), nil
+	}
+
+	isJson := b.Core.LogFormat() == "json"
+	logger := b.Core.Logger().(log.InterceptLogger)
+
+	mon, err := monitor.NewMonitor(512, logger, &log.LoggerOptions{
+		Level:      logLevel,
+		JSONFormat: isJson,
+	})
+	defer mon.Stop()
+
+	if err != nil {
+		return resp, err
+	}
+
+	logCh := mon.Start()
+
+	if logCh == nil {
+		return resp, fmt.Errorf("error trying to start a monitor that's already been started")
+	}
+
+	w.WriteHeader(http.StatusOK)
+
+	// 0 byte write is needed before the Flush call so that if we are using
+	// a gzip stream it will go ahead and write out the HTTP response header
+	_, err = w.Write([]byte(""))
+	if err != nil {
+		return resp, fmt.Errorf("error seeding flusher: %w", err)
+	}
+
+	flusher.Flush()
+
+	// Stream logs until the connection is closed.
+	for {
+		select {
+		case <-ctx.Done():
+			return resp, nil
+		case l := <-logCh:
+			_, err = fmt.Fprint(w, string(l))
+
+			if err != nil {
+				return resp, err
+			}
+
+			flusher.Flush()
+		}
+	}
+}
+
 // handleHostInfo collects and returns host-related information, which includes
 // system information, cpu, disk, and memory usage. Any capture-related errors
 // returned by the collection method will be returned as response warnings.
@@ -3037,13 +3104,15 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	if filtered {
 		return errResp, logical.ErrPermissionDenied
 	}
-
 	resp := &logical.Response{
 		Data: mountInfo(me),
 	}
 	resp.Data["path"] = me.Path
+
+	fullMountPath := ns.Path + me.Path
 	if ns.ID != me.Namespace().ID {
 		resp.Data["path"] = me.Namespace().Path + me.Path
+		fullMountPath = ns.Path + me.Namespace().Path + me.Path
 	}
 
 	// Load the ACL policies so we can walk the prefix for this mount
@@ -3060,7 +3129,7 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		return nil, logical.ErrPermissionDenied
 	}
 
-	if !hasMountAccess(ctx, acl, ns.Path+me.Path) {
+	if !hasMountAccess(ctx, acl, fullMountPath) {
 		return errResp, logical.ErrPermissionDenied
 	}
 
@@ -3399,7 +3468,7 @@ This path responds to the following HTTP methods.
         Sets the header value for the UI.
     DELETE /<header>
         Clears the header value for UI.
-        
+
     LIST /
         List the headers configured for the UI.
         `,

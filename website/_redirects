@@ -1,3 +1,9 @@
+
+# REDIRECTS FILE
+#
+# See https://www.netlify.com/docs/redirects/ for documentation. Please do not
+# modify or delete existing redirects without first verifying internally.
+
 /downloads.html /downloads 301!
 /community.html /community 301!
 /api-docs/index /api-docs 301!
@@ -89,6 +95,10 @@
 /docs/vault-enterprise/mfa/mfa-totp.html /docs/enterprise/mfa/mfa-totp 301!
 /docs/vault-enterprise/replication/index.html  /docs/enterprise/replication 301!
 /docs/vault-enterprise/ui/index.html  /docs/configuration/ui 301!
+/docs/secrets/cassandra /docs/secrets/databases/cassandra 301!
+/docs/secrets/mongodb /docs/secrets/databases/mongodb 301!
+/docs/secrets/mssql /docs/secrets/databases/mssql 301!
+/docs/secrets/mysql /docs/secrets/databases/mysql-maria 301!
 /guides/authentication.html /guides/identity/authentication 301!
 /guides/configuration/authentication.html  /guides/identity/authentication 301!
 /guides/configuration/generate-root.html /guides/operations/generate-root 301!

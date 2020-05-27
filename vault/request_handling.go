@@ -14,6 +14,7 @@ import (
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -40,13 +41,11 @@ var (
 // HandlerProperties is used to seed configuration into a vaulthttp.Handler.
 // It's in this package to avoid a circular dependency
 type HandlerProperties struct {
-	Core                         *Core
-	MaxRequestSize               int64
-	MaxRequestDuration           time.Duration
-	DisablePrintableCheck        bool
-	RecoveryMode                 bool
-	RecoveryToken                *uberAtomic.String
-	UnauthenticatedMetricsAccess bool
+	Core                  *Core
+	ListenerConfig        *configutil.Listener
+	DisablePrintableCheck bool
+	RecoveryMode          bool
+	RecoveryToken         *uberAtomic.String
 }
 
 // fetchEntityAndDerivedPolicies returns the entity object for the given entity
@@ -535,18 +534,23 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 	}
 
 	// Create an audit trail of the response
+
 	if !isControlGroupRun(req) {
-		logInput := &logical.LogInput{
-			Auth:                auth,
-			Request:             req,
-			Response:            auditResp,
-			OuterErr:            err,
-			NonHMACReqDataKeys:  nonHMACReqDataKeys,
-			NonHMACRespDataKeys: nonHMACRespDataKeys,
-		}
-		if auditErr := c.auditBroker.LogResponse(ctx, logInput, c.auditedHeaders); auditErr != nil {
-			c.logger.Error("failed to audit response", "request_path", req.Path, "error", auditErr)
-			return nil, ErrInternalError
+		switch req.Path {
+		case "sys/replication/dr/status", "sys/replication/performance/status", "sys/replication/status":
+		default:
+			logInput := &logical.LogInput{
+				Auth:                auth,
+				Request:             req,
+				Response:            auditResp,
+				OuterErr:            err,
+				NonHMACReqDataKeys:  nonHMACReqDataKeys,
+				NonHMACRespDataKeys: nonHMACRespDataKeys,
+			}
+			if auditErr := c.auditBroker.LogResponse(ctx, logInput, c.auditedHeaders); auditErr != nil {
+				c.logger.Error("failed to audit response", "request_path", req.Path, "error", auditErr)
+				return nil, ErrInternalError
+			}
 		}
 	}
 
@@ -977,16 +981,20 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		return logical.ErrorResponse(ctErr.Error()), auth, retErr
 	}
 
-	// Create an audit trail of the request. Attach auth if it was returned,
-	// e.g. if a token was provided.
-	logInput := &logical.LogInput{
-		Auth:               auth,
-		Request:            req,
-		NonHMACReqDataKeys: nonHMACReqDataKeys,
-	}
-	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
-		c.logger.Error("failed to audit request", "path", req.Path, "error", err)
-		return nil, nil, ErrInternalError
+	switch req.Path {
+	case "sys/replication/dr/status", "sys/replication/performance/status", "sys/replication/status":
+	default:
+		// Create an audit trail of the request. Attach auth if it was returned,
+		// e.g. if a token was provided.
+		logInput := &logical.LogInput{
+			Auth:               auth,
+			Request:            req,
+			NonHMACReqDataKeys: nonHMACReqDataKeys,
+		}
+		if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+			c.logger.Error("failed to audit request", "path", req.Path, "error", err)
+			return nil, nil, ErrInternalError
+		}
 	}
 
 	// The token store uses authentication even when creating a new token,

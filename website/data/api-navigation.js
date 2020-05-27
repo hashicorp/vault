@@ -32,15 +32,15 @@ export default [
           'mysql-maria',
           'oracle',
           'postgresql',
-          'redshift'
-        ]
+          'redshift',
+        ],
       },
       { category: 'gcp' },
       { category: 'gcpkms' },
       { category: 'kmip' },
       {
         category: 'kv',
-        content: ['kv-v1', 'kv-v2']
+        content: ['kv-v1', 'kv-v2'],
       },
       {
         category: 'identity',
@@ -50,8 +50,8 @@ export default [
           'group',
           'group-alias',
           'tokens',
-          'lookup'
-        ]
+          'lookup',
+        ],
       },
       { category: 'mongodbatlas' },
       { category: 'nomad' },
@@ -62,13 +62,7 @@ export default [
       { category: 'totp' },
       { category: 'transform' },
       { category: 'transit' },
-      '-----------------------',
-      { category: 'cassandra' },
-      { category: 'mongodb' },
-      { category: 'mssql' },
-      { category: 'mysql' },
-      { category: 'postgresql' }
-    ]
+    ],
   },
   {
     category: 'auth',
@@ -90,8 +84,8 @@ export default [
       { category: 'cert' },
       { category: 'token' },
       { category: 'userpass' },
-      { category: 'app-id' }
-    ]
+      { category: 'app-id' },
+    ],
   },
   {
     category: 'system',
@@ -122,7 +116,7 @@ export default [
       'metrics',
       {
         category: 'mfa',
-        content: ['duo', 'okta', 'pingid', 'totp']
+        content: ['duo', 'okta', 'pingid', 'totp'],
       },
       'mounts',
       'namespaces',
@@ -138,7 +132,7 @@ export default [
       'remount',
       {
         category: 'replication',
-        content: ['replication-performance', 'replication-dr']
+        content: ['replication-performance', 'replication-dr'],
       },
       'rotate',
       'seal',
@@ -147,14 +141,14 @@ export default [
       'step-down',
       {
         category: 'storage',
-        content: ['raft']
+        content: ['raft'],
       },
       'tools',
       'unseal',
       'wrapping-lookup',
       'wrapping-rewrap',
       'wrapping-unwrap',
-      'wrapping-wrap'
-    ]
-  }
+      'wrapping-wrap',
+    ],
+  },
 ]

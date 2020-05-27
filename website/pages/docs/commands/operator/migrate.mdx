@@ -27,7 +27,7 @@ will not allow starting the server if a migration is in progress.
 
 Migrate all keys:
 
-```text
+```shell-session
 $ vault operator migrate -config migrate.hcl
 
 2018-09-20T14:23:23.656-0700 [INFO ] copied key: data/core/seal-config
@@ -41,7 +41,7 @@ Migration is done in a consistent, sorted order. If the migration is halted or
 exits before completion (e.g. due to a connection error with a storage backend),
 it may be resumed from an arbitrary key prefix:
 
-```text
+```shell-session
 $ vault operator migrate -config migrate.hcl -start "data/logical/fd"
 ```
 
@@ -94,7 +94,7 @@ cluster_addr = "http://127.0.0.1:8201"
 Vault will need to be offline during the migration process. First, stop Vault.
 Then, run the migration on the server you wish to become a the new Vault node.
 
-```text
+```shell-session
 $ vault operator migrate -config migrate.hcl
 
 2018-09-20T14:23:23.656-0700 [INFO ] copied key: data/core/seal-config

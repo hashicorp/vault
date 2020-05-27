@@ -1,44 +1,3 @@
-// File contains DN parsing functionality
-//
-// https://tools.ietf.org/html/rfc4514
-//
-//   distinguishedName = [ relativeDistinguishedName
-//         *( COMMA relativeDistinguishedName ) ]
-//     relativeDistinguishedName = attributeTypeAndValue
-//         *( PLUS attributeTypeAndValue )
-//     attributeTypeAndValue = attributeType EQUALS attributeValue
-//     attributeType = descr / numericoid
-//     attributeValue = string / hexstring
-//
-//     ; The following characters are to be escaped when they appear
-//     ; in the value to be encoded: ESC, one of <escaped>, leading
-//     ; SHARP or SPACE, trailing SPACE, and NULL.
-//     string =   [ ( leadchar / pair ) [ *( stringchar / pair )
-//        ( trailchar / pair ) ] ]
-//
-//     leadchar = LUTF1 / UTFMB
-//     LUTF1 = %x01-1F / %x21 / %x24-2A / %x2D-3A /
-//        %x3D / %x3F-5B / %x5D-7F
-//
-//     trailchar  = TUTF1 / UTFMB
-//     TUTF1 = %x01-1F / %x21 / %x23-2A / %x2D-3A /
-//        %x3D / %x3F-5B / %x5D-7F
-//
-//     stringchar = SUTF1 / UTFMB
-//     SUTF1 = %x01-21 / %x23-2A / %x2D-3A /
-//        %x3D / %x3F-5B / %x5D-7F
-//
-//     pair = ESC ( ESC / special / hexpair )
-//     special = escaped / SPACE / SHARP / EQUALS
-//     escaped = DQUOTE / PLUS / COMMA / SEMI / LANGLE / RANGLE
-//     hexstring = SHARP 1*hexpair
-//     hexpair = HEX HEX
-//
-//  where the productions <descr>, <numericoid>, <COMMA>, <DQUOTE>,
-//  <EQUALS>, <ESC>, <HEX>, <LANGLE>, <NULL>, <PLUS>, <RANGLE>, <SEMI>,
-//  <SPACE>, <SHARP>, and <UTFMB> are defined in [RFC4512].
-//
-
 package ldap
 
 import (
@@ -48,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-asn1-ber/asn1-ber"
+	ber "github.com/go-asn1-ber/asn1-ber"
 )
 
 // AttributeTypeAndValue represents an attributeTypeAndValue from https://tools.ietf.org/html/rfc4514
@@ -69,7 +28,8 @@ type DN struct {
 	RDNs []*RelativeDN
 }
 
-// ParseDN returns a distinguishedName or an error
+// ParseDN returns a distinguishedName or an error.
+// The function respects https://tools.ietf.org/html/rfc4514
 func ParseDN(str string) (*DN, error) {
 	dn := new(DN)
 	dn.RDNs = make([]*RelativeDN, 0)
