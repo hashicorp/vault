@@ -33,6 +33,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/random"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -2065,6 +2066,183 @@ func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.Op
 	}
 }
 
+type passwordPolicyConfig struct {
+	HCLPolicy string `json:"policy"`
+}
+
+func getPasswordPolicyKey(policyName string) string {
+	return fmt.Sprintf("password_policy/%s", policyName)
+}
+
+const (
+	minPasswordLength = 4
+	maxPasswordLength = 100
+)
+
+// handlePoliciesPasswordSet saves/updates password policies
+func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
+	policyName := data.Get("name").(string)
+	if policyName == "" {
+		return nil, logical.CodedError(http.StatusBadRequest, "missing policy name")
+	}
+
+	rawPolicy := data.Get("policy").(string)
+	if rawPolicy == "" {
+		return nil, logical.CodedError(http.StatusBadRequest, "missing policy")
+	}
+
+	// Optionally decode base64 string
+	decodedPolicy, err := base64.StdEncoding.DecodeString(rawPolicy)
+	if err == nil {
+		rawPolicy = string(decodedPolicy)
+	}
+
+	// Parse the policy to ensure that it's valid
+	policy, err := random.ParsePolicy(rawPolicy)
+	if err != nil {
+		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("invalid password policy: %s", err))
+	}
+
+	if policy.Length > maxPasswordLength || policy.Length < minPasswordLength {
+		return nil, logical.CodedError(http.StatusBadRequest,
+			fmt.Sprintf("passwords must be between %d and %d characters", minPasswordLength, maxPasswordLength))
+	}
+
+	// Generate some passwords to ensure that we're confident that the policy isn't impossible
+	timeout := 1 * time.Second
+	genCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	attempts := 10
+	failed := 0
+	for i := 0; i < attempts; i++ {
+		_, err = policy.Generate(genCtx, nil)
+		if err != nil {
+			failed++
+		}
+	}
+
+	if failed == attempts {
+		return nil, logical.CodedError(http.StatusBadRequest,
+			fmt.Sprintf("unable to generate password from provided policy in %s: are the rules impossible?", timeout))
+	}
+
+	if failed > 0 {
+		return nil, logical.CodedError(http.StatusBadRequest,
+			fmt.Sprintf("failed to generate passwords %d times out of %d attempts in %s - is the policy too restrictive?", failed, attempts, timeout))
+	}
+
+	cfg := passwordPolicyConfig{
+		HCLPolicy: rawPolicy,
+	}
+	entry, err := logical.StorageEntryJSON(getPasswordPolicyKey(policyName), cfg)
+	if err != nil {
+		return nil, logical.CodedError(http.StatusInternalServerError, fmt.Sprintf("unable to save password policy: %s", err))
+	}
+
+	err = req.Storage.Put(ctx, entry)
+	if err != nil {
+		return nil, logical.CodedError(http.StatusInternalServerError,
+			fmt.Sprintf("failed to save policy to storage backend: %s", err))
+	}
+
+	return logical.RespondWithStatusCode(nil, req, http.StatusNoContent)
+}
+
+// handlePoliciesPasswordGet retrieves a password policy if it exists
+func (*SystemBackend) handlePoliciesPasswordGet(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	policyName := data.Get("name").(string)
+	if policyName == "" {
+		return nil, logical.CodedError(http.StatusBadRequest, "missing policy name")
+	}
+
+	cfg, err := retrievePasswordPolicy(ctx, req.Storage, policyName)
+	if err != nil {
+		return nil, logical.CodedError(http.StatusInternalServerError, "failed to retrieve password policy")
+	}
+	if cfg == nil {
+		return nil, logical.CodedError(http.StatusNotFound, "policy does not exist")
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"policy": cfg.HCLPolicy,
+		},
+	}
+
+	return resp, nil
+}
+
+// retrievePasswordPolicy retrieves a password policy from the logical storage
+func retrievePasswordPolicy(ctx context.Context, storage logical.Storage, policyName string) (policyCfg *passwordPolicyConfig, err error) {
+	entry, err := storage.Get(ctx, getPasswordPolicyKey(policyName))
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	policyCfg = &passwordPolicyConfig{}
+	err = json.Unmarshal(entry.Value, &policyCfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal stored data: %w", err)
+	}
+
+	return policyCfg, nil
+}
+
+// handlePoliciesPasswordDelete deletes a password policy if it exists
+func (*SystemBackend) handlePoliciesPasswordDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	policyName := data.Get("name").(string)
+	if policyName == "" {
+		return nil, logical.CodedError(http.StatusBadRequest, "missing policy name")
+	}
+
+	err := req.Storage.Delete(ctx, getPasswordPolicyKey(policyName))
+	if err != nil {
+		return nil, logical.CodedError(http.StatusInternalServerError,
+			fmt.Sprintf("failed to delete password policy: %s", err))
+	}
+
+	return nil, nil
+}
+
+// handlePoliciesPasswordGenerate generates a password from the specified password policy
+func (*SystemBackend) handlePoliciesPasswordGenerate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	policyName := data.Get("name").(string)
+	if policyName == "" {
+		return nil, logical.CodedError(http.StatusBadRequest, "missing policy name")
+	}
+
+	cfg, err := retrievePasswordPolicy(ctx, req.Storage, policyName)
+	if err != nil {
+		return nil, logical.CodedError(http.StatusInternalServerError, "failed to retrieve password policy")
+	}
+	if cfg == nil {
+		return nil, logical.CodedError(http.StatusNotFound, "policy does not exist")
+	}
+
+	policy, err := random.ParsePolicy(cfg.HCLPolicy)
+	if err != nil {
+		return nil, logical.CodedError(http.StatusInternalServerError,
+			"stored password policy configuration failed to parse")
+	}
+
+	password, err := policy.Generate(ctx, nil)
+	if err != nil {
+		return nil, logical.CodedError(http.StatusInternalServerError,
+			fmt.Sprintf("failed to generate password from policy: %s", err))
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"password": password,
+		},
+	}
+	return resp, nil
+}
+
 // handleAuditTable handles the "audit" endpoint to provide the audit table
 func (b *SystemBackend) handleAuditTable(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.Core.auditLock.RLock()
@@ -3833,6 +4011,11 @@ or delete a policy.
 
 	"policy-enforcement-level": {
 		`The enforcement level to apply to the policy.`,
+		"",
+	},
+
+	"password-policy-name": {
+		`The name of the password policy.`,
 		"",
 	},
 

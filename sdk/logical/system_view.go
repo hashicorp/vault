@@ -3,6 +3,8 @@ package logical
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -68,6 +70,15 @@ type SystemView interface {
 
 	// PluginEnv returns Vault environment information used by plugins
 	PluginEnv(context.Context) (*PluginEnvironment, error)
+
+	// GeneratePasswordFromPolicy generates a password from the policy referenced.
+	// If the policy does not exist, this will return an error.
+	GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error)
+}
+
+type PasswordPolicy interface {
+	// Generate a random password
+	Generate(context.Context, io.Reader) (string, error)
 }
 
 type ExtendedSystemView interface {
@@ -90,6 +101,7 @@ type StaticSystemView struct {
 	Features            license.Features
 	VaultVersion        string
 	PluginEnvironment   *PluginEnvironment
+	PasswordPolicies    map[string]PasswordPolicy
 }
 
 type noopAuditor struct{}
@@ -164,4 +176,21 @@ func (d StaticSystemView) HasFeature(feature license.Features) bool {
 
 func (d StaticSystemView) PluginEnv(_ context.Context) (*PluginEnvironment, error) {
 	return d.PluginEnvironment, nil
+}
+
+func (d StaticSystemView) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {
+	select {
+	case <-ctx.Done():
+		return "", fmt.Errorf("context timed out")
+	default:
+	}
+
+	if d.PasswordPolicies == nil {
+		return "", fmt.Errorf("password policy not found")
+	}
+	policy, exists := d.PasswordPolicies[policyName]
+	if !exists {
+		return "", fmt.Errorf("password policy not found")
+	}
+	return policy.Generate(ctx, nil)
 }
