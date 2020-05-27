@@ -16,6 +16,16 @@ func isLabelPresent(toFind Label, ls []Label) bool {
 	return false
 }
 
+func defaultMetrics(sink metrics.MetricSink) *metrics.Metrics {
+	// No service name
+	config := metrics.DefaultConfig("")
+
+	// No host name
+	config.EnableHostname = false
+	m, _ := metrics.New(config, sink)
+	return m
+}
+
 func TestClusterLabelPresent(t *testing.T) {
 	testClusterName := "test-cluster"
 
@@ -28,7 +38,7 @@ func TestClusterLabelPresent(t *testing.T) {
 		2000000*time.Hour)
 	clusterSink := &ClusterMetricSink{
 		ClusterName: testClusterName,
-		Sink:        inmemSink,
+		Sink:        defaultMetrics(inmemSink),
 	}
 
 	key1 := []string{"aaa", "bbb"}
