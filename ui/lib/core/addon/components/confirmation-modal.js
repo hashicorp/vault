@@ -19,6 +19,7 @@
  * @param {string} [confirmText=Yes] - The confirmation text that the user must type before continuing
  * @param {string} [buttonClass=is-danger] - extra class to add to confirm button (eg. "is-danger")
  * @param {sting} [type=warning] - Applies message-type styling to header. Override to default with empty string
+ * @param {string} [toConfirmMsg] - Finishes the sentence "Type YES to confirm ..."
  */
 
 import Component from '@ember/component';
@@ -31,4 +32,5 @@ export default Component.extend({
   confirmText: 'Yes',
   type: 'warning',
   actionDescription: '',
+  toConfirmMsg: '',
 });
