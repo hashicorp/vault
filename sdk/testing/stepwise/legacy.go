@@ -142,8 +142,6 @@ func Test(tt TestT, c TestCase) {
 		}()
 	}
 
-	// TODO setup on driver here
-
 	// Check that something is provided
 	if c.LogicalBackend == nil && c.LogicalFactory == nil {
 		if c.CredentialBackend == nil && c.CredentialFactory == nil {
@@ -279,10 +277,6 @@ func Test(tt TestT, c TestCase) {
 		}
 	}
 
-	// TODO
-	//	Steps here
-	//
-
 	// Make requests
 	var revoke []*logical.Request
 	for i, s := range c.Steps {
@@ -338,10 +332,6 @@ func Test(tt TestT, c TestCase) {
 			})
 		}
 
-		// TODO
-		// - test returned error check here
-		//
-
 		// Test step returned an error.
 		if err != nil {
 			// But if an error is expected, do not fail the test step,
@@ -363,10 +353,6 @@ func Test(tt TestT, c TestCase) {
 			err = fmt.Errorf("erroneous response:\n\n%#v", resp)
 		}
 
-		// TODO
-		// - test check func here
-		//
-
 		// Either the 'err' was nil or if an error was expected, it was set to nil.
 		// Call the 'Check' function if there is one.
 		//
@@ -384,10 +370,6 @@ func Test(tt TestT, c TestCase) {
 		}
 	}
 
-	// TODO
-	// - Revoking things here
-	//
-
 	// Revoke any secrets we might have.
 	var failedRevokes []*logical.Secret
 	for _, req := range revoke {
@@ -404,10 +386,6 @@ func Test(tt TestT, c TestCase) {
 			tt.Error(fmt.Sprintf("Revoke error: %s", err))
 		}
 	}
-
-	// TODO
-	// - Rollbacks here
-	//
 
 	// Perform any rollbacks. This should no-op if there aren't any.
 	// We set the "immediate" flag here that any backend can pick up on
