@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/namespace"
-	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	logicaltest "github.com/hashicorp/vault/sdk/testing/stepwise"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 	otplib "github.com/pquerna/otp"

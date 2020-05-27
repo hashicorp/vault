@@ -23,7 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/testhelpers"
-	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	logicaltest "github.com/hashicorp/vault/sdk/testing/stepwise"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )

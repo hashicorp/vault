@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	vlttesting "github.com/hashicorp/vault/helper/testhelpers/logical"
+	vlttesting "github.com/hashicorp/vault/sdk/testing/stepwise"
 	"github.com/hashicorp/vault/sdk/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	logicaltest "github.com/hashicorp/vault/sdk/testing/stepwise"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 

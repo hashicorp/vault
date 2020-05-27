@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
-	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	logicaltest "github.com/hashicorp/vault/sdk/testing/stepwise"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	rabbithole "github.com/michaelklishin/rabbit-hole"
