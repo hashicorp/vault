@@ -48,6 +48,10 @@
       padding: $spacing-l;
       line-height: 1.5;
 
+      &.summary {
+        grid-template-rows: 0.2fr 1fr 0.2fr 1fr;
+      }
+
       &.has-border-danger:hover {
         box-shadow: none;
       }
@@ -79,6 +83,10 @@
       .grid-item-right-bottom {
         grid-column: 2/2;
         grid-row: 3/3;
+      }
+      .grid-item-full-bottom {
+        grid-column: 1 / span 2;
+        grid-row: 4/4;
       }
     }
   }
