@@ -22,11 +22,6 @@
     margin-top: $spacing-xl;
   }
 
-  .summary-state {
-    padding-bottom: $spacing-l;
-    border-bottom: 1px solid rgba($grey-dark, 0.3);
-  }
-
   .selectable-card-container {
     margin-top: $spacing-xl;
     display: grid;
@@ -98,6 +93,14 @@
         grid-row: 4/4;
       }
     }
+
+    &.summary {
+      margin-bottom: $spacing-xl;
+    }
+  }
+  .summary-state {
+    padding-bottom: $spacing-xl;
+    border-bottom: 1px solid rgba($grey-dark, 0.3);
   }
 
   // prevent double lines at the bottom of the dashboard
