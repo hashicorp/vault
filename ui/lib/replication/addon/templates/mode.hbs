@@ -2,30 +2,42 @@
   <div class="container is-widescreen">
     {{#if model.replicationAttrs.replicationEnabled}}
       <PageHeader as |p|>
-        <p.levelLeft>
-          <h1 class="title is-3" data-test-replication-title=true>
-            {{#if (eq replicationMode 'dr')}}
-              Disaster Recovery
-            {{else if (eq replicationMode 'performance')}}
-              Performance
-            {{/if}}
-            <span class="tag is-light has-text-grey-dark" data-test-replication-mode-display=true>
-              {{model.replicationAttrs.modeForHeader}}
-            </span>
-            {{#if model.replicationAttrs.secondaryId}}
-              <span class="tag is-light has-text-grey-dark">
-                <code>
-                  {{model.replicationAttrs.secondaryId}}
-                </code>
+        <p.top>
+          <nav class="key-value-header breadcrumb">
+            <ul>
+              <li>
+                {{#link-to "index" }}
+                  <span class="sep"/>
+                  Go back
+                {{/link-to}}
+              </li>
+            </ul>
+          </nav>
+          </p.top>
+          <p.levelLeft>
+            <h1 class="has-top-margin-m title is-3 " data-test-replication-title=true>
+              {{#if (eq replicationMode 'dr')}}
+                Disaster Recovery
+              {{else if (eq replicationMode 'performance')}}
+                Performance
+              {{/if}}
+              <span class="tag is-light has-text-grey-dark" data-test-replication-mode-display=true>
+                {{model.replicationAttrs.modeForHeader}}
               </span>
-            {{else}}
-              <span class="tag is-light has-text-grey-dark">
-                <code>
-                  {{model.replicationAttrs.clusterIdDisplay}}
-                </code>
-              </span>
-            {{/if}}
-          </h1>
+              {{#if model.replicationAttrs.secondaryId}}
+                <span class="tag is-light has-text-grey-dark">
+                  <code>
+                    {{model.replicationAttrs.secondaryId}}
+                  </code>
+                </span>
+              {{else}}
+                <span class="tag is-light has-text-grey-dark">
+                  <code>
+                    {{model.replicationAttrs.clusterIdDisplay}}
+                  </code>
+                </span>
+              {{/if}}
+            </h1>
         </p.levelLeft>
       </PageHeader>
       <div class="tabs-container box is-bottomless is-fullwidth is-paddingless is-marginless">
