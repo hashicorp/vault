@@ -15,7 +15,7 @@ wide variety of environments.
 ## Functionality
 
 Auto-Auth consists of two parts: a Method, which is the authentication method
-that should be used in the current environment; and one or more Sinks, which
+that should be used in the current environment; and any number of Sinks, which
 are locations where the agent should write a token any time the current token
 value has changed.
 
@@ -103,7 +103,7 @@ The top level `auto_auth` block has two configuration entries:
 
 - `method` `(object: required)` - Configuration for the method
 
-- `sinks` `(array of objects: required)` - Configuration for the sinks
+- `sinks` `(array of objects: optional)` - Configuration for the sinks
 
 ### Configuration (Method)
 

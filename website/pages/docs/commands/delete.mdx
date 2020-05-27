@@ -18,19 +18,19 @@ given path.
 
 Remove data in the static secrets engine:
 
-```text
+```shell-session
 $ vault delete secret/my-secret
 ```
 
 Uninstall an encryption key in the transit backend:
 
-```text
+```shell-session
 $ vault delete transit/keys/my-key
 ```
 
 Delete an IAM role:
 
-```text
+```shell-session
 $ vault delete aws/roles/ops
 ```
 

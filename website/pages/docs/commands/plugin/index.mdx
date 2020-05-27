@@ -16,7 +16,7 @@ the plugin catalog
 
 List all available plugins in the catalog:
 
-```text
+```shell-session
 $ vault plugin list
 
 Plugins
@@ -27,7 +27,7 @@ my-custom-plugin
 
 Register a new plugin to the catalog:
 
-```text
+```shell-session
 $ vault plugin register \
   -sha256=d3f0a8be02f6c074cf38c9c99d4d04c9c6466249 \
   my-custom-plugin
@@ -36,7 +36,7 @@ Success! Registered plugin: my-custom-plugin
 
 Get information about a plugin in the catalog:
 
-```text
+```shell-session
 $ vault plugin info my-custom-plugin
 Key        Value
 ---        -----

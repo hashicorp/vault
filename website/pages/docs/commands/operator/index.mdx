@@ -16,7 +16,7 @@ Most users will not need to interact with these commands.
 
 Initialize a new Vault cluster:
 
-```text
+```shell-session
 $ vault operator init
 Unseal Key 1: sP/4C/fwIDjJmHEC2bi/1Pa43uKhsUQMmiB31GRzFc0R
 Unseal Key 2: kHkw2xTBelbDFIMEgEC8NVX7NDSAZ+rdgBJ/HuJwxOX+
@@ -31,14 +31,14 @@ Initial Root Token: 6662bb4a-afd0-4b6b-faad-e237fb564568
 
 Force a Vault to resign leadership in a cluster:
 
-```text
+```shell-session
 $ vault operator step-down
 Success! Stepped down: https://127.0.0.1:8200
 ```
 
 Rotate Vault's underlying encryption key:
 
-```text
+```shell-session
 $ vault operator rotate
 Success! Rotated key
 
