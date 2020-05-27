@@ -81,6 +81,12 @@ to specify where the configuration is.
   process's entire memory address space from spilling to disk and is therefore
   automatically disabled on unsupported platforms.
 
+  Disabling `mlock` is strongly recommended if using [integrated
+  storage](https://www.vaultproject.io/docs/internals/integrated-storage) due to
+  the fact that `mlock` does not interact well with memory mapped files such as
+  those created by BoltDB, which is used by Raft to track state. Additionally,
+  swap should be disabled to prevent these files from being dumped into disk.
+
   On Linux, to give the Vault executable the ability to use the `mlock`
   syscall without running the process as root, run:
 
@@ -88,7 +94,9 @@ to specify where the configuration is.
   sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
   ```
 
-  Note: Since each plugin runs as a separate process, you need to do the same for each plugin in your [plugins directory](/docs/internals/plugins#plugin-directory).
+  Note: Since each plugin runs as a separate process, you need to do the same
+  for each plugin in your [plugins
+  directory](/docs/internals/plugins#plugin-directory).
 
   If you use a Linux distribution with a modern version of systemd, you can add
   the following directive to the "[Service]" configuration section:

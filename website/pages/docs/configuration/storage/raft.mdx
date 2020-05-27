@@ -42,6 +42,9 @@ backend cannot be declared.
 ~> **Note:** Raft cannot be used as the configured `ha_storage` backend at this
 time. To use Raft for HA coordination users must also use Raft for storage.
 
+~> **Note:** When using the Raft storage backend, it is strongly recommended to
+set `disable_mlock` to `true`, and to disable memory swapping on the system.
+
 ## `raft` Parameters
 
 - `path` `(string: "")` – The file system path where all the Vault data gets
