@@ -12,6 +12,7 @@ const MODE = {
 export default Component.extend({
   layout,
   store: service(),
+  router: service(),
   reindexingDetails: null,
   didReceiveAttrs() {
     this._super(arguments);
@@ -30,9 +31,15 @@ export default Component.extend({
     this.set('reindexingDetails', resp);
   }),
   isSummaryDashboard: computed('model.dr.{mode}', 'model.performance.{mode}', function() {
-    const drMode = this.model.dr.mode;
-    const performanceMode = this.model.performance.mode;
-    return drMode && performanceMode === 'primary';
+    const router = this.router;
+    const currentRoute = router.get('currentRouteName');
+
+    // we only show the summary dashboard in the replication index route
+    if (currentRoute === 'vault.cluster.replication.index') {
+      const drMode = this.model.dr.mode;
+      const performanceMode = this.model.performance.mode;
+      return drMode && performanceMode === 'primary';
+    }
   }),
   formattedReplicationMode: computed('model.{replicationMode}', function() {
     // dr or performance 🤯
