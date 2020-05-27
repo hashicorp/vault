@@ -56,14 +56,13 @@ This process is stateful: each key can be entered via multiple mechanisms
 on multiple computers and it will work. This allows each shard of the master
 key to be on a distinct machine for better security.
 
-Once a Vault node is unsealed, it remains unsealed until one of two things happens:
+Once a Vault node is unsealed, it remains unsealed until one of these things happens:
 
 1. It is resealed via the API (see below).
 
 2. The server is restarted.
 
-3. Something sufficiently bad happens at the storage layer that Vault decides
-it can't continue operation.
+3. Vault's storage layer encounters an unrecoverable error.
 
 -> **Note:** Unsealing makes the process of automating a Vault install
 difficult. Automated tools can easily install, configure, and start Vault,
