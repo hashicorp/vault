@@ -209,7 +209,6 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 	b, dir := getRaft(t, true, true)
 	defer os.RemoveAll(dir)
 
-
 	value := make([]byte, defaultMaxEntrySize+1)
 	rand.Read(value)
 	entry := &physical.Entry{Key: "foo", Value: value}
@@ -235,7 +234,6 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 	b, dir := getRaft(t, true, true)
 	defer os.RemoveAll(dir)
-
 
 	value := make([]byte, defaultMaxEntrySize+1)
 	rand.Read(value)

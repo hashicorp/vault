@@ -53,7 +53,7 @@ var (
 
 	restoreOpDelayDuration = 5 * time.Second
 
-	defaultMaxEntrySize = uint64(3 * raftchunking.ChunkSize)
+	defaultMaxEntrySize = uint64(2 * raftchunking.ChunkSize)
 )
 
 // RaftBackend implements the backend interfaces and uses the raft protocol to
@@ -111,7 +111,7 @@ type RaftBackend struct {
 	permitPool *physical.PermitPool
 
 	// maxEntrySize imposes a size limit (in bytes) on a raft entry (put or transaction).
-	// It is suggested to use a value of 3x the Raft chunking size for optimal
+	// It is suggested to use a value of 2x the Raft chunking size for optimal
 	// performance.
 	maxEntrySize uint64
 }
