@@ -13,7 +13,7 @@ When a Vault server is started, it starts in a _sealed_ state. In this
 state, Vault is configured to know where and how to access the physical
 storage, but doesn't know how to decrypt any of it.
 
-_Unsealing_ is the process of constructing the master key necessary to
+_Unsealing_ is the process of obtaining the plaintext master key necessary to
 read the decryption key to decrypt the data, allowing access to the Vault.
 
 Prior to unsealing, almost no operations are possible with Vault. For
@@ -25,22 +25,29 @@ of the unseal.
 
 The data stored by Vault is stored encrypted. Vault needs the
 _encryption key_ in order to decrypt the data. The encryption key is
-also stored with the data, but encrypted with another encryption key
-known as the _master key_. The master key isn't stored anywhere.
+also stored with the data (in the _keyring_), but encrypted with another
+encryption key known as the _master key_.
 
 Therefore, to decrypt the data, Vault must decrypt the encryption key
-which requires the master key. Unsealing is the process of reconstructing
-this master key.
+which requires the master key. Unsealing is the process of getting access to
+this master key.  The master key is stored alongside all other Vault data,
+but is encrypted by yet another mechanism: the unseal key.
 
-Instead of distributing this master key as a single key to an operator,
-Vault uses an algorithm known as
+To recap: most Vault data is encrypted using the encryption key in the keyring;
+the keyring is encrypted by the master key; and the master key is encrypted by
+the unseal key.
+
+## Shamir seals
+
+The default Vault config uses a Shamir seal. Instead of distributing the unseal
+key as a single key to an operator, Vault uses an algorithm known as
 [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing)
 to split the key into shards. A certain threshold of shards is required to
-reconstruct the master key.
+reconstruct the unseal key, which is then used to decrypt the master key.
 
 This is the _unseal_ process: the shards are added one at a time (in any
 order) until enough shards are present to reconstruct the key and
-decrypt the data.
+decrypt the master key.
 
 ## Unsealing
 
@@ -49,18 +56,19 @@ This process is stateful: each key can be entered via multiple mechanisms
 on multiple computers and it will work. This allows each shard of the master
 key to be on a distinct machine for better security.
 
-Once a Vault is unsealed, it remains unsealed until one of two things happens:
+Once a Vault node is unsealed, it remains unsealed until one of two things happens:
 
 1. It is resealed via the API (see below).
 
 2. The server is restarted.
 
+3. Something sufficiently bad happens at the storage layer that Vault decides
+it can't continue operation.
+
 -> **Note:** Unsealing makes the process of automating a Vault install
 difficult. Automated tools can easily install, configure, and start Vault,
-but unsealing it is a very manual process. We have plans in the future to
-make it easier. For the time being, the best method is to manually unseal
-multiple Vault servers in [HA mode](/docs/concepts/ha). Use a tool such
-as Consul to make sure you only query Vault servers that are unsealed.
+but unsealing it using Shamir is a very manual process.  For most users
+AutoUnseal will provide a better experience.
 
 ## Sealing
 
@@ -75,16 +83,20 @@ access to the master key shards.
 ## Auto Unseal
 
 Auto Unseal was developed to aid in reducing the operational complexity of
-keeping the master key secure. This feature delegates the responsibility of
-securing the master key from users to a trusted device or service. Instead of
-only constructing the key in memory, the master key is encrypted with one of
-these services or devices and then stored in the storage backend allowing Vault
-to decrypt the master key at startup and unseal automatically.
+keeping the unseal key secure. This feature delegates the responsibility of
+securing the unseal key from users to a trusted device or service.  At startup
+Vault will connect to the device or service implementing the seal and ask it
+to decrypt the master key Vault read from storage.
 
 When using Auto Unseal there are certain operations in Vault that still
 require a quorum of users to perform an operation such as generating a root token.
 During the initialization process, a set of Shamir keys are generated that are called
-recovery keys and are used for these operations.
+_recovery keys_ and are used for these operations.
+
+It is still possible to seal a Vault node using the API.  In this case Vault
+will remain sealed until restarted, or the unseal API is used, which with AutoUnseal
+requires the recovery key fragments instead of the unseal key fragments that
+would be provided with Shamir.  The process remains the same.
 
 For a list of examples and supported providers, please see the
 [seal documentation](/docs/configuration/seal).
