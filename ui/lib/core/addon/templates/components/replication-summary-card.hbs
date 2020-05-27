@@ -1,16 +1,20 @@
 <div class="selectable-card is-rounded card-container summary {{if hasErrorClass "has-border-danger"}}" data-test-replication-summary-card>
   {{!-- Check if DR or Performance Card --}}
   {{#if (eq title "Disaster Recovery")}}
-    <h3 class="title is-5 grid-item-title card-title">{{title}}</h3>
+    <h3 class="title is-5 grid-item-top-left card-title">{{title}}</h3>
+    <div class="grid-item-top-right">
+      <ToolbarLink @params={{array 'mode.index' 'dr'}} data-test-manage-link>
+        Details
+      </ToolbarLink>
+    </div>
     <div class="grid-item-left">
       <h6 class="title is-6">last_dr_wal</h6>
       <p class="has-text-grey is-size-8">Index of last WAL entry written on local storage. Updates every ten seconds.</p>
     </div>
     <div class="grid-item-right">
-      <h6 class="title is-6">known secondaries</h6>
+      <h6 class="title is-6">known_secondaries</h6>
       <p class="has-text-grey is-size-8">Number of secondaries connected to this primary.</p>
     </div>
-    {{!-- ARG figure out knownsecondaries count --}}
     <h2 class="title is-3 grid-item-left-bottom">{{lastDrWAL}}</h2>
     <h2 class="title is-3 grid-item-right-bottom">{{knownSecondariesDr}}</h2>
     <div class="grid-item-full-bottom">
@@ -19,16 +23,20 @@
       <h6 class="title is-6">{{merkleRootDr}}</h6>
     </div>
   {{else}}
-    <h3 class="title is-5 grid-item-title card-title">{{title}}</h3>
+    <h3 class="title is-5 grid-item-top-left card-title">{{title}}</h3>
+    <div class="grid-item-top-right">
+      <ToolbarLink @params={{array 'mode.index' 'performance'}} data-test-manage-link>
+        Details
+      </ToolbarLink>
+    </div>
     <div class="grid-item-left">
       <h6 class="title is-6">last_performance_wal</h6>
       <p class="has-text-grey is-size-8">Index of last WAL entry written on local storage. Updates every ten seconds.</p>
     </div>
     <div class="grid-item-right">
-      <h6 class="title is-6">known secondaries</h6>
+      <h6 class="title is-6">known_secondaries</h6>
       <p class="has-text-grey is-size-8">Number of secondaries connected to this primary.</p>
     </div>
-    {{!-- ARG figure out knownsecondaries count --}}
     <h2 class="title is-3 grid-item-left-bottom">{{lastPerformanceWAL}}</h2>
     <h2 class="title is-3 grid-item-right-bottom">{{knownSecondariesPerformance}}</h2>
     <div class="grid-item-full-bottom">

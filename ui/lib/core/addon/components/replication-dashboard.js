@@ -40,4 +40,22 @@ export default Component.extend({
 
     return progressBar;
   }),
+  summaryState: computed(
+    'replicationDetailsSummary.dr.{state}',
+    'replicationDetailsSummary.performance.{state}',
+    function() {
+      const { replicationDetailsSummary } = this;
+      const drState = replicationDetailsSummary.dr.state;
+      const performanceState = replicationDetailsSummary.performance.state;
+
+      if (drState !== performanceState) {
+        // when DR and Performance is enabled on the same cluster,
+        // the states should always be the same
+        // we are leaving this console log statement to be sure
+        console.log('DR State: ', drState, 'Performance State: ', performanceState);
+      }
+
+      return drState;
+    }
+  ),
 });

@@ -34,7 +34,6 @@ export default Component.extend({
       : 0;
   }),
   lastPerformanceWAL: computed('replicationDetails.performance.{lastWAL}', function() {
-    console.log(this.replicationDetails.dr);
     return this.replicationDetails.performance && this.replicationDetails.performance.lastWAL
       ? this.replicationDetails.performance.lastWAL
       : 0;

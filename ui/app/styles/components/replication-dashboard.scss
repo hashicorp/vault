@@ -61,9 +61,12 @@
         min-height: 250px;
       }
 
-      .grid-item-title {
-        grid-column: 1 / span 2;
+      .grid-item-top-left {
+        grid-column: 1 / span 1;
         display: flex;
+      }
+      .grid-item-top-right {
+        grid-column: 2 / span 1;
       }
       .grid-item-left {
         grid-column: 1/1;

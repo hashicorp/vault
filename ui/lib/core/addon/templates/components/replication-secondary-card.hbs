@@ -1,7 +1,7 @@
 <div class="selectable-card is-rounded card-container {{if hasErrorClass "has-border-danger"}}" data-test-replication-secondary-card>
   {{!-- Check if State or WAL Card --}}
   {{#if (eq title "States")}}
-    <h3 class="title is-5 grid-item-title card-title">{{title}}</h3>
+    <h3 class="title is-5 grid-item-top-left card-title">{{title}}</h3>
     <div class="grid-item-left">
       {{#if (get (cluster-states state) "isOk")}}
         <h6 class="title is-6">state</h6>
@@ -45,7 +45,7 @@
     </h2>
     <h2 class="title is-3 grid-item-right-bottom" data-test-connection>{{connection}}</h2>
   {{else}}
-    <h3 class="title is-5 grid-item-title card-title">{{title}}</h3>
+    <h3 class="title is-5 grid-item-top-left card-title">{{title}}</h3>
     <div class="grid-item-left">
       <h6 class="title is-6">last_remote_wal</h6>
       <p class="has-text-grey is-size-8">The last WAL index that the secondary received from the primary. Updates every 10 seconds.</p>

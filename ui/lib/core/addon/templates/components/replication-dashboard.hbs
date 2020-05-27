@@ -10,6 +10,12 @@
     </div>
   {{/if}}
   {{#if isSummaryDashboard}}
+  {{!--  ARG ADD more here for state and connection --}}
+    <h6 class="title is-6">state</h6>
+    <p class="has-text-grey is-size-8">The current operating state of both Disaster Recovery and Performance. This value should be ‘running.’ If the value is idle, it indicates an issue and needs to be investigated.</p>
+    <h2 class="title is-3 grid-item-left-bottom" >{{summaryState}}
+      <Icon @glyph={{get (cluster-states summaryState) "glyph"}} class="has-text-success" data-test-icon />
+    </h2>
     <div
       class="selectable-card-container secondary"
       data-test-selectable-card-container-summary>

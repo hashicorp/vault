@@ -49,7 +49,6 @@
   <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-tabs>
     <nav class="tabs">
       {{#if (not isSummaryDashboard )}}
-      {{!-- ARG TODO figure out what to show here when isSummaryDashboard --}}
         <ul>
           {{#link-to
             "vault.cluster.replication-dr-promote"
@@ -61,6 +60,10 @@
               Details
             {{/link-to}}
           {{/link-to}}
+        </ul>
+      {{else}}
+        <ul>
+          {{link-to-external "Summary" "replication"}}
         </ul>
       {{/if}}
     </nav>
