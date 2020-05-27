@@ -1,6 +1,8 @@
 <div class="action-block is-rounded">
   <div class="action-block-info">
-    <p class="action-block-title">Disable Replication</p>
+    <h4 class="title is-5 is-marginless">
+      Disable Replication
+    </h4>
     <p>
       Disable {{replicationDisplayMode}} Replication entirely on the cluster.
     </p>
@@ -9,7 +11,9 @@
   <div class="action-block-action">
     <button
       class="button is-danger"
-      onclick={{action (mut isModalActive) true}}>
+      onclick={{action (mut isModalActive) true}}
+      data-test-replication-action-trigger
+    >
       Disable Replication
     </button>
   </div>

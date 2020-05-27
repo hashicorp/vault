@@ -11,9 +11,9 @@
       {{yield}}
 
       <div class="modal-confirm-section">
-        <h4 class="has-text-weight-semibold is-size-6">
+        <p class="has-text-weight-semibold is-size-6">
           Confirm
-        </h4>
+        </p>
         <p class="is-help">Type <strong>{{confirmText}}</strong> to confirm {{toConfirm}}</p>
         {{input
             type="text"
@@ -22,7 +22,7 @@
             class="input has-margin-top"
             autocomplete="off"
             spellcheck="false"
-            data-test-replication-action-disable=true
+            data-test-confirmation-modal-input="confirmationInput"
           }}
         </div>
     </div>
@@ -32,12 +32,14 @@
       class="button {{buttonClass}}"
       disabled={{unless (eq confirmationInput confirmText) true}}
       onclick={{onConfirm}}
-      data-test-disable-replication="true">
+      data-test-confirm-button
+    >
       {{buttonText}}
     </button>
     <button
       class="button is-secondary"
-      onclick={{action (mut isActive) false}}>
+      onclick={{action (mut isActive) false}}
+      data-test-cancel-button>
       Cancel
     </button>
   </footer>

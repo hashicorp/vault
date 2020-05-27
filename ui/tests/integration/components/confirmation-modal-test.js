@@ -1,26 +1,39 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import sinon from 'sinon';
+import { click, fillIn, find, render, settled, pauseTest } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 module('Integration | Component | confirmation-modal', function(hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
-    // Set any properties with this.set('myProperty', 'value');
-    // Handle any actions with this.set('myAction', function(val) { ... });
+  test('it works as expected', async function(assert) {
+    let spy = sinon.spy();
+    this.set('onConfirm', spy);
 
-    await render(hbs`{{confirmation-modal}}`);
-
-    assert.equal(this.element.textContent.trim(), '');
-
-    // Template block usage:
     await render(hbs`
-      {{#confirmation-modal}}
-        template block text
-      {{/confirmation-modal}}
+      <div id="modal-wormhole"></div>
+      <ConfirmationModal
+        @isActive={true}
+        @onConfirm={this.onConfirm}
+        @buttonText="Plz Continue"
+        @confirmText="Destructive Thing"
+      />
     `);
 
-    assert.equal(this.element.textContent.trim(), 'template block text');
+    assert.dom('[data-test-confirm-button]').isDisabled();
+    assert.equal(
+      find('[data-test-confirm-button]').textContent.trim(),
+      'Plz Continue',
+      'Confirm button has specified value'
+    );
+
+    await fillIn('[data-test-confirmation-modal-input="confirmationInput"]', 'Destructive Thing');
+    assert.dom('[data-test-confirm-button]').isNotDisabled();
+
+    await click('[data-test-confirm-button]');
+    await settled();
+    await pauseTest();
+    assert.ok(spy.calledOnce, 'onConfirm called when continue button clicked');
   });
 });
