@@ -756,9 +756,40 @@ $ curl \
 ## Tidy Tokens
 
 Performs some maintenance tasks to clean up invalid entries that may remain
-in the token store. Generally, running this is not needed unless upgrade
-notes or support personnel suggest it. This may perform a lot of I/O to the
-storage method so should be used sparingly.
+in the token store. On Enterprise, Tidy will only impact the tokens in the
+specified namespace, or the root namespace if unspecified.
+
+Generally, running this is not needed unless upgrade notes or support personnel
+suggest it. There are two potential dangers to running tidy: first, this will
+perform a lot of read I/O to the storage method, as it will essentially reload the
+entirety of the token store into memory.  Depending on how much cleanup is
+required (usually very little) there may also be a large number of writes.
+Second, this will cause Vault's memory usage to balloon up, because the default
+Vault internal cache is unlimited in size and every value read from storage will
+be cached.  Listing the `/auth/token/accessors` endpoint is a good way to get
+some sense of the potential impact: tidy does this and more, so if this call creates problems
+for your cluster, it would be wise to give Vault more resources before attempting
+tidy.  Note that the request may time out depending on
+[max duration](https://www.vaultproject.io/docs/configuration#default_max_request_duration)
+and your client's timeout configuration, make sure to allow it run to completion
+to properly judge the impact.
+
+Tidy will load every token accessor and cubbyhole in the namespace, as well
+as all the secondary index entries that are used to group tokens into trees so
+that parent token revocation also revokes child tokens.
+
+For each parent token listed in the secondary index, tidy will check if the token
+still exists in storage, and if not its child tokens that still exist will be
+made orphans, then the parent token will be removed from the secondary index.
+
+For each accessor found, tidy will check if the corresponding token still exists
+in storage, and if not will delete the accessor. If the token still exists in
+storage but shouldn't, tidy will try to revoke it and any child leases it might
+have, then delete the accessor.
+
+Finally, any cubbyhole entries that are associated with tokens which weren't deemed
+valid in the above steps will be deleted.
+
 
 | Method | Path               |
 | :----- | :----------------- |

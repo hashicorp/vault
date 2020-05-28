@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/random"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -326,4 +326,33 @@ func (d dynamicSystemView) PluginEnv(_ context.Context) (*logical.PluginEnvironm
 	return &logical.PluginEnvironment{
 		VaultVersion: version.GetVersion().Version,
 	}, nil
+}
+
+func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {
+	if policyName == "" {
+		return "", fmt.Errorf("missing password policy name")
+	}
+
+	// Ensure there's a timeout on the context of some sort
+	if _, hasTimeout := ctx.Deadline(); !hasTimeout {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+	}
+
+	policyCfg, err := retrievePasswordPolicy(ctx, d.core.systemBarrierView, policyName)
+	if err != nil {
+		return "", fmt.Errorf("failed to retrieve password policy: %w", err)
+	}
+
+	if policyCfg == nil {
+		return "", fmt.Errorf("no password policy found")
+	}
+
+	passPolicy, err := random.ParsePolicy(policyCfg.HCLPolicy)
+	if err != nil {
+		return "", fmt.Errorf("stored password policy is invalid: %w", err)
+	}
+
+	return passPolicy.Generate(ctx, nil)
 }
