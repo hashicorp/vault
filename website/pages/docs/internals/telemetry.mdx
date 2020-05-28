@@ -374,6 +374,7 @@ These metrics relate to raft based [integrated storage][integrated-storage].
 | `vault.raft-storage.put`												| Time to insert log entry to persist path.                                                                                                                                                                           | ms                                | timer   |
 | `vault.raft-storage.list`												| Time to list all entries under the prefix from the FSM.                                                                                                                                                             | ms                                | timer   |
 | `vault.raft-storage.transaction`								| Time to insert operations into a single log.                                                                                                                                                                        | ms                                | timer   |
+| `vault.raft-storage.entrySize`  								| The total size of a Raft entry during log application in bytes.                                                                                                                                                     | bytes                             | sample  |
 
 ## Integrated Raft Storage Leadership Changes
 
