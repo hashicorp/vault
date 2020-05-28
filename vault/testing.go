@@ -1463,38 +1463,14 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		testCluster.initCores(t, opts, cores, handlers, addAuditBackend)
 	}
 
-	getAPIClient := func(port int, tlsConfig *tls.Config) *api.Client {
-		transport := cleanhttp.DefaultPooledTransport()
-		transport.TLSClientConfig = tlsConfig.Clone()
-		if err := http2.ConfigureTransport(transport); err != nil {
-			t.Fatal(err)
-		}
-		client := &http.Client{
-			Transport: transport,
-			CheckRedirect: func(*http.Request, []*http.Request) error {
-				// This can of course be overridden per-test by using its own client
-				return fmt.Errorf("redirects not allowed in these tests")
-			},
-		}
-		config := api.DefaultConfig()
-		if config.Error != nil {
-			t.Fatal(config.Error)
-		}
-		config.Address = fmt.Sprintf("https://127.0.0.1:%d", port)
-		config.HttpClient = client
-		config.MaxRetries = 0
-		apiClient, err := api.NewClient(config)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if opts == nil || !opts.SkipInit {
-			apiClient.SetToken(testCluster.RootToken)
-		}
-		return apiClient
-	}
-
+	// Create TestClusterCores
 	var ret []*TestClusterCore
 	for i := 0; i < numCores; i++ {
+
+		client := testCluster.getAPIClient(
+			t, opts == nil || !opts.SkipInit,
+			listeners[i][0].Address.Port, tlsConfigs[i])
+
 		tcc := &TestClusterCore{
 			Core:                 cores[i],
 			CoreConfig:           coreConfigs[i],
@@ -1507,7 +1483,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Handler:              handlers[i],
 			Server:               servers[i],
 			TLSConfig:            tlsConfigs[i],
-			Client:               getAPIClient(listeners[i][0].Address.Port, tlsConfigs[i]),
+			Client:               client,
 			Barrier:              cores[i].barrier,
 			NodeID:               fmt.Sprintf("core-%d", i),
 			UnderlyingRawStorage: coreConfigs[i].Physical,
@@ -1529,6 +1505,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		testExtraTestCoreSetup(t, priKey, tcc)
 	}
 
+	// Cleanup
 	testCluster.CleanupFunc = func() {
 		for _, c := range cleanupFuncs {
 			if c != nil {
@@ -1543,6 +1520,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			}
 		}
 	}
+
+	// Setup
 	if opts != nil {
 		if opts.SetupFunc != nil {
 			testCluster.SetupFunc = func() {
@@ -1552,6 +1531,39 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	return &testCluster
+}
+
+func (testCluster *TestCluster) getAPIClient(
+	t testing.T, init bool,
+	port int, tlsConfig *tls.Config) *api.Client {
+
+	transport := cleanhttp.DefaultPooledTransport()
+	transport.TLSClientConfig = tlsConfig.Clone()
+	if err := http2.ConfigureTransport(transport); err != nil {
+		t.Fatal(err)
+	}
+	client := &http.Client{
+		Transport: transport,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			// This can of course be overridden per-test by using its own client
+			return fmt.Errorf("redirects not allowed in these tests")
+		},
+	}
+	config := api.DefaultConfig()
+	if config.Error != nil {
+		t.Fatal(config.Error)
+	}
+	config.Address = fmt.Sprintf("https://127.0.0.1:%d", port)
+	config.HttpClient = client
+	config.MaxRetries = 0
+	apiClient, err := api.NewClient(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if init {
+		apiClient.SetToken(testCluster.RootToken)
+	}
+	return apiClient
 }
 
 func (testCluster *TestCluster) newCore(
