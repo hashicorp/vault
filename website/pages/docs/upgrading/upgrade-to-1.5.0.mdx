@@ -18,8 +18,8 @@ A new Raft configuration value, `max_entry_size`, has been introduced. This valu
 limits the size in bytes for a Raft K/V entry. It applies to both put operations and
 transactions. Any put or transaction operation exceeding this configuration value
 will cause the respective operation to fail. The default value for this
-configuration is 1048576 -- two times the chunking size.
+configuration is 1MiB.
 
 In addition, a new metric has been introduced, `entrySize`, that allows for
-operators to sample the entry size, view the average, and adjust the configuration value as
-necessary.
+operators to sample the entry size, view the average, and adjust the configuration
+value as necessary. For additional details, please see [Raft configuration](docs/configuration/storage/raft).
