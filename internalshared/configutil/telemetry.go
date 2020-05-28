@@ -320,7 +320,7 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 		metricsConf.EnableHostname = false
 	}
 	fanout = append(fanout, inm)
-	_, err := metrics.NewGlobal(metricsConf, fanout)
+	globalMetrics, err := metrics.NewGlobal(metricsConf, fanout)
 
 	if err != nil {
 		return nil, nil, false, err
@@ -332,7 +332,7 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 		ClusterName:         opts.ClusterName,
 		MaxGaugeCardinality: 500,
 		GaugeInterval:       10 * time.Minute,
-		Sink:                fanout,
+		Sink:                globalMetrics,
 	}
 
 	return inm, wrapper, prometheusEnabled, nil
