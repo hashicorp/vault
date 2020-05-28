@@ -4,8 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/salt"
-	"github.com/hashicorp/vault/sdk/logical"
 	"io"
 	"strings"
 	"time"
@@ -14,6 +12,8 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type AuditFormatWriter interface {
@@ -128,8 +128,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 		},
 	}
 
-	var zt time.Time
-	if auth.IssueTime != zt {
+	if !auth.IssueTime.IsZero() {
 		reqEntry.Auth.TokenIssueTime = auth.IssueTime.Format(time.RFC3339)
 	}
 
@@ -220,8 +219,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			TokenType:                 resp.Auth.TokenType.String(),
 			TokenTTL:                  int64(resp.Auth.TTL.Seconds()),
 		}
-		var zt time.Time
-		if resp.Auth.IssueTime != zt {
+		if !resp.Auth.IssueTime.IsZero() {
 			respAuth.TokenIssueTime = resp.Auth.IssueTime.Format(time.RFC3339)
 		}
 	}
@@ -301,8 +299,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		},
 	}
 
-	var zt time.Time
-	if auth.IssueTime != zt {
+	if !auth.IssueTime.IsZero() {
 		respEntry.Auth.TokenIssueTime = auth.IssueTime.Format(time.RFC3339)
 	}
 	if req.WrapInfo != nil {
