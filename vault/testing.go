@@ -1668,7 +1668,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	testCluster.Cores = ret
 
-	testExtraClusterCoresTestSetup(t, priKey, testCluster.Cores)
+	for _, tcc := range testCluster.Cores {
+		testExtraTestCoreSetup(t, priKey, tcc)
+	}
 
 	testCluster.CleanupFunc = func() {
 		for _, c := range cleanupFuncs {
