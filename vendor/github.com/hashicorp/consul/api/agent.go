@@ -159,6 +159,14 @@ type AgentServiceRegistration struct {
 	Namespace         string                          `json:",omitempty" bexpr:"-" hash:"ignore"`
 }
 
+//ServiceRegisterOpts is used to pass extra options to the service register.
+type ServiceRegisterOpts struct {
+	//Missing healthchecks will be deleted from the agent.
+	//Using this parameter allows to idempotently register a service and its checks without
+	//having to manually deregister checks.
+	ReplaceExistingChecks bool
+}
+
 // AgentCheckRegistration is used to register a new check
 type AgentCheckRegistration struct {
 	ID        string `json:",omitempty"`
@@ -182,6 +190,7 @@ type AgentServiceCheck struct {
 	HTTP              string              `json:",omitempty"`
 	Header            map[string][]string `json:",omitempty"`
 	Method            string              `json:",omitempty"`
+	Body              string              `json:",omitempty"`
 	TCP               string              `json:",omitempty"`
 	Status            string              `json:",omitempty"`
 	Notes             string              `json:",omitempty"`
@@ -554,8 +563,25 @@ func (a *Agent) MembersOpts(opts MembersOpts) ([]*AgentMember, error) {
 // ServiceRegister is used to register a new service with
 // the local agent
 func (a *Agent) ServiceRegister(service *AgentServiceRegistration) error {
+	opts := ServiceRegisterOpts{
+		ReplaceExistingChecks: false,
+	}
+
+	return a.serviceRegister(service, opts)
+}
+
+// ServiceRegister is used to register a new service with
+// the local agent and can be passed additional options.
+func (a *Agent) ServiceRegisterOpts(service *AgentServiceRegistration, opts ServiceRegisterOpts) error {
+	return a.serviceRegister(service, opts)
+}
+
+func (a *Agent) serviceRegister(service *AgentServiceRegistration, opts ServiceRegisterOpts) error {
 	r := a.c.newRequest("PUT", "/v1/agent/service/register")
 	r.obj = service
+	if opts.ReplaceExistingChecks {
+		r.params.Set("replace-existing-checks", "true")
+	}
 	_, resp, err := requireOK(a.c.doRequest(r))
 	if err != nil {
 		return err
@@ -870,20 +896,29 @@ func (a *Agent) DisableNodeMaintenance() error {
 // log stream. An empty string will be sent down the given channel when there's
 // nothing left to stream, after which the caller should close the stopCh.
 func (a *Agent) Monitor(loglevel string, stopCh <-chan struct{}, q *QueryOptions) (chan string, error) {
+	return a.monitor(loglevel, false, stopCh, q)
+}
+
+// MonitorJSON is like Monitor except it returns logs in JSON format.
+func (a *Agent) MonitorJSON(loglevel string, stopCh <-chan struct{}, q *QueryOptions) (chan string, error) {
+	return a.monitor(loglevel, true, stopCh, q)
+}
+func (a *Agent) monitor(loglevel string, logJSON bool, stopCh <-chan struct{}, q *QueryOptions) (chan string, error) {
 	r := a.c.newRequest("GET", "/v1/agent/monitor")
 	r.setQueryOptions(q)
 	if loglevel != "" {
 		r.params.Add("loglevel", loglevel)
 	}
+	if logJSON {
+		r.params.Set("logjson", "true")
+	}
 	_, resp, err := requireOK(a.c.doRequest(r))
 	if err != nil {
 		return nil, err
 	}
-
 	logCh := make(chan string, 64)
 	go func() {
 		defer resp.Body.Close()
-
 		scanner := bufio.NewScanner(resp.Body)
 		for {
 			select {
@@ -907,7 +942,6 @@ func (a *Agent) Monitor(loglevel string, stopCh <-chan struct{}, q *QueryOptions
 			}
 		}
 	}()
-
 	return logCh, nil
 }
 

@@ -412,7 +412,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		return 1
 	}
 
-	c.logger = log.New(&log.LoggerOptions{
+	c.logger = log.NewInterceptLogger(&log.LoggerOptions{
 		Output: c.gatedWriter,
 		Level:  level,
 		// Note that if logFormat is either unspecified or standard, then
@@ -591,6 +591,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	infoKeys = append(infoKeys, "version")
 	verInfo := version.GetVersion()
 	info["version"] = verInfo.FullVersionNumber(false)
+
 	if verInfo.Revision != "" {
 		info["version sha"] = strings.Trim(verInfo.Revision, "'")
 		infoKeys = append(infoKeys, "version sha")
@@ -599,10 +600,15 @@ func (c *ServerCommand) runRecoveryMode() int {
 	infoKeys = append(infoKeys, "recovery mode")
 	info["recovery mode"] = "true"
 
+	infoKeys = append(infoKeys, "go version")
+	info["go version"] = runtime.Version()
+
 	// Server configuration output
 	padding := 24
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
+
 	for _, k := range infoKeys {
 		c.UI.Output(fmt.Sprintf(
 			"%s%s: %s",
@@ -610,6 +616,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 			strings.Title(k),
 			info[k]))
 	}
+
 	c.UI.Output("")
 
 	for _, ln := range lns {
@@ -868,14 +875,16 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	config.LogFormat = logFormat.String()
+
 	if c.flagDevThreeNode || c.flagDevFourCluster {
-		c.logger = log.New(&log.LoggerOptions{
+		c.logger = log.NewInterceptLogger(&log.LoggerOptions{
 			Mutex:  &sync.Mutex{},
 			Output: c.gatedWriter,
 			Level:  log.Trace,
 		})
 	} else {
-		c.logger = log.New(&log.LoggerOptions{
+		c.logger = log.NewInterceptLogger(&log.LoggerOptions{
 			Output: c.gatedWriter,
 			Level:  level,
 			// Note that if logFormat is either unspecified or standard, then
@@ -1477,6 +1486,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		info["version sha"] = strings.Trim(verInfo.Revision, "'")
 		infoKeys = append(infoKeys, "version sha")
 	}
+
 	infoKeys = append(infoKeys, "cgo")
 	info["cgo"] = "disabled"
 	if version.CgoEnabled {
@@ -1486,10 +1496,15 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	infoKeys = append(infoKeys, "recovery mode")
 	info["recovery mode"] = "false"
 
+	infoKeys = append(infoKeys, "go version")
+	info["go version"] = runtime.Version()
+
 	// Server configuration output
 	padding := 24
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
+
 	for _, k := range infoKeys {
 		c.UI.Output(fmt.Sprintf(
 			"%s%s: %s",
@@ -1497,6 +1512,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			strings.Title(k),
 			info[k]))
 	}
+
 	c.UI.Output("")
 
 	// Tests might not want to start a vault server and just want to verify
@@ -2035,16 +2051,22 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		info["version sha"] = strings.Trim(verInfo.Revision, "'")
 		infoKeys = append(infoKeys, "version sha")
 	}
+
 	infoKeys = append(infoKeys, "cgo")
 	info["cgo"] = "disabled"
 	if version.CgoEnabled {
 		info["cgo"] = "enabled"
 	}
 
+	infoKeys = append(infoKeys, "go version")
+	info["go version"] = runtime.Version()
+
 	// Server configuration output
 	padding := 24
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
+
 	for _, k := range infoKeys {
 		c.UI.Output(fmt.Sprintf(
 			"%s%s: %s",
@@ -2052,6 +2074,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 			strings.Title(k),
 			info[k]))
 	}
+
 	c.UI.Output("")
 
 	for _, core := range testCluster.Cores {

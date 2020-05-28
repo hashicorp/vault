@@ -34,7 +34,7 @@ repository.
 Vault includes a CLI helper that obtains a signed JWT locally and sends the
 request to Vault. This helper is only available for IAM-type roles.
 
-```text
+```shell-session
 $ vault login -method=gcp \
     role="my-role" \
     service_account="authenticating-account@my-project.iam.gserviceaccount.com" \
@@ -47,7 +47,7 @@ For more usage information, run `vault auth help gcp`.
 
 ### Via the CLI
 
-```text
+```shell-session
 $ vault write -field=token auth/gcp/login \
     role="my-role" \
     jwt="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -57,7 +57,7 @@ See [Generating JWTs](#generating-jwts) for ways to obtain the JWT token.
 
 ### Via the API
 
-```text
+```shell-session
 $ curl \
     --request POST \
     --data '{"role":"my-role", "jwt":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}' \
@@ -311,7 +311,7 @@ curl \
 
 You can also do this through the (currently beta) gcloud command.
 
-```text
+```shell-session
 $ gcloud beta iam service-accounts sign-jwt $INPUT_JWT_CLAIMS $OUTPUT_JWT_FILE \
     --iam-account=service-account@my-project.iam.gserviceaccount.com \
     --project=my-project

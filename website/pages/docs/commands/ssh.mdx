@@ -23,19 +23,19 @@ with the proper commands to provide an "SSH-like" consistent experience.
 SSH using the OTP mode (requires [sshpass](https://linux.die.net/man/1/sshpass)
 for full automation):
 
-```text
+```shell-session
 $ vault ssh -mode=otp -role=my-role user@1.2.3.4
 ```
 
 SSH using the CA mode:
 
-```text
+```shell-session
 $ vault ssh -mode=ca -role=my-role user@1.2.3.4
 ```
 
 SSH using CA mode with host key verification:
 
-```text
+```shell-session
 $ vault ssh \
     -mode=ca \
     -role=my-role \

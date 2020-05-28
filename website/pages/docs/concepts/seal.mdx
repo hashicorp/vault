@@ -126,43 +126,44 @@ These steps are common for seal migrations between any supported kinds and for
 any storage backend.
 
 1. Take a standby node down and update the [seal
-configuration](/docs/configuration/seal). If the migration is from Shamir seal
-to KMS seal, add the desired new KMS seal block to the config. If the migration
-is from KMS seal to Shamir seal, add `disabled = "true"` to the old seal block.
-If the migration is from KMS seal to another KMS seal, add `disabled = "true"`
-to the old seal block and add the desired new KMS seal block. Now, bring the
-standby node back up and run the unseal command on each by supplying the
-`-migrate` flag. Supply Shamir unseal keys if old seal was Shamir, which will be
-migrated as the recovery keys for the KMS seal. Supply recovery keys if the old
-seal is one of KMS seals, which will be migrated as the recovery keys of the new
-KMS seal or as Shamir unseal keys if the new seal is Shamir.
+   configuration](/docs/configuration/seal). If the migration is from Shamir seal
+   to KMS seal, add the desired new KMS seal block to the config. If the migration
+   is from KMS seal to Shamir seal, add `disabled = "true"` to the old seal block.
+   If the migration is from KMS seal to another KMS seal, add `disabled = "true"`
+   to the old seal block and add the desired new KMS seal block. Now, bring the
+   standby node back up and run the unseal command on each by supplying the
+   `-migrate` flag. Supply Shamir unseal keys if old seal was Shamir, which will be
+   migrated as the recovery keys for the KMS seal. Supply recovery keys if the old
+   seal is one of KMS seals, which will be migrated as the recovery keys of the new
+   KMS seal or as Shamir unseal keys if the new seal is Shamir.
 
 2. Perform step 1 for all the standby nodes, one at a time. It is necessary to
-bring back the downed standby node before moving on to the other standby nodes,
-specifically when integrated storage is in use for it helps to retain the
-quorum.
+   bring back the downed standby node before moving on to the other standby nodes,
+   specifically when integrated storage is in use for it helps to retain the
+   quorum.
 
 3. Stop the active node. One of the standby nodes will become the active node
-and perform the migration. When using Integrated Storage, ensure that quorum is
-reached and a leader is elected. Monitor the server log in the active node to
-witness the completion of the seal migration process. Wait for a little while
-for the migration information to replicate to all the nodes in case of
-Integrated Storage. In enterprise Vault, switching a KMS seal implies that the
-seal wrapped storage entries get re-wrapped. Monitor the log and wait until this
-process is complete (look for `seal re-wrap completed`).
+   and perform the migration. When using Integrated Storage, ensure that quorum is
+   reached and a leader is elected. Monitor the server log in the active node to
+   witness the completion of the seal migration process. Wait for a little while
+   for the migration information to replicate to all the nodes in case of
+   Integrated Storage. In enterprise Vault, switching a KMS seal implies that the
+   seal wrapped storage entries get re-wrapped. Monitor the log and wait until this
+   process is complete (look for `seal re-wrap completed`).
 
 4. Seal migration is now completed. Update the config of the old active node
-(that is still down) to use the new seal blocks (completely unaware of the old
-seal type) and bring it up. It will be auto-unsealed if the new seal is one of the
-KMS seals or will require unseal keys if the new seal is Shamir.
+   (that is still down) to use the new seal blocks (completely unaware of the old
+   seal type) and bring it up. It will be auto-unsealed if the new seal is one of the
+   KMS seals or will require unseal keys if the new seal is Shamir.
 
 5. At this point, config files of all the nodes can be updated to only have the
-new seal information. Standby nodes can be restarted right away and the active
-node can be restarted upon a leadership change.
+   new seal information. Standby nodes can be restarted right away and the active
+   node can be restarted upon a leadership change.
 
 ### Migration pre 1.4
 
 #### Migration From Shamir to Auto Unseal
+
 To migrate from Shamir keys to Auto Unseal, take your server cluster offline and
 update the [seal configuration](/docs/configuration/seal) with the appropriate
 seal configuration. Bring your server back up and leave the rest of the nodes
@@ -173,13 +174,12 @@ All unseal commands must specify the `-migrate` flag. Once the required
 threshold of unseal keys are entered, unseal keys will be migrated to recovery
 keys.
 
-``` $ vault operator unseal -migrate ```
+`$ vault operator unseal -migrate`
 
 #### Migration From Auto Unseal to Shamir
 
 To migrate from Auto Unseal to Shamir keys, take your server cluster offline and
-update the [seal configuration](/docs/configuration/seal) and add `disabled =
-"true"` to the seal block. This allows the migration to use this information to
+update the [seal configuration](/docs/configuration/seal) and add `disabled = "true"` to the seal block. This allows the migration to use this information to
 decrypt the key but will not unseal Vault. When you bring your server back up,
 run the unseal process with the `-migrate` flag and use the Recovery Keys to
 perform the migration. All unseal commands must specify the `-migrate` flag.
@@ -194,7 +194,7 @@ supported. We plan to support this officially in a future release.
 To migrate from Auto Unseal to a different Auto Unseal configuration, take your
 server cluster offline and update the existing [seal
 configuration](/docs/configuration/seal) and add `disabled = "true"` to the seal
-block.  Then add another seal block to describe the new seal.
+block. Then add another seal block to describe the new seal.
 
 When you bring your server back up, run the unseal process with the `-migrate`
 flag and use the Recovery Keys to perform the migration. All unseal commands

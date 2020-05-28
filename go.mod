@@ -30,7 +30,7 @@ require (
 	github.com/client9/misspell v0.3.4
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/coreos/go-semver v0.2.0
-	github.com/denisenkom/go-mssqldb v0.0.0-20190412130859-3b1d194e553a
+	github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
 	github.com/dnaeon/go-vcr v1.0.1 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
@@ -56,7 +56,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-gcp-common v0.6.0
 	github.com/hashicorp/go-hclog v0.13.0
-	github.com/hashicorp/go-kms-wrapping v0.5.9
+	github.com/hashicorp/go-kms-wrapping v0.5.10
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.0.0
@@ -101,7 +101,7 @@ require (
 	github.com/kr/pretty v0.2.0
 	github.com/kr/text v0.1.0
 	github.com/lib/pq v1.2.0
-	github.com/mattn/go-colorable v0.1.4
+	github.com/mattn/go-colorable v0.1.6
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
 	github.com/mitchellh/cli v1.0.0
@@ -109,7 +109,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/go-testing-interface v1.0.0
 	github.com/mitchellh/gox v1.0.1
-	github.com/mitchellh/mapstructure v1.1.2
+	github.com/mitchellh/mapstructure v1.2.2
 	github.com/mitchellh/reflectwalk v1.0.1
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 	github.com/ncw/swift v1.0.47

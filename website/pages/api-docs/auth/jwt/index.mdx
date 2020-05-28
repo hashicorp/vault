@@ -35,7 +35,7 @@ set.
 - `oidc_client_secret` `(string: <optional>)` - The OAuth Client Secret from the provider for OIDC roles.
 - `oidc_response_mode` `(string: <optional>)` - The response mode to be used in the OAuth2 request. Allowed values are "query" and "form_post". Defaults to "query".
 - `oidc_response_types` `(comma-separated string, or array of strings: <optional>)` - The response types to request. Allowed values are "code" and "id_token". Defaults to "code".
-   Note: "id_token" may only be used if "oidc_response_mode" is set to "form_post".
+  Note: "id_token" may only be used if "oidc_response_mode" is set to "form_post".
 - `jwks_url` `(string: <optional>)` - JWKS URL to use to authenticate signatures. Cannot be used with "oidc_discovery_url" or "jwt_validation_pubkeys".
 - `jwks_ca_pem` `(string: <optional>)` - The CA certificate or chain of certificates, in PEM format, to use to validate connections to the JWKS URL. If not set, system certificates are used.
 - `jwt_validation_pubkeys` `(comma-separated string, or array of strings: <optional>)` - A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used with "jwks_url" or "oidc_discovery_url".
@@ -54,7 +54,7 @@ set.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -72,7 +72,7 @@ Returns the previously configured config.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     https://127.0.0.1:8200/v1/auth/jwt/config
@@ -127,9 +127,9 @@ entities attempting to login. At least one of the bound values must be set.
   The expected value may be a single string or a list of strings. The interpretation of the bound
   claim values is configured with `bound_claims_type`.
 - `bound_claims_type` `(string: "string")` - Configures the interpretation of the bound_claims values.
-   If `"string"` (the default), the values will treated as string literals and must match exactly.
-   If set to `"glob"`, the values will be interpreted as globs, with `*` matching any number of
-   characters.
+  If `"string"` (the default), the values will treated as string literals and must match exactly.
+  If set to `"glob"`, the values will be interpreted as globs, with `*` matching any number of
+  characters.
 - `groups_claim` `(string: <optional>)` - The claim to use to uniquely identify
   the set of groups to which the user belongs; this will be used as the names
   for the Identity group aliases created due to a successful login. The claim
@@ -168,7 +168,7 @@ entities attempting to login. At least one of the bound values must be set.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -190,7 +190,7 @@ Returns the previously registered role configuration.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     https://127.0.0.1:8200/v1/auth/jwt/role/dev-role
@@ -232,7 +232,7 @@ Lists all the roles that are registered with the plugin.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -267,7 +267,7 @@ Deletes the previously registered role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -302,7 +302,7 @@ Obtain an authorization URL from Vault to start an OIDC login flow.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request POST \
     --data @payload.json \
@@ -341,7 +341,7 @@ against any bound claims, and if valid a Vault token will be returned.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     https://127.0.0.1:8200/v1/auth/jwt/oidc/callback?state=n2kfh3nsl&code=mn2ldl2nv98h2jl&nonce=ni42i2idj2jj
 ```
@@ -392,7 +392,7 @@ entity and then authorizes the entity for the given role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request POST \
     --data @payload.json \
