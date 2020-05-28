@@ -37,7 +37,7 @@
 
     &.secondary {
       grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      grid-gap: $spacing-xl; //ARG TODO double check ok
+      grid-gap: $spacing-xl;
     }
 
     .card-container {
@@ -80,6 +80,7 @@
       .grid-item-left-bottom {
         grid-column: 1/1;
         grid-row: 3/3;
+        margin-top: -8px;
 
         display: flex;
         align-items: center;
@@ -87,6 +88,7 @@
       .grid-item-right-bottom {
         grid-column: 2/2;
         grid-row: 3/3;
+        margin-top: -8px;
       }
       .grid-item-full-bottom {
         grid-column: 1 / span 2;
