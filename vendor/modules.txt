@@ -489,6 +489,7 @@ github.com/hashicorp/vault/sdk/helper/pathmanager
 github.com/hashicorp/vault/sdk/helper/pluginutil
 github.com/hashicorp/vault/sdk/helper/pointerutil
 github.com/hashicorp/vault/sdk/helper/policyutil
+github.com/hashicorp/vault/sdk/helper/random
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/tlsutil
@@ -634,7 +635,7 @@ github.com/mitchellh/gox
 github.com/mitchellh/hashstructure
 # github.com/mitchellh/iochan v1.0.0
 github.com/mitchellh/iochan
-# github.com/mitchellh/mapstructure v1.1.2
+# github.com/mitchellh/mapstructure v1.2.2
 github.com/mitchellh/mapstructure
 # github.com/mitchellh/pointerstructure v0.0.0-20190430161007-f252a8fd71c8
 github.com/mitchellh/pointerstructure
