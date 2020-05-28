@@ -1455,155 +1455,12 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	// Clustering setup
 	for i := 0; i < numCores; i++ {
-		setupClusterAddress(t, i, cores[i], coreConfigs[i], opts, listeners[i], handlers[i])
+		testCluster.setupClusterListener(t, i, cores[i], coreConfigs[i], opts, listeners[i], handlers[i])
 	}
 
+	// Initialize cores
 	if opts == nil || !opts.SkipInit {
-		bKeys, rKeys, root := TestCoreInitClusterWrapperSetup(t, cores[0], handlers[0])
-		barrierKeys, _ := copystructure.Copy(bKeys)
-		testCluster.BarrierKeys = barrierKeys.([][]byte)
-		recoveryKeys, _ := copystructure.Copy(rKeys)
-		testCluster.RecoveryKeys = recoveryKeys.([][]byte)
-		testCluster.RootToken = root
-
-		// Write root token and barrier keys
-		err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "root_token"), []byte(root), 0755)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var buf bytes.Buffer
-		for i, key := range testCluster.BarrierKeys {
-			buf.Write([]byte(base64.StdEncoding.EncodeToString(key)))
-			if i < len(testCluster.BarrierKeys)-1 {
-				buf.WriteRune('\n')
-			}
-		}
-		err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "barrier_keys"), buf.Bytes(), 0755)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for i, key := range testCluster.RecoveryKeys {
-			buf.Write([]byte(base64.StdEncoding.EncodeToString(key)))
-			if i < len(testCluster.RecoveryKeys)-1 {
-				buf.WriteRune('\n')
-			}
-		}
-		err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "recovery_keys"), buf.Bytes(), 0755)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Unseal first core
-		for _, key := range bKeys {
-			if _, err := cores[0].Unseal(TestKeyCopy(key)); err != nil {
-				t.Fatalf("unseal err: %s", err)
-			}
-		}
-
-		ctx := context.Background()
-
-		// If stored keys is supported, the above will no no-op, so trigger auto-unseal
-		// using stored keys to try to unseal
-		if err := cores[0].UnsealWithStoredKeys(ctx); err != nil {
-			t.Fatal(err)
-		}
-
-		// Verify unsealed
-		if cores[0].Sealed() {
-			t.Fatal("should not be sealed")
-		}
-
-		TestWaitActive(t, cores[0])
-
-		// Existing tests rely on this; we can make a toggle to disable it
-		// later if we want
-		kvReq := &logical.Request{
-			Operation:   logical.UpdateOperation,
-			ClientToken: testCluster.RootToken,
-			Path:        "sys/mounts/secret",
-			Data: map[string]interface{}{
-				"type":        "kv",
-				"path":        "secret/",
-				"description": "key/value secret storage",
-				"options": map[string]string{
-					"version": "1",
-				},
-			},
-		}
-		resp, err := cores[0].HandleRequest(namespace.RootContext(ctx), kvReq)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if resp.IsError() {
-			t.Fatal(err)
-		}
-
-		cfg, err := cores[0].seal.BarrierConfig(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Unseal other cores unless otherwise specified
-		if (opts == nil || !opts.KeepStandbysSealed) && numCores > 1 {
-			for i := 1; i < numCores; i++ {
-				cores[i].seal.SetCachedBarrierConfig(cfg)
-				for _, key := range bKeys {
-					if _, err := cores[i].Unseal(TestKeyCopy(key)); err != nil {
-						t.Fatalf("unseal err: %s", err)
-					}
-				}
-
-				// If stored keys is supported, the above will no no-op, so trigger auto-unseal
-				// using stored keys
-				if err := cores[i].UnsealWithStoredKeys(ctx); err != nil {
-					t.Fatal(err)
-				}
-			}
-
-			// Let them come fully up to standby
-			time.Sleep(2 * time.Second)
-
-			// Ensure cluster connection info is populated.
-			// Other cores should not come up as leaders.
-			for i := 1; i < numCores; i++ {
-				isLeader, _, _, err := cores[i].Leader()
-				if err != nil {
-					t.Fatal(err)
-				}
-				if isLeader {
-					t.Fatalf("core[%d] should not be leader", i)
-				}
-			}
-		}
-
-		//
-		// Set test cluster core(s) and test cluster
-		//
-		cluster, err := cores[0].Cluster(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
-		testCluster.ID = cluster.ID
-
-		if addAuditBackend {
-			// Enable auditing.
-			auditReq := &logical.Request{
-				Operation:   logical.UpdateOperation,
-				ClientToken: testCluster.RootToken,
-				Path:        "sys/audit/noop",
-				Data: map[string]interface{}{
-					"type": "noop",
-				},
-			}
-			resp, err = cores[0].HandleRequest(namespace.RootContext(ctx), auditReq)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if resp.IsError() {
-				t.Fatal(err)
-			}
-		}
+		testCluster.initCores(t, opts, cores, handlers, addAuditBackend)
 	}
 
 	getAPIClient := func(port int, tlsConfig *tls.Config) *api.Client {
@@ -1697,7 +1554,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	return &testCluster
 }
 
-func (cluster *TestCluster) newCore(
+func (testCluster *TestCluster) newCore(
 	t testing.T, idx int, coreConfig *CoreConfig,
 	opts *TestClusterOptions, listeners []*TestListener, pubKey interface{},
 ) (func(), *Core, CoreConfig, http.Handler) {
@@ -1724,7 +1581,7 @@ func (cluster *TestCluster) newCore(
 	}
 
 	if coreConfig.Logger == nil || (opts != nil && opts.Logger != nil) {
-		localConfig.Logger = cluster.Logger.Named(fmt.Sprintf("core%d", idx))
+		localConfig.Logger = testCluster.Logger.Named(fmt.Sprintf("core%d", idx))
 	}
 	if opts != nil && opts.PhysicalFactory != nil {
 		physBundle := opts.PhysicalFactory(t, idx, localConfig.Logger)
@@ -1733,7 +1590,7 @@ func (cluster *TestCluster) newCore(
 		case physBundle == nil && coreConfig.Physical == nil:
 			t.Fatal("PhysicalFactory produced no physical and none in CoreConfig")
 		case physBundle != nil:
-			cluster.Logger.Info("created physical backend", "instance", idx)
+			testCluster.Logger.Info("created physical backend", "instance", idx)
 			coreConfig.Physical = physBundle.Backend
 			localConfig.Physical = physBundle.Backend
 			//base.Physical = physBundle.Backend
@@ -1794,7 +1651,7 @@ func (cluster *TestCluster) newCore(
 	return cleanupFunc, c, localConfig, handler
 }
 
-func setupClusterAddress(
+func (testCluster *TestCluster) setupClusterListener(
 	t testing.T, idx int, core *Core, coreConfig *CoreConfig,
 	opts *TestClusterOptions, listeners []*TestListener, handler http.Handler) {
 
@@ -1828,6 +1685,163 @@ func setupClusterAddress(
 	core.Logger().Info("assigning cluster listener for test core", "core", idx, "port", port)
 	core.SetClusterListenerAddrs(clusterAddrGen(listeners, port))
 	core.SetClusterHandler(handler)
+}
+
+func (testCluster *TestCluster) initCores(
+	t testing.T,
+	opts *TestClusterOptions,
+	cores []*Core,
+	handlers []http.Handler,
+	addAuditBackend bool,
+) {
+
+	bKeys, rKeys, root := TestCoreInitClusterWrapperSetup(t, cores[0], handlers[0])
+	barrierKeys, _ := copystructure.Copy(bKeys)
+	testCluster.BarrierKeys = barrierKeys.([][]byte)
+	recoveryKeys, _ := copystructure.Copy(rKeys)
+	testCluster.RecoveryKeys = recoveryKeys.([][]byte)
+	testCluster.RootToken = root
+
+	// Write root token and barrier keys
+	err := ioutil.WriteFile(filepath.Join(testCluster.TempDir, "root_token"), []byte(root), 0755)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	for i, key := range testCluster.BarrierKeys {
+		buf.Write([]byte(base64.StdEncoding.EncodeToString(key)))
+		if i < len(testCluster.BarrierKeys)-1 {
+			buf.WriteRune('\n')
+		}
+	}
+	err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "barrier_keys"), buf.Bytes(), 0755)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, key := range testCluster.RecoveryKeys {
+		buf.Write([]byte(base64.StdEncoding.EncodeToString(key)))
+		if i < len(testCluster.RecoveryKeys)-1 {
+			buf.WriteRune('\n')
+		}
+	}
+	err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "recovery_keys"), buf.Bytes(), 0755)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Unseal first core
+	for _, key := range bKeys {
+		if _, err := cores[0].Unseal(TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
+	}
+
+	ctx := context.Background()
+
+	// If stored keys is supported, the above will no no-op, so trigger auto-unseal
+	// using stored keys to try to unseal
+	if err := cores[0].UnsealWithStoredKeys(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify unsealed
+	if cores[0].Sealed() {
+		t.Fatal("should not be sealed")
+	}
+
+	TestWaitActive(t, cores[0])
+
+	// Existing tests rely on this; we can make a toggle to disable it
+	// later if we want
+	kvReq := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: testCluster.RootToken,
+		Path:        "sys/mounts/secret",
+		Data: map[string]interface{}{
+			"type":        "kv",
+			"path":        "secret/",
+			"description": "key/value secret storage",
+			"options": map[string]string{
+				"version": "1",
+			},
+		},
+	}
+	resp, err := cores[0].HandleRequest(namespace.RootContext(ctx), kvReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.IsError() {
+		t.Fatal(err)
+	}
+
+	cfg, err := cores[0].seal.BarrierConfig(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Unseal other cores unless otherwise specified
+	numCores := len(cores)
+	if (opts == nil || !opts.KeepStandbysSealed) && numCores > 1 {
+		for i := 1; i < numCores; i++ {
+			cores[i].seal.SetCachedBarrierConfig(cfg)
+			for _, key := range bKeys {
+				if _, err := cores[i].Unseal(TestKeyCopy(key)); err != nil {
+					t.Fatalf("unseal err: %s", err)
+				}
+			}
+
+			// If stored keys is supported, the above will no no-op, so trigger auto-unseal
+			// using stored keys
+			if err := cores[i].UnsealWithStoredKeys(ctx); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		// Let them come fully up to standby
+		time.Sleep(2 * time.Second)
+
+		// Ensure cluster connection info is populated.
+		// Other cores should not come up as leaders.
+		for i := 1; i < numCores; i++ {
+			isLeader, _, _, err := cores[i].Leader()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if isLeader {
+				t.Fatalf("core[%d] should not be leader", i)
+			}
+		}
+	}
+
+	//
+	// Set test cluster core(s) and test cluster
+	//
+	cluster, err := cores[0].Cluster(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	testCluster.ID = cluster.ID
+
+	if addAuditBackend {
+		// Enable auditing.
+		auditReq := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			ClientToken: testCluster.RootToken,
+			Path:        "sys/audit/noop",
+			Data: map[string]interface{}{
+				"type": "noop",
+			},
+		}
+		resp, err = cores[0].HandleRequest(namespace.RootContext(ctx), auditReq)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if resp.IsError() {
+			t.Fatal(err)
+		}
+	}
+
 }
 
 func NewMockBuiltinRegistry() *mockBuiltinRegistry {
