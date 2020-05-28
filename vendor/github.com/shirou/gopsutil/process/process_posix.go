@@ -4,7 +4,6 @@ package process
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -68,34 +67,6 @@ func getTerminalMap() (map[uint64]string, error) {
 		ret[rdev] = strings.Replace(name, "/dev", "", -1)
 	}
 	return ret, nil
-}
-
-func PidExistsWithContext(ctx context.Context, pid int32) (bool, error) {
-	if pid <= 0 {
-		return false, fmt.Errorf("invalid pid %v", pid)
-	}
-	proc, err := os.FindProcess(int(pid))
-	if err != nil {
-		return false, err
-	}
-	err = proc.Signal(syscall.Signal(0))
-	if err == nil {
-		return true, nil
-	}
-	if err.Error() == "os: process already finished" {
-		return false, nil
-	}
-	errno, ok := err.(syscall.Errno)
-	if !ok {
-		return false, err
-	}
-	switch errno {
-	case syscall.ESRCH:
-		return false, nil
-	case syscall.EPERM:
-		return true, nil
-	}
-	return false, err
 }
 
 // SendSignal sends a unix.Signal to the process.

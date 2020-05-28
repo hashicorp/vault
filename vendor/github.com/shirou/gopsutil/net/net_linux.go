@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -17,26 +16,6 @@ import (
 	"syscall"
 
 	"github.com/shirou/gopsutil/internal/common"
-)
-
-const ( // Conntrack Column numbers
-	CT_ENTRIES = iota
-	CT_SEARCHED
-	CT_FOUND
-	CT_NEW
-	CT_INVALID
-	CT_IGNORE
-	CT_DELETE
-	CT_DELETE_LIST
-	CT_INSERT
-	CT_INSERT_FAILED
-	CT_DROP
-	CT_EARLY_DROP
-	CT_ICMP_ERROR
-	CT_EXPECT_NEW
-	CT_EXPECT_CREATE
-	CT_EXPECT_DELETE
-	CT_SEARCH_RESTART
 )
 
 // NetIOCounters returnes network I/O statistics for every network
@@ -253,58 +232,6 @@ func FilterCountersWithContext(ctx context.Context) ([]FilterStat, error) {
 	return stats, nil
 }
 
-// ConntrackStats returns more detailed info about the conntrack table
-func ConntrackStats(percpu bool) ([]ConntrackStat, error) {
-	return ConntrackStatsWithContext(context.Background(), percpu)
-}
-
-// ConntrackStatsWithContext returns more detailed info about the conntrack table
-func ConntrackStatsWithContext(ctx context.Context, percpu bool) ([]ConntrackStat, error) {
-	return conntrackStatsFromFile(common.HostProc("net/stat/nf_conntrack"), percpu)
-}
-
-// conntrackStatsFromFile returns more detailed info about the conntrack table
-// from `filename`
-// If 'percpu' is false, the result will contain exactly one item with totals/summary
-func conntrackStatsFromFile(filename string, percpu bool) ([]ConntrackStat, error) {
-	lines, err := common.ReadLines(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	statlist := NewConntrackStatList()
-
-	for _, line := range lines {
-		fields := strings.Fields(line)
-		if len(fields) == 17 && fields[0] != "entries" {
-			statlist.Append(NewConntrackStat(
-				common.HexToUint32(fields[CT_ENTRIES]),
-				common.HexToUint32(fields[CT_SEARCHED]),
-				common.HexToUint32(fields[CT_FOUND]),
-				common.HexToUint32(fields[CT_NEW]),
-				common.HexToUint32(fields[CT_INVALID]),
-				common.HexToUint32(fields[CT_IGNORE]),
-				common.HexToUint32(fields[CT_DELETE]),
-				common.HexToUint32(fields[CT_DELETE_LIST]),
-				common.HexToUint32(fields[CT_INSERT]),
-				common.HexToUint32(fields[CT_INSERT_FAILED]),
-				common.HexToUint32(fields[CT_DROP]),
-				common.HexToUint32(fields[CT_EARLY_DROP]),
-				common.HexToUint32(fields[CT_ICMP_ERROR]),
-				common.HexToUint32(fields[CT_EXPECT_NEW]),
-				common.HexToUint32(fields[CT_EXPECT_CREATE]),
-				common.HexToUint32(fields[CT_EXPECT_DELETE]),
-				common.HexToUint32(fields[CT_SEARCH_RESTART]),
-			))
-		}
-	}
-
-	if percpu {
-		return statlist.Items(), nil
-	}
-	return statlist.Summary(), nil
-}
-
 // http://students.mimuw.edu.pl/lxr/source/include/net/tcp_states.h
 var TCPStatuses = map[string]string{
 	"01": "ESTABLISHED",
@@ -466,11 +393,7 @@ func statsFromInodes(root string, pid int32, tmap []netConnectionKindType, inode
 		var path string
 		var connKey string
 		var ls []connTmp
-		if pid == 0 {
-			path = fmt.Sprintf("%s/net/%s", root, t.filename)
-		} else {
-			path = fmt.Sprintf("%s/%d/net/%s", root, pid, t.filename)
-		}
+		path = fmt.Sprintf("%s/net/%s", root, t.filename)
 		switch t.family {
 		case syscall.AF_INET, syscall.AF_INET6:
 			ls, err = processInet(path, t, inodes, pid)
@@ -654,7 +577,7 @@ func getProcInodesAll(root string, max int) (map[string][]inodeMap, error) {
 		t, err := getProcInodes(root, pid, max)
 		if err != nil {
 			// skip if permission error or no longer exists
-			if os.IsPermission(err) || os.IsNotExist(err) || err == io.EOF {
+			if os.IsPermission(err) || os.IsNotExist(err) {
 				continue
 			}
 			return ret, err

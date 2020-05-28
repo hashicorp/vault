@@ -13,7 +13,7 @@ import (
 )
 
 func DoSysctrlWithContext(ctx context.Context, mib string) ([]string, error) {
-	sysctl, err := exec.LookPath("sysctl")
+	sysctl, err := exec.LookPath("/usr/sbin/sysctl")
 	if err != nil {
 		return []string{}, err
 	}

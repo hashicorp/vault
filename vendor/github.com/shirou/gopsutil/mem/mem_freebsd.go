@@ -8,8 +8,6 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/unix"
-
-	"github.com/shirou/gopsutil/internal/common"
 )
 
 func VirtualMemory() (*VirtualMemoryStat, error) {
@@ -17,59 +15,58 @@ func VirtualMemory() (*VirtualMemoryStat, error) {
 }
 
 func VirtualMemoryWithContext(ctx context.Context) (*VirtualMemoryStat, error) {
-	pageSize, err := common.SysctlUint("vm.stats.vm.v_page_size")
+	pageSize, err := unix.SysctlUint32("vm.stats.vm.v_page_size")
 	if err != nil {
 		return nil, err
 	}
-	physmem, err := common.SysctlUint("hw.physmem")
+	physmem, err := unix.SysctlUint64("hw.physmem")
 	if err != nil {
 		return nil, err
 	}
-
-	free, err := common.SysctlUint("vm.stats.vm.v_free_count")
+	free, err := unix.SysctlUint32("vm.stats.vm.v_free_count")
 	if err != nil {
 		return nil, err
 	}
-	active, err := common.SysctlUint("vm.stats.vm.v_active_count")
+	active, err := unix.SysctlUint32("vm.stats.vm.v_active_count")
 	if err != nil {
 		return nil, err
 	}
-	inactive, err := common.SysctlUint("vm.stats.vm.v_inactive_count")
+	inactive, err := unix.SysctlUint32("vm.stats.vm.v_inactive_count")
 	if err != nil {
 		return nil, err
 	}
-	buffers, err := common.SysctlUint("vfs.bufspace")
+	buffers, err := unix.SysctlUint64("vfs.bufspace")
 	if err != nil {
 		return nil, err
 	}
-	wired, err := common.SysctlUint("vm.stats.vm.v_wire_count")
+	wired, err := unix.SysctlUint32("vm.stats.vm.v_wire_count")
 	if err != nil {
 		return nil, err
 	}
-	var cached, laundry uint64
-	osreldate, _ := common.SysctlUint("kern.osreldate")
+	var cached, laundry uint32
+	osreldate, _ := unix.SysctlUint32("kern.osreldate")
 	if osreldate < 1102000 {
-		cached, err = common.SysctlUint("vm.stats.vm.v_cache_count")
+		cached, err = unix.SysctlUint32("vm.stats.vm.v_cache_count")
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		laundry, err = common.SysctlUint("vm.stats.vm.v_laundry_count")
+		laundry, err = unix.SysctlUint32("vm.stats.vm.v_laundry_count")
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	p := pageSize
+	p := uint64(pageSize)
 	ret := &VirtualMemoryStat{
-		Total:    physmem,
-		Free:     free * p,
-		Active:   active * p,
-		Inactive: inactive * p,
-		Cached:   cached * p,
-		Buffers:  buffers,
-		Wired:    wired * p,
-		Laundry:  laundry * p,
+		Total:    uint64(physmem),
+		Free:     uint64(free) * p,
+		Active:   uint64(active) * p,
+		Inactive: uint64(inactive) * p,
+		Cached:   uint64(cached) * p,
+		Buffers:  uint64(buffers),
+		Wired:    uint64(wired) * p,
+		Laundry:  uint64(laundry) * p,
 	}
 
 	ret.Available = ret.Inactive + ret.Cached + ret.Free + ret.Laundry
@@ -87,22 +84,11 @@ func SwapMemory() (*SwapMemoryStat, error) {
 // Constants from vm/vm_param.h
 // nolint: golint
 const (
-	XSWDEV_VERSION11 = 1
-	XSWDEV_VERSION   = 2
+	XSWDEV_VERSION = 1
 )
 
 // Types from vm/vm_param.h
 type xswdev struct {
-	Version uint32 // Version is the version
-	Dev     uint64 // Dev is the device identifier
-	Flags   int32  // Flags is the swap flags applied to the device
-	NBlks   int32  // NBlks is the total number of blocks
-	Used    int32  // Used is the number of blocks used
-}
-
-// xswdev11 is a compatibility for under FreeBSD 11
-// sys/vm/swap_pager.c
-type xswdev11 struct {
 	Version uint32 // Version is the version
 	Dev     uint32 // Dev is the device identifier
 	Flags   int32  // Flags is the swap flags applied to the device
@@ -112,7 +98,7 @@ type xswdev11 struct {
 
 func SwapMemoryWithContext(ctx context.Context) (*SwapMemoryStat, error) {
 	// FreeBSD can have multiple swap devices so we total them up
-	i, err := common.SysctlUint("vm.nswapdev")
+	i, err := unix.SysctlUint32("vm.nswapdev")
 	if err != nil {
 		return nil, err
 	}
@@ -123,11 +109,11 @@ func SwapMemoryWithContext(ctx context.Context) (*SwapMemoryStat, error) {
 
 	c := int(i)
 
-	i, err = common.SysctlUint("vm.stats.vm.v_page_size")
+	i, err = unix.SysctlUint32("vm.stats.vm.v_page_size")
 	if err != nil {
 		return nil, err
 	}
-	pageSize := i
+	pageSize := uint64(i)
 
 	var buf []byte
 	s := &SwapMemoryStat{}
@@ -137,23 +123,12 @@ func SwapMemoryWithContext(ctx context.Context) (*SwapMemoryStat, error) {
 			return nil, err
 		}
 
-		// first, try to parse with version 2
 		xsw := (*xswdev)(unsafe.Pointer(&buf[0]))
-		if xsw.Version == XSWDEV_VERSION11 {
-			// this is version 1, so try to parse again
-			xsw := (*xswdev11)(unsafe.Pointer(&buf[0]))
-			if xsw.Version != XSWDEV_VERSION11 {
-				return nil, errors.New("xswdev version mismatch(11)")
-			}
-			s.Total += uint64(xsw.NBlks)
-			s.Used += uint64(xsw.Used)
-		} else if xsw.Version != XSWDEV_VERSION {
+		if xsw.Version != XSWDEV_VERSION {
 			return nil, errors.New("xswdev version mismatch")
-		} else {
-			s.Total += uint64(xsw.NBlks)
-			s.Used += uint64(xsw.Used)
 		}
-
+		s.Total += uint64(xsw.NBlks)
+		s.Used += uint64(xsw.Used)
 	}
 
 	if s.Total != 0 {

@@ -4,9 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"math"
 	"runtime"
-	"sort"
 	"time"
 
 	"github.com/shirou/gopsutil/cpu"
@@ -15,9 +13,8 @@ import (
 )
 
 var (
-	invoke                 common.Invoker = common.Invoke{}
-	ErrorNoChildren                       = errors.New("process does not have children")
-	ErrorProcessNotRunning                = errors.New("process does not exist")
+	invoke          common.Invoker = common.Invoke{}
+	ErrorNoChildren                = errors.New("process does not have children")
 )
 
 type Process struct {
@@ -31,7 +28,6 @@ type Process struct {
 	numThreads     int32
 	memInfo        *MemoryInfoStat
 	sigInfo        *SignalInfoStat
-	createTime     int64
 
 	lastCPUTimes *cpu.TimesStat
 	lastCPUTime  time.Time
@@ -47,7 +43,6 @@ type OpenFilesStat struct {
 type MemoryInfoStat struct {
 	RSS    uint64 `json:"rss"`    // bytes
 	VMS    uint64 `json:"vms"`    // bytes
-	HWM    uint64 `json:"hwm"`    // bytes
 	Data   uint64 `json:"data"`   // bytes
 	Stack  uint64 `json:"stack"`  // bytes
 	Locked uint64 `json:"locked"` // bytes
@@ -79,13 +74,6 @@ type IOCountersStat struct {
 type NumCtxSwitchesStat struct {
 	Voluntary   int64 `json:"voluntary"`
 	Involuntary int64 `json:"involuntary"`
-}
-
-type PageFaultsStat struct {
-	MinorFaults      uint64 `json:"minorFaults"`
-	MajorFaults      uint64 `json:"majorFaults"`
-	ChildMinorFaults uint64 `json:"childMinorFaults"`
-	ChildMajorFaults uint64 `json:"childMajorFaults"`
 }
 
 // Resource limit constants are from /usr/include/x86_64-linux-gnu/bits/resource.h
@@ -139,50 +127,23 @@ func (p NumCtxSwitchesStat) String() string {
 	return string(s)
 }
 
-// Pids returns a slice of process ID list which are running now.
-func Pids() ([]int32, error) {
-	return PidsWithContext(context.Background())
-}
-
-func PidsWithContext(ctx context.Context) ([]int32, error) {
-	pids, err := pidsWithContext(ctx)
-	sort.Slice(pids, func(i, j int) bool { return pids[i] < pids[j] })
-	return pids, err
-}
-
-// NewProcess creates a new Process instance, it only stores the pid and
-// checks that the process exists. Other method on Process can be used
-// to get more information about the process. An error will be returned
-// if the process does not exist.
-func NewProcess(pid int32) (*Process, error) {
-	p := &Process{Pid: pid}
-
-	exists, err := PidExists(pid)
-	if err != nil {
-		return p, err
-	}
-	if !exists {
-		return p, ErrorProcessNotRunning
-	}
-	go p.CreateTime()
-	return p, nil
-}
-
 func PidExists(pid int32) (bool, error) {
 	return PidExistsWithContext(context.Background(), pid)
 }
 
-// Background returns true if the process is in background, false otherwise.
-func (p *Process) Background() (bool, error) {
-	return p.BackgroundWithContext(context.Background())
-}
-
-func (p *Process) BackgroundWithContext(ctx context.Context) (bool, error) {
-	fg, err := p.ForegroundWithContext(ctx)
+func PidExistsWithContext(ctx context.Context, pid int32) (bool, error) {
+	pids, err := Pids()
 	if err != nil {
 		return false, err
 	}
-	return !fg, err
+
+	for _, i := range pids {
+		if i == pid {
+			return true, err
+		}
+	}
+
+	return false, err
 }
 
 // If interval is 0, return difference from last call(non-blocking).
@@ -224,48 +185,13 @@ func (p *Process) PercentWithContext(ctx context.Context, interval time.Duration
 	return ret, nil
 }
 
-// IsRunning returns whether the process is still running or not.
-func (p *Process) IsRunning() (bool, error) {
-	return p.IsRunningWithContext(context.Background())
-}
-
-func (p *Process) IsRunningWithContext(ctx context.Context) (bool, error) {
-	createTime, err := p.CreateTimeWithContext(ctx)
-	if err != nil {
-		return false, err
-	}
-	p2, err := NewProcess(p.Pid)
-	if err == ErrorProcessNotRunning {
-		return false, nil
-	}
-	createTime2, err := p2.CreateTimeWithContext(ctx)
-	if err != nil {
-		return false, err
-	}
-	return createTime == createTime2, nil
-}
-
-// CreateTime returns created time of the process in milliseconds since the epoch, in UTC.
-func (p *Process) CreateTime() (int64, error) {
-	return p.CreateTimeWithContext(context.Background())
-}
-
-func (p *Process) CreateTimeWithContext(ctx context.Context) (int64, error) {
-	if p.createTime != 0 {
-		return p.createTime, nil
-	}
-	createTime, err := p.createTimeWithContext(ctx)
-	p.createTime = createTime
-	return p.createTime, err
-}
-
 func calculatePercent(t1, t2 *cpu.TimesStat, delta float64, numcpu int) float64 {
 	if delta == 0 {
 		return 0
 	}
 	delta_proc := t2.Total() - t1.Total()
 	overall_percent := ((delta_proc / delta) * 100) * float64(numcpu)
-	return math.Min(100, math.Max(0, overall_percent))
+	return overall_percent
 }
 
 // MemoryPercent returns how many percent of the total RAM this process uses
@@ -286,7 +212,7 @@ func (p *Process) MemoryPercentWithContext(ctx context.Context) (float32, error)
 	}
 	used := processMemory.RSS
 
-	return float32(math.Min(100, math.Max(0, (100*float64(used)/float64(total))))), nil
+	return (100 * float32(used) / float32(total)), nil
 }
 
 // CPU_Percent returns how many percent of the CPU time this process uses
@@ -311,5 +237,5 @@ func (p *Process) CPUPercentWithContext(ctx context.Context) (float64, error) {
 		return 0, nil
 	}
 
-	return math.Min(100, math.Max(0, 100*cput.Total()/totalTime)), nil
+	return 100 * cput.Total() / totalTime, nil
 }

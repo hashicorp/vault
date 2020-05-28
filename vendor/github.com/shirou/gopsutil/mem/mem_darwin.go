@@ -5,9 +5,10 @@ package mem
 import (
 	"context"
 	"encoding/binary"
-	"fmt"
-	"unsafe"
+	"strconv"
+	"strings"
 
+	"github.com/shirou/gopsutil/internal/common"
 	"golang.org/x/sys/unix"
 )
 
@@ -26,42 +27,46 @@ func getHwMemsize() (uint64, error) {
 	return total, nil
 }
 
-// xsw_usage in sys/sysctl.h
-type swapUsage struct {
-	Total     uint64
-	Avail     uint64
-	Used      uint64
-	Pagesize  int32
-	Encrypted bool
-}
-
 // SwapMemory returns swapinfo.
 func SwapMemory() (*SwapMemoryStat, error) {
 	return SwapMemoryWithContext(context.Background())
 }
 
 func SwapMemoryWithContext(ctx context.Context) (*SwapMemoryStat, error) {
-	// https://github.com/yanllearnn/go-osstat/blob/ae8a279d26f52ec946a03698c7f50a26cfb427e3/memory/memory_darwin.go
 	var ret *SwapMemoryStat
 
-	value, err := unix.SysctlRaw("vm.swapusage")
+	swapUsage, err := common.DoSysctrlWithContext(ctx, "vm.swapusage")
 	if err != nil {
 		return ret, err
 	}
-	if len(value) != 32 {
-		return ret, fmt.Errorf("unexpected output of sysctl vm.swapusage: %v (len: %d)", value, len(value))
+
+	total := strings.Replace(swapUsage[2], "M", "", 1)
+	used := strings.Replace(swapUsage[5], "M", "", 1)
+	free := strings.Replace(swapUsage[8], "M", "", 1)
+
+	total_v, err := strconv.ParseFloat(total, 64)
+	if err != nil {
+		return nil, err
 	}
-	swap := (*swapUsage)(unsafe.Pointer(&value[0]))
+	used_v, err := strconv.ParseFloat(used, 64)
+	if err != nil {
+		return nil, err
+	}
+	free_v, err := strconv.ParseFloat(free, 64)
+	if err != nil {
+		return nil, err
+	}
 
 	u := float64(0)
-	if swap.Total != 0 {
-		u = ((float64(swap.Total) - float64(swap.Avail)) / float64(swap.Total)) * 100.0
+	if total_v != 0 {
+		u = ((total_v - free_v) / total_v) * 100.0
 	}
 
+	// vm.swapusage shows "M", multiply 1024 * 1024 to convert bytes.
 	ret = &SwapMemoryStat{
-		Total:       swap.Total,
-		Used:        swap.Used,
-		Free:        swap.Avail,
+		Total:       uint64(total_v * 1024 * 1024),
+		Used:        uint64(used_v * 1024 * 1024),
+		Free:        uint64(free_v * 1024 * 1024),
 		UsedPercent: u,
 	}
 

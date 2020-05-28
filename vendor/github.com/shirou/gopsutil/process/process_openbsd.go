@@ -7,8 +7,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"os/exec"
-	"strconv"
 	"strings"
 	"unsafe"
 
@@ -26,7 +24,11 @@ type MemoryInfoExStat struct {
 type MemoryMapsStat struct {
 }
 
-func pidsWithContext(ctx context.Context) ([]int32, error) {
+func Pids() ([]int32, error) {
+	return PidsWithContext(context.Background())
+}
+
+func PidsWithContext(ctx context.Context) ([]int32, error) {
 	var ret []int32
 	procs, err := Processes()
 	if err != nil {
@@ -114,7 +116,11 @@ func (p *Process) CmdlineWithContext(ctx context.Context) (string, error) {
 	return strings.Join(argv, " "), nil
 }
 
-func (p *Process) createTimeWithContext(ctx context.Context) (int64, error) {
+func (p *Process) CreateTime() (int64, error) {
+	return p.CreateTimeWithContext(context.Background())
+}
+
+func (p *Process) CreateTimeWithContext(ctx context.Context) (int64, error) {
 	return 0, common.ErrNotImplementedError
 }
 func (p *Process) Cwd() (string, error) {
@@ -155,23 +161,6 @@ func (p *Process) StatusWithContext(ctx context.Context) (string, error) {
 	}
 
 	return s, nil
-}
-func (p *Process) Foreground() (bool, error) {
-	return p.ForegroundWithContext(context.Background())
-}
-
-func (p *Process) ForegroundWithContext(ctx context.Context) (bool, error) {
-	// see https://github.com/shirou/gopsutil/issues/596#issuecomment-432707831 for implementation details
-	pid := p.Pid
-	ps, err := exec.LookPath("ps")
-	if err != nil {
-		return false, err
-	}
-	out, err := invoke.CommandWithContext(ctx, ps, "-o", "stat=", "-p", strconv.Itoa(int(pid)))
-	if err != nil {
-		return false, err
-	}
-	return strings.IndexByte(string(out), '+') != -1, nil
 }
 func (p *Process) Uids() ([]int32, error) {
 	return p.UidsWithContext(context.Background())
@@ -351,14 +340,6 @@ func (p *Process) MemoryInfoExWithContext(ctx context.Context) (*MemoryInfoExSta
 	return nil, common.ErrNotImplementedError
 }
 
-func (p *Process) PageFaults() (*PageFaultsStat, error) {
-	return p.PageFaultsWithContext(context.Background())
-}
-
-func (p *Process) PageFaultsWithContext(ctx context.Context) (*PageFaultsStat, error) {
-	return nil, common.ErrNotImplementedError
-}
-
 func (p *Process) Children() ([]*Process, error) {
 	return p.ChildrenWithContext(context.Background())
 }
@@ -395,14 +376,6 @@ func (p *Process) ConnectionsWithContext(ctx context.Context) ([]net.ConnectionS
 	return nil, common.ErrNotImplementedError
 }
 
-func (p *Process) ConnectionsMax(max int) ([]net.ConnectionStat, error) {
-	return p.ConnectionsMaxWithContext(context.Background(), max)
-}
-
-func (p *Process) ConnectionsMaxWithContext(ctx context.Context, max int) ([]net.ConnectionStat, error) {
-	return []net.ConnectionStat{}, common.ErrNotImplementedError
-}
-
 func (p *Process) NetIOCounters(pernic bool) ([]net.IOCountersStat, error) {
 	return p.NetIOCountersWithContext(context.Background(), pernic)
 }
@@ -411,6 +384,13 @@ func (p *Process) NetIOCountersWithContext(ctx context.Context, pernic bool) ([]
 	return nil, common.ErrNotImplementedError
 }
 
+func (p *Process) IsRunning() (bool, error) {
+	return p.IsRunningWithContext(context.Background())
+}
+
+func (p *Process) IsRunningWithContext(ctx context.Context) (bool, error) {
+	return true, common.ErrNotImplementedError
+}
 func (p *Process) MemoryMaps(grouped bool) (*[]MemoryMapsStat, error) {
 	return p.MemoryMapsWithContext(context.Background(), grouped)
 }
@@ -479,6 +459,12 @@ func (p *Process) getKProcWithContext(ctx context.Context) (*KinfoProc, error) {
 		return nil, err
 	}
 	return &k, nil
+}
+
+func NewProcess(pid int32) (*Process, error) {
+	p := &Process{Pid: pid}
+
+	return p, nil
 }
 
 func CallKernProcSyscall(op int32, arg int32) ([]byte, uint64, error) {

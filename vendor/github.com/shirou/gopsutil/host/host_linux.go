@@ -15,10 +15,10 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/shirou/gopsutil/internal/common"
-	"golang.org/x/sys/unix"
 )
 
 type LSB struct {
@@ -56,11 +56,6 @@ func InfoWithContext(ctx context.Context) (*InfoStat, error) {
 		ret.KernelVersion = kernelVersion
 	}
 
-	kernelArch, err := kernelArch()
-	if err == nil {
-		ret.KernelArch = kernelArch
-	}
-
 	system, role, err := Virtualization()
 	if err == nil {
 		ret.VirtualizationSystem = system
@@ -79,7 +74,6 @@ func InfoWithContext(ctx context.Context) (*InfoStat, error) {
 
 	sysProductUUID := common.HostSys("class/dmi/id/product_uuid")
 	machineID := common.HostEtc("machine-id")
-	procSysKernelRandomBootID := common.HostProc("sys/kernel/random/boot_id")
 	switch {
 	// In order to read this file, needs to be supported by kernel/arch and run as root
 	// so having fallback is important
@@ -101,14 +95,17 @@ func InfoWithContext(ctx context.Context) (*InfoStat, error) {
 		fallthrough
 	// Not stable between reboot, but better than nothing
 	default:
-		lines, err := common.ReadLines(procSysKernelRandomBootID)
-		if err == nil && len(lines) > 0 && lines[0] != "" {
-			ret.HostID = strings.ToLower(lines[0])
+		values, err := common.DoSysctrl("kernel.random.boot_id")
+		if err == nil && len(values) == 1 && values[0] != "" {
+			ret.HostID = strings.ToLower(values[0])
 		}
 	}
 
 	return ret, nil
 }
+
+// cachedBootTime must be accessed via atomic.Load/StoreUint64
+var cachedBootTime uint64
 
 // BootTime returns the system boot time expressed in seconds since the epoch.
 func BootTime() (uint64, error) {
@@ -116,7 +113,62 @@ func BootTime() (uint64, error) {
 }
 
 func BootTimeWithContext(ctx context.Context) (uint64, error) {
-	return common.BootTimeWithContext(ctx)
+	t := atomic.LoadUint64(&cachedBootTime)
+	if t != 0 {
+		return t, nil
+	}
+
+	system, role, err := Virtualization()
+	if err != nil {
+		return 0, err
+	}
+
+	statFile := "stat"
+	if system == "lxc" && role == "guest" {
+		// if lxc, /proc/uptime is used.
+		statFile = "uptime"
+	} else if system == "docker" && role == "guest" {
+		// also docker, guest
+		statFile = "uptime"
+	}
+
+	filename := common.HostProc(statFile)
+	lines, err := common.ReadLines(filename)
+	if err != nil {
+		return 0, err
+	}
+
+	if statFile == "stat" {
+		for _, line := range lines {
+			if strings.HasPrefix(line, "btime") {
+				f := strings.Fields(line)
+				if len(f) != 2 {
+					return 0, fmt.Errorf("wrong btime format")
+				}
+				b, err := strconv.ParseInt(f[1], 10, 64)
+				if err != nil {
+					return 0, err
+				}
+				t = uint64(b)
+				atomic.StoreUint64(&cachedBootTime, t)
+				return t, nil
+			}
+		}
+	} else if statFile == "uptime" {
+		if len(lines) != 1 {
+			return 0, fmt.Errorf("wrong uptime format")
+		}
+		f := strings.Fields(lines[0])
+		b, err := strconv.ParseFloat(f[0], 64)
+		if err != nil {
+			return 0, err
+		}
+		t = uint64(time.Now().Unix()) - uint64(b)
+		atomic.StoreUint64(&cachedBootTime, t)
+		return t, nil
+	}
+
+	return 0, fmt.Errorf("could not find btime")
 }
 
 func uptime(boot uint64) uint64 {
@@ -182,6 +234,26 @@ func UsersWithContext(ctx context.Context) ([]UserStat, error) {
 
 }
 
+func getOSRelease() (platform string, version string, err error) {
+	contents, err := common.ReadLines(common.HostEtc("os-release"))
+	if err != nil {
+		return "", "", nil // return empty
+	}
+	for _, line := range contents {
+		field := strings.Split(line, "=")
+		if len(field) < 2 {
+			continue
+		}
+		switch field[0] {
+		case "ID": // use ID for lowercase
+			platform = field[1]
+		case "VERSION":
+			version = field[1]
+		}
+	}
+	return platform, version, nil
+}
+
 func getLSB() (*LSB, error) {
 	ret := &LSB{}
 	if common.PathExists(common.HostEtc("lsb-release")) {
@@ -206,7 +278,7 @@ func getLSB() (*LSB, error) {
 			}
 		}
 	} else if common.PathExists("/usr/bin/lsb_release") {
-		lsb_release, err := exec.LookPath("lsb_release")
+		lsb_release, err := exec.LookPath("/usr/bin/lsb_release")
 		if err != nil {
 			return ret, err
 		}
@@ -319,7 +391,7 @@ func PlatformInformationWithContext(ctx context.Context) (platform string, famil
 			version = contents[0]
 		}
 	} else if common.PathExists(common.HostEtc("os-release")) {
-		p, v, err := common.GetOSRelease()
+		p, v, err := getOSRelease()
 		if err == nil {
 			platform = p
 			version = v
@@ -348,7 +420,7 @@ func PlatformInformationWithContext(ctx context.Context) (platform string, famil
 		family = "fedora"
 	case "oracle", "centos", "redhat", "scientific", "enterpriseenterprise", "amazon", "xenserver", "cloudlinux", "ibm_powerkvm":
 		family = "rhel"
-	case "suse", "opensuse", "sles":
+	case "suse", "opensuse":
 		family = "suse"
 	case "gentoo":
 		family = "gentoo"
@@ -362,8 +434,6 @@ func PlatformInformationWithContext(ctx context.Context) (platform string, famil
 		family = "alpine"
 	case "coreos":
 		family = "coreos"
-	case "solus":
-		family = "solus"
 	}
 
 	return platform, family, version, nil
@@ -375,12 +445,19 @@ func KernelVersion() (version string, err error) {
 }
 
 func KernelVersionWithContext(ctx context.Context) (version string, err error) {
-	var utsname unix.Utsname
-	err = unix.Uname(&utsname)
-	if err != nil {
-		return "", err
+	filename := common.HostProc("sys/kernel/osrelease")
+	if common.PathExists(filename) {
+		contents, err := common.ReadLines(filename)
+		if err != nil {
+			return "", err
+		}
+
+		if len(contents) > 0 {
+			version = contents[0]
+		}
 	}
-	return string(utsname.Release[:bytes.IndexByte(utsname.Release[:], 0)]), nil
+
+	return version, nil
 }
 
 func getSlackwareVersion(contents []string) string {
@@ -437,7 +514,106 @@ func Virtualization() (string, string, error) {
 }
 
 func VirtualizationWithContext(ctx context.Context) (string, string, error) {
-	return common.VirtualizationWithContext(ctx)
+	var system string
+	var role string
+
+	filename := common.HostProc("xen")
+	if common.PathExists(filename) {
+		system = "xen"
+		role = "guest" // assume guest
+
+		if common.PathExists(filepath.Join(filename, "capabilities")) {
+			contents, err := common.ReadLines(filepath.Join(filename, "capabilities"))
+			if err == nil {
+				if common.StringsContains(contents, "control_d") {
+					role = "host"
+				}
+			}
+		}
+	}
+
+	filename = common.HostProc("modules")
+	if common.PathExists(filename) {
+		contents, err := common.ReadLines(filename)
+		if err == nil {
+			if common.StringsContains(contents, "kvm") {
+				system = "kvm"
+				role = "host"
+			} else if common.StringsContains(contents, "vboxdrv") {
+				system = "vbox"
+				role = "host"
+			} else if common.StringsContains(contents, "vboxguest") {
+				system = "vbox"
+				role = "guest"
+			} else if common.StringsContains(contents, "vmware") {
+				system = "vmware"
+				role = "guest"
+			}
+		}
+	}
+
+	filename = common.HostProc("cpuinfo")
+	if common.PathExists(filename) {
+		contents, err := common.ReadLines(filename)
+		if err == nil {
+			if common.StringsContains(contents, "QEMU Virtual CPU") ||
+				common.StringsContains(contents, "Common KVM processor") ||
+				common.StringsContains(contents, "Common 32-bit KVM processor") {
+				system = "kvm"
+				role = "guest"
+			}
+		}
+	}
+
+	filename = common.HostProc()
+	if common.PathExists(filepath.Join(filename, "bc", "0")) {
+		system = "openvz"
+		role = "host"
+	} else if common.PathExists(filepath.Join(filename, "vz")) {
+		system = "openvz"
+		role = "guest"
+	}
+
+	// not use dmidecode because it requires root
+	if common.PathExists(filepath.Join(filename, "self", "status")) {
+		contents, err := common.ReadLines(filepath.Join(filename, "self", "status"))
+		if err == nil {
+
+			if common.StringsContains(contents, "s_context:") ||
+				common.StringsContains(contents, "VxID:") {
+				system = "linux-vserver"
+			}
+			// TODO: guest or host
+		}
+	}
+
+	if common.PathExists(filepath.Join(filename, "self", "cgroup")) {
+		contents, err := common.ReadLines(filepath.Join(filename, "self", "cgroup"))
+		if err == nil {
+			if common.StringsContains(contents, "lxc") {
+				system = "lxc"
+				role = "guest"
+			} else if common.StringsContains(contents, "docker") {
+				system = "docker"
+				role = "guest"
+			} else if common.StringsContains(contents, "machine-rkt") {
+				system = "rkt"
+				role = "guest"
+			} else if common.PathExists("/usr/bin/lxc-version") {
+				system = "lxc"
+				role = "host"
+			}
+		}
+	}
+
+	if common.PathExists(common.HostEtc("os-release")) {
+		p, _, err := getOSRelease()
+		if err == nil && p == "coreos" {
+			system = "rkt" // Is it true?
+			role = "host"
+		}
+	}
+	return system, role, nil
 }
 
 func SensorsTemperatures() ([]TemperatureStat, error) {
@@ -458,7 +634,6 @@ func SensorsTemperaturesWithContext(ctx context.Context) ([]TemperatureStat, err
 			return temperatures, err
 		}
 	}
-	var warns Warnings
 
 	// example directory
 	// device/           temp1_crit_alarm  temp2_crit_alarm  temp3_crit_alarm  temp4_crit_alarm  temp5_crit_alarm  temp6_crit_alarm  temp7_crit_alarm
@@ -481,22 +656,19 @@ func SensorsTemperaturesWithContext(ctx context.Context) ([]TemperatureStat, err
 			label = fmt.Sprintf("%s_", strings.Join(strings.Split(strings.TrimSpace(strings.ToLower(string(c))), " "), ""))
 		}
 
-		// Get the name of the temperature you are reading
+		// Get the name of the tempearture you are reading
 		name, err := ioutil.ReadFile(filepath.Join(filepath.Dir(file), "name"))
 		if err != nil {
-			warns.Add(err)
-			continue
+			return temperatures, err
 		}
 
 		// Get the temperature reading
 		current, err := ioutil.ReadFile(file)
 		if err != nil {
-			warns.Add(err)
-			continue
+			return temperatures, err
 		}
 		temperature, err := strconv.ParseFloat(strings.TrimSpace(string(current)), 64)
 		if err != nil {
-			warns.Add(err)
 			continue
 		}
 
@@ -506,5 +678,5 @@ func SensorsTemperaturesWithContext(ctx context.Context) ([]TemperatureStat, err
 			Temperature: temperature / 1000.0,
 		})
 	}
-	return temperatures, warns.Reference()
+	return temperatures, nil
 }

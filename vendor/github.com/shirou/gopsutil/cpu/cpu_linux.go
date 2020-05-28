@@ -16,7 +16,7 @@ import (
 var CPUTick = float64(100)
 
 func init() {
-	getconf, err := exec.LookPath("getconf")
+	getconf, err := exec.LookPath("/usr/bin/getconf")
 	if err != nil {
 		return
 	}
@@ -281,72 +281,4 @@ func parseStatLine(line string) (*TimesStat, error) {
 	}
 
 	return ct, nil
-}
-
-func CountsWithContext(ctx context.Context, logical bool) (int, error) {
-	if logical {
-		ret := 0
-		// https://github.com/giampaolo/psutil/blob/d01a9eaa35a8aadf6c519839e987a49d8be2d891/psutil/_pslinux.py#L599
-		procCpuinfo := common.HostProc("cpuinfo")
-		lines, err := common.ReadLines(procCpuinfo)
-		if err == nil {
-			for _, line := range lines {
-				line = strings.ToLower(line)
-				if strings.HasPrefix(line, "processor") {
-					ret++
-				}
-			}
-		}
-		if ret == 0 {
-			procStat := common.HostProc("stat")
-			lines, err = common.ReadLines(procStat)
-			if err != nil {
-				return 0, err
-			}
-			for _, line := range lines {
-				if len(line) >= 4 && strings.HasPrefix(line, "cpu") && '0' <= line[3] && line[3] <= '9' { // `^cpu\d` regexp matching
-					ret++
-				}
-			}
-		}
-		return ret, nil
-	}
-	// physical cores https://github.com/giampaolo/psutil/blob/d01a9eaa35a8aadf6c519839e987a49d8be2d891/psutil/_pslinux.py#L628
-	filename := common.HostProc("cpuinfo")
-	lines, err := common.ReadLines(filename)
-	if err != nil {
-		return 0, err
-	}
-	mapping := make(map[int]int)
-	currentInfo := make(map[string]int)
-	for _, line := range lines {
-		line = strings.ToLower(strings.TrimSpace(line))
-		if line == "" {
-			// new section
-			id, okID := currentInfo["physical id"]
-			cores, okCores := currentInfo["cpu cores"]
-			if okID && okCores {
-				mapping[id] = cores
-			}
-			currentInfo = make(map[string]int)
-			continue
-		}
-		fields := strings.Split(line, ":")
-		if len(fields) < 2 {
-			continue
-		}
-		fields[0] = strings.TrimSpace(fields[0])
-		if fields[0] == "physical id" || fields[0] == "cpu cores" {
-			val, err := strconv.Atoi(strings.TrimSpace(fields[1]))
-			if err != nil {
-				continue
-			}
-			currentInfo[fields[0]] = val
-		}
-	}
-	ret := 0
-	for _, v := range mapping {
-		ret += v
-	}
-	return ret, nil
 }

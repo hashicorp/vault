@@ -24,14 +24,6 @@ func FilterCountersWithContext(ctx context.Context) ([]FilterStat, error) {
 	return []FilterStat{}, common.ErrNotImplementedError
 }
 
-func ConntrackStats(percpu bool) ([]ConntrackStat, error) {
-	return ConntrackStatsWithContext(context.Background(), percpu)
-}
-
-func ConntrackStatsWithContext(ctx context.Context, percpu bool) ([]ConntrackStat, error) {
-	return nil, common.ErrNotImplementedError
-}
-
 func ProtoCounters(protocols []string) ([]ProtoCountersStat, error) {
 	return ProtoCountersWithContext(context.Background(), protocols)
 }

@@ -3,7 +3,6 @@
 package common
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -12,23 +11,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func SysctlUint(mib string) (uint64, error) {
-	buf, err := unix.SysctlRaw(mib)
-	if err != nil {
-		return 0, err
-	}
-	if len(buf) == 8 { // 64 bit
-		return *(*uint64)(unsafe.Pointer(&buf[0])), nil
-	}
-	if len(buf) == 4 { // 32bit
-		t := *(*uint32)(unsafe.Pointer(&buf[0]))
-		return uint64(t), nil
-	}
-	return 0, fmt.Errorf("unexpected size: %s, %d", mib, len(buf))
-}
-
 func DoSysctrl(mib string) ([]string, error) {
-	sysctl, err := exec.LookPath("sysctl")
+	sysctl, err := exec.LookPath("/sbin/sysctl")
 	if err != nil {
 		return []string{}, err
 	}

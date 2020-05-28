@@ -19,7 +19,6 @@ var (
 	modiphlpapi             = windows.NewLazySystemDLL("iphlpapi.dll")
 	procGetExtendedTCPTable = modiphlpapi.NewProc("GetExtendedTcpTable")
 	procGetExtendedUDPTable = modiphlpapi.NewProc("GetExtendedUdpTable")
-	procGetIfEntry2         = modiphlpapi.NewProc("GetIfEntry2")
 )
 
 const (
@@ -74,65 +73,6 @@ var netConnectionKindMap = map[string][]netConnectionKindType{
 	"inet6": {kindTCP6, kindUDP6},
 }
 
-// https://github.com/microsoft/ethr/blob/aecdaf923970e5a9b4c461b4e2e3963d781ad2cc/plt_windows.go#L114-L170
-type guid struct {
-	Data1 uint32
-	Data2 uint16
-	Data3 uint16
-	Data4 [8]byte
-}
-
-const (
-	maxStringSize        = 256
-	maxPhysAddressLength = 32
-	pad0for64_4for32     = 0
-)
-
-type mibIfRow2 struct {
-	InterfaceLuid               uint64
-	InterfaceIndex              uint32
-	InterfaceGuid               guid
-	Alias                       [maxStringSize + 1]uint16
-	Description                 [maxStringSize + 1]uint16
-	PhysicalAddressLength       uint32
-	PhysicalAddress             [maxPhysAddressLength]uint8
-	PermanentPhysicalAddress    [maxPhysAddressLength]uint8
-	Mtu                         uint32
-	Type                        uint32
-	TunnelType                  uint32
-	MediaType                   uint32
-	PhysicalMediumType          uint32
-	AccessType                  uint32
-	DirectionType               uint32
-	InterfaceAndOperStatusFlags uint32
-	OperStatus                  uint32
-	AdminStatus                 uint32
-	MediaConnectState           uint32
-	NetworkGuid                 guid
-	ConnectionType              uint32
-	padding1                    [pad0for64_4for32]byte
-	TransmitLinkSpeed           uint64
-	ReceiveLinkSpeed            uint64
-	InOctets                    uint64
-	InUcastPkts                 uint64
-	InNUcastPkts                uint64
-	InDiscards                  uint64
-	InErrors                    uint64
-	InUnknownProtos             uint64
-	InUcastOctets               uint64
-	InMulticastOctets           uint64
-	InBroadcastOctets           uint64
-	OutOctets                   uint64
-	OutUcastPkts                uint64
-	OutNUcastPkts               uint64
-	OutDiscards                 uint64
-	OutErrors                   uint64
-	OutUcastOctets              uint64
-	OutMulticastOctets          uint64
-	OutBroadcastOctets          uint64
-	OutQLen                     uint64
-}
-
 func IOCounters(pernic bool) ([]IOCountersStat, error) {
 	return IOCountersWithContext(context.Background(), pernic)
 }
@@ -142,59 +82,34 @@ func IOCountersWithContext(ctx context.Context, pernic bool) ([]IOCountersStat, 
 	if err != nil {
 		return nil, err
 	}
-	var counters []IOCountersStat
+	var ret []IOCountersStat
 
-	err = procGetIfEntry2.Find()
-	if err == nil { // Vista+, uint64 values (issue#693)
-		for _, ifi := range ifs {
-			c := IOCountersStat{
-				Name: ifi.Name,
-			}
-
-			row := mibIfRow2{InterfaceIndex: uint32(ifi.Index)}
-			ret, _, err := procGetIfEntry2.Call(uintptr(unsafe.Pointer(&row)))
-			if ret != 0 {
-				return nil, os.NewSyscallError("GetIfEntry2", err)
-			}
-			c.BytesSent = uint64(row.OutOctets)
-			c.BytesRecv = uint64(row.InOctets)
-			c.PacketsSent = uint64(row.OutUcastPkts)
-			c.PacketsRecv = uint64(row.InUcastPkts)
-			c.Errin = uint64(row.InErrors)
-			c.Errout = uint64(row.OutErrors)
-			c.Dropin = uint64(row.InDiscards)
-			c.Dropout = uint64(row.OutDiscards)
-
-			counters = append(counters, c)
+	for _, ifi := range ifs {
+		c := IOCountersStat{
+			Name: ifi.Name,
 		}
-	} else { // WinXP fallback, uint32 values
-		for _, ifi := range ifs {
-			c := IOCountersStat{
-				Name: ifi.Name,
-			}
 
-			row := windows.MibIfRow{Index: uint32(ifi.Index)}
-			err = windows.GetIfEntry(&row)
-			if err != nil {
-				return nil, os.NewSyscallError("GetIfEntry", err)
-			}
-			c.BytesSent = uint64(row.OutOctets)
-			c.BytesRecv = uint64(row.InOctets)
-			c.PacketsSent = uint64(row.OutUcastPkts)
-			c.PacketsRecv = uint64(row.InUcastPkts)
-			c.Errin = uint64(row.InErrors)
-			c.Errout = uint64(row.OutErrors)
-			c.Dropin = uint64(row.InDiscards)
-			c.Dropout = uint64(row.OutDiscards)
-
-			counters = append(counters, c)
+		row := windows.MibIfRow{Index: uint32(ifi.Index)}
+		e := windows.GetIfEntry(&row)
+		if e != nil {
+			return nil, os.NewSyscallError("GetIfEntry", e)
 		}
+		c.BytesSent = uint64(row.OutOctets)
+		c.BytesRecv = uint64(row.InOctets)
+		c.PacketsSent = uint64(row.OutUcastPkts)
+		c.PacketsRecv = uint64(row.InUcastPkts)
+		c.Errin = uint64(row.InErrors)
+		c.Errout = uint64(row.OutErrors)
+		c.Dropin = uint64(row.InDiscards)
+		c.Dropout = uint64(row.OutDiscards)
+
+		ret = append(ret, c)
 	}
 
-	if !pernic {
-		return getIOCountersAll(counters)
+	if pernic == false {
+		return getIOCountersAll(ret)
 	}
-	return counters, nil
+	return ret, nil
 }
 
 // NetIOCountersByFile is an method which is added just a compatibility for linux.
@@ -290,15 +205,6 @@ func FilterCounters() ([]FilterStat, error) {
 func FilterCountersWithContext(ctx context.Context) ([]FilterStat, error) {
 	return nil, errors.New("NetFilterCounters not implemented for windows")
 }
-
-func ConntrackStats(percpu bool) ([]ConntrackStat, error) {
-	return ConntrackStatsWithContext(context.Background(), percpu)
-}
-
-func ConntrackStatsWithContext(ctx context.Context, percpu bool) ([]ConntrackStat, error) {
-	return nil, common.ErrNotImplementedError
-}
-
 
 // NetProtoCounters returns network statistics for the entire system
 // If protocols is empty then all protocols are returned, otherwise

@@ -23,7 +23,7 @@ func CallLsofWithContext(ctx context.Context, invoke Invoker, pid int32, args ..
 	}
 	out, err := invoke.CommandWithContext(ctx, lsof, cmd...)
 	if err != nil {
-		// if no pid found, lsof returns code 1.
+		// if no pid found, lsof returnes code 1.
 		if err.Error() == "exit status 1" && len(out) == 0 {
 			return []string{}, nil
 		}
