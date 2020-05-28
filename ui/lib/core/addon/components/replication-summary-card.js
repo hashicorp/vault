@@ -21,12 +21,6 @@ export default Component.extend({
   layout,
   title: null,
   replicationDetails: null,
-  state: computed('replicationDetails.dr.{state}', 'replicationDetails.performance.{state}', function() {
-    // ARG TODO return for top part of dashboard
-    // return this.replicationDetails.dr && this.replicationDetails.dr.state
-    //   ? this.replicationDetails.dr.state
-    //   : 'unknown';
-  }),
   lastDrWAL: computed('replicationDetails.dr.{lastWAL}', function() {
     return this.replicationDetails.dr && this.replicationDetails.dr.lastWAL
       ? this.replicationDetails.dr.lastWAL
