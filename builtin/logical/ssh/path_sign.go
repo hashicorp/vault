@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"io"
 	"regexp"
 	"strconv"
 	"strings"
@@ -511,10 +512,29 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 		},
 	}
 
+	sshAlgorithmSigner, _ := b.Signer.(ssh.AlgorithmSigner)
+
+	// prepare certificate for signing
+	certificate.Nonce = make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, certificate.Nonce); err != nil {
+		return nil, fmt.Errorf("failed to generate signed SSH key")
+	}
+	certificate.SignatureKey = sshAlgorithmSigner.PublicKey()
+
+	// get bytes to sign
+	c2 := *certificate
+	c2.Signature = nil
+	out := c2.Marshal()
+	certificateBytes := out[:len(out)-4]
+
+	sig, err := sshAlgorithmSigner.SignWithAlgorithm(rand.Reader, certificateBytes, b.Role.AlgorithmSigner)
+
 	err = certificate.SignCert(rand.Reader, b.Signer)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate signed SSH key")
 	}
+
+	certificate.Signature = sig
 
 	return certificate, nil
 }

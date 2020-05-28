@@ -3,6 +3,7 @@ package ssh
 import (
 	"context"
 	"fmt"
+	"golang.org/x/crypto/ssh"
 	"strings"
 
 	"time"
@@ -53,6 +54,7 @@ type sshRole struct {
 	AllowUserKeyIDs        bool              `mapstructure:"allow_user_key_ids" json:"allow_user_key_ids"`
 	KeyIDFormat            string            `mapstructure:"key_id_format" json:"key_id_format"`
 	AllowedUserKeyLengths  map[string]int    `mapstructure:"allowed_user_key_lengths" json:"allowed_user_key_lengths"`
+	AlgorithmSigner        string            `mapstructure:"algorithm_signer" json:"algorithm_signer"`
 }
 
 func pathListRoles(b *backend) *framework.Path {
@@ -331,6 +333,16 @@ func pathRoles(b *backend) *framework.Path {
                                 If set, allows the enforcement of key types and minimum key sizes to be signed.
                                 `,
 			},
+			"algorithm_signer": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `
+				When supplied, this value specifies a signing algorithm for the key.  Possible values: 
+				ssh-rsa, rsa-sha2-256, rsa-sha2-512.
+				`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Signing Algorithm",
+				},
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -388,6 +400,15 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 	keyType = strings.ToLower(keyType)
 
+	algorithmSigner := d.Get("algorithm_signer").(string)
+	switch algorithmSigner {
+	case ssh.SigAlgoRSASHA2256, ssh.SigAlgoRSA, ssh.SigAlgoRSASHA2512:
+	case "":
+		algorithmSigner = ssh.SigAlgoRSASHA2256
+	default:
+		return nil, fmt.Errorf("unknown algorithm signer %q", algorithmSigner)
+	}
+
 	var roleEntry sshRole
 	if keyType == KeyTypeOTP {
 		defaultUser := d.Get("default_user").(string)
@@ -410,6 +431,7 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 			KeyType:         KeyTypeOTP,
 			Port:            port,
 			AllowedUsers:    allowedUsers,
+			AlgorithmSigner: algorithmSigner,
 		}
 	} else if keyType == KeyTypeDynamic {
 		defaultUser := d.Get("default_user").(string)
@@ -464,9 +486,10 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 			InstallScript:   installScript,
 			AllowedUsers:    allowedUsers,
 			KeyOptionSpecs:  keyOptionSpecs,
+			AlgorithmSigner: algorithmSigner,
 		}
 	} else if keyType == KeyTypeCA {
-		role, errorResponse := b.createCARole(allowedUsers, d.Get("default_user").(string), d)
+		role, errorResponse := b.createCARole(allowedUsers, d.Get("default_user").(string), algorithmSigner, d)
 		if errorResponse != nil {
 			return errorResponse, nil
 		}
@@ -486,7 +509,7 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 	return nil, nil
 }
 
-func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework.FieldData) (*sshRole, *logical.Response) {
+func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *framework.FieldData) (*sshRole, *logical.Response) {
 	ttl := time.Duration(data.Get("ttl").(int)) * time.Second
 	maxTTL := time.Duration(data.Get("max_ttl").(int)) * time.Second
 	role := &sshRole{
@@ -503,6 +526,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework
 		AllowUserKeyIDs:        data.Get("allow_user_key_ids").(bool),
 		KeyIDFormat:            data.Get("key_id_format").(string),
 		KeyType:                KeyTypeCA,
+		AlgorithmSigner:        signer,
 	}
 
 	if !role.AllowUserCertificates && !role.AllowHostCertificates {
@@ -563,6 +587,7 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			"key_type":          role.KeyType,
 			"port":              role.Port,
 			"allowed_users":     role.AllowedUsers,
+			"algorithm_signer":  role.AlgorithmSigner,
 		}
 	case KeyTypeCA:
 		ttl, err := parseutil.ParseDurationSecond(role.TTL)
@@ -594,6 +619,7 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			"default_critical_options": role.DefaultCriticalOptions,
 			"default_extensions":       role.DefaultExtensions,
 			"allowed_user_key_lengths": role.AllowedUserKeyLengths,
+			"algorithm_signer":         role.AlgorithmSigner,
 		}
 	case KeyTypeDynamic:
 		result = map[string]interface{}{
@@ -611,7 +637,8 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			// But this is one way for clients to see the script that is
 			// being used to install the key. If there is some problem,
 			// the script can be modified and configured by clients.
-			"install_script": role.InstallScript,
+			"install_script":   role.InstallScript,
+			"algorithm_signer": role.AlgorithmSigner,
 		}
 	default:
 		return nil, fmt.Errorf("invalid key type: %v", role.KeyType)
