@@ -5,6 +5,7 @@ import layout from '../templates/components/key-value-header';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default Component.extend({
+  layout,
   tagName: 'nav',
   classNames: 'key-value-header breadcrumb',
   ariaLabel: 'breadcrumbs',

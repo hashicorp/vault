@@ -1,15 +1,14 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import layout from '../templates/components/replication-summary-card';
-import { clusterStates } from 'core/helpers/cluster-states';
 
 /**
- * @module ReplicationSecondaryCard
- * ReplicationSecondaryCard components
+ * @module ReplicationSummaryCard
+ * ReplicationSummaryCard components
  *
  * @example
  * ```js
- * <ReplicationSecondaryCard
+ * <ReplicationSummaryCard
     @title='States'
     @replicationDetails=replicationDetails
     />
@@ -55,33 +54,5 @@ export default Component.extend({
   knownSecondariesPerformance: computed('replicationDetails.performance.{knownSecondaries}', function() {
     const knownSecondaries = this.replicationDetails.performance.knownSecondaries;
     return knownSecondaries.length;
-  }),
-  inSyncState: computed('stateDr', 'statePerformance', function() {
-    // if our definition of what is considered 'synced' changes,
-    // we should use the clusterStates helper instead
-    // ARG FIGURE OUT
-    return this.state === 'stream-wals';
-  }),
-  hasErrorClass: computed(
-    'replicationDetails',
-    'title',
-    'stateDr',
-    'statePerformance',
-    'connection',
-    function() {
-      const { title, stateDr, statePerformance, connection } = this;
-      // ARG figure out
-      // only show errors on the state card
-      // if (title === 'States') {
-      //   const currentClusterisOk = clusterStates([state]).isOk;
-      //   const primaryIsOk = clusterStates([connection]).isOk;
-      //   return !(currentClusterisOk && primaryIsOk);
-      // }
-      return false;
-    }
-  ),
-  primaryClusterAddr: computed('replicationDetails.dr.{primaryClusterAddr}', function() {
-    return 'meep';
-    // return this.replicationDetails.primaryClusterAddr;
   }),
 });

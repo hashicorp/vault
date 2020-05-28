@@ -55,7 +55,6 @@ export default Component.extend({
     const { model } = this;
     const { isSummaryDashboard } = this;
     if (isSummaryDashboard) {
-      console.log('1. summaryDashboard exit clusterMode with primary');
       // replicationAttrs does not exist when summaryDashboard
       return 'primary';
     }
@@ -77,9 +76,8 @@ export default Component.extend({
     }
     return false;
   }),
-  isSecondary: computed('clusterMode', 'isSummaryDashboard', function() {
+  isSecondary: computed('clusterMode', function() {
     const { clusterMode } = this;
-    const { isSummaryDashboard } = this;
     return clusterMode === 'secondary';
   }),
   replicationDetailsSummary: computed('isSummaryDashboard', function() {
@@ -99,8 +97,8 @@ export default Component.extend({
     const { model } = this;
     const { isSummaryDashboard } = this;
     if (isSummaryDashboard) {
-      // ARG revisit, for now just returning dr, but will need to either combine or do something else
-      return model['dr'];
+      // Cannot return null
+      return {};
     }
     const replicationMode = model.replicationMode;
     return model[replicationMode];

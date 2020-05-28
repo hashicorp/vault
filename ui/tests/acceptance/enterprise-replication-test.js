@@ -125,9 +125,8 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-replication-link="details"]');
     await settled();
     assert
-      .dom(`[data-test-secondaries-row=${secondaryName}]`)
+      .dom(`[data-test-secondaries=row-for-${secondaryName}]`)
       .exists('shows a table row the recently added secondary');
-    // ARG TODO when get connected state check here
 
     // nav to DR
     await visit('/vault/replication/dr');
