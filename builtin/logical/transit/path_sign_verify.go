@@ -346,15 +346,18 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			if response[0].Error != "" {
 				return logical.ErrorResponse(response[0].Error), response[0].err
 			}
+
 			return nil, response[0].err
 		}
+
 		resp.Data = map[string]interface{}{
 			"signature": response[0].Signature,
+			"version":   ver,
 		}
+
 		if len(response[0].PublicKey) > 0 {
 			resp.Data["public_key"] = response[0].PublicKey
 		}
-
 	}
 
 	p.Unlock()
