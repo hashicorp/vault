@@ -1,5 +1,5 @@
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
-import { pauseTest, click, fillIn, findAll, currentURL, find, visit, settled } from '@ember/test-helpers';
+import { click, fillIn, findAll, currentURL, find, visit, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
