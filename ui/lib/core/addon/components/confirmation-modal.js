@@ -31,6 +31,5 @@ export default Component.extend({
   buttonText: 'Confirm',
   confirmText: 'Yes',
   type: 'warning',
-  actionDescription: '',
   toConfirmMsg: '',
 });
