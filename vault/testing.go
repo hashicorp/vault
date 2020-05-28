@@ -1467,9 +1467,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	var ret []*TestClusterCore
 	for i := 0; i < numCores; i++ {
 
-		client := testCluster.getAPIClient(
-			t, opts == nil || !opts.SkipInit,
-			listeners[i][0].Address.Port, tlsConfigs[i])
+		client := testCluster.getAPIClient(t, opts, listeners[i][0].Address.Port, tlsConfigs[i])
 
 		tcc := &TestClusterCore{
 			Core:                 cores[i],
@@ -1531,39 +1529,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	return &testCluster
-}
-
-func (testCluster *TestCluster) getAPIClient(
-	t testing.T, init bool,
-	port int, tlsConfig *tls.Config) *api.Client {
-
-	transport := cleanhttp.DefaultPooledTransport()
-	transport.TLSClientConfig = tlsConfig.Clone()
-	if err := http2.ConfigureTransport(transport); err != nil {
-		t.Fatal(err)
-	}
-	client := &http.Client{
-		Transport: transport,
-		CheckRedirect: func(*http.Request, []*http.Request) error {
-			// This can of course be overridden per-test by using its own client
-			return fmt.Errorf("redirects not allowed in these tests")
-		},
-	}
-	config := api.DefaultConfig()
-	if config.Error != nil {
-		t.Fatal(config.Error)
-	}
-	config.Address = fmt.Sprintf("https://127.0.0.1:%d", port)
-	config.HttpClient = client
-	config.MaxRetries = 0
-	apiClient, err := api.NewClient(config)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if init {
-		apiClient.SetToken(testCluster.RootToken)
-	}
-	return apiClient
 }
 
 func (testCluster *TestCluster) newCore(
@@ -1854,6 +1819,39 @@ func (testCluster *TestCluster) initCores(
 		}
 	}
 
+}
+
+func (testCluster *TestCluster) getAPIClient(
+	t testing.T, opts *TestClusterOptions,
+	port int, tlsConfig *tls.Config) *api.Client {
+
+	transport := cleanhttp.DefaultPooledTransport()
+	transport.TLSClientConfig = tlsConfig.Clone()
+	if err := http2.ConfigureTransport(transport); err != nil {
+		t.Fatal(err)
+	}
+	client := &http.Client{
+		Transport: transport,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			// This can of course be overridden per-test by using its own client
+			return fmt.Errorf("redirects not allowed in these tests")
+		},
+	}
+	config := api.DefaultConfig()
+	if config.Error != nil {
+		t.Fatal(config.Error)
+	}
+	config.Address = fmt.Sprintf("https://127.0.0.1:%d", port)
+	config.HttpClient = client
+	config.MaxRetries = 0
+	apiClient, err := api.NewClient(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts == nil || !opts.SkipInit {
+		apiClient.SetToken(testCluster.RootToken)
+	}
+	return apiClient
 }
 
 func NewMockBuiltinRegistry() *mockBuiltinRegistry {
