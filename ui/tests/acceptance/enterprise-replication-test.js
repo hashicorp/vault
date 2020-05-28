@@ -211,7 +211,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     );
   });
 
-  test('render performance and dr primary and navigate to details pages', async function(assert) {
+  test('render performance and dr primary and navigate to details page', async function(assert) {
     // enable perf primary replication
     await visit('/vault/replication');
     await click('[data-test-replication-type-select="performance"]');
@@ -238,6 +238,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
       .dom('[data-test-replication-summary-card]')
       .exists({ count: 2 }, 'renders two replication-summary-card components');
 
+    // navigate to details page using the "Details" link
     await click('[data-test-manage-link="Disaster Recovery"]');
     assert
       .dom('[data-test-selectable-card-container="primary"]')

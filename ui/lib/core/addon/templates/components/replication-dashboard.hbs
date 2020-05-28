@@ -11,10 +11,18 @@
   {{/if}}
   {{#if isSummaryDashboard}}
     <div class="summary-state">
-      <h6 class="title is-5">state</h6>
-      <p class="has-text-grey is-size-8">The current operating state of both Disaster Recovery and Performance. This value should be ‘running.’ If the value is idle, it indicates an issue and needs to be investigated.</p>
-      <h2 class="title is-3 grid-item-left-bottom" >{{summaryState}}
-        <Icon @glyph={{get (cluster-states summaryState) "glyph"}} class="has-text-success" data-test-icon />
+      <h6 class="title is-5 {{if (get (cluster-states summaryState) "isOk") "" "has-text-danger"}}" data-test-error>state</h6>
+      {{#unless (get (cluster-states summaryState) "isOk")}}
+        <AlertInline
+          @type="danger"
+          @message="The cluster is {{summaryState}}. Please check your server logs." />
+      {{else}}
+        <p class="has-text-grey is-size-8">The current operating state of both Disaster Recovery and Performance. This value should be ‘running.’ If the value is idle, it indicates an issue and needs to be investigated.</p>
+      {{/unless}}
+      <h2 class="title is-3" data-test-summary-state>{{summaryState}}
+        {{#if (get (cluster-states summaryState) "isOk")}}
+          <Icon @glyph={{get (cluster-states summaryState) "glyph"}} class="{{if (get (cluster-states summaryState) "isOk") "has-text-success" "has-text-danger"}}" data-test-icon />
+        {{/if}}
       </h2>
     </div>
     <div

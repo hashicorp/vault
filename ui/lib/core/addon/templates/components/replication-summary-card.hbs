@@ -15,8 +15,8 @@
       <h6 class="title is-6">known_secondaries</h6>
       <p class="helper-text is-label has-text-grey">Number of secondaries connected to this primary.</p>
     </div>
-    <h2 class="title is-3 grid-item-left-bottom" data-test-lastWAL>{{lastDrWAL}}</h2>
-    <h2 class="title is-3 grid-item-right-bottom" data-test-known-secondaries>{{knownSecondariesDr}}</h2>
+    <h2 class="title is-3 grid-item-left-bottom" data-test-lastWAL>{{format-number lastDrWAL}}</h2>
+    <h2 class="title is-3 grid-item-right-bottom" data-test-known-secondaries>{{format-number knownSecondariesDr}}</h2>
     <div class="grid-item-full-bottom">
       <h6 class="title is-6">merkle_root</h6>
       <p class="helper-text is-label has-text-grey">A snapshot of the merkle tree's root hash.</p>
@@ -37,8 +37,8 @@
       <h6 class="title is-6">known_secondaries</h6>
       <p class="helper-text is-label has-text-grey">Number of secondaries connected to this primary.</p>
     </div>
-    <h2 class="title is-3 grid-item-left-bottom" data-test-lastWAL>{{lastPerformanceWAL}}</h2>
-    <h2 class="title is-3 grid-item-right-bottom" data-test-known-secondaries>{{knownSecondariesPerformance}}</h2>
+    <h2 class="title is-3 grid-item-left-bottom" data-test-lastWAL>{{format-number lastPerformanceWAL}}</h2>
+    <h2 class="title is-3 grid-item-right-bottom" data-test-known-secondaries>{{format-number knownSecondariesPerformance}}</h2>
     <div class="grid-item-full-bottom">
       <h6 class="title is-6">merkle_root</h6>
       <p class="helper-text is-label has-text-grey">A snapshot of the merkle tree's root hash.</p>

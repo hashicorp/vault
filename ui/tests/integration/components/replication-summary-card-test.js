@@ -33,13 +33,13 @@ module('Integration | Enterprise | Component | replication-summary-card', functi
       .dom('[data-test-lastWAL]')
       .includesText(REPLICATION_DETAILS.dr.lastWAL, `shows the correct lastWAL value`);
 
-    const knowSecondaries = REPLICATION_DETAILS.dr.knownSecondaries.length;
+    const knownSecondaries = REPLICATION_DETAILS.dr.knownSecondaries.length;
     assert
       .dom('[data-test-known-secondaries]')
-      .includesText(knowSecondaries, `shows the correct computed value of the know secondaries count`);
+      .includesText(knownSecondaries, `shows the correct computed value of the known secondaries count`);
   });
 
-  test('it renders with lastWAL and knownSecondaries count set when title is Performance', async function(assert) {
+  test('it shows the correct lastWAL and knownSecondaries when title is Performance', async function(assert) {
     await render(
       hbs`<ReplicationSummaryCard @replicationDetails={{replicationDetails}} @title="Performance" />`
     );
@@ -47,9 +47,9 @@ module('Integration | Enterprise | Component | replication-summary-card', functi
       .dom('[data-test-lastWAL]')
       .includesText(REPLICATION_DETAILS.performance.lastWAL, `shows the correct lastWAL value`);
 
-    const knowSecondaries = REPLICATION_DETAILS.performance.knownSecondaries.length;
+    const knownSecondaries = REPLICATION_DETAILS.performance.knownSecondaries.length;
     assert
       .dom('[data-test-known-secondaries]')
-      .includesText(knowSecondaries, `shows the correct computed value of the know secondaries count`);
+      .includesText(knownSecondaries, `shows the correct computed value of the known secondaries count`);
   });
 });
