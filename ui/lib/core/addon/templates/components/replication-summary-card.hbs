@@ -3,7 +3,7 @@
   {{#if (eq title "Disaster Recovery")}}
     <h3 class="title is-5 grid-item-top-left card-title">{{title}}</h3>
     <div class="grid-item-top-right">
-      <ToolbarLink @params={{array 'mode.index' 'dr'}} data-test-manage-link>
+      <ToolbarLink @params={{array 'mode.index' 'dr'}} data-test-manage-link={{title}}>
         Details
       </ToolbarLink>
     </div>
@@ -25,7 +25,7 @@
   {{else}}
     <h3 class="title is-5 grid-item-top-left card-title">{{title}}</h3>
     <div class="grid-item-top-right">
-      <ToolbarLink @params={{array 'mode.index' 'performance'}} data-test-manage-link>
+      <ToolbarLink @params={{array 'mode.index' 'performance'}} data-test-manage-link={{title}}>
         Details
       </ToolbarLink>
     </div>
