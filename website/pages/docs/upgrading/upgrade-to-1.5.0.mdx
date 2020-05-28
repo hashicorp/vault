@@ -15,7 +15,7 @@ for Vault 1.4.x compared to 1.5.0. Please read it carefully.
 ## Raft Configuration
 
 A new Raft configuration value, `max_entry_size`, has been introduced. This value
-limits the size in bytes for a Raft entry. It applies to both Put operations and
+limits the size in bytes for a Raft K/V entry. It applies to both put operations and
 transactions. Any put or transaction operation exceeding this configuration value
 will cause the respective operation to fail. The default value for this
 configuration is 1048576 -- two times the chunking size.
