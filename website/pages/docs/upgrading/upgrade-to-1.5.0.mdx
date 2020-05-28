@@ -20,6 +20,7 @@ transactions. Any put or transaction operation exceeding this configuration valu
 will cause the respective operation to fail. The default value for this
 configuration is 1MiB.
 
-In addition, a new metric has been introduced, `entrySize`, that allows for
-operators to sample the entry size, view the average, and adjust the configuration
-value as necessary. For additional details, please see [Raft configuration](docs/configuration/storage/raft).
+In addition, a new metric has been introduced, `vault.raft_storage.entrySize`,
+that allows for operators to sample the entry size, view the average, and adjust
+the configuration value as necessary. For additional details, please see
+[Raft configuration](docs/configuration/storage/raft).
