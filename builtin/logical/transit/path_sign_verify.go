@@ -24,7 +24,7 @@ type batchResponseSignItem struct {
 	Signature string `json:"signature,omitempty" mapstructure:"signature"`
 
 	// The key version to be used for encryption
-	KeyVersion int `json:"key_version" structs:"key_version" mapstructure:"key_version"`
+	KeyVersion int `json:"key_version" mapstructure:"key_version"`
 
 	PublicKey []byte `json:"publickey,omitempty" mapstructure:"publickey"`
 
