@@ -370,7 +370,7 @@ func TestGauge_InterruptedStreaming(t *testing.T) {
 		ClusterName:         "test",
 		MaxGaugeCardinality: 500,
 		GaugeInterval:       2 * time.Hour,
-		Sink:                defaultMetrics(inmemSink),
+		Sink:                inmemSink,
 	}
 	p, err := sink.newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
@@ -439,7 +439,7 @@ func TestGauge_MaximumMeasurements(t *testing.T) {
 		ClusterName:         "test",
 		MaxGaugeCardinality: 500,
 		GaugeInterval:       2 * time.Hour,
-		Sink:                defaultMetrics(inmemSink),
+		Sink:                inmemSink,
 	}
 
 	// Create a report larger than the default limit
@@ -513,7 +513,7 @@ func TestGauge_MeasurementError(t *testing.T) {
 		ClusterName:         "test",
 		MaxGaugeCardinality: 500,
 		GaugeInterval:       2 * time.Hour,
-		Sink:                defaultMetrics(inmemSink),
+		Sink:                inmemSink,
 	}
 	// Create a small report so we don't have to deal with batching.
 	numGauges := 10

@@ -20,8 +20,8 @@ type ClusterMetricSink struct {
 	MaxGaugeCardinality int
 	GaugeInterval       time.Duration
 
-	// Sink is the go-metrics instance to send to
-	Sink *metrics.Metrics
+	// Sink is the go-metrics instance to send to.
+	Sink metrics.MetricSink
 }
 
 // Convenience alias

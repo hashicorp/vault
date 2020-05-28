@@ -16,6 +16,8 @@ func isLabelPresent(toFind Label, ls []Label) bool {
 	return false
 }
 
+// We can use a sink directly, or wrap the top-level
+// go-metrics implementation for testing purposes.
 func defaultMetrics(sink metrics.MetricSink) *metrics.Metrics {
 	// No service name
 	config := metrics.DefaultConfig("")
