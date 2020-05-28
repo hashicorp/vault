@@ -838,6 +838,32 @@ func (c *TestClusterCore) Seal(t testing.T) {
 	}
 }
 
+func (c *TestClusterCore) Shutdown() error {
+	if c.Listeners != nil {
+		for _, ln := range c.Listeners {
+			ln.Close()
+		}
+	}
+	if c.licensingStopCh != nil {
+		close(c.licensingStopCh)
+		c.licensingStopCh = nil
+	}
+
+	if err := c.Shutdown(); err != nil {
+		return err
+	}
+	timeout := time.Now().Add(60 * time.Second)
+	for {
+		if time.Now().After(timeout) {
+			return errors.New("timeout waiting for core to seal")
+		}
+		if c.Sealed() {
+			return nil
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
+}
+
 func CleanupClusters(clusters []*TestCluster) {
 	wg := &sync.WaitGroup{}
 	for _, cluster := range clusters {
@@ -857,7 +883,6 @@ func (c *TestCluster) Cleanup() {
 		core.CoreConfig.Logger.SetLevel(log.Error)
 	}
 
-	// Close listeners
 	wg := &sync.WaitGroup{}
 	for _, core := range c.Cores {
 		wg.Add(1)
@@ -865,29 +890,8 @@ func (c *TestCluster) Cleanup() {
 
 		go func() {
 			defer wg.Done()
-			if lc.Listeners != nil {
-				for _, ln := range lc.Listeners {
-					ln.Close()
-				}
-			}
-			if lc.licensingStopCh != nil {
-				close(lc.licensingStopCh)
-				lc.licensingStopCh = nil
-			}
-
 			if err := lc.Shutdown(); err != nil {
 				lc.Logger().Error("error during shutdown; abandoning sealing", "error", err)
-			} else {
-				timeout := time.Now().Add(60 * time.Second)
-				for {
-					if time.Now().After(timeout) {
-						lc.Logger().Error("timeout waiting for core to seal")
-					}
-					if lc.Sealed() {
-						break
-					}
-					time.Sleep(250 * time.Millisecond)
-				}
 			}
 		}()
 	}
