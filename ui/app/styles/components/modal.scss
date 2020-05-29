@@ -39,6 +39,11 @@
   }
 }
 
+.modal-card-title.title {
+  display: flex;
+  align-items: center;
+}
+
 pre {
   background-color: inherit;
 }

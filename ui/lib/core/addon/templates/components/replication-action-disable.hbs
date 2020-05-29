@@ -1,4 +1,4 @@
-<div class="action-block is-rounded">
+<div class="action-block is-rounded" data-test-disable-replication>
   <div class="action-block-info">
     <h4 class="title is-5 is-marginless">
       Disable Replication
@@ -47,6 +47,6 @@
     {{else}}
     <li>We will wipe the underlying storage of this secondary when connected to a primary</li>
     {{/if}}
-    <li>Re-enabling this node as will change its cluster ID</li>
+    <li>Re-enabling this node will change its cluster ID</li>
   </ul>
 </ConfirmationModal>
