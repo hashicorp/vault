@@ -272,7 +272,7 @@
     </PageHeader>
   {{/unless}}
 
-  {{#if (and cluster.dr.replicationEnabled cluster.performance.replicationEnabled ) }}
+  {{#if (and (eq cluster.dr.mode "primary") (eq cluster.performance.mode "primary")) }}
     <ReplicationPage @model={{cluster}} as |Page|>
       <Page.header
         @showTabs={{true}}
