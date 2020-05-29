@@ -957,6 +957,7 @@ type TestClusterCore struct {
 	CoreConfig           *CoreConfig
 	Client               *api.Client
 	Handler              http.Handler
+	Address              *net.TCPAddr
 	Listeners            []*TestListener
 	ReloadFuncs          *map[string][]reloadutil.ReloadFunc
 	ReloadFuncsLock      *sync.RWMutex
@@ -1269,18 +1270,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	//
 	// Listener setup
 	//
-	//ports := make([]int, numCores)
-	//if baseAddr != nil {
-	//	for i := 0; i < numCores; i++ {
-	//		ports[i] = baseAddr.Port + i
-	//	}
-	//} else {
-	//	baseAddr = &net.TCPAddr{
-	//		IP:   net.ParseIP("127.0.0.1"),
-	//		Port: 0,
-	//	}
-	//}
-
 	addresses := []*net.TCPAddr{}
 	listeners := [][]*TestListener{}
 	servers := []*http.Server{}
@@ -1296,6 +1285,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		if baseAddr.Port != 0 {
 			addr.Port = baseAddr.Port + i
 		}
+
 		ln, err := net.ListenTCP("tcp", addr)
 		if err != nil {
 			t.Fatal(err)
@@ -1515,6 +1505,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			ServerCert:           certInfoSlice[i].cert,
 			ServerCertBytes:      certInfoSlice[i].certBytes,
 			ServerCertPEM:        certInfoSlice[i].certPEM,
+			Address:              addresses[i],
 			Listeners:            listeners[i],
 			Handler:              handlers[i],
 			Server:               servers[i],
@@ -1607,12 +1598,29 @@ func (cluster *TestCluster) RestartCore(t testing.T, idx int, opts *TestClusterO
 
 	//------------------------------------
 
+	// Set up listeners
+	ln, err := net.ListenTCP("tcp", tcc.Address)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tcc.Listeners = []*TestListener{&TestListener{
+		Listener: tls.NewListener(ln, tcc.TLSConfig),
+		Address:  ln.Addr().(*net.TCPAddr),
+	},
+	}
+
+	tcc.Handler = http.NewServeMux()
+	tcc.Server = &http.Server{
+		Handler:  tcc.Handler,
+		ErrorLog: cluster.Logger.StandardLogger(nil),
+	}
+
 	// Create a new Core
-	cleanup, newCore, localConfig, handler := cluster.newCore(
+	cleanup, newCore, localConfig, coreHandler := cluster.newCore(
 		t, idx, tcc.CoreConfig, opts, tcc.Listeners, cluster.pubKey)
-	if handler != nil {
-		tcc.Handler = handler
-		tcc.Server.Handler = handler
+	if coreHandler != nil {
+		tcc.Handler = coreHandler
+		tcc.Server.Handler = coreHandler
 	}
 
 	cluster.cleanupFuncs[idx] = cleanup
