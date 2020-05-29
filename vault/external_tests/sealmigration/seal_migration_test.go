@@ -42,25 +42,25 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 		tf(t, logger, storage, 20000)
 	})
 
-	//t.Run("file", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("file", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("file")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeFileBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 52000)
-	//})
+		logger := logger.Named("file")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeFileBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 52000)
+	})
 
-	//t.Run("consul", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("consul", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("consul")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeConsulBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 53000)
-	//})
+		logger := logger.Named("consul")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeConsulBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 53000)
+	})
 
 	//if includeRaft {
 	//	t.Run("raft", func(t *testing.T) {
@@ -151,6 +151,7 @@ func migrateFromShamirToTransit_Pre14(
 
 	// Wait for migration to finish.  Sadly there is no callback, and the
 	// test will fail later on if we don't do this.
+	// TODO -- actually there is a callback, we can monitor this and await
 	time.Sleep(10 * time.Second)
 
 	// Read the secret
@@ -188,6 +189,7 @@ func testSealMigrationShamirToTransit_Post14(
 
 	// Initialize the backend using shamir
 	cluster, opts, cleanup := initializeShamir(t, logger, storage, basePort)
+	rootToken := cluster.RootToken
 
 	// Create the transit server.
 	tss := sealhelper.NewTransitSealServer(t)
@@ -197,15 +199,13 @@ func testSealMigrationShamirToTransit_Post14(
 	}()
 	tss.MakeKey(t, "transit-seal-key")
 
-	// Migrate the backend from shamir to transit.  Note that the barrier keys
-	// are now the recovery keys.
-	_ = migrateFromShamirToTransit_Post14(t, logger, storage, tss, cluster, opts)
-	//transitSeal := migrateFromShamirToTransit_Post14(t, logger, storage, tss, cluster, opts)
+	// Migrate the backend from shamir to transit.
+	transitSeal := migrateFromShamirToTransit_Post14(t, logger, storage, tss, cluster, opts)
 	cluster.EnsureCoresSealed(t)
 	cleanup()
 
-	//// Run the backend with transit.
-	//runTransit(t, logger, storage, basePort, rootToken, transitSeal)
+	// Run the backend with transit.
+	runTransit(t, logger, storage, basePort, rootToken, transitSeal)
 }
 
 func migrateFromShamirToTransit_Post14(
@@ -222,47 +222,83 @@ func migrateFromShamirToTransit_Post14(
 		return transitSeal
 	}
 
-	println("--------------------------------------------------")
-
-	// Restart each follower with the new config, and  migrate to Transit.
-	//rootToken, recoveryKeys := cluster.RootToken, cluster.BarrierKeys
+	// Restart each follower with the new config, and migrate to Transit.
+	// Note that the barrier keys are being used as recovery keys.
+	rootToken, recoveryKeys := cluster.RootToken, cluster.BarrierKeys
 	for i := 1; i < numTestCores; i++ {
-
-		fmt.Printf("------------------- aaa %d\n", i)
 		cluster.StopCore(t, i)
 		cluster.RestartCore(t, i, opts)
-		time.Sleep(5 * time.Second)
 
-		//// Note that the barrier keys are being used as recovery keys
-		//fmt.Printf("------------------- bbb %d\n", i)
-		//client := cluster.Cores[i].Client
-		//client.SetToken(rootToken)
-		//unsealMigrate(t, client, recoveryKeys, true)
-		//time.Sleep(10 * time.Second)
+		client := cluster.Cores[i].Client
+		client.SetToken(rootToken)
+		unsealMigrate(t, client, recoveryKeys, true)
+		time.Sleep(5 * time.Second)
 	}
 
-	//// Wait for migration to finish.  Sadly there is no callback, and the
-	//// test will fail later on if we don't do this.
-	//time.Sleep(10 * time.Second)
+	// Bring down the leader
+	cluster.StopCore(t, 0)
 
-	//// Read the secret
-	//secret, err := client.Logical().Read("secret/foo")
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//if diff := deep.Equal(secret.Data, map[string]interface{}{"zork": "quux"}); len(diff) > 0 {
-	//	t.Fatal(diff)
-	//}
+	// Wait for the followers to establish a new leader
+	leaderIdx, err := awaitLeader(t, cluster)
+	if err != nil {
+		t.Fatal(err)
+	}
+	leader := cluster.Cores[leaderIdx]
+	client := leader.Client
+	client.SetToken(rootToken)
 
-	//// Make sure the seal configs were updated correctly.
-	//b, r, err := leader.Core.PhysicalSealConfigs(context.Background())
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//verifyBarrierConfig(t, b, wrapping.Transit, 1, 1, 1)
-	//verifyBarrierConfig(t, r, wrapping.Shamir, keyShares, keyThreshold, 0)
+	// Wait for migration to finish.  Sadly there is no callback, and the
+	// test will fail later on if we don't do this.
+	// TODO -- actually there is a callback, we can monitor this and await
+	time.Sleep(10 * time.Second)
+
+	// Bring core 0 back up
+	// TODO -- make sure its not migrating
+	cluster.RestartCore(t, 0, opts)
+
+	// Read the secret
+	secret, err := client.Logical().Read("secret/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(secret.Data, map[string]interface{}{"zork": "quux"}); len(diff) > 0 {
+		t.Fatal(diff)
+	}
+
+	// Make sure the seal configs were updated correctly.
+	b, r, err := leader.Core.PhysicalSealConfigs(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	verifyBarrierConfig(t, b, wrapping.Transit, 1, 1, 1)
+	verifyBarrierConfig(t, r, wrapping.Shamir, keyShares, keyThreshold, 0)
 
 	return transitSeal
+}
+
+// awaitLeader waits for one of the followers to become leader.
+func awaitLeader(t *testing.T, cluster *vault.TestCluster) (int, error) {
+
+	timeout := time.Now().Add(30 * time.Second)
+	for {
+		if time.Now().After(timeout) {
+			break
+		}
+
+		for i := 1; i < numTestCores; i++ {
+			isLeader, _, _, err := cluster.Cores[i].Leader()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if isLeader {
+				return i, nil
+			}
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	return 0, fmt.Errorf("timeout waiting leader")
 }
 
 //func testSealMigrationShamirToTransit_Post14(
