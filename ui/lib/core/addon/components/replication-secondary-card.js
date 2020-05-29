@@ -5,7 +5,7 @@ import { clusterStates } from 'core/helpers/cluster-states';
 
 /**
  * @module ReplicationSecondaryCard
- * The `ReplicationSecondaryCard` component is a card-like component that lives inside of a flex-box container.  It displays cluster mode details specific for DR and Performance Secondaries.
+ * The `ReplicationSecondaryCard` component is a card-like component.  It displays cluster mode details specific for DR and Performance Secondaries.
  *
  * @example
  * ```js

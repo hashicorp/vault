@@ -4,7 +4,7 @@ import layout from '../templates/components/replication-summary-card';
 
 /**
  * @module ReplicationSummaryCard
- * The `ReplicationSummaryCard` is a card-like component that lives inside of a flex-box container.  It displays cluster mode details for both DR and Performance
+ * The `ReplicationSummaryCard` is a card-like component.  It displays cluster mode details for both DR and Performance
  *
  * @example
  * ```js
@@ -22,24 +22,16 @@ export default Component.extend({
   title: null,
   replicationDetails: null,
   lastDrWAL: computed('replicationDetails.dr.{lastWAL}', function() {
-    return this.replicationDetails.dr && this.replicationDetails.dr.lastWAL
-      ? this.replicationDetails.dr.lastWAL
-      : 0;
+    return this.replicationDetails.dr.lastWAL || 0;
   }),
   lastPerformanceWAL: computed('replicationDetails.performance.{lastWAL}', function() {
-    return this.replicationDetails.performance && this.replicationDetails.performance.lastWAL
-      ? this.replicationDetails.performance.lastWAL
-      : 0;
+    return this.replicationDetails.performance.lastWAL || 0;
   }),
   merkleRootDr: computed('replicationDetails.dr.{merkleRoot}', function() {
-    return this.replicationDetails.dr && this.replicationDetails.dr.merkleRoot
-      ? this.replicationDetails.dr.merkleRoot
-      : '';
+    return this.replicationDetails.dr.merkleRoot || '';
   }),
   merkleRootPerformance: computed('replicationDetails.performance.{merkleRoot}', function() {
-    return this.replicationDetails.performance && this.replicationDetails.performance.merkleRoot
-      ? this.replicationDetails.performance.merkleRoot
-      : '';
+    return this.replicationDetails.performance.merkleRoot || '';
   }),
   knownSecondariesDr: computed('replicationDetails.dr.{knownSecondaries}', function() {
     const knownSecondaries = this.replicationDetails.dr.knownSecondaries;

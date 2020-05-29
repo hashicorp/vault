@@ -31,17 +31,16 @@ import layout from '../templates/components/replication-dashboard';
  * @param {Object} replicationDetails=null - An Ember data object pulled from the Ember Model. It contains details specific to the whether the replication is dr or performance.
  * @param {String} clusterMode=null - The cluster mode passed through to a table component. 
  * @param {Object} reindexingDetails=null - An Ember data object used to show a reindexing progress bar.
- * 
  */
 
 export default Component.extend({
   layout,
   componentToRender: '',
   data: null,
-  replicationDetails: null,
-  replicationDetailsSummary: null,
   isSecondary: false,
   isSummaryDashboard: false,
+  replicationDetails: null,
+  replicationDetailsSummary: null,
   isSyncing: computed('replicationDetails.{state}', 'isSecondary', function() {
     const { state } = this.replicationDetails;
     const isSecondary = this.isSecondary;
