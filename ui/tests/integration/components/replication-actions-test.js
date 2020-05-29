@@ -39,21 +39,21 @@ module('Integration | Component | replication actions', function(hooks) {
   });
 
   let testCases = [
-    ['dr', 'primary', 'disable', 'Disable Replication', null, ['disable', 'primary']],
-    ['performance', 'primary', 'disable', 'Disable Replication', null, ['disable', 'primary']],
-    ['dr', 'secondary', 'disable', 'Disable Replication', null, ['disable', 'secondary']],
-    ['performance', 'secondary', 'disable', 'Disable Replication', null, ['disable', 'secondary']],
-    ['dr', 'primary', 'recover', 'Recover', null, ['recover']],
-    ['performance', 'primary', 'recover', 'Recover', null, ['recover']],
-    ['performance', 'secondary', 'recover', 'Recover', null, ['recover']],
+    ['dr', 'primary', 'disable', 'Disable Replication', null, ['disable', 'primary'], false],
+    ['performance', 'primary', 'disable', 'Disable Replication', null, ['disable', 'primary'], false],
+    ['dr', 'secondary', 'disable', 'Disable Replication', null, ['disable', 'secondary'], false],
+    ['performance', 'secondary', 'disable', 'Disable Replication', null, ['disable', 'secondary'], false],
+    ['dr', 'primary', 'recover', 'Recover', null, ['recover'], true],
+    ['performance', 'primary', 'recover', 'Recover', null, ['recover'], true],
+    ['performance', 'secondary', 'recover', 'Recover', null, ['recover'], true],
 
-    ['dr', 'primary', 'reindex', 'Reindex', null, ['reindex']],
-    ['performance', 'primary', 'reindex', 'Reindex', null, ['reindex']],
-    ['dr', 'secondary', 'reindex', 'Reindex', null, ['reindex']],
-    ['performance', 'secondary', 'reindex', 'Reindex', null, ['reindex']],
+    ['dr', 'primary', 'reindex', 'Reindex', null, ['reindex'], true],
+    ['performance', 'primary', 'reindex', 'Reindex', null, ['reindex'], true],
+    ['dr', 'secondary', 'reindex', 'Reindex', null, ['reindex'], true],
+    ['performance', 'secondary', 'reindex', 'Reindex', null, ['reindex'], true],
 
-    ['dr', 'primary', 'demote', 'Demote cluster', null, ['demote', 'primary']],
-    ['performance', 'primary', 'demote', 'Demote cluster', null, ['demote', 'primary']],
+    ['dr', 'primary', 'demote', 'Demote cluster', null, ['demote', 'primary'], true],
+    ['performance', 'primary', 'demote', 'Demote cluster', null, ['demote', 'primary'], true],
     // we don't do dr secondary promote in this component so just test perf
     [
       'performance',
@@ -65,6 +65,7 @@ module('Integration | Component | replication actions', function(hooks) {
         await blur('[name="primary_cluster_addr"]');
       },
       ['promote', 'secondary', { primary_cluster_addr: 'cluster addr' }],
+      true,
     ],
 
     // don't yet update-primary for dr
@@ -80,10 +81,19 @@ module('Integration | Component | replication actions', function(hooks) {
         await blur('#primary_api_addr');
       },
       ['update-primary', 'secondary', { token: 'token', primary_api_addr: 'addr' }],
+      true,
     ],
   ];
 
-  for (let [replicationMode, clusterMode, action, headerText, fillInFn, expectedOnSubmit] of testCases) {
+  for (let [
+    replicationMode,
+    clusterMode,
+    action,
+    headerText,
+    fillInFn,
+    expectedOnSubmit,
+    oldVersion,
+  ] of testCases) {
     test(`replication mode ${replicationMode}, cluster mode: ${clusterMode}, action: ${action}`, async function(assert) {
       const testKey = `${replicationMode}-${clusterMode}-${action}`;
       this.set('model', {
@@ -111,16 +121,32 @@ module('Integration | Component | replication actions', function(hooks) {
       });
       this.set('storeService.capabilitiesReturnVal', ['root']);
       await render(
-        hbs`{{replication-actions model=model replicationMode=replicationMode selectedAction=selectedAction onSubmit=(action onSubmit)}}`
+        hbs`
+        <div id="modal-wormhole"></div>
+        {{replication-actions model=model replicationMode=replicationMode selectedAction=selectedAction onSubmit=(action onSubmit)}}
+        `
       );
-
-      assert.equal(find('h4').textContent.trim(), headerText, `${testKey}: renders the correct component`);
+      assert.equal(
+        find('h4').textContent.trim(),
+        headerText,
+        `${testKey}: renders the correct component header (${oldVersion})`
+      );
 
       if (typeof fillInFn === 'function') {
         await fillInFn.call(this);
       }
-      await click('[data-test-confirm-action-trigger]');
-      await click('[data-test-confirm-button]');
+      if (oldVersion) {
+        await click('[data-test-confirm-action-trigger]');
+        await click('[data-test-confirm-button]');
+      } else {
+        await click('[data-test-replication-action-trigger]');
+        await fillIn(
+          '[data-test-confirmation-modal-input]',
+          replicationMode === 'dr' ? 'Disaster Recovery' : 'Performance'
+        );
+        await blur('[data-test-confirmation-modal-input]');
+        await click('[data-test-confirm-button]');
+      }
     });
   }
 });

@@ -1,0 +1,46 @@
+<Modal
+  @title={{title}}
+  @onClose={{onClose}}
+  @isActive={{isActive}}
+  @type={{type}}
+  @showCloseButton={{true}}
+>
+  <section class="modal-card-body">
+    <div class="box is-shadowless is-fullwidth is-sideless">
+
+      {{yield}}
+
+      <div class="modal-confirm-section">
+        <p class="has-text-weight-semibold is-size-6">
+          Confirm
+        </p>
+        <p class="is-help">Type <strong>{{confirmText}}</strong> to confirm {{toConfirmMsg}}</p>
+        {{input
+            type="text"
+            value=confirmationInput
+            name="confirmationInput"
+            class="input has-margin-top"
+            autocomplete="off"
+            spellcheck="false"
+            data-test-confirmation-modal-input="confirmationInput"
+          }}
+        </div>
+    </div>
+  </section>
+  <footer class="modal-card-foot modal-card-foot-outlined">
+    <button
+      class="button {{buttonClass}}"
+      disabled={{unless (eq confirmationInput confirmText) true}}
+      onclick={{onConfirm}}
+      data-test-confirm-button
+    >
+      {{buttonText}}
+    </button>
+    <button
+      class="button is-secondary"
+      onclick={{action (mut isActive) false}}
+      data-test-cancel-button>
+      Cancel
+    </button>
+  </footer>
+</Modal>

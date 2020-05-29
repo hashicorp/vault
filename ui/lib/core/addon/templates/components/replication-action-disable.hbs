@@ -1,67 +1,52 @@
-<h4 class="title is-5 is-marginless">
-  Disable Replication
-</h4>
-<div class="content">
-  <p>
-    Disable {{replicationDisplayMode}} Replication entirely on the cluster.
-    {{#if model.replicationAttrs.isPrimary}}
-      Any secondaries will no longer be able to connect.
-    {{else if (eq model.replicationAttrs.modeForUrl 'bootstrapping')}}
-      <br>
-      Since the cluster is currently bootstrapping, we need to know which mode to disable.
-      Be sure to choose it below.
-      <label for="replication-mode" class="is-label">
-        Replication cluster mode
-      </label>
-      <div class="field is-expanded">
-        <div class="control select is-fullwidth">
-          <select onchange={{action (mut mode) value="target.value"}} id="replication-mode" name="replication-mode">
-            {{#each (array 'primary' 'secondary') as |modeOption|}}
-              <option
-                selected={{if mode (eq mode modeOption) (eq modeOption 'primary')}}
-                value={{modeOption}}
-              >
-                {{modeOption}}
-              </option>
-            {{/each}}
-          </select>
-        </div>
-      </div>
-    {{else}}
-      The cluster will no longer be able to connect to the primary.
-    {{/if}}
-    <AlertInline
-      @type="danger"
-      @message="Caution: re-enabling this node as a primary or secondary will change its cluster ID."
-    />
-  </p>
-  <p>
-    In the secondary case this means a wipe of the
-    underlying storage when connected to a primary, and in the primary case,
-    secondaries connecting back to the cluster (even if they have connected
-    before) will require a wipe of the underlying storage.
-  </p>
-</div>
-<div class="field">
-  <div class="control">
-    <ConfirmAction
-      @buttonClasses="button is-primary"
-      @confirmTitle="Disable this cluster?"
-      @confirmMessage="Data in this cluster will no longer be replicated."
-      @confirmButtonText="Disable"
-      @horizontalPosition="auto-left"
-      @onConfirmAction={{action
-        "onSubmit"
-        "disable"
-        (if
-          (eq model.replicationAttrs.modeForUrl 'bootstrapping')
-          mode
-          model.replicationAttrs.modeForUrl
-        )
-      }}
-      data-test-disable-replication="true"
+<div class="action-block is-rounded" data-test-disable-replication>
+  <div class="action-block-info">
+    <h4 class="title is-5 is-marginless">
+      Disable Replication
+    </h4>
+    <p>
+      Disable {{replicationDisplayMode}} Replication entirely on the cluster.
+    </p>
+  </div>
+
+  <div class="action-block-action">
+    <button
+      class="button is-danger"
+      onclick={{action (mut isModalActive) true}}
+      data-test-replication-action-trigger
     >
       Disable Replication
-    </ConfirmAction>
+    </button>
   </div>
 </div>
+
+<ConfirmationModal
+  @title="Disable Replication?"
+  @onClose={{action (mut isModalActive) false}}
+  @isActive={{isModalActive}}
+  @confirmText={{if (eq replicationDisplayMode "DR") "Disaster Recovery" replicationDisplayMode}}
+  @toConfirmMsg="disabling {{replicationDisplayMode}} Replication on this cluster"
+  @onConfirm={{action
+    "onSubmit"
+    "disable"
+    (if
+      (eq model.replicationAttrs.modeForUrl 'bootstrapping')
+      mode
+      model.replicationAttrs.modeForUrl
+    )
+  }}
+>
+  <p class="has-bottom-margin-m">
+    {{#if (and model.replicationAttrs.isPrimary (eq replicationDisplayMode "DR"))}}This cannot be undone. {{/if}}
+    Disabling {{replicationDisplayMode}} Replication entirely on this {{if (eq model.replicationAttrs.isPrimary true) "primary" "secondary"}} cluster means that:
+  </p>
+  <ul class="bullet">
+    {{#if model.replicationAttrs.isPrimary}}
+    <li>Secondaries will no longer be able to connect</li>
+    <li>We will wipe the underlying storage of connected secondaries</li>
+    <li>Secondaries connecting back to the cluster will require a wipe of the underlying storage</li>
+    {{else}}
+    <li>We will wipe the underlying storage of this secondary when connected to a primary</li>
+    {{/if}}
+    <li>Re-enabling this node will change its cluster ID</li>
+  </ul>
+</ConfirmationModal>

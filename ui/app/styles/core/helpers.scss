@@ -158,3 +158,8 @@
 .has-border-danger {
   border: 1px solid $danger;
 }
+
+ul.bullet {
+  list-style: disc;
+  padding-left: $spacing-m;
+}

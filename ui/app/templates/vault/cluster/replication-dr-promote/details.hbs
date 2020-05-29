@@ -1,44 +1,44 @@
 <section class="section">
   <div class="container is-widescreen">
     <ReplicationPage @model={{model}} as |Page|>
-        <Page.header
-          @showTabs={{false}}
+      <Page.header
+        @showTabs={{true}}
+      />
+      {{#if Page.isDisabled}}
+        <EmptyState
+          @title="Disaster Recovery secondary not set up"
+          @message={{Page.message}}
+          @icon="alert-circle-outline"
+          @bottomBorder={{true}}
+        >
+          <nav class="breadcrumb">
+            <ul class="is-grouped-split">
+              <li>
+                {{#link-to "vault.cluster.secrets.backends" }}
+                  <span class="sep"/>
+                  Go back
+                {{/link-to}}
+              </li>
+              <li>
+                <LearnLink @path="/vault/operations/ops-disaster-recovery" @class="has-text-grey">
+                  Need help?
+                </LearnLink>
+              </li>
+            </ul>
+          </nav>
+        </EmptyState>
+      {{else}}
+      <Page.dashboard
+      {{!-- passing in component to render so that the yielded components are flexible based on the dashboard --}}
+        @componentToRender='replication-secondary-card' as |Dashboard|>
+        <Dashboard.card
+          @title="States"
         />
-        {{#if Page.isDisabled}}
-          <EmptyState
-            @title="Disaster Recovery secondary not set up"
-            @message={{Page.message}}
-            @icon="alert-circle-outline"
-            @bottomBorder={{true}}
-          >
-            <nav class="breadcrumb">
-              <ul class="is-grouped-split">
-                <li>
-                  {{#link-to "vault.cluster.secrets.backends" }}
-                    <span class="sep"/>
-                    Go back
-                  {{/link-to}}
-                </li>
-                <li>
-                  <LearnLink @path="/vault/operations/ops-disaster-recovery" @class="has-text-grey">
-                    Need help?
-                  </LearnLink>
-                </li>
-              </ul>
-            </nav>
-          </EmptyState>
-        {{else}}
-        <Page.dashboard
-        {{!-- passing in component to render so that the yielded components are flexible based on the dashboard --}}
-          @componentToRender='replication-secondary-card' as |Dashboard|>
-          <Dashboard.card
-            @title="States"
-          />
-          <Dashboard.card
-            @title="Primary cluster"
-          />
-          <Dashboard.rows/>
-        </Page.dashboard>
+        <Dashboard.card
+          @title="Primary cluster"
+        />
+        <Dashboard.rows/>
+      </Page.dashboard>
       {{/if}}
     </ReplicationPage>
   </div>
