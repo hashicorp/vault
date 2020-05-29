@@ -24,7 +24,7 @@
   @onClose={{action (mut isModalActive) false}}
   @isActive={{isModalActive}}
   @confirmText={{if (eq replicationDisplayMode "DR") "Disaster Recovery" replicationDisplayMode}}
-  @toConfirmMsg="disabling {{replicationDisplayMode}} replication on this cluster"
+  @toConfirmMsg="disabling {{replicationDisplayMode}} Replication on this cluster"
   @onConfirm={{action
     "onSubmit"
     "disable"
