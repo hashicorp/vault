@@ -106,6 +106,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			EntityID:                  auth.EntityID,
 			RemainingUses:             req.ClientTokenRemainingUses,
 			TokenType:                 auth.TokenType.String(),
+			TokenTTL:                  int64(auth.TTL.Seconds()),
 		},
 
 		Request: &AuditRequest{
@@ -125,6 +126,10 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			Headers:                       req.Headers,
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
 		},
+	}
+
+	if !auth.IssueTime.IsZero() {
+		reqEntry.Auth.TokenIssueTime = auth.IssueTime.Format(time.RFC3339)
 	}
 
 	if req.WrapInfo != nil {
@@ -212,6 +217,10 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			NumUses:                   resp.Auth.NumUses,
 			EntityID:                  resp.Auth.EntityID,
 			TokenType:                 resp.Auth.TokenType.String(),
+			TokenTTL:                  int64(resp.Auth.TTL.Seconds()),
+		}
+		if !resp.Auth.IssueTime.IsZero() {
+			respAuth.TokenIssueTime = resp.Auth.IssueTime.Format(time.RFC3339)
 		}
 	}
 
@@ -258,6 +267,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			RemainingUses:             req.ClientTokenRemainingUses,
 			EntityID:                  auth.EntityID,
 			TokenType:                 auth.TokenType.String(),
+			TokenTTL:                  int64(auth.TTL.Seconds()),
 		},
 
 		Request: &AuditRequest{
@@ -289,6 +299,9 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		},
 	}
 
+	if !auth.IssueTime.IsZero() {
+		respEntry.Auth.TokenIssueTime = auth.IssueTime.Format(time.RFC3339)
+	}
 	if req.WrapInfo != nil {
 		respEntry.Request.WrapTTL = int(req.WrapInfo.TTL / time.Second)
 	}
@@ -359,6 +372,8 @@ type AuditAuth struct {
 	RemainingUses             int                 `json:"remaining_uses,omitempty"`
 	EntityID                  string              `json:"entity_id,omitempty"`
 	TokenType                 string              `json:"token_type,omitempty"`
+	TokenTTL                  int64               `json:"token_ttl,omitempty"`
+	TokenIssueTime            string              `json:"token_issue_time,omitempty"`
 }
 
 type AuditSecret struct {

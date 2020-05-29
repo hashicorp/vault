@@ -343,6 +343,10 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		// Store the entity ID in the request object
 		req.EntityID = te.EntityID
 		auth.TokenType = te.Type
+		auth.TTL = te.TTL
+		if te.CreationTime > 0 {
+			auth.IssueTime = time.Unix(te.CreationTime, 0)
+		}
 	}
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
