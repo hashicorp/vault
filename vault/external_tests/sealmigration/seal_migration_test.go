@@ -517,8 +517,7 @@ func testTransit(
 }
 
 func TestFoo(t *testing.T) {
-	println("asdfasdfadsfadsfadfa")
-	//testVariousBackends(t, testFoo, true)
+	testVariousBackends(t, testFoo, true)
 }
 
 func testFoo(
@@ -567,6 +566,24 @@ func testFoo(
 		t.Fatal(err)
 	}
 
+	println("--------------------------------------------------")
+	println("StopCore")
+	cluster.StopCore(t, 1)
+
+	println("--------------------------------------------------")
+	println("RestartCore")
+	cluster.RestartCore(t, 1, &opts)
+
+	println("--------------------------------------------------")
+	println("Sleep")
+	time.Sleep(10 * time.Second)
+
+	println("--------------------------------------------------")
+	println("Seal")
+
 	// Seal the cluster
 	cluster.EnsureCoresSealed(t)
+
+	println("--------------------------------------------------")
+	println("exit")
 }
