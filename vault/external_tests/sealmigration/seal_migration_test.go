@@ -88,7 +88,9 @@ func testSealMigrationShamirToTransit_Pre14(
 	storage teststorage.ReusableStorage, basePort int) {
 
 	// Initialize the backend using shamir
-	rootToken, barrierKeys := initializeShamir(t, logger, storage, basePort)
+	cluster := initializeShamir(t, logger, storage, basePort)
+	rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
+	cluster.EnsureCoresSealed(t)
 
 	// Create the transit server.
 	tss := sealhelper.NewTransitSealServer(t)
@@ -127,9 +129,6 @@ func migrateFromShamirToTransit_Pre14(
 		SkipInit:              true,
 		// N.B. Providing a transit seal puts us in migration mode.
 		SealFunc: func() vault.Seal {
-			// Each core will create its own transit seal here.  Later
-			// on it won't matter which one of these we end up using, since
-			// they were all created from the same transit key.
 			transitSeal = tss.MakeSeal(t, "transit-seal-key")
 			return transitSeal
 		},
@@ -173,6 +172,107 @@ func migrateFromShamirToTransit_Pre14(
 	cluster.EnsureCoresSealed(t)
 
 	return transitSeal
+}
+
+// TestSealMigration_ShamirToTransit_Post14 tests shamir-to-transit seal
+// migration, using the post-1.4 method of bring individual nodes in the cluster
+// to do the migration.
+func TestSealMigration_ShamirToTransit_Post14(t *testing.T) {
+	testVariousBackends(t, testSealMigrationShamirToTransit_Post14, true)
+}
+
+func testSealMigrationShamirToTransit_Post14(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int) {
+
+	var baseClusterPort = basePort + 10
+
+	//----------------------------------------------------
+	// Initialize Shamir
+
+	// Start the cluster
+	var conf = vault.CoreConfig{
+		Logger: logger.Named("initializeShamir"),
+	}
+	var opts = vault.TestClusterOptions{
+		HandlerFunc:           vaulthttp.Handler,
+		NumCores:              numTestCores,
+		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
+		BaseClusterListenPort: baseClusterPort,
+	}
+	storage.Setup(&conf, &opts)
+	cluster := vault.NewTestCluster(t, &conf, &opts)
+	cluster.Start()
+	defer func() {
+		storage.Cleanup(t, cluster)
+		cluster.Cleanup()
+	}()
+
+	leader := cluster.Cores[0]
+	client := leader.Client
+
+	// Unseal
+	if storage.IsRaft {
+		testhelpers.RaftClusterJoinNodes(t, cluster)
+		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		cluster.UnsealCores(t)
+	}
+	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
+
+	// Write a secret that we will read back out later.
+	_, err := client.Logical().Write(
+		"secret/foo",
+		map[string]interface{}{"zork": "quux"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
+
+	//----------------------------------------------------
+	// Migrate to Transit
+
+	// Create the transit server.
+	tss := sealhelper.NewTransitSealServer(t)
+	defer func() {
+		tss.EnsureCoresSealed(t)
+		tss.Cleanup()
+	}()
+	tss.MakeKey(t, "transit-seal-key")
+
+	// N.B. Providing a transit seal puts us in migration mode.
+	var transitSeal vault.Seal
+	opts.SealFunc = func() vault.Seal {
+		println("asd;lfkjasdl;fkjal;skfjl;askdjfl;adksjf;lakdsjf;ladksf")
+		transitSeal = tss.MakeSeal(t, "transit-seal-key")
+		return transitSeal
+	}
+
+	println("--------------------------------------------------")
+
+	// Unseal and migrate to Transit.
+	for i := 1; i < 2; i++ {
+		cluster.StopCore(t, i)
+		cluster.RestartCore(t, i, &opts)
+
+		println("-------------------")
+		time.Sleep(15 * time.Second)
+
+		// Note that the barrier keys are being used as recovery keys
+		client := cluster.Cores[i].Client
+		client.SetToken(rootToken)
+		unsealMigrate(t, client, barrierKeys, true)
+	}
+
+	// done
+	println("--------------------------------------------------")
+	cluster.EnsureCoresSealed(t)
+
+	//----------------------------------------------------
+	// Run Transit
 }
 
 func unsealMigrate(t *testing.T, client *api.Client, keys [][]byte, transitServerAvailable bool) {
@@ -238,7 +338,7 @@ func verifyBarrierConfig(t *testing.T, cfg *vault.SealConfig, sealType string, s
 // initializeShamir initializes a brand new backend storage with Shamir.
 func initializeShamir(
 	t *testing.T, logger hclog.Logger,
-	storage teststorage.ReusableStorage, basePort int) (string, [][]byte) {
+	storage teststorage.ReusableStorage, basePort int) *vault.TestCluster {
 
 	var baseClusterPort = basePort + 10
 
@@ -282,10 +382,7 @@ func initializeShamir(
 		t.Fatal(err)
 	}
 
-	// Seal the cluster
-	cluster.EnsureCoresSealed(t)
-
-	return cluster.RootToken, cluster.BarrierKeys
+	return cluster
 }
 
 // runShamir uses a pre-populated backend storage with Shamir.
@@ -374,9 +471,6 @@ func initializeTransit(
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
 		BaseClusterListenPort: baseClusterPort,
 		SealFunc: func() vault.Seal {
-			// Each core will create its own transit seal here.  Later
-			// on it won't matter which one of these we end up using, since
-			// they were all created from the same transit key.
 			transitSeal = tss.MakeSeal(t, "transit-seal-key")
 			return transitSeal
 		},
@@ -483,38 +577,38 @@ func runTransit(
 	cluster.EnsureCoresSealed(t)
 }
 
-// TestShamir is a temporary test that exercises the reusable raft storage.
-// It will be replace once we do the post-1.4 migration testing.
-func TestShamir(t *testing.T) {
-	testVariousBackends(t, testShamir, true)
-}
-
-func testShamir(
-	t *testing.T, logger hclog.Logger,
-	storage teststorage.ReusableStorage, basePort int) {
-
-	rootToken, barrierKeys := initializeShamir(t, logger, storage, basePort)
-	runShamir(t, logger, storage, basePort, rootToken, barrierKeys)
-}
-
-// TestTransit is a temporary test that exercises the reusable raft storage.
-// It will be replace once we do the post-1.4 migration testing.
-func TestTransit(t *testing.T) {
-	testVariousBackends(t, testTransit, true)
-}
-
-func testTransit(
-	t *testing.T, logger hclog.Logger,
-	storage teststorage.ReusableStorage, basePort int) {
-
-	// Create the transit server.
-	tss := sealhelper.NewTransitSealServer(t)
-	defer tss.Cleanup()
-	tss.MakeKey(t, "transit-seal-key")
-
-	rootToken, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
-	runTransit(t, logger, storage, basePort, rootToken, transitSeal)
-}
+//// TestShamir is a temporary test that exercises the reusable raft storage.
+//// It will be replace once we do the post-1.4 migration testing.
+//func TestShamir(t *testing.T) {
+//	testVariousBackends(t, testShamir, true)
+//}
+//
+//func testShamir(
+//	t *testing.T, logger hclog.Logger,
+//	storage teststorage.ReusableStorage, basePort int) {
+//
+//	rootToken, barrierKeys := initializeShamir(t, logger, storage, basePort)
+//	runShamir(t, logger, storage, basePort, rootToken, barrierKeys)
+//}
+//
+//// TestTransit is a temporary test that exercises the reusable raft storage.
+//// It will be replace once we do the post-1.4 migration testing.
+//func TestTransit(t *testing.T) {
+//	testVariousBackends(t, testTransit, true)
+//}
+//
+//func testTransit(
+//	t *testing.T, logger hclog.Logger,
+//	storage teststorage.ReusableStorage, basePort int) {
+//
+//	// Create the transit server.
+//	tss := sealhelper.NewTransitSealServer(t)
+//	defer tss.Cleanup()
+//	tss.MakeKey(t, "transit-seal-key")
+//
+//	rootToken, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
+//	runTransit(t, logger, storage, basePort, rootToken, transitSeal)
+//}
 
 func TestFoo(t *testing.T) {
 	testVariousBackends(t, testFoo, true)

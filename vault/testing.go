@@ -729,6 +729,7 @@ type TestCluster struct {
 
 	cleanupFuncs []func()
 	base         *CoreConfig
+	pubKey       interface{}
 	priKey       interface{}
 }
 
@@ -1454,6 +1455,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	testCluster.pubKey = pubKey
 	testCluster.priKey = priKey
 
 	// Create cores
@@ -1591,21 +1593,25 @@ func (cluster *TestCluster) RestartCore(t testing.T, idx int, opts *TestClusterO
 	//------------------------------------
 
 	// Create a new Core
-	newCore, err := NewCore(tcc.CoreConfig)
-	if err != nil {
-		t.Fatalf("err: %v", err)
+	cleanup, newCore, localConfig, handler := cluster.newCore(
+		t, idx, tcc.CoreConfig, opts, tcc.Listeners, cluster.pubKey)
+	if handler != nil {
+		tcc.Handler = handler
+		tcc.Server.Handler = handler
 	}
-	newCore.coreNumber = tcc.Core.coreNumber
-	newCore.PR1103disabled = tcc.Core.PR1103disabled
+
+	cluster.cleanupFuncs[idx] = cleanup
+	tcc.Core = newCore
+	tcc.CoreConfig = &localConfig
 
 	cluster.setupClusterListener(
 		t, idx, newCore, tcc.CoreConfig,
 		opts, tcc.Listeners, tcc.Handler)
 
+	tcc.Client = cluster.getAPIClient(t, opts, tcc.Listeners[0].Address.Port, tcc.TLSConfig)
+
 	testAdjustTestCore(cluster.base, tcc)
 	testExtraTestCoreSetup(t, cluster.priKey, tcc)
-
-	tcc.Core = newCore
 
 	//------------------------------------
 
@@ -1617,6 +1623,30 @@ func (cluster *TestCluster) RestartCore(t testing.T, idx int, opts *TestClusterO
 
 	tcc.isRunning = true
 }
+
+//type TestCluster struct {
+//	BarrierKeys        [][]byte
+//	RecoveryKeys       [][]byte
+//	CACert             *x509.Certificate
+//	CACertBytes        []byte
+//	CACertPEM          []byte
+//	CACertPEMFile      string
+//	CAKey              *ecdsa.PrivateKey
+//	CAKeyPEM           []byte
+//	Cores              []*TestClusterCore
+//	ID                 string
+//	RootToken          string
+//	RootCAs            *x509.CertPool
+//	TempDir            string
+//	ClientAuthRequired bool
+//	Logger             log.Logger
+//	CleanupFunc        func()
+//	SetupFunc          func()
+//
+//	cleanupFuncs []func()
+//	base         *CoreConfig
+//	priKey       interface{}
+//}
 
 //type TestClusterCore struct {
 //	*Core
