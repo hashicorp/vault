@@ -4,6 +4,20 @@ import layout from '../templates/components/replication-page';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 
+/**
+ * @module ReplicationPage
+ * The `ReplicationPage` component is the parent contextual component that holds the replication-dashboard, and various replication-<name>-card components.
+ * It is the top level component on routes displaying replication dashboards.
+ *
+ * @example
+ * ```js
+ * <ReplicationPage
+    @model={{cluster}}
+    />
+ * ```
+ * @param {Object} cluster=null - An Ember data object that is pulled from the Ember Cluster Model.
+ */
+
 const MODE = {
   dr: 'Disaster Recovery',
   performance: 'Performance',

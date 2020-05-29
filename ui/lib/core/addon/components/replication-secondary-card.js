@@ -14,7 +14,7 @@ import { clusterStates } from 'core/helpers/cluster-states';
     @replicationDetails={{replicationDetails}}
     />
  * ```
- * @param {string} [title=null] - The title to be displayed on the top left corner of the card.
+ * @param {String} [title=null] - The title to be displayed on the top left corner of the card.
  * @param {Object} replicationDetails=null - An Ember data object pulled from the Ember Model. It contains details specific to the mode's replication.
  */
 

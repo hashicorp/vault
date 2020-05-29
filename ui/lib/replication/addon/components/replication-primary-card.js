@@ -14,10 +14,10 @@ import { clusterStates } from 'core/helpers/cluster-states';
     @metric={{replicationAttrs.lastWAL}}
     />
  * ```
- * @param {string} [title=null] - The title to be displayed on the top left corner of the card.
- * @param {string} [description=null] - Helper text to describe the metric on the card.
- * @param {string} [glyph=null] - The glyph to display beside the metric.
- * @param {string} metric=null - The main metric to highlight on the card.
+ * @param {String} [title=null] - The title to be displayed on the top left corner of the card.
+ * @param {String} [description=null] - Helper text to describe the metric on the card.
+ * @param {String} [glyph=null] - The glyph to display beside the metric.
+ * @param {String} metric=null - The main metric to highlight on the card.
  */
 
 export default Component.extend({
