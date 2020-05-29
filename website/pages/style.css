@@ -25,6 +25,8 @@
 @import '~@hashicorp/react-consent-manager/dist/style.css';
 @import '~@hashicorp/react-toggle/dist/style.css';
 @import '~@hashicorp/react-docs-page/dist/style.css';
+@import '~@hashicorp/react-tabs/dist/style.css';
+@import '~@hashicorp/react-enterprise-alert/dist/style.css';
 
 /* Global Components - Transpiled */
 @import '~@hashicorp/react-mega-nav/style.css';
@@ -34,6 +36,7 @@
 @import '../components/use-case-cta-section/style.css';
 @import '../components/subnav/style.css';
 @import '../components/footer/style.css';
+@import '../components/tabs/style.css';
 
 /* Pages */
 @import './not-found/style.css';

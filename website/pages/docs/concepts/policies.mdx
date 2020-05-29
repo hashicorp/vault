@@ -295,6 +295,29 @@ unique to the user, whereas names can change over time and can be reused. This
 ensures that if a given user or group name is changed, the policy will be
 mapped to the intended entity or group.
 
+If you want to use the metadata associated with an authentication plugin in your
+templates, you will need to get its _mount accessor_ and access it via the
+`aliases` key.
+
+You can get the mount accessor value using the following command:
+
+```shellsession
+$> vault auth list
+Path           Type          Accessor                    Description
+----           ----          --------                    -----------
+kubernetes/    kubernetes    auth_kubernetes_xxxx        n/a
+token/         token         auth_token_yyyy             token based credentials
+```
+
+The following templated policy allow to read the path associated with the
+Kubernetes service account namespace of the identity:
+
+```ruby
+path "secrets/data/{{identity.entity.aliases.auth_kubernetes_xxxx.metadata.service_account_namespace}}/*" {
+  capabilities = ["read"]
+}
+```
+
 ## Fine-Grained Control
 
 In addition to the standard set of capabilities, Vault offers finer-grained
