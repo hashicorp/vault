@@ -717,7 +717,12 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Rotations_MongoDBAtlas(t *testing.T) {
+	// To get the project ID, connect to cloud.mongodb.com, go to the vault-test project and
+	// look at Project Settings.
 	projID := os.Getenv("VAULT_MONGODBATLAS_PROJECT_ID")
+	// For the private and public key, go to Organization Access Manager on cloud.mongodb.com,
+	// choose Create API Key, then create one using the defaults.  Then go back to the vault-test
+	// project and add the API key to it, with permissions "Project Owner".
 	privKey := os.Getenv("VAULT_MONGODBATLAS_PRIVATE_KEY")
 	pubKey := os.Getenv("VAULT_MONGODBATLAS_PUBLIC_KEY")
 	if projID == "" {
@@ -737,11 +742,9 @@ func TestBackend_StaticRole_Rotations_MongoDBAtlas(t *testing.T) {
 	}
 
 	uc := userCreator(func(t *testing.T, username, password string) {
-		// Delete the user in case it's still there from an earlier run
-		_, err = api.DatabaseUsers.Delete(context.Background(), projID, username)
-		if err != nil {
-			t.Fatal(err)
-		}
+		// Delete the user in case it's still there from an earlier run, ignore
+		// errors in case it's not.
+		_, _ = api.DatabaseUsers.Delete(context.Background(), projID, username)
 
 		req := &mongodbatlasapi.DatabaseUser{
 			Username:     username,
@@ -749,7 +752,7 @@ func TestBackend_StaticRole_Rotations_MongoDBAtlas(t *testing.T) {
 			DatabaseName: "admin",
 			Roles:        []mongodbatlasapi.Role{{RoleName: "atlasAdmin", DatabaseName: "admin"}},
 		}
-		_, _, err = api.DatabaseUsers.Create(context.Background(), projID, req)
+		_, _, err := api.DatabaseUsers.Create(context.Background(), projID, req)
 		if err != nil {
 			t.Fatal(err)
 		}
