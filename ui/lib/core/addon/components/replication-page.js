@@ -21,6 +21,13 @@ export default Component.extend({
   getReplicationModeStatus: task(function*() {
     let resp;
     const { replicationMode } = this.model;
+
+    if (this.isSummaryDashboard) {
+      // the summary dashboard is not mode specific and will error
+      // while running replication/null/status in the replication-mode adapter
+      return;
+    }
+
     try {
       resp = yield this.get('store')
         .adapterFor('replication-mode')
