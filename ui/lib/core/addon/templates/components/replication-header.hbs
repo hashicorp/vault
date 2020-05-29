@@ -49,16 +49,24 @@
   <div class="tabs-container box is-bottomless is-fullwidth is-paddingless" data-test-tabs>
     <nav class="tabs">
       {{#if (not isSummaryDashboard )}}
-        <ul>
-          {{#link-to
-            "vault.cluster.replication-dr-promote"
-            tagName="li"
-            activeClass="is-active"
-            current-when=""
-          }}
-            {{#link-to "vault.cluster.replication-dr-promote"}}
-              Details
-            {{/link-to}}
+      <ul>
+        {{#link-to
+          "vault.cluster.replication-dr-promote.details"
+          tagName="li"
+          activeClass="is-active"
+        }}
+          {{#link-to "vault.cluster.replication-dr-promote.details"}}
+            Details
+          {{/link-to}}
+        {{/link-to}}
+        {{#link-to
+          "vault.cluster.replication-dr-promote"
+          tagName="li"
+          activeClass="is-active"
+          current-when="vault.cluster.replication-dr-promote.index"
+        }}
+          {{#link-to "vault.cluster.replication-dr-promote"}}
+            Manage
           {{/link-to}}
         </ul>
       {{else}}

@@ -39,6 +39,11 @@
   }
 }
 
+.modal-card-title.title {
+  display: flex;
+  align-items: center;
+}
+
 pre {
   background-color: inherit;
 }
@@ -51,4 +56,21 @@ pre {
   .modal-card-title {
     color: $yellow-dark;
   }
+}
+
+.modal-confirm-section .is-help {
+  color: $grey;
+  margin: $spacing-xxs 0;
+  strong {
+    color: inherit;
+  }
+}
+
+.modal-confirm-section {
+  margin: $spacing-xl 0 $spacing-m;
+}
+
+.modal-card-foot-outlined {
+  background: #f7f8fa;
+  border-top: 1px solid #bac1cc;
 }
