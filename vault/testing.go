@@ -1111,6 +1111,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			t.Fatal("could not parse given base IP")
 		}
 		certIPs = append(certIPs, baseAddr.IP)
+	} else {
+		baseAddr = &net.TCPAddr{
+			IP:   net.ParseIP("127.0.0.1"),
+			Port: 0,
+		}
 	}
 
 	var testCluster TestCluster
@@ -1264,29 +1269,39 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	//
 	// Listener setup
 	//
-	ports := make([]int, numCores)
-	if baseAddr != nil {
-		for i := 0; i < numCores; i++ {
-			ports[i] = baseAddr.Port + i
-		}
-	} else {
-		baseAddr = &net.TCPAddr{
-			IP:   net.ParseIP("127.0.0.1"),
-			Port: 0,
-		}
-	}
+	//ports := make([]int, numCores)
+	//if baseAddr != nil {
+	//	for i := 0; i < numCores; i++ {
+	//		ports[i] = baseAddr.Port + i
+	//	}
+	//} else {
+	//	baseAddr = &net.TCPAddr{
+	//		IP:   net.ParseIP("127.0.0.1"),
+	//		Port: 0,
+	//	}
+	//}
 
+	addresses := []*net.TCPAddr{}
 	listeners := [][]*TestListener{}
 	servers := []*http.Server{}
 	handlers := []http.Handler{}
 	tlsConfigs := []*tls.Config{}
 	certGetters := []*reloadutil.CertificateGetter{}
 	for i := 0; i < numCores; i++ {
-		baseAddr.Port = ports[i]
-		ln, err := net.ListenTCP("tcp", baseAddr)
+
+		addr := &net.TCPAddr{
+			IP:   baseAddr.IP,
+			Port: 0,
+		}
+		if baseAddr.Port != 0 {
+			addr.Port = baseAddr.Port + i
+		}
+		ln, err := net.ListenTCP("tcp", addr)
 		if err != nil {
 			t.Fatal(err)
 		}
+		addresses = append(addresses, addr)
+
 		certFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node%d_port_%d_cert.pem", i+1, ln.Addr().(*net.TCPAddr).Port))
 		keyFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node%d_port_%d_key.pem", i+1, ln.Addr().(*net.TCPAddr).Port))
 		err = ioutil.WriteFile(certFile, certInfoSlice[i].certPEM, 0755)
