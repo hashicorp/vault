@@ -88,7 +88,7 @@ func testSealMigrationShamirToTransit_Pre14(
 	storage teststorage.ReusableStorage, basePort int) {
 
 	// Initialize the backend using shamir
-	cluster := initializeShamir(t, logger, storage, basePort)
+	cluster, _ := initializeShamir(t, logger, storage, basePort)
 	rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
 	cluster.EnsureCoresSealed(t)
 
@@ -185,55 +185,8 @@ func testSealMigrationShamirToTransit_Post14(
 	t *testing.T, logger hclog.Logger,
 	storage teststorage.ReusableStorage, basePort int) {
 
-	var baseClusterPort = basePort + 10
-
-	//----------------------------------------------------
-	// Initialize Shamir
-
-	// Start the cluster
-	var conf = vault.CoreConfig{
-		Logger: logger.Named("initializeShamir"),
-	}
-	var opts = vault.TestClusterOptions{
-		HandlerFunc:           vaulthttp.Handler,
-		NumCores:              numTestCores,
-		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
-		BaseClusterListenPort: baseClusterPort,
-	}
-	storage.Setup(&conf, &opts)
-	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
-	defer func() {
-		storage.Cleanup(t, cluster)
-		cluster.Cleanup()
-	}()
-
-	leader := cluster.Cores[0]
-	client := leader.Client
-
-	// Unseal
-	if storage.IsRaft {
-		testhelpers.RaftClusterJoinNodes(t, cluster)
-		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
-			t.Fatal(err)
-		}
-	} else {
-		cluster.UnsealCores(t)
-	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
-
-	// Write a secret that we will read back out later.
-	_, err := client.Logical().Write(
-		"secret/foo",
-		map[string]interface{}{"zork": "quux"})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
-
-	//----------------------------------------------------
-	// Migrate to Transit
+	// Initialize the backend using shamir
+	cluster, opts := initializeShamir(t, logger, storage, basePort)
 
 	// Create the transit server.
 	tss := sealhelper.NewTransitSealServer(t)
@@ -243,37 +196,166 @@ func testSealMigrationShamirToTransit_Post14(
 	}()
 	tss.MakeKey(t, "transit-seal-key")
 
+	// Migrate the backend from shamir to transit.  Note that the barrier keys
+	// are now the recovery keys.
+	_ = migrateFromShamirToTransit_Post14(t, logger, storage, tss, cluster, opts)
+	//transitSeal := migrateFromShamirToTransit_Post14(t, logger, storage, tss, cluster, opts)
+	cluster.EnsureCoresSealed(t)
+
+	//// Run the backend with transit.
+	//runTransit(t, logger, storage, basePort, rootToken, transitSeal)
+}
+
+func migrateFromShamirToTransit_Post14(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage,
+	tss *sealhelper.TransitSealServer,
+	cluster *vault.TestCluster, opts *vault.TestClusterOptions,
+) vault.Seal {
+
 	// N.B. Providing a transit seal puts us in migration mode.
 	var transitSeal vault.Seal
 	opts.SealFunc = func() vault.Seal {
-		println("asd;lfkjasdl;fkjal;skfjl;askdjfl;adksjf;lakdsjf;ladksf")
 		transitSeal = tss.MakeSeal(t, "transit-seal-key")
 		return transitSeal
 	}
 
 	println("--------------------------------------------------")
 
-	// Unseal and migrate to Transit.
-	for i := 1; i < 2; i++ {
+	// Restart each follower with the new config, and  migrate to Transit.
+	//rootToken, recoveryKeys := cluster.RootToken, cluster.BarrierKeys
+	for i := 1; i < numTestCores; i++ {
+
+		fmt.Printf("------------------- aaa %d\n", i)
 		cluster.StopCore(t, i)
-		cluster.RestartCore(t, i, &opts)
+		cluster.RestartCore(t, i, opts)
+		time.Sleep(5 * time.Second)
 
-		println("-------------------")
-		time.Sleep(15 * time.Second)
-
-		// Note that the barrier keys are being used as recovery keys
-		client := cluster.Cores[i].Client
-		client.SetToken(rootToken)
-		unsealMigrate(t, client, barrierKeys, true)
+		//// Note that the barrier keys are being used as recovery keys
+		//fmt.Printf("------------------- bbb %d\n", i)
+		//client := cluster.Cores[i].Client
+		//client.SetToken(rootToken)
+		//unsealMigrate(t, client, recoveryKeys, true)
+		//time.Sleep(10 * time.Second)
 	}
 
-	// done
-	println("--------------------------------------------------")
-	cluster.EnsureCoresSealed(t)
+	//// Wait for migration to finish.  Sadly there is no callback, and the
+	//// test will fail later on if we don't do this.
+	//time.Sleep(10 * time.Second)
 
-	//----------------------------------------------------
-	// Run Transit
+	//// Read the secret
+	//secret, err := client.Logical().Read("secret/foo")
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//if diff := deep.Equal(secret.Data, map[string]interface{}{"zork": "quux"}); len(diff) > 0 {
+	//	t.Fatal(diff)
+	//}
+
+	//// Make sure the seal configs were updated correctly.
+	//b, r, err := leader.Core.PhysicalSealConfigs(context.Background())
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//verifyBarrierConfig(t, b, wrapping.Transit, 1, 1, 1)
+	//verifyBarrierConfig(t, r, wrapping.Shamir, keyShares, keyThreshold, 0)
+
+	return transitSeal
 }
+
+//func testSealMigrationShamirToTransit_Post14(
+//	t *testing.T, logger hclog.Logger,
+//	storage teststorage.ReusableStorage, basePort int) {
+//
+//	var baseClusterPort = basePort + 10
+//
+//	//----------------------------------------------------
+//	// Initialize Shamir
+//
+//	// Start the cluster
+//	var conf = vault.CoreConfig{
+//		Logger: logger.Named("initializeShamir"),
+//	}
+//	var opts = vault.TestClusterOptions{
+//		HandlerFunc:           vaulthttp.Handler,
+//		NumCores:              numTestCores,
+//		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
+//		BaseClusterListenPort: baseClusterPort,
+//	}
+//	storage.Setup(&conf, &opts)
+//	cluster := vault.NewTestCluster(t, &conf, &opts)
+//	cluster.Start()
+//	defer func() {
+//		storage.Cleanup(t, cluster)
+//		cluster.Cleanup()
+//	}()
+//
+//	leader := cluster.Cores[0]
+//	client := leader.Client
+//
+//	// Unseal
+//	if storage.IsRaft {
+//		testhelpers.RaftClusterJoinNodes(t, cluster)
+//		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+//			t.Fatal(err)
+//		}
+//	} else {
+//		cluster.UnsealCores(t)
+//	}
+//	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
+//
+//	// Write a secret that we will read back out later.
+//	_, err := client.Logical().Write(
+//		"secret/foo",
+//		map[string]interface{}{"zork": "quux"})
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
+//
+//	//----------------------------------------------------
+//	// Migrate to Transit
+//
+//	// Create the transit server.
+//	tss := sealhelper.NewTransitSealServer(t)
+//	defer func() {
+//		tss.EnsureCoresSealed(t)
+//		tss.Cleanup()
+//	}()
+//	tss.MakeKey(t, "transit-seal-key")
+//
+//	// N.B. Providing a transit seal puts us in migration mode.
+//	var transitSeal vault.Seal
+//	opts.SealFunc = func() vault.Seal {
+//		println("asd;lfkjasdl;fkjal;skfjl;askdjfl;adksjf;lakdsjf;ladksf")
+//		transitSeal = tss.MakeSeal(t, "transit-seal-key")
+//		return transitSeal
+//	}
+//
+//	println("--------------------------------------------------")
+//
+//	// Unseal and migrate to Transit.
+//	for i := 1; i < numTestCores; i++ {
+//		println("-------------------")
+//
+//		cluster.StopCore(t, i)
+//		cluster.RestartCore(t, i, &opts)
+//		time.Sleep(5 * time.Second)
+//
+//		// Note that the barrier keys are being used as recovery keys
+//		client := cluster.Cores[i].Client
+//		client.SetToken(rootToken)
+//		unsealMigrate(t, client, barrierKeys, true)
+//	}
+//
+//	// done
+//	println("--------------------------------------------------")
+//	cluster.EnsureCoresSealed(t)
+//
+//	//----------------------------------------------------
+//	// Run Transit
+//}
 
 func unsealMigrate(t *testing.T, client *api.Client, keys [][]byte, transitServerAvailable bool) {
 
@@ -338,7 +420,7 @@ func verifyBarrierConfig(t *testing.T, cfg *vault.SealConfig, sealType string, s
 // initializeShamir initializes a brand new backend storage with Shamir.
 func initializeShamir(
 	t *testing.T, logger hclog.Logger,
-	storage teststorage.ReusableStorage, basePort int) *vault.TestCluster {
+	storage teststorage.ReusableStorage, basePort int) (*vault.TestCluster, *vault.TestClusterOptions) {
 
 	var baseClusterPort = basePort + 10
 
@@ -382,7 +464,7 @@ func initializeShamir(
 		t.Fatal(err)
 	}
 
-	return cluster
+	return cluster, &opts
 }
 
 // runShamir uses a pre-populated backend storage with Shamir.

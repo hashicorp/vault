@@ -741,7 +741,8 @@ func (c *TestCluster) Start() {
 				go core.Server.Serve(ln)
 			}
 		}
-		core.isRunning = true
+
+		//core.isRunning = true
 	}
 	if c.SetupFunc != nil {
 		c.SetupFunc()
@@ -874,7 +875,7 @@ func (c *TestClusterCore) stop() error {
 	}
 
 	c.Logger().Info("vault test core stopped")
-	c.isRunning = false
+	//c.isRunning = false
 	return nil
 }
 
@@ -973,7 +974,7 @@ type TestClusterCore struct {
 	Barrier              SecurityBarrier
 	NodeID               string
 
-	isRunning bool
+	//isRunning bool
 }
 
 type PhysicalBackendBundle struct {
@@ -1568,9 +1569,9 @@ func (cluster *TestCluster) StopCore(t testing.T, idx int) {
 	tcc := cluster.Cores[idx]
 	tcc.Logger().Info("stopping core", "core", idx)
 
-	if !tcc.isRunning {
-		t.Fatalf("core is already stopped")
-	}
+	//if !tcc.isRunning {
+	//	t.Fatalf("core is already stopped")
+	//}
 
 	// Stop listeners and call Shutdown()
 	if err := tcc.stop(); err != nil {
@@ -1592,11 +1593,9 @@ func (cluster *TestCluster) RestartCore(t testing.T, idx int, opts *TestClusterO
 	tcc := cluster.Cores[idx]
 	tcc.Logger().Info("restarting core", "core", idx)
 
-	if tcc.isRunning {
-		t.Fatalf("cannot restart a running core")
-	}
-
-	//------------------------------------
+	//if tcc.isRunning {
+	//	t.Fatalf("cannot restart a running core")
+	//}
 
 	// Set up listeners
 	ln, err := net.ListenTCP("tcp", tcc.Address)
@@ -1636,15 +1635,14 @@ func (cluster *TestCluster) RestartCore(t testing.T, idx int, opts *TestClusterO
 	testAdjustTestCore(cluster.base, tcc)
 	testExtraTestCoreSetup(t, cluster.priKey, tcc)
 
-	//------------------------------------
-
-	// start listeners
+	// Start listeners
 	for _, ln := range tcc.Listeners {
 		tcc.Logger().Info("starting listener for core", "port", ln.Address.Port)
 		go tcc.Server.Serve(ln)
 	}
 
-	tcc.isRunning = true
+	tcc.Logger().Info("restarted test core", "core", idx)
+	//tcc.isRunning = true
 }
 
 //type TestCluster struct {
