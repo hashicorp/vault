@@ -1555,6 +1555,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// When the underlying storage is raft, kick off retry join if it was specified
 	// in the configuration
+	// TODO: Should we also support retry_join for ha_storage?
 	if config.Storage.Type == "raft" {
 		if err := core.InitiateRetryJoin(context.Background()); err != nil {
 			c.UI.Error(fmt.Sprintf("Failed to initiate raft retry join, %q", err.Error()))
