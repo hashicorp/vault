@@ -38,10 +38,10 @@ export default Component.extend({
     if (currentRoute === 'vault.cluster.replication.index') {
       const drMode = this.model.dr.mode;
       const performanceMode = this.model.performance.mode;
-      return drMode && performanceMode === 'primary';
+      return drMode === 'primary' && performanceMode === 'primary';
     }
   }),
-  formattedReplicationMode: computed('model.{replicationMode}', function() {
+  formattedReplicationMode: computed('model.{replicationMode}', 'isSummaryDashboard', function() {
     // dr or performance 🤯
     const { isSummaryDashboard } = this;
     if (isSummaryDashboard) {

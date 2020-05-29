@@ -4,17 +4,17 @@ import layout from '../templates/components/replication-summary-card';
 
 /**
  * @module ReplicationSummaryCard
- * ReplicationSummaryCard components
+ * The `ReplicationSummaryCard` is a card-like component that lives inside of a flex-box container.  It displays cluster mode details for both DR and Performance
  *
  * @example
  * ```js
  * <ReplicationSummaryCard
     @title='States'
-    @replicationDetails=replicationDetails
+    @replicationDetails={DS.Model.replicationDetailsSummary}
     />
  * ```
  * @param {string} [title=null] - The title to be displayed on the top left corner of the card.
- * @param replicationDetails=null{DS.Model.replicationDetails} - An Ember data object off the Ember data model.  It is computed at the parent component and passed through to this component.
+ * @param {Object} replicationDetails=null - An Ember data object computed off the Ember Model.  It combines the Model.dr and Model.performance objects into one and contains details specific to the mode replication.
  */
 
 export default Component.extend({

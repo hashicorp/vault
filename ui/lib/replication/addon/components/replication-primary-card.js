@@ -4,7 +4,7 @@ import { clusterStates } from 'core/helpers/cluster-states';
 
 /**
  * @module ReplicationPrimaryCard
- * ReplicationPrimaryCard components
+ * The `ReplicationPrimaryCard` component is a card-like component that lives inside of a flex-box container.  It displays cluster mode details specific for DR and Performance Primaries.
  *
  * @example
  * ```js
