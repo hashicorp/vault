@@ -84,8 +84,13 @@ to specify where the configuration is.
   Disabling `mlock` is strongly recommended if using [integrated
   storage](https://www.vaultproject.io/docs/internals/integrated-storage) due to
   the fact that `mlock` does not interact well with memory mapped files such as
-  those created by BoltDB, which is used by Raft to track state. Additionally,
-  swap should be disabled to prevent these files from being dumped into disk.
+  those created by BoltDB, which is used by Raft to track state. When using
+  `mlock`, memory-mapped files get loaded into resident memory which causes
+  Vault's entire dataset to be loaded in-memory and cause out-of-memory
+  issues if Vault's data becomes larger than the available RAM. In this case,
+  even though the data within BoltDB remains encrypted at rest, swap should be
+  disabled to prevent Vault's other in-memory sensitive data from being dumped
+  into disk.
 
   On Linux, to give the Vault executable the ability to use the `mlock`
   syscall without running the process as root, run:
