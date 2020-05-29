@@ -31,6 +31,9 @@ App = Application.extend({
           'version',
           'wizard',
         ],
+        externalRoutes: {
+          replication: 'vault.cluster.replication.index',
+        },
       },
     },
     kmip: {
