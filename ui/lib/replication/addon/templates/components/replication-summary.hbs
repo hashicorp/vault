@@ -323,7 +323,6 @@
           <Icon @size="xl" aria-hidden="true" @glyph="perf-replication" />
           Performance
         </h3>
-        {{#if cluster.dr.replicationEnabled}}
           {{#link-to
             "mode.index"
             "performance"
@@ -335,13 +334,6 @@
               tagName="span"
             }}
           {{/link-to}}
-        {{else}}
-          {{replication-mode-summary
-            mode="performance"
-            cluster=cluster
-            tagName="div"
-          }}
-        {{/if}}
       </div>
     {{/unless}}
   {{/if}}

@@ -7,6 +7,10 @@
     &:hover {
       box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
     }
+
+    .toolbar-link {
+      color: $blue-500;
+    }
   }
 
   .helper-text {
@@ -26,7 +30,8 @@
     margin-top: $spacing-xl;
     display: grid;
 
-    &.primary {
+    &.primary,
+    .summary {
       margin: 2rem 0 2rem 0;
       grid-template-columns: 1fr 2fr;
 
