@@ -11,7 +11,7 @@ CHANGES:
 
 IMPROVEMENTS:
 
-* secrets/transit: Introduce `key_version` to transit responses that includes the key version used for encryption. [[GH-9100](https://github.com/hashicorp/vault/pull/9100)]
+* secrets/transit: Transit requests that make use of keys now include a new field  `key_version` in their responses [[GH-9100](https://github.com/hashicorp/vault/pull/9100)]
 * core: Add the Go version used to build a Vault binary to the server message output. [[GH-9078](https://github.com/hashicorp/vault/pull/9078)]
 * core: Added Password Policies for user-configurable password generation [[GH-8637](https://github.com/hashicorp/vault/pull/8637)]
 * cli: Support reading TLS parameters from file for the `vault operator raft join` command. [[GH-9060](https://github.com/hashicorp/vault/pull/9060)]
