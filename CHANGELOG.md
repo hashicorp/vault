@@ -2,8 +2,6 @@
 
 IMPROVEMENTS:
 
-* storage/raft: Introduce a new Raft metric, `vault.raft-storage.entry_size`, that allows for operators
-  to sample the entry size and view the average.
 * storage/raft: The storage stanza now accepts `leader_ca_cert_file`, `leader_client_cert_file`, and 
   `leader_client_key_file` parameters to read and parse TLS certificate information from paths on disk.
   Existing non-path based parameters will continue to work, but their values will need to be provided as a 
