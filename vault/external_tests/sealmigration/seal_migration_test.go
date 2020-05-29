@@ -88,9 +88,10 @@ func testSealMigrationShamirToTransit_Pre14(
 	storage teststorage.ReusableStorage, basePort int) {
 
 	// Initialize the backend using shamir
-	cluster, _ := initializeShamir(t, logger, storage, basePort)
+	cluster, _, cleanup := initializeShamir(t, logger, storage, basePort)
 	rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
 	cluster.EnsureCoresSealed(t)
+	cleanup()
 
 	// Create the transit server.
 	tss := sealhelper.NewTransitSealServer(t)
@@ -186,7 +187,7 @@ func testSealMigrationShamirToTransit_Post14(
 	storage teststorage.ReusableStorage, basePort int) {
 
 	// Initialize the backend using shamir
-	cluster, opts := initializeShamir(t, logger, storage, basePort)
+	cluster, opts, cleanup := initializeShamir(t, logger, storage, basePort)
 
 	// Create the transit server.
 	tss := sealhelper.NewTransitSealServer(t)
@@ -201,6 +202,7 @@ func testSealMigrationShamirToTransit_Post14(
 	_ = migrateFromShamirToTransit_Post14(t, logger, storage, tss, cluster, opts)
 	//transitSeal := migrateFromShamirToTransit_Post14(t, logger, storage, tss, cluster, opts)
 	cluster.EnsureCoresSealed(t)
+	cleanup()
 
 	//// Run the backend with transit.
 	//runTransit(t, logger, storage, basePort, rootToken, transitSeal)
@@ -420,7 +422,7 @@ func verifyBarrierConfig(t *testing.T, cfg *vault.SealConfig, sealType string, s
 // initializeShamir initializes a brand new backend storage with Shamir.
 func initializeShamir(
 	t *testing.T, logger hclog.Logger,
-	storage teststorage.ReusableStorage, basePort int) (*vault.TestCluster, *vault.TestClusterOptions) {
+	storage teststorage.ReusableStorage, basePort int) (*vault.TestCluster, *vault.TestClusterOptions, func()) {
 
 	var baseClusterPort = basePort + 10
 
@@ -437,10 +439,10 @@ func initializeShamir(
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
 	cluster.Start()
-	defer func() {
+	cleanup := func() {
 		storage.Cleanup(t, cluster)
 		cluster.Cleanup()
-	}()
+	}
 
 	leader := cluster.Cores[0]
 	client := leader.Client
@@ -464,7 +466,7 @@ func initializeShamir(
 		t.Fatal(err)
 	}
 
-	return cluster, &opts
+	return cluster, &opts, cleanup
 }
 
 // runShamir uses a pre-populated backend storage with Shamir.
