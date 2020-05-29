@@ -7,7 +7,7 @@ import hbs from 'htmlbars-inline-precompile';
 module('Integration | Component | confirmation-modal', function(hooks) {
   setupRenderingTest(hooks);
 
-  test('it works as expected', async function(assert) {
+  test('it renders with disabled confirmation button until input matches', async function(assert) {
     let spy = sinon.spy();
     this.set('onConfirm', spy);
 
