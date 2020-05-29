@@ -726,22 +726,23 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		entCore:                      entCore{},
-		devToken:                     conf.DevToken,
-		physical:                     conf.Physical,
-		serviceRegistration:          conf.GetServiceRegistration(),
-		underlyingPhysical:           conf.Physical,
-		storageType:                  conf.StorageType,
-		redirectAddr:                 conf.RedirectAddr,
-		clusterAddr:                  new(atomic.Value),
-		clusterListener:              new(atomic.Value),
-		seal:                         conf.Seal,
-		router:                       NewRouter(),
-		sealed:                       new(uint32),
-		sealMigrated:                 new(uint32),
-		standby:                      true,
-		baseLogger:                   conf.Logger,
-		logger:                       conf.Logger.Named("core"),
+		entCore:             entCore{},
+		devToken:            conf.DevToken,
+		physical:            conf.Physical,
+		serviceRegistration: conf.GetServiceRegistration(),
+		underlyingPhysical:  conf.Physical,
+		storageType:         conf.StorageType,
+		redirectAddr:        conf.RedirectAddr,
+		clusterAddr:         new(atomic.Value),
+		clusterListener:     new(atomic.Value),
+		seal:                conf.Seal,
+		router:              NewRouter(),
+		sealed:              new(uint32),
+		sealMigrated:        new(uint32),
+		standby:             true,
+		baseLogger:          conf.Logger,
+		logger:              conf.Logger.Named("core"),
+
 		defaultLeaseTTL:              conf.DefaultLeaseTTL,
 		maxLeaseTTL:                  conf.MaxLeaseTTL,
 		cachingDisabled:              conf.DisableCache,
@@ -2343,6 +2344,12 @@ func (c *Core) SanitizedConfig() map[string]interface{} {
 		return nil
 	}
 	return conf.(*server.Config).Sanitized()
+}
+
+// LogFormat returns the log format current in use.
+func (c *Core) LogFormat() string {
+	conf := c.rawConfig.Load()
+	return conf.(*server.Config).LogFormat
 }
 
 // MetricsHelper returns the global metrics helper which allows external

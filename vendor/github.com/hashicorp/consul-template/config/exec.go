@@ -40,8 +40,7 @@ type ExecConfig struct {
 	// EnvConfig is the environmental customizations.
 	Env *EnvConfig `mapstructure:"env"`
 
-	// KillSignal is the signal to send to the command to kill it gracefully. The
-	// default value is "SIGTERM".
+	// KillSignal is the signal to send to the command to kill it gracefully.
 	KillSignal *os.Signal `mapstructure:"kill_signal"`
 
 	// KillTimeout is the amount of time to give the process to cleanup before
