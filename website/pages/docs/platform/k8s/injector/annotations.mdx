@@ -102,6 +102,27 @@ them, optional commands to run, etc.
   is rendered.  If no secret name is provided, this sets the default for all rendered 
   secrets in the pod.
 
+- `vault.hashicorp.com/agent-run-as-user` - sets the user (uid) to run Vault
+  agent as. Also available as a command-line option (`-run-as-user`) or
+  environment variable (`AGENT_INJECT_RUN_AS_USER`) for the injector. Defaults
+  to 100.
+
+- `vault.hashicorp.com/agent-run-as-group` - sets the group (gid) to run Vault
+  agent as. Also available as a command-line option (`-run-as-group`) or
+  environment variable (`AGENT_INJECT_RUN_AS_GROUP`) for the injector. Defaults
+  to 1000.
+
+- `vault.hashicorp.com/agent-set-security-context` - controls whether
+  `SecurityContext` is set in injected containers. Also available as a
+  command-line option (`-set-security-context`) or environment variable
+  (`AGENT_INJECT_SET_SECURITY_CONTEXT`). Defaults to `true`.
+
+- `vault.hashicorp.com/agent-run-as-same-user` - run the injected Vault agent
+  containers as the User (uid) of the first application container in the pod.
+  Requires `Spec.Containers[0].SecurityContext.RunAsUser` to be set in the pod
+  spec. Also available as a command-line option (`-run-as-same-user`) or
+  environment variable (`AGENT_INJECT_RUN_AS_SAME_USER`). Defaults to `false`.
+
 ## Vault Annotations
 
 Vault annotations change how the Vault Agent containers communicate with Vault.  For 
