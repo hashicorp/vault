@@ -325,6 +325,17 @@ func ParseConfig(d string) (*Config, error) {
 		return nil, err
 	}
 
+	if rendered, err := configutil.ParseSingleIPTemplate(result.APIAddr); err != nil {
+		return nil, err
+	} else {
+		result.APIAddr = rendered
+	}
+	if rendered, err := configutil.ParseSingleIPTemplate(result.ClusterAddr); err != nil {
+		return nil, err
+	} else {
+		result.ClusterAddr = rendered
+	}
+
 	sharedConfig, err := configutil.ParseConfig(d)
 	if err != nil {
 		return nil, err

@@ -699,3 +699,40 @@ listener "tcp" {
 		t.Fatal(diff)
 	}
 }
+
+func testParseSockaddrTemplate(t *testing.T) {
+	config, err := ParseConfig(`
+api_addr = <<EOF
+{{- GetAllInterfaces | include "flags" "loopback" | include "type" "ipv4" | attr "address" -}}
+EOF
+listener "tcp" {
+	address = <<EOF
+{{- GetAllInterfaces | include "flags" "loopback" | include "type" "ipv4" | attr "address" -}}:443
+EOF
+	cluster_address = <<EOF
+{{- GetAllInterfaces | include "flags" "loopback" | include "type" "ipv4" | attr "address" -}}:8201
+EOF
+	tls_disable = true
+}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		APIAddr: "127.0.0.1",
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:           "tcp",
+					Address:        "127.0.0.1:443",
+					ClusterAddress: "127.0.0.1:8201",
+					TLSDisable:     true,
+				},
+			},
+		},
+	}
+	config.Listeners[0].RawConfig = nil
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
