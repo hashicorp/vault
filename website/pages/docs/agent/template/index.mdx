@@ -120,3 +120,7 @@ template {
   destination = "/tmp/agent/render.txt"
 }
 ```
+
+If you only want to use the Vault agent to render one or more templates and do
+not need to sink the acquired credentials, you can omit the `sink` stanza from
+the `auto_auth` stanza in the agent configuration.

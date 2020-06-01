@@ -53,7 +53,7 @@ and confirmed working, you will be ready to use Kerberos with Vault.
 
 - Enable Kerberos authentication in Vault:
 
-```text
+```shell-session
 $ vault auth enable \
     -passthrough-request-headers=Authorization \
     -allowed-response-headers=www-authenticate \
@@ -62,7 +62,7 @@ $ vault auth enable \
 
 - Create a `keytab` for the Kerberos plugin:
 
-```text
+```shell-session
 $ ktutil
 ktutil:  addent -password -p your_service_account@REALM.COM -e aes256-cts -k 1
 Password for your_service_account@REALM.COM:
@@ -79,7 +79,7 @@ Different encryption types can also be added to the `keytab`, for example `-e rc
 
 Then base64 encode it:
 
-```text
+```shell-session
 $ base64 vault.keytab > vault.keytab.base64
 ```
 
@@ -87,7 +87,7 @@ $ base64 vault.keytab > vault.keytab.base64
   entry name that will be used to verify inbound login
   requests:
 
-```text
+```shell-session
 $ vault write auth/kerberos/config \
     keytab=@vault.keytab.base64 \
     service_account="vault_svc"
@@ -99,7 +99,7 @@ $ vault write auth/kerberos/config \
   first tested your configuration from the Vault server using
   a tool like `ldapsearch`.
 
-```text
+```shell-session
 $ vault write auth/kerberos/config/ldap \
     binddn=vault_svc@MATRIX.LAN \
     bindpass=$VAULT_SVC_PASSWORD \
@@ -123,7 +123,7 @@ for further discussion of available parameters.
   and [LDAP Group -> Policy Mapping](/docs/auth/ldap#ldap-group-policy-mapping)
   for further discussion.
 
-```text
+```shell-session
 $ vault write auth/kerberos/groups/engineering-team \
     policies=engineers
 ```
@@ -137,7 +137,7 @@ group.
 From a client machine with a valid `krb5.conf` and `keytab`, perform a command
 like the following:
 
-```text
+```shell-session
 $ vault login -method=kerberos \
     username=grace \
     service=HTTP/my-service \
@@ -185,7 +185,7 @@ If possible, make it easy for someone else to reproduce the problem who
 is outside of your company. For instance, if you expect that you should
 be able to login using a command like:
 
-```text
+```shell-session
 $ vault login -method=kerberos \
     username=my-name \
     service=HTTP/my-service \
@@ -214,7 +214,7 @@ can be referenced as an example of a full Kerberos and LDAP environment.
 It runs through Docker and can be started through either one of the following
 commands:
 
-```text
+```shell-session
 $ make integration
 $ make dev-env
 ```

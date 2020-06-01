@@ -25,25 +25,25 @@ corresponds to the secrets engines in use.
 
 Persist data in the KV secrets engine:
 
-```text
+```shell-session
 $ vault write secret/my-secret foo=bar
 ```
 
 Create a new encryption key in the transit secrets engine:
 
-```text
+```shell-session
 $ vault write -f transit/keys/my-key
 ```
 
 Upload an AWS IAM policy from a file on disk:
 
-```text
+```shell-session
 $ vault write aws/roles/ops policy=@policy.json
 ```
 
 Configure access to Consul by providing an access token:
 
-```text
+```shell-session
 $ echo $MY_TOKEN | vault write consul/config/access token=-
 ```
 

@@ -28,7 +28,7 @@ unacceptable to you, you should use a different method.
 The default path is `/github`. If this auth method was enabled at a different
 path, specify `-path=/my-path` in the CLI.
 
-```text
+```shell-session
 $ vault login -method=github token="MY_TOKEN"
 ```
 
@@ -37,7 +37,7 @@ $ vault login -method=github token="MY_TOKEN"
 The default endpoint is `auth/github/login`. If this auth method was enabled
 at a different path, use that value instead of `github`.
 
-```shell
+```shell-session
 $ curl \
     --request POST \
     --data '{"token": "MY_TOKEN"}' \

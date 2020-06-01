@@ -21,20 +21,20 @@ and re-open their underlying file, which can assist with log rotation needs.
 
 Enable at the default path:
 
-```text
+```shell-session
 $ vault audit enable file file_path=/var/log/vault_audit.log
 ```
 
 Enable at a different path. It is possible to enable multiple copies of an audit
 device:
 
-```text
+```shell-session
 $ vault audit enable -path="vault_audit_1" file file_path=/home/user/vault_audit.log
 ```
 
 Enable logs on stdout. This is useful when running in a container:
 
-```text
+```shell-session
 $ vault audit enable file file_path=stdout
 ```
 

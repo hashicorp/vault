@@ -53,7 +53,7 @@ access the Kubernetes API.
 
 ### Sample Request
 
-```text
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -71,7 +71,7 @@ Returns the previously configured config, including credentials.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/kubernetes/config
@@ -126,7 +126,7 @@ entities attempting to login.
 
 ### Sample Request
 
-```text
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -148,7 +148,7 @@ Returns the previously registered role configuration.
 
 ### Sample Request
 
-```text
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/kubernetes/role/dev-role
@@ -180,7 +180,7 @@ Lists all the roles that are registered with the auth method.
 
 ### Sample Request
 
-```text
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -211,7 +211,7 @@ Deletes the previously registered role.
 
 ### Sample Request
 
-```text
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -247,7 +247,7 @@ entity and then authorizes the entity for the given role.
 
 ### Sample Request
 
-```text
+```shell-session
 $ curl \
     --request POST \
     --data @payload.json \

@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -24,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/random"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -2729,4 +2731,777 @@ func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+}
+
+func TestHandlePoliciesPasswordSet(t *testing.T) {
+	type testCase struct {
+		inputData *framework.FieldData
+
+		storage *logical.InmemStorage
+
+		expectedResp  *logical.Response
+		expectErr     bool
+		expectedStore map[string]*logical.StorageEntry
+	}
+
+	tests := map[string]testCase{
+		"missing policy name": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"policy": `length = 20
+							rule "charset" {
+								charset="abcdefghij"
+							}`,
+			}),
+
+			storage: new(logical.InmemStorage),
+
+			expectedResp:  nil,
+			expectErr:     true,
+			expectedStore: map[string]*logical.StorageEntry{},
+		},
+		"missing policy": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+			}),
+
+			storage: new(logical.InmemStorage),
+
+			expectedResp:  nil,
+			expectErr:     true,
+			expectedStore: map[string]*logical.StorageEntry{},
+		},
+		"garbage policy": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name":   "testpolicy",
+				"policy": "hasdukfhiuashdfoiasjdf",
+			}),
+
+			storage: new(logical.InmemStorage),
+
+			expectedResp:  nil,
+			expectErr:     true,
+			expectedStore: map[string]*logical.StorageEntry{},
+		},
+		"storage failure": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+				"policy": "length = 20\n" +
+					"rule \"charset\" {\n" +
+					"	charset=\"abcdefghij\"\n" +
+					"}",
+			}),
+
+			storage: new(logical.InmemStorage).FailPut(true),
+
+			expectedResp:  nil,
+			expectErr:     true,
+			expectedStore: map[string]*logical.StorageEntry{},
+		},
+		"impossible policy": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+				"policy": "length = 20\n" +
+					"rule \"charset\" {\n" +
+					"	charset=\"a\"\n" +
+					"	min-chars = 30\n" +
+					"}",
+			}),
+
+			storage: new(logical.InmemStorage),
+
+			expectedResp:  nil,
+			expectErr:     true,
+			expectedStore: map[string]*logical.StorageEntry{},
+		},
+		"not base64 encoded": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+				"policy": "length = 20\n" +
+					"rule \"charset\" {\n" +
+					"	charset=\"abcdefghij\"\n" +
+					"}",
+			}),
+
+			storage: new(logical.InmemStorage),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					logical.HTTPContentType: "application/json",
+					logical.HTTPStatusCode:  http.StatusNoContent,
+				},
+			},
+			expectErr: false,
+			expectedStore: makeStorageMap(storageEntry(t, "testpolicy", "length = 20\n"+
+				"rule \"charset\" {\n"+
+				"	charset=\"abcdefghij\"\n"+
+				"}")),
+		},
+		"base64 encoded": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+				"policy": base64Encode(
+					"length = 20\n" +
+						"rule \"charset\" {\n" +
+						"	charset=\"abcdefghij\"\n" +
+						"}"),
+			}),
+
+			storage: new(logical.InmemStorage),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					logical.HTTPContentType: "application/json",
+					logical.HTTPStatusCode:  http.StatusNoContent,
+				},
+			},
+			expectErr: false,
+			expectedStore: makeStorageMap(storageEntry(t, "testpolicy",
+				"length = 20\n"+
+					"rule \"charset\" {\n"+
+					"	charset=\"abcdefghij\"\n"+
+					"}")),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+
+			req := &logical.Request{
+				Storage: test.storage,
+			}
+
+			b := &SystemBackend{}
+
+			actualResp, err := b.handlePoliciesPasswordSet(ctx, req, test.inputData)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			if !reflect.DeepEqual(actualResp, test.expectedResp) {
+				t.Fatalf("Actual response: %#v\nExpected response: %#v", actualResp, test.expectedResp)
+			}
+
+			actualStore := LogicalToMap(t, ctx, test.storage)
+			if !reflect.DeepEqual(actualStore, test.expectedStore) {
+				t.Fatalf("Actual: %#v\nActual: %#v", dereferenceMap(actualStore), dereferenceMap(test.expectedStore))
+			}
+		})
+	}
+}
+
+func TestHandlePoliciesPasswordGet(t *testing.T) {
+	type testCase struct {
+		inputData *framework.FieldData
+
+		storage *logical.InmemStorage
+
+		expectedResp  *logical.Response
+		expectErr     bool
+		expectedStore map[string]*logical.StorageEntry
+	}
+
+	tests := map[string]testCase{
+		"missing policy name": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{}),
+
+			storage: new(logical.InmemStorage),
+
+			expectedResp:  nil,
+			expectErr:     true,
+			expectedStore: map[string]*logical.StorageEntry{},
+		},
+		"storage error": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+			}),
+
+			storage: new(logical.InmemStorage).FailGet(true),
+
+			expectedResp:  nil,
+			expectErr:     true,
+			expectedStore: map[string]*logical.StorageEntry{},
+		},
+		"missing value": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+			}),
+
+			storage: new(logical.InmemStorage),
+
+			expectedResp:  nil,
+			expectErr:     true,
+			expectedStore: map[string]*logical.StorageEntry{},
+		},
+		"good value": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+			}),
+
+			storage: makeStorage(t, storageEntry(t, "testpolicy",
+				"length = 20\n"+
+					"rule \"charset\" {\n"+
+					"	charset=\"abcdefghij\"\n"+
+					"}")),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"policy": "length = 20\n" +
+						"rule \"charset\" {\n" +
+						"	charset=\"abcdefghij\"\n" +
+						"}",
+				},
+			},
+			expectErr: false,
+			expectedStore: makeStorageMap(storageEntry(t, "testpolicy",
+				"length = 20\n"+
+					"rule \"charset\" {\n"+
+					"	charset=\"abcdefghij\"\n"+
+					"}")),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+			defer cancel()
+
+			req := &logical.Request{
+				Storage: test.storage,
+			}
+
+			b := &SystemBackend{}
+
+			actualResp, err := b.handlePoliciesPasswordGet(ctx, req, test.inputData)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			if !reflect.DeepEqual(actualResp, test.expectedResp) {
+				t.Fatalf("Actual response: %#v\nExpected response: %#v", actualResp, test.expectedResp)
+			}
+
+			actualStore := LogicalToMap(t, ctx, test.storage)
+			if !reflect.DeepEqual(actualStore, test.expectedStore) {
+				t.Fatalf("Actual: %#v\nActual: %#v", dereferenceMap(actualStore), dereferenceMap(test.expectedStore))
+			}
+		})
+	}
+}
+
+func TestHandlePoliciesPasswordDelete(t *testing.T) {
+	type testCase struct {
+		inputData *framework.FieldData
+
+		storage logical.Storage
+
+		expectedResp  *logical.Response
+		expectErr     bool
+		expectedStore map[string]*logical.StorageEntry
+	}
+
+	tests := map[string]testCase{
+		"missing policy name": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{}),
+
+			storage: new(logical.InmemStorage),
+
+			expectedResp:  nil,
+			expectErr:     true,
+			expectedStore: map[string]*logical.StorageEntry{},
+		},
+		"storage failure": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+			}),
+
+			storage: new(logical.InmemStorage).FailDelete(true),
+
+			expectedResp:  nil,
+			expectErr:     true,
+			expectedStore: map[string]*logical.StorageEntry{},
+		},
+		"successful delete": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+			}),
+
+			storage: makeStorage(t,
+				&logical.StorageEntry{
+					Key: getPasswordPolicyKey("testpolicy"),
+					Value: toJson(t,
+						passwordPolicyConfig{
+							HCLPolicy: "length = 18\n" +
+								"rule \"charset\" {\n" +
+								"	charset=\"ABCDEFGHIJ\"\n" +
+								"}",
+						}),
+				},
+				&logical.StorageEntry{
+					Key: getPasswordPolicyKey("unrelated_policy"),
+					Value: toJson(t,
+						passwordPolicyConfig{
+							HCLPolicy: "length = 20\n" +
+								"rule \"charset\" {\n" +
+								"	charset=\"abcdefghij\"\n" +
+								"}",
+						}),
+				},
+			),
+
+			expectedResp: nil,
+			expectErr:    false,
+			expectedStore: makeStorageMap(storageEntry(t, "unrelated_policy",
+				"length = 20\n"+
+					"rule \"charset\" {\n"+
+					"	charset=\"abcdefghij\"\n"+
+					"}")),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+			defer cancel()
+
+			req := &logical.Request{
+				Storage: test.storage,
+			}
+
+			b := &SystemBackend{}
+
+			actualResp, err := b.handlePoliciesPasswordDelete(ctx, req, test.inputData)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			if !reflect.DeepEqual(actualResp, test.expectedResp) {
+				t.Fatalf("Actual response: %#v\nExpected response: %#v", actualResp, test.expectedResp)
+			}
+
+			actualStore := LogicalToMap(t, ctx, test.storage)
+			if !reflect.DeepEqual(actualStore, test.expectedStore) {
+				t.Fatalf("Actual: %#v\nExpected: %#v", dereferenceMap(actualStore), dereferenceMap(test.expectedStore))
+			}
+		})
+	}
+}
+
+func TestHandlePoliciesPasswordGenerate(t *testing.T) {
+	t.Run("errors", func(t *testing.T) {
+		type testCase struct {
+			timeout   time.Duration
+			inputData *framework.FieldData
+
+			storage *logical.InmemStorage
+
+			expectedResp *logical.Response
+			expectErr    bool
+		}
+
+		tests := map[string]testCase{
+			"missing policy name": {
+				inputData: passwordPoliciesFieldData(map[string]interface{}{}),
+
+				storage: new(logical.InmemStorage),
+
+				expectedResp: nil,
+				expectErr:    true,
+			},
+			"storage failure": {
+				inputData: passwordPoliciesFieldData(map[string]interface{}{
+					"name": "testpolicy",
+				}),
+
+				storage: new(logical.InmemStorage).FailGet(true),
+
+				expectedResp: nil,
+				expectErr:    true,
+			},
+			"policy does not exist": {
+				inputData: passwordPoliciesFieldData(map[string]interface{}{
+					"name": "testpolicy",
+				}),
+
+				storage: new(logical.InmemStorage),
+
+				expectedResp: nil,
+				expectErr:    true,
+			},
+			"policy improperly saved": {
+				inputData: passwordPoliciesFieldData(map[string]interface{}{
+					"name": "testpolicy",
+				}),
+
+				storage: makeStorage(t, storageEntry(t, "testpolicy", "badpolicy")),
+
+				expectedResp: nil,
+				expectErr:    true,
+			},
+			"failed to generate": {
+				timeout: 0 * time.Second, // Timeout immediately
+				inputData: passwordPoliciesFieldData(map[string]interface{}{
+					"name": "testpolicy",
+				}),
+
+				storage: makeStorage(t, storageEntry(t, "testpolicy",
+					"length = 20\n"+
+						"rule \"charset\" {\n"+
+						"	charset=\"abcdefghij\"\n"+
+						"}")),
+
+				expectedResp: nil,
+				expectErr:    true,
+			},
+		}
+
+		for name, test := range tests {
+			t.Run(name, func(t *testing.T) {
+				ctx, cancel := context.WithTimeout(context.Background(), test.timeout)
+				defer cancel()
+
+				req := &logical.Request{
+					Storage: test.storage,
+				}
+
+				b := &SystemBackend{}
+
+				actualResp, err := b.handlePoliciesPasswordGenerate(ctx, req, test.inputData)
+				if test.expectErr && err == nil {
+					t.Fatalf("err expected, got nil")
+				}
+				if !test.expectErr && err != nil {
+					t.Fatalf("no error expected, got: %s", err)
+				}
+				if !reflect.DeepEqual(actualResp, test.expectedResp) {
+					t.Fatalf("Actual response: %#v\nExpected response: %#v", actualResp, test.expectedResp)
+				}
+			})
+		}
+	})
+
+	t.Run("success", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+
+		policyEntry := storageEntry(t, "testpolicy",
+			"length = 20\n"+
+				"rule \"charset\" {\n"+
+				"	charset=\"abcdefghij\"\n"+
+				"}")
+		storage := makeStorage(t, policyEntry)
+
+		inputData := passwordPoliciesFieldData(map[string]interface{}{
+			"name": "testpolicy",
+		})
+
+		expectedResp := &logical.Response{
+			Data: map[string]interface{}{
+				// Doesn't include the password as that's pulled out and compared separately
+			},
+		}
+
+		// Password assertions
+		expectedPassLen := 20
+		rules := []random.Rule{
+			random.CharsetRule{
+				Charset:  []rune("abcdefghij"),
+				MinChars: expectedPassLen,
+			},
+		}
+
+		// Run the test a bunch of times to help ensure we don't have flaky behavior
+		for i := 0; i < 1000; i++ {
+			req := &logical.Request{
+				Storage: storage,
+			}
+
+			b := &SystemBackend{}
+
+			actualResp, err := b.handlePoliciesPasswordGenerate(ctx, req, inputData)
+			if err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+
+			assert(t, actualResp != nil, "response is nil")
+			assert(t, actualResp.Data != nil, "expected data, got nil")
+			assertHasKey(t, actualResp.Data, "password", "password key not found in data")
+			assertIsString(t, actualResp.Data["password"], "password key should have a string value")
+			password := actualResp.Data["password"].(string)
+
+			// Delete the password so the rest of the response can be compared
+			delete(actualResp.Data, "password")
+			assert(t, reflect.DeepEqual(actualResp, expectedResp), "Actual response: %#v\nExpected response: %#v", actualResp, expectedResp)
+
+			// Check to make sure the password is correctly formatted
+			passwordLength := len([]rune(password))
+			if passwordLength != expectedPassLen {
+				t.Fatalf("password is %d characters but should be %d", passwordLength, expectedPassLen)
+			}
+
+			for _, rule := range rules {
+				if !rule.Pass([]rune(password)) {
+					t.Fatalf("password %s does not have the correct characters", password)
+				}
+			}
+		}
+	})
+}
+
+func assert(t *testing.T, pass bool, f string, vals ...interface{}) {
+	t.Helper()
+	if !pass {
+		t.Fatalf(f, vals...)
+	}
+}
+
+func assertHasKey(t *testing.T, m map[string]interface{}, key string, f string, vals ...interface{}) {
+	t.Helper()
+	_, exists := m[key]
+	if !exists {
+		t.Fatalf(f, vals...)
+	}
+}
+
+func assertIsString(t *testing.T, val interface{}, f string, vals ...interface{}) {
+	t.Helper()
+	_, ok := val.(string)
+	if !ok {
+		t.Fatalf(f, vals...)
+	}
+}
+
+func passwordPoliciesFieldData(raw map[string]interface{}) *framework.FieldData {
+	return &framework.FieldData{
+		Raw: raw,
+		Schema: map[string]*framework.FieldSchema{
+			"name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "The name of the password policy.",
+			},
+			"policy": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "The password policy",
+			},
+		},
+	}
+}
+
+func base64Encode(data string) string {
+	return base64.StdEncoding.EncodeToString([]byte(data))
+}
+
+func toJson(t *testing.T, val interface{}) []byte {
+	t.Helper()
+
+	b, err := jsonutil.EncodeJSON(val)
+	if err != nil {
+		t.Fatalf("Unable to marshal to JSON: %s", err)
+	}
+	return b
+}
+
+func storageEntry(t *testing.T, key string, policy string) *logical.StorageEntry {
+	return &logical.StorageEntry{
+		Key: getPasswordPolicyKey(key),
+		Value: toJson(t, passwordPolicyConfig{
+			HCLPolicy: policy,
+		}),
+	}
+}
+
+func makeStorageMap(entries ...*logical.StorageEntry) map[string]*logical.StorageEntry {
+	m := map[string]*logical.StorageEntry{}
+	for _, entry := range entries {
+		m[entry.Key] = entry
+	}
+	return m
+}
+
+func dereferenceMap(store map[string]*logical.StorageEntry) map[string]interface{} {
+	m := map[string]interface{}{}
+
+	for k, v := range store {
+		m[k] = map[string]string{
+			"Key":   v.Key,
+			"Value": string(v.Value),
+		}
+	}
+	return m
+}
+
+type walkFunc func(*logical.StorageEntry) error
+
+// WalkLogicalStorage applies the provided walkFunc against each entry in the logical storage.
+// This operates as a breadth first search.
+// TODO: Figure out a place for this to live permanently. This is generic and should be in a helper package somewhere.
+// At the time of writing, none of these locations work due to import cycles:
+// - vault/helper/testhelpers
+// - vault/helper/testhelpers/logical
+// - vault/helper/testhelpers/teststorage
+func WalkLogicalStorage(ctx context.Context, store logical.Storage, walker walkFunc) (err error) {
+	if store == nil {
+		return fmt.Errorf("no storage provided")
+	}
+	if walker == nil {
+		return fmt.Errorf("no walk function provided")
+	}
+
+	keys, err := store.List(ctx, "")
+	if err != nil {
+		return fmt.Errorf("unable to list root keys: %w", err)
+	}
+
+	// Non-recursive breadth-first search through all keys
+	for i := 0; i < len(keys); i++ {
+		key := keys[i]
+
+		entry, err := store.Get(ctx, key)
+		if err != nil {
+			return fmt.Errorf("unable to retrieve key at [%s]: %w", key, err)
+		}
+		if entry != nil {
+			err = walker(entry)
+			if err != nil {
+				return err
+			}
+		}
+
+		if strings.HasSuffix(key, "/") {
+			// Directory
+			subkeys, err := store.List(ctx, key)
+			if err != nil {
+				return fmt.Errorf("unable to list keys at [%s]: %w", key, err)
+			}
+
+			// Append the sub-keys to the keys slice so it searches into the sub-directory
+			for _, subkey := range subkeys {
+				// Avoids infinite loop if the subkey is empty which then repeats indefinitely
+				if subkey == "" {
+					continue
+				}
+				subkey = fmt.Sprintf("%s%s", key, subkey)
+				keys = append(keys, subkey)
+			}
+		}
+	}
+	return nil
+}
+
+// LogicalToMap retrieves all entries in the store and returns them as a map of key -> StorageEntry
+func LogicalToMap(t *testing.T, ctx context.Context, store logical.Storage) (data map[string]*logical.StorageEntry) {
+	data = map[string]*logical.StorageEntry{}
+	f := func(entry *logical.StorageEntry) error {
+		data[entry.Key] = entry
+		return nil
+	}
+
+	err := WalkLogicalStorage(ctx, store, f)
+	if err != nil {
+		t.Fatalf("Unable to walk the storage: %s", err)
+	}
+	return data
+}
+
+// Ensure the WalkLogicalStorage function works
+func TestWalkLogicalStorage(t *testing.T) {
+	type testCase struct {
+		entries []*logical.StorageEntry
+	}
+
+	tests := map[string]testCase{
+		"no entries": {
+			entries: []*logical.StorageEntry{},
+		},
+		"one entry": {
+			entries: []*logical.StorageEntry{
+				{
+					Key: "root",
+				},
+			},
+		},
+		"many entries": {
+			entries: []*logical.StorageEntry{
+				// Alphabetical, breadth-first
+				{Key: "bar"},
+				{Key: "foo"},
+				{Key: "bar/sub-bar1"},
+				{Key: "bar/sub-bar2"},
+				{Key: "foo/sub-foo1"},
+				{Key: "foo/sub-foo2"},
+				{Key: "foo/sub-foo3"},
+				{Key: "bar/sub-bar1/sub-sub-bar1"},
+				{Key: "bar/sub-bar1/sub-sub-bar2"},
+				{Key: "bar/sub-bar2/sub-sub-bar1"},
+				{Key: "foo/sub-foo1/sub-sub-foo1"},
+				{Key: "foo/sub-foo2/sub-sub-foo1"},
+				{Key: "foo/sub-foo3/sub-sub-foo1"},
+				{Key: "foo/sub-foo3/sub-sub-foo2"},
+			},
+		},
+		"sub key without root key": {
+			entries: []*logical.StorageEntry{
+				{Key: "foo/bar/baz"},
+			},
+		},
+		"key with trailing slash": {
+			entries: []*logical.StorageEntry{
+				{Key: "foo/"},
+			},
+		},
+		"double slash": {
+			entries: []*logical.StorageEntry{
+				{Key: "foo//"},
+				{Key: "foo//bar"},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			store := makeStorage(t, test.entries...)
+
+			actualEntries := []*logical.StorageEntry{}
+			f := func(entry *logical.StorageEntry) error {
+				actualEntries = append(actualEntries, entry)
+				return nil
+			}
+
+			err := WalkLogicalStorage(ctx, store, f)
+			if err != nil {
+				t.Fatalf("Failed to walk storage: %s", err)
+			}
+
+			if !reflect.DeepEqual(actualEntries, test.entries) {
+				t.Fatalf("Actual: %#v\nExpected: %#v", actualEntries, test.entries)
+			}
+		})
+	}
+}
+
+func makeStorage(t *testing.T, entries ...*logical.StorageEntry) *logical.InmemStorage {
+	t.Helper()
+
+	ctx := context.Background()
+
+	store := new(logical.InmemStorage)
+
+	for _, entry := range entries {
+		err := store.Put(ctx, entry)
+		if err != nil {
+			t.Fatalf("Unable to load test storage: %s", err)
+		}
+	}
+
+	return store
 }

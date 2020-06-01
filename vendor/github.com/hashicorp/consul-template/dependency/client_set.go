@@ -38,6 +38,7 @@ type vaultClient struct {
 // CreateConsulClientInput is used as input to the CreateConsulClient function.
 type CreateConsulClientInput struct {
 	Address      string
+	Namespace    string
 	Token        string
 	AuthEnabled  bool
 	AuthUsername string
@@ -93,6 +94,10 @@ func (c *ClientSet) CreateConsulClient(i *CreateConsulClientInput) error {
 
 	if i.Address != "" {
 		consulConfig.Address = i.Address
+	}
+
+	if i.Namespace != "" {
+		consulConfig.Namespace = i.Namespace
 	}
 
 	if i.Token != "" {

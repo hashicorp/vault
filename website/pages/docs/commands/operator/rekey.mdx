@@ -29,7 +29,7 @@ step-by-step instructions.
 
 Initialize a rekey:
 
-```text
+```shell-session
 $ vault operator rekey \
     -init \
     -key-shares=15 \
@@ -38,7 +38,7 @@ $ vault operator rekey \
 
 Initialize a rekey and activate the verification process:
 
-```text
+```shell-session
 $ vault operator rekey \
     -init \
     -key-shares=15 \
@@ -48,7 +48,7 @@ $ vault operator rekey \
 
 Rekey and encrypt the resulting unseal keys with PGP:
 
-```text
+```shell-session
 $ vault operator rekey \
     -init \
     -key-shares=3 \
@@ -58,7 +58,7 @@ $ vault operator rekey \
 
 Rekey an Auto Unseal vault and encrypt the resulting recovery keys with PGP:
 
-```text
+```shell-session
 $ vault operator rekey \
     -target=recovery \
     -init \
@@ -69,7 +69,7 @@ $ vault operator rekey \
 
 Store encrypted PGP keys in Vault's core:
 
-```text
+```shell-session
 $ vault operator rekey \
     -init \
     -pgp-keys="..." \
@@ -78,19 +78,19 @@ $ vault operator rekey \
 
 Retrieve backed-up unseal keys:
 
-```text
+```shell-session
 $ vault operator rekey -backup-retrieve
 ```
 
 Delete backed-up unseal keys:
 
-```text
+```shell-session
 $ vault operator rekey -backup-delete
 ```
 
 Perform the verification of the rekey using the verification nonce:
 
-```text
+```shell-session
 $ vault operator rekey -verify -nonce="..."
 ```
 

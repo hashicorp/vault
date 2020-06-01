@@ -38,7 +38,7 @@ the returned token is automatically unwrapped unless:
 
 By default, login uses a "token" method:
 
-```text
+```shell-session
 $ vault login s.3jnbMAKl1i4YS3QoKdbHzGXq
 Success! You are now authenticated. The token information displayed below
 is already stored in the token helper. You do NOT need to run "vault login"
@@ -57,7 +57,7 @@ policies             ["admin" "default"]
 
 To login with a different method, use `-method`:
 
-```text
+```shell-session
 $ vault login -method=userpass username=my-username
 Password (will be hidden):
 Success! You are now authenticated. The token information below is already
@@ -81,7 +81,7 @@ argument (`username=my-username`).
 
 If a github auth method was enabled at the path "github-prod":
 
-```text
+```shell-session
 $ vault login -method=github -path=github-prod
 Success! You are now authenticated. The token information below is already
 stored in the token helper. You do NOT need to run "vault login" again. Future

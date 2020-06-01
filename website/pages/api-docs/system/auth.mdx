@@ -21,7 +21,7 @@ This endpoint lists all enabled auth methods.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/auth
@@ -125,7 +125,7 @@ relevant functionality is only supported in Vault Enterprise:
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -151,7 +151,7 @@ This endpoint disables the auth method at the given auth path.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -177,7 +177,7 @@ without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/auth/my-auth/tune
@@ -256,7 +256,7 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
