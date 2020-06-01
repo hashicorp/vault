@@ -741,8 +741,6 @@ func (c *TestCluster) Start() {
 				go core.Server.Serve(ln)
 			}
 		}
-
-		//core.isRunning = true
 	}
 	if c.SetupFunc != nil {
 		c.SetupFunc()
@@ -875,7 +873,6 @@ func (c *TestClusterCore) stop() error {
 	}
 
 	c.Logger().Info("vault test core stopped")
-	//c.isRunning = false
 	return nil
 }
 
@@ -973,8 +970,6 @@ type TestClusterCore struct {
 	UnderlyingRawStorage physical.Backend
 	Barrier              SecurityBarrier
 	NodeID               string
-
-	//isRunning bool
 }
 
 type PhysicalBackendBundle struct {
@@ -1572,10 +1567,6 @@ func (cluster *TestCluster) StopCore(t testing.T, idx int) {
 	tcc := cluster.Cores[idx]
 	tcc.Logger().Info("stopping core", "core", idx)
 
-	//if !tcc.isRunning {
-	//	t.Fatalf("core is already stopped")
-	//}
-
 	// Stop listeners and call Shutdown()
 	if err := tcc.stop(); err != nil {
 		t.Fatal(err)
@@ -1595,10 +1586,6 @@ func (cluster *TestCluster) RestartCore(t testing.T, idx int, opts *TestClusterO
 	}
 	tcc := cluster.Cores[idx]
 	tcc.Logger().Info("restarting core", "core", idx)
-
-	//if tcc.isRunning {
-	//	t.Fatalf("cannot restart a running core")
-	//}
 
 	// Set up listeners
 	ln, err := net.ListenTCP("tcp", tcc.Address)
@@ -1645,139 +1632,7 @@ func (cluster *TestCluster) RestartCore(t testing.T, idx int, opts *TestClusterO
 	}
 
 	tcc.Logger().Info("restarted test core", "core", idx)
-	//tcc.isRunning = true
 }
-
-//type TestCluster struct {
-//	BarrierKeys        [][]byte
-//	RecoveryKeys       [][]byte
-//	CACert             *x509.Certificate
-//	CACertBytes        []byte
-//	CACertPEM          []byte
-//	CACertPEMFile      string
-//	CAKey              *ecdsa.PrivateKey
-//	CAKeyPEM           []byte
-//	Cores              []*TestClusterCore
-//	ID                 string
-//	RootToken          string
-//	RootCAs            *x509.CertPool
-//	TempDir            string
-//	ClientAuthRequired bool
-//	Logger             log.Logger
-//	CleanupFunc        func()
-//	SetupFunc          func()
-//
-//	cleanupFuncs []func()
-//	base         *CoreConfig
-//	priKey       interface{}
-//}
-
-//type TestClusterCore struct {
-//	*Core
-//	CoreConfig           *CoreConfig
-//	Client               *api.Client
-//	Handler              http.Handler
-//	Listeners            []*TestListener
-//	ReloadFuncs          *map[string][]reloadutil.ReloadFunc
-//	ReloadFuncsLock      *sync.RWMutex
-//	Server               *http.Server
-//	ServerCert           *x509.Certificate
-//	ServerCertBytes      []byte
-//	ServerCertPEM        []byte
-//	ServerKey            *ecdsa.PrivateKey
-//	ServerKeyPEM         []byte
-//	TLSConfig            *tls.Config
-//	UnderlyingStorage    physical.Backend
-//	UnderlyingRawStorage physical.Backend
-//	Barrier              SecurityBarrier
-//	NodeID               string
-//
-//	isRunning bool
-//}
-
-//	// Create cores
-//	cleanupFuncs := []func(){}
-//	cores := []*Core{}
-//	coreConfigs := []*CoreConfig{}
-//
-//	for i := 0; i < numCores; i++ {
-//		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, listeners[i], pubKey)
-//
-//		cleanupFuncs = append(cleanupFuncs, cleanup)
-//		cores = append(cores, c)
-//		coreConfigs = append(coreConfigs, &localConfig)
-//
-//		if handler != nil {
-//			handlers[i] = handler
-//			servers[i].Handler = handlers[i]
-//		}
-//	}
-//
-//	// Clustering setup
-//	for i := 0; i < numCores; i++ {
-//		testCluster.setupClusterListener(t, i, cores[i], coreConfigs[i], opts, listeners[i], handlers[i])
-//	}
-//
-//	// Initialize cores
-//	if opts == nil || !opts.SkipInit {
-//		testCluster.initCores(t, opts, cores, handlers, addAuditBackend)
-//	}
-//
-//	// Create TestClusterCores
-//	var ret []*TestClusterCore
-//	for i := 0; i < numCores; i++ {
-//
-//		client := testCluster.getAPIClient(t, opts, listeners[i][0].Address.Port, tlsConfigs[i])
-//
-//		tcc := &TestClusterCore{
-//			Core:                 cores[i],
-//			CoreConfig:           coreConfigs[i],
-//			ServerKey:            certInfoSlice[i].key,
-//			ServerKeyPEM:         certInfoSlice[i].keyPEM,
-//			ServerCert:           certInfoSlice[i].cert,
-//			ServerCertBytes:      certInfoSlice[i].certBytes,
-//			ServerCertPEM:        certInfoSlice[i].certPEM,
-//			Listeners:            listeners[i],
-//			Handler:              handlers[i],
-//			Server:               servers[i],
-//			TLSConfig:            tlsConfigs[i],
-//			Client:               client,
-//			Barrier:              cores[i].barrier,
-//			NodeID:               fmt.Sprintf("core-%d", i),
-//			UnderlyingRawStorage: coreConfigs[i].Physical,
-//		}
-//		tcc.ReloadFuncs = &cores[i].reloadFuncs
-//		tcc.ReloadFuncsLock = &cores[i].reloadFuncsLock
-//		tcc.ReloadFuncsLock.Lock()
-//		(*tcc.ReloadFuncs)["listener|tcp"] = []reloadutil.ReloadFunc{certGetters[i].Reload}
-//		tcc.ReloadFuncsLock.Unlock()
-//
-//		testAdjustTestCore(base, tcc)
-//
-//		ret = append(ret, tcc)
-//	}
-//
-//	testCluster.Cores = ret
-//
-//	for _, tcc := range testCluster.Cores {
-//		testExtraTestCoreSetup(t, priKey, tcc)
-//	}
-//
-//	// Cleanup
-//	testCluster.CleanupFunc = func() {
-//		for _, c := range cleanupFuncs {
-//			if c != nil {
-//				c()
-//			}
-//		}
-//		if l, ok := testCluster.Logger.(*TestLogger); ok {
-//			if t.Failed() {
-//				_ = l.File.Close()
-//			} else {
-//				_ = os.Remove(l.Path)
-//			}
-//		}
-//	}
 
 func (testCluster *TestCluster) newCore(
 	t testing.T, idx int, coreConfig *CoreConfig,
