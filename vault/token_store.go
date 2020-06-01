@@ -2723,7 +2723,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		[]string{"token", "creation"},
 		1,
 		[]metrics.Label{
-			{"namespace", ns.ID},
+			metricsutil.NamespaceLabel(ns),
 			{"auth_method", "token"},
 			{"mount_point", req.MountPoint}, // path, not accessor
 			{"creation_ttl", ttl_label},

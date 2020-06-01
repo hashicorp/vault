@@ -151,7 +151,7 @@ DONELISTHANDLING:
 		[]string{"token", "creation"},
 		1,
 		[]metrics.Label{
-			{"namespace", ns.ID},
+			metricsutil.NamespaceLabel(ns),
 			// The type of the secret engine is not all that useful;
 			// we could use "token" but let's be more descriptive,
 			// even if it's not a real auth method.

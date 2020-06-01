@@ -1175,7 +1175,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			[]string{"token", "creation"},
 			1,
 			[]metrics.Label{
-				{"namespace", ns.ID},
+				metricsutil.NamespaceLabel(ns),
 				{"auth_method", req.MountType},
 				{"mount_point", req.MountPoint},
 				{"creation_ttl", ttl_label},
