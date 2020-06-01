@@ -1487,16 +1487,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		testCluster.setupClusterListener(t, i, cores[i], coreConfigs[i], opts, listeners[i], handlers[i])
 	}
 
-	// Initialize cores
-	if opts == nil || !opts.SkipInit {
-		testCluster.initCores(t, opts, cores, handlers, addAuditBackend)
-	}
-
 	// Create TestClusterCores
 	var ret []*TestClusterCore
 	for i := 0; i < numCores; i++ {
-
-		client := testCluster.getAPIClient(t, opts, listeners[i][0].Address.Port, tlsConfigs[i])
 
 		tcc := &TestClusterCore{
 			Core:                 cores[i],
@@ -1511,7 +1504,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Handler:              handlers[i],
 			Server:               servers[i],
 			TLSConfig:            tlsConfigs[i],
-			Client:               client,
 			Barrier:              cores[i].barrier,
 			NodeID:               fmt.Sprintf("core-%d", i),
 			UnderlyingRawStorage: coreConfigs[i].Physical,
@@ -1526,9 +1518,20 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 		ret = append(ret, tcc)
 	}
-
 	testCluster.Cores = ret
 
+	// Initialize cores
+	if opts == nil || !opts.SkipInit {
+		testCluster.initCores(t, opts, addAuditBackend)
+	}
+
+	// Assign clients
+	for i := 0; i < numCores; i++ {
+		testCluster.Cores[i].Client =
+			testCluster.getAPIClient(t, opts, listeners[i][0].Address.Port, tlsConfigs[i])
+	}
+
+	// Extra Setup
 	for _, tcc := range testCluster.Cores {
 		testExtraTestCoreSetup(t, priKey, tcc)
 	}
@@ -1909,51 +1912,47 @@ func (testCluster *TestCluster) setupClusterListener(
 	core.SetClusterHandler(handler)
 }
 
-func (testCluster *TestCluster) initCores(
-	t testing.T,
-	opts *TestClusterOptions,
-	cores []*Core,
-	handlers []http.Handler,
-	addAuditBackend bool,
-) {
+func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAuditBackend bool) {
 
-	bKeys, rKeys, root := TestCoreInitClusterWrapperSetup(t, cores[0], handlers[0])
+	leader := tc.Cores[0]
+
+	bKeys, rKeys, root := TestCoreInitClusterWrapperSetup(t, leader.Core, leader.Handler)
 	barrierKeys, _ := copystructure.Copy(bKeys)
-	testCluster.BarrierKeys = barrierKeys.([][]byte)
+	tc.BarrierKeys = barrierKeys.([][]byte)
 	recoveryKeys, _ := copystructure.Copy(rKeys)
-	testCluster.RecoveryKeys = recoveryKeys.([][]byte)
-	testCluster.RootToken = root
+	tc.RecoveryKeys = recoveryKeys.([][]byte)
+	tc.RootToken = root
 
 	// Write root token and barrier keys
-	err := ioutil.WriteFile(filepath.Join(testCluster.TempDir, "root_token"), []byte(root), 0755)
+	err := ioutil.WriteFile(filepath.Join(tc.TempDir, "root_token"), []byte(root), 0755)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var buf bytes.Buffer
-	for i, key := range testCluster.BarrierKeys {
+	for i, key := range tc.BarrierKeys {
 		buf.Write([]byte(base64.StdEncoding.EncodeToString(key)))
-		if i < len(testCluster.BarrierKeys)-1 {
+		if i < len(tc.BarrierKeys)-1 {
 			buf.WriteRune('\n')
 		}
 	}
-	err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "barrier_keys"), buf.Bytes(), 0755)
+	err = ioutil.WriteFile(filepath.Join(tc.TempDir, "barrier_keys"), buf.Bytes(), 0755)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i, key := range testCluster.RecoveryKeys {
+	for i, key := range tc.RecoveryKeys {
 		buf.Write([]byte(base64.StdEncoding.EncodeToString(key)))
-		if i < len(testCluster.RecoveryKeys)-1 {
+		if i < len(tc.RecoveryKeys)-1 {
 			buf.WriteRune('\n')
 		}
 	}
-	err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "recovery_keys"), buf.Bytes(), 0755)
+	err = ioutil.WriteFile(filepath.Join(tc.TempDir, "recovery_keys"), buf.Bytes(), 0755)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Unseal first core
 	for _, key := range bKeys {
-		if _, err := cores[0].Unseal(TestKeyCopy(key)); err != nil {
+		if _, err := leader.Core.Unseal(TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
 		}
 	}
@@ -1962,22 +1961,22 @@ func (testCluster *TestCluster) initCores(
 
 	// If stored keys is supported, the above will no no-op, so trigger auto-unseal
 	// using stored keys to try to unseal
-	if err := cores[0].UnsealWithStoredKeys(ctx); err != nil {
+	if err := leader.Core.UnsealWithStoredKeys(ctx); err != nil {
 		t.Fatal(err)
 	}
 
 	// Verify unsealed
-	if cores[0].Sealed() {
+	if leader.Core.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 
-	TestWaitActive(t, cores[0])
+	TestWaitActive(t, leader.Core)
 
 	// Existing tests rely on this; we can make a toggle to disable it
 	// later if we want
 	kvReq := &logical.Request{
 		Operation:   logical.UpdateOperation,
-		ClientToken: testCluster.RootToken,
+		ClientToken: tc.RootToken,
 		Path:        "sys/mounts/secret",
 		Data: map[string]interface{}{
 			"type":        "kv",
@@ -1988,7 +1987,7 @@ func (testCluster *TestCluster) initCores(
 			},
 		},
 	}
-	resp, err := cores[0].HandleRequest(namespace.RootContext(ctx), kvReq)
+	resp, err := leader.Core.HandleRequest(namespace.RootContext(ctx), kvReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1996,25 +1995,25 @@ func (testCluster *TestCluster) initCores(
 		t.Fatal(err)
 	}
 
-	cfg, err := cores[0].seal.BarrierConfig(ctx)
+	cfg, err := leader.Core.seal.BarrierConfig(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Unseal other cores unless otherwise specified
-	numCores := len(cores)
+	numCores := len(tc.Cores)
 	if (opts == nil || !opts.KeepStandbysSealed) && numCores > 1 {
 		for i := 1; i < numCores; i++ {
-			cores[i].seal.SetCachedBarrierConfig(cfg)
+			tc.Cores[i].Core.seal.SetCachedBarrierConfig(cfg)
 			for _, key := range bKeys {
-				if _, err := cores[i].Unseal(TestKeyCopy(key)); err != nil {
+				if _, err := tc.Cores[i].Core.Unseal(TestKeyCopy(key)); err != nil {
 					t.Fatalf("unseal err: %s", err)
 				}
 			}
 
 			// If stored keys is supported, the above will no no-op, so trigger auto-unseal
 			// using stored keys
-			if err := cores[i].UnsealWithStoredKeys(ctx); err != nil {
+			if err := tc.Cores[i].Core.UnsealWithStoredKeys(ctx); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -2025,7 +2024,7 @@ func (testCluster *TestCluster) initCores(
 		// Ensure cluster connection info is populated.
 		// Other cores should not come up as leaders.
 		for i := 1; i < numCores; i++ {
-			isLeader, _, _, err := cores[i].Leader()
+			isLeader, _, _, err := tc.Cores[i].Core.Leader()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -2038,23 +2037,23 @@ func (testCluster *TestCluster) initCores(
 	//
 	// Set test cluster core(s) and test cluster
 	//
-	cluster, err := cores[0].Cluster(context.Background())
+	cluster, err := leader.Core.Cluster(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	testCluster.ID = cluster.ID
+	tc.ID = cluster.ID
 
 	if addAuditBackend {
 		// Enable auditing.
 		auditReq := &logical.Request{
 			Operation:   logical.UpdateOperation,
-			ClientToken: testCluster.RootToken,
+			ClientToken: tc.RootToken,
 			Path:        "sys/audit/noop",
 			Data: map[string]interface{}{
 				"type": "noop",
 			},
 		}
-		resp, err = cores[0].HandleRequest(namespace.RootContext(ctx), auditReq)
+		resp, err = leader.Core.HandleRequest(namespace.RootContext(ctx), auditReq)
 		if err != nil {
 			t.Fatal(err)
 		}
