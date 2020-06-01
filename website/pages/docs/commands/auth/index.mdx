@@ -24,14 +24,14 @@ interacting with the auth methods themselves, not authenticating to Vault.
 
 Enable an auth method:
 
-```text
+```shell-session
 $ vault auth enable userpass
 Success! Enabled userpass auth method at: userpass/
 ```
 
 List all auth methods:
 
-```text
+```shell-session
 $ vault auth list
 Path         Type        Description
 ----         ----        -----------
@@ -41,7 +41,7 @@ userpass/    userpass    n/a
 
 Get help about how to authenticate to a particular auth method:
 
-```text
+```shell-session
 $ vault auth help userpass/
 Usage: vault login -method=userpass [CONFIG K=V...]
 # ...
@@ -49,14 +49,14 @@ Usage: vault login -method=userpass [CONFIG K=V...]
 
 Disable an auth method:
 
-```text
+```shell-session
 $ vault auth disable userpass/
 Success! Disabled the auth method (if it existed) at: userpass/
 ```
 
 Tune an auth method:
 
-```text
+```shell-session
 $ vault auth tune -max-lease-ttl=30m userpass/
 Success! Tuned the auth method at: userpass/
 ```

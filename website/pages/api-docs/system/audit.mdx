@@ -25,7 +25,7 @@ available audit devices).
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/audit
@@ -89,7 +89,7 @@ relevant functionality is only supported in Vault Enterprise:
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
@@ -115,7 +115,7 @@ This endpoint disables the audit device at the given path.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \

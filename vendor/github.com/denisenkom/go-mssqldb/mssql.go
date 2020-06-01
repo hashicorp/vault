@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/denisenkom/go-mssqldb/internal/querytext"
 )
 
 // ReturnStatus may be used to return the return value from a proc.
@@ -351,7 +353,6 @@ func (d *Driver) connect(ctx context.Context, c *Connector, params connectParams
 		processQueryText: d.processQueryText,
 		connectionGood:   true,
 	}
-	conn.sess.log = d.log
 
 	return conn, nil
 }
@@ -386,7 +387,7 @@ func (c *Conn) Prepare(query string) (driver.Stmt, error) {
 func (c *Conn) prepareContext(ctx context.Context, query string) (*Stmt, error) {
 	paramCount := -1
 	if c.processQueryText {
-		query, paramCount = parseParams(query)
+		query, paramCount = querytext.ParseParams(query)
 	}
 	return &Stmt{c, query, paramCount, nil}, nil
 }
@@ -396,7 +397,10 @@ func (s *Stmt) Close() error {
 }
 
 func (s *Stmt) SetQueryNotification(id, options string, timeout time.Duration) {
-	to := uint32(timeout / time.Second)
+	// 2.2.5.3.1 Query Notifications Header
+	// https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-tds/e168d373-a7b7-41aa-b6ca-25985466a7e0
+	// Timeout in milliseconds in TDS protocol.
+	to := uint32(timeout / time.Millisecond)
 	if to < 1 {
 		to = 1
 	}
@@ -456,13 +460,13 @@ func (s *Stmt) sendQuery(args []namedValue) (err error) {
 		var params []param
 		if isProc(s.query) {
 			proc.name = s.query
-			params, _, err = s.makeRPCParams(args, 0)
+			params, _, err = s.makeRPCParams(args, true)
 			if err != nil {
 				return
 			}
 		} else {
 			var decls []string
-			params, decls, err = s.makeRPCParams(args, 2)
+			params, decls, err = s.makeRPCParams(args, false)
 			if err != nil {
 				return
 			}
@@ -534,8 +538,12 @@ func isProc(s string) bool {
 	return true
 }
 
-func (s *Stmt) makeRPCParams(args []namedValue, offset int) ([]param, []string, error) {
+func (s *Stmt) makeRPCParams(args []namedValue, isProc bool) ([]param, []string, error) {
 	var err error
+	var offset int
+	if !isProc {
+		offset = 2
+	}
 	params := make([]param, len(args)+offset)
 	decls := make([]string, len(args))
 	for i, val := range args {
@@ -546,7 +554,7 @@ func (s *Stmt) makeRPCParams(args []namedValue, offset int) ([]param, []string, 
 		var name string
 		if len(val.Name) > 0 {
 			name = "@" + val.Name
-		} else {
+		} else if !isProc {
 			name = fmt.Sprintf("@p%d", val.Ordinal)
 		}
 		params[i+offset].Name = name
@@ -608,11 +616,13 @@ loop:
 			break loop
 		case doneStruct:
 			if token.isError() {
+				cancel()
 				return nil, s.c.checkBadConn(token.getError())
 			}
 		case ReturnStatus:
 			s.c.setReturnStatus(token)
 		case error:
+			cancel()
 			return nil, s.c.checkBadConn(token)
 		}
 	}
@@ -711,6 +721,8 @@ func (rc *Rows) Next(dest []driver.Value) error {
 			if tokdata.isError() {
 				return rc.stmt.c.checkBadConn(tokdata.getError())
 			}
+		case ReturnStatus:
+			rc.stmt.c.setReturnStatus(tokdata)
 		case error:
 			return rc.stmt.c.checkBadConn(tokdata)
 		}
@@ -867,29 +879,6 @@ type Result struct {
 
 func (r *Result) RowsAffected() (int64, error) {
 	return r.rowsAffected, nil
-}
-
-func (r *Result) LastInsertId() (int64, error) {
-	s, err := r.c.Prepare("select cast(@@identity as bigint)")
-	if err != nil {
-		return 0, err
-	}
-	defer s.Close()
-	rows, err := s.Query(nil)
-	if err != nil {
-		return 0, err
-	}
-	defer rows.Close()
-	dest := make([]driver.Value, 1)
-	err = rows.Next(dest)
-	if err != nil {
-		return 0, err
-	}
-	if dest[0] == nil {
-		return -1, errors.New("There is no generated identity value")
-	}
-	lastInsertId := dest[0].(int64)
-	return lastInsertId, nil
 }
 
 var _ driver.Pinger = &Conn{}

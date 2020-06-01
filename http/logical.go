@@ -86,6 +86,9 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 			responseWriter = w
 		case path == "sys/storage/raft/snapshot":
 			responseWriter = w
+		case path == "sys/monitor":
+			passHTTPReq = true
+			responseWriter = w
 		}
 
 	case "POST", "PUT":
@@ -142,13 +145,13 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		return nil, nil, http.StatusMethodNotAllowed, nil
 	}
 
-	request_id, err := uuid.GenerateUUID()
+	requestId, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("failed to generate identifier for the request: {{err}}", err)
 	}
 
 	req := &logical.Request{
-		ID:         request_id,
+		ID:         requestId,
 		Operation:  op,
 		Path:       path,
 		Data:       data,

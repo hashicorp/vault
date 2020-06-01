@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -489,10 +490,6 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 	defer os.Remove(roleIDPath)
 	defer os.Remove(secretIDPath)
 
-	// Get a temp file path we can use for the sink
-	sinkPath := makeTempFile(t, "sink.txt", "")
-	defer os.Remove(sinkPath)
-
 	// Create a config file
 	config := `
 auto_auth {
@@ -530,7 +527,7 @@ listener "tcp" {
     require_request_header = true
 }
 `
-	config = fmt.Sprintf(config, roleIDPath, secretIDPath, sinkPath)
+	config = fmt.Sprintf(config, roleIDPath, secretIDPath)
 	configPath := makeTempFile(t, "config.hcl", config)
 	defer os.Remove(configPath)
 
@@ -743,10 +740,6 @@ func TestAgent_Template_Basic(t *testing.T) {
 	}`)
 	request(t, serverClient, req, 200)
 
-	// Get a temp file path we can use for the sink
-	sinkPath := makeTempFile(t, "sink.txt", "")
-	defer os.Remove(sinkPath)
-
 	// make a temp directory to hold renders. Each test will create a temp dir
 	// inside this one
 	tmpDirRoot, err := ioutil.TempDir("", "agent-test-renders")
@@ -760,10 +753,6 @@ func TestAgent_Template_Basic(t *testing.T) {
 		templateCount int
 		exitAfterAuth bool
 	}{
-		"zero": {},
-		"zero-with-exit": {
-			exitAfterAuth: true,
-		},
 		"one": {
 			templateCount: 1,
 		},
@@ -782,17 +771,20 @@ func TestAgent_Template_Basic(t *testing.T) {
 
 	for tcname, tc := range testCases {
 		t.Run(tcname, func(t *testing.T) {
-			// make some template files
-			var templatePaths []string
-			for i := 0; i < tc.templateCount; i++ {
-				path := makeTempFile(t, fmt.Sprintf("render_%d", i), templateContents(i))
-				templatePaths = append(templatePaths, path)
-			}
-
 			// create temp dir for this test run
 			tmpDir, err := ioutil.TempDir(tmpDirRoot, tcname)
 			if err != nil {
 				t.Fatal(err)
+			}
+
+			// make some template files
+			var templatePaths []string
+			for i := 0; i < tc.templateCount; i++ {
+				fileName := filepath.Join(tmpDir, fmt.Sprintf("render_%d.tmpl", i))
+				if err := ioutil.WriteFile(fileName, []byte(templateContents(i)), 0600); err != nil {
+					t.Fatal(err)
+				}
+				templatePaths = append(templatePaths, fileName)
 			}
 
 			// build up the template config to be added to the Agent config.hcl file
@@ -819,12 +811,6 @@ auto_auth {
 						remove_secret_id_file_after_reading = false
         }
     }
-
-    sink "file" {
-        config = {
-            path = "%s"
-        }
-    }
 }
 
 %s
@@ -841,7 +827,7 @@ auto_auth {
 			// flatten the template configs
 			templateConfig := strings.Join(templateConfigStrings, " ")
 
-			config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, sinkPath, templateConfig, exitAfterAuth)
+			config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, templateConfig, exitAfterAuth)
 			configPath := makeTempFile(t, "config.hcl", config)
 			defer os.Remove(configPath)
 
@@ -872,50 +858,85 @@ auto_auth {
 			// end and no longer be running. If we are not using exit_after_auth, then
 			// we need to shut down the command
 			if !tc.exitAfterAuth {
+				defer func() {
+					cmd.ShutdownCh <- struct{}{}
+					wg.Wait()
+				}()
+			}
+
+			verify := func(suffix string) {
+				t.Helper()
 				// We need to poll for a bit to give Agent time to render the
 				// templates. Without this this, the test will attempt to read
 				// the temp dir before Agent has had time to render and will
 				// likely fail the test
 				tick := time.Tick(1 * time.Second)
-				timeout := time.After(30 * time.Second)
+				timeout := time.After(10 * time.Second)
+				var err error
 				for {
 					select {
 					case <-timeout:
-						t.Error("timed out waiting for templates to render")
+						t.Fatalf("timed out waiting for templates to render, last error: %v", err)
 					case <-tick:
 					}
 					// Check for files rendered in the directory and break
 					// early for shutdown if we do have all the files
 					// rendered
-					if testListFiles(t, tmpDir) == len(templatePaths) {
-						break
+
+					//----------------------------------------------------
+					// Perform the tests
+					//----------------------------------------------------
+
+					if numFiles := testListFiles(t, tmpDir, ".json"); numFiles != len(templatePaths) {
+						err = fmt.Errorf("expected (%d) templates, got (%d)", len(templatePaths), numFiles)
+						continue
 					}
+
+					for i := range templatePaths {
+						fileName := filepath.Join(tmpDir, fmt.Sprintf("render_%d.json", i))
+						var c []byte
+						c, err = ioutil.ReadFile(fileName)
+						if err != nil {
+							continue
+						}
+						if string(c) != templateRendered(i)+suffix {
+							err = fmt.Errorf("expected='%s', got='%s'", templateRendered(i)+suffix, string(c))
+							continue
+						}
+					}
+					return
 				}
-
-				cmd.ShutdownCh <- struct{}{}
 			}
-			wg.Wait()
 
-			//----------------------------------------------------
-			// Perform the tests
-			//----------------------------------------------------
+			verify("")
 
-			if numFiles := testListFiles(t, tmpDir); numFiles != len(templatePaths) {
-				t.Fatalf("expected (%d) templates, got (%d)", len(templatePaths), numFiles)
+			for i := 0; i < tc.templateCount; i++ {
+				fileName := filepath.Join(tmpDir, fmt.Sprintf("render_%d.tmpl", i))
+				if err := ioutil.WriteFile(fileName, []byte(templateContents(i)+"{}"), 0600); err != nil {
+					t.Fatal(err)
+				}
 			}
+
+			verify("{}")
 		})
 	}
 }
 
-func testListFiles(t *testing.T, dir string) int {
+func testListFiles(t *testing.T, dir, extension string) int {
 	t.Helper()
 
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
+	var count int
+	for _, f := range files {
+		if filepath.Ext(f.Name()) == extension {
+			count++
+		}
+	}
 
-	return len(files)
+	return count
 }
 
 // TestAgent_Template_ExitCounter tests that Vault Agent correctly renders all
@@ -1032,10 +1053,6 @@ func TestAgent_Template_ExitCounter(t *testing.T) {
 	}`)
 	request(t, serverClient, req, 200)
 
-	// Get a temp file path we can use for the sink
-	sinkPath := makeTempFile(t, "sink.txt", "")
-	defer os.Remove(sinkPath)
-
 	// make a temp directory to hold renders. Each test will create a temp dir
 	// inside this one
 	tmpDirRoot, err := ioutil.TempDir("", "agent-test-renders")
@@ -1066,12 +1083,6 @@ auto_auth {
 						remove_secret_id_file_after_reading = false
         }
     }
-
-    sink "file" {
-        config = {
-            path = "%s"
-        }
-    }
 }
 
 template {
@@ -1100,7 +1111,7 @@ EOF
 exit_after_auth = true
 `
 
-	config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, sinkPath, tmpDir, tmpDir, tmpDir)
+	config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, tmpDir, tmpDir, tmpDir)
 	configPath := makeTempFile(t, "config.hcl", config)
 	defer os.Remove(configPath)
 
@@ -1145,24 +1156,22 @@ exit_after_auth = true
 
 // a slice of template options
 var templates = []string{
-	`{{ with secret "secret/otherapp"}}
-{
-{{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
-{{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}
-{{ .Data.data.cert }}
+	`{{- with secret "secret/otherapp"}}{"secret": "other",
+{{- if .Data.data.username}}"username":"{{ .Data.data.username}}",{{- end }}
+{{- if .Data.data.password }}"password":"{{ .Data.data.password }}"{{- end }}}
+{{- end }}`,
+	`{{- with secret "secret/myapp"}}{"secret": "myapp",
+{{- if .Data.data.username}}"username":"{{ .Data.data.username}}",{{- end }}
+{{- if .Data.data.password }}"password":"{{ .Data.data.password }}"{{- end }}}
+{{- end }}`,
+	`{{- with secret "secret/myapp"}}{"secret": "myapp",
+{{- if .Data.data.password }}"password":"{{ .Data.data.password }}"{{- end }}}
+{{- end }}`,
 }
-{{ end }}`,
-	`{{ with secret "secret/myapp"}}
-{
-{{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
-{{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}
-}
-{{ end }}`,
-	`{{ with secret "secret/myapp"}}
-{
-{{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}
-}
-{{ end }}`,
+var rendered = []string{
+	`{"secret": "other","username":"barstuff","password":"zap"}`,
+	`{"secret": "myapp","username":"bar","password":"zap"}`,
+	`{"secret": "myapp","password":"zap"}`,
 }
 
 // templateContents returns a template from the above templates slice. Each
@@ -1172,6 +1181,10 @@ var templates = []string{
 func templateContents(seed int) string {
 	index := seed % len(templates)
 	return templates[index]
+}
+func templateRendered(seed int) string {
+	index := seed % len(templates)
+	return rendered[index]
 }
 
 var templateConfigString = `

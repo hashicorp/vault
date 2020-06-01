@@ -85,7 +85,7 @@ GDPR, from being replicated across the regions.
 ~> **NOTE:** Ensure that GDPR data is segmented by secret mount and blacklist
 the movement of those secret mounts to non-GDPR territories.
 
-### <a name="step1"></a>Step 1: Segment GDPR and non-GDPR secret engines
+### Step 1: Segment GDPR and non-GDPR secret engines ((#step1))
 
 In the EU cluster (primary cluster), enable key/value secret engines:
 
@@ -131,7 +131,7 @@ Select **Enable new engine** and enter corresponding parameter values:
 
 Click **Enable Engine** to complete.
 
-### <a name="step2"></a>Step 2: Enable performance replication with mount filter
+### Step 2: Enable performance replication with mount filter ((#step2))
 
 #### CLI command
 
@@ -289,7 +289,7 @@ the _source of truth_ and passes token requests to the primary.
 Restart the secondary vault server (e.g. `https://us-central.compute.com:8201`)
 and unseal it with the primary cluster's unseal key.
 
-```plaintext
+```shell-session
 $ vault operator unseal
 Unseal Key (will be hidden): <primary_cluster_unseal_key>
 ```
@@ -316,11 +316,11 @@ tokens are only used for just enough initial setup or in emergencies.
 
 Log into the **secondary** cluster using the enabled auth method.
 
-```plaintext
+```shell-session
 $ vault login -method=userpass username=james password="passw0rd"
 ```
 
-### <a name="step3"></a>Step 3: Verify the replication mount filter
+### Step 3: Verify the replication mount filter ((#step3))
 
 Once the replication completes, verify that the secrets stored in the
 `EU_GDPR_data` never get replicated to the US cluster.
@@ -452,7 +452,7 @@ the `apikey` under `US_NON_GDPR_data/secret`.
 The **EU_GDPR_data** data is not replicated, so you won't be able to see the
 secrets.
 
-### <a name="step4"></a>Step 4: Enable a local secret engine
+### Step 4: Enable a local secret engine ((#step4))
 
 When replication is enabled, you can mark the secrets engine local only. Local
 secret engines are not replicated or removed by replication.
@@ -464,7 +464,7 @@ Login to the **secondary** cluster and enable key/value secret engine at
 
 Pass the `-local` flag:
 
-```plaintext
+```shell-session
 $ vault secrets enable -local -path=US_ONLY_data kv-v2
 ```
 
@@ -472,7 +472,7 @@ $ vault secrets enable -local -path=US_ONLY_data kv-v2
 
 Pass the `local` parameter in the API request:
 
-```plaintext
+```shell-session
 $ tee payload.json <<EOF
 {
   "type": "kv-v2",

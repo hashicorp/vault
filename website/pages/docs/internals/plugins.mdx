@@ -90,7 +90,7 @@ docs](/api/system/plugins-catalog).
 
 An example plugin submission looks like:
 
-```
+```shell-session
 $ vault write sys/plugins/catalog/database/myplugin-database-plugin \
     sha256=<expected SHA256 Hex value of the plugin binary> \
     command="myplugin"
