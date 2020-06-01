@@ -592,52 +592,17 @@ func runTransit(
 	cluster.EnsureCoresSealed(t)
 }
 
-//func TestFoo(t *testing.T) {
-//	testVariousBackends(t, testFoo, true)
-//}
-//
-//func testFoo(
-//	t *testing.T, logger hclog.Logger,
-//	storage teststorage.ReusableStorage, basePort int) {
-//
-//	var baseClusterPort = basePort + 10
-//
-//	// Start the cluster
-//	var conf = vault.CoreConfig{
-//		Logger: logger.Named("foo"),
-//	}
-//	var opts = vault.TestClusterOptions{
-//		HandlerFunc:           vaulthttp.Handler,
-//		NumCores:              numTestCores,
-//		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
-//		BaseClusterListenPort: baseClusterPort,
-//	}
-//	storage.Setup(&conf, &opts)
-//	cluster := vault.NewTestCluster(t, &conf, &opts)
-//	cluster.Start()
-//	defer func() {
-//		storage.Cleanup(t, cluster)
-//		cluster.Cleanup()
-//	}()
-//
-//	leader := cluster.Cores[0]
-//	client := leader.Client
-//
-//	// Unseal
-//	if storage.IsRaft {
-//		testhelpers.RaftClusterJoinNodes(t, cluster)
-//		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
-//			t.Fatal(err)
-//		}
-//	} else {
-//		cluster.UnsealCores(t)
-//	}
-//	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
-//
-//
-//	// Seal the cluster
-//	cluster.EnsureCoresSealed(t)
-//
-//	println("--------------------------------------------------")
-//	println("exit")
-//}
+func TestShamir(t *testing.T) {
+	testVariousBackends(t, testShamir, true)
+}
+
+func testShamir(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int) {
+
+	// Initialize the backend using shamir
+	cluster, _, cleanup := initializeShamir(t, logger, storage, basePort)
+	//rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
+	cluster.EnsureCoresSealed(t)
+	cleanup()
+}

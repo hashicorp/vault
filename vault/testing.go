@@ -26,23 +26,20 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/vault/internalshared/configutil"
-
 	"github.com/armon/go-metrics"
-	hclog "github.com/hashicorp/go-hclog"
-	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/vault/cluster"
-	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/copystructure"
-
+	testing "github.com/mitchellh/go-testing-interface"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/net/http2"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	hclog "github.com/hashicorp/go-hclog"
+	log "github.com/hashicorp/go-hclog"
+	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
@@ -54,9 +51,9 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	testing "github.com/mitchellh/go-testing-interface"
-
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
+	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/hashicorp/vault/vault/seal"
 )
 
 // This file contains a number of methods that are useful for unit
@@ -1030,6 +1027,22 @@ type TestClusterOptions struct {
 
 	// ClusterLayers are used to override the default cluster connection layer
 	ClusterLayers cluster.NetworkLayerSet
+
+	// RaftAddressProvider is used to set the raft ServerAddressProvider on
+	// each core.
+	//
+	// If SkipInit is true, then RaftAddressProvider has no effect.
+	// RaftAddressProvider should only be specified if the underlying physical
+	// storage is Raft.
+	RaftAddressProvider raftlib.ServerAddressProvider
+
+	// JoinRaftFollowers specifies that each follower core will be joined to
+	// the raft cluster just before it is unsealed in InitializeCores().
+	//
+	// If SkipInit is true, then JoinRaftFollowers has no effect.
+	// JoinRaftFollowers should only be specified if the underlying physical
+	// storage is Raft.
+	JoinRaftFollowers bool
 }
 
 var DefaultNumCores = 3
