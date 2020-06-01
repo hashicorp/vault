@@ -7,8 +7,8 @@ replace github.com/hashicorp/vault/api => ./api
 replace github.com/hashicorp/vault/sdk => ./sdk
 
 require (
-	cloud.google.com/go v0.56.0
-	cloud.google.com/go/spanner v1.5.1
+	cloud.google.com/go v0.54.0
+	cloud.google.com/go/spanner v1.3.0
 	cloud.google.com/go/storage v1.6.0
 	github.com/Azure/azure-sdk-for-go v36.2.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.10.1
@@ -47,6 +47,7 @@ require (
 	github.com/go-test/deep v1.0.2
 	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
 	github.com/gogo/protobuf v1.3.1 // indirect
+	github.com/golang/mock v1.4.3 // indirect
 	github.com/golang/protobuf v1.4.1
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
@@ -57,7 +58,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-gcp-common v0.6.0
 	github.com/hashicorp/go-hclog v0.13.0
-	github.com/hashicorp/go-kms-wrapping v0.5.10
+	github.com/hashicorp/go-kms-wrapping v0.5.8
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.0.0
@@ -134,6 +135,7 @@ require (
 	github.com/shirou/gopsutil v2.19.9+incompatible
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
 	github.com/stretchr/testify v1.5.1
+	github.com/tencentcloud/tencentcloud-sdk-go v3.0.171+incompatible // indirect
 	github.com/tidwall/pretty v1.0.0 // indirect
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect
@@ -143,10 +145,13 @@ require (
 	go.mongodb.org/mongo-driver v1.2.1
 	go.uber.org/atomic v1.6.0
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
-	golang.org/x/net v0.0.0-20200513185701-a91f0712d120
+	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a // indirect
+	golang.org/x/sys v0.0.0-20200316230553-a7d97aace0b0 // indirect
 	golang.org/x/tools v0.0.0-20200416214402-fc959738d646
-	google.golang.org/api v0.24.0
+	google.golang.org/api v0.22.0
+	google.golang.org/genproto v0.0.0-20200513103714-09dca8ec2884 // indirect
 	google.golang.org/grpc v1.28.1
 	google.golang.org/protobuf v1.22.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
