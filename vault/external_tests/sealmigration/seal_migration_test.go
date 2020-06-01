@@ -32,15 +32,15 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
 
-	//t.Run("inmem", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("inmem", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("inmem")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeInmemBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 51000)
-	//})
+		logger := logger.Named("inmem")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeInmemBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 51000)
+	})
 
 	//t.Run("file", func(t *testing.T) {
 	//	t.Parallel()
@@ -62,16 +62,16 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 	//	tf(t, logger, storage, 53000)
 	//})
 
-	if includeRaft {
-		t.Run("raft", func(t *testing.T) {
-			t.Parallel()
+	//if includeRaft {
+	//	t.Run("raft", func(t *testing.T) {
+	//		t.Parallel()
 
-			logger := logger.Named("raft")
-			storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores)
-			defer cleanup()
-			tf(t, logger, storage, 54000)
-		})
-	}
+	//		logger := logger.Named("raft")
+	//		storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores)
+	//		defer cleanup()
+	//		tf(t, logger, storage, 54000)
+	//	})
+	//}
 }
 
 // TestSealMigration_ShamirToTransit_Pre14 tests shamir-to-transit seal
@@ -189,7 +189,7 @@ func testSealMigrationShamirToTransit_Post14(
 
 	// Initialize the backend using shamir
 	cluster, opts, cleanup := initializeShamir(t, logger, storage, basePort)
-	rootToken := cluster.RootToken
+	//rootToken := cluster.RootToken
 
 	// Create the transit server.
 	tss := sealhelper.NewTransitSealServer(t)
@@ -200,12 +200,15 @@ func testSealMigrationShamirToTransit_Post14(
 	tss.MakeKey(t, "transit-seal-key")
 
 	// Migrate the backend from shamir to transit.
-	transitSeal := migrateFromShamirToTransit_Post14(t, logger, storage, basePort, tss, cluster, opts)
+	//transitSeal := migrateFromShamirToTransit_Post14(t, logger, storage, basePort, tss, cluster, opts)
+	println("--------------------------------------------------------------------------------------------")
+	_ = migrateFromShamirToTransit_Post14(t, logger, storage, basePort, tss, cluster, opts)
 	cluster.EnsureCoresSealed(t)
 	cleanup()
+	println("--------------------------------------------------------------------------------------------")
 
-	// Run the backend with transit.
-	runTransit(t, logger, storage, basePort, rootToken, transitSeal)
+	//// Run the backend with transit.
+	//runTransit(t, logger, storage, basePort, rootToken, transitSeal)
 }
 
 func migrateFromShamirToTransit_Post14(
@@ -250,7 +253,7 @@ func migrateFromShamirToTransit_Post14(
 	}
 
 	// Wait for the followers to establish a new leader
-	leaderIdx, err := awaitLeader(t, cluster)
+	leaderIdx, err := testhelpers.AwaitLeader(t, cluster)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -285,31 +288,6 @@ func migrateFromShamirToTransit_Post14(
 	verifyBarrierConfig(t, r, wrapping.Shamir, keyShares, keyThreshold, 0)
 
 	return transitSeal
-}
-
-// awaitLeader waits for one of the followers to become leader.
-func awaitLeader(t *testing.T, cluster *vault.TestCluster) (int, error) {
-
-	timeout := time.Now().Add(30 * time.Second)
-	for {
-		if time.Now().After(timeout) {
-			break
-		}
-
-		for i := 1; i < numTestCores; i++ {
-			isLeader, _, _, err := cluster.Cores[i].Leader()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if isLeader {
-				return i, nil
-			}
-		}
-
-		time.Sleep(time.Second)
-	}
-
-	return 0, fmt.Errorf("timeout waiting leader")
 }
 
 func unsealMigrate(t *testing.T, client *api.Client, keys [][]byte, transitServerAvailable bool) {
@@ -613,3 +591,53 @@ func runTransit(
 	// Seal the cluster
 	cluster.EnsureCoresSealed(t)
 }
+
+//func TestFoo(t *testing.T) {
+//	testVariousBackends(t, testFoo, true)
+//}
+//
+//func testFoo(
+//	t *testing.T, logger hclog.Logger,
+//	storage teststorage.ReusableStorage, basePort int) {
+//
+//	var baseClusterPort = basePort + 10
+//
+//	// Start the cluster
+//	var conf = vault.CoreConfig{
+//		Logger: logger.Named("foo"),
+//	}
+//	var opts = vault.TestClusterOptions{
+//		HandlerFunc:           vaulthttp.Handler,
+//		NumCores:              numTestCores,
+//		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
+//		BaseClusterListenPort: baseClusterPort,
+//	}
+//	storage.Setup(&conf, &opts)
+//	cluster := vault.NewTestCluster(t, &conf, &opts)
+//	cluster.Start()
+//	defer func() {
+//		storage.Cleanup(t, cluster)
+//		cluster.Cleanup()
+//	}()
+//
+//	leader := cluster.Cores[0]
+//	client := leader.Client
+//
+//	// Unseal
+//	if storage.IsRaft {
+//		testhelpers.RaftClusterJoinNodes(t, cluster)
+//		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+//			t.Fatal(err)
+//		}
+//	} else {
+//		cluster.UnsealCores(t)
+//	}
+//	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
+//
+//
+//	// Seal the cluster
+//	cluster.EnsureCoresSealed(t)
+//
+//	println("--------------------------------------------------")
+//	println("exit")
+//}

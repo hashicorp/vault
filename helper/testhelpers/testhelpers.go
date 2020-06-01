@@ -570,6 +570,35 @@ func VerifyRaftConfiguration(core *vault.TestClusterCore, numCores int) error {
 	return nil
 }
 
+// AwaitLeader waits for one of the cluster's nodes to become leader.
+func AwaitLeader(t testing.T, cluster *vault.TestCluster) (int, error) {
+
+	timeout := time.Now().Add(30 * time.Second)
+	for {
+		if time.Now().After(timeout) {
+			break
+		}
+
+		for i, core := range cluster.Cores {
+			if core.Core.Sealed() {
+				continue
+			}
+
+			isLeader, _, _, err := core.Leader()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if isLeader {
+				return i, nil
+			}
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	return 0, fmt.Errorf("timeout waiting leader")
+}
+
 func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
 	t.Helper()
 
