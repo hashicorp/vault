@@ -10,12 +10,9 @@ export function changelogUrlFor([version]) {
     .split('.')
     .join('');
 
-  if (versionNumber === '142') {
-    url = url.concat('142-may-21st-2020');
-  } else if (versionNumber === '141') {
-    url = url.concat('141-april-30th-2020');
-  } else if (versionNumber === '140') {
-    url = url.concat('140-april-7th-2020');
+  // only the most recent versions have a predictable url
+  if (versionNumber >= '140') {
+    url = url.concat(versionNumber);
   }
 
   return url;
