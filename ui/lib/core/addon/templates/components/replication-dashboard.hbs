@@ -5,7 +5,7 @@
         @title={{concat "Re-indexing in progress" reindexingStage}}
         @type="info"
         @progressBar={{progressBar}}
-        @message="This can cause a delay depending on the size of the data store. You can use Vault during this time."
+        @message={{reindexMessage}}
         data-test-isReindexing />
     </div>
   {{/if}}
