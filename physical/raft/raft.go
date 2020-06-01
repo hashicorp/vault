@@ -991,8 +991,11 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 		return err
 	}
 
+	defer metrics.AddSample([]string{"raft-storage", "entry_size"}, float32(len(commandBytes)))
+
 	var chunked bool
 	var applyFuture raft.ApplyFuture
+
 	switch {
 	case len(commandBytes) <= raftchunking.ChunkSize:
 		applyFuture = b.raft.Apply(commandBytes, 0)
