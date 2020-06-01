@@ -1,0 +1,25 @@
+go-machine:
+  machine: true
+  shell: /usr/bin/env bash -euo pipefail -c
+  environment:
+    GO111MODULE: "off"
+    CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
+    GO_VERSION: 1.13.10  # Pin Go to patch version (ex: 1.2.3)
+    GOTESTSUM_VERSION: 0.3.3  # Pin gotestsum to patch version (ex: 1.2.3)
+    GO_TAGS: ""
+  working_directory: /go/src/github.com/hashicorp/vault
+node:
+  docker:
+    - image: node:10-buster
+  shell: /usr/bin/env bash -euo pipefail -c
+  working_directory: /go/src/github.com/hashicorp/vault
+python:
+  docker:
+    - image: python:3-alpine
+  shell: /usr/bin/env bash -euo pipefail -c
+  working_directory: /go/src/github.com/hashicorp/vault
+alpine:
+  docker:
+    - image: alpine:3.10.2
+  shell: /bin/sh
+  working_directory: /go/src/github.com/hashicorp/vault
