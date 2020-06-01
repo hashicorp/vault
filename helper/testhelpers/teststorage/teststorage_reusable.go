@@ -94,10 +94,7 @@ func MakeReusableRaftStorage(t testing.T, logger hclog.Logger, numCores int) (Re
 		// Close open files being used by raft.
 		Cleanup: func(t testing.T, cluster *vault.TestCluster) {
 			for _, core := range cluster.Cores {
-				raftStorage := core.UnderlyingRawStorage.(*raft.RaftBackend)
-				if err := raftStorage.Close(); err != nil {
-					t.Fatal(err)
-				}
+				CloseRaftStorage(t, core)
 			}
 		},
 	}
@@ -109,6 +106,14 @@ func MakeReusableRaftStorage(t testing.T, logger hclog.Logger, numCores int) (Re
 	}
 
 	return storage, cleanup
+}
+
+// CloseRaftStorage closes open files being used by raft.
+func CloseRaftStorage(t testing.T, core *vault.TestClusterCore) {
+	raftStorage := core.UnderlyingRawStorage.(*raft.RaftBackend)
+	if err := raftStorage.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func makeRaftDir(t testing.T) string {

@@ -531,6 +531,11 @@ func SetRaftAddressProviders(t testing.T, cluster *vault.TestCluster, provider r
 	}
 }
 
+// SetRaftAddressProvider sets a ServerAddressProvider on a node.
+func SetRaftAddressProvider(t testing.T, core *vault.TestClusterCore, provider raftlib.ServerAddressProvider) {
+	core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(provider)
+}
+
 // VerifyRaftConfiguration checks that we have a valid raft configuration, i.e.
 // the correct number of servers, having the correct NodeIDs, and exactly one
 // leader.
