@@ -2,6 +2,7 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { clusterStates } from 'core/helpers/cluster-states';
 import { capitalize } from '@ember/string';
+import { htmlSafe } from '@ember/template';
 import layout from '../templates/components/replication-dashboard';
 
 /**
@@ -90,4 +91,12 @@ export default Component.extend({
       return drState;
     }
   ),
+  reindexMessage: computed('isSecondary', 'progressBar', function() {
+    if (!this.isSecondary) {
+      return htmlSafe(
+        'This can cause a delay depending on the size of the data store. You can <b>not</b> use Vault during this time.'
+      );
+    }
+    return 'This can cause a delay depending on the size of the data store. You can use Vault during this time.';
+  }),
 });
