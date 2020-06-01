@@ -32,46 +32,46 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
 
-	t.Run("inmem", func(t *testing.T) {
-		t.Parallel()
+	//t.Run("inmem", func(t *testing.T) {
+	//	t.Parallel()
 
-		logger := logger.Named("inmem")
-		storage, cleanup := teststorage.MakeReusableStorage(
-			t, logger, teststorage.MakeInmemBackend(t, logger))
-		defer cleanup()
-		tf(t, logger, storage, 51000)
-	})
+	//	logger := logger.Named("inmem")
+	//	storage, cleanup := teststorage.MakeReusableStorage(
+	//		t, logger, teststorage.MakeInmemBackend(t, logger))
+	//	defer cleanup()
+	//	tf(t, logger, storage, 51000)
+	//})
 
-	t.Run("file", func(t *testing.T) {
-		t.Parallel()
+	//t.Run("file", func(t *testing.T) {
+	//	t.Parallel()
 
-		logger := logger.Named("file")
-		storage, cleanup := teststorage.MakeReusableStorage(
-			t, logger, teststorage.MakeFileBackend(t, logger))
-		defer cleanup()
-		tf(t, logger, storage, 52000)
-	})
+	//	logger := logger.Named("file")
+	//	storage, cleanup := teststorage.MakeReusableStorage(
+	//		t, logger, teststorage.MakeFileBackend(t, logger))
+	//	defer cleanup()
+	//	tf(t, logger, storage, 52000)
+	//})
 
-	t.Run("consul", func(t *testing.T) {
-		t.Parallel()
+	//t.Run("consul", func(t *testing.T) {
+	//	t.Parallel()
 
-		logger := logger.Named("consul")
-		storage, cleanup := teststorage.MakeReusableStorage(
-			t, logger, teststorage.MakeConsulBackend(t, logger))
-		defer cleanup()
-		tf(t, logger, storage, 53000)
-	})
+	//	logger := logger.Named("consul")
+	//	storage, cleanup := teststorage.MakeReusableStorage(
+	//		t, logger, teststorage.MakeConsulBackend(t, logger))
+	//	defer cleanup()
+	//	tf(t, logger, storage, 53000)
+	//})
 
-	//if includeRaft {
-	//	t.Run("raft", func(t *testing.T) {
-	//		t.Parallel()
+	if includeRaft {
+		t.Run("raft", func(t *testing.T) {
+			t.Parallel()
 
-	//		logger := logger.Named("raft")
-	//		storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores)
-	//		defer cleanup()
-	//		tf(t, logger, storage, 54000)
-	//	})
-	//}
+			logger := logger.Named("raft")
+			storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores)
+			defer cleanup()
+			tf(t, logger, storage, 54000)
+		})
+	}
 }
 
 // TestSealMigration_ShamirToTransit_Pre14 tests shamir-to-transit seal
@@ -234,8 +234,6 @@ func migrateFromShamirToTransit_Post14(
 		cluster.StopCore(t, i)
 		if storage.IsRaft {
 			teststorage.CloseRaftStorage(t, cluster.Cores[i])
-			panic("TODO")
-			//testhelpers.SetRaftAddressProvider(t, cluster.Cores[i], provider)
 		}
 		cluster.RestartCore(t, i, opts)
 
@@ -249,8 +247,6 @@ func migrateFromShamirToTransit_Post14(
 	cluster.StopCore(t, 0)
 	if storage.IsRaft {
 		teststorage.CloseRaftStorage(t, cluster.Cores[0])
-		panic("TODO")
-		//testhelpers.SetRaftAddressProvider(t, cluster.Cores[0], provider)
 	}
 
 	// Wait for the followers to establish a new leader
@@ -258,6 +254,7 @@ func migrateFromShamirToTransit_Post14(
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	leader := cluster.Cores[leaderIdx]
 	client := leader.Client
 	client.SetToken(rootToken)
@@ -270,6 +267,9 @@ func migrateFromShamirToTransit_Post14(
 	// Bring core 0 back up
 	// TODO -- make sure its not migrating
 	cluster.RestartCore(t, 0, opts)
+
+	// TODO
+	// if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
 
 	// Read the secret
 	secret, err := client.Logical().Read("secret/foo")
