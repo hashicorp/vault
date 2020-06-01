@@ -10,7 +10,10 @@
       &copy; {{date-format (now) "YYYY"}} HashiCorp
     </span>
     <span>
-      Vault {{activeCluster.leaderNode.version}}
+      <a href="https://github.com/hashicorp/vault/blob/master/CHANGELOG.md"
+      class="link has-text-grey">
+        Vault {{activeCluster.leaderNode.version}}
+      </a>
     </span>
     {{#if (is-version "OSS")}}
       <span>
