@@ -117,12 +117,12 @@ const (
 //
 // Cloud Spanner continuously garbage collects deleted and overwritten data in
 // the background to reclaim storage space. This process is known as "version
-// GC". By default, version GC reclaims versions after they are one hour old.
-// Because of this, Cloud Spanner cannot perform reads at read timestamps more
-// than one hour in the past. This restriction also applies to in-progress reads
-// and/or SQL queries whose timestamps become too old while executing. Reads and
-// SQL queries with too-old read timestamps fail with the error
-// ErrorCode.FAILED_PRECONDITION.
+// GC". By default, version GC reclaims versions after they are four hours
+// old. Because of this, Cloud Spanner cannot perform reads at read timestamps
+// more than four hours in the past. This restriction also applies to
+// in-progress reads and/or SQL queries whose timestamps become too old while
+// executing. Reads and SQL queries with too-old read timestamps fail with the
+// error ErrorCode.FAILED_PRECONDITION.
 type TimestampBound struct {
 	mode timestampBoundType
 	d    time.Duration

@@ -241,7 +241,6 @@ func (cw closeWaiter) Wait() {
 // Its buffered writer is lazily allocated as needed, to minimize
 // idle memory usage with many connections.
 type bufferedWriter struct {
-	_  incomparable
 	w  io.Writer     // immutable
 	bw *bufio.Writer // non-nil when data is buffered
 }
@@ -314,7 +313,6 @@ func bodyAllowedForStatus(status int) bool {
 }
 
 type httpError struct {
-	_       incomparable
 	msg     string
 	timeout bool
 }
@@ -378,8 +376,3 @@ func (s *sorter) SortStrings(ss []string) {
 func validPseudoPath(v string) bool {
 	return (len(v) > 0 && v[0] == '/') || v == "*"
 }
-
-// incomparable is a zero-width, non-comparable type. Adding it to a struct
-// makes that struct also non-comparable, and generally doesn't add
-// any size (as long as it's first).
-type incomparable [0]func()

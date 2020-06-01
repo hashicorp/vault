@@ -125,7 +125,7 @@ type OperationsClient struct {
 // Manages long-running operations with an API service.
 //
 // When an API method normally takes long time to complete, it can be designed
-// to return Operation to the client, and the client can use this
+// to return [Operation][google.longrunning.Operation] to the client, and the client can use this
 // interface to receive the real response asynchronously by polling the
 // operation resource, or pass the operation resource to another API (such as
 // Google Cloud Pub/Sub API) to receive the response.  Any API service that
@@ -258,11 +258,11 @@ func (c *OperationsClient) DeleteOperation(ctx context.Context, req *longrunning
 // makes a best effort to cancel the operation, but success is not
 // guaranteed.  If the server doesn’t support this method, it returns
 // google.rpc.Code.UNIMPLEMENTED.  Clients can use
-// Operations.GetOperation or
+// [Operations.GetOperation][google.longrunning.Operations.GetOperation] or
 // other methods to check whether the cancellation succeeded or whether the
 // operation completed despite cancellation. On successful cancellation,
 // the operation is not deleted; instead, it becomes an operation with
-// an Operation.error value with a google.rpc.Status.code of 1,
+// an [Operation.error][google.longrunning.Operation.error] value with a [google.rpc.Status.code][google.rpc.Status.code] of 1,
 // corresponding to Code.CANCELLED.
 func (c *OperationsClient) CancelOperation(ctx context.Context, req *longrunningpb.CancelOperationRequest, opts ...gax.CallOption) error {
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))

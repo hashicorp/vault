@@ -96,7 +96,7 @@ func defaultAlertPolicyCallOptions() *AlertPolicyCallOptions {
 	}
 }
 
-// AlertPolicyClient is a client for interacting with Cloud Monitoring API.
+// AlertPolicyClient is a client for interacting with Stackdriver Monitoring API.
 //
 // Methods, except Close, may be called concurrently. However, fields must not be modified concurrently with method calls.
 type AlertPolicyClient struct {

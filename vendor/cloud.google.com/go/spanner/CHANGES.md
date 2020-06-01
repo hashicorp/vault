@@ -1,45 +1,5 @@
 # Changes
 
-## v1.5.1
-
-* Fix incorrect decreasing metrics, numReads and numWrites.
-* Fix an issue that XXX fields/methods are internal to proto and may change
-  at any time. XXX_Merge panics in proto v1.4.0. Use proto.Merge instead of
-  XXX_Merge.
-* spannertest: handle list parameters in RPC interfacea.
-
-## v1.5.0
-
-* Metrics
-  - Instrument client library with adding OpenCensus metrics. This allows for
-    better monitoring of the session pool.
-* Session management
-  - Switch the session keepalive method from GetSession to SELECT 1.
-* Emulator
-  - Use client hooks for admin clients running against an emulator. With
-    this change, users can use SPANNER_EMULATOR_HOST for initializing admin
-    clients when running against an emulator.
-* spansql
-  - Add space between constraint name and foreign key def.
-* Misc
-  - Fix segfault when a non-existent credentials file had been specified.
-  - Fix cleaning up instances in integration tests.
-  - Fix race condition in batch read-only transaction.
-  - Fix the flaky TestLIFOTakeWriteSessionOrder test.
-  - Fix ITs to order results in SELECT queries.
-  - Fix the documentation of timestamp bounds.
-  - Fix the regex issue in managing backups.
-
-## v1.4.0
-
-- Support managed backups. This includes the API methods for CreateBackup,
-  GetBackup, UpdateBackup, DeleteBackup and others. Also includes a simple
-  wrapper in DatabaseAdminClient to create a backup.
-- Update the healthcheck interval. The default interval is updated to 50 mins.
-  By default, the first healthcheck is scheduled between 10 and 55 mins and
-  the subsequent healthchecks are between 45 and 55 mins. This update avoids
-  overloading the backend service with frequent healthchecking.
-
 ## v1.3.0
 
 * Query options:

@@ -29,7 +29,7 @@
   "description": "Creates and runs virtual machines on Google Cloud Platform.",
   "discoveryVersion": "v1",
   "documentationLink": "https://developers.google.com/compute/docs/reference/latest/",
-  "etag": "\"u9GIe6H63LSGq-9_t39K2Zx_EAc/Kv3mdz8R6SmTm6CaMZqTSDKLCbE\"",
+  "etag": "\"u9GIe6H63LSGq-9_t39K2Zx_EAc/8D3WWVngRoS0y9CFVIt9M0Wvgus\"",
   "icons": {
     "x16": "https://www.google.com/images/icons/product/compute_engine-16.png",
     "x32": "https://www.google.com/images/icons/product/compute_engine-32.png"
@@ -1362,7 +1362,7 @@
           ]
         },
         "getHealth": {
-          "description": "Gets the most recent health check results for this BackendService.\n\nExample request body:\n\n{ \"group\": \"/zones/us-east1-b/instanceGroups/lb-backend-example\" }",
+          "description": "Gets the most recent health check results for this BackendService.",
           "httpMethod": "POST",
           "id": "compute.backendServices.getHealth",
           "parameterOrder": [
@@ -11201,7 +11201,7 @@
           ]
         },
         "patch": {
-          "description": "Updates the specified node group.",
+          "description": "Patch the node group.",
           "httpMethod": "PATCH",
           "id": "compute.nodeGroups.patch",
           "parameterOrder": [
@@ -23301,7 +23301,7 @@
       }
     }
   },
-  "revision": "20200331",
+  "revision": "20200311",
   "rootUrl": "https://compute.googleapis.com/",
   "schemas": {
     "AcceleratorConfig": {
@@ -27965,7 +27965,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Labels for this resource. These can only be added or modified by the setLabels method. Each label key/value pair must comply with RFC1035. Label values may be empty.",
+          "description": "Labels to apply to this ExternalVpnGateway resource. These can be later modified by the setLabels method. Each label key/value must comply with RFC1035. Label values may be empty.",
           "type": "object"
         },
         "name": {
@@ -31162,7 +31162,7 @@
           "type": "array"
         },
         "network": {
-          "description": "[Output Only] The URL of the network to which all instances in the instance group belong. If your instance has multiple network interfaces, then the network and subnetwork fields only refer to the network and subnet used by your primary interface (nic0).",
+          "description": "The URL of the network to which all instances in the instance group belong.",
           "type": "string"
         },
         "region": {
@@ -31179,7 +31179,7 @@
           "type": "integer"
         },
         "subnetwork": {
-          "description": "[Output Only] The URL of the subnetwork to which all instances in the instance group belong. If your instance has multiple network interfaces, then the network and subnetwork fields only refer to the network and subnet used by your primary interface (nic0).",
+          "description": "[Output Only] The URL of the subnetwork to which all instances in the instance group belong.",
           "type": "string"
         },
         "zone": {
@@ -36426,16 +36426,8 @@
           "description": "Whether to export the custom routes to peer network.",
           "type": "boolean"
         },
-        "exportSubnetRoutesWithPublicIp": {
-          "description": "Whether subnet routes with public IP range are exported. The default value is true, all subnet routes are exported. The IPv4 special-use ranges (https://en.wikipedia.org/wiki/IPv4#Special_addresses) are always exported to peers and are not controlled by this field.",
-          "type": "boolean"
-        },
         "importCustomRoutes": {
           "description": "Whether to import the custom routes from peer network.",
-          "type": "boolean"
-        },
-        "importSubnetRoutesWithPublicIp": {
-          "description": "Whether subnet routes with public IP range are imported. The default value is false. The IPv4 special-use ranges (https://en.wikipedia.org/wiki/IPv4#Special_addresses) are always imported from peers and are not controlled by this field.",
           "type": "boolean"
         },
         "name": {
@@ -42062,8 +42054,7 @@
         "network": {
           "annotations": {
             "required": [
-              "compute.routers.insert",
-              "compute.routers.update"
+              "compute.routers.insert"
             ]
           },
           "description": "URI of the network to which this router belongs.",
@@ -43763,10 +43754,6 @@
           "description": "An optional description of this resource. Provide this property when you create the resource.",
           "type": "string"
         },
-        "expireTime": {
-          "description": "[Output Only] Expire time of the certificate. RFC3339",
-          "type": "string"
-        },
         "id": {
           "description": "[Output Only] The unique identifier for the resource. This identifier is defined by the server.",
           "format": "uint64",
@@ -43776,10 +43763,6 @@
           "default": "compute#sslCertificate",
           "description": "[Output Only] Type of the resource. Always compute#sslCertificate for SSL certificates.",
           "type": "string"
-        },
-        "managed": {
-          "$ref": "SslCertificateManagedSslCertificate",
-          "description": "Configuration and status of a managed SSL certificate."
         },
         "name": {
           "description": "Name of the resource. Provided by the client when the resource is created. The name must be 1-63 characters long, and comply with RFC1035. Specifically, the name must be 1-63 characters long and match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means the first character must be a lowercase letter, and all following characters must be a dash, lowercase letter, or digit, except the last character, which cannot be a dash.",
@@ -43796,31 +43779,6 @@
         },
         "selfLink": {
           "description": "[Output only] Server-defined URL for the resource.",
-          "type": "string"
-        },
-        "selfManaged": {
-          "$ref": "SslCertificateSelfManagedSslCertificate",
-          "description": "Configuration and status of a self-managed SSL certificate."
-        },
-        "subjectAlternativeNames": {
-          "description": "[Output Only] Domains associated with the certificate via Subject Alternative Name.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "type": {
-          "description": "(Optional) Specifies the type of SSL certificate, either \"SELF_MANAGED\" or \"MANAGED\". If not specified, the certificate is self-managed and the fields certificate and private_key are used.",
-          "enum": [
-            "MANAGED",
-            "SELF_MANAGED",
-            "TYPE_UNSPECIFIED"
-          ],
-          "enumDescriptions": [
-            "",
-            "",
-            ""
-          ],
           "type": "string"
         }
       },
@@ -44046,80 +44004,6 @@
             }
           },
           "type": "object"
-        }
-      },
-      "type": "object"
-    },
-    "SslCertificateManagedSslCertificate": {
-      "description": "Configuration and status of a managed SSL certificate.",
-      "id": "SslCertificateManagedSslCertificate",
-      "properties": {
-        "domainStatus": {
-          "additionalProperties": {
-            "enum": [
-              "ACTIVE",
-              "DOMAIN_STATUS_UNSPECIFIED",
-              "FAILED_CAA_CHECKING",
-              "FAILED_CAA_FORBIDDEN",
-              "FAILED_NOT_VISIBLE",
-              "FAILED_RATE_LIMITED",
-              "PROVISIONING"
-            ],
-            "enumDescriptions": [
-              "",
-              "",
-              "",
-              "",
-              "",
-              "",
-              ""
-            ],
-            "type": "string"
-          },
-          "description": "[Output only] Detailed statuses of the domains specified for managed certificate resource.",
-          "type": "object"
-        },
-        "domains": {
-          "description": "The domains for which a managed SSL certificate will be generated. Currently only single-domain certs are supported.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "status": {
-          "description": "[Output only] Status of the managed certificate resource.",
-          "enum": [
-            "ACTIVE",
-            "MANAGED_CERTIFICATE_STATUS_UNSPECIFIED",
-            "PROVISIONING",
-            "PROVISIONING_FAILED",
-            "PROVISIONING_FAILED_PERMANENTLY",
-            "RENEWAL_FAILED"
-          ],
-          "enumDescriptions": [
-            "",
-            "",
-            "",
-            "",
-            "",
-            ""
-          ],
-          "type": "string"
-        }
-      },
-      "type": "object"
-    },
-    "SslCertificateSelfManagedSslCertificate": {
-      "description": "Configuration and status of a self-managed SSL certificate.",
-      "id": "SslCertificateSelfManagedSslCertificate",
-      "properties": {
-        "certificate": {
-          "description": "A local certificate file. The certificate must be in PEM format. The certificate chain must be no greater than 5 certs long. The chain must include at least one intermediate cert.",
-          "type": "string"
-        },
-        "privateKey": {
-          "description": "A write-only private key in PEM format. Only insert requests will include this field.",
-          "type": "string"
         }
       },
       "type": "object"
@@ -48362,7 +48246,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Labels for this resource. These can only be added or modified by the setLabels method. Each label key/value pair must comply with RFC1035. Label values may be empty.",
+          "description": "Labels to apply to this VpnGateway resource. These can be later modified by the setLabels method. Each label key/value must comply with RFC1035. Label values may be empty.",
           "type": "object"
         },
         "name": {
@@ -48393,7 +48277,7 @@
           "type": "string"
         },
         "vpnInterfaces": {
-          "description": "A list of interfaces on this VPN gateway.",
+          "description": "[Output Only] A list of interfaces on this VPN gateway.",
           "items": {
             "$ref": "VpnGatewayVpnGatewayInterface"
           },
@@ -48725,7 +48609,7 @@
           "type": "integer"
         },
         "ipAddress": {
-          "description": "[Output Only] The external IP address for this VPN gateway interface.",
+          "description": "The external IP address for this VPN gateway interface.",
           "type": "string"
         }
       },

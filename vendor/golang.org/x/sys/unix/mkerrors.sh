@@ -200,7 +200,6 @@ struct ltchars {
 #include <linux/filter.h>
 #include <linux/fs.h>
 #include <linux/fscrypt.h>
-#include <linux/fsverity.h>
 #include <linux/genetlink.h>
 #include <linux/hdreg.h>
 #include <linux/icmpv6.h>
@@ -486,7 +485,6 @@ ccflags="$@"
 		$2 ~ /^LINUX_REBOOT_MAGIC[12]$/ ||
 		$2 ~ /^MODULE_INIT_/ ||
 		$2 !~ "NLA_TYPE_MASK" &&
-		$2 !~ /^RTC_VL_(ACCURACY|BACKUP|DATA)/ &&
 		$2 ~ /^(NETLINK|NLM|NLMSG|NLA|IFA|IFAN|RT|RTC|RTCF|RTN|RTPROT|RTNH|ARPHRD|ETH_P|NETNSA)_/ ||
 		$2 ~ /^SIOC/ ||
 		$2 ~ /^TIOC/ ||
@@ -508,8 +506,7 @@ ccflags="$@"
 		$2 ~ /^CAP_/ ||
 		$2 ~ /^ALG_/ ||
 		$2 ~ /^FS_(POLICY_FLAGS|KEY_DESC|ENCRYPTION_MODE|[A-Z0-9_]+_KEY_SIZE)/ ||
-		$2 ~ /^FS_IOC_.*(ENCRYPTION|VERITY|GETFLAGS)/ ||
-		$2 ~ /^FS_VERITY_/ ||
+		$2 ~ /^FS_IOC_.*ENCRYPTION/ ||
 		$2 ~ /^FSCRYPT_/ ||
 		$2 ~ /^GRND_/ ||
 		$2 ~ /^RND/ ||

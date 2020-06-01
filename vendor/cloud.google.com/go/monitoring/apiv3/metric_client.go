@@ -137,7 +137,7 @@ func defaultMetricCallOptions() *MetricCallOptions {
 	}
 }
 
-// MetricClient is a client for interacting with Cloud Monitoring API.
+// MetricClient is a client for interacting with Stackdriver Monitoring API.
 //
 // Methods, except Close, may be called concurrently. However, fields must not be modified concurrently with method calls.
 type MetricClient struct {
@@ -196,7 +196,7 @@ func (c *MetricClient) setGoogleClientInfo(keyval ...string) {
 	c.xGoogMetadata = metadata.Pairs("x-goog-api-client", gax.XGoogHeader(kv...))
 }
 
-// ListMonitoredResourceDescriptors lists monitored resource descriptors that match a filter. This method does not require a Workspace.
+// ListMonitoredResourceDescriptors lists monitored resource descriptors that match a filter. This method does not require a Stackdriver account.
 func (c *MetricClient) ListMonitoredResourceDescriptors(ctx context.Context, req *monitoringpb.ListMonitoredResourceDescriptorsRequest, opts ...gax.CallOption) *MonitoredResourceDescriptorIterator {
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
@@ -237,7 +237,7 @@ func (c *MetricClient) ListMonitoredResourceDescriptors(ctx context.Context, req
 	return it
 }
 
-// GetMonitoredResourceDescriptor gets a single monitored resource descriptor. This method does not require a Workspace.
+// GetMonitoredResourceDescriptor gets a single monitored resource descriptor. This method does not require a Stackdriver account.
 func (c *MetricClient) GetMonitoredResourceDescriptor(ctx context.Context, req *monitoringpb.GetMonitoredResourceDescriptorRequest, opts ...gax.CallOption) (*monitoredrespb.MonitoredResourceDescriptor, error) {
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
@@ -254,7 +254,7 @@ func (c *MetricClient) GetMonitoredResourceDescriptor(ctx context.Context, req *
 	return resp, nil
 }
 
-// ListMetricDescriptors lists metric descriptors that match a filter. This method does not require a Workspace.
+// ListMetricDescriptors lists metric descriptors that match a filter. This method does not require a Stackdriver account.
 func (c *MetricClient) ListMetricDescriptors(ctx context.Context, req *monitoringpb.ListMetricDescriptorsRequest, opts ...gax.CallOption) *MetricDescriptorIterator {
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
@@ -295,7 +295,7 @@ func (c *MetricClient) ListMetricDescriptors(ctx context.Context, req *monitorin
 	return it
 }
 
-// GetMetricDescriptor gets a single metric descriptor. This method does not require a Workspace.
+// GetMetricDescriptor gets a single metric descriptor. This method does not require a Stackdriver account.
 func (c *MetricClient) GetMetricDescriptor(ctx context.Context, req *monitoringpb.GetMetricDescriptorRequest, opts ...gax.CallOption) (*metricpb.MetricDescriptor, error) {
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)
@@ -346,7 +346,7 @@ func (c *MetricClient) DeleteMetricDescriptor(ctx context.Context, req *monitori
 	return err
 }
 
-// ListTimeSeries lists time series that match a filter. This method does not require a Workspace.
+// ListTimeSeries lists time series that match a filter. This method does not require a Stackdriver account.
 func (c *MetricClient) ListTimeSeries(ctx context.Context, req *monitoringpb.ListTimeSeriesRequest, opts ...gax.CallOption) *TimeSeriesIterator {
 	md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
 	ctx = insertMetadata(ctx, c.xGoogMetadata, md)

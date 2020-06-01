@@ -54,8 +54,8 @@ const (
 )
 
 var (
-	validDBPattern       = regexp.MustCompile("^projects/(?P<project>[^/]+)/instances/(?P<instance>[^/]+)/databases/(?P<database>[^/]+)$")
-	validInstancePattern = regexp.MustCompile("^projects/(?P<project>[^/]+)/instances/(?P<instance>[^/]+)")
+	validDBPattern       = regexp.MustCompile("^projects/[^/]+/instances/[^/]+/databases/[^/]+$")
+	validInstancePattern = regexp.MustCompile("^projects/[^/]+/instances/[^/]+")
 )
 
 func validDatabaseName(db string) error {
@@ -73,15 +73,6 @@ func getInstanceName(db string) (string, error) {
 			db, validInstancePattern.String())
 	}
 	return matches[0], nil
-}
-
-func parseDatabaseName(db string) (project, instance, database string, err error) {
-	matches := validDBPattern.FindStringSubmatch(db)
-	if len(matches) == 0 {
-		return "", "", "", fmt.Errorf("Failed to parse database name from %q according to pattern %q",
-			db, validDBPattern.String())
-	}
-	return matches[1], matches[2], matches[3], nil
 }
 
 // Client is a client for reading and writing data to a Cloud Spanner database.
@@ -196,7 +187,7 @@ func NewClientWithConfig(ctx context.Context, database string, config ClientConf
 			option.WithGRPCDialOption(grpc.WithInsecure()),
 			option.WithoutAuthentication(),
 		}
-		opts = append(emulatorOpts, opts...)
+		opts = append(opts, emulatorOpts...)
 	} else if os.Getenv("GOOGLE_CLOUD_SPANNER_ENABLE_RESOURCE_BASED_ROUTING") == "true" {
 		// Fetch the instance-specific endpoint.
 		reqOpts := []option.ClientOption{option.WithEndpoint(endpoint)}
@@ -246,9 +237,6 @@ get an instance-specific endpoint and efficiently route requests.
 	// applied after the values in allOpts.
 	allOpts = append(allOpts, opts...)
 	pool, err := gtransport.DialPool(ctx, allOpts...)
-	if err != nil {
-		return nil, err
-	}
 	if configuredNumChannels > 0 && pool.Num() != config.NumChannels {
 		pool.Close()
 		return nil, spannerErrorf(codes.InvalidArgument, "Connection pool mismatch: NumChannels=%v, WithGRPCConnectionPool=%v. Only set one of these options, or set both to the same value.", config.NumChannels, pool.Num())

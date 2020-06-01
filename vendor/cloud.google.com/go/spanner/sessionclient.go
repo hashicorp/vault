@@ -18,7 +18,6 @@ package spanner
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -31,30 +30,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 )
-
-var cidGen = newClientIDGenerator()
-
-type clientIDGenerator struct {
-	mu  sync.Mutex
-	ids map[string]int
-}
-
-func newClientIDGenerator() *clientIDGenerator {
-	return &clientIDGenerator{ids: make(map[string]int)}
-}
-
-func (cg *clientIDGenerator) nextID(database string) string {
-	cg.mu.Lock()
-	defer cg.mu.Unlock()
-	var id int
-	if val, ok := cg.ids[database]; ok {
-		id = val + 1
-	} else {
-		id = 1
-	}
-	cg.ids[database] = id
-	return fmt.Sprintf("client-%d", id)
-}
 
 // sessionConsumer is passed to the batchCreateSessions method and will receive
 // the sessions that are created as they become available. A sessionConsumer
@@ -84,7 +59,6 @@ type sessionClient struct {
 
 	connPool      gtransport.ConnPool
 	database      string
-	id            string
 	sessionLabels map[string]string
 	md            metadata.MD
 	batchTimeout  time.Duration
@@ -96,7 +70,6 @@ func newSessionClient(connPool gtransport.ConnPool, database string, sessionLabe
 	return &sessionClient{
 		connPool:      connPool,
 		database:      database,
-		id:            cidGen.nextID(database),
 		sessionLabels: sessionLabels,
 		md:            md,
 		batchTimeout:  time.Minute,

@@ -36,7 +36,6 @@ type DialSettings struct {
 	NoAuth            bool
 	TelemetryDisabled bool
 	ClientCertSource  func(*tls.CertificateRequestInfo) (*tls.Certificate, error)
-	CustomClaims      map[string]interface{}
 
 	// Google API system parameters. For more information please read:
 	// https://cloud.google.com/apis/docs/system-parameters
