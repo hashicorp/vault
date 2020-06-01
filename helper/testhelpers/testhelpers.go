@@ -412,16 +412,16 @@ func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib
 }
 
 func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
-	raftClusterJoinNodes(t, cluster, false)
+	JoinRaftNodes(t, cluster, false,
+		&TestRaftServerAddressProvider{Cluster: cluster})
 }
 
-func RaftClusterJoinNodesWithStoredKeys(t testing.T, cluster *vault.TestCluster) {
-	raftClusterJoinNodes(t, cluster, true)
-}
+func JoinRaftNodes(
+	t testing.T, cluster *vault.TestCluster,
+	useStoredKeys bool,
+	addressProvider raftlib.ServerAddressProvider,
+) {
 
-func raftClusterJoinNodes(t testing.T, cluster *vault.TestCluster, useStoredKeys bool) {
-
-	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
 	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
 
 	leader := cluster.Cores[0]
@@ -505,11 +505,11 @@ func (p *HardcodedServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftli
 
 // NewHardcodedServerAddressProvider is a convenience function that makes a
 // ServerAddressProvider from a given cluster address base port.
-func NewHardcodedServerAddressProvider(cluster *vault.TestCluster, baseClusterPort int) raftlib.ServerAddressProvider {
+func NewHardcodedServerAddressProvider(numCores, baseClusterPort int) raftlib.ServerAddressProvider {
 
 	entries := make(map[raftlib.ServerID]raftlib.ServerAddress)
 
-	for i := 0; i < len(cluster.Cores); i++ {
+	for i := 0; i < numCores; i++ {
 		id := fmt.Sprintf("core-%d", i)
 		addr := fmt.Sprintf("127.0.0.1:%d", baseClusterPort+i)
 		entries[raftlib.ServerID(id)] = raftlib.ServerAddress(addr)
@@ -529,11 +529,6 @@ func SetRaftAddressProviders(t testing.T, cluster *vault.TestCluster, provider r
 	for _, core := range cluster.Cores {
 		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(provider)
 	}
-}
-
-// SetRaftAddressProvider sets a ServerAddressProvider on a node.
-func SetRaftAddressProvider(t testing.T, core *vault.TestClusterCore, provider raftlib.ServerAddressProvider) {
-	core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(provider)
 }
 
 // VerifyRaftConfiguration checks that we have a valid raft configuration, i.e.

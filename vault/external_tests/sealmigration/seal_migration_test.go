@@ -42,25 +42,25 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 		tf(t, logger, storage, 51000)
 	})
 
-	//t.Run("file", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("file", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("file")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeFileBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 52000)
-	//})
+		logger := logger.Named("file")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeFileBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 52000)
+	})
 
-	//t.Run("consul", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("consul", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("consul")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeConsulBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 53000)
-	//})
+		logger := logger.Named("consul")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeConsulBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 53000)
+	})
 
 	//if includeRaft {
 	//	t.Run("raft", func(t *testing.T) {
@@ -225,8 +225,7 @@ func migrateFromShamirToTransit_Post14(
 		return transitSeal
 	}
 
-	var baseClusterPort = basePort + 10
-	provider := testhelpers.NewHardcodedServerAddressProvider(cluster, baseClusterPort)
+	//var baseClusterPort = basePort + 10
 
 	// Restart each follower with the new config, and migrate to Transit.
 	// Note that the barrier keys are being used as recovery keys.
@@ -235,7 +234,8 @@ func migrateFromShamirToTransit_Post14(
 		cluster.StopCore(t, i)
 		if storage.IsRaft {
 			teststorage.CloseRaftStorage(t, cluster.Cores[i])
-			testhelpers.SetRaftAddressProvider(t, cluster.Cores[i], provider)
+			panic("TODO")
+			//testhelpers.SetRaftAddressProvider(t, cluster.Cores[i], provider)
 		}
 		cluster.RestartCore(t, i, opts)
 
@@ -249,7 +249,8 @@ func migrateFromShamirToTransit_Post14(
 	cluster.StopCore(t, 0)
 	if storage.IsRaft {
 		teststorage.CloseRaftStorage(t, cluster.Cores[0])
-		testhelpers.SetRaftAddressProvider(t, cluster.Cores[0], provider)
+		panic("TODO")
+		//testhelpers.SetRaftAddressProvider(t, cluster.Cores[0], provider)
 	}
 
 	// Wait for the followers to establish a new leader
@@ -380,7 +381,9 @@ func initializeShamir(
 
 	// Unseal
 	if storage.IsRaft {
-		testhelpers.RaftClusterJoinNodes(t, cluster)
+		testhelpers.JoinRaftNodes(t, cluster, false,
+			testhelpers.NewHardcodedServerAddressProvider(numTestCores, baseClusterPort))
+
 		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
 			t.Fatal(err)
 		}
@@ -434,7 +437,7 @@ func runShamir(
 	// Unseal
 	cluster.BarrierKeys = barrierKeys
 	if storage.IsRaft {
-		provider := testhelpers.NewHardcodedServerAddressProvider(cluster, baseClusterPort)
+		provider := testhelpers.NewHardcodedServerAddressProvider(numTestCores, baseClusterPort)
 		testhelpers.SetRaftAddressProviders(t, cluster, provider)
 
 		for _, core := range cluster.Cores {
@@ -503,7 +506,9 @@ func initializeTransit(
 
 	// Join raft
 	if storage.IsRaft {
-		testhelpers.RaftClusterJoinNodesWithStoredKeys(t, cluster)
+		testhelpers.JoinRaftNodes(t, cluster, true,
+			testhelpers.NewHardcodedServerAddressProvider(numTestCores, baseClusterPort))
+
 		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
 			t.Fatal(err)
 		}
@@ -558,7 +563,7 @@ func runTransit(
 	// Unseal.  Even though we are using autounseal, we have to unseal
 	// explicitly because we are using SkipInit.
 	if storage.IsRaft {
-		provider := testhelpers.NewHardcodedServerAddressProvider(cluster, baseClusterPort)
+		provider := testhelpers.NewHardcodedServerAddressProvider(numTestCores, baseClusterPort)
 		testhelpers.SetRaftAddressProviders(t, cluster, provider)
 
 		for _, core := range cluster.Cores {
@@ -592,6 +597,8 @@ func runTransit(
 	cluster.EnsureCoresSealed(t)
 }
 
+//--------------------------------------------------------------
+
 func TestShamir(t *testing.T) {
 	testVariousBackends(t, testShamir, true)
 }
@@ -602,7 +609,26 @@ func testShamir(
 
 	// Initialize the backend using shamir
 	cluster, _, cleanup := initializeShamir(t, logger, storage, basePort)
-	//rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
+	rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
 	cluster.EnsureCoresSealed(t)
 	cleanup()
+
+	runShamir(t, logger, storage, basePort, rootToken, barrierKeys)
+}
+
+func TestTransit(t *testing.T) {
+	testVariousBackends(t, testTransit, true)
+}
+
+func testTransit(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int) {
+
+	tss := sealhelper.NewTransitSealServer(t)
+	defer tss.Cleanup()
+	tss.MakeKey(t, "transit-seal-key")
+
+	rootToken, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
+
+	runTransit(t, logger, storage, basePort, rootToken, transitSeal)
 }
