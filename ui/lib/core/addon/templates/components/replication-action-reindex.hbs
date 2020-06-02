@@ -37,7 +37,7 @@
   <footer class="modal-card-foot modal-card-foot-outlined">
     <button
       class="button is-primary"
-      disabled={{if (and (eq replicationDisplayMode "DR") (not dr_operation_token)) true}}
+      disabled={{if (and (eq replicationMode "dr") (not dr_operation_token)) true}}
       onclick={{action "onSubmit" "reindex"}}
       data-test-reindex-confirm-button
     >
