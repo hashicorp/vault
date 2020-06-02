@@ -10,7 +10,7 @@
 
   <div class="action-block-action">
     <button
-      class="button is-primary"
+      class="button is-secondary"
       onclick={{action (mut isModalActive) true}}
       data-test-replication-action-trigger
     >
@@ -31,7 +31,7 @@
       Reindexing can cause a very long delay on the number and size of objects in the data store. {{if model.replicationAttrs.isPrimary 'You should always re-index your secondary first.'}}
     </p>
     <p>
-      Progress will be shown, and you will be able to use Vault during this time.
+      Progress will be shown, and you will not be able to use Vault during this time.
     </p>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
