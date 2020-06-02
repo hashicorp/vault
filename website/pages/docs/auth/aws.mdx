@@ -566,7 +566,7 @@ for the IAM Role to be assumed.
 
 #### Enable AWS EC2 authentication in Vault.
 
-```
+```shell-session
 $ vault auth enable aws
 ```
 
@@ -580,13 +580,13 @@ The IAM account or role to which the credentials map must allow the
 `ec2:DescribeInstances` action. In addition, if IAM Role binding is used (see
 `bound_iam_role_arn` below), `iam:GetInstanceProfile` must also be allowed.
 
-```
+```shell-session
 $ vault write auth/aws/config/client secret_key=vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj access_key=VKIAJBRHKH6EVTTNXDHA
 ```
 
 #### Configure the policies on the role.
 
-```
+```shell-session
 $ vault write auth/aws/role/dev-role auth_type=ec2 bound_ami_id=ami-fce3c696 policies=prod,dev max_ttl=500h
 
 $ vault write auth/aws/role/dev-role-iam auth_type=iam \
@@ -595,13 +595,13 @@ $ vault write auth/aws/role/dev-role-iam auth_type=iam \
 
 #### Configure a required X-Vault-AWS-IAM-Server-ID Header (recommended)
 
-```
+```shell-session
 $ vault write auth/aws/config/client iam_server_id_header_value=vault.example.com
 ```
 
 #### Perform the login operation
 
-```
+```shell-session
 $ vault write auth/aws/login role=dev-role \
 pkcs7=MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewogICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMuNjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAiMjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVuZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEWBBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA nonce=5defbf9e-a8f9-3063-bdfc-54b7a42a1f95
 ```
@@ -609,7 +609,7 @@ pkcs7=MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmew
 For the iam auth method, generating the signed request is a non-standard
 operation. The Vault cli supports generating this for you:
 
-```
+```shell-session
 $ vault login -method=aws header_value=vault.example.com role=dev-role-iam
 ```
 
@@ -620,7 +620,7 @@ credentials available at any of these locations, you can explicitly pass them
 in on the command line (though this is not recommended), omitting
 `aws_security_token` if not applicable.
 
-```
+```shell-session
 $ vault login -method=aws header_value=vault.example.com role=dev-role-iam \
         aws_access_key_id=<access_key> \
         aws_secret_access_key=<secret_key> \
@@ -629,7 +629,7 @@ $ vault login -method=aws header_value=vault.example.com role=dev-role-iam \
 
 The region used defaults to `us-east-1`, but you can specify a custom region like so:
 
-```
+```shell-session
 $ vault login -method=aws region=us-west-2 role=dev-role-iam
 ```
 
@@ -642,7 +642,7 @@ source code](https://github.com/hashicorp/vault/blob/master/builtin/credential/a
 Using an approach such as this, the request parameters can be generated and
 passed to the `login` method:
 
-```
+```shell-session
 $ vault write auth/aws/login role=dev-role-iam \
         iam_http_request_method=POST \
         iam_request_url=aHR0cHM6Ly9zdHMuYW1hem9uYXdzLmNvbS8= \

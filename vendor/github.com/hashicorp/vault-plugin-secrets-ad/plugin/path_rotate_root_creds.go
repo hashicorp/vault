@@ -4,19 +4,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/util"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/logical"
 	"math"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/util"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (b *backend) pathRotateCredentials() *framework.Path {
 	return &framework.Path{
 		Pattern: "rotate-root",
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathRotateCredentialsUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:                    b.pathRotateCredentialsUpdate,
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathRotateCredentialsUpdateHelpSyn,

@@ -19,13 +19,13 @@ no token is given, the data in the currently authenticated token is unwrapped.
 
 Unwrap the data in the cubbyhole secrets engine for a token:
 
-```text
+```shell-session
 $ vault unwrap 3de9ece1-b347-e143-29b0-dc2dc31caafd
 ```
 
 Unwrap the data in the active token:
 
-```text
+```shell-session
 $ vault login 848f9ccf-7176-098c-5e2b-75a0689d41cd
 $ vault unwrap # unwraps 848f9ccf...
 ```

@@ -73,7 +73,7 @@ Alternatively, you can use the [Vault
 Playground](https://www.katacoda.com/hashicorp/scenarios/vault-playground)
 environment.
 
-### <a name="policy"></a>Policy requirements
+### Policy requirements ((#policy))
 
 -> **NOTE:** For the purpose of this guide, you can use **`root`** token to work
 with Vault. However, it is recommended that root tokens are only used for just
@@ -121,7 +121,7 @@ In this guide, you perform the following:
 1. [Revoke Certificates](#step5)
 1. [Remove Expired Certificates](#step6)
 
-### <a name="step1"></a>Step 1: Generate Root CA
+### Step 1: Generate Root CA ((#step1))
 
 In this step, you are going to generate a self-signed root certificate using
 PKI secrets engine.
@@ -260,8 +260,6 @@ then login.
      ![Configure URL](/img/vault-pki-1.png)
 1. Click **Save**.
 
-<br />
-
 -> **NOTE:** To examine the generated root certificate, you can use
 [OpenSSL](https://www.openssl.org/source/).
 
@@ -273,7 +271,7 @@ $ openssl x509 -in CA_cert.crt -text
 $ openssl x509 -in CA_cert.crt -noout -dates
 ```
 
-### <a name="step2"></a>Step 2: Generate Intermediate CA
+### Step 2: Generate Intermediate CA ((#step2))
 
 Now, you are going to create an intermediate CA using the root CA you regenerate
 in the previous step.
@@ -430,7 +428,7 @@ in the previous step.
 1. Paste in the certificate in the **Signed Intermediate Certificate** field and
    then click **Save**.
 
-### <a name="step3"></a>Step 3: Create a Role
+### Step 3: Create a Role ((#step3))
 
 A role is a logical name that maps to a policy used to generate those
 credentials. It allows [configuration
@@ -456,7 +454,7 @@ In this step, you are going to create a role named, **`example-dot-com`**.
 
 Create a role named **`example-dot-com`** which allows subdomains.
 
-```plaintext
+```shell-session
 $ vault write pki_int/roles/example-dot-com \
         allowed_domains="example.com" \
         allow_subdomains=true \
@@ -467,7 +465,7 @@ $ vault write pki_int/roles/example-dot-com \
 
 Create a role named **`example-dot-com`** which allows subdomains.
 
-```plaintext
+```shell-session
 $ tee payload-role.json <<EOF
 {
   "allowed_domains": "example.com",
@@ -494,7 +492,7 @@ Create a role named **`example-dot-com`** which allows subdomains.
    ![Create Role](/img/vault-pki-2.png)
 1. Click **Create role**.
 
-### <a name="step4"></a>Step 4: Request Certificates
+### Step 4: Request Certificates ((#step4))
 
 Keep certificate lifetimes to be short to align with Vault's philosophy of
 short-lived secrets.
@@ -504,7 +502,7 @@ short-lived secrets.
 Execute the following command to request a new certificate for `test.example.com`
 domain based on the `example-dot-com` role:
 
-```plaintext
+```shell-session
 $ vault write pki_int/issue/example-dot-com common_name="test.example.com" ttl="24h"
 
 Key                 Value
@@ -542,7 +540,7 @@ Invoke the **`/pki_int/issue/<role_name>`** endpoint to request a new certificat
 Request a certificate for `test.example.com` domain based on the
 `example-dot-com` role:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data '{"common_name": "test.example.com", "ttl": "24h"}' \
@@ -583,12 +581,10 @@ serial number.
 
 1. Click **Copy credentials** and save it in a file.
 
-<br />
-
 -> **NOTE:** A certificate can be rotated at any time by simply issuing a new
 certificate with the same CN.
 
-### <a name="step5"></a>Step 5: Revoke Certificates
+### Step 5: Revoke Certificates ((#step5))
 
 If a certificate must be revoked, you can easily perform the revocation action
 which will cause the CRL to be regenerated. When the CRL is regenerated, any
@@ -600,13 +596,13 @@ In a certain circumstances, you may wish to revoke an issued certificate.
 
 To revoke:
 
-```plaintext
+```shell-session
 $ vault write pki_int/revoke serial_number=<serial_number>
 ```
 
 **Example:**
 
-```plaintext
+```shell-session
 $ vault write pki_int/revoke serial_number="48:97:82:dd:f0:d3:d9:7e:53:25:ba:fd:f6:77:3e:89:e5:65:cc:e7"
 Key                        Value
 ---                        -----
@@ -621,7 +617,7 @@ serial number.
 
 **Example:**
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data '{"serial_number": "48:97:82:dd:f0:d3:d9:7e:53:25:ba:fd:f6:77:3e:89:e5:65:cc:e7"}' \
@@ -636,7 +632,7 @@ $ curl --header "X-Vault-Token: ..." \
 1. Select the serial number for the certificate you wish to revoke.
 1. Click **Revoke**. At the confirmation, click **Revoke** again.
 
-### <a name="step6"></a>Step 6: Remove Expired Certificates
+### Step 6: Remove Expired Certificates ((#step6))
 
 Keep the storage backend and CRL by periodically removing certificates that have
 expired and are past a certain buffer period beyond their expiration time.
@@ -645,7 +641,7 @@ expired and are past a certain buffer period beyond their expiration time.
 
 To remove revoked certificate and clean the CRL.
 
-```plaintext
+```shell-session
 $ vault write pki_int/tidy tidy_cert_store=true tidy_revoked_certs=true
 ```
 
@@ -656,7 +652,7 @@ the CRL.
 
 **Example:**
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data '{"tidy_cert_store": true, "tidy_revoked_certs": true}' \

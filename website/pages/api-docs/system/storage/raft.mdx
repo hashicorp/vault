@@ -52,7 +52,7 @@ leader node.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -72,7 +72,7 @@ This endpoint returns the details of all the nodes in the raft cluster.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/storage/raft/configuration
@@ -129,7 +129,7 @@ This endpoint removes a node from the raft cluster.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -148,7 +148,7 @@ snapshot is returned as binary data and should be redirected to a file.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
@@ -165,7 +165,7 @@ Installs the provided snapshot, returning the cluster to the state defined in it
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -186,7 +186,7 @@ snapshot data.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \

@@ -3,18 +3,22 @@ package database
 import (
 	"context"
 	"log"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"database/sql"
 
+	"github.com/Sectorbob/mlab-ns2/gae/ns/digest"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
+	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/lib/pq"
+	mongodbatlasapi "github.com/mongodb/go-client-mongodb-atlas/mongodbatlas"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -44,7 +48,7 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	// create the database user
@@ -192,7 +196,7 @@ func TestBackend_StaticRole_Rotate_NonStaticError(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	// create the database user
@@ -296,7 +300,7 @@ func TestBackend_StaticRole_Revoke_user(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	// create the database user
@@ -521,7 +525,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 		t.Fatal("could not convert to db backend")
 	}
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	// create the database user
@@ -685,143 +689,83 @@ func assertWALCount(t *testing.T, s logical.Storage, expected int, key string) {
 // End WAL testing
 //
 
+type userCreator func(t *testing.T, username, password string)
+
 func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
-	cluster, sys := getCluster(t)
-	defer cluster.Cleanup()
-
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	config.System = sys
-
-	b, err := Factory(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer b.Cleanup(context.Background())
-
-	bd := b.(*databaseBackend)
-	if bd.credRotationQueue == nil {
-		t.Fatal("database backend had no credential rotation queue")
-	}
-
-	// Configure backend, add item and confirm length
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "latest")
 	defer cleanup()
-	testCases := []string{"65", "130", "5400"}
-	// Create database users ahead
-	for _, tc := range testCases {
-		createTestPGUser(t, connURL, dbUser+tc, dbUserDefaultPassword, testRoleStaticCreate)
-	}
-
-	// Configure a connection
-	data := map[string]interface{}{
-		"connection_url":    connURL,
-		"plugin_name":       "postgresql-database-plugin",
-		"verify_connection": false,
-		"allowed_roles":     []string{"*"},
-		"name":              "plugin-test",
-	}
-	req := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "config/plugin-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
-	}
-
-	// Create three static roles with different rotation periods
-	for _, tc := range testCases {
-		roleName := "plugin-static-role-" + tc
-		data = map[string]interface{}{
-			"name":                roleName,
-			"db_name":             "plugin-test",
-			"rotation_statements": testRoleStaticUpdate,
-			"username":            dbUser + tc,
-			"rotation_period":     tc,
-		}
-
-		req = &logical.Request{
-			Operation: logical.CreateOperation,
-			Path:      "static-roles/" + roleName,
-			Storage:   config.StorageView,
-			Data:      data,
-		}
-
-		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-		if err != nil || (resp != nil && resp.IsError()) {
-			t.Fatalf("err:%s resp:%#v\n", err, resp)
-		}
-	}
-
-	// Verify the queue has 3 items in it
-	if bd.credRotationQueue.Len() != 3 {
-		t.Fatalf("expected 3 items in the rotation queue, got: (%d)", bd.credRotationQueue.Len())
-	}
-
-	// List the roles
-	data = map[string]interface{}{}
-	req = &logical.Request{
-		Operation: logical.ListOperation,
-		Path:      "static-roles/",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
-	}
-
-	keys := resp.Data["keys"].([]string)
-	if len(keys) != 3 {
-		t.Fatalf("expected 3 roles, got: (%d)", len(keys))
-	}
-
-	// Capture initial passwords, before the periodic function is triggered
-	pws := make(map[string][]string, 0)
-	pws = capturePasswords(t, b, config, testCases, pws)
-
-	// Sleep to make sure the 65s role will be up for rotation by the time the
-	// periodic function ticks
-	time.Sleep(7 * time.Second)
-
-	// Sleep 75 to make sure the periodic func has time to actually run
-	time.Sleep(75 * time.Second)
-	pws = capturePasswords(t, b, config, testCases, pws)
-
-	// Sleep more, this should allow both sr65 and sr130 to rotate
-	time.Sleep(140 * time.Second)
-	pws = capturePasswords(t, b, config, testCases, pws)
-
-	// Verify all pws are as they should
-	pass := true
-	for k, v := range pws {
-		switch {
-		case k == "plugin-static-role-65":
-			// expect all passwords to be different
-			if v[0] == v[1] || v[1] == v[2] || v[0] == v[2] {
-				pass = false
-			}
-		case k == "plugin-static-role-130":
-			// expect the first two to be equal, but different from the third
-			if v[0] != v[1] || v[0] == v[2] {
-				pass = false
-			}
-		case k == "plugin-static-role-5400":
-			// expect all passwords to be equal
-			if v[0] != v[1] || v[1] != v[2] {
-				pass = false
-			}
-		}
-	}
-	if !pass {
-		t.Fatalf("password rotations did not match expected: %#v", pws)
-	}
+	uc := userCreator(func(t *testing.T, username, password string) {
+		createTestPGUser(t, connURL, username, password, testRoleStaticCreate)
+	})
+	testBackend_StaticRole_Rotations(t, uc, map[string]interface{}{
+		"connection_url": connURL,
+		"plugin_name":    "postgresql-database-plugin",
+	})
 }
 
 func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
+	cleanup, connURL := mongodb.PrepareTestContainerWithDatabase(t, "latest", "vaulttestdb")
+	defer cleanup()
+
+	uc := userCreator(func(t *testing.T, username, password string) {
+		testCreateDBUser(t, connURL, "vaulttestdb", username, password)
+	})
+	testBackend_StaticRole_Rotations(t, uc, map[string]interface{}{
+		"connection_url": connURL,
+		"plugin_name":    "mongodb-database-plugin",
+	})
+}
+
+func TestBackend_StaticRole_Rotations_MongoDBAtlas(t *testing.T) {
+	// To get the project ID, connect to cloud.mongodb.com, go to the vault-test project and
+	// look at Project Settings.
+	projID := os.Getenv("VAULT_MONGODBATLAS_PROJECT_ID")
+	// For the private and public key, go to Organization Access Manager on cloud.mongodb.com,
+	// choose Create API Key, then create one using the defaults.  Then go back to the vault-test
+	// project and add the API key to it, with permissions "Project Owner".
+	privKey := os.Getenv("VAULT_MONGODBATLAS_PRIVATE_KEY")
+	pubKey := os.Getenv("VAULT_MONGODBATLAS_PUBLIC_KEY")
+	if projID == "" {
+		t.Logf("Skipping MongoDB Atlas test because VAULT_MONGODBATLAS_PROJECT_ID not set")
+		t.SkipNow()
+	}
+
+	transport := digest.NewTransport(pubKey, privKey)
+	cl, err := transport.Client()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	api, err := mongodbatlasapi.New(cl)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	uc := userCreator(func(t *testing.T, username, password string) {
+		// Delete the user in case it's still there from an earlier run, ignore
+		// errors in case it's not.
+		_, _ = api.DatabaseUsers.Delete(context.Background(), projID, username)
+
+		req := &mongodbatlasapi.DatabaseUser{
+			Username:     username,
+			Password:     password,
+			DatabaseName: "admin",
+			Roles:        []mongodbatlasapi.Role{{RoleName: "atlasAdmin", DatabaseName: "admin"}},
+		}
+		_, _, err := api.DatabaseUsers.Create(context.Background(), projID, req)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+	testBackend_StaticRole_Rotations(t, uc, map[string]interface{}{
+		"plugin_name": "mongodbatlas-database-plugin",
+		"project_id":  projID,
+		"private_key": privKey,
+		"public_key":  pubKey,
+	})
+}
+
+func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts map[string]interface{}) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -829,6 +773,7 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
 
+	// Rotation ticker starts running in Factory call
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -841,27 +786,18 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 		t.Fatal("database backend had no credential rotation queue")
 	}
 
-	// configure backend, add item and confirm length
-	cleanup, connURL := mongodb.PrepareTestContainerWithDatabase(t, "latest", "vaulttestdb")
-	defer cleanup()
-	testCases := []string{"65", "130", "5400"}
-	// Create database users ahead
-	for _, tc := range testCases {
-		testCreateDBUser(t, connURL, "vaulttestdb", "statictestMongo"+tc, "test")
-	}
-
 	// Configure a connection
 	data := map[string]interface{}{
-		"connection_url":    connURL,
-		"plugin_name":       "mongodb-database-plugin",
 		"verify_connection": false,
 		"allowed_roles":     []string{"*"},
-		"name":              "plugin-mongo-test",
+	}
+	for k, v := range opts {
+		data[k] = v
 	}
 
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/plugin-mongo-test",
+		Path:      "config/plugin-test",
 		Storage:   config.StorageView,
 		Data:      data,
 	}
@@ -870,13 +806,19 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
+	testCases := []string{"10", "20", "100"}
+	// Create database users ahead
+	for _, tc := range testCases {
+		createUser(t, "statictest"+tc, "test")
+	}
+
 	// create three static roles with different rotation periods
 	for _, tc := range testCases {
 		roleName := "plugin-static-role-" + tc
 		data = map[string]interface{}{
 			"name":            roleName,
-			"db_name":         "plugin-mongo-test",
-			"username":        "statictestMongo" + tc,
+			"db_name":         "plugin-test",
+			"username":        "statictest" + tc,
 			"rotation_period": tc,
 		}
 
@@ -920,16 +862,12 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	pws := make(map[string][]string, 0)
 	pws = capturePasswords(t, b, config, testCases, pws)
 
-	// sleep to make sure the 65s role will be up for rotation by the time the
-	// periodic function ticks
-	time.Sleep(7 * time.Second)
-
-	// sleep 75 to make sure the periodic func has time to actually run
-	time.Sleep(75 * time.Second)
+	// sleep to make sure the periodic func has time to actually run
+	time.Sleep(15 * time.Second)
 	pws = capturePasswords(t, b, config, testCases, pws)
 
-	// sleep more, this should allow both sr65 and sr130 to rotate
-	time.Sleep(140 * time.Second)
+	// sleep more, this should allow both sr10 and sr20 to rotate
+	time.Sleep(10 * time.Second)
 	pws = capturePasswords(t, b, config, testCases, pws)
 
 	// verify all pws are as they should
@@ -939,21 +877,23 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 			t.Fatalf("expected to find 3 passwords for (%s), only found (%d)", k, len(v))
 		}
 		switch {
-		case k == "plugin-static-role-65":
+		case k == "plugin-static-role-10":
 			// expect all passwords to be different
 			if v[0] == v[1] || v[1] == v[2] || v[0] == v[2] {
 				pass = false
 			}
-		case k == "plugin-static-role-130":
+		case k == "plugin-static-role-20":
 			// expect the first two to be equal, but different from the third
 			if v[0] != v[1] || v[0] == v[2] {
 				pass = false
 			}
-		case k == "plugin-static-role-5400":
+		case k == "plugin-static-role-100":
 			// expect all passwords to be equal
 			if v[0] != v[1] || v[1] != v[2] {
 				pass = false
 			}
+		default:
+			t.Fatalf("unexpected password key: %v", k)
 		}
 	}
 	if !pass {
@@ -1004,7 +944,7 @@ func TestBackend_StaticRole_LockRegression(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	// Configure a connection
@@ -1073,7 +1013,7 @@ func TestBackend_StaticRole_Rotate_Invalid_Role(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	// create the database user
