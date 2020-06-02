@@ -11,42 +11,6 @@ import (
 	"strings"
 )
 
-// TestHelper is a package global that plugins will use to extract Vault
-// and Docker Clients after setup
-// var TestHelper *Helper
-
-// // Helper is intended as a per-package singleton created in TestMain which
-// // other tests in a package can use to create Terraform execution contexts
-// type Helper struct {
-// 	// api client for use
-// 	Client *api.Client
-// 	// Cluster *dockerDriver.DockerCluster
-// 	// name for plugin in test
-// 	Name string
-// 	// sourceDir is the dir containing the plugin test binary
-// 	SourceDir string
-// 	// temp dir where plugin is compiled
-// 	BuildDir string
-// }
-
-// Cleanup cals the Cluster Cleanup method, if Cluster is not nil
-// func (h *Helper) Cleanup() {
-// 	// if h.Cluster != nil {
-// 	// 	h.Cluster.Cleanup()
-// 	// }
-// 	if h.BuildDir != "" {
-// 		_ = os.RemoveAll(h.BuildDir) // clean up
-// 	}
-// }
-
-// UseDocker setups docker, copying the plugin test binary
-// func UseDocker(name, src string) *Helper {
-// 	return &Helper{
-// 		Name:      name,
-// 		SourceDir: src,
-// 	}
-// }
-
 const pluginPrefix = "vault-plugin-"
 
 // CompilePlugin is a helper method to compile a sourc plugin

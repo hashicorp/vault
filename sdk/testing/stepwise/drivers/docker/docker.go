@@ -759,7 +759,7 @@ func TestWaitLeaderMatches(ctx context.Context, client *api.Client, ready func(r
 // TODO: change back to 3
 // var DefaultNumCores = 3
 
-var DefaultNumCores = 1
+var DefaultNumCores = 3
 
 // creates a managed docker container running Vault
 func (cluster *DockerCluster) setupDockerCluster(base *vault.CoreConfig, opts *DockerClusterOptions) error {
@@ -950,15 +950,6 @@ func (dc *DockerCluster) Setup() error {
 
 	cores := dc.ClusterNodes
 	client := cores[0].Client
-
-	// // TODO maybe not use / need global here
-	// // TODO: likely not a safe way of setting this either
-	// stepwise.TestHelper = &stepwise.Helper{
-	// 	Client: client,
-	// 	// Cluster:  cluster,
-	// 	// TODO: maybe not needed
-	// 	BuildDir: tmpDir,
-	// }
 
 	// use client to mount plugin
 	err = client.Sys().RegisterPlugin(&api.RegisterPluginInput{
