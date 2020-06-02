@@ -166,7 +166,13 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			return nil, fmt.Errorf("empty ciphertext returned for input item %d", i)
 		}
 
+		keyVersion := item.KeyVersion
+		if keyVersion == 0 {
+			keyVersion = p.LatestVersion
+		}
+
 		batchResponseItems[i].Ciphertext = ciphertext
+		batchResponseItems[i].KeyVersion = keyVersion
 	}
 
 	resp := &logical.Response{}
@@ -180,7 +186,8 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			return logical.ErrorResponse(batchResponseItems[0].Error), logical.ErrInvalidRequest
 		}
 		resp.Data = map[string]interface{}{
-			"ciphertext": batchResponseItems[0].Ciphertext,
+			"ciphertext":  batchResponseItems[0].Ciphertext,
+			"key_version": batchResponseItems[0].KeyVersion,
 		}
 	}
 

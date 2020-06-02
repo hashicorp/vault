@@ -14,17 +14,17 @@ const (
 	errorMultipleVersions    = `please provide a self-link with version instead; multiple versions of this resource exist, all non-preferred`
 )
 
-// IamResourceParser handles parsing resource ID and REST
+// ResourceParser handles parsing resource ID and REST
 // config from a given resource ID or name.
-type IamResourceParser interface {
-	Parse(string) (IamResource, error)
+type ResourceParser interface {
+	Parse(string) (Resource, error)
 }
 
-// GeneratedResources implements IamResourceParser - a value
+// GeneratedResources implements ResourceParser - a value
 // is generated using internal/generate_iam.go
-type GeneratedResources map[string]map[string]map[string]IamRestResource
+type GeneratedResources map[string]map[string]map[string]RestResource
 
-func getResourceFromVersions(rawName string, versionMap map[string]IamRestResource) (*IamRestResource, error) {
+func getResourceFromVersions(rawName string, versionMap map[string]RestResource) (*RestResource, error) {
 	possibleVer := make([]string, 0, len(versionMap))
 	for v, config := range versionMap {
 		if config.IsPreferredVersion || len(versionMap) == 1 {
@@ -45,10 +45,10 @@ func getResourceFromVersions(rawName string, versionMap map[string]IamRestResour
 	return nil, fmt.Errorf(resourceParsingErrorTmpl, rawName, errorMultipleVersions)
 }
 
-func (apis GeneratedResources) GetRestConfig(rawName string, fullName *gcputil.FullResourceName, prefix string) (*IamRestResource, error) {
+func (apis GeneratedResources) GetRestConfig(rawName string, fullName *gcputil.FullResourceName, prefix string) (*RestResource, error) {
 	relName := fullName.RelativeResourceName
 	if relName == nil {
-		return nil, fmt.Errorf(resourceParsingErrorTmpl, rawName, fmt.Errorf("unsupported resource type: %s", rawName))
+		return nil, fmt.Errorf(resourceParsingErrorTmpl, rawName, fmt.Errorf("relative name does not exist: %s", rawName))
 	}
 
 	serviceMap, ok := apis[relName.TypeKey]
@@ -80,7 +80,7 @@ func (apis GeneratedResources) GetRestConfig(rawName string, fullName *gcputil.F
 	return nil, fmt.Errorf(resourceParsingErrorTmpl, rawName, errorMultipleServices)
 }
 
-func (apis GeneratedResources) Parse(rawName string) (IamResource, error) {
+func (apis GeneratedResources) Parse(rawName string) (Resource, error) {
 	rUrl, err := url.Parse(rawName)
 	if err != nil {
 		return nil, fmt.Errorf(`resource "%s" is invalid URI`, rawName)
@@ -123,8 +123,10 @@ func (apis GeneratedResources) Parse(rawName string) (IamResource, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &parsedIamResource{
-		relativeId: relName,
-		config:     cfg,
-	}, nil
+	switch cfg.TypeKey {
+	case "projects/dataset":
+		return &DatasetResource{relativeId: relName, config: cfg}, nil
+	default:
+		return &IamResource{relativeId: relName, config: cfg}, nil
+	}
 }

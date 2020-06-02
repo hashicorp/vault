@@ -2,21 +2,26 @@
 
 CHANGES:
 
+* storage/raft: The storage configuration now accepts a new `max_entry_size` config that will limit
+  the total size in bytes of any entry committed via raft. It defaults to `"1048576"` (1MiB). [[GH-9027](https://github.com/hashicorp/vault/pull/9027)]
 * token: Token creation with custom token ID via `id` will no longer allow periods (`.`) as part of the input string. 
   The final generated token value may contain periods, such as the `s.` prefix for service token 
   indication. [[GH-8646](https://github.com/hashicorp/vault/pull/8646/files)]
 * token: Token renewals will now return token policies within the `token_policies` , identity policies within `identity_policies`, and the full policy set within `policies`. [[GH-8535](https://github.com/hashicorp/vault/pull/8535)]
 * cubbyhole: Reject reads and writes to an empty ("") path. [[GH-8971](https://github.com/hashicorp/vault/pull/8971)]
 * core: Remove the addition of newlines to parsed configuration when using integer/boolean values [[GH-8928](https://github.com/hashicorp/vault/pull/8928)]
+* audit: Token TTL and issue time are now provided in the auth portion of audit logs. [[GH-9091](https://github.com/hashicorp/vault/pull/9091)]
 
 IMPROVEMENTS:
 
+* secrets/transit: Transit requests that make use of keys now include a new field  `key_version` in their responses [[GH-9100](https://github.com/hashicorp/vault/pull/9100)]
 * core: Add the Go version used to build a Vault binary to the server message output. [[GH-9078](https://github.com/hashicorp/vault/pull/9078)]
 * core: Added Password Policies for user-configurable password generation [[GH-8637](https://github.com/hashicorp/vault/pull/8637)]
 * cli: Support reading TLS parameters from file for the `vault operator raft join` command. [[GH-9060](https://github.com/hashicorp/vault/pull/9060)]
 * plugin: Add SDK method, `Sys.ReloadPlugin`, and CLI command, `vault plugin reload`, 
   for reloading plugins. [[GH-8777](https://github.com/hashicorp/vault/pull/8777)]
 * sdk/framework: Support accepting TypeFloat parameters over the API [[GH-8923](https://github.com/hashicorp/vault/pull/8923)]
+* secrets/database: Add static role rotation for MongoDB Atlas database plugin [[GH-11](https://github.com/hashicorp/vault-plugin-database-mongodbatlas/pull/11)]
 * secrets/gcp: Support BigQuery dataset ACLs in absence of IAM endpoints [[GH-78](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/78)]
 * sentinel: Add a sentinel config section, and "additional_enabled_modules", a list of Sentinel modules that may be imported in addition to the defaults.
 * ui: Update TTL picker styling on SSH secret engine [[GH-8891](https://github.com/hashicorp/vault/pull/8891)]
