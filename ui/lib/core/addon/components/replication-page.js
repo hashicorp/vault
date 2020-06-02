@@ -4,6 +4,20 @@ import layout from '../templates/components/replication-page';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 
+/**
+ * @module ReplicationPage
+ * The `ReplicationPage` component is the parent contextual component that holds the replication-dashboard, and various replication-<name>-card components.
+ * It is the top level component on routes displaying replication dashboards.
+ *
+ * @example
+ * ```js
+ * <ReplicationPage
+    @model={{cluster}}
+    />
+ * ```
+ * @param {Object} cluster=null - An Ember data object that is pulled from the Ember Cluster Model.
+ */
+
 const MODE = {
   dr: 'Disaster Recovery',
   performance: 'Performance',
@@ -12,6 +26,7 @@ const MODE = {
 export default Component.extend({
   layout,
   store: service(),
+  router: service(),
   reindexingDetails: null,
   didReceiveAttrs() {
     this._super(arguments);
@@ -20,6 +35,13 @@ export default Component.extend({
   getReplicationModeStatus: task(function*() {
     let resp;
     const { replicationMode } = this.model;
+
+    if (this.isSummaryDashboard) {
+      // the summary dashboard is not mode specific and will error
+      // while running replication/null/status in the replication-mode adapter
+      return;
+    }
+
     try {
       resp = yield this.get('store')
         .adapterFor('replication-mode')
@@ -29,22 +51,45 @@ export default Component.extend({
     }
     this.set('reindexingDetails', resp);
   }),
-  formattedReplicationMode: computed('model.{replicationMode}', function() {
+  isSummaryDashboard: computed('model.dr.{mode}', 'model.performance.{mode}', function() {
+    const router = this.router;
+    const currentRoute = router.get('currentRouteName');
+
+    // we only show the summary dashboard in the replication index route
+    if (currentRoute === 'vault.cluster.replication.index') {
+      const drMode = this.model.dr.mode;
+      const performanceMode = this.model.performance.mode;
+      return drMode === 'primary' && performanceMode === 'primary';
+    }
+  }),
+  formattedReplicationMode: computed('model.{replicationMode}', 'isSummaryDashboard', function() {
     // dr or performance 🤯
+    const { isSummaryDashboard } = this;
+    if (isSummaryDashboard) {
+      return 'Disaster Recovery & Performance';
+    }
     const mode = this.model.replicationMode;
     return MODE[mode];
   }),
-  clusterMode: computed('model.{replicationAttrs}', function() {
+  clusterMode: computed('model.{replicationAttrs}', 'isSummaryDashboard', function() {
     // primary or secondary
     const { model } = this;
+    const { isSummaryDashboard } = this;
+    if (isSummaryDashboard) {
+      // replicationAttrs does not exist when summaryDashboard
+      return 'primary';
+    }
     return model.replicationAttrs.mode;
   }),
   isLoadingData: computed('clusterMode', 'model.{replicationAttrs}', function() {
     const { clusterMode } = this;
     const { model } = this;
+    const { isSummaryDashboard } = this;
+    if (isSummaryDashboard) {
+      return false;
+    }
     const clusterId = model.replicationAttrs.clusterId;
     const replicationDisabled = model.replicationAttrs.replicationDisabled;
-
     if (clusterMode === 'bootstrapping' || (!clusterId && !replicationDisabled)) {
       // if clusterMode is bootstrapping
       // if no clusterId, the data hasn't loaded yet, wait for another status endpoint to be called
@@ -56,8 +101,26 @@ export default Component.extend({
     const { clusterMode } = this;
     return clusterMode === 'secondary';
   }),
-  replicationDetails: computed('model.{replicationMode}', function() {
+  replicationDetailsSummary: computed('isSummaryDashboard', function() {
     const { model } = this;
+    const { isSummaryDashboard } = this;
+    if (!isSummaryDashboard) {
+      return;
+    }
+    if (isSummaryDashboard) {
+      let combinedObject = {};
+      combinedObject.dr = model['dr'];
+      combinedObject.performance = model['performance'];
+      return combinedObject;
+    }
+  }),
+  replicationDetails: computed('model.{replicationMode}', 'isSummaryDashboard', function() {
+    const { model } = this;
+    const { isSummaryDashboard } = this;
+    if (isSummaryDashboard) {
+      // Cannot return null
+      return {};
+    }
     const replicationMode = model.replicationMode;
     return model[replicationMode];
   }),

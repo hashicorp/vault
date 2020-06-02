@@ -1,9 +1,15 @@
 .replication-dashboard {
+  box-shadow: none;
+
   .selectable-card {
     line-height: normal;
 
     &:hover {
       box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
+    }
+
+    .toolbar-link {
+      color: $blue-500;
     }
   }
 
@@ -24,7 +30,8 @@
     margin-top: $spacing-xl;
     display: grid;
 
-    &.primary {
+    &.primary,
+    .summary {
       margin: 2rem 0 2rem 0;
       grid-template-columns: 1fr 2fr;
 
@@ -35,7 +42,7 @@
 
     &.secondary {
       grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      grid-gap: $spacing-xl; //ARG TODO double check ok
+      grid-gap: $spacing-xl;
     }
 
     .card-container {
@@ -46,6 +53,10 @@
       padding: $spacing-l;
       line-height: 1.5;
 
+      &.summary {
+        grid-template-rows: 0.2fr 1fr 0.2fr 1fr;
+      }
+
       &.has-border-danger:hover {
         box-shadow: none;
       }
@@ -55,9 +66,13 @@
         min-height: 250px;
       }
 
-      .grid-item-title {
-        grid-column: 1 / span 2;
+      .grid-item-top-left {
+        grid-column: 1 / span 1;
         display: flex;
+      }
+      .grid-item-top-right {
+        grid-column: 2 / span 1;
+        justify-self: right;
       }
       .grid-item-left {
         grid-column: 1/1;
@@ -70,6 +85,7 @@
       .grid-item-left-bottom {
         grid-column: 1/1;
         grid-row: 3/3;
+        margin-top: -8px;
 
         display: flex;
         align-items: center;
@@ -77,8 +93,21 @@
       .grid-item-right-bottom {
         grid-column: 2/2;
         grid-row: 3/3;
+        margin-top: -8px;
+      }
+      .grid-item-full-bottom {
+        grid-column: 1 / span 2;
+        grid-row: 4/4;
       }
     }
+
+    &.summary {
+      margin-bottom: $spacing-xl;
+    }
+  }
+  .summary-state {
+    padding-bottom: $spacing-xl;
+    border-bottom: 1px solid rgba($grey-dark, 0.3);
   }
 
   // prevent double lines at the bottom of the dashboard
