@@ -91,6 +91,8 @@ and consider if they're appropriate for your deployment.
 
   - `nodeSelector` (`string: null`) - nodeSelector labels for injector pod assignment, formatted as a muli-line string.
 
+  - `priorityClassName` (`string: ""`) - Priority class for injector pods
+
 - `server` - Values that configure running a Vault server within Kubernetes.
 
   - `image` - Values that configure the Vault Docker image.
@@ -119,9 +121,15 @@ and consider if they're appropriate for your deployment.
 
       - `labels` (`dictionary: {}`) - Labels for the ingress service.
 
-      - `annotations` (`string`) - This value defines additional annotations to add to the Ingress service. This should be formatted as a multi-line string.
+      - `annotations` (`dictionary: {}`) - This value defines additional annotations to
+      add to the Ingress service. This can either be YAML or a YAML-formatted
+      multi-line templated string.
 
       ```yaml
+      annotations:
+        kubernetes.io/ingress.class: nginx
+        kubernetes.io/tls-acme: "true"
+      # or
       annotations: |
         kubernetes.io/ingress.class: nginx
         kubernetes.io/tls-acme: "true"
@@ -185,7 +193,18 @@ and consider if they're appropriate for your deployment.
 
     - `preStopSleepSeconds` (`int: 5`) - Used to set the sleep time during the preStop step.
 
-    - `extraContainers` (`array: []`) - The extra containers to be applied to the Vault server pods.
+    - `postStart` (`array: []`) - Used to define commands to run after the pod is ready. This can be used to automate processes such as initialization or boostrapping auth methods.
+
+    ```yaml
+    postStart:
+      - /bin/sh
+      - -c
+      - /vault/userconfig/myscript/run.sh
+    ```
+
+    - `extraInitContainers` (`array: null`) - extraInitContainers is a list of init containers. Specified as a YAML list. This is useful if you need to run a script to provision TLS certificates or write out configuration files in a dynamic way.
+
+    - `extraContainers` (`array: null`) - The extra containers to be applied to the Vault server pods.
 
     ```yaml
     extraContainers:
@@ -267,22 +286,24 @@ and consider if they're appropriate for your deployment.
           topologyKey: kubernetes.io/hostname
     ```
 
-    - `tolerations` (`array []`) - This value defines the [tolerations](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/) that are acceptable when being scheduled.
+    - `tolerations` (`string: null`) - This value defines the [tolerations](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/) that are acceptable when being scheduled. This should be a multi-line string matching the Toleration array in a PodSpec.
 
     ```yaml
-    tolerations:
+    tolerations: |
       - key: 'node.kubernetes.io/unreachable'
         operator: 'Exists'
         effect: 'NoExecute'
         tolerationSeconds: 6000
     ```
 
-    - `nodeSelector` - This value defines additional node selection criteria for more control over where the Vault servers are deployed.
+    - `nodeSelector` - This value defines additional node selection criteria for more control over where the Vault servers are deployed. This should be formatted as a multi-line string.
 
     ```yaml
-    nodeSelector:
+    nodeSelector: |
       disktype: ssd
     ```
+
+    - `priorityClassName` (`string: ""`) - Priority class for server pods
 
     - `extraLabels` (`dictionary: {}`) - This value defines additional labels for server pods.
 
@@ -292,9 +313,13 @@ and consider if they're appropriate for your deployment.
       "sample/label2": "bar"
     ```
 
-    - `annotations` - This value defines additional annotations for server pods. This should be a formatted as a multi-line string.
+    - `annotations` (`dictionary: {}`) - This value defines additional annotations for server pods. This can either be YAML or a YAML-formatted multi-line templated string.
 
     ```yaml
+    annotations:
+      "sample/annotation1": "foo"
+      "sample/annotation2": "bar"
+    # or
     annotations: |
       "sample/annotation1": "foo"
       "sample/annotation2": "bar"
@@ -314,9 +339,13 @@ and consider if they're appropriate for your deployment.
 
       - `nodePort` (`int:`) - When type is set to `NodePort`, the bound node port can be configured using this value. A random port will be assigned if this is left blank.
 
-      - `annotations` (`string`) - This value defines additional annotations for the service. This should be formatted as a multi-line string.
+      - `annotations` (`dictionary: {}`) - This value defines additional annotations for the service. This can either be YAML or a YAML-formatted multi-line templated string.
 
       ```yaml
+      annotations:
+        "sample/annotation1": "foo"
+        "sample/annotation2": "bar"
+      # or
       annotations: |
         "sample/annotation1": "foo"
         "sample/annotation2": "bar"
@@ -324,9 +353,13 @@ and consider if they're appropriate for your deployment.
 
     - `serviceAccount` - Values that configure the Kubernetes service account created for Vault.
 
-      - `annotations` (`string`) - This value defines additional annotations for the service account. This should be formatted as a multi-line string.
+      - `annotations` (`dictionary: {}`) - This value defines additional annotations for the service account. This can either be YAML or a YAML-formatted multi-line templated string.
 
       ```yaml
+      annotations:
+        "sample/annotation1": "foo"
+        "sample/annotation2": "bar"
+      # or
       annotations: |
         "sample/annotation1": "foo"
         "sample/annotation2": "bar"
@@ -413,6 +446,8 @@ and consider if they're appropriate for your deployment.
         - `enabled` (`boolean: false`) -
           Enables `raft` integrated storage mode for the Vault server. This mode uses persistent volumes for storage.
 
+        - `setNodeId` (`boolean: false`) - Set the Node Raft ID to the name of the pod.
+
         - `config` (`string: "{}"`) -
           A raw string of extra HCL or JSON [configuration](/docs/configuration) for Vault servers.
           This will be saved as-is into a ConfigMap that is read by the Vault servers.
@@ -488,9 +523,13 @@ and consider if they're appropriate for your deployment.
 
   - `loadBalancerIP` (`string`) - This value defines the IP address of the load balancer when using `serviceType: LoadBalancer`.
 
-  - `annotations` (`string`) - This value defines additional annotations for the UI service. This should be a formatted as a multi-line string.
+  - `annotations` (`dictionary: {}`) - This value defines additional annotations for the UI service. This can either be YAML or a YAML-formatted multi-line templated string.
 
   ```yaml
+  annotations:
+    "sample/annotation1": "foo"
+    "sample/annotation2": "bar"
+  # or
   annotations: |
     "sample/annotation1": "foo"
     "sample/annotation2": "bar"
