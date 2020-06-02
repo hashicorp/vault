@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	"github.com/ory/dockertest"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -30,20 +31,20 @@ func TestInit_clientTLS(t *testing.T) {
 	defer os.RemoveAll(confDir)
 
 	// Create certificates for Mongo authentication
-	caCert := newCert(t,
-		commonName("test certificate authority"),
-		isCA(true),
-		selfSign(),
+	caCert := certhelpers.NewCert(t,
+		certhelpers.CommonName("test certificate authority"),
+		certhelpers.IsCA(true),
+		certhelpers.SelfSign(),
 	)
-	serverCert := newCert(t,
-		commonName("server"),
-		dns("localhost"),
-		parent(caCert),
+	serverCert := certhelpers.NewCert(t,
+		certhelpers.CommonName("server"),
+		certhelpers.Dns("localhost"),
+		certhelpers.Parent(caCert),
 	)
-	clientCert := newCert(t,
-		commonName("client"),
-		dns("client"),
-		parent(caCert),
+	clientCert := certhelpers.NewCert(t,
+		certhelpers.CommonName("client"),
+		certhelpers.Dns("client"),
+		certhelpers.Parent(caCert),
 	)
 
 	writeFile(t, paths.Join(confDir, "ca.pem"), caCert.CombinedPEM(), 0644)
@@ -81,7 +82,7 @@ net:
 		"connection_url":      retURL,
 		"allowed_roles":       "*",
 		"tls_certificate_key": clientCert.CombinedPEM(),
-		"tls_ca":              caCert.pem,
+		"tls_ca":              caCert.Pem,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -111,7 +112,7 @@ net:
 		AuthInfo: authInfo{
 			AuthenticatedUsers: []user{
 				{
-					User: fmt.Sprintf("CN=%s", clientCert.template.Subject.CommonName),
+					User: fmt.Sprintf("CN=%s", clientCert.Template.Subject.CommonName),
 					DB:   "$external",
 				},
 			},
@@ -249,11 +250,11 @@ func connect(t *testing.T, uri string) (client *mongo.Client) {
 	return client
 }
 
-func setUpX509User(t *testing.T, client *mongo.Client, cert certificate) {
+func setUpX509User(t *testing.T, client *mongo.Client, cert certhelpers.Certificate) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	username := fmt.Sprintf("CN=%s", cert.template.Subject.CommonName)
+	username := fmt.Sprintf("CN=%s", cert.Template.Subject.CommonName)
 
 	cmd := &createUserCommand{
 		Username: username,

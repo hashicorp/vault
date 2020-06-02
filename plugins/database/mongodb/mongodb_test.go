@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -239,14 +240,14 @@ func testCreateDBUser(t testing.TB, connURL, db, username, password string) {
 }
 
 func TestGetTLSAuth(t *testing.T) {
-	ca := newCert(t,
-		commonName("certificate authority"),
-		isCA(true),
-		selfSign(),
+	ca := certhelpers.NewCert(t,
+		certhelpers.CommonName("certificate authority"),
+		certhelpers.IsCA(true),
+		certhelpers.SelfSign(),
 	)
-	cert := newCert(t,
-		commonName("test cert"),
-		parent(ca),
+	cert := certhelpers.NewCert(t,
+		certhelpers.CommonName("test cert"),
+		certhelpers.Parent(ca),
 	)
 
 	type testCase struct {
@@ -276,12 +277,12 @@ func TestGetTLSAuth(t *testing.T) {
 			expectErr:  true,
 		},
 		"good ca": {
-			tlsCAData: cert.pem,
+			tlsCAData: cert.Pem,
 
 			expectOpts: options.Client().
 				SetTLSConfig(
 					&tls.Config{
-						RootCAs: appendToCertPool(t, x509.NewCertPool(), cert.pem),
+						RootCAs: appendToCertPool(t, x509.NewCertPool(), cert.Pem),
 					},
 				),
 			expectErr: false,
@@ -293,7 +294,7 @@ func TestGetTLSAuth(t *testing.T) {
 			expectOpts: options.Client().
 				SetTLSConfig(
 					&tls.Config{
-						Certificates: []tls.Certificate{cert.tlsCert},
+						Certificates: []tls.Certificate{cert.TLSCert},
 					},
 				).
 				SetAuth(options.Credential{
