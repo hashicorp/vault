@@ -94,11 +94,7 @@ type FSM struct {
 }
 
 // NewFSM constructs a FSM using the given directory
-func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
-	path, ok := conf["path"]
-	if !ok {
-		return nil, fmt.Errorf("'path' must be set")
-	}
+func NewFSM(path string, storeLatestState bool, logger log.Logger) (*FSM, error) {
 
 	dbPath := filepath.Join(path, "vault.db")
 
@@ -155,13 +151,8 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 		return nil, err
 	}
 
-	storeLatestState := true
-	if _, ok := conf["doNotStoreLatestState"]; ok {
-		storeLatestState = false
-	}
-
 	f := &FSM{
-		path:   conf["path"],
+		path:   path,
 		logger: logger,
 
 		db:               boltDB,
