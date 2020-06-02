@@ -6,15 +6,11 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
 	dockerDriver "github.com/hashicorp/vault/sdk/testing/stepwise/drivers/docker"
 )
-
-// TEST_AWS_SECRET_KEY
-// TEST_AWS_ACCESS_KEY
 
 func TestAccBackend_Stepwise_basic(t *testing.T) {
 	t.Parallel()
@@ -38,7 +34,7 @@ func TestAccBackend_Stepwise_basic(t *testing.T) {
 
 func testAccStepwiseConfig(t *testing.T) stepwise.Step {
 	return stepwise.Step{
-		Operation: logical.UpdateOperation,
+		Operation: stepwise.UpdateOperation,
 		Path:      "config/root",
 		Data: map[string]interface{}{
 			"region":     os.Getenv("AWS_DEFAULT_REGION"),
@@ -50,7 +46,7 @@ func testAccStepwiseConfig(t *testing.T) stepwise.Step {
 
 func testAccStepwiseWritePolicy(t *testing.T, name string, policy string) stepwise.Step {
 	return stepwise.Step{
-		Operation: logical.UpdateOperation,
+		Operation: stepwise.UpdateOperation,
 		Path:      "roles/" + name,
 		Data: map[string]interface{}{
 			"policy_document": policy,
@@ -61,7 +57,7 @@ func testAccStepwiseWritePolicy(t *testing.T, name string, policy string) stepwi
 
 func testAccStepwiseRead(t *testing.T, path, name string, credentialTests []credentialTestFunc) stepwise.Step {
 	return stepwise.Step{
-		Operation: logical.ReadOperation,
+		Operation: stepwise.ReadOperation,
 		Path:      path + "/" + name,
 		Check: func(resp *api.Secret, err error) error {
 			if err != nil {
@@ -94,9 +90,10 @@ func testAccStepwisePreCheck(t *testing.T) {
 			os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
 		}
 
-		// TEST_AWS_SECRET_KEY
-		// TEST_AWS_ACCESS_KEY
 		// Ensure test variables are set
+		if v := os.Getenv("TEST_AWS_ACCESS_KEY"); v == "" {
+			t.Fatal("TEST_AWS_ACCESS_KEY not set")
+		}
 		if v := os.Getenv("TEST_AWS_SECRET_KEY"); v == "" {
 			t.Fatal("TEST_AWS_SECRET_KEY not set")
 		}
