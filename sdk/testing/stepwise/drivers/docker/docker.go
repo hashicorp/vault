@@ -106,6 +106,15 @@ func (dc *DockerCluster) ExpandPath(path string) string {
 	return newPath
 }
 
+// MountPath returns the path that the plugin under test is mounted at
+// TODO: include namespace support
+func (dc *DockerCluster) MountPath() string {
+	if dc.DriverOptions.PluginType == stepwise.PluginTypeCredential {
+		return fmt.Sprintf("%s/%s", "auth", dc.DriverOptions.MountPath)
+	}
+	return dc.DriverOptions.MountPath
+}
+
 func (dc *DockerCluster) Name() string {
 	// TODO return UUID cluster name
 	return dc.PluginName
@@ -898,6 +907,7 @@ func NewDockerDriver(name string, do *stepwise.DriverOptions) *DockerCluster {
 		do = &stepwise.DriverOptions{}
 	}
 	return &DockerCluster{
+		// TODO should this be the driver options plugin name?
 		PluginName:    name,
 		ClusterName:   fmt.Sprintf("test-%s-%s", name, clusterUUID),
 		RaftStorage:   true,
@@ -1000,8 +1010,8 @@ type Runner struct {
 func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, error) {
 	hostConfig := &container.HostConfig{
 		PublishAllPorts: true,
-		// AutoRemove:      false,
 		// TODO: configure auto remove
+		// AutoRemove:      false,
 		AutoRemove: true,
 	}
 

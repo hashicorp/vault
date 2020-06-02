@@ -8,23 +8,21 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/mitchellh/mapstructure"
-	"github.com/y0ssar1an/q"
 
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
 	dockerDriver "github.com/hashicorp/vault/sdk/testing/stepwise/drivers/docker"
 )
 
-func TestBackend_stepwise_UserCrud(t *testing.T) {
+func TestAccBackend_stepwise_UserCrud(t *testing.T) {
+	customPluginName := "my-userpass"
 	driverOptions := &stepwise.DriverOptions{
-		Name:       "userpass23",
+		Name:       customPluginName,
 		PluginType: stepwise.PluginTypeCredential,
 		PluginName: "userpass",
-		MountPath:  "userpass23",
+		MountPath:  customPluginName,
 	}
-	q.Q("testing:", stepwise.PluginTypeCredential.String())
-	q.Q("do testing:", driverOptions.PluginType.String())
 	stepwise.Run(t, stepwise.Case{
-		Driver: dockerDriver.NewDockerDriver("userpass23", driverOptions),
+		Driver: dockerDriver.NewDockerDriver(customPluginName, driverOptions),
 		Steps: []stepwise.Step{
 			testAccStepwiseUser(t, "web", "password", "foo"),
 			testAccStepwiseReadUser(t, "web", "foo"),

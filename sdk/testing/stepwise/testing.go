@@ -81,6 +81,9 @@ type StepDriver interface {
 
 	// ExpandPath adds any Namespace or mount path to the user defined path
 	ExpandPath(string) string
+
+	// MountPath returns the path the plugin is mounted at
+	MountPath() string
 }
 
 // PluginType defines the types of plugins supported
@@ -185,7 +188,7 @@ type Case struct {
 // long, we require the verbose flag so users are able to see progress
 // output.
 func Run(tt TestT, c Case) {
-	// tt.Helper()
+	tt.Helper()
 	q.Q("---------")
 	q.Q("Stepwise starting...")
 	q.Q("---------")
@@ -213,6 +216,7 @@ func Run(tt TestT, c Case) {
 
 	// Run the PreCheck if we have it
 	if c.PreCheck != nil {
+		q.Q("--> running precheck")
 		c.PreCheck()
 	}
 
@@ -238,23 +242,24 @@ func Run(tt TestT, c Case) {
 	// Create an in-memory Vault core
 	// TODO use test logger if available?
 	logger := logging.NewVaultLogger(log.Trace)
-	if c.Driver != nil {
-		err := c.Driver.Setup()
-		if err != nil {
-			driverErr := fmt.Errorf("error setting up driver: %w", err)
-			if err := c.Driver.Teardown(); err != nil {
-				driverErr = fmt.Errorf("error during driver teardown: %w", driverErr)
-			}
-			tt.Fatal(driverErr)
-		}
-		defer func() {
-			if err := c.Driver.Teardown(); err != nil {
-				logger.Error("error in driver teardown:", "error", err)
-			}
-		}()
-	} else {
+	if c.Driver == nil {
 		tt.Fatal("nil driver in acceptance test")
 	}
+
+	err := c.Driver.Setup()
+	if err != nil {
+		driverErr := fmt.Errorf("error setting up driver: %w", err)
+		if err := c.Driver.Teardown(); err != nil {
+			driverErr = fmt.Errorf("error during driver teardown: %w", driverErr)
+		}
+		tt.Fatal(driverErr)
+	}
+
+	// defer func() {
+	// 	if err := c.Driver.Teardown(); err != nil {
+	// 		logger.Error("error in driver teardown:", "error", err)
+	// 	}
+	// }()
 
 	// retrieve the client from the Driver. If this returns an error, fail
 	// immediately
@@ -263,7 +268,9 @@ func Run(tt TestT, c Case) {
 		tt.Fatal(err)
 	}
 
-	var revoke []*logical.Request
+	// track all responses to revoke any secrets
+	var responses []*api.Secret
+	q.Q("mount path:", c.Driver.MountPath())
 	for i, step := range c.Steps {
 		// range is zero based, so add 1 for a human friendly output of steps.
 		// "index" here is only used for logging / output, and not to reference the
@@ -297,6 +304,9 @@ func Run(tt TestT, c Case) {
 			resp, err = client.Logical().Delete(path)
 		default:
 			panic("bad operation")
+		}
+		if resp != nil {
+			responses = append(responses, resp)
 		}
 		// q.Q("test resp,err:", resp, err)
 		// if !s.Unauthenticated {
@@ -367,10 +377,17 @@ func Run(tt TestT, c Case) {
 	// TODO
 	// - Revoking things here
 	//
+	for _, secret := range responses {
+		if secret.LeaseID != "" {
+			if err := client.Sys().Revoke(secret.LeaseID); err != nil {
+				tt.Error(fmt.Sprintf("===>> error revoking lease: %s", err))
+			}
+		}
+	}
 
 	// Revoke any secrets we might have.
 	var failedRevokes []*logical.Secret
-	for _, req := range revoke {
+	for _, req := range responses {
 		q.Q("==>==> revoke req:", req)
 		// TODO do we revoke?
 		// if logger.IsWarn() {
@@ -422,6 +439,13 @@ func Run(tt TestT, c Case) {
 		}
 	}
 
+	// failsafe - revoke by mount path
+	q.Q("==<> failsafe")
+	if err := client.Sys().RevokePrefix(c.Driver.MountPath()); err != nil {
+		q.Q("==<> error in failsafe:", err)
+		revokeErr := fmt.Errorf("[WARN] error revoking by prefix at tend of test: %w", err)
+		tt.Error(revokeErr)
+	}
 }
 
 // TestCheckMulti is a helper to have multiple checks.
