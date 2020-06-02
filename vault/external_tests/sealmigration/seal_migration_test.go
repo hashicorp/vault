@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -67,7 +68,11 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 			t.Parallel()
 
 			logger := logger.Named("raft")
-			storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores)
+
+			atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
+			addressProvider := testhelpers.NewHardcodedServerAddressProvider(numTestCores, 54010)
+
+			storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores, addressProvider)
 			defer cleanup()
 			tf(t, logger, storage, 54000)
 		})
@@ -225,8 +230,6 @@ func migrateFromShamirToTransit_Post14(
 		return transitSeal
 	}
 
-	//var baseClusterPort = basePort + 10
-
 	// Restart each follower with the new config, and migrate to Transit.
 	// Note that the barrier keys are being used as recovery keys.
 	rootToken, recoveryKeys := cluster.RootToken, cluster.BarrierKeys
@@ -381,9 +384,7 @@ func initializeShamir(
 
 	// Unseal
 	if storage.IsRaft {
-		testhelpers.JoinRaftNodes(t, cluster, false,
-			testhelpers.NewHardcodedServerAddressProvider(numTestCores, baseClusterPort))
-
+		testhelpers.JoinRaftFollowers(t, cluster, false)
 		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
 			t.Fatal(err)
 		}
@@ -437,13 +438,10 @@ func runShamir(
 	// Unseal
 	cluster.BarrierKeys = barrierKeys
 	if storage.IsRaft {
-		provider := testhelpers.NewHardcodedServerAddressProvider(numTestCores, baseClusterPort)
-		testhelpers.SetRaftAddressProviders(t, cluster, provider)
-
-		for _, core := range cluster.Cores {
+		for i, core := range cluster.Cores {
+			fmt.Printf(">>> unsealing %d\n", i)
 			cluster.UnsealCore(t, core)
 		}
-
 		// This is apparently necessary for the raft cluster to get itself
 		// situated.
 		time.Sleep(15 * time.Second)
@@ -506,8 +504,7 @@ func initializeTransit(
 
 	// Join raft
 	if storage.IsRaft {
-		testhelpers.JoinRaftNodes(t, cluster, true,
-			testhelpers.NewHardcodedServerAddressProvider(numTestCores, baseClusterPort))
+		testhelpers.JoinRaftFollowers(t, cluster, true)
 
 		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
 			t.Fatal(err)
@@ -563,13 +560,9 @@ func runTransit(
 	// Unseal.  Even though we are using autounseal, we have to unseal
 	// explicitly because we are using SkipInit.
 	if storage.IsRaft {
-		provider := testhelpers.NewHardcodedServerAddressProvider(numTestCores, baseClusterPort)
-		testhelpers.SetRaftAddressProviders(t, cluster, provider)
-
 		for _, core := range cluster.Cores {
 			cluster.UnsealCoreWithStoredKeys(t, core)
 		}
-
 		// This is apparently necessary for the raft cluster to get itself
 		// situated.
 		time.Sleep(15 * time.Second)

@@ -8,6 +8,7 @@ import (
 	"github.com/mitchellh/go-testing-interface"
 
 	hclog "github.com/hashicorp/go-hclog"
+	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/vault"
 )
@@ -73,7 +74,10 @@ func MakeReusableStorage(t testing.T, logger hclog.Logger, bundle *vault.Physica
 
 // MakeReusableRaftStorage makes a physical raft backend that can be re-used
 // across multiple test clusters in sequence.
-func MakeReusableRaftStorage(t testing.T, logger hclog.Logger, numCores int) (ReusableStorage, StorageCleanup) {
+func MakeReusableRaftStorage(
+	t testing.T, logger hclog.Logger, numCores int,
+	addressProvider raftlib.ServerAddressProvider,
+) (ReusableStorage, StorageCleanup) {
 
 	raftDirs := make([]string, numCores)
 	for i := 0; i < numCores; i++ {
@@ -87,7 +91,7 @@ func MakeReusableRaftStorage(t testing.T, logger hclog.Logger, numCores int) (Re
 			conf.DisablePerformanceStandby = true
 			opts.KeepStandbysSealed = true
 			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
-				return makeReusableRaftBackend(t, coreIdx, logger, raftDirs[coreIdx])
+				return makeReusableRaftBackend(t, coreIdx, logger, raftDirs[coreIdx], addressProvider)
 			}
 		},
 
@@ -125,7 +129,10 @@ func makeRaftDir(t testing.T) string {
 	return raftDir
 }
 
-func makeReusableRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, raftDir string) *vault.PhysicalBackendBundle {
+func makeReusableRaftBackend(
+	t testing.T, coreIdx int, logger hclog.Logger, raftDir string,
+	addressProvider raftlib.ServerAddressProvider,
+) *vault.PhysicalBackendBundle {
 
 	nodeID := fmt.Sprintf("core-%d", coreIdx)
 	conf := map[string]string{
@@ -138,6 +145,9 @@ func makeReusableRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, raft
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	fmt.Printf("makeReusableRaftBackend %T %d\n", addressProvider, coreIdx)
+	backend.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
 
 	return &vault.PhysicalBackendBundle{
 		Backend: backend,

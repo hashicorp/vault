@@ -412,15 +412,8 @@ func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib
 }
 
 func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
-	JoinRaftNodes(t, cluster, false,
-		&TestRaftServerAddressProvider{Cluster: cluster})
-}
 
-func JoinRaftNodes(
-	t testing.T, cluster *vault.TestCluster,
-	useStoredKeys bool,
-	addressProvider raftlib.ServerAddressProvider,
-) {
+	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
 
 	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
 
@@ -430,11 +423,7 @@ func JoinRaftNodes(
 	{
 		EnsureCoreSealed(t, leader)
 		leader.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		if useStoredKeys {
-			cluster.UnsealCoreWithStoredKeys(t, leader)
-		} else {
-			cluster.UnsealCore(t, leader)
-		}
+		cluster.UnsealCore(t, leader)
 		vault.TestWaitActive(t, leader.Core)
 	}
 
@@ -449,6 +438,37 @@ func JoinRaftNodes(
 	for i := 1; i < len(cluster.Cores); i++ {
 		core := cluster.Cores[i]
 		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		cluster.UnsealCore(t, core)
+	}
+
+	WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
+}
+
+// JoinRaftFollowers unseals the leader, and then joins-and-unseals the
+// followers one at a time.  We assume the ServerAddressProvider has already
+// been installed on all the nodes.
+func JoinRaftFollowers(t testing.T, cluster *vault.TestCluster, useStoredKeys bool) {
+
+	leader := cluster.Cores[0]
+
+	cluster.UnsealCore(t, leader)
+	vault.TestWaitActive(t, leader.Core)
+
+	leaderInfos := []*raft.LeaderJoinInfo{
+		&raft.LeaderJoinInfo{
+			LeaderAPIAddr: leader.Client.Address(),
+			TLSConfig:     leader.TLSConfig,
+		},
+	}
+
+	// Join followers
+	for i := 1; i < len(cluster.Cores); i++ {
+		core := cluster.Cores[i]
 		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
 		if err != nil {
 			t.Fatal(err)
@@ -517,17 +537,6 @@ func NewHardcodedServerAddressProvider(numCores, baseClusterPort int) raftlib.Se
 
 	return &HardcodedServerAddressProvider{
 		entries,
-	}
-}
-
-// SetRaftAddressProviders sets a ServerAddressProvider for all the nodes in a
-// cluster.
-func SetRaftAddressProviders(t testing.T, cluster *vault.TestCluster, provider raftlib.ServerAddressProvider) {
-
-	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
-
-	for _, core := range cluster.Cores {
-		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(provider)
 	}
 }
 
