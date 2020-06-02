@@ -1,23 +1,50 @@
-<h4 class="title is-5 is-marginless">
-  Recover
-</h4>
-<div class="content">
-  <p>
-    Attempt recovery if replication is in a bad state, for instance if an error
-    has caused replication to stop syncing.
-  </p>
-</div>
-<div class="field">
-  <div class="control">
-    <ConfirmAction
-      @buttonClasses="button is-primary"
-      @confirmTitle="Begin recovery?"
-      @confirmMessage="This will attempt to recover to continue syncing."
-      @confirmButtonText="Recover"
-      @horizontalPosition="auto-left"
-      @onConfirmAction={{action "onSubmit" "recover"}}
+<div class="action-block is-rounded">
+  <div class="action-block-info">
+    <h4 class="title is-5 is-marginless">
+      Recover
+    </h4>
+    <p>
+      Attempt recovery if replication is in a bad state.
+    </p>
+  </div>
+
+  <div class="action-block-action">
+    <button
+      class="button is-secondary"
+      onclick={{action (mut isModalActive) true}}
+      data-test-replication-action-trigger
     >
       Recover
-    </ConfirmAction>
+    </button>
   </div>
 </div>
+
+<Modal
+  @title="Begin recovery?"
+  @onClose={{action (mut isModalActive) false}}
+  @isActive={{isModalActive}}
+  @type="warning"
+  @showCloseButton={{true}}
+>
+  <section class="modal-card-body">
+    <p>
+      If replication is in an adverse state, we can begin recovery. This will attempt to recover to continue syncing.
+    </p>
+  </section>
+  <footer class="modal-card-foot modal-card-foot-outlined">
+    <button
+      class="button is-primary"
+      disabled={{if (and (eq replicationMode "dr") (not dr_operation_token)) true}}
+      onclick={{action "onSubmit" "recover"}}
+      data-test-recover-confirm-button
+    >
+      Recover
+    </button>
+    <button
+      class="button is-secondary"
+      onclick={{action (mut isModalActive) false}}
+      data-test-recover-cancel-button>
+      Cancel
+    </button>
+  </footer>
+</Modal>
