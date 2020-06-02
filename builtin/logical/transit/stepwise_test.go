@@ -14,9 +14,8 @@ import (
 	"github.com/y0ssar1an/q"
 )
 
-// TestBackend_basic_derived_docker is an example test using the Docker Driver
-func TestBackend_basic_derived_docker(t *testing.T) {
-	// t.Helper()
+// TestBackend_basic_docker is an example test using the Docker Driver
+func TestBackend_basic_docker(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	driverOptions := stepwise.DriverOptions{
 		Name:       "transit2",
@@ -30,7 +29,7 @@ func TestBackend_basic_derived_docker(t *testing.T) {
 			testAccStepwiseListPolicy(t, "test", true),
 			testAccStepwiseWritePolicy(t, "test", true),
 			testAccStepwiseListPolicy(t, "test", false),
-			testAccStepwiseReadPolicy(t, "test2", false, true),
+			testAccStepwiseReadPolicy(t, "test", false, true),
 			testAccStepwiseEncryptContext(t, "test", testPlaintext, "my-cool-context", decryptData),
 			testAccStepwiseDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepwiseEnableDeletion(t, "test"),
