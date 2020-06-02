@@ -3,7 +3,7 @@ import layout from '../templates/components/replication-doc-link';
 
 /**
  * @module ReplicationDocLink
- * The `ReplicationDocLink` component is learn link with helper text used on the Replication Dashboards.
+ * The `ReplicationDocLink` component is a learn link with helper text used on the Replication Dashboards.
  * The link takes you to the key monitoring metrics learn doc.
  *
  * @example
