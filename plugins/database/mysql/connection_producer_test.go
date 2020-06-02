@@ -1,36 +1,30 @@
-package mongodb
+package mysql
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"io/ioutil"
-	"net/url"
 	"os"
 	paths "path"
 	"path/filepath"
 	"reflect"
-	"sort"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
-	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	"github.com/ory/dockertest"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
-	"gopkg.in/mgo.v2"
 )
 
 func TestInit_clientTLS(t *testing.T) {
-	t.Skip("Skipping this test because CircleCI can't mount the files we need without further investigation: " +
-		"https://support.circleci.com/hc/en-us/articles/360007324514-How-can-I-mount-volumes-to-docker-containers-")
+	//t.Skip("Skipping this test because CircleCI can't mount the files we need without further investigation: " +
+	//	"https://support.circleci.com/hc/en-us/articles/360007324514-How-can-I-mount-volumes-to-docker-containers-")
 
 	// Set up temp directory so we can mount it to the docker container
 	confDir := makeTempDir(t)
 	defer os.RemoveAll(confDir)
 
-	// Create certificates for Mongo authentication
+	// Create certificates for MySQL authentication
 	caCert := certhelpers.NewCert(t,
 		certhelpers.CommonName("test certificate authority"),
 		certhelpers.IsCA(true),
@@ -48,24 +42,24 @@ func TestInit_clientTLS(t *testing.T) {
 	)
 
 	certhelpers.WriteFile(t, paths.Join(confDir, "ca.pem"), caCert.CombinedPEM(), 0644)
-	certhelpers.WriteFile(t, paths.Join(confDir, "server.pem"), serverCert.CombinedPEM(), 0644)
+	certhelpers.WriteFile(t, paths.Join(confDir, "server-cert.pem"), serverCert.Pem, 0644)
+	certhelpers.WriteFile(t, paths.Join(confDir, "server-key.pem"), serverCert.PrivateKeyPEM(), 0644)
 	certhelpers.WriteFile(t, paths.Join(confDir, "client.pem"), clientCert.CombinedPEM(), 0644)
 
 	// //////////////////////////////////////////////////////
-	// Set up Mongo config file
+	// Set up MySQL config file
 	rawConf := `
-net:
-   tls:
-      mode: preferTLS
-      certificateKeyFile: /etc/mongo/server.pem
-      CAFile: /etc/mongo/ca.pem
-      allowInvalidHostnames: true`
+[mysqld]
+ssl
+ssl-ca=/etc/mysql/ca.pem
+ssl-cert=/etc/mysql/server-cert.pem
+ssl-key=/etc/mysql/server-key.pem`
 
-	certhelpers.WriteFile(t, paths.Join(confDir, "mongod.conf"), []byte(rawConf), 0644)
+	certhelpers.WriteFile(t, paths.Join(confDir, "my.cnf"), []byte(rawConf), 0644)
 
 	// //////////////////////////////////////////////////////
-	// Start Mongo container
-	retURL, cleanup := startMongoWithTLS(t, "latest", confDir)
+	// Start MySQL container
+	retURL, cleanup := startMySQLWithTLS(t, "5.7", confDir)
 	defer cleanup()
 
 	// //////////////////////////////////////////////////////
@@ -76,36 +70,39 @@ net:
 
 	// //////////////////////////////////////////////////////
 	// Test
-	mongo := new()
+	mysql := new(25, 25, 25)
 
 	conf := map[string]interface{}{
 		"connection_url":      retURL,
-		"allowed_roles":       "*",
-		"tls_certificate_key": clientCert.CombinedPEM(),
-		"tls_ca":              caCert.Pem,
+		//"tls_certificate_key": clientCert.CombinedPEM(),
+		//"tls_ca":              caCert.Pem,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := mongo.Init(ctx, conf, true)
+	_, err := mysql.Init(ctx, conf, true)
 	if err != nil {
-		t.Fatalf("Unable to initialize mongo engine: %s", err)
+		t.Fatalf("Unable to initialize mysql engine: %s", err)
 	}
 
 	// Initialization complete. The connection was established, but we need to ensure
 	// that we're connected as the right user
-	whoamiCmd := map[string]interface{}{
-		"connectionStatus": 1,
+	whoamiCmd := "SELECT CURRENT_USER()"
+
+	client, err := mysql.getConnection(ctx)
+	if err != nil {
+		t.Fatalf("Unable to make connection to MySQL: %s", err)
+	}
+	stmt, err := client.Prepare(whoamiCmd)
+	if err != nil {
+		t.Fatalf("Unable to prepare MySQL statementL %s", err)
 	}
 
-	client, err := mongo.getConnection(ctx)
+	results, err := stmt.QueryContext(ctx)
+
 	if err != nil {
-		t.Fatalf("Unable to make connection to Mongo: %s", err)
-	}
-	result := client.Database("test").RunCommand(ctx, whoamiCmd)
-	if result.Err() != nil {
-		t.Fatalf("Unable to connect to Mongo: %s", err)
+		t.Fatalf("Unable to execute MySQL query: %s", err)
 	}
 
 	expected := connStatus{
@@ -129,17 +126,8 @@ net:
 		},
 		Ok: 1,
 	}
-	// Sort the AuthenticatedUserRoles because Mongo doesn't return them in the same order every time
-	// Thanks Mongo! /tableflip
-	sort.Sort(expected.AuthInfo.AuthenticatedUserRoles)
 
-	actual := connStatus{}
-	err = result.Decode(&actual)
-	if err != nil {
-		t.Fatalf("Unable to decode connection status: %s", err)
-	}
-
-	sort.Sort(actual.AuthInfo.AuthenticatedUserRoles)
+	actual := results
 
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("Actual:%#v\nExpected:\n%#v", actual, expected)
@@ -147,7 +135,7 @@ net:
 }
 
 func makeTempDir(t *testing.T) (confDir string) {
-	confDir, err := ioutil.TempDir(".", "mongodb-test-data")
+	confDir, err := ioutil.TempDir(".", "mysql-test-data")
 	if err != nil {
 		t.Fatalf("Unable to make temp directory: %s", err)
 	}
@@ -159,9 +147,9 @@ func makeTempDir(t *testing.T) (confDir string) {
 	return confDir
 }
 
-func startMongoWithTLS(t *testing.T, version string, confDir string) (retURL string, cleanup func()) {
-	if os.Getenv("MONGODB_URL") != "" {
-		return os.Getenv("MONGODB_URL"), func() {}
+func startMySQLWithTLS(t *testing.T, version string, confDir string) (retURL string, cleanup func()) {
+	if os.Getenv("MYSQL_URL") != "" {
+		return os.Getenv("MYSQL_URL"), func() {}
 	}
 
 	pool, err := dockertest.NewPool("")
@@ -170,7 +158,7 @@ func startMongoWithTLS(t *testing.T, version string, confDir string) (retURL str
 	}
 	pool.MaxWait = 30 * time.Second
 
-	containerName := "mongo-unit-test"
+	containerName := "mysql-unit-test"
 
 	// Remove previously running container if it is still running because cleanup failed
 	err = pool.RemoveContainerByName(containerName)
@@ -180,20 +168,21 @@ func startMongoWithTLS(t *testing.T, version string, confDir string) (retURL str
 
 	runOpts := &dockertest.RunOptions{
 		Name:       containerName,
-		Repository: "mongo",
+		Repository: "mysql",
 		Tag:        version,
-		Cmd:        []string{"mongod", "--config", "/etc/mongo/mongod.conf"},
+		Cmd:        []string{"--defaults-extra-file=/etc/mysql/my.cnf", "--auto-generate-certs=OFF"},
+		Env:				[]string{"MYSQL_ROOT_PASSWORD=x509test"},
 		// Mount the directory from local filesystem into the container
 		Mounts: []string{
-			fmt.Sprintf("%s:/etc/mongo", confDir),
+			fmt.Sprintf("%s:/etc/mysql", confDir),
 		},
 	}
 
 	resource, err := pool.RunWithOptions(runOpts)
 	if err != nil {
-		t.Fatalf("Could not start local mongo docker container: %s", err)
+		t.Fatalf("Could not start local mysql docker container: %s", err)
 	}
-	resource.Expire(30)
+	resource.Expire(60)
 
 	cleanup = func() {
 		err := pool.Purge(resource)
@@ -202,78 +191,63 @@ func startMongoWithTLS(t *testing.T, version string, confDir string) (retURL str
 		}
 	}
 
-	uri := url.URL{
-		Scheme: "mongodb",
-		Host:   fmt.Sprintf("localhost:%s", resource.GetPort("27017/tcp")),
-	}
-	retURL = uri.String()
+	dsn := fmt.Sprintf("root:x509test@tcp(localhost:%s)/mysql", resource.GetPort("3306/tcp"))
 
 	// exponential backoff-retry
 	err = pool.Retry(func() error {
 		var err error
-		dialInfo, err := mongodb.ParseMongoURL(retURL)
-		if err != nil {
-			return err
-		}
 
-		session, err := mgo.DialWithInfo(dialInfo)
+		t.Logf("dsn: %s", dsn)
+		db, err := sql.Open("mysql", dsn)
 		if err != nil {
+			t.Logf("err: %s", err)
 			return err
 		}
-		defer session.Close()
-		session.SetSyncTimeout(1 * time.Minute)
-		session.SetSocketTimeout(1 * time.Minute)
-		return session.Ping()
+		defer db.Close()
+		return db.Ping()
 	})
 	if err != nil {
 		cleanup()
-		t.Fatalf("Could not connect to mongo docker container: %s", err)
+		t.Fatalf("Could not connect to mysql docker container: %s", err)
 	}
 
-	return retURL, cleanup
+	return dsn, cleanup
 }
 
-func connect(t *testing.T, uri string) (client *mongo.Client) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
+func connect(t *testing.T, dsn string) (db *sql.DB) {
+	db, err := sql.Open("mysql", dsn)
 	if err != nil {
-		t.Fatalf("Unable to make connection to Mongo: %s", err)
+		t.Fatalf("Unable to make connection to MySQL: %s", err)
 	}
 
-	err = client.Ping(ctx, readpref.Primary())
+	err = db.Ping()
 	if err != nil {
-		t.Fatalf("Failed to ping Mongo server: %s", err)
+		t.Fatalf("Failed to ping MySQL server: %s", err)
 	}
 
-	return client
+	return db
 }
 
-func setUpX509User(t *testing.T, client *mongo.Client, cert certhelpers.Certificate) {
+func setUpX509User(t *testing.T, db *sql.DB, cert certhelpers.Certificate) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	username := fmt.Sprintf("CN=%s", cert.Template.Subject.CommonName)
+	username := cert.Template.Subject.CommonName
 
-	cmd := &createUserCommand{
-		Username: username,
-		Roles: []interface{}{
-			mongodbRole{
-				Role: "readWrite",
-				DB:   "test",
-			},
-			mongodbRole{
-				Role: "userAdminAnyDatabase",
-				DB:   "admin",
-			},
-		},
+	cmd := fmt.Sprintf("CREATE USER %s REQUIRE X509", username)
+
+	stmt, err := db.PrepareContext(ctx, cmd)
+	if err != nil {
+		t.Fatalf("Failed to prepare query: %s", err)
 	}
 
-	result := client.Database("$external").RunCommand(ctx, cmd)
-	err := result.Err()
+	_, err = stmt.ExecContext(ctx)
 	if err != nil {
 		t.Fatalf("Failed to create x509 user in database: %s", err)
+	}
+	err = stmt.Close()
+	if err != nil {
+		t.Fatalf("Failed to close prepared statement: %s", err)
 	}
 }
 

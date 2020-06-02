@@ -1,4 +1,4 @@
-package mongodb
+package certhelpers
 
 import (
 	"bytes"
@@ -12,13 +12,14 @@ import (
 	"encoding/pem"
 	"io/ioutil"
 	"math/big"
+	"net"
 	"os"
 	"strings"
 	"testing"
 	"time"
 )
 
-type certBuilder struct {
+type CertBuilder struct {
 	tmpl       *x509.Certificate
 	parentTmpl *x509.Certificate
 
@@ -28,48 +29,59 @@ type certBuilder struct {
 	isCA bool
 }
 
-type certOpt func(*certBuilder) error
+type CertOpt func(*CertBuilder) error
 
-func commonName(cn string) certOpt {
-	return func(builder *certBuilder) error {
+func CommonName(cn string) CertOpt {
+	return func(builder *CertBuilder) error {
 		builder.tmpl.Subject.CommonName = cn
 		return nil
 	}
 }
 
-func parent(parent certificate) certOpt {
-	return func(builder *certBuilder) error {
+func Parent(parent Certificate) CertOpt {
+	return func(builder *CertBuilder) error {
 		builder.parentKey = parent.privKey.privKey
-		builder.parentTmpl = parent.template
+		builder.parentTmpl = parent.Template
 		return nil
 	}
 }
 
-func isCA(isCA bool) certOpt {
-	return func(builder *certBuilder) error {
+func IsCA(isCA bool) CertOpt {
+	return func(builder *CertBuilder) error {
 		builder.isCA = isCA
 		return nil
 	}
 }
 
-func selfSign() certOpt {
-	return func(builder *certBuilder) error {
+func SelfSign() CertOpt {
+	return func(builder *CertBuilder) error {
 		builder.selfSign = true
 		return nil
 	}
 }
 
-func dns(dns ...string) certOpt {
-	return func(builder *certBuilder) error {
+func Ip(ip ...string) CertOpt {
+	return func(builder *CertBuilder) error {
+		for _, addr := range ip {
+			if ipAddr := net.ParseIP(addr); ipAddr != nil {
+				builder.tmpl.IPAddresses = append(builder.tmpl.IPAddresses, ipAddr)
+			}
+		}
+		return nil
+	}
+}
+
+func Dns(dns ...string) CertOpt {
+	return func(builder *CertBuilder) error {
 		builder.tmpl.DNSNames = dns
 		return nil
 	}
 }
 
-func newCert(t *testing.T, opts ...certOpt) (cert certificate) {
+func NewCert(t *testing.T, opts ...CertOpt) (cert Certificate) {
 	t.Helper()
 
-	builder := certBuilder{
+	builder := CertBuilder{
 		tmpl: &x509.Certificate{
 			SerialNumber: makeSerial(t),
 			Subject: pkix.Name{
@@ -93,7 +105,7 @@ func newCert(t *testing.T, opts ...certOpt) (cert certificate) {
 		}
 	}
 
-	key := newPrivateKey(t)
+	key := NewPrivateKey(t)
 
 	builder.tmpl.SubjectKeyId = getSubjKeyID(t, key.privKey)
 
@@ -127,17 +139,17 @@ func newCert(t *testing.T, opts ...certOpt) (cert certificate) {
 		Bytes: certBytes,
 	})
 
-	tlsCert, err := tls.X509KeyPair(certPem, key.pem)
+	tlsCert, err := tls.X509KeyPair(certPem, key.Pem)
 	if err != nil {
 		t.Fatalf("Unable to parse X509 key pair: %s", err)
 	}
 
-	return certificate{
-		template: tmpl,
+	return Certificate{
+		Template: tmpl,
 		privKey:  key,
-		tlsCert:  tlsCert,
+		TLSCert:  tlsCert,
 		rawCert:  certBytes,
-		pem:      certPem,
+		Pem:      certPem,
 		isCA:     builder.isCA,
 	}
 }
@@ -145,12 +157,12 @@ func newCert(t *testing.T, opts ...certOpt) (cert certificate) {
 // ////////////////////////////////////////////////////////////////////////////
 // Private Key
 // ////////////////////////////////////////////////////////////////////////////
-type keyWrapper struct {
+type KeyWrapper struct {
 	privKey *rsa.PrivateKey
-	pem     []byte
+	Pem     []byte
 }
 
-func newPrivateKey(t *testing.T) (key keyWrapper) {
+func NewPrivateKey(t *testing.T) (key KeyWrapper) {
 	t.Helper()
 
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -165,9 +177,9 @@ func newPrivateKey(t *testing.T) (key keyWrapper) {
 		},
 	)
 
-	key = keyWrapper{
+	key = KeyWrapper{
 		privKey: privKey,
-		pem:     privKeyPem,
+		Pem:     privKeyPem,
 	}
 
 	return key
@@ -176,20 +188,36 @@ func newPrivateKey(t *testing.T) (key keyWrapper) {
 // ////////////////////////////////////////////////////////////////////////////
 // Certificate
 // ////////////////////////////////////////////////////////////////////////////
-type certificate struct {
-	privKey  keyWrapper
-	template *x509.Certificate
-	tlsCert  tls.Certificate
+type Certificate struct {
+	privKey  KeyWrapper
+	Template *x509.Certificate
+	TLSCert  tls.Certificate
 	rawCert  []byte
-	pem      []byte
+	Pem      []byte
 	isCA     bool
 }
 
-func (cert certificate) CombinedPEM() []byte {
+func (cert Certificate) CombinedPEM() []byte {
 	if cert.isCA {
-		return cert.pem
+		return cert.Pem
 	}
-	return bytes.Join([][]byte{cert.privKey.pem, cert.pem}, []byte{'\n'})
+	return bytes.Join([][]byte{cert.privKey.Pem, cert.Pem}, []byte{'\n'})
+}
+
+func (cert Certificate) PrivateKeyPEM() []byte {
+	return cert.privKey.Pem
+}
+
+// ////////////////////////////////////////////////////////////////////////////
+// Writing to file
+// ////////////////////////////////////////////////////////////////////////////
+func WriteFile(t *testing.T, filename string, data []byte, perms os.FileMode) {
+	t.Helper()
+
+	err := ioutil.WriteFile(filename, data, perms)
+	if err != nil {
+		t.Fatalf("Unable to write to file [%s]: %s", filename, err)
+	}
 }
 
 // ////////////////////////////////////////////////////////////////////////////
