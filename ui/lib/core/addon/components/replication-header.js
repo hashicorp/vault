@@ -14,7 +14,7 @@ import layout from '../templates/components/replication-header';
     @isSummaryDashboard=false
     />
  * ```
- * @param {Object} model=null - An Ember data object pulled form the Ember cluster model.
+ * @param {Object} model=null - An Ember data object pulled from the Ember cluster model.
  * @param {String} title=null - The title of the header.
  * @param {String} [secondaryID=null] - The secondaryID pulled off of the model object. 
  * @param {Boolean} isSummaryDashboard=false - True when you have both a primary performance and dr cluster dashboard.
