@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
 	dockerDriver "github.com/hashicorp/vault/sdk/testing/stepwise/drivers/docker"
 	"github.com/mitchellh/mapstructure"
-	"github.com/y0ssar1an/q"
 )
 
 // TestBackend_basic_docker is an example test using the Docker Driver
@@ -59,8 +58,6 @@ func testAccStepwiseListPolicy(t *testing.T, name string, expectNone bool) stepw
 		Operation: stepwise.ListOperation,
 		Path:      "keys",
 		Check: func(resp *api.Secret, err error) error {
-			q.Q("--> stepwise list check func")
-			q.Q("resp in check:", resp)
 			if (resp == nil || len(resp.Data) == 0) && !expectNone {
 				return fmt.Errorf("missing response")
 			}
@@ -72,7 +69,6 @@ func testAccStepwiseListPolicy(t *testing.T, name string, expectNone bool) stepw
 				return nil
 			}
 
-			q.Q("--> --> stepwise checking keys list")
 			var d struct {
 				Keys []string `mapstructure:"keys"`
 			}
@@ -85,7 +81,6 @@ func testAccStepwiseListPolicy(t *testing.T, name string, expectNone bool) stepw
 			if len(d.Keys) != 1 {
 				return fmt.Errorf("only 1 key expected, %d returned", len(d.Keys))
 			}
-			q.Q("--> --> stepwise does with check")
 			return nil
 		},
 	}
@@ -103,7 +98,6 @@ func testAccStepwiseReadPolicyWithVersions(t *testing.T, name string, expectNone
 		Path:      "keys/" + name,
 		Check: func(resp *api.Secret, err error) error {
 			t.Helper()
-			q.Q("--> read policy check")
 			if resp == nil && !expectNone {
 				return fmt.Errorf("missing response")
 			} else if expectNone {
@@ -127,7 +121,6 @@ func testAccStepwiseReadPolicyWithVersions(t *testing.T, name string, expectNone
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
 			}
-			q.Q("d after read:", d)
 
 			if d.Name != name {
 				return fmt.Errorf("bad name: %#v", d)
@@ -161,7 +154,6 @@ func testAccStepwiseReadPolicyWithVersions(t *testing.T, name string, expectNone
 			if derived && d.KDF != "hkdf_sha256" {
 				return fmt.Errorf("bad: %#v", d)
 			}
-			q.Q("--> read policy check OK")
 			return nil
 		},
 	}
