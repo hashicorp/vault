@@ -38,7 +38,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
 	"github.com/hashicorp/vault/vault"
-	"github.com/y0ssar1an/q"
 	"golang.org/x/net/http2"
 
 	docker "github.com/docker/docker/client"
@@ -67,7 +66,6 @@ type DockerCluster struct {
 	CAKeyPEM           []byte
 	CACertPEMFile      string
 	ID                 string
-	RootToken          string
 	TempDir            string
 	ClusterName        string
 	RootCAs            *x509.CertPool
@@ -76,6 +74,8 @@ type DockerCluster struct {
 	CleanupFunc        func()
 	SetupFunc          func()
 	ClusterNodes       []*DockerClusterNode
+
+	rootToken string
 }
 
 // Teardown stops all the containers.
@@ -113,6 +113,11 @@ func (dc *DockerCluster) MountPath() string {
 		return fmt.Sprintf("%s/%s", "auth", dc.DriverOptions.MountPath)
 	}
 	return dc.DriverOptions.MountPath
+}
+
+// RootToken returns the root token of the cluster, if set
+func (dc *DockerCluster) RootToken() string {
+	return dc.rootToken
 }
 
 func (dc *DockerCluster) Name() string {
@@ -234,11 +239,10 @@ func (rc *DockerCluster) Initialize(ctx context.Context) error {
 		}
 		rc.RecoveryKeys = append(rc.RecoveryKeys, raw)
 	}
-	rc.RootToken = resp.RootToken
-	q.Q("===> docker vault root token:", resp.RootToken)
+	rc.rootToken = resp.RootToken
 
 	// Write root token and barrier keys
-	err = ioutil.WriteFile(filepath.Join(rc.TempDir, "root_token"), []byte(rc.RootToken), 0755)
+	err = ioutil.WriteFile(filepath.Join(rc.TempDir, "root_token"), []byte(rc.rootToken), 0755)
 	if err != nil {
 		return err
 	}
@@ -302,7 +306,7 @@ func (rc *DockerCluster) Initialize(ctx context.Context) error {
 		if i == 0 && !unsealed {
 			return fmt.Errorf("could not unseal node %d", i)
 		}
-		client.SetToken(rc.RootToken)
+		client.SetToken(rc.rootToken)
 
 		err = TestWaitHealthMatches(ctx, node.Client, func(health *api.HealthResponse) error {
 			if health.Sealed {
@@ -580,7 +584,7 @@ func (n *DockerClusterNode) CreateAPIClient() (*api.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	apiClient.SetToken(n.Cluster.RootToken)
+	apiClient.SetToken(n.Cluster.RootToken())
 	return apiClient, nil
 }
 

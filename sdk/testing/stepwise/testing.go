@@ -88,6 +88,10 @@ type StepDriver interface {
 	// BarrierKeys returns the keys used to seal/unseal the cluster. Used for
 	// debugging. TODO verify we should provide this
 	//BarrierKeys()        [][]byte
+
+	// RootToken returns the root token of the cluster, used for administrative
+	// tasks
+	RootToken() string
 }
 
 // PluginType defines the types of plugins supported
@@ -199,16 +203,6 @@ type Case struct {
 // output.
 func Run(tt TestT, c Case) {
 	tt.Helper()
-	q.Q("---------")
-	q.Q("Stepwise starting...")
-	q.Q("---------")
-	defer func() {
-		q.Q("---------")
-		q.Q("end")
-		q.Q("---------")
-		q.Q("")
-	}()
-
 	// We only run acceptance tests if an env var is set because they're
 	// slow and generally require some outside configuration.
 	if os.Getenv(TestEnvVar) == "" {
@@ -226,7 +220,6 @@ func Run(tt TestT, c Case) {
 
 	// Run the PreCheck if we have it
 	if c.PreCheck != nil {
-		q.Q("--> running precheck")
 		c.PreCheck()
 	}
 
@@ -236,12 +229,9 @@ func Run(tt TestT, c Case) {
 	var checkErr error
 	if c.Teardown != nil {
 		defer func(testError error) {
-			q.Q("## teardown error check err:", testError)
 			if testError != nil {
-				q.Q("## test check err is not nil, skipping tearing down")
 				return
 			}
-			q.Q("## test check err is nil, tearing down...")
 			err := c.Teardown()
 			if err != nil {
 				tt.Error("failed to tear down:", err)
@@ -281,10 +271,10 @@ func Run(tt TestT, c Case) {
 	if err != nil {
 		tt.Fatal(err)
 	}
+	q.Q("===> docker vault root token:", c.Driver.RootToken())
 
 	// track all responses to revoke any secrets
 	var responses []*api.Secret
-	q.Q("mount path:", c.Driver.MountPath())
 	for i, step := range c.Steps {
 		// range is zero based, so add 1 for a human friendly output of steps.
 		// "index" here is only used for logging / output, and not to reference the
@@ -304,17 +294,13 @@ func Run(tt TestT, c Case) {
 		// var lr *logical.Response
 		switch step.Operation {
 		case WriteOperation, UpdateOperation:
-			q.Q("===> Write/Update operation")
 			resp, err = client.Logical().Write(path, step.Data)
 		case ReadOperation:
-			q.Q("===> Read operation")
 			// resp, err = client.Logical().ReadWithData(path, step.Data)
 			resp, err = client.Logical().Read(path)
 		case ListOperation:
-			q.Q("===> List operation")
 			resp, err = client.Logical().List(path)
 		case DeleteOperation:
-			q.Q("===> Delete operation")
 			resp, err = client.Logical().Delete(path)
 		default:
 			panic("bad operation")
@@ -322,7 +308,7 @@ func Run(tt TestT, c Case) {
 		if resp != nil {
 			responses = append(responses, resp)
 		}
-		// q.Q("test resp,err:", resp, err)
+
 		// if !s.Unauthenticated {
 		// 	// req.ClientToken = client.Token()
 		// 	// req.SetTokenEntry(&logical.TokenEntry{
@@ -361,7 +347,6 @@ func Run(tt TestT, c Case) {
 		// 	// or not. Set the err to nil. If the error is a logical.ErrorResponse,
 		// 	// it will be handled later.
 		// 	if s.ErrorOk {
-		// 		q.Q("===> error ok, setting to nil")
 		// 		err = nil
 		// 	} else {
 		// 		// // If the error is not expected, fail right away.
@@ -454,9 +439,9 @@ func Run(tt TestT, c Case) {
 	}
 
 	// failsafe - revoke by mount path
-	q.Q("==<> failsafe")
+	// TODO: should track all things mounted and revoke all paths to be sure?
+	// Maybe list mounts and try to revoke everything?
 	if err := client.Sys().RevokePrefix(c.Driver.MountPath()); err != nil {
-		q.Q("==<> error in failsafe:", err)
 		revokeErr := fmt.Errorf("[WARN] error revoking by prefix at tend of test: %w", err)
 		tt.Error(revokeErr)
 	}

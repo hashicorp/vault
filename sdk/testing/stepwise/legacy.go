@@ -112,7 +112,6 @@ type PreFlightFunc func(*logical.Request) error
 // backend's HandleRequest method. Please see stepwise.Test and stepwise.Step
 // for more information.
 func Test(tt TestT, c TestCase) {
-	// q.Q("==> here in legacy testing.Test")
 	// We only run acceptance tests if an env var is set because they're
 	// slow and generally require some outside configuration.
 	if c.AcceptanceTest && os.Getenv(TestEnvVar) == "" {
