@@ -123,6 +123,9 @@ them, optional commands to run, etc.
   spec. Also available as a command-line option (`-run-as-same-user`) or
   environment variable (`AGENT_INJECT_RUN_AS_SAME_USER`). Defaults to `false`.
 
+  ~> **Note**: If the first application container in the pod is running as root
+  (uid 0), the `run-as-same-user` annotation will fail injection with an error.
+
 ## Vault Annotations
 
 Vault annotations change how the Vault Agent containers communicate with Vault.  For 
