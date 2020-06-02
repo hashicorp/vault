@@ -236,10 +236,6 @@ func (rc *DockerCluster) Initialize(ctx context.Context) error {
 	}
 	rc.RootToken = resp.RootToken
 	q.Q("===> docker vault root token:", resp.RootToken)
-	// q.Q("===> docker vault barrier keys:")
-	// for i, key := range rc.GetBarrierKeys() {
-	// 	q.Q(i, string(key))
-	// }
 
 	// Write root token and barrier keys
 	err = ioutil.WriteFile(filepath.Join(rc.TempDir, "root_token"), []byte(rc.RootToken), 0755)
@@ -938,9 +934,6 @@ func (dc *DockerCluster) Setup() error {
 		panic(err)
 	}
 
-	// q.Q("--> docker compile results:")
-	// q.Q(binName, binPath, sha256value, err)
-
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 	}
@@ -975,7 +968,6 @@ func (dc *DockerCluster) Setup() error {
 	}
 
 	var mountErr error
-	q.Q("==> mount name:", name)
 	switch dc.DriverOptions.PluginType {
 	case stepwise.PluginTypeCredential:
 		mountErr = client.Sys().EnableAuthWithOptions(dc.DriverOptions.MountPath, &api.EnableAuthOptions{
