@@ -450,8 +450,8 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 }
 
 // JoinRaftFollowers unseals the leader, and then joins-and-unseals the
-// followers one at a time.  We assume the ServerAddressProvider has already
-// been installed on all the nodes.
+// followers one at a time.  We assume that the ServerAddressProvider has
+// already been installed on all the nodes.
 func JoinRaftFollowers(t testing.T, cluster *vault.TestCluster, useStoredKeys bool) {
 
 	leader := cluster.Cores[0]

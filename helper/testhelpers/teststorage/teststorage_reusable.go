@@ -97,8 +97,8 @@ func MakeReusableRaftStorage(
 
 		// Close open files being used by raft.
 		Cleanup: func(t testing.T, cluster *vault.TestCluster) {
-			for _, core := range cluster.Cores {
-				CloseRaftStorage(t, core)
+			for i := 0; i < len(cluster.Cores); i++ {
+				CloseRaftStorage(t, cluster, i)
 			}
 		},
 	}
@@ -113,8 +113,9 @@ func MakeReusableRaftStorage(
 }
 
 // CloseRaftStorage closes open files being used by raft.
-func CloseRaftStorage(t testing.T, core *vault.TestClusterCore) {
-	raftStorage := core.UnderlyingRawStorage.(*raft.RaftBackend)
+func CloseRaftStorage(t testing.T, cluster *vault.TestCluster, idx int) {
+	fmt.Printf("CloseRaftStorage %d\n", idx)
+	raftStorage := cluster.Cores[idx].UnderlyingRawStorage.(*raft.RaftBackend)
 	if err := raftStorage.Close(); err != nil {
 		t.Fatal(err)
 	}

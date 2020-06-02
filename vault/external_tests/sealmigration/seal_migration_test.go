@@ -93,10 +93,11 @@ func testSealMigrationShamirToTransit_Pre14(
 	storage teststorage.ReusableStorage, basePort int) {
 
 	// Initialize the backend using shamir
-	cluster, _, cleanup := initializeShamir(t, logger, storage, basePort)
+	cluster, _ := initializeShamir(t, logger, storage, basePort)
 	rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
 	cluster.EnsureCoresSealed(t)
-	cleanup()
+	storage.Cleanup(t, cluster)
+	cluster.Cleanup()
 
 	// Create the transit server.
 	tss := sealhelper.NewTransitSealServer(t)
@@ -193,8 +194,7 @@ func testSealMigrationShamirToTransit_Post14(
 	storage teststorage.ReusableStorage, basePort int) {
 
 	// Initialize the backend using shamir
-	cluster, opts, cleanup := initializeShamir(t, logger, storage, basePort)
-	//rootToken := cluster.RootToken
+	cluster, opts := initializeShamir(t, logger, storage, basePort)
 
 	// Create the transit server.
 	tss := sealhelper.NewTransitSealServer(t)
@@ -205,15 +205,19 @@ func testSealMigrationShamirToTransit_Post14(
 	tss.MakeKey(t, "transit-seal-key")
 
 	// Migrate the backend from shamir to transit.
-	//transitSeal := migrateFromShamirToTransit_Post14(t, logger, storage, basePort, tss, cluster, opts)
-	println("--------------------------------------------------------------------------------------------")
-	_ = migrateFromShamirToTransit_Post14(t, logger, storage, basePort, tss, cluster, opts)
+	transitSeal := migrateFromShamirToTransit_Post14(t, logger, storage, basePort, tss, cluster, opts)
 	cluster.EnsureCoresSealed(t)
-	cleanup()
-	println("--------------------------------------------------------------------------------------------")
 
-	//// Run the backend with transit.
-	//runTransit(t, logger, storage, basePort, rootToken, transitSeal)
+	storage.Cleanup(t, cluster)
+	cluster.Cleanup()
+	println("--------------------------------------------------------------")
+	println(">>> sleep")
+	time.Sleep(15 * time.Second)
+
+	// Run the backend with transit.
+	println("--------------------------------------------------------------")
+	println(">>> runTransit")
+	runTransit(t, logger, storage, basePort, cluster.RootToken, transitSeal)
 }
 
 func migrateFromShamirToTransit_Post14(
@@ -236,7 +240,7 @@ func migrateFromShamirToTransit_Post14(
 	for i := 1; i < numTestCores; i++ {
 		cluster.StopCore(t, i)
 		if storage.IsRaft {
-			teststorage.CloseRaftStorage(t, cluster.Cores[i])
+			teststorage.CloseRaftStorage(t, cluster, i)
 		}
 		cluster.RestartCore(t, i, opts)
 
@@ -249,7 +253,7 @@ func migrateFromShamirToTransit_Post14(
 	// Bring down the leader
 	cluster.StopCore(t, 0)
 	if storage.IsRaft {
-		teststorage.CloseRaftStorage(t, cluster.Cores[0])
+		teststorage.CloseRaftStorage(t, cluster, 0)
 	}
 
 	// Wait for the followers to establish a new leader
@@ -357,7 +361,7 @@ func verifyBarrierConfig(t *testing.T, cfg *vault.SealConfig, sealType string, s
 // initializeShamir initializes a brand new backend storage with Shamir.
 func initializeShamir(
 	t *testing.T, logger hclog.Logger,
-	storage teststorage.ReusableStorage, basePort int) (*vault.TestCluster, *vault.TestClusterOptions, func()) {
+	storage teststorage.ReusableStorage, basePort int) (*vault.TestCluster, *vault.TestClusterOptions) {
 
 	var baseClusterPort = basePort + 10
 
@@ -374,10 +378,6 @@ func initializeShamir(
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
 	cluster.Start()
-	cleanup := func() {
-		storage.Cleanup(t, cluster)
-		cluster.Cleanup()
-	}
 
 	leader := cluster.Cores[0]
 	client := leader.Client
@@ -401,7 +401,7 @@ func initializeShamir(
 		t.Fatal(err)
 	}
 
-	return cluster, &opts, cleanup
+	return cluster, &opts
 }
 
 // runShamir uses a pre-populated backend storage with Shamir.
@@ -601,10 +601,12 @@ func testShamir(
 	storage teststorage.ReusableStorage, basePort int) {
 
 	// Initialize the backend using shamir
-	cluster, _, cleanup := initializeShamir(t, logger, storage, basePort)
+	cluster, _ := initializeShamir(t, logger, storage, basePort)
 	rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
 	cluster.EnsureCoresSealed(t)
-	cleanup()
+
+	storage.Cleanup(t, cluster)
+	cluster.Cleanup()
 
 	runShamir(t, logger, storage, basePort, rootToken, barrierKeys)
 }
