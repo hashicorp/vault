@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/y0ssar1an/q"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -271,7 +270,8 @@ func Run(tt TestT, c Case) {
 	if err != nil {
 		tt.Fatal(err)
 	}
-	q.Q("===> docker vault root token:", c.Driver.RootToken())
+	// q.Q("===> docker vault root token:", c.Driver.RootToken())
+	rootToken := c.Driver.RootToken()
 
 	// track all responses to revoke any secrets
 	var responses []*api.Secret
@@ -284,19 +284,31 @@ func Run(tt TestT, c Case) {
 			logger.Warn("Executing test step", "step_number", index)
 		}
 
+		// preserve the root token, which may be cleared from the client if the this
+		// step is meant to be unauthenticated. Restored after the request is made.
+		// TODO: use a non-root token for tests, or allow a user configured one as
+		// part of the test
+		if step.Unauthenticated {
+			client.ClearToken()
+		}
+
 		// ExpandPath will turn a test path into a full path, prefixing with the
 		// correct mount, namespaces, or "auth" if needed based on mount path and
 		// plugin type
 		path := c.Driver.ExpandPath(step.Path)
 		var err error
 		var resp *api.Secret
-		// TODO should check expect none here?
-		// var lr *logical.Response
+
 		switch step.Operation {
 		case WriteOperation, UpdateOperation:
 			resp, err = client.Logical().Write(path, step.Data)
 		case ReadOperation:
+			// Some operations support reading with data given.
+			// TODO: see how the CLI parses args and turns them into
+			// map[string][]string, or change how step.Data is defined (currently
+			// map[string]interface{})
 			// resp, err = client.Logical().ReadWithData(path, step.Data)
+
 			resp, err = client.Logical().Read(path)
 		case ListOperation:
 			resp, err = client.Logical().List(path)
@@ -323,20 +335,7 @@ func Run(tt TestT, c Case) {
 		// 	req.Connection.ConnState = s.ConnState
 		// }
 
-		// if s.PreFlight != nil {
-		// 	// ct := req.ClientToken
-		// 	// req.ClientToken = ""
-		// 	// if err := s.PreFlight(req); err != nil {
-		// 	// 	tt.Error(fmt.Sprintf("Failed preflight for step %d: %s", i+1, err))
-		// 	// 	break
-		// 	// }
-		// 	// req.ClientToken = ct
-		// }
-
-		// Make sure to prefix the path with where we mounted the thing
-		// req.Path = fmt.Sprintf("%s/%s", prefix, req.Path)
-
-		// TODO
+		// TODO: expected error check
 		// - test returned error check here
 		//
 
@@ -361,7 +360,6 @@ func Run(tt TestT, c Case) {
 			checkErr = step.Check(resp, err)
 			// TODO allow error
 			if checkErr != nil {
-				// tt.Fatal("test check error:", checkErr)
 				tt.Error(fmt.Sprintf("Failed step %d: %s", index, checkErr))
 			}
 		}
@@ -371,62 +369,22 @@ func Run(tt TestT, c Case) {
 			tt.Error(fmt.Sprintf("Failed step %d: %s", index, err))
 			break
 		}
+
+		// reset token in case it was cleared
+		client.SetToken(rootToken)
 	}
 
-	// TODO
-	// - Revoking things here
-	//
+	// Revoking any secrets created
+	var failedRevokes []*api.Secret
 	for _, secret := range responses {
 		if secret.LeaseID != "" {
+			logger.Warn("Revoking secret", "secret", fmt.Sprintf("%#v", secret))
 			if err := client.Sys().Revoke(secret.LeaseID); err != nil {
 				tt.Error(fmt.Sprintf("===>> error revoking lease: %s", err))
+				failedRevokes = append(failedRevokes, secret)
 			}
 		}
 	}
-
-	// Revoke any secrets we might have.
-	var failedRevokes []*logical.Secret
-	for _, req := range responses {
-		q.Q("==>==> revoke req:", req)
-		// TODO do we revoke?
-		// if logger.IsWarn() {
-		// 	logger.Warn("Revoking secret", "secret", fmt.Sprintf("%#v", req))
-		// }
-		// req.ClientToken = client.Token()
-		// resp, err := core.HandleRequest(namespace.RootContext(nil), req)
-		// if err == nil && resp.IsError() {
-		// 	err = fmt.Errorf("erroneous response:\n\n%#v", resp)
-		// }
-		// if err != nil {
-		// 	failedRevokes = append(failedRevokes, req.Secret)
-		// 	tt.Error(fmt.Sprintf("Revoke error: %s", err))
-		// }
-	}
-
-	// TODO
-	// - Rollbacks here
-	//
-
-	// Perform any rollbacks. This should no-op if there aren't any.
-	// We set the "immediate" flag here that any backend can pick up on
-	// to do all rollbacks immediately even if the WAL entries are new.
-	// logger.Warn("Requesting RollbackOperation")
-	// rollbackPath := prefix + "/"
-	// if c.CredentialFactory != nil || c.CredentialBackend != nil {
-	// 	rollbackPath = "auth/" + rollbackPath
-	// }
-	// req := logical.RollbackRequest(rollbackPath)
-	// req.Data["immediate"] = true
-	// req.ClientToken = client.Token()
-	// resp, err := core.HandleRequest(namespace.RootContext(nil), req)
-	// if err == nil && resp.IsError() {
-	// 	err = fmt.Errorf("erroneous response:\n\n%#v", resp)
-	// }
-	// if err != nil {
-	// 	if !errwrap.Contains(err, logical.ErrUnsupportedOperation.Error()) {
-	// 		tt.Error(fmt.Sprintf("[ERR] Rollback error: %s", err))
-	// 	}
-	// }
 
 	// If we have any failed revokes, log it.
 	if len(failedRevokes) > 0 {
