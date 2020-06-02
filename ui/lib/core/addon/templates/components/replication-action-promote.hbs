@@ -39,29 +39,19 @@
         Vault Replication is not designed for active-active usage. Enabling two primaries should never be done, as it can lead to data loss if they or their secondaries are ever reconnected. If the cluster has a primary, be sure to demote it before promoting a secondary.
       </p>
 
-      {{#if (eq replicationDisplayMode "DR")}}
       <div data-test-promote-dr-inputs>
+        {{#if (eq replicationDisplayMode "DR")}}
         <div class="field is-borderless">
-          <label for="dr_operation_token" class="is-label">
+          <label for="dr_operation_token" class="is-label is-size-6">
             DR Operation Token
           </label>
           <div class="control">
             {{input class="input" id="dr_operation_token" name="dr_operation_token" value=dr_operation_token}}
           </div>
         </div>
-        <ToggleButton
-          @class="is-block"
-          @toggleAttr="showOptions"
-          @toggleTarget={{this}}
-          @openLabel="Hide options"
-          @closedLabel="Options"
-        />
-      </div>
-      {{/if}}
-      {{#if (or (eq replicationDisplayMode "Performance") showOptions)}}
-      <div data-test-promote-performance-inputs>
+        {{/if}}
         <div class="field">
-          <label for="primary_cluster_addr" class="is-label">
+          <label for="primary_cluster_addr" class="is-label is-size-6">
             Primary cluster address <em class="is-optional">(optional)</em>
           </label>
           <div class="control">
@@ -80,19 +70,13 @@
             checked={{force}}
             onchange={{action (mut force) value="target.checked"}}
             />
-            <label for="forcePromote" class="is-label">
+            <label for="forcePromote" class="is-label is-size-6">
               Force promotion of this cluster
             </label>
+            <p>Promote the cluster even if certain safety checks fail. This could result in data loss of data isn't fully replicated</p>
           </div>
-          <AlertInline
-            @type="warning"
-            @message="Forcing promotion could result in data loss if data isn't fully replicated. Force promotion
-            promotes the cluster even if certain safety checks fail."
-          />
         </div>
       </div>
-      {{/if}}
-
     </div>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
