@@ -38,7 +38,7 @@ provided key.
 
 Deletes all versions and metadata of the key "creds":
 
-```text
+```shell-session
 $ vault kv metadata delete secret/creds
 Success! Data deleted (if it existed) at: secret/metadata/creds
 ```
@@ -52,7 +52,7 @@ the given key name. If no key exists with that name, an error is returned.
 
 Retrieves the metadata of the key name, "creds":
 
-```text
+```shell-session
 $ vault kv metadata get secret/creds
 ========== Metadata ==========
 Key                     Value
@@ -91,14 +91,14 @@ secrets engine or to update key configuration for a specified key.
 
 Create a key in the K/V v2 with no data at the key "creds":
 
-```text
+```shell-session
 $ vault kv metadata put secret/creds
 Success! Data written to: secret/metadata/creds
 ```
 
 Set the maximum number of versions to keep for the key "creds":
 
-```text
+```shell-session
 $ vault kv metadata put -max-versions=5 secret/creds
 Success! Data written to: secret/metadata/creds
 ```
@@ -109,7 +109,7 @@ permanently deleted.
 
 Require Check-and-Set for the key "creds":
 
-```text
+```shell-session
 $ vault kv metadata put -cas-required secret/creds
 ```
 
@@ -119,7 +119,7 @@ configuration will be used.
 
 Set the length of time before a version is deleted for the key "creds":
 
-```text
+```shell-session
 $ vault kv metadata put -delete-version-after="3h25m19s" secret/creds
 ```
 

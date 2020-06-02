@@ -9,7 +9,15 @@ description: >-
 
 # Token Helpers
 
-The Vault CLI provides a built in tool for authenticating to any of the enabled auth backends. By default the Vault CLI will take the generated token after a successful authentication and store it on disk in the `~/.vault-token` file. This functionality can change in Vault via the use of a token helper. A token helper is an external program that Vault calls to save, retrieve or erase a saved token. The token helper could be a very simple script or a more complex program depending on your needs. The interface to the external token helper is extremely simple.
+A token helper is an external program that Vault calls to save, retrieve or erase 
+a saved token. The token helper could be a very simple script or a more complex 
+program depending on your needs. The interface to the external token helper is 
+extremely simple.
+
+By default the Vault CLI provides a built in tool for authenticating with any 
+of the enabled authentication backends. Once authenticated, the CLI will store 
+the generated token on disk in the `~/.vault-token` file. By using a token helper, 
+this default functionality can be changed.
 
 ## Configuration
 

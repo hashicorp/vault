@@ -156,8 +156,10 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	if result.AutoAuth != nil {
-		if len(result.AutoAuth.Sinks) == 0 && (result.Cache == nil || !result.Cache.UseAutoAuthToken) {
-			return nil, fmt.Errorf("auto_auth requires at least one sink or cache.use_auto_auth_token=true ")
+		if len(result.AutoAuth.Sinks) == 0 &&
+			(result.Cache == nil || !result.Cache.UseAutoAuthToken) &&
+			len(result.Templates) == 0 {
+			return nil, fmt.Errorf("auto_auth requires at least one sink or at least one template or cache.use_auto_auth_token=true")
 		}
 	}
 

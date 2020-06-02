@@ -6,57 +6,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"path"
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
-	"github.com/ory/dockertest"
 )
-
-func prepareTestContainer(t *testing.T) (cleanup func(), retURL string) {
-	if os.Getenv("PG_URL") != "" {
-		return func() {}, os.Getenv("PG_URL")
-	}
-
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-
-	resource, err := pool.Run("postgres", "latest", []string{"POSTGRES_PASSWORD=secret", "POSTGRES_DB=database"})
-	if err != nil {
-		t.Fatalf("Could not start local PostgreSQL docker container: %s", err)
-	}
-
-	cleanup = func() {
-		docker.CleanupResource(t, pool, resource)
-	}
-
-	retURL = fmt.Sprintf("postgres://postgres:secret@localhost:%s/database?sslmode=disable", resource.GetPort("5432/tcp"))
-
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
-		var err error
-		var db *sql.DB
-		db, err = sql.Open("postgres", retURL)
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-		return db.Ping()
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to PostgreSQL docker container: %s", err)
-	}
-
-	return
-}
 
 func TestBackend_config_connection(t *testing.T) {
 	var resp *logical.Response
@@ -107,7 +66,7 @@ func TestBackend_basic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL := prepareTestContainer(t)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -131,7 +90,7 @@ func TestBackend_roleCrud(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL := prepareTestContainer(t)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -157,7 +116,7 @@ func TestBackend_BlockStatements(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL := prepareTestContainer(t)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -187,7 +146,7 @@ func TestBackend_roleReadOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL := prepareTestContainer(t)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -218,7 +177,7 @@ func TestBackend_roleReadOnly_revocationSQL(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL := prepareTestContainer(t)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	connData := map[string]interface{}{

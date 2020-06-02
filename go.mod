@@ -15,6 +15,7 @@ require (
 	github.com/DataDog/zstd v1.4.4 // indirect
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/SAP/go-hdb v0.14.1
+	github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190620160927-9418d7b0cd0f
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
@@ -30,7 +31,7 @@ require (
 	github.com/client9/misspell v0.3.4
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/coreos/go-semver v0.2.0
-	github.com/denisenkom/go-mssqldb v0.0.0-20190412130859-3b1d194e553a
+	github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
 	github.com/dnaeon/go-vcr v1.0.1 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
@@ -56,7 +57,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-gcp-common v0.6.0
 	github.com/hashicorp/go-hclog v0.13.0
-	github.com/hashicorp/go-kms-wrapping v0.5.9
+	github.com/hashicorp/go-kms-wrapping v0.5.10
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.0.0
@@ -81,11 +82,11 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.6.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.5.4
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.1
+	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.0-beta1.0.20200521152755-9cf156a44f9c
 	github.com/hashicorp/vault-plugin-secrets-ad v0.6.4-beta1.0.20200518124111-3dceeb3ce90e
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5
 	github.com/hashicorp/vault-plugin-secrets-azure v0.5.6
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.1
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.2
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.5
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.5
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2
@@ -101,7 +102,7 @@ require (
 	github.com/kr/pretty v0.2.0
 	github.com/kr/text v0.1.0
 	github.com/lib/pq v1.2.0
-	github.com/mattn/go-colorable v0.1.4
+	github.com/mattn/go-colorable v0.1.6
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
 	github.com/mitchellh/cli v1.0.0
@@ -109,8 +110,9 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/go-testing-interface v1.0.0
 	github.com/mitchellh/gox v1.0.1
-	github.com/mitchellh/mapstructure v1.1.2
+	github.com/mitchellh/mapstructure v1.2.2
 	github.com/mitchellh/reflectwalk v1.0.1
+	github.com/mongodb/go-client-mongodb-atlas v0.1.2
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 	github.com/ncw/swift v1.0.47
 	github.com/nwaples/rardecode v1.0.0 // indirect
