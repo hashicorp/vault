@@ -84,6 +84,10 @@ type StepDriver interface {
 
 	// MountPath returns the path the plugin is mounted at
 	MountPath() string
+
+	// BarrierKeys returns the keys used to seal/unseal the cluster. Used for
+	// debugging. TODO verify we should provide this
+	//BarrierKeys()        [][]byte
 }
 
 // PluginType defines the types of plugins supported
@@ -175,6 +179,12 @@ type Case struct {
 	// in the case that the test can't guarantee all resources were
 	// properly cleaned up.
 	Teardown TestTeardownFunc
+
+	// SkipTeardown allows the TestTeardownFunc to be skipped, leaving any
+	// infrastructure created during Driver setup to remain. Depending on the
+	// Driver used this could incur costs the user is responsible for.
+	// TODO maybe better wording here
+	SkipTeardown bool
 }
 
 // Run performs an acceptance test on a backend with the given test case.
@@ -255,11 +265,15 @@ func Run(tt TestT, c Case) {
 		tt.Fatal(driverErr)
 	}
 
-	// defer func() {
-	// 	if err := c.Driver.Teardown(); err != nil {
-	// 		logger.Error("error in driver teardown:", "error", err)
-	// 	}
-	// }()
+	defer func() {
+		if c.SkipTeardown {
+			logger.Error("driver Teardown skipped")
+			return
+		}
+		if err := c.Driver.Teardown(); err != nil {
+			logger.Error("error in driver teardown:", "error", err)
+		}
+	}()
 
 	// retrieve the client from the Driver. If this returns an error, fail
 	// immediately
