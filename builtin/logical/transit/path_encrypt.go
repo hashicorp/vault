@@ -43,6 +43,9 @@ type BatchResponseItem struct {
 	// request item
 	Ciphertext string `json:"ciphertext,omitempty" structs:"ciphertext" mapstructure:"ciphertext"`
 
+	// KeyVersion defines the key version used to encrypt plaintext.
+	KeyVersion int `json:"key_version,omitempty" structs:"key_version" mapstructure:"key_version"`
+
 	// Plaintext for the ciphertext present in the corresponding batch
 	// request item
 	Plaintext string `json:"plaintext,omitempty" structs:"plaintext" mapstructure:"plaintext"`
@@ -211,6 +214,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	var p *keysutil.Policy
 	var upserted bool
 	var polReq keysutil.PolicyRequest
+
 	if req.Operation == logical.CreateOperation {
 		convergent := d.Get("convergent_encryption").(bool)
 		if convergent && !contextSet {
@@ -244,6 +248,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			Name:    name,
 		}
 	}
+
 	p, upserted, err = b.lm.GetPolicy(ctx, polReq, b.GetRandomReader())
 	if err != nil {
 		return nil, err
@@ -280,7 +285,13 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			return nil, fmt.Errorf("empty ciphertext returned for input item %d", i)
 		}
 
+		keyVersion := item.KeyVersion
+		if keyVersion == 0 {
+			keyVersion = p.LatestVersion
+		}
+
 		batchResponseItems[i].Ciphertext = ciphertext
+		batchResponseItems[i].KeyVersion = keyVersion
 	}
 
 	resp := &logical.Response{}
@@ -293,8 +304,10 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			p.Unlock()
 			return logical.ErrorResponse(batchResponseItems[0].Error), logical.ErrInvalidRequest
 		}
+
 		resp.Data = map[string]interface{}{
-			"ciphertext": batchResponseItems[0].Ciphertext,
+			"ciphertext":  batchResponseItems[0].Ciphertext,
+			"key_version": batchResponseItems[0].KeyVersion,
 		}
 	}
 
