@@ -9,11 +9,14 @@
           title=formattedReplicationMode
           isSecondary=isSecondary
           secondaryId=replicationDetails.secondaryId
+          isSummaryDashboard=isSummaryDashboard
         )
         dashboard=(component
           'replication-dashboard'
           data=model
           isSecondary=isSecondary
+          isSummaryDashboard=isSummaryDashboard
+          replicationDetailsSummary=replicationDetailsSummary
           replicationDetails=replicationDetails
           clusterMode=clusterMode
           reindexingDetails=reindexingDetails

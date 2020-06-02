@@ -1,4 +1,4 @@
-{{!-- DR Secondary has a different Nav Header with access only to the Status menu --}}
+{{! DR Secondary has a different Nav Header with access only to the Status menu }}
 {{#if isSecondary}}
   <NavHeader as |Nav|>
     <Nav.home>
@@ -7,7 +7,7 @@
       </HomeLink>
     </Nav.home>
     <Nav.items>
-      <div class="navbar-item status-indicator-button" data-status="{{if data.unsealed "good" "bad"}}">
+      <div class="navbar-item status-indicator-button" data-status="{{if data.unsealed 'good' 'bad'}}">
         <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
       </div>
     </Nav.items>
@@ -15,20 +15,18 @@
 {{/if}}
 <PageHeader as |p|>
   <p.top>
-    {{#key-value-header
-      baseKey=baseKey
-      path="vault.cluster.replication-dr-promote"
-      root=backendCrumb
-    }}
-      <li>
-        <span class="sep">
-          /
-        </span>
-        {{#link-to "vault.cluster.replication-dr-promote"}}
-          Disaster Recovery
-        {{/link-to}}
-      </li>
-    {{/key-value-header}}
+    {{#if (not isSummaryDashboard)}}
+      {{#key-value-header baseKey=baseKey path='vault.cluster.replication-dr-promote' root=backendCrumb}}
+        <li>
+          <span class="sep">
+            /
+          </span>
+          {{#link-to 'vault.cluster.replication-dr-promote'}}
+            Disaster Recovery
+          {{/link-to}}
+        </li>
+      {{/key-value-header}}
+    {{/if}}
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -42,31 +40,29 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-
 {{#if showTabs}}
-  <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-tabs>
+  <div class="tabs-container box is-bottomless is-fullwidth is-paddingless" data-test-tabs>
     <nav class="tabs">
-      <ul>
-        {{#link-to
-          "vault.cluster.replication-dr-promote.details"
-          tagName="li"
-          activeClass="is-active"
-        }}
-          {{#link-to "vault.cluster.replication-dr-promote.details"}}
-            Details
+      {{#if (not isSummaryDashboard)}}
+        <ul>
+          {{#link-to
+            'vault.cluster.replication-dr-promote'
+            tagName='li'
+            activeClass='is-active'
+            current-when=''
+          }}
+            {{#link-to 'vault.cluster.replication-dr-promote'}}
+              Details
+            {{/link-to}}
           {{/link-to}}
-        {{/link-to}}
-        {{#link-to
-          "vault.cluster.replication-dr-promote"
-          tagName="li"
-          activeClass="is-active"
-          current-when="vault.cluster.replication-dr-promote.index"
-        }}
-          {{#link-to "vault.cluster.replication-dr-promote"}}
-            Manage
-          {{/link-to}}
-        {{/link-to}}
-      </ul>
+        </ul>
+      {{else}}
+        <ul>
+          <li class="is-active">
+            {{link-to-external 'Summary' 'replication'}}
+          </li>
+        </ul>
+      {{/if}}
     </nav>
   </div>
 {{/if}}
