@@ -36,7 +36,6 @@ export default Component.extend({
     return false;
   }),
   errorMessage: computed('hasError', function() {
-    // TODO figure out if we need another error message
     return this.hasError ? 'Check server logs!' : false;
   }),
 });
