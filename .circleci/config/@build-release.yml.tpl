@@ -7,7 +7,7 @@
 {{- $layers := $data.layers -}}
 {{- $revision := (env.Getenv "PRODUCT_REVISION") -}}
 {{- define "cache-key"}}{{template "cache-version"}}-{{.}}{{end -}}
-{{- define "cache-version"}}test9-v1{{end -}}
+{{- define "cache-version"}}cache000{{end -}}
 {{- /*
   Any change to cache-version invalidates all build layer and package caches.
 */ -}}
