@@ -60,8 +60,13 @@ type Step struct {
 	// modification of the request parameters (e.g. Path) with dynamic values.
 	// PreFlight PreFlightFunc
 
-	// ErrorOk, if true, will let erroneous responses through to the check
-	ErrorOk bool
+	// ExpectError indicates if this step is expected to return an error. If the
+	// step operation returns an error and ExpectError is not set, the test will
+	// fail immediately and the StepCheckFunc will not be ran. If ExpectError is
+	// true, the StepCheckFunc will be called (if any) and include the error from
+	// the response. It is the responsibility of the StepCheckFunc to validate the
+	// error is appropriate or not, if expected.
+	ExpectError bool
 
 	// Unauthenticated, if true, will make the request unauthenticated.
 	Unauthenticated bool
@@ -270,18 +275,54 @@ func Run(tt TestT, c Case) {
 	if err != nil {
 		tt.Fatal(err)
 	}
-	// q.Q("===> docker vault root token:", c.Driver.RootToken())
+
+	// Trap the rootToken so that we can preform revocation or other tasks in the
+	// event any steps remove the token during testing.
 	rootToken := c.Driver.RootToken()
 
 	// track all responses to revoke any secrets
 	var responses []*api.Secret
+
+	// Defer revocation of any secrets created. We intentionally enclose the
+	// responses slice so in the event of a fatal error during test evaluation, we
+	// are still able to revoke any leases/secrets created
+	defer func() {
+		// failedRevokes tracks any errors we get when attempting to revoke a lease
+		// to log to users at the end of the test.
+		var failedRevokes []*api.Secret
+		for _, secret := range responses {
+			if secret.LeaseID != "" {
+				logger.Info("Revoking secret", "lease_id", fmt.Sprintf("%s", secret.LeaseID))
+				if err := client.Sys().Revoke(secret.LeaseID); err != nil {
+					logger.Warn("Error revoking secret", "lease_id", fmt.Sprintf("%s", secret.LeaseID))
+					tt.Error(fmt.Errorf("error revoking lease: %w", err))
+					failedRevokes = append(failedRevokes, secret)
+					continue
+				}
+				logger.Info("Successfully revoked secret", "lease_id", fmt.Sprintf("%s", secret.LeaseID))
+			}
+		}
+
+		// If we have any failed revokes, log it.
+		if len(failedRevokes) > 0 {
+			for _, s := range failedRevokes {
+				tt.Error(fmt.Sprintf(
+					"WARNING: Revoking the following secret failed. It may\n"+
+						"still exist. Please verify:\n\n%#v",
+					s))
+			}
+		}
+	}()
+
+	stepCount := len(c.Steps)
 	for i, step := range c.Steps {
 		// range is zero based, so add 1 for a human friendly output of steps.
 		// "index" here is only used for logging / output, and not to reference the
 		// step in the slice of steps.
 		index := i + 1
 		if logger.IsWarn() {
-			logger.Warn("Executing test step", "step_number", index)
+			progress := fmt.Sprintf("%d/%d", index, stepCount)
+			logger.Warn("Executing test step", "step_number", progress)
 		}
 
 		// preserve the root token, which may be cleared from the client if the this
@@ -296,24 +337,24 @@ func Run(tt TestT, c Case) {
 		// correct mount, namespaces, or "auth" if needed based on mount path and
 		// plugin type
 		path := c.Driver.ExpandPath(step.Path)
-		var err error
+		var respErr error
 		var resp *api.Secret
 
 		switch step.Operation {
 		case WriteOperation, UpdateOperation:
-			resp, err = client.Logical().Write(path, step.Data)
+			resp, respErr = client.Logical().Write(path, step.Data)
 		case ReadOperation:
 			// Some operations support reading with data given.
 			// TODO: see how the CLI parses args and turns them into
 			// map[string][]string, or change how step.Data is defined (currently
 			// map[string]interface{})
-			// resp, err = client.Logical().ReadWithData(path, step.Data)
+			// resp, respErr = client.Logical().ReadWithData(path, step.Data)
 
-			resp, err = client.Logical().Read(path)
+			resp, respErr = client.Logical().Read(path)
 		case ListOperation:
-			resp, err = client.Logical().List(path)
+			resp, respErr = client.Logical().List(path)
 		case DeleteOperation:
-			resp, err = client.Logical().Delete(path)
+			resp, respErr = client.Logical().Delete(path)
 		default:
 			panic("bad operation")
 		}
@@ -354,55 +395,23 @@ func Run(tt TestT, c Case) {
 		// 	}
 		// }
 
+		if respErr != nil && !step.ExpectError {
+			tt.Fatal(fmt.Errorf("unexpected error in step %d: %w", index, respErr))
+		}
+
 		// Either the 'err' was nil or if an error was expected, it was set to nil.
 		// Call the 'Check' function if there is one.
 		if step.Check != nil {
-			checkErr = step.Check(resp, err)
-			// TODO allow error
+			checkErr = step.Check(resp, respErr)
 			if checkErr != nil {
 				tt.Error(fmt.Sprintf("Failed step %d: %s", index, checkErr))
 			}
-		}
-
-		// TODO which error is this?
-		if err != nil {
-			tt.Error(fmt.Sprintf("Failed step %d: %s", index, err))
-			break
 		}
 
 		// reset token in case it was cleared
 		client.SetToken(rootToken)
 	}
 
-	// Revoking any secrets created
-	var failedRevokes []*api.Secret
-	for _, secret := range responses {
-		if secret.LeaseID != "" {
-			logger.Warn("Revoking secret", "secret", fmt.Sprintf("%#v", secret))
-			if err := client.Sys().Revoke(secret.LeaseID); err != nil {
-				tt.Error(fmt.Sprintf("===>> error revoking lease: %s", err))
-				failedRevokes = append(failedRevokes, secret)
-			}
-		}
-	}
-
-	// If we have any failed revokes, log it.
-	if len(failedRevokes) > 0 {
-		for _, s := range failedRevokes {
-			tt.Error(fmt.Sprintf(
-				"WARNING: Revoking the following secret failed. It may\n"+
-					"still exist. Please verify:\n\n%#v",
-				s))
-		}
-	}
-
-	// failsafe - revoke by mount path
-	// TODO: should track all things mounted and revoke all paths to be sure?
-	// Maybe list mounts and try to revoke everything?
-	if err := client.Sys().RevokePrefix(c.Driver.MountPath()); err != nil {
-		revokeErr := fmt.Errorf("[WARN] error revoking by prefix at tend of test: %w", err)
-		tt.Error(revokeErr)
-	}
 }
 
 // TestCheckMulti is a helper to have multiple checks.
