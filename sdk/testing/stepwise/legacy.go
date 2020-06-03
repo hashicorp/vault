@@ -5,6 +5,8 @@ import (
 	"crypto/tls"
 	"fmt"
 	"os"
+	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/hashicorp/errwrap"
@@ -18,8 +20,14 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
+// TestEnvVar must be set to a non-empty value for acceptance tests to run.
+const TestEnvVar = "VAULT_ACC"
+
 // testTesting is used for testing the legacy testing framework
 var testTesting = false
+
+// TestTeardownFunc is the callback used for Teardown in TestCase.
+type TestTeardownFunc func() error
 
 // This file contains items considered "legacy" and are not
 // actively being developed. These types and methods rely on internal types from
@@ -475,4 +483,14 @@ func TestCheckError() TestCheckFunc {
 
 		return nil
 	}
+}
+
+// TestT is the interface used to handle the test lifecycle of a test.
+//
+// Users should just use a *testing.T object, which implements this.
+type TestT interface {
+	Error(args ...interface{})
+	Fatal(args ...interface{})
+	Skip(args ...interface{})
+	Helper()
 }

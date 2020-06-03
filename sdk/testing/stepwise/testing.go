@@ -5,8 +5,6 @@ package stepwise
 import (
 	"fmt"
 	"os"
-	"reflect"
-	"sort"
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
@@ -14,14 +12,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
 )
-
-// TestEnvVar must be set to a non-empty value for acceptance tests to run.
-const TestEnvVar = "VAULT_ACC"
-
-// TestTeardownFunc is the callback used for Teardown in TestCase.
-type TestTeardownFunc func() error
 
 // StepOperation defines operations each step could preform
 type StepOperation string
@@ -392,14 +383,4 @@ func Run(tt TestT, c Case) {
 		client.SetToken(rootToken)
 	}
 
-}
-
-// TestT is the interface used to handle the test lifecycle of a test.
-//
-// Users should just use a *testing.T object, which implements this.
-type TestT interface {
-	Error(args ...interface{})
-	Fatal(args ...interface{})
-	Skip(args ...interface{})
-	Helper()
 }

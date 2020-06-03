@@ -88,6 +88,3 @@ func (t *mockT) failMessage() string {
 
 	return "unknown"
 }
-
-// Helper doesn't do anything, just needs to satisfy the TestT interface
-func (t *mockT) Helper() {}
