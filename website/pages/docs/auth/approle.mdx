@@ -29,7 +29,7 @@ the AppRole associated with the credentials.
 The default path is `/approle`. If this auth method was enabled at a different
 path, specify `auth/my-path/login` instead.
 
-```text
+```shell-session
 $ vault write auth/approle/login \
     role_id=db02de05-fa39-4855-059b-67221c5c2f63 \
     secret_id=6a174c20-f6de-a53c-74d2-6018fcceff64
@@ -48,7 +48,7 @@ token_policies     [default]
 The default endpoint is `auth/approle/login`. If this auth method was enabled
 at a different path, use that value instead of `approle`.
 
-```sh
+```shell-session
 $ curl \
     --request POST \
     --data '{"role_id":"988a9df-...","secret_id":"37b74931..."}' \

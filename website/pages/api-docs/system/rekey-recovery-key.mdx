@@ -23,7 +23,7 @@ This endpoint reads the configuration and progress of the current rekey attempt.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/rekey-recovery-key/init
@@ -106,7 +106,7 @@ nonce.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
@@ -127,7 +127,7 @@ during the verification flow, the current unseal keys remain valid.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -146,7 +146,7 @@ fingerprint to hex-encoded PGP-encrypted key.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/rekey/recovery-key-backup
@@ -173,7 +173,7 @@ This endpoint deletes the backup copy of PGP-encrypted recovery key shares.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token" \
     --request DELETE \
@@ -217,7 +217,7 @@ for the verification operation.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token" \
     --request PUT \
@@ -255,7 +255,7 @@ verification attempt.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/rekey-recovery-key/verify
@@ -291,7 +291,7 @@ along with the new nonce.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token" \
     --request DELETE \
@@ -344,7 +344,7 @@ below; otherwise the response will be the same as the `GET` method against
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token" \
     --request PUT \
