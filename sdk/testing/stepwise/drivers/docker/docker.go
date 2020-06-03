@@ -79,12 +79,10 @@ type DockerCluster struct {
 }
 
 // Teardown stops all the containers.
-// TODO: error/logging
 func (rc *DockerCluster) Teardown() error {
 	for _, node := range rc.ClusterNodes {
 		node.Cleanup()
 	}
-	// TODO should return something
 	return nil
 }
 
@@ -97,11 +95,11 @@ func (rc *DockerCluster) Teardown() error {
 // re-inventing this
 func (dc *DockerCluster) ExpandPath(path string) string {
 	// TODO mount point
+	// TODO prefix with namespace
 	newPath := path
 	newPath = fmt.Sprintf("%s/%s", dc.DriverOptions.MountPath, newPath)
 	if dc.DriverOptions.PluginType == stepwise.PluginTypeCredential {
 		newPath = fmt.Sprintf("%s/%s", "auth", newPath)
-		// TODO prefix with namespace
 	}
 	return newPath
 }
@@ -758,8 +756,7 @@ func TestWaitLeaderMatches(ctx context.Context, client *api.Client, ready func(r
 
 // TODO: change back to 3
 // var DefaultNumCores = 3
-
-var DefaultNumCores = 3
+var DefaultNumCores = 1
 
 // creates a managed docker container running Vault
 func (cluster *DockerCluster) setupDockerCluster(base *vault.CoreConfig, opts *DockerClusterOptions) error {
@@ -907,8 +904,7 @@ func NewDockerDriver(name string, do *stepwise.DriverOptions) *DockerCluster {
 		do = &stepwise.DriverOptions{}
 	}
 	return &DockerCluster{
-		// TODO should this be the driver options plugin name?
-		PluginName:    name,
+		PluginName:    do.PluginName,
 		ClusterName:   fmt.Sprintf("test-%s-%s", name, clusterUUID),
 		RaftStorage:   true,
 		DriverOptions: *do,
