@@ -257,9 +257,10 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-replication-enable]');
     await pollCluster(this.owner);
     await settled();
-    await click('[data-test-replication-link="manage"]');
 
-    let demote = document.querySelectorAll('[data-test-confirm-action-trigger="true"]')[1];
+    // demote perf primary to a secondary
+    await click('[data-test-replication-link="manage"]');
+    const demote = document.querySelector('[data-test-replication-demote]').firstElementChild;
     await click(demote);
     await click('[data-test-confirm-button="true"]');
     await click('[data-test-replication-link="details"]');
