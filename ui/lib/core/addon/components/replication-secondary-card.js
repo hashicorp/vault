@@ -51,7 +51,7 @@ export default Component.extend({
     }
     return false;
   }),
-  primaryClusterAddr: computed('replicationDetails.{primaryClusterAddr}', function() {
-    return this.replicationDetails.primaryClusterAddr;
+  knownPrimaryClusterAddrs: computed('replicationDetails.{knownPrimaryClusterAddrs}', function() {
+    return this.replicationDetails.knownPrimaryClusterAddrs;
   }),
 });

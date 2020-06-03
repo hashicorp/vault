@@ -51,22 +51,16 @@
       <p class="has-text-grey is-size-8">The last WAL index that the secondary received from the primary. Updates every 10 seconds.</p>
     </div>
     <div class="grid-item-right">
-      <h6 class="title is-6">primary_cluster_addr</h6>
-      {{#if primaryClusterAddr}}
-        <span>
-          <a
-            href={{primaryClusterAddr}}
-            class="link"
-            target="_blank"
-            rel="noreferrer noopener" 
-            data-test-primaryClusterAddr
-          >
-            {{primaryClusterAddr}}
-          </a>
-        </span>
-      {{else}}
-        <p class="has-text-grey is-size-8">unknown</p>
-      {{/if}}
+      <h6 class="title is-6">known_primary_cluster_addr</h6>
+      <p class="has-text-grey">A list of all the nodes in the primary's cluster. This is updated every ten seconds.</p>
+      <div class="info-table-row">
+        <p class="is-label has-text-grey-dark">cluster_addr</p>
+      </div>
+      {{#each knownPrimaryClusterAddrs as |clusterAddr|}}
+          <div class="info-table-row is-flex">
+            <code class="is-word-break has-text-black">{{clusterAddr}}</code>
+          </div>
+      {{/each}}
     </div>
     <h2 class="title is-3 grid-item-left-bottom" data-test-lastRemoteWAL>{{format-number lastRemoteWAL}}</h2>
     <div class="grid-item-right-bottom">
