@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math/big"
 	mathrand "math/rand"
 	"net"
@@ -23,6 +22,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -76,6 +76,9 @@ type DockerCluster struct {
 	ClusterNodes       []*DockerClusterNode
 
 	rootToken string
+
+	// the mountpath of the plugin under test
+	mountPath string
 }
 
 // Teardown stops all the containers.
@@ -97,20 +100,34 @@ func (dc *DockerCluster) ExpandPath(path string) string {
 	// TODO mount point
 	// TODO prefix with namespace
 	newPath := path
-	newPath = fmt.Sprintf("%s/%s", dc.DriverOptions.MountPath, newPath)
-	if dc.DriverOptions.PluginType == stepwise.PluginTypeCredential {
-		newPath = fmt.Sprintf("%s/%s", "auth", newPath)
-	}
+	newPath = fmt.Sprintf("%s/%s", dc.MountPath(), newPath)
 	return newPath
 }
 
-// MountPath returns the path that the plugin under test is mounted at
+// MountPath returns the path that the plugin under test is mounted at. If a
+// MountPathPrefix was given, the mount path uses the prefix with a uuid
+// appended. The default is the given PluginName with a uuid suffix.
 // TODO: include namespace support
 func (dc *DockerCluster) MountPath() string {
-	if dc.DriverOptions.PluginType == stepwise.PluginTypeCredential {
-		return fmt.Sprintf("%s/%s", "auth", dc.DriverOptions.MountPath)
+	if dc.mountPath != "" {
+		return dc.mountPath
 	}
-	return dc.DriverOptions.MountPath
+
+	uuidStr, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(err)
+	}
+	prefix := dc.PluginName
+	if dc.DriverOptions.MountPathPrefix != "" {
+		prefix = dc.DriverOptions.MountPathPrefix
+	}
+
+	dc.mountPath = fmt.Sprintf("%s_%s", prefix, uuidStr)
+	if dc.DriverOptions.PluginType == stepwise.PluginTypeCredential {
+		dc.mountPath = fmt.Sprintf("%s/%s", "auth", dc.mountPath)
+	}
+
+	return dc.mountPath
 }
 
 // RootToken returns the root token of the cluster, if set
@@ -914,24 +931,24 @@ func NewDockerDriver(name string, do *stepwise.DriverOptions) *DockerCluster {
 // Setup creates any temp dir and compiles the binary for copying to Docker
 func (dc *DockerCluster) Setup() error {
 	// TODO many not use name here
-	name := dc.DriverOptions.PluginName
+	name := dc.DriverOptions.Name
 	// TODO make PluginName give random name with prefix if given
 	pluginName := dc.DriverOptions.PluginName
 	// get the working directory of the plugin being tested.
 	srcDir, err := os.Getwd()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	// tmpDir gets cleaned up when the cluster is cleaned up
 	tmpDir, err := ioutil.TempDir("", "bin")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	binName, binPath, sha256value, err := stepwise.CompilePlugin(name, pluginName, srcDir, tmpDir)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	coreConfig := &vault.CoreConfig{
@@ -939,9 +956,8 @@ func (dc *DockerCluster) Setup() error {
 	}
 
 	dOpts := &DockerClusterOptions{PluginTestBin: binPath}
-	err = dc.setupDockerCluster(coreConfig, dOpts)
-	if err != nil {
-		panic(err)
+	if err := dc.setupDockerCluster(coreConfig, dOpts); err != nil {
+		return err
 	}
 
 	cores := dc.ClusterNodes
@@ -955,29 +971,28 @@ func (dc *DockerCluster) Setup() error {
 		SHA256:  sha256value,
 	})
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	var mountErr error
 	switch dc.DriverOptions.PluginType {
 	case stepwise.PluginTypeCredential:
-		mountErr = client.Sys().EnableAuthWithOptions(dc.DriverOptions.MountPath, &api.EnableAuthOptions{
+		// the mount path includes "auth/" for credential type plugins. For enabling
+		// auth mounts via the /sys endpoint, we need to remove that prefix
+		authPath := strings.TrimPrefix(dc.MountPath(), "auth/")
+		err = client.Sys().EnableAuthWithOptions(authPath, &api.EnableAuthOptions{
 			Type: name,
 		})
 	case stepwise.PluginTypeDatabase:
 		// TODO database type
 		return errors.New("plugin type database not yet supported")
 	case stepwise.PluginTypeSecrets:
-		mountErr = client.Sys().Mount(dc.DriverOptions.MountPath, &api.MountInput{
+		err = client.Sys().Mount(dc.MountPath(), &api.MountInput{
 			Type: name,
 		})
 	default:
 		return fmt.Errorf("unknown plugin type: %s", dc.DriverOptions.PluginType.String())
 	}
-	if mountErr != nil {
-		panic(mountErr)
-	}
-	return mountErr
+	return err
 }
 
 // Runner manages the lifecycle of the Docker container

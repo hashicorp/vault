@@ -136,10 +136,9 @@ func (p PluginType) String() string {
 // DriverOptions are a collection of options each step driver should
 // support
 type DriverOptions struct {
-	// MountPath is an optional string to specify the mount path for the plugin.
-	// Defaults to a random string
-	// TODO make mount path default to random
-	MountPath string
+	// MountPathPrefix is an optional prefix to use when mounting the plugin. If
+	// omitted the mount path will default to the PluginName with a random suffix.
+	MountPathPrefix string
 
 	// Name is used to register the plugin. This can be arbitray but should be a
 	// reasonable value. For an example, if the plugin in test is a secret backend
@@ -261,7 +260,7 @@ func Run(tt TestT, c Case) {
 
 	defer func() {
 		if c.SkipTeardown {
-			logger.Error("driver Teardown skipped")
+			logger.Info("driver Teardown skipped")
 			return
 		}
 		if err := c.Driver.Teardown(); err != nil {
