@@ -310,6 +310,7 @@ export default [
             category: 'helm',
             content: [
               'run',
+              'openshift',
               'configuration',
               {
                 category: 'examples',
