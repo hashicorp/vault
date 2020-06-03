@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/y0ssar1an/q"
 )
 
 func pathUsersList(b *backend) *framework.Path {
@@ -241,7 +240,6 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 }
 
 func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	q.Q("### userpass pathUserWrite")
 	password := d.Get("password").(string)
 	if req.Operation == logical.CreateOperation && password == "" {
 		return logical.ErrorResponse("missing password"), logical.ErrInvalidRequest

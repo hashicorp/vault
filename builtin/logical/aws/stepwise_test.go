@@ -15,10 +15,10 @@ import (
 func TestAccBackend_Stepwise_basic(t *testing.T) {
 	t.Parallel()
 	driverOptions := &stepwise.DriverOptions{
-		Name:       "aws-sec",
-		PluginType: stepwise.PluginTypeSecrets,
-		PluginName: "aws",
-		MountPath:  "aws-sec",
+		Name:            "aws-sec",
+		PluginType:      stepwise.PluginTypeSecrets,
+		PluginName:      "aws",
+		MountPathPrefix: "aws-sec",
 	}
 	roleName := "vault-stepwise-role"
 	stepwise.Run(t, stepwise.Case{

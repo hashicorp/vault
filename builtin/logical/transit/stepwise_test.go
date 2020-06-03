@@ -17,10 +17,10 @@ import (
 func TestBackend_basic_docker(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	driverOptions := stepwise.DriverOptions{
-		Name:       "transit2",
-		PluginType: stepwise.PluginTypeSecrets,
-		PluginName: "transit",
-		MountPath:  "transit_temp",
+		Name:            "transit2",
+		PluginType:      stepwise.PluginTypeSecrets,
+		PluginName:      "transit",
+		MountPathPrefix: "transit_temp",
 	}
 	stepwise.Run(t, stepwise.Case{
 		Driver: dockerDriver.NewDockerDriver("transit", &driverOptions),

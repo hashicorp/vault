@@ -16,10 +16,10 @@ import (
 func TestAccBackend_stepwise_UserCrud(t *testing.T) {
 	customPluginName := "my-userpass"
 	driverOptions := &stepwise.DriverOptions{
-		Name:       customPluginName,
-		PluginType: stepwise.PluginTypeCredential,
-		PluginName: "userpass",
-		MountPath:  customPluginName,
+		Name:            customPluginName,
+		PluginType:      stepwise.PluginTypeCredential,
+		PluginName:      "userpass",
+		MountPathPrefix: customPluginName,
 	}
 	stepwise.Run(t, stepwise.Case{
 		Driver: dockerDriver.NewDockerDriver(customPluginName, driverOptions),

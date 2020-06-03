@@ -6,7 +6,6 @@ import (
 	"github.com/hashicorp/vault/helper/mfa"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/y0ssar1an/q"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -18,7 +17,6 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 }
 
 func Backend() *backend {
-	q.Q("### userpass backend creating in Backend()")
 	var b backend
 	b.Backend = &framework.Backend{
 		Help: backendHelp,
