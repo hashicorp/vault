@@ -186,6 +186,13 @@ type Case struct {
 	// of if the test succeeded or failed. This should return an error
 	// in the case that the test can't guarantee all resources were
 	// properly cleaned up.
+	//
+	// Test Drivers should normally handle this by tearing down any infrastructure
+	// created during the setup of the Vault cluster for testing. The test case
+	// specific teardown should only be used if the Driver cluster supports
+	// multiple tests running on a single cluster, which is not currently
+	// supported. Until this feature is supported by the Driver being used, users
+	// should not use this function.
 	Teardown TestTeardownFunc
 
 	// SkipTeardown allows the TestTeardownFunc to be skipped, leaving any
@@ -227,20 +234,13 @@ func Run(tt TestT, c Case) {
 		c.PreCheck()
 	}
 
-	// Defer on the teardown, regardless of pass/fail at this point
-	// TODO - checkErr is seperate right now b/c I wanted to stop Vault from being
-	// torndown if a test failed. This needs to be removed, or configurable
-	var checkErr error
+	// Defer on the test case teardown, regardless of pass/fail at this point.
 	if c.Teardown != nil {
-		defer func(testError error) {
-			if testError != nil {
-				return
-			}
-			err := c.Teardown()
-			if err != nil {
+		defer func() {
+			if err := c.Teardown(); err != nil {
 				tt.Error("failed to tear down:", err)
 			}
-		}(checkErr)
+		}()
 	}
 
 	// Create an in-memory Vault core
@@ -376,35 +376,16 @@ func Run(tt TestT, c Case) {
 		// 	req.Connection.ConnState = s.ConnState
 		// }
 
-		// TODO: expected error check
-		// - test returned error check here
-		//
-
-		// Test step returned an error.
-		// if err != nil {
-		// 	// But if an error is expected, do not fail the test step,
-		// 	// regardless of whether the error is a 'logical.ErrorResponse'
-		// 	// or not. Set the err to nil. If the error is a logical.ErrorResponse,
-		// 	// it will be handled later.
-		// 	if s.ErrorOk {
-		// 		err = nil
-		// 	} else {
-		// 		// // If the error is not expected, fail right away.
-		// 		tt.Error(fmt.Sprintf("Failed step %d: %s", i+1, err))
-		// 		break
-		// 	}
-		// }
-
+		// If a step returned an unexpected error, fail the entire test immediately
 		if respErr != nil && !step.ExpectError {
 			tt.Fatal(fmt.Errorf("unexpected error in step %d: %w", index, respErr))
 		}
 
-		// Either the 'err' was nil or if an error was expected, it was set to nil.
-		// Call the 'Check' function if there is one.
+		// run the associated StepCheckFunc, if any. If an error was expected it is
+		// sent to the Check function to validate.
 		if step.Check != nil {
-			checkErr = step.Check(resp, respErr)
-			if checkErr != nil {
-				tt.Error(fmt.Sprintf("Failed step %d: %s", index, checkErr))
+			if err := step.Check(resp, respErr); err != nil {
+				tt.Error(fmt.Errorf("Failed step %d: %w", index, err))
 			}
 		}
 
