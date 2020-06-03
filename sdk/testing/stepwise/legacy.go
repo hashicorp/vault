@@ -416,3 +416,63 @@ func Test(tt TestT, c TestCase) {
 		}
 	}
 }
+
+// TestCheckMulti is a helper to have multiple checks.
+func TestCheckMulti(fs ...TestCheckFunc) TestCheckFunc {
+	return func(resp *logical.Response) error {
+		for _, f := range fs {
+			if err := f(resp); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+}
+
+// TestCheckAuth is a helper to check that a request generated an
+// auth token with the proper policies.
+func TestCheckAuth(policies []string) TestCheckFunc {
+	return func(resp *logical.Response) error {
+		if resp == nil || resp.Auth == nil {
+			return fmt.Errorf("no auth in response")
+		}
+		expected := make([]string, len(policies))
+		copy(expected, policies)
+		sort.Strings(expected)
+		ret := make([]string, len(resp.Auth.Policies))
+		copy(ret, resp.Auth.Policies)
+		sort.Strings(ret)
+		if !reflect.DeepEqual(ret, expected) {
+			return fmt.Errorf("invalid policies: expected %#v, got %#v", expected, ret)
+		}
+
+		return nil
+	}
+}
+
+// TestCheckAuthDisplayName is a helper to check that a request generated a
+// valid display name.
+func TestCheckAuthDisplayName(n string) TestCheckFunc {
+	return func(resp *logical.Response) error {
+		if resp.Auth == nil {
+			return fmt.Errorf("no auth in response")
+		}
+		if n != "" && resp.Auth.DisplayName != "mnt-"+n {
+			return fmt.Errorf("invalid display name: %#v", resp.Auth.DisplayName)
+		}
+
+		return nil
+	}
+}
+
+// TestCheckError is a helper to check that a response is an error.
+func TestCheckError() TestCheckFunc {
+	return func(resp *logical.Response) error {
+		if !resp.IsError() {
+			return fmt.Errorf("response should be error")
+		}
+
+		return nil
+	}
+}
