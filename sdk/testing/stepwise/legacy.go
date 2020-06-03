@@ -354,11 +354,9 @@ func Test(tt TestT, c TestCase) {
 		}
 
 		// Either the 'err' was nil or if an error was expected, it was set to nil.
-		// Call the 'Check' function if there is one.
-		//
-		// TODO: This works perfectly for now, but it would be better if 'Check'
-		// function takes in both the response object and the error, and decide on
-		// the action on its own.
+		// Call the 'Check' function if there is one. The legacy tests only check
+		// the response, and not the error. For checking both, use the stepwise Case
+		// and Step types in sdk/testing/stepwise/testing.go
 		if err == nil && s.Check != nil {
 			// Call the test method
 			err = s.Check(resp)
