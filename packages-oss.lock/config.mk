@@ -93,8 +93,7 @@ ifeq ($(PRODUCT_REVISION),)
 # just to perform a new build.
 #
 # Determine the PACKAGE_SOURCE_ID.
-# Note we use the GIT_REF suffixed with '^{}' in order to traverse tags down
-# to individual commits, which is important in case the GIT_REF is an annotated tag.
+#
 # Dirty package builds should never be cached because their PACKAGE_SOURCE_ID
 # is not unique to the code, it just reflects the last commit ID in the git log
 # prefixed with dirty_.
@@ -102,7 +101,18 @@ GIT_REF := HEAD
 ALLOW_DIRTY ?= YES
 PRODUCT_REVISION_NICE_NAME := <current-workdir>
 DIRTY := $(shell cd $(REPO_ROOT); git diff --exit-code $(GIT_REF) -- $(ALWAYS_EXCLUDE_SOURCE_GIT) > /dev/null 2>&1 || echo "dirty_")
-PACKAGE_SOURCE_ID := $(DIRTY)$(shell git rev-parse --verify '$(GIT_REF)^{commit}')
+# Note we used to suffix the GIT_REF with '^{}' in order to traverse tags down
+# to individual commits, in case the GIT_REF is an annotated tag. However this
+# makes build output confusing in case a tag ref is used rather than a commit ref.
+# Therefore we now allow building tag refs, even though this means sometimes we might
+# be building the same source with two different source IDs, and potentially wasting
+# some potential cache hits. The tradeoff in terms of ease of use seems worth it for
+# now, but this could be revisited later.
+# The original of the line below was:
+# 
+#   PACKAGE_SOURCE_ID := $(DIRTY)$(shell git rev-parse --verify '$(GIT_REF)^{commit}')
+#
+PACKAGE_SOURCE_ID := $(DIRTY)$(shell git rev-parse --verify '$(GIT_REF)')
 
 else
 
