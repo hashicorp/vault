@@ -27,6 +27,8 @@ and consider if they're appropriate for your deployment.
 
   - `openshift` (`boolean: false`) - If `true`, enables configuration specific to OpenShift such as NetworkPolicy, SecurityContext, and Route.
 
+    ~> **Note:** OpenShift support is a beta feature.
+
 - `injector` - Values that configure running a Vault Agent Injector Admission Webhook Controller within Kubernetes.
 
   - `enabled` (`boolean: true`) - When set to `true`, the Vault Agent Injector Admission Webhook controller will be created.
