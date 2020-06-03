@@ -20,10 +20,9 @@ Vault and Vault Agent Injector on OpenShift.
 The following are required to install Vault and Vault Agent Injector 
 on OpenShift:
 
-* Cluster Admin privileges: Vault requires a cluster role to review 
-  Kubernetes service accounts and their associated JSON Web Tokens for login requests.
-* OpenShift 4.X
+* Cluster Admin privileges to bind the `auth-delegator` role to Vault's service account
 * Helm v3
+* OpenShift 4.X
 * Vault Helm v0.6.0+
 * Vault K8s v0.4.0+
 
@@ -63,10 +62,6 @@ checklist](/docs/platform/k8s/helm/run#architecture).
 ## How-To
 
 ### Install Vault
-
-Helm must be installed and configured on your machine. Please refer to the [Helm
-documentation](https://helm.sh/) or the [Vault Installation to Minikube via
-Helm](https://learn.hashicorp.com/vault/getting-started-k8s/minikube) guide.
 
 To use the Helm chart, add the Hashicorp helm repository and check that you have
 access to the chart:
@@ -148,12 +143,11 @@ $ helm install vault hashicorp/vault \
     --set "server.dev.enabled=true"
 ```
 
-#### Standalone mode
+#### Highly Available Raft Mode
 
-The Helm chart defaults to run in `standalone` mode. This installs a single
-Vault server with a file storage backend.
+The following creates a Vault cluster using the Raft integrated storage backend.
 
-Install the latest Vault Helm chart in standalone mode.
+Install the latest Vault Helm chart in HA Raft mode:
 
 ```shell-session
 $ helm install vault hashicorp/vault --set "global.openshift=true"
