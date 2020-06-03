@@ -278,7 +278,7 @@ github.com/gogo/protobuf/sortkeys
 github.com/golang-sql/civil
 # github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
 github.com/golang/groupcache/lru
-# github.com/golang/protobuf v1.4.1
+# github.com/golang/protobuf v1.4.2
 github.com/golang/protobuf/internal/gengogrpc
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/protoc-gen-go
@@ -452,7 +452,7 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms
 github.com/hashicorp/vault-plugin-secrets-kv
 # github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas
-# github.com/hashicorp/vault-plugin-secrets-openldap v0.1.0-beta1.0.20200515114020-e19ec0ccabc3
+# github.com/hashicorp/vault-plugin-secrets-openldap v0.1.3
 github.com/hashicorp/vault-plugin-secrets-openldap
 github.com/hashicorp/vault-plugin-secrets-openldap/client
 # github.com/hashicorp/vault/api v1.0.5-0.20200519221902-385fac77e20f => ./api
@@ -893,7 +893,7 @@ golang.org/x/lint/golint
 # golang.org/x/mod v0.2.0
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20200513185701-a91f0712d120
+# golang.org/x/net v0.0.0-20200519113804-d87ec0cfa476
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/http/httpguts
@@ -912,8 +912,9 @@ golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20200413165638-669c56c373c4
+# golang.org/x/sys v0.0.0-20200519105757-fe76b779f299
 golang.org/x/sys/cpu
+golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 # golang.org/x/text v0.3.2
@@ -984,7 +985,7 @@ google.golang.org/appengine/internal/socket
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/socket
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20200513103714-09dca8ec2884
+# google.golang.org/genproto v0.0.0-20200519141106-08726f379972
 google.golang.org/genproto/googleapis/api
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/api/distribution
@@ -1003,7 +1004,7 @@ google.golang.org/genproto/googleapis/spanner/v1
 google.golang.org/genproto/googleapis/type/calendarperiod
 google.golang.org/genproto/googleapis/type/expr
 google.golang.org/genproto/protobuf/field_mask
-# google.golang.org/grpc v1.28.1
+# google.golang.org/grpc v1.29.1
 google.golang.org/grpc
 google.golang.org/grpc/attributes
 google.golang.org/grpc/backoff
@@ -1044,6 +1045,7 @@ google.golang.org/grpc/internal/grpcsync
 google.golang.org/grpc/internal/grpcutil
 google.golang.org/grpc/internal/resolver/dns
 google.golang.org/grpc/internal/resolver/passthrough
+google.golang.org/grpc/internal/status
 google.golang.org/grpc/internal/syscall
 google.golang.org/grpc/internal/transport
 google.golang.org/grpc/keepalive
@@ -1057,7 +1059,7 @@ google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
-# google.golang.org/protobuf v1.22.0
+# google.golang.org/protobuf v1.23.0
 google.golang.org/protobuf/cmd/protoc-gen-go/internal_gengo
 google.golang.org/protobuf/compiler/protogen
 google.golang.org/protobuf/encoding/prototext

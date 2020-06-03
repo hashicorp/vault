@@ -47,7 +47,7 @@ require (
 	github.com/go-test/deep v1.0.2
 	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
 	github.com/gogo/protobuf v1.3.1 // indirect
-	github.com/golang/protobuf v1.4.1
+	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/hashicorp/consul-template v0.25.0
@@ -90,7 +90,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.5
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.5
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.0-beta1.0.20200515114020-e19ec0ccabc3
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.3
 	github.com/hashicorp/vault/api v1.0.5-0.20200519221902-385fac77e20f
 	github.com/hashicorp/vault/sdk v0.1.14-0.20200519221838-e0cfd64bc267
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
@@ -143,12 +143,12 @@ require (
 	go.mongodb.org/mongo-driver v1.2.1
 	go.uber.org/atomic v1.6.0
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
-	golang.org/x/net v0.0.0-20200513185701-a91f0712d120
+	golang.org/x/net v0.0.0-20200519113804-d87ec0cfa476
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/tools v0.0.0-20200416214402-fc959738d646
 	google.golang.org/api v0.24.0
-	google.golang.org/grpc v1.28.1
-	google.golang.org/protobuf v1.22.0
+	google.golang.org/grpc v1.29.1
+	google.golang.org/protobuf v1.23.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.4.1
