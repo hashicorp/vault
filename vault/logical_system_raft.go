@@ -21,18 +21,6 @@ import (
 // raftStoragePaths returns paths for use when raft is the storage mechanism.
 func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 	return []*framework.Path{
-		// {
-		// 	Pattern: "storage/raft/bootstrap",
-		// 	Operations: map[logical.Operation]framework.OperationHandler{
-		// 		logical.UpdateOperation: &framework.PathOperation{
-		// 			Callback: b.handleRaftBootstrapWrite(),
-		// 			Summary:  "Initialize the raft bootstrapping process for a node.",
-		// 		},
-		// 	},
-		//
-		// 	HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-bootstrap"][0]),
-		// 	HelpDescription: strings.TrimSpace(sysRaftHelp["raft-bootstrap"][1]),
-		// },
 		{
 			Pattern: "storage/raft/bootstrap/answer",
 
@@ -180,16 +168,6 @@ func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 		}
 		if b.Core.raftFollowerStates != nil {
 			b.Core.raftFollowerStates.delete(serverID)
-		}
-
-		return nil, nil
-	}
-}
-
-func (b *SystemBackend) handleRaftBootstrapWrite() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		if err := b.Core.RaftBootstrap(context.Background()); err != nil {
-			return nil, err
 		}
 
 		return nil, nil

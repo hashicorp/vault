@@ -211,11 +211,18 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// Bootstrap the raft backend if that's provided as the physical or
 	// HA backend.
 	if raftBackend := c.getRaftBackend(); raftBackend != nil {
-		err := c.RaftBootstrap(ctx)
+		err := c.RaftBootstrap(ctx, true)
 		if err != nil {
 			c.logger.Error("failed to bootstrap raft", "error", err)
 			return nil, err
 		}
+
+		// Teardown cluster after bootstrap setup
+		defer func() {
+			if err := raftBackend.TeardownCluster(nil); err != nil {
+				c.logger.Error("failed to stop raft", "error", err)
+			}
+		}()
 	}
 
 	err = c.seal.Init(ctx)
@@ -367,7 +374,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		results.RootToken = base64.StdEncoding.EncodeToString(encryptedVals[0])
 	}
 
-	if err := c.createRaftTLSKeyring(ctx); err != nil {
+	if _, err := c.RaftCreateTLSKeyring(ctx); err != nil {
 		c.logger.Error("failed to create raft TLS keyring", "error", err)
 		return nil, err
 	}

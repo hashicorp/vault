@@ -12,18 +12,20 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
+// TODO: Move this under the sys backend
 func handleSysRaftBootstrap(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "POST", "PUT":
-			if !core.Sealed() {
-				respondError(w, http.StatusBadRequest, errors.New("node must be sealed to bootstrap"))
+			if core.Sealed() {
+				respondError(w, http.StatusBadRequest, errors.New("node must be unsealed to bootstrap"))
 			}
 
-			if err := core.RaftBootstrap(context.Background()); err != nil {
+			if err := core.RaftBootstrap(context.Background(), false); err != nil {
 				respondError(w, http.StatusInternalServerError, err)
 				return
 			}
+
 		default:
 			respondError(w, http.StatusBadRequest, nil)
 		}

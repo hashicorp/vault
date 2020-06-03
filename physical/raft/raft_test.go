@@ -33,8 +33,13 @@ func getRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, str
 }
 
 func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir string) (*RaftBackend, string) {
+	id, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	logger := hclog.New(&hclog.LoggerOptions{
-		Name:  "raft",
+		Name:  fmt.Sprintf("raft-%s", id),
 		Level: hclog.Trace,
 	})
 	logger.Info("raft dir", "dir", raftDir)

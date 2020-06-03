@@ -754,8 +754,19 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 					c.logger.Error("key rotation periodic upgrade check failed", "error", err)
 				}
 
-				if err := c.checkRaftTLSKeyUpgrades(ctx); err != nil {
-					c.logger.Error("raft tls periodic upgrade check failed", "error", err)
+				if raftBackend := c.getRaftBackend(); raftBackend != nil {
+					hasState, err := raftBackend.HasState()
+					if err != nil {
+						c.logger.Error("could not check raft state", "error", err)
+						return
+					}
+
+					if raftBackend.Initialized() && hasState {
+						if err := c.checkRaftTLSKeyUpgrades(ctx); err != nil {
+							c.logger.Error("raft tls periodic upgrade check failed", "error", err)
+							return
+						}
+					}
 				}
 
 				atomic.AddInt32(lopCount, -1)

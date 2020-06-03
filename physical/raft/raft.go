@@ -69,6 +69,8 @@ type RaftBackend struct {
 	// raft is the instance of raft we will operate on.
 	raft *raft.Raft
 
+	raftInitCh chan struct{}
+
 	// raftNotifyCh is used to receive updates about leadership changes
 	// regarding this node.
 	raftNotifyCh chan bool
@@ -308,6 +310,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	return &RaftBackend{
 		logger:      logger,
 		fsm:         fsm,
+		raftInitCh:  make(chan struct{}),
 		conf:        conf,
 		logStore:    log,
 		stableStore: stable,
@@ -516,10 +519,18 @@ func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error
 	})
 }
 
+func (b *RaftBackend) HasState() (bool, error) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	return raft.HasExistingState(b.logStore, b.stableStore, b.snapStore)
+}
+
 // SetupCluster starts the raft cluster and enables the networking needed for
 // the raft nodes to communicate.
 func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	b.logger.Trace("setting up raft cluster")
+	defer b.logger.Trace("finished setting up raft cluster")
 
 	b.l.Lock()
 	defer b.l.Unlock()
@@ -664,6 +675,9 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		opts.ClusterListener.AddClient(consts.RaftStorageALPN, b.streamLayer)
 	}
 
+	// Close the init channel to signal setup has been completed
+	close(b.raftInitCh)
+
 	return nil
 }
 
@@ -677,6 +691,9 @@ func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error
 	b.l.Lock()
 	future := b.raft.Shutdown()
 	b.raft = nil
+
+	// If we're tearing down, then se need to recreate the raftInitCh
+	b.raftInitCh = make(chan struct{})
 	b.l.Unlock()
 
 	return future.Error()
@@ -1061,9 +1078,9 @@ func (b *RaftBackend) HAEnabled() bool { return true }
 
 // HAEnabled is the implementation of the HABackend interface
 func (b *RaftBackend) LockWith(key, value string) (physical.Lock, error) {
-	if b.raft == nil {
-		return nil, errors.New("lock with: missing raft instance")
-	}
+	// if b.raft == nil {
+	// 	return nil, errors.New("lock with: missing raft instance")
+	// }
 
 	return &RaftLock{
 		key:   key,
@@ -1110,6 +1127,19 @@ func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}, leaderNotifyCh <-ch
 // Lock blocks until we become leader or are shutdown. It returns a channel that
 // is closed when we detect a loss of leadership.
 func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
+	raftInitialized := l.b.Initialized()
+
+	// If not initialized, block until it is
+	if !raftInitialized {
+		select {
+		case <-l.b.raftInitCh:
+			fmt.Println("============= raft got initialized, acquiring lock")
+		case <-stopCh:
+			return nil, nil
+		}
+
+	}
+
 	l.b.l.RLock()
 
 	// Cache the notifyCh locally
@@ -1130,6 +1160,8 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		fmt.Println("=============== here 0")
 
 		return l.monitorLeadership(stopCh, leaderNotifyCh), nil
 	}
@@ -1155,6 +1187,8 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 					return nil, err
 				}
 
+				fmt.Println("=============== here 1")
+
 				return l.monitorLeadership(stopCh, leaderNotifyCh), nil
 			}
 		case <-stopCh:
@@ -1167,6 +1201,10 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 // Unlock gives up leadership.
 func (l *RaftLock) Unlock() error {
+	if l.b.raft == nil {
+		return nil
+	}
+
 	return l.b.raft.LeadershipTransfer().Error()
 }
 
