@@ -262,69 +262,81 @@
     {{/if}}
   </form>
 {{else if showModeSummary}}
-  <PageHeader as |p|>
-    <p.levelLeft>
-      <h1 class="title is-3">
-        Replication
-      </h1>
-    </p.levelLeft>
-  </PageHeader>
-  <div class="box is-sideless is-fullwidth is-marginless">
-    <h3 class="title is-flex-center is-5 is-marginless">
-      <Icon @size="xl" aria-hidden="true" @glyph="replication" />
-      Disaster Recovery (DR)
-    </h3>
-    {{#if cluster.dr.replicationEnabled}}
-      {{#if submit.isRunning }}
-        <LayoutLoading />
-      {{else}}
-        {{#link-to
-          "mode.index"
-          "dr"
-          class="link-plain"
-        }}
-          {{replication-mode-summary
-            mode="dr"
-            cluster=cluster
-            tagName="span"
-          }}
-        {{/link-to}}
-      {{/if}}
-    {{else}}
-      {{replication-mode-summary
-        mode="dr"
-        cluster=cluster
-        tagName="div"
-      }}
-    {{/if}}
-  </div>
-  {{#unless (and submit.isRunning (eq cluster.dr.mode "bootstrapping"))}}
-    <div class="box is-bottomless is-fullwidth is-marginless">
+  {{#unless (and cluster.dr.replicationEnabled cluster.performance.replicationEnabled)}}
+    <PageHeader as |p|>
+      <p.levelLeft>
+        <h1 class="title is-3">
+          Replication
+        </h1>
+      </p.levelLeft>
+    </PageHeader>
+  {{/unless}}
+
+  {{#if (and (eq cluster.dr.mode "primary") (eq cluster.performance.mode "primary")) }}
+    <ReplicationPage @model={{cluster}} as |Page|>
+      <Page.header
+        @showTabs={{true}}
+      />
+      <Page.dashboard
+        @componentToRender='replication-summary-card' as |Dashboard|>
+        <Dashboard.card
+          @title="Disaster Recovery"
+        />
+        <Dashboard.card
+          @title="Performance"
+        />
+      </Page.dashboard>
+    </ReplicationPage>
+  {{else}}
+    <div class="box is-sideless is-fullwidth is-marginless">
       <h3 class="title is-flex-center is-5 is-marginless">
-        <Icon @size="xl" aria-hidden="true" @glyph="perf-replication" />
-        Performance
+        <Icon @size="xl" aria-hidden="true" @glyph="replication" />
+        Disaster Recovery (DR)
       </h3>
       {{#if cluster.dr.replicationEnabled}}
-        {{#link-to
-          "mode.index"
-          "performance"
-          class="link-plain"
-        }}
-          {{replication-mode-summary
-            mode="performance"
-            cluster=cluster
-            tagName="span"
+        {{#if submit.isRunning }}
+          <LayoutLoading />
+        {{else}}
+          {{#link-to
+            "mode.index"
+            "dr"
+            class="link-plain"
           }}
-        {{/link-to}}
+            {{replication-mode-summary
+              mode="dr"
+              cluster=cluster
+              tagName="span"
+            }}
+          {{/link-to}}
+        {{/if}}
       {{else}}
         {{replication-mode-summary
-          mode="performance"
+          mode="dr"
           cluster=cluster
           tagName="div"
         }}
       {{/if}}
     </div>
-  {{/unless}}
+      {{#unless (and submit.isRunning (eq cluster.dr.mode "bootstrapping"))}}
+      <div class="box is-bottomless is-fullwidth is-marginless">
+        <h3 class="title is-flex-center is-5 is-marginless">
+          <Icon @size="xl" aria-hidden="true" @glyph="perf-replication" />
+          Performance
+        </h3>
+          {{#link-to
+            "mode.index"
+            "performance"
+            class="link-plain"
+          }}
+            {{replication-mode-summary
+              mode="performance"
+              cluster=cluster
+              tagName="span"
+            }}
+          {{/link-to}}
+      </div>
+    {{/unless}}
+  {{/if}}
 {{else}}
   {{#if (eq replicationAttrs.mode 'initializing')}}
     The cluster is initializing replication. This may take some time.
@@ -346,12 +358,12 @@
           {{else}}
             <Dashboard.card
               @title='State'
-              @description='Updated every ten seconds.'
+              @description='The cluster’s current operating state.'
               @glyph={{get (cluster-states replicationAttrs.state) "glyph"}}
               @metric={{replicationAttrs.state}} />
             <Dashboard.card
               @title='Last WAL entry'
-              @description='Index of last Write Ahead Logs entry written on local storage.'
+              @description='Index of last Write Ahead Logs entry written on local storage. Updates every ten seconds.'
               @metric={{format-number replicationAttrs.lastWAL}} />
             <Dashboard.secondaryCard
               @cluster={{cluster}}

@@ -119,4 +119,80 @@ module('Integration | Enterprise | Component | replication-dashboard', function(
       .dom('.message-title>.progress')
       .hasValue(reindexingInProgress.reindex_building_progress, 'updates the reindexing progress');
   });
+
+  test('it renders replication-summary-card when isSummaryDashboard', async function(assert) {
+    const replicationDetailsSummary = {
+      dr: {
+        state: 'running',
+        lastWAL: 10,
+        knownSecondaries: ['https://127.0.0.1:8201', 'https://127.0.0.1:8202'],
+      },
+      performance: {
+        state: 'running',
+        lastWAL: 20,
+        knownSecondaries: ['https://127.0.0.1:8201'],
+      },
+    };
+    this.set('replicationDetails', REPLICATION_DETAILS);
+    this.set('replicationDetailsSummary', replicationDetailsSummary);
+    this.set('isSummaryDashboard', true);
+    this.set('clusterMode', 'primary');
+    this.set('isSecondary', false);
+
+    await render(hbs`<ReplicationDashboard
+      @replicationDetails={{replicationDetails}}
+      @replicationDetailsSummary={{replicationDetailsSummary}}
+      @isSummaryDashboard={{isSummaryDashboard}}
+      @clusterMode={{clusterMode}}
+      @isSecondary={{isSecondary}}
+      @componentToRender='replication-summary-card'
+    />`);
+
+    assert.dom('.summary-state').exists('it renders the summary dashboard');
+    assert
+      .dom('[data-test-summary-state]')
+      .includesText(replicationDetailsSummary.dr.state, 'shows the correct state value');
+    assert.dom('[data-test-icon]').exists('shows an icon if state is ok');
+    assert
+      .dom('[data-test-selectable-card-container-summary]')
+      .exists('it renders with the correct selectable card container');
+    assert.dom('[data-test-selectable-card-container-primary]').doesNotExist();
+  });
+
+  test('it renders replication-summary-card with an error message when the state is not OK', async function(assert) {
+    const replicationDetailsSummary = {
+      dr: {
+        state: 'shutdown',
+        lastWAL: 10,
+        knownSecondaries: ['https://127.0.0.1:8201', 'https://127.0.0.1:8202'],
+      },
+      performance: {
+        state: 'shutdown',
+        lastWAL: 20,
+        knownSecondaries: ['https://127.0.0.1:8201'],
+      },
+    };
+    this.set('replicationDetails', REPLICATION_DETAILS);
+    this.set('replicationDetailsSummary', replicationDetailsSummary);
+    this.set('isSummaryDashboard', true);
+    this.set('clusterMode', 'primary');
+    this.set('isSecondary', false);
+
+    await render(hbs`<ReplicationDashboard
+      @replicationDetails={{replicationDetails}}
+      @replicationDetailsSummary={{replicationDetailsSummary}}
+      @isSummaryDashboard={{isSummaryDashboard}}
+      @clusterMode={{clusterMode}}
+      @isSecondary={{isSecondary}}
+      @componentToRender='replication-summary-card'
+    />`);
+
+    assert.dom('[data-test-error]').includesText('state', 'show correct error title');
+    assert
+      .dom('[data-test-inline-error-message]')
+      .includesText(
+        '  The cluster is shutdown. Please check your server logs.',
+        'show correct error message'
+      );
+  });
 });

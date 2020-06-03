@@ -25,13 +25,13 @@ directly to `syslog` will not result in Vault being blocked.
 
 Audit `syslog` device can be enabled by the following command:
 
-```text
+```shell-session
 $ vault audit enable syslog
 ```
 
 Supply configuration parameters via K=V pairs:
 
-```text
+```shell-session
 $ vault audit enable syslog tag="vault" facility="AUTH"
 ```
 

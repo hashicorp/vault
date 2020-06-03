@@ -111,7 +111,7 @@ You will perform the following:
 1. [Rotate the Encryption Key](#step4)
 1. [Update Key Configuration](#step5)
 
-### <a name="step1"></a>Step 1: Configure Transit Secret Engine
+### Step 1: Configure Transit Secret Engine ((#step1))
 
 (**Persona:** operator)
 
@@ -123,7 +123,7 @@ management tool.
 
 Enable the `transit` secret engine by executing the following command:
 
-```plaintext
+```shell-session
 $ vault secrets enable transit
 ```
 
@@ -135,7 +135,7 @@ $ vault secrets enable transit
 Now, create an encryption key ring named, `orders` by executing the following
 command:
 
-```plaintext
+```shell-session
 $ vault write -f transit/keys/orders
 ```
 
@@ -143,7 +143,7 @@ $ vault write -f transit/keys/orders
 
 Enable `transit` secret engine using `/sys/mounts` endpoint:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: <TOKEN>" \
        --request POST \
        --data <PARAMETERS> \
@@ -158,7 +158,7 @@ parameters](/api/system/mounts#enable-secrets-engine) of the secret engine.
 The following example enables transit secret engine at `sys/mounts/transit`
 path, and passed the secret engine type (`transit`) in the request payload.
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data '{"type":"transit"}' \
@@ -168,7 +168,7 @@ $ curl --header "X-Vault-Token: ..." \
 Now, create an encryption key ring named, `orders` using the `transit/keys`
 endpoint:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        https://127.0.0.1:8200/v1/transit/keys/orders
@@ -189,12 +189,10 @@ Open a web browser and launch the Vault UI (e.g. http://127.0.0.1:8200/ui) and t
 
 1. Click **Create encryption key** to complete.
 
-<br />
-
 ~> **NOTE:** Typically, you want to create an encryption key ring for each
 application.
 
-### <a name="step2"></a>Step 2: Encrypt Secrets
+### Step 2: Encrypt Secrets ((#step2))
 
 (**Persona:** operator)
 
@@ -210,13 +208,13 @@ When you encrypt a plaintext, it must be base64-encoded.
 
 To encrypt your secret, use the `transit/encrypt` endpoint:
 
-```plaintext
+```shell-session
 $ vault write transit/encrypt/<key_ring_name>
 ```
 
 Execute the following command to encrypt a plaintext:
 
-```plaintext
+```shell-session
 $ vault write transit/encrypt/orders plaintext=$(base64 <<< "credit-card-number")
 
 Key           Value
@@ -280,7 +278,7 @@ database) or pass it to another application.
    at the desired location (e.g. MySQL database) or pass it to another application.
    ![Encrypt plaintext](/img/vault-transit-4.png)
 
-### <a name="step3"></a>Step 3: Decrypt a cipher-text
+### Step 3: Decrypt a cipher-text ((#step3))
 
 (**Persona:** operator)
 
@@ -293,7 +291,7 @@ endpoint.
 Execute the following command to decrypt the ciphertext resulted in [Step
 2](#step2):
 
-```plaintext
+```shell-session
 $ vault write transit/decrypt/orders \
         ciphertext="vault:v1:cZNHVx+sxdMErXRSuDa1q/pz49fXTn1PScKfhf+PIZPvy8xKfkytpwKcbC0fF2U=" \
 
@@ -305,7 +303,7 @@ plaintext    Y3JlZGl0LWNhcmQtbnVtYmVyCg==
 The resulting data is base64-encoded. To reveal the original plaintext, run the
 following command:
 
-```plaintext
+```shell-session
 $ base64 --decode <<< "Y3JlZGl0LWNhcmQtbnVtYmVyCg=="
 credit-card-number
 ```
@@ -354,7 +352,7 @@ credit-card-number
 1. The resulting data is base64-encoded. Click **Decode from base64** to reveal
    the plaintext.
 
-### <a name="step4"></a>Step 4: Rotate the Encryption Key
+### Step 4: Rotate the Encryption Key ((#step4))
 
 (**Persona:** operator)
 
@@ -373,13 +371,13 @@ encrypt it.
 To rotate the encryption key, invoke the `transit/keys/<key_ring_name>/rotate`
 endpoint.
 
-```plaintext
+```shell-session
 $ vault write -f transit/keys/orders/rotate
 ```
 
 Let's encrypt another data:
 
-```plaintext
+```shell-session
 $ vault write transit/encrypt/orders plaintext=$(base64 <<< "visa-card-number")
 Key           Value
 ---           -----
@@ -400,7 +398,7 @@ rotation.
 Execute the following command to rewrap your ciphertext from [Step 2](#step2)
 with the latest version of the encryption key:
 
-```plaintext
+```shell-session
 $ vault write transit/rewrap/orders \
         ciphertext="vault:v1:cZNHVx+sxdMErXRSuDa1q/pz49fXTn1PScKfhf+PIZPvy8xKfkytpwKcbC0fF2U="
 Key           Value
@@ -419,7 +417,7 @@ plaintext with the newest key in the keyring.
 To rotate the encryption key, invoke the `transit/keys/<key_ring_name>/rotate`
 endpoint.
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST
        https://127.0.0.1:8200/v1/transit/keys/orders/rotate
@@ -460,7 +458,7 @@ rotation.
 Execute the `transit/rewrap` endpoint to rewrap your ciphertext from [Step 2](#step2)
 with the latest version of the encryption key:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data '{"ciphertext": "vault:v1:/9hdQutaWpZR72s3+VSCLK1JNhV1wKM49hYVjh7RjmuxIy/OvshtgV4L4uVB+aQ="}' \
@@ -479,7 +477,7 @@ This operation does not reveal the plaintext data. But Vault will decrypt the
 value using the appropriate key in the keyring and then encrypted the resulting
 plaintext with the newest key in the keyring.
 
-## <a name="step5"></a>Step 5: Update Key Configuration
+## Step 5: Update Key Configuration ((#step5))
 
 (**Persona:** operator)
 
@@ -496,13 +494,13 @@ This helps further tightening the data encryption rule.
 Execute the key rotation command a few times to generate multiple versions of
 the key:
 
-```plaintext
+```shell-session
 $ vault write -f transit/keys/orders/rotate
 ```
 
 Now, read the `orders` key information:
 
-```plaintext
+```shell-session
 $ vault read transit/keys/orders
 
 Key                       Value
@@ -522,13 +520,13 @@ versions can decrypt the data (`min_decryption_version`).
 Run the following command to enforce the use of the encryption key at version
 **5** or later to decrypt the data.
 
-```plaintext
+```shell-session
 $ vault write transit/keys/orders/config min_decryption_version=5
 ```
 
 Now, verify the `orders` key configuration:
 
-```plaintext
+```shell-session
 $ vault read transit/keys/orders
 
 Key                       Value
@@ -549,7 +547,7 @@ min_encryption_version    0
 Execute the `transit/keys/<key_ring_name>/rotate` endpoint a few times key
 rotation command a few times to generate multiple versions of the key:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST
        https://127.0.0.1:8200/v1/transit/keys/orders/rotate
@@ -558,7 +556,7 @@ $ curl --header "X-Vault-Token: ..." \
 Read the `transit/keys/orders` endpoint to review the `orders` key
 detail:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        https://127.0.0.1:8200/v1/transit/keys/orders | jq
 {
@@ -584,7 +582,7 @@ versions can decrypt the data (`min_decryption_version`).
 Run the following command to enforce the use of the encryption key at version
 **5** or later to decrypt the data.
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST
        --data '{"min_decryption_version": 5}'
@@ -593,7 +591,7 @@ $ curl --header "X-Vault-Token: ..." \
 
 Now, verify the `orders` key configuration:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        https://127.0.0.1:8200/v1/transit/keys/orders | jq
 {
@@ -607,8 +605,6 @@ $ curl --header "X-Vault-Token: ..." \
    "min_encryption_version": 0,
    ...
 ```
-
-<br />
 
 -> **NOTE:** Notice that the output only displays two valid encryption key
 versions (`5` and `6`).

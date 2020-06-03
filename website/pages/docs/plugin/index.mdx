@@ -26,7 +26,7 @@ Before a plugin backend can be mounted, it needs to be registered via the
 [plugin catalog](/docs/internals/plugins#plugin-catalog). After
 the plugin is registered, it can be mounted by specifying the registered plugin name:
 
-```text
+```shell-session
 $ vault secrets enable -path=my-secrets passthrough-plugin
 Success! Enabled the passthrough-plugin secrets engine at: my-secrets/
 ```
@@ -34,7 +34,7 @@ Success! Enabled the passthrough-plugin secrets engine at: my-secrets/
 Listing secrets engines will display secrets engines that are mounted as
 plugins:
 
-```text
+```shell-session
 $ vault secrets list
 Path         Type       Accessor            Plugin              Default TTL  Max TTL  Force No Cache  Replication Behavior  Description
 my-secrets/  plugin     plugin_deb84140     passthrough-plugin  system       system   false           replicated
@@ -42,7 +42,7 @@ my-secrets/  plugin     plugin_deb84140     passthrough-plugin  system       sys
 
 Disabling a plugin backend is the identical to disabling internal secrets engines:
 
-```text
+```shell-session
 $ vault secrets disable my-secrets
 ```
 

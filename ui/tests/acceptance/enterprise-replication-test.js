@@ -125,9 +125,8 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-replication-link="details"]');
     await settled();
     assert
-      .dom(`[data-test-secondaries-row=${secondaryName}]`)
+      .dom(`[data-test-secondaries=row-for-${secondaryName}]`)
       .exists('shows a table row the recently added secondary');
-    // ARG TODO when get connected state check here
 
     // nav to DR
     await visit('/vault/replication/dr');
@@ -210,6 +209,41 @@ module('Acceptance | Enterprise | replication', function(hooks) {
       'This Disaster Recovery secondary has not been enabled.  You can do so from the Disaster Recovery Primary.',
       'renders message when replication is enabled'
     );
+  });
+
+  test('render performance and dr primary and navigate to details page', async function(assert) {
+    // enable perf primary replication
+    await visit('/vault/replication');
+    await click('[data-test-replication-type-select="performance"]');
+    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
+    await click('[data-test-replication-enable]');
+    await pollCluster(this.owner);
+    await settled();
+
+    await visit('/vault/replication');
+    assert
+      .dom(`[data-test-replication-summary-card]`)
+      .doesNotExist(`does not render replication summary card when both modes are not enabled as primary`);
+
+    // enable DR primary replication
+    const enableButton = document.querySelector('.is-primary');
+    await click(enableButton);
+    await click('[data-test-replication-enable="true"]');
+    await pollCluster(this.owner);
+    await settled();
+
+    // navigate using breadcrumbs back to replication.index
+    await click('[data-test-replication-breadcrumb]');
+    assert
+      .dom('[data-test-replication-summary-card]')
+      .exists({ count: 2 }, 'renders two replication-summary-card components');
+
+    // navigate to details page using the "Details" link
+    await click('[data-test-manage-link="Disaster Recovery"]');
+    assert
+      .dom('[data-test-selectable-card-container="primary"]')
+      .exists('shows the correct card on the details dashboard');
+    assert.equal(currentURL(), '/vault/replication/dr');
   });
 
   test('render performance secondary and navigate to the details page', async function(assert) {

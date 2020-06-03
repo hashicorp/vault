@@ -30,7 +30,7 @@ The following topics are addressed in this guide:
 backend](/docs/internals/architecture) since that is the recommended
 storage backend for production deployments.
 
-## <a name="one-dc"></a>Deployment Topology within One Datacenter
+## Deployment Topology within One Datacenter ((#one-dc))
 
 This section explains how to deploy a Vault open source cluster in one datacenter.
 Support for [multiple datacenters](#multi-dc) is included in Vault Enterprise through
@@ -149,7 +149,7 @@ Vault.
 
 ## Load Balancing
 
-### <a name="consul-lb"></a>Load Balancing Using Consul Interface
+### Load Balancing Using Consul Interface ((#consul-lb))
 
 Consul can provide load balancing capabilities, but it requires that any Vault
 clients are Consul aware. This means that a client can either utilize Consul DNS
@@ -161,7 +161,7 @@ the request could be forwarded to Consul for the actual IP address response.
 The operation can be completely transparent to legacy applications and would
 operate just as a typical DNS resolution operation.
 
-### <a name="external-lb"></a>Load Balancing Using External Load Balancer
+### Load Balancing Using External Load Balancer ((#external-lb))
 
 ![Vault Behind a Load Balancer](/img/vault-ref-arch-9.png)
 
@@ -218,7 +218,7 @@ with Consul_](/guides/operations/vault-ha-consul) guide.
 > Nodes](/guides/operations/performance-nodes) and data-locality across
 > datacenters requires Vault Enterprise.
 
-## <a name="multi-dc"></a>Deployment Topology for Multiple Datacenters
+## Deployment Topology for Multiple Datacenters ((#multi-dc))
 
 <img src="/img/vault-ref-arch-6.png" />
 

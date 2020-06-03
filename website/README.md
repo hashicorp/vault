@@ -80,6 +80,24 @@ The significant keys in the YAML frontmatter are:
 > ⚠️Since `api` is a reserved directory within NextJS, all `/api/**` pages are
 > listed under the `/pages/api-docs` path.
 
+### Code Highlighting
+
+Code is highlighted using [prism](https://prismjs.com/). Feel free to check out [all the supported languages](https://prismjs.com/#supported-languages) that can be used for code blocks. All code blocks should be tagged with a language as such:
+
+````md
+```language
+// code to be highlighted
+```
+````
+
+If you have a code block that displays a command intended to be run from the terminal, it can be tagged with `shell-session`. This is distinct from `shell` which should represent a shell script. The following example shows a correctly formatted terminal command snippet:
+
+````md
+```shell-session
+$ cowsay "hello world"
+```
+````
+
 ### Editing Sidebars
 
 The structure of the sidebars are controlled by files in the [`/data`
@@ -105,7 +123,7 @@ links to the binaries and will not compile. So this version number should be
 changed _only after a release_.
 
 The `data/version.js` also contains a global variable, `CHANGELOG_URL`, that
-should be updated to point to the latest changelog URL for the particular 
+should be updated to point to the latest changelog URL for the particular
 release version. The URL should be based off the `master` blob such that
 it always reflects the most up-to-date changes.
 
@@ -161,6 +179,9 @@ present by default with markdown, detailed below:
   include](https://github.com/hashicorp/remark-plugins/tree/master/plugins/include-markdown#include-markdown-plugin).
   It's worth noting as well that all includes resolve from
   `website/pages/partials` by default.
+
+  > **Note:** Changes to partials will not trigger a hot reload in development
+
 - If you see `# Headline ((#slug))`, this is an example of an [anchor link
   alias](https://github.com/hashicorp/remark-plugins/tree/je.anchor-link-adjustments/plugins/anchor-links#anchor-link-aliases).
   It adds an extra permalink to a headline for compatibility and is removed from
@@ -192,6 +213,12 @@ present by default with markdown, detailed below:
   inline code at the start of a list item**. If you must change one of these
   items, make sure to tag someone from the digital marketing development team on
   your pull request, they will help to ensure as much compatibility as possible.
+
+There are also some custom components available for use within markdown files, see
+the links below for more information on usage:
+
+- [Enterprise Alert](components/enterprise-alert/README.md)
+- [Tabs](components/tabs/README.md)
 
 ### Redirects
 

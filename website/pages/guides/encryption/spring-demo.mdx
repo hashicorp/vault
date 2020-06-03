@@ -84,8 +84,6 @@ you should find the following folders:
 | `src/main`      | Sample app source code                                |
 | `vagrant-local` | Vagrant file to deploy the demo locally               |
 
-<br />
-
 In this guide, you will perform the following:
 
 1. [Review the demo application implementation](#step1)
@@ -95,7 +93,7 @@ In this guide, you will perform the following:
 
 ![Encryption as a Service](/img/vault-java-demo-10.png)
 
-### <a name="step1"></a>Step 1: Review the demo application implementation
+### Step 1: Review the demo application implementation ((#step1))
 
 The source code can be found under the `src/main` directory.
 
@@ -174,7 +172,7 @@ public class VaultDemoOrderServiceApplication  {
 
 The `OrderAPIController` class defines the API endpoint (`api/orders`).
 
-### <a name="step2"></a>Step 2: Deploy and review the demo environment
+### Step 2: Deploy and review the demo environment ((#step2))
 
 Now let's run the demo app and examine how it behaves.
 
@@ -410,7 +408,7 @@ Secrets](/guides/secret-mgmt/dynamic-secrets) guide.
 Enter `\q` to exit out of the `psql` session, or you can open another terminal
 and SSH into the demo virtual machine.
 
-### <a name="step3"></a>Step 3: Run the demo application
+### Step 3: Run the demo application ((#step3))
 
 If everything looked fine in [Step 2](#step2), you are ready to write some data.
 
@@ -517,7 +515,7 @@ Finally, click **Decode from base64** to reveal the customer name.
 
 ![Web UI](/img/vault-java-demo-8.png)
 
-### <a name="step4"></a>Step 4: Reloading the Static Secrets
+### Step 4: Reloading the Static Secrets ((#step4))
 
 Now, let's test another API endpoint, **`api/secret`** provided by the demo app.
 A plain old Java object, `Secret` defines a get method for `key` and `value`.
@@ -551,8 +549,6 @@ path "secret/spring-vault-demo" {
 ...
 ```
 
-<br />
-
 The demo app retrieved the secret from `secret/spring-vault-demo` and has a
 local copy. If someone (or perhaps another app) updates the secret, it makes the
 secret held by the demo app to be obsolete.
@@ -570,7 +566,7 @@ The initial key-value was set by Vagrant during the provisioning. (See the
 
 Let's invoke the demo app's secret API (**`api/secret`**):
 
-```plaintext
+```shell-session
 $ curl -s http://localhost:8080/api/secret | jq
 {
   "key": "secret",
@@ -610,7 +606,7 @@ $ curl --header "X-Vault-Token: root" \
 
 Run the demo app's secret API again:
 
-```plaintext
+```shell-session
 $ curl -s http://localhost:8080/api/secret | jq
 {
   "key": "secret",
@@ -638,7 +634,7 @@ added to the project.
 
 Let's refresh the secret using the actuator:
 
-```plaintext
+```shell-session
 $ curl -s --request POST http://localhost:8080/actuator/refresh | jq
 [
   "secret"
@@ -647,7 +643,7 @@ $ curl -s --request POST http://localhost:8080/actuator/refresh | jq
 
 Read back the secret from the demo app again:
 
-```plaintext
+```shell-session
 $ curl -s http://localhost:8080/api/secret | jq
 {
   "key": "secret",
@@ -662,7 +658,7 @@ It should display the correct value.
 When you are done exploring the demo implementation, you can destroy the virtual
 machine:
 
-```plaintext
+```shell-session
 $ vagrant destroy
 demo: Are you sure you want to destroy the 'demo' VM? [y/N] y
 ==> demo: Forcing shutdown of VM...

@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/base64"
-	fmt "fmt"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -201,6 +203,67 @@ func TestRaft_Backend(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	physical.ExerciseBackend(t, b)
+}
+
+func TestRaft_Backend_LargeValue(t *testing.T) {
+	b, dir := getRaft(t, true, true)
+	defer os.RemoveAll(dir)
+
+	value := make([]byte, defaultMaxEntrySize+1)
+	rand.Read(value)
+	entry := &physical.Entry{Key: "foo", Value: value}
+
+	err := b.Put(context.Background(), entry)
+	if err == nil {
+		t.Fatal("expected error for put entry")
+	}
+
+	if !strings.Contains(err.Error(), physical.ErrValueTooLarge) {
+		t.Fatalf("expected %q, got %v", physical.ErrValueTooLarge, err)
+	}
+
+	out, err := b.Get(context.Background(), entry.Key)
+	if err != nil {
+		t.Fatalf("unexpected error after failed put: %v", err)
+	}
+	if out != nil {
+		t.Fatal("expected response entry to be nil after a failed put")
+	}
+}
+
+func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
+	b, dir := getRaft(t, true, true)
+	defer os.RemoveAll(dir)
+
+	value := make([]byte, defaultMaxEntrySize+1)
+	rand.Read(value)
+
+	txns := []*physical.TxnEntry{
+		&physical.TxnEntry{
+			Operation: physical.PutOperation,
+			Entry: &physical.Entry{
+				Key:   "foo",
+				Value: value,
+			},
+		},
+	}
+
+	err := b.Transaction(context.Background(), txns)
+	if err == nil {
+		t.Fatal("expected error for transactions")
+	}
+
+	if !strings.Contains(err.Error(), physical.ErrValueTooLarge) {
+		t.Fatalf("expected %q, got %v", physical.ErrValueTooLarge, err)
+	}
+
+	out, err := b.Get(context.Background(), txns[0].Entry.Key)
+	if err != nil {
+		t.Fatalf("unexpected error after failed put: %v", err)
+	}
+	if out != nil {
+		t.Fatal("expected response entry to be nil after a failed put")
+	}
 }
 
 func TestRaft_Backend_ListPrefix(t *testing.T) {

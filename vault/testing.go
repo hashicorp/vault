@@ -14,6 +14,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -1493,7 +1494,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	if coreConfig.RawConfig == nil {
-		coreConfig.RawConfig = new(server.Config)
+		c := new(server.Config)
+		c.SharedConfig = &configutil.SharedConfig{LogFormat: logging.UnspecifiedFormat.String()}
+		coreConfig.RawConfig = c
 	}
 
 	addAuditBackend := len(coreConfig.AuditBackends) == 0

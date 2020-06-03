@@ -51,6 +51,7 @@ type HealthService struct {
 	Checks              api.HealthChecks
 	Status              string
 	Port                int
+	Weights             api.AgentWeights
 }
 
 // HealthServiceQuery is the representation of all a service query in Consul.
@@ -62,10 +63,20 @@ type HealthServiceQuery struct {
 	name    string
 	near    string
 	tag     string
+	connect bool
 }
 
 // NewHealthServiceQuery processes the strings to build a service dependency.
 func NewHealthServiceQuery(s string) (*HealthServiceQuery, error) {
+	return healthServiceQuery(s, false)
+}
+
+// NewHealthConnect Query processes the strings to build a connect dependency.
+func NewHealthConnectQuery(s string) (*HealthServiceQuery, error) {
+	return healthServiceQuery(s, true)
+}
+
+func healthServiceQuery(s string, connect bool) (*HealthServiceQuery, error) {
 	if !HealthServiceQueryRe.MatchString(s) {
 		return nil, fmt.Errorf("health.service: invalid format: %q", s)
 	}
@@ -86,7 +97,8 @@ func NewHealthServiceQuery(s string) (*HealthServiceQuery, error) {
 				filters = append(filters, f)
 			case "":
 			default:
-				return nil, fmt.Errorf("health.service: invalid filter: %q in %q", f, s)
+				return nil, fmt.Errorf(
+					"health.service: invalid filter: %q in %q", f, s)
 			}
 		}
 		sort.Strings(filters)
@@ -101,6 +113,7 @@ func NewHealthServiceQuery(s string) (*HealthServiceQuery, error) {
 		name:    m["name"],
 		near:    m["near"],
 		tag:     m["tag"],
+		connect: connect,
 	}, nil
 }
 
@@ -130,10 +143,15 @@ func (d *HealthServiceQuery) Fetch(clients *ClientSet, opts *QueryOptions) (inte
 	log.Printf("[TRACE] %s: GET %s", d, u)
 
 	// Check if a user-supplied filter was given. If so, we may be querying for
-	// more than healthy services, so we need to implement client-side filtering.
+	// more than healthy services, so we need to implement client-side
+	// filtering.
 	passingOnly := len(d.filters) == 1 && d.filters[0] == HealthPassing
 
-	entries, qm, err := clients.Consul().Health().Service(d.name, d.tag, passingOnly, opts.ToConsulOpts())
+	nodes := clients.Consul().Health().Service
+	if d.connect {
+		nodes = clients.Consul().Health().Connect
+	}
+	entries, qm, err := nodes(d.name, d.tag, passingOnly, opts.ToConsulOpts())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
@@ -145,13 +163,14 @@ func (d *HealthServiceQuery) Fetch(clients *ClientSet, opts *QueryOptions) (inte
 		// Get the status of this service from its checks.
 		status := entry.Checks.AggregatedStatus()
 
-		// If we are not checking only healthy services, filter out services that do
-		// not match the given filter.
+		// If we are not checking only healthy services, filter out services
+		// that do not match the given filter.
 		if !acceptStatus(d.filters, status) {
 			continue
 		}
 
-		// Get the address of the service, falling back to the address of the node.
+		// Get the address of the service, falling back to the address of the
+		// node.
 		address := entry.Service.Address
 		if address == "" {
 			address = entry.Node.Address
@@ -167,10 +186,12 @@ func (d *HealthServiceQuery) Fetch(clients *ClientSet, opts *QueryOptions) (inte
 			Address:             address,
 			ID:                  entry.Service.ID,
 			Name:                entry.Service.Service,
-			Tags:                ServiceTags(deepCopyAndSortTags(entry.Service.Tags)),
-			Status:              status,
-			Checks:              entry.Checks,
-			Port:                entry.Service.Port,
+			Tags: ServiceTags(
+				deepCopyAndSortTags(entry.Service.Tags)),
+			Status:  status,
+			Checks:  entry.Checks,
+			Port:    entry.Service.Port,
+			Weights: entry.Service.Weights,
 		})
 	}
 
