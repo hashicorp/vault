@@ -1,4 +1,4 @@
-<div class="action-block is-rounded">
+<div class="action-block is-rounded" data-test-recover-replication>
   <div class="action-block-info">
     <h4 class="title is-5 is-marginless">
       Recover
@@ -34,7 +34,6 @@
   <footer class="modal-card-foot modal-card-foot-outlined">
     <button
       class="button is-primary"
-      disabled={{if (and (eq replicationMode "dr") (not dr_operation_token)) true}}
       onclick={{action "onSubmit" "recover"}}
       data-test-recover-confirm-button
     >
