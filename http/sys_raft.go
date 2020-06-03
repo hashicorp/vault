@@ -73,6 +73,7 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 			Retry:         req.Retry,
 		},
 	}
+
 	joined, err := core.JoinRaftCluster(context.Background(), leaderInfos, req.NonVoter)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)

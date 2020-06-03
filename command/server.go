@@ -1137,6 +1137,7 @@ func (c *ServerCommand) Run(args []string) int {
 		SecureRandomReader:        secureRandomReader,
 	}
 	if c.flagDev {
+		coreConfig.EnableRaw = true
 		coreConfig.DevToken = c.flagDevRootTokenID
 		if c.flagDevLeasedKV {
 			coreConfig.LogicalBackends["kv"] = vault.LeasedPassthroughBackendFactory

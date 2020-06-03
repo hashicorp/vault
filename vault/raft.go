@@ -423,9 +423,22 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 	return nil
 }
 
+// RaftCreateTLSKeyring creates the initial TLS key and the TLS Keyring for raft
+// use. If a keyring entry is already present in storage, it will return an
+// error.
 func (c *Core) RaftCreateTLSKeyring(ctx context.Context) (*raft.TLSKeyring, error) {
 	if raftBackend := c.getRaftBackend(); raftBackend == nil {
 		return nil, nil
+	}
+
+	// Check if the keyring is already present
+	raftTLSEntry, err := c.barrier.Get(ctx, raftTLSStoragePath)
+	if err != nil {
+		return nil, err
+	}
+
+	if raftTLSEntry != nil {
+		return nil, fmt.Errorf("TLS keyring already present")
 	}
 
 	raftTLS, err := raft.GenerateTLSKey(c.secureRandomReader)
@@ -610,10 +623,52 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		return true, nil
 	}
 
-	// if !c.Sealed() {
-	// 	c.logger.Error("node must be sealed before joining")
-	// 	return false, errors.New("node must be sealed before joining")
-	// }
+	if isRaftStorage && !c.Sealed() {
+		c.logger.Error("node must be sealed before joining")
+		return false, errors.New("node must be sealed before joining")
+	}
+
+	_, isRaftHA := c.ha.(*raft.RaftBackend)
+	// Disallow leader API address to be provided if we're using raft for HA-only
+	if isRaftHA {
+		for _, info := range leaderInfos {
+			if info.LeaderAPIAddr != "" {
+				return false, errors.New("leader API address must be unset when raft is used exclusively for HA")
+			}
+		}
+
+		// Get the leader address from storage
+		keys, err := c.barrier.List(ctx, coreLeaderPrefix)
+		if err != nil {
+			return false, err
+		}
+
+		if len(keys) == 0 || len(keys[0]) == 0 {
+			return false, errors.New("unable to fetch leadership entry")
+		}
+
+		uuid := coreLeaderPrefix + keys[0]
+		entry, err := c.barrier.Get(ctx, uuid)
+		if err != nil {
+			return false, err
+		}
+		if entry == nil {
+			return false, errors.New("unable to read leadership entry")
+		}
+
+		var adv activeAdvertisement
+		err = jsonutil.DecodeJSON(entry.Value, &adv)
+		if err != nil {
+			return false, errwrap.Wrapf("unable to decoded leader entry: {{err}}", err)
+		}
+
+		leaderInfos[0].LeaderAPIAddr = adv.RedirectAddr
+	}
+
+	if !isRaftHA && !c.Sealed() {
+		c.logger.Error("node must be sealed before joining")
+		return false, errors.New("node must be sealed before joining")
+	}
 
 	join := func(retry bool) error {
 		joinLeader := func(leaderInfo *raft.LeaderJoinInfo) error {
@@ -633,10 +688,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				c.logger.Info("returning from raft join as the node is initialized")
 				return nil
 			}
-			// if !c.Sealed() {
-			// 	c.logger.Info("returning from raft join as the node is unsealed")
-			// 	return nil
-			// }
 
 			c.logger.Info("attempting to join possible raft leader node", "leader_addr", leaderInfo.LeaderAPIAddr)
 
@@ -922,17 +973,6 @@ func (c *Core) RaftBootstrap(ctx context.Context, onInit bool) error {
 	}
 
 	if !onInit {
-		// Check for existence of TLS keyring, if present we error
-		// Retrieve the raft TLS information
-		raftTLSEntry, err := c.barrier.Get(ctx, raftTLSStoragePath)
-		if err != nil {
-			return err
-		}
-
-		if raftTLSEntry != nil {
-			return fmt.Errorf("TLS keyring already present during bootstrap")
-		}
-
 		// Generate the TLS Keyring info for
 		// SetupCluster to consume
 		raftTLS, err := c.RaftCreateTLSKeyring(ctx)

@@ -102,15 +102,12 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 
 	args = f.Args()
 	switch len(args) {
+	case 0:
+		// No-opThis is accepted if we're using raft of HA-only
 	case 1:
 		leaderAPIAddr = strings.TrimSpace(args[0])
 	default:
-		c.UI.Error(fmt.Sprintf("Incorrect arguments (expected 1, got %d)", len(args)))
-		return 1
-	}
-
-	if len(leaderAPIAddr) == 0 {
-		c.UI.Error("leader api address is required")
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0-1, got %d)", len(args)))
 		return 1
 	}
 

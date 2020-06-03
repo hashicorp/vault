@@ -210,7 +210,8 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 
 	// Bootstrap the raft backend if that's provided as the physical or
 	// HA backend.
-	if raftBackend := c.getRaftBackend(); raftBackend != nil {
+	raftBackend := c.getRaftBackend()
+	if raftBackend != nil {
 		err := c.RaftBootstrap(ctx, true)
 		if err != nil {
 			c.logger.Error("failed to bootstrap raft", "error", err)
@@ -374,9 +375,11 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		results.RootToken = base64.StdEncoding.EncodeToString(encryptedVals[0])
 	}
 
-	if _, err := c.RaftCreateTLSKeyring(ctx); err != nil {
-		c.logger.Error("failed to create raft TLS keyring", "error", err)
-		return nil, err
+	if raftBackend != nil {
+		if _, err := c.RaftCreateTLSKeyring(ctx); err != nil {
+			c.logger.Error("failed to create raft TLS keyring", "error", err)
+			return nil, err
+		}
 	}
 
 	// Prepare to re-seal
