@@ -1,23 +1,53 @@
-<h4 class="title is-5 is-marginless">
-  Reindex
-</h4>
-<div class="content">
-  <p>
-    Reindex the local data storage. This can cause a very long delay depending
-    on the number and size of objects in the data store.
-  </p>
-</div>
-<div class="field">
-  <div class="control">
-    <ConfirmAction
-      @buttonClasses="button is-primary"
-      @confirmTitle="Begin reindex?"
-      @confirmMessage="This will initiate reindexing of the local data storage."
-      @confirmButtonText="Reindex"
-      @horizontalPosition="auto-left"
-      @onConfirmAction={{action "onSubmit" "reindex"}}
+<div class="action-block is-rounded" data-test-reindex-replication>
+  <div class="action-block-info">
+    <h4 class="title is-5 is-marginless">
+      Reindex
+    </h4>
+    <p>
+      Reindex the local data storage
+    </p>
+  </div>
+
+  <div class="action-block-action">
+    <button
+      class="button is-secondary"
+      onclick={{action (mut isModalActive) true}}
+      data-test-replication-action-trigger
     >
       Reindex
-    </ConfirmAction>
+    </button>
   </div>
 </div>
+
+<Modal
+  @title="Begin reindex?"
+  @onClose={{action (mut isModalActive) false}}
+  @isActive={{isModalActive}}
+  @type="warning"
+  @showCloseButton={{true}}
+>
+  <section class="modal-card-body">
+    <p class="has-bottom-margin-m">
+      Reindexing can cause a very long delay on the number and size of objects in the data store. {{if model.replicationAttrs.isPrimary 'You should always re-index your secondary first.'}}
+    </p>
+    <p>
+      Progress will be shown, and you will {{ if model.replicationAttrs.isPrimary 'not' }} be able to use Vault during this time.
+    </p>
+  </section>
+  <footer class="modal-card-foot modal-card-foot-outlined">
+    <button
+      class="button is-primary"
+      disabled={{if (and (eq replicationMode "dr") (not dr_operation_token)) true}}
+      onclick={{action "onSubmit" "reindex"}}
+      data-test-reindex-confirm-button
+    >
+      Reindex
+    </button>
+    <button
+      class="button is-secondary"
+      onclick={{action (mut isModalActive) false}}
+      data-test-reindex-cancel-button>
+      Cancel
+    </button>
+  </footer>
+</Modal>
