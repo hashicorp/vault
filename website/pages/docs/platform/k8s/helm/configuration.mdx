@@ -25,6 +25,8 @@ and consider if they're appropriate for your deployment.
 
   - `tlsDisable` (`boolean: true`) - When set to `true`, changes URLs from `https` to `http` (such as the `VAULT_ADDR=http://127.0.0.1:8200` environment variable set on the Vault pods).
 
+  - `openshift` (`boolean: false`) - If `true`, enables configuration specific to OpenShift such as NetworkPolicy, SecurityContext, and Route.
+
 - `injector` - Values that configure running a Vault Agent Injector Admission Webhook Controller within Kubernetes.
 
   - `enabled` (`boolean: true`) - When set to `true`, the Vault Agent Injector Admission Webhook controller will be created.
@@ -117,7 +119,9 @@ and consider if they're appropriate for your deployment.
 
     * `ingress` - Values that configure Ingress services for Vault.
 
-      - `enabled` (`boolean: false`) - When set to `true`, an [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) service will be created.
+      ~> If deploying on OpenShift, these ingress settings are ignored. Use the [`route`](#route) configuration to expose Vault on OpenShift.
+
+      - `enabled` (`boolean: false`) - When set to `true`, an [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) service will be created. If [`ha`](#ha) is enabled the Ingress will point to the active vault server via the `active` Service.
 
       - `labels` (`dictionary: {}`) - Labels for the ingress service.
 
@@ -146,6 +150,16 @@ and consider if they're appropriate for your deployment.
           - /
           - /vault
         ```
+
+    * `route` - Values that configure Route services for Vault in OpenShift
+
+      - `enabled` (`boolean: false`) - When set to `true`, a Route for Vault will be created. If [`ha`](#ha) is enabled the Route will point to the active vault server via the `active` Service.
+
+      - `labels` (`dictionary: {}`) - Labels for the Route
+
+      - `annotations` (`dictionary: {}`) - Annotations to add to the Route. This can either be YAML or a YAML-formatted multi-line templated string.
+
+      - `host` (`string: "chart-example.local"`) - Sets the hostname for the Route.
 
     * `tls` - Values that configure the Ingress TLS rules.
 
@@ -193,7 +207,7 @@ and consider if they're appropriate for your deployment.
 
     - `preStopSleepSeconds` (`int: 5`) - Used to set the sleep time during the preStop step.
 
-    - `postStart` (`array: []`) - Used to define commands to run after the pod is ready. This can be used to automate processes such as initialization or boostrapping auth methods.
+    - `postStart` (`array: []`) - Used to define commands to run after the pod is ready. This can be used to automate processes such as initialization or bootstrapping auth methods.
 
     ```yaml
     postStart:
@@ -325,7 +339,7 @@ and consider if they're appropriate for your deployment.
       "sample/annotation2": "bar"
     ```
 
-    - `service` - Values that configure the Kubernetes service created for Vault.
+    - `service` - Values that configure the Kubernetes service created for Vault. These options are also used for the `active` and `standby` services when [`ha`](#ha) is enabled.
 
       - `enabled` (`boolean: true`) - When set to `true`, a Kubernetes service will be created for Vault.
 
