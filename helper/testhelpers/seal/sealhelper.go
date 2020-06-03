@@ -6,13 +6,13 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/transit"
-	"github.com/hashicorp/vault/command/server/seal"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	vaultseal "github.com/hashicorp/vault/vault/seal"
+	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/go-testing-interface"
 )
 
@@ -65,12 +65,12 @@ func (tss *TransitSealServer) MakeSeal(t testing.T, key string) vault.Seal {
 		"key_name":    key,
 		"tls_ca_cert": tss.CACertPEMFile,
 	}
-	transitSeal, _, err := seal.GetTransitKMSFunc(nil, wrapperConfig)
+	transitSeal, _, err := configutil.GetTransitKMSFunc(nil, &configutil.KMS{Config: wrapperConfig})
 	if err != nil {
 		t.Fatalf("error setting wrapper config: %v", err)
 	}
 
-	return vault.NewAutoSeal(&vaultseal.Access{
+	return vault.NewAutoSeal(&seal.Access{
 		Wrapper: transitSeal,
 	})
 }

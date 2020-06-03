@@ -2,19 +2,73 @@
 
 CHANGES:
 
+* storage/raft: The storage configuration now accepts a new `max_entry_size` config that will limit
+  the total size in bytes of any entry committed via raft. It defaults to `"1048576"` (1MiB). [[GH-9027](https://github.com/hashicorp/vault/pull/9027)]
 * token: Token creation with custom token ID via `id` will no longer allow periods (`.`) as part of the input string. 
   The final generated token value may contain periods, such as the `s.` prefix for service token 
   indication. [[GH-8646](https://github.com/hashicorp/vault/pull/8646/files)]
 * token: Token renewals will now return token policies within the `token_policies` , identity policies within `identity_policies`, and the full policy set within `policies`. [[GH-8535](https://github.com/hashicorp/vault/pull/8535)]
-* kv: Return the value of delete_version_after when reading kv/config, even if it is set to the default. [[GH-42](https://github.com/hashicorp/vault-plugin-secrets-kv/pull/42)]
+* cubbyhole: Reject reads and writes to an empty ("") path. [[GH-8971](https://github.com/hashicorp/vault/pull/8971)]
+* core: Remove the addition of newlines to parsed configuration when using integer/boolean values [[GH-8928](https://github.com/hashicorp/vault/pull/8928)]
+* audit: Token TTL and issue time are now provided in the auth portion of audit logs. [[GH-9091](https://github.com/hashicorp/vault/pull/9091)]
 
 IMPROVEMENTS:
 
+* secrets/transit: Transit requests that make use of keys now include a new field  `key_version` in their responses [[GH-9100](https://github.com/hashicorp/vault/pull/9100)]
+* core: Add the Go version used to build a Vault binary to the server message output. [[GH-9078](https://github.com/hashicorp/vault/pull/9078)]
+* core: Added Password Policies for user-configurable password generation [[GH-8637](https://github.com/hashicorp/vault/pull/8637)]
+* cli: Support reading TLS parameters from file for the `vault operator raft join` command. [[GH-9060](https://github.com/hashicorp/vault/pull/9060)]
+* plugin: Add SDK method, `Sys.ReloadPlugin`, and CLI command, `vault plugin reload`, 
+  for reloading plugins. [[GH-8777](https://github.com/hashicorp/vault/pull/8777)]
+* sdk/framework: Support accepting TypeFloat parameters over the API [[GH-8923](https://github.com/hashicorp/vault/pull/8923)]
+* secrets/database: Add static role rotation for MongoDB Atlas database plugin [[GH-11](https://github.com/hashicorp/vault-plugin-database-mongodbatlas/pull/11)]
 * secrets/gcp: Support BigQuery dataset ACLs in absence of IAM endpoints [[GH-78](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/78)]
+* sentinel: Add a sentinel config section, and "additional_enabled_modules", a list of Sentinel modules that may be imported in addition to the defaults.
+* ui: Update TTL picker styling on SSH secret engine [[GH-8891](https://github.com/hashicorp/vault/pull/8891)]
+* ui: Only render the JWT input field of the Vault login form on mounts configured for JWT auth [[GH-8952](https://github.com/hashicorp/vault/pull/8952)]
+* cli: Add a new subcommand, `vault monitor`, for tailing server logs in the console. [[GH-8477](https://github.com/hashicorp/vault/pull/8477)]
 
 BUG FIXES:
 
 * secrets/database: Fix issue where rotating root database credentials while Vault's storage backend is unavailable causes Vault to lose access to the database [[GH-8782](https://github.com/hashicorp/vault/pull/8782)]
+* secrets/kv: Return the value of delete_version_after when reading kv/config, even if it is set to the default. [[GH-42](https://github.com/hashicorp/vault-plugin-secrets-kv/pull/42)]
+* ui: Add Toggle component into core addon so it is available in KMIP and other Ember Engines.[[GH-8913]](https://github.com/hashicorp/vault/pull/8913)
+
+## 1.4.2 (May 21st, 2020)
+
+SECURITY:
+* core: Proxy environment variables are now redacted before being logged, in case the URLs include a username:password. This vulnerability, CVE-2020-13223, is fixed in 1.3.6 and 1.4.2, but affects 1.4.0 and 1.4.1, as well as older versions of Vault [[GH-9022](https://github.com/hashicorp/vault/pull/9022)]
+* secrets/gcp: Fix a regression in 1.4.0 where the system TTLs were being used instead of the configured backend TTLs for dynamic service accounts. This vulnerability is CVE-2020-12757. [[GH-85](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/85)]
+
+IMPROVEMENTS:
+
+* storage/raft: The storage stanza now accepts `leader_ca_cert_file`, `leader_client_cert_file`, and 
+  `leader_client_key_file` parameters to read and parse TLS certificate information from paths on disk.
+  Existing non-path based parameters will continue to work, but their values will need to be provided as a 
+  single-line string with newlines delimited by `\n`.  [[GH-8894](https://github.com/hashicorp/vault/pull/8894)]
+* storage/raft: The `vault status` CLI command and the `sys/leader` API now contain the committed and applied
+  raft indexes. [[GH-9011](https://github.com/hashicorp/vault/pull/9011)]
+  
+BUG FIXES:
+
+* auth/aws: Fix token renewal issues caused by the metadata changes in 1.4.1 [[GH-8991](https://github.com/hashicorp/vault/pull/8991)] 
+* auth/ldap: Fix 1.4.0 regression that could result in auth failures when LDAP auth config includes upndomain. [[GH-9041](https://github.com/hashicorp/vault/pull/9041)]
+* secrets/ad: Forward rotation requests from standbys to active clusters [[GH-66](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/66)]
+* secrets/database: Prevent generation of usernames that are not allowed by the MongoDB Atlas API [[GH-9](https://github.com/hashicorp/vault-plugin-database-mongodbatlas/pull/9)]
+* secrets/database: Return an error if a manual rotation of static account credentials fails [[GH-9035](https://github.com/hashicorp/vault/pull/9035)]
+* secrets/openldap: Forward all rotation requests from standbys to active clusters [[GH-9028](https://github.com/hashicorp/vault/pull/9028)]
+* secrets/transform (enterprise): Fix panic that could occur when accessing cached template entries, such as a requests
+  that accessed templates directly or indirectly from a performance standby node.
+* serviceregistration: Fix a regression for Consul service registration that ignored using the listener address as
+  the redirect address unless api_addr was provided. It now properly uses the same redirect address as the one
+  used by Vault's Core object. [[GH-8976](https://github.com/hashicorp/vault/pull/8976)]
+* storage/raft: Advertise the configured cluster address to the rest of the nodes in the raft cluster. This fixes
+  an issue where a node advertising 0.0.0.0 is not using a unique hostname. [[GH-9008](https://github.com/hashicorp/vault/pull/9008)]
+* storage/raft: Fix panic when multiple nodes attempt to join the cluster at once. [[GH-9008](https://github.com/hashicorp/vault/pull/9008)]
+* sys: The path provided in `sys/internal/ui/mounts/:path` is now namespace-aware. This fixes an issue
+  with `vault kv` subcommands that had namespaces provided in the path returning permission denied all the time.
+  [[GH-8962](https://github.com/hashicorp/vault/pull/8962)]
+* ui: Fix snowman that appears when namespaces have more than one period [[GH-8910](https://github.com/hashicorp/vault/pull/8910)]
 
 ## 1.4.1 (April 30th, 2020)
 
@@ -151,6 +205,7 @@ BUG FIXES:
 * identity: Fix incorrect caching of identity token JWKS responses [[GH-8412](https://github.com/hashicorp/vault/pull/8412)]
 * metrics/stackdriver: Fix issue that prevents the stackdriver metrics library to create unnecessary stackdriver descriptors [[GH-8073](https://github.com/hashicorp/vault/pull/8073)]
 * replication: Fix issue causing cubbyholes in namespaces on performance secondaries to not work.
+* replication (enterprise): Unmounting a dynamic secrets backend could sometimes lead to replication errors.  Change the order of operations to prevent that.
 * seal (enterprise): Fix seal migration when transactional seal wrap backend is in use.
 * secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [[GH-8282](https://github.com/hashicorp/vault/pull/8282)]
 * secrets/database/mysql: Ensures default static credential rotation statements are used [[GH-8240](https://github.com/hashicorp/vault/pull/8240)]
@@ -166,6 +221,16 @@ BUG FIXES:
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [[GH-8035](https://github.com/hashicorp/vault/pull/8035)]
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
 * ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
+
+## 1.3.6 (May 21st, 2020)
+
+SECURITY:
+* core: proxy environment variables are now redacted before being logged, in case the URLs include a username:password. This vulnerability, CVE-2020-13223, is fixed in 1.3.6 and 1.4.2, but affects 1.4 and 1.4.1, as well as older versions of Vault [[GH-9022](https://github.com/hashicorp/vault/pull/9022)]
+
+BUG FIXES:
+
+* auth/aws: Fix token renewal issues caused by the metadata changes in 1.3.5 [[GH-8991](https://github.com/hashicorp/vault/pull/8991)] 
+* replication: Fix mount filter bug that allowed replication filters to hide local mounts on a performance secondary
 
 ## 1.3.5 (April 28th, 2020)
 

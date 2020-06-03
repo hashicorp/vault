@@ -25,14 +25,14 @@ any path.
 This section assumes you have the AWS secrets engine enabled at `aws/`. If you
 do not, enable it before continuing:
 
-```text
+```shell-session
 $ vault secrets enable -path=aws aws
 ```
 
 With the secrets engine enabled, learn about it with the `vault path-help`
 command:
 
-```text
+```shell-session
 $ vault path-help aws
 ## DESCRIPTION
 
@@ -77,7 +77,7 @@ match the regular expression for that path. Note that the path doesn't need to
 actually _work_. For example, we'll get the help below for accessing
 `aws/creds/my-non-existent-role`, even though we never created the role:
 
-```text
+```shell-session
 $ vault path-help aws/creds/my-non-existent-role
 Request:        creds/my-non-existent-role
 Matching Route: ^creds/(?P<name>\w(([\w-.]+)?\w)?)$

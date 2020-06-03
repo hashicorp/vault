@@ -442,6 +442,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"plugin reload": func() (cli.Command, error) {
+			return &PluginReloadCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"policy": func() (cli.Command, error) {
 			return &PolicyCommand{
 				BaseCommand: getBaseCommand(),
@@ -660,6 +665,12 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"kv metadata delete": func() (cli.Command, error) {
 			return &KVMetadataDeleteCommand{
 				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"monitor": func() (cli.Command, error) {
+			return &MonitorCommand{
+				BaseCommand: getBaseCommand(),
+				ShutdownCh:  MakeShutdownCh(),
 			}, nil
 		},
 	}

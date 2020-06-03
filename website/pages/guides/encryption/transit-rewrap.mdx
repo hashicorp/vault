@@ -180,7 +180,7 @@ You are going to perform the following steps:
 1. [Rotate the encryption keys](#step5)
 1. [Re-wrapping data programmatically](#step6)
 
-### <a name="step1"></a>Step 1: Test database setup (Docker)
+### Step 1: Test database setup (Docker) ((#step1))
 
 You need a database to test with. You can create one to test with easily using
 Docker:
@@ -205,7 +205,7 @@ docker run --name mysql-rewrap \
   -d mysql/mysql-server:5.7
 ```
 
-### <a name="step2"></a>Step 2: Enable the transit secret engine
+### Step 2: Enable the transit secret engine ((#step2))
 
 (**Persona:** security engineer)
 
@@ -213,13 +213,13 @@ docker run --name mysql-rewrap \
 
 Enable the `transit` secret engine by executing the following command:
 
-```bash
+```shell-session
 $ vault secrets enable transit
 ```
 
 Create an encryption key to use for transit named, "my_app_key".
 
-```bash
+```shell-session
 $ vault write -f transit/keys/my_app_key
 ```
 
@@ -227,7 +227,7 @@ $ vault write -f transit/keys/my_app_key
 
 Enable the `transit` secret engine via API, use the `/sys/mounts` endpoint:
 
-```bash
+```shell-session
 $ curl --header "X-Vault-Token: <TOKEN>" \
        --request POST \
        --data <PARAMETERS> \
@@ -239,7 +239,7 @@ parameters](/api/system/mounts#enable-secrets-engine) of the secret engine.
 
 To crate a new encryption key, use the `transit/keys/<key_name>` endpoint:
 
-```bash
+```shell-session
 $ curl --header "X-Vault-Token: <TOKEN>" \
        --request POST \
        --data <PARAMETERS> \
@@ -251,7 +251,7 @@ parameters](/api/secret/transit#create-key) to specify the key type.
 
 **Example:**
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data '{"type": "transit"}' \
@@ -263,13 +263,13 @@ at the `sys/mounts/transit` endpoint.
 
 Next, create an encryption key to use for transit named, "my_app_key".
 
-```bash
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        https://localhost:8200/v1/transit/keys/my_app_key
 ```
 
-### <a name="step3"></a>Step 3: Generate a new token for sample app
+### Step 3: Generate a new token for sample app ((#step3))
 
 (**Persona:** security engineer)
 
@@ -298,19 +298,19 @@ path "transit/encrypt/my_app_key" {
 
 Create `rewrap_example` policy:
 
-```shell
+```shell-session
 $ vault policy write rewrap_example ./rewrap_example.hcl
 ```
 
 Finally, create a token to use the `rewrap_example` policy:
 
-```shell
+```shell-session
 $ vault token create -policy=rewrap_example
 ```
 
 **Example:**
 
-```shell
+```shell-session
 $ vault token create -policy=rewrap_example
 Key                Value
 ---                -----
@@ -327,7 +327,7 @@ The generated token is what the sample application uses to connect to Vault.
 
 To create a policy via API, use the `/sys/policy` endpoint:
 
-```plaintext
+```shell-session
 $ curl --request PUT --header "X-Vault-Token: ..." \
        --data @payload.json \
        https://localhost:8200/v1/sys/policy/rewrap_example
@@ -340,7 +340,7 @@ $ cat payload.json
 
 Finally, create a token to use the `rewrap_example` policy:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." --request POST  \
        --data '{ "policies": ["rewrap_example"] }' \
        https://localhost:8200/v1/auth/token/create | jq
@@ -369,7 +369,7 @@ $ curl --header "X-Vault-Token: ..." --request POST  \
 
 The generated token is what the sample application uses to connect to Vault.
 
-### <a name="step4"></a>Step 4: Run the sample application
+### Step 4: Run the sample application ((#step4))
 
 (**Persona:** app)
 
@@ -392,7 +392,7 @@ The sample app retrieves the user token, Vault address, and the name of the
 transit key through environment variables. Be sure to supply the token created
 in [Step 3](#step3):
 
-```bash
+```shell-session
 $ VAULT_TOKEN=<APP_TOKEN> \
      VAULT_ADDR=<VAULT_ADDRESS> \
      VAULT_TRANSIT_KEY=my_app_key \
@@ -405,7 +405,7 @@ $ VAULT_TOKEN=<APP_TOKEN> \
 
 **Example:**
 
-```bash
+```shell-session
 $ VAULT_TOKEN=$TOKEN VAULT_ADDR=http://localhost:8200 VAULT_TRANSIT_KEY=my_app_key SHOULD_SEED_USERS=true dotnet run
 
 Connecting to Vault server...
@@ -419,7 +419,7 @@ Found 0 records to rewrap.
 
 You can inspect the contents of the database with:
 
-```bash
+```shell-session
 $ docker exec -it mysql-rewrap mysql -uroot -proot
 ...
 mysql> DESC user_data;
@@ -427,7 +427,7 @@ mysql> SELECT * FROM user_data WHERE dob LIKE "vault:v1%" limit 10;
 ...data...
 ```
 
-### <a name="step5"></a>Step 5: Rotate the encryption keys
+### Step 5: Rotate the encryption keys ((#step5))
 
 (**Persona:** security engineer)
 
@@ -437,7 +437,7 @@ The encryption key (`my_app_key`) can be rotated easily.
 
 To rotate the key, you write to the `transit/keys/<KEY_NAME>/rotate` path.
 
-```bash
+```shell-session
 $ vault write -f transit/keys/my_app_key/rotate
 Success! Data written to: transit/keys/my_app_key/rotate
 ```
@@ -447,7 +447,7 @@ for testing.
 
 To view the key information:
 
-```bash
+```shell-session
 $ vault read transit/keys/my_app_key
 Key                       Value
 ---                       -----
@@ -502,7 +502,7 @@ type                      aes256-gcm96
 
 To rotate the encryption key via API, use the `transit/keys/<KEY_NAME>/rotate` endpoint:
 
-```bash
+```shell-session
 $ curl --request POST --header "X-Vault-Token: ..." \
        https://localhost:8200/v1/transit/keys/my_app_key/rotate
 ```
@@ -549,7 +549,7 @@ versions can decrypt the data (`min_decryption_version`).
 Let's enforce the use of the encryption key at version five or later to decrypt the
 data.
 
-```shell
+```shell-session
 $ curl --request POST --header "X-Vault-Token: ..." \
        --data '{ "min_decryption_version": 5 }'
        https://localhost:8200/v1/transit/keys/my_app_key/config
@@ -574,7 +574,7 @@ $ curl --request GET --header "X-Vault-Token: ..." \
 }
 ```
 
-### <a name="step6"></a>Step 6: Programmatically re-wrap the data
+### Step 6: Programmatically re-wrap the data ((#step6))
 
 (**Persona:** app)
 
@@ -584,7 +584,7 @@ appropriate. Remember you can inspect records using the MySQL shell (see above).
 
 **Example:**
 
-```shell
+```shell-session
 $ VAULT_TOKEN=2616214b-6868-3589-b443-0330d7915882 VAULT_ADDR=http://localhost:8200 \
           VAULT_TRANSIT_KEY=my_app_key SHOULD_SEED_USERS=true dotnet run
 Connecting to Vault server...
@@ -605,7 +605,7 @@ The application has now re-wrapped all records with the latest key. You can
 verify this by running the application again, or by inspecting the records using the
 MySQL client.
 
-```bash
+```shell-session
 $ docker exec -it mysql-rewrap mysql -uroot -proot
 ...
 mysql> DESC user_data;

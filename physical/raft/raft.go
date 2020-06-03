@@ -52,6 +52,8 @@ var (
 	snapshotsRetained = 2
 
 	restoreOpDelayDuration = 5 * time.Second
+
+	defaultMaxEntrySize = uint64(2 * raftchunking.ChunkSize)
 )
 
 // RaftBackend implements the backend interfaces and uses the raft protocol to
@@ -107,6 +109,11 @@ type RaftBackend struct {
 
 	// permitPool is used to limit the number of concurrent storage calls.
 	permitPool *physical.PermitPool
+
+	// maxEntrySize imposes a size limit (in bytes) on a raft entry (put or transaction).
+	// It is suggested to use a value of 2x the Raft chunking size for optimal
+	// performance.
+	maxEntrySize uint64
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -118,13 +125,27 @@ type LeaderJoinInfo struct {
 	// LeaderCACert is the CA cert of the leader node
 	LeaderCACert string `json:"leader_ca_cert"`
 
-	// LeaderClientCert is the client certificate for the follower node to establish
-	// client authentication during TLS
+	// LeaderClientCert is the client certificate for the follower node to
+	// establish client authentication during TLS
 	LeaderClientCert string `json:"leader_client_cert"`
 
-	// LeaderClientKey is the client key for the follower node to establish client
-	// authentication during TLS
+	// LeaderClientKey is the client key for the follower node to establish
+	// client authentication during TLS.
 	LeaderClientKey string `json:"leader_client_key"`
+
+	// LeaderCACertFile is the path on disk to the the CA cert file of the
+	// leader node. This should only be provided via Vault's configuration file.
+	LeaderCACertFile string `json:"leader_ca_cert_file"`
+
+	// LeaderClientCertFile is the path on disk to the client certificate file
+	// for the follower node to establish client authentication during TLS. This
+	// should only be provided via Vault's configuration file.
+	LeaderClientCertFile string `json:"leader_client_cert_file"`
+
+	// LeaderClientKeyFile is the path on disk to the client key file for the
+	// follower node to establish client authentication during TLS. This should
+	// only be provided via Vault's configuration file.
+	LeaderClientKeyFile string `json:"leader_client_key_file"`
 
 	// Retry indicates if the join process should automatically be retried
 	Retry bool `json:"-"`
@@ -153,18 +174,33 @@ func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
 
 	for _, info := range leaderInfos {
 		info.Retry = true
-		var tlsConfig *tls.Config
-		var err error
-		if len(info.LeaderCACert) != 0 || len(info.LeaderClientCert) != 0 || len(info.LeaderClientKey) != 0 {
-			tlsConfig, err = tlsutil.ClientTLSConfig([]byte(info.LeaderCACert), []byte(info.LeaderClientCert), []byte(info.LeaderClientKey))
-			if err != nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node %q: {{err}}", info.LeaderAPIAddr), err)
-			}
+		info.TLSConfig, err = parseTLSInfo(info)
+		if err != nil {
+			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node %q: {{err}}", info.LeaderAPIAddr), err)
 		}
-		info.TLSConfig = tlsConfig
 	}
 
 	return leaderInfos, nil
+}
+
+// parseTLSInfo is a helper for parses the TLS information, preferring file
+// paths over raw certificate content.
+func parseTLSInfo(leaderInfo *LeaderJoinInfo) (*tls.Config, error) {
+	var tlsConfig *tls.Config
+	var err error
+	if len(leaderInfo.LeaderCACertFile) != 0 || len(leaderInfo.LeaderClientCertFile) != 0 || len(leaderInfo.LeaderClientKeyFile) != 0 {
+		tlsConfig, err = tlsutil.LoadClientTLSConfig(leaderInfo.LeaderCACertFile, leaderInfo.LeaderClientCertFile, leaderInfo.LeaderClientKeyFile)
+		if err != nil {
+			return nil, err
+		}
+	} else if len(leaderInfo.LeaderCACert) != 0 || len(leaderInfo.LeaderClientCert) != 0 || len(leaderInfo.LeaderClientKey) != 0 {
+		tlsConfig, err = tlsutil.ClientTLSConfig([]byte(leaderInfo.LeaderCACert), []byte(leaderInfo.LeaderClientCert), []byte(leaderInfo.LeaderClientKey))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return tlsConfig, nil
 }
 
 // EnsurePath is used to make sure a path exists
@@ -197,6 +233,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	var log raft.LogStore
 	var stable raft.StableStore
 	var snap raft.SnapshotStore
+
 	var devMode bool
 	if devMode {
 		store := raft.NewInmemStore()
@@ -274,17 +311,46 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 	}
 
+	maxEntrySize := defaultMaxEntrySize
+	if maxEntrySizeCfg := conf["max_entry_size"]; len(maxEntrySizeCfg) != 0 {
+		i, err := strconv.Atoi(maxEntrySizeCfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse 'max_entry_size': %w", err)
+		}
+
+		maxEntrySize = uint64(i)
+	}
+
 	return &RaftBackend{
-		logger:      logger,
-		fsm:         fsm,
-		conf:        conf,
-		logStore:    log,
-		stableStore: stable,
-		snapStore:   snap,
-		dataDir:     path,
-		localID:     localID,
-		permitPool:  physical.NewPermitPool(physical.DefaultParallelOperations),
+		logger:       logger,
+		fsm:          fsm,
+		conf:         conf,
+		logStore:     log,
+		stableStore:  stable,
+		snapStore:    snap,
+		dataDir:      path,
+		localID:      localID,
+		permitPool:   physical.NewPermitPool(physical.DefaultParallelOperations),
+		maxEntrySize: maxEntrySize,
 	}, nil
+}
+
+// Close is used to gracefully close all file resources.  N.B. This method
+// should only be called if you are sure the RaftBackend will never be used
+// again.
+func (b *RaftBackend) Close() error {
+	b.l.Lock()
+	defer b.l.Unlock()
+
+	if err := b.fsm.db.Close(); err != nil {
+		return err
+	}
+
+	if err := b.stableStore.(*raftboltdb.BoltStore).Close(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // RaftServer has information about a server in the Raft configuration
@@ -633,6 +699,18 @@ func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error
 	return future.Error()
 }
 
+// CommittedIndex returns the latest index committed to stable storage
+func (b *RaftBackend) CommittedIndex() uint64 {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.raft == nil {
+		return 0
+	}
+
+	return b.raft.LastIndex()
+}
+
 // AppliedIndex returns the latest index applied to the FSM
 func (b *RaftBackend) AppliedIndex() uint64 {
 	b.l.RLock()
@@ -866,10 +944,23 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
 
-	return b.fsm.Get(ctx, path)
+	entry, err := b.fsm.Get(ctx, path)
+	if entry != nil {
+		valueLen := len(entry.Value)
+		if uint64(valueLen) > b.maxEntrySize {
+			b.logger.Warn(
+				"retrieved entry value is too large; see https://www.vaultproject.io/docs/configuration/storage/raft#raft-parameters",
+				"size", valueLen, "suggested", b.maxEntrySize,
+			)
+		}
+	}
+
+	return entry, err
 }
 
-// Put inserts an entry in the log for the put operation
+// Put inserts an entry in the log for the put operation. It will return an
+// error if the resulting entry encoding exceeds the configured max_entry_size
+// or if the call to applyLog fails.
 func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "put"}, time.Now())
 	command := &LogData{
@@ -949,6 +1040,13 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	if err != nil {
 		return err
 	}
+
+	cmdSize := len(commandBytes)
+	if uint64(cmdSize) > b.maxEntrySize {
+		return fmt.Errorf("%s; got %d bytes, max: %d bytes", physical.ErrValueTooLarge, cmdSize, b.maxEntrySize)
+	}
+
+	defer metrics.AddSample([]string{"raft-storage", "entry_size"}, float32(cmdSize))
 
 	var chunked bool
 	var applyFuture raft.ApplyFuture

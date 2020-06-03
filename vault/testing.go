@@ -14,6 +14,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -819,9 +820,10 @@ type TestCluster struct {
 }
 
 func (c *TestCluster) Start() {
-	for _, core := range c.Cores {
+	for i, core := range c.Cores {
 		if core.Server != nil {
 			for _, ln := range core.Listeners {
+				c.Logger.Info("starting listener for test core", "core", i, "port", ln.Address.Port)
 				go core.Server.Serve(ln)
 			}
 		}
@@ -1049,13 +1051,23 @@ type TestClusterOptions struct {
 	SkipInit                 bool
 	HandlerFunc              func(*HandlerProperties) http.Handler
 	DefaultHandlerProperties HandlerProperties
-	BaseListenAddress        string
-	NumCores                 int
-	SealFunc                 func() Seal
-	Logger                   log.Logger
-	TempDir                  string
-	CACert                   []byte
-	CAKey                    *ecdsa.PrivateKey
+
+	// BaseListenAddress is used to assign ports in sequence to the listener
+	// of each core.  It shoud be a string of the form "127.0.0.1:50000"
+	BaseListenAddress string
+
+	// BaseClusterListenPort is used to assign ports in sequence to the
+	// cluster listener of each core.  If BaseClusterListenPort is specified,
+	// then BaseListenAddress must also be specified.  Each cluster listener
+	// will use the same host as the one specified in BaseListenAddress.
+	BaseClusterListenPort int
+
+	NumCores int
+	SealFunc func() Seal
+	Logger   log.Logger
+	TempDir  string
+	CACert   []byte
+	CAKey    *ecdsa.PrivateKey
 	// PhysicalFactory is used to create backends.
 	// The int argument is the index of the core within the cluster, i.e. first
 	// core in cluster will have 0, second 1, etc.
@@ -1082,6 +1094,38 @@ type certInfo struct {
 	certBytes []byte
 	key       *ecdsa.PrivateKey
 	keyPEM    []byte
+}
+
+type TestLogger struct {
+	hclog.Logger
+	Path string
+	File *os.File
+}
+
+func NewTestLogger(t testing.T) *TestLogger {
+	var logDir = os.Getenv("VAULT_TEST_LOG_DIR")
+	if logDir == "" {
+		return &TestLogger{
+			Logger: logging.NewVaultLogger(log.Trace).Named(t.Name()),
+		}
+	}
+
+	logFileName := filepath.Join(logDir, t.Name()+".log")
+	// t.Name may include slashes.
+	dir, _ := filepath.Split(logFileName)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	logFile, err := os.Create(logFileName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return &TestLogger{
+		Path:   logFileName,
+		File:   logFile,
+		Logger: logging.NewVaultLoggerWithWriter(logFile, log.Trace),
+	}
 }
 
 // NewTestCluster creates a new test cluster based on the provided core config
@@ -1130,12 +1174,21 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		certIPs = append(certIPs, baseAddr.IP)
 	}
 
+	baseClusterListenPort := 0
+	if opts != nil && opts.BaseClusterListenPort != 0 {
+		if opts.BaseListenAddress == "" {
+			t.Fatal("BaseListenAddress is not specified")
+		}
+		baseClusterListenPort = opts.BaseClusterListenPort
+	}
+
 	var testCluster TestCluster
 
-	if opts != nil && opts.Logger != nil {
+	switch {
+	case opts != nil && opts.Logger != nil:
 		testCluster.Logger = opts.Logger
-	} else {
-		testCluster.Logger = logging.NewVaultLogger(log.Trace).Named(t.Name())
+	default:
+		testCluster.Logger = NewTestLogger(t)
 	}
 
 	if opts != nil && opts.TempDir != "" {
@@ -1318,7 +1371,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 		certGetter := reloadutil.NewCertificateGetter(certFile, keyFile, "")
 		certGetters = append(certGetters, certGetter)
-		certGetter.Reload(nil)
+		certGetter.Reload()
 		tlsConfig := &tls.Config{
 			Certificates:   []tls.Certificate{tlsCert},
 			RootCAs:        testCluster.RootCAs,
@@ -1441,7 +1494,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	if coreConfig.RawConfig == nil {
-		coreConfig.RawConfig = new(server.Config)
+		c := new(server.Config)
+		c.SharedConfig = &configutil.SharedConfig{LogFormat: logging.UnspecifiedFormat.String()}
+		coreConfig.RawConfig = c
 	}
 
 	addAuditBackend := len(coreConfig.AuditBackends) == 0
@@ -1538,8 +1593,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		if opts != nil && opts.HandlerFunc != nil {
 			props := opts.DefaultHandlerProperties
 			props.Core = c
-			if props.MaxRequestDuration == 0 {
-				props.MaxRequestDuration = DefaultMaxRequestDuration
+			if props.ListenerConfig != nil && props.ListenerConfig.MaxRequestDuration == 0 {
+				props.ListenerConfig.MaxRequestDuration = DefaultMaxRequestDuration
 			}
 			handlers[i] = opts.HandlerFunc(&props)
 			servers[i].Handler = handlers[i]
@@ -1555,12 +1610,12 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	//
 	// Clustering setup
 	//
-	clusterAddrGen := func(lns []*TestListener) []*net.TCPAddr {
+	clusterAddrGen := func(lns []*TestListener, port int) []*net.TCPAddr {
 		ret := make([]*net.TCPAddr, len(lns))
 		for i, ln := range lns {
 			ret[i] = &net.TCPAddr{
 				IP:   ln.Address.IP,
-				Port: 0,
+				Port: port,
 			}
 		}
 		return ret
@@ -1568,7 +1623,12 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	for i := 0; i < numCores; i++ {
 		if coreConfigs[i].ClusterAddr != "" {
-			cores[i].SetClusterListenerAddrs(clusterAddrGen(listeners[i]))
+			port := 0
+			if baseClusterListenPort != 0 {
+				port = baseClusterListenPort + i
+			}
+			cores[i].Logger().Info("assigning cluster listener for test core", "core", i, "port", port)
+			cores[i].SetClusterListenerAddrs(clusterAddrGen(listeners[i], port))
 			cores[i].SetClusterHandler(handlers[i])
 		}
 	}
@@ -1788,6 +1848,13 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	testCluster.CleanupFunc = func() {
 		for _, c := range cleanupFuncs {
 			c()
+		}
+		if l, ok := testCluster.Logger.(*TestLogger); ok {
+			if t.Failed() {
+				_ = l.File.Close()
+			} else {
+				_ = os.Remove(l.Path)
+			}
 		}
 	}
 	if opts != nil {

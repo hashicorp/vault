@@ -4,19 +4,17 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
 
+	mssqlhelper "github.com/hashicorp/vault/helper/testhelpers/mssql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 )
 
 func TestMSSQL_Initialize(t *testing.T) {
-	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
-		t.SkipNow()
-	}
-	connURL := os.Getenv("MSSQL_URL")
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
@@ -50,10 +48,8 @@ func TestMSSQL_Initialize(t *testing.T) {
 }
 
 func TestMSSQL_CreateUser(t *testing.T) {
-	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
-		t.SkipNow()
-	}
-	connURL := os.Getenv("MSSQL_URL")
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
@@ -91,10 +87,8 @@ func TestMSSQL_CreateUser(t *testing.T) {
 }
 
 func TestMSSQL_RotateRootCredentials(t *testing.T) {
-	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
-		t.SkipNow()
-	}
-	connURL := os.Getenv("MSSQL_URL")
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
@@ -130,10 +124,8 @@ func TestMSSQL_RotateRootCredentials(t *testing.T) {
 }
 
 func TestMSSQL_RevokeUser(t *testing.T) {
-	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
-		t.SkipNow()
-	}
-	connURL := os.Getenv("MSSQL_URL")
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,

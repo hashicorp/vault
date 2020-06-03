@@ -79,11 +79,11 @@ The `EnableKeyConversion` enables automatic conversion from a key encoded with c
 
 ### Enabling key conversion
 
-Enable key conversion by calling `EnableKeyConversion(ctx)` in the `/_ah/startup` handler for basic and manual scaling or any handler in automatic scaling.
+Enable key conversion by calling `EnableKeyConversion(ctx)` in the `/_ah/start` handler for basic and manual scaling or any handler in automatic scaling.
 
 #### 1. Basic or manual scaling
 
-This startup handler will enable key conversion for all handlers in the service.
+This start handler will enable key conversion for all handlers in the service.
 
 ```
 http.HandleFunc("/_ah/start", func(w http.ResponseWriter, r *http.Request) {

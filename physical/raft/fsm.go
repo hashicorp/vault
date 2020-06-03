@@ -15,8 +15,7 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
-	protoio "github.com/gogo/protobuf/io"
-	proto "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-raftchunking"
@@ -551,8 +550,8 @@ type writeErrorCloser interface {
 func (f *FSM) writeTo(ctx context.Context, metaSink writeErrorCloser, sink writeErrorCloser) {
 	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "write_snapshot"}, time.Now())
 
-	protoWriter := protoio.NewDelimitedWriter(sink)
-	metadataProtoWriter := protoio.NewDelimitedWriter(metaSink)
+	protoWriter := NewDelimitedWriter(sink)
+	metadataProtoWriter := NewDelimitedWriter(metaSink)
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -619,7 +618,7 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 
 	snapMeta := r.(*boltSnapshotMetadataReader).Metadata()
 
-	protoReader := protoio.NewDelimitedReader(r, math.MaxInt32)
+	protoReader := NewDelimitedReader(r, math.MaxInt32)
 	defer protoReader.Close()
 
 	f.l.Lock()

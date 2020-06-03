@@ -21,7 +21,7 @@ Each auth method produces its own help output.
 
 Get usage instructions for the userpass auth method:
 
-```text
+```shell-session
 $ vault auth help userpass
 Usage: vault login -method=userpass [CONFIG K=V...]
 
@@ -33,7 +33,7 @@ Usage: vault login -method=userpass [CONFIG K=V...]
 
 Print usage for the auth method enabled at my-method/
 
-```text
+```shell-session
 $ vault auth help my-method/
 # ...
 ```

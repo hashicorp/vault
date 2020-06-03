@@ -181,14 +181,17 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 			return logical.ErrorResponse("no server id provided"), logical.ErrInvalidRequest
 		}
 
-		answer, ok := b.Core.pendingRaftPeers[serverID]
+		var answer []byte
+		answerRaw, ok := b.Core.pendingRaftPeers.Load(serverID)
 		if !ok {
 			var err error
 			answer, err = uuid.GenerateRandomBytes(16)
 			if err != nil {
 				return nil, err
 			}
-			b.Core.pendingRaftPeers[serverID] = answer
+			b.Core.pendingRaftPeers.Store(serverID, answer)
+		} else {
+			answer = answerRaw.([]byte)
 		}
 
 		sealAccess := b.Core.seal.GetAccess()
@@ -243,14 +246,14 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return logical.ErrorResponse("could not base64 decode answer"), logical.ErrInvalidRequest
 		}
 
-		expectedAnswer, ok := b.Core.pendingRaftPeers[serverID]
+		expectedAnswerRaw, ok := b.Core.pendingRaftPeers.Load(serverID)
 		if !ok {
 			return logical.ErrorResponse("no expected answer for the server id provided"), logical.ErrInvalidRequest
 		}
 
-		delete(b.Core.pendingRaftPeers, serverID)
+		b.Core.pendingRaftPeers.Delete(serverID)
 
-		if subtle.ConstantTimeCompare(answer, expectedAnswer) == 0 {
+		if subtle.ConstantTimeCompare(answer, expectedAnswerRaw.([]byte)) == 0 {
 			return logical.ErrorResponse("invalid answer given"), logical.ErrInvalidRequest
 		}
 

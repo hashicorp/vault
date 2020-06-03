@@ -31,7 +31,9 @@ import (
 	"runtime"
 	"strings"
 
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -83,6 +85,9 @@ var (
 // running on GCP.
 func isRunningOnGCP() bool {
 	manufacturer, err := readManufacturer()
+	if os.IsNotExist(err) {
+		return false
+	}
 	if err != nil {
 		log.Fatalf("failure to read manufacturer information: %v", err)
 	}
@@ -138,4 +143,21 @@ func AuthInfoFromPeer(p *peer.Peer) (AuthInfo, error) {
 		return nil, errors.New("no alts.AuthInfo found in Peer")
 	}
 	return altsAuthInfo, nil
+}
+
+// ClientAuthorizationCheck checks whether the client is authorized to access
+// the requested resources based on the given expected client service accounts.
+// This API should be used by gRPC server RPC handlers. This API should not be
+// used by clients.
+func ClientAuthorizationCheck(ctx context.Context, expectedServiceAccounts []string) error {
+	authInfo, err := AuthInfoFromContext(ctx)
+	if err != nil {
+		return status.Newf(codes.PermissionDenied, "The context is not an ALTS-compatible context: %v", err).Err()
+	}
+	for _, sa := range expectedServiceAccounts {
+		if authInfo.PeerServiceAccount() == sa {
+			return nil
+		}
+	}
+	return status.Newf(codes.PermissionDenied, "Client %v is not authorized", authInfo.PeerServiceAccount()).Err()
 }

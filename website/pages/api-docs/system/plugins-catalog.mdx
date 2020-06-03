@@ -21,7 +21,7 @@ This endpoint lists the plugins in the catalog by type.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/plugins/catalog
@@ -68,7 +68,7 @@ This endpoint lists the plugins in the catalog by type.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST
@@ -138,7 +138,7 @@ supplied name.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
@@ -167,7 +167,7 @@ This endpoint returns the configuration data for the plugin with the given name.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
@@ -209,7 +209,7 @@ This endpoint removes the plugin with the given name.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \

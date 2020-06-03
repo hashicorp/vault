@@ -14,16 +14,17 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/mapstructure"
 )
 
 // Config is the configuration for the vault server.
 type Config struct {
+	*configutil.SharedConfig `hcl:"-"`
+
 	AutoAuth      *AutoAuth                  `hcl:"auto_auth"`
 	ExitAfterAuth bool                       `hcl:"exit_after_auth"`
-	PidFile       string                     `hcl:"pid_file"`
-	Listeners     []*Listener                `hcl:"listeners"`
 	Cache         *Cache                     `hcl:"cache"`
 	Vault         *Vault                     `hcl:"vault"`
 	Templates     []*ctconfig.TemplateConfig `hcl:"templates"`
@@ -47,15 +48,6 @@ type Cache struct {
 	UseAutoAuthToken    bool        `hcl:"-"`
 	ForceAutoAuthToken  bool        `hcl:"-"`
 }
-
-// Listener contains configuration for any Vault Agent listeners
-type Listener struct {
-	Type   string
-	Config map[string]interface{}
-}
-
-// RequireRequestHeader is a listener configuration option
-const RequireRequestHeader = "require_request_header"
 
 // AutoAuth is the configured authentication method and sinks
 type AutoAuth struct {
@@ -89,6 +81,12 @@ type Sink struct {
 	Config     map[string]interface{}
 }
 
+func NewConfig() *Config {
+	return &Config{
+		SharedConfig: new(configutil.SharedConfig),
+	}
+}
+
 // LoadConfig loads the configuration at the given path, regardless if
 // its a file or directory.
 func LoadConfig(path string) (*Config, error) {
@@ -114,29 +112,31 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	// Start building the result
-	var result Config
-	if err := hcl.DecodeObject(&result, obj); err != nil {
+	result := NewConfig()
+	if err := hcl.DecodeObject(result, obj); err != nil {
 		return nil, err
 	}
+
+	sharedConfig, err := configutil.ParseConfig(string(d))
+	if err != nil {
+		return nil, err
+	}
+	result.SharedConfig = sharedConfig
 
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
 		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
 	}
 
-	if err := parseAutoAuth(&result, list); err != nil {
+	if err := parseAutoAuth(result, list); err != nil {
 		return nil, errwrap.Wrapf("error parsing 'auto_auth': {{err}}", err)
 	}
 
-	if err := parseListeners(&result, list); err != nil {
-		return nil, errwrap.Wrapf("error parsing 'listeners': {{err}}", err)
-	}
-
-	if err := parseCache(&result, list); err != nil {
+	if err := parseCache(result, list); err != nil {
 		return nil, errwrap.Wrapf("error parsing 'cache':{{err}}", err)
 	}
 
-	if err := parseTemplates(&result, list); err != nil {
+	if err := parseTemplates(result, list); err != nil {
 		return nil, errwrap.Wrapf("error parsing 'template': {{err}}", err)
 	}
 
@@ -156,17 +156,19 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	if result.AutoAuth != nil {
-		if len(result.AutoAuth.Sinks) == 0 && (result.Cache == nil || !result.Cache.UseAutoAuthToken) {
-			return nil, fmt.Errorf("auto_auth requires at least one sink or cache.use_auto_auth_token=true ")
+		if len(result.AutoAuth.Sinks) == 0 &&
+			(result.Cache == nil || !result.Cache.UseAutoAuthToken) &&
+			len(result.Templates) == 0 {
+			return nil, fmt.Errorf("auto_auth requires at least one sink or at least one template or cache.use_auto_auth_token=true")
 		}
 	}
 
-	err = parseVault(&result, list)
+	err = parseVault(result, list)
 	if err != nil {
 		return nil, errwrap.Wrapf("error parsing 'vault':{{err}}", err)
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 func parseVault(result *Config, list *ast.ObjectList) error {
@@ -242,47 +244,6 @@ func parseCache(result *Config, list *ast.ObjectList) error {
 	}
 
 	result.Cache = &c
-	return nil
-}
-
-func parseListeners(result *Config, list *ast.ObjectList) error {
-	name := "listener"
-
-	listenerList := list.Filter(name)
-
-	var listeners []*Listener
-	for _, item := range listenerList.Items {
-		var lnConfig map[string]interface{}
-		err := hcl.DecodeObject(&lnConfig, item.Val)
-		if err != nil {
-			return err
-		}
-
-		var lnType string
-		switch {
-		case lnConfig["type"] != nil:
-			lnType = lnConfig["type"].(string)
-			delete(lnConfig, "type")
-		case len(item.Keys) == 1:
-			lnType = strings.ToLower(item.Keys[0].Token.Value().(string))
-		default:
-			return errors.New("listener type must be specified")
-		}
-
-		switch lnType {
-		case "unix", "tcp":
-		default:
-			return fmt.Errorf("invalid listener type %q", lnType)
-		}
-
-		listeners = append(listeners, &Listener{
-			Type:   lnType,
-			Config: lnConfig,
-		})
-	}
-
-	result.Listeners = listeners
-
 	return nil
 }
 

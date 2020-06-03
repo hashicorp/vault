@@ -29,6 +29,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 
 	expectedResultStr := fmt.Sprintf(testFormatJSONReqBasicStrFmt, salter.GetIdentifiedHMAC("foo"))
 
+	issueTime, _ := time.Parse(time.RFC3339, "2020-05-28T13:40:18-05:00")
 	cases := map[string]struct {
 		Auth        *logical.Auth
 		Req         *logical.Request
@@ -45,6 +46,10 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 				NoDefaultPolicy: true,
 				Policies:        []string{"root"},
 				TokenType:       logical.TokenTypeService,
+				LeaseOptions: logical.LeaseOptions{
+					TTL:       time.Hour * 4,
+					IssueTime: issueTime,
+				},
 			},
 			&logical.Request{
 				Operation: logical.UpdateOperation,
@@ -72,6 +77,10 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 				NoDefaultPolicy: true,
 				Policies:        []string{"root"},
 				TokenType:       logical.TokenTypeService,
+				LeaseOptions: logical.LeaseOptions{
+					TTL:       time.Hour * 4,
+					IssueTime: issueTime,
+				},
 			},
 			&logical.Request{
 				Operation: logical.UpdateOperation,
@@ -143,5 +152,5 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 	}
 }
 
-const testFormatJSONReqBasicStrFmt = `{"time":"2015-08-05T13:45:46Z","type":"request","auth":{"client_token":"%s","accessor":"bar","display_name":"testtoken","policies":["root"],"no_default_policy":true,"metadata":null,"entity_id":"foobarentity","token_type":"service"},"request":{"operation":"update","path":"/foo","data":null,"wrap_ttl":60,"remote_address":"127.0.0.1","headers":{"foo":["bar"]}},"error":"this is an error"}
+const testFormatJSONReqBasicStrFmt = `{"time":"2015-08-05T13:45:46Z","type":"request","auth":{"client_token":"%s","accessor":"bar","display_name":"testtoken","policies":["root"],"no_default_policy":true,"metadata":null,"entity_id":"foobarentity","token_type":"service", "token_ttl": 14400, "token_issue_time": "2020-05-28T13:40:18-05:00"},"request":{"operation":"update","path":"/foo","data":null,"wrap_ttl":60,"remote_address":"127.0.0.1","headers":{"foo":["bar"]}},"error":"this is an error"}
 `

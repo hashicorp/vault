@@ -63,7 +63,7 @@ This guide walk through the following operations:
 1. [Demote DR Primary to Secondary](#step4)
 1. [Disable DR Primary](#step5)
 
-### <a name="step1"></a>Step 1: Enable DR Primary Replication
+### Step 1: Enable DR Primary Replication ((#step1))
 
 #### CLI command
 
@@ -173,7 +173,7 @@ https://cluster-A.example.com:8200/ui) and then login.
 1. Click **Copy** to copy the token which you will need to enable the DR secondary cluster.
    ![DR Replication - primary](/img/vault-dr-4.png)
 
-### <a name="step2"></a>Step 2: Enable DR Secondary Replication
+### Step 2: Enable DR Secondary Replication ((#step2))
 
 The following operations must be performed on the DR secondary cluster.
 
@@ -247,7 +247,7 @@ The following operations must be performed on the DR secondary cluster.
 
 !> **NOTE:** This will immediately clear all data in the secondary cluster.
 
-### <a name="step3"></a>Step 3: Promote DR Secondary to Primary
+### Step 3: Promote DR Secondary to Primary ((#step3))
 
 This step walks you through the promotion of the secondary cluster to become the
 new primary when a catastrophic failure causes the primary cluster to be
@@ -434,7 +434,7 @@ secondary cluster. The process, outlined below using API calls, is the similar t
 > authentication method. If desired, generate a [new root
 > token](/guides/operations/generate-root).
 
-### <a name="step4"></a>Step 4: Demote DR Primary to Secondary
+### Step 4: Demote DR Primary to Secondary ((#step4))
 
 If the _original_ DR primary cluster becomes operational again, you may want to
 utilize the cluster by making it a DR secondary cluster. This step explains how
@@ -448,7 +448,7 @@ in DR replication.
 Execute the following command to demote the original DR primary cluster to a
 secondary.
 
-```plaintext
+```shell-session
 $ vault write -f sys/replication/dr/primary/demote
 
 WARNING! The following warnings were returned from Vault:
@@ -466,7 +466,7 @@ reconnected to the same DR replication set without wiping local storage.
 Invoke the **`sys/replication/dr/secondary/enable`** endpoint to demote the
 original DR primary cluster to a secondary.
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        https://cluster-A.example.com:8200/v1/sys/replication/dr/primary/demote | jq
@@ -499,7 +499,7 @@ When you prompted, "_Are you sure you want to demote this cluster?_", click
 
 ![DR Replication - demotion](/img/vault-dr-12.png)
 
-### <a name="step5"></a>Step 5: Disable DR Primary
+### Step 5: Disable DR Primary ((#step5))
 
 Once the DR secondary cluster was promoted to be the **new primary**, you may
 want to disable the DR replication on the _original_ primary when it becomes
@@ -512,7 +512,7 @@ in DR replication.
 
 Execute the following command to disable DR replication.
 
-```plaintext
+```shell-session
 $ vault write -f sys/replication/dr/primary/disable
 
 WARNING! The following warnings were returned from Vault:
@@ -528,7 +528,7 @@ Any secondaries will no longer be able to connect.
 Invoke the **`sys/replication/dr/primary/disable`** endpoint to disable DR
 replication.
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        https://cluster-A.example.com:8200/v1/sys/replication/dr/primary/disable | jq
@@ -567,7 +567,7 @@ the underlying storage even if they have connected before. If re-enabling DR
 replication as a secondary, its underlying storage will be wiped when connected
 to a primary.
 
-## <a name="important"></a>Important Note about Automated DR Failover
+## Important Note about Automated DR Failover ((#important))
 
 Vault does not support an automatic failover/promotion of a DR secondary
 cluster, and this is a deliberate choice due to the difficulty in accurately
