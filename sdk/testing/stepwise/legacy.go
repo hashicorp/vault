@@ -9,9 +9,8 @@ import (
 	"sort"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/http"
@@ -23,6 +22,19 @@ import (
 
 // TestEnvVar must be set to a non-empty value for acceptance tests to run.
 const TestEnvVar = "VAULT_ACC"
+
+// testTesting is used for testing the legacy testing framework
+var testTesting = false
+
+// TestTeardownFunc is the callback used for Teardown in TestCase.
+type TestTeardownFunc func() error
+
+// This file contains items considered "legacy" and are not
+// actively being developed. These types and methods rely on internal types from
+// the logical package (Request, Response, Backend) which should be abstracted
+// or hidden from normal black-box testing.
+// Please use the newer types and methods offered in stepwise/testing.go which
+// rely on public API types.
 
 // TestCase is a single set of tests to run for a backend. A TestCase
 // should generally map 1:1 to each test method for your acceptance
@@ -102,19 +114,11 @@ type TestCheckFunc func(*logical.Response) error
 // in each TestStep.
 type PreFlightFunc func(*logical.Request) error
 
-// TestTeardownFunc is the callback used for Teardown in TestCase.
-type TestTeardownFunc func() error
-
-// Test performs an acceptance test on a backend with the given test case.
-//
-// Tests are not run unless an environmental variable "VAULT_ACC" is
-// set to some non-empty value. This is to avoid test cases surprising
-// a user by creating real resources.
-//
-// Tests will fail unless the verbose flag (`go test -v`, or explicitly
-// the "-test.v" flag) is set. Because some acceptance tests take quite
-// long, we require the verbose flag so users are able to see progress
-// output.
+// Test runs a TestCase using a legacy vault setup. This is used to
+// maintain backwards compatibility with existing tests that use the TestStep
+// type to construct their tests and use logical.Requests directly with a
+// backend's HandleRequest method. Please see stepwise.Test and stepwise.Step
+// for more information.
 func Test(tt TestT, c TestCase) {
 	// We only run acceptance tests if an env var is set because they're
 	// slow and generally require some outside configuration.
@@ -138,7 +142,12 @@ func Test(tt TestT, c TestCase) {
 
 	// Defer on the teardown, regardless of pass/fail at this point
 	if c.Teardown != nil {
-		defer c.Teardown()
+		defer func() {
+			err := c.Teardown()
+			if err != nil {
+				tt.Error("failed to tear down:", err)
+			}
+		}()
 	}
 
 	// Check that something is provided
@@ -220,7 +229,10 @@ func Test(tt TestT, c TestCase) {
 
 	// Create an HTTP API server and client
 	ln, addr := http.TestServer(nil, core)
-	defer ln.Close()
+	defer func() {
+		// intentionally ingore this error
+		_ = ln.Close()
+	}()
 	clientConfig := api.DefaultConfig()
 	clientConfig.Address = addr
 	client, err := api.NewClient(clientConfig)
@@ -350,11 +362,9 @@ func Test(tt TestT, c TestCase) {
 		}
 
 		// Either the 'err' was nil or if an error was expected, it was set to nil.
-		// Call the 'Check' function if there is one.
-		//
-		// TODO: This works perfectly for now, but it would be better if 'Check'
-		// function takes in both the response object and the error, and decide on
-		// the action on its own.
+		// Call the 'Check' function if there is one. The legacy tests only check
+		// the response, and not the error. For checking both, use the stepwise Case
+		// and Step types in sdk/testing/stepwise/testing.go
 		if err == nil && s.Check != nil {
 			// Call the test method
 			err = s.Check(resp)
@@ -483,5 +493,3 @@ type TestT interface {
 	Fatal(args ...interface{})
 	Skip(args ...interface{})
 }
-
-var testTesting = false
