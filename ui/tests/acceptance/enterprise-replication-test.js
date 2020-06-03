@@ -124,7 +124,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
       `/vault/replication/performance/secondaries`,
       'redirects to the secondaries page'
     );
-    // nav back to details page and confirm secondary is in the know secondaries table
+    // nav back to details page and confirm secondary is in the known secondaries table
     await click('[data-test-replication-link="details"]');
     await settled();
     assert
