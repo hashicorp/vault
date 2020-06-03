@@ -80,6 +80,21 @@ QUERY_SPEC = cd $(REPO_ROOT); yq -r '$(1)' < $(SPEC)
 QUERY_PACKAGESPEC = $(call QUERY_LOCK,$(YQ_PACKAGE_PATH) | $(1))
 QUERY_PACKAGESPEC_BY_ID = $(call QUERY_LOCK,$(call YQ_PACKAGE_PATH_BY_ID,$(1)) | $(2))
 
+# GIT_COMMIT_OR_TAG_REF returns the git commit or tag ref SHA that the passed
+# commit-ish points to (that can be a commit, tag or branch ref).
+#
+# Note we used to suffix the passed commit-ish with '^{}' in order to traverse tags down
+# to individual commits, in case the commit-ish is an annotated tag. However this
+# makes build output confusing in case a tag ref is used rather than a commit ref.
+# Therefore we now allow building tag refs, even though this means sometimes we might
+# be building the same source with two different source IDs, and potentially wasting
+# some potential cache hits. The tradeoff in terms of ease of use seems worth it for
+# now, but this could be revisited later.
+# The original of the line below was:
+define GIT_COMMIT_OR_TAG_REF
+git rev-parse --verify '$(1)'
+endef
+
 ifeq ($(PACKAGE_SOURCE_ID),)
 # Even though layers may have different Git revisions, based on the latest
 # revision of their source, we always want to
@@ -101,18 +116,7 @@ GIT_REF := HEAD
 ALLOW_DIRTY ?= YES
 PRODUCT_REVISION_NICE_NAME := <current-workdir>
 DIRTY := $(shell cd $(REPO_ROOT); git diff --exit-code $(GIT_REF) -- $(ALWAYS_EXCLUDE_SOURCE_GIT) > /dev/null 2>&1 || echo "dirty_")
-# Note we used to suffix the GIT_REF with '^{}' in order to traverse tags down
-# to individual commits, in case the GIT_REF is an annotated tag. However this
-# makes build output confusing in case a tag ref is used rather than a commit ref.
-# Therefore we now allow building tag refs, even though this means sometimes we might
-# be building the same source with two different source IDs, and potentially wasting
-# some potential cache hits. The tradeoff in terms of ease of use seems worth it for
-# now, but this could be revisited later.
-# The original of the line below was:
-# 
-#   PACKAGE_SOURCE_ID := $(DIRTY)$(shell git rev-parse --verify '$(GIT_REF)^{commit}')
-#
-PACKAGE_SOURCE_ID := $(DIRTY)$(shell git rev-parse --verify '$(GIT_REF)')
+PACKAGE_SOURCE_ID := $(DIRTY)$(shell $(call GIT_COMMIT_OR_TAG_REF,$(GIT_REF)))
 
 else
 
@@ -121,7 +125,7 @@ else
 GIT_REF := $(PRODUCT_REVISION)
 ALLOW_DIRTY := NO
 PRODUCT_REVISION_NICE_NAME := $(PRODUCT_REVISION)
-PACKAGE_SOURCE_ID := $(shell if COMMIT=$$(git rev-parse --verify '$(PRODUCT_REVISION)^{commit}'); then echo $$COMMIT; else echo FAILED; fi)
+PACKAGE_SOURCE_ID := $(shell if COMMIT=$$($(call GIT_COMMIT_OR_TAG_REF,$(PRODUCT_REVISION))); then echo $$COMMIT; else echo FAILED; fi)
 
 ifeq ($(PACKAGE_SOURCE_ID),FAILED)
 $(error Unable to find git ref "$(PRODUCT_REVISION)", do you need to 'git fetch' it?)
