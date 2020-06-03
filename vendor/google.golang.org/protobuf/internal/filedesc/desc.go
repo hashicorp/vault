@@ -607,7 +607,7 @@ func (dv *defaultValue) get(fd pref.FieldDescriptor) pref.Value {
 		// TODO: Avoid panic if we're running with the race detector
 		// and instead spawn a goroutine that periodically resets
 		// this value back to the original to induce a race.
-		panic("detected mutation on the default bytes")
+		panic(fmt.Sprintf("detected mutation on the default bytes for %v", fd.FullName()))
 	}
 	return dv.val
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault-plugin-secrets-openldap/client"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -16,22 +17,8 @@ const (
 	defaultPasswordLength = 64
 	defaultSchema         = "openldap"
 	defaultTLSVersion     = "tls12"
+	defaultCtxTimeout     = 1 * time.Minute
 )
-
-func readConfig(ctx context.Context, storage logical.Storage) (*config, error) {
-	entry, err := storage.Get(ctx, configPath)
-	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return nil, nil
-	}
-	config := &config{}
-	if err := entry.DecodeJSON(config); err != nil {
-		return nil, err
-	}
-	return config, nil
-}
 
 func (b *backend) pathConfig() []*framework.Path {
 	return []*framework.Path{
@@ -52,8 +39,9 @@ func (b *backend) pathConfig() []*framework.Path {
 					Callback: b.configDeleteOperation,
 				},
 			},
-			HelpSynopsis:    configHelpSynopsis,
-			HelpDescription: configHelpDescription,
+			HelpSynopsis: "Configure the OpenLDAP secret engine plugin.",
+			HelpDescription: "This path configures the OpenLDAP secret engine plugin. See the documentation for the " +
+				"plugin specified for a full list of accepted connection details.",
 		},
 	}
 }
@@ -68,15 +56,21 @@ func (b *backend) configFields() map[string]*framework.FieldSchema {
 		Type:        framework.TypeDurationSecond,
 		Description: "The maximum password time-to-live.",
 	}
-	fields["length"] = &framework.FieldSchema{
-		Type:        framework.TypeInt,
-		Default:     defaultPasswordLength,
-		Description: "The desired length of passwords that Vault generates.",
-	}
 	fields["schema"] = &framework.FieldSchema{
 		Type:        framework.TypeString,
 		Default:     defaultSchema,
 		Description: "The desired OpenLDAP schema used when modifying user account passwords.",
+	}
+	fields["password_policy"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: "Password policy to use to generate passwords",
+	}
+
+	// Deprecated
+	fields["length"] = &framework.FieldSchema{
+		Type:        framework.TypeInt,
+		Description: "The desired length of passwords that Vault generates.",
+		Deprecated:  true,
 	}
 	return fields
 }
@@ -92,7 +86,11 @@ func (b *backend) configCreateUpdateOperation(ctx context.Context, req *logical.
 		return nil, err
 	}
 
-	length := fieldData.Get("length").(int)
+	rawPassLength, hasPassLen := fieldData.GetOk("length")
+	if rawPassLength == nil {
+		rawPassLength = 0 // Don't set to the default but keep this as the zero value so we know it hasn't been set
+	}
+	passLength := rawPassLength.(int)
 	url := fieldData.Get("url").(string)
 
 	if url == "" {
@@ -109,24 +107,56 @@ func (b *backend) configCreateUpdateOperation(ctx context.Context, req *logical.
 			schema, client.SupportedSchemas())
 	}
 
-	config := &config{
+	passPolicy := fieldData.Get("password_policy").(string)
+
+	if passPolicy != "" && hasPassLen {
+		// If both a password policy and a password length are set, we can't figure out what to do
+		return nil, fmt.Errorf("cannot set both 'password_policy' and 'length'")
+	}
+
+	config := config{
 		LDAP: &client.Config{
 			ConfigEntry: ldapConf,
 			Schema:      schema,
 		},
-		PasswordLength: length,
+		PasswordPolicy: passPolicy,
+		PasswordLength: passLength,
 	}
 
-	entry, err := logical.StorageEntryJSON(configPath, config)
+	err = writeConfig(ctx, req.Storage, config)
 	if err != nil {
-		return nil, err
-	}
-	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
 	// Respond with a 204.
 	return nil, nil
+}
+
+func readConfig(ctx context.Context, storage logical.Storage) (*config, error) {
+	entry, err := storage.Get(ctx, configPath)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+	config := &config{}
+	if err := entry.DecodeJSON(config); err != nil {
+		return nil, err
+	}
+	return config, nil
+}
+
+func writeConfig(ctx context.Context, storage logical.Storage, config config) (err error) {
+	entry, err := logical.StorageEntryJSON(configPath, config)
+	if err != nil {
+		return err
+	}
+	err = storage.Put(ctx, entry)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (b *backend) configReadOperation(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
@@ -141,7 +171,12 @@ func (b *backend) configReadOperation(ctx context.Context, req *logical.Request,
 	// "password" is intentionally not returned by this endpoint
 	configMap := config.LDAP.Map()
 	delete(configMap, "bindpass")
-	configMap["length"] = config.PasswordLength
+	if config.PasswordLength > 0 {
+		configMap["length"] = config.PasswordLength
+	}
+	if config.PasswordPolicy != "" {
+		configMap["password_policy"] = config.PasswordPolicy
+	}
 
 	resp := &logical.Response{
 		Data: configMap,
@@ -158,14 +193,8 @@ func (b *backend) configDeleteOperation(ctx context.Context, req *logical.Reques
 
 type config struct {
 	LDAP           *client.Config
-	PasswordLength int `json:"length"`
+	PasswordPolicy string `json:"password_policy,omitempty"`
+
+	// Deprecated
+	PasswordLength int `json:"length,omitempty"`
 }
-
-const configHelpSynopsis = `
-Configure the OpenLDAP secret engine plugin.
-`
-
-const configHelpDescription = `
-This path configures the OpenLDAP secret engine plugin. See the documentation for the plugin specified
-for a full list of accepted connection details.
-`

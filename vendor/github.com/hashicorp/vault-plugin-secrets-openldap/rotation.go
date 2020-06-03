@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -301,6 +302,13 @@ func (b *backend) setStaticAccountPassword(ctx context.Context, s logical.Storag
 	if input == nil || input.Role == nil || input.RoleName == "" {
 		return nil, errors.New("input was empty when attempting to set credentials for static account")
 	}
+
+	if _, hasTimeout := ctx.Deadline(); !hasTimeout {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(ctx, defaultCtxTimeout)
+		defer cancel()
+	}
+
 	// Re-use WAL ID if present, otherwise PUT a new WAL
 	output := &setStaticAccountOutput{WALID: input.WALID}
 
@@ -312,7 +320,7 @@ func (b *backend) setStaticAccountPassword(ctx context.Context, s logical.Storag
 		return nil, errors.New("the config is currently unset")
 	}
 
-	newPassword, err := GeneratePassword(config.PasswordLength)
+	newPassword, err := b.GeneratePassword(ctx, config)
 	if err != nil {
 		return nil, err
 	}
@@ -377,6 +385,21 @@ to %s, configure a new binddn and bindpass to restore openldap function`, pwdSto
 
 	// The WAL has been deleted, return new setStaticAccountOutput without it
 	return &setStaticAccountOutput{RotationTime: lvr}, merr
+}
+
+func (b *backend) GeneratePassword(ctx context.Context, cfg *config) (string, error) {
+	if cfg.PasswordPolicy == "" {
+		if cfg.PasswordLength == 0 {
+			return base62.Random(defaultPasswordLength)
+		}
+		return base62.Random(cfg.PasswordLength)
+	}
+
+	password, err := b.System().GeneratePasswordFromPolicy(ctx, cfg.PasswordPolicy)
+	if err != nil {
+		return "", fmt.Errorf("unable to generate password: %w", err)
+	}
+	return password, nil
 }
 
 // initQueue preforms the necessary checks and initializations needed to preform
