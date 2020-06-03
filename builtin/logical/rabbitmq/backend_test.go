@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/random"
 	"github.com/hashicorp/vault/sdk/logical"
 	rabbithole "github.com/michaelklishin/rabbit-hole"
 	"github.com/mitchellh/mapstructure"
@@ -89,7 +90,7 @@ func TestBackend_basic(t *testing.T) {
 		PreCheck:       testAccPreCheckFunc(t, uri),
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, uri),
+			testAccStepConfig(t, uri, ""),
 			testAccStepRole(t),
 			testAccStepReadCreds(t, b, uri, "web"),
 		},
@@ -111,7 +112,7 @@ func TestBackend_returnsErrs(t *testing.T) {
 		PreCheck:       testAccPreCheckFunc(t, uri),
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, uri),
+			testAccStepConfig(t, uri, ""),
 			{
 				Operation: logical.CreateOperation,
 				Path:      "roles/web",
@@ -144,7 +145,33 @@ func TestBackend_roleCrud(t *testing.T) {
 		PreCheck:       testAccPreCheckFunc(t, uri),
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, uri),
+			testAccStepConfig(t, uri, ""),
+			testAccStepRole(t),
+			testAccStepReadRole(t, "web", testTags, testVHosts, testVHostTopics),
+			testAccStepDeleteRole(t, "web"),
+			testAccStepReadRole(t, "web", "", "", ""),
+		},
+	})
+}
+
+func TestBackend_roleCrudWithPasswordPolicy(t *testing.T) {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+		return
+	}
+
+	backendConfig := logical.TestBackendConfig()
+	backendConfig.System.(*logical.StaticSystemView).SetPasswordPolicy("testpolicy", random.DefaultStringGenerator)
+	b, _ := Factory(context.Background(), backendConfig)
+
+	cleanup, uri, _ := prepareRabbitMQTestContainer(t)
+	defer cleanup()
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		PreCheck:       testAccPreCheckFunc(t, uri),
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t, uri, "testpolicy"),
 			testAccStepRole(t),
 			testAccStepReadRole(t, "web", testTags, testVHosts, testVHostTopics),
 			testAccStepDeleteRole(t, "web"),
@@ -161,7 +188,7 @@ func testAccPreCheckFunc(t *testing.T, uri string) func() {
 	}
 }
 
-func testAccStepConfig(t *testing.T, uri string) logicaltest.TestStep {
+func testAccStepConfig(t *testing.T, uri string, passwordPolicy string) logicaltest.TestStep {
 	username := os.Getenv(envRabbitMQUsername)
 	if len(username) == 0 {
 		username = "guest"
@@ -175,9 +202,10 @@ func testAccStepConfig(t *testing.T, uri string) logicaltest.TestStep {
 		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
 		Data: map[string]interface{}{
-			"connection_uri": uri,
-			"username":       username,
-			"password":       password,
+			"connection_uri":  uri,
+			"username":        username,
+			"password":        password,
+			"password_policy": passwordPolicy,
 		},
 	}
 }

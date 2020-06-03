@@ -53,7 +53,12 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	}
 	username := fmt.Sprintf("%s-%s", req.DisplayName, uuidVal)
 
-	password, err := uuid.GenerateUUID()
+	config, err := readConfig(ctx, req.Storage)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read configuration: %w", err)
+	}
+
+	password, err := b.generatePassword(ctx, config.PasswordPolicy)
 	if err != nil {
 		return nil, err
 	}

@@ -9,6 +9,10 @@ import (
 	rabbithole "github.com/michaelklishin/rabbit-hole"
 )
 
+const (
+	storageKey = "config/connection"
+)
+
 func pathConfigConnection(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/connection",
@@ -29,6 +33,10 @@ func pathConfigConnection(b *backend) *framework.Path {
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: `If set, connection_uri is verified by actually connecting to the RabbitMQ management API`,
+			},
+			"password_policy": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Name of the password policy to use to generate passwords for dynamic credentials.",
 			},
 		},
 
@@ -57,6 +65,8 @@ func (b *backend) pathConnectionUpdate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("missing password"), nil
 	}
 
+	passwordPolicy := data.Get("password_policy").(string)
+
 	// Don't check the connection_url if verification is disabled
 	verifyConnection := data.Get("verify_connection").(bool)
 	if verifyConnection {
@@ -73,15 +83,14 @@ func (b *backend) pathConnectionUpdate(ctx context.Context, req *logical.Request
 	}
 
 	// Store it
-	entry, err := logical.StorageEntryJSON("config/connection", connectionConfig{
-		URI:      uri,
-		Username: username,
-		Password: password,
-	})
-	if err != nil {
-		return nil, err
+	config := connectionConfig{
+		URI:            uri,
+		Username:       username,
+		Password:       password,
+		PasswordPolicy: passwordPolicy,
 	}
-	if err := req.Storage.Put(ctx, entry); err != nil {
+	err := writeConfig(ctx, req.Storage, config)
+	if err != nil {
 		return nil, err
 	}
 
@@ -89,6 +98,33 @@ func (b *backend) pathConnectionUpdate(ctx context.Context, req *logical.Request
 	b.resetClient(ctx)
 
 	return nil, nil
+}
+
+func readConfig(ctx context.Context, storage logical.Storage) (config connectionConfig, err error) {
+	entry, err := storage.Get(ctx, storageKey)
+	if err != nil {
+		return connectionConfig{}, err
+	}
+	if entry == nil {
+		return connectionConfig{}, nil
+	}
+
+	var connConfig connectionConfig
+	if err := entry.DecodeJSON(&connConfig); err != nil {
+		return connectionConfig{}, err
+	}
+	return connConfig, nil
+}
+
+func writeConfig(ctx context.Context, storage logical.Storage, config connectionConfig) (err error) {
+	entry, err := logical.StorageEntryJSON(storageKey, config)
+	if err != nil {
+		return err
+	}
+	if err := storage.Put(ctx, entry); err != nil {
+		return err
+	}
+	return nil
 }
 
 // connectionConfig contains the information required to make a connection to a RabbitMQ node
@@ -101,6 +137,9 @@ type connectionConfig struct {
 
 	// Password for the Username
 	Password string `json:"password"`
+
+	// PasswordPolicy for generating passwords for dynamic credentials
+	PasswordPolicy string `json:"password_policy"`
 }
 
 const pathConfigConnectionHelpSyn = `
