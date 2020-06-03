@@ -87,7 +87,7 @@ func (b *backend) installPublicKeyInTarget(ctx context.Context, adminUser, usern
 	}
 	defer session.Close()
 
-	authKeysFileName := fmt.Sprintf("/home/%s/.ssh/authorized_keys", username)
+	authKeysFileName := fmt.Sprintf("~%s/.ssh/authorized_keys", username)
 
 	var installOption string
 	if install {

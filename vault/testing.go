@@ -14,7 +14,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/internalshared/configutil"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -22,7 +21,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -37,7 +35,6 @@ import (
 	"github.com/mitchellh/copystructure"
 
 	"golang.org/x/crypto/ed25519"
-	"golang.org/x/crypto/ssh"
 	"golang.org/x/net/http2"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
@@ -45,6 +42,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
@@ -489,97 +487,6 @@ func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.Plug
 
 var testLogicalBackends = map[string]logical.Factory{}
 var testCredentialBackends = map[string]logical.Factory{}
-
-// StartSSHHostTestServer starts the test server which responds to SSH
-// authentication. Used to test the SSH secret backend.
-func StartSSHHostTestServer() (string, error) {
-	pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(testSharedPublicKey))
-	if err != nil {
-		return "", fmt.Errorf("error parsing public key")
-	}
-	serverConfig := &ssh.ServerConfig{
-		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
-			if bytes.Compare(pubKey.Marshal(), key.Marshal()) == 0 {
-				return &ssh.Permissions{}, nil
-			} else {
-				return nil, fmt.Errorf("key does not match")
-			}
-		},
-	}
-	signer, err := ssh.ParsePrivateKey([]byte(testSharedPrivateKey))
-	if err != nil {
-		panic("Error parsing private key")
-	}
-	serverConfig.AddHostKey(signer)
-
-	soc, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return "", fmt.Errorf("error listening to connection")
-	}
-
-	go func() {
-		for {
-			conn, err := soc.Accept()
-			if err != nil {
-				panic(fmt.Sprintf("Error accepting incoming connection: %s", err))
-			}
-			defer conn.Close()
-			sshConn, chanReqs, _, err := ssh.NewServerConn(conn, serverConfig)
-			if err != nil {
-				panic(fmt.Sprintf("Handshaking error: %v", err))
-			}
-
-			go func() {
-				for chanReq := range chanReqs {
-					go func(chanReq ssh.NewChannel) {
-						if chanReq.ChannelType() != "session" {
-							chanReq.Reject(ssh.UnknownChannelType, "unknown channel type")
-							return
-						}
-
-						ch, requests, err := chanReq.Accept()
-						if err != nil {
-							panic(fmt.Sprintf("Error accepting channel: %s", err))
-						}
-
-						go func(ch ssh.Channel, in <-chan *ssh.Request) {
-							for req := range in {
-								executeServerCommand(ch, req)
-							}
-						}(ch, requests)
-					}(chanReq)
-				}
-				sshConn.Close()
-			}()
-		}
-	}()
-	return soc.Addr().String(), nil
-}
-
-// This executes the commands requested to be run on the server.
-// Used to test the SSH secret backend.
-func executeServerCommand(ch ssh.Channel, req *ssh.Request) {
-	command := string(req.Payload[4:])
-	cmd := exec.Command("/bin/bash", []string{"-c", command}...)
-	req.Reply(true, nil)
-
-	cmd.Stdout = ch
-	cmd.Stderr = ch
-	cmd.Stdin = ch
-
-	err := cmd.Start()
-	if err != nil {
-		panic(fmt.Sprintf("Error starting the command: '%s'", err))
-	}
-
-	go func() {
-		_, err := cmd.Process.Wait()
-		if err != nil {
-			panic(fmt.Sprintf("Error while waiting for command to finish:'%s'", err))
-		}
-		ch.Close()
-	}()
-}
 
 // This adds a credential backend for the test core. This needs to be
 // invoked before the test core is created.
