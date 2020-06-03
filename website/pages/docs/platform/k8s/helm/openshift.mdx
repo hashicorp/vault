@@ -150,11 +150,7 @@ The following creates a Vault cluster using the Raft integrated storage backend.
 Install the latest Vault Helm chart in HA Raft mode:
 
 ```shell-session
-$ helm install vault hashicorp/vault --set "global.openshift=true"
-```
-
-```shell
-helm install vault hashicorp/vault \
+$ helm install vault hashicorp/vault \
   --set='global.openshift=true' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
@@ -162,35 +158,35 @@ helm install vault hashicorp/vault \
 
 Next, initialize and unseal `vault-0` pod:
 
-```shell
-oc exec -ti vault-0 -- vault operator init
-oc exec -ti vault-0 -- vault operator unseal
+```shell-session
+$ oc exec -ti vault-0 -- vault operator init
+$ oc exec -ti vault-0 -- vault operator unseal
 ```
 
 Finally, join the remaining pods to the Raft cluster and unseal them.  The pods
 will need to communicate directly so we'll configure the pods to use the internal
 service provided by the Helm chart:
 
-```shell
-oc exec -ti vault-1 -- vault operator raft join http://vault-0.vault-internal:8200
-oc exec -ti vault-1 -- vault operator unseal
+```shell-session
+$ oc exec -ti vault-1 -- vault operator raft join http://vault-0.vault-internal:8200
+$ oc exec -ti vault-1 -- vault operator unseal
 
-oc exec -ti vault-2 -- vault operator raft join http://vault-0.vault-internal:8200
-oc exec -ti vault-2 -- vault operator unseal
+$ oc exec -ti vault-2 -- vault operator raft join http://vault-0.vault-internal:8200
+$ oc exec -ti vault-2 -- vault operator unseal
 ```
 
 To verify if the Raft cluster has successfully been initialized, run the following.
 
 First, login using the `root` token on the `vault-0` pod:
 
-```shell
-oc exec -ti vault-0 -- vault login
+```shell-session
+$ oc exec -ti vault-0 -- vault login
 ```
 
 Next, list all the raft peers:
 
-```shell
-oc exec -ti vault-0 -- vault operator raft list-peers
+```shell-session
+$ oc exec -ti vault-0 -- vault operator raft list-peers
 
 Node                                    Address                        State       Voter
 ----                                    -------                        -----       -----
