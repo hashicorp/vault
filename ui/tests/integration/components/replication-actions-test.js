@@ -67,7 +67,7 @@ module('Integration | Component | replication actions', function(hooks) {
       'disable',
       'Disable Replication',
       async function() {
-        fillIn('[data-test-confirmation-modal-input]', 'Disaster Recovery');
+        fillIn('[data-test-confirmation-modal-input]', 'Performance');
       },
       ['disable', 'secondary'],
       false,
