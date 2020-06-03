@@ -17,6 +17,9 @@ const disableReplication = async (type, assert) => {
   if (findAll('[data-test-replication-link="manage"]').length) {
     await click('[data-test-replication-link="manage"]');
     await click('[data-test-disable-replication] button');
+
+    const typeDisplay = type === 'dr' ? 'Disaster Recovery' : 'Performance';
+    await fillIn('[data-test-confirmation-modal-input]', typeDisplay);
     await click('[data-test-confirm-button]');
     if (assert) {
       assert.equal(currentURL(), `/vault/replication`, 'redirects to the replication page');
