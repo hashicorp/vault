@@ -44,7 +44,7 @@ export default Component.extend({
     const { title, state, connection } = this;
 
     // only show errors on the state card
-    if (title === 'States') {
+    if (title === 'Status') {
       const currentClusterisOk = clusterStates([state]).isOk;
       const primaryIsOk = clusterStates([connection]).isOk;
       return !(currentClusterisOk && primaryIsOk);

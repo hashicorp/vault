@@ -1,6 +1,6 @@
 <div class="selectable-card is-rounded card-container {{if hasErrorClass "has-border-danger"}}" data-test-replication-secondary-card>
-  {{!-- Check if State or WAL Card --}}
-  {{#if (eq title "States")}}
+  {{!-- Check if Status or Primary Cluster Card --}}
+  {{#if (eq title "Status")}}
     <h3 class="title is-5 grid-item-top-left card-title">{{title}}</h3>
     <div class="grid-item-left">
       {{#if (get (cluster-states state) "isOk")}}
@@ -43,14 +43,23 @@
         </ToolTip>
       {{/if}}
     </h2>
-    <h2 class="title is-3 grid-item-right-bottom" data-test-connection>{{connection}}</h2>
-  {{else}}
-    <h3 class="title is-5 grid-item-top-left card-title">{{title}}</h3>
-    <div class="grid-item-left">
-      <h6 class="title is-6">last_remote_wal</h6>
-      <p class="has-text-grey is-size-8">The last WAL index that the secondary received from the primary. Updates every 10 seconds.</p>
+    <h2 class="title is-3 grid-item-right-bottom" data-test-connection>
+     {{connection}}
+    </h2>
+    <div class="grid-item-full-bottom">
+      <h6 class="title is-6">
+        last_remote_wal
+      </h6>
+      <p class="has-text-grey is-size-8">
+        The last WAL index that the secondary received from the primary. Updates every 10 seconds.
+      </p>
+      <h2 class="title is-3" data-test-lastRemoteWAL>
+        {{format-number lastRemoteWAL}}
+      </h2>
     </div>
-    <div class="grid-item-right">
+  {{else}}
+    <h3 class="title is-5">{{title}}</h3>
+    <div class="grid-item-full-bottom">
       <h6 class="title is-6">known_primary_cluster_addr</h6>
       <p class="has-text-grey">A list of all the nodes in the primary's cluster. This is updated every ten seconds.</p>
       <div class="info-table-row">
@@ -61,10 +70,6 @@
             <code class="is-word-break has-text-black">{{clusterAddr}}</code>
           </div>
       {{/each}}
-    </div>
-    <h2 class="title is-3 grid-item-left-bottom" data-test-lastRemoteWAL>{{format-number lastRemoteWAL}}</h2>
-    <div class="grid-item-right-bottom">
-        {{!-- Empty --}}
     </div>
   {{/if}}
 </div>
