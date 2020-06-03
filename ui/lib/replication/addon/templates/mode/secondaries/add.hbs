@@ -75,7 +75,8 @@
     </div>
   {{/if}}
 </form>
-  {{#if isModalActive}}
+
+{{#if isModalActive}}
   <Modal @title="Copy your token" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
     <section class="modal-card-body">
       <div class="box is-shadowless is-fullwidth is-sideless">
@@ -95,7 +96,7 @@
             value=ttl}}
           {{info-table-row
             label="Expires"
-            value="REPLACE WITH Expires"}}
+            value=expirationDate}}
         </div>
       </div>
     </section>
@@ -106,4 +107,4 @@
       </CopyButton>
     </footer>
   </Modal>
-  {{/if}}
+{{/if}}

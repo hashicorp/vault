@@ -4,6 +4,7 @@ import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
 import { copy } from 'ember-copy';
 import { resolve } from 'rsvp';
+import { addMinutes } from 'date-fns';
 
 const DEFAULTS = {
   token: null,
@@ -20,6 +21,7 @@ const DEFAULTS = {
 
 export default Controller.extend(copy(DEFAULTS, true), {
   isModalActive: false,
+  expirationDate: null,
   store: service(),
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),
@@ -64,6 +66,11 @@ export default Controller.extend(copy(DEFAULTS, true), {
         primary_api_addr: null,
         primary_cluster_addr: null,
       });
+
+      // calculate expiration date by adding TTL to creation time
+      const expirationDate = addMinutes(resp.wrap_info.creation_time, parseInt(this.ttl, 10));
+      this.set('expirationDate', expirationDate);
+
       // open modal
       this.toggleProperty('isModalActive');
       return cluster.reload();
