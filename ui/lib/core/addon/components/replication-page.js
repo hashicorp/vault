@@ -131,9 +131,12 @@ export default Component.extend({
     return false;
   }),
   message: computed('model.{anyReplicationEnabled}', 'formattedReplicationMode', function() {
+    let msg;
     if (this.model.anyReplicationEnabled) {
-      return `This ${this.formattedReplicationMode} secondary has not been enabled.  You can do so from the ${this.formattedReplicationMode} Primary.`;
+      msg = `This ${this.formattedReplicationMode} secondary has not been enabled.  You can do so from the ${this.formattedReplicationMode} Primary.`;
+    } else {
+      msg = `This cluster has not been enabled as a ${this.formattedReplicationMode} Secondary. You can do so by enabling replication and adding a secondary from the ${this.formattedReplicationMode} Primary.`;
     }
-    return `This cluster has not been enabled as a ${this.formattedReplicationMode} Secondary. You can do so by enabling replication and adding a secondary from the ${this.formattedReplicationMode} Primary.`;
+    return msg;
   }),
 });

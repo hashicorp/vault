@@ -4,6 +4,7 @@ import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 const DATA = {
+  anyReplicationEnabled: true,
   dr: {
     mode: 'secondary',
     rm: {
@@ -39,6 +40,20 @@ module('Integration | Enterprise | Component | replication-header', function(hoo
 
     assert.dom('[data-test-secondaryId]').includesText(SECONDARY_ID, `shows the correct secondaryId value`);
     assert.dom('[data-test-mode]').includesText('secondary', `shows the correct mode value`);
+  });
+
+  test('it does not render mode or secondaryId when replication is not enabled', async function(assert) {
+    const notEnabled = { anyReplicationEnabled: false };
+    const noId = null;
+    this.set('data', notEnabled);
+    this.set('secondaryId', noId);
+
+    await render(
+      hbs`<ReplicationHeader @data={{data}} @isSecondary={{isSecondary}} @title={{title}} @secondaryId={{secondaryId}}/>`
+    );
+
+    assert.dom('[data-test-secondaryId]').doesNotExist();
+    assert.dom('[data-test-mode]').doesNotExist();
   });
 
   test('it does not show tabs when showTabs is not set', async function(assert) {

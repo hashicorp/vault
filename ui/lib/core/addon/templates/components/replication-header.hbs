@@ -35,12 +35,14 @@
   <p.levelLeft>
     <h1 class="title is-3">
       {{title}}
-      <span class="tag is-light has-text-grey-dark" data-test-mode>
-        {{if isSecondary 'secondary' 'primary'}}
-      </span>
-      <span class="tag is-light has-text-grey-dark" data-test-secondaryId>
-        {{secondaryId}}
-      </span>
+      {{#if data.anyReplicationEnabled}}
+        <span class="tag is-light has-text-grey-dark" data-test-mode>
+          {{if isSecondary 'secondary' 'primary'}}
+        </span>
+        <span class="tag is-light has-text-grey-dark" data-test-secondaryId>
+          {{secondaryId}}
+        </span>
+      {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
