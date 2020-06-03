@@ -75,3 +75,35 @@
     </div>
   {{/if}}
 </form>
+  {{#if isModalActive}}
+  <Modal @title="Copy your token" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
+    <section class="modal-card-body">
+      <div class="box is-shadowless is-fullwidth is-sideless">
+        <h2 class="title is-6">Activation token</h2>
+        <div class="copy-text level">
+          <div class="is-fullwidth">
+            <textarea readonly value={{token}} class="textarea level-left"/>
+          </div>
+          <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy" @clipboardText={{token}}
+            @buttonType="button" @success={{action (set-flash-message 'Token copied!')}}>
+            <Icon @glyph="copy-action" aria-label="Copy" />
+          </CopyButton>
+        </div>
+        <div class="has-top-margin-xl has-bottom-margin-s">
+          {{info-table-row
+            label="TTL"
+            value=ttl}}
+          {{info-table-row
+            label="Expires"
+            value="REPLACE WITH Expires"}}
+        </div>
+      </div>
+    </section>
+    <footer class="modal-card-foot">
+      <CopyButton class="button is-primary copy-close" data-test-button="modal-copy-close" @clipboardText={{token}}
+        @buttonType="button" @type="copy" @success={{action "toggleModal" "Token copied!"}}>
+        Copy &amp; Close
+      </CopyButton>
+    </footer>
+  </Modal>
+  {{/if}}

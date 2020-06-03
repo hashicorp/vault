@@ -19,9 +19,11 @@ const DEFAULTS = {
 };
 
 export default Controller.extend(copy(DEFAULTS, true), {
+  isModalActive: false,
   store: service(),
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),
+  flashMessages: service(),
 
   submitError(e) {
     if (e.errors) {
@@ -62,6 +64,8 @@ export default Controller.extend(copy(DEFAULTS, true), {
         primary_api_addr: null,
         primary_cluster_addr: null,
       });
+      // open modal
+      this.toggleProperty('isModalActive');
       return cluster.reload();
     }
     this.reset();
@@ -105,7 +109,13 @@ export default Controller.extend(copy(DEFAULTS, true), {
     onSubmit(/*action, mode, data, event*/) {
       return this.submitHandler(...arguments);
     },
-
+    toggleModal(successMessage) {
+      if (!!successMessage && typeof successMessage === 'string') {
+        this.get('flashMessages').success(successMessage);
+      }
+      this.toggleProperty('isModalActive');
+      this.transitionToRoute('mode.secondaries');
+    },
     clear() {
       this.reset();
       this.setProperties({

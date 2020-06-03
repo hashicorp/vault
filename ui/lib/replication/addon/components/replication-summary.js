@@ -70,7 +70,7 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
     try {
       yield this.submitHandler.perform(...arguments);
     } catch (e) {
-      // TODO handle error
+      // do not handle error
     }
   }),
   actions: {
