@@ -239,9 +239,8 @@ func migrateFromShamirToTransit_Post14(
 		}
 		cluster.RestartCore(t, i, opts)
 
-		client := cluster.Cores[i].Client
-		client.SetToken(rootToken)
-		unsealMigrate(t, client, recoveryKeys, true)
+		cluster.Cores[i].Client.SetToken(rootToken)
+		unsealMigrate(t, cluster.Cores[i].Client, recoveryKeys, true)
 		time.Sleep(5 * time.Second)
 	}
 
@@ -256,25 +255,28 @@ func migrateFromShamirToTransit_Post14(
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	if leaderIdx == 0 {
+		t.Fatalf("Core 0 cannot be the leader right now")
+	}
 	leader := cluster.Cores[leaderIdx]
-	client := leader.Client
-	client.SetToken(rootToken)
+	leader.Client.SetToken(rootToken)
 
 	// Wait for migration to finish.  Sadly there is no callback, and the
 	// test will fail later on if we don't do this.
 	// TODO -- actually there is a callback, we can monitor this and await
-	time.Sleep(10 * time.Second)
+	time.Sleep(60 * time.Second)
 
 	// Bring core 0 back up
-	// TODO -- make sure its not migrating
 	cluster.RestartCore(t, 0, opts)
+	cluster.Cores[0].Client.SetToken(rootToken)
+	unsealMigrate(t, cluster.Cores[0].Client, recoveryKeys, true)
+	time.Sleep(5 * time.Second)
 
 	// TODO
 	// if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
 
 	// Read the secret
-	secret, err := client.Logical().Read("secret/foo")
+	secret, err := leader.Client.Logical().Read("secret/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -330,6 +332,30 @@ func unsealMigrate(t *testing.T, client *api.Client, keys [][]byte, transitServe
 				if err == nil {
 					t.Fatal("expected error due to transit server being stopped.")
 				}
+			}
+			break
+		}
+	}
+}
+
+func unseal(t *testing.T, client *api.Client, keys [][]byte) {
+
+	for i, key := range keys {
+
+		resp, err := client.Sys().UnsealWithOptions(&api.UnsealOpts{
+			Key: base64.StdEncoding.EncodeToString(key),
+		})
+		if i < keyThreshold-1 {
+			// Not enough keys have been provided yet.
+			if err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if resp == nil || resp.Sealed {
+				t.Fatalf("expected unsealed state; got %#v", resp)
 			}
 			break
 		}
