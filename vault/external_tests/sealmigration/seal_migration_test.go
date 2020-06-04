@@ -210,13 +210,8 @@ func testSealMigrationShamirToTransit_Post14(
 
 	storage.Cleanup(t, cluster)
 	cluster.Cleanup()
-	println("--------------------------------------------------------------")
-	println(">>> sleep")
-	time.Sleep(15 * time.Second)
 
 	// Run the backend with transit.
-	println("--------------------------------------------------------------")
-	println(">>> runTransit")
 	runTransit(t, logger, storage, basePort, cluster.RootToken, transitSeal)
 }
 
