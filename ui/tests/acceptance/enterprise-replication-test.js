@@ -81,6 +81,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-replication-link="secondaries"]');
     await click('[data-test-secondary-add]');
     await fillIn('[data-test-replication-secondary-id]', secondaryName);
+
     await click('#deny');
     await clickTrigger();
     mountPath = searchSelect.options.objectAt(0).text;
@@ -184,6 +185,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-replication-link="secondaries"]');
     await click('[data-test-secondary-add]');
     await fillIn('[data-test-replication-secondary-id]', secondaryName);
+
     await click('[data-test-secondary-add]');
     await pollCluster(this.owner);
     await pollCluster(this.owner);
