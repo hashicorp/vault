@@ -334,7 +334,8 @@ func pathRoles(b *backend) *framework.Path {
                                 `,
 			},
 			"algorithm_signer": &framework.FieldSchema{
-				Type: framework.TypeString,
+				Type:    framework.TypeString,
+				Default: ssh.SigAlgoRSA,
 				Description: `
 				When supplied, this value specifies a signing algorithm for the key.  Possible values: 
 				ssh-rsa, rsa-sha2-256, rsa-sha2-512.
@@ -481,8 +482,6 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 		algorithmSigner := d.Get("algorithm_signer").(string)
 		switch algorithmSigner {
 		case ssh.SigAlgoRSA, ssh.SigAlgoRSASHA2256, ssh.SigAlgoRSASHA2512:
-		case "":
-			algorithmSigner = ssh.SigAlgoRSA
 		default:
 			return nil, fmt.Errorf("unknown algorithm signer %q", algorithmSigner)
 		}

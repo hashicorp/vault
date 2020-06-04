@@ -108,9 +108,12 @@ SeKWrUkryx46LVf6NMhkyYmRqCEjBwfOozzezi5WbiJy6nn54GQt
 	// testPublicKeyInstall is the public key that is installed in the
 	// admin account's authorized_keys
 	testPublicKeyInstall = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9i+hFxZHGo6KblVme4zrAcJstR6I0PTJozW286X4WyvPnkMYDQ5mnhEYC7UWCvjoTWbPEXPX7NjhRtwQTGD67bV+lrxgfyzK1JZbUXK4PwgKJvQD+XyyWYMzDgGSQY61KUSqCxymSm/9NZkPU3ElaQ9xQuTzPpztM4ROfb8f2Yv6/ZESZsTo0MTAkp8Pcy+WkioI/uJ1H7zqs0EA4OMY4aDJRu0UtP4rTVeYNEAuRXdX+eH4aW3KMvhzpFTjMbaJHJXlEeUm2SaX5TNQyTOvghCeQILfYIL/Ca2ij8iwCmulwdV6eQGfd4VDu40PvSnmfoaE38o6HaPnX0kUcnKiT"
+
+	dockerImageTagSupportsRSA   = "8.1_p1-r0-ls20"
+	dockerImageTagSupportsNoRSA = "8.3_p1-r0-ls21"
 )
 
-func prepareTestContainer(t *testing.T, caPublicKeyPEM string) (func(), string) {
+func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), string) {
 	pool, err := dockertest.NewPool("")
 	if err != nil {
 		t.Fatalf("Failed to connect to docker: %s", err)
@@ -121,9 +124,12 @@ func prepareTestContainer(t *testing.T, caPublicKeyPEM string) (func(), string) 
 		t.Fatal(err)
 	}
 
+	if tag == "" {
+		tag = dockerImageTagSupportsNoRSA
+	}
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "linuxserver/openssh-server",
-		Tag:        "8.3_p1-r0-ls21",
+		Tag:        tag,
 		Env: []string{
 			"DOCKER_MODS=linuxserver/mods:openssh-server-openssh-client",
 			"PUBLIC_KEY=" + testPublicKeyInstall,
@@ -148,6 +154,7 @@ func prepareTestContainer(t *testing.T, caPublicKeyPEM string) (func(), string) 
 		// Install util-linux for non-busybox flock that supports timeout option
 		return testSSH(t, "vaultssh", sshAddress, ssh.PublicKeys(signer), fmt.Sprintf(`
 			set -e; 
+			sudo ln -s /config /home/vaultssh
 			sudo apk add util-linux;
 			echo "LogLevel DEBUG" | sudo tee -a /config/ssh_host_keys/sshd_config;
 			echo "TrustedUserCAKeys /config/ssh_host_keys/trusted-user-ca-keys.pem" | sudo tee -a /config/ssh_host_keys/sshd_config;
@@ -400,7 +407,7 @@ func TestSSHBackend_RoleList(t *testing.T) {
 }
 
 func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
-	cleanup, sshAddress := prepareTestContainer(t, "")
+	cleanup, sshAddress := prepareTestContainer(t, "", "")
 	defer cleanup()
 
 	host, port, err := net.SplitHostPort(sshAddress)
@@ -504,7 +511,7 @@ func TestSSHBackend_NamedKeysCrud(t *testing.T) {
 }
 
 func TestSSHBackend_OTPCreate(t *testing.T) {
-	cleanup, sshAddress := prepareTestContainer(t, "")
+	cleanup, sshAddress := prepareTestContainer(t, "", "")
 	defer func() {
 		if !t.Failed() {
 			cleanup()
@@ -624,7 +631,7 @@ func TestSSHBackend_CredsForZeroAddressRoles_otp(t *testing.T) {
 }
 
 func TestSSHBackend_CredsForZeroAddressRoles_dynamic(t *testing.T) {
-	cleanup, sshAddress := prepareTestContainer(t, "")
+	cleanup, sshAddress := prepareTestContainer(t, "", "")
 	defer cleanup()
 
 	host, port, err := net.SplitHostPort(sshAddress)
@@ -661,7 +668,28 @@ func TestSSHBackend_CredsForZeroAddressRoles_dynamic(t *testing.T) {
 }
 
 func TestSSHBackend_CA(t *testing.T) {
-	cleanup, sshAddress := prepareTestContainer(t, testCAPublicKey)
+	testCases := []struct {
+		name        string
+		tag         string
+		algoSigner  string
+		expectError bool
+	}{
+		{"defaultSignerSSHDSupport", dockerImageTagSupportsRSA, "", false},
+		{"rsaSignerSSHDSupport", dockerImageTagSupportsRSA, ssh.SigAlgoRSA, false},
+		{"rsa2SignerSSHDSupport", dockerImageTagSupportsRSA, ssh.SigAlgoRSASHA2256, false},
+		{"rsa2SignerNoSSHDSupport", dockerImageTagSupportsNoRSA, ssh.SigAlgoRSASHA2256, false},
+		{"defaultSignerNoSSHDSupport", dockerImageTagSupportsNoRSA, "", true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			testSSHBackend_CA(t, tc.tag, tc.algoSigner, tc.expectError)
+		})
+	}
+}
+
+func testSSHBackend_CA(t *testing.T, dockerImageTag, algorithmSigner string, expectError bool) {
+	cleanup, sshAddress := prepareTestContainer(t, dockerImageTag, testCAPublicKey)
 	defer cleanup()
 
 	config := logical.TestBackendConfig()
@@ -701,34 +729,30 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 `
 	testKeyToSignPublic := `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDCfVXbF38SAlchjnd8FO1zbST9qN6SpCeC+SkVLA0dbrdc0RArwuUU4LIZeiN70NQbGdizcX+iF+wEFaQs19Tt+IQ11IkvWluQCAn7a6FX2wtmO9iGKStdajIlcsMp9jXYuOlwFLYd4sxPTiVpn/FIms4EQkcbMfKvbBQ7Q1RBRA9Q4MAWGccqC+8DhS7v1RiBx1OEXjDzf4QCcTgnMFkwo8yPPLi7ULRH8ugPwO5qkfBfo0ZZ0RS9Rln5dFwhZ4I69HSd6oYFEffmTUy/uTrl3uSQTS68zlnfp6vDe12izPE9h/sAqc7UOl5Ta7AxzKbrE3B/DKcqOEuov8yCLi5H `
 
+	roleOptions := map[string]interface{}{
+		"allow_user_certificates": true,
+		"allowed_users":           "*",
+		"default_extensions": []map[string]string{
+			{
+				"permit-pty": "",
+			},
+		},
+		"key_type":     "ca",
+		"default_user": testUserName,
+		"ttl":          "30m0s",
+	}
+	if algorithmSigner != "" {
+		roleOptions["algorithm_signer"] = algorithmSigner
+	}
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			logicaltest.TestStep{
-				Operation: logical.UpdateOperation,
-				Path:      "config/ca",
-				Data: map[string]interface{}{
-					"public_key":  testCAPublicKey,
-					"private_key": testCAPrivateKey,
-				},
-			},
-			testRoleWrite(t, "testcarole", map[string]interface{}{
-				"allow_user_certificates": true,
-				"allowed_users":           "*",
-				"default_extensions": []map[string]string{
-					{
-						"permit-pty": "",
-					},
-				},
-				"key_type":         "ca",
-				"default_user":     testUserName,
-				"ttl":              "30m0s",
-				"algorithm_signer": ssh.SigAlgoRSASHA2256,
-			}),
-
+			configCaStep(),
+			testRoleWrite(t, "testcarole", roleOptions),
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/testcarole",
+				ErrorOk:   expectError,
 				Data: map[string]interface{}{
 					"public_key":       testKeyToSignPublic,
 					"valid_principals": testUserName,
@@ -755,7 +779,11 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 						return err
 					}
 
-					if err := testSSH(t, testUserName, sshAddress, ssh.PublicKeys(certSigner), "date"); err != nil {
+					err = testSSH(t, testUserName, sshAddress, ssh.PublicKeys(certSigner), "date")
+					if expectError && err == nil {
+						return fmt.Errorf("expected error but got none")
+					}
+					if !expectError && err != nil {
 						return err
 					}
 
