@@ -42,7 +42,11 @@ func testSealMigrationTransitToShamir_Pre14(
 	tss.MakeKey(t, "transit-seal-key")
 
 	// Initialize the backend with transit.
-	rootToken, recoveryKeys, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
+	cluster, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
+	rootToken, recoveryKeys := cluster.RootToken, cluster.RecoveryKeys
+	cluster.EnsureCoresSealed(t)
+	storage.Cleanup(t, cluster)
+	cluster.Cleanup()
 
 	// Migrate the backend from transit to shamir
 	migrateFromTransitToShamir_Pre14(t, logger, storage, basePort, tss, transitSeal, rootToken, recoveryKeys)

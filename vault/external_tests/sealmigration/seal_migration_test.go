@@ -521,7 +521,7 @@ func runShamir(
 func initializeTransit(
 	t *testing.T, logger hclog.Logger,
 	storage teststorage.ReusableStorage, basePort int,
-	tss *sealhelper.TransitSealServer) (string, [][]byte, vault.Seal) {
+	tss *sealhelper.TransitSealServer) (*vault.TestCluster, *vault.TestClusterOptions, vault.Seal) {
 
 	var transitSeal vault.Seal
 
@@ -544,10 +544,6 @@ func initializeTransit(
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
 	cluster.Start()
-	defer func() {
-		storage.Cleanup(t, cluster)
-		cluster.Cleanup()
-	}()
 
 	leader := cluster.Cores[0]
 	client := leader.Client
@@ -570,10 +566,7 @@ func initializeTransit(
 		t.Fatal(err)
 	}
 
-	// Seal the cluster
-	cluster.EnsureCoresSealed(t)
-
-	return cluster.RootToken, cluster.RecoveryKeys, transitSeal
+	return cluster, &opts, transitSeal
 }
 
 func runTransit(
@@ -641,37 +634,42 @@ func runTransit(
 
 //--------------------------------------------------------------
 
-//func TestShamir(t *testing.T) {
-//	testVariousBackends(t, testShamir, true)
-//}
-//
-//func testShamir(
-//	t *testing.T, logger hclog.Logger,
-//	storage teststorage.ReusableStorage, basePort int) {
-//
-//	cluster, _ := initializeShamir(t, logger, storage, basePort)
-//	rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
-//	cluster.EnsureCoresSealed(t)
-//
-//	storage.Cleanup(t, cluster)
-//	cluster.Cleanup()
-//
-//	runShamir(t, logger, storage, basePort, rootToken, barrierKeys)
-//}
-//
-//func TestTransit(t *testing.T) {
-//	testVariousBackends(t, testTransit, true)
-//}
-//
-//func testTransit(
-//	t *testing.T, logger hclog.Logger,
-//	storage teststorage.ReusableStorage, basePort int) {
-//
-//	tss := sealhelper.NewTransitSealServer(t)
-//	defer tss.Cleanup()
-//	tss.MakeKey(t, "transit-seal-key")
-//
-//	rootToken, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
-//
-//	runTransit(t, logger, storage, basePort, rootToken, transitSeal)
-//}
+func TestShamir(t *testing.T) {
+	testVariousBackends(t, testShamir, true)
+}
+
+func testShamir(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int) {
+
+	cluster, _ := initializeShamir(t, logger, storage, basePort)
+	rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
+
+	cluster.EnsureCoresSealed(t)
+	storage.Cleanup(t, cluster)
+	cluster.Cleanup()
+
+	runShamir(t, logger, storage, basePort, rootToken, barrierKeys)
+}
+
+func TestTransit(t *testing.T) {
+	testVariousBackends(t, testTransit, true)
+}
+
+func testTransit(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int) {
+
+	tss := sealhelper.NewTransitSealServer(t)
+	defer tss.Cleanup()
+	tss.MakeKey(t, "transit-seal-key")
+
+	cluster, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
+	rootToken := cluster.RootToken
+
+	cluster.EnsureCoresSealed(t)
+	storage.Cleanup(t, cluster)
+	cluster.Cleanup()
+
+	runTransit(t, logger, storage, basePort, rootToken, transitSeal)
+}
