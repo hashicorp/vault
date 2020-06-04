@@ -123,6 +123,7 @@ func prepareTestContainer(t *testing.T, caPublicKeyPEM string) (func(), string) 
 
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "linuxserver/openssh-server",
+		Tag:        "8.3_p1-r0-ls21",
 		Env: []string{
 			"DOCKER_MODS=linuxserver/mods:openssh-server-openssh-client",
 			"PUBLIC_KEY=" + testPublicKeyInstall,
@@ -399,7 +400,7 @@ func TestSSHBackend_RoleList(t *testing.T) {
 }
 
 func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
-	cleanup, sshAddress := prepareTestContainer(t)
+	cleanup, sshAddress := prepareTestContainer(t, "")
 	defer cleanup()
 
 	host, port, err := net.SplitHostPort(sshAddress)
@@ -719,9 +720,10 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 						"permit-pty": "",
 					},
 				},
-				"key_type":     "ca",
-				"default_user": testUserName,
-				"ttl":          "30m0s",
+				"key_type":         "ca",
+				"default_user":     testUserName,
+				"ttl":              "30m0s",
+				"algorithm_signer": ssh.SigAlgoRSASHA2256,
 			}),
 
 			logicaltest.TestStep{
