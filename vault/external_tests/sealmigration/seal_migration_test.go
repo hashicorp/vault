@@ -338,29 +338,29 @@ func unsealMigrate(t *testing.T, client *api.Client, keys [][]byte, transitServe
 	}
 }
 
-func unseal(t *testing.T, client *api.Client, keys [][]byte) {
-
-	for i, key := range keys {
-
-		resp, err := client.Sys().UnsealWithOptions(&api.UnsealOpts{
-			Key: base64.StdEncoding.EncodeToString(key),
-		})
-		if i < keyThreshold-1 {
-			// Not enough keys have been provided yet.
-			if err != nil {
-				t.Fatal(err)
-			}
-		} else {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if resp == nil || resp.Sealed {
-				t.Fatalf("expected unsealed state; got %#v", resp)
-			}
-			break
-		}
-	}
-}
+//func unseal(t *testing.T, client *api.Client, keys [][]byte) {
+//
+//	for i, key := range keys {
+//
+//		resp, err := client.Sys().UnsealWithOptions(&api.UnsealOpts{
+//			Key: base64.StdEncoding.EncodeToString(key),
+//		})
+//		if i < keyThreshold-1 {
+//			// Not enough keys have been provided yet.
+//			if err != nil {
+//				t.Fatal(err)
+//			}
+//		} else {
+//			if err != nil {
+//				t.Fatal(err)
+//			}
+//			if resp == nil || resp.Sealed {
+//				t.Fatalf("expected unsealed state; got %#v", resp)
+//			}
+//			break
+//		}
+//	}
+//}
 
 // verifyBarrierConfig verifies that a barrier configuration is correct.
 func verifyBarrierConfig(t *testing.T, cfg *vault.SealConfig, sealType string, shares, threshold, stored int) {
@@ -459,8 +459,7 @@ func runShamir(
 	// Unseal
 	cluster.BarrierKeys = barrierKeys
 	if storage.IsRaft {
-		for i, core := range cluster.Cores {
-			fmt.Printf(">>> unsealing %d\n", i)
+		for _, core := range cluster.Cores {
 			cluster.UnsealCore(t, core)
 		}
 		// This is apparently necessary for the raft cluster to get itself

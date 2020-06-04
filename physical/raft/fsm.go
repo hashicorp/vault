@@ -101,7 +101,6 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 	}
 
 	dbPath := filepath.Join(path, "vault.db")
-	fmt.Printf("NewFSM: %s\n", dbPath)
 
 	boltDB, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {

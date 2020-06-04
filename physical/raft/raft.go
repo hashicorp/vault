@@ -342,8 +342,6 @@ func (b *RaftBackend) Close() error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	fmt.Printf("(b *RaftBackend) Close() aaa %s\n", b.fsm.path)
-
 	if err := b.fsm.db.Close(); err != nil {
 		return err
 	}

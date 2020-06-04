@@ -114,7 +114,6 @@ func MakeReusableRaftStorage(
 
 // CloseRaftStorage closes open files being used by raft.
 func CloseRaftStorage(t testing.T, cluster *vault.TestCluster, idx int) {
-	fmt.Printf("CloseRaftStorage %d\n", idx)
 	raftStorage := cluster.Cores[idx].UnderlyingRawStorage.(*raft.RaftBackend)
 	if err := raftStorage.Close(); err != nil {
 		t.Fatal(err)
@@ -147,7 +146,6 @@ func makeReusableRaftBackend(
 		t.Fatal(err)
 	}
 
-	fmt.Printf("makeReusableRaftBackend %T %d\n", addressProvider, coreIdx)
 	backend.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
 
 	return &vault.PhysicalBackendBundle{
