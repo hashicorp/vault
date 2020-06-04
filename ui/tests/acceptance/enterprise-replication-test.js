@@ -96,13 +96,13 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     date.setMinutes(date.getMinutes() + 30); // add default 30 min TTL to current date to return expires
     const dateFromHelper = dateFormat([date, 'MMM DD, YYYY hh:mm:ss A']);
     // because timestamp might be off by a 1 sec due to different in exp from token vs. adding 30 min, checking the string before the seconds.
-    const fistSixDateFromHelper = dateFromHelper.slice(0, 18);
+    const shortendedDateFromHelper = dateFromHelper.slice(0, 18);
     const dateDisplayed = document.querySelector('[data-test-row-value="Expires"]').innerText;
-    const fistSixDateDisplay = dateDisplayed.slice(0, 18);
+    const shortendedDateDisplay = dateDisplayed.slice(0, 18);
 
     assert.equal(
-      firstSixDateDisplay,
-      firstSixDateFromHelper,
+      shortendedDateFromHelper,
+      shortendedDateDisplay,
       'shows the correct expiration date and in the correct format'
     );
 
