@@ -1,7 +1,13 @@
 package vault
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"sort"
 	"testing"
+	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	ldapcred "github.com/hashicorp/vault/builtin/credential/ldap"
@@ -148,4 +154,148 @@ func TestIdentity_BackendTemplating(t *testing.T) {
 			t.Fatalf("got %q, expected %q", out, tCase.expected)
 		}
 	}
+}
+
+func TestDynamicSystemView_GeneratePasswordFromPolicy_successful(t *testing.T) {
+	policyName := "testpolicy"
+	rawPolicy := map[string]interface{}{
+		"policy": `length = 20
+rule "charset" {
+	charset = "abcdefghijklmnopqrstuvwxyz"
+	min_chars = 1
+}
+rule "charset" {
+	charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	min_chars = 1
+}
+rule "charset" {
+	charset = "0123456789"
+	min_chars = 1
+}`,
+	}
+	marshalledPolicy, err := json.Marshal(rawPolicy)
+	if err != nil {
+		t.Fatalf("Unable to set up test: unable to marshal raw policy to JSON: %s", err)
+	}
+
+	testStorage := fakeBarrier{
+		getEntry: &logical.StorageEntry{
+			Key:   getPasswordPolicyKey(policyName),
+			Value: marshalledPolicy,
+		},
+	}
+
+	dsv := dynamicSystemView{
+		core: &Core{
+			systemBarrierView: NewBarrierView(testStorage, "sys/"),
+		},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	runeset := map[rune]bool{}
+	runesFound := []rune{}
+
+	for i := 0; i < 100; i++ {
+		actual, err := dsv.GeneratePasswordFromPolicy(ctx, policyName)
+		if err != nil {
+			t.Fatalf("no error expected, but got: %s", err)
+		}
+		for _, r := range actual {
+			if runeset[r] {
+				continue
+			}
+			runeset[r] = true
+			runesFound = append(runesFound, r)
+		}
+	}
+
+	sort.Sort(runes(runesFound))
+
+	expectedRunes := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+	sort.Sort(runes(expectedRunes)) // Sort it so they can be compared
+
+	if !reflect.DeepEqual(runesFound, expectedRunes) {
+		t.Fatalf("Didn't find all characters from the charset\nActual  : [%s]\nExpected: [%s]", string(runesFound), string(expectedRunes))
+	}
+}
+
+type runes []rune
+
+func (r runes) Len() int           { return len(r) }
+func (r runes) Less(i, j int) bool { return r[i] < r[j] }
+func (r runes) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
+
+func TestDynamicSystemView_GeneratePasswordFromPolicy_failed(t *testing.T) {
+	type testCase struct {
+		policyName string
+		getEntry   *logical.StorageEntry
+		getErr     error
+	}
+
+	tests := map[string]testCase{
+		"no policy name": {
+			policyName: "",
+		},
+		"no policy found": {
+			policyName: "testpolicy",
+			getEntry:   nil,
+			getErr:     nil,
+		},
+		"error retrieving policy": {
+			policyName: "testpolicy",
+			getEntry:   nil,
+			getErr:     fmt.Errorf("a test error"),
+		},
+		"saved policy is malformed": {
+			policyName: "testpolicy",
+			getEntry: &logical.StorageEntry{
+				Key:   getPasswordPolicyKey("testpolicy"),
+				Value: []byte(`{"policy":"asdfahsdfasdf"}`),
+			},
+			getErr: nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			testStorage := fakeBarrier{
+				getEntry: test.getEntry,
+				getErr:   test.getErr,
+			}
+
+			dsv := dynamicSystemView{
+				core: &Core{
+					systemBarrierView: NewBarrierView(testStorage, "sys/"),
+				},
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+			defer cancel()
+			actualPassword, err := dsv.GeneratePasswordFromPolicy(ctx, test.policyName)
+			if err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if actualPassword != "" {
+				t.Fatalf("no password expected, got %s", actualPassword)
+			}
+		})
+	}
+}
+
+type fakeBarrier struct {
+	getEntry *logical.StorageEntry
+	getErr   error
+}
+
+func (b fakeBarrier) Get(context.Context, string) (*logical.StorageEntry, error) {
+	return b.getEntry, b.getErr
+}
+func (b fakeBarrier) List(context.Context, string) ([]string, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) Put(context.Context, *logical.StorageEntry) error {
+	return fmt.Errorf("not implemented")
+}
+func (b fakeBarrier) Delete(context.Context, string) error {
+	return fmt.Errorf("not implemented")
 }

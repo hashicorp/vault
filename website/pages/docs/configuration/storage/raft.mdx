@@ -94,6 +94,16 @@ time. To use Raft for HA coordination users must also use Raft for storage.
   still need to be unsealed manually. See the section below that describes the
   parameters accepted by the `retry_join` stanza.
 
+- `max_entry_size` `(integer: 1048576)` - This configures the maximum number of
+  bytes for a raft entry. It applies to both Put operations and transactions.
+  Any put or transaction operation exceeding this configuration value will cause
+  the respective operation to fail. Raft has a suggested max size of data in a
+  raft log entry. This is based on current architecture, default timing, etc.
+  Integrated storage also uses a chunk size that is the threshold used for
+  breaking a large value into chunks. By default, the chunk size is the same as
+  raft's max size log entry. The default value for this configuration is 1048576
+  -- two times the chunking size.
+
 ### `retry_join` stanza
 
 - `leader_api_addr` `(string: "")` - Address of a possible leader node.

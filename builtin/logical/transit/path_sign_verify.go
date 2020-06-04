@@ -23,6 +23,9 @@ type batchResponseSignItem struct {
 	// request item
 	Signature string `json:"signature,omitempty" mapstructure:"signature"`
 
+	// The key version to be used for encryption
+	KeyVersion int `json:"key_version" mapstructure:"key_version"`
+
 	PublicKey []byte `json:"publickey,omitempty" mapstructure:"publickey"`
 
 	// Error, if set represents a failure encountered while encrypting a
@@ -329,8 +332,14 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		} else if sig == nil {
 			response[i].err = fmt.Errorf("signature could not be computed")
 		} else {
+			keyVersion := ver
+			if keyVersion == 0 {
+				keyVersion = p.LatestVersion
+			}
+
 			response[i].Signature = sig.Signature
 			response[i].PublicKey = sig.PublicKey
+			response[i].KeyVersion = keyVersion
 		}
 	}
 
@@ -346,15 +355,18 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			if response[0].Error != "" {
 				return logical.ErrorResponse(response[0].Error), response[0].err
 			}
+
 			return nil, response[0].err
 		}
+
 		resp.Data = map[string]interface{}{
-			"signature": response[0].Signature,
+			"signature":   response[0].Signature,
+			"key_version": response[0].KeyVersion,
 		}
+
 		if len(response[0].PublicKey) > 0 {
 			resp.Data["public_key"] = response[0].PublicKey
 		}
-
 	}
 
 	p.Unlock()
