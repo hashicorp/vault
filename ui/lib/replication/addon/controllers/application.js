@@ -117,10 +117,23 @@ export default Controller.extend(copy(DEFAULTS, true), {
     onSubmit(/*action, mode, data, event*/) {
       return this.submitHandler(...arguments);
     },
+    copyClose(successMessage) {
+      // separate action for copy & close button so it does not try and use execCommand to copy token to clipboard
+      if (!!successMessage && typeof successMessage === 'string') {
+        this.get('flashMessages').success(successMessage);
+      }
+      this.toggleProperty('isModalActive');
+      this.transitionToRoute('mode.secondaries');
+    },
     toggleModal(successMessage) {
       if (!!successMessage && typeof successMessage === 'string') {
         this.get('flashMessages').success(successMessage);
       }
+      // use copy browser extension to copy token if you close the modal by clicking outside of it.
+      const htmlSelectedToken = document.querySelector('.textarea');
+      htmlSelectedToken.select();
+      document.execCommand('copy');
+
       this.toggleProperty('isModalActive');
       this.transitionToRoute('mode.secondaries');
     },
