@@ -5,6 +5,7 @@ import Controller from '@ember/controller';
 import { copy } from 'ember-copy';
 import { resolve } from 'rsvp';
 import { addMinutes } from 'date-fns';
+import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
 
 const DEFAULTS = {
   token: null,
@@ -67,8 +68,8 @@ export default Controller.extend(copy(DEFAULTS, true), {
         primary_cluster_addr: null,
       });
 
-      // calculate expiration date by adding TTL to creation time
-      const expirationDate = addMinutes(resp.wrap_info.creation_time, parseInt(this.ttl, 10));
+      // decode token and return epoch expiration, convert to timestamp
+      const expirationDate = new Date(decodeConfigFromJWT(this.token).exp * 1000);
       this.set('expirationDate', expirationDate);
 
       // open modal
