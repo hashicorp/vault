@@ -1628,6 +1628,7 @@ func (cluster *TestCluster) RestartCore(t testing.T, idx int, opts *TestClusterO
 	cluster.cleanupFuncs[idx] = cleanup
 	tcc.Core = newCore
 	tcc.CoreConfig = &localConfig
+	tcc.UnderlyingRawStorage = localConfig.Physical
 
 	cluster.setupClusterListener(
 		t, idx, newCore, tcc.CoreConfig,
