@@ -4,6 +4,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
+import { dateFormat } from 'vault/tests/helpers/date-format';
 import { create } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import ss from 'vault/tests/pages/components/search-select';
@@ -80,7 +81,6 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-replication-link="secondaries"]');
     await click('[data-test-secondary-add]');
     await fillIn('[data-test-replication-secondary-id]', secondaryName);
-
     await click('#deny');
     await clickTrigger();
     mountPath = searchSelect.options.objectAt(0).text;
@@ -88,6 +88,21 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-secondary-add]');
 
     await pollCluster(this.owner);
+    // checks on secondary token modal
+    assert.dom('#modal-wormhole').exists();
+
+    const date = new Date();
+    date.setMinutes(date.getMinutes() + 30); // add default 30 min TTL to current date to return expires
+    const dateFromHelper = dateFormat([date, 'MMM DD, YYYY hh:mm:ss A']);
+    const last11DateFromHelper = dateFromHelper.substr(dateFromHelper.length - 11);
+    const dateDisplayed = document.querySelector('[data-test-row-value="Expires"]').innerText;
+    const last11DateDisplay = dateDisplayed.substr(dateDisplayed.length - 11);
+
+    assert.equal(
+      last11DateDisplay,
+      last11DateFromHelper,
+      'shows the correct expiration date and in the correct format'
+    );
 
     // click into the added secondary's mount filter config
     await click('[data-test-replication-link="secondaries"]');
@@ -227,6 +242,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
 
     // enable DR primary replication
     const enableButton = document.querySelector('.is-primary');
+
     await click(enableButton);
     await click('[data-test-replication-enable="true"]');
     await pollCluster(this.owner);

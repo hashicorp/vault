@@ -4,7 +4,6 @@ import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
 import { copy } from 'ember-copy';
 import { resolve } from 'rsvp';
-import { addMinutes } from 'date-fns';
 import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
 
 const DEFAULTS = {
