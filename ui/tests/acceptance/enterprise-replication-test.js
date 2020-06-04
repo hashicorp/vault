@@ -17,6 +17,9 @@ const disableReplication = async (type, assert) => {
   if (findAll('[data-test-replication-link="manage"]').length) {
     await click('[data-test-replication-link="manage"]');
     await click('[data-test-disable-replication] button');
+
+    const typeDisplay = type === 'dr' ? 'Disaster Recovery' : 'Performance';
+    await fillIn('[data-test-confirmation-modal-input]', typeDisplay);
     await click('[data-test-confirm-button]');
     if (assert) {
       assert.equal(currentURL(), `/vault/replication`, 'redirects to the replication page');
@@ -121,7 +124,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
       `/vault/replication/performance/secondaries`,
       'redirects to the secondaries page'
     );
-    // nav back to details page and confirm secondary is in the know secondaries table
+    // nav back to details page and confirm secondary is in the known secondaries table
     await click('[data-test-replication-link="details"]');
     await settled();
     assert
@@ -254,9 +257,10 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-replication-enable]');
     await pollCluster(this.owner);
     await settled();
-    await click('[data-test-replication-link="manage"]');
 
-    let demote = document.querySelectorAll('[data-test-confirm-action-trigger="true"]')[1];
+    // demote perf primary to a secondary
+    await click('[data-test-replication-link="manage"]');
+    const demote = document.querySelector('[data-test-replication-demote]').firstElementChild;
     await click(demote);
     await click('[data-test-confirm-button="true"]');
     await click('[data-test-replication-link="details"]');

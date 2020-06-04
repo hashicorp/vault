@@ -35,12 +35,14 @@
   <p.levelLeft>
     <h1 class="title is-3">
       {{title}}
-      <span class="tag is-light has-text-grey-dark" data-test-mode>
-        {{if isSecondary 'secondary' 'primary'}}
-      </span>
-      <span class="tag is-light has-text-grey-dark" data-test-secondaryId>
-        {{secondaryId}}
-      </span>
+      {{#if data.anyReplicationEnabled}}
+        <span class="tag is-light has-text-grey-dark" data-test-mode>
+          {{if isSecondary 'secondary' 'primary'}}
+        </span>
+        <span class="tag is-light has-text-grey-dark" data-test-secondaryId>
+          {{secondaryId}}
+        </span>
+      {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -49,25 +51,25 @@
   <div class="tabs-container box is-bottomless is-fullwidth is-paddingless" data-test-tabs>
     <nav class="tabs">
       {{#if (not isSummaryDashboard )}}
-      <ul>
-        {{#link-to
-          "vault.cluster.replication-dr-promote.details"
-          tagName="li"
-          activeClass="is-active"
-        }}
-          {{#link-to "vault.cluster.replication-dr-promote.details"}}
-            Details
+        <ul>
+          {{#link-to
+            "vault.cluster.replication-dr-promote.details"
+            tagName="li"
+            activeClass="is-active"
+          }}
+            {{#link-to "vault.cluster.replication-dr-promote.details"}}
+              Details
+            {{/link-to}}
           {{/link-to}}
-        {{/link-to}}
-        {{#link-to
-          "vault.cluster.replication-dr-promote"
-          tagName="li"
-          activeClass="is-active"
-          current-when="vault.cluster.replication-dr-promote.index"
-        }}
-          {{#link-to "vault.cluster.replication-dr-promote"}}
-            Manage
-          {{/link-to}}
+          {{#link-to
+            "vault.cluster.replication-dr-promote"
+            tagName="li"
+            activeClass="is-active"
+            current-when="vault.cluster.replication-dr-promote.index"
+          }}
+            {{#link-to "vault.cluster.replication-dr-promote"}}
+              Manage
+            {{/link-to}}
         {{/link-to}}
       </ul>
       {{else}}
