@@ -400,15 +400,6 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 	keyType = strings.ToLower(keyType)
 
-	algorithmSigner := d.Get("algorithm_signer").(string)
-	switch algorithmSigner {
-	case ssh.SigAlgoRSASHA2256, ssh.SigAlgoRSA, ssh.SigAlgoRSASHA2512:
-	case "":
-		algorithmSigner = ssh.SigAlgoRSASHA2256
-	default:
-		return nil, fmt.Errorf("unknown algorithm signer %q", algorithmSigner)
-	}
-
 	var roleEntry sshRole
 	if keyType == KeyTypeOTP {
 		defaultUser := d.Get("default_user").(string)
@@ -431,7 +422,6 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 			KeyType:         KeyTypeOTP,
 			Port:            port,
 			AllowedUsers:    allowedUsers,
-			AlgorithmSigner: algorithmSigner,
 		}
 	} else if keyType == KeyTypeDynamic {
 		defaultUser := d.Get("default_user").(string)
@@ -486,9 +476,17 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 			InstallScript:   installScript,
 			AllowedUsers:    allowedUsers,
 			KeyOptionSpecs:  keyOptionSpecs,
-			AlgorithmSigner: algorithmSigner,
 		}
 	} else if keyType == KeyTypeCA {
+		algorithmSigner := d.Get("algorithm_signer").(string)
+		switch algorithmSigner {
+		case ssh.SigAlgoRSA, ssh.SigAlgoRSASHA2256, ssh.SigAlgoRSASHA2512:
+		case "":
+			algorithmSigner = ssh.SigAlgoRSA
+		default:
+			return nil, fmt.Errorf("unknown algorithm signer %q", algorithmSigner)
+		}
+
 		role, errorResponse := b.createCARole(allowedUsers, d.Get("default_user").(string), algorithmSigner, d)
 		if errorResponse != nil {
 			return errorResponse, nil
@@ -587,7 +585,6 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			"key_type":          role.KeyType,
 			"port":              role.Port,
 			"allowed_users":     role.AllowedUsers,
-			"algorithm_signer":  role.AlgorithmSigner,
 		}
 	case KeyTypeCA:
 		ttl, err := parseutil.ParseDurationSecond(role.TTL)
@@ -637,8 +634,7 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			// But this is one way for clients to see the script that is
 			// being used to install the key. If there is some problem,
 			// the script can be modified and configured by clients.
-			"install_script":   role.InstallScript,
-			"algorithm_signer": role.AlgorithmSigner,
+			"install_script": role.InstallScript,
 		}
 	default:
 		return nil, fmt.Errorf("invalid key type: %v", role.KeyType)

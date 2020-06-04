@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net"
@@ -24,11 +25,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory/dockertest"
 )
-
-// Before the following tests are run, a username going by the name 'vaultssh' has
-// to be created and its ~/.ssh/authorized_keys file should contain the below key.
-//
-// ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9i+hFxZHGo6KblVme4zrAcJstR6I0PTJozW286X4WyvPnkMYDQ5mnhEYC7UWCvjoTWbPEXPX7NjhRtwQTGD67bV+lrxgfyzK1JZbUXK4PwgKJvQD+XyyWYMzDgGSQY61KUSqCxymSm/9NZkPU3ElaQ9xQuTzPpztM4ROfb8f2Yv6/ZESZsTo0MTAkp8Pcy+WkioI/uJ1H7zqs0EA4OMY4aDJRu0UtP4rTVeYNEAuRXdX+eH4aW3KMvhzpFTjMbaJHJXlEeUm2SaX5TNQyTOvghCeQILfYIL/Ca2ij8iwCmulwdV6eQGfd4VDu40PvSnmfoaE38o6HaPnX0kUcnKiT
 
 const (
 	testIP              = "127.0.0.1"
@@ -114,7 +110,7 @@ SeKWrUkryx46LVf6NMhkyYmRqCEjBwfOozzezi5WbiJy6nn54GQt
 	testPublicKeyInstall = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9i+hFxZHGo6KblVme4zrAcJstR6I0PTJozW286X4WyvPnkMYDQ5mnhEYC7UWCvjoTWbPEXPX7NjhRtwQTGD67bV+lrxgfyzK1JZbUXK4PwgKJvQD+XyyWYMzDgGSQY61KUSqCxymSm/9NZkPU3ElaQ9xQuTzPpztM4ROfb8f2Yv6/ZESZsTo0MTAkp8Pcy+WkioI/uJ1H7zqs0EA4OMY4aDJRu0UtP4rTVeYNEAuRXdX+eH4aW3KMvhzpFTjMbaJHJXlEeUm2SaX5TNQyTOvghCeQILfYIL/Ca2ij8iwCmulwdV6eQGfd4VDu40PvSnmfoaE38o6HaPnX0kUcnKiT"
 )
 
-func prepareTestContainer(t *testing.T) (func(), string) {
+func prepareTestContainer(t *testing.T, caPublicKeyPEM string) (func(), string) {
 	pool, err := dockertest.NewPool("")
 	if err != nil {
 		t.Fatalf("Failed to connect to docker: %s", err)
@@ -149,7 +145,14 @@ func prepareTestContainer(t *testing.T) (func(), string) {
 	pool.MaxWait = 10 * time.Second
 	if err = pool.Retry(func() error {
 		// Install util-linux for non-busybox flock that supports timeout option
-		return testSSH("vaultssh", sshAddress, ssh.PublicKeys(signer), "sudo apk add util-linux")
+		return testSSH(t, "vaultssh", sshAddress, ssh.PublicKeys(signer), fmt.Sprintf(`
+			set -e; 
+			sudo apk add util-linux;
+			echo "LogLevel DEBUG" | sudo tee -a /config/ssh_host_keys/sshd_config;
+			echo "TrustedUserCAKeys /config/ssh_host_keys/trusted-user-ca-keys.pem" | sudo tee -a /config/ssh_host_keys/sshd_config;
+			kill -HUP $(cat /config/sshd.pid)
+			echo "%s" | sudo tee /config/ssh_host_keys/trusted-user-ca-keys.pem
+		`, caPublicKeyPEM))
 	}); err != nil {
 		cleanup()
 		t.Fatalf("Could not connect to SSH docker container: %s", err)
@@ -158,23 +161,28 @@ func prepareTestContainer(t *testing.T) (func(), string) {
 	return cleanup, sshAddress
 }
 
-func testSSH(user, host string, auth ssh.AuthMethod, command string) error {
+func testSSH(t *testing.T, user, host string, auth ssh.AuthMethod, command string) error {
 	client, err := ssh.Dial("tcp", host, &ssh.ClientConfig{
-		Config:          ssh.Config{},
 		User:            user,
 		Auth:            []ssh.AuthMethod{auth},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         5 * time.Second,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to dial sshd to host %q: %v", host, err)
 	}
 	session, err := client.NewSession()
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to create sshd session to host %q: %v", host, err)
 	}
+	var stderr bytes.Buffer
+	session.Stderr = &stderr
 	defer session.Close()
-	return session.Run(command)
+	err = session.Run(command)
+	if err != nil {
+		t.Logf("command %v failed, error: %v, stderr: %v", command, err, stderr.String())
+	}
+	return err
 }
 
 func TestBackend_allowed_users(t *testing.T) {
@@ -495,7 +503,7 @@ func TestSSHBackend_NamedKeysCrud(t *testing.T) {
 }
 
 func TestSSHBackend_OTPCreate(t *testing.T) {
-	cleanup, sshAddress := prepareTestContainer(t)
+	cleanup, sshAddress := prepareTestContainer(t, "")
 	defer func() {
 		if !t.Failed() {
 			cleanup()
@@ -615,7 +623,7 @@ func TestSSHBackend_CredsForZeroAddressRoles_otp(t *testing.T) {
 }
 
 func TestSSHBackend_CredsForZeroAddressRoles_dynamic(t *testing.T) {
-	cleanup, sshAddress := prepareTestContainer(t)
+	cleanup, sshAddress := prepareTestContainer(t, "")
 	defer cleanup()
 
 	host, port, err := net.SplitHostPort(sshAddress)
@@ -649,6 +657,113 @@ func TestSSHBackend_CredsForZeroAddressRoles_dynamic(t *testing.T) {
 			testCredsWrite(t, testDynamicRoleName, data, true, sshAddress),
 		},
 	})
+}
+
+func TestSSHBackend_CA(t *testing.T) {
+	cleanup, sshAddress := prepareTestContainer(t, testCAPublicKey)
+	defer cleanup()
+
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+
+	testKeyToSignPrivate := `-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABFwAAAAdzc2gtcn
+NhAAAAAwEAAQAAAQEAwn1V2xd/EgJXIY53fBTtc20k/ajekqQngvkpFSwNHW63XNEQK8Ll
+FOCyGXoje9DUGxnYs3F/ohfsBBWkLNfU7fiENdSJL1pbkAgJ+2uhV9sLZjvYhikrXWoyJX
+LDKfY12LjpcBS2HeLMT04laZ/xSJrOBEJHGzHyr2wUO0NUQUQPUODAFhnHKgvvA4Uu79UY
+gcdThF4w83+EAnE4JzBZMKPMjzy4u1C0R/LoD8DuapHwX6NGWdEUvUZZ+XRcIWeCOvR0ne
+qGBRH35k1Mv7k65d7kkE0uvM5Z36erw3tdoszxPYf7AKnO1DpeU2uwMcym6xNwfwynKjhL
+qL/Mgi4uRwAAA8iAsY0zgLGNMwAAAAdzc2gtcnNhAAABAQDCfVXbF38SAlchjnd8FO1zbS
+T9qN6SpCeC+SkVLA0dbrdc0RArwuUU4LIZeiN70NQbGdizcX+iF+wEFaQs19Tt+IQ11Ikv
+WluQCAn7a6FX2wtmO9iGKStdajIlcsMp9jXYuOlwFLYd4sxPTiVpn/FIms4EQkcbMfKvbB
+Q7Q1RBRA9Q4MAWGccqC+8DhS7v1RiBx1OEXjDzf4QCcTgnMFkwo8yPPLi7ULRH8ugPwO5q
+kfBfo0ZZ0RS9Rln5dFwhZ4I69HSd6oYFEffmTUy/uTrl3uSQTS68zlnfp6vDe12izPE9h/
+sAqc7UOl5Ta7AxzKbrE3B/DKcqOEuov8yCLi5HAAAAAwEAAQAAAQABns2yT5XNbpuPOgKg
+1APObGBchKWmDxwNKUpAVOefEScR7OP3mV4TOHQDZlMZWvoJZ8O4av+nOA/NUOjXPs0VVn
+azhBvIezY8EvUSVSk49Cg6J9F7/KfR1WqpiTU7CkQUlCXNuz5xLUyKdJo3MQ/vjOqeenbh
+MR9Wes4IWF1BVe4VOD6lxRsjwuIieIgmScW28FFh2rgsEfO2spzZ3AWOGExw+ih757hFz5
+4A2fhsQXP8m3r8m7iiqcjTLWXdxTUk4zot2kZEjbI4Avk0BL+wVeFq6f/y+G+g5edqSo7j
+uuSgzbUQtA9PMnGxhrhU2Ob7n3VGdya7WbGZkaKP8zJhAAAAgQC3bJurmOSLIi3KVhp7lD
+/FfxwXHwVBFALCgq7EyNlkTz6RDoMFM4eOTRMDvsgWxT+bSB8R8eg1sfgY8rkHOuvTAVI5
+3oEYco3H7NWE9X8Zt0lyhO1uaE49EENNSQ8hY7R3UIw5becyI+7ZZxs9HkBgCQCZzSjzA+
+SIyAoMKM261AAAAIEA+PCkcDRp3J0PaoiuetXSlWZ5WjP3CtwT2xrvEX9x+ZsDgXCDYQ5T
+osxvEKOGSfIrHUUhzZbFGvqWyfrziPe9ypJrtCM7RJT/fApBXnbWFcDZzWamkQvohst+0w
+XHYCmNoJ6/Y+roLv3pzyFUmqRNcrQaohex7TZmsvHJT513UakAAACBAMgBXxH8DyNYdniX
+mIXEto4GqMh4rXdNwCghfpyWdJE6vCyDt7g7bYMq7AQ2ynSKRtQDT/ZgQNfSbilUq3iXz7
+xNZn5U9ndwFs90VmEpBup/PmhfX+Gwt5hQZLbkKZcgQ9XrhSKdMxVm1yy/fk0U457enlz5
+cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
+-----END OPENSSH PRIVATE KEY-----
+`
+	testKeyToSignPublic := `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDCfVXbF38SAlchjnd8FO1zbST9qN6SpCeC+SkVLA0dbrdc0RArwuUU4LIZeiN70NQbGdizcX+iF+wEFaQs19Tt+IQ11IkvWluQCAn7a6FX2wtmO9iGKStdajIlcsMp9jXYuOlwFLYd4sxPTiVpn/FIms4EQkcbMfKvbBQ7Q1RBRA9Q4MAWGccqC+8DhS7v1RiBx1OEXjDzf4QCcTgnMFkwo8yPPLi7ULRH8ugPwO5qkfBfo0ZZ0RS9Rln5dFwhZ4I69HSd6oYFEffmTUy/uTrl3uSQTS68zlnfp6vDe12izPE9h/sAqc7UOl5Ta7AxzKbrE3B/DKcqOEuov8yCLi5H `
+
+	testCase := logicaltest.TestCase{
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			logicaltest.TestStep{
+				Operation: logical.UpdateOperation,
+				Path:      "config/ca",
+				Data: map[string]interface{}{
+					"public_key":  testCAPublicKey,
+					"private_key": testCAPrivateKey,
+				},
+			},
+			testRoleWrite(t, "testcarole", map[string]interface{}{
+				"allow_user_certificates": true,
+				"allowed_users":           "*",
+				"default_extensions": []map[string]string{
+					{
+						"permit-pty": "",
+					},
+				},
+				"key_type":     "ca",
+				"default_user": testUserName,
+				"ttl":          "30m0s",
+			}),
+
+			logicaltest.TestStep{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/testcarole",
+				Data: map[string]interface{}{
+					"public_key":       testKeyToSignPublic,
+					"valid_principals": testUserName,
+				},
+
+				Check: func(resp *logical.Response) error {
+
+					signedKey := strings.TrimSpace(resp.Data["signed_key"].(string))
+					if signedKey == "" {
+						return errors.New("no signed key in response")
+					}
+
+					privKey, err := ssh.ParsePrivateKey([]byte(testKeyToSignPrivate))
+					if err != nil {
+						return fmt.Errorf("error parsing private key: %v", err)
+					}
+
+					parsedKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(signedKey))
+					if err != nil {
+						return fmt.Errorf("error parsing signed key: %v", err)
+					}
+					certSigner, err := ssh.NewCertSigner(parsedKey.(*ssh.Certificate), privKey)
+					if err != nil {
+						return err
+					}
+
+					if err := testSSH(t, testUserName, sshAddress, ssh.PublicKeys(certSigner), "date"); err != nil {
+						return err
+					}
+
+					return nil
+				},
+			},
+		},
+	}
+
+	logicaltest.Test(t, testCase)
 }
 
 func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
@@ -696,12 +811,20 @@ func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
 		t.Fatalf("Cannot create backend: %s", err)
 	}
 
+	var expectedPublicKey string
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
+				Check: func(resp *logical.Response) error {
+					if resp.Data["public_key"].(string) == "" {
+						return fmt.Errorf("public_key empty")
+					}
+					expectedPublicKey = resp.Data["public_key"].(string)
+					return nil
+				},
 			},
 
 			logicaltest.TestStep{
@@ -715,6 +838,9 @@ func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
 
 					if key == "" {
 						return fmt.Errorf("public_key empty. Expected not empty, actual %s", key)
+					}
+					if key != expectedPublicKey {
+						return fmt.Errorf("public_key mismatch. Expected %s, actual %s", expectedPublicKey, key)
 					}
 
 					return nil
@@ -1293,8 +1419,8 @@ func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, 
 				if err != nil {
 					return fmt.Errorf("generated key is invalid")
 				}
-				if err := testSSH(data["username"].(string), address, ssh.PublicKeys(privKey), "date"); err != nil {
-					return fmt.Errorf("unable to SSH with new key: %w", err)
+				if err := testSSH(t, data["username"].(string), address, ssh.PublicKeys(privKey), "date"); err != nil {
+					return fmt.Errorf("unable to SSH with new key (%s): %w", d.Key, err)
 				}
 			} else {
 				if resp.Data["key_type"] != KeyTypeOTP {

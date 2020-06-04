@@ -102,8 +102,13 @@ func (b *backend) installPublicKeyInTarget(ctx context.Context, adminUser, usern
 	rmCmd := fmt.Sprintf("rm -f %s", scriptFileName)
 	targetCmd := fmt.Sprintf("%s;%s;%s", chmodCmd, scriptCmd, rmCmd)
 
-	session.Run(targetCmd)
-	return nil
+	//stderr := &bytes.Buffer{}
+	//session.Stderr = stderr
+	return session.Run(targetCmd)
+	//if err != nil {
+	//	return fmt.Errorf("ssh session error: %v, stderr: %v", err, stderr.String())
+	//}
+	//b.Logger().Debug("session output", "stderr", stderr.String())
 }
 
 // Takes an IP address and role name and checks if the IP is part
