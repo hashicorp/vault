@@ -89,11 +89,10 @@
   <footer class="modal-card-foot modal-card-foot-outlined">
     <button
       class="button is-primary"
-      disabled={{if (and (eq replicationMode "dr") (not dr_operation_token)) true}}
       onclick={{action "onSubmit" "update-primary" model.replicationAttrs.modeForUrl (hash token=token primary_api_addr=primary_api_addr ca_path=ca_path ca_file=ca_file)}}
       data-test-confirm-action-trigger
     >
-      Reindex
+      Update
     </button>
     <button
       class="button is-secondary"
