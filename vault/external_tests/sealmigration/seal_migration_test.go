@@ -261,19 +261,23 @@ func migrateFromShamirToTransit_Post14(
 	leader := cluster.Cores[leaderIdx]
 	leader.Client.SetToken(rootToken)
 
-	// Wait for migration to finish.  Sadly there is no callback, and the
-	// test will fail later on if we don't do this.
-	// TODO -- actually there is a callback, we can monitor this and await
-	time.Sleep(60 * time.Second)
-
 	// Bring core 0 back up
 	cluster.RestartCore(t, 0, opts)
 	cluster.Cores[0].Client.SetToken(rootToken)
 	unsealMigrate(t, cluster.Cores[0].Client, recoveryKeys, true)
 	time.Sleep(5 * time.Second)
 
-	// TODO
-	// if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+	// Wait for migration to finish.
+	awaitMigration(t, leader.Client)
+
+	//// TODO
+	//if storage.IsRaft {
+	//	if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+	//		t.Fatal(err)
+	//	}
+	//} else {
+	//	cluster.UnsealCores(t)
+	//}
 
 	// Read the secret
 	secret, err := leader.Client.Logical().Read("secret/foo")
@@ -336,6 +340,29 @@ func unsealMigrate(t *testing.T, client *api.Client, keys [][]byte, transitServe
 			break
 		}
 	}
+}
+
+// awaitMigration waits for migration to finish.
+func awaitMigration(t *testing.T, client *api.Client) {
+
+	timeout := time.Now().Add(60 * time.Second)
+	for {
+		if time.Now().After(timeout) {
+			break
+		}
+
+		resp, err := client.Sys().SealStatus()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !resp.Migration {
+			return
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	t.Fatalf("migration did not complete.")
 }
 
 //func unseal(t *testing.T, client *api.Client, keys [][]byte) {
