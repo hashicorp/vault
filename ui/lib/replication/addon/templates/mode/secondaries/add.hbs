@@ -58,10 +58,6 @@
           <div class="is-fullwidth">
             <textarea readonly value={{token}} class="textarea level-left"/>
           </div>
-          <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy" @clipboardText={{token}}
-            @buttonType="button" @success={{action (set-flash-message 'Token copied!')}}>
-            <Icon @glyph="copy-action" aria-label="Copy" />
-          </CopyButton>
         </div>
         <div class="has-top-margin-xl has-bottom-margin-s">
           {{info-table-row
