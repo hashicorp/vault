@@ -1,5 +1,7 @@
 // Package stepwise offers types and functions to enable black-box style tests
-// that are executed in defined set of steps
+// that are executed in defined set of steps. Stepwise utilizes "Drivers" which
+// setup a running instance of Vault and provide a valid API client to execute
+// user defined steps against.
 package stepwise
 
 import (
@@ -18,53 +20,13 @@ import (
 type StepOperation string
 
 const (
-	// WriteOperation and UpdateOperation should be the same
 	WriteOperation  StepOperation = "create"
 	UpdateOperation               = "update"
 	ReadOperation                 = "read"
 	DeleteOperation               = "delete"
 	ListOperation                 = "list"
 	HelpOperation                 = "help"
-	// AliasLookaheadOperation           = "alias-lookahead"
-
-	// The operations below are called globally, the path is less relevant.
-	RevokeOperation   StepOperation = "revoke"
-	RenewOperation                  = "renew"
-	RollbackOperation               = "rollback"
 )
-
-// Step represents a single step of a test Case
-type Step struct {
-	Operation StepOperation
-	// Path is the request path. The mount prefix will be automatically added.
-	Path string
-
-	// Arguments to pass in
-	Data map[string]interface{}
-
-	// Check is called after this step is executed in order to test that
-	// the step executed successfully. If this is not set, then the next
-	// step will be called
-	Check StepCheckFunc
-
-	// PreFlight is called directly before execution of the request, allowing
-	// modification of the request parameters (e.g. Path) with dynamic values.
-	// PreFlight PreFlightFunc
-
-	// ExpectError indicates if this step is expected to return an error. If the
-	// step operation returns an error and ExpectError is not set, the test will
-	// fail immediately and the StepCheckFunc will not be ran. If ExpectError is
-	// true, the StepCheckFunc will be called (if any) and include the error from
-	// the response. It is the responsibility of the StepCheckFunc to validate the
-	// error is appropriate or not, if expected.
-	ExpectError bool
-
-	// Unauthenticated, if true, will make the request unauthenticated.
-	Unauthenticated bool
-}
-
-// StepCheckFunc is the callback used for Check in TestStep.
-type StepCheckFunc func(*api.Secret, error) error
 
 // StepDriver is the interface Drivers need to implement to be used in
 // Case to execute each Step
@@ -84,24 +46,17 @@ type StepDriver interface {
 	// debugging. TODO verify we should provide this
 	//BarrierKeys()        [][]byte
 
-	// RootToken returns the root token of the cluster, used for administrative
-	// tasks
+	// RootToken returns the root token of the cluster, used for making requests
+	// as well as administrative tasks
 	RootToken() string
 }
 
 // PluginType defines the types of plugins supported
 // This type re-create constants as a convienence so users don't need to import/use
-// the consts package. Example:
-//	driverOptions := &stepwise.DriverOptions{
-//		PluginType: stepwise.PluginTypeCredential,
-//	}
-// versus:
-//	driverOptions := &stepwise.DriverOptions{
-//		PluginType: consts.PluginTypeCredential,
-//	}
-// These are originally defined in sdk/helper/consts/plugin_types.go
+// the consts package.
 type PluginType consts.PluginType
 
+// These are originally defined in sdk/helper/consts/plugin_types.go
 const (
 	PluginTypeUnknown PluginType = iota
 	PluginTypeCredential
@@ -158,10 +113,44 @@ type DriverOptions struct {
 	PluginName string
 }
 
-// Case is a single set of tests to run for a backend. A test Case
-// should generally map 1:1 to each test method for your integration
-// tests.
+// Step represents a single step of a test Case
+type Step struct {
+	// Operation defines what action is being taken in this step; write, read,
+	// delete, et. al.
+	Operation StepOperation
+
+	// Path is the localized request path. The mount prefix, namespace, and
+	// optionally "auth" will be automatically added.
+	Path string
+
+	// Arguments to pass in the request. These arguments represent payloads sent
+	// to the API.
+	Data map[string]interface{}
+
+	// Check is a function that is called after this step is executed in order to
+	// test that the step executed successfully. If this is not set, then the next
+	// step will be called
+	Check StepCheckFunc
+
+	// ExpectError indicates if this step is expected to return an error. If the
+	// step operation returns an error and ExpectError is not set, the test will
+	// fail immediately and the StepCheckFunc will not be ran. If ExpectError is
+	// true, the StepCheckFunc will be called (if any) and include the error from
+	// the response. It is the responsibility of the StepCheckFunc to validate the
+	// error is appropriate or not, if expected.
+	ExpectError bool
+
+	// Unauthenticated will make the request unauthenticated.
+	Unauthenticated bool
+}
+
+// StepCheckFunc is the callback used for Check in Steps.
+type StepCheckFunc func(*api.Secret, error) error
+
+// Case is a collection of tests to run for a plugin
 type Case struct {
+	// Driver is used to setup the Vault instance and provide the client used to
+	// drive the tests
 	Driver StepDriver
 
 	// Precheck, if non-nil, will be called once before the test case
@@ -171,19 +160,6 @@ type Case struct {
 
 	// Steps are the set of operations that are run for this test case.
 	Steps []Step
-
-	// Teardown will be called before the test case is over regardless
-	// of if the test succeeded or failed. This should return an error
-	// in the case that the test can't guarantee all resources were
-	// properly cleaned up.
-	//
-	// Test Drivers should normally handle this by tearing down any infrastructure
-	// created during the setup of the Vault cluster for testing. The test case
-	// specific teardown should only be used if the Driver cluster supports
-	// multiple tests running on a single cluster, which is not currently
-	// supported. Until this feature is supported by the Driver being used, users
-	// should not use this function.
-	Teardown TestTeardownFunc
 
 	// SkipTeardown allows the TestTeardownFunc to be skipped, leaving any
 	// infrastructure created during Driver setup to remain. Depending on the
@@ -224,15 +200,6 @@ func Run(tt TestT, c Case) {
 		c.PreCheck()
 	}
 
-	// Defer on the test case teardown, regardless of pass/fail at this point.
-	if c.Teardown != nil {
-		defer func() {
-			if err := c.Teardown(); err != nil {
-				tt.Error("failed to tear down:", err)
-			}
-		}()
-	}
-
 	// Create an in-memory Vault core
 	// TODO use test logger if available?
 	logger := logging.NewVaultLogger(log.Trace)
@@ -270,33 +237,30 @@ func Run(tt TestT, c Case) {
 	// event any steps remove the token during testing.
 	rootToken := c.Driver.RootToken()
 
-	// track all responses to revoke any secrets
-	var responses []*api.Secret
-
 	// Defer revocation of any secrets created. We intentionally enclose the
 	// responses slice so in the event of a fatal error during test evaluation, we
 	// are still able to revoke any leases/secrets created
+	var responses []*api.Secret
 	defer func() {
 		// failedRevokes tracks any errors we get when attempting to revoke a lease
 		// to log to users at the end of the test.
 		var failedRevokes []*api.Secret
 		for _, secret := range responses {
-			if secret.LeaseID != "" {
-				logger.Info("Revoking secret", "lease_id", fmt.Sprintf("%s", secret.LeaseID))
-				if err := client.Sys().Revoke(secret.LeaseID); err != nil {
-					logger.Warn("Error revoking secret", "lease_id", fmt.Sprintf("%s", secret.LeaseID))
-					tt.Error(fmt.Errorf("error revoking lease: %w", err))
-					failedRevokes = append(failedRevokes, secret)
-					continue
-				}
-				logger.Info("Successfully revoked secret", "lease_id", fmt.Sprintf("%s", secret.LeaseID))
+			if secret.LeaseID == "" {
+				continue
+			}
+
+			if err := client.Sys().Revoke(secret.LeaseID); err != nil {
+				tt.Error(fmt.Errorf("error revoking lease: %w", err))
+				failedRevokes = append(failedRevokes, secret)
+				continue
 			}
 		}
 
 		// If we have any failed revokes, log it.
 		if len(failedRevokes) > 0 {
 			for _, s := range failedRevokes {
-				tt.Error(fmt.Sprintf(
+				tt.Fatal(fmt.Sprintf(
 					"WARNING: Revoking the following secret failed. It may\n"+
 						"still exist. Please verify:\n\n%#v",
 					s))
@@ -317,8 +281,6 @@ func Run(tt TestT, c Case) {
 
 		// preserve the root token, which may be cleared from the client if the this
 		// step is meant to be unauthenticated. Restored after the request is made.
-		// TODO: use a non-root token for tests, or allow a user configured one as
-		// part of the test
 		if step.Unauthenticated {
 			client.ClearToken()
 		}
@@ -352,20 +314,6 @@ func Run(tt TestT, c Case) {
 			responses = append(responses, resp)
 		}
 
-		// if !s.Unauthenticated {
-		// 	// req.ClientToken = client.Token()
-		// 	// req.SetTokenEntry(&logical.TokenEntry{
-		// 	// 	ID:          req.ClientToken,
-		// 	// 	NamespaceID: namespace.RootNamespaceID,
-		// 	// 	Policies:    tokenPolicies,
-		// 	// 	DisplayName: tokenInfo.Data["display_name"].(string),
-		// 	// })
-		// }
-		// req.Connection = &logical.Connection{RemoteAddr: s.RemoteAddr}
-		// if s.ConnState != nil {
-		// 	req.Connection.ConnState = s.ConnState
-		// }
-
 		// If a step returned an unexpected error, fail the entire test immediately
 		if respErr != nil && !step.ExpectError {
 			tt.Fatal(fmt.Errorf("unexpected error in step %d: %w", index, respErr))
@@ -375,12 +323,11 @@ func Run(tt TestT, c Case) {
 		// sent to the Check function to validate.
 		if step.Check != nil {
 			if err := step.Check(resp, respErr); err != nil {
-				tt.Error(fmt.Errorf("Failed step %d: %w", index, err))
+				tt.Error(fmt.Errorf("failed step %d: %w", index, err))
 			}
 		}
 
 		// reset token in case it was cleared
 		client.SetToken(rootToken)
 	}
-
 }
