@@ -97,7 +97,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     // because timestamp might be off by a 1 sec due to different in exp from token vs. adding 30 min, only checking month and day.
     const fistSixDateFromHelper = dateFromHelper.slice(0, 6);
     const dateDisplayed = document.querySelector('[data-test-row-value="Expires"]').innerText;
-    const fistSixDateDisplay = dateDisplayed.slick(0, 6);
+    const fistSixDateDisplay = dateDisplayed.slice(0, 6);
 
     assert.equal(
       firstSixDateDisplay,
