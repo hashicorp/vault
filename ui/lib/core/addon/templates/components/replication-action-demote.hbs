@@ -24,14 +24,27 @@
   @isActive={{isModalActive}}
   @buttonClass="is-primary"
   @confirmText={{if (eq replicationDisplayMode "DR") "Disaster Recovery" replicationDisplayMode}}
-  @toConfirmMsg="demoting this {{replicationDisplayMode}} primary to a secondary"
+  @toConfirmMsg="demoting this cluster"
   @onConfirm={{action "onSubmit" "demote" model.replicationAttrs.modeForUrl}}
 >
   <p class="has-bottom-margin-m">
-    {{#if (and model.replicationAttrs.isPrimary (eq replicationDisplayMode "DR"))}}This cannot be undone. {{/if}}
+    {{#if (and
+      (eq replicationMode 'dr')
+      (not model.performance.replicationDisabled)
+    )}}
+      <p class="has-bottom-margin-m" data-test-demote-warning>
+        This cluster is currently operating as a performance secondary. Demoting it will leave your replication setup <strong>without a performance primary cluster</strong> until a new cluster is promoted.
+      </div>
+    {{/if}}
     Demoting this {{replicationDisplayMode}} primary to a {{replicationDisplayMode}} secondary means that the resulting secondary cluster:
   </p>
   <ul class="bullet has-bottom-margin-m">
+    {{#if (and
+      (eq replicationMode 'dr')
+      (not model.performance.replicationDisabled)
+    )}}
+      <li>Will be read-only</li>
+    {{/if}}
     <li>Will not attempt to connect to a primary</li>
     <li>Will maintain knowledge of its cluster ID</li>
     <li>Can be reconnected to the same set of replication clusters without wiping local storage.</li>
