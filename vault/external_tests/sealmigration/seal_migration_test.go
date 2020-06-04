@@ -33,35 +33,35 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
 
-	//t.Run("inmem", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("inmem", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("inmem")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeInmemBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 51000)
-	//})
+		logger := logger.Named("inmem")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeInmemBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 51000)
+	})
 
-	//t.Run("file", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("file", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("file")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeFileBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 52000)
-	//})
+		logger := logger.Named("file")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeFileBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 52000)
+	})
 
-	//t.Run("consul", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("consul", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("consul")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeConsulBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 53000)
-	//})
+		logger := logger.Named("consul")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeConsulBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 53000)
+	})
 
 	if includeRaft {
 		t.Run("raft", func(t *testing.T) {
@@ -149,19 +149,16 @@ func migrateFromShamirToTransit_Pre14(
 	}()
 
 	leader := cluster.Cores[0]
-	client := leader.Client
-	client.SetToken(rootToken)
+	leader.Client.SetToken(rootToken)
 
 	// Unseal and migrate to Transit.
-	unsealMigrate(t, client, recoveryKeys, true)
+	unsealMigrate(t, leader.Client, recoveryKeys, true)
 
-	// Wait for migration to finish.  Sadly there is no callback, and the
-	// test will fail later on if we don't do this.
-	// TODO -- actually there is a callback, we can monitor this and await
-	time.Sleep(10 * time.Second)
+	// Wait for migration to finish.
+	awaitMigration(t, leader.Client)
 
 	// Read the secret
-	secret, err := client.Logical().Read("secret/foo")
+	secret, err := leader.Client.Logical().Read("secret/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,20 +261,27 @@ func migrateFromShamirToTransit_Post14(
 	// Bring core 0 back up
 	cluster.RestartCore(t, 0, opts)
 	cluster.Cores[0].Client.SetToken(rootToken)
-	unsealMigrate(t, cluster.Cores[0].Client, recoveryKeys, true)
+
+	// TODO is this a bug? Why is raft different here?
+	if storage.IsRaft {
+		unsealMigrate(t, cluster.Cores[0].Client, recoveryKeys, true)
+	} else {
+		unseal(t, cluster.Cores[0].Client, recoveryKeys)
+	}
+
 	time.Sleep(5 * time.Second)
 
 	// Wait for migration to finish.
 	awaitMigration(t, leader.Client)
 
-	//// TODO
-	//if storage.IsRaft {
-	//	if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
-	//		t.Fatal(err)
-	//	}
-	//} else {
-	//	cluster.UnsealCores(t)
-	//}
+	// This is apparently necessary for the raft cluster to get itself
+	// situated.
+	if storage.IsRaft {
+		time.Sleep(15 * time.Second)
+		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	// Read the secret
 	secret, err := leader.Client.Logical().Read("secret/foo")
@@ -365,29 +369,29 @@ func awaitMigration(t *testing.T, client *api.Client) {
 	t.Fatalf("migration did not complete.")
 }
 
-//func unseal(t *testing.T, client *api.Client, keys [][]byte) {
-//
-//	for i, key := range keys {
-//
-//		resp, err := client.Sys().UnsealWithOptions(&api.UnsealOpts{
-//			Key: base64.StdEncoding.EncodeToString(key),
-//		})
-//		if i < keyThreshold-1 {
-//			// Not enough keys have been provided yet.
-//			if err != nil {
-//				t.Fatal(err)
-//			}
-//		} else {
-//			if err != nil {
-//				t.Fatal(err)
-//			}
-//			if resp == nil || resp.Sealed {
-//				t.Fatalf("expected unsealed state; got %#v", resp)
-//			}
-//			break
-//		}
-//	}
-//}
+func unseal(t *testing.T, client *api.Client, keys [][]byte) {
+
+	for i, key := range keys {
+
+		resp, err := client.Sys().UnsealWithOptions(&api.UnsealOpts{
+			Key: base64.StdEncoding.EncodeToString(key),
+		})
+		if i < keyThreshold-1 {
+			// Not enough keys have been provided yet.
+			if err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if resp == nil || resp.Sealed {
+				t.Fatalf("expected unsealed state; got %#v", resp)
+			}
+			break
+		}
+	}
+}
 
 // verifyBarrierConfig verifies that a barrier configuration is correct.
 func verifyBarrierConfig(t *testing.T, cfg *vault.SealConfig, sealType string, shares, threshold, stored int) {
@@ -492,7 +496,6 @@ func runShamir(
 		// This is apparently necessary for the raft cluster to get itself
 		// situated.
 		time.Sleep(15 * time.Second)
-
 		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
 			t.Fatal(err)
 		}
@@ -613,7 +616,6 @@ func runTransit(
 		// This is apparently necessary for the raft cluster to get itself
 		// situated.
 		time.Sleep(15 * time.Second)
-
 		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
 			t.Fatal(err)
 		}
@@ -639,38 +641,37 @@ func runTransit(
 
 //--------------------------------------------------------------
 
-func TestShamir(t *testing.T) {
-	testVariousBackends(t, testShamir, true)
-}
-
-func testShamir(
-	t *testing.T, logger hclog.Logger,
-	storage teststorage.ReusableStorage, basePort int) {
-
-	// Initialize the backend using shamir
-	cluster, _ := initializeShamir(t, logger, storage, basePort)
-	rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
-	cluster.EnsureCoresSealed(t)
-
-	storage.Cleanup(t, cluster)
-	cluster.Cleanup()
-
-	runShamir(t, logger, storage, basePort, rootToken, barrierKeys)
-}
-
-func TestTransit(t *testing.T) {
-	testVariousBackends(t, testTransit, true)
-}
-
-func testTransit(
-	t *testing.T, logger hclog.Logger,
-	storage teststorage.ReusableStorage, basePort int) {
-
-	tss := sealhelper.NewTransitSealServer(t)
-	defer tss.Cleanup()
-	tss.MakeKey(t, "transit-seal-key")
-
-	rootToken, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
-
-	runTransit(t, logger, storage, basePort, rootToken, transitSeal)
-}
+//func TestShamir(t *testing.T) {
+//	testVariousBackends(t, testShamir, true)
+//}
+//
+//func testShamir(
+//	t *testing.T, logger hclog.Logger,
+//	storage teststorage.ReusableStorage, basePort int) {
+//
+//	cluster, _ := initializeShamir(t, logger, storage, basePort)
+//	rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
+//	cluster.EnsureCoresSealed(t)
+//
+//	storage.Cleanup(t, cluster)
+//	cluster.Cleanup()
+//
+//	runShamir(t, logger, storage, basePort, rootToken, barrierKeys)
+//}
+//
+//func TestTransit(t *testing.T) {
+//	testVariousBackends(t, testTransit, true)
+//}
+//
+//func testTransit(
+//	t *testing.T, logger hclog.Logger,
+//	storage teststorage.ReusableStorage, basePort int) {
+//
+//	tss := sealhelper.NewTransitSealServer(t)
+//	defer tss.Cleanup()
+//	tss.MakeKey(t, "transit-seal-key")
+//
+//	rootToken, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
+//
+//	runTransit(t, logger, storage, basePort, rootToken, transitSeal)
+//}
