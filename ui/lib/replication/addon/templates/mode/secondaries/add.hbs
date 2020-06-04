@@ -79,6 +79,7 @@
 {{#if isModalActive}}
   <Modal @title="Copy your token" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
     <section class="modal-card-body">
+      <p>This token can be used to enable DR replication or change primaries on the secondary cluster.</p>
       <div class="box is-shadowless is-fullwidth is-sideless">
         <h2 class="title is-6">Activation token</h2>
         <div class="copy-text level">
@@ -96,7 +97,7 @@
             value=ttl}}
           {{info-table-row
             label="Expires"
-            value=expirationDate}}
+            value=(date-format expirationDate 'MMM DD, YYYY hh:mm:ss A')}}
         </div>
       </div>
     </section>
