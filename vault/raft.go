@@ -109,10 +109,10 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 	var raftTLS *raft.TLSKeyring
 	switch raftTLSEntry {
 	case nil:
-		// TODO: Is this the right check?
-		// If this is HA and no TLS keyring is found, that means the cluster has
-		// not been bootstrapped or joined. We return early here in this case.
-		if _, ok := c.ha.(*raft.RaftBackend); ok {
+		// If this is HA-only and no TLS keyring is found, that means the
+		// cluster has not been bootstrapped or joined. We return early here in
+		// this case.
+		if raftHA := c.isRaftHAOnly(); raftHA {
 			return nil
 		}
 
@@ -628,7 +628,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		return false, errors.New("node must be sealed before joining")
 	}
 
-	_, isRaftHA := c.ha.(*raft.RaftBackend)
+	isRaftHA := c.isRaftHAOnly()
 	// Disallow leader API address to be provided if we're using raft for HA-only
 	if isRaftHA {
 		for _, info := range leaderInfos {
@@ -764,10 +764,8 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				nonVoter:            nonVoter,
 			}
 
-			_, isRaftHA := c.ha.(*raft.RaftBackend)
-
 			// NOTE: Why doe we have this block in here?
-			if c.seal.BarrierType() == wrapping.Shamir && !isRaftHA {
+			if c.seal.BarrierType() == wrapping.Shamir && !c.isRaftHAOnly() {
 				c.raftInfo = raftInfo
 				if err := c.seal.SetBarrierConfig(ctx, &sealConfig); err != nil {
 					return err
@@ -845,8 +843,8 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	return true, nil
 }
 
-// getRaftBackend returns the RaftBackend from HA or physical storage,
-// in that order of preference.
+// getRaftBackend returns the RaftBackend from the HA or physical backend,
+// in that order of preference, or nil if not of type RaftBackend.
 func (c *Core) getRaftBackend() *raft.RaftBackend {
 	var raftBackend *raft.RaftBackend
 
@@ -859,6 +857,18 @@ func (c *Core) getRaftBackend() *raft.RaftBackend {
 	}
 
 	return raftBackend
+}
+
+// isRaftHAOnly returns true if c.ha is raft and physical storage is non-raft
+func (c *Core) isRaftHAOnly() bool {
+	_, isRaftHA := c.ha.(*raft.RaftBackend)
+	_, isRaftStorage := c.underlyingPhysical.(*raft.RaftBackend)
+
+	if isRaftHA && !isRaftStorage {
+		return true
+	}
+
+	return false
 }
 
 func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, raftInfo *raftInformation) error {
