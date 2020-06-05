@@ -99,22 +99,20 @@ module('Integration | Component | replication actions', function(hooks) {
       ['promote', 'secondary', { primary_cluster_addr: 'cluster addr' }],
       false,
     ],
-
-    // don't yet update-primary for dr
-    // [
-    //   'performance',
-    //   'secondary',
-    //   'update-primary',
-    //   'Update primary',
-    //   async function() {
-    //     await fillIn('#secondary-token', 'token');
-    //     await blur('#secondary-token');
-    //     await fillIn('#primary_api_addr', 'addr');
-    //     await blur('#primary_api_addr');
-    //   },
-    //   ['update-primary', 'secondary', { token: 'token', primary_api_addr: 'addr' }],
-    //   true,
-    // ],
+    [
+      'performance',
+      'secondary',
+      'update-primary',
+      'Update primary',
+      async function() {
+        await fillIn('#secondary-token', 'token');
+        await blur('#secondary-token');
+        await fillIn('#primary_api_addr', 'addr');
+        await blur('#primary_api_addr');
+      },
+      ['update-primary', 'secondary', { token: 'token', primary_api_addr: 'addr' }],
+      false,
+    ],
   ];
 
   for (let [
