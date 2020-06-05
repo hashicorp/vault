@@ -14,6 +14,7 @@ import layout from '../templates/components/info-table';
 
 export default Component.extend({
   layout,
+  tagName: '',
   title: null,
   header: null,
   items: null,
