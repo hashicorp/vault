@@ -234,60 +234,11 @@ func migrateFromShamirToTransit_Post14(
 
 	// Restart each follower with the new config, and migrate to Transit.
 	// Note that the barrier keys are being used as recovery keys.
-	rootToken, recoveryKeys := cluster.RootToken, cluster.BarrierKeys
-	for i := 1; i < numTestCores; i++ {
-		cluster.StopCore(t, i)
-		if storage.IsRaft {
-			teststorage.CloseRaftStorage(t, cluster, i)
-		}
-		cluster.RestartCore(t, i, opts)
-
-		cluster.Cores[i].Client.SetToken(rootToken)
-		unsealMigrate(t, cluster.Cores[i].Client, recoveryKeys, true)
-		time.Sleep(5 * time.Second)
-	}
-
-	// Bring down the leader
-	cluster.StopCore(t, 0)
-	if storage.IsRaft {
-		teststorage.CloseRaftStorage(t, cluster, 0)
-	}
-
-	// Wait for the followers to establish a new leader
-	leaderIdx, err := testhelpers.AwaitLeader(t, cluster)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if leaderIdx == 0 {
-		t.Fatalf("Core 0 cannot be the leader right now")
-	}
+	leaderIdx := migratePost14(
+		t, logger, storage, cluster, opts,
+		cluster.RootToken, cluster.BarrierKeys,
+		migrateShamirToTransit)
 	leader := cluster.Cores[leaderIdx]
-	leader.Client.SetToken(rootToken)
-
-	// Bring core 0 back up
-	cluster.RestartCore(t, 0, opts)
-	cluster.Cores[0].Client.SetToken(rootToken)
-
-	// TODO is this a bug? Why is raft different here?
-	if storage.IsRaft {
-		unsealMigrate(t, cluster.Cores[0].Client, recoveryKeys, true)
-	} else {
-		unseal(t, cluster.Cores[0].Client, recoveryKeys)
-	}
-
-	time.Sleep(5 * time.Second)
-
-	// Wait for migration to finish.
-	awaitMigration(t, leader.Client)
-
-	// This is apparently necessary for the raft cluster to get itself
-	// situated.
-	if storage.IsRaft {
-		time.Sleep(15 * time.Second)
-		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
-			t.Fatal(err)
-		}
-	}
 
 	// Read the secret
 	secret, err := leader.Client.Logical().Read("secret/foo")
@@ -373,7 +324,48 @@ func migrateFromTransitToShamir_Post14(
 	}
 
 	// Restart each follower with the new config, and migrate to Shamir.
-	rootToken, recoveryKeys := cluster.RootToken, cluster.RecoveryKeys
+	leaderIdx := migratePost14(
+		t, logger, storage, cluster, opts,
+		cluster.RootToken, cluster.RecoveryKeys,
+		migrateTransitToShamir)
+	leader := cluster.Cores[leaderIdx]
+
+	// Read the secret
+	secret, err := leader.Client.Logical().Read("secret/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(secret.Data, map[string]interface{}{"zork": "quux"}); len(diff) > 0 {
+		t.Fatal(diff)
+	}
+
+	// Make sure the seal configs were updated correctly.
+	b, r, err := cluster.Cores[0].Core.PhysicalSealConfigs(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	verifyBarrierConfig(t, b, wrapping.Shamir, keyShares, keyThreshold, 1)
+	if r != nil {
+		t.Fatalf("expected nil recovery config, got: %#v", r)
+	}
+}
+
+type migrationDirection int
+
+const (
+	migrateShamirToTransit migrationDirection = iota
+	migrateTransitToShamir
+)
+
+func migratePost14(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage,
+	cluster *vault.TestCluster, opts *vault.TestClusterOptions,
+	rootToken string, recoveryKeys [][]byte,
+	migrate migrationDirection,
+) int {
+
+	// Restart each follower with the new config, and migrate.
 	for i := 1; i < numTestCores; i++ {
 		cluster.StopCore(t, i)
 		if storage.IsRaft {
@@ -407,11 +399,23 @@ func migrateFromTransitToShamir_Post14(
 	cluster.RestartCore(t, 0, opts)
 	cluster.Cores[0].Client.SetToken(rootToken)
 
-	// TODO is this a bug? Why is raft different here?
-	if storage.IsRaft {
-		unseal(t, cluster.Cores[0].Client, recoveryKeys)
-	} else {
-		unsealMigrate(t, cluster.Cores[0].Client, recoveryKeys, true)
+	// TODO look into why this is different for different migration directions,
+	// and why it is swapped for raft.
+	switch migrate {
+	case migrateShamirToTransit:
+		if storage.IsRaft {
+			unsealMigrate(t, cluster.Cores[0].Client, recoveryKeys, true)
+		} else {
+			unseal(t, cluster.Cores[0].Client, recoveryKeys)
+		}
+	case migrateTransitToShamir:
+		if storage.IsRaft {
+			unseal(t, cluster.Cores[0].Client, recoveryKeys)
+		} else {
+			unsealMigrate(t, cluster.Cores[0].Client, recoveryKeys, true)
+		}
+	default:
+		t.Fatalf("unreachable")
 	}
 
 	time.Sleep(5 * time.Second)
@@ -428,24 +432,7 @@ func migrateFromTransitToShamir_Post14(
 		}
 	}
 
-	// Read the secret
-	secret, err := leader.Client.Logical().Read("secret/foo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if diff := deep.Equal(secret.Data, map[string]interface{}{"zork": "quux"}); len(diff) > 0 {
-		t.Fatal(diff)
-	}
-
-	// Make sure the seal configs were updated correctly.
-	b, r, err := cluster.Cores[0].Core.PhysicalSealConfigs(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	verifyBarrierConfig(t, b, wrapping.Shamir, keyShares, keyThreshold, 1)
-	if r != nil {
-		t.Fatalf("expected nil recovery config, got: %#v", r)
-	}
+	return leaderIdx
 }
 
 func unsealMigrate(t *testing.T, client *api.Client, keys [][]byte, transitServerAvailable bool) {
