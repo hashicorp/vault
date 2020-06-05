@@ -71,7 +71,7 @@ below writing to a path of `auth/cert/certs/web`. If a certificate role name
 is not specified, the auth method will try to authenticate against all trusted
 certificates.
 
-```
+```shell-session
 $ vault login \
     -method=cert \
     -ca-cert=ca.pem \
@@ -87,7 +87,7 @@ TLS certificate and when the login endpoint is hit, the auth method will
 determine if there is a matching trusted certificate to authenticate the client.
 Optionally, you may specify a single certificate role to authenticate against.
 
-```sh
+```shell-session
 $ curl \
     --request POST \
     --cacert ca.pem \

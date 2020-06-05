@@ -8,6 +8,10 @@ type ConsulConfig struct {
 	// Address is the address of the Consul server. It may be an IP or FQDN.
 	Address *string
 
+	// Namespace is the Consul namespace to use for reading/writing. This can
+	// also be set via the CONSUL_NAMESPACE environment variable.
+	Namespace *string `mapstructure:"namespace"`
+
 	// Auth is the HTTP basic authentication for communicating with Consul.
 	Auth *AuthConfig `mapstructure:"auth"`
 
@@ -45,6 +49,8 @@ func (c *ConsulConfig) Copy() *ConsulConfig {
 	var o ConsulConfig
 
 	o.Address = c.Address
+
+	o.Namespace = c.Namespace
 
 	if c.Auth != nil {
 		o.Auth = c.Auth.Copy()
@@ -89,6 +95,10 @@ func (c *ConsulConfig) Merge(o *ConsulConfig) *ConsulConfig {
 		r.Address = o.Address
 	}
 
+	if o.Namespace != nil {
+		r.Namespace = o.Namespace
+	}
+
 	if o.Auth != nil {
 		r.Auth = r.Auth.Merge(o.Auth)
 	}
@@ -118,6 +128,10 @@ func (c *ConsulConfig) Finalize() {
 		c.Address = stringFromEnv([]string{
 			"CONSUL_HTTP_ADDR",
 		}, "")
+	}
+
+	if c.Namespace == nil {
+		c.Namespace = stringFromEnv([]string{"CONSUL_NAMESPACE"}, "")
 	}
 
 	if c.Auth == nil {
@@ -156,6 +170,7 @@ func (c *ConsulConfig) GoString() string {
 
 	return fmt.Sprintf("&ConsulConfig{"+
 		"Address:%s, "+
+		"Namespace:%s, "+
 		"Auth:%#v, "+
 		"Retry:%#v, "+
 		"SSL:%#v, "+
@@ -163,6 +178,7 @@ func (c *ConsulConfig) GoString() string {
 		"Transport:%#v"+
 		"}",
 		StringGoString(c.Address),
+		StringGoString(c.Namespace),
 		c.Auth,
 		c.Retry,
 		c.SSL,

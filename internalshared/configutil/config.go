@@ -49,6 +49,15 @@ func LoadConfigFile(path string) (*SharedConfig, error) {
 	return ParseConfig(string(d))
 }
 
+func LoadConfigKMSes(path string) ([]*KMS, error) {
+	// Read the file
+	d, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return ParseKMSes(string(d))
+}
+
 func ParseConfig(d string) (*SharedConfig, error) {
 	// Parse!
 	obj, err := hcl.Parse(d)
@@ -82,19 +91,19 @@ func ParseConfig(d string) (*SharedConfig, error) {
 	}
 
 	if o := list.Filter("hsm"); len(o.Items) > 0 {
-		if err := parseKMS(&result, o, "hsm", 1); err != nil {
+		if err := parseKMS(&result.Seals, o, "hsm", 2); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'hsm': {{err}}", err)
 		}
 	}
 
 	if o := list.Filter("seal"); len(o.Items) > 0 {
-		if err := parseKMS(&result, o, "seal", 2); err != nil {
+		if err := parseKMS(&result.Seals, o, "seal", 3); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'seal': {{err}}", err)
 		}
 	}
 
 	if o := list.Filter("kms"); len(o.Items) > 0 {
-		if err := parseKMS(&result, o, "kms", 2); err != nil {
+		if err := parseKMS(&result.Seals, o, "kms", 3); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'kms': {{err}}", err)
 		}
 	}

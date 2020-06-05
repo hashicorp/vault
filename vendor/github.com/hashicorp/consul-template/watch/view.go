@@ -11,11 +11,6 @@ import (
 	dep "github.com/hashicorp/consul-template/dependency"
 )
 
-const (
-	// The amount of time to do a blocking query for
-	defaultWaitTime = 60 * time.Second
-)
-
 // View is a representation of a Dependency and the most recent data it has
 // received from Consul.
 type View struct {
@@ -33,6 +28,9 @@ type View struct {
 	receivedData bool
 	lastIndex    uint64
 
+	// blockQueryWaitTime is amount of time in seconds to do a blocking query for
+	blockQueryWaitTime time.Duration
+
 	// maxStale is the maximum amount of time to allow a query to be stale.
 	maxStale time.Duration
 
@@ -45,11 +43,6 @@ type View struct {
 
 	// stopCh is used to stop polling on this View
 	stopCh chan struct{}
-
-	// vaultGrace is the grace period between a lease and the max TTL for which
-	// Consul Template will generate a new secret instead of renewing an existing
-	// one.
-	vaultGrace time.Duration
 }
 
 // NewViewInput is used as input to the NewView function.
@@ -61,6 +54,9 @@ type NewViewInput struct {
 	// directly to the dependency.
 	Clients *dep.ClientSet
 
+	// BlockQueryWaitTime is amount of time in seconds to do a blocking query for
+	BlockQueryWaitTime time.Duration
+
 	// MaxStale is the maximum amount a time a query response is allowed to be
 	// stale before forcing a read from the leader.
 	MaxStale time.Duration
@@ -71,23 +67,18 @@ type NewViewInput struct {
 	// RetryFunc is a function which dictates how this view should retry on
 	// upstream errors.
 	RetryFunc RetryFunc
-
-	// VaultGrace is the grace period between a lease and the max TTL for which
-	// Consul Template will generate a new secret instead of renewing an existing
-	// one.
-	VaultGrace time.Duration
 }
 
 // NewView constructs a new view with the given inputs.
 func NewView(i *NewViewInput) (*View, error) {
 	return &View{
-		dependency: i.Dependency,
-		clients:    i.Clients,
-		maxStale:   i.MaxStale,
-		once:       i.Once,
-		retryFunc:  i.RetryFunc,
-		stopCh:     make(chan struct{}, 1),
-		vaultGrace: i.VaultGrace,
+		dependency:         i.Dependency,
+		clients:            i.Clients,
+		blockQueryWaitTime: i.BlockQueryWaitTime,
+		maxStale:           i.MaxStale,
+		once:               i.Once,
+		retryFunc:          i.RetryFunc,
+		stopCh:             make(chan struct{}, 1),
 	}, nil
 }
 
@@ -212,9 +203,8 @@ func (v *View) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 
 		data, rm, err := v.dependency.Fetch(v.clients, &dep.QueryOptions{
 			AllowStale: allowStale,
-			WaitTime:   defaultWaitTime,
+			WaitTime:   v.blockQueryWaitTime,
 			WaitIndex:  v.lastIndex,
-			VaultGrace: v.vaultGrace,
 		})
 		if err != nil {
 			if err == dep.ErrStopped {

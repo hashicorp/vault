@@ -85,7 +85,7 @@ to confirm signed JWTs passed in during login.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -103,7 +103,7 @@ Returns the configuration, if any, including credentials.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/gcp/config
@@ -227,7 +227,7 @@ Example `gce` role:
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -267,7 +267,7 @@ service accounts on the role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -307,7 +307,7 @@ remove labels (keys, values, or both) from the list of keys on the role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -329,7 +329,7 @@ Returns the previously registered role configuration.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/gcp/role/my-role
@@ -368,7 +368,7 @@ Lists all the roles that are registered with the plugin.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -399,7 +399,7 @@ Deletes the previously registered role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -440,7 +440,7 @@ role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request POST \
     --data @payload.json \

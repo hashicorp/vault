@@ -37,7 +37,7 @@ for verifying inbound SPNEGO tokens.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -65,7 +65,7 @@ The keytab is not returned because it is sensitive information.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/kerberos/config
@@ -151,7 +151,7 @@ This endpoint configures LDAP in the Kerberos auth method.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -189,7 +189,7 @@ This endpoint retrieves the LDAP configuration for the Kerberos auth method.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/kerberos/config/ldap
@@ -236,7 +236,7 @@ This endpoint returns a list of existing LDAP groups in the Kerberos auth method
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -273,7 +273,7 @@ This endpoint returns the policies associated with a Kerberos LDAP group.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/kerberos/groups/admins
@@ -317,7 +317,7 @@ This endpoint creates or updates LDAP group policies.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -339,7 +339,7 @@ This endpoint deletes the LDAP group and policy association.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -391,7 +391,7 @@ sWw
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "Authorization: Negotiate YIIFSw...sWw" \
     --request POST \

@@ -18,7 +18,7 @@ Version 2](/docs/secrets/kv/kv-v2).
 Create or update the key named "creds" in the K/V Version 2 enabled at "secret"
 with the value "passcode=my-long-passcode":
 
-```text
+```shell-session
 $ vault kv put secret/creds passcode=my-long-passcode
 Key              Value
 ---              -----
@@ -30,7 +30,7 @@ version          1
 
 Read this value back:
 
-```text
+```shell-session
 $ vault kv get secret/creds
 ====== Metadata ======
 Key              Value
@@ -48,7 +48,7 @@ passcode    my-long-passcode
 
 Get metadata for the key named "creds":
 
-```text
+```shell-session
 $ vault kv metadata get secret/creds
 ========== Metadata ==========
 Key                     Value
@@ -71,7 +71,7 @@ destroyed        false
 
 Get a specific version of the key named "creds":
 
-```text
+```shell-session
 $ vault kv get -version=1 secret/creds
 ====== Metadata ======
 Key              Value

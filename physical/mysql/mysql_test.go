@@ -1,7 +1,9 @@
 package mysql
 
 import (
+	"bytes"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,6 +17,48 @@ import (
 	mysqlhelper "github.com/hashicorp/vault/helper/testhelpers/mysql"
 )
 
+func TestMySQLPlaintextCatch(t *testing.T) {
+	address := os.Getenv("MYSQL_ADDR")
+	if address == "" {
+		t.SkipNow()
+	}
+
+	database := os.Getenv("MYSQL_DB")
+	if database == "" {
+		database = "test"
+	}
+
+	table := os.Getenv("MYSQL_TABLE")
+	if table == "" {
+		table = "test"
+	}
+
+	username := os.Getenv("MYSQL_USERNAME")
+	password := os.Getenv("MYSQL_PASSWORD")
+
+	// Run vault tests
+	var buf bytes.Buffer
+	log.DefaultOutput = &buf
+
+	logger := logging.NewVaultLogger(log.Debug)
+
+	NewMySQLBackend(map[string]string{
+		"address":  address,
+		"database": database,
+		"table":    table,
+		"username": username,
+		"password": password,
+		"plaintext_connection_allowed": "false",
+	}, logger)
+
+	str := buf.String()
+	dataIdx := strings.IndexByte(str, ' ')
+	rest := str[dataIdx+1:]
+
+	if !strings.Contains(rest, "credentials will be sent in plaintext") {
+		t.Fatalf("No warning of plaintext credentials occurred")
+	}
+}
 func TestMySQLBackend(t *testing.T) {
 	address := os.Getenv("MYSQL_ADDR")
 	if address == "" {
@@ -43,6 +87,7 @@ func TestMySQLBackend(t *testing.T) {
 		"table":    table,
 		"username": username,
 		"password": password,
+		"plaintext_connection_allowed": "true",
 	}, logger)
 
 	if err != nil {
@@ -89,6 +134,7 @@ func TestMySQLHABackend(t *testing.T) {
 		"username":   username,
 		"password":   password,
 		"ha_enabled": "true",
+		"plaintext_connection_allowed": "true",
 	}
 
 	b, err := NewMySQLBackend(config, logger)
@@ -136,6 +182,7 @@ func TestMySQLHABackend_LockFailPanic(t *testing.T) {
 		"username":   cfg.User,
 		"password":   cfg.Passwd,
 		"ha_enabled": "true",
+		"plaintext_connection_allowed": "true",
 	}
 
 	b, err := NewMySQLBackend(config, logger)

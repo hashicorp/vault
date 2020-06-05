@@ -230,7 +230,6 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	conf.LogLevel = logLevelToStringPtr(sc.LogLevel)
 
 	if err := ctlogging.Setup(&ctlogging.Config{
-		Name:   "template.server.runner",
 		Level:  *conf.LogLevel,
 		Writer: sc.LogWriter,
 	}); err != nil {

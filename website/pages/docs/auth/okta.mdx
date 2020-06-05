@@ -22,7 +22,7 @@ The mapping of groups in Okta to Vault policies is managed by using the
 The default path is `/okta`. If this auth method was enabled at a different
 path, specify `-path=/my-path` in the CLI.
 
-```text
+```shell-session
 $ vault login -method=okta username=my-username
 ```
 
@@ -31,7 +31,7 @@ $ vault login -method=okta username=my-username
 The default endpoint is `auth/okta/login`. If this auth method was enabled
 at a different path, use that value instead of `okta`.
 
-```shell
+```shell-session
 $ curl \
     --request POST \
     --data '{"password": "MY_PASSWORD"}' \
@@ -62,55 +62,55 @@ management tool.
 
 1. Enable the Okta auth method:
 
-```
+```shell-session
 $ vault auth enable okta
 ```
 
 1. Configure Vault to communicate with your Okta account:
 
-```
+```shell-session
 $ vault write auth/okta/config \
    base_url="okta.com" \
    org_name="dev-123456" \
    api_token="00KzlTNCqDf0enpQKYSAYUt88KHqXax6dT11xEZz_g"
 ```
 
-   **If no token is supplied, Vault will function, but only locally configured
-   group membership will be available. Without a token, groups will not be
-   queried.
+\*\*If no token is supplied, Vault will function, but only locally configured
+group membership will be available. Without a token, groups will not be
+queried.
 
-   Support for okta auth with no API token is deprecated in Vault 1.4.**
+Support for okta auth with no API token is deprecated in Vault 1.4.\*\*
 
-   For the complete list of configuration options, please see the API
-   documentation.
+For the complete list of configuration options, please see the API
+documentation.
 
 1. Map an Okta group to a Vault policy:
 
-```
+```shell-session
 $ vault write auth/okta/groups/scientists policies=nuclear-reactor
 ```
 
-   In this example, anyone who successfully authenticates via Okta who is a
-   member of the "scientists" group will receive a Vault token with the
-   "nuclear-reactor" policy attached.
+In this example, anyone who successfully authenticates via Okta who is a
+member of the "scientists" group will receive a Vault token with the
+"nuclear-reactor" policy attached.
 
-   ***
+---
 
-   It is also possible to add users directly:
+It is also possible to add users directly:
 
-```
+```shell-session
 $ vault write auth/okta/groups/engineers policies=autopilot
 $ vault write auth/okta/users/tesla groups=engineers
 ```
 
-   This adds the Okta user "tesla" to the "engineers" group, which maps to
-   the "autopilot" Vault policy.
+This adds the Okta user "tesla" to the "engineers" group, which maps to
+the "autopilot" Vault policy.
 
-   **The user-policy mapping via group membership happens at token _creation
-   time_. Any changes in group membership in Okta will not affect existing
-   tokens that have already been provisioned. To see these changes, users
-   will need to re-authenticate. You can force this by revoking the
-   existing tokens.**
+**The user-policy mapping via group membership happens at token _creation
+time_. Any changes in group membership in Okta will not affect existing
+tokens that have already been provisioned. To see these changes, users
+will need to re-authenticate. You can force this by revoking the
+existing tokens.**
 
 ## API
 

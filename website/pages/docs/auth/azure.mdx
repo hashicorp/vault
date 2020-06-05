@@ -45,7 +45,7 @@ have already reviewed these sections, here are some quick links to:
 The default path is `/auth/azure`. If this auth method was enabled at a different
 path, specify `auth/my-path/login` instead.
 
-```text
+```shell-session
 $ vault write auth/azure/login \
     role="dev-role" \
     jwt="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
@@ -58,7 +58,7 @@ The `role` and `jwt` parameters are required. When using bound*service_principal
 
 For example:
 
-```text
+```shell-session
 $ vault write auth/azure/login role="dev-role" \
      jwt="$(curl -s 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.hashicorp.com%2F' -H Metadata:true | jq -r '.access_token')" \
      subscription_id=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-08-01" | jq -r '.compute | .subscriptionId')  \
@@ -71,7 +71,7 @@ $ vault write auth/azure/login role="dev-role" \
 The default endpoint is `auth/azure/login`. If this auth method was enabled
 at a different path, use that value instead of `azure`.
 
-```sh
+```shell-session
 $ curl \
     --request POST \
     --data '{"role": "dev-role", "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}' \

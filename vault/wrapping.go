@@ -10,7 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -142,6 +144,24 @@ DONELISTHANDLING:
 		c.logger.Error("failed to create wrapping token", "error", err)
 		return nil, ErrInternalError
 	}
+
+	// Count the successful token creation
+	ttl_label := metricsutil.TTLBucket(resp.WrapInfo.TTL)
+	c.metricSink.IncrCounterWithLabels(
+		[]string{"token", "creation"},
+		1,
+		[]metrics.Label{
+			metricsutil.NamespaceLabel(ns),
+			// The type of the secret engine is not all that useful;
+			// we could use "token" but let's be more descriptive,
+			// even if it's not a real auth method.
+			{"auth_method", "response_wrapping"},
+			{"mount_point", req.MountPoint},
+			{"creation_ttl", ttl_label},
+			// *Should* be service, but let's use whatever create() did..
+			{"token_type", te.Type.String()},
+		},
+	)
 
 	resp.WrapInfo.Token = te.ID
 	resp.WrapInfo.Accessor = te.Accessor

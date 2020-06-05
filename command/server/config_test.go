@@ -22,6 +22,14 @@ func TestLoadConfigFile_json2(t *testing.T) {
 	testLoadConfigFile_json2(t, nil)
 }
 
+func TestLoadConfigFileIntegerAndBooleanValues(t *testing.T) {
+	testLoadConfigFileIntegerAndBooleanValues(t)
+}
+
+func TestLoadConfigFileIntegerAndBooleanValuesJson(t *testing.T) {
+	testLoadConfigFileIntegerAndBooleanValuesJson(t)
+}
+
 func TestLoadConfigDir(t *testing.T) {
 	testLoadConfigDir(t)
 }
