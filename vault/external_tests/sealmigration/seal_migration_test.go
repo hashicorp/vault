@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"runtime/debug"
 	"testing"
 	"time"
 
@@ -292,12 +293,14 @@ func migrateFromShamirToTransit_Post14(
 	}
 
 	// Make sure the seal configs were updated correctly.
-	b, r, err := leader.Core.PhysicalSealConfigs(context.Background())
+	b, r, err := cluster.Cores[0].Core.PhysicalSealConfigs(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	verifyBarrierConfig(t, b, wrapping.Transit, 1, 1, 1)
-	verifyBarrierConfig(t, r, wrapping.Shamir, keyShares, keyThreshold, 0)
+	verifyBarrierConfig(t, b, wrapping.Shamir, keyShares, keyThreshold, 1)
+	if r != nil {
+		t.Fatalf("expected nil recovery config, got: %#v", r)
+	}
 
 	return transitSeal
 }
@@ -383,6 +386,59 @@ func migrateFromTransitToShamir_Post14(
 		unsealMigrate(t, cluster.Cores[i].Client, recoveryKeys, true)
 		time.Sleep(5 * time.Second)
 	}
+
+	// Bring down the leader
+	cluster.StopCore(t, 0)
+	if storage.IsRaft {
+		teststorage.CloseRaftStorage(t, cluster, 0)
+	}
+
+	// Wait for the followers to establish a new leader
+	leaderIdx, err := testhelpers.AwaitLeader(t, cluster)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if leaderIdx == 0 {
+		t.Fatalf("Core 0 cannot be the leader right now")
+	}
+	leader := cluster.Cores[leaderIdx]
+	leader.Client.SetToken(rootToken)
+
+	// Bring core 0 back up
+	cluster.RestartCore(t, 0, opts)
+	cluster.Cores[0].Client.SetToken(rootToken)
+
+	// TODO is this a bug? Why is raft different here?
+	unsealMigrate(t, cluster.Cores[0].Client, recoveryKeys, true)
+	if storage.IsRaft {
+		unsealMigrate(t, cluster.Cores[0].Client, recoveryKeys, true)
+	} else {
+		unsealMigrate(t, cluster.Cores[0].Client, recoveryKeys, true)
+		//unseal(t, cluster.Cores[0].Client, recoveryKeys)
+	}
+
+	time.Sleep(5 * time.Second)
+
+	// Wait for migration to finish.
+	awaitMigration(t, leader.Client)
+
+	// This is apparently necessary for the raft cluster to get itself
+	// situated.
+	if storage.IsRaft {
+		time.Sleep(15 * time.Second)
+		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Read the secret
+	secret, err := leader.Client.Logical().Read("secret/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(secret.Data, map[string]interface{}{"zork": "quux"}); len(diff) > 0 {
+		t.Fatal(diff)
+	}
 }
 
 func unsealMigrate(t *testing.T, client *api.Client, keys [][]byte, transitServerAvailable bool) {
@@ -461,6 +517,7 @@ func unseal(t *testing.T, client *api.Client, keys [][]byte) {
 		if i < keyThreshold-1 {
 			// Not enough keys have been provided yet.
 			if err != nil {
+				debug.PrintStack()
 				t.Fatal(err)
 			}
 		} else {
