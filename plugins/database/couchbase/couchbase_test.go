@@ -1,6 +1,10 @@
 package couchbase
 
 import (
+	"encoding/base64"
+	"net/http"
+	"io/ioutil"
+	"fmt"
 	"context"
 	"testing"
 	"time"
@@ -29,10 +33,6 @@ func prepareCouchbaseTestContainer(t *testing.T) (func(), string, int) {
 	if err != nil {
 		t.Fatalf("Failed to connect to docker: %s", err)
 	}
-
-	//	cwd, _ := os.Getwd()
-
-	// 0.0.0.0:8091-8094->8091-8094/tcp, 0.0.0.0:11207->11207/tcp, 0.0.0.0:11210->11210/tcp, 0.0.0.0:18091-18096->18091-18096/tcp
 
 	ro := &dockertest.RunOptions{
 		Repository:   "docker.io/fhitchen/vault-couchbase",
@@ -84,6 +84,7 @@ func prepareCouchbaseTestContainer(t *testing.T) (func(), string, int) {
 
 	containerInitialized = true
 
+	// [TODO] wait for contaienr to be ready using sleep for now.
 	//port, _ := strconv.Atoi(resource.GetPort("9042/tcp"))
 	//address  := fmt.Sprintf("127.0.0.1:%d", port)
 
@@ -113,21 +114,32 @@ func prepareCouchbaseTestContainer(t *testing.T) (func(), string, int) {
 func TestCouchbaseDB_Initialize(t *testing.T) {
 	log.Printf("Testing Init()")
 	_, address, port := prepareCouchbaseTestContainer(t)
-	// defer cleanup()
-	address = "couchbases://localhost"
+
+	base64pemRootCA, err := getRootCAfromCouchbase(fmt.Sprintf("http://%s:8091/pools/default/certificate", address))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// couchbase[s] for TLS, also using insecure_tls false
+	// Test will fail if we do not use 127.0.0.1 as that is the CN in the self signed server certificate
+	// localhost will return an "unambiguous timeout" error. Look in the Couchbase memcached log to see the real error,
+	// WARNING 43: SSL_accept() returned -1 with error 1: error:14094412:SSL routines:ssl3_read_bytes:sslv3 alert bad certificate
+	
+	address = fmt.Sprintf("couchbases://%s", "127.0.0.1")
+	
 	connectionDetails := map[string]interface{}{
 		"hosts":            address,
 		"port":             port,
 		"username":         "Administrator",
 		"password":         "Admin123",
 		"tls":              true,
-		"insecure_tls":     true,
-		"base64pem":        Base64pemCA,
+		"insecure_tls":     false,
+		"base64pem":        base64pemRootCA,
 		"protocol_version": 4,
 	}
 
 	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -149,7 +161,6 @@ func TestCouchbaseDB_CreateUser(t *testing.T) {
 	log.Printf("Testing CreateUser()")
 
 	_, address, port := prepareCouchbaseTestContainer(t)
-	// defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"hosts":            address,
@@ -201,7 +212,6 @@ func testCredsExist(t *testing.T, username string, password string) error {
 	}
 	log.Printf("Testing testCredsExist()")
 	_, address, port := prepareCouchbaseTestContainer(t)
-	// defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"hosts":            address,
@@ -230,7 +240,6 @@ func testRevokeUser(t *testing.T, username string) error {
 	}
 	log.Printf("Testing RevokeUser()")
 	_, address, port := prepareCouchbaseTestContainer(t)
-	// defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"hosts":            address,
@@ -268,7 +277,6 @@ func TestCouchbaseDB_CreateUser_plusRole(t *testing.T) {
 	}
 	log.Printf("Testing CreateUser_plusRole()")
 	_, address, port := prepareCouchbaseTestContainer(t)
-	// defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"hosts":            address,
@@ -320,7 +328,6 @@ func TestCouchbaseDB_RotateRootCredentials(t *testing.T) {
 	}
 	log.Printf("Testing RotateRootCredentials()")
 	_, address, port := prepareCouchbaseTestContainer(t)
-	// defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"hosts":            address,
@@ -365,7 +372,7 @@ func TestCouchbaseDB_RotateRootCredentials(t *testing.T) {
 func testCouchbaseDB_SetCredentials(t *testing.T, username, password string) {
 
 	_, address, port := prepareCouchbaseTestContainer(t)
-	// defer cleanup()
+
 	log.Printf("Testing SetCredentials()")
 
 	connectionDetails := map[string]interface{}{
@@ -423,8 +430,24 @@ func TestCouchbaseDB_SetCredentials(t *testing.T) {
 	}
 
 	testCouchbaseDB_SetCredentials(t, "vault-edu", "password")
+}
+
+// Last test to cleanup the db
+func TestCouchbaseDB_cleanup(t *testing.T) {
 	cleanup()
 }
 
 const testCouchbaseRole = `[{"name":"ro_admin"},{"name":"bucket_admin","bucket":"foo"}]`
-const Base64pemCA = `LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURBakNDQWVxZ0F3SUJBZ0lJRmhBcGRmdG5oeHd3RFFZSktvWklodmNOQVFFTEJRQXdKREVpTUNBR0ExVUUKQXhNWlEyOTFZMmhpWVhObElGTmxjblpsY2lCaE9UbG1OV05oWXpBZUZ3MHhNekF4TURFd01EQXdNREJhRncwMApPVEV5TXpFeU16VTVOVGxhTUNReElqQWdCZ05WQkFNVEdVTnZkV05vWW1GelpTQlRaWEoyWlhJZ1lUazVaalZqCllXTXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUFBNElCRHdBd2dnRUtBb0lCQVFEWGV1a21CZWZtTEs1TGpXOEsKOW9rSUs4d1FMTjZJVnlLQ1NRelFJZXNURDRuZzZ0Z1F5bHJZL1Q1RlRHQURpUE9leDZpbEp4dDRnNzJteHVtcworZHZvaE1KaVpWOFFGaTNOeTVYdFc3S05mNUl1Nkk0djQvZmViSkYrdGNjTGgrUUNtaEtPR1F2VUdleDFlT0J5Ck8xVWxRWlVDbTFsZVNKVjRzUWhyWXZPR296THlHMkpUVjRESFNqQW1RbkxMQTNqTExWbHI4V1hOcEdEL1NsaWMKYWFPc0dvaEtudGdwU1AvSTdxMU5ESXhNaEtpY1dmUS9sN3dxQVgwMU1jWXFaNjErcDZuMkF2ZmY5NjJrUjF1aApWQWcwdDVZU3c0WG01RXd2L1hqS2ErZW1RVXg5TVB3TUloYldHVUtlZUJwbHFEbk5VemFDUWVQeTN0dFI2d09pCkZIdURBZ01CQUFHak9EQTJNQTRHQTFVZER3RUIvd1FFQXdJQ3BEQVRCZ05WSFNVRUREQUtCZ2dyQmdFRkJRY0QKQVRBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFBNktJVW9vWjY3ayt1WApYWDlFY2lUOEQvejhUcDF4WXZ1aVliMlAwbGpZRjBPWU5jNC9sdkk5MUNGek5iMFBhQy9zbFhOYVcya3NIZnlaClJLN08wdk9tSEpVMW8wK0xUdlhJVjZsRld1N3k0aXB4Zy8zY0MwRFl5S0dad0xMbzZ5OUpIMmYvczc5SVFVZXoKZWZiUlhxZ05Ta2E4VUp0cWg5VEhBT0lYY09TUnFId2VvRG56a1NDaC9ZNnJDMWc1RlZWWjhuNDlJQUxMMG14ZAoya0VYYU9IUlhtSloyME9HWDgwZGdWT2Y2Z3lTRHN6ZWU1T3J3VDdESWNQMzdsQkQ0cytHZG9DM25HNktURDRwClVGc3FaSXBSM2x2cmF2V1Fxb1Z2UzJyNHpoN2IvZVZrNmlIOVcycWdxaTQrTzNyK25WcWpQdW1pQTJiNXNUNkkKbDQ5d1BNWTAKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=`
+
+func getRootCAfromCouchbase(url string) (Base64pemCA string, err error) {
+	resp, err := http.Get(url)
+        if err != nil {
+                return "", err
+        }
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(body), nil
+}

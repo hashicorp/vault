@@ -222,21 +222,11 @@ func (p *CouchbaseDB) RenewUser(ctx context.Context, statements dbplugin.Stateme
 	return nil
 }
 
-func (p *CouchbaseDB) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
+func (c *CouchbaseDB) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
 	// Grab the lock
-	p.Lock()
-	defer p.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
-	statements = dbutil.StatementCompatibilityHelper(statements)
-
-	if len(statements.Revocation) == 0 {
-		return p.defaultRevokeUser(ctx, username)
-	}
-
-	return p.customRevokeUser(ctx, username, statements.Revocation)
-}
-
-func (c *CouchbaseDB) customRevokeUser(ctx context.Context, username string, revocationStmts []string) error {
 	db, err := c.getConnection(ctx)
 	if err != nil {
 		return err
@@ -248,19 +238,9 @@ func (c *CouchbaseDB) customRevokeUser(ctx context.Context, username string, rev
 	err = mgr.DropUser(username, nil)
 
 	if err != nil {
-		panic(err)
-	}
-
-	c.close()
-
-	return nil
-}
-
-func (c *CouchbaseDB) defaultRevokeUser(ctx context.Context, username string) error {
-	_, err := c.getConnection(ctx)
-	if err != nil {
 		return err
 	}
+
 	c.close()
 
 	return nil

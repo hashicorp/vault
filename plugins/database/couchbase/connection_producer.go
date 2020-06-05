@@ -150,7 +150,6 @@ func (c *couchbaseDBConnectionProducer) close() error {
 	}
 
 	c.cluster = nil
-	fmt.Println("Closed db")
 	return nil
 }
 
