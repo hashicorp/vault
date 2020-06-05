@@ -82,6 +82,12 @@
         grid-column: 2/2;
         grid-row: 2/2;
       }
+
+      .grid-item-full-middle {
+        grid-column: 1 / span 2;
+        grid-row: 2/4;
+      }
+
       .grid-item-left-bottom {
         grid-column: 1/1;
         grid-row: 3/3;
