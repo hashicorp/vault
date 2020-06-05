@@ -4,7 +4,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
-import { dateFormat } from 'vault/tests/helpers/date-format';
+import { dateFormat } from 'core/helpers/date-format';
 import { create } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import ss from 'vault/tests/pages/components/search-select';
@@ -89,23 +89,6 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-secondary-add]');
 
     await pollCluster(this.owner);
-    // checks on secondary token modal
-    assert.dom('#modal-wormhole').exists();
-
-    const date = new Date();
-    date.setMinutes(date.getMinutes() + 30); // add default 30 min TTL to current date to return expires
-    const dateFromHelper = dateFormat([date, 'MMM DD, YYYY hh:mm:ss A']);
-    // because timestamp might be off by a 1 sec due to different in exp from token vs. adding 30 min, checking the string before the seconds.
-    const shortendedDateFromHelper = dateFromHelper.slice(0, 18);
-    const dateDisplayed = document.querySelector('[data-test-row-value="Expires"]').innerText;
-    const shortendedDateDisplay = dateDisplayed.slice(0, 18);
-
-    assert.equal(
-      shortendedDateFromHelper,
-      shortendedDateDisplay,
-      'shows the correct expiration date and in the correct format'
-    );
-
     // click into the added secondary's mount filter config
     await click('[data-test-replication-link="secondaries"]');
     await click('[data-test-popup-menu-trigger]');
@@ -227,6 +210,50 @@ module('Acceptance | Enterprise | replication', function(hooks) {
       'This Disaster Recovery secondary has not been enabled.  You can do so from the Disaster Recovery Primary.',
       'renders message when replication is enabled'
     );
+  });
+
+  test('add secondary and navigate through token generation modal', async function(assert) {
+    const secondaryName = 'firstSecondary';
+    await visit('/vault/replication');
+
+    // enable perf replication
+    await click('[data-test-replication-type-select="performance"]');
+    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
+    await click('[data-test-replication-enable]');
+    await pollCluster(this.owner);
+    await settled();
+
+    // add a secondary
+    await click('[data-test-replication-link="secondaries"]');
+    await click('[data-test-secondary-add]');
+    await fillIn('[data-test-replication-secondary-id]', secondaryName);
+    await click('[data-test-secondary-add]');
+    await pollCluster(this.owner);
+
+    // checks on secondary token modal
+    assert.dom('#modal-wormhole').exists();
+    const today = new Date();
+    today.setMinutes(today.getMinutes() + 30); // add default 30 min TTL to current date to return expires
+    const dateFormatted = dateFormat([today, 'MMM DD, YYYY hh:mm:ss A']);
+    const modalDate = document.querySelector('[data-test-row-value="Expires"]').innerText;
+    // because timestamp might be off by a 1 sec due to different in exp from token vs. adding 30 min, checking the string before the seconds.
+    assert.equal(
+      dateFormatted.slice(0, 18),
+      modalDate.slice(0, 18),
+      'shows the correct expiration date and in the correct format'
+    );
+    // click off the modal to make sure you don't just have to click on the copy-close button to copy the token
+    await click('[data-test-modal-background]');
+    await settled();
+    // confirm you were redirected to the secondaries page
+    assert.equal(
+      currentURL(),
+      `/vault/replication/performance/secondaries`,
+      'redirects to the secondaries page'
+    );
+    assert
+      .dom('[data-test-secondary-name]')
+      .includesText(secondaryName, 'it displays the secondary in the list of secondaries');
   });
 
   test('render performance and dr primary and navigate to details page', async function(assert) {

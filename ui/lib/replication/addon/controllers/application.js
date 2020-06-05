@@ -129,7 +129,7 @@ export default Controller.extend(copy(DEFAULTS, true), {
         this.get('flashMessages').success(successMessage);
       }
       // use copy browser extension to copy token if you close the modal by clicking outside of it.
-      const htmlSelectedToken = document.querySelector('.textarea');
+      const htmlSelectedToken = document.querySelector('#token-textarea');
       htmlSelectedToken.select();
       document.execCommand('copy');
 
