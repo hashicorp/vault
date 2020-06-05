@@ -192,10 +192,14 @@ func (cert Certificate) CombinedPEM() []byte {
 	return bytes.Join([][]byte{cert.privKey.Pem, cert.Pem}, []byte{'\n'})
 }
 
+func (cert Certificate) PrivateKeyPEM() []byte {
+	return cert.privKey.Pem
+}
+
 // ////////////////////////////////////////////////////////////////////////////
 // Writing to file
 // ////////////////////////////////////////////////////////////////////////////
-func writeFile(t *testing.T, filename string, data []byte, perms os.FileMode) {
+func WriteFile(t *testing.T, filename string, data []byte, perms os.FileMode) {
 	t.Helper()
 
 	err := ioutil.WriteFile(filename, data, perms)
