@@ -1,9 +1,11 @@
 package metricsutil
 
 import (
+	"strings"
 	"time"
 
 	metrics "github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/namespace"
 )
 
 // ClusterMetricSink serves as a shim around go-metrics
@@ -66,5 +68,20 @@ func BlackholeSink() *ClusterMetricSink {
 func (m *ClusterMetricSink) SetDefaultClusterName(clusterName string) {
 	if m.ClusterName == "" {
 		m.ClusterName = clusterName
+	}
+}
+
+// NamespaceLabel creates a metrics label for the given
+// Namespace: root is "root"; others are path with the
+// final '/' removed.
+func NamespaceLabel(ns *namespace.Namespace) metrics.Label {
+	switch {
+	case ns == nil:
+		return metrics.Label{"namespace", "root"}
+	case ns.ID == namespace.RootNamespaceID:
+		return metrics.Label{"namespace", "root"}
+	default:
+		return metrics.Label{"namespace",
+			strings.Trim(ns.Path, "/")}
 	}
 }
