@@ -43,6 +43,8 @@ func TestTest_preCheck(t *testing.T) {
 	}
 }
 
+var _ TestT = (*mockT)(nil)
+
 // mockT implements TestT for testing
 type mockT struct {
 	ErrorCalled bool
@@ -72,6 +74,8 @@ func (t *mockT) Skip(args ...interface{}) {
 	t.SkipArgs = args
 	t.f = true
 }
+
+func (t *mockT) Helper() {}
 
 func (t *mockT) failed() bool {
 	return t.f

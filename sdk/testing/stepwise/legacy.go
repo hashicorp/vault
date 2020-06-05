@@ -492,4 +492,5 @@ type TestT interface {
 	Error(args ...interface{})
 	Fatal(args ...interface{})
 	Skip(args ...interface{})
+	Helper()
 }
