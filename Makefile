@@ -312,40 +312,10 @@ LOCKFILE := $(LOCKDIR)/pkgs.yml
 
 export PACKAGE_SPEC_ID LAYER_SPEC_ID PRODUCT_REVISION
 
-# You can override the workflow name by setting this value in the environment.
-# This is useful when you want to look up a specific workflow by name.
-RELEASE_BUILD_WORKFLOW_NAME ?= build-release
-
-# packages regenerates $(LOCKDIR) from $(SPEC) using packagespec. This is only for
-# internal HashiCorp use, as it has dependencies not available to OSS contributors.
-packages:
-	@command -v packagespec > /dev/null 2>&1 || { \
-		echo "Please install packagespec."; \
-		echo "Note: packagespec is only available to HashiCorp employees at present."; \
-		exit 1; \
-	}
-	@packagespec lock -specfile $(SPEC) -lockdir $(LOCKDIR)
-	@$(MAKE) ci-config
-
-# package is an alias for make -C $(LOCKDIR) package, for building a specific package.
-# You must set PACKAGE_SPEC_ID in order to use this target.
-package:
-	@$(MAKE) -C $(LOCKDIR) package
-
-# build is an alias for make -C $(LOCKDIR) build, this is a convenience target for
-# local use only, which builds the first package in your spec file that matches your
-# machine's GOOS and GOARCH.
-build:
-	@$(MAKE) -C $(LOCKDIR) build
-
-
-# CI_TARGETS are an aliases for make -C $(LOCKDIR) $@. These are convenience
-# targets for triggering actions in CI. These are only for internal HashiCorp use.
-CI_TARGETS := build-ci stage-config stage
-$(CI_TARGETS):
-	@\
-		export RELEASE_BUILD_WORKFLOW_NAME=$(RELEASE_BUILD_WORKFLOW_NAME); \
-		$(MAKE) -C $(LOCKDIR) $@
+# PACKAGESPEC_TARGETS are convenience aliases for targets defined in $(LOCKDIR)/Makefile
+PACKAGESPEC_TARGETS := package build build-ci stage-config stage publish
+$(PACKAGESPEC_TARGETS):
+	@$(MAKE) -C $(LOCKDIR) $@
 ## end packagespec integration ##
 
 CI_WORKFLOW_TPL     := .circleci/config/@build-release.yml.tpl
@@ -359,7 +329,6 @@ $(CI_WORKFLOW): $(LOCKFILE) $(CI_WORKFLOW_TPL)
 	@\
 		echo "==> Updating $@ to match $<"; \
 		$(call WRITE_GENERATED_FILE_HEADER,$@,make $@,$^); \
-		export RELEASE_BUILD_WORKFLOW_NAME=$(RELEASE_BUILD_WORKFLOW_NAME); \
 		cat $< | gomplate -f $(CI_WORKFLOW_TPL) -d 'package-list=stdin://?type=application/yaml' >> $@
 
 .PHONY: ci-config
@@ -368,6 +337,17 @@ ci-config: ci-update-release-packages
 .PHONY: ci-verify
 ci-verify:
 	@$(MAKE) -C .circleci ci-verify
+
+# packages regenerates $(LOCKDIR) from $(SPEC) using packagespec. This is only for
+# internal HashiCorp use, as it has dependencies not available to OSS contributors.
+packages:
+	@command -v packagespec > /dev/null 2>&1 || { \
+		echo "Please install packagespec."; \
+		echo "Note: packagespec is only available to HashiCorp employees at present."; \
+		exit 1; \
+	}
+	@packagespec lock -specfile $(SPEC) -lockdir $(LOCKDIR)
+	@$(MAKE) ci-config
 
 
 .PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack stage-commit publish-commit packages build build-ci
