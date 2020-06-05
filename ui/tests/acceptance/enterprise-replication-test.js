@@ -1,5 +1,5 @@
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
-import { click, fillIn, findAll, currentURL, find, visit, settled } from '@ember/test-helpers';
+import { pauseTest, click, fillIn, findAll, currentURL, find, visit, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -193,7 +193,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-replication-enable]');
     await pollCluster(this.owner);
     await visit('/vault/replication/dr/manage');
-
+    await click('[data-test-demote-replication] [data-test-replication-action-trigger]');
     assert.ok(findAll('[data-test-demote-warning]').length, 'displays the demotion warning');
   });
 
@@ -260,11 +260,17 @@ module('Acceptance | Enterprise | replication', function(hooks) {
 
     // demote perf primary to a secondary
     await click('[data-test-replication-link="manage"]');
-    const demote = document.querySelector('[data-test-replication-demote]').firstElementChild;
-    await click(demote);
-    await click('[data-test-confirm-button="true"]');
+    // open demote modal
+    await click('[data-test-demote-replication] [data-test-replication-action-trigger]');
+    // enter confirmation text
+    await pauseTest();
+    await fillIn('input[data-test-confirmation-modal-input]', 'Performance');
+    // Click confirm button
+    await pauseTest();
+    await click('[data-test-confirm-button]');
+    await pauseTest();
     await click('[data-test-replication-link="details"]');
-
+    await pauseTest();
     assert.dom('[data-test-replication-dashboard]').exists();
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
     assert.ok(
