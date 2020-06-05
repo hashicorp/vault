@@ -1,6 +1,5 @@
 import { alias } from '@ember/object/computed';
 import Component from '@ember/component';
-import { computed } from '@ember/object';
 import ReplicationActions from 'core/mixins/replication-actions';
 import layout from '../templates/components/replication-actions';
 

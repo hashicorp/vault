@@ -16,8 +16,8 @@ module('Integration | Helper | date-format', function(hooks) {
       .includesText(today.getFullYear(), 'it renders the date in the year format');
   });
 
-  test('it formats the date as specified', async function(assert) {
-    let today = new Date();
+  test('it supports date timestamps', async function(assert) {
+    let today = new Date().getTime();
     this.set('today', today);
 
     await render(hbs`<p class="date-format">{{date-format today 'hh:mm:ss'}}</p>`);
