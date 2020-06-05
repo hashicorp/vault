@@ -49,7 +49,7 @@
       display: grid;
       grid-gap: $spacing-s;
       grid-template-columns: 1fr 1fr;
-      grid-template-rows: 0.2fr 1fr 0.2fr;
+      grid-template-rows: 0.2fr 0.2fr 0.2fr;
       padding: $spacing-l;
       line-height: 1.5;
 
@@ -83,23 +83,26 @@
         grid-row: 2/2;
       }
 
-      .grid-item-full-middle {
+      .grid-item-second-row {
         grid-column: 1 / span 2;
-        grid-row: 2/4;
+        grid-row: 2/2;
+      }
+
+      .grid-item-third-row {
+        grid-column: 1 / span 2;
+        grid-row: 3/4;
+        max-height: 240px;
       }
 
       .grid-item-left-bottom {
         grid-column: 1/1;
         grid-row: 3/3;
-        margin-top: -8px;
-
         display: flex;
         align-items: center;
       }
       .grid-item-right-bottom {
         grid-column: 2/2;
         grid-row: 3/3;
-        margin-top: -8px;
       }
       .grid-item-full-bottom {
         grid-column: 1 / span 2;

@@ -20,6 +20,7 @@ import { clusterStates } from 'core/helpers/cluster-states';
 
 export default Component.extend({
   layout,
+  tagName: '',
   title: null,
   replicationDetails: null,
   state: computed('replicationDetails.{state}', function() {
