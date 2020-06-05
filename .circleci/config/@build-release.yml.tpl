@@ -2,7 +2,7 @@
 {{- /*
   It is mandatory to set RELEASE_BUILD_WORKFLOW_NAME when rendering this template.
 */ -}}
-{{- $workflowName := (env.Getenv "RELEASE_BUILD_WORKFLOW_NAME") -}}
+{{- $workflowName := (env.Getenv "RELEASE_BUILD_WORKFLOW_NAME" "build-release") -}}
 {{- $packages := $data.packages -}}
 {{- $layers := $data.layers -}}
 {{- $revision := (env.Getenv "PRODUCT_REVISION") -}}
