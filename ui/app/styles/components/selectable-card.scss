@@ -67,6 +67,11 @@
     font-weight: 500;
     line-height: 1.33;
   }
+
+  .vlt-table {
+    max-height: 240px;
+    overflow: scroll;
+  }
 }
 
 .selectable-card.is-rounded {
