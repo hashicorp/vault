@@ -25,7 +25,7 @@ import (
 func TestSealMigration_TransitToShamir_Pre14(t *testing.T) {
 	// Note that we do not test integrated raft storage since this is
 	// a pre-1.4 test.
-	testVariousBackends(t, testSealMigrationTransitToShamir_Pre14, false)
+	testVariousBackends(t, testSealMigrationTransitToShamir_Pre14, basePort_TransitToShamir_Pre14, false)
 }
 
 func testSealMigrationTransitToShamir_Pre14(
@@ -42,8 +42,6 @@ func testSealMigrationTransitToShamir_Pre14(
 	tss.MakeKey(t, "transit-seal-key")
 
 	// Initialize the backend with transit.
-	fmt.Printf("-----------------------------------------------------------------\n")
-	fmt.Printf("initializeTransit\n")
 	cluster, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
 	rootToken, recoveryKeys := cluster.RootToken, cluster.RecoveryKeys
 	cluster.EnsureCoresSealed(t)
@@ -51,8 +49,6 @@ func testSealMigrationTransitToShamir_Pre14(
 	cluster.Cleanup()
 
 	// Migrate the backend from transit to shamir
-	fmt.Printf("-----------------------------------------------------------------\n")
-	fmt.Printf("migrateFromTransitToShamir_Pre14\n")
 	migrateFromTransitToShamir_Pre14(t, logger, storage, basePort, tss, transitSeal, rootToken, recoveryKeys)
 
 	// Now that migration is done, we can nuke the transit server, since we
@@ -62,8 +58,6 @@ func testSealMigrationTransitToShamir_Pre14(
 
 	// Run the backend with shamir.  Note that the recovery keys are now the
 	// barrier keys.
-	fmt.Printf("-----------------------------------------------------------------\n")
-	fmt.Printf("runShamir\n")
 	runShamir(t, logger, storage, basePort, rootToken, recoveryKeys)
 }
 

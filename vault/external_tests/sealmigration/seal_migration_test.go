@@ -25,11 +25,16 @@ const (
 	numTestCores = 5
 	keyShares    = 3
 	keyThreshold = 3
+
+	basePort_ShamirToTransit_Pre14  = 51000
+	basePort_TransitToShamir_Pre14  = 52000
+	basePort_ShamirToTransit_Post14 = 53000
+	basePort_TransitToShamir_Post14 = 54000
 )
 
 type testFunc func(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int)
 
-func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
+func testVariousBackends(t *testing.T, tf testFunc, basePort int, includeRaft bool) {
 
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
 
@@ -40,7 +45,7 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 		storage, cleanup := teststorage.MakeReusableStorage(
 			t, logger, teststorage.MakeInmemBackend(t, logger))
 		defer cleanup()
-		tf(t, logger, storage, 51000)
+		tf(t, logger, storage, basePort+100)
 	})
 
 	t.Run("file", func(t *testing.T) {
@@ -50,7 +55,7 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 		storage, cleanup := teststorage.MakeReusableStorage(
 			t, logger, teststorage.MakeFileBackend(t, logger))
 		defer cleanup()
-		tf(t, logger, storage, 52000)
+		tf(t, logger, storage, basePort+200)
 	})
 
 	t.Run("consul", func(t *testing.T) {
@@ -60,7 +65,7 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 		storage, cleanup := teststorage.MakeReusableStorage(
 			t, logger, teststorage.MakeConsulBackend(t, logger))
 		defer cleanup()
-		tf(t, logger, storage, 53000)
+		tf(t, logger, storage, basePort+300)
 	})
 
 	if includeRaft {
@@ -68,13 +73,14 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 			t.Parallel()
 
 			logger := logger.Named("raft")
+			raftBasePort := basePort + 400
 
 			atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
-			addressProvider := testhelpers.NewHardcodedServerAddressProvider(numTestCores, 54010)
+			addressProvider := testhelpers.NewHardcodedServerAddressProvider(numTestCores, raftBasePort+10)
 
 			storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores, addressProvider)
 			defer cleanup()
-			tf(t, logger, storage, 54000)
+			tf(t, logger, storage, raftBasePort)
 		})
 	}
 }
@@ -85,7 +91,7 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 func TestSealMigration_ShamirToTransit_Pre14(t *testing.T) {
 	// Note that we do not test integrated raft storage since this is
 	// a pre-1.4 test.
-	testVariousBackends(t, testSealMigrationShamirToTransit_Pre14, false)
+	testVariousBackends(t, testSealMigrationShamirToTransit_Pre14, basePort_ShamirToTransit_Pre14, false)
 }
 
 func testSealMigrationShamirToTransit_Pre14(
@@ -183,7 +189,7 @@ func migrateFromShamirToTransit_Pre14(
 // migration, using the post-1.4 method of bring individual nodes in the cluster
 // to do the migration.
 func TestSealMigration_ShamirToTransit_Post14(t *testing.T) {
-	testVariousBackends(t, testSealMigrationShamirToTransit_Post14, true)
+	testVariousBackends(t, testSealMigrationShamirToTransit_Post14, basePort_ShamirToTransit_Post14, true)
 }
 
 func testSealMigrationShamirToTransit_Post14(
@@ -311,7 +317,7 @@ func migrateFromShamirToTransit_Post14(
 func TestSealMigration_TransitToShamir_Post14(t *testing.T) {
 	// Note that we do not test integrated raft storage since this is
 	// a pre-1.4 test.
-	testVariousBackends(t, testSealMigrationTransitToShamir_Post14, true)
+	testVariousBackends(t, testSealMigrationTransitToShamir_Post14, basePort_TransitToShamir_Post14, true)
 }
 
 func testSealMigrationTransitToShamir_Post14(
@@ -328,13 +334,10 @@ func testSealMigrationTransitToShamir_Post14(
 	tss.MakeKey(t, "transit-seal-key")
 
 	// Initialize the backend with transit.
-	fmt.Printf("-----------------------------------------------------------------\n")
-	fmt.Printf("initializeTransit\n")
 	cluster, opts, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
+	rootToken, recoveryKeys := cluster.RootToken, cluster.RecoveryKeys
 
 	// Migrate the backend from transit to shamir
-	fmt.Printf("-----------------------------------------------------------------\n")
-	fmt.Printf("migrateFromTransitToShamir_Post14\n")
 	migrateFromTransitToShamir_Post14(t, logger, storage, basePort, tss, transitSeal, cluster, opts)
 	cluster.EnsureCoresSealed(t)
 	storage.Cleanup(t, cluster)
@@ -345,11 +348,9 @@ func testSealMigrationTransitToShamir_Post14(
 	tss.Cleanup()
 	tss = nil
 
-	//// Run the backend with shamir.  Note that the recovery keys are now the
-	//// barrier keys.
-	//fmt.Printf("-----------------------------------------------------------------\n")
-	//fmt.Printf("runShamir\n")
-	//runShamir(t, logger, storage, basePort, rootToken, recoveryKeys)
+	// Run the backend with shamir.  Note that the recovery keys are now the
+	// barrier keys.
+	runShamir(t, logger, storage, basePort, rootToken, recoveryKeys)
 }
 
 func migrateFromTransitToShamir_Post14(
@@ -766,46 +767,4 @@ func runTransit(
 
 	// Seal the cluster
 	cluster.EnsureCoresSealed(t)
-}
-
-//--------------------------------------------------------------
-
-func TestShamir(t *testing.T) {
-	testVariousBackends(t, testShamir, true)
-}
-
-func testShamir(
-	t *testing.T, logger hclog.Logger,
-	storage teststorage.ReusableStorage, basePort int) {
-
-	cluster, _ := initializeShamir(t, logger, storage, basePort)
-	rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
-
-	cluster.EnsureCoresSealed(t)
-	storage.Cleanup(t, cluster)
-	cluster.Cleanup()
-
-	runShamir(t, logger, storage, basePort, rootToken, barrierKeys)
-}
-
-func TestTransit(t *testing.T) {
-	testVariousBackends(t, testTransit, true)
-}
-
-func testTransit(
-	t *testing.T, logger hclog.Logger,
-	storage teststorage.ReusableStorage, basePort int) {
-
-	tss := sealhelper.NewTransitSealServer(t)
-	defer tss.Cleanup()
-	tss.MakeKey(t, "transit-seal-key")
-
-	cluster, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
-	rootToken := cluster.RootToken
-
-	cluster.EnsureCoresSealed(t)
-	storage.Cleanup(t, cluster)
-	cluster.Cleanup()
-
-	runTransit(t, logger, storage, basePort, rootToken, transitSeal)
 }
