@@ -8,8 +8,8 @@ require (
 	github.com/aws/aws-sdk-go v1.25.41
 	github.com/fatih/structs v1.1.0
 	github.com/go-ldap/ldap/v3 v3.1.3
-	github.com/go-test/deep v1.0.2
-	github.com/golang/protobuf v1.3.2
+	github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
+	github.com/golang/protobuf v1.4.2
 	github.com/golang/snappy v0.0.1
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-hclog v0.12.0
@@ -32,5 +32,6 @@ require (
 	github.com/ryanuber/go-glob v1.0.0
 	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad
 	golang.org/x/sys v0.0.0-20200122134326-e047566fdf82
-	google.golang.org/grpc v1.23.1
+	google.golang.org/grpc v1.27.0
+	google.golang.org/protobuf v1.24.0
 )
