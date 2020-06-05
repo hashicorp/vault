@@ -13,22 +13,14 @@
               </li>
               <li>
                 <span class="sep"></span>
-                {{#if (eq replicationMode 'dr')}}
-                  Disaster Recovery
-                {{else if (eq replicationMode 'performance')}}
-                  Performance
-                {{/if}}
+                  {{model.replicationModeForDisplay}}
               </li>
             </ul>
           </nav>
           </p.top>
           <p.levelLeft>
             <h1 class="has-top-margin-m title is-3 " data-test-replication-title=true>
-              {{#if (eq replicationMode 'dr')}}
-                Disaster Recovery
-              {{else if (eq replicationMode 'performance')}}
-                Performance
-              {{/if}}
+              {{model.replicationModeForDisplay}}
               <span class="tag is-light has-text-grey-dark" data-test-replication-mode-display=true>
                 {{model.replicationAttrs.modeForHeader}}
               </span>

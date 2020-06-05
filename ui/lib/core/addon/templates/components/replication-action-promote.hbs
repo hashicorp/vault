@@ -1,8 +1,8 @@
 {{#if (and (eq replicationMode 'dr') (eq model.replicationAttrs.modeForUrl 'secondary'))}}
   <div class="box is-marginless is-shadowless">
     <p>
-      This cluster is currently running as a DR Replication Secondary.
-      Promote the cluster to a primary by entering DR Operation Token.
+      This cluster is currently running as a {{model.replicationModeForDisplay}} Replication Secondary.
+      Promote the cluster to a primary by entering {{model.replicationModeForDisplay}} Operation Token.
     </p>
     <div class="field">
       <label for="dr_operation_token" class="is-label">

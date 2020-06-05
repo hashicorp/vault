@@ -25,16 +25,6 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
     this.setProperties(DEFAULTS);
   },
 
-  replicationDisplayMode: computed('replicationMode', function() {
-    const replicationMode = this.get('replicationMode');
-    if (replicationMode === 'dr') {
-      return 'DR';
-    }
-    if (replicationMode === 'performance') {
-      return 'Performance';
-    }
-  }),
-
   actions: {
     onSubmit() {
       return this.submitHandler.perform(...arguments);
