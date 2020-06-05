@@ -143,7 +143,6 @@ func (dc *DockerCluster) Name() string {
 func (dc *DockerCluster) Client() (*api.Client, error) {
 	if len(dc.ClusterNodes) > 0 {
 		if dc.ClusterNodes[0].Client != nil {
-			// TODO is clone needed here?
 			c, err := dc.ClusterNodes[0].Client.Clone()
 			if err != nil {
 				return nil, err

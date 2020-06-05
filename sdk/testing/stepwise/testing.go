@@ -226,9 +226,9 @@ func Run(tt TestT, c Case) {
 		}
 	}()
 
-	// retrieve the client from the Driver. If this returns an error, fail
+	// retrieve the root client from the Driver. If this returns an error, fail
 	// immediately
-	client, err := c.Driver.Client()
+	rootClient, err := c.Driver.Client()
 	if err != nil {
 		tt.Fatal(err)
 	}
@@ -242,6 +242,8 @@ func Run(tt TestT, c Case) {
 	// are still able to revoke any leases/secrets created
 	var responses []*api.Secret
 	defer func() {
+		// restore root token for admin tasks
+		rootClient.SetToken(rootToken)
 		// failedRevokes tracks any errors we get when attempting to revoke a lease
 		// to log to users at the end of the test.
 		var failedRevokes []*api.Secret
@@ -250,7 +252,7 @@ func Run(tt TestT, c Case) {
 				continue
 			}
 
-			if err := client.Sys().Revoke(secret.LeaseID); err != nil {
+			if err := rootClient.Sys().Revoke(secret.LeaseID); err != nil {
 				tt.Error(fmt.Errorf("error revoking lease: %w", err))
 				failedRevokes = append(failedRevokes, secret)
 				continue
@@ -279,37 +281,17 @@ func Run(tt TestT, c Case) {
 			logger.Warn("Executing test step", "step_number", progress)
 		}
 
-		// preserve the root token, which may be cleared from the client if the this
-		// step is meant to be unauthenticated. Restored after the request is made.
-		if step.Unauthenticated {
-			client.ClearToken()
+		// reset token in case it was cleared
+		client, err := rootClient.Clone()
+		if err != nil {
+			tt.Fatal(err)
 		}
 
-		// ExpandPath will turn a test path into a full path, prefixing with the
-		// correct mount, namespaces, or "auth" if needed based on mount path and
-		// plugin type
-		path := c.Driver.ExpandPath(step.Path)
-		var respErr error
-		var resp *api.Secret
+		// TODO: support creating tokens with policies listed in each Step
+		client.SetToken(rootToken)
 
-		switch step.Operation {
-		case WriteOperation, UpdateOperation:
-			resp, respErr = client.Logical().Write(path, step.Data)
-		case ReadOperation:
-			// Some operations support reading with data given.
-			// TODO: see how the CLI parses args and turns them into
-			// map[string][]string, or change how step.Data is defined (currently
-			// map[string]interface{})
-			// resp, respErr = client.Logical().ReadWithData(path, step.Data)
+		resp, respErr := makeRequest(tt, c.Driver, step)
 
-			resp, respErr = client.Logical().Read(path)
-		case ListOperation:
-			resp, respErr = client.Logical().List(path)
-		case DeleteOperation:
-			resp, respErr = client.Logical().Delete(path)
-		default:
-			panic("bad operation")
-		}
 		if resp != nil {
 			responses = append(responses, resp)
 		}
@@ -326,8 +308,38 @@ func Run(tt TestT, c Case) {
 				tt.Error(fmt.Errorf("failed step %d: %w", index, err))
 			}
 		}
+	}
+}
 
-		// reset token in case it was cleared
-		client.SetToken(rootToken)
+func makeRequest(tt TestT, driver StepDriver, step Step) (*api.Secret, error) {
+	client, err := driver.Client()
+	if err != nil {
+		return nil, err
+	}
+
+	if step.Unauthenticated {
+		client.ClearToken()
+	}
+
+	// ExpandPath will turn a test path into a full path, prefixing with the
+	// correct mount, namespaces, or "auth" if needed based on mount path and
+	// plugin type
+	path := driver.ExpandPath(step.Path)
+	switch step.Operation {
+	case WriteOperation, UpdateOperation:
+		return client.Logical().Write(path, step.Data)
+	case ReadOperation:
+		// Some operations support reading with data given.
+		// TODO: see how the CLI parses args and turns them into
+		// map[string][]string, or change how step.Data is defined (currently
+		// map[string]interface{})
+		// resp, respErr = client.Logical().ReadWithData(path, step.Data)
+		return client.Logical().Read(path)
+	case ListOperation:
+		return client.Logical().List(path)
+	case DeleteOperation:
+		return client.Logical().Delete(path)
+	default:
+		return nil, fmt.Errorf("invalid operation: %s", step.Operation)
 	}
 }
