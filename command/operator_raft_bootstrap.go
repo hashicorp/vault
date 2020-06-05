@@ -8,10 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorRaftJoinCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorRaftJoinCommand)(nil)
+var _ cli.Command = (*OperatorRaftBootstrapCommand)(nil)
+var _ cli.CommandAutocomplete = (*OperatorRaftBootstrapCommand)(nil)
 
-type OperatorRaftJoinCommand struct {
+type OperatorRaftBootstrapCommand struct {
 	flagRetry            bool
 	flagLeaderCACert     string
 	flagLeaderClientCert string
@@ -20,11 +20,11 @@ type OperatorRaftJoinCommand struct {
 	*BaseCommand
 }
 
-func (c *OperatorRaftJoinCommand) Synopsis() string {
+func (c *OperatorRaftBootstrapCommand) Synopsis() string {
 	return "Bootstraps a node to be the initial active Raft node"
 }
 
-func (c *OperatorRaftJoinCommand) Help() string {
+func (c *OperatorRaftBootstrapCommand) Help() string {
 	helpText := `
 Usage: vault operator raft bootstrap
 
@@ -37,19 +37,19 @@ Usage: vault operator raft bootstrap
 	return strings.TrimSpace(helpText)
 }
 
-func (c *OperatorRaftJoinCommand) Flags() *FlagSets {
+func (c *OperatorRaftBootstrapCommand) Flags() *FlagSets {
 	return c.flagSet(FlagSetHTTP)
 }
 
-func (c *OperatorRaftJoinCommand) AutocompleteArgs() complete.Predictor {
+func (c *OperatorRaftBootstrapCommand) AutocompleteArgs() complete.Predictor {
 	return complete.PredictAnything
 }
 
-func (c *OperatorRaftJoinCommand) AutocompleteFlags() complete.Flags {
+func (c *OperatorRaftBootstrapCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *OperatorRaftJoinCommand) Run(args []string) int {
+func (c *OperatorRaftBootstrapCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
