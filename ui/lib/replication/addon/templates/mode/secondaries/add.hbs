@@ -18,7 +18,7 @@
     </p>
   </div>
   <div class="field">
-    {{ttl-picker onChange=(action (mut ttl)) class="is-marginless"}}
+    {{ttl-picker onChange=(action (mut ttl)) initialValue="30m" class="is-marginless"}}
     <p class="help has-text-grey">
       This is the Time To Live for the generated secondary token. After this period, the generated token will no longer be valid.
     </p>
