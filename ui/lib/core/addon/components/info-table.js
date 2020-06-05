@@ -7,15 +7,21 @@ import layout from '../templates/components/info-table';
  *
  * @example
  * ```js
- * <InfoTable @replicationAttrs={{replicationAttrs}} />
+ * <InfoTable
+        @title="Known Primary Cluster Addrs"
+        @header="cluster_addr"
+        @items={{knownPrimaryClusterAddrs}}
+      />
  * ```
- * @param {object} replicationAttrs=null - The attributes passed directly from the cluster model used to access the array of known secondaries. We use this to grab the secondaries.
+ * @param {String} [title=Info Table] - The title of the table. Used for accessibility purposes.
+ * @param {String} header=null - The column header.
+ * @param {Array} items=null - An array of strings which will be used as the InfoTableRow value.
  */
 
 export default Component.extend({
   layout,
   tagName: '',
-  title: null,
+  title: 'Info Table',
   header: null,
   items: null,
 });
