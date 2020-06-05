@@ -5,6 +5,7 @@ type LogInput struct {
 	Auth                *Auth
 	Request             *Request
 	Response            *Response
+	BackendType         string
 	OuterErr            error
 	NonHMACReqDataKeys  []string
 	NonHMACRespDataKeys []string
