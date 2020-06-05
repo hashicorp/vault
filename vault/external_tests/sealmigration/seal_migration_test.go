@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"runtime/debug"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -43,40 +43,40 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 		tf(t, logger, storage, 51000)
 	})
 
-	//t.Run("file", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("file", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("file")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeFileBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 52000)
-	//})
+		logger := logger.Named("file")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeFileBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 52000)
+	})
 
-	//t.Run("consul", func(t *testing.T) {
-	//	t.Parallel()
+	t.Run("consul", func(t *testing.T) {
+		t.Parallel()
 
-	//	logger := logger.Named("consul")
-	//	storage, cleanup := teststorage.MakeReusableStorage(
-	//		t, logger, teststorage.MakeConsulBackend(t, logger))
-	//	defer cleanup()
-	//	tf(t, logger, storage, 53000)
-	//})
+		logger := logger.Named("consul")
+		storage, cleanup := teststorage.MakeReusableStorage(
+			t, logger, teststorage.MakeConsulBackend(t, logger))
+		defer cleanup()
+		tf(t, logger, storage, 53000)
+	})
 
-	//if includeRaft {
-	//	t.Run("raft", func(t *testing.T) {
-	//		t.Parallel()
+	if includeRaft {
+		t.Run("raft", func(t *testing.T) {
+			t.Parallel()
 
-	//		logger := logger.Named("raft")
+			logger := logger.Named("raft")
 
-	//		atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
-	//		addressProvider := testhelpers.NewHardcodedServerAddressProvider(numTestCores, 54010)
+			atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
+			addressProvider := testhelpers.NewHardcodedServerAddressProvider(numTestCores, 54010)
 
-	//		storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores, addressProvider)
-	//		defer cleanup()
-	//		tf(t, logger, storage, 54000)
-	//	})
-	//}
+			storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores, addressProvider)
+			defer cleanup()
+			tf(t, logger, storage, 54000)
+		})
+	}
 }
 
 // TestSealMigration_ShamirToTransit_Pre14 tests shamir-to-transit seal
@@ -311,7 +311,7 @@ func migrateFromShamirToTransit_Post14(
 func TestSealMigration_TransitToShamir_Post14(t *testing.T) {
 	// Note that we do not test integrated raft storage since this is
 	// a pre-1.4 test.
-	testVariousBackends(t, testSealMigrationTransitToShamir_Post14, false)
+	testVariousBackends(t, testSealMigrationTransitToShamir_Post14, true)
 }
 
 func testSealMigrationTransitToShamir_Post14(
@@ -409,12 +409,10 @@ func migrateFromTransitToShamir_Post14(
 	cluster.Cores[0].Client.SetToken(rootToken)
 
 	// TODO is this a bug? Why is raft different here?
-	unsealMigrate(t, cluster.Cores[0].Client, recoveryKeys, true)
 	if storage.IsRaft {
-		unsealMigrate(t, cluster.Cores[0].Client, recoveryKeys, true)
+		unseal(t, cluster.Cores[0].Client, recoveryKeys)
 	} else {
 		unsealMigrate(t, cluster.Cores[0].Client, recoveryKeys, true)
-		//unseal(t, cluster.Cores[0].Client, recoveryKeys)
 	}
 
 	time.Sleep(5 * time.Second)
@@ -517,7 +515,6 @@ func unseal(t *testing.T, client *api.Client, keys [][]byte) {
 		if i < keyThreshold-1 {
 			// Not enough keys have been provided yet.
 			if err != nil {
-				debug.PrintStack()
 				t.Fatal(err)
 			}
 		} else {
