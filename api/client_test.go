@@ -97,6 +97,37 @@ func TestClientToken(t *testing.T) {
 	}
 }
 
+func TestClientHostHeader(t *testing.T) {
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		w.Write([]byte(req.Host))
+	}
+	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
+	defer ln.Close()
+
+	config.Address = strings.ReplaceAll(config.Address, "127.0.0.1", "localhost")
+	client, err := NewClient(config)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Set the token manually
+	client.SetToken("foo")
+
+	resp, err := client.RawRequest(client.NewRequest("PUT", "/"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Copy the response
+	var buf bytes.Buffer
+	io.Copy(&buf, resp.Body)
+
+	// Verify we got the response from the primary
+	if buf.String() != strings.ReplaceAll(config.Address, "http://", "") {
+		t.Fatalf("Bad address: %s", buf.String())
+	}
+}
+
 func TestClientBadToken(t *testing.T) {
 	handler := func(w http.ResponseWriter, req *http.Request) {}
 

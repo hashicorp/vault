@@ -1,0 +1,48 @@
+import Component from '@ember/component';
+import { computed } from '@ember/object';
+
+/**
+ * @module SelectableCardContainer
+ * SelectableCardContainer components are used to hold SelectableCard components.  They act as a CSS grid container, and change grid configurations based on the boolean of @gridContainer.
+ *
+ * @example
+ * ```js
+ * <SelectableCardContainer @counters={{model}} @gridContainer="true" />
+ * ```
+ * @param counters=null {Object} - Counters is an object that returns total entities, tokens, and an array of objects with the total https request per month.
+ * @param gridContainer=false {Boolean} - gridContainer is optional.  If true, it's telling the container it will have a nested CSS grid.
+ */
+
+export default Component.extend({
+  classNameBindings: ['isGridContainer'],
+  counters: null,
+  gridContainer: false,
+  isGridContainer: computed('counters', function() {
+    return this.counters.httpsRequests.length > 1
+      ? 'selectable-card-container has-grid'
+      : 'selectable-card-container';
+  }),
+  totalHttpRequests: computed('counters', function() {
+    let httpsRequestsArray = this.counters.httpsRequests || [];
+    return httpsRequestsArray.firstObject.total;
+  }),
+  // Limit number of months returned to the most recent 12
+  filteredHttpsRequests: computed('counters', function() {
+    let httpsRequestsArray = this.counters.httpsRequests || [];
+    if (httpsRequestsArray.length > 12) {
+      httpsRequestsArray = httpsRequestsArray.slice(0, 12);
+    }
+    return httpsRequestsArray;
+  }),
+  percentChange: computed('counters', function() {
+    let httpsRequestsArray = this.counters.httpsRequests || [];
+    let lastTwoMonthsArray = httpsRequestsArray.slice(0, 2);
+    let previousMonthVal = lastTwoMonthsArray.lastObject.total;
+    let thisMonthVal = lastTwoMonthsArray.firstObject.total;
+
+    let percentChange = (((previousMonthVal - thisMonthVal) / previousMonthVal) * 100).toFixed(1);
+    // a negative value indicates a percentage increase, so we swap the value
+    percentChange = -percentChange;
+    return percentChange;
+  }),
+});

@@ -121,7 +121,7 @@ func (p *azureProvider) ComputeClient(subscriptionID string) (computeClient, err
 		return nil, err
 	}
 
-	client := compute.NewVirtualMachinesClient(subscriptionID)
+	client := compute.NewVirtualMachinesClientWithBaseURI(p.settings.Environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 	client.Sender = p.httpClient
 	client.AddToUserAgent(userAgent())
@@ -134,7 +134,7 @@ func (p *azureProvider) VMSSClient(subscriptionID string) (vmssClient, error) {
 		return nil, err
 	}
 
-	client := compute.NewVirtualMachineScaleSetsClient(subscriptionID)
+	client := compute.NewVirtualMachineScaleSetsClientWithBaseURI(p.settings.Environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 	client.Sender = p.httpClient
 	client.AddToUserAgent(userAgent())

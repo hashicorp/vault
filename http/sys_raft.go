@@ -26,13 +26,14 @@ func handleSysRaftJoin(core *vault.Core) http.Handler {
 func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	// Parse the request
 	var req JoinRequest
-	if _, err := parseRequest(core.PerfStandby(), r, w, &req); err != nil && err != io.EOF {
+	if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil && err != io.EOF {
 		respondError(w, http.StatusBadRequest, err)
 		return
 	}
 
 	if req.NonVoter && !nonVotersAllowed {
 		respondError(w, http.StatusBadRequest, errors.New("non-voting nodes not allowed"))
+		return
 	}
 
 	var tlsConfig *tls.Config

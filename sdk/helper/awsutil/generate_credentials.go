@@ -3,10 +3,15 @@ package awsutil
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/defaults"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/pkg/errors"
 )
 
 type CredentialsConfig struct {
@@ -54,6 +59,20 @@ func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials,
 			"static AWS client credentials haven't been properly configured (the access key or secret key were provided but not both)")
 	}
 
+	roleARN := os.Getenv("AWS_ROLE_ARN")
+	tokenPath := os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE")
+	sessionName := os.Getenv("AWS_ROLE_SESSION_NAME")
+	if roleARN != "" && tokenPath != "" && sessionName != "" {
+		// this session is only created to create the WebIdentityRoleProvider, as the env variables are already there
+		// this automatically assumes the role, but the provider needs to be added to the chain
+		sess, err := session.NewSession()
+		if err != nil {
+			return nil, errors.Wrap(err, "error creating a new session to create a WebIdentityRoleProvider")
+		}
+		//Add the web identity role credential provider
+		providers = append(providers, stscreds.NewWebIdentityRoleProvider(sts.New(sess), roleARN, sessionName, tokenPath))
+	}
+
 	// Add the environment credential provider
 	providers = append(providers, &credentials.EnvProvider{})
 
@@ -77,7 +96,7 @@ func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials,
 	// Create the credentials required to access the API.
 	creds := credentials.NewChainCredentials(providers)
 	if creds == nil {
-		return nil, fmt.Errorf("could not compile valid credential providers from static config, environment, shared, or instance metadata")
+		return nil, fmt.Errorf("could not compile valid credential providers from static config, environment, shared, web identity or instance metadata")
 	}
 
 	return creds, nil

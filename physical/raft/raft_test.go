@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/base64"
-	fmt "fmt"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -76,22 +78,77 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 	return backend, raftDir
 }
 
+func connectPeers(nodes ...*RaftBackend) {
+	for _, node := range nodes {
+		for _, peer := range nodes {
+			if node == peer {
+				continue
+			}
+
+			node.raftTransport.(*raft.InmemTransport).Connect(raft.ServerAddress(peer.NodeID()), peer.raftTransport)
+			peer.raftTransport.(*raft.InmemTransport).Connect(raft.ServerAddress(node.NodeID()), node.raftTransport)
+		}
+	}
+}
+
+func stepDownLeader(t *testing.T, node *RaftBackend) {
+	t.Helper()
+
+	if err := node.raft.LeadershipTransfer().Error(); err != nil {
+		t.Fatal(err)
+	}
+
+	timeout := time.Now().Add(time.Second * 10)
+	for !time.Now().After(timeout) {
+		if err := node.raft.VerifyLeader().Error(); err != nil {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	t.Fatal("still leader")
+}
+
+func waitForLeader(t *testing.T, nodes ...*RaftBackend) *RaftBackend {
+	t.Helper()
+	timeout := time.Now().Add(time.Second * 10)
+	for !time.Now().After(timeout) {
+		for _, node := range nodes {
+			if node.raft.Leader() == raft.ServerAddress(node.NodeID()) {
+				return node
+			}
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	t.Fatal("no leader")
+	return nil
+}
+
 func compareFSMs(t *testing.T, fsm1, fsm2 *FSM) {
+	t.Helper()
+	if err := compareFSMsWithErr(t, fsm1, fsm2); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func compareFSMsWithErr(t *testing.T, fsm1, fsm2 *FSM) error {
 	t.Helper()
 	index1, config1 := fsm1.LatestState()
 	index2, config2 := fsm2.LatestState()
 
 	if !proto.Equal(index1, index2) {
-		t.Fatalf("indexes did not match: %+v != %+v", index1, index2)
+		return fmt.Errorf("indexes did not match: %+v != %+v", index1, index2)
 	}
 	if !proto.Equal(config1, config2) {
-		t.Fatalf("configs did not match: %+v != %+v", config1, config2)
+		return fmt.Errorf("configs did not match: %+v != %+v", config1, config2)
 	}
 
-	compareDBs(t, fsm1.db, fsm2.db)
+	return compareDBs(t, fsm1.db, fsm2.db)
 }
 
-func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB) {
+func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB) error {
+	t.Helper()
 	db1 := make(map[string]string)
 	db2 := make(map[string]string)
 
@@ -135,8 +192,10 @@ func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB) {
 	}
 
 	if diff := deep.Equal(db1, db2); diff != nil {
-		t.Fatal(diff)
+		return fmt.Errorf("%+v", diff)
 	}
+
+	return nil
 }
 
 func TestRaft_Backend(t *testing.T) {
@@ -144,6 +203,67 @@ func TestRaft_Backend(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	physical.ExerciseBackend(t, b)
+}
+
+func TestRaft_Backend_LargeValue(t *testing.T) {
+	b, dir := getRaft(t, true, true)
+	defer os.RemoveAll(dir)
+
+	value := make([]byte, defaultMaxEntrySize+1)
+	rand.Read(value)
+	entry := &physical.Entry{Key: "foo", Value: value}
+
+	err := b.Put(context.Background(), entry)
+	if err == nil {
+		t.Fatal("expected error for put entry")
+	}
+
+	if !strings.Contains(err.Error(), physical.ErrValueTooLarge) {
+		t.Fatalf("expected %q, got %v", physical.ErrValueTooLarge, err)
+	}
+
+	out, err := b.Get(context.Background(), entry.Key)
+	if err != nil {
+		t.Fatalf("unexpected error after failed put: %v", err)
+	}
+	if out != nil {
+		t.Fatal("expected response entry to be nil after a failed put")
+	}
+}
+
+func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
+	b, dir := getRaft(t, true, true)
+	defer os.RemoveAll(dir)
+
+	value := make([]byte, defaultMaxEntrySize+1)
+	rand.Read(value)
+
+	txns := []*physical.TxnEntry{
+		&physical.TxnEntry{
+			Operation: physical.PutOperation,
+			Entry: &physical.Entry{
+				Key:   "foo",
+				Value: value,
+			},
+		},
+	}
+
+	err := b.Transaction(context.Background(), txns)
+	if err == nil {
+		t.Fatal("expected error for transactions")
+	}
+
+	if !strings.Contains(err.Error(), physical.ErrValueTooLarge) {
+		t.Fatalf("expected %q, got %v", physical.ErrValueTooLarge, err)
+	}
+
+	out, err := b.Get(context.Background(), txns[0].Entry.Key)
+	if err != nil {
+		t.Fatalf("unexpected error after failed put: %v", err)
+	}
+	if out != nil {
+		t.Fatal("expected response entry to be nil after a failed put")
+	}
 }
 
 func TestRaft_Backend_ListPrefix(t *testing.T) {

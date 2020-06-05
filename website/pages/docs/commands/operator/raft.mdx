@@ -1,0 +1,158 @@
+---
+layout: docs
+page_title: operator raft - Command
+sidebar_title: <code>raft</code>
+description: >-
+  The "operator raft" command is used to interact with the integrated Raft storage backend.
+---
+
+# operator raft
+
+This command groups subcommands for operators to manage the integrated Raft storage backend.
+
+```text
+Usage: vault operator raft <subcommand> [options] [args]
+
+ This command groups subcommands for operators interacting with the Vault
+ integrated Raft storage backend. Most users will not need to interact with these
+ commands. Here are a few examples of the Raft operator commands:
+
+Subcommands:
+    join           Joins a node to the Raft cluster
+    list-peers     Returns the Raft peer set
+    remove-peer    Removes a node from the Raft cluster
+    snapshot       Restores and saves snapshots from the Raft cluster
+```
+
+## join
+
+This command is used to join a new node as a peer to the Raft cluster. In order
+to join, there must be at least one existing member of the cluster. If Shamir
+seal is in use, then this API will request for the unseal keys to be supplied to
+join the cluster.
+
+```text
+Usage: vault operator raft join [options] <leader-api-addr>
+
+  Join the current node as a peer to the Raft cluster by providing the address
+  of the Raft leader node.
+
+	  $ vault operator raft join "http://127.0.0.2:8200"
+```
+
+### Parameters
+
+The following flags are available for the `operator raft join` command.
+
+- `-leader-ca-cert` `(string: "")` - CA cert to communicate with Raft leader.
+
+- `-leader-client-cert` `(string: "")` - Client cert to to authenticate to Raft leader.
+
+- `-leader-client-key` `(string: "")` - Client key to to authenticate to Raft leader.
+
+- `-non-voter` `(bool: false) (enterprise)` - This flag is used to make the
+  server not participate in the Raft quorum, and have it only receive the data
+  replication stream. This can be used to add read scalability to a cluster in
+  cases where a high volume of reads to servers are needed. The default is false.
+
+- `-retry` `(bool: false)` - Continuously retry joining the Raft cluster upon
+  failures. The default is false.
+
+## list-peers
+
+This command is used to list the full set of peers in the Raft cluster.
+
+```text
+Usage: vault operator raft list-peers
+
+  Provides the details of all the peers in the Raft cluster.
+
+	  $ vault operator raft list-peers
+```
+
+### Example Output
+
+```python
+{
+ ...
+  "data": {
+    "config": {
+      "index": 62,
+      "servers": [
+        {
+          "address": "127.0.0.2:8201",
+          "leader": true,
+          "node_id": "node1",
+          "protocol_version": "3",
+          "voter": true
+        },
+        {
+          "address": "127.0.0.4:8201",
+          "leader": false,
+          "node_id": "node3",
+          "protocol_version": "3",
+          "voter": true
+        }
+      ]
+    }
+  }
+}
+```
+
+## remove-peer
+
+This command is used to remove a node from being a peer to the Raft cluster. In
+certain cases where a peer may be left behind in the Raft configuration even
+though the server is no longer present and known to the cluster, this command
+can be used to remove the failed server so that it is no longer affects the Raft
+quorum.
+
+```text
+Usage: vault operator raft remove-peer <server_id>
+
+  Removes a node from the Raft cluster.
+
+	  $ vault operator raft remove-peer node1
+```
+
+## snapshot
+
+This command groups subcommands for operators interacting with the snapshot
+functionality of the integrated Raft storage backend. There are 2 subcommands
+supported: `save` and `restore`.
+
+```text
+Usage: vault operator raft snapshot <subcommand> [options] [args]
+
+  This command groups subcommands for operators interacting with the snapshot
+  functionality of the integrated Raft storage backend.
+
+Subcommands:
+    restore    Installs the provided snapshot, returning the cluster to the state defined in it
+    save       Saves a snapshot of the current state of the Raft cluster into a file
+```
+
+### snapshot save
+
+Takes a snapshot of the Vault data. The snapshot can be used to restore Vault to
+the point in time when a snapshot was taken.
+
+```text
+Usage: vault operator raft snapshot save <snapshot_file>
+
+  Saves a snapshot of the current state of the Raft cluster into a file.
+
+	  $ vault operator raft snapshot save raft.snap
+```
+
+### snapshot restore
+
+Restores a snapshot of Vault data taken with `vault operator raft snapshot save`.
+
+```text
+Usage: vault operator raft snapshot restore <snapshot_file>
+
+  Installs the provided snapshot, returning the cluster to the state defined in it.
+
+	  $ vault operator raft snapshot restore raft.snap
+```

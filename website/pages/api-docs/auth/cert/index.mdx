@@ -78,7 +78,7 @@ Sets a CA cert and associated parameters in a role name.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -100,7 +100,7 @@ Gets information associated with the named role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/cert/certs/test-ca
@@ -138,7 +138,7 @@ Lists configured certificate names.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -175,7 +175,7 @@ Deletes the named role and CA cert from the method mount.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -205,7 +205,7 @@ Sets a named CRL.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -229,7 +229,7 @@ arbitrary size, these are returned as strings.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/cert/crls/custom-crl
@@ -266,7 +266,7 @@ Deletes the named CRL from the auth method mount.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -297,7 +297,7 @@ Configuration options for the method.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -334,7 +334,7 @@ https://tools.ietf.org/html/rfc6125#section-2.3)
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request POST \
     --cert cert.pem \

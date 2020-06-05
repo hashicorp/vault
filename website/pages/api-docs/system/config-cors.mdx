@@ -24,7 +24,7 @@ This endpoint returns the current CORS configuration.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/config/cors
@@ -75,7 +75,7 @@ cross-origin requests, as well as headers that are allowed on cross-origin reque
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
@@ -93,7 +93,7 @@ This endpoint removes any CORS configuration.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \

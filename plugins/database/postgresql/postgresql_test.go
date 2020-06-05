@@ -4,64 +4,24 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/lib/pq"
-	"github.com/ory/dockertest"
 )
 
-func preparePostgresTestContainer(t *testing.T) (cleanup func(), retURL string) {
-	if os.Getenv("PG_URL") != "" {
-		return func() {}, os.Getenv("PG_URL")
-	}
-
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-
-	resource, err := pool.Run("postgres", "latest", []string{"POSTGRES_PASSWORD=secret", "POSTGRES_DB=database"})
-	if err != nil {
-		t.Fatalf("Could not start local PostgreSQL docker container: %s", err)
-	}
-
-	cleanup = func() {
-		docker.CleanupResource(t, pool, resource)
-	}
-
-	retURL = fmt.Sprintf("postgres://postgres:secret@localhost:%s/database?sslmode=disable", resource.GetPort("5432/tcp"))
-
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
-		var err error
-		var db *sql.DB
-		db, err = sql.Open("postgres", retURL)
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-		return db.Ping()
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to PostgreSQL docker container: %s", err)
-	}
-
-	return
-}
-
-func TestPostgreSQL_Initialize(t *testing.T) {
-	cleanup, connURL := preparePostgresTestContainer(t)
-	defer cleanup()
+func getPostgreSQL(t *testing.T, options map[string]interface{}) (*PostgreSQL, func()) {
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "latest")
 
 	connectionDetails := map[string]interface{}{
-		"connection_url":       connURL,
-		"max_open_connections": 5,
+		"connection_url": connURL,
+	}
+	for k, v := range options {
+		connectionDetails[k] = v
 	}
 
 	db := new()
@@ -73,23 +33,29 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 	if !db.Initialized {
 		t.Fatal("Database should be initialized")
 	}
+	return db, cleanup
+}
 
-	err = db.Close()
-	if err != nil {
+func TestPostgreSQL_Initialize(t *testing.T) {
+	db, cleanup := getPostgreSQL(t, map[string]interface{}{
+		"max_open_connections": 5,
+	})
+	defer cleanup()
+
+	if err := db.Close(); err != nil {
 		t.Fatalf("err: %s", err)
 	}
+}
 
-	// Test decoding a string value for max_open_connections
-	connectionDetails = map[string]interface{}{
-		"connection_url":       connURL,
+func TestPostgreSQL_InitializeWithStringVals(t *testing.T) {
+	db, cleanup := getPostgreSQL(t, map[string]interface{}{
 		"max_open_connections": "5",
-	}
+	})
+	defer cleanup()
 
-	_, err = db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
+	if err := db.Close(); err != nil {
 		t.Fatalf("err: %s", err)
 	}
-
 }
 
 func TestPostgreSQL_CreateUser_missingArgs(t *testing.T) {
@@ -114,7 +80,8 @@ func TestPostgreSQL_CreateUser_missingArgs(t *testing.T) {
 
 func TestPostgreSQL_CreateUser(t *testing.T) {
 	type testCase struct {
-		createStmts []string
+		createStmts          []string
+		shouldTestCredsExist bool
 	}
 
 	tests := map[string]testCase{
@@ -126,6 +93,7 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 				  VALID UNTIL '{{expiration}}';
 				GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
 			},
+			shouldTestCredsExist: true,
 		},
 		"admin username": {
 			createStmts: []string{`
@@ -135,6 +103,7 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 				  VALID UNTIL '{{expiration}}';
 				GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{username}}";`,
 			},
+			shouldTestCredsExist: true,
 		},
 		"read only name": {
 			createStmts: []string{`
@@ -145,6 +114,7 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 				GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";
 				GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO "{{name}}";`,
 			},
+			shouldTestCredsExist: true,
 		},
 		"read only username": {
 			createStmts: []string{`
@@ -155,22 +125,29 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 				GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{username}}";
 				GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO "{{username}}";`,
 			},
+			shouldTestCredsExist: true,
+		},
+		// https://github.com/hashicorp/vault/issues/6098
+		"reproduce GH-6098": {
+			createStmts: []string{
+				// NOTE: "rolname" in the following line is not a typo.
+				"DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE my_role; END IF; END $$",
+			},
+			// This test statement doesn't generate creds.
+			shouldTestCredsExist: false,
+		},
+		"reproduce issue with template": {
+			createStmts: []string{
+				`DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE "{{username}}"; END IF; END $$`,
+			},
+			// This test statement doesn't generate creds.
+			shouldTestCredsExist: false,
 		},
 	}
 
 	// Shared test container for speed - there should not be any overlap between the tests
-	cleanup, connURL := preparePostgresTestContainer(t)
+	db, cleanup := getPostgreSQL(t, nil)
 	defer cleanup()
-
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
-	}
-
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -192,14 +169,19 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 				t.Fatalf("err: %s", err)
 			}
 
-			if err = testCredsExist(t, connURL, username, password); err != nil {
+			if !test.shouldTestCredsExist {
+				// We're done here.
+				return
+			}
+
+			if err = testCredsExist(t, db.ConnectionURL, username, password); err != nil {
 				t.Fatalf("Could not connect with new credentials: %s", err)
 			}
 
 			// Ensure that the role doesn't expire immediately
 			time.Sleep(2 * time.Second)
 
-			if err = testCredsExist(t, connURL, username, password); err != nil {
+			if err = testCredsExist(t, db.ConnectionURL, username, password); err != nil {
 				t.Fatalf("Could not connect with new credentials: %s", err)
 			}
 		})
@@ -226,23 +208,8 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 	}
 
 	// Shared test container for speed - there should not be any overlap between the tests
-	cleanup, connURL := preparePostgresTestContainer(t)
+	db, cleanup := getPostgreSQL(t, nil)
 	defer cleanup()
-
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
-	}
-
-	db := new()
-
-	// Give a timeout just in case the test decides to be problematic
-	initCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	_, err := db.Init(initCtx, connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -265,7 +232,7 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 				t.Fatalf("err: %s", err)
 			}
 
-			if err = testCredsExist(t, connURL, username, password); err != nil {
+			if err = testCredsExist(t, db.ConnectionURL, username, password); err != nil {
 				t.Fatalf("Could not connect with new credentials: %s", err)
 			}
 
@@ -277,7 +244,7 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 			// Sleep longer than the initial expiration time
 			time.Sleep(2 * time.Second)
 
-			if err = testCredsExist(t, connURL, username, password); err != nil {
+			if err = testCredsExist(t, db.ConnectionURL, username, password); err != nil {
 				t.Fatalf("Could not connect with new credentials: %s", err)
 			}
 		})
@@ -305,9 +272,8 @@ func TestPostgreSQL_RotateRootCredentials(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			cleanup, connURL := preparePostgresTestContainer(t)
+			cleanup, connURL := postgresql.PrepareTestContainer(t, "latest")
 			defer cleanup()
-
 			connURL = strings.Replace(connURL, "postgres:secret", `{{username}}:{{password}}`, -1)
 
 			connectionDetails := map[string]interface{}{
@@ -318,7 +284,6 @@ func TestPostgreSQL_RotateRootCredentials(t *testing.T) {
 			}
 
 			db := new()
-
 			connProducer := db.SQLConnectionProducer
 
 			// Give a timeout just in case the test decides to be problematic
@@ -374,23 +339,8 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 	}
 
 	// Shared test container for speed - there should not be any overlap between the tests
-	cleanup, connURL := preparePostgresTestContainer(t)
+	db, cleanup := getPostgreSQL(t, nil)
 	defer cleanup()
-
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
-	}
-
-	db := new()
-
-	// Give a timeout just in case the test decides to be problematic
-	initCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	_, err := db.Init(initCtx, connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -409,7 +359,7 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 				t.Fatalf("err: %s", err)
 			}
 
-			if err = testCredsExist(t, connURL, username, password); err != nil {
+			if err = testCredsExist(t, db.ConnectionURL, username, password); err != nil {
 				t.Fatalf("Could not connect with new credentials: %s", err)
 			}
 
@@ -419,7 +369,7 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 				t.Fatalf("err: %s", err)
 			}
 
-			if err := testCredsExist(t, connURL, username, password); err == nil {
+			if err := testCredsExist(t, db.ConnectionURL, username, password); err == nil {
 				t.Fatal("Credentials were not revoked")
 			}
 		})
@@ -504,29 +454,13 @@ func TestPostgresSQL_SetCredentials(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			// Shared test container for speed - there should not be any overlap between the tests
-			cleanup, connURL := preparePostgresTestContainer(t)
+			db, cleanup := getPostgreSQL(t, nil)
 			defer cleanup()
 
 			// create the database user
 			dbUser := "vaultstatictest"
 			initPassword := "password"
-			createTestPGUser(t, connURL, dbUser, initPassword, testRoleStaticCreate)
-
-			connectionDetails := map[string]interface{}{
-				"connection_url": connURL,
-			}
-
-			db := new()
-
-			// Give a timeout just in case the test decides to be problematic
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-
-			_, err := db.Init(ctx, connectionDetails, true)
-			if err != nil {
-				t.Fatalf("err: %s", err)
-			}
+			createTestPGUser(t, db.ConnectionURL, dbUser, initPassword, testRoleStaticCreate)
 
 			statements := dbplugin.Statements{
 				Rotation: test.rotationStmts,
@@ -542,20 +476,20 @@ func TestPostgresSQL_SetCredentials(t *testing.T) {
 				Password: password,
 			}
 
-			if err := testCredsExist(t, connURL, dbUser, initPassword); err != nil {
+			if err := testCredsExist(t, db.ConnectionURL, dbUser, initPassword); err != nil {
 				t.Fatalf("Could not connect with initial credentials: %s", err)
 			}
 
-			username, password, err := db.SetCredentials(ctx, statements, usernameConfig)
+			username, password, err := db.SetCredentials(context.Background(), statements, usernameConfig)
 			if err != nil {
 				t.Fatalf("err: %s", err)
 			}
 
-			if err := testCredsExist(t, connURL, username, password); err != nil {
+			if err := testCredsExist(t, db.ConnectionURL, username, password); err != nil {
 				t.Fatalf("Could not connect with new credentials: %s", err)
 			}
 
-			if err := testCredsExist(t, connURL, username, initPassword); err == nil {
+			if err := testCredsExist(t, db.ConnectionURL, username, initPassword); err == nil {
 				t.Fatalf("Should not be able to connect with initial credentials")
 			}
 		})
@@ -655,5 +589,83 @@ func createTestPGUser(t *testing.T, connURL string, username, password, query st
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestContainsMultilineStatement(t *testing.T) {
+	type testCase struct {
+		Input    string
+		Expected bool
+	}
+
+	testCases := map[string]*testCase{
+		"issue 6098 repro": {
+			Input:    `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE my_role; END IF; END $$`,
+			Expected: true,
+		},
+		"multiline with template fields": {
+			Input:    `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname="{{name}}") THEN CREATE ROLE {{name}}; END IF; END $$`,
+			Expected: true,
+		},
+		"docs example": {
+			Input: `CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; \
+        GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
+			Expected: false,
+		},
+	}
+
+	for tName, tCase := range testCases {
+		t.Run(tName, func(t *testing.T) {
+			if containsMultilineStatement(tCase.Input) != tCase.Expected {
+				t.Fatalf("%q should be %t for multiline input", tCase.Input, tCase.Expected)
+			}
+		})
+	}
+}
+
+func TestExtractQuotedStrings(t *testing.T) {
+	type testCase struct {
+		Input    string
+		Expected []string
+	}
+
+	testCases := map[string]*testCase{
+		"no quotes": {
+			Input:    `Five little monkeys jumping on the bed`,
+			Expected: []string{},
+		},
+		"two of both quote types": {
+			Input:    `"Five" little 'monkeys' "jumping on" the' 'bed`,
+			Expected: []string{`"Five"`, `"jumping on"`, `'monkeys'`, `' '`},
+		},
+		"one single quote": {
+			Input:    `Five little monkeys 'jumping on the bed`,
+			Expected: []string{},
+		},
+		"empty string": {
+			Input:    ``,
+			Expected: []string{},
+		},
+		"templated field": {
+			Input:    `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname="{{name}}") THEN CREATE ROLE {{name}}; END IF; END $$`,
+			Expected: []string{`"{{name}}"`},
+		},
+	}
+
+	for tName, tCase := range testCases {
+		t.Run(tName, func(t *testing.T) {
+			results, err := extractQuotedStrings(tCase.Input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(results) != len(tCase.Expected) {
+				t.Fatalf("%s isn't equal to %s", results, tCase.Expected)
+			}
+			for i := range results {
+				if results[i] != tCase.Expected[i] {
+					t.Fatalf(`expected %q but received %q`, tCase.Expected, results[i])
+				}
+			}
+		})
 	}
 }

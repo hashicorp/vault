@@ -59,9 +59,9 @@ extracted. Not every installation of Kuberentes exposes these keys.`,
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathConfigWrite(),
-			logical.CreateOperation: b.pathConfigWrite(),
-			logical.ReadOperation:   b.pathConfigRead(),
+			logical.UpdateOperation: b.pathConfigWrite,
+			logical.CreateOperation: b.pathConfigWrite,
+			logical.ReadOperation:   b.pathConfigRead,
 		},
 
 		HelpSynopsis:    confHelpSyn,
@@ -70,79 +70,75 @@ extracted. Not every installation of Kuberentes exposes these keys.`,
 }
 
 // pathConfigWrite handles create and update commands to the config
-func (b *kubeAuthBackend) pathConfigRead() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		if config, err := b.config(ctx, req.Storage); err != nil {
-			return nil, err
-		} else if config == nil {
-			return nil, nil
-		} else {
-			// Create a map of data to be returned
-			resp := &logical.Response{
-				Data: map[string]interface{}{
-					"kubernetes_host":    config.Host,
-					"kubernetes_ca_cert": config.CACert,
-					"pem_keys":           config.PEMKeys,
-					"issuer":             config.Issuer,
-				},
-			}
-
-			return resp, nil
+func (b *kubeAuthBackend) pathConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if config, err := b.config(ctx, req.Storage); err != nil {
+		return nil, err
+	} else if config == nil {
+		return nil, nil
+	} else {
+		// Create a map of data to be returned
+		resp := &logical.Response{
+			Data: map[string]interface{}{
+				"kubernetes_host":    config.Host,
+				"kubernetes_ca_cert": config.CACert,
+				"pem_keys":           config.PEMKeys,
+				"issuer":             config.Issuer,
+			},
 		}
+
+		return resp, nil
 	}
 }
 
 // pathConfigWrite handles create and update commands to the config
-func (b *kubeAuthBackend) pathConfigWrite() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		host := data.Get("kubernetes_host").(string)
-		if host == "" {
-			return logical.ErrorResponse("no host provided"), nil
-		}
+func (b *kubeAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	host := data.Get("kubernetes_host").(string)
+	if host == "" {
+		return logical.ErrorResponse("no host provided"), nil
+	}
 
-		pemList := data.Get("pem_keys").([]string)
-		caCert := data.Get("kubernetes_ca_cert").(string)
-		issuer := data.Get("issuer").(string)
-		if len(pemList) == 0 && len(caCert) == 0 {
-			return logical.ErrorResponse("one of pem_keys or kubernetes_ca_cert must be set"), nil
-		}
+	pemList := data.Get("pem_keys").([]string)
+	caCert := data.Get("kubernetes_ca_cert").(string)
+	issuer := data.Get("issuer").(string)
+	if len(pemList) == 0 && len(caCert) == 0 {
+		return logical.ErrorResponse("one of pem_keys or kubernetes_ca_cert must be set"), nil
+	}
 
-		tokenReviewer := data.Get("token_reviewer_jwt").(string)
-		if len(tokenReviewer) > 0 {
-			// Validate it's a JWT
-			_, err := jws.ParseJWT([]byte(tokenReviewer))
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		config := &kubeConfig{
-			PublicKeys:       make([]interface{}, len(pemList)),
-			PEMKeys:          pemList,
-			Host:             host,
-			CACert:           caCert,
-			TokenReviewerJWT: tokenReviewer,
-			Issuer:           issuer,
-		}
-
-		var err error
-		for i, pem := range pemList {
-			config.PublicKeys[i], err = parsePublicKeyPEM([]byte(pem))
-			if err != nil {
-				return logical.ErrorResponse(err.Error()), nil
-			}
-		}
-
-		entry, err := logical.StorageEntryJSON(configPath, config)
+	tokenReviewer := data.Get("token_reviewer_jwt").(string)
+	if len(tokenReviewer) > 0 {
+		// Validate it's a JWT
+		_, err := jws.ParseJWT([]byte(tokenReviewer))
 		if err != nil {
 			return nil, err
 		}
-
-		if err := req.Storage.Put(ctx, entry); err != nil {
-			return nil, err
-		}
-		return nil, nil
 	}
+
+	config := &kubeConfig{
+		PublicKeys:       make([]interface{}, len(pemList)),
+		PEMKeys:          pemList,
+		Host:             host,
+		CACert:           caCert,
+		TokenReviewerJWT: tokenReviewer,
+		Issuer:           issuer,
+	}
+
+	var err error
+	for i, pem := range pemList {
+		config.PublicKeys[i], err = parsePublicKeyPEM([]byte(pem))
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+	}
+
+	entry, err := logical.StorageEntryJSON(configPath, config)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := req.Storage.Put(ctx, entry); err != nil {
+		return nil, err
+	}
+	return nil, nil
 }
 
 // kubeConfig contains the public key certificate used to verify the signature

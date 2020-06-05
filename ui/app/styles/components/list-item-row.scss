@@ -26,4 +26,8 @@ a.list-item-row,
     box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light, $box-link-hover-shadow,
       $box-shadow-middle;
   }
+
+  &.no-destination {
+    cursor: default;
+  }
 }

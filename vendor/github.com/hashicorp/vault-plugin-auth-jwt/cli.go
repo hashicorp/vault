@@ -9,16 +9,21 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path"
 	"regexp"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/base62"
 )
 
 const defaultMount = "oidc"
+const defaultListenAddress = "localhost"
 const defaultPort = "8250"
 const defaultCallbackHost = "localhost"
+const defaultCallbackMethod = "http"
 
 var errorRegex = regexp.MustCompile(`(?s)Errors:.*\* *(.*)`)
 
@@ -42,6 +47,11 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		mount = defaultMount
 	}
 
+	listenAddress, ok := m["listenaddress"]
+	if !ok {
+		listenAddress = defaultListenAddress
+	}
+
 	port, ok := m["port"]
 	if !ok {
 		port = defaultPort
@@ -52,38 +62,27 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		callbackHost = defaultCallbackHost
 	}
 
+	callbackMethod, ok := m["callbackmethod"]
+	if !ok {
+		callbackMethod = defaultCallbackMethod
+	}
+
+	callbackPort, ok := m["callbackport"]
+	if !ok {
+		callbackPort = port
+	}
+
 	role := m["role"]
 
-	authURL, err := fetchAuthURL(c, role, mount, port, callbackHost)
+	authURL, clientNonce, err := fetchAuthURL(c, role, mount, callbackPort, callbackMethod, callbackHost)
 	if err != nil {
 		return nil, err
 	}
 
 	// Set up callback handler
-	http.HandleFunc("/oidc/callback", func(w http.ResponseWriter, req *http.Request) {
-		var response string
+	http.HandleFunc("/oidc/callback", callbackHandler(c, mount, clientNonce, doneCh))
 
-		query := req.URL.Query()
-		code := query.Get("code")
-		state := query.Get("state")
-		data := map[string][]string{
-			"code":  {code},
-			"state": {state},
-		}
-
-		secret, err := c.Logical().ReadWithData(fmt.Sprintf("auth/%s/oidc/callback", mount), data)
-		if err != nil {
-			summary, detail := parseError(err)
-			response = errorHTML(summary, detail)
-		} else {
-			response = successHTML
-		}
-
-		w.Write([]byte(response))
-		doneCh <- loginResp{secret, err}
-	})
-
-	listener, err := net.Listen("tcp", ":"+port)
+	listener, err := net.Listen("tcp", listenAddress+":"+port)
 	if err != nil {
 		return nil, err
 	}
@@ -103,26 +102,81 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		}
 	}()
 
-	// Wait for either the callback to finish or SIGINT to be received
+	// Wait for either the callback to finish, SIGINT to be received or up to 2 minutes
 	select {
 	case s := <-doneCh:
 		return s.secret, s.err
 	case <-sigintCh:
 		return nil, errors.New("Interrupted")
+	case <-time.After(2 * time.Minute):
+		return nil, errors.New("Timed out waiting for response from provider")
 	}
 }
 
-func fetchAuthURL(c *api.Client, role, mount, port string, callbackHost string) (string, error) {
+func callbackHandler(c *api.Client, mount string, clientNonce string, doneCh chan<- loginResp) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		var response string
+		var secret *api.Secret
+		var err error
+
+		defer func() {
+			w.Write([]byte(response))
+			doneCh <- loginResp{secret, err}
+		}()
+
+		// Pull any parameters from either the body or query parameters.
+		// FormValue prioritizes body values, if found.
+		data := map[string][]string{
+			"state":        {req.FormValue("state")},
+			"code":         {req.FormValue("code")},
+			"id_token":     {req.FormValue("id_token")},
+			"client_nonce": {clientNonce},
+		}
+
+		// If this is a POST, then the form_post response_mode is being used and the flow
+		// involves an extra step. First POST the data to Vault, and then issue a GET with
+		// the same state/code to complete the auth as normal.
+		if req.Method == http.MethodPost {
+			url := c.Address() + path.Join("/v1/auth", mount, "oidc/callback")
+			resp, err := http.PostForm(url, data)
+			if err != nil {
+				summary, detail := parseError(err)
+				response = errorHTML(summary, detail)
+				return
+			}
+			defer resp.Body.Close()
+
+			// An id_token will never be part of a redirect GET, so remove it here too.
+			delete(data, "id_token")
+		}
+
+		secret, err = c.Logical().ReadWithData(fmt.Sprintf("auth/%s/oidc/callback", mount), data)
+		if err != nil {
+			summary, detail := parseError(err)
+			response = errorHTML(summary, detail)
+		} else {
+			response = successHTML
+		}
+	}
+}
+
+func fetchAuthURL(c *api.Client, role, mount, callbackport string, callbackMethod string, callbackHost string) (string, string, error) {
 	var authURL string
+
+	clientNonce, err := base62.Random(20)
+	if err != nil {
+		return "", "", err
+	}
 
 	data := map[string]interface{}{
 		"role":         role,
-		"redirect_uri": fmt.Sprintf("http://%s:%s/oidc/callback", callbackHost, port),
+		"redirect_uri": fmt.Sprintf("%s://%s:%s/oidc/callback", callbackMethod, callbackHost, callbackport),
+		"client_nonce": clientNonce,
 	}
 
 	secret, err := c.Logical().Write(fmt.Sprintf("auth/%s/oidc/auth_url", mount), data)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if secret != nil {
@@ -130,10 +184,10 @@ func fetchAuthURL(c *api.Client, role, mount, port string, callbackHost string) 
 	}
 
 	if authURL == "" {
-		return "", errors.New(fmt.Sprintf("Unable to authorize role %q. Check Vault logs for more information.", role))
+		return "", "", fmt.Errorf("Unable to authorize role %q. Check Vault logs for more information.", role)
 	}
 
-	return authURL, nil
+	return authURL, clientNonce, nil
 }
 
 // isWSL tests if the binary is being run in Windows Subsystem for Linux
@@ -228,8 +282,20 @@ Configuration:
   role=<string>
       Vault role of type "OIDC" to use for authentication.
 
+  listenaddress=<string>
+    Optional address to bind the OIDC callback listener to (default: localhost).
+
   port=<string>
-      Optional localhost port to use for OIDC callback (default: 8250).
+    Optional localhost port to use for OIDC callback (default: 8250).
+
+  callbackmethod=<string>
+    Optional method to to use in OIDC redirect_uri (default: http).
+
+  callbackhost=<string>
+    Optional callback host address to use in OIDC redirect_uri (default: localhost).
+
+  callbackport=<string>
+      Optional port to to use in OIDC redirect_uri (default: the value set for port).
 `
 
 	return strings.TrimSpace(help)

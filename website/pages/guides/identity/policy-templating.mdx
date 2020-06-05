@@ -106,25 +106,25 @@ In this guide, you are going to perform the following steps:
 1. [Setup an entity and a group](#step3)
 1. [Test the ACL templating](#step4)
 
-### <a name="step1"></a>Step 1: Write templated ACL policies
+### Step 1: Write templated ACL policies ((#step1))
 
 Policy authors can pass in a policy path containing double curly braces as
 templating delimiters: `{{<parameter>}}`.
 
 #### Available Templating Parameters
 
-| Name                                                                   | Description                                                             |
-| :--------------------------------------------------------------------- | :---------------------------------------------------------------------- |
-| `identity.entity.id`                                                   | The entity's ID                                                         |
-| `identity.entity.name`                                                 | The entity's name                                                       |
-| `identity.entity.metadata.<<metadata key>>`                            | Metadata associated with the entity for the given key                   |
-| `identity.entity.aliases.<<mount accessor>>.id`                        | Entity alias ID for the given mount                                     |
-| `identity.entity.aliases.<<mount accessor>>.name`                      | Entity alias name for the given mount                                   |
-| `identity.entity.aliases.<<mount accessor>>.metadata.<<metadata key>>` | Metadata associated with the alias for the given mount and metadata key |
-| `identity.groups.ids.<<group id>>.name`                                | The group name for the given group ID                                   |
-| `identity.groups.names.<<group name>>.id`                              | The group ID for the given group name                                   |
-| `identity.groups.ids.<<group id>>.metadata.<<metadata key>>`           | Metadata associated with the group for the given key                    |
-| `identity.groups.names.<<group name>>.metadata.<<metadata key>>`       | Metadata associated with the group for the given key                    |
+| Name                                                               | Description                                                             |
+| :----------------------------------------------------------------- | :---------------------------------------------------------------------- |
+| `identity.entity.id`                                               | The entity's ID                                                         |
+| `identity.entity.name`                                             | The entity's name                                                       |
+| `identity.entity.metadata.<metadata key>`                          | Metadata associated with the entity for the given key                   |
+| `identity.entity.aliases.<mount accessor>.id`                      | Entity alias ID for the given mount                                     |
+| `identity.entity.aliases.<mount accessor>.name`                    | Entity alias name for the given mount                                   |
+| `identity.entity.aliases.<mount accessor>.metadata.<metadata key>` | Metadata associated with the alias for the given mount and metadata key |
+| `identity.groups.ids.<group id>.name`                              | The group name for the given group ID                                   |
+| `identity.groups.names.<group name>.id`                            | The group ID for the given group name                                   |
+| `identity.groups.ids.<group id>.metadata.<metadata key>`           | Metadata associated with the group for the given key                    |
+| `identity.groups.names.<group name>.metadata.<metadata key>`       | Metadata associated with the group for the given key                    |
 
 -> **NOTE:** Identity groups are not directly attached to a token and an entity
 can be associated with multiple groups. Therefore, in order to reference a
@@ -186,13 +186,13 @@ path "identity/group/id" {
 }
 ```
 
-### <a name="step2"></a>Step 2: Deploy your policy
+### Step 2: Deploy your policy ((#step2))
 
 - [CLI command](#step2-cli)
 - [API call using cURL](#step2-api)
 - [Web UI](#step2-ui)
 
-#### <a name="step2-cli"></a>CLI command
+#### CLI command ((#step2-cli))
 
 ```shell
 # Create the user-tmpl policy
@@ -202,11 +202,11 @@ $ vault policy write user-tmpl user-tmpl.hcl
 $ vault policy write group-tmpl group-tmpl.hcl
 ```
 
-#### <a name="step2-api"></a>API call using cURL
+#### API call using cURL ((#step2-api))
 
 To create a policy, use the `/sys/policies/acl` endpoint:
 
-```sh
+```shell-session
 $ curl --header "X-Vault-Token: <TOKEN>" \
        --request PUT \
        --data <PAYLOAD> \
@@ -246,7 +246,7 @@ $ curl --header "X-Vault-Token: ..." \
        http://127.0.0.1:8200/v1/sys/policies/acl/group-tmpl
 ```
 
-#### <a name="step2-ui"></a>Web UI
+#### Web UI ((#step2-ui))
 
 Open a web browser and launch the Vault UI (e.g. http://127.0.0.1:8200/ui) and
 then login.
@@ -264,7 +264,7 @@ then login.
 
 1. Repeat the steps to create the `group-tmpl` policy.
 
-### <a name="step3"></a>Step 3: Setup an entity and a group
+### Step 3: Setup an entity and a group ((#step3))
 
 Let's create an entity, **`bob_smith`** with a user **`bob`** as its entity
 alias. Also, create a group, **`education`** and add the **`bob_smith`** entity
@@ -279,7 +279,7 @@ Groups](/guides/identity/identity) guide if you need the full details.
 - [CLI command](#step3-cli)
 - [Web UI](#step3-ui)
 
-#### <a name="step3-cli"></a>CLI command
+#### CLI command ((#step3-cli))
 
 The following command uses [`jq`](https://stedolan.github.io/jq/download/) tool
 to parse JSON output.
@@ -312,7 +312,7 @@ $ vault write -format=json identity/group name="education" \
       | jq -r ".data.id" > group_id.txt
 ```
 
-#### <a name="step3-ui"></a>Web UI
+#### Web UI ((#step3-ui))
 
 1.  Click the **Access** tab, and select **Enable new method**.
 
@@ -354,13 +354,13 @@ $ vault write -format=json identity/group name="education" \
 
 1.  Click **Create**.
 
-### <a name="step4"></a>Step 4: Test the ACL templating
+### Step 4: Test the ACL templating ((#step4))
 
 - [CLI command](#step4-cli)
 - [API call using cURL](#step4-api)
 - [Web UI](#step4-ui)
 
-#### <a name="step4-cli"></a>CLI Command
+#### CLI Command ((#step4-cli))
 
 1.  Enable key/value v2 secrets engine at `user-kv` and `group-kv` paths.
 
@@ -450,7 +450,7 @@ $ vault write -format=json identity/group name="education" \
     type                 internal
     ```
 
-#### <a name="step4-api"></a>API call using cURL
+#### API call using cURL ((#step4-api))
 
 1.  Enable key/value v2 secrets engine at `user-kv` and `group-kv` paths.
 
@@ -542,7 +542,7 @@ $ vault write -format=json identity/group name="education" \
             http://127.0.0.1:8200/v1/identity/group/id/<education_group_id>
     ```
 
-#### <a name="step4-ui"></a>Web UI
+#### Web UI ((#step4-ui))
 
 1. In **Secrets** tab, select **Enable new engine**.
 

@@ -5,6 +5,7 @@ ui = true
 
 listener "tcp" {
     address = "127.0.0.1:443"
+	allow_stuff = true
 }
 
 backend "consul" {
@@ -27,6 +28,7 @@ telemetry {
     statsite_address = "foo"
     dogstatsd_addr = "127.0.0.1:7254"
     dogstatsd_tags = ["tag_1:val_1", "tag_2:val_2"]
+    metrics_prefix = "myprefix"
 }
 
 max_lease_ttl = "10h"

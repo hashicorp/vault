@@ -7,14 +7,38 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 const { attr } = DS;
 
 const ACTION_VALUES = {
-  encrypt: 'supportsEncryption',
-  decrypt: 'supportsDecryption',
-  datakey: 'supportsEncryption',
-  rewrap: 'supportsEncryption',
-  sign: 'supportsSigning',
-  hmac: true,
-  verify: true,
-  export: 'exportable',
+  encrypt: {
+    isSupported: 'supportsEncryption',
+    description: 'Looks up wrapping properties for the given token',
+    glyph: 'lock-closed',
+  },
+  decrypt: {
+    isSupported: 'supportsDecryption',
+    description: 'Decrypts the provided ciphertext using this key',
+    glyph: 'envelope-unsealed--outline',
+  },
+  datakey: {
+    isSupported: 'supportsEncryption',
+    description: 'Generates a new key and value encrypted with this key',
+    glyph: 'key',
+  },
+  rewrap: {
+    isSupported: 'supportsEncryption',
+    description: 'Rewraps the ciphertext using the latest version of the named key',
+    glyph: 'refresh-default',
+  },
+  sign: {
+    isSupported: 'supportsSigning',
+    description: 'Get the cryptographic signature of the given data',
+    glyph: 'edit',
+  },
+  hmac: { isSupported: true, description: 'Generate a data digest using a hash algorithm', glyph: 'remix' },
+  verify: {
+    isSupported: true,
+    description: 'Validate the provided signature for the given data',
+    glyph: 'check-circle-outline',
+  },
+  export: { isSupported: 'exportable', description: 'Get the named key', glyph: 'exit' },
 };
 
 export default DS.Model.extend({
@@ -56,13 +80,15 @@ export default DS.Model.extend({
   },
 
   supportedActions: computed('type', function() {
-    return Object.keys(ACTION_VALUES).filter(name => {
-      const isSupported = ACTION_VALUES[name];
-      if (typeof isSupported === 'boolean') {
-        return isSupported;
-      }
-      return get(this, isSupported);
-    });
+    return Object.keys(ACTION_VALUES)
+      .filter(name => {
+        const { isSupported } = ACTION_VALUES[name];
+        return typeof isSupported === 'boolean' || get(this, isSupported);
+      })
+      .map(name => {
+        const { description, glyph } = ACTION_VALUES[name];
+        return { name, description, glyph };
+      });
   }),
 
   canDelete: computed('deletionAllowed', 'lastLoadTS', function() {
@@ -116,10 +142,11 @@ export default DS.Model.extend({
     return types;
   }),
 
-  backend: attr('string', {
-    readOnly: true,
-  }),
+  backend: attr('string'),
 
   rotatePath: lazyCapabilities(apiPath`${'backend'}/keys/${'id'}/rotate`, 'backend', 'id'),
   canRotate: alias('rotatePath.canUpdate'),
+  secretPath: lazyCapabilities(apiPath`${'backend'}/keys/${'id'}`, 'backend', 'id'),
+  canRead: alias('secretPath.canUpdate'),
+  canEdit: alias('secretPath.canUpdate'),
 });

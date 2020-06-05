@@ -1,6 +1,7 @@
 package http
 
 import (
+	"bufio"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -19,6 +20,24 @@ import (
 	"github.com/hashicorp/vault/vault"
 	"go.uber.org/atomic"
 )
+
+// bufferedReader can be used to replace a request body with a buffered
+// version. The Close method invokes the original Closer.
+type bufferedReader struct {
+	*bufio.Reader
+	rOrig io.ReadCloser
+}
+
+func newBufferedReader(r io.ReadCloser) *bufferedReader {
+	return &bufferedReader{
+		Reader: bufio.NewReader(r),
+		rOrig:  r,
+	}
+}
+
+func (b *bufferedReader) Close() error {
+	return b.rOrig.Close()
+}
 
 func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
 	ns, err := namespace.FromContext(r.Context())
@@ -67,20 +86,44 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 			responseWriter = w
 		case path == "sys/storage/raft/snapshot":
 			responseWriter = w
+		case path == "sys/monitor":
+			passHTTPReq = true
+			responseWriter = w
 		}
 
 	case "POST", "PUT":
 		op = logical.UpdateOperation
-		// Parse the request if we can
-		if op == logical.UpdateOperation {
-			// If we are uploading a snapshot we don't want to parse it. Instead
-			// we will simply add the HTTP request to the logical request object
-			// for later consumption.
-			if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
-				passHTTPReq = true
-				origBody = r.Body
+
+		// Buffer the request body in order to allow us to peek at the beginning
+		// without consuming it. This approach involves no copying.
+		bufferedBody := newBufferedReader(r.Body)
+		r.Body = bufferedBody
+
+		// If we are uploading a snapshot we don't want to parse it. Instead
+		// we will simply add the HTTP request to the logical request object
+		// for later consumption.
+		if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
+			passHTTPReq = true
+			origBody = r.Body
+		} else {
+			// Sample the first bytes to determine whether this should be parsed as
+			// a form or as JSON. The amount to look ahead (512 bytes) is arbitrary
+			// but extremely tolerant (i.e. allowing 511 bytes of leading whitespace
+			// and an incorrect content-type).
+			head, err := bufferedBody.Peek(512)
+			if err != nil && err != bufio.ErrBufferFull && err != io.EOF {
+				return nil, nil, http.StatusBadRequest, err
+			}
+
+			if isForm(head, r.Header.Get("Content-Type")) {
+				formData, err := parseFormRequest(r)
+				if err != nil {
+					return nil, nil, http.StatusBadRequest, fmt.Errorf("error parsing form data: %w", err)
+				}
+
+				data = formData
 			} else {
-				origBody, err = parseRequest(perfStandby, r, w, &data)
+				origBody, err = parseJSONRequest(perfStandby, r, w, &data)
 				if err == io.EOF {
 					data = nil
 					err = nil
@@ -102,13 +145,13 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		return nil, nil, http.StatusMethodNotAllowed, nil
 	}
 
-	request_id, err := uuid.GenerateUUID()
+	requestId, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("failed to generate identifier for the request: {{err}}", err)
 	}
 
 	req := &logical.Request{
-		ID:         request_id,
+		ID:         requestId,
 		Operation:  op,
 		Path:       path,
 		Data:       data,
@@ -192,6 +235,7 @@ func handleLogicalRecovery(raw *vault.RawBackend, token *atomic.String) http.Han
 		reqToken := r.Header.Get(consts.AuthHeaderName)
 		if reqToken == "" || token.Load() == "" || reqToken != token.Load() {
 			respondError(w, http.StatusForbidden, nil)
+			return
 		}
 
 		resp, err := raw.HandleRequest(r.Context(), req)
@@ -339,6 +383,7 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 		case strings.HasPrefix(req.Path, "sys/metrics"):
 			if isStandby, _ := core.Standby(); isStandby {
 				respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
+				return
 			}
 		}
 

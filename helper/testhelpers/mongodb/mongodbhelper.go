@@ -54,7 +54,7 @@ func PrepareTestContainerWithDatabase(t *testing.T, version, dbName string) (cle
 	// exponential backoff-retry
 	if err = pool.Retry(func() error {
 		var err error
-		dialInfo, err := parseMongoURL(retURL)
+		dialInfo, err := ParseMongoURL(retURL)
 		if err != nil {
 			return err
 		}
@@ -75,8 +75,8 @@ func PrepareTestContainerWithDatabase(t *testing.T, version, dbName string) (cle
 	return
 }
 
-// parseMongoURL will parse a connection string and return a configured dialer
-func parseMongoURL(rawURL string) (*mgo.DialInfo, error) {
+// ParseMongoURL will parse a connection string and return a configured dialer
+func ParseMongoURL(rawURL string) (*mgo.DialInfo, error) {
 	url, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, err

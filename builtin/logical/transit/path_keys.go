@@ -46,8 +46,8 @@ func (b *backend) pathKeys() *framework.Path {
 				Default: "aes256-gcm96",
 				Description: `
 The type of key to create. Currently, "aes128-gcm96" (symmetric), "aes256-gcm96" (symmetric), "ecdsa-p256"
-(asymmetric), "ecdsa-p384" (asymmetric), "ecdsa-p521" (asymmetric), "ed25519" (asymmetric), "rsa-2048" (asymmetric), "rsa-4096"
-(asymmetric) are supported.  Defaults to "aes256-gcm96".
+(asymmetric), "ecdsa-p384" (asymmetric), "ecdsa-p521" (asymmetric), "ed25519" (asymmetric), "rsa-2048" (asymmetric), "rsa-3072"
+(asymmetric), "rsa-4096" (asymmetric) are supported.  Defaults to "aes256-gcm96".
 `,
 			},
 
@@ -155,6 +155,8 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_ED25519
 	case "rsa-2048":
 		polReq.KeyType = keysutil.KeyType_RSA2048
+	case "rsa-3072":
+		polReq.KeyType = keysutil.KeyType_RSA3072
 	case "rsa-4096":
 		polReq.KeyType = keysutil.KeyType_RSA4096
 	default:
@@ -269,7 +271,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 		}
 		resp.Data["keys"] = retKeys
 
-	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
+	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
 		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {
 			key := asymKey{
@@ -305,8 +307,12 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 					}
 				}
 				key.Name = "ed25519"
-			case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
+			case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
 				key.Name = "rsa-2048"
+				if p.Type == keysutil.KeyType_RSA3072 {
+					key.Name = "rsa-3072"
+				}
+
 				if p.Type == keysutil.KeyType_RSA4096 {
 					key.Name = "rsa-4096"
 				}

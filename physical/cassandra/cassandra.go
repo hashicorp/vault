@@ -217,8 +217,10 @@ func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) err
 			tlsConfig.MinVersion = tls.VersionTLS11
 		case "tls12":
 			tlsConfig.MinVersion = tls.VersionTLS12
+		case "tls13":
+			tlsConfig.MinVersion = tls.VersionTLS13
 		default:
-			return fmt.Errorf("'tls_min_version' must be one of `tls10`, `tls11` or `tls12`")
+			return fmt.Errorf("'tls_min_version' must be one of `tls10`, `tls11`, `tls12` or `tls13`")
 		}
 	}
 

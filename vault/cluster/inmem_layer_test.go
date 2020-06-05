@@ -5,11 +5,16 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"go.uber.org/atomic"
 )
 
 func TestInmemCluster_Connect(t *testing.T) {
-	cluster, err := NewInmemLayerCluster(3, nil)
+	cluster, err := NewInmemLayerCluster("c1", 3, log.New(&log.LoggerOptions{
+		Mutex: &sync.Mutex{},
+		Level: log.Trace,
+		Name:  "inmem-cluster",
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +75,11 @@ func TestInmemCluster_Connect(t *testing.T) {
 }
 
 func TestInmemCluster_Disconnect(t *testing.T) {
-	cluster, err := NewInmemLayerCluster(3, nil)
+	cluster, err := NewInmemLayerCluster("c1", 3, log.New(&log.LoggerOptions{
+		Mutex: &sync.Mutex{},
+		Level: log.Trace,
+		Name:  "inmem-cluster",
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +142,11 @@ func TestInmemCluster_Disconnect(t *testing.T) {
 }
 
 func TestInmemCluster_DisconnectAll(t *testing.T) {
-	cluster, err := NewInmemLayerCluster(3, nil)
+	cluster, err := NewInmemLayerCluster("c1", 3, log.New(&log.LoggerOptions{
+		Mutex: &sync.Mutex{},
+		Level: log.Trace,
+		Name:  "inmem-cluster",
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,11 +175,19 @@ func TestInmemCluster_DisconnectAll(t *testing.T) {
 }
 
 func TestInmemCluster_ConnectCluster(t *testing.T) {
-	cluster, err := NewInmemLayerCluster(3, nil)
+	cluster, err := NewInmemLayerCluster("c1", 3, log.New(&log.LoggerOptions{
+		Mutex: &sync.Mutex{},
+		Level: log.Trace,
+		Name:  "inmem-cluster",
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	cluster2, err := NewInmemLayerCluster(3, nil)
+	cluster2, err := NewInmemLayerCluster("c2", 3, log.New(&log.LoggerOptions{
+		Mutex: &sync.Mutex{},
+		Level: log.Trace,
+		Name:  "inmem-cluster",
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}

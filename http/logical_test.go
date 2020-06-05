@@ -267,7 +267,9 @@ func TestLogical_RequestSizeLimit(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	// Write a very large object, should fail
+	// Write a very large object, should fail. This test works because Go will
+	// convert the byte slice to base64, which makes it significantly larger
+	// than the default max request size.
 	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
 		"data": make([]byte, DefaultMaxRequestSize),
 	})
@@ -436,4 +438,29 @@ func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
 			t.Fatalf("bad: %#v", noop.RespErrs)
 		}
 	}
+}
+
+func TestLogical_ShouldParseForm(t *testing.T) {
+	const formCT = "application/x-www-form-urlencoded"
+
+	tests := map[string]struct {
+		prefix      string
+		contentType string
+		isForm      bool
+	}{
+		"JSON":                 {`{"a":42}`, formCT, false},
+		"JSON 2":               {`[42]`, formCT, false},
+		"JSON w/leading space": {"   \n\n\r\t  [42]  ", formCT, false},
+		"Form":                 {"a=42&b=dog", formCT, true},
+		"Form w/wrong CT":      {"a=42&b=dog", "application/json", false},
+	}
+
+	for name, test := range tests {
+		isForm := isForm([]byte(test.prefix), test.contentType)
+
+		if isForm != test.isForm {
+			t.Fatalf("%s fail: expected isForm %t, got %t", name, test.isForm, isForm)
+		}
+	}
+
 }

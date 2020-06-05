@@ -42,7 +42,7 @@ Directory](http://social.technet.microsoft.com/wiki/contents/articles/5312.activ
 
 ### Via the CLI
 
-```text
+```shell-session
 $ vault login -method=ldap username=mitchellh
 Password (will be hidden):
 Successfully authenticated! The policies that are associated
@@ -53,7 +53,7 @@ admins
 
 ### Via the API
 
-```shell
+```shell-session
 $ curl \
     --request POST \
     --data '{"password": "foo"}' \
@@ -104,6 +104,8 @@ management tool.
 - `starttls` (bool, optional) - If true, issues a `StartTLS` command after establishing an unencrypted connection.
 - `insecure_tls` - (bool, optional) - If true, skips LDAP server SSL certificate verification - insecure, use with caution!
 - `certificate` - (string, optional) - CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded.
+- `client_tls_cert` - (string, optional) - Client certificate to provide to the LDAP server, must be x509 PEM encoded.
+- `client_tls_key` - (string, optional) - Client certificate key to provide to the LDAP server, must be x509 PEM encoded.
 
 ### Binding parameters
 
@@ -122,6 +124,7 @@ There are two alternate methods of resolving the user object used to authenticat
 - `userdn` (string, optional) - Base DN under which to perform user search. Example: `ou=Users,dc=example,dc=com`
 - `userattr` (string, optional) - Attribute on user attribute object matching the username passed when authenticating. Examples: `sAMAccountName`, `cn`, `uid`
 - `deny_null_bind` (bool, optional) - This option prevents users from bypassing authentication when providing an empty password. The default is `true`.
+- `anonymous_group_search` (bool, optional) - Use anonymous binds when performing LDAP group searches. Defaults to `false`.
 
 #### Binding - User Principal Name (AD)
 
@@ -151,7 +154,7 @@ Use `vault path-help` for more details.
 - Group search will start under `ou=Groups,dc=example,dc=com`. For all group objects under that path, the `member` attribute will be checked for a match against the authenticated user.
 - Group names are identified using their `cn` attribute.
 
-```
+```shell-session
 $ vault write auth/ldap/config \
     url="ldap://ldap.example.com" \
     userdn="ou=Users,dc=example,dc=com" \
@@ -176,7 +179,7 @@ $ vault write auth/ldap/config \
 - Username passed to vault when authenticating maps to the `sAMAccountName` attribute.
 - Group membership will be resolved via the `memberOf` attribute of _user_ objects. That search will begin under `ou=Users,dc=example,dc=com`.
 
-```
+```shell-session
 $ vault write auth/ldap/config \
     url="ldap://ldap.example.com" \
     userattr=sAMAccountName \
@@ -202,7 +205,7 @@ $ vault write auth/ldap/config \
 - Group membership will be resolved via any one of `memberUid`, `member`, or `uniqueMember` attributes. That search will begin under `ou=Groups,dc=example,dc=com`.
 - Group names are identified using the `cn` attribute.
 
-```
+```shell-session
 $ vault write auth/ldap/config \
     url="ldaps://ldap.example.com" \
     userattr="uid" \
@@ -219,7 +222,7 @@ $ vault write auth/ldap/config \
 
 Next we want to create a mapping from an LDAP group to a Vault policy:
 
-```
+```shell-session
 $ vault write auth/ldap/groups/scientists policies=foo,bar
 ```
 
@@ -227,7 +230,7 @@ This maps the LDAP group "scientists" to the "foo" and "bar" Vault policies.
 We can also add specific LDAP users to additional (potentially non-LDAP)
 groups. Note that policies can also be specified on LDAP users as well.
 
-```
+```shell-session
 $ vault write auth/ldap/groups/engineers policies=foobar
 $ vault write auth/ldap/users/tesla groups=engineers policies=zoobar
 ```
@@ -238,7 +241,7 @@ policy.
 
 Finally, we can test this by authenticating:
 
-```
+```shell-session
 $ vault login -method=ldap username=tesla
 Password (will be hidden):
 Successfully authenticated! The policies that are associated

@@ -4,44 +4,29 @@ const path = require('path')
 module.exports = withHashicorp({
   defaultLayout: true,
   transpileModules: ['is-absolute-url', '@hashicorp/react-mega-nav'],
-  mdx: { resolveIncludes: path.join(__dirname, 'pages') }
+  mdx: { resolveIncludes: path.join(__dirname, 'pages') },
 })({
   experimental: {
-    css: true,
-    granularChunks: true,
+    modern: true,
+    polyfillsOptimization: true,
     rewrites: () => [
       {
         source: '/api/:path*',
-        destination: '/api-docs/:path*'
-      }
+        destination: '/api-docs/:path*',
+      },
     ],
     redirects: () => [
       {
         source: '/intro',
         destination: '/intro/getting-started',
-        permanent: false
-      }
-    ]
-  },
-  exportTrailingSlash: true,
-  webpack(config) {
-    // Add polyfills
-    const originalEntry = config.entry
-    config.entry = async () => {
-      const entries = await originalEntry()
-      let polyEntry = entries['static/runtime/polyfills.js']
-      if (polyEntry && !polyEntry.includes('./lib/polyfills.js')) {
-        if (!Array.isArray(polyEntry)) {
-          entries['static/runtime/polyfills.js'] = [polyEntry]
-        }
-        entries['static/runtime/polyfills.js'].unshift('./lib/polyfills.js')
-      }
-      return entries
-    }
-
-    return config
+        permanent: false,
+      },
+    ],
   },
   env: {
-    HASHI_ENV: process.env.HASHI_ENV
-  }
+    HASHI_ENV: process.env.HASHI_ENV || 'development',
+    SEGMENT_WRITE_KEY: 'OdSFDq9PfujQpmkZf03dFpcUlywme4sC',
+    BUGSNAG_CLIENT_KEY: '07ff2d76ce27aded8833bf4804b73350',
+    BUGSNAG_SERVER_KEY: 'fb2dc40bb48b17140628754eac6c1b11',
+  },
 })

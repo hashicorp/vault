@@ -100,7 +100,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		StateToken   string         `json:"stateToken"`
 	}
 
-	authReq, err := shim.NewRequest("POST", "/api/v1/authn", map[string]interface{}{
+	authReq, err := shim.NewRequest("POST", "authn", map[string]interface{}{
 		"username": username,
 		"password": password,
 	})

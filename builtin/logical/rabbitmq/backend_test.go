@@ -97,6 +97,39 @@ func TestBackend_basic(t *testing.T) {
 
 }
 
+func TestBackend_returnsErrs(t *testing.T) {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+		return
+	}
+	b, _ := Factory(context.Background(), logical.TestBackendConfig())
+
+	cleanup, uri, _ := prepareRabbitMQTestContainer(t)
+	defer cleanup()
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		PreCheck:       testAccPreCheckFunc(t, uri),
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t, uri),
+			{
+				Operation: logical.CreateOperation,
+				Path:      "roles/web",
+				Data: map[string]interface{}{
+					"tags":         testTags,
+					"vhosts":       `{"invalid":{"write": ".*", "read": ".*"}}`,
+					"vhost_topics": testVHostTopics,
+				},
+			},
+			{
+				Operation: logical.ReadOperation,
+				Path:      "creds/web",
+				ErrorOk:   true,
+			},
+		},
+	})
+}
+
 func TestBackend_roleCrud(t *testing.T) {
 	if os.Getenv(logicaltest.TestEnvVar) == "" {
 		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))

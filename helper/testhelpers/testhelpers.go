@@ -139,6 +139,14 @@ func EnsureCoresUnsealed(t testing.T, c *vault.TestCluster) {
 	}
 }
 
+func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClusterCore) {
+	t.Helper()
+	err := AttemptUnsealCore(c, core)
+	if err != nil {
+		t.Fatalf("failed to unseal core: %v", err)
+	}
+}
+
 func AttemptUnsealCores(c *vault.TestCluster) error {
 	for i, core := range c.Cores {
 		err := AttemptUnsealCore(c, core)
@@ -186,7 +194,16 @@ func AttemptUnsealCore(c *vault.TestCluster, core *vault.TestClusterCore) error 
 }
 
 func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
+	deriveStableActiveCore(t, cluster)
+}
+
+func DeriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
+	return deriveStableActiveCore(t, cluster)
+}
+
+func deriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
 	activeCore := DeriveActiveCore(t, cluster)
+	minDuration := time.NewTimer(3 * time.Second)
 
 	for i := 0; i < 30; i++ {
 		leaderResp, err := activeCore.Client.Sys().Leader()
@@ -194,10 +211,22 @@ func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
 			t.Fatal(err)
 		}
 		if !leaderResp.IsSelf {
-			t.Fatal("unstable active node")
+			minDuration.Reset(3 * time.Second)
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
+
+	select {
+	case <-minDuration.C:
+	default:
+		if stopped := minDuration.Stop(); stopped {
+			t.Fatal("unstable active node")
+		}
+		// Drain the value
+		<-minDuration.C
+	}
+
+	return activeCore
 }
 
 func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
@@ -248,7 +277,7 @@ func WaitForNCoresUnsealed(t testing.T, cluster *vault.TestCluster, n int) {
 		time.Sleep(time.Second)
 	}
 
-	t.Fatalf("%d cores were not sealed", n)
+	t.Fatalf("%d cores were not unsealed", n)
 }
 
 func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
@@ -284,6 +313,19 @@ func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClust
 
 	t.Fatalf("node did not become active")
 	return nil
+}
+
+func WaitForStandbyNode(t testing.T, core *vault.TestClusterCore) {
+	t.Helper()
+	for i := 0; i < 30; i++ {
+		if isLeader, _, clusterAddr, _ := core.Core.Leader(); isLeader != true && clusterAddr != "" {
+			return
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	t.Fatalf("node did not become standby")
 }
 
 func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]byte {
@@ -344,6 +386,12 @@ func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]by
 	return newKeys
 }
 
+// TestRaftServerAddressProvider is a ServerAddressProvider that uses the
+// ClusterAddr() of each node to provide raft addresses.
+//
+// Note that TestRaftServerAddressProvider should only be used in cases where
+// cores that are part of a raft configuration have already had
+// startClusterListener() called (via either unsealing or raft joining).
 type TestRaftServerAddressProvider struct {
 	Cluster *vault.TestCluster
 }
@@ -383,9 +431,8 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 		TLSConfig:     leaderCore.TLSConfig,
 	}
 
-	// Join core1
-	{
-		core := cluster.Cores[1]
+	for i := 1; i < len(cluster.Cores); i++ {
+		core := cluster.Cores[i]
 		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
 		leaderInfos := []*raft.LeaderJoinInfo{
 			leaderInfo,
@@ -398,20 +445,87 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 		cluster.UnsealCore(t, core)
 	}
 
-	// Join core2
-	{
-		core := cluster.Cores[2]
-		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		leaderInfos := []*raft.LeaderJoinInfo{
-			leaderInfo,
-		}
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
-		if err != nil {
-			t.Fatal(err)
-		}
+	WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
+}
 
-		cluster.UnsealCore(t, core)
+// HardcodedServerAddressProvider is a ServerAddressProvider that uses
+// a hardcoded map of raft node addresses.
+//
+// It is useful in cases where the raft configuration is known ahead of time,
+// but some of the cores have not yet had startClusterListener() called (via
+// either unsealing or raft joining), and thus do not yet have a ClusterAddr()
+// assigned.
+type HardcodedServerAddressProvider struct {
+	Entries map[raftlib.ServerID]raftlib.ServerAddress
+}
+
+func (p *HardcodedServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.ServerAddress, error) {
+	if addr, ok := p.Entries[id]; ok {
+		return addr, nil
+	}
+	return "", errors.New("could not find cluster addr")
+}
+
+// NewHardcodedServerAddressProvider is a convenience function that makes a
+// ServerAddressProvider from a given cluster address base port.
+func NewHardcodedServerAddressProvider(cluster *vault.TestCluster, baseClusterPort int) raftlib.ServerAddressProvider {
+
+	entries := make(map[raftlib.ServerID]raftlib.ServerAddress)
+
+	for i := 0; i < len(cluster.Cores); i++ {
+		id := fmt.Sprintf("core-%d", i)
+		addr := fmt.Sprintf("127.0.0.1:%d", baseClusterPort+i)
+		entries[raftlib.ServerID(id)] = raftlib.ServerAddress(addr)
 	}
 
-	WaitForNCoresUnsealed(t, cluster, 3)
+	return &HardcodedServerAddressProvider{
+		entries,
+	}
+}
+
+// SetRaftAddressProviders sets a ServerAddressProvider for all the nodes in a
+// cluster.
+func SetRaftAddressProviders(t testing.T, cluster *vault.TestCluster, provider raftlib.ServerAddressProvider) {
+
+	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
+
+	for _, core := range cluster.Cores {
+		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(provider)
+	}
+}
+
+func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
+	t.Helper()
+
+	stopCh := make(chan struct{})
+	ticker := time.NewTicker(time.Second)
+	var err error
+
+	go func() {
+		for {
+			select {
+			case <-stopCh:
+				ticker.Stop()
+				stopCh <- struct{}{}
+				return
+			case <-ticker.C:
+				err = client.Sys().Mount("foo", &api.MountInput{
+					Type: "kv",
+					Options: map[string]string{
+						"version": "1",
+					},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				err = client.Sys().Unmount("foo")
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+	}()
+
+	return stopCh
 }

@@ -504,7 +504,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			cluster.BarrierKeys = barrierKeys
 			testhelpers.EnsureCoresUnsealed(t, cluster)
 			testhelpers.WaitForActiveNode(t, cluster)
-			activeCore := testhelpers.DeriveActiveCore(t, cluster)
+			activeCore := testhelpers.DeriveStableActiveCore(t, cluster)
 
 			// Read the value.
 			data, err := activeCore.Client.Logical().Read("secret/foo")
@@ -707,7 +707,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 				cluster.BarrierKeys = newBarrierKeys
 				testhelpers.EnsureCoresUnsealed(t, cluster)
 				testhelpers.WaitForActiveNode(t, cluster)
-				activeCore := testhelpers.DeriveActiveCore(t, cluster)
+				activeCore := testhelpers.DeriveStableActiveCore(t, cluster)
 
 				// Read the value.
 				data, err := activeCore.Client.Logical().Read("secret/foo")

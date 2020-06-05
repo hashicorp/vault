@@ -35,8 +35,8 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
 	"github.com/hashicorp/vault/command/agent/template"
+	"github.com/hashicorp/vault/internalshared/gatedwriter"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/gatedwriter"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -464,7 +464,7 @@ func (c *AgentCommand) Run(args []string) int {
 			})
 		}
 
-		var proxyVaultToken = !config.Cache.UseAutoAuthTokenEnforce
+		var proxyVaultToken = !config.Cache.ForceAutoAuthToken
 
 		// Create the request handler
 		cacheHandler := cache.Handler(ctx, cacheLogger, leaseCache, inmemSink, proxyVaultToken)
@@ -482,15 +482,8 @@ func (c *AgentCommand) Run(args []string) int {
 			// Parse 'require_request_header' listener config option, and wrap
 			// the request handler if necessary
 			muxHandler := cacheHandler
-			if v, ok := lnConfig.Config[agentConfig.RequireRequestHeader]; ok {
-				switch v {
-				case true:
-					muxHandler = verifyRequestHeader(muxHandler)
-				case false /* noop */ :
-				default:
-					c.UI.Error(fmt.Sprintf("Invalid value for 'require_request_header': %v", v))
-					return 1
-				}
+			if lnConfig.RequireRequestHeader {
+				muxHandler = verifyRequestHeader(muxHandler)
 			}
 
 			// Create a muxer and add paths relevant for the lease cache layer

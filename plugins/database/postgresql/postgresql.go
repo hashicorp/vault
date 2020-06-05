@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -29,7 +30,22 @@ ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
 `
 )
 
-var _ dbplugin.Database = &PostgreSQL{}
+var (
+	_ dbplugin.Database = &PostgreSQL{}
+
+	// postgresEndStatement is basically the word "END" but
+	// surrounded by a word boundary to differentiate it from
+	// other words like "APPEND".
+	postgresEndStatement = regexp.MustCompile(`\bEND\b`)
+
+	// doubleQuotedPhrases finds substrings like "hello"
+	// and pulls them out with the quotes included.
+	doubleQuotedPhrases = regexp.MustCompile(`(".*?")`)
+
+	// singleQuotedPhrases finds substrings like 'hello'
+	// and pulls them out with the quotes included.
+	singleQuotedPhrases = regexp.MustCompile(`('.*?')`)
+)
 
 // New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
@@ -96,7 +112,7 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 // Vault's storage.
 func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
 	if len(statements.Rotation) == 0 {
-		return "", "", errors.New("empty rotation statements")
+		statements.Rotation = []string{defaultPostgresRotateRootCredentialsSQL}
 	}
 
 	username = staticUser.Username
@@ -206,6 +222,20 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 
 	// Execute each query
 	for _, stmt := range statements.Creation {
+		if containsMultilineStatement(stmt) {
+			// Execute it as-is.
+			m := map[string]string{
+				"name":       username,
+				"username":   username,
+				"password":   password,
+				"expiration": expirationStr,
+			}
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, stmt); err != nil {
+				return "", "", err
+			}
+			continue
+		}
+		// Otherwise, it's fine to split the statements on the semicolon.
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {
@@ -500,4 +530,41 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 
 	p.RawConfig["password"] = password
 	return p.RawConfig, nil
+}
+
+// containsMultilineStatement is a best effort to determine whether
+// a particular statement is multiline, and therefore should not be
+// split upon semicolons. If it's unsure, it defaults to false.
+func containsMultilineStatement(stmt string) bool {
+	// We're going to look for the word "END", but first let's ignore
+	// anything the user provided within single or double quotes since
+	// we're looking for an "END" within the Postgres syntax.
+	literals, err := extractQuotedStrings(stmt)
+	if err != nil {
+		return false
+	}
+	stmtWithoutLiterals := stmt
+	for _, literal := range literals {
+		stmtWithoutLiterals = strings.Replace(stmt, literal, "", -1)
+	}
+	// Now look for the word "END" specifically. This will miss any
+	// representations of END that aren't surrounded by spaces, but
+	// it should be easy to change on the user's side.
+	return postgresEndStatement.MatchString(stmtWithoutLiterals)
+}
+
+// extractQuotedStrings extracts 0 or many substrings
+// that have been single- or double-quoted. Ex:
+// `"Hello", silly 'elephant' from the "zoo".`
+// returns [ `Hello`, `'elephant'`, `"zoo"` ]
+func extractQuotedStrings(s string) ([]string, error) {
+	var found []string
+	toFind := []*regexp.Regexp{
+		doubleQuotedPhrases,
+		singleQuotedPhrases,
+	}
+	for _, typeOfPhrase := range toFind {
+		found = append(found, typeOfPhrase.FindAllString(s, -1)...)
+	}
+	return found, nil
 }

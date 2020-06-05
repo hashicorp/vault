@@ -42,9 +42,13 @@ GCE identity metadata token ('iam', 'gce' roles).`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:         b.pathLogin,
-			logical.AliasLookaheadOperation: b.pathLogin,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathLogin,
+			},
+			logical.AliasLookaheadOperation: &framework.PathOperation{
+				Callback: b.pathLogin,
+			},
 		},
 
 		HelpSynopsis:    pathLoginHelpSyn,
@@ -80,7 +84,7 @@ func (b *GcpAuthBackend) pathLogin(ctx context.Context, req *logical.Request, da
 	case gceRoleType:
 		return b.pathGceLogin(ctx, req, loginInfo)
 	default:
-		return logical.ErrorResponse(fmt.Sprintf("login against role type '%s' is unsupported", roleType)), nil
+		return logical.ErrorResponse("login against role type '%s' is unsupported", roleType), nil
 	}
 }
 
@@ -163,12 +167,12 @@ func (b *GcpAuthBackend) parseAndValidateJwt(ctx context.Context, req *logical.R
 	// Parse 'kid' key id from headers.
 	jwtVal, err := jwt.ParseSigned(signedJwt.(string))
 	if err != nil {
-		return nil, err
+		return nil, errwrap.Wrapf("unable to parse signed JWT: {{err}}", err)
 	}
 
 	key, err := b.getSigningKey(ctx, jwtVal, signedJwt.(string), loginInfo.Role, req.Storage)
 	if err != nil {
-		return nil, err
+		return nil, errwrap.Wrapf("unable to get public key for signed JWT: %v", err)
 	}
 
 	// Parse claims and verify signature.
@@ -201,50 +205,37 @@ func (b *GcpAuthBackend) parseAndValidateJwt(ctx context.Context, req *logical.R
 }
 
 func (b *GcpAuthBackend) getSigningKey(ctx context.Context, token *jwt.JSONWebToken, rawToken string, role *gcpRole, s logical.Storage) (interface{}, error) {
+	b.Logger().Debug("Getting signing Key for JWT")
+
 	if len(token.Headers) != 1 {
 		return nil, errors.New("expected token to have exactly one header")
 	}
+	kid := token.Headers[0].KeyID
+	b.Logger().Debug("kid found for JWT", "kid", kid)
 
-	keyId := token.Headers[0].KeyID
-
-	switch role.RoleType {
-	case iamRoleType:
-		iamClient, err := b.IAMClient(s)
-		if err != nil {
-			return nil, err
-		}
-
-		serviceAccountId, err := parseServiceAccountFromIAMJWT(rawToken)
-		if err != nil {
-			return nil, err
-		}
-
-		accountKey, err := gcputil.ServiceAccountKey(iamClient, &gcputil.ServiceAccountKeyId{
-			Project:   "-",
-			EmailOrId: serviceAccountId,
-			Key:       keyId,
-		})
-		if err != nil {
-			saErr := err
-			// Attempt to get a normal Google Oauth cert in case of GCE inferrence.
-			key, err := gcputil.OAuth2RSAPublicKey(keyId, "")
-			if err != nil {
-				return nil, errwrap.Wrapf(
-					fmt.Sprintf("%s or could not find Google Oauth cert with given 'kid' id %s: {{err}}", saErr.Error(), keyId),
-					err)
-			}
-			return key, nil
-		}
-		return gcputil.PublicKey(accountKey.PublicKeyData)
-	case gceRoleType:
-		return gcputil.OAuth2RSAPublicKey(keyId, "")
-	default:
-		return nil, fmt.Errorf("unexpected role type %s", role.RoleType)
+	// Try getting Google-wide key
+	k, gErr := gcputil.OAuth2RSAPublicKey(ctx, kid)
+	if gErr == nil {
+		b.Logger().Debug("Found Google OAuth2 provider key", "kid", kid)
+		return k, nil
 	}
+
+	// If that failed, try to get account-specific key
+	b.Logger().Debug("Unable to get Google-wide OAuth2 Key, trying service-account public key")
+	saId, err := getJWTSubject(rawToken)
+	if err != nil {
+		return nil, err
+	}
+	k, saErr := gcputil.ServiceAccountPublicKey(saId, kid)
+	if saErr != nil {
+		return nil, errwrap.Wrapf(fmt.Sprintf("unable to get public key %q for JWT subject %q: {{err}}", kid, saId), saErr)
+	}
+
+	return k, nil
 }
 
-// ParseServiceAccountFromIAMJWT parses the service account from the 'sub' claim given a serialized signed JWT.
-func parseServiceAccountFromIAMJWT(signedJwt string) (string, error) {
+// getJWTSubject grabs 'sub' claim given an unverified signed JWT.
+func getJWTSubject(signedJwt string) (string, error) {
 	jwtVal, err := jwt.ParseSigned(signedJwt)
 	if err != nil {
 		return "", fmt.Errorf("could not parse JWT: %v", err)
@@ -255,17 +246,9 @@ func parseServiceAccountFromIAMJWT(signedJwt string) (string, error) {
 	}
 	accountID := claims.Subject
 	if accountID == "" {
-		return "", errors.New("expected 'sub' claim with service account ID or name")
+		return "", errors.New("expected 'sub' claim from JWT")
 	}
 	return accountID, nil
-}
-
-func (b *GcpAuthBackend) getGoogleOauthCert(ctx context.Context, keyId string) (interface{}, error) {
-	key, err := gcputil.OAuth2RSAPublicKey(keyId, "")
-	if err != nil {
-		return nil, err
-	}
-	return key, nil
 }
 
 func validateBaseJWTClaims(c *jwt.Claims, roleName string) error {
@@ -313,8 +296,10 @@ func (b *GcpAuthBackend) pathIamLogin(ctx context.Context, req *logical.Request,
 	}
 
 	// TODO(emilymye): move to general JWT validation once custom expiry is supported for other JWT types.
-	if loginInfo.JWTClaims.Expiry.Time().After(time.Now().Add(role.MaxJwtExp)) {
-		return logical.ErrorResponse(fmt.Sprintf("role requires that JWTs must expire within %d seconds", int(role.MaxJwtExp/time.Second))), nil
+	if loginInfo.GceMetadata != nil {
+		b.Logger().Info("GCE Metadata found in JWT, skipping custom expiry check")
+	} else if loginInfo.JWTClaims.Expiry.Time().After(time.Now().Add(role.MaxJwtExp)) {
+		return logical.ErrorResponse("role requires that service account JWTs expire within %d seconds", int(role.MaxJwtExp/time.Second)), nil
 	}
 
 	// Get service account and make sure it still exists.
@@ -445,8 +430,7 @@ func (b *GcpAuthBackend) pathGceLogin(ctx context.Context, req *logical.Request,
 	}
 
 	if len(role.BoundProjects) > 0 && !strutil.StrListContains(role.BoundProjects, metadata.ProjectId) {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"instance %q (project %q) not in bound projects %+v", metadata.InstanceId, metadata.ProjectId, role.BoundProjects)), nil
+		return logical.ErrorResponse("instance %q (project %q) not in bound projects %+v", metadata.InstanceId, metadata.ProjectId, role.BoundProjects), nil
 	}
 
 	// Verify instance exists.
@@ -457,9 +441,8 @@ func (b *GcpAuthBackend) pathGceLogin(ctx context.Context, req *logical.Request,
 
 	instance, err := metadata.GetVerifiedInstance(computeClient)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"error when attempting to find instance (project %s, zone: %s, instance: %s) :%v",
-			metadata.ProjectId, metadata.Zone, metadata.InstanceName, err)), nil
+		return logical.ErrorResponse("error when attempting to find instance (project %s, zone: %s, instance: %s) :%v",
+			metadata.ProjectId, metadata.Zone, metadata.InstanceName, err), nil
 	}
 
 	if err := b.authorizeGCEInstance(ctx, metadata.ProjectId, instance, req.Storage, role, loginInfo.EmailOrId); err != nil {
@@ -486,9 +469,7 @@ func (b *GcpAuthBackend) pathGceLogin(ctx context.Context, req *logical.Request,
 		EmailOrId: loginInfo.EmailOrId,
 	})
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Could not find service account '%s' used for GCE metadata token: %s",
-			loginInfo.EmailOrId, err)), nil
+		return logical.ErrorResponse("Could not find service account '%s' used for GCE metadata token: %s", loginInfo.EmailOrId, err), nil
 	}
 
 	auth := &logical.Auth{

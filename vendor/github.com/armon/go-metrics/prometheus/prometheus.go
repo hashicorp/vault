@@ -1,4 +1,4 @@
-// +build go1.3
+// +build go1.9
 
 package prometheus
 
@@ -32,11 +32,11 @@ type PrometheusOpts struct {
 }
 
 type PrometheusSink struct {
-	mu         sync.Mutex
-	gauges     map[string]prometheus.Gauge
-	summaries  map[string]prometheus.Summary
-	counters   map[string]prometheus.Counter
-	updates    map[string]time.Time
+	// If these will ever be copied, they should be converted to *sync.Map values and initialized appropriately
+	gauges     sync.Map
+	summaries  sync.Map
+	counters   sync.Map
+	updates    sync.Map
 	expiration time.Duration
 }
 
@@ -48,10 +48,10 @@ func NewPrometheusSink() (*PrometheusSink, error) {
 // NewPrometheusSinkFrom creates a new PrometheusSink using the passed options.
 func NewPrometheusSinkFrom(opts PrometheusOpts) (*PrometheusSink, error) {
 	sink := &PrometheusSink{
-		gauges:     make(map[string]prometheus.Gauge),
-		summaries:  make(map[string]prometheus.Summary),
-		counters:   make(map[string]prometheus.Counter),
-		updates:    make(map[string]time.Time),
+		gauges:     sync.Map{},
+		summaries:  sync.Map{},
+		counters:   sync.Map{},
+		updates:    sync.Map{},
 		expiration: opts.Expiration,
 	}
 
@@ -69,38 +69,38 @@ func (p *PrometheusSink) Describe(c chan<- *prometheus.Desc) {
 // logic to clean up ephemeral metrics if their value haven't been set for a
 // duration exceeding our allowed expiration time.
 func (p *PrometheusSink) Collect(c chan<- prometheus.Metric) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
 	expire := p.expiration != 0
 	now := time.Now()
-	for k, v := range p.gauges {
-		last := p.updates[k]
-		if expire && last.Add(p.expiration).Before(now) {
-			delete(p.updates, k)
-			delete(p.gauges, k)
+	p.gauges.Range(func(k, v interface{}) bool {
+		last, _ := p.updates.Load(k)
+		if expire && last.(time.Time).Add(p.expiration).Before(now) {
+			p.updates.Delete(k)
+			p.gauges.Delete(k)
 		} else {
-			v.Collect(c)
+			v.(prometheus.Gauge).Collect(c)
 		}
-	}
-	for k, v := range p.summaries {
-		last := p.updates[k]
-		if expire && last.Add(p.expiration).Before(now) {
-			delete(p.updates, k)
-			delete(p.summaries, k)
+		return true
+	})
+	p.summaries.Range(func(k, v interface{}) bool {
+		last, _ := p.updates.Load(k)
+		if expire && last.(time.Time).Add(p.expiration).Before(now) {
+			p.updates.Delete(k)
+			p.summaries.Delete(k)
 		} else {
-			v.Collect(c)
+			v.(prometheus.Summary).Collect(c)
 		}
-	}
-	for k, v := range p.counters {
-		last := p.updates[k]
-		if expire && last.Add(p.expiration).Before(now) {
-			delete(p.updates, k)
-			delete(p.counters, k)
+		return true
+	})
+	p.counters.Range(func(k, v interface{}) bool {
+		last, _ := p.updates.Load(k)
+		if expire && last.(time.Time).Add(p.expiration).Before(now) {
+			p.updates.Delete(k)
+			p.counters.Delete(k)
 		} else {
-			v.Collect(c)
+			v.(prometheus.Counter).Collect(c)
 		}
-	}
+		return true
+	})
 }
 
 var forbiddenChars = regexp.MustCompile("[ .=\\-/]")
@@ -130,20 +130,18 @@ func (p *PrometheusSink) SetGauge(parts []string, val float32) {
 }
 
 func (p *PrometheusSink) SetGaugeWithLabels(parts []string, val float32, labels []metrics.Label) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
 	key, hash := p.flattenKey(parts, labels)
-	g, ok := p.gauges[hash]
+	g, ok := p.gauges.Load(hash)
 	if !ok {
 		g = prometheus.NewGauge(prometheus.GaugeOpts{
 			Name:        key,
 			Help:        key,
 			ConstLabels: prometheusLabels(labels),
 		})
-		p.gauges[hash] = g
+		p.gauges.Store(hash, g)
 	}
-	g.Set(float64(val))
-	p.updates[hash] = time.Now()
+	g.(prometheus.Gauge).Set(float64(val))
+	p.updates.Store(hash, time.Now())
 }
 
 func (p *PrometheusSink) AddSample(parts []string, val float32) {
@@ -151,22 +149,20 @@ func (p *PrometheusSink) AddSample(parts []string, val float32) {
 }
 
 func (p *PrometheusSink) AddSampleWithLabels(parts []string, val float32, labels []metrics.Label) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
 	key, hash := p.flattenKey(parts, labels)
-	g, ok := p.summaries[hash]
+	g, ok := p.summaries.Load(hash)
 	if !ok {
 		g = prometheus.NewSummary(prometheus.SummaryOpts{
 			Name:        key,
 			Help:        key,
 			MaxAge:      10 * time.Second,
 			ConstLabels: prometheusLabels(labels),
-			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+			Objectives:  map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 		})
-		p.summaries[hash] = g
+		p.summaries.Store(hash, g)
 	}
-	g.Observe(float64(val))
-	p.updates[hash] = time.Now()
+	g.(prometheus.Summary).Observe(float64(val))
+	p.updates.Store(hash, time.Now())
 }
 
 // EmitKey is not implemented. Prometheus doesn’t offer a type for which an
@@ -180,20 +176,18 @@ func (p *PrometheusSink) IncrCounter(parts []string, val float32) {
 }
 
 func (p *PrometheusSink) IncrCounterWithLabels(parts []string, val float32, labels []metrics.Label) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
 	key, hash := p.flattenKey(parts, labels)
-	g, ok := p.counters[hash]
+	g, ok := p.counters.Load(hash)
 	if !ok {
 		g = prometheus.NewCounter(prometheus.CounterOpts{
 			Name:        key,
 			Help:        key,
 			ConstLabels: prometheusLabels(labels),
 		})
-		p.counters[hash] = g
+		p.counters.Store(hash, g)
 	}
-	g.Add(float64(val))
-	p.updates[hash] = time.Now()
+	g.(prometheus.Counter).Add(float64(val))
+	p.updates.Store(hash, time.Now())
 }
 
 type PrometheusPushSink struct {
@@ -207,10 +201,10 @@ type PrometheusPushSink struct {
 func NewPrometheusPushSink(address string, pushIterval time.Duration, name string) (*PrometheusPushSink, error) {
 
 	promSink := &PrometheusSink{
-		gauges:     make(map[string]prometheus.Gauge),
-		summaries:  make(map[string]prometheus.Summary),
-		counters:   make(map[string]prometheus.Counter),
-		updates:    make(map[string]time.Time),
+		gauges:     sync.Map{},
+		summaries:  sync.Map{},
+		counters:   sync.Map{},
+		updates:    sync.Map{},
 		expiration: 60 * time.Second,
 	}
 

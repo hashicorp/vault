@@ -35,9 +35,9 @@ func new() *MongoDBAtlas {
 	connProducer.Type = mongoDBAtlasTypeName
 
 	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 15,
+		DisplayNameLen: credsutil.NoneLength,
 		RoleNameLen:    15,
-		UsernameLen:    100,
+		UsernameLen:    20,
 		Separator:      "-",
 	}
 
@@ -148,12 +148,6 @@ func (m *MongoDBAtlas) SetCredentials(ctx context.Context, statements dbplugin.S
 	// Grab the lock
 	m.Lock()
 	defer m.Unlock()
-
-	statements = dbutil.StatementCompatibilityHelper(statements)
-
-	if len(statements.Creation) == 0 {
-		return "", "", dbutil.ErrEmptyCreationStatement
-	}
 
 	client, err := m.getConnection(ctx)
 	if err != nil {

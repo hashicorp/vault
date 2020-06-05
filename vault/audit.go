@@ -473,7 +473,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 			}
 		}
 
-		c.reloadFuncs[key] = append(c.reloadFuncs[key], func(map[string]interface{}) error {
+		c.reloadFuncs[key] = append(c.reloadFuncs[key], func() error {
 			if auditLogger.IsInfo() {
 				auditLogger.Info("reloading file audit backend", "path", entry.Path)
 			}

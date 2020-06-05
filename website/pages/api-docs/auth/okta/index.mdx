@@ -33,7 +33,8 @@ distinction between the `create` and `update` capabilities inside ACL policies.
   groups will be enabled.
   **Support for okta auth without api_token is deprecated in Vault 1.4**
 - `base_url` `(string: "")` - If set, will be used as the base domain
-  for API requests. Examples are okta.com, oktapreview.com, and okta-emea.com.
+  for API requests. If unset, "okta.com" will be used. Other valid examples
+  are oktapreview.com, and okta-emea.com.
 - `bypass_okta_mfa` `(bool: false)` - Whether to bypass an Okta MFA request.
   Useful if using one of Vault's built-in MFA mechanisms, but this will also
   cause certain other statuses to be ignored, such as `PASSWORD_EXPIRED`.
@@ -51,7 +52,7 @@ distinction between the `create` and `update` capabilities inside ACL policies.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -69,7 +70,7 @@ Reads the Okta configuration.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/okta/config
@@ -84,11 +85,18 @@ $ curl \
   "lease_duration": 0,
   "renewable": false,
   "data": {
-    "org_name": "example",
-    "api_token": "abc123",
     "base_url": "okta.com",
-    "ttl": "",
-    "max_ttl": ""
+    "bypass_okta_mfa": false,
+    "org_name": "example",
+    "token_bound_cidrs": [],
+    "token_explicit_max_ttl": 0,
+    "token_max_ttl": 0,
+    "token_no_default_policy": false,
+    "token_num_uses": 0,
+    "token_period": 0,
+    "token_policies": [],
+    "token_ttl": 0,
+    "token_type": "default"
   },
   "warnings": null
 }
@@ -104,7 +112,7 @@ List the users configured in the Okta method.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -149,7 +157,7 @@ Registers a new user and maps a set of policies to it.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -171,7 +179,7 @@ Reads the properties of an existing username.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/okta/users/test-user
@@ -207,7 +215,7 @@ Deletes an existing username from the method.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -224,7 +232,7 @@ List the groups configured in the Okta method.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -268,7 +276,7 @@ Registers a new group and maps a set of policies to it.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -290,7 +298,7 @@ Reads the properties of an existing group.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/okta/groups/admins
@@ -325,7 +333,7 @@ Deletes an existing group from the method.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -355,7 +363,7 @@ Login with the username and password.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request POST \
     --data @payload.json \

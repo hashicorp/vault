@@ -3,12 +3,13 @@ package okta
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/go-cleanhttp"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	oktaold "github.com/chrismalek/oktasdk-go/okta"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -282,6 +283,9 @@ func (new *oktaShimNew) Client() *oktanew.Client {
 }
 
 func (new *oktaShimNew) NewRequest(method string, url string, body interface{}) (*http.Request, error) {
+	if !strings.HasPrefix(url, "/") {
+		url = "/api/v1/" + url
+	}
 	return new.client.GetRequestExecutor().NewRequest(method, url, body)
 }
 

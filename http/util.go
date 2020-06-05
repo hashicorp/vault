@@ -15,7 +15,7 @@ var (
 	genericWrapping = func(core *vault.Core, in http.Handler, props *vault.HandlerProperties) http.Handler {
 		// Wrap the help wrapped handler with another layer with a generic
 		// handler
-		return wrapGenericHandler(core, in, props.MaxRequestSize, props.MaxRequestDuration)
+		return wrapGenericHandler(core, in, props)
 	}
 
 	additionalRoutes = func(mux *http.ServeMux, core *vault.Core) {}

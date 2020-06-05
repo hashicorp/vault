@@ -3,6 +3,7 @@ package cluster
 import (
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -27,6 +28,8 @@ type InmemLayer struct {
 
 	stopped *atomic.Bool
 	stopCh  chan struct{}
+
+	connectionCh chan *ConnectionInfo
 }
 
 // NewInmemLayer returns a new in-memory layer configured to listen on the
@@ -41,6 +44,12 @@ func NewInmemLayer(addr string, logger log.Logger) *InmemLayer {
 		servConns:   make(map[string][]net.Conn),
 		clientConns: make(map[string][]net.Conn),
 	}
+}
+
+func (l *InmemLayer) SetConnectionCh(ch chan *ConnectionInfo) {
+	l.l.Lock()
+	l.connectionCh = ch
+	l.l.Unlock()
 }
 
 // Addrs implements NetworkLayer.
@@ -80,9 +89,35 @@ func (l *InmemLayer) Dial(addr string, timeout time.Duration, tlsConfig *tls.Con
 	l.l.Lock()
 	defer l.l.Unlock()
 
+	if addr == l.addr {
+		panic(fmt.Sprintf("%q attempted to dial itself", l.addr))
+	}
+
 	peer, ok := l.peers[addr]
 	if !ok {
 		return nil, errors.New("inmemlayer: no address found")
+	}
+
+	alpn := ""
+	if tlsConfig != nil {
+		alpn = tlsConfig.NextProtos[0]
+	}
+
+	if l.logger.IsDebug() {
+		l.logger.Debug("dailing connection", "node", l.addr, "remote", addr, "alpn", alpn)
+	}
+
+	if l.connectionCh != nil {
+		select {
+		case l.connectionCh <- &ConnectionInfo{
+			Node:     l.addr,
+			Remote:   addr,
+			IsServer: false,
+			ALPN:     alpn,
+		}:
+		case <-time.After(2 * time.Second):
+			l.logger.Warn("failed to send connection info")
+		}
 	}
 
 	conn, err := peer.clientConn(l.addr)
@@ -116,6 +151,21 @@ func (l *InmemLayer) clientConn(addr string) (net.Conn, error) {
 
 	l.servConns[addr] = append(l.servConns[addr], servConn)
 
+	if l.logger.IsDebug() {
+		l.logger.Debug("received connection", "node", l.addr, "remote", addr)
+	}
+	if l.connectionCh != nil {
+		select {
+		case l.connectionCh <- &ConnectionInfo{
+			Node:     l.addr,
+			Remote:   addr,
+			IsServer: true,
+		}:
+		case <-time.After(2 * time.Second):
+			l.logger.Warn("failed to send connection info")
+		}
+	}
+
 	select {
 	case l.listener.pendingConns <- servConn:
 	case <-time.After(2 * time.Second):
@@ -127,10 +177,10 @@ func (l *InmemLayer) clientConn(addr string) (net.Conn, error) {
 
 // Connect is used to connect this transport to another transport for
 // a given peer name. This allows for local routing.
-func (l *InmemLayer) Connect(peer string, remote *InmemLayer) {
+func (l *InmemLayer) Connect(remote *InmemLayer) {
 	l.l.Lock()
 	defer l.l.Unlock()
-	l.peers[peer] = remote
+	l.peers[remote.addr] = remote
 }
 
 // Disconnect is used to remove the ability to route to a given peer.
@@ -265,24 +315,18 @@ type InmemLayerCluster struct {
 
 // NewInmemLayerCluster returns a new in-memory layer set that builds n nodes
 // and connects them all together.
-func NewInmemLayerCluster(nodes int, logger log.Logger) (*InmemLayerCluster, error) {
-	clusterID, err := base62.Random(4)
-	if err != nil {
-		return nil, err
-	}
-
-	clusterName := "cluster_" + clusterID
-
-	var layers []*InmemLayer
-	for i := 0; i < nodes; i++ {
-		nodeID, err := base62.Random(4)
+func NewInmemLayerCluster(clusterName string, nodes int, logger log.Logger) (*InmemLayerCluster, error) {
+	if clusterName == "" {
+		clusterID, err := base62.Random(4)
 		if err != nil {
 			return nil, err
 		}
+		clusterName = "cluster_" + clusterID
+	}
 
-		nodeName := clusterName + "_node_" + nodeID
-
-		layers = append(layers, NewInmemLayer(nodeName, logger))
+	layers := make([]*InmemLayer, nodes)
+	for i := 0; i < nodes; i++ {
+		layers[i] = NewInmemLayer(fmt.Sprintf("%s_node_%d", clusterName, i), logger)
 	}
 
 	// Connect all the peers together
@@ -293,8 +337,8 @@ func NewInmemLayerCluster(nodes int, logger log.Logger) (*InmemLayerCluster, err
 				continue
 			}
 
-			node.Connect(peer.addr, peer)
-			peer.Connect(node.addr, node)
+			node.Connect(peer)
+			peer.Connect(node)
 		}
 	}
 
@@ -306,8 +350,8 @@ func NewInmemLayerCluster(nodes int, logger log.Logger) (*InmemLayerCluster, err
 func (ic *InmemLayerCluster) ConnectCluster(remote *InmemLayerCluster) {
 	for _, node := range ic.layers {
 		for _, peer := range remote.layers {
-			node.Connect(peer.addr, peer)
-			peer.Connect(node.addr, node)
+			node.Connect(peer)
+			peer.Connect(node)
 		}
 	}
 }
@@ -320,4 +364,17 @@ func (ic *InmemLayerCluster) Layers() []NetworkLayer {
 	}
 
 	return ret
+}
+
+func (ic *InmemLayerCluster) SetConnectionCh(ch chan *ConnectionInfo) {
+	for _, node := range ic.layers {
+		node.SetConnectionCh(ch)
+	}
+}
+
+type ConnectionInfo struct {
+	Node     string
+	Remote   string
+	IsServer bool
+	ALPN     string
 }

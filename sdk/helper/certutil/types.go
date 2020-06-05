@@ -321,8 +321,10 @@ func (p *ParsedCertBundle) Verify() error {
 				return fmt.Errorf("certificate %d of certificate chain is not a certificate authority", i+1)
 			}
 			if !bytes.Equal(certPath[i].Certificate.AuthorityKeyId, caCert.Certificate.SubjectKeyId) {
-				return fmt.Errorf("certificate %d of certificate chain ca trust path is incorrect (%q/%q)",
-					i+1, certPath[i].Certificate.Subject.CommonName, caCert.Certificate.Subject.CommonName)
+				return fmt.Errorf("certificate %d of certificate chain ca trust path is incorrect (%q/%q) (%X/%X)",
+					i+1,
+					certPath[i].Certificate.Subject.CommonName, caCert.Certificate.Subject.CommonName,
+					certPath[i].Certificate.AuthorityKeyId, caCert.Certificate.SubjectKeyId)
 			}
 		}
 	}

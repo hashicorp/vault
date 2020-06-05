@@ -29,6 +29,7 @@ service_registration "consul" {
 telemetry {
   statsd_address = "bar"
   circonus_api_token = "baz"
+  metrics_prefix = "pfx"
 }
 
 seal "awskms" {

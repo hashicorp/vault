@@ -2,7 +2,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import notes from './ttl-picker.md';
 
-storiesOf('TtlPicker/', module)
+storiesOf('TTL/TtlPicker/', module)
   .addParameters({ options: { showPanel: false } })
   .add(
     `TtlPicker`,

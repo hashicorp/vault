@@ -79,7 +79,7 @@ You perform the following:
 -> For the purpose of this guide, we will use the open source software editions of
 Vault and Consul; however, the setup is the same for Enterprise editions.
 
-### <a name="step1"></a>Step 1: Setup a Consul Server Cluster
+### Step 1: Setup a Consul Server Cluster ((#step1))
 
 Our Consul servers in this guide will be defined by IP address only, but also
 referenced by a label:
@@ -246,7 +246,7 @@ Once the unit file is defined and saved (e.g.
 `/etc/systemd/system/consul.service`), be sure to perform a `systemctl daemon-reload`
 and then you can start your Consul service on each server.
 
-### <a name="step2"></a>Step 2: Start and Verify the Consul Cluster State
+### Step 2: Start and Verify the Consul Cluster State ((#step2))
 
 Be sure that the ownership and permissions are correct on the directory you
 specified for the value of `data_dir`, and then start the Consul service on each
@@ -284,7 +284,7 @@ leader before proceeding:
 The above output shows that **`consul_s3`** is the current cluster leader in
 this example. Now, you are good to move on to the Vault server configuration.
 
-### <a name="step3"></a>Step 3: Setup Consul Client Agents on Vault Nodes
+### Step 3: Setup Consul Client Agents on Vault Nodes ((#step3))
 
 The Vault server nodes require **both** the Consul and Vault binaries on each node. Consul will be configured as a **client** agent and Vault will be configured as a server.
 
@@ -446,7 +446,7 @@ After starting all Consul client agents, check the Consul cluster status:
 The above output shows 3 Consul server agents and 2 Consul client agents in the
 cluster. Now, you are ready to configure the Vault servers.
 
-### <a name="step4"></a>Step 4: Configure the Vault Servers
+### Step 4: Configure the Vault Servers ((#step4))
 
 Now that we have a Consul cluster consisting of 3 servers and 2 client agents
 for our Vault servers, let’s get the configuration for Vault and a startup
@@ -585,7 +585,7 @@ Once the unit file is defined and saved as e.g.
 `/etc/systemd/system/vault.service`, be sure to perform a `systemctl daemon-reload`
 and then you can start your Vault service on each server.
 
-### <a name="step5"></a>Step 5: Start Vault and Verify the State
+### Step 5: Start Vault and Verify the State ((#step5))
 
 Start the Vault service on each system and verify the status:
 

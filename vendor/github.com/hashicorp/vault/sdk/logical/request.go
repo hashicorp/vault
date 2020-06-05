@@ -70,10 +70,7 @@ type Request struct {
 	// Operation is the requested operation type
 	Operation Operation `json:"operation" structs:"operation" mapstructure:"operation"`
 
-	// Path is the part of the request path not consumed by the
-	// routing. As an example, if the original request path is "prod/aws/foo"
-	// and the AWS logical backend is mounted at "prod/aws/", then the
-	// final path is "foo" since the mount prefix is trimmed.
+	// Path is the full path of the request
 	Path string `json:"path" structs:"path" mapstructure:"path" sentinel:""`
 
 	// Request data is an opaque map that must have string keys.

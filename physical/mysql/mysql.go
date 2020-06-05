@@ -251,13 +251,17 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) 
 	}
 
 	dsnParams := url.Values{}
-	tlsCaFile, ok := conf["tls_ca_file"]
-	if ok {
+	tlsCaFile, tlsOk := conf["tls_ca_file"]
+	if tlsOk {
 		if err := setupMySQLTLSConfig(tlsCaFile); err != nil {
 			return nil, errwrap.Wrapf("failed register TLS config: {{err}}", err)
 		}
 
 		dsnParams.Add("tls", mysqlTLSKey)
+	}
+	ptAllowed, ptOk := conf["plaintext_connection_allowed"]
+	if !(ptOk && strings.ToLower(ptAllowed) == "true") && !tlsOk {
+		logger.Warn("No TLS specified, credentials will be sent in plaintext. To mute this warning add 'plaintext_connection_allowed' with a true value to your MySQL configuration in your config file.")
 	}
 
 	// Create MySQL handle for the database.

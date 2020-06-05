@@ -726,7 +726,7 @@ type roleEntry struct {
 	MaxTTL                        time.Duration `json:"max_ttl_duration" mapstructure:"max_ttl_duration"`
 	AllowLocalhost                bool          `json:"allow_localhost" mapstructure:"allow_localhost"`
 	AllowedBaseDomain             string        `json:"allowed_base_domain" mapstructure:"allowed_base_domain"`
-	AllowedDomainsOld             string        `json:"allowed_domains,omit_empty"`
+	AllowedDomainsOld             string        `json:"allowed_domains,omitempty"`
 	AllowedDomains                []string      `json:"allowed_domains_list" mapstructure:"allowed_domains"`
 	AllowBaseDomain               bool          `json:"allow_base_domain"`
 	AllowBareDomains              bool          `json:"allow_bare_domains" mapstructure:"allow_bare_domains"`

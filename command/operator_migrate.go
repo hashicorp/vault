@@ -172,11 +172,18 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 		return fmt.Errorf("Storage migration in progress (started: %s).", migrationStatus.Start.Format(time.RFC3339))
 	}
 
-	if err := SetStorageMigration(from, true); err != nil {
-		return errwrap.Wrapf("error setting migration lock: {{err}}", err)
-	}
+	switch config.StorageSource.Type {
+	case "raft":
+		// Raft storage cannot be written to when shutdown. Also the boltDB file
+		// already uses file locking to ensure two processes are not accessing
+		// it.
+	default:
+		if err := SetStorageMigration(from, true); err != nil {
+			return errwrap.Wrapf("error setting migration lock: {{err}}", err)
+		}
 
-	defer SetStorageMigration(from, false)
+		defer SetStorageMigration(from, false)
+	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 

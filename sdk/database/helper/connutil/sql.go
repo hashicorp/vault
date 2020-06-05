@@ -131,9 +131,9 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	// Ensure timezone is set to UTC for all the connections
 	if strings.HasPrefix(conn, "postgres://") || strings.HasPrefix(conn, "postgresql://") {
 		if strings.Contains(conn, "?") {
-			conn += "&timezone=utc"
+			conn += "&timezone=UTC"
 		} else {
-			conn += "?timezone=utc"
+			conn += "?timezone=UTC"
 		}
 	}
 

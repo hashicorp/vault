@@ -136,6 +136,14 @@ type KMSAPI interface {
 	GenerateDataKeyWithContext(aws.Context, *kms.GenerateDataKeyInput, ...request.Option) (*kms.GenerateDataKeyOutput, error)
 	GenerateDataKeyRequest(*kms.GenerateDataKeyInput) (*request.Request, *kms.GenerateDataKeyOutput)
 
+	GenerateDataKeyPair(*kms.GenerateDataKeyPairInput) (*kms.GenerateDataKeyPairOutput, error)
+	GenerateDataKeyPairWithContext(aws.Context, *kms.GenerateDataKeyPairInput, ...request.Option) (*kms.GenerateDataKeyPairOutput, error)
+	GenerateDataKeyPairRequest(*kms.GenerateDataKeyPairInput) (*request.Request, *kms.GenerateDataKeyPairOutput)
+
+	GenerateDataKeyPairWithoutPlaintext(*kms.GenerateDataKeyPairWithoutPlaintextInput) (*kms.GenerateDataKeyPairWithoutPlaintextOutput, error)
+	GenerateDataKeyPairWithoutPlaintextWithContext(aws.Context, *kms.GenerateDataKeyPairWithoutPlaintextInput, ...request.Option) (*kms.GenerateDataKeyPairWithoutPlaintextOutput, error)
+	GenerateDataKeyPairWithoutPlaintextRequest(*kms.GenerateDataKeyPairWithoutPlaintextInput) (*request.Request, *kms.GenerateDataKeyPairWithoutPlaintextOutput)
+
 	GenerateDataKeyWithoutPlaintext(*kms.GenerateDataKeyWithoutPlaintextInput) (*kms.GenerateDataKeyWithoutPlaintextOutput, error)
 	GenerateDataKeyWithoutPlaintextWithContext(aws.Context, *kms.GenerateDataKeyWithoutPlaintextInput, ...request.Option) (*kms.GenerateDataKeyWithoutPlaintextOutput, error)
 	GenerateDataKeyWithoutPlaintextRequest(*kms.GenerateDataKeyWithoutPlaintextInput) (*request.Request, *kms.GenerateDataKeyWithoutPlaintextOutput)
@@ -155,6 +163,10 @@ type KMSAPI interface {
 	GetParametersForImport(*kms.GetParametersForImportInput) (*kms.GetParametersForImportOutput, error)
 	GetParametersForImportWithContext(aws.Context, *kms.GetParametersForImportInput, ...request.Option) (*kms.GetParametersForImportOutput, error)
 	GetParametersForImportRequest(*kms.GetParametersForImportInput) (*request.Request, *kms.GetParametersForImportOutput)
+
+	GetPublicKey(*kms.GetPublicKeyInput) (*kms.GetPublicKeyOutput, error)
+	GetPublicKeyWithContext(aws.Context, *kms.GetPublicKeyInput, ...request.Option) (*kms.GetPublicKeyOutput, error)
+	GetPublicKeyRequest(*kms.GetPublicKeyInput) (*request.Request, *kms.GetPublicKeyOutput)
 
 	ImportKeyMaterial(*kms.ImportKeyMaterialInput) (*kms.ImportKeyMaterialOutput, error)
 	ImportKeyMaterialWithContext(aws.Context, *kms.ImportKeyMaterialInput, ...request.Option) (*kms.ImportKeyMaterialOutput, error)
@@ -216,6 +228,10 @@ type KMSAPI interface {
 	ScheduleKeyDeletionWithContext(aws.Context, *kms.ScheduleKeyDeletionInput, ...request.Option) (*kms.ScheduleKeyDeletionOutput, error)
 	ScheduleKeyDeletionRequest(*kms.ScheduleKeyDeletionInput) (*request.Request, *kms.ScheduleKeyDeletionOutput)
 
+	Sign(*kms.SignInput) (*kms.SignOutput, error)
+	SignWithContext(aws.Context, *kms.SignInput, ...request.Option) (*kms.SignOutput, error)
+	SignRequest(*kms.SignInput) (*request.Request, *kms.SignOutput)
+
 	TagResource(*kms.TagResourceInput) (*kms.TagResourceOutput, error)
 	TagResourceWithContext(aws.Context, *kms.TagResourceInput, ...request.Option) (*kms.TagResourceOutput, error)
 	TagResourceRequest(*kms.TagResourceInput) (*request.Request, *kms.TagResourceOutput)
@@ -235,6 +251,10 @@ type KMSAPI interface {
 	UpdateKeyDescription(*kms.UpdateKeyDescriptionInput) (*kms.UpdateKeyDescriptionOutput, error)
 	UpdateKeyDescriptionWithContext(aws.Context, *kms.UpdateKeyDescriptionInput, ...request.Option) (*kms.UpdateKeyDescriptionOutput, error)
 	UpdateKeyDescriptionRequest(*kms.UpdateKeyDescriptionInput) (*request.Request, *kms.UpdateKeyDescriptionOutput)
+
+	Verify(*kms.VerifyInput) (*kms.VerifyOutput, error)
+	VerifyWithContext(aws.Context, *kms.VerifyInput, ...request.Option) (*kms.VerifyOutput, error)
+	VerifyRequest(*kms.VerifyInput) (*request.Request, *kms.VerifyOutput)
 }
 
 var _ KMSAPI = (*kms.KMS)(nil)

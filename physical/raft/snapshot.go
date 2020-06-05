@@ -104,13 +104,6 @@ func (f *BoltSnapshotStore) Create(version raft.SnapshotVersion, index, term uin
 		return nil, fmt.Errorf("unsupported snapshot version %d", version)
 	}
 
-	// We are processing a snapshot, fastforward the index, term, and
-	// configuration to the latest seen by the raft system. This could include
-	// log indexes for operation types that are never sent to the FSM.
-	if err := f.fsm.witnessSnapshot(index, term, configurationIndex, configuration); err != nil {
-		return nil, err
-	}
-
 	// Create the sink
 	sink := &BoltSnapshotSink{
 		store:  f,
@@ -208,6 +201,11 @@ func (f *BoltSnapshotStore) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, 
 		if err != nil {
 			return nil, nil, err
 		}
+
+		readCloser = &boltSnapshotMetadataReader{
+			meta:       meta,
+			ReadCloser: readCloser,
+		}
 	}
 
 	return meta, readCloser, nil
@@ -285,4 +283,13 @@ func (s *BoltSnapshotSink) Cancel() error {
 	}
 
 	return nil
+}
+
+type boltSnapshotMetadataReader struct {
+	io.ReadCloser
+	meta *raft.SnapshotMeta
+}
+
+func (r *boltSnapshotMetadataReader) Metadata() *raft.SnapshotMeta {
+	return r.meta
 }

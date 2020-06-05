@@ -28,6 +28,7 @@ import (
 	dbMssql "github.com/hashicorp/vault/plugins/database/mssql"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
+	dbRedshift "github.com/hashicorp/vault/plugins/database/redshift"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -39,6 +40,7 @@ import (
 	logicalGcpKms "github.com/hashicorp/vault-plugin-secrets-gcpkms"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalMongoAtlas "github.com/hashicorp/vault-plugin-secrets-mongodbatlas"
+	logicalOpenLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
 	logicalAws "github.com/hashicorp/vault/builtin/logical/aws"
 	logicalCass "github.com/hashicorp/vault/builtin/logical/cassandra"
 	logicalConsul "github.com/hashicorp/vault/builtin/logical/consul"
@@ -97,6 +99,7 @@ func newRegistry() *registry {
 			"mysql-legacy-database-plugin": dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
 
 			"postgresql-database-plugin":    dbPostgres.New,
+			"redshift-database-plugin":      dbRedshift.New(true),
 			"mssql-database-plugin":         dbMssql.New,
 			"cassandra-database-plugin":     dbCass.New,
 			"mongodb-database-plugin":       dbMongo.New,
@@ -110,18 +113,19 @@ func newRegistry() *registry {
 			"alicloud":     logicalAlicloud.Factory,
 			"aws":          logicalAws.Factory,
 			"azure":        logicalAzure.Factory,
-			"cassandra":    logicalCass.Factory,
+			"cassandra":    logicalCass.Factory, // Deprecated
 			"consul":       logicalConsul.Factory,
 			"gcp":          logicalGcp.Factory,
 			"gcpkms":       logicalGcpKms.Factory,
 			"kv":           logicalKv.Factory,
-			"mongodb":      logicalMongo.Factory,
+			"mongodb":      logicalMongo.Factory, // Deprecated
 			"mongodbatlas": logicalMongoAtlas.Factory,
-			"mssql":        logicalMssql.Factory,
-			"mysql":        logicalMysql.Factory,
+			"mssql":        logicalMssql.Factory, // Deprecated
+			"mysql":        logicalMysql.Factory, // Deprecated
 			"nomad":        logicalNomad.Factory,
+			"openldap":     logicalOpenLDAP.Factory,
 			"pki":          logicalPki.Factory,
-			"postgresql":   logicalPostgres.Factory,
+			"postgresql":   logicalPostgres.Factory, // Deprecated
 			"rabbitmq":     logicalRabbit.Factory,
 			"ssh":          logicalSsh.Factory,
 			"totp":         logicalTotp.Factory,
