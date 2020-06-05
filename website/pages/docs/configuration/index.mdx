@@ -82,7 +82,7 @@ to specify where the configuration is.
   automatically disabled on unsupported platforms.
 
   Disabling `mlock` is strongly recommended if using [integrated
-  storage](https://www.vaultproject.io/docs/internals/integrated-storage) due to
+  storage](/docs/internals/integrated-storage) due to
   the fact that `mlock` does not interact well with memory mapped files such as
   those created by BoltDB, which is used by Raft to track state. When using
   `mlock`, memory-mapped files get loaded into resident memory which causes
