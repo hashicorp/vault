@@ -30,6 +30,7 @@ export default [
       'seal',
       'lease',
       'auth',
+      'storage',
       'tokens',
       'response-wrapping',
       'policies',

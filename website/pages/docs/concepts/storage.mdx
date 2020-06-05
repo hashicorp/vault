@@ -1,0 +1,40 @@
+---
+layout: docs
+page_title: Storage
+sidebar_title: Storage
+description: >-
+  Vault relies on external storage to save its information.
+---
+
+# Storage
+
+As described on our [Architecture](/docs/internals/architecture) page, Vault's storage backend is untrusted storage used purely to keep encrypted information.
+
+## Supported Storage Backends
+
+For enterprise customers, HashiCorp provides official support for Consul and Vault's Integrated Storage as storage backends.
+
+Many other options for storage are available with community support - see our [Storage Configuration](/docs/configuration/storage) section for more information.
+
+## Backups & Restores
+
+Due to the highly flexible nature of Vault's potential storage configurations, providing exacting guidance on backing up and restoring Vault is challenging.
+
+When backing up Vault, there are two pieces to consider:
+
+1. Vault's encrypted data in the storage backend
+2. Configuration files and management scripts for running the Vault server
+
+### Vault's Persisted Data
+
+In an ideal world, backups and restores would be performed while Vault is offline. If offline backups are impossible, we have recommended using a storage backend that supports atomic snapshots (such as [Consul](https://www.consul.io/docs/commands/snapshot.html) or [Integrated Storage](https://www.vaultproject.io/docs/commands/operator/raft#snapshot)).
+
+**If your storage backend does not support atomic snapshots, we recommend only taking offline backups.**
+
+We recommend taking backups **before**, but not during, write operations to the `/sys` API (excluding the `/sys/leases`, `/sys/namespaces`, `/sys/tools`, `/sys/wrapping`, `/sys/policies`, and `/sys/pprof` endpoints). Some examples of workflows that write to the `/sys` API are upgrades, server moves, and rekeys. In the future, this guidance may change for the Integrated Storage backend.
+
+To perform a backup or restore of Vault's encrypted data, refer to the snapshotting documentation for your storage backend.
+
+### Configuration
+
+In addition to backing up Vault's encrypted data via the storage backend, you may also wish to save the server configuration files and any scripts for managing the Vault service. The location of these files will be specific to your installation of Vault.
