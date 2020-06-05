@@ -83,6 +83,17 @@
         grid-row: 2/2;
       }
 
+      .grid-item-bottom-left {
+        grid-column: 1/1;
+        grid-row: 3/3;
+        display: flex;
+        align-items: center;
+      }
+      .grid-item-bottom-right {
+        grid-column: 2/2;
+        grid-row: 3/3;
+      }
+
       .grid-item-second-row {
         grid-column: 1 / span 2;
         grid-row: 2/2;
@@ -92,18 +103,7 @@
         grid-column: 1 / span 2;
         grid-row: 3/4;
       }
-
-      .grid-item-left-bottom {
-        grid-column: 1/1;
-        grid-row: 3/3;
-        display: flex;
-        align-items: center;
-      }
-      .grid-item-right-bottom {
-        grid-column: 2/2;
-        grid-row: 3/3;
-      }
-      .grid-item-full-bottom {
+      .grid-item-bottom-row {
         grid-column: 1 / span 2;
         grid-row: 4/4;
       }

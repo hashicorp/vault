@@ -48,7 +48,7 @@
         </p>
       {{/if}}
     </div>
-    <h2 class="title is-3 grid-item-left-bottom" data-test-state>
+    <h2 class="title is-3 grid-item-bottom-left" data-test-state>
       {{state}}
       {{#if inSyncState}}
         <ToolTip @verticalPosition="above" as |T|>
@@ -63,10 +63,10 @@
         </ToolTip>
       {{/if}}
     </h2>
-    <h2 class="title is-3 grid-item-right-bottom" data-test-connection>
+    <h2 class="title is-3 grid-item-bottom-right" data-test-connection>
       {{connection}}
     </h2>
-    <div class="grid-item-full-bottom">
+    <div class="grid-item-bottom-row">
       <h6 class="title is-6">
         last_remote_wal
       </h6>
