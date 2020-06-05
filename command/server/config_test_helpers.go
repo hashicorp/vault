@@ -17,7 +17,7 @@ func testConfigRaftRetryJoin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	retryJoinConfig := `[{"leader_api_addr":"http://127.0.0.1:8200"},{"leader_api_addr":"http://127.0.0.2:8200"},{"leader_api_addr":"http://127.0.0.3:8200"}]` + "\n"
+	retryJoinConfig := `[{"leader_api_addr":"http://127.0.0.1:8200"},{"leader_api_addr":"http://127.0.0.2:8200"},{"leader_api_addr":"http://127.0.0.3:8200"}]`
 	expected := &Config{
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
@@ -291,6 +291,57 @@ func testParseEntropy(t *testing.T, oss bool) {
 			fmt.Printf("\n config.Entropy: %#v", config.Entropy)
 			t.Fatalf("entropy config mismatch: expected %#v got %#v", test.outEntropy, *config.Entropy)
 		}
+	}
+}
+
+func testLoadConfigFileIntegerAndBooleanValues(t *testing.T) {
+	testLoadConfigFileIntegerAndBooleanValuesCommon(t, "./test-fixtures/config4.hcl")
+}
+
+func testLoadConfigFileIntegerAndBooleanValuesJson(t *testing.T) {
+	testLoadConfigFileIntegerAndBooleanValuesCommon(t, "./test-fixtures/config4.hcl.json")
+}
+
+func testLoadConfigFileIntegerAndBooleanValuesCommon(t *testing.T, path string) {
+	config, err := LoadConfigFile(path)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:    "tcp",
+					Address: "127.0.0.1:8200",
+				},
+			},
+			DisableMlock: true,
+		},
+
+		Storage: &Storage{
+			Type: "raft",
+			Config: map[string]string{
+				"path":                   "/storage/path/raft",
+				"node_id":                "raft1",
+				"performance_multiplier": "1",
+				"foo":                    "bar",
+				"baz":                    "true",
+			},
+			ClusterAddr: "127.0.0.1:8201",
+		},
+
+		ClusterAddr: "127.0.0.1:8201",
+
+		DisableCache:    true,
+		DisableCacheRaw: true,
+		EnableUI:        true,
+		EnableUIRaw:     true,
+	}
+
+	config.Listeners[0].RawConfig = nil
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
 	}
 }
 

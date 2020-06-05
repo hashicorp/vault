@@ -20,7 +20,7 @@ introduce a Vault token into a Kubernetes Pod.
 The default path is `/kubernetes`. If this auth method was enabled at a
 different path, specify `-path=/my-path` in the CLI.
 
-```text
+```shell-session
 $ vault write auth/kubernetes/login role=demo jwt=...
 ```
 
@@ -29,7 +29,7 @@ $ vault write auth/kubernetes/login role=demo jwt=...
 The default endpoint is `auth/kubernetes/login`. If this auth method was enabled
 at a different path, use that value instead of `kubernetes`.
 
-```shell
+```shell-session
 $ curl \
     --request POST \
     --data '{"jwt": "your_service_account_jwt", "role": "demo"}' \

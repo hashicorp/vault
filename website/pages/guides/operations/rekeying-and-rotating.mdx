@@ -70,7 +70,7 @@ rekeying to match the threshold configured when the keys were issued.
 First, initialize a rekeying operation. The flags represent the **newly
 desired** number of keys and threshold:
 
-```text
+```shell-session
 $ vault operator rekey -init -key-shares=3 -key-threshold=2
 ```
 
@@ -91,7 +91,7 @@ New Threshold     2
 
 Each unseal key holder runs the following command and enters their unseal key:
 
-```text
+```shell-session
 $ vault operator rekey -nonce=<nonce>
 Rekey operation nonce: dc1aec3b-ae67-5780-b4b5-2a10ca05b17c
 Key (will be hidden):
@@ -127,7 +127,7 @@ the encryption key rotation.
 
 To trigger a key rotation, execute the command:
 
-```text
+```shell-session
 $ vault operator rotate
 ```
 

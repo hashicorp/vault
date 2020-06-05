@@ -108,7 +108,7 @@ You will perform the following:
 1. [Request an OTP](#step3)
 1. [Establish an SSH session](#step4)
 
-### <a name="step1"></a>Step 1: Install vault-ssh-helper
+### Step 1: Install vault-ssh-helper ((#step1))
 
 (**Persona:** operations)
 
@@ -202,7 +202,7 @@ onto every **_target host_**.
 ~> This step must be performed on **all** target hosts that you wish to connect
 using the Vault's one-time SSH password.
 
-### <a name="step2"></a>Step 2: Setup the SSH Secrets Engine
+### Step 2: Setup the SSH Secrets Engine ((#step2))
 
 (**Persona:** operations)
 
@@ -214,13 +214,13 @@ perform the operation. Then you are going to create a role named,
 
 First, enable the SSH secrets engine.
 
-```plaintext
+```shell-session
 $ vault secrets enable ssh
 ```
 
 Next, create a role.
 
-```plaintext
+```shell-session
 $ vault write ssh/roles/otp_key_role key_type=otp \
         default_user=ubuntu \
         cidr_list=0.0.0.0/0
@@ -233,7 +233,7 @@ credential will be generated.
 
 Enable `ssh` secret engine using `/sys/mounts` endpoint:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: <TOKEN>" \
        --request POST \
        --data <PARAMETERS> \
@@ -248,7 +248,7 @@ parameters](/api/system/mounts#enable-secrets-engine) of the secret engine.
 The following example enables SSH secret engine at `sys/mounts/ssh`
 path, and passed the secret engine type (`ssh`) in the request payload.
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data '{"type":"ssh"}' \
@@ -257,7 +257,7 @@ $ curl --header "X-Vault-Token: ..." \
 
 Now, create a role using the `ssh/roles/otp_key_role` endpoint.
 
-```plaintext
+```shell-session
 $ tee payload.json <<EOF
 {
   "key_type": "otp",
@@ -298,15 +298,13 @@ then login.
 
 1. Click **Create role**.
 
-<br />
-
 ~> **NOTE:** Its recommended to create individual roles for each username to
 ensure absolute isolation between usernames. This is required for Dynamic Key
 type and OTP type. For the purpose of this guide, the **`cidr_list`** will be
 set to `0.0.0.0/0`. For production, be sure to set this parameter to be as
 granular as you can since there is no need to keep this role open to the world.
 
-### <a name="step3"></a>Step 3: Request an OTP
+### Step 3: Request an OTP ((#step3))
 
 (**Persona:** client)
 
@@ -324,13 +322,13 @@ path "ssh/creds/otp_key_role" {
 To generate an OTP credential for an IP of the remote host belongs to the
 `otp_key_role`:
 
-```plaintext
+```shell-session
 $ vault write ssh/creds/otp_key_role ip=<REMOTE_HOST_IP>
 ```
 
 **Example:**
 
-```plaintext
+```shell-session
 $ vault write ssh/creds/otp_key_role ip=192.0.2.10
 Key                Value
 ---                -----
@@ -351,7 +349,7 @@ The **`key`** value is the OTP to use during SSH authentication.
 To generate an OTP credential for an IP of the remote host belongs to the
 `otp_key_role`:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data '{"ip": "<REMOTE_HOST_IP>"}'
@@ -360,7 +358,7 @@ $ curl --header "X-Vault-Token: ..." \
 
 **Example:**
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data '{"ip": "192.0.2.10"}'
@@ -398,11 +396,11 @@ To generate an OTP credential for an IP of the remote host belongs to the
 
 1. Click **Copy credentials**. This copies the OTP (`key` value).
 
-### <a name="step4"></a>Step 4: Establish an SSH session
+### Step 4: Establish an SSH session ((#step4))
 
 Simply, use the OTP generated at [Step 3](#step3) to authenticate:
 
-```plaintext
+```shell-session
 $ ssh ubuntu@192.0.2.10
 Password: <Enter OTP>
 ```
@@ -411,7 +409,7 @@ Password: <Enter OTP>
 you can create a new OTP and SSH into the target host with single line of CLI
 command:
 
-```plaintext
+```shell-session
 $ vault ssh -role otp_key_role -mode otp -strict-host-key-checking=no ubuntu@192.0.2.10
 ```
 

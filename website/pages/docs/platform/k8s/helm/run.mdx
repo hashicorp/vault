@@ -48,12 +48,12 @@ Helm](https://learn.hashicorp.com/vault/getting-started-k8s/minikube) guide.
 To use the Helm chart, add the Hashicorp helm repository and check that you have
 access to the chart:
 
-```shell
+```shell-session
 $ helm repo add hashicorp https://helm.releases.hashicorp.com
 "hashicorp" has been added to your repositories
 
 $ helm search repo hashicorp/vault
-NAME           	CHART VERSION	APP VERSION	DESCRIPTION                               
+NAME           	CHART VERSION	APP VERSION	DESCRIPTION
 hashicorp/vault	0.5.0        	           	Install and configure Vault on Kubernetes.
 ```
 
@@ -63,7 +63,7 @@ changes.
 
 Use `helm install` to install the latest release of the Vault Helm chart.
 
-```sh
+```shell-session
 $ helm install vault hashicorp/vault
 ```
 
@@ -72,7 +72,7 @@ Or install a specific version of the chart.
 ```sh
 # List the available releases
 $ helm search repo hashicorp/vault -l
-NAME           	CHART VERSION	APP VERSION	DESCRIPTION                               
+NAME           	CHART VERSION	APP VERSION	DESCRIPTION
 hashicorp/vault	0.5.0        	           	Install and configure Vault on Kubernetes.
 hashicorp/vault	0.4.0        	           	Install and configure Vault on Kubernetes.
 
@@ -85,14 +85,14 @@ values inline or defined in a file.
 
 Override the `server.dev.enabled` configuration value:
 
-```sh
+```shell-session
 $ helm install vault hashicorp/vault \
     --set "server.dev.enabled=true"
 ```
 
 Override all the configuration found in a file:
 
-```sh
+```shell-session
 $ cat override-values.yml
 server:
   ha:
@@ -113,7 +113,7 @@ NOT recommended for a production environment.
 
 Install the latest Vault Helm chart in development mode.
 
-```sh
+```shell-session
 $ helm install vault hashicorp/vault \
     --set "server.dev.enabled=true"
 ```
@@ -125,7 +125,7 @@ Vault server with a file storage backend.
 
 Install the latest Vault Helm chart in standalone mode.
 
-```sh
+```shell-session
 $ helm install vault hashicorp/vault
 ```
 
@@ -138,7 +138,7 @@ chart](https://github.com/hashicorp/consul-helm).
 
 Install the latest Vault Helm chart in HA mode.
 
-```sh
+```shell-session
 $ helm install vault hashicorp/vault \
     --set "server.ha.enabled=true"
 ```
@@ -154,7 +154,7 @@ relies on a network addressable Vault server to exist.
 
 Install the latest Vault Helm chart in external mode.
 
-```sh
+```shell-session
 $ helm install vault hashicorp/vault \
     --set "injector.externalVaultAddr=http://external-vault:8200"
 ```
@@ -172,7 +172,7 @@ configuration value](/docs/platform/k8s/helm/configuration/#ui).
 
 Expose the Vault UI with port-forwarding:
 
-```sh
+```shell-session
 $ kubectl port-forward vault-0 8200:8200
 Forwarding from 127.0.0.1:8200 -> 8200
 Forwarding from [::1]:8200 -> 8200
@@ -192,7 +192,7 @@ servers.
 
 View all the Vault pods in the current namespace:
 
-```sh
+```shell-session
 $ kubectl get pods -l app.kubernetes.io/name=vault
 NAME                                    READY   STATUS    RESTARTS   AGE
 vault-0                                 0/1     Running   0          1m49s
@@ -203,7 +203,7 @@ vault-2                                 0/1     Running   0          1m49s
 Initialize one Vault server with the default number of key shares and default
 key threshold:
 
-```sh
+```shell-session
 $ kubectl exec -ti vault-0 -- vault operator init
 Unseal Key 1: MBFSDepD9E6whREc6Dj+k3pMaKJ6cCnCUWcySJQymObb
 Unseal Key 2: zQj4v22k9ixegS+94HJwmIaWLBL3nZHe1i+b/wHz25fr
@@ -229,7 +229,7 @@ $ kubectl exec -ti vault-0 -- vault operator unseal # ... Unseal Key 3
 Repeat the unseal process for all Vault server pods. When all Vault server pods
 are unsealed they report READY `1/1`.
 
-```sh
+```shell-session
 $ kubectl get pods -l app.kubernetes.io/name=vault
 NAME                                    READY   STATUS    RESTARTS   AGE
 vault-0                                 1/1     Running   0          1m49s
@@ -317,7 +317,7 @@ are defined in each Vault server pod.
 
 First, create a secret with your EKS access key/secret:
 
-```sh
+```shell-session
 $ kubectl create secret generic eks-creds \
     --from-literal=AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID?}" \
     --from-literal=AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY?}"
@@ -388,7 +388,7 @@ well.
 
 #### Upgrading Vault Servers
 
-!> **IMPORTANT NOTE:** Helm will install the latest chart found in a repo by default. 
+!> **IMPORTANT NOTE:** Helm will install the latest chart found in a repo by default.
 It's recommended to specify the chart version when upgrading.
 
 To initiate the upgrade, set the `server.image` values to the desired Vault
@@ -413,7 +413,7 @@ hashicorp/vault	0.5.0        	           	Install and configure Vault on Kuberne
 Next, test the upgrade with `--dry-run` first to verify the changes sent to the
 Kubernetes cluster.
 
-```bash
+```shell-session
 $ helm upgrade vault hashicorp/vault --version=0.5.0 \
     --set='server.image.repository=vault' \
     --set='server.image.tag=123.456' \
@@ -430,7 +430,7 @@ deleted to upgrade. Deleting the pods does not delete any persisted data.
 If Vault is not deployed using `ha` mode, the single Vault server may be deleted by
 running:
 
-```bash
+```shell-session
 $ kubectl delete pod <name of Vault pod>
 ```
 
@@ -438,33 +438,33 @@ If Vault is deployed using `ha` mode, the standby pods must be upgraded first.
 To identify which pod is currently the active primary, run the following command
 on each Vault pod:
 
-```bash
+```shell-session
 $ kubectl exec -ti <name of pod> -- vault status | grep "HA Mode"
 ```
 
 Next, delete every pod that is not the active primary:
 
-```bash
+```shell-session
 $ kubectl delete pod <name of Vault pods>
 ```
 
 If auto-unseal is not being used, the newly scheduled Vault standby pods needs
 to be unsealed:
 
-```bash
+```shell-session
 $ kubectl exec -ti <name of pod> -- vault operator unseal
 ```
 
 Finally, once the standby nodes have been updated and unsealed, delete the active
 primary:
 
-```bash
+```shell-session
 $ kubectl delete pod <name of Vault primary>
 ```
 
 Similar to the standby nodes, the former primary also needs to be unsealed:
 
-```bash
+```shell-session
 $ kubectl exec -ti <name of pod> -- vault operator unseal
 ```
 
@@ -485,7 +485,7 @@ secrets.
 First, create a partial Vault configuration with the sensitive settings Vault
 loads during startup:
 
-```sh
+```shell-session
 $ cat <<EOF >>config.hcl
 storage "mysql" {
 username = "user1234"
@@ -497,7 +497,7 @@ EOF
 
 Next, create a Kubernetes secret containing this partial configuration:
 
-```bash
+```shell-session
 $ kubectl create secret generic vault-storage-config \
     --from-file=config.hcl
 ```
@@ -505,7 +505,7 @@ $ kubectl create secret generic vault-storage-config \
 Finally, mount this secret as an extra volume and add an additional `-config` flag
 to the Vault startup command:
 
-```bash
+```shell-session
 $ helm install vault hashicorp/vault \
   --set='server.extraVolumes[0].type=secret' \
   --set='server.extraVolumes[0].name=vault-storage-config' \

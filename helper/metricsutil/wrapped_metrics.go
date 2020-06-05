@@ -42,6 +42,17 @@ func (m *ClusterMetricSink) AddSampleWithLabels(key []string, val float32, label
 		append(labels, Label{"cluster", m.ClusterName}))
 }
 
+func (m *ClusterMetricSink) AddDurationWithLabels(key []string, d time.Duration, labels []Label) {
+	val := float32(d) / float32(time.Millisecond)
+	m.AddSampleWithLabels(key, val, labels)
+}
+
+func (m *ClusterMetricSink) MeasureSinceWithLabels(key []string, start time.Time, labels []Label) {
+	elapsed := time.Now().Sub(start)
+	val := float32(elapsed) / float32(time.Millisecond)
+	m.AddSampleWithLabels(key, val, labels)
+}
+
 // BlackholeSink is a default suitable for use in unit tests.
 func BlackholeSink() *ClusterMetricSink {
 	return &ClusterMetricSink{

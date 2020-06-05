@@ -48,7 +48,7 @@ virtual machine.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -66,7 +66,7 @@ Returns the previously configured config, including credentials.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     https://127.0.0.1:8200/v1/auth/azure/config
@@ -97,7 +97,7 @@ Deletes the previously configured Azure config and credentials.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -145,7 +145,7 @@ entities attempting to login.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -167,7 +167,7 @@ Returns the previously registered role configuration.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     https://127.0.0.1:8200/v1/auth/azure/role/dev-role
@@ -206,7 +206,7 @@ Lists all the roles that are registered with the plugin.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -241,7 +241,7 @@ Deletes the previously registered role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -287,7 +287,7 @@ entity and then authorizes the entity for the given role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request POST \
     --data @payload.json \

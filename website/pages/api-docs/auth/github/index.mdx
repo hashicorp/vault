@@ -43,7 +43,7 @@ distinction between the `create` and `update` capabilities inside ACL policies.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -61,7 +61,7 @@ Reads the GitHub configuration.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/github/config
@@ -108,7 +108,7 @@ Map a list of policies to a team that exists in the configured GitHub organizati
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -126,7 +126,7 @@ Reads the GitHub team policy mapping.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/github/map/teams/dev
@@ -174,7 +174,7 @@ organization.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -195,7 +195,7 @@ Reads the GitHub user policy mapping.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/github/map/users/sethvargo
@@ -241,7 +241,7 @@ Login using GitHub access token.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request POST \
     http://127.0.0.1:8200/v1/auth/github/login

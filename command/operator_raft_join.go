@@ -32,7 +32,15 @@ Usage: vault operator raft join [options] <leader-api-addr>
   Join the current node as a peer to the Raft cluster by providing the address
   of the Raft leader node.
 
-	  $ vault operator raft join "http://127.0.0.2:8200"
+      $ vault operator raft join "http://127.0.0.2:8200"
+
+  TLS certificate data can also be consumed from a file on disk by prefixing with
+  the "@" symbol. For example:
+
+      $ vault operator raft join "http://127.0.0.2:8200" \
+        -leader-ca-cert=@leader_ca.crt \
+        -leader-client-cert=@leader_client.crt \
+        -leader-client-key=@leader.key
 
 ` + c.Flags().Help()
 
@@ -114,6 +122,24 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 		return 1
 	}
 
+	leaderCACert, err := parseFlagFile(c.flagLeaderCACert)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Failed to parse leader CA certificate: %s", err))
+		return 1
+	}
+
+	leaderClientCert, err := parseFlagFile(c.flagLeaderClientCert)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Failed to parse leader client certificate: %s", err))
+		return 1
+	}
+
+	leaderClientKey, err := parseFlagFile(c.flagLeaderClientKey)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Failed to parse leader client key: %s", err))
+		return 1
+	}
+
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -122,9 +148,9 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 
 	resp, err := client.Sys().RaftJoin(&api.RaftJoinRequest{
 		LeaderAPIAddr:    leaderAPIAddr,
-		LeaderCACert:     c.flagLeaderCACert,
-		LeaderClientCert: c.flagLeaderClientCert,
-		LeaderClientKey:  c.flagLeaderClientKey,
+		LeaderCACert:     leaderCACert,
+		LeaderClientCert: leaderClientCert,
+		LeaderClientKey:  leaderClientKey,
 		Retry:            c.flagRetry,
 		NonVoter:         c.flagNonVoter,
 	})
@@ -139,9 +165,10 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 		return OutputData(c.UI, resp)
 	}
 
-	out := []string{}
-	out = append(out, "Key | Value")
-	out = append(out, fmt.Sprintf("Joined | %t", resp.Joined))
+	out := []string{
+		"Key | Value",
+		fmt.Sprintf("Joined | %t", resp.Joined),
+	}
 	c.UI.Output(tableOutput(out, nil))
 
 	return 0

@@ -33,7 +33,7 @@ to specify where the configuration is.
 
 ## Parameters
 
-- `storage` <tt>([StorageBackend][storage-backend]: \<required\>)</tt> –
+- `storage` `([StorageBackend][storage-backend]: <required>)` –
   Configures the storage backend where Vault data is stored. Please see the
   [storage backends documentation][storage-backend] for the full list of
   available storage backends. Running Vault in HA mode would require
@@ -43,17 +43,17 @@ to specify where the configuration is.
   configured with a backend that supports HA, along with corresponding HA
   options.
 
-- `ha_storage` <tt>([StorageBackend][storage-backend]: nil)</tt> – Configures
+- `ha_storage` `([StorageBackend][storage-backend]: nil)` – Configures
   the storage backend where Vault HA coordination will take place. This must be
   an HA-supporting backend. If not set, HA will be attempted on the backend
   given in the `storage` parameter. This parameter is not required if the
   storage backend supports HA coordination and if HA specific options are
   already specified with `storage` parameter.
 
-- `listener` <tt>([Listener][listener]: \<required\>)</tt> – Configures how
+- `listener` `([Listener][listener]: <required>)` – Configures how
   Vault is listening for API requests.
 
-- `seal` <tt>([Seal][seal]: nil)</tt> – Configures the seal type to use for
+- `seal` `([Seal][seal]: nil)` – Configures the seal type to use for
   auto-unsealing, as well as for
   [seal wrapping][sealwrap] as an additional layer of data protection.
 
@@ -101,7 +101,7 @@ to specify where the configuration is.
   allowed to be loaded. Vault must have permission to read files in this
   directory to successfully load plugins, and the value cannot be a symbolic link.
 
-- `telemetry` <tt>([Telemetry][telemetry]: &lt;none&gt;)</tt> – Specifies the telemetry
+- `telemetry` `([Telemetry][telemetry]: <none>)` – Specifies the telemetry
   reporting system.
 
 - `log_level` `(string: "")` – Specifies the log level to use; overridden by

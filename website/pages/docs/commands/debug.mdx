@@ -65,7 +65,7 @@ single directory. Each target, with the exception of profiling data, is captured
 in a single file. For each of those targets collection is represented as a JSON
 array object, with each entry captured at each interval as a JSON object.
 
-```text
+```shell-session
 $ tree vault-debug-2019-10-15T21-44-49Z/
 vault-debug-2019-10-15T21-44-49Z/
 ├── 2019-10-15T21-44-49Z
@@ -103,20 +103,20 @@ vault-debug-2019-10-15T21-44-49Z/
 
 Start debug using sane defaults:
 
-```text
+```shell-session
 $ vault debug
 ```
 
 Start debug with different duration, intervals, and metrics interval values, and
 skip compression:
 
-```text
+```shell-session
 $ vault debug -duration=1m -interval=10s -metrics-interval=5s -compress=false
 ```
 
 Start debug with specific targets:
 
-```text
+```shell-session
 $ vault debug -target=host -target=metrics
 ```
 

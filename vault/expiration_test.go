@@ -415,10 +415,18 @@ func TestExpiration_Restore(t *testing.T) {
 		}
 	}
 
+	if exp.leaseCount != len(paths) {
+		t.Fatalf("expected %v leases, got %v", len(paths), exp.leaseCount)
+	}
+
 	// Stop everything
 	err = exp.Stop()
 	if err != nil {
 		t.Fatalf("err: %v", err)
+	}
+
+	if exp.leaseCount != 0 {
+		t.Fatalf("expected %v leases, got %v", 0, exp.leaseCount)
 	}
 
 	// Restore
@@ -426,6 +434,8 @@ func TestExpiration_Restore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	// Would like to test here, but this is a race with the expiration of the leases.
 
 	// Ensure all are reaped
 	start := time.Now()
@@ -445,6 +455,11 @@ func TestExpiration_Restore(t *testing.T) {
 			t.Fatalf("Bad: %v", req)
 		}
 	}
+
+	if exp.leaseCount != 0 {
+		t.Fatalf("expected %v leases, got %v", 0, exp.leaseCount)
+	}
+
 }
 
 func TestExpiration_Register(t *testing.T) {
@@ -1038,6 +1053,10 @@ func TestExpiration_RenewToken_period(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	if exp.leaseCount != 1 {
+		t.Fatalf("expected %v leases, got %v", 1, exp.leaseCount)
+	}
+
 	// Renew the token
 	te = &logical.TokenEntry{
 		ID:          root.ID,
@@ -1056,6 +1075,11 @@ func TestExpiration_RenewToken_period(t *testing.T) {
 	if out.Auth.TTL > time.Minute {
 		t.Fatalf("expected TTL to be less than 1 minute, got: %s", out.Auth.TTL)
 	}
+
+	if exp.leaseCount != 1 {
+		t.Fatalf("expected %v leases, got %v", 1, exp.leaseCount)
+	}
+
 }
 
 func TestExpiration_RenewToken_period_backend(t *testing.T) {
