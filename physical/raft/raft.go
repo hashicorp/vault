@@ -328,7 +328,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	return &RaftBackend{
 		logger:       logger,
 		fsm:          fsm,
-		raftInitCh:  make(chan struct{}),
+		raftInitCh:   make(chan struct{}),
 		conf:         conf,
 		logStore:     log,
 		stableStore:  stable,

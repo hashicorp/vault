@@ -24,6 +24,19 @@ type RaftJoinRequest struct {
 	NonVoter         bool   `json:"non_voter"`
 }
 
+func (c *Sys) RaftBootstrap() error {
+	r := c.c.NewRequest("POST", "/v1/sys/storage/raft/bootstrap")
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	_, err := c.c.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // RaftJoin adds the node from which this call is invoked from to the raft
 // cluster represented by the leader address in the parameter.
 func (c *Sys) RaftJoin(opts *RaftJoinRequest) (*RaftJoinResponse, error) {
