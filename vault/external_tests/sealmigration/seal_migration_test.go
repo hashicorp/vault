@@ -303,6 +303,80 @@ func migrateFromShamirToTransit_Post14(
 	return transitSeal
 }
 
+// TestSealMigration_TransitToShamir_Post14 tests transit-to-shamir seal
+// migration, using the post-1.4 method of bring individual nodes in the
+// cluster to do the migration.
+func TestSealMigration_TransitToShamir_Post14(t *testing.T) {
+	// Note that we do not test integrated raft storage since this is
+	// a pre-1.4 test.
+	testVariousBackends(t, testSealMigrationTransitToShamir_Post14, false)
+}
+
+func testSealMigrationTransitToShamir_Post14(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int) {
+
+	// Create the transit server.
+	tss := sealhelper.NewTransitSealServer(t)
+	defer func() {
+		if tss != nil {
+			tss.Cleanup()
+		}
+	}()
+	tss.MakeKey(t, "transit-seal-key")
+
+	// Initialize the backend with transit.
+	cluster, opts, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
+
+	// Migrate the backend from transit to shamir
+	migrateFromTransitToShamir_Post14(t, logger, storage, basePort, tss, transitSeal, cluster, opts)
+	cluster.EnsureCoresSealed(t)
+	storage.Cleanup(t, cluster)
+	cluster.Cleanup()
+
+	// Now that migration is done, we can nuke the transit server, since we
+	// can unseal without it.
+	tss.Cleanup()
+	tss = nil
+
+	//// Run the backend with shamir.  Note that the recovery keys are now the
+	//// barrier keys.
+	//runShamir(t, logger, storage, basePort, rootToken, recoveryKeys)
+}
+
+func migrateFromTransitToShamir_Post14(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int,
+	tss *sealhelper.TransitSealServer, transitSeal vault.Seal,
+	cluster *vault.TestCluster, opts *vault.TestClusterOptions) {
+
+	// This will give us Shamir
+	opts.SealFunc = nil
+
+	// Restart each follower with the new config, and migrate to Shamir.
+	rootToken, recoveryKeys := cluster.RootToken, cluster.RecoveryKeys
+	for i := 1; i < numTestCores; i++ {
+		cluster.StopCore(t, i)
+		if storage.IsRaft {
+			teststorage.CloseRaftStorage(t, cluster, i)
+		}
+
+		// N.B. Providing an UnwrapSeal puts us in migration mode. This is the
+		// equivalent of doing the following in HCL:
+		//     seal "transit" {
+		//       // ...
+		//       disabled = "true"
+		//     }
+		cluster.Cores[i].CoreConfig.UnwrapSeal = transitSeal
+
+		cluster.RestartCore(t, i, opts)
+
+		cluster.Cores[i].Client.SetToken(rootToken)
+		unsealMigrate(t, cluster.Cores[i].Client, recoveryKeys, true)
+		time.Sleep(5 * time.Second)
+	}
+}
+
 func unsealMigrate(t *testing.T, client *api.Client, keys [][]byte, transitServerAvailable bool) {
 
 	for i, key := range keys {
