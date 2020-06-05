@@ -53,6 +53,19 @@ export default Component.extend({
     return false;
   }),
   knownPrimaryClusterAddrs: computed('replicationDetails.{knownPrimaryClusterAddrs}', function() {
-    return this.replicationDetails.knownPrimaryClusterAddrs;
+    // return this.replicationDetails.knownPrimaryClusterAddrs;
+    return [
+      'https://127.0.0.1:8201',
+      'https://127.0.0.1:8201',
+      'https://127.0.0.1:8201',
+      'https://127.0.0.1:8201',
+      'https://127.0.0.1:8201',
+      'https://127.0.0.1:8201',
+      'https://127.0.0.1:8201',
+      'https://127.0.0.1:8201',
+      'https://127.0.0.1:8201',
+      'https://127.0.0.1:8201',
+      'https://127.0.0.1:8201',
+    ];
   }),
 });
