@@ -299,14 +299,12 @@ func migrateFromShamirToTransit_Post14(
 	}
 
 	// Make sure the seal configs were updated correctly.
-	b, r, err := cluster.Cores[0].Core.PhysicalSealConfigs(context.Background())
+	b, r, err := leader.Core.PhysicalSealConfigs(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	verifyBarrierConfig(t, b, wrapping.Shamir, keyShares, keyThreshold, 1)
-	if r != nil {
-		t.Fatalf("expected nil recovery config, got: %#v", r)
-	}
+	verifyBarrierConfig(t, b, wrapping.Transit, 1, 1, 1)
+	verifyBarrierConfig(t, r, wrapping.Shamir, keyShares, keyThreshold, 0)
 
 	return transitSeal
 }
@@ -437,6 +435,16 @@ func migrateFromTransitToShamir_Post14(
 	}
 	if diff := deep.Equal(secret.Data, map[string]interface{}{"zork": "quux"}); len(diff) > 0 {
 		t.Fatal(diff)
+	}
+
+	// Make sure the seal configs were updated correctly.
+	b, r, err := cluster.Cores[0].Core.PhysicalSealConfigs(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	verifyBarrierConfig(t, b, wrapping.Shamir, keyShares, keyThreshold, 1)
+	if r != nil {
+		t.Fatalf("expected nil recovery config, got: %#v", r)
 	}
 }
 
