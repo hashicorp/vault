@@ -13,24 +13,26 @@ matrix:
 
 branches:
   only:
-  - master
+    - master
 
 env:
   global:
     - GOMAXPROCS=2
   matrix:
-    - CASS=2.2.13
+    - CASS=2.1.21
       AUTH=true
-    - CASS=2.2.13
+    - CASS=2.2.14
+      AUTH=true
+    - CASS=2.2.14
       AUTH=false
-    - CASS=3.0.17
+    - CASS=3.0.18
       AUTH=false
-    - CASS=3.11.3
+    - CASS=3.11.4
       AUTH=false
 
 go:
-  - "1.10"
-  - "1.11"
+  - 1.12.x
+  - 1.13.x
 
 install:
   - ./install_test_deps.sh $TRAVIS_REPO_SLUG

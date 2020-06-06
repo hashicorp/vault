@@ -19,8 +19,8 @@ The following matrix shows the versions of Go and Cassandra that are tested with
 
 Go/Cassandra | 2.1.x | 2.2.x | 3.x.x
 -------------| -------| ------| ---------
-1.10 | yes | yes | yes
-1.11 | yes | yes | yes
+1.12 | yes | yes | yes
+1.13 | yes | yes | yes
 
 Gocql has been tested in production against many different versions of Cassandra. Due to limits in our CI setup we only test against the latest 3 major releases, which coincide with the official support from the Apache project.
 
@@ -164,6 +164,22 @@ func main() {
 		log.Fatal(err)
 	}
 }
+```
+
+
+Authentication 
+-------
+
+```go
+cluster := gocql.NewCluster("192.168.1.1", "192.168.1.2", "192.168.1.3")
+cluster.Authenticator = gocql.PasswordAuthenticator{
+	Username: "user",
+	Password: "password"
+}
+cluster.Keyspace = "example"
+cluster.Consistency = gocql.Quorum
+session, _ := cluster.CreateSession()
+defer session.Close()
 ```
 
 Data Binding

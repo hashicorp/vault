@@ -103,6 +103,7 @@ func NewCassandraBackend(conf map[string]string, logger log.Logger) (physical.Ba
 	cluster := gocql.NewCluster(hosts...)
 	cluster.Port = port
 	cluster.Keyspace = keyspace
+	cluster.Consistency = consistency
 
 	cluster.ProtoVersion = 2
 	if protoVersionStr, ok := conf["protocol_version"]; ok {
@@ -141,7 +142,6 @@ func NewCassandraBackend(conf map[string]string, logger log.Logger) (physical.Ba
 		return nil, err
 	}
 	metrics.MeasureSince([]string{"cassandra", "connect"}, connectStart)
-	sess.SetConsistency(consistency)
 
 	impl := &CassandraBackend{
 		sess:   sess,
