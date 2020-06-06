@@ -817,10 +817,9 @@ func (c *SSHCommand) parseSSHCommand(args []string) (hostname string, username s
 
 		// this is an ssh option, lets see if User or Port have been set and use it
 		if arg == "-o" {
-			split := strings.Split(i, "=")
+			split := strings.SplitN(i, "=", 2)
 			key := split[0]
-			// Incase the value contains = signs we want to get all of them
-			value := strings.Join(split[1:], "=")
+			value := split[1]
 
 			// Remove double quotes
 			if value[0:1] == "\"" {
