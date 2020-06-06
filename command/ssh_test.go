@@ -66,6 +66,17 @@ func TestParseSSHCommand(t *testing.T) {
 			nil,
 		},
 		{
+			"Parse the username out of -o User=\"User Name\" #7912",
+			[]string{
+				"-o", "User=\"User Name\"",
+				"hostname",
+			},
+			"hostname",
+			"User Name",
+			"",
+			nil,
+		},
+		{
 			"If the username is specified with -o User=username and realname@hostname prefer realname@",
 			[]string{
 				"-o", "User=username",
