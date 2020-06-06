@@ -55,6 +55,17 @@ func TestParseSSHCommand(t *testing.T) {
 			nil,
 		},
 		{
+			"Parse the username out of -l username",
+			[]string{
+				"-l", "user1",
+				"hostname",
+			},
+			"hostname",
+			"user1",
+			"",
+			nil,
+		},
+		{
 			"Parse the username out of -o User=username",
 			[]string{
 				"-o", "User=username",
