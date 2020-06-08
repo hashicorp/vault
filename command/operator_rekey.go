@@ -49,7 +49,7 @@ Usage: vault operator rekey [options] [KEY]
 
   Generates a new set of unseal keys. This can optionally change the total
   number of key shares or the required threshold of those key shares to
-  reconstruct the master key. This operation is zero downtime, but it requires
+  reconstruct the root key. This operation is zero downtime, but it requires
   the Vault is unsealed and a quorum of existing unseal keys are provided.
 
   An unseal key may be provided directly on the command line as an argument to
@@ -127,7 +127,7 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 		Target:     &c.flagKeyShares,
 		Default:    5,
 		Completion: complete.PredictAnything,
-		Usage: "Number of key shares to split the generated master key into. " +
+		Usage: "Number of key shares to split the generated root key into. " +
 			"This is the number of \"unseal keys\" to generate.",
 	})
 
@@ -137,7 +137,7 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 		Target:     &c.flagKeyThreshold,
 		Default:    3,
 		Completion: complete.PredictAnything,
-		Usage: "Number of key shares required to reconstruct the master key. " +
+		Usage: "Number of key shares required to reconstruct the root key. " +
 			"This must be less than or equal to -key-shares.",
 	})
 

@@ -22,7 +22,7 @@ const (
 	// barrierSealConfigPath is the path used to store our seal configuration.
 	// This value is stored in plaintext, since we must be able to read it even
 	// with the Vault sealed. This is required so that we know how many secret
-	// parts must be used to reconstruct the master key.
+	// parts must be used to reconstruct the unseal key.
 	barrierSealConfigPath = "core/seal-config"
 
 	// recoverySealConfigPath is the path to the recovery key seal
@@ -138,7 +138,7 @@ func (d *defaultSeal) StoredKeysSupported() seal.StoredKeysSupport {
 	case isLegacy:
 		return seal.StoredKeysNotSupported
 	default:
-		return seal.StoredKeysSupportedShamirMaster
+		return seal.StoredKeysSupportedShamirRoot
 	}
 }
 

@@ -813,7 +813,7 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 
 // Snapshot takes a raft snapshot, packages it into a archive file and writes it
 // to the provided writer. Seal access is used to encrypt the SHASUM file so we
-// can validate the snapshot was taken using the same master keys or not.
+// can validate the snapshot was taken using the same root keys or not.
 func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access *seal.Access) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
@@ -855,7 +855,7 @@ func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access *seal.Acc
 // WriteSnapshotToTemp reads a snapshot archive off the provided reader,
 // extracts the data and writes the snapshot to a temporary file. The seal
 // access is used to decrypt the SHASUM file in the archive to ensure this
-// snapshot has the same master key as the running instance. If the provided
+// snapshot has the same root key as the running instance. If the provided
 // access is nil then it will skip that validation.
 func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access) (*os.File, func(), raft.SnapshotMeta, error) {
 	b.l.RLock()

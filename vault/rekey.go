@@ -332,7 +332,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	// Get the seal configuration
 	var existingConfig *SealConfig
 	var err error
-	var useRecovery bool // Determines whether recovery key is being used to rekey the master key
+	var useRecovery bool // Determines whether recovery key is being used to rekey the root key
 	if c.seal.StoredKeysSupported() == seal.StoredKeysSupportedGeneric && c.seal.RecoveryKeySupported() {
 		existingConfig, err = c.seal.RecoveryConfig(ctx)
 		useRecovery = true
@@ -378,7 +378,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 		return nil, nil
 	}
 
-	// Recover the master key or recovery key
+	// Recover the root key or recovery key
 	var recoveredKey []byte
 	if existingConfig.SecretThreshold == 1 {
 		recoveredKey = c.barrierRekeyConfig.RekeyProgress[0]
@@ -387,7 +387,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 		recoveredKey, err = shamir.Combine(c.barrierRekeyConfig.RekeyProgress)
 		c.barrierRekeyConfig.RekeyProgress = nil
 		if err != nil {
-			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to compute master key: {{err}}", err).Error())
+			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to compute root key: {{err}}", err).Error())
 		}
 	}
 
@@ -398,7 +398,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 			return nil, logical.CodedError(http.StatusBadRequest, errwrap.Wrapf("recovery key verification failed: {{err}}", err).Error())
 		}
 	case c.seal.BarrierType() == wrapping.Shamir:
-		if c.seal.StoredKeysSupported() == seal.StoredKeysSupportedShamirMaster {
+		if c.seal.StoredKeysSupported() == seal.StoredKeysSupportedShamirRoot {
 			testseal := NewDefaultSeal(&seal.Access{
 				Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
 					Logger: c.logger.Named("testseal"),
@@ -416,23 +416,23 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 			testseal.SetCachedBarrierConfig(cfg)
 			stored, err := testseal.GetStoredKeys(ctx)
 			if err != nil {
-				return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to read master key: {{err}}", err).Error())
+				return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to read root key: {{err}}", err).Error())
 			}
 			recoveredKey = stored[0]
 		}
-		if err := c.barrier.VerifyMaster(recoveredKey); err != nil {
-			c.logger.Error("master key verification failed", "error", err)
-			return nil, logical.CodedError(http.StatusBadRequest, errwrap.Wrapf("master key verification failed: {{err}}", err).Error())
+		if err := c.barrier.VerifyRoot(recoveredKey); err != nil {
+			c.logger.Error("root key verification failed", "error", err)
+			return nil, logical.CodedError(http.StatusBadRequest, errwrap.Wrapf("root key verification failed: {{err}}", err).Error())
 		}
 	}
 
-	// Generate a new key: for AutoUnseal, this is a new master key; for Shamir,
+	// Generate a new key: for AutoUnseal, this is a new root key; for Shamir,
 	// this is a new unseal key, and performBarrierRekey will also generate a
-	// new master key.
+	// new root key.
 	newKey, err := c.barrier.GenerateKey(c.secureRandomReader)
 	if err != nil {
-		c.logger.Error("failed to generate master key", "error", err)
-		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("master key generation failed: {{err}}", err).Error())
+		c.logger.Error("failed to generate root key", "error", err)
+		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("root key generation failed: {{err}}", err).Error())
 	}
 
 	results := &RekeyResult{
@@ -539,17 +539,17 @@ func (c *Core) performBarrierRekey(ctx context.Context, newSealKey []byte) logic
 		}
 	}
 
-	newMasterKey, err := c.barrier.GenerateKey(c.secureRandomReader)
+	newRootKey, err := c.barrier.GenerateKey(c.secureRandomReader)
 	if err != nil {
 		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to perform rekey: {{err}}", err).Error())
 	}
-	if err := c.seal.SetStoredKeys(ctx, [][]byte{newMasterKey}); err != nil {
+	if err := c.seal.SetStoredKeys(ctx, [][]byte{newRootKey}); err != nil {
 		c.logger.Error("failed to store keys", "error", err)
 		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to store keys: {{err}}", err).Error())
 	}
 
 	// Rekey the barrier
-	if err := c.barrier.Rekey(ctx, newMasterKey); err != nil {
+	if err := c.barrier.Rekey(ctx, newRootKey); err != nil {
 		c.logger.Error("failed to rekey barrier", "error", err)
 		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to rekey barrier: {{err}}", err).Error())
 	}
@@ -656,7 +656,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 		return nil, nil
 	}
 
-	// Recover the master key
+	// Recover the root key
 	var recoveryKey []byte
 	if existingConfig.SecretThreshold == 1 {
 		recoveryKey = c.recoveryRekeyConfig.RekeyProgress[0]
@@ -675,23 +675,23 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 		return nil, logical.CodedError(http.StatusBadRequest, errwrap.Wrapf("recovery key verification failed: {{err}}", err).Error())
 	}
 
-	// Generate a new master key
-	newMasterKey, err := c.barrier.GenerateKey(c.secureRandomReader)
+	// Generate a new root key
+	newRootKey, err := c.barrier.GenerateKey(c.secureRandomReader)
 	if err != nil {
 		c.logger.Error("failed to generate recovery key", "error", err)
 		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("recovery key generation failed: {{err}}", err).Error())
 	}
 
-	// Return the master key if only a single key part is used
+	// Return the root key if only a single key part is used
 	results := &RekeyResult{
 		Backup: c.recoveryRekeyConfig.Backup,
 	}
 
 	if c.recoveryRekeyConfig.SecretShares == 1 {
-		results.SecretShares = append(results.SecretShares, newMasterKey)
+		results.SecretShares = append(results.SecretShares, newRootKey)
 	} else {
-		// Split the master key using the Shamir algorithm
-		shares, err := shamir.Split(newMasterKey, c.recoveryRekeyConfig.SecretShares, c.recoveryRekeyConfig.SecretThreshold)
+		// Split the root key using the Shamir algorithm
+		shares, err := shamir.Split(newRootKey, c.recoveryRekeyConfig.SecretShares, c.recoveryRekeyConfig.SecretThreshold)
 		if err != nil {
 			c.logger.Error("failed to generate shares", "error", err)
 			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to generate shares: {{err}}", err).Error())
@@ -749,14 +749,14 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to generate verification nonce: {{err}}", err).Error())
 		}
 		c.recoveryRekeyConfig.VerificationNonce = nonce
-		c.recoveryRekeyConfig.VerificationKey = newMasterKey
+		c.recoveryRekeyConfig.VerificationKey = newRootKey
 
 		results.VerificationRequired = true
 		results.VerificationNonce = nonce
 		return results, nil
 	}
 
-	if err := c.performRecoveryRekey(ctx, newMasterKey); err != nil {
+	if err := c.performRecoveryRekey(ctx, newRootKey); err != nil {
 		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to perform recovery rekey: {{err}}", err).Error())
 	}
 
@@ -764,8 +764,8 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 	return results, nil
 }
 
-func (c *Core) performRecoveryRekey(ctx context.Context, newMasterKey []byte) logical.HTTPCodedError {
-	if err := c.seal.SetRecoveryKey(ctx, newMasterKey); err != nil {
+func (c *Core) performRecoveryRekey(ctx context.Context, newRootKey []byte) logical.HTTPCodedError {
+	if err := c.seal.SetRecoveryKey(ctx, newRootKey); err != nil {
 		c.logger.Error("failed to set recovery key", "error", err)
 		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to set recovery key: {{err}}", err).Error())
 	}
@@ -868,7 +868,7 @@ func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recove
 		}
 	}()
 
-	// Recover the master key or recovery key
+	// Recover the root key or recovery key
 	var recoveredKey []byte
 	if config.SecretThreshold == 1 {
 		recoveredKey = config.VerificationProgress[0]

@@ -55,10 +55,10 @@ Usage: vault operator init [options]
   same storage backend in HA mode, you only need to initialize one Vault to
   initialize the storage backend.
 
-  During initialization, Vault generates an in-memory master key and applies
-  Shamir's secret sharing algorithm to disassemble that master key into a
+  During initialization, Vault generates an in-memory root key and applies
+  Shamir's secret sharing algorithm to disassemble that root key into a
   configuration number of key shares such that a configurable subset of those
-  key shares must come together to regenerate the master key. These keys are
+  key shares must come together to regenerate the root key. These keys are
   often called "unseal keys" in Vault's documentation.
 
   This command cannot be run against an already-initialized Vault cluster.
@@ -103,7 +103,7 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Target:     &c.flagKeyShares,
 		Default:    defKeyShares,
 		Completion: complete.PredictAnything,
-		Usage: "Number of key shares to split the generated master key into. " +
+		Usage: "Number of key shares to split the generated root key into. " +
 			"This is the number of \"unseal keys\" to generate.",
 	})
 
@@ -113,7 +113,7 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Target:     &c.flagKeyThreshold,
 		Default:    defKeyThreshold,
 		Completion: complete.PredictAnything,
-		Usage: "Number of key shares required to reconstruct the master key. " +
+		Usage: "Number of key shares required to reconstruct the root key. " +
 			"This must be less than or equal to -key-shares.",
 	})
 
@@ -445,8 +445,8 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 
 		c.UI.Output("")
 		c.UI.Output(wrapAtLength(fmt.Sprintf(
-			"Vault does not store the generated master key. Without at least %d "+
-				"key to reconstruct the master key, Vault will remain permanently "+
+			"Vault does not store the generated root key. Without at least %d "+
+				"key to reconstruct the root key, Vault will remain permanently "+
 				"sealed!",
 			req.SecretThreshold)))
 

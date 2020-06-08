@@ -467,7 +467,7 @@ func (c *Core) checkRaftTLSKeyUpgrades(ctx context.Context) error {
 
 // handleSnapshotRestore is for the raft backend to hook back into core after a
 // snapshot is restored so we can clear the necessary caches and handle changing
-// keyrings or master keys
+// keyrings or root keys
 func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(context.Context) error {
 	return func(ctx context.Context) (retErr error) {
 		c.logger.Info("running post snapshot restore invalidations")
@@ -503,10 +503,10 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 		}
 
 		// Reload the keyring in case it changed. If this fails it's likely
-		// we've changed master keys.
+		// we've changed root keys.
 		err := c.performKeyUpgrades(ctx)
 		if err != nil {
-			// The snapshot contained a master key or keyring we couldn't
+			// The snapshot contained a root key or keyring we couldn't
 			// recover
 			switch c.seal.BarrierType() {
 			case wrapping.Shamir:
@@ -535,7 +535,7 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 					c.logger.Error("raft snapshot restore failed to unseal barrier", "error", err)
 					return err
 				}
-				c.logger.Info("done reloading master key using auto seal")
+				c.logger.Info("done reloading root key using auto seal")
 			}
 		}
 

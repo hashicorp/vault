@@ -21,12 +21,12 @@ type generateRecoveryToken struct {
 }
 
 func (g *generateRecoveryToken) authenticate(ctx context.Context, c *Core, combinedKey []byte) error {
-	key, err := c.unsealKeyToMasterKey(ctx, combinedKey)
+	key, err := c.unsealKeyToRootKey(ctx, combinedKey)
 	if err != nil {
 		return errwrap.Wrapf("unable to authenticate: {{err}}", err)
 	}
 
-	// Use the retrieved master key to unseal the barrier
+	// Use the retrieved root key to unseal the barrier
 	if err := c.barrier.Unseal(ctx, key); err != nil {
 		return errwrap.Wrapf("recovery operation token generation failed, cannot unseal barrier: {{err}}", err)
 	}

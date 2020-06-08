@@ -15,11 +15,11 @@ import (
 // The term used to encrypt a key is prefixed to the key written out.
 // All data is encrypted with the latest key, but storing the old keys
 // allows for decryption of keys written previously. Along with the encryption
-// keys, the keyring also tracks the master key. This is necessary so that
-// when a new key is added to the keyring, we can encrypt with the master key
+// keys, the keyring also tracks the root key. This is necessary so that
+// when a new key is added to the keyring, we can encrypt with the root key
 // and write out the new keyring.
 type Keyring struct {
-	masterKey  []byte
+	rootKey    []byte
 	keys       map[uint32]*Key
 	activeTerm uint32
 }
@@ -64,7 +64,7 @@ func NewKeyring() *Keyring {
 // Clone returns a new copy of the keyring
 func (k *Keyring) Clone() *Keyring {
 	clone := &Keyring{
-		masterKey:  k.masterKey,
+		rootKey:    k.rootKey,
 		keys:       make(map[uint32]*Key, len(k.keys)),
 		activeTerm: k.activeTerm,
 	}
@@ -135,25 +135,25 @@ func (k *Keyring) TermKey(term uint32) *Key {
 	return k.keys[term]
 }
 
-// SetMasterKey is used to update the master key
-func (k *Keyring) SetMasterKey(val []byte) *Keyring {
+// SetRootKey is used to update the root key
+func (k *Keyring) SetRootKey(val []byte) *Keyring {
 	valCopy := make([]byte, len(val))
 	copy(valCopy, val)
 	clone := k.Clone()
-	clone.masterKey = valCopy
+	clone.rootKey = valCopy
 	return clone
 }
 
-// MasterKey returns the master key
-func (k *Keyring) MasterKey() []byte {
-	return k.masterKey
+// RootKey returns the root key
+func (k *Keyring) RootKey() []byte {
+	return k.rootKey
 }
 
 // Serialize is used to create a byte encoded keyring
 func (k *Keyring) Serialize() ([]byte, error) {
 	// Create the encoded entry
 	enc := EncodedKeyring{
-		MasterKey: k.masterKey,
+		MasterKey: k.rootKey,
 	}
 	for _, key := range k.keys {
 		enc.Keys = append(enc.Keys, key)
@@ -174,7 +174,7 @@ func DeserializeKeyring(buf []byte) (*Keyring, error) {
 
 	// Create a new keyring
 	k := NewKeyring()
-	k.masterKey = enc.MasterKey
+	k.rootKey = enc.MasterKey
 	for _, key := range enc.Keys {
 		k.keys[key.Term] = key
 		if key.Term > k.activeTerm {
@@ -191,8 +191,8 @@ func (k *Keyring) Zeroize(keysToo bool) {
 	if k == nil {
 		return
 	}
-	if k.masterKey != nil {
-		memzero(k.masterKey)
+	if k.rootKey != nil {
+		memzero(k.rootKey)
 	}
 	if !keysToo || k.keys == nil {
 		return
