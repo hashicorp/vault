@@ -289,14 +289,14 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		},
 
 		Response: &AuditResponse{
-			Backend:  in.BackendType,
-			Auth:     respAuth,
-			Secret:   respSecret,
-			Data:     resp.Data,
-			Warnings: resp.Warnings,
-			Redirect: resp.Redirect,
-			WrapInfo: respWrapInfo,
-			Headers:  resp.Headers,
+			MountType: in.MountType,
+			Auth:      respAuth,
+			Secret:    respSecret,
+			Data:      resp.Data,
+			Warnings:  resp.Warnings,
+			Redirect:  resp.Redirect,
+			WrapInfo:  respWrapInfo,
+			Headers:   resp.Headers,
 		},
 	}
 
