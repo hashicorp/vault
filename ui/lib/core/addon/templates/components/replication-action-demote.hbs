@@ -11,8 +11,8 @@
     <div data-test-demote-warning>
       <AlertInline
         @type="danger"
-        @message="Demoting this DR primary cluster
-          would result in a DR secondary and in that mode Vault is read-only. This
+        @message="Demoting this {{model.replicationModeForDisplay}} primary cluster
+          would result in a {{model.replicationModeForDisplay}} secondary and in that mode Vault is read-only. This
           cluster is also currently operating as a Performance
           {{capitalize model.performance.modeForUrl}}, demoting it will leave your
           replication setup without a performance primary cluster until a new
@@ -21,7 +21,7 @@
     </div>
   {{/if}}
     <p>
-      Demote this {{replicationDisplayMode}} primary cluster to a {{replicationDisplayMode}} secondary. The resulting secondary cluster will not
+      Demote this {{model.replicationModeForDisplay}} primary cluster to a {{model.replicationModeForDisplay}} secondary. The resulting secondary cluster will not
       attempt to connect to a primary, but will maintain knowledge of its cluster
       ID and can be reconnected to the same set of replication clusters without
       wiping local storage.

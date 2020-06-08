@@ -3,7 +3,7 @@
 </h4>
 <div class="content">
   <p>
-    Disable {{replicationDisplayMode}} Replication entirely on the cluster.
+    Disable {{model.replicationModeForDisplay}} Replication entirely on the cluster.
     {{#if model.replicationAttrs.isPrimary}}
       Any secondaries will no longer be able to connect.
     {{else if (eq model.replicationAttrs.modeForUrl 'bootstrapping')}}
