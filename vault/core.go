@@ -2337,8 +2337,6 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 }
 
 func (c *Core) setSealsForMigration(migrationSeal, newSeal, unwrapSeal Seal) {
-	c.stateLock.Lock()
-	defer c.stateLock.Unlock()
 	c.unwrapSeal = unwrapSeal
 	if c.unwrapSeal != nil {
 		c.unwrapSeal.SetCore(c)
