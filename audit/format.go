@@ -350,14 +350,14 @@ type AuditRequest struct {
 }
 
 type AuditResponse struct {
-	Auth     *AuditAuth             `json:"auth,omitempty"`
-	Backend  string                 `json:"backend,omitempty"`
-	Secret   *AuditSecret           `json:"secret,omitempty"`
-	Data     map[string]interface{} `json:"data,omitempty"`
-	Warnings []string               `json:"warnings,omitempty"`
-	Redirect string                 `json:"redirect,omitempty"`
-	WrapInfo *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
-	Headers  map[string][]string    `json:"headers,omitempty"`
+	Auth      *AuditAuth             `json:"auth,omitempty"`
+	MountType string                 `json:"mount_type,omitempty"`
+	Secret    *AuditSecret           `json:"secret,omitempty"`
+	Data      map[string]interface{} `json:"data,omitempty"`
+	Warnings  []string               `json:"warnings,omitempty"`
+	Redirect  string                 `json:"redirect,omitempty"`
+	WrapInfo  *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
+	Headers   map[string][]string    `json:"headers,omitempty"`
 }
 
 type AuditAuth struct {
