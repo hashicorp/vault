@@ -500,7 +500,7 @@ func (c *OperatorInitCommand) status(client *api.Client) int {
 		if inited {
 			c.UI.Output("Vault is initialized")
 		} else {
-			c.UI.Output("Vault it not initialized")
+			c.UI.Output("Vault is not initialized")
 		}
 	default:
 		data := api.InitStatusResponse{Initialized: inited}
