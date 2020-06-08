@@ -149,7 +149,7 @@ func TestRaft_Snapshot_Index(t *testing.T) {
 	// Get index
 	index, _ := raft.fsm.LatestState()
 	if index.Term != 2 {
-		t.Fatalf("unexpected term, got %d expected 1", index.Term)
+		t.Fatalf("unexpected term, got %d expected 2", index.Term)
 	}
 	if index.Index != 3 {
 		t.Fatalf("unexpected index, got %d expected 3", index.Term)
