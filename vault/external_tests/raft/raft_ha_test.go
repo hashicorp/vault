@@ -14,9 +14,23 @@ import (
 )
 
 func TestRaft_HA_NewCluster(t *testing.T) {
+	t.Run("file", func(t *testing.T) {
+		t.Run("no_client_certs", func(t *testing.T) {
+			testRaftHANewCluster(t, teststorage.MakeFileBackend, false)
+		})
+
+		t.Run("with_client_certs", func(t *testing.T) {
+			testRaftHANewCluster(t, teststorage.MakeFileBackend, true)
+		})
+	})
+
+}
+
+func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundler, addClientCerts bool) {
 	var conf vault.CoreConfig
 	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
-	teststorage.RaftHASetup(&conf, &opts)
+
+	teststorage.RaftHASetup(&conf, &opts, bundler)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -24,7 +38,7 @@ func TestRaft_HA_NewCluster(t *testing.T) {
 	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
 
 	leaderCore := cluster.Cores[0]
-	leaderAPI := leaderCore.Client.Address()
+	// leaderAPI := leaderCore.Client.Address()
 	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
 
 	// Seal the leader so we can install an address provider
@@ -35,10 +49,13 @@ func TestRaft_HA_NewCluster(t *testing.T) {
 		vault.TestWaitActive(t, leaderCore.Core)
 	}
 
+	// Now unseal core for join commands to work
+	testhelpers.EnsureCoresUnsealed(t, cluster)
+
 	joinFunc := func(client *api.Client, addClientCerts bool) {
 		req := &api.RaftJoinRequest{
-			LeaderAPIAddr: leaderAPI,
-			LeaderCACert:  string(cluster.CACertPEM),
+			// LeaderAPIAddr: leaderAPI,
+			LeaderCACert: string(cluster.CACertPEM),
 		}
 		if addClientCerts {
 			req.LeaderClientCert = string(cluster.CACertPEM)
@@ -53,25 +70,36 @@ func TestRaft_HA_NewCluster(t *testing.T) {
 		}
 	}
 
-	joinFunc(cluster.Cores[1].Client, false)
-	joinFunc(cluster.Cores[2].Client, false)
+	joinFunc(cluster.Cores[1].Client, addClientCerts)
+	joinFunc(cluster.Cores[2].Client, addClientCerts)
 
-	_, err := cluster.Cores[0].Client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
+	// Ensure peers are added
+	leaderClient := cluster.Cores[0].Client
+	checkConfigFunc(t, leaderClient, map[string]bool{
+		"core-0": true,
+		"core-1": true,
+		"core-2": true,
+	})
+
+	// Test remove peers
+	_, err := leaderClient.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
 		"server_id": "core-1",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = cluster.Cores[0].Client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
+	_, err = leaderClient.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
 		"server_id": "core-2",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	joinFunc(cluster.Cores[1].Client, true)
-	joinFunc(cluster.Cores[2].Client, true)
+	// Ensure peers are removed
+	checkConfigFunc(t, leaderClient, map[string]bool{
+		"core-0": true,
+	})
 }
 
 func TestRaft_HA_ExistingCluster(t *testing.T) {

@@ -1547,10 +1547,15 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			case physBundle == nil && coreConfig.Physical == nil:
 				t.Fatal("PhysicalFactory produced no physical and none in CoreConfig")
 			case physBundle != nil:
-				testCluster.Logger.Info("created physical backend", "instance", i)
-				coreConfig.Physical = physBundle.Backend
-				localConfig.Physical = physBundle.Backend
-				base.Physical = physBundle.Backend
+				// Storage backend setup
+				if physBundle.Backend != nil {
+					testCluster.Logger.Info("created physical backend", "instance", i)
+					coreConfig.Physical = physBundle.Backend
+					localConfig.Physical = physBundle.Backend
+					base.Physical = physBundle.Backend
+				}
+
+				// HA Backend setup
 				haBackend := physBundle.HABackend
 				if haBackend == nil {
 					if ha, ok := physBundle.Backend.(physical.HABackend); ok {
@@ -1559,6 +1564,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 				}
 				coreConfig.HAPhysical = haBackend
 				localConfig.HAPhysical = haBackend
+
+				// Cleanup setup
 				if physBundle.Cleanup != nil {
 					cleanupFuncs = append(cleanupFuncs, physBundle.Cleanup)
 				}

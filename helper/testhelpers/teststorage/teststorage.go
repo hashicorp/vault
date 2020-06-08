@@ -130,9 +130,56 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.Physi
 	}
 }
 
-type ClusterSetupMutator func(conf *vault.CoreConfig, opts *vault.TestClusterOptions)
+// RaftHAFactory returns a PhysicalBackendBundle with raft set as the HABackend
+// and the physical.Backend provided in PhysicalBackendBundler as the storage
+// backend.
+func RaftHAFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+	return func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+		// Call the factory func to create the storage backend
+		bundler := SharedPhysicalFactory(f)
+		bundle := bundler(t, coreIdx, logger)
 
-func SharedPhysicalFactory(f func(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle) func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+		// This can happen if a shared physical backend is called on a non-0th core.
+		if bundle == nil {
+			bundle = new(vault.PhysicalBackendBundle)
+		}
+
+		raftDir := makeRaftDir(t)
+		cleanupFunc := func() {
+			os.RemoveAll(raftDir)
+		}
+
+		nodeID := fmt.Sprintf("core-%d", coreIdx)
+		conf := map[string]string{
+			"path":                   raftDir,
+			"node_id":                nodeID,
+			"performance_multiplier": "8",
+		}
+
+		// Create and set the HA Backend
+		raftBackend, err := raft.NewRaftBackend(conf, logger)
+		if err != nil {
+			bundle.Cleanup()
+			t.Fatal(err)
+		}
+		bundle.HABackend = raftBackend.(physical.HABackend)
+
+		// Re-wrap the cleanup func
+		bundleCleanup := bundle.Cleanup
+		bundle.Cleanup = func() {
+			if bundleCleanup != nil {
+				bundleCleanup()
+			}
+			cleanupFunc()
+		}
+
+		return bundle
+	}
+}
+
+type PhysicalBackendBundler func(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle
+
+func SharedPhysicalFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
 	return func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
 		if coreIdx == 0 {
 			return f(t, logger)
@@ -140,6 +187,8 @@ func SharedPhysicalFactory(f func(t testing.T, logger hclog.Logger) *vault.Physi
 		return nil
 	}
 }
+
+type ClusterSetupMutator func(conf *vault.CoreConfig, opts *vault.TestClusterOptions)
 
 func InmemBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.PhysicalFactory = SharedPhysicalFactory(MakeInmemBackend)
@@ -154,54 +203,6 @@ func ConsulBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) 
 	opts.PhysicalFactory = SharedPhysicalFactory(MakeConsulBackend)
 }
 
-func MakeRaftHABackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
-	// Set up physical backend
-	f := SharedPhysicalFactory(MakeFileBackend)
-	physBundle := f(t, coreIdx, logger)
-
-	nodeID := fmt.Sprintf("core-%d", coreIdx)
-	raftDir, err := ioutil.TempDir("", "vault-raft-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("raft dir: %s", raftDir)
-	raftCleanupFunc := func() {
-		os.RemoveAll(raftDir)
-	}
-
-	logger.Info("raft dir", "dir", raftDir)
-
-	cleanupFunc := func() {
-		physBundle.Cleanup()
-		raftCleanupFunc()
-	}
-
-	conf := map[string]string{
-		"path":                   raftDir,
-		"node_id":                nodeID,
-		"performance_multiplier": "8",
-	}
-
-	raftBackend, err := raft.NewRaftBackend(conf, logger)
-	if err != nil {
-		cleanupFunc()
-		t.Fatal(err)
-	}
-
-	return &vault.PhysicalBackendBundle{
-		Backend:   physBundle.Backend,
-		HABackend: raftBackend.(physical.HABackend),
-		Cleanup:   cleanupFunc,
-	}
-}
-
-func RaftHASetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
-	conf.DisablePerformanceStandby = true
-	opts.PhysicalFactory = MakeRaftHABackend
-	opts.KeepStandbysSealed = true
-	opts.SetupFunc = nil
-}
-
 func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	conf.DisablePerformanceStandby = true
 	opts.KeepStandbysSealed = true
@@ -212,6 +213,12 @@ func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 			time.Sleep(15 * time.Second)
 		}
 	}
+}
+
+func RaftHASetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, bundler PhysicalBackendBundler) {
+	conf.DisablePerformanceStandby = true
+	opts.PhysicalFactory = RaftHAFactory(bundler)
+	opts.KeepStandbysSealed = true
 }
 
 func ClusterSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, setup ClusterSetupMutator) (*vault.CoreConfig, *vault.TestClusterOptions) {

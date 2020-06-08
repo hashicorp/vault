@@ -90,23 +90,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 		cluster.UnsealCore(t, core)
 	}
 
-	checkConfigFunc := func(expected map[string]bool) {
-		secret, err := cluster.Cores[0].Client.Logical().Read("sys/storage/raft/configuration")
-		if err != nil {
-			t.Fatal(err)
-		}
-		servers := secret.Data["config"].(map[string]interface{})["servers"].([]interface{})
-
-		for _, s := range servers {
-			server := s.(map[string]interface{})
-			delete(expected, server["node_id"].(string))
-		}
-		if len(expected) != 0 {
-			t.Fatalf("failed to read configuration successfully")
-		}
-	}
-
-	checkConfigFunc(map[string]bool{
+	checkConfigFunc(t, cluster.Cores[0].Client, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 		"core-2": true,
@@ -187,23 +171,7 @@ func TestRaft_RemovePeer(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 
-	checkConfigFunc := func(expected map[string]bool) {
-		secret, err := client.Logical().Read("sys/storage/raft/configuration")
-		if err != nil {
-			t.Fatal(err)
-		}
-		servers := secret.Data["config"].(map[string]interface{})["servers"].([]interface{})
-
-		for _, s := range servers {
-			server := s.(map[string]interface{})
-			delete(expected, server["node_id"].(string))
-		}
-		if len(expected) != 0 {
-			t.Fatalf("failed to read configuration successfully")
-		}
-	}
-
-	checkConfigFunc(map[string]bool{
+	checkConfigFunc(t, client, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 		"core-2": true,
@@ -216,7 +184,7 @@ func TestRaft_RemovePeer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	checkConfigFunc(map[string]bool{
+	checkConfigFunc(t, client, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 	})
@@ -228,7 +196,7 @@ func TestRaft_RemovePeer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	checkConfigFunc(map[string]bool{
+	checkConfigFunc(t, client, map[string]bool{
 		"core-0": true,
 	})
 }
@@ -842,4 +810,22 @@ func BenchmarkRaft_SingleNode(b *testing.B) {
 	}
 
 	b.Run("256b", func(b *testing.B) { bench(b, 25) })
+}
+
+func checkConfigFunc(t *testing.T, client *api.Client, expected map[string]bool) {
+	t.Helper()
+
+	secret, err := client.Logical().Read("sys/storage/raft/configuration")
+	if err != nil {
+		t.Fatalf("error reading raft config: %v", err)
+	}
+	servers := secret.Data["config"].(map[string]interface{})["servers"].([]interface{})
+
+	for _, s := range servers {
+		server := s.(map[string]interface{})
+		delete(expected, server["node_id"].(string))
+	}
+	if len(expected) != 0 {
+		t.Fatalf("failed to read configuration successfully")
+	}
 }

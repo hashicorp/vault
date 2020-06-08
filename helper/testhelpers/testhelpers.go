@@ -487,7 +487,7 @@ func NewHardcodedServerAddressProvider(cluster *vault.TestCluster, baseClusterPo
 // cluster.
 func SetRaftAddressProviders(t testing.T, cluster *vault.TestCluster, provider raftlib.ServerAddressProvider) {
 
-	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
+	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
 
 	for _, core := range cluster.Cores {
 		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(provider)
