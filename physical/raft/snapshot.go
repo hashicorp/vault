@@ -14,9 +14,10 @@ import (
 	"sync"
 	"time"
 
-	protoio "github.com/gogo/protobuf/io"
+	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	"github.com/rboyer/safeio"
 	bolt "go.etcd.io/bbolt"
 	"go.uber.org/atomic"
 
@@ -174,51 +175,109 @@ func (f *BoltSnapshotStore) getBoltSnapshotMeta() (*raft.SnapshotMeta, error) {
 
 // Open takes a snapshot ID and returns a ReadCloser for that snapshot.
 func (f *BoltSnapshotStore) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
-	var readCloser io.ReadCloser
-	var meta *raft.SnapshotMeta
-	switch id {
-	case boltSnapshotID:
+	if id == boltSnapshotID {
+		return f.openFromFSM()
+	}
 
-		var err error
-		meta, err = f.getBoltSnapshotMeta()
-		if err != nil {
-			return nil, nil, err
-		}
-		// If we don't have any data return an error
-		if meta.Index == 0 {
-			return nil, nil, errors.New("no snapshot data")
+	return f.openFromFile(id)
+}
+
+func (f *BoltSnapshotStore) openFromFSM() (*raft.SnapshotMeta, io.ReadCloser, error) {
+	meta, err := f.getBoltSnapshotMeta()
+	if err != nil {
+		return nil, nil, err
+	}
+	// If we don't have any data return an error
+	if meta.Index == 0 {
+		return nil, nil, errors.New("no snapshot data")
+	}
+
+	// Stream data out of the FSM to calculate the size
+	readCloser, writeCloser := io.Pipe()
+	metaReadCloser, metaWriteCloser := io.Pipe()
+	go func() {
+		f.fsm.writeTo(context.Background(), metaWriteCloser, writeCloser)
+	}()
+
+	// Compute the size
+	n, err := io.Copy(ioutil.Discard, metaReadCloser)
+	if err != nil {
+		f.logger.Error("failed to read state file", "error", err)
+		metaReadCloser.Close()
+		readCloser.Close()
+		return nil, nil, err
+	}
+
+	meta.Size = n
+
+	return meta, readCloser, nil
+}
+
+func (f *BoltSnapshotStore) loadMetaFromDB(id string) (*raft.SnapshotMeta, error) {
+	if len(id) == 0 {
+		return nil, errors.New("can not open empty snapshot ID")
+	}
+
+	filename := filepath.Join(f.path, id, "vault.db")
+	boltDB, err := bolt.Open(filename, 0666, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		return nil, err
+	}
+	defer boltDB.Close()
+
+	meta := &raft.SnapshotMeta{
+		Version: 1,
+		ID:      id,
+	}
+
+	err = boltDB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(configBucketName)
+		val := b.Get(latestIndexKey)
+		if val != nil {
+			var snapshotIndexes IndexValue
+			err := proto.Unmarshal(val, &snapshotIndexes)
+			if err != nil {
+				return err
+			}
+
+			meta.Index = snapshotIndexes.Index
+			meta.Term = snapshotIndexes.Term
 		}
 
-		// Stream data out of the FSM to calculate the size
-		var writeCloser *io.PipeWriter
-		readCloser, writeCloser = io.Pipe()
-		metaReadCloser, metaWriteCloser := io.Pipe()
-		go func() {
-			f.fsm.writeTo(context.Background(), metaWriteCloser, writeCloser)
-		}()
+		// Read in our latest config and populate it inmemory
+		val = b.Get(latestConfigKey)
+		if val != nil {
+			var config ConfigurationValue
+			err := proto.Unmarshal(val, &config)
+			if err != nil {
+				return err
+			}
 
-		// Compute the size
-		n, err := io.Copy(ioutil.Discard, metaReadCloser)
-		if err != nil {
-			f.logger.Error("failed to read state file", "error", err)
-			metaReadCloser.Close()
-			readCloser.Close()
-			return nil, nil, err
+			meta.ConfigurationIndex, meta.Configuration = protoConfigurationToRaftConfiguration(&config)
 		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
 
-		meta.Size = n
+	return meta, nil
+}
 
-	default:
-		/*var err error
-		meta, readCloser, err = f.fileSnapStore.Open(id)
-		if err != nil {
-			return nil, nil, err
-		}
-		*/
-		readCloser = &boltSnapshotReader{
-			meta:       meta,
-			ReadCloser: readCloser,
-		}
+func (f *BoltSnapshotStore) openFromFile(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
+
+	// TODO: should we insted have a separate metadata file so we can checksum
+	// the db file?
+	meta, err := f.loadMetaFromDB(id)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	filename := filepath.Join(f.path, id, "vault.db")
+	readCloser := &boltSnapshotInstaller{
+		meta:       meta,
+		ReadCloser: ioutil.NopCloser(strings.NewReader(filename)),
+		filename:   filename,
 	}
 
 	return meta, readCloser, nil
@@ -232,7 +291,6 @@ func (f *BoltSnapshotStore) ReapSnapshots() error {
 		return err
 	}
 
-	// Populate the metadata
 	for _, snap := range snapshots {
 		// Ignore any files
 		if !snap.IsDir() {
@@ -296,7 +354,8 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 	go func() {
 		defer close(s.doneWritingCh)
 		defer boltDB.Close()
-		protoReader := protoio.NewDelimitedReader(reader, math.MaxInt32)
+
+		protoReader := NewDelimitedReader(reader, math.MaxInt32)
 		defer protoReader.Close()
 
 		var done bool
@@ -311,7 +370,6 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 
 				// Commit in batches of 50k. Bolt holds all the data in memory and
 				// doesn't split the pages until commit so we do incremental writes.
-				// This is safe since we have a write lock on the fsm's lock.
 				for i := 0; i < 50000; i++ {
 					err := protoReader.ReadMsg(entry)
 					if err != nil {
@@ -387,7 +445,8 @@ func (s *BoltSnapshotSink) Close() error {
 			return err
 		}
 
-		if runtime.GOOS != "windows" { // skipping fsync for directory entry edits on Windows, only needed for *nix style file systems
+		// skipping fsync for directory entry edits on Windows, only needed for *nix style file systems
+		if runtime.GOOS != "windows" {
 			parentFH, err := os.Open(s.parentDir)
 			defer parentFH.Close()
 			if err != nil {
@@ -428,13 +487,26 @@ func (s *BoltSnapshotSink) Cancel() error {
 	return nil
 }
 
-type boltSnapshotMetadataReader struct {
+type boltSnapshotInstaller struct {
 	io.ReadCloser
-	meta *raft.SnapshotMeta
+	meta     *raft.SnapshotMeta
+	filename string
 }
 
-func (r *boltSnapshotMetadataReader) Metadata() *raft.SnapshotMeta {
-	return r.meta
+func (i *boltSnapshotInstaller) Metadata() *raft.SnapshotMeta {
+	return i.meta
+}
+
+func (i *boltSnapshotInstaller) Install(filename string) error {
+	if len(i.filename) == 0 {
+		return errors.New("snapshot filename empty")
+	}
+
+	if len(filename) == 0 {
+		return errors.New("fsm filename empty")
+	}
+
+	return safeio.Rename(i.filename, filename)
 }
 
 // snapshotName generates a name for the snapshot.
