@@ -7,6 +7,10 @@
       value=secondaryId}}
   {{/if}}
   {{info-table-row
+      label='primary_cluster_addr'
+      helperText='The configuration of the cluster. This was set when replication was enabled.'
+      value=primaryClusterAddr}}
+  {{info-table-row
     label="Merkle root index"
     helperText="A snapshot in time of the merkle tree's root hash. Changes on every update to storage."
     value=merkleRoot}}
