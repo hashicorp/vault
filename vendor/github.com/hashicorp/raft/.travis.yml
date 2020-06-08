@@ -8,7 +8,10 @@ go:
     - 1.12
     - tip
 
-install: make deps
+install: 
+    - make deps 
+    - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin latest 
+
 script:
     - make integ
 
