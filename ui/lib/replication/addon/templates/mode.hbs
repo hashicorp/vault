@@ -24,19 +24,6 @@
               <span class="tag is-light has-text-grey-dark" data-test-replication-mode-display=true>
                 {{model.replicationAttrs.modeForHeader}}
               </span>
-              {{#if model.replicationAttrs.secondaryId}}
-                <span class="tag is-light has-text-grey-dark">
-                  <code>
-                    {{model.replicationAttrs.secondaryId}}
-                  </code>
-                </span>
-              {{else}}
-                <span class="tag is-light has-text-grey-dark">
-                  <code>
-                    {{model.replicationAttrs.clusterIdDisplay}}
-                  </code>
-                </span>
-              {{/if}}
             </h1>
         </p.levelLeft>
       </PageHeader>
