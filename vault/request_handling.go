@@ -548,6 +548,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 				Auth:                auth,
 				Request:             req,
 				Response:            auditResp,
+				BackendType:         entry.Type,
 				OuterErr:            err,
 				NonHMACReqDataKeys:  nonHMACReqDataKeys,
 				NonHMACRespDataKeys: nonHMACRespDataKeys,

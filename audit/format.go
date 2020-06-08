@@ -289,6 +289,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		},
 
 		Response: &AuditResponse{
+			Backend:  in.BackendType,
 			Auth:     respAuth,
 			Secret:   respSecret,
 			Data:     resp.Data,
@@ -350,6 +351,7 @@ type AuditRequest struct {
 
 type AuditResponse struct {
 	Auth     *AuditAuth             `json:"auth,omitempty"`
+	Backend  string                 `json:"backend,omitempty"`
 	Secret   *AuditSecret           `json:"secret,omitempty"`
 	Data     map[string]interface{} `json:"data,omitempty"`
 	Warnings []string               `json:"warnings,omitempty"`
