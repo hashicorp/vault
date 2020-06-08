@@ -1,5 +1,11 @@
 <div class="has-top-margin-xl has-bottom-margin-s"
   data-test-table-rows>
+  {{#if (eq clusterMode 'secondary')}}
+    {{info-table-row
+      label='secondary_id'
+      helperText="The ID of the secondary activation token used to enable replication."
+      value=secondaryId}}
+  {{/if}}
   {{info-table-row
     label="Merkle root index"
     helperText="A snapshot in time of the merkle tree's root hash. Changes on every update to storage."
