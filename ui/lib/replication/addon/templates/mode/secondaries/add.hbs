@@ -18,6 +18,7 @@
     </p>
   </div>
   <div class="field">
+    {{!-- TODO fix so it defaults to 30s like in other places or replace with new TTL picker --}}
     {{ttl-picker onChange=(action (mut ttl)) initialValue="30m" class="is-marginless"}}
     <p class="help has-text-grey">
       This is the Time To Live for the generated secondary token. After this period, the generated token will no longer be valid.
