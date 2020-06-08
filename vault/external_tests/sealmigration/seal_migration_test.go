@@ -231,13 +231,14 @@ func migrateFromShamirToTransit_Post14(
 		transitSeal = tss.MakeSeal(t, "transit-seal-key")
 		return transitSeal
 	}
+	modifyCoreConfig := func(tcc *vault.TestClusterCore) {}
 
 	// Restart each follower with the new config, and migrate to Transit.
 	// Note that the barrier keys are being used as recovery keys.
 	leaderIdx := migratePost14(
 		t, logger, storage, cluster, opts,
 		cluster.RootToken, cluster.BarrierKeys,
-		migrateShamirToTransit)
+		migrateShamirToTransit, modifyCoreConfig)
 	leader := cluster.Cores[leaderIdx]
 
 	// Read the secret
@@ -309,10 +310,9 @@ func migrateFromTransitToShamir_Post14(
 	cluster *vault.TestCluster, opts *vault.TestClusterOptions) {
 
 	opts.SealFunc = nil
-	for i := 1; i < numTestCores; i++ {
-
+	modifyCoreConfig := func(tcc *vault.TestClusterCore) {
 		// Nil out the seal so it will be initialized as shamir.
-		cluster.Cores[i].CoreConfig.Seal = nil
+		tcc.CoreConfig.Seal = nil
 
 		// N.B. Providing an UnwrapSeal puts us in migration mode. This is the
 		// equivalent of doing the following in HCL:
@@ -320,14 +320,14 @@ func migrateFromTransitToShamir_Post14(
 		//       // ...
 		//       disabled = "true"
 		//     }
-		cluster.Cores[i].CoreConfig.UnwrapSeal = transitSeal
+		tcc.CoreConfig.UnwrapSeal = transitSeal
 	}
 
 	// Restart each follower with the new config, and migrate to Shamir.
 	leaderIdx := migratePost14(
 		t, logger, storage, cluster, opts,
 		cluster.RootToken, cluster.RecoveryKeys,
-		migrateTransitToShamir)
+		migrateTransitToShamir, modifyCoreConfig)
 	leader := cluster.Cores[leaderIdx]
 
 	// Read the secret
@@ -363,6 +363,7 @@ func migratePost14(
 	cluster *vault.TestCluster, opts *vault.TestClusterOptions,
 	rootToken string, recoveryKeys [][]byte,
 	migrate migrationDirection,
+	modifyCoreConfig func(*vault.TestClusterCore),
 ) int {
 
 	// Restart each follower with the new config, and migrate.
@@ -371,6 +372,7 @@ func migratePost14(
 		if storage.IsRaft {
 			teststorage.CloseRaftStorage(t, cluster, i)
 		}
+		modifyCoreConfig(cluster.Cores[i])
 		cluster.RestartCore(t, i, opts)
 
 		cluster.Cores[i].Client.SetToken(rootToken)
