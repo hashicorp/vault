@@ -15,6 +15,8 @@ import (
 
 func TestRaft_HA_NewCluster(t *testing.T) {
 	t.Run("file", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("no_client_certs", func(t *testing.T) {
 			testRaftHANewCluster(t, teststorage.MakeFileBackend, false)
 		})
@@ -24,6 +26,29 @@ func TestRaft_HA_NewCluster(t *testing.T) {
 		})
 	})
 
+	t.Run("inmem", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("no_client_certs", func(t *testing.T) {
+			testRaftHANewCluster(t, teststorage.MakeInmemBackend, false)
+		})
+
+		t.Run("with_client_certs", func(t *testing.T) {
+			testRaftHANewCluster(t, teststorage.MakeInmemBackend, true)
+		})
+	})
+
+	t.Run("consul", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("no_client_certs", func(t *testing.T) {
+			testRaftHANewCluster(t, teststorage.MakeConsulBackend, false)
+		})
+
+		t.Run("with_client_certs", func(t *testing.T) {
+			testRaftHANewCluster(t, teststorage.MakeConsulBackend, true)
+		})
+	})
 }
 
 func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundler, addClientCerts bool) {
