@@ -12,6 +12,7 @@ import (
 	"encoding/pem"
 	"io/ioutil"
 	"math/big"
+	"net"
 	"os"
 	"strings"
 	"testing"
@@ -55,6 +56,17 @@ func IsCA(isCA bool) CertOpt {
 func SelfSign() CertOpt {
 	return func(builder *CertBuilder) error {
 		builder.selfSign = true
+		return nil
+	}
+}
+
+func Ip(ip ...string) CertOpt {
+	return func(builder *CertBuilder) error {
+		for _, addr := range ip {
+			if ipAddr := net.ParseIP(addr); ipAddr != nil {
+				builder.tmpl.IPAddresses = append(builder.tmpl.IPAddresses, ipAddr)
+			}
+		}
 		return nil
 	}
 }

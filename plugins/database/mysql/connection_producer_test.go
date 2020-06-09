@@ -43,8 +43,6 @@ func TestInit_clientTLS(t *testing.T) {
 
 	certhelpers.WriteFile(t, paths.Join(confDir, "ca.pem"), caCert.CombinedPEM(), 0644)
 	certhelpers.WriteFile(t, paths.Join(confDir, "server-cert.pem"), serverCert.Pem, 0644)
-	t.Logf("server-cert.pem: %s", serverCert.Pem)
-	t.Logf("server-key.pem: %s", serverCert.PrivateKeyPEM())
 	certhelpers.WriteFile(t, paths.Join(confDir, "server-key.pem"), serverCert.PrivateKeyPEM(), 0644)
 	certhelpers.WriteFile(t, paths.Join(confDir, "client.pem"), clientCert.CombinedPEM(), 0644)
 
@@ -76,8 +74,8 @@ ssl-key=/etc/mysql/server-key.pem`
 
 	conf := map[string]interface{}{
 		"connection_url":      retURL,
-		"tls_certificate_key": clientCert.CombinedPEM(),
-		"tls_ca":              caCert.Pem,
+		//"tls_certificate_key": clientCert.CombinedPEM(),
+		//"tls_ca":              caCert.Pem,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -172,7 +170,7 @@ func startMySQLWithTLS(t *testing.T, version string, confDir string) (retURL str
 		Name:       containerName,
 		Repository: "mysql",
 		Tag:        version,
-		Cmd:        []string{"--defaults-extra-file=/etc/mysql/my.cnf"},
+		Cmd:        []string{"--defaults-extra-file=/etc/mysql/my.cnf", "--auto-generate-certs=OFF"},
 		Env:				[]string{"MYSQL_ROOT_PASSWORD=x509test"},
 		// Mount the directory from local filesystem into the container
 		Mounts: []string{

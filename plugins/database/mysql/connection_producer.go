@@ -31,6 +31,8 @@ type mySQLConnectionProducer struct {
 	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
 
 	TLSCertificateKeyData []byte `json:"tls_certificate_key" structs:"-" mapstructure:"tls_certificate_key"`
+	TLSCertificateData		[]byte `json:"tls_client_cert" structs:"-" mapstructure:"tls_client_cert"`
+	TLSKeyData						[]byte `json:"tls_client_key" structs:"-" mapstructure:"tls_client_key"`
 	TLSCAData							[]byte `json:"tls_ca"							 structs:"-" mapstructure:"tls_ca"`
 	TLSConfigName					string
 
@@ -181,7 +183,9 @@ func (c *mySQLConnectionProducer) SetCredentials(ctx context.Context, statements
 }
 
 func (c *mySQLConnectionProducer) getTLSAuth() (err error) {
-	if len(c.TLSCAData) == 0 && len(c.TLSCertificateKeyData) == 0 {
+	if len(c.TLSCAData) == 0 && 
+	   len(c.TLSCertificateKeyData) == 0 &&
+		 (len(c.TLSCertificateData) == 0 || len(c.TLSKeyData) == 0) {
 		return nil
 	}
 
@@ -200,6 +204,13 @@ func (c *mySQLConnectionProducer) getTLSAuth() (err error) {
 		certificate, err := tls.X509KeyPair(c.TLSCertificateKeyData, c.TLSCertificateKeyData)
 		if err != nil {
 			return fmt.Errorf("unable to load tls_certificate_key_data: %w", err)
+		}
+
+		tlsConfig.Certificates = append(tlsConfig.Certificates, certificate)
+	} else if len(c.TLSCertificateData) > 0 && len(c.TLSKeyData) > 0 {
+		certificate, err := tls.X509KeyPair(c.TLSCertificateData, c.TLSKeyData)
+		if err != nil {
+			return fmt.Errorf("unable to load tls_certificate_data or tls_key_data: %w", err)
 		}
 
 		tlsConfig.Certificates = append(tlsConfig.Certificates, certificate)
