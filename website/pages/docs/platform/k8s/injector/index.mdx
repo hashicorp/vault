@@ -116,7 +116,7 @@ the secret. The annotation must have the following format:
 
 ```yaml
 vault.hashicorp.com/agent-inject-template-<unique-name>: |
-  < 
+  <
     TEMPLATE
     HERE
   >
@@ -135,7 +135,7 @@ vault.hashicorp.com/role: 'app'
 
 The rendered secret would look like this within the container:
 
-```bash
+```shell-session
 $ cat /vault/secrets/foo
 postgres://v-kubernet-pg-app-q0Z7WPfVN:A1a-BUEuQR52oAqPrP1J@postgres:5432/mydb?sslmode=disable
 ```
@@ -162,13 +162,13 @@ vault.hashicorp.com/role: 'app'
 
 The rendered secret would look like this within the container:
 
-```bash
+```shell-session
 $ cat /vault/secrets/foo
 password: A1a-BUEuQR52oAqPrP1J
 username: v-kubernet-pg-app-q0Z7WPfVNqqTJuoDqCTY-1576529094
 ```
 
-~> Some secrets such as KV are stored in maps.  Their data can be accessed using `.Data.data.<NAME>`
+~> Some secrets such as KV are stored in maps. Their data can be accessed using `.Data.data.<NAME>`
 
 #### Vault Agent Configuration Map
 
@@ -179,7 +179,13 @@ annotation. The configuration files will be mounted to `/vault/configs`.
 
 The configuration map must contain either one or both of the following files:
 
-- `config-init.hcl` used by the init container. This must have `exit_after_auth` set to `true`.
-- `config.hcl` used by the sidecar container. This must have `exit_after_auth` set to `false`.
+- **config-init.hcl** used by the init container. This must have `exit_after_auth` set to `true`.
+- **config.hcl** used by the sidecar container. This must have `exit_after_auth` set to `false`.
 
 An example of mounting a Vault Agent configmap [can be found here](/docs/platform/k8s/injector/examples#configmap-example).
+
+## Learn
+
+Refer to the [Injecting Secrets into Kubernetes Pods via Vault Helm
+Sidecar](https://learn.hashicorp.com/vault/getting-started-k8s/sidecar) guide
+for a step-by-step tutorial.

@@ -56,7 +56,7 @@ privileges, so it can perform any operation within Vault.
 
 You can create more tokens:
 
-```text
+```shell-session
 $ vault token create
 Key                Value
 ---                -----
@@ -75,7 +75,7 @@ remove access for all sub-tokens that user created as well.
 
 After a token is created, you can revoke it:
 
-```text
+```shell-session
 $ vault token revoke 463763ae-0c3b-ff77-e137-af668941465c
 Success! Revoked token (if it existed)
 ```
@@ -86,7 +86,7 @@ is only used for revoking _leases_. For revoking _tokens_, use
 
 To authenticate with a token:
 
-```text
+```shell-session
 $ vault login a402d075-6d59-6129-1ac7-3718796d4346
 Success! You are now authenticated. The token information displayed below
 is already stored in the token helper. You do NOT need to run "vault login"
@@ -122,7 +122,7 @@ method, let's authenticate via GitHub.
 
 First, enable the GitHub auth method:
 
-```text
+```shell-session
 $ vault auth enable -path=github github
 Success! Enabled github auth method at: github/
 ```
@@ -130,7 +130,7 @@ Success! Enabled github auth method at: github/
 Just like secrets engines, auth methods default to their TYPE as the PATH, so
 the following commands are equivalent:
 
-```text
+```shell-session
 $ vault auth enable -path=github github
 $ vault auth enable github
 ```
@@ -139,7 +139,7 @@ Unlike secrets engines which are enabled at the root router, auth methods are
 always prefixed with `auth/` in their path. So the GitHub auth method we just
 enabled is accessible at `auth/github`. As another example:
 
-```text
+```shell-session
 $ vault auth enable -path=my-github github
 Success! Enabled github auth method at: my-github/
 ```
@@ -151,7 +151,7 @@ Next, configure the GitHub auth method. Each auth method has different
 configuration options, so please see the documentation for the full details. In
 this case, the minimal set of configuration is to map teams to policies.
 
-```text
+```shell-session
 $ vault write auth/github/config organization=hashicorp
 ```
 
@@ -159,7 +159,7 @@ With the GitHub auth method enabled, we first have to configure it. For GitHub,
 we tell it what organization users must be a part of, and map a team to a
 policy:
 
-```text
+```shell-session
 $ vault write auth/github/config organization=hashicorp
 Success! Data written to: auth/github/config
 
@@ -177,7 +177,7 @@ exist in the system yet - Vault will just produce a warning when we login.
 
 As a user, you may want to find which auth methods are enabled and available:
 
-```text
+```shell-session
 $ vault auth list
 Path       Type      Description
 ----       ----      -----------
@@ -189,7 +189,7 @@ The `vault auth list` command will list all enabled auth methods. To learn more
 about how to authenticate to a particular auth method via the CLI, use the
 `vault auth help` command with the PATH or TYPE of an auth method:
 
-```text
+```shell-session
 $ vault auth help github
 Usage: vault login -method=github [CONFIG K=V...]
 
@@ -216,7 +216,7 @@ Configuration:
 Similarly, you can ask for help information about any CLI auth method, _even if
 it is not enabled_:
 
-```text
+```shell-session
 $ vault auth help aws
 $ vault auth help userpass
 $ vault auth help token
@@ -226,7 +226,7 @@ As per the help output, authenticate to GitHub using the `vault login` command.
 Enter your [GitHub personal access token][gh-pat] and Vault will authenticate
 you.
 
-```text
+```shell-session
 $ vault login -method=github
 GitHub Personal Access Token (will be hidden):
 Success! You are now authenticated. The token information displayed below
@@ -249,20 +249,20 @@ its token helper, so you do not need to run `vault login` again. However, this
 new user we just created does not have many permissions in Vault. To continue,
 re-authenticate as the root token:
 
-```text
+```shell-session
 $ vault login <initial-root-token>
 ```
 
 You can revoke any logins from an auth method using `vault token revoke` with
 the `-mode` argument. For example:
 
-```text
+```shell-session
 $ vault token revoke -mode path auth/github
 ```
 
 Alternatively, if you want to completely disable the GitHub auth method:
 
-```text
+```shell-session
 $ vault auth disable github
 Success! Disabled the auth method (if it existed) at: github/
 ```

@@ -31,7 +31,7 @@ This endpoint retrieve lease metadata.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
@@ -64,7 +64,7 @@ This endpoint returns a list of lease ids.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -109,7 +109,7 @@ cannot be renewed using this endpoint, use instead the auth/token/renew endpoint
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
@@ -149,7 +149,7 @@ This endpoint revokes a lease immediately.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
@@ -182,7 +182,7 @@ this endpoint should be tightly controlled.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
@@ -209,7 +209,7 @@ used to revoke very large numbers of secrets/tokens at once.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
@@ -228,7 +228,7 @@ This may perform a lot of I/O to the storage method so should be used sparingly.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \

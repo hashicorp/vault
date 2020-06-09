@@ -13,7 +13,9 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -40,13 +42,11 @@ var (
 // HandlerProperties is used to seed configuration into a vaulthttp.Handler.
 // It's in this package to avoid a circular dependency
 type HandlerProperties struct {
-	Core                         *Core
-	MaxRequestSize               int64
-	MaxRequestDuration           time.Duration
-	DisablePrintableCheck        bool
-	RecoveryMode                 bool
-	RecoveryToken                *uberAtomic.String
-	UnauthenticatedMetricsAccess bool
+	Core                  *Core
+	ListenerConfig        *configutil.Listener
+	DisablePrintableCheck bool
+	RecoveryMode          bool
+	RecoveryToken         *uberAtomic.String
 }
 
 // fetchEntityAndDerivedPolicies returns the entity object for the given entity
@@ -344,6 +344,10 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		// Store the entity ID in the request object
 		req.EntityID = te.EntityID
 		auth.TokenType = te.Type
+		auth.TTL = te.TTL
+		if te.CreationTime > 0 {
+			auth.IssueTime = time.Unix(te.CreationTime, 0)
+		}
 	}
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
@@ -535,18 +539,23 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 	}
 
 	// Create an audit trail of the response
+
 	if !isControlGroupRun(req) {
-		logInput := &logical.LogInput{
-			Auth:                auth,
-			Request:             req,
-			Response:            auditResp,
-			OuterErr:            err,
-			NonHMACReqDataKeys:  nonHMACReqDataKeys,
-			NonHMACRespDataKeys: nonHMACRespDataKeys,
-		}
-		if auditErr := c.auditBroker.LogResponse(ctx, logInput, c.auditedHeaders); auditErr != nil {
-			c.logger.Error("failed to audit response", "request_path", req.Path, "error", auditErr)
-			return nil, ErrInternalError
+		switch req.Path {
+		case "sys/replication/dr/status", "sys/replication/performance/status", "sys/replication/status":
+		default:
+			logInput := &logical.LogInput{
+				Auth:                auth,
+				Request:             req,
+				Response:            auditResp,
+				OuterErr:            err,
+				NonHMACReqDataKeys:  nonHMACReqDataKeys,
+				NonHMACRespDataKeys: nonHMACRespDataKeys,
+			}
+			if auditErr := c.auditBroker.LogResponse(ctx, logInput, c.auditedHeaders); auditErr != nil {
+				c.logger.Error("failed to audit response", "request_path", req.Path, "error", auditErr)
+				return nil, ErrInternalError
+			}
 		}
 	}
 
@@ -836,9 +845,8 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	}
 
 	// Only the token store is allowed to return an auth block, for any
-	// other request this is an internal error. We exclude renewal of a token,
-	// since it does not need to be re-registered
-	if resp != nil && resp.Auth != nil && !strings.HasPrefix(req.Path, "auth/token/renew") {
+	// other request this is an internal error.
+	if resp != nil && resp.Auth != nil {
 		if !strings.HasPrefix(req.Path, "auth/token/") {
 			c.logger.Error("unexpected Auth response for non-token backend", "request_path", req.Path)
 			retErr = multierror.Append(retErr, ErrInternalError)
@@ -868,24 +876,34 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			return nil, nil, ErrInternalError
 		}
 
-		resp.Auth.TokenPolicies = policyutil.SanitizePolicies(resp.Auth.Policies, policyutil.DoNotAddDefaultPolicy)
-		switch resp.Auth.TokenType {
-		case logical.TokenTypeBatch:
-		case logical.TokenTypeService:
-			if err := c.expiration.RegisterAuth(ctx, &logical.TokenEntry{
-				TTL:         auth.TTL,
-				Policies:    auth.TokenPolicies,
-				Path:        resp.Auth.CreationPath,
-				NamespaceID: ns.ID,
-			}, resp.Auth); err != nil {
-				// Best-effort clean up on error, so we log the cleanup error as
-				// a warning but still return as internal error.
-				if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
-					c.logger.Warn("failed to clean up token lease during auth/token/ request", "request_path", req.Path, "error", err)
+		// We skip expiration manager registration for token renewal since it
+		// does not need to be re-registered
+		if strings.HasPrefix(req.Path, "auth/token/renew") {
+			// We build the "policies" list to be returned by starting with
+			// token policies, and add identity policies right after this
+			// conditional
+			resp.Auth.Policies = policyutil.SanitizePolicies(resp.Auth.TokenPolicies, policyutil.DoNotAddDefaultPolicy)
+		} else {
+			resp.Auth.TokenPolicies = policyutil.SanitizePolicies(resp.Auth.Policies, policyutil.DoNotAddDefaultPolicy)
+
+			switch resp.Auth.TokenType {
+			case logical.TokenTypeBatch:
+			case logical.TokenTypeService:
+				if err := c.expiration.RegisterAuth(ctx, &logical.TokenEntry{
+					TTL:         auth.TTL,
+					Policies:    auth.TokenPolicies,
+					Path:        resp.Auth.CreationPath,
+					NamespaceID: ns.ID,
+				}, resp.Auth); err != nil {
+					// Best-effort clean up on error, so we log the cleanup error as
+					// a warning but still return as internal error.
+					if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
+						c.logger.Warn("failed to clean up token lease during auth/token/ request", "request_path", req.Path, "error", err)
+					}
+					c.logger.Error("failed to register token lease during auth/token/ request", "request_path", req.Path, "error", err)
+					retErr = multierror.Append(retErr, ErrInternalError)
+					return nil, auth, retErr
 				}
-				c.logger.Error("failed to register token lease during auth/token/ request", "request_path", req.Path, "error", err)
-				retErr = multierror.Append(retErr, ErrInternalError)
-				return nil, auth, retErr
 			}
 		}
 
@@ -968,16 +986,20 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		return logical.ErrorResponse(ctErr.Error()), auth, retErr
 	}
 
-	// Create an audit trail of the request. Attach auth if it was returned,
-	// e.g. if a token was provided.
-	logInput := &logical.LogInput{
-		Auth:               auth,
-		Request:            req,
-		NonHMACReqDataKeys: nonHMACReqDataKeys,
-	}
-	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
-		c.logger.Error("failed to audit request", "path", req.Path, "error", err)
-		return nil, nil, ErrInternalError
+	switch req.Path {
+	case "sys/replication/dr/status", "sys/replication/performance/status", "sys/replication/status":
+	default:
+		// Create an audit trail of the request. Attach auth if it was returned,
+		// e.g. if a token was provided.
+		logInput := &logical.LogInput{
+			Auth:               auth,
+			Request:            req,
+			NonHMACReqDataKeys: nonHMACReqDataKeys,
+		}
+		if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+			c.logger.Error("failed to audit request", "path", req.Path, "error", err)
+			return nil, nil, ErrInternalError
+		}
 	}
 
 	// The token store uses authentication even when creating a new token,
@@ -1160,6 +1182,19 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 
+		// Count the successful token creation
+		ttl_label := metricsutil.TTLBucket(tokenTTL)
+		c.metricSink.IncrCounterWithLabels(
+			[]string{"token", "creation"},
+			1,
+			[]metrics.Label{
+				metricsutil.NamespaceLabel(ns),
+				{"auth_method", req.MountType},
+				{"mount_point", req.MountPoint},
+				{"creation_ttl", ttl_label},
+				{"token_type", auth.TokenType.String()},
+			},
+		)
 	}
 
 	return resp, auth, routeErr

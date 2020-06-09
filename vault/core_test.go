@@ -2476,7 +2476,7 @@ type mockServiceRegistration struct {
 	runDiscoveryCount int
 }
 
-func (m *mockServiceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup) error {
+func (m *mockServiceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup, redirectAddr string) error {
 	m.runDiscoveryCount++
 	return nil
 }

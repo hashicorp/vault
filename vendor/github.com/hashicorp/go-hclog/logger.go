@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"strings"
-	"sync"
 )
 
 var (
@@ -87,6 +86,25 @@ func LevelFromString(levelStr string) Level {
 		return Error
 	default:
 		return NoLevel
+	}
+}
+
+func (l Level) String() string {
+	switch l {
+	case Trace:
+		return "trace"
+	case Debug:
+		return "debug"
+	case Info:
+		return "info"
+	case Warn:
+		return "warn"
+	case Error:
+		return "error"
+	case NoLevel:
+		return "none"
+	default:
+		return "unknown"
 	}
 }
 
@@ -186,8 +204,10 @@ type LoggerOptions struct {
 	// Where to write the logs to. Defaults to os.Stderr if nil
 	Output io.Writer
 
-	// An optional mutex pointer in case Output is shared
-	Mutex *sync.Mutex
+	// An optional Locker in case Output is shared. This can be a sync.Mutex or
+	// a NoopLocker if the caller wants control over output, e.g. for batching
+	// log lines.
+	Mutex Locker
 
 	// Control if the output should be in JSON.
 	JSONFormat bool
@@ -201,6 +221,12 @@ type LoggerOptions struct {
 	// Color the output. On Windows, colored logs are only avaiable for io.Writers that
 	// are concretely instances of *os.File.
 	Color ColorOption
+
+	// A function which is called with the log information and if it returns true the value
+	// should not be logged.
+	// This is useful when interacting with a system that you wish to suppress the log
+	// message for (because it's too noisy, etc)
+	Exclude func(level Level, msg string, args ...interface{}) bool
 }
 
 // InterceptLogger describes the interface for using a logger
@@ -260,3 +286,26 @@ type OutputResettable interface {
 	// given in opts will be used for the new output.
 	ResetOutputWithFlush(opts *LoggerOptions, flushable Flushable) error
 }
+
+// Locker is used for locking output. If not set when creating a logger, a
+// sync.Mutex will be used internally.
+type Locker interface {
+	// Lock is called when the output is going to be changed or written to
+	Lock()
+
+	// Unlock is called when the operation that called Lock() completes
+	Unlock()
+}
+
+// NoopLocker implements locker but does nothing. This is useful if the client
+// wants tight control over locking, in order to provide grouping of log
+// entries or other functionality.
+type NoopLocker struct{}
+
+// Lock does nothing
+func (n NoopLocker) Lock() {}
+
+// Unlock does nothing
+func (n NoopLocker) Unlock() {}
+
+var _ Locker = (*NoopLocker)(nil)

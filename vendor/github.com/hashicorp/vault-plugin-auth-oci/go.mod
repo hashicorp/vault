@@ -12,8 +12,8 @@ require (
 	github.com/hashicorp/go-immutable-radix v1.1.0 // indirect
 	github.com/hashicorp/go-version v1.2.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
-	github.com/hashicorp/vault/api v1.0.5-0.20200215224050-f6547fa8e820
-	github.com/hashicorp/vault/sdk v0.1.14-0.20200215224050-f6547fa8e820
+	github.com/hashicorp/vault/api v1.0.5-0.20200317185738-82f498082f02
+	github.com/hashicorp/vault/sdk v0.1.14-0.20200317185738-82f498082f02
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
 	github.com/oracle/oci-go-sdk v7.0.0+incompatible
 	github.com/pierrec/lz4 v2.2.6+incompatible // indirect

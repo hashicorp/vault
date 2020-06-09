@@ -1,8 +1,8 @@
 ---
-layout: "docs"
-page_title: "Using Kubernetes Auth Method"
-sidebar_current: "docs-platform-k8s-examples-kubernetes-auth"
-sidebar_title: "Using Kubernetes Auth Method"
+layout: 'docs'
+page_title: 'Using Kubernetes Auth Method'
+sidebar_current: 'docs-platform-k8s-examples-kubernetes-auth'
+sidebar_title: 'Using Kubernetes Auth Method'
 description: |-
   Describes how to set up Kubernetes Auth method
 ---
@@ -11,7 +11,7 @@ description: |-
 
 ~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3 with this chart.
 
-In this example, we will walk through how to set up the [Kubernetes Auth Method](/docs/auth/kubernetes.html).
+In this example, we will walk through how to set up the [Kubernetes Auth Method](/docs/auth/kubernetes).
 
 This assumes the following commands will be run inside a Vault pod running in Kubernetes.
 
@@ -44,4 +44,4 @@ vault write auth/kubernetes/config \
    kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
 ```
 
-From here you can continue to configure Vault from the [Kubernetes Auth Method](/docs/auth/kubernetes.html) documentation.
+From here you can continue to configure Vault from the [Kubernetes Auth Method](/docs/auth/kubernetes) documentation.

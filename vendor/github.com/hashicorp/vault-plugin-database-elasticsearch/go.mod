@@ -16,8 +16,8 @@ require (
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-retryablehttp v0.6.2
 	github.com/hashicorp/go-rootcerts v1.0.1
-	github.com/hashicorp/vault/api v1.0.5-0.20200215224050-f6547fa8e820
-	github.com/hashicorp/vault/sdk v0.1.14-0.20200215224050-f6547fa8e820
+	github.com/hashicorp/vault/api v1.0.5-0.20200317185738-82f498082f02
+	github.com/hashicorp/vault/sdk v0.1.14-0.20200317185738-82f498082f02
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
 	github.com/lib/pq v1.2.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect

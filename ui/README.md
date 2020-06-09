@@ -1,5 +1,6 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 **Table of Contents**
 
 - [Vault UI](#vault-ui)
@@ -39,7 +40,7 @@ If don't want optional dependencies installed you can run `yarn --ignore-optiona
 previously and want to install them, you have to tell yarn to refetch all deps by
 running `yarn --force`.
 
-In order to enforce the same version of `yarn` across installs, the `yarn` binary is included in the repo 
+In order to enforce the same version of `yarn` across installs, the `yarn` binary is included in the repo
 in the `.yarn/releases` folder. To update to a different version of `yarn`, use the `yarn policies set-version VERSION` command. For more information on this, see the [documentation](https://yarnpkg.com/en/docs/cli/policies).
 
 ## Running / Development
@@ -64,7 +65,7 @@ long-form version of the npm script:
 
 ### Code Generators
 
-Make use of the many generators for code, try `ember help generate` for more details
+Make use of the many generators for code, try `ember help generate` for more details. If you're using a component that can be widely-used, consider making it an `addon` component instead (see [this PR](https://github.com/hashicorp/vault/pull/6629) for more details)
 
 ### Running Tests
 
@@ -80,11 +81,11 @@ acceptance tests then run, proxing requests back to that server.
 
 #### Automated Cross-Browser Testing
 
-Vault uses [Browserstack Automate](https://automate.browserstack.com/) to run all the kv acceptance tests on various browsers. You can view the list of browsers we test by viewing `testem.browserstack.js`. 
+Vault uses [Browserstack Automate](https://automate.browserstack.com/) to run all the kv acceptance tests on various browsers. You can view the list of browsers we test by viewing `testem.browserstack.js`.
 
 ##### Running Browserstack Locally
 
-To run the Browserstack tests locally you will need to add your `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` to your environment. Then run `yarn run test:browserstack`. You can view the currently running tests at `localhost:7357` or log in to [Browserstack Automate](https://automate.browserstack.com/) to view a previous build. 
+To run the Browserstack tests locally you will need to add your `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` to your environment. Then run `yarn run test:browserstack`. You can view the currently running tests at `localhost:7357` or log in to [Browserstack Automate](https://automate.browserstack.com/) to view a previous build.
 
 To run the tests locally in a browser other than IE11, swap out `launch_in_ci: ['BS_IE_11']` inside `testem.browserstack.js`.
 
@@ -110,9 +111,10 @@ setting `VAULT_UI` environment variable.
 ## Vault Storybook
 
 The Vault UI uses Storybook to catalog all of its components. Below are details for running and contributing to Storybook.
+
 ### Storybook Commands at a Glance
 
-| Command                                    | Description               |
+| Command                                                                  | Description                                                |
 | ------------------------------------------------------------------------ | ---------------------------------------------------------- |
 | `yarn storybook`                                                         | run storybook                                              |
 | `ember generate story [name-of-component]`                               | generate a new story                                       |
@@ -151,6 +153,7 @@ Each component in `vault/ui/app/components` should have a corresponding `[compon
  * @param {String} [closedLabel=More options] - The message to display when the toggle is closed.
  */
 ````
+
 Note that placing a param inside brackets (e.g. `[closedLabel=More options]` indicates it is optional and has a default value of `'More options'`.)
 
 2. Generate a new story with `ember generate story [name-of-component]`

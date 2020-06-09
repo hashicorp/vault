@@ -15,7 +15,7 @@ func XORBytes(a, b []byte) ([]byte, error) {
 
 	buf := make([]byte, len(a))
 
-	for i, _ := range a {
+	for i := range a {
 		buf[i] = a[i] ^ b[i]
 	}
 

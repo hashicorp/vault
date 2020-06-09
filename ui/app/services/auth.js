@@ -333,6 +333,10 @@ export default Service.extend({
     return authData;
   },
 
+  getAuthType() {
+    return this.get('authData.backend.type');
+  },
+
   deleteCurrentToken() {
     const tokenName = this.get('currentTokenName');
     this.deleteToken(tokenName);

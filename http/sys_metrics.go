@@ -17,6 +17,7 @@ func handleMetricsUnauthenticated(core *vault.Core) http.Handler {
 		case "GET":
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
+			return
 		}
 
 		// Parse form

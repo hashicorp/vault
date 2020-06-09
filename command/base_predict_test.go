@@ -390,6 +390,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"redshift-database-plugin",
 				"ssh",
 				"totp",
+				"transform",
 				"transit",
 				"userpass",
 			},
@@ -410,6 +411,14 @@ func TestPredict_Plugins(t *testing.T) {
 				if !strutil.StrListContains(act, "kmip") {
 					for i, v := range tc.exp {
 						if v == "kmip" {
+							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
+							break
+						}
+					}
+				}
+				if !strutil.StrListContains(act, "transform") {
+					for i, v := range tc.exp {
+						if v == "transform" {
 							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
 							break
 						}

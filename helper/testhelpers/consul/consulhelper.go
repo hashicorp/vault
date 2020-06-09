@@ -11,6 +11,10 @@ import (
 	"github.com/ory/dockertest"
 )
 
+// PrepareTestContainer creates a Consul docker container.  If version is empty,
+// the Consul version used will be given by the environment variable
+// CONSUL_DOCKER_VERSION, or if that's empty, whatever we've hardcoded as the
+// the latest Consul version.
 func PrepareTestContainer(t *testing.T, version string) (cleanup func(), retAddress string, consulToken string) {
 	t.Logf("preparing test container")
 	consulToken = os.Getenv("CONSUL_HTTP_TOKEN")
@@ -25,6 +29,14 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), retAddr
 	}
 
 	config := `acl { enabled = true default_policy = "deny" }`
+	if version == "" {
+		consulVersion := os.Getenv("CONSUL_DOCKER_VERSION")
+		if consulVersion != "" {
+			version = consulVersion
+		} else {
+			version = "1.7.2" // Latest Consul version, update as new releases come out
+		}
+	}
 	if strings.HasPrefix(version, "1.3") {
 		config = `datacenter = "test" acl_default_policy = "deny" acl_datacenter = "test" acl_master_token = "test"`
 	}

@@ -267,7 +267,9 @@ func TestLogical_RequestSizeLimit(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	// Write a very large object, should fail
+	// Write a very large object, should fail. This test works because Go will
+	// convert the byte slice to base64, which makes it significantly larger
+	// than the default max request size.
 	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
 		"data": make([]byte, DefaultMaxRequestSize),
 	})

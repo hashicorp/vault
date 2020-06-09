@@ -40,6 +40,7 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 		if err != nil {
 			logger.Error("failed to read request body")
 			logical.RespondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
+			return
 		}
 		if r.Body != nil {
 			r.Body.Close()

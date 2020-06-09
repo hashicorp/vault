@@ -33,7 +33,6 @@ func (d *DiscoveryChain) Get(name string, opts *DiscoveryChainOptions, q *QueryO
 		if opts.EvaluateInDatacenter != "" {
 			r.params.Set("compile-dc", opts.EvaluateInDatacenter)
 		}
-		// TODO(namespaces): handle possible EvaluateInNamespace here
 	}
 
 	if method == "POST" {

@@ -16,14 +16,14 @@ underlying secret.
 
 Revoke a lease:
 
-```text
+```shell-session
 $ vault lease revoke database/creds/readonly/27e1b9a1-27b8-83d9-9fe0-d99d786bdc83
 Success! Revoked lease: database/creds/readonly/27e1b9a1-27b8-83d9-9fe0-d99d786bdc83
 ```
 
 Revoke a lease which starts with a prefix:
 
-```text
+```shell-session
 $ vault lease revoke -prefix database/creds
 Success! Revoked any leases with prefix: database/creds
 ```

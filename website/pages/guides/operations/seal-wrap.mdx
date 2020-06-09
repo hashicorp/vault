@@ -96,7 +96,7 @@ This guide walks you through the following steps:
 1. [Enable Seal Wrap](#step2)
 1. [Test the Seal Wrap Feature](#step3)
 
-### <a name="step1"></a>Step 1: Configure HSM Auto-unseal
+### Step 1: Configure HSM Auto-unseal ((#step1))
 
 When a Vault server is started, it normally starts in a sealed state where a
 quorum of existing unseal keys is required to unseal it. By integrating Vault
@@ -164,7 +164,7 @@ Start the Vault server with your Vault configuration file. For example, if your
 configuration file is located at `/home/ec2-user/config-hsm.hcl`, the command
 would look like:
 
-```plaintext
+```shell-session
 $ vault server -config=/home/ec2-user/config-hsm.hcl
 
   SDK Version: 2.03
@@ -185,8 +185,6 @@ $ vault server -config=/home/ec2-user/config-hsm.hcl
 
 ==> Vault server started! Log data will stream in below:
 ```
-
-<br />
 
 In another terminal, set the `VAULT_ADDR` environment variable, and [initialize](/intro/getting-started/deploy#initializing-the-vault) your Vault server.
 
@@ -222,7 +220,7 @@ as generation of a root token require these recovery keys.
 
 Login to the Vault using the generated root token to verify.
 
-```plaintext
+```shell-session
 $ vault login 8d726c6b-98ba-893f-23d5-be3d2fec480e
 ```
 
@@ -230,7 +228,7 @@ $ vault login 8d726c6b-98ba-893f-23d5-be3d2fec480e
 
 Stop and restart the Vault server and then verify its status:
 
-```plaintext
+```shell-session
 $ vault status
 
 Key                      Value
@@ -248,7 +246,7 @@ HA Enabled               false
 The `Sealed` status is **`false`** which means that the Vault was automatically
 unsealed upon its start. You can proceed with Vault operations.
 
-### <a name="step2"></a>Step 2: Enable Seal Wrap
+### Step 2: Enable Seal Wrap ((#step2))
 
 -> **NOTE:** For FIPS 140-2 compliance, seal wrap requires FIPS
 140-2 Certified HSM which is supported by _Vault Enterprise Premium_.
@@ -261,7 +259,7 @@ key/value secret engine, you can enable seal wrap to wrap all data.
 
 Check the enabled secret engines.
 
-```plaintext
+```shell-session
 $ vault secrets list -format=json
 {
   ...
@@ -296,7 +294,7 @@ $ vault secrets enable -path=secret2/ -version=1 -seal-wrap kv
 The above command enabled [key/value version 1](/docs/secrets/kv/kv-v1) with
 seal wrap feature enabled.
 
-```plaintext
+```shell-session
 $ vault secrets list -format=json
 {
   ...
@@ -324,7 +322,7 @@ Notice that the `seal_wrap` parameter is set to **`true`** at `secret2/`.
 
 Check the enabled secret engines.
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        http://127.0.0.1:8200/v1/sys/mounts | jq
 ...
@@ -373,7 +371,7 @@ $ curl --header "X-Vault-Token: ..." \
 The above command enabled [key/value version 1](/docs/secrets/kv/kv-v1) with
 seal wrap feature enabled.
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        http://127.0.0.1:8200/v1/sys/mounts | jq
 {
@@ -419,7 +417,7 @@ Select **Enable new engine**.
 
 Click **Enable Engine**.
 
-### <a name="step3"></a>Step 3: Test the Seal Wrap Feature
+### Step 3: Test the Seal Wrap Feature ((#step3))
 
 In this step, you are going to:
 
@@ -569,7 +567,7 @@ storage "file" {
 SSH into the machine where the Vault server is running, and check the stored
 values in the `/tmp/vault` directory.
 
-```plaintext
+```shell-session
 $ cd /tmp/vault/sdk/logical
 ```
 

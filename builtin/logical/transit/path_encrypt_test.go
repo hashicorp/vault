@@ -44,6 +44,11 @@ func TestTransit_BatchEncryptionCase1(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
+	keyVersion := resp.Data["key_version"].(int)
+	if keyVersion != 1 {
+		t.Fatalf("unexpected key version; got: %d, expected: %d", keyVersion, 1)
+	}
+
 	ciphertext := resp.Data["ciphertext"]
 
 	decData := map[string]interface{}{
@@ -88,6 +93,11 @@ func TestTransit_BatchEncryptionCase2(t *testing.T) {
 	resp, err = b.HandleRequest(context.Background(), encReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	keyVersion := resp.Data["key_version"].(int)
+	if keyVersion != 1 {
+		t.Fatalf("unexpected key version; got: %d, expected: %d", keyVersion, 1)
 	}
 
 	ciphertext := resp.Data["ciphertext"]
@@ -192,6 +202,10 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
 	for _, item := range batchResponseItems {
+		if item.KeyVersion != 1 {
+			t.Fatalf("unexpected key version; got: %d, expected: %d", item.KeyVersion, 1)
+		}
+
 		decReq.Data = map[string]interface{}{
 			"ciphertext": item.Ciphertext,
 		}
@@ -260,6 +274,10 @@ func TestTransit_BatchEncryptionCase5(t *testing.T) {
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
 	for _, item := range batchResponseItems {
+		if item.KeyVersion != 1 {
+			t.Fatalf("unexpected key version; got: %d, expected: %d", item.KeyVersion, 1)
+		}
+
 		decReq.Data = map[string]interface{}{
 			"ciphertext": item.Ciphertext,
 			"context":    "dmlzaGFsCg==",
@@ -316,6 +334,11 @@ func TestTransit_BatchEncryptionCase6(t *testing.T) {
 		if err := mapstructure.Decode(responseItem, &item); err != nil {
 			t.Fatal(err)
 		}
+
+		if item.KeyVersion != 1 {
+			t.Fatalf("unexpected key version; got: %d, expected: %d", item.KeyVersion, 1)
+		}
+
 		decReq.Data = map[string]interface{}{
 			"ciphertext": item.Ciphertext,
 		}
@@ -367,6 +390,10 @@ func TestTransit_BatchEncryptionCase7(t *testing.T) {
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
 	for _, item := range batchResponseItems {
+		if item.KeyVersion != 1 {
+			t.Fatalf("unexpected key version; got: %d, expected: %d", item.KeyVersion, 1)
+		}
+
 		decReq.Data = map[string]interface{}{
 			"ciphertext": item.Ciphertext,
 			"context":    "dmlzaGFsCg==",

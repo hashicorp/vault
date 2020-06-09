@@ -44,6 +44,37 @@ to confirm signed JWTs passed in during login.
 
   The project must have the `iam.googleapis.com` API [enabled](https://console.cloud.google.com/flows/enableapi?apiid=iam.googleapis.com).
 
+- `iam_alias` `(string: "unique_id")` - Must be either `unique_id` or `role_id`.
+  If `unique_id` is specified, the service account's unique ID will be used for
+  alias names during login. If `role_id` is specified, the ID of the Vault role
+  will be used. Only used if role `type` is `iam`.
+
+- `iam_metadata` `(string: "default")` - The metadata to include on the token
+  returned by the `login` endpoint. This metadata will be added to both audit logs,
+  and on the `iam_alias`. By default, it includes `project_id`, `role`,
+  `service_account_id`, and `service_account_email`. To include no metadata,
+  set to `""` via the CLI or `[]` via the API. To use only particular fields, select
+  the explicit fields. To restore to defaults, send only a field of `default`.
+  **Only select fields that will have a low rate of change** for your `iam_alias` because
+  each change triggers a storage write and can have a performance impact at scale.
+  Only used if role `type` is `iam`.
+
+- `gce_alias` `(string: "instance_id")` - Must be either `instance_id` or `role_id`.
+  If `instance_id` is specified, the GCE instance ID will be used for alias names
+  during login. If `role_id` is specified, the ID of the Vault role will be used.
+  Only used if role `type` is `gce`.
+
+- `gce_metadata` `(string: "default")` - The metadata to include on the token
+  returned by the `login` endpoint. This metadata will be added to both audit logs,
+  and on the `gce_alias`. By default, it includes `instance_creation_timestamp`,
+  `instance_id`, `instance_name`, `project_id`, `project_number`, `role`,
+  `service_account_id`, `service_account_email`, and `zone`. To include no metadata,
+  set to `""` via the CLI or `[]` via the API. To use only particular fields, select
+  the explicit fields. To restore to defaults, send only a field of `default`.
+  **Only select fields that will have a low rate of change** for your `gce_alias` because
+  each change triggers a storage write and can have a performance impact at scale.
+  Only used if role `type` is `gce`.
+
 ### Sample Payload
 
 ```json
@@ -54,7 +85,7 @@ to confirm signed JWTs passed in during login.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -72,7 +103,7 @@ Returns the configuration, if any, including credentials.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/gcp/config
@@ -196,7 +227,7 @@ Example `gce` role:
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -236,7 +267,7 @@ service accounts on the role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -276,7 +307,7 @@ remove labels (keys, values, or both) from the list of keys on the role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -298,7 +329,7 @@ Returns the previously registered role configuration.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/gcp/role/my-role
@@ -316,9 +347,11 @@ $ curl \
     },
     "bound_service_accounts": ["dev-1@project-123456.iam.gserviceaccount.com"],
     "bound_zones": ["eu-west2-a", "us-east1-b"],
+    "gce_alias": "instance_id",
     "max_ttl": 86400,
     "policies": ["prod"],
     "project_id": "project-123456",
+    "role_id": "6bbfab2b-ca32-6044-4829-4515728d87b1",
     "type": "gce",
     "ttl": 1800
   }
@@ -335,7 +368,7 @@ Lists all the roles that are registered with the plugin.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -366,7 +399,7 @@ Deletes the previously registered role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -407,7 +440,7 @@ role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request POST \
     --data @payload.json \

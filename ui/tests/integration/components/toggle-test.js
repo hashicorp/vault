@@ -12,7 +12,7 @@ let handler = (data, e) => {
 module('Integration | Component | toggle', function(hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders with name as default label', async function(assert) {
     this.set('handler', sinon.spy(handler));
 
     await render(hbs`<Toggle
@@ -20,7 +20,7 @@ module('Integration | Component | toggle', function(hooks) {
       @name="thing"
     />`);
 
-    assert.equal(findAll('label')[0].textContent.trim(), '');
+    assert.equal(findAll('label')[0].textContent.trim(), 'thing');
 
     await render(hbs`
       <Toggle
@@ -46,5 +46,21 @@ module('Integration | Component | toggle', function(hooks) {
       </Toggle>
     `);
     assert.dom('.toggle.is-small').exists('toggle has is-small class');
+  });
+
+  test('it sets the id of the input correctly', async function(assert) {
+    this.set('handler', sinon.spy(handler));
+    await render(hbs`
+    <Toggle
+      @onChange={{handler}}
+      @name="my toggle #_has we!rd chars"
+    >
+      Label
+    </Toggle>
+    `);
+    assert.dom('#toggle-mytoggle_haswerdchars').exists('input has correct ID');
+    assert
+      .dom('label')
+      .hasAttribute('for', 'toggle-mytoggle_haswerdchars', 'label has correct for attribute');
   });
 });

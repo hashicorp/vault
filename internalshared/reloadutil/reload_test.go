@@ -59,7 +59,7 @@ opM24uvQT3Bc0UM0WNh3tdRFuboxDeBDh7PX/2RIoiaMuCCiRZ3O0A==
 	}
 
 	cg := NewCertificateGetter(certFile, keyFile, "")
-	err = cg.Reload(nil)
+	err = cg.Reload()
 	if err == nil {
 		t.Fatal("error expected")
 	}
@@ -68,7 +68,7 @@ opM24uvQT3Bc0UM0WNh3tdRFuboxDeBDh7PX/2RIoiaMuCCiRZ3O0A==
 	}
 
 	cg = NewCertificateGetter(certFile, keyFile, password)
-	if err := cg.Reload(nil); err != nil {
+	if err := cg.Reload(); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 }

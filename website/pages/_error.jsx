@@ -1,13 +1,14 @@
-import React from 'react'
-import ErrorPage from 'next/error'
-import bugsnagClient from '../lib/bugsnag'
+import NotFound from './404'
+import Bugsnag from '@hashicorp/nextjs-scripts/lib/bugsnag'
 
-export default class Page extends React.Component {
-  static async getInitialProps(ctx) {
-    if (ctx.err) bugsnagClient.notify(ctx.err)
-    return ErrorPage.getInitialProps(ctx)
-  }
-  render() {
-    return <ErrorPage statusCode={this.props.statusCode || '¯\\_(ツ)_/¯'} />
-  }
+function Error({ statusCode }) {
+  return <NotFound statusCode={statusCode} />
 }
+
+Error.getInitialProps = ({ res, err }) => {
+  if (err) Bugsnag.notify(err)
+  const statusCode = res ? res.statusCode : err ? err.statusCode : 404
+  return { statusCode }
+}
+
+export default Error

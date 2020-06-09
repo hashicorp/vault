@@ -15,6 +15,15 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// To run this test, set the following env variables:
+// VAULT_ACC=1
+// OKTA_ORG=dev-219337
+// OKTA_API_TOKEN=<find in 1password>
+// OKTA_USERNAME=test2@example.com
+// OKTA_PASSWORD=<find in 1password>
+//
+// You will need to install the Okta client app on your mobile device and
+// setup MFA.
 func TestBackend_Config(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 12
 	maxLeaseTTLVal := time.Hour * 24

@@ -66,7 +66,7 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 				Description: "The CA certificate or chain of certificates, in PEM format, to use to validate connections to the JWKS URL. If not set, system certificates are used.",
 			},
 			"default_role": {
-				Type:        framework.TypeString,
+				Type:        framework.TypeLowerCaseString,
 				Description: "The default role to use if none is provided during login. If not set, a role is required during login.",
 			},
 			"jwt_validation_pubkeys": {

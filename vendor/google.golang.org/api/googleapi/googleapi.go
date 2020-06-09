@@ -54,7 +54,7 @@ const (
 
 	// DefaultUploadChunkSize is the default chunk size to use for resumable
 	// uploads if not specified by the user.
-	DefaultUploadChunkSize = 8 * 1024 * 1024
+	DefaultUploadChunkSize = 16 * 1024 * 1024
 
 	// MinUploadChunkSize is the minimum chunk size that can be used for
 	// resumable uploads.  All user-specified chunk sizes must be multiple of
@@ -69,6 +69,8 @@ type Error struct {
 	// Message is the server response message and is only populated when
 	// explicitly referenced by the JSON server response.
 	Message string `json:"message"`
+	// Details provide more context to an error.
+	Details []interface{} `json:"details"`
 	// Body is the raw response returned by the server.
 	// It is often but not always JSON, depending on how the request fails.
 	Body string
@@ -94,6 +96,16 @@ func (e *Error) Error() string {
 	fmt.Fprintf(&buf, "googleapi: Error %d: ", e.Code)
 	if e.Message != "" {
 		fmt.Fprintf(&buf, "%s", e.Message)
+	}
+	if len(e.Details) > 0 {
+		var detailBuf bytes.Buffer
+		enc := json.NewEncoder(&detailBuf)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(e.Details); err == nil {
+			fmt.Fprint(&buf, "\nDetails:")
+			fmt.Fprintf(&buf, "\n%s", detailBuf.String())
+
+		}
 	}
 	if len(e.Errors) == 0 {
 		return strings.TrimSpace(buf.String())

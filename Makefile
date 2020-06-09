@@ -9,14 +9,13 @@ TEST_TIMEOUT?=45m
 EXTENDED_TEST_TIMEOUT=60m
 INTEG_TEST_TIMEOUT=120m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
-EXTERNAL_TOOLS=\
-	golang.org/x/tools/cmd/goimports \
+EXTERNAL_TOOLS_CI=\
 	github.com/elazarl/go-bindata-assetfs/... \
 	github.com/hashicorp/go-bindata/... \
 	github.com/mitchellh/gox \
-	github.com/kardianos/govendor \
-	github.com/client9/misspell/cmd/misspell \
-	github.com/golangci/golangci-lint/cmd/golangci-lint
+	golang.org/x/tools/cmd/goimports 
+EXTERNAL_TOOLS=\
+	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
@@ -126,12 +125,16 @@ ci-config:
 ci-verify:
 	@$(MAKE) -C .circleci ci-verify
 
-# bootstrap the build by downloading additional tools
-bootstrap:
-	@for tool in  $(EXTERNAL_TOOLS) ; do \
+# bootstrap the build by downloading additional tools needed to build
+ci-bootstrap:
+	@for tool in  $(EXTERNAL_TOOLS_CI) ; do \
 		echo "Installing/Updating $$tool" ; \
 		GO111MODULE=off $(GO_CMD) get -u $$tool; \
 	done
+
+# bootstrap the build by downloading additional tools that may be used by devs
+bootstrap: ci-bootstrap
+	go generate -tags tools tools/tools.go
 
 # Note: if you have plugins in GOPATH you can update all of them via something like:
 # for i in $(ls | grep vault-plugin-); do cd $i; git remote update; git reset --hard origin/master; dep ensure -update; git add .; git commit; git push; cd ..; done
@@ -274,6 +277,6 @@ publish-commit:
 	@[ -n "$(PUBLISH_VERSION)" ] || { echo "You must set PUBLISH_VERSION to the version in semver-like format."; exit 1; }
 	set -x; $(GPG_KEY_VARS) && git commit --allow-empty --gpg-sign=$$GIT_GPG_KEY_ID -m 'release: publish v$(PUBLISH_VERSION)'
 
-.PHONY: bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack stage-commit publish-commit
+.PHONY: bin default prep test vet ci-bootstrap bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack stage-commit publish-commit
 
 .NOTPARALLEL: ember-dist ember-dist-dev static-assets
