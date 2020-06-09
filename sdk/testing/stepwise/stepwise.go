@@ -28,9 +28,9 @@ const (
 	HelpOperation                 = "help"
 )
 
-// StepDriver is the interface Drivers need to implement to be used in
+// StepwiseEnvironment is the interface Drivers need to implement to be used in
 // Case to execute each Step
-type StepDriver interface {
+type StepwiseEnvironment interface {
 	Setup() error
 	Client() (*api.Client, error)
 	Teardown() error
@@ -151,7 +151,7 @@ type StepCheckFunc func(*api.Secret, error) error
 type Case struct {
 	// Driver is used to setup the Vault instance and provide the client used to
 	// drive the tests
-	Driver StepDriver
+	Driver StepwiseEnvironment
 
 	// Precheck, if non-nil, will be called once before the test case
 	// runs at all. This can be used for some validation prior to the
@@ -311,7 +311,7 @@ func Run(tt TestT, c Case) {
 	}
 }
 
-func makeRequest(tt TestT, driver StepDriver, step Step) (*api.Secret, error) {
+func makeRequest(tt TestT, driver StepwiseEnvironment, step Step) (*api.Secret, error) {
 	client, err := driver.Client()
 	if err != nil {
 		return nil, err
