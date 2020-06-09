@@ -26,6 +26,7 @@
   @confirmText={{if (eq replicationDisplayMode "DR") "Disaster Recovery" replicationDisplayMode}}
   @toConfirmMsg="demoting this cluster"
   @onConfirm={{action "onSubmit" "demote" model.replicationAttrs.modeForUrl}}
+  @testSelector="demote"
 >
   <p class="has-bottom-margin-m">
     {{#if (and
