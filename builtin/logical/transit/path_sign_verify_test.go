@@ -178,19 +178,19 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 		req.Path = "verify/foo" + postpath
 		req.Data["signature"] = sig
 		resp, err := b.HandleRequest(context.Background(), req)
-		if err != nil && !errExpected {
-			t.Fatalf("got error: %v, sig was %v", err, sig)
-		}
-		if errExpected {
-			if resp != nil && !resp.IsError() {
-				t.Fatalf("bad: should have gotten error response: %#v", *resp)
+		if err != nil {
+			if errExpected {
+				return
 			}
-			return
+			t.Fatalf("got error: %v, sig was %v", err, sig)
 		}
 		if resp == nil {
 			t.Fatal("expected non-nil response")
 		}
 		if resp.IsError() {
+			if errExpected {
+				return
+			}
 			t.Fatalf("bad: got error response: %#v", *resp)
 		}
 		value, ok := resp.Data["valid"]
@@ -199,6 +199,8 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 		}
 		if !value.(bool) && !errExpected {
 			t.Fatalf("verification failed; req was %#v, resp is %#v", *req, *resp)
+		} else if value.(bool) && errExpected {
+			t.Fatalf("expected error and didn't get one; req was %#v, resp is %#v", *req, *resp)
 		}
 	}
 
@@ -244,14 +246,20 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 	// Bad value
 	req.Data["marshaling_algorithm"] = "asn2"
 	sig = signRequest(req, true, "")
-	// Sign with jws, verify we can validate
+	// Use the default, verify we can't validate with jws
+	req.Data["marshaling_algorithm"] = "asn1"
+	sig = signRequest(req, false, "")
 	req.Data["marshaling_algorithm"] = "jws"
+	verifyRequest(req, true, "", sig)
+	// Sign with jws, verify we can validate
 	sig = signRequest(req, false, "")
 	verifyRequest(req, false, "", sig)
+	// If we change marshaling back to asn1 we shouldn't be able to verify
+	delete(req.Data, "marshaling_algorithm")
+	verifyRequest(req, true, "", sig)
 
 	// Test 512 and save sig for later to ensure we can't validate once min
 	// decryption version is set
-	delete(req.Data, "marshaling_algorithm")
 	req.Data["hash_algorithm"] = "sha2-512"
 	sig = signRequest(req, false, "")
 	verifyRequest(req, false, "", sig)
