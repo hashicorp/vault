@@ -32,7 +32,7 @@
       class="button {{buttonClass}}"
       disabled={{unless (eq confirmationInput confirmText) true}}
       onclick={{onConfirm}}
-      data-test-confirm-button
+      data-test-confirm-button={{testSelector}}
     >
       {{buttonText}}
     </button>

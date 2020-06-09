@@ -32,5 +32,5 @@ export default Component.extend({
   confirmText: 'Yes',
   type: 'warning',
   toConfirmMsg: '',
-  testSelector: 'confirmationInput',
+  testSelector: '',
 });

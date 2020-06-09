@@ -1,5 +1,5 @@
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
-import { pauseTest, click, fillIn, findAll, currentURL, find, visit, settled } from '@ember/test-helpers';
+import { click, fillIn, findAll, currentURL, find, visit, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -19,7 +19,7 @@ const disableReplication = async (type, assert) => {
     await click('[data-test-disable-replication] button');
 
     const typeDisplay = type === 'dr' ? 'Disaster Recovery' : 'Performance';
-    await fillIn('[data-test-confirmation-modal-input]', typeDisplay);
+    await fillIn('[data-test-confirmation-modal-input="disable"]', typeDisplay);
     await click('[data-test-confirm-button]');
     if (assert) {
       assert.equal(currentURL(), `/vault/replication`, 'redirects to the replication page');
@@ -263,14 +263,10 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     // open demote modal
     await click('[data-test-demote-replication] [data-test-replication-action-trigger]');
     // enter confirmation text
-    await pauseTest();
     await fillIn('[data-test-confirmation-modal-input="demote"]', 'Performance');
     // Click confirm button
-    await pauseTest();
-    await click('[data-test-confirm-button]');
-    await pauseTest();
+    await click('[data-test-confirm-button="demote"]');
     await click('[data-test-replication-link="details"]');
-    await pauseTest();
     assert.dom('[data-test-replication-dashboard]').exists();
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
     assert.ok(
