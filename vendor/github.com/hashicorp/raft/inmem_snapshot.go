@@ -90,9 +90,9 @@ func (m *InmemSnapshotStore) Open(id string) (*SnapshotMeta, io.ReadCloser, erro
 
 // Write appends the given bytes to the snapshot contents
 func (s *InmemSnapshotSink) Write(p []byte) (n int, err error) {
-	written, err := io.Copy(s.contents, bytes.NewReader(p))
-	s.meta.Size += written
-	return int(written), err
+	written, err := s.contents.Write(p)
+	s.meta.Size += int64(written)
+	return written, err
 }
 
 // Close updates the Size and is otherwise a no-op
