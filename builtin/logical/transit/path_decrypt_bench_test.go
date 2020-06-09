@@ -7,21 +7,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func createBenchBackendWithStorage(b *testing.B) (*backend, logical.Storage) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-
-	backend, _ := Backend(context.Background(), config)
-	if b == nil {
-		b.Fatalf("failed to create backend")
-	}
-	err := backend.Backend.Setup(context.Background(), config)
-	if err != nil {
-		b.Fatal(err)
-	}
-	return backend, config.StorageView
-}
-
 func BenchmarkTransit_BatchDecryption1(b *testing.B) {
 	BTransit_BatchDecryption(b, 1)
 }
@@ -52,7 +37,7 @@ func BTransit_BatchDecryption(b *testing.B, bsize int) {
 	var resp *logical.Response
 	var err error
 
-	backend, s := createBenchBackendWithStorage(b)
+	backend, s := createBackendWithStorage(b)
 
 	batchEncryptionInput := make([]interface{}, 0, bsize)
 	for i := 0; i < bsize; i++ {

@@ -37,7 +37,7 @@ func BTransit_BatchEncryption(b *testing.B, bsize int) {
 	var resp *logical.Response
 	var err error
 
-	backend, s := createBenchBackendWithStorage(b)
+	backend, s := createBackendWithStorage(b)
 
 	batchEncryptionInput := make([]interface{}, 0, bsize)
 	for i := 0; i < bsize; i++ {
