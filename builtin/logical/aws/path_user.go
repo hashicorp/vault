@@ -33,6 +33,10 @@ func pathUser(b *backend) *framework.Path {
 				Description: "Lifetime of the returned credentials in seconds",
 				Default:     3600,
 			},
+			"external_id": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "STS external ID",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -81,6 +85,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	roleArn := d.Get("role_arn").(string)
+	externalId := d.Get("external_id").(string)
 
 	var credentialType string
 	switch {
@@ -126,7 +131,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 		case !strutil.StrListContains(role.RoleArns, roleArn):
 			return logical.ErrorResponse(fmt.Sprintf("role_arn %q not in allowed role arns for Vault role %q", roleArn, roleName)), nil
 		}
-		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, role.PolicyDocument, role.PolicyArns, ttl)
+		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, role.PolicyDocument, role.PolicyArns, externalId, ttl)
 	case federationTokenCred:
 		return b.getFederationToken(ctx, req.Storage, req.DisplayName, roleName, role.PolicyDocument, role.PolicyArns, ttl)
 	default:
