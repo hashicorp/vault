@@ -783,6 +783,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.rawConfig.Store(conf.RawConfig)
 
 	atomic.StoreUint32(c.sealed, 1)
+	metrics.SetGauge([]string{"core", "sealed"}, 1)
+
 	c.allLoggers = append(c.allLoggers, c.logger)
 
 	c.router.logger = c.logger.Named("router")
@@ -1497,6 +1499,7 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 
 	// Success!
 	atomic.StoreUint32(c.sealed, 0)
+	metrics.SetGauge([]string{"core", "sealed"}, 0)
 
 	if c.logger.IsInfo() {
 		c.logger.Info("vault is unsealed")
@@ -1710,6 +1713,7 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 	if swapped := atomic.CompareAndSwapUint32(c.sealed, 0, 1); !swapped {
 		return nil
 	}
+	metrics.SetGauge([]string{"core", "sealed"}, 1)
 
 	c.logger.Info("marked as sealed")
 
