@@ -56,7 +56,7 @@
 {{else}}
 {{!-- this is the replication index page --}}
   <div class="level">
-    <div class="level-left">
+    <div class="replication-description level-left">
     <div>
     {{#if (and (eq mode 'performance') (not (has-feature 'Performance Replication')))}}
       <p>
@@ -76,26 +76,27 @@
         <h6 class="title is-6 is-uppercase">
           Enabled
         </h6>
-      <span class="has-text-grey">
-        {{capitalize modeForUrl}}
-      </span>
-      {{#if secondaryId}}
+      <div class="detail-tags">
+        <span class="has-text-grey">
+          {{capitalize modeForUrl}}
+        </span>
+        {{#if secondaryId}}
+          <span class="tag is-light has-text-grey-dark">
+            <code>
+              {{secondaryId}}
+            </code>
+          </span>
+        {{/if}}
         <span class="tag is-light has-text-grey-dark">
           <code>
-            {{secondaryId}}
+            {{clusterIdDisplay}}
           </code>
         </span>
-      {{/if}}
-      <span class="tag is-light has-text-grey-dark">
-        <code>
-          {{clusterIdDisplay}}
-        </code>
-      </span>
-    {{else}}
-      <p class="help has-text-grey-dark">
-        {{replication-mode-description mode}}
-      </p>
+      </div>
     {{/if}}
+    <p class="help has-text-grey-dark">
+      {{replication-mode-description mode}}
+    </p>
   </div>
 </div>
 <div class="level-right">
