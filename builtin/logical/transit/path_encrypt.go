@@ -59,22 +59,22 @@ func (b *backend) pathEncrypt() *framework.Path {
 	return &framework.Path{
 		Pattern: "encrypt/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the policy",
 			},
 
-			"plaintext": &framework.FieldSchema{
+			"plaintext": {
 				Type:        framework.TypeString,
 				Description: "Base64 encoded plaintext value to be encrypted",
 			},
 
-			"context": &framework.FieldSchema{
+			"context": {
 				Type:        framework.TypeString,
 				Description: "Base64 encoded context for key derivation. Required if key derivation is enabled",
 			},
 
-			"nonce": &framework.FieldSchema{
+			"nonce": {
 				Type: framework.TypeString,
 				Description: `
 Base64 encoded nonce value. Must be provided if convergent encryption is
@@ -85,7 +85,7 @@ encryption key) this nonce value is **never reused**.
 `,
 			},
 
-			"type": &framework.FieldSchema{
+			"type": {
 				Type:    framework.TypeString,
 				Default: "aes256-gcm96",
 				Description: `
@@ -94,7 +94,7 @@ When performing an upsert operation, the type of key to create. Currently,
 "aes128-gcm96" (symmetric) and "aes256-gcm96" (symmetric) are the only types supported. Defaults to "aes256-gcm96".`,
 			},
 
-			"convergent_encryption": &framework.FieldSchema{
+			"convergent_encryption": {
 				Type: framework.TypeBool,
 				Description: `
 This parameter will only be used when a key is expected to be created.  Whether
@@ -107,7 +107,7 @@ you ensure that all nonces are unique for a given context.  Failing to do so
 will severely impact the ciphertext's security.`,
 			},
 
-			"key_version": &framework.FieldSchema{
+			"key_version": {
 				Type: framework.TypeInt,
 				Description: `The version of the key to use for encryption.
 Must be 0 (for latest) or a value greater than or equal
@@ -128,8 +128,8 @@ to the min_encryption_version configured on the key.`,
 }
 
 // decodeBatchRequestItems is a fast path alternative to mapstructure.Decode to decode []BatchRequestItem.
-func decodeBatchRequestItems(src interface{}, dest *[]BatchRequestItem) error {
-	if src == nil || dest == nil {
+func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
+	if src == nil || dst == nil {
 		return nil
 	}
 
@@ -138,11 +138,13 @@ func decodeBatchRequestItems(src interface{}, dest *[]BatchRequestItem) error {
 		return fmt.Errorf("source data must be an array or slice, got %T", src)
 	}
 
-	if len(items) == 0 {
+	// Early return should happen before allocating the array if the batch is empty.
+	// However to comply with mapstructure output we must allocate an empty array.
+	sitems := len(items)
+	*dst = make([]BatchRequestItem, sitems)
+	if sitems == 0 {
 		return nil
 	}
-
-	*dest = make([]BatchRequestItem, len(items))
 
 	var errs mapstructure.Error
 
@@ -154,7 +156,7 @@ func decodeBatchRequestItems(src interface{}, dest *[]BatchRequestItem) error {
 
 		if v, has := item["context"]; has {
 			if casted, ok := v.(string); ok {
-				(*dest)[i].Context = casted
+				(*dst)[i].Context = casted
 			} else {
 
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].context' expected type 'string', got unconvertible type '%T'", i, item["context"]))
@@ -163,7 +165,7 @@ func decodeBatchRequestItems(src interface{}, dest *[]BatchRequestItem) error {
 
 		if v, has := item["ciphertext"]; has {
 			if casted, ok := v.(string); ok {
-				(*dest)[i].Ciphertext = casted
+				(*dst)[i].Ciphertext = casted
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].ciphertext' expected type 'string', got unconvertible type '%T'", i, item["ciphertext"]))
 			}
@@ -171,7 +173,7 @@ func decodeBatchRequestItems(src interface{}, dest *[]BatchRequestItem) error {
 
 		if v, has := item["plaintext"]; has {
 			if casted, ok := v.(string); ok {
-				(*dest)[i].Plaintext = casted
+				(*dst)[i].Plaintext = casted
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].plaintext' expected type 'string', got unconvertible type '%T'", i, item["plaintext"]))
 			}
@@ -179,7 +181,7 @@ func decodeBatchRequestItems(src interface{}, dest *[]BatchRequestItem) error {
 
 		if v, has := item["nonce"]; has {
 			if casted, ok := v.(string); ok {
-				(*dest)[i].Nonce = casted
+				(*dst)[i].Nonce = casted
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].nonce' expected type 'string', got unconvertible type '%T'", i, item["nonce"]))
 			}
@@ -187,7 +189,7 @@ func decodeBatchRequestItems(src interface{}, dest *[]BatchRequestItem) error {
 
 		if v, has := item["key_version"]; has {
 			if casted, ok := v.(int); ok {
-				(*dest)[i].KeyVersion = casted
+				(*dst)[i].KeyVersion = casted
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].key_version' expected type 'int', got unconvertible type '%T'", i, item["key_version"]))
 			}
