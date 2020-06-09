@@ -5,11 +5,13 @@
       label='secondary_id'
       helperText="The ID of the secondary activation token used to enable replication."
       value=secondaryId}}
-  {{/if}}
-  {{info-table-row
+  {{else}}
+    {{info-table-row
       label='primary_cluster_addr'
       helperText='The configuration of the cluster. This was set when replication was enabled.'
-      value=primaryClusterAddr}}
+      value=primaryClusterAddr
+    }}
+  {{/if}}
   {{info-table-row
     label="Merkle root index"
     helperText="A snapshot in time of the merkle tree's root hash. Changes on every update to storage."
