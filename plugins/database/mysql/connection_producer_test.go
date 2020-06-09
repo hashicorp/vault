@@ -13,12 +13,13 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/ory/dockertest"
 )
 
 func TestInit_clientTLS(t *testing.T) {
-	//t.Skip("Skipping this test because CircleCI can't mount the files we need without further investigation: " +
-	//	"https://support.circleci.com/hc/en-us/articles/360007324514-How-can-I-mount-volumes-to-docker-containers-")
+	t.Skip("Skipping this test because CircleCI can't mount the files we need without further investigation: " +
+		"https://support.circleci.com/hc/en-us/articles/360007324514-How-can-I-mount-volumes-to-docker-containers-")
 
 	// Set up temp directory so we can mount it to the docker container
 	confDir := makeTempDir(t)
@@ -66,7 +67,7 @@ ssl-key=/etc/mysql/server-key.pem`
 	// Set up x509 user
 	mClient := connect(t, retURL)
 
-	setUpX509User(t, mClient, clientCert)
+	username := setUpX509User(t, mClient, clientCert)
 
 	// //////////////////////////////////////////////////////
 	// Test
@@ -74,8 +75,9 @@ ssl-key=/etc/mysql/server-key.pem`
 
 	conf := map[string]interface{}{
 		"connection_url":      retURL,
-		//"tls_certificate_key": clientCert.CombinedPEM(),
-		//"tls_ca":              caCert.Pem,
+		"username":            username,
+		"tls_certificate_key": clientCert.CombinedPEM(),
+		"tls_ca":              caCert.Pem,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -99,38 +101,15 @@ ssl-key=/etc/mysql/server-key.pem`
 		t.Fatalf("Unable to prepare MySQL statementL %s", err)
 	}
 
-	results, err := stmt.QueryContext(ctx)
+	results := stmt.QueryRow()
 
-	if err != nil {
-		t.Fatalf("Unable to execute MySQL query: %s", err)
-	}
+	expected := fmt.Sprintf("%s@%s", username, "%")
 
-	expected := connStatus{
-		AuthInfo: authInfo{
-			AuthenticatedUsers: []user{
-				{
-					User: fmt.Sprintf("CN=%s", clientCert.Template.Subject.CommonName),
-					DB:   "$external",
-				},
-			},
-			AuthenticatedUserRoles: []role{
-				{
-					Role: "readWrite",
-					DB:   "test",
-				},
-				{
-					Role: "userAdminAnyDatabase",
-					DB:   "admin",
-				},
-			},
-		},
-		Ok: 1,
-	}
+	var result string
+	results.Scan(&result)
 
-	actual := results
-
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("Actual:%#v\nExpected:\n%#v", actual, expected)
+	if !reflect.DeepEqual(result, expected) {
+		t.Fatalf("Actual:%#v\nExpected:\n%#v", result, expected)
 	}
 }
 
@@ -182,7 +161,7 @@ func startMySQLWithTLS(t *testing.T, version string, confDir string) (retURL str
 	if err != nil {
 		t.Fatalf("Could not start local mysql docker container: %s", err)
 	}
-	resource.Expire(60)
+	resource.Expire(600)
 
 	cleanup = func() {
 		err := pool.Purge(resource)
@@ -191,14 +170,17 @@ func startMySQLWithTLS(t *testing.T, version string, confDir string) (retURL str
 		}
 	}
 
-	dsn := fmt.Sprintf("root:x509test@tcp(localhost:%s)/mysql", resource.GetPort("3306/tcp"))
+	dsn := fmt.Sprintf("{{username}}:{{password}}@tcp(localhost:%s)/mysql", resource.GetPort("3306/tcp"))
 
+	url := dbutil.QueryHelper(dsn, map[string]string{
+		"username": "root",
+		"password": "x509test",
+	})
 	// exponential backoff-retry
 	err = pool.Retry(func() error {
 		var err error
 
-		t.Logf("dsn: %s", dsn)
-		db, err := sql.Open("mysql", dsn)
+		db, err := sql.Open("mysql", url)
 		if err != nil {
 			t.Logf("err: %s", err)
 			return err
@@ -215,7 +197,12 @@ func startMySQLWithTLS(t *testing.T, version string, confDir string) (retURL str
 }
 
 func connect(t *testing.T, dsn string) (db *sql.DB) {
-	db, err := sql.Open("mysql", dsn)
+	url := dbutil.QueryHelper(dsn, map[string]string{
+		"username": "root",
+		"password": "x509test",
+	})
+
+	db, err := sql.Open("mysql", url)
 	if err != nil {
 		t.Fatalf("Unable to make connection to MySQL: %s", err)
 	}
@@ -228,27 +215,34 @@ func connect(t *testing.T, dsn string) (db *sql.DB) {
 	return db
 }
 
-func setUpX509User(t *testing.T, db *sql.DB, cert certhelpers.Certificate) {
+func setUpX509User(t *testing.T, db *sql.DB, cert certhelpers.Certificate) (username string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	username := cert.Template.Subject.CommonName
+	username = cert.Template.Subject.CommonName
 
-	cmd := fmt.Sprintf("CREATE USER %s REQUIRE X509", username)
-
-	stmt, err := db.PrepareContext(ctx, cmd)
-	if err != nil {
-		t.Fatalf("Failed to prepare query: %s", err)
+	cmds := []string{
+		fmt.Sprintf("CREATE USER %s IDENTIFIED BY '' REQUIRE X509", username),
+		fmt.Sprintf("GRANT ALL ON mysql.* TO '%s'@'%s' REQUIRE X509", username, "%"),
 	}
 
-	_, err = stmt.ExecContext(ctx)
-	if err != nil {
-		t.Fatalf("Failed to create x509 user in database: %s", err)
+	for _, cmd := range cmds {
+		stmt, err := db.PrepareContext(ctx, cmd)
+		if err != nil {
+			t.Fatalf("Failed to prepare query: %s", err)
+		}
+
+		_, err = stmt.ExecContext(ctx)
+		if err != nil {
+			t.Fatalf("Failed to create x509 user in database: %s", err)
+		}
+		err = stmt.Close()
+		if err != nil {
+			t.Fatalf("Failed to close prepared statement: %s", err)
+		}
 	}
-	err = stmt.Close()
-	if err != nil {
-		t.Fatalf("Failed to close prepared statement: %s", err)
-	}
+
+	return username
 }
 
 type connStatus struct {

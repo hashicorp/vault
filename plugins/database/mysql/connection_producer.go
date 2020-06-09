@@ -7,34 +7,34 @@ import (
 	"database/sql"
 	"fmt"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
 	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/mapstructure"
 )
 
 // SQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
 type mySQLConnectionProducer struct {
-	ConnectionURL            string      `json:"connection_url" mapstructure:"connection_url" structs:"connection_url"`
-	MaxOpenConnections       int         `json:"max_open_connections" mapstructure:"max_open_connections" structs:"max_open_connections"`
-	MaxIdleConnections       int         `json:"max_idle_connections" mapstructure:"max_idle_connections" structs:"max_idle_connections"`
+	ConnectionURL            string      `json:"connection_url"          mapstructure:"connection_url"          structs:"connection_url"`
+	MaxOpenConnections       int         `json:"max_open_connections"    mapstructure:"max_open_connections"    structs:"max_open_connections"`
+	MaxIdleConnections       int         `json:"max_idle_connections"    mapstructure:"max_idle_connections"    structs:"max_idle_connections"`
 	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
 
-	Username                 string      `json:"username" mapstructure:"username" structs:"username"`
-	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
+	Username string `json:"username" mapstructure:"username" structs:"username"`
+	Password string `json:"password" mapstructure:"password" structs:"password"`
 
-	TLSCertificateKeyData []byte `json:"tls_certificate_key" structs:"-" mapstructure:"tls_certificate_key"`
-	TLSCertificateData		[]byte `json:"tls_client_cert" structs:"-" mapstructure:"tls_client_cert"`
-	TLSKeyData						[]byte `json:"tls_client_key" structs:"-" mapstructure:"tls_client_key"`
-	TLSCAData							[]byte `json:"tls_ca"							 structs:"-" mapstructure:"tls_ca"`
-	TLSConfigName					string
+	TLSCertificateKeyData []byte `json:"tls_certificate_key" mapstructure:"tls_certificate_key" structs:"-"`
+	TLSCAData							[]byte `json:"tls_ca"              mapstructure:"tls_ca"              structs:"-"`
+
+	// tlsConfigName is a globally unique name that references the TLS config for this instance in the mysql driver
+	tlsConfigName					string
 
 	Type                  string
 	RawConfig             map[string]interface{}
@@ -94,9 +94,20 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 		return nil, errwrap.Wrapf("invalid max_connection_lifetime: {{err}}", err)
 	}
 
-	err = c.getTLSAuth()
+	tlsConfig, err := c.getTLSAuth()
 	if err != nil {
 		return nil, err
+	}
+
+	if tlsConfig != nil {
+		if c.tlsConfigName == "" && tlsConfig != nil {
+			c.tlsConfigName, err = uuid.GenerateUUID()
+			if err != nil {
+				return nil, fmt.Errorf("unable to generate UUID for TLS configuration: %w", err)
+			}
+		}
+
+		stdmysql.RegisterTLSConfig(c.tlsConfigName, tlsConfig)
 	}
 
 	// Set initialized to true at this point since all fields are set,
@@ -134,10 +145,17 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 	dbType := c.Type
 
 	// Otherwise, attempt to make connection
-	conn := c.ConnectionURL
+	uri, err := url.Parse(c.ConnectionURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid connection URL: %w", err)
+	}
+	vals := uri.Query()
+	if c.tlsConfigName != "" {
+		vals.Set("tls", c.tlsConfigName)
+	}
+	uri.RawQuery = vals.Encode()
 
-	var err error
-	c.db, err = sql.Open(dbType, conn)
+	c.db, err = sql.Open(dbType, uri.String())
 	if err != nil {
 		return nil, err
 	}
@@ -182,53 +200,35 @@ func (c *mySQLConnectionProducer) SetCredentials(ctx context.Context, statements
 	return "", "", dbutil.Unimplemented()
 }
 
-func (c *mySQLConnectionProducer) getTLSAuth() (err error) {
-	if len(c.TLSCAData) == 0 && 
-	   len(c.TLSCertificateKeyData) == 0 &&
-		 (len(c.TLSCertificateData) == 0 || len(c.TLSKeyData) == 0) {
-		return nil
+func (c *mySQLConnectionProducer) getTLSAuth() (tlsConfig *tls.Config, err error) {
+	if len(c.TLSCAData) == 0 &&
+	  len(c.TLSCertificateKeyData) == 0 {
+		return nil, nil
 	}
 
-	tlsConfig := &tls.Config{}
-
+	rootCertPool := x509.NewCertPool()
 	if len(c.TLSCAData) > 0 {
-		tlsConfig.RootCAs = x509.NewCertPool()
-
-		ok := tlsConfig.RootCAs.AppendCertsFromPEM(c.TLSCAData)
+		ok := rootCertPool.AppendCertsFromPEM(c.TLSCAData)
 		if !ok {
-			return fmt.Errorf("failed to append CA to client options")
+			return nil, fmt.Errorf("failed to append CA to client options")
 		}
 	}
+
+	clientCert := make([]tls.Certificate, 0, 1)
 
 	if len(c.TLSCertificateKeyData) > 0 {
 		certificate, err := tls.X509KeyPair(c.TLSCertificateKeyData, c.TLSCertificateKeyData)
 		if err != nil {
-			return fmt.Errorf("unable to load tls_certificate_key_data: %w", err)
+			return nil, fmt.Errorf("unable to load tls_certificate_key_data: %w", err)
 		}
 
-		tlsConfig.Certificates = append(tlsConfig.Certificates, certificate)
-	} else if len(c.TLSCertificateData) > 0 && len(c.TLSKeyData) > 0 {
-		certificate, err := tls.X509KeyPair(c.TLSCertificateData, c.TLSKeyData)
-		if err != nil {
-			return fmt.Errorf("unable to load tls_certificate_data or tls_key_data: %w", err)
-		}
-
-		tlsConfig.Certificates = append(tlsConfig.Certificates, certificate)
+		clientCert = append(clientCert, certificate)
 	}
 
-	if c.TLSConfigName == "" {
-		c.TLSConfigName = "custom"
+	tlsConfig = &tls.Config{
+		RootCAs: rootCertPool,
+		Certificates: clientCert,
 	}
 
-	stdmysql.RegisterTLSConfig(c.TLSConfigName, tlsConfig)
-
-	if !strings.Contains(c.ConnectionURL, "tls=") {
-		if !strings.Contains(c.ConnectionURL, "?") {
-			c.ConnectionURL += "?"
-		} else {
-			c.ConnectionURL += "&"
-		}
-		c.ConnectionURL += "tls=" + c.TLSConfigName
-	}
-	return nil
+	return tlsConfig, nil
 }
