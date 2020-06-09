@@ -92,11 +92,9 @@
     {{else}}
       <p class="help has-text-grey-dark">
         {{#if (eq mode 'dr')}}
-          {{model.replicationModeForDisplay}}
-          is designed to protect against catastrophic failure of entire clusters. Secondaries do not forward service requests (until they are elected and become a new primary).
+          DR is designed to protect against catastrophic failure of entire clusters. Secondaries do not forward service requests (until they are elected and become a new primary).
         {{else}}
-          {{model.replicationModeForDisplay}}
-          Replication scales workloads horizontally across clusters to make requests faster. Local secondaries handle read requests but forward writes to the primary to be handled.
+          Performance Replication scales workloads horizontally across clusters to make requests faster. Local secondaries handle read requests but forward writes to the primary to be handled.
         {{/if}}
       </p>
     {{/if}}
