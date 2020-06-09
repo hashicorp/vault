@@ -33,6 +33,7 @@ The following options are available on all telemetry configurations.
 - `enable_hostname_label` `(bool: false)` - Specifies if all metric values should
   contain the `host` label with the local hostname. It is recommended to enable
   `disable_hostname` if this option is used.
+- `metrics_prefix` `(string: "vault")` - The prefix used while writing all telemetry data. By default, this is set to "vault". This was added in Vault 1.4.
 
 ### `statsite`
 
