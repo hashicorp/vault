@@ -40,8 +40,7 @@
             Disaster Recovery (DR) Replication
           </h3>
           <p class="help has-text-grey-dark">
-            DR is designed to protect against catastrophic failure of entire clusters. Secondaries do not forward
-            service requests (until they are elected and become a new primary).
+            {{replication-mode-description 'dr'}}
           </p>
         {{else if (eq initialReplicationMode 'performance')}}
           <h3 class="title is-flex-center is-5 is-marginless">
@@ -54,8 +53,7 @@
             </p>
           {{else}}
             <p class="help has-text-grey-dark">
-              Performance replication scales workloads horizontally across clusters to make requests faster. Local
-              secondaries handle read requests but forward writes to the primary to be handled.
+              {{replication-mode-description 'performance'}}
             </p>
           {{/if}}
         {{/if}}
@@ -76,8 +74,7 @@
                   Disaster Recovery (DR)
                 </h3>
                 <p class="help has-text-grey-dark">
-                  DR is designed to protect against catastrophic failure of entire clusters. Secondaries do not forward
-                  service requests (until they are elected and become a new primary).
+                  {{replication-mode-description 'dr'}}
                 </p>
               </div>
               <div>
@@ -105,8 +102,7 @@
                   </p>
                 {{else}}
                   <p class="help has-text-grey-dark">
-                    Performance Replication scales workloads horizontally across clusters to make requests faster. Local
-                    secondaries handle read requests but forward writes to the primary to be handled.
+                    {{replication-mode-description 'performance'}}
                   </p>
                 {{/if}}
               </div>
