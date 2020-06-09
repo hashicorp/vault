@@ -15,7 +15,7 @@ export default Component.extend({
   version: service(),
   router: service(),
   namespace: service(),
-  classNameBindings: ['isMenu::box', 'isMenu::level'],
+  classNameBindings: ['isMenu::box'],
   attributeBindings: ['href', 'target'],
   display: 'banner',
   isMenu: equal('display', 'menu'),
