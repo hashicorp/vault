@@ -25,8 +25,8 @@ export default Component.extend({
   secondaryId: computed('replicationDetails.{secondaryId}', function() {
     return this.replicationDetails.secondaryId;
   }),
-  primaryClusterAddr: computed('replcationDetails.{primaryClusterAddr}', function() {
-    return this.replicationDetails.primaryClusterAddr;
+  primaryClusterAddr: computed('replicationDetails.{primaryClusterAddr}', function() {
+    return this.replicationDetails.primaryClusterAddr || 'Not defined';
   }),
   merkleRoot: computed('replicationDetails.{merkleRoot}', function() {
     return this.replicationDetails.merkleRoot || 'unknown';
