@@ -8,9 +8,9 @@ package queue
 import (
 	"container/heap"
 	"errors"
-	"sync"
-
+	sync2 "github.com/hashicorp/vault/sdk/helper/sync"
 	"github.com/mitchellh/copystructure"
+	"sync"
 )
 
 // ErrEmpty is returned for queues with no items
@@ -24,11 +24,17 @@ var ErrDuplicateItem = errors.New("duplicate item")
 // New initializes the internal data structures and returns a new
 // PriorityQueue
 func New() *PriorityQueue {
-	pq := PriorityQueue{
-		data:    make(queue, 0),
-		dataMap: make(map[string]*Item),
-	}
-	heap.Init(&pq.data)
+	pq := NewNoClone()
+	pq.cloneValues = true
+	return pq
+}
+
+// NewNoClone initializes a priority queue which does not make
+// a deep clone of its stored values
+func NewNoClone() *PriorityQueue {
+	var pq PriorityQueue
+	pq.notEmpty = sync2.NewTimeoutCond(&pq.lock)
+	pq.Clear()
 	return &pq
 }
 
@@ -51,6 +57,10 @@ type PriorityQueue struct {
 	// lock is a read/write mutex, and used to facilitate read/write locks on the
 	// data and dataMap fields
 	lock sync.RWMutex
+
+	// notEmpty is used to notify internally when items arrive in the queue
+	notEmpty    *sync2.TimeoutCond
+	cloneValues bool
 }
 
 // queue is the internal data structure used to satisfy heap.Interface. This
@@ -72,6 +82,10 @@ type Item struct {
 	// index is an internal value used by the heap package, and should not be
 	// modified by any consumer of the priority queue
 	index int
+}
+
+func (pq *PriorityQueue) NotEmptyChan() <-chan struct{} {
+	return pq.notEmpty.NotifyChan()
 }
 
 // Len returns the count of items in the Priority Queue
@@ -113,15 +127,20 @@ func (pq *PriorityQueue) Push(i *Item) error {
 	if _, ok := pq.dataMap[i.Key]; ok {
 		return ErrDuplicateItem
 	}
-	// Copy the item value(s) so that modifications to the source item does not
-	// affect the item on the queue
-	clone, err := copystructure.Copy(i)
-	if err != nil {
-		return err
+
+	if pq.cloneValues {
+		// Copy the item value(s) so that modifications to the source item does not
+		// affect the item on the queue
+		clone, err := copystructure.Copy(i)
+		if err != nil {
+			return err
+		}
+		i = clone.(*Item)
 	}
 
-	pq.dataMap[i.Key] = clone.(*Item)
-	heap.Push(&pq.data, clone)
+	pq.dataMap[i.Key] = i
+	heap.Push(&pq.data, i)
+	pq.notEmpty.Broadcast()
 	return nil
 }
 
@@ -148,6 +167,37 @@ func (pq *PriorityQueue) PopByKey(key string) (*Item, error) {
 	}
 
 	return nil, nil
+}
+
+// GetByKey searches the queue for an item with the given key and returns it
+// if found.  The queue is unmodified.
+func (pq *PriorityQueue) GetByKey(key string) *Item {
+	pq.lock.Lock()
+	defer pq.lock.Unlock()
+
+	return pq.dataMap[key]
+}
+
+// Pop is used by heap.Interface to peak at the lowest priority item on the heap.
+func (pq *PriorityQueue) Peek() *Item {
+	pq.lock.RLock()
+	defer pq.lock.RUnlock()
+
+	i := pq.data.peek()
+	if i != nil {
+		return i.(*Item)
+	}
+
+	return nil
+}
+
+func (pq *PriorityQueue) Clear() {
+	pq.lock.Lock()
+	defer pq.lock.Unlock()
+
+	pq.dataMap = make(map[string]*Item)
+	pq.data = make(queue, 0)
+	heap.Init(&pq.data)
 }
 
 // Len returns the number of items in the queue data structure. Do not use this
@@ -190,4 +240,11 @@ func (q *queue) Pop() interface{} {
 	item.index = -1 // for safety
 	*q = old[0 : n-1]
 	return item
+}
+
+func (q *queue) peek() interface{} {
+	if len(*q) > 0 {
+		return (*q)[0]
+	}
+	return nil
 }

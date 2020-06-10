@@ -5,7 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
+	"runtime"
+	"runtime/pprof"
 	"sort"
 	"strings"
 	"sync"
@@ -313,6 +316,7 @@ func BenchmarkExpiration_Restore_InMem(b *testing.B) {
 }
 
 func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, numLeases int) {
+	profile := false
 	c, _, _ := TestCoreUnsealedBackend(b, physicalBackend)
 	exp := c.expiration
 	noop := &NoopBackend{}
@@ -326,50 +330,89 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 		b.Fatal(err)
 	}
 
-	// Register fake leases
-	for i := 0; i < numLeases; i++ {
-		pathUUID, err := uuid.GenerateUUID()
-		if err != nil {
-			b.Fatal(err)
-		}
-
-		req := &logical.Request{
-			Operation:   logical.ReadOperation,
-			Path:        "prod/aws/" + pathUUID,
-			ClientToken: "root",
-		}
-		resp := &logical.Response{
-			Secret: &logical.Secret{
-				LeaseOptions: logical.LeaseOptions{
-					TTL: 400 * time.Second,
-				},
-			},
-			Data: map[string]interface{}{
-				"access_key": "xyz",
-				"secret_key": "abcd",
-			},
-		}
-		_, err = exp.Register(context.Background(), req, resp)
-		if err != nil {
-			b.Fatalf("err: %v", err)
-		}
+	if profile {
+		runtime.GC()
 	}
 
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		threads := 1
+		var wg sync.WaitGroup
+		wg.Add(threads)
+		for j := 0; j < threads; j++ {
+			go func() {
+
+				// Register fake leases
+				for i := 0; i < numLeases; i++ {
+					pathUUID, err := uuid.GenerateUUID()
+					if err != nil {
+						b.Fatal(err)
+					}
+
+					req := &logical.Request{
+						Operation:   logical.ReadOperation,
+						Path:        "prod/aws/" + pathUUID,
+						ClientToken: "root",
+					}
+					req.SetTokenEntry(&logical.TokenEntry{
+						Type: logical.TokenTypeService,
+						ID:   "test",
+					})
+
+					t := time.Duration(i*500) * time.Millisecond
+					resp := &logical.Response{
+						Secret: &logical.Secret{
+							LeaseOptions: logical.LeaseOptions{
+								TTL:       t,
+								IssueTime: time.Now(),
+								Renewable: true,
+								Increment: time.Second * 60,
+								MaxTTL:    5 * time.Minute,
+							},
+						},
+						Data: map[string]interface{}{
+							"access_key": "xyz",
+							"secret_key": "abcd",
+						},
+					}
+
+					ctx := namespace.RootContext(context.Background())
+					_, err = exp.Register(ctx, req, resp)
+					if err != nil {
+						b.Fatalf("err: %v", err)
+					}
+				}
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+	}
+
+	b.StopTimer()
+
+	if profile {
+		f, _ := os.Create("/tmp/memprof")
+		defer f.Close()
+		runtime.GC() // get up-to-date statistics
+		pprof.WriteHeapProfile(f)
+	}
+	time.Sleep(30 * time.Second)
 	// Stop everything
 	err = exp.Stop()
 	if err != nil {
 		b.Fatalf("err: %v", err)
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		err = exp.Restore(nil)
-		// Restore
-		if err != nil {
-			b.Fatalf("err: %v", err)
+	/*
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			err = exp.Restore(nil)
+			// Restore
+			if err != nil {
+				b.Fatalf("err: %v", err)
+			}
 		}
-	}
-	b.StopTimer()
+		b.StopTimer()*/
 }
 
 func TestExpiration_Restore(t *testing.T) {
