@@ -8,7 +8,8 @@ const ACTIONS = {
   },
   dr: {
     primary: ['disable', 'recover', 'reindex', 'demote'],
-    secondary: ['promote'],
+    // TODO: add disable, recover, reindex and update-primary when API is ready
+    secondary: ['promote', 'update-primary'],
     bootstrapping: ['disable', 'recover', 'reindex'],
   },
 };

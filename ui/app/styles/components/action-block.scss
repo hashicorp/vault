@@ -12,6 +12,7 @@
   display: grid;
   padding: $spacing-m $spacing-l;
   line-height: inherit;
+  grid-gap: $spacing-m;
 
   @include until($mobile) {
     @include stacked-grid();
@@ -20,7 +21,7 @@
 
 .action-block-info {
   @include until($mobile) {
-    @include stacked-grid();
+    @include stacked-content();
   }
 }
 
@@ -42,17 +43,25 @@
   }
 }
 
+/* Action Block Grid */
 .replication-actions-grid-layout {
   display: flex;
   flex-wrap: wrap;
+  margin: $spacing-m 0;
+  @include until($tablet) {
+    display: block;
+  }
 }
 
 .replication-actions-grid-item {
   flex-basis: 50%;
-  padding: 5px;
+  padding: $spacing-s;
 }
 
 .replication-actions-grid-item .action-block {
   height: 100%;
   width: 100%;
+  @include until($tablet) {
+    height: inherit;
+  }
 }

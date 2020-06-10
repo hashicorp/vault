@@ -22,6 +22,7 @@ import layout from '../templates/components/replication-header';
 
 export default Component.extend({
   layout,
+  data: null,
   classNames: ['replication-header'],
   isSecondary: null,
   secondaryId: null,
