@@ -1172,7 +1172,6 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	if !raftInitialized {
 		select {
 		case <-l.b.raftInitCh:
-			fmt.Println("============= raft got initialized, acquiring lock")
 		case <-stopCh:
 			return nil, nil
 		}
@@ -1200,8 +1199,6 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 			return nil, err
 		}
 
-		fmt.Println("=============== here 0")
-
 		return l.monitorLeadership(stopCh, leaderNotifyCh), nil
 	}
 	l.b.l.RUnlock()
@@ -1225,8 +1222,6 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 				if err != nil {
 					return nil, err
 				}
-
-				fmt.Println("=============== here 1")
 
 				return l.monitorLeadership(stopCh, leaderNotifyCh), nil
 			}

@@ -140,15 +140,12 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 	physBundle := teststorage.MakeInmemBackend(t, logger)
 	physBundle.HABackend = nil
 
-	// We don't use the cleanup from here and let the cleanup from the second
-	// constructor take care of this.
 	storage, cleanup := teststorage.MakeReusableStorage(t, logger, physBundle)
 	defer cleanup()
 
 	var (
 		clusterBarrierKeys [][]byte
 		clusterRootToken   string
-		// clusterCACertPEM   []byte
 	)
 	createCluster := func(t *testing.T) {
 		t.Log("simulating cluster creation without raft as HABackend")
@@ -210,9 +207,9 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 			vault.TestWaitActive(t, leaderCore.Core)
 		}
 
-		// // Set address provider
-		// cluster.Cores[1].UnderlyingHAStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		// cluster.Cores[2].UnderlyingHAStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		// Set address provider
+		cluster.Cores[1].UnderlyingHAStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		cluster.Cores[2].UnderlyingHAStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
 
 		// Now unseal core for join commands to work
 		testhelpers.EnsureCoresUnsealed(t, cluster)
@@ -232,8 +229,6 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 
 		joinFunc(cluster.Cores[1].Client)
 		joinFunc(cluster.Cores[2].Client)
-
-		println("===== token", leaderClient.Token())
 
 		// Ensure peers are added
 		verifyRaftPeers(t, leaderClient, map[string]bool{

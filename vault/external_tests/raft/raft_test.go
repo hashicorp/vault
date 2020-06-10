@@ -815,17 +815,35 @@ func BenchmarkRaft_SingleNode(b *testing.B) {
 func verifyRaftPeers(t *testing.T, client *api.Client, expected map[string]bool) {
 	t.Helper()
 
-	secret, err := client.Logical().Read("sys/storage/raft/configuration")
+	resp, err := client.Logical().Read("sys/storage/raft/configuration")
 	if err != nil {
 		t.Fatalf("error reading raft config: %v", err)
 	}
-	servers := secret.Data["config"].(map[string]interface{})["servers"].([]interface{})
 
+	if resp == nil || resp.Data == nil {
+		t.Fatal("missing response data")
+	}
+
+	config, ok := resp.Data["config"].(map[string]interface{})
+	if !ok {
+		t.Fatal("missing config in response data")
+	}
+
+	servers, ok := config["servers"].([]interface{})
+	if !ok {
+		t.Fatal("missing servers in response data config")
+	}
+
+	// Iterate through the servers and remove the node found in the response
+	// from the expected collection
 	for _, s := range servers {
 		server := s.(map[string]interface{})
 		delete(expected, server["node_id"].(string))
 	}
+
+	// If the collection is non-empty, it means that the peer was not found in
+	// the response.
 	if len(expected) != 0 {
-		t.Fatalf("failed to read configuration successfully")
+		t.Fatalf("failed to read configuration successfully, expected peers no found in configuration list: %v", expected)
 	}
 }

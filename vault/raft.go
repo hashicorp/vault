@@ -146,7 +146,6 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 	}
 
 	if !hasState {
-		fmt.Println("============== no state, returning from SetupCluster")
 		return nil
 	}
 
@@ -772,7 +771,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				}
 
 				if !retry {
-					fmt.Println("============ returned here 0")
 					return nil
 				}
 
@@ -796,7 +794,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			}
 
 			c.logger.Info("successfully joined the raft cluster", "leader_addr", leaderInfo.LeaderAPIAddr)
-			fmt.Println("============ returned here 1")
 			return nil
 		}
 
