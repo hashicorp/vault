@@ -14,7 +14,6 @@ CHANGES:
 
 IMPROVEMENTS:
 
-* secrets/transit: Transit requests that make use of keys now include a new field  `key_version` in their responses [[GH-9100](https://github.com/hashicorp/vault/pull/9100)]
 * core: Add the Go version used to build a Vault binary to the server message output. [[GH-9078](https://github.com/hashicorp/vault/pull/9078)]
 * core: Added Password Policies for user-configurable password generation [[GH-8637](https://github.com/hashicorp/vault/pull/8637)]
 * cli: Support reading TLS parameters from file for the `vault operator raft join` command. [[GH-9060](https://github.com/hashicorp/vault/pull/9060)]
@@ -26,6 +25,8 @@ IMPROVEMENTS:
 * secrets/database: Allow InfluxDB to use insecure TLS without cert bundle [[GH-8778](https://github.com/hashicorp/vault/pull/8778)]
 * secrets/gcp: Support BigQuery dataset ACLs in absence of IAM endpoints [[GH-78](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/78)]
 * secrets/pki: Allow 3072-bit RSA keys [[GH-8343](https://github.com/hashicorp/vault/pull/8343)]
+* secrets/transit: Transit requests that make use of keys now include a new field  `key_version` in their responses [[GH-8775](https://github.com/hashicorp/vault/pull/8775)]
+* secrets/transit: Improving transit batch encrypt and decrypt latencies [[GH-9100](https://github.com/hashicorp/vault/pull/9100)]
 * sentinel: Add a sentinel config section, and "additional_enabled_modules", a list of Sentinel modules that may be imported in addition to the defaults.
 * ui: Update TTL picker styling on SSH secret engine [[GH-8891](https://github.com/hashicorp/vault/pull/8891)]
 * ui: Only render the JWT input field of the Vault login form on mounts configured for JWT auth [[GH-8952](https://github.com/hashicorp/vault/pull/8952)]
