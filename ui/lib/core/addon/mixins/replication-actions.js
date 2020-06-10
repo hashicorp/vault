@@ -22,7 +22,11 @@ export default Mixin.create({
       data = Object.keys(data).reduce((newData, key) => {
         var val = data[key];
         if (isPresent(val)) {
-          newData[key] = val;
+          if (key === 'dr_operation_token_primary' || key === 'dr_operation_token_promote') {
+            newData['dr_operation_token'] = val;
+          } else {
+            newData[key] = val;
+          }
         }
         return newData;
       }, {});
