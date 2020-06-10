@@ -1839,7 +1839,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := enterprisePostUnseal(c); err != nil {
 		return err
 	}
-	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRPrimary | consts.ReplicationDRSecondary) {
+	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
 		// Only perf primarys should write feature flags, but we do it by
 		// excluding other states so that we don't have to change it when
 		// a non-replicated cluster becomes a primary.
@@ -2381,15 +2381,18 @@ type FeatureFlags struct {
 }
 
 func (c *Core) persistFeatureFlags(ctx context.Context) error {
-	c.logger.Debug("persisting feature flags")
-	json, err := jsonutil.EncodeJSON(&FeatureFlags{NamespacesCubbyholesLocal: !c.PR1103disabled})
-	if err != nil {
-		return err
+	if !c.PR1103disabled {
+		c.logger.Debug("persisting feature flags")
+		json, err := jsonutil.EncodeJSON(&FeatureFlags{NamespacesCubbyholesLocal: !c.PR1103disabled})
+		if err != nil {
+			return err
+		}
+		return c.barrier.Put(ctx, &logical.StorageEntry{
+			Key:   consts.CoreFeatureFlagPath,
+			Value: json,
+		})
 	}
-	return c.barrier.Put(ctx, &logical.StorageEntry{
-		Key:   consts.CoreFeatureFlagPath,
-		Value: json,
-	})
+	return nil
 }
 
 func (c *Core) readFeatureFlags(ctx context.Context) (*FeatureFlags, error) {
