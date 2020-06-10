@@ -20,7 +20,7 @@ const disableReplication = async (type, assert) => {
     await click('[data-test-disable-replication] button');
 
     const typeDisplay = type === 'dr' ? 'Disaster Recovery' : 'Performance';
-    await fillIn('[data-test-confirmation-modal-input]', typeDisplay);
+    await fillIn('[data-test-confirmation-modal-input="disable"]', typeDisplay);
     await click('[data-test-confirm-button]');
     if (assert) {
       assert.equal(currentURL(), `/vault/replication`, 'redirects to the replication page');
@@ -194,7 +194,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-replication-enable]');
     await pollCluster(this.owner);
     await visit('/vault/replication/dr/manage');
-
+    await click('[data-test-demote-replication] [data-test-replication-action-trigger]');
     assert.ok(findAll('[data-test-demote-warning]').length, 'displays the demotion warning');
   });
 
@@ -306,11 +306,13 @@ module('Acceptance | Enterprise | replication', function(hooks) {
 
     // demote perf primary to a secondary
     await click('[data-test-replication-link="manage"]');
-    const demote = document.querySelector('[data-test-replication-demote]').firstElementChild;
-    await click(demote);
-    await click('[data-test-confirm-button="true"]');
+    // open demote modal
+    await click('[data-test-demote-replication] [data-test-replication-action-trigger]');
+    // enter confirmation text
+    await fillIn('[data-test-confirmation-modal-input="demote"]', 'Performance');
+    // Click confirm button
+    await click('[data-test-confirm-button="demote"]');
     await click('[data-test-replication-link="details"]');
-
     assert.dom('[data-test-replication-dashboard]').exists();
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
     assert.ok(

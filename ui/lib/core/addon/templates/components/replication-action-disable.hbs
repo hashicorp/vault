@@ -34,6 +34,7 @@
       model.replicationAttrs.modeForUrl
     )
   }}
+  @testSelector="disable"
 >
   <p class="has-bottom-margin-m">
     {{#if (and model.replicationAttrs.isPrimary (eq replicationDisplayMode "DR"))}}This cannot be undone. {{/if}}

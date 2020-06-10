@@ -80,8 +80,8 @@ module('Integration | Component | replication actions', function(hooks) {
     ['performance', 'primary', 'reindex', 'Reindex', null, ['reindex'], false],
     ['performance', 'secondary', 'reindex', 'Reindex', null, ['reindex'], false],
 
-    // ['dr', 'primary', 'demote', 'Demote cluster', null, ['demote', 'primary'], true],
-    // ['performance', 'primary', 'demote', 'Demote cluster', null, ['demote', 'primary'], true],
+    ['dr', 'primary', 'demote', 'Demote cluster', null, ['demote', 'primary'], false],
+    ['performance', 'primary', 'demote', 'Demote cluster', null, ['demote', 'primary'], false],
 
     // we don't do dr secondary promote in this component so just test perf
     // re-enable this test when the DR secondary disable API endpoint is fixed

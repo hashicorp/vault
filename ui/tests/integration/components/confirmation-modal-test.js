@@ -18,6 +18,7 @@ module('Integration | Component | confirmation-modal', function(hooks) {
         @onConfirm={this.onConfirm}
         @buttonText="Plz Continue"
         @confirmText="Destructive Thing"
+        @testSelector="demote"
       />
     `);
 
@@ -28,7 +29,7 @@ module('Integration | Component | confirmation-modal', function(hooks) {
       'Confirm button has specified value'
     );
 
-    await fillIn('[data-test-confirmation-modal-input="confirmationInput"]', 'Destructive Thing');
-    assert.dom('[data-test-confirm-button]').isNotDisabled();
+    await fillIn('[data-test-confirmation-modal-input="demote"]', 'Destructive Thing');
+    assert.dom('[data-test-confirm-button="demote"]').isNotDisabled();
   });
 });
