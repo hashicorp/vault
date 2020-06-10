@@ -44,7 +44,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 )
 
-var _ stepwise.StepDriver = &DockerCluster{}
+var _ stepwise.StepwiseEnvironment = &DockerCluster{}
 
 // DockerCluster is used to managing the lifecycle of the test Vault cluster
 type DockerCluster struct {
@@ -53,9 +53,9 @@ type DockerCluster struct {
 	// ClusterName is a UUID name of the cluster. Docker ID?
 	CluterName string
 
-	// DriverOptions are a set of options from the Stepwise test using this
+	// EnvOptions are a set of options from the Stepwise test using this
 	// cluster
-	DriverOptions stepwise.DriverOptions
+	EnvOptions stepwise.EnvironmentOptions
 
 	RaftStorage        bool
 	ClientAuthRequired bool
@@ -118,12 +118,12 @@ func (dc *DockerCluster) MountPath() string {
 		panic(err)
 	}
 	prefix := dc.PluginName
-	if dc.DriverOptions.MountPathPrefix != "" {
-		prefix = dc.DriverOptions.MountPathPrefix
+	if dc.EnvOptions.MountPathPrefix != "" {
+		prefix = dc.EnvOptions.MountPathPrefix
 	}
 
 	dc.mountPath = fmt.Sprintf("%s_%s", prefix, uuidStr)
-	if dc.DriverOptions.PluginType == stepwise.PluginTypeCredential {
+	if dc.EnvOptions.PluginType == stepwise.PluginTypeCredential {
 		dc.mountPath = fmt.Sprintf("%s/%s", "auth", dc.mountPath)
 	}
 
@@ -908,7 +908,7 @@ func createNetwork(cli *docker.Client, netName, cidr string) (string, error) {
 }
 
 // NewDockerDriver creats a new Stepwise Driver for executing tests
-func NewDockerDriver(name string, do *stepwise.DriverOptions) *DockerCluster {
+func NewDockerDriver(name string, do *stepwise.EnvironmentOptions) *DockerCluster {
 	// TODO name here should be name of the test?
 	clusterUUID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -917,22 +917,22 @@ func NewDockerDriver(name string, do *stepwise.DriverOptions) *DockerCluster {
 
 	if do == nil {
 		// set empty values
-		do = &stepwise.DriverOptions{}
+		do = &stepwise.EnvironmentOptions{}
 	}
 	return &DockerCluster{
-		PluginName:    do.PluginName,
-		ClusterName:   fmt.Sprintf("test-%s-%s", name, clusterUUID),
-		RaftStorage:   true,
-		DriverOptions: *do,
+		PluginName:  do.PluginName,
+		ClusterName: fmt.Sprintf("test-%s-%s", name, clusterUUID),
+		RaftStorage: true,
+		EnvOptions:  *do,
 	}
 }
 
 // Setup creates any temp dir and compiles the binary for copying to Docker
 func (dc *DockerCluster) Setup() error {
 	// TODO many not use name here
-	name := dc.DriverOptions.Name
+	name := dc.EnvOptions.Name
 	// TODO make PluginName give random name with prefix if given
-	pluginName := dc.DriverOptions.PluginName
+	pluginName := dc.EnvOptions.PluginName
 	// get the working directory of the plugin being tested.
 	srcDir, err := os.Getwd()
 	if err != nil {
@@ -965,7 +965,7 @@ func (dc *DockerCluster) Setup() error {
 	// use client to mount plugin
 	err = client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 		Name:    name,
-		Type:    consts.PluginType(dc.DriverOptions.PluginType),
+		Type:    consts.PluginType(dc.EnvOptions.PluginType),
 		Command: binName,
 		SHA256:  sha256value,
 	})
@@ -973,7 +973,7 @@ func (dc *DockerCluster) Setup() error {
 		return err
 	}
 
-	switch dc.DriverOptions.PluginType {
+	switch dc.EnvOptions.PluginType {
 	case stepwise.PluginTypeCredential:
 		// the mount path includes "auth/" for credential type plugins. For enabling
 		// auth mounts via the /sys endpoint, we need to remove that prefix
@@ -989,7 +989,7 @@ func (dc *DockerCluster) Setup() error {
 			Type: name,
 		})
 	default:
-		return fmt.Errorf("unknown plugin type: %s", dc.DriverOptions.PluginType.String())
+		return fmt.Errorf("unknown plugin type: %s", dc.EnvOptions.PluginType.String())
 	}
 	return err
 }

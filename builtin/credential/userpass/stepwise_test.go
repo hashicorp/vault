@@ -10,19 +10,19 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
-	dockerDriver "github.com/hashicorp/vault/sdk/testing/stepwise/drivers/docker"
+	dockerDriver "github.com/hashicorp/vault/sdk/testing/stepwise/environments/docker"
 )
 
 func TestAccBackend_stepwise_UserCrud(t *testing.T) {
 	customPluginName := "my-userpass"
-	driverOptions := &stepwise.DriverOptions{
+	envOptions := &stepwise.EnvironmentOptions{
 		Name:            customPluginName,
 		PluginType:      stepwise.PluginTypeCredential,
 		PluginName:      "userpass",
 		MountPathPrefix: customPluginName,
 	}
 	stepwise.Run(t, stepwise.Case{
-		Driver: dockerDriver.NewDockerDriver(customPluginName, driverOptions),
+		Driver: dockerDriver.NewDockerDriver(customPluginName, envOptions),
 		Steps: []stepwise.Step{
 			testAccStepwiseUser(t, "web", "password", "foo"),
 			testAccStepwiseReadUser(t, "web", "foo"),

@@ -9,12 +9,12 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
-	dockerDriver "github.com/hashicorp/vault/sdk/testing/stepwise/drivers/docker"
+	dockerDriver "github.com/hashicorp/vault/sdk/testing/stepwise/environments/docker"
 )
 
 func TestAccBackend_Stepwise_basic(t *testing.T) {
 	t.Parallel()
-	driverOptions := &stepwise.DriverOptions{
+	envOptions := &stepwise.EnvironmentOptions{
 		Name:            "aws-sec",
 		PluginType:      stepwise.PluginTypeSecrets,
 		PluginName:      "aws",
@@ -23,7 +23,7 @@ func TestAccBackend_Stepwise_basic(t *testing.T) {
 	roleName := "vault-stepwise-role"
 	stepwise.Run(t, stepwise.Case{
 		PreCheck: func() { testAccStepwisePreCheck(t) },
-		Driver:   dockerDriver.NewDockerDriver("aws", driverOptions),
+		Driver:   dockerDriver.NewDockerDriver("aws", envOptions),
 		Steps: []stepwise.Step{
 			testAccStepwiseConfig(t),
 			testAccStepwiseWritePolicy(t, roleName, testDynamoPolicy),
