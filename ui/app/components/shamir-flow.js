@@ -26,6 +26,7 @@ export default Component.extend(DEFAULTS, {
   buttonText: 'Submit',
   thresholdPath: 'required',
   generateAction: false,
+  paddingless: false,
 
   init() {
     this._super(...arguments);
