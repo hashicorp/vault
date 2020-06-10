@@ -4,7 +4,7 @@
       Disable Replication
     </h4>
     <p>
-      Disable {{replicationDisplayMode}} Replication entirely on the cluster.
+      Disable {{model.replicationModeForDisplay}} Replication entirely on the cluster.
     </p>
   </div>
 
@@ -23,8 +23,8 @@
   @title="Disable Replication?"
   @onClose={{action (mut isModalActive) false}}
   @isActive={{isModalActive}}
-  @confirmText={{if (eq replicationDisplayMode "DR") "Disaster Recovery" replicationDisplayMode}}
-  @toConfirmMsg="disabling {{replicationDisplayMode}} Replication on this cluster"
+  @confirmText={{model.replicationModeForDisplay}}
+  @toConfirmMsg="disabling {{model.replicationModeForDisplay}} Replication on this cluster"
   @onConfirm={{action
     "onSubmit"
     "disable"
@@ -37,8 +37,8 @@
   @testSelector="disable"
 >
   <p class="has-bottom-margin-m">
-    {{#if (and model.replicationAttrs.isPrimary (eq replicationDisplayMode "DR"))}}This cannot be undone. {{/if}}
-    Disabling {{replicationDisplayMode}} Replication entirely on this {{if (eq model.replicationAttrs.isPrimary true) "primary" "secondary"}} cluster means that:
+    {{#if (and model.replicationAttrs.isPrimary (eq model.replicationModeForDisplay "Disaster Recovery"))}}This cannot be undone. {{/if}}
+    Disabling {{model.replicationModeForDisplay}} Replication entirely on this {{if (eq model.replicationAttrs.isPrimary true) "primary" "secondary"}} cluster means that:
   </p>
   <ul class="bullet">
     {{#if model.replicationAttrs.isPrimary}}
