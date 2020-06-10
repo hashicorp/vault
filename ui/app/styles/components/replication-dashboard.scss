@@ -102,6 +102,11 @@
       .grid-item-third-row {
         grid-column: 1 / span 2;
         grid-row: 3/4;
+
+        .empty-state {
+          padding: 0px 12px;
+          box-shadow: none;
+        }
       }
       .grid-item-bottom-row {
         grid-column: 1 / span 2;
