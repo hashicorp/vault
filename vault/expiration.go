@@ -54,8 +54,9 @@ const (
 )
 
 type pendingInfo struct {
-	exportLeaseTimes *leaseEntry
-	timer            *time.Timer
+	// A subset of the lease entry, cached in memory
+	cachedLeaseInfo *leaseEntry
+	timer           *time.Timer
 }
 
 // ExpirationManager is used by the Core to manage leases. Secrets
@@ -74,7 +75,10 @@ type ExpirationManager struct {
 	// pendingLock should be held to ensure lease modifications
 	// are atomic (with respect to storage, expiration time,
 	// and particularly the lease count.)
+	// The nonexpiring map holds entries for root tokens with
+	// TTL zero, which we want to count but have no timer associated.
 	pending     sync.Map
+	nonexpiring sync.Map
 	leaseCount  int
 	pendingLock sync.RWMutex
 
@@ -147,15 +151,16 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 // using a given view, and uses the provided router for revocation.
 func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger) *ExpirationManager {
 	exp := &ExpirationManager{
-		core:       c,
-		router:     c.router,
-		idView:     view.SubView(leaseViewPrefix),
-		tokenView:  view.SubView(tokenViewPrefix),
-		tokenStore: c.tokenStore,
-		logger:     logger,
-		pending:    sync.Map{},
-		leaseCount: 0,
-		tidyLock:   new(int32),
+		core:        c,
+		router:      c.router,
+		idView:      view.SubView(leaseViewPrefix),
+		tokenView:   view.SubView(tokenViewPrefix),
+		tokenStore:  c.tokenStore,
+		logger:      logger,
+		pending:     sync.Map{},
+		nonexpiring: sync.Map{},
+		leaseCount:  0,
+		tidyLock:    new(int32),
 
 		// new instances of the expiration manager will go immediately into
 		// restore mode
@@ -252,6 +257,10 @@ func (m *ExpirationManager) invalidate(key string) {
 			m.pending.Delete(leaseID)
 			m.leaseCount--
 		}
+
+		// If in the nonexpiring map, remove there.
+		m.nonexpiring.Delete(leaseID)
+
 		m.pendingLock.Unlock()
 	}
 }
@@ -569,6 +578,10 @@ func (m *ExpirationManager) Stop() error {
 		m.leaseCount--
 		return true
 	})
+	m.nonexpiring.Range(func(key, value interface{}) bool {
+		m.nonexpiring.Delete(key)
+		return true
+	})
 	m.pendingLock.Unlock()
 
 	if m.inRestoreMode() {
@@ -663,7 +676,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 		}
 	}
 
-	// Clear the expiration handler
+	// Clear the expiration handler (or remove from the list of non-expiring tokens.
 	m.pendingLock.Lock()
 	if info, ok := m.pending.Load(leaseID); ok {
 		pending := info.(pendingInfo)
@@ -671,6 +684,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 		m.pending.Delete(leaseID)
 		m.leaseCount--
 	}
+	m.nonexpiring.Delete(leaseID)
 	m.pendingLock.Unlock()
 
 	if m.logger.IsInfo() && !skipToken && m.logLeaseExpirations {
@@ -1281,8 +1295,8 @@ func (m *ExpirationManager) FetchLeaseTimes(ctx context.Context, leaseID string)
 	defer metrics.MeasureSince([]string{"expire", "fetch-lease-times"}, time.Now())
 
 	info, ok := m.pending.Load(leaseID)
-	if ok && info.(pendingInfo).exportLeaseTimes != nil {
-		return info.(pendingInfo).exportLeaseTimes, nil
+	if ok && info.(pendingInfo).cachedLeaseInfo != nil {
+		return m.leaseTimesForExport(info.(pendingInfo).cachedLeaseInfo), nil
 	}
 
 	// Load the entry
@@ -1318,6 +1332,22 @@ func (m *ExpirationManager) leaseTimesForExport(le *leaseEntry) *leaseEntry {
 	return ret
 }
 
+// Restricts lease entry stored in pendingInfo to a low-cost subset of the
+// information.
+func (m *ExpirationManager) inMemoryLeaseInfo(le *leaseEntry) *leaseEntry {
+	ret := m.leaseTimesForExport(le)
+	// Need to index:
+	//   namespace -- derived from lease ID
+	//   policies -- stored in Auth object
+	//   auth method -- derived from lease.Path
+	if le.Auth != nil {
+		// TODO: make unique so all copies share a single array
+		ret.Auth.Policies = le.Auth.Policies
+		ret.Path = le.Path
+	}
+	return ret
+}
+
 // updatePending is used to update a pending invocation for a lease
 func (m *ExpirationManager) updatePending(le *leaseEntry, leaseTotal time.Duration) {
 	m.pendingLock.Lock()
@@ -1334,8 +1364,16 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal tim
 	// Check for an existing timer
 	info, ok := m.pending.Load(le.LeaseID)
 
-	// If there is no expiry time, don't do anything
 	if le.ExpireTime.IsZero() {
+		if le.nonexpiringToken() {
+			// Store this in the nonexpiring map instead of pending.
+			// There does not appear to be any cases where a token that had
+			// a nonzero can be can be assigned a zero TTL, but we can handle that
+			// anyway by falling through to the next check.
+			pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
+			m.nonexpiring.Store(le.LeaseID, pending)
+		}
+
 		// if the timer happened to exist, stop the time and delete it from the
 		// pending timers.
 		if ok {
@@ -1352,6 +1390,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal tim
 		pending.timer.Reset(leaseTotal)
 		// No change to lease count in this case
 	} else {
+		// Extend the timer by the lease total
 		timer := time.AfterFunc(leaseTotal, func() {
 			m.expireFunc(m.quitContext, m, le)
 		})
@@ -1362,8 +1401,8 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal tim
 		m.leaseCount++
 	}
 
-	// Extend the timer by the lease total
-	pending.exportLeaseTimes = m.leaseTimesForExport(le)
+	// Retain some information in-memory
+	pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
 
 	m.pending.Store(le.LeaseID, pending)
 }
@@ -1817,6 +1856,31 @@ func (m *ExpirationManager) emitMetrics() {
 	}
 }
 
+// Callback function type to walk tokens referenced in the expiration
+// manager. Don't want to use leaseEntry here because it's an unexported
+// type (though most likely we would only call this from within the "vault" core package.)
+type ExpirationWalkFunction = func(leaseID string, auth *logical.Auth, path string) bool
+
+// WalkTokens extracts the Auth structure from leases corresponding to tokens.
+// Returning false from the walk function terminates the iteration.
+// TODO: signal if reload hasn't finished yet?
+func (m *ExpirationManager) WalkTokens(walkFn ExpirationWalkFunction) {
+	callback := func(key, value interface{}) bool {
+		p := value.(pendingInfo)
+		if p.cachedLeaseInfo == nil {
+			return true
+		}
+		lease := p.cachedLeaseInfo
+		if lease.Auth != nil {
+			return walkFn(key.(string), lease.Auth, lease.Path)
+		}
+		return true
+	}
+
+	m.pending.Range(callback)
+	m.nonexpiring.Range(callback)
+}
+
 // leaseEntry is used to structure the values the expiration
 // manager stores. This is used to handle renew and revocation.
 type leaseEntry struct {
@@ -1873,6 +1937,13 @@ func (le *leaseEntry) renewable() (bool, error) {
 
 func (le *leaseEntry) ttl() int64 {
 	return int64(le.ExpireTime.Sub(time.Now().Round(time.Second)).Seconds())
+}
+
+func (le *leaseEntry) nonexpiringToken() bool {
+	if le.Auth == nil {
+		return false
+	}
+	return !le.Auth.LeaseEnabled()
 }
 
 // decodeLeaseEntry is used to reverse encode and return a new entry
