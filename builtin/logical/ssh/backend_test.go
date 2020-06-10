@@ -139,7 +139,7 @@ func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), str
 		ExposedPorts: []string{"2222/tcp"},
 	})
 	if err != nil {
-		t.Fatalf("Could not start local MySQL docker container: %s", err)
+		t.Fatalf("Could not start local ssh docker container: %s", err)
 	}
 
 	cleanup := func() {
