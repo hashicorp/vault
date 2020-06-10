@@ -90,7 +90,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 		cluster.UnsealCore(t, core)
 	}
 
-	checkConfigFunc(t, cluster.Cores[0].Client, map[string]bool{
+	verifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 		"core-2": true,
@@ -171,7 +171,7 @@ func TestRaft_RemovePeer(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 
-	checkConfigFunc(t, client, map[string]bool{
+	verifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 		"core-2": true,
@@ -184,7 +184,7 @@ func TestRaft_RemovePeer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	checkConfigFunc(t, client, map[string]bool{
+	verifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 	})
@@ -196,7 +196,7 @@ func TestRaft_RemovePeer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	checkConfigFunc(t, client, map[string]bool{
+	verifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
 	})
 }
@@ -812,7 +812,7 @@ func BenchmarkRaft_SingleNode(b *testing.B) {
 	b.Run("256b", func(b *testing.B) { bench(b, 25) })
 }
 
-func checkConfigFunc(t *testing.T, client *api.Client, expected map[string]bool) {
+func verifyRaftPeers(t *testing.T, client *api.Client, expected map[string]bool) {
 	t.Helper()
 
 	secret, err := client.Logical().Read("sys/storage/raft/configuration")

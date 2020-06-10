@@ -4,12 +4,13 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -63,7 +64,6 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
 
 	leaderCore := cluster.Cores[0]
-	// leaderAPI := leaderCore.Client.Address()
 	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
 
 	// Seal the leader so we can install an address provider
@@ -79,7 +79,6 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 
 	joinFunc := func(client *api.Client, addClientCerts bool) {
 		req := &api.RaftJoinRequest{
-			// LeaderAPIAddr: leaderAPI,
 			LeaderCACert: string(cluster.CACertPEM),
 		}
 		if addClientCerts {
@@ -100,7 +99,7 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 
 	// Ensure peers are added
 	leaderClient := cluster.Cores[0].Client
-	checkConfigFunc(t, leaderClient, map[string]bool{
+	verifyRaftPeers(t, leaderClient, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 		"core-2": true,
@@ -122,11 +121,127 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 	}
 
 	// Ensure peers are removed
-	checkConfigFunc(t, leaderClient, map[string]bool{
+	verifyRaftPeers(t, leaderClient, map[string]bool{
 		"core-0": true,
 	})
 }
 
 func TestRaft_HA_ExistingCluster(t *testing.T) {
-	t.Skipf("not implemented")
+	conf := vault.CoreConfig{
+		DisablePerformanceStandby: true,
+	}
+	opts := vault.TestClusterOptions{
+		HandlerFunc:        vaulthttp.Handler,
+		NumCores:           vault.DefaultNumCores,
+		KeepStandbysSealed: true,
+	}
+	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
+
+	physBundle := teststorage.MakeInmemBackend(t, logger)
+	physBundle.HABackend = nil
+
+	// We don't use the cleanup from here and let the cleanup from the second
+	// constructor take care of this.
+	storage, cleanup := teststorage.MakeReusableStorage(t, logger, physBundle)
+	defer cleanup()
+
+	var (
+		clusterBarrierKeys [][]byte
+		clusterRootToken   string
+		// clusterCACertPEM   []byte
+	)
+	createCluster := func(t *testing.T) {
+		t.Log("simulating cluster creation without raft as HABackend")
+
+		storage.Setup(&conf, &opts)
+
+		cluster := vault.NewTestCluster(t, &conf, &opts)
+		cluster.Start()
+		defer func() {
+			cluster.Cleanup()
+			storage.Cleanup(t, cluster)
+		}()
+
+		clusterBarrierKeys = cluster.BarrierKeys
+		clusterRootToken = cluster.RootToken
+	}
+
+	createCluster(t)
+
+	haStorage, haCleanup := teststorage.MakeReusableRaftHAStorage(t, logger, opts.NumCores, physBundle)
+	defer haCleanup()
+
+	updateCLuster := func(t *testing.T) {
+		t.Log("simulating cluster update with raft as HABackend")
+
+		opts.SkipInit = true
+		haStorage.Setup(&conf, &opts)
+
+		cluster := vault.NewTestCluster(t, &conf, &opts)
+		cluster.Start()
+		defer func() {
+			cluster.Cleanup()
+			haStorage.Cleanup(t, cluster)
+		}()
+
+		// Set cluster values
+		cluster.BarrierKeys = clusterBarrierKeys
+		cluster.RootToken = clusterRootToken
+
+		addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
+		atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
+
+		// Seal the leader so we can install an address provider
+		leaderCore := cluster.Cores[0]
+		{
+			testhelpers.EnsureCoreSealed(t, leaderCore)
+			leaderCore.UnderlyingHAStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+			testhelpers.EnsureCoreUnsealed(t, cluster, leaderCore)
+		}
+
+		// Call the bootstrap on the leader and then ensure that it becomes active
+		leaderClient := cluster.Cores[0].Client
+		leaderClient.SetToken(clusterRootToken)
+		{
+			_, err := leaderClient.Logical().Write("sys/storage/raft/bootstrap", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			vault.TestWaitActive(t, leaderCore.Core)
+		}
+
+		// // Set address provider
+		// cluster.Cores[1].UnderlyingHAStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		// cluster.Cores[2].UnderlyingHAStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+
+		// Now unseal core for join commands to work
+		testhelpers.EnsureCoresUnsealed(t, cluster)
+
+		joinFunc := func(client *api.Client) {
+			req := &api.RaftJoinRequest{
+				LeaderCACert: string(cluster.CACertPEM),
+			}
+			resp, err := client.Sys().RaftJoin(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !resp.Joined {
+				t.Fatalf("failed to join raft cluster")
+			}
+		}
+
+		joinFunc(cluster.Cores[1].Client)
+		joinFunc(cluster.Cores[2].Client)
+
+		println("===== token", leaderClient.Token())
+
+		// Ensure peers are added
+		verifyRaftPeers(t, leaderClient, map[string]bool{
+			"core-0": true,
+			"core-1": true,
+			"core-2": true,
+		})
+	}
+
+	updateCLuster(t)
 }

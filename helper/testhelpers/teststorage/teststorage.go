@@ -136,8 +136,8 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.Physi
 func RaftHAFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
 	return func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
 		// Call the factory func to create the storage backend
-		bundler := SharedPhysicalFactory(f)
-		bundle := bundler(t, coreIdx, logger)
+		physFactory := SharedPhysicalFactory(f)
+		bundle := physFactory(t, coreIdx, logger)
 
 		// This can happen if a shared physical backend is called on a non-0th core.
 		if bundle == nil {
@@ -217,8 +217,8 @@ func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 
 func RaftHASetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, bundler PhysicalBackendBundler) {
 	conf.DisablePerformanceStandby = true
-	opts.PhysicalFactory = RaftHAFactory(bundler)
 	opts.KeepStandbysSealed = true
+	opts.PhysicalFactory = RaftHAFactory(bundler)
 }
 
 func ClusterSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, setup ClusterSetupMutator) (*vault.CoreConfig, *vault.TestClusterOptions) {

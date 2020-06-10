@@ -940,7 +940,10 @@ func CleanupClusters(clusters []*TestCluster) {
 func (c *TestCluster) Cleanup() {
 	c.Logger.Info("cleaning up vault cluster")
 	for _, core := range c.Cores {
-		core.CoreConfig.Logger.SetLevel(log.Error)
+		// Upgrade logger to emit errors if not doing so already
+		if !core.CoreConfig.Logger.IsError() {
+			core.CoreConfig.Logger.SetLevel(log.Error)
+		}
 	}
 
 	// Close listeners
