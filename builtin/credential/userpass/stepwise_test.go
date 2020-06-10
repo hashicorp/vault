@@ -10,7 +10,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
-	dockerDriver "github.com/hashicorp/vault/sdk/testing/stepwise/environments/docker"
+	dockerEnvironment "github.com/hashicorp/vault/sdk/testing/stepwise/environments/docker"
 )
 
 func TestAccBackend_stepwise_UserCrud(t *testing.T) {
@@ -22,7 +22,7 @@ func TestAccBackend_stepwise_UserCrud(t *testing.T) {
 		MountPathPrefix: customPluginName,
 	}
 	stepwise.Run(t, stepwise.Case{
-		Driver: dockerDriver.NewDockerDriver(customPluginName, envOptions),
+		Environment: dockerEnvironment.NewDockerEnvironment(customPluginName, envOptions),
 		Steps: []stepwise.Step{
 			testAccStepwiseUser(t, "web", "password", "foo"),
 			testAccStepwiseReadUser(t, "web", "foo"),

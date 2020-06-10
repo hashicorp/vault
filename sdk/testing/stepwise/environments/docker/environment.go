@@ -93,8 +93,8 @@ func (rc *DockerCluster) Teardown() error {
 // mount, auth, and namespace parts as needed. This enables drivers to create
 // random/unique mount and namespace paths while allowing tests to be written
 // with relative paths.
-// TODO should this be in stepwise and not per-driver? Maybe have Drivers give
-// mount, namespace returns and have stepwise do this so people aren't
+// TODO should this be in stepwise and not per-driver? Maybe have Environments
+// give mount, namespace returns and have stepwise do this so people aren't
 // re-inventing this
 func (dc *DockerCluster) ExpandPath(path string) string {
 	// TODO mount point
@@ -907,8 +907,8 @@ func createNetwork(cli *docker.Client, netName, cidr string) (string, error) {
 	return resp.ID, nil
 }
 
-// NewDockerDriver creats a new Stepwise Driver for executing tests
-func NewDockerDriver(name string, do *stepwise.EnvironmentOptions) *DockerCluster {
+// NewDockerEnvironment creats a new Stepwise Environment for executing tests
+func NewDockerEnvironment(name string, do *stepwise.EnvironmentOptions) *DockerCluster {
 	// TODO name here should be name of the test?
 	clusterUUID, err := uuid.GenerateUUID()
 	if err != nil {

@@ -11,10 +11,10 @@ import (
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
 	"github.com/mitchellh/mapstructure"
 
-	dockerDriver "github.com/hashicorp/vault/sdk/testing/stepwise/environments/docker"
+	dockerEnvironment "github.com/hashicorp/vault/sdk/testing/stepwise/environments/docker"
 )
 
-// TestBackend_basic_docker is an example test using the Docker Driver
+// TestBackend_basic_docker is an example test using the Docker Environment
 func TestBackend_basic_docker(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	envOptions := stepwise.EnvironmentOptions{
@@ -24,7 +24,7 @@ func TestBackend_basic_docker(t *testing.T) {
 		MountPathPrefix: "transit_temp",
 	}
 	stepwise.Run(t, stepwise.Case{
-		Driver: dockerDriver.NewDockerDriver("transit", &envOptions),
+		Environment: dockerEnvironment.NewDockerEnvironment("transit", &envOptions),
 		Steps: []stepwise.Step{
 			testAccStepwiseListPolicy(t, "test", true),
 			testAccStepwiseWritePolicy(t, "test", true),
