@@ -2132,3 +2132,32 @@ func TestExpiration_WalkTokens(t *testing.T) {
 	}
 
 }
+
+func TestExpiration_CachedPolicyIsShared(t *testing.T) {
+	exp := mockExpiration(t)
+
+	tokenEntries := []*logical.TokenEntry{
+		sampleToken(t, exp, "auth/userpass/login", true, "policy23457"),
+		sampleToken(t, exp, "auth/github/login", true, strings.Join([]string{"policy", "23457"}, "")),
+		sampleToken(t, exp, "auth/token/create", true, "policy23457"),
+	}
+
+	var policies [][]string
+
+	exp.WalkTokens(func(leaseId string, auth *logical.Auth, path string) bool {
+		policies = append(policies, auth.Policies)
+		return true
+	})
+	if len(policies) != len(tokenEntries) {
+		t.Fatalf("Mismatched number of tokens: %v", len(policies))
+	}
+	ptrs := make([]*string, len(policies))
+	for i := range ptrs {
+		ptrs[i] = &((policies[0])[0])
+	}
+	for i := 1; i < len(ptrs); i++ {
+		if ptrs[i-1] != ptrs[i] {
+			t.Errorf("Mismatched pointers: %v and %v", ptrs[i-1], ptrs[i])
+		}
+	}
+}

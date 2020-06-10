@@ -82,6 +82,12 @@ type ExpirationManager struct {
 	leaseCount  int
 	pendingLock sync.RWMutex
 
+	// The uniquePolicies map holds policy sets, so they can
+	// be deduplicated. It is periodically emptied to prevent
+	// unbounded growth.
+	uniquePolicies      map[string][]string
+	emptyUniquePolicies *time.Ticker
+
 	tidyLock *int32
 
 	restoreMode        *int32
@@ -162,6 +168,9 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		leaseCount:  0,
 		tidyLock:    new(int32),
 
+		uniquePolicies:      make(map[string][]string),
+		emptyUniquePolicies: time.NewTicker(7 * 24 * time.Hour),
+
 		// new instances of the expiration manager will go immediately into
 		// restore mode
 		restoreMode:  new(int32),
@@ -181,6 +190,8 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		opts := log.LoggerOptions{Name: "expiration_manager"}
 		exp.logger = log.New(&opts)
 	}
+
+	go exp.uniquePoliciesGc()
 
 	return exp
 }
@@ -582,6 +593,7 @@ func (m *ExpirationManager) Stop() error {
 		m.nonexpiring.Delete(key)
 		return true
 	})
+	m.uniquePolicies = make(map[string][]string)
 	m.pendingLock.Unlock()
 
 	if m.inRestoreMode() {
@@ -592,6 +604,8 @@ func (m *ExpirationManager) Stop() error {
 			time.Sleep(10 * time.Millisecond)
 		}
 	}
+
+	m.emptyUniquePolicies.Stop()
 
 	return nil
 }
@@ -676,7 +690,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 		}
 	}
 
-	// Clear the expiration handler (or remove from the list of non-expiring tokens.
+	// Clear the expiration handler (or remove from the list of non-expiring tokens.)
 	m.pendingLock.Lock()
 	if info, ok := m.pending.Load(leaseID); ok {
 		pending := info.(pendingInfo)
@@ -1341,11 +1355,35 @@ func (m *ExpirationManager) inMemoryLeaseInfo(le *leaseEntry) *leaseEntry {
 	//   policies -- stored in Auth object
 	//   auth method -- derived from lease.Path
 	if le.Auth != nil {
-		// TODO: make unique so all copies share a single array
-		ret.Auth.Policies = le.Auth.Policies
+		// Ensure that list of policies is not copied more than
+		// once. This menthod is called with pendingLock held.
+
+		// We could use hashstructure here to generate a key, but that
+		// seems like it would be substantially slower?
+		key := strings.Join(le.Auth.Policies, "\n")
+		uniq, ok := m.uniquePolicies[key]
+		if ok {
+			ret.Auth.Policies = uniq
+		} else {
+			m.uniquePolicies[key] = le.Auth.Policies
+			ret.Auth.Policies = le.Auth.Policies
+		}
 		ret.Path = le.Path
 	}
 	return ret
+}
+
+func (m *ExpirationManager) uniquePoliciesGc() {
+	for {
+		<-m.emptyUniquePolicies.C
+
+		// If the maximum lease is a month, and we blow away the unique
+		// policy cache every week, the pessimal case is 4x larger space
+		// utilization than keeping the cache indefinitely.
+		m.pendingLock.Lock()
+		m.uniquePolicies = make(map[string][]string)
+		m.pendingLock.Unlock()
+	}
 }
 
 // updatePending is used to update a pending invocation for a lease
