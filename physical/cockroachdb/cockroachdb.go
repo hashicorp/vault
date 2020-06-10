@@ -288,6 +288,10 @@ func validateDBTable(dbTable string) (err error) {
 		if !unicode.IsLetter(r) && r != '_' && !unicode.IsDigit(r) && r != '$' {
 			return fmt.Errorf("must only contain letters, underscores, digits, and dollar signs")
 		}
+
+		if r == '`' || r == '\'' || r == '"' {
+			return fmt.Errorf("cannot contain backticks, single quotes, or double quotes")
+		}
 	}
 
 	return nil
