@@ -13,12 +13,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -2116,6 +2118,79 @@ func TestTokenStore_HandleRequest_CreateToken_TTL(t *testing.T) {
 	}
 	if resp.Auth.Renewable {
 		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func TestTokenStore_HandleRequest_CreateToken_Metric(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	ts := c.tokenStore
+
+	inmemSink := metrics.NewInmemSink(
+		1000000*time.Hour,
+		2000000*time.Hour)
+	c.metricSink = &metricsutil.ClusterMetricSink{
+		ClusterName: "test-cluster",
+		Sink:        inmemSink,
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
+	req.ClientToken = root
+	req.Data["ttl"] = "3h"
+	req.Data["policies"] = []string{"foo"}
+	req.MountPoint = "test/mount"
+
+	resp := testMakeTokenViaRequest(t, ts, req)
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	intervals := inmemSink.Data()
+	// Test crossed an interval boundary, don't try to deal with it.
+	if len(intervals) > 1 {
+		t.Skip("Detected interval crossing.")
+	}
+
+	keyPrefix := "token.creation"
+	var counter *metrics.SampledValue = nil
+
+	for _, c := range intervals[0].Counters {
+		if strings.HasPrefix(c.Name, keyPrefix) {
+			counter = &c
+			break
+		}
+	}
+	if counter == nil {
+		t.Fatal("No token.creation counter found.")
+	}
+
+	if counter.Count != 1 {
+		t.Errorf("Counter number of samples %v is not 1.", counter.Count)
+	}
+
+	if counter.Sum != 1.0 {
+		t.Errorf("Counter sum %v is not 1.", counter.Sum)
+	}
+
+	labels := make(map[string]string)
+	for _, l := range counter.Labels {
+		labels[l.Name] = l.Value
+	}
+	expected := map[string]string{
+		"cluster":      "test-cluster",
+		"namespace":    "root",
+		"auth_method":  "token",
+		"mount_point":  req.MountPoint,
+		"creation_ttl": "1d",
+		"token_type":   "service",
+	}
+	for expected_label, expected_val := range expected {
+		if v, ok := labels[expected_label]; ok {
+			if v != expected_val {
+				t.Errorf("Label %q incorrect, expected %q, got %q", expected_label, expected_val, v)
+			}
+		} else {
+			t.Errorf("Label %q missing", expected_label)
+		}
 	}
 }
 

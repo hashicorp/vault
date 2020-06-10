@@ -726,22 +726,23 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		entCore:                      entCore{},
-		devToken:                     conf.DevToken,
-		physical:                     conf.Physical,
-		serviceRegistration:          conf.GetServiceRegistration(),
-		underlyingPhysical:           conf.Physical,
-		storageType:                  conf.StorageType,
-		redirectAddr:                 conf.RedirectAddr,
-		clusterAddr:                  new(atomic.Value),
-		clusterListener:              new(atomic.Value),
-		seal:                         conf.Seal,
-		router:                       NewRouter(),
-		sealed:                       new(uint32),
-		sealMigrated:                 new(uint32),
-		standby:                      true,
-		baseLogger:                   conf.Logger,
-		logger:                       conf.Logger.Named("core"),
+		entCore:             entCore{},
+		devToken:            conf.DevToken,
+		physical:            conf.Physical,
+		serviceRegistration: conf.GetServiceRegistration(),
+		underlyingPhysical:  conf.Physical,
+		storageType:         conf.StorageType,
+		redirectAddr:        conf.RedirectAddr,
+		clusterAddr:         new(atomic.Value),
+		clusterListener:     new(atomic.Value),
+		seal:                conf.Seal,
+		router:              NewRouter(),
+		sealed:              new(uint32),
+		sealMigrated:        new(uint32),
+		standby:             true,
+		baseLogger:          conf.Logger,
+		logger:              conf.Logger.Named("core"),
+
 		defaultLeaseTTL:              conf.DefaultLeaseTTL,
 		maxLeaseTTL:                  conf.MaxLeaseTTL,
 		cachingDisabled:              conf.DisableCache,
@@ -1838,7 +1839,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := enterprisePostUnseal(c); err != nil {
 		return err
 	}
-	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRPrimary | consts.ReplicationDRSecondary) {
+	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
 		// Only perf primarys should write feature flags, but we do it by
 		// excluding other states so that we don't have to change it when
 		// a non-replicated cluster becomes a primary.
@@ -2345,6 +2346,12 @@ func (c *Core) SanitizedConfig() map[string]interface{} {
 	return conf.(*server.Config).Sanitized()
 }
 
+// LogFormat returns the log format current in use.
+func (c *Core) LogFormat() string {
+	conf := c.rawConfig.Load()
+	return conf.(*server.Config).LogFormat
+}
+
 // MetricsHelper returns the global metrics helper which allows external
 // packages to access Vault's internal metrics.
 func (c *Core) MetricsHelper() *metricsutil.MetricsHelper {
@@ -2374,15 +2381,18 @@ type FeatureFlags struct {
 }
 
 func (c *Core) persistFeatureFlags(ctx context.Context) error {
-	c.logger.Debug("persisting feature flags")
-	json, err := jsonutil.EncodeJSON(&FeatureFlags{NamespacesCubbyholesLocal: !c.PR1103disabled})
-	if err != nil {
-		return err
+	if !c.PR1103disabled {
+		c.logger.Debug("persisting feature flags")
+		json, err := jsonutil.EncodeJSON(&FeatureFlags{NamespacesCubbyholesLocal: !c.PR1103disabled})
+		if err != nil {
+			return err
+		}
+		return c.barrier.Put(ctx, &logical.StorageEntry{
+			Key:   consts.CoreFeatureFlagPath,
+			Value: json,
+		})
 	}
-	return c.barrier.Put(ctx, &logical.StorageEntry{
-		Key:   consts.CoreFeatureFlagPath,
-		Value: json,
-	})
+	return nil
 }
 
 func (c *Core) readFeatureFlags(ctx context.Context) (*FeatureFlags, error) {

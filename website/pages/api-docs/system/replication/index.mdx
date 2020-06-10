@@ -22,7 +22,7 @@ example: an error has caused replication to stop syncing.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -71,7 +71,7 @@ depending on the number and size of objects in the data store.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -99,7 +99,7 @@ This is an authenticated endpoint.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/sys/replication/status
 ```

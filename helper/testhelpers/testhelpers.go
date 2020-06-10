@@ -493,3 +493,39 @@ func SetRaftAddressProviders(t testing.T, cluster *vault.TestCluster, provider r
 		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(provider)
 	}
 }
+
+func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
+	t.Helper()
+
+	stopCh := make(chan struct{})
+	ticker := time.NewTicker(time.Second)
+	var err error
+
+	go func() {
+		for {
+			select {
+			case <-stopCh:
+				ticker.Stop()
+				stopCh <- struct{}{}
+				return
+			case <-ticker.C:
+				err = client.Sys().Mount("foo", &api.MountInput{
+					Type: "kv",
+					Options: map[string]string{
+						"version": "1",
+					},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				err = client.Sys().Unmount("foo")
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+	}()
+
+	return stopCh
+}

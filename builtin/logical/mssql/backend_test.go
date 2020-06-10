@@ -4,17 +4,17 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"reflect"
 	"testing"
 
 	_ "github.com/denisenkom/go-mssqldb"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	mssqlhelper "github.com/hashicorp/vault/helper/testhelpers/mssql"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
-func TestBackend_config_connection(t *testing.T) {
+func Backend_config_connection(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	config := logical.TestBackendConfig()
@@ -55,15 +55,12 @@ func TestBackend_config_connection(t *testing.T) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" || os.Getenv("MSSQL_URL") == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-	}
-	connURL := os.Getenv("MSSQL_URL")
-
 	b, _ := Factory(context.Background(), logical.TestBackendConfig())
 
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
+
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
 		PreCheck:       testAccPreCheckFunc(t, connURL),
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
@@ -75,15 +72,12 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" || os.Getenv("MSSQL_URL") == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-	}
-	connURL := os.Getenv("MSSQL_URL")
-
 	b := Backend()
 
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
+
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
 		PreCheck:       testAccPreCheckFunc(t, connURL),
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
@@ -97,15 +91,12 @@ func TestBackend_roleCrud(t *testing.T) {
 }
 
 func TestBackend_leaseWriteRead(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" || os.Getenv("MSSQL_URL") == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-	}
-	connURL := os.Getenv("MSSQL_URL")
-
 	b := Backend()
 
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
+
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
 		PreCheck:       testAccPreCheckFunc(t, connURL),
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{

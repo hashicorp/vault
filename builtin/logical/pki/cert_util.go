@@ -965,7 +965,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 
 					if !valid {
 						return nil, errutil.UserError{Err: fmt.Sprintf(
-							"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
+							"URI Subject Alternative Names were provided via the API which are not valid for this role"),
 						}
 					}
 

@@ -16,15 +16,14 @@ var Levels = []logutils.LogLevel{"TRACE", "DEBUG", "INFO", "WARN", "ERR"}
 
 // Config is the configuration for this log setup.
 type Config struct {
-	// Name is the progname as it will appear in syslog output (if enabled).
-	Name string `json:"name"`
-
 	// Level is the log level to use.
 	Level string `json:"level"`
 
 	// Syslog and SyslogFacility are the syslog configuration options.
 	Syslog         bool   `json:"syslog"`
 	SyslogFacility string `json:"syslog_facility"`
+	// SyslogName is the progname as it will appear in syslog output (if enabled).
+	SyslogName     string `json:"name"`
 
 	// Writer is the output where logs should go. If syslog is enabled, data will
 	// be written to writer in addition to syslog.
@@ -51,7 +50,7 @@ func Setup(config *Config) error {
 	if config.Syslog {
 		log.Printf("[DEBUG] (logging) enabling syslog on %s", config.SyslogFacility)
 
-		l, err := gsyslog.NewLogger(gsyslog.LOG_NOTICE, config.SyslogFacility, config.Name)
+		l, err := gsyslog.NewLogger(gsyslog.LOG_NOTICE, config.SyslogFacility, config.SyslogName)
 		if err != nil {
 			return fmt.Errorf("error setting up syslog logger: %s", err)
 		}

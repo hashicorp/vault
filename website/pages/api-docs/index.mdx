@@ -63,7 +63,7 @@ Thus, it would be equivalent to the above example to set `X-Vault-Namespace` to
 
 For example, the following two commands result in equivalent requests:
 
-```shell
+```shell-session
 $ curl \
     -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
     -H "X-Vault-Namespace: ns1/ns2/" \
@@ -71,7 +71,7 @@ $ curl \
     http://127.0.0.1:8200/v1/secret/foo
 ```
 
-```shell
+```shell-session
 $ curl \
     -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
     -X GET \
@@ -100,7 +100,7 @@ is mounted by default on a fresh Vault install and is of type `kv`.
 
 Here is an example of reading a secret using cURL:
 
-```shell
+```shell-session
 $ curl \
     -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
     -X GET \
@@ -117,7 +117,7 @@ parameter `list=true`, or you can use the `LIST` HTTP verb. For the `kv`
 backend, listing is allowed on directories only, and returns the keys in the
 given directory:
 
-```shell
+```shell-session
 $ curl \
     -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
     -X LIST \
@@ -143,7 +143,7 @@ with a JSON body like:
 
 Here is an example of writing a secret using cURL:
 
-```shell
+```shell-session
 $ curl \
     -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
     -H "Content-Type: application/json" \
@@ -166,7 +166,7 @@ Requests that are sent to a [Vault Agent][agent] that is configured to use the
 `require_request_header` option must include the `X-Vault-Request` header
 entry, e.g.:
 
-```shell
+```shell-session
 $ curl \
     -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
     -H "X-Vault-Request: true" \
@@ -191,7 +191,7 @@ OpenAPI document in the `openapi` attribute. This document is relevant for the p
 
 Example request:
 
-```shell
+```shell-session
 $ curl \
     -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
     http://127.0.0.1:8200/v1/secret?help=1
@@ -200,7 +200,6 @@ $ curl \
 Example response:
 
 ```javascript
-
 {
   "help": "## DESCRIPTION\n\nThis backend provides a versioned key-value store. The kv backend reads and\nwrites arbitrary secrets to the storage backend. The secrets are\nencrypted/decrypted by Vault: they are never stored unencrypted in the backend\nand the backend never has an opportunity to see the unencrypted value. Each key\ncan have a configured number of versions, and versions can be retrieved based on\ntheir version numbers.\n\n## PATHS\n\nThe following paths are supported by this backend. To view help for\nany of the paths below, use the help command with any route matching\nthe path pattern. Note that depending on the policy of your auth token,\nyou may or may not be able to access certain paths.\n\n    ^.*$\n\n\n    ^config$\n        Configures settings for the KV store\n\n    ^data/(?P<path>.*)$\n        Write, Read, and Delete data in the Key-Value Store.\n\n    ^delete/(?P<path>.*)$\n        Marks one or more versions as deleted in the KV store.\n\n    ^destroy/(?P<path>.*)$\n        Permanently removes one or more versions in the KV store\n\n    ^metadata/(?P<path>.*)$\n        Configures settings for the KV store\n\n    ^undelete/(?P<path>.*)$\n        Undeletes one or more versions from the KV store.",
   "openapi": {

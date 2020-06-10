@@ -153,12 +153,12 @@ This guide demonstrates the lifecycle of tokens.
 1. [Orphan tokens](#step5)
 1. [Revoke tokens](#step6)
 
-### <a name="step1"></a>Step 1: Read token auth method configuration
+### Step 1: Read token auth method configuration ((#step1))
 
 When you create leases with no specific TTL values, the default value applies
 to the lease.
 
-```shell
+```shell-session
 $ vault auth list
 
 Path       Type      Accessor                Default TTL  Max TTL  Replication Behavior  Description
@@ -183,7 +183,7 @@ the system configuration.
 
 Read the default TTL settings for **token** auth method:
 
-```shell
+```shell-session
 $ vault read sys/auth/token/tune
 
 Key              	Value
@@ -198,7 +198,7 @@ max_lease_ttl    	2764800
 Use `/sys/auth/token/tune` endpoint to read the default TTL settings for **token** auth
 method:
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: <TOKEN>" \
      --request GET \
      <VAULT_ADDRESS>/v1/sys/auth/token/tune
@@ -209,7 +209,7 @@ Where `<TOKEN>` is your valid token with read permission on the
 
 **Example:**
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: ..." --request GET \
       http://127.0.0.1:8200/v1/sys/auth/token/tune | jq
 {
@@ -233,7 +233,7 @@ $ curl --header "X-Vault-Token: ..." --request GET \
 
 -> **NOTE:** The returned TTL value is in seconds (2764800 seconds = 32 days).
 
-### <a name="step2"></a>Step 2: Create short-lived tokens
+### Step 2: Create short-lived tokens ((#step2))
 
 Create a new token with TTL of 30 seconds which means that the token gets
 automatically revoked after 30 seconds.
@@ -242,7 +242,7 @@ automatically revoked after 30 seconds.
 
 To view optional parameters to create tokens:
 
-```shell
+```shell-session
 $ vault token create -help
 ```
 
@@ -293,19 +293,19 @@ token usage.
 
 You can **renew** the token's TTL as long as the token has not expired.
 
-```shell
+```shell-session
 $ vault token renew <TOKEN>
 ```
 
 If you want to renew and extend the token's TTL, pass the desired extension:
 
-```shell
+```shell-session
 $ vault token renew <TOKEN> <EXTENSION>
 ```
 
 Or with revamped cli:
 
-```shell
+```shell-session
 $ vault token renew -increment=<EXTENSION> <TOKEN>
 ```
 
@@ -366,7 +366,7 @@ token usage.
 
 #### Renew the token:
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: ..." --request POST \
        http://127.0.0.1:8200/v1/auth/token/renew/<TOKEN> | jq
 
@@ -382,7 +382,7 @@ renew the token up to 24 hours from its creation time. Once 24 hours has passed 
 the token's creation time, the token is revoked by Vault. For long running
 processes, this may introduce complexity. In such case, use [periodic tokens](#step4).
 
-### <a name="step3"></a>Step 3: Create tokens with use limit
+### Step 3: Create tokens with use limit ((#step3))
 
 In addition to TTL and max TTL, tokens may be limited to a number of uses. Use
 limit tokens expire at the end of their last use regardless of their remaining
@@ -398,7 +398,7 @@ Create a token with the `-use-limit` property argument.
 
 **Example:**
 
-```shell
+```shell-session
 $ vault token create -policy=default -use-limit=2
 
 Key            	Value
@@ -414,7 +414,7 @@ This creates a token with the _default_ policy and a use limit of 2.
 
 #### Verification
 
-```shell
+```shell-session
 $ VAULT_TOKEN=bd39178e-176e-cc91-3930-94f7b0194de5 vault token lookup
 
 Key             	Value
@@ -459,7 +459,7 @@ the attempt to read the secret from the cubbyhole failed.
 
 Set the `num_uses` property in the request payload.
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." --request POST  \
        --data '{ "policies": ["default"], "num_uses":2 }' \
        http://127.0.0.1:8200/v1/auth/token/create | jq
@@ -488,7 +488,7 @@ This creates a token with the _default_ policy and a use limit of 2.
 
 #### Verification
 
-```text
+```shell-session
 $ curl --header "X-Vault-Token: d9c2f2e5-6b8a-4021-476c-ebd3f166d668" \
        --request GET \
        http://127.0.0.1:8200/v1/auth/token/lookup-self | jq
@@ -531,7 +531,7 @@ The first command read the token's properties and then wrote a value to the cubb
 secret engine. This exhausted the use limit of 2 for this token. Therefore,
 the attempt to read the secret from the cubbyhole failed.
 
-### <a name="step4"></a>Step 4: Periodic tokens
+### Step 4: Periodic tokens ((#step4))
 
 **Root** or **sudo** users have the ability to generate **periodic tokens**.
 Periodic tokens have a TTL, but no max TTL; therefore, they may live for an
@@ -546,19 +546,19 @@ the token renewal period. This value can be an integer value in seconds (e.g.
 
 2764800. or a string duration (e.g. 72h).
 
-```shell
+```shell-session
 $ vault write auth/token/roles/<ROLE_NAME> allowed_policies="<POLICY_NAMES>" period=<RENEWAL_PERIOD>
 ```
 
 **Example:**
 
-```shell
+```shell-session
 $ vault write auth/token/roles/zabbix allowed_policies="default" period="24h"
 ```
 
 Now, generate a token:
 
-```shell
+```shell-session
 $ vault token create -role=zabbix
 
 Key            	Value
@@ -602,7 +602,7 @@ Its renewal period is set to 24 hours.
 
 Now, generate a token:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." --request POST \
      http://127.0.0.1:8200/v1/auth/token/create/zabbix | jq
 {
@@ -638,7 +638,7 @@ To create AppRole periodic tokens, create your AppRole role with
 
 **Example:**
 
-```plaintext
+```shell-session
 $ vault write auth/approle/role/jenkins policies="jenkins" period="72h"
 ```
 
@@ -661,7 +661,7 @@ $ curl --header "X-Vault-Token:..." --request POST \
        http://127.0.0.1:8200/v1/auth/approle/role/jenkins
 ```
 
-### <a name="step5"></a>Step 5: Orphan tokens
+### Step 5: Orphan tokens ((#step5))
 
 Orphan tokens are **not** children of their parent; therefore, orphan tokens do
 not expire when their parent does.
@@ -673,7 +673,7 @@ not expire when their parent does.
 The following CLI command requires **root** token or **sudo** capability on the
 `auth/token/create` path.
 
-```shell
+```shell-session
 $ vault token create -orphan
 ```
 
@@ -681,7 +681,7 @@ $ vault token create -orphan
 
 To create an orphan token, use the **`auth/token/create-orphan`** endpoint:
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token:..." --request POST \
        http://127.0.0.1:8200/v1/auth/token/create-orphan | jq
 ```
@@ -689,7 +689,7 @@ $ curl --header "X-Vault-Token:..." --request POST \
 Also, you can create an orphan token using the **`auth/token/create`** endpoint with
 `no-parent` parameter set to true.
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token:..." --request POST \
        --data '{ "no_parent": true }' \
        http://127.0.0.1:8200/v1/auth/token/create | jq
@@ -699,7 +699,7 @@ $ curl --header "X-Vault-Token:..." --request POST \
 **sudo** capability to create an orphan token while
 **`auth/token/create-orphan`** endpoint does not.
 
-### <a name="step6"></a>Step 6: Revoke tokens and leases
+### Step 6: Revoke tokens and leases ((#step6))
 
 Revoking a token and all its children.
 
@@ -707,13 +707,13 @@ Revoking a token and all its children.
 
 To revoke a specific token:
 
-```shell
+```shell-session
 $ vault token revoke <TOKEN>
 ```
 
 To revoke all leases under a specific path:
 
-```shell
+```shell-session
 $ vault lease revoke -prefix <PATH>
 ```
 
@@ -766,7 +766,7 @@ secret leases expire earlier than you expected.
 
 #### 1. Determine the TTLs specific to the mount
 
-```shell
+```shell-session
 $ vault secrets list
 
 Path        Type       Accessor            Plugin  Default TTL  Max TTL  Force No Cache  Replication Behavior  Seal Wrap  Description
@@ -791,13 +791,13 @@ Override the global defaults by specifying `default_lease_ttl` and
 
 The following example assumes that you have a database secret engine configured.
 
-```shell
+```shell-session
 $ vault write sys/mounts/database/tune default_lease_ttl="8640"
 ```
 
 Or
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token:..." --request POST \
        --data '{ "max_lease_ttl": 129600}' \
        http://127.0.0.1:8200/v1/sys/mounts/database/tune
@@ -808,7 +808,7 @@ $ curl --header "X-Vault-Token:..." --request POST \
 Depending on the auth method, there may be more specific TTLs configured (e.g.
 roles, groups, users) as you have done so in [Step 4](#step4).
 
-```shell
+```shell-session
 $ vault read auth/token/roles/zabbix
 
 Key                	Value

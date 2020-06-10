@@ -17,21 +17,21 @@ be used to control the behavior of the revocation.
 
 Revoke a token and all the token's children:
 
-```text
+```shell-session
 $ vault token revoke 96ddf4bc-d217-f3ba-f9bd-017055595017
 Success! Revoked token (if it existed)
 ```
 
 Revoke a token leaving the token's children:
 
-```text
+```shell-session
 $ vault token revoke -mode=orphan 96ddf4bc-d217-f3ba-f9bd-017055595017
 Success! Revoked token (if it existed)
 ```
 
 Revoke a token by accessor:
 
-```text
+```shell-session
 $ vault token revoke -accessor 9793c9b3-e04a-46f3-e7b8-748d7da248da
 Success! Revoked token (if it existed)
 ```

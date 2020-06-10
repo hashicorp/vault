@@ -104,7 +104,7 @@ feature.
 If you do not use mlock, you can use `LD_LIBRARY_PATH` to point the linker at
 the location of the primary client library.
 
-```
+```shell-session
 $ export LD_LIBRARY_PATH=/dest/dir/for/primary:$LD_LIBRARY_PATH
 $ export FDB_NETWORK_OPTION_EXTERNAL_CLIENT_DIRECTORY=/dest/dir/for/secondary
 $ /path/to/bin/vault ...
@@ -130,7 +130,7 @@ to replace the use of `LD_LIBRARY_PATH`.
 When building Vault, pass the `-r /dest/dir/for/primary` option to the Go
 linker, for instance:
 
-```
+```shell-session
 $ make dev FDB_ENABLED=1 LD_FLAGS="-r /dest/dir/for/primary "
 ```
 
@@ -138,14 +138,14 @@ $ make dev FDB_ENABLED=1 LD_FLAGS="-r /dest/dir/for/primary "
 
 You can verify `RPATH` is set on the Vault binary using `readelf`:
 
-```
+```shell-session
 $ readelf -d /path/to/bin/vault | grep RPATH
  0x000000000000000f (RPATH)              Library rpath: [/dest/dir/for/primary]
 ```
 
 With the client libraries installed:
 
-```
+```shell-session
 $ ldd /path/to/bin/vault
 ...
     libfdb_c.so => /dest/dir/for/primary/libfdb_c.so (0x00007f270ad05000)
@@ -154,7 +154,7 @@ $ ldd /path/to/bin/vault
 
 Now run Vault:
 
-```
+```shell-session
 $ export FDB_NETWORK_OPTION_EXTERNAL_CLIENT_DIRECTORY=/dest/dir/for/secondary
 $ /path/to/bin/vault ...
 ```

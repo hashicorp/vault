@@ -24,7 +24,7 @@ type inmemPipeline struct {
 
 	shutdown     bool
 	shutdownCh   chan struct{}
-	shutdownLock sync.Mutex
+	shutdownLock sync.RWMutex
 }
 
 type inmemPipelineInflight struct {
@@ -63,7 +63,7 @@ func NewInmemTransportWithTimeout(addr ServerAddress, timeout time.Duration) (Se
 // NewInmemTransport is used to initialize a new transport
 // and generates a random local address if none is specified
 func NewInmemTransport(addr ServerAddress) (ServerAddress, *InmemTransport) {
-	return NewInmemTransportWithTimeout(addr, 50*time.Millisecond)
+	return NewInmemTransportWithTimeout(addr, 500*time.Millisecond)
 }
 
 // SetHeartbeatHandler is used to set optional fast-path for
@@ -159,7 +159,7 @@ func (i *InmemTransport) makeRPC(target ServerAddress, args interface{}, r io.Re
 	}
 
 	// Send the RPC over
-	respCh := make(chan RPCResponse)
+	respCh := make(chan RPCResponse, 1)
 	req := RPC{
 		Command:  args,
 		Reader:   r,
@@ -314,6 +314,17 @@ func (i *inmemPipeline) AppendEntries(args *AppendEntriesRequest, resp *AppendEn
 		Command:  args,
 		RespChan: respCh,
 	}
+
+	// Check if we have been already shutdown, otherwise the random choose
+	// made by select statement below might pick consumerCh even if
+	// shutdownCh was closed.
+	i.shutdownLock.RLock()
+	shutdown := i.shutdown
+	i.shutdownLock.RUnlock()
+	if shutdown {
+		return nil, ErrPipelineShutdown
+	}
+
 	select {
 	case i.peer.consumerCh <- rpc:
 	case <-timeout:

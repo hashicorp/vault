@@ -30,12 +30,12 @@ Helm](https://learn.hashicorp.com/vault/getting-started-k8s/minikube) guide.
 To use the Helm chart, add the Hashicorp helm repository and check that you have
 access to the chart:
 
-```shell
+```shell-session
 $ helm repo add hashicorp https://helm.releases.hashicorp.com
 "hashicorp" has been added to your repositories
 
 $ helm search repo hashicorp/vault
-NAME           	CHART VERSION	APP VERSION	DESCRIPTION                               
+NAME           	CHART VERSION	APP VERSION	DESCRIPTION
 hashicorp/vault	0.5.0        	           	Install and configure Vault on Kubernetes.
 ```
 
@@ -48,7 +48,7 @@ Example chart usage:
 Installing the latest release of the Vault Helm chart with pods prefixed with
 the name `vault`.
 
-```sh
+```shell-session
 $ helm install vault hashicorp/vault
 ```
 
@@ -57,7 +57,7 @@ Installing a specific version of the chart.
 ```sh
 # List the available releases
 $ helm search repo hashicorp/vault -l
-NAME           	CHART VERSION	APP VERSION	DESCRIPTION                               
+NAME           	CHART VERSION	APP VERSION	DESCRIPTION
 hashicorp/vault	0.5.0        	           	Install and configure Vault on Kubernetes.
 hashicorp/vault	0.4.0        	           	Install and configure Vault on Kubernetes.
 
