@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,7 +32,7 @@ type mySQLConnectionProducer struct {
 	Password string `json:"password" mapstructure:"password" structs:"password"`
 
 	TLSCertificateKeyData []byte `json:"tls_certificate_key" mapstructure:"tls_certificate_key" structs:"-"`
-	TLSCAData							[]byte `json:"tls_ca"              mapstructure:"tls_ca"              structs:"-"`
+	TLSCAData             []byte `json:"tls_ca"              mapstructure:"tls_ca"              structs:"-"`
 
 	// tlsConfigName is a globally unique name that references the TLS config for this instance in the mysql driver
 	tlsConfigName					string
@@ -64,6 +65,9 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 		return nil, fmt.Errorf("connection_url cannot be empty")
 	}
 
+	c.Type = "mysql"
+
+	// Don't escape special characters for MySQL password
 	password := c.Password
 
 	// QueryHelper doesn't do any SQL escaping, but if it starts to do so
@@ -72,8 +76,6 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 		"username": url.PathEscape(c.Username),
 		"password": password,
 	})
-
-	c.Type = "mysql"
 
 	if c.MaxOpenConnections == 0 {
 		c.MaxOpenConnections = 4
@@ -155,7 +157,20 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 	}
 	uri.RawQuery = vals.Encode()
 
-	c.db, err = sql.Open(dbType, uri.String())
+	// This convoluted piece is to ensure we're not url encoding any username
+	// or password information
+	urlPieces := strings.Split(c.ConnectionURL, "?")
+	connURL := ""
+	for i, urlFragment := range urlPieces {
+		if len(urlPieces) == 1 || i != len(urlPieces) - 1 {
+			connURL = connURL + urlFragment
+		}
+	}
+	if len(vals.Encode()) > 0 {
+		connURL = connURL + "?" + vals.Encode()
+	}
+
+	c.db, err = sql.Open(dbType, connURL)
 	if err != nil {
 		return nil, err
 	}
