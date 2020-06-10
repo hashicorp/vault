@@ -255,11 +255,11 @@ func (c *CockroachDBBackend) transaction(tx *sql.Tx, txns []*physical.TxnEntry) 
 // validateDBTable against the CockroachDB rules for table names:
 // https://www.cockroachlabs.com/docs/stable/keywords-and-identifiers.html#identifiers
 //
-//   All values that accept an identifier must:
-//   - Begin with a Unicode letter or an underscore (_). Subsequent characters can be letters,
-//   - underscores, digits (0-9), or dollar signs ($).
-//   Not equal any SQL keyword unless the keyword is accepted by the element's syntax.
-//   For example, name accepts Unreserved or Column Name keywords.
+//   - All values that accept an identifier must:
+//     - Begin with a Unicode letter or an underscore (_). Subsequent characters can be letters,
+//     - underscores, digits (0-9), or dollar signs ($).
+//   - Not equal any SQL keyword unless the keyword is accepted by the element's syntax. For example,
+//     name accepts Unreserved or Column Name keywords.
 //
 // The docs do state that we can bypass these rules with double quotes, however I think it
 // is safer to just require these rules across the board.
