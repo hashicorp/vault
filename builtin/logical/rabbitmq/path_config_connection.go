@@ -100,7 +100,7 @@ func (b *backend) pathConnectionUpdate(ctx context.Context, req *logical.Request
 	return nil, nil
 }
 
-func readConfig(ctx context.Context, storage logical.Storage) (config connectionConfig, err error) {
+func readConfig(ctx context.Context, storage logical.Storage) (connectionConfig, error) {
 	entry, err := storage.Get(ctx, storageKey)
 	if err != nil {
 		return connectionConfig{}, err
@@ -116,7 +116,7 @@ func readConfig(ctx context.Context, storage logical.Storage) (config connection
 	return connConfig, nil
 }
 
-func writeConfig(ctx context.Context, storage logical.Storage, config connectionConfig) (err error) {
+func writeConfig(ctx context.Context, storage logical.Storage, config connectionConfig) error {
 	entry, err := logical.StorageEntryJSON(storageKey, config)
 	if err != nil {
 		return err
