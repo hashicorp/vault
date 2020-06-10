@@ -529,7 +529,11 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 	// Drop trailing signature length.
 	certificateBytes := out[:len(out)-4]
 
-	sig, err := sshAlgorithmSigner.SignWithAlgorithm(rand.Reader, certificateBytes, b.Role.AlgorithmSigner)
+	algo := b.Role.AlgorithmSigner
+	if algo == "" {
+		algo = ssh.SigAlgoRSA
+	}
+	sig, err := sshAlgorithmSigner.SignWithAlgorithm(rand.Reader, certificateBytes, algo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate signed SSH key: sign error")
 	}
