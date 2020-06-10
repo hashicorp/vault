@@ -620,6 +620,8 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 
 	dbPath := filepath.Join(f.path, "vault.db")
 
+	f.logger.Info("installing snapshot to FSM")
+
 	// Install the new boltdb file
 	if err := snapshotInstaller.Install(dbPath); err != nil {
 		return errwrap.Wrapf("failed to install snapshot database: {{err}}", err)

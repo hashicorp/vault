@@ -143,7 +143,7 @@ func (f *BoltSnapshotStore) Create(version raft.SnapshotVersion, index, term uin
 // snapshots. No snapshot will be returned if there are no indexes in the
 // FSM.
 func (f *BoltSnapshotStore) List() ([]*raft.SnapshotMeta, error) {
-	meta, err := f.getBoltSnapshotMeta()
+	meta, err := f.getMetaFromFSM()
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +157,7 @@ func (f *BoltSnapshotStore) List() ([]*raft.SnapshotMeta, error) {
 }
 
 // getBoltSnapshotMeta returns the fsm's latest state and configuration.
-func (f *BoltSnapshotStore) getBoltSnapshotMeta() (*raft.SnapshotMeta, error) {
+func (f *BoltSnapshotStore) getMetaFromFSM() (*raft.SnapshotMeta, error) {
 	latestIndex, latestConfig := f.fsm.LatestState()
 	meta := &raft.SnapshotMeta{
 		Version: 1,
@@ -183,7 +183,7 @@ func (f *BoltSnapshotStore) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, 
 }
 
 func (f *BoltSnapshotStore) openFromFSM() (*raft.SnapshotMeta, io.ReadCloser, error) {
-	meta, err := f.getBoltSnapshotMeta()
+	meta, err := f.getMetaFromFSM()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -213,7 +213,7 @@ func (f *BoltSnapshotStore) openFromFSM() (*raft.SnapshotMeta, io.ReadCloser, er
 	return meta, readCloser, nil
 }
 
-func (f *BoltSnapshotStore) loadMetaFromDB(id string) (*raft.SnapshotMeta, error) {
+func (f *BoltSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, error) {
 	if len(id) == 0 {
 		return nil, errors.New("can not open empty snapshot ID")
 	}
@@ -265,10 +265,9 @@ func (f *BoltSnapshotStore) loadMetaFromDB(id string) (*raft.SnapshotMeta, error
 }
 
 func (f *BoltSnapshotStore) openFromFile(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
-
 	// TODO: should we insted have a separate metadata file so we can checksum
 	// the db file?
-	meta, err := f.loadMetaFromDB(id)
+	meta, err := f.getMetaFromDB(id)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -339,6 +338,8 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 		return err
 	}
 
+	// TODO: should we do this last, what if we fail below we want to make sure
+	// we don't apply a partial snapshot?
 	if err := writeSnapshotMetaToDB(&s.meta, boltDB); err != nil {
 		return err
 	}
