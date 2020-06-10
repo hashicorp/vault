@@ -1,10 +1,10 @@
 <div class="action-block is-rounded" data-test-promote-replication>
   <div class="action-block-info">
     <h4 class="title is-5 is-marginless">
-      Generate token
+      Generate operation token
     </h4>
     <p>
-      TODO: Make this work
+      Generate an operation token in order to do actions such as 'Promote' and 'Update primary.'
     </p>
   </div>
 
@@ -14,18 +14,38 @@
       onclick={{action (mut isModalActive) true}}
       data-test-replication-action-trigger
     >
-      Generate
+      Generate token
     </button>
   </div>
 </div>
-{{!-- <ShamirFlow
-        @action="generate-dr-operation-token"
-        @buttonText="Promote cluster"
-        @fetchOnInit=true
-        @generateAction=true
-      >
-        <p>
-          Generate an Operation Token by entering a portion of the master key.
-          Once all portions are entered, the generated operation token may be used to manage your secondary Disaster Recovery cluster.
-        </p>
-      </ShamirFlow> --}}
+
+<Modal
+  @title="Generate operation token"
+  @onClose={{action (mut isModalActive) false}}
+  @isActive={{isModalActive}}
+  @type="warning"
+  @showCloseButton={{true}}
+>
+  <section class="modal-card-body">
+    <ShamirFlow
+      @action="generate-dr-operation-token"
+      @buttonText="Generate token"
+      @fetchOnInit=true
+      @generateAction=true
+      @paddingless=true
+    >
+      <p>
+        Generate an Operation Token by entering a portion of the {{replicationDisplayMode}} Primary's master key.
+        Once all portions are entered, the generated operation token may be used to manage your secondary Disaster Recovery cluster.
+      </p>
+    </ShamirFlow>
+  </section>
+  <footer class="modal-card-foot modal-card-foot-outlined">
+    <button
+      class="button is-secondary"
+      onclick={{action (mut isModalActive) false}}
+      data-test-generate-token-cancel-button>
+      Cancel
+    </button>
+  </footer>
+</Modal>
