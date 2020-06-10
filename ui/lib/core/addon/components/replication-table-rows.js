@@ -14,7 +14,7 @@ import layout from '../templates/components/replication-table-rows';
     />
  * ```
  * @param {Object} replicationDetails=null - An Ember data object pulled from the Ember Model. It contains details specific to the whether the replication is dr or performance.
- * @param {String} clusterMode=null - The cluster mode (e.g. primary or secondary) passed through to a table component. 
+ * @param {String} clusterMode=null - The cluster mode (e.g. primary or secondary) passed through to a table component.
  */
 
 export default Component.extend({
@@ -22,6 +22,12 @@ export default Component.extend({
   classNames: ['replication-table-rows'],
   replicationDetails: null,
   clusterMode: null,
+  secondaryId: computed('replicationDetails.{secondaryId}', function() {
+    return this.replicationDetails.secondaryId;
+  }),
+  primaryClusterAddr: computed('replcationDetails.{primaryClusterAddr}', function() {
+    return this.replicationDetails.primaryClusterAddr;
+  }),
   merkleRoot: computed('replicationDetails.{merkleRoot}', function() {
     return this.replicationDetails.merkleRoot || 'unknown';
   }),

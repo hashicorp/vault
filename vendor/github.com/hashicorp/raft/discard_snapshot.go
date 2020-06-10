@@ -42,7 +42,7 @@ func (d *DiscardSnapshotStore) Open(id string) (*SnapshotMeta, io.ReadCloser, er
 	return nil, nil, fmt.Errorf("open is not supported")
 }
 
-// Write returns successfully with the lenght of the input byte slice
+// Write returns successfully with the length of the input byte slice
 // to satisfy the WriteCloser interface
 func (d *DiscardSnapshotSink) Write(b []byte) (int, error) {
 	return len(b), nil

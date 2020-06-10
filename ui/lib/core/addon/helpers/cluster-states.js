@@ -17,25 +17,21 @@ export const CLUSTER_STATES = {
   },
   'stream-wals': {
     glyph: 'check-circle-outline',
-    display: 'Streaming',
     isOk: true,
     isSyncing: false,
   },
   'merkle-diff': {
     glyph: 'android-sync',
-    display: 'Determining sync status',
     isOk: true,
     isSyncing: true,
   },
   connecting: {
     glyph: 'android-sync',
-    display: 'Streaming',
     isOk: true,
     isSyncing: true,
   },
   'merkle-sync': {
     glyph: 'android-sync',
-    display: 'Syncing',
     isOk: true,
     isSyncing: true,
   },
@@ -59,7 +55,6 @@ export const CLUSTER_STATES = {
 export function clusterStates([state]) {
   const defaultDisplay = {
     glyph: '',
-    display: '',
     isOk: null,
     isSyncing: null,
   };

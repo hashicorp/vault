@@ -26,7 +26,7 @@ export default Component.extend({
   glyph: computed('type', function() {
     const modalType = this.get('type');
     if (!modalType) {
-      return {};
+      return;
     }
     return messageTypes([this.get('type')]);
   }),

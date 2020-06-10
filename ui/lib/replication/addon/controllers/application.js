@@ -4,6 +4,7 @@ import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
 import { copy } from 'ember-copy';
 import { resolve } from 'rsvp';
+import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
 
 const DEFAULTS = {
   token: null,
@@ -19,9 +20,12 @@ const DEFAULTS = {
 };
 
 export default Controller.extend(copy(DEFAULTS, true), {
+  isModalActive: false,
+  expirationDate: null,
   store: service(),
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),
+  flashMessages: service(),
 
   submitError(e) {
     if (e.errors) {
@@ -62,6 +66,13 @@ export default Controller.extend(copy(DEFAULTS, true), {
         primary_api_addr: null,
         primary_cluster_addr: null,
       });
+
+      // decode token and return epoch expiration, convert to timestamp
+      const expirationDate = new Date(decodeConfigFromJWT(this.token).exp * 1000);
+      this.set('expirationDate', expirationDate);
+
+      // open modal
+      this.toggleProperty('isModalActive');
       return cluster.reload();
     }
     this.reset();
@@ -105,7 +116,26 @@ export default Controller.extend(copy(DEFAULTS, true), {
     onSubmit(/*action, mode, data, event*/) {
       return this.submitHandler(...arguments);
     },
+    copyClose(successMessage) {
+      // separate action for copy & close button so it does not try and use execCommand to copy token to clipboard
+      if (!!successMessage && typeof successMessage === 'string') {
+        this.get('flashMessages').success(successMessage);
+      }
+      this.toggleProperty('isModalActive');
+      this.transitionToRoute('mode.secondaries');
+    },
+    toggleModal(successMessage) {
+      if (!!successMessage && typeof successMessage === 'string') {
+        this.get('flashMessages').success(successMessage);
+      }
+      // use copy browser extension to copy token if you close the modal by clicking outside of it.
+      const htmlSelectedToken = document.querySelector('#token-textarea');
+      htmlSelectedToken.select();
+      document.execCommand('copy');
 
+      this.toggleProperty('isModalActive');
+      this.transitionToRoute('mode.secondaries');
+    },
     clear() {
       this.reset();
       this.setProperties({
