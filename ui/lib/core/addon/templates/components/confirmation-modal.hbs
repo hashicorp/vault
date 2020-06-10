@@ -6,25 +6,23 @@
   @showCloseButton={{true}}
 >
   <section class="modal-card-body">
-    <div class="box is-shadowless is-fullwidth is-sideless">
 
-      {{yield}}
+    {{yield}}
 
-      <div class="modal-confirm-section">
-        <p class="has-text-weight-semibold is-size-6">
-          Confirm
-        </p>
-        <p class="is-help">Type <strong>{{confirmText}}</strong> to confirm {{toConfirmMsg}}</p>
-        {{input
-            type="text"
-            value=confirmationInput
-            name="confirmationInput"
-            class="input has-margin-top"
-            autocomplete="off"
-            spellcheck="false"
-            data-test-confirmation-modal-input=testSelector
-          }}
-        </div>
+    <div class="modal-confirm-section">
+      <p class="has-text-weight-semibold is-size-6">
+        Confirm
+      </p>
+      <p class="is-help">Type <strong>{{confirmText}}</strong> to confirm {{toConfirmMsg}}</p>
+      {{input
+        type="text"
+        value=confirmationInput
+        name="confirmationInput"
+        class="input has-margin-top"
+        autocomplete="off"
+        spellcheck="false"
+        data-test-confirmation-modal-input=testSelector
+      }}
     </div>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
