@@ -50,7 +50,7 @@
 </form>
 
 {{#if isModalActive}}
-  <Modal @title="Copy your token" @onClose={{action "toggleModal" "Token copied!"}} @isActive={{isModalActive}}>
+  <Modal @title="Copy your token" @onKeyUp={{action "toggleModal"}} @onClose={{action "toggleModal" "Token copied!"}} @isActive={{isModalActive}}>
     <section class="modal-card-body">
       <p>This token can be used to enable {{model.replicationModeForDisplay}} replication or change primaries on the secondary cluster.</p>
       <div class="box is-shadowless is-fullwidth is-sideless">

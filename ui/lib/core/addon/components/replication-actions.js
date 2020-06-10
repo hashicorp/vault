@@ -2,6 +2,7 @@ import { alias } from '@ember/object/computed';
 import Component from '@ember/component';
 import ReplicationActions from 'core/mixins/replication-actions';
 import layout from '../templates/components/replication-actions';
+import keys from 'vault/lib/keycodes';
 
 const DEFAULTS = {
   token: null,
@@ -26,6 +27,10 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
 
   actions: {
     onSubmit() {
+      // do not submit if a key is pressed and it is not the enter key
+      if (event.keyCode && event.keyCode !== keys.ENTER) {
+        return;
+      }
       return this.submitHandler.perform(...arguments);
     },
     clear() {
