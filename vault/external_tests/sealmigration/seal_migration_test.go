@@ -132,7 +132,8 @@ func migrateFromShamirToTransit_Pre14(
 	var transitSeal vault.Seal
 
 	var conf = vault.CoreConfig{
-		Logger: logger.Named("migrateFromShamirToTransit"),
+		Logger:                    logger.Named("migrateFromShamirToTransit"),
+		DisablePerformanceStandby: true,
 	}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
@@ -553,7 +554,8 @@ func initializeShamir(
 
 	// Start the cluster
 	var conf = vault.CoreConfig{
-		Logger: logger.Named("initializeShamir"),
+		Logger:                    logger.Named("initializeShamir"),
+		DisablePerformanceStandby: true,
 	}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
@@ -600,7 +602,8 @@ func runShamir(
 
 	// Start the cluster
 	var conf = vault.CoreConfig{
-		Logger: logger.Named("runShamir"),
+		Logger:                    logger.Named("runShamir"),
+		DisablePerformanceStandby: true,
 	}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
@@ -663,7 +666,8 @@ func initializeTransit(
 
 	// Start the cluster
 	var conf = vault.CoreConfig{
-		Logger: logger.Named("initializeTransit"),
+		Logger:                    logger.Named("initializeTransit"),
+		DisablePerformanceStandby: true,
 	}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
@@ -712,8 +716,9 @@ func runTransit(
 
 	// Start the cluster
 	var conf = vault.CoreConfig{
-		Logger: logger.Named("runTransit"),
-		Seal:   transitSeal,
+		Logger:                    logger.Named("runTransit"),
+		DisablePerformanceStandby: true,
+		Seal:                      transitSeal,
 	}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
