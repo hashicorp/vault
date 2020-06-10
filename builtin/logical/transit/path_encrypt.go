@@ -128,6 +128,8 @@ to the min_encryption_version configured on the key.`,
 }
 
 // decodeBatchRequestItems is a fast path alternative to mapstructure.Decode to decode []BatchRequestItem.
+// It aims to behave as closely possible to the original mapstructure.Decode and will return the same errors.
+// https://github.com/hashicorp/vault/pull/8775/files#r437709722
 func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 	if src == nil || dst == nil {
 		return nil
@@ -139,13 +141,14 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 	}
 
 	// Early return should happen before allocating the array if the batch is empty.
-	// However to comply with mapstructure output we must allocate an empty array.
+	// However to comply with mapstructure output it's needed to allocate an empty array.
 	sitems := len(items)
 	*dst = make([]BatchRequestItem, sitems)
 	if sitems == 0 {
 		return nil
 	}
 
+	// To comply with mapstructure output the same error type is needed.
 	var errs mapstructure.Error
 
 	for i, iitem := range items {
@@ -158,7 +161,6 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 			if casted, ok := v.(string); ok {
 				(*dst)[i].Context = casted
 			} else {
-
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].context' expected type 'string', got unconvertible type '%T'", i, item["context"]))
 			}
 		}
