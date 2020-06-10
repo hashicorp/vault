@@ -39,6 +39,11 @@ func TestTransit_BatchRewrapCase1(t *testing.T) {
 		t.Fatalf("bad: ciphertext version: expected: 'vault:v1', actual: %s", ciphertext)
 	}
 
+	keyVersion := resp.Data["key_version"].(int)
+	if keyVersion != 1 {
+		t.Fatalf("unexpected key version; got: %d, expected: %d", keyVersion, 1)
+	}
+
 	rewrapData := map[string]interface{}{
 		"ciphertext": ciphertext,
 	}
@@ -99,6 +104,11 @@ func TestTransit_BatchRewrapCase1(t *testing.T) {
 	if !strings.HasPrefix(resp.Data["ciphertext"].(string), "vault:v2") {
 		t.Fatalf("bad: ciphertext version: expected: 'vault:v2', actual: %s", resp.Data["ciphertext"].(string))
 	}
+
+	keyVersion = resp.Data["key_version"].(int)
+	if keyVersion != 2 {
+		t.Fatalf("unexpected key version; got: %d, expected: %d", keyVersion, 2)
+	}
 }
 
 // Check the normal flow of rewrap with upserted key
@@ -131,6 +141,11 @@ func TestTransit_BatchRewrapCase2(t *testing.T) {
 	ciphertext := resp.Data["ciphertext"]
 	if !strings.HasPrefix(ciphertext.(string), "vault:v1") {
 		t.Fatalf("bad: ciphertext version: expected: 'vault:v1', actual: %s", ciphertext)
+	}
+
+	keyVersion := resp.Data["key_version"].(int)
+	if keyVersion != 1 {
+		t.Fatalf("unexpected key version; got: %d, expected: %d", keyVersion, 1)
 	}
 
 	rewrapData := map[string]interface{}{
@@ -193,6 +208,11 @@ func TestTransit_BatchRewrapCase2(t *testing.T) {
 
 	if !strings.HasPrefix(resp.Data["ciphertext"].(string), "vault:v2") {
 		t.Fatalf("bad: ciphertext version: expected: 'vault:v2', actual: %s", resp.Data["ciphertext"].(string))
+	}
+
+	keyVersion = resp.Data["key_version"].(int)
+	if keyVersion != 2 {
+		t.Fatalf("unexpected key version; got: %d, expected: %d", keyVersion, 2)
 	}
 }
 
@@ -275,6 +295,10 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 
 		if !strings.HasPrefix(rItem.Ciphertext, "vault:v2") {
 			t.Fatalf("bad: invalid version of ciphertext in rewrap response; expected: 'vault:v2', actual: %s", rItem.Ciphertext)
+		}
+
+		if rItem.KeyVersion != 2 {
+			t.Fatalf("unexpected key version; got: %d, expected: %d", rItem.KeyVersion, 2)
 		}
 
 		decReq.Data = map[string]interface{}{

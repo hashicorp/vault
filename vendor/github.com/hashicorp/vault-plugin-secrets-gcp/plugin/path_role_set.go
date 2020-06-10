@@ -236,7 +236,7 @@ func (b *backend) pathRoleSetDelete(ctx context.Context, req *logical.Request, d
 		return nil, err
 	}
 
-	iamHandle := iamutil.GetIamHandle(httpC, useragent.String())
+	apiHandle := iamutil.GetApiHandle(httpC, useragent.String())
 
 	warnings := make([]string, 0)
 	if rs.AccountId != nil {
@@ -250,7 +250,7 @@ func (b *backend) pathRoleSetDelete(ctx context.Context, req *logical.Request, d
 			warnings = append(warnings, w)
 		}
 
-		if merr := b.removeBindings(ctx, iamHandle, rs.AccountId.EmailOrId, rs.Bindings); merr != nil {
+		if merr := b.removeBindings(ctx, apiHandle, rs.AccountId.EmailOrId, rs.Bindings); merr != nil {
 			for _, err := range merr.Errors {
 				w := fmt.Sprintf("unable to delete IAM policy bindings for service account %q (WAL entry to clean-up later has been added): %v", rs.AccountId.EmailOrId, err)
 				warnings = append(warnings, w)

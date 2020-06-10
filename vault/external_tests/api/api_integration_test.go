@@ -1,9 +1,7 @@
 package api
 
 import (
-	"database/sql"
 	"encoding/base64"
-	"fmt"
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
@@ -15,11 +13,9 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/builtinplugins"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/ory/dockertest"
 )
 
 // testVaultServer creates a test vault cluster and returns a configured API
@@ -82,41 +78,4 @@ func testVaultServerCoreConfig(t testing.TB, coreConfig *vault.CoreConfig) (*api
 	}
 
 	return client, unsealKeys, func() { defer cluster.Cleanup() }
-}
-
-// testPostgresDB creates a testing postgres database in a Docker container,
-// returning the connection URL and the associated closer function.
-func testPostgresDB(t testing.TB) (string, func()) {
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("postgresdb: failed to connect to docker: %s", err)
-	}
-
-	resource, err := pool.Run("postgres", "latest", []string{
-		"POSTGRES_PASSWORD=secret",
-		"POSTGRES_DB=database",
-	})
-	if err != nil {
-		t.Fatalf("postgresdb: could not start container: %s", err)
-	}
-
-	cleanup := func() {
-		docker.CleanupResource(t, pool, resource)
-	}
-
-	addr := fmt.Sprintf("postgres://postgres:secret@localhost:%s/database?sslmode=disable", resource.GetPort("5432/tcp"))
-
-	if err := pool.Retry(func() error {
-		db, err := sql.Open("postgres", addr)
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-		return db.Ping()
-	}); err != nil {
-		cleanup()
-		t.Fatalf("postgresdb: could not connect: %s", err)
-	}
-
-	return addr, cleanup
 }

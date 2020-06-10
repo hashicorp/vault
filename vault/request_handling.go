@@ -13,6 +13,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -343,6 +344,10 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		// Store the entity ID in the request object
 		req.EntityID = te.EntityID
 		auth.TokenType = te.Type
+		auth.TTL = te.TTL
+		if te.CreationTime > 0 {
+			auth.IssueTime = time.Unix(te.CreationTime, 0)
+		}
 	}
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
@@ -1177,6 +1182,19 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 
+		// Count the successful token creation
+		ttl_label := metricsutil.TTLBucket(tokenTTL)
+		c.metricSink.IncrCounterWithLabels(
+			[]string{"token", "creation"},
+			1,
+			[]metrics.Label{
+				metricsutil.NamespaceLabel(ns),
+				{"auth_method", req.MountType},
+				{"mount_point", req.MountPoint},
+				{"creation_ttl", ttl_label},
+				{"token_type", auth.TokenType.String()},
+			},
+		)
 	}
 
 	return resp, auth, routeErr
