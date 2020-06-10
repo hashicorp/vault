@@ -28,6 +28,8 @@ const (
 	testTags        = "administrator"
 	testVHosts      = `{"/": {"configure": ".*", "write": ".*", "read": ".*"}}`
 	testVHostTopics = `{"/": {"amq.topic": {"write": ".*", "read": ".*"}}}`
+
+	roleName = "web"
 )
 
 func prepareRabbitMQTestContainer(t *testing.T) (func(), string, int) {
@@ -92,7 +94,7 @@ func TestBackend_basic(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, uri, ""),
 			testAccStepRole(t),
-			testAccStepReadCreds(t, b, uri, "web"),
+			testAccStepReadCreds(t, b, uri, roleName),
 		},
 	})
 
@@ -115,7 +117,7 @@ func TestBackend_returnsErrs(t *testing.T) {
 			testAccStepConfig(t, uri, ""),
 			{
 				Operation: logical.CreateOperation,
-				Path:      "roles/web",
+				Path:      fmt.Sprintf("roles/%s", roleName),
 				Data: map[string]interface{}{
 					"tags":         testTags,
 					"vhosts":       `{"invalid":{"write": ".*", "read": ".*"}}`,
@@ -124,7 +126,7 @@ func TestBackend_returnsErrs(t *testing.T) {
 			},
 			{
 				Operation: logical.ReadOperation,
-				Path:      "creds/web",
+				Path:      fmt.Sprintf("creds/%s", roleName),
 				ErrorOk:   true,
 			},
 		},
@@ -147,14 +149,14 @@ func TestBackend_roleCrud(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, uri, ""),
 			testAccStepRole(t),
-			testAccStepReadRole(t, "web", testTags, testVHosts, testVHostTopics),
-			testAccStepDeleteRole(t, "web"),
-			testAccStepReadRole(t, "web", "", "", ""),
+			testAccStepReadRole(t, roleName, testTags, testVHosts, testVHostTopics),
+			testAccStepDeleteRole(t, roleName),
+			testAccStepReadRole(t, roleName, "", "", ""),
 		},
 	})
 }
 
-func TestBackend_roleCrudWithPasswordPolicy(t *testing.T) {
+func TestBackend_roleWithPasswordPolicy(t *testing.T) {
 	if os.Getenv(logicaltest.TestEnvVar) == "" {
 		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
 		return
@@ -173,9 +175,7 @@ func TestBackend_roleCrudWithPasswordPolicy(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, uri, "testpolicy"),
 			testAccStepRole(t),
-			testAccStepReadRole(t, "web", testTags, testVHosts, testVHostTopics),
-			testAccStepDeleteRole(t, "web"),
-			testAccStepReadRole(t, "web", "", "", ""),
+			testAccStepReadCreds(t, b, uri, roleName),
 		},
 	})
 }
@@ -213,7 +213,7 @@ func testAccStepConfig(t *testing.T, uri string, passwordPolicy string) logicalt
 func testAccStepRole(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "roles/web",
+		Path:      fmt.Sprintf("roles/%s", roleName),
 		Data: map[string]interface{}{
 			"tags":         testTags,
 			"vhosts":       testVHosts,
