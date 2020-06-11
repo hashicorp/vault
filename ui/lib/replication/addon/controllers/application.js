@@ -5,6 +5,7 @@ import Controller from '@ember/controller';
 import { copy } from 'ember-copy';
 import { resolve } from 'rsvp';
 import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
+import keys from 'vault/lib/keycodes';
 
 const DEFAULTS = {
   token: null,
@@ -129,13 +130,26 @@ export default Controller.extend(copy(DEFAULTS, true), {
       this.transitionToRoute('mode.secondaries');
     },
     toggleModal(successMessage) {
-      if (!!successMessage && typeof successMessage === 'string') {
-        this.get('flashMessages').success(successMessage);
+      // if modal is not active return.
+      // This is a separate conditional because of the enter that can happen on the form submit
+      if (!this.isModalActive) {
+        return;
       }
+
+      if (event.keyCode !== keys.ENTER) {
+        // because we want them to copy this token and not think they can cancel the operation,
+        // we are not allowing the ESCAPE key functionality
+        return;
+      }
+
       // use copy browser extension to copy token if you close the modal by clicking outside of it.
       const htmlSelectedToken = document.querySelector('#token-textarea');
       htmlSelectedToken.select();
       document.execCommand('copy');
+
+      if (!!successMessage && typeof successMessage === 'string') {
+        this.get('flashMessages').success(successMessage);
+      }
 
       this.toggleProperty('isModalActive');
       this.transitionToRoute('mode.secondaries');
