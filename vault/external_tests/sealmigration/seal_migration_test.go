@@ -1,4 +1,4 @@
-package seal_migration
+package sealmigration
 
 import (
 	"context"

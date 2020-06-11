@@ -1,6 +1,6 @@
 // +build !enterprise
 
-package seal_migration
+package sealmigration
 
 import (
 	"context"
