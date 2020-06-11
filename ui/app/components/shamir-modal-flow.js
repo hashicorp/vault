@@ -21,16 +21,15 @@ export default ShamirFlow.extend({
   actions: {
     onCancelClose() {
       if (this.encoded_token) {
-        console.log('encoded token');
-        this.reset();
+        this.send('reset');
       } else if (this.generateAction && !this.started) {
         if (this.generateStep !== 'chooseMethod') {
-          this.reset();
+          this.send('reset');
         }
       } else {
         const adapter = this.get('store').adapterFor('cluster');
         adapter.generateDrOperationToken(this.model, { cancel: true });
-        this.reset();
+        this.send('reset');
       }
       this.onClose();
     },

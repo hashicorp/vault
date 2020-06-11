@@ -39,6 +39,10 @@
   display: flex;
   flex-direction: column;
 }
+.is-flex-row {
+  display: flex;
+  flex-direction: row;
+}
 .is-flex-v-centered {
   display: flex;
   align-items: center;
