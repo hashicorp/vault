@@ -39,7 +39,7 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 		storage, cleanup := teststorage.MakeReusableStorage(
 			t, logger, teststorage.MakeInmemBackend(t, logger))
 		defer cleanup()
-		tf(t, logger, storage, 20000)
+		tf(t, logger, storage, 51000)
 	})
 
 	t.Run("file", func(t *testing.T) {
@@ -49,7 +49,7 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 		storage, cleanup := teststorage.MakeReusableStorage(
 			t, logger, teststorage.MakeFileBackend(t, logger))
 		defer cleanup()
-		tf(t, logger, storage, 20020)
+		tf(t, logger, storage, 52000)
 	})
 
 	t.Run("consul", func(t *testing.T) {
@@ -59,7 +59,7 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 		storage, cleanup := teststorage.MakeReusableStorage(
 			t, logger, teststorage.MakeConsulBackend(t, logger))
 		defer cleanup()
-		tf(t, logger, storage, 20040)
+		tf(t, logger, storage, 53000)
 	})
 
 	if includeRaft {
@@ -69,7 +69,7 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 			logger := logger.Named("raft")
 			storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores)
 			defer cleanup()
-			tf(t, logger, storage, 20060)
+			tf(t, logger, storage, 54000)
 		})
 	}
 }
@@ -266,13 +266,13 @@ func initializeShamir(
 	// Unseal
 	if storage.IsRaft {
 		testhelpers.RaftClusterJoinNodes(t, cluster)
-		if err := testhelpers.VerifyRaftConfiguration(leader, len(cluster.Cores)); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
 			t.Fatal(err)
 		}
 	} else {
 		cluster.UnsealCores(t)
 	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
+	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
 
 	// Write a secret that we will read back out later.
 	_, err := client.Logical().Write(
@@ -333,13 +333,13 @@ func runShamir(
 		// situated.
 		time.Sleep(15 * time.Second)
 
-		if err := testhelpers.VerifyRaftConfiguration(leader, len(cluster.Cores)); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
 			t.Fatal(err)
 		}
 	} else {
 		cluster.UnsealCores(t)
 	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
+	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
 
 	// Read the secret
 	secret, err := client.Logical().Read("secret/foo")
@@ -395,11 +395,11 @@ func initializeTransit(
 	// Join raft
 	if storage.IsRaft {
 		testhelpers.RaftClusterJoinNodesWithStoredKeys(t, cluster)
-		if err := testhelpers.VerifyRaftConfiguration(leader, len(cluster.Cores)); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
 			t.Fatal(err)
 		}
 	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
+	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
 
 	// Write a secret that we will read back out later.
 	_, err := client.Logical().Write(
@@ -460,7 +460,7 @@ func runTransit(
 		// situated.
 		time.Sleep(15 * time.Second)
 
-		if err := testhelpers.VerifyRaftConfiguration(leader, len(cluster.Cores)); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
 			t.Fatal(err)
 		}
 	} else {
@@ -468,7 +468,7 @@ func runTransit(
 			t.Fatal(err)
 		}
 	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
+	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
 
 	// Read the secret
 	secret, err := client.Logical().Read("secret/foo")
