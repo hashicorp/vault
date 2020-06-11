@@ -39,7 +39,7 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 		storage, cleanup := teststorage.MakeReusableStorage(
 			t, logger, teststorage.MakeInmemBackend(t, logger))
 		defer cleanup()
-		tf(t, logger, storage, 51000)
+		tf(t, logger, storage, 20000)
 	})
 
 	t.Run("file", func(t *testing.T) {
@@ -49,7 +49,7 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 		storage, cleanup := teststorage.MakeReusableStorage(
 			t, logger, teststorage.MakeFileBackend(t, logger))
 		defer cleanup()
-		tf(t, logger, storage, 52000)
+		tf(t, logger, storage, 20020)
 	})
 
 	t.Run("consul", func(t *testing.T) {
@@ -59,7 +59,7 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 		storage, cleanup := teststorage.MakeReusableStorage(
 			t, logger, teststorage.MakeConsulBackend(t, logger))
 		defer cleanup()
-		tf(t, logger, storage, 53000)
+		tf(t, logger, storage, 20040)
 	})
 
 	if includeRaft {
@@ -69,7 +69,7 @@ func testVariousBackends(t *testing.T, tf testFunc, includeRaft bool) {
 			logger := logger.Named("raft")
 			storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores)
 			defer cleanup()
-			tf(t, logger, storage, 54000)
+			tf(t, logger, storage, 20060)
 		})
 	}
 }

@@ -14,7 +14,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/internalshared/configutil"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -27,6 +26,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/vault/internalshared/configutil"
 
 	"github.com/armon/go-metrics"
 	hclog "github.com/hashicorp/go-hclog"
@@ -1058,14 +1059,28 @@ type TestClusterOptions struct {
 	HandlerFunc              func(*HandlerProperties) http.Handler
 	DefaultHandlerProperties HandlerProperties
 
-	// BaseListenAddress is used to assign ports in sequence to the listener
-	// of each core.  It shoud be a string of the form "127.0.0.1:50000"
+	// BaseListenAddress is used to explicitly assign ports in sequence to the
+	// listener of each core.  It shoud be a string of the form
+	// "127.0.0.1:20000"
+	//
+	// WARNING: Using an explicitly assigned port above 30000 may clash with
+	// ephemeral ports that have been assigned by the OS in other tests.  The
+	// use of explictly assigned ports below 30000 is strongly recommended.
+	// In addition, you should be careful to use explictly assigned ports that
+	// do not clash with any other explicitly assigned ports in other tests.
 	BaseListenAddress string
 
-	// BaseClusterListenPort is used to assign ports in sequence to the
-	// cluster listener of each core.  If BaseClusterListenPort is specified,
-	// then BaseListenAddress must also be specified.  Each cluster listener
-	// will use the same host as the one specified in BaseListenAddress.
+	// BaseClusterListenPort is used to explicitly assign ports in sequence to
+	// the cluster listener of each core.  If BaseClusterListenPort is
+	// specified, then BaseListenAddress must also be specified.  Each cluster
+	// listener will use the same host as the one specified in
+	// BaseListenAddress.
+	//
+	// WARNING: Using an explicitly assigned port above 30000 may clash with
+	// ephemeral ports that have been assigned by the OS in other tests.  The
+	// use of explictly assigned ports below 30000 is strongly recommended.
+	// In addition, you should be careful to use explictly assigned ports that
+	// do not clash with any other explicitly assigned ports in other tests.
 	BaseClusterListenPort int
 
 	NumCores int
