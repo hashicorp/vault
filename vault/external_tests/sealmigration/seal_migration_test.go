@@ -266,13 +266,13 @@ func initializeShamir(
 	// Unseal
 	if storage.IsRaft {
 		testhelpers.RaftClusterJoinNodes(t, cluster)
-		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(leader, len(cluster.Cores)); err != nil {
 			t.Fatal(err)
 		}
 	} else {
 		cluster.UnsealCores(t)
 	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
+	testhelpers.WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
 
 	// Write a secret that we will read back out later.
 	_, err := client.Logical().Write(
@@ -333,13 +333,13 @@ func runShamir(
 		// situated.
 		time.Sleep(15 * time.Second)
 
-		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(leader, len(cluster.Cores)); err != nil {
 			t.Fatal(err)
 		}
 	} else {
 		cluster.UnsealCores(t)
 	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
+	testhelpers.WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
 
 	// Read the secret
 	secret, err := client.Logical().Read("secret/foo")
@@ -395,11 +395,11 @@ func initializeTransit(
 	// Join raft
 	if storage.IsRaft {
 		testhelpers.RaftClusterJoinNodesWithStoredKeys(t, cluster)
-		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(leader, len(cluster.Cores)); err != nil {
 			t.Fatal(err)
 		}
 	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
+	testhelpers.WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
 
 	// Write a secret that we will read back out later.
 	_, err := client.Logical().Write(
@@ -460,7 +460,7 @@ func runTransit(
 		// situated.
 		time.Sleep(15 * time.Second)
 
-		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(leader, len(cluster.Cores)); err != nil {
 			t.Fatal(err)
 		}
 	} else {
@@ -468,7 +468,7 @@ func runTransit(
 			t.Fatal(err)
 		}
 	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
+	testhelpers.WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
 
 	// Read the secret
 	secret, err := client.Logical().Read("secret/foo")
