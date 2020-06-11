@@ -1356,7 +1356,7 @@ func (m *ExpirationManager) inMemoryLeaseInfo(le *leaseEntry) *leaseEntry {
 	//   auth method -- derived from lease.Path
 	if le.Auth != nil {
 		// Ensure that list of policies is not copied more than
-		// once. This menthod is called with pendingLock held.
+		// once. This method is called with pendingLock held.
 
 		// We could use hashstructure here to generate a key, but that
 		// seems like it would be substantially slower?
