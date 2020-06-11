@@ -10,18 +10,28 @@
  * @param {string} [optionalParam] - optionalParam is...
  * @param {string} [param1=defaultValue] - param1 is...
  */
-
+import { inject as service } from '@ember/service';
 import ShamirFlow from './shamir-flow';
 import layout from '../templates/components/shamir-modal-flow';
 
 export default ShamirFlow.extend({
   layout,
+  store: service(),
   onClose: () => {},
   actions: {
     onCancelClose() {
-      console.log('on cancel close');
-      this.reset();
-      console.log('closing');
+      if (this.encoded_token) {
+        console.log('encoded token');
+        this.reset();
+      } else if (this.generateAction && !this.started) {
+        if (this.generateStep !== 'chooseMethod') {
+          this.reset();
+        }
+      } else {
+        const adapter = this.get('store').adapterFor('cluster');
+        adapter.generateDrOperationToken(this.model, { cancel: true });
+        this.reset();
+      }
       this.onClose();
     },
   },
