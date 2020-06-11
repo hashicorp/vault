@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -13,20 +14,79 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
-// func TestStepwise_Run(t *testing.T) {
+type testRun struct {
+	mt        *mockT
+	expectedT *mockT
+	testCase  Case
+}
 
-// 	type testRun struct {
-// 	}
+func TestStepwise_SkipIfNotAcc(t *testing.T) {
+	if err := os.Setenv(TestEnvVar, ""); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	defer os.Setenv(TestEnvVar, "1")
+	skipCase := Case{
+		Environment: new(mockEnvironment),
+		Steps:       []Step{Step{}},
+	}
 
-// 	testRuns := map[string]testRun{}
+	mt := new(mockT)
+	et := mockT{
+		SkipCalled: true,
+	}
 
-// 	for name, tr := range testRuns {
-// 		t.Run(name, func(t *testing.T) {
-// 			q.Q("--> Test Run:", name)
-// 			q.Q(tr)
-// 		})
-// 	}
-// }
+	testRun := testRun{
+		mt: mt,
+		expectedT: &mockT{
+			SkipCalled: true,
+		},
+		testCase: skipCase,
+	}
+
+	Run(mt, testRun.testCase)
+
+	if mt.SkipCalled != et.SkipCalled {
+		t.Fatalf("expected SkipCalled (%t), got (%t)", et.SkipCalled, mt.SkipCalled)
+	}
+}
+
+func TestStepwise_Run(t *testing.T) {
+	basicCase := func() Case {
+		// envOptions := stepwise.EnvironmentOptions{
+		// 	Name:            "transit2",
+		// 	PluginType:      stepwise.PluginTypeSecrets,
+		// 	PluginName:      "transit",
+		// 	MountPathPrefix: "transit_temp",
+		// }
+		return Case{
+			Environment: new(mockEnvironment),
+			Steps: []Step{
+				Step{
+					Operation: ListOperation,
+					Path:      "keys",
+					Check: func(resp *api.Secret, err error) error {
+						return nil
+					},
+				},
+				// testAccStepwiseWritePolicy(t, "test", true),
+			},
+		}
+	}
+
+	testRuns := map[string]testRun{
+		"basic": {
+			mt:        new(mockT),
+			expectedT: new(mockT),
+			testCase:  basicCase(),
+		},
+	}
+
+	for name, tr := range testRuns {
+		t.Run(name, func(t *testing.T) {
+			Run(tr.mt, tr.testCase)
+		})
+	}
+}
 
 func TestStepwise_makeRequest(t *testing.T) {
 	me := new(mockEnvironment)
