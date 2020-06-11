@@ -26,10 +26,10 @@ const (
 	keyShares    = 3
 	keyThreshold = 3
 
-	basePort_ShamirToTransit_Pre14  = 51000
-	basePort_TransitToShamir_Pre14  = 52000
-	basePort_ShamirToTransit_Post14 = 53000
-	basePort_TransitToShamir_Post14 = 54000
+	basePort_ShamirToTransit_Pre14  = 20000
+	basePort_TransitToShamir_Pre14  = 21000
+	basePort_ShamirToTransit_Post14 = 22000
+	basePort_TransitToShamir_Post14 = 23000
 )
 
 type testFunc func(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int)
