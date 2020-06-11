@@ -19,33 +19,17 @@
   </div>
 </div>
 
-<Modal
-  @title="Generate operation token"
-  @onClose={{action (mut isModalActive) false}}
-  @isActive={{isModalActive}}
-  @type="warning"
-  @showCloseButton={{true}}
->
-  <section class="modal-card-body">
-    <ShamirFlow
-      @action="generate-dr-operation-token"
-      @buttonText="Generate token"
-      @fetchOnInit=true
-      @generateAction=true
-      @paddingless=true
-    >
-      <p>
-        Generate an Operation Token by entering a portion of the {{replicationDisplayMode}} Primary's master key.
-        Once all portions are entered, the generated operation token may be used to manage your secondary Disaster Recovery cluster.
-      </p>
-    </ShamirFlow>
-  </section>
-  <footer class="modal-card-foot modal-card-foot-outlined">
-    <button
-      class="button is-secondary"
-      onclick={{action (mut isModalActive) false}}
-      data-test-generate-token-cancel-button>
-      Cancel
-    </button>
-  </footer>
-</Modal>
+
+  <ShamirModalFlow
+    @action="generate-dr-operation-token"
+    @buttonText="Generate token"
+    @fetchOnInit=true
+    @generateAction=true
+    @onClose={{action (mut isModalActive) false}}
+    @isActive={{isModalActive}}
+  >
+    <p>
+      Generate an Operation Token by entering a portion of the {{replicationDisplayMode}} Primary's master key.
+      Once all portions are entered, the generated operation token may be used to manage your secondary Disaster Recovery cluster.
+    </p>
+  </ShamirModalFlow>
