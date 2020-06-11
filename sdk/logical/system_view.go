@@ -194,3 +194,16 @@ func (d StaticSystemView) GeneratePasswordFromPolicy(ctx context.Context, policy
 	}
 	return policy.Generate(ctx, nil)
 }
+
+func (d *StaticSystemView) SetPasswordPolicy(name string, policy PasswordPolicy) {
+	if d.PasswordPolicies == nil {
+		d.PasswordPolicies = map[string]PasswordPolicy{}
+	}
+	d.PasswordPolicies[name] = policy
+}
+
+func (d *StaticSystemView) DeletePasswordPolicy(name string) (existed bool) {
+	_, existed = d.PasswordPolicies[name]
+	delete(d.PasswordPolicies, name)
+	return existed
+}
