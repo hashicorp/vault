@@ -62,7 +62,12 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 	backend := backendRaw.(*RaftBackend)
 
 	if bootstrap {
-		err = backend.Bootstrap(context.Background(), []Peer{Peer{ID: backend.NodeID(), Address: backend.NodeID()}})
+		err = backend.Bootstrap([]Peer{
+			{
+				ID:      backend.NodeID(),
+				Address: backend.NodeID(),
+			},
+		})
 		if err != nil {
 			t.Fatal(err)
 		}

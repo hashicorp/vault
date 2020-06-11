@@ -259,7 +259,7 @@ func (c *OperatorMigrateCommand) createDestinationBackend(kind string, conf map[
 		if err != nil {
 			return nil, errwrap.Wrapf("error parsing cluster address: {{err}}", err)
 		}
-		if err := raftStorage.Bootstrap(context.Background(), []raft.Peer{
+		if err := raftStorage.Bootstrap([]raft.Peer{
 			{
 				ID:      raftStorage.NodeID(),
 				Address: parsedClusterAddr.Host,

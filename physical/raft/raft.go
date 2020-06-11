@@ -426,7 +426,7 @@ func (b *RaftBackend) SetServerAddressProvider(provider raft.ServerAddressProvid
 }
 
 // Bootstrap prepares the given peers to be part of the raft cluster
-func (b *RaftBackend) Bootstrap(ctx context.Context, peers []Peer) error {
+func (b *RaftBackend) Bootstrap(peers []Peer) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 

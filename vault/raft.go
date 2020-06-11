@@ -925,7 +925,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return err
 	}
 
-	if err := raftBackend.Bootstrap(ctx, answerResp.Data.Peers); err != nil {
+	if err := raftBackend.Bootstrap(answerResp.Data.Peers); err != nil {
 		return err
 	}
 
@@ -956,17 +956,15 @@ func (c *Core) RaftBootstrap(ctx context.Context, onInit bool) error {
 	}
 
 	raftBackend := c.getRaftBackend()
-
-	// No raft backend found, no-op
 	if raftBackend == nil {
-		return errors.New("raft backend not use")
+		return errors.New("raft backend not in use")
 	}
 
 	parsedClusterAddr, err := url.Parse(c.ClusterAddr())
 	if err != nil {
 		return errwrap.Wrapf("error parsing cluster address: {{err}}", err)
 	}
-	if err := raftBackend.Bootstrap(ctx, []raft.Peer{
+	if err := raftBackend.Bootstrap([]raft.Peer{
 		{
 			ID:      raftBackend.NodeID(),
 			Address: parsedClusterAddr.Host,

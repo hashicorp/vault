@@ -35,7 +35,7 @@ func addPeer(t *testing.T, leader, follower *RaftBackend) {
 		t.Fatal(err)
 	}
 
-	err = follower.Bootstrap(context.Background(), peers)
+	err = follower.Bootstrap(peers)
 	if err != nil {
 		t.Fatal(err)
 	}
