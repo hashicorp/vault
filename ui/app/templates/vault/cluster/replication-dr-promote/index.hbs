@@ -32,6 +32,7 @@
           <ReplicationActions
             @replicationMode="dr"
             @model={{model}}
+            @onPromote={{action "onPromote"}}
             />
         </section>
       {{/if}}
