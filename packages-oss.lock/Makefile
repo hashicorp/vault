@@ -176,7 +176,7 @@ endef
 # RELEASE_TARGETS are targets in the release repo we pass control to
 # to perform release actions.
 # Note: The release repo is only available to HashiCorp employees.
-RELEASE_TARGETS := build-ci stage-config stage
+RELEASE_TARGETS := build-ci stage-config stage watch-ci
 # We always rev-parse the PRODUCT_REVISION to obtain the full SHA. This is required
 # for downstream processes which use it to determine part of the package name.
 $(RELEASE_TARGETS): PRODUCT_REVISION := $(shell git rev-parse $${PRODUCT_REVISION:-HEAD})
