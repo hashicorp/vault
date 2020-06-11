@@ -21,7 +21,8 @@
         class="input has-margin-top"
         autocomplete="off"
         spellcheck="false"
-        enter=onConfirm
+        enter=(if (eq confirmationInput confirmText) onConfirm)
+        escape-press=onClose
         data-test-confirmation-modal-input=testSelector
       }}
     </div>
