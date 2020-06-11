@@ -115,10 +115,6 @@ export default Controller.extend(copy(DEFAULTS, true), {
 
   actions: {
     onSubmit(/*action, mode, data, event*/) {
-      if (this.isModalActive) {
-        // capturing the enter action if the modal is open
-        return this.send('copyClose', 'Token copied!');
-      }
       return this.submitHandler(...arguments);
     },
     copyClose(successMessage) {
