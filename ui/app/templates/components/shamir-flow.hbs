@@ -1,5 +1,5 @@
 {{#if encoded_token}}
-  <div class="box is-marginless is-shadowless {{if paddingless 'is-paddingless'}}">
+  <div class="box is-marginless is-shadowless">
     <div class="message is-list has-copy-button" tabindex="-1">
       <HoverCopyButton @copyValue={{encoded_token}} />
       <div class="message-body">
@@ -10,6 +10,7 @@
       </div>
     </div>
     {{#if otp}}
+      <p>IS OTP</p>
       <div class="message is-list has-copy-button" tabindex="-1">
         <HoverCopyButton @copyValue={{otp}} />
         <div class="message-body">
@@ -39,10 +40,11 @@
     </button>
   </div>
 {{else if (and generateAction (not started))}}
+<p>GENERATE ACTION NOT STARTED</p>
   <form {{action 'startGenerate' (hash pgp_key=pgp_key) on="submit"}} id="shamir">
     {{message-error errors=errors}}
     {{#if (eq generateStep 'chooseMethod')}}
-      <div class="box is-marginless is-shadowless {{if paddingless 'is-paddingless'}}">
+      <div class="box is-marginless is-shadowless">
         <p>
         Updating or promoting this cluster requires an operation token. Let's generate one by
         inputting the master key shares. If you'd like to encrypt the token with a PGP Key, please click "Provide PGP Key" below, otherwise we can begin generation of the Operation Token.
@@ -67,7 +69,7 @@
       </div>
     {{/if}}
     {{#if (eq generateStep 'providePGPKey')}}
-      <div class="box is-marginless is-shadowless {{if paddingless 'is-paddingless'}}">
+      <div class="box is-marginless is-shadowless">
         <p>
           Choose a PGP Key from your computer or paste the contents of one in the form below.
           This key will be used to Encrypt the generated Operation Token.
@@ -88,7 +90,7 @@
       </div>
     {{/if}}
     {{#if (eq generateStep 'beginGenerationWithPGP')}}
-      <div class="box is-marginless is-shadowless {{if paddingless 'is-paddingless'}}">
+      <div class="box is-marginless is-shadowless">
         <p>
           Below is the base-64 encoded PGP Key that will be used to encrypt the generated Operation Token.
           Next we'll enter portions of the master key to generate an Operation Token. Click the "Generate Operation Token" button to proceed.
@@ -118,8 +120,9 @@
     {{/if}}
   </form>
 {{else}}
+  <p>ALL ELSE FAILS</p>
   <form {{action 'onSubmit' (hash key=key) on="submit"}} id="shamir">
-    <div class="box is-marginless is-shadowless {{if paddingless 'is-paddingless'}}">
+    <div class="box is-shadowless">
       {{#if errors}}
         <div class="box is-shadowless is-marginless no-padding-top is-fullwidth">
           {{message-error errors=errors}}
@@ -155,7 +158,7 @@
         </div>
       </div>
     </div>
-    <div class="box is-marginless is-shadowless {{if paddingless 'is-paddingless'}}">
+    <div class="box is-marginless is-shadowless">
       <div class="columns is-mobile">
         <div class="column is-narrow">
           <button
