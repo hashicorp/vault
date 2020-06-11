@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -11,6 +12,21 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
+
+// func TestStepwise_Run(t *testing.T) {
+
+// 	type testRun struct {
+// 	}
+
+// 	testRuns := map[string]testRun{}
+
+// 	for name, tr := range testRuns {
+// 		t.Run(name, func(t *testing.T) {
+// 			q.Q("--> Test Run:", name)
+// 			q.Q(tr)
+// 		})
+// 	}
+// }
 
 func TestStepwise_makeRequest(t *testing.T) {
 	me := new(mockEnvironment)
@@ -69,6 +85,7 @@ func TestStepwise_makeRequest(t *testing.T) {
 type mockEnvironment struct {
 	ts     *httptest.Server
 	client *api.Client
+	l      sync.Mutex
 }
 
 // Setup creates the mock environment, establishing a test HTTP server
@@ -111,12 +128,19 @@ func (m *mockEnvironment) Setup() error {
 // Client creates a Vault API client configured to the mock environment's test
 // server
 func (m *mockEnvironment) Client() (*api.Client, error) {
+	m.l.Lock()
+	defer m.l.Unlock()
 	// this shouldn't be needed but being defensive
 	if m.ts == nil {
 		if err := m.Setup(); err != nil {
 			return nil, err
 		}
 	}
+
+	if m.client != nil {
+		return m.client, nil
+	}
+
 	cfg := api.Config{
 		Address:    m.ts.URL,
 		HttpClient: cleanhttp.DefaultPooledClient(),
