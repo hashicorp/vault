@@ -71,6 +71,8 @@ YQ_PACKAGE_BY_ID = .packages[] | select(.packagespecid == "$(1)")
 # This may be invalid, check that PACKAGE_SPEC_ID is not empty before use.
 YQ_PACKAGE_PATH := $(call YQ_PACKAGE_BY_ID,$(PACKAGE_SPEC_ID))  
 
+YQ_PACKAGE_PATH_BY_ID = $(call YQ_PACKAGE_BY_ID,$(1))  
+
 # QUERY_LOCK is a macro to query the lock file.
 QUERY_LOCK = cd $(REPO_ROOT); yq -r '$(1)' < $(LOCK)
 
