@@ -7,7 +7,7 @@
 {{- $layers := $data.layers -}}
 {{- $revision := (env.Getenv "PRODUCT_REVISION") -}}
 {{- define "cache-key"}}{{template "cache-version"}}-{{.}}{{end -}}
-{{- define "cache-version"}}cache000{{end -}}
+{{- define "cache-version"}}cache001{{end -}}
 {{- /*
   Any change to cache-version invalidates all build layer and package caches.
 */ -}}
@@ -118,17 +118,6 @@ jobs:
               echo "No package found, continuing with build."
               exit 0
             fi
-            # Check the aliases are right, as they are metadata not included in
-            # the cache key. If they're wrong, it's time to bust cache.
-            for ALIAS in {{ range .aliases }}.buildcache/packages/by-alias/{{.type}}/{{.path}} {{end}}; do
-              echo "Checking alias: $ALIAS"
-              if ! readlink $ALIAS; then
-                echo "Missing alias: $ALIAS"
-                echo "Please increment the cache version to fix this issue."
-                { { apt-get update && apt-get install -y tree; } > /dev/null 2>&1 && tree .buildcache/packages; } || true
-                exit 1
-              fi
-            done
             echo "Package already cached, skipping build."
             circleci-agent step halt
 
@@ -141,14 +130,14 @@ jobs:
           {{- end}}
       - run: make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
-      - run: ls -lahR .buildcache/packages
+      - run: ls -lahR .buildcache/packages/store
       # Save package cache.
       - save_cache:
           key: '{{template "cache-key" .meta.circleci.PACKAGE_CACHE_KEY}}'
           paths:
-            - .buildcache/packages
+            - .buildcache/packages/store
       - store_artifacts:
-          path: .buildcache/packages
+          path: .buildcache/packages/store
           destination: packages
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
@@ -181,11 +170,11 @@ jobs:
       - write-all-package-cache-keys
       {{- range $packages}}
       - load-{{.meta.BUILD_JOB_NAME}}{{end}}
-      - run: ls -lahR .buildcache/packages
+      - run: ls -lahR .buildcache/packages/store
       - store_artifacts:
-          path: .buildcache/packages
+          path: .buildcache/packages/store
           destination: packages
-      - run: tar -czf packages.tar.gz .buildcache/packages
+      - run: tar -czf packages.tar.gz .buildcache/packages/store
       - store_artifacts:
           path: packages.tar.gz
           destination: packages.tar.gz
