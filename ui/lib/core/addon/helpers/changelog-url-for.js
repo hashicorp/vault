@@ -1,7 +1,19 @@
 import { helper } from '@ember/component/helper';
 
+/*
+This helper returns a url to the changelog for the specified version.
+It assumes that Changelog headers for Vault versions >= 1.4.3 are structured as:
+
+## v1.5.0
+### Month, DD, YYYY
+
+## v1.4.5
+### Month, DD, YYY
+
+etc.
+*/
+
 export function changelogUrlFor([version]) {
-  // returns a url to the changelog for the specified version
   let url = 'http://www.github.com/hashicorp/vault/blob/master/CHANGELOG.md#';
 
   // strip the '+prem' from enterprise versions and remove periods
@@ -10,12 +22,12 @@ export function changelogUrlFor([version]) {
     .split('.')
     .join('');
 
-  // only the most recent versions have a predictable url
-  if (versionNumber >= '140') {
-    url = url.concat(versionNumber);
+  // only recent versions have a predictable url
+  if (versionNumber >= '143') {
+    return url.concat('v', versionNumber);
+  } else {
+    return url;
   }
-
-  return url;
 }
 
 export default helper(changelogUrlFor);
