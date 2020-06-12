@@ -132,20 +132,17 @@
           {{/if}}
           <div class="box is-shadowless is-marginless no-padding-top is-fullwidth no-padding-sides" data-test-form-text>
             {{#if otp}}
-              <p>
-                <AlertBanner @type="info" @message="Below is the generated OTP. This will be used to encode the generated operation token. Make sure to save this, as you will need it later to decode the operation token." />
-              </p>
-              <div class="message is-list has-copy-button" tabindex="-1">
-                <HoverCopyButton @copyValue={{otp}} />
-                <div class="message-body">
-                  <h4 class="title is-7 is-marginless">
-                    One-time password (OTP)
-                  </h4>
+              <div>
+                <h4 class="title is-7 has-bottom-padding-m is-fullwidth">
+                  One-time password (OTP)
+                </h4>
+                <div class="message is-list has-copy-button" tabindex="-1">
+                  <HoverCopyButton @copyValue={{otp}} />
                   <code class="is-word-break">{{otp}}</code>
                 </div>
               </div>
-              <div class="has-text-grey is-helper">
-                This OTP will be used to encode the generated operation token. <span class="is-bold">Save this</span>, as you will need it later to decode the operation token.
+              <div class="has-text-grey is-size-8 has-bottom-margin-l">
+                This OTP will be used to encode the generated operation token. <span class="has-text-semibold">Save this</span>, as you will need it later to decode the operation token.
               </div>
             {{/if}}
             <p>

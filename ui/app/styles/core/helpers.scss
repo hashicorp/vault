@@ -156,6 +156,9 @@
 .has-bottom-margin-m {
   margin-bottom: $spacing-m;
 }
+.has-bottom-margin-l {
+  margin-bottom: $spacing-l;
+}
 .has-top-margin-xl {
   margin-top: $spacing-xl;
 }
@@ -166,4 +169,8 @@
 ul.bullet {
   list-style: disc;
   padding-left: $spacing-m;
+}
+
+.has-text-semibold {
+  font-weight: $font-weight-semibold;
 }
