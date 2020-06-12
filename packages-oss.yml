@@ -29,8 +29,6 @@ inputs:
   # These values may be overridden on a per-package basis in the packages section.
   defaults:
 
-    EDITION: ""
-
     # PRODUCT_VERSION is the version of this product. Usually, this should be left
     # as 0.0.0-snapshot. When we build a release candidate, this is overridden in
     # a one-off fashion to produce that build.
