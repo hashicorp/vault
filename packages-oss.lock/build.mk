@@ -57,8 +57,8 @@ _ := $(shell mkdir -p $(OUTPUT_DIR))
 PACKAGE_NAME := $(PACKAGE_SOURCE_ID)-$(PACKAGE_SPEC_ID)
 PACKAGE_ZIP_NAME := $(PACKAGE_NAME).zip
 PACKAGE := $(OUTPUT_DIR)/$(PACKAGE_ZIP_NAME)
-META_YAML_NAME := $(PACKAGE_NAME)-meta.yml
-META := $(OUTPUT_DIR)/$(META_YAML_NAME)
+META_JSON_NAME := $(PACKAGE_ZIP_NAME).meta.json
+META := $(OUTPUT_DIR)/$(META_JSON_NAME)
 
 # In the container, place the output dir at root. This makes 'docker cp' easier.
 CONTAINER_OUTPUT_DIR := /$(OUTPUT_DIR)

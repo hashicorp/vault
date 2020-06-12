@@ -107,6 +107,25 @@ package:
 		echo "$$COMMAND"; \
 		$(SHELL) "$$COMMAND"
 
+# aliases writes all alias symlinks for packages in the package store that
+# match the current LOCKFILE and PRODUCT_REVISION. It does not cause a new build.
+# If the package store contains no matchin binaries, then this does nothing.
+aliases:
+	@echo "==> Writing alias symlinks for existing packages in the store."
+	@PACKAGE_SPEC_IDS="$$($(call QUERY_LOCK,.packages[] | .packagespecid))"; \
+		for PACKAGE_SPEC_ID in $$PACKAGE_SPEC_IDS; do \
+			PACKAGE_FILE="$$PACKAGE_SOURCE_ID-$$PACKAGE_SPEC_ID.zip"; \
+			PACKAGE="$(PACKAGE_STORE)/$$PACKAGE_FILE"; \
+			[ -f $$PACKAGE ] || continue; \
+			ALIASES=$$($(call QUERY_PACKAGESPEC_BY_ID,'$$PACKAGE_SPEC_ID',.aliases[] | "\(.type)/\(.path)")); \
+			for A in $ALIASES; do \
+				mkdir -p $$(dirname $$A); \
+				$(LN) -rfs $$PACKAGE $$A; \
+				echo "==> Alias written: $$A -> $$PACKAGE"; \
+			done; \
+		done
+
+
 write-builder-cache-keys:
 	@echo "==> Writing build layer cache keys"
 	@$(MK)layer.mk write-cache-keys
