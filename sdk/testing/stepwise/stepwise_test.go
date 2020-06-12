@@ -16,7 +16,6 @@ import (
 )
 
 type testRun struct {
-	testT         *mockT
 	expectedTestT *mockT
 	environment   *mockEnvironment
 	steps         []Step
@@ -37,11 +36,11 @@ func TestStepwise_Run_SkipIfNotAcc(t *testing.T) {
 		Steps:       []Step{Step{}},
 	}
 
-	testT := new(mockT)
 	expected := mockT{
 		SkipCalled: true,
 	}
 
+	testT := new(mockT)
 	Run(testT, skipCase)
 
 	if testT.SkipCalled != expected.SkipCalled {
@@ -49,47 +48,7 @@ func TestStepwise_Run_SkipIfNotAcc(t *testing.T) {
 	}
 }
 
-func stepFunc(path string, operation StepOperation, shouldError bool) Step {
-	s := Step{
-		Operation: operation,
-		Path:      path,
-	}
-	if shouldError {
-		s.Check = func(resp *api.Secret, err error) error {
-			return errors.New("some error")
-		}
-	}
-	return s
-}
-
 func TestStepwise_Run_Basic(t *testing.T) {
-	// basicCase := Case{
-	// 	Environment: new(mockEnvironment),
-	// 	Steps: []Step{
-	// 		Step{
-	// 			Operation: ListOperation,
-	// 			Path:      "keys",
-	// 			Check: func(resp *api.Secret, err error) error {
-	// 				return nil
-	// 			},
-	// 		},
-	// 	},
-	// }
-
-	// errCase := Case{
-	// 	Environment: new(mockEnvironment),
-	// 	Steps: []Step{
-	// 		Step{
-	// 			Operation: ListOperation,
-	// 			Path:      "keys",
-	// 			Check: func(resp *api.Secret, err error) error {
-	// 				return errors.New("some error")
-	// 			},
-	// 		},
-	// 	},
-	// }
-	// nilCase := Case{}
-
 	testRuns := map[string]testRun{
 		"basic": {
 			steps: []Step{
@@ -127,11 +86,8 @@ func TestStepwise_Run_Basic(t *testing.T) {
 
 	for name, tr := range testRuns {
 		t.Run(name, func(t *testing.T) {
-			testT := tr.testT
+			testT := new(mockT)
 			expectedT := tr.expectedTestT
-			if testT == nil {
-				testT = new(mockT)
-			}
 			if expectedT == nil {
 				expectedT = new(mockT)
 			}
@@ -139,6 +95,7 @@ func TestStepwise_Run_Basic(t *testing.T) {
 				Steps:        tr.steps,
 				SkipTeardown: tr.skipTeardown,
 			}
+
 			if tr.environment != nil {
 				testCase.Environment = tr.environment
 			}
@@ -258,6 +215,7 @@ func (m *mockEnvironment) Setup() error {
 		}
 		w.Write(out)
 	})
+	// fall through that rejects any other url than "/"
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		if req.URL.Path != "/" {
 			http.NotFound(w, req)
@@ -301,9 +259,24 @@ func (m *mockEnvironment) Teardown() error {
 	m.ts.Close()
 	return nil
 }
+
 func (m *mockEnvironment) Name() string { return "" }
 func (m *mockEnvironment) ExpandPath(path string) string {
 	return "/test/" + path
 }
+
 func (m *mockEnvironment) MountPath() string { return "" }
 func (m *mockEnvironment) RootToken() string { return "" }
+
+func stepFunc(path string, operation StepOperation, shouldError bool) Step {
+	s := Step{
+		Operation: operation,
+		Path:      path,
+	}
+	if shouldError {
+		s.Check = func(resp *api.Secret, err error) error {
+			return errors.New("some error")
+		}
+	}
+	return s
+}
