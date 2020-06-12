@@ -147,10 +147,11 @@ type Step struct {
 // StepCheckFunc is the callback used for Check in Steps.
 type StepCheckFunc func(*api.Secret, error) error
 
-// Case is a collection of tests to run for a plugin
+// Case represents a scenario we want to test which involves a series of
+// steps to be followed sequentially, evaluating the results after each step.
 type Case struct {
-	// Environment is used to setup the Vault instance and provide the client used to
-	// drive the tests
+	// Environment is used to setup the Vault instance and provide the client that
+	// will be used to drive the tests
 	Environment StepwiseEnvironment
 
 	// Precheck, if non-nil, will be called once before the test case
@@ -213,8 +214,10 @@ func Run(tt TestT, c Case) {
 	err := c.Environment.Setup()
 	if err != nil {
 		driverErr := fmt.Errorf("error setting up driver: %w", err)
-		if err := c.Environment.Teardown(); err != nil {
-			driverErr = fmt.Errorf("error during driver teardown: %w", driverErr)
+		if !c.SkipTeardown {
+			if err := c.Environment.Teardown(); err != nil {
+				driverErr = fmt.Errorf("error during driver teardown: %w", driverErr)
+			}
 		}
 		tt.Fatal(driverErr)
 	}
@@ -265,7 +268,7 @@ func Run(tt TestT, c Case) {
 		// If we have any failed revokes, log it.
 		if len(failedRevokes) > 0 {
 			for _, s := range failedRevokes {
-				tt.Fatal(fmt.Sprintf(
+				tt.Error(fmt.Sprintf(
 					"WARNING: Revoking the following secret failed. It may\n"+
 						"still exist. Please verify:\n\n%#v",
 					s))
