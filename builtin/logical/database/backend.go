@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	databaseConfigPath     = "database/config/"
+	databaseConfigPath     = "config/"
 	databaseRolePath       = "role/"
 	databaseStaticRolePath = "static-role/"
 )
