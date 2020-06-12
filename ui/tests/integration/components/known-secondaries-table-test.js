@@ -5,19 +5,17 @@ import engineResolverFor from 'ember-engines/test-support/engine-resolver-for';
 import hbs from 'htmlbars-inline-precompile';
 const resolver = engineResolverFor('replication');
 
-const REPLICATION_ATTRS = {
-  secondaries: [
-    { id: 'secondary-1', api_address: 'https://stuff.com/', connection_status: 'connected' },
-    { id: '2nd', api_address: 'https://10.0.0.2:1234/', connection_status: 'disconnected' },
-    { id: '_three_', api_address: 'https://10.0.0.2:1000/', connection_status: 'connected' },
-  ],
-};
+const SECONDARIES = [
+  { node_id: 'secondary-1', api_address: 'https://127.0.0.1:52304', connection_status: 'connected' },
+  { node_id: '2nd', connection_status: 'disconnected' },
+  { node_id: '_three_', api_address: 'http://127.0.0.1:8202', connection_status: 'connected' },
+];
 
 module('Integration | Component | replication known-secondaries-table', function(hooks) {
   setupRenderingTest(hooks, { resolver });
 
   hooks.beforeEach(function() {
-    this.set('replicationAttrs', REPLICATION_ATTRS);
+    this.set('replicationAttrs', SECONDARIES);
   });
 
   test('it renders a table of known secondaries', async function(assert) {
@@ -29,7 +27,7 @@ module('Integration | Component | replication known-secondaries-table', function
   test('it shows the secondary URL and connection_status', async function(assert) {
     await render(hbs`<KnownSecondariesTable @replicationAttrs={{replicationAttrs}} />`);
 
-    REPLICATION_ATTRS.secondaries.forEach(secondary => {
+    SECONDARIES.forEach(secondary => {
       assert.equal(
         this.element.querySelector(`[data-test-secondaries=row-for-${secondary.id}]`).innerHTML.trim(),
         secondary.id,

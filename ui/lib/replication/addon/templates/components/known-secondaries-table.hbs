@@ -22,17 +22,17 @@
       {{#each secondaries as |secondary|}}
         <tr>
           <th scope="row">
-            <code data-test-secondaries={{concat 'row-for-' (or secondary.id secondary)}}>
-              {{or secondary.id secondary}}
+            <code data-test-secondaries={{concat 'row-for-' secondary.node_id}}>
+              {{secondary.node_id}}
             </code>
           </th>
           <td>
-            <a href={{secondary.api_address}} data-test-secondaries={{concat 'api-address-for-' secondary.id}}>
+            <a href={{secondary.api_address}} data-test-secondaries={{concat 'api-address-for-' secondary.node_id}}>
               <code class="is-word-break">{{secondary.api_address}}</code>
             </a>
           </td>
           <td>
-            <code data-test-secondaries={{concat 'connection-status-for-' (or secondary.id secondary)}}>{{secondary.connection_status}}</code>
+            <code data-test-secondaries={{concat 'connection-status-for-' (or secondary.node_id secondary)}}>{{secondary.connection_status}}</code>
           </td>
         </tr>
       {{/each}}
