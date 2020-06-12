@@ -368,7 +368,7 @@ func migratePost14(
 ) int {
 
 	// Restart each follower with the new config, and migrate.
-	for i := 1; i < numTestCores; i++ {
+	for i := 1; i < len(cluster.Cores); i++ {
 		cluster.StopCore(t, i)
 		if storage.IsRaft {
 			teststorage.CloseRaftStorage(t, cluster, i)
@@ -430,7 +430,7 @@ func migratePost14(
 	// situated.
 	if storage.IsRaft {
 		time.Sleep(15 * time.Second)
-		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(leader, len(cluster.Cores)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -573,13 +573,13 @@ func initializeShamir(
 	// Unseal
 	if storage.IsRaft {
 		testhelpers.JoinRaftFollowers(t, cluster, false)
-		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(leader, len(cluster.Cores)); err != nil {
 			t.Fatal(err)
 		}
 	} else {
 		cluster.UnsealCores(t)
 	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
+	testhelpers.WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
 
 	// Write a secret that we will read back out later.
 	_, err := client.Logical().Write(
@@ -633,13 +633,13 @@ func runShamir(
 		// This is apparently necessary for the raft cluster to get itself
 		// situated.
 		time.Sleep(15 * time.Second)
-		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(leader, len(cluster.Cores)); err != nil {
 			t.Fatal(err)
 		}
 	} else {
 		cluster.UnsealCores(t)
 	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
+	testhelpers.WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
 
 	// Read the secret
 	secret, err := client.Logical().Read("secret/foo")
@@ -690,11 +690,11 @@ func initializeTransit(
 	if storage.IsRaft {
 		testhelpers.JoinRaftFollowers(t, cluster, true)
 
-		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(leader, len(cluster.Cores)); err != nil {
 			t.Fatal(err)
 		}
 	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
+	testhelpers.WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
 
 	// Write a secret that we will read back out later.
 	_, err := client.Logical().Write(
@@ -748,7 +748,7 @@ func runTransit(
 		// This is apparently necessary for the raft cluster to get itself
 		// situated.
 		time.Sleep(15 * time.Second)
-		if err := testhelpers.VerifyRaftConfiguration(leader, numTestCores); err != nil {
+		if err := testhelpers.VerifyRaftConfiguration(leader, len(cluster.Cores)); err != nil {
 			t.Fatal(err)
 		}
 	} else {
@@ -756,7 +756,7 @@ func runTransit(
 			t.Fatal(err)
 		}
 	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, numTestCores)
+	testhelpers.WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
 
 	// Read the secret
 	secret, err := client.Logical().Read("secret/foo")
