@@ -111,14 +111,15 @@ package:
 # match the current LOCKFILE and PRODUCT_REVISION. It does not cause a new build.
 # If the package store contains no matchin binaries, then this does nothing.
 aliases:
-	@echo "==> Writing alias symlinks for existing packages in the store."
-	@PACKAGE_SPEC_IDS="$$($(call QUERY_LOCK,.packages[] | .packagespecid))"; \
+	echo "==> Writing alias symlinks for existing packages in the store."; \
+	cd $(REPO_ROOT); \
+	PACKAGE_SPEC_IDS="$$($(call QUERY_LOCK,.packages[] | .packagespecid))"; \
 		for PACKAGE_SPEC_ID in $$PACKAGE_SPEC_IDS; do \
 			PACKAGE_FILE="$$PACKAGE_SOURCE_ID-$$PACKAGE_SPEC_ID.zip"; \
-			PACKAGE="$(PACKAGE_STORE)/$$PACKAGE_FILE"; \
+			PACKAGE="$(CACHE_ROOT)/packages/store/$$PACKAGE_FILE"; \
 			[ -f $$PACKAGE ] || continue; \
-			ALIASES=$$($(call QUERY_PACKAGESPEC_BY_ID,'$$PACKAGE_SPEC_ID',.aliases[] | "\(.type)/\(.path)")); \
-			for A in $ALIASES; do \
+			ALIASES=$$($(call QUERY_PACKAGESPEC_BY_ID,'$$PACKAGE_SPEC_ID',.aliases[] | "$(CACHE_ROOT)/packages/by-alias/\(.type)/\(.path)")); \
+			for A in $$ALIASES; do \
 				mkdir -p $$(dirname $$A); \
 				$(LN) -rfs $$PACKAGE $$A; \
 				echo "==> Alias written: $$A -> $$PACKAGE"; \
