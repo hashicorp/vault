@@ -54,6 +54,9 @@ const (
 	maxLeaseThreshold = 256000
 )
 
+// ErrAlreadyStarted is returned if an attempt is made to start expiration when it is already running
+var ErrAlreadyStarted = errors.New("expiration already started")
+
 // ExpirationManager is used by the Core to manage leases. Secrets
 // can provide a lease, meaning that they can be renewed or revoked.
 // If a secret is not renewed in timely manner, it may be expired, and
@@ -66,13 +69,14 @@ type ExpirationManager struct {
 	tokenStore *TokenStore
 	logger     log.Logger
 
+	pending           *queue.PriorityQueue
+	expirationRunning bool
+	leaseCount        int
+
 	// Although the data structure itself is atomic,
 	// pendingLock should be held to ensure lease modifications
 	// are atomic (with respect to storage, expiration time,
 	// and particularly the lease count.)
-	pending *queue.PriorityQueue
-
-	leaseCount  int
 	pendingLock sync.RWMutex
 
 	tidyLock *int32
@@ -174,8 +178,6 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		exp.logger = log.New(&opts)
 	}
 
-	exp.start()
-
 	return exp
 }
 
@@ -205,6 +207,9 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 		}
 	}
 	go c.expiration.Restore(errorFunc)
+	if err := startExpiration(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -224,8 +229,22 @@ func (c *Core) stopExpiration() error {
 }
 
 // Starts the lease reaper
-func (m *ExpirationManager) start() {
+func (m *ExpirationManager) startExpiration() error {
+	m.pendingLock.Lock()
+	defer m.pendingLock.Unlock()
+
+	if m.expirationRunning {
+		return ErrAlreadyStarted
+	}
+	m.expirationRunning = true
+
 	go func() {
+		defer func() {
+			m.pendingLock.Lock()
+			defer m.pendingLock.Unlock()
+			m.expirationRunning = false
+		}()
+
 		var h *queue.Item
 		var hExp time.Time
 		var delay time.Duration = time.Minute
@@ -263,6 +282,7 @@ func (m *ExpirationManager) start() {
 			}
 		}
 	}()
+	return nil
 }
 
 func prioToTime(priority int64) time.Time {
