@@ -1,6 +1,7 @@
 package stepwise
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -15,12 +16,16 @@ import (
 )
 
 type testRun struct {
-	mt        *mockT
-	expectedT *mockT
-	testCase  Case
+	testT         TestT
+	expectedTestT TestT
+	testCase      Case
 }
 
-func TestStepwise_SkipIfNotAcc(t *testing.T) {
+// TestStepwise_Run_SkipIfNotAcc tests if the Stepwise Run function skips tests
+// if the VAULT_ACC environment variable is not set. This test is seperate from
+// the table tests due to the unsetting/re-setting of the environment variable,
+// which is assumed/needed for all other tests.
+func TestStepwise_Run_SkipIfNotAcc(t *testing.T) {
 	if err := os.Setenv(TestEnvVar, ""); err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -30,60 +35,104 @@ func TestStepwise_SkipIfNotAcc(t *testing.T) {
 		Steps:       []Step{Step{}},
 	}
 
-	mt := new(mockT)
-	et := mockT{
+	testT := new(mockT)
+	expected := mockT{
 		SkipCalled: true,
 	}
 
 	testRun := testRun{
-		mt: mt,
-		expectedT: &mockT{
+		testT: testT,
+		expectedTestT: &mockT{
 			SkipCalled: true,
 		},
 		testCase: skipCase,
 	}
 
-	Run(mt, testRun.testCase)
+	Run(testT, testRun.testCase)
 
-	if mt.SkipCalled != et.SkipCalled {
-		t.Fatalf("expected SkipCalled (%t), got (%t)", et.SkipCalled, mt.SkipCalled)
+	if testT.SkipCalled != expected.SkipCalled {
+		t.Fatalf("expected SkipCalled (%t), got (%t)", expected.SkipCalled, testT.SkipCalled)
 	}
 }
 
-func TestStepwise_Run(t *testing.T) {
-	basicCase := func() Case {
-		// envOptions := stepwise.EnvironmentOptions{
-		// 	Name:            "transit2",
-		// 	PluginType:      stepwise.PluginTypeSecrets,
-		// 	PluginName:      "transit",
-		// 	MountPathPrefix: "transit_temp",
-		// }
-		return Case{
-			Environment: new(mockEnvironment),
-			Steps: []Step{
-				Step{
-					Operation: ListOperation,
-					Path:      "keys",
-					Check: func(resp *api.Secret, err error) error {
-						return nil
-					},
+func TestStepwise_Run_Basic(t *testing.T) {
+	basicCase := Case{
+		Environment: new(mockEnvironment),
+		Steps: []Step{
+			Step{
+				Operation: ListOperation,
+				Path:      "keys",
+				Check: func(resp *api.Secret, err error) error {
+					return nil
 				},
-				// testAccStepwiseWritePolicy(t, "test", true),
 			},
-		}
+		},
 	}
+
+	errCase := Case{
+		Environment: new(mockEnvironment),
+		Steps: []Step{
+			Step{
+				Operation: ListOperation,
+				Path:      "keys",
+				Check: func(resp *api.Secret, err error) error {
+					return errors.New("some error")
+				},
+			},
+		},
+	}
+	nilCase := Case{}
 
 	testRuns := map[string]testRun{
 		"basic": {
-			mt:        new(mockT),
-			expectedT: new(mockT),
-			testCase:  basicCase(),
+			testT:         new(mockT),
+			expectedTestT: new(mockT),
+			testCase:      basicCase,
+		},
+		"error": {
+			testT: new(mockT),
+			expectedTestT: &mockT{
+				ErrorCalled: true,
+			},
+			testCase: errCase,
+		},
+		"nil-env": {
+			testT: new(mockT),
+			expectedTestT: &mockT{
+				FatalCalled: true,
+			},
+			testCase: nilCase,
 		},
 	}
 
 	for name, tr := range testRuns {
 		t.Run(name, func(t *testing.T) {
-			Run(tr.mt, tr.testCase)
+			Run(tr.testT, tr.testCase)
+
+			testT := tr.testT.(*mockT)
+			expectedT := tr.expectedTestT.(*mockT)
+			envRaw := tr.testCase.Environment
+			var env *mockEnvironment
+			if envRaw != nil {
+				env = envRaw.(*mockEnvironment)
+			}
+
+			if env == nil && !testT.FatalCalled {
+				t.Fatal("expected FatalCalled with nil environment, but wasn't")
+			}
+
+			if env != nil {
+				if tr.testCase.SkipTeardown && env.teardownCalled {
+					t.Fatal("SkipTeardown is true, but Teardown was called")
+				}
+				if !tr.testCase.SkipTeardown && !env.teardownCalled {
+					t.Fatal("SkipTeardown is false, but Teardown was not called")
+				}
+			}
+
+			if expectedT.ErrorCalled != testT.ErrorCalled {
+				t.Fatalf("expected ErrorCalled (%t), got (%t)", expectedT.ErrorCalled, testT.ErrorCalled)
+			}
 		})
 	}
 }
@@ -91,7 +140,7 @@ func TestStepwise_Run(t *testing.T) {
 func TestStepwise_makeRequest(t *testing.T) {
 	me := new(mockEnvironment)
 	me.Setup()
-	mt := new(mockT)
+	testT := new(mockT)
 
 	type testRequest struct {
 		Operation         StepOperation
@@ -124,7 +173,7 @@ func TestStepwise_makeRequest(t *testing.T) {
 				Path:      tc.Path,
 			}
 
-			secret, err := makeRequest(mt, me, step)
+			secret, err := makeRequest(testT, me, step)
 			if err != nil && !tc.ExpectErr {
 				t.Fatalf("unexpected error: %s", err)
 			}
@@ -146,11 +195,14 @@ type mockEnvironment struct {
 	ts     *httptest.Server
 	client *api.Client
 	l      sync.Mutex
+
+	teardownCalled bool
 }
 
 // Setup creates the mock environment, establishing a test HTTP server
 func (m *mockEnvironment) Setup() error {
 	mux := http.NewServeMux()
+	// LIST
 	mux.HandleFunc("/v1/test/keys", func(w http.ResponseWriter, req *http.Request) {
 		listResp := api.Secret{
 			RequestID: "list-request",
@@ -162,6 +214,11 @@ func (m *mockEnvironment) Setup() error {
 		}
 		w.Write(out)
 	})
+	// lease revoke
+	mux.HandleFunc("/v1/sys/leases/revoke", func(w http.ResponseWriter, req *http.Request) {
+		w.Write(nil)
+	})
+	// READ
 	mux.HandleFunc("/v1/test/keys/name", func(w http.ResponseWriter, req *http.Request) {
 		readResp := api.Secret{
 			RequestID: "read-request",
@@ -212,6 +269,7 @@ func (m *mockEnvironment) Client() (*api.Client, error) {
 }
 
 func (m *mockEnvironment) Teardown() error {
+	m.teardownCalled = true
 	m.ts.Close()
 	return nil
 }

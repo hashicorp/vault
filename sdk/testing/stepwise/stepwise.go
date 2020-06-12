@@ -205,6 +205,9 @@ func Run(tt TestT, c Case) {
 	logger := logging.NewVaultLogger(log.Trace)
 	if c.Environment == nil {
 		tt.Fatal("nil driver in acceptance test")
+		// return here only used during testing when using mockT type, otherwise
+		// Fatal will exit
+		return
 	}
 
 	err := c.Environment.Setup()
