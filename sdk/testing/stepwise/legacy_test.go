@@ -43,8 +43,6 @@ func TestTest_preCheck(t *testing.T) {
 	}
 }
 
-var _ TestT = (*mockT)(nil)
-
 // mockT implements TestT for testing
 type mockT struct {
 	ErrorCalled bool
@@ -75,8 +73,6 @@ func (t *mockT) Skip(args ...interface{}) {
 	t.f = true
 }
 
-func (t *mockT) Helper() {}
-
 func (t *mockT) failed() bool {
 	return t.f
 }
@@ -92,3 +88,5 @@ func (t *mockT) failMessage() string {
 
 	return "unknown"
 }
+
+func (t *mockT) Helper() {}

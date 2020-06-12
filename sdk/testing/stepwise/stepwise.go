@@ -1,5 +1,5 @@
 // Package stepwise offers types and functions to enable black-box style tests
-// that are executed in defined set of steps. Stepwise utilizes "Drivers" which
+// that are executed in defined set of steps. Stepwise utilizes "Environments" which
 // setup a running instance of Vault and provide a valid API client to execute
 // user defined steps against.
 package stepwise
@@ -28,9 +28,9 @@ const (
 	HelpOperation                 = "help"
 )
 
-// StepDriver is the interface Drivers need to implement to be used in
+// StepwiseEnvironment is the interface Environments need to implement to be used in
 // Case to execute each Step
-type StepDriver interface {
+type StepwiseEnvironment interface {
 	Setup() error
 	Client() (*api.Client, error)
 	Teardown() error
@@ -79,9 +79,9 @@ func (p PluginType) String() string {
 	}
 }
 
-// DriverOptions are a collection of options each step driver should
+// EnvironmentOptions are a collection of options each step driver should
 // support
-type DriverOptions struct {
+type EnvironmentOptions struct {
 	// MountPathPrefix is an optional prefix to use when mounting the plugin. If
 	// omitted the mount path will default to the PluginName with a random suffix.
 	MountPathPrefix string
@@ -149,9 +149,9 @@ type StepCheckFunc func(*api.Secret, error) error
 
 // Case is a collection of tests to run for a plugin
 type Case struct {
-	// Driver is used to setup the Vault instance and provide the client used to
+	// Environment is used to setup the Vault instance and provide the client used to
 	// drive the tests
-	Driver StepDriver
+	Environment StepwiseEnvironment
 
 	// Precheck, if non-nil, will be called once before the test case
 	// runs at all. This can be used for some validation prior to the
@@ -162,8 +162,8 @@ type Case struct {
 	Steps []Step
 
 	// SkipTeardown allows the TestTeardownFunc to be skipped, leaving any
-	// infrastructure created during Driver setup to remain. Depending on the
-	// Driver used this could incur costs the user is responsible for.
+	// infrastructure created during Environment setup to remain. Depending on the
+	// Environment used this could incur costs the user is responsible for.
 	// TODO maybe better wording here
 	SkipTeardown bool
 }
@@ -203,14 +203,17 @@ func Run(tt TestT, c Case) {
 	// Create an in-memory Vault core
 	// TODO use test logger if available?
 	logger := logging.NewVaultLogger(log.Trace)
-	if c.Driver == nil {
+	if c.Environment == nil {
 		tt.Fatal("nil driver in acceptance test")
+		// return here only used during testing when using mockT type, otherwise
+		// Fatal will exit
+		return
 	}
 
-	err := c.Driver.Setup()
+	err := c.Environment.Setup()
 	if err != nil {
 		driverErr := fmt.Errorf("error setting up driver: %w", err)
-		if err := c.Driver.Teardown(); err != nil {
+		if err := c.Environment.Teardown(); err != nil {
 			driverErr = fmt.Errorf("error during driver teardown: %w", driverErr)
 		}
 		tt.Fatal(driverErr)
@@ -221,21 +224,21 @@ func Run(tt TestT, c Case) {
 			logger.Info("driver Teardown skipped")
 			return
 		}
-		if err := c.Driver.Teardown(); err != nil {
+		if err := c.Environment.Teardown(); err != nil {
 			logger.Error("error in driver teardown:", "error", err)
 		}
 	}()
 
-	// retrieve the root client from the Driver. If this returns an error, fail
+	// retrieve the root client from the Environment. If this returns an error, fail
 	// immediately
-	rootClient, err := c.Driver.Client()
+	rootClient, err := c.Environment.Client()
 	if err != nil {
 		tt.Fatal(err)
 	}
 
 	// Trap the rootToken so that we can preform revocation or other tasks in the
 	// event any steps remove the token during testing.
-	rootToken := c.Driver.RootToken()
+	rootToken := c.Environment.RootToken()
 
 	// Defer revocation of any secrets created. We intentionally enclose the
 	// responses slice so in the event of a fatal error during test evaluation, we
@@ -290,7 +293,7 @@ func Run(tt TestT, c Case) {
 		// TODO: support creating tokens with policies listed in each Step
 		client.SetToken(rootToken)
 
-		resp, respErr := makeRequest(tt, c.Driver, step)
+		resp, respErr := makeRequest(tt, c.Environment, step)
 
 		if resp != nil {
 			responses = append(responses, resp)
@@ -311,7 +314,7 @@ func Run(tt TestT, c Case) {
 	}
 }
 
-func makeRequest(tt TestT, driver StepDriver, step Step) (*api.Secret, error) {
+func makeRequest(tt TestT, driver StepwiseEnvironment, step Step) (*api.Secret, error) {
 	client, err := driver.Client()
 	if err != nil {
 		return nil, err
