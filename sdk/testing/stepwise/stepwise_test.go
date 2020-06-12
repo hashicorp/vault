@@ -16,9 +16,11 @@ import (
 )
 
 type testRun struct {
-	testT         TestT
-	expectedTestT TestT
-	testCase      Case
+	testT         *mockT
+	expectedTestT *mockT
+	environment   *mockEnvironment
+	steps         []Step
+	skipTeardown  bool
 }
 
 // TestStepwise_Run_SkipIfNotAcc tests if the Stepwise Run function skips tests
@@ -40,92 +42,118 @@ func TestStepwise_Run_SkipIfNotAcc(t *testing.T) {
 		SkipCalled: true,
 	}
 
-	testRun := testRun{
-		testT: testT,
-		expectedTestT: &mockT{
-			SkipCalled: true,
-		},
-		testCase: skipCase,
-	}
-
-	Run(testT, testRun.testCase)
+	Run(testT, skipCase)
 
 	if testT.SkipCalled != expected.SkipCalled {
 		t.Fatalf("expected SkipCalled (%t), got (%t)", expected.SkipCalled, testT.SkipCalled)
 	}
 }
 
-func TestStepwise_Run_Basic(t *testing.T) {
-	basicCase := Case{
-		Environment: new(mockEnvironment),
-		Steps: []Step{
-			Step{
-				Operation: ListOperation,
-				Path:      "keys",
-				Check: func(resp *api.Secret, err error) error {
-					return nil
-				},
-			},
-		},
+func stepFunc(path string, operation StepOperation, shouldError bool) Step {
+	s := Step{
+		Operation: operation,
+		Path:      path,
 	}
+	if shouldError {
+		s.Check = func(resp *api.Secret, err error) error {
+			return errors.New("some error")
+		}
+	}
+	return s
+}
 
-	errCase := Case{
-		Environment: new(mockEnvironment),
-		Steps: []Step{
-			Step{
-				Operation: ListOperation,
-				Path:      "keys",
-				Check: func(resp *api.Secret, err error) error {
-					return errors.New("some error")
-				},
-			},
-		},
-	}
-	nilCase := Case{}
+func TestStepwise_Run_Basic(t *testing.T) {
+	// basicCase := Case{
+	// 	Environment: new(mockEnvironment),
+	// 	Steps: []Step{
+	// 		Step{
+	// 			Operation: ListOperation,
+	// 			Path:      "keys",
+	// 			Check: func(resp *api.Secret, err error) error {
+	// 				return nil
+	// 			},
+	// 		},
+	// 	},
+	// }
+
+	// errCase := Case{
+	// 	Environment: new(mockEnvironment),
+	// 	Steps: []Step{
+	// 		Step{
+	// 			Operation: ListOperation,
+	// 			Path:      "keys",
+	// 			Check: func(resp *api.Secret, err error) error {
+	// 				return errors.New("some error")
+	// 			},
+	// 		},
+	// 	},
+	// }
+	// nilCase := Case{}
 
 	testRuns := map[string]testRun{
 		"basic": {
-			testT:         new(mockT),
-			expectedTestT: new(mockT),
-			testCase:      basicCase,
+			steps: []Step{
+				stepFunc("keys", ListOperation, false),
+			},
+			environment: new(mockEnvironment),
 		},
 		"error": {
-			testT: new(mockT),
 			expectedTestT: &mockT{
 				ErrorCalled: true,
 			},
-			testCase: errCase,
+			steps: []Step{
+				stepFunc("keys", ListOperation, false),
+				stepFunc("keys", ReadOperation, true),
+			},
+			environment: new(mockEnvironment),
 		},
 		"nil-env": {
-			testT: new(mockT),
 			expectedTestT: &mockT{
 				FatalCalled: true,
 			},
-			testCase: nilCase,
+			steps: []Step{
+				stepFunc("keys", ListOperation, false),
+			},
+		},
+		"skipTeardown": {
+			steps: []Step{
+				stepFunc("keys", ListOperation, false),
+				stepFunc("keys", ReadOperation, false),
+			},
+			skipTeardown: true,
+			environment:  new(mockEnvironment),
 		},
 	}
 
 	for name, tr := range testRuns {
 		t.Run(name, func(t *testing.T) {
-			Run(tr.testT, tr.testCase)
-
-			testT := tr.testT.(*mockT)
-			expectedT := tr.expectedTestT.(*mockT)
-			envRaw := tr.testCase.Environment
-			var env *mockEnvironment
-			if envRaw != nil {
-				env = envRaw.(*mockEnvironment)
+			testT := tr.testT
+			expectedT := tr.expectedTestT
+			if testT == nil {
+				testT = new(mockT)
+			}
+			if expectedT == nil {
+				expectedT = new(mockT)
+			}
+			testCase := Case{
+				Steps:        tr.steps,
+				SkipTeardown: tr.skipTeardown,
+			}
+			if tr.environment != nil {
+				testCase.Environment = tr.environment
 			}
 
-			if env == nil && !testT.FatalCalled {
+			Run(testT, testCase)
+
+			if tr.environment == nil && !testT.FatalCalled {
 				t.Fatal("expected FatalCalled with nil environment, but wasn't")
 			}
 
-			if env != nil {
-				if tr.testCase.SkipTeardown && env.teardownCalled {
+			if tr.environment != nil {
+				if tr.skipTeardown && tr.environment.teardownCalled {
 					t.Fatal("SkipTeardown is true, but Teardown was called")
 				}
-				if !tr.testCase.SkipTeardown && !env.teardownCalled {
+				if !tr.skipTeardown && !tr.environment.teardownCalled {
 					t.Fatal("SkipTeardown is false, but Teardown was not called")
 				}
 			}
