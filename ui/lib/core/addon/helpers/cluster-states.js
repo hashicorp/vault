@@ -1,8 +1,10 @@
 import { helper as buildHelper } from '@ember/component/helper';
 
-// A hash of cluster states to ensure that the status menu and replication dashboards
-// display states and glyphs consistently
-// this includes states for the primary vault cluster and the connection_state
+/*
+A hash of cluster states to ensure the status menu and replication dashboards
+display states and glyphs consistently. This includes states for the primary
+vault cluster and the connection_state.
+*/
 
 export const CLUSTER_STATES = {
   running: {
