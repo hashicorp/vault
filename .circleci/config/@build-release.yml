@@ -161,7 +161,7 @@ jobs:
             fi
             # Check the aliases are right, as they are metadata not included in
             # the cache key. If they're wrong, it's time to bust cache.
-            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot+_darwin_386.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot+/vault_0.0.0-snapshot+_darwin_386.zip ; do
+            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot_darwin_386.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot/vault_0.0.0-snapshot_darwin_386.zip ; do
               echo "Checking alias: $ALIAS"
               if ! readlink $ALIAS; then
                 echo "Missing alias: $ALIAS"
@@ -234,7 +234,7 @@ jobs:
             fi
             # Check the aliases are right, as they are metadata not included in
             # the cache key. If they're wrong, it's time to bust cache.
-            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot+_darwin_amd64.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot+/vault_0.0.0-snapshot+_darwin_amd64.zip ; do
+            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot_darwin_amd64.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot/vault_0.0.0-snapshot_darwin_amd64.zip ; do
               echo "Checking alias: $ALIAS"
               if ! readlink $ALIAS; then
                 echo "Missing alias: $ALIAS"
@@ -307,7 +307,7 @@ jobs:
             fi
             # Check the aliases are right, as they are metadata not included in
             # the cache key. If they're wrong, it's time to bust cache.
-            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot+_freebsd_386.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot+/vault_0.0.0-snapshot+_freebsd_386.zip ; do
+            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot_freebsd_386.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot/vault_0.0.0-snapshot_freebsd_386.zip ; do
               echo "Checking alias: $ALIAS"
               if ! readlink $ALIAS; then
                 echo "Missing alias: $ALIAS"
@@ -380,7 +380,7 @@ jobs:
             fi
             # Check the aliases are right, as they are metadata not included in
             # the cache key. If they're wrong, it's time to bust cache.
-            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot+_freebsd_amd64.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot+/vault_0.0.0-snapshot+_freebsd_amd64.zip ; do
+            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot_freebsd_amd64.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot/vault_0.0.0-snapshot_freebsd_amd64.zip ; do
               echo "Checking alias: $ALIAS"
               if ! readlink $ALIAS; then
                 echo "Missing alias: $ALIAS"
@@ -453,7 +453,7 @@ jobs:
             fi
             # Check the aliases are right, as they are metadata not included in
             # the cache key. If they're wrong, it's time to bust cache.
-            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot+_freebsd_arm.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot+/vault_0.0.0-snapshot+_freebsd_arm.zip ; do
+            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot_freebsd_arm.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot/vault_0.0.0-snapshot_freebsd_arm.zip ; do
               echo "Checking alias: $ALIAS"
               if ! readlink $ALIAS; then
                 echo "Missing alias: $ALIAS"
@@ -526,7 +526,7 @@ jobs:
             fi
             # Check the aliases are right, as they are metadata not included in
             # the cache key. If they're wrong, it's time to bust cache.
-            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot+_linux_386.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot+/vault_0.0.0-snapshot+_linux_386.zip ; do
+            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot_linux_386.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot/vault_0.0.0-snapshot_linux_386.zip ; do
               echo "Checking alias: $ALIAS"
               if ! readlink $ALIAS; then
                 echo "Missing alias: $ALIAS"
@@ -599,7 +599,7 @@ jobs:
             fi
             # Check the aliases are right, as they are metadata not included in
             # the cache key. If they're wrong, it's time to bust cache.
-            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot+_linux_amd64.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot+/vault_0.0.0-snapshot+_linux_amd64.zip ; do
+            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot_linux_amd64.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot/vault_0.0.0-snapshot_linux_amd64.zip ; do
               echo "Checking alias: $ALIAS"
               if ! readlink $ALIAS; then
                 echo "Missing alias: $ALIAS"
@@ -672,7 +672,7 @@ jobs:
             fi
             # Check the aliases are right, as they are metadata not included in
             # the cache key. If they're wrong, it's time to bust cache.
-            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot+_linux_arm.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot+/vault_0.0.0-snapshot+_linux_arm.zip ; do
+            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot_linux_arm.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot/vault_0.0.0-snapshot_linux_arm.zip ; do
               echo "Checking alias: $ALIAS"
               if ! readlink $ALIAS; then
                 echo "Missing alias: $ALIAS"
@@ -745,7 +745,7 @@ jobs:
             fi
             # Check the aliases are right, as they are metadata not included in
             # the cache key. If they're wrong, it's time to bust cache.
-            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot+_linux_arm64.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot+/vault_0.0.0-snapshot+_linux_arm64.zip ; do
+            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot_linux_arm64.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot/vault_0.0.0-snapshot_linux_arm64.zip ; do
               echo "Checking alias: $ALIAS"
               if ! readlink $ALIAS; then
                 echo "Missing alias: $ALIAS"
@@ -818,7 +818,7 @@ jobs:
             fi
             # Check the aliases are right, as they are metadata not included in
             # the cache key. If they're wrong, it's time to bust cache.
-            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot+_netbsd_386.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot+/vault_0.0.0-snapshot+_netbsd_386.zip ; do
+            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot_netbsd_386.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot/vault_0.0.0-snapshot_netbsd_386.zip ; do
               echo "Checking alias: $ALIAS"
               if ! readlink $ALIAS; then
                 echo "Missing alias: $ALIAS"
@@ -891,7 +891,7 @@ jobs:
             fi
             # Check the aliases are right, as they are metadata not included in
             # the cache key. If they're wrong, it's time to bust cache.
-            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot+_netbsd_amd64.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot+/vault_0.0.0-snapshot+_netbsd_amd64.zip ; do
+            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot_netbsd_amd64.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot/vault_0.0.0-snapshot_netbsd_amd64.zip ; do
               echo "Checking alias: $ALIAS"
               if ! readlink $ALIAS; then
                 echo "Missing alias: $ALIAS"
@@ -964,7 +964,7 @@ jobs:
             fi
             # Check the aliases are right, as they are metadata not included in
             # the cache key. If they're wrong, it's time to bust cache.
-            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot+_openbsd_386.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot+/vault_0.0.0-snapshot+_openbsd_386.zip ; do
+            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot_openbsd_386.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot/vault_0.0.0-snapshot_openbsd_386.zip ; do
               echo "Checking alias: $ALIAS"
               if ! readlink $ALIAS; then
                 echo "Missing alias: $ALIAS"
@@ -1037,7 +1037,7 @@ jobs:
             fi
             # Check the aliases are right, as they are metadata not included in
             # the cache key. If they're wrong, it's time to bust cache.
-            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot+_openbsd_amd64.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot+/vault_0.0.0-snapshot+_openbsd_amd64.zip ; do
+            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot_openbsd_amd64.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot/vault_0.0.0-snapshot_openbsd_amd64.zip ; do
               echo "Checking alias: $ALIAS"
               if ! readlink $ALIAS; then
                 echo "Missing alias: $ALIAS"
@@ -1110,7 +1110,7 @@ jobs:
             fi
             # Check the aliases are right, as they are metadata not included in
             # the cache key. If they're wrong, it's time to bust cache.
-            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot+_solaris_amd64.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot+/vault_0.0.0-snapshot+_solaris_amd64.zip ; do
+            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot_solaris_amd64.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot/vault_0.0.0-snapshot_solaris_amd64.zip ; do
               echo "Checking alias: $ALIAS"
               if ! readlink $ALIAS; then
                 echo "Missing alias: $ALIAS"
@@ -1183,7 +1183,7 @@ jobs:
             fi
             # Check the aliases are right, as they are metadata not included in
             # the cache key. If they're wrong, it's time to bust cache.
-            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot+_windows_386.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot+/vault_0.0.0-snapshot+_windows_386.zip ; do
+            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot_windows_386.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot/vault_0.0.0-snapshot_windows_386.zip ; do
               echo "Checking alias: $ALIAS"
               if ! readlink $ALIAS; then
                 echo "Missing alias: $ALIAS"
@@ -1256,7 +1256,7 @@ jobs:
             fi
             # Check the aliases are right, as they are metadata not included in
             # the cache key. If they're wrong, it's time to bust cache.
-            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot+_windows_amd64.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot+/vault_0.0.0-snapshot+_windows_amd64.zip ; do
+            for ALIAS in .buildcache/packages/by-alias/local/vault_0.0.0-snapshot_windows_amd64.zip .buildcache/packages/by-alias/public-hc-releases/vault/vault_0.0.0-snapshot/vault_0.0.0-snapshot_windows_amd64.zip ; do
               echo "Checking alias: $ALIAS"
               if ! readlink $ALIAS; then
                 echo "Missing alias: $ALIAS"

@@ -29,8 +29,6 @@ inputs:
   # These values may be overridden on a per-package basis in the packages section.
   defaults:
 
-    # EDITION is an additional differentiator for a given package. It should
-    # be used in the PACKAGE_NAME template.
     EDITION: ""
 
     # PRODUCT_VERSION is the version of this product. Usually, this should be left
@@ -167,12 +165,12 @@ meta:
 package-aliases:
   - type: local
     template: >-
-      vault_{{.PRODUCT_VERSION}}+{{.EDITION}}_{{.GOOS}}_{{.GOARCH}}.zip
+      vault_{{.PRODUCT_VERSION}}_{{.GOOS}}_{{.GOARCH}}.zip
   # public-hc-releases is the path to use for upload to releases.hashicorp.com
   # it is empty if this package is not public (empty aliases are ignored).
   - type: public-hc-releases
     template: >-
-      vault/vault_{{.PRODUCT_VERSION}}+{{.EDITION}}/vault_{{.PRODUCT_VERSION}}+{{.EDITION}}_{{.GOOS}}_{{.GOARCH}}.zip
+      vault/vault_{{.PRODUCT_VERSION}}/vault_{{.PRODUCT_VERSION}}_{{.GOOS}}_{{.GOARCH}}.zip
 
 # Layers determines the build layers, which are individually cacheable layers
 # in a linear build. Each layer contains a Dockerfile. All the layers
