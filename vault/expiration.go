@@ -207,7 +207,7 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 		}
 	}
 	go c.expiration.Restore(errorFunc)
-	if err := startExpiration(); err != nil {
+	if err := c.expiration.startExpiration(); err != nil {
 		return err
 	}
 
