@@ -665,7 +665,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	}
 
 	if !isRaftHA && !c.Sealed() {
-		c.logger.Error("node must be sealed before joining")
+		c.logger.Error("node must be unsealed before joining")
 		return false, errors.New("node must be sealed before joining")
 	}
 
