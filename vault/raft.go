@@ -112,7 +112,7 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 		// If this is HA-only and no TLS keyring is found, that means the
 		// cluster has not been bootstrapped or joined. We return early here in
 		// this case.
-		if raftHA := c.isRaftHAOnly(); raftHA {
+		if c.isRaftHAOnly() {
 			return nil
 		}
 
