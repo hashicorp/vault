@@ -17,8 +17,6 @@
       </tr>
     </thead>
     <tbody>
-      {{! TODO: this should be compliant with the new api attributes, but we should verify this
-      when those attributes are merged. At that point we can also get rid of all the 'or's in here. --}}
       {{#each secondaries as |secondary|}}
         <tr>
           <th scope="row">
@@ -27,12 +25,23 @@
             </code>
           </th>
           <td>
-            <a href={{secondary.api_address}} data-test-secondaries={{concat 'api-address-for-' secondary.node_id}}>
-              <code class="is-word-break">{{secondary.api_address}}</code>
-            </a>
+            {{#if secondary.api_address}}
+              <a
+                class="link"
+                href={{concat secondary.api_address '/ui/'}}
+                target="_blank"
+                rel="noopener"
+                data-test-secondaries={{concat 'api-address-for-' secondary.node_id}}>
+                <p class="is-word-break">{{secondary.api_address}}</p>
+              </a>
+            {{else}}
+              <p class="is-word-break">{{secondary.api_address}}</p>
+            {{/if}}
           </td>
           <td>
-            <code data-test-secondaries={{concat 'connection-status-for-' (or secondary.node_id secondary)}}>{{secondary.connection_status}}</code>
+            <code data-test-secondaries={{concat 'connection-status-for-' (or secondary.node_id secondary)}}>
+              {{secondary.connection_status}}
+            </code>
           </td>
         </tr>
       {{/each}}
