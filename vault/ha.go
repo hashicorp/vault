@@ -758,7 +758,6 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 					hasState, err := raftBackend.HasState()
 					if err != nil {
 						c.logger.Error("could not check raft state", "error", err)
-						return
 					}
 
 					if raftBackend.Initialized() && hasState {
