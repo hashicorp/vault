@@ -222,7 +222,6 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		raftBackend := b.Core.getRaftBackend()
-
 		if raftBackend == nil {
 			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
 		}
