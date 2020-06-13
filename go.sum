@@ -471,8 +471,6 @@ github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d/go.mod h1:WKCL
 github.com/hashicorp/raft v1.0.1/go.mod h1:DVSAWItjLjTOkVbSpWQ0j0kUADIvDaCtBxIcbNAQLkI=
 github.com/hashicorp/raft v1.1.2-0.20191002163536-9c6bd3e3eb17 h1:p+2EISNdFCnD9R+B4xCiqSn429MCFtvM41aHJDJ6qW4=
 github.com/hashicorp/raft v1.1.2-0.20191002163536-9c6bd3e3eb17/go.mod h1:vPAJM8Asw6u8LxC3eJCUZmRP/E4QmUGE1R7g7k8sG/8=
-github.com/hashicorp/raft v1.1.2 h1:oxEL5DDeurYxLd3UbcY/hccgSPhLLpiBZ1YxtWEq59c=
-github.com/hashicorp/raft v1.1.2/go.mod h1:vPAJM8Asw6u8LxC3eJCUZmRP/E4QmUGE1R7g7k8sG/8=
 github.com/hashicorp/raft v1.1.3-0.20200501224250-c95aa91e604e h1:hMRRBhY9cayPJzEgNGNAl74TJ0rwY3Csbr43ogjKh1I=
 github.com/hashicorp/raft v1.1.3-0.20200501224250-c95aa91e604e/go.mod h1:vPAJM8Asw6u8LxC3eJCUZmRP/E4QmUGE1R7g7k8sG/8=
 github.com/hashicorp/raft-boltdb v0.0.0-20171010151810-6e5ba93211ea/go.mod h1:pNv7Wc3ycL6F5oOWn+tPGo2gWD4a5X+yp/ntwdKLjRk=
@@ -498,10 +496,8 @@ github.com/hashicorp/vault-plugin-auth-kerberos v0.1.5 h1:knWedzZ51g8Aj6Hyi1ATlQ
 github.com/hashicorp/vault-plugin-auth-kerberos v0.1.5/go.mod h1:r4UqWITHYKmBeAMKPWqLo4V8bl/wNqoSIaQcMpeK9ss=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.6.1 h1:TpdQhHdZZN1Wo9RpJG33gUfuiVtajVcSF/hNpHWaatI=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.6.1/go.mod h1:/Y9W5aZULfPeNVRQK0/nrFGpHWyNm0J3UWhOdsAu0vM=
-github.com/hashicorp/vault-plugin-auth-oci v0.5.3-beta1.0.20200611202039-7f7ad0f784bc h1:16Vixes773Z7R/JZcYGPAk284OaXB4lY6g+Q1TjAmgY=
-github.com/hashicorp/vault-plugin-auth-oci v0.5.3-beta1.0.20200611202039-7f7ad0f784bc/go.mod h1:Cn5cjR279Y+snw8LTaiLTko3KGrbigRbsQPOd2D5xDw=
-github.com/hashicorp/vault-plugin-auth-oci v0.5.4 h1:Hoauxh1V8Lusf7BRs+yXfoDTFQzgykbb3OC77aReXDY=
-github.com/hashicorp/vault-plugin-auth-oci v0.5.4/go.mod h1:j05O2b9fw2Q82NxDPhHMYVfHKvitUYGWfmqmpBdqmmc=
+github.com/hashicorp/vault-plugin-auth-oci v0.5.5 h1:nIP8g+VZd2V+LY/D5omWhLSnhHuogIJx7Bz6JyLt628=
+github.com/hashicorp/vault-plugin-auth-oci v0.5.5/go.mod h1:Cn5cjR279Y+snw8LTaiLTko3KGrbigRbsQPOd2D5xDw=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4 h1:YE4qndazWmYGpVOoZI7nDGG+gwTZKzL1Ou4WZQ+Tdxk=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4/go.mod h1:QjGrrxcRXv/4XkEZAlM0VMZEa3uxKAICFqDj27FP/48=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.0-beta1.0.20200521152755-9cf156a44f9c h1:9pXwe7sEVhZ5C3U6egIrKaZBb5lD0FvLIjISEvpbQQA=

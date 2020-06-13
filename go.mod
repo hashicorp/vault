@@ -80,7 +80,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-jwt v0.6.2
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.1.5
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.6.1
-	github.com/hashicorp/vault-plugin-auth-oci v0.5.3-beta1.0.20200611202039-7f7ad0f784bc
+	github.com/hashicorp/vault-plugin-auth-oci v0.5.5
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.0-beta1.0.20200521152755-9cf156a44f9c
 	github.com/hashicorp/vault-plugin-secrets-ad v0.6.4-beta1.0.20200518124111-3dceeb3ce90e
