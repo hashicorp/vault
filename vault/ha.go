@@ -763,7 +763,6 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 					if raftBackend.Initialized() && hasState {
 						if err := c.checkRaftTLSKeyUpgrades(ctx); err != nil {
 							c.logger.Error("raft tls periodic upgrade check failed", "error", err)
-							return
 						}
 					}
 				}
