@@ -730,7 +730,7 @@ func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error
 	future := b.raft.Shutdown()
 	b.raft = nil
 
-	// If we're tearing down, then se need to recreate the raftInitCh
+	// If we're tearing down, then we need to recreate the raftInitCh
 	b.raftInitCh = make(chan struct{})
 	b.l.Unlock()
 
