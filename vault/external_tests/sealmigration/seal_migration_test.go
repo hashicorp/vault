@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -30,6 +29,7 @@ const (
 	basePort_TransitToShamir_Pre14  = 21000
 	basePort_ShamirToTransit_Post14 = 22000
 	basePort_TransitToShamir_Post14 = 23000
+	basePort_TransitToTransit       = 24000
 )
 
 type testFunc func(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int)
@@ -48,41 +48,41 @@ func testVariousBackends(t *testing.T, tf testFunc, basePort int, includeRaft bo
 		tf(t, logger, storage, basePort+100)
 	})
 
-	t.Run("file", func(t *testing.T) {
-		t.Parallel()
+	//t.Run("file", func(t *testing.T) {
+	//	t.Parallel()
 
-		logger := logger.Named("file")
-		storage, cleanup := teststorage.MakeReusableStorage(
-			t, logger, teststorage.MakeFileBackend(t, logger))
-		defer cleanup()
-		tf(t, logger, storage, basePort+200)
-	})
+	//	logger := logger.Named("file")
+	//	storage, cleanup := teststorage.MakeReusableStorage(
+	//		t, logger, teststorage.MakeFileBackend(t, logger))
+	//	defer cleanup()
+	//	tf(t, logger, storage, basePort+200)
+	//})
 
-	t.Run("consul", func(t *testing.T) {
-		t.Parallel()
+	//t.Run("consul", func(t *testing.T) {
+	//	t.Parallel()
 
-		logger := logger.Named("consul")
-		storage, cleanup := teststorage.MakeReusableStorage(
-			t, logger, teststorage.MakeConsulBackend(t, logger))
-		defer cleanup()
-		tf(t, logger, storage, basePort+300)
-	})
+	//	logger := logger.Named("consul")
+	//	storage, cleanup := teststorage.MakeReusableStorage(
+	//		t, logger, teststorage.MakeConsulBackend(t, logger))
+	//	defer cleanup()
+	//	tf(t, logger, storage, basePort+300)
+	//})
 
-	if includeRaft {
-		t.Run("raft", func(t *testing.T) {
-			t.Parallel()
+	//if includeRaft {
+	//	t.Run("raft", func(t *testing.T) {
+	//		t.Parallel()
 
-			logger := logger.Named("raft")
-			raftBasePort := basePort + 400
+	//		logger := logger.Named("raft")
+	//		raftBasePort := basePort + 400
 
-			atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
-			addressProvider := testhelpers.NewHardcodedServerAddressProvider(numTestCores, raftBasePort+10)
+	//		atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
+	//		addressProvider := testhelpers.NewHardcodedServerAddressProvider(numTestCores, raftBasePort+10)
 
-			storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores, addressProvider)
-			defer cleanup()
-			tf(t, logger, storage, raftBasePort)
-		})
-	}
+	//		storage, cleanup := teststorage.MakeReusableRaftStorage(t, logger, numTestCores, addressProvider)
+	//		defer cleanup()
+	//		tf(t, logger, storage, raftBasePort)
+	//	})
+	//}
 }
 
 // TestSealMigration_ShamirToTransit_Pre14 tests shamir-to-transit seal
@@ -239,7 +239,7 @@ func migrateFromShamirToTransit_Post14(
 	leaderIdx := migratePost14(
 		t, logger, storage, cluster, opts,
 		cluster.RootToken, cluster.BarrierKeys,
-		migrateShamirToTransit, modifyCoreConfig)
+		migrateToTransit, modifyCoreConfig)
 	leader := cluster.Cores[leaderIdx]
 
 	// Read the secret
@@ -289,7 +289,7 @@ func testSealMigrationTransitToShamir_Post14(
 	rootToken, recoveryKeys := cluster.RootToken, cluster.RecoveryKeys
 
 	// Migrate the backend from transit to shamir
-	migrateFromTransitToShamir_Post14(t, logger, storage, basePort, tss, transitSeal, cluster, opts)
+	migrateFromTransitToShamir_Post14(t, logger, storage, basePort, transitSeal, cluster, opts)
 	cluster.EnsureCoresSealed(t)
 	storage.Cleanup(t, cluster)
 	cluster.Cleanup()
@@ -307,7 +307,7 @@ func testSealMigrationTransitToShamir_Post14(
 func migrateFromTransitToShamir_Post14(
 	t *testing.T, logger hclog.Logger,
 	storage teststorage.ReusableStorage, basePort int,
-	tss *sealhelper.TransitSealServer, transitSeal vault.Seal,
+	transitSeal vault.Seal,
 	cluster *vault.TestCluster, opts *vault.TestClusterOptions) {
 
 	opts.SealFunc = nil
@@ -328,7 +328,7 @@ func migrateFromTransitToShamir_Post14(
 	leaderIdx := migratePost14(
 		t, logger, storage, cluster, opts,
 		cluster.RootToken, cluster.RecoveryKeys,
-		migrateTransitToShamir, modifyCoreConfig)
+		migrateToShamir, modifyCoreConfig)
 	leader := cluster.Cores[leaderIdx]
 
 	// Read the secret
@@ -351,11 +351,115 @@ func migrateFromTransitToShamir_Post14(
 	}
 }
 
+// TestSealMigration_TransitToTransit tests transit-to-shamir seal
+// migration, using the post-1.4 method of bring individual nodes in the
+// cluster to do the migration.
+func TestSealMigration_TransitToTransit(t *testing.T) {
+	// Note that we do not test integrated raft storage since this is
+	// a pre-1.4 test.
+	testVariousBackends(t, testSealMigration_TransitToTransit, basePort_TransitToTransit, true)
+}
+
+func testSealMigration_TransitToTransit(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int) {
+
+	// Create the transit server.
+	tss1 := sealhelper.NewTransitSealServer(t)
+	defer func() {
+		if tss1 != nil {
+			tss1.Cleanup()
+		}
+	}()
+	tss1.MakeKey(t, "transit-seal-key")
+
+	// Initialize the backend with transit.
+	cluster, opts, tseal1 := initializeTransit(t, logger, storage, basePort, tss1)
+	//rootToken, recoveryKeys := cluster.RootToken, cluster.RecoveryKeys
+
+	// Create the transit server.
+	tss2 := sealhelper.NewTransitSealServer(t)
+	defer func() {
+		tss2.EnsureCoresSealed(t)
+		tss2.Cleanup()
+	}()
+	tss2.MakeKey(t, "transit-seal-key")
+
+	// Migrate the backend from transit to transit.
+	//tseal2 := migrateFromTransitToTransit(t, logger, storage, basePort, tseal1, tss2, rootToken, recoveryKeys)
+	_ = migrateFromTransitToTransit(t, logger, storage, basePort, tseal1, tss2, cluster, opts)
+
+	// Now that migration is done, we can nuke the transit server, since we
+	// can unseal without it.
+	tss1.Cleanup()
+	tss1 = nil
+
+	//// Run the backend with transit.
+	//runTransit(t, logger, storage, basePort, rootToken, tseal2)
+}
+
+func migrateFromTransitToTransit(
+	t *testing.T, logger hclog.Logger,
+	storage teststorage.ReusableStorage, basePort int,
+	tseal1 vault.Seal,
+	tss2 *sealhelper.TransitSealServer,
+	cluster *vault.TestCluster, opts *vault.TestClusterOptions,
+) vault.Seal {
+
+	// N.B. Providing a transit seal puts us in migration mode.
+	var tseal2 vault.Seal
+	opts.SealFunc = func() vault.Seal {
+		tseal2 = tss2.MakeSeal(t, "transit-seal-key")
+		return tseal2
+	}
+
+	modifyCoreConfig := func(tcc *vault.TestClusterCore) {
+		// Nil out the seal so it will be initialized with the SealFunc.
+		tcc.CoreConfig.Seal = nil
+
+		// N.B. Providing an UnwrapSeal puts us in migration mode. This is the
+		// equivalent of doing the following in HCL:
+		//     seal "transit" {
+		//       // ...
+		//       disabled = "true"
+		//     }
+		tcc.CoreConfig.UnwrapSeal = tseal1
+	}
+
+	// Restart each follower with the new config, and migrate to transit.
+	leaderIdx := migratePost14(
+		t, logger, storage, cluster, opts,
+		cluster.RootToken, cluster.RecoveryKeys,
+		migrateToTransit, modifyCoreConfig)
+	leader := cluster.Cores[leaderIdx]
+
+	// Read the secret
+	secret, err := leader.Client.Logical().Read("secret/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(secret.Data, map[string]interface{}{"zork": "quux"}); len(diff) > 0 {
+		t.Fatal(diff)
+	}
+
+	//// Make sure the seal configs were updated correctly.
+	//b, r, err := cluster.Cores[0].Core.PhysicalSealConfigs(context.Background())
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//verifyBarrierConfig(t, b, wrapping.Shamir, keyShares, keyThreshold, 1)
+	//if r != nil {
+	//	t.Fatalf("expected nil recovery config, got: %#v", r)
+	//}
+
+	return tseal2
+}
+
 type migrationDirection int
 
 const (
-	migrateShamirToTransit migrationDirection = iota
-	migrateTransitToShamir
+	migrateToTransit migrationDirection = iota
+	migrateToShamir
 )
 
 func migratePost14(
@@ -405,13 +509,13 @@ func migratePost14(
 	// TODO look into why this is different for different migration directions,
 	// and why it is swapped for raft.
 	switch migrate {
-	case migrateShamirToTransit:
+	case migrateToTransit:
 		if storage.IsRaft {
 			unsealMigrate(t, cluster.Cores[0].Client, recoveryKeys, true)
 		} else {
 			unseal(t, cluster.Cores[0].Client, recoveryKeys)
 		}
-	case migrateTransitToShamir:
+	case migrateToShamir:
 		if storage.IsRaft {
 			unseal(t, cluster.Cores[0].Client, recoveryKeys)
 		} else {
