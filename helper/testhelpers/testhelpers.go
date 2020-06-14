@@ -412,40 +412,77 @@ func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib
 }
 
 func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
-	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
+	raftClusterJoinNodes(t, cluster, false)
+}
 
-	leaderCore := cluster.Cores[0]
-	leaderAPI := leaderCore.Client.Address()
+func RaftClusterJoinNodesWithStoredKeys(t testing.T, cluster *vault.TestCluster) {
+	raftClusterJoinNodes(t, cluster, true)
+}
+
+func raftClusterJoinNodes(t testing.T, cluster *vault.TestCluster, useStoredKeys bool) {
+
+	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
 	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
+
+	leader := cluster.Cores[0]
 
 	// Seal the leader so we can install an address provider
 	{
-		EnsureCoreSealed(t, leaderCore)
-		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		cluster.UnsealCore(t, leaderCore)
-		vault.TestWaitActive(t, leaderCore.Core)
+		EnsureCoreSealed(t, leader)
+		leader.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+		if useStoredKeys {
+			cluster.UnsealCoreWithStoredKeys(t, leader)
+		} else {
+			cluster.UnsealCore(t, leader)
+		}
+		vault.TestWaitActive(t, leader.Core)
 	}
 
-	leaderInfo := &raft.LeaderJoinInfo{
-		LeaderAPIAddr: leaderAPI,
-		TLSConfig:     leaderCore.TLSConfig,
+	leaderInfos := []*raft.LeaderJoinInfo{
+		&raft.LeaderJoinInfo{
+			LeaderAPIAddr: leader.Client.Address(),
+			TLSConfig:     leader.TLSConfig,
+		},
 	}
 
+	// Join followers
 	for i := 1; i < len(cluster.Cores); i++ {
 		core := cluster.Cores[i]
 		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		leaderInfos := []*raft.LeaderJoinInfo{
-			leaderInfo,
-		}
 		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		cluster.UnsealCore(t, core)
+		if useStoredKeys {
+			// For autounseal, the raft backend is not initialized right away
+			// after the join.  We need to wait briefly before we can unseal.
+			awaitUnsealWithStoredKeys(t, core)
+		} else {
+			cluster.UnsealCore(t, core)
+		}
 	}
 
 	WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
+}
+
+func awaitUnsealWithStoredKeys(t testing.T, core *vault.TestClusterCore) {
+
+	timeout := time.Now().Add(30 * time.Second)
+	for {
+		if time.Now().After(timeout) {
+			t.Fatal("raft join: timeout waiting for core to unseal")
+		}
+		// Its actually ok for an error to happen here the first couple of
+		// times -- it means the raft join hasn't gotten around to initializing
+		// the backend yet.
+		err := core.UnsealWithStoredKeys(context.Background())
+		if err == nil {
+			return
+		}
+		core.Logger().Warn("raft join: failed to unseal core", "error", err)
+		time.Sleep(time.Second)
+	}
 }
 
 // HardcodedServerAddressProvider is a ServerAddressProvider that uses
@@ -492,6 +529,40 @@ func SetRaftAddressProviders(t testing.T, cluster *vault.TestCluster, provider r
 	for _, core := range cluster.Cores {
 		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(provider)
 	}
+}
+
+// VerifyRaftConfiguration checks that we have a valid raft configuration, i.e.
+// the correct number of servers, having the correct NodeIDs, and exactly one
+// leader.
+func VerifyRaftConfiguration(core *vault.TestClusterCore, numCores int) error {
+
+	backend := core.UnderlyingRawStorage.(*raft.RaftBackend)
+	ctx := namespace.RootContext(context.Background())
+	config, err := backend.GetConfiguration(ctx)
+	if err != nil {
+		return err
+	}
+
+	servers := config.Servers
+	if len(servers) != numCores {
+		return fmt.Errorf("Found %d servers, not %d", len(servers), numCores)
+	}
+
+	leaders := 0
+	for i, s := range servers {
+		if s.NodeID != fmt.Sprintf("core-%d", i) {
+			return fmt.Errorf("Found unexpected node ID %q", s.NodeID)
+		}
+		if s.Leader {
+			leaders++
+		}
+	}
+
+	if leaders != 1 {
+		return fmt.Errorf("Found %d leaders", leaders)
+	}
+
+	return nil
 }
 
 func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {

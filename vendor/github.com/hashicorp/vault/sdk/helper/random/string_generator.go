@@ -37,7 +37,7 @@ var (
 	AlphaNumericFullSymbolRuneset  = []rune(AlphaNumericFullSymbolCharset)
 
 	// DefaultStringGenerator has reasonable default rules for generating strings
-	DefaultStringGenerator = StringGenerator{
+	DefaultStringGenerator = &StringGenerator{
 		Length: 20,
 		Rules: []Rule{
 			CharsetRule{
