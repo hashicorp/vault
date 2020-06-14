@@ -2290,25 +2290,29 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	// newSeal will be the barrierSeal
 	newSeal = barrierSeal
 
-	if migrationSeal != nil && newSeal != nil && migrationSeal.BarrierType() == newSeal.BarrierType() {
-		return errors.New("Migrating between same seal types is currently not supported")
-	}
+	//if migrationSeal != nil && newSeal != nil && migrationSeal.BarrierType() == newSeal.BarrierType() {
+	//	return errors.New("Migrating between same seal types is currently not supported")
+	//}
+	fmt.Printf("(c *Core) adjustForSealMigration zzz\n")
 
-	if unwrapSeal != nil && existBarrierSealConfig.Type == barrierSeal.BarrierType() {
-		// In this case our migration seal is set so we are using it
-		// (potentially) for unwrapping. Set it on core for that purpose then
-		// exit.
-		c.setSealsForMigration(nil, nil, unwrapSeal)
-		return nil
-	}
+	//if unwrapSeal != nil && existBarrierSealConfig.Type == barrierSeal.BarrierType() {
+	//	fmt.Printf("(c *Core) adjustForSealMigration yyy\n")
+	//	// In this case our migration seal is set so we are using it
+	//	// (potentially) for unwrapping. Set it on core for that purpose then
+	//	// exit.
+	//	c.setSealsForMigration(nil, nil, unwrapSeal)
+	//	return nil
+	//}
 
 	// Set the appropriate barrier and recovery configs.
 	switch {
 	case migrationSeal != nil && newSeal != nil && migrationSeal.RecoveryKeySupported() && newSeal.RecoveryKeySupported():
+		fmt.Printf("(c *Core) adjustForSealMigration aaa\n")
 		// Migrating from auto->auto, copy the configs over
 		newSeal.SetCachedBarrierConfig(existBarrierSealConfig)
 		newSeal.SetCachedRecoveryConfig(existRecoverySealConfig)
 	case migrationSeal != nil && newSeal != nil && migrationSeal.RecoveryKeySupported():
+		fmt.Printf("(c *Core) adjustForSealMigration bbb\n")
 		// Migrating from auto->shamir, clone auto's recovery config and set
 		// stored keys to 1.
 		newSealConfig := existRecoverySealConfig.Clone()

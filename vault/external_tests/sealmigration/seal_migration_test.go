@@ -111,14 +111,14 @@ func testSealMigrationShamirToTransit_Pre14(
 		tss.EnsureCoresSealed(t)
 		tss.Cleanup()
 	}()
-	tss.MakeKey(t, "transit-seal-key")
+	tss.MakeKey(t, "transit-seal-key-1")
 
 	// Migrate the backend from shamir to transit.  Note that the barrier keys
 	// are now the recovery keys.
 	transitSeal := migrateFromShamirToTransit_Pre14(t, logger, storage, basePort, tss, rootToken, barrierKeys)
 
 	// Run the backend with transit.
-	runTransit(t, logger, storage, basePort, rootToken, transitSeal)
+	runTransit(t, logger, storage, basePort, rootToken, transitSeal, 0)
 }
 
 func migrateFromShamirToTransit_Pre14(
@@ -143,7 +143,7 @@ func migrateFromShamirToTransit_Pre14(
 		SkipInit:              true,
 		// N.B. Providing a transit seal puts us in migration mode.
 		SealFunc: func() vault.Seal {
-			transitSeal = tss.MakeSeal(t, "transit-seal-key")
+			transitSeal = tss.MakeSeal(t, "transit-seal-key-1")
 			return transitSeal
 		},
 	}
@@ -206,7 +206,7 @@ func testSealMigrationShamirToTransit_Post14(
 		tss.EnsureCoresSealed(t)
 		tss.Cleanup()
 	}()
-	tss.MakeKey(t, "transit-seal-key")
+	tss.MakeKey(t, "transit-seal-key-1")
 
 	// Migrate the backend from shamir to transit.
 	transitSeal := migrateFromShamirToTransit_Post14(t, logger, storage, basePort, tss, cluster, opts)
@@ -216,7 +216,7 @@ func testSealMigrationShamirToTransit_Post14(
 	cluster.Cleanup()
 
 	// Run the backend with transit.
-	runTransit(t, logger, storage, basePort, cluster.RootToken, transitSeal)
+	runTransit(t, logger, storage, basePort, cluster.RootToken, transitSeal, 0)
 }
 
 func migrateFromShamirToTransit_Post14(
@@ -229,7 +229,7 @@ func migrateFromShamirToTransit_Post14(
 	// N.B. Providing a transit seal puts us in migration mode.
 	var transitSeal vault.Seal
 	opts.SealFunc = func() vault.Seal {
-		transitSeal = tss.MakeSeal(t, "transit-seal-key")
+		transitSeal = tss.MakeSeal(t, "transit-seal-key-1")
 		return transitSeal
 	}
 	modifyCoreConfig := func(tcc *vault.TestClusterCore) {}
@@ -282,7 +282,7 @@ func testSealMigrationTransitToShamir_Post14(
 			tss.Cleanup()
 		}
 	}()
-	tss.MakeKey(t, "transit-seal-key")
+	tss.MakeKey(t, "transit-seal-key-1")
 
 	// Initialize the backend with transit.
 	cluster, opts, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
@@ -371,31 +371,42 @@ func testSealMigration_TransitToTransit(
 			tss1.Cleanup()
 		}
 	}()
-	tss1.MakeKey(t, "transit-seal-key")
+	tss1.MakeKey(t, "transit-seal-key-1")
 
 	// Initialize the backend with transit.
+	println("------------------------------------------------------------------------------")
+	println("initializeTransit")
 	cluster, opts, tseal1 := initializeTransit(t, logger, storage, basePort, tss1)
-	//rootToken, recoveryKeys := cluster.RootToken, cluster.RecoveryKeys
+	rootToken := cluster.RootToken
 
 	// Create the transit server.
 	tss2 := sealhelper.NewTransitSealServer(t)
 	defer func() {
+		println("------------------------------------------------------------------------------")
+		println("tss2.Cleanup()")
 		tss2.EnsureCoresSealed(t)
 		tss2.Cleanup()
 	}()
-	tss2.MakeKey(t, "transit-seal-key")
+	tss2.MakeKey(t, "transit-seal-key-2")
 
 	// Migrate the backend from transit to transit.
-	//tseal2 := migrateFromTransitToTransit(t, logger, storage, basePort, tseal1, tss2, rootToken, recoveryKeys)
-	_ = migrateFromTransitToTransit(t, logger, storage, basePort, tseal1, tss2, cluster, opts)
+	println("------------------------------------------------------------------------------")
+	println("migrateFromTransitToTransit")
+	tseal2, leaderIdx := migrateFromTransitToTransit(t, logger, storage, basePort, tseal1, tss2, cluster, opts)
+	fmt.Printf("leaderIdx %d\n", leaderIdx)
 
 	// Now that migration is done, we can nuke the transit server, since we
 	// can unseal without it.
+	println("------------------------------------------------------------------------------")
+	println("tss1.Cleanup()")
+	tss1.EnsureCoresSealed(t)
 	tss1.Cleanup()
 	tss1 = nil
 
-	//// Run the backend with transit.
-	//runTransit(t, logger, storage, basePort, rootToken, tseal2)
+	// Run the backend with transit.
+	println("------------------------------------------------------------------------------")
+	println("runTransit")
+	runTransit(t, logger, storage, basePort+50, rootToken, tseal2, leaderIdx)
 }
 
 func migrateFromTransitToTransit(
@@ -404,12 +415,12 @@ func migrateFromTransitToTransit(
 	tseal1 vault.Seal,
 	tss2 *sealhelper.TransitSealServer,
 	cluster *vault.TestCluster, opts *vault.TestClusterOptions,
-) vault.Seal {
+) (vault.Seal, int) {
 
 	// N.B. Providing a transit seal puts us in migration mode.
 	var tseal2 vault.Seal
 	opts.SealFunc = func() vault.Seal {
-		tseal2 = tss2.MakeSeal(t, "transit-seal-key")
+		tseal2 = tss2.MakeSeal(t, "transit-seal-key-1")
 		return tseal2
 	}
 
@@ -442,17 +453,20 @@ func migrateFromTransitToTransit(
 		t.Fatal(diff)
 	}
 
-	//// Make sure the seal configs were updated correctly.
-	//b, r, err := cluster.Cores[0].Core.PhysicalSealConfigs(context.Background())
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
+	// Make sure the seal configs were updated correctly.
+	b, r, err := cluster.Cores[0].Core.PhysicalSealConfigs(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
 	//verifyBarrierConfig(t, b, wrapping.Shamir, keyShares, keyThreshold, 1)
 	//if r != nil {
 	//	t.Fatalf("expected nil recovery config, got: %#v", r)
 	//}
 
-	return tseal2
+	verifyBarrierConfig(t, b, wrapping.Transit, 1, 1, 1)
+	verifyBarrierConfig(t, r, wrapping.Shamir, keyShares, keyThreshold, 0)
+
+	return tseal2, leaderIdx
 }
 
 type migrationDirection int
@@ -779,7 +793,7 @@ func initializeTransit(
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
 		BaseClusterListenPort: baseClusterPort,
 		SealFunc: func() vault.Seal {
-			transitSeal = tss.MakeSeal(t, "transit-seal-key")
+			transitSeal = tss.MakeSeal(t, "transit-seal-key-1")
 			return transitSeal
 		},
 	}
@@ -814,7 +828,8 @@ func initializeTransit(
 func runTransit(
 	t *testing.T, logger hclog.Logger,
 	storage teststorage.ReusableStorage, basePort int,
-	rootToken string, transitSeal vault.Seal) {
+	rootToken string, transitSeal vault.Seal,
+	leaderIdx int) {
 
 	var baseClusterPort = basePort + 10
 
@@ -839,7 +854,7 @@ func runTransit(
 		cluster.Cleanup()
 	}()
 
-	leader := cluster.Cores[0]
+	leader := cluster.Cores[leaderIdx]
 	client := leader.Client
 	client.SetToken(rootToken)
 
@@ -856,7 +871,8 @@ func runTransit(
 			t.Fatal(err)
 		}
 	} else {
-		if err := cluster.UnsealCoresWithError(true); err != nil {
+		//err := cluster.UnsealCoresWithError(true)
+		if err := unsealWithStoredKeys(cluster, leaderIdx); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -873,4 +889,71 @@ func runTransit(
 
 	// Seal the cluster
 	cluster.EnsureCoresSealed(t)
+}
+
+func unsealWithStoredKeys(cluster *vault.TestCluster, leaderIdx int) error {
+
+	println("a;sldkjfal;sijropewiurtopiuopwqtuopkjfopirtupoeiorut")
+	println("a;sldkjfal;sijropewiurtopiuopwqtuopkjfopirtupoeiorut")
+	println("a;sldkjfal;sijropewiurtopiuopwqtuopkjfopirtupoeiorut")
+
+	ctx := context.Background()
+
+	//unseal := func(core *Core) error {
+	//	for _, key := range c.BarrierKeys {
+	//		if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
+	//			return err
+	//		}
+	//	}
+	//	return nil
+	//}
+	//if useStoredKeys {
+	//	unseal = func(core *Core) error {
+	//		return core.UnsealWithStoredKeys(context.Background())
+	//	}
+	//}
+
+	// Unseal first core
+	if err := cluster.Cores[leaderIdx].Core.UnsealWithStoredKeys(ctx); err != nil {
+		return fmt.Errorf("unseal core %d err: %s", 0, err)
+	}
+
+	// Verify unsealed
+	if cluster.Cores[leaderIdx].Sealed() {
+		return fmt.Errorf("should not be sealed")
+	}
+
+	if err := vault.TestWaitActiveWithError(cluster.Cores[leaderIdx].Core); err != nil {
+		return err
+	}
+
+	// Unseal other cores
+	for i := 0; i < len(cluster.Cores); i++ {
+		if i == leaderIdx {
+			continue
+		}
+		if err := cluster.Cores[i].Core.UnsealWithStoredKeys(ctx); err != nil {
+			return fmt.Errorf("unseal core %d err: %s", i, err)
+		}
+	}
+
+	// Let them come fully up to standby
+	time.Sleep(2 * time.Second)
+
+	// Ensure cluster connection info is populated.
+	// Other cores should not come up as leaders.
+	for i := 0; i < len(cluster.Cores); i++ {
+		if i == leaderIdx {
+			continue
+		}
+		isLeader, _, _, err := cluster.Cores[i].Leader()
+		if err != nil {
+			return err
+		}
+		if isLeader {
+			return fmt.Errorf("core[%d] should not be leader", i)
+		}
+	}
+
+	return nil
 }
