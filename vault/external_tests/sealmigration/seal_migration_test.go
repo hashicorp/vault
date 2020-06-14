@@ -871,10 +871,13 @@ func runTransit(
 			t.Fatal(err)
 		}
 	} else {
-		//err := cluster.UnsealCoresWithError(true)
-		if err := unsealWithStoredKeys(cluster, leaderIdx); err != nil {
-			t.Fatal(err)
+		for _, core := range cluster.Cores {
+			cluster.UnsealCoreWithStoredKeys(t, core)
 		}
+		//err := cluster.UnsealCoresWithError(true)
+		//if err := unsealWithStoredKeys(cluster, leaderIdx); err != nil {
+		//	t.Fatal(err)
+		//}
 	}
 	testhelpers.WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
 
@@ -891,69 +894,69 @@ func runTransit(
 	cluster.EnsureCoresSealed(t)
 }
 
-func unsealWithStoredKeys(cluster *vault.TestCluster, leaderIdx int) error {
-
-	println("a;sldkjfal;sijropewiurtopiuopwqtuopkjfopirtupoeiorut")
-	println("a;sldkjfal;sijropewiurtopiuopwqtuopkjfopirtupoeiorut")
-	println("a;sldkjfal;sijropewiurtopiuopwqtuopkjfopirtupoeiorut")
-
-	ctx := context.Background()
-
-	//unseal := func(core *Core) error {
-	//	for _, key := range c.BarrierKeys {
-	//		if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
-	//			return err
-	//		}
-	//	}
-	//	return nil
-	//}
-	//if useStoredKeys {
-	//	unseal = func(core *Core) error {
-	//		return core.UnsealWithStoredKeys(context.Background())
-	//	}
-	//}
-
-	// Unseal first core
-	if err := cluster.Cores[leaderIdx].Core.UnsealWithStoredKeys(ctx); err != nil {
-		return fmt.Errorf("unseal core %d err: %s", 0, err)
-	}
-
-	// Verify unsealed
-	if cluster.Cores[leaderIdx].Sealed() {
-		return fmt.Errorf("should not be sealed")
-	}
-
-	if err := vault.TestWaitActiveWithError(cluster.Cores[leaderIdx].Core); err != nil {
-		return err
-	}
-
-	// Unseal other cores
-	for i := 0; i < len(cluster.Cores); i++ {
-		if i == leaderIdx {
-			continue
-		}
-		if err := cluster.Cores[i].Core.UnsealWithStoredKeys(ctx); err != nil {
-			return fmt.Errorf("unseal core %d err: %s", i, err)
-		}
-	}
-
-	// Let them come fully up to standby
-	time.Sleep(2 * time.Second)
-
-	// Ensure cluster connection info is populated.
-	// Other cores should not come up as leaders.
-	for i := 0; i < len(cluster.Cores); i++ {
-		if i == leaderIdx {
-			continue
-		}
-		isLeader, _, _, err := cluster.Cores[i].Leader()
-		if err != nil {
-			return err
-		}
-		if isLeader {
-			return fmt.Errorf("core[%d] should not be leader", i)
-		}
-	}
-
-	return nil
-}
+//func unsealWithStoredKeys(cluster *vault.TestCluster, leaderIdx int) error {
+//
+//	println("a;sldkjfal;sijropewiurtopiuopwqtuopkjfopirtupoeiorut")
+//	println("a;sldkjfal;sijropewiurtopiuopwqtuopkjfopirtupoeiorut")
+//	println("a;sldkjfal;sijropewiurtopiuopwqtuopkjfopirtupoeiorut")
+//
+//	ctx := context.Background()
+//
+//	//unseal := func(core *Core) error {
+//	//	for _, key := range c.BarrierKeys {
+//	//		if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
+//	//			return err
+//	//		}
+//	//	}
+//	//	return nil
+//	//}
+//	//if useStoredKeys {
+//	//	unseal = func(core *Core) error {
+//	//		return core.UnsealWithStoredKeys(context.Background())
+//	//	}
+//	//}
+//
+//	// Unseal first core
+//	if err := cluster.Cores[leaderIdx].Core.UnsealWithStoredKeys(ctx); err != nil {
+//		return fmt.Errorf("unseal core %d err: %s", 0, err)
+//	}
+//
+//	// Verify unsealed
+//	if cluster.Cores[leaderIdx].Sealed() {
+//		return fmt.Errorf("should not be sealed")
+//	}
+//
+//	if err := vault.TestWaitActiveWithError(cluster.Cores[leaderIdx].Core); err != nil {
+//		return err
+//	}
+//
+//	// Unseal other cores
+//	for i := 0; i < len(cluster.Cores); i++ {
+//		if i == leaderIdx {
+//			continue
+//		}
+//		if err := cluster.Cores[i].Core.UnsealWithStoredKeys(ctx); err != nil {
+//			return fmt.Errorf("unseal core %d err: %s", i, err)
+//		}
+//	}
+//
+//	// Let them come fully up to standby
+//	time.Sleep(2 * time.Second)
+//
+//	// Ensure cluster connection info is populated.
+//	// Other cores should not come up as leaders.
+//	for i := 0; i < len(cluster.Cores); i++ {
+//		if i == leaderIdx {
+//			continue
+//		}
+//		isLeader, _, _, err := cluster.Cores[i].Leader()
+//		if err != nil {
+//			return err
+//		}
+//		if isLeader {
+//			return fmt.Errorf("core[%d] should not be leader", i)
+//		}
+//	}
+//
+//	return nil
+//}
