@@ -4,6 +4,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
+import { dateFormat } from 'core/helpers/date-format';
 import { create } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import ss from 'vault/tests/pages/components/search-select';
@@ -19,7 +20,7 @@ const disableReplication = async (type, assert) => {
     await click('[data-test-disable-replication] button');
 
     const typeDisplay = type === 'dr' ? 'Disaster Recovery' : 'Performance';
-    await fillIn('[data-test-confirmation-modal-input]', typeDisplay);
+    await fillIn('[data-test-confirmation-modal-input="disable"]', typeDisplay);
     await click('[data-test-confirm-button]');
     if (assert) {
       assert.equal(currentURL(), `/vault/replication`, 'redirects to the replication page');
@@ -91,7 +92,6 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-secondary-add]');
 
     await pollCluster(this.owner);
-
     // click into the added secondary's mount filter config
     await click('[data-test-replication-link="secondaries"]');
     await click('[data-test-popup-menu-trigger]');
@@ -171,6 +171,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-replication-link="secondaries"]');
     await click('[data-test-secondary-add]');
     await fillIn('[data-test-replication-secondary-id]', secondaryName);
+
     await click('[data-test-secondary-add]');
     await pollCluster(this.owner);
     await pollCluster(this.owner);
@@ -193,7 +194,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-replication-enable]');
     await pollCluster(this.owner);
     await visit('/vault/replication/dr/manage');
-
+    await click('[data-test-demote-replication] [data-test-replication-action-trigger]');
     assert.ok(findAll('[data-test-demote-warning]').length, 'displays the demotion warning');
   });
 
@@ -214,6 +215,50 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     );
   });
 
+  test('add secondary and navigate through token generation modal', async function(assert) {
+    const secondaryName = 'firstSecondary';
+    await visit('/vault/replication');
+
+    // enable perf replication
+    await click('[data-test-replication-type-select="performance"]');
+    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
+    await click('[data-test-replication-enable]');
+    await pollCluster(this.owner);
+    await settled();
+
+    // add a secondary
+    await click('[data-test-replication-link="secondaries"]');
+    await click('[data-test-secondary-add]');
+    await fillIn('[data-test-replication-secondary-id]', secondaryName);
+    await click('[data-test-secondary-add]');
+    await pollCluster(this.owner);
+
+    // checks on secondary token modal
+    assert.dom('#modal-wormhole').exists();
+    const today = new Date();
+    today.setMinutes(today.getMinutes() + 30); // add default 30 min TTL to current date to return expires
+    const dateFormatted = dateFormat([today, 'MMM DD, YYYY hh:mm:ss A']);
+    const modalDate = document.querySelector('[data-test-row-value="Expires"]').innerText;
+    // because timestamp might be off by a 1 sec due to different in exp from token vs. adding 30 min, checking the string before the seconds.
+    assert.equal(
+      dateFormatted.slice(0, 18),
+      modalDate.slice(0, 18),
+      'shows the correct expiration date and in the correct format'
+    );
+    // click off the modal to make sure you don't just have to click on the copy-close button to copy the token
+    await click('[data-test-modal-background]');
+    await settled();
+    // confirm you were redirected to the secondaries page
+    assert.equal(
+      currentURL(),
+      `/vault/replication/performance/secondaries`,
+      'redirects to the secondaries page'
+    );
+    assert
+      .dom('[data-test-secondary-name]')
+      .includesText(secondaryName, 'it displays the secondary in the list of secondaries');
+  });
+
   test('render performance and dr primary and navigate to details page', async function(assert) {
     // enable perf primary replication
     await visit('/vault/replication');
@@ -230,6 +275,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
 
     // enable DR primary replication
     const enableButton = document.querySelector('.is-primary');
+
     await click(enableButton);
     await click('[data-test-replication-enable="true"]');
     await pollCluster(this.owner);
@@ -260,11 +306,13 @@ module('Acceptance | Enterprise | replication', function(hooks) {
 
     // demote perf primary to a secondary
     await click('[data-test-replication-link="manage"]');
-    const demote = document.querySelector('[data-test-replication-demote]').firstElementChild;
-    await click(demote);
-    await click('[data-test-confirm-button="true"]');
+    // open demote modal
+    await click('[data-test-demote-replication] [data-test-replication-action-trigger]');
+    // enter confirmation text
+    await fillIn('[data-test-confirmation-modal-input="demote"]', 'Performance');
+    // Click confirm button
+    await click('[data-test-confirm-button="demote"]');
     await click('[data-test-replication-link="details"]');
-
     assert.dom('[data-test-replication-dashboard]').exists();
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
     assert.ok(

@@ -18,6 +18,7 @@ export default Fragment.extend({
   isPrimary: match('mode', /primary/),
 
   knownSecondaries: attr('array'),
+  secondaries: attr('array'),
 
   // secondary attrs
   isSecondary: match('mode', /secondary/),

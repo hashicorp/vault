@@ -49,7 +49,7 @@
       display: grid;
       grid-gap: $spacing-s;
       grid-template-columns: 1fr 1fr;
-      grid-template-rows: 0.2fr 1fr 0.2fr;
+      grid-template-rows: 0.2fr 0.2fr 0.2fr;
       padding: $spacing-l;
       line-height: 1.5;
 
@@ -82,20 +82,33 @@
         grid-column: 2/2;
         grid-row: 2/2;
       }
-      .grid-item-left-bottom {
+
+      .grid-item-bottom-left {
         grid-column: 1/1;
         grid-row: 3/3;
-        margin-top: -8px;
-
         display: flex;
         align-items: center;
       }
-      .grid-item-right-bottom {
+      .grid-item-bottom-right {
         grid-column: 2/2;
         grid-row: 3/3;
-        margin-top: -8px;
       }
-      .grid-item-full-bottom {
+
+      .grid-item-second-row {
+        grid-column: 1 / span 2;
+        grid-row: 2/2;
+      }
+
+      .grid-item-third-row {
+        grid-column: 1 / span 2;
+        grid-row: 3/4;
+
+        .empty-state {
+          padding: 0px 12px;
+          box-shadow: none;
+        }
+      }
+      .grid-item-bottom-row {
         grid-column: 1 / span 2;
         grid-row: 4/4;
       }

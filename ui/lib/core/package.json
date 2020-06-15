@@ -5,6 +5,7 @@
   ],
   "dependencies": {
     "autosize": "*",
+    "date-fns": "*",
     "Duration.js": "*",
     "base64-js": "*",
     "ember-auto-import": "*",

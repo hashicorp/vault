@@ -4,7 +4,7 @@
       Promote cluster
     </h4>
     <p>
-      Promote this cluster to a {{replicationDisplayMode}} primary
+      Promote this cluster to a {{model.replicationModeForDisplay}} primary
     </p>
   </div>
 
@@ -28,9 +28,9 @@
 >
   <section class="modal-card-body">
     {{#if (eq replicationMode "dr")}}
-      <p class="has-bottom-margin-m">
-        To promote this DR Replication Secondary to a primary, enter the DR Operation token.
-      </p>
+    <p class="has-bottom-margin-m">
+      To promote this DR Replication Secondary to a primary, enter the DR Operation token.
+    </p>
     {{/if}}
     <p class="has-bottom-margin-m">
       Vault Replication is not designed for active-active usage. Enabling two primaries should never be done, as it can lead to data loss if they or their secondaries are ever reconnected. If the cluster has a primary, be sure to demote it before promoting a secondary.

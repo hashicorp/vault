@@ -20,6 +20,7 @@ import { clusterStates } from 'core/helpers/cluster-states';
 
 export default Component.extend({
   layout,
+  tagName: '',
   title: null,
   replicationDetails: null,
   state: computed('replicationDetails.{state}', function() {
@@ -44,14 +45,14 @@ export default Component.extend({
     const { title, state, connection } = this;
 
     // only show errors on the state card
-    if (title === 'States') {
+    if (title === 'Status') {
       const currentClusterisOk = clusterStates([state]).isOk;
       const primaryIsOk = clusterStates([connection]).isOk;
       return !(currentClusterisOk && primaryIsOk);
     }
     return false;
   }),
-  primaryClusterAddr: computed('replicationDetails.{primaryClusterAddr}', function() {
-    return this.replicationDetails.primaryClusterAddr;
+  knownPrimaryClusterAddrs: computed('replicationDetails.{knownPrimaryClusterAddrs}', function() {
+    return this.replicationDetails.knownPrimaryClusterAddrs;
   }),
 });

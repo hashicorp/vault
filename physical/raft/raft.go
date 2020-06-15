@@ -615,13 +615,8 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		if err := raft.BootstrapCluster(raftConfig, b.logStore, b.stableStore, b.snapStore, b.raftTransport, *bootstrapConfig); err != nil {
 			return err
 		}
-		// If we are the only node we should start as the leader.
-		if len(bootstrapConfig.Servers) == 1 {
-			opts.StartAsLeader = true
-		}
 	}
 
-	raftConfig.StartAsLeader = opts.StartAsLeader
 	// Setup the Raft store.
 	b.fsm.SetNoopRestore(true)
 
@@ -670,6 +665,30 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	if err != nil {
 		return err
 	}
+
+	// If we are expecting to start as leader wait until we win the election.
+	// This should happen quickly since there is only one node in the cluster.
+	// StartAsLeader is only set during init, recovery mode, storage migration,
+	// and tests.
+	if opts.StartAsLeader {
+		for {
+			if raftObj.State() == raft.Leader {
+				break
+			}
+
+			select {
+			case <-ctx.Done():
+				future := raftObj.Shutdown()
+				if future.Error() != nil {
+					return errwrap.Wrapf("shutdown while waiting for leadership: {{err}}", future.Error())
+				}
+
+				return errors.New("shutdown while waiting for leadership")
+			case <-time.After(10 * time.Millisecond):
+			}
+		}
+	}
+
 	b.raft = raftObj
 	b.raftNotifyCh = raftNotifyCh
 

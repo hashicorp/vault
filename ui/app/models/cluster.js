@@ -54,6 +54,9 @@ export default DS.Model.extend({
   // replicationAttrs will then return the relevant `replication-attributes` fragment
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),
+  replicationModeForDisplay: computed('replicationMode', function() {
+    return this.replicationMode === 'dr' ? 'Disaster Recovery' : 'Performance';
+  }),
   replicationIsInitializing: computed('dr.mode', 'performance.mode', function() {
     // a mode of null only happens when a cluster is being initialized
     // otherwise the mode will be 'disabled', 'primary', 'secondary'

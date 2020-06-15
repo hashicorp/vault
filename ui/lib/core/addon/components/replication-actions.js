@@ -1,6 +1,5 @@
 import { alias } from '@ember/object/computed';
 import Component from '@ember/component';
-import { computed } from '@ember/object';
 import ReplicationActions from 'core/mixins/replication-actions';
 import layout from '../templates/components/replication-actions';
 
@@ -24,16 +23,6 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
     }
     this.setProperties(DEFAULTS);
   },
-
-  replicationDisplayMode: computed('replicationMode', function() {
-    const replicationMode = this.get('replicationMode');
-    if (replicationMode === 'dr') {
-      return 'DR';
-    }
-    if (replicationMode === 'performance') {
-      return 'Performance';
-    }
-  }),
 
   actions: {
     onSubmit() {
