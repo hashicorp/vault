@@ -26,7 +26,7 @@ type BarrierView struct {
 // a view of it that can only operate with the given prefix.
 func NewBarrierView(barrier logical.Storage, prefix string) *BarrierView {
 	return &BarrierView{
-		storage: logical.NewStorageView(barrier, prefix),
+		storage: logical.NewStorageView(logical.NewCompressor(barrier), prefix),
 	}
 }
 
