@@ -66,7 +66,7 @@ func new(displayNameLen, roleNameLen, usernameLen int) *MySQL {
 
 	return &MySQL{
 		mySQLConnectionProducer: connProducer,
-		CredentialsProducer:   credsProducer,
+		CredentialsProducer:     credsProducer,
 	}
 }
 

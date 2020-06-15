@@ -18,8 +18,8 @@ import (
 )
 
 func TestInit_clientTLS(t *testing.T) {
-	t.Skip("Skipping this test because CircleCI can't mount the files we need without further investigation: " +
-		"https://support.circleci.com/hc/en-us/articles/360007324514-How-can-I-mount-volumes-to-docker-containers-")
+	//t.Skip("Skipping this test because CircleCI can't mount the files we need without further investigation: " +
+	//	"https://support.circleci.com/hc/en-us/articles/360007324514-How-can-I-mount-volumes-to-docker-containers-")
 
 	// Set up temp directory so we can mount it to the docker container
 	confDir := makeTempDir(t)
@@ -33,19 +33,19 @@ func TestInit_clientTLS(t *testing.T) {
 	)
 	serverCert := certhelpers.NewCert(t,
 		certhelpers.CommonName("server"),
-		certhelpers.Dns("localhost"),
+		certhelpers.DNS("localhost"),
 		certhelpers.Parent(caCert),
 	)
 	clientCert := certhelpers.NewCert(t,
 		certhelpers.CommonName("client"),
-		certhelpers.Dns("client"),
+		certhelpers.DNS("client"),
 		certhelpers.Parent(caCert),
 	)
 
-	certhelpers.WriteFile(t, paths.Join(confDir, "ca.pem"), caCert.CombinedPEM(), 0644)
-	certhelpers.WriteFile(t, paths.Join(confDir, "server-cert.pem"), serverCert.Pem, 0644)
-	certhelpers.WriteFile(t, paths.Join(confDir, "server-key.pem"), serverCert.PrivateKeyPEM(), 0644)
-	certhelpers.WriteFile(t, paths.Join(confDir, "client.pem"), clientCert.CombinedPEM(), 0644)
+	writeFile(t, paths.Join(confDir, "ca.pem"), caCert.CombinedPEM(), 0644)
+	writeFile(t, paths.Join(confDir, "server-cert.pem"), serverCert.Pem, 0644)
+	writeFile(t, paths.Join(confDir, "server-key.pem"), serverCert.PrivateKeyPEM(), 0644)
+	writeFile(t, paths.Join(confDir, "client.pem"), clientCert.CombinedPEM(), 0644)
 
 	// //////////////////////////////////////////////////////
 	// Set up MySQL config file
@@ -56,7 +56,7 @@ ssl-ca=/etc/mysql/ca.pem
 ssl-cert=/etc/mysql/server-cert.pem
 ssl-key=/etc/mysql/server-key.pem`
 
-	certhelpers.WriteFile(t, paths.Join(confDir, "my.cnf"), []byte(rawConf), 0644)
+	writeFile(t, paths.Join(confDir, "my.cnf"), []byte(rawConf), 0644)
 
 	// //////////////////////////////////////////////////////
 	// Start MySQL container
@@ -103,10 +103,12 @@ ssl-key=/etc/mysql/server-key.pem`
 
 	results := stmt.QueryRow()
 
-	expected := fmt.Sprintf("%s@%s", username, "%")
+	expected := fmt.Sprintf("%s@%%", username)
 
 	var result string
-	results.Scan(&result)
+	if err := results.Scan(&result); err != nil {
+		t.Fatalf("result could not be scanned from result set: %s", err)
+	}
 
 	if !reflect.DeepEqual(result, expected) {
 		t.Fatalf("Actual:%#v\nExpected:\n%#v", result, expected)
@@ -145,12 +147,15 @@ func startMySQLWithTLS(t *testing.T, version string, confDir string) (retURL str
 		t.Fatalf("Unable to remove old running containers: %s", err)
 	}
 
+	username := "root"
+	password := "x509test"
+
 	runOpts := &dockertest.RunOptions{
 		Name:       containerName,
 		Repository: "mysql",
 		Tag:        version,
 		Cmd:        []string{"--defaults-extra-file=/etc/mysql/my.cnf", "--auto-generate-certs=OFF"},
-		Env:				[]string{"MYSQL_ROOT_PASSWORD=x509test"},
+		Env:        []string{fmt.Sprintf("MYSQL_ROOT_PASSWORD=%s", password)},
 		// Mount the directory from local filesystem into the container
 		Mounts: []string{
 			fmt.Sprintf("%s:/etc/mysql", confDir),
@@ -161,7 +166,7 @@ func startMySQLWithTLS(t *testing.T, version string, confDir string) (retURL str
 	if err != nil {
 		t.Fatalf("Could not start local mysql docker container: %s", err)
 	}
-	resource.Expire(600)
+	resource.Expire(30)
 
 	cleanup = func() {
 		err := pool.Purge(resource)
@@ -173,8 +178,8 @@ func startMySQLWithTLS(t *testing.T, version string, confDir string) (retURL str
 	dsn := fmt.Sprintf("{{username}}:{{password}}@tcp(localhost:%s)/mysql", resource.GetPort("3306/tcp"))
 
 	url := dbutil.QueryHelper(dsn, map[string]string{
-		"username": "root",
-		"password": "x509test",
+		"username": username,
+		"password": password,
 	})
 	// exponential backoff-retry
 	err = pool.Retry(func() error {
@@ -245,28 +250,15 @@ func setUpX509User(t *testing.T, db *sql.DB, cert certhelpers.Certificate) (user
 	return username
 }
 
-type connStatus struct {
-	AuthInfo authInfo `bson:"authInfo"`
-	Ok       int      `bson:"ok"`
+// ////////////////////////////////////////////////////////////////////////////
+// Writing to file
+// ////////////////////////////////////////////////////////////////////////////
+func writeFile(t *testing.T, filename string, data []byte, perms os.FileMode) {
+	t.Helper()
+
+	err := ioutil.WriteFile(filename, data, perms)
+	if err != nil {
+		t.Fatalf("Unable to write to file [%s]: %s", filename, err)
+	}
 }
 
-type authInfo struct {
-	AuthenticatedUsers     []user `bson:"authenticatedUsers"`
-	AuthenticatedUserRoles roles  `bson:"authenticatedUserRoles"`
-}
-
-type user struct {
-	User string `bson:"user"`
-	DB   string `bson:"db"`
-}
-
-type role struct {
-	Role string `bson:"role"`
-	DB   string `bson:"db"`
-}
-
-type roles []role
-
-func (r roles) Len() int           { return len(r) }
-func (r roles) Less(i, j int) bool { return r[i].Role < r[j].Role }
-func (r roles) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }

@@ -47,9 +47,9 @@ func TestInit_clientTLS(t *testing.T) {
 		certhelpers.Parent(caCert),
 	)
 
-	certhelpers.WriteFile(t, paths.Join(confDir, "ca.pem"), caCert.CombinedPEM(), 0644)
-	certhelpers.WriteFile(t, paths.Join(confDir, "server.pem"), serverCert.CombinedPEM(), 0644)
-	certhelpers.WriteFile(t, paths.Join(confDir, "client.pem"), clientCert.CombinedPEM(), 0644)
+	writeFile(t, paths.Join(confDir, "ca.pem"), caCert.CombinedPEM(), 0644)
+	writeFile(t, paths.Join(confDir, "server.pem"), serverCert.CombinedPEM(), 0644)
+	writeFile(t, paths.Join(confDir, "client.pem"), clientCert.CombinedPEM(), 0644)
 
 	// //////////////////////////////////////////////////////
 	// Set up Mongo config file
@@ -61,7 +61,7 @@ net:
       CAFile: /etc/mongo/ca.pem
       allowInvalidHostnames: true`
 
-	certhelpers.WriteFile(t, paths.Join(confDir, "mongod.conf"), []byte(rawConf), 0644)
+	writeFile(t, paths.Join(confDir, "mongod.conf"), []byte(rawConf), 0644)
 
 	// //////////////////////////////////////////////////////
 	// Start Mongo container
@@ -302,3 +302,16 @@ type roles []role
 func (r roles) Len() int           { return len(r) }
 func (r roles) Less(i, j int) bool { return r[i].Role < r[j].Role }
 func (r roles) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
+
+// ////////////////////////////////////////////////////////////////////////////
+// Writing to file
+// ////////////////////////////////////////////////////////////////////////////
+func writeFile(t *testing.T, filename string, data []byte, perms os.FileMode) {
+	t.Helper()
+
+	err := ioutil.WriteFile(filename, data, perms)
+	if err != nil {
+		t.Fatalf("Unable to write to file [%s]: %s", filename, err)
+	}
+}
+

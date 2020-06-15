@@ -10,10 +10,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"io/ioutil"
 	"math/big"
 	"net"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -40,7 +38,7 @@ func CommonName(cn string) CertOpt {
 
 func Parent(parent Certificate) CertOpt {
 	return func(builder *CertBuilder) error {
-		builder.parentKey = parent.privKey.privKey
+		builder.parentKey = parent.PrivKey.PrivKey
 		builder.parentTmpl = parent.Template
 		return nil
 	}
@@ -60,7 +58,7 @@ func SelfSign() CertOpt {
 	}
 }
 
-func Ip(ip ...string) CertOpt {
+func IP(ip ...string) CertOpt {
 	return func(builder *CertBuilder) error {
 		for _, addr := range ip {
 			if ipAddr := net.ParseIP(addr); ipAddr != nil {
@@ -71,7 +69,7 @@ func Ip(ip ...string) CertOpt {
 	}
 }
 
-func Dns(dns ...string) CertOpt {
+func DNS(dns ...string) CertOpt {
 	return func(builder *CertBuilder) error {
 		builder.tmpl.DNSNames = dns
 		return nil
@@ -107,16 +105,16 @@ func NewCert(t *testing.T, opts ...CertOpt) (cert Certificate) {
 
 	key := NewPrivateKey(t)
 
-	builder.tmpl.SubjectKeyId = getSubjKeyID(t, key.privKey)
+	builder.tmpl.SubjectKeyId = getSubjKeyID(t, key.PrivKey)
 
 	tmpl := builder.tmpl
 	parent := builder.parentTmpl
-	publicKey := key.privKey.Public()
+	publicKey := key.PrivKey.Public()
 	signingKey := builder.parentKey
 
 	if builder.selfSign {
 		parent = tmpl
-		signingKey = key.privKey
+		signingKey = key.PrivKey
 	}
 
 	if builder.isCA {
@@ -146,11 +144,11 @@ func NewCert(t *testing.T, opts ...CertOpt) (cert Certificate) {
 
 	return Certificate{
 		Template: tmpl,
-		privKey:  key,
+		PrivKey:  key,
 		TLSCert:  tlsCert,
-		rawCert:  certBytes,
+		RawCert:  certBytes,
 		Pem:      certPem,
-		isCA:     builder.isCA,
+		IsCA:     builder.isCA,
 	}
 }
 
@@ -158,7 +156,7 @@ func NewCert(t *testing.T, opts ...CertOpt) (cert Certificate) {
 // Private Key
 // ////////////////////////////////////////////////////////////////////////////
 type KeyWrapper struct {
-	privKey *rsa.PrivateKey
+	PrivKey *rsa.PrivateKey
 	Pem     []byte
 }
 
@@ -178,7 +176,7 @@ func NewPrivateKey(t *testing.T) (key KeyWrapper) {
 	)
 
 	key = KeyWrapper{
-		privKey: privKey,
+		PrivKey: privKey,
 		Pem:     privKeyPem,
 	}
 
@@ -189,35 +187,23 @@ func NewPrivateKey(t *testing.T) (key KeyWrapper) {
 // Certificate
 // ////////////////////////////////////////////////////////////////////////////
 type Certificate struct {
-	privKey  KeyWrapper
+	PrivKey  KeyWrapper
 	Template *x509.Certificate
 	TLSCert  tls.Certificate
-	rawCert  []byte
+	RawCert  []byte
 	Pem      []byte
-	isCA     bool
+	IsCA     bool
 }
 
 func (cert Certificate) CombinedPEM() []byte {
-	if cert.isCA {
+	if cert.IsCA {
 		return cert.Pem
 	}
-	return bytes.Join([][]byte{cert.privKey.Pem, cert.Pem}, []byte{'\n'})
+	return bytes.Join([][]byte{cert.PrivKey.Pem, cert.Pem}, []byte{'\n'})
 }
 
 func (cert Certificate) PrivateKeyPEM() []byte {
-	return cert.privKey.Pem
-}
-
-// ////////////////////////////////////////////////////////////////////////////
-// Writing to file
-// ////////////////////////////////////////////////////////////////////////////
-func WriteFile(t *testing.T, filename string, data []byte, perms os.FileMode) {
-	t.Helper()
-
-	err := ioutil.WriteFile(filename, data, perms)
-	if err != nil {
-		t.Fatalf("Unable to write to file [%s]: %s", filename, err)
-	}
+	return cert.PrivKey.Pem
 }
 
 // ////////////////////////////////////////////////////////////////////////////

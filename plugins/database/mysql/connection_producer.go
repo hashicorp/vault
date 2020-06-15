@@ -35,7 +35,7 @@ type mySQLConnectionProducer struct {
 	TLSCAData             []byte `json:"tls_ca"              mapstructure:"tls_ca"              structs:"-"`
 
 	// tlsConfigName is a globally unique name that references the TLS config for this instance in the mysql driver
-	tlsConfigName					string
+	tlsConfigName string
 
 	Type                  string
 	RawConfig             map[string]interface{}
@@ -162,7 +162,7 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 	urlPieces := strings.Split(c.ConnectionURL, "?")
 	connURL := ""
 	for i, urlFragment := range urlPieces {
-		if len(urlPieces) == 1 || i != len(urlPieces) - 1 {
+		if len(urlPieces) == 1 || i != len(urlPieces)-1 {
 			connURL = connURL + urlFragment
 		}
 	}
@@ -217,7 +217,7 @@ func (c *mySQLConnectionProducer) SetCredentials(ctx context.Context, statements
 
 func (c *mySQLConnectionProducer) getTLSAuth() (tlsConfig *tls.Config, err error) {
 	if len(c.TLSCAData) == 0 &&
-	  len(c.TLSCertificateKeyData) == 0 {
+		len(c.TLSCertificateKeyData) == 0 {
 		return nil, nil
 	}
 
@@ -241,7 +241,7 @@ func (c *mySQLConnectionProducer) getTLSAuth() (tlsConfig *tls.Config, err error
 	}
 
 	tlsConfig = &tls.Config{
-		RootCAs: rootCertPool,
+		RootCAs:      rootCertPool,
 		Certificates: clientCert,
 	}
 
