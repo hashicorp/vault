@@ -11,7 +11,7 @@ const REPLICATION_DETAILS = {
   lastRemoteWAL: 10,
 };
 
-const KNOW_PRIMARY_CLUSTER_DETAILS = {
+const KNOWN_PRIMARY_CLUSTER_DETAILS = {
   knownPrimaryClusterAddrs: ['https://127.0.0.1:8201', 'https://127.0.0.1:8202'],
 };
 
@@ -47,7 +47,7 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
   });
 
   test('it renders with knowPrimaryClusterAddrs set when title is not Status', async function(assert) {
-    this.set('replicationDetails', KNOW_PRIMARY_CLUSTER_DETAILS);
+    this.set('replicationDetails', KNOWN_PRIMARY_CLUSTER_DETAILS);
     await render(
       hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title='Primary cluster'/>`
     );
