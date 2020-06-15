@@ -9,7 +9,6 @@
     {{#if encoded_token}}
       <p class="has-bottom-margin-l">
         {{#if otp}}
-
         There are three values below. The encoded operation token and the OTP are used in the <span class="has-text-semibold">DR operation token command</span>, which you will need to copy and paste into your CLI in order to generate the operation token. Save your encoded operation token and OTP.
         {{else}}
         The encoded operation token and the OTP are used in the <span class="has-text-semibold">DR operation token command</span>, which you will need to copy and paste into your CLI in order to generate the operation token. Save your encoded operation token and OTP.
@@ -21,7 +20,7 @@
         </h4>
         <div class="message is-list has-copy-button" tabindex="-1">
           <HoverCopyButton @copyValue={{encoded_token}} />
-          <code class="is-word-break">{{encoded_token}}</code>
+          <code class="is-word-break" data-test-shamir-encoded-token>{{encoded_token}}</code>
         </div>
         {{#if otp}}
           <h4 class="title is-7 has-bottom-padding-m is-fullwidth">
@@ -52,7 +51,7 @@
     <form {{action 'startGenerate' (hash pgp_key=pgp_key) on="submit"}} id="shamir">
       {{message-error errors=errors}}
       {{#if (eq generateStep 'chooseMethod')}}
-        <div class="has-bottom-margin-m">
+        <div class="has-bottom-margin-m" data-test-shamir-modal-body>
           {{yield}}
         </div>
         <div class="field is-grouped">
@@ -67,7 +66,7 @@
             </span>
           </div>
           <div class="control">
-            <button type="submit" class="button is-primary">
+            <button type="submit" class="button is-primary" data-test-generate-token-cta>
               Generate operation token
             </button>
           </div>

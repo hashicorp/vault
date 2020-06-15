@@ -33,5 +33,8 @@ export default ShamirFlow.extend({
       }
       this.onClose();
     },
+    onClose() {
+      this.onClose();
+    },
   },
 });
