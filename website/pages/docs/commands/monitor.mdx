@@ -13,11 +13,8 @@ The `monitor` command shows a real time display of the server logs of a Vault
 server. This command accepts a log level as an argument, which can be different
 from the log level that the Vault server was started with.
 
-The `monitor` command honors the same the variables that the base command
-accepts, such as the token stored via a previous login or the environment
-variables `VAULT_TOKEN` and `VAULT_ADDR`. The token used determines the
-permissions. The address specified determines the target server that will
-be monitored.
+The `monitor` command honors the `VAULT_ADDR` environment variable. The address
+specified determines the target server that will be monitored.
 
 Note that this command is designed to run indefinitely. It is similar to
 `tail -f` in the Unix world. This command will not exit on its own unless
