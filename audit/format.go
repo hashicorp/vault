@@ -291,7 +291,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		},
 
 		Response: &AuditResponse{
-			MountType: in.MountType,
+			MountType: req.MountType,
 			Auth:      respAuth,
 			Secret:    respSecret,
 			Data:      resp.Data,
