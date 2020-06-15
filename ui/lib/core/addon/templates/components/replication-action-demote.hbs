@@ -37,7 +37,7 @@
         This cluster is currently operating as a performance secondary. Demoting it will leave your replication setup <strong>without a performance primary cluster</strong> until a new cluster is promoted.
       </p>
     {{/if}}
-    Demoting this{{model.replicationModeForDisplay}} primary to a {{model.replicationModeForDisplay}} secondary means that the resulting secondary cluster:
+    Demoting this {{model.replicationModeForDisplay}} primary to a {{model.replicationModeForDisplay}} secondary means that the resulting secondary cluster:
   </p>
   <ul class="bullet has-bottom-margin-m">
     {{#if (and

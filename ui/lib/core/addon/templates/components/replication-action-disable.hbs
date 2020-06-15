@@ -37,7 +37,7 @@
   @testSelector="disable"
 >
   <p class="has-bottom-margin-m">
-    {{#if (and model.replicationAttrs.isPrimary (eq model.replicationModeForDisplay "Disaster Recovery"))}}This cannot be undone. {{/if}}
+    {{#if (and model.replicationAttrs.isPrimary (eq model.replicationMode "dr"))}}This cannot be undone. {{/if}}
     Disabling {{model.replicationModeForDisplay}} Replication entirely on this {{if (eq model.replicationAttrs.isPrimary true) "primary" "secondary"}} cluster means that:
   </p>
   <ul class="bullet">
