@@ -170,7 +170,35 @@ username: v-kubernet-pg-app-q0Z7WPfVNqqTJuoDqCTY-1576529094
 
 ~> Some secrets such as KV are stored in maps. Their data can be accessed using `.Data.data.<NAME>`
 
-#### Vault Agent Configuration Map
+### Renewals and Updating Secrets
+
+The Vault Agent templating automatically renews and fetches secrets.  The behavior 
+of how Agent does this depends on the type of secret.  The following is a high level 
+overview of different behaviors.
+
+#### Renewable Secrets
+
+If a secret is renewable, Vault Agent will renew and fetch the secret when 85% of the 
+secrets time-to-live (TTL) is reached. Renewable secrets include (but not limited 
+to) tokens, dynamic secrets such as database credentials and [KV Version 1](/docs/secrets/kv/kv-v1).
+
+#### Non-Renewable Secrets
+
+If a secret isn't renewable, Vault Agent will fetch the secret every 5 minutes. This is not 
+configurable.  Non-renewable secrets include (but not limited to) [KV Version 2](/docs/secrets/kv/kv-v2).
+
+#### Static Roles
+
+If a secret has a `rotation_period`, such as a [database static role](/docs/secrets/databases#static-roles), 
+Vault Agent template will fetch the new secret as it changes in Vault.  It does 
+this by inspecting the secret's time-to-live (TTL).
+
+#### Certificates
+
+If a secret is a [certificate](/docs/secrets/pki), Vault Agent template will fetch the new certificate 
+uing the certificates `validTo` field.
+
+### Vault Agent Configuration Map
 
 For advanced use cases, it may be required to define Vault Agent configuration
 files to mount instead of using secret and template annotations. The Vault Agent
