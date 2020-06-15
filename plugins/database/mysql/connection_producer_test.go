@@ -18,8 +18,8 @@ import (
 )
 
 func TestInit_clientTLS(t *testing.T) {
-	//t.Skip("Skipping this test because CircleCI can't mount the files we need without further investigation: " +
-	//	"https://support.circleci.com/hc/en-us/articles/360007324514-How-can-I-mount-volumes-to-docker-containers-")
+	t.Skip("Skipping this test because CircleCI can't mount the files we need without further investigation: " +
+		"https://support.circleci.com/hc/en-us/articles/360007324514-How-can-I-mount-volumes-to-docker-containers-")
 
 	// Set up temp directory so we can mount it to the docker container
 	confDir := makeTempDir(t)
@@ -261,4 +261,3 @@ func writeFile(t *testing.T, filename string, data []byte, perms os.FileMode) {
 		t.Fatalf("Unable to write to file [%s]: %s", filename, err)
 	}
 }
-
