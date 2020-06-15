@@ -173,11 +173,11 @@ jobs:
       - run: ls -lahR .buildcache/packages/store
       - store_artifacts:
           path: .buildcache/packages/store
-          destination: packages
-      - run: tar -czf packages.tar.gz .buildcache/packages/store
+          destination: packages-{{$workflowName}}
+      - run: tar -czf packages-{{$workflowName}}.tar.gz .buildcache/packages/store
       - store_artifacts:
-          path: packages.tar.gz
-          destination: packages.tar.gz
+          path: packages-{{$workflowName}}.tar.gz
+          destination: packages-{{$workflowName}}.tar.gz
 
 commands:
   {{- range $packages }}
