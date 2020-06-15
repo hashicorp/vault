@@ -28,7 +28,7 @@ require (
 	github.com/pierrec/lz4 v2.0.5+incompatible
 	github.com/pkg/errors v0.8.1
 	github.com/ryanuber/go-glob v1.0.0
-	golang.org/x/crypto v0.0.0-20190418165655-df01cb2cc480
+	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
 	golang.org/x/sys v0.0.0-20191008105621-543471e840be
 	google.golang.org/grpc v1.27.0
 	google.golang.org/protobuf v1.24.0
