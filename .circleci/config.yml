@@ -56,6 +56,11 @@ jobs:
     - store_artifacts:
         destination: packages-build-release.tar.gz
         path: packages-build-release.tar.gz
+    - run:
+        command: tar -czf aliases-build-release.tar.gz .buildcache/packages/by-alias
+    - store_artifacts:
+        destination: aliases-build-release.tar.gz
+        path: aliases-build-release.tar.gz
     environment:
     - AUTO_INSTALL_TOOLS: 'YES'
     - PRODUCT_REVISION: ''

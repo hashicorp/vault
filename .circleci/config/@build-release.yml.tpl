@@ -171,13 +171,21 @@ jobs:
       {{- range $packages}}
       - load-{{.meta.BUILD_JOB_NAME}}{{end}}
       - run: ls -lahR .buildcache/packages/store
+      # Surface each zip as a separate artifact.
       - store_artifacts:
           path: .buildcache/packages/store
           destination: packages-{{$workflowName}}
+      # Surface a tarball of the whole package store as an artifact.
       - run: tar -czf packages-{{$workflowName}}.tar.gz .buildcache/packages/store
       - store_artifacts:
           path: packages-{{$workflowName}}.tar.gz
           destination: packages-{{$workflowName}}.tar.gz
+      # Surface a tarball of just the alias symlinks as an artifact.
+      # This is used by downstream processes, it's not much use by itself.
+      - run: tar -czf aliases-{{$workflowName}}.tar.gz .buildcache/packages/by-alias
+      - store_artifacts:
+          path: aliases-{{$workflowName}}.tar.gz
+          destination: aliases-{{$workflowName}}.tar.gz
 
 commands:
   {{- range $packages }}
