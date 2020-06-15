@@ -619,4 +619,34 @@ service SystemView {
 message Connection {
 	// RemoteAddr is the network address that sent the request.
 	string remote_addr = 1;
+
+	// ConnectionState is the marshalled tls.ConnectionState from the original
+	// request
+	ConnectionState connection_state = 2;
 }
+
+message ConnectionState {
+	uint32           version                        = 1;
+	bool             handshake_complete             = 2;
+	bool             did_resume                     = 3;
+	uint32           cipher_suite                   = 4;
+	string           negotiated_protocol            = 5;
+	bool             negotiated_protocol_is_mutual  = 6;
+	string           server_name                    = 7;
+	CertificateChain peer_certificates              = 8;
+
+	repeated CertificateChain verified_chains               =  9;
+	repeated bytes            signed_certificate_timestamps = 10;
+
+	bytes ocsp_response = 11;
+	bytes tls_unique    = 12;
+}
+
+message Certificate {
+	bytes asn1_data = 1;
+}
+
+message CertificateChain {
+	repeated Certificate certificates = 1;
+}
+
