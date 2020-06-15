@@ -2,7 +2,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { changelogUrlFor } from '../../../helpers/changelog-url-for';
 
-const CHANGELOG_URL = 'http://www.github.com/hashicorp/vault/blob/master/CHANGELOG.md#';
+const CHANGELOG_URL = 'https://www.github.com/hashicorp/vault/blob/master/CHANGELOG.md#';
 
 module('Integration | Helper | changelog-url-for', function(hooks) {
   setupRenderingTest(hooks);
