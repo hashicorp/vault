@@ -111,7 +111,7 @@ package:
 # match the current LOCKFILE and PRODUCT_REVISION. It does not cause a new build.
 # If the package store contains no matchin binaries, then this does nothing.
 aliases:
-	echo "==> Writing alias symlinks for existing packages in the store."; \
+	@echo "==> Writing alias symlinks for existing packages in the store."; \
 	cd $(REPO_ROOT); \
 	PACKAGE_SPEC_IDS="$$($(call QUERY_LOCK,.packages[] | .packagespecid))"; \
 		for PACKAGE_SPEC_ID in $$PACKAGE_SPEC_IDS; do \
