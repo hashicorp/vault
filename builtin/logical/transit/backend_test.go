@@ -27,7 +27,7 @@ const (
 	testPlaintext = "the quick brown fox"
 )
 
-func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
+func createBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
@@ -42,7 +42,7 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	return b, config.StorageView
 }
 
-func createBackendWithSysView(t *testing.T) (*backend, logical.Storage) {
+func createBackendWithSysView(t testing.TB) (*backend, logical.Storage) {
 	sysView := logical.TestSystemView()
 	storage := &logical.InmemStorage{}
 
@@ -64,7 +64,7 @@ func createBackendWithSysView(t *testing.T) (*backend, logical.Storage) {
 	return b, storage
 }
 
-func createBackendWithSysViewWithStorage(t *testing.T, s logical.Storage) *backend {
+func createBackendWithSysViewWithStorage(t testing.TB, s logical.Storage) *backend {
 	sysView := logical.TestSystemView()
 
 	conf := &logical.BackendConfig{
@@ -85,7 +85,7 @@ func createBackendWithSysViewWithStorage(t *testing.T, s logical.Storage) *backe
 	return b
 }
 
-func createBackendWithForceNoCacheWithSysViewWithStorage(t *testing.T, s logical.Storage) *backend {
+func createBackendWithForceNoCacheWithSysViewWithStorage(t testing.TB, s logical.Storage) *backend {
 	sysView := logical.TestSystemView()
 	sysView.CachingDisabledVal = true
 

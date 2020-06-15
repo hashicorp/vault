@@ -14,7 +14,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/internalshared/configutil"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -22,7 +21,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -37,7 +35,6 @@ import (
 	"github.com/mitchellh/copystructure"
 
 	"golang.org/x/crypto/ed25519"
-	"golang.org/x/crypto/ssh"
 	"golang.org/x/net/http2"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
@@ -45,6 +42,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
@@ -490,97 +488,6 @@ func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.Plug
 var testLogicalBackends = map[string]logical.Factory{}
 var testCredentialBackends = map[string]logical.Factory{}
 
-// StartSSHHostTestServer starts the test server which responds to SSH
-// authentication. Used to test the SSH secret backend.
-func StartSSHHostTestServer() (string, error) {
-	pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(testSharedPublicKey))
-	if err != nil {
-		return "", fmt.Errorf("error parsing public key")
-	}
-	serverConfig := &ssh.ServerConfig{
-		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
-			if bytes.Compare(pubKey.Marshal(), key.Marshal()) == 0 {
-				return &ssh.Permissions{}, nil
-			} else {
-				return nil, fmt.Errorf("key does not match")
-			}
-		},
-	}
-	signer, err := ssh.ParsePrivateKey([]byte(testSharedPrivateKey))
-	if err != nil {
-		panic("Error parsing private key")
-	}
-	serverConfig.AddHostKey(signer)
-
-	soc, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return "", fmt.Errorf("error listening to connection")
-	}
-
-	go func() {
-		for {
-			conn, err := soc.Accept()
-			if err != nil {
-				panic(fmt.Sprintf("Error accepting incoming connection: %s", err))
-			}
-			defer conn.Close()
-			sshConn, chanReqs, _, err := ssh.NewServerConn(conn, serverConfig)
-			if err != nil {
-				panic(fmt.Sprintf("Handshaking error: %v", err))
-			}
-
-			go func() {
-				for chanReq := range chanReqs {
-					go func(chanReq ssh.NewChannel) {
-						if chanReq.ChannelType() != "session" {
-							chanReq.Reject(ssh.UnknownChannelType, "unknown channel type")
-							return
-						}
-
-						ch, requests, err := chanReq.Accept()
-						if err != nil {
-							panic(fmt.Sprintf("Error accepting channel: %s", err))
-						}
-
-						go func(ch ssh.Channel, in <-chan *ssh.Request) {
-							for req := range in {
-								executeServerCommand(ch, req)
-							}
-						}(ch, requests)
-					}(chanReq)
-				}
-				sshConn.Close()
-			}()
-		}
-	}()
-	return soc.Addr().String(), nil
-}
-
-// This executes the commands requested to be run on the server.
-// Used to test the SSH secret backend.
-func executeServerCommand(ch ssh.Channel, req *ssh.Request) {
-	command := string(req.Payload[4:])
-	cmd := exec.Command("/bin/bash", []string{"-c", command}...)
-	req.Reply(true, nil)
-
-	cmd.Stdout = ch
-	cmd.Stderr = ch
-	cmd.Stdin = ch
-
-	err := cmd.Start()
-	if err != nil {
-		panic(fmt.Sprintf("Error starting the command: '%s'", err))
-	}
-
-	go func() {
-		_, err := cmd.Process.Wait()
-		if err != nil {
-			panic(fmt.Sprintf("Error while waiting for command to finish:'%s'", err))
-		}
-		ch.Close()
-	}()
-}
-
 // This adds a credential backend for the test core. This needs to be
 // invoked before the test core is created.
 func AddTestCredentialBackend(name string, factory logical.Factory) error {
@@ -909,6 +816,12 @@ func (c *TestCluster) UnsealCore(t testing.T, core *TestClusterCore) {
 	}
 }
 
+func (c *TestCluster) UnsealCoreWithStoredKeys(t testing.T, core *TestClusterCore) {
+	if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func (c *TestCluster) EnsureCoresSealed(t testing.T) {
 	t.Helper()
 	if err := c.ensureCoresSealed(); err != nil {
@@ -1052,14 +965,28 @@ type TestClusterOptions struct {
 	HandlerFunc              func(*HandlerProperties) http.Handler
 	DefaultHandlerProperties HandlerProperties
 
-	// BaseListenAddress is used to assign ports in sequence to the listener
-	// of each core.  It shoud be a string of the form "127.0.0.1:50000"
+	// BaseListenAddress is used to explicitly assign ports in sequence to the
+	// listener of each core.  It shoud be a string of the form
+	// "127.0.0.1:20000"
+	//
+	// WARNING: Using an explicitly assigned port above 30000 may clash with
+	// ephemeral ports that have been assigned by the OS in other tests.  The
+	// use of explictly assigned ports below 30000 is strongly recommended.
+	// In addition, you should be careful to use explictly assigned ports that
+	// do not clash with any other explicitly assigned ports in other tests.
 	BaseListenAddress string
 
-	// BaseClusterListenPort is used to assign ports in sequence to the
-	// cluster listener of each core.  If BaseClusterListenPort is specified,
-	// then BaseListenAddress must also be specified.  Each cluster listener
-	// will use the same host as the one specified in BaseListenAddress.
+	// BaseClusterListenPort is used to explicitly assign ports in sequence to
+	// the cluster listener of each core.  If BaseClusterListenPort is
+	// specified, then BaseListenAddress must also be specified.  Each cluster
+	// listener will use the same host as the one specified in
+	// BaseListenAddress.
+	//
+	// WARNING: Using an explicitly assigned port above 30000 may clash with
+	// ephemeral ports that have been assigned by the OS in other tests.  The
+	// use of explictly assigned ports below 30000 is strongly recommended.
+	// In addition, you should be careful to use explictly assigned ports that
+	// do not clash with any other explicitly assigned ports in other tests.
 	BaseClusterListenPort int
 
 	NumCores int
@@ -1431,6 +1358,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.CacheSize = base.CacheSize
 		coreConfig.PluginDirectory = base.PluginDirectory
 		coreConfig.Seal = base.Seal
+		coreConfig.UnwrapSeal = base.UnwrapSeal
 		coreConfig.DevToken = base.DevToken
 		coreConfig.EnableRaw = base.EnableRaw
 		coreConfig.DisableSealWrap = base.DisableSealWrap

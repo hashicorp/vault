@@ -319,7 +319,7 @@ func (n *NetworkTransport) getProviderAddressOrFallback(id ServerID, target Serv
 	if n.serverAddressProvider != nil {
 		serverAddressOverride, err := n.serverAddressProvider.ServerAddr(id)
 		if err != nil {
-			n.logger.Warn("unable to get address for sever, using fallback address", "id", id, "fallback", target, "error", err)
+			n.logger.Warn("unable to get address for server, using fallback address", "id", id, "fallback", target, "error", err)
 		} else {
 			return serverAddressOverride
 		}
