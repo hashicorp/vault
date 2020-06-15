@@ -1,14 +1,13 @@
 /**
  * @module ShamirModalFlow
- * ShamirModalFlow components are used to...
+ * ShamirModalFlow is an extension of the ShamirFlow component that does the Generate Action Token workflow inside of a Modal.
+ * Please note, this is not an extensive list of the required parameters -- please see ShamirFlow for others
  *
  * @example
  * ```js
- * <ShamirModalFlow @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <ShamirModalFlow @onClose={action 'onClose'}>This copy is the main paragraph when the token flow has not started</ShamirModalFlow>
  * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
+ * @param {function} onClose - This function will be triggered when the modal intends to be closed
  */
 import { inject as service } from '@ember/service';
 import ShamirFlow from './shamir-flow';
