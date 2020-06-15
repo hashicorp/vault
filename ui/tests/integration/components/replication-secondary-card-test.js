@@ -46,7 +46,7 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
       .includesText(REPLICATION_DETAILS.connection_state, `shows the correct connection value`);
   });
 
-  test('it renders with knowPrimaryClusterAddrs set when title is not Status', async function(assert) {
+  test('it renders with knownPrimaryClusterAddrs set when title is not Status', async function(assert) {
     this.set('replicationDetails', KNOWN_PRIMARY_CLUSTER_DETAILS);
     await render(
       hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title='Primary cluster'/>`
@@ -54,7 +54,7 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
     assert.dom('[data-test-info-table]').exists();
   });
 
-  test('it renders with emptyState if no knowPrimaryClusterAddrs are set', async function(assert) {
+  test('it renders with emptyState if no knownPrimaryClusterAddrs are set', async function(assert) {
     this.set('replicationDetails', []);
     await render(
       hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title='Primary cluster'/>`
