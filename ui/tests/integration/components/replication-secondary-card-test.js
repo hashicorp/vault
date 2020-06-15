@@ -3,13 +3,16 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-const TITLE = 'States';
+const TITLE = 'Status';
 
 const REPLICATION_DETAILS = {
   state: 'stream-wals',
   connection_state: 'ready',
   lastRemoteWAL: 10,
-  primaryClusterAddr: 'https://127.0.0.1:8201',
+};
+
+const KNOW_PRIMARY_CLUSTER_DETAILS = {
+  knownPrimaryClusterAddrs: ['https://127.0.0.1:8201', 'https://127.0.0.1:8202'],
 };
 
 const STATE_ERROR = {
@@ -43,14 +46,20 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
       .includesText(REPLICATION_DETAILS.connection_state, `shows the correct connection value`);
   });
 
-  test('it renders with lastRemoteWAL and primaryAddress set when title is not States', async function(assert) {
-    await render(hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} />`);
-    assert
-      .dom('[data-test-lastRemoteWAL]')
-      .includesText(REPLICATION_DETAILS.lastRemoteWAL, `shows the correct lastRemoteWAL value`);
-    assert
-      .dom('[data-test-primaryClusterAddr]')
-      .includesText(REPLICATION_DETAILS.primaryClusterAddr, `shows the correct primaryClusterAddr value`);
+  test('it renders with knowPrimaryClusterAddrs set when title is not Status', async function(assert) {
+    this.set('replicationDetails', KNOW_PRIMARY_CLUSTER_DETAILS);
+    await render(
+      hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title='Primary cluster'/>`
+    );
+    assert.dom('[data-test-info-table]').exists();
+  });
+
+  test('it renders with emptyState if no knowPrimaryClusterAddrs are set', async function(assert) {
+    this.set('replicationDetails', []);
+    await render(
+      hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title='Primary cluster'/>`
+    );
+    assert.dom('[data-test-component="empty-state"]').exists();
   });
 
   test('it renders tooltip with check-circle-outline when state is stream-wals', async function(assert) {
