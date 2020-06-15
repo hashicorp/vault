@@ -783,7 +783,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.rawConfig.Store(conf.RawConfig)
 
 	atomic.StoreUint32(c.sealed, 1)
-	metrics.SetGauge([]string{"core", "unsealed"}, 0)
+	c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 0, nil)
 
 	c.allLoggers = append(c.allLoggers, c.logger)
 
@@ -1499,7 +1499,7 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 
 	// Success!
 	atomic.StoreUint32(c.sealed, 0)
-	metrics.SetGauge([]string{"core", "unsealed"}, 1)
+	c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 1, nil)
 
 	if c.logger.IsInfo() {
 		c.logger.Info("vault is unsealed")
@@ -1713,7 +1713,7 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 	if swapped := atomic.CompareAndSwapUint32(c.sealed, 0, 1); !swapped {
 		return nil
 	}
-	metrics.SetGauge([]string{"core", "sealed"}, 1)
+	c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 1, nil)
 
 	c.logger.Info("marked as sealed")
 
@@ -2096,9 +2096,9 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 			}
 			//Refresh the sealed gauge
 			if c.Sealed() {
-				metrics.SetGauge([]string{"core", "unsealed"}, 1)
+				c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 0, nil)
 			} else {
-				metrics.SetGauge([]string{"core", "unsealed"}, 0)
+				c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 1, nil)
 			}
 
 			c.metricsMutex.Unlock()
