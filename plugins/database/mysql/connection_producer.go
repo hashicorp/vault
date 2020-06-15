@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	stdmysql "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
@@ -109,7 +109,7 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 			}
 		}
 
-		stdmysql.RegisterTLSConfig(c.tlsConfigName, tlsConfig)
+		mysql.RegisterTLSConfig(c.tlsConfigName, tlsConfig)
 	}
 
 	// Set initialized to true at this point since all fields are set,
