@@ -133,17 +133,17 @@ overview of different behaviors.
 
 ### Renewable Secrets
 
-If a secret is renewable, such as a token, Vault Agent will renew the secret at 1/3 
+If a secret or token is renewable, Vault Agent will renew the secret at 1/3 
 of the secret's lease.
 
 ### Non-Renewable Secrets
 
-If a secret isn't renewable or leased, Vault Agent will fetch the secret every 5 minutes. This is not
+If a secret or token isn't renewable or leased, Vault Agent will fetch the secret every 5 minutes. This is not
 configurable.  Non-renewable secrets include (but not limited to) [KV Version 2](/docs/secrets/kv/kv-v2).
 
 ### Non-Renewable Leased Secrets
 
-If a secret is non-renewable but leased, Vault Agent will fetch the secret when 85% of the
+If a secret or token is non-renewable but leased, Vault Agent will fetch the secret when 85% of the
 secrets time-to-live (TTL) is reached. Leased, non-renewable secrets include (but not limited
 to) dynamic secrets such as [database credentials](/docs/secrets/databases) and [KV Version 1](/docs/secrets/kv/kv-v1).
 
@@ -157,3 +157,6 @@ this by inspecting the secret's time-to-live (TTL).
 
 If a secret is a [certificate](/docs/secrets/pki), Vault Agent template will fetch the new certificate
 using the certificates `validTo` field.
+
+This does not apply to certificates generated with `generate_lease: true`.  If set 
+Vault Agent template will apply the non-renewable, leased secret rules.
