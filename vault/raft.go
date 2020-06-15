@@ -294,7 +294,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 			// If there already exists a pending key update then the update
 			// hasn't replicated down to all standby nodes yet. Don't allow any
 			// new keys to be created until all standbys have seen this previous
-			// rotation. As a backoff strategy another rotation attempt is
+			// rotation. As a backoff strategy, another rotation attempt is
 			// scheduled for 5 minutes from now.
 			logger.Warn("skipping new raft TLS config creation, keys are pending")
 			return time.Now().Add(time.Minute * 5), nil
@@ -320,7 +320,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 		}
 
 		// Write the keyring again with the new applied index. This allows us to
-		// track if standby nodes receive the update.
+		// track if standby nodes received the update.
 		keyring.Keys[1].AppliedIndex = raftBackend.AppliedIndex()
 		keyring.AppliedIndex = raftBackend.AppliedIndex()
 		entry, err = logical.StorageEntryJSON(raftTLSStoragePath, keyring)
@@ -339,7 +339,13 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 	// checkCommitted verifies key updates have been applied to all nodes and
 	// finalizes the rotation by deleting the old keys and updating the raft
 	// backend.
-	checkCommitted := func() error {
+	checkCommitted := func(haOnly bool) error {
+		// No-op here if we're using raft for HA-only. Since the storage is
+		// shared, the two phase commit is not done on rotation.
+		if haOnly {
+			return nil
+		}
+
 		keyring, err := readKeyring()
 		if err != nil {
 			return errwrap.Wrapf("failed to read raft TLS keyring: {{err}}", err)
@@ -395,6 +401,8 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 		keyCheckInterval := time.NewTicker(1 * time.Minute)
 		defer keyCheckInterval.Stop()
 
+		isRaftHAOnly := c.isRaftHAOnly()
+
 		var backoff bool
 		for {
 			// If we encountered and error we should try to create the key
@@ -406,7 +414,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 
 			select {
 			case <-keyCheckInterval.C:
-				err := checkCommitted()
+				err := checkCommitted(isRaftHAOnly)
 				if err != nil {
 					logger.Error("failed to activate TLS key", "error", err)
 				}

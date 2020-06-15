@@ -1199,6 +1199,11 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 	l.b.l.RLock()
 
+	// Ensure that we still have a raft instance after grabbing the read lock
+	if l.b.raft == nil {
+		return nil, errors.New("attempted to grab a lock on a nil raft backend")
+	}
+
 	// Cache the notifyCh locally
 	leaderNotifyCh := l.b.raftNotifyCh
 

@@ -111,7 +111,7 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 	args = f.Args()
 	switch len(args) {
 	case 0:
-		// No-opThis is accepted if we're using raft of HA-only
+		// No-op: This is acceptable if we're using raft for HA-only
 	case 1:
 		leaderAPIAddr = strings.TrimSpace(args[0])
 	default:

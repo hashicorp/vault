@@ -1704,7 +1704,7 @@ func (c *Core) sealInternal() error {
 	return c.sealInternalWithOptions(true, false, true)
 }
 
-func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft bool) error {
+func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, performCleanup bool) error {
 	// Mark sealed, and if already marked return
 	if swapped := atomic.CompareAndSwapUint32(c.sealed, 0, 1); !swapped {
 		return nil
@@ -1785,18 +1785,18 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 
 	c.teardownReplicationResolverHandler()
 
-	// If the storage backend needs to be sealed
-	if shutdownRaft {
+	// Perform additional cleanup upon sealing.
+	if performCleanup {
 		if raftBackend := c.getRaftBackend(); raftBackend != nil {
 			if err := raftBackend.TeardownCluster(c.getClusterListener()); err != nil {
 				c.logger.Error("error stopping storage cluster", "error", err)
 				return err
 			}
 		}
-	}
 
-	// Stop the cluster listener
-	c.stopClusterListener()
+		// Stop the cluster listener
+		c.stopClusterListener()
+	}
 
 	c.logger.Debug("sealing barrier")
 	if err := c.barrier.Seal(); err != nil {
