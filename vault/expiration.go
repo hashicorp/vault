@@ -582,6 +582,8 @@ func (m *ExpirationManager) Stop() error {
 	close(m.quitCh)
 
 	m.pendingLock.Lock()
+	// Replacing the entire map would cause a race with
+	// a simultaneous WalkTokens, which doesn't hold pendingLock.
 	m.pending.Range(func(key, value interface{}) bool {
 		info := value.(pendingInfo)
 		info.timer.Stop()
