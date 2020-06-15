@@ -133,14 +133,19 @@ overview of different behaviors.
 
 ### Renewable Secrets
 
-If a secret is renewable, Vault Agent will renew and fetch the secret when 85% of the
-secrets time-to-live (TTL) is reached. Renewable secrets include (but not limited
-to) tokens, dynamic secrets such as [database credentials](/docs/secrets/databases) and [KV Version 1](/docs/secrets/kv/kv-v1).
+If a secret is renewable, such as a token, Vault Agent will renew the secret at 1/3 
+of the secret's lease.
 
 ### Non-Renewable Secrets
 
-If a secret isn't renewable, Vault Agent will fetch the secret every 5 minutes. This is not
+If a secret isn't renewable or leased, Vault Agent will fetch the secret every 5 minutes. This is not
 configurable.  Non-renewable secrets include (but not limited to) [KV Version 2](/docs/secrets/kv/kv-v2).
+
+### Non-Renewable Leased Secrets
+
+If a secret is non-renewable but leased, Vault Agent will fetch the secret when 85% of the
+secrets time-to-live (TTL) is reached. Leased, non-renewable secrets include (but not limited
+to) dynamic secrets such as [database credentials](/docs/secrets/databases) and [KV Version 1](/docs/secrets/kv/kv-v1).
 
 ### Static Roles
 
