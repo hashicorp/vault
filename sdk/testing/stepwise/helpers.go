@@ -13,7 +13,7 @@ import (
 
 const pluginPrefix = "vault-plugin-"
 
-// CompilePlugin is a helper method to compile a sourc plugin
+// CompilePlugin is a helper method to compile a source plugin
 // TODO refactor compile plugin input and output to be types
 func CompilePlugin(name, pluginName, srcDir, tmpDir string) (string, string, string, error) {
 	binName := name
