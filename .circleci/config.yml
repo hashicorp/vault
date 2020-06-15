@@ -49,13 +49,13 @@ jobs:
     - run:
         command: ls -lahR .buildcache/packages/store
     - store_artifacts:
-        destination: packages
+        destination: packages-build-release
         path: .buildcache/packages/store
     - run:
-        command: tar -czf packages.tar.gz .buildcache/packages/store
+        command: tar -czf packages-build-release.tar.gz .buildcache/packages/store
     - store_artifacts:
-        destination: packages.tar.gz
-        path: packages.tar.gz
+        destination: packages-build-release.tar.gz
+        path: packages-build-release.tar.gz
     environment:
     - AUTO_INSTALL_TOOLS: 'YES'
     - PRODUCT_REVISION: ''
