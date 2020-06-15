@@ -376,7 +376,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	}
 
 	if raftBackend != nil {
-		if _, err := c.RaftCreateTLSKeyring(ctx); err != nil {
+		if _, err := c.raftCreateTLSKeyring(ctx); err != nil {
 			c.logger.Error("failed to create raft TLS keyring", "error", err)
 			return nil, err
 		}

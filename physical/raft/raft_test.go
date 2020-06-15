@@ -49,6 +49,7 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 	conf := map[string]string{
 		"path":          raftDir,
 		"trailing_logs": "100",
+		"node_id":       id,
 	}
 
 	if noStoreState {

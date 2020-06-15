@@ -111,8 +111,10 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 	case nil:
 		// If this is HA-only and no TLS keyring is found, that means the
 		// cluster has not been bootstrapped or joined. We return early here in
-		// this case.
+		// this case. If we return here, the raft object has not be instantiated,
+		// and a bootstrap call should be made.
 		if c.isRaftHAOnly() {
+			c.logger.Trace("skipping raft backend setup during unseal, bootstrap should be started")
 			return nil
 		}
 
@@ -145,7 +147,13 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 		return err
 	}
 
+	// This can be hit on follower nodes that got their config updated to use
+	// raft for HA-only before they are joined to the cluster. Since followers
+	// in this case use shared storage, it doesn't return early from the TLS
+	// case above, but there's not raft state yet for the backend to call
+	// raft.SetupCluster.
 	if !hasState {
+		c.logger.Trace("skipping raft backend setup during unseal, no raft state found")
 		return nil
 	}
 
@@ -422,10 +430,10 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 	return nil
 }
 
-// RaftCreateTLSKeyring creates the initial TLS key and the TLS Keyring for raft
+// raftCreateTLSKeyring creates the initial TLS key and the TLS Keyring for raft
 // use. If a keyring entry is already present in storage, it will return an
 // error.
-func (c *Core) RaftCreateTLSKeyring(ctx context.Context) (*raft.TLSKeyring, error) {
+func (c *Core) raftCreateTLSKeyring(ctx context.Context) (*raft.TLSKeyring, error) {
 	if raftBackend := c.getRaftBackend(); raftBackend == nil {
 		return nil, nil
 	}
@@ -614,22 +622,28 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		return false, errwrap.Wrapf("failed to check if core is initialized: {{err}}", err)
 	}
 
-	_, isRaftStorage := c.underlyingPhysical.(*raft.RaftBackend)
-
+	isRaftHAOnly := c.isRaftHAOnly()
 	// Prevent join from happening if we're using raft for storage and
 	// it has already been initialized.
-	if init && isRaftStorage {
+	if init && !isRaftHAOnly {
 		return true, nil
 	}
 
-	if isRaftStorage && !c.Sealed() {
-		c.logger.Error("node must be sealed before joining")
+	// Check on seal status and storage type before proceeding:
+	// If raft is used for storage, core needs to be sealed
+	if !isRaftHAOnly && !c.Sealed() {
+		c.logger.Error("node must be seal before joining")
 		return false, errors.New("node must be sealed before joining")
 	}
 
-	isRaftHA := c.isRaftHAOnly()
+	// If raft is used for ha-only, core needs to be unsealed
+	if isRaftHAOnly && c.Sealed() {
+		c.logger.Error("node must be unsealed before joining")
+		return false, errors.New("node must be unsealed before joining")
+	}
+
 	// Disallow leader API address to be provided if we're using raft for HA-only
-	if isRaftHA {
+	if isRaftHAOnly {
 		for _, info := range leaderInfos {
 			if info.LeaderAPIAddr != "" {
 				return false, errors.New("leader API address must be unset when raft is used exclusively for HA")
@@ -664,11 +678,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		leaderInfos[0].LeaderAPIAddr = adv.RedirectAddr
 	}
 
-	if !isRaftHA && !c.Sealed() {
-		c.logger.Error("node must be unsealed before joining")
-		return false, errors.New("node must be sealed before joining")
-	}
-
 	join := func(retry bool) error {
 		joinLeader := func(leaderInfo *raft.LeaderJoinInfo) error {
 			if leaderInfo == nil {
@@ -683,7 +692,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				return errwrap.Wrapf("failed to check if core is initialized: {{err}}", err)
 			}
 
-			if init && isRaftStorage {
+			if init && !isRaftHAOnly {
 				c.logger.Info("returning from raft join as the node is initialized")
 				return nil
 			}
@@ -980,7 +989,7 @@ func (c *Core) RaftBootstrap(ctx context.Context, onInit bool) error {
 	if !onInit {
 		// Generate the TLS Keyring info for
 		// SetupCluster to consume
-		raftTLS, err := c.RaftCreateTLSKeyring(ctx)
+		raftTLS, err := c.raftCreateTLSKeyring(ctx)
 		if err != nil {
 			return errwrap.Wrapf("could not generate TLS keyring during bootstrap: {{err}}", err)
 		}
