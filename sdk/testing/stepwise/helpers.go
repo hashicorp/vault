@@ -23,8 +23,7 @@ func CompilePlugin(name, pluginName, srcDir, tmpDir string) (string, string, str
 	binPath := path.Join(tmpDir, binName)
 
 	cmd := exec.Command("go", "build", "-o", binPath, path.Join(srcDir, fmt.Sprintf("cmd/%s/main.go", pluginName)))
-	var out bytes.Buffer
-	cmd.Stdout = &out
+	cmd.Stdout = &bytes.Buffer{}
 
 	// match the target architecture of the docker container
 	cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64")
