@@ -1713,7 +1713,7 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 	if swapped := atomic.CompareAndSwapUint32(c.sealed, 0, 1); !swapped {
 		return nil
 	}
-	c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 1, nil)
+	c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 0, nil)
 
 	c.logger.Info("marked as sealed")
 
