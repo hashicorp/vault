@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"io"
 	"regexp"
 	"strconv"
 	"strings"
@@ -497,6 +498,16 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 
 	now := time.Now()
 
+	sshAlgorithmSigner, ok := b.Signer.(ssh.AlgorithmSigner)
+	if !ok {
+		return nil, fmt.Errorf("failed to generate signed SSH key: signer is not an AlgorithmSigner")
+	}
+
+	// prepare certificate for signing
+	nonce := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, fmt.Errorf("failed to generate signed SSH key: error generating random nonce")
+	}
 	certificate := &ssh.Certificate{
 		Serial:          serialNumber.Uint64(),
 		Key:             b.PublicKey,
@@ -509,12 +520,25 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 			CriticalOptions: b.CriticalOptions,
 			Extensions:      b.Extensions,
 		},
+		Nonce:        nonce,
+		SignatureKey: sshAlgorithmSigner.PublicKey(),
 	}
 
-	err = certificate.SignCert(rand.Reader, b.Signer)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate signed SSH key")
+	// get bytes to sign; this is based on Certificate.bytesForSigning() from the go ssh lib
+	out := certificate.Marshal()
+	// Drop trailing signature length.
+	certificateBytes := out[:len(out)-4]
+
+	algo := b.Role.AlgorithmSigner
+	if algo == "" {
+		algo = ssh.SigAlgoRSA
 	}
+	sig, err := sshAlgorithmSigner.SignWithAlgorithm(rand.Reader, certificateBytes, algo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate signed SSH key: sign error")
+	}
+
+	certificate.Signature = sig
 
 	return certificate, nil
 }
