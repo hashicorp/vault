@@ -16,6 +16,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
@@ -204,7 +205,114 @@ func (c *Core) stopRaftActiveNode() {
 	c.stopPeriodicRaftTLSRotate()
 }
 
-// startPeriodicRaftTLSRotate will spawn a go routine in charge of periodically
+func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
+	raftBackend := c.getRaftBackend()
+
+	// No-op if raft is not being used
+	if raftBackend == nil {
+		return nil
+	}
+
+	c.raftTLSRotationStopCh = make(chan struct{})
+	logger := c.logger.Named("raft")
+
+	if c.isRaftHAOnly() {
+		return c.raftTLSRotateDirect(ctx, logger, c.raftTLSRotationStopCh)
+	}
+
+	return c.raftTLSRotatePhased(ctx, logger, raftBackend, c.raftTLSRotationStopCh)
+}
+
+// raftTLSRotateDirect will spawn a go routine in charge of periodically
+// rotating the TLS certs and keys used for raft traffic.
+//
+// The logic for updating the TLS keyring is through direct storage update. This
+// is called whenever raft is used for HA-only, which means that the underlying
+// storage is a shared physical object, thus requiring no additional
+// coordination.
+func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, stopCh chan struct{}) error {
+	logger.Info("creating new raft TLS config")
+
+	rotateKeyring := func() (time.Time, error) {
+		// Create a new key
+		raftTLSKey, err := raft.GenerateTLSKey(c.secureRandomReader)
+		if err != nil {
+			return time.Time{}, errwrap.Wrapf("failed to generate new raft TLS key: {{err}}", err)
+		}
+
+		// Read the existing keyring
+		keyring, err := c.raftReadTLSKeyring(ctx)
+		if err != nil {
+			return time.Time{}, errwrap.Wrapf("failed to read raft TLS keyring: {{err}}", err)
+		}
+
+		// Advance the term and store the new key, replacing the old one.
+		// Unlike phased rotation, we don't need to update AppliedIndex since
+		// we don't rely on it to check whether the followers got the key. A
+		// shared storage means that followers will have the key as soon as it's
+		// written storage.
+		keyring.Term += 1
+		keyring.Keys[0] = raftTLSKey
+		keyring.ActiveKeyID = raftTLSKey.ID
+		entry, err := logical.StorageEntryJSON(raftTLSStoragePath, keyring)
+		if err != nil {
+			return time.Time{}, errwrap.Wrapf("failed to json encode keyring: {{err}}", err)
+		}
+		if err := c.barrier.Put(ctx, entry); err != nil {
+			return time.Time{}, errwrap.Wrapf("failed to write keyring: {{err}}", err)
+		}
+
+		logger.Info("wrote new raft TLS config")
+
+		// Schedule the next rotation
+		return raftTLSKey.CreatedTime.Add(raftTLSRotationPeriod), nil
+	}
+
+	// Read the keyring to calculate the time of next rotation.
+	keyring, err := c.raftReadTLSKeyring(ctx)
+	if err != nil {
+		return err
+	}
+
+	activeKey := keyring.GetActive()
+	if activeKey == nil {
+		return errors.New("no active raft TLS key found")
+	}
+
+	go func() {
+		nextRotationTime := activeKey.CreatedTime.Add(raftTLSRotationPeriod)
+
+		var backoff bool
+		for {
+			// If we encountered and error we should try to create the key
+			// again.
+			if backoff {
+				nextRotationTime = time.Now().Add(10 * time.Second)
+				backoff = false
+			}
+
+			select {
+			case <-time.After(time.Until(nextRotationTime)):
+				// It's time to rotate the keys
+				next, err := rotateKeyring()
+				if err != nil {
+					logger.Error("failed to rotate TLS key", "error", err)
+					backoff = true
+					continue
+				}
+
+				nextRotationTime = next
+
+			case <-stopCh:
+				return
+			}
+		}
+	}()
+
+	return nil
+}
+
+// raftTLSRotatePhased will spawn a go routine in charge of periodically
 // rotating the TLS certs and keys used for raft traffic.
 //
 // The logic for updating the TLS certificate uses a pseudo two phase commit
@@ -223,13 +331,7 @@ func (c *Core) stopRaftActiveNode() {
 // receives the update. This ensures a standby node isn't left behind and unable
 // to reconnect with the cluster. Additionally, only one outstanding key
 // is allowed for this same reason (max keyring size of 2).
-func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
-	raftBackend := c.getRaftBackend()
-	if raftBackend == nil {
-		return nil
-	}
-
-	stopCh := make(chan struct{})
+func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raftBackend *raft.RaftBackend, stopCh chan struct{}) error {
 	followerStates := &raftFollowerStates{
 		followers: make(map[string]uint64),
 	}
@@ -244,26 +346,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 			followerStates.update(server.NodeID, 0)
 		}
 	}
-
-	logger := c.logger.Named("raft")
-	c.raftTLSRotationStopCh = stopCh
 	c.raftFollowerStates = followerStates
-
-	readKeyring := func() (*raft.TLSKeyring, error) {
-		tlsKeyringEntry, err := c.barrier.Get(ctx, raftTLSStoragePath)
-		if err != nil {
-			return nil, err
-		}
-		if tlsKeyringEntry == nil {
-			return nil, errors.New("no keyring found")
-		}
-		var keyring raft.TLSKeyring
-		if err := tlsKeyringEntry.DecodeJSON(&keyring); err != nil {
-			return nil, err
-		}
-
-		return &keyring, nil
-	}
 
 	// rotateKeyring writes new key data to the keyring and adds an applied
 	// index that is used to verify it has been committed. The keys written in
@@ -271,7 +354,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 	// using it yet.
 	rotateKeyring := func() (time.Time, error) {
 		// Read the existing keyring
-		keyring, err := readKeyring()
+		keyring, err := c.raftReadTLSKeyring(ctx)
 		if err != nil {
 			return time.Time{}, errwrap.Wrapf("failed to read raft TLS keyring: {{err}}", err)
 		}
@@ -346,7 +429,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 			return nil
 		}
 
-		keyring, err := readKeyring()
+		keyring, err := c.raftReadTLSKeyring(ctx)
 		if err != nil {
 			return errwrap.Wrapf("failed to read raft TLS keyring: {{err}}", err)
 		}
@@ -385,7 +468,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 	}
 
 	// Read the keyring to calculate the time of next rotation.
-	keyring, err := readKeyring()
+	keyring, err := c.raftReadTLSKeyring(ctx)
 	if err != nil {
 		return err
 	}
@@ -436,6 +519,22 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 	}()
 
 	return nil
+}
+
+func (c *Core) raftReadTLSKeyring(ctx context.Context) (*raft.TLSKeyring, error) {
+	tlsKeyringEntry, err := c.barrier.Get(ctx, raftTLSStoragePath)
+	if err != nil {
+		return nil, err
+	}
+	if tlsKeyringEntry == nil {
+		return nil, errors.New("no keyring found")
+	}
+	var keyring raft.TLSKeyring
+	if err := tlsKeyringEntry.DecodeJSON(&keyring); err != nil {
+		return nil, err
+	}
+
+	return &keyring, nil
 }
 
 // raftCreateTLSKeyring creates the initial TLS key and the TLS Keyring for raft
