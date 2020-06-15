@@ -102,8 +102,7 @@ func (b *backend) installPublicKeyInTarget(ctx context.Context, adminUser, usern
 	rmCmd := fmt.Sprintf("rm -f %s", scriptFileName)
 	targetCmd := fmt.Sprintf("%s;%s;%s", chmodCmd, scriptCmd, rmCmd)
 
-	session.Run(targetCmd)
-	return nil
+	return session.Run(targetCmd)
 }
 
 // Takes an IP address and role name and checks if the IP is part
