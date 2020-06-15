@@ -10,10 +10,10 @@ module('Integration | Helper | date-format', function(hooks) {
     let today = new Date();
     this.set('today', today);
 
-    await render(hbs`<p data-test-date-format>Date: {{date-format today "YYYY"}}</p>`);
-    assert
-      .dom('[data-test-date-format]')
-      .includesText(today.getFullYear(), 'it renders the date in the year format');
+    // the hbs helper allows us to render any markup we would in a regular template
+    // you have access to all of the same helpers and syntax
+    await render(hbs`<p>Date: {{date-format today "YYYY"}}</p>`);
+    assert.dom(this.element).includesText(today.getFullYear(), 'it renders the date in the year format');
   });
 
   test('it supports date timestamps', async function(assert) {
@@ -29,9 +29,7 @@ module('Integration | Helper | date-format', function(hooks) {
     let todayString = new Date().getFullYear().toString();
     this.set('todayString', todayString);
 
-    await render(hbs`<p data-test-date-format>Date: {{date-format todayString}}</p>`);
-    assert
-      .dom('[data-test-date-format]')
-      .includesText(todayString, 'it renders the a date if passed in as a string');
+    await render(hbs`<p>Date: {{date-format todayString}}</p>`);
+    assert.dom(this.element).includesText(todayString, 'it renders the a date if passed in as a string');
   });
 });

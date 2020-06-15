@@ -12,6 +12,7 @@ module('Integration | Component | Confirm', function(hooks) {
     this.set('title', 'Are you sure?');
     this.set('message', 'You will not be able to recover this item later.');
     this.set('triggerText', 'Click me!');
+    // we use a spy here as to mock a real function
     this.set('onConfirm', sinon.spy());
   });
 
@@ -46,6 +47,7 @@ module('Integration | Component | Confirm', function(hooks) {
       `);
     assert.dom('.confirm-overlay').doesNotContainText(this.message);
 
+    // this comes from ember-test-helpers
     await click('[data-test-confirm-action-trigger]');
 
     assert.dom('.confirm-overlay').containsText(this.title);
@@ -67,6 +69,7 @@ module('Integration | Component | Confirm', function(hooks) {
     await click('[data-test-confirm-action-trigger]');
     await click('[data-test-confirm-button=true]');
 
+    // use our spy to ensure it was called
     assert.ok(this.onConfirm.calledOnce);
   });
 

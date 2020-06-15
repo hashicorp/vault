@@ -8,8 +8,14 @@ const HEADER = 'Cool Header';
 const ITEMS = ['https://127.0.0.1:8201', 'hello', 3];
 
 module('Integration | Enterprise | Component | InfoTable', function(hooks) {
+  // uses setupTests() under the hood and gives us Ember's dependency injection system
+  // allowing us to look up anything in the application, such as this.owner
+  // and grants us this.element so we can make assertions
   setupRenderingTest(hooks);
 
+  // setupRenderingTest also enables us to get and set items in our test context
+  // defining the consts above does not grant our templates access to them until we
+  // manually set these values below
   hooks.beforeEach(function() {
     this.set('title', TITLE);
     this.set('header', HEADER);
@@ -23,10 +29,14 @@ module('Integration | Enterprise | Component | InfoTable', function(hooks) {
         @items={{items}}
       />`);
 
+    // you can use ember-test-selectors to find an element in the dom
     assert.dom('[data-test-info-table]').exists();
-    assert.dom('[data-test-info-table] th').includesText(HEADER, `shows the table header`);
 
-    const rows = document.querySelectorAll('.info-table-row');
+    // this.element returns the resulting element from render(hbs) above
+    // so you can also search within its markup to make any assertions from QUnit DOM
+    assert.dom(this.element).includesText(HEADER, `shows the table header`);
+
+    const rows = this.element.querySelectorAll('.info-table-row');
     assert.equal(rows.length, ITEMS.length, 'renders an InfoTableRow for each item');
 
     rows.forEach((row, i) => {

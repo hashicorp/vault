@@ -5,6 +5,7 @@ import { run } from '@ember/runloop';
 import hbs from 'htmlbars-inline-precompile';
 import Service from '@ember/service';
 
+// create a mock permissions service
 const Permissions = Service.extend({
   globPaths: null,
   hasNavPermission() {

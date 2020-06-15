@@ -58,6 +58,7 @@ module('Integration | Component | ttl-picker2', function(hooks) {
   });
 
   test('it keeps seconds value when unit is changed', async function(assert) {
+    // set up our spy
     let changeSpy = sinon.spy();
     this.set('onChange', changeSpy);
     await render(hbs`
@@ -70,7 +71,10 @@ module('Integration | Component | ttl-picker2', function(hooks) {
       />
     `);
     await click('[data-test-toggle-input="clicktest"]');
+    // make sure onChange was called only once after we clicked on the input
     assert.ok(changeSpy.calledOnce, 'it calls the passed onChange');
+
+    // ensure the spy was called with these arguments
     assert.ok(
       changeSpy.calledWith({
         enabled: true,
@@ -79,7 +83,10 @@ module('Integration | Component | ttl-picker2', function(hooks) {
       }),
       'Changes enabled to true on click'
     );
+
     await fillIn('[data-test-select="ttl-unit"]', 'm');
+
+    // now ensure the spy was called again with new arguments
     assert.ok(
       changeSpy.calledWith({
         enabled: true,
