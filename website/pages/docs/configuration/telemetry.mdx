@@ -28,7 +28,9 @@ parameters on this page are grouped by the telemetry provider.
 
 The following options are available on all telemetry configurations.
 
-- `usage_gauge_period` `(string: "10m")` - Specifies the interval at which high-cardinality usage data is collected, such as token counts, entity counts, and secret counts.
+- `usage_gauge_period` `(string: "10m")` - Specifies the interval at which high-cardinality 
+   usage data is collected, such as token counts, entity counts, and secret counts.  
+   A value of "none" disables the collection.
 - `maximum_gauge_cardinality` `(int: 500)` - The maximum cardinality of gauge labels.
 - `disable_hostname` `(bool: false)` - Specifies if gauge values should be
   prefixed with the local hostname.
