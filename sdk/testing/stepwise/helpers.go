@@ -47,5 +47,5 @@ func CompilePlugin(name, pluginName, srcDir, tmpDir string) (string, string, str
 
 	sha256value := fmt.Sprintf("%x", h.Sum(nil))
 
-	return binName, binPath, sha256value, err
+	return binName, binPath, sha256value, nil
 }
