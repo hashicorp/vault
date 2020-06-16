@@ -180,12 +180,6 @@ jobs:
       - store_artifacts:
           path: packages-{{$workflowName}}.tar.gz
           destination: packages-{{$workflowName}}.tar.gz
-      # Surface a tarball of just the alias symlinks as an artifact.
-      # This is used by downstream processes, it's not much use by itself.
-      - run: tar -czf aliases-{{$workflowName}}.tar.gz .buildcache/packages/by-alias
-      - store_artifacts:
-          path: aliases-{{$workflowName}}.tar.gz
-          destination: aliases-{{$workflowName}}.tar.gz
       # Surface a tarball of just the metadata files.
       - run: tar -czf meta-{{$workflowName}}.tar.gz .buildcache/packages/store/*.json
       - store_artifacts:
