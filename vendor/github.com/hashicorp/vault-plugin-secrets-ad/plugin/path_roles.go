@@ -221,7 +221,7 @@ func getServiceAccountName(fieldData *framework.FieldData) (string, error) {
 	return serviceAccountName, nil
 }
 
-func getValidatedTTL(passwordConf *passwordConf, fieldData *framework.FieldData) (int, error) {
+func getValidatedTTL(passwordConf passwordConf, fieldData *framework.FieldData) (int, error) {
 	ttl := fieldData.Get("ttl").(int)
 	if ttl == 0 {
 		ttl = passwordConf.TTL

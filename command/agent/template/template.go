@@ -153,7 +153,13 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			}
 		case err := <-ts.runner.ErrCh:
 			ts.logger.Error("template server error", "error", err.Error())
-			return
+			ts.runner.StopImmediately()
+			ts.runner, err = manager.NewRunner(runnerConfig, false)
+			if err != nil {
+				ts.logger.Error("template server failed to create", "error", err)
+				return
+			}
+			go ts.runner.Start()
 		case <-ts.runner.TemplateRenderedCh():
 			// A template has been rendered, figure out what to do
 			events := ts.runner.RenderEvents()
