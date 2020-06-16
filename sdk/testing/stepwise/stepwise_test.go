@@ -233,11 +233,8 @@ func (m *mockEnvironment) Setup() error {
 func (m *mockEnvironment) Client() (*api.Client, error) {
 	m.l.Lock()
 	defer m.l.Unlock()
-	// this shouldn't be needed but being defensive
 	if m.ts == nil {
-		if err := m.Setup(); err != nil {
-			return nil, err
-		}
+		return nil, errors.New("client() called but test server is nil")
 	}
 
 	if m.client != nil {
@@ -251,7 +248,13 @@ func (m *mockEnvironment) Client() (*api.Client, error) {
 		MaxRetries: 2,
 	}
 
-	return api.NewClient(&cfg)
+	client, err := api.NewClient(&cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	m.client = client
+	return client, nil
 }
 
 func (m *mockEnvironment) Teardown() error {

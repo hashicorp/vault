@@ -334,11 +334,7 @@ func makeRequest(tt TestT, driver StepwiseEnvironment, step Step) (*api.Secret, 
 	case WriteOperation, UpdateOperation:
 		return client.Logical().Write(path, step.Data)
 	case ReadOperation:
-		// Some operations support reading with data given.
-		// TODO: see how the CLI parses args and turns them into
-		// map[string][]string, or change how step.Data is defined (currently
-		// map[string]interface{})
-		// resp, respErr = client.Logical().ReadWithData(path, step.Data)
+		// TODO support ReadWithData
 		return client.Logical().Read(path)
 	case ListOperation:
 		return client.Logical().List(path)
