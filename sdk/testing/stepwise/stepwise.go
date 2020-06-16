@@ -16,7 +16,10 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
-// StepOperation defines operations each step could preform
+// StepOperation defines operations each step could preform. These are
+// intentionally redefined from the logical package in the SDK, so users
+// consistently use the stepwise package and not a combination of both stepwise
+// and logical.
 type StepOperation string
 
 const (
