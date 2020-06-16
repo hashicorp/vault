@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, find, pauseTest, click } from '@ember/test-helpers';
+import { render, find } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
@@ -13,9 +13,6 @@ module('Integration | Component | shamir-modal-flow', function(hooks) {
   });
 
   test('it renders with initial content by default', async function(assert) {
-    // Set any properties with this.set('myProperty', 'value');
-    // Handle any actions with this.set('myAction', function(val) { ... });
-
     await render(hbs`
       <div id="modal-wormhole"></div>
       <ShamirModalFlow
@@ -23,7 +20,7 @@ module('Integration | Component | shamir-modal-flow', function(hooks) {
         @buttonText="Generate token"
         @fetchOnInit=true
         @generateAction=true
-        @buttonText="Crazy CTA"
+        @buttonText="My CTA"
         @onClose={{onClose}}
         @isActive={{isActive}}
       >
