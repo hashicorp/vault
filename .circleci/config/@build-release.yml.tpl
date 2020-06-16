@@ -170,13 +170,13 @@ jobs:
       - write-all-package-cache-keys
       {{- range $packages}}
       - load-{{.meta.BUILD_JOB_NAME}}{{end}}
-      - run: ls -lahR .buildcache/packages/store
+      - run: ls -lahR .buildcache/packages
       # Surface each zip as a separate artifact.
       - store_artifacts:
-          path: .buildcache/packages/store
+          path: .buildcache/packages
           destination: packages-{{$workflowName}}
       # Surface a tarball of the whole package store as an artifact.
-      - run: tar -czf packages-{{$workflowName}}.tar.gz .buildcache/packages/store
+      - run: tar -czf packages-{{$workflowName}}.tar.gz .buildcache/packages
       - store_artifacts:
           path: packages-{{$workflowName}}.tar.gz
           destination: packages-{{$workflowName}}.tar.gz
@@ -186,6 +186,11 @@ jobs:
       - store_artifacts:
           path: aliases-{{$workflowName}}.tar.gz
           destination: aliases-{{$workflowName}}.tar.gz
+      # Surface a tarball of just the metadata files.
+      - run: tar -czf meta-{{$workflowName}}.tar.gz .buildcache/packages/store/*.json
+      - store_artifacts:
+          path: meta-{{$workflowName}}.tar.gz
+          destination: meta-{{$workflowName}}.tar.gz
 
 commands:
   {{- range $packages }}
