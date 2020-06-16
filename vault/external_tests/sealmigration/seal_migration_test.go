@@ -266,7 +266,6 @@ func migrateFromShamirToTransit_Post14(
 // migration, using the post-1.4 method of bring individual nodes in the
 // cluster to do the migration.
 func TestSealMigration_TransitToShamir_Post14(t *testing.T) {
-	// Note that we do not test integrated raft storage since this is
 	// a pre-1.4 test.
 	testVariousBackends(t, testSealMigrationTransitToShamir_Post14, basePort_TransitToShamir_Post14, true)
 }
