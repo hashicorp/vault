@@ -25,7 +25,7 @@ import (
 
 const (
 	PrometheusDefaultRetentionTime = 24 * time.Hour
-	UsageGaugeDefaultPeriod        = 30 * time.Second
+	UsageGaugeDefaultPeriod        = 10 * time.Minute
 	MaximumGaugeCardinalityDefault = 500
 )
 
