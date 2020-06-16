@@ -37,7 +37,7 @@ type StepwiseEnvironment interface {
 	Setup() error
 	Client() (*api.Client, error)
 	Teardown() error
-	Name() string // maybe?
+	Name() string
 
 	// ExpandPath adds any Namespace or mount path to the user defined path
 	ExpandPath(string) string
