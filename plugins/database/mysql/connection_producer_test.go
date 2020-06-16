@@ -17,6 +17,38 @@ import (
 	"github.com/ory/dockertest"
 )
 
+func Test_finalizeConnectionURL(t *testing.T) {
+	type testCase struct {
+		rootUrl        string
+		tlsConfigName  string
+		expectedResult string
+	}
+
+	tests := map[string]testCase{
+		"no tls, no query string": {"user:password@tcp(localhost:3306)/test", "", "user:password@tcp(localhost:3306)/test"},
+		"tls, no query string": {"user:password@tcp(localhost:3306)/test", "tlsTest101", "user:password@tcp(localhost:3306)/test?tls=tlsTest101"},
+		"tls, query string": {"user:password@tcp(localhost:3306)/test?foo=bar", "tlsTest101", "user:password@tcp(localhost:3306)/test?tls=tlsTest101&foo=bar"},
+		"tls, query string, ? in password": {"user:pa?ssword?@tcp(localhost:3306)/test?foo=bar", "tlsTest101", "user:pa?ssword?@tcp(localhost:3306)/test?tls=tlsTest101&foo=bar"},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			tCase := mySQLConnectionProducer {
+				ConnectionURL: test.rootUrl,
+				tlsConfigName: test.tlsConfigName,
+			}
+
+			actual, err := tCase.finalizeConnectionURL()
+			if err != nil {
+				t.Fatalf("error occurred in test: %s", err)
+			}
+			if actual != test.expectedResult {
+				t.Fatalf("generated: %s, expected: %s", actual, test.expectedResult)
+			}
+		})
+	}
+}
+
 func TestInit_clientTLS(t *testing.T) {
 	t.Skip("Skipping this test because CircleCI can't mount the files we need without further investigation: " +
 		"https://support.circleci.com/hc/en-us/articles/360007324514-How-can-I-mount-volumes-to-docker-containers-")

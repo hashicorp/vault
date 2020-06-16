@@ -7,21 +7,19 @@ import (
 	"database/sql"
 	"fmt"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/mapstructure"
 )
 
-// SQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
+// mySQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
 type mySQLConnectionProducer struct {
 	ConnectionURL            string      `json:"connection_url"          mapstructure:"connection_url"          structs:"connection_url"`
 	MaxOpenConnections       int         `json:"max_open_connections"    mapstructure:"max_open_connections"    structs:"max_open_connections"`
@@ -37,7 +35,6 @@ type mySQLConnectionProducer struct {
 	// tlsConfigName is a globally unique name that references the TLS config for this instance in the mysql driver
 	tlsConfigName string
 
-	Type                  string
 	RawConfig             map[string]interface{}
 	maxConnectionLifetime time.Duration
 	Initialized           bool
@@ -64,8 +61,6 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 	if len(c.ConnectionURL) == 0 {
 		return nil, fmt.Errorf("connection_url cannot be empty")
 	}
-
-	c.Type = "mysql"
 
 	// Don't escape special characters for MySQL password
 	password := c.Password
@@ -102,7 +97,7 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 	}
 
 	if tlsConfig != nil {
-		if c.tlsConfigName == "" && tlsConfig != nil {
+		if c.tlsConfigName == "" {
 			c.tlsConfigName, err = uuid.GenerateUUID()
 			if err != nil {
 				return nil, fmt.Errorf("unable to generate UUID for TLS configuration: %w", err)
@@ -144,33 +139,9 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 		c.db.Close()
 	}
 
-	dbType := c.Type
+	connURL, err := c.finalizeConnectionURL()
 
-	// Otherwise, attempt to make connection
-	uri, err := url.Parse(c.ConnectionURL)
-	if err != nil {
-		return nil, fmt.Errorf("invalid connection URL: %w", err)
-	}
-	vals := uri.Query()
-	if c.tlsConfigName != "" {
-		vals.Set("tls", c.tlsConfigName)
-	}
-	uri.RawQuery = vals.Encode()
-
-	// This convoluted piece is to ensure we're not url encoding any username
-	// or password information
-	urlPieces := strings.Split(c.ConnectionURL, "?")
-	connURL := ""
-	for i, urlFragment := range urlPieces {
-		if len(urlPieces) == 1 || i != len(urlPieces)-1 {
-			connURL = connURL + urlFragment
-		}
-	}
-	if len(vals.Encode()) > 0 {
-		connURL = connURL + "?" + vals.Encode()
-	}
-
-	c.db, err = sql.Open(dbType, connURL)
+	c.db, err = sql.Open("mysql", connURL)
 	if err != nil {
 		return nil, err
 	}
@@ -205,16 +176,6 @@ func (c *mySQLConnectionProducer) Close() error {
 	return nil
 }
 
-// SetCredentials uses provided information to set/create a user in the
-// database. Unlike CreateUser, this method requires a username be provided and
-// uses the name given, instead of generating a name. This is used for creating
-// and setting the password of static accounts, as well as rolling back
-// passwords in the database in the event an updated database fails to save in
-// Vault's storage.
-func (c *mySQLConnectionProducer) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
-	return "", "", dbutil.Unimplemented()
-}
-
 func (c *mySQLConnectionProducer) getTLSAuth() (tlsConfig *tls.Config, err error) {
 	if len(c.TLSCAData) == 0 &&
 		len(c.TLSCertificateKeyData) == 0 {
@@ -246,4 +207,17 @@ func (c *mySQLConnectionProducer) getTLSAuth() (tlsConfig *tls.Config, err error
 	}
 
 	return tlsConfig, nil
+}
+
+func (c *mySQLConnectionProducer) finalizeConnectionURL() (connURL string, err error) {
+	config, err := mysql.ParseDSN(c.ConnectionURL)
+	if err != nil {
+		return "", fmt.Errorf("unable to parse connectionURL: %s", err)
+	}
+
+	config.TLSConfig = c.tlsConfigName
+
+	connURL = config.FormatDSN()
+
+	return connURL, nil
 }

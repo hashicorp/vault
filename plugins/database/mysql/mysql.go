@@ -55,7 +55,6 @@ func New(displayNameLen, roleNameLen, usernameLen int) func() (interface{}, erro
 
 func new(displayNameLen, roleNameLen, usernameLen int) *MySQL {
 	connProducer := &mySQLConnectionProducer{}
-	connProducer.Type = mySQLTypeName
 
 	credsProducer := &credsutil.SQLCredentialsProducer{
 		DisplayNameLen: displayNameLen,
