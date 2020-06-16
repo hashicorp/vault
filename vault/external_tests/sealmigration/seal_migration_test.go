@@ -421,8 +421,6 @@ func migratePost14(
 		t.Fatalf("unreachable")
 	}
 
-	time.Sleep(5 * time.Second)
-
 	// Wait for migration to finish.
 	awaitMigration(t, leader.Client)
 
