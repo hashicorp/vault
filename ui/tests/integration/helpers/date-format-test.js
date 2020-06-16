@@ -10,9 +10,13 @@ module('Integration | Helper | date-format', function(hooks) {
     let today = new Date();
     this.set('today', today);
 
-    // the hbs helper allows us to render any markup we would in a regular template
-    // you have access to all of the same helpers and syntax
+    /*
+    The hbs helper allows us to render any markup we normally would
+    in a regular template. It gives us access to all of the same
+    helpers and syntax.
+    */
     await render(hbs`<p>Date: {{date-format today "YYYY"}}</p>`);
+
     assert.dom(this.element).includesText(today.getFullYear(), 'it renders the date in the year format');
   });
 
