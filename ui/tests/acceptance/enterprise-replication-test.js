@@ -1,7 +1,7 @@
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { click, fillIn, findAll, currentURL, find, visit, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
-import { setupApplicationTest } from 'ember-qunit';
+import { setupApplicationTest, only, todo } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { dateFormat } from 'core/helpers/date-format';
@@ -181,7 +181,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
       .includesText(secondaryName, 'it displays the secondary in the list of known secondaries');
   });
 
-  test('disabling dr primary when perf replication is enabled', async function(assert) {
+  todo('disabling dr primary when perf replication is enabled', async function(assert) {
     await visit('vault/replication/performance');
     // enable perf replication
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
