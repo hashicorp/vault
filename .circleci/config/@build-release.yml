@@ -14,7 +14,7 @@ executors:
     shell: /usr/bin/env bash -euo pipefail -c
 
 workflows:
-  build-release:
+  build-standalone:
     jobs:
       - cache-builder-images:
           filters:
@@ -1158,17 +1158,17 @@ jobs:
       # Surface each zip as a separate artifact.
       - store_artifacts:
           path: .buildcache/packages
-          destination: packages-build-release
+          destination: packages-standalone
       # Surface a tarball of the whole package store as an artifact.
-      - run: tar -czf packages-build-release.tar.gz .buildcache/packages
+      - run: tar -czf packages-standalone.tar.gz .buildcache/packages
       - store_artifacts:
-          path: packages-build-release.tar.gz
-          destination: packages-build-release.tar.gz
+          path: packages-standalone.tar.gz
+          destination: packages-standalone.tar.gz
       # Surface a tarball of just the metadata files.
-      - run: tar -czf meta-build-release.tar.gz .buildcache/packages/store/*.json
+      - run: tar -czf meta-standalone.tar.gz .buildcache/packages/store/*.json
       - store_artifacts:
-          path: meta-build-release.tar.gz
-          destination: meta-build-release.tar.gz
+          path: meta-standalone.tar.gz
+          destination: meta-standalone.tar.gz
 
 commands:
   load-darwin_386_package:
