@@ -13,10 +13,12 @@ import (
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	sealhelper "github.com/hashicorp/vault/helper/testhelpers/seal"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
 )
@@ -570,7 +572,7 @@ func initializeShamir(
 
 	// Unseal
 	if storage.IsRaft {
-		testhelpers.JoinRaftFollowers(t, cluster, false)
+		joinRaftFollowers(t, cluster, false)
 		if err := testhelpers.VerifyRaftConfiguration(leader, len(cluster.Cores)); err != nil {
 			t.Fatal(err)
 		}
@@ -686,7 +688,7 @@ func initializeTransit(
 
 	// Join raft
 	if storage.IsRaft {
-		testhelpers.JoinRaftFollowers(t, cluster, true)
+		joinRaftFollowers(t, cluster, true)
 
 		if err := testhelpers.VerifyRaftConfiguration(leader, len(cluster.Cores)); err != nil {
 			t.Fatal(err)
@@ -767,4 +769,60 @@ func runTransit(
 
 	// Seal the cluster
 	cluster.EnsureCoresSealed(t)
+}
+
+// joinRaftFollowers unseals the leader, and then joins-and-unseals the
+// followers one at a time.  We assume that the ServerAddressProvider has
+// already been installed on all the nodes.
+func joinRaftFollowers(t *testing.T, cluster *vault.TestCluster, useStoredKeys bool) {
+
+	leader := cluster.Cores[0]
+
+	cluster.UnsealCore(t, leader)
+	vault.TestWaitActive(t, leader.Core)
+
+	leaderInfos := []*raft.LeaderJoinInfo{
+		&raft.LeaderJoinInfo{
+			LeaderAPIAddr: leader.Client.Address(),
+			TLSConfig:     leader.TLSConfig,
+		},
+	}
+
+	// Join followers
+	for i := 1; i < len(cluster.Cores); i++ {
+		core := cluster.Cores[i]
+		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if useStoredKeys {
+			// For autounseal, the raft backend is not initialized right away
+			// after the join.  We need to wait briefly before we can unseal.
+			awaitUnsealWithStoredKeys(t, core)
+		} else {
+			cluster.UnsealCore(t, core)
+		}
+	}
+
+	testhelpers.WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
+}
+
+func awaitUnsealWithStoredKeys(t *testing.T, core *vault.TestClusterCore) {
+
+	timeout := time.Now().Add(30 * time.Second)
+	for {
+		if time.Now().After(timeout) {
+			t.Fatal("raft join: timeout waiting for core to unseal")
+		}
+		// Its actually ok for an error to happen here the first couple of
+		// times -- it means the raft join hasn't gotten around to initializing
+		// the backend yet.
+		err := core.UnsealWithStoredKeys(context.Background())
+		if err == nil {
+			return
+		}
+		core.Logger().Warn("raft join: failed to unseal core", "error", err)
+		time.Sleep(time.Second)
+	}
 }

@@ -1034,14 +1034,6 @@ type TestClusterOptions struct {
 	// RaftAddressProvider should only be specified if the underlying physical
 	// storage is Raft.
 	RaftAddressProvider raftlib.ServerAddressProvider
-
-	// JoinRaftFollowers specifies that each follower core will be joined to
-	// the raft cluster just before it is unsealed in InitializeCores().
-	//
-	// If SkipInit is true, then JoinRaftFollowers has no effect.
-	// JoinRaftFollowers should only be specified if the underlying physical
-	// storage is Raft.
-	JoinRaftFollowers bool
 }
 
 var DefaultNumCores = 3
