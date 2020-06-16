@@ -1,6 +1,7 @@
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest, only } from 'ember-qunit';
 import { render, click, fillIn } from '@ember/test-helpers';
+// import sinon so we can use a spy
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
 
@@ -57,10 +58,11 @@ module('Integration | Component | ttl-picker2', function(hooks) {
     );
   });
 
-  test('it keeps seconds value when unit is changed', async function(assert) {
-    // set up our spy
+  only('it keeps seconds value when unit is changed', async function(assert) {
+    // set up the spy in this test context
     let changeSpy = sinon.spy();
     this.set('onChange', changeSpy);
+
     await render(hbs`
       <TtlPicker2
         @label="clicktest"
@@ -70,11 +72,17 @@ module('Integration | Component | ttl-picker2', function(hooks) {
         @enableTTL={{false}}
       />
     `);
+
+    // execute the code that uses the spy
     await click('[data-test-toggle-input="clicktest"]');
-    // make sure onChange was called only once after we clicked on the input
+
+    // we can inspect our spy in the debugger to see what was called
+    // debugger;
+
+    // verify the spy was called
     assert.ok(changeSpy.calledOnce, 'it calls the passed onChange');
 
-    // ensure the spy was called with these arguments
+    // ensure the spy was called with specific arguments
     assert.ok(
       changeSpy.calledWith({
         enabled: true,
@@ -84,6 +92,7 @@ module('Integration | Component | ttl-picker2', function(hooks) {
       'Changes enabled to true on click'
     );
 
+    // again, execute the code that uses our spy
     await fillIn('[data-test-select="ttl-unit"]', 'm');
 
     // now ensure the spy was called again with new arguments
