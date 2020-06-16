@@ -309,6 +309,7 @@ management tool.
 
     ```text
     vault write auth/jwt/role/demo \
+        role_type=jwt \
         bound_subject="r3qX9DljwFIWhsiqwFiu38209F10atW6@clients" \
         bound_audiences="https://vault.plugin.auth.jwt.test" \
         user_claim="https://vault/user" \
