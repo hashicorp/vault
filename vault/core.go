@@ -2089,6 +2089,66 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 	writeTimer := time.Tick(c.counters.syncInterval)
 	identityCountTimer := time.Tick(time.Minute * 10)
 
+	// The gauge collection processes are started and stopped here
+	// because there's more than one TokenManager created during startup,
+	// but we only want one set of gauges.
+	tokenCount1, err := c.MetricSink().NewGaugeCollectionProcess(
+		[]string{"token", "count"},
+		[]metrics.Label{{"gauge", "token_by_namespace"}},
+		func(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+			if c.tokenStore == nil {
+				return []metricsutil.GaugeLabelValues{}, errors.New("nil token store")
+			} else {
+				return c.tokenStore.gaugeCollector(ctx)
+			}
+		},
+		c.logger,
+	)
+	if err != nil {
+		c.logger.Error("failed to start token count", "error", err)
+	} else {
+		go tokenCount1.Run()
+		defer tokenCount1.Stop()
+	}
+
+	tokenCount2, err := c.MetricSink().NewGaugeCollectionProcess(
+		[]string{"token", "count", "by_policy"},
+		[]metrics.Label{{"gauge", "token_by_policy"}},
+		func(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+			if c.tokenStore == nil {
+				return []metricsutil.GaugeLabelValues{}, errors.New("nil token store")
+			} else {
+				return c.tokenStore.gaugeCollectorByPolicy(ctx)
+			}
+		},
+		c.logger,
+	)
+	if err != nil {
+		c.logger.Error("failed to start token count", "error", err)
+	} else {
+		go tokenCount2.Run()
+		defer tokenCount2.Stop()
+	}
+
+	tokenCount3, err := c.MetricSink().NewGaugeCollectionProcess(
+		[]string{"token", "count", "by_auth"},
+		[]metrics.Label{{"gauge", "token_by_auth"}},
+		func(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+			if c.tokenStore == nil {
+				return []metricsutil.GaugeLabelValues{}, errors.New("nil token store")
+			} else {
+				return c.tokenStore.gaugeCollectorByMethod(ctx)
+			}
+		},
+		c.logger,
+	)
+	if err != nil {
+		c.logger.Error("failed to start token count", "error", err)
+	} else {
+		go tokenCount3.Run()
+		defer tokenCount3.Stop()
+	}
+
 	for {
 		select {
 		case <-emitTimer:
@@ -2129,6 +2189,7 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 			return
 		}
 	}
+
 }
 
 func (c *Core) ReplicationState() consts.ReplicationState {

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/armon/go-radix"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -3419,7 +3420,7 @@ func (ts *TokenStore) gaugeCollector(ctx context.Context) ([]metricsutil.GaugeLa
 		namespacePosition[ns.ID] = i
 	}
 
-	ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
+	err := ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
 		select {
 		// Abort and return empty collection if it's taking too much time, nonblocking check.
 		case <-ctx.Done():
@@ -3439,10 +3440,16 @@ func (ts *TokenStore) gaugeCollector(ctx context.Context) ([]metricsutil.GaugeLa
 		}
 	})
 
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+
 	// If collection was cancelled, return an empty array.
 	select {
 	case <-ctx.Done():
 		return []metricsutil.GaugeLabelValues{}, nil
+	default:
+		break
 	}
 
 	for i := range values {
@@ -3450,6 +3457,152 @@ func (ts *TokenStore) gaugeCollector(ctx context.Context) ([]metricsutil.GaugeLa
 	}
 	return values, nil
 
+}
+
+func (ts *TokenStore) gaugeCollectorByPolicy(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if ts.expiration == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("expiration manager is nil")
+	}
+
+	allNamespaces := ts.core.collectNamespaces()
+	byNsAndPolicy := make(map[string]map[string]int)
+
+	err := ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
+		select {
+		// Abort and return empty collection if it's taking too much time, nonblocking check.
+		case <-ctx.Done():
+			return false
+		default:
+			_, nsID := namespace.SplitIDFromString(leaseID)
+			if nsID == "" {
+				nsID = namespace.RootNamespaceID
+			}
+			policyMap, ok := byNsAndPolicy[nsID]
+			if !ok {
+				policyMap = make(map[string]int)
+				byNsAndPolicy[nsID] = policyMap
+			}
+			for _, policy := range auth.Policies {
+				policyMap[policy] = policyMap[policy] + 1
+			}
+			return true
+		}
+	})
+
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+
+	// If collection was cancelled, return an empty array.
+	select {
+	case <-ctx.Done():
+		return []metricsutil.GaugeLabelValues{}, nil
+	default:
+		break
+	}
+
+	// TODO: can we estimate the needed size?
+	flattenedResults := make([]metricsutil.GaugeLabelValues, 0)
+	for _, ns := range allNamespaces {
+		for policy, count := range byNsAndPolicy[ns.ID] {
+			flattenedResults = append(flattenedResults,
+				metricsutil.GaugeLabelValues{
+					Labels: []metrics.Label{
+						metricsutil.NamespaceLabel(ns),
+						{"policy", policy},
+					},
+					Value: float32(count),
+				})
+		}
+	}
+	return flattenedResults, nil
+}
+
+func (ts *TokenStore) gaugeCollectorByMethod(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if ts.expiration == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("expiration manager is nil")
+	}
+
+	rootContext := namespace.RootContext(ctx)
+	allNamespaces := ts.core.collectNamespaces()
+	byNsAndMethod := make(map[string]map[string]int)
+
+	// Cache the prefixes that we find locally rather than
+	// hitting the shared mount table every time
+	prefixTree := radix.New()
+
+	pathToPrefix := func(path string) string {
+		_, method, ok := prefixTree.LongestPrefix(path)
+		if ok {
+			return method.(string)
+		}
+
+		// This method needs a context that has a namespace
+		// FIXME: does it need to match the namespace in the lease?
+		mountEntry := ts.core.router.MatchingMountEntry(rootContext, path)
+		if mountEntry == nil {
+			return "unknown"
+		}
+
+		// FIXME: is there a better way to do this, rather than accessing
+		// the router twice? mountEntry.Path is incomplete.
+		matchingMount := ts.core.router.MatchingMount(rootContext, path)
+		if matchingMount == "" {
+			return "unknown"
+		}
+
+		prefixTree.Insert(matchingMount, mountEntry.Type)
+		return mountEntry.Type
+	}
+
+	err := ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
+		select {
+		// Abort and return empty collection if it's taking too much time, nonblocking check.
+		case <-ctx.Done():
+			return false
+		default:
+			_, nsID := namespace.SplitIDFromString(leaseID)
+			if nsID == "" {
+				nsID = namespace.RootNamespaceID
+			}
+			methodMap, ok := byNsAndMethod[nsID]
+			if !ok {
+				methodMap = make(map[string]int)
+				byNsAndMethod[nsID] = methodMap
+			}
+			method := pathToPrefix(path)
+			methodMap[method] = methodMap[method] + 1
+			return true
+		}
+	})
+
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+
+	// If collection was cancelled, return an empty array.
+	select {
+	case <-ctx.Done():
+		return []metricsutil.GaugeLabelValues{}, nil
+	default:
+		break
+	}
+
+	// TODO: can we estimate the needed size?
+	flattenedResults := make([]metricsutil.GaugeLabelValues, 0)
+	for _, ns := range allNamespaces {
+		for method, count := range byNsAndMethod[ns.ID] {
+			flattenedResults = append(flattenedResults,
+				metricsutil.GaugeLabelValues{
+					Labels: []metrics.Label{
+						metricsutil.NamespaceLabel(ns),
+						{"auth_method", method},
+					},
+					Value: float32(count),
+				})
+		}
+	}
+	return flattenedResults, nil
 }
 
 const (

@@ -1903,8 +1903,11 @@ type ExpirationWalkFunction = func(leaseID string, auth *logical.Auth, path stri
 
 // WalkTokens extracts the Auth structure from leases corresponding to tokens.
 // Returning false from the walk function terminates the iteration.
-// TODO: signal if reload hasn't finished yet?
-func (m *ExpirationManager) WalkTokens(walkFn ExpirationWalkFunction) {
+func (m *ExpirationManager) WalkTokens(walkFn ExpirationWalkFunction) error {
+	if m.inRestoreMode() {
+		return errors.New("expiration manager in restore mode")
+	}
+
 	callback := func(key, value interface{}) bool {
 		p := value.(pendingInfo)
 		if p.cachedLeaseInfo == nil {
@@ -1919,6 +1922,8 @@ func (m *ExpirationManager) WalkTokens(walkFn ExpirationWalkFunction) {
 
 	m.pending.Range(callback)
 	m.nonexpiring.Range(callback)
+
+	return nil
 }
 
 // leaseEntry is used to structure the values the expiration
