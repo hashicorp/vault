@@ -19,7 +19,7 @@
 	"telemetry": {
 		"statsite_address": "baz",
 		"cluster_name": "test",
-		"usage_gauge_period": "30s",
+		"usage_gauge_period": "5m",
 		"maximum_gauge_cardinality": 100
 	},
 	"max_lease_ttl": "10h",

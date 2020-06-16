@@ -941,12 +941,14 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	inmemMetrics, metricSink, prometheusEnabled, err := configutil.SetupTelemetry(&configutil.SetupTelemetryOpts{
-		Config:      config.Telemetry,
-		Ui:          c.UI,
-		ServiceName: "vault",
-		DisplayName: "Vault",
-		UserAgent:   useragent.String(),
-		ClusterName: config.ClusterName,
+		Config:              config.Telemetry,
+		Ui:                  c.UI,
+		ServiceName:         "vault",
+		DisplayName:         "Vault",
+		UserAgent:           useragent.String(),
+		ClusterName:         config.ClusterName,
+		MaxGaugeCardinality: config.Telemetry.MaximumGaugeCardinality,
+		GaugeInterval:       config.Telemetry.UsageGaugePeriod,
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))

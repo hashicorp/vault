@@ -26,6 +26,7 @@ import (
 const (
 	PrometheusDefaultRetentionTime = 24 * time.Hour
 	UsageGaugeDefaultPeriod        = 30 * time.Second
+	MaximumGaugeCardinalityDefault = 500
 )
 
 // Telemetry is the telemetry configuration for the server
@@ -184,16 +185,22 @@ func parseTelemetry(result *SharedConfig, list *ast.ObjectList) error {
 		result.Telemetry.UsageGaugePeriod = UsageGaugeDefaultPeriod
 	}
 
+	if result.Telemetry.MaximumGaugeCardinality == 0 {
+		result.Telemetry.MaximumGaugeCardinality = MaximumGaugeCardinalityDefault
+	}
+
 	return nil
 }
 
 type SetupTelemetryOpts struct {
-	Config      *Telemetry
-	Ui          cli.Ui
-	ServiceName string
-	DisplayName string
-	UserAgent   string
-	ClusterName string
+	Config              *Telemetry
+	Ui                  cli.Ui
+	ServiceName         string
+	DisplayName         string
+	UserAgent           string
+	ClusterName         string
+	MaxGaugeCardinality int
+	GaugeInterval       time.Duration
 }
 
 // SetupTelemetry is used to setup the telemetry sub-systems and returns the
@@ -346,8 +353,8 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	// and to any backend.
 	wrapper := &metricsutil.ClusterMetricSink{
 		ClusterName:         opts.ClusterName,
-		MaxGaugeCardinality: 500,
-		GaugeInterval:       10 * time.Minute,
+		MaxGaugeCardinality: opts.MaxGaugeCardinality,
+		GaugeInterval:       opts.GaugeInterval,
 		Sink:                fanout,
 	}
 

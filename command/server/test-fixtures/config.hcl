@@ -26,7 +26,7 @@ service_registration "consul" {
 telemetry {
     statsd_address = "bar"
     cluster_name = "test"
-    usage_gauge_period = "30s"
+    usage_gauge_period = "5m"
     maximum_gauge_cardinality = 100
 
     statsite_address = "foo"
