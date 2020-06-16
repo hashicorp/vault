@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"github.com/armon/go-metrics"
 	"github.com/pierrec/lz4"
+	"time"
 )
 
 type Compressor struct {
@@ -17,6 +19,7 @@ var ErrSizeMismatch = errors.New("decompressed size unexpected")
 
 const v1 = 1
 const headerLen = 6
+const algoNone = 0
 const algoLZ4 = 1
 
 func NewCompressor(store Storage) *Compressor {
@@ -26,7 +29,8 @@ func NewCompressor(store Storage) *Compressor {
 }
 
 func (c *Compressor) Put(ctx context.Context, entry *StorageEntry) error {
-	ht := make([]int, 65536)
+	//defer metrics.MeasureSince([]string{"storage", "compression", "compress_time"}, time.Now())
+	var ht [65536]int
 	srcLen := len(entry.Value)
 	dstLen := headerLen + lz4.CompressBlockBound(srcLen)
 	var dst []byte
@@ -36,19 +40,29 @@ func (c *Compressor) Put(ctx context.Context, entry *StorageEntry) error {
 		dst = make([]byte, dstLen)
 	}
 
-	sz, err := lz4.CompressBlock(entry.Value, dst[headerLen:], ht)
+	sz, err := lz4.CompressBlock(entry.Value, dst[headerLen:], ht[:])
 	if err != nil {
 		return err
 	}
 	dst[0] = v1
-	dst[1] = algoLZ4
-	binary.LittleEndian.PutUint32(dst[2:6], uint32(sz))
-	entry.Value = dst[0 : sz+headerLen]
-
+	if sz == 0 {
+		dst[1] = algoNone
+		copy(dst[2:], entry.Value)
+		entry.Value = dst[0 : len(entry.Value)+2]
+		//metrics.AddSample([]string{"storage", "compression", "delta"}, 0)
+	} else {
+		//	delta := float32(srcLen - (sz + headerLen))
+		//metrics.AddSample([]string{"storage", "compression", "delta"}, delta)
+		dst[1] = algoLZ4
+		binary.LittleEndian.PutUint32(dst[2:6], uint32(srcLen))
+		entry.Value = dst[0 : sz+headerLen]
+	}
 	return c.physical.Put(ctx, entry)
 }
 
 func (c *Compressor) Get(ctx context.Context, key string) (*StorageEntry, error) {
+	defer metrics.MeasureSince([]string{"storage", "compression", "decompress_time"}, time.Now())
+
 	entry, err := c.physical.Get(ctx, key)
 	if err != nil || entry == nil {
 		return entry, err
@@ -60,20 +74,24 @@ func (c *Compressor) Get(ctx context.Context, key string) (*StorageEntry, error)
 	if entry.Value[0] != v1 {
 		return nil, ErrUnsupportedVersion
 	}
-	if entry.Value[1] != algoLZ4 {
+	switch entry.Value[1] {
+	case algoNone:
+		entry.Value = entry.Value[2:]
+	case algoLZ4:
+		sz := binary.LittleEndian.Uint32(entry.Value[2:6])
+		dst := make([]byte, sz)
+		si, err := lz4.UncompressBlock(entry.Value[headerLen:], dst)
+		if err != nil {
+			return nil, err
+		}
+		if sz != uint32(si) {
+			return nil, ErrSizeMismatch
+		}
+		entry.Value = dst
+	default:
 		return nil, ErrUnsupportedAlgorithm
 	}
 
-	sz := binary.LittleEndian.Uint32(entry.Value[2:6])
-	dst := make([]byte, 0, sz*2)
-	si, err := lz4.UncompressBlock(entry.Value[headerLen:headerLen+sz], dst)
-	if err != nil {
-		return nil, err
-	}
-	if sz != uint32(si) {
-		return nil, ErrSizeMismatch
-	}
-	entry.Value = dst
 	return entry, nil
 }
 
