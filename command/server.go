@@ -64,7 +64,14 @@ var enableFourClusterDev = func(c *ServerCommand, base *vault.CoreConfig, info m
 	return 1
 }
 
-const storageMigrationLock = "core/migration"
+const (
+	storageMigrationLock = "core/migration"
+
+	// Even though there are more types than the ones below, the following consts
+	// are declared internally for value comparison and reusability.
+	storageTypeRaft   = "raft"
+	storageTypeConsul = "consul"
+)
 
 type ServerCommand struct {
 	*BaseCommand
@@ -453,7 +460,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
 		return 1
 	}
-	if config.Storage.Type == "raft" {
+	if config.Storage.Type == storageTypeRaft {
 		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
 			config.ClusterAddr = envCA
 		}
@@ -963,7 +970,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Do any custom configuration needed per backend
 	switch config.Storage.Type {
-	case "consul":
+	case storageTypeConsul:
 		if config.ServiceRegistration == nil {
 			// If Consul is configured for storage and service registration is unconfigured,
 			// use Consul for service registration without requiring additional configuration.
@@ -973,7 +980,7 @@ func (c *ServerCommand) Run(args []string) int {
 				Config: config.Storage.Config,
 			}
 		}
-	case "raft":
+	case storageTypeRaft:
 		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
 			config.ClusterAddr = envCA
 		}
@@ -1175,12 +1182,12 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the separate HA storage backend, if it exists
 	var ok bool
 	if config.HAStorage != nil {
-		if config.Storage.Type == "raft" {
+		if config.Storage.Type == storageTypeRaft {
 			c.UI.Error("HA storage cannot be declared when Raft is the storage type")
 			return 1
 		}
 
-		if config.Storage.Type == "raft" && config.HAStorage.Type == "raft" {
+		if config.Storage.Type == storageTypeRaft && config.HAStorage.Type == storageTypeRaft {
 			c.UI.Error("Raft cannot be declared as HA storage separately when also declared as the storage type to use")
 			return 1
 		}
@@ -1215,7 +1222,7 @@ func (c *ServerCommand) Run(args []string) int {
 		coreConfig.RedirectAddr = config.HAStorage.RedirectAddr
 		disableClustering = config.HAStorage.DisableClustering
 
-		if config.HAStorage.Type == "raft" && disableClustering {
+		if config.HAStorage.Type == storageTypeRaft && disableClustering {
 			c.UI.Error("Disable clustering cannot be set to true when Raft is the HA storage type")
 			return 1
 		}
@@ -1228,7 +1235,7 @@ func (c *ServerCommand) Run(args []string) int {
 			coreConfig.RedirectAddr = config.Storage.RedirectAddr
 			disableClustering = config.Storage.DisableClustering
 
-			if config.Storage.Type == "raft" && disableClustering {
+			if config.Storage.Type == storageTypeRaft && disableClustering {
 				c.UI.Error("Disable clustering cannot be set to true when Raft is the storage type")
 				return 1
 			}
@@ -1571,7 +1578,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// When the underlying storage is raft, kick off retry join if it was specified
 	// in the configuration
 	// TODO: Should we also support retry_join for ha_storage?
-	if config.Storage.Type == "raft" {
+	if config.Storage.Type == storageTypeRaft {
 		if err := core.InitiateRetryJoin(context.Background()); err != nil {
 			c.UI.Error(fmt.Sprintf("Failed to initiate raft retry join, %q", err.Error()))
 			return 1

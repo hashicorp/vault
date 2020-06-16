@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-// TODO: Move this under the sys backend
 func handleSysRaftBootstrap(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
