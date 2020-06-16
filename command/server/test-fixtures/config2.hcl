@@ -27,9 +27,8 @@ service_registration "consul" {
 
 telemetry {
     statsd_address = "bar"
-         cluster_name = "test"
-         usage_gauge_period = "5m"
-         maximum_gauge_cardinality = 125
+    usage_gauge_period = "5m"
+    maximum_gauge_cardinality = 125
     statsite_address = "foo"
     dogstatsd_addr = "127.0.0.1:7254"
     dogstatsd_tags = ["tag_1:val_1", "tag_2:val_2"]

@@ -37,7 +37,6 @@ type Telemetry struct {
 	DisableHostname     bool   `hcl:"disable_hostname"`
 	EnableHostnameLabel bool   `hcl:"enable_hostname_label"`
 	MetricsPrefix       string `hcl:"metrics_prefix"`
-	ClusterName         string `hcl:"cluster_name"`
 	UsageGaugePeriod    time.Duration
 	UsageGaugePeriodRaw interface{} `hcl:"usage_gauge_period"`
 

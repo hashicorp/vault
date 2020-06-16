@@ -30,7 +30,6 @@ telemetry {
   statsd_address = "bar"
   circonus_api_token = "baz"
   metrics_prefix = "pfx"
-  cluster_name = "test"
   usage_gauge_period = "5m"
   maximum_gauge_cardinality = 100
 }

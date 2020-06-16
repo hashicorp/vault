@@ -2,7 +2,6 @@ telemetry {
     statsd_address = "baz"
     statsite_address = "qux"
     disable_hostname = true
-    cluster_name = "test"
     usage_gauge_period = "5m"
     maximum_gauge_cardinality = 100
 }

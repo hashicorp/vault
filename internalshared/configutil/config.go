@@ -192,7 +192,6 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 			"statsd_address":                         c.Telemetry.StatsdAddr,
 			"disable_hostname":                       c.Telemetry.DisableHostname,
 			"metrics_prefix":                         c.Telemetry.MetricsPrefix,
-			"cluster_name":                           c.Telemetry.ClusterName,
 			"usage_gauge_period":                     c.Telemetry.UsageGaugePeriod,
 			"maximum_gauge_cardinality":              c.Telemetry.MaximumGaugeCardinality,
 			"circonus_api_token":                     "",
