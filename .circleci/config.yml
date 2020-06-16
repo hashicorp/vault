@@ -109,14 +109,14 @@ jobs:
     - run:
         command: make -C packages*.lock package
     - run:
-        command: ls -lahR .buildcache/packages/store
+        command: ls -lahR .buildcache/packages
     - save_cache:
         key: cache001-package-ab3072321c199b5095af45fa750cb943bd2c1d8a-{{checksum ".buildcache/cache-keys/package-ab3072321c199b5095af45fa750cb943bd2c1d8a"}}
         paths:
-        - .buildcache/packages/store
+        - .buildcache/packages
     - store_artifacts:
         destination: packages
-        path: .buildcache/packages/store
+        path: .buildcache/packages
     - run:
         command: |
           if [ -f .buildcache/archives/08-warm-go-build-vendor-cache-38306c8570075250506a515a20f34b5126c5837e.tar.gz ]; then
@@ -175,14 +175,14 @@ jobs:
     - run:
         command: make -C packages*.lock package
     - run:
-        command: ls -lahR .buildcache/packages/store
+        command: ls -lahR .buildcache/packages
     - save_cache:
         key: cache001-package-c21f2ce5ea0294a673d5a4d57941733f19c4f873-{{checksum ".buildcache/cache-keys/package-c21f2ce5ea0294a673d5a4d57941733f19c4f873"}}
         paths:
-        - .buildcache/packages/store
+        - .buildcache/packages
     - store_artifacts:
         destination: packages
-        path: .buildcache/packages/store
+        path: .buildcache/packages
     - run:
         command: |
           if [ -f .buildcache/archives/08-warm-go-build-vendor-cache-1da13aa79cf3ca9b34ff2e38e2176999b19bf960.tar.gz ]; then
@@ -260,14 +260,14 @@ jobs:
     - run:
         command: make -C packages*.lock package
     - run:
-        command: ls -lahR .buildcache/packages/store
+        command: ls -lahR .buildcache/packages
     - save_cache:
         key: cache001-package-7249859028bed3224703bfc84d09115208121e9d-{{checksum ".buildcache/cache-keys/package-7249859028bed3224703bfc84d09115208121e9d"}}
         paths:
-        - .buildcache/packages/store
+        - .buildcache/packages
     - store_artifacts:
         destination: packages
-        path: .buildcache/packages/store
+        path: .buildcache/packages
     - run:
         command: |
           if [ -f .buildcache/archives/08-warm-go-build-vendor-cache-3d53a16a300d170d26c5ae1a1310cc5c40198b67.tar.gz ]; then
@@ -364,14 +364,14 @@ jobs:
     - run:
         command: make -C packages*.lock package
     - run:
-        command: ls -lahR .buildcache/packages/store
+        command: ls -lahR .buildcache/packages
     - save_cache:
         key: cache001-package-baeb641cbe24baded16bb35cfdb2ae65ce9525c4-{{checksum ".buildcache/cache-keys/package-baeb641cbe24baded16bb35cfdb2ae65ce9525c4"}}
         paths:
-        - .buildcache/packages/store
+        - .buildcache/packages
     - store_artifacts:
         destination: packages
-        path: .buildcache/packages/store
+        path: .buildcache/packages
     - run:
         command: |
           if [ -f .buildcache/archives/08-warm-go-build-vendor-cache-c5b5fe7db5d96e53eb07a75aa90a8cd1cfc8bd51.tar.gz ]; then
@@ -448,14 +448,14 @@ jobs:
     - run:
         command: make -C packages*.lock package
     - run:
-        command: ls -lahR .buildcache/packages/store
+        command: ls -lahR .buildcache/packages
     - save_cache:
         key: cache001-package-5b216171ff992033dc46dd1d6e06fdd276b0c96c-{{checksum ".buildcache/cache-keys/package-5b216171ff992033dc46dd1d6e06fdd276b0c96c"}}
         paths:
-        - .buildcache/packages/store
+        - .buildcache/packages
     - store_artifacts:
         destination: packages
-        path: .buildcache/packages/store
+        path: .buildcache/packages
     - run:
         command: |
           if [ -f .buildcache/archives/08-warm-go-build-vendor-cache-a4c6b877aeccec7aaf8d528d1b239254acea0823.tar.gz ]; then
@@ -573,14 +573,14 @@ jobs:
     - run:
         command: make -C packages*.lock package
     - run:
-        command: ls -lahR .buildcache/packages/store
+        command: ls -lahR .buildcache/packages
     - save_cache:
         key: cache001-package-f82586a6af3e014c5a179c2122d79750790549d2-{{checksum ".buildcache/cache-keys/package-f82586a6af3e014c5a179c2122d79750790549d2"}}
         paths:
-        - .buildcache/packages/store
+        - .buildcache/packages
     - store_artifacts:
         destination: packages
-        path: .buildcache/packages/store
+        path: .buildcache/packages
     - run:
         command: |
           if [ -f .buildcache/archives/08-warm-go-build-vendor-cache-be081d5d75f0d4be93eae6ea865f6a89f2a6970e.tar.gz ]; then
@@ -639,14 +639,14 @@ jobs:
     - run:
         command: make -C packages*.lock package
     - run:
-        command: ls -lahR .buildcache/packages/store
+        command: ls -lahR .buildcache/packages
     - save_cache:
         key: cache001-package-579374ae016b09777440b7ae9bfadd9c31b61061-{{checksum ".buildcache/cache-keys/package-579374ae016b09777440b7ae9bfadd9c31b61061"}}
         paths:
-        - .buildcache/packages/store
+        - .buildcache/packages
     - store_artifacts:
         destination: packages
-        path: .buildcache/packages/store
+        path: .buildcache/packages
     - run:
         command: |
           if [ -f .buildcache/archives/08-warm-go-build-vendor-cache-5729c8912b854bf9b6cf8a0dc67e28bbd8ab681f.tar.gz ]; then
@@ -796,14 +796,14 @@ jobs:
     - run:
         command: make -C packages*.lock package
     - run:
-        command: ls -lahR .buildcache/packages/store
+        command: ls -lahR .buildcache/packages
     - save_cache:
         key: cache001-package-5a14badf69d270b8bf58c893fcbe74f3b3c06ca1-{{checksum ".buildcache/cache-keys/package-5a14badf69d270b8bf58c893fcbe74f3b3c06ca1"}}
         paths:
-        - .buildcache/packages/store
+        - .buildcache/packages
     - store_artifacts:
         destination: packages
-        path: .buildcache/packages/store
+        path: .buildcache/packages
     - run:
         command: |
           if [ -f .buildcache/archives/08-warm-go-build-vendor-cache-fb9a5ac9be401125f9141a649bff22b7f26a1e7b.tar.gz ]; then
@@ -862,14 +862,14 @@ jobs:
     - run:
         command: make -C packages*.lock package
     - run:
-        command: ls -lahR .buildcache/packages/store
+        command: ls -lahR .buildcache/packages
     - save_cache:
         key: cache001-package-fa62c0992256d7cd9380cf28234da513679b57c6-{{checksum ".buildcache/cache-keys/package-fa62c0992256d7cd9380cf28234da513679b57c6"}}
         paths:
-        - .buildcache/packages/store
+        - .buildcache/packages
     - store_artifacts:
         destination: packages
-        path: .buildcache/packages/store
+        path: .buildcache/packages
     - run:
         command: |
           if [ -f .buildcache/archives/08-warm-go-build-vendor-cache-26d1b9d805b71c8fdcb315e9903862d0cbfec92e.tar.gz ]; then
@@ -928,14 +928,14 @@ jobs:
     - run:
         command: make -C packages*.lock package
     - run:
-        command: ls -lahR .buildcache/packages/store
+        command: ls -lahR .buildcache/packages
     - save_cache:
         key: cache001-package-b0a44bc1c262dabdbb2546ab89d7936107d30c47-{{checksum ".buildcache/cache-keys/package-b0a44bc1c262dabdbb2546ab89d7936107d30c47"}}
         paths:
-        - .buildcache/packages/store
+        - .buildcache/packages
     - store_artifacts:
         destination: packages
-        path: .buildcache/packages/store
+        path: .buildcache/packages
     - run:
         command: |
           if [ -f .buildcache/archives/08-warm-go-build-vendor-cache-0ce8e3ff723f31379bf6955716f58b70f3c5b48b.tar.gz ]; then
@@ -1017,14 +1017,14 @@ jobs:
     - run:
         command: make -C packages*.lock package
     - run:
-        command: ls -lahR .buildcache/packages/store
+        command: ls -lahR .buildcache/packages
     - save_cache:
         key: cache001-package-e061e451e98e6f06593c7a78b8150e4a6f125feb-{{checksum ".buildcache/cache-keys/package-e061e451e98e6f06593c7a78b8150e4a6f125feb"}}
         paths:
-        - .buildcache/packages/store
+        - .buildcache/packages
     - store_artifacts:
         destination: packages
-        path: .buildcache/packages/store
+        path: .buildcache/packages
     - run:
         command: |
           if [ -f .buildcache/archives/08-warm-go-build-vendor-cache-4941033b883d2fed929c3f3a2b3abd43e75249c0.tar.gz ]; then
@@ -1293,14 +1293,14 @@ jobs:
     - run:
         command: make -C packages*.lock package
     - run:
-        command: ls -lahR .buildcache/packages/store
+        command: ls -lahR .buildcache/packages
     - save_cache:
         key: cache001-package-d2f755917a5f986e2e2448ba959361049efdcdcc-{{checksum ".buildcache/cache-keys/package-d2f755917a5f986e2e2448ba959361049efdcdcc"}}
         paths:
-        - .buildcache/packages/store
+        - .buildcache/packages
     - store_artifacts:
         destination: packages
-        path: .buildcache/packages/store
+        path: .buildcache/packages
     - run:
         command: |
           if [ -f .buildcache/archives/08-warm-go-build-vendor-cache-9bae6e7b584977ea7b1c927c05063f921eb6b859.tar.gz ]; then
@@ -1359,14 +1359,14 @@ jobs:
     - run:
         command: make -C packages*.lock package
     - run:
-        command: ls -lahR .buildcache/packages/store
+        command: ls -lahR .buildcache/packages
     - save_cache:
         key: cache001-package-d5cf587df2a3bd102cbf919c295ad21f5c7b8eb3-{{checksum ".buildcache/cache-keys/package-d5cf587df2a3bd102cbf919c295ad21f5c7b8eb3"}}
         paths:
-        - .buildcache/packages/store
+        - .buildcache/packages
     - store_artifacts:
         destination: packages
-        path: .buildcache/packages/store
+        path: .buildcache/packages
     - run:
         command: |
           if [ -f .buildcache/archives/08-warm-go-build-vendor-cache-f3eb0e446e517505d44a4dc41bdaa5afc37f9927.tar.gz ]; then
@@ -1425,14 +1425,14 @@ jobs:
     - run:
         command: make -C packages*.lock package
     - run:
-        command: ls -lahR .buildcache/packages/store
+        command: ls -lahR .buildcache/packages
     - save_cache:
         key: cache001-package-f24591929b66a2ca1a17cc3a7f8172463b230d11-{{checksum ".buildcache/cache-keys/package-f24591929b66a2ca1a17cc3a7f8172463b230d11"}}
         paths:
-        - .buildcache/packages/store
+        - .buildcache/packages
     - store_artifacts:
         destination: packages
-        path: .buildcache/packages/store
+        path: .buildcache/packages
     - run:
         command: |
           if [ -f .buildcache/archives/08-warm-go-build-vendor-cache-385c32eb530f9ccbd253f305f1e448ecc20f30e8.tar.gz ]; then
@@ -1491,14 +1491,14 @@ jobs:
     - run:
         command: make -C packages*.lock package
     - run:
-        command: ls -lahR .buildcache/packages/store
+        command: ls -lahR .buildcache/packages
     - save_cache:
         key: cache001-package-ce604a8ea8e617312bd796c687d54cd20b7096e8-{{checksum ".buildcache/cache-keys/package-ce604a8ea8e617312bd796c687d54cd20b7096e8"}}
         paths:
-        - .buildcache/packages/store
+        - .buildcache/packages
     - store_artifacts:
         destination: packages
-        path: .buildcache/packages/store
+        path: .buildcache/packages
     - run:
         command: |
           if [ -f .buildcache/archives/08-warm-go-build-vendor-cache-d32c38a5770d69785d6cf47bee9655bc466ec3f3.tar.gz ]; then
@@ -1557,14 +1557,14 @@ jobs:
     - run:
         command: make -C packages*.lock package
     - run:
-        command: ls -lahR .buildcache/packages/store
+        command: ls -lahR .buildcache/packages
     - save_cache:
         key: cache001-package-191f68d13c18858af887523f34ff61c6cdeeb782-{{checksum ".buildcache/cache-keys/package-191f68d13c18858af887523f34ff61c6cdeeb782"}}
         paths:
-        - .buildcache/packages/store
+        - .buildcache/packages
     - store_artifacts:
         destination: packages
-        path: .buildcache/packages/store
+        path: .buildcache/packages
     - run:
         command: |
           if [ -f .buildcache/archives/08-warm-go-build-vendor-cache-79069e4640672e19084d4887a6f3eebe09d04519.tar.gz ]; then

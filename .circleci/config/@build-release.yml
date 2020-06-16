@@ -178,14 +178,14 @@ jobs:
           - cache001-base_1a0e_{{checksum ".buildcache/cache-keys/base-1a0eebdb7c8e017a66a042afd9f319a57d761a4c"}}
       - run: make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
-      - run: ls -lahR .buildcache/packages/store
+      - run: ls -lahR .buildcache/packages
       # Save package cache.
       - save_cache:
           key: 'cache001-package-5b216171ff992033dc46dd1d6e06fdd276b0c96c-{{checksum ".buildcache/cache-keys/package-5b216171ff992033dc46dd1d6e06fdd276b0c96c"}}'
           paths:
-            - .buildcache/packages/store
+            - .buildcache/packages
       - store_artifacts:
-          path: .buildcache/packages/store
+          path: .buildcache/packages
           destination: packages
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
@@ -240,14 +240,14 @@ jobs:
           - cache001-base_1a0e_{{checksum ".buildcache/cache-keys/base-1a0eebdb7c8e017a66a042afd9f319a57d761a4c"}}
       - run: make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
-      - run: ls -lahR .buildcache/packages/store
+      - run: ls -lahR .buildcache/packages
       # Save package cache.
       - save_cache:
           key: 'cache001-package-ab3072321c199b5095af45fa750cb943bd2c1d8a-{{checksum ".buildcache/cache-keys/package-ab3072321c199b5095af45fa750cb943bd2c1d8a"}}'
           paths:
-            - .buildcache/packages/store
+            - .buildcache/packages
       - store_artifacts:
-          path: .buildcache/packages/store
+          path: .buildcache/packages
           destination: packages
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
@@ -302,14 +302,14 @@ jobs:
           - cache001-base_1a0e_{{checksum ".buildcache/cache-keys/base-1a0eebdb7c8e017a66a042afd9f319a57d761a4c"}}
       - run: make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
-      - run: ls -lahR .buildcache/packages/store
+      - run: ls -lahR .buildcache/packages
       # Save package cache.
       - save_cache:
           key: 'cache001-package-579374ae016b09777440b7ae9bfadd9c31b61061-{{checksum ".buildcache/cache-keys/package-579374ae016b09777440b7ae9bfadd9c31b61061"}}'
           paths:
-            - .buildcache/packages/store
+            - .buildcache/packages
       - store_artifacts:
-          path: .buildcache/packages/store
+          path: .buildcache/packages
           destination: packages
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
@@ -364,14 +364,14 @@ jobs:
           - cache001-base_1a0e_{{checksum ".buildcache/cache-keys/base-1a0eebdb7c8e017a66a042afd9f319a57d761a4c"}}
       - run: make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
-      - run: ls -lahR .buildcache/packages/store
+      - run: ls -lahR .buildcache/packages
       # Save package cache.
       - save_cache:
           key: 'cache001-package-5a14badf69d270b8bf58c893fcbe74f3b3c06ca1-{{checksum ".buildcache/cache-keys/package-5a14badf69d270b8bf58c893fcbe74f3b3c06ca1"}}'
           paths:
-            - .buildcache/packages/store
+            - .buildcache/packages
       - store_artifacts:
-          path: .buildcache/packages/store
+          path: .buildcache/packages
           destination: packages
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
@@ -426,14 +426,14 @@ jobs:
           - cache001-base_1a0e_{{checksum ".buildcache/cache-keys/base-1a0eebdb7c8e017a66a042afd9f319a57d761a4c"}}
       - run: make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
-      - run: ls -lahR .buildcache/packages/store
+      - run: ls -lahR .buildcache/packages
       # Save package cache.
       - save_cache:
           key: 'cache001-package-ce604a8ea8e617312bd796c687d54cd20b7096e8-{{checksum ".buildcache/cache-keys/package-ce604a8ea8e617312bd796c687d54cd20b7096e8"}}'
           paths:
-            - .buildcache/packages/store
+            - .buildcache/packages
       - store_artifacts:
-          path: .buildcache/packages/store
+          path: .buildcache/packages
           destination: packages
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
@@ -488,14 +488,14 @@ jobs:
           - cache001-base_1a0e_{{checksum ".buildcache/cache-keys/base-1a0eebdb7c8e017a66a042afd9f319a57d761a4c"}}
       - run: make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
-      - run: ls -lahR .buildcache/packages/store
+      - run: ls -lahR .buildcache/packages
       # Save package cache.
       - save_cache:
           key: 'cache001-package-f82586a6af3e014c5a179c2122d79750790549d2-{{checksum ".buildcache/cache-keys/package-f82586a6af3e014c5a179c2122d79750790549d2"}}'
           paths:
-            - .buildcache/packages/store
+            - .buildcache/packages
       - store_artifacts:
-          path: .buildcache/packages/store
+          path: .buildcache/packages
           destination: packages
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
@@ -550,14 +550,14 @@ jobs:
           - cache001-base_1a0e_{{checksum ".buildcache/cache-keys/base-1a0eebdb7c8e017a66a042afd9f319a57d761a4c"}}
       - run: make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
-      - run: ls -lahR .buildcache/packages/store
+      - run: ls -lahR .buildcache/packages
       # Save package cache.
       - save_cache:
           key: 'cache001-package-b0a44bc1c262dabdbb2546ab89d7936107d30c47-{{checksum ".buildcache/cache-keys/package-b0a44bc1c262dabdbb2546ab89d7936107d30c47"}}'
           paths:
-            - .buildcache/packages/store
+            - .buildcache/packages
       - store_artifacts:
-          path: .buildcache/packages/store
+          path: .buildcache/packages
           destination: packages
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
@@ -612,14 +612,14 @@ jobs:
           - cache001-base_1a0e_{{checksum ".buildcache/cache-keys/base-1a0eebdb7c8e017a66a042afd9f319a57d761a4c"}}
       - run: make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
-      - run: ls -lahR .buildcache/packages/store
+      - run: ls -lahR .buildcache/packages
       # Save package cache.
       - save_cache:
           key: 'cache001-package-baeb641cbe24baded16bb35cfdb2ae65ce9525c4-{{checksum ".buildcache/cache-keys/package-baeb641cbe24baded16bb35cfdb2ae65ce9525c4"}}'
           paths:
-            - .buildcache/packages/store
+            - .buildcache/packages
       - store_artifacts:
-          path: .buildcache/packages/store
+          path: .buildcache/packages
           destination: packages
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
@@ -674,14 +674,14 @@ jobs:
           - cache001-base_1a0e_{{checksum ".buildcache/cache-keys/base-1a0eebdb7c8e017a66a042afd9f319a57d761a4c"}}
       - run: make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
-      - run: ls -lahR .buildcache/packages/store
+      - run: ls -lahR .buildcache/packages
       # Save package cache.
       - save_cache:
           key: 'cache001-package-7249859028bed3224703bfc84d09115208121e9d-{{checksum ".buildcache/cache-keys/package-7249859028bed3224703bfc84d09115208121e9d"}}'
           paths:
-            - .buildcache/packages/store
+            - .buildcache/packages
       - store_artifacts:
-          path: .buildcache/packages/store
+          path: .buildcache/packages
           destination: packages
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
@@ -736,14 +736,14 @@ jobs:
           - cache001-base_1a0e_{{checksum ".buildcache/cache-keys/base-1a0eebdb7c8e017a66a042afd9f319a57d761a4c"}}
       - run: make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
-      - run: ls -lahR .buildcache/packages/store
+      - run: ls -lahR .buildcache/packages
       # Save package cache.
       - save_cache:
           key: 'cache001-package-f24591929b66a2ca1a17cc3a7f8172463b230d11-{{checksum ".buildcache/cache-keys/package-f24591929b66a2ca1a17cc3a7f8172463b230d11"}}'
           paths:
-            - .buildcache/packages/store
+            - .buildcache/packages
       - store_artifacts:
-          path: .buildcache/packages/store
+          path: .buildcache/packages
           destination: packages
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
@@ -798,14 +798,14 @@ jobs:
           - cache001-base_1a0e_{{checksum ".buildcache/cache-keys/base-1a0eebdb7c8e017a66a042afd9f319a57d761a4c"}}
       - run: make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
-      - run: ls -lahR .buildcache/packages/store
+      - run: ls -lahR .buildcache/packages
       # Save package cache.
       - save_cache:
           key: 'cache001-package-d2f755917a5f986e2e2448ba959361049efdcdcc-{{checksum ".buildcache/cache-keys/package-d2f755917a5f986e2e2448ba959361049efdcdcc"}}'
           paths:
-            - .buildcache/packages/store
+            - .buildcache/packages
       - store_artifacts:
-          path: .buildcache/packages/store
+          path: .buildcache/packages
           destination: packages
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
@@ -860,14 +860,14 @@ jobs:
           - cache001-base_1a0e_{{checksum ".buildcache/cache-keys/base-1a0eebdb7c8e017a66a042afd9f319a57d761a4c"}}
       - run: make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
-      - run: ls -lahR .buildcache/packages/store
+      - run: ls -lahR .buildcache/packages
       # Save package cache.
       - save_cache:
           key: 'cache001-package-fa62c0992256d7cd9380cf28234da513679b57c6-{{checksum ".buildcache/cache-keys/package-fa62c0992256d7cd9380cf28234da513679b57c6"}}'
           paths:
-            - .buildcache/packages/store
+            - .buildcache/packages
       - store_artifacts:
-          path: .buildcache/packages/store
+          path: .buildcache/packages
           destination: packages
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
@@ -922,14 +922,14 @@ jobs:
           - cache001-base_1a0e_{{checksum ".buildcache/cache-keys/base-1a0eebdb7c8e017a66a042afd9f319a57d761a4c"}}
       - run: make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
-      - run: ls -lahR .buildcache/packages/store
+      - run: ls -lahR .buildcache/packages
       # Save package cache.
       - save_cache:
           key: 'cache001-package-d5cf587df2a3bd102cbf919c295ad21f5c7b8eb3-{{checksum ".buildcache/cache-keys/package-d5cf587df2a3bd102cbf919c295ad21f5c7b8eb3"}}'
           paths:
-            - .buildcache/packages/store
+            - .buildcache/packages
       - store_artifacts:
-          path: .buildcache/packages/store
+          path: .buildcache/packages
           destination: packages
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
@@ -984,14 +984,14 @@ jobs:
           - cache001-base_1a0e_{{checksum ".buildcache/cache-keys/base-1a0eebdb7c8e017a66a042afd9f319a57d761a4c"}}
       - run: make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
-      - run: ls -lahR .buildcache/packages/store
+      - run: ls -lahR .buildcache/packages
       # Save package cache.
       - save_cache:
           key: 'cache001-package-e061e451e98e6f06593c7a78b8150e4a6f125feb-{{checksum ".buildcache/cache-keys/package-e061e451e98e6f06593c7a78b8150e4a6f125feb"}}'
           paths:
-            - .buildcache/packages/store
+            - .buildcache/packages
       - store_artifacts:
-          path: .buildcache/packages/store
+          path: .buildcache/packages
           destination: packages
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
@@ -1046,14 +1046,14 @@ jobs:
           - cache001-base_1a0e_{{checksum ".buildcache/cache-keys/base-1a0eebdb7c8e017a66a042afd9f319a57d761a4c"}}
       - run: make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
-      - run: ls -lahR .buildcache/packages/store
+      - run: ls -lahR .buildcache/packages
       # Save package cache.
       - save_cache:
           key: 'cache001-package-c21f2ce5ea0294a673d5a4d57941733f19c4f873-{{checksum ".buildcache/cache-keys/package-c21f2ce5ea0294a673d5a4d57941733f19c4f873"}}'
           paths:
-            - .buildcache/packages/store
+            - .buildcache/packages
       - store_artifacts:
-          path: .buildcache/packages/store
+          path: .buildcache/packages
           destination: packages
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
@@ -1108,14 +1108,14 @@ jobs:
           - cache001-base_1a0e_{{checksum ".buildcache/cache-keys/base-1a0eebdb7c8e017a66a042afd9f319a57d761a4c"}}
       - run: make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
-      - run: ls -lahR .buildcache/packages/store
+      - run: ls -lahR .buildcache/packages
       # Save package cache.
       - save_cache:
           key: 'cache001-package-191f68d13c18858af887523f34ff61c6cdeeb782-{{checksum ".buildcache/cache-keys/package-191f68d13c18858af887523f34ff61c6cdeeb782"}}'
           paths:
-            - .buildcache/packages/store
+            - .buildcache/packages
       - store_artifacts:
-          path: .buildcache/packages/store
+          path: .buildcache/packages
           destination: packages
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
