@@ -153,6 +153,8 @@ module('Integration | Component | auth form', function(hooks) {
     this.owner.unregister('service:auth');
     this.owner.register('service:auth', workingAuthService);
     this.auth = this.owner.lookup('service:auth');
+
+    // This allows us to spy on an object's specific function
     let authSpy = sinon.spy(this.get('auth'), 'authenticate');
     let methods = {
       'foo/': {
@@ -171,9 +173,18 @@ module('Integration | Component | auth form', function(hooks) {
     await component.login();
 
     await settled();
+
+    // verify the auth.authenticate spy was called once
     assert.ok(authSpy.calledOnce, 'a call to authenticate was made');
+    // inspect its arguments
     let { data } = authSpy.getCall(0).args[0];
+
     assert.equal(data.path, 'foo', 'uses the id for the path');
+
+    /*
+    Tear down the spy and revert to using the original function.
+    Do this when you only want to use the spy for a single test to avoid accidentally using it other tests.
+    */
     authSpy.restore();
     server.shutdown();
   });
