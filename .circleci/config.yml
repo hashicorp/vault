@@ -47,12 +47,12 @@ jobs:
     - restore_cache:
         key: cache001-package-191f68d13c18858af887523f34ff61c6cdeeb782-{{checksum ".buildcache/cache-keys/package-191f68d13c18858af887523f34ff61c6cdeeb782"}}
     - run:
-        command: ls -lahR .buildcache/packages/store
+        command: ls -lahR .buildcache/packages
     - store_artifacts:
         destination: packages-build-release
-        path: .buildcache/packages/store
+        path: .buildcache/packages
     - run:
-        command: tar -czf packages-build-release.tar.gz .buildcache/packages/store
+        command: tar -czf packages-build-release.tar.gz .buildcache/packages
     - store_artifacts:
         destination: packages-build-release.tar.gz
         path: packages-build-release.tar.gz
@@ -61,6 +61,11 @@ jobs:
     - store_artifacts:
         destination: aliases-build-release.tar.gz
         path: aliases-build-release.tar.gz
+    - run:
+        command: tar -czf meta-build-release.tar.gz .buildcache/packages/store/*.json
+    - store_artifacts:
+        destination: meta-build-release.tar.gz
+        path: meta-build-release.tar.gz
     environment:
     - AUTO_INSTALL_TOOLS: 'YES'
     - PRODUCT_REVISION: ''
