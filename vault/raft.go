@@ -112,10 +112,10 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 	case nil:
 		// If this is HA-only and no TLS keyring is found, that means the
 		// cluster has not been bootstrapped or joined. We return early here in
-		// this case. If we return here, the raft object has not be instantiated,
+		// this case. If we return here, the raft object has not been instantiated,
 		// and a bootstrap call should be made.
 		if c.isRaftHAOnly() {
-			c.logger.Trace("skipping raft backend setup during unseal, bootstrap should be started")
+			c.logger.Trace("skipping raft backend setup during unseal, bootstrap must be started")
 			return nil
 		}
 
