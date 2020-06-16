@@ -57,11 +57,6 @@ jobs:
         destination: packages-build-release.tar.gz
         path: packages-build-release.tar.gz
     - run:
-        command: tar -czf aliases-build-release.tar.gz .buildcache/packages/by-alias
-    - store_artifacts:
-        destination: aliases-build-release.tar.gz
-        path: aliases-build-release.tar.gz
-    - run:
         command: tar -czf meta-build-release.tar.gz .buildcache/packages/store/*.json
     - store_artifacts:
         destination: meta-build-release.tar.gz
