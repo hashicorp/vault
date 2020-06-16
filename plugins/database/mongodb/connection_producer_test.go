@@ -38,12 +38,12 @@ func TestInit_clientTLS(t *testing.T) {
 	)
 	serverCert := certhelpers.NewCert(t,
 		certhelpers.CommonName("server"),
-		certhelpers.Dns("localhost"),
+		certhelpers.DNS("localhost"),
 		certhelpers.Parent(caCert),
 	)
 	clientCert := certhelpers.NewCert(t,
 		certhelpers.CommonName("client"),
-		certhelpers.Dns("client"),
+		certhelpers.DNS("client"),
 		certhelpers.Parent(caCert),
 	)
 
