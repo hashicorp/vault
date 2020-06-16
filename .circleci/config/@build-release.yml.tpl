@@ -1,8 +1,9 @@
 {{- $data := (datasource "package-list") -}}
 {{- /*
-  It is mandatory to set RELEASE_BUILD_WORKFLOW_NAME when rendering this template.
+  BUILD_ID is set by the staging workflow to produce an identifiable build.
 */ -}}
-{{- $workflowName := (env.Getenv "RELEASE_BUILD_WORKFLOW_NAME" "build-release") -}}
+{{- $buildID := (env.Getenv "BUILD_ID" "standalone") -}}
+{{- $workflowName := (env.Getenv "RELEASE_BUILD_WORKFLOW_NAME" "build-standalone") -}}
 {{- $packages := $data.packages -}}
 {{- $layers := $data.layers -}}
 {{- $revision := (env.Getenv "PRODUCT_REVISION") -}}
@@ -174,17 +175,17 @@ jobs:
       # Surface each zip as a separate artifact.
       - store_artifacts:
           path: .buildcache/packages
-          destination: packages-{{$workflowName}}
+          destination: packages-{{$buildID}}
       # Surface a tarball of the whole package store as an artifact.
-      - run: tar -czf packages-{{$workflowName}}.tar.gz .buildcache/packages
+      - run: tar -czf packages-{{$buildID}}.tar.gz .buildcache/packages
       - store_artifacts:
-          path: packages-{{$workflowName}}.tar.gz
-          destination: packages-{{$workflowName}}.tar.gz
+          path: packages-{{$buildID}}.tar.gz
+          destination: packages-{{$buildID}}.tar.gz
       # Surface a tarball of just the metadata files.
-      - run: tar -czf meta-{{$workflowName}}.tar.gz .buildcache/packages/store/*.json
+      - run: tar -czf meta-{{$buildID}}.tar.gz .buildcache/packages/store/*.json
       - store_artifacts:
-          path: meta-{{$workflowName}}.tar.gz
-          destination: meta-{{$workflowName}}.tar.gz
+          path: meta-{{$buildID}}.tar.gz
+          destination: meta-{{$buildID}}.tar.gz
 
 commands:
   {{- range $packages }}

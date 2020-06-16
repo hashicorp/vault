@@ -49,18 +49,18 @@ jobs:
     - run:
         command: ls -lahR .buildcache/packages
     - store_artifacts:
-        destination: packages-build-release
+        destination: packages-standalone
         path: .buildcache/packages
     - run:
-        command: tar -czf packages-build-release.tar.gz .buildcache/packages
+        command: tar -czf packages-standalone.tar.gz .buildcache/packages
     - store_artifacts:
-        destination: packages-build-release.tar.gz
-        path: packages-build-release.tar.gz
+        destination: packages-standalone.tar.gz
+        path: packages-standalone.tar.gz
     - run:
-        command: tar -czf meta-build-release.tar.gz .buildcache/packages/store/*.json
+        command: tar -czf meta-standalone.tar.gz .buildcache/packages/store/*.json
     - store_artifacts:
-        destination: meta-build-release.tar.gz
-        path: meta-build-release.tar.gz
+        destination: meta-standalone.tar.gz
+        path: meta-standalone.tar.gz
     environment:
     - AUTO_INSTALL_TOOLS: 'YES'
     - PRODUCT_REVISION: ''
@@ -1706,7 +1706,7 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - PRODUCT_REVISION: ''
 workflows:
-  build-release:
+  build-standalone:
     jobs:
     - cache-builder-images:
         filters:
