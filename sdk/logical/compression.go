@@ -29,7 +29,7 @@ func NewCompressor(store Storage) *Compressor {
 }
 
 func (c *Compressor) Put(ctx context.Context, entry *StorageEntry) error {
-	defer metrics.MeasureSince([]string{"storage", "compression", "compress_time"}, time.Now())
+	//defer metrics.MeasureSince([]string{"storage", "compression", "compress_time"}, time.Now())
 	var ht [65536]int
 	srcLen := len(entry.Value)
 	dstLen := headerLen + lz4.CompressBlockBound(srcLen)
@@ -46,13 +46,16 @@ func (c *Compressor) Put(ctx context.Context, entry *StorageEntry) error {
 	}
 	dst[0] = v1
 	if sz == 0 {
+		//fmt.Printf("Incomprsesible: %s\n", string(entry.Value))
 		// Incompressible
 		dst[1] = algoNone
 		copy(dst[2:], entry.Value)
 		entry.Value = dst[0 : len(entry.Value)+2]
-		metrics.AddSample([]string{"storage", "compression", "delta"}, 0)
+		//metrics.AddSample([]string{"storage", "compression", "delta"}, 0)
 	} else {
-		metrics.AddSample([]string{"storage", "compression", "delta"}, float32(srcLen-(sz+headerLen)))
+		//	delta := float32(srcLen - (sz + headerLen))
+		//fmt.Printf("Delta: %f\n", delta)
+		//metrics.AddSample([]string{"storage", "compression", "delta"}, delta)
 		dst[1] = algoLZ4
 		binary.LittleEndian.PutUint32(dst[2:6], uint32(srcLen))
 		entry.Value = dst[0 : sz+headerLen]
