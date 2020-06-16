@@ -43,7 +43,7 @@ func CompilePlugin(name, pluginName, srcDir, tmpDir string) (string, string, str
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
-		return err
+		return "", "", "", err
 	}
 
 	sha256value := fmt.Sprintf("%x", h.Sum(nil))
