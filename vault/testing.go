@@ -33,7 +33,6 @@ import (
 	"golang.org/x/net/http2"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	hclog "github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
@@ -1016,7 +1015,7 @@ type TestClusterOptions struct {
 	// core in cluster will have 0, second 1, etc.
 	// If the backend is shared across the cluster (i.e. is not Raft) then it
 	// should return nil when coreIdx != 0.
-	PhysicalFactory func(t testing.T, coreIdx int, logger hclog.Logger) *PhysicalBackendBundle
+	PhysicalFactory func(t testing.T, coreIdx int, logger log.Logger) *PhysicalBackendBundle
 	// FirstCoreNumber is used to assign a unique number to each core within
 	// a multi-cluster setup.
 	FirstCoreNumber   int
@@ -1056,7 +1055,7 @@ type certInfo struct {
 }
 
 type TestLogger struct {
-	hclog.Logger
+	log.Logger
 	Path string
 	File *os.File
 }
