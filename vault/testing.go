@@ -1686,7 +1686,6 @@ func (testCluster *TestCluster) newCore(
 			testCluster.Logger.Info("created physical backend", "instance", idx)
 			coreConfig.Physical = physBundle.Backend
 			localConfig.Physical = physBundle.Backend
-			//base.Physical = physBundle.Backend
 			haBackend := physBundle.HABackend
 			if haBackend == nil {
 				if ha, ok := physBundle.Backend.(physical.HABackend); ok {
