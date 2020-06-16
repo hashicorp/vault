@@ -765,8 +765,8 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			return false, errors.New("unable to fetch leadership entry")
 		}
 
-		uuid := coreLeaderPrefix + keys[0]
-		entry, err := c.barrier.Get(ctx, uuid)
+		leadershipEntry := coreLeaderPrefix + keys[0]
+		entry, err := c.barrier.Get(ctx, leadershipEntry)
 		if err != nil {
 			return false, err
 		}
@@ -1088,8 +1088,7 @@ func (c *Core) RaftBootstrap(ctx context.Context, onInit bool) error {
 	}
 
 	if !onInit {
-		// Generate the TLS Keyring info for
-		// SetupCluster to consume
+		// Generate the TLS Keyring info for SetupCluster to consume
 		raftTLS, err := c.raftCreateTLSKeyring(ctx)
 		if err != nil {
 			return errwrap.Wrapf("could not generate TLS keyring during bootstrap: {{err}}", err)
