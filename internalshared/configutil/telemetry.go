@@ -25,6 +25,7 @@ import (
 
 const (
 	PrometheusDefaultRetentionTime = 24 * time.Hour
+	UsageGaugeDefaultPeriod        = 30 * time.Second
 )
 
 // Telemetry is the telemetry configuration for the server
@@ -35,6 +36,11 @@ type Telemetry struct {
 	DisableHostname     bool   `hcl:"disable_hostname"`
 	EnableHostnameLabel bool   `hcl:"enable_hostname_label"`
 	MetricsPrefix       string `hcl:"metrics_prefix"`
+	ClusterName         string `hcl:"cluster_name"`
+	UsageGaugePeriod    time.Duration
+	UsageGaugePeriodRaw interface{} `hcl:"usage_gauge_period"`
+
+	MaximumGaugeCardinality int `hcl:"maximum_gauge_cardinality"`
 
 	// Circonus: see https://github.com/circonus-labs/circonus-gometrics
 	// for more details on the various configuration options.
@@ -166,6 +172,16 @@ func parseTelemetry(result *SharedConfig, list *ast.ObjectList) error {
 		result.Telemetry.PrometheusRetentionTimeRaw = nil
 	} else {
 		result.Telemetry.PrometheusRetentionTime = PrometheusDefaultRetentionTime
+	}
+
+	if result.Telemetry.UsageGaugePeriodRaw != nil {
+		var err error
+		if result.Telemetry.UsageGaugePeriod, err = parseutil.ParseDurationSecond(result.Telemetry.UsageGaugePeriodRaw); err != nil {
+			return err
+		}
+		result.Telemetry.UsageGaugePeriodRaw = nil
+	} else {
+		result.Telemetry.UsageGaugePeriod = UsageGaugeDefaultPeriod
 	}
 
 	return nil

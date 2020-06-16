@@ -35,6 +35,10 @@
     "statsd_address":"bar",
     "statsite_address":"foo",
     "disable_hostname":true,
+    "cluster_name": "test2",
+    "usage_gauge_period": "60s",
+    "maximum_gauge_cardinality": 125,
+
     "circonus_api_token": "0",
     "circonus_api_app": "vault",
     "circonus_api_url": "http://api.circonus.com/v2",
