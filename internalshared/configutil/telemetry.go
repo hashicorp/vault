@@ -175,11 +175,15 @@ func parseTelemetry(result *SharedConfig, list *ast.ObjectList) error {
 	}
 
 	if result.Telemetry.UsageGaugePeriodRaw != nil {
-		var err error
-		if result.Telemetry.UsageGaugePeriod, err = parseutil.ParseDurationSecond(result.Telemetry.UsageGaugePeriodRaw); err != nil {
-			return err
+		if result.Telemetry.UsageGaugePeriodRaw == "none" {
+			result.Telemetry.UsageGaugePeriod = 0
+		} else {
+			var err error
+			if result.Telemetry.UsageGaugePeriod, err = parseutil.ParseDurationSecond(result.Telemetry.UsageGaugePeriodRaw); err != nil {
+				return err
+			}
+			result.Telemetry.UsageGaugePeriodRaw = nil
 		}
-		result.Telemetry.UsageGaugePeriodRaw = nil
 	} else {
 		result.Telemetry.UsageGaugePeriod = UsageGaugeDefaultPeriod
 	}
@@ -192,14 +196,12 @@ func parseTelemetry(result *SharedConfig, list *ast.ObjectList) error {
 }
 
 type SetupTelemetryOpts struct {
-	Config              *Telemetry
-	Ui                  cli.Ui
-	ServiceName         string
-	DisplayName         string
-	UserAgent           string
-	ClusterName         string
-	MaxGaugeCardinality int
-	GaugeInterval       time.Duration
+	Config      *Telemetry
+	Ui          cli.Ui
+	ServiceName string
+	DisplayName string
+	UserAgent   string
+	ClusterName string
 }
 
 // SetupTelemetry is used to setup the telemetry sub-systems and returns the
@@ -352,8 +354,8 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	// and to any backend.
 	wrapper := &metricsutil.ClusterMetricSink{
 		ClusterName:         opts.ClusterName,
-		MaxGaugeCardinality: opts.MaxGaugeCardinality,
-		GaugeInterval:       opts.GaugeInterval,
+		MaxGaugeCardinality: opts.Config.MaximumGaugeCardinality,
+		GaugeInterval:       opts.Config.UsageGaugePeriod,
 		Sink:                fanout,
 	}
 
