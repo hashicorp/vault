@@ -1,0 +1,21 @@
+language: go
+sudo: false
+install:
+- go get golang.org/x/crypto/ssh
+- go get -v -tags 'fixtures acceptance' ./...
+- go get github.com/wadey/gocovmerge
+- go get github.com/mattn/goveralls
+- go get golang.org/x/tools/cmd/goimports
+go:
+- "1.11"
+- tip
+env:
+  global:
+  - secure: "5XfjlctyrfCccnP8hSUFv3bmGsYTS912L"
+before_script:
+- go vet ./...
+script:
+- ./script/coverage
+- ./script/format
+after_success:
+- $HOME/gopath/bin/goveralls -service=travis-ci -coverprofile=cover.out

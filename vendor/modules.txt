@@ -350,6 +350,7 @@ github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms
 github.com/hashicorp/go-kms-wrapping/wrappers/awskms
 github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault
 github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms
+github.com/hashicorp/go-kms-wrapping/wrappers/huaweicloudkms
 github.com/hashicorp/go-kms-wrapping/wrappers/ocikms
 github.com/hashicorp/go-kms-wrapping/wrappers/transit
 # github.com/hashicorp/go-kms-wrapping/entropy v0.1.0
@@ -507,6 +508,20 @@ github.com/hashicorp/vault/sdk/queue
 github.com/hashicorp/vault/sdk/version
 # github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d
 github.com/hashicorp/yamux
+# github.com/huaweicloud/golangsdk v0.0.0-20200304081349-45ec0797f2a4
+github.com/huaweicloud/golangsdk
+github.com/huaweicloud/golangsdk/internal
+github.com/huaweicloud/golangsdk/openstack
+github.com/huaweicloud/golangsdk/openstack/identity/v2/tenants
+github.com/huaweicloud/golangsdk/openstack/identity/v2/tokens
+github.com/huaweicloud/golangsdk/openstack/identity/v3/domains
+github.com/huaweicloud/golangsdk/openstack/identity/v3/endpoints
+github.com/huaweicloud/golangsdk/openstack/identity/v3/projects
+github.com/huaweicloud/golangsdk/openstack/identity/v3/services
+github.com/huaweicloud/golangsdk/openstack/identity/v3/tokens
+github.com/huaweicloud/golangsdk/openstack/kms/v1/keys
+github.com/huaweicloud/golangsdk/openstack/utils
+github.com/huaweicloud/golangsdk/pagination
 # github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 github.com/influxdata/influxdb/client/v2
 github.com/influxdata/influxdb/models
