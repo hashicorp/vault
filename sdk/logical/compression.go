@@ -46,15 +46,12 @@ func (c *Compressor) Put(ctx context.Context, entry *StorageEntry) error {
 	}
 	dst[0] = v1
 	if sz == 0 {
-		//fmt.Printf("Incomprsesible: %s\n", string(entry.Value))
-		// Incompressible
 		dst[1] = algoNone
 		copy(dst[2:], entry.Value)
 		entry.Value = dst[0 : len(entry.Value)+2]
 		//metrics.AddSample([]string{"storage", "compression", "delta"}, 0)
 	} else {
 		//	delta := float32(srcLen - (sz + headerLen))
-		//fmt.Printf("Delta: %f\n", delta)
 		//metrics.AddSample([]string{"storage", "compression", "delta"}, delta)
 		dst[1] = algoLZ4
 		binary.LittleEndian.PutUint32(dst[2:6], uint32(srcLen))
