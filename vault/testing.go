@@ -1590,7 +1590,7 @@ func (cluster *TestCluster) StopCore(t testing.T, idx int) {
 
 // Restart a TestClusterCore that was stopped, by replacing the
 // underlying Core.
-func (cluster *TestCluster) RestartCore(t testing.T, idx int, opts *TestClusterOptions) {
+func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOptions) {
 	t.Helper()
 
 	if idx < 0 || idx > len(cluster.Cores) {

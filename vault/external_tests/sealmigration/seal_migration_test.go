@@ -372,7 +372,7 @@ func migratePost14(
 			teststorage.CloseRaftStorage(t, cluster, i)
 		}
 		modifyCoreConfig(cluster.Cores[i])
-		cluster.RestartCore(t, i, opts)
+		cluster.StartCore(t, i, opts)
 
 		cluster.Cores[i].Client.SetToken(rootToken)
 		unsealMigrate(t, cluster.Cores[i].Client, recoveryKeys, true)
@@ -397,7 +397,7 @@ func migratePost14(
 	leader.Client.SetToken(rootToken)
 
 	// Bring core 0 back up
-	cluster.RestartCore(t, 0, opts)
+	cluster.StartCore(t, 0, opts)
 	cluster.Cores[0].Client.SetToken(rootToken)
 
 	// TODO look into why this is different for different migration directions,
