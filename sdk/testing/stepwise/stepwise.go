@@ -37,17 +37,13 @@ type StepwiseEnvironment interface {
 	Setup() error
 	Client() (*api.Client, error)
 	Teardown() error
-	Name() string
+	Name() string // maybe?
 
 	// ExpandPath adds any Namespace or mount path to the user defined path
 	ExpandPath(string) string
 
 	// MountPath returns the path the plugin is mounted at
 	MountPath() string
-
-	// BarrierKeys returns the keys used to seal/unseal the cluster. Used for
-	// debugging. TODO verify we should provide this
-	//BarrierKeys()        [][]byte
 
 	// RootToken returns the root token of the cluster, used for making requests
 	// as well as administrative tasks
