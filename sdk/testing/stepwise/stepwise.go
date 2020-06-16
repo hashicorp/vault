@@ -85,7 +85,7 @@ type EnvironmentOptions struct {
 	// omitted the mount path will default to the PluginName with a random suffix.
 	MountPathPrefix string
 
-	// Name is used to register the plugin. This can be arbitray but should be a
+	// Name is used to register the plugin. This can be arbitrary but should be a
 	// reasonable value. For an example, if the plugin in test is a secret backend
 	// that generates UUIDs with the name "vault-plugin-secrets-uuid", then "uuid"
 	// or "test-uuid" would be reasonable. The name is used for lookups in the
