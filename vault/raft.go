@@ -722,8 +722,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		return false, errors.New("raft backend not in use")
 	}
 
-	// NOTE: We need to support initialized core for the ha_storage case
-
 	init, err := c.Initialized(ctx)
 	if err != nil {
 		return false, errwrap.Wrapf("failed to check if core is initialized: {{err}}", err)
@@ -977,11 +975,7 @@ func (c *Core) isRaftHAOnly() bool {
 	_, isRaftHA := c.ha.(*raft.RaftBackend)
 	_, isRaftStorage := c.underlyingPhysical.(*raft.RaftBackend)
 
-	if isRaftHA && !isRaftStorage {
-		return true
-	}
-
-	return false
+	return isRaftHA && !isRaftStorage
 }
 
 func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, raftInfo *raftInformation) error {
@@ -1064,7 +1058,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 
 // RaftBootstrap performs bootstrapping of a raft cluster if core contains a raft
 // backend. If raft is not part for the storage or HA storage backend, this
-// call results in a no-op
+// call results in an error.
 func (c *Core) RaftBootstrap(ctx context.Context, onInit bool) error {
 	if c.logger.IsDebug() {
 		c.logger.Debug("bootstrapping raft backend")

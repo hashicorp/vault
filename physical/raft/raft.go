@@ -1136,10 +1136,6 @@ func (b *RaftBackend) HAEnabled() bool { return true }
 
 // HAEnabled is the implementation of the HABackend interface
 func (b *RaftBackend) LockWith(key, value string) (physical.Lock, error) {
-	// if b.raft == nil {
-	// 	return nil, errors.New("lock with: missing raft instance")
-	// }
-
 	return &RaftLock{
 		key:   key,
 		value: []byte(value),
@@ -1185,10 +1181,8 @@ func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}, leaderNotifyCh <-ch
 // Lock blocks until we become leader or are shutdown. It returns a channel that
 // is closed when we detect a loss of leadership.
 func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
-	raftInitialized := l.b.Initialized()
-
 	// If not initialized, block until it is
-	if !raftInitialized {
+	if !l.b.Initialized() {
 		select {
 		case <-l.b.raftInitCh:
 		case <-stopCh:
@@ -1201,6 +1195,7 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 	// Ensure that we still have a raft instance after grabbing the read lock
 	if l.b.raft == nil {
+		l.b.l.RUnlock()
 		return nil, errors.New("attempted to grab a lock on a nil raft backend")
 	}
 
