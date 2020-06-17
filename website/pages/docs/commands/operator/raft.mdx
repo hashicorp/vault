@@ -145,6 +145,8 @@ Usage: vault operator raft snapshot save <snapshot_file>
 	  $ vault operator raft snapshot save raft.snap
 ```
 
+~> **Note:** Snapshot is not supported when Raft is used for `ha_storage`.
+
 ### snapshot restore
 
 Restores a snapshot of Vault data taken with `vault operator raft snapshot save`.
