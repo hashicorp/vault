@@ -31,7 +31,8 @@ const (
 	putOp
 	restoreCallbackOp
 
-	chunkingPrefix = "raftchunking/"
+	chunkingPrefix   = "raftchunking/"
+	databaseFilename = "vault.db"
 )
 
 var (
@@ -81,10 +82,6 @@ type FSM struct {
 	restoreCb restoreCallback
 
 	chunker *raftchunking.ChunkingBatchingFSM
-
-	// testSnapshotRestoreError is used in tests to simulate an error while
-	// restoring a snapshot.
-	testSnapshotRestoreError bool
 }
 
 // NewFSM constructs a FSM using the given directory
@@ -116,7 +113,7 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 		ctx: context.Background(),
 	})
 
-	dbPath := filepath.Join(path, "vault.db")
+	dbPath := filepath.Join(path, databaseFilename)
 	if err := f.openDBFile(dbPath); err != nil {
 		return nil, errwrap.Wrapf("failed to open bolt file: {{err}}", err)
 	}
@@ -618,7 +615,7 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 		return err
 	}
 
-	dbPath := filepath.Join(f.path, "vault.db")
+	dbPath := filepath.Join(f.path, databaseFilename)
 
 	f.logger.Info("installing snapshot to FSM")
 

@@ -207,7 +207,7 @@ func (f *BoltSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, error)
 		return nil, errors.New("can not open empty snapshot ID")
 	}
 
-	filename := filepath.Join(f.path, id, "vault.db")
+	filename := filepath.Join(f.path, id, databaseFilename)
 	boltDB, err := bolt.Open(filename, 0666, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return nil, err
@@ -261,7 +261,7 @@ func (f *BoltSnapshotStore) openFromFile(id string) (*raft.SnapshotMeta, io.Read
 		return nil, nil, err
 	}
 
-	filename := filepath.Join(f.path, id, "vault.db")
+	filename := filepath.Join(f.path, id, databaseFilename)
 	readCloser := &boltSnapshotInstaller{
 		meta:       meta,
 		ReadCloser: ioutil.NopCloser(strings.NewReader(filename)),
@@ -274,7 +274,11 @@ func (f *BoltSnapshotStore) openFromFile(id string) (*raft.SnapshotMeta, io.Read
 // ReapSnapshots reaps any snapshots beyond the retain count.
 func (f *BoltSnapshotStore) ReapSnapshots() error {
 	snapshots, err := ioutil.ReadDir(f.path)
-	if err != nil {
+	switch {
+	case err == nil:
+	case os.IsNotExist(err):
+		return nil
+	default:
 		f.logger.Error("failed to scan snapshot directory", "error", err)
 		return err
 	}
@@ -324,7 +328,7 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 	}
 
 	// Create the BoltDB file
-	dbPath := filepath.Join(path, "vault.db")
+	dbPath := filepath.Join(path, databaseFilename)
 	boltDB, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return err
