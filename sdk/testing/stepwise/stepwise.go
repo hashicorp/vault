@@ -42,8 +42,8 @@ type Environment interface {
 	// cluster created in Setup and managed by this Environment.
 	Client() (*api.Client, error)
 
-	// Teardown is responsible for destroying any infrastructure created during
-	// Setup or other steps
+	// Teardown is responsible for destroying any and all infrastructure created
+	// during Setup or otherwise over the course of executing test cases.
 	Teardown() error
 
 	// Name returns the name of the environment provider, e.g. Docker, Minikube,
@@ -164,10 +164,9 @@ type Case struct {
 	// Steps are the set of operations that are run for this test case.
 	Steps []Step
 
-	// SkipTeardown allows the TestTeardownFunc to be skipped, leaving any
-	// infrastructure created during Environment setup to remain. Depending on the
-	// Environment used this could incur costs the user is responsible for.
-	// TODO maybe better wording here
+	// SkipTeardown allows the Environment TeardownFunc to be skipped, leaving any
+	// infrastructure created after the test exists. Depending on the Environment
+	// used this could incur costs the user is responsible for.
 	SkipTeardown bool
 }
 
