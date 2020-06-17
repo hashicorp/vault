@@ -10,6 +10,7 @@ export default Mixin.create({
   loading: or('save.isRunning', 'submitSuccess.isRunning'),
   onEnable() {},
   onDisable() {},
+  onPromote() {},
   submitHandler: task(function*(action, clusterMode, data, event) {
     let replicationMode = (data && data.replicationMode) || this.get('replicationMode');
     if (event && event.preventDefault) {
@@ -22,7 +23,11 @@ export default Mixin.create({
       data = Object.keys(data).reduce((newData, key) => {
         var val = data[key];
         if (isPresent(val)) {
-          newData[key] = val;
+          if (key === 'dr_operation_token_primary' || key === 'dr_operation_token_promote') {
+            newData['dr_operation_token'] = val;
+          } else {
+            newData[key] = val;
+          }
         }
         return newData;
       }, {});
@@ -87,6 +92,9 @@ export default Mixin.create({
     cluster.rollbackAttributes();
     if (action === 'disable') {
       yield this.onDisable();
+    }
+    if (action === 'promote') {
+      yield this.onPromote();
     }
     if (action === 'enable') {
       /// onEnable is a method available only to route vault.cluster.replication.index
