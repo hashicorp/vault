@@ -102,7 +102,7 @@ type MountOptions struct {
 	// or "test-uuid" would be reasonable. The name is used for lookups in the
 	// catalog. See "name" in the "Register Plugin" endpoint docs:
 	// - https://www.vaultproject.io/api-docs/system/plugins-catalog#register-plugin
-	Name string
+	RegistryName string
 
 	// PluginType is the optional type of plugin. See PluginType const defined
 	// above
