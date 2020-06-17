@@ -186,12 +186,6 @@ func Run(tt TestT, c Case) {
 	// slow and generally require some outside configuration.
 	checkShouldRun(tt)
 
-	// We require verbose mode so that the user knows what is going on.
-	if !testing.Verbose() {
-		tt.Fatal("Acceptance tests must be run with the -v flag on tests")
-		return
-	}
-
 	// Run the PreCheck if we have it
 	if c.PreCheck != nil {
 		c.PreCheck()
@@ -334,5 +328,21 @@ func makeRequest(tt TestT, driver Environment, step Step) (*api.Secret, error) {
 		return client.Logical().Delete(path)
 	default:
 		return nil, fmt.Errorf("invalid operation: %s", step.Operation)
+	}
+}
+
+func checkShouldRun(tt TestT) {
+	tt.Helper()
+	if os.Getenv(TestEnvVar) == "" {
+		tt.Skip(fmt.Sprintf(
+			"Acceptance tests skipped unless env '%s' set",
+			TestEnvVar))
+		return
+	}
+
+	// We require verbose mode so that the user knows what is going on.
+	if !testing.Verbose() {
+		tt.Fatal("Acceptance tests must be run with the -v flag on tests")
+		return
 	}
 }
