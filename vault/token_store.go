@@ -1980,7 +1980,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				countCubbyholeKeys++
 				if countCubbyholeKeys%500 == 0 {
 					percentComplete := float64(index)/float64(len(cubbyholeKeys))*100
-					ts.logger.Info("checking if there are invalid cubbyholes", "progress", countParentList, "percent_complete", percentComplete)
+					ts.logger.Info("checking if there are invalid cubbyholes", "progress", countCubbyholeKeys, "percent_complete", percentComplete)
 				}
 
 				key := strings.TrimSuffix(key, "/")
