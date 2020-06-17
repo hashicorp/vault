@@ -292,6 +292,7 @@ func Run(tt TestT, c Case) {
 }
 
 func makeRequest(tt TestT, driver Environment, step Step) (*api.Secret, error) {
+	tt.Helper()
 	client, err := driver.Client()
 	if err != nil {
 		return nil, err
