@@ -1883,7 +1883,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				countAccessorList++
 				if countAccessorList%500 == 0 {
 					percentComplete := float64(index)/float64(len(saltedAccessorList))*100
-					ts.logger.Info("checking if accessors contain valid tokens", "progress", countParentList, "percent_complete", percentComplete)
+					ts.logger.Info("checking if accessors contain valid tokens", "progress", countAccessorList, "percent_complete", percentComplete)
 				}
 
 				accessorEntry, err := ts.lookupByAccessor(quitCtx, saltedAccessor, true, true)
