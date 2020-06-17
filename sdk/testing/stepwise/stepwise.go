@@ -156,11 +156,6 @@ type Case struct {
 	// will be used to drive the tests
 	Environment Environment
 
-	// Precheck, if non-nil, will be called once before the test case
-	// runs at all. This can be used for some validation prior to the
-	// test running.
-	PreCheck func()
-
 	// Steps are the set of operations that are run for this test case.
 	Steps []Step
 
@@ -186,13 +181,7 @@ func Run(tt TestT, c Case) {
 	// slow and generally require some outside configuration.
 	checkShouldRun(tt)
 
-	// Run the PreCheck if we have it
-	if c.PreCheck != nil {
-		c.PreCheck()
-	}
-
 	// Create an in-memory Vault core
-	// TODO use test logger if available?
 	logger := logging.NewVaultLogger(log.Trace)
 	if c.Environment == nil {
 		tt.Fatal("nil driver in acceptance test")
