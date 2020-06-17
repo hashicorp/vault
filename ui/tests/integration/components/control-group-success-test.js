@@ -11,12 +11,17 @@ import controlGroupSuccess from '../../pages/components/control-group-success';
 
 const component = create(controlGroupSuccess);
 
+/*
+Another example of stubbing a service by extending the Ember class.
+You can make this stub even more useful by using sinon to stub specific methods and controlling their result.
+*/
 const controlGroupService = Service.extend({
   deleteControlGroupToken: sinon.stub(),
   markTokenForUnwrap: sinon.stub(),
 });
 
 const routerService = Service.extend({
+  // force any call to transitionTo to resolve
   transitionTo: sinon.stub().returns(resolve()),
 });
 

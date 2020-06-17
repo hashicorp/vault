@@ -4,6 +4,7 @@ import { render } from '@ember/test-helpers';
 import { run } from '@ember/runloop';
 import hbs from 'htmlbars-inline-precompile';
 import Service from '@ember/service';
+import sinon from 'sinon';
 
 /*
 Notice that Ember gives us the ability to create a stub service by
@@ -17,6 +18,8 @@ const Permissions = Service.extend({
   hasNavPermission() {
     return this.globPaths ? true : false;
   },
+  // we can accomplish similar behavior above by using a sinon stub
+  // hasNavPermission: sinon.stub().returns(console.log('hello')),
 });
 
 module('Integration | Helper | has-permission', function(hooks) {
@@ -27,9 +30,9 @@ module('Integration | Helper | has-permission', function(hooks) {
     Thanks to setupRenderingTest above, which gives us access to
     Ember's dependency injection system, we can ensure that the
     helper here uses our stub permissions service instead of the
-    real one. We do this by registering the service, and then
-    pointing the test instance of the permissions service to the one
-    we just registered.
+    real one. We do this by registering the service and pointing the
+    test instance of the permissions service to the one we just
+    registered.
     */
     this.owner.register('service:permissions', Permissions);
     this.permissions = this.owner.lookup('service:permissions');
