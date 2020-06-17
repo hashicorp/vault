@@ -33,7 +33,6 @@ import (
 	"golang.org/x/net/http2"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	hclog "github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
@@ -1016,7 +1015,7 @@ type TestClusterOptions struct {
 	// core in cluster will have 0, second 1, etc.
 	// If the backend is shared across the cluster (i.e. is not Raft) then it
 	// should return nil when coreIdx != 0.
-	PhysicalFactory func(t testing.T, coreIdx int, logger hclog.Logger) *PhysicalBackendBundle
+	PhysicalFactory func(t testing.T, coreIdx int, logger log.Logger) *PhysicalBackendBundle
 	// FirstCoreNumber is used to assign a unique number to each core within
 	// a multi-cluster setup.
 	FirstCoreNumber   int
@@ -1035,14 +1034,6 @@ type TestClusterOptions struct {
 	// RaftAddressProvider should only be specified if the underlying physical
 	// storage is Raft.
 	RaftAddressProvider raftlib.ServerAddressProvider
-
-	// JoinRaftFollowers specifies that each follower core will be joined to
-	// the raft cluster just before it is unsealed in InitializeCores().
-	//
-	// If SkipInit is true, then JoinRaftFollowers has no effect.
-	// JoinRaftFollowers should only be specified if the underlying physical
-	// storage is Raft.
-	JoinRaftFollowers bool
 }
 
 var DefaultNumCores = 3
@@ -1056,7 +1047,7 @@ type certInfo struct {
 }
 
 type TestLogger struct {
-	hclog.Logger
+	log.Logger
 	Path string
 	File *os.File
 }
@@ -1591,7 +1582,7 @@ func (cluster *TestCluster) StopCore(t testing.T, idx int) {
 
 // Restart a TestClusterCore that was stopped, by replacing the
 // underlying Core.
-func (cluster *TestCluster) RestartCore(t testing.T, idx int, opts *TestClusterOptions) {
+func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOptions) {
 	t.Helper()
 
 	if idx < 0 || idx > len(cluster.Cores) {
@@ -1687,7 +1678,6 @@ func (testCluster *TestCluster) newCore(
 			testCluster.Logger.Info("created physical backend", "instance", idx)
 			coreConfig.Physical = physBundle.Backend
 			localConfig.Physical = physBundle.Backend
-			//base.Physical = physBundle.Backend
 			haBackend := physBundle.HABackend
 			if haBackend == nil {
 				if ha, ok := physBundle.Backend.(physical.HABackend); ok {
