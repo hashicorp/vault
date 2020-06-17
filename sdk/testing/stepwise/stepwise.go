@@ -343,6 +343,5 @@ func checkShouldRun(tt TestT) {
 	// We require verbose mode so that the user knows what is going on.
 	if !testing.Verbose() {
 		tt.Fatal("Acceptance tests must be run with the -v flag on tests")
-		return
 	}
 }
