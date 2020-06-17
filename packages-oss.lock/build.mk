@@ -87,6 +87,10 @@ DOCKER_CP_COMMAND = docker cp $(BUILD_CONTAINER_NAME):$(CONTAINER_OUTPUT_DIR)/$(
 package: $(ALIASES)
 	@echo $(PACKAGE)
 
+.PHONY: package-meta
+package-meta: $(META)
+	@echo $(META)
+
 $(META): $(LOCK)
 	@$(call QUERY_PACKAGESPEC,.) > $@
 
