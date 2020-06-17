@@ -146,6 +146,9 @@ meta:
       {{- if and (eq .GOOS "windows") (eq .GOARCH "amd64")}}microsoft-notarize {{end -}}
       av-scan'
 
+    # BUNDLE_NAME is used in archive filenames, as well as by downstream processes.
+    BUNDLE_NAME: "vault_{{.PRODUCT_VERSION}}"
+
 # package-aliases are a set of paths by which each package may be known, they are
 # templates which may refer to any input or meta field defined in this file.
 # Package aliases must be unique across all packages defined in this file.
@@ -163,12 +166,12 @@ meta:
 package-aliases:
   - type: local
     template: >-
-      vault_{{.PRODUCT_VERSION}}_{{.GOOS}}_{{.GOARCH}}.zip
+      {{.BUNDLE_NAME}}_{{.GOOS}}_{{.GOARCH}}.zip
   # public-hc-releases is the path to use for upload to releases.hashicorp.com
   # it is empty if this package is not public (empty aliases are ignored).
   - type: public-hc-releases
     template: >-
-      vault/vault_{{.PRODUCT_VERSION}}/vault_{{.PRODUCT_VERSION}}_{{.GOOS}}_{{.GOARCH}}.zip
+      vault/{{.BUNDLE_NAME}}/{{.BUNDLE_NAME}}_{{.GOOS}}_{{.GOARCH}}.zip
 
 # Layers determines the build layers, which are individually cacheable layers
 # in a linear build. Each layer contains a Dockerfile. All the layers
