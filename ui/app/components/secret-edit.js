@@ -300,6 +300,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
     createOrUpdateKey(type, event) {
       event.preventDefault();
+      const MAXIMUM_VERSIONS = 9999999999999999;
       let model = this.modelForData;
       let secret = this.model;
       // prevent from submitting if there's no key
@@ -308,7 +309,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         return;
       }
       const maxVersions = secret.get('maxVersions');
-      if (maxVersions > 9999999999999999) {
+      if (MAXIMUM_VERSIONS < maxVersions) {
         this.flashMessages.danger('Max versions is too large');
         return;
       }
