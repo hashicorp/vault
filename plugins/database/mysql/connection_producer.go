@@ -139,7 +139,10 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 		c.db.Close()
 	}
 
-	connURL, err := c.finalizeConnectionURL()
+	connURL, err := c.addTLStoDSN()
+	if err != nil {
+		return nil, err
+	}
 
 	c.db, err = sql.Open("mysql", connURL)
 	if err != nil {
@@ -209,7 +212,7 @@ func (c *mySQLConnectionProducer) getTLSAuth() (tlsConfig *tls.Config, err error
 	return tlsConfig, nil
 }
 
-func (c *mySQLConnectionProducer) finalizeConnectionURL() (connURL string, err error) {
+func (c *mySQLConnectionProducer) addTLStoDSN() (connURL string, err error) {
 	config, err := mysql.ParseDSN(c.ConnectionURL)
 	if err != nil {
 		return "", fmt.Errorf("unable to parse connectionURL: %s", err)
