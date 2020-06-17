@@ -2,7 +2,6 @@ package rabbitmq
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 
@@ -73,16 +72,8 @@ func (b *backend) Client(ctx context.Context, s logical.Storage) (*rabbithole.Cl
 	b.lock.RUnlock()
 
 	// Otherwise, attempt to make connection
-	entry, err := s.Get(ctx, "config/connection")
+	connConfig, err := readConfig(ctx, s)
 	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return nil, fmt.Errorf("configure the client connection with config/connection first")
-	}
-
-	var connConfig connectionConfig
-	if err := entry.DecodeJSON(&connConfig); err != nil {
 		return nil, err
 	}
 

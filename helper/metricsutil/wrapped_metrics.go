@@ -22,7 +22,7 @@ type ClusterMetricSink struct {
 	MaxGaugeCardinality int
 	GaugeInterval       time.Duration
 
-	// Sink is the go-metrics sink to send to
+	// Sink is the go-metrics instance to send to.
 	Sink metrics.MetricSink
 }
 
@@ -57,9 +57,11 @@ func (m *ClusterMetricSink) MeasureSinceWithLabels(key []string, start time.Time
 
 // BlackholeSink is a default suitable for use in unit tests.
 func BlackholeSink() *ClusterMetricSink {
+	sink, _ := metrics.New(metrics.DefaultConfig(""),
+		&metrics.BlackholeSink{})
 	return &ClusterMetricSink{
 		ClusterName: "",
-		Sink:        &metrics.BlackholeSink{},
+		Sink:        sink,
 	}
 }
 
