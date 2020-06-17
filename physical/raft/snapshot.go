@@ -9,7 +9,6 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -32,18 +31,20 @@ const (
 	snapPath       = "snapshots"
 )
 
-// BoltSnapshotStore implements the SnapshotStore interface and allows
-// snapshots to be made on the local disk. The main difference between this
-// store and the file store is we make the distinction between snapshots that
-// have been written by the FSM and by internal Raft operations. The former are
-// treated as noop snapshots on Persist and are read in full from the FSM on
-// Open. The latter are treated like normal file snapshots and are able to be
-// opened and applied as usual.
+// BoltSnapshotStore implements the SnapshotStore interface and allows snapshots
+// to be stored in BoltDB files on local disk. Since we always have an up to
+// date FSM we use a special snapshot ID to indicate that the snapshot can be
+// pulled from the BoltDB file that is currently backing the FSM. This allows us
+// to provide just-in-time snapshots without doing incremental data dumps.
+//
+// When a snapshot is being installed on the node we will Create and Write data
+// to it. This will cause the snapshot store to create a new BoltDB file and
+// write the snapshot data to it. Then, we can simply rename the snapshot to the
+// FSM's filename. This allows us to atomically install the snapshot and
+// reduces the amount of disk i/o.
 type BoltSnapshotStore struct {
 	// path is the directory in which to store file based snapshots
 	path string
-	// retain is the number of file based snapshots to keep
-	retain int
 
 	// We hold a copy of the FSM so we can stream snapshots straight out of the
 	// database.
@@ -64,6 +65,7 @@ type BoltSnapshotSink struct {
 	// one)
 	written       atomic.Bool
 	writer        io.WriteCloser
+	writeError    error
 	dir           string
 	parentDir     string
 	doneWritingCh chan struct{}
@@ -75,10 +77,7 @@ type BoltSnapshotSink struct {
 // NewBoltSnapshotStore creates a new BoltSnapshotStore based
 // on a base directory. The `retain` parameter controls how many
 // snapshots are retained. Must be at least 1.
-func NewBoltSnapshotStore(base string, retain int, logger log.Logger, fsm *FSM) (*BoltSnapshotStore, error) {
-	if retain < 1 {
-		return nil, fmt.Errorf("must retain at least one snapshot")
-	}
+func NewBoltSnapshotStore(base string, logger log.Logger, fsm *FSM) (*BoltSnapshotStore, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("no logger provided")
 	}
@@ -96,26 +95,16 @@ func NewBoltSnapshotStore(base string, retain int, logger log.Logger, fsm *FSM) 
 		path:   path,
 	}
 
-	{
-		// TODO: I think this needs to be done before every NewRaft and
-		// RecoverCluster call. Not just on Factory method.
-
-		// Here we delete all the existing file based snapshots. This is necessary
-		// because we do not issue a restore on NewRaft. If a previous file snapshot
-		// had failed to apply we will be incorrectly setting the indexes. It's
-		// safer to simply delete all file snapshots on startup and rely on Raft to
-		// reconcile the FSM state.
-		if err := store.ReapSnapshots(); err != nil {
-			return nil, err
-		}
+	// Cleanup any old or failed snapshots on startup.
+	if err := store.ReapSnapshots(); err != nil {
+		return nil, err
 	}
 
 	return store, nil
 }
 
 // Create is used to start a new snapshot
-func (f *BoltSnapshotStore) Create(version raft.SnapshotVersion, index, term uint64,
-	configuration raft.Configuration, configurationIndex uint64, trans raft.Transport) (raft.SnapshotSink, error) {
+func (f *BoltSnapshotStore) Create(version raft.SnapshotVersion, index, term uint64, configuration raft.Configuration, configurationIndex uint64, trans raft.Transport) (raft.SnapshotSink, error) {
 	// We only support version 1 snapshots at this time.
 	if version != 1 {
 		return nil, fmt.Errorf("unsupported snapshot version %d", version)
@@ -302,7 +291,9 @@ func (f *BoltSnapshotStore) ReapSnapshots() error {
 			f.logger.Warn("found temporary snapshot", "name", dirName)
 		}
 
-		if err := os.RemoveAll(snap.Name()); err != nil {
+		path := filepath.Join(f.path, snap.Name())
+		f.logger.Info("reaping snapshot", "path", path)
+		if err := os.RemoveAll(path); err != nil {
 			f.logger.Error("failed to reap snapshot", "path", snap.Name(), "error", err)
 			return err
 		}
@@ -332,30 +323,41 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 		return err
 	}
 
+	// Create the BoltDB file
 	dbPath := filepath.Join(path, "vault.db")
 	boltDB, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return err
 	}
 
-	// TODO: should we do this last, what if we fail below we want to make sure
-	// we don't apply a partial snapshot?
+	// Write the snapshot metadata
 	if err := writeSnapshotMetaToDB(&s.meta, boltDB); err != nil {
 		return err
 	}
 
+	// Set the snapshot ID to the generated name.
 	s.meta.ID = name
+
+	// Create the done channel
+	s.doneWritingCh = make(chan struct{})
+
+	// Store the directories so we can commit the changes on success or abort
+	// them on failure.
 	s.dir = path
 	s.parentDir = s.store.path
 
+	// Create a pipe so we pipe writes into the below go routine.
 	reader, writer := io.Pipe()
 	s.writer = writer
-	s.doneWritingCh = make(chan struct{})
 
+	// Start a go routine in charge of piping data from the snapshot's Write
+	// call to the delimtedreader and the BoltDB file.
 	go func() {
 		defer close(s.doneWritingCh)
 		defer boltDB.Close()
 
+		// The delimted reader will parse full proto messages from the snapshot
+		// data.
 		protoReader := NewDelimitedReader(reader, math.MaxInt32)
 		defer protoReader.Close()
 
@@ -392,6 +394,7 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 			})
 			if err != nil {
 				s.logger.Error("snapshot write: failed to write transaction", "error", err)
+				s.writeError = err
 				return
 			}
 
@@ -402,8 +405,8 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 	return nil
 }
 
-// Write is used to append to the state file. We write to the
-// buffered IO object to reduce the amount of context switches.
+// Write is used to append to the bolt file. The first call to write ensures we
+// have the file created.
 func (s *BoltSnapshotSink) Write(b []byte) (int, error) {
 	s.l.Lock()
 	defer s.l.Unlock()
@@ -439,26 +442,18 @@ func (s *BoltSnapshotSink) Close() error {
 		s.writer.Close()
 		<-s.doneWritingCh
 
-		// Move the directory into place
-		newPath := strings.TrimSuffix(s.dir, tmpSuffix)
-		if err := os.Rename(s.dir, newPath); err != nil {
-			s.logger.Error("failed to move snapshot into place", "error", err)
-			return err
+		if s.writeError != nil {
+			// If we encountered an error while writing then we should remove
+			// the directory and return the error
+			_ = os.RemoveAll(s.dir)
+			return s.writeError
 		}
 
-		// skipping fsync for directory entry edits on Windows, only needed for *nix style file systems
-		if runtime.GOOS != "windows" {
-			parentFH, err := os.Open(s.parentDir)
-			defer parentFH.Close()
-			if err != nil {
-				s.logger.Error("failed to open snapshot parent directory", "path", s.parentDir, "error", err)
-				return err
-			}
-
-			if err = parentFH.Sync(); err != nil {
-				s.logger.Error("failed syncing parent directory", "path", s.parentDir, "error", err)
-				return err
-			}
+		// Move the directory into place
+		newPath := strings.TrimSuffix(s.dir, tmpSuffix)
+		if err := safeio.Rename(s.dir, newPath); err != nil {
+			s.logger.Error("failed to move snapshot into place", "error", err)
+			return err
 		}
 	}
 
@@ -482,7 +477,6 @@ func (s *BoltSnapshotSink) Cancel() error {
 
 		// Attempt to remove all artifacts
 		return os.RemoveAll(s.dir)
-
 	}
 
 	return nil
@@ -507,6 +501,7 @@ func (i *boltSnapshotInstaller) Install(filename string) error {
 		return errors.New("fsm filename empty")
 	}
 
+	// Rename the snapshot to the FSM location
 	return safeio.Rename(i.filename, filename)
 }
 
