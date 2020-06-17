@@ -297,3 +297,49 @@ func TestRequestHandling_LoginMetric(t *testing.T) {
 	)
 
 }
+
+func TestRequestHandling_SecretLeaseMetric(t *testing.T) {
+	core, _, root := TestCoreUnsealed(t)
+
+	inmemSink := metrics.NewInmemSink(
+		1000000*time.Hour,
+		2000000*time.Hour)
+	core.metricSink = &metricsutil.ClusterMetricSink{
+		ClusterName: "test-cluster",
+		Sink:        inmemSink,
+	}
+
+	// Create a key with a lease
+	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
+	req.Data["foo"] = "bar"
+	req.ClientToken = root
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read a key with a LeaseID
+	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
+	req.ClientToken = root
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Secret.LeaseID == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	checkCounter(t, inmemSink, "secret.lease.creation",
+		map[string]string{
+			"cluster":       "test-cluster",
+			"namespace":     "root",
+			"secret_engine": "kv",
+			"mount_point":   "secret/",
+			"creation_ttl":  "+Inf",
+		},
+	)
+}
