@@ -16,24 +16,24 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
-// StepOperation defines operations each step could preform. These are
+// Operation defines operations each step could preform. These are
 // intentionally redefined from the logical package in the SDK, so users
 // consistently use the stepwise package and not a combination of both stepwise
 // and logical.
-type StepOperation string
+type Operation string
 
 const (
-	WriteOperation  StepOperation = "create"
-	UpdateOperation               = "update"
-	ReadOperation                 = "read"
-	DeleteOperation               = "delete"
-	ListOperation                 = "list"
-	HelpOperation                 = "help"
+	WriteOperation  Operation = "create"
+	UpdateOperation           = "update"
+	ReadOperation             = "read"
+	DeleteOperation           = "delete"
+	ListOperation             = "list"
+	HelpOperation             = "help"
 )
 
-// StepwiseEnvironment is the interface Environments need to implement to be used in
+// Environment is the interface Environments need to implement to be used in
 // Case to execute each Step
-type StepwiseEnvironment interface {
+type Environment interface {
 	Setup() error
 	Client() (*api.Client, error)
 	Teardown() error
@@ -116,7 +116,7 @@ type EnvironmentOptions struct {
 type Step struct {
 	// Operation defines what action is being taken in this step; write, read,
 	// delete, et. al.
-	Operation StepOperation
+	Operation Operation
 
 	// Path is the localized request path. The mount prefix, namespace, and
 	// optionally "auth" will be automatically added.
@@ -126,16 +126,16 @@ type Step struct {
 	// to the API.
 	Data map[string]interface{}
 
-	// Check is a function that is called after this step is executed in order to
+	// Assert is a function that is called after this step is executed in order to
 	// test that the step executed successfully. If this is not set, then the next
 	// step will be called
-	Check StepCheckFunc
+	Assert AssertionFunc
 
 	// ExpectError indicates if this step is expected to return an error. If the
 	// step operation returns an error and ExpectError is not set, the test will
-	// fail immediately and the StepCheckFunc will not be ran. If ExpectError is
-	// true, the StepCheckFunc will be called (if any) and include the error from
-	// the response. It is the responsibility of the StepCheckFunc to validate the
+	// fail immediately and the AssertionFunc will not be ran. If ExpectError is
+	// true, the AssertionFunc will be called (if any) and include the error from
+	// the response. It is the responsibility of the AssertionFunc to validate the
 	// error is appropriate or not, if expected.
 	ExpectError bool
 
@@ -143,15 +143,15 @@ type Step struct {
 	Unauthenticated bool
 }
 
-// StepCheckFunc is the callback used for Check in Steps.
-type StepCheckFunc func(*api.Secret, error) error
+// AssertionFunc is the callback used for Assert in Steps.
+type AssertionFunc func(*api.Secret, error) error
 
 // Case represents a scenario we want to test which involves a series of
 // steps to be followed sequentially, evaluating the results after each step.
 type Case struct {
 	// Environment is used to setup the Vault instance and provide the client that
 	// will be used to drive the tests
-	Environment StepwiseEnvironment
+	Environment Environment
 
 	// Precheck, if non-nil, will be called once before the test case
 	// runs at all. This can be used for some validation prior to the
@@ -306,17 +306,17 @@ func Run(tt TestT, c Case) {
 			tt.Fatal(fmt.Errorf("unexpected error in step %d: %w", index, respErr))
 		}
 
-		// run the associated StepCheckFunc, if any. If an error was expected it is
-		// sent to the Check function to validate.
-		if step.Check != nil {
-			if err := step.Check(resp, respErr); err != nil {
+		// run the associated AssertionFunc, if any. If an error was expected it is
+		// sent to the Assert function to validate.
+		if step.Assert != nil {
+			if err := step.Assert(resp, respErr); err != nil {
 				tt.Error(fmt.Errorf("failed step %d: %w", index, err))
 			}
 		}
 	}
 }
 
-func makeRequest(tt TestT, driver StepwiseEnvironment, step Step) (*api.Secret, error) {
+func makeRequest(tt TestT, driver Environment, step Step) (*api.Secret, error) {
 	client, err := driver.Client()
 	if err != nil {
 		return nil, err

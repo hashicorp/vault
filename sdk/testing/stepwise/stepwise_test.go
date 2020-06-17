@@ -128,7 +128,7 @@ func TestStepwise_makeRequest(t *testing.T) {
 	testT := new(mockT)
 
 	type testRequest struct {
-		Operation         StepOperation
+		Operation         Operation
 		Path              string
 		ExpectedRequestID string
 		ExpectErr         bool
@@ -271,13 +271,13 @@ func (m *mockEnvironment) ExpandPath(path string) string {
 func (m *mockEnvironment) MountPath() string { return "" }
 func (m *mockEnvironment) RootToken() string { return "" }
 
-func stepFunc(path string, operation StepOperation, shouldError bool) Step {
+func stepFunc(path string, operation Operation, shouldError bool) Step {
 	s := Step{
 		Operation: operation,
 		Path:      path,
 	}
 	if shouldError {
-		s.Check = func(resp *api.Secret, err error) error {
+		s.Assert = func(resp *api.Secret, err error) error {
 			return errors.New("some error")
 		}
 	}
