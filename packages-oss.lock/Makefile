@@ -85,6 +85,17 @@ build:
 		echo "$$COMMAND"; \
 		$(SHELL) "$$COMMAND"
 
+# meta is a convenience target for local builds, do not use in CI.
+# Instead, use `make package-meta` specifying PACKAGE_SPEC_ID.
+meta:
+	@echo "==> Writing metacdata for default package (GOOS=$(GOOS) GOARCH=$(GOARCH))"
+	@ALIASES=$$($(call QUERY_DEFAULT_PACKAGESPEC,.aliases[] | "alias type:\(.type) path:\(.path)") | column -t); \
+		echo "$$ALIASES"
+	@PACKAGE_SPEC_ID="$$($(call QUERY_DEFAULT_PACKAGESPEC,.packagespecid) | head -n1)"; \
+		COMMAND="PACKAGE_SOURCE_ID=$$PACKAGE_SOURCE_ID PACKAGE_SPEC_ID=$$PACKAGE_SPEC_ID $(MK)build.mk package-meta"; \
+		echo "$$COMMAND"; \
+		$(SHELL) "$$COMMAND"
+
 # build-all is a convenience target to sequentially build each package.
 # It is mostly useful in the tutorial, do not use this in CI as it is much slower
 # than building packages in parallel.
@@ -104,6 +115,15 @@ package:
 	@ALIASES=$$($(call QUERY_PACKAGESPEC,.aliases[] | "alias type:\(.type) path:\(.path)") | column -t); \
 		echo "$$ALIASES"
 	@COMMAND="PACKAGE_SOURCE_ID=$$PACKAGE_SOURCE_ID PACKAGE_SPEC_ID=$$PACKAGE_SPEC_ID $(MK)build.mk package"; \
+		echo "$$COMMAND"; \
+		$(SHELL) "$$COMMAND"
+
+# package-meta expects PACKAGE_SPEC_ID to already be set, use this in CI.
+package-meta:
+	@echo "==> Writing metadata for package $(PACKAGE_SPEC_ID)"
+	@ALIASES=$$($(call QUERY_PACKAGESPEC,.aliases[] | "alias type:\(.type) path:\(.path)") | column -t); \
+		echo "$$ALIASES"
+	@COMMAND="PACKAGE_SOURCE_ID=$$PACKAGE_SOURCE_ID PACKAGE_SPEC_ID=$$PACKAGE_SPEC_ID $(MK)build.mk package-meta"; \
 		echo "$$COMMAND"; \
 		$(SHELL) "$$COMMAND"
 
