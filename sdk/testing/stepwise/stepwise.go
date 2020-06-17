@@ -184,12 +184,7 @@ func Run(tt TestT, c Case) {
 	tt.Helper()
 	// We only run acceptance tests if an env var is set because they're
 	// slow and generally require some outside configuration.
-	if os.Getenv(TestEnvVar) == "" {
-		tt.Skip(fmt.Sprintf(
-			"Acceptance tests skipped unless env '%s' set",
-			TestEnvVar))
-		return
-	}
+	checkShouldRun(tt)
 
 	// We require verbose mode so that the user knows what is going on.
 	if !testing.Verbose() {
