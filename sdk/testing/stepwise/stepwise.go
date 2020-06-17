@@ -89,9 +89,9 @@ func (p PluginType) String() string {
 	}
 }
 
-// EnvironmentOptions are a collection of options each step driver should
+// MountOptions are a collection of options each step driver should
 // support
-type EnvironmentOptions struct {
+type MountOptions struct {
 	// MountPathPrefix is an optional prefix to use when mounting the plugin. If
 	// omitted the mount path will default to the PluginName with a random suffix.
 	MountPathPrefix string
