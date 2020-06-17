@@ -142,14 +142,6 @@ type Step struct {
 	// step will be called
 	Assert AssertionFunc
 
-	// ExpectError indicates if this step is expected to return an error. If the
-	// step operation returns an error and ExpectError is not set, the test will
-	// fail immediately and the AssertionFunc will not be ran. If ExpectError is
-	// true, the AssertionFunc will be called (if any) and include the error from
-	// the response. It is the responsibility of the AssertionFunc to validate the
-	// error is appropriate or not, if expected.
-	ExpectError bool
-
 	// Unauthenticated will make the request unauthenticated.
 	Unauthenticated bool
 }
@@ -310,11 +302,6 @@ func Run(tt TestT, c Case) {
 
 		if resp != nil {
 			responses = append(responses, resp)
-		}
-
-		// If a step returned an unexpected error, fail the entire test immediately
-		if respErr != nil && !step.ExpectError {
-			tt.Fatal(fmt.Errorf("unexpected error in step %d: %w", index, respErr))
 		}
 
 		// run the associated AssertionFunc, if any. If an error was expected it is
