@@ -25,6 +25,8 @@ import (
 
 const (
 	PrometheusDefaultRetentionTime = 24 * time.Hour
+	UsageGaugeDefaultPeriod        = 10 * time.Minute
+	MaximumGaugeCardinalityDefault = 500
 )
 
 // Telemetry is the telemetry configuration for the server
@@ -35,6 +37,10 @@ type Telemetry struct {
 	DisableHostname     bool   `hcl:"disable_hostname"`
 	EnableHostnameLabel bool   `hcl:"enable_hostname_label"`
 	MetricsPrefix       string `hcl:"metrics_prefix"`
+	UsageGaugePeriod    time.Duration
+	UsageGaugePeriodRaw interface{} `hcl:"usage_gauge_period"`
+
+	MaximumGaugeCardinality int `hcl:"maximum_gauge_cardinality"`
 
 	// Circonus: see https://github.com/circonus-labs/circonus-gometrics
 	// for more details on the various configuration options.
@@ -166,6 +172,24 @@ func parseTelemetry(result *SharedConfig, list *ast.ObjectList) error {
 		result.Telemetry.PrometheusRetentionTimeRaw = nil
 	} else {
 		result.Telemetry.PrometheusRetentionTime = PrometheusDefaultRetentionTime
+	}
+
+	if result.Telemetry.UsageGaugePeriodRaw != nil {
+		if result.Telemetry.UsageGaugePeriodRaw == "none" {
+			result.Telemetry.UsageGaugePeriod = 0
+		} else {
+			var err error
+			if result.Telemetry.UsageGaugePeriod, err = parseutil.ParseDurationSecond(result.Telemetry.UsageGaugePeriodRaw); err != nil {
+				return err
+			}
+			result.Telemetry.UsageGaugePeriodRaw = nil
+		}
+	} else {
+		result.Telemetry.UsageGaugePeriod = UsageGaugeDefaultPeriod
+	}
+
+	if result.Telemetry.MaximumGaugeCardinality == 0 {
+		result.Telemetry.MaximumGaugeCardinality = MaximumGaugeCardinalityDefault
 	}
 
 	return nil
@@ -320,7 +344,7 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 		metricsConf.EnableHostname = false
 	}
 	fanout = append(fanout, inm)
-	_, err := metrics.NewGlobal(metricsConf, fanout)
+	globalMetrics, err := metrics.NewGlobal(metricsConf, fanout)
 
 	if err != nil {
 		return nil, nil, false, err
@@ -330,9 +354,9 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	// and to any backend.
 	wrapper := &metricsutil.ClusterMetricSink{
 		ClusterName:         opts.ClusterName,
-		MaxGaugeCardinality: 500,
-		GaugeInterval:       10 * time.Minute,
-		Sink:                fanout,
+		MaxGaugeCardinality: opts.Config.MaximumGaugeCardinality,
+		GaugeInterval:       opts.Config.UsageGaugePeriod,
+		Sink:                globalMetrics,
 	}
 
 	return inm, wrapper, prometheusEnabled, nil

@@ -106,7 +106,7 @@ func TestStringGenerator_Generate_errors(t *testing.T) {
 	type testCase struct {
 		timeout   time.Duration
 		generator *StringGenerator
-		rng io.Reader
+		rng       io.Reader
 	}
 
 	tests := map[string]testCase{
@@ -121,7 +121,7 @@ func TestStringGenerator_Generate_errors(t *testing.T) {
 				},
 				charset: AlphaNumericShortSymbolRuneset,
 			},
-				rng:     rand.Reader,
+			rng: rand.Reader,
 		},
 		"impossible rules": {
 			timeout: 10 * time.Millisecond, // Keep this short so the test doesn't take too long
@@ -134,7 +134,7 @@ func TestStringGenerator_Generate_errors(t *testing.T) {
 				},
 				charset: AlphaNumericShortSymbolRuneset,
 			},
-				rng:     rand.Reader,
+			rng: rand.Reader,
 		},
 		"bad RNG reader": {
 			timeout: 10 * time.Millisecond, // Keep this short so the test doesn't take too long
@@ -143,7 +143,7 @@ func TestStringGenerator_Generate_errors(t *testing.T) {
 				Rules:   []Rule{},
 				charset: AlphaNumericShortSymbolRuneset,
 			},
-				rng:     badReader{},
+			rng: badReader{},
 		},
 		"0 length": {
 			timeout: 10 * time.Millisecond,
@@ -157,7 +157,7 @@ func TestStringGenerator_Generate_errors(t *testing.T) {
 				},
 				charset: []rune("abcde"),
 			},
-				rng:     rand.Reader,
+			rng: rand.Reader,
 		},
 		"-1 length": {
 			timeout: 10 * time.Millisecond,
@@ -171,7 +171,7 @@ func TestStringGenerator_Generate_errors(t *testing.T) {
 				},
 				charset: []rune("abcde"),
 			},
-				rng:     rand.Reader,
+			rng: rand.Reader,
 		},
 		"no charset": {
 			timeout: 10 * time.Millisecond,
@@ -179,7 +179,7 @@ func TestStringGenerator_Generate_errors(t *testing.T) {
 				Length: 20,
 				Rules:  []Rule{},
 			},
-			rng:    rand.Reader,
+			rng: rand.Reader,
 		},
 	}
 
@@ -333,8 +333,8 @@ func TestRandomRunes_errors(t *testing.T) {
 				"šŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ℀℁ℂ℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔ℕ№℗℘ℙℚℛℜℝ℞℟℠" +
 				"Σ",
 			),
-			length:20,
-			rng: rand.Reader,
+			length: 20,
+			rng:    rand.Reader,
 		},
 		"length is zero": {
 			charset: []rune("abcde"),
@@ -372,22 +372,24 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 	}
 
 	type testCase struct {
-		generator StringGenerator
+		generator *StringGenerator
 	}
 
 	benches := map[string]testCase{
-		"no rules": {
-			generator: StringGenerator{
-				charset: AlphaNumericFullSymbolRuneset,
-				Rules:   []Rule{},
+		"no restrictions": {
+			generator: &StringGenerator{
+				Rules: []Rule{
+					CharsetRule{
+						Charset: AlphaNumericFullSymbolRuneset,
+					},
+				},
 			},
 		},
 		"default generator": {
 			generator: DefaultStringGenerator,
 		},
 		"large symbol set": {
-			generator: StringGenerator{
-				charset: AlphaNumericFullSymbolRuneset,
+			generator: &StringGenerator{
 				Rules: []Rule{
 					CharsetRule{
 						Charset:  LowercaseRuneset,
@@ -409,13 +411,14 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 			},
 		},
 		"max symbol set": {
-			generator: StringGenerator{
-				charset: []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" +
-					"`abcdefghijklmnopqrstuvwxyz{|}~ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠ" +
-					"ġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒœŔŕŖŗŘřŚśŜŝŞşŠ" +
-					"šŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ℀℁ℂ℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔ℕ№℗℘ℙℚℛℜℝ℞℟℠",
-				),
+			generator: &StringGenerator{
 				Rules: []Rule{
+					CharsetRule{
+						Charset: []rune(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_" +
+							"`abcdefghijklmnopqrstuvwxyz{|}~ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠ" +
+							"ġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒœŔŕŖŗŘřŚśŜŝŞşŠ" +
+							"šŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ℀℁ℂ℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔ℕ№℗℘ℙℚℛℜℝ℞℟℠"),
+					},
 					CharsetRule{
 						Charset:  LowercaseRuneset,
 						MinChars: 1,
@@ -432,9 +435,11 @@ func BenchmarkStringGenerator_Generate(b *testing.B) {
 			},
 		},
 		"restrictive charset rules": {
-			generator: StringGenerator{
-				charset: AlphaNumericShortSymbolRuneset,
+			generator: &StringGenerator{
 				Rules: []Rule{
+					CharsetRule{
+						Charset: AlphaNumericShortSymbolRuneset,
+					},
 					CharsetRule{
 						Charset:  []rune("A"),
 						MinChars: 1,
@@ -551,7 +556,7 @@ func (badReader) Read([]byte) (int, error) {
 
 func TestValidate(t *testing.T) {
 	type testCase struct {
-		generator StringGenerator
+		generator *StringGenerator
 		expectErr bool
 	}
 
@@ -561,33 +566,33 @@ func TestValidate(t *testing.T) {
 			expectErr: false,
 		},
 		"length is 0": {
-			generator: StringGenerator{
+			generator: &StringGenerator{
 				Length: 0,
 			},
 			expectErr: true,
 		},
 		"length is negative": {
-			generator: StringGenerator{
+			generator: &StringGenerator{
 				Length: -2,
 			},
 			expectErr: true,
 		},
 		"nil charset, no rules": {
-			generator: StringGenerator{
+			generator: &StringGenerator{
 				Length:  5,
 				charset: nil,
 			},
 			expectErr: true,
 		},
 		"zero length charset, no rules": {
-			generator: StringGenerator{
+			generator: &StringGenerator{
 				Length:  5,
 				charset: []rune{},
 			},
 			expectErr: true,
 		},
 		"rules require password longer than length": {
-			generator: StringGenerator{
+			generator: &StringGenerator{
 				Length:  5,
 				charset: []rune("abcde"),
 				Rules: []Rule{
@@ -600,7 +605,7 @@ func TestValidate(t *testing.T) {
 			expectErr: true,
 		},
 		"charset has non-printable characters": {
-			generator: StringGenerator{
+			generator: &StringGenerator{
 				Length: 0,
 				charset: []rune{
 					'a',

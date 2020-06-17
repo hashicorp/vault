@@ -1127,6 +1127,7 @@ func (c *ServerCommand) Run(args []string) int {
 		HAPhysical:                nil,
 		ServiceRegistration:       configSR,
 		Seal:                      barrierSeal,
+		UnwrapSeal:                unwrapSeal,
 		AuditBackends:             c.AuditBackends,
 		CredentialBackends:        c.CredentialBackends,
 		LogicalBackends:           c.LogicalBackends,
@@ -1540,12 +1541,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	core.SetClusterHandler(vaulthttp.Handler(&vault.HandlerProperties{
 		Core: core,
 	}))
-
-	// Before unsealing with stored keys, setup seal migration if needed
-	if err := adjustCoreForSealMigration(c.logger, core, barrierSeal, unwrapSeal); err != nil {
-		c.UI.Error(err.Error())
-		return 1
-	}
 
 	// Attempt unsealing in a background goroutine. This is needed for when a
 	// Vault cluster with multiple servers is configured with auto-unseal but is
