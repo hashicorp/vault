@@ -34,10 +34,21 @@ const (
 // Environment is the interface Environments need to implement to be used in
 // Case to execute each Step
 type Environment interface {
+	// Setup is responsible for creating the Vault cluster for use in the test
+	// case.
 	Setup() error
+
+	// Client returns a configured Vault API client to communicate with the Vault
+	// cluster created in Setup and managed by this Environment.
 	Client() (*api.Client, error)
+
+	// Teardown is responsible for destroying any infrastructure created during
+	// Setup or other steps
 	Teardown() error
-	Name() string // maybe?
+
+	// Name returns the name of the environment provider, e.g. Docker, Minikube,
+	// et.al.
+	Name() string
 
 	// ExpandPath adds any Namespace or mount path to the user defined path
 	ExpandPath(string) string
