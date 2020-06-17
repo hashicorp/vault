@@ -217,10 +217,7 @@ func TestRequestHandling_LoginMetric(t *testing.T) {
 	inmemSink := metrics.NewInmemSink(
 		1000000*time.Hour,
 		2000000*time.Hour)
-	core.metricSink = &metricsutil.ClusterMetricSink{
-		ClusterName: "test-cluster",
-		Sink:        inmemSink,
-	}
+	core.metricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
 
 	// Setup mount
 	req := &logical.Request{

@@ -2128,10 +2128,7 @@ func TestTokenStore_HandleRequest_CreateToken_Metric(t *testing.T) {
 	inmemSink := metrics.NewInmemSink(
 		1000000*time.Hour,
 		2000000*time.Hour)
-	c.metricSink = &metricsutil.ClusterMetricSink{
-		ClusterName: "test-cluster",
-		Sink:        inmemSink,
-	}
+	c.metricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
