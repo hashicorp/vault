@@ -16,6 +16,7 @@ type PluginReloadCommand struct {
 	*BaseCommand
 	plugin string
 	mounts []string
+	scope  string
 }
 
 func (c *PluginReloadCommand) Synopsis() string {
@@ -58,6 +59,13 @@ func (c *PluginReloadCommand) Flags() *FlagSets {
 		Usage:      "Array or comma-separated string mount paths of the plugin backends to reload.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:       "scope",
+		Target:     &c.plugin,
+		Completion: complete.PredictAnything,
+		Usage:      `The scope of the reload, omitted for local, "cluster", for cluster-wide`,
+	})
+
 	return set
 }
 
@@ -84,6 +92,8 @@ func (c *PluginReloadCommand) Run(args []string) int {
 	case c.plugin != "" && len(c.mounts) > 0:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
 		return 1
+	case c.scope != "" && c.scope != "cluster":
+		c.UI.Error(fmt.Sprintf("Invalid reload scope: %s", c.scope))
 	}
 
 	client, err := c.Client()
@@ -95,6 +105,7 @@ func (c *PluginReloadCommand) Run(args []string) int {
 	if err := client.Sys().ReloadPlugin(&api.ReloadPluginInput{
 		Plugin: c.plugin,
 		Mounts: c.mounts,
+		Scope:  c.scope,
 	}); err != nil {
 		c.UI.Error(fmt.Sprintf("Error reloading plugin/mounts: %s", err))
 		return 2
