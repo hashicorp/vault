@@ -38,10 +38,7 @@ func TestClusterLabelPresent(t *testing.T) {
 	inmemSink := metrics.NewInmemSink(
 		1000000*time.Hour,
 		2000000*time.Hour)
-	clusterSink := &ClusterMetricSink{
-		ClusterName: testClusterName,
-		Sink:        defaultMetrics(inmemSink),
-	}
+	clusterSink := NewClusterMetricSink(testClusterName, defaultMetrics(inmemSink))
 
 	key1 := []string{"aaa", "bbb"}
 	key2 := []string{"ccc", "ddd"}
