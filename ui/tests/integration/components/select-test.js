@@ -30,7 +30,10 @@ module('Integration | Component | Select', function(hooks) {
   });
 
   test('it renders when options is an array of objects', async function(assert) {
-    const objectOptions = [{ value: 'berry', label: 'Berry' }, { value: 'cherry', label: 'Cherry' }];
+    const objectOptions = [
+      { value: 'berry', label: 'Berry' },
+      { value: 'cherry', label: 'Cherry' },
+    ];
     this.set('options', objectOptions);
     await render(hbs`<Select @options={{options}} @label={{label}} @name={{name}}/>`);
 
@@ -39,7 +42,10 @@ module('Integration | Component | Select', function(hooks) {
   });
 
   test('it renders when options is an array of custom objects', async function(assert) {
-    const objectOptions = [{ day: 'mon', fullDay: 'Monday' }, { day: 'tues', fullDay: 'Tuesday' }];
+    const objectOptions = [
+      { day: 'mon', fullDay: 'Monday' },
+      { day: 'tues', fullDay: 'Tuesday' },
+    ];
     const selectedValue = objectOptions[1].day;
     this.setProperties({
       options: objectOptions,

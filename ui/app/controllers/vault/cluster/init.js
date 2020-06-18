@@ -78,7 +78,10 @@ export default Controller.extend(DEFAULTS, {
       store
         .adapterFor('cluster')
         .initCluster(data)
-        .then(resp => this.initSuccess(resp), (...errArgs) => this.initError(...errArgs));
+        .then(
+          resp => this.initSuccess(resp),
+          (...errArgs) => this.initError(...errArgs)
+        );
     },
 
     setKeys(data) {
