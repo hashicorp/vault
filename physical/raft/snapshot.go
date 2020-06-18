@@ -286,7 +286,8 @@ func (f *BoltSnapshotStore) ReapSnapshots() error {
 			continue
 		}
 
-		// Ignore any temporary snapshots
+		// Warn about temporary snapshots, this indicates a previously failed
+		// snapshot attempt. We still want to clean these up.
 		dirName := snap.Name()
 		if strings.HasSuffix(dirName, tmpSuffix) {
 			f.logger.Warn("found temporary snapshot", "name", dirName)
