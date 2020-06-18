@@ -352,12 +352,9 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 
 	// Intialize a wrapper around the global sink; this will be passed to Core
 	// and to any backend.
-	wrapper := &metricsutil.ClusterMetricSink{
-		ClusterName:         opts.ClusterName,
-		MaxGaugeCardinality: opts.Config.MaximumGaugeCardinality,
-		GaugeInterval:       opts.Config.UsageGaugePeriod,
-		Sink:                globalMetrics,
-	}
+	wrapper := metricsutil.NewClusterMetricSink(opts.ClusterName, globalMetrics)
+	wrapper.MaxGaugeCardinality = opts.Config.MaximumGaugeCardinality
+	wrapper.GaugeInterval = opts.Config.UsageGaugePeriod
 
 	return inm, wrapper, prometheusEnabled, nil
 }
