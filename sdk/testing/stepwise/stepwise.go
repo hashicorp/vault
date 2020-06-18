@@ -50,9 +50,6 @@ type Environment interface {
 	// et.al.
 	Name() string
 
-	// ExpandPath adds any Namespace or mount path to the user defined path
-	ExpandPath(string) string
-
 	// MountPath returns the path the plugin is mounted at
 	MountPath() string
 
@@ -292,9 +289,9 @@ func Run(tt TestT, c Case) {
 	}
 }
 
-func makeRequest(tt TestT, driver Environment, step Step) (*api.Secret, error) {
+func makeRequest(tt TestT, env Environment, step Step) (*api.Secret, error) {
 	tt.Helper()
-	client, err := driver.Client()
+	client, err := env.Client()
 	if err != nil {
 		return nil, err
 	}
@@ -303,10 +300,7 @@ func makeRequest(tt TestT, driver Environment, step Step) (*api.Secret, error) {
 		client.ClearToken()
 	}
 
-	// ExpandPath will turn a test path into a full path, prefixing with the
-	// correct mount, namespaces, or "auth" if needed based on mount path and
-	// plugin type
-	path := driver.ExpandPath(step.Path)
+	path := fmt.Sprintf("%s/%s", env.MountPath(), step.Path)
 	switch step.Operation {
 	case WriteOperation, UpdateOperation:
 		return client.Logical().Write(path, step.Data)

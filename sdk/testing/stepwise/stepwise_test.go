@@ -134,17 +134,17 @@ func TestStepwise_makeRequest(t *testing.T) {
 		ExpectErr         bool
 	}
 	testRequests := map[string]testRequest{
-		"list": testRequest{
+		"list": {
 			Operation:         ListOperation,
 			Path:              "keys",
 			ExpectedRequestID: "list-request",
 		},
-		"read": testRequest{
+		"read": {
 			Operation:         ReadOperation,
 			Path:              "keys/name",
 			ExpectedRequestID: "read-request",
 		},
-		"error": testRequest{
+		"error": {
 			Operation: ReadOperation,
 			Path:      "error",
 			ExpectErr: true,
@@ -264,11 +264,11 @@ func (m *mockEnvironment) Teardown() error {
 }
 
 func (m *mockEnvironment) Name() string { return "" }
-func (m *mockEnvironment) ExpandPath(path string) string {
-	return "/test/" + path
+
+func (m *mockEnvironment) MountPath() string {
+	return "/test/"
 }
 
-func (m *mockEnvironment) MountPath() string { return "" }
 func (m *mockEnvironment) RootToken() string { return "" }
 
 func stepFunc(path string, operation Operation, shouldError bool) Step {
