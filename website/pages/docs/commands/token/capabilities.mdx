@@ -21,14 +21,14 @@ token.
 
 List capabilities for the local token on the "secret/foo" path:
 
-```text
+```shell-session
 $ vault token capabilities secret/foo
 read
 ```
 
 List capabilities for a token on the "cubbyhole/foo" path:
 
-```text
+```shell-session
 $ vault token capabilities 96ddf4bc-d217-f3ba-f9bd-017055595017 database/creds/readonly
 deny
 ```

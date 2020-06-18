@@ -23,7 +23,7 @@ This endpoint lists all configured ACL policies.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     -X LIST --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/policies/acl
@@ -52,7 +52,7 @@ This endpoint retrieves information about the named ACL policy.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/policies/acl/my-policy
@@ -94,7 +94,7 @@ updated, it takes effect immediately to all associated users.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
@@ -119,7 +119,7 @@ acts as an empty policy.)
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -136,7 +136,7 @@ This endpoint lists all configured RGP policies.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     -X LIST --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/policies/rgp
@@ -165,7 +165,7 @@ This endpoint retrieves information about the named RGP policy.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/policies/rgp/webapp
@@ -213,7 +213,7 @@ updated, it takes effect immediately to all associated users.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
@@ -238,7 +238,7 @@ acts as an empty policy.)
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -261,7 +261,7 @@ path, this endpoint returns two identifiers:
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     -X LIST --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/policies/egp
@@ -290,7 +290,7 @@ This endpoint retrieves information about the named EGP policy.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/policies/egp/breakglass
@@ -345,7 +345,7 @@ updated, it takes effect immediately to all associated users.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
@@ -368,7 +368,7 @@ This endpoint deletes the EGP policy with the given name from all paths on which
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \

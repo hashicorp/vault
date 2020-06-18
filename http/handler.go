@@ -23,6 +23,7 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -132,6 +133,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
 		mux.Handle("/v1/sys/leader", handleSysLeader(core))
 		mux.Handle("/v1/sys/health", handleSysHealth(core))
+		mux.Handle("/v1/sys/monitor", handleLogicalNoForward(core))
 		mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core,
 			handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))
 		mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core,
@@ -161,7 +163,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		}
 
 		// Register metrics path without authentication if enabled
-		if props.UnauthenticatedMetricsAccess {
+		if props.ListenerConfig != nil && props.ListenerConfig.Telemetry.UnauthenticatedMetricsAccess {
 			mux.Handle("/v1/sys/metrics", handleMetricsUnauthenticated(core))
 		} else {
 			mux.Handle("/v1/sys/metrics", handleLogicalNoForward(core))
@@ -252,9 +254,18 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 // wrapGenericHandler wraps the handler with an extra layer of handler where
 // tasks that should be commonly handled for all the requests and/or responses
 // are performed.
-func wrapGenericHandler(core *vault.Core, h http.Handler, maxRequestSize int64, maxRequestDuration time.Duration) http.Handler {
+func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerProperties) http.Handler {
+	var maxRequestDuration time.Duration
+	var maxRequestSize int64
+	if props.ListenerConfig != nil {
+		maxRequestDuration = props.ListenerConfig.MaxRequestDuration
+		maxRequestSize = props.ListenerConfig.MaxRequestSize
+	}
 	if maxRequestDuration == 0 {
 		maxRequestDuration = vault.DefaultMaxRequestDuration
+	}
+	if maxRequestSize == 0 {
+		maxRequestSize = DefaultMaxRequestSize
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Set the Cache-Control header for all the responses returned
@@ -264,8 +275,12 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, maxRequestSize int64, 
 		// Start with the request context
 		ctx := r.Context()
 		var cancelFunc context.CancelFunc
-		// Add our timeout
-		ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
+		// Add our timeout, but not for the monitor endpoint, as it's streaming
+		if strings.HasSuffix(r.URL.Path, "sys/monitor") {
+			ctx, cancelFunc = context.WithCancel(ctx)
+		} else {
+			ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
+		}
 		// Add a size limiter if desired
 		if maxRequestSize > 0 {
 			ctx = context.WithValue(ctx, "max_request_size", maxRequestSize)
@@ -296,7 +311,11 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, maxRequestSize int64, 
 	})
 }
 
-func WrapForwardedForHandler(h http.Handler, authorizedAddrs []*sockaddr.SockAddrMarshaler, rejectNotPresent, rejectNonAuthz bool, hopSkips int) http.Handler {
+func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handler {
+	rejectNotPresent := l.XForwardedForRejectNotPresent
+	hopSkips := l.XForwardedForHopSkips
+	authorizedAddrs := l.XForwardedForAuthorizedAddrs
+	rejectNotAuthz := l.XForwardedForRejectNotAuthorized
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		headers, headersOK := r.Header[textproto.CanonicalMIMEHeaderKey("X-Forwarded-For")]
 		if !headersOK || len(headers) == 0 {
@@ -342,7 +361,7 @@ func WrapForwardedForHandler(h http.Handler, authorizedAddrs []*sockaddr.SockAdd
 		if !found {
 			// If we didn't find it and aren't configured to reject, simply
 			// don't trust it
-			if !rejectNonAuthz {
+			if !rejectNotAuthz {
 				h.ServeHTTP(w, r)
 				return
 			}
@@ -362,7 +381,7 @@ func WrapForwardedForHandler(h http.Handler, authorizedAddrs []*sockaddr.SockAdd
 			}
 		}
 
-		indexToUse := len(acc) - 1 - hopSkips
+		indexToUse := int64(len(acc)) - 1 - hopSkips
 		if indexToUse < 0 {
 			// This is likely an error in either configuration or other
 			// infrastructure. We could either deny the request, or we

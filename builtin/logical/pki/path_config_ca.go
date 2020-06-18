@@ -47,9 +47,12 @@ func (b *backend) pathCAWrite(ctx context.Context, req *logical.Request, data *f
 		}
 	}
 
-	if parsedBundle.PrivateKey == nil ||
-		parsedBundle.PrivateKeyType == certutil.UnknownPrivateKey {
+	if parsedBundle.PrivateKey == nil {
 		return logical.ErrorResponse("private key not found in the PEM bundle"), nil
+	}
+
+	if parsedBundle.PrivateKeyType == certutil.UnknownPrivateKey {
+		return logical.ErrorResponse("unknown private key found in the PEM bundle"), nil
 	}
 
 	if parsedBundle.Certificate == nil {

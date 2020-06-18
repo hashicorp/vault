@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 )
@@ -25,14 +24,19 @@ func (b *backend) pathRotateCredentials() []*framework.Path {
 			Fields:  map[string]*framework.FieldSchema{},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.pathRotateCredentialsUpdate,
+					Callback:                    b.pathRotateCredentialsUpdate,
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 				logical.CreateOperation: &framework.PathOperation{
-					Callback: b.pathRotateCredentialsUpdate,
+					Callback:                    b.pathRotateCredentialsUpdate,
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 			},
-			HelpSynopsis:    pathRotateCredentialsUpdateHelpSyn,
-			HelpDescription: pathRotateCredentialsUpdateHelpDesc,
+			HelpSynopsis: "Request to rotate the root credentials Vault uses for the OpenLDAP administrator account.",
+			HelpDescription: "This path attempts to rotate the root credentials of the administrator account " +
+				"(binddn) used by Vault to manage OpenLDAP.",
 		},
 		{
 			Pattern: rotateRolePath + framework.GenericNameRegex("name"),
@@ -44,19 +48,29 @@ func (b *backend) pathRotateCredentials() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.pathRotateRoleCredentialsUpdate,
+					Callback:                    b.pathRotateRoleCredentialsUpdate,
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 				logical.CreateOperation: &framework.PathOperation{
-					Callback: b.pathRotateRoleCredentialsUpdate,
+					Callback:                    b.pathRotateRoleCredentialsUpdate,
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 			},
-			HelpSynopsis:    pathRotateRoleCredentialsUpdateHelpSyn,
-			HelpDescription: pathRotateRoleCredentialsUpdateHelpDesc,
+			HelpSynopsis:    "Request to rotate the credentials for a static user account.",
+			HelpDescription: "This path attempts to rotate the credentials for the given OpenLDAP static user account.",
 		},
 	}
 }
 
 func (b *backend) pathRotateCredentialsUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if _, hasTimeout := ctx.Deadline(); !hasTimeout {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(ctx, defaultCtxTimeout)
+		defer cancel()
+	}
+
 	config, err := readConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -65,7 +79,7 @@ func (b *backend) pathRotateCredentialsUpdate(ctx context.Context, req *logical.
 		return nil, errors.New("the config is currently unset")
 	}
 
-	newPassword, err := GeneratePassword(config.PasswordLength)
+	newPassword, err := b.GeneratePassword(ctx, config)
 	if err != nil {
 		return nil, err
 	}
@@ -137,14 +151,17 @@ func (b *backend) pathRotateRoleCredentialsUpdate(ctx context.Context, req *logi
 		item.Priority = resp.RotationTime.Add(role.StaticAccount.RotationPeriod).Unix()
 	}
 
-	// Add their rotation to the queue
-	if err := b.pushItem(item); err != nil {
-		return nil, err
+	// Add their rotation to the queue. We use pushErr here to distinguish between
+	// the error returned from setStaticAccount. They are scoped differently but
+	// it's more clear to developers that err above can still be non nil, and not
+	// overwritten or reused here.
+	if pushErr := b.pushItem(item); pushErr != nil {
+		return nil, pushErr
 	}
 
 	// We're not returning creds here because we do not know if its been processed
 	// by the queue.
-	return nil, nil
+	return nil, err
 }
 
 // rollBackPassword uses naive exponential backoff to retry updating to an old password,
@@ -176,22 +193,3 @@ func storePassword(ctx context.Context, s logical.Storage, config *config) error
 	}
 	return s.Put(ctx, entry)
 }
-
-func GeneratePassword(length int) (string, error) {
-	return base62.Random(length)
-}
-
-const pathRotateCredentialsUpdateHelpSyn = `
-Request to rotate the root credentials Vault uses for the OpenLDAP administrator account.
-`
-
-const pathRotateCredentialsUpdateHelpDesc = `
-This path attempts to rotate the root credentials of the administrator account (binddn) used by Vault to manage OpenLDAP.
-`
-
-const pathRotateRoleCredentialsUpdateHelpSyn = `
-Request to rotate the credentials for a static user account.
-`
-const pathRotateRoleCredentialsUpdateHelpDesc = `
-This path attempts to rotate the credentials for the given OpenLDAP static user account.
-`

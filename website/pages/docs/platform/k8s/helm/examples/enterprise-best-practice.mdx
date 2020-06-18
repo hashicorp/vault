@@ -69,7 +69,7 @@ TLS certificate generation is covered [here](/docs/platform/k8s/helm/examples/st
 The below `values-custom.yaml` can be used to set up a three server Vault cluster using
 Consul as a highly available storage backend, with AWS KMS for Auto Unseal.
 
-```
+```yaml
 # Create a values-custom.yaml to override default values
 cat << EOF > values-custom.yaml
 server:

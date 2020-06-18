@@ -82,7 +82,7 @@ Alternatively you can use the [join CLI
 command](/docs/commands/operator/raft/#join) or the API to join a node. The
 active node's API address will need to be specified:
 
-```shell
+```shell-session
 $ vault operator raft join https://node1.vault.local:8200
 ```
 
@@ -94,7 +94,7 @@ quorum count. This can be used in conjunction with [Performance
 Standby](/docs/enterprise/performance-standby/) nodes to add read scalability to
 a cluster in cases where a high volume of reads to servers are needed.
 
-```shell
+```shell-session
 $ vault operator raft join -non-voter https://node1.vault.local:8200
 ```
 
@@ -110,7 +110,7 @@ To remove the peer you can issue a
 [remove-peer](/docs/commands/operator/raft#remove-peer) command and provide the
 node ID you wish to remove:
 
-```shell
+```shell-session
 $ vault operator raft remove-peer node1
 Peer removed successfully!
 ```
@@ -122,7 +122,7 @@ To see the current peer set for the cluster you can issue a
 nodes that are listed here contribute to the quorum and a majority must be alive
 for integrated storage to continue to operate.
 
-```shell
+```shell-session
 $ vault operator raft list-peers
 Node     Address                   State       Voter
 ----     -------                   -----       -----

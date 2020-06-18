@@ -111,6 +111,10 @@ func (b *CubbyholeBackend) handleRead(ctx context.Context, req *logical.Request,
 
 	path := data.Get("path").(string)
 
+	if path == "" {
+		return nil, fmt.Errorf("missing path")
+	}
+
 	// Read the path
 	out, err := req.Storage.Get(ctx, req.ClientToken+"/"+path)
 	if err != nil {
@@ -146,6 +150,10 @@ func (b *CubbyholeBackend) handleWrite(ctx context.Context, req *logical.Request
 	}
 
 	path := data.Get("path").(string)
+
+	if path == "" {
+		return nil, fmt.Errorf("missing path")
+	}
 
 	// JSON encode the data
 	buf, err := json.Marshal(req.Data)

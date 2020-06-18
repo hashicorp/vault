@@ -11,8 +11,8 @@ const ERROR_WINDOW_CLOSED =
   'The provider window was closed before authentication was complete.  Please click Sign In to try again.';
 const ERROR_MISSING_PARAMS =
   'The callback from the provider did not supply all of the required parameters.  Please click Sign In to try again. If the problem persists, you may want to contact your administrator.';
-
-export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS };
+const ERROR_JWT_LOGIN = 'OIDC login is not configured for this mount';
+export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN };
 
 export default Component.extend({
   store: service(),
@@ -20,6 +20,7 @@ export default Component.extend({
   selectedAuthType: null,
   roleName: null,
   role: null,
+  errorMessage: null,
   onRoleName() {},
   onLoading() {},
   onError() {},
@@ -36,13 +37,14 @@ export default Component.extend({
     } else if (shouldDebounce) {
       this.fetchRole.perform(this.roleName);
     }
+    this.set('errorMessage', null);
     this.set('oldSelectedAuthPath', selectedAuthPath);
   },
 
-  // OIDC roles in the JWT/OIDC backend are those with an authUrl,
-  // those that are JWT type will 400 when trying to fetch the role
-  isOIDC: computed('role', 'role.authUrl', function() {
-    return this.role && this.role.authUrl;
+  // Assumes authentication using OIDC until it's known that the mount is
+  // configured for JWT authentication via static keys, JWKS, or OIDC discovery.
+  isOIDC: computed('errorMessage', function() {
+    return this.errorMessage !== ERROR_JWT_LOGIN;
   }),
 
   getWindow() {
@@ -63,6 +65,9 @@ export default Component.extend({
     } catch (e) {
       if (!e.httpStatus || e.httpStatus !== 400) {
         throw e;
+      }
+      if (e.errors && e.errors.length > 0) {
+        this.set('errorMessage', e.errors[0]);
       }
     }
     this.set('role', role);
@@ -152,7 +157,7 @@ export default Component.extend({
       if (e && e.preventDefault) {
         e.preventDefault();
       }
-      if (!this.isOIDC) {
+      if (!this.isOIDC || !this.role || !this.role.authUrl) {
         return;
       }
 

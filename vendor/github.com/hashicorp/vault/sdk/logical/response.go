@@ -185,13 +185,13 @@ func RespondWithStatusCode(resp *Response, req *Request, code int) (*Response, e
 }
 
 // HTTPResponseWriter is optionally added to a request object and can be used to
-// write directly to the HTTP response writter.
+// write directly to the HTTP response writer.
 type HTTPResponseWriter struct {
 	http.ResponseWriter
 	written *uint32
 }
 
-// NewHTTPResponseWriter creates a new HTTPRepoinseWriter object that wraps the
+// NewHTTPResponseWriter creates a new HTTPResponseWriter object that wraps the
 // provided io.Writer.
 func NewHTTPResponseWriter(w http.ResponseWriter) *HTTPResponseWriter {
 	return &HTTPResponseWriter{

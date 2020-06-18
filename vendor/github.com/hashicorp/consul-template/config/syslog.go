@@ -1,16 +1,26 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/hashicorp/consul-template/version"
+)
 
 const (
 	// DefaultSyslogFacility is the default facility to log to.
 	DefaultSyslogFacility = "LOCAL0"
 )
 
+var (
+	// DefaultSyslogName is the default app name in syslog.
+	DefaultSyslogName = version.Name
+)
+
 // SyslogConfig is the configuration for syslog.
 type SyslogConfig struct {
 	Enabled  *bool   `mapstructure:"enabled"`
 	Facility *string `mapstructure:"facility"`
+	Name	 *string `mapstructure:"name"`
 }
 
 // DefaultSyslogConfig returns a configuration that is populated with the
@@ -28,6 +38,7 @@ func (c *SyslogConfig) Copy() *SyslogConfig {
 	var o SyslogConfig
 	o.Enabled = c.Enabled
 	o.Facility = c.Facility
+	o.Name = c.Name
 	return &o
 }
 
@@ -57,17 +68,25 @@ func (c *SyslogConfig) Merge(o *SyslogConfig) *SyslogConfig {
 		r.Facility = o.Facility
 	}
 
+	if o.Name != nil {
+		r.Name = o.Name
+	}
+
 	return r
 }
 
 // Finalize ensures there no nil pointers.
 func (c *SyslogConfig) Finalize() {
 	if c.Enabled == nil {
-		c.Enabled = Bool(StringPresent(c.Facility))
+		c.Enabled = Bool(StringPresent(c.Facility) || StringPresent(c.Name))
 	}
 
 	if c.Facility == nil {
 		c.Facility = String(DefaultSyslogFacility)
+	}
+
+	if c.Name == nil {
+		c.Name = String(DefaultSyslogName)
 	}
 }
 
@@ -80,8 +99,10 @@ func (c *SyslogConfig) GoString() string {
 	return fmt.Sprintf("&SyslogConfig{"+
 		"Enabled:%s, "+
 		"Facility:%s"+
+		"Name:%s"+
 		"}",
 		BoolGoString(c.Enabled),
 		StringGoString(c.Facility),
+		StringGoString(c.Name),
 	)
 }

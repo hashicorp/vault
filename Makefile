@@ -134,10 +134,7 @@ ci-bootstrap:
 
 # bootstrap the build by downloading additional tools that may be used by devs
 bootstrap: ci-bootstrap
-	@for tool in  $(EXTERNAL_TOOLS) ; do \
-		echo "Installing/Updating $$tool" ; \
-		GO111MODULE=off $(GO_CMD) get -u $$tool; \
-	done
+	go generate -tags tools tools/tools.go
 
 # Note: if you have plugins in GOPATH you can update all of them via something like:
 # for i in $(ls | grep vault-plugin-); do cd $i; git remote update; git reset --hard origin/master; dep ensure -update; git add .; git commit; git push; cd ..; done

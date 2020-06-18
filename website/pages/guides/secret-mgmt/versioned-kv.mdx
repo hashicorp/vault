@@ -98,7 +98,7 @@ You will perform the following:
 5. [Delete versions of secret](#step5)
 6. [Permanently delete data](#step6)
 
-### <a name="step1"></a>Step 1: Check the KV secret engine version
+### Step 1: Check the KV secret engine version ((#step1))
 
 (**Persona:** devops)
 
@@ -108,7 +108,7 @@ Before beginning, verify that you are using the v2 of the KV secret engine.
 
 To check the KV secret engine version:
 
-```plaintext
+```shell-session
 $ vault secrets list -format=json
 ...
 "secret/": {
@@ -129,7 +129,7 @@ $ vault secrets list -format=json
 The indicated **`version`** should be **`2`**. If the version is **`1`**,
 upgrade it to v2.
 
-```plaintext
+```shell-session
 $ vault kv enable-versioning secret/
 ```
 
@@ -137,7 +137,7 @@ $ vault kv enable-versioning secret/
 
 To check the KV secret engine version:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: <TOKEN>" \
        <VAULT_ADDRESS>/v1/sys/mounts
 ```
@@ -147,7 +147,7 @@ server is running.
 
 **Example:**
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        http://127.0.0.1:8200/v1/sys/mounts | jq
 ...
@@ -173,7 +173,7 @@ $ curl --header "X-Vault-Token: ..." \
 The indicated **`version`** should be **`2`**. If the version is **`1`**,
 upgrade it to v2.
 
-```plaintext
+```shell-session
 $ cat payload.json
 {
   "options": {
@@ -197,7 +197,7 @@ then login.
 If `secret/` does not indicates **`v2`**, you can upgrade it from `v1` to `v2`
 by executing the following CLI command:
 
-```plaintext
+```shell-session
 $ vault kv enable-versioning secret/
 ```
 
@@ -209,7 +209,7 @@ drop-down list. Be sure that the **Version** is set to be **Version 2**.
 
 Click **Enable Engine** to complete.
 
-### <a name="step2"></a>Step 2: Write Secrets
+### Step 2: Write Secrets ((#step2))
 
 To understand how the versioning works, let's write some test data.
 
@@ -217,7 +217,7 @@ To understand how the versioning works, let's write some test data.
 
 To write secrets, run `vault kv put` command instead of `vault write`:
 
-```plaintext
+```shell-session
 $ vault kv put secret/customer/acme name="ACME Inc." contact_email="jsmith@acme.com"
 Key              Value
 ---              -----
@@ -229,7 +229,7 @@ version          1
 
 To update the existing secret, run the `vault kv put` command again:
 
-```plaintext
+```shell-session
 $ vault kv put secret/customer/acme name="ACME Inc." contact_email="john.smith@acme.com"
 Key              Value
 ---              -----
@@ -242,7 +242,7 @@ version          2
 Now you have two versions of the `secret/customer/acme` data. Run `vault kv get`
 to read the data.
 
-```plaintext
+```shell-session
 $ vault kv get secret/customer/acme
 ====== Metadata ======
 Key              Value
@@ -263,7 +263,7 @@ name             ACME Inc.
 
 Write some data at `secret/customer/acme`:
 
-```plaintext
+```shell-session
 $ tee payload.json <<EOF
 {
   "data": {
@@ -285,7 +285,7 @@ write secrets at `secret/customer/acme`, the API endpoint becomes
 
 Update the secret to create another version:
 
-```plaintext
+```shell-session
 $ tee payload.json <<EOF
 {
   "data": {
@@ -303,7 +303,7 @@ $ curl --header "X-Vault-Token: ..." \
 
 Now you have two versions of the `secret/customer/acme` data. Read back the secret.
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        http://127.0.0.1:8200/v1/secret/data/customer/acme
 {
@@ -342,7 +342,7 @@ value, and then click **Save**.
 
 ![Write Secret](/img/vault-versioned-kv-6.png)
 
-### <a name="step3"></a>Step 3: Retrieve a Specific Version of Secret
+### Step 3: Retrieve a Specific Version of Secret ((#step3))
 
 You may run into a situation where you need to view the secret before an update.
 
@@ -350,7 +350,7 @@ You may run into a situation where you need to view the secret before an update.
 
 To retrieve the version 1 of the secret written at `secret/customer/acme`:
 
-```plaintext
+```shell-session
 $ vault kv get -version=1 secret/customer/acme
 ====== Metadata ======
 Key              Value
@@ -369,7 +369,7 @@ name             ACME Inc.
 
 To read the **metadata** of `secret/customer/acme`:
 
-```plaintext
+```shell-session
 $ vault kv metadata get secret/customer/acme
 ======= Metadata =======
 Key                Value
@@ -399,7 +399,7 @@ destroyed        false
 
 To retrieve the version 1 of the secret written at `secret/customer/acme`:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        http://127.0.0.1:8200/v1/secret/data/customer/acme?version=1 | jq
 {
@@ -427,7 +427,7 @@ $ curl --header "X-Vault-Token: ..." \
 
 To read the **metadata** of `secret/customer/acme`:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        http://127.0.0.1:8200/v1/secret/metadata/customer/acme | jq
 {
@@ -460,7 +460,7 @@ $ curl --header "X-Vault-Token: ..." \
 }
 ```
 
-### <a name="step4"></a>Step 4: Specify the number of versions to keep
+### Step 4: Specify the number of versions to keep ((#step4))
 
 By default, the `kv-v2` secret engine keeps up to 10 versions. Let's limit the
 maximum number of versions to keep to be 4.
@@ -469,7 +469,7 @@ maximum number of versions to keep to be 4.
 
 To set the `secret/` to keep up to 4 versions:
 
-```shell
+```shell-session
 $ vault write secret/config max_versions=4
 Success! Data written to: secret/config
 
@@ -484,13 +484,13 @@ max_versions    4
 Alternatively, to limit the number of versions only on the
 **`secret/customer/acme`** path rather than the entire `secret/` engine:
 
-```plaintext
+```shell-session
 $ vault kv metadata put -max-versions=4 secret/customer/acme
 ```
 
 Overwrite the data a few more times to see what happens to the data.
 
-```plaintext
+```shell-session
 $ vault kv metadata get secret/customer/acme
 ======= Metadata =======
 Key                Value
@@ -535,7 +535,7 @@ show up in the metadata. Because the kv secret engine is configured to keep only
 4 versions, the oldest two versions are permanently deleted and you won't be
 able to read them.
 
-```plaintext
+```shell-session
 $ vault kv get -version=1 secret/customer/acme
 No value found at secret/data/customer/data
 ```
@@ -544,7 +544,7 @@ No value found at secret/data/customer/data
 
 To set the `secret/` to keep up to 4 versions:
 
-```plaintext
+```shell-session
 $ tee payload.json<<EOF
 {
   "max_versions": 4,
@@ -560,7 +560,7 @@ $ curl --header "X-Vault-Token: ..." \
 
 To view the configuration:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        http://127.0.0.1:8200/v1/secret/config | jq
 {
@@ -581,7 +581,7 @@ $ curl --header "X-Vault-Token: ..." \
 Alternatively, to limit the number of versions only on the
 **`secret/customer/acme`** path rather than the entire `secret/` engine:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data @payload.json
@@ -592,7 +592,7 @@ Invoke the `secret/metadata/customer/acme` endpoint instead.
 
 Overwrite the data a few more times to see what happens to the data.
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        http://127.0.0.1:8200/v1/secret/metadata/customer/acme | jq
 {
@@ -640,7 +640,7 @@ show up in the metadata. Because the kv secret engine is configured to keep only
 4 versions, the oldest two versions are permanently deleted and you won't be
 able to read them.
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        http://127.0.0.1:8200/v1/secret/data/customer/acme?version=1 | jq
 {
@@ -648,13 +648,13 @@ $ curl --header "X-Vault-Token: ..." \
 }
 ```
 
-### <a name="step5"></a>Step 5: Delete versions of secret
+### Step 5: Delete versions of secret ((#step5))
 
 #### CLI command
 
 Let's delete versions 4 and 5:
 
-```shell
+```shell-session
 $ vault kv delete -versions="4,5" secret/customer/acme
 Success! Data deleted (if it existed) at: secret/customer/acme
 
@@ -682,7 +682,7 @@ The metadata on versions 4 and 5 reports its deletion timestamp
 
 If version 5 was deleted by mistake and you wish to recover, invoke the `vault kv undelete` command:
 
-```plaintext
+```shell-session
 $ vault kv undelete -versions=5 secret/customer/acme
 Success! Data written to: secret/undelete/customer/acme
 ```
@@ -691,7 +691,7 @@ Success! Data written to: secret/undelete/customer/acme
 
 Let's delete versions 4 and 5:
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data '{ "versions":[4,5] }'
@@ -720,20 +720,20 @@ The metadata on versions 4 and 5 reports its deletion timestamp
 If version 5 was deleted by mistake and you wish to recover, invoke the
 `/secret/undelete` endpoint:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data '{ "versions":[5] }'
        http://127.0.0.1:8200/v1/secret/undelete/customer/acme
 ```
 
-### <a name="step6"></a>Step 6: Permanently delete data
+### Step 6: Permanently delete data ((#step6))
 
 #### CLI command
 
 To permanently delete a version of secret:
 
-```shell
+```shell-session
 $ vault kv destroy -versions=4 secret/customer/acme
 Success! Data written to: secret/destroy/customer/acme
 
@@ -754,7 +754,7 @@ The metadata indicates that Version 4 is destroyed.
 If you wish to destroy all the keys and versions at `secret/customer/acme`,
 invoke the `vault kv metadata delete` command:
 
-```plaintext
+```shell-session
 $ vault kv metadata delete secret/customer/acme
 Success! Data deleted (if it existed) at: secret/metadata/customer/acme
 ```
@@ -763,7 +763,7 @@ Success! Data deleted (if it existed) at: secret/metadata/customer/acme
 
 To permanently delete a version of secret:
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data '{ "versions":[4] }'
@@ -786,7 +786,7 @@ The metadata indicates that Version 4 is destroyed.
 If you wish to destroy all the keys and versions at `secret/customer/acme`,
 invoke the `secret/metadata` endpoint:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request DELETE
        http://127.0.0.1:8200/v1/secret/metadata/customer/acme
@@ -801,7 +801,7 @@ checks if the key already exists.
 By default, _Check-And-Set_ operation is not enabled on the KV secret engine;
 therefore, write is always allowed (no checking is performed).
 
-```plaintext
+```shell-session
 $ vault read secret/config
 Key             Value
 ---             -----
@@ -852,7 +852,7 @@ version          2
 
 To enable the **_Check-And-Set_** operation:
 
-```shell
+```shell-session
 $ tee payload.json<<EOF
 {
   "max_versions": 10,
@@ -917,8 +917,6 @@ $ curl --header "X-Vault-Token: ..." \
        --data @payload.json \
        http://127.0.0.1:8200/v1/secret/data/partner
 ```
-
-<br />
 
 ~> If the **`cas`** value is missing in your write request, the
 "`check-and-set parameter required for this call`" error will be returned. If

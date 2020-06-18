@@ -24,14 +24,14 @@ concepts](/docs/concepts/policies) page for more information.
 
 Enable the auth method "userpass" enabled at "userpass/":
 
-```text
+```shell-session
 $ vault auth enable userpass
 Success! Enabled the userpass auth method at: userpass/
 ```
 
 Create a user:
 
-```text
+```shell-session
 $ vault write auth/userpass/users/sethvargo password=secret
 Success! Data written to: auth/userpass/users/sethvargo
 ```
@@ -44,7 +44,7 @@ the [auth method](/docs/auth) documentation.
 The following flags are available in addition to the [standard set of
 flags](/docs/commands) included on all commands.
 
-- `-audit-non-hmac-request-keys` `(string: "")` -  Comma-separated
+- `-audit-non-hmac-request-keys` `(string: "")` - Comma-separated
   string or list of keys that will not be HMAC'd by audit devices in the
   request data object.
 

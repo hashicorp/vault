@@ -6,6 +6,9 @@
   publish = "out"
   command = "npm run static"
 
+[build.environment]
+  NODE_OPTIONS = '--max-old-space-size=4096'
+
 [context.production]
   environment = { HASHI_ENV = "production", NODE_ENV = "production"}
 
@@ -14,7 +17,7 @@
 
 [[redirects]]
   from = "/*"
-  to = "/404/index.html"
+  to = "/404.html"
   status = 404
 
 [[headers]]

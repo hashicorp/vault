@@ -383,6 +383,12 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 		}
 	}
 
+	if leaderStatus.RaftCommittedIndex > 0 {
+		out = append(out, fmt.Sprintf("Raft Committed Index | %d", leaderStatus.RaftCommittedIndex))
+	}
+	if leaderStatus.RaftAppliedIndex > 0 {
+		out = append(out, fmt.Sprintf("Raft Applied Index | %d", leaderStatus.RaftAppliedIndex))
+	}
 	if leaderStatus.LastWAL != 0 {
 		out = append(out, fmt.Sprintf("Last WAL | %d", leaderStatus.LastWAL))
 	}

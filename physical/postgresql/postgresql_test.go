@@ -7,10 +7,9 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/ory/dockertest"
 
 	_ "github.com/lib/pq"
 )
@@ -19,11 +18,11 @@ func TestPostgreSQLBackend(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Debug)
 
 	// Use docker as pg backend if no url is provided via environment variables
-	var cleanup func()
 	connURL := os.Getenv("PGURL")
 	if connURL == "" {
-		cleanup, connURL = prepareTestContainer(t, logger)
+		cleanup, u := postgresql.PrepareTestContainer(t, "11.1")
 		defer cleanup()
+		connURL = u
 	}
 
 	table := os.Getenv("PGTABLE")
@@ -359,47 +358,6 @@ func testPostgresSQLLockRenewal(t *testing.T, ha physical.HABackend) {
 
 	// Cleanup
 	newLock.Unlock()
-}
-
-func prepareTestContainer(t *testing.T, logger log.Logger) (cleanup func(), retConnString string) {
-	// If environment variable is set, use this connectionstring without starting docker container
-	if os.Getenv("PGURL") != "" {
-		return func() {}, os.Getenv("PGURL")
-	}
-
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-	// using 11.1 which is currently latest, use hard version for stability of tests
-	resource, err := pool.Run("postgres", "11.1", []string{})
-	if err != nil {
-		t.Fatalf("Could not start docker Postgres: %s", err)
-	}
-
-	retConnString = fmt.Sprintf("postgres://postgres@localhost:%v/postgres?sslmode=disable", resource.GetPort("5432/tcp"))
-
-	cleanup = func() {
-		docker.CleanupResource(t, pool, resource)
-	}
-
-	// Provide a test function to the pool to test if docker instance service is up.
-	// We try to setup a pg backend as test for successful connect
-	// exponential backoff-retry, because the dockerinstance may not be able to accept
-	// connections yet, test by trying to setup a postgres backend, max-timeout is 60s
-	if err := pool.Retry(func() error {
-		var err error
-		_, err = NewPostgreSQLBackend(map[string]string{
-			"connection_url": retConnString,
-		}, logger)
-		return err
-
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to docker: %s", err)
-	}
-
-	return cleanup, retConnString
 }
 
 func setupDatabaseObjects(t *testing.T, logger log.Logger, pg *PostgreSQLBackend) {

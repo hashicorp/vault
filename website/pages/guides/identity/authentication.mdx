@@ -146,7 +146,7 @@ In this guide, you are going to perform the following steps:
 Step 1 through 3 need to be performed by an `admin` user. Step 4 and 5 describe
 the commands that an `app` runs to get a token and read secrets from Vault.
 
-### <a name="step1"></a>Step 1: Enable AppRole auth method
+### Step 1: Enable AppRole auth method ((#step1))
 
 (**Persona:** admin)
 
@@ -156,7 +156,7 @@ Like many other auth methods, AppRole must be enabled before it can be used.
 
 Enable `approle` auth method by executing the following command:
 
-```shell
+```shell-session
 $ vault auth enable approle
 ```
 
@@ -164,7 +164,7 @@ $ vault auth enable approle
 
 Enable `approle` auth method by mounting its endpoint at `/sys/auth/approle`:
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: <TOKEN>" \
        --request POST \
        --data <PARAMETERS> \
@@ -176,7 +176,7 @@ parameters](/api/system/auth#enable-auth-method) of the method.
 
 **Example:**
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data '{"type": "approle"}' \
@@ -186,7 +186,7 @@ $ curl --header "X-Vault-Token: ..." \
 The above example passes the **type** (`approle`) in the request payload
 at the `sys/auth/approle` endpoint.
 
-### <a name="step2"></a>Step 2: Create a role with policy attached
+### Step 2: Create a role with policy attached ((#step2))
 
 (**Persona:** admin)
 
@@ -215,13 +215,13 @@ path "secret/mysql/*" {
 
 Before creating a role, create a `jenkins` policy:
 
-```shell
+```shell-session
 $ vault policy write jenkins jenkins-pol.hcl
 ```
 
 The command to create a new AppRole:
 
-```shell
+```shell-session
 $ vault write auth/approle/role/<ROLE_NAME> [parameters]
 ```
 
@@ -240,7 +240,7 @@ The following example creates a role named `jenkins` with `jenkins` policy
 attached. (NOTE: This example creates a role operates in [**pull**
 mode](/docs/auth/approle).)
 
-```shell
+```shell-session
 $ vault write auth/approle/role/jenkins policies="jenkins"
 
 # Read the jenkins role
@@ -262,7 +262,7 @@ $ vault read auth/approle/role/jenkins
 **NOTE:** To attach multiple policies, pass the policy names as a comma
 separated string.
 
-```shell
+```shell-session
 $ vault write auth/approle/role/jenkins policies="jenkins,anotherpolicy"
 ```
 
@@ -270,7 +270,7 @@ $ vault write auth/approle/role/jenkins policies="jenkins,anotherpolicy"
 
 Before creating a role, create `jenkins` policy:
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: ..." --request PUT --data @payload.json \
      http://127.0.0.1:8200/v1/sys/policy/jenkins
 
@@ -288,7 +288,7 @@ The following example creates a role named `jenkins` with a `jenkins` policy
 attached. (NOTE: This example creates a role which operates in [**pull**
 mode](/docs/auth/approle).)
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: ..." --request POST \
        --data '{"policies":"jenkins"}' \
        http://127.0.0.1:8200/v1/auth/approle/role/jenkins
@@ -306,7 +306,7 @@ $ curl --header "X-Vault-Token: ..." --request POST \
 **NOTE:** To attach multiple policies, pass the policy names as a comma
 separated string.
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token:..."
        --request POST \
        --data '{"policies":"jenkins,anotherpolicy"}' \
@@ -315,7 +315,7 @@ $ curl --header "X-Vault-Token:..."
 
 To read the jenkins role you just created:
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: ..." --request GET \
         http://127.0.0.1:8200/v1/auth/approle/role/jenkins | jq
 {
@@ -342,7 +342,7 @@ $ curl --header "X-Vault-Token: ..." --request GET \
 }
 ```
 
-### <a name="step3"></a>Step 3: Get Role ID and Secret ID
+### Step 3: Get Role ID and Secret ID ((#step3))
 
 (**Persona:** admin)
 
@@ -359,13 +359,13 @@ Now, you need to fetch the Role ID and Secret ID of a role.
 
 To read the Role ID:
 
-```shell
+```shell-session
 $ vault read auth/approle/role/<ROLE_NAME>/role-id
 ```
 
 To generate a new Secret ID:
 
-```shell
+```shell-session
 $ vault write -f auth/approle/role/<ROLE_NAME>/secret-id
 ```
 
@@ -376,7 +376,7 @@ values specified. Alternatively, you can set
 
 **Example:**
 
-```shell
+```shell-session
 $ vault read auth/approle/role/jenkins/role-id
   Key    	Value
   ---    	-----
@@ -396,7 +396,7 @@ the role in [Step 2](#step2), the generated secret ID carries out the conditions
 
 To read the Role ID:
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token:..." \
        --request GET \
        <VAULT_ADDRESS>/v1/auth/approle/role/<ROLE_NAME>/role-id
@@ -404,7 +404,7 @@ $ curl --header "X-Vault-Token:..." \
 
 To generate a new Secret ID:
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token:..." \
        --request POST \
        --data <PARAMETERS>
@@ -417,7 +417,7 @@ payload, or invoke the API with an empty payload.
 
 **Example:**
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token:..." --request GET \
        http://127.0.0.1:8200/v1/auth/approle/role/jenkins/role-id | jq
 
@@ -428,7 +428,7 @@ $ curl --header "X-Vault-Token:..." --request POST \
 If you specified `secret_id_ttl`, `secret_id_num_uses`, or `bound_cidr_list` on
 the role in [Step 2](#step2), the generated secret ID carries out the conditions.
 
-### <a name="step4"></a>Step 4: Login with Role ID & Secret ID
+### Step 4: Login with Role ID & Secret ID ((#step4))
 
 (**Persona:** app)
 
@@ -446,7 +446,7 @@ To login, use the `auth/approle/login` endpoint by passing the role ID and secre
 
 **Example:**
 
-```shell
+```shell-session
 $ vault write auth/approle/login role_id="675a50e7-cfe0-be76-e35f-49ec009731ea" \
   secret_id="ed0a642f-2acf-c2da-232f-1b21300d5f29"
 
@@ -469,7 +469,7 @@ in the request payload.
 
 **Example:**
 
-```plaintext
+```shell-session
 $ cat payload.json
   {
     "role_id": "675a50e7-cfe0-be76-e35f-49ec009731ea",
@@ -504,7 +504,7 @@ $ curl --request POST --data @payload.json http://127.0.0.1:8200/v1/auth/approle
 
 Now you have a **client token** with `default` and `jenkins` policies attached.
 
-### <a name="step5"></a>Step 5: Read secrets using the AppRole token
+### Step 5: Read secrets using the AppRole token ((#step5))
 
 (**Persona:** app)
 
@@ -518,14 +518,14 @@ this token.
 You can pass the `client_token` returned in [Step 4](#step4) as a part of the
 CLI command.
 
-```shell
+```shell-session
 $ VAULT_TOKEN=3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e vault kv get secret/mysql/webapp
 No value found at secret/mysql/webapp
 ```
 
 Alternatively, you can first authenticate with Vault using the `client_token`.
 
-```shell
+```shell-session
 $ vault login eeaf890e-4b0f-a687-4190-c75b1d6d70bc
 Successfully authenticated! You are now logged in.
 token: eeaf890e-4b0f-a687-4190-c75b1d6d70bc
@@ -542,7 +542,7 @@ found" message.
 **Optional:** Using the `admin` user's token, you can store some secrets in the
 `secret/mysql/webapp` path.
 
-```shell
+```shell-session
 $ vault kv put secret/mysql/webapp @mysqldb.txt
 
 $ cat mysqldb.txt
@@ -564,7 +564,7 @@ You can now pass the `client_token` returned in [Step 4](#step4) in the
 
 **Example:**
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: eeaf890e-4b0f-a687-4190-c75b1d6d70bc" \
        --request GET \
        http://127.0.0.1:8200/v1/secret/data/mysql/webapp | jq
@@ -578,7 +578,7 @@ Since there is no value at `secret/mysql/webapp`, it returns an empty array.
 **Optional:** Using the **`admin`** user's token, create some secrets in the
 `secret/mysql/webapp` path.
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: ..." --request POST --data @mysqldb.txt \
 
 $ cat mysqldb.text
@@ -616,13 +616,13 @@ to the secret ID rather than the actual value.
 In [Step 3](#step3), you executed the following command to retrieve the Secret
 ID:
 
-```shell
+```shell-session
 $ vault write -f auth/approle/role/jenkins/secret-id
 ```
 
 Instead, use response wrapping by passing the **`-wrap-ttl`** parameter:
 
-```shell
+```shell-session
 $ vault write -wrap-ttl=60s -f auth/approle/role/jenkins/secret-id
 
 Key                          	Value
@@ -637,7 +637,7 @@ wrapping_token_creation_path:	auth/approle/role/jenkins/secret-id
 Send this `wrapping_token` to the client so that the response can be unwrapped and
 obtain the Secret ID.
 
-```shell
+```shell-session
 $ VAULT_TOKEN=9bbe23b7-5f8c-2aec-83dc-e97e94a2e632 vault unwrap
 
 Key               	Value
@@ -648,7 +648,7 @@ secret_id_accessor	7d8a40b7-a6fd-a634-579b-b7d673ff86fb
 
 NOTE: To retrieve the Secret ID alone, you can use `jq` as follows:
 
-```shell
+```shell-session
 $ VAULT_TOKEN=2577044d-cf86-a065-e28f-e2a14ea6eaf7 vault unwrap -format=json | jq -r ".data.secret_id"
 
 b07d7a47-1d0d-741d-20b4-ae0de7c6d964
