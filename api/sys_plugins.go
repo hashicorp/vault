@@ -232,6 +232,9 @@ type ReloadPluginInput struct {
 
 	// Mounts is the array of string mount paths of the plugin backends to reload
 	Mounts []string `json:"mounts"`
+
+	// Scope is the scope of the plugin reload
+	Scope string `json:"scope"`
 }
 
 // ReloadPlugin reloads mounted plugin backends
