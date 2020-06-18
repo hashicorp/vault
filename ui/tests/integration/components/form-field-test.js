@@ -31,6 +31,8 @@ module('Integration | Component | form field', function(hooks) {
   };
 
   test('it renders', async function(assert) {
+    // use EmberObject.create({}) when you don't need a full model
+    // in your test.
     let model = EmberObject.create({});
     this.set('attr', { name: 'foo' });
     this.set('model', model);

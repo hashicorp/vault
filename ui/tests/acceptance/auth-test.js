@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { setupApplicationTest } from 'ember-qunit';
+import { setupApplicationTest, only } from 'ember-qunit';
 import sinon from 'sinon';
 import { currentURL, visit, settled } from '@ember/test-helpers';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
@@ -19,6 +19,16 @@ module('Acceptance | auth', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
+    /*
+    useFakeTimers here allows us to overwrite the global
+    setInterval, setTimeout, etc., starting the timer at Date.now()
+    instead of at 0.
+
+    without shouldAdvanceTime: true, the timer would freeze until we
+    told it to continue using clock.tick. In this example we want
+    time to pass in our tests, but we need to be able to force a
+    timeout later on, so we leave shouldAdvanceTime set to true.
+    */
     this.clock = sinon.useFakeTimers({
       now: Date.now(),
       shouldAdvanceTime: true,
@@ -28,6 +38,7 @@ module('Acceptance | auth', function(hooks) {
   });
 
   hooks.afterEach(function() {
+    // make sure to tear down the fake timer!
     this.clock.restore();
     this.server.shutdown();
     return logout.visit();
@@ -87,7 +98,7 @@ module('Acceptance | auth', function(hooks) {
     }
   });
 
-  test('it shows the token warning beacon on the menu', async function(assert) {
+  only('it shows the token warning beacon on the menu', async function(assert) {
     let authService = this.owner.lookup('service:auth');
     await authPage.login();
     await consoleComponent.runCommands([
@@ -96,6 +107,11 @@ module('Acceptance | auth', function(hooks) {
     let token = consoleComponent.lastTextOutput;
     await logout.visit();
     await authPage.login(token);
+
+    // inspect the timer
+    // debugger;
+
+    // use the fake timer to cause a timeout
     this.clock.tick(authService.IDLE_TIMEOUT);
     authService.shouldRenew();
     await settled();
