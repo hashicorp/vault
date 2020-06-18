@@ -1,6 +1,7 @@
 import { Base } from '../create';
 import { isPresent, clickable, visitable, create, fillable } from 'ember-cli-page-object';
 import { codeFillable } from 'vault/tests/pages/helpers/codemirror';
+
 export default create({
   ...Base,
   path: fillable('[data-test-secret-path]'),

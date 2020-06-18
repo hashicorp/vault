@@ -2,6 +2,8 @@ import { visit, settled, currentURL, currentRouteName } from '@ember/test-helper
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+
+// these are all page-objects from ember-cli-page-object
 import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
