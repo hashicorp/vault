@@ -206,18 +206,21 @@ func checkCounter(t *testing.T, inmemSink *metrics.InmemSink, keyPrefix string, 
 }
 
 func TestRequestHandling_LoginMetric(t *testing.T) {
-	core, _, root := TestCoreUnsealed(t)
+	core := TestCore(t)
+
+	// Replace sink before unseal!
+	inmemSink := metrics.NewInmemSink(
+		1000000*time.Hour,
+		2000000*time.Hour)
+	core.metricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
+
+	_, _, root := testCoreUnsealed(t, core)
 
 	if err := core.loadMounts(namespace.RootContext(nil)); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	core.credentialBackends["userpass"] = credUserpass.Factory
-
-	inmemSink := metrics.NewInmemSink(
-		1000000*time.Hour,
-		2000000*time.Hour)
-	core.metricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
 
 	// Setup mount
 	req := &logical.Request{

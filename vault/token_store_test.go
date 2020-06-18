@@ -2122,13 +2122,16 @@ func TestTokenStore_HandleRequest_CreateToken_TTL(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_Metric(t *testing.T) {
-	c, _, root := TestCoreUnsealed(t)
-	ts := c.tokenStore
+	c := TestCore(t)
 
+	// Replace metricSink before unsealing
 	inmemSink := metrics.NewInmemSink(
 		1000000*time.Hour,
 		2000000*time.Hour)
 	c.metricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
+
+	_, _, root := testCoreUnsealed(t, c)
+	ts := c.tokenStore
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
