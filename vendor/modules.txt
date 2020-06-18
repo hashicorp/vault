@@ -307,7 +307,7 @@ github.com/google/go-metrics-stackdriver/vault
 github.com/google/go-querystring/query
 # github.com/google/gofuzz v1.0.0
 github.com/google/gofuzz
-# github.com/google/uuid v1.0.0
+# github.com/google/uuid v1.1.1
 github.com/google/uuid
 # github.com/googleapis/gax-go/v2 v2.0.5
 github.com/googleapis/gax-go/v2
@@ -648,6 +648,8 @@ github.com/modern-go/concurrent
 github.com/modern-go/reflect2
 # github.com/mongodb/go-client-mongodb-atlas v0.1.2
 github.com/mongodb/go-client-mongodb-atlas/mongodbatlas
+# github.com/mozillazg/go-httpheader v0.2.1
+github.com/mozillazg/go-httpheader
 # github.com/mwielbut/pointy v1.1.0
 github.com/mwielbut/pointy
 # github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
@@ -768,6 +770,8 @@ github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/http
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/kms/v20190118
+# github.com/tencentyun/cos-go-sdk-v5 v0.7.7
+github.com/tencentyun/cos-go-sdk-v5
 # github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926
 github.com/tv42/httpunix
 # github.com/ulikunitz/xz v0.5.6

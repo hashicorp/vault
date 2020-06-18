@@ -1,0 +1,66 @@
+---
+layout: docs
+page_title: TencentCloud COS - Storage Backends - Configuration
+sidebar_title: TencentCloud COS
+description: |-
+  The TencentCloud COS storage backend is used to persist Vault's data
+  in a TencentCloud COS bucket.
+---
+
+# TencentCloud COS Storage Backend
+
+The TencentCloud COS storage backend is used to persist Vault's data
+in a [TencentCloud COS][tencentcloudcos] bucket.
+
+- **No High Availability** - The TencentCloud COS storage backend does not support
+  High availability.
+
+- **Community Supported** - The TencentCloud COS storage backend is supported by the
+  community. While it has undergone review by HashiCorp employees, they may not
+  be as knowledgeable about the technology. If you encounter problems with them,
+  you may be referred to the original author.
+
+```hcl
+storage "tencentcloudcos" {
+  region     = "Your-COS-region"
+  access_key = "Your-SecretId"
+  secret_key = "Your-SecretKey"
+  bucket     = "Your-COS-bucket"
+}
+```
+
+## `tencentcloudcos` Parameters
+
+These parameters apply to the `storage` stanza in the Vault configuration file:
+
+- `region` `(string: <required> "ap-guangzhou")`: The TencentCloud region where the bucket
+  lives. My also be specified by the `TENCENTCLOUD_REGION` environment variable.
+
+- `access_key` `(string: <required>)`: The TencentCloud secret id to use. May also be specified by
+  `TENCENTCLOUD_SECRET_ID` environment variable.
+
+- `secret_key` `(string: <required>)`: The TencentCloud secret key to use. May also be specified by
+  `TENCENTCLOUD_SECRET_KEY` environment variable.
+
+- `bucket` `(string: <required>)`: The TencentCloud COS bucket to use for storage.
+  May also be specified by `TENCENTCLOUD_COS_BUCKET` environment variable.
+
+- `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
+  requests to TencentCloud COS.
+
+## `tencentcloudcos` Examples
+
+### Default Example
+
+This example shows using TencentCloud COS as a storage backend.
+
+```hcl
+storage "tencentcloudcos" {
+  region     = "Your-COS-region"
+  access_key = "Your-SecretId"
+  secret_key = "Your-SecretKey"
+  bucket     = "Your-COS-bucket"
+}
+```
+
+[tencentcloudcos]: https://intl.cloud.tencent.com/product/cos

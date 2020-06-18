@@ -83,6 +83,7 @@ export default [
           'raft',
           's3',
           'swift',
+          'tencentcloudcos',
           'zookeeper',
         ],
       },
