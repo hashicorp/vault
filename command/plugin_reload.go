@@ -61,7 +61,7 @@ func (c *PluginReloadCommand) Flags() *FlagSets {
 
 	f.StringVar(&StringVar{
 		Name:       "scope",
-		Target:     &c.plugin,
+		Target:     &c.scope,
 		Completion: complete.PredictAnything,
 		Usage:      `The scope of the reload, omitted for local, "cluster", for cluster-wide`,
 	})
