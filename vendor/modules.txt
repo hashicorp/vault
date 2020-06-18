@@ -351,6 +351,7 @@ github.com/hashicorp/go-kms-wrapping/wrappers/awskms
 github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault
 github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms
 github.com/hashicorp/go-kms-wrapping/wrappers/ocikms
+github.com/hashicorp/go-kms-wrapping/wrappers/tencentcloudkms
 github.com/hashicorp/go-kms-wrapping/wrappers/transit
 # github.com/hashicorp/go-kms-wrapping/entropy v0.1.0
 github.com/hashicorp/go-kms-wrapping/entropy
@@ -761,6 +762,12 @@ github.com/sirupsen/logrus
 # github.com/stretchr/testify v1.5.1
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
+# github.com/tencentcloud/tencentcloud-sdk-go v3.0.171+incompatible
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/http
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/kms/v20190118
 # github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926
 github.com/tv42/httpunix
 # github.com/ulikunitz/xz v0.5.6
