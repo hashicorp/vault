@@ -457,9 +457,13 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 	}
 
 	if scope == clusterScope {
-		return nil, handleClusterPluginReload(ctx, b, pluginName, pluginMounts)
+		go handleClusterPluginReload(ctx, b, req.ID, pluginName, pluginMounts)
 	}
-	return nil, nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"reload_id": req.ID,
+		},
+	}, nil
 }
 
 func (b *SystemBackend) writePluginReloadRequest(ctx context.Context, reqPath string) error {
