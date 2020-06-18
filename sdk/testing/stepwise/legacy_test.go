@@ -88,3 +88,5 @@ func (t *mockT) failMessage() string {
 
 	return "unknown"
 }
+
+func (t *mockT) Helper() {}
