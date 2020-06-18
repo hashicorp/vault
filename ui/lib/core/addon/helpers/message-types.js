@@ -25,6 +25,12 @@ export const MESSAGE_TYPES = {
     glyph: 'alert-triangle',
     text: 'Warning',
   },
+  loading: {
+    class: 'is-success',
+    glyphClass: 'has-text-success',
+    glyph: 'loading',
+    text: 'Loading',
+  },
 };
 
 export function messageTypes([type]) {
