@@ -75,8 +75,7 @@ type BoltSnapshotSink struct {
 }
 
 // NewBoltSnapshotStore creates a new BoltSnapshotStore based
-// on a base directory. The `retain` parameter controls how many
-// snapshots are retained. Must be at least 1.
+// on a base directory.
 func NewBoltSnapshotStore(base string, logger log.Logger, fsm *FSM) (*BoltSnapshotStore, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("no logger provided")
@@ -254,8 +253,6 @@ func (f *BoltSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, error)
 }
 
 func (f *BoltSnapshotStore) openFromFile(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
-	// TODO: should we insted have a separate metadata file so we can checksum
-	// the db file?
 	meta, err := f.getMetaFromDB(id)
 	if err != nil {
 		return nil, nil, err
@@ -271,7 +268,7 @@ func (f *BoltSnapshotStore) openFromFile(id string) (*raft.SnapshotMeta, io.Read
 	return meta, readCloser, nil
 }
 
-// ReapSnapshots reaps any snapshots beyond the retain count.
+// ReapSnapshots reaps all snapshots.
 func (f *BoltSnapshotStore) ReapSnapshots() error {
 	snapshots, err := ioutil.ReadDir(f.path)
 	switch {

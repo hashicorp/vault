@@ -619,6 +619,7 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 
 	// Close the db file
 	if err := f.db.Close(); err != nil {
+		f.logger.Error("failed to close database file", "error", err)
 		return err
 	}
 
@@ -628,11 +629,15 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 
 	// Install the new boltdb file
 	if err := snapshotInstaller.Install(dbPath); err != nil {
+		f.logger.Error("failed to install snapshot", "error", err)
 		return errwrap.Wrapf("failed to install snapshot database: {{err}}", err)
 	}
 
+	f.logger.Info("snapshot installed")
+
 	// Open the new file
 	if err := f.openDBFile(dbPath); err != nil {
+		f.logger.Error("failed to open new database file", "error", err)
 		return errwrap.Wrapf("failed to open new bolt file: {{err}}", err)
 	}
 
