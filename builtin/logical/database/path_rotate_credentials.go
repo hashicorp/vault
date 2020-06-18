@@ -143,7 +143,7 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			item.Priority = time.Now().Add(10 * time.Second).Unix()
 
 			// Preserve the WALID if it was returned
-			if resp.WALID != "" {
+			if resp != nil && resp.WALID != "" {
 				item.Value = resp.WALID
 			}
 		} else {
