@@ -460,7 +460,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
 		return 1
 	}
-	if config.Storage.Type == storageTypeRaft {
+	if config.Storage.Type == storageTypeRaft || config.HAStorage.Type == storageTypeRaft {
 		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
 			config.ClusterAddr = envCA
 		}
@@ -1183,13 +1183,13 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the separate HA storage backend, if it exists
 	var ok bool
 	if config.HAStorage != nil {
-		if config.Storage.Type == storageTypeRaft {
-			c.UI.Error("HA storage cannot be declared when Raft is the storage type")
+		if config.Storage.Type == storageTypeRaft && config.HAStorage.Type == storageTypeRaft {
+			c.UI.Error("Raft cannot be declared as HA storage separately when also declared as the storage type to use")
 			return 1
 		}
 
-		if config.Storage.Type == storageTypeRaft && config.HAStorage.Type == storageTypeRaft {
-			c.UI.Error("Raft cannot be declared as HA storage separately when also declared as the storage type to use")
+		if config.Storage.Type == storageTypeRaft {
+			c.UI.Error("HA storage cannot be declared when Raft is the storage type")
 			return 1
 		}
 
@@ -1236,8 +1236,8 @@ func (c *ServerCommand) Run(args []string) int {
 			coreConfig.RedirectAddr = config.Storage.RedirectAddr
 			disableClustering = config.Storage.DisableClustering
 
-			if config.Storage.Type == storageTypeRaft && disableClustering {
-				c.UI.Error("Disable clustering cannot be set to true when Raft is the storage type")
+			if (config.Storage.Type == storageTypeRaft || config.HAStorage.Type == storageTypeRaft) && disableClustering {
+				c.UI.Error("Disable clustering cannot be set to true when Raft is the storage or ha_storage type")
 				return 1
 			}
 
