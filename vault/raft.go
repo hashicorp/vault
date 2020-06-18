@@ -115,7 +115,7 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 		// this case. If we return here, the raft object has not been instantiated,
 		// and a bootstrap call should be made.
 		if c.isRaftHAOnly() {
-			c.logger.Trace("skipping raft backend setup during unseal, bootstrap must be started")
+			c.logger.Trace("skipping raft backend setup during unseal, no bootstrap operation has been started yet")
 			return nil
 		}
 

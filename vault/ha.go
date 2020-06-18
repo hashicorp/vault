@@ -708,10 +708,8 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 
 // periodicCheckKeyUpgrade is used to watch for key rotation events as a standby
 func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{}) {
-	var isRaft bool
-	if rb := c.getRaftBackend(); rb != nil {
-		isRaft = true
-	}
+	raftBackend := c.getRaftBackend()
+	isRaft := raftBackend != nil
 
 	opCount := new(int32)
 	for {
@@ -754,7 +752,7 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 					c.logger.Error("key rotation periodic upgrade check failed", "error", err)
 				}
 
-				if raftBackend := c.getRaftBackend(); raftBackend != nil {
+				if isRaft {
 					hasState, err := raftBackend.HasState()
 					if err != nil {
 						c.logger.Error("could not check raft state", "error", err)

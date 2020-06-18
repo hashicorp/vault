@@ -71,6 +71,9 @@ type RaftBackend struct {
 	// raft is the instance of raft we will operate on.
 	raft *raft.Raft
 
+	// raftInitCh is used to block during HA lock acquisition if raft
+	// has not been initialized yet, which can occur if raft is being
+	// used for HA-only.
 	raftInitCh chan struct{}
 
 	// raftNotifyCh is used to receive updates about leadership changes
@@ -549,7 +552,6 @@ func (b *RaftBackend) HasState() (bool, error) {
 // the raft nodes to communicate.
 func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	b.logger.Trace("setting up raft cluster")
-	defer b.logger.Trace("finished setting up raft cluster")
 
 	b.l.Lock()
 	defer b.l.Unlock()
@@ -716,6 +718,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	// Close the init channel to signal setup has been completed
 	close(b.raftInitCh)
 
+	b.logger.Trace("finished setting up raft cluster")
 	return nil
 }
 
