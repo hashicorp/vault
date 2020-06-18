@@ -1,8 +1,12 @@
 package vault
 
 import (
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -108,4 +112,50 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 			t.Errorf("Unexpected mount point %v", mountPoint)
 		}
 	}
+}
+
+func TestCoreMetrics_KvSecretGaugeError(t *testing.T) {
+	core := TestCore(t)
+
+	// Replace metricSink before unsealing
+	inmemSink := metrics.NewInmemSink(
+		1000000*time.Hour,
+		2000000*time.Hour)
+	core.metricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
+
+	testCoreUnsealed(t, core)
+	ctx := namespace.RootContext(nil)
+
+	badKvMount := &kvMount{
+		Namespace:  namespace.RootNamespace,
+		MountPoint: "bad/path",
+		Version:    "1",
+		NumSecrets: 0,
+	}
+
+	core.walkKvMountSecrets(ctx, badKvMount)
+
+	intervals := inmemSink.Data()
+	// Test crossed an interval boundary, don't try to deal with it.
+	if len(intervals) > 1 {
+		t.Skip("Detected interval crossing.")
+	}
+
+	// Should be an error
+	keyPrefix := "metrics.collection.error"
+	var counter *metrics.SampledValue = nil
+
+	for _, c := range intervals[0].Counters {
+		if strings.HasPrefix(c.Name, keyPrefix) {
+			counter = &c
+			break
+		}
+	}
+	if counter == nil {
+		t.Fatal("No metrics.collection.error counter found.")
+	}
+	if counter.Count != 1 {
+		t.Errorf("Counter number of samples %v is not 1.", counter.Count)
+	}
+
 }
