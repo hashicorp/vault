@@ -748,6 +748,9 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	}
 
 	// Disallow leader API address to be provided if we're using raft for HA-only
+	// The leader API address is obtained directly through storage. This serves
+	// as a form of verification that this node is sharing the same physical
+	// storage as the leader node.
 	if isRaftHAOnly {
 		for _, info := range leaderInfos {
 			if info.LeaderAPIAddr != "" {
@@ -877,7 +880,9 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				nonVoter:            nonVoter,
 			}
 
-			// NOTE: Why doe we have this block in here?
+			// If we're using Shamir and using raft for both physical and HA, we
+			// need to block until the node is unsealed, unless retry is set to
+			// false.
 			if c.seal.BarrierType() == wrapping.Shamir && !c.isRaftHAOnly() {
 				c.raftInfo = raftInfo
 				if err := c.seal.SetBarrierConfig(ctx, &sealConfig); err != nil {
