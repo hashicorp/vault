@@ -156,7 +156,9 @@ type Case struct {
 	// will be used to drive the tests
 	Environment Environment
 
-	// Steps are the set of operations that are run for this test case.
+	// Steps are the set of operations that are run for this test case. During
+	// execution each step will be logged to output with a 1-based index as it is
+	// ran, with the first step logged as step '1' and not step '0'.
 	Steps []Step
 
 	// SkipTeardown allows the Environment TeardownFunc to be skipped, leaving any
@@ -181,8 +183,6 @@ func Run(tt TestT, c Case) {
 	// slow and generally require some outside configuration.
 	checkShouldRun(tt)
 
-	// Create an in-memory Vault core
-	logger := logging.NewVaultLogger(log.Trace)
 	if c.Environment == nil {
 		tt.Fatal("nil driver in acceptance test")
 		// return here only used during testing when using mockT type, otherwise
@@ -190,8 +190,9 @@ func Run(tt TestT, c Case) {
 		return
 	}
 
-	err := c.Environment.Setup()
-	if err != nil {
+	logger := logging.NewVaultLogger(log.Trace)
+
+	if err := c.Environment.Setup(); err != nil {
 		driverErr := fmt.Errorf("error setting up driver: %w", err)
 		if !c.SkipTeardown {
 			if err := c.Environment.Teardown(); err != nil {
