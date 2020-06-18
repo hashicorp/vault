@@ -110,3 +110,48 @@ func (c *Core) kvSecretGaugeCollector(ctx context.Context) ([]metricsutil.GaugeL
 
 	return results, nil
 }
+
+func (c *Core) entityGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	// TODO: terminate the count if it's taking too long
+	byNamespace, err := c.identityStore.CountEntitiesByNamespace()
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, err
+	}
+
+	allNamespaces := ts.core.collectNamespaces()
+	values := make([]metricsutil.GaugeLabelValues, len(allNamespaces))
+	for i, glv := range values {
+		glv.Labels = []metrics.Label{
+			metricsutil.namespaceLabel(allNamespaces[i]),
+		}
+		glv.Value = float32(byNamespace[allNamespaces[i].ID])
+	}
+
+	return values, nil
+}
+
+func (c *Core) entityGaugeCollectorByMount(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	// TODO: terminate the count if it's taking too long
+	byAccessor, err := c.identityStore.CountEntitiesByMountAccessor()
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, err
+	}
+
+	values := make([]metricsutil.GaugeLabelValues, 0)
+	for accessor, count := range byAccessor {
+		mountEntry := c.router.MatchingMountByAccessor(accessor)
+		if mountEntry == nil {
+			continue
+		}
+		values = append(values, metricsutil.GaugeLabelValues{
+			Labels: []metrics.Label{
+				metricsutil.namespaceLabel(mountEntry.namespace),
+				{"auth_method", mountEntry.Type},
+				{"mount_point", mountEntry.Path},
+			},
+			Value: float32(count),
+		})
+	}
+
+	return values, nil
+}

@@ -2131,3 +2131,43 @@ func (i *IdentityStore) countEntities() (int, error) {
 
 	return count, nil
 }
+
+// Sum up the number of entities belonging to each namespace (keyed by ID)
+func (i *IdentityStore) countEntitiesByNamespace() (map[string]int, error) {
+	txn := i.db.Txn(false)
+	iter, err := txn.Get(entitiesTable, "id")
+	if err != nil {
+		return -1, err
+	}
+
+	byNamespace := make(map[string]int)
+	val := iter.Next()
+	for val != nil {
+		entity := val.(*identity.Entity)
+		byNamespace[entity.NamespaceID] = byNamespace[entity.NamespaceID] + 1
+		val = iter.Next()
+	}
+
+	return byNamespace, nil
+}
+
+// Sum up the number of entities belonging to each mount point (keyed by accessor)
+func (i *IdentityStore) countEntitiesByAccessor() (map[string]int, error) {
+	txn := i.db.Txn(false)
+	iter, err := txn.Get(entitiesTable, "id")
+	if err != nil {
+		return -1, err
+	}
+
+	byMountAccessor := make(map[string]int)
+	val := iter.Next()
+	for val != nil {
+		entity := val.(*identity.Entity)
+		for _, alias := range entity.Aliases {
+			byMountAccessor[alias.MountAccessor] = byMountAccessor[alias.MountAccessor] + 1
+		}
+		val = iter.Next()
+	}
+
+	return byMountAccessor, nil
+}
