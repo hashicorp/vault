@@ -492,6 +492,10 @@ type boltSnapshotInstaller struct {
 	filename string
 }
 
+func (i *boltSnapshotInstaller) Filename() string {
+	return i.filename
+}
+
 func (i *boltSnapshotInstaller) Metadata() *raft.SnapshotMeta {
 	return i.meta
 }

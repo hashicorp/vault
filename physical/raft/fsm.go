@@ -176,6 +176,13 @@ func (f *FSM) openDBFile(dbPath string) error {
 	return nil
 }
 
+func (f *FSM) Close() error {
+	f.l.RLock()
+	defer f.l.RUnlock()
+
+	return f.db.Close()
+}
+
 func writeSnapshotMetaToDB(metadata *raft.SnapshotMeta, db *bolt.DB) error {
 	latestIndex := &IndexValue{
 		Term:  metadata.Term,
