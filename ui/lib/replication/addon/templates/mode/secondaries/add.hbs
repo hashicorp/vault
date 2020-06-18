@@ -13,33 +13,26 @@
     <div class="control">
       {{input class="input" name="activation-token-id" id="activation-token-id" value=id data-test-replication-secondary-id=true}}
     </div>
-    <p class="help has-text-grey">
-      This will be used to identify a secondary cluster once a connection has been established with the primary.
-    </p>
-  </div>
-  <div class="field">
-    {{!-- TODO fix so it defaults to 30s like in other places or replace with new TTL picker --}}
-    {{ttl-picker onChange=(action (mut ttl)) initialValue="30m" class="is-marginless"}}
-    <p class="help has-text-grey">
-      This is the Time To Live for the generated secondary token. After this period, the generated token will no longer be valid.
-    </p>
-  </div>
-  {{#if (eq replicationMode "performance")}}
-    <PathFilterConfigList
-      @paths={{paths}}
-      @config={{filterConfig}}
-      @id={{id}}
-    />
-  {{/if}}
-  <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
-      <button
-        type="submit"
-        class="button is-primary"
-        data-test-secondary-add=true
-        >
-        Generate token
-      </button>
+  {{else}}
+    <div class="field">
+      <label for="activation-token-id" class="is-label">
+        Secondary ID
+      </label>
+      <div class="control">
+        {{input class="input" name="activation-token-id" id="activation-token-id" value=id data-test-replication-secondary-id=true}}
+      </div>
+      <p class="help has-text-grey">
+        This will be used to identify secondary cluster once a connection has been established with the primary.
+      </p>
+    </div>
+    <div class="field">
+      <TtlPicker2
+        @initialValue="30m"
+        @label="Time to Live (TTL) for generated secondary token"
+        @helperTextDisabled="If not set, the default value (30 minutes) will be used"
+        @helperTextEnabled="After this period, the generated token will no longer be valid."
+        @onChange={{action "updateTtl"}}
+      />
     </div>
     <div class="control">
       {{#link-to "mode.secondaries" replicationMode class="button"}}
