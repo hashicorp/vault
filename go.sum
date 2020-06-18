@@ -508,8 +508,8 @@ github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5 h1:BOOtSls+BQ1EtPmpE9L
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5/go.mod h1:gAoReoUpBHaBwkxQqTK7FY8nQC0MuaZHLiW5WOSny5g=
 github.com/hashicorp/vault-plugin-secrets-azure v0.5.6 h1:4PgQ5rCT29wW5PMyebEhPkEYuR5s+SnInuZz3x2cP50=
 github.com/hashicorp/vault-plugin-secrets-azure v0.5.6/go.mod h1:Q0cIL4kZWnMmQWkBfWtyOd7+JXTEpAyU4L932PMHq3E=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.6.2 h1:ovziWUzmj83UlVXK8tM926ZitLKa5ZwRvlMqVibWHEs=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.6.2/go.mod h1:psRQ/dm5XatoUKLDUeWrpP9icMJNtu/jmscUr37YGK4=
+github.com/hashicorp/vault-plugin-secrets-gcp v0.6.3-0.20200615210754-6c617f9285c3 h1:yVlEx1z3AgSWl7VKwSyQi9Di0nHnwHV76mC3OI9gC0c=
+github.com/hashicorp/vault-plugin-secrets-gcp v0.6.3-0.20200615210754-6c617f9285c3/go.mod h1:psRQ/dm5XatoUKLDUeWrpP9icMJNtu/jmscUr37YGK4=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.5 h1:NigzA2v+h+cjBPl41pRirRwWELF+RPJGch/ys0Sijrc=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.5/go.mod h1:b6RwFD1bny1zbfqhD35iGJdQYHRtJLx3HfBD109GO38=
 github.com/hashicorp/vault-plugin-secrets-kv v0.5.5 h1:yLtfsAiJOkpRkk+OxQmFluQJ35OUw420Y+CwfGMWuSc=
@@ -750,6 +750,7 @@ github.com/prometheus/procfs v0.0.2/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsT
 github.com/prometheus/procfs v0.0.8 h1:+fpWZdT24pJBiqJdAwYBjPSk+5YmQzYNPYzQsdzLkt8=
 github.com/prometheus/procfs v0.0.8/go.mod h1:7Qr8sr6344vo1JqZ6HhLceV9o3AJ1Ff+GxbHq6oeK9A=
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
+github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a h1:9ZKAASQSHhDYGoxY8uLVpewe1GDZ2vu2Tr/vTdVAkFQ=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/rogpeppe/fastuuid v0.0.0-20150106093220-6724a57986af/go.mod h1:XWv6SoW27p1b0cqNHllgS5HIMJraePCO15w5zCzIWYg=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
