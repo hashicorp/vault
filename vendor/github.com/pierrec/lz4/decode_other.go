@@ -19,7 +19,7 @@ func decodeBlock(dst, src []byte) (ret int) {
 		// Literals.
 		if lLen := b >> 4; lLen > 0 {
 			switch {
-			case lLen < 0xF && di+18 < len(dst) && si+16 < len(src):
+			case lLen < 0xF && si+16 < len(src):
 				// Shortcut 1
 				// if we have enough room in src and dst, and the literals length
 				// is small enough (0..14) then copy all 16 bytes, even if not all
@@ -34,7 +34,13 @@ func decodeBlock(dst, src []byte) (ret int) {
 					mLen += 4
 					if offset := int(src[si]) | int(src[si+1])<<8; mLen <= offset {
 						i := di - offset
-						copy(dst[di:], dst[i:i+18])
+						end := i + 18
+						if end > len(dst) {
+							// The remaining buffer may not hold 18 bytes.
+							// See https://github.com/pierrec/lz4/issues/51.
+							end = len(dst)
+						}
+						copy(dst[di:], dst[i:end])
 						si += 2
 						di += mLen
 						continue
