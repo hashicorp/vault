@@ -44,6 +44,43 @@ func testConfigRaftRetryJoin(t *testing.T) {
 	}
 }
 
+func testConfigRaftRetryJoinEmpty(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/raft_ha_retry_join.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	retryJoinConfig := `[{}]`
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:    "tcp",
+					Address: "127.0.0.1:8200",
+				},
+			},
+			DisableMlock: true,
+		},
+
+		Storage: &Storage{
+			Type:   "inmem",
+			Config: map[string]string{},
+		},
+
+		HAStorage: &Storage{
+			Type: "raft",
+			Config: map[string]string{
+				"path":       "/storage/path/raft",
+				"node_id":    "raft1",
+				"retry_join": retryJoinConfig,
+			},
+		},
+	}
+	config.Listeners[0].RawConfig = nil
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 	config, err := LoadConfigFile("./test-fixtures/config2.hcl")
 	if err != nil {
