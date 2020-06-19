@@ -189,13 +189,7 @@ func Run(tt TestT, c Case) {
 	logger := logging.NewVaultLogger(log.Trace)
 
 	if err := c.Environment.Setup(); err != nil {
-		driverErr := fmt.Errorf("error setting up driver: %w", err)
-		if !c.SkipTeardown {
-			if err := c.Environment.Teardown(); err != nil {
-				driverErr = fmt.Errorf("error during driver teardown: %w", driverErr)
-			}
-		}
-		tt.Fatal(driverErr)
+		tt.Fatal(err)
 	}
 
 	defer func() {
