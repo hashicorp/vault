@@ -290,7 +290,12 @@ func makeRequest(tt TestT, env Environment, step Step) (*api.Secret, error) {
 	}
 
 	if step.Unauthenticated {
+		token := client.Token()
 		client.ClearToken()
+		// restore the client token after this request completes
+		defer func() {
+			client.SetToken(token)
+		}()
 	}
 
 	path := fmt.Sprintf("%s/%s", env.MountPath(), step.Path)
