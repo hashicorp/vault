@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
