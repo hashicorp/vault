@@ -143,8 +143,7 @@ func Test(tt TestT, c TestCase) {
 	// Defer on the teardown, regardless of pass/fail at this point
 	if c.Teardown != nil {
 		defer func() {
-			err := c.Teardown()
-			if err != nil {
+			if err := c.Teardown(); err != nil {
 				tt.Error("failed to tear down:", err)
 			}
 		}()
@@ -229,10 +228,8 @@ func Test(tt TestT, c TestCase) {
 
 	// Create an HTTP API server and client
 	ln, addr := http.TestServer(nil, core)
-	defer func() {
-		// intentionally ingore this error
-		_ = ln.Close()
-	}()
+	defer ln.Close()
+
 	clientConfig := api.DefaultConfig()
 	clientConfig.Address = addr
 	client, err := api.NewClient(clientConfig)

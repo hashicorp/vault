@@ -37,9 +37,8 @@ func CompilePlugin(name, pluginName, srcDir, tmpDir string) (string, string, str
 	if err != nil {
 		return "", "", "", err
 	}
-	defer func() {
-		_ = f.Close()
-	}()
+
+	defer f.Close()
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
