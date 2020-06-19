@@ -4,6 +4,7 @@ import { render } from '@ember/test-helpers';
 import { run } from '@ember/runloop';
 import hbs from 'htmlbars-inline-precompile';
 import Service from '@ember/service';
+/* eslint-disable no-unused-vars */
 import sinon from 'sinon';
 
 /*
