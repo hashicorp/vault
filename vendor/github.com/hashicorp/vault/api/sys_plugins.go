@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/api"
 	"net/http"
 	"time"
 
@@ -262,8 +261,8 @@ func (c *Sys) ReloadPlugin(i *ReloadPluginInput) error {
 
 type PluginReloadStatus struct {
 	Timestamp time.Time
-	Success bool
-	Message string
+	Success   bool
+	Message   string
 }
 
 type PluginReloadStatusResponse struct {
@@ -295,7 +294,7 @@ func (c *Sys) ReloadPluginStatus(i *ReloadPluginStatusInput) (*PluginReloadStatu
 	}
 	defer resp.Body.Close()
 	if resp != nil {
-		secret, parseErr := api.ParseSecret(resp.Body)
+		secret, parseErr := ParseSecret(resp.Body)
 		if parseErr != nil {
 			return nil, err
 		}
@@ -324,4 +323,3 @@ func catalogPathByType(pluginType consts.PluginType, name string) string {
 
 	return path
 }
-h;g

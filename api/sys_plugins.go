@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/api"
 	"net/http"
 	"time"
 
@@ -295,7 +294,7 @@ func (c *Sys) ReloadPluginStatus(i *ReloadPluginStatusInput) (*PluginReloadStatu
 	}
 	defer resp.Body.Close()
 	if resp != nil {
-		secret, parseErr := api.ParseSecret(resp.Body)
+		secret, parseErr := ParseSecret(resp.Body)
 		if parseErr != nil {
 			return nil, err
 		}

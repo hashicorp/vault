@@ -15,3 +15,7 @@ type ReplicationTokenInfo struct{}
 func (c *forwardingClient) PerformanceStandbyElection(ctx context.Context) (*ReplicationTokenInfo, error) {
 	return nil, nil
 }
+
+func (s *forwardedRequestRPCServer) StorageTxn(ctx context.Context, in *StorageTxnRequestInput) (*StorageTxnReply, error) {
+	return nil, nil
+}
