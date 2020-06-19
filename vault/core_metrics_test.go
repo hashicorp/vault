@@ -3,6 +3,7 @@ package vault
 import (
 	"testing"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -108,4 +109,93 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 			t.Errorf("Unexpected mount point %v", mountPoint)
 		}
 	}
+}
+
+func metricLabelsMatch(t *testing.T, actual []metrics.Label, expected map[string]string) {
+	t.Helper()
+
+	if len(actual) != len(expected) {
+		t.Errorf("Expected %v labels, got %v: %v", len(expected), len(actual), actual)
+	}
+
+	for _, l := range actual {
+		if v, ok := expected[l.Name]; ok {
+			if v != l.Value {
+				t.Errorf("Mismatched value %v=%v, expected %v", l.Name, l.Value, v)
+			}
+		} else {
+			t.Errorf("Unexpected label %v", l.Name)
+		}
+	}
+}
+
+func TestCoreMetrics_EntityGauges(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	is, ghAccessor, core := testIdentityStoreWithGithubAuth(ctx, t)
+
+	// Create an entity
+	alias1 := &logical.Alias{
+		MountType:     "github",
+		MountAccessor: ghAccessor,
+		Name:          "githubuser",
+	}
+
+	entity, err := is.CreateOrFetchEntity(ctx, alias1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a second alias for the same entity
+	registerReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity-alias",
+		Data: map[string]interface{}{
+			"name":           "githubuser2",
+			"canonical_id":   entity.ID,
+			"mount_accessor": ghAccessor,
+		},
+	}
+
+	resp, err := is.HandleRequest(ctx, registerReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	glv, err := core.entityGaugeCollector(ctx)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if len(glv) != 1 {
+		t.Fatalf("Wrong number of gauges %v, expected %v", len(glv), 1)
+	}
+
+	if glv[0].Value != 1.0 {
+		t.Errorf("Entity count %v, expected %v", glv[0].Value, 1.0)
+	}
+
+	metricLabelsMatch(t, glv[0].Labels,
+		map[string]string{
+			"namespace": "root",
+		})
+
+	glv, err = core.entityGaugeCollectorByMount(ctx)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if len(glv) != 1 {
+		t.Fatalf("Wrong number of gauges %v, expected %v", len(glv), 1)
+	}
+
+	if glv[0].Value != 2.0 {
+		t.Errorf("Alias count %v, expected %v", glv[0].Value, 2.0)
+	}
+
+	metricLabelsMatch(t, glv[0].Labels,
+		map[string]string{
+			"namespace":   "root",
+			"auth_method": "github",
+			"mount_point": "auth/github/",
+		})
 }

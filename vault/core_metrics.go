@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -10,6 +11,7 @@ import (
 )
 
 // TODO: move emitMetrics into this file.
+// TODO: initialize all the gauge collection processes
 
 type kvMount struct {
 	Namespace  *namespace.Namespace
@@ -112,42 +114,51 @@ func (c *Core) kvSecretGaugeCollector(ctx context.Context) ([]metricsutil.GaugeL
 }
 
 func (c *Core) entityGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
-	// TODO: terminate the count if it's taking too long
-	byNamespace, err := c.identityStore.CountEntitiesByNamespace()
+	byNamespace, err := c.identityStore.countEntitiesByNamespace(ctx)
 	if err != nil {
 		return []metricsutil.GaugeLabelValues{}, err
 	}
 
-	allNamespaces := ts.core.collectNamespaces()
+	// No check for expiration here; the bulk of the work should be in
+	// counting the entities.
+	allNamespaces := c.collectNamespaces()
 	values := make([]metricsutil.GaugeLabelValues, len(allNamespaces))
-	for i, glv := range values {
-		glv.Labels = []metrics.Label{
-			metricsutil.namespaceLabel(allNamespaces[i]),
+	for i := range values {
+		values[i].Labels = []metrics.Label{
+			metricsutil.NamespaceLabel(allNamespaces[i]),
 		}
-		glv.Value = float32(byNamespace[allNamespaces[i].ID])
+		values[i].Value = float32(byNamespace[allNamespaces[i].ID])
 	}
 
 	return values, nil
 }
 
 func (c *Core) entityGaugeCollectorByMount(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
-	// TODO: terminate the count if it's taking too long
-	byAccessor, err := c.identityStore.CountEntitiesByMountAccessor()
+	byAccessor, err := c.identityStore.countEntitiesByMountAccessor(ctx)
 	if err != nil {
 		return []metricsutil.GaugeLabelValues{}, err
 	}
 
 	values := make([]metricsutil.GaugeLabelValues, 0)
 	for accessor, count := range byAccessor {
+		// Terminate if taking too long to do the translation
+		select {
+		case <-ctx.Done():
+			return values, errors.New("context cancelled")
+		default:
+			break
+		}
+
 		mountEntry := c.router.MatchingMountByAccessor(accessor)
 		if mountEntry == nil {
 			continue
 		}
 		values = append(values, metricsutil.GaugeLabelValues{
 			Labels: []metrics.Label{
-				metricsutil.namespaceLabel(mountEntry.namespace),
+				metricsutil.NamespaceLabel(mountEntry.namespace),
 				{"auth_method", mountEntry.Type},
-				{"mount_point", mountEntry.Path},
+				// FIXME: I suspect this  won't work right with namespaces?
+				{"mount_point", "auth/" + mountEntry.Path},
 			},
 			Value: float32(count),
 		})
