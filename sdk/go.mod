@@ -2,10 +2,6 @@ module github.com/hashicorp/vault/sdk
 
 go 1.13
 
-replace github.com/hashicorp/vault/api => ../api
-
-replace github.com/hashicorp/vault => ../
-
 require (
 	github.com/armon/go-metrics v0.3.3
 	github.com/armon/go-radix v1.0.0
