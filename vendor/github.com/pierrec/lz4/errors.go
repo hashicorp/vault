@@ -15,6 +15,8 @@ var (
 	ErrInvalid = errors.New("lz4: bad magic number")
 	// ErrBlockDependency is returned when attempting to decompress an archive created with block dependency.
 	ErrBlockDependency = errors.New("lz4: block dependency not supported")
+	// ErrUnsupportedSeek is returned when attempting to Seek any way but forward from the current position.
+	ErrUnsupportedSeek = errors.New("lz4: can only seek forward from io.SeekCurrent")
 )
 
 func recoverBlock(e *error) {
