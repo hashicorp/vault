@@ -13,7 +13,7 @@ import (
 
 const pluginPrefix = "vault-plugin-"
 
-// CompilePlugin is a helper method to compile a sourc plugin
+// CompilePlugin is a helper method to compile a source plugin
 // TODO refactor compile plugin input and output to be types
 func CompilePlugin(name, pluginName, srcDir, tmpDir string) (string, string, string, error) {
 	binName := name
@@ -23,8 +23,7 @@ func CompilePlugin(name, pluginName, srcDir, tmpDir string) (string, string, str
 	binPath := path.Join(tmpDir, binName)
 
 	cmd := exec.Command("go", "build", "-o", binPath, path.Join(srcDir, fmt.Sprintf("cmd/%s/main.go", pluginName)))
-	var out bytes.Buffer
-	cmd.Stdout = &out
+	cmd.Stdout = &bytes.Buffer{}
 
 	// match the target architecture of the docker container
 	cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64")
@@ -39,14 +38,14 @@ func CompilePlugin(name, pluginName, srcDir, tmpDir string) (string, string, str
 		return "", "", "", err
 	}
 
-	h := sha256.New()
-	if _, ioErr := io.Copy(h, f); ioErr != nil {
-		panic(ioErr)
-	}
+	defer f.Close()
 
-	_ = f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", "", "", err
+	}
 
 	sha256value := fmt.Sprintf("%x", h.Sum(nil))
 
-	return binName, binPath, sha256value, err
+	return binName, binPath, sha256value, nil
 }

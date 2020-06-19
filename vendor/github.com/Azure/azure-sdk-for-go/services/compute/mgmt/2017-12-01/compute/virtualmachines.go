@@ -89,7 +89,7 @@ func (client VirtualMachinesClient) CapturePreparer(ctx context.Context, resourc
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -169,7 +169,7 @@ func (client VirtualMachinesClient) ConvertToManagedDisksPreparer(ctx context.Co
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -197,13 +197,14 @@ func (client VirtualMachinesClient) ConvertToManagedDisksSender(req *http.Reques
 
 // ConvertToManagedDisksResponder handles the response to the ConvertToManagedDisks request. The method always
 // closes the http.Response Body.
-func (client VirtualMachinesClient) ConvertToManagedDisksResponder(resp *http.Response) (result autorest.Response, err error) {
+func (client VirtualMachinesClient) ConvertToManagedDisksResponder(resp *http.Response) (result OperationStatusResponse, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
-	result.Response = resp
+	result.Response = autorest.Response{Response: resp}
 	return
 }
 
@@ -267,7 +268,7 @@ func (client VirtualMachinesClient) CreateOrUpdatePreparer(ctx context.Context, 
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -348,7 +349,7 @@ func (client VirtualMachinesClient) DeallocatePreparer(ctx context.Context, reso
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -376,13 +377,14 @@ func (client VirtualMachinesClient) DeallocateSender(req *http.Request) (future 
 
 // DeallocateResponder handles the response to the Deallocate request. The method always
 // closes the http.Response Body.
-func (client VirtualMachinesClient) DeallocateResponder(resp *http.Response) (result autorest.Response, err error) {
+func (client VirtualMachinesClient) DeallocateResponder(resp *http.Response) (result OperationStatusResponse, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
-	result.Response = resp
+	result.Response = autorest.Response{Response: resp}
 	return
 }
 
@@ -424,7 +426,7 @@ func (client VirtualMachinesClient) DeletePreparer(ctx context.Context, resource
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -452,13 +454,14 @@ func (client VirtualMachinesClient) DeleteSender(req *http.Request) (future Virt
 
 // DeleteResponder handles the response to the Delete request. The method always
 // closes the http.Response Body.
-func (client VirtualMachinesClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
+func (client VirtualMachinesClient) DeleteResponder(resp *http.Response) (result OperationStatusResponse, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent),
+		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
-	result.Response = resp
+	result.Response = autorest.Response{Response: resp}
 	return
 }
 
@@ -466,13 +469,13 @@ func (client VirtualMachinesClient) DeleteResponder(resp *http.Response) (result
 // Parameters:
 // resourceGroupName - the name of the resource group.
 // VMName - the name of the virtual machine.
-func (client VirtualMachinesClient) Generalize(ctx context.Context, resourceGroupName string, VMName string) (result autorest.Response, err error) {
+func (client VirtualMachinesClient) Generalize(ctx context.Context, resourceGroupName string, VMName string) (result OperationStatusResponse, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachinesClient.Generalize")
 		defer func() {
 			sc := -1
-			if result.Response != nil {
-				sc = result.Response.StatusCode
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -485,7 +488,7 @@ func (client VirtualMachinesClient) Generalize(ctx context.Context, resourceGrou
 
 	resp, err := client.GeneralizeSender(req)
 	if err != nil {
-		result.Response = resp
+		result.Response = autorest.Response{Response: resp}
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesClient", "Generalize", resp, "Failure sending request")
 		return
 	}
@@ -506,7 +509,7 @@ func (client VirtualMachinesClient) GeneralizePreparer(ctx context.Context, reso
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -528,13 +531,14 @@ func (client VirtualMachinesClient) GeneralizeSender(req *http.Request) (*http.R
 
 // GeneralizeResponder handles the response to the Generalize request. The method always
 // closes the http.Response Body.
-func (client VirtualMachinesClient) GeneralizeResponder(resp *http.Response) (result autorest.Response, err error) {
+func (client VirtualMachinesClient) GeneralizeResponder(resp *http.Response) (result OperationStatusResponse, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
+		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
-	result.Response = resp
+	result.Response = autorest.Response{Response: resp}
 	return
 }
 
@@ -583,7 +587,7 @@ func (client VirtualMachinesClient) GetPreparer(ctx context.Context, resourceGro
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -609,6 +613,87 @@ func (client VirtualMachinesClient) GetSender(req *http.Request) (*http.Response
 // GetResponder handles the response to the Get request. The method always
 // closes the http.Response Body.
 func (client VirtualMachinesClient) GetResponder(resp *http.Response) (result VirtualMachine, err error) {
+	err = autorest.Respond(
+		resp,
+		client.ByInspecting(),
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// GetExtensions the operation to get all extensions of a Virtual Machine.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// VMName - the name of the virtual machine containing the extension.
+// expand - the expand expression to apply on the operation.
+func (client VirtualMachinesClient) GetExtensions(ctx context.Context, resourceGroupName string, VMName string, expand string) (result VirtualMachineExtensionsListResult, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachinesClient.GetExtensions")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	req, err := client.GetExtensionsPreparer(ctx, resourceGroupName, VMName, expand)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesClient", "GetExtensions", nil, "Failure preparing request")
+		return
+	}
+
+	resp, err := client.GetExtensionsSender(req)
+	if err != nil {
+		result.Response = autorest.Response{Response: resp}
+		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesClient", "GetExtensions", resp, "Failure sending request")
+		return
+	}
+
+	result, err = client.GetExtensionsResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesClient", "GetExtensions", resp, "Failure responding to request")
+	}
+
+	return
+}
+
+// GetExtensionsPreparer prepares the GetExtensions request.
+func (client VirtualMachinesClient) GetExtensionsPreparer(ctx context.Context, resourceGroupName string, VMName string, expand string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+		"vmName":            autorest.Encode("path", VMName),
+	}
+
+	const APIVersion = "2017-12-01"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+	if len(expand) > 0 {
+		queryParameters["$expand"] = autorest.Encode("query", expand)
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsGet(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/extensions", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// GetExtensionsSender sends the GetExtensions request. The method will close the
+// http.Response Body if it receives an error.
+func (client VirtualMachinesClient) GetExtensionsSender(req *http.Request) (*http.Response, error) {
+	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
+	return autorest.SendWithSender(client, req, sd...)
+}
+
+// GetExtensionsResponder handles the response to the GetExtensions request. The method always
+// closes the http.Response Body.
+func (client VirtualMachinesClient) GetExtensionsResponder(resp *http.Response) (result VirtualMachineExtensionsListResult, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
@@ -663,7 +748,7 @@ func (client VirtualMachinesClient) InstanceViewPreparer(ctx context.Context, re
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -740,7 +825,7 @@ func (client VirtualMachinesClient) ListPreparer(ctx context.Context, resourceGr
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -812,9 +897,7 @@ func (client VirtualMachinesClient) ListComplete(ctx context.Context, resourceGr
 
 // ListAll lists all of the virtual machines in the specified subscription. Use the nextLink property in the response
 // to get the next page of virtual machines.
-// Parameters:
-// statusOnly - statusOnly=true enables fetching run time status of all Virtual Machines in the subscription.
-func (client VirtualMachinesClient) ListAll(ctx context.Context, statusOnly string) (result VirtualMachineListResultPage, err error) {
+func (client VirtualMachinesClient) ListAll(ctx context.Context) (result VirtualMachineListResultPage, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachinesClient.ListAll")
 		defer func() {
@@ -826,7 +909,7 @@ func (client VirtualMachinesClient) ListAll(ctx context.Context, statusOnly stri
 		}()
 	}
 	result.fn = client.listAllNextResults
-	req, err := client.ListAllPreparer(ctx, statusOnly)
+	req, err := client.ListAllPreparer(ctx)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesClient", "ListAll", nil, "Failure preparing request")
 		return
@@ -848,17 +931,14 @@ func (client VirtualMachinesClient) ListAll(ctx context.Context, statusOnly stri
 }
 
 // ListAllPreparer prepares the ListAll request.
-func (client VirtualMachinesClient) ListAllPreparer(ctx context.Context, statusOnly string) (*http.Request, error) {
+func (client VirtualMachinesClient) ListAllPreparer(ctx context.Context) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
-	}
-	if len(statusOnly) > 0 {
-		queryParameters["statusOnly"] = autorest.Encode("query", statusOnly)
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -911,7 +991,7 @@ func (client VirtualMachinesClient) listAllNextResults(ctx context.Context, last
 }
 
 // ListAllComplete enumerates all values, automatically crossing page boundaries as required.
-func (client VirtualMachinesClient) ListAllComplete(ctx context.Context, statusOnly string) (result VirtualMachineListResultIterator, err error) {
+func (client VirtualMachinesClient) ListAllComplete(ctx context.Context) (result VirtualMachineListResultIterator, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachinesClient.ListAll")
 		defer func() {
@@ -922,7 +1002,7 @@ func (client VirtualMachinesClient) ListAllComplete(ctx context.Context, statusO
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	result.page, err = client.ListAll(ctx, statusOnly)
+	result.page, err = client.ListAll(ctx)
 	return
 }
 
@@ -970,7 +1050,7 @@ func (client VirtualMachinesClient) ListAvailableSizesPreparer(ctx context.Conte
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1052,7 +1132,7 @@ func (client VirtualMachinesClient) ListByLocationPreparer(ctx context.Context, 
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1160,7 +1240,7 @@ func (client VirtualMachinesClient) PerformMaintenancePreparer(ctx context.Conte
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1188,13 +1268,14 @@ func (client VirtualMachinesClient) PerformMaintenanceSender(req *http.Request) 
 
 // PerformMaintenanceResponder handles the response to the PerformMaintenance request. The method always
 // closes the http.Response Body.
-func (client VirtualMachinesClient) PerformMaintenanceResponder(resp *http.Response) (result autorest.Response, err error) {
+func (client VirtualMachinesClient) PerformMaintenanceResponder(resp *http.Response) (result OperationStatusResponse, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
-	result.Response = resp
+	result.Response = autorest.Response{Response: resp}
 	return
 }
 
@@ -1203,10 +1284,7 @@ func (client VirtualMachinesClient) PerformMaintenanceResponder(resp *http.Respo
 // Parameters:
 // resourceGroupName - the name of the resource group.
 // VMName - the name of the virtual machine.
-// skipShutdown - the parameter to request non-graceful VM shutdown. True value for this flag indicates
-// non-graceful shutdown whereas false indicates otherwise. Default value for this flag is false if not
-// specified
-func (client VirtualMachinesClient) PowerOff(ctx context.Context, resourceGroupName string, VMName string, skipShutdown *bool) (result VirtualMachinesPowerOffFuture, err error) {
+func (client VirtualMachinesClient) PowerOff(ctx context.Context, resourceGroupName string, VMName string) (result VirtualMachinesPowerOffFuture, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachinesClient.PowerOff")
 		defer func() {
@@ -1217,7 +1295,7 @@ func (client VirtualMachinesClient) PowerOff(ctx context.Context, resourceGroupN
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	req, err := client.PowerOffPreparer(ctx, resourceGroupName, VMName, skipShutdown)
+	req, err := client.PowerOffPreparer(ctx, resourceGroupName, VMName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesClient", "PowerOff", nil, "Failure preparing request")
 		return
@@ -1233,21 +1311,16 @@ func (client VirtualMachinesClient) PowerOff(ctx context.Context, resourceGroupN
 }
 
 // PowerOffPreparer prepares the PowerOff request.
-func (client VirtualMachinesClient) PowerOffPreparer(ctx context.Context, resourceGroupName string, VMName string, skipShutdown *bool) (*http.Request, error) {
+func (client VirtualMachinesClient) PowerOffPreparer(ctx context.Context, resourceGroupName string, VMName string) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
-	}
-	if skipShutdown != nil {
-		queryParameters["skipShutdown"] = autorest.Encode("query", *skipShutdown)
-	} else {
-		queryParameters["skipShutdown"] = autorest.Encode("query", false)
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -1273,89 +1346,14 @@ func (client VirtualMachinesClient) PowerOffSender(req *http.Request) (future Vi
 
 // PowerOffResponder handles the response to the PowerOff request. The method always
 // closes the http.Response Body.
-func (client VirtualMachinesClient) PowerOffResponder(resp *http.Response) (result autorest.Response, err error) {
+func (client VirtualMachinesClient) PowerOffResponder(resp *http.Response) (result OperationStatusResponse, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
-	result.Response = resp
-	return
-}
-
-// Reapply the operation to reapply a virtual machine's state.
-// Parameters:
-// resourceGroupName - the name of the resource group.
-// VMName - the name of the virtual machine.
-func (client VirtualMachinesClient) Reapply(ctx context.Context, resourceGroupName string, VMName string) (result VirtualMachinesReapplyFuture, err error) {
-	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachinesClient.Reapply")
-		defer func() {
-			sc := -1
-			if result.Response() != nil {
-				sc = result.Response().StatusCode
-			}
-			tracing.EndSpan(ctx, sc, err)
-		}()
-	}
-	req, err := client.ReapplyPreparer(ctx, resourceGroupName, VMName)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesClient", "Reapply", nil, "Failure preparing request")
-		return
-	}
-
-	result, err = client.ReapplySender(req)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesClient", "Reapply", result.Response(), "Failure sending request")
-		return
-	}
-
-	return
-}
-
-// ReapplyPreparer prepares the Reapply request.
-func (client VirtualMachinesClient) ReapplyPreparer(ctx context.Context, resourceGroupName string, VMName string) (*http.Request, error) {
-	pathParameters := map[string]interface{}{
-		"resourceGroupName": autorest.Encode("path", resourceGroupName),
-		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
-		"vmName":            autorest.Encode("path", VMName),
-	}
-
-	const APIVersion = "2019-07-01"
-	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
-	}
-
-	preparer := autorest.CreatePreparer(
-		autorest.AsPost(),
-		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/reapply", pathParameters),
-		autorest.WithQueryParameters(queryParameters))
-	return preparer.Prepare((&http.Request{}).WithContext(ctx))
-}
-
-// ReapplySender sends the Reapply request. The method will close the
-// http.Response Body if it receives an error.
-func (client VirtualMachinesClient) ReapplySender(req *http.Request) (future VirtualMachinesReapplyFuture, err error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
-	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req, sd...)
-	if err != nil {
-		return
-	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
-	return
-}
-
-// ReapplyResponder handles the response to the Reapply request. The method always
-// closes the http.Response Body.
-func (client VirtualMachinesClient) ReapplyResponder(resp *http.Response) (result autorest.Response, err error) {
-	err = autorest.Respond(
-		resp,
-		client.ByInspecting(),
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
-		autorest.ByClosing())
-	result.Response = resp
+	result.Response = autorest.Response{Response: resp}
 	return
 }
 
@@ -1397,7 +1395,7 @@ func (client VirtualMachinesClient) RedeployPreparer(ctx context.Context, resour
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1425,95 +1423,14 @@ func (client VirtualMachinesClient) RedeploySender(req *http.Request) (future Vi
 
 // RedeployResponder handles the response to the Redeploy request. The method always
 // closes the http.Response Body.
-func (client VirtualMachinesClient) RedeployResponder(resp *http.Response) (result autorest.Response, err error) {
+func (client VirtualMachinesClient) RedeployResponder(resp *http.Response) (result OperationStatusResponse, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
-	result.Response = resp
-	return
-}
-
-// Reimage reimages the virtual machine which has an ephemeral OS disk back to its initial state.
-// Parameters:
-// resourceGroupName - the name of the resource group.
-// VMName - the name of the virtual machine.
-// parameters - parameters supplied to the Reimage Virtual Machine operation.
-func (client VirtualMachinesClient) Reimage(ctx context.Context, resourceGroupName string, VMName string, parameters *VirtualMachineReimageParameters) (result VirtualMachinesReimageFuture, err error) {
-	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachinesClient.Reimage")
-		defer func() {
-			sc := -1
-			if result.Response() != nil {
-				sc = result.Response().StatusCode
-			}
-			tracing.EndSpan(ctx, sc, err)
-		}()
-	}
-	req, err := client.ReimagePreparer(ctx, resourceGroupName, VMName, parameters)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesClient", "Reimage", nil, "Failure preparing request")
-		return
-	}
-
-	result, err = client.ReimageSender(req)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesClient", "Reimage", result.Response(), "Failure sending request")
-		return
-	}
-
-	return
-}
-
-// ReimagePreparer prepares the Reimage request.
-func (client VirtualMachinesClient) ReimagePreparer(ctx context.Context, resourceGroupName string, VMName string, parameters *VirtualMachineReimageParameters) (*http.Request, error) {
-	pathParameters := map[string]interface{}{
-		"resourceGroupName": autorest.Encode("path", resourceGroupName),
-		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
-		"vmName":            autorest.Encode("path", VMName),
-	}
-
-	const APIVersion = "2019-07-01"
-	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
-	}
-
-	preparer := autorest.CreatePreparer(
-		autorest.AsContentType("application/json; charset=utf-8"),
-		autorest.AsPost(),
-		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/reimage", pathParameters),
-		autorest.WithQueryParameters(queryParameters))
-	if parameters != nil {
-		preparer = autorest.DecoratePreparer(preparer,
-			autorest.WithJSON(parameters))
-	}
-	return preparer.Prepare((&http.Request{}).WithContext(ctx))
-}
-
-// ReimageSender sends the Reimage request. The method will close the
-// http.Response Body if it receives an error.
-func (client VirtualMachinesClient) ReimageSender(req *http.Request) (future VirtualMachinesReimageFuture, err error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
-	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req, sd...)
-	if err != nil {
-		return
-	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
-	return
-}
-
-// ReimageResponder handles the response to the Reimage request. The method always
-// closes the http.Response Body.
-func (client VirtualMachinesClient) ReimageResponder(resp *http.Response) (result autorest.Response, err error) {
-	err = autorest.Respond(
-		resp,
-		client.ByInspecting(),
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
-		autorest.ByClosing())
-	result.Response = resp
+	result.Response = autorest.Response{Response: resp}
 	return
 }
 
@@ -1555,7 +1472,7 @@ func (client VirtualMachinesClient) RestartPreparer(ctx context.Context, resourc
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1583,13 +1500,14 @@ func (client VirtualMachinesClient) RestartSender(req *http.Request) (future Vir
 
 // RestartResponder handles the response to the Restart request. The method always
 // closes the http.Response Body.
-func (client VirtualMachinesClient) RestartResponder(resp *http.Response) (result autorest.Response, err error) {
+func (client VirtualMachinesClient) RestartResponder(resp *http.Response) (result OperationStatusResponse, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
-	result.Response = resp
+	result.Response = autorest.Response{Response: resp}
 	return
 }
 
@@ -1638,7 +1556,7 @@ func (client VirtualMachinesClient) RunCommandPreparer(ctx context.Context, reso
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1717,7 +1635,7 @@ func (client VirtualMachinesClient) StartPreparer(ctx context.Context, resourceG
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1745,13 +1663,14 @@ func (client VirtualMachinesClient) StartSender(req *http.Request) (future Virtu
 
 // StartResponder handles the response to the Start request. The method always
 // closes the http.Response Body.
-func (client VirtualMachinesClient) StartResponder(resp *http.Response) (result autorest.Response, err error) {
+func (client VirtualMachinesClient) StartResponder(resp *http.Response) (result OperationStatusResponse, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
-	result.Response = resp
+	result.Response = autorest.Response{Response: resp}
 	return
 }
 
@@ -1794,7 +1713,7 @@ func (client VirtualMachinesClient) UpdatePreparer(ctx context.Context, resource
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

@@ -26,30 +26,31 @@ import (
 	"net/http"
 )
 
-// SnapshotsClient is the compute Client
-type SnapshotsClient struct {
+// DisksClient is the compute Client
+type DisksClient struct {
 	BaseClient
 }
 
-// NewSnapshotsClient creates an instance of the SnapshotsClient client.
-func NewSnapshotsClient(subscriptionID string) SnapshotsClient {
-	return NewSnapshotsClientWithBaseURI(DefaultBaseURI, subscriptionID)
+// NewDisksClient creates an instance of the DisksClient client.
+func NewDisksClient(subscriptionID string) DisksClient {
+	return NewDisksClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewSnapshotsClientWithBaseURI creates an instance of the SnapshotsClient client.
-func NewSnapshotsClientWithBaseURI(baseURI string, subscriptionID string) SnapshotsClient {
-	return SnapshotsClient{NewWithBaseURI(baseURI, subscriptionID)}
+// NewDisksClientWithBaseURI creates an instance of the DisksClient client.
+func NewDisksClientWithBaseURI(baseURI string, subscriptionID string) DisksClient {
+	return DisksClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
-// CreateOrUpdate creates or updates a snapshot.
+// CreateOrUpdate creates or updates a disk.
 // Parameters:
 // resourceGroupName - the name of the resource group.
-// snapshotName - the name of the snapshot that is being created. The name can't be changed after the snapshot
-// is created. Supported characters for the name are a-z, A-Z, 0-9 and _. The max name length is 80 characters.
-// snapshot - snapshot object supplied in the body of the Put disk operation.
-func (client SnapshotsClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, snapshotName string, snapshot Snapshot) (result SnapshotsCreateOrUpdateFuture, err error) {
+// diskName - the name of the managed disk that is being created. The name can't be changed after the disk is
+// created. Supported characters for the name are a-z, A-Z, 0-9 and _. The maximum name length is 80
+// characters.
+// disk - disk object supplied in the body of the Put disk operation.
+func (client DisksClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, diskName string, disk Disk) (result DisksCreateOrUpdateFuture, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/SnapshotsClient.CreateOrUpdate")
+		ctx = tracing.StartSpan(ctx, fqdn+"/DisksClient.CreateOrUpdate")
 		defer func() {
 			sc := -1
 			if result.Response() != nil {
@@ -59,27 +60,35 @@ func (client SnapshotsClient) CreateOrUpdate(ctx context.Context, resourceGroupN
 		}()
 	}
 	if err := validation.Validate([]validation.Validation{
-		{TargetValue: snapshot,
-			Constraints: []validation.Constraint{{Target: "snapshot.SnapshotProperties", Name: validation.Null, Rule: false,
-				Chain: []validation.Constraint{{Target: "snapshot.SnapshotProperties.CreationData", Name: validation.Null, Rule: true,
-					Chain: []validation.Constraint{{Target: "snapshot.SnapshotProperties.CreationData.ImageReference", Name: validation.Null, Rule: false,
-						Chain: []validation.Constraint{{Target: "snapshot.SnapshotProperties.CreationData.ImageReference.ID", Name: validation.Null, Rule: true, Chain: nil}}},
+		{TargetValue: disk,
+			Constraints: []validation.Constraint{{Target: "disk.DiskProperties", Name: validation.Null, Rule: false,
+				Chain: []validation.Constraint{{Target: "disk.DiskProperties.CreationData", Name: validation.Null, Rule: true,
+					Chain: []validation.Constraint{{Target: "disk.DiskProperties.CreationData.ImageReference", Name: validation.Null, Rule: false,
+						Chain: []validation.Constraint{{Target: "disk.DiskProperties.CreationData.ImageReference.ID", Name: validation.Null, Rule: true, Chain: nil}}},
 					}},
-					{Target: "snapshot.SnapshotProperties.EncryptionSettingsCollection", Name: validation.Null, Rule: false,
-						Chain: []validation.Constraint{{Target: "snapshot.SnapshotProperties.EncryptionSettingsCollection.Enabled", Name: validation.Null, Rule: true, Chain: nil}}},
+					{Target: "disk.DiskProperties.EncryptionSettings", Name: validation.Null, Rule: false,
+						Chain: []validation.Constraint{{Target: "disk.DiskProperties.EncryptionSettings.DiskEncryptionKey", Name: validation.Null, Rule: false,
+							Chain: []validation.Constraint{{Target: "disk.DiskProperties.EncryptionSettings.DiskEncryptionKey.SourceVault", Name: validation.Null, Rule: true, Chain: nil},
+								{Target: "disk.DiskProperties.EncryptionSettings.DiskEncryptionKey.SecretURL", Name: validation.Null, Rule: true, Chain: nil},
+							}},
+							{Target: "disk.DiskProperties.EncryptionSettings.KeyEncryptionKey", Name: validation.Null, Rule: false,
+								Chain: []validation.Constraint{{Target: "disk.DiskProperties.EncryptionSettings.KeyEncryptionKey.SourceVault", Name: validation.Null, Rule: true, Chain: nil},
+									{Target: "disk.DiskProperties.EncryptionSettings.KeyEncryptionKey.KeyURL", Name: validation.Null, Rule: true, Chain: nil},
+								}},
+						}},
 				}}}}}); err != nil {
-		return result, validation.NewError("compute.SnapshotsClient", "CreateOrUpdate", err.Error())
+		return result, validation.NewError("compute.DisksClient", "CreateOrUpdate", err.Error())
 	}
 
-	req, err := client.CreateOrUpdatePreparer(ctx, resourceGroupName, snapshotName, snapshot)
+	req, err := client.CreateOrUpdatePreparer(ctx, resourceGroupName, diskName, disk)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "CreateOrUpdate", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "CreateOrUpdate", nil, "Failure preparing request")
 		return
 	}
 
 	result, err = client.CreateOrUpdateSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "CreateOrUpdate", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "CreateOrUpdate", result.Response(), "Failure sending request")
 		return
 	}
 
@@ -87,32 +96,32 @@ func (client SnapshotsClient) CreateOrUpdate(ctx context.Context, resourceGroupN
 }
 
 // CreateOrUpdatePreparer prepares the CreateOrUpdate request.
-func (client SnapshotsClient) CreateOrUpdatePreparer(ctx context.Context, resourceGroupName string, snapshotName string, snapshot Snapshot) (*http.Request, error) {
+func (client DisksClient) CreateOrUpdatePreparer(ctx context.Context, resourceGroupName string, diskName string, disk Disk) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
+		"diskName":          autorest.Encode("path", diskName),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
-		"snapshotName":      autorest.Encode("path", snapshotName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
 
-	snapshot.ManagedBy = nil
+	disk.ManagedBy = nil
 	preparer := autorest.CreatePreparer(
 		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/snapshots/{snapshotName}", pathParameters),
-		autorest.WithJSON(snapshot),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/disks/{diskName}", pathParameters),
+		autorest.WithJSON(disk),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
 // CreateOrUpdateSender sends the CreateOrUpdate request. The method will close the
 // http.Response Body if it receives an error.
-func (client SnapshotsClient) CreateOrUpdateSender(req *http.Request) (future SnapshotsCreateOrUpdateFuture, err error) {
+func (client DisksClient) CreateOrUpdateSender(req *http.Request) (future DisksCreateOrUpdateFuture, err error) {
 	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
 	var resp *http.Response
 	resp, err = autorest.SendWithSender(client, req, sd...)
@@ -125,7 +134,7 @@ func (client SnapshotsClient) CreateOrUpdateSender(req *http.Request) (future Sn
 
 // CreateOrUpdateResponder handles the response to the CreateOrUpdate request. The method always
 // closes the http.Response Body.
-func (client SnapshotsClient) CreateOrUpdateResponder(resp *http.Response) (result Snapshot, err error) {
+func (client DisksClient) CreateOrUpdateResponder(resp *http.Response) (result Disk, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
@@ -136,14 +145,15 @@ func (client SnapshotsClient) CreateOrUpdateResponder(resp *http.Response) (resu
 	return
 }
 
-// Delete deletes a snapshot.
+// Delete deletes a disk.
 // Parameters:
 // resourceGroupName - the name of the resource group.
-// snapshotName - the name of the snapshot that is being created. The name can't be changed after the snapshot
-// is created. Supported characters for the name are a-z, A-Z, 0-9 and _. The max name length is 80 characters.
-func (client SnapshotsClient) Delete(ctx context.Context, resourceGroupName string, snapshotName string) (result SnapshotsDeleteFuture, err error) {
+// diskName - the name of the managed disk that is being created. The name can't be changed after the disk is
+// created. Supported characters for the name are a-z, A-Z, 0-9 and _. The maximum name length is 80
+// characters.
+func (client DisksClient) Delete(ctx context.Context, resourceGroupName string, diskName string) (result DisksDeleteFuture, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/SnapshotsClient.Delete")
+		ctx = tracing.StartSpan(ctx, fqdn+"/DisksClient.Delete")
 		defer func() {
 			sc := -1
 			if result.Response() != nil {
@@ -152,15 +162,15 @@ func (client SnapshotsClient) Delete(ctx context.Context, resourceGroupName stri
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	req, err := client.DeletePreparer(ctx, resourceGroupName, snapshotName)
+	req, err := client.DeletePreparer(ctx, resourceGroupName, diskName)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "Delete", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "Delete", nil, "Failure preparing request")
 		return
 	}
 
 	result, err = client.DeleteSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "Delete", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "Delete", result.Response(), "Failure sending request")
 		return
 	}
 
@@ -168,14 +178,14 @@ func (client SnapshotsClient) Delete(ctx context.Context, resourceGroupName stri
 }
 
 // DeletePreparer prepares the Delete request.
-func (client SnapshotsClient) DeletePreparer(ctx context.Context, resourceGroupName string, snapshotName string) (*http.Request, error) {
+func (client DisksClient) DeletePreparer(ctx context.Context, resourceGroupName string, diskName string) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
+		"diskName":          autorest.Encode("path", diskName),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
-		"snapshotName":      autorest.Encode("path", snapshotName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -183,14 +193,14 @@ func (client SnapshotsClient) DeletePreparer(ctx context.Context, resourceGroupN
 	preparer := autorest.CreatePreparer(
 		autorest.AsDelete(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/snapshots/{snapshotName}", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/disks/{diskName}", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
 // DeleteSender sends the Delete request. The method will close the
 // http.Response Body if it receives an error.
-func (client SnapshotsClient) DeleteSender(req *http.Request) (future SnapshotsDeleteFuture, err error) {
+func (client DisksClient) DeleteSender(req *http.Request) (future DisksDeleteFuture, err error) {
 	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
 	var resp *http.Response
 	resp, err = autorest.SendWithSender(client, req, sd...)
@@ -203,24 +213,26 @@ func (client SnapshotsClient) DeleteSender(req *http.Request) (future SnapshotsD
 
 // DeleteResponder handles the response to the Delete request. The method always
 // closes the http.Response Body.
-func (client SnapshotsClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
+func (client DisksClient) DeleteResponder(resp *http.Response) (result OperationStatusResponse, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent),
+		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
-	result.Response = resp
+	result.Response = autorest.Response{Response: resp}
 	return
 }
 
-// Get gets information about a snapshot.
+// Get gets information about a disk.
 // Parameters:
 // resourceGroupName - the name of the resource group.
-// snapshotName - the name of the snapshot that is being created. The name can't be changed after the snapshot
-// is created. Supported characters for the name are a-z, A-Z, 0-9 and _. The max name length is 80 characters.
-func (client SnapshotsClient) Get(ctx context.Context, resourceGroupName string, snapshotName string) (result Snapshot, err error) {
+// diskName - the name of the managed disk that is being created. The name can't be changed after the disk is
+// created. Supported characters for the name are a-z, A-Z, 0-9 and _. The maximum name length is 80
+// characters.
+func (client DisksClient) Get(ctx context.Context, resourceGroupName string, diskName string) (result Disk, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/SnapshotsClient.Get")
+		ctx = tracing.StartSpan(ctx, fqdn+"/DisksClient.Get")
 		defer func() {
 			sc := -1
 			if result.Response.Response != nil {
@@ -229,36 +241,36 @@ func (client SnapshotsClient) Get(ctx context.Context, resourceGroupName string,
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	req, err := client.GetPreparer(ctx, resourceGroupName, snapshotName)
+	req, err := client.GetPreparer(ctx, resourceGroupName, diskName)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "Get", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "Get", nil, "Failure preparing request")
 		return
 	}
 
 	resp, err := client.GetSender(req)
 	if err != nil {
 		result.Response = autorest.Response{Response: resp}
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "Get", resp, "Failure sending request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "Get", resp, "Failure sending request")
 		return
 	}
 
 	result, err = client.GetResponder(resp)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "Get", resp, "Failure responding to request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "Get", resp, "Failure responding to request")
 	}
 
 	return
 }
 
 // GetPreparer prepares the Get request.
-func (client SnapshotsClient) GetPreparer(ctx context.Context, resourceGroupName string, snapshotName string) (*http.Request, error) {
+func (client DisksClient) GetPreparer(ctx context.Context, resourceGroupName string, diskName string) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
+		"diskName":          autorest.Encode("path", diskName),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
-		"snapshotName":      autorest.Encode("path", snapshotName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -266,21 +278,21 @@ func (client SnapshotsClient) GetPreparer(ctx context.Context, resourceGroupName
 	preparer := autorest.CreatePreparer(
 		autorest.AsGet(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/snapshots/{snapshotName}", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/disks/{diskName}", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
-func (client SnapshotsClient) GetSender(req *http.Request) (*http.Response, error) {
+func (client DisksClient) GetSender(req *http.Request) (*http.Response, error) {
 	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
 	return autorest.SendWithSender(client, req, sd...)
 }
 
 // GetResponder handles the response to the Get request. The method always
 // closes the http.Response Body.
-func (client SnapshotsClient) GetResponder(resp *http.Response) (result Snapshot, err error) {
+func (client DisksClient) GetResponder(resp *http.Response) (result Disk, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
@@ -291,15 +303,16 @@ func (client SnapshotsClient) GetResponder(resp *http.Response) (result Snapshot
 	return
 }
 
-// GrantAccess grants access to a snapshot.
+// GrantAccess grants access to a disk.
 // Parameters:
 // resourceGroupName - the name of the resource group.
-// snapshotName - the name of the snapshot that is being created. The name can't be changed after the snapshot
-// is created. Supported characters for the name are a-z, A-Z, 0-9 and _. The max name length is 80 characters.
-// grantAccessData - access data object supplied in the body of the get snapshot access operation.
-func (client SnapshotsClient) GrantAccess(ctx context.Context, resourceGroupName string, snapshotName string, grantAccessData GrantAccessData) (result SnapshotsGrantAccessFuture, err error) {
+// diskName - the name of the managed disk that is being created. The name can't be changed after the disk is
+// created. Supported characters for the name are a-z, A-Z, 0-9 and _. The maximum name length is 80
+// characters.
+// grantAccessData - access data object supplied in the body of the get disk access operation.
+func (client DisksClient) GrantAccess(ctx context.Context, resourceGroupName string, diskName string, grantAccessData GrantAccessData) (result DisksGrantAccessFuture, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/SnapshotsClient.GrantAccess")
+		ctx = tracing.StartSpan(ctx, fqdn+"/DisksClient.GrantAccess")
 		defer func() {
 			sc := -1
 			if result.Response() != nil {
@@ -311,18 +324,18 @@ func (client SnapshotsClient) GrantAccess(ctx context.Context, resourceGroupName
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: grantAccessData,
 			Constraints: []validation.Constraint{{Target: "grantAccessData.DurationInSeconds", Name: validation.Null, Rule: true, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("compute.SnapshotsClient", "GrantAccess", err.Error())
+		return result, validation.NewError("compute.DisksClient", "GrantAccess", err.Error())
 	}
 
-	req, err := client.GrantAccessPreparer(ctx, resourceGroupName, snapshotName, grantAccessData)
+	req, err := client.GrantAccessPreparer(ctx, resourceGroupName, diskName, grantAccessData)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "GrantAccess", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "GrantAccess", nil, "Failure preparing request")
 		return
 	}
 
 	result, err = client.GrantAccessSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "GrantAccess", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "GrantAccess", result.Response(), "Failure sending request")
 		return
 	}
 
@@ -330,14 +343,14 @@ func (client SnapshotsClient) GrantAccess(ctx context.Context, resourceGroupName
 }
 
 // GrantAccessPreparer prepares the GrantAccess request.
-func (client SnapshotsClient) GrantAccessPreparer(ctx context.Context, resourceGroupName string, snapshotName string, grantAccessData GrantAccessData) (*http.Request, error) {
+func (client DisksClient) GrantAccessPreparer(ctx context.Context, resourceGroupName string, diskName string, grantAccessData GrantAccessData) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
+		"diskName":          autorest.Encode("path", diskName),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
-		"snapshotName":      autorest.Encode("path", snapshotName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -346,7 +359,7 @@ func (client SnapshotsClient) GrantAccessPreparer(ctx context.Context, resourceG
 		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/snapshots/{snapshotName}/beginGetAccess", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/disks/{diskName}/beginGetAccess", pathParameters),
 		autorest.WithJSON(grantAccessData),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
@@ -354,7 +367,7 @@ func (client SnapshotsClient) GrantAccessPreparer(ctx context.Context, resourceG
 
 // GrantAccessSender sends the GrantAccess request. The method will close the
 // http.Response Body if it receives an error.
-func (client SnapshotsClient) GrantAccessSender(req *http.Request) (future SnapshotsGrantAccessFuture, err error) {
+func (client DisksClient) GrantAccessSender(req *http.Request) (future DisksGrantAccessFuture, err error) {
 	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
 	var resp *http.Response
 	resp, err = autorest.SendWithSender(client, req, sd...)
@@ -367,7 +380,7 @@ func (client SnapshotsClient) GrantAccessSender(req *http.Request) (future Snaps
 
 // GrantAccessResponder handles the response to the GrantAccess request. The method always
 // closes the http.Response Body.
-func (client SnapshotsClient) GrantAccessResponder(resp *http.Response) (result AccessURI, err error) {
+func (client DisksClient) GrantAccessResponder(resp *http.Response) (result AccessURI, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
@@ -378,14 +391,14 @@ func (client SnapshotsClient) GrantAccessResponder(resp *http.Response) (result 
 	return
 }
 
-// List lists snapshots under a subscription.
-func (client SnapshotsClient) List(ctx context.Context) (result SnapshotListPage, err error) {
+// List lists all the disks under a subscription.
+func (client DisksClient) List(ctx context.Context) (result DiskListPage, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/SnapshotsClient.List")
+		ctx = tracing.StartSpan(ctx, fqdn+"/DisksClient.List")
 		defer func() {
 			sc := -1
-			if result.sl.Response.Response != nil {
-				sc = result.sl.Response.Response.StatusCode
+			if result.dl.Response.Response != nil {
+				sc = result.dl.Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -393,32 +406,32 @@ func (client SnapshotsClient) List(ctx context.Context) (result SnapshotListPage
 	result.fn = client.listNextResults
 	req, err := client.ListPreparer(ctx)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "List", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "List", nil, "Failure preparing request")
 		return
 	}
 
 	resp, err := client.ListSender(req)
 	if err != nil {
-		result.sl.Response = autorest.Response{Response: resp}
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "List", resp, "Failure sending request")
+		result.dl.Response = autorest.Response{Response: resp}
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "List", resp, "Failure sending request")
 		return
 	}
 
-	result.sl, err = client.ListResponder(resp)
+	result.dl, err = client.ListResponder(resp)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "List", resp, "Failure responding to request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "List", resp, "Failure responding to request")
 	}
 
 	return
 }
 
 // ListPreparer prepares the List request.
-func (client SnapshotsClient) ListPreparer(ctx context.Context) (*http.Request, error) {
+func (client DisksClient) ListPreparer(ctx context.Context) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -426,21 +439,21 @@ func (client SnapshotsClient) ListPreparer(ctx context.Context) (*http.Request, 
 	preparer := autorest.CreatePreparer(
 		autorest.AsGet(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.Compute/snapshots", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.Compute/disks", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
-func (client SnapshotsClient) ListSender(req *http.Request) (*http.Response, error) {
+func (client DisksClient) ListSender(req *http.Request) (*http.Response, error) {
 	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
 	return autorest.SendWithSender(client, req, sd...)
 }
 
 // ListResponder handles the response to the List request. The method always
 // closes the http.Response Body.
-func (client SnapshotsClient) ListResponder(resp *http.Response) (result SnapshotList, err error) {
+func (client DisksClient) ListResponder(resp *http.Response) (result DiskList, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
@@ -452,10 +465,10 @@ func (client SnapshotsClient) ListResponder(resp *http.Response) (result Snapsho
 }
 
 // listNextResults retrieves the next set of results, if any.
-func (client SnapshotsClient) listNextResults(ctx context.Context, lastResults SnapshotList) (result SnapshotList, err error) {
-	req, err := lastResults.snapshotListPreparer(ctx)
+func (client DisksClient) listNextResults(ctx context.Context, lastResults DiskList) (result DiskList, err error) {
+	req, err := lastResults.diskListPreparer(ctx)
 	if err != nil {
-		return result, autorest.NewErrorWithError(err, "compute.SnapshotsClient", "listNextResults", nil, "Failure preparing next results request")
+		return result, autorest.NewErrorWithError(err, "compute.DisksClient", "listNextResults", nil, "Failure preparing next results request")
 	}
 	if req == nil {
 		return
@@ -463,19 +476,19 @@ func (client SnapshotsClient) listNextResults(ctx context.Context, lastResults S
 	resp, err := client.ListSender(req)
 	if err != nil {
 		result.Response = autorest.Response{Response: resp}
-		return result, autorest.NewErrorWithError(err, "compute.SnapshotsClient", "listNextResults", resp, "Failure sending next results request")
+		return result, autorest.NewErrorWithError(err, "compute.DisksClient", "listNextResults", resp, "Failure sending next results request")
 	}
 	result, err = client.ListResponder(resp)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "listNextResults", resp, "Failure responding to next results request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "listNextResults", resp, "Failure responding to next results request")
 	}
 	return
 }
 
 // ListComplete enumerates all values, automatically crossing page boundaries as required.
-func (client SnapshotsClient) ListComplete(ctx context.Context) (result SnapshotListIterator, err error) {
+func (client DisksClient) ListComplete(ctx context.Context) (result DiskListIterator, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/SnapshotsClient.List")
+		ctx = tracing.StartSpan(ctx, fqdn+"/DisksClient.List")
 		defer func() {
 			sc := -1
 			if result.Response().Response.Response != nil {
@@ -488,16 +501,16 @@ func (client SnapshotsClient) ListComplete(ctx context.Context) (result Snapshot
 	return
 }
 
-// ListByResourceGroup lists snapshots under a resource group.
+// ListByResourceGroup lists all the disks under a resource group.
 // Parameters:
 // resourceGroupName - the name of the resource group.
-func (client SnapshotsClient) ListByResourceGroup(ctx context.Context, resourceGroupName string) (result SnapshotListPage, err error) {
+func (client DisksClient) ListByResourceGroup(ctx context.Context, resourceGroupName string) (result DiskListPage, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/SnapshotsClient.ListByResourceGroup")
+		ctx = tracing.StartSpan(ctx, fqdn+"/DisksClient.ListByResourceGroup")
 		defer func() {
 			sc := -1
-			if result.sl.Response.Response != nil {
-				sc = result.sl.Response.Response.StatusCode
+			if result.dl.Response.Response != nil {
+				sc = result.dl.Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -505,33 +518,33 @@ func (client SnapshotsClient) ListByResourceGroup(ctx context.Context, resourceG
 	result.fn = client.listByResourceGroupNextResults
 	req, err := client.ListByResourceGroupPreparer(ctx, resourceGroupName)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "ListByResourceGroup", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "ListByResourceGroup", nil, "Failure preparing request")
 		return
 	}
 
 	resp, err := client.ListByResourceGroupSender(req)
 	if err != nil {
-		result.sl.Response = autorest.Response{Response: resp}
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "ListByResourceGroup", resp, "Failure sending request")
+		result.dl.Response = autorest.Response{Response: resp}
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "ListByResourceGroup", resp, "Failure sending request")
 		return
 	}
 
-	result.sl, err = client.ListByResourceGroupResponder(resp)
+	result.dl, err = client.ListByResourceGroupResponder(resp)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "ListByResourceGroup", resp, "Failure responding to request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "ListByResourceGroup", resp, "Failure responding to request")
 	}
 
 	return
 }
 
 // ListByResourceGroupPreparer prepares the ListByResourceGroup request.
-func (client SnapshotsClient) ListByResourceGroupPreparer(ctx context.Context, resourceGroupName string) (*http.Request, error) {
+func (client DisksClient) ListByResourceGroupPreparer(ctx context.Context, resourceGroupName string) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -539,21 +552,21 @@ func (client SnapshotsClient) ListByResourceGroupPreparer(ctx context.Context, r
 	preparer := autorest.CreatePreparer(
 		autorest.AsGet(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/snapshots", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/disks", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
 // ListByResourceGroupSender sends the ListByResourceGroup request. The method will close the
 // http.Response Body if it receives an error.
-func (client SnapshotsClient) ListByResourceGroupSender(req *http.Request) (*http.Response, error) {
+func (client DisksClient) ListByResourceGroupSender(req *http.Request) (*http.Response, error) {
 	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
 	return autorest.SendWithSender(client, req, sd...)
 }
 
 // ListByResourceGroupResponder handles the response to the ListByResourceGroup request. The method always
 // closes the http.Response Body.
-func (client SnapshotsClient) ListByResourceGroupResponder(resp *http.Response) (result SnapshotList, err error) {
+func (client DisksClient) ListByResourceGroupResponder(resp *http.Response) (result DiskList, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
@@ -565,10 +578,10 @@ func (client SnapshotsClient) ListByResourceGroupResponder(resp *http.Response) 
 }
 
 // listByResourceGroupNextResults retrieves the next set of results, if any.
-func (client SnapshotsClient) listByResourceGroupNextResults(ctx context.Context, lastResults SnapshotList) (result SnapshotList, err error) {
-	req, err := lastResults.snapshotListPreparer(ctx)
+func (client DisksClient) listByResourceGroupNextResults(ctx context.Context, lastResults DiskList) (result DiskList, err error) {
+	req, err := lastResults.diskListPreparer(ctx)
 	if err != nil {
-		return result, autorest.NewErrorWithError(err, "compute.SnapshotsClient", "listByResourceGroupNextResults", nil, "Failure preparing next results request")
+		return result, autorest.NewErrorWithError(err, "compute.DisksClient", "listByResourceGroupNextResults", nil, "Failure preparing next results request")
 	}
 	if req == nil {
 		return
@@ -576,19 +589,19 @@ func (client SnapshotsClient) listByResourceGroupNextResults(ctx context.Context
 	resp, err := client.ListByResourceGroupSender(req)
 	if err != nil {
 		result.Response = autorest.Response{Response: resp}
-		return result, autorest.NewErrorWithError(err, "compute.SnapshotsClient", "listByResourceGroupNextResults", resp, "Failure sending next results request")
+		return result, autorest.NewErrorWithError(err, "compute.DisksClient", "listByResourceGroupNextResults", resp, "Failure sending next results request")
 	}
 	result, err = client.ListByResourceGroupResponder(resp)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "listByResourceGroupNextResults", resp, "Failure responding to next results request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "listByResourceGroupNextResults", resp, "Failure responding to next results request")
 	}
 	return
 }
 
 // ListByResourceGroupComplete enumerates all values, automatically crossing page boundaries as required.
-func (client SnapshotsClient) ListByResourceGroupComplete(ctx context.Context, resourceGroupName string) (result SnapshotListIterator, err error) {
+func (client DisksClient) ListByResourceGroupComplete(ctx context.Context, resourceGroupName string) (result DiskListIterator, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/SnapshotsClient.ListByResourceGroup")
+		ctx = tracing.StartSpan(ctx, fqdn+"/DisksClient.ListByResourceGroup")
 		defer func() {
 			sc := -1
 			if result.Response().Response.Response != nil {
@@ -601,14 +614,15 @@ func (client SnapshotsClient) ListByResourceGroupComplete(ctx context.Context, r
 	return
 }
 
-// RevokeAccess revokes access to a snapshot.
+// RevokeAccess revokes access to a disk.
 // Parameters:
 // resourceGroupName - the name of the resource group.
-// snapshotName - the name of the snapshot that is being created. The name can't be changed after the snapshot
-// is created. Supported characters for the name are a-z, A-Z, 0-9 and _. The max name length is 80 characters.
-func (client SnapshotsClient) RevokeAccess(ctx context.Context, resourceGroupName string, snapshotName string) (result SnapshotsRevokeAccessFuture, err error) {
+// diskName - the name of the managed disk that is being created. The name can't be changed after the disk is
+// created. Supported characters for the name are a-z, A-Z, 0-9 and _. The maximum name length is 80
+// characters.
+func (client DisksClient) RevokeAccess(ctx context.Context, resourceGroupName string, diskName string) (result DisksRevokeAccessFuture, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/SnapshotsClient.RevokeAccess")
+		ctx = tracing.StartSpan(ctx, fqdn+"/DisksClient.RevokeAccess")
 		defer func() {
 			sc := -1
 			if result.Response() != nil {
@@ -617,15 +631,15 @@ func (client SnapshotsClient) RevokeAccess(ctx context.Context, resourceGroupNam
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	req, err := client.RevokeAccessPreparer(ctx, resourceGroupName, snapshotName)
+	req, err := client.RevokeAccessPreparer(ctx, resourceGroupName, diskName)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "RevokeAccess", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "RevokeAccess", nil, "Failure preparing request")
 		return
 	}
 
 	result, err = client.RevokeAccessSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "RevokeAccess", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "RevokeAccess", result.Response(), "Failure sending request")
 		return
 	}
 
@@ -633,14 +647,14 @@ func (client SnapshotsClient) RevokeAccess(ctx context.Context, resourceGroupNam
 }
 
 // RevokeAccessPreparer prepares the RevokeAccess request.
-func (client SnapshotsClient) RevokeAccessPreparer(ctx context.Context, resourceGroupName string, snapshotName string) (*http.Request, error) {
+func (client DisksClient) RevokeAccessPreparer(ctx context.Context, resourceGroupName string, diskName string) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
+		"diskName":          autorest.Encode("path", diskName),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
-		"snapshotName":      autorest.Encode("path", snapshotName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -648,14 +662,14 @@ func (client SnapshotsClient) RevokeAccessPreparer(ctx context.Context, resource
 	preparer := autorest.CreatePreparer(
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/snapshots/{snapshotName}/endGetAccess", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/disks/{diskName}/endGetAccess", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
 // RevokeAccessSender sends the RevokeAccess request. The method will close the
 // http.Response Body if it receives an error.
-func (client SnapshotsClient) RevokeAccessSender(req *http.Request) (future SnapshotsRevokeAccessFuture, err error) {
+func (client DisksClient) RevokeAccessSender(req *http.Request) (future DisksRevokeAccessFuture, err error) {
 	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
 	var resp *http.Response
 	resp, err = autorest.SendWithSender(client, req, sd...)
@@ -668,25 +682,27 @@ func (client SnapshotsClient) RevokeAccessSender(req *http.Request) (future Snap
 
 // RevokeAccessResponder handles the response to the RevokeAccess request. The method always
 // closes the http.Response Body.
-func (client SnapshotsClient) RevokeAccessResponder(resp *http.Response) (result autorest.Response, err error) {
+func (client DisksClient) RevokeAccessResponder(resp *http.Response) (result OperationStatusResponse, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
-	result.Response = resp
+	result.Response = autorest.Response{Response: resp}
 	return
 }
 
-// Update updates (patches) a snapshot.
+// Update updates (patches) a disk.
 // Parameters:
 // resourceGroupName - the name of the resource group.
-// snapshotName - the name of the snapshot that is being created. The name can't be changed after the snapshot
-// is created. Supported characters for the name are a-z, A-Z, 0-9 and _. The max name length is 80 characters.
-// snapshot - snapshot object supplied in the body of the Patch snapshot operation.
-func (client SnapshotsClient) Update(ctx context.Context, resourceGroupName string, snapshotName string, snapshot SnapshotUpdate) (result SnapshotsUpdateFuture, err error) {
+// diskName - the name of the managed disk that is being created. The name can't be changed after the disk is
+// created. Supported characters for the name are a-z, A-Z, 0-9 and _. The maximum name length is 80
+// characters.
+// disk - disk object supplied in the body of the Patch disk operation.
+func (client DisksClient) Update(ctx context.Context, resourceGroupName string, diskName string, disk DiskUpdate) (result DisksUpdateFuture, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/SnapshotsClient.Update")
+		ctx = tracing.StartSpan(ctx, fqdn+"/DisksClient.Update")
 		defer func() {
 			sc := -1
 			if result.Response() != nil {
@@ -695,15 +711,15 @@ func (client SnapshotsClient) Update(ctx context.Context, resourceGroupName stri
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	req, err := client.UpdatePreparer(ctx, resourceGroupName, snapshotName, snapshot)
+	req, err := client.UpdatePreparer(ctx, resourceGroupName, diskName, disk)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "Update", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "Update", nil, "Failure preparing request")
 		return
 	}
 
 	result, err = client.UpdateSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "compute.SnapshotsClient", "Update", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "compute.DisksClient", "Update", result.Response(), "Failure sending request")
 		return
 	}
 
@@ -711,14 +727,14 @@ func (client SnapshotsClient) Update(ctx context.Context, resourceGroupName stri
 }
 
 // UpdatePreparer prepares the Update request.
-func (client SnapshotsClient) UpdatePreparer(ctx context.Context, resourceGroupName string, snapshotName string, snapshot SnapshotUpdate) (*http.Request, error) {
+func (client DisksClient) UpdatePreparer(ctx context.Context, resourceGroupName string, diskName string, disk DiskUpdate) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
+		"diskName":          autorest.Encode("path", diskName),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
-		"snapshotName":      autorest.Encode("path", snapshotName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-07-01"
+	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -727,15 +743,15 @@ func (client SnapshotsClient) UpdatePreparer(ctx context.Context, resourceGroupN
 		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/snapshots/{snapshotName}", pathParameters),
-		autorest.WithJSON(snapshot),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/disks/{diskName}", pathParameters),
+		autorest.WithJSON(disk),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
 // UpdateSender sends the Update request. The method will close the
 // http.Response Body if it receives an error.
-func (client SnapshotsClient) UpdateSender(req *http.Request) (future SnapshotsUpdateFuture, err error) {
+func (client DisksClient) UpdateSender(req *http.Request) (future DisksUpdateFuture, err error) {
 	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
 	var resp *http.Response
 	resp, err = autorest.SendWithSender(client, req, sd...)
@@ -748,7 +764,7 @@ func (client SnapshotsClient) UpdateSender(req *http.Request) (future SnapshotsU
 
 // UpdateResponder handles the response to the Update request. The method always
 // closes the http.Response Body.
-func (client SnapshotsClient) UpdateResponder(resp *http.Response) (result Snapshot, err error) {
+func (client DisksClient) UpdateResponder(resp *http.Response) (result Disk, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),

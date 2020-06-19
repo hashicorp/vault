@@ -10,41 +10,47 @@ import (
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
-// StepOperation defines operations each step could preform
-type StepOperation string
+// Operation defines operations each step could perform. These are
+// intentionally redefined from the logical package in the SDK, so users
+// consistently use the stepwise package and not a combination of both stepwise
+// and logical.
+type Operation string
 
 const (
-	WriteOperation  StepOperation = "create"
-	UpdateOperation               = "update"
-	ReadOperation                 = "read"
-	DeleteOperation               = "delete"
-	ListOperation                 = "list"
-	HelpOperation                 = "help"
+	WriteOperation  Operation = "create"
+	UpdateOperation           = "update"
+	ReadOperation             = "read"
+	DeleteOperation           = "delete"
+	ListOperation             = "list"
+	HelpOperation             = "help"
 )
 
-// StepwiseEnvironment is the interface Environments need to implement to be used in
+// Environment is the interface Environments need to implement to be used in
 // Case to execute each Step
-type StepwiseEnvironment interface {
+type Environment interface {
+	// Setup is responsible for creating the Vault cluster for use in the test
+	// case.
 	Setup() error
-	Client() (*api.Client, error)
-	Teardown() error
-	Name() string // maybe?
 
-	// ExpandPath adds any Namespace or mount path to the user defined path
-	ExpandPath(string) string
+	// Client returns a configured Vault API client to communicate with the Vault
+	// cluster created in Setup and managed by this Environment.
+	Client() (*api.Client, error)
+
+	// Teardown is responsible for destroying any and all infrastructure created
+	// during Setup or otherwise over the course of executing test cases.
+	Teardown() error
+
+	// Name returns the name of the environment provider, e.g. Docker, Minikube,
+	// et.al.
+	Name() string
 
 	// MountPath returns the path the plugin is mounted at
 	MountPath() string
-
-	// BarrierKeys returns the keys used to seal/unseal the cluster. Used for
-	// debugging. TODO verify we should provide this
-	//BarrierKeys()        [][]byte
 
 	// RootToken returns the root token of the cluster, used for making requests
 	// as well as administrative tasks
@@ -79,20 +85,20 @@ func (p PluginType) String() string {
 	}
 }
 
-// EnvironmentOptions are a collection of options each step driver should
+// MountOptions are a collection of options each step driver should
 // support
-type EnvironmentOptions struct {
+type MountOptions struct {
 	// MountPathPrefix is an optional prefix to use when mounting the plugin. If
 	// omitted the mount path will default to the PluginName with a random suffix.
 	MountPathPrefix string
 
-	// Name is used to register the plugin. This can be arbitray but should be a
+	// Name is used to register the plugin. This can be arbitrary but should be a
 	// reasonable value. For an example, if the plugin in test is a secret backend
 	// that generates UUIDs with the name "vault-plugin-secrets-uuid", then "uuid"
 	// or "test-uuid" would be reasonable. The name is used for lookups in the
 	// catalog. See "name" in the "Register Plugin" endpoint docs:
 	// - https://www.vaultproject.io/api-docs/system/plugins-catalog#register-plugin
-	Name string
+	RegistryName string
 
 	// PluginType is the optional type of plugin. See PluginType const defined
 	// above
@@ -117,7 +123,7 @@ type EnvironmentOptions struct {
 type Step struct {
 	// Operation defines what action is being taken in this step; write, read,
 	// delete, et. al.
-	Operation StepOperation
+	Operation Operation
 
 	// Path is the localized request path. The mount prefix, namespace, and
 	// optionally "auth" will be automatically added.
@@ -127,45 +133,33 @@ type Step struct {
 	// to the API.
 	Data map[string]interface{}
 
-	// Check is a function that is called after this step is executed in order to
+	// Assert is a function that is called after this step is executed in order to
 	// test that the step executed successfully. If this is not set, then the next
 	// step will be called
-	Check StepCheckFunc
-
-	// ExpectError indicates if this step is expected to return an error. If the
-	// step operation returns an error and ExpectError is not set, the test will
-	// fail immediately and the StepCheckFunc will not be ran. If ExpectError is
-	// true, the StepCheckFunc will be called (if any) and include the error from
-	// the response. It is the responsibility of the StepCheckFunc to validate the
-	// error is appropriate or not, if expected.
-	ExpectError bool
+	Assert AssertionFunc
 
 	// Unauthenticated will make the request unauthenticated.
 	Unauthenticated bool
 }
 
-// StepCheckFunc is the callback used for Check in Steps.
-type StepCheckFunc func(*api.Secret, error) error
+// AssertionFunc is the callback used for Assert in Steps.
+type AssertionFunc func(*api.Secret, error) error
 
 // Case represents a scenario we want to test which involves a series of
 // steps to be followed sequentially, evaluating the results after each step.
 type Case struct {
 	// Environment is used to setup the Vault instance and provide the client that
 	// will be used to drive the tests
-	Environment StepwiseEnvironment
+	Environment Environment
 
-	// Precheck, if non-nil, will be called once before the test case
-	// runs at all. This can be used for some validation prior to the
-	// test running.
-	PreCheck func()
-
-	// Steps are the set of operations that are run for this test case.
+	// Steps are the set of operations that are run for this test case. During
+	// execution each step will be logged to output with a 1-based index as it is
+	// ran, with the first step logged as step '1' and not step '0'.
 	Steps []Step
 
-	// SkipTeardown allows the TestTeardownFunc to be skipped, leaving any
-	// infrastructure created during Environment setup to remain. Depending on the
-	// Environment used this could incur costs the user is responsible for.
-	// TODO maybe better wording here
+	// SkipTeardown allows the Environment TeardownFunc to be skipped, leaving any
+	// infrastructure created after the test exists. Depending on the Environment
+	// used this could incur costs the user is responsible for.
 	SkipTeardown bool
 }
 
@@ -183,27 +177,8 @@ func Run(tt TestT, c Case) {
 	tt.Helper()
 	// We only run acceptance tests if an env var is set because they're
 	// slow and generally require some outside configuration.
-	if os.Getenv(TestEnvVar) == "" {
-		tt.Skip(fmt.Sprintf(
-			"Acceptance tests skipped unless env '%s' set",
-			TestEnvVar))
-		return
-	}
+	checkShouldRun(tt)
 
-	// We require verbose mode so that the user knows what is going on.
-	if !testing.Verbose() {
-		tt.Fatal("Acceptance tests must be run with the -v flag on tests")
-		return
-	}
-
-	// Run the PreCheck if we have it
-	if c.PreCheck != nil {
-		c.PreCheck()
-	}
-
-	// Create an in-memory Vault core
-	// TODO use test logger if available?
-	logger := logging.NewVaultLogger(log.Trace)
 	if c.Environment == nil {
 		tt.Fatal("nil driver in acceptance test")
 		// return here only used during testing when using mockT type, otherwise
@@ -211,15 +186,10 @@ func Run(tt TestT, c Case) {
 		return
 	}
 
-	err := c.Environment.Setup()
-	if err != nil {
-		driverErr := fmt.Errorf("error setting up driver: %w", err)
-		if !c.SkipTeardown {
-			if err := c.Environment.Teardown(); err != nil {
-				driverErr = fmt.Errorf("error during driver teardown: %w", driverErr)
-			}
-		}
-		tt.Fatal(driverErr)
+	logger := logging.NewVaultLogger(log.Trace)
+
+	if err := c.Environment.Setup(); err != nil {
+		tt.Fatal(err)
 	}
 
 	defer func() {
@@ -302,44 +272,38 @@ func Run(tt TestT, c Case) {
 			responses = append(responses, resp)
 		}
 
-		// If a step returned an unexpected error, fail the entire test immediately
-		if respErr != nil && !step.ExpectError {
-			tt.Fatal(fmt.Errorf("unexpected error in step %d: %w", index, respErr))
-		}
-
-		// run the associated StepCheckFunc, if any. If an error was expected it is
-		// sent to the Check function to validate.
-		if step.Check != nil {
-			if err := step.Check(resp, respErr); err != nil {
+		// run the associated AssertionFunc, if any. If an error was expected it is
+		// sent to the Assert function to validate.
+		if step.Assert != nil {
+			if err := step.Assert(resp, respErr); err != nil {
 				tt.Error(fmt.Errorf("failed step %d: %w", index, err))
 			}
 		}
 	}
 }
 
-func makeRequest(tt TestT, driver StepwiseEnvironment, step Step) (*api.Secret, error) {
-	client, err := driver.Client()
+func makeRequest(tt TestT, env Environment, step Step) (*api.Secret, error) {
+	tt.Helper()
+	client, err := env.Client()
 	if err != nil {
 		return nil, err
 	}
 
 	if step.Unauthenticated {
+		token := client.Token()
 		client.ClearToken()
+		// restore the client token after this request completes
+		defer func() {
+			client.SetToken(token)
+		}()
 	}
 
-	// ExpandPath will turn a test path into a full path, prefixing with the
-	// correct mount, namespaces, or "auth" if needed based on mount path and
-	// plugin type
-	path := driver.ExpandPath(step.Path)
+	path := fmt.Sprintf("%s/%s", env.MountPath(), step.Path)
 	switch step.Operation {
 	case WriteOperation, UpdateOperation:
 		return client.Logical().Write(path, step.Data)
 	case ReadOperation:
-		// Some operations support reading with data given.
-		// TODO: see how the CLI parses args and turns them into
-		// map[string][]string, or change how step.Data is defined (currently
-		// map[string]interface{})
-		// resp, respErr = client.Logical().ReadWithData(path, step.Data)
+		// TODO support ReadWithData
 		return client.Logical().Read(path)
 	case ListOperation:
 		return client.Logical().List(path)
@@ -348,4 +312,29 @@ func makeRequest(tt TestT, driver StepwiseEnvironment, step Step) (*api.Secret, 
 	default:
 		return nil, fmt.Errorf("invalid operation: %s", step.Operation)
 	}
+}
+
+func checkShouldRun(tt TestT) {
+	tt.Helper()
+	if os.Getenv(TestEnvVar) == "" {
+		tt.Skip(fmt.Sprintf(
+			"Acceptance tests skipped unless env '%s' set",
+			TestEnvVar))
+		return
+	}
+
+	// We require verbose mode so that the user knows what is going on.
+	if !testing.Verbose() {
+		tt.Fatal("Acceptance tests must be run with the -v flag on tests")
+	}
+}
+
+// TestT is the interface used to handle the test lifecycle of a test.
+//
+// Users should just use a *testing.T object, which implements this.
+type TestT interface {
+	Error(args ...interface{})
+	Fatal(args ...interface{})
+	Skip(args ...interface{})
+	Helper()
 }

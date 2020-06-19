@@ -41,9 +41,7 @@ func NewResourceSkusClientWithBaseURI(baseURI string, subscriptionID string) Res
 }
 
 // List gets the list of Microsoft.Compute SKUs available for your Subscription.
-// Parameters:
-// filter - the filter to apply on the operation.
-func (client ResourceSkusClient) List(ctx context.Context, filter string) (result ResourceSkusResultPage, err error) {
+func (client ResourceSkusClient) List(ctx context.Context) (result ResourceSkusResultPage, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/ResourceSkusClient.List")
 		defer func() {
@@ -55,7 +53,7 @@ func (client ResourceSkusClient) List(ctx context.Context, filter string) (resul
 		}()
 	}
 	result.fn = client.listNextResults
-	req, err := client.ListPreparer(ctx, filter)
+	req, err := client.ListPreparer(ctx)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.ResourceSkusClient", "List", nil, "Failure preparing request")
 		return
@@ -77,17 +75,14 @@ func (client ResourceSkusClient) List(ctx context.Context, filter string) (resul
 }
 
 // ListPreparer prepares the List request.
-func (client ResourceSkusClient) ListPreparer(ctx context.Context, filter string) (*http.Request, error) {
+func (client ResourceSkusClient) ListPreparer(ctx context.Context) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-04-01"
+	const APIVersion = "2017-09-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
-	}
-	if len(filter) > 0 {
-		queryParameters["$filter"] = autorest.Encode("query", filter)
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -140,7 +135,7 @@ func (client ResourceSkusClient) listNextResults(ctx context.Context, lastResult
 }
 
 // ListComplete enumerates all values, automatically crossing page boundaries as required.
-func (client ResourceSkusClient) ListComplete(ctx context.Context, filter string) (result ResourceSkusResultIterator, err error) {
+func (client ResourceSkusClient) ListComplete(ctx context.Context) (result ResourceSkusResultIterator, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/ResourceSkusClient.List")
 		defer func() {
@@ -151,6 +146,6 @@ func (client ResourceSkusClient) ListComplete(ctx context.Context, filter string
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	result.page, err = client.List(ctx, filter)
+	result.page, err = client.List(ctx)
 	return
 }

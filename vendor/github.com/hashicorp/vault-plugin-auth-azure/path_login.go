@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-07-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -208,8 +208,7 @@ func (b *azureAuthBackend) verifyResource(ctx context.Context, subscriptionID, r
 		return errors.New("subscription_id and resource_group_name are required")
 	}
 
-	var location *string
-	principalIDs := map[string]struct{}{}
+	var principalID, location *string
 
 	switch {
 	// If vmss name is specified, the vm name will be ignored and only the scale set
@@ -225,25 +224,21 @@ func (b *azureAuthBackend) verifyResource(ctx context.Context, subscriptionID, r
 			return errwrap.Wrapf("unable to retrieve virtual machine scale set metadata: {{err}}", err)
 		}
 
+		if vmss.Identity == nil {
+			return errors.New("vmss client did not return identity information")
+		}
+		if vmss.Identity.PrincipalID == nil {
+			return errors.New("vmss principal id is empty")
+		}
+
 		// Check bound scale sets
 		if len(role.BoundScaleSets) > 0 && !strListContains(role.BoundScaleSets, vmssName) {
 			return errors.New("scale set not authorized")
 		}
 
+		principalID = vmss.Identity.PrincipalID
 		location = vmss.Location
 
-		if vmss.Identity == nil {
-			return errors.New("vmss client did not return identity information")
-		}
-		// if system-assigned identity's principal id is available
-		if vmss.Identity.PrincipalID != nil {
-			principalIDs[to.String(vmss.Identity.PrincipalID)] = struct{}{}
-			break
-		}
-		// if not, look for user-assigned identities
-		for _, userIdentity := range vmss.Identity.UserAssignedIdentities {
-			principalIDs[to.String(userIdentity.PrincipalID)] = struct{}{}
-		}
 	case vmName != "":
 		client, err := b.provider.ComputeClient(subscriptionID)
 		if err != nil {
@@ -255,32 +250,29 @@ func (b *azureAuthBackend) verifyResource(ctx context.Context, subscriptionID, r
 			return errwrap.Wrapf("unable to retrieve virtual machine metadata: {{err}}", err)
 		}
 
-		location = vm.Location
-
 		if vm.Identity == nil {
 			return errors.New("vm client did not return identity information")
 		}
+
+		if vm.Identity.PrincipalID == nil {
+			return errors.New("vm principal id is empty")
+		}
+
 		// Check bound scale sets
 		if len(role.BoundScaleSets) > 0 {
 			return errors.New("bound scale set defined but this vm isn't in a scale set")
 		}
-		// if system-assigned identity's principal id is available
-		if vm.Identity.PrincipalID != nil {
-			principalIDs[to.String(vm.Identity.PrincipalID)] = struct{}{}
-			break
-		}
-		// if not, look for user-assigned identities
-		for _, userIdentity := range vm.Identity.UserAssignedIdentities {
-			principalIDs[to.String(userIdentity.PrincipalID)] = struct{}{}
-		}
+
+		principalID = vm.Identity.PrincipalID
+		location = vm.Location
+
 	default:
 		return errors.New("either vm_name or vmss_name is required")
 	}
 
-	// Ensure the token OID is the principal id of the system-assigned identity
-	// or one of the user-assigned identities of the VM
-	if _, ok := principalIDs[claims.ObjectID]; !ok {
-		return errors.New("token object id does not match virtual machine identities")
+	// Ensure the principal id for the VM matches the verified token OID
+	if to.String(principalID) != claims.ObjectID {
+		return errors.New("token object id does not match virtual machine principal id")
 	}
 
 	// Check bound subscriptions
