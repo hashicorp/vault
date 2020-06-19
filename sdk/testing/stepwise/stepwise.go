@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
-// Operation defines operations each step could preform. These are
+// Operation defines operations each step could perform. These are
 // intentionally redefined from the logical package in the SDK, so users
 // consistently use the stepwise package and not a combination of both stepwise
 // and logical.
