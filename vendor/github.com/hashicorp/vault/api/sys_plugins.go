@@ -276,7 +276,7 @@ type PluginReloadStatus struct {
 
 type PluginReloadStatusResponse struct {
 	ReloadID string
-	Results  map[string]PluginReloadStatus
+	Results  map[string]interface{}
 }
 
 // ReloadPluginStatusInput is used as input to the ReloadStatusPlugin function.
@@ -286,7 +286,7 @@ type ReloadPluginStatusInput struct {
 }
 
 // ReloadPluginStatus retrieves the status of a reload operation
-func (c *Sys) ReloadPluginStatus(reloadID string) (*PluginReloadStatusResponse, error) {
+func (c *Sys) ReloadPluginStatus(reloadID string) (map[string]interface{}, error) {
 	path := "/v1/sys/plugins/reload/backend/status"
 	req := c.c.NewRequest(http.MethodGet, path)
 	req.Params.Add("reload_id", reloadID)
@@ -305,24 +305,8 @@ func (c *Sys) ReloadPluginStatus(reloadID string) (*PluginReloadStatusResponse, 
 			return nil, err
 		}
 
-		ps := PluginReloadStatusResponse{
-			ReloadID: secret.Data["reload_id"].(string),
-			Results:  make(map[string]PluginReloadStatus),
-		}
 
-		// There is certainly a better way to do this...
-		decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-			DecodeHook: mapstructure.ComposeDecodeHookFunc(mapstructure.StringToTimeHookFunc(time.RFC3339)),
-			Result:     &ps.Results,
-		})
-		if err != nil {
-			return nil, err
-		}
-		err = decoder.Decode(secret.Data["results"])
-		if err != nil {
-			return nil, err
-		}
-		return &ps, nil
+		return secret.Data, nil
 	}
 	return nil, nil
 

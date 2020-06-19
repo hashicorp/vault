@@ -3,6 +3,7 @@ package command
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -85,8 +86,13 @@ func (c *PluginReloadStatusCommand) Run(args []string) int {
 	// This is almost certainly not right and very gross, but how do we output a typed struct?
 	c.UI.Output("Time    \tParticipant                         \tSuccess\tMessage")
 	c.UI.Output("--------\t------------------------------------\t-------\t-------")
-	for i, s := range r.Results {
-		c.UI.Output(fmt.Sprintf("%s\t%s\t%t\t%s", s.Timestamp.Format("15:04:05"), i, s.Success, s.Message))
+	for i, s := range r["results"].(map[string]interface{}) {
+		m := s.(map[string]interface{})
+		ts, err := time.Parse(m["timestamp"].(string), time.RFC3339)
+		if err != nil {
+			return 3
+		}
+		c.UI.Output(fmt.Sprintf("%s\t%s\t%t\t%s", ts.Format("15:04:05"), i, m["success"].(bool), m["message"].(string)))
 	}
 	return 0
 }
