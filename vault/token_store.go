@@ -3610,7 +3610,7 @@ func (ts *TokenStore) gaugeCollectorByMethod(ctx context.Context) ([]metricsutil
 	prefixTree := radix.New()
 
 	pathToPrefix := func(nsID string, path string) string {
-		ns, err := namespaceByID(rootContext, nsID, ts.core)
+		ns, err := NamespaceByID(rootContext, nsID, ts.core)
 		if ns == nil || err != nil {
 			return "unknown"
 		}
