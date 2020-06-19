@@ -571,7 +571,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		}
 
 		// Emit a metric for the new entity
-		ns, err := namespaceByID(ctx, entity.NamespaceID, i.core)
+		ns, err := NamespaceByID(ctx, entity.NamespaceID, i.core)
 		var nsLabel metrics.Label
 		if err != nil {
 			nsLabel = metrics.Label{"namespace", "unknown"}
