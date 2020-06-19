@@ -260,9 +260,15 @@ func (c *Sys) ReloadPlugin(i *ReloadPluginInput) error {
 	return err
 }
 
+type PluginReloadStatus struct {
+	Timestamp time.Time
+	Success bool
+	Message string
+}
+
 type PluginReloadStatusResponse struct {
 	ReloadID string
-	Results  map[string]interface{}
+	Results  map[string]PluginReloadStatus
 }
 
 // ReloadPluginStatusInput is used as input to the ReloadStatusPlugin function.
@@ -318,3 +324,4 @@ func catalogPathByType(pluginType consts.PluginType, name string) string {
 
 	return path
 }
+h;g
