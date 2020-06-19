@@ -1,4 +1,5 @@
 import { module, test } from 'qunit';
+/* eslint-disable no-unused-vars */
 import { setupRenderingTest, only } from 'ember-qunit';
 import { render, click, fillIn } from '@ember/test-helpers';
 // import sinon so we can use a spy
@@ -58,7 +59,7 @@ module('Integration | Component | ttl-picker2 | ember learn', function(hooks) {
     );
   });
 
-  only('it keeps seconds value when unit is changed', async function(assert) {
+  test('it keeps seconds value when unit is changed', async function(assert) {
     // EXAMPLE 2
     // set up the spy in this test context
     let changeSpy = sinon.spy();

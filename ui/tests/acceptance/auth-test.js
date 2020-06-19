@@ -1,4 +1,5 @@
 import { module, test } from 'qunit';
+/* eslint-disable no-unused-vars */
 import { setupApplicationTest, only } from 'ember-qunit';
 import sinon from 'sinon';
 import { currentURL, visit, settled } from '@ember/test-helpers';
@@ -100,7 +101,7 @@ module('Acceptance | auth | ember learn', function(hooks) {
     }
   });
 
-  only('it shows the token warning beacon on the menu', async function(assert) {
+  test('it shows the token warning beacon on the menu', async function(assert) {
     let authService = this.owner.lookup('service:auth');
     await authPage.login();
     await consoleComponent.runCommands([
