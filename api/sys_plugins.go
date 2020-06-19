@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -239,13 +238,14 @@ type ReloadPluginInput struct {
 	Scope string `json:"scope"`
 }
 
-// ReloadPlugin reloads mounted plugin backends
-func (c *Sys) ReloadPlugin(i *ReloadPluginInput) error {
+// ReloadPlugin reloads mounted plugin backends, possibly returning
+// reloadId for a cluster scoped reload
+func (c *Sys) ReloadPlugin(i *ReloadPluginInput) (string, error) {
 	path := "/v1/sys/plugins/reload/backend"
 	req := c.c.NewRequest(http.MethodPut, path)
 
 	if err := req.SetJSONBody(i); err != nil {
-		return err
+		return "", err
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -253,16 +253,25 @@ func (c *Sys) ReloadPlugin(i *ReloadPluginInput) error {
 
 	resp, err := c.c.RawRequestWithContext(ctx, req)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer resp.Body.Close()
-	return err
+
+	if i.Scope == "cluster" {
+		// Get the reload id
+		secret, parseErr := ParseSecret(resp.Body)
+		if parseErr != nil {
+			return "", err
+		}
+		return secret.Data["reload_id"].(string), nil
+	}
+	return "", err
 }
 
 type PluginReloadStatus struct {
-	Timestamp time.Time
-	Success   bool
-	Message   string
+	Timestamp time.Time `json:"timestamp"`
+	Success   bool      `json:"success"`
+	Message   string    `json:"message"`
 }
 
 type PluginReloadStatusResponse struct {
@@ -276,14 +285,11 @@ type ReloadPluginStatusInput struct {
 	ReloadID string `json:"reload_id"`
 }
 
-// ReloadPlugiNStatus retrieves the status of a reload operation
-func (c *Sys) ReloadPluginStatus(i *ReloadPluginStatusInput) (*PluginReloadStatusResponse, error) {
+// ReloadPluginStatus retrieves the status of a reload operation
+func (c *Sys) ReloadPluginStatus(reloadID string) (*PluginReloadStatusResponse, error) {
 	path := "/v1/sys/plugins/reload/backend/status"
-	req := c.c.NewRequest(http.MethodPut, path)
-
-	if err := req.SetJSONBody(i); err != nil {
-		return nil, err
-	}
+	req := c.c.NewRequest(http.MethodGet, path)
+	req.Params.Add("reload_id", reloadID)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
@@ -301,8 +307,18 @@ func (c *Sys) ReloadPluginStatus(i *ReloadPluginStatusInput) (*PluginReloadStatu
 
 		ps := PluginReloadStatusResponse{
 			ReloadID: secret.Data["reload_id"].(string),
+			Results:  make(map[string]PluginReloadStatus),
 		}
-		err := json.Unmarshal([]byte(secret.Data["results"].(string)), &ps.Results)
+
+		// There is certainly a better way to do this...
+		decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+			DecodeHook: mapstructure.ComposeDecodeHookFunc(mapstructure.StringToTimeHookFunc(time.RFC3339)),
+			Result:     &ps.Results,
+		})
+		if err != nil {
+			return nil, err
+		}
+		err = decoder.Decode(secret.Data["results"])
 		if err != nil {
 			return nil, err
 		}

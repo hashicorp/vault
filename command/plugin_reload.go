@@ -102,19 +102,28 @@ func (c *PluginReloadCommand) Run(args []string) int {
 		return 2
 	}
 
-	if err := client.Sys().ReloadPlugin(&api.ReloadPluginInput{
+	rid, err := client.Sys().ReloadPlugin(&api.ReloadPluginInput{
 		Plugin: c.plugin,
 		Mounts: c.mounts,
 		Scope:  c.scope,
-	}); err != nil {
+	})
+	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reloading plugin/mounts: %s", err))
 		return 2
 	}
 
 	if len(c.mounts) > 0 {
-		c.UI.Output(fmt.Sprintf("Success! Reloaded mounts: %s", c.mounts))
+		if rid != "" {
+			c.UI.Output(fmt.Sprintf("Success! Reloading mounts: %s, reload_id: %s", c.mounts, rid))
+		} else {
+			c.UI.Output(fmt.Sprintf("Success! Reloaded mounts: %s", c.mounts))
+		}
 	} else {
-		c.UI.Output(fmt.Sprintf("Success! Reloaded plugin: %s", c.plugin))
+		if rid != "" {
+			c.UI.Output(fmt.Sprintf("Success! Reloading plugin: %s, reload_id: %s", c.plugin, rid))
+		} else {
+			c.UI.Output(fmt.Sprintf("Success! Reloaded plugin: %s", c.mounts))
+		}
 	}
 
 	return 0

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -76,14 +75,18 @@ func (c *PluginReloadStatusCommand) Run(args []string) int {
 		return 2
 	}
 
-	r, err := client.Sys().ReloadPluginStatus(&api.ReloadPluginStatusInput{
-		ReloadID: c.reload_id,
-	})
+	r, err := client.Sys().ReloadPluginStatus(c.reload_id)
+
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error retrieving plugin reload status: %s", err))
 		return 2
 	}
 
-	OutputData(c.UI, r.Results)
+	// This is almost certainly not right and very gross, but how do we output a typed struct?
+	c.UI.Output("Time    \tParticipant                         \tSuccess\tMessage")
+	c.UI.Output("--------\t------------------------------------\t-------\t-------")
+	for i, s := range r.Results {
+		c.UI.Output(fmt.Sprintf("%s\t%s\t%t\t%s", s.Timestamp.Format("15:04:05"), i, s.Success, s.Message))
+	}
 	return 0
 }
