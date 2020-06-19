@@ -3,20 +3,18 @@ package vault
 import (
 	"context"
 	"fmt"
-	"strings"
-	"time"
-
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"strings"
 
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // reloadPluginMounts reloads provided mounts, regardless of
 // plugin name, as long as the backend type is plugin.
-func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string, reloadTime time.Time) error {
+func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) error {
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 	c.authLock.RLock()
