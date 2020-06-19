@@ -459,13 +459,13 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 	}
 
 	r := logical.Response{
-
 		Data: map[string]interface{}{
 			"reload_id": req.ID,
 		},
 	}
+
 	if scope == clusterScope {
-		go handleClusterPluginReload(ctx, b, req.ID, pluginName, pluginMounts)
+		go handleClusterPluginReload(b, req.ID, pluginName, pluginMounts)
 		return logical.RespondWithStatusCode(&r, req, http.StatusAccepted)
 	}
 	return &r, nil
