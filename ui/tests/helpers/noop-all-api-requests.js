@@ -6,6 +6,11 @@ const noop = response => {
   };
 };
 
+/*
+This helper uses Pretender to mock a server. It intercepts all
+requests so that we don't make a real, external call to the Vault
+API.
+*/
 export default function(options = { usePassthrough: false }) {
   return new Pretender(function() {
     let fn = noop();

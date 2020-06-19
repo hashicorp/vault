@@ -2,6 +2,7 @@ import { later, run } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled } from '@ember/test-helpers';
+// import the fake server
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import hbs from 'htmlbars-inline-precompile';
 
@@ -12,11 +13,13 @@ import sinon from 'sinon';
 
 const component = create(mountBackendForm);
 
-module('Integration | Component | mount backend form', function(hooks) {
+module('Integration | Component | mount backend form | ember learn', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
     this.owner.lookup('service:flash-messages').registerTypes(['success', 'danger']);
+
+    // replace the server in all of the tests with the Pretender one
     this.server = apiStub();
   });
 
@@ -54,6 +57,7 @@ module('Integration | Component | mount backend form', function(hooks) {
   });
 
   test('it calls mount success', async function(assert) {
+    // use our mock server to make a fake API call
     this.server.post('/v1/sys/auth/foo', () => {
       return [204, { 'Content-Type': 'application/json' }];
     });
