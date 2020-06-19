@@ -234,9 +234,9 @@ func (c *Core) kvCollectionErrorCount() {
 func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
 	var subdirectories []string
 	if m.Version == "1" {
-		subdirectories = []string{m.MountPoint}
+		subdirectories = []string{m.Namespace.Path + m.MountPoint}
 	} else {
-		subdirectories = []string{m.MountPoint + "metadata/"}
+		subdirectories = []string{m.Namespace.Path + m.MountPoint + "metadata/"}
 	}
 
 	for len(subdirectories) > 0 {
@@ -296,7 +296,8 @@ func (c *Core) kvSecretGaugeCollector(ctx context.Context) ([]metricsutil.GaugeL
 	mounts := c.findKvMounts()
 	results := make([]metricsutil.GaugeLabelValues, len(mounts))
 
-	// Context must have root namespace
+	// Use a root namespace, so include namespace path
+	// in any queries.
 	ctx = namespace.RootContext(ctx)
 
 	// Route list requests to all the identified mounts.
