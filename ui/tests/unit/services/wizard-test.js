@@ -14,10 +14,11 @@ let routerStub = Service.extend({
       };
     },
   }),
+  // force the router to return a fake route
   urlFor: sinon.stub().returns('/ui/vault/foo'),
 });
 
-module('Unit | Service | wizard', function(hooks) {
+module('Unit | Service | wizard | ember learn', function(hooks) {
   setupTest(hooks);
 
   hooks.beforeEach(function() {
