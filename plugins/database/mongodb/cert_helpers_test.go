@@ -10,9 +10,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"io/ioutil"
 	"math/big"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -190,18 +188,6 @@ func (cert certificate) CombinedPEM() []byte {
 		return cert.pem
 	}
 	return bytes.Join([][]byte{cert.privKey.pem, cert.pem}, []byte{'\n'})
-}
-
-// ////////////////////////////////////////////////////////////////////////////
-// Writing to file
-// ////////////////////////////////////////////////////////////////////////////
-func writeFile(t *testing.T, filename string, data []byte, perms os.FileMode) {
-	t.Helper()
-
-	err := ioutil.WriteFile(filename, data, perms)
-	if err != nil {
-		t.Fatalf("Unable to write to file [%s]: %s", filename, err)
-	}
 }
 
 // ////////////////////////////////////////////////////////////////////////////
