@@ -512,6 +512,66 @@ func testACLAllowOperation(t *testing.T, ns *namespace.Namespace) {
 	}
 }
 
+func TestACL_AllowedParametersGlobbing(t *testing.T) {
+	rawPolicy := `
+path "auth/userpass/users/+/policies" {
+  capabilities = ["create", "update"]
+  allowed_parameters = {
+    "policies" = ["policies/*"]
+  }
+}
+`
+
+	ns := namespace.RootNamespace
+	policy, err := ParseACLPolicy(ns, rawPolicy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+	acl, err := NewACL(ctx, []*Policy{policy})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	toperations := []logical.Operation{
+		logical.UpdateOperation,
+		logical.CreateOperation,
+	}
+	type tcase struct {
+		path       string
+		parameters []string
+		values     []interface{}
+		allowed    bool
+	}
+
+	tcases := []tcase{
+		{"auth/userpass/users/bob/policies", []string{"policies"}, []interface{}{"policies/foo"}, true},
+		{"auth/userpass/users/bob/policies", []string{"policies"}, []interface{}{"root"}, false},
+		{"auth/userpass/users/bob/policies", []string{"policies"}, []interface{}{"root,policies/foo"}, false},
+		{"auth/userpass/users/bob/policies", []string{"policies"}, []interface{}{"policies/foo,root"}, false},
+	}
+
+	for _, tc := range tcases {
+		request := &logical.Request{
+			Path: tc.path,
+			Data: make(map[string]interface{}),
+		}
+		ctx := namespace.ContextWithNamespace(context.Background(), ns)
+
+		for i, parameter := range tc.parameters {
+			request.Data[parameter] = tc.values[i]
+		}
+		for _, op := range toperations {
+			request.Operation = op
+			authResults := acl.AllowOperation(ctx, request, false)
+			if authResults.Allowed != tc.allowed {
+				t.Fatalf("bad: case %#v: %v", tc, authResults.Allowed)
+			}
+		}
+	}
+}
+
 func TestACL_ValuePermissions(t *testing.T) {
 	t.Run("root-ns", func(t *testing.T) {
 		t.Parallel()

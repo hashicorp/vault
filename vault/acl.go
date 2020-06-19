@@ -720,7 +720,21 @@ func valueInSlice(v interface{}, list []interface{}) bool {
 			item := el.(string)
 			val := v.(string)
 
-			if strutil.GlobbedStringsMatch(item, val) {
+			// At this point, if val contains a comma, it means multiple values were specified and we
+			// need to check each of them in turn, rather than treating the entire thing like 1 value.
+			// In order for this to return true, strutil.GlobbedStringsMatch must return true for
+			// all of them. Even if val doesn't contain a comma, this is still safe because strings.Split()
+			// will return a slice of length 1 with val in it.
+			allMatch := true
+
+			for _, s := range strings.Split(val, ",") {
+				if !strutil.GlobbedStringsMatch(item, s) {
+					allMatch = false
+					break
+				}
+			}
+
+			if allMatch {
 				return true
 			}
 		} else if reflect.DeepEqual(el, v) {
