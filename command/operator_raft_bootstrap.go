@@ -70,7 +70,7 @@ func (c *OperatorRaftBootstrapCommand) Run(args []string) int {
 	}
 
 	if err := client.Sys().RaftBootstrap(); err != nil {
-		c.UI.Error(fmt.Sprintf("Error performing Raft bootstrap the node: %s", err))
+		c.UI.Error(fmt.Sprintf("Error performing Raft bootstrap on the node: %s", err))
 		return 2
 	}
 
