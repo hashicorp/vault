@@ -15,6 +15,9 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
+// TestEnvVar must be set to a non-empty value for acceptance tests to run.
+const TestEnvVar = "VAULT_ACC"
+
 // Operation defines operations each step could perform. These are
 // intentionally redefined from the logical package in the SDK, so users
 // consistently use the stepwise package and not a combination of both stepwise
