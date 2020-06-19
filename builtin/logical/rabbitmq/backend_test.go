@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	logicaltest "github.com/hashicorp/vault/sdk/testing/stepwise"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	rabbithole "github.com/michaelklishin/rabbit-hole"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory/dockertest"

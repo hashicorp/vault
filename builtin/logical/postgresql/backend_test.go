@@ -12,7 +12,7 @@ import (
 
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/logical"
-	logicaltest "github.com/hashicorp/vault/sdk/testing/stepwise"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
 )

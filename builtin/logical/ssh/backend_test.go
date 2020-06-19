@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/sdk/logical"
-	logicaltest "github.com/hashicorp/vault/sdk/testing/stepwise"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory/dockertest"
