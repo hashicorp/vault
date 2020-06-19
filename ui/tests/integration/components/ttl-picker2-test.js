@@ -5,7 +5,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | ttl-picker2', function(hooks) {
+module('Integration | Component | ttl-picker2 | ember learn', function(hooks) {
   setupRenderingTest(hooks);
 
   test('it renders time and unit inputs when TTL enabled', async function(assert) {
@@ -59,6 +59,7 @@ module('Integration | Component | ttl-picker2', function(hooks) {
   });
 
   only('it keeps seconds value when unit is changed', async function(assert) {
+    // EXAMPLE 2
     // set up the spy in this test context
     let changeSpy = sinon.spy();
     this.set('onChange', changeSpy);

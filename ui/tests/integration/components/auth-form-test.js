@@ -38,7 +38,7 @@ const routerService = Service.extend({
   },
 });
 
-module('Integration | Component | auth form', function(hooks) {
+module('Integration | Component | auth form | ember learn', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
@@ -154,6 +154,7 @@ module('Integration | Component | auth form', function(hooks) {
     this.owner.register('service:auth', workingAuthService);
     this.auth = this.owner.lookup('service:auth');
 
+    // EXAMPLE 3
     // This allows us to spy on an object's specific function
     let authSpy = sinon.spy(this.get('auth'), 'authenticate');
     let methods = {

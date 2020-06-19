@@ -14,6 +14,7 @@ let routerStub = Service.extend({
       };
     },
   }),
+  // EXAMPLE 7
   // force the router to return a fake route
   urlFor: sinon.stub().returns('/ui/vault/foo'),
 });

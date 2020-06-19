@@ -12,6 +12,8 @@ import controlGroupSuccess from '../../pages/components/control-group-success';
 const component = create(controlGroupSuccess);
 
 /*
+EXAMPLE 5
+
 Another example of stubbing a service by extending the Ember class.
 You can make this stub even more useful by using sinon to stub specific methods and controlling their result.
 */
@@ -35,7 +37,7 @@ const storeService = Service.extend({
   },
 });
 
-module('Integration | Component | control group success', function(hooks) {
+module('Integration | Component | control group success | ember learn', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {

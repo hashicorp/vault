@@ -15,11 +15,13 @@ const consoleComponent = create(consoleClass);
 const component = create(authForm);
 const jwtComponent = create(jwtForm);
 
-module('Acceptance | auth', function(hooks) {
+module('Acceptance | auth | ember learn', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
     /*
+    EXAMPLE 8
+
     useFakeTimers here allows us to overwrite the global
     setInterval, setTimeout, etc., starting the timer at Date.now()
     instead of at 0.

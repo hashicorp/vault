@@ -7,6 +7,8 @@ import Service from '@ember/service';
 import sinon from 'sinon';
 
 /*
+EXAMPLE 4
+
 Notice that Ember gives us the ability to create a stub service by
 importing and extending Service directly. This is helpful because
 the real permissions service makes API calls which are unnecessary
@@ -22,7 +24,7 @@ const Permissions = Service.extend({
   // hasNavPermission: sinon.stub().returns(console.log('hello')),
 });
 
-module('Integration | Helper | has-permission', function(hooks) {
+module('Integration | Helper | has-permission | ember learn', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {

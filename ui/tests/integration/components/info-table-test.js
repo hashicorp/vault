@@ -8,8 +8,10 @@ const TITLE = 'My Table';
 const HEADER = 'Cool Header';
 const ITEMS = ['https://127.0.0.1:8201', 'hello', 3];
 
-module('Integration | Enterprise | Component | InfoTable', function(hooks) {
+module('Integration | Enterprise | Component | InfoTable | ember learn', function(hooks) {
   /*
+  EXAMPLE 1
+
   setupRenderingTest gives us access to Ember's dependency injection
   system, allowing us to look up anything in the application, such
   as this.owner. It also grants us this.element so we can make
