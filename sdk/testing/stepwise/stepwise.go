@@ -328,3 +328,13 @@ func checkShouldRun(tt TestT) {
 		tt.Fatal("Acceptance tests must be run with the -v flag on tests")
 	}
 }
+
+// TestT is the interface used to handle the test lifecycle of a test.
+//
+// Users should just use a *testing.T object, which implements this.
+type TestT interface {
+	Error(args ...interface{})
+	Fatal(args ...interface{})
+	Skip(args ...interface{})
+	Helper()
+}

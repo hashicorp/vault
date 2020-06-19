@@ -15,6 +15,12 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
+// TestEnvVar must be set to a non-empty value for acceptance tests to run.
+const TestEnvVar = "VAULT_ACC"
+
+// testTesting is used for testing the legacy testing framework
+var testTesting = false
+
 type testRun struct {
 	expectedTestT *mockT
 	environment   *mockEnvironment
@@ -283,3 +289,51 @@ func stepFunc(path string, operation Operation, shouldError bool) Step {
 	}
 	return s
 }
+
+// mockT implements TestT for testing
+type mockT struct {
+	ErrorCalled bool
+	ErrorArgs   []interface{}
+	FatalCalled bool
+	FatalArgs   []interface{}
+	SkipCalled  bool
+	SkipArgs    []interface{}
+
+	f bool
+}
+
+func (t *mockT) Error(args ...interface{}) {
+	t.ErrorCalled = true
+	t.ErrorArgs = args
+	t.f = true
+}
+
+func (t *mockT) Fatal(args ...interface{}) {
+	t.FatalCalled = true
+	t.FatalArgs = args
+	t.f = true
+}
+
+func (t *mockT) Skip(args ...interface{}) {
+	t.SkipCalled = true
+	t.SkipArgs = args
+	t.f = true
+}
+
+func (t *mockT) failed() bool {
+	return t.f
+}
+
+func (t *mockT) failMessage() string {
+	if t.FatalCalled {
+		return t.FatalArgs[0].(string)
+	} else if t.ErrorCalled {
+		return t.ErrorArgs[0].(string)
+	} else if t.SkipCalled {
+		return t.SkipArgs[0].(string)
+	}
+
+	return "unknown"
+}
+
+func (t *mockT) Helper() {}
