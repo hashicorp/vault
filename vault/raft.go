@@ -250,7 +250,7 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 		// Unlike phased rotation, we don't need to update AppliedIndex since
 		// we don't rely on it to check whether the followers got the key. A
 		// shared storage means that followers will have the key as soon as it's
-		// written storage.
+		// written to storage.
 		keyring.Term += 1
 		keyring.Keys[0] = raftTLSKey
 		keyring.ActiveKeyID = raftTLSKey.ID
