@@ -841,6 +841,19 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			// 26399 instead of 26400, say, even if it's just a few
 			// microseconds. This provides a nicer UX.
 			resp.Secret.TTL = le.ExpireTime.Sub(time.Now()).Round(time.Second)
+
+			// Count the lease creation
+			ttl_label := metricsutil.TTLBucket(resp.Secret.TTL)
+			c.MetricSink().IncrCounterWithLabels(
+				[]string{"secret", "lease", "creation"},
+				1,
+				[]metrics.Label{
+					metricsutil.NamespaceLabel(ns),
+					{"secret_engine", req.MountType},
+					{"mount_point", req.MountPoint},
+					{"creation_ttl", ttl_label},
+				},
+			)
 		}
 	}
 

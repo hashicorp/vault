@@ -9,10 +9,10 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
-	logicaltest "github.com/hashicorp/vault/sdk/testing/stepwise"
+	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/random"
 	"github.com/hashicorp/vault/sdk/logical"
+	logicaltest "github.com/hashicorp/vault/sdk/testing/stepwise"
 	rabbithole "github.com/michaelklishin/rabbit-hole"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory/dockertest"
@@ -163,7 +163,10 @@ func TestBackend_roleWithPasswordPolicy(t *testing.T) {
 	}
 
 	backendConfig := logical.TestBackendConfig()
-	backendConfig.System.(*logical.StaticSystemView).SetPasswordPolicy("testpolicy", random.DefaultStringGenerator)
+	passGen := func() (password string, err error) {
+		return base62.Random(30)
+	}
+	backendConfig.System.(*logical.StaticSystemView).SetPasswordPolicy("testpolicy", passGen)
 	b, _ := Factory(context.Background(), backendConfig)
 
 	cleanup, uri, _ := prepareRabbitMQTestContainer(t)
