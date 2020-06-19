@@ -119,7 +119,7 @@
   </form>
 {{else}}
   <form {{action 'onSubmit' (hash key=key) on="submit"}} id="shamir">
-    <div class="box is-marginless is-shadowless">
+    <div class="box is-shadowless">
       {{#if errors}}
         <div class="box is-shadowless is-marginless no-padding-top is-fullwidth">
           {{message-error errors=errors}}

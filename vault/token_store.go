@@ -3397,6 +3397,61 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 	return resp, nil
 }
 
+// gaugeCollector is responsible for counting the number of tokens by
+// namespace. Separate versions cover the other two counts; this is somewhat
+// less efficient than doing just one pass over the tokens and can
+// be fixed later.
+func (ts *TokenStore) gaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if ts.expiration == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("expiration manager is nil")
+	}
+
+	allNamespaces := ts.core.collectNamespaces()
+	values := make([]metricsutil.GaugeLabelValues, len(allNamespaces))
+	namespacePosition := make(map[string]int)
+
+	// If we increment the float32 value by 1.0 each time, then we cap out
+	// at around 16 million. So, we should keep a separate integer array
+	// to potentially handle a larger number of tokens.
+	intValues := make([]int, len(allNamespaces))
+	for i, ns := range allNamespaces {
+		values[i].Labels = []metrics.Label{metricsutil.NamespaceLabel(ns)}
+		namespacePosition[ns.ID] = i
+	}
+
+	ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
+		select {
+		// Abort and return empty collection if it's taking too much time, nonblocking check.
+		case <-ctx.Done():
+			return false
+		default:
+			_, nsID := namespace.SplitIDFromString(leaseID)
+			if nsID == "" {
+				nsID = namespace.RootNamespaceID
+			}
+			// A new namespace could be created while
+			// we're counting, ignore it until the next iteration.
+			pos, ok := namespacePosition[nsID]
+			if ok {
+				intValues[pos] += 1
+			}
+			return true
+		}
+	})
+
+	// If collection was cancelled, return an empty array.
+	select {
+	case <-ctx.Done():
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+
+	for i := range values {
+		values[i].Value = float32(intValues[i])
+	}
+	return values, nil
+
+}
+
 const (
 	tokenTidyHelp = `
 This endpoint performs cleanup tasks that can be run if certain error
