@@ -305,7 +305,6 @@ func (c *Sys) ReloadPluginStatus(reloadID string) (map[string]interface{}, error
 			return nil, err
 		}
 
-
 		return secret.Data, nil
 	}
 	return nil, nil

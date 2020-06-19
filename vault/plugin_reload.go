@@ -35,10 +35,6 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string, 
 			continue
 		}
 
-		if entry.StartedTime.After(reloadTime) {
-			continue
-		}
-
 		var isAuth bool
 		fullPath := c.router.MatchingMount(ctx, mount)
 		if strings.HasPrefix(fullPath, credentialRoutePrefix) {
@@ -63,7 +59,7 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string, 
 // reloadPlugin reloads all mounted backends that are of
 // plugin pluginName (name of the plugin as registered in
 // the plugin catalog).
-func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string, reloadTime time.Time) error {
+func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) error {
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 	c.authLock.RLock()
@@ -80,7 +76,7 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string, relo
 		if ns.ID != entry.Namespace().ID {
 			continue
 		}
-		if entry.Type == pluginName || (entry.Type == "plugin" && entry.Config.PluginName == pluginName) && reloadTime.After(entry.StartedTime) {
+		if entry.Type == pluginName || (entry.Type == "plugin" && entry.Config.PluginName == pluginName) {
 			err := c.reloadBackendCommon(ctx, entry, false)
 			if err != nil {
 				return err
