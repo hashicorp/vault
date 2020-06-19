@@ -1901,11 +1901,15 @@ func (m *ExpirationManager) emitMetrics() {
 // type (though most likely we would only call this from within the "vault" core package.)
 type ExpirationWalkFunction = func(leaseID string, auth *logical.Auth, path string) bool
 
+var (
+	ErrInRestoreMode = errors.New("expiration manager in restore mode")
+)
+
 // WalkTokens extracts the Auth structure from leases corresponding to tokens.
 // Returning false from the walk function terminates the iteration.
 func (m *ExpirationManager) WalkTokens(walkFn ExpirationWalkFunction) error {
 	if m.inRestoreMode() {
-		return errors.New("expiration manager in restore mode")
+		return ErrInRestoreMode
 	}
 
 	callback := func(key, value interface{}) bool {
