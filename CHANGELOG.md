@@ -25,6 +25,7 @@ IMPROVEMENTS:
 * sdk/framework: Support accepting TypeFloat parameters over the API [[GH-8923](https://github.com/hashicorp/vault/pull/8923)]
 * secrets/aws: Add iam_groups parameter to role create/update [[GH-8811](https://github.com/hashicorp/vault/pull/8811)]
 * secrets/database: Add static role rotation for MongoDB Atlas database plugin [[GH-11](https://github.com/hashicorp/vault-plugin-database-mongodbatlas/pull/11)]
+* secrets/database: Add static role rotation for MSSQL database plugin [[GH-9062](https://github.com/hashicorp/vault/pull/9062)]
 * secrets/database: Allow InfluxDB to use insecure TLS without cert bundle [[GH-8778](https://github.com/hashicorp/vault/pull/8778)]
 * secrets/gcp: Support BigQuery dataset ACLs in absence of IAM endpoints [[GH-78](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/78)]
 * secrets/pki: Allow 3072-bit RSA keys [[GH-8343](https://github.com/hashicorp/vault/pull/8343)]
