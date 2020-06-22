@@ -205,8 +205,8 @@ func Run(tt TestT, c Case) {
 		}
 	}()
 
-	// retrieve the root client from the Environment. If this returns an error, fail
-	// immediately
+	// retrieve the root client from the Environment. If this returns an error,
+	// fail immediately
 	rootClient, err := c.Environment.Client()
 	if err != nil {
 		tt.Fatal(err)

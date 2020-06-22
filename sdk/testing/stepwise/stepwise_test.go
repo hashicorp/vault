@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -23,6 +24,7 @@ type testRun struct {
 	environment   *mockEnvironment
 	steps         []Step
 	skipTeardown  bool
+	requests      *requestCounts
 }
 
 // TestStepwise_Run_SkipIfNotAcc tests if the Stepwise Run function skips tests
@@ -53,21 +55,48 @@ func TestStepwise_Run_SkipIfNotAcc(t *testing.T) {
 
 func TestStepwise_Run_Basic(t *testing.T) {
 	testRuns := map[string]testRun{
-		"basic": {
+		"basic_list": {
 			steps: []Step{
 				stepFunc("keys", ListOperation, false),
+			},
+			environment: new(mockEnvironment),
+			requests: &requestCounts{
+				listRequests: 1,
+			},
+		},
+		"basic_list_read": {
+			steps: []Step{
+				stepFunc("keys", ListOperation, false),
+				stepFunc("keys/name", ReadOperation, false),
+			},
+			environment: new(mockEnvironment),
+			requests: &requestCounts{
+				listRequests:   1,
+				readRequests:   1,
+				revokeRequests: 1,
+			},
+		},
+		"basic_unauth": {
+			steps: []Step{
+				stepFuncWithoutAuth("keys", ListOperation, true),
+			},
+			expectedTestT: &mockT{
+				ErrorCalled: true,
 			},
 			environment: new(mockEnvironment),
 		},
 		"error": {
+			steps: []Step{
+				stepFunc("keys", ListOperation, false),
+				stepFunc("keys/something", ReadOperation, true),
+			},
 			expectedTestT: &mockT{
 				ErrorCalled: true,
 			},
-			steps: []Step{
-				stepFunc("keys", ListOperation, false),
-				stepFunc("keys", ReadOperation, true),
-			},
 			environment: new(mockEnvironment),
+			requests: &requestCounts{
+				listRequests: 1,
+			},
 		},
 		"nil-env": {
 			expectedTestT: &mockT{
@@ -80,10 +109,18 @@ func TestStepwise_Run_Basic(t *testing.T) {
 		"skipTeardown": {
 			steps: []Step{
 				stepFunc("keys", ListOperation, false),
-				stepFunc("keys", ReadOperation, false),
+				stepFunc("keys/name", ReadOperation, false),
+				stepFunc("keys/name", ReadOperation, false),
+				stepFunc("keys/name", DeleteOperation, false),
 			},
 			skipTeardown: true,
 			environment:  new(mockEnvironment),
+			requests: &requestCounts{
+				listRequests:   1,
+				readRequests:   2,
+				revokeRequests: 2,
+				deleteRequests: 1,
+			},
 		},
 	}
 
@@ -121,8 +158,21 @@ func TestStepwise_Run_Basic(t *testing.T) {
 			if expectedT.ErrorCalled != testT.ErrorCalled {
 				t.Fatalf("expected ErrorCalled (%t), got (%t)", expectedT.ErrorCalled, testT.ErrorCalled)
 			}
+			if tr.requests != nil {
+				if !reflect.DeepEqual(*tr.requests, tr.environment.requests) {
+					t.Fatalf("request counts do not match: %#v / %#v", tr.requests, tr.environment.requests)
+				}
+			}
 		})
 	}
+}
+
+type requestCounts struct {
+	writeRequests  int
+	readRequests   int
+	deleteRequests int
+	revokeRequests int
+	listRequests   int
 }
 
 func TestStepwise_makeRequest(t *testing.T) {
@@ -135,6 +185,7 @@ func TestStepwise_makeRequest(t *testing.T) {
 		Path              string
 		ExpectedRequestID string
 		ExpectErr         bool
+		UnAuth            bool
 	}
 	testRequests := map[string]testRequest{
 		"list": {
@@ -151,6 +202,17 @@ func TestStepwise_makeRequest(t *testing.T) {
 			Operation:         WriteOperation,
 			Path:              "keys/name",
 			ExpectedRequestID: "write-request",
+		},
+		"update": {
+			Operation:         UpdateOperation,
+			Path:              "keys/name",
+			ExpectedRequestID: "write-request",
+		},
+		"update_unauth": {
+			Operation: UpdateOperation,
+			Path:      "keys/name",
+			UnAuth:    true,
+			ExpectErr: true,
 		},
 		"delete": {
 			Operation:         DeleteOperation,
@@ -169,6 +231,10 @@ func TestStepwise_makeRequest(t *testing.T) {
 			step := Step{
 				Operation: tc.Operation,
 				Path:      tc.Path,
+			}
+
+			if tc.UnAuth {
+				step.Unauthenticated = tc.UnAuth
 			}
 
 			secret, err := makeRequest(testT, me, step)
@@ -195,6 +261,7 @@ type mockEnvironment struct {
 	l      sync.Mutex
 
 	teardownCalled bool
+	requests       requestCounts
 }
 
 // Setup creates the mock environment, establishing a test HTTP server
@@ -202,30 +269,43 @@ func (m *mockEnvironment) Setup() error {
 	mux := http.NewServeMux()
 	// LIST
 	mux.HandleFunc("/v1/test/keys", func(w http.ResponseWriter, req *http.Request) {
+		checkAuth(w, req)
 		switch req.Method {
 		case "GET":
-			respondCommon("list", w, req)
+			m.requests.listRequests++
+			respondCommon("list", true, w, req)
 		default:
 			w.WriteHeader(http.StatusBadRequest)
 		}
 	})
 	// lease revoke
 	mux.HandleFunc("/v1/sys/leases/revoke", func(w http.ResponseWriter, req *http.Request) {
+		checkAuth(w, req)
+		m.requests.revokeRequests++
 		w.WriteHeader(http.StatusOK)
 	})
-	// READ
+	// READ, DELETE, WRITE
 	mux.HandleFunc("/v1/test/keys/name", func(w http.ResponseWriter, req *http.Request) {
+		checkAuth(w, req)
+		var method string
+		// indicate if the common response should include a lease id
+		var excludeLease bool
 		switch req.Method {
 		case "GET":
-			respondCommon("read", w, req)
+			m.requests.readRequests++
+			method = "read"
 		case "POST":
 		case "PUT":
-			respondCommon("write", w, req)
+			m.requests.writeRequests++
+			method = "write"
 		case "DELETE":
-			respondCommon("delete", w, req)
+			m.requests.deleteRequests++
+			excludeLease = true
+			method = "delete"
 		default:
 			w.WriteHeader(http.StatusBadRequest)
 		}
+		respondCommon(method, excludeLease, w, req)
 	})
 	// fall through that rejects any other url than "/"
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
@@ -245,12 +325,15 @@ func (m *mockEnvironment) Setup() error {
 // respond with a request id / lease id for DELETE or REVOKE, but we do that
 // here to verify that the makeRequest method translates the Step Operation
 // and calls delete/revoke correctly
-func respondCommon(id string, w http.ResponseWriter, req *http.Request) {
-	readResp := api.Secret{
+func respondCommon(id string, excludeLease bool, w http.ResponseWriter, req *http.Request) {
+	resp := api.Secret{
 		RequestID: id + "-request",
 		LeaseID:   "lease-id",
 	}
-	out, err := jsonutil.EncodeJSON(readResp)
+	if excludeLease {
+		resp.LeaseID = ""
+	}
+	out, err := jsonutil.EncodeJSON(resp)
 	if err != nil {
 		panic(err)
 	}
@@ -282,6 +365,8 @@ func (m *mockEnvironment) Client() (*api.Client, error) {
 		return nil, err
 	}
 
+	// need to set root token here to mimic an actual root token of a cluster
+	client.SetToken(m.RootToken())
 	m.client = client
 	return client, nil
 }
@@ -298,12 +383,21 @@ func (m *mockEnvironment) MountPath() string {
 	return "/test/"
 }
 
-func (m *mockEnvironment) RootToken() string { return "" }
+func (m *mockEnvironment) RootToken() string { return "root-token" }
+
+func stepFuncWithoutAuth(path string, operation Operation, shouldError bool) Step {
+	return stepFuncCommon(path, operation, shouldError, true)
+}
 
 func stepFunc(path string, operation Operation, shouldError bool) Step {
+	return stepFuncCommon(path, operation, shouldError, false)
+}
+
+func stepFuncCommon(path string, operation Operation, shouldError bool, unauth bool) Step {
 	s := Step{
-		Operation: operation,
-		Path:      path,
+		Operation:       operation,
+		Path:            path,
+		Unauthenticated: unauth,
 	}
 	if shouldError {
 		s.Assert = func(resp *api.Secret, err error) error {
@@ -360,3 +454,11 @@ func (t *mockT) failMessage() string {
 }
 
 func (t *mockT) Helper() {}
+
+// validates that X-Vault-Token is set on the requets to the mock endpoints
+func checkAuth(w http.ResponseWriter, r *http.Request) {
+	if token := r.Header.Get("X-Vault-Token"); token == "" {
+		// not authenticated
+		w.WriteHeader(http.StatusForbidden)
+	}
+}
