@@ -147,6 +147,16 @@ func TestStepwise_makeRequest(t *testing.T) {
 			Path:              "keys/name",
 			ExpectedRequestID: "read-request",
 		},
+		"write": {
+			Operation:         WriteOperation,
+			Path:              "keys/name",
+			ExpectedRequestID: "write-request",
+		},
+		"delete": {
+			Operation:         DeleteOperation,
+			Path:              "keys/name",
+			ExpectedRequestID: "delete-request",
+		},
 		"error": {
 			Operation: ReadOperation,
 			Path:      "error",
@@ -192,31 +202,30 @@ func (m *mockEnvironment) Setup() error {
 	mux := http.NewServeMux()
 	// LIST
 	mux.HandleFunc("/v1/test/keys", func(w http.ResponseWriter, req *http.Request) {
-		listResp := api.Secret{
-			RequestID: "list-request",
-			LeaseID:   "lease-id",
+		switch req.Method {
+		case "GET":
+			respondCommon("list", w, req)
+		default:
+			w.WriteHeader(http.StatusBadRequest)
 		}
-		out, err := jsonutil.EncodeJSON(listResp)
-		if err != nil {
-			panic(err)
-		}
-		w.Write(out)
 	})
 	// lease revoke
 	mux.HandleFunc("/v1/sys/leases/revoke", func(w http.ResponseWriter, req *http.Request) {
-		w.Write(nil)
+		w.WriteHeader(http.StatusOK)
 	})
 	// READ
 	mux.HandleFunc("/v1/test/keys/name", func(w http.ResponseWriter, req *http.Request) {
-		readResp := api.Secret{
-			RequestID: "read-request",
-			LeaseID:   "lease-id",
+		switch req.Method {
+		case "GET":
+			respondCommon("read", w, req)
+		case "POST":
+		case "PUT":
+			respondCommon("write", w, req)
+		case "DELETE":
+			respondCommon("delete", w, req)
+		default:
+			w.WriteHeader(http.StatusBadRequest)
 		}
-		out, err := jsonutil.EncodeJSON(readResp)
-		if err != nil {
-			panic(err)
-		}
-		w.Write(out)
 	})
 	// fall through that rejects any other url than "/"
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
@@ -229,6 +238,23 @@ func (m *mockEnvironment) Setup() error {
 	m.ts = httptest.NewServer(mux)
 
 	return nil
+}
+
+// respondCommon returns a mock secret with a request ID that matches the
+// request method that was used to invoke it. A true Vault server would not
+// respond with a request id / lease id for DELETE or REVOKE, but we do that
+// here to verify that the makeRequest method translates the Step Operation
+// and calls delete/revoke correctly
+func respondCommon(id string, w http.ResponseWriter, req *http.Request) {
+	readResp := api.Secret{
+		RequestID: id + "-request",
+		LeaseID:   "lease-id",
+	}
+	out, err := jsonutil.EncodeJSON(readResp)
+	if err != nil {
+		panic(err)
+	}
+	w.Write(out)
 }
 
 // Client creates a Vault API client configured to the mock environment's test
