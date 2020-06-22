@@ -56,6 +56,9 @@ BUG FIXES:
 IMPROVEMENTS:
 * auth/aws: Add support for Web Identity credentials [[GH-9251](https://github.com/hashicorp/vault/pull/9251)]
 
+BUG FIXES:
+* replication: The issue causing cubbyholes in namespaces on performance secondaries to not work, which was fixed in 1.4.0, was still an issue when the primary was both a performance primary and DR primary.
+
 ## 1.4.2 (May 21st, 2020)
 
 SECURITY:
