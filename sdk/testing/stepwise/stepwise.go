@@ -161,8 +161,10 @@ type Case struct {
 	Steps []Step
 
 	// SkipTeardown allows the Environment TeardownFunc to be skipped, leaving any
-	// infrastructure created after the test exists. Depending on the Environment
-	// used this could incur costs the user is responsible for.
+	// infrastructure created after the test exists. This is useful for debugging
+	// during plugin development to examine the state of the Vault cluster after a
+	// test runs. Depending on the Environment used this could incur costs the
+	// user is responsible for.
 	SkipTeardown bool
 }
 
