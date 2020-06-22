@@ -437,22 +437,6 @@ func (t *mockT) Skip(args ...interface{}) {
 	t.f = true
 }
 
-func (t *mockT) failed() bool {
-	return t.f
-}
-
-func (t *mockT) failMessage() string {
-	if t.FatalCalled {
-		return t.FatalArgs[0].(string)
-	} else if t.ErrorCalled {
-		return t.ErrorArgs[0].(string)
-	} else if t.SkipCalled {
-		return t.SkipArgs[0].(string)
-	}
-
-	return "unknown"
-}
-
 func (t *mockT) Helper() {}
 
 // validates that X-Vault-Token is set on the requets to the mock endpoints
