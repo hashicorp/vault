@@ -348,7 +348,7 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 	s.dir = path
 	s.parentDir = s.store.path
 
-	// Create a pipe so we pipe writes into the below go routine.
+	// Create a pipe so we pipe writes into the go routine below.
 	reader, writer := io.Pipe()
 	s.writer = writer
 
