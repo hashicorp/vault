@@ -293,7 +293,7 @@ func (f *BoltSnapshotStore) ReapSnapshots() error {
 			f.logger.Warn("found temporary snapshot", "name", dirName)
 		}
 
-		path := filepath.Join(f.path, snap.Name())
+		path := filepath.Join(f.path, dirName)
 		f.logger.Info("reaping snapshot", "path", path)
 		if err := os.RemoveAll(path); err != nil {
 			f.logger.Error("failed to reap snapshot", "path", snap.Name(), "error", err)
