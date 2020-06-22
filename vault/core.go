@@ -2307,13 +2307,29 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	//	return errors.New("Migrating between same seal types is currently not supported")
 	//}
 
-	// TODO: To allowe migrating between same seal types, we *also* need to
-	// comment out this check.  What does this check actually do? Is this for
-	// Shamir re-wrap?
+	// use this to fetch a recovery key from a seal:
+	// seal.RecoveryKey(context.Context) ([]byte, error)
+
+	fmt.Printf("(c *Core) adjustForSealMigration aaa existBarrierSealConfig %s, barrierSeal %s\n",
+		existBarrierSealConfig.Type, barrierSeal.BarrierType())
+
+	_, rerr := barrierSeal.RecoveryKey(context.Background())
+	fmt.Printf("(c *Core) adjustForSealMigration bbb recoveryKey %t\n", rerr == nil)
+	if rerr != nil {
+		fmt.Printf("(c *Core) adjustForSealMigration ccc %s\n", rerr.Error())
+	}
+
+	// seal.RecoveryKey(context.Context) ([]byte, error)
+
+	//// TODO: To allowe migrating between same seal types, we *also* need to
+	//// comment out this check.  What does this check actually do? Is this for
+	//// Shamir re-wrap?
 	//if unwrapSeal != nil && existBarrierSealConfig.Type == barrierSeal.BarrierType() {
 	//	// In this case our migration seal is set so we are using it
 	//	// (potentially) for unwrapping. Set it on core for that purpose then
 	//	// exit.
+
+	//	// This means we've already migrated, and we just need to set the unwrap seal.
 	//	c.setSealsForMigration(nil, nil, unwrapSeal)
 	//	return nil
 	//}

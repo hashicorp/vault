@@ -52,25 +52,25 @@ func testVariousBackends(t *testing.T, tf testFunc, basePort int, includeRaft bo
 		tf(t, logger, storage, basePort+100)
 	})
 
-	t.Run("file", func(t *testing.T) {
-		t.Parallel()
+	//t.Run("file", func(t *testing.T) {
+	//	t.Parallel()
 
-		logger := logger.Named("file")
-		storage, cleanup := teststorage.MakeReusableStorage(
-			t, logger, teststorage.MakeFileBackend(t, logger))
-		defer cleanup()
-		tf(t, logger, storage, basePort+200)
-	})
+	//	logger := logger.Named("file")
+	//	storage, cleanup := teststorage.MakeReusableStorage(
+	//		t, logger, teststorage.MakeFileBackend(t, logger))
+	//	defer cleanup()
+	//	tf(t, logger, storage, basePort+200)
+	//})
 
-	t.Run("consul", func(t *testing.T) {
-		t.Parallel()
+	//t.Run("consul", func(t *testing.T) {
+	//	t.Parallel()
 
-		logger := logger.Named("consul")
-		storage, cleanup := teststorage.MakeReusableStorage(
-			t, logger, teststorage.MakeConsulBackend(t, logger))
-		defer cleanup()
-		tf(t, logger, storage, basePort+300)
-	})
+	//	logger := logger.Named("consul")
+	//	storage, cleanup := teststorage.MakeReusableStorage(
+	//		t, logger, teststorage.MakeConsulBackend(t, logger))
+	//	defer cleanup()
+	//	tf(t, logger, storage, basePort+300)
+	//})
 
 	//if includeRaft {
 	//	t.Run("raft", func(t *testing.T) {
