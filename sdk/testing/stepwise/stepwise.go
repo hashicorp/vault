@@ -271,7 +271,7 @@ func Run(tt TestT, c Case) {
 			responses = append(responses, resp)
 		}
 
-		// run the associated AssertionFunc, if any. If an error was expected it is
+		// Run the associated AssertionFunc, if any. If an error was expected it is
 		// sent to the Assert function to validate.
 		if step.Assert != nil {
 			if err := step.Assert(resp, respErr); err != nil {
