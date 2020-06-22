@@ -251,12 +251,9 @@ func Run(tt TestT, c Case) {
 
 	stepCount := len(c.Steps)
 	for i, step := range c.Steps {
-		// range is zero based, so add 1 for a human friendly output of steps.
-		// "index" here is only used for logging / output, and not to reference the
-		// step in the slice of steps.
-		index := i + 1
 		if logger.IsWarn() {
-			progress := fmt.Sprintf("%d/%d", index, stepCount)
+			// range is zero based, so add 1 for a human friendly output of steps.
+			progress := fmt.Sprintf("%d/%d", i+1, stepCount)
 			logger.Warn("Executing test step", "step_number", progress)
 		}
 
@@ -279,7 +276,7 @@ func Run(tt TestT, c Case) {
 		// sent to the Assert function to validate.
 		if step.Assert != nil {
 			if err := step.Assert(resp, respErr); err != nil {
-				tt.Error(fmt.Errorf("failed step %d: %w", index, err))
+				tt.Error(fmt.Errorf("failed step %d: %w", i+1, err))
 			}
 		}
 	}
