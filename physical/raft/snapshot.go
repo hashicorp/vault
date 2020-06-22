@@ -41,7 +41,9 @@ const (
 // to it. This will cause the snapshot store to create a new BoltDB file and
 // write the snapshot data to it. Then, we can simply rename the snapshot to the
 // FSM's filename. This allows us to atomically install the snapshot and
-// reduces the amount of disk i/o.
+// reduces the amount of disk i/o. Older snapshots are reaped on startup and
+// before each subsequent snapshot write. This ensures we only have one snapshot
+// on disk at a time.
 type BoltSnapshotStore struct {
 	// path is the directory in which to store file based snapshots
 	path string
@@ -197,6 +199,7 @@ func (f *BoltSnapshotStore) openFromFSM() (*raft.SnapshotMeta, io.ReadCloser, er
 	}
 
 	meta.Size = n
+	metaReadCloser.Close()
 
 	return meta, readCloser, nil
 }
@@ -259,13 +262,13 @@ func (f *BoltSnapshotStore) openFromFile(id string) (*raft.SnapshotMeta, io.Read
 	}
 
 	filename := filepath.Join(f.path, id, databaseFilename)
-	readCloser := &boltSnapshotInstaller{
+	installer := &boltSnapshotInstaller{
 		meta:       meta,
 		ReadCloser: ioutil.NopCloser(strings.NewReader(filename)),
 		filename:   filename,
 	}
 
-	return meta, readCloser, nil
+	return meta, installer, nil
 }
 
 // ReapSnapshots reaps all snapshots.

@@ -17,6 +17,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -599,9 +600,9 @@ func (f *FSM) SetNoopRestore(enabled bool) {
 	f.l.Unlock()
 }
 
-// Restore reads data from the provided reader and writes it into the FSM. It
-// first deletes the existing bucket to clear all existing data, then recreates
-// it so we can copy in the snapshot.
+// Restore installs a new snapshot from the provided reader. It does an atomic
+// rename of the snapshot file into the database filepath. While a restore is
+// happening the FSM is locked and no writes or reads can be performed.
 func (f *FSM) Restore(r io.ReadCloser) error {
 	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "restore_snapshot"}, time.Now())
 
@@ -628,20 +629,22 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 	f.logger.Info("installing snapshot to FSM")
 
 	// Install the new boltdb file
+	var retErr *multierror.Error
 	if err := snapshotInstaller.Install(dbPath); err != nil {
 		f.logger.Error("failed to install snapshot", "error", err)
-		return errwrap.Wrapf("failed to install snapshot database: {{err}}", err)
+		retErr = multierror.Append(retErr, errwrap.Wrapf("failed to install snapshot database: {{err}}", err))
+	} else {
+		f.logger.Info("snapshot installed")
 	}
 
-	f.logger.Info("snapshot installed")
-
-	// Open the new file
+	// Open the db file. We want to do this regardless of if the above install
+	// worked. If the install failed we should try to open the old DB file.
 	if err := f.openDBFile(dbPath); err != nil {
 		f.logger.Error("failed to open new database file", "error", err)
-		return errwrap.Wrapf("failed to open new bolt file: {{err}}", err)
+		retErr = multierror.Append(retErr, errwrap.Wrapf("failed to open new bolt file: {{err}}", err))
 	}
 
-	return nil
+	return retErr.ErrorOrNil()
 }
 
 // noopSnapshotter implements the fsm.Snapshot interface. It doesn't do anything
