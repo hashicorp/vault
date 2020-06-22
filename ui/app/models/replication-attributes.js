@@ -18,15 +18,24 @@ export default Fragment.extend({
   isPrimary: match('mode', /primary/),
 
   knownSecondaries: attr('array'),
+  secondaries: attr('array'),
 
   // secondary attrs
   isSecondary: match('mode', /secondary/),
-
+  connection_state: attr('string'),
   modeForUrl: computed('mode', function() {
     const mode = this.get('mode');
     return mode === 'bootstrapping'
       ? 'bootstrapping'
       : (this.get('isSecondary') && 'secondary') || (this.get('isPrimary') && 'primary');
+  }),
+  modeForHeader: computed('mode', function() {
+    const mode = this.mode;
+    if (!mode) {
+      // mode will be false or undefined if it calls the status endpoint while still setting up the cluster
+      return 'loading';
+    }
+    return mode;
   }),
   secondaryId: attr('string'),
   primaryClusterAddr: attr('string'),
