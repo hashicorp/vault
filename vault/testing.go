@@ -42,7 +42,6 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
