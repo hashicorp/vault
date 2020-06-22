@@ -37,7 +37,7 @@ are required for [external groups](/docs/secrets/identity#external-vs-internal-g
 
 - `groupMembershipClaims` should be changed from `none` in the
   [App registration manifest](https://docs.microsoft.com/en-us/azure/active-directory/develop/reference-app-manifest).
-  Options are "All" or "Security"
+  Options are "All" or "SecurityGroup"
 
 - In the [OIDC Role config](/api/auth/jwt#create-role)
   the scope `"https://graph.microsoft.com/.default"` should be added to add groups
@@ -68,6 +68,36 @@ vault write auth/oidc/role/demo user_claim="email" \
     allowed_redirect_uris="http://localhost:8250/oidc/callback,https://online_version_hostname:port_number/ui/vault/auth/oidc/oidc/callback"  \
     groups_claim="groups" \
     policies=default
+```
+
+### Azure-specific handling configuration
+
+If a user is a member of more than 200 groups (directly or indirectly), extra configuration is required so that vault can fetch the groups properly.
+
+- Set `"provider_config"` to azure (see below)
+- Grant the AAD application `Directory.Read.All` permission under "Azure Active Directory Graph" API Permissions (legacy API).
+- Add `"profile"` to `oidc_scopes` so the user's id comes back on the jwt token.
+
+```
+vault write auth/oidc/config -<<"EOH"
+{
+   "oidc_client_id": "your_client_id",
+   "oidc_client_secret": "your_client_secret",
+   "default_role": “your_default_role”,
+   "oidc_discovery_url": "https://login.microsoftonline.com/tenant_id/v2.0”,
+   "provider_config": {
+      "provider": "azure"
+   }
+}
+```
+
+```
+vault write auth/oidc/role/demo \
+   user_claim="email" \
+   allowed_redirect_uris="http://localhost:8250/oidc/callback,https://online_version_hostname:port_number/ui/vault/auth/oidc/oidc/callback"  \
+   groups_claim="groups" \
+   oidc_scopes="profile" \
+   policies="default"
 ```
 
 ## Auth0
