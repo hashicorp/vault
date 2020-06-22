@@ -267,7 +267,6 @@ func Run(tt TestT, c Case) {
 		client.SetToken(rootToken)
 
 		resp, respErr := makeRequest(tt, c.Environment, step)
-
 		if resp != nil {
 			responses = append(responses, resp)
 		}
