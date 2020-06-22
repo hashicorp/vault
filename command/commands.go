@@ -362,11 +362,6 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"operator raft bootstrap": func() (cli.Command, error) {
-			return &OperatorRaftBootstrapCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
 		"operator raft join": func() (cli.Command, error) {
 			return &OperatorRaftJoinCommand{
 				BaseCommand: getBaseCommand(),

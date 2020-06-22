@@ -433,11 +433,6 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 }
 
 var sysRaftHelp = map[string][2]string{
-	"raft-bootstrap": {
-		"Initialize the raft bootstrapping process for a node.",
-		`Initialize the raft bootstrapping process for a node. This is only
-applicable for nodes that have raft set under ha_storage.`,
-	},
 	"raft-bootstrap-challenge": {
 		"Creates a challenge for the new peer to be joined to the raft cluster.",
 		"",
