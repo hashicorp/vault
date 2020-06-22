@@ -393,6 +393,27 @@ options are:
     }
     ```
 
+  - It's important to note that the use of globbing can result in surprising
+    or unexpected behavior.
+    ```ruby
+    # This allows the user to create or update "secret/foo" with a parameter
+    # named "bar". The values passed to parameter "bar" must start with "baz/"
+    # so values like "baz/quux" are fine. However, values like
+    # "baz/quux,wibble,wobble,wubble" would also be accepted. The API that
+    # underlies "secret/foo" might allow comma delimited values for the "bar"
+    # parameter, and if it did, specifying a value like
+    # "baz/quux,wibble,wobble,wubble" would result in 4 different values getting
+    # passed along. Seeing values like "wibble" or "wobble" getting passed to
+    # "secret/foo" might surprise someone that expected the allowed_parameters
+    # constraint to only allow values starting with "baz/".
+    path "secret/foo" {
+      capabilities = ["create", "update"]
+      allowed_parameters = {
+        "bar" = ["baz/*"]
+      }
+    }
+    ```
+
 - `denied_parameters` - Blacklists a list of parameter and values. Any values
   specified here take precedence over `allowed_parameters`.
 
