@@ -54,10 +54,14 @@ BUG FIXES:
 ## 1.4.3 (TBD)
 
 IMPROVEMENTS:
+
 * auth/aws: Add support for Web Identity credentials [[GH-9251](https://github.com/hashicorp/vault/pull/9251)]
 
 BUG FIXES:
+
 * replication: The issue causing cubbyholes in namespaces on performance secondaries to not work, which was fixed in 1.4.0, was still an issue when the primary was both a performance primary and DR primary.
+* secrets/aws: Fix issue where performance standbys weren't able to generate STS credentials after an IAM access key rotation in AWS and root IAM credential update in Vault [[GH-9207](https://github.com/hashicorp/vault/pull/9207)]
+* secrets/database: Fix issue that prevents performance standbys from connecting to databases after a root credential rotation [[GH-9208](https://github.com/hashicorp/vault/pull/9208)]
 
 ## 1.4.2 (May 21st, 2020)
 
