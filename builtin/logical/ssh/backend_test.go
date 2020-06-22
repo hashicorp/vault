@@ -17,11 +17,12 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory/dockertest"
 )
@@ -312,7 +313,7 @@ func newTestingFactory(t *testing.T) func(ctx context.Context, conf *logical.Bac
 		defaultLeaseTTLVal := 2 * time.Minute
 		maxLeaseTTLVal := 10 * time.Minute
 		return Factory(context.Background(), &logical.BackendConfig{
-			Logger:      vault.NewTestLogger(t),
+			Logger:      logging.NewVaultLogger(hclog.Trace).Named(t.Name()),
 			StorageView: &logical.InmemStorage{},
 			System: &logical.StaticSystemView{
 				DefaultLeaseTTLVal: defaultLeaseTTLVal,
