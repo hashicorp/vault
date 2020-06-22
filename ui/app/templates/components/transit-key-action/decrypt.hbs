@@ -56,25 +56,30 @@
   </div>
 </form>
 {{#if isModalActive}}
-<Modal @title="Copy your unwrapped data" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
-  <section class="modal-card-body">
-    <div class="box is-shadowless is-fullwidth is-sideless">
-      <h2 class="title is-6">Plaintext</h2>
-      <div class="copy-text level">
-        <code class="level-left" data-test-encrypted-value="plaintext">{{plaintext}}</code>
-        <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy" @clipboardText={{plaintext}}
-          @buttonType="button" @success={{action (set-flash-message 'Plaintext copied!')}}>
-          <Icon @glyph="copy-action" aria-label="Copy" />
-        </CopyButton>
+  <Modal
+    @title="Copy your unwrapped data"
+    @onClose={{action (mut isModalActive) false}}
+    @isActive={{isModalActive}}
+    @modalId="decrypt"
+  >
+    <section class="modal-card-body">
+      <div class="box is-shadowless is-fullwidth is-sideless">
+        <h2 class="title is-6">Plaintext</h2>
+        <div class="copy-text level">
+          <code class="level-left" data-test-encrypted-value="plaintext">{{plaintext}}</code>
+          <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy" @clipboardText={{plaintext}}
+            @buttonType="button" @success={{action (set-flash-message 'Plaintext copied!')}}>
+            <Icon @glyph="copy-action" aria-label="Copy" />
+          </CopyButton>
+        </div>
+        <p class="help">Plaintext is base64 encoded</p>
       </div>
-      <p class="help">Plaintext is base64 encoded</p>
-    </div>
-  </section>
-  <footer class="modal-card-foot">
-    <CopyButton class="button is-primary copy-close" data-test-button="modal-copy-close" @clipboardText={{plaintext}}
-      @buttonType="button" @success={{action "toggleModal" "Plaintext copied!"}}>
-      Copy &amp; Close
-    </CopyButton>
-  </footer>
-</Modal>
+    </section>
+    <footer class="modal-card-foot">
+      <CopyButton class="button is-primary copy-close" data-test-button="modal-copy-close" @clipboardText={{plaintext}}
+        @buttonType="button" @success={{action "toggleModal" "Plaintext copied!"}}>
+        Copy &amp; Close
+      </CopyButton>
+    </footer>
+  </Modal>
 {{/if}}

@@ -104,35 +104,38 @@
     </div>
   </div>
 </form>
-<Modal
-  @title="Copy your signature"
-  @onClose={{action (mut isModalActive) false}}
-  @isActive={{isModalActive}}
-  data-test-sign-modal>
-  <section class="modal-card-body">
-    <div class="box is-shadowless is-fullwidth is-sideless">
-      <h2 class="title is-6">Signature</h2>
-      <div class="copy-text level">
-        <code class="level-left" data-test-encrypted-value="signature">{{signature}}</code>
-        <CopyButton
-          class="button is-compact is-transparent level-right"
-          data-test-button="modal-copy"
-          @clipboardText={{signature}}
-          @buttonType="button"
-          @success={{action (set-flash-message 'Signature copied!')}}>
-          <Icon @glyph="copy-action" aria-label="Copy" />
-        </CopyButton>
+{{#if isModalActive}}
+  <Modal
+    @title="Copy your signature"
+    @onClose={{action (mut isModalActive) false}}
+    @isActive={{isModalActive}}
+    @modalId="sign"
+    data-test-sign-modal>
+    <section class="modal-card-body">
+      <div class="box is-shadowless is-fullwidth is-sideless">
+        <h2 class="title is-6">Signature</h2>
+        <div class="copy-text level">
+          <code class="level-left" data-test-encrypted-value="signature">{{signature}}</code>
+          <CopyButton
+            class="button is-compact is-transparent level-right"
+            data-test-button="modal-copy"
+            @clipboardText={{signature}}
+            @buttonType="button"
+            @success={{action (set-flash-message 'Signature copied!')}}>
+            <Icon @glyph="copy-action" aria-label="Copy" />
+          </CopyButton>
+        </div>
       </div>
-    </div>
-  </section>
-  <footer class="modal-card-foot">
-    <CopyButton
-      class="button is-primary copy-close"
-      data-test-button="modal-copy-close"
-      @clipboardText={{signature}}
-      @buttonType="button"
-      @success={{action "toggleModal" "Signature copied!"}}>
-      Copy &amp; Close
-    </CopyButton>
-  </footer>
-</Modal>
+    </section>
+    <footer class="modal-card-foot">
+      <CopyButton
+        class="button is-primary copy-close"
+        data-test-button="modal-copy-close"
+        @clipboardText={{signature}}
+        @buttonType="button"
+        @success={{action "toggleModal" "Signature copied!"}}>
+        Copy &amp; Close
+      </CopyButton>
+    </footer>
+  </Modal>
+{{/if}}

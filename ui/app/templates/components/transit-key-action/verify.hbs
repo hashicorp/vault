@@ -206,12 +206,19 @@
       </div>
     </div>
 </form>
-<Modal @title="Results" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
-  <section class="modal-card-body">
-    <AlertBanner
-      @type={{if valid 'success' 'danger'}}
-      @title={{if valid 'Valid' 'Not Valid'}}
-      @message="The input is {{if valid 'valid' 'not valid'}} for the given {{if signature 'signature' 'HMAC'}}"
-      data-test-transit-verify="true"/>
-  </section>
-</Modal>
+{{#if isModalActive}}
+  <Modal
+    @title="Results"
+    @onClose={{action (mut isModalActive) false}}
+    @isActive={{isModalActive}}
+    @modalId="verify"
+  >
+    <section class="modal-card-body">
+      <AlertBanner
+        @type={{if valid 'success' 'danger'}}
+        @title={{if valid 'Valid' 'Not Valid'}}
+        @message="The input is {{if valid 'valid' 'not valid'}} for the given {{if signature 'signature' 'HMAC'}}"
+        data-test-transit-verify="true"/>
+    </section>
+  </Modal>
+{{/if}}
