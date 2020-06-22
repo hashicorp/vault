@@ -15,6 +15,9 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
+// TestEnvVar must be set to a non-empty value for acceptance tests to run.
+const TestEnvVar = "VAULT_ACC"
+
 // Operation defines operations each step could perform. These are
 // intentionally redefined from the logical package in the SDK, so users
 // consistently use the stepwise package and not a combination of both stepwise
@@ -158,8 +161,10 @@ type Case struct {
 	Steps []Step
 
 	// SkipTeardown allows the Environment TeardownFunc to be skipped, leaving any
-	// infrastructure created after the test exists. Depending on the Environment
-	// used this could incur costs the user is responsible for.
+	// infrastructure created after the test exists. This is useful for debugging
+	// during plugin development to examine the state of the Vault cluster after a
+	// test runs. Depending on the Environment used this could incur costs the
+	// user is responsible for.
 	SkipTeardown bool
 }
 
@@ -202,8 +207,8 @@ func Run(tt TestT, c Case) {
 		}
 	}()
 
-	// retrieve the root client from the Environment. If this returns an error, fail
-	// immediately
+	// retrieve the root client from the Environment. If this returns an error,
+	// fail immediately
 	rootClient, err := c.Environment.Client()
 	if err != nil {
 		tt.Fatal(err)
@@ -248,12 +253,9 @@ func Run(tt TestT, c Case) {
 
 	stepCount := len(c.Steps)
 	for i, step := range c.Steps {
-		// range is zero based, so add 1 for a human friendly output of steps.
-		// "index" here is only used for logging / output, and not to reference the
-		// step in the slice of steps.
-		index := i + 1
 		if logger.IsWarn() {
-			progress := fmt.Sprintf("%d/%d", index, stepCount)
+			// range is zero based, so add 1 for a human friendly output of steps.
+			progress := fmt.Sprintf("%d/%d", i+1, stepCount)
 			logger.Warn("Executing test step", "step_number", progress)
 		}
 
@@ -267,16 +269,15 @@ func Run(tt TestT, c Case) {
 		client.SetToken(rootToken)
 
 		resp, respErr := makeRequest(tt, c.Environment, step)
-
 		if resp != nil {
 			responses = append(responses, resp)
 		}
 
-		// run the associated AssertionFunc, if any. If an error was expected it is
+		// Run the associated AssertionFunc, if any. If an error was expected it is
 		// sent to the Assert function to validate.
 		if step.Assert != nil {
 			if err := step.Assert(resp, respErr); err != nil {
-				tt.Error(fmt.Errorf("failed step %d: %w", index, err))
+				tt.Error(fmt.Errorf("failed step %d: %w", i+1, err))
 			}
 		}
 	}
