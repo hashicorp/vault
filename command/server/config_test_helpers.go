@@ -274,6 +274,57 @@ func testParseEntropy(t *testing.T, oss bool) {
 	}
 }
 
+func testLoadConfigFileIntegerAndBooleanValues(t *testing.T) {
+	testLoadConfigFileIntegerAndBooleanValuesCommon(t, "./test-fixtures/config4.hcl")
+}
+
+func testLoadConfigFileIntegerAndBooleanValuesJson(t *testing.T) {
+	testLoadConfigFileIntegerAndBooleanValuesCommon(t, "./test-fixtures/config4.hcl.json")
+}
+
+func testLoadConfigFileIntegerAndBooleanValuesCommon(t *testing.T, path string) {
+	config, err := LoadConfigFile(path)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		Listeners: []*Listener{
+			&Listener{
+				Type: "tcp",
+				Config: map[string]interface{}{
+					"address": "127.0.0.1:8200",
+				},
+			},
+		},
+
+		Storage: &Storage{
+			Type: "raft",
+			Config: map[string]string{
+				"path":                   "/storage/path/raft",
+				"node_id":                "raft1",
+				"performance_multiplier": "1",
+				"foo":                    "bar",
+				"baz":                    "true",
+			},
+			ClusterAddr: "127.0.0.1:8201",
+		},
+
+		ClusterAddr: "127.0.0.1:8201",
+
+		DisableCache:    true,
+		DisableCacheRaw: true,
+		EnableUI:        true,
+		EnableUIRaw:     true,
+		DisableMlock:    true,
+		DisableMlockRaw: true,
+	}
+
+	if !reflect.DeepEqual(config, expected) {
+		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
+	}
+}
+
 func testLoadConfigFile(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config.hcl")
 	if err != nil {
