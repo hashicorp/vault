@@ -308,17 +308,20 @@ func (c *Core) kvSecretGaugeCollector(ctx context.Context) ([]metricsutil.GaugeL
 		select {
 		case <-ctx.Done():
 			return []metricsutil.GaugeLabelValues{}, nil
-			results[i].Labels = []metrics.Label{
-				metricsutil.NamespaceLabel(m.Namespace),
-				{"mount_point", m.MountPoint},
-			}
-
-			c.walkKvMountSecrets(ctx, m)
-			results[i].Value = float32(m.NumSecrets)
+		default:
+			break
 		}
 
-		return results, nil
+		results[i].Labels = []metrics.Label{
+			metricsutil.NamespaceLabel(m.Namespace),
+			{"mount_point", m.MountPoint},
+		}
+
+		c.walkKvMountSecrets(ctx, m)
+		results[i].Value = float32(m.NumSecrets)
 	}
+
+	return results, nil
 }
 
 func (c *Core) entityGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
@@ -365,7 +368,6 @@ func (c *Core) entityGaugeCollectorByMount(ctx context.Context) ([]metricsutil.G
 			Labels: []metrics.Label{
 				metricsutil.NamespaceLabel(mountEntry.namespace),
 				{"auth_method", mountEntry.Type},
-				// FIXME: I suspect this  won't work right with namespaces?
 				{"mount_point", "auth/" + mountEntry.Path},
 			},
 			Value: float32(count),
