@@ -199,9 +199,11 @@ github.com/coreos/go-systemd/journal
 github.com/coreos/pkg/capnslog
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/denisenkom/go-mssqldb v0.0.0-20190412130859-3b1d194e553a
+# github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
 github.com/denisenkom/go-mssqldb
 github.com/denisenkom/go-mssqldb/internal/cp
+github.com/denisenkom/go-mssqldb/internal/decimal
+github.com/denisenkom/go-mssqldb/internal/querytext
 # github.com/dgrijalva/jwt-go v3.2.0+incompatible
 github.com/dgrijalva/jwt-go
 # github.com/dimchansky/utfbom v1.1.0
@@ -262,6 +264,8 @@ github.com/gogo/protobuf/io
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
 github.com/gogo/protobuf/sortkeys
+# github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe
+github.com/golang-sql/civil
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/protoc-gen-go/descriptor
@@ -426,7 +430,7 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms
 github.com/hashicorp/vault-plugin-secrets-kv
 # github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas
-# github.com/hashicorp/vault-plugin-secrets-openldap v0.1.3-0.20200518214608-746aba5fead6
+# github.com/hashicorp/vault-plugin-secrets-openldap v0.1.3-0.20200623230748-8c6a0913e025
 github.com/hashicorp/vault-plugin-secrets-openldap
 github.com/hashicorp/vault-plugin-secrets-openldap/client
 # github.com/hashicorp/vault/api v1.0.5-0.20200317185738-82f498082f02 => ./api
