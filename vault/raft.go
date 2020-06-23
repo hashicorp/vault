@@ -775,7 +775,17 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			return false, errwrap.Wrapf("unable to decoded leader entry: {{err}}", err)
 		}
 
-		leaderInfos[0].LeaderAPIAddr = adv.RedirectAddr
+		// Add the API address in storage as the leader address for all of the
+		// objects within the slice. All retry-join attempts will be against
+		// this address.
+		// N.B. Joining may result in error due to mismatched certs if mTLS is
+		// enabled for instance since only one of them will only have the
+		// correct certs for the leader address, but this is fine since the
+		// logic retries with all of the entries within the slice until one is
+		// successful.
+		for _, info := range leaderInfos {
+			info.LeaderAPIAddr = adv.RedirectAddr
+		}
 	}
 
 	join := func(retry bool) error {
