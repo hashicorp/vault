@@ -57,6 +57,7 @@ IMPROVEMENTS:
 
 * core: Add the Go version used to build a Vault binary to the server message output. [[GH-9078](https://github.com/hashicorp/vault/pull/9078)]
 * auth/aws: Add support for Web Identity credentials [[GH-9251](https://github.com/hashicorp/vault/pull/9251)]
+* ui: Link to the Vault Changelog in the UI footer [[GH-9216](https://github.com/hashicorp/vault/pull/9216)]
 
 BUG FIXES:
 
