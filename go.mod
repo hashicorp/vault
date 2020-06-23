@@ -13,6 +13,7 @@ require (
 	github.com/Azure/azure-sdk-for-go v36.2.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.10.1
 	github.com/DataDog/zstd v1.4.4 // indirect
+	github.com/Microsoft/hcsshim v0.8.9 // indirect
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/SAP/go-hdb v0.14.1
 	github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
@@ -46,7 +47,6 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-test/deep v1.0.2
 	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
-	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
