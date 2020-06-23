@@ -88,7 +88,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.5
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.5
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.3-0.20200623225524-75f9c33d322d
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.3-0.20200623230748-8c6a0913e025
 	github.com/hashicorp/vault/api v1.0.5-0.20200317185738-82f498082f02
 	github.com/hashicorp/vault/sdk v0.1.14-0.20200429182704-29fce8f27ce4
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
