@@ -46,9 +46,9 @@ The response will contain a token at `auth.client_token`:
     "policies": ["default"],
     "metadata": {
       "role": "demo",
-      "service_account_name": "vault-auth",
+      "service_account_name": "myapp",
       "service_account_namespace": "default",
-      "service_account_secret_name": "vault-auth-token-pd21c",
+      "service_account_secret_name": "myapp-token-pd21c",
       "service_account_uid": "aa9aa8ff-98d0-11e7-9bb7-0800276d99bf"
     },
     "lease_duration": 2764800,
@@ -91,13 +91,13 @@ management tool.
 
     ```text
     vault write auth/kubernetes/role/demo \
-        bound_service_account_names=vault-auth \
+        bound_service_account_names=myapp \
         bound_service_account_namespaces=default \
         policies=default \
         ttl=1h
     ```
 
-    This role authorizes the "vault-auth" service account in the default
+    This role authorizes the "myapp" service account in the default
     namespace and it gives it the default policy.
 
     For the complete list of configuration options, please see the API
