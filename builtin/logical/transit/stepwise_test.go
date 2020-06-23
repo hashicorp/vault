@@ -18,13 +18,13 @@ import (
 func TestAccBackend_basic_docker(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	envOptions := stepwise.MountOptions{
-		RegistryName:    "transit2",
+		RegistryName:    "updatedtransit",
 		PluginType:      stepwise.PluginTypeSecrets,
 		PluginName:      "transit",
 		MountPathPrefix: "transit_temp",
 	}
 	stepwise.Run(t, stepwise.Case{
-		Environment: dockerEnvironment.NewEnvironment("transit", &envOptions),
+		Environment: dockerEnvironment.NewEnvironment("updatedtransit", &envOptions),
 		Steps: []stepwise.Step{
 			testAccStepwiseListPolicy(t, "test", true),
 			testAccStepwiseWritePolicy(t, "test", true),
@@ -41,7 +41,6 @@ func TestAccBackend_basic_docker(t *testing.T) {
 
 func testAccStepwiseWritePolicy(t *testing.T, name string, derived bool) stepwise.Step {
 	ts := stepwise.Step{
-		// Operation: logical.UpdateOperation,
 		Operation: stepwise.WriteOperation,
 		Path:      "keys/" + name,
 		Data: map[string]interface{}{
