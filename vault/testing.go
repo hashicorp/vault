@@ -27,11 +27,6 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/mitchellh/copystructure"
-	testing "github.com/mitchellh/go-testing-interface"
-	"golang.org/x/crypto/ed25519"
-	"golang.org/x/net/http2"
-
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	raftlib "github.com/hashicorp/raft"
@@ -53,6 +48,10 @@ import (
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
+	"github.com/mitchellh/copystructure"
+	testing "github.com/mitchellh/go-testing-interface"
+	"golang.org/x/crypto/ed25519"
+	"golang.org/x/net/http2"
 )
 
 // This file contains a number of methods that are useful for unit
@@ -888,7 +887,10 @@ func CleanupClusters(clusters []*TestCluster) {
 func (c *TestCluster) Cleanup() {
 	c.Logger.Info("cleaning up vault cluster")
 	for _, core := range c.Cores {
-		core.CoreConfig.Logger.SetLevel(log.Error)
+		// Upgrade logger to emit errors if not doing so already
+		if !core.CoreConfig.Logger.IsError() {
+			core.CoreConfig.Logger.SetLevel(log.Error)
+		}
 	}
 
 	wg := &sync.WaitGroup{}
@@ -964,6 +966,7 @@ type TestClusterCore struct {
 	TLSConfig            *tls.Config
 	UnderlyingStorage    physical.Backend
 	UnderlyingRawStorage physical.Backend
+	UnderlyingHAStorage  physical.HABackend
 	Barrier              SecurityBarrier
 	NodeID               string
 }
@@ -1506,6 +1509,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Barrier:              cores[i].barrier,
 			NodeID:               fmt.Sprintf("core-%d", i),
 			UnderlyingRawStorage: coreConfigs[i].Physical,
+			UnderlyingHAStorage:  coreConfigs[i].HAPhysical,
 		}
 		tcc.ReloadFuncs = &cores[i].reloadFuncs
 		tcc.ReloadFuncsLock = &cores[i].reloadFuncsLock
@@ -1675,9 +1679,14 @@ func (testCluster *TestCluster) newCore(
 		case physBundle == nil && coreConfig.Physical == nil:
 			t.Fatal("PhysicalFactory produced no physical and none in CoreConfig")
 		case physBundle != nil:
-			testCluster.Logger.Info("created physical backend", "instance", idx)
-			coreConfig.Physical = physBundle.Backend
-			localConfig.Physical = physBundle.Backend
+			// Storage backend setup
+			if physBundle.Backend != nil {
+				testCluster.Logger.Info("created physical backend", "instance", idx)
+				coreConfig.Physical = physBundle.Backend
+				localConfig.Physical = physBundle.Backend
+			}
+
+			// HA Backend setup
 			haBackend := physBundle.HABackend
 			if haBackend == nil {
 				if ha, ok := physBundle.Backend.(physical.HABackend); ok {
@@ -1686,6 +1695,8 @@ func (testCluster *TestCluster) newCore(
 			}
 			coreConfig.HAPhysical = haBackend
 			localConfig.HAPhysical = haBackend
+
+			// Cleanup setup
 			if physBundle.Cleanup != nil {
 				cleanupFunc = physBundle.Cleanup
 			}
