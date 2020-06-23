@@ -78,9 +78,9 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 // seems confusing.
 func (c *Core) tokenGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
 	// stateLock or authLock protects the tokenStore pointer
-	c.stateLock.Lock()
+	c.stateLock.RLock()
 	ts := c.tokenStore
-	c.stateLock.Unlock()
+	c.stateLock.RUnlock()
 	if ts == nil {
 		return []metricsutil.GaugeLabelValues{}, errors.New("nil token store")
 	}
@@ -88,9 +88,9 @@ func (c *Core) tokenGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabe
 }
 
 func (c *Core) tokenGaugePolicyCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
-	c.stateLock.Lock()
+	c.stateLock.RLock()
 	ts := c.tokenStore
-	c.stateLock.Unlock()
+	c.stateLock.RUnlock()
 	if ts == nil {
 		return []metricsutil.GaugeLabelValues{}, errors.New("nil token store")
 	}
@@ -98,9 +98,9 @@ func (c *Core) tokenGaugePolicyCollector(ctx context.Context) ([]metricsutil.Gau
 }
 
 func (c *Core) tokenGaugeMethodCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
-	c.stateLock.Lock()
+	c.stateLock.RLock()
 	ts := c.tokenStore
-	c.stateLock.Unlock()
+	c.stateLock.RUnlock()
 	if ts == nil {
 		return []metricsutil.GaugeLabelValues{}, errors.New("nil token store")
 	}
@@ -108,9 +108,9 @@ func (c *Core) tokenGaugeMethodCollector(ctx context.Context) ([]metricsutil.Gau
 }
 
 func (c *Core) tokenGaugeTtlCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
-	c.stateLock.Lock()
+	c.stateLock.RLock()
 	ts := c.tokenStore
-	c.stateLock.Unlock()
+	c.stateLock.RUnlock()
 	if ts == nil {
 		return []metricsutil.GaugeLabelValues{}, errors.New("nil token store")
 	}

@@ -3623,6 +3623,9 @@ func (ts *TokenStore) gaugeCollectorByMethod(ctx context.Context) ([]metricsutil
 		}
 
 		// Look up the path from the lease within the correct namespace
+		// Need to hold stateLock while accessing the router.
+		ts.core.stateLock.RLock()
+		defer ts.core.stateLock.RUnlock()
 		mountEntry := ts.core.router.MatchingMountEntry(ctx, path)
 		if mountEntry == nil {
 			return "unknown"
