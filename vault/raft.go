@@ -904,7 +904,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				return errwrap.Wrapf("failed to send answer to raft leader node: {{err}}", err)
 			}
 
-			if c.seal.BarrierType() == wrapping.Shamir && !c.isRaftHAOnly() {
+			if c.seal.BarrierType() == wrapping.Shamir && !isRaftHAOnly {
 				// Reset the state
 				c.raftInfo = nil
 
