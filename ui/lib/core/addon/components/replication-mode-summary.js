@@ -15,7 +15,7 @@ export default Component.extend({
   version: service(),
   router: service(),
   namespace: service(),
-  classNameBindings: ['isMenu::box', 'isMenu::level'],
+  classNameBindings: ['isMenu::box'],
   attributeBindings: ['href', 'target'],
   display: 'banner',
   isMenu: equal('display', 'menu'),
@@ -48,4 +48,9 @@ export default Component.extend({
   clusterIdDisplay: replicationAttr('clusterIdDisplay'),
   mode: null,
   cluster: null,
+  modeState: computed('cluster', 'mode', function() {
+    const { cluster, mode } = this;
+    const clusterState = cluster[mode].state;
+    return clusterState;
+  }),
 });

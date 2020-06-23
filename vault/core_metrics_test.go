@@ -1,19 +1,26 @@
 package vault
 
 import (
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/armon/go-metrics"
+	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestCoreMetrics_KvSecretGauge(t *testing.T) {
+	// Use the real KV implementation instead of Passthrough
+	AddTestLogicalBackend("kv", logicalKv.Factory)
+	// Clean up for the next test-- is there a better way?
+	defer func() {
+		delete(testLogicalBackends, "kv")
+	}()
 	core, _, root := TestCoreUnsealed(t)
 
-	// I think I can't test with the real kv-v2 because it's
-	// a plugin. But we can fake it by using "metadata" as
-	// part of the secret path with a V1 backend.
 	testMounts := []struct {
 		Path          string
 		Version       string
@@ -42,21 +49,23 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 		}
 	}
 
-	secrets := []string{
+	v1secrets := []string{
 		"secret1/a", // 3
 		"secret1/b",
 		"secret1/c/d",
-		"secret3/metadata/a", // 4
-		"secret3/metadata/b",
-		"secret3/metadata/c/d",
-		"secret3/metadata/c/e",
-		"prefix/secret4/metadata/a/secret", // 5
-		"prefix/secret4/metadata/a/secret2",
-		"prefix/secret4/metadata/a/b/c/secret",
-		"prefix/secret4/metadata/a/b/c/secret2",
-		"prefix/secret4/metadata/a/b/c/d/secret3",
 	}
-	for _, p := range secrets {
+	v2secrets := []string{
+		"secret3/data/a", // 4
+		"secret3/data/b",
+		"secret3/data/c/d",
+		"secret3/data/c/e",
+		"prefix/secret4/data/a/secret", // 5
+		"prefix/secret4/data/a/secret2",
+		"prefix/secret4/data/a/b/c/secret",
+		"prefix/secret4/data/a/b/c/secret2",
+		"prefix/secret4/data/a/b/c/d/secret3",
+	}
+	for _, p := range v1secrets {
 		req := logical.TestRequest(t, logical.CreateOperation, p)
 		req.Data["foo"] = "bar"
 		req.ClientToken = root
@@ -65,6 +74,18 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		if resp != nil {
+			t.Fatalf("bad: %#v", resp)
+		}
+	}
+	for _, p := range v2secrets {
+		req := logical.TestRequest(t, logical.CreateOperation, p)
+		req.Data["data"] = map[string]interface{}{"foo": "bar"}
+		req.ClientToken = root
+		resp, err := core.HandleRequest(ctx, req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if resp.Error() != nil {
 			t.Fatalf("bad: %#v", resp)
 		}
 	}
@@ -108,6 +129,51 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 		if !found {
 			t.Errorf("Unexpected mount point %v", mountPoint)
 		}
+	}
+}
+
+func TestCoreMetrics_KvSecretGaugeError(t *testing.T) {
+	core := TestCore(t)
+
+	// Replace metricSink before unsealing
+	inmemSink := metrics.NewInmemSink(
+		1000000*time.Hour,
+		2000000*time.Hour)
+	core.metricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
+
+	testCoreUnsealed(t, core)
+	ctx := namespace.RootContext(nil)
+
+	badKvMount := &kvMount{
+		Namespace:  namespace.RootNamespace,
+		MountPoint: "bad/path",
+		Version:    "1",
+		NumSecrets: 0,
+	}
+
+	core.walkKvMountSecrets(ctx, badKvMount)
+
+	intervals := inmemSink.Data()
+	// Test crossed an interval boundary, don't try to deal with it.
+	if len(intervals) > 1 {
+		t.Skip("Detected interval crossing.")
+	}
+
+	// Should be an error
+	keyPrefix := "metrics.collection.error"
+	var counter *metrics.SampledValue = nil
+
+	for _, c := range intervals[0].Counters {
+		if strings.HasPrefix(c.Name, keyPrefix) {
+			counter = &c
+			break
+		}
+	}
+	if counter == nil {
+		t.Fatal("No metrics.collection.error counter found.")
+	}
+	if counter.Count != 1 {
+		t.Errorf("Counter number of samples %v is not 1.", counter.Count)
 	}
 }
 

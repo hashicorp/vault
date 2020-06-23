@@ -99,7 +99,7 @@ to specify where the configuration is.
   sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
   ```
 
-  Note: Since each plugin runs as a separate process, you need to do the same
+  ~> Note: Since each plugin runs as a separate process, you need to do the same
   for each plugin in your [plugins
   directory](/docs/internals/plugins#plugin-directory).
 

@@ -307,7 +307,7 @@ func (m *MSSQL) RotateRootCredentials(ctx context.Context, statements []string) 
 
 	rotateStatents := statements
 	if len(rotateStatents) == 0 {
-		rotateStatents = []string{rotateRootCredentialsSQL}
+		rotateStatents = []string{alterLoginSQL}
 	}
 
 	db, err := m.getConnection(ctx)
@@ -357,6 +357,70 @@ func (m *MSSQL) RotateRootCredentials(ctx context.Context, statements []string) 
 	return m.RawConfig, nil
 }
 
+func (m *MSSQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
+	if len(statements.Rotation) == 0 {
+		statements.Rotation = []string{alterLoginSQL}
+	}
+
+	username = staticUser.Username
+	password = staticUser.Password
+
+	if username == "" || password == "" {
+		return "", "", errors.New("must provide both username and password")
+	}
+
+	m.Lock()
+	defer m.Unlock()
+
+	db, err := m.getConnection(ctx)
+	if err != nil {
+		return "", "", err
+	}
+
+	var exists bool
+
+	err = db.QueryRowContext(ctx, "SELECT 1 FROM master.sys.server_principals where name = N'$1'", username).Scan(&exists)
+
+	if err != nil && err != sql.ErrNoRows {
+		return "", "", err
+	}
+
+	stmts := statements.Rotation
+
+	// Start a transaction
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return "", "", err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	for _, stmt := range stmts {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+
+			m := map[string]string{
+				"name":     username,
+				"username": username,
+				"password": password,
+			}
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+				return "", "", err
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return "", "", err
+	}
+
+	return username, password, nil
+}
+
 const dropUserSQL = `
 USE [%s]
 IF EXISTS
@@ -377,7 +441,6 @@ BEGIN
   DROP LOGIN [%s]
 END
 `
-
-const rotateRootCredentialsSQL = `
+const alterLoginSQL = `
 ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}' 
 `
