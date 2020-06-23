@@ -63,7 +63,7 @@ func (c *PluginReloadCommand) Flags() *FlagSets {
 		Name:       "scope",
 		Target:     &c.scope,
 		Completion: complete.PredictAnything,
-		Usage:      `The scope of the reload, omitted for local, "cluster", for cluster-wide`,
+		Usage:      "The scope of the reload, omitted for local, 'global', for replicated reloads",
 	})
 
 	return set
@@ -92,7 +92,7 @@ func (c *PluginReloadCommand) Run(args []string) int {
 	case c.plugin != "" && len(c.mounts) > 0:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
 		return 1
-	case c.scope != "" && c.scope != "cluster":
+	case c.scope != "" && c.scope != "global":
 		c.UI.Error(fmt.Sprintf("Invalid reload scope: %s", c.scope))
 	}
 

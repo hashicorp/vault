@@ -41,7 +41,7 @@ import (
 )
 
 const maxBytes = 128 * 1024
-const clusterScope = "cluster"
+const globalScope = "global"
 
 func systemBackendMemDBSchema() *memdb.DBSchema {
 	systemSchema := &memdb.DBSchema{
@@ -437,6 +437,10 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 	pluginMounts := d.Get("mounts").([]string)
 	scope := d.Get("scope").(string)
 
+	if scope != "" && scope != globalScope {
+		return logical.ErrorResponse("reload scope must be omitted or 'global'"), nil
+	}
+
 	if pluginName != "" && len(pluginMounts) > 0 {
 		return logical.ErrorResponse("plugin and mounts cannot be set at the same time"), nil
 	}
@@ -464,8 +468,11 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 		},
 	}
 
-	if scope == clusterScope {
-		go handleClusterPluginReload(b, req.ID, pluginName, pluginMounts)
+	if scope == globalScope {
+		err := handleGlobalPluginReload(b, req.ID, pluginName, pluginMounts)
+		if err != nil {
+			return nil, err
+		}
 		return logical.RespondWithStatusCode(&r, req, http.StatusAccepted)
 	}
 	return &r, nil

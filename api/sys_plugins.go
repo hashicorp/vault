@@ -257,7 +257,7 @@ func (c *Sys) ReloadPlugin(i *ReloadPluginInput) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	if i.Scope == "cluster" {
+	if i.Scope == "global" {
 		// Get the reload id
 		secret, parseErr := ParseSecret(resp.Body)
 		if parseErr != nil {
@@ -270,13 +270,15 @@ func (c *Sys) ReloadPlugin(i *ReloadPluginInput) (string, error) {
 	return "", err
 }
 
-type PluginReloadStatus struct {
+// ReloadStatus is the status of an individual node's plugin reload
+type ReloadStatus struct {
 	Timestamp time.Time `json:"timestamp"`
 	Success   bool      `json:"success"`
 	Message   string    `json:"message"`
 }
 
-type PluginReloadStatusResponse struct {
+// ReloadStatusResponse is the combined response of all known completed plugin reloads
+type ReloadStatusResponse struct {
 	ReloadID string
 	Results  map[string]interface{}
 }

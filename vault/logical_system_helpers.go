@@ -84,7 +84,7 @@ var (
 			},
 		}
 	}
-	handleClusterPluginReload = func(*SystemBackend, string, string, []string) error {
+	handleGlobalPluginReload = func(*SystemBackend, string, string, []string) error {
 		return nil
 	}
 	handleSetupPluginReload = func(*SystemBackend) error {
