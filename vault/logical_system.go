@@ -4285,6 +4285,10 @@ This path responds to the following HTTP methods.
 		`The mount paths of the plugin backends to reload.`,
 		"",
 	},
+	"plugin-backend-reload-scope": {
+		`The scope of the plugin reload, either omitted or 'global'`,
+		"",
+	},
 	"hash": {
 		"Generate a hash sum for input data",
 		"Generates a hash sum of the given algorithm against the given input data.",

@@ -708,6 +708,10 @@ func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 				Type:        framework.TypeCommaStringSlice,
 				Description: strings.TrimSpace(sysHelp["plugin-backend-reload-mounts"][0]),
 			},
+			"scope": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-backend-reload-scope"][0]),
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
