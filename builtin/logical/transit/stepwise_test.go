@@ -9,21 +9,22 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
-	dockerDriver "github.com/hashicorp/vault/sdk/testing/stepwise/drivers/docker"
 	"github.com/mitchellh/mapstructure"
+
+	dockerEnvironment "github.com/hashicorp/vault/sdk/testing/stepwise/environments/docker"
 )
 
-// TestBackend_basic_docker is an example test using the Docker Driver
+// TestBackend_basic_docker is an example test using the Docker Environment
 func TestBackend_basic_docker(t *testing.T) {
 	decryptData := make(map[string]interface{})
-	driverOptions := stepwise.DriverOptions{
-		Name:            "transit2",
+	envOptions := stepwise.MountOptions{
+		RegistryName:    "transit2",
 		PluginType:      stepwise.PluginTypeSecrets,
 		PluginName:      "transit",
 		MountPathPrefix: "transit_temp",
 	}
 	stepwise.Run(t, stepwise.Case{
-		Driver: dockerDriver.NewDockerDriver("transit", &driverOptions),
+		Environment: dockerEnvironment.NewEnvironment("transit", &envOptions),
 		Steps: []stepwise.Step{
 			testAccStepwiseListPolicy(t, "test", true),
 			testAccStepwiseWritePolicy(t, "test", true),
@@ -57,7 +58,7 @@ func testAccStepwiseListPolicy(t *testing.T, name string, expectNone bool) stepw
 	return stepwise.Step{
 		Operation: stepwise.ListOperation,
 		Path:      "keys",
-		Check: func(resp *api.Secret, err error) error {
+		Assert: func(resp *api.Secret, err error) error {
 			if (resp == nil || len(resp.Data) == 0) && !expectNone {
 				return fmt.Errorf("missing response")
 			}
@@ -96,7 +97,7 @@ func testAccStepwiseReadPolicyWithVersions(t *testing.T, name string, expectNone
 	return stepwise.Step{
 		Operation: stepwise.ReadOperation,
 		Path:      "keys/" + name,
-		Check: func(resp *api.Secret, err error) error {
+		Assert: func(resp *api.Secret, err error) error {
 			t.Helper()
 			if resp == nil && !expectNone {
 				return fmt.Errorf("missing response")
@@ -168,7 +169,7 @@ func testAccStepwiseEncryptContext(
 			"plaintext": base64.StdEncoding.EncodeToString([]byte(plaintext)),
 			"context":   base64.StdEncoding.EncodeToString([]byte(context)),
 		},
-		Check: func(resp *api.Secret, err error) error {
+		Assert: func(resp *api.Secret, err error) error {
 			var d struct {
 				Ciphertext string `mapstructure:"ciphertext"`
 			}
@@ -191,7 +192,7 @@ func testAccStepwiseDecrypt(
 		Operation: stepwise.UpdateOperation,
 		Path:      "decrypt/" + name,
 		Data:      decryptData,
-		Check: func(resp *api.Secret, err error) error {
+		Assert: func(resp *api.Secret, err error) error {
 			var d struct {
 				Plaintext string `mapstructure:"plaintext"`
 			}
