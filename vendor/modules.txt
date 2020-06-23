@@ -425,7 +425,7 @@ github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
 github.com/hashicorp/vault-plugin-auth-jwt
 # github.com/hashicorp/vault-plugin-auth-kerberos v0.1.5
 github.com/hashicorp/vault-plugin-auth-kerberos
-# github.com/hashicorp/vault-plugin-auth-kubernetes v0.6.1
+# github.com/hashicorp/vault-plugin-auth-kubernetes v0.6.2
 github.com/hashicorp/vault-plugin-auth-kubernetes
 # github.com/hashicorp/vault-plugin-auth-oci v0.5.5
 github.com/hashicorp/vault-plugin-auth-oci
@@ -457,7 +457,7 @@ github.com/hashicorp/vault-plugin-secrets-openldap
 github.com/hashicorp/vault-plugin-secrets-openldap/client
 # github.com/hashicorp/vault/api v1.0.5-0.20200519221902-385fac77e20f => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20200615191832-d4b3c4b29c62 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20200527182800-ad90e0b39d2f => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/database/helper/credsutil
@@ -503,6 +503,7 @@ github.com/hashicorp/vault/sdk/plugin
 github.com/hashicorp/vault/sdk/plugin/mock
 github.com/hashicorp/vault/sdk/plugin/pb
 github.com/hashicorp/vault/sdk/queue
+github.com/hashicorp/vault/sdk/testing/stepwise
 github.com/hashicorp/vault/sdk/version
 # github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d
 github.com/hashicorp/yamux
@@ -735,6 +736,8 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
+# github.com/rboyer/safeio v0.2.1
+github.com/rboyer/safeio
 # github.com/ryanuber/columnize v2.1.0+incompatible
 github.com/ryanuber/columnize
 # github.com/ryanuber/go-glob v1.0.0

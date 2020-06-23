@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"bytes"
 	"context"
 	"crypto/md5"
 	"encoding/base64"
@@ -155,18 +156,21 @@ func compareFSMsWithErr(t *testing.T, fsm1, fsm2 *FSM) error {
 		return fmt.Errorf("configs did not match: %+v != %+v", config1, config2)
 	}
 
-	return compareDBs(t, fsm1.db, fsm2.db)
+	return compareDBs(t, fsm1.db, fsm2.db, false)
 }
 
-func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB) error {
+func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
 	t.Helper()
 	db1 := make(map[string]string)
 	db2 := make(map[string]string)
 
 	err := boltDB1.View(func(tx *bolt.Tx) error {
-
 		c := tx.Cursor()
 		for bucketName, _ := c.First(); bucketName != nil; bucketName, _ = c.Next() {
+			if dataOnly && !bytes.Equal(bucketName, dataBucketName) {
+				continue
+			}
+
 			b := tx.Bucket(bucketName)
 
 			cBucket := b.Cursor()
@@ -186,6 +190,9 @@ func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB) error {
 	err = boltDB2.View(func(tx *bolt.Tx) error {
 		c := tx.Cursor()
 		for bucketName, _ := c.First(); bucketName != nil; bucketName, _ = c.Next() {
+			if dataOnly && !bytes.Equal(bucketName, dataBucketName) {
+				continue
+			}
 			b := tx.Bucket(bucketName)
 
 			c := b.Cursor()
