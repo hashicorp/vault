@@ -17,7 +17,7 @@ type PluginReloadStatusCommand struct {
 }
 
 func (c *PluginReloadStatusCommand) Synopsis() string {
-	return "Get the status of an active or recently completed cluster plugin reload"
+	return "Get the status of an active or recently completed global plugin reload"
 }
 
 func (c *PluginReloadStatusCommand) Help() string {
