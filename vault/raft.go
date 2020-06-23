@@ -883,7 +883,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			// If we're using Shamir and using raft for both physical and HA, we
 			// need to block until the node is unsealed, unless retry is set to
 			// false.
-			if c.seal.BarrierType() == wrapping.Shamir && !c.isRaftHAOnly() {
+			if c.seal.BarrierType() == wrapping.Shamir && !isRaftHAOnly {
 				c.raftInfo = raftInfo
 				if err := c.seal.SetBarrierConfig(ctx, &sealConfig); err != nil {
 					return err
