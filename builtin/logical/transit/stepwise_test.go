@@ -15,7 +15,7 @@ import (
 )
 
 // TestBackend_basic_docker is an example test using the Docker Environment
-func TestBackend_basic_docker(t *testing.T) {
+func TestAccBackend_basic_docker(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	envOptions := stepwise.MountOptions{
 		RegistryName:    "transit2",
