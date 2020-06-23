@@ -3629,7 +3629,7 @@ func (ts *TokenStore) gaugeCollectorByMethod(ctx context.Context) ([]metricsutil
 		}
 
 		// mountEntry.Path lacks the "auth/" prefix; perhaps we should
-		// refactor router to provide a method taht returns both the matching
+		// refactor router to provide a method that returns both the matching
 		// path *and* the the mount entry?
 		// Or we could just always add "auth/"?
 		matchingMount := ts.core.router.MatchingMount(ctx, path)
