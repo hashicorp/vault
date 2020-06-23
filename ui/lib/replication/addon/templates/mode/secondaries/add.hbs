@@ -54,7 +54,6 @@
     @title="Copy your token"
     @onClose={{action "toggleModal" "Token copied!"}}
     @isActive={{isModalActive}}
-    @modalId="add"
   >
     <section class="modal-card-body">
       <p>This token can be used to enable {{model.replicationModeForDisplay}} replication or change primaries on the secondary cluster.</p>

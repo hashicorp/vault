@@ -2,7 +2,7 @@
   <div
     class="{{modalClass}} {{if isActive 'is-active'}}"
     aria-modal="true"
-    id={{concat 'modal-card-id-' modalId}} tabindex="0"
+    id={{modalId}} tabindex="0"
   >
     <div class="modal-background" onclick={{onClose}} data-test-modal-background></div>
     <div class="modal-card">

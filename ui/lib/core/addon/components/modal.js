@@ -9,13 +9,12 @@
  *
  * @example
  * ```js
- * <Modal @title={'myTitle'} @showCloseButton={true} @onClose={() => {}} @modalId="uniqueId"/>
+ * <Modal @title={'myTitle'} @showCloseButton={true} @onClose={() => {}} />
  * ```
  * @param {function} onClose - onClose is the action taken when someone clicks the modal background or close button (if shown).
  * @param {string} [title] - This text shows up in the header section of the modal.
  * @param {boolean} [showCloseButton=false] - controls whether the close button in the top right corner shows.
  * @param {string} type=null - The header type. This comes from the message-types helper.
- * @param {string} modalId=null - unique ID passed to each modal instance.  Used to set focus on the modal for accessibility.
  */
 
 import Component from '@ember/component';
@@ -28,13 +27,15 @@ export default Component.extend({
   title: null,
   showCloseButton: false,
   type: null,
-  modalId: null,
+  modalId: computed(function() {
+    return `modal-card-id-${this.elementId}`;
+  }),
   didInsertElement() {
     this._super(...arguments);
     // if the modal is active, set the focus to the modal card
     // allows user to use keyboard on the modal
     if (this.isActive) {
-      let modalCard = this.element.querySelector(`#modal-card-id-${this.modalId}`);
+      let modalCard = this.element.querySelector(`#${this.modalId}`);
       modalCard.focus();
     }
   },
