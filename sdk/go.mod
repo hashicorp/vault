@@ -6,6 +6,10 @@ require (
 	github.com/armon/go-metrics v0.3.3
 	github.com/armon/go-radix v1.0.0
 	github.com/aws/aws-sdk-go v1.30.27
+	github.com/containerd/containerd v1.3.4 // indirect
+	github.com/docker/distribution v2.7.1+incompatible // indirect
+	github.com/docker/docker v1.4.2-0.20200319182547-c7ad2b866182
+	github.com/docker/go-connections v0.4.0
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/fatih/structs v1.1.0
 	github.com/frankban/quicktest v1.10.0 // indirect
