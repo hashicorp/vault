@@ -216,7 +216,6 @@ func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 }
 
 func RaftHASetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, bundler PhysicalBackendBundler) {
-	conf.DisablePerformanceStandby = true
 	opts.KeepStandbysSealed = true
 	opts.PhysicalFactory = RaftHAFactory(bundler)
 }

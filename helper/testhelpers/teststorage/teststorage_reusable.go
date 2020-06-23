@@ -124,7 +124,6 @@ func MakeReusableRaftHAStorage(t testing.T, logger hclog.Logger, numCores int, b
 
 	storage := ReusableStorage{
 		Setup: func(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
-			conf.DisablePerformanceStandby = true
 			opts.KeepStandbysSealed = true
 			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
 				haBundle := makeReusableRaftBackend(t, coreIdx, logger, raftDirs[coreIdx], nil, true)

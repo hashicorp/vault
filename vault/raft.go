@@ -422,13 +422,7 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 	// checkCommitted verifies key updates have been applied to all nodes and
 	// finalizes the rotation by deleting the old keys and updating the raft
 	// backend.
-	checkCommitted := func(haOnly bool) error {
-		// No-op here if we're using raft for HA-only. Since the storage is
-		// shared, the two phase commit is not done on rotation.
-		if haOnly {
-			return nil
-		}
-
+	checkCommitted := func() error {
 		keyring, err := c.raftReadTLSKeyring(ctx)
 		if err != nil {
 			return errwrap.Wrapf("failed to read raft TLS keyring: {{err}}", err)
@@ -484,8 +478,6 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 		keyCheckInterval := time.NewTicker(1 * time.Minute)
 		defer keyCheckInterval.Stop()
 
-		isRaftHAOnly := c.isRaftHAOnly()
-
 		var backoff bool
 		for {
 			// If we encountered and error we should try to create the key
@@ -497,7 +489,7 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 
 			select {
 			case <-keyCheckInterval.C:
-				err := checkCommitted(isRaftHAOnly)
+				err := checkCommitted()
 				if err != nil {
 					logger.Error("failed to activate TLS key", "error", err)
 				}
@@ -542,7 +534,7 @@ func (c *Core) raftReadTLSKeyring(ctx context.Context) (*raft.TLSKeyring, error)
 // error.
 func (c *Core) raftCreateTLSKeyring(ctx context.Context) (*raft.TLSKeyring, error) {
 	if raftBackend := c.getRaftBackend(); raftBackend == nil {
-		return nil, nil
+		return nil, fmt.Errorf("raft backend not in use")
 	}
 
 	// Check if the keyring is already present
