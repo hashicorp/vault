@@ -2,11 +2,9 @@ package command
 
 import (
 	"fmt"
-	"strings"
-	"time"
-
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
+	"strings"
 )
 
 var _ cli.Command = (*PluginReloadCommand)(nil)
@@ -48,6 +46,11 @@ func (c *PluginReloadStatusCommand) AutocompleteFlags() complete.Flags {
 func (c *PluginReloadStatusCommand) Run(args []string) int {
 	f := c.Flags()
 
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
 	args = f.Args()
 	switch {
 	case len(args) < 1:
@@ -73,18 +76,12 @@ func (c *PluginReloadStatusCommand) Run(args []string) int {
 		return 2
 	}
 	out := []string{"Time | Participant | Success | Message "}
-	for i, s := range r["results"].(map[string]interface{}) {
-		m := s.(map[string]interface{})
-		ts, err := time.Parse(m["timestamp"].(string), time.RFC3339)
-		if err != nil {
-			return 3
-		}
-
-		out = append(out, fmt.Sprintf("%s | %s | %s | %s ",
-			ts.Format("15:04:05"),
+	for i, s := range r.Results {
+		out = append(out, fmt.Sprintf("%s | %s | %t | %s ",
+			s.Timestamp.Format("15:04:05"),
 			i,
-			m["success"].(bool),
-			m["message"].(string)))
+			s.Success,
+			s.Message))
 	}
 	c.UI.Output(tableOutput(out, nil))
 	return 0

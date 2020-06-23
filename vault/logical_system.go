@@ -4289,6 +4289,10 @@ This path responds to the following HTTP methods.
 		`The scope of the plugin reload, either omitted or 'global'`,
 		"",
 	},
+	"plugin-reload-backend-status": {
+		`Retrieve the status of a global plugin reload`,
+		"",
+	},
 	"hash": {
 		"Generate a hash sum for input data",
 		"Generates a hash sum of the given algorithm against the given input data.",

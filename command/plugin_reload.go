@@ -122,7 +122,7 @@ func (c *PluginReloadCommand) Run(args []string) int {
 		if rid != "" {
 			c.UI.Output(fmt.Sprintf("Success! Reloading plugin: %s, reload_id: %s", c.plugin, rid))
 		} else {
-			c.UI.Output(fmt.Sprintf("Success! Reloaded plugin: %s", c.mounts))
+			c.UI.Output(fmt.Sprintf("Success! Reloaded plugin: %s", c.plugin))
 		}
 	}
 
