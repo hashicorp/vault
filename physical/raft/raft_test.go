@@ -36,8 +36,13 @@ func getRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, str
 }
 
 func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir string) (*RaftBackend, string) {
+	id, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	logger := hclog.New(&hclog.LoggerOptions{
-		Name:  "raft",
+		Name:  fmt.Sprintf("raft-%s", id),
 		Level: hclog.Trace,
 	})
 	logger.Info("raft dir", "dir", raftDir)
@@ -45,6 +50,7 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 	conf := map[string]string{
 		"path":          raftDir,
 		"trailing_logs": "100",
+		"node_id":       id,
 	}
 
 	if noStoreState {
@@ -58,7 +64,12 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 	backend := backendRaw.(*RaftBackend)
 
 	if bootstrap {
-		err = backend.Bootstrap(context.Background(), []Peer{Peer{ID: backend.NodeID(), Address: backend.NodeID()}})
+		err = backend.Bootstrap([]Peer{
+			{
+				ID:      backend.NodeID(),
+				Address: backend.NodeID(),
+			},
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
