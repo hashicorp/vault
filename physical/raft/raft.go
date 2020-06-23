@@ -47,9 +47,8 @@ var (
 	// This is used to reduce disk I/O for the recently committed entries.
 	raftLogCacheSize = 512
 
-	raftState         = "raft/"
-	peersFileName     = "peers.json"
-	snapshotsRetained = 2
+	raftState     = "raft/"
+	peersFileName = "peers.json"
 
 	restoreOpDelayDuration = 5 * time.Second
 
@@ -262,7 +261,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		log = cacheStore
 
 		// Create the snapshot store.
-		snapshots, err := NewBoltSnapshotStore(path, snapshotsRetained, logger.Named("snapshot"), fsm)
+		snapshots, err := NewBoltSnapshotStore(path, logger.Named("snapshot"), fsm)
 		if err != nil {
 			return nil, err
 		}

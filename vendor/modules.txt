@@ -736,6 +736,8 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
+# github.com/rboyer/safeio v0.2.1
+github.com/rboyer/safeio
 # github.com/ryanuber/columnize v2.1.0+incompatible
 github.com/ryanuber/columnize
 # github.com/ryanuber/go-glob v1.0.0
