@@ -1,14 +1,12 @@
 #!/bin/bash
 
+if [[ `uname -a` = *"Darwin"* ]]; then
+  echo "It seems you are running on Mac. This script does not work on Mac. See https://github.com/grpc/grpc-go/issues/2047"
+  exit 1
+fi
+
 set -ex  # Exit on error; debugging enabled.
 set -o pipefail  # Fail a pipe if any sub-command fails.
-
-# not makes sure the command passed to it does not exit with a return code of 0.
-not() {
-  # This is required instead of the earlier (! $COMMAND) because subshells and
-  # pipefail don't work the same on Darwin as in Linux.
-  ! "$@"
-}
 
 die() {
   echo "$@" >&2
@@ -16,7 +14,7 @@ die() {
 }
 
 fail_on_output() {
-  tee /dev/stderr | not read
+  tee /dev/stderr | (! read)
 }
 
 # Check to make sure it's safe to modify the user's git repo.
@@ -33,15 +31,12 @@ PATH="${GOPATH}/bin:${GOROOT}/bin:${PATH}"
 if [[ "$1" = "-install" ]]; then
   # Check for module support
   if go help mod >& /dev/null; then
-    # Install the pinned versions as defined in module tools.
-    pushd ./test/tools
     go install \
       golang.org/x/lint/golint \
       golang.org/x/tools/cmd/goimports \
       honnef.co/go/tools/cmd/staticcheck \
       github.com/client9/misspell/cmd/misspell \
       github.com/golang/protobuf/protoc-gen-go
-    popd
   else
     # Ye olde `go get` incantation.
     # Note: this gets the latest version of all tools (vs. the pinned versions
@@ -62,7 +57,7 @@ if [[ "$1" = "-install" ]]; then
       unzip ${PROTOC_FILENAME}
       bin/protoc --version
       popd
-    elif not which protoc > /dev/null; then
+    elif ! which protoc > /dev/null; then
       die "Please install protoc into your path"
     fi
   fi
@@ -72,21 +67,18 @@ elif [[ "$#" -ne 0 ]]; then
 fi
 
 # - Ensure all source files contain a copyright message.
-not git grep -L "\(Copyright [0-9]\{4,\} gRPC authors\)\|DO NOT EDIT" -- '*.go'
+git ls-files "*.go" | xargs grep -L "\(Copyright [0-9]\{4,\} gRPC authors\)\|DO NOT EDIT" 2>&1 | fail_on_output
 
 # - Make sure all tests in grpc and grpc/test use leakcheck via Teardown.
-not grep 'func Test[^(]' *_test.go
-not grep 'func Test[^(]' test/*.go
-
-# - Do not import x/net/context.
-not git grep -l 'x/net/context' -- "*.go"
+(! grep 'func Test[^(]' *_test.go)
+(! grep 'func Test[^(]' test/*.go)
 
 # - Do not import math/rand for real library code.  Use internal/grpcrand for
 #   thread safety.
-git grep -l '"math/rand"' -- "*.go" 2>&1 | not grep -v '^examples\|^stress\|grpcrand\|^benchmark\|wrr_test'
+git ls-files "*.go" | xargs grep -l '"math/rand"' 2>&1 | (! grep -v '^examples\|^stress\|grpcrand\|wrr_test')
 
 # - Ensure all ptypes proto packages are renamed when importing.
-not git grep "\(import \|^\s*\)\"github.com/golang/protobuf/ptypes/" -- "*.go"
+git ls-files "*.go" | (! xargs grep "\(import \|^\s*\)\"github.com/golang/protobuf/ptypes/")
 
 # - Check imports that are illegal in appengine (until Go 1.11).
 # TODO: Remove when we drop Go 1.10 support
@@ -94,11 +86,9 @@ go list -f {{.Dir}} ./... | xargs go run test/go_vet/vet.go
 
 # - gofmt, goimports, golint (with exceptions for generated code), go vet.
 gofmt -s -d -l . 2>&1 | fail_on_output
-goimports -l . 2>&1 | not grep -vE "(_mock|\.pb)\.go"
-golint ./... 2>&1 | not grep -vE "(_mock|\.pb)\.go:"
-go vet -all ./...
-
-misspell -error .
+goimports -l . 2>&1 | (! grep -vE "(_mock|\.pb)\.go:") | fail_on_output
+golint ./... 2>&1 | (! grep -vE "(_mock|\.pb)\.go:")
+go vet -all .
 
 # - Check that generated proto files are up to date.
 if [[ -z "${VET_SKIP_PROTO}" ]]; then
@@ -115,49 +105,30 @@ if go help mod >& /dev/null; then
 fi
 
 # - Collection of static analysis checks
-#
-# TODO(dfawley): don't use deprecated functions in examples or first-party
-# plugins.
-SC_OUT="$(mktemp)"
-staticcheck -go 1.9 -checks 'inherit,-ST1015' ./... > "${SC_OUT}" || true
-# Error if anything other than deprecation warnings are printed.
-not grep -v "is deprecated:.*SA1019" "${SC_OUT}"
-# Only ignore the following deprecated types/fields/functions.
-not grep -Fv '.HandleResolvedAddrs
-.HandleSubConnStateChange
-.HeaderMap
-.NewAddress
-.NewServiceConfig
-.Metadata is deprecated: use Attributes
-.Type is deprecated: use Attributes
-.UpdateBalancerState
-balancer.Picker
-grpc.CallCustomCodec
-grpc.Code
-grpc.Compressor
-grpc.Decompressor
-grpc.MaxMsgSize
-grpc.MethodConfig
-grpc.NewGZIPCompressor
-grpc.NewGZIPDecompressor
-grpc.RPCCompressor
-grpc.RPCDecompressor
-grpc.RoundRobin
-grpc.ServiceConfig
-grpc.WithBalancer
-grpc.WithBalancerName
-grpc.WithCompressor
-grpc.WithDecompressor
-grpc.WithDialer
-grpc.WithMaxMsgSize
-grpc.WithServiceConfig
-grpc.WithTimeout
-http.CloseNotifier
-info.SecurityVersion
-naming.Resolver
-naming.Update
-naming.Watcher
-resolver.Backend
-resolver.GRPCLB' "${SC_OUT}"
-
-echo SUCCESS
+# TODO(dfawley): don't use deprecated functions in examples.
+staticcheck -go 1.9 -checks 'inherit,-ST1015' -ignore '
+google.golang.org/grpc/balancer.go:SA1019
+google.golang.org/grpc/balancer/grpclb/grpclb_remote_balancer.go:SA1019
+google.golang.org/grpc/balancer/roundrobin/roundrobin_test.go:SA1019
+google.golang.org/grpc/xds/internal/balancer/edsbalancer/balancergroup.go:SA1019
+google.golang.org/grpc/xds/internal/balancer/xds.go:SA1019
+google.golang.org/grpc/xds/internal/balancer/xds_client.go:SA1019
+google.golang.org/grpc/balancer_conn_wrappers.go:SA1019
+google.golang.org/grpc/balancer_test.go:SA1019
+google.golang.org/grpc/benchmark/benchmain/main.go:SA1019
+google.golang.org/grpc/benchmark/worker/benchmark_client.go:SA1019
+google.golang.org/grpc/clientconn.go:S1024
+google.golang.org/grpc/clientconn_state_transition_test.go:SA1019
+google.golang.org/grpc/clientconn_test.go:SA1019
+google.golang.org/grpc/examples/features/debugging/client/main.go:SA1019
+google.golang.org/grpc/examples/features/load_balancing/client/main.go:SA1019
+google.golang.org/grpc/internal/transport/handler_server.go:SA1019
+google.golang.org/grpc/internal/transport/handler_server_test.go:SA1019
+google.golang.org/grpc/resolver/dns/dns_resolver.go:SA1019
+google.golang.org/grpc/stats/stats_test.go:SA1019
+google.golang.org/grpc/test/balancer_test.go:SA1019
+google.golang.org/grpc/test/channelz_test.go:SA1019
+google.golang.org/grpc/test/end2end_test.go:SA1019
+google.golang.org/grpc/test/healthcheck_test.go:SA1019
+' ./...
+misspell -error .

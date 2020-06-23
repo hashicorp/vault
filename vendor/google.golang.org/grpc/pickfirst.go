@@ -19,14 +19,12 @@
 package grpc
 
 import (
-	"errors"
+	"context"
 
 	"google.golang.org/grpc/balancer"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/resolver"
-	"google.golang.org/grpc/status"
 )
 
 // PickFirstBalancerName is the name of the pick_first balancer.
@@ -47,67 +45,35 @@ func (*pickfirstBuilder) Name() string {
 }
 
 type pickfirstBalancer struct {
-	state connectivity.State
-	cc    balancer.ClientConn
-	sc    balancer.SubConn
+	cc balancer.ClientConn
+	sc balancer.SubConn
 }
-
-var _ balancer.V2Balancer = &pickfirstBalancer{} // Assert we implement v2
 
 func (b *pickfirstBalancer) HandleResolvedAddrs(addrs []resolver.Address, err error) {
 	if err != nil {
-		b.ResolverError(err)
+		if grpclog.V(2) {
+			grpclog.Infof("pickfirstBalancer: HandleResolvedAddrs called with error %v", err)
+		}
 		return
 	}
-	b.UpdateClientConnState(balancer.ClientConnState{ResolverState: resolver.State{Addresses: addrs}}) // Ignore error
-}
-
-func (b *pickfirstBalancer) HandleSubConnStateChange(sc balancer.SubConn, s connectivity.State) {
-	b.UpdateSubConnState(sc, balancer.SubConnState{ConnectivityState: s})
-}
-
-func (b *pickfirstBalancer) ResolverError(err error) {
-	switch b.state {
-	case connectivity.TransientFailure, connectivity.Idle, connectivity.Connecting:
-		// Set a failing picker if we don't have a good picker.
-		b.cc.UpdateState(balancer.State{ConnectivityState: connectivity.TransientFailure,
-			Picker: &picker{err: status.Errorf(codes.Unavailable, "name resolver error: %v", err)}},
-		)
-	}
-	if grpclog.V(2) {
-		grpclog.Infof("pickfirstBalancer: ResolverError called with error %v", err)
-	}
-}
-
-func (b *pickfirstBalancer) UpdateClientConnState(cs balancer.ClientConnState) error {
-	if len(cs.ResolverState.Addresses) == 0 {
-		b.ResolverError(errors.New("produced zero addresses"))
-		return balancer.ErrBadResolverState
-	}
 	if b.sc == nil {
-		var err error
-		b.sc, err = b.cc.NewSubConn(cs.ResolverState.Addresses, balancer.NewSubConnOptions{})
+		b.sc, err = b.cc.NewSubConn(addrs, balancer.NewSubConnOptions{})
 		if err != nil {
+			//TODO(yuxuanli): why not change the cc state to Idle?
 			if grpclog.V(2) {
 				grpclog.Errorf("pickfirstBalancer: failed to NewSubConn: %v", err)
 			}
-			b.state = connectivity.TransientFailure
-			b.cc.UpdateState(balancer.State{ConnectivityState: connectivity.TransientFailure,
-				Picker: &picker{err: status.Errorf(codes.Unavailable, "error creating connection: %v", err)}},
-			)
-			return balancer.ErrBadResolverState
+			return
 		}
-		b.state = connectivity.Idle
-		b.cc.UpdateState(balancer.State{ConnectivityState: connectivity.Idle, Picker: &picker{result: balancer.PickResult{SubConn: b.sc}}})
+		b.cc.UpdateBalancerState(connectivity.Idle, &picker{sc: b.sc})
 		b.sc.Connect()
 	} else {
-		b.sc.UpdateAddresses(cs.ResolverState.Addresses)
+		b.sc.UpdateAddresses(addrs)
 		b.sc.Connect()
 	}
-	return nil
 }
 
-func (b *pickfirstBalancer) UpdateSubConnState(sc balancer.SubConn, s balancer.SubConnState) {
+func (b *pickfirstBalancer) HandleSubConnStateChange(sc balancer.SubConn, s connectivity.State) {
 	if grpclog.V(2) {
 		grpclog.Infof("pickfirstBalancer: HandleSubConnStateChange: %p, %v", sc, s)
 	}
@@ -117,28 +83,18 @@ func (b *pickfirstBalancer) UpdateSubConnState(sc balancer.SubConn, s balancer.S
 		}
 		return
 	}
-	b.state = s.ConnectivityState
-	if s.ConnectivityState == connectivity.Shutdown {
+	if s == connectivity.Shutdown {
 		b.sc = nil
 		return
 	}
 
-	switch s.ConnectivityState {
+	switch s {
 	case connectivity.Ready, connectivity.Idle:
-		b.cc.UpdateState(balancer.State{ConnectivityState: s.ConnectivityState, Picker: &picker{result: balancer.PickResult{SubConn: sc}}})
+		b.cc.UpdateBalancerState(s, &picker{sc: sc})
 	case connectivity.Connecting:
-		b.cc.UpdateState(balancer.State{ConnectivityState: s.ConnectivityState, Picker: &picker{err: balancer.ErrNoSubConnAvailable}})
+		b.cc.UpdateBalancerState(s, &picker{err: balancer.ErrNoSubConnAvailable})
 	case connectivity.TransientFailure:
-		err := balancer.ErrTransientFailure
-		// TODO: this can be unconditional after the V1 API is removed, as
-		// SubConnState will always contain a connection error.
-		if s.ConnectionError != nil {
-			err = balancer.TransientFailureError(s.ConnectionError)
-		}
-		b.cc.UpdateState(balancer.State{
-			ConnectivityState: s.ConnectivityState,
-			Picker:            &picker{err: err},
-		})
+		b.cc.UpdateBalancerState(s, &picker{err: balancer.ErrTransientFailure})
 	}
 }
 
@@ -146,12 +102,15 @@ func (b *pickfirstBalancer) Close() {
 }
 
 type picker struct {
-	result balancer.PickResult
-	err    error
+	err error
+	sc  balancer.SubConn
 }
 
-func (p *picker) Pick(info balancer.PickInfo) (balancer.PickResult, error) {
-	return p.result, p.err
+func (p *picker) Pick(ctx context.Context, opts balancer.PickOptions) (balancer.SubConn, func(balancer.DoneInfo), error) {
+	if p.err != nil {
+		return nil, nil, p.err
+	}
+	return p.sc, nil, nil
 }
 
 func init() {

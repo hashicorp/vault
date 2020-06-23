@@ -19,6 +19,7 @@
 package grpc
 
 import (
+	"context"
 	"sync"
 
 	"google.golang.org/grpc/balancer"
@@ -48,7 +49,7 @@ func (bwb *balancerWrapperBuilder) Build(cc balancer.ClientConn, opts balancer.B
 		csEvltr:    &balancer.ConnectivityStateEvaluator{},
 		state:      connectivity.Idle,
 	}
-	cc.UpdateState(balancer.State{ConnectivityState: connectivity.Idle, Picker: bw})
+	cc.UpdateBalancerState(connectivity.Idle, bw)
 	go bw.lbWatcher()
 	return bw
 }
@@ -242,7 +243,7 @@ func (bw *balancerWrapper) HandleSubConnStateChange(sc balancer.SubConn, s conne
 	if bw.state != sa {
 		bw.state = sa
 	}
-	bw.cc.UpdateState(balancer.State{ConnectivityState: bw.state, Picker: bw})
+	bw.cc.UpdateBalancerState(bw.state, bw)
 	if s == connectivity.Shutdown {
 		// Remove state for this sc.
 		delete(bw.connSt, sc)
@@ -274,17 +275,17 @@ func (bw *balancerWrapper) Close() {
 
 // The picker is the balancerWrapper itself.
 // It either blocks or returns error, consistent with v1 balancer Get().
-func (bw *balancerWrapper) Pick(info balancer.PickInfo) (result balancer.PickResult, err error) {
+func (bw *balancerWrapper) Pick(ctx context.Context, opts balancer.PickOptions) (sc balancer.SubConn, done func(balancer.DoneInfo), err error) {
 	failfast := true // Default failfast is true.
-	if ss, ok := rpcInfoFromContext(info.Ctx); ok {
+	if ss, ok := rpcInfoFromContext(ctx); ok {
 		failfast = ss.failfast
 	}
-	a, p, err := bw.balancer.Get(info.Ctx, BalancerGetOptions{BlockingWait: !failfast})
+	a, p, err := bw.balancer.Get(ctx, BalancerGetOptions{BlockingWait: !failfast})
 	if err != nil {
-		return balancer.PickResult{}, toRPCErr(err)
+		return nil, nil, err
 	}
 	if p != nil {
-		result.Done = func(balancer.DoneInfo) { p() }
+		done = func(balancer.DoneInfo) { p() }
 		defer func() {
 			if err != nil {
 				p()
@@ -296,39 +297,38 @@ func (bw *balancerWrapper) Pick(info balancer.PickInfo) (result balancer.PickRes
 	defer bw.mu.Unlock()
 	if bw.pickfirst {
 		// Get the first sc in conns.
-		for _, result.SubConn = range bw.conns {
-			return result, nil
+		for _, sc := range bw.conns {
+			return sc, done, nil
 		}
-		return balancer.PickResult{}, balancer.ErrNoSubConnAvailable
+		return nil, nil, balancer.ErrNoSubConnAvailable
 	}
-	var ok1 bool
-	result.SubConn, ok1 = bw.conns[resolver.Address{
+	sc, ok1 := bw.conns[resolver.Address{
 		Addr:       a.Addr,
 		Type:       resolver.Backend,
 		ServerName: "",
 		Metadata:   a.Metadata,
 	}]
-	s, ok2 := bw.connSt[result.SubConn]
+	s, ok2 := bw.connSt[sc]
 	if !ok1 || !ok2 {
 		// This can only happen due to a race where Get() returned an address
 		// that was subsequently removed by Notify.  In this case we should
 		// retry always.
-		return balancer.PickResult{}, balancer.ErrNoSubConnAvailable
+		return nil, nil, balancer.ErrNoSubConnAvailable
 	}
 	switch s.s {
 	case connectivity.Ready, connectivity.Idle:
-		return result, nil
+		return sc, done, nil
 	case connectivity.Shutdown, connectivity.TransientFailure:
 		// If the returned sc has been shut down or is in transient failure,
 		// return error, and this RPC will fail or wait for another picker (if
 		// non-failfast).
-		return balancer.PickResult{}, balancer.ErrTransientFailure
+		return nil, nil, balancer.ErrTransientFailure
 	default:
 		// For other states (connecting or unknown), the v1 balancer would
 		// traditionally wait until ready and then issue the RPC.  Returning
 		// ErrNoSubConnAvailable will be a slight improvement in that it will
 		// allow the balancer to choose another address in case others are
 		// connected.
-		return balancer.PickResult{}, balancer.ErrNoSubConnAvailable
+		return nil, nil, balancer.ErrNoSubConnAvailable
 	}
 }

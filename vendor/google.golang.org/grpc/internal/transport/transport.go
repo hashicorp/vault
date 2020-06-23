@@ -73,11 +73,10 @@ type recvMsg struct {
 }
 
 // recvBuffer is an unbounded channel of recvMsg structs.
-//
-// Note: recvBuffer differs from buffer.Unbounded only in the fact that it
-// holds a channel of recvMsg structs instead of objects implementing "item"
-// interface. recvBuffer is written to much more often and using strict recvMsg
-// structs helps avoid allocation in "recvBuffer.put"
+// Note recvBuffer differs from controlBuffer only in that recvBuffer
+// holds a channel of only recvMsg structs instead of objects implementing "item" interface.
+// recvBuffer is written to much more often than
+// controlBuffer and using strict recvMsg structs helps avoid allocation in "recvBuffer.put"
 type recvBuffer struct {
 	c       chan recvMsg
 	mu      sync.Mutex
@@ -234,7 +233,6 @@ const (
 type Stream struct {
 	id           uint32
 	st           ServerTransport    // nil for client side Stream
-	ct           *http2Client       // nil for server side Stream
 	ctx          context.Context    // the associated context of the stream
 	cancel       context.CancelFunc // always nil for client side Stream
 	done         chan struct{}      // closed at the end of stream to unblock writers. On the client side.
@@ -253,10 +251,6 @@ type Stream struct {
 
 	headerChan       chan struct{} // closed to indicate the end of header metadata.
 	headerChanClosed uint32        // set when headerChan is closed. Used to avoid closing headerChan multiple times.
-	// headerValid indicates whether a valid header was received.  Only
-	// meaningful after headerChan is closed (always call waitOnHeader() before
-	// reading its value).  Not valid on server side.
-	headerValid bool
 
 	// hdrMu protects header and trailer metadata on the server-side.
 	hdrMu sync.Mutex
@@ -309,28 +303,34 @@ func (s *Stream) getState() streamState {
 	return streamState(atomic.LoadUint32((*uint32)(&s.state)))
 }
 
-func (s *Stream) waitOnHeader() {
+func (s *Stream) waitOnHeader() error {
 	if s.headerChan == nil {
 		// On the server headerChan is always nil since a stream originates
 		// only after having received headers.
-		return
+		return nil
 	}
 	select {
 	case <-s.ctx.Done():
-		// Close the stream to prevent headers/trailers from changing after
-		// this function returns.
-		s.ct.CloseStream(s, ContextErr(s.ctx.Err()))
-		// headerChan could possibly not be closed yet if closeStream raced
-		// with operateHeaders; wait until it is closed explicitly here.
-		<-s.headerChan
+		// We prefer success over failure when reading messages because we delay
+		// context error in stream.Read(). To keep behavior consistent, we also
+		// prefer success here.
+		select {
+		case <-s.headerChan:
+			return nil
+		default:
+		}
+		return ContextErr(s.ctx.Err())
 	case <-s.headerChan:
+		return nil
 	}
 }
 
 // RecvCompress returns the compression algorithm applied to the inbound
 // message. It is empty string if there is no compression applied.
 func (s *Stream) RecvCompress() string {
-	s.waitOnHeader()
+	if err := s.waitOnHeader(); err != nil {
+		return ""
+	}
 	return s.recvCompress
 }
 
@@ -351,27 +351,36 @@ func (s *Stream) Done() <-chan struct{} {
 // available. It blocks until i) the metadata is ready or ii) there is no header
 // metadata or iii) the stream is canceled/expired.
 //
-// On server side, it returns the out header after t.WriteHeader is called.  It
-// does not block and must not be called until after WriteHeader.
+// On server side, it returns the out header after t.WriteHeader is called.
 func (s *Stream) Header() (metadata.MD, error) {
-	if s.headerChan == nil {
+	if s.headerChan == nil && s.header != nil {
 		// On server side, return the header in stream. It will be the out
 		// header after t.WriteHeader is called.
 		return s.header.Copy(), nil
 	}
-	s.waitOnHeader()
-	if !s.headerValid {
-		return nil, s.status.Err()
+	err := s.waitOnHeader()
+	// Even if the stream is closed, header is returned if available.
+	select {
+	case <-s.headerChan:
+		if s.header == nil {
+			return nil, nil
+		}
+		return s.header.Copy(), nil
+	default:
 	}
-	return s.header.Copy(), nil
+	return nil, err
 }
 
 // TrailersOnly blocks until a header or trailers-only frame is received and
 // then returns true if the stream was trailers-only.  If the stream ends
-// before headers are received, returns true, nil.  Client-side only.
-func (s *Stream) TrailersOnly() bool {
-	s.waitOnHeader()
-	return s.noHeaders
+// before headers are received, returns true, nil.  If a context error happens
+// first, returns it as a status error.  Client-side only.
+func (s *Stream) TrailersOnly() (bool, error) {
+	err := s.waitOnHeader()
+	if err != nil {
+		return false, err
+	}
+	return s.noHeaders, nil
 }
 
 // Trailer returns the cached trailer metedata. Note that if it is not called
@@ -525,7 +534,6 @@ type ServerConfig struct {
 	ReadBufferSize        int
 	ChannelzParentID      int64
 	MaxHeaderListSize     *uint32
-	HeaderTableSize       *uint32
 }
 
 // NewServerTransport creates a ServerTransport with conn or non-nil error

@@ -19,6 +19,7 @@
 package grpclb
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 
@@ -29,7 +30,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// rpcStats is same as lbpb.ClientStats, except that numCallsDropped is a map
+// rpcStats is same as lbmpb.ClientStats, except that numCallsDropped is a map
 // instead of a slice.
 type rpcStats struct {
 	// Only access the following fields atomically.
@@ -47,14 +48,6 @@ func newRPCStats() *rpcStats {
 	return &rpcStats{
 		numCallsDropped: make(map[string]int64),
 	}
-}
-
-func isZeroStats(stats *lbpb.ClientStats) bool {
-	return len(stats.CallsFinishedWithDrop) == 0 &&
-		stats.NumCallsStarted == 0 &&
-		stats.NumCallsFinished == 0 &&
-		stats.NumCallsFinishedWithClientFailedToSend == 0 &&
-		stats.NumCallsFinishedKnownReceived == 0
 }
 
 // toClientStats converts rpcStats to lbpb.ClientStats, and clears rpcStats.
@@ -103,8 +96,8 @@ type errPicker struct {
 	err error
 }
 
-func (p *errPicker) Pick(balancer.PickInfo) (balancer.PickResult, error) {
-	return balancer.PickResult{}, p.err
+func (p *errPicker) Pick(ctx context.Context, opts balancer.PickOptions) (balancer.SubConn, func(balancer.DoneInfo), error) {
+	return nil, nil, p.err
 }
 
 // rrPicker does roundrobin on subConns. It's typically used when there's no
@@ -125,12 +118,12 @@ func newRRPicker(readySCs []balancer.SubConn) *rrPicker {
 	}
 }
 
-func (p *rrPicker) Pick(balancer.PickInfo) (balancer.PickResult, error) {
+func (p *rrPicker) Pick(ctx context.Context, opts balancer.PickOptions) (balancer.SubConn, func(balancer.DoneInfo), error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	sc := p.subConns[p.subConnsNext]
 	p.subConnsNext = (p.subConnsNext + 1) % len(p.subConns)
-	return balancer.PickResult{SubConn: sc}, nil
+	return sc, nil, nil
 }
 
 // lbPicker does two layers of picks:
@@ -161,7 +154,7 @@ func newLBPicker(serverList []*lbpb.Server, readySCs []balancer.SubConn, stats *
 	}
 }
 
-func (p *lbPicker) Pick(balancer.PickInfo) (balancer.PickResult, error) {
+func (p *lbPicker) Pick(ctx context.Context, opts balancer.PickOptions) (balancer.SubConn, func(balancer.DoneInfo), error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -172,12 +165,12 @@ func (p *lbPicker) Pick(balancer.PickInfo) (balancer.PickResult, error) {
 	// If it's a drop, return an error and fail the RPC.
 	if s.Drop {
 		p.stats.drop(s.LoadBalanceToken)
-		return balancer.PickResult{}, status.Errorf(codes.Unavailable, "request dropped by grpclb")
+		return nil, nil, status.Errorf(codes.Unavailable, "request dropped by grpclb")
 	}
 
 	// If not a drop but there's no ready subConns.
 	if len(p.subConns) <= 0 {
-		return balancer.PickResult{}, balancer.ErrNoSubConnAvailable
+		return nil, nil, balancer.ErrNoSubConnAvailable
 	}
 
 	// Return the next ready subConn in the list, also collect rpc stats.
@@ -190,7 +183,7 @@ func (p *lbPicker) Pick(balancer.PickInfo) (balancer.PickResult, error) {
 			p.stats.knownReceived()
 		}
 	}
-	return balancer.PickResult{SubConn: sc, Done: done}, nil
+	return sc, done, nil
 }
 
 func (p *lbPicker) updateReadySCs(readySCs []balancer.SubConn) {

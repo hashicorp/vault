@@ -64,9 +64,6 @@ var (
 	concurrentHandshakes = int64(0)
 	// errDropped occurs when maxPendingHandshakes is reached.
 	errDropped = errors.New("maximum number of concurrent ALTS handshakes is reached")
-	// errOutOfBound occurs when the handshake service returns a consumed
-	// bytes value larger than the buffer that was passed to it originally.
-	errOutOfBound = errors.New("handshaker service consumed bytes value is out-of-bound")
 )
 
 func init() {
@@ -77,10 +74,8 @@ func init() {
 	}
 }
 
-func acquire() bool {
+func acquire(n int64) bool {
 	mu.Lock()
-	// If we need n to be configurable, we can pass it as an argument.
-	n := int64(1)
 	success := maxPendingHandshakes-concurrentHandshakes >= n
 	if success {
 		concurrentHandshakes += n
@@ -89,10 +84,8 @@ func acquire() bool {
 	return success
 }
 
-func release() {
+func release(n int64) {
 	mu.Lock()
-	// If we need n to be configurable, we can pass it as an argument.
-	n := int64(1)
 	concurrentHandshakes -= n
 	if concurrentHandshakes < 0 {
 		mu.Unlock()
@@ -189,10 +182,10 @@ func NewServerHandshaker(ctx context.Context, conn *grpc.ClientConn, c net.Conn,
 // ClientHandshake starts and completes a client ALTS handshaking for GCP. Once
 // done, ClientHandshake returns a secure connection.
 func (h *altsHandshaker) ClientHandshake(ctx context.Context) (net.Conn, credentials.AuthInfo, error) {
-	if !acquire() {
+	if !acquire(1) {
 		return nil, nil, errDropped
 	}
-	defer release()
+	defer release(1)
 
 	if h.side != core.ClientSide {
 		return nil, nil, errors.New("only handshakers created using NewClientHandshaker can perform a client handshaker")
@@ -232,10 +225,10 @@ func (h *altsHandshaker) ClientHandshake(ctx context.Context) (net.Conn, credent
 // ServerHandshake starts and completes a server ALTS handshaking for GCP. Once
 // done, ServerHandshake returns a secure connection.
 func (h *altsHandshaker) ServerHandshake(ctx context.Context) (net.Conn, credentials.AuthInfo, error) {
-	if !acquire() {
+	if !acquire(1) {
 		return nil, nil, errDropped
 	}
-	defer release()
+	defer release(1)
 
 	if h.side != core.ServerSide {
 		return nil, nil, errors.New("only handshakers created using NewServerHandshaker can perform a server handshaker")
@@ -287,9 +280,6 @@ func (h *altsHandshaker) doHandshake(req *altspb.HandshakerReq) (net.Conn, *alts
 
 	var extra []byte
 	if req.GetServerStart() != nil {
-		if resp.GetBytesConsumed() > uint32(len(req.GetServerStart().GetInBytes())) {
-			return nil, nil, errOutOfBound
-		}
 		extra = req.GetServerStart().GetInBytes()[resp.GetBytesConsumed():]
 	}
 	result, extra, err := h.processUntilDone(resp, extra)
@@ -349,7 +339,6 @@ func (h *altsHandshaker) processUntilDone(resp *altspb.HandshakerResp, extra []b
 		// Append extra bytes from the previous interaction with the
 		// handshaker service with the current buffer read from conn.
 		p := append(extra, buf[:n]...)
-		// From here on, p and extra point to the same slice.
 		resp, err = h.accessHandshakerService(&altspb.HandshakerReq{
 			ReqOneof: &altspb.HandshakerReq_Next{
 				Next: &altspb.NextHandshakeMessageReq{
@@ -361,10 +350,11 @@ func (h *altsHandshaker) processUntilDone(resp *altspb.HandshakerResp, extra []b
 			return nil, nil, err
 		}
 		// Set extra based on handshaker service response.
-		if resp.GetBytesConsumed() > uint32(len(p)) {
-			return nil, nil, errOutOfBound
+		if n == 0 {
+			extra = nil
+		} else {
+			extra = buf[resp.GetBytesConsumed():n]
 		}
-		extra = p[resp.GetBytesConsumed():]
 	}
 }
 
