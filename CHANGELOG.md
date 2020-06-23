@@ -54,10 +54,18 @@ BUG FIXES:
 ## 1.4.3 (TBD)
 
 IMPROVEMENTS:
+
+* core: Add the Go version used to build a Vault binary to the server message output. [[GH-9078](https://github.com/hashicorp/vault/pull/9078)]
 * auth/aws: Add support for Web Identity credentials [[GH-9251](https://github.com/hashicorp/vault/pull/9251)]
+* ui: Link to the Vault Changelog in the UI footer [[GH-9216](https://github.com/hashicorp/vault/pull/9216)]
 
 BUG FIXES:
+
+* auth/oci: Fix issue where users of the Oracle Cloud Infrastructure (OCI) auth method could not authenticate when the plugin backend was mounted at a non-default path. [[GH-9278](https://github.com/hashicorp/vault/pull/9278)]
 * replication: The issue causing cubbyholes in namespaces on performance secondaries to not work, which was fixed in 1.4.0, was still an issue when the primary was both a performance primary and DR primary.
+* secrets/aws: Fix issue where performance standbys weren't able to generate STS credentials after an IAM access key rotation in AWS and root IAM credential update in Vault [[GH-9207](https://github.com/hashicorp/vault/pull/9207)]
+* secrets/database: Fix issue that prevents performance standbys from connecting to databases after a root credential rotation [[GH-9208](https://github.com/hashicorp/vault/pull/9208)]
+* secrets/gcp: Fix issue were updates were not being applied to the `token_scopes` of a roleset. [[GH-9277](https://github.com/hashicorp/vault/pull/9277)]
 
 ## 1.4.2 (May 21st, 2020)
 
