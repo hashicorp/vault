@@ -964,8 +964,6 @@ func (dc *DockerCluster) Setup() error {
 			Type: registryName,
 		})
 	case stepwise.PluginTypeDatabase:
-		// TODO database type
-		return errors.New("plugin type database not yet supported")
 	case stepwise.PluginTypeSecrets:
 		err = client.Sys().Mount(dc.MountPath(), &api.MountInput{
 			Type: registryName,
@@ -989,9 +987,7 @@ type Runner struct {
 func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, error) {
 	hostConfig := &container.HostConfig{
 		PublishAllPorts: true,
-		// TODO: configure auto remove
-		// AutoRemove:      false,
-		AutoRemove: true,
+		AutoRemove:      true,
 	}
 
 	networkingConfig := &network.NetworkingConfig{}
