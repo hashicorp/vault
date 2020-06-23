@@ -82,8 +82,10 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 	}
 
 	if raftBackend := s.core.getRaftBackend(); raftBackend != nil {
-		reply.RaftAppliedIndex = raftBackend.AppliedIndex()
-		reply.RaftNodeID = raftBackend.NodeID()
+		if !s.core.isRaftHAOnly() {
+			reply.RaftAppliedIndex = raftBackend.AppliedIndex()
+			reply.RaftNodeID = raftBackend.NodeID()
+		}
 	}
 
 	return reply, nil
@@ -111,8 +113,10 @@ func (c *forwardingClient) startHeartbeat() {
 			}
 
 			if raftBackend := c.core.getRaftBackend(); raftBackend != nil {
-				req.RaftAppliedIndex = raftBackend.AppliedIndex()
-				req.RaftNodeID = raftBackend.NodeID()
+				if !c.core.isRaftHAOnly() {
+					req.RaftAppliedIndex = raftBackend.AppliedIndex()
+					req.RaftNodeID = raftBackend.NodeID()
+				}
 			}
 
 			ctx, cancel := context.WithTimeout(c.echoContext, 2*time.Second)
