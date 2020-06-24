@@ -279,8 +279,8 @@ type ReloadStatus struct {
 
 // ReloadStatusResponse is the combined response of all known completed plugin reloads
 type ReloadStatusResponse struct {
-	ReloadID string                  `mapstructure:"reload_id"`
-	Results  map[string]ReloadStatus `mapstructure:"results"`
+	ReloadID string                   `mapstructure:"reload_id"`
+	Results  map[string]*ReloadStatus `mapstructure:"results"`
 }
 
 // ReloadPluginStatusInput is used as input to the ReloadStatusPlugin function.
