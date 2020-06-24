@@ -29,7 +29,6 @@ import (
 	"github.com/hashicorp/vault/helper/monitor"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
-	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -166,7 +165,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
 	}
 
-	if _, ok := core.underlyingPhysical.(*raft.RaftBackend); ok {
+	if backend := core.getRaftBackend(); backend != nil {
 		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
 	}
 

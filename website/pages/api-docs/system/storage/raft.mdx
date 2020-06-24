@@ -141,6 +141,7 @@ $ curl \
 
 This endpoint returns a snapshot of the current state of the raft cluster. The
 snapshot is returned as binary data and should be redirected to a file.
+Unavailable if Raft is used exclusively for `ha_storage`.
 
 | Method | Path                         |
 | :----- | :--------------------------- |
@@ -157,7 +158,8 @@ $ curl \
 
 ## Restore Raft using a snapshot
 
-Installs the provided snapshot, returning the cluster to the state defined in it.
+Installs the provided snapshot, returning the cluster to the state defined in
+it. Unavailable if Raft is used exclusively for `ha_storage`.
 
 | Method | Path                         |
 | :----- | :--------------------------- |
@@ -178,7 +180,7 @@ $ curl \
 Installs the provided snapshot, returning the cluster to the state defined in
 it. This is same as writing to `/sys/storage/raft/snapshot` except that this
 bypasses checks ensuring the Autounseal or shamir keys are consistent with the
-snapshot data.
+snapshot data. Unavailable if Raft is used exclusively for `ha_storage`.
 
 | Method | Path                               |
 | :----- | :--------------------------------- |
