@@ -168,12 +168,21 @@ jobs:
       - checkout
       - write-all-package-cache-keys
       {{- range $packages}}
-      - load-{{.meta.BUILD_JOB_NAME}}{{end}}
+      - load-{{.meta.BUILD_JOB_NAME}}
       - run:
-          name: List Packages
+          environment:
+            PACKAGE_SPEC_ID: {{.packagespecid}}
+          name: Write package metadata for {{.meta.BUILD_JOB_NAME}}
           command: |
-            echo "Current workdir is: $PWD"
-            ls -lahR .
+            make package-meta
+      {{- end}}
+      - run:
+          name: Write package aliases
+          command:
+            make aliases
+      - run:
+          name: List Build Cache
+          command: ls -lahR .buildcache
       # Surface each zip as a separate artifact.
       - store_artifacts:
           path: .buildcache/packages
