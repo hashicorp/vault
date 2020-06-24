@@ -95,7 +95,7 @@ $(META): $(LOCK)
 	@$(call QUERY_PACKAGESPEC,.) > $@
 
 # PACKAGE builds the package.
-$(PACKAGE): $(BUILD_LAYER_IMAGE) $(META)
+$(PACKAGE): $(BUILD_LAYER_IMAGE)
 	@mkdir -p $$(dirname $@)
 	@echo "==> Building package: $@"
 	@echo "PACKAGE_SOURCE_ID: $(PACKAGE_SOURCE_ID)"
