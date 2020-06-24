@@ -401,7 +401,7 @@ github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
 # github.com/hashicorp/vault-plugin-auth-jwt v0.6.2
 github.com/hashicorp/vault-plugin-auth-jwt
-# github.com/hashicorp/vault-plugin-auth-kerberos v0.1.5
+# github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6-0.20200527181845-3c7b47e8be2c
 github.com/hashicorp/vault-plugin-auth-kerberos
 # github.com/hashicorp/vault-plugin-auth-kubernetes v0.6.1
 github.com/hashicorp/vault-plugin-auth-kubernetes
