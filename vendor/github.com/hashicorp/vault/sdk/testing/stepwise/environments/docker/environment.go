@@ -1,7 +1,6 @@
 package docker
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -49,35 +48,36 @@ var _ stepwise.Environment = &DockerCluster{}
 type DockerCluster struct {
 	// PluginName is the input from the test case
 	PluginName string
-	// ClusterName is a UUID name of the cluster. Docker ID?
+	// ClusterName is a UUID name of the cluster.
 	CluterName string
 
-	// MountOptions are a set of options from the Stepwise test using this
-	// cluster
+	// MountOptions are a set of options for registering and mounting the plugin
 	MountOptions stepwise.MountOptions
 
-	RaftStorage        bool
-	ClientAuthRequired bool
-	BarrierKeys        [][]byte
-	RecoveryKeys       [][]byte
-	CACertBytes        []byte
-	CACertPEM          []byte
-	CAKeyPEM           []byte
-	CACertPEMFile      string
-	ID                 string
-	TempDir            string
-	ClusterName        string
-	RootCAs            *x509.CertPool
-	CACert             *x509.Certificate
-	CAKey              *ecdsa.PrivateKey
-	CleanupFunc        func()
-	SetupFunc          func()
-	ClusterNodes       []*DockerClusterNode
+	RaftStorage   bool
+	CACertBytes   []byte
+	CACertPEM     []byte
+	CAKeyPEM      []byte
+	CACertPEMFile string
+	ID            string
+	ClusterName   string
+	RootCAs       *x509.CertPool
+	CACert        *x509.Certificate
+	CAKey         *ecdsa.PrivateKey
+	CleanupFunc   func()
+	SetupFunc     func()
+	ClusterNodes  []*DockerClusterNode
 
-	rootToken string
+	barrierKeys  [][]byte
+	recoveryKeys [][]byte
+	tmpDir       string
 
+	clientAuthRequired bool
 	// the mountpath of the plugin under test
 	mountPath string
+	// rootToken is the initial root token created when the Vault cluster is
+	// created.
+	rootToken string
 }
 
 // Teardown stops all the containers.
@@ -95,7 +95,6 @@ func (rc *DockerCluster) Teardown() error {
 // MountPath returns the path that the plugin under test is mounted at. If a
 // MountPathPrefix was given, the mount path uses the prefix with a uuid
 // appended. The default is the given PluginName with a uuid suffix.
-// TODO: include namespace support
 func (dc *DockerCluster) MountPath() string {
 	if dc.mountPath != "" {
 		return dc.mountPath
@@ -120,10 +119,12 @@ func (dc *DockerCluster) RootToken() string {
 	return dc.rootToken
 }
 
+// Name returns the name of this environment
 func (dc *DockerCluster) Name() string {
-	return dc.ClusterName
+	return "Docker"
 }
 
+// Client returns a clone of the configured Vault API client.
 func (dc *DockerCluster) Client() (*api.Client, error) {
 	if len(dc.ClusterNodes) > 0 {
 		if dc.ClusterNodes[0].Client != nil {
@@ -139,63 +140,8 @@ func (dc *DockerCluster) Client() (*api.Client, error) {
 	return nil, errors.New("no configured client found")
 }
 
-func (rc *DockerCluster) GetBarrierOrRecoveryKeys() [][]byte {
-	return rc.GetBarrierKeys()
-}
-
-func (rc *DockerCluster) GetCACertPEMFile() string {
-	return rc.CACertPEMFile
-}
-
-func (rc *DockerCluster) ClusterID() string {
-	return rc.ID
-}
-
 func (n *DockerClusterNode) Name() string {
 	return n.Cluster.ClusterName + "-" + n.NodeID
-}
-
-type VaultClusterNode interface {
-	Name() string
-	APIClient() *api.Client
-}
-
-func (rc *DockerCluster) Nodes() []VaultClusterNode {
-	ret := make([]VaultClusterNode, len(rc.ClusterNodes))
-	for i, core := range rc.ClusterNodes {
-		ret[i] = core
-	}
-	return ret
-}
-
-func (rc *DockerCluster) GetBarrierKeys() [][]byte {
-	ret := make([][]byte, len(rc.BarrierKeys))
-	for i, k := range rc.BarrierKeys {
-		ret[i] = vault.TestKeyCopy(k)
-	}
-	return ret
-}
-
-func (rc *DockerCluster) GetRecoveryKeys() [][]byte {
-	ret := make([][]byte, len(rc.RecoveryKeys))
-	for i, k := range rc.RecoveryKeys {
-		ret[i] = vault.TestKeyCopy(k)
-	}
-	return ret
-}
-
-func (rc *DockerCluster) SetBarrierKeys(keys [][]byte) {
-	rc.BarrierKeys = make([][]byte, len(keys))
-	for i, k := range keys {
-		rc.BarrierKeys[i] = vault.TestKeyCopy(k)
-	}
-}
-
-func (rc *DockerCluster) SetRecoveryKeys(keys [][]byte) {
-	rc.RecoveryKeys = make([][]byte, len(keys))
-	for i, k := range keys {
-		rc.RecoveryKeys[i] = vault.TestKeyCopy(k)
-	}
 }
 
 func (rc *DockerCluster) Initialize(ctx context.Context) error {
@@ -227,41 +173,18 @@ func (rc *DockerCluster) Initialize(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		rc.BarrierKeys = append(rc.BarrierKeys, raw)
+		rc.barrierKeys = append(rc.barrierKeys, raw)
 	}
+
 	for _, k := range resp.RecoveryKeys {
 		raw, err := hex.DecodeString(k)
 		if err != nil {
 			return err
 		}
-		rc.RecoveryKeys = append(rc.RecoveryKeys, raw)
+		rc.recoveryKeys = append(rc.recoveryKeys, raw)
 	}
-	rc.rootToken = resp.RootToken
 
-	// Write root token and barrier keys
-	err = ioutil.WriteFile(filepath.Join(rc.TempDir, "root_token"), []byte(rc.rootToken), 0755)
-	if err != nil {
-		return err
-	}
-	var buf bytes.Buffer
-	for _, key := range rc.BarrierKeys {
-		// TODO handle errors?
-		_, _ = buf.Write(key)
-		_, _ = buf.WriteRune('\n')
-	}
-	err = ioutil.WriteFile(filepath.Join(rc.TempDir, "barrier_keys"), buf.Bytes(), 0755)
-	if err != nil {
-		return err
-	}
-	for _, key := range rc.RecoveryKeys {
-		// TODO handle errors?
-		_, _ = buf.Write(key)
-		_, _ = buf.WriteRune('\n')
-	}
-	err = ioutil.WriteFile(filepath.Join(rc.TempDir, "recovery_keys"), buf.Bytes(), 0755)
-	if err != nil {
-		return err
-	}
+	rc.rootToken = resp.RootToken
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -293,7 +216,7 @@ func (rc *DockerCluster) Initialize(ctx context.Context) error {
 		}
 
 		var unsealed bool
-		for _, key := range rc.BarrierKeys {
+		for _, key := range rc.barrierKeys {
 			resp, err := client.Sys().Unseal(hex.EncodeToString(key))
 			if err != nil {
 				return err
@@ -305,7 +228,7 @@ func (rc *DockerCluster) Initialize(ctx context.Context) error {
 		}
 		client.SetToken(rc.rootToken)
 
-		err = TestWaitHealthMatches(ctx, node.Client, func(health *api.HealthResponse) error {
+		err = testWaitHealthMatches(ctx, node.Client, func(health *api.HealthResponse) error {
 			if health.Sealed {
 				return fmt.Errorf("node %d is sealed: %#v", i, health)
 			}
@@ -321,7 +244,7 @@ func (rc *DockerCluster) Initialize(ctx context.Context) error {
 		}
 
 		if i == 0 {
-			err = TestWaitLeaderMatches(ctx, node.Client, func(leader *api.LeaderResponse) error {
+			err = testWaitLeaderMatches(ctx, node.Client, func(leader *api.LeaderResponse) error {
 				if !leader.IsSelf {
 					return fmt.Errorf("node %d leader=%v, expected=%v", i, leader.IsSelf, true)
 				}
@@ -336,7 +259,7 @@ func (rc *DockerCluster) Initialize(ctx context.Context) error {
 
 	for i, node := range rc.ClusterNodes {
 		expectLeader := i == 0
-		err = TestWaitLeaderMatches(ctx, node.Client, func(leader *api.LeaderResponse) error {
+		err = testWaitLeaderMatches(ctx, node.Client, func(leader *api.LeaderResponse) error {
 			if expectLeader != leader.IsSelf {
 				return fmt.Errorf("node %d leader=%v, expected=%v", i, leader.IsSelf, expectLeader)
 			}
@@ -374,7 +297,7 @@ func (rc *DockerCluster) setupCA(opts *DockerClusterOptions) error {
 	if opts != nil && len(opts.CACert) > 0 {
 		caBytes = opts.CACert
 	} else {
-		caCertTemplate := &x509.Certificate{
+		CACertTemplate := &x509.Certificate{
 			Subject: pkix.Name{
 				CommonName: "localhost",
 			},
@@ -387,28 +310,28 @@ func (rc *DockerCluster) setupCA(opts *DockerClusterOptions) error {
 			BasicConstraintsValid: true,
 			IsCA:                  true,
 		}
-		caBytes, err = x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, caKey.Public(), caKey)
+		caBytes, err = x509.CreateCertificate(rand.Reader, CACertTemplate, CACertTemplate, caKey.Public(), caKey)
 		if err != nil {
 			return err
 		}
 	}
-	caCert, err := x509.ParseCertificate(caBytes)
+	CACert, err := x509.ParseCertificate(caBytes)
 	if err != nil {
 		return err
 	}
-	rc.CACert = caCert
+	rc.CACert = CACert
 	rc.CACertBytes = caBytes
 
 	rc.RootCAs = x509.NewCertPool()
-	rc.RootCAs.AddCert(caCert)
+	rc.RootCAs.AddCert(CACert)
 
-	caCertPEMBlock := &pem.Block{
+	CACertPEMBlock := &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	}
-	rc.CACertPEM = pem.EncodeToMemory(caCertPEMBlock)
+	rc.CACertPEM = pem.EncodeToMemory(CACertPEMBlock)
 
-	rc.CACertPEMFile = filepath.Join(rc.TempDir, "ca", "ca.pem")
+	rc.CACertPEMFile = filepath.Join(rc.tmpDir, "ca", "ca.pem")
 	err = ioutil.WriteFile(rc.CACertPEMFile, rc.CACertPEM, 0755)
 	if err != nil {
 		return err
@@ -418,34 +341,14 @@ func (rc *DockerCluster) setupCA(opts *DockerClusterOptions) error {
 	if err != nil {
 		return err
 	}
-	caKeyPEMBlock := &pem.Block{
+	CAKeyPEMBlock := &pem.Block{
 		Type:  "EC PRIVATE KEY",
 		Bytes: marshaledCAKey,
 	}
-	rc.CAKeyPEM = pem.EncodeToMemory(caKeyPEMBlock)
-
-	// We don't actually need this file, but it may be helpful for debugging.
-	err = ioutil.WriteFile(filepath.Join(rc.TempDir, "ca", "ca_key.pem"), rc.CAKeyPEM, 0755)
-	if err != nil {
-		return err
-	}
+	rc.CAKeyPEM = pem.EncodeToMemory(CAKeyPEMBlock)
 
 	return nil
 }
-
-// TODO: unused at this point
-// func (rc *DockerCluster) raftJoinConfig() []api.RaftJoinRequest {
-// 	ret := make([]api.RaftJoinRequest, len(rc.ClusterNodes))
-// 	for _, node := range rc.ClusterNodes {
-// 		ret = append(ret, api.RaftJoinRequest{
-// 			LeaderAPIAddr:    fmt.Sprintf("https://%s:%d", node.Address.IP, node.Address.Port),
-// 			LeaderCACert:     string(rc.CACertPEM),
-// 			LeaderClientCert: string(node.ServerCertPEM),
-// 			LeaderClientKey:  string(node.ServerKeyPEM),
-// 		})
-// 	}
-// 	return ret
-// }
 
 // Don't call this until n.Address.IP is populated
 func (n *DockerClusterNode) setupCert() error {
@@ -460,10 +363,8 @@ func (n *DockerClusterNode) setupCert() error {
 		Subject: pkix.Name{
 			CommonName: n.Name(),
 		},
-		// Include host.docker.internal for the sake of benchmark-vault running on MacOS/Windows.
-		// This allows Prometheus running in docker to scrape the cluster for metrics.
-		DNSNames:    []string{"localhost", "host.docker.internal", n.Name()},
-		IPAddresses: []net.IP{net.IPv6loopback, net.ParseIP("127.0.0.1")}, // n.Address.IP,
+		DNSNames:    []string{"localhost", n.Name()},
+		IPAddresses: []net.IP{net.IPv6loopback, net.ParseIP("127.0.0.1")},
 		ExtKeyUsage: []x509.ExtKeyUsage{
 			x509.ExtKeyUsageServerAuth,
 			x509.ExtKeyUsageClientAuth,
@@ -514,8 +415,7 @@ func (n *DockerClusterNode) setupCert() error {
 
 	certGetter := reloadutil.NewCertificateGetter(n.ServerCertPEMFile, n.ServerKeyPEMFile, "")
 	if err := certGetter.Reload(); err != nil {
-		// TODO error handle or panic?
-		panic(err)
+		return err
 	}
 	tlsConfig := &tls.Config{
 		Certificates:   []tls.Certificate{tlsCert},
@@ -526,7 +426,7 @@ func (n *DockerClusterNode) setupCert() error {
 		GetCertificate: certGetter.GetCertificate,
 	}
 
-	if n.Cluster.ClientAuthRequired {
+	if n.Cluster.clientAuthRequired {
 		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
 	}
 	n.TLSConfig = tlsConfig
@@ -534,6 +434,7 @@ func (n *DockerClusterNode) setupCert() error {
 	return nil
 }
 
+// DockerClusterNode represents a single instance of Vault in a cluster
 type DockerClusterNode struct {
 	NodeID            string
 	Address           *net.TCPAddr
@@ -553,10 +454,8 @@ type DockerClusterNode struct {
 	dockerAPI         *docker.Client
 }
 
-func (n *DockerClusterNode) APIClient() *api.Client {
-	return n.Client
-}
-
+// CreateAPIClient creates and configures a Vault API client to communicate with
+// the running Vault Cluster for this DockerClusterNode
 func (n *DockerClusterNode) CreateAPIClient() (*api.Client, error) {
 	transport := cleanhttp.DefaultPooledTransport()
 	transport.TLSClientConfig = n.TLSConfig.Clone()
@@ -587,10 +486,7 @@ func (n *DockerClusterNode) CreateAPIClient() (*api.Client, error) {
 
 // Cleanup kills the container of the node
 func (n *DockerClusterNode) Cleanup() error {
-	if err := n.dockerAPI.ContainerKill(context.Background(), n.container.ID, "KILL"); err != nil {
-		return err
-	}
-	return nil
+	return n.dockerAPI.ContainerKill(context.Background(), n.container.ID, "KILL")
 }
 
 func (n *DockerClusterNode) Start(cli *docker.Client, caDir, netName string, netCIDR *DockerClusterNode, pluginBinPath string) error {
@@ -619,14 +515,14 @@ func (n *DockerClusterNode) Start(cli *docker.Client, caDir, netName string, net
 			"raft": map[string]interface{}{
 				"path":    "/vault/file",
 				"node_id": n.NodeID,
-				//"retry_join": string(joinConfigStr),
 			},
 		},
 		"cluster_name":         netName,
 		"log_level":            "TRACE",
 		"raw_storage_endpoint": true,
 		"plugin_directory":     "/vault/config",
-		//TODO: mlock
+		// disable_mlock is required for working in the Docker environment with
+		// custom plugins
 		"disable_mlock": true,
 		// These are being provided by docker-entrypoint now, since we don't know
 		// the address before the container starts.
@@ -660,7 +556,6 @@ func (n *DockerClusterNode) Start(cli *docker.Client, caDir, netName string, net
 				"exec /usr/local/bin/docker-entrypoint.sh vault server -log-level=trace -dev-plugin-dir=./vault/config -config /vault/config/local.json"},
 			Env: []string{
 				"VAULT_CLUSTER_INTERFACE=eth0",
-				// TODO: api addr set is funny
 				"VAULT_API_ADDR=https://127.0.0.1:8200",
 				fmt.Sprintf("VAULT_REDIRECT_ADDR=https://%s:8200", n.Name()),
 			},
@@ -698,24 +593,22 @@ type DockerClusterOptions struct {
 	SkipInit           bool
 	CACert             []byte
 	NumCores           int
-	TempDir            string
+	tmpDir             string
 	PluginTestBin      string
 	// SetupFunc is called after the cluster is started.
 	SetupFunc func(t testing.T, c *DockerCluster)
 	CAKey     *ecdsa.PrivateKey
-	// TODO: plugin source dir here?
 }
 
 //
 // test methods/functions
 //
 
-// TestWaitHealthMatches checks health TODO: update docs
-func TestWaitHealthMatches(ctx context.Context, client *api.Client, ready func(response *api.HealthResponse) error) error {
+// testWaitHealthMatches checks health
+func testWaitHealthMatches(ctx context.Context, client *api.Client, ready func(response *api.HealthResponse) error) error {
 	var health *api.HealthResponse
 	var err error
 	for ctx.Err() == nil {
-		// TODO ideally Health method would take a context
 		health, err = client.Sys().Health()
 		switch {
 		case err != nil:
@@ -732,11 +625,10 @@ func TestWaitHealthMatches(ctx context.Context, client *api.Client, ready func(r
 	return fmt.Errorf("error checking health: %v", err)
 }
 
-func TestWaitLeaderMatches(ctx context.Context, client *api.Client, ready func(response *api.LeaderResponse) error) error {
+func testWaitLeaderMatches(ctx context.Context, client *api.Client, ready func(response *api.LeaderResponse) error) error {
 	var leader *api.LeaderResponse
 	var err error
 	for ctx.Err() == nil {
-		// TODO ideally Leader method would take a context
 		leader, err = client.Sys().Leader()
 		switch {
 		case err != nil:
@@ -755,28 +647,26 @@ func TestWaitLeaderMatches(ctx context.Context, client *api.Client, ready func(r
 
 // end test helper methods
 
-// TODO: change back to 3
-// var DefaultNumCores = 3
+// TODO: allow number of cores/servers to be configurable
 var DefaultNumCores = 1
 
 // creates a managed docker container running Vault
 func (cluster *DockerCluster) setupDockerCluster(base *vault.CoreConfig, opts *DockerClusterOptions) error {
-
-	if opts != nil && opts.TempDir != "" {
-		if _, err := os.Stat(opts.TempDir); os.IsNotExist(err) {
-			if err := os.MkdirAll(opts.TempDir, 0700); err != nil {
+	if opts != nil && opts.tmpDir != "" {
+		if _, err := os.Stat(opts.tmpDir); os.IsNotExist(err) {
+			if err := os.MkdirAll(opts.tmpDir, 0700); err != nil {
 				return err
 			}
 		}
-		cluster.TempDir = opts.TempDir
+		cluster.tmpDir = opts.tmpDir
 	} else {
 		tempDir, err := ioutil.TempDir("", "vault-test-cluster-")
 		if err != nil {
 			return err
 		}
-		cluster.TempDir = tempDir
+		cluster.tmpDir = tempDir
 	}
-	caDir := filepath.Join(cluster.TempDir, "ca")
+	caDir := filepath.Join(cluster.tmpDir, "ca")
 	if err := os.MkdirAll(caDir, 0755); err != nil {
 		return err
 	}
@@ -789,7 +679,7 @@ func (cluster *DockerCluster) setupDockerCluster(base *vault.CoreConfig, opts *D
 	}
 
 	if opts != nil && opts.RequireClientAuth {
-		cluster.ClientAuthRequired = true
+		cluster.clientAuthRequired = true
 	}
 
 	cidr := "192.168.128.0/20"
@@ -798,7 +688,7 @@ func (cluster *DockerCluster) setupDockerCluster(base *vault.CoreConfig, opts *D
 		node := &DockerClusterNode{
 			NodeID:  nodeID,
 			Cluster: cluster,
-			WorkDir: filepath.Join(cluster.TempDir, nodeID),
+			WorkDir: filepath.Join(cluster.tmpDir, nodeID),
 		}
 		cluster.ClusterNodes = append(cluster.ClusterNodes, node)
 		if err := os.MkdirAll(node.WorkDir, 0700); err != nil {
@@ -816,7 +706,7 @@ func (cluster *DockerCluster) setupDockerCluster(base *vault.CoreConfig, opts *D
 		return err
 	}
 	netName := "vault-test"
-	_, err = SetupNetwork(cli, netName, cidr)
+	_, err = setupNetwork(cli, netName, cidr)
 	if err != nil {
 		return err
 	}
@@ -843,8 +733,8 @@ func (cluster *DockerCluster) setupDockerCluster(base *vault.CoreConfig, opts *D
 }
 
 // Docker networking functions
-// SetupNetwork establishes networking for the Docker container
-func SetupNetwork(cli *docker.Client, netName, cidr string) (string, error) {
+// setupNetwork establishes networking for the Docker container
+func setupNetwork(cli *docker.Client, netName, cidr string) (string, error) {
 	ctx := context.Background()
 
 	netResources, err := cli.NetworkList(ctx, types.NetworkListOptions{})

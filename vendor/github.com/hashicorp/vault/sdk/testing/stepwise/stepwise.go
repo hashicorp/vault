@@ -40,8 +40,9 @@ type Environment interface {
 	// case.
 	Setup() error
 
-	// Client returns a configured Vault API client to communicate with the Vault
-	// cluster created in Setup and managed by this Environment.
+	// Client should return a clone of a configured Vault API client to
+	// communicate with the Vault cluster created in Setup and managed by this
+	// Environment.
 	Client() (*api.Client, error)
 
 	// Teardown is responsible for destroying any and all infrastructure created
