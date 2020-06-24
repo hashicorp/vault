@@ -169,7 +169,11 @@ jobs:
       - write-all-package-cache-keys
       {{- range $packages}}
       - load-{{.meta.BUILD_JOB_NAME}}{{end}}
-      - run: ls -lahR .buildcache/packages
+      - run:
+          name: List Packages
+          command: |
+            echo "Current workdir is: $PWD"
+            ls -lahR .
       # Surface each zip as a separate artifact.
       - store_artifacts:
           path: .buildcache/packages
