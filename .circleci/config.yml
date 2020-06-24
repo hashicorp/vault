@@ -16,41 +16,138 @@ jobs:
         name: Write package cache key
     - restore_cache:
         key: cache002-package-bb07f08c156d885036aa4167ab07de80fb1c2467-{{checksum ".buildcache/cache-keys/package-bb07f08c156d885036aa4167ab07de80fb1c2467"}}
+    - run:
+        command: |
+          make package-meta
+        environment:
+          PACKAGE_SPEC_ID: bb07f08c156d885036aa4167ab07de80fb1c2467
+        name: Write package metadata for darwin_386_package
     - restore_cache:
         key: cache002-package-11e9d4bcafdbd85a742c1d1b91da4424de35a17d-{{checksum ".buildcache/cache-keys/package-11e9d4bcafdbd85a742c1d1b91da4424de35a17d"}}
+    - run:
+        command: |
+          make package-meta
+        environment:
+          PACKAGE_SPEC_ID: 11e9d4bcafdbd85a742c1d1b91da4424de35a17d
+        name: Write package metadata for darwin_amd64_package
     - restore_cache:
         key: cache002-package-b88f28dcd3cc1d958d753e46c84b70e7616139bc-{{checksum ".buildcache/cache-keys/package-b88f28dcd3cc1d958d753e46c84b70e7616139bc"}}
+    - run:
+        command: |
+          make package-meta
+        environment:
+          PACKAGE_SPEC_ID: b88f28dcd3cc1d958d753e46c84b70e7616139bc
+        name: Write package metadata for freebsd_386_package
     - restore_cache:
         key: cache002-package-30dc3e173c49afc668917eabf6c75c85b7542e46-{{checksum ".buildcache/cache-keys/package-30dc3e173c49afc668917eabf6c75c85b7542e46"}}
+    - run:
+        command: |
+          make package-meta
+        environment:
+          PACKAGE_SPEC_ID: 30dc3e173c49afc668917eabf6c75c85b7542e46
+        name: Write package metadata for freebsd_amd64_package
     - restore_cache:
         key: cache002-package-425eb3e346c505f4c1ca09d56a14b6715ef8218b-{{checksum ".buildcache/cache-keys/package-425eb3e346c505f4c1ca09d56a14b6715ef8218b"}}
+    - run:
+        command: |
+          make package-meta
+        environment:
+          PACKAGE_SPEC_ID: 425eb3e346c505f4c1ca09d56a14b6715ef8218b
+        name: Write package metadata for freebsd_arm_package
     - restore_cache:
         key: cache002-package-7570b94bfa7151547efbff8756143df8b924cb3d-{{checksum ".buildcache/cache-keys/package-7570b94bfa7151547efbff8756143df8b924cb3d"}}
+    - run:
+        command: |
+          make package-meta
+        environment:
+          PACKAGE_SPEC_ID: 7570b94bfa7151547efbff8756143df8b924cb3d
+        name: Write package metadata for linux_386_package
     - restore_cache:
         key: cache002-package-967c7b476dad4016eba6e74fe5cf9954a238132b-{{checksum ".buildcache/cache-keys/package-967c7b476dad4016eba6e74fe5cf9954a238132b"}}
+    - run:
+        command: |
+          make package-meta
+        environment:
+          PACKAGE_SPEC_ID: 967c7b476dad4016eba6e74fe5cf9954a238132b
+        name: Write package metadata for linux_amd64_package
     - restore_cache:
         key: cache002-package-48d03c91242324d8f0098cd6f432575916d4fbe8-{{checksum ".buildcache/cache-keys/package-48d03c91242324d8f0098cd6f432575916d4fbe8"}}
+    - run:
+        command: |
+          make package-meta
+        environment:
+          PACKAGE_SPEC_ID: 48d03c91242324d8f0098cd6f432575916d4fbe8
+        name: Write package metadata for linux_arm_package
     - restore_cache:
         key: cache002-package-028aaf3173c7947799040162334c7f3872fc3e4c-{{checksum ".buildcache/cache-keys/package-028aaf3173c7947799040162334c7f3872fc3e4c"}}
+    - run:
+        command: |
+          make package-meta
+        environment:
+          PACKAGE_SPEC_ID: 028aaf3173c7947799040162334c7f3872fc3e4c
+        name: Write package metadata for linux_arm64_package
     - restore_cache:
         key: cache002-package-370c6b1aba76bbc5cbf32006fa735f97249a0663-{{checksum ".buildcache/cache-keys/package-370c6b1aba76bbc5cbf32006fa735f97249a0663"}}
+    - run:
+        command: |
+          make package-meta
+        environment:
+          PACKAGE_SPEC_ID: 370c6b1aba76bbc5cbf32006fa735f97249a0663
+        name: Write package metadata for netbsd_386_package
     - restore_cache:
         key: cache002-package-64e2de3b7727ca84326cb5175c7a08f7364c6c7a-{{checksum ".buildcache/cache-keys/package-64e2de3b7727ca84326cb5175c7a08f7364c6c7a"}}
+    - run:
+        command: |
+          make package-meta
+        environment:
+          PACKAGE_SPEC_ID: 64e2de3b7727ca84326cb5175c7a08f7364c6c7a
+        name: Write package metadata for netbsd_amd64_package
     - restore_cache:
         key: cache002-package-cb6ed1345fda5a2094975652476400ae7f9d38d8-{{checksum ".buildcache/cache-keys/package-cb6ed1345fda5a2094975652476400ae7f9d38d8"}}
+    - run:
+        command: |
+          make package-meta
+        environment:
+          PACKAGE_SPEC_ID: cb6ed1345fda5a2094975652476400ae7f9d38d8
+        name: Write package metadata for openbsd_386_package
     - restore_cache:
         key: cache002-package-3578ece3b2ea134e14f1e62315c18f27ac05775a-{{checksum ".buildcache/cache-keys/package-3578ece3b2ea134e14f1e62315c18f27ac05775a"}}
+    - run:
+        command: |
+          make package-meta
+        environment:
+          PACKAGE_SPEC_ID: 3578ece3b2ea134e14f1e62315c18f27ac05775a
+        name: Write package metadata for openbsd_amd64_package
     - restore_cache:
         key: cache002-package-c68068e4b01cbe174825a95582aefc3fc15ff6b8-{{checksum ".buildcache/cache-keys/package-c68068e4b01cbe174825a95582aefc3fc15ff6b8"}}
+    - run:
+        command: |
+          make package-meta
+        environment:
+          PACKAGE_SPEC_ID: c68068e4b01cbe174825a95582aefc3fc15ff6b8
+        name: Write package metadata for solaris_amd64_package
     - restore_cache:
         key: cache002-package-f5ffef05499c2b9d176d134777db2e9dc2cf3654-{{checksum ".buildcache/cache-keys/package-f5ffef05499c2b9d176d134777db2e9dc2cf3654"}}
+    - run:
+        command: |
+          make package-meta
+        environment:
+          PACKAGE_SPEC_ID: f5ffef05499c2b9d176d134777db2e9dc2cf3654
+        name: Write package metadata for windows_386_package
     - restore_cache:
         key: cache002-package-06fff1a1cfb3dbbc9b82585096947fb79bf360d0-{{checksum ".buildcache/cache-keys/package-06fff1a1cfb3dbbc9b82585096947fb79bf360d0"}}
     - run:
         command: |
-          echo "Current workdir is: $PWD"
-          ls -lahR .
-        name: List Packages
+          make package-meta
+        environment:
+          PACKAGE_SPEC_ID: 06fff1a1cfb3dbbc9b82585096947fb79bf360d0
+        name: Write package metadata for windows_amd64_package
+    - run:
+        command: make aliases
+        name: Write package aliases
+    - run:
+        command: ls -lahR .buildcache
+        name: List Build Cache
     - store_artifacts:
         destination: packages-standalone
         path: .buildcache/packages
