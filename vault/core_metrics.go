@@ -323,3 +323,73 @@ func (c *Core) kvSecretGaugeCollector(ctx context.Context) ([]metricsutil.GaugeL
 
 	return results, nil
 }
+
+func (c *Core) entityGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	// Protect against concurrent changes during seal
+	c.stateLock.RLock()
+	identityStore := c.identityStore
+	c.stateLock.RUnlock()
+	if identityStore == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("nil identity store")
+	}
+
+	byNamespace, err := identityStore.countEntitiesByNamespace(ctx)
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, err
+	}
+
+	// No check for expiration here; the bulk of the work should be in
+	// counting the entities.
+	allNamespaces := c.collectNamespaces()
+	values := make([]metricsutil.GaugeLabelValues, len(allNamespaces))
+	for i := range values {
+		values[i].Labels = []metrics.Label{
+			metricsutil.NamespaceLabel(allNamespaces[i]),
+		}
+		values[i].Value = float32(byNamespace[allNamespaces[i].ID])
+	}
+
+	return values, nil
+}
+
+func (c *Core) entityGaugeCollectorByMount(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	c.stateLock.RLock()
+	identityStore := c.identityStore
+	c.stateLock.RUnlock()
+	if identityStore == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("nil identity store")
+	}
+
+	byAccessor, err := identityStore.countEntitiesByMountAccessor(ctx)
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, err
+	}
+
+	values := make([]metricsutil.GaugeLabelValues, 0)
+	for accessor, count := range byAccessor {
+		// Terminate if taking too long to do the translation
+		select {
+		case <-ctx.Done():
+			return values, errors.New("context cancelled")
+		default:
+			break
+		}
+
+		c.stateLock.RLock()
+		mountEntry := c.router.MatchingMountByAccessor(accessor)
+		c.stateLock.RUnlock()
+		if mountEntry == nil {
+			continue
+		}
+		values = append(values, metricsutil.GaugeLabelValues{
+			Labels: []metrics.Label{
+				metricsutil.NamespaceLabel(mountEntry.namespace),
+				{"auth_method", mountEntry.Type},
+				{"mount_point", "auth/" + mountEntry.Path},
+			},
+			Value: float32(count),
+		})
+	}
+
+	return values, nil
+}
