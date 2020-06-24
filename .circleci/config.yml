@@ -47,7 +47,10 @@ jobs:
     - restore_cache:
         key: cache002-package-cc041555a6c9929856a4aeece825a0a99ed82092-{{checksum ".buildcache/cache-keys/package-cc041555a6c9929856a4aeece825a0a99ed82092"}}
     - run:
-        command: ls -lahR .buildcache/packages
+        command: |
+          echo "Current workdir is: $PWD"
+          ls -lahR .
+        name: List Packages
     - store_artifacts:
         destination: packages-standalone
         path: .buildcache/packages
