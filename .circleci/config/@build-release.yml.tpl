@@ -8,7 +8,7 @@
 {{- $layers := $data.layers -}}
 {{- $revision := (env.Getenv "PRODUCT_REVISION") -}}
 {{- define "cache-key"}}{{template "cache-version"}}-{{.}}{{end -}}
-{{- define "cache-version"}}cache001{{end -}}
+{{- define "cache-version"}}cache002{{end -}}
 {{- /*
   Any change to cache-version invalidates all build layer and package caches.
 */ -}}
@@ -33,7 +33,8 @@ workflows:
                 - /build-.*/
                 - /ci.*/
       {{- range $packages}}
-      - {{.meta.BUILD_JOB_NAME}}: { requires: [ cache-builder-images ] }{{end}}
+      - {{.meta.BUILD_JOB_NAME}}: { requires: [ cache-builder-images ] }
+      {{- end }}
       - bundle-releases:
           requires:
             {{- range $packages}}
