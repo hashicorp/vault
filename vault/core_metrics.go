@@ -325,7 +325,15 @@ func (c *Core) kvSecretGaugeCollector(ctx context.Context) ([]metricsutil.GaugeL
 }
 
 func (c *Core) entityGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
-	byNamespace, err := c.identityStore.countEntitiesByNamespace(ctx)
+	// Protect against concurrent changes during seal
+	c.stateLock.RLock()
+	identityStore := c.identityStore
+	c.stateLock.RUnlock()
+	if identityStore == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("nil identity store")
+	}
+
+	byNamespace, err := identityStore.countEntitiesByNamespace(ctx)
 	if err != nil {
 		return []metricsutil.GaugeLabelValues{}, err
 	}
@@ -345,7 +353,14 @@ func (c *Core) entityGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLab
 }
 
 func (c *Core) entityGaugeCollectorByMount(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
-	byAccessor, err := c.identityStore.countEntitiesByMountAccessor(ctx)
+	c.stateLock.RLock()
+	identityStore := c.identityStore
+	c.stateLock.RUnlock()
+	if identityStore == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("nil identity store")
+	}
+
+	byAccessor, err := identityStore.countEntitiesByMountAccessor(ctx)
 	if err != nil {
 		return []metricsutil.GaugeLabelValues{}, err
 	}
@@ -360,7 +375,9 @@ func (c *Core) entityGaugeCollectorByMount(ctx context.Context) ([]metricsutil.G
 			break
 		}
 
+		c.stateLock.RLock()
 		mountEntry := c.router.MatchingMountByAccessor(accessor)
+		c.stateLock.RUnlock()
 		if mountEntry == nil {
 			continue
 		}
