@@ -137,7 +137,7 @@ jobs:
       - save_cache:
           key: '{{template "cache-key" .meta.circleci.PACKAGE_CACHE_KEY}}'
           paths:
-            - .buildcache/packages/store/*.zip
+            - .buildcache/packages/store
       # Save builder image cache if necessary.
       # The range should only iterate over a single layer.
       {{- $pkg := . -}}
