@@ -2742,9 +2742,18 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 
 	flusher.Flush()
 
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
 	// Stream logs until the connection is closed.
 	for {
 		select {
+		// Periodically check for the seal status and return if core gets
+		// marked as sealed.
+		case <-ticker.C:
+			if b.Core.Sealed() {
+				return resp, err
+			}
 		case <-ctx.Done():
 			return resp, nil
 		case l := <-logCh:
