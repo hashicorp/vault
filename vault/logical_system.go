@@ -2752,7 +2752,7 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		// marked as sealed.
 		case <-ticker.C:
 			if b.Core.Sealed() {
-				return resp, err
+				return resp, nil
 			}
 		case <-ctx.Done():
 			return resp, nil
