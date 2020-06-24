@@ -35,7 +35,6 @@ import (
 	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
-	"github.com/hashicorp/vault/vault"
 	"golang.org/x/net/http2"
 
 	docker "github.com/docker/docker/client"
@@ -651,7 +650,7 @@ func testWaitLeaderMatches(ctx context.Context, client *api.Client, ready func(r
 var DefaultNumCores = 1
 
 // creates a managed docker container running Vault
-func (cluster *DockerCluster) setupDockerCluster(base *vault.CoreConfig, opts *DockerClusterOptions) error {
+func (cluster *DockerCluster) setupDockerCluster(opts *DockerClusterOptions) error {
 	if opts != nil && opts.tmpDir != "" {
 		if _, err := os.Stat(opts.tmpDir); os.IsNotExist(err) {
 			if err := os.MkdirAll(opts.tmpDir, 0700); err != nil {
@@ -820,12 +819,8 @@ func (dc *DockerCluster) Setup() error {
 		return err
 	}
 
-	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-	}
-
 	dOpts := &DockerClusterOptions{PluginTestBin: binPath}
-	if err := dc.setupDockerCluster(coreConfig, dOpts); err != nil {
+	if err := dc.setupDockerCluster(dOpts); err != nil {
 		return err
 	}
 
