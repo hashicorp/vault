@@ -22,6 +22,7 @@ func TestAccBackend_Stepwise_basic(t *testing.T) {
 	}
 	roleName := "vault-stepwise-role"
 	stepwise.Run(t, stepwise.Case{
+		Precheck:    func() { testAccStepwisePreCheck(t) },
 		Environment: dockerEnvironment.NewEnvironment("aws", envOptions),
 		Steps: []stepwise.Step{
 			testAccStepwiseConfig(t),
@@ -91,10 +92,10 @@ func testAccStepwisePreCheck(t *testing.T) {
 
 		// Ensure test variables are set
 		if v := os.Getenv("TEST_AWS_ACCESS_KEY"); v == "" {
-			t.Fatal("TEST_AWS_ACCESS_KEY not set")
+			t.Skip("TEST_AWS_ACCESS_KEY not set")
 		}
 		if v := os.Getenv("TEST_AWS_SECRET_KEY"); v == "" {
-			t.Fatal("TEST_AWS_SECRET_KEY not set")
+			t.Skip("TEST_AWS_SECRET_KEY not set")
 		}
 	})
 }

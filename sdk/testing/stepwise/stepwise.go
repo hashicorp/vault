@@ -156,6 +156,9 @@ type Case struct {
 	// will be used to drive the tests
 	Environment Environment
 
+	// Precheck enabls a test case to determine if it should run or not
+	Precheck func()
+
 	// Steps are the set of operations that are run for this test case. During
 	// execution each step will be logged to output with a 1-based index as it is
 	// ran, with the first step logged as step '1' and not step '0'.
@@ -184,6 +187,10 @@ func Run(tt TestT, c Case) {
 	// We only run acceptance tests if an env var is set because they're
 	// slow and generally require some outside configuration.
 	checkShouldRun(tt)
+
+	if c.Precheck != nil {
+		c.Precheck()
+	}
 
 	if c.Environment == nil {
 		tt.Fatal("nil driver in acceptance test")
