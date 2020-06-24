@@ -47,6 +47,8 @@ func (b *backend) pathRoles() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.pathStaticRoleDelete,
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 			},
 			HelpSynopsis:    staticRoleHelpSynopsis,
