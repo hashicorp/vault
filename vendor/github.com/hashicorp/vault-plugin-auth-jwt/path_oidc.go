@@ -28,6 +28,7 @@ const (
 	errLoginFailed       = "Vault login failed."
 	errNoResponse        = "No response from provider."
 	errTokenVerification = "Token verification failed."
+	errNotOIDCFlow       = "OIDC login is not configured for this mount"
 
 	noCode = "no_code"
 )
@@ -344,7 +345,7 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 	}
 
 	if config.authType() != OIDCFlow {
-		return logical.ErrorResponse("OIDC login is not configured for this mount"), nil
+		return logical.ErrorResponse(errNotOIDCFlow), nil
 	}
 
 	roleName := d.Get("role").(string)

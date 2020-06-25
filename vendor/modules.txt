@@ -421,7 +421,7 @@ github.com/hashicorp/vault-plugin-auth-cf/util
 # github.com/hashicorp/vault-plugin-auth-gcp v0.6.1
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
-# github.com/hashicorp/vault-plugin-auth-jwt v0.6.2
+# github.com/hashicorp/vault-plugin-auth-jwt v0.7.0
 github.com/hashicorp/vault-plugin-auth-jwt
 # github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6
 github.com/hashicorp/vault-plugin-auth-kerberos
@@ -636,7 +636,7 @@ github.com/mitchellh/hashstructure
 github.com/mitchellh/iochan
 # github.com/mitchellh/mapstructure v1.3.2
 github.com/mitchellh/mapstructure
-# github.com/mitchellh/pointerstructure v0.0.0-20190430161007-f252a8fd71c8
+# github.com/mitchellh/pointerstructure v1.0.0
 github.com/mitchellh/pointerstructure
 # github.com/mitchellh/reflectwalk v1.0.1
 github.com/mitchellh/reflectwalk
