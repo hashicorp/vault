@@ -199,7 +199,7 @@ func (rc *DockerCluster) Initialize(ctx context.Context) error {
 
 	rc.rootToken = resp.RootToken
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
 	// Unseal
