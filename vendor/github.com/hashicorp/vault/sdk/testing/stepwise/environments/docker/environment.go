@@ -67,6 +67,9 @@ type DockerCluster struct {
 	SetupFunc     func()
 	ClusterNodes  []*DockerClusterNode
 
+	// networkID tracks the network ID of the created docker network
+	networkID string
+
 	barrierKeys  [][]byte
 	recoveryKeys [][]byte
 	tmpDir       string
@@ -85,6 +88,17 @@ func (rc *DockerCluster) Teardown() error {
 	for _, node := range rc.ClusterNodes {
 		if err := node.Cleanup(); err != nil {
 			result = multierror.Append(result, err)
+		}
+	}
+
+	//clean up networks
+	if rc.networkID != "" {
+		cli, err := docker.NewClientWithOpts(docker.FromEnv, docker.WithVersion("1.40"))
+		if err != nil {
+			return err
+		}
+		if err := cli.NetworkRemove(context.Background(), rc.networkID); err != nil {
+			return err
 		}
 	}
 
@@ -681,7 +695,6 @@ func (cluster *DockerCluster) setupDockerCluster(opts *DockerClusterOptions) err
 		cluster.clientAuthRequired = true
 	}
 
-	cidr := "192.168.128.0/20"
 	for i := 0; i < numCores; i++ {
 		nodeID := fmt.Sprintf("vault-%d", i)
 		node := &DockerClusterNode{
@@ -704,11 +717,14 @@ func (cluster *DockerCluster) setupDockerCluster(opts *DockerClusterOptions) err
 	if err != nil {
 		return err
 	}
-	netName := "vault-test"
-	_, err = setupNetwork(cli, netName, cidr)
+
+	netUUID, _ := uuid.GenerateUUID()
+	netName := fmt.Sprintf("%s-%s", "vault-test", netUUID)
+	netID, err := setupNetwork(cli, netName)
 	if err != nil {
 		return err
 	}
+	cluster.networkID = netID
 
 	for _, node := range cluster.ClusterNodes {
 		pluginBinPath := ""
@@ -733,33 +749,15 @@ func (cluster *DockerCluster) setupDockerCluster(opts *DockerClusterOptions) err
 
 // Docker networking functions
 // setupNetwork establishes networking for the Docker container
-func setupNetwork(cli *docker.Client, netName, cidr string) (string, error) {
-	ctx := context.Background()
-
-	netResources, err := cli.NetworkList(ctx, types.NetworkListOptions{})
+func setupNetwork(cli *docker.Client, netName string) (string, error) {
+	id, err := createNetwork(cli, netName)
 	if err != nil {
-		return "", err
-	}
-	for _, netRes := range netResources {
-		if netRes.Name == netName {
-			if len(netRes.IPAM.Config) > 0 && netRes.IPAM.Config[0].Subnet == cidr {
-				return netRes.ID, nil
-			}
-			err = cli.NetworkRemove(ctx, netRes.ID)
-			if err != nil {
-				return "", err
-			}
-		}
-	}
-
-	id, err := createNetwork(cli, netName, cidr)
-	if err != nil {
-		return "", fmt.Errorf("couldn't create network %s on %s: %w", netName, cidr, err)
+		return "", fmt.Errorf("couldn't create network %s: %w", netName, err)
 	}
 	return id, nil
 }
 
-func createNetwork(cli *docker.Client, netName, cidr string) (string, error) {
+func createNetwork(cli *docker.Client, netName string) (string, error) {
 	resp, err := cli.NetworkCreate(context.Background(), netName, types.NetworkCreate{
 		CheckDuplicate: true,
 		Driver:         "bridge",
@@ -767,11 +765,6 @@ func createNetwork(cli *docker.Client, netName, cidr string) (string, error) {
 		IPAM: &network.IPAM{
 			Driver:  "default",
 			Options: map[string]string{},
-			Config: []network.IPAMConfig{
-				{
-					Subnet: cidr,
-				},
-			},
 		},
 	})
 	if err != nil {
