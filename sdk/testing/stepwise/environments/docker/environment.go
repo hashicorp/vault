@@ -48,7 +48,7 @@ type DockerCluster struct {
 	// PluginName is the input from the test case
 	PluginName string
 	// ClusterName is a UUID name of the cluster.
-	CluterName string
+	ClusterName string
 
 	// MountOptions are a set of options for registering and mounting the plugin
 	MountOptions stepwise.MountOptions
