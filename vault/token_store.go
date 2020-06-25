@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/armon/go-radix"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -2722,6 +2723,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 	// Count the successful token creation.
 	ttl_label := metricsutil.TTLBucket(te.TTL)
+
 	ts.core.metricSink.IncrCounterWithLabels(
 		[]string{"token", "creation"},
 		1,
@@ -3400,6 +3402,15 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 	return resp, nil
 }
 
+func suppressRestoreModeError(err error) error {
+	if err != nil {
+		if strings.Contains(err.Error(), ErrInRestoreMode.Error()) {
+			return nil
+		}
+	}
+	return err
+}
+
 // gaugeCollector is responsible for counting the number of tokens by
 // namespace. Separate versions cover the other two counts; this is somewhat
 // less efficient than doing just one pass over the tokens and can
@@ -3422,7 +3433,7 @@ func (ts *TokenStore) gaugeCollector(ctx context.Context) ([]metricsutil.GaugeLa
 		namespacePosition[ns.ID] = i
 	}
 
-	ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
+	err := ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
 		select {
 		// Abort and return empty collection if it's taking too much time, nonblocking check.
 		case <-ctx.Done():
@@ -3442,10 +3453,16 @@ func (ts *TokenStore) gaugeCollector(ctx context.Context) ([]metricsutil.GaugeLa
 		}
 	})
 
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
+	}
+
 	// If collection was cancelled, return an empty array.
 	select {
 	case <-ctx.Done():
 		return []metricsutil.GaugeLabelValues{}, nil
+	default:
+		break
 	}
 
 	for i := range values {
@@ -3453,6 +3470,233 @@ func (ts *TokenStore) gaugeCollector(ctx context.Context) ([]metricsutil.GaugeLa
 	}
 	return values, nil
 
+}
+
+func (ts *TokenStore) gaugeCollectorByPolicy(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if ts.expiration == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("expiration manager is nil")
+	}
+
+	allNamespaces := ts.core.collectNamespaces()
+	byNsAndPolicy := make(map[string]map[string]int)
+
+	err := ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
+		select {
+		// Abort and return empty collection if it's taking too much time, nonblocking check.
+		case <-ctx.Done():
+			return false
+		default:
+			_, nsID := namespace.SplitIDFromString(leaseID)
+			if nsID == "" {
+				nsID = namespace.RootNamespaceID
+			}
+			policyMap, ok := byNsAndPolicy[nsID]
+			if !ok {
+				policyMap = make(map[string]int)
+				byNsAndPolicy[nsID] = policyMap
+			}
+			for _, policy := range auth.Policies {
+				policyMap[policy] = policyMap[policy] + 1
+			}
+			return true
+		}
+	})
+
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
+	}
+
+	// If collection was cancelled, return an empty array.
+	select {
+	case <-ctx.Done():
+		return []metricsutil.GaugeLabelValues{}, nil
+	default:
+		break
+	}
+
+	// TODO: can we estimate the needed size?
+	flattenedResults := make([]metricsutil.GaugeLabelValues, 0)
+	for _, ns := range allNamespaces {
+		for policy, count := range byNsAndPolicy[ns.ID] {
+			flattenedResults = append(flattenedResults,
+				metricsutil.GaugeLabelValues{
+					Labels: []metrics.Label{
+						metricsutil.NamespaceLabel(ns),
+						{"policy", policy},
+					},
+					Value: float32(count),
+				})
+		}
+	}
+	return flattenedResults, nil
+}
+
+func (ts *TokenStore) gaugeCollectorByTtl(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if ts.expiration == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("expiration manager is nil")
+	}
+
+	allNamespaces := ts.core.collectNamespaces()
+	byNsAndBucket := make(map[string]map[string]int)
+
+	err := ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
+		select {
+		// Abort and return empty collection if it's taking too much time, nonblocking check.
+		case <-ctx.Done():
+			return false
+		default:
+			if auth == nil {
+				return true
+			}
+
+			_, nsID := namespace.SplitIDFromString(leaseID)
+			if nsID == "" {
+				nsID = namespace.RootNamespaceID
+			}
+			bucketMap, ok := byNsAndBucket[nsID]
+			if !ok {
+				bucketMap = make(map[string]int)
+				byNsAndBucket[nsID] = bucketMap
+			}
+			bucket := metricsutil.TTLBucket(auth.TTL)
+			// Zero is a special value in this context
+			if auth.TTL == time.Duration(0) {
+				bucket = metricsutil.OverflowBucket
+			}
+
+			bucketMap[bucket] = bucketMap[bucket] + 1
+			return true
+		}
+	})
+
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
+	}
+
+	// If collection was cancelled, return an empty array.
+	select {
+	case <-ctx.Done():
+		return []metricsutil.GaugeLabelValues{}, nil
+	default:
+		break
+	}
+
+	// 10 different time buckets, at the moment, though many should
+	// be unused.
+	flattenedResults := make([]metricsutil.GaugeLabelValues, 0, len(allNamespaces)*10)
+	for _, ns := range allNamespaces {
+		for bucket, count := range byNsAndBucket[ns.ID] {
+			flattenedResults = append(flattenedResults,
+				metricsutil.GaugeLabelValues{
+					Labels: []metrics.Label{
+						metricsutil.NamespaceLabel(ns),
+						{"creation_ttl", bucket},
+					},
+					Value: float32(count),
+				})
+		}
+	}
+	return flattenedResults, nil
+}
+
+func (ts *TokenStore) gaugeCollectorByMethod(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if ts.expiration == nil {
+		return []metricsutil.GaugeLabelValues{}, errors.New("expiration manager is nil")
+	}
+
+	rootContext := namespace.RootContext(ctx)
+	allNamespaces := ts.core.collectNamespaces()
+	byNsAndMethod := make(map[string]map[string]int)
+
+	// Cache the prefixes that we find locally rather than
+	// hitting the shared mount table every time
+	prefixTree := radix.New()
+
+	pathToPrefix := func(nsID string, path string) string {
+		ns, err := NamespaceByID(rootContext, nsID, ts.core)
+		if ns == nil || err != nil {
+			return "unknown"
+		}
+		ctx := namespace.ContextWithNamespace(rootContext, ns)
+
+		key := ns.Path + path
+		_, method, ok := prefixTree.LongestPrefix(key)
+		if ok {
+			return method.(string)
+		}
+
+		// Look up the path from the lease within the correct namespace
+		// Need to hold stateLock while accessing the router.
+		ts.core.stateLock.RLock()
+		defer ts.core.stateLock.RUnlock()
+		mountEntry := ts.core.router.MatchingMountEntry(ctx, path)
+		if mountEntry == nil {
+			return "unknown"
+		}
+
+		// mountEntry.Path lacks the "auth/" prefix; perhaps we should
+		// refactor router to provide a method that returns both the matching
+		// path *and* the the mount entry?
+		// Or we could just always add "auth/"?
+		matchingMount := ts.core.router.MatchingMount(ctx, path)
+		if matchingMount == "" {
+			// Shouldn't happen, but a race is possible?
+			return mountEntry.Type
+		}
+
+		key = ns.Path + matchingMount
+		prefixTree.Insert(key, mountEntry.Type)
+		return mountEntry.Type
+	}
+
+	err := ts.expiration.WalkTokens(func(leaseID string, auth *logical.Auth, path string) bool {
+		select {
+		// Abort and return empty collection if it's taking too much time, nonblocking check.
+		case <-ctx.Done():
+			return false
+		default:
+			_, nsID := namespace.SplitIDFromString(leaseID)
+			if nsID == "" {
+				nsID = namespace.RootNamespaceID
+			}
+			methodMap, ok := byNsAndMethod[nsID]
+			if !ok {
+				methodMap = make(map[string]int)
+				byNsAndMethod[nsID] = methodMap
+			}
+			method := pathToPrefix(nsID, path)
+			methodMap[method] = methodMap[method] + 1
+			return true
+		}
+	})
+
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, suppressRestoreModeError(err)
+	}
+
+	// If collection was cancelled, return an empty array.
+	select {
+	case <-ctx.Done():
+		return []metricsutil.GaugeLabelValues{}, nil
+	default:
+		break
+	}
+
+	// TODO: how can we estimate the needed size?
+	flattenedResults := make([]metricsutil.GaugeLabelValues, 0)
+	for _, ns := range allNamespaces {
+		for method, count := range byNsAndMethod[ns.ID] {
+			flattenedResults = append(flattenedResults,
+				metricsutil.GaugeLabelValues{
+					Labels: []metrics.Label{
+						metricsutil.NamespaceLabel(ns),
+						{"auth_method", method},
+					},
+					Value: float32(count),
+				})
+		}
+	}
+	return flattenedResults, nil
 }
 
 const (

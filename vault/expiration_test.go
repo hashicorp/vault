@@ -2092,6 +2092,8 @@ func TestExpiration_WalkTokens(t *testing.T) {
 		sampleToken(t, exp, "auth/github/login", false, "root"),
 	}
 
+	waitForRestore(t, exp)
+
 	for true {
 		// Count before and after each revocation
 		t.Logf("Counting %d tokens.", len(tokenEntries))
@@ -2133,6 +2135,22 @@ func TestExpiration_WalkTokens(t *testing.T) {
 
 }
 
+func waitForRestore(t *testing.T, exp *ExpirationManager) {
+	t.Helper()
+
+	timeout := time.After(200 * time.Millisecond)
+	ticker := time.Tick(5 * time.Millisecond)
+
+	for exp.inRestoreMode() {
+		select {
+		case <-timeout:
+			t.Fatalf("Timeout waiting for expiration manager to recover.")
+		case <-ticker:
+			continue
+		}
+	}
+}
+
 func TestExpiration_CachedPolicyIsShared(t *testing.T) {
 	exp := mockExpiration(t)
 
@@ -2144,6 +2162,7 @@ func TestExpiration_CachedPolicyIsShared(t *testing.T) {
 
 	var policies [][]string
 
+	waitForRestore(t, exp)
 	exp.WalkTokens(func(leaseId string, auth *logical.Auth, path string) bool {
 		policies = append(policies, auth.Policies)
 		return true

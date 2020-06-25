@@ -31,7 +31,6 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
-	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -1455,7 +1454,7 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		return false, err
 	}
 
-	if err := c.startRaftStorage(ctx); err != nil {
+	if err := c.startRaftBackend(ctx); err != nil {
 		return false, err
 	}
 
@@ -1714,7 +1713,7 @@ func (c *Core) sealInternal() error {
 	return c.sealInternalWithOptions(true, false, true)
 }
 
-func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft bool) error {
+func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, performCleanup bool) error {
 	// Mark sealed, and if already marked return
 	if swapped := atomic.CompareAndSwapUint32(c.sealed, 0, 1); !swapped {
 		return nil
@@ -1796,10 +1795,10 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 
 	c.teardownReplicationResolverHandler()
 
-	// If the storage backend needs to be sealed
-	if shutdownRaft {
-		if raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
-			if err := raftStorage.TeardownCluster(c.getClusterListener()); err != nil {
+	// Perform additional cleanup upon sealing.
+	if performCleanup {
+		if raftBackend := c.getRaftBackend(); raftBackend != nil {
+			if err := raftBackend.TeardownCluster(c.getClusterListener()); err != nil {
 				c.logger.Error("error stopping storage cluster", "error", err)
 				return err
 			}
@@ -2085,61 +2084,6 @@ func startReplicationImpl(c *Core) error {
 
 func stopReplicationImpl(c *Core) error {
 	return nil
-}
-
-// emitMetrics is used to periodically expose metrics while running
-func (c *Core) emitMetrics(stopCh chan struct{}) {
-	emitTimer := time.Tick(time.Second)
-	writeTimer := time.Tick(c.counters.syncInterval)
-	identityCountTimer := time.Tick(time.Minute * 10)
-
-	for {
-		select {
-		case <-emitTimer:
-			c.metricsMutex.Lock()
-			if c.expiration != nil {
-				c.expiration.emitMetrics()
-			}
-			//Refresh the sealed gauge
-			if c.Sealed() {
-				c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 0, nil)
-			} else {
-				c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 1, nil)
-			}
-
-			c.metricsMutex.Unlock()
-
-		case <-writeTimer:
-			if stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh); stopped {
-				// Go through the loop again, this time the stop channel case
-				// should trigger
-				continue
-			}
-			if c.perfStandby {
-				syncCounter(c)
-			} else {
-				err := c.saveCurrentRequestCounters(context.Background(), time.Now())
-				if err != nil {
-					c.logger.Error("writing request counters to barrier", "err", err)
-				}
-			}
-			c.stateLock.RUnlock()
-		case <-identityCountTimer:
-			go func() {
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-				defer cancel()
-				entities, err := c.countActiveEntities(ctx)
-				if err != nil {
-					c.logger.Error("error counting identity entities", "err", err)
-				} else {
-					metrics.SetGauge([]string{"identity", "num_entities"}, float32(entities.Entities.Total))
-				}
-			}()
-
-		case <-stopCh:
-			return
-		}
-	}
 }
 
 func (c *Core) ReplicationState() consts.ReplicationState {

@@ -41,15 +41,16 @@ const EnvVaultRaftPath = "VAULT_RAFT_PATH"
 // Verify RaftBackend satisfies the correct interfaces
 var _ physical.Backend = (*RaftBackend)(nil)
 var _ physical.Transactional = (*RaftBackend)(nil)
+var _ physical.HABackend = (*RaftBackend)(nil)
+var _ physical.Lock = (*RaftLock)(nil)
 
 var (
 	// raftLogCacheSize is the maximum number of logs to cache in-memory.
 	// This is used to reduce disk I/O for the recently committed entries.
 	raftLogCacheSize = 512
 
-	raftState         = "raft/"
-	peersFileName     = "peers.json"
-	snapshotsRetained = 2
+	raftState     = "raft/"
+	peersFileName = "peers.json"
 
 	restoreOpDelayDuration = 5 * time.Second
 
@@ -68,6 +69,11 @@ type RaftBackend struct {
 
 	// raft is the instance of raft we will operate on.
 	raft *raft.Raft
+
+	// raftInitCh is used to block during HA lock acquisition if raft
+	// has not been initialized yet, which can occur if raft is being
+	// used for HA-only.
+	raftInitCh chan struct{}
 
 	// raftNotifyCh is used to receive updates about leadership changes
 	// regarding this node.
@@ -262,7 +268,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		log = cacheStore
 
 		// Create the snapshot store.
-		snapshots, err := NewBoltSnapshotStore(path, snapshotsRetained, logger.Named("snapshot"), fsm)
+		snapshots, err := NewBoltSnapshotStore(path, logger.Named("snapshot"), fsm)
 		if err != nil {
 			return nil, err
 		}
@@ -324,6 +330,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	return &RaftBackend{
 		logger:       logger,
 		fsm:          fsm,
+		raftInitCh:   make(chan struct{}),
 		conf:         conf,
 		logStore:     log,
 		stableStore:  stable,
@@ -421,7 +428,7 @@ func (b *RaftBackend) SetServerAddressProvider(provider raft.ServerAddressProvid
 }
 
 // Bootstrap prepares the given peers to be part of the raft cluster
-func (b *RaftBackend) Bootstrap(ctx context.Context, peers []Peer) error {
+func (b *RaftBackend) Bootstrap(peers []Peer) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
@@ -531,6 +538,13 @@ func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error
 		StartAsLeader:      true,
 		RecoveryModeConfig: recoveryModeConfig,
 	})
+}
+
+func (b *RaftBackend) HasState() (bool, error) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	return raft.HasExistingState(b.logStore, b.stableStore, b.snapStore)
 }
 
 // SetupCluster starts the raft cluster and enables the networking needed for
@@ -700,6 +714,10 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		opts.ClusterListener.AddClient(consts.RaftStorageALPN, b.streamLayer)
 	}
 
+	// Close the init channel to signal setup has been completed
+	close(b.raftInitCh)
+
+	b.logger.Trace("finished setting up raft cluster")
 	return nil
 }
 
@@ -713,6 +731,9 @@ func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error
 	b.l.Lock()
 	future := b.raft.Shutdown()
 	b.raft = nil
+
+	// If we're tearing down, then we need to recreate the raftInitCh
+	b.raftInitCh = make(chan struct{})
 	b.l.Unlock()
 
 	return future.Error()
@@ -1112,10 +1133,10 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	return nil
 }
 
-// HAEnabled is the implemention of the HABackend interface
+// HAEnabled is the implementation of the HABackend interface
 func (b *RaftBackend) HAEnabled() bool { return true }
 
-// HAEnabled is the implemention of the HABackend interface
+// HAEnabled is the implementation of the HABackend interface
 func (b *RaftBackend) LockWith(key, value string) (physical.Lock, error) {
 	return &RaftLock{
 		key:   key,
@@ -1162,17 +1183,26 @@ func (l *RaftLock) monitorLeadership(stopCh <-chan struct{}, leaderNotifyCh <-ch
 // Lock blocks until we become leader or are shutdown. It returns a channel that
 // is closed when we detect a loss of leadership.
 func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
+	// If not initialized, block until it is
+	if !l.b.Initialized() {
+		select {
+		case <-l.b.raftInitCh:
+		case <-stopCh:
+			return nil, nil
+		}
+
+	}
+
 	l.b.l.RLock()
+
+	// Ensure that we still have a raft instance after grabbing the read lock
+	if l.b.raft == nil {
+		l.b.l.RUnlock()
+		return nil, errors.New("attempted to grab a lock on a nil raft backend")
+	}
 
 	// Cache the notifyCh locally
 	leaderNotifyCh := l.b.raftNotifyCh
-
-	// TODO: Remove when Raft can server as the ha_storage backend. The internal
-	// raft pointer should not be nil here, but the nil check is a guard against
-	// https://github.com/hashicorp/vault/issues/8206
-	if l.b.raft == nil {
-		return nil, errors.New("attempted to grab a lock on a nil raft backend")
-	}
 
 	// Check to see if we are already leader.
 	if l.b.raft.State() == raft.Leader {
@@ -1226,6 +1256,10 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 // Unlock gives up leadership.
 func (l *RaftLock) Unlock() error {
+	if l.b.raft == nil {
+		return nil
+	}
+
 	return l.b.raft.LeadershipTransfer().Error()
 }
 

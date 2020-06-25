@@ -2,6 +2,7 @@ package metricsutil
 
 import (
 	"strings"
+	"sync/atomic"
 	"time"
 
 	metrics "github.com/armon/go-metrics"
@@ -17,7 +18,10 @@ import (
 type ClusterMetricSink struct {
 	// ClusterName is either the cluster ID, or a name provided
 	// in the telemetry configuration stanza.
-	ClusterName string
+	//
+	// Because it may be set after the Core is initialized, we need
+	// to protect against concurrent access.
+	ClusterName atomic.Value
 
 	MaxGaugeCardinality int
 	GaugeInterval       time.Duration
@@ -31,17 +35,17 @@ type Label = metrics.Label
 
 func (m *ClusterMetricSink) SetGaugeWithLabels(key []string, val float32, labels []Label) {
 	m.Sink.SetGaugeWithLabels(key, val,
-		append(labels, Label{"cluster", m.ClusterName}))
+		append(labels, Label{"cluster", m.ClusterName.Load().(string)}))
 }
 
 func (m *ClusterMetricSink) IncrCounterWithLabels(key []string, val float32, labels []Label) {
 	m.Sink.IncrCounterWithLabels(key, val,
-		append(labels, Label{"cluster", m.ClusterName}))
+		append(labels, Label{"cluster", m.ClusterName.Load().(string)}))
 }
 
 func (m *ClusterMetricSink) AddSampleWithLabels(key []string, val float32, labels []Label) {
 	m.Sink.AddSampleWithLabels(key, val,
-		append(labels, Label{"cluster", m.ClusterName}))
+		append(labels, Label{"cluster", m.ClusterName.Load().(string)}))
 }
 
 func (m *ClusterMetricSink) AddDurationWithLabels(key []string, d time.Duration, labels []Label) {
@@ -59,17 +63,30 @@ func (m *ClusterMetricSink) MeasureSinceWithLabels(key []string, start time.Time
 func BlackholeSink() *ClusterMetricSink {
 	sink, _ := metrics.New(metrics.DefaultConfig(""),
 		&metrics.BlackholeSink{})
-	return &ClusterMetricSink{
-		ClusterName: "",
+	cms := &ClusterMetricSink{
+		ClusterName: atomic.Value{},
 		Sink:        sink,
 	}
+	cms.ClusterName.Store("")
+	return cms
+}
+
+func NewClusterMetricSink(clusterName string, sink metrics.MetricSink) *ClusterMetricSink {
+	cms := &ClusterMetricSink{
+		ClusterName: atomic.Value{},
+		Sink:        sink,
+	}
+	cms.ClusterName.Store(clusterName)
+	return cms
 }
 
 // SetDefaultClusterName changes the cluster name from its default value,
 // if it has not previously been configured.
 func (m *ClusterMetricSink) SetDefaultClusterName(clusterName string) {
-	if m.ClusterName == "" {
-		m.ClusterName = clusterName
+	// This is not a true compare-and-swap, but it should be
+	// consistent enough for normal uses
+	if m.ClusterName.Load().(string) == "" {
+		m.ClusterName.Store(clusterName)
 	}
 }
 
