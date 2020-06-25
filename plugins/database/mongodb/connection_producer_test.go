@@ -314,4 +314,3 @@ func writeFile(t *testing.T, filename string, data []byte, perms os.FileMode) {
 		t.Fatalf("Unable to write to file [%s]: %s", filename, err)
 	}
 }
-
