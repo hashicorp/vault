@@ -523,7 +523,9 @@ func (n *dockerClusterNode) NewAPIClient() (*api.Client, error) {
 
 // Cleanup kills the container of the node
 func (n *dockerClusterNode) Cleanup() error {
-	return n.dockerAPI.ContainerKill(context.Background(), n.container.ID, "KILL")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return n.dockerAPI.ContainerKill(ctx, n.container.ID, "KILL")
 }
 
 func (n *dockerClusterNode) start(cli *docker.Client, caDir, netName string, netCIDR *dockerClusterNode, pluginBinPath string) error {
