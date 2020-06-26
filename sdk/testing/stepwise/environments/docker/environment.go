@@ -55,7 +55,7 @@ type DockerCluster struct {
 	MountOptions stepwise.MountOptions
 
 	RaftStorage  bool
-	ClusterNodes []*DockerClusterNode
+	ClusterNodes []*dockerClusterNode
 
 	// Certificate fields
 	CACert        *x509.Certificate
@@ -156,7 +156,7 @@ func (dc *DockerCluster) Client() (*api.Client, error) {
 	return nil, errors.New("no configured client found")
 }
 
-func (n *DockerClusterNode) Name() string {
+func (n *dockerClusterNode) Name() string {
 	return n.Cluster.ClusterName + "-" + n.NodeID
 }
 
@@ -313,6 +313,7 @@ func (dc *DockerCluster) setupCA(opts *DockerClusterOptions) error {
 	if opts != nil && len(opts.CACert) > 0 {
 		caBytes = opts.CACert
 	} else {
+		serialNumber := mathrand.New(mathrand.NewSource(time.Now().UnixNano())).Int63()
 		CACertTemplate := &x509.Certificate{
 			Subject: pkix.Name{
 				CommonName: "localhost",
@@ -320,7 +321,7 @@ func (dc *DockerCluster) setupCA(opts *DockerClusterOptions) error {
 			DNSNames:              []string{"localhost"},
 			IPAddresses:           certIPs,
 			KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-			SerialNumber:          big.NewInt(mathrand.Int63()),
+			SerialNumber:          big.NewInt(serialNumber),
 			NotBefore:             time.Now().Add(-30 * time.Second),
 			NotAfter:              time.Now().Add(262980 * time.Hour),
 			BasicConstraintsValid: true,
@@ -367,7 +368,7 @@ func (dc *DockerCluster) setupCA(opts *DockerClusterOptions) error {
 }
 
 // Don't call this until n.Address.IP is populated
-func (n *DockerClusterNode) setupCert() error {
+func (n *dockerClusterNode) setupCert() error {
 	var err error
 
 	n.ServerKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -470,7 +471,7 @@ func NewEnvironment(name string, options *stepwise.MountOptions) *DockerCluster 
 }
 
 // DockerClusterNode represents a single instance of Vault in a cluster
-type DockerClusterNode struct {
+type dockerClusterNode struct {
 	NodeID            string
 	Address           *net.TCPAddr
 	HostPort          string
@@ -491,7 +492,7 @@ type DockerClusterNode struct {
 
 // NewAPIClient creates and configures a Vault API client to communicate with
 // the running Vault Cluster for this DockerClusterNode
-func (n *DockerClusterNode) NewAPIClient() (*api.Client, error) {
+func (n *dockerClusterNode) NewAPIClient() (*api.Client, error) {
 	transport := cleanhttp.DefaultPooledTransport()
 	transport.TLSClientConfig = n.TLSConfig.Clone()
 	if err := http2.ConfigureTransport(transport); err != nil {
@@ -520,11 +521,11 @@ func (n *DockerClusterNode) NewAPIClient() (*api.Client, error) {
 }
 
 // Cleanup kills the container of the node
-func (n *DockerClusterNode) Cleanup() error {
+func (n *dockerClusterNode) Cleanup() error {
 	return n.dockerAPI.ContainerKill(context.Background(), n.container.ID, "KILL")
 }
 
-func (n *DockerClusterNode) Start(cli *docker.Client, caDir, netName string, netCIDR *DockerClusterNode, pluginBinPath string) error {
+func (n *dockerClusterNode) start(cli *docker.Client, caDir, netName string, netCIDR *dockerClusterNode, pluginBinPath string) error {
 	n.dockerAPI = cli
 
 	err := n.setupCert()
@@ -719,7 +720,7 @@ func (cluster *DockerCluster) setupDockerCluster(opts *DockerClusterOptions) err
 
 	for i := 0; i < numCores; i++ {
 		nodeID := fmt.Sprintf("vault-%d", i)
-		node := &DockerClusterNode{
+		node := &dockerClusterNode{
 			NodeID:  nodeID,
 			Cluster: cluster,
 			WorkDir: filepath.Join(cluster.tmpDir, nodeID),
@@ -757,7 +758,7 @@ func (cluster *DockerCluster) setupDockerCluster(opts *DockerClusterOptions) err
 			pluginBinPath = opts.PluginTestBin
 		}
 
-		err := node.Start(cli, caDir, netName, node, pluginBinPath)
+		err := node.start(cli, caDir, netName, node, pluginBinPath)
 		if err != nil {
 			return err
 		}
