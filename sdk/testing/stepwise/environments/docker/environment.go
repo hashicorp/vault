@@ -41,7 +41,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 )
 
-var _ stepwise.Environment = &DockerCluster{}
+var _ stepwise.Environment = (*DockerCluster)(nil)
 
 // DockerCluster is used to managing the lifecycle of the test Vault cluster
 type DockerCluster struct {
