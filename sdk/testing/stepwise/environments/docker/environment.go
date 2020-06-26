@@ -161,7 +161,7 @@ func (n *DockerClusterNode) Name() string {
 }
 
 func (dc *DockerCluster) Initialize(ctx context.Context) error {
-	client, err := dc.ClusterNodes[0].CreateAPIClient()
+	client, err := dc.ClusterNodes[0].NewAPIClient()
 	if err != nil {
 		return err
 	}
@@ -209,7 +209,7 @@ func (dc *DockerCluster) Initialize(ctx context.Context) error {
 	for j, node := range dc.ClusterNodes {
 		// copy the index value, so we're not reusing it in deeper scopes
 		i := j
-		client, err := node.CreateAPIClient()
+		client, err := node.NewAPIClient()
 		if err != nil {
 			return err
 		}
@@ -470,9 +470,9 @@ type DockerClusterNode struct {
 	dockerAPI         *docker.Client
 }
 
-// CreateAPIClient creates and configures a Vault API client to communicate with
+// NewAPIClient creates and configures a Vault API client to communicate with
 // the running Vault Cluster for this DockerClusterNode
-func (n *DockerClusterNode) CreateAPIClient() (*api.Client, error) {
+func (n *DockerClusterNode) NewAPIClient() (*api.Client, error) {
 	transport := cleanhttp.DefaultPooledTransport()
 	transport.TLSClientConfig = n.TLSConfig.Clone()
 	if err := http2.ConfigureTransport(transport); err != nil {
