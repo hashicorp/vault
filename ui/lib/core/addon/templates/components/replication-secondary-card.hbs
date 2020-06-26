@@ -78,9 +78,19 @@
       </h2>
     </div>
   {{else}}
-    <h3 class="title is-5 grid-item-top-left card-title">
-      {{title}}
-    </h3>
+    <div class="grid-item-top-left">
+      <h3 class="title is-5 card-title">
+        {{title}}
+      </h3>
+    </div>
+      {{#if primaryUiUrl}}
+        <div class="grid-item-top-right">
+          <a href={{concat primaryUiUrl '/ui/'}} class="toolbar-link" data-test-primary-link>
+            View primary cluster
+            <Icon @glyph='chevron-right' />
+          </a>
+        </div>
+      {{/if}}
     <div class="grid-item-second-row">
       <h6 class="title is-6">
         known_primary_cluster_addrs
