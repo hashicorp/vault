@@ -28,17 +28,16 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	docker "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-multierror"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
 	"golang.org/x/net/http2"
-
-	docker "github.com/docker/docker/client"
-	uuid "github.com/hashicorp/go-uuid"
 )
 
 var _ stepwise.Environment = (*DockerCluster)(nil)
