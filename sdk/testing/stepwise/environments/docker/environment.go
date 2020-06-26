@@ -137,7 +137,7 @@ func (dc *DockerCluster) RootToken() string {
 
 // Name returns the name of this environment
 func (dc *DockerCluster) Name() string {
-	return "Docker"
+	return "docker"
 }
 
 // Client returns a clone of the configured Vault API client.
