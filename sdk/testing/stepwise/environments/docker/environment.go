@@ -83,7 +83,7 @@ type DockerCluster struct {
 
 // Teardown stops all the containers.
 func (rc *DockerCluster) Teardown() error {
-	var result error
+	var result *multierror.Error
 	for _, node := range rc.ClusterNodes {
 		if err := node.Cleanup(); err != nil {
 			result = multierror.Append(result, err)
@@ -94,10 +94,10 @@ func (rc *DockerCluster) Teardown() error {
 	if rc.networkID != "" {
 		cli, err := docker.NewClientWithOpts(docker.FromEnv, docker.WithVersion("1.40"))
 		if err != nil {
-			return err
+			return multierror.Append(result, err)
 		}
 		if err := cli.NetworkRemove(context.Background(), rc.networkID); err != nil {
-			return err
+			return multierror.Append(result, err)
 		}
 	}
 
