@@ -59,7 +59,6 @@ type DockerCluster struct {
 	CAKeyPEM      []byte
 	CACertPEMFile string
 	ID            string
-	ClusterName   string
 	RootCAs       *x509.CertPool
 	CACert        *x509.Certificate
 	CAKey         *ecdsa.PrivateKey

@@ -10,7 +10,6 @@ require (
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.4.2-0.20200319182547-c7ad2b866182
 	github.com/docker/go-connections v0.4.0
-	github.com/fatih/color v1.9.0 // indirect
 	github.com/fatih/structs v1.1.0
 	github.com/frankban/quicktest v1.10.0 // indirect
 	github.com/go-ldap/ldap/v3 v3.1.10
@@ -30,24 +29,22 @@ require (
 	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/hashicorp/hcl v1.0.0
+	github.com/hashicorp/vault v1.4.2
 	github.com/hashicorp/vault/api v1.0.5-0.20200519221902-385fac77e20f
-	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mitchellh/copystructure v1.0.0
 	github.com/mitchellh/go-testing-interface v1.0.0
 	github.com/mitchellh/mapstructure v1.3.2
-	github.com/mitchellh/reflectwalk v1.0.1 // indirect
+	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pierrec/lz4 v2.5.2+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/ryanuber/go-glob v1.0.0
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
-	golang.org/x/net v0.0.0-20200602114024-627f9648deb9 // indirect
+	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
 	golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980
-	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.24.0
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
-	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
