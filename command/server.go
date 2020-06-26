@@ -64,7 +64,14 @@ var enableFourClusterDev = func(c *ServerCommand, base *vault.CoreConfig, info m
 	return 1
 }
 
-const storageMigrationLock = "core/migration"
+const (
+	storageMigrationLock = "core/migration"
+
+	// Even though there are more types than the ones below, the following consts
+	// are declared internally for value comparison and reusability.
+	storageTypeRaft   = "raft"
+	storageTypeConsul = "consul"
+)
 
 type ServerCommand struct {
 	*BaseCommand
@@ -412,7 +419,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		return 1
 	}
 
-	c.logger = log.New(&log.LoggerOptions{
+	c.logger = log.NewInterceptLogger(&log.LoggerOptions{
 		Output: c.gatedWriter,
 		Level:  level,
 		// Note that if logFormat is either unspecified or standard, then
@@ -453,7 +460,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
 		return 1
 	}
-	if config.Storage.Type == "raft" {
+	if config.Storage.Type == storageTypeRaft || (config.HAStorage != nil && config.HAStorage.Type == storageTypeRaft) {
 		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
 			config.ClusterAddr = envCA
 		}
@@ -591,6 +598,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	infoKeys = append(infoKeys, "version")
 	verInfo := version.GetVersion()
 	info["version"] = verInfo.FullVersionNumber(false)
+
 	if verInfo.Revision != "" {
 		info["version sha"] = strings.Trim(verInfo.Revision, "'")
 		infoKeys = append(infoKeys, "version sha")
@@ -599,10 +607,15 @@ func (c *ServerCommand) runRecoveryMode() int {
 	infoKeys = append(infoKeys, "recovery mode")
 	info["recovery mode"] = "true"
 
+	infoKeys = append(infoKeys, "go version")
+	info["go version"] = runtime.Version()
+
 	// Server configuration output
 	padding := 24
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
+
 	for _, k := range infoKeys {
 		c.UI.Output(fmt.Sprintf(
 			"%s%s: %s",
@@ -610,6 +623,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 			strings.Title(k),
 			info[k]))
 	}
+
 	c.UI.Output("")
 
 	for _, ln := range lns {
@@ -868,14 +882,16 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	config.LogFormat = logFormat.String()
+
 	if c.flagDevThreeNode || c.flagDevFourCluster {
-		c.logger = log.New(&log.LoggerOptions{
+		c.logger = log.NewInterceptLogger(&log.LoggerOptions{
 			Mutex:  &sync.Mutex{},
 			Output: c.gatedWriter,
 			Level:  log.Trace,
 		})
 	} else {
-		c.logger = log.New(&log.LoggerOptions{
+		c.logger = log.NewInterceptLogger(&log.LoggerOptions{
 			Output: c.gatedWriter,
 			Level:  level,
 			// Note that if logFormat is either unspecified or standard, then
@@ -954,7 +970,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Do any custom configuration needed per backend
 	switch config.Storage.Type {
-	case "consul":
+	case storageTypeConsul:
 		if config.ServiceRegistration == nil {
 			// If Consul is configured for storage and service registration is unconfigured,
 			// use Consul for service registration without requiring additional configuration.
@@ -964,7 +980,7 @@ func (c *ServerCommand) Run(args []string) int {
 				Config: config.Storage.Config,
 			}
 		}
-	case "raft":
+	case storageTypeRaft:
 		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
 			config.ClusterAddr = envCA
 		}
@@ -1111,6 +1127,7 @@ func (c *ServerCommand) Run(args []string) int {
 		HAPhysical:                nil,
 		ServiceRegistration:       configSR,
 		Seal:                      barrierSeal,
+		UnwrapSeal:                unwrapSeal,
 		AuditBackends:             c.AuditBackends,
 		CredentialBackends:        c.CredentialBackends,
 		LogicalBackends:           c.LogicalBackends,
@@ -1135,6 +1152,7 @@ func (c *ServerCommand) Run(args []string) int {
 		SecureRandomReader:        secureRandomReader,
 	}
 	if c.flagDev {
+		coreConfig.EnableRaw = true
 		coreConfig.DevToken = c.flagDevRootTokenID
 		if c.flagDevLeasedKV {
 			coreConfig.LogicalBackends["kv"] = vault.LeasedPassthroughBackendFactory
@@ -1165,24 +1183,26 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the separate HA storage backend, if it exists
 	var ok bool
 	if config.HAStorage != nil {
-		if config.Storage.Type == "raft" {
+		if config.Storage.Type == storageTypeRaft && config.HAStorage.Type == storageTypeRaft {
+			c.UI.Error("Raft cannot be set both as 'storage' and 'ha_storage'. Setting 'storage' to 'raft' will automatically set it up for HA operations as well")
+			return 1
+		}
+
+		if config.Storage.Type == storageTypeRaft {
 			c.UI.Error("HA storage cannot be declared when Raft is the storage type")
 			return 1
 		}
 
-		// TODO: Remove when Raft can server as the ha_storage backend.
-		// See https://github.com/hashicorp/vault/issues/8206
-		if config.HAStorage.Type == "raft" {
-			c.UI.Error("Raft cannot be used as separate HA storage at this time")
-			return 1
-		}
 		factory, exists := c.PhysicalBackends[config.HAStorage.Type]
 		if !exists {
 			c.UI.Error(fmt.Sprintf("Unknown HA storage type %s", config.HAStorage.Type))
 			return 1
 
 		}
-		habackend, err := factory(config.HAStorage.Config, c.logger)
+
+		namedHALogger := c.logger.Named("ha." + config.HAStorage.Type)
+		allLoggers = append(allLoggers, namedHALogger)
+		habackend, err := factory(config.HAStorage.Config, namedHALogger)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf(
 				"Error initializing HA storage of type %s: %s", config.HAStorage.Type, err))
@@ -1201,10 +1221,13 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 
 		coreConfig.RedirectAddr = config.HAStorage.RedirectAddr
-
-		// TODO: Check for raft and disableClustering case when Raft on HA
-		//       Storage support is added.
 		disableClustering = config.HAStorage.DisableClustering
+
+		if config.HAStorage.Type == storageTypeRaft && disableClustering {
+			c.UI.Error("Disable clustering cannot be set to true when Raft is the HA storage type")
+			return 1
+		}
+
 		if !disableClustering {
 			coreConfig.ClusterAddr = config.HAStorage.ClusterAddr
 		}
@@ -1213,7 +1236,7 @@ func (c *ServerCommand) Run(args []string) int {
 			coreConfig.RedirectAddr = config.Storage.RedirectAddr
 			disableClustering = config.Storage.DisableClustering
 
-			if config.Storage.Type == "raft" && disableClustering {
+			if (config.Storage.Type == storageTypeRaft) && disableClustering {
 				c.UI.Error("Disable clustering cannot be set to true when Raft is the storage type")
 				return 1
 			}
@@ -1477,6 +1500,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		info["version sha"] = strings.Trim(verInfo.Revision, "'")
 		infoKeys = append(infoKeys, "version sha")
 	}
+
 	infoKeys = append(infoKeys, "cgo")
 	info["cgo"] = "disabled"
 	if version.CgoEnabled {
@@ -1486,10 +1510,15 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	infoKeys = append(infoKeys, "recovery mode")
 	info["recovery mode"] = "false"
 
+	infoKeys = append(infoKeys, "go version")
+	info["go version"] = runtime.Version()
+
 	// Server configuration output
 	padding := 24
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
+
 	for _, k := range infoKeys {
 		c.UI.Output(fmt.Sprintf(
 			"%s%s: %s",
@@ -1497,6 +1526,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			strings.Title(k),
 			info[k]))
 	}
+
 	c.UI.Output("")
 
 	// Tests might not want to start a vault server and just want to verify
@@ -1511,12 +1541,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	core.SetClusterHandler(vaulthttp.Handler(&vault.HandlerProperties{
 		Core: core,
 	}))
-
-	// Before unsealing with stored keys, setup seal migration if needed
-	if err := adjustCoreForSealMigration(c.logger, core, barrierSeal, unwrapSeal); err != nil {
-		c.UI.Error(err.Error())
-		return 1
-	}
 
 	// Attempt unsealing in a background goroutine. This is needed for when a
 	// Vault cluster with multiple servers is configured with auto-unseal but is
@@ -1548,7 +1572,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// When the underlying storage is raft, kick off retry join if it was specified
 	// in the configuration
-	if config.Storage.Type == "raft" {
+	// TODO: Should we also support retry_join for ha_storage?
+	if config.Storage.Type == storageTypeRaft {
 		if err := core.InitiateRetryJoin(context.Background()); err != nil {
 			c.UI.Error(fmt.Sprintf("Failed to initiate raft retry join, %q", err.Error()))
 			return 1
@@ -2035,16 +2060,22 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		info["version sha"] = strings.Trim(verInfo.Revision, "'")
 		infoKeys = append(infoKeys, "version sha")
 	}
+
 	infoKeys = append(infoKeys, "cgo")
 	info["cgo"] = "disabled"
 	if version.CgoEnabled {
 		info["cgo"] = "enabled"
 	}
 
+	infoKeys = append(infoKeys, "go version")
+	info["go version"] = runtime.Version()
+
 	// Server configuration output
 	padding := 24
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
+
 	for _, k := range infoKeys {
 		c.UI.Output(fmt.Sprintf(
 			"%s%s: %s",
@@ -2052,6 +2083,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 			strings.Title(k),
 			info[k]))
 	}
+
 	c.UI.Output("")
 
 	for _, core := range testCluster.Cores {

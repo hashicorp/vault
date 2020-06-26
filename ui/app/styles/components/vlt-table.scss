@@ -4,6 +4,15 @@
     height: 0;
   }
 
+  &.sticky-header {
+    thead th {
+      position: sticky;
+      background: #fff;
+      box-shadow: 0 1px 0px 0px rgba($grey-dark, 0.3);
+      top: 0;
+    }
+  }
+
   th,
   td {
     padding: $spacing-s;
@@ -33,5 +42,10 @@
 
   td.no-padding {
     padding: 0;
+  }
+
+  code {
+    font-size: $size-7;
+    color: $black;
   }
 }

@@ -66,7 +66,7 @@ documentation](/docs/auth/cf).
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -84,7 +84,7 @@ Returns the present CF configuration.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/cf/config
@@ -117,7 +117,7 @@ Deletes the present CF configuration.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -177,7 +177,7 @@ will be able to authenticate against this role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -195,7 +195,7 @@ Returns a CF role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/cf/roles/:role
@@ -227,7 +227,7 @@ Deletes a CF role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -244,7 +244,7 @@ Returns a CF role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST
@@ -314,7 +314,7 @@ rsa.SignPSS(rand.Reader, rsaPrivateKey, crypto.SHA256, checksum, nil)
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \

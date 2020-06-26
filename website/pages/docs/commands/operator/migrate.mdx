@@ -27,7 +27,7 @@ will not allow starting the server if a migration is in progress.
 
 Migrate all keys:
 
-```text
+```shell-session
 $ vault operator migrate -config migrate.hcl
 
 2018-09-20T14:23:23.656-0700 [INFO ] copied key: data/core/seal-config
@@ -41,7 +41,7 @@ Migration is done in a consistent, sorted order. If the migration is halted or
 exits before completion (e.g. due to a connection error with a storage backend),
 it may be resumed from an arbitrary key prefix:
 
-```text
+```shell-session
 $ vault operator migrate -config migrate.hcl -start "data/logical/fd"
 ```
 
@@ -76,6 +76,10 @@ defined `path`. `node_id` can optionally be set to identify this node.
 cluster hostname of this node. For more configuration options see the [raft
 storage configuration documentation](/docs/configuration/storage/raft).
 
+If the original configuration uses "raft" for `ha_storage` a different
+`path` needs to be declared for the path in `storage_destination` and the new
+configuration for the node post-migration.
+
 ```hcl
 storage_source "consul" {
   address = "127.0.0.1:8500"
@@ -94,7 +98,7 @@ cluster_addr = "http://127.0.0.1:8201"
 Vault will need to be offline during the migration process. First, stop Vault.
 Then, run the migration on the server you wish to become a the new Vault node.
 
-```text
+```shell-session
 $ vault operator migrate -config migrate.hcl
 
 2018-09-20T14:23:23.656-0700 [INFO ] copied key: data/core/seal-config
@@ -114,6 +118,9 @@ vault server.
 
 After migration the raft cluster will only have a single node. Additional peers
 should be joined to this node.
+
+If the cluster was previously HA-enabled using "raft" as the `ha_storage`, the
+nodes will have to re-join to the migrated node before unsealing.
 
 ## Usage
 

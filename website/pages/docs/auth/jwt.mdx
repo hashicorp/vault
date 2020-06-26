@@ -161,7 +161,7 @@ they must be added as query parameters, for example:
 The CLI login defaults to path of `/oidc`. If this auth method was enabled at a
 different path, specify `-path=/my-path` in the CLI.
 
-```text
+```shell-session
 $ vault login -method=oidc port=8400 role=test
 
 Complete the login via your OIDC provider. Launching browser to:
@@ -211,6 +211,7 @@ vault write auth/oidc/role/demo -<<EOF
 }
 EOF
 ```
+
 - Monitor Vault's log output. Important information about OIDC validation failures will be emitted.
 - Ensure Redirect URIs are correct in Vault and on the provider. They need to match exactly. Check:
   http/https, 127.0.0.1/localhost, port numbers, whether trailing slashes are present.
@@ -244,7 +245,7 @@ only needs to validate the provided JWT.
 The default path is `/jwt`. If this auth method was enabled at a
 different path, specify `-path=/my-path` in the CLI.
 
-```text
+```shell-session
 $ vault write auth/jwt/login role=demo jwt=...
 ```
 
@@ -253,7 +254,7 @@ $ vault write auth/jwt/login role=demo jwt=...
 The default endpoint is `auth/jwt/login`. If this auth method was enabled
 at a different path, use that value instead of `jwt`.
 
-```shell
+```shell-session
 $ curl \
     --request POST \
     --data '{"jwt": "your_jwt", "role": "demo"}' \

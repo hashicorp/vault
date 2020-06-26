@@ -17,7 +17,7 @@ func testConfigRaftRetryJoin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	retryJoinConfig := `[{"leader_api_addr":"http://127.0.0.1:8200"},{"leader_api_addr":"http://127.0.0.2:8200"},{"leader_api_addr":"http://127.0.0.3:8200"}]` + "\n"
+	retryJoinConfig := `[{"leader_api_addr":"http://127.0.0.1:8200"},{"leader_api_addr":"http://127.0.0.2:8200"},{"leader_api_addr":"http://127.0.0.3:8200"}]`
 	expected := &Config{
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
@@ -66,6 +66,8 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 				DogStatsDAddr:           "127.0.0.1:7254",
 				DogStatsDTags:           []string{"tag_1:val_1", "tag_2:val_2"},
 				PrometheusRetentionTime: 30 * time.Second,
+				UsageGaugePeriod:        5 * time.Minute,
+				MaximumGaugeCardinality: 125,
 			},
 
 			DisableMlock: true,
@@ -170,6 +172,8 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 				StatsiteAddr:                       "foo",
 				StatsdAddr:                         "bar",
 				DisableHostname:                    true,
+				UsageGaugePeriod:                   5 * time.Minute,
+				MaximumGaugeCardinality:            125,
 				CirconusAPIToken:                   "0",
 				CirconusAPIApp:                     "vault",
 				CirconusAPIURL:                     "http://api.circonus.com/v2",
@@ -294,6 +298,57 @@ func testParseEntropy(t *testing.T, oss bool) {
 	}
 }
 
+func testLoadConfigFileIntegerAndBooleanValues(t *testing.T) {
+	testLoadConfigFileIntegerAndBooleanValuesCommon(t, "./test-fixtures/config4.hcl")
+}
+
+func testLoadConfigFileIntegerAndBooleanValuesJson(t *testing.T) {
+	testLoadConfigFileIntegerAndBooleanValuesCommon(t, "./test-fixtures/config4.hcl.json")
+}
+
+func testLoadConfigFileIntegerAndBooleanValuesCommon(t *testing.T, path string) {
+	config, err := LoadConfigFile(path)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:    "tcp",
+					Address: "127.0.0.1:8200",
+				},
+			},
+			DisableMlock: true,
+		},
+
+		Storage: &Storage{
+			Type: "raft",
+			Config: map[string]string{
+				"path":                   "/storage/path/raft",
+				"node_id":                "raft1",
+				"performance_multiplier": "1",
+				"foo":                    "bar",
+				"baz":                    "true",
+			},
+			ClusterAddr: "127.0.0.1:8201",
+		},
+
+		ClusterAddr: "127.0.0.1:8201",
+
+		DisableCache:    true,
+		DisableCacheRaw: true,
+		EnableUI:        true,
+		EnableUIRaw:     true,
+	}
+
+	config.Listeners[0].RawConfig = nil
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 func testLoadConfigFile(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config.hcl")
 	if err != nil {
@@ -313,6 +368,8 @@ func testLoadConfigFile(t *testing.T) {
 				StatsdAddr:              "bar",
 				StatsiteAddr:            "foo",
 				DisableHostname:         false,
+				UsageGaugePeriod:        5 * time.Minute,
+				MaximumGaugeCardinality: 100,
 				DogStatsDAddr:           "127.0.0.1:7254",
 				DogStatsDTags:           []string{"tag_1:val_1", "tag_2:val_2"},
 				PrometheusRetentionTime: configutil.PrometheusDefaultRetentionTime,
@@ -395,6 +452,8 @@ func testLoadConfigFile_json(t *testing.T) {
 				StatsiteAddr:                       "baz",
 				StatsdAddr:                         "",
 				DisableHostname:                    false,
+				UsageGaugePeriod:                   5 * time.Minute,
+				MaximumGaugeCardinality:            100,
 				CirconusAPIToken:                   "",
 				CirconusAPIApp:                     "",
 				CirconusAPIURL:                     "",
@@ -472,6 +531,8 @@ func testLoadConfigDir(t *testing.T) {
 				StatsiteAddr:            "qux",
 				StatsdAddr:              "baz",
 				DisableHostname:         true,
+				UsageGaugePeriod:        5 * time.Minute,
+				MaximumGaugeCardinality: 100,
 				PrometheusRetentionTime: configutil.PrometheusDefaultRetentionTime,
 			},
 			ClusterName: "testcluster",
@@ -565,6 +626,8 @@ func testConfig_Sanitized(t *testing.T) {
 			"type": "consul",
 		},
 		"telemetry": map[string]interface{}{
+			"usage_gauge_period":                     5 * time.Minute,
+			"maximum_gauge_cardinality":              100,
 			"circonus_api_app":                       "",
 			"circonus_api_token":                     "",
 			"circonus_api_url":                       "",

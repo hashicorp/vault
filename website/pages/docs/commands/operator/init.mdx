@@ -30,13 +30,13 @@ For more information on sealing and unsealing, please the [seal concepts page](/
 
 Start initialization with the default options:
 
-```text
+```shell-session
 $ vault operator init
 ```
 
 Initialize, but encrypt the unseal keys with pgp keys:
 
-```text
+```shell-session
 $ vault operator init \
     -key-shares=3 \
     -key-threshold=2 \
@@ -45,7 +45,7 @@ $ vault operator init \
 
 Initialize Auto Unseal, but encrypt the recovery keys with pgp keys:
 
-```text
+```shell-session
 $ vault operator init \
     -recovery-shares=1 \
     -recovery-threshold=1 \
@@ -54,7 +54,7 @@ $ vault operator init \
 
 Encrypt the initial root token using a pgp key:
 
-```text
+```shell-session
 $ vault operator init -root-token-pgp-key="keybase:hashicorp"
 ```
 

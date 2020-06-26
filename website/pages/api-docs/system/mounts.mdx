@@ -19,7 +19,7 @@ This endpoints lists all the mounted secrets engines.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/mounts
@@ -87,9 +87,7 @@ $ curl \
         "default_lease_ttl": 0,
         "force_no_cache": false,
         "max_lease_ttl": 0,
-        "passthrough_request_headers": [
-          "Accept"
-        ]
+        "passthrough_request_headers": ["Accept"]
       },
       "description": "system endpoints used for control, policy and debugging",
       "external_entropy_access": false,
@@ -190,7 +188,7 @@ relevant functionality is only supported in Vault Enterprise:
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -208,7 +206,7 @@ This endpoint disables the mount point specified in the URL.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -227,7 +225,7 @@ be the system default or a mount-specific value.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/mounts/my-mount/tune
@@ -293,7 +291,7 @@ This endpoint tunes configuration parameters for a given mount point.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \

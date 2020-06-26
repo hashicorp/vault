@@ -7,7 +7,7 @@ description: Learn about the telemetry data available in Vault.
 
 # Telemetry
 
-The Vault server process collects various runtime metrics about the performance of different libraries and subsystems. These metrics are aggregated on a ten second interval and are retained for one minute.
+The Vault server process collects various runtime metrics about the performance of different libraries and subsystems. These metrics are aggregated on a ten second interval and are retained for one minute in-memory.
 
 To view the raw data, you must send a signal to the Vault process: on Unix-style operating systems, this is `USR1` while on Windows it is `BREAK`. When the Vault process receives this signal it will dump the current telemetry information to the process's `stderr`.
 
@@ -54,7 +54,9 @@ You'll note that log entries are prefixed with the metric type as follows:
 - **[G]** is a gauge
 - **[S]** is a summary
 
-The following sections describe available Vault metrics. The metrics interval can be assumed to be 10 seconds when manually triggering metrics output using the above described signals.
+The following sections describe available Vault metrics. The metrics interval can be assumed to be 10 seconds when manually triggering metrics output using the above described signals. Some high-cardinality gauges, like `vault.kv.secret.count`, are emitted every 10 minutes, or at an interval configured in the `telemetry` stanza.
+
+Some Vault metrics come with additional [labels](#metric-labels) describing the measurement in more detail, such as the namespace in which an operation takes place, or the auth method used to create a token. In the in-memory telemetry, or other telemetry engines that do not support labels, this additional information is incorporated into the metric name.  The metric name in the table below is followed by a list of labels supported, in the order in which they appear if flattened.
 
 ## Audit Metrics
 
@@ -85,17 +87,24 @@ These metrics represent operational aspects of the running Vault instance.
 | `vault.core.handle_login_request`    | Duration of time taken by login requests handled by Vault core                                                                                                                                      | ms   | summary |
 | `vault.core.leadership_setup_failed` | Duration of time taken by cluster leadership setup failures which have occurred in a highly available Vault cluster. This should be monitored and alerted on for overall cluster leadership status. | ms   | summary |
 | `vault.core.leadership_lost`         | Duration of time taken by cluster leadership losses which have occurred in a highly available Vault cluster. This should be monitored and alerted on for overall cluster leadership status.         | ms   | summary |
-| `vault.core.post_unseal`             | Duration of time taken by post-unseal operations handled by Vault core                                                                                                                              | ms   | gauge   |
-| `vault.core.pre_seal`                | Duration of time taken by pre-seal operations                                                                                                                                                       | ms   | gauge   |
-| `vault.core.seal-with-request`       | Duration of time taken by requested seal operations                                                                                                                                                 | ms   | gauge   |
-| `vault.core.seal`                    | Duration of time taken by seal operations                                                                                                                                                           | ms   | gauge   |
-| `vault.core.seal-internal`           | Duration of time taken by internal seal operations                                                                                                                                                  | ms   | gauge   |
+| `vault.core.post_unseal`             | Duration of time taken by post-unseal operations handled by Vault core                                                                                                                              | ms   | summary |
+| `vault.core.pre_seal`                | Duration of time taken by pre-seal operations                                                                                                                                                       | ms   | summary |
+| `vault.core.seal-with-request`       | Duration of time taken by requested seal operations                                                                                                                                                 | ms   | summary |
+| `vault.core.seal`                    | Duration of time taken by seal operations                                                                                                                                                           | ms   | summary |
+| `vault.core.seal-internal`           | Duration of time taken by internal seal operations                                                                                                                                                  | ms   | summary |
 | `vault.core.step_down`               | Duration of time taken by cluster leadership step downs. This should be monitored and alerted on for overall cluster leadership status.                                                             | ms   | summary |
 | `vault.core.unseal`                  | Duration of time taken by unseal operations                                                                                                                                                         | ms   | summary |
+| `vault.core.unsealed`                | Has value 1 when Vault is unsealed, and 0 when Vault is sealed.                                                                                                                                     | bool | gauge   |
+| `vault.rollback.attempt.<mountpoint>` | Time taken to perform a rollback operation on the given mount point. The mount point name has its forward slashes `/` replaced by `-`. For example, a rollback operation on the `auth/token` backend would be reportes as `vault.rollback.attempt.auth-token-`.                                                                                                                                    | ms   | summary |
+| `vault.route.create.<mountpoint>`    | Time taken to dispatch a create operation to a backend, and for that backend to process it. The mount point name has its forward slashes `/` replaced by `-`. For example, a create operation to `ns1/secret/` would have corresponding metric `vault.route.create.ns1-secret-`. The number of samples of this metric, and the corresponding ones for other operations below, indicates how many operations were performed per mount point.                                                                                                                                                         | ms   | summary |
+| `vault.route.delete.<mountpoint>`    | Time taken to dispatch a delete operation to a backend, and for that backend to process it.                                                                                                         | ms   | summary |
+| `vault.route.list.<mountpoint>`      | Time taken to dispatch a list operation to a backend, and for that backend to process it.                                                                                                           | ms   | summary |
+| `vault.route.read.<mountpoint>`      | Time taken to dispatch a read operation to a backend, and for that backend to process it.                                                                                                           | ms   | summary |
+| `vault.route.rollback.<mountpoint>`  | Time taken to dispatch a rollback operation to a backend, and for that backend to process it. Rollback operations are automatically scheduled to clean up partial errors.                           | ms   | summary |
 
 ## Runtime Metrics
 
-These metrics represent runtime aspects of the running Vault instance.
+These metrics collect information from Vault's Go runtime, such as memory usage information.
 
 | Metric                            | Description                                                                                                                                                  | Unit       | Type    |
 | :-------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------- | :------ |
@@ -109,9 +118,20 @@ These metrics represent runtime aspects of the running Vault instance.
 | `vault.runtime.gc_pause_ns` | Total duration of the last garbage collection run | ns | sample |
 | `vault.runtime.total_gc_runs`     | Total number of garbage collection runs since Vault was last started                                                                                         | operations | gauge   |
 
-## Policy and Token Metrics
+## Policy Metrics
 
-These metrics relate to policies and tokens.
+These metrics report measurements of the time spent performing policy operations.
+
+| Metric                       | Description                                                                                   | Unit  | Type    |
+| :--------------------------- | :-------------------------------------------------------------------------------------------- | :---- | :------ |
+| `vault.policy.get_policy`    | Time taken to get a policy                                                                    | ms    | summary |
+| `vault.policy.list_policies` | Time taken to list policies                                                                   | ms    | summary |
+| `vault.policy.delete_policy` | Time taken to delete a policy                                                                 | ms    | summary |
+| `vault.policy.set_policy`    | Time taken to set a policy                                                                    | ms    | summary |
+
+## Token, Identity, and Lease Metrics
+
+These metrics cover measurement of token, identity, and lease operations, and counts of the number of such objects managed by Vault.
 
 | Metric                                    | Description                                                                 | Unit   | Type    |
 | :---------------------------------------- | :-------------------------------------------------------------------------- | :----- | :------ |
@@ -125,40 +145,23 @@ These metrics relate to policies and tokens.
 | `vault.expire.renew`                      | Time taken to renew a lease                                                 | ms     | summary |
 | `vault.expire.renew-token`                | Time taken to renew a token which does not need to invoke a logical backend | ms     | summary |
 | `vault.expire.register`                   | Time taken for register operations                                          | ms     | summary |
-
-These operations take a request and response with an associated lease and register a lease entry with lease ID
-
-| Metric                       | Description                                                                                   | Unit  | Type    |
-| :--------------------------- | :-------------------------------------------------------------------------------------------- | :---- | :------ |
-| `vault.expire.register-auth` | Time taken for register authentication operations which create lease entries without lease ID | ms    | summary |
-| `vault.policy.get_policy`    | Time taken to get a policy                                                                    | ms    | summary |
-| `vault.policy.list_policies` | Time taken to list policies                                                                   | ms    | summary |
-| `vault.policy.delete_policy` | Time taken to delete a policy                                                                 | ms    | summary |
-| `vault.policy.set_policy`    | Time taken to set a policy                                                                    | ms    | summary |
-| `vault.token.create`         | The time taken to create a token                                                              | ms    | summary |
-| `vault.token.create_root`    | Number of created root tokens. Does not decrease on revocation.                               | token | counter |
-| `vault.token.createAccessor` | The time taken to create a token accessor                                                     | ms    | summary |
-| `vault.token.lookup`         | The time taken to look up a token                                                             | ms    | summary |
-| `vault.token.revoke`         | Time taken to revoke a token                                                                  | ms    | summary |
-| `vault.token.revoke-tree`    | Time taken to revoke a token tree                                                             | ms    | summary |
-| `vault.token.store`          | Time taken to store an updated token entry without writing to the secondary index             | ms    | summary |
-
-## Auth Methods Metrics
-
-These metrics relate to supported authentication methods.
-
-| Metric                              | Description                                                                                                   | Unit | Type    |
-| :---------------------------------- | :------------------------------------------------------------------------------------------------------------ | :--- | :------ |
-| `vault.rollback.attempt.auth-token` | Time taken to perform a rollback operation for the [token auth method][token-auth-backend]                    | ms   | summary |
-| `vault.rollback.attempt.auth-ldap`  | Time taken to perform a rollback operation for the [LDAP auth method][ldap-auth-backend]                      | ms   | summary |
-| `vault.rollback.attempt.cubbyhole`  | Time taken to perform a rollback operation for the [Cubbyhole secret backend][cubbyhole-secrets-engine]       | ms   | summary |
-| `vault.rollback.attempt.secret`     | Time taken to perform a rollback operation for the [K/V secret backend][kv-secrets-engine]                    | ms   | summary |
-| `vault.rollback.attempt.sys`        | Time taken to perform a rollback operation for the system backend                                             | ms   | summary |
-| `vault.route.rollback.auth-ldap`    | Time taken to perform a route rollback operation for the [LDAP auth method][ldap-auth-backend]                | ms   | summary |
-| `vault.route.rollback.auth-token`   | Time taken to perform a route rollback operation for the [token auth method][token-auth-backend]              | ms   | summary |
-| `vault.route.rollback.cubbyhole`    | Time taken to perform a route rollback operation for the [Cubbyhole secret backend][cubbyhole-secrets-engine] | ms   | summary |
-| `vault.route.rollback.secret`       | Time taken to perform a route rollback operation for the [K/V secret backend][kv-secrets-engine]              | ms   | summary |
-| `vault.route.rollback.sys`          | Time taken to perform a route rollback operation for the system backend                                       | ms   | summary |
+| `vault.expire.register-auth`              | Time taken for register authentication operations which create lease entries without lease ID           | ms       | summary |
+| `vault.identity.num_entities`             | Number of identity entities stored in Vault                                                             | entities | gauge   |
+| `vault.identity.entity.alias.count` (cluster, namespace, auth_method, mount_point) | Number of identity entities aliases stored in Vault, grouped by the auth mount that created them. This gauage is computed every 10 minutes.                                                                                                                    | aliases  | gauge |
+| `vault.identity.entity.count` (cluster, namespace) | Number of identity entities stored in Vault, grouped by namespace.                             | entities | gauge   |
+| `vault.identity.entity.creation` (cluster, namespace, auth_method, mount_point) | Number of identity entities created, grouped by the auth mount that created them.                                                                                                                                                                                 | entities | counter |
+| `vault.token.count` (cluster, namespace)  | Number of service tokens available for use; counts all un-expired and un-revoked tokens in Vault's token store. This measurement is performed every 10 minutes. | token | gauge   |
+| `vault.token.count.by_auth` (cluster, namespace, auth_method)  | Number of service tokens that were created by a particular auth method.            | tokens   | gauge   |
+| `vault.token.count.by_policy` (cluster, namespace, policy)     | Number of service tokens that have a particular policy attached. If a token has more than one policy, it is counted in each policy gauge.                                                                                                                                          | tokens   | gauge   |
+| `vault.token.count.by_ttl` (cluster, namespace, creation_ttl)  | Number of service tokens, grouped by the TTL range they were assigned at creation. | tokens   | gauge   |
+| `vault.token.create`         | The time taken to create a token                                                              | ms     | summary |
+| `vault.token.create_root`    | Number of created root tokens. Does not decrease on revocation.                               | tokens | counter |
+| `vault.token.createAccessor` | The time taken to create a token accessor                                                     | ms     | summary |
+| `vault.token.creation` (cluster, namespace, auth_method, mount_point, creation_ttl, token_type) | Number of service or batch tokens created.							                                                                                                                               | tokens | counter |
+| `vault.token.lookup`         | The time taken to look up a token                                                             | ms     | summary |
+| `vault.token.revoke`         | Time taken to revoke a token                                                                  | ms     | summary |
+| `vault.token.revoke-tree`    | Time taken to revoke a token tree                                                             | ms     | summary |
+| `vault.token.store`          | Time taken to store an updated token entry without writing to the secondary index             | ms     | summary |
 
 ## Merkle Tree and Write Ahead Log Metrics
 
@@ -249,6 +252,8 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 | `database.<name>.RevokeUser`       | Time taken to revoke a user for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RevokeUser`                                             | ms     | summary |
 | `database.RevokeUser.error`              | Number of user revocation operation errors across all database secrets engines                                                                                             | errors | counter |
 | `database.<name>.RevokeUser.error` | Number of user revocation operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RevokeUser.error`                              | errors | counter |
+| `vault.secret.kv.count` (cluster, namespace, mount_point) | Number of entries in each key-value secret engine.                                                                                                  | paths  | gauge   |
+| `vault.secret.lease.creation` (cluster, namespace, secret_engine, mount_point, creation_ttl) | Counts the number of leases created by secret engines.                                                           | leases | counter |
 
 ## Storage Backend Metrics
 
@@ -374,6 +379,7 @@ These metrics relate to raft based [integrated storage][integrated-storage].
 | `vault.raft-storage.put`												| Time to insert log entry to persist path.                                                                                                                                                                           | ms                                | timer   |
 | `vault.raft-storage.list`												| Time to list all entries under the prefix from the FSM.                                                                                                                                                             | ms                                | timer   |
 | `vault.raft-storage.transaction`								| Time to insert operations into a single log.                                                                                                                                                                        | ms                                | timer   |
+| `vault.raft-storage.entry_size`  								| The total size of a Raft entry during log application in bytes.                                                                                                                                                     | bytes                             | sample  |
 
 ## Integrated Raft Storage Leadership Changes
 
@@ -391,6 +397,19 @@ themselves are unable to keep up with the load.
 **What to look for**: For a healthy cluster, you're looking for a lastContact
 lower than 200ms, leader > 0 and candidate == 0. Deviations from this might
 indicate flapping leadership.
+
+## Metric Labels
+
+| Metric                                          | Description                                                                | Example                            | 
+| :---------------------------------------------- | :------------------------------------------------------------------------- | :--------------------------------- |
+| `auth_method`                                   | Authorization engine type    .                                             | `userpass`                         |
+| `cluster`                                       | The cluster name from which the metric originated; set in the configuration file, or automatically generated when a cluster is create                                                                                                                                      | `vault-cluster-d54ad07`            |
+| `creation_ttl`                                  | Time-to-live value assigned to a token or lease at creation. This value is rounded up to the next-highest bucket; the available buckets are `1m`, `10m`, `20m`, `1h`, `2h`, `1d`, `2d`, `7d`, and `30d`. Any longer TTL is assigned the value `+Inf`.                                    | `7d`                               |
+| `mount_point`                                   | Path at which an auth method or secret engine is mounted.                  | `auth/userpass/`                   |
+| `namespace`                                     | A namespace path, or `root` for the root namespace                         | `ns1'                              |
+| `policy`                                        | A single named policy                                                      | `default`                          |
+| `secret_engine`                                 | The [secret engine][secrets-engine] type.                                  | `aws`                              |
+| `token_type`                                    | Identifies whether the token is a batch token or a service token.          | `service`                          |
 
 [secrets-engines]: /docs/secrets
 [storage-backends]: /docs/configuration/storage

@@ -57,6 +57,14 @@ extracted. Not every installation of Kuberentes exposes these keys.`,
 					Name: "JWT Issuer",
 				},
 			},
+			"disable_iss_validation": {
+				Type:        framework.TypeBool,
+				Description: "Disable JWT issuer validation. Allows to skip ISS validation.",
+				Default:     false,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Disable JWT Issuer Validation",
+				},
+			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathConfigWrite,
@@ -79,10 +87,11 @@ func (b *kubeAuthBackend) pathConfigRead(ctx context.Context, req *logical.Reque
 		// Create a map of data to be returned
 		resp := &logical.Response{
 			Data: map[string]interface{}{
-				"kubernetes_host":    config.Host,
-				"kubernetes_ca_cert": config.CACert,
-				"pem_keys":           config.PEMKeys,
-				"issuer":             config.Issuer,
+				"kubernetes_host":        config.Host,
+				"kubernetes_ca_cert":     config.CACert,
+				"pem_keys":               config.PEMKeys,
+				"issuer":                 config.Issuer,
+				"disable_iss_validation": config.DisableISSValidation,
 			},
 		}
 
@@ -100,6 +109,7 @@ func (b *kubeAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Requ
 	pemList := data.Get("pem_keys").([]string)
 	caCert := data.Get("kubernetes_ca_cert").(string)
 	issuer := data.Get("issuer").(string)
+	disableIssValidation := data.Get("disable_iss_validation").(bool)
 	if len(pemList) == 0 && len(caCert) == 0 {
 		return logical.ErrorResponse("one of pem_keys or kubernetes_ca_cert must be set"), nil
 	}
@@ -114,12 +124,13 @@ func (b *kubeAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Requ
 	}
 
 	config := &kubeConfig{
-		PublicKeys:       make([]interface{}, len(pemList)),
-		PEMKeys:          pemList,
-		Host:             host,
-		CACert:           caCert,
-		TokenReviewerJWT: tokenReviewer,
-		Issuer:           issuer,
+		PublicKeys:           make([]interface{}, len(pemList)),
+		PEMKeys:              pemList,
+		Host:                 host,
+		CACert:               caCert,
+		TokenReviewerJWT:     tokenReviewer,
+		Issuer:               issuer,
+		DisableISSValidation: disableIssValidation,
 	}
 
 	var err error
@@ -157,6 +168,8 @@ type kubeConfig struct {
 	TokenReviewerJWT string `json:"token_reviewer_jwt"`
 	// Issuer is the claim that specifies who issued the token
 	Issuer string `json:"issuer"`
+	// DisableISSValidation is optional parameter to allow to skip ISS validation
+	DisableISSValidation bool `json:"disable_iss_validation"`
 }
 
 // PasrsePublicKeyPEM is used to parse RSA and ECDSA public keys from PEMs

@@ -144,10 +144,10 @@ spec:
 
 Also, by setting `publishNotReadyAddresses: false` above, pods that have failed will be removed from the service pool.
 
-With this active service in place, we now have a dedicated endpoint that will always reach the active node.  When
+With this active service in place, we now have a dedicated endpoint that will always reach the active node. When
 setting up Vault replication, it can be used as the primary address:
 
-```
+```shell-session
 $ vault write -f sys/replication/performance/primary/enable \
     primary_cluster_addr='https://vault-active-us-east:8201'
 ```
@@ -156,7 +156,7 @@ $ vault write -f sys/replication/performance/primary/enable \
 
 In conjunction with the pod labels and the `OnDelete` upgrade strategy, upgrades are much easier to orchestrate:
 
-```
+```shell-session
 $ helm upgrade vault --set='server.image.tag=1.4.0'
 
 $ kubectl delete pod --selector=vault-active=false \

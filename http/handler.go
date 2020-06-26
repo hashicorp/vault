@@ -133,6 +133,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
 		mux.Handle("/v1/sys/leader", handleSysLeader(core))
 		mux.Handle("/v1/sys/health", handleSysHealth(core))
+		mux.Handle("/v1/sys/monitor", handleLogicalNoForward(core))
 		mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core,
 			handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))
 		mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core,
@@ -143,6 +144,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
 		mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
 		mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
+		mux.Handle("/v1/sys/storage/raft/bootstrap", handleSysRaftBootstrap(core))
 		mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
 		for _, path := range injectDataIntoTopRoutes {
 			mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core)))
@@ -274,8 +276,12 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		// Start with the request context
 		ctx := r.Context()
 		var cancelFunc context.CancelFunc
-		// Add our timeout
-		ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
+		// Add our timeout, but not for the monitor endpoint, as it's streaming
+		if strings.HasSuffix(r.URL.Path, "sys/monitor") {
+			ctx, cancelFunc = context.WithCancel(ctx)
+		} else {
+			ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
+		}
 		// Add a size limiter if desired
 		if maxRequestSize > 0 {
 			ctx = context.WithValue(ctx, "max_request_size", maxRequestSize)

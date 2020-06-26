@@ -40,6 +40,8 @@ access the Kubernetes API.
   keys.
 - `issuer` `(string: "")` - Optional JWT issuer. If no issuer is specified, then this plugin will
   use `kubernetes.io/serviceaccount` as the default issuer.
+- `disable_iss_validation` `(bool: false)` - Disable JWT issuer validation. Allows to skip ISS validation.
+
 
 ### Sample Payload
 
@@ -53,7 +55,7 @@ access the Kubernetes API.
 
 ### Sample Request
 
-```text
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -71,7 +73,7 @@ Returns the previously configured config, including credentials.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/kubernetes/config
@@ -84,7 +86,8 @@ $ curl \
   "data":{
     "kubernetes_host": "https://192.168.99.100:8443",
     "kubernetes_ca_cert": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----",
-    "pem_keys": ["-----BEGIN CERTIFICATE-----.....", .....]
+    "pem_keys": ["-----BEGIN CERTIFICATE-----.....", .....],
+    "disable_iss_validation": false
   }
 }
 ```
@@ -126,7 +129,7 @@ entities attempting to login.
 
 ### Sample Request
 
-```text
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -148,7 +151,7 @@ Returns the previously registered role configuration.
 
 ### Sample Request
 
-```text
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/kubernetes/role/dev-role
@@ -180,7 +183,7 @@ Lists all the roles that are registered with the auth method.
 
 ### Sample Request
 
-```text
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -211,7 +214,7 @@ Deletes the previously registered role.
 
 ### Sample Request
 
-```text
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -247,7 +250,7 @@ entity and then authorizes the entity for the given role.
 
 ### Sample Request
 
-```text
+```shell-session
 $ curl \
     --request POST \
     --data @payload.json \
