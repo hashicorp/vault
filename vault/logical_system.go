@@ -478,24 +478,6 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 	return &r, nil
 }
 
-func (b *SystemBackend) writePluginReloadRequest(ctx context.Context, reqPath string) error {
-	now := time.Now()
-	nb, err := now.MarshalBinary()
-	if err != nil {
-		return err
-	}
-
-	// Write a plugin reload request
-	if err := b.Core.barrier.Put(ctx, &logical.StorageEntry{
-		Key:   pluginReloadRequestPath + reqPath,
-		Value: nb,
-	}); err != nil {
-		b.Core.logger.Error("error saving plugin reload request", "error", err)
-		return errwrap.Wrapf("failed to save plugin reload request: {{err}}", err)
-	}
-	return nil
-}
-
 // handleAuditedHeaderUpdate creates or overwrites a header entry
 func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
