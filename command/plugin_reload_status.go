@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 	"strings"
@@ -69,7 +70,9 @@ func (c *PluginReloadStatusCommand) Run(args []string) int {
 		return 2
 	}
 
-	r, err := client.Sys().ReloadPluginStatus(reloadId)
+	r, err := client.Sys().ReloadPluginStatus(&api.ReloadPluginStatusInput{
+		ReloadID: reloadId,
+	})
 
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error retrieving plugin reload status: %s", err))
