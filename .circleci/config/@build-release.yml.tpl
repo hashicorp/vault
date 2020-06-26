@@ -183,20 +183,24 @@ jobs:
       - run:
           name: List Build Cache
           command: ls -lahR .buildcache
-      # Surface each zip as a separate artifact.
+
+      # Surface the package store directory as an artifact.
+      # This makes each zipped package separately downloadable.
       - store_artifacts:
           path: .buildcache/packages
           destination: packages-{{$buildID}}
-      # Surface a tarball of the whole package store as an artifact.
-      - run: tar -czf packages-{{$buildID}}.tar.gz .buildcache/packages
+
+      # Surface a zip of the whole package store as an artifact.
+      - run: zip -r --symlinks packages-{{$buildID}}.zip .buildcache/packages
       - store_artifacts:
-          path: packages-{{$buildID}}.tar.gz
-          destination: packages-{{$buildID}}.tar.gz
-      # Surface a tarball of just the metadata files.
-      - run: tar -czf meta-{{$buildID}}.tar.gz .buildcache/packages/store/*.json
+          path: packages-{{$buildID}}.zip
+          destination: packages-{{$buildID}}.zip
+
+      # Surface a zip of just the metadata files.
+      - run: zip -r meta-{{$buildID}}.zip .buildcache/packages/store/*.json
       - store_artifacts:
-          path: meta-{{$buildID}}.tar.gz
-          destination: meta-{{$buildID}}.tar.gz
+          path: meta-{{$buildID}}.zip
+          destination: meta-{{$buildID}}.zip
 
 commands:
   {{- range $packages }}
