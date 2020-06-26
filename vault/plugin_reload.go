@@ -196,5 +196,5 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 }
 
 func (c *Core) setupPluginReload() error {
-	return handleSetupPluginReload(c.systemBackend)
+	return handleSetupPluginReload(c)
 }

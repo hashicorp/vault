@@ -469,7 +469,7 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 	}
 
 	if scope == globalScope {
-		err := handleGlobalPluginReload(ctx, b, req.ID, pluginName, pluginMounts)
+		err := handleGlobalPluginReload(ctx, b.Core, req.ID, pluginName, pluginMounts)
 		if err != nil {
 			return nil, err
 		}

@@ -84,10 +84,10 @@ var (
 			},
 		}
 	}
-	handleGlobalPluginReload = func(context.Context, *SystemBackend, string, string, []string) error {
+	handleGlobalPluginReload = func(context.Context, *Core, string, string, []string) error {
 		return nil
 	}
-	handleSetupPluginReload = func(*SystemBackend) error {
+	handleSetupPluginReload = func(*Core) error {
 		return nil
 	}
 
