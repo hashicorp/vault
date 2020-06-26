@@ -72,8 +72,8 @@ func testAccStepwiseRead(t *testing.T, path, name string, credentialTests []cred
 				return err
 			}
 			log.Printf("[WARN] Generated credentials: %v", d)
-			for _, test := range credentialTests {
-				err := test(d.AccessKey, d.SecretKey, d.STSToken)
+			for _, testFunc := range credentialTests {
+				err := testFunc(d.AccessKey, d.SecretKey, d.STSToken)
 				if err != nil {
 					return err
 				}
