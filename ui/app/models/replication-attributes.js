@@ -40,6 +40,7 @@ export default Fragment.extend({
   secondaryId: attr('string'),
   primaryClusterAddr: attr('string'),
   knownPrimaryClusterAddrs: attr('array'),
+  primaries: attr('array'),
   state: attr('string'), //stream-wal, merkle-diff, merkle-sync, idle
   lastRemoteWAL: attr('number'),
 
