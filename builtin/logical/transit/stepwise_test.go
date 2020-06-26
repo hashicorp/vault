@@ -137,25 +137,25 @@ func testAccStepwiseReadPolicyWithVersions(t *testing.T, name string, expectNone
 			}
 			// Should NOT get a key back
 			if d.Key != nil {
-				return fmt.Errorf("bad: %#v", d)
+				return fmt.Errorf("unexpected key found")
 			}
 			if d.Keys == nil {
-				return fmt.Errorf("bad: %#v", d)
+				return fmt.Errorf("no keys found")
 			}
 			if d.MinDecryptionVersion != minDecryptionVersion {
-				return fmt.Errorf("bad: %#v", d)
+				return fmt.Errorf("minimum decryption version mismatch, expected (%#v), found (%#v)", minEncryptionVersion, d.MinDecryptionVersion)
 			}
 			if d.MinEncryptionVersion != minEncryptionVersion {
-				return fmt.Errorf("bad: %#v", d)
+				return fmt.Errorf("minimum encryption version mismatch, expected (%#v), found (%#v)", minEncryptionVersion, d.MinDecryptionVersion)
 			}
 			if d.DeletionAllowed == true {
-				return fmt.Errorf("bad: %#v", d)
+				return fmt.Errorf("expected DeletionAllowed to be false, but got true")
 			}
 			if d.Derived != derived {
-				return fmt.Errorf("bad: %#v", d)
+				return fmt.Errorf("derived mismatch, expected (%t), got (%t)", derived, d.Derived)
 			}
 			if derived && d.KDF != "hkdf_sha256" {
-				return fmt.Errorf("bad: %#v", d)
+				return fmt.Errorf("expected KDF to be hkdf_sha256, but got (%s)", d.KDF)
 			}
 			return nil
 		},
