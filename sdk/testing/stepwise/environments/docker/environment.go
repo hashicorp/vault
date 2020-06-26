@@ -124,7 +124,7 @@ func (dc *DockerCluster) MountPath() string {
 
 	dc.mountPath = fmt.Sprintf("%s_%s", prefix, uuidStr)
 	if dc.MountOptions.PluginType == stepwise.PluginTypeCredential {
-		dc.mountPath = fmt.Sprintf("%s/%s", "auth", dc.mountPath)
+		dc.mountPath = path.Join("auth", dc.mountPath)
 	}
 
 	return dc.mountPath
