@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/quotas"
 	uberAtomic "go.uber.org/atomic"
 )
 
@@ -539,7 +540,6 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 	}
 
 	// Create an audit trail of the response
-
 	if !isControlGroupRun(req) {
 		switch req.Path {
 		case "sys/replication/dr/status", "sys/replication/performance/status", "sys/replication/status":
@@ -708,6 +708,36 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 	}
 
+	leaseGenerated := false
+	quotaResp, quotaErr := c.applyLeaseCountQuota(&quotas.Request{
+		Path:          req.Path,
+		MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
+		NamespacePath: ns.Path,
+	})
+	if quotaErr != nil {
+		c.logger.Error("failed to apply quota", "path", req.Path, "error", err)
+		retErr = multierror.Append(retErr, quotaErr)
+		return nil, auth, retErr
+	}
+
+	if !quotaResp.Allowed {
+		if c.logger.IsTrace() {
+			c.logger.Trace("request rejected due to lease count quota violation", "request_path", req.Path)
+		}
+
+		retErr = multierror.Append(retErr, errwrap.Wrapf(fmt.Sprintf("request path %q: {{err}}", req.Path), quotas.ErrLeaseCountQuotaExceeded))
+		return nil, auth, retErr
+	}
+
+	defer func() {
+		if quotaResp.Access != nil {
+			quotaAckErr := c.ackLeaseQuota(quotaResp.Access, leaseGenerated)
+			if quotaAckErr != nil {
+				retErr = multierror.Append(retErr, quotaAckErr)
+			}
+		}
+	}()
+
 	// Route the request
 	resp, routeErr := c.doRouting(ctx, req)
 	if resp != nil {
@@ -827,6 +857,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				retErr = multierror.Append(retErr, ErrInternalError)
 				return nil, auth, retErr
 			}
+			leaseGenerated = true
 			resp.Secret.LeaseID = leaseID
 
 			// Get the actual time of the lease
@@ -917,6 +948,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 					retErr = multierror.Append(retErr, ErrInternalError)
 					return nil, auth, retErr
 				}
+				leaseGenerated = true
 			}
 		}
 
@@ -1073,6 +1105,46 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 	// If the response generated an authentication, then generate the token
 	if resp != nil && resp.Auth != nil {
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			c.logger.Error("failed to get namespace from context", "error", err)
+			retErr = multierror.Append(retErr, ErrInternalError)
+			return
+		}
+
+		leaseGenerated := false
+
+		// The request successfully authenticated itself. Run the quota checks
+		// before creating lease.
+		quotaResp, quotaErr := c.applyLeaseCountQuota(&quotas.Request{
+			Path:          req.Path,
+			MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
+			NamespacePath: ns.Path,
+		})
+
+		if quotaErr != nil {
+			c.logger.Error("failed to apply quota", "path", req.Path, "error", err)
+			retErr = multierror.Append(retErr, quotaErr)
+			return
+		}
+
+		if !quotaResp.Allowed {
+			if c.logger.IsTrace() {
+				c.logger.Trace("request rejected due to lease count quota violation", "request_path", req.Path)
+			}
+
+			retErr = multierror.Append(retErr, errwrap.Wrapf(fmt.Sprintf("request path %q: {{err}}", req.Path), quotas.ErrLeaseCountQuotaExceeded))
+			return
+		}
+
+		defer func() {
+			if quotaResp.Access != nil {
+				quotaAckErr := c.ackLeaseQuota(quotaResp.Access, leaseGenerated)
+				if quotaAckErr != nil {
+					retErr = multierror.Append(retErr, quotaAckErr)
+				}
+			}
+		}()
 
 		var entity *identity.Entity
 		auth = resp.Auth
@@ -1141,10 +1213,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			resp.AddWarning(warning)
 		}
 
-		ns, err := namespace.FromContext(ctx)
-		if err != nil {
-			return nil, nil, err
-		}
 		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID)
 		if err != nil {
 			return nil, nil, ErrInternalError
@@ -1181,6 +1249,9 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		err = registerFunc(ctx, tokenTTL, req.Path, auth)
 		switch {
 		case err == nil:
+			if auth.TokenType != logical.TokenTypeBatch {
+				leaseGenerated = true
+			}
 		case err == ErrInternalError:
 			return nil, auth, err
 		default:
