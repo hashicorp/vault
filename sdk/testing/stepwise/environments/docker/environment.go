@@ -112,7 +112,11 @@ func (dc *DockerCluster) MountPath() string {
 		return dc.mountPath
 	}
 
-	uuidStr, _ := uuid.GenerateUUID()
+	uuidStr, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(err)
+	}
+
 	prefix := dc.PluginName
 	if dc.MountOptions.MountPathPrefix != "" {
 		prefix = dc.MountOptions.MountPathPrefix
@@ -717,7 +721,10 @@ func (cluster *DockerCluster) setupDockerCluster(opts *DockerClusterOptions) err
 		return err
 	}
 
-	netUUID, _ := uuid.GenerateUUID()
+	netUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(err)
+	}
 	netName := fmt.Sprintf("%s-%s", "vault-test", netUUID)
 	netID, err := setupNetwork(cli, netName)
 	if err != nil {
@@ -779,7 +786,10 @@ func NewEnvironment(name string, options *stepwise.MountOptions) *DockerCluster 
 		return nil
 	}
 
-	clusterUUID, _ := uuid.GenerateUUID()
+	clusterUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(err)
+	}
 
 	return &DockerCluster{
 		PluginName:   options.PluginName,
