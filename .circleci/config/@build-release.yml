@@ -1216,17 +1216,17 @@ jobs:
           path: .buildcache/packages
           destination: packages-standalone
 
-      # Surface a zip of the whole package store as an artifact.
-      - run: zip -r --symlinks packages-standalone.zip .buildcache/packages
+      # Surface a tarball of the whole package store as an artifact.
+      - run: tar -czf packages-standalone.tar.gz .buildcache/packages
       - store_artifacts:
-          path: packages-standalone.zip
-          destination: packages-standalone.zip
+          path: packages-standalone.tar.gz
+          destination: packages-standalone.tar.gz
 
-      # Surface a zip of just the metadata files.
-      - run: zip -r meta-standalone.zip .buildcache/packages/store/*.json
+      # Surface a tarball of just the metadata files.
+      - run: tar -czf meta-standalone.tar.gz .buildcache/packages/store/*.json
       - store_artifacts:
-          path: meta-standalone.zip
-          destination: meta-standalone.zip
+          path: meta-standalone.tar.gz
+          destination: meta-standalone.tar.gz
 
 commands:
   load-darwin_386_package:

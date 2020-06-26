@@ -190,17 +190,17 @@ jobs:
           path: .buildcache/packages
           destination: packages-{{$buildID}}
 
-      # Surface a zip of the whole package store as an artifact.
-      - run: zip -r --symlinks packages-{{$buildID}}.zip .buildcache/packages
+      # Surface a tarball of the whole package store as an artifact.
+      - run: tar -czf packages-{{$buildID}}.tar.gz .buildcache/packages
       - store_artifacts:
-          path: packages-{{$buildID}}.zip
-          destination: packages-{{$buildID}}.zip
+          path: packages-{{$buildID}}.tar.gz
+          destination: packages-{{$buildID}}.tar.gz
 
-      # Surface a zip of just the metadata files.
-      - run: zip -r meta-{{$buildID}}.zip .buildcache/packages/store/*.json
+      # Surface a tarball of just the metadata files.
+      - run: tar -czf meta-{{$buildID}}.tar.gz .buildcache/packages/store/*.json
       - store_artifacts:
-          path: meta-{{$buildID}}.zip
-          destination: meta-{{$buildID}}.zip
+          path: meta-{{$buildID}}.tar.gz
+          destination: meta-{{$buildID}}.tar.gz
 
 commands:
   {{- range $packages }}
