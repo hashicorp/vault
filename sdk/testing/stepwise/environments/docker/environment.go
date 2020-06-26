@@ -244,7 +244,7 @@ func (dc *DockerCluster) Initialize(ctx context.Context) error {
 		}
 		client.SetToken(dc.rootToken)
 
-		err = testWaitHealthMatches(ctx, node.Client, func(health *api.HealthResponse) error {
+		err = ensureHealthMatches(ctx, node.Client, func(health *api.HealthResponse) error {
 			if health.Sealed {
 				return fmt.Errorf("node %d is sealed: %#v", i, health)
 			}
@@ -260,7 +260,7 @@ func (dc *DockerCluster) Initialize(ctx context.Context) error {
 		}
 
 		if i == 0 {
-			err = testWaitLeaderMatches(ctx, node.Client, func(leader *api.LeaderResponse) error {
+			err = ensureLeaderMatches(ctx, node.Client, func(leader *api.LeaderResponse) error {
 				if !leader.IsSelf {
 					return fmt.Errorf("node %d leader=%v, expected=%v", i, leader.IsSelf, true)
 				}
@@ -275,7 +275,7 @@ func (dc *DockerCluster) Initialize(ctx context.Context) error {
 
 	for i, node := range dc.ClusterNodes {
 		expectLeader := i == 0
-		err = testWaitLeaderMatches(ctx, node.Client, func(leader *api.LeaderResponse) error {
+		err = ensureLeaderMatches(ctx, node.Client, func(leader *api.LeaderResponse) error {
 			if expectLeader != leader.IsSelf {
 				return fmt.Errorf("node %d leader=%v, expected=%v", i, leader.IsSelf, expectLeader)
 			}
@@ -617,11 +617,11 @@ type DockerClusterOptions struct {
 }
 
 //
-// test methods/functions
+// helper methods/functions
 //
 
-// testWaitHealthMatches checks health
-func testWaitHealthMatches(ctx context.Context, client *api.Client, ready func(response *api.HealthResponse) error) error {
+// ensureHealthMatches checks health
+func ensureHealthMatches(ctx context.Context, client *api.Client, ready func(response *api.HealthResponse) error) error {
 	var health *api.HealthResponse
 	var err error
 	for ctx.Err() == nil {
@@ -641,7 +641,7 @@ func testWaitHealthMatches(ctx context.Context, client *api.Client, ready func(r
 	return fmt.Errorf("error checking health: %v", err)
 }
 
-func testWaitLeaderMatches(ctx context.Context, client *api.Client, ready func(response *api.LeaderResponse) error) error {
+func ensureLeaderMatches(ctx context.Context, client *api.Client, ready func(response *api.LeaderResponse) error) error {
 	var leader *api.LeaderResponse
 	var err error
 	for ctx.Err() == nil {
