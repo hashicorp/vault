@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/mapstructure"
-
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
 	dockerEnvironment "github.com/hashicorp/vault/sdk/testing/stepwise/environments/docker"
 )
