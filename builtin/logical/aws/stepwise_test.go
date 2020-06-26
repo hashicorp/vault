@@ -1,7 +1,6 @@
 package aws
 
 import (
-	"log"
 	"os"
 	"testing"
 
@@ -70,7 +69,7 @@ func testAccStepwiseRead(t *testing.T, path, name string, credentialTests []cred
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
 			}
-			log.Printf("[WARN] Generated credentials: %v", d)
+			t.Logf("[WARN] Generated credentials: %v", d)
 			for _, testFunc := range credentialTests {
 				err := testFunc(d.AccessKey, d.SecretKey, d.STSToken)
 				if err != nil {
@@ -85,7 +84,7 @@ func testAccStepwiseRead(t *testing.T, path, name string, credentialTests []cred
 func testAccStepwisePreCheck(t *testing.T) {
 	initSetup.Do(func() {
 		if v := os.Getenv("AWS_DEFAULT_REGION"); v == "" {
-			log.Println("[INFO] Test: Using us-west-2 as test region")
+			t.Logf("[INFO] Test: Using us-west-2 as test region")
 			os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
 		}
 

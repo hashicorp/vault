@@ -7,9 +7,9 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
-	"github.com/mitchellh/mapstructure"
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
 	dockerEnvironment "github.com/hashicorp/vault/sdk/testing/stepwise/environments/docker"
+	"github.com/mitchellh/mapstructure"
 )
 
 func TestAccBackend_stepwise_UserCrud(t *testing.T) {
@@ -43,10 +43,10 @@ func testAccStepwiseUser(
 	}
 }
 
-func testAccStepwiseDeleteUser(t *testing.T, n string) stepwise.Step {
+func testAccStepwiseDeleteUser(t *testing.T, name string) stepwise.Step {
 	return stepwise.Step{
 		Operation: stepwise.DeleteOperation,
-		Path:      "users/" + n,
+		Path:      "users/" + name,
 	}
 }
 
