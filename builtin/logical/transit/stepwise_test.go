@@ -75,11 +75,14 @@ func testAccStepwiseListPolicy(t *testing.T, name string, expectNone bool) stepw
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
 			}
-			if len(d.Keys) > 0 && d.Keys[0] != name {
-				return fmt.Errorf("bad name: %#v", d)
+			if len(d.Keys) == 0 {
+				return fmt.Errorf("missing keys")
 			}
-			if len(d.Keys) != 1 {
-				return fmt.Errorf("only 1 key expected, %d returned", len(d.Keys))
+			if len(d.keys) > 1 {
+				return fmt.Errorf("only 1 key expected, %d returned", len(d.keys))
+			}
+			if d.Keys[0] != name {
+				return fmt.Errorf("Actual key: %s\nExpected key: %s", d.keys[0], name)
 			}
 			return nil
 		},
