@@ -45,6 +45,7 @@ var _ stepwise.Environment = (*DockerCluster)(nil)
 
 // DockerCluster is used to managing the lifecycle of the test Vault cluster
 type DockerCluster struct {
+	ID string
 	// PluginName is the input from the test case
 	PluginName string
 	// ClusterName is a UUID name of the cluster.
@@ -53,18 +54,17 @@ type DockerCluster struct {
 	// MountOptions are a set of options for registering and mounting the plugin
 	MountOptions stepwise.MountOptions
 
-	RaftStorage   bool
+	RaftStorage  bool
+	ClusterNodes []*DockerClusterNode
+
+	// Certificate fields
+	CACert        *x509.Certificate
 	CACertBytes   []byte
 	CACertPEM     []byte
-	CAKeyPEM      []byte
 	CACertPEMFile string
-	ID            string
-	RootCAs       *x509.CertPool
-	CACert        *x509.Certificate
 	CAKey         *ecdsa.PrivateKey
-	CleanupFunc   func()
-	SetupFunc     func()
-	ClusterNodes  []*DockerClusterNode
+	CAKeyPEM      []byte
+	RootCAs       *x509.CertPool
 
 	// networkID tracks the network ID of the created docker network
 	networkID string
@@ -450,6 +450,25 @@ func (n *DockerClusterNode) setupCert() error {
 	return nil
 }
 
+// NewEnvironment creats a new Stepwise Environment for executing tests
+func NewEnvironment(name string, options *stepwise.MountOptions) *DockerCluster {
+	if options == nil {
+		return nil
+	}
+
+	clusterUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(err)
+	}
+
+	return &DockerCluster{
+		PluginName:   options.PluginName,
+		ClusterName:  fmt.Sprintf("test-%s-%s", name, clusterUUID),
+		RaftStorage:  true,
+		MountOptions: *options,
+	}
+}
+
 // DockerClusterNode represents a single instance of Vault in a cluster
 type DockerClusterNode struct {
 	NodeID            string
@@ -778,25 +797,6 @@ func createNetwork(cli *docker.Client, netName string) (string, error) {
 	}
 
 	return resp.ID, nil
-}
-
-// NewEnvironment creats a new Stepwise Environment for executing tests
-func NewEnvironment(name string, options *stepwise.MountOptions) *DockerCluster {
-	if options == nil {
-		return nil
-	}
-
-	clusterUUID, err := uuid.GenerateUUID()
-	if err != nil {
-		panic(err)
-	}
-
-	return &DockerCluster{
-		PluginName:   options.PluginName,
-		ClusterName:  fmt.Sprintf("test-%s-%s", name, clusterUUID),
-		RaftStorage:  true,
-		MountOptions: *options,
-	}
 }
 
 // Setup creates any temp directories needed and compiles the binary for copying to Docker
