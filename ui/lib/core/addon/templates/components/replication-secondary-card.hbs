@@ -83,7 +83,7 @@
         {{title}}
       </h3>
     </div>
-      {{#if primaryUiUrl}}
+      {{#if (and primaryUiUrl knownPrimaryClusterAddrs)}}
         <div class="grid-item-top-right">
           <a href={{concat primaryUiUrl '/ui/'}} class="toolbar-link" data-test-primary-link>
             View primary cluster
