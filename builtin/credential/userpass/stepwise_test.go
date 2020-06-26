@@ -61,7 +61,7 @@ func testAccStepwiseReadUser(t *testing.T, name string, policies string) stepwis
 					return nil
 				}
 
-				return fmt.Errorf("bad: %#v", resp)
+				return fmt.Errorf("unexpected nil response")
 			}
 
 			var d struct {
