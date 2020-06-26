@@ -91,7 +91,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.5
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.3
-	github.com/hashicorp/vault/api v1.0.5-0.20200626184954-945c5abf3a8b
+	github.com/hashicorp/vault/api 72ce534218410b8688670b3dd7f1390a5725cebd
 	github.com/hashicorp/vault/sdk v0.1.14-0.20200615191832-d4b3c4b29c62
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
