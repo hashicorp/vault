@@ -83,12 +83,13 @@ vault write auth/oidc/config -<<"EOH"
 {
    "oidc_client_id": "your_client_id",
    "oidc_client_secret": "your_client_secret",
-   "default_role": “your_default_role”,
-   "oidc_discovery_url": "https://login.microsoftonline.com/tenant_id/v2.0”,
+   "default_role": "your_default_role",
+   "oidc_discovery_url": "https://login.microsoftonline.com/tenant_id/v2.0",
    "provider_config": {
       "provider": "azure"
    }
 }
+EOH
 ```
 
 ```
