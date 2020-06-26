@@ -152,15 +152,15 @@ jobs:
         destination: packages-standalone
         path: .buildcache/packages
     - run:
-        command: zip -r --symlinks packages-standalone.zip .buildcache/packages
+        command: tar -czf packages-standalone.tar.gz .buildcache/packages
     - store_artifacts:
-        destination: packages-standalone.zip
-        path: packages-standalone.zip
+        destination: packages-standalone.tar.gz
+        path: packages-standalone.tar.gz
     - run:
-        command: zip -r meta-standalone.zip .buildcache/packages/store/*.json
+        command: tar -czf meta-standalone.tar.gz .buildcache/packages/store/*.json
     - store_artifacts:
-        destination: meta-standalone.zip
-        path: meta-standalone.zip
+        destination: meta-standalone.tar.gz
+        path: meta-standalone.tar.gz
     environment:
     - AUTO_INSTALL_TOOLS: 'YES'
     - PRODUCT_REVISION: ''
