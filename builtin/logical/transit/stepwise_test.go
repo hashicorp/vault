@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
 	"github.com/mitchellh/mapstructure"
-
 	dockerEnvironment "github.com/hashicorp/vault/sdk/testing/stepwise/environments/docker"
 )
 
