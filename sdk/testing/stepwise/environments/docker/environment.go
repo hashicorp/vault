@@ -43,6 +43,8 @@ import (
 
 var _ stepwise.Environment = (*DockerCluster)(nil)
 
+const dockerVersion = "1.40"
+
 // DockerCluster is used to managing the lifecycle of the test Vault cluster
 type DockerCluster struct {
 	ID string
@@ -92,7 +94,7 @@ func (dc *DockerCluster) Teardown() error {
 
 	//clean up networks
 	if dc.networkID != "" {
-		cli, err := docker.NewClientWithOpts(docker.FromEnv, docker.WithVersion("1.40"))
+		cli, err := docker.NewClientWithOpts(docker.FromEnv, docker.WithVersion(dockerVersion))
 		if err != nil {
 			return multierror.Append(result, err)
 		}
@@ -739,7 +741,7 @@ func (cluster *DockerCluster) setupDockerCluster(opts *DockerClusterOptions) err
 		return err
 	}
 
-	cli, err := docker.NewClientWithOpts(docker.FromEnv, docker.WithVersion("1.40"))
+	cli, err := docker.NewClientWithOpts(docker.FromEnv, docker.WithVersion(dockerVersion))
 	if err != nil {
 		return err
 	}
