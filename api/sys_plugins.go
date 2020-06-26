@@ -290,10 +290,10 @@ type ReloadPluginStatusInput struct {
 }
 
 // ReloadPluginStatus retrieves the status of a reload operation
-func (c *Sys) ReloadPluginStatus(reloadID string) (*ReloadStatusResponse, error) {
+func (c *Sys) ReloadPluginStatus(reloadStatusInput *ReloadPluginStatusInput) (*ReloadStatusResponse, error) {
 	path := "/v1/sys/plugins/reload/backend/status"
 	req := c.c.NewRequest(http.MethodGet, path)
-	req.Params.Add("reload_id", reloadID)
+	req.Params.Add("reload_id", reloadStatusInput.ReloadID)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
