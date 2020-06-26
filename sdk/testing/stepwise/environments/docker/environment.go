@@ -376,6 +376,7 @@ func (n *dockerClusterNode) setupCert() error {
 		return err
 	}
 
+	serialNumber := mathrand.New(mathrand.NewSource(time.Now().UnixNano())).Int63()
 	certTemplate := &x509.Certificate{
 		Subject: pkix.Name{
 			CommonName: n.Name(),
@@ -387,7 +388,7 @@ func (n *dockerClusterNode) setupCert() error {
 			x509.ExtKeyUsageClientAuth,
 		},
 		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
-		SerialNumber: big.NewInt(mathrand.Int63()),
+		SerialNumber: big.NewInt(serialNumber),
 		NotBefore:    time.Now().Add(-30 * time.Second),
 		NotAfter:     time.Now().Add(262980 * time.Hour),
 	}
