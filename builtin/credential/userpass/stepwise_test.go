@@ -71,8 +71,9 @@ func testAccStepwiseReadUser(t *testing.T, name string, policies string) stepwis
 				return err
 			}
 
-			if !reflect.DeepEqual(d.Policies, policyutil.ParsePolicies(policies)) {
-				return fmt.Errorf("bad: %#v", resp)
+			expectedPolicies := policyutil.ParsePolicies(policies)
+			if !reflect.DeepEqual(d.Policies, expectedPolicies) {
+				return fmt.Errorf("Actual policies: %#v\nExpected policies: %#v", d.Policies, expectedPolicies)
 			}
 
 			return nil
