@@ -160,6 +160,18 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 			c.kvSecretGaugeCollector,
 			"VAULT_DISABLE_KV_GAUGE",
 		},
+		{
+			[]string{"identity", "entity", "count"},
+			[]metrics.Label{{"gauge", "identity_by_namespace"}},
+			c.entityGaugeCollector,
+			"",
+		},
+		{
+			[]string{"identity", "entity", "alias", "count"},
+			[]metrics.Label{{"gauge", "identity_by_mountpoint"}},
+			c.entityGaugeCollectorByMount,
+			"",
+		},
 	}
 
 	if c.MetricSink().GaugeInterval == time.Duration(0) {
