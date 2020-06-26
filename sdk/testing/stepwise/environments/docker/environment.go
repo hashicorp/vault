@@ -101,7 +101,7 @@ func (rc *DockerCluster) Teardown() error {
 		}
 	}
 
-	return result
+	return result.ErrorOrNil()
 }
 
 // MountPath returns the path that the plugin under test is mounted at. If a
