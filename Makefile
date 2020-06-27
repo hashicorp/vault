@@ -9,13 +9,6 @@ TEST_TIMEOUT?=45m
 EXTENDED_TEST_TIMEOUT=60m
 INTEG_TEST_TIMEOUT=120m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
-EXTERNAL_TOOLS_CI=\
-	github.com/elazarl/go-bindata-assetfs/... \
-	github.com/hashicorp/go-bindata/... \
-	github.com/mitchellh/gox \
-	golang.org/x/tools/cmd/goimports 
-EXTERNAL_TOOLS=\
-	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
@@ -125,15 +118,8 @@ ci-config:
 ci-verify:
 	@$(MAKE) -C .circleci ci-verify
 
-# bootstrap the build by downloading additional tools needed to build
-ci-bootstrap:
-	@for tool in  $(EXTERNAL_TOOLS_CI) ; do \
-		echo "Installing/Updating $$tool" ; \
-		GO111MODULE=off $(GO_CMD) get -u $$tool; \
-	done
-
 # bootstrap the build by downloading additional tools that may be used by devs
-bootstrap: ci-bootstrap
+bootstrap:
 	go generate -tags tools tools/tools.go
 
 # Note: if you have plugins in GOPATH you can update all of them via something like:
