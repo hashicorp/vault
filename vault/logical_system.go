@@ -29,7 +29,6 @@ import (
 	"github.com/hashicorp/vault/helper/monitor"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
-	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -161,12 +160,13 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.monitorPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.quotasPaths()...)
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
 	}
 
-	if _, ok := core.underlyingPhysical.(*raft.RaftBackend); ok {
+	if backend := core.getRaftBackend(); backend != nil {
 		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
 	}
 
@@ -752,7 +752,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 
 	// Get all the options
 	path := data.Get("path").(string)
-	path = sanitizeMountPath(path)
+	path = sanitizePath(path)
 
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
@@ -935,7 +935,7 @@ func handleErrorNoReadOnlyForward(
 // handleUnmount is used to unmount a path
 func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
-	path = sanitizeMountPath(path)
+	path = sanitizePath(path)
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -1030,6 +1030,12 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 		return handleError(err)
 	}
 
+	// Update quotas with the new path
+	if err := b.Core.quotaManager.HandleRemount(ctx, ns.Path, sanitizePath(fromPath), sanitizePath(toPath)); err != nil {
+		b.Core.logger.Error("failed to update quotas after remount", "ns_path", ns.Path, "from_path", fromPath, "to_path", toPath, "error", err)
+		return handleError(err)
+	}
+
 	return nil, nil
 }
 
@@ -1061,7 +1067,7 @@ func (b *SystemBackend) handleMountTuneRead(ctx context.Context, req *logical.Re
 
 // handleTuneReadCommon returns the config settings of a path
 func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (*logical.Response, error) {
-	path = sanitizeMountPath(path)
+	path = sanitizePath(path)
 
 	sysView := b.Core.router.MatchingSystemView(ctx, path)
 	if sysView == nil {
@@ -1147,7 +1153,7 @@ func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.R
 func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 
-	path = sanitizeMountPath(path)
+	path = sanitizePath(path)
 
 	// Prevent protected paths from being changed
 	for _, p := range untunableMounts {
@@ -1717,7 +1723,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 
 	// Get all the options
 	path := data.Get("path").(string)
-	path = sanitizeMountPath(path)
+	path = sanitizePath(path)
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
 	pluginName := data.Get("plugin_name").(string)
@@ -1858,7 +1864,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 // handleDisableAuth is used to disable a credential backend
 func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
-	path = sanitizeMountPath(path)
+	path = sanitizePath(path)
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -2273,7 +2279,7 @@ func (b *SystemBackend) handleAuditHash(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse("the \"input\" parameter is empty"), nil
 	}
 
-	path = sanitizeMountPath(path)
+	path = sanitizePath(path)
 
 	hash, err := b.Core.auditBroker.GetHash(ctx, path, input)
 	if err != nil {
@@ -3259,7 +3265,7 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	if path == "" {
 		return logical.ErrorResponse("path not set"), logical.ErrInvalidRequest
 	}
-	path = sanitizeMountPath(path)
+	path = sanitizePath(path)
 
 	errResp := logical.ErrorResponse(fmt.Sprintf("preflight capability check returned 403, please ensure client's policies grant access to path %q", path))
 
@@ -3577,7 +3583,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	return resp, nil
 }
 
-func sanitizeMountPath(path string) string {
+func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
 	}

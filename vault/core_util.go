@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/vault/quotas"
 	"github.com/hashicorp/vault/vault/replication"
 )
 
@@ -58,7 +59,7 @@ func addExtraCredentialBackends(*Core, map[string]logical.Factory) {}
 
 func preUnsealInternal(context.Context, *Core) error { return nil }
 
-func postSealInternal(*Core) {}
+func postSealInternal(*Core) error { return nil }
 
 func preSealPhysical(c *Core) {
 	switch c.sealUnwrapper.(type) {
@@ -132,3 +133,23 @@ func (c *Core) perfStandbyClusterHandler() (*replication.Cluster, chan struct{},
 func (c *Core) initSealsForMigration() {}
 
 func (c *Core) postSealMigration(ctx context.Context) error { return nil }
+
+func (c *Core) applyLeaseCountQuota(in *quotas.Request) (*quotas.Response, error) {
+	return &quotas.Response{Allowed: true}, nil
+}
+
+func (c *Core) ackLeaseQuota(access quotas.Access, leaseGenerated bool) error {
+	return nil
+}
+
+func (c *Core) quotaLeaseWalker(ctx context.Context, callback func(request *quotas.Request) bool) error {
+	return nil
+}
+
+func (c *Core) quotasHandleLeases(ctx context.Context, action quotas.LeaseAction, leaseIDs []string) error {
+	return nil
+}
+
+func (c *Core) namespaceByPath(path string) *namespace.Namespace {
+	return namespace.RootNamespace
+}
