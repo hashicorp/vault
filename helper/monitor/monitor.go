@@ -22,7 +22,7 @@ type Monitor interface {
 }
 
 // monitor implements the Monitor interface. Note that this
-// struct is not threadsafe.
+// struct is not thread-safe.
 type monitor struct {
 	sink log.SinkAdapter
 

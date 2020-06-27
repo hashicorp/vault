@@ -2740,31 +2740,24 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 
 	flusher.Flush()
 
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
-	// Stream logs until the connection is closed.
-	for {
-		select {
-		// Periodically check for the seal status and return if core gets
-		// marked as sealed.
-		case <-ticker.C:
-			if b.Core.Sealed() {
+	go func() {
+		// Stream logs until the connection is closed or the writer is signaled to be
+		// done writing.
+		for {
+			select {
+			case <-w.DoneWriteCh():
+				return
+			case l := <-logCh:
 				// If we error here, it means we couldn't write to the response
-				// writer so there's nothing we can use send over the error.
-				_, _ = fmt.Fprint(w, "core received sealed state change, ending monitor session")
-				return nil, nil
-			}
-		case <-ctx.Done():
-			return nil, nil
-		case l := <-logCh:
-			// If we error here, it means we couldn't write to the response
-			// writer so there's nothing we can use to send over the error.
-			_, _ = fmt.Fprint(w, string(l))
+				// writer so there's nothing we can use to send over the error.
+				_, _ = fmt.Fprint(w, string(l))
 
-			flusher.Flush()
+				flusher.Flush()
+			}
 		}
-	}
+	}()
+
+	return nil, nil
 }
 
 // handleHostInfo collects and returns host-related information, which includes

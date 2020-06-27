@@ -710,6 +710,10 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 	// Route the request
 	resp, routeErr := c.doRouting(ctx, req)
+	println("================ doRouting")
+	if routeErr != nil {
+		println("========== routeErr.Error()", routeErr.Error())
+	}
 	if resp != nil {
 
 		// If wrapping is used, use the shortest between the request and response

@@ -411,6 +411,18 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 		default:
 			// Build and return the proper response if everything is fine.
 			respondLogical(w, r, req, resp, injectDataIntoTopLevel)
+
+			if req.Path == "sys/monitor" {
+				ctx, cancelFunc := core.GetContext()
+				defer cancelFunc()
+
+				select {
+				case <-req.ResponseWriter.DoneWriteCh():
+				case <-ctx.Done():
+					req.ResponseWriter.SignalDoneWrite()
+				}
+			}
+
 			return
 		}
 	})
