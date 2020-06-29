@@ -257,26 +257,30 @@ func (c *Sys) ReloadPlugin(i *ReloadPluginInput) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	if i.Scope == "cluster" {
+	if i.Scope == "global" {
 		// Get the reload id
 		secret, parseErr := ParseSecret(resp.Body)
 		if parseErr != nil {
 			return "", err
 		}
-		return secret.Data["reload_id"].(string), nil
+		if _, ok := secret.Data["reload_id"]; ok {
+			return secret.Data["reload_id"].(string), nil
+		}
 	}
 	return "", err
 }
 
-type PluginReloadStatus struct {
-	Timestamp time.Time `json:"timestamp"`
-	Success   bool      `json:"success"`
-	Message   string    `json:"message"`
+// ReloadStatus is the status of an individual node's plugin reload
+type ReloadStatus struct {
+	Timestamp time.Time `json:"timestamp" mapstructure:"timestamp"`
+	Success   bool      `json:"success" mapstructure:"success"`
+	Message   string    `json:"message" mapstructure:"message"`
 }
 
-type PluginReloadStatusResponse struct {
-	ReloadID string
-	Results  map[string]interface{}
+// ReloadStatusResponse is the combined response of all known completed plugin reloads
+type ReloadStatusResponse struct {
+	ReloadID string                   `mapstructure:"reload_id"`
+	Results  map[string]*ReloadStatus `mapstructure:"results"`
 }
 
 // ReloadPluginStatusInput is used as input to the ReloadStatusPlugin function.
@@ -286,10 +290,10 @@ type ReloadPluginStatusInput struct {
 }
 
 // ReloadPluginStatus retrieves the status of a reload operation
-func (c *Sys) ReloadPluginStatus(reloadID string) (map[string]interface{}, error) {
+func (c *Sys) ReloadPluginStatus(reloadStatusInput *ReloadPluginStatusInput) (*ReloadStatusResponse, error) {
 	path := "/v1/sys/plugins/reload/backend/status"
 	req := c.c.NewRequest(http.MethodGet, path)
-	req.Params.Add("reload_id", reloadID)
+	req.Params.Add("reload_id", reloadStatusInput.ReloadID)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
@@ -305,7 +309,19 @@ func (c *Sys) ReloadPluginStatus(reloadID string) (map[string]interface{}, error
 			return nil, err
 		}
 
-		return secret.Data, nil
+		var r ReloadStatusResponse
+		d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+			DecodeHook: mapstructure.StringToTimeHookFunc(time.RFC3339),
+			Result:     &r,
+		})
+		if err != nil {
+			return nil, err
+		}
+		err = d.Decode(secret.Data)
+		if err != nil {
+			return nil, err
+		}
+		return &r, nil
 	}
 	return nil, nil
 
