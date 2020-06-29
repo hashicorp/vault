@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/helper/monitor"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -40,6 +41,7 @@ import (
 )
 
 const maxBytes = 128 * 1024
+const clusterScope = "cluster"
 
 func systemBackendMemDBSchema() *memdb.DBSchema {
 	systemSchema := &memdb.DBSchema{
@@ -112,9 +114,11 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"replication/performance/status",
 				"replication/dr/status",
 				"replication/dr/secondary/promote",
+				"replication/dr/secondary/disable",
 				"replication/dr/secondary/update-primary",
 				"replication/dr/secondary/operation-token/delete",
 				"replication/dr/secondary/license",
+				"replication/dr/secondary/recover",
 				"replication/dr/secondary/reindex",
 				"storage/raft/bootstrap/challenge",
 				"storage/raft/bootstrap/answer",
@@ -160,13 +164,12 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.monitorPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.quotasPaths()...)
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
 	}
 
-	if backend := core.getRaftBackend(); backend != nil {
+	if _, ok := core.underlyingPhysical.(*raft.RaftBackend); ok {
 		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
 	}
 
@@ -434,6 +437,7 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logi
 func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("plugin").(string)
 	pluginMounts := d.Get("mounts").([]string)
+	scope := d.Get("scope").(string)
 
 	if pluginName != "" && len(pluginMounts) > 0 {
 		return logical.ErrorResponse("plugin and mounts cannot be set at the same time"), nil
@@ -443,18 +447,30 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 	}
 
 	if pluginName != "" {
-		err := b.Core.reloadMatchingPlugin(ctx, pluginName)
+		err := b.Core.reloadMatchingPlugin(ctx, pluginName, time.Now())
 		if err != nil {
 			return nil, err
 		}
 	} else if len(pluginMounts) > 0 {
-		err := b.Core.reloadMatchingPluginMounts(ctx, pluginMounts)
+		err := b.Core.reloadMatchingPluginMounts(ctx, pluginMounts, time.Now())
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		return nil, nil
 	}
 
-	return nil, nil
+	r := logical.Response{
+		Data: map[string]interface{}{
+			"reload_id": req.ID,
+		},
+	}
+
+	if scope == clusterScope {
+		go handleClusterPluginReload(b, req.ID, pluginName, pluginMounts)
+		return logical.RespondWithStatusCode(&r, req, http.StatusAccepted)
+	}
+	return &r, nil
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
@@ -670,6 +686,7 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 		"external_entropy_access": entry.ExternalEntropyAccess,
 		"options":                 entry.Options,
 		"uuid":                    entry.UUID,
+		"started_time":            entry.StartedTime,
 	}
 	entryConfig := map[string]interface{}{
 		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
@@ -752,7 +769,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 
 	// Get all the options
 	path := data.Get("path").(string)
-	path = sanitizePath(path)
+	path = sanitizeMountPath(path)
 
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
@@ -935,7 +952,7 @@ func handleErrorNoReadOnlyForward(
 // handleUnmount is used to unmount a path
 func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
-	path = sanitizePath(path)
+	path = sanitizeMountPath(path)
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -1030,12 +1047,6 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 		return handleError(err)
 	}
 
-	// Update quotas with the new path
-	if err := b.Core.quotaManager.HandleRemount(ctx, ns.Path, sanitizePath(fromPath), sanitizePath(toPath)); err != nil {
-		b.Core.logger.Error("failed to update quotas after remount", "ns_path", ns.Path, "from_path", fromPath, "to_path", toPath, "error", err)
-		return handleError(err)
-	}
-
 	return nil, nil
 }
 
@@ -1067,7 +1078,7 @@ func (b *SystemBackend) handleMountTuneRead(ctx context.Context, req *logical.Re
 
 // handleTuneReadCommon returns the config settings of a path
 func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (*logical.Response, error) {
-	path = sanitizePath(path)
+	path = sanitizeMountPath(path)
 
 	sysView := b.Core.router.MatchingSystemView(ctx, path)
 	if sysView == nil {
@@ -1153,7 +1164,7 @@ func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.R
 func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 
-	path = sanitizePath(path)
+	path = sanitizeMountPath(path)
 
 	// Prevent protected paths from being changed
 	for _, p := range untunableMounts {
@@ -1723,7 +1734,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 
 	// Get all the options
 	path := data.Get("path").(string)
-	path = sanitizePath(path)
+	path = sanitizeMountPath(path)
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
 	pluginName := data.Get("plugin_name").(string)
@@ -1864,7 +1875,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 // handleDisableAuth is used to disable a credential backend
 func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
-	path = sanitizePath(path)
+	path = sanitizeMountPath(path)
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -2279,7 +2290,7 @@ func (b *SystemBackend) handleAuditHash(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse("the \"input\" parameter is empty"), nil
 	}
 
-	path = sanitizePath(path)
+	path = sanitizeMountPath(path)
 
 	hash, err := b.Core.auditBroker.GetHash(ctx, path, input)
 	if err != nil {
@@ -3207,7 +3218,8 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.mountsLock.RLock()
 	for _, entry := range b.Core.mounts.Entries {
-		filtered, err := b.Core.checkReplicatedFiltering(ctx, entry, "")
+		ctxWithNamespace := namespace.ContextWithNamespace(ctx, entry.Namespace())
+		filtered, err := b.Core.checkReplicatedFiltering(ctxWithNamespace, entry, "")
 		if err != nil {
 			b.Core.mountsLock.RUnlock()
 			return nil, err
@@ -3233,7 +3245,8 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.authLock.RLock()
 	for _, entry := range b.Core.auth.Entries {
-		filtered, err := b.Core.checkReplicatedFiltering(ctx, entry, credentialRoutePrefix)
+		ctxWithNamespace := namespace.ContextWithNamespace(ctx, entry.Namespace())
+		filtered, err := b.Core.checkReplicatedFiltering(ctxWithNamespace, entry, credentialRoutePrefix)
 		if err != nil {
 			b.Core.authLock.RUnlock()
 			return nil, err
@@ -3265,7 +3278,7 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	if path == "" {
 		return logical.ErrorResponse("path not set"), logical.ErrInvalidRequest
 	}
-	path = sanitizePath(path)
+	path = sanitizeMountPath(path)
 
 	errResp := logical.ErrorResponse(fmt.Sprintf("preflight capability check returned 403, please ensure client's policies grant access to path %q", path))
 
@@ -3583,7 +3596,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	return resp, nil
 }
 
-func sanitizePath(path string) string {
+func sanitizeMountPath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
 	}
@@ -4250,6 +4263,14 @@ This path responds to the following HTTP methods.
 	},
 	"plugin-backend-reload-mounts": {
 		`The mount paths of the plugin backends to reload.`,
+		"",
+	},
+	"plugin-backend-reload-scope": {
+		`The scope of the reload`,
+		`Either absent or the empty string for local reload, or "cluster" for a cluster wide reload`,
+	},
+	"plugin-reload-backend-status": {
+		`Retrieve the status of a cluster-wide plugin reload`,
 		"",
 	},
 	"hash": {

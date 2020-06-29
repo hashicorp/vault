@@ -2,6 +2,9 @@ package vault_test
 
 import (
 	"fmt"
+	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -427,6 +430,18 @@ func TestSystemBackend_Plugin_SealUnseal(t *testing.T) {
 	// Wait for active so post-unseal takes place
 	// If it fails, it means unseal process failed
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
+}
+
+func TestSystemBackend_Plugin_reload(t *testing.T) {
+	data := map[string]interface{}{
+		"plugin": "mock-plugin",
+	}
+	t.Run("plugin", func(t *testing.T) { testSystemBackend_PluginReload(t, data) })
+
+	data = map[string]interface{}{
+		"mounts": "mock-0/,mock-1/",
+	}
+	t.Run("mounts", func(t *testing.T) { testSystemBackend_PluginReload(t, data) })
 }
 
 func TestSystemBackend_Plugin_reload(t *testing.T) {

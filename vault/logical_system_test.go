@@ -2654,7 +2654,7 @@ func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
 	// Add another mount
 	me := &MountEntry{
 		Table:   mountTableType,
-		Path:    sanitizePath("kv-v1"),
+		Path:    sanitizeMountPath("kv-v1"),
 		Type:    "kv",
 		Options: map[string]string{"version": "1"},
 	}
