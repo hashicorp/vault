@@ -2301,45 +2301,19 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	// newSeal will be the barrierSeal
 	newSeal = barrierSeal
 
-	// TODO: I think that commenting out this check is all we need to do to
-	// allow migrating between same seal types.
-	//if migrationSeal != nil && newSeal != nil && migrationSeal.BarrierType() == newSeal.BarrierType() {
-	//	return errors.New("Migrating between same seal types is currently not supported")
-	//}
-
-	// use this to fetch a recovery key from a seal:
-	// seal.RecoveryKey(context.Context) ([]byte, error)
-
-	fmt.Printf("(c *Core) adjustForSealMigration aaa existBarrierSealConfig %s, barrierSeal %s\n",
-		existBarrierSealConfig.Type, barrierSeal.BarrierType())
-
-	_, rerr := barrierSeal.RecoveryKey(context.Background())
-	fmt.Printf("(c *Core) adjustForSealMigration bbb recoveryKey %t\n", rerr == nil)
-	if rerr != nil {
-		fmt.Printf("(c *Core) adjustForSealMigration ccc %s\n", rerr.Error())
-	}
-
-	// seal.RecoveryKey(context.Context) ([]byte, error)
-
-	//// TODO: To allowe migrating between same seal types, we *also* need to
-	//// comment out this check.  What does this check actually do? Is this for
-	//// Shamir re-wrap?
-	//if unwrapSeal != nil && existBarrierSealConfig.Type == barrierSeal.BarrierType() {
-	//	// In this case our migration seal is set so we are using it
-	//	// (potentially) for unwrapping. Set it on core for that purpose then
-	//	// exit.
-
-	//	// This means we've already migrated, and we just need to set the unwrap seal.
-	//	c.setSealsForMigration(nil, nil, unwrapSeal)
-	//	return nil
-	//}
-
 	// Set the appropriate barrier and recovery configs.
 	switch {
 	case migrationSeal != nil && newSeal != nil && migrationSeal.RecoveryKeySupported() && newSeal.RecoveryKeySupported():
 		// Migrating from auto->auto, copy the configs over
 		newSeal.SetCachedBarrierConfig(existBarrierSealConfig)
 		newSeal.SetCachedRecoveryConfig(existRecoverySealConfig)
+
+		// If we have an unwrap seal, and the seals match, this means we've
+		// already migrated, and we just need to set the unwrap seal.
+		if unwrapSeal != nil && autoSealsMatch(newSeal, barrierSeal) {
+			c.setSealsForMigration(nil, nil, unwrapSeal)
+			return nil
+		}
 	case migrationSeal != nil && newSeal != nil && migrationSeal.RecoveryKeySupported():
 		// Migrating from auto->shamir, clone auto's recovery config and set
 		// stored keys to 1.
@@ -2366,6 +2340,20 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	c.setSealsForMigration(migrationSeal, newSeal, unwrapSeal)
 
 	return nil
+}
+
+// autoSealsMatch checks if the two seals are the same, by checking
+// whether they can both decode the recoveryKey successfully.
+func autoSealsMatch(seal1, seal2 Seal) bool {
+
+	ctx := context.Background()
+	_, err := seal1.RecoveryKey(ctx)
+	if err != nil {
+		return false
+	}
+
+	_, err = seal2.RecoveryKey(ctx)
+	return err == nil
 }
 
 func (c *Core) setSealsForMigration(migrationSeal, newSeal, unwrapSeal Seal) {
