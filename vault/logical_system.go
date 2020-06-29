@@ -2757,17 +2757,24 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		// marked as sealed.
 		case <-ticker.C:
 			if b.Core.Sealed() {
-				// If we error here, it means we couldn't write to the response
-				// writer so there's nothing we can use send over the error.
-				_, _ = fmt.Fprint(w, "core received sealed state change, ending monitor session")
-				return nil, nil
+				// We still return the error, but this will be ignored upstream
+				// due to the fact that we've already sent a response by
+				// writing the header and flushing the writer above.
+				_, err = fmt.Fprint(w, "core received sealed state change, ending monitor session")
+				if err != nil {
+					return nil, fmt.Errorf("error checking seal state: %w", err)
+				}
 			}
 		case <-ctx.Done():
 			return nil, nil
 		case l := <-logCh:
-			// If we error here, it means we couldn't write to the response
-			// writer so there's nothing we can use to send over the error.
-			_, _ = fmt.Fprint(w, string(l))
+			// We still return the error, but this will be ignored upstream
+			// due to the fact that we've already sent a response by
+			// writing the header and flushing the writer above.
+			_, err = fmt.Fprint(w, string(l))
+			if err != nil {
+				return nil, fmt.Errorf("error streaming monitor output: %w", err)
+			}
 
 			flusher.Flush()
 		}
