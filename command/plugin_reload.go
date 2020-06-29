@@ -16,7 +16,6 @@ type PluginReloadCommand struct {
 	*BaseCommand
 	plugin string
 	mounts []string
-	scope  string
 }
 
 func (c *PluginReloadCommand) Synopsis() string {
@@ -59,13 +58,6 @@ func (c *PluginReloadCommand) Flags() *FlagSets {
 		Usage:      "Array or comma-separated string mount paths of the plugin backends to reload.",
 	})
 
-	f.StringVar(&StringVar{
-		Name:       "scope",
-		Target:     &c.scope,
-		Completion: complete.PredictAnything,
-		Usage:      "The scope of the reload, omitted for local, 'global', for replicated reloads",
-	})
-
 	return set
 }
 
@@ -92,8 +84,6 @@ func (c *PluginReloadCommand) Run(args []string) int {
 	case c.plugin != "" && len(c.mounts) > 0:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
 		return 1
-	case c.scope != "" && c.scope != "global":
-		c.UI.Error(fmt.Sprintf("Invalid reload scope: %s", c.scope))
 	}
 
 	client, err := c.Client()
@@ -102,28 +92,18 @@ func (c *PluginReloadCommand) Run(args []string) int {
 		return 2
 	}
 
-	rid, err := client.Sys().ReloadPlugin(&api.ReloadPluginInput{
+	if err := client.Sys().ReloadPlugin(&api.ReloadPluginInput{
 		Plugin: c.plugin,
 		Mounts: c.mounts,
-		Scope:  c.scope,
-	})
-	if err != nil {
+	}); err != nil {
 		c.UI.Error(fmt.Sprintf("Error reloading plugin/mounts: %s", err))
 		return 2
 	}
 
 	if len(c.mounts) > 0 {
-		if rid != "" {
-			c.UI.Output(fmt.Sprintf("Success! Reloading mounts: %s, reload_id: %s", c.mounts, rid))
-		} else {
-			c.UI.Output(fmt.Sprintf("Success! Reloaded mounts: %s", c.mounts))
-		}
+		c.UI.Output(fmt.Sprintf("Success! Reloaded mounts: %s", c.mounts))
 	} else {
-		if rid != "" {
-			c.UI.Output(fmt.Sprintf("Success! Reloading plugin: %s, reload_id: %s", c.plugin, rid))
-		} else {
-			c.UI.Output(fmt.Sprintf("Success! Reloaded plugin: %s", c.plugin))
-		}
+		c.UI.Output(fmt.Sprintf("Success! Reloaded plugin: %s", c.plugin))
 	}
 
 	return 0
