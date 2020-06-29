@@ -2308,8 +2308,9 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 		newSeal.SetCachedBarrierConfig(existBarrierSealConfig)
 		newSeal.SetCachedRecoveryConfig(existRecoverySealConfig)
 
-		// If we have an unwrap seal, and the seals match, this means we've
-		// already migrated, and we just need to set the unwrap seal.
+		// In this case our migration seal is set so we are using it
+		// (potentially) for unwrapping. Set it on core for that purpose then
+		// exit.
 		if unwrapSeal != nil && autoSealsMatch(newSeal, barrierSeal) {
 			c.setSealsForMigration(nil, nil, unwrapSeal)
 			return nil
