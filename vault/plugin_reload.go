@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/vault/helper/namespace"
 
@@ -16,7 +15,7 @@ import (
 
 // reloadPluginMounts reloads provided mounts, regardless of
 // plugin name, as long as the backend type is plugin.
-func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string, reloadTime time.Time) error {
+func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) error {
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 	c.authLock.RLock()
@@ -32,10 +31,6 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string, 
 		entry := c.router.MatchingMountEntry(ctx, mount)
 		if entry == nil {
 			errors = multierror.Append(errors, fmt.Errorf("cannot fetch mount entry on %q", mount))
-			continue
-		}
-
-		if entry.StartedTime.After(reloadTime) {
 			continue
 		}
 
@@ -63,7 +58,7 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string, 
 // reloadPlugin reloads all mounted backends that are of
 // plugin pluginName (name of the plugin as registered in
 // the plugin catalog).
-func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string, reloadTime time.Time) error {
+func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) error {
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 	c.authLock.RLock()
@@ -80,7 +75,7 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string, relo
 		if ns.ID != entry.Namespace().ID {
 			continue
 		}
-		if entry.Type == pluginName || (entry.Type == "plugin" && entry.Config.PluginName == pluginName) && reloadTime.After(entry.StartedTime) {
+		if entry.Type == pluginName || (entry.Type == "plugin" && entry.Config.PluginName == pluginName) {
 			err := c.reloadBackendCommon(ctx, entry, false)
 			if err != nil {
 				return err
@@ -199,8 +194,4 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 	}
 
 	return nil
-}
-
-func (c *Core) setupPluginReload() error {
-	return handleSetupPluginReload(c.systemBackend)
 }

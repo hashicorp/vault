@@ -84,12 +84,6 @@ var (
 			},
 		}
 	}
-	handleGlobalPluginReload = func(context.Context, *Core, string, string, []string) error {
-		return nil
-	}
-	handleSetupPluginReload = func(*Core) error {
-		return nil
-	}
 
 	checkRaw = func(b *SystemBackend, path string) error { return nil }
 )
