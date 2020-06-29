@@ -1828,10 +1828,11 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, performCleanup
 		}
 	}
 
-	if err := postSealInternal(c); err != nil {
-		c.logger.Error("post seal error", "error", err)
-		return err
+	if err := c.quotaManager.Reset(); err != nil {
+		c.logger.Error("error resetting quota manager", "error", err)
 	}
+
+	postSealInternal(c)
 
 	c.logger.Info("vault is sealed")
 

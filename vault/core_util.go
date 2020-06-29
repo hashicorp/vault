@@ -59,7 +59,7 @@ func addExtraCredentialBackends(*Core, map[string]logical.Factory) {}
 
 func preUnsealInternal(context.Context, *Core) error { return nil }
 
-func postSealInternal(*Core) error { return nil }
+func postSealInternal(*Core) {}
 
 func preSealPhysical(c *Core) {
 	switch c.sealUnwrapper.(type) {
