@@ -531,8 +531,9 @@ github.com/hashicorp/vault-plugin-auth-gcp v0.5.1/go.mod h1:eLj92eX8MPI4vY1jaazV
 github.com/hashicorp/vault-plugin-auth-gcp v0.6.1 h1:WXTuja3WC2BdZekYCnzuZGoVvZTAGH8kSDUHzOK2PQY=
 github.com/hashicorp/vault-plugin-auth-gcp v0.6.1/go.mod h1:8eBRzg+JIhAaDBfDndDAQKIhDrQ3WW8OPklxAYftNFs=
 github.com/hashicorp/vault-plugin-auth-gcp v0.6.2-0.20200428223335-82bd3a3ad5b3/go.mod h1:U0fkAlxWTEyQ74lx8wlGdD493lP1DD/qpMjXgOEbwj0=
-github.com/hashicorp/vault-plugin-auth-jwt v0.6.2 h1:fp6Rk89iPjDS8dyEK7lEauYE/UhkgkHbmwRZKuQA01U=
 github.com/hashicorp/vault-plugin-auth-jwt v0.6.2/go.mod h1:SFadxIfoLGzugEjwUUmUaCGbsYEz2/jJymZDDQjEqYg=
+github.com/hashicorp/vault-plugin-auth-jwt v0.7.0 h1:lHg02BB7IpUQbJStAPmGyS3KnZJC7PSEvc5LOZNPjHM=
+github.com/hashicorp/vault-plugin-auth-jwt v0.7.0/go.mod h1:ZJJy4b0H3N7CSoJ6iPlWhV9EjHLSoB5NhP06CNm6ImU=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.1.5 h1:knWedzZ51g8Aj6Hyi1ATlQ/7jEx6nJeqFoCoHSrbQFI=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.1.5/go.mod h1:r4UqWITHYKmBeAMKPWqLo4V8bl/wNqoSIaQcMpeK9ss=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6 h1:l5wu8J7aiQBLsTtkKhf1QQjGoeVjcfcput+uJ/pu2MM=
@@ -697,8 +698,9 @@ github.com/mitchellh/mapstructure v1.2.2 h1:dxe5oCinTXiTIcfgmZecdCzPmAJKd46KsCWc
 github.com/mitchellh/mapstructure v1.2.2/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/mitchellh/mapstructure v1.3.2 h1:mRS76wmkOn3KkKAyXDu42V+6ebnXWIztFSYGN7GeoRg=
 github.com/mitchellh/mapstructure v1.3.2/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
-github.com/mitchellh/pointerstructure v0.0.0-20190430161007-f252a8fd71c8 h1:1CO5wil3HuiVLrUQ2ovSTO+6AfNOA5EMkHHVyHE9IwA=
 github.com/mitchellh/pointerstructure v0.0.0-20190430161007-f252a8fd71c8/go.mod h1:k4XwG94++jLVsSiTxo7qdIfXA9pj9EAeo0QsNNJOLZ8=
+github.com/mitchellh/pointerstructure v1.0.0 h1:ATSdz4NWrmWPOF1CeCBU4sMCno2hgqdbSrRPFWQSVZI=
+github.com/mitchellh/pointerstructure v1.0.0/go.mod h1:k4XwG94++jLVsSiTxo7qdIfXA9pj9EAeo0QsNNJOLZ8=
 github.com/mitchellh/reflectwalk v1.0.0/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
 github.com/mitchellh/reflectwalk v1.0.1 h1:FVzMWA5RllMAKIdUSC8mdWo3XtwoecrH79BY70sEEpE=
 github.com/mitchellh/reflectwalk v1.0.1/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
