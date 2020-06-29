@@ -16,7 +16,7 @@ import (
 
 // reloadPluginMounts reloads provided mounts, regardless of
 // plugin name, as long as the backend type is plugin.
-func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) error {
+func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string, reloadTime time.Time) error {
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 	c.authLock.RLock()
@@ -63,7 +63,7 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) 
 // reloadPlugin reloads all mounted backends that are of
 // plugin pluginName (name of the plugin as registered in
 // the plugin catalog).
-func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) error {
+func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string, reloadTime time.Time) error {
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 	c.authLock.RLock()
