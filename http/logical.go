@@ -416,12 +416,18 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 				ctx, cancel := core.GetContext()
 				defer cancel()
 
-				// If this is a sys/monitor command
-				select {
-				case <-req.ResponseWriter.DoneWriteCh():
-				case <-ctx.Done():
-					req.ResponseWriter.SignalDoneWrite()
+				waitDone := func() {
+					for {
+						select {
+						case <-req.ResponseWriter.DoneWriteCh():
+							return
+						case <-ctx.Done():
+							req.ResponseWriter.SignalDoneWrite()
+						}
+					}
 				}
+				waitDone()
+
 			}
 
 			// Build and return the proper response if everything is fine.
