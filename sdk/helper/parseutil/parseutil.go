@@ -12,6 +12,7 @@ import (
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/mitchellh/mapstructure"
+	"github.com/prometheus/common/model"
 )
 
 func ParseDurationSecond(in interface{}) (time.Duration, error) {
@@ -27,10 +28,10 @@ func ParseDurationSecond(in interface{}) (time.Duration, error) {
 		if inp == "" {
 			return dur, nil
 		}
-		var err error
 		// Look for a suffix otherwise its a plain second value
-		if strings.HasSuffix(inp, "s") || strings.HasSuffix(inp, "m") || strings.HasSuffix(inp, "h") || strings.HasSuffix(inp, "ms") {
-			dur, err = time.ParseDuration(inp)
+		if strings.HasSuffix(inp, "s") || strings.HasSuffix(inp, "m") || strings.HasSuffix(inp, "h") || strings.HasSuffix(inp, "ms") || strings.HasSuffix(inp, "d") || strings.HasSuffix(inp, "w") || strings.HasSuffix(inp, "y") {
+			d, err := model.ParseDuration(inp)
+			dur = time.Duration(d)
 			if err != nil {
 				return dur, err
 			}
