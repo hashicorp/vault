@@ -4,35 +4,6 @@
 ### ***
 version: 2
 jobs:
-  pre-flight-checks:
-    docker:
-    - image: circleci/buildpack-deps
-    environment:
-    - CCI_VERSION: 0.1.5691
-    shell: /usr/bin/env bash -euo pipefail
-    steps:
-    - checkout
-    - run:
-        command: |
-          export CCI_PATH=/tmp/circleci-cli/$CCI_VERSION
-          mkdir -p $CCI_PATH
-          NAME=circleci-cli_${CCI_VERSION}_${ARCH}
-          URL=$BASE/v${CCI_VERSION}/${NAME}.tar.gz
-          curl -sSL $URL \
-            | tar --overwrite --strip-components=1 -xz -C $CCI_PATH "${NAME}/circleci"
-          # Add circleci to the path for subsequent steps.
-          echo "export PATH=$CCI_PATH:\$PATH" >> $BASH_ENV
-          # Done, print some debug info.
-          set -x
-          . $BASH_ENV
-          which circleci
-          circleci version
-        environment:
-          ARCH: linux_amd64
-          BASE: https://github.com/CircleCI-Public/circleci-cli/releases/download
-        name: Install CircleCI CLI
-    - run:
-        command: make ci-verify
   install-ui-dependencies:
     docker:
     - environment:
@@ -54,50 +25,6 @@ jobs:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
         paths:
         - ui/node_modules
-  build-go-dev:
-    machine: true
-    shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /go/src/github.com/hashicorp/vault
-    steps:
-    - run:
-        command: |
-          [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
-          # Install Go
-          curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
-          sudo rm -rf /usr/local/go
-          sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
-          rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-          GOPATH="/go"
-          mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
-          echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
-          echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
-
-          echo "$ go version"
-          go version
-        name: Setup Go
-        working_directory: ~/
-    - checkout
-    - attach_workspace:
-        at: .
-    - run:
-        command: |
-          # Move dev UI assets to expected location
-          rm -rf ./pkg
-          mkdir ./pkg
-
-          # Build dev binary
-          make ci-bootstrap dev
-        name: Build dev binary
-    - persist_to_workspace:
-        paths:
-        - bin
-        root: .
-    environment:
-    - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_TAGS: ''
-    - GO_VERSION: 1.13.8
-    - GO111MODULE: 'off'
-    - GOTESTSUM_VERSION: 0.3.3
   test-ui:
     docker:
     - environment:
@@ -158,23 +85,11 @@ jobs:
           export PATH="${PWD}"/bin:${PATH}
           make test-ui-browserstack
         name: Run Browserstack Tests
-  test-go:
+  build-go-dev:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /go/src/github.com/hashicorp/vault
-    parallelism: 2
     steps:
-    - run:
-        command: |
-          # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
-          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
-            # stop the job from this step
-            circleci-agent step halt
-          }
-          # exit with success either way
-          exit 0
-        name: Check branch name
-        working_directory: ~/
     - run:
         command: |
           [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
@@ -193,59 +108,42 @@ jobs:
         name: Setup Go
         working_directory: ~/
     - checkout
+    - attach_workspace:
+        at: .
     - run:
         command: |
-          set -x
+          # Move dev UI assets to expected location
+          rm -rf ./pkg
+          mkdir ./pkg
 
-          # Install CircleCI CLI
-          curl -sSL \
-              "https://github.com/CircleCI-Public/circleci-cli/releases/download/v${CIRCLECI_CLI_VERSION}/circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64.tar.gz" \
-            | sudo tar --overwrite -xz \
-              -C /usr/local/bin \
-              "circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64/circleci"
-
-          # Split Go tests by prior test times
-          package_names=$(go list \
-              -tags "${GO_TAGS}" \
-              ./... \
-            | grep -v /integ \
-            | grep -v /vendor/ \
-            | sort \
-            | circleci tests split --split-by=timings --timings-type=classname)
-
-          # Install gotestsum
-          curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz" \
-            | sudo tar --overwrite -xz -C /usr/local/bin gotestsum
-
-          # Run tests
-          make prep
-          mkdir -p test-results/go-test
-          CGO_ENABLED= \
-            VAULT_ADDR= \
-            VAULT_TOKEN= \
-            VAULT_DEV_ROOT_TOKEN_ID= \
-            VAULT_ACC= \
-            VAULT_TEST_LOG_DIR=/tmp/testlogs \
-            gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
-              -tags "${GO_TAGS}" \
-              -timeout=60m \
-              -parallel=20 \
-               \
-              ${package_names}
-        name: Run Go tests
-        no_output_timeout: 60m
-    - store_artifacts:
-        path: test-results
-    - store_test_results:
-        path: test-results
-    - store_artifacts:
-        path: /tmp/testlogs
+          # Build dev binary
+          make ci-bootstrap dev
+        name: Build dev binary
+    - persist_to_workspace:
+        paths:
+        - bin
+        root: .
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
     - GO_VERSION: 1.13.8
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.3.3
+  algolia-index:
+    docker:
+    - image: node:12
+    steps:
+    - checkout
+    - run:
+        command: |
+          if  [ "$CIRCLE_REPOSITORY_URL" != "git@github.com:hashicorp/vault.git" ]; then
+            echo "Not Vault OSS Repo, not indexing Algolia"
+            exit 0
+          fi
+          cd website/
+          npm install
+          node scripts/index_search_content.js
+        name: Push content to Algolia Index
   test-go-race:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
@@ -345,6 +243,123 @@ jobs:
               docker push hashicorp/vault-website
           fi
         name: Build Docker Image if Necessary
+  test-go:
+    machine: true
+    shell: /usr/bin/env bash -euo pipefail -c
+    working_directory: /go/src/github.com/hashicorp/vault
+    parallelism: 2
+    steps:
+    - run:
+        command: |
+          # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
+            # stop the job from this step
+            circleci-agent step halt
+          }
+          # exit with success either way
+          exit 0
+        name: Check branch name
+        working_directory: ~/
+    - run:
+        command: |
+          [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
+          # Install Go
+          curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
+          sudo rm -rf /usr/local/go
+          sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
+          rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
+          GOPATH="/go"
+          mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
+          echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+
+          echo "$ go version"
+          go version
+        name: Setup Go
+        working_directory: ~/
+    - checkout
+    - run:
+        command: |
+          set -x
+
+          # Install CircleCI CLI
+          curl -sSL \
+              "https://github.com/CircleCI-Public/circleci-cli/releases/download/v${CIRCLECI_CLI_VERSION}/circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64.tar.gz" \
+            | sudo tar --overwrite -xz \
+              -C /usr/local/bin \
+              "circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64/circleci"
+
+          # Split Go tests by prior test times
+          package_names=$(go list \
+              -tags "${GO_TAGS}" \
+              ./... \
+            | grep -v /integ \
+            | grep -v /vendor/ \
+            | sort \
+            | circleci tests split --split-by=timings --timings-type=classname)
+
+          # Install gotestsum
+          curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz" \
+            | sudo tar --overwrite -xz -C /usr/local/bin gotestsum
+
+          # Run tests
+          make prep
+          mkdir -p test-results/go-test
+          CGO_ENABLED= \
+            VAULT_ADDR= \
+            VAULT_TOKEN= \
+            VAULT_DEV_ROOT_TOKEN_ID= \
+            VAULT_ACC= \
+            VAULT_TEST_LOG_DIR=/tmp/testlogs \
+            gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
+              -tags "${GO_TAGS}" \
+              -timeout=60m \
+              -parallel=20 \
+               \
+              ${package_names}
+        name: Run Go tests
+        no_output_timeout: 60m
+    - store_artifacts:
+        path: test-results
+    - store_test_results:
+        path: test-results
+    - store_artifacts:
+        path: /tmp/testlogs
+    environment:
+    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_TAGS: ''
+    - GO_VERSION: 1.13.8
+    - GO111MODULE: 'off'
+    - GOTESTSUM_VERSION: 0.3.3
+  pre-flight-checks:
+    docker:
+    - image: circleci/buildpack-deps
+    environment:
+    - CCI_VERSION: 0.1.5691
+    shell: /usr/bin/env bash -euo pipefail
+    steps:
+    - checkout
+    - run:
+        command: |
+          export CCI_PATH=/tmp/circleci-cli/$CCI_VERSION
+          mkdir -p $CCI_PATH
+          NAME=circleci-cli_${CCI_VERSION}_${ARCH}
+          URL=$BASE/v${CCI_VERSION}/${NAME}.tar.gz
+          curl -sSL $URL \
+            | tar --overwrite --strip-components=1 -xz -C $CCI_PATH "${NAME}/circleci"
+          # Add circleci to the path for subsequent steps.
+          echo "export PATH=$CCI_PATH:\$PATH" >> $BASH_ENV
+          # Done, print some debug info.
+          set -x
+          . $BASH_ENV
+          which circleci
+          circleci version
+        environment:
+          ARCH: linux_amd64
+          BASE: https://github.com/CircleCI-Public/circleci-cli/releases/download
+        name: Install CircleCI CLI
+    - run:
+        command: make ci-verify
 workflows:
   ci:
     jobs:
@@ -382,6 +397,12 @@ workflows:
           branches:
             only:
             - master
+        context: vault-docs
+    - algolia-index:
+        filters:
+          branches:
+            only:
+            - stable-website
         context: vault-docs
   version: 2
 
@@ -513,6 +534,21 @@ workflows:
 #     shell: /usr/bin/env bash -euo pipefail -c
 #     working_directory: /go/src/github.com/hashicorp/vault
 # jobs:
+#   algolia-index:
+#     docker:
+#     - image: node:12
+#     steps:
+#     - checkout
+#     - run:
+#         command: |
+#           if  [ \"$CIRCLE_REPOSITORY_URL\" != \"git@github.com:hashicorp/vault.git\" ]; then
+#             echo \"Not Vault OSS Repo, not indexing Algolia\"
+#             exit 0
+#           fi
+#           cd website/
+#           npm install
+#           node scripts/index_search_content.js
+#         name: Push content to Algolia Index
 #   build-go-dev:
 #     executor: go-machine
 #     steps:
@@ -719,3 +755,9 @@ workflows:
 #           branches:
 #             only:
 #             - master
+#     - algolia-index:
+#         context: vault-docs
+#         filters:
+#           branches:
+#             only:
+#             - stable-website
