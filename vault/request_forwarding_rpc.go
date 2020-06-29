@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/forwarding"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/replication"
 )
@@ -81,11 +82,9 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 		ReplicationState: uint32(s.core.ReplicationState()),
 	}
 
-	if raftBackend := s.core.getRaftBackend(); raftBackend != nil {
-		if !s.core.isRaftHAOnly() {
-			reply.RaftAppliedIndex = raftBackend.AppliedIndex()
-			reply.RaftNodeID = raftBackend.NodeID()
-		}
+	if raftStorage, ok := s.core.underlyingPhysical.(*raft.RaftBackend); ok {
+		reply.RaftAppliedIndex = raftStorage.AppliedIndex()
+		reply.RaftNodeID = raftStorage.NodeID()
 	}
 
 	return reply, nil
@@ -112,11 +111,9 @@ func (c *forwardingClient) startHeartbeat() {
 				ClusterAddr: clusterAddr,
 			}
 
-			if raftBackend := c.core.getRaftBackend(); raftBackend != nil {
-				if !c.core.isRaftHAOnly() {
-					req.RaftAppliedIndex = raftBackend.AppliedIndex()
-					req.RaftNodeID = raftBackend.NodeID()
-				}
+			if raftStorage, ok := c.core.underlyingPhysical.(*raft.RaftBackend); ok {
+				req.RaftAppliedIndex = raftStorage.AppliedIndex()
+				req.RaftNodeID = raftStorage.NodeID()
 			}
 
 			ctx, cancel := context.WithTimeout(c.echoContext, 2*time.Second)
