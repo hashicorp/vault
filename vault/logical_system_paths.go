@@ -718,7 +718,7 @@ func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:    b.handlePluginReloadUpdate,
 				Summary:     "Reload mounted plugin backends.",
-				Description: "Either the plugin name (`plugin`) or the desired plugin backend mounts (`mounts`) must be provided, but not both. In the case that the plugin name is provided, all mounted paths that use that plugin backend will be reloaded.  If (`scope`) is provided and is (`cluster`), the plugin(s) are reloaded cluster wide.",
+				Description: "Either the plugin name (`plugin`) or the desired plugin backend mounts (`mounts`) must be provided, but not both. In the case that the plugin name is provided, all mounted paths that use that plugin backend will be reloaded.  If (`scope`) is provided and is (`global`), the plugin(s) are reloaded globally.",
 			},
 		},
 
@@ -726,6 +726,7 @@ func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 		HelpDescription: strings.TrimSpace(sysHelp["plugin-reload"][1]),
 	}
 }
+
 func (b *SystemBackend) toolsPaths() []*framework.Path {
 	return []*framework.Path{
 		{
