@@ -18,6 +18,7 @@
  * @param recalculationTimeout=5000 {Number} - This is the time, in milliseconds, that `recalculateSeconds` will be be true after time is updated
  * @param initialValue=null {String} - This is the value set initially (particularly from a string like '30h')
  * @param initialEnabled=null {Boolean} - Set this value if you want the toggle on when component is mounted
+ * @param changeOnInit=false {Boolean} - set this value if you'd like the passed onChange function to be called on component initialization
  */
 
 import Ember from 'ember';
@@ -52,11 +53,13 @@ export default Component.extend({
   unit: 's',
   recalculationTimeout: 5000,
   initialValue: null,
+  changeOnInit: false,
 
   init() {
     this._super(...arguments);
     const value = this.initialValue;
     const enable = this.initialEnabled;
+    const changeOnInit = this.changeOnInit;
     // if initial value is unset use params passed in as defaults
     if (!value && value !== 0) {
       return;
@@ -83,6 +86,10 @@ export default Component.extend({
       unit: 's',
       enableTTL: setEnable,
     });
+
+    if (changeOnInit) {
+      this.handleChange();
+    }
   },
 
   unitOptions: computed(function() {
@@ -100,6 +107,7 @@ export default Component.extend({
       seconds,
       timeString: time + unit,
     };
+    console.log({ ttl });
     this.onChange(ttl);
   },
   updateTime: task(function*(newTime) {
