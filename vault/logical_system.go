@@ -41,7 +41,7 @@ import (
 )
 
 const maxBytes = 128 * 1024
-const globalScope = "global"
+const clusterScope = "cluster"
 
 func systemBackendMemDBSchema() *memdb.DBSchema {
 	systemSchema := &memdb.DBSchema{
@@ -439,10 +439,6 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 	pluginMounts := d.Get("mounts").([]string)
 	scope := d.Get("scope").(string)
 
-	if scope != "" && scope != globalScope {
-		return logical.ErrorResponse("reload scope must be omitted or 'global'"), nil
-	}
-
 	if pluginName != "" && len(pluginMounts) > 0 {
 		return logical.ErrorResponse("plugin and mounts cannot be set at the same time"), nil
 	}
@@ -451,12 +447,12 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 	}
 
 	if pluginName != "" {
-		err := b.Core.reloadMatchingPlugin(ctx, pluginName)
+		err := b.Core.reloadMatchingPlugin(ctx, pluginName, time.Now())
 		if err != nil {
 			return nil, err
 		}
 	} else if len(pluginMounts) > 0 {
-		err := b.Core.reloadMatchingPluginMounts(ctx, pluginMounts)
+		err := b.Core.reloadMatchingPluginMounts(ctx, pluginMounts, time.Now())
 		if err != nil {
 			return nil, err
 		}
@@ -470,11 +466,8 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 		},
 	}
 
-	if scope == globalScope {
-		err := handleGlobalPluginReload(ctx, b.Core, req.ID, pluginName, pluginMounts)
-		if err != nil {
-			return nil, err
-		}
+	if scope == clusterScope {
+		go handleClusterPluginReload(b, req.ID, pluginName, pluginMounts)
 		return logical.RespondWithStatusCode(&r, req, http.StatusAccepted)
 	}
 	return &r, nil
@@ -4288,11 +4281,11 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"plugin-backend-reload-scope": {
-		`The scope of the plugin reload, either omitted or 'global'`,
-		"",
+		`The scope of the reload`,
+		`Either absent or the empty string for local reload, or "cluster" for a cluster wide reload`,
 	},
 	"plugin-reload-backend-status": {
-		`Retrieve the status of a global plugin reload`,
+		`Retrieve the status of a cluster-wide plugin reload`,
 		"",
 	},
 	"hash": {
