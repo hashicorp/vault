@@ -409,13 +409,14 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			// in this case.
 			return
 		default:
-			// Build and return the proper response if everything is fine.
-			respondLogical(w, r, req, resp, injectDataIntoTopLevel)
-
+			// If this is a sys/monitor command, we process the request but hold
+			// off on returning a response to allow streaming until active
+			// context is given up or the request is canceled.
 			if req.Path == "sys/monitor" {
-				ctx, cancelFunc := core.GetContext()
-				defer cancelFunc()
+				ctx, cancel := core.GetContext()
+				defer cancel()
 
+				// If this is a sys/monitor command
 				select {
 				case <-req.ResponseWriter.DoneWriteCh():
 				case <-ctx.Done():
@@ -423,6 +424,8 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 				}
 			}
 
+			// Build and return the proper response if everything is fine.
+			respondLogical(w, r, req, resp, injectDataIntoTopLevel)
 			return
 		}
 	})
