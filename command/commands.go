@@ -447,11 +447,6 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"plugin reload-status": func() (cli.Command, error) {
-			return &PluginReloadStatusCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
 		"policy": func() (cli.Command, error) {
 			return &PolicyCommand{
 				BaseCommand: getBaseCommand(),

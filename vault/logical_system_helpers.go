@@ -84,12 +84,6 @@ var (
 			},
 		}
 	}
-	handleClusterPluginReload = func(*SystemBackend, string, string, []string) error {
-		return nil
-	}
-	handleSetupPluginReload = func(*SystemBackend) error {
-		return nil
-	}
 
 	checkRaw = func(b *SystemBackend, path string) error { return nil }
 )

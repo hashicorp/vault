@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/mapstructure"
@@ -233,19 +232,15 @@ type ReloadPluginInput struct {
 
 	// Mounts is the array of string mount paths of the plugin backends to reload
 	Mounts []string `json:"mounts"`
-
-	// Scope is the scope of the plugin reload
-	Scope string `json:"scope"`
 }
 
-// ReloadPlugin reloads mounted plugin backends, possibly returning
-// reloadId for a cluster scoped reload
-func (c *Sys) ReloadPlugin(i *ReloadPluginInput) (string, error) {
+// ReloadPlugin reloads mounted plugin backends
+func (c *Sys) ReloadPlugin(i *ReloadPluginInput) error {
 	path := "/v1/sys/plugins/reload/backend"
 	req := c.c.NewRequest(http.MethodPut, path)
 
 	if err := req.SetJSONBody(i); err != nil {
-		return "", err
+		return err
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -253,63 +248,10 @@ func (c *Sys) ReloadPlugin(i *ReloadPluginInput) (string, error) {
 
 	resp, err := c.c.RawRequestWithContext(ctx, req)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer resp.Body.Close()
-
-	if i.Scope == "cluster" {
-		// Get the reload id
-		secret, parseErr := ParseSecret(resp.Body)
-		if parseErr != nil {
-			return "", err
-		}
-		return secret.Data["reload_id"].(string), nil
-	}
-	return "", err
-}
-
-type PluginReloadStatus struct {
-	Timestamp time.Time `json:"timestamp"`
-	Success   bool      `json:"success"`
-	Message   string    `json:"message"`
-}
-
-type PluginReloadStatusResponse struct {
-	ReloadID string
-	Results  map[string]interface{}
-}
-
-// ReloadPluginStatusInput is used as input to the ReloadStatusPlugin function.
-type ReloadPluginStatusInput struct {
-	// ReloadID is the ID of the reload operation
-	ReloadID string `json:"reload_id"`
-}
-
-// ReloadPluginStatus retrieves the status of a reload operation
-func (c *Sys) ReloadPluginStatus(reloadID string) (map[string]interface{}, error) {
-	path := "/v1/sys/plugins/reload/backend/status"
-	req := c.c.NewRequest(http.MethodGet, path)
-	req.Params.Add("reload_id", reloadID)
-
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-
-	resp, err := c.c.RawRequestWithContext(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp != nil {
-		secret, parseErr := ParseSecret(resp.Body)
-		if parseErr != nil {
-			return nil, err
-		}
-
-
-		return secret.Data, nil
-	}
-	return nil, nil
-
+	return err
 }
 
 // catalogPathByType is a helper to construct the proper API path by plugin type
