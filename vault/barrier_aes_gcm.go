@@ -910,6 +910,9 @@ func (b *AESGCMBarrier) encrypt(path string, term uint32, gcm cipher.AEAD, plain
 	// Allocate the output buffer with room for tern, version byte,
 	// nonce, GCM tag and the plaintext
 	capacity := termSize + 1 + gcm.NonceSize() + gcm.Overhead() + len(plain)
+	if capacity < 0 {
+		return nil, ErrPlaintextTooLarge
+	}
 	size := termSize + 1 + gcm.NonceSize()
 	out := make([]byte, size, capacity)
 

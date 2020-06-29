@@ -76,6 +76,10 @@ defined `path`. `node_id` can optionally be set to identify this node.
 cluster hostname of this node. For more configuration options see the [raft
 storage configuration documentation](/docs/configuration/storage/raft).
 
+If the original configuration uses "raft" for `ha_storage` a different
+`path` needs to be declared for the path in `storage_destination` and the new
+configuration for the node post-migration.
+
 ```hcl
 storage_source "consul" {
   address = "127.0.0.1:8500"
@@ -114,6 +118,9 @@ vault server.
 
 After migration the raft cluster will only have a single node. Additional peers
 should be joined to this node.
+
+If the cluster was previously HA-enabled using "raft" as the `ha_storage`, the
+nodes will have to re-join to the migrated node before unsealing.
 
 ## Usage
 
