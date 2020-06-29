@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"io/ioutil"
 
 	"github.com/briankassouf/jose/jws"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -106,15 +107,27 @@ func (b *kubeAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse("no host provided"), nil
 	}
 
+	localCACert, _ := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+
+	localTokenReviewer, _ := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+
 	pemList := data.Get("pem_keys").([]string)
 	caCert := data.Get("kubernetes_ca_cert").(string)
 	issuer := data.Get("issuer").(string)
 	disableIssValidation := data.Get("disable_iss_validation").(bool)
 	if len(pemList) == 0 && len(caCert) == 0 {
-		return logical.ErrorResponse("one of pem_keys or kubernetes_ca_cert must be set"), nil
+		if len(localCACert) > 0 {
+			caCert = string(localCACert)
+		} else {
+			return logical.ErrorResponse("one of pem_keys or kubernetes_ca_cert must be set"), nil
+		}
 	}
 
 	tokenReviewer := data.Get("token_reviewer_jwt").(string)
+	if len(tokenReviewer) == 0 && len(localTokenReviewer) > 0 {
+		tokenReviewer = string(localTokenReviewer)
+	}
+
 	if len(tokenReviewer) > 0 {
 		// Validate it's a JWT
 		_, err := jws.ParseJWT([]byte(tokenReviewer))

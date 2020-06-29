@@ -72,7 +72,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.6.2-0.20200428223335-82bd3a3ad5b3
 	github.com/hashicorp/vault-plugin-auth-jwt v0.7.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.6.2
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.5.5
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2-0.20200520204052-f840e9d4895c
