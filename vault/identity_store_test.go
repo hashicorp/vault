@@ -2,14 +2,17 @@ package vault
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/ptypes"
 	uuid "github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -621,4 +624,93 @@ func TestIdentityStore_MetadataKeyRegex(t *testing.T) {
 	if metaKeyFormatRegEx(key) {
 		t.Fatal("accepted invalid metadata key")
 	}
+}
+
+func expectSingleCount(t *testing.T, sink *metrics.InmemSink, keyPrefix string) {
+	t.Helper()
+
+	intervals := sink.Data()
+	// Test crossed an interval boundary, don't try to deal with it.
+	if len(intervals) > 1 {
+		t.Skip("Detected interval crossing.")
+	}
+
+	var counter *metrics.SampledValue = nil
+
+	for _, c := range intervals[0].Counters {
+		if strings.HasPrefix(c.Name, keyPrefix) {
+			counter = &c
+			break
+		}
+	}
+	if counter == nil {
+		t.Fatalf("No %q counter found.", keyPrefix)
+	}
+
+	if counter.Count != 1 {
+		t.Errorf("Counter number of samples %v is not 1.", counter.Count)
+	}
+
+	if counter.Sum != 1.0 {
+		t.Errorf("Counter sum %v is not 1.", counter.Sum)
+	}
+
+}
+
+func TestIdentityStore_NewEntityCounter(t *testing.T) {
+	// Add github credential factory to core config
+	err := AddTestCredentialBackend("github", credGithub.Factory)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	c := TestCore(t)
+
+	// Replace metricSink before unsealing
+	// This results in some duplication from the normal test setup function.
+	inmemSink := metrics.NewInmemSink(
+		1000000*time.Hour,
+		2000000*time.Hour)
+	c.metricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
+
+	testCoreUnsealed(t, c)
+
+	meGH := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "github/",
+		Type:        "github",
+		Description: "github auth",
+	}
+
+	ctx := namespace.RootContext(nil)
+	err = c.enableCredential(ctx, meGH)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	is := c.identityStore
+	ghAccessor := meGH.Accessor
+
+	alias := &logical.Alias{
+		MountType:     "github",
+		MountAccessor: ghAccessor,
+		Name:          "githubuser",
+		Metadata: map[string]string{
+			"foo": "a",
+		},
+	}
+
+	_, err = is.CreateOrFetchEntity(ctx, alias)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectSingleCount(t, inmemSink, "identity.entity.creation")
+
+	_, err = is.CreateOrFetchEntity(ctx, alias)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectSingleCount(t, inmemSink, "identity.entity.creation")
 }
