@@ -34,7 +34,6 @@ const (
 	basePort_ShamirToTransit_Post14 = 22000
 	basePort_TransitToShamir_Post14 = 23000
 	basePort_TransitToTransit       = 24000
-	basePort_TransitToTestSeal      = 25000
 )
 
 type testFunc func(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int)
@@ -195,7 +194,9 @@ func migrateFromShamirToTransit_Pre14(
 // migration, using the post-1.4 method of bring individual nodes in the cluster
 // to do the migration.
 func TestSealMigration_ShamirToTransit_Post14(t *testing.T) {
-	testVariousBackends(t, testSealMigrationShamirToTransit_Post14, basePort_ShamirToTransit_Post14, true)
+	// TODO re-enable the raft test
+	//testVariousBackends(t, testSealMigrationShamirToTransit_Post14, basePort_ShamirToTransit_Post14, true)
+	testVariousBackends(t, testSealMigrationShamirToTransit_Post14, basePort_ShamirToTransit_Post14, false)
 }
 
 func testSealMigrationShamirToTransit_Post14(
