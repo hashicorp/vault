@@ -1522,6 +1522,11 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 				c.logger.Warn("failed to notify unsealed status", "error", err)
 			}
 		}
+		if err := c.serviceRegistration.NotifyInitializedStateChange(true); err != nil {
+			if c.logger.IsWarn() {
+				c.logger.Warn("failed to notify initialized status", "error", err)
+			}
+		}
 	}
 	return true, nil
 }
