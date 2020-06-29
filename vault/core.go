@@ -2311,7 +2311,7 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 		// In this case our migration seal is set so we are using it
 		// (potentially) for unwrapping. Set it on core for that purpose then
 		// exit.
-		if unwrapSeal != nil && autoSealsMatch(newSeal, barrierSeal) {
+		if unwrapSeal != nil && c.autoSealsMatch(newSeal, barrierSeal) {
 			c.setSealsForMigration(nil, nil, unwrapSeal)
 			return nil
 		}
@@ -2345,15 +2345,14 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 
 // autoSealsMatch checks if the two seals are the same, by checking
 // whether they can both decode the recoveryKey successfully.
-func autoSealsMatch(seal1, seal2 Seal) bool {
+func (c *Core) autoSealsMatch(seal1, seal2 Seal) bool {
 
-	ctx := context.Background()
-	_, err := seal1.RecoveryKey(ctx)
+	_, err := seal1.RecoveryKey(c.activeContext)
 	if err != nil {
 		return false
 	}
 
-	_, err = seal2.RecoveryKey(ctx)
+	_, err = seal2.RecoveryKey(c.activeContext)
 	return err == nil
 }
 
