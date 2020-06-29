@@ -1,0 +1,28 @@
+---
+layout: docs
+page_title: Resource Quotas
+sidebar_title: Resource Quotas
+description: Providing measures against misbehaving applications and users overdrawing resources in Vault.
+---
+
+# Resource Quotas
+
+Every single interaction with Vault, whether to put secrets into the key/value
+store or to generate new pairs of database credentials for the MySQL database,
+needs to go through Vault’s API.
+
+One side effect of the API driven model is that applications and users can
+misbehave by overwhelming system resources through consistent and high volume API
+requests resulting in DoS issues in some Vault nodes or even the entire Vault
+cluster. This risk is significantly increased when Vault API endpoints are exposed
+to thousands or millions of services deployed across a global infrastructure,
+especially in use cases of Vault where Vault is deployed as a service for internal
+developers. 
+
+Vault provides a feature, resource quotas, that allows Vault operators to specify
+limits on resources used in Vault. Specifically, Vault allows operators to create
+and configure API rate limits.
+
+<!-- Vault’s operators are generally not the end consumers of its data and have
+limited to no control over how applications that use Vault are designed or
+implemented.  -->
