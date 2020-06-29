@@ -131,14 +131,14 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, d *
 		b.Logger().Debug(fmt.Sprintf("identity: %+v", identity))
 		username = identity.UserName()
 
-		// Verify that the realm on the LDAP config is the same as the identity's
+		// Verify that the realm on the LDAP config (if set) is the same as the identity's
 		// realm. The UPNDomain denotes the realm on the LDAP config, and the identity
 		// domain likewise identifies the realm. This is a case sensitive check.
 		// This covers an edge case where, potentially, there has been drift between the LDAP
 		// config's realm and the Kerberos realm. In such a case, it prevents a user from
 		// passing Kerberos authentication, and then extracting group membership, and
 		// therefore policies, from a separate directory.
-		if identity.Domain() != ldapCfg.ConfigEntry.UPNDomain {
+		if ldapCfg.ConfigEntry.UPNDomain != "" && identity.Domain() != ldapCfg.ConfigEntry.UPNDomain {
 			w.WriteHeader(400)
 			_, _ = w.Write([]byte(fmt.Sprintf("identity domain of %q doesn't match LDAP upndomain of %q", identity.Domain(), ldapCfg.ConfigEntry.UPNDomain)))
 			return
