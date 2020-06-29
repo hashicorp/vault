@@ -20,7 +20,7 @@ var bucketBoundaries = []struct {
 	{30 * 24 * time.Hour, "30d"},
 }
 
-const overflowBucket = "+Inf"
+const OverflowBucket = "+Inf"
 
 // TTLBucket computes the label to apply for a token TTL.
 func TTLBucket(ttl time.Duration) string {
@@ -31,7 +31,7 @@ func TTLBucket(ttl time.Duration) string {
 		},
 	)
 	if upperBound >= len(bucketBoundaries) {
-		return overflowBucket
+		return OverflowBucket
 	} else {
 		return bucketBoundaries[upperBound].Label
 	}

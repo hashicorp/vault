@@ -28,6 +28,14 @@ var (
 	// ErrPerfStandbyForward is returned when Vault is in a state such that a
 	// perf standby cannot satisfy a request
 	ErrPerfStandbyPleaseForward = errors.New("please forward to the active node")
+
+	// ErrLeaseCountQuotaExceeded is returned when a request is rejected due to a lease
+	// count quota being exceeded.
+	ErrLeaseCountQuotaExceeded = errors.New("lease count quota exceeded")
+
+	// ErrRateLimitQuotaExceeded is returned when a request is rejected due to a
+	// rate limit quota being exceeded.
+	ErrRateLimitQuotaExceeded = errors.New("rate limit quota exceeded")
 )
 
 type HTTPCodedError interface {

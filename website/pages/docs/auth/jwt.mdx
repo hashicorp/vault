@@ -234,6 +234,9 @@ EOF
   be helpful when debugging provider setup and verifying that the received claims are what you expect.
   Since claims data is logged verbatim and may contain sensitive information, this option should not be
   used in production.
+- Azure requires some additional configuration when a user is a member of more
+  than 200 groups, described in [Azure-specific handling
+  configuration](/docs/auth/jwt_oidc_providers#azure-specific-handling-configuration)
 
 ## JWT Authentication
 

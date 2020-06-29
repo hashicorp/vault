@@ -9,22 +9,12 @@ const REPLICATION_DETAILS = {
   state: 'stream-wals',
   connection_state: 'ready',
   lastRemoteWAL: 10,
-};
-
-const KNOWN_PRIMARY_CLUSTER_DETAILS = {
   knownPrimaryClusterAddrs: ['https://127.0.0.1:8201', 'https://127.0.0.1:8202'],
-};
-
-const STATE_ERROR = {
-  state: 'idle',
-  connection_state: 'ready',
-  lastRemoteWAL: 10,
-};
-
-const CONNECTION_ERROR = {
-  state: 'stream-wals',
-  connection_state: 'transient_failure',
-  lastRemoteWAL: 10,
+  primaries: [
+    {
+      api_address: 'http://127.0.0.1:8201',
+    },
+  ],
 };
 
 module('Integration | Enterprise | Component | replication-secondary-card', function(hooks) {
@@ -46,12 +36,26 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
       .includesText(REPLICATION_DETAILS.connection_state, `shows the correct connection value`);
   });
 
-  test('it renders with knownPrimaryClusterAddrs set when title is not Status', async function(assert) {
-    this.set('replicationDetails', KNOWN_PRIMARY_CLUSTER_DETAILS);
+  test('it renders the Primary Cluster card when title is not Status', async function(assert) {
     await render(
       hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title='Primary cluster'/>`
     );
-    assert.dom('[data-test-info-table]').exists();
+
+    assert.dom('[data-test-info-table]').exists('it shows the known primary cluster details');
+
+    const url = this.element.querySelector('[data-test-primary-link]').href;
+    const expectedUrl = `${REPLICATION_DETAILS.primaries[0].api_address}/ui/`;
+
+    assert.equal(url, expectedUrl, 'it renders a link to the primary cluster UI');
+  });
+
+  test('it does not render a link to the primary cluster UI when the primary api address or known primaries are unknown', async function(assert) {
+    this.set('replicationDetails', {});
+    await render(
+      hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title='Primary cluster'/>`
+    );
+
+    assert.dom('[data-test-primary-link]').doesNotExist();
   });
 
   test('it renders with emptyState if no knownPrimaryClusterAddrs are set', async function(assert) {
@@ -70,7 +74,13 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
   });
 
   test('it renders hasErrorMessage when state is idle', async function(assert) {
-    this.set('stateError', STATE_ERROR);
+    const stateError = {
+      state: 'idle',
+      connection_state: 'ready',
+      lastRemoteWAL: 10,
+    };
+
+    this.set('stateError', stateError);
     await render(hbs`<ReplicationSecondaryCard @replicationDetails={{stateError}} @title={{title}} />`);
     assert.dom('[data-test-error]').includesText('state', 'show correct error title');
     assert
@@ -79,7 +89,13 @@ module('Integration | Enterprise | Component | replication-secondary-card', func
   });
 
   test('it renders hasErrorMessage when connection is transient_failure', async function(assert) {
-    this.set('connectionError', CONNECTION_ERROR);
+    const connectionError = {
+      state: 'stream-wals',
+      connection_state: 'transient_failure',
+      lastRemoteWAL: 10,
+    };
+
+    this.set('connectionError', connectionError);
     await render(hbs`<ReplicationSecondaryCard @replicationDetails={{connectionError}} @title={{title}} />`);
     assert.dom('[data-test-error]').includesText('connection_state', 'show correct error title');
     assert
