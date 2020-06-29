@@ -39,7 +39,7 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 	for _, tm := range testMounts[1:] {
 		me := &MountEntry{
 			Table:   mountTableType,
-			Path:    sanitizeMountPath(tm.Path),
+			Path:    sanitizePath(tm.Path),
 			Type:    "kv",
 			Options: map[string]string{"version": tm.Version},
 		}

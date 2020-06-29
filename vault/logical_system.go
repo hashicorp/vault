@@ -2714,7 +2714,6 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	ll := data.Get("log_level").(string)
 	w := req.ResponseWriter
-	resp := &logical.Response{}
 
 	if ll == "" {
 		ll = "info"
@@ -2737,16 +2736,15 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		Level:      logLevel,
 		JSONFormat: isJson,
 	})
-	defer mon.Stop()
-
 	if err != nil {
-		return resp, err
+		return nil, err
 	}
 
 	logCh := mon.Start()
+	defer mon.Stop()
 
 	if logCh == nil {
-		return resp, fmt.Errorf("error trying to start a monitor that's already been started")
+		return nil, fmt.Errorf("error trying to start a monitor that's already been started")
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -2755,21 +2753,38 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 	// a gzip stream it will go ahead and write out the HTTP response header
 	_, err = w.Write([]byte(""))
 	if err != nil {
-		return resp, fmt.Errorf("error seeding flusher: %w", err)
+		return nil, fmt.Errorf("error seeding flusher: %w", err)
 	}
 
 	flusher.Flush()
 
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
 	// Stream logs until the connection is closed.
 	for {
 		select {
+		// Periodically check for the seal status and return if core gets
+		// marked as sealed.
+		case <-ticker.C:
+			if b.Core.Sealed() {
+				// We still return the error, but this will be ignored upstream
+				// due to the fact that we've already sent a response by
+				// writing the header and flushing the writer above.
+				_, err = fmt.Fprint(w, "core received sealed state change, ending monitor session")
+				if err != nil {
+					return nil, fmt.Errorf("error checking seal state: %w", err)
+				}
+			}
 		case <-ctx.Done():
-			return resp, nil
+			return nil, nil
 		case l := <-logCh:
+			// We still return the error, but this will be ignored upstream
+			// due to the fact that we've already sent a response by
+			// writing the header and flushing the writer above.
 			_, err = fmt.Fprint(w, string(l))
-
 			if err != nil {
-				return resp, err
+				return nil, fmt.Errorf("error streaming monitor output: %w", err)
 			}
 
 			flusher.Flush()
