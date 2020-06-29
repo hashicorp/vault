@@ -21,7 +21,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/serviceregistration/kubernetes/client"
@@ -42,39 +45,64 @@ func init() {
 func main() {
 	flag.Parse()
 
-	c, err := client.New(hclog.Default(), make(chan struct{}))
+	c, err := client.New(hclog.Default())
 	if err != nil {
 		panic(err)
 	}
 
-	switch callToMake {
-	case "get-pod":
-		pod, err := c.GetPod(namespace, podName)
-		if err != nil {
-			panic(err)
-		}
-		b, _ := json.Marshal(pod)
-		fmt.Printf("pod: %s\n", b)
-		return
-	case "patch-pod":
-		patchPairs := strings.Split(patchesToAdd, ",")
-		var patches []*client.Patch
-		for _, patchPair := range patchPairs {
-			fields := strings.Split(patchPair, ":")
-			if len(fields) != 2 {
-				panic(fmt.Errorf("unable to split %s from selectors provided of %s", fields, patchesToAdd))
+	reqCh := make(chan struct{})
+	shutdownCh := makeShutdownCh()
+
+	go func() {
+		defer close(reqCh)
+
+		switch callToMake {
+		case "get-pod":
+			pod, err := c.GetPod(namespace, podName)
+			if err != nil {
+				panic(err)
 			}
-			patches = append(patches, &client.Patch{
-				Operation: client.Replace,
-				Path:      fields[0],
-				Value:     fields[1],
-			})
+			b, _ := json.Marshal(pod)
+			fmt.Printf("pod: %s\n", b)
+			return
+		case "patch-pod":
+			patchPairs := strings.Split(patchesToAdd, ",")
+			var patches []*client.Patch
+			for _, patchPair := range patchPairs {
+				fields := strings.Split(patchPair, ":")
+				if len(fields) != 2 {
+					panic(fmt.Errorf("unable to split %s from selectors provided of %s", fields, patchesToAdd))
+				}
+				patches = append(patches, &client.Patch{
+					Operation: client.Replace,
+					Path:      fields[0],
+					Value:     fields[1],
+				})
+			}
+			if err := c.PatchPod(namespace, podName, patches...); err != nil {
+				panic(err)
+			}
+			return
+		default:
+			panic(fmt.Errorf(`unsupported call provided: %q`, callToMake))
 		}
-		if err := c.PatchPod(namespace, podName, patches...); err != nil {
-			panic(err)
-		}
-		return
-	default:
-		panic(fmt.Errorf(`unsupported call provided: %q`, callToMake))
+	}()
+
+	select {
+	case <-shutdownCh:
+		fmt.Println("Interrupt received, exiting...")
+	case <-reqCh:
 	}
+}
+
+func makeShutdownCh() chan struct{} {
+	resultCh := make(chan struct{})
+
+	shutdownCh := make(chan os.Signal, 4)
+	signal.Notify(shutdownCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-shutdownCh
+		close(resultCh)
+	}()
+	return resultCh
 }

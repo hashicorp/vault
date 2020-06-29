@@ -97,7 +97,7 @@ This guide demonstrates basic Sentinel policy authoring and management tasks.
 1. [Deploy your EGP policies](#step3)
 1. [Delete Sentinel Policies](#step4)
 
-### <a name="step1"></a>Step 1: Write Sentinel Policies
+### Step 1: Write Sentinel Policies ((#step1))
 
 #### Anatomy of Sentinel Policies
 
@@ -195,7 +195,7 @@ main = rule when precond {
 documentation for available properties which Vault injects to Sentinel to allow
 fine-grained controls.
 
-### <a name="step2"></a>Step 2: Test the Sentinel Policies
+### Step 2: Test the Sentinel Policies ((#step2))
 
 You can test the Sentinel policies prior to deployment in orders to validate
 syntax and to document expected behavior.
@@ -328,7 +328,7 @@ syntax and to document expected behavior.
     > **NOTE:** If you want to see the tracing and log output for those tests,
     > run the command with `-verbose` flag.
 
-### <a name="step3"></a>Step 3: Deploy your EGP policies
+### Step 3: Deploy your EGP policies ((#step3))
 
 Sentinel policies has three **enforcement levels**:
 
@@ -337,8 +337,6 @@ Sentinel policies has three **enforcement levels**:
 | advisory       | The policy is allowed to fail. Can be used as a tool to educate new users. |
 | soft-mandatory | The policy must pass unless an override is specified.                      |
 | hard-mandatory | The policy must pass no matter what!                                       |
-
-<br />
 
 Since both policies are tied to specific paths, the policy type that you are
 going to create is Endpoint Governing Policies (EGPs).
@@ -388,7 +386,7 @@ going to create is Endpoint Governing Policies (EGPs).
 
 To create EGP policies, use the `/sys/policies/egp` endpoint:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Token: <TOKEN>" \
        --request PUT \
        --data <PAYLOAD> \
@@ -490,8 +488,6 @@ then login.
 
 1. Click **Create Policy**.
 
-<br />
-
 ~> **NOTE:** Unlike ACL policies, EGPs are a _prefix walk_ which allows policies
 to be applied at various points at Vault API. If you have EGPs tied to
 "**`secret/orders`**", "**`secret/*`**" and "**`*`**", all EGPs will be
@@ -502,7 +498,7 @@ evaluated for a request on "**`secret/orders`**".
 Once the policies were deployed, `create`, `update` and `delete` operations
 coming from an IP address other than `122.22.3.4` will be denied.
 
-```plaintext
+```shell-session
 $ vault kv put secret/accounting/test acct_no="293472309423"
 
 Error writing data to secret/accounting/test: Error making API request.
@@ -539,7 +535,7 @@ hours defined by the `business-hrs` policy.
 !> **NOTE:** Like with ACL policies, **`root`** tokens are **_NOT_** subject to
 Sentinel policy checks.
 
-### <a name="step4"></a>Step 4: Delete Sentinel Policies
+### Step 4: Delete Sentinel Policies ((#step4))
 
 #### CLI Command
 

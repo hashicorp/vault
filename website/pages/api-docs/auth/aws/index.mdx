@@ -78,7 +78,7 @@ capabilities, the credentials are fetched automatically.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -96,7 +96,7 @@ Returns the previously configured AWS access credentials.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/aws/config/client
@@ -127,7 +127,7 @@ Deletes the previously configured AWS access credentials.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -196,7 +196,7 @@ This configures the way that Vault interacts with the
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     -- header "X-Vault-Token:..." \
     --request POST
@@ -214,7 +214,7 @@ Returns the previously configured Identity integration configuration
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token:..." \
     http://127.0.0.1:8200/v1/auth/aws/config/identity
@@ -263,7 +263,7 @@ using the "type" parameter.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -285,7 +285,7 @@ Returns the previously configured AWS public key.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/aws/config/certificate/test-cert
@@ -312,7 +312,7 @@ Removes the previously configured AWS public key.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -329,7 +329,7 @@ Lists all the AWS public certificates that are registered with the method.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -376,7 +376,7 @@ when validating IAM principals or EC2 instances in the particular AWS account.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -399,7 +399,7 @@ Returns the previously configured STS role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/aws/config/sts/111122223333
@@ -425,7 +425,7 @@ Lists all the AWS Account IDs for which an STS role is registered.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -457,7 +457,7 @@ Deletes a previously configured AWS account/STS role association.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -490,7 +490,7 @@ Configures the periodic tidying operation of the whitelisted identity entries.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -508,7 +508,7 @@ Returns the previously configured periodic whitelist tidying settings.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/aws/config/tidy/identity-whitelist
@@ -535,7 +535,7 @@ Deletes the previously configured periodic whitelist tidying settings.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -568,7 +568,7 @@ Configures the periodic tidying operation of the blacklisted role tag entries.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -586,7 +586,7 @@ Returns the previously configured periodic blacklist tidying settings.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/aws/config/tidy/roletag-blacklist
@@ -613,7 +613,7 @@ Deletes the previously configured periodic blacklist tidying settings.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -789,7 +789,7 @@ list in order to satisfy that constraint.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -811,7 +811,7 @@ Returns the previously registered role configuration.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/aws/role/dev-role
@@ -842,7 +842,7 @@ Lists all the roles that are registered with the method.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -873,7 +873,7 @@ Deletes the previously registered role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -932,7 +932,7 @@ given instance can be allowed to gain in a worst-case scenario.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -1025,7 +1025,7 @@ along with its RSA digest can be supplied to this endpoint.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request POST \
     --data @payload.json \
@@ -1073,7 +1073,7 @@ token.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -1096,7 +1096,7 @@ Returns the blacklist entry of a previously blacklisted role tag.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/aws/roletag-blacklist/djE6MDlWcDBxR3V5Qjg9OmE9YW1pLWZjZTNjNjk2OnA9ZGVmYXVsdCxwcm9kOmQ9ZmFsc2U6dD0zMDBoMG0wczp1UExLQ1F4cXNlZlJocnAxcW1WYTF3c1FWVVhYSkc4VVpQLwo=
@@ -1123,7 +1123,7 @@ Lists all the role tags that are blacklisted.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -1158,7 +1158,7 @@ Deletes a blacklisted role tag.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -1182,7 +1182,7 @@ Cleans up the entries in the blacklist based on expiration time on the entry and
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -1206,7 +1206,7 @@ successful login.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/aws/identity-whitelist/i-aab47d37
@@ -1236,7 +1236,7 @@ Lists all the instance IDs that are in the whitelist of successful logins.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -1269,7 +1269,7 @@ Deletes a cache of the successful login from an instance.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -1293,7 +1293,7 @@ Cleans up the entries in the whitelist based on expiration time and
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \

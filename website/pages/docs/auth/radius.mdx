@@ -19,7 +19,7 @@ path, specify `-path=/my-path` in the CLI.
 
 ### Via the CLI
 
-```text
+```shell-session
 $ vault login -path=radius username=sethvargo
 ```
 
@@ -28,7 +28,7 @@ $ vault login -path=radius username=sethvargo
 The default endpoint is `auth/radius/login`. If this auth method was enabled
 at a different path, use that value instead of `radius`.
 
-```shell
+```shell-session
 $ curl \
     --request POST \
     --data '{"password": "..."}' \

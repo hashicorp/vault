@@ -42,7 +42,7 @@ import (
 const (
 	// hypervisorHandshakerServiceAddress represents the default ALTS gRPC
 	// handshaker service address in the hypervisor.
-	hypervisorHandshakerServiceAddress = "metadata.google.internal:8080"
+	hypervisorHandshakerServiceAddress = "metadata.google.internal.:8080"
 	// defaultTimeout specifies the server handshake timeout.
 	defaultTimeout = 30.0 * time.Second
 	// The following constants specify the minimum and maximum acceptable

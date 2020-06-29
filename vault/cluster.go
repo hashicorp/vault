@@ -321,6 +321,13 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 		// If we listened on port 0, record the port the OS gave us.
 		c.clusterAddr.Store(fmt.Sprintf("https://%s", c.getClusterListener().Addr()))
 	}
+
+	if len(c.ClusterAddr()) != 0 {
+		if err := c.getClusterListener().SetAdvertiseAddr(c.ClusterAddr()); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

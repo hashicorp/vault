@@ -13,12 +13,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -2117,6 +2119,32 @@ func TestTokenStore_HandleRequest_CreateToken_TTL(t *testing.T) {
 	if resp.Auth.Renewable {
 		t.Fatalf("bad: %#v", resp)
 	}
+}
+
+func TestTokenStore_HandleRequest_CreateToken_Metric(t *testing.T) {
+	c := TestCore(t)
+
+	// Replace metricSink before unsealing
+	inmemSink := metrics.NewInmemSink(
+		1000000*time.Hour,
+		2000000*time.Hour)
+	c.metricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
+
+	_, _, root := testCoreUnsealed(t, c)
+	ts := c.tokenStore
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
+	req.ClientToken = root
+	req.Data["ttl"] = "3h"
+	req.Data["policies"] = []string{"foo"}
+	req.MountPoint = "test/mount"
+
+	resp := testMakeTokenViaRequest(t, ts, req)
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	expectSingleCount(t, inmemSink, "token.creation")
 }
 
 func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
@@ -5665,4 +5693,89 @@ func TestTokenStore_TokenID(t *testing.T) {
 			t.Fatalf("expected input error not present in error response")
 		}
 	})
+}
+
+func expectInGaugeCollection(t *testing.T, expectedLabels map[string]string, expectedValue float32, actual []metricsutil.GaugeLabelValues) {
+	t.Helper()
+
+	for _, glv := range actual {
+		actualLabels := make(map[string]string)
+		for _, l := range glv.Labels {
+			actualLabels[l.Name] = l.Value
+		}
+		if labelsMatch(actualLabels, expectedLabels) {
+			if expectedValue != glv.Value {
+				t.Errorf("expeced %v for %v, got %v", expectedValue, expectedLabels, glv.Value)
+			}
+			return
+		}
+	}
+	t.Errorf("didn't find labels %v", expectedLabels)
+}
+
+func TestTokenStore_Collectors(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	exp := mockExpiration(t)
+	ts := exp.tokenStore
+
+	// This helper is defined in expiration.go
+	sampleToken(t, exp, "auth/userpass/login", true, "default")
+	sampleToken(t, exp, "auth/userpass/login", true, "policy23457")
+	sampleToken(t, exp, "auth/token/create", false, "root")
+	sampleToken(t, exp, "auth/github/login", true, "root")
+	sampleToken(t, exp, "auth/github/login", false, "root")
+
+	waitForRestore(t, exp)
+
+	// By namespace:
+	values, err := ts.gaugeCollector(ctx)
+	if err != nil {
+		t.Fatalf("bad collector run: %v", err)
+	}
+	if len(values) != 1 {
+		t.Errorf("got %v values, expected 1", len(values))
+	}
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root"},
+		5.0,
+		values)
+
+	values, err = ts.gaugeCollectorByPolicy(ctx)
+	if err != nil {
+		t.Fatalf("bad collector run: %v", err)
+	}
+	if len(values) != 3 {
+		t.Errorf("got %v values, expected 3", len(values))
+	}
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root", "policy": "root"},
+		3.0,
+		values)
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root", "policy": "default"},
+		1.0,
+		values)
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root", "policy": "policy23457"},
+		1.0,
+		values)
+
+	values, err = ts.gaugeCollectorByTtl(ctx)
+	if err != nil {
+		t.Fatalf("bad collector run: %v", err)
+	}
+	if len(values) != 2 {
+		t.Errorf("got %v values, expected 2", len(values))
+	}
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root", "creation_ttl": "1h"},
+		3.0,
+		values)
+	expectInGaugeCollection(t,
+		map[string]string{"namespace": "root", "creation_ttl": "+Inf"},
+		2.0,
+		values)
+
+	// Need to set up router for this to work, TODO
+	// ts.gaugeCollectorByMethod( ctx )
 }

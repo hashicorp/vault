@@ -33,6 +33,7 @@ export default [
       'tokens',
       'response-wrapping',
       'policies',
+      'password-policies',
       'ha',
       'integrated-storage',
       'pgp-gpg-keybase',
@@ -128,6 +129,7 @@ export default [
       },
       'list',
       'login',
+      'monitor',
       'namespace',
       {
         category: 'operator',
@@ -309,6 +311,7 @@ export default [
             category: 'helm',
             content: [
               'run',
+              'openshift',
               'configuration',
               {
                 category: 'examples',
@@ -379,6 +382,7 @@ export default [
       'upgrade-to-1.3.4',
       'upgrade-to-1.3.5',
       'upgrade-to-1.4.0',
+      'upgrade-to-1.4.1',
     ],
   },
   '----------------',

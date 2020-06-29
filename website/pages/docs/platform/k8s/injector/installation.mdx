@@ -15,7 +15,7 @@ install and configure the Agent Injector in Kubernetes.
 To install a new instance of Vault and the Vault Agent Injector, first add the
 Hashicorp helm repository and ensure you have access to the chart:
 
-```shell
+```shell-session
 $ helm repo add hashicorp https://helm.releases.hashicorp.com
 "hashicorp" has been added to your repositories
 
@@ -35,11 +35,10 @@ Upgrades may be performed with `helm upgrade` on an existing install. Please
 always run Helm with `--dry-run` before any install or upgrade to verify
 changes.
 
-You can see all the available values settings by running `helm inspect values
-hashicorp/vault` or by reading the [Vault Helm Configuration
+You can see all the available values settings by running `helm inspect values hashicorp/vault` or by reading the [Vault Helm Configuration
 Docs](/docs/platform/k8s/helm/configuration). Commonly used values in the Helm
 chart include limiting the namespaces the injector runs in, TLS options and
-more. 
+more.
 
 ## TLS Options
 

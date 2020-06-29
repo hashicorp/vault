@@ -10,7 +10,6 @@ import (
 	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -39,7 +38,7 @@ var (
 var _ dbplugin.Database = (*MySQL)(nil)
 
 type MySQL struct {
-	*connutil.SQLConnectionProducer
+	*mySQLConnectionProducer
 	credsutil.CredentialsProducer
 }
 
@@ -55,8 +54,7 @@ func New(displayNameLen, roleNameLen, usernameLen int) func() (interface{}, erro
 }
 
 func new(displayNameLen, roleNameLen, usernameLen int) *MySQL {
-	connProducer := &connutil.SQLConnectionProducer{}
-	connProducer.Type = mySQLTypeName
+	connProducer := &mySQLConnectionProducer{}
 
 	credsProducer := &credsutil.SQLCredentialsProducer{
 		DisplayNameLen: displayNameLen,
@@ -66,8 +64,8 @@ func new(displayNameLen, roleNameLen, usernameLen int) *MySQL {
 	}
 
 	return &MySQL{
-		SQLConnectionProducer: connProducer,
-		CredentialsProducer:   credsProducer,
+		mySQLConnectionProducer: connProducer,
+		CredentialsProducer:     credsProducer,
 	}
 }
 

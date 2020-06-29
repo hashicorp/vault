@@ -25,20 +25,20 @@ policy granting the "update" capability.
 
 Writes the data to the key "creds":
 
-```text
+```shell-session
 $ vault kv put secret/creds passcode=my-long-passcode
 ```
 
 The data can also be consumed from a file on disk by prefixing with the "@"
 symbol. For example:
 
-```text
+```shell-session
 $ vault kv put secret/foo @data.json
 ```
 
 Or it can be read from stdin using the "-" symbol:
 
-```text
+```shell-session
 $ echo "abcd1234" | vault kv put secret/foo bar=-
 ```
 

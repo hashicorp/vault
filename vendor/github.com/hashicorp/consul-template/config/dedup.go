@@ -15,6 +15,9 @@ const (
 	// DefaultDedupMaxStale is the default max staleness for the deduplication
 	// manager.
 	DefaultDedupMaxStale = DefaultMaxStale
+
+	// DefaultDedupBlockQueryWaitTime is the default amount of time to do a blocking query for the deduplication
+	DefaultDedupBlockQueryWaitTime = 60 * time.Second
 )
 
 // DedupConfig is used to enable the de-duplication mode, which depends
@@ -32,6 +35,9 @@ type DedupConfig struct {
 
 	// TTL is the Session TTL used for lock acquisition, defaults to 15 seconds.
 	TTL *time.Duration `mapstructure:"ttl"`
+
+	// BlockQueryWaitTime is amount of time to do a blocking query for, defaults to 60 seconds.
+	BlockQueryWaitTime *time.Duration `mapstructure:"block_query_wait"`
 }
 
 // DefaultDedupConfig returns a configuration that is populated with the
@@ -51,6 +57,7 @@ func (c *DedupConfig) Copy() *DedupConfig {
 	o.MaxStale = c.MaxStale
 	o.Prefix = c.Prefix
 	o.TTL = c.TTL
+	o.BlockQueryWaitTime = c.BlockQueryWaitTime
 	return &o
 }
 
@@ -88,6 +95,10 @@ func (c *DedupConfig) Merge(o *DedupConfig) *DedupConfig {
 		r.TTL = o.TTL
 	}
 
+	if o.BlockQueryWaitTime != nil {
+		r.BlockQueryWaitTime = o.BlockQueryWaitTime
+	}
+
 	return r
 }
 
@@ -97,7 +108,8 @@ func (c *DedupConfig) Finalize() {
 		c.Enabled = Bool(false ||
 			TimeDurationPresent(c.MaxStale) ||
 			StringPresent(c.Prefix) ||
-			TimeDurationPresent(c.TTL))
+			TimeDurationPresent(c.TTL) ||
+			TimeDurationPresent(c.BlockQueryWaitTime))
 	}
 
 	if c.MaxStale == nil {
@@ -111,6 +123,10 @@ func (c *DedupConfig) Finalize() {
 	if c.TTL == nil {
 		c.TTL = TimeDuration(DefaultDedupTTL)
 	}
+
+	if c.BlockQueryWaitTime == nil {
+		c.BlockQueryWaitTime = TimeDuration(DefaultDedupBlockQueryWaitTime)
+	}
 }
 
 // GoString defines the printable version of this struct.
@@ -122,11 +138,13 @@ func (c *DedupConfig) GoString() string {
 		"Enabled:%s, "+
 		"MaxStale:%s, "+
 		"Prefix:%s, "+
-		"TTL:%s"+
+		"TTL:%s, "+
+		"BlockQueryWaitTime:%s"+
 		"}",
 		BoolGoString(c.Enabled),
 		TimeDurationGoString(c.MaxStale),
 		StringGoString(c.Prefix),
 		TimeDurationGoString(c.TTL),
+		TimeDurationGoString(c.BlockQueryWaitTime),
 	)
 }

@@ -12,6 +12,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const (
+	rootConfigPath        = "config/root"
+	minAwsUserRollbackAge = 5 * time.Minute
+)
+
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
 	if err := b.Setup(ctx, conf); err != nil {
@@ -47,6 +52,7 @@ func Backend() *backend {
 			secretAccessKeys(&b),
 		},
 
+		Invalidate:        b.invalidate,
 		WALRollback:       b.walRollback,
 		WALRollbackMinAge: minAwsUserRollbackAge,
 		BackendType:       logical.TypeLogical,
@@ -79,6 +85,21 @@ After mounting this backend, credentials to generate IAM keys must
 be configured with the "root" path and policies must be written using
 the "roles/" endpoints before any access keys can be generated.
 `
+
+func (b *backend) invalidate(ctx context.Context, key string) {
+	switch {
+	case key == rootConfigPath:
+		b.clearClients()
+	}
+}
+
+// clearClients clears the backend's IAM and STS clients
+func (b *backend) clearClients() {
+	b.clientMutex.Lock()
+	defer b.clientMutex.Unlock()
+	b.iamClient = nil
+	b.stsClient = nil
+}
 
 // clientIAM returns the configured IAM client. If nil, it constructs a new one
 // and returns it, setting it the internal variable
@@ -135,5 +156,3 @@ func (b *backend) clientSTS(ctx context.Context, s logical.Storage) (stsiface.ST
 
 	return b.stsClient, nil
 }
-
-const minAwsUserRollbackAge = 5 * time.Minute

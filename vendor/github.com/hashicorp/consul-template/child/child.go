@@ -290,14 +290,14 @@ func (c *Child) start() error {
 		// down the exit channel.
 		c.stopLock.RLock()
 		defer c.stopLock.RUnlock()
-		if c.stopped {
-			return
+		if !c.stopped {
+			select {
+			case <-c.stopCh:
+			case exitCh <- code:
+			}
 		}
 
-		select {
-		case <-c.stopCh:
-		case exitCh <- code:
-		}
+		close(exitCh)
 	}()
 
 	c.exitCh = exitCh
@@ -365,16 +365,13 @@ func (c *Child) reload() error {
 	return c.signal(c.reloadSignal)
 }
 
+// kill sends the signal to kill the process using the configured signal
+// if set, else the default system signal
 func (c *Child) kill(immediately bool) {
+
 	if !c.running() {
-		return
-	}
-
-	exited := false
-	process := c.cmd.Process
-
-	if c.cmd.ProcessState != nil {
 		log.Printf("[DEBUG] (child) Kill() called but process dead; not waiting for splay.")
+		return
 	} else if immediately {
 		log.Printf("[DEBUG] (child) Kill() called but performing immediate shutdown; not waiting for splay.")
 	} else {
@@ -383,6 +380,9 @@ func (c *Child) kill(immediately bool) {
 		case <-c.randomSplay():
 		}
 	}
+
+	exited := false
+	process := c.cmd.Process
 
 	if c.killSignal != nil {
 		if err := process.Signal(c.killSignal); err == nil {
@@ -410,6 +410,11 @@ func (c *Child) kill(immediately bool) {
 }
 
 func (c *Child) running() bool {
+	select {
+	case <-c.exitCh:
+		return false
+	default:
+	}
 	return c.cmd != nil && c.cmd.Process != nil
 }
 
