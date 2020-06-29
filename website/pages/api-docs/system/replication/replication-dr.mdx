@@ -38,10 +38,19 @@ primary, it will look something like:
 {
   "data": {
     "cluster_id": "d4095d41-3aee-8791-c421-9bc7f88f7c3e",
-    "known_secondaries": [],
+    "known_secondaries": ["3"],
     "last_wal": 241,
     "merkle_root": "56794a98e52598f35974024fba6691f047e772e9",
-    "mode": "primary"
+    "mode": "primary",
+    "secondaries": [
+      {
+        "api_address": "https://127.0.0.1:49264",
+        "cluster_address": "https://127.0.0.1:49267",
+        "connection_status": "connected",
+        "last_heartbeat": "2020-06-10T15:40:47-07:00",
+        "node_id": "3"
+      }
+    ]
   }
 }
 ```
@@ -59,6 +68,14 @@ secondary, it will look something like:
     "last_remote_wal": 241,
     "merkle_root": "56794a98e52598f35974024fba6691f047e772e9",
     "mode": "secondary",
+    "primaries": [
+      {
+        "api_address": "https://127.0.0.1:49244",
+        "cluster_address": "https://127.0.0.1:8201",
+        "connection_status": "connected",
+        "last_heartbeat": "2020-06-10T15:40:46-07:00"
+      }
+    ],
     "primary_cluster_addr": "https://127.0.0.1:8201",
     "secondary_id": "3",
     "state": "stream-wals"
