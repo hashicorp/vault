@@ -25,9 +25,15 @@
           <span class="sep">
             /
           </span>
-          {{#link-to "vault.cluster.replication-dr-promote"}}
-            Disaster Recovery
-          {{/link-to}}
+          {{#if isDisabled}}
+            {{#link-to "vault.cluster.replication.index"}}
+              Replication
+            {{/link-to}}
+          {{else}}
+            {{#link-to "vault.cluster.replication-dr-promote"}}
+              Disaster Recovery
+            {{/link-to}}
+          {{/if}}
         </li>
       {{/key-value-header}}
     {{/if}}
