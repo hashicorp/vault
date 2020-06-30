@@ -30,6 +30,34 @@ func Test_ParseDurationSecond(t *testing.T) {
 	}
 }
 
+func Test_ParseInt(t *testing.T) {
+	var expected int64 = 123
+
+	outp, err := ParseInt("123")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if expected != outp {
+		t.Fatal("wrong output")
+	}
+
+	outp, err = ParseInt(123)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if expected != outp {
+		t.Fatal("wrong output")
+	}
+
+	outp, err = ParseInt(json.Number("123"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if expected != outp {
+		t.Fatal("wrong output")
+	}
+}
+
 func Test_ParseBool(t *testing.T) {
 	outp, err := ParseBool("true")
 	if err != nil {

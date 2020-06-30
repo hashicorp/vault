@@ -16,10 +16,6 @@ import (
 
 func ParseDurationSecond(in interface{}) (time.Duration, error) {
 	var dur time.Duration
-	jsonIn, ok := in.(json.Number)
-	if ok {
-		in = jsonIn.String()
-	}
 	switch inp := in.(type) {
 	case nil:
 		// return default of zero
@@ -60,6 +56,8 @@ func ParseDurationSecond(in interface{}) (time.Duration, error) {
 		dur = time.Duration(inp) * time.Second
 	case time.Duration:
 		dur = inp
+	case json.Number:
+		return ParseDurationSecond(inp.String())
 	default:
 		return 0, errors.New("could not parse duration from input")
 	}
@@ -69,13 +67,8 @@ func ParseDurationSecond(in interface{}) (time.Duration, error) {
 
 func ParseInt(in interface{}) (int64, error) {
 	var ret int64
-	jsonIn, ok := in.(json.Number)
-	if ok {
-		in = jsonIn.String()
-	}
-	switch in.(type) {
+	switch inp := in.(type) {
 	case string:
-		inp := in.(string)
 		if inp == "" {
 			return 0, nil
 		}
@@ -86,17 +79,19 @@ func ParseInt(in interface{}) (int64, error) {
 		}
 		ret = left
 	case int:
-		ret = int64(in.(int))
+		ret = int64(inp)
 	case int32:
-		ret = int64(in.(int32))
+		ret = int64(inp)
 	case int64:
-		ret = in.(int64)
+		ret = inp
 	case uint:
-		ret = int64(in.(uint))
+		ret = int64(inp)
 	case uint32:
-		ret = int64(in.(uint32))
+		ret = int64(inp)
 	case uint64:
-		ret = int64(in.(uint64))
+		ret = int64(inp)
+	case json.Number:
+		return ParseInt(inp.String())
 	default:
 		return 0, errors.New("could not parse value from input")
 	}
