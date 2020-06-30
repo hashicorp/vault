@@ -22,7 +22,7 @@ cloud.google.com/go/storage
 # code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f
 code.cloudfoundry.org/gofileutils/fileutils
 # github.com/Azure/azure-sdk-for-go v36.2.0+incompatible
-github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute
+github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-07-01/compute
 github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac
 github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault
 github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-01-01-preview/authorization
@@ -447,7 +447,7 @@ github.com/hashicorp/serf/coordinate
 # github.com/hashicorp/vault-plugin-auth-alicloud v0.5.5
 github.com/hashicorp/vault-plugin-auth-alicloud
 github.com/hashicorp/vault-plugin-auth-alicloud/tools
-# github.com/hashicorp/vault-plugin-auth-azure v0.5.5
+# github.com/hashicorp/vault-plugin-auth-azure v0.5.6-0.20200422235613-1b5c70f9ef68
 github.com/hashicorp/vault-plugin-auth-azure
 # github.com/hashicorp/vault-plugin-auth-centrify v0.5.5
 github.com/hashicorp/vault-plugin-auth-centrify
@@ -458,7 +458,7 @@ github.com/hashicorp/vault-plugin-auth-cf/signatures
 github.com/hashicorp/vault-plugin-auth-cf/testing/certificates
 github.com/hashicorp/vault-plugin-auth-cf/testing/cf
 github.com/hashicorp/vault-plugin-auth-cf/util
-# github.com/hashicorp/vault-plugin-auth-gcp v0.6.1
+# github.com/hashicorp/vault-plugin-auth-gcp v0.6.2-0.20200428223335-82bd3a3ad5b3
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
 # github.com/hashicorp/vault-plugin-auth-jwt v0.7.0
@@ -471,7 +471,7 @@ github.com/hashicorp/vault-plugin-auth-kubernetes
 github.com/hashicorp/vault-plugin-auth-oci
 # github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4
 github.com/hashicorp/vault-plugin-database-elasticsearch
-# github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.0-beta1.0.20200521152755-9cf156a44f9c
+# github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2-0.20200520204052-f840e9d4895c
 github.com/hashicorp/vault-plugin-database-mongodbatlas
 # github.com/hashicorp/vault-plugin-secrets-ad v0.6.6
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
@@ -702,7 +702,7 @@ github.com/oklog/run
 github.com/okta/okta-sdk-golang/okta
 github.com/okta/okta-sdk-golang/okta/cache
 github.com/okta/okta-sdk-golang/okta/query
-# github.com/opencontainers/go-digest v1.0.0-rc1
+# github.com/opencontainers/go-digest v1.0.0
 github.com/opencontainers/go-digest
 # github.com/opencontainers/image-spec v1.0.1
 github.com/opencontainers/image-spec/specs-go
@@ -790,7 +790,7 @@ github.com/samuel/go-zookeeper/zk
 github.com/sasha-s/go-deadlock
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
-# github.com/shirou/gopsutil v2.19.9+incompatible
+# github.com/shirou/gopsutil v2.20.6-0.20200630091542-01afd763e6c0+incompatible
 github.com/shirou/gopsutil/cpu
 github.com/shirou/gopsutil/disk
 github.com/shirou/gopsutil/host
@@ -798,8 +798,6 @@ github.com/shirou/gopsutil/internal/common
 github.com/shirou/gopsutil/mem
 github.com/shirou/gopsutil/net
 github.com/shirou/gopsutil/process
-# github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4
-github.com/shirou/w32
 # github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
 # github.com/stretchr/testify v1.5.1

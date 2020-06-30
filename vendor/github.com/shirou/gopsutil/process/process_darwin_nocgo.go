@@ -22,7 +22,7 @@ func (p *Process) ExeWithContext(ctx context.Context) (string, error) {
 	}
 	txtFound := 0
 	lines := strings.Split(string(out), "\n")
-	for i := 1; i < len(lines); i += 2 {
+	for i := 1; i < len(lines); i++ {
 		if lines[i] == "ftxt" {
 			txtFound++
 			if txtFound == 2 {

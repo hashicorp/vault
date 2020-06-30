@@ -124,7 +124,7 @@ require (
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec
 	github.com/sasha-s/go-deadlock v0.2.0
-	github.com/shirou/gopsutil v2.19.9+incompatible
+	github.com/shirou/gopsutil v2.20.6-0.20200630091542-01afd763e6c0+incompatible
 	github.com/stretchr/testify v1.5.1
 	go.etcd.io/bbolt v1.3.4
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547

@@ -522,6 +522,7 @@ github.com/hashicorp/vault-plugin-auth-alicloud v0.5.5 h1:JYf3VYpKs7mOdtcwZWi73S
 github.com/hashicorp/vault-plugin-auth-alicloud v0.5.5/go.mod h1:sQ+VNwPQlemgXHXikYH6onfH9gPwDZ1GUVRLz0ZvHx8=
 github.com/hashicorp/vault-plugin-auth-azure v0.5.5 h1:kN79ai+aMVU9hUmwscHjmweW2fGa8V/t+ScIchPZGrk=
 github.com/hashicorp/vault-plugin-auth-azure v0.5.5/go.mod h1:RCVBsf8AJndh4c6iGZtvVZFui9SG0Bj9fnF0SodNIkw=
+github.com/hashicorp/vault-plugin-auth-azure v0.5.6-0.20200422235613-1b5c70f9ef68 h1:o4ekpvOmfRxCYE7+g4dV6FQc9H+Sl1jv4JoGDrLDKt0=
 github.com/hashicorp/vault-plugin-auth-azure v0.5.6-0.20200422235613-1b5c70f9ef68/go.mod h1:RCVBsf8AJndh4c6iGZtvVZFui9SG0Bj9fnF0SodNIkw=
 github.com/hashicorp/vault-plugin-auth-centrify v0.5.5 h1:YXxXt6o6I1rOkYW+hADK0vd+uVMj4C6Qs3jBrQlKQcY=
 github.com/hashicorp/vault-plugin-auth-centrify v0.5.5/go.mod h1:GfRoy7NHsuR/ogmZtbExdJXUwbfwcxPrS9xzkyy2J/c=
@@ -530,6 +531,7 @@ github.com/hashicorp/vault-plugin-auth-cf v0.5.4/go.mod h1:idkFYHc6ske2BE7fe00Sp
 github.com/hashicorp/vault-plugin-auth-gcp v0.5.1/go.mod h1:eLj92eX8MPI4vY1jaazVLF2sVbSAJ3LRHLRhF/pUmlI=
 github.com/hashicorp/vault-plugin-auth-gcp v0.6.1 h1:WXTuja3WC2BdZekYCnzuZGoVvZTAGH8kSDUHzOK2PQY=
 github.com/hashicorp/vault-plugin-auth-gcp v0.6.1/go.mod h1:8eBRzg+JIhAaDBfDndDAQKIhDrQ3WW8OPklxAYftNFs=
+github.com/hashicorp/vault-plugin-auth-gcp v0.6.2-0.20200428223335-82bd3a3ad5b3 h1:GTQYSsqv/2jjdTm0DawBSljMmZTc/js6zLer+9A5e2U=
 github.com/hashicorp/vault-plugin-auth-gcp v0.6.2-0.20200428223335-82bd3a3ad5b3/go.mod h1:U0fkAlxWTEyQ74lx8wlGdD493lP1DD/qpMjXgOEbwj0=
 github.com/hashicorp/vault-plugin-auth-jwt v0.6.2/go.mod h1:SFadxIfoLGzugEjwUUmUaCGbsYEz2/jJymZDDQjEqYg=
 github.com/hashicorp/vault-plugin-auth-jwt v0.7.0 h1:lHg02BB7IpUQbJStAPmGyS3KnZJC7PSEvc5LOZNPjHM=
@@ -548,6 +550,7 @@ github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4 h1:YE4qndazWmYGp
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4/go.mod h1:QjGrrxcRXv/4XkEZAlM0VMZEa3uxKAICFqDj27FP/48=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.0-beta1.0.20200521152755-9cf156a44f9c h1:9pXwe7sEVhZ5C3U6egIrKaZBb5lD0FvLIjISEvpbQQA=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.0-beta1.0.20200521152755-9cf156a44f9c/go.mod h1:HTXNzFr/SAVtJOs7jz0XxZ69jlKtaceEwp37l86UAQ0=
+github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2-0.20200520204052-f840e9d4895c h1:P9rZXBJx+UHu/T8lK8NEtS2PGeSnyZ31zeOtkvGo4yo=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2-0.20200520204052-f840e9d4895c/go.mod h1:MP3kfr0N+7miOTZFwKv952b9VkXM4S2Q6YtQCiNKWq8=
 github.com/hashicorp/vault-plugin-secrets-ad v0.6.6-0.20200520202259-fc6b89630f9f/go.mod h1:kk98nB+cwDbt3I7UGQq3ota7+eHZrGSTQZfSRGpluvA=
 github.com/hashicorp/vault-plugin-secrets-ad v0.6.6 h1:GskxrCCL2flrBtnAeOsBV+whCaqnnM/+t/h1IyqukNo=
@@ -839,6 +842,8 @@ github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 h1:nn5Wsu0esKSJiIVhscUt
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
 github.com/shirou/gopsutil v2.19.9+incompatible h1:IrPVlK4nfwW10DF7pW+7YJKws9NkgNzWozwwWv9FsgY=
 github.com/shirou/gopsutil v2.19.9+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=
+github.com/shirou/gopsutil v2.20.6-0.20200630091542-01afd763e6c0+incompatible h1:IYOqH6sML3rQGNVEQ5foLtpDt4TeW8PIUBuI9f8itkI=
+github.com/shirou/gopsutil v2.20.6-0.20200630091542-01afd763e6c0+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=
 github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 h1:udFKJ0aHUL60LboW/A+DfgoHVedieIzIXE8uylPue0U=
 github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4/go.mod h1:qsXQc7+bwAM3Q1u/4XEfrquwF8Lw7D7y5cD8CuHnfIc=
 github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 h1:pntxY8Ary0t43dCZ5dqY4YTJCObLY1kIXl0uzMv+7DE=
