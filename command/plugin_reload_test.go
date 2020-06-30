@@ -161,44 +161,4 @@ func TestPluginReloadStatusCommand_Run(t *testing.T) {
 			}
 		})
 	}
-
-	t.Run("integration", func(t *testing.T) {
-		t.Parallel()
-
-		pluginDir, cleanup := testPluginDir(t)
-		defer cleanup(t)
-
-		client, _, closer := testVaultServerPluginDir(t, pluginDir)
-		defer closer()
-
-		pluginName := "my-plugin"
-		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, consts.PluginTypeCredential)
-
-		ui, cmd := testPluginReloadStatusCommand(t)
-		cmd.client = client
-
-		if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
-			Name:    pluginName,
-			Type:    consts.PluginTypeCredential,
-			Command: pluginName,
-			SHA256:  sha256Sum,
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		code := cmd.Run([]string{
-			"-reload_id", pluginName,
-		})
-		if exp := 0; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
-
-		expected := "Success! Reloaded plugin: "
-		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-		if !strings.Contains(combined, expected) {
-			t.Errorf("expected %q to contain %q", combined, expected)
-		}
-
-	})
-
 }
