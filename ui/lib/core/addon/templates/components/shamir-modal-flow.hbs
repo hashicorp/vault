@@ -48,7 +48,7 @@
         </button>
       </div>
     {{else if (and generateAction (not started))}}
-    <form {{action 'startGenerate' (hash pgp_key=pgp_key) on="submit"}} id="shamir">
+    <form {{action (perform startGenerate (hash pgp_key=pgp_key)) on="submit"}} id="shamir">
       {{message-error errors=errors}}
       {{#if (eq generateStep 'chooseMethod')}}
         <div class="has-bottom-margin-m" data-test-shamir-modal-body>
@@ -122,7 +122,7 @@
       {{/if}}
     </form>
     {{else}}
-      <form {{action 'onSubmit' (hash key=key) on="submit"}} id="shamir">
+      <form {{action (perform onSubmit (hash key=key)) on="submit"}} id="shamir">
         <div class="has-bottom-margin-m">
           {{#if errors}}
             <div class="box is-shadowless is-marginless no-padding-top is-fullwidth">
