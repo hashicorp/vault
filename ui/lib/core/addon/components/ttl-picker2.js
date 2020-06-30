@@ -35,6 +35,7 @@ const secondsMap = {
   h: 3600,
   d: 86400,
 };
+const validUnits = ['s', 'm', 'h', 'd'];
 const convertToSeconds = (time, unit) => {
   return time * secondsMap[unit];
 };
@@ -65,25 +66,36 @@ export default Component.extend({
       return;
     }
 
-    let seconds = 30;
+    let time = 30;
+    let unit = 's';
     let setEnable = this.enableTTL;
     if (!!enable || typeOf(enable) === 'boolean') {
       // This allows non-boolean values passed in to be evaluated for truthiness
       setEnable = !!enable;
     }
+
     if (typeOf(value) === 'number') {
-      seconds = value;
+      // if the passed value is a number, assume unit is seconds
+      time = value;
     } else {
       try {
-        seconds = Duration.parse(value).seconds();
+        const seconds = Duration.parse(value).seconds();
+        const lastDigit = value.toString().substring(value.length - 1);
+        if (validUnits.indexOf(lastDigit) >= 0 && lastDigit !== 's') {
+          time = convertFromSeconds(seconds, lastDigit);
+          unit = lastDigit;
+        } else {
+          time = seconds;
+        }
       } catch (e) {
         console.error(e);
-        // if parsing fails leave as default 30
+        // if parsing fails leave as default 30s
       }
     }
+
     this.setProperties({
-      time: seconds,
-      unit: 's',
+      time,
+      unit,
       enableTTL: setEnable,
     });
 
