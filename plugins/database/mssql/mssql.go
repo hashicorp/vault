@@ -43,7 +43,7 @@ func new() *MSSQL {
 	connProducer.Type = msSQLTypeName
 
 	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 20,
+		DisplayNameLen: 73,
 		RoleNameLen:    20,
 		UsernameLen:    128,
 		Separator:      "-",
