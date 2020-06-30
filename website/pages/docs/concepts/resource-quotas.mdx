@@ -17,12 +17,27 @@ requests resulting in DoS issues in some Vault nodes or even the entire Vault
 cluster. This risk is significantly increased when Vault API endpoints are exposed
 to thousands or millions of services deployed across a global infrastructure,
 especially in use cases of Vault where Vault is deployed as a service for internal
-developers. 
+developers.
 
 Vault provides a feature, resource quotas, that allows Vault operators to specify
 limits on resources used in Vault. Specifically, Vault allows operators to create
 and configure API rate limits.
 
-<!-- Vault’s operators are generally not the end consumers of its data and have
-limited to no control over how applications that use Vault are designed or
-implemented.  -->
+## Rate Limit Quotas
+
+Vault allows operators to create rate limit quotas which enforce API rate
+limiting using a [token bucket](https://en.wikipedia.org/wiki/Token_bucket) algorithm.
+A rate limit quota can be created at the root level or defined on a namespace or
+mount by specifying a `path` when creating the quota. The rate limiter is applied
+to each unique client IP address on a per-node basis (i.e. rate limit quotas
+are not replicated). A client may invoke `burst` requests at any given second,
+after which they may invoke additional requests at `rate` per-second, where `burst`
+must be greater than or equal to `rate`.
+
+A rate limit quota defined at the root level, essentially to the entire Vault API,
+is inherited to all mounts. However, a rate limit quota can be defined for a mount,
+which will take precedence over inherited quotas.
+
+Vault also allows the inspection of the state of rate limiting in a Vault node
+through various [metrics](/docs/internals/telemetry#Resource-Quota-Metrics) exposed and through enabling
+optional audit logging.
