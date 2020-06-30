@@ -39,5 +39,10 @@ is inherited to all mounts. However, a rate limit quota can be defined for a mou
 which will take precedence over inherited quotas.
 
 Vault also allows the inspection of the state of rate limiting in a Vault node
-through various [metrics](/docs/internals/telemetry#Resource-Quota-Metrics) exposed and through enabling
-optional audit logging.
+through various [metrics](/docs/internals/telemetry#Resource-Quota-Metrics) exposed
+and through enabling optional audit logging.
+
+## API
+
+Rate limit quotas can be managed over the HTTP API. Please see
+[Rate Limit Quotas API](/api/system/rate-limit-quotas) for more details.

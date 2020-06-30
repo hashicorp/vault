@@ -1,0 +1,106 @@
+---
+layout: api
+page_title: /sys/quotas/rate-limit - HTTP API
+sidebar_title: <code>/sys/quotas/rate-limit</code>
+description: The `/sys/quotas/rate-limit` endpoint is used to create, edit and list rate limit quotas.
+---
+
+# `/sys/quotas/rate-limit`
+
+The `/sys/quotas/rate-limit` endpoint is used to create, edit and list rate limit quotas.
+
+## Create or Update a Rate Limit Quota
+
+This endpoint is used to create a rate limit quota by `name`. A rate limit quota
+must include a `rate` and `burst` value with an optional `path` that can either
+be a namespace or mount.
+
+| Method | Path                           |
+| :----- | :----------------------------- |
+| `POST` | `/sys/quotas/rate-limit/:name` |
+
+### Parameters
+
+- `path` `(string: "")` - Path of the mount or namespace to apply the quota.
+  A blank path configures a global rate limit quota. For example `namespace1/`
+  adds a quota to a full namespace, `namespace1/auth/userpass` adds a quota to
+  `userpass` in `namespace1`.
+- `rate` `(float: 0.0)` - The rate at which allowed requests are refilled per
+  second by the quota rule. Internally, a token-bucket algorithm is used which
+  has a size of `burst`, initially full. The quota limits requests to `rate`
+  per-second, with a maximum burst size of `burst`. Each request takes a single
+  token from this bucket. The `rate` must be positive.
+- `burst` `(int: 0)` - The maximum number of requests at any given second to be
+  allowed by the quota rule. There is a one-to-one mapping between requests and
+  tokens in the rate limit quota. A client may perform up to `burst` requests at
+  once, at which they they may invoke additional requests at `rate` per-second.
+
+### Sample Payload
+
+```json
+{
+  "path": "",
+  "rate": 897.3,
+  "burst": 2692
+}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/quotas/rate-limit/global-rate-limiter
+```
+
+## Delete a Rate Limit Quota
+
+A rate limit quota can be deleted by `name`.
+
+| Method   | Path                           |
+| :------- | :----------------------------- |
+| `DELETE` | `/sys/quotas/rate-limit/:name` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/sys/quotas/rate-limit/global-rate-limiter
+```
+
+## Get a Rate Limit Quota
+
+A rate limit quota can be retrieved by `name`.
+
+| Method | Path                           |
+| :----- | :----------------------------- |
+| `GET`  | `/sys/quotas/rate-limit/:name` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/quotas/rate-limit/global-rate-limiter
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "d0870811-455d-3dfd-459f-aee016e6fb68",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "burst": 2692,
+    "name": "global-rate-limiter",
+    "path": "",
+    "rate": 897.3,
+    "type": "rate-limit"
+  },
+  "warnings": null
+}
+```
