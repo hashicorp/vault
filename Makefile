@@ -313,7 +313,11 @@ LOCKFILE := $(LOCKDIR)/pkgs.yml
 export PACKAGE_SPEC_ID LAYER_SPEC_ID PRODUCT_REVISION
 
 # PACKAGESPEC_TARGETS are convenience aliases for targets defined in $(LOCKDIR)/Makefile
-PACKAGESPEC_TARGETS := build build-all build-ci aliases meta package package-meta stage-config stage watch-ci publish
+PACKAGESPEC_TARGETS := \
+	build build-all build-ci \
+	aliases meta package \
+	package-meta stage-config stage \
+	watch-ci publish list-staged-builds
 $(PACKAGESPEC_TARGETS):
 	@$(MAKE) -C $(LOCKDIR) $@
 ## end packagespec integration ##
