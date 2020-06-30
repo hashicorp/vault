@@ -1932,6 +1932,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 			return err
 		}
+		if err := c.setupPluginReload(); err != nil {
+			return err
+		}
 	} else {
 		c.auditBroker = NewAuditBroker(c.logger)
 	}
