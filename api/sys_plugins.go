@@ -261,7 +261,7 @@ func (c *Sys) ReloadPlugin(i *ReloadPluginInput) (string, error) {
 		// Get the reload id
 		secret, parseErr := ParseSecret(resp.Body)
 		if parseErr != nil {
-			return "", err
+			return "", parseErr
 		}
 		if _, ok := secret.Data["reload_id"]; ok {
 			return secret.Data["reload_id"].(string), nil
