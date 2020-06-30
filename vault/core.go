@@ -955,6 +955,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
+	err = c.adjustForSealMigration(conf.UnwrapSeal)
+	if err != nil {
+		return nil, err
+	}
+
 	return c, nil
 }
 
