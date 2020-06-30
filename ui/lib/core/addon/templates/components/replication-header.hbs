@@ -30,9 +30,15 @@
               Replication
             {{/link-to}}
           {{else}}
-            {{#link-to "vault.cluster.replication-dr-promote"}}
-              Disaster Recovery
-            {{/link-to}}
+            {{#if (eq pageType "manage")}}
+              {{#link-to "vault.cluster.replication-dr-promote.details"}}
+                Disaster Recovery
+              {{/link-to}}
+            {{else}}
+              {{#link-to "vault.cluster.replication-dr-promote"}}
+                Disaster Recovery
+              {{/link-to}}
+            {{/if}}
           {{/if}}
         </li>
       {{/key-value-header}}
