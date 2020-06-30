@@ -119,7 +119,6 @@ export default Component.extend({
       seconds,
       timeString: time + unit,
     };
-    console.log({ ttl });
     this.onChange(ttl);
   },
   updateTime: task(function*(newTime) {

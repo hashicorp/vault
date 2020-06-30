@@ -197,8 +197,14 @@ module('Integration | Component | ttl-picker2', function(hooks) {
         @changeOnInit={{true}}
       />
     `);
+    assert.ok(
+      changeSpy.calledWith({
+        enabled: true,
+        seconds: 6000,
+        timeString: '100m',
+      }),
+      'Seconds value is recalculated based on time and unit'
+    );
     assert.ok(changeSpy.calledOnce, 'it calls the passed onChange after render');
-    // assert.dom('[data-test-ttl-value]').hasValue('6000', 'time value is initialValue as seconds');
-    // assert.dom('[data-test-ttl-unit]').exists('Unit is shown on mount');
   });
 });
