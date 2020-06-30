@@ -83,8 +83,8 @@ func (c *PluginReloadStatusCommand) Run(args []string) int {
 		out = append(out, fmt.Sprintf("%s | %s | %t | %s ",
 			s.Timestamp.Format("15:04:05"),
 			i,
-			s.Success,
-			s.Message))
+			s.Error == "",
+			s.Error))
 	}
 	c.UI.Output(tableOutput(out, nil))
 	return 0
