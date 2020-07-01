@@ -43,6 +43,7 @@ import (
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/patrickmn/go-cache"
 	"google.golang.org/grpc"
@@ -97,6 +98,7 @@ var (
 	enterprisePostUnseal         = enterprisePostUnsealImpl
 	enterprisePreSeal            = enterprisePreSealImpl
 	enterpriseSetupFilteredPaths = enterpriseSetupFilteredPathsImpl
+	enterpriseSetupQuotas        = enterpriseSetupQuotasImpl
 	startReplication             = startReplicationImpl
 	stopReplication              = stopReplicationImpl
 	LastWAL                      = lastWALImpl
@@ -520,6 +522,8 @@ type Core struct {
 	// can test an upgrade to a version that includes the fixes from
 	// https://github.com/hashicorp/vault-enterprise/pull/1103
 	PR1103disabled bool
+
+	quotaManager *quotas.Manager
 }
 
 // CoreConfig is used to parameterize a core
@@ -943,6 +947,13 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
 
 	c.clusterListener.Store((*cluster.Listener)(nil))
+
+	quotasLogger := conf.Logger.Named("quotas")
+	c.allLoggers = append(c.allLoggers, quotasLogger)
+	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink)
+	if err != nil {
+		return nil, err
+	}
 
 	err = c.adjustForSealMigration(conf.UnwrapSeal)
 	if err != nil {
@@ -1516,6 +1527,11 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 				c.logger.Warn("failed to notify unsealed status", "error", err)
 			}
 		}
+		if err := c.serviceRegistration.NotifyInitializedStateChange(true); err != nil {
+			if c.logger.IsWarn() {
+				c.logger.Warn("failed to notify initialized status", "error", err)
+			}
+		}
 	}
 	return true, nil
 }
@@ -1822,6 +1838,10 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, performCleanup
 		}
 	}
 
+	if err := c.quotaManager.Reset(); err != nil {
+		c.logger.Error("error resetting quota manager", "error", err)
+	}
+
 	postSealInternal(c)
 
 	c.logger.Info("vault is sealed")
@@ -1892,6 +1912,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupCredentials(ctx); err != nil {
 		return err
 	}
+	if err := c.setupQuotas(ctx, false); err != nil {
+		return err
+	}
 	if !c.IsDRSecondary() {
 		if err := c.startRollback(); err != nil {
 			return err
@@ -1916,6 +1939,13 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		}
 	} else {
 		c.auditBroker = NewAuditBroker(c.logger)
+	}
+
+	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
+		//Cannot do this above, as we need other resources like mounts to be setup
+		if err := c.setupPluginReload(); err != nil {
+			return err
+		}
 	}
 
 	if c.getClusterListener() != nil && (c.ha != nil || shouldStartClusterListener(c)) {
@@ -2075,6 +2105,10 @@ func enterprisePreSealImpl(c *Core) error {
 }
 
 func enterpriseSetupFilteredPathsImpl(c *Core) error {
+	return nil
+}
+
+func enterpriseSetupQuotasImpl(ctx context.Context, c *Core) error {
 	return nil
 }
 
@@ -2473,4 +2507,30 @@ func (c *Core) readFeatureFlags(ctx context.Context) (*FeatureFlags, error) {
 		}
 	}
 	return &flags, nil
+}
+
+// MatchingMount returns the path of the mount that will be responsible for
+// handling the given request path.
+func (c *Core) MatchingMount(ctx context.Context, reqPath string) string {
+	return c.router.MatchingMount(ctx, reqPath)
+}
+
+func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
+	if c.quotaManager == nil {
+		return nil
+	}
+
+	return c.quotaManager.Setup(ctx, c.systemBarrierView, isPerfStandby)
+}
+
+// ApplyRateLimitQuota checks the request against all the applicable quota rules
+func (c *Core) ApplyRateLimitQuota(req *quotas.Request) (quotas.Response, error) {
+	req.Type = quotas.TypeRateLimit
+	return c.quotaManager.ApplyQuota(req)
+}
+
+// RateLimitAuditLoggingEnabled returns if the quota configuration allows audit
+// logging of request rejections due to rate limiting quota rule violations.
+func (c *Core) RateLimitAuditLoggingEnabled() bool {
+	return c.quotaManager.RateLimitAuditLoggingEnabled()
 }
