@@ -113,6 +113,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"replication/performance/status",
 				"replication/dr/status",
 				"replication/dr/secondary/promote",
+				"replication/dr/secondary/disable",
+				"replication/dr/secondary/recover",
 				"replication/dr/secondary/update-primary",
 				"replication/dr/secondary/operation-token/delete",
 				"replication/dr/secondary/license",
@@ -3241,7 +3243,8 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.mountsLock.RLock()
 	for _, entry := range b.Core.mounts.Entries {
-		filtered, err := b.Core.checkReplicatedFiltering(ctx, entry, "")
+		ctxWithNamespace := namespace.ContextWithNamespace(ctx, entry.Namespace())
+		filtered, err := b.Core.checkReplicatedFiltering(ctxWithNamespace, entry, "")
 		if err != nil {
 			b.Core.mountsLock.RUnlock()
 			return nil, err
@@ -3267,7 +3270,8 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.authLock.RLock()
 	for _, entry := range b.Core.auth.Entries {
-		filtered, err := b.Core.checkReplicatedFiltering(ctx, entry, credentialRoutePrefix)
+		ctxWithNamespace := namespace.ContextWithNamespace(ctx, entry.Namespace())
+		filtered, err := b.Core.checkReplicatedFiltering(ctxWithNamespace, entry, credentialRoutePrefix)
 		if err != nil {
 			b.Core.authLock.RUnlock()
 			return nil, err

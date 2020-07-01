@@ -382,7 +382,7 @@ github.com/hashicorp/go-gcp-common/gcputil
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.1.0
 github.com/hashicorp/go-immutable-radix
-# github.com/hashicorp/go-kms-wrapping v0.5.10
+# github.com/hashicorp/go-kms-wrapping v0.5.12
 github.com/hashicorp/go-kms-wrapping
 github.com/hashicorp/go-kms-wrapping/internal/xor
 github.com/hashicorp/go-kms-wrapping/wrappers/aead
@@ -447,7 +447,7 @@ github.com/hashicorp/serf/coordinate
 # github.com/hashicorp/vault-plugin-auth-alicloud v0.5.5
 github.com/hashicorp/vault-plugin-auth-alicloud
 github.com/hashicorp/vault-plugin-auth-alicloud/tools
-# github.com/hashicorp/vault-plugin-auth-azure v0.5.6-0.20200422235613-1b5c70f9ef68
+# github.com/hashicorp/vault-plugin-auth-azure v0.5.6
 github.com/hashicorp/vault-plugin-auth-azure
 # github.com/hashicorp/vault-plugin-auth-centrify v0.5.5
 github.com/hashicorp/vault-plugin-auth-centrify
@@ -458,7 +458,7 @@ github.com/hashicorp/vault-plugin-auth-cf/signatures
 github.com/hashicorp/vault-plugin-auth-cf/testing/certificates
 github.com/hashicorp/vault-plugin-auth-cf/testing/cf
 github.com/hashicorp/vault-plugin-auth-cf/util
-# github.com/hashicorp/vault-plugin-auth-gcp v0.6.2-0.20200428223335-82bd3a3ad5b3
+# github.com/hashicorp/vault-plugin-auth-gcp v0.6.2
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
 # github.com/hashicorp/vault-plugin-auth-jwt v0.7.0
@@ -471,7 +471,7 @@ github.com/hashicorp/vault-plugin-auth-kubernetes
 github.com/hashicorp/vault-plugin-auth-oci
 # github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4
 github.com/hashicorp/vault-plugin-database-elasticsearch
-# github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2-0.20200520204052-f840e9d4895c
+# github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2
 github.com/hashicorp/vault-plugin-database-mongodbatlas
 # github.com/hashicorp/vault-plugin-secrets-ad v0.6.6
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
@@ -482,20 +482,20 @@ github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
 # github.com/hashicorp/vault-plugin-secrets-azure v0.6.1
 github.com/hashicorp/vault-plugin-secrets-azure
-# github.com/hashicorp/vault-plugin-secrets-gcp v0.6.3-0.20200615210754-6c617f9285c3
+# github.com/hashicorp/vault-plugin-secrets-gcp v0.6.3
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
-# github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.5
+# github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.6
 github.com/hashicorp/vault-plugin-secrets-gcpkms
-# github.com/hashicorp/vault-plugin-secrets-kv v0.5.5
+# github.com/hashicorp/vault-plugin-secrets-kv v0.5.6
 github.com/hashicorp/vault-plugin-secrets-kv
 # github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas
-# github.com/hashicorp/vault-plugin-secrets-openldap v0.1.4-0.20200618161832-cae59ebde561
+# github.com/hashicorp/vault-plugin-secrets-openldap v0.1.4
 github.com/hashicorp/vault-plugin-secrets-openldap
 github.com/hashicorp/vault-plugin-secrets-openldap/client
-# github.com/hashicorp/vault/api v1.0.5-0.20200630153159-69a37f1037b5 => ./api
+# github.com/hashicorp/vault/api v1.0.5-0.20200630205458-1a16f3c699c6 => ./api
 github.com/hashicorp/vault/api
 # github.com/hashicorp/vault/sdk v0.1.14-0.20200527182800-ad90e0b39d2f => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
