@@ -12,6 +12,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	metrics "github.com/armon/go-metrics"
+	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
+	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -19,11 +24,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
-	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
-	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/namespace"
 	uberAtomic "go.uber.org/atomic"
 )
 
@@ -295,7 +295,7 @@ func (m *ExpirationManager) invalidate(key string) {
 				m.nonexpiring.Delete(leaseID)
 
 				if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
-					m.logger.Error("failed to handle lease delete invalidation", "error", err)
+					m.logger.Error("failed to update quota on lease invalidation", "error", err)
 					return
 				}
 			default:
@@ -737,10 +737,9 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 		pending.timer.Stop()
 		m.pending.Delete(leaseID)
 		m.leaseCount--
+		// Log but do not fail; unit tests (and maybe Tidy on production systems)
 		if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
-			m.pendingLock.Unlock()
-			m.logger.Error("failed to handle lease path deletion", "error", err)
-			return err
+			m.logger.Error("failed to update quota on revocation", "error", err)
 		}
 	}
 	m.nonexpiring.Delete(leaseID)
@@ -1464,7 +1463,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal tim
 			m.pending.Delete(le.LeaseID)
 			m.leaseCount--
 			if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionDeleted, []string{le.LeaseID}); err != nil {
-				m.logger.Error("failed to handle lease path deletion", "error", err)
+				m.logger.Error("failed to update quota on lease deletion", "error", err)
 				return
 			}
 		}
@@ -1497,7 +1496,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal tim
 
 	if leaseCreated {
 		if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionCreated, []string{le.LeaseID}); err != nil {
-			m.logger.Error("failed to handle lease creation", "error", err)
+			m.logger.Error("failed to update quota on lease creation", "error", err)
 			return
 		}
 	}
