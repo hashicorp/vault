@@ -151,7 +151,7 @@
                   One-time password (OTP)
                 </h4>
                 <p class="help has-text-grey has-bottom-margin-xs">
-                  This OTP will be used to encode the generated operation token. <span class="has-text-semibold">Save this</span>, as you will need it later to decode the operation token.
+                  This OTP will be used to decode the generated operation token. <span class="has-text-semibold">Save this</span>, as you will need it later to decode the operation token.
                 </p>
                 <div class="message is-list has-copy-button" tabindex="-1">
                   <HoverCopyButton @copyValue={{otp}} />
@@ -160,7 +160,7 @@
               </div>
             {{/if}}
             <p>
-              Generate an operation token by entering a portion of the master key. Once all portions are entered, the generated token may be used to manage your secondary Disaster Recovery cluster.
+              Generate an operation token by entering a portion of the primary's master key. Once all portions are entered, the generated token may be used to manage your secondary Disaster Recovery cluster.
             </p>
           </div>
           <div class="field">
