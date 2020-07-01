@@ -955,6 +955,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
+	err = c.adjustForSealMigration(conf.UnwrapSeal)
+	if err != nil {
+		return nil, err
+	}
+
 	return c, nil
 }
 
@@ -1934,6 +1939,13 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		}
 	} else {
 		c.auditBroker = NewAuditBroker(c.logger)
+	}
+
+	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
+		//Cannot do this above, as we need other resources like mounts to be setup
+		if err := c.setupPluginReload(); err != nil {
+			return err
+		}
 	}
 
 	if c.getClusterListener() != nil && (c.ha != nil || shouldStartClusterListener(c)) {
