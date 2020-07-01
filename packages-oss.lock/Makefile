@@ -221,6 +221,11 @@ endef
 # INVOKE_RELEASER_TARGET invokes the named target (first arg) in the releaser
 # repository, first calling REQUIRE_EXPORT on all the named variables (second arg).
 define INVOKE_RELEASER_TARGET
+	$(call REQUIRE_EXPORT,\
+		PRODUCT_REPO_LOCAL    PRODUCT_REPO          PRODUCT_PATH \
+		PRODUCT_CIRCLECI_SLUG PRODUCT_CIRCLECI_HOST RELEASE_SYSTEM_BRANCH \
+		SPEC                  LOCKDIR \
+	) \
 	[ -d "$(RELEASER_DIR)" ] || { \
 		[ $(RELEASER_CLONE) = YES ] || { \
 			echo "You must clone $(RELEASER_REPO) into $(RELEASER_DIR)"; exit 1; \
@@ -257,12 +262,7 @@ $(RELEASE_TARGETS): PRODUCT_VERSION ?= 0.0.0-$(USER)-snapshot
 $(RELEASE_TARGETS): RELEASE_SYSTEM_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
 $(RELEASE_TARGETS):
 	@\
-		$(call REQUIRE_EXPORT,\
-			PRODUCT_REPO_LOCAL \
-			PRODUCT_REPO           PRODUCT_PATH           PRODUCT_REVISION \
-			PRODUCT_VERSION        PRODUCT_CIRCLECI_SLUG  PRODUCT_CIRCLECI_HOST \
-			RELEASE_SYSTEM_BRANCH  SPEC                   LOCKDIR \
-		) \
+		$(call REQUIRE_EXPORT,PRODUCT_REVISION PRODUCT_VERSION) \
 		$(call INVOKE_RELEASER_TARGET,$@)
 
 # QUERY_TARGETS are targets in the release repo that perform queries, and are therefore
@@ -272,12 +272,14 @@ QUERY_TARGETS := list-staged-builds
 $(QUERY_TARGETS): RELEASE_SYSTEM_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
 $(QUERY_TARGETS):
 	@\
-		$(call REQUIRE_EXPORT,\
-			PRODUCT_REPO_LOCAL \
-			PRODUCT_REPO           PRODUCT_PATH           \
-			PRODUCT_CIRCLECI_SLUG  PRODUCT_CIRCLECI_HOST \
-			RELEASE_SYSTEM_BRANCH  SPEC                   LOCKDIR \
-		) \
 		$(call EXPORT,PRODUCT_VERSION PRODUCT_REVISION) \
-		$(call INVOKE_RELEASER_TARGET,$@) \
+		$(call INVOKE_RELEASER_TARGET,$@)
 
+# BUNDLE_TARGETS are targets acting on specific staged bundles.
+BUNDLE_TARGETS := publish inspect-staged-build
+
+$(BUNDLE_TARGETS): RELEASE_SYSTEM_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
+$(BUNDLE_TARGETS):
+	@\
+		$(call REQUIRE_EXPORT,BUNDLE_ID) \
+		$(call INVOKE_RELEASER_TARGET,$@)
