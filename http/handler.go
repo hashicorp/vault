@@ -276,10 +276,14 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		} else {
 			ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
 		}
+
+		defer cancelFunc()
+
 		// Add a size limiter if desired
 		if maxRequestSize > 0 {
 			ctx = context.WithValue(ctx, "max_request_size", maxRequestSize)
 		}
+
 		ctx = context.WithValue(ctx, "original_request_path", r.URL.Path)
 		r = r.WithContext(ctx)
 		r = r.WithContext(namespace.ContextWithNamespace(r.Context(), namespace.RootNamespace))
@@ -289,7 +293,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			newR, status := adjustRequest(core, r)
 			if status != 0 {
 				respondError(w, status, nil)
-				cancelFunc()
+				// cancelFunc()
 				return
 			}
 			r = newR
@@ -297,7 +301,6 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
 		default:
 			respondError(w, http.StatusNotFound, nil)
-			cancelFunc()
 			return
 		}
 
@@ -309,6 +312,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			respondError(w, status, err)
 			return
 		}
+
 		// Reset the body since logical request creation already read the
 		// request body.
 		r.Body = ioutil.NopCloser(origBody)
@@ -321,9 +325,6 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			ResponseWriter: w,
 			request:        req,
 		}, r)
-
-		cancelFunc()
-		return
 	})
 }
 

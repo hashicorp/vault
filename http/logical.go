@@ -44,7 +44,11 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 	if err != nil {
 		return nil, nil, http.StatusBadRequest, nil
 	}
-	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
+
+	path := r.URL.Path
+	if strings.HasPrefix(path, "/v1/") {
+		path = ns.TrimmedPath(path[len("/v1/"):])
+	}
 
 	var data map[string]interface{}
 	var origBody io.ReadCloser
