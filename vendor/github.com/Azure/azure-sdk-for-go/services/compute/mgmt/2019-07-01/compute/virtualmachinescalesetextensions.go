@@ -82,7 +82,7 @@ func (client VirtualMachineScaleSetExtensionsClient) CreateOrUpdatePreparer(ctx 
 		"vmssExtensionName": autorest.Encode("path", vmssExtensionName),
 	}
 
-	const APIVersion = "2017-12-01"
+	const APIVersion = "2019-07-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -163,7 +163,7 @@ func (client VirtualMachineScaleSetExtensionsClient) DeletePreparer(ctx context.
 		"vmssExtensionName": autorest.Encode("path", vmssExtensionName),
 	}
 
-	const APIVersion = "2017-12-01"
+	const APIVersion = "2019-07-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -191,14 +191,13 @@ func (client VirtualMachineScaleSetExtensionsClient) DeleteSender(req *http.Requ
 
 // DeleteResponder handles the response to the Delete request. The method always
 // closes the http.Response Body.
-func (client VirtualMachineScaleSetExtensionsClient) DeleteResponder(resp *http.Response) (result OperationStatusResponse, err error) {
+func (client VirtualMachineScaleSetExtensionsClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent),
-		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
-	result.Response = autorest.Response{Response: resp}
+	result.Response = resp
 	return
 }
 
@@ -249,7 +248,7 @@ func (client VirtualMachineScaleSetExtensionsClient) GetPreparer(ctx context.Con
 		"vmssExtensionName": autorest.Encode("path", vmssExtensionName),
 	}
 
-	const APIVersion = "2017-12-01"
+	const APIVersion = "2019-07-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -330,7 +329,7 @@ func (client VirtualMachineScaleSetExtensionsClient) ListPreparer(ctx context.Co
 		"vmScaleSetName":    autorest.Encode("path", VMScaleSetName),
 	}
 
-	const APIVersion = "2017-12-01"
+	const APIVersion = "2019-07-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
