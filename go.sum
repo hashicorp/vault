@@ -458,6 +458,8 @@ github.com/hashicorp/go-immutable-radix v1.1.0/go.mod h1:0y9vanUI8NX6FsYoO3zeMjh
 github.com/hashicorp/go-kms-wrapping v0.5.1/go.mod h1:cGIibZmMx9qlxS1pZTUrEgGqA+7u3zJyvVYMhjU2bDs=
 github.com/hashicorp/go-kms-wrapping v0.5.10 h1:n6a1ggDgoP75SoJ3OzVnTBzB0H5fJ5XX1rvuZIBWVaM=
 github.com/hashicorp/go-kms-wrapping v0.5.10/go.mod h1:yVIWtGOTh/cdGc++/NOlXLus0hJ19Lz4iFrpF6WsZh4=
+github.com/hashicorp/go-kms-wrapping v0.5.12 h1:4zZCaLqOob5moaAmpS6ZtGZYm4yOcqvmt2lO+zNXHls=
+github.com/hashicorp/go-kms-wrapping v0.5.12/go.mod h1:yVIWtGOTh/cdGc++/NOlXLus0hJ19Lz4iFrpF6WsZh4=
 github.com/hashicorp/go-kms-wrapping/entropy v0.1.0 h1:xuTi5ZwjimfpvpL09jDE71smCBRpnF5xfo871BSX4gs=
 github.com/hashicorp/go-kms-wrapping/entropy v0.1.0/go.mod h1:d1g9WGtAunDNpek8jUIEJnBlbgKS1N2Q61QkHiZyR1g=
 github.com/hashicorp/go-memdb v1.0.2 h1:AIjzJlwIxz2inhZqRJZfe6D15lPeF0/cZyS1BVlnlHg=

@@ -382,7 +382,7 @@ github.com/hashicorp/go-gcp-common/gcputil
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.1.0
 github.com/hashicorp/go-immutable-radix
-# github.com/hashicorp/go-kms-wrapping v0.5.10
+# github.com/hashicorp/go-kms-wrapping v0.5.12
 github.com/hashicorp/go-kms-wrapping
 github.com/hashicorp/go-kms-wrapping/internal/xor
 github.com/hashicorp/go-kms-wrapping/wrappers/aead
