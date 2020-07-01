@@ -293,7 +293,6 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			newR, status := adjustRequest(core, r)
 			if status != 0 {
 				respondError(w, status, nil)
-				// cancelFunc()
 				return
 			}
 			r = newR
