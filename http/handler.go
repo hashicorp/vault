@@ -301,17 +301,15 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			return
 		}
 
-		origBody := new(bytes.Buffer)
-		reader := ioutil.NopCloser(io.TeeReader(r.Body, origBody))
-		r.Body = reader
-		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+		req, origBody, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
 		if err != nil || status != 0 {
 			respondError(w, status, err)
 			return
 		}
-		// Reset the body since logical request creation already read the
-		// request body.
-		r.Body = ioutil.NopCloser(origBody)
+
+		if origBody != nil {
+			r.Body = ioutil.NopCloser(origBody)
+		}
 
 		// Set the mount path in the request
 		req.MountPoint = core.MatchingMount(r.Context(), req.Path)
