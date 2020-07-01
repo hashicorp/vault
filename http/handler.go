@@ -252,6 +252,7 @@ type LogicalResponseWriter struct {
 func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerProperties) http.Handler {
 	var maxRequestDuration time.Duration
 	var maxRequestSize int64
+
 	if props.ListenerConfig != nil {
 		maxRequestDuration = props.ListenerConfig.MaxRequestDuration
 		maxRequestSize = props.ListenerConfig.MaxRequestSize
@@ -262,6 +263,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 	if maxRequestSize == 0 {
 		maxRequestSize = DefaultMaxRequestSize
 	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
@@ -277,8 +279,6 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
 		}
 
-		defer cancelFunc()
-
 		// Add a size limiter if desired
 		if maxRequestSize > 0 {
 			ctx = context.WithValue(ctx, "max_request_size", maxRequestSize)
@@ -293,6 +293,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			newR, status := adjustRequest(core, r)
 			if status != 0 {
 				respondError(w, status, nil)
+				cancelFunc()
 				return
 			}
 			r = newR
@@ -300,6 +301,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
 		default:
 			respondError(w, http.StatusNotFound, nil)
+			cancelFunc()
 			return
 		}
 
@@ -309,6 +311,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
 		if err != nil || status != 0 {
 			respondError(w, status, err)
+			cancelFunc()
 			return
 		}
 
@@ -324,6 +327,8 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			ResponseWriter: w,
 			request:        req,
 		}, r)
+
+		cancelFunc()
 	})
 }
 
