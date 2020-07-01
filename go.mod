@@ -66,24 +66,24 @@ require (
 	github.com/hashicorp/raft v1.1.3-0.20200501224250-c95aa91e604e
 	github.com/hashicorp/raft-snapshot v1.0.2-0.20190827162939-8117efcc5aab
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.5
-	github.com/hashicorp/vault-plugin-auth-azure v0.5.6-0.20200422235613-1b5c70f9ef68
+	github.com/hashicorp/vault-plugin-auth-azure v0.5.6
 	github.com/hashicorp/vault-plugin-auth-centrify v0.5.5
 	github.com/hashicorp/vault-plugin-auth-cf v0.5.4
-	github.com/hashicorp/vault-plugin-auth-gcp v0.6.2-0.20200428223335-82bd3a3ad5b3
+	github.com/hashicorp/vault-plugin-auth-gcp v0.6.2
 	github.com/hashicorp/vault-plugin-auth-jwt v0.7.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.5.5
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2-0.20200520204052-f840e9d4895c
+	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2
 	github.com/hashicorp/vault-plugin-secrets-ad v0.6.6
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5
 	github.com/hashicorp/vault-plugin-secrets-azure v0.6.1
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.3-0.20200615210754-6c617f9285c3
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.5
-	github.com/hashicorp/vault-plugin-secrets-kv v0.5.5
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.3
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.6
+	github.com/hashicorp/vault-plugin-secrets-kv v0.5.6
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.4-0.20200618161832-cae59ebde561
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.4
 	github.com/hashicorp/vault/api v1.0.5-0.20200519221902-385fac77e20f
 	github.com/hashicorp/vault/sdk v0.1.14-0.20200527182800-ad90e0b39d2f
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
