@@ -116,7 +116,7 @@ module('Integration | Component | ttl-picker2', function(hooks) {
     );
   });
 
-  test('it sets default value to seconds of parsed value when set', async function(assert) {
+  test('it sets default value to time and unit passed', async function(assert) {
     let changeSpy = sinon.spy();
     this.set('onChange', changeSpy);
     await render(hbs`
@@ -128,8 +128,27 @@ module('Integration | Component | ttl-picker2', function(hooks) {
         @unit="d"
       />
     `);
-    assert.dom('[data-test-ttl-value]').hasValue('7200', 'time value is initialValue as seconds');
-    assert.dom('[data-test-select="ttl-unit"]').hasValue('s', 'unit is seconds');
+    assert.dom('[data-test-ttl-value]').hasValue('2', 'time value is 2');
+    assert.dom('[data-test-select="ttl-unit"]').hasValue('h', 'unit is hours');
+    assert.ok(changeSpy.notCalled, 'it does not call onChange after render when changeOnInit is not set');
+  });
+
+  test('it is disabled on init if initialEnabled is false', async function(assert) {
+    let changeSpy = sinon.spy();
+    this.set('onChange', changeSpy);
+    await render(hbs`
+      <TtlPicker2
+        @label="inittest"
+        @onChange={{onChange}}
+        @initialValue="100m"
+        @initialEnabled={{false}}
+      />
+    `);
+    assert.dom('[data-test-ttl-value]').doesNotExist('Value is not shown on mount');
+    assert.dom('[data-test-ttl-unit]').doesNotExist('Unit is not shown on mount');
+    await click('[data-test-toggle-input="inittest"]');
+    assert.dom('[data-test-ttl-value]').hasValue('100', 'time after toggle is 100');
+    assert.dom('[data-test-select="ttl-unit"]').hasValue('m', 'Unit is minutes after toggle');
   });
 
   test('it is enabled on init if initialEnabled is true', async function(assert) {
@@ -143,8 +162,8 @@ module('Integration | Component | ttl-picker2', function(hooks) {
         @initialEnabled={{true}}
       />
     `);
-    assert.dom('[data-test-ttl-value]').hasValue('6000', 'time value is initialValue as seconds');
-    assert.dom('[data-test-ttl-unit]').exists('Unit is shown on mount');
+    assert.dom('[data-test-ttl-value]').hasValue('100', 'time is shown on mount');
+    assert.dom('[data-test-select="ttl-unit"]').hasValue('m', 'Unit is shown on mount');
     await click('[data-test-toggle-input="inittest"]');
     assert.dom('[data-test-ttl-value]').doesNotExist('Value no longer shows after toggle');
     assert.dom('[data-test-ttl-unit]').doesNotExist('Unit no longer shows after toggle');
@@ -161,7 +180,31 @@ module('Integration | Component | ttl-picker2', function(hooks) {
         @initialEnabled="true"
       />
     `);
-    assert.dom('[data-test-ttl-value]').hasValue('6000', 'time value is initialValue as seconds');
+    assert.dom('[data-test-ttl-value]').hasValue('100', 'time value is shown on mount');
     assert.dom('[data-test-ttl-unit]').exists('Unit is shown on mount');
+    assert.dom('[data-test-select="ttl-unit"]').hasValue('m', 'Unit matches what is passed in');
+  });
+
+  test('it calls onChange on init when rendered if changeOnInit is true', async function(assert) {
+    let changeSpy = sinon.spy();
+    this.set('onChange', changeSpy);
+    await render(hbs`
+      <TtlPicker2
+        @label="changeOnInitTest"
+        @onChange={{onChange}}
+        @initialValue="100m"
+        @initialEnabled="true"
+        @changeOnInit={{true}}
+      />
+    `);
+    assert.ok(
+      changeSpy.calledWith({
+        enabled: true,
+        seconds: 6000,
+        timeString: '100m',
+      }),
+      'Seconds value is recalculated based on time and unit'
+    );
+    assert.ok(changeSpy.calledOnce, 'it calls the passed onChange after render');
   });
 });
