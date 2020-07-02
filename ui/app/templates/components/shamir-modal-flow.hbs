@@ -8,32 +8,46 @@
   <section class="modal-card-body">
     {{#if encoded_token}}
       <p class="has-bottom-margin-l">
-        {{#if otp}}
-        There are three values below. The encoded operation token and the OTP are used in the <span class="has-text-semibold">DR operation token command</span>, which you will need to copy and paste into your CLI in order to generate the operation token. Save your encoded operation token and OTP.
-        {{else}}
-        The encoded operation token and the OTP are used in the <span class="has-text-semibold">DR operation token command</span>, which you will need to copy and paste into your CLI in order to generate the operation token. Save your encoded operation token and OTP.
-        {{/if}}
+        Below is the process and the values necessary to generate your operation token. Read the instructions carefully!
       </p>
       <div class="has-bottom-margin-m">
-        <h4 class="title is-7 has-bottom-padding-m is-fullwidth">
-          Encoded operation token
-        </h4>
-        <div class="message is-list has-copy-button" tabindex="-1">
-          <HoverCopyButton @copyValue={{encoded_token}} />
-          <code class="is-word-break" data-test-shamir-encoded-token>{{encoded_token}}</code>
+        <div class="has-bottom-margin-xl">
+          <h4 class="field-title">
+            Encoded operation token
+          </h4>
+          <p class="help has-text-grey has-bottom-margin-xs">
+            This is a one-time token that will be used to generate the operation token. Please save it.
+          </p>
+          <div class="message is-list has-copy-button" tabindex="-1">
+            <HoverCopyButton @copyValue={{encoded_token}} />
+            <code class="is-word-break" data-test-shamir-encoded-token>{{encoded_token}}</code>
+          </div>
         </div>
         {{#if otp}}
-          <h4 class="title is-7 has-bottom-padding-m is-fullwidth">
-            One time password (OTP)
-          </h4>
-          <div class="message is-list has-copy-button" tabindex="-1">
-            <HoverCopyButton @copyValue={{otp}} />
-            <code class="is-word-break">{{otp}}</code>
+          <div class="has-bottom-margin-xl">
+            <h4 class="field-title">
+              One time password (OTP)
+            </h4>
+            <p class="help has-text-grey has-bottom-margin-xs">
+              This OTP will be used to decode the generated operation token. Please save it.
+            </p>
+            <div class="message is-list has-copy-button" tabindex="-1">
+              <HoverCopyButton @copyValue={{otp}} />
+              <code class="is-word-break">{{otp}}</code>
+            </div>
           </div>
         {{/if}}
-          <h4 class="title is-7 has-bottom-padding-m is-fullwidth">
+        <div class="has-bottom-margin-xl">
+          <h4 class="field-title">
             DR operation token command
           </h4>
+          <p class="help has-text-grey has-bottom-margin-xs">
+            {{#if otp}}
+            This command contains both the encoded token and the OTP. It should be executed on the primary cluster in order to generate the operation token.
+            {{else}}
+            This command requires the OTP saved earlier. It should be executed on the primary cluster in order to generate the operation token.
+            {{/if}}
+          </p>
           <div class="message is-list has-copy-button" tabindex="-1">
             {{#let (if otp
               (concat 'vault operator generate-root -otp="' otp '" -decode="' encoded_token '"') (concat 'vault operator generate-root -otp="<enter your otp here>" -decode="' encoded_token '"') ) as |cmd|}}
@@ -41,6 +55,7 @@
               <code class="is-word-break">{{cmd}}</code>
             {{/let}}
           </div>
+        </div>
       </div>
       <div>
         <button type="button" class="button is-primary" {{action 'onCancelClose'}}>
@@ -99,7 +114,7 @@
             Below is the base-64 encoded PGP Key that will be used to encrypt the generated operation token.
             Next we'll enter portions of the master key to generate an operation token. Click the "Generate operation token" button to proceed.
           </p>
-          <h4 class="title is-7 has-bottom-padding-m is-fullwidth">
+          <h4 class="field-title has-bottom-padding-m is-fullwidth">
             PGP Key {{pgpKeyFile.fileName}}
           </h4>
           <div class="message is-list has-copy-button" tabindex="-1">
@@ -131,24 +146,24 @@
           {{/if}}
           <div class="box is-shadowless is-marginless no-padding-top is-fullwidth no-padding-sides" data-test-form-text>
             {{#if otp}}
-              <div>
-                <h4 class="title is-7 has-bottom-padding-m is-fullwidth">
+              <div class="has-bottom-margin-xxl">
+                <h4 class="field-title">
                   One-time password (OTP)
                 </h4>
+                <p class="help has-text-grey has-bottom-margin-xs">
+                  This OTP will be used to decode the generated operation token. <span class="has-text-semibold">Save this</span>, as you will need it later to decode the operation token.
+                </p>
                 <div class="message is-list has-copy-button" tabindex="-1">
                   <HoverCopyButton @copyValue={{otp}} />
                   <code class="is-word-break">{{otp}}</code>
                 </div>
               </div>
-              <div class="has-text-grey is-size-8 has-bottom-margin-l">
-                This OTP will be used to encode the generated operation token. <span class="has-text-semibold">Save this</span>, as you will need it later to decode the operation token.
-              </div>
             {{/if}}
             <p>
-              Generate an operation token by entering a portion of the master key. Once all portions are entered, the generated token may be used to manage your secondary Disaster Recovery cluster.
+              Generate an operation token by entering a portion of the primary's master key. Once all portions are entered, the generated token may be used to manage your secondary Disaster Recovery cluster.
             </p>
           </div>
-          <div class="field {{if paddingless 'has-margin-top'}}">
+          <div class="field">
             <label for="key" class="is-label">
               Master Key Portion
             </label>
