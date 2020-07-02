@@ -118,7 +118,7 @@
     {{/if}}
   </form>
 {{else}}
-  <form {{action (perform onSubmit (hash key=key)) on="submit"}} id="shamir">
+  <form {{action 'onSubmit' (hash key=key) on="submit"}} id="shamir">
     <div class="box is-shadowless">
       {{#if errors}}
         <div class="box is-shadowless is-marginless no-padding-top is-fullwidth">

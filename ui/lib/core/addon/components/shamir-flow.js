@@ -149,18 +149,18 @@ export default Component.extend(DEFAULTS, {
     yield this.attemptProgress(this.extractData(data));
   }).drop(),
 
-  onSubmit: task(function*(data) {
-    if (!data.key) {
-      return;
-    }
-    yield this.attemptProgress(this.extractData(data));
-  }).drop(),
-
   actions: {
     reset() {
       this.reset();
       this.set('encoded_token', null);
       this.set('otp', null);
+    },
+
+    onSubmit(data) {
+      if (!data.key) {
+        return;
+      }
+      this.attemptProgress(this.extractData(data));
     },
 
     setKey(_, keyFile) {
