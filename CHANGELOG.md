@@ -55,7 +55,8 @@ BUG FIXES:
 * ui: Disallow max versions value of large than 9999999999999999 on kv2 secrets engine. [[GH-9242](https://github.com/hashicorp/vault/pull/9242)]
 * ui: Add and upgrade missing dependencies to resolve a failure with `make static-dist`. [[GH-9277](https://github.com/hashicorp/vault/pull/9371)]
 
-## 1.4.3 (July 2nd, 2020)
+## 1.4.3
+### July 2nd, 2020
 
 IMPROVEMENTS:
 
@@ -260,10 +261,12 @@ BUG FIXES:
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
 * ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
 
-## 1.3.7 (July 2nd, 2020)
+## 1.3.7
+### July 2nd, 2020
 
 BUG FIXES:
 
+* seal: (enterprise) Fix issue causing stored seal and recovery keys to be mistaken as sealwrapped values
 * secrets/aws: Fix issue where performance standbys weren't able to generate STS credentials after an IAM access key rotation in AWS and root IAM credential update in Vault [[GH-9363](https://github.com/hashicorp/vault/pull/9363)]
 
 ## 1.3.6 (May 21st, 2020)
