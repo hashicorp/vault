@@ -89,7 +89,7 @@ enable_raw_endpoint = true
 storage "%s" {
 }
 
-enable_ui = true
+ui = true
 `
 
 	hclStr = fmt.Sprintf(hclStr, storageType)
