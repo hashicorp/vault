@@ -4,7 +4,7 @@ import ProductDownloader from '@hashicorp/react-product-downloader'
 import Head from 'next/head'
 import HashiHead from '@hashicorp/react-head'
 
-export default function DownloadsPage({ releaseData }) {
+export default function DownloadsPage(props) {
   const changelogUrl = CHANGELOG_URL.length
     ? CHANGELOG_URL
     : `https://github.com/hashicorp/vault/blob/v${VERSION}/CHANGELOG.md`
@@ -14,7 +14,7 @@ export default function DownloadsPage({ releaseData }) {
       <ProductDownloader
         product="Vault"
         version={VERSION}
-        releaseData={releaseData}
+        releaseData={props.releaseData}
         changelog={changelogUrl}
       />
     </div>
