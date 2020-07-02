@@ -89,7 +89,7 @@
   <footer class="modal-card-foot modal-card-foot-outlined">
     <button
       class="button is-primary"
-      onclick={{action "onSubmit" "update-primary" model.replicationAttrs.modeForUrl (hash token=token primary_api_addr=primary_api_addr ca_path=ca_path ca_file=ca_file)}}
+      onclick={{action "onSubmit" "update-primary" model.replicationAttrs.modeForUrl (hash token=token dr_operation_token_primary=dr_operation_token_primary primary_api_addr=primary_api_addr ca_path=ca_path ca_file=ca_file)}}
       data-test-confirm-action-trigger
     >
       Update
