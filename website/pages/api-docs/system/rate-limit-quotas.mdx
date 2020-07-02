@@ -25,7 +25,7 @@ that can either be a namespace or mount.
 - `path` `(string: "")` - Path of the mount or namespace to apply the quota.
   A blank path configures a global rate limit quota. For example `namespace1/`
   adds a quota to a full namespace, `namespace1/auth/userpass` adds a quota to
-  `userpass` in `namespace1`. **Note, namespaces are supported in Enterprise only**.
+  `userpass` in `namespace1`.
 - `rate` `(float: 0.0)` - The rate at which allowed requests are refilled per
   second by the quota rule. Internally, a token-bucket algorithm is used which
   has a size of `burst`, initially full. The quota limits requests to `rate`
