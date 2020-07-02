@@ -148,16 +148,16 @@ export default Component.extend(DEFAULTS, {
       this.set('otp', null);
     },
 
-    startGenerate(data) {
-      if (this.generateAction) {
-        data.attempt = true;
+    onSubmit(data) {
+      if (!data.key) {
+        return;
       }
       this.attemptProgress(this.extractData(data));
     },
 
-    onSubmit(data) {
-      if (!data.key) {
-        return;
+    startGenerate(data) {
+      if (this.generateAction) {
+        data.attempt = true;
       }
       this.attemptProgress(this.extractData(data));
     },
