@@ -41,9 +41,6 @@ rate limit quota, and a rate limit quota defined for a mount takes precedence ov
 the global and namespace rate limit quotas. In other words, the most specific
 quota rule will be applied.
 
-However, a rate limit quota can be
-defined for a mount, which will take precedence over inherited quotas.
-
 Vault also allows the inspection of the state of rate limiting in a Vault node
 through various [metrics](/docs/internals/telemetry#Resource-Quota-Metrics) exposed
 and through enabling optional audit logging.
