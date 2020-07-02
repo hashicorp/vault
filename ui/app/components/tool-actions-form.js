@@ -130,7 +130,10 @@ export default Component.extend(DEFAULTS, {
       get(this, 'store')
         .adapterFor('tools')
         .toolAction(action, data, { wrapTTL })
-        .then(resp => this.handleSuccess(resp, action), (...errArgs) => this.handleError(...errArgs));
+        .then(
+          resp => this.handleSuccess(resp, action),
+          (...errArgs) => this.handleError(...errArgs)
+        );
     },
 
     onClear() {

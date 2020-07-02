@@ -9,7 +9,10 @@ export default Controller.extend({
   },
   actions: {
     saveModel({ text }) {
-      this.model.save({ text }).then(() => this.licenseSuccess(), () => this.licenseError());
+      this.model.save({ text }).then(
+        () => this.licenseSuccess(),
+        () => this.licenseError()
+      );
     },
   },
 });
