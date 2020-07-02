@@ -13,9 +13,9 @@ needs to go through Vault’s API.
 
 One side effect of the API driven model is that applications and users can
 misbehave by overwhelming system resources through consistent and high volume API
-requests resulting in DoS issues in some Vault nodes or even the entire Vault
-cluster. This risk is significantly increased when Vault API endpoints are exposed
-to thousands or millions of services deployed across a global infrastructure,
+requests resulting in denial-of-service issues in some Vault nodes or even the
+entire Vault cluster. This risk is significantly increased when Vault API endpoints
+are exposed to thousands or millions of services deployed across a global infrastructure,
 especially in use cases of Vault where Vault is deployed as a service for internal
 developers.
 
@@ -34,9 +34,15 @@ are not replicated). A client may invoke `burst` requests at any given second,
 after which they may invoke additional requests at `rate` per-second, where `burst`
 must be greater than or equal to `rate`.
 
-A rate limit quota defined at the root level, essentially to the entire Vault API,
-is inherited to all mounts. However, a rate limit quota can be defined for a mount,
-which will take precedence over inherited quotas.
+A rate limit quota defined at the root level (i.e. empty `path`) is inherited by
+all namespaces and mounts. It acts as a single rate limiter for the entire Vault
+API. A rate limit quota defined on a namespace takes precedence over the global
+rate limit quota, and a rate limit quota defined for a mount takes precedence over 
+the global and namespace rate limit quotas. In other words, the most specific
+quota rule will be applied.
+
+However, a rate limit quota can be
+defined for a mount, which will take precedence over inherited quotas.
 
 Vault also allows the inspection of the state of rate limiting in a Vault node
 through various [metrics](/docs/internals/telemetry#Resource-Quota-Metrics) exposed

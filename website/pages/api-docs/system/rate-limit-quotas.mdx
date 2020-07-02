@@ -32,9 +32,10 @@ that can either be a namespace or mount.
   per-second, with a maximum burst size of `burst`. Each request takes a single
   token from this bucket. The `rate` must be positive.
 - `burst` `(int: 0)` - The maximum number of requests at any given second to be
-  allowed by the quota rule. There is a one-to-one mapping between requests and
-  tokens in the rate limit quota. A client may perform up to `burst` requests at
-  once, at which they they may invoke additional requests at `rate` per-second.
+  allowed by the quota rule, where each request takes a single token. A client
+  may perform up to `burst` requests at once, after which they they may invoke
+  additional requests at `rate` per-second. The `burst` value must be greater
+  than or equal to `rate`.
 
 ### Sample Payload
 
