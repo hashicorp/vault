@@ -20,6 +20,17 @@ func testPluginReloadCommand(tb testing.TB) (*cli.MockUi, *PluginReloadCommand) 
 	}
 }
 
+func testPluginReloadStatusCommand(tb testing.TB) (*cli.MockUi, *PluginReloadStatusCommand) {
+	tb.Helper()
+
+	ui := cli.NewMockUi()
+	return ui, &PluginReloadStatusCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
+		},
+	}
+}
+
 func TestPluginReloadCommand_Run(t *testing.T) {
 	t.Parallel()
 
@@ -107,4 +118,47 @@ func TestPluginReloadCommand_Run(t *testing.T) {
 
 	})
 
+}
+
+func TestPluginReloadStatusCommand_Run(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		args []string
+		out  string
+		code int
+	}{
+		{
+			"not_enough_args",
+			nil,
+			"Not enough arguments",
+			1,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			client, closer := testVaultServer(t)
+			defer closer()
+
+			ui, cmd := testPluginReloadCommand(t)
+			cmd.client = client
+
+			args := append([]string{}, tc.args...)
+			code := cmd.Run(args)
+			if code != tc.code {
+				t.Errorf("expected %d to be %d", code, tc.code)
+			}
+
+			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+			if !strings.Contains(combined, tc.out) {
+				t.Errorf("expected %q to contain %q", combined, tc.out)
+			}
+		})
+	}
 }

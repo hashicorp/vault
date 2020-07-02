@@ -129,6 +129,7 @@ export default [
       },
       'list',
       'login',
+      'monitor',
       'namespace',
       {
         category: 'operator',

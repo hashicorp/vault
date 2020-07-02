@@ -1819,10 +1819,11 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				}
 
 				var deletedChildrenCount int64
-				for _, child := range children {
+				for index, child := range children {
 					countParentList++
 					if countParentList%500 == 0 {
-						ts.logger.Info("checking validity of tokens in secondary index list", "progress", countParentList)
+						percentComplete := float64(index)/float64(len(children))*100
+						ts.logger.Info("checking validity of tokens in secondary index list", "progress", countParentList, "percent_complete", percentComplete)
 					}
 
 					// Look up tainted entries so we can be sure that if this isn't
@@ -1879,10 +1880,11 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			// For each of the accessor, see if the token ID associated with it is
 			// a valid one. If not, delete the leases associated with that token
 			// and delete the accessor as well.
-			for _, saltedAccessor := range saltedAccessorList {
+			for index, saltedAccessor := range saltedAccessorList {
 				countAccessorList++
 				if countAccessorList%500 == 0 {
-					ts.logger.Info("checking if accessors contain valid tokens", "progress", countAccessorList)
+					percentComplete := float64(index)/float64(len(saltedAccessorList))*100
+					ts.logger.Info("checking if accessors contain valid tokens", "progress", countAccessorList, "percent_complete", percentComplete)
 				}
 
 				accessorEntry, err := ts.lookupByAccessor(quitCtx, saltedAccessor, true, true)
@@ -1975,10 +1977,11 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			}
 
 			// Revoke invalid cubbyhole storage keys
-			for _, key := range cubbyholeKeys {
+			for index, key := range cubbyholeKeys {
 				countCubbyholeKeys++
 				if countCubbyholeKeys%500 == 0 {
-					ts.logger.Info("checking if there are invalid cubbyholes", "progress", countCubbyholeKeys)
+					percentComplete := float64(index)/float64(len(cubbyholeKeys))*100
+					ts.logger.Info("checking if there are invalid cubbyholes", "progress", countCubbyholeKeys, "percent_complete", percentComplete)
 				}
 
 				key := strings.TrimSuffix(key, "/")

@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/quotas"
 	uberAtomic "go.uber.org/atomic"
 )
 
@@ -256,23 +257,60 @@ func (m *ExpirationManager) inRestoreMode() bool {
 }
 
 func (m *ExpirationManager) invalidate(key string) {
-
 	switch {
 	case strings.HasPrefix(key, leaseViewPrefix):
-		// Clear from the pending expiration
 		leaseID := strings.TrimPrefix(key, leaseViewPrefix)
-		m.pendingLock.Lock()
-		if info, ok := m.pending.Load(leaseID); ok {
-			pending := info.(pendingInfo)
-			pending.timer.Stop()
-			m.pending.Delete(leaseID)
-			m.leaseCount--
+		ctx := m.quitContext
+		_, nsID := namespace.SplitIDFromString(leaseID)
+		leaseNS := namespace.RootNamespace
+		var err error
+		if nsID != "" {
+			leaseNS, err = NamespaceByID(ctx, nsID, m.core)
+			if err != nil {
+				m.logger.Error("failed to invalidate lease entry", "error", err)
+				return
+			}
 		}
 
-		// If in the nonexpiring map, remove there.
-		m.nonexpiring.Delete(leaseID)
+		le, err := m.loadEntryInternal(namespace.ContextWithNamespace(ctx, leaseNS), leaseID, false, false)
+		if err != nil {
+			m.logger.Error("failed to invalidate lease entry", "error", err)
+			return
+		}
 
-		m.pendingLock.Unlock()
+		m.pendingLock.Lock()
+		defer m.pendingLock.Unlock()
+		info, ok := m.pending.Load(leaseID)
+		switch {
+		case ok:
+			switch {
+			case le == nil:
+				// Handle lease deletion
+				pending := info.(pendingInfo)
+				pending.timer.Stop()
+				m.pending.Delete(leaseID)
+				m.leaseCount--
+
+				// If in the nonexpiring map, remove there.
+				m.nonexpiring.Delete(leaseID)
+
+				if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
+					m.logger.Error("failed to update quota on lease invalidation", "error", err)
+					return
+				}
+			default:
+				// Handle lease update
+				m.updatePendingInternal(le, le.ExpireTime.Sub(time.Now()))
+			}
+		default:
+			// There is no entry in the pending map and the invalidation
+			// resulted in a nil entry. This should ideally never happen.
+			if le == nil {
+				return
+			}
+			// Handle lease creation
+			m.updatePendingInternal(le, le.ExpireTime.Sub(time.Now()))
+		}
 	}
 }
 
@@ -692,13 +730,17 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 		}
 	}
 
-	// Clear the expiration handler (or remove from the list of non-expiring tokens.)
+	// Clear the expiration handler
 	m.pendingLock.Lock()
 	if info, ok := m.pending.Load(leaseID); ok {
 		pending := info.(pendingInfo)
 		pending.timer.Stop()
 		m.pending.Delete(leaseID)
 		m.leaseCount--
+		// Log but do not fail; unit tests (and maybe Tidy on production systems)
+		if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
+			m.logger.Error("failed to update quota on revocation", "error", err)
+		}
 	}
 	m.nonexpiring.Delete(leaseID)
 	m.pendingLock.Unlock()
@@ -1420,10 +1462,15 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal tim
 			info.(pendingInfo).timer.Stop()
 			m.pending.Delete(le.LeaseID)
 			m.leaseCount--
+			if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionDeleted, []string{le.LeaseID}); err != nil {
+				m.logger.Error("failed to update quota on lease deletion", "error", err)
+				return
+			}
 		}
 		return
 	}
 
+	leaseCreated := false
 	// Create entry if it does not exist or reset if it does
 	if ok {
 		pending = info.(pendingInfo)
@@ -1439,12 +1486,20 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal tim
 		}
 		// new lease
 		m.leaseCount++
+		leaseCreated = true
 	}
 
 	// Retain some information in-memory
 	pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
 
 	m.pending.Store(le.LeaseID, pending)
+
+	if leaseCreated {
+		if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionCreated, []string{le.LeaseID}); err != nil {
+			m.logger.Error("failed to update quota on lease creation", "error", err)
+			return
+		}
+	}
 }
 
 // revokeEntry is used to attempt revocation of an internal entry
