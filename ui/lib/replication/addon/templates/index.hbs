@@ -1,10 +1,8 @@
 <section class="section">
   <div class="container is-widescreen">
     {{#if model.replicationIsInitializing }}
-      <div class="page-container">
-        <nav class="navbar"></nav>
-        <LayoutLoading />
-      </div>
+      <nav class="navbar"></nav>
+      <LayoutLoading />
     {{else}}
       {{#if (eq model.mode 'unsupported')}}
         <PageHeader as |p|>
