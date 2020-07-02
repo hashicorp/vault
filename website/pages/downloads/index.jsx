@@ -4,7 +4,7 @@ import ProductDownloader from '@hashicorp/react-product-downloader'
 import Head from 'next/head'
 import HashiHead from '@hashicorp/react-head'
 
-export default function DownloadsPage({ downloadData }) {
+export default function DownloadsPage({ releaseData }) {
   const changelogUrl = CHANGELOG_URL.length
     ? CHANGELOG_URL
     : `https://github.com/hashicorp/vault/blob/v${VERSION}/CHANGELOG.md`
@@ -14,7 +14,7 @@ export default function DownloadsPage({ downloadData }) {
       <ProductDownloader
         product="Vault"
         version={VERSION}
-        downloads={downloadData}
+        releaseData={releaseData}
         changelog={changelogUrl}
       />
     </div>
@@ -24,15 +24,7 @@ export default function DownloadsPage({ downloadData }) {
 export async function getStaticProps() {
   return fetch(`https://releases.hashicorp.com/vault/${VERSION}/index.json`)
     .then((r) => r.json())
-    .then((r) => {
-      // TODO: restructure product-downloader to run this logic internally
-      return r.builds.reduce((acc, build) => {
-        if (!acc[build.os]) acc[build.os] = {}
-        acc[build.os][build.arch] = build.url
-        return acc
-      }, {})
-    })
-    .then((r) => ({ props: { downloadData: r } }))
+    .then((releaseData) => ({ props: { releaseData } }))
     .catch(() => {
       throw new Error(
         `--------------------------------------------------------
