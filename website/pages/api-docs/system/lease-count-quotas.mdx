@@ -27,7 +27,7 @@ that can either be a namespace or mount.
 - `path` `(string: "")` - Path of the mount or namespace to apply the quota.
   A blank path configures a global lease count quota. For example `namespace1/`
   adds a quota to a full namespace, `namespace1/auth/userpass` adds a quota to
-  `userpass` in `namespace1`. **Note, namespaces are supported in Enterprise only**.
+  `userpass` in `namespace1`.
 - `max_leases` `(int: 0)` - Maximum number of leases allowed by the quota rule.
 
 ### Sample Payload
