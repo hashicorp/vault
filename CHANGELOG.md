@@ -260,7 +260,7 @@ BUG FIXES:
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
 * ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
 
-## 1.3.7 (TBD)
+## 1.3.7 (July 2nd, 2020)
 
 BUG FIXES:
 
