@@ -50,6 +50,7 @@ be a namespace or mount.
 ```shell-session
 $ curl \
     --request POST \
+    --header "X-Vault-Token: ..." \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/quotas/rate-limit/global-rate-limiter
 ```
@@ -67,6 +68,7 @@ A rate limit quota can be deleted by `name`.
 ```shell-session
 $ curl \
     --request DELETE \
+    --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/quotas/rate-limit/global-rate-limiter
 ```
 
@@ -83,6 +85,7 @@ A rate limit quota can be retrieved by `name`.
 ```shell-session
 $ curl \
     --request GET \
+    --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/quotas/rate-limit/global-rate-limiter
 ```
 
