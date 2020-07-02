@@ -39,7 +39,7 @@
     </button>
   </div>
 {{else if (and generateAction (not started))}}
-   <form {{action 'startGenerate' (hash pgp_key=pgp_key) on="submit"}} id="shamir">
+  <form {{action 'startGenerate' (hash pgp_key=pgp_key) on="submit"}} id="shamir">
     {{message-error errors=errors}}
     {{#if (eq generateStep 'chooseMethod')}}
       <div class="box is-marginless is-shadowless">
