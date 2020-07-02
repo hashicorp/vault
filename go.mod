@@ -50,7 +50,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-gcp-common v0.6.0
 	github.com/hashicorp/go-hclog v0.14.1
-	github.com/hashicorp/go-kms-wrapping v0.5.10
+	github.com/hashicorp/go-kms-wrapping v0.5.12
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.1.0
@@ -66,25 +66,25 @@ require (
 	github.com/hashicorp/raft v1.1.3-0.20200501224250-c95aa91e604e
 	github.com/hashicorp/raft-snapshot v1.0.2-0.20190827162939-8117efcc5aab
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.5
-	github.com/hashicorp/vault-plugin-auth-azure v0.5.6-0.20200422235613-1b5c70f9ef68
+	github.com/hashicorp/vault-plugin-auth-azure v0.5.6
 	github.com/hashicorp/vault-plugin-auth-centrify v0.5.5
 	github.com/hashicorp/vault-plugin-auth-cf v0.5.4
-	github.com/hashicorp/vault-plugin-auth-gcp v0.6.2-0.20200428223335-82bd3a3ad5b3
+	github.com/hashicorp/vault-plugin-auth-gcp v0.6.2
 	github.com/hashicorp/vault-plugin-auth-jwt v0.7.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.5.5
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2-0.20200520204052-f840e9d4895c
+	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2
 	github.com/hashicorp/vault-plugin-secrets-ad v0.6.6
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5
 	github.com/hashicorp/vault-plugin-secrets-azure v0.6.1
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.3-0.20200615210754-6c617f9285c3
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.5
-	github.com/hashicorp/vault-plugin-secrets-kv v0.5.5
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.3
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.6
+	github.com/hashicorp/vault-plugin-secrets-kv v0.5.6
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.4-0.20200618161832-cae59ebde561
-	github.com/hashicorp/vault/api v1.0.5-0.20200630153159-69a37f1037b5
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.4
+	github.com/hashicorp/vault/api v1.0.5-0.20200630205458-1a16f3c699c6
 	github.com/hashicorp/vault/sdk v0.1.14-0.20200527182800-ad90e0b39d2f
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
@@ -106,6 +106,7 @@ require (
 	github.com/mitchellh/mapstructure v1.3.2
 	github.com/mitchellh/reflectwalk v1.0.1
 	github.com/mongodb/go-client-mongodb-atlas v0.1.2
+	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 	github.com/ncw/swift v1.0.47
 	github.com/oklog/run v1.0.0
@@ -141,5 +142,6 @@ require (
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.5.1
+	gotest.tools/v3 v3.0.2 // indirect
 	layeh.com/radius v0.0.0-20190322222518-890bc1058917
 )
