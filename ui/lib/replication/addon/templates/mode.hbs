@@ -1,6 +1,6 @@
 <section class="section">
   <div class="container is-widescreen">
-    {{#if (not-eq model.drMode model.drModeInit)}}
+    {{#if (and (eq model.drMode "secondary") (eq model.drModeInit "primary"))}}
       <LayoutLoading />
     {{else}}
       {{#if model.replicationAttrs.replicationEnabled}}
