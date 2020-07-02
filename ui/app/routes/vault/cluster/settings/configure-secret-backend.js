@@ -40,7 +40,10 @@ export default Route.extend({
           backend: model.id,
           type,
         })
-        .then(() => model, () => model);
+        .then(
+          () => model,
+          () => model
+        );
     }
     return model;
   },
