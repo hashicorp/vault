@@ -3,7 +3,6 @@ import { gt } from '@ember/object/computed';
 import { camelize } from '@ember/string';
 import Component from '@ember/component';
 import { get, computed } from '@ember/object';
-import { task } from 'ember-concurrency';
 
 const DEFAULTS = {
   key: null,
@@ -142,18 +141,18 @@ export default Component.extend(DEFAULTS, {
       .then(resp => this.actionSuccess(resp), (...args) => this.actionError(...args));
   },
 
-  startGenerate: task(function*(data) {
-    if (this.generateAction) {
-      data.attempt = true;
-    }
-    yield this.attemptProgress(this.extractData(data));
-  }).drop(),
-
   actions: {
     reset() {
       this.reset();
       this.set('encoded_token', null);
       this.set('otp', null);
+    },
+
+    startGenerate(data) {
+      if (this.generateAction) {
+        data.attempt = true;
+      }
+      this.attemptProgress(this.extractData(data));
     },
 
     onSubmit(data) {
