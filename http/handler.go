@@ -144,6 +144,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
 		mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
 		mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
+		mux.Handle("/v1/sys/storage/raft/bootstrap", handleSysRaftBootstrap(core))
 		mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
 		for _, path := range injectDataIntoTopRoutes {
 			mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core)))
@@ -175,8 +176,8 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	// Wrap the handler in another handler to trigger all help paths.
 	helpWrappedHandler := wrapHelpHandler(mux, core)
 	corsWrappedHandler := wrapCORSHandler(helpWrappedHandler, core)
-
-	genericWrappedHandler := genericWrapping(core, corsWrappedHandler, props)
+	quotaWrappedHandler := rateLimitQuotaWrapping(corsWrappedHandler, core)
+	genericWrappedHandler := genericWrapping(core, quotaWrappedHandler, props)
 
 	// Wrap the handler with PrintablePathCheckHandler to check for non-printable
 	// characters in the request path.
@@ -220,26 +221,14 @@ func (w *copyResponseWriter) WriteHeader(code int) {
 
 func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origBody := new(bytes.Buffer)
-		reader := ioutil.NopCloser(io.TeeReader(r.Body, origBody))
-		r.Body = reader
-		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
-		if err != nil || status != 0 {
-			respondError(w, status, err)
-			return
-		}
-		if origBody != nil {
-			r.Body = ioutil.NopCloser(origBody)
-		}
 		input := &logical.LogInput{
-			Request: req,
+			Request: w.(*LogicalResponseWriter).request,
 		}
-
 		core.AuditLogger().AuditRequest(r.Context(), input)
 		cw := newCopyResponseWriter(w)
 		h.ServeHTTP(cw, r)
 		data := make(map[string]interface{})
-		err = jsonutil.DecodeJSON(cw.body.Bytes(), &data)
+		err := jsonutil.DecodeJSON(cw.body.Bytes(), &data)
 		if err != nil {
 			// best effort, ignore
 		}
@@ -248,7 +237,13 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 		core.AuditLogger().AuditResponse(r.Context(), input)
 		return
 	})
+}
 
+// LogicalResponseWriter is used to carry the logical request from generic
+// handler down to all the middleware http handlers.
+type LogicalResponseWriter struct {
+	http.ResponseWriter
+	request *logical.Request
 }
 
 // wrapGenericHandler wraps the handler with an extra layer of handler where
@@ -287,6 +282,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		}
 		ctx = context.WithValue(ctx, "original_request_path", r.URL.Path)
 		r = r.WithContext(ctx)
+		r = r.WithContext(namespace.ContextWithNamespace(r.Context(), namespace.RootNamespace))
 
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/v1/"):
@@ -305,7 +301,27 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			return
 		}
 
-		h.ServeHTTP(w, r)
+		origBody := new(bytes.Buffer)
+		reader := ioutil.NopCloser(io.TeeReader(r.Body, origBody))
+		r.Body = reader
+		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+		if err != nil || status != 0 {
+			respondError(w, status, err)
+			return
+		}
+		// Reset the body since logical request creation already read the
+		// request body.
+		r.Body = ioutil.NopCloser(origBody)
+
+		// Set the mount path in the request
+		req.MountPoint = core.MatchingMount(r.Context(), req.Path)
+
+		// Pass the logical request down through the response writer
+		h.ServeHTTP(&LogicalResponseWriter{
+			ResponseWriter: w,
+			request:        req,
+		}, r)
+
 		cancelFunc()
 		return
 	})

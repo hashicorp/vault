@@ -412,17 +412,10 @@ func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib
 }
 
 func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
-	raftClusterJoinNodes(t, cluster, false)
-}
-
-func RaftClusterJoinNodesWithStoredKeys(t testing.T, cluster *vault.TestCluster) {
-	raftClusterJoinNodes(t, cluster, true)
-}
-
-func raftClusterJoinNodes(t testing.T, cluster *vault.TestCluster, useStoredKeys bool) {
 
 	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
-	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
+
+	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
 
 	leader := cluster.Cores[0]
 
@@ -430,11 +423,7 @@ func raftClusterJoinNodes(t testing.T, cluster *vault.TestCluster, useStoredKeys
 	{
 		EnsureCoreSealed(t, leader)
 		leader.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		if useStoredKeys {
-			cluster.UnsealCoreWithStoredKeys(t, leader)
-		} else {
-			cluster.UnsealCore(t, leader)
-		}
+		cluster.UnsealCore(t, leader)
 		vault.TestWaitActive(t, leader.Core)
 	}
 
@@ -454,35 +443,10 @@ func raftClusterJoinNodes(t testing.T, cluster *vault.TestCluster, useStoredKeys
 			t.Fatal(err)
 		}
 
-		if useStoredKeys {
-			// For autounseal, the raft backend is not initialized right away
-			// after the join.  We need to wait briefly before we can unseal.
-			awaitUnsealWithStoredKeys(t, core)
-		} else {
-			cluster.UnsealCore(t, core)
-		}
+		cluster.UnsealCore(t, core)
 	}
 
 	WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
-}
-
-func awaitUnsealWithStoredKeys(t testing.T, core *vault.TestClusterCore) {
-
-	timeout := time.Now().Add(30 * time.Second)
-	for {
-		if time.Now().After(timeout) {
-			t.Fatal("raft join: timeout waiting for core to unseal")
-		}
-		// Its actually ok for an error to happen here the first couple of
-		// times -- it means the raft join hasn't gotten around to initializing
-		// the backend yet.
-		err := core.UnsealWithStoredKeys(context.Background())
-		if err == nil {
-			return
-		}
-		core.Logger().Warn("raft join: failed to unseal core", "error", err)
-		time.Sleep(time.Second)
-	}
 }
 
 // HardcodedServerAddressProvider is a ServerAddressProvider that uses
@@ -505,11 +469,11 @@ func (p *HardcodedServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftli
 
 // NewHardcodedServerAddressProvider is a convenience function that makes a
 // ServerAddressProvider from a given cluster address base port.
-func NewHardcodedServerAddressProvider(cluster *vault.TestCluster, baseClusterPort int) raftlib.ServerAddressProvider {
+func NewHardcodedServerAddressProvider(numCores, baseClusterPort int) raftlib.ServerAddressProvider {
 
 	entries := make(map[raftlib.ServerID]raftlib.ServerAddress)
 
-	for i := 0; i < len(cluster.Cores); i++ {
+	for i := 0; i < numCores; i++ {
 		id := fmt.Sprintf("core-%d", i)
 		addr := fmt.Sprintf("127.0.0.1:%d", baseClusterPort+i)
 		entries[raftlib.ServerID(id)] = raftlib.ServerAddress(addr)
@@ -517,17 +481,6 @@ func NewHardcodedServerAddressProvider(cluster *vault.TestCluster, baseClusterPo
 
 	return &HardcodedServerAddressProvider{
 		entries,
-	}
-}
-
-// SetRaftAddressProviders sets a ServerAddressProvider for all the nodes in a
-// cluster.
-func SetRaftAddressProviders(t testing.T, cluster *vault.TestCluster, provider raftlib.ServerAddressProvider) {
-
-	atomic.StoreUint32(&vault.UpdateClusterAddrForTests, 1)
-
-	for _, core := range cluster.Cores {
-		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(provider)
 	}
 }
 
@@ -563,6 +516,35 @@ func VerifyRaftConfiguration(core *vault.TestClusterCore, numCores int) error {
 	}
 
 	return nil
+}
+
+// AwaitLeader waits for one of the cluster's nodes to become leader.
+func AwaitLeader(t testing.T, cluster *vault.TestCluster) (int, error) {
+
+	timeout := time.Now().Add(30 * time.Second)
+	for {
+		if time.Now().After(timeout) {
+			break
+		}
+
+		for i, core := range cluster.Cores {
+			if core.Core.Sealed() {
+				continue
+			}
+
+			isLeader, _, _, err := core.Leader()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if isLeader {
+				return i, nil
+			}
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	return 0, fmt.Errorf("timeout waiting leader")
 }
 
 func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {

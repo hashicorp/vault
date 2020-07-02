@@ -362,6 +362,9 @@ func (b *backend) pathRoleSetCreateUpdate(ctx context.Context, req *logical.Requ
 	// If no new bindings or new bindings are exactly same as old bindings,
 	// just update the role set without rotating service account.
 	if !newBindings || rs.bindingHash() == getStringHash(bRaw.(string)) {
+		if rs.TokenGen != nil {
+			rs.TokenGen.Scopes = scopes
+		}
 		// Just save role with updated metadata:
 		if err := rs.save(ctx, req.Storage); err != nil {
 			return logical.ErrorResponse(err.Error()), nil

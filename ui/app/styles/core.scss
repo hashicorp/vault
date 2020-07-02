@@ -60,9 +60,11 @@
 @import './components/http-requests-bar-chart';
 @import './components/http-requests-table';
 @import './components/init-illustration';
+@import './components/info-table';
 @import './components/info-table-row';
 @import './components/input-hint';
 @import './components/kmip-role-edit';
+@import './components/known-secondaries-card.scss';
 @import './components/linked-block';
 @import './components/list-item-row';
 @import './components/list-pagination';
@@ -78,10 +80,19 @@
 @import './components/radio-card';
 @import './components/radial-progress';
 @import './components/raft-join';
+@import './components/replication-dashboard';
+@import './components/replication-doc-link';
+@import './components/replication-header';
+@import './components/replication-mode-summary';
+@import './components/replication-page';
+@import './components/replication-primary-card';
+@import './components/replication-summary';
 @import './components/role-item';
 @import './components/search-select';
 @import './components/selectable-card';
 @import './components/selectable-card-container.scss';
+// action-block extends selectable-card
+@import './components/action-block.scss';
 @import './components/shamir-progress';
 @import './components/sidebar';
 @import './components/splash-page';

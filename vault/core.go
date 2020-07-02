@@ -31,7 +31,6 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
-	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -44,6 +43,7 @@ import (
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/patrickmn/go-cache"
 	"google.golang.org/grpc"
@@ -98,6 +98,7 @@ var (
 	enterprisePostUnseal         = enterprisePostUnsealImpl
 	enterprisePreSeal            = enterprisePreSealImpl
 	enterpriseSetupFilteredPaths = enterpriseSetupFilteredPathsImpl
+	enterpriseSetupQuotas        = enterpriseSetupQuotasImpl
 	startReplication             = startReplicationImpl
 	stopReplication              = stopReplicationImpl
 	LastWAL                      = lastWALImpl
@@ -521,6 +522,8 @@ type Core struct {
 	// can test an upgrade to a version that includes the fixes from
 	// https://github.com/hashicorp/vault-enterprise/pull/1103
 	PR1103disabled bool
+
+	quotaManager *quotas.Manager
 }
 
 // CoreConfig is used to parameterize a core
@@ -784,6 +787,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.rawConfig.Store(conf.RawConfig)
 
 	atomic.StoreUint32(c.sealed, 1)
+	c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 0, nil)
+
 	c.allLoggers = append(c.allLoggers, c.logger)
 
 	c.router.logger = c.logger.Named("router")
@@ -942,6 +947,13 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
 
 	c.clusterListener.Store((*cluster.Listener)(nil))
+
+	quotasLogger := conf.Logger.Named("quotas")
+	c.allLoggers = append(c.allLoggers, quotasLogger)
+	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink)
+	if err != nil {
+		return nil, err
+	}
 
 	err = c.adjustForSealMigration(conf.UnwrapSeal)
 	if err != nil {
@@ -1453,7 +1465,7 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		return false, err
 	}
 
-	if err := c.startRaftStorage(ctx); err != nil {
+	if err := c.startRaftBackend(ctx); err != nil {
 		return false, err
 	}
 
@@ -1503,6 +1515,7 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 
 	// Success!
 	atomic.StoreUint32(c.sealed, 0)
+	c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 1, nil)
 
 	if c.logger.IsInfo() {
 		c.logger.Info("vault is unsealed")
@@ -1512,6 +1525,11 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		if err := c.serviceRegistration.NotifySealedStateChange(false); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify unsealed status", "error", err)
+			}
+		}
+		if err := c.serviceRegistration.NotifyInitializedStateChange(true); err != nil {
+			if c.logger.IsWarn() {
+				c.logger.Warn("failed to notify initialized status", "error", err)
 			}
 		}
 	}
@@ -1711,11 +1729,12 @@ func (c *Core) sealInternal() error {
 	return c.sealInternalWithOptions(true, false, true)
 }
 
-func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft bool) error {
+func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, performCleanup bool) error {
 	// Mark sealed, and if already marked return
 	if swapped := atomic.CompareAndSwapUint32(c.sealed, 0, 1); !swapped {
 		return nil
 	}
+	c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 0, nil)
 
 	c.logger.Info("marked as sealed")
 
@@ -1792,10 +1811,10 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 
 	c.teardownReplicationResolverHandler()
 
-	// If the storage backend needs to be sealed
-	if shutdownRaft {
-		if raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
-			if err := raftStorage.TeardownCluster(c.getClusterListener()); err != nil {
+	// Perform additional cleanup upon sealing.
+	if performCleanup {
+		if raftBackend := c.getRaftBackend(); raftBackend != nil {
+			if err := raftBackend.TeardownCluster(c.getClusterListener()); err != nil {
 				c.logger.Error("error stopping storage cluster", "error", err)
 				return err
 			}
@@ -1816,6 +1835,12 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, shutdownRaft b
 			if c.logger.IsWarn() {
 				c.logger.Warn("failed to notify sealed status", "error", err)
 			}
+		}
+	}
+
+	if c.quotaManager != nil {
+		if err := c.quotaManager.Reset(); err != nil {
+			c.logger.Error("error resetting quota manager", "error", err)
 		}
 	}
 
@@ -1889,6 +1914,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupCredentials(ctx); err != nil {
 		return err
 	}
+	if err := c.setupQuotas(ctx, false); err != nil {
+		return err
+	}
 	if !c.IsDRSecondary() {
 		if err := c.startRollback(); err != nil {
 			return err
@@ -1913,6 +1941,13 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		}
 	} else {
 		c.auditBroker = NewAuditBroker(c.logger)
+	}
+
+	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
+		//Cannot do this above, as we need other resources like mounts to be setup
+		if err := c.setupPluginReload(); err != nil {
+			return err
+		}
 	}
 
 	if c.getClusterListener() != nil && (c.ha != nil || shouldStartClusterListener(c)) {
@@ -2075,60 +2110,16 @@ func enterpriseSetupFilteredPathsImpl(c *Core) error {
 	return nil
 }
 
+func enterpriseSetupQuotasImpl(ctx context.Context, c *Core) error {
+	return nil
+}
+
 func startReplicationImpl(c *Core) error {
 	return nil
 }
 
 func stopReplicationImpl(c *Core) error {
 	return nil
-}
-
-// emitMetrics is used to periodically expose metrics while running
-func (c *Core) emitMetrics(stopCh chan struct{}) {
-	emitTimer := time.Tick(time.Second)
-	writeTimer := time.Tick(c.counters.syncInterval)
-	identityCountTimer := time.Tick(time.Minute * 10)
-
-	for {
-		select {
-		case <-emitTimer:
-			c.metricsMutex.Lock()
-			if c.expiration != nil {
-				c.expiration.emitMetrics()
-			}
-			c.metricsMutex.Unlock()
-
-		case <-writeTimer:
-			if stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh); stopped {
-				// Go through the loop again, this time the stop channel case
-				// should trigger
-				continue
-			}
-			if c.perfStandby {
-				syncCounter(c)
-			} else {
-				err := c.saveCurrentRequestCounters(context.Background(), time.Now())
-				if err != nil {
-					c.logger.Error("writing request counters to barrier", "err", err)
-				}
-			}
-			c.stateLock.RUnlock()
-		case <-identityCountTimer:
-			go func() {
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-				defer cancel()
-				entities, err := c.countActiveEntities(ctx)
-				if err != nil {
-					c.logger.Error("error counting identity entities", "err", err)
-				} else {
-					metrics.SetGauge([]string{"identity", "num_entities"}, float32(entities.Entities.Total))
-				}
-			}()
-
-		case <-stopCh:
-			return
-		}
-	}
 }
 
 func (c *Core) ReplicationState() consts.ReplicationState {
@@ -2518,4 +2509,38 @@ func (c *Core) readFeatureFlags(ctx context.Context) (*FeatureFlags, error) {
 		}
 	}
 	return &flags, nil
+}
+
+// MatchingMount returns the path of the mount that will be responsible for
+// handling the given request path.
+func (c *Core) MatchingMount(ctx context.Context, reqPath string) string {
+	return c.router.MatchingMount(ctx, reqPath)
+}
+
+func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
+	if c.quotaManager == nil {
+		return nil
+	}
+
+	return c.quotaManager.Setup(ctx, c.systemBarrierView, isPerfStandby)
+}
+
+// ApplyRateLimitQuota checks the request against all the applicable quota rules
+func (c *Core) ApplyRateLimitQuota(req *quotas.Request) (quotas.Response, error) {
+	req.Type = quotas.TypeRateLimit
+	if c.quotaManager != nil {
+		return c.quotaManager.ApplyQuota(req)
+	}
+
+	return quotas.Response{Allowed: true}, nil
+}
+
+// RateLimitAuditLoggingEnabled returns if the quota configuration allows audit
+// logging of request rejections due to rate limiting quota rule violations.
+func (c *Core) RateLimitAuditLoggingEnabled() bool {
+	if c.quotaManager != nil {
+		return c.quotaManager.RateLimitAuditLoggingEnabled()
+	}
+
+	return false
 }
