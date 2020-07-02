@@ -253,7 +253,7 @@ endef
 # RELEASE_TARGETS are targets in the release repo we pass control to
 # to perform release actions.
 # Note: The release repo is only available to HashiCorp employees.
-RELEASE_TARGETS := build-ci stage-config stage watch-ci
+RELEASE_TARGETS := build-ci stage-config stage
 
 # We always rev-parse the PRODUCT_REVISION to obtain the full SHA. This is required
 # for downstream processes which use it to determine part of the package name.
@@ -267,7 +267,7 @@ $(RELEASE_TARGETS):
 
 # QUERY_TARGETS are targets in the release repo that perform queries, and are therefore
 # not necessarily bound to a specific PRODUCT_VERSION or PRODUCT_REVISION.
-QUERY_TARGETS := list-staged-builds
+QUERY_TARGETS := list-staged-builds watch-ci
 
 $(QUERY_TARGETS): RELEASE_SYSTEM_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
 $(QUERY_TARGETS):
