@@ -11,9 +11,9 @@ The `/sys/quotas/rate-limit` endpoint is used to create, edit and delete rate li
 
 ## Create or Update a Rate Limit Quota
 
-This endpoint is used to create a rate limit quota by `name`. A rate limit quota
-must include a `rate` and `burst` value with an optional `path` that can either
-be a namespace or mount.
+This endpoint is used to create a rate limit quota with an identifier, `name`.
+A rate limit quota must include a `rate` and `burst` value with an optional `path`
+that can either be a namespace or mount.
 
 | Method | Path                           |
 | :----- | :----------------------------- |
@@ -21,6 +21,7 @@ be a namespace or mount.
 
 ### Parameters
 
+- `name` `(string: "")` - The name of quota.
 - `path` `(string: "")` - Path of the mount or namespace to apply the quota.
   A blank path configures a global rate limit quota. For example `namespace1/`
   adds a quota to a full namespace, `namespace1/auth/userpass` adds a quota to

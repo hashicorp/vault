@@ -13,9 +13,9 @@ The `/sys/quotas/lease-count` endpoint is used to create, edit and delete lease 
 
 ## Create or Update a Lease Count Quota
 
-This endpoint is used to create a lease count quota by `name`. A lease count quota
-must include a `max_leases` value with an optional `path` that can either be a
-namespace or mount.
+This endpoint is used to create a lease count quota with an identifier, `name`.
+A lease count quota must include a `max_leases` value with an optional `path`
+that can either be a namespace or mount.
 
 | Method | Path                            |
 | :----- | :------------------------------ |
@@ -23,6 +23,7 @@ namespace or mount.
 
 ### Parameters
 
+- `name` `(string: "")` - The name of quota.
 - `path` `(string: "")` - Path of the mount or namespace to apply the quota.
   A blank path configures a global lease count quota. For example `namespace1/`
   adds a quota to a full namespace, `namespace1/auth/userpass` adds a quota to
