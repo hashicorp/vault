@@ -33,6 +33,7 @@ The `/sys/quotas/config` endpoint is used to configure rate limit quotas.
 ```shell-session
 $ curl \
     --request POST \
+    --header "X-Vault-Token: ..." \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/quotas/config
 ```
