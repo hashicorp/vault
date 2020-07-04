@@ -24,7 +24,7 @@ const MODELS = {
 
 const DEFAULT_VALUE = 'aws/client';
 
-storiesOf('Form/FormFieldGroups/', module)
+storiesOf('Forms/FormFieldGroups', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
   .add(

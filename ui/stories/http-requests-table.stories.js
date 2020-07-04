@@ -11,7 +11,7 @@ const COUNTERS = [
   { start_time: '2019-03-01T00:00:00Z', total: 5000 },
 ];
 
-storiesOf('HttpRequests/Table/', module)
+storiesOf('HttpRequests/Table', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
   .add(
