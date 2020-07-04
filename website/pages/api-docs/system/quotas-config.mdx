@@ -49,6 +49,7 @@ $ curl \
 ```shell-session
 $ curl \
     --request GET \
+    --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/quotas/config
 ```
 
