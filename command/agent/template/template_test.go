@@ -3,11 +3,13 @@ package template
 import (
 	"context"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
@@ -122,11 +124,7 @@ func TestServerRun(t *testing.T) {
 				ExitAfterAuth: true,
 			}
 
-			var server *Server
-			server = NewServer(&sc)
-			if ts == nil {
-				t.Fatal("nil server returned")
-			}
+			server := NewServer(&sc)
 
 			go server.Run(ctx, templateTokenCh, templatesToRender)
 
@@ -159,6 +157,62 @@ func TestServerRun(t *testing.T) {
 				t.Fatalf("mismatch file to template: (%d) / (%d)", fileCount, len(templatesToRender))
 			}
 		})
+	}
+}
+
+func TestServerRunTLS(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "agent-tests")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	var gotTLSServerName string
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotTLSServerName = r.TLS.ServerName
+		fmt.Fprintln(w, jsonResponse)
+	}))
+	defer ts.Close()
+
+	templateTokenCh := make(chan string, 1)
+	templatesToRender := []*ctconfig.TemplateConfig{
+		{
+			Destination: pointerutil.StringPtr(filepath.Join(tmpDir, "render_01")),
+			Contents:    pointerutil.StringPtr(templateContents),
+		},
+	}
+
+	caCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ts.Certificate().Raw})
+	caCertFile := filepath.Join(tmpDir, "ca.pem")
+	if err := ioutil.WriteFile(caCertFile, caCert, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	sc := ServerConfig{
+		Logger: logging.NewVaultLogger(hclog.Trace),
+		VaultConf: &config.Vault{
+			CACert:  caCertFile,
+			Address: ts.URL,
+			// example.com is a name on the net/http localhost cert, see
+			// https://github.com/golang/go/blob/go1.14/src/net/http/internal/testcert.go#L12
+			TLSServerName: "example.com",
+		},
+		LogLevel:      hclog.Trace,
+		LogWriter:     hclog.DefaultOutput,
+		ExitAfterAuth: true,
+	}
+
+	server := NewServer(&sc)
+
+	go server.Run(context.Background(), templateTokenCh, templatesToRender)
+
+	// send a dummy value to trigger the internal Runner to query for secret
+	// info
+	templateTokenCh <- "test"
+	<-server.DoneCh
+
+	if want := "example.com"; gotTLSServerName != want {
+		t.Errorf("got request TLS ServerName %q, want %q", gotTLSServerName, want)
 	}
 }
 
