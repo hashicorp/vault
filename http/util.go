@@ -16,7 +16,7 @@ import (
 
 var (
 	adjustRequest = func(c *vault.Core, r *http.Request) (*http.Request, int) {
-		return r.WithContext(namespace.ContextWithNamespace(r.Context(), namespace.RootNamespace)), 0
+		return r, 0
 	}
 
 	genericWrapping = func(core *vault.Core, in http.Handler, props *vault.HandlerProperties) http.Handler {
