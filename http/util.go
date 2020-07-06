@@ -75,10 +75,13 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 					return
 				}
 
-				_ = core.AuditLogger().AuditRequest(r.Context(), &logical.LogInput{
+				err = core.AuditLogger().AuditRequest(r.Context(), &logical.LogInput{
 					Request:  req,
 					OuterErr: quotaErr,
 				})
+				if err != nil {
+					core.Logger().Warn("failed to audit log request rejection caused by rate limit quota violation", "error", err)
+				}
 			}
 
 			return
