@@ -955,6 +955,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
+	err = c.adjustForSealMigration(conf.UnwrapSeal)
+	if err != nil {
+		return nil, err
+	}
+
 	return c, nil
 }
 
@@ -1833,8 +1838,10 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, performCleanup
 		}
 	}
 
-	if err := c.quotaManager.Reset(); err != nil {
-		c.logger.Error("error resetting quota manager", "error", err)
+	if c.quotaManager != nil {
+		if err := c.quotaManager.Reset(); err != nil {
+			c.logger.Error("error resetting quota manager", "error", err)
+		}
 	}
 
 	postSealInternal(c)
@@ -2521,11 +2528,19 @@ func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
 // ApplyRateLimitQuota checks the request against all the applicable quota rules
 func (c *Core) ApplyRateLimitQuota(req *quotas.Request) (quotas.Response, error) {
 	req.Type = quotas.TypeRateLimit
-	return c.quotaManager.ApplyQuota(req)
+	if c.quotaManager != nil {
+		return c.quotaManager.ApplyQuota(req)
+	}
+
+	return quotas.Response{Allowed: true}, nil
 }
 
 // RateLimitAuditLoggingEnabled returns if the quota configuration allows audit
 // logging of request rejections due to rate limiting quota rule violations.
 func (c *Core) RateLimitAuditLoggingEnabled() bool {
-	return c.quotaManager.RateLimitAuditLoggingEnabled()
+	if c.quotaManager != nil {
+		return c.quotaManager.RateLimitAuditLoggingEnabled()
+	}
+
+	return false
 }
