@@ -524,6 +524,7 @@ github.com/hashicorp/vault-plugin-auth-alicloud v0.5.5 h1:JYf3VYpKs7mOdtcwZWi73S
 github.com/hashicorp/vault-plugin-auth-alicloud v0.5.5/go.mod h1:sQ+VNwPQlemgXHXikYH6onfH9gPwDZ1GUVRLz0ZvHx8=
 github.com/hashicorp/vault-plugin-auth-azure v0.5.5 h1:kN79ai+aMVU9hUmwscHjmweW2fGa8V/t+ScIchPZGrk=
 github.com/hashicorp/vault-plugin-auth-azure v0.5.5/go.mod h1:RCVBsf8AJndh4c6iGZtvVZFui9SG0Bj9fnF0SodNIkw=
+github.com/hashicorp/vault-plugin-auth-azure v0.5.6-0.20200422235613-1b5c70f9ef68 h1:o4ekpvOmfRxCYE7+g4dV6FQc9H+Sl1jv4JoGDrLDKt0=
 github.com/hashicorp/vault-plugin-auth-azure v0.5.6-0.20200422235613-1b5c70f9ef68/go.mod h1:RCVBsf8AJndh4c6iGZtvVZFui9SG0Bj9fnF0SodNIkw=
 github.com/hashicorp/vault-plugin-auth-azure v0.5.6 h1:yg1zVb0zf5dkCz68sVwO9Y258NkF4kDKFCZHvwidKpo=
 github.com/hashicorp/vault-plugin-auth-azure v0.5.6/go.mod h1:xUpcusehlkR1cNbA+wNta9W4slS64pYe7CXx5UYM2OQ=
@@ -534,6 +535,7 @@ github.com/hashicorp/vault-plugin-auth-cf v0.5.4/go.mod h1:idkFYHc6ske2BE7fe00Sp
 github.com/hashicorp/vault-plugin-auth-gcp v0.5.1/go.mod h1:eLj92eX8MPI4vY1jaazVLF2sVbSAJ3LRHLRhF/pUmlI=
 github.com/hashicorp/vault-plugin-auth-gcp v0.6.1 h1:WXTuja3WC2BdZekYCnzuZGoVvZTAGH8kSDUHzOK2PQY=
 github.com/hashicorp/vault-plugin-auth-gcp v0.6.1/go.mod h1:8eBRzg+JIhAaDBfDndDAQKIhDrQ3WW8OPklxAYftNFs=
+github.com/hashicorp/vault-plugin-auth-gcp v0.6.2-0.20200428223335-82bd3a3ad5b3 h1:GTQYSsqv/2jjdTm0DawBSljMmZTc/js6zLer+9A5e2U=
 github.com/hashicorp/vault-plugin-auth-gcp v0.6.2-0.20200428223335-82bd3a3ad5b3/go.mod h1:U0fkAlxWTEyQ74lx8wlGdD493lP1DD/qpMjXgOEbwj0=
 github.com/hashicorp/vault-plugin-auth-gcp v0.6.2 h1:3g3xNzHI9A6Zb14Zz0mCDp8OXCzkePwcVYhXaAMAqLc=
 github.com/hashicorp/vault-plugin-auth-gcp v0.6.2/go.mod h1:sHDguHmyGScoalGLEjuxvDCrMPVlw2c3f+ieeiHcv6w=
@@ -554,6 +556,7 @@ github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4 h1:YE4qndazWmYGp
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4/go.mod h1:QjGrrxcRXv/4XkEZAlM0VMZEa3uxKAICFqDj27FP/48=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.0-beta1.0.20200521152755-9cf156a44f9c h1:9pXwe7sEVhZ5C3U6egIrKaZBb5lD0FvLIjISEvpbQQA=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.0-beta1.0.20200521152755-9cf156a44f9c/go.mod h1:HTXNzFr/SAVtJOs7jz0XxZ69jlKtaceEwp37l86UAQ0=
+github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2-0.20200520204052-f840e9d4895c h1:P9rZXBJx+UHu/T8lK8NEtS2PGeSnyZ31zeOtkvGo4yo=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2-0.20200520204052-f840e9d4895c/go.mod h1:MP3kfr0N+7miOTZFwKv952b9VkXM4S2Q6YtQCiNKWq8=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2 h1:tSToR3JRARqQkV9B10rk4VlZe2Sr9fOdhEP2NdxPo0I=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2/go.mod h1:HTXNzFr/SAVtJOs7jz0XxZ69jlKtaceEwp37l86UAQ0=

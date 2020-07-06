@@ -1943,6 +1943,13 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		c.auditBroker = NewAuditBroker(c.logger)
 	}
 
+	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
+		//Cannot do this above, as we need other resources like mounts to be setup
+		if err := c.setupPluginReload(); err != nil {
+			return err
+		}
+	}
+
 	if c.getClusterListener() != nil && (c.ha != nil || shouldStartClusterListener(c)) {
 		if err := c.setupRaftActiveNode(ctx); err != nil {
 			return err
