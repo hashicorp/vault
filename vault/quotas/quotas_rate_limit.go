@@ -186,18 +186,14 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 	return nil
 }
 
-// HasClient returns a boolean that states if a given client by address has a
-// rate limit quota.
-func (rlq *RateLimitQuota) HasClient(addr string) bool {
+func (rlq *RateLimitQuota) hasClient(addr string) bool {
 	rlq.lock.RLock()
 	defer rlq.lock.RUnlock()
 	rlc, ok := rlq.rateQuotas[addr]
 	return ok && rlc != nil
 }
 
-// NumClients returns the total number of unique clients for which there exists
-// a rate limit quota.
-func (rlq *RateLimitQuota) NumClients() int {
+func (rlq *RateLimitQuota) numClients() int {
 	rlq.lock.RLock()
 	defer rlq.lock.RUnlock()
 	return len(rlq.rateQuotas)

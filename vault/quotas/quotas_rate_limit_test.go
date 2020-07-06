@@ -137,7 +137,7 @@ func TestRateLimitQuota_Allow(t *testing.T) {
 
 	wg.Wait()
 
-	if got, expected := len(results), rlq.NumClients(); got != expected {
+	if got, expected := len(results), rlq.numClients(); got != expected {
 		t.Fatalf("unexpected number of tracked client rate limit quotas; got %d, expected; %d", got, expected)
 	}
 
@@ -165,7 +165,7 @@ func TestRateLimitQuota_Allow(t *testing.T) {
 	time.Sleep(rlq.purgeInterval * 2)
 
 	for addr := range results {
-		if rlq.HasClient(addr) {
+		if rlq.hasClient(addr) {
 			t.Fatalf("expected stale client to be purged: %s", addr)
 		}
 	}
