@@ -169,22 +169,13 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 	return req, origBody, 0, nil
 }
 
-var methodToLogicalOp = map[string]logical.Operation{
-	"DELETE": logical.DeleteOperation,
-	"GET":    logical.ReadOperation,
-	"POST":   logical.UpdateOperation,
-	"PUT":    logical.UpdateOperation,
-	"LIST":   logical.ListOperation,
-}
-
-func buildLogicalPathAndOp(r *http.Request) (string, logical.Operation, int, error) {
+func buildLogicalPathAndOp(r *http.Request) (string, int, error) {
 	ns, err := namespace.FromContext(r.Context())
 	if err != nil {
-		return "", "", http.StatusBadRequest, nil
+		return "", http.StatusBadRequest, nil
 	}
 
 	path := ns.TrimmedPath(strings.TrimPrefix(r.URL.Path, "/v1/"))
-	op := methodToLogicalOp[r.Method]
 
 	switch r.Method {
 	case "GET":
@@ -199,7 +190,7 @@ func buildLogicalPathAndOp(r *http.Request) (string, logical.Operation, int, err
 		if listStr != "" {
 			list, err = strconv.ParseBool(listStr)
 			if err != nil {
-				return "", "", http.StatusBadRequest, nil
+				return "", http.StatusBadRequest, nil
 			}
 			if list {
 				if !strings.HasSuffix(path, "/") {
@@ -214,7 +205,7 @@ func buildLogicalPathAndOp(r *http.Request) (string, logical.Operation, int, err
 		}
 	}
 
-	return path, op, 0, nil
+	return path, 0, nil
 }
 
 func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {

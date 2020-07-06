@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
-	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/quotas"
 )
@@ -38,7 +38,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			return
 		}
 
-		path, op, status, err := buildLogicalPathAndOp(r)
+		path, status, err := buildLogicalPathAndOp(r)
 		if err != nil || status != 0 {
 			respondError(w, status, err)
 			return
@@ -65,18 +65,10 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 				core.Logger().Trace("request rejected due to lease count quota violation", "request_path", path)
 			}
 
-			requestId, err := uuid.GenerateUUID()
-			if err != nil {
-				respondError(w, http.StatusBadRequest, errwrap.Wrapf("failed to generate identifier for the request: {{err}}", err))
+			req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+			if err != nil || status != 0 {
+				respondError(w, status, err)
 				return
-			}
-
-			req := &logical.Request{
-				ID:         requestId,
-				Operation:  op,
-				Path:       path,
-				Connection: getConnection(r),
-				Headers:    r.Header,
 			}
 
 			if core.RateLimitAuditLoggingEnabled() {
