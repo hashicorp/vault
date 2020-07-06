@@ -96,7 +96,7 @@ type RateLimitQuota struct {
 	// Burst defines maximum number of requests at any given moment to be allowed.
 	Burst int `json:"burst"`
 
-	lock         *sync.Mutex
+	lock         *sync.RWMutex
 	logger       log.Logger
 	metricSink   *metricsutil.ClusterMetricSink
 	purgeEnabled bool
@@ -131,13 +131,13 @@ func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, burst int) 
 	}
 }
 
-// jnitialize ensures the namespace and max requests are initialized, sets the ID
+// initialize ensures the namespace and max requests are initialized, sets the ID
 // if it's currently empty, sets the purge interval and stale age to default
 // values, and finally starts the client purge go routine if it has been started
 // already. Note, initialize will reset the internal rateQuotas mapping.
 func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.ClusterMetricSink) error {
 	if rlq.lock == nil {
-		rlq.lock = new(sync.Mutex)
+		rlq.lock = new(sync.RWMutex)
 	}
 
 	rlq.lock.Lock()
@@ -186,6 +186,29 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 	return nil
 }
 
+// HasClient returns a boolean that states if a given client by address has a
+// rate limit quota.
+func (rlq *RateLimitQuota) HasClient(addr string) bool {
+	rlq.lock.RLock()
+	defer rlq.lock.RUnlock()
+	_, ok := rlq.rateQuotas[addr]
+	return ok
+}
+
+// NumClients returns the total number of unique clients for which there exists
+// a rate limit quota.
+func (rlq *RateLimitQuota) NumClients() int {
+	rlq.lock.RLock()
+	defer rlq.lock.RUnlock()
+	return len(rlq.rateQuotas)
+}
+
+func (rlq *RateLimitQuota) getPurgeEnabled() bool {
+	rlq.lock.RLock()
+	defer rlq.lock.RUnlock()
+	return rlq.purgeEnabled
+}
+
 // quotaID returns the identifier of the quota rule
 func (rlq *RateLimitQuota) quotaID() string {
 	return rlq.ID
@@ -219,7 +242,9 @@ func (rlq *RateLimitQuota) purgeClientsLoop() {
 
 		case <-rlq.closeCh:
 			ticker.Stop()
+			rlq.lock.Lock()
 			rlq.purgeEnabled = false
+			rlq.lock.Unlock()
 			return
 		}
 	}
