@@ -11,6 +11,8 @@
   in `token_policies`.
 - `token_num_uses` `(integer: 0)` - The maximum number of times a generated
   token may be used (within its lifetime); 0 means unlimited.
+  If you require the token to have the ability to create child tokens, 
+  you will need to set this value to 0.
 - `token_period` `(integer: 0 or string: "")` - The
   [period](/docs/concepts/tokens#token-time-to-live-periodic-tokens-and-explicit-max-ttls),
   if any, to set on the token.

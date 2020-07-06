@@ -3,7 +3,7 @@ import { storiesOf } from '@storybook/ember';
 import { withKnobs, boolean, text } from '@storybook/addon-knobs';
 import notes from './info-table-row.md';
 
-storiesOf('InfoTableRow/', module)
+storiesOf('InfoTable/InfoTableRow', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs({ escapeHTML: false }))
   .add(

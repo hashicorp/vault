@@ -1,10 +1,9 @@
 #page-home {
-  & .g-section-block.page-wrap {
-    padding-top: 0;
-  }
-
   & .g-section-block {
     padding: 160px 0;
+    &.page-wrap {
+      padding-top: 0;
+    }
   }
 
   & .g-logo-grid li img {

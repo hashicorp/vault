@@ -955,6 +955,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
+	err = c.adjustForSealMigration(conf.UnwrapSeal)
+	if err != nil {
+		return nil, err
+	}
+
 	return c, nil
 }
 
@@ -1522,6 +1527,11 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 				c.logger.Warn("failed to notify unsealed status", "error", err)
 			}
 		}
+		if err := c.serviceRegistration.NotifyInitializedStateChange(true); err != nil {
+			if c.logger.IsWarn() {
+				c.logger.Warn("failed to notify initialized status", "error", err)
+			}
+		}
 	}
 	return true, nil
 }
@@ -1828,10 +1838,13 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, performCleanup
 		}
 	}
 
-	if err := postSealInternal(c); err != nil {
-		c.logger.Error("post seal error", "error", err)
-		return err
+	if c.quotaManager != nil {
+		if err := c.quotaManager.Reset(); err != nil {
+			c.logger.Error("error resetting quota manager", "error", err)
+		}
 	}
+
+	postSealInternal(c)
 
 	c.logger.Info("vault is sealed")
 
@@ -1928,6 +1941,13 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		}
 	} else {
 		c.auditBroker = NewAuditBroker(c.logger)
+	}
+
+	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
+		//Cannot do this above, as we need other resources like mounts to be setup
+		if err := c.setupPluginReload(); err != nil {
+			return err
+		}
 	}
 
 	if c.getClusterListener() != nil && (c.ha != nil || shouldStartClusterListener(c)) {
@@ -2508,11 +2528,19 @@ func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
 // ApplyRateLimitQuota checks the request against all the applicable quota rules
 func (c *Core) ApplyRateLimitQuota(req *quotas.Request) (quotas.Response, error) {
 	req.Type = quotas.TypeRateLimit
-	return c.quotaManager.ApplyQuota(req)
+	if c.quotaManager != nil {
+		return c.quotaManager.ApplyQuota(req)
+	}
+
+	return quotas.Response{Allowed: true}, nil
 }
 
 // RateLimitAuditLoggingEnabled returns if the quota configuration allows audit
 // logging of request rejections due to rate limiting quota rule violations.
 func (c *Core) RateLimitAuditLoggingEnabled() bool {
-	return c.quotaManager.RateLimitAuditLoggingEnabled()
+	if c.quotaManager != nil {
+		return c.quotaManager.RateLimitAuditLoggingEnabled()
+	}
+
+	return false
 }

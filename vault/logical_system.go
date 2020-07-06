@@ -40,6 +40,7 @@ import (
 )
 
 const maxBytes = 128 * 1024
+const globalScope = "global"
 
 func systemBackendMemDBSchema() *memdb.DBSchema {
 	systemSchema := &memdb.DBSchema{
@@ -112,6 +113,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"replication/performance/status",
 				"replication/dr/status",
 				"replication/dr/secondary/promote",
+				"replication/dr/secondary/disable",
+				"replication/dr/secondary/recover",
 				"replication/dr/secondary/update-primary",
 				"replication/dr/secondary/operation-token/delete",
 				"replication/dr/secondary/license",
@@ -434,6 +437,11 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logi
 func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("plugin").(string)
 	pluginMounts := d.Get("mounts").([]string)
+	scope := d.Get("scope").(string)
+
+	if scope != "" && scope != globalScope {
+		return logical.ErrorResponse("reload scope must be omitted or 'global'"), nil
+	}
 
 	if pluginName != "" && len(pluginMounts) > 0 {
 		return logical.ErrorResponse("plugin and mounts cannot be set at the same time"), nil
@@ -454,7 +462,20 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 		}
 	}
 
-	return nil, nil
+	r := logical.Response{
+		Data: map[string]interface{}{
+			"reload_id": req.ID,
+		},
+	}
+
+	if scope == globalScope {
+		err := handleGlobalPluginReload(ctx, b.Core, req.ID, pluginName, pluginMounts)
+		if err != nil {
+			return nil, err
+		}
+		return logical.RespondWithStatusCode(&r, req, http.StatusAccepted)
+	}
+	return &r, nil
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
@@ -2703,7 +2724,6 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	ll := data.Get("log_level").(string)
 	w := req.ResponseWriter
-	resp := &logical.Response{}
 
 	if ll == "" {
 		ll = "info"
@@ -2726,16 +2746,15 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		Level:      logLevel,
 		JSONFormat: isJson,
 	})
-	defer mon.Stop()
-
 	if err != nil {
-		return resp, err
+		return nil, err
 	}
 
 	logCh := mon.Start()
+	defer mon.Stop()
 
 	if logCh == nil {
-		return resp, fmt.Errorf("error trying to start a monitor that's already been started")
+		return nil, fmt.Errorf("error trying to start a monitor that's already been started")
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -2744,21 +2763,38 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 	// a gzip stream it will go ahead and write out the HTTP response header
 	_, err = w.Write([]byte(""))
 	if err != nil {
-		return resp, fmt.Errorf("error seeding flusher: %w", err)
+		return nil, fmt.Errorf("error seeding flusher: %w", err)
 	}
 
 	flusher.Flush()
 
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
 	// Stream logs until the connection is closed.
 	for {
 		select {
+		// Periodically check for the seal status and return if core gets
+		// marked as sealed.
+		case <-ticker.C:
+			if b.Core.Sealed() {
+				// We still return the error, but this will be ignored upstream
+				// due to the fact that we've already sent a response by
+				// writing the header and flushing the writer above.
+				_, err = fmt.Fprint(w, "core received sealed state change, ending monitor session")
+				if err != nil {
+					return nil, fmt.Errorf("error checking seal state: %w", err)
+				}
+			}
 		case <-ctx.Done():
-			return resp, nil
+			return nil, nil
 		case l := <-logCh:
+			// We still return the error, but this will be ignored upstream
+			// due to the fact that we've already sent a response by
+			// writing the header and flushing the writer above.
 			_, err = fmt.Fprint(w, string(l))
-
 			if err != nil {
-				return resp, err
+				return nil, fmt.Errorf("error streaming monitor output: %w", err)
 			}
 
 			flusher.Flush()
@@ -3207,7 +3243,8 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.mountsLock.RLock()
 	for _, entry := range b.Core.mounts.Entries {
-		filtered, err := b.Core.checkReplicatedFiltering(ctx, entry, "")
+		ctxWithNamespace := namespace.ContextWithNamespace(ctx, entry.Namespace())
+		filtered, err := b.Core.checkReplicatedFiltering(ctxWithNamespace, entry, "")
 		if err != nil {
 			b.Core.mountsLock.RUnlock()
 			return nil, err
@@ -3233,7 +3270,8 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.authLock.RLock()
 	for _, entry := range b.Core.auth.Entries {
-		filtered, err := b.Core.checkReplicatedFiltering(ctx, entry, credentialRoutePrefix)
+		ctxWithNamespace := namespace.ContextWithNamespace(ctx, entry.Namespace())
+		filtered, err := b.Core.checkReplicatedFiltering(ctxWithNamespace, entry, credentialRoutePrefix)
 		if err != nil {
 			b.Core.authLock.RUnlock()
 			return nil, err
