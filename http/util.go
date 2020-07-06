@@ -68,13 +68,13 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 				core.Logger().Trace("request rejected due to lease count quota violation", "request_path", path)
 			}
 
-			req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
-			if err != nil || status != 0 {
-				respondError(w, status, err)
-				return
-			}
-
 			if core.RateLimitAuditLoggingEnabled() {
+				req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+				if err != nil || status != 0 {
+					respondError(w, status, err)
+					return
+				}
+
 				_ = core.AuditLogger().AuditRequest(r.Context(), &logical.LogInput{
 					Request:  req,
 					OuterErr: quotaErr,
