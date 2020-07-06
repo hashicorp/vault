@@ -169,7 +169,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 	return req, origBody, 0, nil
 }
 
-func buildLogicalPathAndOp(r *http.Request) (string, int, error) {
+func buildLogicalPath(r *http.Request) (string, int, error) {
 	ns, err := namespace.FromContext(r.Context())
 	if err != nil {
 		return "", http.StatusBadRequest, nil
