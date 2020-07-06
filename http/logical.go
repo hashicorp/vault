@@ -141,7 +141,6 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		}
 
 	case "OPTIONS":
-	case "HEAD":
 	default:
 		return nil, nil, http.StatusMethodNotAllowed, nil
 	}
@@ -170,32 +169,83 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 	return req, origBody, 0, nil
 }
 
-func setupLogicalRequest(core *vault.Core, req *logical.Request, r *http.Request) (*logical.Request, int, error) {
-	var err error
+var methodToLogicalOp = map[string]logical.Operation{
+	"DELETE": logical.DeleteOperation,
+	"GET":    logical.ReadOperation,
+	"POST":   logical.UpdateOperation,
+	"PUT":    logical.UpdateOperation,
+	"LIST":   logical.ListOperation,
+}
+
+func buildLogicalPathAndOp(r *http.Request) (string, logical.Operation, int, error) {
+	ns, err := namespace.FromContext(r.Context())
+	if err != nil {
+		return "", "", http.StatusBadRequest, nil
+	}
+
+	path := ns.TrimmedPath(strings.TrimPrefix(r.URL.Path, "/v1/"))
+	op := methodToLogicalOp[r.Method]
+
+	switch r.Method {
+	case "GET":
+		var (
+			list bool
+			err  error
+		)
+
+		queryVals := r.URL.Query()
+
+		listStr := queryVals.Get("list")
+		if listStr != "" {
+			list, err = strconv.ParseBool(listStr)
+			if err != nil {
+				return "", "", http.StatusBadRequest, nil
+			}
+			if list {
+				if !strings.HasSuffix(path, "/") {
+					path += "/"
+				}
+			}
+		}
+
+	case "LIST":
+		if !strings.HasSuffix(path, "/") {
+			path += "/"
+		}
+	}
+
+	return path, op, 0, nil
+}
+
+func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
+	req, origBody, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+	if err != nil || status != 0 {
+		return nil, nil, status, err
+	}
 	req, err = requestAuth(core, r, req)
 	if err != nil {
 		if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
-			return nil, http.StatusForbidden, nil
+			return nil, nil, http.StatusForbidden, nil
 		}
-		return nil, http.StatusBadRequest, errwrap.Wrapf("error performing token check: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("error performing token check: {{err}}", err)
 	}
 
 	req, err = requestWrapInfo(r, req)
 	if err != nil {
-		return nil, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-TTL header: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-TTL header: {{err}}", err)
 	}
 
 	err = parseMFAHeader(req)
 	if err != nil {
-		return nil, http.StatusBadRequest, errwrap.Wrapf("failed to parse X-Vault-MFA header: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("failed to parse X-Vault-MFA header: {{err}}", err)
 	}
 
 	err = requestPolicyOverride(r, req)
 	if err != nil {
-		return nil, http.StatusBadRequest, errwrap.Wrapf(fmt.Sprintf(`failed to parse %s header: {{err}}`, PolicyOverrideHeaderName), err)
+		return nil, nil, http.StatusBadRequest, errwrap.Wrapf(fmt.Sprintf(`failed to parse %s header: {{err}}`, PolicyOverrideHeaderName), err)
 	}
 
-	return req, 0, nil
+	return req, origBody, 0, nil
 }
 
 // handleLogical returns a handler for processing logical requests. These requests
@@ -254,7 +304,7 @@ func handleLogicalRecovery(raw *vault.RawBackend, token *atomic.String) http.Han
 // toggles. Refer to usage on functions for possible behaviors.
 func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForward bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, statusCode, err := setupLogicalRequest(core, w.(*LogicalResponseWriter).request, r)
+		req, origBody, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return
@@ -266,6 +316,9 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			if noForward {
 				respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
 				return
+			}
+			if origBody != nil {
+				r.Body = origBody
 			}
 			forwardRequest(core, w, r)
 			return
@@ -391,6 +444,9 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
 			return
 		case needsForward && !noForward:
+			if origBody != nil {
+				r.Body = origBody
+			}
 			forwardRequest(core, w, r)
 			return
 		case !ok:
