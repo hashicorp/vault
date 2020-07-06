@@ -191,8 +191,8 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 func (rlq *RateLimitQuota) HasClient(addr string) bool {
 	rlq.lock.RLock()
 	defer rlq.lock.RUnlock()
-	_, ok := rlq.rateQuotas[addr]
-	return ok
+	rlc, ok := rlq.rateQuotas[addr]
+	return ok && rlc != nil
 }
 
 // NumClients returns the total number of unique clients for which there exists
