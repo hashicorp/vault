@@ -3,7 +3,6 @@
     <ReplicationPage @model={{model}} as |Page|>
       <Page.header
         @showTabs={{true}}
-        @pageType="manage"
       />
       {{#if Page.isDisabled}}
         <EmptyState
