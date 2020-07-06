@@ -619,8 +619,6 @@ func runShamir(
 	}()
 
 	leader := cluster.Cores[0]
-	client := leader.Client
-	client.SetToken(rootToken)
 
 	// Unseal
 	cluster.BarrierKeys = barrierKeys
@@ -638,6 +636,14 @@ func runShamir(
 		cluster.UnsealCores(t)
 	}
 	testhelpers.WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
+
+	// Ensure that we always use the leader's client for this read check
+	leaderIdx, err := testhelpers.AwaitLeader(t, cluster)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := cluster.Cores[leaderIdx].Client
+	client.SetToken(rootToken)
 
 	// Read the secret
 	secret, err := client.Logical().Read("secret/foo")
