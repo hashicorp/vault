@@ -15,7 +15,7 @@
 {{/if}}
 <PageHeader as |p|>
   <p.top>
-    {{#if (not isSummaryDashboard) }}
+    {{#if (not (or isSummaryDashboard isSecondary)) }}
       {{#key-value-header
         baseKey=baseKey
         path="vault.cluster.replication-dr-promote"
@@ -30,15 +30,9 @@
               Replication
             {{/link-to}}
           {{else}}
-            {{#if (eq pageType "manage")}}
-              {{#link-to "vault.cluster.replication-dr-promote.details"}}
-                Disaster Recovery
-              {{/link-to}}
-            {{else}}
-              {{#link-to "vault.cluster.replication-dr-promote"}}
-                Disaster Recovery
-              {{/link-to}}
-            {{/if}}
+            {{#link-to "vault.cluster.replication-dr-promote"}}
+              Disaster Recovery
+            {{/link-to}}  
           {{/if}}
         </li>
       {{/key-value-header}}
