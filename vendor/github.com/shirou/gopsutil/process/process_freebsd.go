@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/binary"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -58,8 +59,24 @@ func (p *Process) NameWithContext(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	name := common.IntToString(k.Comm[:])
 
-	return common.IntToString(k.Comm[:]), nil
+	if len(name) >= 15 {
+		cmdlineSlice, err := p.CmdlineSliceWithContext(ctx)
+		if err != nil {
+			return "", err
+		}
+		if len(cmdlineSlice) > 0 {
+			extendedName := filepath.Base(cmdlineSlice[0])
+			if strings.HasPrefix(extendedName, p.name) {
+				name = extendedName
+			} else {
+				name = cmdlineSlice[0]
+			}
+		}
+	}
+
+	return name, nil
 }
 func (p *Process) Tgid() (int32, error) {
 	return 0, common.ErrNotImplementedError
