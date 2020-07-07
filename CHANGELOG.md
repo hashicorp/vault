@@ -34,8 +34,8 @@ IMPROVEMENTS:
 * secrets/pki: Allow 3072-bit RSA keys [[GH-8343](https://github.com/hashicorp/vault/pull/8343)]
 * secrets/ssh: Add a CA-mode role option to specify signing algorithm [[GH-9096](https://github.com/hashicorp/vault/pull/9096)]
 * secrets/ssh: The [Vault SSH Helper](https://github.com/hashicorp/vault-ssh-helper) can now be configured to reference a mount in a namespace [[GH-44](https://github.com/hashicorp/vault-ssh-helper/pull/44)]
-* secrets/transit: Transit requests that make use of keys now include a new field  `key_version` in their responses [[GH-8775](https://github.com/hashicorp/vault/pull/8775)]
-* secrets/transit: Improving transit batch encrypt and decrypt latencies [[GH-9100](https://github.com/hashicorp/vault/pull/9100)]
+* secrets/transit: Transit requests that make use of keys now include a new field  `key_version` in their responses [[GH-9100](https://github.com/hashicorp/vault/pull/9100)]
+* secrets/transit: Improving transit batch encrypt and decrypt latencies [[GH-8775](https://github.com/hashicorp/vault/pull/8775)]
 * sentinel: Add a sentinel config section, and "additional_enabled_modules", a list of Sentinel modules that may be imported in addition to the defaults.
 * ui: Update TTL picker styling on SSH secret engine [[GH-8891](https://github.com/hashicorp/vault/pull/8891)]
 * ui: Only render the JWT input field of the Vault login form on mounts configured for JWT auth [[GH-8952](https://github.com/hashicorp/vault/pull/8952)]
