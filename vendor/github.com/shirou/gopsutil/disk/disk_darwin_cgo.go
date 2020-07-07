@@ -7,7 +7,7 @@ package disk
 #cgo LDFLAGS: -framework CoreFoundation -framework IOKit
 #include <stdint.h>
 #include <CoreFoundation/CoreFoundation.h>
-#include "disk_darwin.h"
+#include "iostat_darwin.h"
 */
 import "C"
 

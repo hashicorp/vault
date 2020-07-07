@@ -84,7 +84,7 @@ func SwapMemoryWithContext(ctx context.Context) (*SwapMemoryStat, error) {
 	if tot == 0 {
 		usedPercent = 0
 	} else {
-		usedPercent = float64(used) / float64(tot)
+		usedPercent = float64(used) / float64(tot) * 100
 	}
 	ret := &SwapMemoryStat{
 		Total:       tot,
