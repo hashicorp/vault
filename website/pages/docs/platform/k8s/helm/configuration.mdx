@@ -121,9 +121,10 @@ and consider if they're appropriate for your deployment.
 
     * `ingress` - Values that configure Ingress services for Vault.
 
-      ~> If deploying on OpenShift, these ingress settings are ignored. Use the [`route`](#route) configuration to expose Vault on OpenShift.
+      ~> If deploying on OpenShift, these ingress settings are ignored. Use the [`route`](#route) configuration to expose Vault on OpenShift. <br/> <br/>
+      If [`ha`](#ha) is enabled the Ingress will point to the active vault server via the `active` Service. This requires vault 1.4+ and [service_registration](https://www.vaultproject.io/docs/configuration/service-registration/kubernetes) to be set in the config.
 
-      - `enabled` (`boolean: false`) - When set to `true`, an [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) service will be created. If [`ha`](#ha) is enabled the Ingress will point to the active vault server via the `active` Service.
+      - `enabled` (`boolean: false`) - When set to `true`, an [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) service will be created.
 
       - `labels` (`dictionary: {}`) - Labels for the ingress service.
 
@@ -155,7 +156,9 @@ and consider if they're appropriate for your deployment.
 
     * `route` - Values that configure Route services for Vault in OpenShift
 
-      - `enabled` (`boolean: false`) - When set to `true`, a Route for Vault will be created. If [`ha`](#ha) is enabled the Route will point to the active vault server via the `active` Service.
+      ~> If [`ha`](#ha) is enabled the Route will point to the active vault server via the `active` Service (requires vault 1.4+ and [service_registration](https://www.vaultproject.io/docs/configuration/service-registration/kubernetes) to be set in the config).
+
+      - `enabled` (`boolean: false`) - When set to `true`, a Route for Vault will be created.
 
       - `labels` (`dictionary: {}`) - Labels for the Route
 
@@ -380,11 +383,6 @@ and consider if they're appropriate for your deployment.
         "sample/annotation1": "foo"
         "sample/annotation2": "bar"
       ```
-
-    - `extraVolumes` - This configures the `Service` resource created for the Vault server.
-
-      - `enabled` (`boolean: true`) -
-        Enables a service to allow other pods running in Kubernetes to communicate with the Vault server.
 
     - `dataStorage` - This configures the volume used for storing Vault data when not using external storage such as Consul.
 
