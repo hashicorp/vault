@@ -729,14 +729,25 @@ func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error
 	}
 
 	b.l.Lock()
-	future := b.raft.Shutdown()
+
+	// Perform shutdown only if the raft object is non-nil. The object could be nil
+	// if the node is unsealed but has not joined the peer set.
+	var future raft.Future
+	if b.raft != nil {
+		future = b.raft.Shutdown()
+	}
+
 	b.raft = nil
 
 	// If we're tearing down, then we need to recreate the raftInitCh
 	b.raftInitCh = make(chan struct{})
 	b.l.Unlock()
 
-	return future.Error()
+	if future != nil {
+		return future.Error()
+	}
+
+	return nil
 }
 
 // CommittedIndex returns the latest index committed to stable storage

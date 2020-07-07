@@ -176,8 +176,8 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	// Wrap the handler in another handler to trigger all help paths.
 	helpWrappedHandler := wrapHelpHandler(mux, core)
 	corsWrappedHandler := wrapCORSHandler(helpWrappedHandler, core)
-
-	genericWrappedHandler := genericWrapping(core, corsWrappedHandler, props)
+	quotaWrappedHandler := rateLimitQuotaWrapping(corsWrappedHandler, core)
+	genericWrappedHandler := genericWrapping(core, quotaWrappedHandler, props)
 
 	// Wrap the handler with PrintablePathCheckHandler to check for non-printable
 	// characters in the request path.
@@ -235,7 +235,6 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 		input := &logical.LogInput{
 			Request: req,
 		}
-
 		core.AuditLogger().AuditRequest(r.Context(), input)
 		cw := newCopyResponseWriter(w)
 		h.ServeHTTP(cw, r)
@@ -249,7 +248,6 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 		core.AuditLogger().AuditResponse(r.Context(), input)
 		return
 	})
-
 }
 
 // wrapGenericHandler wraps the handler with an extra layer of handler where
@@ -288,6 +286,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		}
 		ctx = context.WithValue(ctx, "original_request_path", r.URL.Path)
 		r = r.WithContext(ctx)
+		r = r.WithContext(namespace.ContextWithNamespace(r.Context(), namespace.RootNamespace))
 
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/v1/"):
@@ -307,6 +306,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		}
 
 		h.ServeHTTP(w, r)
+
 		cancelFunc()
 		return
 	})

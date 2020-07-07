@@ -8,9 +8,9 @@ import createConsentManager from '@hashicorp/nextjs-scripts/lib/consent-manager'
 import NProgress from '@hashicorp/nextjs-scripts/lib/nprogress'
 import useAnchorLinkAnalytics from '@hashicorp/nextjs-scripts/lib/anchor-link-analytics'
 import HashiHead from '@hashicorp/react-head'
-import ProductSubnav from '../components/subnav'
+import ProductSubnav from 'components/subnav'
 import MegaNav from '@hashicorp/react-mega-nav'
-import Footer from '../components/footer'
+import Footer from 'components/footer'
 import Error from './_error'
 
 NProgress({ Router })
@@ -29,12 +29,6 @@ function App({ Component, pageProps }) {
         siteName="Vault by HashiCorp"
         description="Vault secures, stores, and tightly controls access to tokens, passwords, certificates, API keys, and other secrets in modern computing. Vault handles leasing, key revocation, key rolling, auditing, and provides secrets as a service through a unified API."
         image="https://www.vaultproject.io/img/og-image.png"
-        stylesheet={[
-          {
-            href:
-              'https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700&display=swap',
-          },
-        ]}
         icon={[
           {
             href:

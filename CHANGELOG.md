@@ -16,13 +16,15 @@ IMPROVEMENTS:
 
 * audit: Replication status requests are no longer audited. [[GH-8877](https://github.com/hashicorp/vault/pull/8877)]
 * auth/aws: Add support for Web Identity credentials [[GH-7738](https://github.com/hashicorp/vault/pull/7738)]
+* auth/jwt: Support users that are members of more than 200 groups on Azure [[GH-120](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/120)]
 * auth/kubernetes: Allow disabling `iss` validation [[GH-91](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/91)]
+* auth/kubernetes: Try reading the ca.crt and TokenReviewer JWT from the default service account [[GH-83](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/83)]
 * core: Add the Go version used to build a Vault binary to the server message output. [[GH-9078](https://github.com/hashicorp/vault/pull/9078)]
 * core: Added Password Policies for user-configurable password generation [[GH-8637](https://github.com/hashicorp/vault/pull/8637)]
 * core: New telemetry metrics covering token counts, token creation, KV secret counts, lease creation. [[GH-9239](https://github.com/hashicorp/vault/pull/9239)] [[GH-9250](https://github.com/hashicorp/vault/pull/9250)] [[GH-9244](https://github.com/hashicorp/vault/pull/9244)] [[GH-9052](https://github.com/hashicorp/vault/pull/9052)]
 * cli: Support reading TLS parameters from file for the `vault operator raft join` command. [[GH-9060](https://github.com/hashicorp/vault/pull/9060)]
-* plugin: Add SDK method, `Sys.ReloadPlugin`, and CLI command, `vault plugin reload`, 
-  for reloading plugins. [[GH-8777](https://github.com/hashicorp/vault/pull/8777)]
+* plugin: Add SDK method, `Sys.ReloadPlugin`, and CLI command, `vault plugin reload`, for reloading plugins. [[GH-8777](https://github.com/hashicorp/vault/pull/8777)]
+* plugin (enterprise): Add a scope field to plugin reload, which when global, reloads the plugin anywhere in a cluster. [[GH-9347](https://github.com/hashicorp/vault/pull/9347)] 
 * sdk/framework: Support accepting TypeFloat parameters over the API [[GH-8923](https://github.com/hashicorp/vault/pull/8923)]
 * secrets/aws: Add iam_groups parameter to role create/update [[GH-8811](https://github.com/hashicorp/vault/pull/8811)]
 * secrets/database: Add static role rotation for MongoDB Atlas database plugin [[GH-11](https://github.com/hashicorp/vault-plugin-database-mongodbatlas/pull/11)]
@@ -30,9 +32,10 @@ IMPROVEMENTS:
 * secrets/database: Allow InfluxDB to use insecure TLS without cert bundle [[GH-8778](https://github.com/hashicorp/vault/pull/8778)]
 * secrets/gcp: Support BigQuery dataset ACLs in absence of IAM endpoints [[GH-78](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/78)]
 * secrets/pki: Allow 3072-bit RSA keys [[GH-8343](https://github.com/hashicorp/vault/pull/8343)]
-* secrets/ssh: Add a CA-mode role option to specify signing algorithm [[GH-9096](https://github.com/hashicorp/vault/pull/9096)] 
-* secrets/transit: Transit requests that make use of keys now include a new field  `key_version` in their responses [[GH-8775](https://github.com/hashicorp/vault/pull/8775)]
-* secrets/transit: Improving transit batch encrypt and decrypt latencies [[GH-9100](https://github.com/hashicorp/vault/pull/9100)]
+* secrets/ssh: Add a CA-mode role option to specify signing algorithm [[GH-9096](https://github.com/hashicorp/vault/pull/9096)]
+* secrets/ssh: The [Vault SSH Helper](https://github.com/hashicorp/vault-ssh-helper) can now be configured to reference a mount in a namespace [[GH-44](https://github.com/hashicorp/vault-ssh-helper/pull/44)]
+* secrets/transit: Transit requests that make use of keys now include a new field  `key_version` in their responses [[GH-9100](https://github.com/hashicorp/vault/pull/9100)]
+* secrets/transit: Improving transit batch encrypt and decrypt latencies [[GH-8775](https://github.com/hashicorp/vault/pull/8775)]
 * sentinel: Add a sentinel config section, and "additional_enabled_modules", a list of Sentinel modules that may be imported in addition to the defaults.
 * ui: Update TTL picker styling on SSH secret engine [[GH-8891](https://github.com/hashicorp/vault/pull/8891)]
 * ui: Only render the JWT input field of the Vault login form on mounts configured for JWT auth [[GH-8952](https://github.com/hashicorp/vault/pull/8952)]
@@ -51,8 +54,10 @@ BUG FIXES:
 * secrets/kv: Return the value of delete_version_after when reading kv/config, even if it is set to the default. [[GH-42](https://github.com/hashicorp/vault-plugin-secrets-kv/pull/42)]
 * ui: Add Toggle component into core addon so it is available in KMIP and other Ember Engines.[[GH-8913]](https://github.com/hashicorp/vault/pull/8913)
 * ui: Disallow max versions value of large than 9999999999999999 on kv2 secrets engine. [[GH-9242](https://github.com/hashicorp/vault/pull/9242)]
+* ui: Add and upgrade missing dependencies to resolve a failure with `make static-dist`. [[GH-9277](https://github.com/hashicorp/vault/pull/9371)]
 
-## 1.4.3 (TBD)
+## 1.4.3
+### July 2nd, 2020
 
 IMPROVEMENTS:
 
@@ -65,6 +70,7 @@ BUG FIXES:
 
 * auth/oci: Fix issue where users of the Oracle Cloud Infrastructure (OCI) auth method could not authenticate when the plugin backend was mounted at a non-default path. [[GH-9278](https://github.com/hashicorp/vault/pull/9278)]
 * replication: The issue causing cubbyholes in namespaces on performance secondaries to not work, which was fixed in 1.4.0, was still an issue when the primary was both a performance primary and DR primary.
+* seal: (enterprise) Fix issue causing stored seal and recovery keys to be mistaken as sealwrapped values
 * secrets/aws: Fix issue where performance standbys weren't able to generate STS credentials after an IAM access key rotation in AWS and root IAM credential update in Vault [[GH-9207](https://github.com/hashicorp/vault/pull/9207)]
 * secrets/database: Fix issue that prevents performance standbys from connecting to databases after a root credential rotation [[GH-9208](https://github.com/hashicorp/vault/pull/9208)]
 * secrets/gcp: Fix issue were updates were not being applied to the `token_scopes` of a roleset. [[GH-9277](https://github.com/hashicorp/vault/pull/9277)]
@@ -256,6 +262,14 @@ BUG FIXES:
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [[GH-8035](https://github.com/hashicorp/vault/pull/8035)]
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
 * ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
+
+## 1.3.7
+### July 2nd, 2020
+
+BUG FIXES:
+
+* seal: (enterprise) Fix issue causing stored seal and recovery keys to be mistaken as sealwrapped values
+* secrets/aws: Fix issue where performance standbys weren't able to generate STS credentials after an IAM access key rotation in AWS and root IAM credential update in Vault [[GH-9363](https://github.com/hashicorp/vault/pull/9363)]
 
 ## 1.3.6 (May 21st, 2020)
 

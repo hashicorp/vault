@@ -2,7 +2,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import notes from './popup-menu.md';
 
-storiesOf('PopupMenu/', module)
+storiesOf('PopupMenu', module)
   .addParameters({ options: { showPanel: true } })
   .add(
     `PopupMenu`,

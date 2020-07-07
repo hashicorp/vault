@@ -140,7 +140,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 			path += "/"
 		}
 
-	case "OPTIONS":
+	case "OPTIONS", "HEAD":
 	default:
 		return nil, nil, http.StatusMethodNotAllowed, nil
 	}
@@ -169,12 +169,50 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 	return req, origBody, 0, nil
 }
 
+func buildLogicalPath(r *http.Request) (string, int, error) {
+	ns, err := namespace.FromContext(r.Context())
+	if err != nil {
+		return "", http.StatusBadRequest, nil
+	}
+
+	path := ns.TrimmedPath(strings.TrimPrefix(r.URL.Path, "/v1/"))
+
+	switch r.Method {
+	case "GET":
+		var (
+			list bool
+			err  error
+		)
+
+		queryVals := r.URL.Query()
+
+		listStr := queryVals.Get("list")
+		if listStr != "" {
+			list, err = strconv.ParseBool(listStr)
+			if err != nil {
+				return "", http.StatusBadRequest, nil
+			}
+			if list {
+				if !strings.HasSuffix(path, "/") {
+					path += "/"
+				}
+			}
+		}
+
+	case "LIST":
+		if !strings.HasSuffix(path, "/") {
+			path += "/"
+		}
+	}
+
+	return path, 0, nil
+}
+
 func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
 	req, origBody, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
 	if err != nil || status != 0 {
 		return nil, nil, status, err
 	}
-
 	req, err = requestAuth(core, r, req)
 	if err != nil {
 		if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
@@ -270,7 +308,6 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 				respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
 				return
 			}
-
 			if origBody != nil {
 				r.Body = origBody
 			}

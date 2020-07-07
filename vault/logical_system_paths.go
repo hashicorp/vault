@@ -708,13 +708,17 @@ func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 				Type:        framework.TypeCommaStringSlice,
 				Description: strings.TrimSpace(sysHelp["plugin-backend-reload-mounts"][0]),
 			},
+			"scope": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-backend-reload-scope"][0]),
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:    b.handlePluginReloadUpdate,
 				Summary:     "Reload mounted plugin backends.",
-				Description: "Either the plugin name (`plugin`) or the desired plugin backend mounts (`mounts`) must be provided, but not both. In the case that the plugin name is provided, all mounted paths that use that plugin backend will be reloaded.",
+				Description: "Either the plugin name (`plugin`) or the desired plugin backend mounts (`mounts`) must be provided, but not both. In the case that the plugin name is provided, all mounted paths that use that plugin backend will be reloaded.  If (`scope`) is provided and is (`global`), the plugin(s) are reloaded globally.",
 			},
 		},
 
