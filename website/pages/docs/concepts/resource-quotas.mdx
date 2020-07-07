@@ -45,6 +45,18 @@ Vault also allows the inspection of the state of rate limiting in a Vault node
 through various [metrics](/docs/internals/telemetry#Resource-Quota-Metrics) exposed
 and through enabling optional audit logging.
 
+## Exempt Routes
+
+The following routes are always exempt from rate limiting:
+
+- `/v1/sys/generate-recovery-token/attempt`
+- `/v1/sys/generate-recovery-token/update`
+- `/v1/sys/generate-root/attempt`
+- `/v1/sys/generate-root/update`
+- `/v1/sys/health`
+- `/v1/sys/seal-status`
+- `/v1/sys/unseal`
+
 ## API
 
 Rate limit quotas can be managed over the HTTP API. Please see
