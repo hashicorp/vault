@@ -5,7 +5,7 @@ import { withKnobs, text } from '@storybook/addon-knobs';
 
 import notes from './file-to-array-buffer.md';
 
-storiesOf('FileToArrayBuffer/', module)
+storiesOf('FileToArrayBuffer', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(
     withKnobs()
