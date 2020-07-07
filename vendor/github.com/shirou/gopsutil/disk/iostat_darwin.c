@@ -1,7 +1,7 @@
 // https://github.com/lufia/iostat/blob/9f7362b77ad333b26c01c99de52a11bdb650ded2/iostat_darwin.c
 #include <stdint.h>
 #include <CoreFoundation/CoreFoundation.h>
-#include "disk_darwin.h"
+#include "iostat_darwin.h"
 
 #define IOKIT	1	/* to get io_name_t in device_types.h */
 
