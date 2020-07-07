@@ -221,7 +221,9 @@ func (rlq *RateLimitQuota) QuotaName() string {
 // current time. The loop will continue to run indefinitely until a value is
 // sent on the closeCh in which we stop the ticker and exit.
 func (rlq *RateLimitQuota) purgeClientsLoop() {
+	rlq.lock.RLock()
 	ticker := time.NewTicker(rlq.purgeInterval)
+	rlq.lock.RUnlock()
 
 	for {
 		select {
