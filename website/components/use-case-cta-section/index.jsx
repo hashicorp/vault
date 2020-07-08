@@ -12,7 +12,7 @@ export default function UseCaseCtaSection() {
           theme={{
             variant: 'primary',
             background: 'dark',
-            brand: 'neutral'
+            brand: 'neutral',
           }}
         />
         <Button

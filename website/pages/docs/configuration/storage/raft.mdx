@@ -112,25 +112,26 @@ set `disable_mlock` to `true`, and to disable memory swapping on the system.
   possible leader node.
 
 - `leader_client_cert_file` `(string: "")` - File path to the client certificate
-for the follower node to establish client authentication with the possible
-leader node.
+  for the follower node to establish client authentication with the possible
+  leader node.
 
 - `leader_client_key_file` `(string: "")` - File path to the client key for the
-follower node to establish client authentication with the possible leader node.
+  follower node to establish client authentication with the possible leader node.
 
 - `leader_ca_cert` `(string: "")` - CA cert of the possible leader node.
 
 - `leader_client_cert` `(string: "")` - Client certificate for the follower node
-to establish client authentication with the possible leader node.
+  to establish client authentication with the possible leader node.
 
 - `leader_client_key` `(string: "")` - Client key for the follower node to
-establish client authentication with the possible leader node.
+  establish client authentication with the possible leader node.
 
 Each `retry_join` block may provide TLS certificates via file paths or as a
 single-line certificate string value with newlines delimited by `\n`, but not a
 combination of both.
 
 Example Configuration:
+
 ```
 storage "raft" {
   path    = "/Users/foo/raft/"

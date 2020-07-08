@@ -10,37 +10,37 @@ description: >-
 
 # Run Vault on OpenShift
 
-The following documentation describes installing, running and using 
+The following documentation describes installing, running and using
 Vault and Vault Agent Injector on OpenShift.
 
 ## Requirements
 
-The following are required to install Vault and Vault Agent Injector 
+The following are required to install Vault and Vault Agent Injector
 on OpenShift:
 
-* Cluster Admin privileges to bind the `auth-delegator` role to Vault's service account
-* Helm v3
-* OpenShift 4.X
-* Vault Helm v0.6.0+
-* Vault K8s v0.4.0+
+- Cluster Admin privileges to bind the `auth-delegator` role to Vault's service account
+- Helm v3
+- OpenShift 4.X
+- Vault Helm v0.6.0+
+- Vault K8s v0.4.0+
 
-~> **Note:** At this time, Consul does not support OpenShift.  For highly available
-  deployments, Raft integrated storage is recommended.
+~> **Note:** At this time, Consul does not support OpenShift. For highly available
+deployments, Raft integrated storage is recommended.
 
 ## Additional Resources
 
-The documentation, configuration and examples for Vault Helm and Vault K8s Agent Injector 
-are applicable to OpenShift installations.  For more examples see the existing documentation:
+The documentation, configuration and examples for Vault Helm and Vault K8s Agent Injector
+are applicable to OpenShift installations. For more examples see the existing documentation:
 
-* [Vault Helm documentation](/docs/platform/k8s/helm)
-* [Vault K8s documentation](/docs/platform/k8s/injector)
+- [Vault Helm documentation](/docs/platform/k8s/helm)
+- [Vault K8s documentation](/docs/platform/k8s/injector)
 
 ## Helm Chart
 
 The [Vault Helm chart](https://github.com/hashicorp/vault-helm)
 is the recommended way to install and configure Vault on OpenShift.
 In addition to running Vault itself, the Helm chart is the primary
-method for installing and configuring Vault Agent Injection Mutating 
+method for installing and configuring Vault Agent Injection Mutating
 Webhook.
 
 While the Helm chart automatically sets up complex resources and exposes the
@@ -98,7 +98,7 @@ $ helm install vault hashicorp/vault --version 0.5.0
 ```
 
 The `helm install` command accepts parameters to override default configuration
-values inline or defined in a file.  For all OpenShift deployments, `global.openshift` 
+values inline or defined in a file. For all OpenShift deployments, `global.openshift`
 should be set to `true`.
 
 Override the `server.dev.enabled` configuration value:
@@ -161,7 +161,7 @@ $ oc exec -ti vault-0 -- vault operator init
 $ oc exec -ti vault-0 -- vault operator unseal
 ```
 
-Finally, join the remaining pods to the Raft cluster and unseal them.  The pods
+Finally, join the remaining pods to the Raft cluster and unseal them. The pods
 will need to communicate directly so we'll configure the pods to use the internal
 service provided by the Helm chart:
 

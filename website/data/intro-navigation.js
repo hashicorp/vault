@@ -18,7 +18,7 @@ export default [
       'policies',
       'deploy',
       'apis',
-      'next-steps'
-    ]
-  }
+      'next-steps',
+    ],
+  },
 ]

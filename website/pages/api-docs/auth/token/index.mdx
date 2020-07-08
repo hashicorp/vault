@@ -71,6 +71,7 @@ during this call.
   token ID is a randomly generated value.
 
   _Note:_ The ID should not start with the `s.` prefix.
+
 - `role_name` `(string: "")` – The name of the token role.
 - `policies` `(array: "")` – A list of policies for the token. This must be a
   subset of the policies belonging to the token making the request, unless root.
@@ -764,14 +765,14 @@ specified namespace, or the root namespace if unspecified.
 Generally, running this is not needed unless upgrade notes or support personnel
 suggest it. There are two potential dangers to running tidy: first, this will
 perform a lot of read I/O to the storage method, as it will essentially reload the
-entirety of the token store into memory.  Depending on how much cleanup is
+entirety of the token store into memory. Depending on how much cleanup is
 required (usually very little) there may also be a large number of writes.
 Second, this will cause Vault's memory usage to balloon up, because the default
 Vault internal cache is unlimited in size and every value read from storage will
-be cached.  Listing the `/auth/token/accessors` endpoint is a good way to get
+be cached. Listing the `/auth/token/accessors` endpoint is a good way to get
 some sense of the potential impact: tidy does this and more, so if this call creates problems
 for your cluster, it would be wise to give Vault more resources before attempting
-tidy.  Note that the request may time out depending on
+tidy. Note that the request may time out depending on
 [max duration](https://www.vaultproject.io/docs/configuration#default_max_request_duration)
 and your client's timeout configuration, make sure to allow it run to completion
 to properly judge the impact.
@@ -791,7 +792,6 @@ have, then delete the accessor.
 
 Finally, any cubbyhole entries that are associated with tokens which weren't deemed
 valid in the above steps will be deleted.
-
 
 | Method | Path               |
 | :----- | :----------------- |

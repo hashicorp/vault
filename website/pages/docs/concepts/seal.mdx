@@ -30,7 +30,7 @@ encryption key known as the _master key_.
 
 Therefore, to decrypt the data, Vault must decrypt the encryption key
 which requires the master key. Unsealing is the process of getting access to
-this master key.  The master key is stored alongside all other Vault data,
+this master key. The master key is stored alongside all other Vault data,
 but is encrypted by yet another mechanism: the unseal key.
 
 To recap: most Vault data is encrypted using the encryption key in the keyring;
@@ -68,7 +68,7 @@ Once a Vault node is unsealed, it remains unsealed until one of these things hap
 
 -> **Note:** Unsealing makes the process of automating a Vault install
 difficult. Automated tools can easily install, configure, and start Vault,
-but unsealing it using Shamir is a very manual process.  For most users
+but unsealing it using Shamir is a very manual process. For most users
 AutoUnseal will provide a better experience.
 
 ## Sealing
@@ -85,7 +85,7 @@ access to the master key shards.
 
 Auto Unseal was developed to aid in reducing the operational complexity of
 keeping the unseal key secure. This feature delegates the responsibility of
-securing the unseal key from users to a trusted device or service.  At startup
+securing the unseal key from users to a trusted device or service. At startup
 Vault will connect to the device or service implementing the seal and ask it
 to decrypt the master key Vault read from storage.
 
@@ -96,10 +96,10 @@ require a quorum of users to perform an operation such as generating a root toke
 During the initialization process, a set of Shamir keys are generated that are called
 _recovery keys_ and are used for these operations.
 
-It is still possible to seal a Vault node using the API.  In this case Vault
+It is still possible to seal a Vault node using the API. In this case Vault
 will remain sealed until restarted, or the unseal API is used, which with AutoUnseal
 requires the recovery key fragments instead of the unseal key fragments that
-would be provided with Shamir.  The process remains the same.
+would be provided with Shamir. The process remains the same.
 
 For a list of examples and supported providers, please see the
 [seal documentation](/docs/configuration/seal).

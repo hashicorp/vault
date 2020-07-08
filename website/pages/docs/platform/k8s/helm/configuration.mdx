@@ -60,9 +60,9 @@ and consider if they're appropriate for your deployment.
     ```yaml
     resources:
       requests:
-        memory: "10Gi"
+        memory: '10Gi'
       limits:
-        memory: "10Gi"
+        memory: '10Gi'
     ```
 
   - `namespaceSelector` (`dictionary: {}`) - The selector used by the admission webhook controller to limit what namespaces where injection can happen. If set to null, all non-system namespaces are eligible for injection.
@@ -112,9 +112,9 @@ and consider if they're appropriate for your deployment.
       ```yaml
       resources:
         requests:
-          memory: "10Gi"
+          memory: '10Gi'
         limits:
-          memory: "10Gi"
+          memory: '10Gi'
       ```
 
     * `ingress` - Values that configure Ingress services for Vault.
@@ -127,8 +127,8 @@ and consider if they're appropriate for your deployment.
       - `labels` (`dictionary: {}`) - Labels for the ingress service.
 
       - `annotations` (`dictionary: {}`) - This value defines additional annotations to
-      add to the Ingress service. This can either be YAML or a YAML-formatted
-      multi-line templated string.
+        add to the Ingress service. This can either be YAML or a YAML-formatted
+        multi-line templated string.
 
       ```yaml
       annotations:
@@ -326,8 +326,8 @@ and consider if they're appropriate for your deployment.
 
     ```yaml
     extraLabels:
-      "sample/label1": "foo"
-      "sample/label2": "bar"
+      'sample/label1': 'foo'
+      'sample/label2': 'bar'
     ```
 
     - `annotations` (`dictionary: {}`) - This value defines additional annotations for server pods. This can either be YAML or a YAML-formatted multi-line templated string.
