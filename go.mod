@@ -38,7 +38,7 @@ require (
 	github.com/go-errors/errors v1.0.1
 	github.com/go-ldap/ldap/v3 v3.1.10
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/go-test/deep v1.0.2
+	github.com/go-test/deep v1.0.3
 	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github v17.0.0+incompatible
