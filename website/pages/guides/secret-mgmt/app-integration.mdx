@@ -339,7 +339,7 @@ language](https://github.com/hashicorp/consul-template#templating-language).
    The input file is the **`config.yml.tpl`** and specify the desired output
    file name to be **`config.yml`**:
 
-   ```plaintext
+   ```shell-session
    $ VAULT_TOKEN=<token> consul-template -template="config.yml.tpl:config.yml" -once
    ```
 
@@ -348,7 +348,7 @@ language](https://github.com/hashicorp/consul-template#templating-language).
 1. Open the generated **`config.yml`** file to verify its content. It should
    look similar to:
 
-   ```plaintext
+   ```shell-session
    $ cat config.yml
    ---
    username: "v-token-readonly-tu17xrtz345uz643980r-1527630039"

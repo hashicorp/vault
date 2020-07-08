@@ -52,30 +52,30 @@ curl --silent --remote-name https://releases.hashicorp.com/vault/${VAULT_VERSION
 
 Unzip the downloaded package and move the `vault` binary to `/usr/local/bin/`. Check `vault` is available on the system path.
 
-```text
-unzip vault_${VAULT_VERSION}_linux_amd64.zip
-sudo chown root:root vault
-sudo mv vault /usr/local/bin/
-vault --version
+```shell-session
+$ unzip vault_${VAULT_VERSION}_linux_amd64.zip
+$ sudo chown root:root vault
+$ sudo mv vault /usr/local/bin/
+$ vault --version
 ```
 
 The `vault` command features opt-in autocompletion for flags, subcommands, and arguments (where supported). Enable autocompletion.
 
-```text
-vault -autocomplete-install
-complete -C /usr/local/bin/vault vault
+```shell-session
+$ vault -autocomplete-install
+$ complete -C /usr/local/bin/vault vault
 ```
 
 Give Vault the ability to use the mlock syscall without running the process as root. The mlock syscall prevents memory from being swapped to disk.
 
-```text
-sudo setcap cap_ipc_lock=+ep /usr/local/bin/vault
+```shell-session
+$ sudo setcap cap_ipc_lock=+ep /usr/local/bin/vault
 ```
 
 Create a unique, non-privileged system user to run Vault.
 
-```text
-sudo useradd --system --home /etc/vault.d --shell /bin/false vault
+```shell-session
+$ sudo useradd --system --home /etc/vault.d --shell /bin/false vault
 ```
 
 ## Configure systemd
@@ -84,8 +84,8 @@ Systemd uses [documented sane defaults](https://www.freedesktop.org/software/sys
 
 Create a Vault service file at /etc/systemd/system/vault.service.
 
-```text
-sudo touch /etc/systemd/system/vault.service
+```shell-session
+$ sudo touch /etc/systemd/system/vault.service
 ```
 
 Add the below configuration to the Vault service file:
@@ -203,11 +203,11 @@ Vault uses [documented sane defaults](/docs/configuration) so only non-default v
 
 Create a configuration file at /etc/vault.d/vault.hcl:
 
-```text
-sudo mkdir --parents /etc/vault.d
-sudo touch /etc/vault.d/vault.hcl
-sudo chown --recursive vault:vault /etc/vault.d
-sudo chmod 640 /etc/vault.d/vault.hcl
+```shell-session
+$ sudo mkdir --parents /etc/vault.d
+$ sudo touch /etc/vault.d/vault.hcl
+$ sudo chown --recursive vault:vault /etc/vault.d
+$ sudo chmod 640 /etc/vault.d/vault.hcl
 ```
 
 ### Listener stanza
@@ -312,10 +312,10 @@ ui = true
 
 Enable and start Vault using the systemctl command responsible for controlling systemd managed services. Check the status of the vault service using systemctl.
 
-```text
-sudo systemctl enable vault
-sudo systemctl start vault
-sudo systemctl status vault
+```shell-session
+$ sudo systemctl enable vault
+$ sudo systemctl start vault
+$ sudo systemctl status vault
 ```
 
 ## Next Steps

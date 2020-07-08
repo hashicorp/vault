@@ -344,7 +344,7 @@ $ vault write identity/group name="acct_manager" \
 1.  Click the Vault CLI shell icon (**`>_`**) to open a command shell. Enter the
     following command to create a new user, **`bob`**:
 
-    ```plaintext
+    ```shell-session
     $ vault write auth/userpass/users/bob password="training"
     ```
 
@@ -352,7 +352,7 @@ $ vault write identity/group name="acct_manager" \
 
 1.  Enter the following command to create a new user, **`ellen`**:
 
-    ```plaintext
+    ```shell-session
     $ vault write auth/userpass/users/ellen password="training"
     ```
 
@@ -403,13 +403,13 @@ Now, let's see how the control group works.
 
 1.  Log in as **`bob`**.
 
-    ```plaintext
+    ```shell-session
     $ vault login -method=userpass username="bob" password="training"
     ```
 
 1.  Request to read "`EU_GDPR_data/orders/acct1`":
 
-    ```plaintext
+    ```shell-session
     $ vault kv get EU_GDPR_data/orders/acct1
 
     Key                              Value
@@ -427,7 +427,7 @@ Now, let's see how the control group works.
 1.  Now, a member of `acct_manager` must approve this request. Log in as
     **`ellen`** who is a member of `acct_manager` group.
 
-    ```plaintext
+    ```shell-session
     $ vault login -method=userpass username="ellen" password="training"
     ```
 
@@ -485,7 +485,7 @@ Now, let's see how the control group works.
 
 1.  Log in as **`bob`**.
 
-    ```plaintext
+    ```shell-session
     $ curl --request POST \
            --data '{"password": "training"}' \
            http://127.0.0.1:8200/v1/auth/userpass/login/bob | jq
@@ -495,7 +495,7 @@ Now, let's see how the control group works.
 
 1.  Request to `EU_GDPR_data/orders/acct1`:
 
-    ```plaintext
+    ```shell-session
     $ curl --header "X-Vault-Token: <bob_client_token>" \
            http://127.0.0.1:8200/v1/EU_GDPR_data/orders/acct1 | jq
     {
@@ -517,7 +517,7 @@ Now, let's see how the control group works.
 1.  Now, a member of `acct_manager` must approve this request. Log in as
     **`ellen`** who is a member of `acct_manager` group.
 
-    ```plaintext
+    ```shell-session
     $ curl --request POST \
             --data '{"password": "training"}' \
             http://127.0.0.1:8200/v1/auth/userpass/login/ellen | jq
@@ -567,7 +567,7 @@ Now, let's see how the control group works.
 
 1.  The `bob` user should be able to unwrap the secrets.
 
-    ```plaintext
+    ```shell-session
     $ curl --header "X-Vault-Token: <bob_client_token>" \
            --request POST \
            --data '{"token": "<wrapping_token>"}' \

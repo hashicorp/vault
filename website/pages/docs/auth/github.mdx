@@ -70,13 +70,13 @@ management tool.
 
 1. Enable the GitHub auth method:
 
-   ```text
+   ```shell-session
    $ vault auth enable github
    ```
 
 1. Use the `/config` endpoint to configure Vault to talk to GitHub.
 
-   ```text
+   ```shell-session
    $ vault write auth/github/config organization=hashicorp
    ```
 
@@ -86,7 +86,7 @@ management tool.
 1. Map the users/teams of that GitHub organization to policies in Vault. Team
    names must be "slugified":
 
-   ```text
+   ```shell-session
    $ vault write auth/github/map/teams/dev value=dev-policy
    ```
 
@@ -99,7 +99,7 @@ management tool.
    You can also create mappings for a specific user `map/users/<user>`
    endpoint:
 
-   ```text
+   ```shell-session
    $ vault write auth/github/map/users/sethvargo value=sethvargo-policy
    ```
 

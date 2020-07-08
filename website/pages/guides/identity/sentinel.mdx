@@ -204,7 +204,7 @@ syntax and to document expected behavior.
 
     **Example:**
 
-    ```plaintext
+    ```shell-session
     $ wget https://releases.hashicorp.com/sentinel/0.3.1/sentinel_0.3.1_darwin_amd64.zip
     $ unzip sentinel_0.3.1_darwin_amd64.zip -d /usr/local/bin
     ```
@@ -213,7 +213,7 @@ syntax and to document expected behavior.
     `business-hrs.sentinel` policies are located. Under the `test` folder, you want
     to create a sub-folder for each policy: **`cidr-check`** and **`business-hrs`**.
 
-    ```plaintext
+    ```shell-session
     $ mkdir -p test/business-hrs
     $ mkdir -p test/cidr-check
     ```
@@ -316,7 +316,7 @@ syntax and to document expected behavior.
 
 1.  Execute the test:
 
-    ```plaintext
+    ```shell-session
     $ sentinel test
 
     PASS - business-hrs.sentinel
@@ -346,14 +346,14 @@ going to create is Endpoint Governing Policies (EGPs).
 1.  Store the Base64 encoded `cidr-check.sentinel` policy in an environment
     variable named `POLICY`.
 
-    ```plaintext
+    ```shell-session
     $ POLICY=$(base64 cidr-check.sentinel)
     ```
 
 1.  Create a policy `cidr-check` with enforcement level of **hard-mandatory** to
     reject all requests coming from IP addressed that are not internal.
 
-    ```plaintext
+    ```shell-session
     $ vault write sys/policies/egp/cidr-check \
             policy="${POLICY}" \
             paths="secret/*" \
@@ -362,7 +362,7 @@ going to create is Endpoint Governing Policies (EGPs).
 
 1.  You can read the policy by executing the following command:
 
-    ```plaintext
+    ```shell-session
     $ vault read sys/policies/egp/cidr-check
     ```
 
@@ -399,13 +399,13 @@ policy, endpoint paths, and enforcement level.
 1.  Store the Base64 encoded `cidr-check.sentinel` policy in an environment
     variable named `POLICY`.
 
-    ```plaintext
+    ```shell-session
     $ POLICY=$(base64 cidr-check.sentinel)
     ```
 
 1.  Create API request payload.
 
-    ```plaintext
+    ```shell-session
     $ tee cidr-payload.json <<EOF
     {
       "policy": "${POLICY}",
@@ -418,7 +418,7 @@ policy, endpoint paths, and enforcement level.
 1.  Create a policy `cidr-check` with enforcement level of **hard-mandatory** to
     reject all requests coming from IP addressed that are not internal.
 
-    ```plaintext
+    ```shell-session
     $ curl --header "X-Vault-Token: ..." \
             --request PUT \
             --data @cidr-payload.json \
@@ -449,7 +449,7 @@ policy, endpoint paths, and enforcement level.
 
 1.  You can list the EGPs that were created.
 
-    ```plaintext
+    ```shell-session
     $ curl --header "X-Vault-Token: ..." \
            --request LIST \
            http://127.0.0.1:8200/v1/sys/policies/egp | jq

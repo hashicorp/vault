@@ -80,13 +80,13 @@ management tool.
 
 1. Enable the AppRole auth method:
 
-   ```text
+   ```shell-session
    $ vault auth enable approle
    ```
 
 1. Create a named role:
 
-   ```text
+   ```shell-session
    $ vault write auth/approle/role/my-role \
        secret_id_ttl=10m \
        token_num_uses=10 \
@@ -102,14 +102,14 @@ documentation.
 
 1. Fetch the RoleID of the AppRole:
 
-   ```text
+   ```shell-session
    $ vault read auth/approle/role/my-role/role-id
    role_id     db02de05-fa39-4855-059b-67221c5c2f63
    ```
 
 1. Get a SecretID issued against the AppRole:
 
-   ```text
+   ```shell-session
    $ vault write -f auth/approle/role/my-role/secret-id
    secret_id               6a174c20-f6de-a53c-74d2-6018fcceff64
    secret_id_accessor      c454f7e5-996e-7230-6074-6ef26b7bcf86

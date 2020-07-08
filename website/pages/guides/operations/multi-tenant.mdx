@@ -98,14 +98,14 @@ To create a new namespace, run: **`vault namespace create <namespace_name>`**
 
 1.  Create a namespace dedicated to the **`education`** organizations:
 
-    ```plaintext
+    ```shell-session
     $ vault namespace create education
     ```
 
 1.  Create child namespaces called `training` and `certification` under the
     `education` namespace:
 
-    ```plaintext
+    ```shell-session
     $ vault namespace create -namespace=education training
 
     $ vault namespace create -namespace=education certification
@@ -113,7 +113,7 @@ To create a new namespace, run: **`vault namespace create <namespace_name>`**
 
 1.  List the created namespaces:
 
-    ```plaintext
+    ```shell-session
     $ vault namespace list
     education/
 
@@ -137,7 +137,7 @@ name.
 
 1.  Create a namespace for the **`education`** organization:
 
-    ```plaintext
+    ```shell-session
     $ curl --header "X-Vault-Token: ..." \
            --request POST \
            http://127.0.0.1:8200/v1/sys/namespaces/education
@@ -165,7 +165,7 @@ name.
 
 1.  List the created namespaces:
 
-    ```plaintext
+    ```shell-session
     $ curl --header "X-Vault-Token: ..." \
            --request LIST
            http://127.0.0.1:8200/v1/sys/namespaces | jq
@@ -335,14 +335,14 @@ To target a specific namespace, you can do one of the following:
 - Set **`VAULT_NAMESPACE`** so that all subsequent CLI commands will be
   executed against that particular namespace
 
-  ```plaintext
+  ```shell-session
   $ export VAULT_NAMESPACE=<namespace_name>
   $ vault policy write <policy_name> <policy_file>
   ```
 
 - Specify the target namespace with **`-namespace`** flag
 
-  ```plaintext
+  ```shell-session
   $ vault policy write -namespace=<namespace_name> <policy_name> <policy_file>
   ```
 
@@ -502,8 +502,8 @@ $ vault write -namespace=education identity/entity-alias name="bsmith" \
 1.  Click the Vault CLI shell icon (**`>_`**) to open a command shell. Enter the
     following command to create a new user, **`bob`**.
 
-    ```plaintext
-    vault write auth/userpass/users/bob password="password"
+    ```shell-session
+    $ vault write auth/userpass/users/bob password="password"
     ```
 
     ![Create Policy](/img/vault-multi-tenant-4.png)
@@ -547,8 +547,8 @@ $ vault write -namespace=education identity/entity-alias name="bsmith" \
 1.  Click the Vault CLI shell icon (**`>_`**) to open a command shell. Enter the
     following command to create a new user, **`bsmith`**.
 
-    ```plaintext
-    vault write auth/userpass/users/bsmith password="password"
+    ```shell-session
+    $ vault write auth/userpass/users/bsmith password="password"
     ```
 
 1.  Set the **CURRENT NAMESPACE** back to **education**.
@@ -557,8 +557,8 @@ $ vault write -namespace=education identity/entity-alias name="bsmith" \
     `<Bob_Smith_entity_id>` with the value you copied at step 13, and
     `<mount_accessor>` with the value you copied at step 20.
 
-    ```plaintext
-    vault write identity/entity-alias name="bsmith" \
+    ```shell-session
+    $ vault write identity/entity-alias name="bsmith" \
             canonical_id=<Bob_Smith_entity_id> mount_accessor=<mount_accessor>
     ```
 
@@ -881,7 +881,7 @@ guide using the LDAP auth method enabled in the root namespace.
 1.  Enable and configure the desired auth method (e.g. LDAP) in the root
     namespace.
 
-    ```plaintext
+    ```shell-session
     $ vault auth enable ldap
 
     $ vault write auth/ldap/config \
@@ -917,7 +917,7 @@ guide using the LDAP auth method enabled in the root namespace.
 1.  In the `education/training` namespace, create an _internal_ group which has
     the external group (`training_admin_root`) as its member.
 
-    ```plaintext
+    ```shell-session
     $ vault write -namespace=education/training identity/group \
             name="Training Admin" \
             policies="training-admin" \

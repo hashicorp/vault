@@ -137,7 +137,7 @@ Click **Enable Engine** to complete.
 
 1. Enable performance replication on the **primary** cluster.
 
-   ```plaintext
+   ```shell-session
    $ vault write -f sys/replication/performance/primary/enable
    WARNING! The following warnings were returned from Vault:
 
@@ -147,7 +147,7 @@ Click **Enable Engine** to complete.
 
 1. Generate a secondary token.
 
-   ```plaintext
+   ```shell-session
    $ vault write sys/replication/performance/primary/secondary-token id="secondary"
    Key                              Value
    ---                              -----
@@ -160,14 +160,14 @@ Click **Enable Engine** to complete.
 
 1. Create a **mount filter** to blacklist `EU_GDPR_data`.
 
-   ```plaintext
+   ```shell-session
    $ vault write sys/replication/performance/primary/mount-filter/secondary  \
           mode="blacklist" paths="EU_GDPR_data/"
    ```
 
 1. Enable performance replication on the **secondary** cluster.
 
-   ```plaintext
+   ```shell-session
    $ vault write sys/replication/performance/secondary/enable token="..."
    ```
 
@@ -179,7 +179,7 @@ Click **Enable Engine** to complete.
 
 1. Enable performance replication on the **primary** cluster.
 
-   ```plaintext
+   ```shell-session
    $ curl --header "X-Vault-Token: ..." \
           --request POST \
           --data '{"primary_cluster_addr":"https://eu-west-1.compute.com:8200"}' \
@@ -188,7 +188,7 @@ Click **Enable Engine** to complete.
 
 1. Generate a secondary token.
 
-   ```plaintext
+   ```shell-session
    $ curl --header "X-Vault-Token: ..." \
           --request POST \
           --data '{ "id": "secondary"}' \
@@ -213,7 +213,7 @@ Click **Enable Engine** to complete.
 
 1. Create a **mount filter** to blacklist `EU_GDPR_data`.
 
-   ```plaintext
+   ```shell-session
    $ tee payload.json <<EOF
    {
      "mode": "blacklist",
@@ -229,7 +229,7 @@ Click **Enable Engine** to complete.
 
 1. Enable performance replication on the **secondary** cluster.
 
-   ```plaintext
+   ```shell-session
    $ tee payload.json <<EOF
    {
      "token": "..."

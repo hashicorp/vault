@@ -38,15 +38,15 @@ TMPDIR=/tmp
 
 1. Create a key for Kubernetes to sign.
 
-   ```bash
-   openssl genrsa -out ${TMPDIR}/vault.key 2048
+   ```shell-session
+   $ openssl genrsa -out ${TMPDIR}/vault.key 2048
    ```
 
 2. Create a Certificate Signing Request (CSR).
 
    1. Create a file `${TMPDIR}/csr.conf` with the following contents:
 
-      ```
+      ```shell-session
       $ cat <<EOF >${TMPDIR}/csr.conf
       [req]
       req_extensions = v3_req
@@ -68,15 +68,15 @@ TMPDIR=/tmp
 
    2. Create a CSR.
 
-      ```bash
-      openssl req -new -key ${TMPDIR}/vault.key -subj "/CN=${SERVICE}.${NAMESPACE}.svc" -out ${TMPDIR}/server.csr -config ${TMPDIR}/csr.conf
+      ```shell-session
+      $ openssl req -new -key ${TMPDIR}/vault.key -subj "/CN=${SERVICE}.${NAMESPACE}.svc" -out ${TMPDIR}/server.csr -config ${TMPDIR}/csr.conf
       ```
 
 3. Create the certificate
 
    1. Create a file `${TMPDIR}/csr.yaml` with the following contents:
 
-      ```
+      ```shell-session
       $ export CSR_NAME=vault-csr
       $ cat <<EOF >${TMPDIR}/csr.yaml
       apiVersion: certificates.k8s.io/v1beta1
@@ -98,8 +98,8 @@ TMPDIR=/tmp
 
    2. Send the CSR to Kubernetes.
 
-      ```bash
-      kubectl create -f ${TMPDIR}/csr.yaml
+      ```shell-session
+      $ kubectl create -f ${TMPDIR}/csr.yaml
       ```
 
       -> If this process is automated, you may need to wait to ensure the CSR has been received and stored:
@@ -107,16 +107,16 @@ TMPDIR=/tmp
 
    3. Approve the CSR in Kubernetes.
 
-      ```bash
-      kubectl certificate approve ${CSR_NAME}
+      ```shell-session
+      $ kubectl certificate approve ${CSR_NAME}
       ```
 
 ## 2. Store key, cert, and Kubernetes CA into Kubernetes secrets store
 
 1. Retrieve the certificate.
 
-   ```bash
-   serverCert=$(kubectl get csr ${CSR_NAME} -o jsonpath='{.status.certificate}')
+   ```shell-session
+   $ serverCert=$(kubectl get csr ${CSR_NAME} -o jsonpath='{.status.certificate}')
    ```
 
    -> If this process is automated, you may need to wait to ensure the certificate has been created.
@@ -124,20 +124,20 @@ TMPDIR=/tmp
 
 2. Write the certificate out to a file.
 
-   ```bash
-   echo "${serverCert}" | openssl base64 -d -A -out ${TMPDIR}/vault.crt
+   ```shell-session
+   $ echo "${serverCert}" | openssl base64 -d -A -out ${TMPDIR}/vault.crt
    ```
 
 3. Retrieve Kubernetes CA.
 
-   ```bash
-   kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[].cluster.certificate-authority-data}' | base64 -d > ${TMPDIR}/vault.ca
+   ```shell-session
+   $ kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[].cluster.certificate-authority-data}' | base64 -d > ${TMPDIR}/vault.ca
    ```
 
 4. Store the key, cert, and Kubernetes CA into Kubernetes secrets.
 
-   ```bash
-   kubectl create secret generic ${SECRET_NAME} \
+   ```shell-session
+   $ kubectl create secret generic ${SECRET_NAME} \
            --namespace ${NAMESPACE} \
            --from-file=vault.key=${TMPDIR}/vault.key \
            --from-file=vault.crt=${TMPDIR}/vault.crt \

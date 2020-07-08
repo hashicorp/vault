@@ -74,13 +74,13 @@ management tool.
 
 1. Enable the Google Cloud auth method:
 
-   ```text
+   ```shell-session
    $ vault auth enable gcp
    ```
 
 1. Configure the auth method credentials:
 
-   ```text
+   ```shell-session
    $ vault write auth/gcp/config \
        credentials=@/path/to/credentials.json
    ```
@@ -93,7 +93,7 @@ management tool.
 
    For an `iam`-type role:
 
-   ```text
+   ```shell-session
    $ vault write auth/gcp/role/my-iam-role \
        type="iam" \
        policies="dev,prod" \
@@ -102,7 +102,7 @@ management tool.
 
    For a `gce`-type role:
 
-   ```text
+   ```shell-session
    $ vault write auth/gcp/role/my-gce-role \
        type="gce" \
        policies="dev,prod" \

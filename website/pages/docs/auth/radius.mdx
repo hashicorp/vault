@@ -55,13 +55,13 @@ The response will contain a token at `auth.client_token`:
 
 1. Enable the radius auth method:
 
-   ```text
+   ```shell-session
    $ vault auth enable radius
    ```
 
 1. Configure connection details for your RADIUS server.
 
-   ```text
+   ```shell-session
    $ vault write auth/radius/users/mitchellh policies=admins
    ```
 

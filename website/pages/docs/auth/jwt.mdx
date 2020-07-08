@@ -199,8 +199,8 @@ why things aren't working. Some tips for setting up OIDC:
   the Vault CLI. In these cases the best approach is to write the entire configuration as a single
   JSON object:
 
-```text
-vault write auth/oidc/role/demo -<<EOF
+```shell-session
+$ vault write auth/oidc/role/demo -<<EOF
 {
   "user_claim": "sub",
   "bound_audiences": "abc123",
@@ -300,7 +300,7 @@ management tool.
     Discovery URL must be present. For OIDC roles, OIDC Discovery URL, OIDC Client ID and OIDC Client Secret are required. For the
     list of available configuration options, please see the [API documentation](/api/auth/jwt).
 
-    ```text
+    ```shell-session
     $ vault write auth/jwt/config \
         oidc_discovery_url="https://myco.auth0.com/" \
         oidc_client_id="m5i8bj3iofytj" \
@@ -310,8 +310,8 @@ management tool.
 
 1.  Create a named role:
 
-    ```text
-    vault write auth/jwt/role/demo \
+    ```shell-session
+    $ vault write auth/jwt/role/demo \
         bound_subject="r3qX9DljwFIWhsiqwFiu38209F10atW6@clients" \
         bound_audiences="https://vault.plugin.auth.jwt.test" \
         user_claim="https://vault/user" \

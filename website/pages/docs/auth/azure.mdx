@@ -102,13 +102,13 @@ tool.
 
 1. Enable Azure authentication in Vault:
 
-   ```text
+   ```shell-session
    $ vault auth enable azure
    ```
 
 1. Configure the Azure auth method:
 
-   ```text
+   ```shell-session
    $ vault write auth/azure/config \
        tenant_id=7cd1f227-ca67-4fc6-a1a4-9888ea7f388c \
        resource=https://vault.hashicorp.com \
@@ -121,7 +121,7 @@ tool.
 
 1. Create a role:
 
-   ```text
+   ```shell-session
    $ vault write auth/azure/role/dev-role \
        policies="prod,dev" \
        bound_subscription_ids=6a1d5988-5917-4221-b224-904cd7e24a25 \
@@ -179,7 +179,7 @@ for your server at `path/to/plugins`:
 
 1. Enable the plugin in the catalog:
 
-   ```text
+   ```shell-session
    $ vault write sys/plugins/catalog/auth/azure-auth \
        command="vault-plugin-auth-azure" \
        sha256="..."
@@ -187,7 +187,7 @@ for your server at `path/to/plugins`:
 
 1. Enable the azure auth method as a plugin:
 
-   ```text
+   ```shell-session
    $ vault auth enable -path=azure azure-auth
    ```
 

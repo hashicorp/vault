@@ -105,13 +105,13 @@ management tool.
 
 1. Enable the certificate auth method:
 
-   ```text
+   ```shell-session
    $ vault auth enable cert
    ```
 
 1. Configure it with trusted certificates that are allowed to authenticate:
 
-   ```text
+   ```shell-session
    $ vault write auth/cert/certs/web \
        display_name=web \
        policies=web,prod \
