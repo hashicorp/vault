@@ -119,7 +119,7 @@ documentation.
 
 1. Enable the AppRole auth method:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \
@@ -129,7 +129,7 @@ documentation.
 
 1. Create an AppRole with desired set of policies:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \
@@ -139,7 +139,7 @@ documentation.
 
 1. Fetch the identifier of the role:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        http://127.0.0.1:8200/v1/auth/approle/role/my-role/role-id
@@ -157,7 +157,7 @@ documentation.
 
 1. Create a new secret identifier under the role:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \

@@ -63,8 +63,8 @@ Follow the steps below to add policies to your tenancy that allow the OCI comput
 
 - Configure the home_tenancy_id parameter in the Vault.
 
-```sh
-    curl --header "X-Vault-Token: $roottoken" --request PUT \
+```shell-session
+$ curl --header "X-Vault-Token: $roottoken" --request PUT \
     --data @hometenancyid.json \
     http://127.0.0.1:8200/v1/auth/oci/config (127.0.0.1:8200/v1/auth/oci/config)
 ```
@@ -88,8 +88,8 @@ Group or Dynamic Group OCIDs in your tenancy that has users or instances that yo
 
 Create the Vault admin role:
 
-```sh
-    curl --header "X-Vault-Token: $roottoken" --request PUT \
+```shell-session
+$ curl --header "X-Vault-Token: $roottoken" --request PUT \
     --data @vaultadminrole.json \
     http://127.0.0.1:8200/v1/auth/oci/role/vaultadminrole (127.0.0.1:8200/v1/auth/oci/role/vaultadminrole)
 ```
@@ -129,16 +129,16 @@ You will see a response that includes a token with the previously added policy.
 
 1.  Add the role.
 
-```sh
-curl --header "X-Vault-Token: $token" --request PUT \
---data @devrole.json \
-http://127.0.0.1:8200/v1/auth/oci/role/devrole (127.0.0.1:8200/v1/auth/oci/role/devrole)
+```shell-session
+$ curl --header "X-Vault-Token: $token" --request PUT \
+    --data @devrole.json \
+    http://127.0.0.1:8200/v1/auth/oci/role/devrole (127.0.0.1:8200/v1/auth/oci/role/devrole)
 ```
 
 1.  Login to Vault assuming the devrole.
 
-```sh
-vault login -method=oci auth_type=instance role=vaultadminrole`
+```shell-session
+$ vault login -method=oci auth_type=instance role=vaultadminrole`
 ```
 
 ## Authentication
@@ -188,7 +188,7 @@ DUhxkFIWtTtLBj3sUzaFj34XE6YZAHc9r2DmE4pMwOAy/kiITcZxa1oHPOeRheC0jP2dqbTll
 1.  Add the signed headers to the "request_headers" field and make the actual request to vault. An example is given below:
 
 ```sh
-POST http://127.0.0.1/v1/auth/oci/login/devrole
+$ POST http://127.0.0.1/v1/auth/oci/login/devrole
    "request_headers": {
        "date": ["Fri, 22 Aug 2019 21:02:19 GMT"],
        "(request-target)": ["get /v1/auth/oci/login/devrole"],
