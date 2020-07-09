@@ -160,10 +160,7 @@ module('Unit | Service | wizard', function(hooks) {
       method: 'clearFeatureData',
       args: [],
       expectedResults: {
-        props: [
-          { prop: 'currentMachine', value: null },
-          { prop: 'featureMachineHistory', value: null },
-        ],
+        props: [{ prop: 'currentMachine', value: null }, { prop: 'featureMachineHistory', value: null }],
         storage: [
           { key: STORAGE_KEYS.FEATURE_STATE, value: undefined },
           { key: STORAGE_KEYS.FEATURE_STATE_HISTORY, value: undefined },
@@ -285,10 +282,7 @@ module('Unit | Service | wizard', function(hooks) {
       args: [],
       properties: { featureList: ['secrets', 'tools'] },
       expectedResults: {
-        props: [
-          { prop: 'featureState', value: 'idle' },
-          { prop: 'currentMachine', value: 'secrets' },
-        ],
+        props: [{ prop: 'featureState', value: 'idle' }, { prop: 'currentMachine', value: 'secrets' }],
       },
     },
     {

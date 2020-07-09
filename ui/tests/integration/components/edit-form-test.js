@@ -18,10 +18,7 @@ const flash = Service.extend({
 
 const createModel = (canDelete = true) => {
   return EmberObject.create({
-    fields: [
-      { name: 'one', type: 'string' },
-      { name: 'two', type: 'boolean' },
-    ],
+    fields: [{ name: 'one', type: 'string' }, { name: 'two', type: 'boolean' }],
     canDelete,
     destroyRecord() {
       return resolve();

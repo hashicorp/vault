@@ -17,21 +17,13 @@ const storeService = Service.extend({
     return new Promise((resolve, reject) => {
       switch (modelType) {
         case 'policy/acl':
-          resolve([
-            { id: '1', name: '1' },
-            { id: '2', name: '2' },
-            { id: '3', name: '3' },
-          ]);
+          resolve([{ id: '1', name: '1' }, { id: '2', name: '2' }, { id: '3', name: '3' }]);
           break;
         case 'policy/rgp':
           reject({ httpStatus: 403, message: 'permission denied' });
           break;
         case 'identity/entity':
-          resolve([
-            { id: '7', name: 'seven' },
-            { id: '8', name: 'eight' },
-            { id: '9', name: 'nine' },
-          ]);
+          resolve([{ id: '7', name: 'seven' }, { id: '8', name: 'eight' }, { id: '9', name: 'nine' }]);
           break;
         case 'server/error':
           var error = new Error('internal server error');

@@ -138,10 +138,9 @@ export default Component.extend(DEFAULTS, {
     const adapter = this.get('store').adapterFor('cluster');
     const method = adapter[action];
 
-    method.call(adapter, data, { checkStatus }).then(
-      resp => this.actionSuccess(resp),
-      (...args) => this.actionError(...args)
-    );
+    method
+      .call(adapter, data, { checkStatus })
+      .then(resp => this.actionSuccess(resp), (...args) => this.actionError(...args));
   },
 
   actions: {
