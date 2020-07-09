@@ -518,6 +518,25 @@ func VerifyRaftConfiguration(core *vault.TestClusterCore, numCores int) error {
 	return nil
 }
 
+func RaftAppliedIndex(core *vault.TestClusterCore) uint64 {
+	return core.UnderlyingRawStorage.(*raft.RaftBackend).AppliedIndex()
+}
+
+func WaitForRaftApply(t testing.T, core *vault.TestClusterCore, index uint64) {
+	t.Helper()
+
+	backend := core.UnderlyingRawStorage.(*raft.RaftBackend)
+	for i := 0; i < 30; i++ {
+		if backend.AppliedIndex() >= index {
+			return
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	t.Fatalf("node did not apply index")
+}
+
 // AwaitLeader waits for one of the cluster's nodes to become leader.
 func AwaitLeader(t testing.T, cluster *vault.TestCluster) (int, error) {
 
@@ -532,10 +551,7 @@ func AwaitLeader(t testing.T, cluster *vault.TestCluster) (int, error) {
 				continue
 			}
 
-			isLeader, _, _, err := core.Leader()
-			if err != nil {
-				t.Fatal(err)
-			}
+			isLeader, _, _, _ := core.Leader()
 			if isLeader {
 				return i, nil
 			}
