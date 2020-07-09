@@ -1,86 +1,25 @@
-# MongoDB Atlas Database Secrets Engine
+# HashiCorp Vault Database Secrets Engine - MongoDB Atlas plugin
 
-This plugin provides unique, short-lived credentials for [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
-It is to be used with [Hashicorp Vault](https://www.github.com/hashicorp/vault).
+MongoDB Atlas is one of the supported plugins for the HashiCorp Vault Database Secrets Engine and allows for the programmatic generation of unique, ephemeral MongoDB [Database User](https://docs.atlas.mongodb.com/reference/api/database-users/) credentials in MongoDB Atlas Projects.
 
-**Please note**: We take Vault's security and our users' trust very seriously. If you believe you have found a security issue in Vault, _please responsibly disclose_ by contacting us at [security@hashicorp.com](mailto:security@hashicorp.com).
+**The plugin is included in version 1.4 of Vault.**
+
+## Support, Bugs and Feature Requests
+Support for the HashiCorp Vault Database Secrets Engine - MongoDB Atlas is provided under MongoDB Atlas support plans. Please submit support questions within the Atlas UI.  Vault support is via HashiCorp.
+
+Bugs should be filed under the Issues section of this repo.
+
+Feature requests can be submitted in the Issues section or directly to MongoDB at https://feedback.mongodb.com/forums/924145-atlas - just select the Vault plugin as the category or vote for an already suggested feature.
 
 ## Quick Links
-
-- [Database Secrets Engine for MongoDB Atlas](https://www.vaultproject.io/docs/secrets/databases/mongodbatlas.html)
+- [Database Secrets Engine for MongoDB Atlas - Docs](https://www.vaultproject.io/docs/secrets/databases/mongodbatlas)
+- [Database Secrets Engine for MongoDB Atlas - API Docs](https://www.vaultproject.io/api-docs/secret/databases/mongodbatlas/)
 - [MongoDB Atlas Website](https://www.mongodb.com/cloud/atlas)
 - [Vault Website](https://www.vaultproject.io)
-- [Vault Github](https://www.github.com/hashicorp/vault)
 
-## Getting Started
+**Please note**: Hashicorp takes Vault's security and their users' trust very seriously, as does MongoDB.
 
-This is a Vault plugin and is meant to work with Vault. This guide assumes you have already installed Vault
-and have a basic understanding of how Vault works.
-
-Otherwise, first read this guide on how to [get started with Vault](https://www.vaultproject.io/intro/getting-started/install.html).
-
-To learn specifically about how plugins work, see documentation on [Vault plugins](https://www.vaultproject.io/docs/internals/plugins.html).
-
-## Installation
-
-This plugin is bundled in Vault version 1.4.0 or later. It may also be built and mounted externally
-with earlier versions of Vault. For details on this process please see the documentation for Vault's
-[plugin system](https://www.vaultproject.io/docs/internals/plugins.html).
-
-## Setup
-
-1. Enable the database secrets engine if it is not already enabled:
-
-    ```text
-    $ vault secrets enable database
-    Success! Enabled the database secrets engine at: database/
-    ```
-
-    The secrets engine will be enabled at the default path which is name of the engine. To
-    enable the secrets engine at a different path use the `-path` argument.
-
-1. Configure Vault with the proper plugin and connection information:
-
-    ```text
-    $ vault write database/config/my-mongodbatlas-database \
-        plugin_name=mongodbatlas-database-plugin \
-        allowed_roles="my-role" \
-        public_key="a-public-key" \
-        private_key="a-private-key!" \
-        project_id="a-project-id"
-    ```
-
-2. Configure a role that maps a name in Vault to a MongoDB Atlas command that executes and
-   creates the Database User credential:
-
-    ```text
-    $ vault write database/roles/my-role \
-        db_name=my-mongodbatlas-database \
-        creation_statements='{ "database_name": "admin", "roles": [{"databaseName":"admin","roleName":"atlasAdmin"}]}' \
-        default_ttl="1h" \
-        max_ttl="24h"
-    Success! Data written to: database/roles/my-role
-    ```
-
-## Usage
-
-After the secrets engine is configured and a user/machine has a Vault token with
-the proper permissions, it can generate credentials.
-
-1. Generate a new credential by reading from the `/creds` endpoint with the name
-of the role:
-
-    ```text
-    $ vault read database/creds/my-role
-    Key                Value
-    ---                -----
-    lease_id           database/creds/my-role/2f6a614c-4aa2-7b19-24b9-ad944a8d4de6
-    lease_duration     1h
-    lease_renewable    true
-    password           A1a-QwxApKgnfCp1AJYN
-    username           v-5WFTBKdwOTLOqWLgsjvH-1565815206
-    ```
-
-
-For more details on configuring and using the plugin, refer to the [Database Secrets Engine for MongoDB Atlas](https://www.vaultproject.io/docs/secrets/databases/mongodbatlas.html)
-documentation.
+If you believe you have found a security issue in Vault or with this plugin, _please responsibly disclose_ by
+contacting HashiCorp at [security@hashicorp.com](mailto:security@hashicorp.com) and contact MongoDB
+directly via [security@mongodb.com](mailto:security@mongodb.com) or
+[open a ticket](https://jira.mongodb.org/plugins/servlet/samlsso?redirectTo=%2Fbrowse%2FSECURITY) (link is external).
