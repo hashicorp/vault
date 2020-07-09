@@ -94,10 +94,10 @@ type Backend struct {
 	// because a flood of requests should not block refreshing the TTLs on the
 	// lock.
 	//
-	// These values will be nil if haEnabled is false.
+	// This value will be nil if haEnabled is false.
 	haClient *spanner.Client
 
-	// logger and permitPool are internal constructs.
+	// logger is the internal logger.
 	logger log.Logger
 }
 
