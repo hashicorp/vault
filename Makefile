@@ -57,6 +57,9 @@ dev-dynamic-mem: dev-dynamic
 docker-dev: prep
 	docker build -f scripts/docker/Dockerfile -t vault:dev .
 
+docker-dev-ui: prep
+	docker build -f scripts/docker/Dockerfile.ui -t vault:dev-ui .
+
 # test runs the unit tests and vets the code
 test: prep
 	@CGO_ENABLED=$(CGO_ENABLED) \
