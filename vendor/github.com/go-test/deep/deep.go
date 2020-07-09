@@ -99,7 +99,7 @@ func (c *cmp) equals(a, b reflect.Value, level int) {
 		return
 	}
 
-	// If differenet types, they can't be equal
+	// If different types, they can't be equal
 	aType := a.Type()
 	bType := b.Type()
 	if aType != bType {
@@ -112,11 +112,16 @@ func (c *cmp) equals(a, b reflect.Value, level int) {
 	aKind := a.Kind()
 	bKind := b.Kind()
 
+	// Do a and b have underlying elements? Yes if they're ptr or interface.
+	aElem := aKind == reflect.Ptr || aKind == reflect.Interface
+	bElem := bKind == reflect.Ptr || bKind == reflect.Interface
+
 	// If both types implement the error interface, compare the error strings.
 	// This must be done before dereferencing because the interface is on a
-	// pointer receiver.
+	// pointer receiver. Re https://github.com/go-test/deep/issues/31, a/b might
+	// be primitive kinds; see TestErrorPrimitiveKind.
 	if aType.Implements(errorType) && bType.Implements(errorType) {
-		if a.Elem().IsValid() && b.Elem().IsValid() { // both err != nil
+		if (!aElem || !a.IsNil()) && (!bElem || !b.IsNil()) {
 			aString := a.MethodByName("Error").Call(nil)[0].String()
 			bString := b.MethodByName("Error").Call(nil)[0].String()
 			if aString != bString {
@@ -127,17 +132,13 @@ func (c *cmp) equals(a, b reflect.Value, level int) {
 	}
 
 	// Dereference pointers and interface{}
-	if aElem, bElem := aKind == reflect.Ptr || aKind == reflect.Interface,
-		bKind == reflect.Ptr || bKind == reflect.Interface; aElem || bElem {
-
+	if aElem || bElem {
 		if aElem {
 			a = a.Elem()
 		}
-
 		if bElem {
 			b = b.Elem()
 		}
-
 		c.equals(a, b, level+1)
 		return
 	}
