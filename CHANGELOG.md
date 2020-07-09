@@ -2,6 +2,8 @@
 
 CHANGES:
 
+* storage/gcs: The `credentials_file` config option has been removed. The `GOOGLE_APPLICATION_CREDENTIALS` environment variable
+  or default credentials may be used instead [[GH-9424](https://github.com/hashicorp/vault/pull/9424)]
 * storage/raft: The storage configuration now accepts a new `max_entry_size` config that will limit
   the total size in bytes of any entry committed via raft. It defaults to `"1048576"` (1MiB). [[GH-9027](https://github.com/hashicorp/vault/pull/9027)]
 * token: Token creation with custom token ID via `id` will no longer allow periods (`.`) as part of the input string. 
