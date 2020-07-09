@@ -83,7 +83,7 @@ type Backend struct {
 	// because a flood of requests should not block refreshing the TTLs on the
 	// lock.
 	//
-	// These values will be nil if haEnabled is false.
+	// This value will be nil if haEnabled is false.
 	haClient *storage.Client
 
 	// logger is an internal logger.
