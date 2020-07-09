@@ -153,7 +153,7 @@ any storage backend.
     Now, bring the standby node back up and run the unseal command on each key, by
     supplying the `-migrate` flag. 
 
-    * Supply Shamir unseal keys if old seal was Shamir, which will be migrated
+    * Supply Shamir unseal keys if the old seal was Shamir, which will be migrated
       as the recovery keys for the KMS seal. 
     * Supply recovery keys if the old seal is one of KMS seals, which will be
       migrated as the recovery keys of the new KMS seal, or as Shamir unseal
