@@ -24,7 +24,7 @@ const IS_REINDEXING = {
   state: 'running',
 };
 
-module('Integration | Enterprise | Component | replication-dashboard', function(hooks) {
+module('Integration | Component | replication-dashboard', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
