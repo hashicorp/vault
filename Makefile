@@ -55,7 +55,6 @@ dev-dynamic-mem: dev-dynamic
 # Creates a Docker image by adding the compiled linux/amd64 binary found in ./bin.
 # The resulting image is tagged "vault:dev". 
 docker-dev: prep
-	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 XC_OSARCH='linux/amd64' sh -c "'$(CURDIR)/scripts/build.sh'"
 	docker build -f scripts/docker/Dockerfile -t vault:dev .
 
 # test runs the unit tests and vets the code

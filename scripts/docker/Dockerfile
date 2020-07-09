@@ -1,3 +1,19 @@
+# Builder
+ARG VERSION=1.13.10
+
+FROM golang:${VERSION} AS builder
+
+ARG CGO_ENABLED=0
+ARG BUILD_TAGS
+
+WORKDIR /go/src/github.com/hashicorp/vault
+COPY . .
+
+RUN make bootstrap \
+  && CGO_ENABLED=$CGO_ENABLED BUILD_TAGS='$BUILD_TAGS' VAULT_DEV_BUILD=1 XC_OSARCH='linux/amd64' sh -c "'./scripts/build.sh'"
+
+# Docker Image
+
 FROM alpine:3.10
 
 # Create a vault user and group first so the IDs get set the same way,
@@ -7,9 +23,9 @@ RUN addgroup vault && \
 
 # Set up certificates, our base tools, and Vault.
 RUN set -eux; \
-    apk add --no-cache ca-certificates libcap su-exec dumb-init tzdata 
+    apk add --no-cache ca-certificates libcap su-exec dumb-init tzdata
 
-ADD bin/vault /bin/vault
+COPY --from=builder /go/bin/vault /bin/vault
 
 # /vault/logs is made available to use as a location to store audit logs, if
 # desired; /vault/file is made available to use as a location with the file
