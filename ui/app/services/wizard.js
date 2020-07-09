@@ -38,7 +38,11 @@ export default Service.extend(DEFAULTS, {
       this.set('componentState', this.getExtState(COMPONENT_STATE));
     }
     let stateNodes = TutorialMachine.getStateNodes(this.currentState);
-    this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []), null, 'tutorial');
+    this.executeActions(
+      stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []),
+      null,
+      'tutorial'
+    );
 
     if (this.storageHasKey(FEATURE_LIST)) {
       this.set('featureList', this.getExtState(FEATURE_LIST));
@@ -293,7 +297,11 @@ export default Service.extend(DEFAULTS, {
     }
     this.saveState('nextStep', next.value);
     let stateNodes = FeatureMachine.getStateNodes(this.featureState);
-    this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []), null, 'feature');
+    this.executeActions(
+      stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []),
+      null,
+      'feature'
+    );
   },
 
   startFeature() {

@@ -34,7 +34,11 @@ storiesOf('Select', module)
         isInline: boolean('isInline', false),
         valueAttribute: select('valueAttribute', Object.keys(OPTIONS[0]), 'value'),
         labelAttribute: select('labelAttribute', Object.keys(OPTIONS[0]), 'label'),
-        selectedValue: select('selectedValue', OPTIONS.map(o => o.label), 'tues'),
+        selectedValue: select(
+          'selectedValue',
+          OPTIONS.map(o => o.label),
+          'tues'
+        ),
       },
     }),
     { notes }
