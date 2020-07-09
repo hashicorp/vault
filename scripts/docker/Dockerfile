@@ -1,4 +1,6 @@
-# Builder
+# Multi-stage builder to avoid polluting users environment with wrong 
+# architecture binaries.  Since this binary is used in an alpine container, 
+# we're explicitly compiling for 'linux/amd64'
 ARG VERSION=1.13.10
 
 FROM golang:${VERSION} AS builder
