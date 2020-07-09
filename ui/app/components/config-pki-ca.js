@@ -7,6 +7,7 @@ export default Component.extend({
   classNames: 'config-pki-ca',
   store: service('store'),
   flashMessages: service(),
+  isCaCert: true,
 
   /*
    * @param boolean

@@ -96,14 +96,25 @@
     label=labelString
   }}
 {{else if (eq attr.options.editType "ttl")}}
-  <TtlPicker2
-    @onChange={{action (action "setAndBroadcastTtl" valuePath)}}
-    @label={{labelString}}
-    @helperTextDisabled="Vault will use the default lease duration"
-    @helperTextEnabled="Lease will expire after"
-    @description={{attr.helpText}}
-    @initialValue={{or (get model valuePath) attr.options.setDefault}}
-  />
+  {{#if isCaCert}}
+    <TtlPicker2
+      @onChange={{action (action "setAndBroadcastTtl" valuePath)}}
+      @label={{labelString}}
+      @helperTextDisabled="Vault will use the default lease duration"
+      @helperTextEnabled="Lease will expire after"
+      @description={{attr.helpText}}
+      @initialValue='720h'
+    />
+  {{else}}
+    <TtlPicker2
+      @onChange={{action (action "setAndBroadcastTtl" valuePath)}}
+      @label={{labelString}}
+      @helperTextDisabled="Vault will use the default lease duration"
+      @helperTextEnabled="Lease will expire after"
+      @description={{attr.helpText}}
+      @initialValue={{or (get model valuePath) attr.options.setDefault}}
+    />
+  {{/if}}
 {{else if (eq attr.options.editType "stringArray")}}
   {{string-list
     data-test-input=attr.name

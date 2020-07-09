@@ -53,7 +53,7 @@ export default DS.Model.extend({
   ttl: attr({
     label: 'TTL',
     editType: 'ttl',
-    defaultValue: '720h',
+    defaultValue: '30h',
   }),
 
   format: attr('string', {
