@@ -117,6 +117,14 @@ func migrateFromTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage
 		t.Fatal(diff)
 	}
 
+	// Write a new secret
+	_, err = leader.Client.Logical().Write("kv-wrapped/test", map[string]interface{}{
+		"zork": "quux",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Make sure the seal configs were updated correctly.
 	b, r, err := cluster.Cores[0].Core.PhysicalSealConfigs(context.Background())
 	if err != nil {
