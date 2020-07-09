@@ -17,17 +17,16 @@ The below `values.yaml` can be used to set up a single server Vault cluster with
 server:
   standalone:
     enabled: true
-    config: |
-      ui = true
-
-      listener "tcp" {
-        tls_disable = 1
-        address = "[::]:8200"
-        cluster_address = "[::]:8201"
-      }
-      storage "file" {
-        path = "/vault/data"
-      }
+    config:
+      ui: true
+      listener:
+        tcp:
+          tls_disable: 1
+          address: "[::]:8200"
+          cluster_address: "[::]:8201"
+      storage:
+        file:
+          path: "/vault/data"
 
   service:
     enabled: true

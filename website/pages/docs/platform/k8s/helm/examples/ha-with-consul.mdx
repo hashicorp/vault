@@ -42,24 +42,21 @@ server:
     enabled: true
     replicas: 5
 
-    config: |
-      ui = true
-
-      listener "tcp" {
-        tls_disable = 1
-        address = "[::]:8200"
-        cluster_address = "[::]:8201"
-      }
-
-      storage "consul" {
-        path = "vault"
-        address = "HOST_IP:8500"
-      }
-
-      seal "gcpckms" {
-         project     = "myproject"
-         region      = "global"
-         key_ring    = "vault-unseal-kr"
-         crypto_key  = "vault-unseal-key"
-      }
+    config:
+      ui: true
+      listener:
+        tcp:
+          tls_disable: 1
+          address: "[::]:8200"
+          cluster_address: "[::]:8201"
+      storage:
+        consul:
+          path: vault
+          address: "HOST_IP:8500"
+      seal:
+         gcpckms:
+         project: myproject
+         region: global
+         key_ring: "vault-unseal-kr"
+         crypto_key: "vault-unseal-key"
 ```
