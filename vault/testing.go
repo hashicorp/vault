@@ -1647,11 +1647,7 @@ func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOpt
 	tcc.Logger().Info("restarted test core", "core", idx)
 }
 
-func (testCluster *TestCluster) newCore(
-	t testing.T, idx int, coreConfig *CoreConfig,
-	opts *TestClusterOptions, listeners []*TestListener, pubKey interface{},
-) (func(), *Core, CoreConfig, http.Handler) {
-
+func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreConfig, opts *TestClusterOptions, listeners []*TestListener, pubKey interface{}) (func(), *Core, CoreConfig, http.Handler) {
 	localConfig := *coreConfig
 	cleanupFunc := func() {}
 	var handler http.Handler
