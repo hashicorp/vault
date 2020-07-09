@@ -317,7 +317,7 @@ PACKAGESPEC_TARGETS := \
 	build build-all build-ci \
 	aliases meta package \
 	package-meta stage-config stage \
-	watch-ci publish list-staged-builds
+	watch-ci publish-config publish list-staged-builds
 $(PACKAGESPEC_TARGETS):
 	@$(MAKE) -C $(LOCKDIR) $@
 ## end packagespec integration ##

@@ -272,11 +272,12 @@ QUERY_TARGETS := list-staged-builds watch-ci
 $(QUERY_TARGETS): RELEASE_SYSTEM_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
 $(QUERY_TARGETS):
 	@\
-		$(call EXPORT,PRODUCT_VERSION PRODUCT_REVISION) \
+		$(call EXPORT,PRODUCT_REVISION PRODUCT_VERSION) \
 		$(call INVOKE_RELEASER_TARGET,$@)
 
-# BUNDLE_TARGETS are targets acting on specific staged bundles.
-BUNDLE_TARGETS := publish inspect-staged-build
+# BUNDLE_TARGETS are targets acting on specific staged bundles, identified by
+# their BUNDLE_ID.
+BUNDLE_TARGETS := publish-config publish inspect-staged-build
 
 $(BUNDLE_TARGETS): RELEASE_SYSTEM_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
 $(BUNDLE_TARGETS):
