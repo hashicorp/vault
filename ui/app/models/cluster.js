@@ -53,6 +53,7 @@ export default DS.Model.extend({
   // this service exposes what mode the UI is currently viewing
   // replicationAttrs will then return the relevant `replication-attributes` fragment
   rm: service('replication-mode'),
+  drMode: alias('dr.mode'),
   replicationMode: alias('rm.mode'),
   replicationModeForDisplay: computed('replicationMode', function() {
     return this.replicationMode === 'dr' ? 'Disaster Recovery' : 'Performance';
