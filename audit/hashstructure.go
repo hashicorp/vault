@@ -351,7 +351,7 @@ func (w *hashWalker) Primitive(v reflect.Value) error {
 		s.Slice(si, si+1).Index(0).Set(resultVal)
 	default:
 		// Otherwise, we set it if if value is both addressable
-		// and is not an from an unexported field.
+		// and is not from an unexported field.
 		if setV.CanSet() {
 			setV.Set(resultVal)
 		}
