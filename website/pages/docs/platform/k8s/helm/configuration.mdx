@@ -122,7 +122,7 @@ and consider if they're appropriate for your deployment.
     * `ingress` - Values that configure Ingress services for Vault.
 
       ~> If deploying on OpenShift, these ingress settings are ignored. Use the [`route`](#route) configuration to expose Vault on OpenShift. <br/> <br/>
-      If [`ha`](#ha) is enabled the Ingress will point to the active vault server via the `active` Service. This requires vault 1.4+ and [service_registration](https://www.vaultproject.io/docs/configuration/service-registration/kubernetes) to be set in the config.
+      If [`ha`](#ha) is enabled the Ingress will point to the active vault server via the `active` Service. This requires vault 1.4+ and [service_registration](https://www.vaultproject.io/docs/configuration/service-registration/kubernetes) to be set in the vault config.
 
       - `enabled` (`boolean: false`) - When set to `true`, an [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) service will be created.
 
@@ -156,7 +156,7 @@ and consider if they're appropriate for your deployment.
 
     * `route` - Values that configure Route services for Vault in OpenShift
 
-      ~> If [`ha`](#ha) is enabled the Route will point to the active vault server via the `active` Service (requires vault 1.4+ and [service_registration](https://www.vaultproject.io/docs/configuration/service-registration/kubernetes) to be set in the config).
+      ~> If [`ha`](#ha) is enabled the Route will point to the active vault server via the `active` Service (requires vault 1.4+ and [service_registration](https://www.vaultproject.io/docs/configuration/service-registration/kubernetes) to be set in the vault config).
 
       - `enabled` (`boolean: false`) - When set to `true`, a Route for Vault will be created.
 
