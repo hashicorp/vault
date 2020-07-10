@@ -79,7 +79,12 @@ the wildcard subdomains. See the documentation for more
 information. This parameter accepts a comma-separated 
 string or list of domains.`,
 			},
-
+			"allowed_domains_template": &framework.FieldSchema{
+				Type: framework.TypeBool,
+				Description: `If set, Allowed domains can be specified using identity template policies.
+				Non-templated domains are also permitted.`,
+				Default: false,
+			},
 			"allow_bare_domains": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `If set, clients can request certificates
@@ -541,6 +546,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		TTL:                           time.Duration(data.Get("ttl").(int)) * time.Second,
 		AllowLocalhost:                data.Get("allow_localhost").(bool),
 		AllowedDomains:                data.Get("allowed_domains").([]string),
+		AllowedDomainsTemplate:        data.Get("allowed_domains_template").(bool),
 		AllowBareDomains:              data.Get("allow_bare_domains").(bool),
 		AllowSubdomains:               data.Get("allow_subdomains").(bool),
 		AllowGlobDomains:              data.Get("allow_glob_domains").(bool),
@@ -728,6 +734,7 @@ type roleEntry struct {
 	AllowedBaseDomain             string        `json:"allowed_base_domain" mapstructure:"allowed_base_domain"`
 	AllowedDomainsOld             string        `json:"allowed_domains,omitempty"`
 	AllowedDomains                []string      `json:"allowed_domains_list" mapstructure:"allowed_domains"`
+	AllowedDomainsTemplate        bool          `json:"allowed_domains_template"`
 	AllowBaseDomain               bool          `json:"allow_base_domain"`
 	AllowBareDomains              bool          `json:"allow_bare_domains" mapstructure:"allow_bare_domains"`
 	AllowTokenDisplayName         bool          `json:"allow_token_displayname" mapstructure:"allow_token_displayname"`
@@ -778,6 +785,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"max_ttl":                            int64(r.MaxTTL.Seconds()),
 		"allow_localhost":                    r.AllowLocalhost,
 		"allowed_domains":                    r.AllowedDomains,
+		"allowed_domains_template":           r.AllowedDomainsTemplate,
 		"allow_bare_domains":                 r.AllowBareDomains,
 		"allow_token_displayname":            r.AllowTokenDisplayName,
 		"allow_subdomains":                   r.AllowSubdomains,
