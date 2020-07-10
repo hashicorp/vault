@@ -380,6 +380,9 @@ func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath s
 // - namespace specific quota takes precedence over global quota
 // - mount specific quota takes precedence over namespace specific quota
 func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
 	if txn == nil {
 		txn = m.db.Txn(false)
 	}
