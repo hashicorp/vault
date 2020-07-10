@@ -1485,10 +1485,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 	}
 
-	if base != nil {
-		base.Physical = coreConfig.Physical
-	}
-
 	// Clustering setup
 	for i := 0; i < numCores; i++ {
 		testCluster.setupClusterListener(t, i, cores[i], coreConfigs[i], opts, listeners[i], handlers[i])
@@ -1522,7 +1518,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		(*tcc.ReloadFuncs)["listener|tcp"] = []reloadutil.ReloadFunc{certGetters[i].Reload}
 		tcc.ReloadFuncsLock.Unlock()
 
-		testAdjustUnderlyingStorage(base, tcc)
+		testAdjustUnderlyingStorage(tcc)
 
 		ret = append(ret, tcc)
 	}
@@ -1635,7 +1631,7 @@ func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOpt
 
 	tcc.Client = cluster.getAPIClient(t, opts, tcc.Listeners[0].Address.Port, tcc.TLSConfig)
 
-	testAdjustUnderlyingStorage(cluster.base, tcc)
+	testAdjustUnderlyingStorage(tcc)
 	testExtraTestCoreSetup(t, cluster.priKey, tcc)
 
 	// Start listeners
