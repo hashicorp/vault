@@ -12,7 +12,7 @@ const MODEL = {
   },
 };
 
-module('Integration | Enterprise | Component | replication-page', function(hooks) {
+module('Integration | Component | replication-page', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
