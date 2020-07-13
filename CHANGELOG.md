@@ -1,4 +1,5 @@
-## Next
+## 1.5.0-RC
+### July 13th, 2020
 
 CHANGES:
 
