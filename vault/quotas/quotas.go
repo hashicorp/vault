@@ -372,6 +372,14 @@ func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath s
 	return quotas[0], nil
 }
 
+// QueryQuota returns the most specific applicable quota for a given request.
+func (m *Manager) QueryQuota(req *Request) (Quota, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	return m.queryQuota(nil, req)
+}
+
 // queryQuota returns the quota rule that is applicable for the given request. It
 // queries all the quota rules that are defined against request values and finds
 // the quota rule that takes priority.
@@ -497,7 +505,7 @@ func (m *Manager) DeleteQuota(ctx context.Context, qType string, name string) er
 func (m *Manager) ApplyQuota(req *Request) (Response, error) {
 	var resp Response
 
-	quota, err := m.queryQuota(nil, req)
+	quota, err := m.QueryQuota(req)
 	if err != nil {
 		return resp, err
 	}
