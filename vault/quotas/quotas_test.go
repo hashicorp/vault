@@ -28,7 +28,7 @@ func TestQuotas_Precedence(t *testing.T) {
 
 	checkQuotaFunc := func(t *testing.T, nsPath, mountPath string, expected Quota) {
 		t.Helper()
-		quota, err := qm.queryQuota(nil, &Request{
+		quota, err := qm.QueryQuota(&Request{
 			Type:          TypeRateLimit,
 			NamespacePath: nsPath,
 			MountPath:     mountPath,
