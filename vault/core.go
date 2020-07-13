@@ -2255,7 +2255,7 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	}
 
 	if existBarrierSealConfig.Type != wrapping.Shamir && existRecoverySealConfig == nil {
-		return errors.New(`Recovery seal configuration not found for existing seal`)
+		return errors.New("Recovery seal configuration not found for existing seal")
 	}
 
 	var migrationSeal Seal
@@ -2263,8 +2263,13 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 
 	// Determine the migrationSeal. This is either going to be an instance of
 	// shamir or the unwrapSeal.
-	switch existBarrierSealConfig.Type {
-	case wrapping.Shamir:
+	switch {
+	case unwrapSeal != nil:
+		// If we're not coming from Shamir we expect the previous seal to be
+		// in the config and disabled.
+		migrationSeal = unwrapSeal
+
+	case existBarrierSealConfig.Type == wrapping.Shamir:
 		// The value reflected in config is what we're going to
 		migrationSeal = NewDefaultSeal(&vaultseal.Access{
 			Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
@@ -2273,9 +2278,8 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 		})
 
 	default:
-		// If we're not coming from Shamir we expect the previous seal to be
-		// in the config and disabled.
-		migrationSeal = unwrapSeal
+		return errors.New("failed to determine the migration seal")
+
 	}
 
 	// newSeal will be the barrierSeal
