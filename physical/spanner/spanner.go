@@ -79,18 +79,26 @@ type Backend struct {
 	// table is the name of the table in the database.
 	table string
 
+	// client is the API client and permitPool is the allowed concurrent uses of
+	// the client.
+	client     *spanner.Client
+	permitPool *physical.PermitPool
+
 	// haTable is the name of the table to use for HA in the database.
 	haTable string
 
 	// haEnabled indicates if high availability is enabled. Default: true.
 	haEnabled bool
 
-	// client is the underlying API client for talking to spanner.
-	client *spanner.Client
+	// haClient is the API client. This is managed separately from the main client
+	// because a flood of requests should not block refreshing the TTLs on the
+	// lock.
+	//
+	// This value will be nil if haEnabled is false.
+	haClient *spanner.Client
 
-	// logger and permitPool are internal constructs.
-	logger     log.Logger
-	permitPool *physical.PermitPool
+	// logger is the internal logger.
+	logger log.Logger
 }
 
 // NewBackend creates a new Google Spanner storage backend with the given
@@ -127,6 +135,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	}
 
 	// HA configuration
+	haClient := (*spanner.Client)(nil)
 	haEnabled := false
 	haEnabledStr := os.Getenv(envHAEnabled)
 	if haEnabledStr == "" {
@@ -137,6 +146,17 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		haEnabled, err = strconv.ParseBool(haEnabledStr)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to parse HA enabled: {{err}}", err)
+		}
+	}
+	if haEnabled {
+		logger.Debug("creating HA client")
+		var err error
+		ctx := context.Background()
+		haClient, err = spanner.NewClient(ctx, database,
+			option.WithUserAgent(useragent.String()),
+		)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to create HA client: {{err}}", err)
 		}
 	}
 
@@ -153,8 +173,8 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		"haTable", haTable,
 		"maxParallel", maxParallel,
 	)
-	logger.Debug("creating client")
 
+	logger.Debug("creating client")
 	ctx := context.Background()
 	client, err := spanner.NewClient(ctx, database,
 		option.WithUserAgent(useragent.String()),
@@ -164,14 +184,16 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	}
 
 	return &Backend{
-		database:  database,
-		table:     table,
-		haEnabled: haEnabled,
-		haTable:   haTable,
-
+		database:   database,
+		table:      table,
 		client:     client,
 		permitPool: physical.NewPermitPool(maxParallel),
-		logger:     logger,
+
+		haEnabled: haEnabled,
+		haTable:   haTable,
+		haClient:  haClient,
+
+		logger: logger,
 	}, nil
 }
 

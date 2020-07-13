@@ -7,7 +7,7 @@ const TITLE = 'My Table';
 const HEADER = 'Cool Header';
 const ITEMS = ['https://127.0.0.1:8201', 'hello', 3];
 
-module('Integration | Enterprise | Component | InfoTable', function(hooks) {
+module('Integration | Component | InfoTable', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
