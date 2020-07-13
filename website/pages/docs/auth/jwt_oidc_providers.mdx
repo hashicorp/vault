@@ -167,7 +167,7 @@ that enable the feature.
 - `fetch_groups` `(bool: false)` - If set to true, groups will be fetched from G Suite.
 - `fetch_user_info` `(bool: false)` - If set to true, user info will be fetched from G Suite using the configured [user_custom_schemas](#user_custom_schemas).
 - `groups_recurse_max_depth` `(int: <optional>)` - Group membership recursion max depth. Defaults to 0, which means don't recurse.
-- `user_custom_schemas` `(string: <optional>` - Comma-separated list of G Suite [custom schemas](https://developers.google.com/admin-sdk/directory/v1/guides/manage-schemas).
+- `user_custom_schemas` `(string: <optional>)` - Comma-separated list of G Suite [custom schemas](https://developers.google.com/admin-sdk/directory/v1/guides/manage-schemas).
 Values set for G Suite users using custom schema fields will be fetched and made available as claims that can be used with [claim_mappings](/api/auth/jwt#claim_mappings). Required if [fetch_user_info](#fetch_user_info) is set to true.
 
 Example configuration:
