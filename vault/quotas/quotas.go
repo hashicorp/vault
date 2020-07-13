@@ -388,9 +388,6 @@ func (m *Manager) QueryQuota(req *Request) (Quota, error) {
 // - namespace specific quota takes precedence over global quota
 // - mount specific quota takes precedence over namespace specific quota
 func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-
 	if txn == nil {
 		txn = m.db.Txn(false)
 	}
