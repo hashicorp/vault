@@ -149,12 +149,6 @@ func (m *MongoDBAtlas) SetCredentials(ctx context.Context, statements dbplugin.S
 	m.Lock()
 	defer m.Unlock()
 
-	statements = dbutil.StatementCompatibilityHelper(statements)
-
-	if len(statements.Creation) == 0 {
-		return "", "", dbutil.ErrEmptyCreationStatement
-	}
-
 	client, err := m.getConnection(ctx)
 	if err != nil {
 		return "", "", err
