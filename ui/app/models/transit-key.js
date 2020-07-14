@@ -43,7 +43,7 @@ const ACTION_VALUES = {
 
 export default DS.Model.extend({
   type: attr('string', {
-    defaultValue: 'aes256-gcm96',
+    defaultValue: 'aes128-gcm96',
   }),
   name: attr('string'),
   deletionAllowed: attr('boolean'),
