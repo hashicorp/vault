@@ -64,6 +64,13 @@ BUG FIXES:
 * ui: Disallow max versions value of large than 9999999999999999 on kv2 secrets engine. [[GH-9242](https://github.com/hashicorp/vault/pull/9242)]
 * ui: Add and upgrade missing dependencies to resolve a failure with `make static-dist`. [[GH-9277](https://github.com/hashicorp/vault/pull/9371)]
 
+## 1.4.4
+### TBD
+
+BUG FIXES:
+
+* seal/awskms: fix AWS KMS auto-unseal when AWS_ROLE_SESSION_NAME not set [[GH-9416](https://github.com/hashicorp/vault/pull/9416)]
+
 ## 1.4.3
 ### July 2nd, 2020
 
