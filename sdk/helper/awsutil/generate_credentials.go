@@ -62,7 +62,7 @@ func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials,
 	roleARN := os.Getenv("AWS_ROLE_ARN")
 	tokenPath := os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE")
 	sessionName := os.Getenv("AWS_ROLE_SESSION_NAME")
-	if roleARN != "" && tokenPath != "" && sessionName != "" {
+	if roleARN != "" && tokenPath != "" {
 		// this session is only created to create the WebIdentityRoleProvider, as the env variables are already there
 		// this automatically assumes the role, but the provider needs to be added to the chain
 		sess, err := session.NewSession()
