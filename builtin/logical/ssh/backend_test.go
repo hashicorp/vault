@@ -149,7 +149,6 @@ func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), str
 	sshAddress := fmt.Sprintf("127.0.0.1:%s", resource.GetPort("2222/tcp"))
 
 	// exponential backoff-retry
-	//pool.MaxWait = 10 * time.Second
 	if err = pool.Retry(func() error {
 		// Install util-linux for non-busybox flock that supports timeout option
 		return testSSH(t, "vaultssh", sshAddress, ssh.PublicKeys(signer), fmt.Sprintf(`
