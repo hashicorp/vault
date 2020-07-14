@@ -16,6 +16,11 @@ export default function DownloadsPage({ releaseData }) {
         version={VERSION}
         releaseData={releaseData}
         changelog={changelogUrl}
+        prerelease={{
+          type: 'release candidate',
+          name: 'v1.5.0',
+          version: '1.5.0-rc',
+        }}
       />
     </div>
   )
