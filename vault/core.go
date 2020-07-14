@@ -237,6 +237,9 @@ type Core struct {
 	migrationInfo *migrationInformation
 	sealMigrated  *uint32
 
+	// migrationLock is used for seal migration
+	migrationLock sync.RWMutex
+
 	// unwrapSeal is the seal to use on Enterprise to unwrap values wrapped
 	// with the previous seal.
 	unwrapSeal Seal
@@ -1325,6 +1328,10 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 }
 
 func (c *Core) migrateSeal(ctx context.Context) error {
+
+	c.migrationLock.Lock()
+	defer c.migrationLock.Unlock()
+
 	if c.migrationInfo == nil {
 		return nil
 	}
