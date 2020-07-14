@@ -147,6 +147,7 @@ DONELISTHANDLING:
 
 	// Count the successful token creation
 	ttl_label := metricsutil.TTLBucket(resp.WrapInfo.TTL)
+	mountPointWithoutNs := ns.TrimmedPath(req.MountPoint)
 	c.metricSink.IncrCounterWithLabels(
 		[]string{"token", "creation"},
 		1,
@@ -156,7 +157,7 @@ DONELISTHANDLING:
 			// we could use "token" but let's be more descriptive,
 			// even if it's not a real auth method.
 			{"auth_method", "response_wrapping"},
-			{"mount_point", req.MountPoint},
+			{"mount_point", mountPointWithoutNs},
 			{"creation_ttl", ttl_label},
 			// *Should* be service, but let's use whatever create() did..
 			{"token_type", te.Type.String()},
