@@ -236,9 +236,7 @@ type Core struct {
 	// about the seal we are migrating *from*.
 	migrationInfo *migrationInformation
 	sealMigrated  *uint32
-
-	// migrationLock is used for seal migration
-	migrationLock sync.RWMutex
+	migrationLock *int32
 
 	// unwrapSeal is the seal to use on Enterprise to unwrap values wrapped
 	// with the previous seal.
@@ -746,6 +744,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		router:              NewRouter(),
 		sealed:              new(uint32),
 		sealMigrated:        new(uint32),
+		migrationLock:       new(int32),
 		standby:             true,
 		baseLogger:          conf.Logger,
 		logger:              conf.Logger.Named("core"),
@@ -1329,8 +1328,12 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 
 func (c *Core) migrateSeal(ctx context.Context) error {
 
-	c.migrationLock.Lock()
-	defer c.migrationLock.Unlock()
+	// Check if migration is already in progress
+	if !atomic.CompareAndSwapInt32(c.migrationLock, 0, 1) {
+		c.logger.Warn("migration is already in progress")
+		return nil
+	}
+	defer atomic.CompareAndSwapInt32(c.migrationLock, 1, 0)
 
 	if c.migrationInfo == nil {
 		return nil
