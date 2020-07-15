@@ -7,7 +7,7 @@
         @size="l"
         aria-hidden="true"
         class="has-text-grey-light" />
-      &copy; {{date-format (now) "YYYY"}} HashiCorp
+      &copy; {{date-format (now) "yyyy"}} HashiCorp
     </span>
     <span>
       <a href={{changelog-url-for activeCluster.leaderNode.version}}
