@@ -7,18 +7,15 @@ parameters:
     type: string
     default: "/tmp/testlogs"
 steps:
-  - when:
-      condition:
-        equal:
-          - << parameters.extra_flags >>
-          - "-race"
-      steps:
-        - run: VAULT_CI_GO_TEST_RACE=1
   - run:
       name: Run Go tests
       no_output_timeout: 60m
       command: |
         set -x
+
+        case "<< parameters.extra_flags >>" in
+        *-race*) VAULT_CI_GO_TEST_RACE=1;;
+        esac
 
         # Install CircleCI CLI
         curl -sSL \
