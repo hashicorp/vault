@@ -1,7 +1,7 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
-import isWithinRange from 'date-fns/is_within_range';
-import addMonths from 'date-fns/add_months';
+import isWithinInterval from 'date-fns/isWithinInterval';
+import addMonths from 'date-fns/addMonths';
 
 /**
  * @module HttpRequestsContainer
@@ -51,7 +51,7 @@ export default Component.extend({
       const today = new Date();
       const twelveMonthsAgo = addMonths(today, -12);
       filteredCounters = counters.filter(counter => {
-        return isWithinRange(counter.start_time, twelveMonthsAgo, today);
+        return isWithinInterval(counter.start_time, twelveMonthsAgo, today);
       });
 
       return filteredCounters;
