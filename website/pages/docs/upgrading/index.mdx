@@ -103,3 +103,13 @@ Upgrading installations of Vault which participate in [Enterprise Replication](/
 - Verify functionality of each secondary instance after upgrading
 - When satisfied with functionality of upgraded secondary instances, upgrade
   the primary instance
+
+For Vault Enterprise customers who have both Disaster Recovery (DR) and Performance Replication (PR) clusters, the recommended sequence for upgrading all clusters is as follows:
+
+* Upgrade Disaster Recovery clusters
+
+* Upgrade Performance Replication secondary clusters
+
+* Upgrade Performance Replication primary clusters
+
+**NOTE**:  If the DR Primary is also a PR Primary, you will upgrade the DR secondary first then upgrade the PR secondary.  As the final step, upgrade the mixed DR+PR Primary. 
