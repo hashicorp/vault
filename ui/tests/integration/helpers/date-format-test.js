@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, find } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 module('Integration | Helper | date-format', function(hooks) {
@@ -29,27 +29,45 @@ module('Integration | Helper | date-format', function(hooks) {
     let todayString = 'Thu Jul 16 2020 09:13:57';
     this.set('todayString', todayString);
 
-    await render(hbs`<p data-test-date-format>Date: {{date-format todayString 'dd MM yyyy'}}</p>`);
+    await render(hbs`<p data-test-date-format>Date: {{date-format todayString 'dd MMMM yyyy'}}</p>`);
     assert
       .dom('[data-test-date-format]')
       .includesText('16 July 2020', 'it renders the date if passed in as a string');
   });
 
   test('it supports ISO strings', async function(assert) {
-    let iso = '2016-01-01';
+    let iso = '2014-02-11T11:30:30';
     this.set('iso', iso);
 
-    await render(hbs`<p data-test-date-format>Date: {{date-format iso}}</p>`);
+    await render(hbs`<p data-test-date-format>Date: {{date-format iso 'dd MMMM yyyy'}}</p>`);
     assert
       .dom('[data-test-date-format]')
-      .includesText(iso, 'it renders the a date if passed in as an ISO string');
+      .includesText('11 February 2014', 'it renders the formatted date if passed in as an ISO string');
   });
 
-  test('it fails gracefully', async function(assert) {
+  test('it fails gracefully with strings', async function(assert) {
     let antiDate = 'lol';
     this.set('antiDate', antiDate);
 
     await render(hbs`<p data-test-date-format>Date: {{date-format antiDate}}</p>`);
     assert.dom('[data-test-date-format]').includesText(antiDate, 'it renders what it is passed');
+  });
+
+  test('it fails gracefully with non-strings', async function(assert) {
+    let nonDate = { text: 'lol' };
+    this.set('nonDate', nonDate);
+
+    await render(hbs`<p data-test-date-format>Date: -{{date-format nonDate}}-</p>`);
+    assert.equal(find('[data-test-date-format]').innerText, 'Date: --', 'it renders an empty string');
+  });
+
+  test('it renders a formatted date if no format is passed', async function(assert) {
+    let date = new Date(2020, 0, 20);
+    this.set('date', date);
+
+    await render(hbs`<p data-test-date-format>Date: {{date-format date}}</p>`);
+    assert
+      .dom('[data-test-date-format]')
+      .includesText('20 Jan 2020', 'it renders the date in a default format');
   });
 });
