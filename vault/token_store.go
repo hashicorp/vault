@@ -1822,7 +1822,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				for index, child := range children {
 					countParentList++
 					if countParentList%500 == 0 {
-						percentComplete := float64(index)/float64(len(children))*100
+						percentComplete := float64(index) / float64(len(children)) * 100
 						ts.logger.Info("checking validity of tokens in secondary index list", "progress", countParentList, "percent_complete", percentComplete)
 					}
 
@@ -1883,7 +1883,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			for index, saltedAccessor := range saltedAccessorList {
 				countAccessorList++
 				if countAccessorList%500 == 0 {
-					percentComplete := float64(index)/float64(len(saltedAccessorList))*100
+					percentComplete := float64(index) / float64(len(saltedAccessorList)) * 100
 					ts.logger.Info("checking if accessors contain valid tokens", "progress", countAccessorList, "percent_complete", percentComplete)
 				}
 
@@ -1980,7 +1980,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			for index, key := range cubbyholeKeys {
 				countCubbyholeKeys++
 				if countCubbyholeKeys%500 == 0 {
-					percentComplete := float64(index)/float64(len(cubbyholeKeys))*100
+					percentComplete := float64(index) / float64(len(cubbyholeKeys)) * 100
 					ts.logger.Info("checking if there are invalid cubbyholes", "progress", countCubbyholeKeys, "percent_complete", percentComplete)
 				}
 
@@ -2723,14 +2723,14 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 	// Count the successful token creation.
 	ttl_label := metricsutil.TTLBucket(te.TTL)
-
+	mountPointWithoutNs := ns.TrimmedPath(req.MountPoint)
 	ts.core.metricSink.IncrCounterWithLabels(
 		[]string{"token", "creation"},
 		1,
 		[]metrics.Label{
 			metricsutil.NamespaceLabel(ns),
 			{"auth_method", "token"},
-			{"mount_point", req.MountPoint}, // path, not accessor
+			{"mount_point", mountPointWithoutNs}, // path, not accessor
 			{"creation_ttl", ttl_label},
 			{"token_type", tokenType.String()},
 		},

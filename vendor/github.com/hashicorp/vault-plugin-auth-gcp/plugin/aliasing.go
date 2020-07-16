@@ -13,22 +13,22 @@ type iamAliaser func(role *gcpRole, svcAccount *iam.ServiceAccount) (alias strin
 type gceAliaser func(role *gcpRole, instance *compute.Instance) (alias string)
 
 const (
-	defaultIAMAlias = "unique_id"
-	defaultGCEAlias = "instance_id"
+	defaultIAMAlias = "role_id"
+	defaultGCEAlias = "role_id"
 )
 
 var (
 	allowedIAMAliases = map[string]iamAliaser{
-		defaultIAMAlias: getIAMSvcAccountUniqueID,
-		"":              getIAMSvcAccountUniqueID, // For backwards compatibility
+		defaultIAMAlias: getIAMRoleID,
+		"":              getIAMRoleID, // For backwards compatibility
 
-		"role_id": getIAMRoleID,
+		"unique_id": getIAMSvcAccountUniqueID,
 	}
 	allowedGCEAliases = map[string]gceAliaser{
-		defaultGCEAlias: getGCEInstanceID,
-		"":              getGCEInstanceID, // For backwards compatibility
+		defaultGCEAlias: getGCERoleID,
+		"":              getGCERoleID, // For backwards compatibility
 
-		"role_id": getGCERoleID,
+		"instance_id": getGCEInstanceID,
 	}
 
 	allowedIAMAliasesSlice = iamMapKeyToSlice(allowedIAMAliases)
