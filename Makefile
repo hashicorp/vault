@@ -318,8 +318,22 @@ PACKAGESPEC_TARGETS := \
 	aliases meta package \
 	package-meta stage-config stage \
 	watch-ci publish-config publish list-staged-builds
+
 $(PACKAGESPEC_TARGETS):
 	@$(MAKE) -C $(LOCKDIR) $@
+
+# packages regenerates $(LOCKDIR) from $(SPEC) using packagespec. This is only for
+# internal HashiCorp use, as it has dependencies not available to OSS contributors.
+packages:
+	@command -v packagespec > /dev/null 2>&1 || { \
+		echo "Please install packagespec."; \
+		echo "Note: packagespec is only available to HashiCorp employees at present."; \
+		exit 1; \
+	}
+	@packagespec lock -specfile $(SPEC) -lockdir $(LOCKDIR)
+	@$(MAKE) ci-config
+
+.PHONY: $(PACKAGESPEC_TARGETS) packages
 ## end packagespec integration ##
 
 CI_WORKFLOW_TPL     := .circleci/config/@build-release.yml.tpl
@@ -342,18 +356,6 @@ ci-config: ci-update-release-packages
 ci-verify:
 	@$(MAKE) -C .circleci ci-verify
 
-# packages regenerates $(LOCKDIR) from $(SPEC) using packagespec. This is only for
-# internal HashiCorp use, as it has dependencies not available to OSS contributors.
-packages:
-	@command -v packagespec > /dev/null 2>&1 || { \
-		echo "Please install packagespec."; \
-		echo "Note: packagespec is only available to HashiCorp employees at present."; \
-		exit 1; \
-	}
-	@packagespec lock -specfile $(SPEC) -lockdir $(LOCKDIR)
-	@$(MAKE) ci-config
-
-
-.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack stage-commit publish-commit packages build build-ci
+.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack stage-commit publish-commit
 
 .NOTPARALLEL: ember-dist ember-dist-dev static-assets
