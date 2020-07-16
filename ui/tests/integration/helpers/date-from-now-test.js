@@ -5,19 +5,19 @@ import { dateFromNow } from '../../../helpers/date-from-now';
 module('Integration | Helper | date-from-now', function(hooks) {
   setupRenderingTest(hooks);
 
-  test('it works', function(assert) {
+  test('it accepts a number', function(assert) {
     let result = dateFromNow([1481022124443]);
-    assert.ok(typeof result === 'string', 'it is a string');
+    assert.ok(result.includes('years'));
   });
 
   test('it accepts a Date', function(assert) {
-    let result = dateFromNow([new Date()]);
-    assert.ok(typeof result === 'string', 'it is a string');
+    let result = dateFromNow([new Date('2006-06-06')]);
+    assert.ok(result.includes('years'));
   });
 
-  test('it accepts a string', function(assert) {
+  test('fails gracefully with strings', function(assert) {
     let result = dateFromNow(['foo']);
-    assert.ok(typeof result === 'string', 'it is a string');
+    assert.equal(result, '');
   });
 
   test('you can include a suffix', function(assert) {
