@@ -138,9 +138,8 @@ func TestQuotas_RateLimitQuota_DupName(t *testing.T) {
 
 	// create a rate limit quota w/ 'secret' path
 	_, err := client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
-		"rate":  7.7,
-		"burst": 8,
-		"path":  "secret",
+		"rate": 7.7,
+		"path": "secret",
 	})
 	require.NoError(t, err)
 
@@ -150,9 +149,8 @@ func TestQuotas_RateLimitQuota_DupName(t *testing.T) {
 
 	// create a rate limit quota w/ empty path (same name)
 	_, err = client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
-		"rate":  7.7,
-		"burst": 8,
-		"path":  "",
+		"rate": 7.7,
+		"path": "",
 	})
 	require.NoError(t, err)
 
@@ -214,9 +212,8 @@ func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
 	// ⌈7.7⌉*2 requests in the span of roughly a second -- 8 initially, followed
 	// by a refill rate of 7.7 per-second.
 	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
-		"rate":  7.7,
-		"burst": 8,
-		"path":  "pki/",
+		"rate": 7.7,
+		"path": "pki/",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -224,7 +221,7 @@ func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
 
 	numSuccess, numFail, elapsed := testRPS(reqFunc, 5*time.Second)
 
-	// evaluate the ideal RPS as (burst + (RPS * totalSeconds))
+	// evaluate the ideal RPS as (ceil(RPS) + (RPS * totalSeconds))
 	ideal := 8 + (7.7 * float64(elapsed) / float64(time.Second))
 
 	// ensure there were some failed requests
@@ -239,9 +236,8 @@ func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
 
 	// update the rate limit quota with a high RPS such that no requests should fail
 	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
-		"rate":  1000.0,
-		"burst": 3000,
-		"path":  "pki/",
+		"rate": 1000.0,
+		"path": "pki/",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -294,9 +290,8 @@ func TestQuotas_RateLimitQuota_MountPrecedence(t *testing.T) {
 
 	// create a root rate limit quota
 	_, err = client.Logical().Write("sys/quotas/rate-limit/root-rlq", map[string]interface{}{
-		"name":  "root-rlq",
-		"rate":  14.7,
-		"burst": 15,
+		"name": "root-rlq",
+		"rate": 14.7,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -304,10 +299,9 @@ func TestQuotas_RateLimitQuota_MountPrecedence(t *testing.T) {
 
 	// create a mount rate limit quota with a lower RPS than the root rate limit quota
 	_, err = client.Logical().Write("sys/quotas/rate-limit/mount-rlq", map[string]interface{}{
-		"name":  "mount-rlq",
-		"rate":  7.7,
-		"burst": 8,
-		"path":  "pki/",
+		"name": "mount-rlq",
+		"rate": 7.7,
+		"path": "pki/",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -327,7 +321,7 @@ func TestQuotas_RateLimitQuota_MountPrecedence(t *testing.T) {
 	// ensure mount rate limit quota takes precedence over root rate limit quota
 	numSuccess, numFail, elapsed := testRPS(reqFunc, 5*time.Second)
 
-	// evaluate the ideal RPS as (burst + (RPS * totalSeconds))
+	// evaluate the ideal RPS as (ceil(RPS) + (RPS * totalSeconds))
 	ideal := 8 + (7.7 * float64(elapsed) / float64(time.Second))
 
 	// ensure there were some failed requests
@@ -370,8 +364,7 @@ func TestQuotas_RateLimitQuota(t *testing.T) {
 	// ⌈7.7⌉*2 requests in the span of roughly a second -- 8 initially, followed
 	// by a refill rate of 7.7 per-second.
 	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
-		"rate":  7.7,
-		"burst": 8,
+		"rate": 7.7,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -389,7 +382,7 @@ func TestQuotas_RateLimitQuota(t *testing.T) {
 
 	numSuccess, numFail, elapsed := testRPS(reqFunc, 5*time.Second)
 
-	// evaluate the ideal RPS as (burst + (RPS * totalSeconds))
+	// evaluate the ideal RPS as (ceil(RPS) + (RPS * totalSeconds))
 	ideal := 8 + (7.7 * float64(elapsed) / float64(time.Second))
 
 	// ensure there were some failed requests
@@ -407,8 +400,7 @@ func TestQuotas_RateLimitQuota(t *testing.T) {
 
 	// update the rate limit quota with a high RPS such that no requests should fail
 	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
-		"rate":  1000.0,
-		"burst": 3000,
+		"rate": 1000.0,
 	})
 	if err != nil {
 		t.Fatal(err)
