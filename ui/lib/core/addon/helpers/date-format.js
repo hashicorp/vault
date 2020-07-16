@@ -19,15 +19,13 @@ export function dateFormat([date, format]) {
     if (!d.getTime()) {
       return date;
     }
-  } else if (typeof date === 'object') {
-    return '';
   }
 
   try {
     // expects date obj or number only
     return formatDate(d, f);
   } catch (e) {
-    return date;
+    return '';
   }
 }
 
