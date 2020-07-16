@@ -30,9 +30,8 @@ limiting using a [token bucket](https://en.wikipedia.org/wiki/Token_bucket) algo
 A rate limit quota can be created at the root level or defined on a namespace or
 mount by specifying a `path` when creating the quota. The rate limiter is applied
 to each unique client IP address on a per-node basis (i.e. rate limit quotas
-are not replicated). A client may invoke `burst` requests at any given second,
-after which they may invoke additional requests at `rate` per-second, where `burst`
-must be greater than or equal to `rate`.
+are not replicated). A client may invoke `rate` requests at any given second,
+after which they may invoke additional requests at `rate` per-second.
 
 A rate limit quota defined at the root level (i.e. empty `path`) is inherited by
 all namespaces and mounts. It acts as a single rate limiter for the entire Vault
