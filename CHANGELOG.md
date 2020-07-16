@@ -18,6 +18,7 @@ CHANGES:
 IMPROVEMENTS:
 
 * audit: Replication status requests are no longer audited. [[GH-8877](https://github.com/hashicorp/vault/pull/8877)]
+* audit: Added mount_type field to requests and responses. [[GH-9167](https://github.com/hashicorp/vault/pull/9167)]
 * auth/aws: Add support for Web Identity credentials [[GH-7738](https://github.com/hashicorp/vault/pull/7738)]
 * auth/jwt: Support users that are members of more than 200 groups on Azure [[GH-120](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/120)]
 * auth/kerberos: Support identities without userPrincipalName [[GH-44](https://github.com/hashicorp/vault-plugin-auth-kerberos/issues/44)]
@@ -47,10 +48,10 @@ IMPROVEMENTS:
 * ui: Only render the JWT input field of the Vault login form on mounts configured for JWT auth [[GH-8952](https://github.com/hashicorp/vault/pull/8952)]
 * cli: Add a new subcommand, `vault monitor`, for tailing server logs in the console. [[GH-8477](https://github.com/hashicorp/vault/pull/8477)]
 * ui: Add replication dashboards.  Improve replication management workflows. [[GH-8705]](https://github.com/hashicorp/vault/pull/8705).
+* ui: Update alert banners to match design systems black text. [[GH-9463]](https://github.com/hashicorp/vault/pull/9463).
 
 BUG FIXES:
 
-* agent: Restart template server when it shuts down [[GH-9200](https://github.com/hashicorp/vault/pull/9200)]
 * auth/oci: Fix issue where users of the Oracle Cloud Infrastructure (OCI) auth method could not authenticate when the plugin backend was mounted at a non-default path. [[GH-7](https://github.com/hashicorp/vault-plugin-auth-oci/pull/7)]
 * core: Extend replicated cubbyhole fix in 1.4.0 to cover case where a performance primary is also a DR primary [[GH-9148](https://github.com/hashicorp/vault/pull/9148)]
 * seal/awskms: fix AWS KMS auto-unseal when AWS_ROLE_SESSION_NAME not set [[GH-9416](https://github.com/hashicorp/vault/pull/9416)]
@@ -62,6 +63,13 @@ BUG FIXES:
 * ui: Add Toggle component into core addon so it is available in KMIP and other Ember Engines.[[GH-8913]](https://github.com/hashicorp/vault/pull/8913)
 * ui: Disallow max versions value of large than 9999999999999999 on kv2 secrets engine. [[GH-9242](https://github.com/hashicorp/vault/pull/9242)]
 * ui: Add and upgrade missing dependencies to resolve a failure with `make static-dist`. [[GH-9277](https://github.com/hashicorp/vault/pull/9371)]
+
+## 1.4.4
+### TBD
+
+BUG FIXES:
+
+* seal/awskms: fix AWS KMS auto-unseal when AWS_ROLE_SESSION_NAME not set [[GH-9416](https://github.com/hashicorp/vault/pull/9416)]
 
 ## 1.4.3
 ### July 2nd, 2020
@@ -76,12 +84,14 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+* agent: Restart template server when it shuts down [[GH-9200](https://github.com/hashicorp/vault/pull/9200)]
 * auth/oci: Fix issue where users of the Oracle Cloud Infrastructure (OCI) auth method could not authenticate when the plugin backend was mounted at a non-default path. [[GH-9278](https://github.com/hashicorp/vault/pull/9278)]
 * replication: The issue causing cubbyholes in namespaces on performance secondaries to not work, which was fixed in 1.4.0, was still an issue when the primary was both a performance primary and DR primary.
 * seal: (enterprise) Fix issue causing stored seal and recovery keys to be mistaken as sealwrapped values
 * secrets/aws: Fix issue where performance standbys weren't able to generate STS credentials after an IAM access key rotation in AWS and root IAM credential update in Vault [[GH-9207](https://github.com/hashicorp/vault/pull/9207)]
 * secrets/database: Fix issue that prevents performance standbys from connecting to databases after a root credential rotation [[GH-9208](https://github.com/hashicorp/vault/pull/9208)]
 * secrets/gcp: Fix issue were updates were not being applied to the `token_scopes` of a roleset. [[GH-9277](https://github.com/hashicorp/vault/pull/9277)]
+
 
 ## 1.4.2 (May 21st, 2020)
 
