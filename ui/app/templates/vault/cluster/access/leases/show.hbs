@@ -58,7 +58,7 @@
         {{model.expireTime}}
       </code>
     {{/info-table-row}}
-    {{info-table-row label="Expires in" value=(date-from-now model.expireTime interval=1000 hideSuffix=true)}}
+    {{info-table-row label="Expires in" value=(date-from-now model.expireTime hideSuffix=true)}}
   {{/if}}
   {{info-table-row label="TTL" value=model.ttl}}
 </div>
