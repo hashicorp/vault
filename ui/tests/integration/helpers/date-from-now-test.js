@@ -10,6 +10,16 @@ module('Integration | Helper | date-from-now', function(hooks) {
     assert.ok(typeof result === 'string', 'it is a string');
   });
 
+  test('it accepts a Date', function(assert) {
+    let result = dateFromNow([new Date()]);
+    assert.ok(typeof result === 'string', 'it is a string');
+  });
+
+  test('it accepts a string', function(assert) {
+    let result = dateFromNow(['foo']);
+    assert.ok(typeof result === 'string', 'it is a string');
+  });
+
   test('you can include a suffix', function(assert) {
     let result = dateFromNow([1481022124443], { addSuffix: true });
     assert.ok(result.includes(' ago'));
