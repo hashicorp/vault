@@ -9,7 +9,7 @@
         {{#if canExpire}}
           <li class="action">
             <AlertBanner @type="warning" @message="We've stopped auto-renewing your token due to inactivity.
-                It will expire in {{date-from-now auth.tokenExpirationDate interval=1000 hideSuffix=true}}.
+                It will expire in {{date-from-now auth.tokenExpirationDate hideSuffix=true}}.
                 on {{date-format auth.tokenExpirationDate 'MMMM Do yyyy, h:mm:ss a'}}" />
           </li>
         {{/if}}
