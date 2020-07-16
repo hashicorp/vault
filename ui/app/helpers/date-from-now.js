@@ -2,16 +2,14 @@ import { helper } from '@ember/component/helper';
 import { formatDistanceToNow } from 'date-fns';
 
 export function dateFromNow([date], options = {}) {
-  // debugger;
-  // const time = fromUnixTime(date / 1000);
-  let dateString;
+  let d = date;
   try {
-    dateString = formatDistanceToNow(date, { ...options });
+    // expects date obj or number only
+    return formatDistanceToNow(d, { ...options });
   } catch (e) {
-    console.log(date);
+    // if we can't determine the distance, show nothing
+    return '';
   }
-
-  return dateString;
 }
 
 export default helper(dateFromNow);
