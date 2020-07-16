@@ -447,11 +447,18 @@ to be unsealed:
 $ kubectl exec -ti <name of pod> -- vault operator unseal
 ```
 
-Finally, once the standby nodes have been updated and unsealed, delete the active
-primary:
+Finally, once the standby nodes have been updated and unsealed, let the active pod 
+[step-down](/docs/commands/operator/step-down):
 
 ```shell-session
-$ kubectl delete pod <name of Vault primary>
+$ vault operator step-down
+```
+
+You may need to wait a few second that the active flag change woulr reflect on Kubernetes load-balancers, though 
+there will be no downtime. Then delete the former active primary:
+
+```shell-session
+$ kubectl delete pod <name of former Vault primary>
 ```
 
 Similar to the standby nodes, the former primary also needs to be unsealed:
