@@ -188,6 +188,77 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 	}
 }
 
+func TestPostgreSQL_CreateUser_Username(t *testing.T) {
+	type testCase struct {
+		displayName        string
+		roleName           string
+		expectedUserPrefix string
+	}
+
+	tests := map[string]testCase{
+		"short display name and role name are fully embedded in username ": {
+			displayName: "short",
+			roleName: "readonly",
+			expectedUserPrefix: "v-short-readonly-",
+		},
+		"long display name is truncated in username": {
+			displayName: "longlonglonglonglonglonglonglong",
+			roleName: "readonly",
+			expectedUserPrefix: "v-longlonglonglonglonglonglonglo-readonly-",
+		},
+		"long role name is truncated in username": {
+			displayName: "short",
+			roleName: "readwrite",
+			expectedUserPrefix: "v-short-readwrit-",
+		},
+		"long display name and role name are truncated in username": {
+			displayName: "longlonglonglonglonglonglonglong",
+			roleName: "readwrite",
+			expectedUserPrefix: "v-longlonglonglonglonglonglonglo-readwrit-",
+		},
+	}
+
+	// Shared test container for speed - there should not be any overlap between the tests
+	db, cleanup := getPostgreSQL(t, nil)
+	defer cleanup()
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			usernameConfig := dbplugin.UsernameConfig{
+				DisplayName: test.displayName,
+				RoleName:    test.roleName,
+			}
+
+			statements := dbplugin.Statements{
+				Creation: []string{`
+					CREATE ROLE "{{name}}" WITH
+					  LOGIN
+					  PASSWORD '{{password}}'
+					  VALID UNTIL '{{expiration}}';`,
+				},
+			}
+
+			// Give a timeout just in case the test decides to be problematic
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			username, password, err := db.CreateUser(ctx, statements, usernameConfig, time.Now().Add(time.Minute))
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			if err = testCredsExist(t, db.ConnectionURL, username, password); err != nil {
+				t.Fatalf("Could not connect with new credentials: %s", err)
+			}
+
+			if !strings.HasPrefix(username, test.expectedUserPrefix) {
+				t.Fatalf("Expected username to begin with %s. But got %s", test.expectedUserPrefix, username)
+			}
+		})
+	}
+}
+
+
 func TestPostgreSQL_RenewUser(t *testing.T) {
 	type testCase struct {
 		renewalStmts []string

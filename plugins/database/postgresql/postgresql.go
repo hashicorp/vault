@@ -60,7 +60,7 @@ func new() *PostgreSQL {
 	connProducer.Type = postgreSQLTypeName
 
 	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 8,
+		DisplayNameLen: 30,
 		RoleNameLen:    8,
 		UsernameLen:    63,
 		Separator:      "-",
