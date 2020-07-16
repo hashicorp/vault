@@ -26,12 +26,30 @@ module('Integration | Helper | date-format', function(hooks) {
   });
 
   test('it supports date strings', async function(assert) {
-    let todayString = new Date().getFullYear().toString();
+    let todayString = 'Thu Jul 16 2020 09:13:57';
     this.set('todayString', todayString);
 
-    await render(hbs`<p data-test-date-format>Date: {{date-format todayString}}</p>`);
+    await render(hbs`<p data-test-date-format>Date: {{date-format todayString 'dd MM yyyy'}}</p>`);
     assert
       .dom('[data-test-date-format]')
-      .includesText(todayString, 'it renders the a date if passed in as a string');
+      .includesText('16 July 2020', 'it renders the date if passed in as a string');
+  });
+
+  test('it supports ISO strings', async function(assert) {
+    let iso = '2016-01-01';
+    this.set('iso', iso);
+
+    await render(hbs`<p data-test-date-format>Date: {{date-format iso}}</p>`);
+    assert
+      .dom('[data-test-date-format]')
+      .includesText(iso, 'it renders the a date if passed in as an ISO string');
+  });
+
+  test('it fails gracefully', async function(assert) {
+    let antiDate = 'lol';
+    this.set('antiDate', antiDate);
+
+    await render(hbs`<p data-test-date-format>Date: {{date-format antiDate}}</p>`);
+    assert.dom('[data-test-date-format]').includesText(antiDate, 'it renders what it is passed');
   });
 });
