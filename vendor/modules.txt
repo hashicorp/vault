@@ -542,7 +542,6 @@ github.com/hashicorp/vault/sdk/plugin
 github.com/hashicorp/vault/sdk/plugin/mock
 github.com/hashicorp/vault/sdk/plugin/pb
 github.com/hashicorp/vault/sdk/queue
-github.com/hashicorp/vault/sdk/testing/internal/reloadutil
 github.com/hashicorp/vault/sdk/testing/stepwise
 github.com/hashicorp/vault/sdk/testing/stepwise/environments/docker
 github.com/hashicorp/vault/sdk/version
