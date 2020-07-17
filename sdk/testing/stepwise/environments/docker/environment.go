@@ -35,6 +35,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/testing/internal/reloadutil"
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
 	"golang.org/x/net/http2"
 )
@@ -431,7 +432,7 @@ func (n *dockerClusterNode) setupCert() error {
 		return err
 	}
 
-	certGetter := stepwise.NewCertificateGetter(n.ServerCertPEMFile, n.ServerKeyPEMFile, "")
+	certGetter := reloadutil.NewCertificateGetter(n.ServerCertPEMFile, n.ServerKeyPEMFile, "")
 	if err := certGetter.Reload(); err != nil {
 		return err
 	}
