@@ -56,7 +56,7 @@ spec:
         vault.hashicorp.com/agent-inject-secret-db-creds: "database/creds/db-app"
         vault.hashicorp.com/agent-inject-template-db-creds: |
           {{- with secret "database/creds/db-app" -}}
-          postgres://{{ .Data.username }}:{{ .Data.password }}@postgres:5432/appdb?sslmode=disable
+          postgres://{{ .Data.data.username }}:{{ .Data.data.password }}@postgres:5432/appdb?sslmode=disable
           {{- end }}
         vault.hashicorp.com/role: "db-app"
         vault.hashicorp.com/ca-cert: "/vault/tls/ca.crt"
@@ -113,7 +113,7 @@ spec:
         vault.hashicorp.com/agent-inject-secret-db-creds: "database/creds/db-app"
         vault.hashicorp.com/agent-inject-template-db-creds: |
           {{- with secret "database/creds/db-app" -}}
-          postgres://{{ .Data.username }}:{{ .Data.password }}@postgres:5432/appdb?sslmode=disable
+          postgres://{{ .Data.data.username }}:{{ .Data.data.password }}@postgres:5432/appdb?sslmode=disable
           {{- end }}
         vault.hashicorp.com/role: "db-app"
         vault.hashicorp.com/ca-cert: "/vault/tls/ca.crt"
@@ -190,7 +190,7 @@ data:
     "pid_file" = "/home/vault/.pid"
 
     "template" = {
-      "contents" = "{{- with secret \"database/creds/db-app\" -}}postgres://{{ .Data.username }}:{{ .Data.password }}@postgres:5432/mydb?sslmode=disable{{- end }}"
+      "contents" = "{{- with secret \"database/creds/db-app\" -}}postgres://{{ .Data.data.username }}:{{ .Data.data.password }}@postgres:5432/mydb?sslmode=disable{{- end }}"
       "destination" = "/vault/secrets/db-creds"
     }
 
@@ -222,7 +222,7 @@ data:
     "pid_file" = "/home/vault/.pid"
 
     "template" = {
-      "contents" = "{{- with secret \"database/creds/db-app\" -}}postgres://{{ .Data.username }}:{{ .Data.password }}@postgres:5432/mydb?sslmode=disable{{- end }}"
+      "contents" = "{{- with secret \"database/creds/db-app\" -}}postgres://{{ .Data.data.username }}:{{ .Data.data.password }}@postgres:5432/mydb?sslmode=disable{{- end }}"
       "destination" = "/vault/secrets/db-creds"
     }
 
