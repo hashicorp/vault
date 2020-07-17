@@ -34,8 +34,8 @@ import (
 	"github.com/hashicorp/go-multierror"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/testing/internal/reloadutil"
 	"github.com/hashicorp/vault/sdk/testing/stepwise"
 	"golang.org/x/net/http2"
 )
