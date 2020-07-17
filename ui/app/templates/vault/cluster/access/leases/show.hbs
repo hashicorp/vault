@@ -36,7 +36,7 @@
 
 <div class="field box is-fullwidth is-sideless is-paddingless is-marginless">
   {{#info-table-row label="Issue time" value=model.issueTime}}
-    {{date-format model.issueTime 'MMM DD, yyyy hh:mm:ss A'}}
+    {{date-format model.issueTime 'MMM dd, yyyy hh:mm:ss a'}}
     <br/>
     <code>
       {{model.issueTime}}
@@ -44,7 +44,7 @@
   {{/info-table-row}}
   {{info-table-row label="Renewable" value=model.renewable}}
   {{#info-table-row label="Last renewal" value=model.lastRenewal}}
-    {{date-format model.lastRenewal 'MMM DD, yyyy hh:mm:ss A'}}
+    {{date-format model.lastRenewal 'MMM dd, yyyy hh:mm:ss a'}}
     <br/>
     <code>
       {{model.lastRenewal}}
@@ -52,7 +52,7 @@
   {{/info-table-row}}
   {{#if model.expireTime}}
     {{#info-table-row label="Expiration time" value=model.expireTime}}
-      {{date-format model.expireTime 'MMM DD, yyyy hh:mm:ss A'}}
+      {{date-format model.expireTime 'MMM dd, yyyy hh:mm:ss a'}}
       <br/>
       <code>
         {{model.expireTime}}
