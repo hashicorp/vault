@@ -319,8 +319,9 @@ PACKAGESPEC_TARGETS := \
 	package-meta stage-config stage \
 	watch-ci publish-config publish list-staged-builds
 
+$(PACKAGESPEC_TARGETS): 
 $(PACKAGESPEC_TARGETS):
-	@$(MAKE) -C $(LOCKDIR) $@
+	@PRODUCT_REPO_ROOT="$(shell git rev-parse --show-toplevel)" $(MAKE) -C $(LOCKDIR) $@
 
 # packages regenerates $(LOCKDIR) from $(SPEC) using packagespec. This is only for
 # internal HashiCorp use, as it has dependencies not available to OSS contributors.
