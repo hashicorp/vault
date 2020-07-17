@@ -25,6 +25,7 @@ export function dateFormat([date, format]) {
     // expects date obj or number only
     return formatDate(d, f);
   } catch (e) {
+    console.log(e);
     return '';
   }
 }

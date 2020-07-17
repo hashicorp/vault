@@ -24,6 +24,7 @@ export function dateFromNow([date], options = {}) {
     // expects date obj or number only
     return formatDistanceToNow(d, { ...options });
   } catch (e) {
+    console.log(e);
     return '';
   }
 }
