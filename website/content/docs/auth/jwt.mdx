@@ -188,6 +188,24 @@ not required to be set:
 - `callbackmethod` (default: "http")
 - `callbackport` (default: value set for `port`). This value is used in the `redirect_uri`, whereas
   `port` is the localhost port that the listener is using. These two may be different in advanced setups.
+- `mode` (default: "browser"). This value is used to toggle between automatic and manual OIDC authentication.
+   In `manual` mode, the user's browser is not automatically launched, rather the user copies the URL and
+   completes browser authentication out of band. Upon successful authentication, the user is presented
+   with a code that is copied and manually supplied to the authenticating client. `manual` mode requires
+   that the role being used has the `oidc/manual` path listed in the role's `allowed_redirect_uris`. For example:
+   `https://vault.server:8200/v1/oidc/oidc/manual`.
+
+Example of manual mode:
+
+```shell-session
+$ vault login -method=oidc mode=manual callbackmethod=https
+
+Complete the login via your OIDC provider. Launching browser to:
+
+    https://myco.auth0.com/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A8400%2Foidc%2Fcallback&client_id=r3qXc2bix9eF...
+
+Enter verification code:
+```
 
 ### OIDC Provider Configuration
 
