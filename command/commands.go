@@ -20,6 +20,7 @@ import (
 	_ "github.com/hashicorp/vault/helper/builtinplugins"
 
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
+	auditKafka "github.com/hashicorp/vault/builtin/audit/kafka"
 	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 
@@ -115,6 +116,7 @@ const (
 var (
 	auditBackends = map[string]audit.Factory{
 		"file":   auditFile.Factory,
+		"kafka":  auditKafka.Factory,
 		"socket": auditSocket.Factory,
 		"syslog": auditSyslog.Factory,
 	}

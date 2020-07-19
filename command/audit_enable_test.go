@@ -1,12 +1,17 @@
 package command
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/Shopify/sarama"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/mitchellh/cli"
+	"github.com/ory/dockertest"
+	"github.com/ory/dockertest/docker"
 )
 
 func testAuditEnableCommand(tb testing.TB) (*cli.MockUi, *AuditEnableCommand) {
@@ -165,6 +170,8 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 
 		client, closer := testVaultServerAllBackends(t)
 		defer closer()
+		cleanup, kafkaAddress := prepareKafkaTestContainer(t)
+		defer cleanup()
 
 		files, err := ioutil.ReadDir("../builtin/audit")
 		if err != nil {
@@ -190,6 +197,8 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 				args = append(args, "file_path=discard")
 			case "socket":
 				args = append(args, "address=127.0.0.1:8888")
+			case "kafka":
+				args = append(args, fmt.Sprintf("address=%s", kafkaAddress), "topic=vault")
 			case "syslog":
 				if _, exists := os.LookupEnv("WSLENV"); exists {
 					t.Log("skipping syslog test on WSL")
@@ -202,4 +211,92 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 			}
 		}
 	})
+}
+
+func prepareKafkaTestContainer(t *testing.T) (cleanup func(), retURL string) {
+	if os.Getenv("KAFKA_SERVER") != "" {
+		return func() {}, os.Getenv("KAFKA_SERVER")
+	}
+
+	randName, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatalf("Unable to create UUID: %s", err)
+	}
+
+	pool, err := dockertest.NewPool("")
+	if err != nil {
+		t.Fatalf("Failed to connect to docker: %s", err)
+	}
+	client := pool.Client
+	net, err := client.CreateNetwork(docker.CreateNetworkOptions{
+		Name: fmt.Sprintf("vault-kafka-%s", randName),
+	})
+	if err != nil {
+		t.Fatalf("Failed to create docker network: %s", err)
+	}
+
+	zookeeperResource, err := pool.RunWithOptions(&dockertest.RunOptions{
+		Name:       fmt.Sprintf("zookeeper-%s", randName),
+		Repository: "confluentinc/cp-zookeeper",
+		Tag:        "5.0.1",
+		NetworkID:  net.ID,
+		Env: []string{
+			"ZOOKEEPER_CLIENT_PORT=2181",
+		},
+	})
+	if err != nil {
+		t.Fatalf("Could not start local zookeeper docker container: %s", err)
+	}
+
+	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
+		Name:       fmt.Sprintf("kafka-%s", randName),
+		Repository: "confluentinc/cp-kafka",
+		Tag:        "5.0.1",
+		NetworkID:  net.ID,
+		Env: []string{
+			"KAFKA_BROKER_ID=1",
+			"KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1",
+			"KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092",
+			fmt.Sprintf("KAFKA_ZOOKEEPER_CONNECT=zookeeper-%s:2181", randName),
+		},
+	})
+
+	if err != nil {
+		t.Fatalf("Could not start local kafka docker container: %s", err)
+	}
+
+	cleanup = func() {
+		err := pool.Purge(zookeeperResource)
+		if err != nil {
+			t.Fatalf("Failed to cleanup local containers: %s", err)
+		}
+
+		err = pool.Purge(resource)
+		if err != nil {
+			t.Fatalf("Failed to cleanup local containers: %s", err)
+		}
+
+		client.RemoveNetwork(net.ID)
+		if err != nil {
+			t.Fatalf("Failed to cleanup network: %s", err)
+		}
+	}
+
+	kafkaServerAddress := fmt.Sprintf("localhost:%s", resource.GetPort("9092/tcp"))
+
+	// exponential backoff-retry
+	if err = pool.Retry(func() error {
+		var err error
+		c, err := sarama.NewClient([]string{kafkaServerAddress}, nil)
+		if err != nil {
+			return err
+		}
+
+		return c.Close()
+	}); err != nil {
+		cleanup()
+		t.Fatalf("Could not connect to kakfa docker container: %s", err)
+	}
+
+	return cleanup, kafkaServerAddress
 }

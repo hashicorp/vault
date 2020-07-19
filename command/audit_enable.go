@@ -89,6 +89,7 @@ func (c *AuditEnableCommand) Flags() *FlagSets {
 func (c *AuditEnableCommand) AutocompleteArgs() complete.Predictor {
 	return complete.PredictSet(
 		"file",
+		"kafka",
 		"syslog",
 		"socket",
 	)

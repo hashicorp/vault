@@ -493,6 +493,12 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 				auditLogger.Debug("syslog backend options", "path", entry.Path, "facility", entry.Options["facility"], "tag", entry.Options["tag"])
 			}
 		}
+	case "kafka":
+		if auditLogger.IsDebug() {
+			if entry.Options != nil {
+				auditLogger.Debug("kafka backend options", "path", entry.Path, "topic", entry.Options["topic"], "address", entry.Options["address"])
+			}
+		}
 	}
 
 	return be, err
