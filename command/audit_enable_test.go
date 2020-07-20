@@ -238,7 +238,7 @@ func prepareKafkaTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	zookeeperResource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Name:       fmt.Sprintf("zookeeper-%s", randName),
 		Repository: "confluentinc/cp-zookeeper",
-		Tag:        "5.0.1",
+		Tag:        "5.5.1",
 		NetworkID:  net.ID,
 		Env: []string{
 			"ZOOKEEPER_CLIENT_PORT=2181",
@@ -251,7 +251,7 @@ func prepareKafkaTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Name:       fmt.Sprintf("kafka-%s", randName),
 		Repository: "confluentinc/cp-kafka",
-		Tag:        "5.0.1",
+		Tag:        "5.5.1",
 		NetworkID:  net.ID,
 		Env: []string{
 			"KAFKA_BROKER_ID=1",
