@@ -198,7 +198,7 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 			case "socket":
 				args = append(args, "address=127.0.0.1:8888")
 			case "kafka":
-				args = append(args, fmt.Sprintf("address=%s", kafkaAddress), "topic=vault")
+				args = append(args, fmt.Sprintf("address=%s", kafkaAddress), "topic=vault", "tls_disabled=true")
 			case "syslog":
 				if _, exists := os.LookupEnv("WSLENV"); exists {
 					t.Log("skipping syslog test on WSL")
