@@ -127,10 +127,10 @@ func migrateFromShamirToTransit_Pre14(t *testing.T, logger hclog.Logger, storage
 	var transitSeal vault.Seal
 
 	var conf = vault.CoreConfig{
-		Logger:                    logger.Named("migrateFromShamirToTransit"),
 		DisablePerformanceStandby: true,
 	}
 	var opts = vault.TestClusterOptions{
+		Logger:                logger.Named("migrateFromShamirToTransit"),
 		HandlerFunc:           vaulthttp.Handler,
 		NumCores:              numTestCores,
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
@@ -367,9 +367,16 @@ func migratePost14(t *testing.T, logger hclog.Logger, storage teststorage.Reusab
 	}
 
 	// Wait for the followers to establish a new leader
-	leaderIdx, err := testhelpers.AwaitLeader(t, cluster)
-	if err != nil {
-		t.Fatal(err)
+	var leaderIdx int
+	for i := 0; i < 30; i++ {
+		leaderIdx, err = testhelpers.AwaitLeader(t, cluster)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if leaderIdx != 0 {
+			break
+		}
+		time.Sleep(1 * time.Second)
 	}
 	if leaderIdx == 0 {
 		t.Fatalf("Core 0 cannot be the leader right now")
@@ -522,10 +529,10 @@ func initializeShamir(t *testing.T, logger hclog.Logger, storage teststorage.Reu
 
 	// Start the cluster
 	var conf = vault.CoreConfig{
-		Logger:                    logger.Named("initializeShamir"),
 		DisablePerformanceStandby: true,
 	}
 	var opts = vault.TestClusterOptions{
+		Logger:                logger.Named("initializeShamir"),
 		HandlerFunc:           vaulthttp.Handler,
 		NumCores:              numTestCores,
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
@@ -575,10 +582,10 @@ func runShamir(t *testing.T, logger hclog.Logger, storage teststorage.ReusableSt
 
 	// Start the cluster
 	var conf = vault.CoreConfig{
-		Logger:                    logger.Named("runShamir"),
 		DisablePerformanceStandby: true,
 	}
 	var opts = vault.TestClusterOptions{
+		Logger:                logger.Named("runShamir"),
 		HandlerFunc:           vaulthttp.Handler,
 		NumCores:              numTestCores,
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
@@ -649,10 +656,10 @@ func initializeTransit(t *testing.T, logger hclog.Logger, storage teststorage.Re
 
 	// Start the cluster
 	var conf = vault.CoreConfig{
-		Logger:                    logger,
 		DisablePerformanceStandby: true,
 	}
 	var opts = vault.TestClusterOptions{
+		Logger:                logger,
 		HandlerFunc:           vaulthttp.Handler,
 		NumCores:              numTestCores,
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
@@ -703,11 +710,11 @@ func runTransit(t *testing.T, logger hclog.Logger, storage teststorage.ReusableS
 
 	// Start the cluster
 	var conf = vault.CoreConfig{
-		Logger:                    logger.Named("runTransit"),
 		DisablePerformanceStandby: true,
 		Seal:                      transitSeal,
 	}
 	var opts = vault.TestClusterOptions{
+		Logger:                logger.Named("runTransit"),
 		HandlerFunc:           vaulthttp.Handler,
 		NumCores:              numTestCores,
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
