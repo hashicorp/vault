@@ -955,9 +955,7 @@ func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.Snapsho
 		},
 	}
 
-	b.l.RLock()
 	err := b.applyLog(ctx, command)
-	b.l.RUnlock()
 
 	// Do a best-effort attempt to let the standbys apply the restoreCallbackOp
 	// before we continue.
