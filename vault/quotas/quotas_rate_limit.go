@@ -31,13 +31,14 @@ const (
 
 func init() {
 	rateLimitExemptPaths.AddPaths([]string{
-		"/v1/sys/generate-recovery-token/attempt",
-		"/v1/sys/generate-recovery-token/update",
-		"/v1/sys/generate-root/attempt",
-		"/v1/sys/generate-root/update",
-		"/v1/sys/health",
-		"/v1/sys/seal-status",
-		"/v1/sys/unseal",
+		"sys/internal/ui/mounts",
+		"sys/generate-recovery-token/attempt",
+		"sys/generate-recovery-token/update",
+		"sys/generate-root/attempt",
+		"sys/generate-root/update",
+		"sys/health",
+		"sys/seal-status",
+		"sys/unseal",
 	})
 }
 
