@@ -14,10 +14,10 @@ description: |-
 * **Lease Count Quotas (Enterprise Only):** Allows operators to specify lease count quotas. If the number of leases in the cluster hits the configured quota limits, additional lease creations will be forbidden for all clients until a lease has been revoked or has expired.
 * **Rate Limit Quotas (All versions):** Allows operators to specify request-per-second quotas. Rate limit quotas are applicable to every node in the Vault cluster, meaning each node will maintain separate counters to enforce rate limits. If the rate limit quota limit is hit on any of the nodes in the Vault cluster, additional requests will be canceled for all clients. 
 
-**Splunk App for Monitoring Vault (Enterprise Only):**  A new Splunk App providing sample dashboards for Vault operational and usage metrics that will include operational metrics, usage metrics and some interpretive data from Vault’s audit logs:
-* **Operational metrics (telemetry)** include Disk I/O, memory and CPU usage. Storage backend metrics are also included (if using Consul or Integrated Storage).
-* **Usage metrics (telemetry)** include number of identity entities, number of service tokens, token TTL distribution, and secret KV count. The usage metrics are new to Vault telemetry (and are supported by all versions of Vault).
-* **Audit log interpretation** data includes requests by path, KV operations by path, distinct tokens by auth method, and leases created by path. 
+**Splunk App for Monitoring Vault (Enterprise Only):**  A new Splunk App providing information on how Vault is doing from an operational and security perspective. The app includes sample dashboards spanning operational metrics, usage metrics and some interpretive data from Vault’s audit logs:
+* Example **Operational metrics (telemetry)** include Disk I/O, memory and CPU usage. Storage backend metrics are also included (if using Consul or Integrated Storage).
+* Example **Usage metrics (telemetry)** include number of identity entities, number of service tokens, token TTL distribution, and secret KV count. The usage metrics are new to Vault telemetry (and are supported by all versions of Vault).
+* Example **Audit log interpretation** data includes requests by path, KV operations by path, distinct tokens by auth method, and leases created by path. 
 
 **Replication UI Redesign (Enterprise Only):** Redesign of the replication UI for performance and DR primary and secondary clusters, to help understand the health of replication Vault better. Includes the following: 
 * A new DR secondary replication dashboard, and an updated performance secondary replication dashboard 
@@ -38,7 +38,7 @@ description: |-
 
 **Support for distributed groups claims on Azure:**  Vault now supports group claims for Azure Active Directory users that are part of over 200 groups. 
 
-**Performance improvements for transit:** Vault now features infrastructure improvements to how `transit` handles encryption/decryption calls with batch tokens.
+**Performance improvements for transit:** Vault now features infrastructure improvements to how transit handles encryption/decryption calls with batch tokens.
 
 ## What’s Changed
 
