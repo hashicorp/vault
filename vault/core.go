@@ -265,7 +265,7 @@ type Core struct {
 	standby              bool
 	perfStandby          bool
 	standbyDoneCh        chan struct{}
-	standbyStopCh        chan struct{}
+	standbyStopCh        *atomic.Value
 	manualStepDownCh     chan struct{}
 	keepHALockOnStepDown *uint32
 	heldHALock           physical.Lock
@@ -747,6 +747,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		sealMigrated:        new(uint32),
 		inSealMigration:     uberAtomic.NewBool(false),
 		standby:             true,
+		standbyStopCh:       new(atomic.Value),
 		baseLogger:          conf.Logger,
 		logger:              conf.Logger.Named("core"),
 
@@ -786,6 +787,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		postUnsealStarted: new(uint32),
 		raftJoinDoneCh:    make(chan struct{}),
 	}
+	c.standbyStopCh.Store(make(chan struct{}))
 
 	c.rawConfig.Store(conf.RawConfig)
 
@@ -1520,8 +1522,8 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		// Go to standby mode, wait until we are active to unseal
 		c.standbyDoneCh = make(chan struct{})
 		c.manualStepDownCh = make(chan struct{})
-		c.standbyStopCh = make(chan struct{})
-		go c.runStandby(c.standbyDoneCh, c.manualStepDownCh, c.standbyStopCh)
+		c.standbyStopCh.Store(make(chan struct{}))
+		go c.runStandby(c.standbyDoneCh, c.manualStepDownCh, c.standbyStopCh.Load().(chan struct{}))
 	}
 
 	// Success!
@@ -1811,7 +1813,7 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, performCleanup
 		// If we are active, signal the standby goroutine to shut down and wait
 		// for completion. We have the state lock here so nothing else should
 		// be toggling standby status.
-		close(c.standbyStopCh)
+		close(c.standbyStopCh.Load().(chan struct{}))
 		c.logger.Debug("finished triggering standbyStopCh for runStandby")
 
 		// Wait for runStandby to stop
