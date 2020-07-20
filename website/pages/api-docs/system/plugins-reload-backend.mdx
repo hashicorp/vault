@@ -28,6 +28,10 @@ This endpoint reloads mounted plugin backends.
 - `mounts` `(array: [])` – Array or comma-separated string mount paths
   of the plugin backends to reload.
 
+- `scope` `(string: "")` - The scope of the reload.  If ommitted, reloads the 
+  plugin or mounts on this Vault instance.  If 'global', will begin reloading the 
+  plugin on all instances of a cluster.
+
 ### Sample Payload
 
 ```json
