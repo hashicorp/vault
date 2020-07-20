@@ -14,7 +14,7 @@ description: |-
 * **Lease Count Quotas (Enterprise Only):** Allows operators to specify lease count quotas. If the number of leases in the cluster hits the configured quota limits, additional lease creations will be forbidden for all clients until a lease has been revoked or has expired.
 * **Rate Limit Quotas (All versions):** Allows operators to specify request-per-second quotas. Rate limit quotas are applicable to every node in the Vault cluster, meaning each node will maintain separate counters to enforce rate limits. If the rate limit quota limit is hit on any of the nodes in the Vault cluster, additional requests will be canceled for all clients. 
 
-**Splunk App for Monitoring Vault (Enterprise Only):**  A new Splunk App providing sample dashboards for Vault operational and usage metrics that will include operational metrics, usage metrics and some interpretive data from Vault’s audit logs.
+**Splunk App for Monitoring Vault (Enterprise Only):**  A new Splunk App providing sample dashboards for Vault operational and usage metrics that will include operational metrics, usage metrics and some interpretive data from Vault’s audit logs:
 * **Operational metrics (telemetry)** include Disk I/O, memory and CPU usage. Storage backend metrics are also included (if using Consul or Integrated Storage).
 * **Usage metrics (telemetry)** include number of identity entities, number of service tokens, token TTL distribution, and secret KV count. The usage metrics are new to Vault telemetry (and are supported by all versions of Vault).
 * **Audit log interpretation** data includes requests by path, KV operations by path, distinct tokens by auth method, and leases created by path. 
