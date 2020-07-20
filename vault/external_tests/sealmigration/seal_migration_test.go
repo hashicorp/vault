@@ -102,8 +102,8 @@ func testSealMigrationShamirToTransit_Pre14(t *testing.T, logger hclog.Logger, s
 	cluster, _ := initializeShamir(t, logger, storage, basePort)
 	rootToken, barrierKeys := cluster.RootToken, cluster.BarrierKeys
 	cluster.EnsureCoresSealed(t)
-	storage.Cleanup(t, cluster)
 	cluster.Cleanup()
+	storage.Cleanup(t, cluster)
 
 	// Create the transit server.
 	tss := sealhelper.NewTransitSealServer(t)
@@ -146,8 +146,8 @@ func migrateFromShamirToTransit_Pre14(t *testing.T, logger hclog.Logger, storage
 	cluster := vault.NewTestCluster(t, &conf, &opts)
 	cluster.Start()
 	defer func() {
-		storage.Cleanup(t, cluster)
 		cluster.Cleanup()
+		storage.Cleanup(t, cluster)
 	}()
 
 	leader := cluster.Cores[0]
@@ -212,8 +212,8 @@ func testSealMigrationShamirToTransit_Post14(t *testing.T, logger hclog.Logger, 
 	transitSeal := migrateFromShamirToTransit_Post14(t, logger, storage, basePort, tss, cluster, opts)
 	cluster.EnsureCoresSealed(t)
 
-	storage.Cleanup(t, cluster)
 	cluster.Cleanup()
+	storage.Cleanup(t, cluster)
 
 	// Run the backend with transit.
 	runTransit(t, logger, storage, basePort, cluster.RootToken, transitSeal)
@@ -280,8 +280,8 @@ func testSealMigrationTransitToShamir_Post14(t *testing.T, logger hclog.Logger, 
 	// Migrate the backend from transit to shamir
 	migrateFromTransitToShamir_Post14(t, logger, storage, basePort, tss, transitSeal, cluster, opts)
 	cluster.EnsureCoresSealed(t)
-	storage.Cleanup(t, cluster)
 	cluster.Cleanup()
+	storage.Cleanup(t, cluster)
 
 	// Now that migration is done, we can nuke the transit server, since we
 	// can unseal without it.
@@ -589,8 +589,8 @@ func runShamir(t *testing.T, logger hclog.Logger, storage teststorage.ReusableSt
 	cluster := vault.NewTestCluster(t, &conf, &opts)
 	cluster.Start()
 	defer func() {
-		storage.Cleanup(t, cluster)
 		cluster.Cleanup()
+		storage.Cleanup(t, cluster)
 	}()
 
 	leader := cluster.Cores[0]
@@ -718,8 +718,8 @@ func runTransit(t *testing.T, logger hclog.Logger, storage teststorage.ReusableS
 	cluster := vault.NewTestCluster(t, &conf, &opts)
 	cluster.Start()
 	defer func() {
-		storage.Cleanup(t, cluster)
 		cluster.Cleanup()
+		storage.Cleanup(t, cluster)
 	}()
 
 	leader := cluster.Cores[0]
