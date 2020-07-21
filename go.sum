@@ -523,8 +523,8 @@ github.com/hashicorp/vault-plugin-auth-cf v0.5.4/go.mod h1:idkFYHc6ske2BE7fe00Sp
 github.com/hashicorp/vault-plugin-auth-gcp v0.5.1/go.mod h1:eLj92eX8MPI4vY1jaazVLF2sVbSAJ3LRHLRhF/pUmlI=
 github.com/hashicorp/vault-plugin-auth-gcp v0.7.0 h1:38xERGtaK55lx5QOxBZP3i6aJZ/UvdfxVJlTai2FlE8=
 github.com/hashicorp/vault-plugin-auth-gcp v0.7.0/go.mod h1:sHDguHmyGScoalGLEjuxvDCrMPVlw2c3f+ieeiHcv6w=
-github.com/hashicorp/vault-plugin-auth-jwt v0.7.0 h1:lHg02BB7IpUQbJStAPmGyS3KnZJC7PSEvc5LOZNPjHM=
-github.com/hashicorp/vault-plugin-auth-jwt v0.7.0/go.mod h1:ZJJy4b0H3N7CSoJ6iPlWhV9EjHLSoB5NhP06CNm6ImU=
+github.com/hashicorp/vault-plugin-auth-jwt v0.7.1-0.20200721230855-5815ce50fbff h1:MUd83hVmuIbbYjH5uMa2e/9Bmn+weAyTIK8+q0duQ2Q=
+github.com/hashicorp/vault-plugin-auth-jwt v0.7.1-0.20200721230855-5815ce50fbff/go.mod h1:pyR4z5f2Vuz9TXucuN0rivUJTtSdlOtDdZ16IqBjZVo=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6 h1:l5wu8J7aiQBLsTtkKhf1QQjGoeVjcfcput+uJ/pu2MM=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6/go.mod h1:IM/n7LY1rIM4MVzOfSH6cRmY/C2rGkrjGrEr0B/yO9c=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.0 h1:tt/kHMFB1qjp2b2ZRSI1KbH2CRV91VHghgr+5x9grgM=
@@ -1163,6 +1163,8 @@ google.golang.org/api v0.20.0/go.mod h1:BwFmGc8tA3vsd7r/7kR8DY7iEEGSU04BFxCo5jP/
 google.golang.org/api v0.21.0/go.mod h1:BwFmGc8tA3vsd7r/7kR8DY7iEEGSU04BFxCo5jP/sfE=
 google.golang.org/api v0.24.0 h1:cG03eaksBzhfSIk7JRGctfp3lanklcOM/mTGvow7BbQ=
 google.golang.org/api v0.24.0/go.mod h1:lIXQywCXRcnZPGlsd8NbLnOjtAoL6em04bJ9+z0MncE=
+google.golang.org/api v0.29.0 h1:BaiDisFir8O4IJxvAabCGGkQ6yCJegNQqSVoYUNAnbk=
+google.golang.org/api v0.29.0/go.mod h1:Lcubydp8VUV7KeIHD9z2Bys/sm/vGKnG1UHuDBSrHWM=
 google.golang.org/appengine v1.1.0/go.mod h1:EbEs0AVv82hx2wNQdGPgUI5lhzA/G0D9YwlJXL52JkM=
 google.golang.org/appengine v1.3.0/go.mod h1:xpcJRLb0r/rnEns0DIKYYv+WjYCduHsrkT7/EB5XEv4=
 google.golang.org/appengine v1.4.0/go.mod h1:xpcJRLb0r/rnEns0DIKYYv+WjYCduHsrkT7/EB5XEv4=
