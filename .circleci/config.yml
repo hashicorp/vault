@@ -128,7 +128,7 @@ jobs:
     - GO_TAGS: ''
     - GO_VERSION: 1.14.6
     - GO111MODULE: 'off'
-    - GOTESTSUM_VERSION: 0.3.3
+    - GOTESTSUM_VERSION: 0.5.2
   algolia-index:
     docker:
     - image: node:12
@@ -204,7 +204,10 @@ jobs:
             VAULT_DEV_ROOT_TOKEN_ID= \
             VAULT_ACC= \
             VAULT_TEST_LOG_DIR=/tmp/testlogs \
-            gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
+            gotestsum --format=short-verbose \
+              --junitfile test-results/go-test/results.xml \
+              --jsonfile test-results/go-test/results.json \
+              -- \
               -tags "${GO_TAGS}" \
               -timeout=60m \
               -parallel=20 \
@@ -223,7 +226,7 @@ jobs:
     - GO_TAGS: ''
     - GO_VERSION: 1.14.6
     - GO111MODULE: 'off'
-    - GOTESTSUM_VERSION: 0.3.3
+    - GOTESTSUM_VERSION: 0.5.2
   website-docker-image:
     docker:
     - image: circleci/buildpack-deps
@@ -319,7 +322,10 @@ jobs:
             VAULT_DEV_ROOT_TOKEN_ID= \
             VAULT_ACC= \
             VAULT_TEST_LOG_DIR=/tmp/testlogs \
-            gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
+            gotestsum --format=short-verbose \
+              --junitfile test-results/go-test/results.xml \
+              --jsonfile test-results/go-test/results.json \
+              -- \
               -tags "${GO_TAGS}" \
               -timeout=60m \
               -parallel=20 \
@@ -338,7 +344,7 @@ jobs:
     - GO_TAGS: ''
     - GO_VERSION: 1.14.6
     - GO111MODULE: 'off'
-    - GOTESTSUM_VERSION: 0.3.3
+    - GOTESTSUM_VERSION: 0.5.2
   pre-flight-checks:
     docker:
     - image: circleci/buildpack-deps
