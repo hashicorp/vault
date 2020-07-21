@@ -727,6 +727,32 @@ func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 	}
 }
 
+
+func (b *SystemBackend) pluginsReloadStatusPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "plugins/reload/backend/status$",
+
+		Fields: map[string]*framework.FieldSchema{
+			"reload_id": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-reload-backend-status"][0]),
+			},
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:    b.pluginReloadStatus,
+				Summary:     "Get the status of a cluster-scoped reload.",
+				Description: "The reload_id returned by a cluster scoped reload must be provided.",
+			},
+		},
+
+		HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-reload-backend-status"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["plugin-reload-backend-status"][1]),
+	}
+}
+
+
 func (b *SystemBackend) toolsPaths() []*framework.Path {
 	return []*framework.Path{
 		{

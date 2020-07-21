@@ -3621,6 +3621,10 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	return resp, nil
 }
 
+func (b *SystemBackend) pluginReloadStatus(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return handlePluginReloadStatus(ctx, b.Core.barrier, request, data)
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"

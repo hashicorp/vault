@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -89,6 +90,10 @@ var (
 	}
 	handleSetupPluginReload = func(*Core) error {
 		return nil
+	}
+
+	handlePluginReloadStatus = func(ctx context.Context, store logical.Storage, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		return logical.RespondWithStatusCode(logical.ErrorResponse("enterprise only feature"), req, http.StatusNotImplemented)
 	}
 
 	checkRaw = func(b *SystemBackend, path string) error { return nil }
