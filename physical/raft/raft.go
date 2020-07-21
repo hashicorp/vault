@@ -229,13 +229,8 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		path = pathFromConfig
 	}
 
-	storeLatestState := true
-	if _, ok := conf["doNotStoreLatestState"]; ok {
-		storeLatestState = false
-	}
-
 	// Create the FSM.
-	fsm, err := NewFSM(path, storeLatestState, logger.Named("fsm"))
+	fsm, err := NewFSM(path, logger.Named("fsm"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create fsm: %v", err)
 	}

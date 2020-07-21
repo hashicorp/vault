@@ -86,7 +86,7 @@ type FSM struct {
 }
 
 // NewFSM constructs a FSM using the given directory
-func NewFSM(path string, storeLatestState bool, logger log.Logger) (*FSM, error) {
+func NewFSM(path string, logger log.Logger) (*FSM, error) {
 
 	// Initialize the latest term, index, and config values
 	latestTerm := new(uint64)
