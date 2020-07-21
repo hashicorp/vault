@@ -1,17 +1,27 @@
 # UNRELEASED
 
+IMPROVEMENTS
+
+* Remove `StartAsLeader` configuration option [[GH-364](https://github.com/hashicorp/raft/pull/386)]
+
+# 1.1.2 (January 17th, 2020)
+
 FEATURES
 
 * Improve FSM apply performance through batching. Implementing the `BatchingFSM` interface enables this new feature [[GH-364](https://github.com/hashicorp/raft/pull/364)]
+* Add ability to obtain Raft configuration before Raft starts with GetConfiguration [[GH-369](https://github.com/hashicorp/raft/pull/369)]
 
 IMPROVEMENTS
 
+* Remove lint violations and add a `make` rule for running the linter.
 * Replace logger with hclog [[GH-360](https://github.com/hashicorp/raft/pull/360)]
+* Read latest configuration independently from main loop [[GH-379](https://github.com/hashicorp/raft/pull/379)]
 
 BUG FIXES
 
 * Export the leader field in LeaderObservation [[GH-357](https://github.com/hashicorp/raft/pull/357)]
 * Fix snapshot to not attempt to truncate a negative range [[GH-358](https://github.com/hashicorp/raft/pull/358)]
+* Check for shutdown in inmemPipeline before sending RPCs [[GH-276](https://github.com/hashicorp/raft/pull/276)]
 
 # 1.1.1 (July 23rd, 2019)
 

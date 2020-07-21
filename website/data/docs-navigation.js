@@ -129,6 +129,7 @@ export default [
       },
       'list',
       'login',
+      'monitor',
       'namespace',
       {
         category: 'operator',
@@ -310,6 +311,7 @@ export default [
             category: 'helm',
             content: [
               'run',
+              'openshift',
               'configuration',
               {
                 category: 'examples',

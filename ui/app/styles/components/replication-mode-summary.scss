@@ -1,0 +1,11 @@
+.replication-description {
+  flex-shrink: 1;
+
+  .title {
+    margin-bottom: $spacing-xs;
+  }
+
+  .detail-tags {
+    margin-bottom: $spacing-m;
+  }
+}
