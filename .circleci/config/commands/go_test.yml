@@ -12,6 +12,7 @@ steps:
       no_output_timeout: 60m
       command: |
         set -x
+        free
 
         case "<< parameters.extra_flags >>" in
         *-race*) VAULT_CI_GO_TEST_RACE=1;;

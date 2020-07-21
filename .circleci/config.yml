@@ -171,6 +171,7 @@ jobs:
     - run:
         command: |
           set -x
+          free
 
           case "-p 1 -race" in
           *-race*) VAULT_CI_GO_TEST_RACE=1;;
@@ -289,6 +290,7 @@ jobs:
     - run:
         command: |
           set -x
+          free
 
           case "" in
           *-race*) VAULT_CI_GO_TEST_RACE=1;;
