@@ -15,9 +15,9 @@ description: |-
 * **Rate Limit Quotas (All versions):** Allows operators to specify request-per-second quotas. Rate limit quotas are applicable to every node in the Vault cluster, meaning each node will maintain separate counters to enforce rate limits. If the rate limit quota limit is hit on any of the nodes in the Vault cluster, additional requests will be canceled for all clients. 
 
 **Splunk App for Monitoring Vault (Enterprise Only):**  A new [Splunk App](https://splunkbase.splunk.com/app/5093/) providing information on how Vault is doing from an operational and security perspective. The app includes sample dashboards spanning operational metrics, usage metrics and some interpretive data from Vault’s audit logs:
-* Example **Operational metrics (telemetry)** include Disk I/O, memory and CPU usage. Storage backend metrics are also included (if using Consul or Integrated Storage).
-* Example **Usage metrics (telemetry)** include number of identity entities, number of service tokens, token TTL distribution, and secret KV count. The usage metrics are new to Vault telemetry (and are supported by all versions of Vault).
-* Example **Audit log interpretation** data includes requests by path, KV operations by path, distinct tokens by auth method, and leases created by path. 
+* Example **Operational Metrics (telemetry)** include Disk I/O, memory and CPU usage. Storage backend metrics are also included (if using Consul or Integrated Storage).
+* Example **Usage Metrics (telemetry)** include number of identity entities, number of service tokens, token TTL distribution, and secret KV count. The usage metrics are new to Vault telemetry (and are supported by all versions of Vault).
+* Example **Audit Log Interpretation** data includes requests by path, KV operations by path, distinct tokens by auth method, and leases created by path. 
 
 **Replication UI Redesign (Enterprise Only):** Redesign of the replication UI for performance and DR primary and secondary clusters, to help understand the health of replication Vault better. Includes the following: 
 * A new DR secondary replication dashboard, and an updated performance secondary replication dashboard 
@@ -28,17 +28,17 @@ description: |-
 
 **Vault Monitor Command:** A new command, “vault monitor”, which allows users to stream logs of a running Vault server. The log level selected can be different from the log level used by the server logs.
 
-**Password policies:** Vault generates passwords as part of the dynamic secrets workflows. These passwords are created with high complexity for security reasons. However, certain organizations  have internal policies that are less stringent and restricted to usage of certain character sets. The new Password Policies feature in Vault 1.5 allows an operator to configure secret engines to generate passwords that comply with character set requirements of those systems.
+**Password Policies:** Vault generates passwords as part of the dynamic secrets workflows. These passwords are created with high complexity for security reasons. However, certain organizations  have internal policies that are less stringent and restricted to usage of certain character sets. The new Password Policies feature in Vault 1.5 allows an operator to configure secret engines to generate passwords that comply with character set requirements of those systems.
 
-**Namespace support for SSH helper:**  Vault now has an option to allow users to specify the namespace of the SSH mount when using the SSH helper. 
+**Namespace Support for SSH Helper:**  Vault now has an option to allow users to specify the namespace of the SSH mount when using the SSH helper. 
 
-**Static credential rotation support for MS SQL Server:** Vault now allows static credential rotation for MS SQL. 
+**Static Credential Rotation Support for MS SQL Server:** Vault now allows static credential rotation for MS SQL. 
 
 **Support for AWS IAM Roles for Kubernetes Service Accounts:** Vault now provides support for AWS IAM Roles for K8s Service Accounts (IRSA)
 
-**Support for distributed groups claims on Azure:**  Vault now supports group claims for Azure Active Directory users that are part of over 200 groups. 
+**Support for Distributed Groups Claims on Azure:**  Vault now supports group claims for Azure Active Directory users that are part of over 200 groups. 
 
-**Performance improvements for transit:** Vault now features infrastructure improvements to how transit handles encryption/decryption calls with batch tokens.
+**Performance Improvements for Transit:** Vault now features infrastructure improvements to how transit handles encryption/decryption calls with batch tokens.
 
 ## What’s Changed
 
