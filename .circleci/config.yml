@@ -225,7 +225,7 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_TAGS: enterprise ent
+    - GO_TAGS: ''
     - GO_VERSION: 1.14.6
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.5.2
