@@ -1,5 +1,8 @@
 ## Next
 
+BUG FIXES:
+* core: Handle a trailing slash in the API address used for enabling replication
+
 ## 1.5.0
 ### July 21st, 2020
 
