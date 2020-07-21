@@ -43,8 +43,8 @@ func testSealMigrationTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, s
 	cluster, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
 	rootToken, recoveryKeys := cluster.RootToken, cluster.RecoveryKeys
 	cluster.EnsureCoresSealed(t)
-	storage.Cleanup(t, cluster)
 	cluster.Cleanup()
+	storage.Cleanup(t, cluster)
 
 	// Migrate the backend from transit to shamir
 	migrateFromTransitToShamir_Pre14(t, logger, storage, basePort, tss, transitSeal, rootToken, recoveryKeys)
@@ -83,8 +83,8 @@ func migrateFromTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage
 	cluster := vault.NewTestCluster(t, &conf, &opts)
 	cluster.Start()
 	defer func() {
-		storage.Cleanup(t, cluster)
 		cluster.Cleanup()
+		storage.Cleanup(t, cluster)
 	}()
 
 	leader := cluster.Cores[0]

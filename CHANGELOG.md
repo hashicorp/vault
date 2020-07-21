@@ -1,5 +1,7 @@
-## 1.5.0-RC
-### July 13th, 2020
+## Next
+
+## 1.5.0
+### July 21st, 2020
 
 CHANGES:
 
@@ -71,6 +73,9 @@ BUG FIXES:
 BUG FIXES:
 
 * seal/awskms: fix AWS KMS auto-unseal when AWS_ROLE_SESSION_NAME not set [[GH-9416](https://github.com/hashicorp/vault/pull/9416)]
+
+IMPROVEMENTS:
+* ui: Add transit key algorithms aes128-gcm96, ecdsa-p384, ecdsa-p521 to the UI. [[GH-9070](https://github.com/hashicorp/vault/pull/9070)] & [[GH-9520](https://github.com/hashicorp/vault/pull/9520)]
 
 ## 1.4.3
 ### July 2nd, 2020
