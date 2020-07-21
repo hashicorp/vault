@@ -632,12 +632,6 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 		// Purge the cache so we make sure we are operating on fresh data
 		c.physicalCache.Purge(ctx)
 
-		// Refresh the raft TLS keys
-		if err := c.checkRaftTLSKeyUpgrades(ctx); err != nil {
-			c.logger.Info("failed to perform TLS key upgrades, sealing", "error", err)
-			return err
-		}
-
 		// Reload the keyring in case it changed. If this fails it's likely
 		// we've changed master keys.
 		err := c.performKeyUpgrades(ctx)
@@ -673,6 +667,12 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 				}
 				c.logger.Info("done reloading master key using auto seal")
 			}
+		}
+
+		// Refresh the raft TLS keys
+		if err := c.checkRaftTLSKeyUpgrades(ctx); err != nil {
+			c.logger.Info("failed to perform TLS key upgrades, sealing", "error", err)
+			return err
 		}
 
 		return nil
