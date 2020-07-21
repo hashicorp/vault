@@ -149,6 +149,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadStatusPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.auditPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.mountPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.authPaths()...)
