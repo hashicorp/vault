@@ -33,6 +33,17 @@ executors:
       GOTESTSUM_VERSION: 0.5.2  # Pin gotestsum to patch version (ex: 1.2.3)
       GO_TAGS: ""
     working_directory: /go/src/github.com/hashicorp/vault
+  go-machine-large:
+    machine: true
+    resource_class: large
+    shell: /usr/bin/env bash -euo pipefail -c
+    environment:
+      GO111MODULE: "off"
+      CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
+      GO_VERSION: 1.14.6  # Pin Go to patch version (ex: 1.2.3)
+      GOTESTSUM_VERSION: 0.5.2  # Pin gotestsum to patch version (ex: 1.2.3)
+      GO_TAGS: enterprise ent
+    working_directory: /go/src/github.com/hashicorp/vault
   node:
     docker:
       - image: *NODE_IMAGE

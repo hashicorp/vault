@@ -146,6 +146,7 @@ jobs:
         name: Push content to Algolia Index
   test-go-race:
     machine: true
+    resource_class: large
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /go/src/github.com/hashicorp/vault
     steps:
@@ -171,7 +172,7 @@ jobs:
         command: |
           set -x
 
-          case "-race" in
+          case "-p 1 -race" in
           *-race*) VAULT_CI_GO_TEST_RACE=1;;
           esac
 
@@ -211,7 +212,7 @@ jobs:
               -tags "${GO_TAGS}" \
               -timeout=60m \
               -parallel=20 \
-              -race \
+              -p 1 -race \
               ${package_names}
         name: Run Go tests
         no_output_timeout: 60m
@@ -223,7 +224,7 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_TAGS: ''
+    - GO_TAGS: enterprise ent
     - GO_VERSION: 1.14.6
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.5.2

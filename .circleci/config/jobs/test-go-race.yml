@@ -1,9 +1,9 @@
-executor: go-machine
+executor: go-machine-large
 steps:
   - setup-go
   - checkout
   - go_test:
-      extra_flags: "-race"
+      extra_flags: "-p 1 -race"
       log_dir: "/tmp/testlogs"
   - store_artifacts:
       path: test-results
