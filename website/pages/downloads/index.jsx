@@ -18,7 +18,7 @@ export default function DownloadsPage({ releaseData }) {
         releaseData={releaseData}
         changelog={changelogUrl}>
         <p className="description g-type-body">Release notes are available in our
-          <Link href={`/docs/release-notes/${VERSION}`}><a> documentation</a></Link>.
+          <Link href="/docs/release-notes"><a> documentation</a></Link>.
         </p>
       </ProductDownloader>
     </div>
