@@ -156,6 +156,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.LicensingConfig = opts.LicensingConfig
 	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
 	conf.MetricsHelper = opts.MetricsHelper
+	conf.MetricSink = opts.MetricSink
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -304,6 +305,17 @@ func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {
 	t.Helper()
 	core := TestCore(t)
 	return testCoreUnsealed(t, core)
+}
+
+func TestCoreUnsealedWithMetrics(t testing.T) (*Core, [][]byte, string, *metrics.InmemSink) {
+	t.Helper()
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+	conf := &CoreConfig{
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
+	}
+	core, keys, root := testCoreUnsealed(t, TestCoreWithSealAndUI(t, conf))
+	return core, keys, root, inmemSink
 }
 
 // TestCoreUnsealedRaw returns a pure in-memory core that is already
