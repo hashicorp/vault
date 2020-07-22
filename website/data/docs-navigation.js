@@ -384,6 +384,7 @@ export default [
       'upgrade-to-1.3.5',
       'upgrade-to-1.4.0',
       'upgrade-to-1.4.1',
+      'upgrade-to-1.5.0',
     ],
   },
   '----------------',
