@@ -76,7 +76,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.5.5
 	github.com/hashicorp/vault-plugin-auth-cf v0.5.4
 	github.com/hashicorp/vault-plugin-auth-gcp v0.7.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.7.0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.7.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.5.5
@@ -149,7 +149,7 @@ require (
 	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1
 	golang.org/x/tools v0.0.0-20200416214402-fc959738d646
-	google.golang.org/api v0.24.0
+	google.golang.org/api v0.29.0
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.24.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce

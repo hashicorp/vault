@@ -460,7 +460,7 @@ github.com/hashicorp/vault-plugin-auth-cf/util
 # github.com/hashicorp/vault-plugin-auth-gcp v0.7.0
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
-# github.com/hashicorp/vault-plugin-auth-jwt v0.7.0
+# github.com/hashicorp/vault-plugin-auth-jwt v0.7.1
 github.com/hashicorp/vault-plugin-auth-jwt
 # github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6
 github.com/hashicorp/vault-plugin-auth-kerberos
@@ -999,7 +999,8 @@ golang.org/x/tools/internal/telemetry/event
 # golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/api v0.24.0
+# google.golang.org/api v0.29.0
+google.golang.org/api/admin/directory/v1
 google.golang.org/api/cloudresourcemanager/v1
 google.golang.org/api/compute/v1
 google.golang.org/api/googleapi
