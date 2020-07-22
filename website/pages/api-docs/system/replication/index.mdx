@@ -118,7 +118,16 @@ performance primary and DR primary node, it will look something like:
       "last_wal": 291,
       "merkle_root": "38543b95d44132138003939addbaf94125ec184e",
       "mode": "primary",
-      "primary_cluster_addr": ""
+      "primary_cluster_addr": "",
+      "secondaries": [
+        {
+          "api_address": "https://127.0.0.1:49264",
+          "cluster_address": "https://127.0.0.1:49267",
+          "connection_status": "connected",
+          "last_heartbeat": "2020-06-10T15:40:47-07:00",
+          "node_id": "3"
+        }
+      ]
     },
     "performance": {
       "cluster_id": "1598d434-dfec-1f48-f019-3d22a8075bf9",
@@ -126,16 +135,27 @@ performance primary and DR primary node, it will look something like:
       "last_wal": 291,
       "merkle_root": "43f40fc775b40cc76cd5d7e289b2e6eaf4ba138c",
       "mode": "primary",
-      "primary_cluster_addr": ""
+      "primary_cluster_addr": "",
+      "secondaries": [
+        {
+          "api_address": "https://127.0.0.1:49253",
+          "cluster_address": "https://127.0.0.1:49256",
+          "connection_status": "connected",
+          "last_heartbeat": "2020-06-10T15:40:46-07:00",
+          "node_id": "2"
+        }
+      ]
     }
   }
 }
 ```
+Possible values for `connection_status` are `connected` or `disconnected`. `last_heartbeat` is the timestamp of the
+last time this node exchanged heartbeats with another node.
 
 ### Sample Response from Performance Secondary & DR Primary
 
 The printed status of the replication environment. As an example, for a
-performnace secondary and DR primary node, it will look something like:
+performance secondary and DR primary node, it will look something like:
 
 ```json
 {
@@ -146,7 +166,16 @@ performnace secondary and DR primary node, it will look something like:
       "last_wal": 455,
       "merkle_root": "cdcf796619240ce19dd8af30fa700f64c8006e3d",
       "mode": "primary",
-      "primary_cluster_addr": ""
+      "primary_cluster_addr": "",
+      "secondaries": [
+        {
+          "api_address": "https://127.0.0.1:49277",
+          "cluster_address": "https://127.0.0.1:49281",
+          "connection_status": "connected",
+          "last_heartbeat": "2020-06-10T15:40:46-07:00",
+          "node_id": "4"
+        }
+      ]
     },
     "performance": {
       "cluster_id": "1598d434-dfec-1f48-f019-3d22a8075bf9",
@@ -154,6 +183,14 @@ performnace secondary and DR primary node, it will look something like:
       "last_remote_wal": 291,
       "merkle_root": "43f40fc775b40cc76cd5d7e289b2e6eaf4ba138c",
       "mode": "secondary",
+      "primaries": [
+        {
+          "api_address": "https://127.0.0.1:49244",
+          "cluster_address": "https://127.0.0.1:8201",
+          "connection_status": "connected",
+          "last_heartbeat": "2020-06-10T15:40:46-07:00"
+        }
+      ],
       "primary_cluster_addr": "https://127.0.0.1:8201",
       "secondary_id": "2",
       "state": "stream-wals"

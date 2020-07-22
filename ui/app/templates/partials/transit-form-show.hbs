@@ -103,6 +103,7 @@
   {{#if (or
       (eq key.type "aes256-gcm96")
       (eq key.type "chacha20-poly1305")
+      (eq key.type "aes128-gcm96")
     )
   }}
     {{#each-in key.keys as |version creationTimestamp|}}

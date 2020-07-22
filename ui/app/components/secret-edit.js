@@ -262,7 +262,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
             this.flashMessages.success('Secret Successfully Wrapped!');
           })
           .catch(() => {
-            this.flashMessages.error('Could Not Wrap Secret');
+            this.flashMessages.danger('Could Not Wrap Secret');
           })
           .finally(() => {
             this.set('isWrapping', false);
@@ -276,7 +276,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
             this.flashMessages.success('Secret Successfully Wrapped!');
           })
           .catch(() => {
-            this.flashMessages.error('Could Not Wrap Secret');
+            this.flashMessages.danger('Could Not Wrap Secret');
           })
           .finally(() => {
             this.set('isWrapping', false);
@@ -294,16 +294,23 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     },
 
     handleCopyError() {
-      this.flashMessages.error('Could Not Copy Wrapped Data');
+      this.flashMessages.danger('Could Not Copy Wrapped Data');
       this.send('clearWrappedData');
     },
 
     createOrUpdateKey(type, event) {
       event.preventDefault();
+      const MAXIMUM_VERSIONS = 9999999999999999;
       let model = this.modelForData;
+      let secret = this.model;
       // prevent from submitting if there's no key
-      // maybe do something fancier later
       if (type === 'create' && isBlank(model.path || model.id)) {
+        this.flashMessages.danger('Please provide a path for the secret');
+        return;
+      }
+      const maxVersions = secret.get('maxVersions');
+      if (MAXIMUM_VERSIONS < maxVersions) {
+        this.flashMessages.danger('Max versions is too large');
         return;
       }
 

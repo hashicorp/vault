@@ -132,8 +132,7 @@ func createClient(ctx context.Context, connURL string, clientOptions *options.Cl
 	clientOptions.SetSocketTimeout(1 * time.Minute)
 	clientOptions.SetConnectTimeout(1 * time.Minute)
 
-	opts := clientOptions.ApplyURI(connURL)
-	client, err = mongo.Connect(ctx, opts)
+	client, err = mongo.Connect(ctx, options.MergeClientOptions(options.Client().ApplyURI(connURL), clientOptions))
 	if err != nil {
 		return nil, err
 	}

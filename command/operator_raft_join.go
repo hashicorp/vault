@@ -56,21 +56,21 @@ func (c *OperatorRaftJoinCommand) Flags() *FlagSets {
 		Name:       "leader-ca-cert",
 		Target:     &c.flagLeaderCACert,
 		Completion: complete.PredictNothing,
-		Usage:      "CA cert to communicate with Raft leader.",
+		Usage:      "CA cert to use when verifying the Raft leader certificate.",
 	})
 
 	f.StringVar(&StringVar{
 		Name:       "leader-client-cert",
 		Target:     &c.flagLeaderClientCert,
 		Completion: complete.PredictNothing,
-		Usage:      "Client cert to to authenticate to Raft leader.",
+		Usage:      "Client cert to use when authenticating with the Raft leader.",
 	})
 
 	f.StringVar(&StringVar{
 		Name:       "leader-client-key",
 		Target:     &c.flagLeaderClientKey,
 		Completion: complete.PredictNothing,
-		Usage:      "Client key to to authenticate to Raft leader.",
+		Usage:      "Client key to use when authenticating with the Raft leader.",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -110,15 +110,12 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 
 	args = f.Args()
 	switch len(args) {
+	case 0:
+		// No-op: This is acceptable if we're using raft for HA-only
 	case 1:
 		leaderAPIAddr = strings.TrimSpace(args[0])
 	default:
-		c.UI.Error(fmt.Sprintf("Incorrect arguments (expected 1, got %d)", len(args)))
-		return 1
-	}
-
-	if len(leaderAPIAddr) == 0 {
-		c.UI.Error("leader api address is required")
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0-1, got %d)", len(args)))
 		return 1
 	}
 

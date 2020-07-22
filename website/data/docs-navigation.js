@@ -33,10 +33,12 @@ export default [
       'tokens',
       'response-wrapping',
       'policies',
+      'password-policies',
       'ha',
       'integrated-storage',
       'pgp-gpg-keybase',
       'recovery-mode',
+      'resource-quotas'
     ],
   },
   {
@@ -128,6 +130,7 @@ export default [
       },
       'list',
       'login',
+      'monitor',
       'namespace',
       {
         category: 'operator',
@@ -309,6 +312,7 @@ export default [
             category: 'helm',
             content: [
               'run',
+              'openshift',
               'configuration',
               {
                 category: 'examples',
@@ -384,6 +388,13 @@ export default [
   },
   '----------------',
   {
+    category: 'release-notes',
+    content: [
+      '1.5.0',
+    ],
+  },
+  '----------------',
+  {
     category: 'enterprise',
     content: [
       { category: 'replication' },
@@ -391,6 +402,7 @@ export default [
         category: 'hsm',
         content: ['behavior', 'security'],
       },
+      { category: 'lease-count-quotas' },
       { category: 'entropy-augmentation' },
       { category: 'sealwrap' },
       { category: 'namespaces' },

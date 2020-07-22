@@ -9,6 +9,7 @@ import (
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/ory/dockertest"
+	dc "github.com/ory/dockertest/docker"
 )
 
 // PrepareTestContainer creates a Consul docker container.  If version is empty,
@@ -45,6 +46,14 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), retAddr
 		Repository: "consul",
 		Tag:        version,
 		Cmd:        []string{"agent", "-dev", "-client", "0.0.0.0", "-hcl", config},
+	}
+	consulRepo := os.Getenv("CONSUL_DOCKER_REPO")
+	if consulRepo != "" {
+		dockerOptions.Repository = consulRepo
+		dockerOptions.Auth = dc.AuthConfiguration{
+			Username:      os.Getenv("CONSUL_DOCKER_USERNAME"),
+			Password:      os.Getenv("CONSUL_DOCKER_PASSWORD"),
+		}
 	}
 	resource, err := pool.RunWithOptions(dockerOptions)
 	if err != nil {

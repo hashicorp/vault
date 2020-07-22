@@ -49,21 +49,33 @@ const (
 	PDH_NO_DATA          = 0x800007d5
 )
 
+const (
+	ProcessBasicInformation = 0
+	ProcessWow64Information = 26
+)
+
 var (
 	Modkernel32 = windows.NewLazySystemDLL("kernel32.dll")
 	ModNt       = windows.NewLazySystemDLL("ntdll.dll")
 	ModPdh      = windows.NewLazySystemDLL("pdh.dll")
 	ModPsapi    = windows.NewLazySystemDLL("psapi.dll")
 
-	ProcGetSystemTimes           = Modkernel32.NewProc("GetSystemTimes")
-	ProcNtQuerySystemInformation = ModNt.NewProc("NtQuerySystemInformation")
-	PdhOpenQuery                 = ModPdh.NewProc("PdhOpenQuery")
-	PdhAddCounter                = ModPdh.NewProc("PdhAddCounterW")
-	PdhCollectQueryData          = ModPdh.NewProc("PdhCollectQueryData")
-	PdhGetFormattedCounterValue  = ModPdh.NewProc("PdhGetFormattedCounterValue")
-	PdhCloseQuery                = ModPdh.NewProc("PdhCloseQuery")
+	ProcGetSystemTimes                   = Modkernel32.NewProc("GetSystemTimes")
+	ProcNtQuerySystemInformation         = ModNt.NewProc("NtQuerySystemInformation")
+	ProcRtlGetNativeSystemInformation    = ModNt.NewProc("RtlGetNativeSystemInformation")
+	ProcRtlNtStatusToDosError            = ModNt.NewProc("RtlNtStatusToDosError")
+	ProcNtQueryInformationProcess        = ModNt.NewProc("NtQueryInformationProcess")
+	ProcNtReadVirtualMemory              = ModNt.NewProc("NtReadVirtualMemory")
+	ProcNtWow64QueryInformationProcess64 = ModNt.NewProc("NtWow64QueryInformationProcess64")
+	ProcNtWow64ReadVirtualMemory64       = ModNt.NewProc("NtWow64ReadVirtualMemory64")
 
-	procQueryDosDeviceW = Modkernel32.NewProc("QueryDosDeviceW")
+	PdhOpenQuery                         = ModPdh.NewProc("PdhOpenQuery")
+	PdhAddCounter                        = ModPdh.NewProc("PdhAddCounterW")
+	PdhCollectQueryData                  = ModPdh.NewProc("PdhCollectQueryData")
+	PdhGetFormattedCounterValue          = ModPdh.NewProc("PdhGetFormattedCounterValue")
+	PdhCloseQuery                        = ModPdh.NewProc("PdhCloseQuery")
+
+	procQueryDosDeviceW                  = Modkernel32.NewProc("QueryDosDeviceW")
 )
 
 type FILETIME struct {

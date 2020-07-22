@@ -13,6 +13,10 @@ steps:
       command: |
         set -x
 
+        case "<< parameters.extra_flags >>" in
+        *-race*) VAULT_CI_GO_TEST_RACE=1;;
+        esac
+
         # Install CircleCI CLI
         curl -sSL \
             "https://github.com/CircleCI-Public/circleci-cli/releases/download/v${CIRCLECI_CLI_VERSION}/circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64.tar.gz" \
@@ -42,7 +46,10 @@ steps:
           VAULT_DEV_ROOT_TOKEN_ID= \
           VAULT_ACC= \
           VAULT_TEST_LOG_DIR=<< parameters.log_dir >> \
-          gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
+          gotestsum --format=short-verbose \
+            --junitfile test-results/go-test/results.xml \
+            --jsonfile test-results/go-test/results.json \
+            -- \
             -tags "${GO_TAGS}" \
             -timeout=60m \
             -parallel=20 \
