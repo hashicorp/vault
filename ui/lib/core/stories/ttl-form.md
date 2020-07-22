@@ -1,7 +1,10 @@
 <!--THIS FILE IS AUTO GENERATED. This file is generated from JSDoc comments in lib/core/addon/components/ttl-form.js. To make changes, first edit that file and run "yarn gen-story-md ttl-form" to re-generate the content.-->
 
 ## TtlForm
-TtlForm components are used to enter a Time To Live (TTL) input. This component does not include a label or
+TtlForm components are used to enter a Time To Live (TTL) input.
+This component does not include a label and is designed to take
+a time and unit, and pass an object including seconds and
+timestring when those two values are changed.
 
 **Params**
 
@@ -15,7 +18,7 @@ TtlForm components are used to enter a Time To Live (TTL) input. This component 
 **Example**
   
 ```js
-<TtlForm @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+<TtlForm @onChange={action handleChange} @unit={{m}}/>
 ```
 
 **See**
