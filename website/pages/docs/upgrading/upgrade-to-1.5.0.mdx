@@ -23,14 +23,14 @@ configuration is 1MiB.
 In addition, a new metric has been introduced, `vault.raft-storage.entry_size`,
 that allows for operators to sample the entry size, view the average, and adjust
 the configuration value as necessary. For additional details, please see
-[Raft configuration](docs/configuration/storage/raft).
+[Raft configuration](/docs/configuration/storage/raft).
 
 ## Known Issues
 
 ### Enabling telemetry on 32-bit systems will cause Vault to crash.
 
 A workaround for this issue is to disable collection of usage gauges in
-the [telemetry](docs/configuration/telemetry) stanza of the configuration.
+the [telemetry](/docs/configuration/telemetry) stanza of the configuration.
 
 ```
 telemetry {
