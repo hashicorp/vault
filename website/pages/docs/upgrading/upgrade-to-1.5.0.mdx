@@ -27,8 +27,10 @@ the configuration value as necessary. For additional details, please see
 
 ## Known Issues
 
-Enabling telemetry on 32-bit systems will cause Vault to crash.  A workaround for this
-issue is to disable collection of usage gauges in the [telemetry](docs/configuration/telemetry) stanza of the configuration.
+### Enabling telemetry on 32-bit systems will cause Vault to crash.
+
+A workaround for this issue is to disable collection of usage gauges in
+the [telemetry](docs/configuration/telemetry) stanza of the configuration.
 
 ```
 telemetry {
@@ -37,5 +39,27 @@ telemetry {
 }
 ```
 
-This will suppress the metrics `vault.identity.entity.count`, `vault.identity.entity.alias.count`, `vault.token.count`, `vault.token.count.by_auth`, `vault.token.count.by_policy`, `vault.token.count.by_ttl` and `vault.secret.kv.count` that were introduced in version 1.5.0, but all other Vault telemetry will remain available.
+This will suppress the metrics `vault.identity.entity.count`,
+`vault.identity.entity.alias.count`, `vault.token.count`, `vault.token.count.by_auth`,
+`vault.token.count.by_policy`, `vault.token.count.by_ttl` and `vault.secret.kv.count`
+that were introduced in version 1.5.0, but all other Vault telemetry will remain available.
 
+### Non-string values in seal config prevent startup
+
+Any values in the [Seal configuration stanza](https://www.vaultproject.io/docs/configuration/seal)
+that are not quoted strings yield a parse error of the form:
+
+```
+error loading "/etc/vault.d/config_seal.hcl": error parsing 'seal': seal.pkcs11: unable to parse 'purpose' in kms type "pkcs11": value could not be parsed as string
+```
+
+The error is not actually with the `purpose` field, but rather with other config fields such as:
+
+```
+ mechanism = 0x1082
+```
+
+The workaround is to quote the strings in question, as in:
+```
+ mechanism = "0x1082"
+```
