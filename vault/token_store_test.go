@@ -4,6 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"path"
 	"reflect"
 	"sort"
@@ -13,7 +17,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
@@ -22,10 +25,6 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/helper/locksutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/tokenutil"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -2122,15 +2121,7 @@ func TestTokenStore_HandleRequest_CreateToken_TTL(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_Metric(t *testing.T) {
-	c := TestCore(t)
-
-	// Replace metricSink before unsealing
-	inmemSink := metrics.NewInmemSink(
-		1000000*time.Hour,
-		2000000*time.Hour)
-	c.metricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
-
-	_, _, root := testCoreUnsealed(t, c)
+	c, _, root, sink := TestCoreUnsealedWithMetrics(t)
 	ts := c.tokenStore
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
@@ -2144,7 +2135,7 @@ func TestTokenStore_HandleRequest_CreateToken_Metric(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	expectSingleCount(t, inmemSink, "token.creation")
+	expectSingleCount(t, sink, "token.creation")
 }
 
 func TestTokenStore_HandleRequest_Revoke(t *testing.T) {

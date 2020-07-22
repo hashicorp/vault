@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"github.com/hashicorp/vault/sdk/logical"
 	"strings"
 	"testing"
 	"time"
@@ -8,9 +9,7 @@ import (
 	"github.com/armon/go-metrics"
 	uuid "github.com/hashicorp/go-uuid"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestRequestHandling_Wrapping(t *testing.T) {
@@ -206,15 +205,7 @@ func checkCounter(t *testing.T, inmemSink *metrics.InmemSink, keyPrefix string, 
 }
 
 func TestRequestHandling_LoginMetric(t *testing.T) {
-	core := TestCore(t)
-
-	// Replace sink before unseal!
-	inmemSink := metrics.NewInmemSink(
-		1000000*time.Hour,
-		2000000*time.Hour)
-	core.metricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
-
-	_, _, root := testCoreUnsealed(t, core)
+	core, _, root, sink := TestCoreUnsealedWithMetrics(t)
 
 	if err := core.loadMounts(namespace.RootContext(nil)); err != nil {
 		t.Fatalf("err: %v", err)
@@ -275,7 +266,7 @@ func TestRequestHandling_LoginMetric(t *testing.T) {
 	}
 
 	// There should be two counters
-	checkCounter(t, inmemSink, "token.creation",
+	checkCounter(t, sink, "token.creation",
 		map[string]string{
 			"cluster":      "test-cluster",
 			"namespace":    "root",
@@ -285,7 +276,7 @@ func TestRequestHandling_LoginMetric(t *testing.T) {
 			"token_type":   "service",
 		},
 	)
-	checkCounter(t, inmemSink, "token.creation",
+	checkCounter(t, sink, "token.creation",
 		map[string]string{
 			"cluster":      "test-cluster",
 			"namespace":    "root",
@@ -299,12 +290,7 @@ func TestRequestHandling_LoginMetric(t *testing.T) {
 }
 
 func TestRequestHandling_SecretLeaseMetric(t *testing.T) {
-	core, _, root := TestCoreUnsealed(t)
-
-	inmemSink := metrics.NewInmemSink(
-		1000000*time.Hour,
-		2000000*time.Hour)
-	core.metricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
+	core, _, root, sink := TestCoreUnsealedWithMetrics(t)
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -330,7 +316,7 @@ func TestRequestHandling_SecretLeaseMetric(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	checkCounter(t, inmemSink, "secret.lease.creation",
+	checkCounter(t, sink, "secret.lease.creation",
 		map[string]string{
 			"cluster":       "test-cluster",
 			"namespace":     "root",
