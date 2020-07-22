@@ -121,7 +121,7 @@ func (m *ClusterMetricSink) newGaugeCollectionProcessWithClock(
 // If we knew all the procsses in advance, we could just schedule them
 // evenly, but a new one could be added per secret engine.
 func (p *GaugeCollectionProcess) delayStart() bool {
-	randomDelay := time.Duration(rand.Intn(int(p.currentInterval)))
+	randomDelay := time.Duration(rand.Int63n(int64(p.currentInterval)))
 	// A Timer might be better, but then we'd have to simulate
 	// one of those too?
 	delayTick := p.clock.NewTicker(randomDelay)
