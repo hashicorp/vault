@@ -1,6 +1,11 @@
 ## Next
 
+IMPROVEMENTS:
+
+* auth/jwt: Add support for fetching groups and user information from G Suite during authentication. [[GH-123](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/123)]
+
 BUG FIXES:
+
 * core: Handle a trailing slash in the API address used for enabling replication
 * core: Fix resource leak in plugin API (plugin-dependent, not all plugins impacted) [[GH-9557](https://github.com/hashicorp/vault/pull/9557)]
 * core: Fix race involved in enabling certain features via a license change
