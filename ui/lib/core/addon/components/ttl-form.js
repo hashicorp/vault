@@ -60,7 +60,6 @@ export default Component.extend({
       seconds,
       timeString: time + unit,
     };
-    console.log('changing', ttl);
     this.onChange(ttl);
   },
   keepSecondsRecalculate(newUnit) {
