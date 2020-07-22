@@ -38,10 +38,6 @@ export default Component.extend({
   time: '',
   unit: 's',
 
-  init() {
-    this._super(...arguments);
-  },
-
   /* Used internally */
   recalculationTimeout: 5000,
   recalculateSeconds: false,
