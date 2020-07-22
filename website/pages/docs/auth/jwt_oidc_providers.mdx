@@ -133,7 +133,7 @@ Main reference: [Using OAuth 2.0 to Access Google APIs](https://developers.googl
 Provider specific configuration is available when using Google as an identity provider from the
 Vault JWT/OIDC auth method. The configuration allows Vault to obtain G Suite group membership and
 user information during the JWT/OIDC authentication flow. The group membership obtained from G Suite
-will be used for Identity group alias association. The user information obtained from G Suite can be
+may be used for Identity group alias association. The user information obtained from G Suite can be
 used to copy claims data into resulting auth token and alias metadata via [claim_mappings](/api/auth/jwt#claim_mappings).
 
 #### Setup
@@ -146,7 +146,7 @@ for granting domain-wide delegation API client access.
 The Google-specific handling that's used to fetch G Suite groups and user information in Vault uses
 [G Suite Domain-Wide Delegation of Authority](https://developers.google.com/admin-sdk/directory/v1/guides/delegation)
 for authentication and authorization. You need to follow **all steps** in the [guide](https://developers.google.com/admin-sdk/directory/v1/guides/delegation)
-to obtain a Google service account key file capable of making requests to the G Suite
+to obtain the key file for a Google service account capable of making requests to the G Suite
 [User Accounts](https://developers.google.com/admin-sdk/directory/v1/guides/manage-users) and
 [Groups](https://developers.google.com/admin-sdk/directory/v1/guides/manage-groups) APIs.
 
@@ -166,8 +166,8 @@ that enable the feature.
 - `gsuite_admin_impersonate` `(string: <required>)` - Email address of a G Suite admin to impersonate.
 - `fetch_groups` `(bool: false)` - If set to true, groups will be fetched from G Suite.
 - `fetch_user_info` `(bool: false)` - If set to true, user info will be fetched from G Suite using the configured [user_custom_schemas](#user_custom_schemas).
-- `groups_recurse_max_depth` `(int: <optional>` - Group membership recursion max depth. Defaults to 0, which means don't recurse.
-- `user_custom_schemas` `(string: <optional>` - Comma-separated list of G Suite [custom schemas](https://developers.google.com/admin-sdk/directory/v1/guides/manage-schemas).
+- `groups_recurse_max_depth` `(int: <optional>)` - Group membership recursion max depth. Defaults to 0, which means don't recurse.
+- `user_custom_schemas` `(string: <optional>)` - Comma-separated list of G Suite [custom schemas](https://developers.google.com/admin-sdk/directory/v1/guides/manage-schemas).
 Values set for G Suite users using custom schema fields will be fetched and made available as claims that can be used with [claim_mappings](/api/auth/jwt#claim_mappings). Required if [fetch_user_info](#fetch_user_info) is set to true.
 
 Example configuration:
