@@ -387,6 +387,13 @@ export default [
   },
   '----------------',
   {
+    category: 'release-notes',
+    content: [
+      '1.5.0',
+    ],
+  },
+  '----------------',
+  {
     category: 'enterprise',
     content: [
       { category: 'replication' },

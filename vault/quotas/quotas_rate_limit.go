@@ -31,13 +31,14 @@ const (
 
 func init() {
 	rateLimitExemptPaths.AddPaths([]string{
-		"/v1/sys/generate-recovery-token/attempt",
-		"/v1/sys/generate-recovery-token/update",
-		"/v1/sys/generate-root/attempt",
-		"/v1/sys/generate-root/update",
-		"/v1/sys/health",
-		"/v1/sys/seal-status",
-		"/v1/sys/unseal",
+		"sys/internal/ui/mounts",
+		"sys/generate-recovery-token/attempt",
+		"sys/generate-recovery-token/update",
+		"sys/generate-root/attempt",
+		"sys/generate-root/update",
+		"sys/health",
+		"sys/seal-status",
+		"sys/unseal",
 	})
 }
 
@@ -56,7 +57,7 @@ type ClientRateLimiter struct {
 // that is uniquely addressable, where maxRequests defines the requests-per-second
 // and burstSize defines the maximum burst allowed. A caller may provide -1 for
 // burstSize to allow the burst value to be roughly equivalent to the RPS. Note,
-// the underlying rate limiter is already thread-safe.
+// the underlying rate limiter is thread-safe.
 func newClientRateLimiter(maxRequests float64, burstSize int) *ClientRateLimiter {
 	if burstSize < 0 {
 		burstSize = int(math.Ceil(maxRequests))
@@ -93,9 +94,6 @@ type RateLimitQuota struct {
 	// Rate defines the rate of which allowed requests are refilled per second.
 	Rate float64 `json:"rate"`
 
-	// Burst defines maximum number of requests at any given moment to be allowed.
-	Burst int `json:"burst"`
-
 	lock         *sync.RWMutex
 	logger       log.Logger
 	metricSink   *metricsutil.ClusterMetricSink
@@ -120,14 +118,13 @@ type RateLimitQuota struct {
 
 // NewRateLimitQuota creates a quota checker for imposing limits on the number
 // of requests per second.
-func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, burst int) *RateLimitQuota {
+func NewRateLimitQuota(name, nsPath, mountPath string, rate float64) *RateLimitQuota {
 	return &RateLimitQuota{
 		Name:          name,
 		Type:          TypeRateLimit,
 		NamespacePath: nsPath,
 		MountPath:     mountPath,
 		Rate:          rate,
-		Burst:         burst,
 	}
 }
 
@@ -150,10 +147,6 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 
 	if rlq.Rate <= 0 {
 		return fmt.Errorf("invalid avg rps: %v", rlq.Rate)
-	}
-
-	if rlq.Burst < int(rlq.Rate) {
-		return fmt.Errorf("burst size (%v) must be greater than or equal to average rps (%v)", rlq.Burst, rlq.Rate)
 	}
 
 	if logger != nil {
@@ -260,7 +253,7 @@ func (rlq *RateLimitQuota) clientRateLimiter(addr string) *ClientRateLimiter {
 
 	crl, ok := rlq.rateQuotas[addr]
 	if !ok {
-		limiter := newClientRateLimiter(rlq.Rate, rlq.Burst)
+		limiter := newClientRateLimiter(rlq.Rate, -1)
 		rlq.rateQuotas[addr] = limiter
 		return limiter
 	}

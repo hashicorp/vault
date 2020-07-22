@@ -90,12 +90,7 @@ func (c *gcpConfig) Update(d *framework.FieldData) error {
 }
 
 func (c *gcpConfig) getIAMAlias(role *gcpRole, svcAccount *iam.ServiceAccount) (alias string, err error) {
-	aliasType := c.IAMAliasType
-	if aliasType == "" {
-		aliasType = defaultIAMAlias
-	}
-
-	aliaser, exists := allowedIAMAliases[aliasType]
+	aliaser, exists := allowedIAMAliases[c.IAMAliasType]
 	if !exists {
 		return "", fmt.Errorf("invalid IAM alias type: must be one of: %s", strings.Join(allowedIAMAliasesSlice, ", "))
 	}
@@ -103,12 +98,7 @@ func (c *gcpConfig) getIAMAlias(role *gcpRole, svcAccount *iam.ServiceAccount) (
 }
 
 func (c *gcpConfig) getGCEAlias(role *gcpRole, instance *compute.Instance) (alias string, err error) {
-	aliasType := c.GCEAliasType
-	if aliasType == "" {
-		aliasType = defaultGCEAlias
-	}
-
-	aliaser, exists := allowedGCEAliases[aliasType]
+	aliaser, exists := allowedGCEAliases[c.GCEAliasType]
 	if !exists {
 		return "", fmt.Errorf("invalid GCE alias type: must be one of: %s", strings.Join(allowedGCEAliasesSlice, ", "))
 	}
