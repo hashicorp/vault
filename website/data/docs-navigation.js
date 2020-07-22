@@ -38,6 +38,7 @@ export default [
       'integrated-storage',
       'pgp-gpg-keybase',
       'recovery-mode',
+      'resource-quotas'
     ],
   },
   {
@@ -387,6 +388,13 @@ export default [
   },
   '----------------',
   {
+    category: 'release-notes',
+    content: [
+      '1.5.0',
+    ],
+  },
+  '----------------',
+  {
     category: 'enterprise',
     content: [
       { category: 'replication' },
@@ -394,6 +402,7 @@ export default [
         category: 'hsm',
         content: ['behavior', 'security'],
       },
+      { category: 'lease-count-quotas' },
       { category: 'entropy-augmentation' },
       { category: 'sealwrap' },
       { category: 'namespaces' },

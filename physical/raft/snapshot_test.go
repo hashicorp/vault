@@ -251,14 +251,17 @@ func TestRaft_Snapshot_Peers(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	commitIdx := raft1.CommittedIndex()
+
 	// Add raft2 to the cluster
 	addPeer(t, raft1, raft2)
 
-	// TODO: remove sleeps from these tests
-	time.Sleep(10 * time.Second)
+	ensureCommitApplied(t, commitIdx, raft2)
 
 	// Make sure the snapshot was applied correctly on the follower
-	compareDBs(t, raft1.fsm.db, raft2.fsm.db, false)
+	if err := compareDBs(t, raft1.fsm.db, raft2.fsm.db, false); err != nil {
+		t.Fatal(err)
+	}
 
 	// Write some more data
 	for i := 1000; i < 2000; i++ {
@@ -276,15 +279,34 @@ func TestRaft_Snapshot_Peers(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	commitIdx = raft1.CommittedIndex()
+
 	// Add raft3 to the cluster
 	addPeer(t, raft1, raft3)
 
-	// TODO: remove sleeps from these tests
-	time.Sleep(10 * time.Second)
+	ensureCommitApplied(t, commitIdx, raft2)
+	ensureCommitApplied(t, commitIdx, raft3)
 
 	// Make sure all stores are the same
 	compareFSMs(t, raft1.fsm, raft2.fsm)
 	compareFSMs(t, raft1.fsm, raft3.fsm)
+}
+
+func ensureCommitApplied(t *testing.T, leaderCommitIdx uint64, backend *RaftBackend) {
+	t.Helper()
+
+	timeout := time.Now().Add(10 * time.Second)
+	for {
+		if time.Now().After(timeout) {
+			t.Fatal("timeout reached while verifying applied index on raft backend")
+		}
+
+		if backend.AppliedIndex() >= leaderCommitIdx {
+			break
+		}
+
+		time.Sleep(1 * time.Second)
+	}
 }
 
 func TestRaft_Snapshot_Restart(t *testing.T) {
@@ -568,9 +590,7 @@ func TestBoltSnapshotStore_Listing(t *testing.T) {
 		Level: hclog.Trace,
 	})
 
-	fsm, err := NewFSM(map[string]string{
-		"path": parent,
-	}, logger)
+	fsm, err := NewFSM(parent, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -635,9 +655,7 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 		Level: hclog.Trace,
 	})
 
-	fsm, err := NewFSM(map[string]string{
-		"path": parent,
-	}, logger)
+	fsm, err := NewFSM(parent, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -735,9 +753,7 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 		t.Fatal("expected snapshot installer object")
 	}
 
-	newFSM, err := NewFSM(map[string]string{
-		"path": filepath.Dir(installer.Filename()),
-	}, logger)
+	newFSM, err := NewFSM(filepath.Dir(installer.Filename()), logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -796,9 +812,7 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 
 		// Close/Reopen the db and make sure we still match
 		fsm.Close()
-		fsm, err = NewFSM(map[string]string{
-			"path": parent,
-		}, logger)
+		fsm, err = NewFSM(parent, logger)
 		if err != nil {
 			t.Fatal(err)
 		}

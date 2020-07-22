@@ -31,13 +31,14 @@ const (
 
 func init() {
 	rateLimitExemptPaths.AddPaths([]string{
-		"/v1/sys/generate-recovery-token/attempt",
-		"/v1/sys/generate-recovery-token/update",
-		"/v1/sys/generate-root/attempt",
-		"/v1/sys/generate-root/update",
-		"/v1/sys/health",
-		"/v1/sys/seal-status",
-		"/v1/sys/unseal",
+		"sys/internal/ui/mounts",
+		"sys/generate-recovery-token/attempt",
+		"sys/generate-recovery-token/update",
+		"sys/generate-root/attempt",
+		"sys/generate-root/update",
+		"sys/health",
+		"sys/seal-status",
+		"sys/unseal",
 	})
 }
 
@@ -56,7 +57,7 @@ type ClientRateLimiter struct {
 // that is uniquely addressable, where maxRequests defines the requests-per-second
 // and burstSize defines the maximum burst allowed. A caller may provide -1 for
 // burstSize to allow the burst value to be roughly equivalent to the RPS. Note,
-// the underlying rate limiter is already thread-safe.
+// the underlying rate limiter is thread-safe.
 func newClientRateLimiter(maxRequests float64, burstSize int) *ClientRateLimiter {
 	if burstSize < 0 {
 		burstSize = int(math.Ceil(maxRequests))
@@ -93,10 +94,7 @@ type RateLimitQuota struct {
 	// Rate defines the rate of which allowed requests are refilled per second.
 	Rate float64 `json:"rate"`
 
-	// Burst defines maximum number of requests at any given moment to be allowed.
-	Burst int `json:"burst"`
-
-	lock         *sync.Mutex
+	lock         *sync.RWMutex
 	logger       log.Logger
 	metricSink   *metricsutil.ClusterMetricSink
 	purgeEnabled bool
@@ -120,24 +118,23 @@ type RateLimitQuota struct {
 
 // NewRateLimitQuota creates a quota checker for imposing limits on the number
 // of requests per second.
-func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, burst int) *RateLimitQuota {
+func NewRateLimitQuota(name, nsPath, mountPath string, rate float64) *RateLimitQuota {
 	return &RateLimitQuota{
 		Name:          name,
 		Type:          TypeRateLimit,
 		NamespacePath: nsPath,
 		MountPath:     mountPath,
 		Rate:          rate,
-		Burst:         burst,
 	}
 }
 
-// jnitialize ensures the namespace and max requests are initialized, sets the ID
+// initialize ensures the namespace and max requests are initialized, sets the ID
 // if it's currently empty, sets the purge interval and stale age to default
 // values, and finally starts the client purge go routine if it has been started
 // already. Note, initialize will reset the internal rateQuotas mapping.
 func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.ClusterMetricSink) error {
 	if rlq.lock == nil {
-		rlq.lock = new(sync.Mutex)
+		rlq.lock = new(sync.RWMutex)
 	}
 
 	rlq.lock.Lock()
@@ -150,10 +147,6 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 
 	if rlq.Rate <= 0 {
 		return fmt.Errorf("invalid avg rps: %v", rlq.Rate)
-	}
-
-	if rlq.Burst < int(rlq.Rate) {
-		return fmt.Errorf("burst size (%v) must be greater than or equal to average rps (%v)", rlq.Burst, rlq.Rate)
 	}
 
 	if logger != nil {
@@ -186,6 +179,25 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 	return nil
 }
 
+func (rlq *RateLimitQuota) hasClient(addr string) bool {
+	rlq.lock.RLock()
+	defer rlq.lock.RUnlock()
+	rlc, ok := rlq.rateQuotas[addr]
+	return ok && rlc != nil
+}
+
+func (rlq *RateLimitQuota) numClients() int {
+	rlq.lock.RLock()
+	defer rlq.lock.RUnlock()
+	return len(rlq.rateQuotas)
+}
+
+func (rlq *RateLimitQuota) getPurgeEnabled() bool {
+	rlq.lock.RLock()
+	defer rlq.lock.RUnlock()
+	return rlq.purgeEnabled
+}
+
 // quotaID returns the identifier of the quota rule
 func (rlq *RateLimitQuota) quotaID() string {
 	return rlq.ID
@@ -202,7 +214,9 @@ func (rlq *RateLimitQuota) QuotaName() string {
 // current time. The loop will continue to run indefinitely until a value is
 // sent on the closeCh in which we stop the ticker and exit.
 func (rlq *RateLimitQuota) purgeClientsLoop() {
+	rlq.lock.RLock()
 	ticker := time.NewTicker(rlq.purgeInterval)
+	rlq.lock.RUnlock()
 
 	for {
 		select {
@@ -219,7 +233,9 @@ func (rlq *RateLimitQuota) purgeClientsLoop() {
 
 		case <-rlq.closeCh:
 			ticker.Stop()
+			rlq.lock.Lock()
 			rlq.purgeEnabled = false
+			rlq.lock.Unlock()
 			return
 		}
 	}
@@ -237,7 +253,7 @@ func (rlq *RateLimitQuota) clientRateLimiter(addr string) *ClientRateLimiter {
 
 	crl, ok := rlq.rateQuotas[addr]
 	if !ok {
-		limiter := newClientRateLimiter(rlq.Rate, rlq.Burst)
+		limiter := newClientRateLimiter(rlq.Rate, -1)
 		rlq.rateQuotas[addr] = limiter
 		return limiter
 	}

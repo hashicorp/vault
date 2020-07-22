@@ -358,6 +358,27 @@ server:
       }
 ```
 
+### Probes
+
+Probes are essential for detecting failures, rescheduling and using pods in 
+Kubernetes. The helm chart offers configurable readiness and liveliness probes 
+which can be customized for a variety of use cases.
+
+Vault's [/sys/health`](/api-docs/system/health) endpoint can be customized to 
+change the behavior of the health check.  For example, we can change the Vault 
+readiness probe to show the Vault pods are ready even if they're still uninitialized 
+and sealed using the following probe:
+
+```yaml
+server:
+  readinessProbe:
+    enabled: true
+    path: "/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"
+```
+
+Using this customized probe, a `postStart` script could automatically run once the 
+pod is ready for additional setup.
+
 ### Upgrading Vault on Kubernetes
 
 To upgrade Vault on Kubernetes, we follow the same pattern as

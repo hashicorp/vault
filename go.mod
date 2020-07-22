@@ -12,10 +12,11 @@ require (
 	cloud.google.com/go/storage v1.6.0
 	github.com/Azure/azure-sdk-for-go v36.2.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.10.1
-	github.com/Microsoft/hcsshim v0.8.9 // indirect
+	github.com/DataDog/zstd v1.4.5 // indirect
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/SAP/go-hdb v0.14.1
 	github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
+	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190620160927-9418d7b0cd0f
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 	github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
@@ -24,11 +25,15 @@ require (
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf
 	github.com/aws/aws-sdk-go v1.30.27
+	github.com/bitly/go-hostpool v0.1.0 // indirect
+	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
 	github.com/client9/misspell v0.3.4
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/coreos/go-semver v0.2.0
 	github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
+	github.com/dnaeon/go-vcr v1.0.1 // indirect
+	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 	github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
 	github.com/fatih/color v1.9.0
@@ -37,8 +42,9 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-errors/errors v1.0.1
 	github.com/go-ldap/ldap/v3 v3.1.10
+	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/go-test/deep v1.0.2
+	github.com/go-test/deep v1.0.3
 	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github v17.0.0+incompatible
@@ -69,7 +75,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.5.6
 	github.com/hashicorp/vault-plugin-auth-centrify v0.5.5
 	github.com/hashicorp/vault-plugin-auth-cf v0.5.4
-	github.com/hashicorp/vault-plugin-auth-gcp v0.6.2
+	github.com/hashicorp/vault-plugin-auth-gcp v0.7.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.7.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.0
@@ -84,8 +90,8 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.6
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.4
-	github.com/hashicorp/vault/api v1.0.5-0.20200630205458-1a16f3c699c6
-	github.com/hashicorp/vault/sdk v0.1.14-0.20200527182800-ad90e0b39d2f
+	github.com/hashicorp/vault/api v1.0.5-0.20200717191844-f687267c8086
+	github.com/hashicorp/vault/sdk v0.1.14-0.20200717191844-f687267c8086
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
@@ -109,6 +115,7 @@ require (
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 	github.com/ncw/swift v1.0.47
+	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/oklog/run v1.0.0
 	github.com/okta/okta-sdk-golang v1.0.1
 	github.com/oracle/oci-go-sdk v12.5.0+incompatible
@@ -125,8 +132,13 @@ require (
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec
 	github.com/sasha-s/go-deadlock v0.2.0
-	github.com/shirou/gopsutil v2.19.9+incompatible
+	github.com/shirou/gopsutil v2.20.6-0.20200630091542-01afd763e6c0+incompatible
 	github.com/stretchr/testify v1.5.1
+	github.com/tidwall/pretty v1.0.1 // indirect
+	github.com/ulikunitz/xz v0.5.7 // indirect
+	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
+	github.com/xdg/stringprep v1.0.0 // indirect
+	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	go.etcd.io/bbolt v1.3.4
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547
 	go.mongodb.org/mongo-driver v1.2.1
@@ -134,6 +146,7 @@ require (
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1
 	golang.org/x/tools v0.0.0-20200416214402-fc959738d646
 	google.golang.org/api v0.24.0
