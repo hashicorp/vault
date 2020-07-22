@@ -1,0 +1,28 @@
+---
+layout: docs
+page_title: Upgrading to Vault 1.5.0 - Guides
+sidebar_title: Upgrade to 1.5.0
+description: |-
+  This page contains the list of deprecations and important or breaking changes
+  for Vault 1.5.0. Please read it carefully.
+---
+
+# Overview
+
+This page contains the list of deprecations and important or breaking changes
+for Vault 1.5.0 compared to 1.4.1. Please read it carefully.
+
+## Known Issues
+
+Enabling telemetry on 32-bit systems will cause Vault to crash.  A workaround for this
+issue is to disable collection of usage gauges in the telemetry stanza of the configuration.
+
+```
+telemetry {
+  ...
+  usage_gauge_period = "none"
+}
+```
+
+This will suppress the metrics `vault.identity.entity.count`, `vault.identity.entity.alias.count`, `vault.token.count`, `vault.token.count.by_auth`, `vault.token.count.by_policy`, `vault.token.count.by_ttl` and `vault.secret.kv.count`, but all other Vault telemetry will remain available.
+
