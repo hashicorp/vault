@@ -2,6 +2,7 @@
 
 BUG FIXES:
 * core: Handle a trailing slash in the API address used for enabling replication
+* core: Fix resource leak in plugin API (plugin-dependent, not all plugins impacted) [[GH-9557](https://github.com/hashicorp/vault/pull/9557)]
 
 ## 1.5.0
 ### July 21st, 2020
