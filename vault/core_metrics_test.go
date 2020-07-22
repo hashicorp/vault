@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -78,15 +79,23 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 		}
 	}
 	for _, p := range v2secrets {
-		req := logical.TestRequest(t, logical.CreateOperation, p)
-		req.Data["data"] = map[string]interface{}{"foo": "bar"}
-		req.ClientToken = root
-		resp, err := core.HandleRequest(ctx, req)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		if resp.Error() != nil {
-			t.Fatalf("bad: %#v", resp)
+		for i := 0; i < 50; i++ {
+			req := logical.TestRequest(t, logical.CreateOperation, p)
+			req.Data["data"] = map[string]interface{}{"foo": "bar"}
+			req.ClientToken = root
+			resp, err := core.HandleRequest(ctx, req)
+			if err != nil {
+				if errors.Is(err, logical.ErrInvalidRequest) {
+					// Handle scenario where KVv2 upgrade is ongoing
+					time.Sleep(100 * time.Millisecond)
+					continue
+				}
+				t.Fatalf("err: %v", err)
+			}
+			if resp.Error() != nil {
+				t.Fatalf("bad: %#v", resp)
+			}
+			break
 		}
 	}
 
