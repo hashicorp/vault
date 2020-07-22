@@ -311,6 +311,10 @@ func (r *Raft) runCandidate() {
 			// Reject any restores since we are not the leader
 			r.respond(ErrNotLeader)
 
+		case r := <-r.leadershipTransferCh:
+			// Reject any operations since we are not the leader
+			r.respond(ErrNotLeader)
+
 		case c := <-r.configurationsCh:
 			c.configurations = r.configurations.Clone()
 			c.respond(nil)

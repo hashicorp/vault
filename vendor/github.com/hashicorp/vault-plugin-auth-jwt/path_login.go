@@ -318,6 +318,11 @@ func (b *jwtAuthBackend) createIdentity(allClaims map[string]interface{}, role *
 		return nil, nil, fmt.Errorf("claim %q could not be converted to string", role.UserClaim)
 	}
 
+	err := b.fetchUserInfo(allClaims, role)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	metadata, err := extractMetadata(b.Logger(), allClaims, role.ClaimMappings)
 	if err != nil {
 		return nil, nil, err
@@ -358,6 +363,22 @@ func (b *jwtAuthBackend) createIdentity(allClaims map[string]interface{}, role *
 	}
 
 	return alias, groupAliases, nil
+}
+
+// Checks if there's a custom provider_config and calls FetchUserInfo() if implemented.
+func (b *jwtAuthBackend) fetchUserInfo(allClaims map[string]interface{}, role *jwtRole) error {
+	pConfig, err := NewProviderConfig(b.cachedConfig, ProviderMap())
+	if err != nil {
+		return fmt.Errorf("failed to load custom provider config: %s", err)
+	}
+	// Fetch user info from custom provider if it's implemented
+	if pConfig != nil {
+		if uif, ok := pConfig.(UserInfoFetcher); ok {
+			return uif.FetchUserInfo(b, allClaims, role)
+		}
+	}
+
+	return nil
 }
 
 // Checks if there's a custom provider_config and calls FetchGroups() if implemented
