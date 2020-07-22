@@ -1,0 +1,26 @@
+---
+layout: docs
+page_title: Upgrading to Vault 1.5.0 - Guides
+sidebar_title: Upgrade to 1.5.0
+description: |-
+  This page contains the list of deprecations and important or breaking changes
+  for Vault 1.5.0. Please read it carefully.
+---
+
+# Overview
+
+This page contains the list of deprecations and important or breaking changes
+for Vault 1.4.x compared to 1.5.0. Please read it carefully.
+
+## Raft Configuration
+
+A new Raft configuration value, `max_entry_size`, has been introduced. This value
+limits the size in bytes for a Raft K/V entry. It applies to both put operations and
+transactions. Any put or transaction operation exceeding this configuration value
+will cause the respective operation to fail. The default value for this
+configuration is 1MiB.
+
+In addition, a new metric has been introduced, `vault.raft-storage.entry_size`,
+that allows for operators to sample the entry size, view the average, and adjust
+the configuration value as necessary. For additional details, please see
+[Raft configuration](docs/configuration/storage/raft).
