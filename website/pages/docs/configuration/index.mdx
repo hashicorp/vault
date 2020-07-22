@@ -48,7 +48,10 @@ to specify where the configuration is.
   an HA-supporting backend. If not set, HA will be attempted on the backend
   given in the `storage` parameter. This parameter is not required if the
   storage backend supports HA coordination and if HA specific options are
-  already specified with `storage` parameter.
+  already specified with `storage` parameter. (Refer to [Use Integrated Storage
+  for HA
+  Coordination](https://learn.hashicorp.com/vault/operations/raft-ha-storage)
+  for a usage example.)
 
 - `listener` `([Listener][listener]: <required>)` – Configures how
   Vault is listening for API requests.
