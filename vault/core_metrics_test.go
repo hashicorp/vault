@@ -79,7 +79,7 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 		}
 	}
 	for _, p := range v2secrets {
-		for {
+		for i := 0; i < 50; i++ {
 			req := logical.TestRequest(t, logical.CreateOperation, p)
 			req.Data["data"] = map[string]interface{}{"foo": "bar"}
 			req.ClientToken = root
