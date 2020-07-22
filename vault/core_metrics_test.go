@@ -8,7 +8,6 @@ import (
 
 	"github.com/armon/go-metrics"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
-	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -142,15 +141,7 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 }
 
 func TestCoreMetrics_KvSecretGaugeError(t *testing.T) {
-	core := TestCore(t)
-
-	// Replace metricSink before unsealing
-	inmemSink := metrics.NewInmemSink(
-		1000000*time.Hour,
-		2000000*time.Hour)
-	core.metricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
-
-	testCoreUnsealed(t, core)
+	core, _, _, sink := TestCoreUnsealedWithMetrics(t)
 	ctx := namespace.RootContext(nil)
 
 	badKvMount := &kvMount{
@@ -162,7 +153,7 @@ func TestCoreMetrics_KvSecretGaugeError(t *testing.T) {
 
 	core.walkKvMountSecrets(ctx, badKvMount)
 
-	intervals := inmemSink.Data()
+	intervals := sink.Data()
 	// Test crossed an interval boundary, don't try to deal with it.
 	if len(intervals) > 1 {
 		t.Skip("Detected interval crossing.")
