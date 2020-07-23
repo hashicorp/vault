@@ -119,6 +119,8 @@ RestartSec=5
 TimeoutStopSec=30
 StartLimitIntervalSec=60
 StartLimitBurst=3
+LogRateLimitIntervalSec=0
+LogRateLimitBurst=0
 
 [Install]
 WantedBy=multi-user.target
@@ -146,6 +148,7 @@ The following parameters are set for the `[Service]` stanza:
 - [`RestartSec`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#RestartSec=) - Restart vault after 5 seconds of it being considered 'failed'
 - [`TimeoutStopSec`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#TimeoutStopSec=) - Wait 30 seconds for a clean stop before sending a SIGKILL signal
 - [`StartLimitIntervalSec`, `StartLimitBurst`](https://www.freedesktop.org/software/systemd/man/systemd.unit.html#StartLimitIntervalSec=interval) - Limit vault to three start attempts in 60 seconds
+- [`LogRateLimitIntervalSec`, `LogRateLimitBurst`](https://www.freedesktop.org/software/systemd/man/systemd.exec.html#LogRateLimitIntervalSec=) - Prevent JournalD from suppressing messages sent by Vault.
 
 The following parameters are set for the `[Install]` stanza:
 
