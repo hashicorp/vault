@@ -822,6 +822,8 @@ github.com/sean-/conswriter v0.0.0-20180208195008-f5ae3917a627/go.mod h1:7zjs06q
 github.com/sean-/pager v0.0.0-20180208200047-666be9bf53b5/go.mod h1:BeybITEsBEg6qbIiqJ6/Bqeq25bCLbL7YFmpaFfJDuM=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 h1:nn5Wsu0esKSJiIVhscUtVbo7ada43DJhG55ua/hjS5I=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
+github.com/sethvargo/go-limiter v0.2.2 h1:9MsQb01jSwXyuuU4v2KIVtTisvzIQgUpHUEyVoM6s3M=
+github.com/sethvargo/go-limiter v0.2.2/go.mod h1:C0kbSFbiriE5k2FFOe18M1YZbAR2Fiwf72uGu0CXCcU=
 github.com/shirou/gopsutil v2.20.6-0.20200630091542-01afd763e6c0+incompatible h1:IYOqH6sML3rQGNVEQ5foLtpDt4TeW8PIUBuI9f8itkI=
 github.com/shirou/gopsutil v2.20.6-0.20200630091542-01afd763e6c0+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=
 github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 h1:pntxY8Ary0t43dCZ5dqY4YTJCObLY1kIXl0uzMv+7DE=
