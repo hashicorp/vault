@@ -10,7 +10,7 @@ require (
 	cloud.google.com/go v0.56.0
 	cloud.google.com/go/spanner v1.5.1
 	cloud.google.com/go/storage v1.6.0
-	github.com/Azure/azure-sdk-for-go v36.2.0+incompatible
+	github.com/Azure/azure-storage-blob-go v0.10.0
 	github.com/Azure/go-autorest/autorest v0.10.1
 	github.com/DataDog/zstd v1.4.5 // indirect
 	github.com/NYTimes/gziphandler v1.1.1
@@ -32,7 +32,6 @@ require (
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/coreos/go-semver v0.2.0
 	github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
-	github.com/dnaeon/go-vcr v1.0.1 // indirect
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200309214505-aa6a9891b09c+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/dsnet/compress v0.0.1 // indirect
