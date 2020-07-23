@@ -70,10 +70,12 @@ type RateLimitQuota struct {
 	// Rate defines the rate of which allowed requests are refilled per second.
 	Rate float64 `json:"rate"`
 
-	lock       *sync.RWMutex
-	store      limiter.Store
-	logger     log.Logger
-	metricSink *metricsutil.ClusterMetricSink
+	lock          *sync.RWMutex
+	store         limiter.Store
+	logger        log.Logger
+	metricSink    *metricsutil.ClusterMetricSink
+	purgeInterval time.Duration
+	staleAge      time.Duration
 }
 
 // NewRateLimitQuota creates a quota checker for imposing limits on the number
@@ -85,6 +87,8 @@ func NewRateLimitQuota(name, nsPath, mountPath string, rate float64) *RateLimitQ
 		NamespacePath: nsPath,
 		MountPath:     mountPath,
 		Rate:          rate,
+		purgeInterval: DefaultRateLimitPurgeInterval,
+		staleAge:      DefaultRateLimitStaleAge,
 	}
 }
 
@@ -127,10 +131,10 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 	}
 
 	rlStore, err := memorystore.New(&memorystore.Config{
-		Tokens:        uint64(math.Round(rlq.Rate)),  // allow 'rlq.Rate' number of requests per 'Interval'
-		Interval:      time.Second,                   // time interval in which to enforce rate limiting
-		SweepInterval: DefaultRateLimitPurgeInterval, // how often stale clients are removed
-		SweepMinTTL:   DefaultRateLimitStaleAge,      // how long since the last request a client is considered stale
+		Tokens:        uint64(math.Round(rlq.Rate)), // allow 'rlq.Rate' number of requests per 'Interval'
+		Interval:      time.Second,                  // time interval in which to enforce rate limiting
+		SweepInterval: rlq.purgeInterval,            // how often stale clients are removed
+		SweepMinTTL:   rlq.staleAge,                 // how long since the last request a client is considered stale
 	})
 	if err != nil {
 		return err
@@ -186,7 +190,11 @@ func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
 
 // close stops the current running client purge loop.
 func (rlq *RateLimitQuota) close() error {
-	return rlq.store.Close()
+	if rlq.store != nil {
+		return rlq.store.Close()
+	}
+
+	return nil
 }
 
 func (rlq *RateLimitQuota) handleRemount(toPath string) {
