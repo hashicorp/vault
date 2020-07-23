@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -75,7 +76,13 @@ func (c *PluginReloadStatusCommand) Run(args []string) int {
 	})
 
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error retrieving plugin reload status: %s", err))
+		if w, ok := err.(errwrap.Wrapper); ok {
+			for _, e := range w.WrappedErrors() {
+				c.UI.Error(e.Error())
+			}
+		} else {
+			c.UI.Error(fmt.Sprintf("Error retrieving plugin reload status: %s", err))
+		}
 		return 2
 	}
 	out := []string{"Time | Participant | Success | Message "}
