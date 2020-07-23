@@ -21,7 +21,7 @@ import (
 // To run this test, set the following env variables:
 // VAULT_ACC=1
 // OKTA_ORG=dev-219337
-// OKTA_API_TOKEN=<find in 1password>
+// OKTA_API_TOKEN=<generate via web UI, see Confluence for login details>
 // OKTA_USERNAME=test3@example.com
 // OKTA_PASSWORD=<find in 1password>
 //
