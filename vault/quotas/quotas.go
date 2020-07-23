@@ -177,6 +177,10 @@ type Response struct {
 	// Access is the handle to reach back into the quota rule that processed the
 	// quota request. This may not be set all the time.
 	Access Access
+
+	// Headers defines any optional headers that may be returned by the quota rule
+	// to clients.
+	Headers map[string]string
 }
 
 // Config holds operator preferences around quota behaviors

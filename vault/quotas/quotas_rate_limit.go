@@ -2,6 +2,8 @@ package quotas
 
 import (
 	"fmt"
+	"math"
+	"strconv"
 	"sync"
 	"time"
 
@@ -10,6 +12,8 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/pathmanager"
+	"github.com/sethvargo/go-limiter"
+	"github.com/sethvargo/go-limiter/httplimit"
 	"github.com/sethvargo/go-limiter/memorystore"
 )
 
@@ -41,33 +45,6 @@ func init() {
 	})
 }
 
-// // ClientRateLimiter defines a token bucket based rate limiter for a unique
-// // addressable client (e.g. IP address). Whenever this client attempts to make
-// // a request, the lastSeen value will be updated.
-// type ClientRateLimiter struct {
-// 	// lastSeen defines the UNIX timestamp the client last made a request.
-// 	lastSeen time.Time
-
-// 	// limiter represents an instance of a token bucket based rate limiter.
-// 	limiter *rate.Limiter
-// }
-
-// // newClientRateLimiter returns a token bucket based rate limiter for a client
-// // that is uniquely addressable, where maxRequests defines the requests-per-second
-// // and burstSize defines the maximum burst allowed. A caller may provide -1 for
-// // burstSize to allow the burst value to be roughly equivalent to the RPS. Note,
-// // the underlying rate limiter is thread-safe.
-// func newClientRateLimiter(maxRequests float64, burstSize int) *ClientRateLimiter {
-// 	if burstSize < 0 {
-// 		burstSize = int(math.Ceil(maxRequests))
-// 	}
-
-// 	return &ClientRateLimiter{
-// 		lastSeen: time.Now().UTC(),
-// 		limiter:  rate.NewLimiter(rate.Limit(maxRequests), burstSize),
-// 	}
-// }
-
 // Ensure that RateLimitQuota implements the Quota interface
 var _ Quota = (*RateLimitQuota)(nil)
 
@@ -94,25 +71,9 @@ type RateLimitQuota struct {
 	Rate float64 `json:"rate"`
 
 	lock       *sync.RWMutex
+	store      limiter.Store
 	logger     log.Logger
 	metricSink *metricsutil.ClusterMetricSink
-	// purgeEnabled bool
-
-	// // purgeInterval defines the interval in seconds in which the RateLimitQuota
-	// // attempts to remove stale entries from the rateQuotas mapping.
-	// purgeInterval time.Duration
-	// closeCh       chan struct{}
-
-	// // staleAge defines the age in seconds in which a clientRateLimiter is
-	// // considered stale. A clientRateLimiter is considered stale if the delta
-	// // between the current purge time and its lastSeen timestamp is greater than
-	// // this value.
-	// staleAge time.Duration
-
-	// // rateQuotas contains a mapping from a unique addressable client (e.g. IP address)
-	// // to a clientRateLimiter reference. Every purgeInterval seconds, the RateLimitQuota
-	// // will attempt to remove stale entries from the mapping.
-	// rateQuotas map[string]*ClientRateLimiter
 }
 
 // NewRateLimitQuota creates a quota checker for imposing limits on the number
@@ -165,45 +126,20 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 		rlq.ID = id
 	}
 
-	// TODO: Wrap in conditional check
 	rlStore, err := memorystore.New(&memorystore.Config{
-		Tokens:        rlq.Rate,                      // allow 'rlq.Rate' number of requests per 'Interval'
+		Tokens:        uint64(math.Round(rlq.Rate)),  // allow 'rlq.Rate' number of requests per 'Interval'
 		Interval:      time.Second,                   // time interval in which to enforce rate limiting
 		SweepInterval: DefaultRateLimitPurgeInterval, // how often stale clients are removed
 		SweepMinTTL:   DefaultRateLimitStaleAge,      // how long since the last request a client is considered stale
 	})
+	if err != nil {
+		return err
+	}
 
-	// rlq.purgeInterval = DefaultRateLimitPurgeInterval
-	// rlq.staleAge = DefaultRateLimitStaleAge
-	// rlq.rateQuotas = make(map[string]*ClientRateLimiter)
-
-	// if !rlq.purgeEnabled {
-	// 	rlq.purgeEnabled = true
-	// 	rlq.closeCh = make(chan struct{})
-	// 	go rlq.purgeClientsLoop()
-	// }
+	rlq.store = rlStore
 
 	return nil
 }
-
-func (rlq *RateLimitQuota) hasClient(addr string) bool {
-	rlq.lock.RLock()
-	defer rlq.lock.RUnlock()
-	rlc, ok := rlq.rateQuotas[addr]
-	return ok && rlc != nil
-}
-
-func (rlq *RateLimitQuota) numClients() int {
-	rlq.lock.RLock()
-	defer rlq.lock.RUnlock()
-	return len(rlq.rateQuotas)
-}
-
-// func (rlq *RateLimitQuota) getPurgeEnabled() bool {
-// 	rlq.lock.RLock()
-// 	defer rlq.lock.RUnlock()
-// 	return rlq.purgeEnabled
-// }
 
 // quotaID returns the identifier of the quota rule
 func (rlq *RateLimitQuota) quotaID() string {
@@ -214,60 +150,6 @@ func (rlq *RateLimitQuota) quotaID() string {
 func (rlq *RateLimitQuota) QuotaName() string {
 	return rlq.Name
 }
-
-// // purgeClientsLoop performs a blocking process where every purgeInterval
-// // duration, we look for stale clients to remove from the rateQuotas map.
-// // A ClientRateLimiter is considered stale if its lastSeen timestamp exceeds the
-// // current time. The loop will continue to run indefinitely until a value is
-// // sent on the closeCh in which we stop the ticker and exit.
-// func (rlq *RateLimitQuota) purgeClientsLoop() {
-// 	rlq.lock.RLock()
-// 	ticker := time.NewTicker(rlq.purgeInterval)
-// 	rlq.lock.RUnlock()
-
-// 	for {
-// 		select {
-// 		case t := <-ticker.C:
-// 			rlq.lock.Lock()
-
-// 			for client, crl := range rlq.rateQuotas {
-// 				if t.UTC().Sub(crl.lastSeen) >= rlq.staleAge {
-// 					delete(rlq.rateQuotas, client)
-// 				}
-// 			}
-
-// 			rlq.lock.Unlock()
-
-// 		case <-rlq.closeCh:
-// 			ticker.Stop()
-// 			rlq.lock.Lock()
-// 			rlq.purgeEnabled = false
-// 			rlq.lock.Unlock()
-// 			return
-// 		}
-// 	}
-// }
-
-// // clientRateLimiter returns a reference to a ClientRateLimiter based on a
-// // provided client address (e.g. IP address). If the ClientRateLimiter does not
-// // exist in the RateLimitQuota's mapping, one will be created and set. The
-// // created RateLimitQuota will have its requests-per-second set to
-// // RateLimitQuota.AverageRps. If the ClientRateLimiter already exists, the
-// // lastSeen timestamp will be updated.
-// func (rlq *RateLimitQuota) clientRateLimiter(addr string) *ClientRateLimiter {
-// 	rlq.lock.Lock()
-// 	defer rlq.lock.Unlock()
-
-// 	crl, ok := rlq.rateQuotas[addr]
-// 	if !ok {
-// 		limiter := newClientRateLimiter(rlq.Rate, -1)
-// 		rlq.rateQuotas[addr] = limiter
-// 		return limiter
-// 	}
-
-// 	crl.lastSeen = time.Now().UTC()
-// 	return crl
-// }
 
 // allow decides if the request is allowed by the quota. An error will be
 // returned if the request ID or address is empty. If the path is exempt, the
@@ -286,8 +168,16 @@ func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
 		return resp, fmt.Errorf("missing request client address in quota request")
 	}
 
-	resp.Allowed = rlq.clientRateLimiter(req.ClientAddress).limiter.Allow()
+	limit, remaining, reset, allow := rlq.store.Take(req.ClientAddress)
+	resp.Allowed = allow
+	resp.Headers = map[string]string{
+		httplimit.HeaderRateLimitLimit:     strconv.FormatUint(limit, 10),
+		httplimit.HeaderRateLimitRemaining: strconv.FormatUint(remaining, 10),
+		httplimit.HeaderRateLimitReset:     time.Unix(0, int64(reset)).UTC().Format(time.RFC1123),
+	}
+
 	if !resp.Allowed {
+		resp.Headers[httplimit.HeaderRetryAfter] = resp.Headers[httplimit.HeaderRateLimitReset]
 		rlq.metricSink.IncrCounterWithLabels([]string{"quota", "rate_limit", "violation"}, 1, []metrics.Label{{"name", rlq.Name}})
 	}
 
@@ -296,8 +186,7 @@ func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
 
 // close stops the current running client purge loop.
 func (rlq *RateLimitQuota) close() error {
-	close(rlq.closeCh)
-	return nil
+	return rlq.store.Close()
 }
 
 func (rlq *RateLimitQuota) handleRemount(toPath string) {
