@@ -77,7 +77,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		}
 	}
 
-	shim, err := cfg.OktaClient()
+	shim, _, err := cfg.OktaClient(ctx)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -109,7 +109,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	}
 
 	var result authResult
-	rsp, err := shim.Do(ctx, authReq, &result)
+	rsp, err := shim.Do(authReq, &result)
 	if err != nil {
 		if oe, ok := err.(*okta.Error); ok {
 			return nil, logical.ErrorResponse("Okta auth failed: %v (code=%v)", err, oe.ErrorCode), nil, nil
@@ -189,7 +189,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 			return nil, nil, nil, err
 		}
 
-		rsp, err := shim.Do(ctx, verifyReq, &result)
+		rsp, err := shim.Do(verifyReq, &result)
 		if err != nil {
 			return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed: %v", err)), nil, nil
 		}
@@ -203,7 +203,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 				if err != nil {
 					return nil, logical.ErrorResponse(fmt.Sprintf("okta auth failed creating verify request: %v", err)), nil, nil
 				}
-				rsp, err := shim.Do(ctx, verifyReq, &result)
+				rsp, err := shim.Do(verifyReq, &result)
 				if err != nil {
 					return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed checking loop: %v", err)), nil, nil
 				}
@@ -258,9 +258,9 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 
 	var allGroups []string
 	// Only query the Okta API for group membership if we have a token
-	client := shim.Client()
+	client, oktactx := shim.Client()
 	if client != nil {
-		oktaGroups, err := b.getOktaGroups(ctx, client, &result.Embedded.User)
+		oktaGroups, err := b.getOktaGroups(oktactx, client, &result.Embedded.User)
 		if err != nil {
 			return nil, logical.ErrorResponse(fmt.Sprintf("okta failure retrieving groups: %v", err)), nil, nil
 		}

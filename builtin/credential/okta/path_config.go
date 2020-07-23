@@ -269,17 +269,18 @@ func (b *backend) pathConfigExistenceCheck(ctx context.Context, req *logical.Req
 }
 
 type oktaShim interface {
-	Client() *oktanew.Client
+	Client() (*oktanew.Client, context.Context)
 	NewRequest(method string, url string, body interface{}) (*http.Request, error)
-	Do(ctx context.Context, req *http.Request, v interface{}) (interface{}, error)
+	Do(req *http.Request, v interface{}) (interface{}, error)
 }
 
 type oktaShimNew struct {
 	client *oktanew.Client
+	ctx    context.Context
 }
 
-func (new *oktaShimNew) Client() *oktanew.Client {
-	return new.client
+func (new *oktaShimNew) Client() (*oktanew.Client, context.Context) {
+	return new.client, new.ctx
 }
 
 func (new *oktaShimNew) NewRequest(method string, url string, body interface{}) (*http.Request, error) {
@@ -289,28 +290,28 @@ func (new *oktaShimNew) NewRequest(method string, url string, body interface{}) 
 	return new.client.GetRequestExecutor().NewRequest(method, url, body)
 }
 
-func (new *oktaShimNew) Do(ctx context.Context, req *http.Request, v interface{}) (interface{}, error) {
-	return new.client.GetRequestExecutor().Do(ctx, req, v)
+func (new *oktaShimNew) Do(req *http.Request, v interface{}) (interface{}, error) {
+	return new.client.GetRequestExecutor().Do(new.ctx, req, v)
 }
 
 type oktaShimOld struct {
 	client *oktaold.Client
 }
 
-func (new *oktaShimOld) Client() *oktanew.Client {
-	return nil
+func (new *oktaShimOld) Client() (*oktanew.Client, context.Context) {
+	return nil, nil
 }
 
 func (new *oktaShimOld) NewRequest(method string, url string, body interface{}) (*http.Request, error) {
 	return new.client.NewRequest(method, url, body)
 }
 
-func (new *oktaShimOld) Do(_ context.Context, req *http.Request, v interface{}) (interface{}, error) {
+func (new *oktaShimOld) Do(req *http.Request, v interface{}) (interface{}, error) {
 	return new.client.Do(req, v)
 }
 
 // OktaClient creates a basic okta client connection
-func (c *ConfigEntry) OktaClient() (oktaShim, error) {
+func (c *ConfigEntry) OktaClient(ctx context.Context) (oktaShim, context.Context, error) {
 	baseURL := defaultBaseURL
 	if c.Production != nil {
 		if !*c.Production {
@@ -322,19 +323,19 @@ func (c *ConfigEntry) OktaClient() (oktaShim, error) {
 	}
 
 	if c.Token != "" {
-		_, client, err := oktanew.NewClient(context.Background(),
+		ctx, client, err := oktanew.NewClient(ctx,
 			oktanew.WithOrgUrl("https://"+c.Org+"."+baseURL),
 			oktanew.WithToken(c.Token))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return &oktaShimNew{client}, nil
+		return &oktaShimNew{client, ctx}, ctx, nil
 	}
 	client, err := oktaold.NewClientWithDomain(cleanhttp.DefaultClient(), c.Org, baseURL, "")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return &oktaShimOld{client}, nil
+	return &oktaShimOld{client}, ctx, nil
 }
 
 // ConfigEntry for Okta
