@@ -729,9 +729,9 @@ func runTransit(t *testing.T, logger hclog.Logger, storage teststorage.ReusableS
 		storage.Cleanup(t, cluster)
 	}()
 
-	leader := cluster.Cores[0]
-	client := leader.Client
-	client.SetToken(rootToken)
+	for _, c := range cluster.Cores {
+		c.Client.SetToken(rootToken)
+	}
 
 	// Unseal.  Even though we are using autounseal, we have to unseal
 	// explicitly because we are using SkipInit.
@@ -742,7 +742,8 @@ func runTransit(t *testing.T, logger hclog.Logger, storage teststorage.ReusableS
 		// This is apparently necessary for the raft cluster to get itself
 		// situated.
 		time.Sleep(15 * time.Second)
-		if err := testhelpers.VerifyRaftConfiguration(leader, len(cluster.Cores)); err != nil {
+		// We're taking the first core, but we're not assuming it's the leader here.
+		if err := testhelpers.VerifyRaftConfiguration(cluster.Cores[0], len(cluster.Cores)); err != nil {
 			t.Fatal(err)
 		}
 	} else {
@@ -751,6 +752,11 @@ func runTransit(t *testing.T, logger hclog.Logger, storage teststorage.ReusableS
 		}
 	}
 	testhelpers.WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
+
+	// Preceding code may have stepped down the leader, so we're not sure who it is
+	// at this point.
+	leaderCore := testhelpers.DeriveActiveCore(t, cluster)
+	client := leaderCore.Client
 
 	// Read the secrets
 	secret, err := client.Logical().Read("kv-wrapped/foo")
