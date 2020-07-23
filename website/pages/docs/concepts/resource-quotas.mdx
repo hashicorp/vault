@@ -36,7 +36,7 @@ after which they may invoke additional requests at `rate` per-second.
 A rate limit quota defined at the root level (i.e. empty `path`) is inherited by
 all namespaces and mounts. It acts as a single rate limiter for the entire Vault
 API. A rate limit quota defined on a namespace takes precedence over the global
-rate limit quota, and a rate limit quota defined for a mount takes precedence over 
+rate limit quota, and a rate limit quota defined for a mount takes precedence over
 the global and namespace rate limit quotas. In other words, the most specific
 quota rule will be applied.
 
@@ -55,6 +55,12 @@ The following routes are always exempt from rate limiting:
 - `/v1/sys/health`
 - `/v1/sys/seal-status`
 - `/v1/sys/unseal`
+
+## Learn
+
+Refer to [Protecting Vault with Resource
+Quotas](https://learn.hashicorp.com/vault/security/resource-quotas) for a
+step-by-step tutorial.
 
 ## API
 
