@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	oktanew "github.com/okta/okta-sdk-golang/okta"
+	oktanew "github.com/okta/okta-sdk-golang/v2/okta"
 )
 
 const (
@@ -271,7 +271,7 @@ func (b *backend) pathConfigExistenceCheck(ctx context.Context, req *logical.Req
 type oktaShim interface {
 	Client() *oktanew.Client
 	NewRequest(method string, url string, body interface{}) (*http.Request, error)
-	Do(req *http.Request, v interface{}) (interface{}, error)
+	Do(ctx context.Context, req *http.Request, v interface{}) (interface{}, error)
 }
 
 type oktaShimNew struct {
@@ -289,8 +289,8 @@ func (new *oktaShimNew) NewRequest(method string, url string, body interface{}) 
 	return new.client.GetRequestExecutor().NewRequest(method, url, body)
 }
 
-func (new *oktaShimNew) Do(req *http.Request, v interface{}) (interface{}, error) {
-	return new.client.GetRequestExecutor().Do(req, v)
+func (new *oktaShimNew) Do(ctx context.Context, req *http.Request, v interface{}) (interface{}, error) {
+	return new.client.GetRequestExecutor().Do(ctx, req, v)
 }
 
 type oktaShimOld struct {
@@ -305,7 +305,7 @@ func (new *oktaShimOld) NewRequest(method string, url string, body interface{}) 
 	return new.client.NewRequest(method, url, body)
 }
 
-func (new *oktaShimOld) Do(req *http.Request, v interface{}) (interface{}, error) {
+func (new *oktaShimOld) Do(_ context.Context, req *http.Request, v interface{}) (interface{}, error) {
 	return new.client.Do(req, v)
 }
 
@@ -322,7 +322,7 @@ func (c *ConfigEntry) OktaClient() (oktaShim, error) {
 	}
 
 	if c.Token != "" {
-		client, err := oktanew.NewClient(context.Background(),
+		_, client, err := oktanew.NewClient(context.Background(),
 			oktanew.WithOrgUrl("https://"+c.Org+"."+baseURL),
 			oktanew.WithToken(c.Token))
 		if err != nil {
