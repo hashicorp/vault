@@ -789,6 +789,11 @@ github.com/samuel/go-zookeeper/zk
 github.com/sasha-s/go-deadlock
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
+# github.com/sethvargo/go-limiter v0.2.2
+github.com/sethvargo/go-limiter
+github.com/sethvargo/go-limiter/fasttime
+github.com/sethvargo/go-limiter/httplimit
+github.com/sethvargo/go-limiter/memorystore
 # github.com/shirou/gopsutil v2.20.6-0.20200630091542-01afd763e6c0+incompatible
 github.com/shirou/gopsutil/cpu
 github.com/shirou/gopsutil/disk
