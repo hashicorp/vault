@@ -48,7 +48,8 @@ func TestBackend_Config(t *testing.T) {
 	username := os.Getenv("OKTA_USERNAME")
 	password := os.Getenv("OKTA_PASSWORD")
 	token := os.Getenv("OKTA_API_TOKEN")
-	createOktaGroups(t, username, token, os.Getenv("OKTA_ORG"))
+	groupIDs := createOktaGroups(t, username, token, os.Getenv("OKTA_ORG"))
+	defer deleteOktaGroups(t, token, os.Getenv("OKTA_ORG"), groupIDs)
 
 	configData := map[string]interface{}{
 		"org_name": os.Getenv("OKTA_ORG"),
@@ -96,7 +97,7 @@ func TestBackend_Config(t *testing.T) {
 	})
 }
 
-func createOktaGroups(t *testing.T, username string, token string, org string) {
+func createOktaGroups(t *testing.T, username string, token string, org string) []string {
 	orgURL := "https://" + org + "." + previewBaseURL
 	ctx, client, err := okta.NewClient(context.Background(), okta.WithOrgUrl(orgURL), okta.WithToken(token))
 	require.Nil(t, err)
@@ -107,6 +108,7 @@ func createOktaGroups(t *testing.T, username string, token string, org string) {
 	require.Nil(t, err)
 	require.Len(t, users, 1)
 	userID := users[0].Id
+	var groupIDs []string
 
 	for i := 0; i < 201; i++ {
 		name := fmt.Sprintf("TestGroup%d", i)
@@ -127,8 +129,21 @@ func createOktaGroups(t *testing.T, username string, token string, org string) {
 		} else {
 			groupID = groups[0].Id
 		}
+		groupIDs = append(groupIDs, groupID)
 
 		_, err = client.Group.AddUserToGroup(ctx, groupID, userID)
+		require.Nil(t, err)
+	}
+	return groupIDs
+}
+
+func deleteOktaGroups(t *testing.T, token string, org string, groupIDs []string) {
+	orgURL := "https://" + org + "." + previewBaseURL
+	ctx, client, err := okta.NewClient(context.Background(), okta.WithOrgUrl(orgURL), okta.WithToken(token))
+	require.Nil(t, err)
+
+	for _, groupID := range groupIDs {
+		_, err := client.Group.DeleteGroup(ctx, groupID)
 		require.Nil(t, err)
 	}
 }
