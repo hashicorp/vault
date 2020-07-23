@@ -2,8 +2,11 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/sdk/logical"
 	"net/http"
 	"time"
 
@@ -299,6 +302,13 @@ func (c *Sys) ReloadPluginStatus(reloadStatusInput *ReloadPluginStatusInput) (*R
 
 	resp, err := c.c.RawRequestWithContext(ctx, req)
 	if err != nil {
+		defer resp.Body.Close()
+		var er logical.Response
+		dec := json.NewDecoder(resp.Body)
+		err2 := dec.Decode(&er)
+		if err2 == nil && er.Data != nil{
+			err = errwrap.Wrap(err, errors.New(er.Data["error"].(string)))
+		}
 		return nil, err
 	}
 	defer resp.Body.Close()
