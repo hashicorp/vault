@@ -66,6 +66,7 @@ export default DS.Store.extend({
   //   pageFilter: a string that will be used to do a fuzzy match against the
   //     results, this is done pre-pagination
   lazyPaginatedQuery(modelType, query /*, options*/) {
+    console.log({ query });
     const adapter = this.adapterFor(modelType);
     const modelName = normalizeModelName(modelType);
     const dataCache = this.getDataset(modelName, query);
@@ -79,16 +80,19 @@ export default DS.Store.extend({
     if (dataCache) {
       return resolve(this.fetchPage(modelName, query));
     }
+    console.log({ adapter });
     return adapter
       .query(this, { modelName }, query)
       .then(response => {
         const serializer = this.serializerFor(modelName);
+        console.log(serializer);
         const datasetHelper = serializer.extractLazyPaginatedData;
         const dataset = datasetHelper
           ? datasetHelper.call(serializer, response)
           : get(response, responsePath);
         set(response, responsePath, null);
         this.storeDataset(modelName, query, response, dataset);
+        console.log({ modelName });
         return this.fetchPage(modelName, query);
       })
       .catch(function(e) {
