@@ -110,6 +110,11 @@ func createOktaGroups(t *testing.T, username string, token string, org string) [
 	userID := users[0].Id
 	var groupIDs []string
 
+	// Verify that login's call to list the groups of the user logging in will page
+	// through multiple result sets; note here
+	// https://developer.okta.com/docs/reference/api/groups/#list-groups-with-defaults
+	// that "If you don't specify a value for limit and don't specify a query,
+	// only 200 results are returned for most orgs."
 	for i := 0; i < 201; i++ {
 		name := fmt.Sprintf("TestGroup%d", i)
 		groups, _, err := client.Group.ListGroups(ctx, &query.Params{

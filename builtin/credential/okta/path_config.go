@@ -311,7 +311,7 @@ func (new *oktaShimOld) Do(req *http.Request, v interface{}) (interface{}, error
 }
 
 // OktaClient creates a basic okta client connection
-func (c *ConfigEntry) OktaClient(ctx context.Context) (oktaShim, context.Context, error) {
+func (c *ConfigEntry) OktaClient(ctx context.Context) (oktaShim, error) {
 	baseURL := defaultBaseURL
 	if c.Production != nil {
 		if !*c.Production {
@@ -327,15 +327,15 @@ func (c *ConfigEntry) OktaClient(ctx context.Context) (oktaShim, context.Context
 			oktanew.WithOrgUrl("https://"+c.Org+"."+baseURL),
 			oktanew.WithToken(c.Token))
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		return &oktaShimNew{client, ctx}, ctx, nil
+		return &oktaShimNew{client, ctx}, nil
 	}
 	client, err := oktaold.NewClientWithDomain(cleanhttp.DefaultClient(), c.Org, baseURL, "")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return &oktaShimOld{client}, ctx, nil
+	return &oktaShimOld{client}, nil
 }
 
 // ConfigEntry for Okta

@@ -77,7 +77,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		}
 	}
 
-	shim, _, err := cfg.OktaClient(ctx)
+	shim, err := cfg.OktaClient(ctx)
 	if err != nil {
 		return nil, nil, nil, err
 	}
