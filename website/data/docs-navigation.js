@@ -21,6 +21,7 @@ export default [
       'rotation',
       'replication',
       'plugins',
+      'limits',
     ],
   },
   {
