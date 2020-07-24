@@ -32,6 +32,9 @@ import (
 // test3@example.com is not a member of testgroup, which is the group with
 // the profile that requires MFA.
 func TestBackend_Config(t *testing.T) {
+	if os.Getenv("VAULT_ACC") == "" {
+		t.SkipNow()
+	}
 	defaultLeaseTTLVal := time.Hour * 12
 	maxLeaseTTLVal := time.Hour * 24
 	b, err := Factory(context.Background(), &logical.BackendConfig{
