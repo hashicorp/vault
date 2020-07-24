@@ -5,7 +5,7 @@ sidebar_title: Limits and Maximums
 description: Learn about the maximum number of objects within Vault.
 ---
 
-# Vault Maximums and Limits
+# Vault Limits and Maximums and
 
 Vault imposes fixed upper limits on the size of certain fields and
 objects, and configurable limits on others.  Vault also has upper
@@ -99,16 +99,19 @@ storage entries. The size of each group object depends on the number
 of members and the amount of metadata.  Group aliases and group
 membership information is stored inline in each Group object.
 
-The following table assumes a conservative (but not worst-case)
-estimate of 1KB per entity or group; the number is slightly less than
-512 * 256 to reflect the fact that the first shard to fill up will
-start inducing failures.  This maximum will decrease if each entity
+Entities consume about 450 bytes of storage in isolation, but compression
+performs better across many entities.  The following table shows a best-case
+estimate of 250 bytes per entity and a a conservative (but not worst-case)
+estimate of 1KB per entity or group.  The number is slightly less than the
+amount that fits in one shard, to reflect the fact that the first shard to fill up will start inducing failures.  This maximum will decrease if each entity
 has a large amount of metadata, or if each group has a large number of
 members.
 
 |   | Consul default (512 KiB) | Integrated storage default (1 MiB) |
 |---|--------------------------|------------------------------------|
-| Maximum number of identity entities | ~100,000 | ~220,000 |
+| 
+| Maximum number of identity entities (best case) | ~450,000 | ~950,000 |
+| Maximum number of identity entities (conservative) | ~100,000 | ~220,000 | 
 | Maximum number of groups | ~100,000 | ~220,000 |
 | Maximum number of members in a group | ~12,000 | ~24,000 |
  
@@ -130,6 +133,8 @@ upper bound on the number of active tokens.  There are no restrictions on
 the token metadata field, other than the entire token must fit into one
 storage entry:
 
+|                                       |          | 
+|---------------------------------------|----------|
 | Number of key-value pairs in metadata | no limit |
 | Metadata key size | no limit |
 | Metadata value size | no limit |
@@ -159,6 +164,8 @@ is becoming excessive.
 
 ### Versioned key-value store (kv-v2 secret engine)
 
+|                                       |          | 
+|---------------------------------------|----------|
 | Number of secrets | no limit, up to available storage capacity |
 | Size of one version of a secret | slightly less than one storage entry (512 KiB or 1024 KiB)> |
 | Number of versions of a secret | default 10; configurable per-secret or per-mount |
@@ -188,9 +195,21 @@ operation on a remote service, the Vault client will see a failure.
 
 ### Cluster and replication limits
 
-| Maximum cluster size | no limit |
-| Maximum number of DR replicas | no limit |
-| Maximum number of performance replicas | no limit |
+There are no implementation limits on the maximum size of a cluster,
+or the maximum number of replicas associated with a primary.  However,
+each replica adds considerable overhead to the active node, as
+each write must be duplicated to all standbys. The overhead of
+resyncing multiple replicas at once is also high.
+
+Monitor the active Vault node's CPU and network utilization, as well as
+the lag between the last WAL and replica WAL, to determine if the
+maximum number of replicas has been exceeded.
+
+|                                       |          | 
+|---------------------------------------|----------|
+| Maximum cluster size | no limit, up to active node capability |
+| Maximum number of DR replicas | no limit, up to active node capability |
+| Maximum number of performance replicas | no limit, up to actcive node capability |
 
 ### Lease limits
 
@@ -201,7 +220,7 @@ configured.
 Although no technical maximum exists, high lease counts can cause
 degradation in system performance.  We recommend short default
 time-to-live values on tokens and leases to avoid a large backlog of
-unexpired leases.
+unexpired leases, or a large number of simultaneous expirations.
 
 | Maximum number of leases | advisory limit at 256,000 |
 | Maximum duration of lease or token | 768 hours by default |
