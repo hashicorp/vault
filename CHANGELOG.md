@@ -517,6 +517,7 @@ FEATURES:
    details. [[GH-6957](https://github.com/hashicorp/vault/pull/6957)]
  * **Filtered Paths Replication (Enterprise)**: Based on the predecessor Filtered Mount Replication,
    Filtered Paths Replication allows now filtering of namespaces in addition to mounts.
+   With this feature, Filtered Mount Replication should be considered deprecated.
  * **Token Renewal via Accessor**: Tokens can now be renewed via the accessor value through
    the new `auth/token/renew-accessor` endpoint if the caller's token has
    permission to access that endpoint.
