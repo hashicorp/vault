@@ -18,7 +18,7 @@ func TestQuotas_Precedence(t *testing.T) {
 
 	setQuotaFunc := func(t *testing.T, name, nsPath, mountPath string) Quota {
 		t.Helper()
-		quota := NewRateLimitQuota(name, nsPath, mountPath, 10, 20)
+		quota := NewRateLimitQuota(name, nsPath, mountPath, 10)
 		err := qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true)
 		if err != nil {
 			t.Fatal(err)
@@ -28,7 +28,7 @@ func TestQuotas_Precedence(t *testing.T) {
 
 	checkQuotaFunc := func(t *testing.T, nsPath, mountPath string, expected Quota) {
 		t.Helper()
-		quota, err := qm.queryQuota(nil, &Request{
+		quota, err := qm.QueryQuota(&Request{
 			Type:          TypeRateLimit,
 			NamespacePath: nsPath,
 			MountPath:     mountPath,
