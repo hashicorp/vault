@@ -120,7 +120,7 @@ The number of entities can be monitored using Vault's [telemetry](/docs/internal
 
 The cost of entity and group updates grows as the number of objects in
 each shard increases. This cost can be monitored via the
-`vault.identity.upsert_entity_txn` metric and
+`vault.identity.upsert_entity_txn` and
 the `vault.identity.upsert_group_txn` metrics.
 
 Very large internal groups should be avoided (more than 1000 members),
@@ -168,7 +168,7 @@ is becoming excessive.
 |                                       |          | 
 |---------------------------------------|----------|
 | Number of secrets | no limit, up to available storage capacity |
-| Size of one version of a secret | slightly less than one storage entry (512 KiB or 1024 KiB)> |
+| Maximum size of one version of a secret | slightly less than one storage entry (512 KiB or 1024 KiB) |
 | Number of versions of a secret | default 10; configurable per-secret or per-mount |
 | Maximum number of versions (not checked when configured) | at least 24,000 |
 
@@ -183,7 +183,7 @@ single storage entry, separate from the stored data.
 ### Request size
 
 The maximum size of an HTTP request sent to Vault is limited by
-the `maxium_request_size` option in the [listener stanza](/docs/configuration/listener/tcp). It defaults to 32 MiB.  This value, minus the overhead of
+the `maximum_request_size` option in the [listener stanza](/docs/configuration/listener/tcp). It defaults to 32 MiB.  This value, minus the overhead of
 the HTTP request itself, places an upper bound on any Transform operation,
 and on the maximum size of any key-value secrets.
 
@@ -223,5 +223,7 @@ degradation in system performance.  We recommend short default
 time-to-live values on tokens and leases to avoid a large backlog of
 unexpired leases, or a large number of simultaneous expirations.
 
+|                                       |          | 
+|---------------------------------------|----------|
 | Maximum number of leases | advisory limit at 256,000 |
 | Maximum duration of lease or token | 768 hours by default |
