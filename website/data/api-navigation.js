@@ -8,6 +8,7 @@
 export default [
   'index',
   'libraries',
+  'plugins-directory',
   'relatedtools',
   '------------',
   {
