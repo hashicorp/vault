@@ -8,7 +8,6 @@ import (
 	"unsafe"
 
 	"github.com/sethvargo/go-limiter"
-	"github.com/sethvargo/go-limiter/fasttime"
 )
 
 var _ limiter.Store = (*store)(nil)
@@ -139,8 +138,7 @@ func (s *store) Take(key string) (uint64, uint64, uint64, bool) {
 	// collected), so create the bucket and take an initial request.
 	b := newBucket(s.tokens, s.interval, s.rate)
 
-	// Add it to the map. Since this is the first time, they can't possibly be
-	// rate limited yet, so return true.
+	// Add it to the map and take.
 	s.data[key] = b
 	s.dataLock.Unlock()
 	return b.take()
@@ -183,7 +181,7 @@ func (s *store) purge() {
 		}
 
 		s.dataLock.Lock()
-		now := fasttime.Now()
+		now := fastnow()
 		for k, b := range s.data {
 			lastTick := (*bucketState)(atomic.LoadPointer(&b.bucketState)).lastTick
 			lastTime := b.startTime + (lastTick * uint64(b.interval))
@@ -233,7 +231,7 @@ type bucketState struct {
 // newBucket creates a new bucket from the given tokens and interval.
 func newBucket(tokens uint64, interval time.Duration, rate float64) *bucket {
 	b := &bucket{
-		startTime: fasttime.Now(),
+		startTime: fastnow(),
 		maxTokens: tokens,
 		interval:  interval,
 		fillRate:  rate,
@@ -252,7 +250,7 @@ func newBucket(tokens uint64, interval time.Duration, rate float64) *bucket {
 func (b *bucket) take() (uint64, uint64, uint64, bool) {
 	// Capture the current request time, current tick, and amount of time until
 	// the bucket resets.
-	now := fasttime.Now()
+	now := fastnow()
 	currTick := tick(b.startTime, now, b.interval)
 	next := b.startTime + ((currTick + 1) * uint64(b.interval))
 
@@ -314,4 +312,15 @@ func availableTokens(last, curr, max uint64, fillRate float64) uint64 {
 // yet.
 func tick(start, curr uint64, interval time.Duration) uint64 {
 	return (curr - start) / uint64(interval)
+}
+
+//go:noescape
+//go:linkname walltime runtime.walltime
+func walltime() (int64, int32)
+
+// fastnow returns a monotonic clock value. The actual value will differ across
+// systems, but that's okay because we generally only care about the deltas.
+func fastnow() uint64 {
+	x, y := walltime()
+	return uint64(x)*1e9 + uint64(y)
 }
