@@ -11,6 +11,13 @@ BUG FIXES:
 * core: Fix race involved in enabling certain features via a license change
 * secrets/database: Fix handling of TLS options in mongodb connection strings [[GH-9519](https://github.com/hashicorp/vault/pull/9519)]
 
+## 1.5.1
+### TBD
+
+IMPROVEMENTS:
+
+* auth/jwt: Add support for fetching groups and user information from G Suite during authentication. [[GH-9574](https://github.com/hashicorp/vault/pull/9574)]
+
 ## 1.5.0
 ### July 21st, 2020
 
