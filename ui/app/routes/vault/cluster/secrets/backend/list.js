@@ -56,6 +56,7 @@ export default Route.extend({
     let types = {
       transit: 'transit-key',
       ssh: 'role-ssh',
+      transform: 'transforms',
       aws: 'role-aws',
       pki: tab === 'certs' ? 'pki-certificate' : 'role-pki',
       // secret or secret-v2
@@ -70,6 +71,7 @@ export default Route.extend({
     const secret = this.secretParam() || '';
     const backend = this.enginePathParam();
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
+    // debugger;
     return hash({
       secret,
       secrets: this.store
@@ -85,6 +87,7 @@ export default Route.extend({
           return model;
         })
         .catch(err => {
+          console.error(err);
           // if we're at the root we don't want to throw
           if (backendModel && err.httpStatus === 404 && secret === '') {
             return [];
