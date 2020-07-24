@@ -32,10 +32,7 @@ to allow in Sentinel policies.
   Vault currently enables all of Sentinel's [standard imports](https://docs.hashicorp.com/sentinel/imports/)
   except the "http" import, which has performance and security implications. In the future, if any new Sentinel
   imports are not automatically enabled by Vault, users could enable them in this stanza.
-  Note that this setting only affects available imports, it cannot be used to load
-  custom modules.
-  
-  
+  Note that this setting cannot be used to load custom import plugins.
 
   ~> **Warning**: Care should be taken when enabling imports (modules) which
   could have performance and security implications in policies.  Enabling the "http" import could cause your Vault
