@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
@@ -72,41 +71,38 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 		var disabled bool
 		var purpose []string
 		var err error
-		var cfg = make(map[string]string)
+		{
+			// We first decode into a map[string]interface{} because purpose isn't
+			// necessarily a string. Then we migrate everything else over to
+			// map[string]string and error if it doesn't work.
+			var m map[string]interface{}
+			if err := hcl.DecodeObject(&m, item.Val); err != nil {
+				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+			}
 
-		// We first decode into a map[string]interface{} because purpose isn't
-		// necessarily a string. Then we migrate everything else over to
-		// map[string]string and error if it doesn't work.
-		var m map[string]interface{}
-		if err := hcl.DecodeObject(&m, item.Val); err != nil {
-			return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
-		}
-
-		for k, v := range m {
-			switch k {
-			case "purpose":
+			if v, ok := m["purpose"]; ok {
 				if purpose, err = parseutil.ParseCommaStringSlice(v); err != nil {
 					return multierror.Prefix(fmt.Errorf("unable to parse 'purpose' in kms type %q: %w", key, err), fmt.Sprintf("%s.%s:", blockName, key))
 				}
 				for i, p := range purpose {
 					purpose[i] = strings.ToLower(p)
 				}
-			case "disabled":
+			}
+
+			if v, ok := m["disabled"]; ok {
 				disabled, err = parseutil.ParseBool(v)
 				if err != nil {
 					return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 				}
-			default:
-				switch s := v.(type) {
-				case string:
-					cfg[k] = s
-				case int:
-					cfg[k] = strconv.Itoa(s)
-				default:
-					return multierror.Prefix(fmt.Errorf("not a string or integer"), fmt.Sprintf("%s.%s:", blockName, key))
-				}
 			}
 		}
+
+		var cfg map[string]string
+		if err := hcl.DecodeObject(&cfg, item.Val); err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+		}
+		delete(cfg, "purpose")
+		delete(cfg, "disabled")
 
 		seal := &KMS{
 			Type:     strings.ToLower(key),
