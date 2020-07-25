@@ -104,7 +104,7 @@ membership information is stored inline in each Group object.
 Entities consume about 450 bytes of storage in isolation, but compression
 performs better across many entities.  The following table shows a best-case
 estimate of 250 bytes per entity and a a conservative (but not worst-case)
-estimate of 1KB per entity or group.  The number is slightly less than the
+estimate of 1KiB per entity or group.  The number is slightly less than the
 amount that fits in one shard, to reflect the fact that the first shard to fill up will start inducing failures.  This maximum will decrease if each entity
 has a large amount of metadata, or if each group has a large number of
 members.
@@ -116,7 +116,7 @@ members.
 | Maximum number of groups | ~100,000 | ~220,000 |
 | Maximum number of members in a group | ~12,000 | ~24,000 |
  
-The number of entities can be monitored using Vault's [telemetry](/docs/internals/telemetry#token-identity-and-lease-metrics); see `vault.identity.num_entities metric` (total) or `vault.identity.entities.count metric` (by namespace).
+The number of entities can be monitored using Vault's [telemetry](/docs/internals/telemetry#token-identity-and-lease-metrics); see `vault.identity.num_entities` (total) or `vault.identity.entities.count` (by namespace).
 
 The cost of entity and group updates grows as the number of objects in
 each shard increases. This cost can be monitored via the
