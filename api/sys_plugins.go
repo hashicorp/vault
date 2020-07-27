@@ -301,8 +301,8 @@ func (c *Sys) ReloadPluginStatus(reloadStatusInput *ReloadPluginStatusInput) (*R
 	defer cancelFunc()
 
 	resp, err := c.c.RawRequestWithContext(ctx, req)
+	defer resp.Body.Close()
 	if err != nil {
-		defer resp.Body.Close()
 		var er logical.Response
 		dec := json.NewDecoder(resp.Body)
 		err2 := dec.Decode(&er)
@@ -311,7 +311,6 @@ func (c *Sys) ReloadPluginStatus(reloadStatusInput *ReloadPluginStatusInput) (*R
 		}
 		return nil, err
 	}
-	defer resp.Body.Close()
 	if resp != nil {
 		secret, parseErr := ParseSecret(resp.Body)
 		if parseErr != nil {
