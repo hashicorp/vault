@@ -182,9 +182,7 @@ export default Service.extend({
       // paths is an array but it will have a single entry
       // for the scope we're in
       const path = Object.keys(help.openapi.paths)[0]; // do this or look at name
-      console.log('all paths', help.openapi.paths);
       const pathInfo = help.openapi.paths[path];
-      console.log({ pathInfo });
       const params = pathInfo.parameters;
       let paramProp = {};
 
@@ -216,7 +214,6 @@ export default Service.extend({
   },
 
   getNewAdapter(pathInfo, itemType) {
-    console.log('pathInfo', pathInfo);
     // we need list and create paths to set the correct urls for actions
     let paths = this.filterPathsByItemType(pathInfo, itemType);
     let { apiPath } = pathInfo;
@@ -271,7 +268,6 @@ export default Service.extend({
 
   registerNewModelWithProps(helpUrl, backend, newModel, modelName) {
     return this.getProps(helpUrl, backend).then(props => {
-      console.log('propes', props);
       const { attrs, newFields } = combineAttributes(newModel.attributes, props);
       let owner = getOwner(this);
       newModel = newModel.extend(attrs, { newFields });

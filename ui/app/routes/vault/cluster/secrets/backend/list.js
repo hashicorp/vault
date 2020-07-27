@@ -71,7 +71,7 @@ export default Route.extend({
     const secret = this.secretParam() || '';
     const backend = this.enginePathParam();
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
-    // debugger;
+
     return hash({
       secret,
       secrets: this.store
@@ -117,6 +117,7 @@ export default Route.extend({
         return model;
       },
       () => {
+        console.log('model after', model);
         return model;
       }
     );
