@@ -56,7 +56,7 @@ export default Route.extend({
     let types = {
       transit: 'transit-key',
       ssh: 'role-ssh',
-      transform: 'transforms',
+      transform: 'transform',
       aws: 'role-aws',
       pki: tab === 'certs' ? 'pki-certificate' : 'role-pki',
       // secret or secret-v2
