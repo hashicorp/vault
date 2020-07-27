@@ -199,6 +199,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 			Sealed:       true,
 			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
 			StorageType:  core.StorageType(),
+			Version:      version.GetVersion().VersionNumber(),
 		})
 		return
 	}
