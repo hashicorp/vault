@@ -2561,3 +2561,13 @@ func (c *Core) RateLimitAuditLoggingEnabled() bool {
 
 	return false
 }
+
+// ResponseHeadersEnabled returns if the quota configuration allows for quota
+// related HTTP headers to be added to responses.
+func (c *Core) ResponseHeadersEnabled() bool {
+	if c.quotaManager != nil {
+		return c.quotaManager.ResponseHeadersEnabled()
+	}
+
+	return false
+}

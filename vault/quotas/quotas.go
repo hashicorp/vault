@@ -188,6 +188,10 @@ type Config struct {
 	// EnableRateLimitAuditLogging, if set, starts audit logging of the
 	// request rejections that arise due to rate limit quota violations.
 	EnableRateLimitAuditLogging bool `json:"enable_rate_limit_audit_logging"`
+
+	// EnableResponseHeaders dictates if additional HTTP headers contain quota
+	// related information should be added to responses.
+	EnableResponseHeaders bool `json:"enable_response_headers"`
 }
 
 // Request contains information required by the quota manager to query and
@@ -533,10 +537,22 @@ func (m *Manager) SetEnableRateLimitAuditLogging(val bool) {
 	m.config.EnableRateLimitAuditLogging = val
 }
 
+// SetEnableResponseHeaders updates the operator preference regarding the quota
+// HTTP header behavior.
+func (m *Manager) SetEnableResponseHeaders(val bool) {
+	m.config.EnableResponseHeaders = val
+}
+
 // RateLimitAuditLoggingEnabled returns if the quota configuration allows audit
 // logging of request rejections due to rate limiting quota rule violations.
 func (m *Manager) RateLimitAuditLoggingEnabled() bool {
 	return m.config.EnableRateLimitAuditLogging
+}
+
+// ResponseHeadersEnabled returns if the quota configuration allows for quota
+// related HTTP headers to be added to responses.
+func (m *Manager) ResponseHeadersEnabled() bool {
+	return m.config.EnableResponseHeaders
 }
 
 // Config returns the operator preferences in the quota manager
@@ -558,8 +574,7 @@ func (m *Manager) Reset() error {
 	m.storage = nil
 	m.ctx = nil
 
-	m.entManager.Reset()
-	return nil
+	return m.entManager.Reset()
 }
 
 // dbSchema creates a DB schema for holding all the quota rules. It creates a
@@ -640,7 +655,10 @@ func (m *Manager) Invalidate(key string) {
 			m.logger.Error("failed to invalidate quota config", "error", err)
 			return
 		}
+
 		m.SetEnableRateLimitAuditLogging(config.EnableRateLimitAuditLogging)
+		m.SetEnableResponseHeaders(config.EnableResponseHeaders)
+
 	default:
 		splitKeys := strings.Split(key, "/")
 		if len(splitKeys) != 2 {

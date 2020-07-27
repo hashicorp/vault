@@ -20,6 +20,10 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 					Type:        framework.TypeBool,
 					Description: "If set, starts audit logging of requests that get rejected due to rate limit quota rule violations.",
 				},
+				"enable_response_headers": {
+					Type:        framework.TypeBool,
+					Description: "If set, additional quota related HTTP headers will be added to responses.",
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
@@ -88,7 +92,9 @@ func (b *SystemBackend) handleQuotasConfigUpdate() framework.OperationFunc {
 		if err != nil {
 			return nil, err
 		}
+
 		config.EnableRateLimitAuditLogging = d.Get("enable_rate_limit_audit_logging").(bool)
+		config.EnableResponseHeaders = d.Get("enable_response_headers").(bool)
 
 		entry, err := logical.StorageEntryJSON(quotas.ConfigPath, config)
 		if err != nil {
@@ -99,6 +105,8 @@ func (b *SystemBackend) handleQuotasConfigUpdate() framework.OperationFunc {
 		}
 
 		b.Core.quotaManager.SetEnableRateLimitAuditLogging(config.EnableRateLimitAuditLogging)
+		b.Core.quotaManager.SetEnableResponseHeaders(config.EnableResponseHeaders)
+
 		return nil, nil
 	}
 }
@@ -109,6 +117,7 @@ func (b *SystemBackend) handleQuotasConfigRead() framework.OperationFunc {
 		return &logical.Response{
 			Data: map[string]interface{}{
 				"enable_rate_limit_audit_logging": config.EnableRateLimitAuditLogging,
+				"enable_response_headers":         config.EnableResponseHeaders,
 			},
 		}, nil
 	}
