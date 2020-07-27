@@ -38,7 +38,8 @@ either be a namespace or mount.
 ```json
 {
   "path": "",
-  "rate": 897.3
+  "rate": 897.3,
+  "interval": "2m"
 }
 ```
 
@@ -95,6 +96,7 @@ $ curl \
   "lease_duration": 0,
   "renewable": false,
   "data": {
+    "interval": "2m0s",
     "name": "global-rate-limiter",
     "path": "",
     "rate": 897.3,
