@@ -30,7 +30,7 @@ export default ApplicationAdapter.extend({
   // },
 
   pathForType() {
-    return 'transforms';
+    return 'transform';
   },
 
   urlForAlphabet(backend, id) {

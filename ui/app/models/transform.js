@@ -43,6 +43,8 @@ const CA_FIELDS = [
 export default DS.Model.extend({
   useOpenAPI: true,
   getHelpUrl: function(backend) {
+    // ARG TODO: this is the open api
+    console.log(backend, 'Backend');
     return `/v1/${backend}?help=1`;
   },
 
