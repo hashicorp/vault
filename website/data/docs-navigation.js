@@ -38,6 +38,7 @@ export default [
       'integrated-storage',
       'pgp-gpg-keybase',
       'recovery-mode',
+      'resource-quotas'
     ],
   },
   {
@@ -85,6 +86,7 @@ export default [
           'zookeeper',
         ],
       },
+      'sentinel',
       {
         category: 'service-registration',
         content: ['consul', 'kubernetes'],
@@ -383,6 +385,14 @@ export default [
       'upgrade-to-1.3.5',
       'upgrade-to-1.4.0',
       'upgrade-to-1.4.1',
+      'upgrade-to-1.5.0',
+    ],
+  },
+  '----------------',
+  {
+    category: 'release-notes',
+    content: [
+      '1.5.0',
     ],
   },
   '----------------',
@@ -394,6 +404,7 @@ export default [
         category: 'hsm',
         content: ['behavior', 'security'],
       },
+      { category: 'lease-count-quotas' },
       { category: 'entropy-augmentation' },
       { category: 'sealwrap' },
       { category: 'namespaces' },
