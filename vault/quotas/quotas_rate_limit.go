@@ -49,7 +49,7 @@ func init() {
 var _ Quota = (*RateLimitQuota)(nil)
 
 // RateLimitQuota represents the quota rule properties that is used to limit the
-// number of requests per second for a namespace or mount.
+// number of requests in a given interval for a namespace or mount.
 type RateLimitQuota struct {
 	// ID is the identifier of the quota
 	ID string `json:"id"`
@@ -82,7 +82,8 @@ type RateLimitQuota struct {
 }
 
 // NewRateLimitQuota creates a quota checker for imposing limits on the number
-// of requests per second.
+// of requests in a given interval. An interval time duration of zero may be
+// provided, which will default to 1s when initialized.
 func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, interval time.Duration) *RateLimitQuota {
 	return &RateLimitQuota{
 		Name:          name,
