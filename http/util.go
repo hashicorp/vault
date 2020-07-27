@@ -60,7 +60,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			return
 		}
 
-		if core.ResponseHeadersEnabled() {
+		if core.QuotaResponseHeadersEnabled() {
 			for h, v := range quotaResp.Headers {
 				w.Header().Set(h, v)
 			}
