@@ -353,10 +353,9 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 		ui.Error(fmt.Sprintf("Error checking leader status: %s", err))
 		return 1
 	}
-	if err == nil {
-		// Output if HA is enabled
-		out = append(out, fmt.Sprintf("HA Enabled | %t", leaderStatus.HAEnabled))
-	}
+
+	// Output if HA is enabled
+	out = append(out, fmt.Sprintf("HA Enabled | %t", leaderStatus.HAEnabled))
 
 	if leaderStatus.HAEnabled {
 		mode := "sealed"
