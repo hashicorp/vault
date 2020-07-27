@@ -7,7 +7,7 @@
  *
  * @example
  * ```js
- * <TtlForm @onChange={action handleChange} @unit={{m}}/>
+ * <TtlForm @onChange={{action handleChange}} @unit="m"/>
  * ```
  * @param {function} onChange - This function will be called when the user changes the value. An object will be passed in as a parameter with values seconds{number}, timeString{string}
  * @param {number} [time] - Time is the value that will be passed into the value input. Can be null/undefined to start if input is required.
