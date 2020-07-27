@@ -19,6 +19,10 @@ IMPROVEMENTS:
 
 * auth/jwt: Add support for fetching groups and user information from G Suite during authentication. [[GH-9574](https://github.com/hashicorp/vault/pull/9574)]
 
+BUG FIXES:
+
+* secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-9603](https://github.com/hashicorp/vault/pull/9603)]
+
 ## 1.5.0
 ### July 21st, 2020
 
