@@ -156,6 +156,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.LicensingConfig = opts.LicensingConfig
 	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
 	conf.MetricsHelper = opts.MetricsHelper
+	conf.MetricSink = opts.MetricSink
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -304,6 +305,17 @@ func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {
 	t.Helper()
 	core := TestCore(t)
 	return testCoreUnsealed(t, core)
+}
+
+func TestCoreUnsealedWithMetrics(t testing.T) (*Core, [][]byte, string, *metrics.InmemSink) {
+	t.Helper()
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+	conf := &CoreConfig{
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
+	}
+	core, keys, root := testCoreUnsealed(t, TestCoreWithSealAndUI(t, conf))
+	return core, keys, root, inmemSink
 }
 
 // TestCoreUnsealedRaw returns a pure in-memory core that is already
@@ -984,13 +996,13 @@ type TestClusterOptions struct {
 	DefaultHandlerProperties HandlerProperties
 
 	// BaseListenAddress is used to explicitly assign ports in sequence to the
-	// listener of each core.  It shoud be a string of the form
+	// listener of each core.  It should be a string of the form
 	// "127.0.0.1:20000"
 	//
 	// WARNING: Using an explicitly assigned port above 30000 may clash with
 	// ephemeral ports that have been assigned by the OS in other tests.  The
-	// use of explictly assigned ports below 30000 is strongly recommended.
-	// In addition, you should be careful to use explictly assigned ports that
+	// use of explicitly assigned ports below 30000 is strongly recommended.
+	// In addition, you should be careful to use explicitly assigned ports that
 	// do not clash with any other explicitly assigned ports in other tests.
 	BaseListenAddress string
 
@@ -1002,8 +1014,8 @@ type TestClusterOptions struct {
 	//
 	// WARNING: Using an explicitly assigned port above 30000 may clash with
 	// ephemeral ports that have been assigned by the OS in other tests.  The
-	// use of explictly assigned ports below 30000 is strongly recommended.
-	// In addition, you should be careful to use explictly assigned ports that
+	// use of explicitly assigned ports below 30000 is strongly recommended.
+	// In addition, you should be careful to use explicitly assigned ports that
 	// do not clash with any other explicitly assigned ports in other tests.
 	BaseClusterListenPort int
 
@@ -1381,6 +1393,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisablePerformanceStandby = base.DisablePerformanceStandby
 		coreConfig.MetricsHelper = base.MetricsHelper
 		coreConfig.SecureRandomReader = base.SecureRandomReader
+
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
 		}
@@ -1517,7 +1530,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		(*tcc.ReloadFuncs)["listener|tcp"] = []reloadutil.ReloadFunc{certGetters[i].Reload}
 		tcc.ReloadFuncsLock.Unlock()
 
-		testAdjustTestCore(base, tcc)
+		testAdjustUnderlyingStorage(tcc)
 
 		ret = append(ret, tcc)
 	}
@@ -1613,8 +1626,7 @@ func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOpt
 	}
 
 	// Create a new Core
-	cleanup, newCore, localConfig, coreHandler := cluster.newCore(
-		t, idx, tcc.CoreConfig, opts, tcc.Listeners, cluster.pubKey)
+	cleanup, newCore, localConfig, coreHandler := cluster.newCore(t, idx, tcc.CoreConfig, opts, tcc.Listeners, cluster.pubKey)
 	if coreHandler != nil {
 		tcc.Handler = coreHandler
 		tcc.Server.Handler = coreHandler
@@ -1631,7 +1643,7 @@ func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOpt
 
 	tcc.Client = cluster.getAPIClient(t, opts, tcc.Listeners[0].Address.Port, tcc.TLSConfig)
 
-	testAdjustTestCore(cluster.base, tcc)
+	testAdjustUnderlyingStorage(tcc)
 	testExtraTestCoreSetup(t, cluster.priKey, tcc)
 
 	// Start listeners
@@ -1643,11 +1655,7 @@ func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOpt
 	tcc.Logger().Info("restarted test core", "core", idx)
 }
 
-func (testCluster *TestCluster) newCore(
-	t testing.T, idx int, coreConfig *CoreConfig,
-	opts *TestClusterOptions, listeners []*TestListener, pubKey interface{},
-) (func(), *Core, CoreConfig, http.Handler) {
-
+func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreConfig, opts *TestClusterOptions, listeners []*TestListener, pubKey interface{}) (func(), *Core, CoreConfig, http.Handler) {
 	localConfig := *coreConfig
 	cleanupFunc := func() {}
 	var handler http.Handler

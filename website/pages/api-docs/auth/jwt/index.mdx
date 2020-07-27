@@ -124,9 +124,10 @@ entities attempting to login. At least one of the bound values must be set.
   if set to `-1`. Only applicable with "jwt" roles.
 - `bound_subject` `(string: <optional>)` - If set, requires that the `sub`
   claim matches this value.
-- `bound_claims` `(map: <optional>)` - If set, a map of claims/values to match against.
+- `bound_claims` `(map: <optional>)` - If set, a map of claims (keys) to match against respective claim values (values).
   The expected value may be a single string or a list of strings. The interpretation of the bound
-  claim values is configured with `bound_claims_type`.
+  claim values is configured with `bound_claims_type`. Keys support [JSON pointer](/docs/auth/jwt#claim-specifications-and-json-pointer)
+  syntax for referencing claims.
 - `bound_claims_type` `(string: "string")` - Configures the interpretation of the bound_claims values.
   If `"string"` (the default), the values will treated as string literals and must match exactly.
   If set to `"glob"`, the values will be interpreted as globs, with `*` matching any number of
@@ -134,9 +135,11 @@ entities attempting to login. At least one of the bound values must be set.
 - `groups_claim` `(string: <optional>)` - The claim to use to uniquely identify
   the set of groups to which the user belongs; this will be used as the names
   for the Identity group aliases created due to a successful login. The claim
-  value must be a list of strings.
+  value must be a list of strings. Supports [JSON pointer](/docs/auth/jwt#claim-specifications-and-json-pointer)
+  syntax for referencing claims.
 - `claim_mappings` `(map: <optional>)` - If set, a map of claims (keys) to be copied to
-  specified metadata fields (values).
+  specified metadata fields (values). Keys support [JSON pointer](/docs/auth/jwt#claim-specifications-and-json-pointer)
+  syntax for referencing claims.
 - `oidc_scopes` `(list: <optional>)` - If set, a list of OIDC scopes to be used with an OIDC role.
   The standard scope "openid" is automatically included and need not be specified.
 - `allowed_redirect_uris` `(list: <required>)` - The list of allowed values for redirect_uri

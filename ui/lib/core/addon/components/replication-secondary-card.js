@@ -56,6 +56,9 @@ export default Component.extend({
     return this.replicationDetails.knownPrimaryClusterAddrs;
   }),
   primaryUiUrl: computed('replicationDetails.{primaries,knownPrimaryClusterAddrs}', function() {
-    return this.replicationDetails.primaries.length && this.replicationDetails.primaries[0].api_address;
+    const { replicationDetails } = this;
+    if (replicationDetails.primaries && replicationDetails.primaries.length) {
+      return this.replicationDetails.primaries[0].api_address;
+    }
   }),
 });

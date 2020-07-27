@@ -54,7 +54,7 @@ github.com/Azure/go-autorest/tracing
 github.com/BurntSushi/toml
 # github.com/DataDog/datadog-go v3.2.0+incompatible
 github.com/DataDog/datadog-go/statsd
-# github.com/DataDog/zstd v1.4.4
+# github.com/DataDog/zstd v1.4.5
 github.com/DataDog/zstd
 # github.com/Jeffail/gabs v1.1.1
 github.com/Jeffail/gabs
@@ -78,7 +78,7 @@ github.com/SAP/go-hdb/internal/unicode
 github.com/SAP/go-hdb/internal/unicode/cesu8
 # github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
 github.com/Sectorbob/mlab-ns2/gae/ns/digest
-# github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6
+# github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d
 github.com/StackExchange/wmi
 # github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190620160927-9418d7b0cd0f
 github.com/aliyun/alibaba-cloud-sdk-go/sdk
@@ -204,10 +204,9 @@ github.com/cloudfoundry-community/go-cfclient
 github.com/cockroachdb/cockroach-go/crdb
 # github.com/containerd/containerd v1.3.4
 github.com/containerd/containerd/errdefs
-# github.com/containerd/continuity v0.0.0-20190426062206-aaeac12a7ffc
+# github.com/containerd/continuity v0.0.0-20200709052629-daa8e1ccc0bc
 github.com/containerd/continuity/fs
 github.com/containerd/continuity/pathdriver
-github.com/containerd/continuity/syscallx
 github.com/containerd/continuity/sysx
 # github.com/coreos/go-oidc v2.1.0+incompatible
 github.com/coreos/go-oidc
@@ -293,14 +292,14 @@ github.com/go-asn1-ber/asn1-ber
 github.com/go-errors/errors
 # github.com/go-ldap/ldap/v3 v3.1.10
 github.com/go-ldap/ldap/v3
-# github.com/go-ole/go-ole v1.2.1
+# github.com/go-ole/go-ole v1.2.4
 github.com/go-ole/go-ole
 github.com/go-ole/go-ole/oleutil
 # github.com/go-sql-driver/mysql v1.5.0
 github.com/go-sql-driver/mysql
 # github.com/go-stack/stack v1.8.0
 github.com/go-stack/stack
-# github.com/go-test/deep v1.0.2
+# github.com/go-test/deep v1.0.3
 github.com/go-test/deep
 # github.com/go-yaml/yaml v2.1.0+incompatible
 github.com/go-yaml/yaml
@@ -439,7 +438,7 @@ github.com/hashicorp/logutils
 # github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
 github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
-# github.com/hashicorp/raft v1.1.3-0.20200501224250-c95aa91e604e
+# github.com/hashicorp/raft v1.1.3-0.20200722211658-e8ce96ef55b8
 github.com/hashicorp/raft
 # github.com/hashicorp/raft-snapshot v1.0.2-0.20190827162939-8117efcc5aab
 github.com/hashicorp/raft-snapshot
@@ -459,10 +458,10 @@ github.com/hashicorp/vault-plugin-auth-cf/signatures
 github.com/hashicorp/vault-plugin-auth-cf/testing/certificates
 github.com/hashicorp/vault-plugin-auth-cf/testing/cf
 github.com/hashicorp/vault-plugin-auth-cf/util
-# github.com/hashicorp/vault-plugin-auth-gcp v0.6.2
+# github.com/hashicorp/vault-plugin-auth-gcp v0.7.0
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
-# github.com/hashicorp/vault-plugin-auth-jwt v0.7.0
+# github.com/hashicorp/vault-plugin-auth-jwt v0.7.1
 github.com/hashicorp/vault-plugin-auth-jwt
 # github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6
 github.com/hashicorp/vault-plugin-auth-kerberos
@@ -483,7 +482,7 @@ github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
 # github.com/hashicorp/vault-plugin-secrets-azure v0.6.1
 github.com/hashicorp/vault-plugin-secrets-azure
-# github.com/hashicorp/vault-plugin-secrets-gcp v0.6.3
+# github.com/hashicorp/vault-plugin-secrets-gcp v0.6.4
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
@@ -496,9 +495,9 @@ github.com/hashicorp/vault-plugin-secrets-mongodbatlas
 # github.com/hashicorp/vault-plugin-secrets-openldap v0.1.4
 github.com/hashicorp/vault-plugin-secrets-openldap
 github.com/hashicorp/vault-plugin-secrets-openldap/client
-# github.com/hashicorp/vault/api v1.0.5-0.20200630205458-1a16f3c699c6 => ./api
+# github.com/hashicorp/vault/api v1.0.5-0.20200717191844-f687267c8086 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20200527182800-ad90e0b39d2f => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20200717191844-f687267c8086 => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/database/helper/credsutil
@@ -625,7 +624,7 @@ github.com/json-iterator/go
 github.com/jstemmer/go-junit-report
 github.com/jstemmer/go-junit-report/formatter
 github.com/jstemmer/go-junit-report/parser
-# github.com/kelseyhightower/envconfig v1.3.0
+# github.com/kelseyhightower/envconfig v1.4.0
 github.com/kelseyhightower/envconfig
 # github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f
 github.com/keybase/go-crypto/brainpool
@@ -697,14 +696,16 @@ github.com/mwielbut/pointy
 github.com/natefinch/atomic
 # github.com/ncw/swift v1.0.47
 github.com/ncw/swift
-# github.com/nwaples/rardecode v1.0.0
+# github.com/nwaples/rardecode v1.1.0
 github.com/nwaples/rardecode
 # github.com/oklog/run v1.0.0
 github.com/oklog/run
-# github.com/okta/okta-sdk-golang v1.0.1
-github.com/okta/okta-sdk-golang/okta
+# github.com/okta/okta-sdk-golang v1.1.0
 github.com/okta/okta-sdk-golang/okta/cache
-github.com/okta/okta-sdk-golang/okta/query
+# github.com/okta/okta-sdk-golang/v2 v2.0.0
+github.com/okta/okta-sdk-golang/v2/okta
+github.com/okta/okta-sdk-golang/v2/okta/cache
+github.com/okta/okta-sdk-golang/v2/okta/query
 # github.com/opencontainers/go-digest v1.0.0
 github.com/opencontainers/go-digest
 # github.com/opencontainers/image-spec v1.0.1
@@ -793,7 +794,7 @@ github.com/samuel/go-zookeeper/zk
 github.com/sasha-s/go-deadlock
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
-# github.com/shirou/gopsutil v2.19.9+incompatible
+# github.com/shirou/gopsutil v2.20.6-0.20200630091542-01afd763e6c0+incompatible
 github.com/shirou/gopsutil/cpu
 github.com/shirou/gopsutil/disk
 github.com/shirou/gopsutil/host
@@ -801,8 +802,6 @@ github.com/shirou/gopsutil/internal/common
 github.com/shirou/gopsutil/mem
 github.com/shirou/gopsutil/net
 github.com/shirou/gopsutil/process
-# github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4
-github.com/shirou/w32
 # github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
 # github.com/stretchr/testify v1.5.1
@@ -818,7 +817,7 @@ github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/kms/v20190118
 github.com/tencentyun/cos-go-sdk-v5
 # github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926
 github.com/tv42/httpunix
-# github.com/ulikunitz/xz v0.5.6
+# github.com/ulikunitz/xz v0.5.7
 github.com/ulikunitz/xz
 github.com/ulikunitz/xz/internal/hash
 github.com/ulikunitz/xz/internal/xlog
@@ -970,7 +969,7 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980
+# golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
@@ -988,7 +987,7 @@ golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 # golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20200416214402-fc959738d646
+# golang.org/x/tools v0.0.0-20200521155704-91d71f6c2f04
 golang.org/x/tools/cmd/goimports
 golang.org/x/tools/go/analysis
 golang.org/x/tools/go/analysis/passes/inspect
@@ -1004,16 +1003,20 @@ golang.org/x/tools/go/packages
 golang.org/x/tools/go/types/objectpath
 golang.org/x/tools/go/types/typeutil
 golang.org/x/tools/internal/analysisinternal
+golang.org/x/tools/internal/event
+golang.org/x/tools/internal/event/core
+golang.org/x/tools/internal/event/keys
+golang.org/x/tools/internal/event/label
 golang.org/x/tools/internal/fastwalk
 golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
 golang.org/x/tools/internal/packagesinternal
-golang.org/x/tools/internal/telemetry/event
 # golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/api v0.24.0
+# google.golang.org/api v0.29.0
+google.golang.org/api/admin/directory/v1
 google.golang.org/api/cloudresourcemanager/v1
 google.golang.org/api/compute/v1
 google.golang.org/api/googleapi

@@ -283,6 +283,41 @@ func ConnectionsMaxWithContext(ctx context.Context, kind string, max int) ([]Con
 	return []ConnectionStat{}, common.ErrNotImplementedError
 }
 
+// Return a list of network connections opened, omitting `Uids`.
+// WithoutUids functions are reliant on implementation details. They may be altered to be an alias for Connections or be
+// removed from the API in the future.
+func ConnectionsWithoutUids(kind string) ([]ConnectionStat, error) {
+	return ConnectionsWithoutUidsWithContext(context.Background(), kind)
+}
+
+func ConnectionsWithoutUidsWithContext(ctx context.Context, kind string) ([]ConnectionStat, error) {
+	return ConnectionsMaxWithoutUidsWithContext(ctx, kind, 0)
+}
+
+func ConnectionsMaxWithoutUidsWithContext(ctx context.Context, kind string, max int) ([]ConnectionStat, error) {
+	return ConnectionsPidMaxWithoutUidsWithContext(ctx, kind, 0, max)
+}
+
+func ConnectionsPidWithoutUids(kind string, pid int32) ([]ConnectionStat, error) {
+	return ConnectionsPidWithoutUidsWithContext(context.Background(), kind, pid)
+}
+
+func ConnectionsPidWithoutUidsWithContext(ctx context.Context, kind string, pid int32) ([]ConnectionStat, error) {
+	return ConnectionsPidMaxWithoutUidsWithContext(ctx, kind, pid, 0)
+}
+
+func ConnectionsPidMaxWithoutUids(kind string, pid int32, max int) ([]ConnectionStat, error) {
+	return ConnectionsPidMaxWithoutUidsWithContext(context.Background(), kind, pid, max)
+}
+
+func ConnectionsPidMaxWithoutUidsWithContext(ctx context.Context, kind string, pid int32, max int) ([]ConnectionStat, error) {
+	return connectionsPidMaxWithoutUidsWithContext(ctx, kind, pid, max)
+}
+
+func connectionsPidMaxWithoutUidsWithContext(ctx context.Context, kind string, pid int32, max int) ([]ConnectionStat, error) {
+	return []ConnectionStat{}, common.ErrNotImplementedError
+}
+
 func FilterCounters() ([]FilterStat, error) {
 	return FilterCountersWithContext(context.Background())
 }

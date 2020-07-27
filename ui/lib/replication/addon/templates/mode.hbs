@@ -1,57 +1,62 @@
 <section class="section">
   <div class="container is-widescreen">
-    {{#if model.replicationAttrs.replicationEnabled}}
-      <PageHeader as |p|>
-        <p.top>
-          <nav class="key-value-header breadcrumb">
+    {{#if (and (eq model.drMode "secondary") (eq model.drModeInit "primary"))}}
+      <nav class="navbar"></nav>
+      <LayoutLoading />
+    {{else}}
+      {{#if model.replicationAttrs.replicationEnabled}}
+        <PageHeader as |p|>
+          <p.top>
+            <nav class="key-value-header breadcrumb">
+              <ul>
+                <li>
+                  {{#link-to "index"}}
+                    <span class="sep" data-test-replication-breadcrumb />
+                    Replication
+                  {{/link-to}}
+                </li>
+                <li>
+                  <span class="sep"></span>
+                    {{model.replicationModeForDisplay}}
+                </li>
+              </ul>
+            </nav>
+            </p.top>
+            <p.levelLeft>
+              <h1 class="has-top-margin-m title is-3 " data-test-replication-title=true>
+                {{model.replicationModeForDisplay}}
+                <span class="tag is-light has-text-grey-dark" data-test-replication-mode-display=true>
+                  {{model.replicationAttrs.modeForHeader}}
+                </span>
+              </h1>
+          </p.levelLeft>
+        </PageHeader>
+        <div class="tabs-container box is-bottomless is-fullwidth is-paddingless is-marginless">
+          <nav class="tabs sub-nav">
             <ul>
-              <li>
-                {{#link-to "index"}}
-                  <span class="sep" data-test-replication-breadcrumb />
-                  Replication
+              <li class="{{if (is-active-route 'vault.cluster.replication.mode.index') 'is-active' ''}}">
+                {{#link-to "mode" replicationMode data-test-replication-link="details"}}
+                  Details
                 {{/link-to}}
               </li>
-              <li>
-                <span class="sep"></span>
-                  {{model.replicationModeForDisplay}}
+              <li class="{{if (is-active-route 'vault.cluster.replication.mode.manage') 'is-active' ''}}">
+                {{#link-to "mode.manage" replicationMode data-test-replication-link="manage"}}
+                  Manage
+                {{/link-to}}
               </li>
+              {{#if model.replicationAttrs.isPrimary}}
+                <li class="{{if (is-active-route 'vault.cluster.replication.mode.secondaries') 'is-active' ''}}">
+                  {{#link-to "mode.secondaries" replicationMode data-test-replication-link="secondaries"}}
+                    Secondaries
+                  {{/link-to}}
+                </li>
+              {{/if}}
             </ul>
           </nav>
-          </p.top>
-          <p.levelLeft>
-            <h1 class="has-top-margin-m title is-3 " data-test-replication-title=true>
-              {{model.replicationModeForDisplay}}
-              <span class="tag is-light has-text-grey-dark" data-test-replication-mode-display=true>
-                {{model.replicationAttrs.modeForHeader}}
-              </span>
-            </h1>
-        </p.levelLeft>
-      </PageHeader>
-      <div class="tabs-container box is-bottomless is-fullwidth is-paddingless is-marginless">
-        <nav class="tabs sub-nav">
-          <ul>
-            <li class="{{if (is-active-route 'vault.cluster.replication.mode.index') 'is-active' ''}}">
-              {{#link-to "mode" replicationMode data-test-replication-link="details"}}
-                Details
-              {{/link-to}}
-            </li>
-            <li class="{{if (is-active-route 'vault.cluster.replication.mode.manage') 'is-active' ''}}">
-              {{#link-to "mode.manage" replicationMode data-test-replication-link="manage"}}
-                Manage
-              {{/link-to}}
-            </li>
-            {{#if model.replicationAttrs.isPrimary}}
-              <li class="{{if (is-active-route 'vault.cluster.replication.mode.secondaries') 'is-active' ''}}">
-                {{#link-to "mode.secondaries" replicationMode data-test-replication-link="secondaries"}}
-                  Secondaries
-                {{/link-to}}
-              </li>
-            {{/if}}
-          </ul>
-        </nav>
-      </div>
+        </div>
+      {{/if}}
+      {{outlet}}
     {{/if}}
-    {{outlet}}
   </div>
 </section>
 

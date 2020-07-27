@@ -2,6 +2,7 @@ package quotas
 
 import (
 	"fmt"
+	"math"
 	"sync"
 	"testing"
 	"time"
@@ -35,7 +36,7 @@ func TestNewClientRateLimiter(t *testing.T) {
 }
 
 func TestNewRateLimitQuota(t *testing.T) {
-	rlq := NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", 16.7, 50)
+	rlq := NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", 16.7)
 	if err := rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()); err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +54,7 @@ func TestNewRateLimitQuota(t *testing.T) {
 }
 
 func TestRateLimitQuota_Close(t *testing.T) {
-	rlq := NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", 16.7, 50)
+	rlq := NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", 16.7)
 
 	if err := rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()); err != nil {
 		t.Fatal(err)
@@ -65,7 +66,7 @@ func TestRateLimitQuota_Close(t *testing.T) {
 
 	time.Sleep(time.Second) // allow enough time for purgeClientsLoop to receive on closeCh
 
-	if rlq.purgeEnabled {
+	if rlq.getPurgeEnabled() {
 		t.Fatal("expected client purging to be disabled after close")
 	}
 }
@@ -77,7 +78,6 @@ func TestRateLimitQuota_Allow(t *testing.T) {
 		NamespacePath: "qa",
 		MountPath:     "/foo/bar",
 		Rate:          16.7,
-		Burst:         83,
 		purgeEnabled:  true, // to allow manual setting of purgeInterval and staleAge
 	}
 
@@ -137,14 +137,14 @@ func TestRateLimitQuota_Allow(t *testing.T) {
 
 	wg.Wait()
 
-	if got, expected := len(results), len(rlq.rateQuotas); got != expected {
+	if got, expected := len(results), rlq.numClients(); got != expected {
 		t.Fatalf("unexpected number of tracked client rate limit quotas; got %d, expected; %d", got, expected)
 	}
 
 	elapsed := time.Since(start)
 
-	// evaluate the ideal RPS as (burst + (RPS * totalSeconds))
-	ideal := float64(rlq.Burst) + (rlq.Rate * float64(elapsed) / float64(time.Second))
+	// evaluate the ideal RPS as (ceil(RPS) + (RPS * totalSeconds))
+	ideal := math.Ceil(rlq.Rate) + (rlq.Rate * float64(elapsed) / float64(time.Second))
 
 	for addr, cr := range results {
 		numAllow := cr.atomicNumAllow.Load()
@@ -165,8 +165,7 @@ func TestRateLimitQuota_Allow(t *testing.T) {
 	time.Sleep(rlq.purgeInterval * 2)
 
 	for addr := range results {
-		rlc, ok := rlq.rateQuotas[addr]
-		if ok || rlc != nil {
+		if rlq.hasClient(addr) {
 			t.Fatalf("expected stale client to be purged: %s", addr)
 		}
 	}
