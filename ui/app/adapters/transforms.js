@@ -13,7 +13,6 @@ export default ApplicationAdapter.extend({
     const data = serializer.serialize(snapshot, requestType);
     const { id } = snapshot;
     let url = this.urlForRole(snapshot.record.get('backend'), id);
-    debugger;
     return this.ajax(url, 'POST', { data });
   },
 
@@ -34,8 +33,16 @@ export default ApplicationAdapter.extend({
     return 'transforms';
   },
 
-  urlForRole(backend, id) {
+  urlForAlphabet(backend, id) {
     let url = `${this.buildURL()}/${encodePath(backend)}/alphabet`;
+    if (id) {
+      url = url + '/' + encodePath(id);
+    }
+    return url;
+  },
+
+  urlForTransformations(backend, id) {
+    let url = `${this.buildURL()}/${encodePath(backend)}/transformation`;
     if (id) {
       url = url + '/' + encodePath(id);
     }
@@ -51,14 +58,13 @@ export default ApplicationAdapter.extend({
   },
 
   fetchByQuery(store, query) {
-    console.log('fetching query');
     const { id, backend } = query;
     let zeroAddressAjax = resolve();
-    const queryAjax = this.ajax(this.urlForRole(backend, id), 'GET', this.optionsForQuery(id));
+    const queryAjax = this.ajax(this.urlForTransformations(backend, id), 'GET', this.optionsForQuery(id));
     if (!id) {
       zeroAddressAjax = this.findAllZeroAddress(store, query);
     }
-    debugger;
+
     return allSettled([queryAjax, zeroAddressAjax]).then(results => {
       // query result 404d, so throw the adapterError
       if (!results[0].value) {
@@ -91,12 +97,10 @@ export default ApplicationAdapter.extend({
   },
 
   query(store, type, query) {
-    console.log('QUERYING!');
     return this.fetchByQuery(store, query);
   },
 
   queryRecord(store, type, query) {
-    console.log('whoeihwoiegjw');
     return this.fetchByQuery(store, query);
   },
 });
