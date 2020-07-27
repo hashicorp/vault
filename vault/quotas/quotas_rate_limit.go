@@ -67,8 +67,11 @@ type RateLimitQuota struct {
 	// MountPath is the path of the mount to which this quota is applicable
 	MountPath string `json:"mount_path"`
 
-	// Rate defines the rate of which allowed requests are refilled per second.
+	// Rate defines the number of requests allowed per Interval.
 	Rate float64 `json:"rate"`
+
+	// Interval defines the duration to which rate limiting is applied.
+	Interval time.Duration `json:"interval"`
 
 	lock          *sync.RWMutex
 	store         limiter.Store
@@ -80,13 +83,14 @@ type RateLimitQuota struct {
 
 // NewRateLimitQuota creates a quota checker for imposing limits on the number
 // of requests per second.
-func NewRateLimitQuota(name, nsPath, mountPath string, rate float64) *RateLimitQuota {
+func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, interval time.Duration) *RateLimitQuota {
 	return &RateLimitQuota{
 		Name:          name,
 		Type:          TypeRateLimit,
 		NamespacePath: nsPath,
 		MountPath:     mountPath,
 		Rate:          rate,
+		Interval:      interval,
 		purgeInterval: DefaultRateLimitPurgeInterval,
 		staleAge:      DefaultRateLimitStaleAge,
 	}
@@ -107,6 +111,10 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 	// Memdb requires a non-empty value for indexing
 	if rlq.NamespacePath == "" {
 		rlq.NamespacePath = "root"
+	}
+
+	if rlq.Interval == 0 {
+		rlq.Interval = time.Second
 	}
 
 	if rlq.Rate <= 0 {
@@ -132,7 +140,7 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 
 	rlStore, err := memorystore.New(&memorystore.Config{
 		Tokens:        uint64(math.Round(rlq.Rate)), // allow 'rlq.Rate' number of requests per 'Interval'
-		Interval:      time.Second,                  // time interval in which to enforce rate limiting
+		Interval:      rlq.Interval,                 // time interval in which to enforce rate limiting
 		SweepInterval: rlq.purgeInterval,            // how often stale clients are removed
 		SweepMinTTL:   rlq.staleAge,                 // how long since the last request a client is considered stale
 	})

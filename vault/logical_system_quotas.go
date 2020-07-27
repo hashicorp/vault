@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -65,8 +66,12 @@ namespace1/auth/userpass adds a quota to userpass in namespace1.`,
 				},
 				"rate": {
 					Type: framework.TypeFloat,
-					Description: `The maximum number of requests at any given second to be allowed by the quota rule.
+					Description: `The maximum number of requests in a given interval to be allowed by the quota rule.
 The 'rate' must be positive.`,
+				},
+				"interval": {
+					Type:        framework.TypeDurationSecond,
+					Description: "The duration to enforce rate limiting for (default '1s').",
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -144,6 +149,11 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			return logical.ErrorResponse("'rate' is invalid"), nil
 		}
 
+		interval := time.Second * time.Duration(d.Get("interval").(int))
+		if interval == 0 {
+			interval = time.Second
+		}
+
 		mountPath := sanitizePath(d.Get("path").(string))
 		ns := b.Core.namespaceByPath(mountPath)
 		if ns.ID != namespace.RootNamespaceID {
@@ -175,12 +185,13 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 				return logical.ErrorResponse("quota rule with similar properties exists under the name %q", quotaByFactors.QuotaName()), nil
 			}
 
-			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, rate)
+			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, rate, interval)
 		default:
 			rlq := quota.(*quotas.RateLimitQuota)
 			rlq.NamespacePath = ns.Path
 			rlq.MountPath = mountPath
 			rlq.Rate = rate
+			rlq.Interval = interval
 		}
 
 		entry, err := logical.StorageEntryJSON(quotas.QuotaStoragePath(qType, name), quota)
@@ -221,10 +232,11 @@ func (b *SystemBackend) handleRateLimitQuotasRead() framework.OperationFunc {
 		}
 
 		data := map[string]interface{}{
-			"type": qType,
-			"name": rlq.Name,
-			"path": nsPath + rlq.MountPath,
-			"rate": rlq.Rate,
+			"type":     qType,
+			"name":     rlq.Name,
+			"path":     nsPath + rlq.MountPath,
+			"rate":     rlq.Rate,
+			"interval": rlq.Interval.String(),
 		}
 
 		return &logical.Response{
@@ -258,7 +270,7 @@ var quotasHelp = map[string][2]string{
 	"rate-limit": {
 		`Get, create or update rate limit resource quota for an optional namespace or
 mount.`,
-		`A rate limit quota will enforce API rate limiting on a per-second basis. A
+		`A rate limit quota will enforce API rate limiting in a specified interval. A
 rate limit quota can be created at the root level or defined on a namespace or
 mount by specifying a 'path'. The rate limiter is applied to each unique client
 IP address.`,

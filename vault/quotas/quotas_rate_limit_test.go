@@ -20,7 +20,7 @@ func TestNewRateLimitQuota(t *testing.T) {
 		rlq       *RateLimitQuota
 		expectErr bool
 	}{
-		{"valid rate", NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", 16.7), false},
+		{"valid rate", NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", 16.7, time.Second), false},
 	}
 
 	for _, tc := range testCases {
@@ -34,7 +34,7 @@ func TestNewRateLimitQuota(t *testing.T) {
 }
 
 func TestRateLimitQuota_Close(t *testing.T) {
-	rlq := NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", 16.7)
+	rlq := NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", 16.7, time.Second)
 	require.NoError(t, rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()))
 	require.NoError(t, rlq.close())
 }
