@@ -6,8 +6,9 @@ import Head from 'next/head'
 import Link from 'next/link'
 import Tabs, { Tab } from 'components/tabs'
 import EnterpriseAlert from 'components/enterprise-alert'
+import Columns from 'components/columns'
 
-const DEFAULT_COMPONENTS = { Tabs, Tab, EnterpriseAlert }
+const DEFAULT_COMPONENTS = { Tabs, Tab, EnterpriseAlert, Columns }
 
 export default function ApiLayoutWrapper(pageMeta) {
   function ApiLayout(props) {
