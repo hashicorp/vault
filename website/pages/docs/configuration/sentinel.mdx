@@ -9,7 +9,8 @@ description: |-
 
 # `sentinel` Stanza
 
-The sentinel stanza specifies configurations for Vault's Sentinel integration.
+The sentinel stanza specifies configurations for 
+[Vault's Sentinel](https://www.vaultproject.io/docs/enterprise/sentinel) integration.
 
 ```hcl
 sentinel {
@@ -25,12 +26,17 @@ A valid Vault Enterprise license is required for use of Sentinel policies.
 
 The sentinel stanza currently supports only one parameter, `additional_enabled_modules`.
 
-- `additional_enabled_modules` `(string array: [])`` - Specifies a list of
-  sentinel policy modules to enable above the default set.  For example,
-  adding "http" to this list indicates sentinel policies may import
+- `additional_enabled_modules` `(string array: [])`` - This parameter specifies a list of imports (modules)
+to allow in Sentinel policies.
 
-  ~> **Warning**: Care should be taken when enabling some modules which
-  could have performance and security implications in policies.  For
-  example, enabling "http" could cause your Vault servers to submit outbound
-  requests to arbitrary endpoints.  See [the Sentinel Documentation](https://docs.hashicorp.com/sentinel/imports/http/)
-  for more information.
+  Vault currently enables all of Sentinel's [standard imports](https://docs.hashicorp.com/sentinel/imports/)
+  except the "http" import, which has performance and security implications. In the future, if any new Sentinel
+  imports are not automatically enabled by Vault, users could enable them in this stanza.
+  Note that this setting cannot be used to load custom import plugins.
+
+  ~> **Warning**: Care should be taken when enabling imports (modules) which
+  could have performance and security implications in policies.  Enabling the "http" import could cause your Vault
+  servers to submit outbound requests to arbitrary endpoints.  
+  See the 
+  [Sentinel HTTP Import](https://docs.hashicorp.com/sentinel/imports/http/) 
+  documentation for more information.
