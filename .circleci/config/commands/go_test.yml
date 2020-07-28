@@ -19,7 +19,7 @@ steps:
         TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
   - restore_cache:
       keys:
-        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+        - go-test-cache-date-v2-{{ checksum "/tmp/go-cache-key" }}
   - run:
       name: Run Go tests
       no_output_timeout: 60m
@@ -40,7 +40,7 @@ steps:
         # Split Go tests by prior test times
         package_names=$(go list \
             -tags "${GO_TAGS}" \
-            ./command/server \
+            ./command/... \
           | grep -v /integ \
           | grep -v /vendor/ \
           | sort \
@@ -75,6 +75,6 @@ steps:
       steps:
         - save_cache:
             when: always
-            key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+            key: go-test-cache-date-v2-{{ checksum "/tmp/go-cache-key" }}
             paths:
             - << parameters.cache_dir >>
