@@ -9,6 +9,7 @@ BUG FIXES:
 * core: Handle a trailing slash in the API address used for enabling replication
 * core: Fix resource leak in plugin API (plugin-dependent, not all plugins impacted) [[GH-9557](https://github.com/hashicorp/vault/pull/9557)]
 * core: Fix race involved in enabling certain features via a license change
+* secrets/aws: Fix possible issue creating access keys when using Performance Standbys  [[GH-9606](https://github.com/hashicorp/vault/pull/9606)]
 * secrets/database: Fix handling of TLS options in mongodb connection strings [[GH-9519](https://github.com/hashicorp/vault/pull/9519)]
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-93](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/93)]
 
@@ -18,6 +19,10 @@ BUG FIXES:
 IMPROVEMENTS:
 
 * auth/jwt: Add support for fetching groups and user information from G Suite during authentication. [[GH-9574](https://github.com/hashicorp/vault/pull/9574)]
+
+BUG FIXES:
+
+* secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-9603](https://github.com/hashicorp/vault/pull/9603)]
 
 ## 1.5.0
 ### July 21st, 2020
