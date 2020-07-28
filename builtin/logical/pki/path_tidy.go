@@ -183,7 +183,8 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 					// within the cert itself and the time from the revocation
 					// entry, and perform tidy if either one tells us that the
 					// certificate has already been revoked.
-					if time.Now().After(revokedCert.NotAfter.Add(bufferDuration)) || time.Now().After(revInfo.RevocationTimeUTC.Add(bufferDuration)) {
+					now := time.Now()
+					if now.After(revokedCert.NotAfter.Add(bufferDuration)) || now.After(revInfo.RevocationTimeUTC.Add(bufferDuration)) {
 						if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
 							return errwrap.Wrapf(fmt.Sprintf("error deleting serial %q from revoked list: {{err}}", serial), err)
 						}
