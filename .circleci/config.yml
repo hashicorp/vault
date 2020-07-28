@@ -192,7 +192,7 @@ jobs:
           # Split Go tests by prior test times
           package_names=$(go list \
               -tags "${GO_TAGS}" \
-              ./... \
+              ./command/server \
             | grep -v /integ \
             | grep -v /vendor/ \
             | sort \
@@ -321,7 +321,7 @@ jobs:
           # Split Go tests by prior test times
           package_names=$(go list \
               -tags "${GO_TAGS}" \
-              ./... \
+              ./command/server \
             | grep -v /integ \
             | grep -v /vendor/ \
             | sort \
@@ -426,7 +426,7 @@ jobs:
           # Split Go tests by prior test times
           package_names=$(go list \
               -tags "${GO_TAGS}" \
-              ./... \
+              ./command/server \
             | grep -v /integ \
             | grep -v /vendor/ \
             | sort \
