@@ -7,7 +7,4 @@ triggers:
             - spike-go-test-cache
 jobs:
   - pre-flight-checks
-  - build-go-dev
-  - test-go-nightly:
-      requires:
-        - build-go-dev
+  - test-go-nightly

@@ -555,10 +555,7 @@ workflows:
   nightly-cachebuilder:
     jobs:
     - pre-flight-checks
-    - build-go-dev
-    - test-go-nightly:
-        requires:
-        - build-go-dev
+    - test-go-nightly
     triggers:
     - schedule:
         cron: 01 15 * * *
