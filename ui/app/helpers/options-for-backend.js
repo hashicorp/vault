@@ -57,11 +57,11 @@ const SECRET_BACKENDS = {
   },
   // ARG TODO: edit the editComponent and listItemPartial and better understand what's happening here
   transform: {
-    displayName: 'Transform DISPLAY NAME TEST',
-    searchPlaceholder: 'Filter Roles TEST',
+    displayName: 'Transform',
+    searchPlaceholder: 'Filter Transform',
     item: 'transform',
     create: 'Create Transformation',
-    editComponent: 'role-ssh-edit',
+    editComponent: 'transform-edit',
     listItemPartial: 'partials/secret-list/ssh-role-item',
   },
   transit: {
@@ -77,7 +77,6 @@ const SECRET_BACKENDS = {
 export function optionsForBackend([backend, tab]) {
   const selected = SECRET_BACKENDS[backend];
   let backendOptions;
-  console.log('options for bakend?');
   if (selected && selected.tabs) {
     let tabData =
       selected.tabs.findBy('name', tab) || selected.tabs.findBy('modelPrefix', tab) || selected.tabs[0];

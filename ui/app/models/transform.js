@@ -2,58 +2,80 @@ import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
 import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
 
 // these arrays define the order in which the fields will be displayed
 // see
 // https://github.com/hashicorp/vault/blob/master/builtin/logical/ssh/path_roles.go#L542 for list of fields for each key type
-const OTP_FIELDS = [
-  'name',
-  'keyType',
-  'defaultUser',
-  'adminUser',
-  'port',
-  'allowedUsers',
-  'cidrList',
-  'excludeCidrList',
+const TYPES = [
+  {
+    value: 'fpe',
+    displayName: 'Format Preserving Encryption (FPE)',
+  },
+  {
+    value: 'masking',
+    displayName: 'Masking',
+  },
 ];
-const CA_FIELDS = [
-  'name',
-  'keyType',
-  'allowUserCertificates',
-  'allowHostCertificates',
-  'defaultUser',
-  'allowedUsers',
-  'allowedUsersTemplate',
-  'allowedDomains',
-  'ttl',
-  'maxTtl',
-  'allowedCriticalOptions',
-  'defaultCriticalOptions',
-  'allowedExtensions',
-  'defaultExtensions',
-  'allowBareDomains',
-  'allowSubdomains',
-  'allowUserKeyIds',
-  'keyIdFormat',
+
+const TWEAK_SOURCE = [
+  {
+    value: 'supplied',
+    displayName: 'supplied',
+  },
+  {
+    value: 'generated',
+    displayName: 'generated',
+  },
+  {
+    value: 'internal',
+    displayName: 'internal',
+  },
 ];
 
 export default DS.Model.extend({
-  useOpenAPI: true,
-  getHelpUrl: function(backend) {
-    // ARG TODO: this is the open api
-    console.log(backend, 'Backend');
-    return `/v1/${backend}?help=1`;
-  },
-
-  attrsForKeyType: computed('keyType', function() {
-    const keyType = this.get('keyType');
-    let keys = keyType === 'ca' ? CA_FIELDS.slice(0) : OTP_FIELDS.slice(0);
-    return expandAttributeMeta(this, keys);
+  // useOpenAPI: true,
+  // getHelpUrl: function(backend) {
+  //   // ARG TODO: this is the open api
+  //   console.log(backend, 'Backend');
+  //   return `/v1/${backend}?help=1`;
+  // },
+  name: attr('string', {
+    label: 'Transformation Name',
   }),
-
+  type: attr('string', {
+    defaultValue: 'fpe',
+    label: 'Type',
+    possibleValues: TYPES,
+  }),
+  template: attr('string', {
+    label: 'Template name',
+  }),
+  tweak_source: attr('string', {
+    defaultValue: 'supplied',
+    label: 'Tweak source',
+    possibleValues: TWEAK_SOURCE,
+  }),
+  masking_character: attr('string', {
+    label: 'Masking character',
+  }),
+  allowed_roles: attr('array', {
+    defaultValue: function() {
+      return [];
+    },
+    label: 'Allowed roles',
+  }),
+  transformAttrs: computed(function() {
+    // return [{ default: ['name', 'type', 'template', 'tweak_source', 'masking_characters', 'allowed_roles'] }];
+    // for looping over form field types
+    // TODO: group them into sections
+    return ['name', 'type', 'template', 'tweak_source', 'masking_characters', 'allowed_roles'];
+  }),
+  transformFieldAttrs: computed('transformAttrs', function() {
+    return expandAttributeMeta(this, this.get('transformAttrs'));
+  }),
   updatePath: lazyCapabilities(apiPath`${'backend'}/transforms/${'id'}`, 'backend', 'id'),
   canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),
