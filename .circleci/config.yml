@@ -547,7 +547,7 @@ workflows:
     - test-go-nightly
     triggers:
     - schedule:
-        cron: 21 17 * * *
+        cron: 35 17 * * *
         filters:
           branches:
             only:
