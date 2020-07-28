@@ -1,10 +1,10 @@
 triggers:
   - schedule:
-      cron: "35 17 * * *"
+      cron: "0 9 * * *"
       filters:
         branches:
           only:
-            - spike-go-test-cache
+            - master
 jobs:
   - pre-flight-checks
   - test-go-nightly

@@ -173,7 +173,7 @@ jobs:
         name: Compute test cache key
     - restore_cache:
         keys:
-        - go-test-cache-date-v2-{{ checksum "/tmp/go-cache-key" }}
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - run:
         command: |
           set -x
@@ -192,7 +192,7 @@ jobs:
           # Split Go tests by prior test times
           package_names=$(go list \
               -tags "${GO_TAGS}" \
-              ./command/... \
+              ./... \
             | grep -v /integ \
             | grep -v /vendor/ \
             | sort \
@@ -299,7 +299,7 @@ jobs:
         name: Compute test cache key
     - restore_cache:
         keys:
-        - go-test-cache-date-v2-{{ checksum "/tmp/go-cache-key" }}
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - run:
         command: |
           set -x
@@ -318,7 +318,7 @@ jobs:
           # Split Go tests by prior test times
           package_names=$(go list \
               -tags "${GO_TAGS}" \
-              ./command/... \
+              ./... \
             | grep -v /integ \
             | grep -v /vendor/ \
             | sort \
@@ -401,7 +401,7 @@ jobs:
         name: Compute test cache key
     - restore_cache:
         keys:
-        - go-test-cache-date-v2-{{ checksum "/tmp/go-cache-key" }}
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - run:
         command: |
           set -x
@@ -420,7 +420,7 @@ jobs:
           # Split Go tests by prior test times
           package_names=$(go list \
               -tags "${GO_TAGS}" \
-              ./command/... \
+              ./... \
             | grep -v /integ \
             | grep -v /vendor/ \
             | sort \
@@ -452,7 +452,7 @@ jobs:
         name: Run Go tests
         no_output_timeout: 60m
     - save_cache:
-        key: go-test-cache-date-v2-{{ checksum "/tmp/go-cache-key" }}
+        key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
         paths:
         - /tmp/go-cache
         when: always
@@ -547,9 +547,9 @@ workflows:
     - test-go-nightly
     triggers:
     - schedule:
-        cron: 35 17 * * *
+        cron: 0 9 * * *
         filters:
           branches:
             only:
-            - spike-go-test-cache
+            - master
   version: 2
