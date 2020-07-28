@@ -549,9 +549,9 @@ workflows:
         - build-go-dev
     triggers:
     - schedule:
-        cron: 20 13 * * *
+        cron: 35 13 * * *
         filters:
           branches:
             only:
-            - master
+            - spike-go-test-cache
   version: 2
