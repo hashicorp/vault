@@ -1,0 +1,13 @@
+triggers:
+  - schedule:
+      cron: "20 13 * * *"
+      filters:
+        branches:
+          only:
+            - master
+jobs:
+  - pre-flight-checks
+  - build-go-dev
+  - test-go-nightly:
+      requires:
+        - build-go-dev

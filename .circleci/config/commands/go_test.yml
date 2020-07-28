@@ -9,6 +9,9 @@ parameters:
   cache_dir:
     type: string
     default: /tmp/go-cache
+  save_cache:
+    type: boolean
+    default: false
 steps:
   - run:
       name: Compute test cache key
@@ -67,7 +70,10 @@ steps:
             << parameters.extra_flags >> \
             ${package_names}
 
-  - save_cache:
-      key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
-      paths:
-      - << parameters.cache_dir >>
+  - when:
+      condition: << parameters.save_cache >>
+      steps:
+        - save_cache:
+            key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+            paths:
+            - << parameters.cache_dir >>
