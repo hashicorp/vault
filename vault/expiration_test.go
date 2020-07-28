@@ -1353,7 +1353,7 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
-				TTL:       50 * time.Millisecond,
+				TTL:       20 * time.Millisecond,
 				Renewable: true,
 			},
 		},
