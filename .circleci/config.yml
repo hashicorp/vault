@@ -205,6 +205,7 @@ jobs:
           # Run tests
           make prep
           mkdir -p test-results/go-test
+          export TEST_FAILURE=0
           CGO_ENABLED= \
             VAULT_ADDR= \
             VAULT_TOKEN= \
@@ -334,6 +335,7 @@ jobs:
           # Run tests
           make prep
           mkdir -p test-results/go-test
+          export TEST_FAILURE=0
           CGO_ENABLED= \
             VAULT_ADDR= \
             VAULT_TOKEN= \
@@ -439,6 +441,7 @@ jobs:
           # Run tests
           make prep
           mkdir -p test-results/go-test
+          export TEST_FAILURE=0
           CGO_ENABLED= \
             VAULT_ADDR= \
             VAULT_TOKEN= \
