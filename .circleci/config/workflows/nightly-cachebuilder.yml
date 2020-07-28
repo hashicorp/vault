@@ -1,6 +1,6 @@
 triggers:
   - schedule:
-      cron: "50 14 * * *"
+      cron: "01 15 * * *"
       filters:
         branches:
           only:
