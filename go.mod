@@ -45,7 +45,7 @@ require (
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-test/deep v1.0.3
-	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
+	github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
@@ -85,7 +85,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-ad v0.6.6
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5
 	github.com/hashicorp/vault-plugin-secrets-azure v0.6.1
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.3
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.4
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.6
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.6
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2

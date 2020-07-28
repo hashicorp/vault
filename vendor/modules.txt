@@ -303,7 +303,7 @@ github.com/go-stack/stack
 github.com/go-test/deep
 # github.com/go-yaml/yaml v2.1.0+incompatible
 github.com/go-yaml/yaml
-# github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
+# github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
 github.com/gocql/gocql
 github.com/gocql/gocql/internal/lru
 github.com/gocql/gocql/internal/murmur
@@ -481,7 +481,7 @@ github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
 # github.com/hashicorp/vault-plugin-secrets-azure v0.6.1
 github.com/hashicorp/vault-plugin-secrets-azure
-# github.com/hashicorp/vault-plugin-secrets-gcp v0.6.3
+# github.com/hashicorp/vault-plugin-secrets-gcp v0.6.4
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util

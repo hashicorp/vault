@@ -68,49 +68,51 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 			key = item.Keys[0].Token.Value().(string)
 		}
 
-		var disabled bool
-		var purpose []string
-		var err error
-		{
-			// We first decode into a map[string]interface{} because purpose isn't
-			// necessarily a string. Then we migrate everything else over to
-			// map[string]string and error if it doesn't work.
-			var m map[string]interface{}
-			if err := hcl.DecodeObject(&m, item.Val); err != nil {
-				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
-			}
-
-			if v, ok := m["purpose"]; ok {
-				if purpose, err = parseutil.ParseCommaStringSlice(v); err != nil {
-					return multierror.Prefix(fmt.Errorf("unable to parse 'purpose' in kms type %q: %w", key, err), fmt.Sprintf("%s.%s:", blockName, key))
-				}
-				for i, p := range purpose {
-					purpose[i] = strings.ToLower(p)
-				}
-			}
-
-			if v, ok := m["disabled"]; ok {
-				disabled, err = parseutil.ParseBool(v)
-				if err != nil {
-					return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
-				}
-			}
-		}
-
-		var cfg map[string]string
-		if err := hcl.DecodeObject(&cfg, item.Val); err != nil {
+		// We first decode into a map[string]interface{} because purpose isn't
+		// necessarily a string. Then we migrate everything else over to
+		// map[string]string and error if it doesn't work.
+		var m map[string]interface{}
+		if err := hcl.DecodeObject(&m, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 		}
-		delete(cfg, "purpose")
-		delete(cfg, "disabled")
+
+		var purpose []string
+		var err error
+		if v, ok := m["purpose"]; ok {
+			if purpose, err = parseutil.ParseCommaStringSlice(v); err != nil {
+				return multierror.Prefix(fmt.Errorf("unable to parse 'purpose' in kms type %q: %w", key, err), fmt.Sprintf("%s.%s:", blockName, key))
+			}
+			for i, p := range purpose {
+				purpose[i] = strings.ToLower(p)
+			}
+			delete(m, "purpose")
+		}
+
+		var disabled bool
+		if v, ok := m["disabled"]; ok {
+			disabled, err = parseutil.ParseBool(v)
+			if err != nil {
+				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+			}
+			delete(m, "disabled")
+		}
+
+		strMap := make(map[string]string, len(m))
+		for k, v := range m {
+			s, err := parseutil.ParseString(v)
+			if err != nil {
+				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+			}
+			strMap[k] = s
+		}
 
 		seal := &KMS{
 			Type:     strings.ToLower(key),
 			Purpose:  purpose,
 			Disabled: disabled,
 		}
-		if len(cfg) > 0 {
-			seal.Config = cfg
+		if len(strMap) > 0 {
+			seal.Config = strMap
 		}
 		seals = append(seals, seal)
 	}
