@@ -1,15 +1,18 @@
-import RoleEdit from './role-edit';
+import Component from '@ember/component';
+import { inject as service } from '@ember/service';
 
-export default RoleEdit.extend({
+export default Component.extend({
   init() {
     this._super(...arguments);
+    // TODO: don't need confirm?
     this.set('backendType', 'transform');
   },
+  store: service(),
   actions: {
-    updateTtl(path, val) {
-      const model = this.get('model');
-      let valueToSet = val.enabled === true ? `${val.seconds}s` : undefined;
-      model.set(path, valueToSet);
+    // TODO modify the parameters and potentially rename
+    createOrUpdate(type, event) {
+      const adapter = this.get('store').adapterFor('transform');
+      adapter.createOrUpdate(store, type, snapshot, requestType);
     },
   },
 });

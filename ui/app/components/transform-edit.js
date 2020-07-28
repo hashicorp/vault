@@ -1,15 +1,9 @@
-import RoleEdit from './role-edit';
+import Component from '@ember/component';
 
-export default RoleEdit.extend({
+export default Component.extend({
   init() {
     this._super(...arguments);
     this.set('backendType', 'transform');
   },
-  actions: {
-    updateTtl(path, val) {
-      const model = this.get('model');
-      let valueToSet = val.enabled === true ? `${val.seconds}s` : undefined;
-      model.set(path, valueToSet);
-    },
-  },
+  actions: {},
 });

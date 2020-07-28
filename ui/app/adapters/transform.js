@@ -9,6 +9,7 @@ export default ApplicationAdapter.extend({
   // defaultSerializer: 'role',
 
   createOrUpdate(store, type, snapshot, requestType) {
+    console.log('create or update on transform adapter');
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot, requestType);
     const { id } = snapshot;
