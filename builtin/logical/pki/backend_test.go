@@ -2911,7 +2911,7 @@ func setCerts() {
 }
 
 func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
-	// Enable PKI secret engine and Cert auth method
+	// Enable PKI secret engine
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"pki": Factory,
