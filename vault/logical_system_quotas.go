@@ -236,7 +236,7 @@ func (b *SystemBackend) handleRateLimitQuotasRead() framework.OperationFunc {
 			"name":     rlq.Name,
 			"path":     nsPath + rlq.MountPath,
 			"rate":     rlq.Rate,
-			"interval": rlq.Interval.String(),
+			"interval": int(rlq.Interval.Seconds),
 		}
 
 		return &logical.Response{
