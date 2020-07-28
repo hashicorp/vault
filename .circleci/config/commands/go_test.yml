@@ -68,7 +68,8 @@ steps:
             -timeout=60m \
             -parallel=20 \
             << parameters.extra_flags >> \
-            ${package_names}
+            ${package_names} \
+        || TEST_FAILURE=1
 
   - when:
       condition: << parameters.save_cache >>
@@ -77,3 +78,5 @@ steps:
             key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
             paths:
             - << parameters.cache_dir >>
+  - run:
+      exit $TEST_FAILURE
