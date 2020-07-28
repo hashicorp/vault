@@ -185,6 +185,10 @@ func (c *Core) setupCluster(ctx context.Context) error {
 		modified = true
 	}
 
+	// This is the first point at which the stored (or newly generated)
+	// cluster name is known.
+	c.metricSink.SetDefaultClusterName(cluster.Name)
+
 	if cluster.ID == "" {
 		c.logger.Debug("cluster ID not found, generating new")
 		// Generate a clusterID
@@ -317,6 +321,13 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 		// If we listened on port 0, record the port the OS gave us.
 		c.clusterAddr.Store(fmt.Sprintf("https://%s", c.getClusterListener().Addr()))
 	}
+
+	if len(c.ClusterAddr()) != 0 {
+		if err := c.getClusterListener().SetAdvertiseAddr(c.ClusterAddr()); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

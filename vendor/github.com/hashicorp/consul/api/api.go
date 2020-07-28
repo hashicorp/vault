@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -18,6 +17,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-rootcerts"
 )
 
@@ -358,7 +358,14 @@ type TLSConfig struct {
 // is not recommended, then you may notice idle connections building up over
 // time. To avoid this, use the DefaultNonPooledConfig() instead.
 func DefaultConfig() *Config {
-	return defaultConfig(cleanhttp.DefaultPooledTransport)
+	return defaultConfig(nil, cleanhttp.DefaultPooledTransport)
+}
+
+// DefaultConfigWithLogger returns a default configuration for the client. It
+// is exactly the same as DefaultConfig, but allows for a pre-configured logger
+// object to be passed through.
+func DefaultConfigWithLogger(logger hclog.Logger) *Config {
+	return defaultConfig(logger, cleanhttp.DefaultPooledTransport)
 }
 
 // DefaultNonPooledConfig returns a default configuration for the client which
@@ -367,12 +374,18 @@ func DefaultConfig() *Config {
 // accumulation of idle connections if you make many client objects during the
 // lifetime of your application.
 func DefaultNonPooledConfig() *Config {
-	return defaultConfig(cleanhttp.DefaultTransport)
+	return defaultConfig(nil, cleanhttp.DefaultTransport)
 }
 
 // defaultConfig returns the default configuration for the client, using the
 // given function to make the transport.
-func defaultConfig(transportFn func() *http.Transport) *Config {
+func defaultConfig(logger hclog.Logger, transportFn func() *http.Transport) *Config {
+	if logger == nil {
+		logger = hclog.New(&hclog.LoggerOptions{
+			Name: "consul-api",
+		})
+	}
+
 	config := &Config{
 		Address:   "127.0.0.1:8500",
 		Scheme:    "http",
@@ -410,7 +423,7 @@ func defaultConfig(transportFn func() *http.Transport) *Config {
 	if ssl := os.Getenv(HTTPSSLEnvName); ssl != "" {
 		enabled, err := strconv.ParseBool(ssl)
 		if err != nil {
-			log.Printf("[WARN] client: could not parse %s: %s", HTTPSSLEnvName, err)
+			logger.Warn(fmt.Sprintf("could not parse %s", HTTPSSLEnvName), "error", err)
 		}
 
 		if enabled {
@@ -436,7 +449,7 @@ func defaultConfig(transportFn func() *http.Transport) *Config {
 	if v := os.Getenv(HTTPSSLVerifyEnvName); v != "" {
 		doVerify, err := strconv.ParseBool(v)
 		if err != nil {
-			log.Printf("[WARN] client: could not parse %s: %s", HTTPSSLVerifyEnvName, err)
+			logger.Warn(fmt.Sprintf("could not parse %s", HTTPSSLVerifyEnvName), "error", err)
 		}
 		if !doVerify {
 			config.TLSConfig.InsecureSkipVerify = true

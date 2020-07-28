@@ -50,7 +50,8 @@ const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
 // returns an optional string duration to be used for response wrapping (e.g.
 // "15s", or simply "15"). The path will not begin with "/v1/" or "v1/" or "/",
 // however, end-of-path forward slashes are not trimmed, so must match your
-// called path precisely.
+// called path precisely. Response wrapping will only be used when the return
+// value is not the empty string.
 type WrappingLookupFunc func(operation, path string) string
 
 // Config is used to configure the creation of the client.
@@ -547,7 +548,7 @@ func (c *Client) SetOutputCurlString(curl bool) {
 }
 
 // CurrentWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
-// for a given operation and path
+// for a given operation and path.
 func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
@@ -556,7 +557,7 @@ func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
 }
 
 // SetWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
-// for a given operation and path
+// for a given operation and path.
 func (c *Client) SetWrappingLookupFunc(lookupFunc WrappingLookupFunc) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
@@ -813,13 +814,10 @@ START:
 	}
 
 	if timeout != 0 {
-		// NOTE: this leaks a timer. But when we defer a cancel call here for
-		// the returned function we see errors in tests with contxt canceled.
-		// Although the request is done by the time we exit this function it is
-		// still causing something else to go wrong. Maybe it ends up being
-		// tied to the response somehow and reading the response body ends up
-		// checking it, or something. I don't know, but until we can chase this
-		// down, keep it not-canceled even though vet complains.
+		// Note: we purposefully do not call cancel manually. The reason is
+		// when canceled, the request.Body will EOF when reading due to the way
+		// it streams data in. Cancel will still be run when the timeout is
+		// hit, so this doesn't really harm anything.
 		ctx, _ = context.WithTimeout(ctx, timeout)
 	}
 	req.Request = req.Request.WithContext(ctx)

@@ -29,20 +29,6 @@ var (
 	ErrNotInCluster   = errors.New("unable to load in-cluster configuration, KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT must be defined")
 )
 
-// New instantiates a Client. The stopCh is used for exiting retry loops
-// when closed.
-func New(logger hclog.Logger, stopCh <-chan struct{}) (*Client, error) {
-	config, err := inClusterConfig()
-	if err != nil {
-		return nil, err
-	}
-	return &Client{
-		logger: logger,
-		config: config,
-		stopCh: stopCh,
-	}, nil
-}
-
 // Client is a minimal Kubernetes client. We rolled our own because the existing
 // Kubernetes client-go library available externally has a high number of dependencies
 // and we thought it wasn't worth it for only two API calls. If at some point they break
@@ -51,7 +37,25 @@ func New(logger hclog.Logger, stopCh <-chan struct{}) (*Client, error) {
 type Client struct {
 	logger hclog.Logger
 	config *Config
-	stopCh <-chan struct{}
+	stopCh chan struct{}
+}
+
+// New instantiates a Client. The stopCh is used for exiting retry loops
+// when closed.
+func New(logger hclog.Logger) (*Client, error) {
+	config, err := inClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+	return &Client{
+		logger: logger,
+		config: config,
+		stopCh: make(chan struct{}),
+	}, nil
+}
+
+func (c *Client) Shutdown() {
+	close(c.stopCh)
 }
 
 // GetPod gets a pod from the Kubernetes API.
@@ -132,10 +136,13 @@ func (c *Client) do(req *http.Request, ptrToReturnObj interface{}) error {
 	// a stop from our stopChan. This allows us to exit from our retry
 	// loop during a shutdown, rather than hanging.
 	ctx, cancelFunc := context.WithCancel(context.Background())
-	go func(stopCh <-chan struct{}) {
-		<-stopCh
-		cancelFunc()
-	}(c.stopCh)
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-c.stopCh:
+			cancelFunc()
+		}
+	}()
 	retryableReq.WithContext(ctx)
 
 	retryableReq.Header.Set("Authorization", "Bearer "+c.config.BearerToken)

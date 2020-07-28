@@ -63,13 +63,13 @@ More details on this process follow:
 
 Via the CLI:
 
-```text
+```shell-session
 $ vault write auth/app-id/login/:app-id user_id=:user_id
 ```
 
 Via the API:
 
-```text
+```shell-session
 $ curl \
     --method POST \
     --data '{"user_id": ":user_id"}' \

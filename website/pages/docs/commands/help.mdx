@@ -43,7 +43,7 @@ You can try it right away with any Vault with `vault path-help secret`, since
 below and contains both a description of what that backend is for, along with
 the paths it supports.
 
-```
+```shell-session
 $ vault path-help secret
 ## DESCRIPTION
 
@@ -82,7 +82,7 @@ For example, below we get the help for a single secret in the `secret/`
 mount point. The help shows the operations that that path supports, the
 parameters it takes (for write), and a description of that specific path.
 
-```
+```shell-session
 $ vault path-help secret/password
 Request:        password
 Matching Route: ^.*$

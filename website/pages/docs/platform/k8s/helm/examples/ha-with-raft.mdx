@@ -14,10 +14,9 @@ description: |-
 Integrated storage (raft) can be enabled using the `server.ha.raft.enabled` value:
 
 ```shell
-helm install vault \
+helm install vault hashicorp/vault \
   --set='server.ha.enabled=true' \
-  --set='server.ha.raft.enabled=true' \
-  https://github.com/hashicorp/vault-helm/archive/v0.5.0.tar.gz
+  --set='server.ha.raft.enabled=true'
 ```
 
 Next, initialize and unseal `vault-0` pod:

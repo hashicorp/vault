@@ -23,7 +23,7 @@ const MODELS = {
 
 const DEFAULT_VALUE = 'aws/client';
 
-storiesOf('AuthConfigForm/Options/', module)
+storiesOf('AuthConfigForm/Options', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
   .add(

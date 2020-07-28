@@ -88,7 +88,7 @@ In this guide, you are going to perform the following steps:
 1. [Test the team admin user](#step5)
 1. [Audit ambient credentials](#step6)
 
-### <a name="step1"></a>Step 1: Create namespaces
+### Step 1: Create namespaces ((#step1))
 
 (**Persona:** operations)
 
@@ -126,7 +126,7 @@ To create a new namespace, run: **`vault namespace create <namespace_name>`**
 
 To create a new namespace, invoke **`sys/namespaces`** endpoint:
 
-```shell
+```shell-session
 $ curl --header "X-Vault-Token: <TOKEN>" \
        --request POST \
        <VAULT_ADDRESS>/v1/sys/namespaces/<NS_NAME>
@@ -219,7 +219,7 @@ name.
 1.  Select **Create a namespace** again, and then enter **`certification`** in
     the **Path** field, and click **Save**.
 
-### <a name="step2"></a>Step 2: Write Policies
+### Step 2: Write Policies ((#step2))
 
 (**Persona:** operations)
 
@@ -423,7 +423,7 @@ $ curl --header "X-Vault-Token: ..." \
 
 1. Click **Create Policy**.
 
-### <a name="step3"></a>Step 3: Setup entities and groups
+### Step 3: Setup entities and groups ((#step3))
 
 (**Persona:** operations)
 
@@ -562,7 +562,7 @@ $ vault write -namespace=education identity/entity-alias name="bsmith" \
             canonical_id=<Bob_Smith_entity_id> mount_accessor=<mount_accessor>
     ```
 
-### <a name="step4"></a>Step 4: Test the organization admin user
+### Step 4: Test the organization admin user ((#step4))
 
 (**Persona:** org-admin)
 
@@ -570,7 +570,7 @@ $ vault write -namespace=education identity/entity-alias name="bsmith" \
 
 Log in as **`bob`** into the `education` namespace:
 
-```plaintext
+```shell-session
 $ vault login -namespace=education -method=userpass username="bob" password="password"
 
 Key                    Value
@@ -608,7 +608,7 @@ Optionally, you can create new policies to test that `bob` can perform the
 operations as expected. When you are done testing, unset the VAULT_NAMESPACE
 environment variable.
 
-```plaintext
+```shell-session
 $ unset VAULT_NAMESPACE
 ```
 
@@ -616,7 +616,7 @@ $ unset VAULT_NAMESPACE
 
 Log in as **`bob`** into the `education` namespace:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Namespace: education" \
        --request POST \
        --data '{"password": "password"}' \
@@ -698,7 +698,7 @@ $ curl --header "X-Vault-Token: 5ai0qpQeCdRHALzEY4Q8sW.28dk2" \
 
 1. Click **Enable Engine** to finish.
 
-### <a name="step5"></a>Step 5: Test the team admin user
+### Step 5: Test the team admin user ((#step5))
 
 (**Persona:** team-admin)
 
@@ -706,7 +706,7 @@ $ curl --header "X-Vault-Token: 5ai0qpQeCdRHALzEY4Q8sW.28dk2" \
 
 Log in as **`bsmith`** into the **`education/training`** namespace:
 
-```plaintext
+```shell-session
 $ vault login -namespace=education/training -method=userpass username="bsmith" password="password"
 
 Key                    Value
@@ -743,7 +743,7 @@ Success! Enabled the kv secrets engine at: team-secret/
 
 When you are done testing, unset the VAULT_NAMESPACE environment variable.
 
-```plaintext
+```shell-session
 $ unset VAULT_NAMESPACE
 ```
 
@@ -751,7 +751,7 @@ $ unset VAULT_NAMESPACE
 
 Log in as **`bsmith`** into the `education` namespace:
 
-```plaintext
+```shell-session
 $ curl --header "X-Vault-Namespace: education/training" \
        --request POST \
        --data '{"password": "password"}' \
@@ -832,7 +832,7 @@ $ curl --header "X-Vault-Token: 5YNNjDDl6D8iW3eGQIlU0q.9dKXw" \
 
 1. Click **Enable Engine** to finish.
 
-### <a name="step6"></a>Step 6: Audit ambient credentials
+### Step 6: Audit ambient credentials ((#step6))
 
 (**Persona:** operator)
 

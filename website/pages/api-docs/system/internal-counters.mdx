@@ -10,19 +10,19 @@ description: >-
 
 The `/sys/internal/counters` endpoints are used to return data about the number of Http Requests, Tokens, and Entities in Vault.
 
-~> **NOTE**: This endpoint is only available in Vault version 1.3+.  Backwards compatibility is not guaranteed.  These endpoints are subject to change or may disappear without notice.
+~> **NOTE**: This endpoint is only available in Vault version 1.3+. Backwards compatibility is not guaranteed. These endpoints are subject to change or may disappear without notice.
 
 ## Http Requests
 
 This endpoint lists the number of Http Requests made per month.
 
-| Method | Path                |
-| :----- | :------------------ |
-| `GET` | `/sys/internal/counters/requests` |
+| Method | Path                              |
+| :----- | :-------------------------------- |
+| `GET`  | `/sys/internal/counters/requests` |
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
@@ -59,13 +59,13 @@ $ curl \
 
 This endpoint returns the total number of Entities.
 
-| Method | Path                |
-| :----- | :------------------ |
-| `GET` | `/sys/internal/counters/entities` |
+| Method | Path                              |
+| :----- | :-------------------------------- |
+| `GET`  | `/sys/internal/counters/entities` |
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
@@ -97,13 +97,13 @@ $ curl \
 
 This endpoint returns the total number of Tokens.
 
-| Method | Path                |
-| :----- | :------------------ |
-| `GET` | `/sys/internal/counters/tokens` |
+| Method | Path                            |
+| :----- | :------------------------------ |
+| `GET`  | `/sys/internal/counters/tokens` |
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \

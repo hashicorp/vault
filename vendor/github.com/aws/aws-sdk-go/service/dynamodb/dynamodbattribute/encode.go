@@ -243,23 +243,6 @@ func (e *Encoder) Encode(in interface{}) (*dynamodb.AttributeValue, error) {
 	return av, nil
 }
 
-func fieldByIndex(v reflect.Value, index []int,
-	OnEmbeddedNilStruct func(*reflect.Value) bool) reflect.Value {
-	fv := v
-	for i, x := range index {
-		if i > 0 {
-			if fv.Kind() == reflect.Ptr && fv.Type().Elem().Kind() == reflect.Struct {
-				if fv.IsNil() && !OnEmbeddedNilStruct(&fv) {
-					break
-				}
-				fv = fv.Elem()
-			}
-		}
-		fv = fv.Field(x)
-	}
-	return fv
-}
-
 func (e *Encoder) encode(av *dynamodb.AttributeValue, v reflect.Value, fieldTag tag) error {
 	// We should check for omitted values first before dereferencing.
 	if fieldTag.OmitEmpty && emptyValue(v, e.EnableEmptyCollections) {
@@ -310,16 +293,12 @@ func (e *Encoder) encodeStruct(av *dynamodb.AttributeValue, v reflect.Value, fie
 
 	av.M = map[string]*dynamodb.AttributeValue{}
 	fields := unionStructFields(v.Type(), e.MarshalOptions)
-	for _, f := range fields {
+	for _, f := range fields.All() {
 		if f.Name == "" {
 			return &InvalidMarshalError{msg: "map key cannot be empty"}
 		}
 
-		found := true
-		fv := fieldByIndex(v, f.Index, func(v *reflect.Value) bool {
-			found = false
-			return false // to break the loop.
-		})
+		fv, found := encoderFieldByIndex(v, f.Index)
 		if !found {
 			continue
 		}
@@ -547,6 +526,20 @@ func encodeFloat(f float64, bitSize int) string {
 func encodeNull(av *dynamodb.AttributeValue) {
 	t := true
 	*av = dynamodb.AttributeValue{NULL: &t}
+}
+
+// encoderFieldByIndex finds the field with the provided nested index
+func encoderFieldByIndex(v reflect.Value, index []int) (reflect.Value, bool) {
+	for i, x := range index {
+		if i > 0 && v.Kind() == reflect.Ptr && v.Type().Elem().Kind() == reflect.Struct {
+			if v.IsNil() {
+				return reflect.Value{}, false
+			}
+			v = v.Elem()
+		}
+		v = v.Field(x)
+	}
+	return v, true
 }
 
 func valueElem(v reflect.Value) reflect.Value {

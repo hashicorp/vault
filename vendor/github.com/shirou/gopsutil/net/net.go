@@ -3,11 +3,7 @@ package net
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net"
-	"strconv"
-	"strings"
-	"syscall"
 
 	"github.com/shirou/gopsutil/internal/common"
 )
@@ -161,14 +157,6 @@ func (l *ConntrackStatList) Summary() []ConntrackStat {
 	return []ConntrackStat{*summary}
 }
 
-var constMap = map[string]int{
-	"unix": syscall.AF_UNIX,
-	"TCP":  syscall.SOCK_STREAM,
-	"UDP":  syscall.SOCK_DGRAM,
-	"IPv4": syscall.AF_INET,
-	"IPv6": syscall.AF_INET6,
-}
-
 func (n IOCountersStat) String() string {
 	s, _ := json.Marshal(n)
 	return string(s)
@@ -272,85 +260,4 @@ func getIOCountersAll(n []IOCountersStat) ([]IOCountersStat, error) {
 	}
 
 	return []IOCountersStat{r}, nil
-}
-
-func parseNetLine(line string) (ConnectionStat, error) {
-	f := strings.Fields(line)
-	if len(f) < 8 {
-		return ConnectionStat{}, fmt.Errorf("wrong line,%s", line)
-	}
-
-	if len(f) == 8 {
-		f = append(f, f[7])
-		f[7] = "unix"
-	}
-
-	pid, err := strconv.Atoi(f[1])
-	if err != nil {
-		return ConnectionStat{}, err
-	}
-	fd, err := strconv.Atoi(strings.Trim(f[3], "u"))
-	if err != nil {
-		return ConnectionStat{}, fmt.Errorf("unknown fd, %s", f[3])
-	}
-	netFamily, ok := constMap[f[4]]
-	if !ok {
-		return ConnectionStat{}, fmt.Errorf("unknown family, %s", f[4])
-	}
-	netType, ok := constMap[f[7]]
-	if !ok {
-		return ConnectionStat{}, fmt.Errorf("unknown type, %s", f[7])
-	}
-
-	var laddr, raddr Addr
-	if f[7] == "unix" {
-		laddr.IP = f[8]
-	} else {
-		laddr, raddr, err = parseNetAddr(f[8])
-		if err != nil {
-			return ConnectionStat{}, fmt.Errorf("failed to parse netaddr, %s", f[8])
-		}
-	}
-
-	n := ConnectionStat{
-		Fd:     uint32(fd),
-		Family: uint32(netFamily),
-		Type:   uint32(netType),
-		Laddr:  laddr,
-		Raddr:  raddr,
-		Pid:    int32(pid),
-	}
-	if len(f) == 10 {
-		n.Status = strings.Trim(f[9], "()")
-	}
-
-	return n, nil
-}
-
-func parseNetAddr(line string) (laddr Addr, raddr Addr, err error) {
-	parse := func(l string) (Addr, error) {
-		host, port, err := net.SplitHostPort(l)
-		if err != nil {
-			return Addr{}, fmt.Errorf("wrong addr, %s", l)
-		}
-		lport, err := strconv.Atoi(port)
-		if err != nil {
-			return Addr{}, err
-		}
-		return Addr{IP: host, Port: uint32(lport)}, nil
-	}
-
-	addrs := strings.Split(line, "->")
-	if len(addrs) == 0 {
-		return laddr, raddr, fmt.Errorf("wrong netaddr, %s", line)
-	}
-	laddr, err = parse(addrs[0])
-	if len(addrs) == 2 { // remote addr exists
-		raddr, err = parse(addrs[1])
-		if err != nil {
-			return laddr, raddr, err
-		}
-	}
-
-	return laddr, raddr, err
 }

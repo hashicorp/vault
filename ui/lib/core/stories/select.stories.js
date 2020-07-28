@@ -9,7 +9,7 @@ const OPTIONS = [
   { value: 'weds', label: 'Wednesday', spanish: 'miercoles' },
 ];
 
-storiesOf('Select/', module)
+storiesOf('Select', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
   .add(

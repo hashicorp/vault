@@ -267,7 +267,9 @@ func TestLogical_RequestSizeLimit(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	// Write a very large object, should fail
+	// Write a very large object, should fail. This test works because Go will
+	// convert the byte slice to base64, which makes it significantly larger
+	// than the default max request size.
 	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
 		"data": make([]byte, DefaultMaxRequestSize),
 	})
@@ -279,6 +281,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req, _ := http.NewRequest("GET", "http://127.0.0.1:8200/v1/secret/foo", nil)
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
+
 	lreq, _, status, err := buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)
@@ -293,6 +296,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req, _ = http.NewRequest("GET", "http://127.0.0.1:8200/v1/secret/foo?list=true", nil)
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
+
 	lreq, _, status, err = buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)
@@ -307,6 +311,12 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req, _ = http.NewRequest("LIST", "http://127.0.0.1:8200/v1/secret/foo", nil)
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
+
+	_, _, status, err = buildLogicalRequestNoAuth(core.PerfStandby(), nil, req)
+	if err != nil || status != 0 {
+		t.Fatal(err)
+	}
+
 	lreq, _, status, err = buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)

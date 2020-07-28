@@ -12,11 +12,10 @@ VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf 
 EXTERNAL_TOOLS_CI=\
 	github.com/elazarl/go-bindata-assetfs/... \
 	github.com/hashicorp/go-bindata/... \
-	github.com/mitchellh/gox
+	github.com/mitchellh/gox \
+	golang.org/x/tools/cmd/goimports 
 EXTERNAL_TOOLS=\
-	golang.org/x/tools/cmd/goimports \
-	github.com/client9/misspell/cmd/misspell \
-	github.com/golangci/golangci-lint/cmd/golangci-lint
+	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
@@ -52,6 +51,14 @@ dev-ui-mem: BUILD_TAGS+=memprofiler
 dev-ui-mem: assetcheck dev-ui
 dev-dynamic-mem: BUILD_TAGS+=memprofiler
 dev-dynamic-mem: dev-dynamic
+
+# Creates a Docker image by adding the compiled linux/amd64 binary found in ./bin.
+# The resulting image is tagged "vault:dev". 
+docker-dev: prep
+	docker build -f scripts/docker/Dockerfile -t vault:dev .
+
+docker-dev-ui: prep
+	docker build -f scripts/docker/Dockerfile.ui -t vault:dev-ui .
 
 # test runs the unit tests and vets the code
 test: prep
@@ -135,10 +142,7 @@ ci-bootstrap:
 
 # bootstrap the build by downloading additional tools that may be used by devs
 bootstrap: ci-bootstrap
-	@for tool in  $(EXTERNAL_TOOLS) ; do \
-		echo "Installing/Updating $$tool" ; \
-		GO111MODULE=off $(GO_CMD) get -u $$tool; \
-	done
+	go generate -tags tools tools/tools.go
 
 # Note: if you have plugins in GOPATH you can update all of them via something like:
 # for i in $(ls | grep vault-plugin-); do cd $i; git remote update; git reset --hard origin/master; dep ensure -update; git add .; git commit; git push; cd ..; done

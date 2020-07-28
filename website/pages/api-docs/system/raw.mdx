@@ -30,7 +30,7 @@ system.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     ---header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/raw/secret/foo
@@ -71,7 +71,7 @@ mount system.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
@@ -92,7 +92,7 @@ This endpoint returns a list keys for a given path prefix.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -125,7 +125,7 @@ storage backend and not the logical path that is exposed via the mount system.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \

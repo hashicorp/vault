@@ -3,6 +3,9 @@ parameters:
   extra_flags:
     type: string
     default: ""
+  log_dir:
+    type: string
+    default: "/tmp/testlogs"
   cache_dir:
     type: string
     default: /tmp/go-cache
@@ -19,6 +22,10 @@ steps:
       no_output_timeout: 60m
       command: |
         set -x
+
+        case "<< parameters.extra_flags >>" in
+        *-race*) VAULT_CI_GO_TEST_RACE=1;;
+        esac
 
         # Install CircleCI CLI
         curl -sSL \
@@ -43,14 +50,17 @@ steps:
         # Run tests
         make prep
         mkdir -p test-results/go-test
-
         CGO_ENABLED= \
           VAULT_ADDR= \
           VAULT_TOKEN= \
           VAULT_DEV_ROOT_TOKEN_ID= \
           VAULT_ACC= \
           GOCACHE=<< parameters.cache_dir >> \
-          gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
+          VAULT_TEST_LOG_DIR=<< parameters.log_dir >> \
+          gotestsum --format=short-verbose \
+            --junitfile test-results/go-test/results.xml \
+            --jsonfile test-results/go-test/results.json \
+            -- \
             -tags "${GO_TAGS}" \
             -timeout=60m \
             -parallel=20 \

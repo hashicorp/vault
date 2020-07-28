@@ -169,6 +169,8 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 				Certificate: certificates[0],
 				Bytes:       pemBlock.Bytes,
 			})
+		} else if x509.IsEncryptedPEMBlock(pemBlock) {
+			return nil, errutil.UserError{Err: "Encrypted private key given; provide only decrypted private key in the bundle"}
 		}
 	}
 
@@ -462,6 +464,7 @@ func ValidateKeyTypeLength(keyType string, keyBits int) error {
 	case "rsa":
 		switch keyBits {
 		case 2048:
+		case 3072:
 		case 4096:
 		case 8192:
 		default:

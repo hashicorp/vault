@@ -517,7 +517,7 @@ func (i *IdentityStore) handleEntityBatchDelete() framework.OperationFunc {
 			defer i.lock.Unlock()
 
 			// Create a MemDB transaction to delete entities from the inmem database
-			// without altering storage. Batch deletion on storage bucket items is 
+			// without altering storage. Batch deletion on storage bucket items is
 			// performed directly through entityPacker.
 			txn := i.db.Txn(true)
 			defer txn.Abort()

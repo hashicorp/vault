@@ -11,13 +11,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/mitchellh/cli"
 )
 
 func TestTCPListener(t *testing.T) {
-	ln, _, _, err := tcpListenerFactory(map[string]interface{}{
-		"address":     "127.0.0.1:0",
-		"tls_disable": "1",
+	ln, _, _, err := tcpListenerFactory(&configutil.Listener{
+		Address:    "127.0.0.1:0",
+		TLSDisable: true,
 	}, nil, cli.NewMockUi())
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -49,12 +50,12 @@ func TestTCPListener_tls(t *testing.T) {
 		t.Fatal("not ok when appending CA cert")
 	}
 
-	ln, _, _, err := tcpListenerFactory(map[string]interface{}{
-		"address":                            "127.0.0.1:0",
-		"tls_cert_file":                      wd + "reload_foo.pem",
-		"tls_key_file":                       wd + "reload_foo.key",
-		"tls_require_and_verify_client_cert": "true",
-		"tls_client_ca_file":                 wd + "reload_ca.pem",
+	ln, _, _, err := tcpListenerFactory(&configutil.Listener{
+		Address:                       "127.0.0.1:0",
+		TLSCertFile:                   wd + "reload_foo.pem",
+		TLSKeyFile:                    wd + "reload_foo.key",
+		TLSRequireAndVerifyClientCert: true,
+		TLSClientCAFile:               wd + "reload_ca.pem",
 	}, nil, cli.NewMockUi())
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -87,24 +88,24 @@ func TestTCPListener_tls(t *testing.T) {
 
 	testListenerImpl(t, ln, connFn(true), "foo.example.com")
 
-	ln, _, _, err = tcpListenerFactory(map[string]interface{}{
-		"address":                            "127.0.0.1:0",
-		"tls_cert_file":                      wd + "reload_foo.pem",
-		"tls_key_file":                       wd + "reload_foo.key",
-		"tls_require_and_verify_client_cert": "true",
-		"tls_disable_client_certs":           "true",
-		"tls_client_ca_file":                 wd + "reload_ca.pem",
+	ln, _, _, err = tcpListenerFactory(&configutil.Listener{
+		Address:                       "127.0.0.1:0",
+		TLSCertFile:                   wd + "reload_foo.pem",
+		TLSKeyFile:                    wd + "reload_foo.key",
+		TLSRequireAndVerifyClientCert: true,
+		TLSDisableClientCerts:         true,
+		TLSClientCAFile:               wd + "reload_ca.pem",
 	}, nil, cli.NewMockUi())
 	if err == nil {
 		t.Fatal("expected error due to mutually exclusive client cert options")
 	}
 
-	ln, _, _, err = tcpListenerFactory(map[string]interface{}{
-		"address":                  "127.0.0.1:0",
-		"tls_cert_file":            wd + "reload_foo.pem",
-		"tls_key_file":             wd + "reload_foo.key",
-		"tls_disable_client_certs": "true",
-		"tls_client_ca_file":       wd + "reload_ca.pem",
+	ln, _, _, err = tcpListenerFactory(&configutil.Listener{
+		Address:               "127.0.0.1:0",
+		TLSCertFile:           wd + "reload_foo.pem",
+		TLSKeyFile:            wd + "reload_foo.key",
+		TLSDisableClientCerts: true,
+		TLSClientCAFile:       wd + "reload_ca.pem",
 	}, nil, cli.NewMockUi())
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -131,13 +132,13 @@ func TestTCPListener_tls13(t *testing.T) {
 		t.Fatal("not ok when appending CA cert")
 	}
 
-	ln, _, _, err := tcpListenerFactory(map[string]interface{}{
-		"address":                            "127.0.0.1:0",
-		"tls_cert_file":                      wd + "reload_foo.pem",
-		"tls_key_file":                       wd + "reload_foo.key",
-		"tls_require_and_verify_client_cert": "true",
-		"tls_client_ca_file":                 wd + "reload_ca.pem",
-		"tls_min_version":                    "tls13",
+	ln, _, _, err := tcpListenerFactory(&configutil.Listener{
+		Address:                       "127.0.0.1:0",
+		TLSCertFile:                   wd + "reload_foo.pem",
+		TLSKeyFile:                    wd + "reload_foo.key",
+		TLSRequireAndVerifyClientCert: true,
+		TLSClientCAFile:               wd + "reload_ca.pem",
+		TLSMinVersion:                 "tls13",
 	}, nil, cli.NewMockUi())
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -170,26 +171,26 @@ func TestTCPListener_tls13(t *testing.T) {
 
 	testListenerImpl(t, ln, connFn(true), "foo.example.com")
 
-	ln, _, _, err = tcpListenerFactory(map[string]interface{}{
-		"address":                            "127.0.0.1:0",
-		"tls_cert_file":                      wd + "reload_foo.pem",
-		"tls_key_file":                       wd + "reload_foo.key",
-		"tls_require_and_verify_client_cert": "true",
-		"tls_disable_client_certs":           "true",
-		"tls_client_ca_file":                 wd + "reload_ca.pem",
-		"tls_min_version":                    "tls13",
+	ln, _, _, err = tcpListenerFactory(&configutil.Listener{
+		Address:                       "127.0.0.1:0",
+		TLSCertFile:                   wd + "reload_foo.pem",
+		TLSKeyFile:                    wd + "reload_foo.key",
+		TLSRequireAndVerifyClientCert: true,
+		TLSDisableClientCerts:         true,
+		TLSClientCAFile:               wd + "reload_ca.pem",
+		TLSMinVersion:                 "tls13",
 	}, nil, cli.NewMockUi())
 	if err == nil {
 		t.Fatal("expected error due to mutually exclusive client cert options")
 	}
 
-	ln, _, _, err = tcpListenerFactory(map[string]interface{}{
-		"address":                  "127.0.0.1:0",
-		"tls_cert_file":            wd + "reload_foo.pem",
-		"tls_key_file":             wd + "reload_foo.key",
-		"tls_disable_client_certs": "true",
-		"tls_client_ca_file":       wd + "reload_ca.pem",
-		"tls_min_version":          "tls13",
+	ln, _, _, err = tcpListenerFactory(&configutil.Listener{
+		Address:               "127.0.0.1:0",
+		TLSCertFile:           wd + "reload_foo.pem",
+		TLSKeyFile:            wd + "reload_foo.key",
+		TLSDisableClientCerts: true,
+		TLSClientCAFile:       wd + "reload_ca.pem",
+		TLSMinVersion:         "tls13",
 	}, nil, cli.NewMockUi())
 	if err != nil {
 		t.Fatalf("err: %s", err)

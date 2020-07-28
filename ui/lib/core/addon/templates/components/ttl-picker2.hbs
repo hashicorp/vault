@@ -7,7 +7,21 @@
   data-test-ttl-toggle
 >
   <span class="ttl-picker-label is-large">{{label}}</span><br/>
-  <span class="has-text-grey">{{helperText}}</span>
+  <div class="description has-text-grey">
+    <span>{{helperText}}</span>
+    {{#if description}}
+      <ToolTip @verticalPosition="below" as |T|>
+        <T.trigger data-test-tooltip-trigger tabindex=false>
+          <Icon @glyph="info-circle-outline" aria-label="description" />
+        </T.trigger>
+        <T.content @class="tool-tip">
+          <div class="box" data-test-hover-copy-tooltip-text>
+            {{description}}
+          </div>
+        </T.content>
+      </ToolTip>
+    {{/if}}
+  </div>
 </Toggle>
 {{#if enableTTL}}
   <div class="ttl-show-picker" data-test-ttl-picker-group="{{label}}">

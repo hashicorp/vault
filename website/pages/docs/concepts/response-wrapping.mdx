@@ -63,7 +63,7 @@ response-wrapping token:
 - Creation Path: The API path that was called in the original request
 - Wrapped Accessor: If the wrapped response is an authentication response
   containing a Vault token, this is the value of the wrapped token's accessor.
-  This is useful for orchestration systems (such as Nomad) to able to control
+  This is useful for orchestration systems (such as Nomad) to be able to control
   the lifetime of secrets based on their knowledge of the lifetime of jobs,
   without having to actually unwrap the response-wrapping token or gain
   knowledge of the token ID inside.

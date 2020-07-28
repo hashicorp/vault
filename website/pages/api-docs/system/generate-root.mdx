@@ -22,7 +22,7 @@ attempt.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/sys/generate-root/attempt
 ```
@@ -75,7 +75,7 @@ generation attempt can take place at a time.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request PUT \
     http://127.0.0.1:8200/v1/sys/generate-root/attempt
@@ -107,7 +107,7 @@ progress made. This must be called to change the OTP or PGP key being used.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request DELETE \
     http://127.0.0.1:8200/v1/sys/generate-root/attempt
@@ -142,7 +142,7 @@ nonce must be provided with each call.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request PUT \
     --data @payload.json \
