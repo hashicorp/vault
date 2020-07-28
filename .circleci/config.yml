@@ -205,7 +205,6 @@ jobs:
           # Run tests
           make prep
           mkdir -p test-results/go-test
-          export TEST_FAILURE=0
           CGO_ENABLED= \
             VAULT_ADDR= \
             VAULT_TOKEN= \
@@ -221,12 +220,9 @@ jobs:
               -timeout=60m \
               -parallel=20 \
               -race \
-              ${package_names} \
-          || TEST_FAILURE=1
+              ${package_names}
         name: Run Go tests
         no_output_timeout: 60m
-    - run:
-        command: exit $TEST_FAILURE
     - store_artifacts:
         path: test-results
     - store_test_results:
@@ -335,7 +331,6 @@ jobs:
           # Run tests
           make prep
           mkdir -p test-results/go-test
-          export TEST_FAILURE=0
           CGO_ENABLED= \
             VAULT_ADDR= \
             VAULT_TOKEN= \
@@ -351,12 +346,9 @@ jobs:
               -timeout=60m \
               -parallel=20 \
                \
-              ${package_names} \
-          || TEST_FAILURE=1
+              ${package_names}
         name: Run Go tests
         no_output_timeout: 60m
-    - run:
-        command: exit $TEST_FAILURE
     - store_artifacts:
         path: test-results
     - store_test_results:
@@ -441,7 +433,6 @@ jobs:
           # Run tests
           make prep
           mkdir -p test-results/go-test
-          export TEST_FAILURE=0
           CGO_ENABLED= \
             VAULT_ADDR= \
             VAULT_TOKEN= \
@@ -457,16 +448,14 @@ jobs:
               -timeout=60m \
               -parallel=20 \
                \
-              ${package_names} \
-          || TEST_FAILURE=1
+              ${package_names}
         name: Run Go tests
         no_output_timeout: 60m
     - save_cache:
         key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
         paths:
         - /tmp/go-cache
-    - run:
-        command: exit $TEST_FAILURE
+        when: always
     - store_artifacts:
         path: test-results
     - store_test_results:

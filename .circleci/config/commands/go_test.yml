@@ -53,7 +53,6 @@ steps:
         # Run tests
         make prep
         mkdir -p test-results/go-test
-        export TEST_FAILURE=0
         CGO_ENABLED= \
           VAULT_ADDR= \
           VAULT_TOKEN= \
@@ -69,15 +68,13 @@ steps:
             -timeout=60m \
             -parallel=20 \
             << parameters.extra_flags >> \
-            ${package_names} \
-        || TEST_FAILURE=1
+            ${package_names}
 
   - when:
       condition: << parameters.save_cache >>
       steps:
         - save_cache:
+            when: always
             key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
             paths:
             - << parameters.cache_dir >>
-  - run:
-      exit $TEST_FAILURE
