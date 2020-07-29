@@ -191,13 +191,34 @@ key-value pairs are converted to JSON before storage.
 Version metadata consumes 21 bytes per version and must fit in a
 single storage entry, separate from the stored data.
 
+### Transit secret engine
+
+The maximum size of a Transit ciphertext or plaintext is limited by Vault's
+maximum request size, as described [below](#request-size).
+
+All archived versions of a single key must fit in a single storage entry.
+This limit depends on the key size.
+
+| Key length | Consul default (512 KiB) | Integrated storage default (1 MiB) |
+|----------|--------------------------|---------------------------------------|
+| aes128-gcm96    |  2008   |  4017   |
+| aes128-gcm96    |  1865   |  3731   |
+| chacha-poly1305 |  1865   |  3731   |
+| ed25519         |  1420   |  2841   |
+| ecdsa-p256      |   817   |  1635   |
+| ecdsa-p384      |   659   |  1318   |
+| ecdsa-p523      |   539   |  1078   |
+| 1024-bit RSA    |   169   |  333    |
+| 2048-bit RSA    |   116   |  233    |
+| 4096-bit RSA    |    89   |  178    |
+
 ## Other limits
 
 ### Request size
 
 The maximum size of an HTTP request sent to Vault is limited by
 the `maximum_request_size` option in the [listener stanza](/docs/configuration/listener/tcp). It defaults to 32 MiB.  This value, minus the overhead of
-the HTTP request itself, places an upper bound on any Transform operation,
+the HTTP request itself, places an upper bound on any Transit operation,
 and on the maximum size of any key-value secrets.
 
 ### Request duration
@@ -240,3 +261,11 @@ unexpired leases, or a large number of simultaneous expirations.
 |---------------------------------------|----------|
 | Maximum number of leases | advisory limit at 256,000 |
 | Maximum duration of lease or token | 768 hours by default |
+
+### Transform limits
+
+The Transform secret engine obeys the [FF3-1 minimum and maximum sizes
+on the length of an input](/docs/secrets/transform#input-limits), which
+are a function of the alphabet size.
+
+
