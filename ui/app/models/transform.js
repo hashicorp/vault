@@ -61,11 +61,11 @@ export default DS.Model.extend({
   masking_character: attr('string', {
     label: 'Masking character',
   }),
-  allowed_roles: attr('array', {
-    defaultValue: function() {
-      return [];
-    },
+  allowed_roles: attr('stringArray', {
     label: 'Allowed roles',
+    editType: 'searchSelect',
+    fallbackComponent: 'string-list',
+    models: ['transform/role'],
   }),
   transformAttrs: computed(function() {
     // return [{ default: ['name', 'type', 'template', 'tweak_source', 'masking_characters', 'allowed_roles'] }];
