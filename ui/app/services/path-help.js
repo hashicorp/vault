@@ -193,7 +193,7 @@ export default Service.extend({
 
         paramProp[name] = {
           'x-vault-displayAttrs': {
-            name: `hi! ${label}`,
+            name: label,
             group: 'default',
           },
           type: schema.type,

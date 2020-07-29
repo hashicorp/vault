@@ -55,7 +55,7 @@ const SECRET_BACKENDS = {
     editComponent: 'role-ssh-edit',
     listItemPartial: 'partials/secret-list/ssh-role-item',
   },
-  // ARG TODO: edit the editComponent and listItemPartial and better understand what's happening here
+  // TODO: edit or remove listItemPartial and better understand what's happening here
   transform: {
     displayName: 'Transform',
     searchPlaceholder: 'Filter Transform',
@@ -77,6 +77,7 @@ const SECRET_BACKENDS = {
 export function optionsForBackend([backend, tab]) {
   const selected = SECRET_BACKENDS[backend];
   let backendOptions;
+
   if (selected && selected.tabs) {
     let tabData =
       selected.tabs.findBy('name', tab) || selected.tabs.findBy('modelPrefix', tab) || selected.tabs[0];

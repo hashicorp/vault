@@ -87,7 +87,6 @@ export default Route.extend({
           return model;
         })
         .catch(err => {
-          console.error(err);
           // if we're at the root we don't want to throw
           if (backendModel && err.httpStatus === 404 && secret === '') {
             return [];
@@ -117,7 +116,6 @@ export default Route.extend({
         return model;
       },
       () => {
-        console.log('model after', model);
         return model;
       }
     );
