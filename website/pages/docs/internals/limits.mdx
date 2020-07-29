@@ -37,7 +37,8 @@ recover from an error where a storage entry has reached its maximum
 size by reconfiguring Vault or Consul to a larger maximum storage
 entry.  However, using large storage entries also negatively affects
 performance, as even a small change may become a large
-read-modify-write cycle on the entire entry.
+read-modify-write cycle on the entire entry. Larger writes may also delay
+Raft heartbeats, leading to leadership instability.
 
 ### Mount point limits
 
@@ -91,7 +92,7 @@ point limit by the larger of of the number of auth mounts per namespace
 The metadata that may be attached to an identity entity or an entity group
 has the following constraints:
 
-|            |      |
+|            | Limit |
 |------------|------|
 | Number of key-value pairs in metadata |  64 |
 | Metadata key size | 128 bytes |
@@ -124,7 +125,8 @@ group has a large number of members.
 |   | Consul default (512 KiB) | Integrated storage default (1 MiB) |
 |---|--------------------------|------------------------------------|
 | Maximum number of identity entities (best case, 200 bytes per entity) | ~610,000 | ~1,1250,000 |
-| Maximum number of identity entities (conservative case, 500 bytes per entity) | ~250,000 | ~480,000 | 
+| Maximum number of identity entities (conservative case, 500 bytes per entity) | ~250,000 | ~480,000 |
+| Maximum number of identity entities (maximum permitted metadata, 41160 bytes per entity) | 670 | 2,400 | 
 | Maximum number of groups (10 entities per group) | ~250,000 | ~480,000 |
 | Maximum number of groups (100 entities per group) | ~22,000 | ~50,000 |
 | Maximum number of members in a group | ~11,500 | ~23,000 |
@@ -147,7 +149,7 @@ upper bound on the number of active tokens.  There are no restrictions on
 the token metadata field, other than the entire token must fit into one
 storage entry:
 
-|                                       |          | 
+|                                       | Limit    | 
 |---------------------------------------|----------|
 | Number of key-value pairs in metadata | no limit |
 | Metadata key size | no limit |
@@ -178,7 +180,7 @@ is becoming excessive.
 
 ### Versioned key-value store (kv-v2 secret engine)
 
-|                                       |          | 
+|                                       | Limit    | 
 |---------------------------------------|----------|
 | Number of secrets | no limit, up to available storage capacity |
 | Maximum size of one version of a secret | slightly less than one storage entry (512 KiB or 1024 KiB) |
@@ -201,16 +203,16 @@ This limit depends on the key size.
 
 | Key length | Consul default (512 KiB) | Integrated storage default (1 MiB) |
 |----------|--------------------------|---------------------------------------|
-| aes128-gcm96    |  2008   |  4017   |
-| aes128-gcm96    |  1865   |  3731   |
-| chacha-poly1305 |  1865   |  3731   |
-| ed25519         |  1420   |  2841   |
-| ecdsa-p256      |   817   |  1635   |
-| ecdsa-p384      |   659   |  1318   |
-| ecdsa-p523      |   539   |  1078   |
-| 1024-bit RSA    |   169   |  333    |
-| 2048-bit RSA    |   116   |  233    |
-| 4096-bit RSA    |    89   |  178    |
+| aes128-gcm96 keys    |  2008   |  4017   |
+| aes128-gcm96 keys    |  1865   |  3731   |
+| chacha-poly1305 keys |  1865   |  3731   |
+| ed25519 keys         |  1420   |  2841   |
+| ecdsa-p256 keys      |   817   |  1635   |
+| ecdsa-p384 keys      |   659   |  1318   |
+| ecdsa-p523 keys      |   539   |  1078   |
+| 1024-bit RSA keys    |   169   |  333    |
+| 2048-bit RSA keys    |   116   |  233    |
+| 4096-bit RSA kyes    |    89   |  178    |
 
 ## Other limits
 
@@ -223,24 +225,27 @@ and on the maximum size of any key-value secrets.
 
 ### Request duration
 
-The default maximum duration of a Vault operation is
-[`max_request_duration`](/configuration/listener/tcp), which defaults to
+The maximum duration of a Vault operation is
+[`max_request_duration`](/docs//configuration/listener/tcp), which defaults to
 90 seconds. If a particular secret engine takes longer than this to perform an
 operation on a remote service, the Vault client will see a failure.
+
+The environment variable [`VAULT_CLIENT_TIMEOUT`](https://www.vaultproject.io/docs/commands#vault_client_timeout) sets a client-side maximum duration as well,
+which is 60 seconds by default.
 
 ### Cluster and replication limits
 
 There are no implementation limits on the maximum size of a cluster,
 or the maximum number of replicas associated with a primary.  However,
-each replica adds considerable overhead to the active node, as
-each write must be duplicated to all standbys. The overhead of
+each replica or performance standby adds considerable overhead to the
+active node, as each write must be duplicated to all standbys. The overhead of
 resyncing multiple replicas at once is also high.
 
 Monitor the active Vault node's CPU and network utilization, as well as
 the lag between the last WAL and replica WAL, to determine if the
 maximum number of replicas has been exceeded.
 
-|                                       |          | 
+|                                       | Limit    | 
 |---------------------------------------|----------|
 | Maximum cluster size | no limit, up to active node capability |
 | Maximum number of DR replicas | no limit, up to active node capability |
@@ -257,10 +262,13 @@ degradation in system performance.  We recommend short default
 time-to-live values on tokens and leases to avoid a large backlog of
 unexpired leases, or a large number of simultaneous expirations.
 
-|                                       |          | 
+|                                       | Limit    | 
 |---------------------------------------|----------|
 | Maximum number of leases | advisory limit at 256,000 |
 | Maximum duration of lease or token | 768 hours by default |
+
+The current number of unexpired leases can be monitored via the
+[`vault.expire.num_leases`](/docs/internals/telemetry#token-identity-and-lease-metrics) metric.
 
 ### Transform limits
 
