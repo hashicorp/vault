@@ -84,13 +84,13 @@ management tool.
 
 1.  Enable the AppID auth method:
 
-    ```text
+    ```shell-session
     $ vault auth enable app-id
     ```
 
 1.  Configure it with the set of AppIDs, user IDs, and the mapping between them:
 
-    ```text
+    ```shell-session
     $ vault write auth/app-id/map/app-id/foo value=admins display_name=foo
     # ...
 

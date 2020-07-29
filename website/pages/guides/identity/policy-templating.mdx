@@ -323,7 +323,7 @@ $ vault write -format=json identity/group name="education" \
 1.  Click the Vault CLI shell icon (**`>_`**) to open a command shell. Enter the
     following command to create a new user, **`bob`**.
 
-    ```plaintext
+    ```shell-session
     $ vault write auth/userpass/users/bob password="training"
     ```
 
@@ -364,7 +364,7 @@ $ vault write -format=json identity/group name="education" \
 
 1.  Enable key/value v2 secrets engine at `user-kv` and `group-kv` paths.
 
-    ```plaintext
+    ```shell-session
     $ vault secrets enable -path=user-kv kv-v2
 
     $ vault secrets enable -path=group-kv kv-v2
@@ -372,7 +372,7 @@ $ vault write -format=json identity/group name="education" \
 
 1.  Log in as **`bob`**.
 
-    ```plaintext
+    ```shell-session
     $ vault login -method=userpass username="bob" password="training"
 
     Key                    Value
@@ -391,7 +391,7 @@ $ vault write -format=json identity/group name="education" \
     "`user-kv/data/{{identity.entity.name}}/*`" expression in the `user-tmpl` policy
     translates to "**`user-kv/data/bob_smith/*`**". Let's test!
 
-    ```plaintext
+    ```shell-session
     $ vault kv put user-kv/bob_smith/apikey webapp="12344567890"
     Key              Value
     ---              -----
@@ -407,7 +407,7 @@ $ vault write -format=json identity/group name="education" \
     expression in the `group-tmpl` policy translates to
     "**`group-kv/data/education/us-west/*`**". Let's verify.
 
-    ```plaintext
+    ```shell-session
     $ vault kv put group-kv/education/us-west/db_cred password="ABCDEFGHIJKLMN"
     Key              Value
     ---              -----
@@ -422,7 +422,7 @@ $ vault write -format=json identity/group name="education" \
     "`identity/group/id/{{identity.groups.names.education.id}}`" path. In [Step
     2](#step2), you saved the `education` group ID in the `group_id.txt` file.
 
-    ```plaintext
+    ```shell-session
     $ vault write identity/group/id/$(cat group_id.txt) \
             policies="group-tmpl" \
             metadata=region="us-west" \
@@ -431,7 +431,7 @@ $ vault write -format=json identity/group name="education" \
 
     Read the group information to verify that the data has been updated.
 
-    ```plaintext
+    ```shell-session
     $ vault read identity/group/id/$(cat group_id.txt)
 
     Key                  Value
@@ -454,7 +454,7 @@ $ vault write -format=json identity/group name="education" \
 
 1.  Enable key/value v2 secrets engine at `user-kv` and `group-kv` paths.
 
-    ```plaintext
+    ```shell-session
     $ tee payload.json <<EOF
     {
       "type": "kv",
@@ -477,7 +477,7 @@ $ vault write -format=json identity/group name="education" \
 
 1.  Log in as **`bob`**.
 
-    ```plaintext
+    ```shell-session
     $ curl --request POST \
            --data '{"password": "training"}' \
            http://127.0.0.1:8200/v1/auth/userpass/login/bob | jq
@@ -489,7 +489,7 @@ $ vault write -format=json identity/group name="education" \
     "`user-kv/data/{{identity.entity.name}}/*`" expression in the `user-tmpl` policy
     translates to "**`user-kv/data/bob_smith/*`**". Let's test!
 
-    ```plaintext
+    ```shell-session
     $ curl --header "X-Vault-Token: <bob_client_token>" \
             --request POST \
             --data '{ "data": {"webapp": "12344567890"} }' \
@@ -502,7 +502,7 @@ $ vault write -format=json identity/group name="education" \
     expression in the `group-tmpl` policy translates to
     "**`group-kv/data/education/us-west/*`**". Let's verify.
 
-    ```plaintext
+    ```shell-session
     $ curl --header "X-Vault-Token: <bob_client_token>" \
             --request POST \
             --data '{ "data": {"password": "ABCDEFGHIJKLMN"} }' \
@@ -513,7 +513,7 @@ $ vault write -format=json identity/group name="education" \
     permits "update" and "read" on the
     "`identity/group/id/{{identity.groups.names.education.id}}`" path.
 
-    ```plaintext
+    ```shell-session
     $ tee group_info.json <<EOF
     {
       "metadata": {
@@ -537,7 +537,7 @@ $ vault write -format=json identity/group name="education" \
 
     Read the group information to verify that the data has been updated.
 
-    ```plaintext
+    ```shell-session
     $ curl --header "X-Vault-Token: <bob_client_token>" \
             http://127.0.0.1:8200/v1/identity/group/id/<education_group_id>
     ```

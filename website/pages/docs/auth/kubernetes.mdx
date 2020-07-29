@@ -65,14 +65,14 @@ management tool.
 
 1.  Enable the Kubernetes auth method:
 
-    ```text
+    ```shell-session
     $ vault auth enable kubernetes
     ```
 
 1.  Use the `/config` endpoint to configure Vault to talk to Kubernetes. For the
     list of available configuration options, please see the API documentation.
 
-    ```text
+    ```shell-session
     $ vault write auth/kubernetes/config \
         token_reviewer_jwt="reviewer_service_account_jwt" \
         kubernetes_host=https://192.168.99.100:8443 \
@@ -89,8 +89,8 @@ management tool.
 
 1.  Create a named role:
 
-    ```text
-    vault write auth/kubernetes/role/demo \
+    ```shell-session
+    $ vault write auth/kubernetes/role/demo \
         bound_service_account_names=vault-auth \
         bound_service_account_namespaces=default \
         policies=default \

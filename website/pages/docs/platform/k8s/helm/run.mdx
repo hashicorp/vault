@@ -250,8 +250,8 @@ Vault Helm requires the Google Cloud KMS credentials stored in
 
 First, create the secret in Kubernetes:
 
-```bash
-kubectl create secret generic kms-creds --from-file=credentials.json
+```shell-session
+$ kubectl create secret generic kms-creds --from-file=credentials.json
 ```
 
 Vault Helm mounts this to `/vault/userconfig/kms-creds/credentials.json`.
@@ -417,8 +417,8 @@ server:
 
 Next, list the Helm versions and choose the desired version to install.
 
-```bash
-helm search repo hashicorp/vault
+```shell-session
+$ helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
 hashicorp/vault	0.5.0        	           	Install and configure Vault on Kubernetes.
 ```

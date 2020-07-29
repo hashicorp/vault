@@ -130,19 +130,19 @@ PKI secrets engine.
 
 1. First, enable the `pki` secrets engine at `pki` path:
 
-   ```plaintext
+   ```shell-session
    $ vault secrets enable pki
    ```
 
 1. Tune the `pki` secrets engine to issue certificates with a maximum time-to-live (TTL) of 87600 hours.
 
-   ```plaintext
+   ```shell-session
    $ vault secrets tune -max-lease-ttl=87600h pki
    ```
 
 1. Generate the **_root_** certificate and save the certificate in `CA_cert.crt`.
 
-   ```plaintext
+   ```shell-session
    $ vault write -field=certificate pki/root/generate/internal common_name="example.com" \
            ttl=87600h > CA_cert.crt
    ```
@@ -154,7 +154,7 @@ PKI secrets engine.
 
 1. Configure the CA and CRL URLs:
 
-   ```plaintext
+   ```shell-session
    $ vault write pki/config/urls \
            issuing_certificates="http://127.0.0.1:8200/v1/pki/ca" \
            crl_distribution_points="http://127.0.0.1:8200/v1/pki/crl"
@@ -164,7 +164,7 @@ PKI secrets engine.
 
 1.  First, enable the `pki` secrets engine at `pki` path using `/sys/mounts` endpoint:
 
-    ```plaintext
+    ```shell-session
     $ curl --header "X-Vault-Token: <TOKEN>" \
            --request POST \
            --data <PARAMETERS> \
@@ -178,7 +178,7 @@ PKI secrets engine.
 
     The following example mounts `pki` secret engine.
 
-    ```plaintext
+    ```shell-session
     $ curl --header "X-Vault-Token: ..." \
            --request POST \
            --data '{"type":"pki"}' \
@@ -188,7 +188,7 @@ PKI secrets engine.
 1.  Tune the `pki` secrets engine to issue certificates with a maximum
     time-to-live (TTL) of 87600 hours.
 
-    ```plaintext
+    ```shell-session
     $ curl --header "X-Vault-Token: ..." \
             --request POST \
             --data '{"max_lease_ttl":"87600h"}' \
@@ -202,7 +202,7 @@ PKI secrets engine.
     > You can install [`jq`](https://stedolan.github.io/jq/download/) or manually
     > copy and paste the certificate in a file, `CA_cert.crt`.
 
-    ```plaintext
+    ```shell-session
     $ tee payload.json <<EOF
     {
       "common_name": "example.com",
@@ -224,7 +224,7 @@ PKI secrets engine.
 
 1.  Configure the CA and CRL URLs:
 
-    ```plaintext
+    ```shell-session
     $ tee payload-url.json <<EOF
     {
       "issuing_certificates": "http://127.0.0.1:8200/v1/pki/ca",
@@ -280,21 +280,21 @@ in the previous step.
 
 1.  First, enable the `pki` secrets engine at **`pki_int`** path:
 
-    ```plaintext
+    ```shell-session
     $ vault secrets enable -path=pki_int pki
     ```
 
 1.  Tune the `pki_int` secrets engine to issue certificates with a maximum
     time-to-live (TTL) of 43800 hours.
 
-    ```plaintext
+    ```shell-session
     $ vault secrets tune -max-lease-ttl=43800h pki_int
     ```
 
 1.  Execute the following command to generate an intermediate and save the CSR as
     `pki_intermediate.csr`:
 
-    ```plaintext
+    ```shell-session
     $ vault write -format=json pki_int/intermediate/generate/internal \
             common_name="example.com Intermediate Authority" ttl="43800h" \
             | jq -r '.data.csr' > pki_intermediate.csr
@@ -303,7 +303,7 @@ in the previous step.
 1.  Sign the intermediate certificate with the root certificate and save the
     generated certificate as `intermediate.cert.pem`:
 
-    ```plaintext
+    ```shell-session
     $ vault write -format=json pki/root/sign-intermediate csr=@pki_intermediate.csr \
             format=pem_bundle ttl="43800h" \
             | jq -r '.data.certificate' > intermediate.cert.pem
@@ -312,7 +312,7 @@ in the previous step.
 1.  Once the CSR is signed and the root CA returns a certificate, it can be
     imported back into Vault:
 
-    ```plaintext
+    ```shell-session
     $ vault write pki_int/intermediate/set-signed certificate=@intermediate.cert.pem
     ```
 
@@ -322,7 +322,7 @@ in the previous step.
 
     **Example:**
 
-    ```plaintext
+    ```shell-session
     $ curl --header "X-Vault-Token: ..." \
            --request POST \
            --data '{"type":"pki"}' \
@@ -332,7 +332,7 @@ in the previous step.
 1.  Tune the `pki_int` secrets engine to issue certificates with a maximum
     time-to-live (TTL) of 43800 hours.
 
-    ```plaintext
+    ```shell-session
     $ curl --header "X-Vault-Token: ..." \
             --request POST \
             --data '{"max_lease_ttl":"43800h"}' \
@@ -342,7 +342,7 @@ in the previous step.
 1.  Generate an intermediate using the `/pki_int/intermediate/generate/internal`
     endpoint.
 
-    ```plaintext
+    ```shell-session
     $ tee payload-int.json <<EOF
     {
       "common_name": "example.com Intermediate Authority",
@@ -363,7 +363,7 @@ in the previous step.
 
     -> **NOTE:** The API request payload should contain the CSR you obtained.
 
-    ```plaintext
+    ```shell-session
     $ tee payload-int-cert.json <<EOF
     {
       "csr": "...",
@@ -390,7 +390,7 @@ in the previous step.
     -> **NOTE:** The API request payload should contain the certificate you
     obtained.
 
-    ```plaintext
+    ```shell-session
     $ tee payload-signed.json <<EOF
     {
       "certificate": "..."

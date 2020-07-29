@@ -216,7 +216,7 @@ attached.
 
 1. Enable the `userpass` auth method.
 
-   ```plaintext
+   ```shell-session
    $ vault auth enable userpass
    ```
 
@@ -226,7 +226,7 @@ attached.
    - password: training
    - policy: test
 
-   ```plaintext
+   ```shell-session
    $ vault write auth/userpass/users/bob password="training" policies="test"
    ```
 
@@ -236,13 +236,13 @@ attached.
    - password: training
    - policy: team-qa
 
-   ```plaintext
+   ```shell-session
    $ vault write auth/userpass/users/bsmith password="training" policies="team-qa"
    ```
 
 1. Execute the following command to discover the mount accessor for the userpass auth method:
 
-   ```plaintext
+   ```shell-session
    $ vault auth list -detailed
    Path                  Type        Accessor                ...
    ----                  ----        --------                ...
@@ -254,13 +254,13 @@ attached.
 
    Run the following command to store the userpass accessor value in a file named, `accessor.txt`.
 
-   ```plaintext
+   ```shell-session
    $ vault auth list -format=json | jq -r '.["userpass/"].accessor' > accessor.txt
    ```
 
 1. Create an entity for `bob-smith`.
 
-   ```plaintext
+   ```shell-session
    $ vault write identity/entity name="bob-smith" policies="base" \
         metadata=organization="ACME Inc." \
         metadata=team="QA"
@@ -275,7 +275,7 @@ attached.
 
 1. Now, add the user `bob` to the `bob-smith` entity by creating an entity alias:
 
-   ```plaintext
+   ```shell-session
    $ vault write identity/entity-alias name="bob" \
        canonical_id=<entity_id> \
        mount_accessor=<userpass_accessor>
@@ -285,7 +285,7 @@ attached.
 
    **Example:**
 
-   ```plaintext
+   ```shell-session
    $ vault write identity/entity-alias name="bob" \
          canonical_id="631256b1-8523-9838-5501-d0a1e2cdad9c" \
          mount_accessor=$(cat accessor.txt)
@@ -300,7 +300,7 @@ attached.
 
    **Example:**
 
-   ```plaintext
+   ```shell-session
    $ vault write identity/entity-alias name="bsmith" \
           canonical_id="631256b1-8523-9838-5501-d0a1e2cdad9c" \
           mount_accessor=$(cat accessor.txt)
@@ -313,7 +313,7 @@ attached.
 
 1. Review the entity details.
 
-   ```plaintext
+   ```shell-session
    $ vault read identity/entity/id/<entity_id>
    ```
 
@@ -326,7 +326,7 @@ attached.
 
    To create a policy, use the `/sys/policy` endpoint:
 
-   ```shell
+   ```shell-session
    $ curl --header "X-Vault-Token: <TOKEN>" \
           --request PUT \
           --data <PAYLOAD> \
@@ -385,7 +385,7 @@ attached.
 
 1. Enable the `userpass` auth method.
 
-   ```plaintext
+   ```shell-session
    $ curl --header "X-Vault-Token: ..." \
           --request POST \
           --data '{"type": "userpass"}' \
@@ -398,7 +398,7 @@ attached.
    - password: training
    - policy: test
 
-   ```plaintext
+   ```shell-session
    $ curl --header "X-Vault-Token: ..." \
           --request POST \
           --data '{"password": "training", "policies": "test"}' \
@@ -411,7 +411,7 @@ attached.
    - password: training
    - policy: team-qa
 
-   ```plaintext
+   ```shell-session
    $ curl --header "X-Vault-Token: ..." \
           --request POST \
           --data '{"password": "training", "policies": "team-qa"}' \
@@ -421,7 +421,7 @@ attached.
 1. Execute the following command to discover the mount accessor for the userpass
    auth method.
 
-   ```plaintext
+   ```shell-session
    $ curl --header "X-Vault-Token: ..." \
           http://127.0.0.1:8200/v1/sys/auth | jq
     {
@@ -437,7 +437,7 @@ attached.
 
 1. Create an entity for bob-smith.
 
-   ```plaintext
+   ```shell-session
    $ tee payload.json <<EOF
    {
      "name": "bob-smith",
@@ -492,7 +492,7 @@ $ curl --header "X-Vault-Token: ..." \
 
    **Example:**
 
-   ```plaintext
+   ```shell-session
    $ tee payload-bsmith.json <<EOF
    {
      "name": "bsmith",
@@ -510,7 +510,7 @@ $ curl --header "X-Vault-Token: ..." \
 1. Review the entity details. (**NOTE:** Be sure to enter the entity ID matching
    your environment.)
 
-   ```plaintext
+   ```shell-session
    $ curl --header "X-Vault-Token: ..." \
           http://127.0.0.1:8200/v1/identity/entity/id/<ENTITY_ID>
    {
@@ -567,7 +567,7 @@ $ curl --header "X-Vault-Token: ..." \
 1.  Click the Vault CLI shell icon (**`>_`**) to open a command shell. Enter the
     following command to create a new user, **`bob`**:
 
-    ```plaintext
+    ```shell-session
     $ vault write auth/userpass/users/bob password="training" policies="test"
     ```
 
@@ -575,7 +575,7 @@ $ curl --header "X-Vault-Token: ..." \
 
 1.  Enter the following command to create a new user, **`bsmith`**:
 
-    ```plaintext
+    ```shell-session
     $ vault write auth/userpass/users/bsmith password="training" policies="team-qa"
     ```
 
@@ -778,14 +778,14 @@ path "secret/team/eng" {
 
 1.  Create a new policy named, `team-eng`:
 
-    ```plaintext
+    ```shell-session
     $ vault policy write team-eng ./team-eng.hcl
     ```
 
 1.  Create an internal group named, `engineers` and add `bob-smith` entity as a
     group member and attach `team-eng`.
 
-    ```plaintext
+    ```shell-session
     $ vault write identity/group name="engineers" \
           policies="team-eng" \
           member_entity_ids=<entity_id> \
@@ -797,7 +797,7 @@ path "secret/team/eng" {
 
     **Example:**
 
-    ```plaintext
+    ```shell-session
     $ vault write identity/group name="engineers" \
           policies="team-eng" \
           member_entity_ids="631256b1-8523-9838-5501..."  \

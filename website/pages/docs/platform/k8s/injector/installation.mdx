@@ -27,8 +27,8 @@ hashicorp/vault	0.5.0        	           	Install and configure Vault on Kuberne
 Then install the chart and enable the injection feature by setting the
 `injector.enabled` value to `true`:
 
-```bash
-helm install vault hashicorp/vault --set="injector.enabled=true"
+```shell-session
+$ helm install vault hashicorp/vault --set="injector.enabled=true"
 ```
 
 Upgrades may be performed with `helm upgrade` on an existing install. Please

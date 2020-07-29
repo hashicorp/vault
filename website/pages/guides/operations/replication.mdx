@@ -23,7 +23,9 @@ the [Vault Replication API documentation](/api/system/replication)
 
 To activate the primary, run:
 
-    $ vault write -f sys/replication/performance/primary/enable
+```shell-session
+$ vault write -f sys/replication/performance/primary/enable
+```
 
 There is currently one optional argument: `primary_cluster_addr`. This can be
 used to override the cluster address that the primary advertises to the
@@ -34,7 +36,9 @@ members of a single cluster and primary/secondary clusters.
 
 To fetch a secondary bootstrap token, run:
 
-    $ vault write sys/replication/performance/primary/secondary-token id=<id>
+```shell-session
+$ vault write sys/replication/performance/primary/secondary-token id=<id>
+```
 
 The value for `id` is opaque to Vault and can be any identifying value you want;
 this can be used later to revoke the secondary and will be listed when you read
@@ -45,7 +49,9 @@ except that the token will be JWT-formatted..
 
 To activate a secondary using the fetched token, run:
 
-    $ vault write sys/replication/performance/secondary/enable token=<token>
+```shell-session
+vault write sys/replication/performance/secondary/enable token=<token>
+```
 
 You must provide the full token value. Be very careful when running this
 command, as it will destroy all data currently stored in the secondary.

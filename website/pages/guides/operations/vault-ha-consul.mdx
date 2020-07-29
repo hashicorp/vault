@@ -252,6 +252,7 @@ Be sure that the ownership and permissions are correct on the directory you
 specified for the value of `data_dir`, and then start the Consul service on each
 system and verify the status:
 
+    ```shell-session
     $ sudo systemctl start consul
     $ sudo systemctl status consul
     ● consul.service - Consul server agent
@@ -263,6 +264,7 @@ system and verify the status:
           CPU: 0m 52.784s
        CGroup: /system.slice/consul.service
                └─2068 /usr/local/bin/consul agent -config-file=/usr/local/etc/consul/client_agent.json -pid-file=/var/run/consul/consul.pid
+    ```
 
 After starting all Consul server agents, let’s check the Consul cluster status:
 
@@ -421,6 +423,7 @@ permissions are correct on the directory you specified for the value of
 `data_dir`, and then start the Consul service on each system and verify the
 status:
 
+    ```shell-session
     $ sudo systemctl start consul
     $ sudo systemctl status consul
     ● consul.service - Consul client agent
@@ -432,6 +435,7 @@ status:
           CPU: 571ms
        CGroup: /system.slice/consul.service
                └─23758 /usr/local/bin/consul agent -config-file=/usr/local/etc/consul/client_agent.json -pid-file=/var/run/consul/consul.pid
+    ```
 
 After starting all Consul client agents, check the Consul cluster status:
 
@@ -589,6 +593,7 @@ and then you can start your Vault service on each server.
 
 Start the Vault service on each system and verify the status:
 
+    ```shell-session
     $ sudo systemctl start vault
     $ sudo systemctl status vault
     ● vault.service - Vault secret management tool
@@ -600,6 +605,7 @@ Start the Vault service on each system and verify the status:
           CPU: 50s
        CGroup: /system.slice/vault.service
                └─2080 /usr/local/bin/vault server -config=/home/ubuntu/vault_nano/config/vault_server.hcl -log-level=debu
+    ```
 
 Now you’ll need to move on to [initializing and
 unsealing](/intro/getting-started/deploy#initializing-the-vault) each Vault
@@ -609,6 +615,7 @@ Once that is done, check Vault status on each of the servers.
 
 The **active** Vault server:
 
+    ```shell-session
     $ vault status
     Key             Value
     ---             -----
@@ -622,6 +629,7 @@ The **active** Vault server:
     HA Enabled      true
     HA Cluster      https://10.1.42.201:8201
     HA Mode         active
+    ```
 
 The **standby** Vault server:
 

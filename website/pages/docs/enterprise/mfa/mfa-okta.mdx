@@ -13,13 +13,13 @@ This page demonstrates the Okta MFA on ACL'd paths of Vault.
 
 1.  Enable the appropriate auth method:
 
-    ```text
+    ```shell-session
     $ vault auth enable userpass
     ```
 
 1.  Fetch the mount accessor for the enabled auth method:
 
-    ```text
+    ```shell-session
     $ vault auth list -detailed
     ```
 
@@ -34,7 +34,7 @@ This page demonstrates the Okta MFA on ACL'd paths of Vault.
 
 1.  Configure Okta MFA:
 
-    ```text
+    ```shell-session
     $ vault write sys/mfa/method/okta/my_okta \
         mount_accessor=auth_userpass_54b8e339 \
         org_name="dev-262775" \
@@ -44,7 +44,7 @@ This page demonstrates the Okta MFA on ACL'd paths of Vault.
 1.  Create a policy that gives access to secret through the MFA method created
     above:
 
-    ```text
+    ```shell-session
     $ vault policy write okta-policy -<<EOF
     path "secret/foo" {
       capabilities = ["read"]
@@ -58,7 +58,7 @@ This page demonstrates the Okta MFA on ACL'd paths of Vault.
     identity information. Create a user in the `userpass` auth method and
     authenticate against it:
 
-    ```text
+    ```shell-session
     $ vault write auth/userpass/users/testuser \
         password=testpassword \
         policies=okta-policy
@@ -66,7 +66,7 @@ This page demonstrates the Okta MFA on ACL'd paths of Vault.
 
 1.  Create a login token:
 
-    ```text
+    ```shell-session
     $ vault write auth/userpass/login/testuser password=testpassword
 
     Key                    Value
@@ -86,7 +86,7 @@ This page demonstrates the Okta MFA on ACL'd paths of Vault.
 1.  Fetch the entity ID from the token. The caller identity is represented by the
     `entity_id` property of the token:
 
-    ```text
+    ```shell-session
     $ vault token lookup 70f97438-e174-c03c-40fe-6bcdc1028d6c
 
     Key                     Value
@@ -111,14 +111,14 @@ This page demonstrates the Okta MFA on ACL'd paths of Vault.
 
 1.  Login as the user:
 
-    ```text
+    ```shell-session
     $ vault login 70f97438-e174-c03c-40fe-6bcdc1028d6c
     ```
 
 1.  Read a secret to trigger an Okta push. This will be a blocking call until
     the push notification is either approved or declined:
 
-    ```text
+    ```shell-session
     $ vault read secret/foo
 
     Key                     Value

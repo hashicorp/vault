@@ -80,13 +80,13 @@ management tool.
 
 1. Enable the AppRole auth method:
 
-   ```text
+   ```shell-session
    $ vault auth enable approle
    ```
 
 1. Create a named role:
 
-   ```text
+   ```shell-session
    $ vault write auth/approle/role/my-role \
        secret_id_ttl=10m \
        token_num_uses=10 \
@@ -97,19 +97,19 @@ management tool.
 
 ~> **Note:** If the token issued by your approle needs the ability to create child tokens, you will need to set token_num_uses to 0.
 
-   For the complete list of configuration options, please see the API
-   documentation.
+For the complete list of configuration options, please see the API
+documentation.
 
 1. Fetch the RoleID of the AppRole:
 
-   ```text
+   ```shell-session
    $ vault read auth/approle/role/my-role/role-id
    role_id     db02de05-fa39-4855-059b-67221c5c2f63
    ```
 
 1. Get a SecretID issued against the AppRole:
 
-   ```text
+   ```shell-session
    $ vault write -f auth/approle/role/my-role/secret-id
    secret_id               6a174c20-f6de-a53c-74d2-6018fcceff64
    secret_id_accessor      c454f7e5-996e-7230-6074-6ef26b7bcf86
@@ -119,7 +119,7 @@ management tool.
 
 1. Enable the AppRole auth method:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \
@@ -129,7 +129,7 @@ management tool.
 
 1. Create an AppRole with desired set of policies:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \
@@ -139,7 +139,7 @@ management tool.
 
 1. Fetch the identifier of the role:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        http://127.0.0.1:8200/v1/auth/approle/role/my-role/role-id
@@ -157,7 +157,7 @@ management tool.
 
 1. Create a new secret identifier under the role:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \

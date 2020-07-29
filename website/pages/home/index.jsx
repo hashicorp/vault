@@ -18,20 +18,20 @@ export default function Homepage() {
               size: 55617,
               url:
                 'https://www.datocms-assets.com/2885/1539894412-vault-bg.jpg',
-              width: 3196
+              width: 3196,
             },
             backgroundTheme: 'light',
             buttons: [
               {
                 external: false,
                 title: 'Download',
-                url: 'https://www.vaultproject.io/downloads'
+                url: 'https://www.vaultproject.io/downloads',
               },
               {
                 external: false,
                 title: 'Get Started with Vault',
-                url: 'https://www.vaultproject.io/intro/getting-started'
-              }
+                url: 'https://www.vaultproject.io/intro/getting-started',
+              },
             ],
             centered: false,
             description:
@@ -46,9 +46,9 @@ export default function Homepage() {
                   {
                     srcType: 'mp4',
                     url:
-                      'https://www.datocms-assets.com/2885/1543956852-vault-v1-0-ui-opt.mp4'
-                  }
-                ]
+                      'https://www.datocms-assets.com/2885/1543956852-vault-v1-0-ui-opt.mp4',
+                  },
+                ],
               },
               {
                 name: 'CLI',
@@ -57,11 +57,11 @@ export default function Homepage() {
                   {
                     srcType: 'mp4',
                     url:
-                      'https://www.datocms-assets.com/2885/1543956847-vault-v1-0-cli-opt.mp4'
-                  }
-                ]
-              }
-            ]
+                      'https://www.datocms-assets.com/2885/1543956847-vault-v1-0-cli-opt.mp4',
+                  },
+                ],
+              },
+            ],
           }}
         />
 
@@ -81,7 +81,7 @@ export default function Homepage() {
             beforeImage={{
               url:
                 'https://www.datocms-assets.com/2885/1579635889-static-infrastructure.svg',
-              format: 'svg'
+              format: 'svg',
             }}
             beforeHeadline="Static Infrastructure"
             beforeContent={`Datacenters with inherently high-trust networks with clear network perimeters.
@@ -94,7 +94,7 @@ export default function Homepage() {
             afterImage={{
               url:
                 'https://www.datocms-assets.com/2885/1579635892-dynamic-infrastructure.svg',
-              format: 'svg'
+              format: 'svg',
             }}
             afterHeadline="Dynamic Infrastructure"
             afterContent={`Multiple clouds and private datacenters without a clear network perimeter.
@@ -123,13 +123,13 @@ export default function Homepage() {
                     alt: null,
                     format: 'png',
                     url:
-                      'https://www.datocms-assets.com/2885/1575422126-secrets.png'
+                      'https://www.datocms-assets.com/2885/1575422126-secrets.png',
                   },
                   link: {
                     external: false,
                     title: 'Learn more',
-                    url: '/use-cases/secrets-management'
-                  }
+                    url: '/use-cases/secrets-management',
+                  },
                 },
                 {
                   title: 'Data Encryption',
@@ -139,13 +139,13 @@ export default function Homepage() {
                     alt: null,
                     format: 'png',
                     url:
-                      'https://www.datocms-assets.com/2885/1575422166-encryption.png'
+                      'https://www.datocms-assets.com/2885/1575422166-encryption.png',
                   },
                   link: {
                     external: false,
                     title: 'Learn more',
-                    url: '/use-cases/data-encryption'
-                  }
+                    url: '/use-cases/data-encryption',
+                  },
                 },
                 {
                   title: 'Identity-based Access',
@@ -155,14 +155,14 @@ export default function Homepage() {
                     alt: null,
                     format: 'png',
                     url:
-                      'https://www.datocms-assets.com/2885/1575422201-identity.png'
+                      'https://www.datocms-assets.com/2885/1575422201-identity.png',
                   },
                   link: {
                     external: false,
                     title: 'Learn more',
-                    url: '/use-cases/identity-based-access'
-                  }
-                }
+                    url: '/use-cases/identity-based-access',
+                  },
+                },
               ]}
             />
           </div>
@@ -184,8 +184,8 @@ Use policy to codify, protect, and automate access to secrets`,
     --header "X-Vault-Token: ..." \n
     --request POST \n
     --data @payload.json \n
-    https://127.0.0.1:8200/v1/secret/config`
-              }
+    https://127.0.0.1:8200/v1/secret/config`,
+              },
             }}
           />
 
@@ -207,8 +207,8 @@ Use policy to codify, protect, and automate access to secrets`,
                   'https://www.datocms-assets.com/2885/1506527326-color.svg',
                   'https://www.datocms-assets.com/2885/1506540149-black.svg',
                   'https://www.datocms-assets.com/2885/1539876682-k8s.svg',
-                  'https://www.datocms-assets.com/2885/1506535057-black.svg'
-                ].map(logo => (
+                  'https://www.datocms-assets.com/2885/1506535057-black.svg',
+                ].map((logo) => (
                   <li key={logo}>
                     <img src={logo} alt="company logo" />
                   </li>
@@ -238,8 +238,8 @@ Use policy to codify, protect, and automate access to secrets`,
                   'https://www.datocms-assets.com/2885/1508434209-consul_primarylogo_fullcolor.svg',
                   'https://www.datocms-assets.com/2885/1539817686-microsoft-sql-server.svg',
                   'https://www.datocms-assets.com/2885/1539818112-postgresql.svg',
-                  'https://www.datocms-assets.com/2885/1539799149-azure-stacked-color.svg'
-                ].map(logo => (
+                  'https://www.datocms-assets.com/2885/1539799149-azure-stacked-color.svg',
+                ].map((logo) => (
                   <li key={logo}>
                     <img src={logo} alt="company logo" />
                   </li>

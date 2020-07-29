@@ -17,7 +17,7 @@ export default class MyDocument extends Document {
           <script
             noModule
             dangerouslySetInnerHTML={{
-              __html: `window.MSInputMethodContext && document.documentMode && document.write('<script src="/ie-custom-properties.js"><\\x2fscript>');`
+              __html: `window.MSInputMethodContext && document.documentMode && document.write('<script src="/ie-custom-properties.js"><\\x2fscript>');`,
             }}
           />
         </body>

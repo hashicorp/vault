@@ -12,7 +12,7 @@ function BeforeAfterDiagram(props) {
     beforeImage,
     afterHeadline,
     afterContent,
-    afterImage
+    afterImage,
   } = props
   return (
     <div className={`g-before-after-diagrams ${theme}`}>
@@ -27,7 +27,7 @@ function BeforeAfterDiagram(props) {
             <span />
             <div
               dangerouslySetInnerHTML={{
-                __html: alertIcon
+                __html: alertIcon,
               }}
             />
             <span />
@@ -37,7 +37,7 @@ function BeforeAfterDiagram(props) {
               <h3
                 className="g-type-display-3"
                 dangerouslySetInnerHTML={{
-                  __html: marked.inlineLexer(beforeHeadline, [])
+                  __html: marked.inlineLexer(beforeHeadline, []),
                 }}
               />
             )}
@@ -45,7 +45,7 @@ function BeforeAfterDiagram(props) {
               <div
                 className="g-type-body-small"
                 dangerouslySetInnerHTML={{
-                  __html: marked(beforeContent, markedOptions)
+                  __html: marked(beforeContent, markedOptions),
                 }}
               />
             )}
@@ -62,7 +62,7 @@ function BeforeAfterDiagram(props) {
           <div className="line">
             <div
               dangerouslySetInnerHTML={{
-                __html: checkIcon
+                __html: checkIcon,
               }}
             />
           </div>
@@ -71,14 +71,14 @@ function BeforeAfterDiagram(props) {
               <h3
                 className="g-type-display-3"
                 dangerouslySetInnerHTML={{
-                  __html: marked.inlineLexer(afterHeadline, [])
+                  __html: marked.inlineLexer(afterHeadline, []),
                 }}
               />
             )}
             {afterContent && (
               <div
                 dangerouslySetInnerHTML={{
-                  __html: marked(afterContent, markedOptions)
+                  __html: marked(afterContent, markedOptions),
                 }}
               />
             )}
@@ -94,13 +94,13 @@ export default BeforeAfterDiagram
 function generateMarkedOptions() {
   const markedRenderer = new marked.Renderer()
 
-  markedRenderer.heading = function(text, level) {
+  markedRenderer.heading = function (text, level) {
     return `<h${level} class="g-type-label">${text}</h${level}>`
   }
-  markedRenderer.paragraph = function(text) {
+  markedRenderer.paragraph = function (text) {
     return `<p class="g-type-body-small">${text}</p>`
   }
-  markedRenderer.list = function(text) {
+  markedRenderer.list = function (text) {
     return `<ul class="g-type-body-small">${text}</ul>`
   }
 

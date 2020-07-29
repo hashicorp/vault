@@ -69,7 +69,7 @@ This guide walk through the following operations:
 
 1. Enable DR replication on the **primary** cluster.
 
-   ```plaintext
+   ```shell-session
    $ vault write -f sys/replication/dr/primary/enable
    WARNING! The following warnings were returned from Vault:
 
@@ -79,7 +79,7 @@ This guide walk through the following operations:
 
 1. Generate a secondary token.
 
-   ```plaintext
+   ```shell-session
    $ vault write sys/replication/dr/primary/secondary-token id="secondary"
    ```
 
@@ -104,7 +104,7 @@ This guide walk through the following operations:
 
    **Example:**
 
-   ```plaintext
+   ```shell-session
    $ curl --header "X-Vault-Token: ..." \
           --request POST \
           --data '{}' \
@@ -128,7 +128,7 @@ This guide walk through the following operations:
 
    **Example:**
 
-   ```plaintext
+   ```shell-session
    $ curl --header "X-Vault-Token: ..." \
           --request POST \
           --data '{ "id": "secondary"}' \
@@ -181,7 +181,7 @@ The following operations must be performed on the DR secondary cluster.
 
 1. Enable DR replication on the **secondary** cluster.
 
-   ```plaintext
+   ```shell-session
    $ vault write sys/replication/dr/secondary/enable token="..."
    ```
 
@@ -203,7 +203,7 @@ The following operations must be performed on the DR secondary cluster.
 
 1. Enable DR replication on the **secondary** cluster.
 
-   ```plaintext
+   ```shell-session
    $ tee payload.json <<EOF
    {
      "token": "..."
@@ -261,7 +261,7 @@ secondary cluster. The process, outlined below using API calls, is the similar t
 
 1.  Generate an one time password (OTP) to use:
 
-    ```plaintext
+    ```shell-session
     $ vault operator generate-root -dr-token -generate-otp
     HenFLWmt0AgrjWJp/RECzQ==
     ```
@@ -270,7 +270,7 @@ secondary cluster. The process, outlined below using API calls, is the similar t
 
     **Example:**
 
-    ```plaintext
+    ```shell-session
     $ tee payload.json <<EOF
     {
       "otp": "HenFLWmt0AgrjWJp/RECzQ=="
@@ -299,7 +299,7 @@ secondary cluster. The process, outlined below using API calls, is the similar t
 
     **Example:**
 
-    ```plaintext
+    ```shell-session
     $ tee payload_key1.json <<EOF
     {
       "key": "<primary_unseal_key_1>",
@@ -328,7 +328,7 @@ secondary cluster. The process, outlined below using API calls, is the similar t
 
     **Example:**
 
-    ```plaintext
+    ```shell-session
     $ curl --request PUT \
           --data @payload_key3.json \
           https://cluster-B.example.com:8200/v1/sys/replication/dr/secondary/generate-operation-token/update | jq
@@ -348,7 +348,7 @@ secondary cluster. The process, outlined below using API calls, is the similar t
 
     **Example:**
 
-    ```plaintext
+    ```shell-session
     $ vault operator generate-root -dr-token \
             -decode="dKNQqNmh3JfJcSZdGlkttQ==" \
             -otp="HenFLWmt0AgrjWJp/RECzQ=="
@@ -362,7 +362,7 @@ secondary cluster. The process, outlined below using API calls, is the similar t
 
     **Example:**
 
-    ```plaintext
+    ```shell-session
     $ tee payload.json <<EOF
     {
           "dr_operation_token": "23e02f22-2ae6-94cc-d93f-5ee295e03e9d"
@@ -411,7 +411,7 @@ secondary cluster. The process, outlined below using API calls, is the similar t
 
     **Example:**
 
-    ```
+    ```shell-session
     $ vault operator generate-root -dr-token \
             -otp="vZpZZf5UI1nvB3A5/7Xq9A==" \
             -decode="cuplaFGYduDEY6ZVC5IfaA=="

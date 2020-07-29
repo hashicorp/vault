@@ -66,13 +66,13 @@ management tool.
 
 1. Enable the userpass auth method:
 
-   ```text
+   ```shell-session
    $ vault auth enable userpass
    ```
 
 1. Configure it with users that are allowed to authenticate:
 
-   ```text
+   ```shell-session
    $ vault write auth/userpass/users/mitchellh \
        password=foo \
        policies=admins

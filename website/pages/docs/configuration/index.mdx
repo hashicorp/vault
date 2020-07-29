@@ -98,8 +98,8 @@ to specify where the configuration is.
   On Linux, to give the Vault executable the ability to use the `mlock`
   syscall without running the process as root, run:
 
-  ```shell
-  sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
+  ```shell-session
+  $ sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
   ```
 
   ~> Note: Since each plugin runs as a separate process, you need to do the same
