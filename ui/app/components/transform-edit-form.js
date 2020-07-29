@@ -11,8 +11,10 @@ export default Component.extend({
   actions: {
     // TODO modify the parameters and potentially rename
     createOrUpdate(type, event) {
+      // TODO: this currently fails because we are not correctly passing in the necessary parameters.  Fix once you have this all setup.
       const adapter = this.get('store').adapterFor('transform');
-      adapter.createOrUpdate(store, type, snapshot, requestType);
+      // adapter.createOrUpdate(store, type, snapshot, requestType));
+      adapter.createOrUpdate(type, event); // TODO: placeholder to pass linting
     },
   },
 });
