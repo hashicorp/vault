@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn, blur, find, triggerEvent } from '@ember/test-helpers';
+import { render, click, fillIn, find } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import waitForError from 'vault/tests/helpers/wait-for-error';
 
