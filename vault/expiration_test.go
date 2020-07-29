@@ -401,7 +401,7 @@ func TestExpiration_Restore(t *testing.T) {
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
-					TTL: 20 * time.Millisecond,
+					TTL: time.Second,
 				},
 			},
 			Data: map[string]interface{}{
@@ -761,7 +761,7 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
-					TTL: 20 * time.Millisecond,
+					TTL: time.Second,
 				},
 			},
 			Data: map[string]interface{}{
@@ -830,7 +830,7 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
-					TTL: 20 * time.Millisecond,
+					TTL: time.Second,
 				},
 			},
 			Data: map[string]interface{}{
@@ -1231,7 +1231,7 @@ func TestExpiration_Renew(t *testing.T) {
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
-				TTL:       20 * time.Millisecond,
+				TTL:       time.Second,
 				Renewable: true,
 			},
 		},
@@ -1249,7 +1249,7 @@ func TestExpiration_Renew(t *testing.T) {
 	noop.Response = &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
-				TTL: 20 * time.Millisecond,
+				TTL: time.Second,
 			},
 		},
 		Data: map[string]interface{}{
@@ -1302,7 +1302,7 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
-				TTL:       20 * time.Millisecond,
+				TTL:       time.Second,
 				Renewable: false,
 			},
 		},
