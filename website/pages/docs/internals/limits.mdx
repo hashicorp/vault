@@ -64,14 +64,14 @@ The number of mount points can be monitored by reading the
 ### Namespace limits
 
 The entire list of namespaces must fit in a single storage
-entry. However, the effective limit is generally much smaller because
-each namespace must have at least two secret engine mounts (for `sys`
-and `identity`) and at least one auth engine mount (for `token`).
+entry. However, the effective limit is generally much smaller because each
+namespace must have at least two secret engine mounts (for `sys` and `identity`),
+one local secret engine (`cubbyhole`) and one auth engine mount (`token`).
 
 |   | Consul default (512 KiB) | Integrated storage default (1 MiB) |
 |---|--------------------------|------------------------------------|
 | Maximum number of namespaces | ~3500 | ~7000 |
-| Maximum number of namespaces with at least one additional secret engine | ~2300 | ~4600 |
+| Maximum number of namespaces with one additional secret engine per namespace | ~2300 | ~4600 |
 | Maximum nesting depth for namespaces | ~160 | ~220 |
 
 The maximum nesting depth calculation assumes a cost of 40 bytes per namespace
