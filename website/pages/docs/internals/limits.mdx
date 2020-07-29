@@ -171,7 +171,7 @@ within a single storage entry.
 
 Each time a token is used, Vault must assemble the collection of
 policies attached to that token, to the entity, to any groups that the
-entity belongs to, and recursively to any parents of that entity.
+entity belongs to, and recursively to any groups that contain those groups.
 Very large numbers of policies are possible, but can cause Vault’s
 response time to increase. You can monitor the
 [`vault.core.fetch_acl_and_token`](/docs/internals/telemetry#core-metrics)
