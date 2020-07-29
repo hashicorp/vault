@@ -27,30 +27,21 @@ export default Component.extend({
 
   layout: hbs`
     <div class="field">
-      <div class="b-checkbox">
-        <input
-          id="wrap-response"
-          class="styled"
-          name="wrap-response"
-          type="checkbox"
-          checked={{wrapResponse}}
-          onchange={{action 'changedValue' 'wrapResponse'}}
-          />
-        <label for="wrap-response" class="is-label">
-          Wrap response
-        </label>
-      </div>
-      {{#if wrapResponse}}
-        {{ttl-picker data-test-wrap-ttl-picker=true labelText='Wrap TTL' onChange=(action (mut ttl))}}
-      {{/if}}
+      {{ttl-picker2
+        data-test-wrap-ttl-picker=true
+        label='Wrap Response'
+        helperTextDisabled='Will not wrap response'
+        helperTextEnabled='Will wrap response with a lease of'
+        enableTTL=wrapResponse
+        onChange=(action 'changedValue')
+      }}
     </div>
   `,
 
   actions: {
-    changedValue(key, event) {
-      const { type, value, checked } = event.target;
-      const val = type === 'checkbox' ? checked : value;
-      set(this, key, val);
+    changedValue(ttlObj) {
+      set(this, 'wrapResponse', ttlObj.enabled);
+      set(this, 'ttl', `${ttlObj.seconds}s`);
       get(this, 'onChange')(get(this, 'wrapTTL'));
     },
   },
