@@ -43,15 +43,19 @@ read-modify-write cycle on the entire entry.
 
 All secret engine mount points, and all auth mount points, must each fit
 within a single storage entry.  Each JSON object describing a mount
-takes about 500 bytes. Each of (1) auth mounts, (2) secret engine mount
-points, (3) local-only auth methods, and (4) local-only secret engine mounts
-are stored separately, so the limit applies to each independently.
+takes about 500 bytes, but is stored in compressed form at a typical cost of
+about  75 bytes. Each of (1) auth mounts, (2) secret engine mount points,
+(3) local-only auth methods, and (4) local-only secret engine mounts are
+stored separately, so the limit applies to each independently.
 
 |   | Consul default (512 KiB) | Integrated storage default (1 MiB) |
 |---|--------------------------|------------------------------------|
-| Maximum number of secret engine mount points | ~1000 | ~2000 |
-| Maximum number of enabled auth methods | ~1000 | ~2000 |
+| Maximum number of secret engine mount points | ~7000 | ~14000 |
+| Maximum number of enabled auth methods | ~7000 | ~14000 |
 | Maximum mount point length | no enforced limit | no enforced limit |
+
+Specifying distinct per-mount options, or using long mount point paths, can
+increase the space required per mount.
 
 The number of mount points can be monitored by reading the
 [`sys/auth`](/api-docs/system/audit) and
@@ -66,8 +70,8 @@ and `identity`) and at least one auth engine mount (for `token`).
 
 |   | Consul default (512 KiB) | Integrated storage default (1 MiB) |
 |---|--------------------------|------------------------------------|
-| Maximum number of namespaces | ~500 | ~1000 |
-| Maximum number of namespaces with at least one additional secret engine | ~330 | ~650 |
+| Maximum number of namespaces | ~3500 | ~7000 |
+| Maximum number of namespaces with at least one additional secret engine | ~2300 | ~4600 |
 | Maximum nesting depth for namespaces | ~160 | ~220 |
 
 The maximum nesting depth calculation assumes a cost of 40 bytes per namespace
@@ -76,6 +80,11 @@ path element.  160 nested paths = 160 namespaces ranging from 40 bytes to
 
 The number of namespaces can be monitored by querying
 [`sys/namespaces`](/api-docs/system/namespaces).
+
+To estimate the number of namespaces that can be created, divide the mount
+point limit by the larger of of the number of auth mounts per namespace
+(including `ns_token`) and the number of secret mounts per namespace
+(including `identity` and `sys`.)
 
 ### Entity and group limits
 
@@ -94,27 +103,31 @@ hard limit of 128MiB storage space used for entities on Consul, or
 are stored inline in the Entity objects and so consume the same pool
 of storage. Entity definitions are compressed within each storage
 entry, and the pre-compression size varies with the number of entity
-aliases and the amount of metadata.
+aliases and the amount of metadata.  Minimally-populated entities
+about 200 bytes after compression.
 
 Group definitions are stored separately, in their own pool of 256
 storage entries. The size of each group object depends on the number
 of members and the amount of metadata.  Group aliases and group
-membership information is stored inline in each Group object.
+membership information is stored inline in each Group object. A group
+with no metadata, holding 10 entities, will use about 500 bytes per
+group.  A group holding 100 entities would instead consume about 4,000
+bytes.
 
-Entities consume about 450 bytes of storage in isolation, but compression
-performs better across many entities.  The following table shows a best-case
-estimate of 250 bytes per entity and a a conservative (but not worst-case)
-estimate of 1KiB per entity or group.  The number is slightly less than the
-amount that fits in one shard, to reflect the fact that the first shard to fill up will start inducing failures.  This maximum will decrease if each entity
-has a large amount of metadata, or if each group has a large number of
-members.
+The following table shows a best-case estimate and a more conservative
+estimate for entities and groups. The number is slightly less than the
+amount that fits in one shard, to reflect the fact that the first
+shard to fill up will start inducing failures.  This maximum will
+decrease if each entity has a large amount of metadata, or if each
+group has a large number of members.
 
 |   | Consul default (512 KiB) | Integrated storage default (1 MiB) |
 |---|--------------------------|------------------------------------|
-| Maximum number of identity entities (best case) | ~450,000 | ~950,000 |
-| Maximum number of identity entities (conservative) | ~100,000 | ~220,000 | 
-| Maximum number of groups | ~100,000 | ~220,000 |
-| Maximum number of members in a group | ~12,000 | ~24,000 |
+| Maximum number of identity entities (best case, 200 bytes per entity) | ~610,000 | ~1,1250,000 |
+| Maximum number of identity entities (conservative case, 500 bytes per entity) | ~250,000 | ~480,000 | 
+| Maximum number of groups (10 entities per group) | ~250,000 | ~480,000 |
+| Maximum number of groups (100 entities per group) | ~22,000 | ~50,000 |
+| Maximum number of members in a group | ~11,500 | ~23,000 |
  
 The number of entities can be monitored using Vault's [telemetry](/docs/internals/telemetry#token-identity-and-lease-metrics); see `vault.identity.num_entities` (total) or `vault.identity.entities.count` (by namespace).
 
