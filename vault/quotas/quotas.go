@@ -189,9 +189,9 @@ type Config struct {
 	// request rejections that arise due to rate limit quota violations.
 	EnableRateLimitAuditLogging bool `json:"enable_rate_limit_audit_logging"`
 
-	// EnableResponseHeaders dictates if additional HTTP headers contain quota
-	// related information should be added to responses.
-	EnableResponseHeaders bool `json:"enable_response_headers"`
+	// EnableRateLimitResponseHeaders dictates if rate limit quota HTTP headers
+	// should be added to responses.
+	EnableRateLimitResponseHeaders bool `json:"enable_rate_limit_response_headers"`
 }
 
 // Request contains information required by the quota manager to query and
@@ -537,10 +537,10 @@ func (m *Manager) SetEnableRateLimitAuditLogging(val bool) {
 	m.config.EnableRateLimitAuditLogging = val
 }
 
-// SetEnableResponseHeaders updates the operator preference regarding the quota
-// HTTP header behavior.
-func (m *Manager) SetEnableResponseHeaders(val bool) {
-	m.config.EnableResponseHeaders = val
+// SetEnableRateLimitResponseHeaders updates the operator preference regarding
+// the rate limit quota HTTP header behavior.
+func (m *Manager) SetEnableRateLimitResponseHeaders(val bool) {
+	m.config.EnableRateLimitResponseHeaders = val
 }
 
 // RateLimitAuditLoggingEnabled returns if the quota configuration allows audit
@@ -549,10 +549,10 @@ func (m *Manager) RateLimitAuditLoggingEnabled() bool {
 	return m.config.EnableRateLimitAuditLogging
 }
 
-// ResponseHeadersEnabled returns if the quota configuration allows for quota
-// related HTTP headers to be added to responses.
-func (m *Manager) ResponseHeadersEnabled() bool {
-	return m.config.EnableResponseHeaders
+// RateLimitResponseHeadersEnabled returns if the quota configuration allows for
+// rate limit quota HTTP headers to be added to responses.
+func (m *Manager) RateLimitResponseHeadersEnabled() bool {
+	return m.config.EnableRateLimitResponseHeaders
 }
 
 // Config returns the operator preferences in the quota manager
@@ -657,7 +657,7 @@ func (m *Manager) Invalidate(key string) {
 		}
 
 		m.SetEnableRateLimitAuditLogging(config.EnableRateLimitAuditLogging)
-		m.SetEnableResponseHeaders(config.EnableResponseHeaders)
+		m.SetEnableRateLimitResponseHeaders(config.EnableRateLimitResponseHeaders)
 
 	default:
 		splitKeys := strings.Split(key, "/")
