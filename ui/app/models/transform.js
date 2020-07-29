@@ -8,7 +8,7 @@ const { attr } = DS;
 
 // these arrays define the order in which the fields will be displayed
 // see
-// https://github.com/hashicorp/vault/blob/master/builtin/logical/ssh/path_roles.go#L542 for list of fields for each key type
+//https://www.vaultproject.io/api-docs/secret/transform#create-update-transformation
 const TYPES = [
   {
     value: 'fpe',
@@ -36,9 +36,9 @@ const TWEAK_SOURCE = [
 ];
 
 export default DS.Model.extend({
+  // TODO: for now, commenting out openApi info, but keeping here just in case we end up using it.
   // useOpenAPI: true,
   // getHelpUrl: function(backend) {
-  //   // ARG TODO: this is the open api
   //   console.log(backend, 'Backend');
   //   return `/v1/${backend}?help=1`;
   // },
@@ -68,9 +68,8 @@ export default DS.Model.extend({
     models: ['transform/role'],
   }),
   transformAttrs: computed(function() {
-    // return [{ default: ['name', 'type', 'template', 'tweak_source', 'masking_characters', 'allowed_roles'] }];
-    // for looping over form field types
-    // TODO: group them into sections
+    // TODO: group them into sections/groups.  Right now, we don't different between required and not required as we do by hiding options.
+    // will default to design mocks on how to handle as it will likely be a different pattern using client-side validation, which we have not done before
     return ['name', 'type', 'template', 'tweak_source', 'masking_characters', 'allowed_roles'];
   }),
   transformFieldAttrs: computed('transformAttrs', function() {
