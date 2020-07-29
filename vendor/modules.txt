@@ -303,7 +303,7 @@ github.com/go-stack/stack
 github.com/go-test/deep
 # github.com/go-yaml/yaml v2.1.0+incompatible
 github.com/go-yaml/yaml
-# github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
+# github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
 github.com/gocql/gocql
 github.com/gocql/gocql/internal/lru
 github.com/gocql/gocql/internal/murmur
@@ -481,7 +481,7 @@ github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
 # github.com/hashicorp/vault-plugin-secrets-azure v0.6.1
 github.com/hashicorp/vault-plugin-secrets-azure
-# github.com/hashicorp/vault-plugin-secrets-gcp v0.6.3
+# github.com/hashicorp/vault-plugin-secrets-gcp v0.6.4
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
@@ -791,6 +791,10 @@ github.com/samuel/go-zookeeper/zk
 github.com/sasha-s/go-deadlock
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
+# github.com/sethvargo/go-limiter v0.2.3
+github.com/sethvargo/go-limiter
+github.com/sethvargo/go-limiter/httplimit
+github.com/sethvargo/go-limiter/memorystore
 # github.com/shirou/gopsutil v2.20.6-0.20200630091542-01afd763e6c0+incompatible
 github.com/shirou/gopsutil/cpu
 github.com/shirou/gopsutil/disk

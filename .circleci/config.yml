@@ -169,6 +169,13 @@ jobs:
     - checkout
     - run:
         command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
+    - restore_cache:
+        keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - run:
+        command: |
           set -x
 
           case "-race" in
@@ -203,6 +210,7 @@ jobs:
             VAULT_TOKEN= \
             VAULT_DEV_ROOT_TOKEN_ID= \
             VAULT_ACC= \
+            GOCACHE=/tmp/go-cache \
             VAULT_TEST_LOG_DIR=/tmp/testlogs \
             gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results.xml \
@@ -287,6 +295,13 @@ jobs:
     - checkout
     - run:
         command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
+    - restore_cache:
+        keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - run:
+        command: |
           set -x
 
           case "" in
@@ -321,6 +336,7 @@ jobs:
             VAULT_TOKEN= \
             VAULT_DEV_ROOT_TOKEN_ID= \
             VAULT_ACC= \
+            GOCACHE=/tmp/go-cache \
             VAULT_TEST_LOG_DIR=/tmp/testlogs \
             gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results.xml \
@@ -333,6 +349,113 @@ jobs:
               ${package_names}
         name: Run Go tests
         no_output_timeout: 60m
+    - store_artifacts:
+        path: test-results
+    - store_test_results:
+        path: test-results
+    - store_artifacts:
+        path: /tmp/testlogs
+    environment:
+    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_TAGS: ''
+    - GO_VERSION: 1.14.6
+    - GO111MODULE: 'off'
+    - GOTESTSUM_VERSION: 0.5.2
+  test-go-nightly:
+    machine: true
+    shell: /usr/bin/env bash -euo pipefail -c
+    working_directory: /go/src/github.com/hashicorp/vault
+    steps:
+    - run:
+        command: |
+          # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
+            # stop the job from this step
+            circleci-agent step halt
+          }
+          # exit with success either way
+          exit 0
+        name: Check branch name
+        working_directory: ~/
+    - run:
+        command: |
+          [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
+          # Install Go
+          curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
+          sudo rm -rf /usr/local/go
+          sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
+          rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
+          GOPATH="/go"
+          mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
+          echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+
+          echo "$ go version"
+          go version
+        name: Setup Go
+        working_directory: ~/
+    - checkout
+    - run:
+        command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
+    - restore_cache:
+        keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - run:
+        command: |
+          set -x
+
+          case "" in
+          *-race*) VAULT_CI_GO_TEST_RACE=1;;
+          esac
+
+          # Install CircleCI CLI
+          curl -sSL \
+              "https://github.com/CircleCI-Public/circleci-cli/releases/download/v${CIRCLECI_CLI_VERSION}/circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64.tar.gz" \
+            | sudo tar --overwrite -xz \
+              -C /usr/local/bin \
+              "circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64/circleci"
+
+          # Split Go tests by prior test times
+          package_names=$(go list \
+              -tags "${GO_TAGS}" \
+              ./... \
+            | grep -v /integ \
+            | grep -v /vendor/ \
+            | sort \
+            | circleci tests split --split-by=timings --timings-type=classname)
+
+          # Install gotestsum
+          curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz" \
+            | sudo tar --overwrite -xz -C /usr/local/bin gotestsum
+
+          # Run tests
+          make prep
+          mkdir -p test-results/go-test
+          CGO_ENABLED= \
+            VAULT_ADDR= \
+            VAULT_TOKEN= \
+            VAULT_DEV_ROOT_TOKEN_ID= \
+            VAULT_ACC= \
+            GOCACHE=/tmp/go-cache \
+            VAULT_TEST_LOG_DIR=/tmp/testlogs \
+            gotestsum --format=short-verbose \
+              --junitfile test-results/go-test/results.xml \
+              --jsonfile test-results/go-test/results.json \
+              -- \
+              -tags "${GO_TAGS}" \
+              -timeout=60m \
+              -parallel=20 \
+               \
+              ${package_names}
+        name: Run Go tests
+        no_output_timeout: 60m
+    - save_cache:
+        key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+        paths:
+        - /tmp/go-cache
+        when: always
     - store_artifacts:
         path: test-results
     - store_test_results:
@@ -418,4 +541,15 @@ workflows:
             only:
             - stable-website
         context: vault-docs
+  nightly-cachebuilder:
+    jobs:
+    - pre-flight-checks
+    - test-go-nightly
+    triggers:
+    - schedule:
+        cron: 0 9 * * *
+        filters:
+          branches:
+            only:
+            - master
   version: 2
