@@ -8,7 +8,7 @@ export default Component.extend({
   onChange: null,
   wrapResponse: true,
 
-  ttl: null,
+  ttl: '30m',
 
   wrapTTL: computed('wrapResponse', 'ttl', function() {
     const { wrapResponse, ttl } = this.getProperties('wrapResponse', 'ttl');
@@ -29,10 +29,11 @@ export default Component.extend({
     <div class="field">
       {{ttl-picker2
         data-test-wrap-ttl-picker=true
-        label='Wrap Response'
+        label='Wrap response'
         helperTextDisabled='Will not wrap response'
         helperTextEnabled='Will wrap response with a lease of'
         enableTTL=wrapResponse
+        initialValue=ttl
         onChange=(action 'changedValue')
       }}
     </div>
