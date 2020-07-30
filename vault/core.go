@@ -7,6 +7,7 @@ import (
 	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -2424,7 +2425,8 @@ func (c *Core) SetLogLevel(level log.Level) {
 // SetConfig sets core's config object to the newly provided config.
 func (c *Core) SetConfig(conf *server.Config) {
 	c.rawConfig.Store(conf)
-	c.logger.Debug("set config", "sanitized config", c.SanitizedConfig())
+	bz, _ := json.Marshal(c.SanitizedConfig())
+	c.logger.Debug("set config", "sanitized config", string(bz))
 }
 
 // SanitizedConfig returns a sanitized version of the current config.
