@@ -37,10 +37,6 @@ func handleSysHaStatusGet(core *vault.Core, w http.ResponseWriter, r *http.Reque
 
 		}
 	}
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
-		return
-	}
 	h, _ := host.Info()
 	leaderAddr := NodeAddr{
 		HostName:       h.Hostname,
