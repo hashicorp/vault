@@ -6,7 +6,20 @@ parameters:
   log_dir:
     type: string
     default: "/tmp/testlogs"
+  cache_dir:
+    type: string
+    default: /tmp/go-cache
+  save_cache:
+    type: boolean
+    default: false
 steps:
+  - run:
+      name: Compute test cache key
+      command: |
+        TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+  - restore_cache:
+      keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
   - run:
       name: Run Go tests
       no_output_timeout: 60m
@@ -45,6 +58,7 @@ steps:
           VAULT_TOKEN= \
           VAULT_DEV_ROOT_TOKEN_ID= \
           VAULT_ACC= \
+          GOCACHE=<< parameters.cache_dir >> \
           VAULT_TEST_LOG_DIR=<< parameters.log_dir >> \
           gotestsum --format=short-verbose \
             --junitfile test-results/go-test/results.xml \
@@ -56,3 +70,11 @@ steps:
             << parameters.extra_flags >> \
             ${package_names}
 
+  - when:
+      condition: << parameters.save_cache >>
+      steps:
+        - save_cache:
+            when: always
+            key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+            paths:
+            - << parameters.cache_dir >>

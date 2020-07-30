@@ -7,6 +7,7 @@ import (
 	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -526,6 +527,8 @@ type Core struct {
 	PR1103disabled bool
 
 	quotaManager *quotas.Manager
+
+	clusterHeartbeatInterval time.Duration
 }
 
 // CoreConfig is used to parameterize a core
@@ -615,44 +618,8 @@ type CoreConfig struct {
 	RecoveryMode bool
 
 	ClusterNetworkLayer cluster.NetworkLayer
-}
 
-func (c *CoreConfig) Clone() *CoreConfig {
-	return &CoreConfig{
-		DevToken:                  c.DevToken,
-		LogicalBackends:           c.LogicalBackends,
-		CredentialBackends:        c.CredentialBackends,
-		AuditBackends:             c.AuditBackends,
-		Physical:                  c.Physical,
-		HAPhysical:                c.HAPhysical,
-		ServiceRegistration:       c.ServiceRegistration,
-		Seal:                      c.Seal,
-		Logger:                    c.Logger,
-		DisableCache:              c.DisableCache,
-		DisableMlock:              c.DisableMlock,
-		CacheSize:                 c.CacheSize,
-		StorageType:               c.StorageType,
-		RedirectAddr:              c.RedirectAddr,
-		ClusterAddr:               c.ClusterAddr,
-		DefaultLeaseTTL:           c.DefaultLeaseTTL,
-		MaxLeaseTTL:               c.MaxLeaseTTL,
-		ClusterName:               c.ClusterName,
-		ClusterCipherSuites:       c.ClusterCipherSuites,
-		EnableUI:                  c.EnableUI,
-		EnableRaw:                 c.EnableRaw,
-		PluginDirectory:           c.PluginDirectory,
-		DisableSealWrap:           c.DisableSealWrap,
-		ReloadFuncs:               c.ReloadFuncs,
-		ReloadFuncsLock:           c.ReloadFuncsLock,
-		LicensingConfig:           c.LicensingConfig,
-		DevLicenseDuration:        c.DevLicenseDuration,
-		DisablePerformanceStandby: c.DisablePerformanceStandby,
-		DisableIndexing:           c.DisableIndexing,
-		AllLoggers:                c.AllLoggers,
-		CounterSyncInterval:       c.CounterSyncInterval,
-		ClusterNetworkLayer:       c.ClusterNetworkLayer,
-		entCoreConfig:             c.entCoreConfig.Clone(),
-	}
+	ClusterHeartbeatInterval time.Duration
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -730,6 +697,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		conf.SecureRandomReader = rand.Reader
 	}
 
+	clusterHeartbeatInterval := conf.ClusterHeartbeatInterval
+	if clusterHeartbeatInterval == 0 {
+		clusterHeartbeatInterval = 5 * time.Second
+	}
+
 	// Setup the core
 	c := &Core{
 		entCore:             entCore{},
@@ -756,7 +728,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		cachingDisabled:              conf.DisableCache,
 		clusterName:                  conf.ClusterName,
 		clusterNetworkLayer:          conf.ClusterNetworkLayer,
-		clusterPeerClusterAddrsCache: cache.New(3*cluster.HeartbeatInterval, time.Second),
+		clusterPeerClusterAddrsCache: cache.New(3*clusterHeartbeatInterval, time.Second),
 		enableMlock:                  !conf.DisableMlock,
 		rawEnabled:                   conf.EnableRaw,
 		shutdownDoneCh:               make(chan struct{}),
@@ -783,13 +755,12 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 			requests:     new(uint64),
 			syncInterval: syncInterval,
 		},
-		recoveryMode:      conf.RecoveryMode,
-		postUnsealStarted: new(uint32),
-		raftJoinDoneCh:    make(chan struct{}),
+		recoveryMode:             conf.RecoveryMode,
+		postUnsealStarted:        new(uint32),
+		raftJoinDoneCh:           make(chan struct{}),
+		clusterHeartbeatInterval: clusterHeartbeatInterval,
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
-
-	c.rawConfig.Store(conf.RawConfig)
 
 	atomic.StoreUint32(c.sealed, 1)
 	c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 0, nil)
@@ -798,6 +769,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	c.router.logger = c.logger.Named("router")
 	c.allLoggers = append(c.allLoggers, c.router.logger)
+
+	c.SetConfig(conf.RawConfig)
 
 	atomic.StoreUint32(c.replicationState, uint32(consts.ReplicationDRDisabled|consts.ReplicationPerformanceDisabled))
 	c.localClusterCert.Store(([]byte)(nil))
@@ -2452,6 +2425,13 @@ func (c *Core) SetLogLevel(level log.Level) {
 // SetConfig sets core's config object to the newly provided config.
 func (c *Core) SetConfig(conf *server.Config) {
 	c.rawConfig.Store(conf)
+	bz, err := json.Marshal(c.SanitizedConfig())
+	if err != nil {
+		c.logger.Error("error serializing sanitized config", "error", err)
+		return
+	}
+
+	c.logger.Debug("set config", "sanitized config", string(bz))
 }
 
 // SanitizedConfig returns a sanitized version of the current config.
@@ -2557,6 +2537,16 @@ func (c *Core) ApplyRateLimitQuota(req *quotas.Request) (quotas.Response, error)
 func (c *Core) RateLimitAuditLoggingEnabled() bool {
 	if c.quotaManager != nil {
 		return c.quotaManager.RateLimitAuditLoggingEnabled()
+	}
+
+	return false
+}
+
+// RateLimitResponseHeadersEnabled returns if the quota configuration allows for
+// rate limit quota HTTP headers to be added to responses.
+func (c *Core) RateLimitResponseHeadersEnabled() bool {
+	if c.quotaManager != nil {
+		return c.quotaManager.RateLimitResponseHeadersEnabled()
 	}
 
 	return false
