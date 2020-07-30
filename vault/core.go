@@ -761,8 +761,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 
-	c.rawConfig.Store(conf.RawConfig)
-
 	atomic.StoreUint32(c.sealed, 1)
 	c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 0, nil)
 
@@ -770,6 +768,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	c.router.logger = c.logger.Named("router")
 	c.allLoggers = append(c.allLoggers, c.router.logger)
+
+	c.SetConfig(conf.RawConfig)
 
 	atomic.StoreUint32(c.replicationState, uint32(consts.ReplicationDRDisabled|consts.ReplicationPerformanceDisabled))
 	c.localClusterCert.Store(([]byte)(nil))
@@ -2424,6 +2424,7 @@ func (c *Core) SetLogLevel(level log.Level) {
 // SetConfig sets core's config object to the newly provided config.
 func (c *Core) SetConfig(conf *server.Config) {
 	c.rawConfig.Store(conf)
+	c.logger.Debug("set config", "sanitized config", c.SanitizedConfig())
 }
 
 // SanitizedConfig returns a sanitized version of the current config.
