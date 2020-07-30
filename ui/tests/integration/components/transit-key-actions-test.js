@@ -280,8 +280,7 @@ module('Integration | Component | transit key actions', function(hooks) {
     const response = { keys: { a: 'key' } };
     this.set('storeService.keyActionReturnVal', response);
     await setupExport.call(this);
-    await click('#wrap-response');
-    await triggerEvent('#wrap-response', 'change');
+    await click('[data-test-toggle-label="Wrap response"]');
     await click('button[type="submit"]');
     assert.dom('.modal.is-active').exists('Modal opens after export');
     assert.deepEqual(
@@ -295,8 +294,7 @@ module('Integration | Component | transit key actions', function(hooks) {
     const response = { keys: { a: 'key' } };
     this.set('storeService.keyActionReturnVal', response);
     await setupExport.call(this);
-    await click('#wrap-response');
-    await triggerEvent('#wrap-response', 'change');
+    await click('[data-test-toggle-label="Wrap response"]');
     await click('#exportVersion');
     await triggerEvent('#exportVersion', 'change');
     await click('button[type="submit"]');

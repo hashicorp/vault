@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn, blur, find, triggerEvent } from '@ember/test-helpers';
+import { render, click, fillIn, find } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import waitForError from 'vault/tests/helpers/wait-for-error';
 
@@ -24,28 +24,25 @@ module('Integration | Component | wrap ttl', function(hooks) {
   test('it renders', async function(assert) {
     await render(hbs`{{wrap-ttl onChange=(action onChange)}}`);
     assert.equal(this.lastOnChangeCall, '30m', 'calls onChange with 30m default on first render');
-    assert.equal(find('label[for=wrap-response]').textContent.trim(), 'Wrap response');
+    // await this.pauseTest();
+    assert.equal(
+      find('label[for="toggle-Wrapresponse"] .ttl-picker-label').textContent.trim(),
+      'Wrap response'
+    );
   });
 
   test('it nulls out value when you uncheck wrapResponse', async function(assert) {
     await render(hbs`{{wrap-ttl onChange=(action onChange)}}`);
-    await click('#wrap-response');
-    await triggerEvent('#wrap-response', 'change');
+    await click('[data-test-toggle-label="Wrap response"]');
     assert.equal(this.lastOnChangeCall, null, 'calls onChange with null');
   });
 
   test('it sends value changes to onChange handler', async function(assert) {
     await render(hbs`{{wrap-ttl onChange=(action onChange)}}`);
-
-    await fillIn('[data-test-wrap-ttl-picker] input', '20');
-    assert.equal(this.lastOnChangeCall, '20m', 'calls onChange correctly on time input');
-
+    // for testing purposes we need to input unit first because it keeps seconds value
     await fillIn('[data-test-select="ttl-unit"]', 'h');
-    await blur('[data-test-select="ttl-unit"]');
-    assert.equal(this.lastOnChangeCall, '20h', 'calls onChange correctly on unit change');
-
-    await fillIn('[data-test-select="ttl-unit"]', 'd');
-    await blur('[data-test-select="ttl-unit"]');
-    assert.equal(this.lastOnChangeCall, '480h', 'converts days to hours correctly');
+    assert.equal(this.lastOnChangeCall, '1800s', 'calls onChange correctly on time input');
+    await fillIn('[data-test-ttl-value="Wrap response"]', '20');
+    assert.equal(this.lastOnChangeCall, '72000s', 'calls onChange correctly on unit change');
   });
 });
