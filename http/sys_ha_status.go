@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/errwrap"
@@ -23,6 +24,18 @@ func handleSysHaStatusGet(core *vault.Core, w http.ResponseWriter, r *http.Reque
 	_, address, clusterAddr, err := core.Leader()
 	if errwrap.Contains(err, vault.ErrHANotEnabled.Error()) {
 		err = nil
+		conf := core.SanitizedConfig()
+		//If Vault is not HA enabled,use the address from the configuration
+		address = conf["api_addr"].(string)
+		clusterAddr = conf["cluster_addr"].(string)
+
+		//If addresses is not defined at the top level in the config,use the first listener addresses as last resort
+		listener := conf["listeners"].([]interface{})
+		if address == "" && len(listener) > 0 {
+			rawConf := listener[0].(map[string]interface{})["config"].(map[string]interface{})
+			address = fmt.Sprintf("%s", rawConf["address"])
+
+		}
 	}
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
