@@ -2425,7 +2425,12 @@ func (c *Core) SetLogLevel(level log.Level) {
 // SetConfig sets core's config object to the newly provided config.
 func (c *Core) SetConfig(conf *server.Config) {
 	c.rawConfig.Store(conf)
-	bz, _ := json.Marshal(c.SanitizedConfig())
+	bz, err := json.Marshal(c.SanitizedConfig())
+	if err != nil {
+		c.logger.Error("error serializing sanitized config", "error", err)
+		return
+	}
+
 	c.logger.Debug("set config", "sanitized config", string(bz))
 }
 
