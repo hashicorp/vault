@@ -75,7 +75,6 @@ export default Component.extend(FocusOnInsertMixin, {
 
   persist(method, successCallback) {
     const model = get(this, 'model');
-    console.log('in persist.');
     return model[method]().then(() => {
       if (!get(model, 'isError')) {
         if (this.get('wizard.featureState') === 'role') {
