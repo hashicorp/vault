@@ -1,9 +1,8 @@
-import Component from '@ember/component';
+import RoleEdit from './role-edit';
 
-export default Component.extend({
+export default RoleEdit.extend({
   init() {
     this._super(...arguments);
     this.set('backendType', 'transform');
   },
-  actions: {},
 });

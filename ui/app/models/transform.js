@@ -43,7 +43,10 @@ export default DS.Model.extend({
   //   return `/v1/${backend}?help=1`;
   // },
   name: attr('string', {
+    // TODO: make this required for making a transformation
     label: 'Transformation Name',
+    fieldValue: 'id',
+    readOnly: true,
   }),
   type: attr('string', {
     defaultValue: 'fpe',
@@ -51,7 +54,7 @@ export default DS.Model.extend({
     possibleValues: TYPES,
   }),
   template: attr('string', {
-    label: 'Template name',
+    label: 'Template name', // TODO: make this required for making a transformation
   }),
   tweak_source: attr('string', {
     defaultValue: 'supplied',

@@ -9,11 +9,12 @@ export default ApplicationAdapter.extend({
 
   // defaultSerializer: 'role',
 
-  createOrUpdate(store, type, snapshot, requestType) {
-    const serializer = store.serializerFor(type.modelName);
-    const data = serializer.serialize(snapshot, requestType);
+  createOrUpdate(store, type, snapshot) {
+    const serializer = store.serializerFor('transform'); // TODO replace transform with type.modelName
+    const data = serializer.serialize(snapshot);
     const { id } = snapshot;
-    let url = this.urlForRole(snapshot.record.get('backend'), id);
+    let url = this.urlForTransformations(snapshot.record.get('backend'), id);
+
     return this.ajax(url, 'POST', { data });
   },
 

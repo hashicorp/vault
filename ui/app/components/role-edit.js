@@ -75,6 +75,7 @@ export default Component.extend(FocusOnInsertMixin, {
 
   persist(method, successCallback) {
     const model = get(this, 'model');
+    console.log('in persist.');
     return model[method]().then(() => {
       if (!get(model, 'isError')) {
         if (this.get('wizard.featureState') === 'role') {
@@ -89,7 +90,7 @@ export default Component.extend(FocusOnInsertMixin, {
     createOrUpdate(type, event) {
       event.preventDefault();
 
-      const modelId = this.get('model.id');
+      const modelId = this.get('model.id') || this.get('model.name'); //ARG TODO this is not okay
       // prevent from submitting if there's no key
       // maybe do something fancier later
       if (type === 'create' && isBlank(modelId)) {
