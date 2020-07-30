@@ -7,8 +7,9 @@ import Link from 'next/link'
 import Tabs, { Tab } from 'components/tabs'
 import EnterpriseAlert from 'components/enterprise-alert'
 import Columns from 'components/columns'
+import Tag from 'components/inline-tag'
 
-const DEFAULT_COMPONENTS = { Tabs, Tab, EnterpriseAlert, Columns }
+const DEFAULT_COMPONENTS = { Tabs, Tab, EnterpriseAlert, Columns, Tag }
 
 export default function ApiLayoutWrapper(pageMeta) {
   function ApiLayout(props) {
