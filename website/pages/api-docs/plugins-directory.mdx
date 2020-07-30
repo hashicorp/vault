@@ -14,42 +14,37 @@ For more information about plugin development, refer to this [documentation
 section](/docs/internals/plugins#plugin-development) and this [Learn
 Guide](https://learn.hashicorp.com/vault/developer/plugin-backends).
 
-If a plugin exists separately under its own repository, follow the instructions
-within that repository to develop, test, and build the plugin. If a repository
-exists within the Vault repository, the plugin can be built as instructed in
-[here](/docs/internals/plugins#built-in-plugins).
+## Official
 
 Official plugins are supported and maintained by HashiCorp.
 These plugins are available directly in the Vault binary, but they can also be
 built and registered to Vault as external plugins if necessary.
 
-Partner plugins are developed by HashiCorp partners, and have been vetted and
-reviewed by HashiCorp.
-
-Community plugins are developed by community members. The compatibility and
-stability guarantees on these plugins are fully to the extent of their authors.
+If a plugin exists separately under its own repository, follow the instructions
+within that repository to develop, test, and build the plugin. If a repository
+exists within the Vault repository, the plugin can be built as instructed in
+[here](/docs/internals/plugins#built-in-plugins).
 
 ## Auth
 
 <Columns count={2}>
 
-- [AliCloud](https://github.com/hashicorp/vault-plugin-auth-alicloud) <Tag title='official' color='blue' />
-- [AppRole](/api-docs/auth/approle) <Tag title='official' color='blue' />
-- [Amazon Web Services (AWS)](/api-docs/auth/aws) <Tag title='official' color='blue' />
-- [Azure](https://github.com/hashicorp/vault-plugin-auth-azure) <Tag title='official' color='blue' />
-- [Centrify](https://github.com/hashicorp/vault-plugin-auth-centrify) <Tag title='official' color='blue' />
-- [Cloud Foundry](https://github.com/hashicorp/vault-plugin-auth-cf) <Tag title='official' color='blue' />
-- [GitHub](/api-docs/auth/github) <Tag title='official' color='blue' />
-- [Google Cloud Platform (GCP)](https://github.com/hashicorp/vault-plugin-auth-gcp) <Tag title='official' color='blue' />
-- [Jenkins](https://plugins.jenkins.io/hashicorp-vault-plugin) <Tag title='community' color='yellow' />
-- [JWT/OIDC](https://github.com/hashicorp/vault-plugin-auth-jwt) <Tag title='official' color='blue' />
-- [Keberos](https://github.com/hashicorp/vault-plugin-auth-kerberos) <Tag title='official' color='blue' />
-- [Kubernetes](https://github.com/hashicorp/vault-plugin-auth-kubernetes) <Tag title='official' color='blue' />
-- [Okta](/api-docs/auth/okta) <Tag title='official' color='blue' />
-- [Oracle Cloud Infrastructure (OCI)](https://github.com/hashicorp/vault-plugin-auth-oci) <Tag title='official' color='blue' />
-- [RADIUS](/api-docs/auth/radius) <Tag title='official' color='blue' />
-- [TLS Certificates](/api-docs/auth/cert) <Tag title='official' color='blue' />
-- [Username/Password](/api-docs/auth/userpass) <Tag title='official' color='blue' />
+- [AliCloud](https://github.com/hashicorp/vault-plugin-auth-alicloud)
+- [AppRole](/api-docs/auth/approle)
+- [Amazon Web Services (AWS)](/api-docs/auth/aws)
+- [Azure](https://github.com/hashicorp/vault-plugin-auth-azure)
+- [Centrify](https://github.com/hashicorp/vault-plugin-auth-centrify)
+- [Cloud Foundry](https://github.com/hashicorp/vault-plugin-auth-cf)
+- [GitHub](/api-docs/auth/github)
+- [Google Cloud Platform (GCP)](https://github.com/hashicorp/vault-plugin-auth-gcp)
+- [JWT/OIDC](https://github.com/hashicorp/vault-plugin-auth-jwt)
+- [Keberos](https://github.com/hashicorp/vault-plugin-auth-kerberos)
+- [Kubernetes](https://github.com/hashicorp/vault-plugin-auth-kubernetes)
+- [Okta](/api-docs/auth/okta)
+- [Oracle Cloud Infrastructure (OCI)](https://github.com/hashicorp/vault-plugin-auth-oci)
+- [RADIUS](/api-docs/auth/radius)
+- [TLS Certificates](/api-docs/auth/cert)
+- [Username/Password](/api-docs/auth/userpass)
 
 </Columns>
 
@@ -57,17 +52,17 @@ stability guarantees on these plugins are fully to the extent of their authors.
 
 <Columns count={2}>
 
-- [Cassandra](/api-docs/secret/databases/cassandra) <Tag title='official' color='blue' />
-- [Elasticsearch](https://github.com/hashicorp/vault-plugin-database-elasticsearch) <Tag title='official' color='blue' />
-- [InfluxDB](/api-docs/secret/databases/influxdb) <Tag title='official' color='blue' />
-- [HanaDB](/api-docs/secret/databases/hanadb) <Tag title='official' color='blue' />
-- [MongoDB](/api-docs/secret/databases/mongodb) <Tag title='official' color='blue' />
-- [MongoDB Atlas](https://github.com/hashicorp/vault-plugin-database-mongodbatlas) <Tag title='official' color='blue' />
-- [MSSQL](/api-docs/secret/databases/mssql) <Tag title='official' color='blue' />
-- [MySQL/MariaDB](/api-docs/secret/databases/mysql-maria) <Tag title='official' color='blue' />
-- [Oracle Database](https://github.com/hashicorp/vault-plugin-database-oracle) <Tag title='official' color='blue' />
-- [PostgreSQL](/api-docs/secret/databases/postgresql) <Tag title='official' color='blue' />
-- [Redshift](/api-docs/secret/databases/redshift) <Tag title='official' color='blue' />
+- [Cassandra](/api-docs/secret/databases/cassandra)
+- [Elasticsearch](https://github.com/hashicorp/vault-plugin-database-elasticsearch)
+- [InfluxDB](/api-docs/secret/databases/influxdb)
+- [HanaDB](/api-docs/secret/databases/hanadb)
+- [MongoDB](/api-docs/secret/databases/mongodb)
+- [MongoDB Atlas](https://github.com/hashicorp/vault-plugin-database-mongodbatlas)
+- [MSSQL](/api-docs/secret/databases/mssql)
+- [MySQL/MariaDB](/api-docs/secret/databases/mysql-maria)
+- [Oracle Database](https://github.com/hashicorp/vault-plugin-database-oracle)
+- [PostgreSQL](/api-docs/secret/databases/postgresql)
+- [Redshift](/api-docs/secret/databases/redshift)
 
 </Columns>
 
@@ -75,25 +70,45 @@ stability guarantees on these plugins are fully to the extent of their authors.
 
 <Columns count={2}>
 
-- [Active Directory](https://github.com/hashicorp/vault-plugin-secrets-ad) <Tag title='official' color='blue' />
-- [AliCloud](https://github.com/hashicorp/vault-plugin-secrets-alicloud) <Tag title='official' color='blue' />
-- [Amazon Web Services AWS](/api-docs/secret/aws) <Tag title='official' color='blue' />
-- [Azure](https://github.com/hashicorp/vault-plugin-secrets-azure) <Tag title='official' color='blue' />
-- [Consul](/api-docs/secret/consul) <Tag title='official' color='blue' />
-- [Ethereum](https://github.com/immutability-io/vault-ethereum) <Tag title='community' color='yellow' />
-- [Google Cloud Platform (GCP)](https://github.com/hashicorp/vault-plugin-secrets-gcp) <Tag title='official' color='blue' />
-- [GCP KMS](https://github.com/hashicorp/vault-plugin-secrets-gcpkms) <Tag title='official' color='blue' />
-- [KMIP](/api-docs/secret/kmip) <sup>ENTERPRISE</sup> <Tag title='official' color='blue' />
-- [Key/Value (KV)](https://github.com/hashicorp/vault-plugin-secrets-kv) <Tag title='official' color='blue' />
-- [MongoDB Atlas](https://github.com/hashicorp/vault-plugin-secrets-mongodbatlas) <Tag title='official' color='blue' />
-- [Nomad](/api-docs/secret/nomad) <Tag title='official' color='blue' />
-- [OpenLDAP](https://github.com/hashicorp/vault-plugin-secrets-openldap) <Tag title='official' color='blue' />
-- [PKI](/api-docs/secret/pki) <Tag title='official' color='blue' />
-- [RabbitMQ](/api-docs/secret/rabbitmq) <Tag title='official' color='blue' />
-- [SSH](/api-docs/secret/ssh) <Tag title='official' color='blue' />
-- [TOTP](/api-docs/secret/totp) <Tag title='official' color='blue' />
-- [Transform](/api-docs/secret/transform) <sup>ENTERPRISE</sup> <Tag title='official' color='blue' />
-- [Transit](/api-docs/secret/transit) <Tag title='official' color='blue' />
-- [Venafi](https://github.com/Venafi/vault-pki-backend-venafi) <Tag title='partner' color='green' />
+- [Active Directory](https://github.com/hashicorp/vault-plugin-secrets-ad)
+- [AliCloud](https://github.com/hashicorp/vault-plugin-secrets-alicloud)
+- [Amazon Web Services AWS](/api-docs/secret/aws)
+- [Azure](https://github.com/hashicorp/vault-plugin-secrets-azure)
+- [Consul](/api-docs/secret/consul)
+- [Google Cloud Platform (GCP)](https://github.com/hashicorp/vault-plugin-secrets-gcp)
+- [GCP KMS](https://github.com/hashicorp/vault-plugin-secrets-gcpkms)
+- [KMIP](/api-docs/secret/kmip) <sup>ENTERPRISE</sup>
+- [Key/Value (KV)](https://github.com/hashicorp/vault-plugin-secrets-kv)
+- [MongoDB Atlas](https://github.com/hashicorp/vault-plugin-secrets-mongodbatlas)
+- [Nomad](/api-docs/secret/nomad)
+- [OpenLDAP](https://github.com/hashicorp/vault-plugin-secrets-openldap)
+- [PKI](/api-docs/secret/pki)
+- [RabbitMQ](/api-docs/secret/rabbitmq)
+- [SSH](/api-docs/secret/ssh)
+- [TOTP](/api-docs/secret/totp)
+- [Transform](/api-docs/secret/transform) <sup>ENTERPRISE</sup>
+- [Transit](/api-docs/secret/transit)
 
 </Columns>
+
+## Partner
+
+Partner plugins are developed by HashiCorp partners that have been vetted and
+reviewed by HashiCorp.
+
+### Secrets
+
+- [Venafi](https://github.com/Venafi/vault-pki-backend-venafi)
+
+## Community
+
+Community plugins are developed by community members. Compatibility and
+stability guarantees on these plugins are established by their authors.
+
+### Auth
+
+- [Jenkins](https://plugins.jenkins.io/hashicorp-vault-plugin)
+
+### Secrets
+
+- [Ethereum](https://github.com/immutability-io/vault-ethereum)
