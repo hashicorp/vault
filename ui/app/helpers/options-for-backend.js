@@ -55,6 +55,15 @@ const SECRET_BACKENDS = {
     editComponent: 'role-ssh-edit',
     listItemPartial: 'partials/secret-list/ssh-role-item',
   },
+  // TODO: edit or remove listItemPartial and better understand what's happening here
+  transform: {
+    displayName: 'Transform',
+    searchPlaceholder: 'Filter Transform',
+    item: 'transform',
+    create: 'Create Transformation',
+    editComponent: 'transform-edit',
+    listItemPartial: 'partials/secret-list/ssh-role-item',
+  },
   transit: {
     searchPlaceholder: 'Filter keys',
     item: 'key',
