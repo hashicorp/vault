@@ -3,7 +3,7 @@ import { computed } from '@ember/object';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { methods } from 'vault/helpers/mountable-auth-methods';
-import { engines, KMIP } from 'vault/helpers/mountable-secret-engines';
+import { engines, KMIP, TRANSFORM } from 'vault/helpers/mountable-secret-engines';
 
 const METHODS = methods();
 const ENGINES = engines();
@@ -56,10 +56,17 @@ export default Component.extend({
   }),
 
   engines: computed('version.features[]', function() {
+    let e = [...ENGINES];
+    if (this.get('version.isEnterprise')) {
+      // If we want to show KMIP with the same disabled-with-tooltip
+      // as we do for Transform, add it here
+      e.push(TRANSFORM);
+    }
+
     if (this.version.hasFeature('KMIP')) {
-      return ENGINES.concat([KMIP]);
+      return e.concat([KMIP]);
     } else {
-      return ENGINES;
+      return e;
     }
   }),
 
