@@ -5,7 +5,7 @@ export const KMIP = {
   value: 'kmip',
   type: 'kmip',
   category: 'generic',
-  requiredModule: 'KMIP',
+  requiredFeature: 'KMIP',
 };
 
 export const TRANSFORM = {
@@ -13,7 +13,7 @@ export const TRANSFORM = {
   value: 'transform',
   type: 'transform',
   category: 'generic',
-  requiredModule: 'Transform Secrets Engine',
+  requiredFeature: 'Transform Secrets Engine',
 };
 
 const MOUNTABLE_SECRET_ENGINES = [
