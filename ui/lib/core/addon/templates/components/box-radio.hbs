@@ -20,7 +20,7 @@
         <RadioButton
           @value={{type}}
           @radioClass="radio"
-          @groupValue={{mountType}}
+          @groupValue={{groupValue}}
           @changed={{onRadioChange}}
           @name="mount-type"
           @radioId={{type}}
@@ -31,11 +31,7 @@
     </T.trigger>
     <T.content @class="tool-tip">
       <div class="box">
-        {{#if (eq type 'transform')}}
-          Transform is part of the Advanced Data Protection module, which is not included in your enterprise license.
-        {{else}}
-          This option is not available to you at this time.
-        {{/if}}
+        {{tooltipMessage}}
       </div>
     </T.content>
   </ToolTip>
@@ -45,7 +41,7 @@
   <label
     for={{type}}
     class="box-radio is-marginless
-    {{if (eq mountType type) " is-selected"}}"
+    {{if (eq groupValue type) " is-selected"}}"
     data-test-mount-type-radio
     data-test-mount-type={{type}}
   >
@@ -60,7 +56,7 @@
       @radioClass="radio"
       @groupValue={{mountType}}
       @changed={{onRadioChange}}
-      @name="mount-type"
+      @name={{groupName}}
       @radioId={{type}}
       @disabled={{disabled}}
       />
