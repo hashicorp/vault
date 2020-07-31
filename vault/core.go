@@ -1494,7 +1494,7 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 	} else {
 		// Go to standby mode, wait until we are active to unseal
 		c.standbyDoneCh = make(chan struct{})
-		c.manualStepDownCh = make(chan struct{})
+		c.manualStepDownCh = make(chan struct{}, 1)
 		c.standbyStopCh.Store(make(chan struct{}))
 		go c.runStandby(c.standbyDoneCh, c.manualStepDownCh, c.standbyStopCh.Load().(chan struct{}))
 	}
