@@ -5,6 +5,16 @@ export const KMIP = {
   value: 'kmip',
   type: 'kmip',
   category: 'generic',
+  requiredModule: 'KMIP',
+};
+
+export const TRANSFORM = {
+  displayName: 'Transform',
+  value: 'transform',
+  type: 'transform',
+  category: 'generic',
+  glyph: 'lock-closed', // TODO: remove once we save transform icon
+  requiredModule: 'Transform Secrets Engine',
 };
 
 const MOUNTABLE_SECRET_ENGINES = [
