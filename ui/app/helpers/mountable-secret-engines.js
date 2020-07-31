@@ -13,7 +13,6 @@ export const TRANSFORM = {
   value: 'transform',
   type: 'transform',
   category: 'generic',
-  glyph: 'lock-closed', // TODO: remove once we save transform icon
   requiredModule: 'Transform Secrets Engine',
 };
 
