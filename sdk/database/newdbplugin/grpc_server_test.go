@@ -635,3 +635,110 @@ func (badJSONValue) MarshalJSON() ([]byte, error) {
 func (badJSONValue) UnmarshalJSON([]byte) error {
 	return fmt.Errorf("this cannot be unmarshalled from JSON")
 }
+
+var _ Database = fakeDatabase{}
+
+type fakeDatabase struct {
+	initResp InitializeResponse
+	initErr  error
+
+	newUserResp NewUserResponse
+	newUserErr  error
+
+	updateUserResp UpdateUserResponse
+	updateUserErr  error
+
+	deleteUserResp DeleteUserResponse
+	deleteUserErr  error
+
+	typeResp string
+	typeErr  error
+
+	closeErr error
+}
+
+func (e fakeDatabase) Initialize(ctx context.Context, req InitializeRequest) (InitializeResponse, error) {
+	return e.initResp, e.initErr
+}
+
+func (e fakeDatabase) NewUser(ctx context.Context, req NewUserRequest) (NewUserResponse, error) {
+	return e.newUserResp, e.newUserErr
+}
+
+func (e fakeDatabase) UpdateUser(ctx context.Context, req UpdateUserRequest) (UpdateUserResponse, error) {
+	return e.updateUserResp, e.updateUserErr
+}
+
+func (e fakeDatabase) DeleteUser(ctx context.Context, req DeleteUserRequest) (DeleteUserResponse, error) {
+	return e.deleteUserResp, e.deleteUserErr
+}
+
+func (e fakeDatabase) Type() (string, error) {
+	return e.typeResp, e.typeErr
+}
+
+func (e fakeDatabase) Close() error {
+	return e.closeErr
+}
+
+var _ Database = &recordingDatabase{}
+
+type recordingDatabase struct {
+	initializeCalls int
+	newUserCalls    int
+	updateUserCalls int
+	deleteUserCalls int
+	typeCalls       int
+	closeCalls      int
+
+	// recordingDatabase can act as middleware so we can record the calls to other test Database implementations
+	next Database
+}
+
+func (f *recordingDatabase) Initialize(ctx context.Context, req InitializeRequest) (InitializeResponse, error) {
+	f.initializeCalls++
+	if f.next == nil {
+		return InitializeResponse{}, nil
+	}
+	return f.next.Initialize(ctx, req)
+}
+
+func (f *recordingDatabase) NewUser(ctx context.Context, req NewUserRequest) (NewUserResponse, error) {
+	f.newUserCalls++
+	if f.next == nil {
+		return NewUserResponse{}, nil
+	}
+	return f.next.NewUser(ctx, req)
+}
+
+func (f *recordingDatabase) UpdateUser(ctx context.Context, req UpdateUserRequest) (UpdateUserResponse, error) {
+	f.updateUserCalls++
+	if f.next == nil {
+		return UpdateUserResponse{}, nil
+	}
+	return f.next.UpdateUser(ctx, req)
+}
+
+func (f *recordingDatabase) DeleteUser(ctx context.Context, req DeleteUserRequest) (DeleteUserResponse, error) {
+	f.deleteUserCalls++
+	if f.next == nil {
+		return DeleteUserResponse{}, nil
+	}
+	return f.next.DeleteUser(ctx, req)
+}
+
+func (f *recordingDatabase) Type() (string, error) {
+	f.typeCalls++
+	if f.next == nil {
+		return "recordingDatabase", nil
+	}
+	return f.next.Type()
+}
+
+func (f *recordingDatabase) Close() error {
+	f.closeCalls++
+	if f.next == nil {
+		return nil
+	}
+	return f.next.Close()
+}
