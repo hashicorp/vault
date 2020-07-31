@@ -53,12 +53,17 @@
               @displayName={{type.displayName}}
               @type={{type.type}}
               @glyph={{or type.glyph type.type}}
-              @mountType={{mountModel.type}}
+              @groupValue={{mountModel.type}}
+              @groupName="mount-type"
               @onRadioChange={{queue
                 (action (mut mountModel.type))
                 (action "onTypeChange" "type")
               }}
               @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}}
+              @tooltipMessage={{if (eq type.type 'transform')
+                'Transform is part of the Advanced Data Protection module, which is not included in your enterprise license.'
+                'This secret engine is not included in your license.'
+              }}
             />
           {{/each}}
         </div>
