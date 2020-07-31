@@ -3,7 +3,7 @@ import { assert } from '@ember/debug';
 import Helper from '@ember/component/helper';
 import { observer } from '@ember/object';
 
-const FEATURES = [
+const POSSIBLE_FEATURES = [
   'HSM',
   'Performance Replication',
   'DR Replication',
@@ -12,10 +12,12 @@ const FEATURES = [
   'Seal Wrapping',
   'Control Groups',
   'Namespaces',
+  'KMIP',
+  'Transform Secrets Engine',
 ];
 
 export function hasFeature(featureName, features) {
-  if (!FEATURES.includes(featureName)) {
+  if (!POSSIBLE_FEATURES.includes(featureName)) {
     assert(`${featureName} is not one of the available values for Vault Enterprise features.`, false);
     return false;
   }

@@ -3,7 +3,7 @@ import { computed } from '@ember/object';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { methods } from 'vault/helpers/mountable-auth-methods';
-import { engines, KMIP } from 'vault/helpers/mountable-secret-engines';
+import { engines, KMIP, TRANSFORM } from 'vault/helpers/mountable-secret-engines';
 
 const METHODS = methods();
 const ENGINES = engines();
@@ -56,11 +56,14 @@ export default Component.extend({
   }),
 
   engines: computed('version.features[]', function() {
+    let mountEngines = [...ENGINES];
     if (this.version.hasFeature('KMIP')) {
-      return ENGINES.concat([KMIP]);
-    } else {
-      return ENGINES;
+      mountEngines.push(KMIP);
     }
+    if (this.get('version.isEnterprise')) {
+      mountEngines.push(TRANSFORM);
+    }
+    return mountEngines;
   }),
 
   willDestroy() {
