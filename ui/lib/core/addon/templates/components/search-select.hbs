@@ -7,12 +7,18 @@
     helpText=helpText
   }}
 {{else}}
-<label class="{{if labelClass labelClass 'title is-4'}}" data-test-field-label>
+  <label class="{{if labelClass labelClass 'title is-4'}}" data-test-field-label>
     {{label}}
     {{#if helpText}}
       {{#info-tooltip}}{{helpText}}{{/info-tooltip}}
     {{/if}}
   </label>
+  {{#if subLabel}}
+    <p class="is-label">{{subLabel}}</p>
+  {{/if}}
+  {{#if subText}}
+    <p class="sub-text">{{subText}}</p>
+  {{/if}}
   {{#power-select-with-create
     options=options
     search=search

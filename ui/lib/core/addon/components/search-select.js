@@ -16,7 +16,9 @@ import layout from '../templates/components/search-select';
  * @param onChange {Func} - The onchange action for this form field.
  * @param inputValue {String | Array} -  A comma-separated string or an array of strings.
  * @param [helpText] {String} - Text to be displayed in the info tooltip for this form field
+ * @param [subText] {String} - Text to be displayed below the label
  * @param label {String} - Label for this form field
+ * @param [subLabel] {String} - a smaller label below the main Label
  * @param fallbackComponent {String} - name of component to be rendered if the API call 403s
  *
  * @param options {Array} - *Advanced usage* - `options` can be passed directly from the outside to the

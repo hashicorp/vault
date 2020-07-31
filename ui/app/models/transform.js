@@ -44,7 +44,7 @@ export default DS.Model.extend({
   // },
   name: attr('string', {
     // TODO: make this required for making a transformation
-    label: 'Transformation Name',
+    label: 'Name',
     fieldValue: 'id',
     readOnly: true,
   }),
@@ -52,23 +52,34 @@ export default DS.Model.extend({
     defaultValue: 'fpe',
     label: 'Type',
     possibleValues: TYPES,
+    subText:
+      'Vault provides two types of transformations: Format Preserving Encryption (FPE) is reversible, while Masking is not.',
   }),
-  template: attr('string', {
-    label: 'Template name', // TODO: make this required for making a transformation
+  template: attr('stringArray', {
+    label: 'Template', // TODO: make this required for making a transformation
+    subLabel: 'Template Name',
+    subText:
+      'Templates allow Vault to determine what and how to capture the value to be transformed. Type to use an existing template or create a new one.',
+    editType: 'searchSelect',
+    fallbackComponent: 'string-list',
+    models: ['transform/template'],
   }),
   tweak_source: attr('string', {
     defaultValue: 'supplied',
     label: 'Tweak source',
     possibleValues: TWEAK_SOURCE,
+    subText: `A tweak value is used when performing FPE transformations. This can be supplied, generated, or internal.`, // TODO: I do not include the link here.  Need to figure out the best way to approach this.
   }),
   masking_character: attr('string', {
     label: 'Masking character',
+    subText: 'Specify which character you’d like to mask your data.',
   }),
   allowed_roles: attr('stringArray', {
     label: 'Allowed roles',
     editType: 'searchSelect',
     fallbackComponent: 'string-list',
     models: ['transform/role'],
+    subText: 'Search for an existing role, type a new role to create it, or use a wildcard (*).',
   }),
   transformAttrs: computed(function() {
     // TODO: group them into sections/groups.  Right now, we don't different between required and not required as we do by hiding options.
