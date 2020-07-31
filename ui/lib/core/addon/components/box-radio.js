@@ -4,14 +4,7 @@
  *
  * @example
  * ```js
- * <BoxRadio
- *   @displayName="Catahoula Leopard"
- *   @type="catahoula"
- *   @glyph="dog"
- *   @groupValue="labrador"
- *   @groupName="my-favorite-dog"
- *   @onRadioChange={{handleRadioChange}}
- * />
+ * <BoxRadio @displayName="Catahoula Leopard" @type="catahoula" @glyph="dog" @groupValue="labrador" @groupName="my-favorite-dog" @onRadioChange={{handleRadioChange}} />
  * ```
  * @param {string} displayName - This is the string that will show on the box radio option.
  * @param {string} type - type is the key that the radio input will be identified by. Please use a value without spaces.

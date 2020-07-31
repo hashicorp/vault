@@ -1,6 +1,7 @@
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import { withKnobs, text, boolean, select } from '@storybook/addon-knobs';
+import notes from './box-radio.md';
 
 const GLYPHS = {
   KMIP: 'kmip',
@@ -23,8 +24,10 @@ const GLYPHS = {
 storiesOf('BoxRadio', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
-  .add(`BoxRadio`, () => ({
-    template: hbs`
+  .add(
+    `BoxRadio`,
+    () => ({
+      template: hbs`
       <h5 class="title is-5">Box Radio</h5>
       <BoxRadio
         @type={{type}}
@@ -34,12 +37,14 @@ storiesOf('BoxRadio', module)
         @disabled={{disabled}}
       />
     `,
-    context: {
-      displayName: text('displayName', 'HashiCorp'),
-      type: select('glyph', GLYPHS, 'hashicorp'),
-      disabled: boolean('disabled', false),
-      onRadioChange: e => {
-        console.log('Radio changed!', e);
+      context: {
+        displayName: text('displayName', 'HashiCorp'),
+        type: select('glyph', GLYPHS, 'hashicorp'),
+        disabled: boolean('disabled', false),
+        onRadioChange: e => {
+          console.log('Radio changed!', e);
+        },
       },
-    },
-  }));
+    }),
+    { notes }
+  );
