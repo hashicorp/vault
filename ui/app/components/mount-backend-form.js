@@ -56,18 +56,14 @@ export default Component.extend({
   }),
 
   engines: computed('version.features[]', function() {
-    let e = [...ENGINES];
-    if (this.get('version.isEnterprise')) {
-      // If we want to show KMIP with the same disabled-with-tooltip
-      // as we do for Transform, add it here
-      e.push(TRANSFORM);
-    }
-
+    let mountEngines = [...ENGINES];
     if (this.version.hasFeature('KMIP')) {
-      return e.concat([KMIP]);
-    } else {
-      return e;
+      mountEngines.push(KMIP);
     }
+    if (this.get('version.isEnterprise')) {
+      mountEngines.push(TRANSFORM);
+    }
+    return mountEngines;
   }),
 
   willDestroy() {
