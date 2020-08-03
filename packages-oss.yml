@@ -36,7 +36,7 @@ inputs:
     PRODUCT_VERSION: 0.0.0-snapshot
 
     # GO_VERSION is the version of the Go toolchain to use to compile this package.
-    GO_VERSION: 1.13.8
+    GO_VERSION: 1.14.6
 
     # YARN_VERSION is the version of Yarn to install for the UI layer.
     YARN_VERSION: 1.19.1-1
