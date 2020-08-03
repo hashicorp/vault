@@ -77,7 +77,8 @@ func (c *Core) Initialized(ctx context.Context) (bool, error) {
 		c.logger.Error("barrier init check failed", "error", err)
 		return false, err
 	}
-	if !init {
+	// raft.Info set when operator raft join is already invoked - thus init is began with node needing unsealing.
+	if !init && c.raftInfo == nil {
 		c.logger.Info("security barrier not initialized")
 		return false, nil
 	}
