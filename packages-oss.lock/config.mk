@@ -214,6 +214,9 @@ PRODUCT_REPO := $(shell $(call QUERY_SPEC,.config["product-repo"]))
 # PRODUCT_REPO_LOCAL is the local clone of this git repo.
 PRODUCT_REPO_LOCAL := $(REPO_ROOT)
 
+# RELEASE_REPO is the release repository for this project.
+PRODUCT_RELEASE_REPO := $(shell $(call QUERY_SPEC,.config["release-repo"]))
+
 # PRODUCT_PATH must be unique for every repo.
 # A golang-style package path is ideal.
 PRODUCT_PATH := $(shell $(call QUERY_SPEC,.config["product-id"]))
