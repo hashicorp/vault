@@ -6,7 +6,13 @@ sudo apt-get update -y
 sudo apt-get install -y curl unzip
 
 # Download Vault into some temporary directory
-curl -L "${download_url}" > /tmp/vault.zip
+vault_download_url=https://releases.hashicorp.com/vault/${download_version}/vault_${download_version}_linux_amd64.zip
+
+if [[ ! -z "${download_url}" ]]; then
+    vault_download_url=${download_url}
+fi
+
+curl -L "${vault_download_url}" > /tmp/vault.zip;
 
 # Unzip it
 cd /tmp
