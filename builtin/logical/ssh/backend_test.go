@@ -133,7 +133,11 @@ func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), str
 	}
 
 	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
-		sshAddress := fmt.Sprintf("%s:%d", host, port)
+		ipaddr, err := net.ResolveIPAddr("ip", host)
+		if err != nil {
+			return nil, err
+		}
+		sshAddress := fmt.Sprintf("%s:%d", ipaddr.String(), port)
 
 		signer, err := ssh.ParsePrivateKey([]byte(testSharedPrivateKey))
 		if err != nil {
@@ -154,7 +158,7 @@ func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), str
 			return nil, err
 		}
 
-		return docker.NewServiceHostPort(host, port), nil
+		return docker.NewServiceHostPort(ipaddr.String(), port), nil
 	})
 	if err != nil {
 		t.Fatalf("Could not start docker ssh server: %s", err)
