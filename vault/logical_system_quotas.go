@@ -73,6 +73,11 @@ The 'rate' must be positive.`,
 					Type:        framework.TypeDurationSecond,
 					Description: "The duration to enforce rate limiting for (default '1s').",
 				},
+				"block": {
+					Type: framework.TypeDurationSecond,
+					Description: `If set, when a client reaches a rate limit threshold, the client will be prohibited
+from any further requests until after the 'block' interval.`,
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
@@ -154,6 +159,11 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			interval = time.Second
 		}
 
+		block := time.Second * time.Duration(d.Get("interval").(int))
+		if block < 0 {
+			return logical.ErrorResponse("'block' is invalid"), nil
+		}
+
 		mountPath := sanitizePath(d.Get("path").(string))
 		ns := b.Core.namespaceByPath(mountPath)
 		if ns.ID != namespace.RootNamespaceID {
@@ -185,13 +195,14 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 				return logical.ErrorResponse("quota rule with similar properties exists under the name %q", quotaByFactors.QuotaName()), nil
 			}
 
-			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, rate, interval)
+			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, rate, interval, block)
 		default:
 			rlq := quota.(*quotas.RateLimitQuota)
 			rlq.NamespacePath = ns.Path
 			rlq.MountPath = mountPath
 			rlq.Rate = rate
 			rlq.Interval = interval
+			rlq.Block = block
 		}
 
 		entry, err := logical.StorageEntryJSON(quotas.QuotaStoragePath(qType, name), quota)
@@ -237,6 +248,7 @@ func (b *SystemBackend) handleRateLimitQuotasRead() framework.OperationFunc {
 			"path":     nsPath + rlq.MountPath,
 			"rate":     rlq.Rate,
 			"interval": int(rlq.Interval.Seconds()),
+			"block":    int(rlq.Block.Seconds()),
 		}
 
 		return &logical.Response{

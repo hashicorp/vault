@@ -73,6 +73,11 @@ type RateLimitQuota struct {
 	// Interval defines the duration to which rate limiting is applied.
 	Interval time.Duration `json:"interval"`
 
+	// Block defines the duration during which all requests are blocked for a given
+	// client. This interval is enforced only if non-zero and a client reaches the
+	// rate limit.
+	Block time.Duration `json:"block"`
+
 	lock          *sync.RWMutex
 	store         limiter.Store
 	logger        log.Logger
@@ -83,8 +88,10 @@ type RateLimitQuota struct {
 
 // NewRateLimitQuota creates a quota checker for imposing limits on the number
 // of requests in a given interval. An interval time duration of zero may be
-// provided, which will default to 1s when initialized.
-func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, interval time.Duration) *RateLimitQuota {
+// provided, which will default to 1s when initialized. An optional block
+// duration may be provided, where if set, when a client reaches the rate limit,
+// subsequent requests will fail until the block duration has passed.
+func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, interval, block time.Duration) *RateLimitQuota {
 	return &RateLimitQuota{
 		Name:          name,
 		Type:          TypeRateLimit,
@@ -92,6 +99,7 @@ func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, interval ti
 		MountPath:     mountPath,
 		Rate:          rate,
 		Interval:      interval,
+		Block:         block,
 		purgeInterval: DefaultRateLimitPurgeInterval,
 		staleAge:      DefaultRateLimitStaleAge,
 	}
@@ -119,7 +127,11 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 	}
 
 	if rlq.Rate <= 0 {
-		return fmt.Errorf("invalid avg rps: %v", rlq.Rate)
+		return fmt.Errorf("invalid 'rate': %v", rlq.Rate)
+	}
+
+	if rlq.Block < 0 {
+		return fmt.Errorf("invalid 'block': %v", rlq.Block)
 	}
 
 	if logger != nil {
