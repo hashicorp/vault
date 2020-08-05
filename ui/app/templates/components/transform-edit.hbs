@@ -15,7 +15,7 @@
       {{else if (eq mode 'edit')}}
         Edit Transformation
       {{else}}
-        SSH role <code>{{model.id}}</code>
+        Transformation <code>{{model.id}}</code>
       {{/if}}
     </h1>
   </p.levelLeft>
@@ -51,7 +51,7 @@
           @buttonClasses="toolbar-link"
           @onConfirmAction={{action "delete"}}
         >
-          Delete role
+          Delete transformation
         </ConfirmAction>
       {{/if}}
       {{#if (or model.canUpdate model.canDelete)}}
@@ -61,18 +61,25 @@
           @data-test-edit-link=true
           @replace=true
         >
-          Edit role
+          Edit transformation
         </ToolbarSecretLink>
       {{/if}}
     </ToolbarActions>
   </Toolbar>
 {{/if}}
 
-<TransformEditForm @mode={{mode}} @model={{model}} />
-{{!-- TODO: keeping here for now to remind us what other component we need to add --}}
-{{!-- TODO: not following partial pattern in Transform, this comes from SSH --}}
-{{!-- {{#if (or (eq mode 'edit') (eq mode 'create'))}}
-  {{partial 'partials/role-ssh/form'}}
+{{#if (or (eq mode 'edit') (eq mode 'create'))}}
+  <TransformEditForm @mode={{mode}} @model={{model}} />
 {{else}}
-  {{partial 'partials/role-ssh/show'}}
-{{/if}} --}}
+{{!-- TODO eventually turn this into a component once it's fleshed out --}}
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{log model}}
+  {{#each model.transformFieldAttrs as |attr|}}
+    {{#if (eq attr.type "object")}}
+      {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(stringify (get model attr.name))}}
+    {{else}}
+      {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
+    {{/if}}
+  {{/each}}
+</div>
+{{/if}}
