@@ -146,7 +146,7 @@ jobs:
         name: Push content to Algolia Index
   test-go-remote-docker:
     docker:
-    - image: circleci/golang:1.13.10-buster
+    - image: circleci/golang:1.14.6-stretch
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
@@ -175,6 +175,8 @@ jobs:
     - run:
         command: |
           set -x
+
+          free -h
 
           case "" in
           *-race*) VAULT_CI_GO_TEST_RACE=1;;
@@ -279,7 +281,7 @@ jobs:
     - GO111MODULE: 'off'
   test-go-race:
     docker:
-    - image: circleci/golang:1.13.10-buster
+    - image: circleci/golang:1.14.6-stretch
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
@@ -308,6 +310,8 @@ jobs:
     - run:
         command: |
           set -x
+
+          free -h
 
           case "-race" in
           *-race*) VAULT_CI_GO_TEST_RACE=1;;
@@ -428,7 +432,7 @@ jobs:
         name: Build Docker Image if Necessary
   test-go:
     docker:
-    - image: circleci/golang:1.13.10-buster
+    - image: circleci/golang:1.14.6-stretch
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
@@ -454,6 +458,8 @@ jobs:
     - run:
         command: |
           set -x
+
+          free -h
 
           case "" in
           *-race*) VAULT_CI_GO_TEST_RACE=1;;
@@ -594,6 +600,8 @@ jobs:
         command: |
           set -x
 
+          free -h
+
           case "" in
           *-race*) VAULT_CI_GO_TEST_RACE=1;;
           esac
@@ -726,7 +734,7 @@ jobs:
         command: make ci-verify
   test-go-race-remote-docker:
     docker:
-    - image: circleci/golang:1.13.10-buster
+    - image: circleci/golang:1.14.6-stretch
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
@@ -755,6 +763,8 @@ jobs:
     - run:
         command: |
           set -x
+
+          free -h
 
           case "-race" in
           *-race*) VAULT_CI_GO_TEST_RACE=1;;

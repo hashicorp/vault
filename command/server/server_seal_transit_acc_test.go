@@ -11,8 +11,8 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
 func TestTransitWrapper_Lifecycle(t *testing.T) {
@@ -96,7 +96,7 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 	}
 }
 
-type Config struct {
+type DockerVaultConfig struct {
 	docker.ServiceURL
 	token     string
 	mountPath string
@@ -104,7 +104,7 @@ type Config struct {
 	tlsConfig *api.TLSConfig
 }
 
-func (c *Config) apiConfig() *api.Config {
+func (c *DockerVaultConfig) apiConfig() *api.Config {
 	vaultConfig := api.DefaultConfig()
 	vaultConfig.Address = c.URL().String()
 	if err := vaultConfig.ConfigureTLS(c.tlsConfig); err != nil {
@@ -114,9 +114,9 @@ func (c *Config) apiConfig() *api.Config {
 	return vaultConfig
 }
 
-var _ docker.ServiceConfig = &Config{}
+var _ docker.ServiceConfig = &DockerVaultConfig{}
 
-func prepareTestContainer(t *testing.T) (func(), *Config) {
+func prepareTestContainer(t *testing.T) (func(), *DockerVaultConfig) {
 	rootToken, err := uuid.GenerateUUID()
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -142,7 +142,7 @@ func prepareTestContainer(t *testing.T) (func(), *Config) {
 	}
 
 	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
-		c := &Config{
+		c := &DockerVaultConfig{
 			ServiceURL: *docker.NewServiceURL(url.URL{Scheme: "http", Host: fmt.Sprintf("%s:%d", host, port)}),
 			tlsConfig: &api.TLSConfig{
 				Insecure: true,
@@ -174,5 +174,5 @@ func prepareTestContainer(t *testing.T) (func(), *Config) {
 	if err != nil {
 		t.Fatalf("could not start docker vault: %s", err)
 	}
-	return svc.Cleanup, svc.Config.(*Config)
+	return svc.Cleanup, svc.Config.(*DockerVaultConfig)
 }

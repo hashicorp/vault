@@ -32,6 +32,8 @@ steps:
       command: |
         set -x
 
+        free -h
+
         case "<< parameters.extra_flags >>" in
         *-race*) VAULT_CI_GO_TEST_RACE=1;;
         esac

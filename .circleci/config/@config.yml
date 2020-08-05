@@ -4,7 +4,7 @@ version: 2.1
 references:
   images:
     node: &NODE_IMAGE node:10-buster # Pin Node.js to major version (ex: 10)
-    docker: &DOCKER_IMAGE "circleci/golang:1.13.10-buster"
+    docker: &DOCKER_IMAGE "circleci/golang:1.14.6-stretch"
 
   cache:
     go-sum: &GO_SUM_CACHE_KEY go-sum-v1-{{ checksum "go.sum" }}
