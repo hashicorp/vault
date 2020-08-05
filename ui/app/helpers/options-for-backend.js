@@ -57,12 +57,12 @@ const SECRET_BACKENDS = {
   },
   // TODO: edit or remove listItemPartial and better understand what's happening here
   transform: {
-    displayName: 'Transform',
-    searchPlaceholder: 'Filter Transform',
-    item: 'transform',
-    create: 'Create Transformation',
-    editComponent: 'transform-edit',
-    listItemPartial: 'partials/secret-list/ssh-role-item',
+    displayName: 'Transformation',
+    searchPlaceholder: 'Filter transformations',
+    item: 'transformation',
+    create: 'Create transformation',
+    editComponent: 'transformation-edit',
+    listItemPartial: 'partials/secret-list/item', // TODO: Use transform-specific item template
   },
   transit: {
     searchPlaceholder: 'Filter keys',
