@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -105,6 +106,9 @@ type RefresherWithContext interface {
 // TokenRefreshCallback is the type representing callbacks that will be called after
 // a successful token refresh
 type TokenRefreshCallback func(Token) error
+
+// TokenRefresh is a type representing a custom callback to refresh a token
+type TokenRefresh func(ctx context.Context, resource string) (*Token, error)
 
 // Token encapsulates the access token used to authorize Azure requests.
 // https://docs.microsoft.com/en-us/azure/active-directory/develop/v1-oauth2-client-creds-grant-flow#service-to-service-access-token-response
@@ -245,7 +249,7 @@ func (secret *ServicePrincipalCertificateSecret) SignJwt(spt *ServicePrincipalTo
 		"sub": spt.inner.ClientID,
 		"jti": base64.URLEncoding.EncodeToString(jti),
 		"nbf": time.Now().Unix(),
-		"exp": time.Now().Add(time.Hour * 24).Unix(),
+		"exp": time.Now().Add(24 * time.Hour).Unix(),
 	}
 
 	signedString, err := token.SignedString(secret.PrivateKey)
@@ -344,10 +348,11 @@ func (secret ServicePrincipalAuthorizationCodeSecret) MarshalJSON() ([]byte, err
 
 // ServicePrincipalToken encapsulates a Token created for a Service Principal.
 type ServicePrincipalToken struct {
-	inner            servicePrincipalToken
-	refreshLock      *sync.RWMutex
-	sender           Sender
-	refreshCallbacks []TokenRefreshCallback
+	inner             servicePrincipalToken
+	refreshLock       *sync.RWMutex
+	sender            Sender
+	customRefreshFunc TokenRefresh
+	refreshCallbacks  []TokenRefreshCallback
 	// MaxMSIRefreshAttempts is the maximum number of attempts to refresh an MSI token.
 	MaxMSIRefreshAttempts int
 }
@@ -360,6 +365,11 @@ func (spt ServicePrincipalToken) MarshalTokenJSON() ([]byte, error) {
 // SetRefreshCallbacks replaces any existing refresh callbacks with the specified callbacks.
 func (spt *ServicePrincipalToken) SetRefreshCallbacks(callbacks []TokenRefreshCallback) {
 	spt.refreshCallbacks = callbacks
+}
+
+// SetCustomRefreshFunc sets a custom refresh function used to refresh the token.
+func (spt *ServicePrincipalToken) SetCustomRefreshFunc(customRefreshFunc TokenRefresh) {
+	spt.customRefreshFunc = customRefreshFunc
 }
 
 // MarshalJSON implements the json.Marshaler interface.
@@ -786,13 +796,13 @@ func (spt *ServicePrincipalToken) InvokeRefreshCallbacks(token Token) error {
 }
 
 // Refresh obtains a fresh token for the Service Principal.
-// This method is not safe for concurrent use and should be syncrhonized.
+// This method is safe for concurrent use.
 func (spt *ServicePrincipalToken) Refresh() error {
 	return spt.RefreshWithContext(context.Background())
 }
 
 // RefreshWithContext obtains a fresh token for the Service Principal.
-// This method is not safe for concurrent use and should be syncrhonized.
+// This method is safe for concurrent use.
 func (spt *ServicePrincipalToken) RefreshWithContext(ctx context.Context) error {
 	spt.refreshLock.Lock()
 	defer spt.refreshLock.Unlock()
@@ -800,13 +810,13 @@ func (spt *ServicePrincipalToken) RefreshWithContext(ctx context.Context) error 
 }
 
 // RefreshExchange refreshes the token, but for a different resource.
-// This method is not safe for concurrent use and should be syncrhonized.
+// This method is safe for concurrent use.
 func (spt *ServicePrincipalToken) RefreshExchange(resource string) error {
 	return spt.RefreshExchangeWithContext(context.Background(), resource)
 }
 
 // RefreshExchangeWithContext refreshes the token, but for a different resource.
-// This method is not safe for concurrent use and should be syncrhonized.
+// This method is safe for concurrent use.
 func (spt *ServicePrincipalToken) RefreshExchangeWithContext(ctx context.Context, resource string) error {
 	spt.refreshLock.Lock()
 	defer spt.refreshLock.Unlock()
@@ -833,6 +843,15 @@ func isIMDS(u url.URL) bool {
 }
 
 func (spt *ServicePrincipalToken) refreshInternal(ctx context.Context, resource string) error {
+	if spt.customRefreshFunc != nil {
+		token, err := spt.customRefreshFunc(ctx, resource)
+		if err != nil {
+			return err
+		}
+		spt.inner.Token = *token
+		return spt.InvokeRefreshCallbacks(spt.inner.Token)
+	}
+
 	req, err := http.NewRequest(http.MethodPost, spt.inner.OauthConfig.TokenEndpoint.String(), nil)
 	if err != nil {
 		return fmt.Errorf("adal: Failed to build the refresh request. Error = '%v'", err)
@@ -954,6 +973,10 @@ func retryForIMDS(sender Sender, req *http.Request, maxAttempts int) (resp *http
 	delay := time.Duration(0)
 
 	for attempt < maxAttempts {
+		if resp != nil && resp.Body != nil {
+			io.Copy(ioutil.Discard, resp.Body)
+			resp.Body.Close()
+		}
 		resp, err = sender.Do(req)
 		// we want to retry if err is not nil or the status code is in the list of retry codes
 		if err == nil && !responseHasStatusCode(resp, retries...) {

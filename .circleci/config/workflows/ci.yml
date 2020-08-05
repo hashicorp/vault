@@ -60,3 +60,9 @@ jobs:
         branches:
           only:
             - master
+  - algolia-index:
+      context: vault-docs
+      filters:
+        branches:
+          only:
+            - stable-website

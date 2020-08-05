@@ -1,3 +1,3 @@
-export const VERSION = '1.4.1'
+export const VERSION = '1.5.0'
 export const CHANGELOG_URL =
-  'https://github.com/hashicorp/vault/blob/master/CHANGELOG.md#141-april-30th-2020'
+  'https://github.com/hashicorp/vault/blob/master/CHANGELOG.md#150'

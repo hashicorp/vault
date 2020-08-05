@@ -27,10 +27,17 @@ Helm must be installed and configured on your machine. Please refer to the [Helm
 documentation](https://helm.sh/) or the [Vault Installation to Minikube via
 Helm](https://learn.hashicorp.com/vault/getting-started-k8s/minikube) guide.
 
-To use the Helm chart, you can target a specific [release published to
-GitHub](https://github.com/hashicorp/vault-helm/releases) or download/clone the
-[vault-helm GitHub repository](https://github.com/hashicorp/vault-helm). In the
-future, we plan publishing to a public Helm repository.
+To use the Helm chart, add the Hashicorp helm repository and check that you have
+access to the chart:
+
+```shell-session
+$ helm repo add hashicorp https://helm.releases.hashicorp.com
+"hashicorp" has been added to your repositories
+
+$ helm search repo hashicorp/vault
+NAME           	CHART VERSION	APP VERSION	DESCRIPTION
+hashicorp/vault	0.5.0        	           	Install and configure Vault on Kubernetes.
+```
 
 -> **Important:** The Helm chart is new and under significant development.
 Please always run Helm with `--dry-run` before any install or upgrade to verify
@@ -38,34 +45,29 @@ changes.
 
 Example chart usage:
 
-Installing the Vault Helm chart version 0.4.0 with pods prefixed with the name
-`vault`.
+Installing the latest release of the Vault Helm chart with pods prefixed with
+the name `vault`.
 
-```sh
-$ helm install vault https://github.com/hashicorp/vault-helm/archive/v0.4.0.tar.gz
+```shell-session
+$ helm install vault hashicorp/vault
 ```
 
-Cloning the Vault Helm chart, checking out tagged version v0.4.0, and installing
-the Vault Helm chart from the filesystem.
-
-~> **NOTE:** We highly recommend you checkout a specific tagged release
-of the chart to avoid any instabilities from master.
+Installing a specific version of the chart.
 
 ```sh
-# Clone the chart repo
-$ git clone https://github.com/hashicorp/vault-helm.git
-$ cd vault-helm
+# List the available releases
+$ helm search repo hashicorp/vault -l
+NAME           	CHART VERSION	APP VERSION	DESCRIPTION
+hashicorp/vault	0.5.0        	           	Install and configure Vault on Kubernetes.
+hashicorp/vault	0.4.0        	           	Install and configure Vault on Kubernetes.
 
-# Checkout a tagged version
-$ git checkout v0.4.0
-
-# Run Helm
-$ helm install vault ./
+# Install version 0.4.0
+$ helm install vault hashicorp/vault --version 0.4.0
 ```
 
 ~> **Security Warning:** By default, the chart runs in standalone mode. This
 mode uses a single Vault server with a file storage backend. This is a less
-secure and less resilent installation that is **NOT** appropriate for a
+secure and less resilient installation that is **NOT** appropriate for a
 production setup. It is highly recommended to use a [properly secured Kubernetes
 cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/),
 [learn the available configuration

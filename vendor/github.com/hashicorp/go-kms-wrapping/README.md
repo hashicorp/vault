@@ -40,12 +40,27 @@ as they may have been used for past encryption operations.
   * * AEAD using AES-GCM and a provided key
   * * Alibaba Cloud KMS (uses envelopes)
   * * AWS KMS (uses envelopes)
-  * * GCP CKMS (uses envelopes)
   * * Azure KeyVault (uses envelopes)
+  * * GCP CKMS (uses envelopes)
+  * * Huawei Cloud KMS (uses envelopes)
   * * OCI KMS (uses envelopes)
+  * * Tencent Cloud KMS (uses envelopes)
   * * Vault Transit mount
   * Transparently supports multiple decryption targets, allowing for key rotation
   * Supports Additional Authenticated Data (AAD) for all KMSes except Vault Transit.
+
+A
+[`multiwrapper`](https://github.com/hashicorp/go-kms-wrapping/tree/master/wrappers/multiwrapper)
+KMS is also included, capable of encrypting to a specified wrapper and
+decrypting using one of several wrappers switched on key ID. This can allow
+easy key rotation for KMSes that do not natively support it.
+
+The
+[`structwrapping`](https://github.com/hashicorp/go-kms-wrapping/tree/master/structwrapping)
+package allows for structs to have members encrypted and decrypted in a single
+pass via a single wrapper. This can be used for workflows such as database
+library callback functions to easily encrypt/decrypt data as it goes to/from
+storage.
 
 ## Installation
 
@@ -82,7 +97,7 @@ Following is an example usage of the AWS KMS provider.
 ctx := context.Background()
 
 wrapper := awskms.NewWrapper(nil)
-_, err := kms.SetConfig(&map[string]string{
+_, err := wrapper.SetConfig(&map[string]string{
     "kms_key_id": "1234abcd-12ab-34cd-56ef-1234567890ab"
 })
 if err != nil {

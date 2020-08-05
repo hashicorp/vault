@@ -11,7 +11,7 @@ import Pretender from 'pretender';
 import { resolve } from 'rsvp';
 import { create } from 'ember-cli-page-object';
 import form from '../../pages/components/auth-jwt';
-import { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS } from 'vault/components/auth-jwt';
+import { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN } from 'vault/components/auth-jwt';
 
 const component = create(form);
 const windows = [];
@@ -120,7 +120,7 @@ module('Integration | Component | auth jwt', function(hooks) {
             }),
           ];
         }
-        return [400, { 'Content-Type': 'application/json' }, JSON.stringify({ errors: ['nope'] })];
+        return [400, { 'Content-Type': 'application/json' }, JSON.stringify({ errors: [ERROR_JWT_LOGIN] })];
       });
     });
   });

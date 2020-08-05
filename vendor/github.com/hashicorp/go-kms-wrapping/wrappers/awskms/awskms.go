@@ -189,7 +189,12 @@ func (k *Wrapper) Encrypt(_ context.Context, plaintext, aad []byte) (blob *wrapp
 		return nil, fmt.Errorf("error encrypting data: %w", err)
 	}
 
-	// store the current key id
+	// Store the current key id
+	//
+	// When using a key alias, this will return the actual underlying key id
+	// used for encryption.  This is helpful if you are looking to reencyrpt
+	// your data when it is not using the latest key id. See these docs relating
+	// to key rotation https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html
 	keyID := aws.StringValue(output.KeyId)
 	k.currentKeyID.Store(keyID)
 

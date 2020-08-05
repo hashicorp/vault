@@ -24,10 +24,7 @@ type Config struct {
 var _ docker.ServiceConfig = &Config{}
 
 func prepareCockroachDBTestContainer(t *testing.T) (func(), *Config) {
-	tableName := os.Getenv("CR_TABLE")
-	if tableName == "" {
-		tableName = "vault_kv_store"
-	}
+	pool, err := dockertest.NewPool("")
 	if retURL := os.Getenv("CR_URL"); retURL != "" {
 		s, err := docker.NewServiceURLParse(retURL)
 		if err != nil {
@@ -68,15 +65,21 @@ func connectCockroachDB(ctx context.Context, host string, port int) (docker.Serv
 	}
 	defer db.Close()
 
-	database := "database"
+	database := "vault"
 	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", database))
 	if err != nil {
 		return nil, err
 	}
 
+	tableName := os.Getenv("CR_TABLE")
+	if tableName == "" {
+		tableName = defaultTableName
+	}
+	t.Logf("Table name: %s", tableName)
+
 	return &Config{
 		ServiceURL: *docker.NewServiceURL(u),
-		TableName:  database + ".vault_kv",
+		TableName:  database + "." + tableName,
 	}, nil
 }
 
@@ -112,5 +115,65 @@ func truncate(t *testing.T, b physical.Backend) {
 	_, err := crdb.client.Exec("TRUNCATE TABLE " + crdb.table)
 	if err != nil {
 		t.Fatalf("Failed to drop table: %v", err)
+	}
+}
+
+func TestValidateDBTable(t *testing.T) {
+	type testCase struct {
+		table     string
+		expectErr bool
+	}
+
+	tests := map[string]testCase{
+		"first character is letter":     {"abcdef", false},
+		"first character is underscore": {"_bcdef", false},
+		"exclamation point":             {"ab!def", true},
+		"at symbol":                     {"ab@def", true},
+		"hash":                          {"ab#def", true},
+		"percent":                       {"ab%def", true},
+		"carrot":                        {"ab^def", true},
+		"ampersand":                     {"ab&def", true},
+		"star":                          {"ab*def", true},
+		"left paren":                    {"ab(def", true},
+		"right paren":                   {"ab)def", true},
+		"dash":                          {"ab-def", true},
+		"digit":                         {"a123ef", false},
+		"dollar end":                    {"abcde$", false},
+		"dollar middle":                 {"ab$def", false},
+		"dollar start":                  {"$bcdef", true},
+		"backtick prefix":               {"`bcdef", true},
+		"backtick middle":               {"ab`def", true},
+		"backtick suffix":               {"abcde`", true},
+		"single quote prefix":           {"'bcdef", true},
+		"single quote middle":           {"ab'def", true},
+		"single quote suffix":           {"abcde'", true},
+		"double quote prefix":           {`"bcdef`, true},
+		"double quote middle":           {`ab"def`, true},
+		"double quote suffix":           {`abcde"`, true},
+		"underscore with all runes":     {"_bcd123__a__$", false},
+		"all runes":                     {"abcd123__a__$", false},
+		"default table name":            {defaultTableName, false},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := validateDBTable(test.table)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+		})
+		t.Run(fmt.Sprintf("database: %s", name), func(t *testing.T) {
+			dbTable := fmt.Sprintf("%s.%s", test.table, test.table)
+			err := validateDBTable(dbTable)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+		})
 	}
 }

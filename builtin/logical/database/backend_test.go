@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/vault-plugin-database-mongodbatlas"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
@@ -46,6 +47,7 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	sys := vault.TestDynamicSystemView(cores[0].Core)
 	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Postgres", []string{}, "")
 	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Mongo", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "mongodbatlas-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_MongoAtlas", []string{}, "")
 
 	return cluster, sys
 }
@@ -86,6 +88,28 @@ func TestBackend_PluginMain_Mongo(t *testing.T) {
 	flags.Parse(args)
 
 	err := mongodb.Run(apiClientMeta.GetTLSConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBackend_PluginMain_MongoAtlas(t *testing.T) {
+	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+		return
+	}
+
+	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
+	if caPEM == "" {
+		t.Fatal("CA cert not passed in")
+	}
+
+	args := []string{"--ca-cert=" + caPEM}
+
+	apiClientMeta := &api.PluginAPIClientMeta{}
+	flags := apiClientMeta.FlagSet()
+	flags.Parse(args)
+
+	err := mongodbatlas.Run(apiClientMeta.GetTLSConfig())
 	if err != nil {
 		t.Fatal(err)
 	}

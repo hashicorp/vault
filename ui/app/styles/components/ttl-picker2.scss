@@ -15,3 +15,9 @@ input.has-error:hover {
 .ttl-value-error {
   margin-top: 0.3em;
 }
+
+.description {
+  display: flex;
+  justify-content: flex-start;
+  align-content: center;
+}

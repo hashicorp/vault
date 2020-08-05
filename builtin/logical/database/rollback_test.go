@@ -2,13 +2,14 @@ package database
 
 import (
 	"context"
+	"strings"
+	"testing"
+
 	"github.com/hashicorp/vault/helper/namespace"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"strings"
-	"testing"
 )
 
 const (

@@ -105,20 +105,20 @@ const (
 // The valid Go types and their corresponding Cloud Spanner types that can be
 // used in the Insert/Update/InsertOrUpdate functions are:
 //
-//     string, NullString - STRING
-//     []string, []NullString - STRING ARRAY
+//     string, *string, NullString - STRING
+//     []string, []*string, []NullString - STRING ARRAY
 //     []byte - BYTES
 //     [][]byte - BYTES ARRAY
-//     int, int64, NullInt64 - INT64
-//     []int, []int64, []NullInt64 - INT64 ARRAY
-//     bool, NullBool - BOOL
-//     []bool, []NullBool - BOOL ARRAY
-//     float64, NullFloat64 - FLOAT64
-//     []float64, []NullFloat64 - FLOAT64 ARRAY
-//     time.Time, NullTime - TIMESTAMP
-//     []time.Time, []NullTime - TIMESTAMP ARRAY
-//     Date, NullDate - DATE
-//     []Date, []NullDate - DATE ARRAY
+//     int, int64, *int64, NullInt64 - INT64
+//     []int, []int64, []*int64, []NullInt64 - INT64 ARRAY
+//     bool, *bool, NullBool - BOOL
+//     []bool, []*bool, []NullBool - BOOL ARRAY
+//     float64, *float64, NullFloat64 - FLOAT64
+//     []float64, []*float64, []NullFloat64 - FLOAT64 ARRAY
+//     time.Time, *time.Time, NullTime - TIMESTAMP
+//     []time.Time, []*time.Time, []NullTime - TIMESTAMP ARRAY
+//     Date, *Date, NullDate - DATE
+//     []Date, []*Date, []NullDate - DATE ARRAY
 //
 // To compare two Mutations for testing purposes, use reflect.DeepEqual.
 type Mutation struct {
@@ -191,7 +191,7 @@ func structToMutationParams(in interface{}) ([]string, []interface{}, error) {
 }
 
 // Insert returns a Mutation to insert a row into a table. If the row already
-// exists, the write or transaction fails.
+// exists, the write or transaction fails with codes.AlreadyExists.
 func Insert(table string, cols []string, vals []interface{}) *Mutation {
 	return &Mutation{
 		op:      opInsert,
@@ -203,14 +203,15 @@ func Insert(table string, cols []string, vals []interface{}) *Mutation {
 
 // InsertMap returns a Mutation to insert a row into a table, specified by
 // a map of column name to value. If the row already exists, the write or
-// transaction fails.
+// transaction fails with codes.AlreadyExists.
 func InsertMap(table string, in map[string]interface{}) *Mutation {
 	cols, vals := mapToMutationParams(in)
 	return Insert(table, cols, vals)
 }
 
 // InsertStruct returns a Mutation to insert a row into a table, specified by
-// a Go struct.  If the row already exists, the write or transaction fails.
+// a Go struct.  If the row already exists, the write or transaction fails with
+// codes.AlreadyExists.
 //
 // The in argument must be a struct or a pointer to a struct. Its exported
 // fields specify the column names and values. Use a field tag like "spanner:name"

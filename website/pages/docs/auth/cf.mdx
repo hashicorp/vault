@@ -42,7 +42,7 @@ and you'll need to configure it to access the CF API.
 To gain your instance identity CA certificate, in the [cf dev](https://github.com/cloudfoundry-incubator/cfdev)
 environment it can be found using:
 
-```
+```shell-session
 $ bosh int --path /diego_instance_identity_ca ~/.cfdev/state/bosh/creds.yml
 ```
 
@@ -53,13 +53,13 @@ ease of drilling into the particular part of the response you'll need.
 
 Once those steps are complete, get the credentials you'll use for CredHub:
 
-```
+```shell-session
 $ pcf settings | jq '.products[0].director_credhub_client_credentials'
 ```
 
 SSH into your Ops Manager VM:
 
-```
+```shell-session
 $ ssh -i ops_mgr.pem ubuntu@$OPS_MGR_URL
 ```
 
@@ -67,13 +67,13 @@ Please note that the above OPS_MGR_URL shouldn't be prepended with `https://`.
 
 Log into CredHub with the credentials you obtained earlier:
 
-```
+```shell-session
 $ credhub login --client-name=director_to_credhub --client-secret=some-secret
 ```
 
 And view the root certificate CF uses to issue instance identity certificates:
 
-```
+```shell-session
 $ credhub get -n /cf/diego-instance-identity-root-ca
 ```
 
@@ -81,7 +81,7 @@ The output to that call will include two certificates and one RSA key. You will 
 under `ca: |` and place it into a file on your local machine that's properly formatted. Here's an example of
 a properly formatted CA certificate:
 
-```
+```shell-session
 $ cat ca.crt
 -----BEGIN CERTIFICATE-----
 MIIDNDCCAhygAwIBAgITPqTy1qvfHNEVuxsl9l1glY85OTANBgkqhkiG9w0BAQsF
@@ -107,7 +107,7 @@ jK0RcmCyaXw=
 
 An easy way to verify that your CA certificate is properly formatted is using OpenSSL like so:
 
-```
+```shell-session
 $ openssl x509 -in ca.crt -text -noout
 Certificate:
     Data:
@@ -179,7 +179,7 @@ run `$ cf api` to view the API endpoint that Vault will use.
 Next, configure a user for Vault to use. This plugin was tested with Org Manager level
 permissions, but lower level permissions _may_ be usable.
 
-```
+```shell-session
 $ cf create-user vault pa55w0rd
 $ cf orgs
 $ cf org-users my-example-org
@@ -204,13 +204,13 @@ x509: certificate signed by unknown authority
 If you encounter this error, you will need to first gain a copy of the certificate that CF
 is using for the API via:
 
-```
+```shell-session
 $ openssl s_client -showcerts -servername domain.com -connect domain.com:443
 ```
 
 Here is an example of a real call:
 
-```
+```shell-session
 $ openssl s_client -showcerts -servername api.sys.somewhere.cf-app.com -connect api.sys.somewhere.cf-app.com:443
 ```
 
@@ -224,7 +224,7 @@ you name this file `cfapi.crt`.
 After obtaining the information described above, a Vault operator will configure the CF auth method
 like so:
 
-```
+```shell-session
 $ vault auth enable cf
 
 $ vault write auth/cf/config \
@@ -244,7 +244,7 @@ $ vault write auth/cf/roles/my-role \
 Once configured, from a CF instance containing real values for the `CF_INSTANCE_CERT` and
 `CF_INSTANCE_KEY`, login can be performed using:
 
-```
+```shell-session
 $ vault login -method=cf role=test-role
 ```
 
@@ -258,7 +258,7 @@ CF docs indicate they expire every 4 years. However long they last, at some poin
 to add another CA certificate - one that's soon to expire, and one that is currently or soon-to-be
 valid.
 
-```
+```shell-session
 $ CURRENT=$(cat /path/to/current-ca.crt)
 $ FUTURE=$(cat /path/to/future-ca.crt)
 $ vault write auth/vault-plugin-auth-cf/config identity_ca_certificates="$CURRENT,$FUTURE"
@@ -280,13 +280,13 @@ files, each being a distinct certificate. The first certificate tends to be the 
 `identity.crt`, and the second one tends to be the `intermediate.crt`. Verify each are
 properly named and formatted using a command like:
 
-```
+```shell-session
 $ openssl x509 -in ca.crt -text -noout
 ```
 
 Then, verify that the certificates are properly chained to the `ca.crt` you've configured:
 
-```
+```shell-session
 $ openssl verify -CAfile ca.crt -untrusted intermediate.crt identity.crt
 ```
 

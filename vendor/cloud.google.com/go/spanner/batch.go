@@ -143,6 +143,17 @@ func (t *BatchReadOnlyTransaction) PartitionReadUsingIndex(ctx context.Context, 
 // PartitionQuery returns a list of Partitions that can be used to execute a
 // query against the database.
 func (t *BatchReadOnlyTransaction) PartitionQuery(ctx context.Context, statement Statement, opt PartitionOptions) ([]*Partition, error) {
+	return t.partitionQuery(ctx, statement, opt, t.ReadOnlyTransaction.txReadOnly.qo)
+}
+
+// PartitionQueryWithOptions returns a list of Partitions that can be used to
+// execute a query against the database. The sql query execution will be
+// optimized based on the given query options.
+func (t *BatchReadOnlyTransaction) PartitionQueryWithOptions(ctx context.Context, statement Statement, opt PartitionOptions, qOpts QueryOptions) ([]*Partition, error) {
+	return t.partitionQuery(ctx, statement, opt, t.ReadOnlyTransaction.txReadOnly.qo.merge(qOpts))
+}
+
+func (t *BatchReadOnlyTransaction) partitionQuery(ctx context.Context, statement Statement, opt PartitionOptions, qOpts QueryOptions) ([]*Partition, error) {
 	sh, ts, err := t.acquire(ctx)
 	if err != nil {
 		return nil, err
@@ -166,11 +177,12 @@ func (t *BatchReadOnlyTransaction) PartitionQuery(ctx context.Context, statement
 
 	// prepare ExecuteSqlRequest
 	r := &sppb.ExecuteSqlRequest{
-		Session:     sid,
-		Transaction: ts,
-		Sql:         statement.SQL,
-		Params:      params,
-		ParamTypes:  paramTypes,
+		Session:      sid,
+		Transaction:  ts,
+		Sql:          statement.SQL,
+		Params:       params,
+		ParamTypes:   paramTypes,
+		QueryOptions: qOpts.Options,
 	}
 
 	// generate Partitions
@@ -221,12 +233,13 @@ func (t *BatchReadOnlyTransaction) Cleanup(ctx context.Context) {
 	}
 	t.sh = nil
 	sid, client := sh.getID(), sh.getClient()
-	err := runRetryable(ctx, func(ctx context.Context) error {
-		_, e := client.DeleteSession(ctx, &sppb.DeleteSessionRequest{Name: sid})
-		return e
-	})
+	err := client.DeleteSession(ctx, &sppb.DeleteSessionRequest{Name: sid})
 	if err != nil {
-		log.Printf("Failed to delete session %v. Error: %v", sid, err)
+		var logger *log.Logger
+		if sh.session != nil {
+			logger = sh.session.logger
+		}
+		logf(logger, "Failed to delete session %v. Error: %v", sid, err)
 	}
 }
 
@@ -248,20 +261,23 @@ func (t *BatchReadOnlyTransaction) Execute(ctx context.Context, p *Partition) *R
 	}
 	// Read or query partition.
 	if p.rreq != nil {
-		p.rreq.PartitionToken = p.pt
+		req := *p.rreq
+		req.PartitionToken = p.pt
 		rpc = func(ctx context.Context, resumeToken []byte) (streamingReceiver, error) {
-			p.rreq.ResumeToken = resumeToken
-			return client.StreamingRead(ctx, p.rreq)
+			req.ResumeToken = resumeToken
+			return client.StreamingRead(ctx, &req)
 		}
 	} else {
-		p.qreq.PartitionToken = p.pt
+		req := *p.qreq
+		req.PartitionToken = p.pt
 		rpc = func(ctx context.Context, resumeToken []byte) (streamingReceiver, error) {
-			p.qreq.ResumeToken = resumeToken
-			return client.ExecuteStreamingSql(ctx, p.qreq)
+			req.ResumeToken = resumeToken
+			return client.ExecuteStreamingSql(ctx, &req)
 		}
 	}
 	return stream(
 		contextWithOutgoingMetadata(ctx, sh.getMetadata()),
+		sh.session.logger,
 		rpc,
 		t.setTimestamp,
 		t.release)

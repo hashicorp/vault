@@ -4,19 +4,18 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
 
+	mssqlhelper "github.com/hashicorp/vault/helper/testhelpers/mssql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 )
 
 func TestMSSQL_Initialize(t *testing.T) {
-	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
-		t.SkipNow()
-	}
-	connURL := os.Getenv("MSSQL_URL")
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
@@ -50,10 +49,8 @@ func TestMSSQL_Initialize(t *testing.T) {
 }
 
 func TestMSSQL_CreateUser(t *testing.T) {
-	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
-		t.SkipNow()
-	}
-	connURL := os.Getenv("MSSQL_URL")
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
@@ -91,10 +88,8 @@ func TestMSSQL_CreateUser(t *testing.T) {
 }
 
 func TestMSSQL_RotateRootCredentials(t *testing.T) {
-	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
-		t.SkipNow()
-	}
-	connURL := os.Getenv("MSSQL_URL")
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
@@ -129,11 +124,141 @@ func TestMSSQL_RotateRootCredentials(t *testing.T) {
 	}
 }
 
-func TestMSSQL_RevokeUser(t *testing.T) {
-	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
-		t.SkipNow()
+func TestMSSQL_SetCredentials_missingArgs(t *testing.T) {
+	type testCase struct {
+		statements dbplugin.Statements
+		userConfig dbplugin.StaticUserConfig
 	}
-	connURL := os.Getenv("MSSQL_URL")
+
+	tests := map[string]testCase{
+		"empty rotation statements": {
+			statements: dbplugin.Statements{
+				Rotation: nil,
+			},
+			userConfig: dbplugin.StaticUserConfig{
+				Username: "testuser",
+				Password: "password",
+			},
+		},
+		"empty username": {
+			statements: dbplugin.Statements{
+				Rotation: []string{`
+					ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}';`,
+				},
+			},
+			userConfig: dbplugin.StaticUserConfig{
+				Username: "",
+				Password: "password",
+			},
+		},
+		"empty password": {
+			statements: dbplugin.Statements{
+				Rotation: []string{`
+					ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}';`,
+				},
+			},
+			userConfig: dbplugin.StaticUserConfig{
+				Username: "testuser",
+				Password: "",
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			db := new()
+
+			username, password, err := db.SetCredentials(context.Background(), test.statements, test.userConfig)
+			if err == nil {
+				t.Fatalf("expected err, got nil")
+			}
+			if username != "" {
+				t.Fatalf("expected empty username, got [%s]", username)
+			}
+			if password != "" {
+				t.Fatalf("expected empty password, got [%s]", password)
+			}
+		})
+	}
+}
+
+func TestMSSQL_SetCredentials(t *testing.T) {
+	type testCase struct {
+		rotationStmts []string
+	}
+
+	tests := map[string]testCase{
+		"empty rotation statements": {
+			rotationStmts: []string{},
+		}, "username rotation": {
+			rotationStmts: []string{`
+				ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}';`,
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+			defer cleanup()
+
+			connectionDetails := map[string]interface{}{
+				"connection_url": connURL,
+			}
+
+			db := new()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			_, err := db.Init(ctx, connectionDetails, true)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			dbUser := "vaultstatictest"
+			initPassword := "p4$sw0rd"
+			createTestMSSQLUser(t, connURL, dbUser, initPassword, testMSSQLLogin)
+
+			if err := testCredsExist(t, connURL, dbUser, initPassword); err != nil {
+				t.Fatalf("Could not connect with initial credentials: %s", err)
+			}
+
+			statements := dbplugin.Statements{
+				Rotation: test.rotationStmts,
+			}
+
+			newPassword, err := db.GenerateCredentials(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			usernameConfig := dbplugin.StaticUserConfig{
+				Username: dbUser,
+				Password: newPassword,
+			}
+
+			username, password, err := db.SetCredentials(ctx, statements, usernameConfig)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			if err := testCredsExist(t, connURL, username, password); err != nil {
+				t.Fatalf("Could not connect with new credentials: %s", err)
+			}
+
+			if err := testCredsExist(t, connURL, username, initPassword); err == nil {
+				t.Fatalf("Should not be able to connect with initial credentials")
+			}
+
+		})
+	}
+
+}
+
+func TestMSSQL_RevokeUser(t *testing.T) {
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
@@ -206,6 +331,37 @@ func testCredsExist(t testing.TB, connURL, username, password string) error {
 	return db.Ping()
 }
 
+func createTestMSSQLUser(t *testing.T, connURL string, username, password, query string) {
+
+	db, err := sql.Open("mssql", connURL)
+	defer db.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Start a transaction
+	ctx := context.Background()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	m := map[string]string{
+		"name":     username,
+		"password": password,
+	}
+	if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+		t.Fatal(err)
+	}
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 const testMSSQLRole = `
 CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
 CREATE USER [{{name}}] FOR LOGIN [{{name}}];
@@ -214,4 +370,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::dbo TO [{{name}}];`
 const testMSSQLDrop = `
 DROP USER [{{name}}];
 DROP LOGIN [{{name}}];
+`
+
+const testMSSQLLogin = `
+CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
 `

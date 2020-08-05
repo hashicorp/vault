@@ -38,7 +38,7 @@
       margin-bottom: 62px;
     }
 
-    & li:before {
+    & li::before {
       background: url('./img/alert-triangle.svg');
       height: 20px;
       margin-top: 3px;
@@ -46,7 +46,7 @@
     }
   }
 
-  & .after li:before {
+  & .after li::before {
     background: url('./img/check-circle.svg');
     height: 18px;
     margin-top: 4px;
@@ -109,8 +109,8 @@
       padding-right: 20px;
     }
 
-    &:before,
-    &:after {
+    &::before,
+    &::after {
       bottom: 100%;
       border: solid transparent;
       content: '';
@@ -121,14 +121,14 @@
       pointer-events: none;
     }
 
-    &:before {
+    &::before {
       border-color: rgba(229, 230, 235, 0);
       border-bottom-color: var(--DEPRECATED-gray-9);
       border-width: 18px;
       margin-left: -18px;
     }
 
-    &:after {
+    &::after {
       border-color: rgba(255, 255, 255, 0);
       border-bottom-color: var(--white);
       border-width: 17px;
@@ -174,7 +174,7 @@
   & li {
     margin: 8px 0;
 
-    &:before {
+    &::before {
       background-repeat: no-repeat;
       content: '';
       left: 0;
@@ -265,8 +265,8 @@
           height: calc(100% + 218px);
         }
 
-        &:after {
-          border-color: transparent transparent transparent #000000;
+        &::after {
+          border-color: transparent transparent transparent #000;
           border-style: solid;
           border-width: 5.5px 0 5.5px 8px;
           content: '';
@@ -298,7 +298,7 @@
    */
   &.vault {
     & .after {
-      & li:before {
+      & li::before {
         background: url('./img/check-circle-blue.svg');
         height: 19px;
       }

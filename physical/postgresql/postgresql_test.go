@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/ory/dockertest"
 
 	_ "github.com/lib/pq"
 )
@@ -20,7 +21,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 	// Use docker as pg backend if no url is provided via environment variables
 	connURL := os.Getenv("PGURL")
 	if connURL == "" {
-		cleanup, u := postgresql.PrepareTestContainer(t, "")
+		cleanup, u := postgresql.PrepareTestContainer(t, "11.1")
 		defer cleanup()
 		connURL = u
 	}

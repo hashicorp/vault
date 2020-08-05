@@ -52,7 +52,7 @@ Keybase will be discussed first as it is simpler.
 To generate unseal keys for Keybase users, Vault accepts the `keybase:` prefix
 to the `-pgp-keys` argument:
 
-```
+```shell-session
 $ vault operator init -key-shares=3 -key-threshold=2 \
     -pgp-keys="keybase:jefferai,keybase:vishalnayak,keybase:sethvargo"
 ```
@@ -85,7 +85,7 @@ the Keybase CLI, you are now tasked with entering your unseal key. To get the
 plain-text unseal key, you must decrypt the value given to you by the
 initializer. To get the plain-text value, run the following command:
 
-```
+```shell-session
 $ echo "wcBMA37..." | base64 --decode | keybase pgp decrypt
 ```
 
@@ -101,7 +101,7 @@ plain-text unseal key.
 This is your unseal key in plain-text and should be guarded the same way you
 guard a password. Now you can enter your key to the `unseal` command:
 
-```
+```shell-session
 $ vault operator unseal
 Key (will be hidden): ...
 ```
@@ -116,20 +116,20 @@ manual](https://gnupg.org/gph/en/manual.html).
 
 To create a new PGP key, run, following the prompts:
 
-```
+```shell-session
 $ gpg --gen-key
 ```
 
 To import an existing key, download the public key onto disk and run:
 
-```
+```shell-session
 $ gpg --import key.asc
 ```
 
 Once you have imported the users' public keys, you need to save their values
 to disk as either base64 or binary key files. For example:
 
-```
+```shell-session
 $ gpg --export 348FFC4C | base64 > seth.asc
 ```
 
@@ -137,7 +137,7 @@ These key files must exist on disk in base64 (the "standard" base64 character se
 without ASCII armoring) or binary. Once saved to disk, the path to these files
 can be specified as an argument to the `-pgp-keys` flag.
 
-```
+```shell-session
 $ vault operator init -key-shares=3 -key-threshold=2 \
     -pgp-keys="jeff.asc,vishal.asc,seth.asc"
 ```
@@ -166,7 +166,7 @@ PGP key, you are now tasked with entering your unseal key. To get the
 plain-text unseal key, you must decrypt the value given to you by the
 initializer. To get the plain-text value, run the following command:
 
-```
+```shell-session
 $ echo "wcBMA37..." | base64 --decode | gpg -dq
 ```
 
@@ -183,7 +183,7 @@ key:
 This is your unseal key in plain-text and should be guarded the same way you
 guard a password. Now you can enter your key to the `unseal` command:
 
-```
+```shell-session
 $ vault operator unseal
 Key (will be hidden): ...
 ```

@@ -301,7 +301,7 @@ func PartitionsWithContext(ctx context.Context, all bool) ([]PartitionStat, erro
 			}
 
 			if strings.HasPrefix(d.Device, "/dev/mapper/") {
-				devpath, err := filepath.EvalSymlinks(d.Device)
+				devpath, err := filepath.EvalSymlinks(common.HostDev(strings.Replace(d.Device, "/dev", "", -1)))
 				if err == nil {
 					d.Device = devpath
 				}

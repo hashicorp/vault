@@ -15,12 +15,12 @@ import (
 var (
 	// ErrTemplateContentsAndSource is the error returned when a template
 	// specifies both a "source" and "content" argument, which is not valid.
-	ErrTemplateContentsAndSource = errors.New("template: cannot specify both 'source' and 'content'")
+	ErrTemplateContentsAndSource = errors.New("template: cannot specify both 'source' and 'contents'")
 
 	// ErrTemplateMissingContentsAndSource is the error returned when a template
 	// does not specify either a "source" or "content" argument, which is not
 	// valid.
-	ErrTemplateMissingContentsAndSource = errors.New("template: must specify exactly one of 'source' or 'content'")
+	ErrTemplateMissingContentsAndSource = errors.New("template: must specify exactly one of 'source' or 'contents'")
 )
 
 // Template is the internal representation of an individual template to process.
@@ -237,9 +237,12 @@ func funcMap(i *funcMapInput) template.FuncMap {
 		"secret":       secretFunc(i.brain, i.used, i.missing),
 		"secrets":      secretsFunc(i.brain, i.used, i.missing),
 		"service":      serviceFunc(i.brain, i.used, i.missing),
+		"connect":      connectFunc(i.brain, i.used, i.missing),
 		"services":     servicesFunc(i.brain, i.used, i.missing),
 		"tree":         treeFunc(i.brain, i.used, i.missing, true),
 		"safeTree":     safeTreeFunc(i.brain, i.used, i.missing),
+		"caRoots":      connectCARootsFunc(i.brain, i.used, i.missing),
+		"caLeaf":       connectLeafFunc(i.brain, i.used, i.missing),
 
 		// Scratch
 		"scratch": func() *Scratch { return &scratch },
@@ -270,10 +273,12 @@ func funcMap(i *funcMapInput) template.FuncMap {
 		"parseInt":        parseInt,
 		"parseJSON":       parseJSON,
 		"parseUint":       parseUint,
+		"parseYAML":       parseYAML,
 		"plugin":          plugin,
 		"regexReplaceAll": regexReplaceAll,
 		"regexMatch":      regexMatch,
 		"replaceAll":      replaceAll,
+		"sha256Hex":       sha256Hex,
 		"timestamp":       timestamp,
 		"toLower":         toLower,
 		"toJSON":          toJSON,
@@ -291,6 +296,8 @@ func funcMap(i *funcMapInput) template.FuncMap {
 		"multiply": multiply,
 		"divide":   divide,
 		"modulo":   modulo,
+		"minimum":  minimum,
+		"maximum":  maximum,
 	}
 
 	for _, bf := range i.functionBlacklist {

@@ -8,9 +8,10 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
-	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	rabbithole "github.com/michaelklishin/rabbit-hole"
 	"github.com/mitchellh/mapstructure"
 )
@@ -25,6 +26,8 @@ const (
 	testTags        = "administrator"
 	testVHosts      = `{"/": {"configure": ".*", "write": ".*", "read": ".*"}}`
 	testVHostTopics = `{"/": {"amq.topic": {"write": ".*", "read": ".*"}}}`
+
+	roleName = "web"
 )
 
 func prepareRabbitMQTestContainer(t *testing.T) (func(), string) {
@@ -72,9 +75,9 @@ func TestBackend_basic(t *testing.T) {
 		PreCheck:       testAccPreCheckFunc(t, uri),
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, uri),
+			testAccStepConfig(t, uri, ""),
 			testAccStepRole(t),
-			testAccStepReadCreds(t, b, uri, "web"),
+			testAccStepReadCreds(t, b, uri, roleName),
 		},
 	})
 
@@ -90,10 +93,10 @@ func TestBackend_returnsErrs(t *testing.T) {
 		PreCheck:       testAccPreCheckFunc(t, uri),
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, uri),
+			testAccStepConfig(t, uri, ""),
 			{
 				Operation: logical.CreateOperation,
-				Path:      "roles/web",
+				Path:      fmt.Sprintf("roles/%s", roleName),
 				Data: map[string]interface{}{
 					"tags":         testTags,
 					"vhosts":       `{"invalid":{"write": ".*", "read": ".*"}}`,
@@ -102,7 +105,7 @@ func TestBackend_returnsErrs(t *testing.T) {
 			},
 			{
 				Operation: logical.ReadOperation,
-				Path:      "creds/web",
+				Path:      fmt.Sprintf("creds/%s", roleName),
 				ErrorOk:   true,
 			},
 		},
@@ -119,11 +122,38 @@ func TestBackend_roleCrud(t *testing.T) {
 		PreCheck:       testAccPreCheckFunc(t, uri),
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, uri),
+			testAccStepConfig(t, uri, ""),
 			testAccStepRole(t),
-			testAccStepReadRole(t, "web", testTags, testVHosts, testVHostTopics),
-			testAccStepDeleteRole(t, "web"),
-			testAccStepReadRole(t, "web", "", "", ""),
+			testAccStepReadRole(t, roleName, testTags, testVHosts, testVHostTopics),
+			testAccStepDeleteRole(t, roleName),
+			testAccStepReadRole(t, roleName, "", "", ""),
+		},
+	})
+}
+
+func TestBackend_roleWithPasswordPolicy(t *testing.T) {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+		return
+	}
+
+	backendConfig := logical.TestBackendConfig()
+	passGen := func() (password string, err error) {
+		return base62.Random(30)
+	}
+	backendConfig.System.(*logical.StaticSystemView).SetPasswordPolicy("testpolicy", passGen)
+	b, _ := Factory(context.Background(), backendConfig)
+
+	cleanup, uri, _ := prepareRabbitMQTestContainer(t)
+	defer cleanup()
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		PreCheck:       testAccPreCheckFunc(t, uri),
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t, uri, "testpolicy"),
+			testAccStepRole(t),
+			testAccStepReadCreds(t, b, uri, roleName),
 		},
 	})
 }
@@ -136,7 +166,7 @@ func testAccPreCheckFunc(t *testing.T, uri string) func() {
 	}
 }
 
-func testAccStepConfig(t *testing.T, uri string) logicaltest.TestStep {
+func testAccStepConfig(t *testing.T, uri string, passwordPolicy string) logicaltest.TestStep {
 	username := os.Getenv(envRabbitMQUsername)
 	if len(username) == 0 {
 		username = "guest"
@@ -150,9 +180,10 @@ func testAccStepConfig(t *testing.T, uri string) logicaltest.TestStep {
 		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
 		Data: map[string]interface{}{
-			"connection_uri": uri,
-			"username":       username,
-			"password":       password,
+			"connection_uri":  uri,
+			"username":        username,
+			"password":        password,
+			"password_policy": passwordPolicy,
 		},
 	}
 }
@@ -160,7 +191,7 @@ func testAccStepConfig(t *testing.T, uri string) logicaltest.TestStep {
 func testAccStepRole(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "roles/web",
+		Path:      fmt.Sprintf("roles/%s", roleName),
 		Data: map[string]interface{}{
 			"tags":         testTags,
 			"vhosts":       testVHosts,

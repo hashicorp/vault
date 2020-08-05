@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 
 	"github.com/hashicorp/vault/api"
@@ -141,6 +142,20 @@ func leaseCheckWait(s *Secret) time.Duration {
 		}
 	}
 
+	// Handle if this is a secret with a rotation period.  If this is a rotating secret,
+	// the rotating secret's TTL will be the duration to sleep before rendering the new secret.
+	var rotatingSecret bool
+	if _, ok := s.Data["rotation_period"]; ok && s.LeaseID == "" {
+		if ttlInterface, ok := s.Data["ttl"]; ok {
+			if ttlData, err := ttlInterface.(json.Number).Int64(); err == nil {
+				log.Printf("[DEBUG] Found rotation_period and set lease duration to %d seconds", ttlData)
+				// Add a second for cushion
+				base = int(ttlData) + 1
+				rotatingSecret = true
+			}
+		}
+	}
+
 	// Ensure we have a lease duration, since sometimes this can be zero.
 	if base <= 0 {
 		base = int(VaultDefaultLeaseDuration.Seconds())
@@ -156,7 +171,9 @@ func leaseCheckWait(s *Secret) time.Duration {
 
 		// Use some randomness so many clients do not hit Vault simultaneously.
 		sleep = sleep * (rand.Float64() + 1) / 2.0
-	} else {
+	} else if !rotatingSecret {
+		// If the secret doesn't have a rotation period, this is a non-renewable leased
+		// secret.
 		// For non-renewable leases set the renew duration to use much of the secret
 		// lease as possible. Use a stagger over 85%-95% of the lease duration so that
 		// many clients do not hit Vault simultaneously.
@@ -339,8 +356,12 @@ func addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
 		return path.Join(mountPath, apiPrefix)
 	default:
 		p = strings.TrimPrefix(p, mountPath)
-		// Don't add /data to the path if it's been added manually.
-		if strings.HasPrefix(p, apiPrefix) {
+		// Don't add /data/ to the path if it's been added manually.
+		apiPathPrefix := apiPrefix
+		if !strings.HasSuffix(apiPrefix, "/") {
+			apiPathPrefix += "/"
+		}
+		if strings.HasPrefix(p, apiPathPrefix) {
 			return path.Join(mountPath, p)
 		}
 		return path.Join(mountPath, apiPrefix, p)

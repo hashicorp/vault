@@ -35,7 +35,7 @@ After installing Vault, verify the installation worked by opening a new
 terminal session and checking that the `vault` binary is available. By executing
 `vault`, you should see help output similar to the following:
 
-```text
+```shell-session
 $ vault
 Usage: vault <command> [args]
 
@@ -75,7 +75,7 @@ Bash, ZSH or Fish. Unfortunately other shells are not supported at this time.
 
 To install completions, run:
 
-```sh
+```shell-session
 $ vault -autocomplete-install
 ```
 
@@ -83,7 +83,7 @@ This will automatically install the helpers in your `~/.bashrc` or `~/.zshrc`, o
 `~/.config/fish/completions/vault.fish` for Fish users. Then restart your terminal
 or reload your shell:
 
-```sh
+```shell-session
 $ exec $SHELL
 ```
 

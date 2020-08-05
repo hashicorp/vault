@@ -16,9 +16,9 @@
 package ocgrpc
 
 import (
+	"context"
 	"time"
 
-	"context"
 	"go.opencensus.io/tag"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/stats"
@@ -30,7 +30,7 @@ func (h *ClientHandler) statsTagRPC(ctx context.Context, info *stats.RPCTagInfo)
 	startTime := time.Now()
 	if info == nil {
 		if grpclog.V(2) {
-			grpclog.Infof("clientHandler.TagRPC called with nil info.", info.FullMethodName)
+			grpclog.Info("clientHandler.TagRPC called with nil info.")
 		}
 		return ctx
 	}

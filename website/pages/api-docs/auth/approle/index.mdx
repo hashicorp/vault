@@ -25,7 +25,7 @@ This endpoint returns a list the existing AppRoles in the method.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -93,7 +93,7 @@ enabled while creating or updating a role.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -115,7 +115,7 @@ Reads the properties of an existing AppRole.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/approle/role/application1
@@ -158,7 +158,7 @@ Deletes an existing AppRole from the method.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -179,7 +179,7 @@ Reads the RoleID of an existing AppRole.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/auth/approle/role/application1/role-id
@@ -224,7 +224,7 @@ Updates the RoleID of an existing AppRole to a custom value.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -284,7 +284,7 @@ itself, and also to delete the SecretID from the AppRole.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -324,7 +324,7 @@ This includes the accessors for "custom" SecretIDs as well.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
@@ -376,7 +376,7 @@ Reads out the properties of a SecretID.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -407,7 +407,7 @@ Destroy an AppRole secret ID.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -438,7 +438,7 @@ Reads out the properties of a SecretID.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -469,7 +469,7 @@ Destroy an AppRole secret ID by its accessor.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -512,7 +512,7 @@ Assigns a "custom" SecretID against an existing AppRole. This is used in the
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -564,7 +564,7 @@ AppRole (such as client IP CIDR) are also evaluated.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --request POST \
     --data @payload.json \
@@ -626,7 +626,7 @@ storage method so should be used sparingly.
 
 ### Sample Request
 
-```
+```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \

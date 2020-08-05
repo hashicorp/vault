@@ -102,8 +102,7 @@ func (b *backend) installPublicKeyInTarget(ctx context.Context, adminUser, usern
 	rmCmd := fmt.Sprintf("rm -f %s", scriptFileName)
 	targetCmd := fmt.Sprintf("%s;%s;%s", chmodCmd, scriptCmd, rmCmd)
 
-	session.Run(targetCmd)
-	return nil
+	return session.Run(targetCmd)
 }
 
 // Takes an IP address and role name and checks if the IP is part
@@ -155,6 +154,13 @@ func cidrListContainsIP(ip, cidrList string) (bool, error) {
 	return false, nil
 }
 
+func insecureIgnoreHostWarning(logger log.Logger) ssh.HostKeyCallback {
+	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		logger.Warn("cannot verify server key: host key validation disabled")
+		return nil
+	}
+}
+
 func createSSHComm(logger log.Logger, username, ip string, port int, hostkey string) (*comm, error) {
 	signer, err := ssh.ParsePrivateKey([]byte(hostkey))
 	if err != nil {
@@ -166,7 +172,7 @@ func createSSHComm(logger log.Logger, username, ip string, port int, hostkey str
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
 		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: insecureIgnoreHostWarning(logger),
 	}
 
 	connfunc := func() (net.Conn, error) {

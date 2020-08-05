@@ -4,11 +4,13 @@
 `EmptyState` components are used to render a helpful message and any necessary content when a user
 encounters a state that would usually be blank.
 
+**Params**
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
 | title | <code>String</code> | <code></code> | A short label for the empty state |
 | message | <code>String</code> | <code></code> | A description of why a user might be seeing the empty state and possibly instructions for actions they may take. |
+| [icon] | <code>String</code> | <code>&#x27;&#x27;</code> | A optional param to display icon to the right of the title |
 
 **Example**
   
@@ -18,7 +20,7 @@ encounters a state that would usually be blank.
 
 **See**
 
-- [Uses of EmptyState](https://github.com/hashicorp/vault/search?l=Handlebars&q=EmptyState)
-- [EmptyState Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/empty-state.js)
+- [Uses of EmptyState](https://github.com/hashicorp/vault/search?l=Handlebars&q=EmptyState+OR+empty-state)
+- [EmptyState Source Code](https://github.com/hashicorp/vault/blob/master/ui/lib/core/addon/components/empty-state.js)
 
 ---

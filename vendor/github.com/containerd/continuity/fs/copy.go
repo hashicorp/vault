@@ -104,6 +104,10 @@ func copyDirectory(dst, src string, inodes map[uint64]string, o *copyDirOpts) er
 		return errors.Wrapf(err, "failed to copy file info for %s", dst)
 	}
 
+	if err := copyXAttrs(dst, src, o.xeh); err != nil {
+		return errors.Wrap(err, "failed to copy xattrs")
+	}
+
 	for _, fi := range fis {
 		source := filepath.Join(src, fi.Name())
 		target := filepath.Join(dst, fi.Name())
