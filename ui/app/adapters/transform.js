@@ -63,9 +63,10 @@ export default ApplicationAdapter.extend({
     const { id, backend } = query;
     let zeroAddressAjax = resolve();
     const queryAjax = this.ajax(this.urlForTransformations(backend, id), 'GET', this.optionsForQuery(id));
-    if (!id) {
-      zeroAddressAjax = this.findAllZeroAddress(store, query);
-    }
+    // TODO: come back to why you need this, carry over.
+    // if (!id) {
+    //   zeroAddressAjax = this.findAllZeroAddress(store, query);
+    // }
 
     return allSettled([queryAjax, zeroAddressAjax]).then(results => {
       // query result 404d, so throw the adapterError

@@ -55,7 +55,6 @@
 {{else}}
 {{!-- TODO eventually turn this into a component once it's fleshed out --}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    {{log model}}
   {{#each model.transformFieldAttrs as |attr|}}
     {{#if (eq attr.type "object")}}
       {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(stringify (get model attr.name))}}

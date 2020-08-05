@@ -62,6 +62,7 @@ export default DS.Model.extend({
     subText: `A tweak value is used when performing FPE transformations. This can be supplied, generated, or internal.`, // TODO: I do not include the link here.  Need to figure out the best way to approach this.
   }),
   masking_character: attr('string', {
+    defaultValue: '*',
     label: 'Masking character',
     subText: 'Specify which character you’d like to mask your data.',
   }),
