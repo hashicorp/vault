@@ -58,11 +58,52 @@ const SECRET_BACKENDS = {
   // TODO: edit or remove listItemPartial and better understand what's happening here
   transform: {
     displayName: 'Transformation',
-    searchPlaceholder: 'Filter transformations',
-    item: 'transformation',
-    create: 'Create transformation',
-    editComponent: 'transformation-edit',
-    listItemPartial: 'partials/secret-list/item', // TODO: Use transform-specific item template
+    navigateTree: false,
+    listItemPartial: 'partials/secret-list/item',
+    tabs: [
+      {
+        name: 'transformations',
+        label: 'Transformations',
+        searchPlaceholder: 'Filter transformations',
+        item: 'transformation',
+        create: 'Create transformation',
+        editComponent: 'transformation-edit',
+      },
+      // TODO: Add tabs as needed
+      // {
+      //   name: 'roles',
+      //   modelPrefix: 'role/',
+      //   label: 'Roles',
+      //   searchPlaceholder: 'Filter roles',
+      //   item: 'roles',
+      //   create: 'Create role',
+      //   tab: 'role',
+      //   listItemPartial: 'partials/secret-list/item',
+      //   editComponent: 'transform-role-edit',
+      // },
+      // {
+      //   name: 'templates',
+      //   modelPrefix: 'template/',
+      //   label: 'Templates',
+      //   searchPlaceholder: 'Filter templates',
+      //   item: 'templates',
+      //   create: 'Create template',
+      //   tab: 'template',
+      //   listItemPartial: 'partials/secret-list/item',
+      //   editComponent: 'transform-template-edit',
+      // },
+      // {
+      //   name: 'alphabets',
+      //   modelPrefix: 'alphabet/',
+      //   label: 'Alphabets',
+      //   searchPlaceholder: 'Filter alphabets',
+      //   item: 'alphabets',
+      //   create: 'Create alphabet',
+      //   tab: 'alphabet',
+      //   listItemPartial: 'partials/secret-list/item',
+      //   editComponent: 'alphabet-edit',
+      // },
+    ],
   },
   transit: {
     searchPlaceholder: 'Filter keys',
