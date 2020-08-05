@@ -3,6 +3,7 @@
 IMPROVEMENTS:
 
 * auth/jwt: Add support for fetching groups and user information from G Suite during authentication. [[GH-123](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/123)]
+* secrets/openldap: Add "ad" schema that allows the engine to correctly rotate AD passwords.
 
 BUG FIXES:
 
@@ -24,7 +25,6 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-9603](https://github.com/hashicorp/vault/pull/9603)]
-* secrets/openldap: Add "ad" schema that allows the engine to correctly rotate AD passwords.
 
 ## 1.5.0
 ### July 21st, 2020
