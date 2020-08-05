@@ -65,8 +65,7 @@ export default DS.Model.extend({
     label: 'Masking character',
     subText: 'Specify which character you’d like to mask your data.',
   }),
-
-  template: attr('stringArray', {
+  template: attr('string', {
     label: 'Template', // TODO: make this required for making a transformation
     subLabel: 'Template Name',
     subText:
@@ -75,7 +74,7 @@ export default DS.Model.extend({
     fallbackComponent: 'string-list',
     models: ['transform/template'],
   }),
-  allowed_roles: attr('stringArray', {
+  allowed_roles: attr('string', {
     label: 'Allowed roles',
     editType: 'searchSelect',
     fallbackComponent: 'string-list',
