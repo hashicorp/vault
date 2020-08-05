@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-hclog"
@@ -28,7 +29,16 @@ func TestNewServer(t *testing.T) {
 
 func TestServerRun(t *testing.T) {
 	// create http test server
-	ts := httptest.NewServer(http.HandlerFunc(handleRequest))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v1/kv/myapp/config", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, jsonResponse)
+	})
+	mux.HandleFunc("/v1/kv/myapp/config-bad", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(404)
+		fmt.Fprintln(w, `{"errors":[]}`)
+	})
+
+	ts := httptest.NewServer(mux)
 	defer ts.Close()
 	tmpDir, err := ioutil.TempDir("", "agent-tests")
 	defer os.RemoveAll(tmpDir)
@@ -50,6 +60,8 @@ func TestServerRun(t *testing.T) {
 
 	testCases := map[string]struct {
 		templateMap map[string]*templateTest
+		expectError bool
+		timeout     time.Duration
 	}{
 		"simple": {
 			templateMap: map[string]*templateTest{
@@ -59,6 +71,7 @@ func TestServerRun(t *testing.T) {
 					},
 				},
 			},
+			expectError: false,
 		},
 		"multiple": {
 			templateMap: map[string]*templateTest{
@@ -98,6 +111,28 @@ func TestServerRun(t *testing.T) {
 					},
 				},
 			},
+			expectError: false,
+		},
+		// "bad secret": {
+		// 	templateMap: map[string]*templateTest{
+		// 		"render_01": &templateTest{
+		// 			template: &ctconfig.TemplateConfig{
+		// 				Contents: pointerutil.StringPtr(templateContentsBad),
+		// 			},
+		// 		},
+		// 	},
+		// 	expectError: false,
+		// },
+		"bad secret with error_on_missing": {
+			templateMap: map[string]*templateTest{
+				"render_01": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents:      pointerutil.StringPtr(templateContentsBad),
+						ErrMissingKey: pointerutil.BoolPtr(true),
+					},
+				},
+			},
+			expectError: true,
 		},
 	}
 
@@ -127,13 +162,27 @@ func TestServerRun(t *testing.T) {
 			if ts == nil {
 				t.Fatal("nil server returned")
 			}
+			server.testingLimitRetry = true
 
-			go server.Run(ctx, templateTokenCh, templatesToRender)
+			errCh := make(chan error, 1)
+			go server.Run(ctx, templateTokenCh, templatesToRender, errCh)
 
 			// send a dummy value to trigger the internal Runner to query for secret
 			// info
 			templateTokenCh <- "test"
-			<-server.DoneCh
+
+			select {
+			case <-server.DoneCh:
+				if tc.expectError {
+					t.Fatalf("expected error for test case")
+				}
+			case err := <-errCh:
+				if err != nil && !tc.expectError {
+					t.Fatalf("did not expect error, got: %v", err)
+				}
+				t.Logf("received expected error: %v", err)
+				return
+			}
 
 			// verify test file exists and has the content we're looking for
 			var fileCount int
@@ -162,10 +211,6 @@ func TestServerRun(t *testing.T) {
 	}
 }
 
-func handleRequest(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, jsonResponse)
-}
-
 var jsonResponse = `
 {
   "request_id": "8af096e9-518c-7351-eff5-5ba20554b21f",
@@ -192,6 +237,16 @@ var jsonResponse = `
 
 var templateContents = `
 {{ with secret "kv/myapp/config"}}
+{
+{{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
+{{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}
+{{ if .Data.metadata.version}}"version":"{{ .Data.metadata.version }}"{{ end }}
+}
+{{ end }}
+`
+
+var templateContentsBad = `
+{{ with secret "kv/myapp/config-bad"}}
 {
 {{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
 {{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}

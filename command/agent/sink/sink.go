@@ -70,7 +70,7 @@ func NewSinkServer(conf *SinkServerConfig) *SinkServer {
 
 // Run executes the server's run loop, which is responsible for reading
 // in new tokens and pushing them out to the various sinks.
-func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*SinkConfig) {
+func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*SinkConfig, errCh chan error) {
 	latestToken := new(string)
 	writeSink := func(currSink *SinkConfig, currToken string) error {
 		if currToken != *latestToken {
@@ -94,7 +94,10 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 	}
 
 	if incoming == nil {
-		panic("incoming channel is nil")
+		err := errors.New("incoming channel is nil")
+		ss.logger.Info("sink server internal error", "error", err)
+		errCh <- err
+		return
 	}
 
 	ss.logger.Info("starting sink server")

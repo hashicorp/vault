@@ -7,15 +7,17 @@ package template
 
 import (
 	"context"
+	"errors"
 	"io"
 	"strings"
+
+	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	ctlogging "github.com/hashicorp/consul-template/logging"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
-	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
 // ServerConfig is a config struct for setting up the basic parts of the
@@ -50,7 +52,7 @@ type Server struct {
 	// Templates holds the parsed Consul Templates
 	Templates []*ctconfig.TemplateConfig
 
-	// lookupMap is alist of templates indexed by their consul-template ID. This
+	// lookupMap is a list of templates indexed by their consul-template ID. This
 	// is used to ensure all Vault templates have been rendered before returning
 	// from the runner in the event we're using exit after auth.
 	lookupMap map[string][]*ctconfig.TemplateConfig
@@ -58,6 +60,8 @@ type Server struct {
 	DoneCh        chan struct{}
 	logger        hclog.Logger
 	exitAfterAuth bool
+
+	testingLimitRetry bool
 }
 
 // NewServer returns a new configured server
@@ -74,7 +78,14 @@ func NewServer(conf *ServerConfig) *Server {
 // Run kicks off the internal Consul Template runner, and listens for changes to
 // the token from the AuthHandler. If Done() is called on the context, shut down
 // the Runner and return
-func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig) {
+func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig, errCh chan error) {
+	if incoming == nil {
+		err := errors.New("incoming channel is nil")
+		ts.logger.Error("template server internal error", "error", err)
+		errCh <- err
+		return
+	}
+
 	latestToken := new(string)
 	ts.logger.Info("starting template server")
 	// defer the closing of the DoneCh
@@ -83,11 +94,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		close(ts.DoneCh)
 	}()
 
-	if incoming == nil {
-		panic("incoming channel is nil")
-	}
-
-	// If there are no templates, return
+	// If there are no templates, return gracefully
 	if len(templates) == 0 {
 		ts.logger.Info("no templates found")
 		return
@@ -99,6 +106,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	var runnerConfigErr error
 	if runnerConfig, runnerConfigErr = newRunnerConfig(ts.config, templates); runnerConfigErr != nil {
 		ts.logger.Error("template server failed to generate runner config", "error", runnerConfigErr)
+		errCh <- runnerConfigErr
 		return
 	}
 
@@ -106,6 +114,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	ts.runner, err = manager.NewRunner(runnerConfig, false)
 	if err != nil {
 		ts.logger.Error("template server failed to create", "error", err)
+		errCh <- err
 		return
 	}
 
@@ -117,11 +126,16 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	// contents, they will be identified by the same key.
 	idMap := ts.runner.TemplateConfigMapping()
 	lookupMap := make(map[string][]*ctconfig.TemplateConfig, len(idMap))
+	errOnMissingKey := false
 	for id, ctmpls := range idMap {
 		for _, ctmpl := range ctmpls {
 			tl := lookupMap[id]
 			tl = append(tl, ctmpl)
 			lookupMap[id] = tl
+
+			if *ctmpl.ErrMissingKey {
+				errOnMissingKey = true
+			}
 		}
 	}
 	ts.lookupMap = lookupMap
@@ -142,6 +156,14 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 						Token: latestToken,
 					},
 				}
+
+				// If we're testing, limit retries to 3 attempts to avoid
+				// long test runs from exponential back-offs
+				if ts.testingLimitRetry {
+					i := 3
+					ctv.Vault.Retry = &ctconfig.RetryConfig{Attempts: &i}
+				}
+
 				runnerConfig = runnerConfig.Merge(&ctv)
 				var runnerErr error
 				ts.runner, runnerErr = manager.NewRunner(runnerConfig, false)
@@ -154,9 +176,18 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		case err := <-ts.runner.ErrCh:
 			ts.logger.Error("template server error", "error", err.Error())
 			ts.runner.StopImmediately()
+
+			// If any of the templates had `error_on_missing_key` set, we return
+			// immediately.
+			if errOnMissingKey {
+				errCh <- err
+				return
+			}
+
 			ts.runner, err = manager.NewRunner(runnerConfig, false)
 			if err != nil {
 				ts.logger.Error("template server failed to create", "error", err)
+				errCh <- err
 				return
 			}
 			go ts.runner.Start()

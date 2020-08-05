@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"net/http"
 	"time"
@@ -74,9 +75,12 @@ func backoffOrQuit(ctx context.Context, backoff time.Duration) {
 	}
 }
 
-func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
+func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod, errCh chan<- error) {
 	if am == nil {
-		panic("nil auth method")
+		err := errors.New("nil auth method")
+		ah.logger.Error("auth handler internal error", "error", err)
+		errCh <- err
+		return
 	}
 
 	ah.logger.Info("starting auth handler")

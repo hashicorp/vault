@@ -530,6 +530,7 @@ func (c *AgentCommand) Run(args []string) int {
 	// signal.Notify(c.signalCh)
 
 	var ssDoneCh, ahDoneCh, tsDoneCh chan struct{}
+	var errCh chan error
 	// Start auto-auth and sink servers
 	if method != nil {
 		enableTokenCh := len(config.Templates) > 0
@@ -559,9 +560,11 @@ func (c *AgentCommand) Run(args []string) int {
 		})
 		tsDoneCh = ts.DoneCh
 
-		go ah.Run(ctx, method)
-		go ss.Run(ctx, ah.OutputCh, sinks)
-		go ts.Run(ctx, ah.TemplateTokenCh, config.Templates)
+		errCh = make(chan error, 3)
+
+		go ah.Run(ctx, method, errCh)
+		go ss.Run(ctx, ah.OutputCh, sinks, errCh)
+		go ts.Run(ctx, ah.TemplateTokenCh, config.Templates, errCh)
 	}
 
 	// Server configuration output
@@ -593,6 +596,9 @@ func (c *AgentCommand) Run(args []string) int {
 	}()
 
 	select {
+	case err := <-errCh:
+		c.UI.Error(fmt.Sprintf("Error encountered: %s", err))
+		return 1
 	case <-ssDoneCh:
 		// This will happen if we exit-on-auth
 		c.logger.Info("sinks finished, exiting")
