@@ -55,15 +55,6 @@ export default DS.Model.extend({
     subText:
       'Vault provides two types of transformations: Format Preserving Encryption (FPE) is reversible, while Masking is not.',
   }),
-  template: attr('stringArray', {
-    label: 'Template', // TODO: make this required for making a transformation
-    subLabel: 'Template Name',
-    subText:
-      'Templates allow Vault to determine what and how to capture the value to be transformed. Type to use an existing template or create a new one.',
-    editType: 'searchSelect',
-    fallbackComponent: 'string-list',
-    models: ['transform/template'],
-  }),
   tweak_source: attr('string', {
     defaultValue: 'supplied',
     label: 'Tweak source',
@@ -73,6 +64,16 @@ export default DS.Model.extend({
   masking_character: attr('string', {
     label: 'Masking character',
     subText: 'Specify which character you’d like to mask your data.',
+  }),
+
+  template: attr('stringArray', {
+    label: 'Template', // TODO: make this required for making a transformation
+    subLabel: 'Template Name',
+    subText:
+      'Templates allow Vault to determine what and how to capture the value to be transformed. Type to use an existing template or create a new one.',
+    editType: 'searchSelect',
+    fallbackComponent: 'string-list',
+    models: ['transform/template'],
   }),
   allowed_roles: attr('stringArray', {
     label: 'Allowed roles',
@@ -85,9 +86,9 @@ export default DS.Model.extend({
     // TODO: group them into sections/groups.  Right now, we don't different between required and not required as we do by hiding options.
     // will default to design mocks on how to handle as it will likely be a different pattern using client-side validation, which we have not done before
     if (this.type === 'masking') {
-      return ['name', 'type', 'template', 'masking_character', 'allowed_roles'];
+      return ['name', 'type', 'masking_character', 'template', 'allowed_roles'];
     }
-    return ['name', 'type', 'template', 'tweak_source', 'allowed_roles'];
+    return ['name', 'type', 'tweak_source', 'template', 'allowed_roles'];
   }),
   transformFieldAttrs: computed('transformAttrs', function() {
     return expandAttributeMeta(this, this.get('transformAttrs'));
