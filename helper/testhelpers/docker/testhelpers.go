@@ -1,7 +1,10 @@
 package docker
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -35,6 +38,9 @@ type RunOptions struct {
 	CopyFromTo      map[string]string
 	Ports           []string
 	DoNotAutoRemove bool
+	Repository      string
+	AuthUsername    string
+	AuthPassword    string
 }
 
 func NewServiceRunner(opts RunOptions) (*Runner, error) {
@@ -213,7 +219,19 @@ func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, []string, err
 	}
 
 	// best-effort pull
-	resp, _ := d.DockerAPI.ImageCreate(ctx, cfg.Image, types.ImageCreateOptions{})
+	var opts types.ImageCreateOptions
+	if d.RunOptions.AuthUsername != "" && d.RunOptions.AuthPassword != "" {
+		var buf bytes.Buffer
+		auth := map[string]string{
+			"username": d.RunOptions.AuthUsername,
+			"password": d.RunOptions.AuthPassword,
+		}
+		if err := json.NewEncoder(&buf).Encode(auth); err != nil {
+			return nil, nil, err
+		}
+		opts.RegistryAuth = base64.URLEncoding.EncodeToString(buf.Bytes())
+	}
+	resp, _ := d.DockerAPI.ImageCreate(ctx, cfg.Image, opts)
 	if resp != nil {
 		_, _ = ioutil.ReadAll(resp)
 	}

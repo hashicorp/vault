@@ -24,13 +24,16 @@ type Config struct {
 var _ docker.ServiceConfig = &Config{}
 
 func prepareCockroachDBTestContainer(t *testing.T) (func(), *Config) {
-	pool, err := dockertest.NewPool("")
 	if retURL := os.Getenv("CR_URL"); retURL != "" {
 		s, err := docker.NewServiceURLParse(retURL)
 		if err != nil {
 			t.Fatal(err)
 		}
-		return func() {}, &Config{*s, tableName}
+		tableName := os.Getenv("CR_TABLE")
+		if tableName == "" {
+			tableName = defaultTableName
+		}
+		return func() {}, &Config{*s, "vault." + tableName}
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
@@ -75,7 +78,6 @@ func connectCockroachDB(ctx context.Context, host string, port int) (docker.Serv
 	if tableName == "" {
 		tableName = defaultTableName
 	}
-	t.Logf("Table name: %s", tableName)
 
 	return &Config{
 		ServiceURL: *docker.NewServiceURL(u),

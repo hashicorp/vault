@@ -48,20 +48,15 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 		config = `datacenter = "test" acl_default_policy = "deny" acl_datacenter = "test" acl_master_token = "test"`
 	}
 
-	// TODO add support for repo/auth in docker.RunOptions post-merge
-	consulRepo := os.Getenv("CONSUL_DOCKER_REPO")
-	if consulRepo != "" {
-		dockerOptions.Repository = consulRepo
-		dockerOptions.Auth = dc.AuthConfiguration{
-			Username:      os.Getenv("CONSUL_DOCKER_USERNAME"),
-			Password:      os.Getenv("CONSUL_DOCKER_PASSWORD"),
-		}
-	}
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ImageRepo: "consul",
 		ImageTag:  version,
 		Cmd:       []string{"agent", "-dev", "-client", "0.0.0.0", "-hcl", config},
 		Ports:     []string{"8500/tcp"},
+		// TODO auth untested on this branch
+		Repository:   os.Getenv("CONSUL_DOCKER_REPO"),
+		AuthUsername: os.Getenv("CONSUL_DOCKER_USERNAME"),
+		AuthPassword: os.Getenv("CONSUL_DOCKER_PASSWORD"),
 	})
 	if err != nil {
 		t.Fatalf("Could not start docker Consul: %s", err)
