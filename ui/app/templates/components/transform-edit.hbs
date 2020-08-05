@@ -24,25 +24,7 @@
 {{#if (eq mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if (eq model.keyType "otp")}}
-        <ToolbarSecretLink
-          @secret={{model.id}}
-          @mode="credentials"
-          @data-test-backend-credentials=true
-          @replace=true
-        >
-         Generate Credential
-       </ToolbarSecretLink>
-      {{else}}
-        <ToolbarSecretLink
-          @secret={{model.id}}
-          @mode="sign"
-          @data-test-backend-credentials=true
-          @replace=true
-        >
-          Sign Keys
-        </ToolbarSecretLink>
-      {{/if}}
+      {{!-- TODO: update these actions, show delete grey out if not allowed --}}
       {{#if (or model.canUpdate model.canDelete)}}
         <div class="toolbar-separator" />
       {{/if}}
