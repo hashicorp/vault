@@ -8,10 +8,10 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	rabbithole "github.com/michaelklishin/rabbit-hole"
 	"github.com/mitchellh/mapstructure"
 )
@@ -144,7 +144,7 @@ func TestBackend_roleWithPasswordPolicy(t *testing.T) {
 	backendConfig.System.(*logical.StaticSystemView).SetPasswordPolicy("testpolicy", passGen)
 	b, _ := Factory(context.Background(), backendConfig)
 
-	cleanup, uri, _ := prepareRabbitMQTestContainer(t)
+	cleanup, uri := prepareRabbitMQTestContainer(t)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
