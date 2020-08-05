@@ -81,10 +81,13 @@ export default DS.Model.extend({
     models: ['transform/role'],
     subText: 'Search for an existing role, type a new role to create it, or use a wildcard (*).',
   }),
-  transformAttrs: computed(function() {
+  transformAttrs: computed('type', function() {
     // TODO: group them into sections/groups.  Right now, we don't different between required and not required as we do by hiding options.
     // will default to design mocks on how to handle as it will likely be a different pattern using client-side validation, which we have not done before
-    return ['name', 'type', 'template', 'tweak_source', 'masking_characters', 'allowed_roles'];
+    if (this.type === 'masking') {
+      return ['name', 'type', 'template', 'masking_character', 'allowed_roles'];
+    }
+    return ['name', 'type', 'template', 'tweak_source', 'allowed_roles'];
   }),
   transformFieldAttrs: computed('transformAttrs', function() {
     return expandAttributeMeta(this, this.get('transformAttrs'));

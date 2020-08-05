@@ -10,7 +10,7 @@
         @model={{model}}
       />
     {{/each}}
-    <FormFieldGroups @model={{model}} @mode="create" />
+    {{!-- <FormFieldGroups @model={{model}} @mode="create" /> --}}
   </div>
   <div class="field is-grouped-split box is-fullwidth is-bottomless">
     <div class="control">
@@ -21,7 +21,7 @@
         data-test-role-ssh-create=true
       >
         {{#if (eq mode 'create')}}
-          Create role
+          Create transformation
         {{else if (eq mode 'edit')}}
           Save
         {{/if}}
