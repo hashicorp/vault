@@ -201,7 +201,8 @@ RELEASER_DIR   := $(REPO_ROOT)/../packagespec-release
 RELEASER_CLONE := NO
 RELEASER_PULL  := NO
 ifeq ($(shell if [ -d $(RELEASER_DIR) ]; then echo OK; else echo NO; fi),NO)
-RELEASER_DIR   := $(REPO_ROOT)/.releaser
+RELEASER_GITIGNORE   := $(REPO_ROOT)/.tmp/.gitignore
+RELEASER_DIR   := $(REPO_ROOT)/.tmp/.releaser
 RELEASER_CLONE := YES
 RELEASER_PULL  := YES
 endif
@@ -230,6 +231,8 @@ define INVOKE_RELEASER_TARGET
 		[ $(RELEASER_CLONE) = YES ] || { \
 			echo "You must clone $(RELEASER_REPO) into $(RELEASER_DIR)"; exit 1; \
 		}; \
+		mkdir -p $(RELEASER_DIR); \
+		echo "*" > "$(RELEASER_GITIGNORE)"; \
 		echo "==> Attempting to clone $(RELEASER_REPO) into $(RELEASER_DIR)"; \
 		echo "==> NOTE: The above repo is only available to HashiCorp employees at this time."; \
 		mkdir -p $(RELEASER_DIR); \
