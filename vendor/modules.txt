@@ -204,7 +204,7 @@ github.com/cloudfoundry-community/go-cfclient
 github.com/cockroachdb/cockroach-go/crdb
 # github.com/containerd/containerd v1.3.4
 github.com/containerd/containerd/errdefs
-# github.com/containerd/continuity v0.0.0-20200709052629-daa8e1ccc0bc
+# github.com/containerd/continuity v0.0.0-20200710164510-efbc4488d8fe
 github.com/containerd/continuity/fs
 github.com/containerd/continuity/pathdriver
 github.com/containerd/continuity/sysx
@@ -214,6 +214,14 @@ github.com/coreos/go-oidc
 github.com/coreos/go-semver/semver
 # github.com/coreos/go-systemd/v22 v22.0.0
 github.com/coreos/go-systemd/v22/journal
+# github.com/couchbase/gocb/v2 v2.1.4
+github.com/couchbase/gocb/v2
+github.com/couchbase/gocb/v2/search
+# github.com/couchbase/gocbcore/v9 v9.0.4
+github.com/couchbase/gocbcore/v9
+github.com/couchbase/gocbcore/v9/connstr
+github.com/couchbase/gocbcore/v9/memd
+github.com/couchbase/gocbcore/v9/scram
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
 # github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
@@ -416,7 +424,7 @@ github.com/hashicorp/go-sockaddr/template
 github.com/hashicorp/go-syslog
 # github.com/hashicorp/go-uuid v1.0.2
 github.com/hashicorp/go-uuid
-# github.com/hashicorp/go-version v1.2.0
+# github.com/hashicorp/go-version v1.2.1
 github.com/hashicorp/go-version
 # github.com/hashicorp/golang-lru v0.5.3
 github.com/hashicorp/golang-lru
@@ -468,6 +476,8 @@ github.com/hashicorp/vault-plugin-auth-kerberos
 github.com/hashicorp/vault-plugin-auth-kubernetes
 # github.com/hashicorp/vault-plugin-auth-oci v0.5.5
 github.com/hashicorp/vault-plugin-auth-oci
+# github.com/hashicorp/vault-plugin-database-couchbase v0.0.0-20200805092232-1e9019956cd2
+github.com/hashicorp/vault-plugin-database-couchbase
 # github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4
 github.com/hashicorp/vault-plugin-database-elasticsearch
 # github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2
@@ -639,13 +649,13 @@ github.com/keybase/go-crypto/openpgp/errors
 github.com/keybase/go-crypto/openpgp/packet
 github.com/keybase/go-crypto/openpgp/s2k
 github.com/keybase/go-crypto/rsa
-# github.com/konsorten/go-windows-terminal-sequences v1.0.1
+# github.com/konsorten/go-windows-terminal-sequences v1.0.3
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/kr/pretty v0.2.0
 github.com/kr/pretty
 # github.com/kr/text v0.2.0
 github.com/kr/text
-# github.com/lib/pq v1.2.0
+# github.com/lib/pq v1.8.0
 github.com/lib/pq
 github.com/lib/pq/oid
 github.com/lib/pq/scram
@@ -675,7 +685,7 @@ github.com/mitchellh/gox
 github.com/mitchellh/hashstructure
 # github.com/mitchellh/iochan v1.0.0
 github.com/mitchellh/iochan
-# github.com/mitchellh/mapstructure v1.3.2
+# github.com/mitchellh/mapstructure v1.3.3
 github.com/mitchellh/mapstructure
 # github.com/mitchellh/pointerstructure v1.0.0
 github.com/mitchellh/pointerstructure
@@ -803,7 +813,7 @@ github.com/shirou/gopsutil/internal/common
 github.com/shirou/gopsutil/mem
 github.com/shirou/gopsutil/net
 github.com/shirou/gopsutil/process
-# github.com/sirupsen/logrus v1.4.2
+# github.com/sirupsen/logrus v1.6.0
 github.com/sirupsen/logrus
 # github.com/stretchr/testify v1.5.1
 github.com/stretchr/testify/assert
