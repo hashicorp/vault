@@ -3,9 +3,10 @@ TEST?=$$(go list ./... | grep -v /vendor/ | grep -v teamcity)
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 BUILD_TAGS?=${TOOL}
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
+GO_TEST_CMD?=go test -v
 
 # bin generates the releaseable binaries for this plugin
-bin: fmtcheck generate
+bin: fmtcheck
 	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' sh -c "'$(CURDIR)/scripts/build.sh'"
 
 default: dev
@@ -13,14 +14,17 @@ default: dev
 # dev starts up `vault` from your $PATH, then builds the couchbase
 # plugin, registers it with vault and enables it.
 # A ./tmp dir is created for configs and binaries, and cleaned up on exit.
-dev: fmtcheck generate
+dev: fmtcheck
 	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # test runs the unit tests and vets the code
-test: fmtcheck generate
-	CGO_ENABLED=0 VAULT_TOKEN= VAULT_ACC= go test -v -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -count=1 -timeout=20m -parallel=4
+test: fmtcheck
+	CGO_ENABLED=0 VAULT_TOKEN= ${GO_TEST_CMD} -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -count=1 -timeout=5m -parallel=4
 
-testcompile: fmtcheck generate
+testacc: fmtcheck
+	CGO_ENABLED=0 VAULT_TOKEN= VAULT_ACC=1 ${GO_TEST_CMD} -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -count=1 -timeout=20m
+
+testcompile: fmtcheck
 	@for pkg in $(TEST) ; do \
 		go test -v -c -tags='$(BUILD_TAGS)' $$pkg ; \
 	done
