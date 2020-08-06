@@ -188,10 +188,16 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 		require.NotZero(t, numFail)
 	}
 
-	// allow enough time for all blocked clients to be purged
-	time.Sleep(rlq.purgeInterval * 2)
-
-	for addr := range results {
-		require.False(t, rlq.hasBlockedClient(addr), "expected blocked client to be purged")
-	}
+	func() {
+		for {
+			select {
+			case <-time.After(rlq.purgeInterval):
+				require.Failf(t, "timeout exceeded waiting for blocked clients to be purged", "num blocked: %d", rlq.numBlockedClient())
+			case <-time.Tick(time.Second):
+				if rlq.numBlockedClient() == 0 {
+					return
+				}
+			}
+		}
+	}()
 }

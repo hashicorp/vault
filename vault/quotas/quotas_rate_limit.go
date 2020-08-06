@@ -220,11 +220,10 @@ func (rlq *RateLimitQuota) getPurgeBlocked() bool {
 	return rlq.purgeBlocked
 }
 
-func (rlq *RateLimitQuota) hasBlockedClient(addr string) bool {
+func (rlq *RateLimitQuota) numBlockedClient() int {
 	rlq.lock.RLock()
 	defer rlq.lock.RUnlock()
-	_, ok := rlq.blockedClients[addr]
-	return ok
+	return len(rlq.blockedClients)
 }
 
 // quotaID returns the identifier of the quota rule
