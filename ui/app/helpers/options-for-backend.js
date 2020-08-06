@@ -62,7 +62,7 @@ const SECRET_BACKENDS = {
     item: 'transform',
     create: 'Create Transformation',
     editComponent: 'transform-edit',
-    listItemPartial: 'partials/secret-list/ssh-role-item',
+    listItemPartial: 'partials/secret-list/transform-transformations-item',
   },
   transit: {
     searchPlaceholder: 'Filter keys',
