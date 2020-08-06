@@ -73,10 +73,10 @@ type RateLimitQuota struct {
 	// Interval defines the duration to which rate limiting is applied.
 	Interval time.Duration `json:"interval"`
 
-	// Block defines the duration during which all requests are blocked for a given
-	// client. This interval is enforced only if non-zero and a client reaches the
-	// rate limit.
-	Block time.Duration `json:"block"`
+	// BlockInterval defines the duration during which all requests are blocked for
+	// a given client. This interval is enforced only if non-zero and a client
+	// reaches the rate limit.
+	BlockInterval time.Duration `json:"block_interval"`
 
 	lock                *sync.RWMutex
 	store               limiter.Store
@@ -102,7 +102,7 @@ func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, interval, b
 		MountPath:     mountPath,
 		Rate:          rate,
 		Interval:      interval,
-		Block:         block,
+		BlockInterval: block,
 		purgeInterval: DefaultRateLimitPurgeInterval,
 		staleAge:      DefaultRateLimitStaleAge,
 	}
@@ -130,11 +130,11 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 	}
 
 	if rlq.Rate <= 0 {
-		return fmt.Errorf("invalid 'rate': %v", rlq.Rate)
+		return fmt.Errorf("invalid rate: %v", rlq.Rate)
 	}
 
-	if rlq.Block < 0 {
-		return fmt.Errorf("invalid 'block': %v", rlq.Block)
+	if rlq.BlockInterval < 0 {
+		return fmt.Errorf("invalid block interval: %v", rlq.BlockInterval)
 	}
 
 	if logger != nil {
@@ -167,7 +167,7 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 	rlq.store = rlStore
 	rlq.blockedClients = make(map[string]time.Time)
 
-	if rlq.Block > 0 && !rlq.purgeBlocked {
+	if rlq.BlockInterval > 0 && !rlq.purgeBlocked {
 		rlq.purgeBlocked = true
 		rlq.closePurgeBlockedCh = make(chan struct{})
 		go rlq.purgeBlockedClients()
@@ -195,7 +195,7 @@ func (rlq *RateLimitQuota) purgeBlockedClients() {
 			rlq.lock.Lock()
 
 			for client, blockedAt := range rlq.blockedClients {
-				if t.Sub(blockedAt) >= rlq.Block {
+				if t.Sub(blockedAt) >= rlq.BlockInterval {
 					delete(rlq.blockedClients, client)
 				}
 			}
@@ -274,13 +274,13 @@ func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
 	// a client may no longer be considered blocked whereas the purging interval
 	// has yet to run.
 	if blockedAt, ok := rlq.blockedClients[req.ClientAddress]; ok {
-		if time.Since(blockedAt) >= rlq.Block {
+		if time.Since(blockedAt) >= rlq.BlockInterval {
 			// allow the request and remove the blocked client
 			delete(rlq.blockedClients, req.ClientAddress)
 		} else {
 			// deny the request and return early
 			resp.Allowed = false
-			retryAfter = blockedAt.Add(rlq.Block).UTC().Format(time.RFC1123)
+			retryAfter = blockedAt.Add(rlq.BlockInterval).UTC().Format(time.RFC1123)
 			return resp, nil
 		}
 	}
@@ -296,7 +296,7 @@ func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
 	// is enabled, we add the client to the set of blocked clients.
 	if !resp.Allowed && rlq.purgeBlocked {
 		blockedAt := time.Now()
-		retryAfter = blockedAt.Add(rlq.Block).UTC().Format(time.RFC1123)
+		retryAfter = blockedAt.Add(rlq.BlockInterval).UTC().Format(time.RFC1123)
 		rlq.blockedClients[req.ClientAddress] = blockedAt
 	}
 

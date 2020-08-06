@@ -127,7 +127,7 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 		NamespacePath: "qa",
 		MountPath:     "/foo/bar",
 		Rate:          16.7,
-		Block:         10 * time.Second,
+		BlockInterval: 10 * time.Second,
 
 		// override values to lower durations for testing purposes
 		purgeInterval: 10 * time.Second,
