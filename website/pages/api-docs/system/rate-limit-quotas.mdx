@@ -99,9 +99,8 @@ $ curl \
   "lease_duration": 0,
   "renewable": false,
   "data": {
-    // TODO: Ensure the response here is valid
-    "interval": "2m0s",
-    "block": "5m",
+    "block": 300,
+    "interval": 2,
     "name": "global-rate-limiter",
     "path": "",
     "rate": 897.3,
