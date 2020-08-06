@@ -39,7 +39,6 @@ export default DS.Model.extend({
   // TODO: for now, commenting out openApi info, but keeping here just in case we end up using it.
   // useOpenAPI: true,
   // getHelpUrl: function(backend) {
-  //   console.log(backend, 'Backend');
   //   return `/v1/${backend}?help=1`;
   // },
   name: attr('string', {
@@ -67,14 +66,15 @@ export default DS.Model.extend({
     subText: 'Specify which character you’d like to mask your data.',
   }),
   template: attr('string', {
+    editType: 'searchSelect',
+    fallbackComponent: 'string-list',
     label: 'Template', // TODO: make this required for making a transformation
+    models: ['transform/template'],
     subLabel: 'Template Name',
     subText:
       'Templates allow Vault to determine what and how to capture the value to be transformed. Type to use an existing template or create a new one.',
-    editType: 'searchSelect',
-    fallbackComponent: 'string-list',
-    models: ['transform/template'],
   }),
+  templates: attr('array'), // TODO: remove once BE changes the returned property to a singular template on the GET request.
   allowed_roles: attr('string', {
     label: 'Allowed roles',
     editType: 'searchSelect',
@@ -86,9 +86,9 @@ export default DS.Model.extend({
     // TODO: group them into sections/groups.  Right now, we don't different between required and not required as we do by hiding options.
     // will default to design mocks on how to handle as it will likely be a different pattern using client-side validation, which we have not done before
     if (this.type === 'masking') {
-      return ['name', 'type', 'masking_character', 'template', 'allowed_roles'];
+      return ['name', 'type', 'masking_character', 'template', 'templates', 'allowed_roles'];
     }
-    return ['name', 'type', 'tweak_source', 'template', 'allowed_roles'];
+    return ['name', 'type', 'tweak_source', 'template', 'templates', 'allowed_roles'];
   }),
   transformFieldAttrs: computed('transformAttrs', function() {
     return expandAttributeMeta(this, this.get('transformAttrs'));
