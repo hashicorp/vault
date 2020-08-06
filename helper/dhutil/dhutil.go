@@ -37,7 +37,7 @@ func GeneratePublicPrivateKey() ([]byte, []byte, error) {
 	return public[:], scalar[:], nil
 }
 
-// generateSharedKey uses the private key and the other party's public key to
+// GenerateSharedSecret uses the private key and the other party's public key to
 // generate the shared secret.
 func GenerateSharedSecret(ourPrivate, theirPublic []byte) ([]byte, error) {
 	if len(ourPrivate) != 32 {
@@ -72,12 +72,12 @@ func DeriveSharedKey(secret, ourPublic, theirPublic []byte) ([]byte, error) {
 
 	var key [32]byte
 	n, err := io.ReadFull(kio, key[:])
-	if n != 32 {
-		return nil, errors.New("short read from hkdf")
-	}
 	if err != nil {
 		// Don't return the key along with the error to prevent misuse
 		return nil, err
+	}
+	if n != 32 {
+		return nil, errors.New("short read from hkdf")
 	}
 	return key[:], nil
 }
