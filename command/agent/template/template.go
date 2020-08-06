@@ -126,16 +126,11 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	// contents, they will be identified by the same key.
 	idMap := ts.runner.TemplateConfigMapping()
 	lookupMap := make(map[string][]*ctconfig.TemplateConfig, len(idMap))
-	errOnMissingKey := false
 	for id, ctmpls := range idMap {
 		for _, ctmpl := range ctmpls {
 			tl := lookupMap[id]
 			tl = append(tl, ctmpl)
 			lookupMap[id] = tl
-
-			if *ctmpl.ErrMissingKey {
-				errOnMissingKey = true
-			}
 		}
 	}
 	ts.lookupMap = lookupMap
@@ -173,24 +168,13 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				}
 				go ts.runner.Start()
 			}
+
 		case err := <-ts.runner.ErrCh:
 			ts.logger.Error("template server error", "error", err.Error())
 			ts.runner.StopImmediately()
+			errCh <- err
+			return
 
-			// If any of the templates had `error_on_missing_key` set, we return
-			// immediately.
-			if errOnMissingKey {
-				errCh <- err
-				return
-			}
-
-			ts.runner, err = manager.NewRunner(runnerConfig, false)
-			if err != nil {
-				ts.logger.Error("template server failed to create", "error", err)
-				errCh <- err
-				return
-			}
-			go ts.runner.Start()
 		case <-ts.runner.TemplateRenderedCh():
 			// A template has been rendered, figure out what to do
 			events := ts.runner.RenderEvents()

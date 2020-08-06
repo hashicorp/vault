@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
-	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-hclog"
@@ -61,7 +60,6 @@ func TestServerRun(t *testing.T) {
 	testCases := map[string]struct {
 		templateMap map[string]*templateTest
 		expectError bool
-		timeout     time.Duration
 	}{
 		"simple": {
 			templateMap: map[string]*templateTest{
@@ -113,21 +111,21 @@ func TestServerRun(t *testing.T) {
 			},
 			expectError: false,
 		},
-		// "bad secret": {
-		// 	templateMap: map[string]*templateTest{
-		// 		"render_01": &templateTest{
-		// 			template: &ctconfig.TemplateConfig{
-		// 				Contents: pointerutil.StringPtr(templateContentsBad),
-		// 			},
-		// 		},
-		// 	},
-		// 	expectError: false,
-		// },
-		"bad secret with error_on_missing": {
+		"bad secret": {
 			templateMap: map[string]*templateTest{
 				"render_01": &templateTest{
 					template: &ctconfig.TemplateConfig{
-						Contents:      pointerutil.StringPtr(templateContentsBad),
+						Contents: pointerutil.StringPtr(templateContentsBad),
+					},
+				},
+			},
+			expectError: true,
+		},
+		"missing key": {
+			templateMap: map[string]*templateTest{
+				"render_01": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents:      pointerutil.StringPtr(templateContentsMissingKey),
 						ErrMissingKey: pointerutil.BoolPtr(true),
 					},
 				},
@@ -241,6 +239,14 @@ var templateContents = `
 {{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
 {{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}
 {{ if .Data.metadata.version}}"version":"{{ .Data.metadata.version }}"{{ end }}
+}
+{{ end }}
+`
+
+var templateContentsMissingKey = `
+{{ with secret "kv/myapp/config"}}
+{
+{{ if .Data.data.foo}}"foo":"{{ .Data.data.foo}}"{{ end }}
 }
 {{ end }}
 `
