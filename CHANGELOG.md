@@ -57,6 +57,7 @@ FEATURES:
 * **Integrated Storage as HA Storage**: In Vault 1.5, it is possible to use Integrated Storage as HA Storage with a different storage backend as regular storage.
 * **OIDC Auth Provider Extensions**: We've added support to OIDC Auth to incorporate IdP-specific extensions. Currently this includes expanded Azure AD groups support.
 * **GCP Secrets**: Support BigQuery dataset ACLs in absence of IAM endpoints.
+* **KMIP**: Add support for signing client certificates requests (CSRs) rather than having them be generated entirely within Vault.
 
 IMPROVEMENTS:
 
