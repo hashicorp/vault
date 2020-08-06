@@ -195,7 +195,7 @@ func (rlq *RateLimitQuota) purgeBlockedClients() {
 			rlq.lock.Lock()
 
 			for client, blockedAt := range rlq.blockedClients {
-				if t.UTC().Sub(blockedAt) >= rlq.Block {
+				if t.Sub(blockedAt) >= rlq.Block {
 					delete(rlq.blockedClients, client)
 				}
 			}
@@ -212,6 +212,19 @@ func (rlq *RateLimitQuota) purgeBlockedClients() {
 			return
 		}
 	}
+}
+
+func (rlq *RateLimitQuota) getPurgeBlocked() bool {
+	rlq.lock.RLock()
+	defer rlq.lock.RUnlock()
+	return rlq.purgeBlocked
+}
+
+func (rlq *RateLimitQuota) hasBlockedClient(addr string) bool {
+	rlq.lock.RLock()
+	defer rlq.lock.RUnlock()
+	_, ok := rlq.blockedClients[addr]
+	return ok
 }
 
 // quotaID returns the identifier of the quota rule
@@ -267,7 +280,7 @@ func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
 		} else {
 			// deny the request and return early
 			resp.Allowed = false
-			retryAfter = blockedAt.Add(rlq.Block).Format(time.RFC1123)
+			retryAfter = blockedAt.Add(rlq.Block).UTC().Format(time.RFC1123)
 			return resp, nil
 		}
 	}
@@ -278,6 +291,12 @@ func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
 	resp.Headers[httplimit.HeaderRateLimitRemaining] = strconv.FormatUint(remaining, 10)
 	resp.Headers[httplimit.HeaderRateLimitReset] = time.Unix(0, int64(reset)).UTC().Format(time.RFC1123)
 	retryAfter = resp.Headers[httplimit.HeaderRateLimitReset]
+
+	// If the request is not allowed (i.e. rate limit threshold reached) and blocking
+	// is enabled, we add the client to the set of blocked clients.
+	if !resp.Allowed && rlq.purgeBlocked {
+		rlq.blockedClients[req.ClientAddress] = time.Now()
+	}
 
 	return resp, nil
 }

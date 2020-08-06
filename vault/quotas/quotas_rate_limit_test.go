@@ -14,6 +14,11 @@ import (
 	"go.uber.org/atomic"
 )
 
+type clientResult struct {
+	atomicNumAllow *atomic.Int32
+	atomicNumFail  *atomic.Int32
+}
+
 func TestNewRateLimitQuota(t *testing.T) {
 	testCases := []struct {
 		name      string
@@ -34,9 +39,12 @@ func TestNewRateLimitQuota(t *testing.T) {
 }
 
 func TestRateLimitQuota_Close(t *testing.T) {
-	rlq := NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", 16.7, time.Second, 0)
+	rlq := NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", 16.7, time.Second, time.Minute)
 	require.NoError(t, rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()))
 	require.NoError(t, rlq.close())
+
+	time.Sleep(time.Second) // allow enough time for purgeClientsLoop to receive on closeCh
+	require.False(t, rlq.getPurgeBlocked(), "expected blocked client purging to be disabled after explicit close")
 }
 
 func TestRateLimitQuota_Allow(t *testing.T) {
@@ -55,11 +63,6 @@ func TestRateLimitQuota_Allow(t *testing.T) {
 	require.NoError(t, rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()))
 
 	var wg sync.WaitGroup
-
-	type clientResult struct {
-		atomicNumAllow *atomic.Int32
-		atomicNumFail  *atomic.Int32
-	}
 
 	reqFunc := func(addr string, atomicNumAllow, atomicNumFail *atomic.Int32) {
 		defer wg.Done()
@@ -80,8 +83,8 @@ func TestRateLimitQuota_Allow(t *testing.T) {
 
 	start := time.Now()
 	end := start.Add(5 * time.Second)
-	for time.Now().Before(end) {
 
+	for time.Now().Before(end) {
 		for i := 0; i < 5; i++ {
 			wg.Add(1)
 
@@ -114,5 +117,81 @@ func TestRateLimitQuota_Allow(t *testing.T) {
 		// ensure that we should never get more requests than allowed for the namespace
 		want := int32(ideal + 1)
 		require.Falsef(t, numAllow > want, "too many successful requests; addr: %s, want: %d, numSuccess: %d, numFail: %d, elapsed: %d", addr, want, numAllow, numFail, elapsed)
+	}
+}
+
+func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
+	rlq := &RateLimitQuota{
+		Name:          "test-rate-limiter",
+		Type:          TypeRateLimit,
+		NamespacePath: "qa",
+		MountPath:     "/foo/bar",
+		Rate:          16.7,
+		Block:         10 * time.Second,
+
+		// override values to lower durations for testing purposes
+		purgeInterval: 10 * time.Second,
+		staleAge:      10 * time.Second,
+	}
+
+	require.NoError(t, rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()))
+	require.True(t, rlq.getPurgeBlocked())
+
+	var wg sync.WaitGroup
+
+	reqFunc := func(addr string, atomicNumAllow, atomicNumFail *atomic.Int32) {
+		defer wg.Done()
+
+		resp, err := rlq.allow(&Request{ClientAddress: addr})
+		if err != nil {
+			return
+		}
+
+		if resp.Allowed {
+			atomicNumAllow.Add(1)
+		} else {
+			atomicNumFail.Add(1)
+		}
+	}
+
+	results := make(map[string]*clientResult)
+
+	start := time.Now()
+	end := start.Add(5 * time.Second)
+
+	for time.Now().Before(end) {
+		for i := 0; i < 5; i++ {
+			wg.Add(1)
+
+			addr := fmt.Sprintf("127.0.0.%d", i)
+			cr, ok := results[addr]
+			if !ok {
+				results[addr] = &clientResult{atomicNumAllow: atomic.NewInt32(0), atomicNumFail: atomic.NewInt32(0)}
+				cr = results[addr]
+			}
+
+			go reqFunc(addr, cr.atomicNumAllow, cr.atomicNumFail)
+
+			time.Sleep(2 * time.Millisecond)
+		}
+	}
+
+	wg.Wait()
+
+	for _, cr := range results {
+		numAllow := cr.atomicNumAllow.Load()
+		numFail := cr.atomicNumFail.Load()
+
+		// Since blocking is enabled, each client should only have 'rate' successful
+		// requests, whereas all subsequent requests fail.
+		require.Equal(t, int32(17), numAllow)
+		require.NotZero(t, numFail)
+	}
+
+	// allow enough time for all blocked clients to be purged
+	time.Sleep(rlq.purgeInterval * 2)
+
+	for addr := range results {
+		require.False(t, rlq.hasBlockedClient(addr), "expected blocked client to be purged")
 	}
 }
