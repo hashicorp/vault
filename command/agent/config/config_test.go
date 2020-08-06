@@ -143,6 +143,7 @@ func TestLoadConfigFile(t *testing.T) {
 					DHType:  "curve25519",
 					DHPath:  "/tmp/file-foo-dhpath2",
 					AAD:     "aad",
+					DeriveKey: true,
 					Config: map[string]interface{}{
 						"path": "/tmp/file-bar",
 					},
@@ -531,6 +532,7 @@ func TestLoadConfigFile_Template(t *testing.T) {
 							DHType: "curve25519",
 							DHPath: "/tmp/file-foo-dhpath",
 							AAD:    "foobar",
+							DeriveKey: true,
 							Config: map[string]interface{}{
 								"path": "/tmp/file-foo",
 							},

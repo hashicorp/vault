@@ -186,7 +186,11 @@ func testCertWithNameEndToEnd(t *testing.T, ahWrapping bool) {
 					continue
 				}
 
-				aesKey, err := dhutil.GenerateSharedKey(pri, pub, resp.Curve25519PublicKey)
+				shared, err := dhutil.GenerateSharedSecret(pri, resp.Curve25519PublicKey)
+				if err != nil {
+					t.Fatal(err)
+				}
+				aesKey, err := dhutil.DeriveSharedKey(shared, pub, resp.Curve25519PublicKey)
 				if err != nil {
 					t.Fatal(err)
 				}

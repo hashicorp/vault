@@ -39,7 +39,7 @@ func GeneratePublicPrivateKey() ([]byte, []byte, error) {
 
 // generateSharedKey uses the private key and the other party's public key to
 // generate the shared secret.
-func GenerateSharedKey(ourPrivate, ourPublic, theirPublic []byte) ([]byte, error) {
+func GenerateSharedSecret(ourPrivate, theirPublic []byte) ([]byte, error) {
 	if len(ourPrivate) != 32 {
 		return nil, fmt.Errorf("invalid private key length: %d", len(ourPrivate))
 	}
@@ -47,11 +47,11 @@ func GenerateSharedKey(ourPrivate, ourPublic, theirPublic []byte) ([]byte, error
 		return nil, fmt.Errorf("invalid public key length: %d", len(theirPublic))
 	}
 
-	secret, err := curve25519.X25519(ourPrivate, theirPublic)
-	if err != nil {
-		return nil, err
-	}
+	return curve25519.X25519(ourPrivate, theirPublic)
+}
 
+// DeriveSharedKey uses HKDF to derive a key from a shared secret and public keys
+func DeriveSharedKey(secret, ourPublic, theirPublic []byte) ([]byte, error) {
 	// Derive the final key from the HKDF of the secret and public keys.
 
 	//These must be consistently ordered we're on "our" side of key negotiation or the other.

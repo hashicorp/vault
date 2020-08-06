@@ -155,6 +155,11 @@ These configuration values are common to all Sinks:
   agent should read the client's initial parameters (e.g. curve25519 public
   key).
 
+- `derive_key` `(bool: false)` - If specified, the final encryption key is
+  calculated by using HKDF-SHA256 to derive a key from the calculated shared
+  secret and the two public keys for enhanced security.  This is recommended
+  if backward compatibility isn't a concern.
+
 - `aad` `(string: optional)` - If specified, additional authenticated data to
   use with the AES-GCM encryption of the token. Can be any string, including
   serialized data.
