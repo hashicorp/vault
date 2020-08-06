@@ -112,9 +112,14 @@ func TestCFEndToEnd(t *testing.T) {
 	}
 
 	ah := auth.NewAuthHandler(ahConfig)
-	go ah.Run(ctx, am)
+	errCh := make(chan error, 2)
+	go ah.Run(ctx, am, errCh)
 	defer func() {
-		<-ah.DoneCh
+		select {
+		case <-ah.DoneCh:
+		case err := <-errCh:
+			t.Fatal(err)
+		}
 	}()
 
 	tmpFile, err := ioutil.TempFile("", "auth.tokensink.test.")
@@ -144,9 +149,13 @@ func TestCFEndToEnd(t *testing.T) {
 		Logger: logger.Named("sink.server"),
 		Client: client,
 	})
-	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}, errCh)
 	defer func() {
-		<-ss.DoneCh
+		select {
+		case <-ss.DoneCh:
+		case err := <-errCh:
+			t.Fatal(err)
+		}
 	}()
 
 	if stat, err := os.Lstat(tokenSinkFileName); err == nil {

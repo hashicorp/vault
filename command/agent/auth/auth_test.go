@@ -79,7 +79,8 @@ func TestAuthHandler(t *testing.T) {
 	})
 
 	am := newUserpassTestMethod(t, client)
-	go ah.Run(ctx, am)
+	errCh := make(chan error, 1)
+	go ah.Run(ctx, am, errCh)
 
 	// Consume tokens so we don't block
 	stopTime := time.Now().Add(5 * time.Second)
@@ -87,6 +88,8 @@ func TestAuthHandler(t *testing.T) {
 consumption:
 	for {
 		select {
+		case err := <-errCh:
+			t.Fatal(err)
 		case <-ah.OutputCh:
 		case <-ah.TemplateTokenCh:
 		// Nothing

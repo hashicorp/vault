@@ -124,9 +124,14 @@ func testCertWithNoNAmeEndToEnd(t *testing.T, ahWrapping bool) {
 		ahConfig.WrapTTL = 10 * time.Second
 	}
 	ah := auth.NewAuthHandler(ahConfig)
-	go ah.Run(ctx, am)
+	errCh := make(chan error, 2)
+	go ah.Run(ctx, am, errCh)
 	defer func() {
-		<-ah.DoneCh
+		select {
+		case <-ah.DoneCh:
+		case err := <-errCh:
+			t.Fatal(err)
+		}
 	}()
 
 	config := &sink.SinkConfig{
@@ -151,9 +156,13 @@ func testCertWithNoNAmeEndToEnd(t *testing.T, ahWrapping bool) {
 		Logger: logger.Named("sink.server"),
 		Client: client,
 	})
-	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}, errCh)
 	defer func() {
-		<-ss.DoneCh
+		select {
+		case <-ss.DoneCh:
+		case err := <-errCh:
+			t.Fatal(err)
+		}
 	}()
 
 	// This has to be after the other defers so it happens first

@@ -33,7 +33,8 @@ func TestSinkServer(t *testing.T) {
 	uuidStr, _ := uuid.GenerateUUID()
 	in := make(chan string)
 	sinks := []*sink.SinkConfig{fs1, fs2}
-	go ss.Run(ctx, in, sinks)
+	errCh := make(chan error, 1)
+	go ss.Run(ctx, in, sinks, errCh)
 
 	// Seed a token
 	in <- uuidStr
@@ -43,7 +44,11 @@ func TestSinkServer(t *testing.T) {
 
 	// Tell it to shut down and give it time to do so
 	cancelFunc()
-	<-ss.DoneCh
+	select {
+	case <-ss.DoneCh:
+	case err := <-errCh:
+		t.Fatal(err)
+	}
 
 	for _, path := range []string{path1, path2} {
 		fileBytes, err := ioutil.ReadFile(fmt.Sprintf("%s/token", path))
@@ -91,7 +96,8 @@ func TestSinkServerRetry(t *testing.T) {
 
 	in := make(chan string)
 	sinks := []*sink.SinkConfig{&sink.SinkConfig{Sink: b1}, &sink.SinkConfig{Sink: b2}}
-	go ss.Run(ctx, in, sinks)
+	errCh := make(chan error, 1)
+	go ss.Run(ctx, in, sinks, errCh)
 
 	// Seed a token
 	in <- "bad"
@@ -117,5 +123,9 @@ func TestSinkServerRetry(t *testing.T) {
 
 	// Tell it to shut down and give it time to do so
 	cancelFunc()
-	<-ss.DoneCh
+	select {
+	case <-ss.DoneCh:
+	case err := <-errCh:
+		t.Fatal(err)
+	}
 }
