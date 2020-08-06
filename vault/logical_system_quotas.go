@@ -159,7 +159,7 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			interval = time.Second
 		}
 
-		block := time.Second * time.Duration(d.Get("interval").(int))
+		block := time.Second * time.Duration(d.Get("block").(int))
 		if block < 0 {
 			return logical.ErrorResponse("'block' is invalid"), nil
 		}
