@@ -284,7 +284,9 @@ func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
 
 // close stops the current running client purge loop.
 func (rlq *RateLimitQuota) close() error {
-	close(rlq.closePurgeBlockedCh)
+	if rlq.purgeBlocked {
+		close(rlq.closePurgeBlockedCh)
+	}
 
 	if rlq.store != nil {
 		return rlq.store.Close()
