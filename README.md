@@ -1,4 +1,4 @@
-# Vault [![CircleCI](https://circleci.com/gh/hashicorp/vault.svg?style=svg)](https://circleci.com/gh/hashicorp/vault) [![Join the chat at https://gitter.im/hashicorp-vault/Lobby](https://badges.gitter.im/hashicorp-vault/Lobby.svg)](https://gitter.im/hashicorp-vault/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![vault enterprise](https://img.shields.io/badge/vault-enterprise-yellow.svg?colorB=7c8797&colorA=000000)](https://www.hashicorp.com/products/vault/?utm_source=github&utm_medium=banner&utm_campaign=github-vault-enterprise)
+# Vault [![CircleCI](https://circleci.com/gh/hashicorp/vault.svg?style=svg)](https://circleci.com/gh/hashicorp/vault) [![vault enterprise](https://img.shields.io/badge/vault-enterprise-yellow.svg?colorB=7c8797&colorA=000000)](https://www.hashicorp.com/products/vault/?utm_source=github&utm_medium=banner&utm_campaign=github-vault-enterprise)
 
 ----
 
@@ -9,7 +9,7 @@
 -	Website: https://www.vaultproject.io
 -	IRC: `#vault-tool` on Freenode
 -	Announcement list: [Google Groups](https://groups.google.com/group/hashicorp-announce)
--	Discussion list: [Google Groups](https://groups.google.com/group/vault-tool)
+-	Discussion forum: [Discuss](https://discuss.hashicorp.com/c/vault)
 - Documentation: [https://www.vaultproject.io/docs/](https://www.vaultproject.io/docs/)
 - Tutorials: [HashiCorp's Learn Platform](https://learn.hashicorp.com/vault)
 - Certification Exam: [Vault Associate](https://www.hashicorp.com/certification/#hashicorp-certified-vault-associate)

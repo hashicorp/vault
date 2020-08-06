@@ -14,21 +14,22 @@ import (
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-	backend := newBackend(util.NewSecretsClient(conf.Logger))
+	backend := newBackend(util.NewSecretsClient(conf.Logger), conf.System)
 	if err := backend.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	return backend, nil
 }
 
-func newBackend(client secretsClient) *backend {
+func newBackend(client secretsClient, passwordGenerator passwordGenerator) *backend {
 	adBackend := &backend{
 		client:         client,
 		roleCache:      cache.New(roleCacheExpiration, roleCacheCleanup),
 		credCache:      cache.New(credCacheExpiration, credCacheCleanup),
 		rotateRootLock: new(int32),
 		checkOutHandler: &checkOutHandler{
-			client: client,
+			client:            client,
+			passwordGenerator: passwordGenerator,
 		},
 		checkOutLocks: locksutil.CreateLocks(),
 	}

@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/mitchellh/mapstructure"
 )
 
 func (b *backend) pathDecrypt() *framework.Path {
@@ -57,7 +56,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 	var batchInputItems []BatchRequestItem
 	var err error
 	if batchInputRaw != nil {
-		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
+		err = decodeBatchRequestItems(batchInputRaw, &batchInputItems)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
 		}

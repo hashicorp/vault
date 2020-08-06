@@ -23,6 +23,7 @@ type azureConfig struct {
 	ClientID       string `json:"client_id"`
 	ClientSecret   string `json:"client_secret"`
 	Environment    string `json:"environment"`
+	PasswordPolicy string `json:"password_policy"`
 }
 
 func pathConfig(b *azureSecretBackend) *framework.Path {
@@ -53,6 +54,10 @@ func pathConfig(b *azureSecretBackend) *framework.Path {
 				Type: framework.TypeString,
 				Description: `The OAuth2 client secret to connect to Azure.
 				This value can also be provided with the AZURE_CLIENT_SECRET environment variable.`,
+			},
+			"password_policy": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Name of the password policy to use to generate passwords for dynamic credentials.",
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -106,6 +111,8 @@ func (b *azureSecretBackend) pathConfigWrite(ctx context.Context, req *logical.R
 	if clientSecret, ok := data.GetOk("client_secret"); ok {
 		config.ClientSecret = clientSecret.(string)
 	}
+
+	config.PasswordPolicy = data.Get("password_policy").(string)
 
 	if merr.ErrorOrNil() != nil {
 		return logical.ErrorResponse(merr.Error()), nil

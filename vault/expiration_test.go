@@ -401,7 +401,7 @@ func TestExpiration_Restore(t *testing.T) {
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
-					TTL: 20 * time.Millisecond,
+					TTL: time.Second,
 				},
 			},
 			Data: map[string]interface{}{
@@ -761,7 +761,7 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
-					TTL: 20 * time.Millisecond,
+					TTL: time.Second,
 				},
 			},
 			Data: map[string]interface{}{
@@ -830,7 +830,7 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
-					TTL: 20 * time.Millisecond,
+					TTL: time.Second,
 				},
 			},
 			Data: map[string]interface{}{
@@ -1231,7 +1231,7 @@ func TestExpiration_Renew(t *testing.T) {
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
-				TTL:       20 * time.Millisecond,
+				TTL:       time.Second,
 				Renewable: true,
 			},
 		},
@@ -1249,7 +1249,7 @@ func TestExpiration_Renew(t *testing.T) {
 	noop.Response = &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
-				TTL: 20 * time.Millisecond,
+				TTL: time.Second,
 			},
 		},
 		Data: map[string]interface{}{
@@ -1302,7 +1302,7 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
-				TTL:       20 * time.Millisecond,
+				TTL:       time.Second,
 				Renewable: false,
 			},
 		},
@@ -2026,4 +2026,157 @@ func badRenewFactory(ctx context.Context, conf *logical.BackendConfig) (logical.
 	}
 
 	return be, nil
+}
+
+func sampleToken(t *testing.T, exp *ExpirationManager, path string, expiring bool, policy string) *logical.TokenEntry {
+	t.Helper()
+
+	root, err := exp.tokenStore.rootToken(context.Background())
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	auth := &logical.Auth{
+		ClientToken: root.ID,
+		Policies:    []string{policy},
+	}
+	if expiring {
+		auth.LeaseOptions = logical.LeaseOptions{
+			TTL: time.Hour,
+		}
+	}
+
+	te := &logical.TokenEntry{
+		ID:          root.ID,
+		Path:        path,
+		NamespaceID: namespace.RootNamespaceID,
+		Policies:    auth.Policies,
+	}
+
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	return te
+}
+
+func findMatchingPath(path string, tokenEntries []*logical.TokenEntry) bool {
+	for _, te := range tokenEntries {
+		if path == te.Path {
+			return true
+		}
+	}
+	return false
+}
+
+func findMatchingPolicy(policy string, tokenEntries []*logical.TokenEntry) bool {
+	for _, te := range tokenEntries {
+		for _, p := range te.Policies {
+			if policy == p {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func TestExpiration_WalkTokens(t *testing.T) {
+	exp := mockExpiration(t)
+
+	tokenEntries := []*logical.TokenEntry{
+		sampleToken(t, exp, "auth/userpass/login", true, "default"),
+		sampleToken(t, exp, "auth/userpass/login", true, "policy23457"),
+		sampleToken(t, exp, "auth/token/create", false, "root"),
+		sampleToken(t, exp, "auth/github/login", true, "root"),
+		sampleToken(t, exp, "auth/github/login", false, "root"),
+	}
+
+	waitForRestore(t, exp)
+
+	for true {
+		// Count before and after each revocation
+		t.Logf("Counting %d tokens.", len(tokenEntries))
+		count := 0
+		exp.WalkTokens(func(leaseId string, auth *logical.Auth, path string) bool {
+			count += 1
+			t.Logf("Lease ID %d: %q\n", count, leaseId)
+			if !findMatchingPath(path, tokenEntries) {
+				t.Errorf("Mismatched Path: %v", path)
+			}
+			if len(auth.Policies) < 1 || !findMatchingPolicy(auth.Policies[0], tokenEntries) {
+				t.Errorf("Mismatched Policies: %v", auth.Policies)
+			}
+			return true
+		})
+		if count != len(tokenEntries) {
+			t.Errorf("Mismatched number of tokens: %v", count)
+		}
+
+		if len(tokenEntries) == 0 {
+			break
+		}
+
+		// Revoke last token
+		toRevoke := len(tokenEntries) - 1
+		leaseId, err := exp.CreateOrFetchRevocationLeaseByToken(namespace.RootContext(nil), tokenEntries[toRevoke])
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		t.Logf("revocation lease ID: %q", leaseId)
+		err = exp.Revoke(namespace.RootContext(nil), leaseId)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		tokenEntries = tokenEntries[:len(tokenEntries)-1]
+
+	}
+
+}
+
+func waitForRestore(t *testing.T, exp *ExpirationManager) {
+	t.Helper()
+
+	timeout := time.After(200 * time.Millisecond)
+	ticker := time.Tick(5 * time.Millisecond)
+
+	for exp.inRestoreMode() {
+		select {
+		case <-timeout:
+			t.Fatalf("Timeout waiting for expiration manager to recover.")
+		case <-ticker:
+			continue
+		}
+	}
+}
+
+func TestExpiration_CachedPolicyIsShared(t *testing.T) {
+	exp := mockExpiration(t)
+
+	tokenEntries := []*logical.TokenEntry{
+		sampleToken(t, exp, "auth/userpass/login", true, "policy23457"),
+		sampleToken(t, exp, "auth/github/login", true, strings.Join([]string{"policy", "23457"}, "")),
+		sampleToken(t, exp, "auth/token/create", true, "policy23457"),
+	}
+
+	var policies [][]string
+
+	waitForRestore(t, exp)
+	exp.WalkTokens(func(leaseId string, auth *logical.Auth, path string) bool {
+		policies = append(policies, auth.Policies)
+		return true
+	})
+	if len(policies) != len(tokenEntries) {
+		t.Fatalf("Mismatched number of tokens: %v", len(policies))
+	}
+	ptrs := make([]*string, len(policies))
+	for i := range ptrs {
+		ptrs[i] = &((policies[0])[0])
+	}
+	for i := 1; i < len(ptrs); i++ {
+		if ptrs[i-1] != ptrs[i] {
+			t.Errorf("Mismatched pointers: %v and %v", ptrs[i-1], ptrs[i])
+		}
+	}
 }

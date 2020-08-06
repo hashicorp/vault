@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 	"time"
@@ -66,6 +67,8 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 				DogStatsDAddr:           "127.0.0.1:7254",
 				DogStatsDTags:           []string{"tag_1:val_1", "tag_2:val_2"},
 				PrometheusRetentionTime: 30 * time.Second,
+				UsageGaugePeriod:        5 * time.Minute,
+				MaximumGaugeCardinality: 125,
 			},
 
 			DisableMlock: true,
@@ -170,6 +173,8 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 				StatsiteAddr:                       "foo",
 				StatsdAddr:                         "bar",
 				DisableHostname:                    true,
+				UsageGaugePeriod:                   5 * time.Minute,
+				MaximumGaugeCardinality:            125,
 				CirconusAPIToken:                   "0",
 				CirconusAPIApp:                     "vault",
 				CirconusAPIURL:                     "http://api.circonus.com/v2",
@@ -364,6 +369,8 @@ func testLoadConfigFile(t *testing.T) {
 				StatsdAddr:              "bar",
 				StatsiteAddr:            "foo",
 				DisableHostname:         false,
+				UsageGaugePeriod:        5 * time.Minute,
+				MaximumGaugeCardinality: 100,
 				DogStatsDAddr:           "127.0.0.1:7254",
 				DogStatsDTags:           []string{"tag_1:val_1", "tag_2:val_2"},
 				PrometheusRetentionTime: configutil.PrometheusDefaultRetentionTime,
@@ -446,6 +453,8 @@ func testLoadConfigFile_json(t *testing.T) {
 				StatsiteAddr:                       "baz",
 				StatsdAddr:                         "",
 				DisableHostname:                    false,
+				UsageGaugePeriod:                   5 * time.Minute,
+				MaximumGaugeCardinality:            100,
 				CirconusAPIToken:                   "",
 				CirconusAPIApp:                     "",
 				CirconusAPIURL:                     "",
@@ -523,6 +532,8 @@ func testLoadConfigDir(t *testing.T) {
 				StatsiteAddr:            "qux",
 				StatsdAddr:              "baz",
 				DisableHostname:         true,
+				UsageGaugePeriod:        5 * time.Minute,
+				MaximumGaugeCardinality: 100,
 				PrometheusRetentionTime: configutil.PrometheusDefaultRetentionTime,
 			},
 			ClusterName: "testcluster",
@@ -616,6 +627,8 @@ func testConfig_Sanitized(t *testing.T) {
 			"type": "consul",
 		},
 		"telemetry": map[string]interface{}{
+			"usage_gauge_period":                     5 * time.Minute,
+			"maximum_gauge_cardinality":              100,
 			"circonus_api_app":                       "",
 			"circonus_api_token":                     "",
 			"circonus_api_url":                       "",
@@ -698,4 +711,61 @@ listener "tcp" {
 	if diff := deep.Equal(config, *expected); diff != nil {
 		t.Fatal(diff)
 	}
+}
+
+func testParseSeals(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config_seals.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	config.Listeners[0].RawConfig = nil
+
+	expected := &Config{
+		Storage: &Storage{
+			Type:   "consul",
+			Config: map[string]string{},
+		},
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:    "tcp",
+					Address: "127.0.0.1:443",
+				},
+			},
+			Seals: []*configutil.KMS{
+				&configutil.KMS{
+					Type:    "pkcs11",
+					Purpose: []string{"many", "purposes"},
+					Config: map[string]string{
+						"lib":                    "/usr/lib/libcklog2.so",
+						"slot":                   "0.0",
+						"pin":                    "XXXXXXXX",
+						"key_label":              "HASHICORP",
+						"mechanism":              "0x1082",
+						"hmac_mechanism":         "0x0251",
+						"hmac_key_label":         "vault-hsm-hmac-key",
+						"default_hmac_key_label": "vault-hsm-hmac-key",
+						"generate_key":           "true",
+					},
+				},
+				&configutil.KMS{
+					Type:     "pkcs11",
+					Purpose:  []string{"single"},
+					Disabled: true,
+					Config: map[string]string{
+						"lib":                    "/usr/lib/libcklog2.so",
+						"slot":                   "0.0",
+						"pin":                    "XXXXXXXX",
+						"key_label":              "HASHICORP",
+						"mechanism":              "4226",
+						"hmac_mechanism":         "593",
+						"hmac_key_label":         "vault-hsm-hmac-key",
+						"default_hmac_key_label": "vault-hsm-hmac-key",
+						"generate_key":           "true",
+					},
+				},
+			},
+		},
+	}
+	require.Equal(t, config, expected)
 }

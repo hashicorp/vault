@@ -39,8 +39,8 @@ between the nodes in the Raft cluster.
 ~> **Note:** When using the Raft storage backend, a separate `ha_storage`
 backend cannot be declared.
 
-~> **Note:** Raft cannot be used as the configured `ha_storage` backend at this
-time. To use Raft for HA coordination users must also use Raft for storage.
+~> **Note:** When using the Raft storage backend, it is strongly recommended to
+set `disable_mlock` to `true`, and to disable memory swapping on the system.
 
 ## `raft` Parameters
 
@@ -137,7 +137,7 @@ storage "raft" {
   node_id = "node1"
   retry_join {
     leader_api_addr = "http://127.0.0.2:8200"
-    leader_ca_cer_file = "/path/to/ca1"
+    leader_ca_cert_file = "/path/to/ca1"
     leader_client_cert_file = "/path/to/client/cert1"
     leader_client_key_file = "/path/to/client/key1"
   }
