@@ -295,7 +295,9 @@ func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
 	// If the request is not allowed (i.e. rate limit threshold reached) and blocking
 	// is enabled, we add the client to the set of blocked clients.
 	if !resp.Allowed && rlq.purgeBlocked {
-		rlq.blockedClients[req.ClientAddress] = time.Now()
+		blockedAt := time.Now()
+		retryAfter = blockedAt.Add(rlq.Block).UTC().Format(time.RFC1123)
+		rlq.blockedClients[req.ClientAddress] = blockedAt
 	}
 
 	return resp, nil
