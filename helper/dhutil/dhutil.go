@@ -1,11 +1,14 @@
 package dhutil
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha256"
 	"errors"
 	"fmt"
+	"golang.org/x/crypto/hkdf"
 	"io"
 
 	"golang.org/x/crypto/curve25519"
@@ -36,7 +39,7 @@ func GeneratePublicPrivateKey() ([]byte, []byte, error) {
 
 // generateSharedKey uses the private key and the other party's public key to
 // generate the shared secret.
-func GenerateSharedKey(ourPrivate, theirPublic []byte) ([]byte, error) {
+func GenerateSharedKey(ourPrivate, ourPublic, theirPublic []byte) ([]byte, error) {
 	if len(ourPrivate) != 32 {
 		return nil, fmt.Errorf("invalid private key length: %d", len(ourPrivate))
 	}
@@ -44,13 +47,39 @@ func GenerateSharedKey(ourPrivate, theirPublic []byte) ([]byte, error) {
 		return nil, fmt.Errorf("invalid public key length: %d", len(theirPublic))
 	}
 
-	var scalar, pub, secret [32]byte
-	copy(scalar[:], ourPrivate)
-	copy(pub[:], theirPublic)
+	secret, err := curve25519.X25519(ourPrivate, theirPublic)
+	if err != nil {
+		return nil, err
+	}
 
-	curve25519.ScalarMult(&secret, &scalar, &pub)
+	// Derive the final key from the HKDF of the secret and public keys.
 
-	return secret[:], nil
+	//These must be consistently ordered we're on "our" side of key negotiation or the other.
+	var pub1 []byte
+	var pub2 []byte
+	switch bytes.Compare(ourPublic, theirPublic) {
+	case 0:
+		return nil, errors.New("same public key supplied for both participants")
+	case -1:
+		pub1 = ourPublic
+		pub2 = theirPublic
+	case 1:
+		pub1 = theirPublic
+		pub2 = ourPublic
+	}
+
+	kio := hkdf.New(sha256.New, secret, pub1, pub2)
+
+	var key [32]byte
+	n, err := io.ReadFull(kio, key[:])
+	if n != 32 {
+		return nil, errors.New("short read from hkdf")
+	}
+	if err != nil {
+		// Don't return the key along with the error to prevent misuse
+		return nil, err
+	}
+	return key[:], nil
 }
 
 // Use AES256-GCM to encrypt some plaintext with a provided key. The returned values are

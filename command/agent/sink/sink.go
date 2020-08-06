@@ -205,7 +205,7 @@ func (s *SinkConfig) encryptToken(token string) (string, error) {
 		resp.Curve25519PublicKey = s.cachedPubKey
 	}
 
-	aesKey, err = dhutil.GenerateSharedKey(s.cachedPriKey, s.cachedRemotePubKey)
+	aesKey, err = dhutil.GenerateSharedKey(s.cachedPriKey, s.cachedPubKey, s.cachedRemotePubKey)
 	if err != nil {
 		return "", errwrap.Wrapf("error deriving shared key: {{err}}", err)
 	}
