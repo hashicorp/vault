@@ -80,9 +80,14 @@ type NewUserRequest struct {
 	// within the database plugin
 	UsernameConfig UsernameMetadata
 
-	// Statements is an ordered list of commands to run within the database when creating a new user.
-	// This frequently includes permissions to give the user or similar actions.
+	// Statements is an ordered list of commands to run within the database when
+	// creating a new user. This frequently includes permissions to give the
+	// user or similar actions.
 	Statements Statements
+
+	// RollbackSTatements is an ordered list of commands to run within the database
+	// if the new user creation process fails.
+	RollbackStatements Statements
 
 	// Password credentials to use when creating the user
 	Password string
@@ -123,13 +128,22 @@ type UpdateUserRequest struct {
 
 // ChangePassword of a given user
 type ChangePassword struct {
+	// NewPassword for the user
 	NewPassword string
+
+	// Statements is an ordered list of commands to run within the database
+	// when changing the user's password.
+	Statements Statements
 }
 
 // ChangeExpiration of a give user
 type ChangeExpiration struct {
+	// NewExpiration of the user
 	NewExpiration time.Time
-	Statements    Statements
+
+	// Statements is an ordered list of commands to run within the database
+	// when changing the user's expiration.
+	Statements Statements
 }
 
 type UpdateUserResponse struct{}
@@ -139,7 +153,12 @@ type UpdateUserResponse struct{}
 // ///////////////////////////////////////////////////////
 
 type DeleteUserRequest struct {
+	// Username to delete from the database
 	Username string
+
+	// Statements is an ordered list of commands to run within the database
+	// when deleting a user.
+	Statements Statements
 }
 
 type DeleteUserResponse struct{}
@@ -152,5 +171,7 @@ type DeleteUserResponse struct{}
 // operation is performed (create, update, etc.). This is a struct rather than
 // a string slice so we can easily add more information to this in the future.
 type Statements struct {
+	// Commands is an ordered list of commands to execute in the database.
+	// These commands may include templated fields such as {{username}} and {{password}}
 	Commands []string
 }
