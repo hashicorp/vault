@@ -287,7 +287,7 @@ github.com/google/go-metrics-stackdriver/vault
 github.com/google/go-querystring/query
 # github.com/google/gofuzz v1.0.0
 github.com/google/gofuzz
-# github.com/google/uuid v1.0.0
+# github.com/google/uuid v1.1.1
 github.com/google/uuid
 # github.com/googleapis/gax-go/v2 v2.0.5
 github.com/googleapis/gax-go/v2
@@ -556,7 +556,7 @@ github.com/joyent/triton-go/errors
 github.com/joyent/triton-go/storage
 # github.com/json-iterator/go v1.1.9
 github.com/json-iterator/go
-# github.com/kelseyhightower/envconfig v1.3.0
+# github.com/kelseyhightower/envconfig v1.4.0
 github.com/kelseyhightower/envconfig
 # github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f
 github.com/keybase/go-crypto/brainpool
@@ -626,10 +626,12 @@ github.com/ncw/swift
 github.com/nwaples/rardecode
 # github.com/oklog/run v1.0.0
 github.com/oklog/run
-# github.com/okta/okta-sdk-golang v1.0.1
-github.com/okta/okta-sdk-golang/okta
+# github.com/okta/okta-sdk-golang v1.1.0
 github.com/okta/okta-sdk-golang/okta/cache
-github.com/okta/okta-sdk-golang/okta/query
+# github.com/okta/okta-sdk-golang/v2 v2.0.0
+github.com/okta/okta-sdk-golang/v2/okta
+github.com/okta/okta-sdk-golang/v2/okta/cache
+github.com/okta/okta-sdk-golang/v2/okta/query
 # github.com/opencontainers/go-digest v1.0.0-rc1
 github.com/opencontainers/go-digest
 # github.com/opencontainers/image-spec v1.0.1
@@ -673,7 +675,7 @@ github.com/patrickmn/go-cache
 # github.com/pierrec/lz4 v2.2.6+incompatible
 github.com/pierrec/lz4
 github.com/pierrec/lz4/internal/xxh32
-# github.com/pkg/errors v0.8.1
+# github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
@@ -723,7 +725,7 @@ github.com/shirou/gopsutil/process
 github.com/shirou/w32
 # github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
-# github.com/stretchr/testify v1.4.0
+# github.com/stretchr/testify v1.5.1
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
 # github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926
@@ -828,7 +830,7 @@ go.uber.org/zap/internal/bufferpool
 go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
-# golang.org/x/crypto v0.0.0-20200117160349-530e935923ad
+# golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blake2b
 golang.org/x/crypto/blowfish
@@ -848,8 +850,9 @@ golang.org/x/crypto/pkcs12/internal/rc2
 golang.org/x/crypto/poly1305
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/agent
+golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
+# golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/http/httpguts
@@ -992,7 +995,7 @@ gopkg.in/mgo.v2/internal/sasl
 gopkg.in/mgo.v2/internal/scram
 # gopkg.in/ory-am/dockertest.v3 v3.3.4
 gopkg.in/ory-am/dockertest.v3
-# gopkg.in/square/go-jose.v2 v2.4.1
+# gopkg.in/square/go-jose.v2 v2.5.1
 gopkg.in/square/go-jose.v2
 gopkg.in/square/go-jose.v2/cipher
 gopkg.in/square/go-jose.v2/json
