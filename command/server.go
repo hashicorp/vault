@@ -1513,16 +1513,12 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
 
-	// Server configuration output
-	padding := 24
-
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
 
 	for _, k := range infoKeys {
 		c.UI.Output(fmt.Sprintf(
-			"%s%s: %s",
-			strings.Repeat(" ", padding-len(k)),
+			"%24s: %s",
 			strings.Title(k),
 			info[k]))
 	}
