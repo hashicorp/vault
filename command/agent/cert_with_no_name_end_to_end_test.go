@@ -134,7 +134,6 @@ func testCertWithNoNAmeEndToEnd(t *testing.T, ahWrapping bool) {
 		AAD:    "foobar",
 		DHType: "curve25519",
 		DHPath: dhpath,
-		DeriveKey: true,
 		Config: map[string]interface{}{
 			"path": out,
 		},
@@ -184,11 +183,7 @@ func testCertWithNoNAmeEndToEnd(t *testing.T, ahWrapping bool) {
 					continue
 				}
 
-				shared, err := dhutil.GenerateSharedSecret(pri, resp.Curve25519PublicKey)
-				if err != nil {
-					t.Fatal(err)
-				}
-				aesKey, err := dhutil.DeriveSharedKey(shared, pub, resp.Curve25519PublicKey)
+				aesKey, err := dhutil.GenerateSharedSecret(pri, resp.Curve25519PublicKey)
 				if err != nil {
 					t.Fatal(err)
 				}
