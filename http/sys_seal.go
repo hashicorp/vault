@@ -86,7 +86,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 
 		// Parse the request
 		var req UnsealRequest
-		if _, err := parseRequest(core, r, w, &req); err != nil {
+		if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
 			respondError(w, http.StatusBadRequest, err)
 			return
 		}
@@ -198,6 +198,8 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 			Initialized:  false,
 			Sealed:       true,
 			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
+			StorageType:  core.StorageType(),
+			Version:      version.GetVersion().VersionNumber(),
 		})
 		return
 	}
@@ -233,6 +235,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 		ClusterName:  clusterName,
 		ClusterID:    clusterID,
 		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
+		StorageType:  core.StorageType(),
 	})
 }
 
@@ -249,6 +252,7 @@ type SealStatusResponse struct {
 	ClusterName  string `json:"cluster_name,omitempty"`
 	ClusterID    string `json:"cluster_id,omitempty"`
 	RecoverySeal bool   `json:"recovery_seal"`
+	StorageType  string `json:"storage_type,omitempty"`
 }
 
 // Note: because we didn't provide explicit tagging in the past we can't do it

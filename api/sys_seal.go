@@ -77,6 +77,7 @@ type SealStatusResponse struct {
 	ClusterName  string `json:"cluster_name,omitempty"`
 	ClusterID    string `json:"cluster_id,omitempty"`
 	RecoverySeal bool   `json:"recovery_seal"`
+	StorageType  string `json:"storage_type,omitempty"`
 }
 
 type UnsealOpts struct {

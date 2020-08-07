@@ -128,6 +128,12 @@ func (b *BaseCommand) PredictVaultFolders() complete.Predictor {
 	return NewPredict().VaultFolders()
 }
 
+// PredictVaultNamespaces returns a predictor for "namespaces". See PredictVaultFiles
+// for more information an restrictions.
+func (b *BaseCommand) PredictVaultNamespaces() complete.Predictor {
+	return NewPredict().VaultNamespaces()
+}
+
 // PredictVaultMounts returns a predictor for "folders". See PredictVaultFiles
 // for more information and restrictions.
 func (b *BaseCommand) PredictVaultMounts() complete.Predictor {
@@ -157,6 +163,17 @@ func (b *BaseCommand) PredictVaultPolicies() complete.Predictor {
 	return NewPredict().VaultPolicies()
 }
 
+func (b *BaseCommand) PredictVaultDebugTargets() complete.Predictor {
+	return complete.PredictSet(
+		"config",
+		"host",
+		"metrics",
+		"pprof",
+		"replication-status",
+		"server-status",
+	)
+}
+
 // VaultFiles returns a predictor for Vault "files". This is a public API for
 // consumers, but you probably want BaseCommand.PredictVaultFiles instead.
 func (p *Predict) VaultFiles() complete.Predictor {
@@ -168,6 +185,13 @@ func (p *Predict) VaultFiles() complete.Predictor {
 // instead.
 func (p *Predict) VaultFolders() complete.Predictor {
 	return p.vaultPaths(false)
+}
+
+// VaultNamespaces returns a predictor for Vault "namespaces". This is a public
+// API for consumers, but you probably want BaseCommand.PredictVaultNamespaces
+// instead.
+func (p *Predict) VaultNamespaces() complete.Predictor {
+	return p.filterFunc(p.namespaces)
 }
 
 // VaultMounts returns a predictor for Vault "folders". This is a public
@@ -222,8 +246,18 @@ func (p *Predict) vaultPaths(includeFiles bool) complete.PredictFunc {
 
 		path := args.Last
 
+		// Trim path with potential mount
+		var relativePath string
+		for _, mount := range p.mounts() {
+			if strings.HasPrefix(path, mount) {
+				relativePath = strings.TrimPrefix(path, mount+"/")
+				break
+			}
+		}
+
+		// Predict path or mount depending on path separator
 		var predictions []string
-		if strings.Contains(path, "/") {
+		if strings.Contains(relativePath, "/") {
 			predictions = p.paths(path, includeFiles)
 		} else {
 			predictions = p.filter(p.mounts(), path)
@@ -402,6 +436,36 @@ func (p *Predict) mounts() []string {
 	list := make([]string, 0, len(mounts))
 	for m := range mounts {
 		list = append(list, m)
+	}
+	sort.Strings(list)
+	return list
+}
+
+// namespaces returns a sorted list of the namespace paths for Vault server for
+// which the client is configured to communicate with. This function returns
+// an empty list in any error occurs.
+func (p *Predict) namespaces() []string {
+	client := p.Client()
+	if client == nil {
+		return nil
+	}
+
+	secret, err := client.Logical().List("sys/namespaces")
+	if err != nil {
+		return nil
+	}
+	namespaces, ok := extractListData(secret)
+	if !ok {
+		return nil
+	}
+
+	list := make([]string, 0, len(namespaces))
+	for _, n := range namespaces {
+		s, ok := n.(string)
+		if !ok {
+			continue
+		}
+		list = append(list, s)
 	}
 	sort.Strings(list)
 	return list

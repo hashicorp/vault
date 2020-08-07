@@ -325,7 +325,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			keys[len(keys)-1], // the last unseal key
 		})
 		if exp := 0; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
+			t.Fatalf("expected %d to be %d, out=%q, err=%q", code, exp, ui.OutputWriter, ui.ErrorWriter)
 		}
 
 		reToken := regexp.MustCompile(`Encoded Token\s+(.+)`)

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -213,8 +214,39 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Configure identity.
+	_, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/identity",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"iam_alias": "role_id",
+			"iam_metadata": []string{
+				"account_id",
+				"auth_type",
+				"canonical_arn",
+				"client_arn",
+				"client_user_id",
+				"inferred_aws_region",
+				"inferred_entity_id",
+				"inferred_entity_type",
+			},
+			"ec2_alias": "role_id",
+			"ec2_metadata": []string{
+				"account_id",
+				"ami_id",
+				"instance_id",
+				"region",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// create a role entry
 	roleEntry := &awsRoleEntry{
+		RoleID:   "foo",
 		Version:  currentRoleStorageVersion,
 		AuthType: iamAuthType,
 	}
@@ -229,6 +261,14 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 	loginData, err := defaultLoginData()
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	expectedAuthMetadata := map[string]string{
+		"account_id":     "123456789012",
+		"auth_type":      "iam",
+		"canonical_arn":  "arn:aws:iam::123456789012:user/valid-role",
+		"client_arn":     "arn:aws:iam::123456789012:user/valid-role",
+		"client_user_id": "ASOMETHINGSOMETHINGSOMETHING",
 	}
 
 	// expected errors for certain tests
@@ -324,6 +364,146 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 					return
 				}
 				t.Errorf("un expected failed login:\nresp: %#v\n\nerr: %v", resp, err)
+			}
+
+			if !reflect.DeepEqual(expectedAuthMetadata, resp.Auth.Alias.Metadata) {
+				t.Errorf("expected metadata (%#v) to match (%#v)", expectedAuthMetadata, resp.Auth.Alias.Metadata)
+			}
+		})
+	}
+}
+
+func TestBackend_defaultAliasMetadata(t *testing.T) {
+	storage := &logical.InmemStorage{}
+	config := logical.TestBackendConfig()
+	config.StorageView = storage
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// sets up a test server to stand in for STS service
+	ts := setupIAMTestServer()
+	defer ts.Close()
+
+	clientConfigData := map[string]interface{}{
+		"iam_server_id_header_value": testVaultHeaderValue,
+		"sts_endpoint":               ts.URL,
+	}
+	clientRequest := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/client",
+		Storage:   storage,
+		Data:      clientConfigData,
+	}
+	_, err = b.HandleRequest(context.Background(), clientRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Configure identity.
+	_, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/identity",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"iam_alias": "role_id",
+			"ec2_alias": "role_id",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create a role entry
+	roleEntry := &awsRoleEntry{
+		RoleID:   "foo",
+		Version:  currentRoleStorageVersion,
+		AuthType: iamAuthType,
+	}
+
+	if err := b.setRole(context.Background(), storage, testValidRoleName, roleEntry); err != nil {
+		t.Fatalf("failed to set entry: %s", err)
+	}
+
+	// create a baseline loginData map structure, including iam_request_headers
+	// already base64encoded. This is the "Default" loginData used for all tests.
+	// Each sub test can override the map's iam_request_headers entry
+	loginData, err := defaultLoginData()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedAliasMetadata := map[string]string{
+		"account_id": "123456789012",
+		"auth_type":  "iam",
+	}
+
+	testCases := []struct {
+		Name      string
+		Header    interface{}
+		ExpectErr error
+	}{
+		{
+			Name: "Default",
+		},
+		{
+			Name: "Map-complete",
+			Header: map[string]interface{}{
+				"Content-Length":            "43",
+				"Content-Type":              "application/x-www-form-urlencoded; charset=utf-8",
+				"User-Agent":                "aws-sdk-go/1.14.24 (go1.11; darwin; amd64)",
+				"X-Amz-Date":                "20180910T203328Z",
+				"X-Vault-Aws-Iam-Server-Id": "VaultAcceptanceTesting",
+				"Authorization":             "AWS4-HMAC-SHA256 Credential=AKIAJPQ466AIIQW4LPSQ/20180910/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=cdef5819b2e97f1ff0f3e898fd2621aa03af00a4ec3e019122c20e5482534bf4",
+			},
+		},
+		{
+			Name: "JSON-complete",
+			Header: `{
+				"Content-Length":"43",
+				"Content-Type":"application/x-www-form-urlencoded; charset=utf-8",
+				"User-Agent":"aws-sdk-go/1.14.24 (go1.11; darwin; amd64)",
+				"X-Amz-Date":"20180910T203328Z",
+				"X-Vault-Aws-Iam-Server-Id": "VaultAcceptanceTesting",
+				"Authorization":"AWS4-HMAC-SHA256 Credential=AKIAJPQ466AIIQW4LPSQ/20180910/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=cdef5819b2e97f1ff0f3e898fd2621aa03af00a4ec3e019122c20e5482534bf4"
+			}`,
+		},
+		{
+			Name:   "Base64-complete",
+			Header: base64Complete(),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			if tc.Header != nil {
+				loginData["iam_request_headers"] = tc.Header
+			}
+
+			loginRequest := &logical.Request{
+				Operation:  logical.UpdateOperation,
+				Path:       "login",
+				Storage:    storage,
+				Data:       loginData,
+				Connection: &logical.Connection{},
+			}
+
+			resp, err := b.HandleRequest(context.Background(), loginRequest)
+			if err != nil || resp == nil || resp.IsError() {
+				if tc.ExpectErr != nil && tc.ExpectErr.Error() == resp.Error().Error() {
+					return
+				}
+				t.Errorf("un expected failed login:\nresp: %#v\n\nerr: %v", resp, err)
+			}
+
+			if !reflect.DeepEqual(expectedAliasMetadata, resp.Auth.Alias.Metadata) {
+				t.Errorf("expected metadata (%#v) to match (%#v)", expectedAliasMetadata, resp.Auth.Alias.Metadata)
 			}
 		})
 	}

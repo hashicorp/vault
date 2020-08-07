@@ -3,6 +3,7 @@ package gcpsecrets
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -57,11 +58,15 @@ func pathSecretServiceAccountKey(b *backend) *framework.Path {
 				Description: fmt.Sprintf(`Private key type for service account key - defaults to %s"`, privateKeyTypeJson),
 				Default:     privateKeyTypeJson,
 			},
+			"ttl": {
+				Type:        framework.TypeDurationSecond,
+				Description: "Lifetime of the service account key",
+			},
 		},
-		ExistenceCheck: b.pathRoleSetExistenceCheck,
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathServiceAccountKey,
-			logical.UpdateOperation: b.pathServiceAccountKey,
+		ExistenceCheck: b.pathRoleSetExistenceCheck("roleset"),
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation:   &framework.PathOperation{Callback: b.pathServiceAccountKey},
+			logical.UpdateOperation: &framework.PathOperation{Callback: b.pathServiceAccountKey},
 		},
 		HelpSynopsis:    pathServiceAccountKeySyn,
 		HelpDescription: pathServiceAccountKeyDesc,
@@ -72,20 +77,21 @@ func (b *backend) pathServiceAccountKey(ctx context.Context, req *logical.Reques
 	rsName := d.Get("roleset").(string)
 	keyType := d.Get("key_type").(string)
 	keyAlg := d.Get("key_algorithm").(string)
+	ttl := d.Get("ttl").(int)
 
 	rs, err := getRoleSet(rsName, ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 	if rs == nil {
-		return logical.ErrorResponse(fmt.Sprintf("role set '%s' does not exists", rsName)), nil
+		return logical.ErrorResponse(fmt.Sprintf("role set '%s' does not exist", rsName)), nil
 	}
 
 	if rs.SecretType != SecretTypeKey {
 		return logical.ErrorResponse(fmt.Sprintf("role set '%s' cannot generate service account keys (has secret type %s)", rsName, rs.SecretType)), nil
 	}
 
-	return b.getSecretKey(ctx, req.Storage, rs, keyType, keyAlg)
+	return b.getSecretKey(ctx, req.Storage, rs, keyType, keyAlg, ttl)
 }
 
 func (b *backend) secretKeyRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -138,7 +144,7 @@ func (b *backend) verifySecretServiceKeyExists(ctx context.Context, req *logical
 	}
 
 	// Verify service account key still exists.
-	iamAdmin, err := b.IAMClient(req.Storage)
+	iamAdmin, err := b.IAMAdminClient(req.Storage)
 	if err != nil {
 		return logical.ErrorResponse("could not confirm key still exists in GCP"), nil
 	}
@@ -154,7 +160,7 @@ func (b *backend) secretKeyRevoke(ctx context.Context, req *logical.Request, d *
 		return nil, fmt.Errorf("secret is missing key_name internal data")
 	}
 
-	iamAdmin, err := b.IAMClient(req.Storage)
+	iamAdmin, err := b.IAMAdminClient(req.Storage)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -167,7 +173,7 @@ func (b *backend) secretKeyRevoke(ctx context.Context, req *logical.Request, d *
 	return nil, nil
 }
 
-func (b *backend) getSecretKey(ctx context.Context, s logical.Storage, rs *RoleSet, keyType, keyAlgorithm string) (*logical.Response, error) {
+func (b *backend) getSecretKey(ctx context.Context, s logical.Storage, rs *RoleSet, keyType, keyAlgorithm string, ttl int) (*logical.Response, error) {
 	cfg, err := getConfig(ctx, s)
 	if err != nil {
 		return nil, errwrap.Wrapf("could not read backend config: {{err}}", err)
@@ -176,7 +182,7 @@ func (b *backend) getSecretKey(ctx context.Context, s logical.Storage, rs *RoleS
 		cfg = &config{}
 	}
 
-	iamC, err := b.IAMClient(s)
+	iamC, err := b.IAMAdminClient(s)
 	if err != nil {
 		return nil, errwrap.Wrapf("could not create IAM Admin client: {{err}}", err)
 	}
@@ -207,9 +213,16 @@ func (b *backend) getSecretKey(ctx context.Context, s logical.Storage, rs *RoleS
 	}
 
 	resp := b.Secret(SecretTypeKey).Response(secretD, internalD)
-	resp.Secret.TTL = cfg.TTL
-	resp.Secret.MaxTTL = cfg.MaxTTL
 	resp.Secret.Renewable = true
+
+	resp.Secret.MaxTTL = cfg.MaxTTL
+	resp.Secret.TTL = cfg.TTL
+
+	// If the request came with a TTL value, overwrite the config default
+	if ttl > 0 {
+		resp.Secret.TTL = time.Duration(ttl) * time.Second
+	}
+
 	return resp, nil
 }
 

@@ -16,14 +16,14 @@ export default Route.extend(ModelBoundaryRoute, {
   }),
 
   beforeModel() {
+    let authType = this.auth.getAuthType();
     this.auth.deleteCurrentToken();
     this.controlGroup.deleteTokens();
     this.namespaceService.reset();
     this.console.set('isOpen', false);
     this.console.clearLog(true);
-    this.clearModelCache();
-    this.replaceWith('vault.cluster.auth', { queryParams: { redirect_to: '' } });
     this.flashMessages.clearMessages();
     this.permissions.reset();
+    this.replaceWith('vault.cluster.auth', { queryParams: { with: authType } });
   },
 });

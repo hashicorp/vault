@@ -1,4 +1,4 @@
-/* eslint-disable import/extensions */
+
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import { withKnobs, object } from '@storybook/addon-knobs';
@@ -18,7 +18,7 @@ const COUNTERS = [
   { start_time: '2019-03-01T00:00:00Z', total: 5000 },
 ];
 
-storiesOf('HttpRequests/Container/', module)
+storiesOf('HttpRequests/HttpRequestsContainer', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
   .add(

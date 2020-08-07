@@ -11,9 +11,11 @@ import (
 	"crypto/x509/pkix"
 	"errors"
 	fmt "fmt"
+	"io"
 	"math/big"
 	mathrand "math/rand"
 	"net"
+	"net/url"
 	"sync"
 	"time"
 
@@ -86,8 +88,8 @@ func (k *TLSKeyring) GetActive() *TLSKey {
 	return nil
 }
 
-func GenerateTLSKey() (*TLSKey, error) {
-	key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+func GenerateTLSKey(reader io.Reader) (*TLSKey, error) {
+	key, err := ecdsa.GenerateKey(elliptic.P521(), reader)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +111,7 @@ func GenerateTLSKey() (*TLSKey, error) {
 		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement | x509.KeyUsageCertSign,
 		SerialNumber: big.NewInt(mathrand.Int63()),
 		NotBefore:    time.Now().Add(-30 * time.Second),
-		// 30 years of single-active uptime ought to be enough for anybody
+		// 30 years ought to be enough for anybody
 		NotAfter:              time.Now().Add(262980 * time.Hour),
 		BasicConstraintsValid: true,
 		IsCA:                  true,
@@ -134,13 +136,15 @@ func GenerateTLSKey() (*TLSKey, error) {
 	}, nil
 }
 
-// Make sure raftLayer satisfies the raft.StreamLayer interface
-var _ raft.StreamLayer = (*raftLayer)(nil)
+var (
+	// Make sure raftLayer satisfies the raft.StreamLayer interface
+	_ raft.StreamLayer = (*raftLayer)(nil)
 
-// Make sure raftLayer satisfies the cluster.Handler and cluster.Client
-// interfaces
-var _ cluster.Handler = (*raftLayer)(nil)
-var _ cluster.Client = (*raftLayer)(nil)
+	// Make sure raftLayer satisfies the cluster.Handler and cluster.Client
+	// interfaces
+	_ cluster.Handler = (*raftLayer)(nil)
+	_ cluster.Client  = (*raftLayer)(nil)
+)
 
 // RaftLayer implements the raft.StreamLayer interface,
 // so that we can use a single RPC layer for Raft and Vault
@@ -161,25 +165,35 @@ type raftLayer struct {
 	dialerFunc func(string, time.Duration) (net.Conn, error)
 
 	// TLS config
-	keyring       *TLSKeyring
-	baseTLSConfig *tls.Config
+	keyring         *TLSKeyring
+	clusterListener cluster.ClusterHook
 }
 
 // NewRaftLayer creates a new raftLayer object. It parses the TLS information
 // from the network config.
-func NewRaftLayer(logger log.Logger, raftTLSKeyring *TLSKeyring, clusterAddr net.Addr, baseTLSConfig *tls.Config) (*raftLayer, error) {
-	switch {
-	case clusterAddr == nil:
-		// Clustering disabled on the server, don't try to look for params
+func NewRaftLayer(logger log.Logger, raftTLSKeyring *TLSKeyring, clusterListener cluster.ClusterHook) (*raftLayer, error) {
+	clusterAddr := clusterListener.Addr()
+	if clusterAddr == nil {
 		return nil, errors.New("no raft addr found")
 	}
 
+	{
+		// Test the advertised address to make sure it's not an unspecified IP
+		u := url.URL{
+			Host: clusterAddr.String(),
+		}
+		ip := net.ParseIP(u.Hostname())
+		if ip != nil && ip.IsUnspecified() {
+			return nil, fmt.Errorf("cannot use unspecified IP with raft storage: %s", clusterAddr.String())
+		}
+	}
+
 	layer := &raftLayer{
-		addr:          clusterAddr,
-		connCh:        make(chan net.Conn),
-		closeCh:       make(chan struct{}),
-		logger:        logger,
-		baseTLSConfig: baseTLSConfig,
+		addr:            clusterAddr,
+		connCh:          make(chan net.Conn),
+		closeCh:         make(chan struct{}),
+		logger:          logger,
+		clusterListener: clusterListener,
 	}
 
 	if err := layer.setTLSKeyring(raftTLSKeyring); err != nil {
@@ -235,6 +249,24 @@ func (l *raftLayer) setTLSKeyring(keyring *TLSKeyring) error {
 	return nil
 }
 
+func (l *raftLayer) ServerName() string {
+	key := l.keyring.GetActive()
+	if key == nil {
+		return ""
+	}
+
+	return key.parsedCert.Subject.CommonName
+}
+
+func (l *raftLayer) CACert(ctx context.Context) *x509.Certificate {
+	key := l.keyring.GetActive()
+	if key == nil {
+		return nil
+	}
+
+	return key.parsedCert
+}
+
 func (l *raftLayer) ClientLookup(ctx context.Context, requestInfo *tls.CertificateRequestInfo) (*tls.Certificate, error) {
 	for _, subj := range requestInfo.AcceptableCAs {
 		for _, key := range l.keyring.Keys {
@@ -284,7 +316,7 @@ func (l *raftLayer) CALookup(context.Context) ([]*x509.Certificate, error) {
 	return ret, nil
 }
 
-// Stop shutsdown the raft layer.
+// Stop shuts down the raft layer.
 func (l *raftLayer) Stop() error {
 	l.Close()
 	return nil
@@ -345,26 +377,6 @@ func (l *raftLayer) Addr() net.Addr {
 
 // Dial is used to create a new outgoing connection
 func (l *raftLayer) Dial(address raft.ServerAddress, timeout time.Duration) (net.Conn, error) {
-
-	tlsConfig := l.baseTLSConfig.Clone()
-
-	key := l.keyring.GetActive()
-	if key == nil {
-		return nil, errors.New("no active key")
-	}
-
-	tlsConfig.NextProtos = []string{consts.RaftStorageALPN}
-	tlsConfig.ServerName = key.parsedCert.Subject.CommonName
-
-	l.logger.Debug("creating rpc dialer", "host", tlsConfig.ServerName)
-
-	pool := x509.NewCertPool()
-	pool.AddCert(key.parsedCert)
-	tlsConfig.RootCAs = pool
-	tlsConfig.ClientCAs = pool
-
-	dialer := &net.Dialer{
-		Timeout: timeout,
-	}
-	return tls.DialWithDialer(dialer, "tcp", string(address), tlsConfig)
+	dialFunc := l.clusterListener.GetDialerFunc(context.Background(), consts.RaftStorageALPN)
+	return dialFunc(string(address), timeout)
 }

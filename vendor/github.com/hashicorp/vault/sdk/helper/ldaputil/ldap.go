@@ -3,7 +3,7 @@ package ldaputil
 import (
 	"crypto/tls"
 
-	"github.com/go-ldap/ldap"
+	"github.com/go-ldap/ldap/v3"
 )
 
 func NewLDAP() LDAP {

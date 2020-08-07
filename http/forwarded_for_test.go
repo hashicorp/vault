@@ -7,8 +7,19 @@ import (
 	"testing"
 
 	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/vault"
 )
+
+func getListenerConfigForMarshalerTest(addr sockaddr.IPAddr) *configutil.Listener {
+	return &configutil.Listener{
+		XForwardedForAuthorizedAddrs: []*sockaddr.SockAddrMarshaler{
+			{
+				SockAddr: addr,
+			},
+		},
+	}
+}
 
 func TestHandler_XForwardedFor(t *testing.T) {
 	goodAddr, err := sockaddr.NewIPAddr("127.0.0.1")
@@ -29,11 +40,9 @@ func TestHandler_XForwardedFor(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(r.RemoteAddr))
 			})
-			return WrapForwardedForHandler(origHandler, []*sockaddr.SockAddrMarshaler{
-				&sockaddr.SockAddrMarshaler{
-					SockAddr: goodAddr,
-				},
-			}, true, false, 0)
+			listenerConfig := getListenerConfigForMarshalerTest(goodAddr)
+			listenerConfig.XForwardedForRejectNotPresent = true
+			return WrapForwardedForHandler(origHandler, listenerConfig)
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
@@ -74,11 +83,9 @@ func TestHandler_XForwardedFor(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(r.RemoteAddr))
 			})
-			return WrapForwardedForHandler(origHandler, []*sockaddr.SockAddrMarshaler{
-				&sockaddr.SockAddrMarshaler{
-					SockAddr: badAddr,
-				},
-			}, true, false, 0)
+			listenerConfig := getListenerConfigForMarshalerTest(badAddr)
+			listenerConfig.XForwardedForRejectNotPresent = true
+			return WrapForwardedForHandler(origHandler, listenerConfig)
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
@@ -111,11 +118,10 @@ func TestHandler_XForwardedFor(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(r.RemoteAddr))
 			})
-			return WrapForwardedForHandler(origHandler, []*sockaddr.SockAddrMarshaler{
-				&sockaddr.SockAddrMarshaler{
-					SockAddr: badAddr,
-				},
-			}, true, true, 0)
+			listenerConfig := getListenerConfigForMarshalerTest(badAddr)
+			listenerConfig.XForwardedForRejectNotPresent = true
+			listenerConfig.XForwardedForRejectNotAuthorized = true
+			return WrapForwardedForHandler(origHandler, listenerConfig)
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
@@ -145,11 +151,11 @@ func TestHandler_XForwardedFor(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(r.RemoteAddr))
 			})
-			return WrapForwardedForHandler(origHandler, []*sockaddr.SockAddrMarshaler{
-				&sockaddr.SockAddrMarshaler{
-					SockAddr: goodAddr,
-				},
-			}, true, true, 4)
+			listenerConfig := getListenerConfigForMarshalerTest(goodAddr)
+			listenerConfig.XForwardedForRejectNotPresent = true
+			listenerConfig.XForwardedForRejectNotAuthorized = true
+			listenerConfig.XForwardedForHopSkips = 4
+			return WrapForwardedForHandler(origHandler, listenerConfig)
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
@@ -179,11 +185,11 @@ func TestHandler_XForwardedFor(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(r.RemoteAddr))
 			})
-			return WrapForwardedForHandler(origHandler, []*sockaddr.SockAddrMarshaler{
-				&sockaddr.SockAddrMarshaler{
-					SockAddr: goodAddr,
-				},
-			}, true, true, 1)
+			listenerConfig := getListenerConfigForMarshalerTest(goodAddr)
+			listenerConfig.XForwardedForRejectNotPresent = true
+			listenerConfig.XForwardedForRejectNotAuthorized = true
+			listenerConfig.XForwardedForHopSkips = 1
+			return WrapForwardedForHandler(origHandler, listenerConfig)
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
@@ -216,11 +222,11 @@ func TestHandler_XForwardedFor(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(r.RemoteAddr))
 			})
-			return WrapForwardedForHandler(origHandler, []*sockaddr.SockAddrMarshaler{
-				&sockaddr.SockAddrMarshaler{
-					SockAddr: goodAddr,
-				},
-			}, true, true, 1)
+			listenerConfig := getListenerConfigForMarshalerTest(goodAddr)
+			listenerConfig.XForwardedForRejectNotPresent = true
+			listenerConfig.XForwardedForRejectNotAuthorized = true
+			listenerConfig.XForwardedForHopSkips = 1
+			return WrapForwardedForHandler(origHandler, listenerConfig)
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{

@@ -6,7 +6,7 @@ export function linkParams({ mode, secret, queryParams }) {
   let params;
   const route = `vault.cluster.secrets.backend.${mode}`;
 
-  if (!secret || secret === ' ') {
+  if ((mode !== 'versions' && !secret) || secret === ' ') {
     params = [route + '-root'];
   } else {
     params = [route, encodePath(secret)];

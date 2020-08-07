@@ -102,7 +102,7 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -146,10 +146,16 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 		return nil, fmt.Errorf("empty ciphertext returned")
 	}
 
+	keyVersion := ver
+	if keyVersion == 0 {
+		keyVersion = p.LatestVersion
+	}
+
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"ciphertext": ciphertext,
+			"ciphertext":  ciphertext,
+			"key_version": keyVersion,
 		},
 	}
 

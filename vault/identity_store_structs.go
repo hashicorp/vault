@@ -87,3 +87,7 @@ type groupDiff struct {
 	Deleted    []*identity.Group
 	Unmodified []*identity.Group
 }
+
+type casesensitivity struct {
+	DisableLowerCasedNames bool `json:"disable_lower_cased_names"`
+}

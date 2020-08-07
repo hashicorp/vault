@@ -1,0 +1,48 @@
+version = 0
+name = "Aggregate"
+documentation = "Performs an aggregate operation"
+response.type = "batch cursor"
+
+[properties]
+enabled = ["read concern", "read preference", "write concern"]
+retryable = {mode = "once per command", type = "reads"}
+MinimumWriteConcernWireVersion = 5
+
+[command]
+name = "aggregate"
+parameter = "collection"
+database = true
+
+[request.pipeline]
+type = "array"
+constructor = true
+documentation = "Pipeline determines how data is transformed for an aggregation."
+
+[request.allowDiskUse]
+type = "boolean"
+documentation = "AllowDiskUse enables writing to temporary files. When true, aggregation stages can write to the dbPath/_tmp directory."
+
+[request.batchSize]
+type = "int32"
+documentation = "BatchSize specifies the number of documents to return in every batch."
+
+[request.bypassDocumentValidation]
+type = "boolean"
+documentation = "BypassDocumentValidation allows the write to opt-out of document level validation. This only applies when the $out stage is specified."
+
+[request.collation]
+type = "document"
+minWireVersionRequired = 5
+documentation = "Collation specifies a collation. This option is only valid for server versions 3.4 and above."
+
+[request.maxTimeMS]
+type = "int64"
+documentation = "MaxTimeMS specifies the maximum amount of time to allow the query to run."
+
+[request.comment]
+type = "string"
+documentation = "Comment specifies an arbitrary string to help trace the operation through the database profiler, currentOp, and logs."
+
+[request.hint]
+type = "value"
+documentation = "Hint specifies the index to use."

@@ -2,7 +2,27 @@ package ldaputil
 
 import (
 	"testing"
+
+	"github.com/hashicorp/go-hclog"
 )
+
+// TestDialLDAP duplicates a potential panic that was
+// present in the previous version of TestDialLDAP,
+// then confirms its fix by passing.
+func TestDialLDAP(t *testing.T) {
+	ldapClient := Client{
+		Logger: hclog.NewNullLogger(),
+		LDAP:   NewLDAP(),
+	}
+
+	ce := &ConfigEntry{
+		Url:            "ldap://localhost:384654786",
+		RequestTimeout: 3,
+	}
+	if _, err := ldapClient.DialLDAP(ce); err == nil {
+		t.Fatal("expected error")
+	}
+}
 
 func TestLDAPEscape(t *testing.T) {
 	testcases := map[string]string{

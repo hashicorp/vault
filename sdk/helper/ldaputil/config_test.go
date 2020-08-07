@@ -3,6 +3,8 @@ package ldaputil
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/go-test/deep"
 )
 
 func TestCertificateValidation(t *testing.T) {
@@ -28,26 +30,36 @@ func TestCertificateValidation(t *testing.T) {
 	}
 }
 
-func TestUseTokenGroupsDefault(t *testing.T) {
+func TestConfig(t *testing.T) {
 	config := testConfig()
-	if config.UseTokenGroups {
-		t.Errorf("expected false UseTokenGroups but got %t", config.UseTokenGroups)
-	}
+	configFromJSON := testJSONConfig(t)
 
-	config = testJSONConfig(t)
-	if config.UseTokenGroups {
-		t.Errorf("expected false UseTokenGroups from JSON but got %t", config.UseTokenGroups)
-	}
+	t.Run("equality_check", func(t *testing.T) {
+		if diff := deep.Equal(config, configFromJSON); len(diff) > 0 {
+			t.Fatalf("bad, diff: %#v", diff)
+		}
+	})
+
+	t.Run("default_use_token_groups", func(t *testing.T) {
+		if config.UseTokenGroups {
+			t.Errorf("expected false UseTokenGroups but got %t", config.UseTokenGroups)
+		}
+
+		if configFromJSON.UseTokenGroups {
+			t.Errorf("expected false UseTokenGroups from JSON but got %t", configFromJSON.UseTokenGroups)
+		}
+	})
 }
 
 func testConfig() *ConfigEntry {
 	return &ConfigEntry{
-		Url:           "ldap://138.91.247.105",
-		UserDN:        "example,com",
-		BindDN:        "kitty",
-		BindPassword:  "cats",
-		TLSMaxVersion: "tls12",
-		TLSMinVersion: "tls12",
+		Url:            "ldap://138.91.247.105",
+		UserDN:         "example,com",
+		BindDN:         "kitty",
+		BindPassword:   "cats",
+		TLSMaxVersion:  "tls12",
+		TLSMinVersion:  "tls12",
+		RequestTimeout: 30,
 	}
 }
 
@@ -103,6 +115,7 @@ var jsonConfig = []byte(`
 	"binddn": "kitty",
 	"bindpass": "cats",
 	"tls_max_version": "tls12",
-	"tls_min_version": "tls12"
+	"tls_min_version": "tls12",
+	"request_timeout": 30
 }
 `)

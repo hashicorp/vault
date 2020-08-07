@@ -99,8 +99,8 @@ func (client DeletedApplicationsClient) HardDeletePreparer(ctx context.Context, 
 // HardDeleteSender sends the HardDelete request. The method will close the
 // http.Response Body if it receives an error.
 func (client DeletedApplicationsClient) HardDeleteSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // HardDeleteResponder handles the response to the HardDelete request. The method always
@@ -181,8 +181,8 @@ func (client DeletedApplicationsClient) ListPreparer(ctx context.Context, filter
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client DeletedApplicationsClient) ListSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -272,8 +272,8 @@ func (client DeletedApplicationsClient) ListNextPreparer(ctx context.Context, ne
 // ListNextSender sends the ListNext request. The method will close the
 // http.Response Body if it receives an error.
 func (client DeletedApplicationsClient) ListNextSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // ListNextResponder handles the response to the ListNext request. The method always
@@ -347,8 +347,8 @@ func (client DeletedApplicationsClient) RestorePreparer(ctx context.Context, obj
 // RestoreSender sends the Restore request. The method will close the
 // http.Response Body if it receives an error.
 func (client DeletedApplicationsClient) RestoreSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // RestoreResponder handles the response to the Restore request. The method always

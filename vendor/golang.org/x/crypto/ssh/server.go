@@ -193,6 +193,12 @@ func NewServerConn(c net.Conn, config *ServerConfig) (*ServerConn, <-chan NewCha
 	if fullConf.MaxAuthTries == 0 {
 		fullConf.MaxAuthTries = 6
 	}
+	// Check if the config contains any unsupported key exchanges
+	for _, kex := range fullConf.KeyExchanges {
+		if _, ok := serverForbiddenKexAlgos[kex]; ok {
+			return nil, nil, nil, fmt.Errorf("ssh: unsupported key exchange %s for server", kex)
+		}
+	}
 
 	s := &connection{
 		sshConn: sshConn{conn: c},
@@ -278,8 +284,8 @@ func (s *connection) serverHandshake(config *ServerConfig) (*Permissions, error)
 
 func isAcceptableAlgo(algo string) bool {
 	switch algo {
-	case KeyAlgoRSA, KeyAlgoDSA, KeyAlgoECDSA256, KeyAlgoECDSA384, KeyAlgoECDSA521, KeyAlgoED25519,
-		CertAlgoRSAv01, CertAlgoDSAv01, CertAlgoECDSA256v01, CertAlgoECDSA384v01, CertAlgoECDSA521v01, CertAlgoED25519v01:
+	case KeyAlgoRSA, KeyAlgoDSA, KeyAlgoECDSA256, KeyAlgoECDSA384, KeyAlgoECDSA521, KeyAlgoSKECDSA256, KeyAlgoED25519, KeyAlgoSKED25519,
+		CertAlgoRSAv01, CertAlgoDSAv01, CertAlgoECDSA256v01, CertAlgoECDSA384v01, CertAlgoECDSA521v01, CertAlgoSKECDSA256v01, CertAlgoED25519v01, CertAlgoSKED25519v01:
 		return true
 	}
 	return false

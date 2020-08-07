@@ -11,7 +11,7 @@
   box-sizing: border-box;
   flex-basis: 7rem;
   width: 7rem;
-  height: 7.5rem;
+  min-height: 7.5rem;
   padding: $size-10 $size-6 $size-10;
   flex-direction: column;
   justify-content: space-between;

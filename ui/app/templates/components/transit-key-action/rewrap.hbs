@@ -1,6 +1,9 @@
 <form {{action 'doSubmit' (hash ciphertext=ciphertext context=context nonce=nonce key_version=key_version) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="rewrap" />
+      <div class="content">
+        <p>You can rewrap the provided ciphertext using the latest version of <code>{{key.name}}</code> as the encryption key.</p>
+      </div>
     {{key-version-select
       key=key
       onVersionChange=(action (mut key_version))
@@ -9,7 +12,15 @@
     <div class="field">
       <label for="ciphertext" class="is-label">Ciphertext</label>
       <div class="control is-expanded">
-        {{textarea name="ciphertext" class="textarea" id="ciphertext" value=ciphertext}}
+        {{ivy-codemirror
+            valueUpdated=(action (mut ciphertext))
+            options=(hash
+              lineNumbers=true
+              tabSize=2
+              mode='ruby'
+              theme='hashi'
+            )
+          }}
       </div>
     </div>
     {{#if key.derived}}
@@ -54,3 +65,23 @@
     </div>
   </div>
 </form>
+<Modal @title="Copy your token" @onClose={{action (mut isModalActive)}} @isActive={{isModalActive}}>
+  <section class="modal-card-body">
+    <div class="box is-shadowless is-fullwidth is-sideless">
+      <h2 class="title is-6">Ciphertext</h2>
+      <div class="copy-text level">
+        <code class="level-left" data-test-encrypted-value="ciphertext">{{ciphertext}}</code>
+        <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
+          @clipboardText={{ciphertext}} @buttonType="button" @success={{action (set-flash-message 'Ciphertext copied!')}}>
+          <Icon @glyph="copy-action" aria-label="Copy" />
+        </CopyButton>
+      </div>
+    </div>
+  </section>
+  <footer class="modal-card-foot">
+    <CopyButton class="button is-primary copy-close" data-test-button="modal-copy-close" @clipboardText={{ciphertext}}
+      @buttonType="button" @success={{action "toggleModal" "Ciphertext copied!"}}>
+      Copy &amp; Close
+    </CopyButton>
+  </footer>
+</Modal>

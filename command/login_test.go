@@ -58,6 +58,9 @@ func TestLoginCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		// Emulate an unknown token format present in ~/.vault-token, for example
+		client.SetToken("a.a")
+
 		code := cmd.Run([]string{
 			"-method", "userpass",
 			"-path", "my-auth",

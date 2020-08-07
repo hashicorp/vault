@@ -49,6 +49,17 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		},
 
 		{
+			Pattern: "config/state/sanitized$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.handleConfigStateSanitized,
+					Summary:     "Return a sanitized version of the Vault server configuration.",
+					Description: "The sanitized output strips configuration values in the storage, HA storage, and seals stanzas, which may contain sensitive values such as API tokens. It also removes any token or secret fields in other stanzas, such as the circonus_api_token from telemetry.",
+				},
+			},
+		},
+
+		{
 			Pattern: "config/ui/headers/" + framework.GenericNameRegex("header"),
 
 			Fields: map[string]*framework.FieldSchema{
@@ -143,7 +154,40 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		},
 		{
 			Pattern: "health$",
-
+			Fields: map[string]*framework.FieldSchema{
+				"standbyok": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Description: "Specifies if being a standby should still return the active status code.",
+				},
+				"perfstandbyok": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Description: "Specifies if being a performance standby should still return the active status code.",
+				},
+				"activecode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for an active node.",
+				},
+				"standbycode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for a standby node.",
+				},
+				"drsecondarycode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for a DR secondary node.",
+				},
+				"performancestandbycode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for a performance standby node.",
+				},
+				"sealedcode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for a sealed node.",
+				},
+				"uninitcode": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for an uninitialized node.",
+				},
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Summary: "Returns the health status of Vault.",
@@ -156,6 +200,9 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					},
 				},
 			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["health"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["health"][1]),
 		},
 
 		{
@@ -661,13 +708,17 @@ func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 				Type:        framework.TypeCommaStringSlice,
 				Description: strings.TrimSpace(sysHelp["plugin-backend-reload-mounts"][0]),
 			},
+			"scope": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-backend-reload-scope"][0]),
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:    b.handlePluginReloadUpdate,
 				Summary:     "Reload mounted plugin backends.",
-				Description: "Either the plugin name (`plugin`) or the desired plugin backend mounts (`mounts`) must be provided, but not both. In the case that the plugin name is provided, all mounted paths that use that plugin backend will be reloaded.",
+				Description: "Either the plugin name (`plugin`) or the desired plugin backend mounts (`mounts`) must be provided, but not both. In the case that the plugin name is provided, all mounted paths that use that plugin backend will be reloaded.  If (`scope`) is provided and is (`global`), the plugin(s) are reloaded globally.",
 			},
 		},
 
@@ -834,6 +885,28 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-requests"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-requests"][1]),
+		},
+		{
+			Pattern: "internal/counters/tokens",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.pathInternalCountersTokens,
+					Unpublished: true,
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-tokens"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-tokens"][1]),
+		},
+		{
+			Pattern: "internal/counters/entities",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.pathInternalCountersEntities,
+					Unpublished: true,
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-entities"][1]),
 		},
 	}
 }
@@ -1130,6 +1203,40 @@ func (b *SystemBackend) metricsPath() *framework.Path {
 
 }
 
+func (b *SystemBackend) monitorPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "monitor",
+		Fields: map[string]*framework.FieldSchema{
+			"log_level": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Log level to view system logs at. Currently supported values are \"trace\", \"debug\", \"info\", \"warn\", \"error\".",
+				Query:       true,
+			},
+		},
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation: b.handleMonitor,
+		},
+		HelpSynopsis:    strings.TrimSpace(sysHelp["monitor"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["monitor"][1]),
+	}
+
+}
+
+func (b *SystemBackend) hostInfoPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "host-info/?",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:    b.handleHostInfo,
+				Summary:     strings.TrimSpace(sysHelp["host-info"][0]),
+				Description: strings.TrimSpace(sysHelp["host-info"][1]),
+			},
+		},
+		HelpSynopsis:    strings.TrimSpace(sysHelp["host-info"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["host-info"][1]),
+	}
+}
+
 func (b *SystemBackend) authPaths() []*framework.Path {
 	return []*framework.Path{
 		{
@@ -1231,6 +1338,11 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Type:        framework.TypeBool,
 					Default:     false,
 					Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
+				},
+				"external_entropy_access": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Default:     false,
+					Description: strings.TrimSpace(sysHelp["external_entropy_access"][0]),
 				},
 				"plugin_name": &framework.FieldSchema{
 					Type:        framework.TypeString,
@@ -1354,6 +1466,61 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
+		},
+
+		{
+			Pattern: "policies/password/(?P<name>.+)/generate$",
+
+			Fields: map[string]*framework.FieldSchema{
+				"name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "The name of the password policy.",
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handlePoliciesPasswordGenerate,
+					Summary:  "Generate a password from an existing password policy.",
+				},
+			},
+
+			HelpSynopsis:    "Generate a password from an existing password policy.",
+			HelpDescription: "Generate a password from an existing password policy.",
+		},
+
+		{
+			Pattern: "policies/password/(?P<name>.+)$",
+
+			Fields: map[string]*framework.FieldSchema{
+				"name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "The name of the password policy.",
+				},
+				"policy": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "The password policy",
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handlePoliciesPasswordSet,
+					Summary:  "Add a new or update an existing password policy.",
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handlePoliciesPasswordGet,
+					Summary:  "Retrieve an existing password policy.",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handlePoliciesPasswordDelete,
+					Summary:  "Delete a password policy.",
+				},
+			},
+
+			HelpSynopsis: "Read, Modify, or Delete a password policy.",
+			HelpDescription: "Read the rules of an existing password policy, create or update " +
+				"the rules of a password policy, or delete a password policy.",
 		},
 	}
 }
@@ -1521,6 +1688,11 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeBool,
 					Default:     false,
 					Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
+				},
+				"external_entropy_access": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Default:     false,
+					Description: strings.TrimSpace(sysHelp["external_entropy_access"][0]),
 				},
 				"plugin_name": &framework.FieldSchema{
 					Type:        framework.TypeString,

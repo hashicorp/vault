@@ -10,6 +10,5 @@ export default create({
   generateCredentialsLink: clickable('[data-test-kmip-link-generate-credentials]'),
   roleDetailsLink: clickable('[data-test-kmip-link-role-details]'),
   backToRoleLink: clickable('[data-test-kmip-link-back-to-role]'),
-  detailRevoke: clickable('[data-test-popup-menu-trigger]'),
   submit: clickable('[data-test-edit-form-submit]'),
 });

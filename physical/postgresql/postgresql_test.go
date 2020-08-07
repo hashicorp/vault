@@ -7,10 +7,9 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/ory/dockertest"
 
 	_ "github.com/lib/pq"
 )
@@ -19,11 +18,11 @@ func TestPostgreSQLBackend(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Debug)
 
 	// Use docker as pg backend if no url is provided via environment variables
-	var cleanup func()
 	connURL := os.Getenv("PGURL")
 	if connURL == "" {
-		cleanup, connURL = prepareTestContainer(t, logger)
+		cleanup, u := postgresql.PrepareTestContainer(t, "11.1")
 		defer cleanup()
+		connURL = u
 	}
 
 	table := os.Getenv("PGTABLE")
@@ -111,6 +110,67 @@ func TestPostgreSQLBackendMaxIdleConnectionsParameter(t *testing.T) {
 	expectedErrStr := "failed parsing max_idle_connections parameter: strconv.Atoi: parsing \"bad param\": invalid syntax"
 	if err.Error() != expectedErrStr {
 		t.Errorf("Expected: \"%s\" but found \"%s\"", expectedErrStr, err.Error())
+	}
+}
+
+func TestConnectionURL(t *testing.T) {
+	type input struct {
+		envar string
+		conf  map[string]string
+	}
+
+	var cases = map[string]struct {
+		want  string
+		input input
+	}{
+		"environment_variable_not_set_use_config_value": {
+			want: "abc",
+			input: input{
+				envar: "",
+				conf:  map[string]string{"connection_url": "abc"},
+			},
+		},
+
+		"no_value_connection_url_set_key_exists": {
+			want: "",
+			input: input{
+				envar: "",
+				conf:  map[string]string{"connection_url": ""},
+			},
+		},
+
+		"no_value_connection_url_set_key_doesnt_exist": {
+			want: "",
+			input: input{
+				envar: "",
+				conf:  map[string]string{},
+			},
+		},
+
+		"environment_variable_set": {
+			want: "abc",
+			input: input{
+				envar: "abc",
+				conf:  map[string]string{"connection_url": "def"},
+			},
+		},
+	}
+
+	for name, tt := range cases {
+		t.Run(name, func(t *testing.T) {
+			// This is necessary to avoid always testing the branch where the env is set.
+			// As long the the env is set --- even if the value is "" --- `ok` returns true.
+			if tt.input.envar != "" {
+				os.Setenv("VAULT_PG_CONNECTION_URL", tt.input.envar)
+				defer os.Unsetenv("VAULT_PG_CONNECTION_URL")
+			}
+
+			got := connectionURL(tt.input.conf)
+
+			if got != tt.want {
+				t.Errorf("connectionURL(%s): want '%s', got '%s'", tt.input, tt.want, got)
+			}
+		})
 	}
 }
 
@@ -257,16 +317,26 @@ func testPostgresSQLLockRenewal(t *testing.T, ha physical.HABackend) {
 		t.Fatalf("err: %v", err)
 	}
 
-	// Cancel attempt after lock ttl + 1s so as not to block unit tests forever
 	stopCh := make(chan struct{})
 	timeout := time.Duration(lock.ttlSeconds)*time.Second + lock.retryInterval + time.Second
-	time.AfterFunc(timeout, func() {
+
+	var leaderCh2 <-chan struct{}
+	newlockch := make(chan struct{})
+	go func() {
+		leaderCh2, err = newLock.Lock(stopCh)
+		close(newlockch)
+	}()
+
+	// Cancel attempt after lock ttl + 1s so as not to block unit tests forever
+	select {
+	case <-time.After(timeout):
 		t.Logf("giving up on lock attempt after %v", timeout)
 		close(stopCh)
-	})
+	case <-newlockch:
+		// pass through
+	}
 
 	// Attempt to lock should work
-	leaderCh2, err := newLock.Lock(stopCh)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -288,47 +358,6 @@ func testPostgresSQLLockRenewal(t *testing.T, ha physical.HABackend) {
 
 	// Cleanup
 	newLock.Unlock()
-}
-
-func prepareTestContainer(t *testing.T, logger log.Logger) (cleanup func(), retConnString string) {
-	// If environment variable is set, use this connectionstring without starting docker container
-	if os.Getenv("PGURL") != "" {
-		return func() {}, os.Getenv("PGURL")
-	}
-
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-	// using 11.1 which is currently latest, use hard version for stability of tests
-	resource, err := pool.Run("postgres", "11.1", []string{})
-	if err != nil {
-		t.Fatalf("Could not start docker Postgres: %s", err)
-	}
-
-	retConnString = fmt.Sprintf("postgres://postgres@localhost:%v/postgres?sslmode=disable", resource.GetPort("5432/tcp"))
-
-	cleanup = func() {
-		docker.CleanupResource(t, pool, resource)
-	}
-
-	// Provide a test function to the pool to test if docker instance service is up.
-	// We try to setup a pg backend as test for successful connect
-	// exponential backoff-retry, because the dockerinstance may not be able to accept
-	// connections yet, test by trying to setup a postgres backend, max-timeout is 60s
-	if err := pool.Retry(func() error {
-		var err error
-		_, err = NewPostgreSQLBackend(map[string]string{
-			"connection_url": retConnString,
-		}, logger)
-		return err
-
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to docker: %s", err)
-	}
-
-	return cleanup, retConnString
 }
 
 func setupDatabaseObjects(t *testing.T, logger log.Logger, pg *PostgreSQLBackend) {

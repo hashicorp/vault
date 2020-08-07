@@ -4,18 +4,21 @@ package vault
 
 import (
 	"context"
-	"time"
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/hashicorp/vault/vault/quotas"
 	"github.com/hashicorp/vault/vault/replication"
-	cache "github.com/patrickmn/go-cache"
 )
 
 type entCore struct{}
+type entCoreConfig struct{}
+
+func (e entCoreConfig) Clone() entCoreConfig {
+	return entCoreConfig{}
+}
 
 type LicensingConfig struct {
 	AdditionalPublicKeys []interface{}
@@ -43,8 +46,12 @@ func coreInit(c *Core, conf *CoreConfig) error {
 	}
 	return nil
 }
+func (c *Core) setupReplicationResolverHandler() error {
+	return nil
+}
 
-func createSecondaries(*Core, *CoreConfig) {}
+func (c *Core) teardownReplicationResolverHandler() {}
+func createSecondaries(*Core, *CoreConfig)          {}
 
 func addExtraLogicalBackends(*Core, map[string]logical.Factory) {}
 
@@ -91,6 +98,12 @@ func (c *Core) HasFeature(license.Features) bool {
 	return false
 }
 
+func (c *Core) collectNamespaces() []*namespace.Namespace {
+	return []*namespace.Namespace{
+		namespace.RootNamespace,
+	}
+}
+
 func (c *Core) namepaceByPath(string) *namespace.Namespace {
 	return namespace.RootNamespace
 }
@@ -99,7 +112,7 @@ func (c *Core) setupReplicatedClusterPrimary(*replication.Cluster) error { retur
 
 func (c *Core) perfStandbyCount() int { return 0 }
 
-func (c *Core) removePrefixFromFilteredPaths(context.Context, string) error {
+func (c *Core) removePathFromFilteredPaths(context.Context, string, string) error {
 	return nil
 }
 
@@ -113,6 +126,30 @@ func (c *Core) removePerfStandbySecondary(context.Context, string) {}
 
 func (c *Core) removeAllPerfStandbySecondaries() {}
 
-func (c *Core) perfStandbyClusterHandler() (*replication.Cluster, *cache.Cache, chan struct{}, error) {
-	return nil, cache.New(2*cluster.HeartbeatInterval, 1*time.Second), make(chan struct{}), nil
+func (c *Core) perfStandbyClusterHandler() (*replication.Cluster, chan struct{}, error) {
+	return nil, make(chan struct{}), nil
+}
+
+func (c *Core) initSealsForMigration() {}
+
+func (c *Core) postSealMigration(ctx context.Context) error { return nil }
+
+func (c *Core) applyLeaseCountQuota(in *quotas.Request) (*quotas.Response, error) {
+	return &quotas.Response{Allowed: true}, nil
+}
+
+func (c *Core) ackLeaseQuota(access quotas.Access, leaseGenerated bool) error {
+	return nil
+}
+
+func (c *Core) quotaLeaseWalker(ctx context.Context, callback func(request *quotas.Request) bool) error {
+	return nil
+}
+
+func (c *Core) quotasHandleLeases(ctx context.Context, action quotas.LeaseAction, leaseIDs []string) error {
+	return nil
+}
+
+func (c *Core) namespaceByPath(path string) *namespace.Namespace {
+	return namespace.RootNamespace
 }

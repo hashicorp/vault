@@ -23,6 +23,7 @@ export default Route.extend({
       }
 
       let router = this.get('routing');
+      //FIXME transition.intent likely needs to be replaced
       let errorURL = transition.intent.url;
       let { name, contexts, queryParams } = transition.intent;
 

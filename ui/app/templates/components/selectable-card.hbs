@@ -1,0 +1,20 @@
+{{!-- conditional to check if SelectableCard is apart of a CSS Grid, if yes return grid item class --}}
+{{#if gridContainer}}
+  <div class="selectable-card is-rounded is-grid-container">
+    <div class="selectable-card-title">
+      <h2 class="title-number">{{format-number total}}</h2>
+      <h3 class="title is-5" data-test-selectable-card-title={{formattedCardTitle}}>{{formattedCardTitle}}</h3>
+      <p class="has-text-grey is-size-8">{{subText}}</p>
+    </div>
+    {{yield}}
+  </div>
+{{else}}
+  <div class="selectable-card is-rounded">
+    <div>
+      <h2 class="title-number">{{format-number total}}</h2>
+      <h3 class="title is-5" data-test-selectable-card-title={{formattedCardTitle}}>{{formattedCardTitle}}</h3>
+      <p class="has-text-grey is-size-8">{{subText}}</p>
+    </div>
+    {{yield}}
+  </div>
+{{/if}}

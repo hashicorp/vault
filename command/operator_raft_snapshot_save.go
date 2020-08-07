@@ -17,14 +17,14 @@ type OperatorRaftSnapshotSaveCommand struct {
 }
 
 func (c *OperatorRaftSnapshotSaveCommand) Synopsis() string {
-	return "Saves a snapshot of the current state of the raft cluster into a file"
+	return "Saves a snapshot of the current state of the Raft cluster into a file"
 }
 
 func (c *OperatorRaftSnapshotSaveCommand) Help() string {
 	helpText := `
 Usage: vault operator raft snapshot save <snapshot_file>
 
-  Saves a snapshot of the current state of the raft cluster into a file.
+  Saves a snapshot of the current state of the Raft cluster into a file.
 
 	  $ vault operator raft snapshot save raft.snap
 

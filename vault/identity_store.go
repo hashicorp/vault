@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
+	metrics "github.com/armon/go-metrics"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -23,6 +26,7 @@ const (
 )
 
 var (
+	caseSensitivityKey           = "casesensitivity"
 	sendGroupUpgrade             = func(*IdentityStore, *identity.Group) (bool, error) { return false, nil }
 	parseExtraEntityFromBucket   = func(context.Context, *IdentityStore, *identity.Entity) (bool, error) { return false, nil }
 	addExtraEntityDataToResponse = func(*identity.Entity, map[string]interface{}) {}
@@ -72,9 +76,10 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	}
 
 	iStore.Backend = &framework.Backend{
-		BackendType: logical.TypeLogical,
-		Paths:       iStore.paths(),
-		Invalidate:  iStore.Invalidate,
+		BackendType:    logical.TypeLogical,
+		Paths:          iStore.paths(),
+		Invalidate:     iStore.Invalidate,
+		InitializeFunc: iStore.initialize,
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"oidc/.well-known/*",
@@ -109,6 +114,22 @@ func (i *IdentityStore) paths() []*framework.Path {
 	)
 }
 
+func (i *IdentityStore) initialize(ctx context.Context, req *logical.InitializationRequest) error {
+	// Only primary should write the status
+	if i.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationPerformanceStandby | consts.ReplicationDRSecondary) {
+		return nil
+	}
+
+	entry, err := logical.StorageEntryJSON(caseSensitivityKey, &casesensitivity{
+		DisableLowerCasedNames: i.disableLowerCasedNames,
+	})
+	if err != nil {
+		return err
+	}
+
+	return i.view.Put(ctx, entry)
+}
+
 // Invalidate is a callback wherein the backend is informed that the value at
 // the given key is updated. In identity store's case, it would be the entity
 // storage entries that get updated. The value needs to be read and MemDB needs
@@ -120,6 +141,41 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	defer i.lock.Unlock()
 
 	switch {
+	case key == caseSensitivityKey:
+		entry, err := i.view.Get(ctx, caseSensitivityKey)
+		if err != nil {
+			i.logger.Error("failed to read case sensitivity setting during invalidation", "error", err)
+			return
+		}
+		if entry == nil {
+			return
+		}
+
+		var setting casesensitivity
+		if err := entry.DecodeJSON(&setting); err != nil {
+			i.logger.Error("failed to decode case sensitivity setting during invalidation", "error", err)
+			return
+		}
+
+		// Fast return if the setting is the same
+		if i.disableLowerCasedNames == setting.DisableLowerCasedNames {
+			return
+		}
+
+		// If the setting is different, reset memdb and reload all the artifacts
+		i.disableLowerCasedNames = setting.DisableLowerCasedNames
+		if err := i.resetDB(ctx); err != nil {
+			i.logger.Error("failed to reset memdb during invalidation", "error", err)
+			return
+		}
+		if err := i.loadEntities(ctx); err != nil {
+			i.logger.Error("failed to load entities during invalidation", "error", err)
+			return
+		}
+		if err := i.loadGroups(ctx); err != nil {
+			i.logger.Error("failed to load groups during invalidation", "error", err)
+			return
+		}
 	// Check if the key is a storage entry key for an entity bucket
 	case strings.HasPrefix(key, storagepacker.StoragePackerBucketsPrefix):
 		// Create a MemDB transaction
@@ -262,7 +318,17 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		return
 
 	case strings.HasPrefix(key, oidcTokensPrefix):
-		i.oidcCache.Flush(nil)
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			i.logger.Error("error retrieving namespace", "error", err)
+			return
+		}
+
+		// Wipe the cache for the requested namespace. This will also clear
+		// the shared namespace as well.
+		if err := i.oidcCache.Flush(ns); err != nil {
+			i.logger.Error("error flushing oidc cache", "error", err)
+		}
 	}
 }
 
@@ -415,6 +481,8 @@ func (i *IdentityStore) entityByAliasFactorsInTxn(txn *memdb.Txn, mountAccessor,
 // CreateOrFetchEntity creates a new entity. This is used by core to
 // associate each login attempt by an alias to a unified entity in Vault.
 func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.Alias) (*identity.Entity, error) {
+	defer metrics.MeasureSince([]string{"identity", "create_or_fetch_entity"}, time.Now())
+
 	var entity *identity.Entity
 	var err error
 	var update bool
@@ -501,6 +569,23 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		entity.Aliases = []*identity.Alias{
 			newAlias,
 		}
+
+		// Emit a metric for the new entity
+		ns, err := NamespaceByID(ctx, entity.NamespaceID, i.core)
+		var nsLabel metrics.Label
+		if err != nil {
+			nsLabel = metrics.Label{"namespace", "unknown"}
+		} else {
+			nsLabel = metricsutil.NamespaceLabel(ns)
+		}
+		i.core.MetricSink().IncrCounterWithLabels(
+			[]string{"identity", "entity", "creation"},
+			1,
+			[]metrics.Label{
+				nsLabel,
+				{"auth_method", newAlias.MountType},
+				{"mount_point", newAlias.MountPath},
+			})
 	}
 
 	// Update MemDB and persist entity object

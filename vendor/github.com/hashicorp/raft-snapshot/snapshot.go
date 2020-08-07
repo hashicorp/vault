@@ -23,6 +23,17 @@ type Snapshot struct {
 	index uint64
 }
 
+// Size returns the file size of the snapshot archive.
+func (s *Snapshot) Size() (int64, error) {
+	info, err := s.file.Stat()
+	if err != nil {
+		return 0, err
+	}
+
+	return info.Size(), nil
+}
+
+// Sealer is used to seal and open the SHASUM file inside the archive.
 type Sealer interface {
 	Seal(context.Context, []byte) ([]byte, error)
 	Open(context.Context, []byte) ([]byte, error)

@@ -65,7 +65,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}

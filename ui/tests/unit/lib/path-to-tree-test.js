@@ -49,6 +49,54 @@ module('Unit | Lib | path to tree', function() {
         },
       },
     ],
+    [
+      'leaves with nested number and shared prefix',
+      ['ns1', 'ns1a', 'ns1a/99999/five9s', 'ns1a/999/ns3', 'ns1a/9999/ns3'],
+      {
+        ns1: null,
+        ns1a: {
+          999: {
+            ns3: null,
+          },
+          9999: {
+            ns3: null,
+          },
+          99999: {
+            five9s: null,
+          },
+        },
+      },
+    ],
+    [
+      'sorting lexicographically',
+      [
+        '99',
+        'bat',
+        'bat/bird',
+        'animal/flying/birds',
+        'animal/walking/dogs',
+        'animal/walking/cats',
+        '1/thing',
+      ],
+      {
+        1: {
+          thing: null,
+        },
+        99: null,
+        animal: {
+          flying: {
+            birds: null,
+          },
+          walking: {
+            cats: null,
+            dogs: null,
+          },
+        },
+        bat: {
+          bird: null,
+        },
+      },
+    ],
   ];
 
   tests.forEach(function([name, input, expected]) {

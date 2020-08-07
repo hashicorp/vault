@@ -118,6 +118,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
 							return errwrap.Wrapf(fmt.Sprintf("error deleting entry with nil value with serial %s: {{err}}", serial), err)
 						}
+						continue
 					}
 
 					cert, err := x509.ParseCertificate(certEntry.Value)
@@ -156,6 +157,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
 							return errwrap.Wrapf(fmt.Sprintf("error deleting nil revoked entry with serial %s: {{err}}", serial), err)
 						}
+						continue
 					}
 
 					if revokedEntry.Value == nil || len(revokedEntry.Value) == 0 {
@@ -163,6 +165,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
 							return errwrap.Wrapf(fmt.Sprintf("error deleting revoked entry with nil value with serial %s: {{err}}", serial), err)
 						}
+						continue
 					}
 
 					err = revokedEntry.DecodeJSON(&revInfo)
@@ -175,7 +178,13 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						return errwrap.Wrapf(fmt.Sprintf("unable to parse stored revoked certificate with serial %q: {{err}}", serial), err)
 					}
 
-					if time.Now().After(revokedCert.NotAfter.Add(bufferDuration)) {
+					// Remove the matched certificate entries from revoked/ and
+					// cert/ paths. We compare against both the NotAfter time
+					// within the cert itself and the time from the revocation
+					// entry, and perform tidy if either one tells us that the
+					// certificate has already been revoked.
+					now := time.Now()
+					if now.After(revokedCert.NotAfter.Add(bufferDuration)) || now.After(revInfo.RevocationTimeUTC.Add(bufferDuration)) {
 						if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
 							return errwrap.Wrapf(fmt.Sprintf("error deleting serial %q from revoked list: {{err}}", serial), err)
 						}

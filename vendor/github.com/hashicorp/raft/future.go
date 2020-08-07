@@ -84,9 +84,10 @@ func (e errorFuture) Index() uint64 {
 // deferError can be embedded to allow a future
 // to provide an error in the future.
 type deferError struct {
-	err       error
-	errCh     chan error
-	responded bool
+	err        error
+	errCh      chan error
+	responded  bool
+	ShutdownCh chan struct{}
 }
 
 func (d *deferError) init() {
@@ -103,7 +104,11 @@ func (d *deferError) Error() error {
 	if d.errCh == nil {
 		panic("waiting for response on nil channel")
 	}
-	d.err = <-d.errCh
+	select {
+	case d.err = <-d.errCh:
+	case <-d.ShutdownCh:
+		d.err = ErrRaftShutdown
+	}
 	return d.err
 }
 
@@ -183,14 +188,13 @@ type userSnapshotFuture struct {
 func (u *userSnapshotFuture) Open() (*SnapshotMeta, io.ReadCloser, error) {
 	if u.opener == nil {
 		return nil, nil, fmt.Errorf("no snapshot available")
-	} else {
-		// Invalidate the opener so it can't get called multiple times,
-		// which isn't generally safe.
-		defer func() {
-			u.opener = nil
-		}()
-		return u.opener()
 	}
+	// Invalidate the opener so it can't get called multiple times,
+	// which isn't generally safe.
+	defer func() {
+		u.opener = nil
+	}()
+	return u.opener()
 }
 
 // userRestoreFuture is used for waiting on a user-triggered restore of an

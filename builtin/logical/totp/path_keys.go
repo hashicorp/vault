@@ -333,6 +333,7 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 			Digits:      keyDigits,
 			Algorithm:   keyAlgorithm,
 			SecretSize:  uintKeySize,
+			Rand:        b.GetRandomReader(),
 		})
 		if err != nil {
 			return logical.ErrorResponse("an error occurred while generating a key"), err

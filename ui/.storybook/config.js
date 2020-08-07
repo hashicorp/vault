@@ -1,7 +1,6 @@
 import { configure, addParameters, addDecorator } from '@storybook/ember';
 import { INITIAL_VIEWPORTS } from '@storybook/addon-viewport';
 import theme from './theme.js';
-import { assign } from '@ember/polyfills';
 
 function loadStories() {
   // automatically import all files ending in *.stories.js
@@ -28,7 +27,7 @@ addDecorator(storyFn => {
 
   // Create a div to wrap the Canvas tab with the applied styles.
   const element = document.createElement('div');
-  assign(element.style, styles.style);
+  Object.assign(element.style, styles.style);
 
   const innerElement = document.createElement('div');
   const wormhole = document.createElement('div');

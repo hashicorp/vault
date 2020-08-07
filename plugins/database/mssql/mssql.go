@@ -215,14 +215,14 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	// sessions.  There cannot be any active sessions before we drop the logins
 	// This isn't done in a transaction because even if we fail along the way,
 	// we want to remove as much access as possible
-	sessionStmt, err := db.PrepareContext(ctx, fmt.Sprintf(
-		"SELECT session_id FROM sys.dm_exec_sessions WHERE login_name = '%s';", username))
+	sessionStmt, err := db.PrepareContext(ctx,
+		"SELECT session_id FROM sys.dm_exec_sessions WHERE login_name = @p1;")
 	if err != nil {
 		return err
 	}
 	defer sessionStmt.Close()
 
-	sessionRows, err := sessionStmt.QueryContext(ctx)
+	sessionRows, err := sessionStmt.QueryContext(ctx, username)
 	if err != nil {
 		return err
 	}
@@ -243,13 +243,13 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	// we need to drop the database users before we can drop the login and the role
 	// This isn't done in a transaction because even if we fail along the way,
 	// we want to remove as much access as possible
-	stmt, err := db.PrepareContext(ctx, fmt.Sprintf("EXEC master.dbo.sp_msloginmappings '%s';", username))
+	stmt, err := db.PrepareContext(ctx, "EXEC master.dbo.sp_msloginmappings @p1;")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.QueryContext(ctx)
+	rows, err := stmt.QueryContext(ctx, username)
 	if err != nil {
 		return err
 	}
@@ -307,7 +307,7 @@ func (m *MSSQL) RotateRootCredentials(ctx context.Context, statements []string) 
 
 	rotateStatents := statements
 	if len(rotateStatents) == 0 {
-		rotateStatents = []string{rotateRootCredentialsSQL}
+		rotateStatents = []string{alterLoginSQL}
 	}
 
 	db, err := m.getConnection(ctx)
@@ -357,6 +357,70 @@ func (m *MSSQL) RotateRootCredentials(ctx context.Context, statements []string) 
 	return m.RawConfig, nil
 }
 
+func (m *MSSQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
+	if len(statements.Rotation) == 0 {
+		statements.Rotation = []string{alterLoginSQL}
+	}
+
+	username = staticUser.Username
+	password = staticUser.Password
+
+	if username == "" || password == "" {
+		return "", "", errors.New("must provide both username and password")
+	}
+
+	m.Lock()
+	defer m.Unlock()
+
+	db, err := m.getConnection(ctx)
+	if err != nil {
+		return "", "", err
+	}
+
+	var exists bool
+
+	err = db.QueryRowContext(ctx, "SELECT 1 FROM master.sys.server_principals where name = N'$1'", username).Scan(&exists)
+
+	if err != nil && err != sql.ErrNoRows {
+		return "", "", err
+	}
+
+	stmts := statements.Rotation
+
+	// Start a transaction
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return "", "", err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	for _, stmt := range stmts {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+
+			m := map[string]string{
+				"name":     username,
+				"username": username,
+				"password": password,
+			}
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+				return "", "", err
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return "", "", err
+	}
+
+	return username, password, nil
+}
+
 const dropUserSQL = `
 USE [%s]
 IF EXISTS
@@ -377,7 +441,6 @@ BEGIN
   DROP LOGIN [%s]
 END
 `
-
-const rotateRootCredentialsSQL = `
+const alterLoginSQL = `
 ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}' 
 `

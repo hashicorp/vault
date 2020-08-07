@@ -16,14 +16,14 @@ type OperatorRaftRemovePeerCommand struct {
 }
 
 func (c *OperatorRaftRemovePeerCommand) Synopsis() string {
-	return "Removes a node from the raft cluster"
+	return "Removes a node from the Raft cluster"
 }
 
 func (c *OperatorRaftRemovePeerCommand) Help() string {
 	helpText := `
 Usage: vault operator raft remove-peer <server_id>
 
-  Removes a node from the raft cluster.
+  Removes a node from the Raft cluster.
 
 	  $ vault operator raft remove-peer node1
 

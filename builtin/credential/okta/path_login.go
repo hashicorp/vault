@@ -118,7 +118,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	}
 
 	loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password)
-	if len(loginPolicies) == 0 {
+	if err != nil || (resp != nil && resp.IsError()) {
 		return resp, err
 	}
 

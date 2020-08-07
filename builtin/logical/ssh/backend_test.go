@@ -1,9 +1,10 @@
 package ssh
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"os/user"
+	"net"
 	"reflect"
 	"strconv"
 	"testing"
@@ -17,27 +18,27 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
+	"github.com/ory/dockertest"
 )
 
-// Before the following tests are run, a username going by the name 'vaultssh' has
-// to be created and its ~/.ssh/authorized_keys file should contain the below key.
-//
-// ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9i+hFxZHGo6KblVme4zrAcJstR6I0PTJozW286X4WyvPnkMYDQ5mnhEYC7UWCvjoTWbPEXPX7NjhRtwQTGD67bV+lrxgfyzK1JZbUXK4PwgKJvQD+XyyWYMzDgGSQY61KUSqCxymSm/9NZkPU3ElaQ9xQuTzPpztM4ROfb8f2Yv6/ZESZsTo0MTAkp8Pcy+WkioI/uJ1H7zqs0EA4OMY4aDJRu0UtP4rTVeYNEAuRXdX+eH4aW3KMvhzpFTjMbaJHJXlEeUm2SaX5TNQyTOvghCeQILfYIL/Ca2ij8iwCmulwdV6eQGfd4VDu40PvSnmfoaE38o6HaPnX0kUcnKiT
-
 const (
-	testIP               = "127.0.0.1"
-	testUserName         = "vaultssh"
-	testAdminUser        = "vaultssh"
-	testOTPKeyType       = "otp"
-	testDynamicKeyType   = "dynamic"
-	testCIDRList         = "127.0.0.1/32"
-	testDynamicRoleName  = "testDynamicRoleName"
-	testOTPRoleName      = "testOTPRoleName"
-	testKeyName          = "testKeyName"
+	testIP              = "127.0.0.1"
+	testUserName        = "vaultssh"
+	testAdminUser       = "vaultssh"
+	testOTPKeyType      = "otp"
+	testDynamicKeyType  = "dynamic"
+	testCIDRList        = "127.0.0.1/32"
+	testAtRoleName      = "test@RoleName"
+	testDynamicRoleName = "testDynamicRoleName"
+	testOTPRoleName     = "testOTPRoleName"
+	// testKeyName is the name of the entry that will be written to SSHMOUNTPOINT/ssh/keys
+	testKeyName = "testKeyName"
+	// testSharedPrivateKey is the value of the entry that will be written to SSHMOUNTPOINT/ssh/keys
 	testSharedPrivateKey = `
 -----BEGIN RSA PRIVATE KEY-----
 MIIEogIBAAKCAQEAvYvoRcWRxqOim5VZnuM6wHCbLUeiND0yaM1tvOl+Fsrz55DG
@@ -67,15 +68,15 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 +B6f4RoPdSXj24JHPg/ioRxjaj094UXJxua2yfkcecGNEuBQHSs=
 -----END RSA PRIVATE KEY-----
 `
-	// Public half of `privateKey`, identical to how it would be fed in from a file
-	publicKey = `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDArgK0ilRRfk8E7HIsjz5l3BuxmwpDd8DHRCVfOhbZ4gOSVxjEOOqBwWGjygdboBIZwFXmwDlU6sWX0hBJAgpQz0Cjvbjxtq/NjkvATrYPgnrXUhTaEn2eQO0PsqRNSFH46SK/oJfTp0q8/WgojxWJ2L7FUV8PO8uIk49DzqAqPV7WXU63vFsjx+3WQOX/ILeQvHCvaqs3dWjjzEoDudRWCOdUqcHEOshV9azIzPrXlQVzRV3QAKl6u7pC+/Secorpwt6IHpMKoVPGiR0tMMuNOVH8zrAKzIxPGfy2WmNDpJopbXMTvSOGAqNcp49O4SKOQl9Fzfq2HEevJamKLrMB dummy@example.com
+	// Public half of `testCAPrivateKey`, identical to how it would be fed in from a file
+	testCAPublicKey = `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDArgK0ilRRfk8E7HIsjz5l3BuxmwpDd8DHRCVfOhbZ4gOSVxjEOOqBwWGjygdboBIZwFXmwDlU6sWX0hBJAgpQz0Cjvbjxtq/NjkvATrYPgnrXUhTaEn2eQO0PsqRNSFH46SK/oJfTp0q8/WgojxWJ2L7FUV8PO8uIk49DzqAqPV7WXU63vFsjx+3WQOX/ILeQvHCvaqs3dWjjzEoDudRWCOdUqcHEOshV9azIzPrXlQVzRV3QAKl6u7pC+/Secorpwt6IHpMKoVPGiR0tMMuNOVH8zrAKzIxPGfy2WmNDpJopbXMTvSOGAqNcp49O4SKOQl9Fzfq2HEevJamKLrMB dummy@example.com
 `
 	publicKey2 = `AAAAB3NzaC1yc2EAAAADAQABAAABAQDArgK0ilRRfk8E7HIsjz5l3BuxmwpDd8DHRCVfOhbZ4gOSVxjEOOqBwWGjygdboBIZwFXmwDlU6sWX0hBJAgpQz0Cjvbjxtq/NjkvATrYPgnrXUhTaEn2eQO0PsqRNSFH46SK/oJfTp0q8/WgojxWJ2L7FUV8PO8uIk49DzqAqPV7WXU63vFsjx+3WQOX/ILeQvHCvaqs3dWjjzEoDudRWCOdUqcHEOshV9azIzPrXlQVzRV3QAKl6u7pC+/Secorpwt6IHpMKoVPGiR0tMMuNOVH8zrAKzIxPGfy2WmNDpJopbXMTvSOGAqNcp49O4SKOQl9Fzfq2HEevJamKLrMB
 `
 
 	publicKey4096 = `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC54Oj4YCFDYxYv69Q9KfU6rWYtUB1eByQdUW0nXFi/vr98QUIV77sEeUVhaQzZcuCojAi/GrloW7ta0Z2DaEv5jOQMAnGpXBcqLJsz3KdrHbpvl93MPNdmNaGPU0GnUEsjBVuDVn9HdIUa8CNrxShvPu7/VqoaRHKLqphGgzFb37vi4qvnQ+5VYAO/TzyVYMD6qJX6I/9Pw8d74jCfEdOh2yGKkP7rXWOghreyIl8H2zTJKg9KoZuPq9F5M8nNt7Oi3rf+DwQiYvamzIqlDP4s5oFVTZW0E9lwWvYDpyiJnUrkQqksebBK/rcyfiFG3onb4qLo2WVWXeK3si8IhGik/TEzprScyAWIf9RviT8O+l5hTA2/c+ctn3MVCLRNfez2lKpdxCoprv1MbIcySGWblTJEcY6RA+aauVJpu7FMtRxHHtZKtMpep8cLu8GKbiP6Ifq2JXBtXtNxDeIgo2MkNoMh/NHAsACJniE/dqV/+u9HvhvgrTbJ69ell0nE4ivzA7O4kZgbR/4MHlLgLFvaqC8RrWRLY6BdFagPIMxghWha7Qw16zqoIjRnolvRzUWvSXanJVg8Z6ua1VxwgirNaAH1ivmJhUh2+4lNxCX6jmZyR3zjJsWY03gjJTairvI762opjjalF8fH6Xrs15mB14JiAlNbk6+5REQcvXlGqw== dummy@example.com`
 
-	privateKey = `-----BEGIN RSA PRIVATE KEY-----
+	testCAPrivateKey = `-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAwK4CtIpUUX5PBOxyLI8+ZdwbsZsKQ3fAx0QlXzoW2eIDklcY
 xDjqgcFho8oHW6ASGcBV5sA5VOrFl9IQSQIKUM9Ao7248bavzY5LwE62D4J611IU
 2hJ9nkDtD7KkTUhR+Okiv6CX06dKvP1oKI8Vidi+xVFfDzvLiJOPQ86gKj1e1l1O
@@ -103,7 +104,93 @@ lObH9Faf0WGdnACZvTz22U9gWhw79S0SpDV31tC5Kl8dXHFiZ09vYUKkYmSd/kms
 SeKWrUkryx46LVf6NMhkyYmRqCEjBwfOozzezi5WbiJy6nn54GQt
 -----END RSA PRIVATE KEY-----
 `
+
+	// testPublicKeyInstall is the public key that is installed in the
+	// admin account's authorized_keys
+	testPublicKeyInstall = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9i+hFxZHGo6KblVme4zrAcJstR6I0PTJozW286X4WyvPnkMYDQ5mnhEYC7UWCvjoTWbPEXPX7NjhRtwQTGD67bV+lrxgfyzK1JZbUXK4PwgKJvQD+XyyWYMzDgGSQY61KUSqCxymSm/9NZkPU3ElaQ9xQuTzPpztM4ROfb8f2Yv6/ZESZsTo0MTAkp8Pcy+WkioI/uJ1H7zqs0EA4OMY4aDJRu0UtP4rTVeYNEAuRXdX+eH4aW3KMvhzpFTjMbaJHJXlEeUm2SaX5TNQyTOvghCeQILfYIL/Ca2ij8iwCmulwdV6eQGfd4VDu40PvSnmfoaE38o6HaPnX0kUcnKiT"
+
+	dockerImageTagSupportsRSA   = "8.1_p1-r0-ls20"
+	dockerImageTagSupportsNoRSA = "8.3_p1-r0-ls21"
 )
+
+func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), string) {
+	pool, err := dockertest.NewPool("")
+	if err != nil {
+		t.Fatalf("Failed to connect to docker: %s", err)
+	}
+
+	signer, err := ssh.ParsePrivateKey([]byte(testSharedPrivateKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if tag == "" {
+		tag = dockerImageTagSupportsNoRSA
+	}
+	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
+		Repository: "linuxserver/openssh-server",
+		Tag:        tag,
+		Env: []string{
+			"DOCKER_MODS=linuxserver/mods:openssh-server-openssh-client",
+			"PUBLIC_KEY=" + testPublicKeyInstall,
+			"SUDO_ACCESS=true",
+			"USER_NAME=vaultssh",
+		},
+		ExposedPorts: []string{"2222/tcp"},
+	})
+	if err != nil {
+		t.Fatalf("Could not start local ssh docker container: %s", err)
+	}
+
+	cleanup := func() {
+		docker.CleanupResource(t, pool, resource)
+	}
+
+	sshAddress := fmt.Sprintf("127.0.0.1:%s", resource.GetPort("2222/tcp"))
+
+	// exponential backoff-retry
+	if err = pool.Retry(func() error {
+		// Install util-linux for non-busybox flock that supports timeout option
+		return testSSH(t, "vaultssh", sshAddress, ssh.PublicKeys(signer), fmt.Sprintf(`
+			set -e; 
+			sudo ln -s /config /home/vaultssh
+			sudo apk add util-linux;
+			echo "LogLevel DEBUG" | sudo tee -a /config/ssh_host_keys/sshd_config;
+			echo "TrustedUserCAKeys /config/ssh_host_keys/trusted-user-ca-keys.pem" | sudo tee -a /config/ssh_host_keys/sshd_config;
+			kill -HUP $(cat /config/sshd.pid)
+			echo "%s" | sudo tee /config/ssh_host_keys/trusted-user-ca-keys.pem
+		`, caPublicKeyPEM))
+	}); err != nil {
+		cleanup()
+		t.Fatalf("Could not connect to SSH docker container: %s", err)
+	}
+
+	return cleanup, sshAddress
+}
+
+func testSSH(t *testing.T, user, host string, auth ssh.AuthMethod, command string) error {
+	client, err := ssh.Dial("tcp", host, &ssh.ClientConfig{
+		User:            user,
+		Auth:            []ssh.AuthMethod{auth},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         5 * time.Second,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to dial sshd to host %q: %v", host, err)
+	}
+	session, err := client.NewSession()
+	if err != nil {
+		return fmt.Errorf("unable to create sshd session to host %q: %v", host, err)
+	}
+	var stderr bytes.Buffer
+	session.Stderr = &stderr
+	defer session.Close()
+	err = session.Run(command)
+	if err != nil {
+		t.Logf("command %v failed, error: %v, stderr: %v", command, err, stderr.String())
+	}
+	return err
+}
 
 func TestBackend_allowed_users(t *testing.T) {
 	config := logical.TestBackendConfig()
@@ -219,21 +306,19 @@ func TestBackend_allowed_users(t *testing.T) {
 	}
 }
 
-func testingFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-	_, err := vault.StartSSHHostTestServer()
-	if err != nil {
-		panic(fmt.Sprintf("error starting mock server:%s", err))
+func newTestingFactory(t *testing.T) func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+	return func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+		defaultLeaseTTLVal := 2 * time.Minute
+		maxLeaseTTLVal := 10 * time.Minute
+		return Factory(context.Background(), &logical.BackendConfig{
+			Logger:      vault.NewTestLogger(t),
+			StorageView: &logical.InmemStorage{},
+			System: &logical.StaticSystemView{
+				DefaultLeaseTTLVal: defaultLeaseTTLVal,
+				MaxLeaseTTLVal:     maxLeaseTTLVal,
+			},
+		})
 	}
-	defaultLeaseTTLVal := 2 * time.Minute
-	maxLeaseTTLVal := 10 * time.Minute
-	return Factory(context.Background(), &logical.BackendConfig{
-		Logger:      nil,
-		StorageView: &logical.InmemStorage{},
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     maxLeaseTTLVal,
-		},
-	})
 }
 
 func TestSSHBackend_Lookup(t *testing.T) {
@@ -256,9 +341,9 @@ func TestSSHBackend_Lookup(t *testing.T) {
 	resp2 := []string{testOTPRoleName}
 	resp3 := []string{testDynamicRoleName, testOTPRoleName}
 	resp4 := []string{testDynamicRoleName}
+	resp5 := []string{testAtRoleName}
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		LogicalFactory: testingFactory,
+		LogicalFactory: newTestingFactory(t),
 		Steps: []logicaltest.TestStep{
 			testLookupRead(t, data, resp1),
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
@@ -269,6 +354,10 @@ func TestSSHBackend_Lookup(t *testing.T) {
 			testRoleDelete(t, testOTPRoleName),
 			testLookupRead(t, data, resp4),
 			testRoleDelete(t, testDynamicRoleName),
+			testLookupRead(t, data, resp1),
+			testRoleWrite(t, testAtRoleName, testDynamicRoleData),
+			testLookupRead(t, data, resp5),
+			testRoleDelete(t, testAtRoleName),
 			testLookupRead(t, data, resp1),
 		},
 	})
@@ -289,36 +378,62 @@ func TestSSHBackend_RoleList(t *testing.T) {
 			},
 		},
 	}
+	resp3 := map[string]interface{}{
+		"keys": []string{testAtRoleName, testOTPRoleName},
+		"key_info": map[string]interface{}{
+			testOTPRoleName: map[string]interface{}{
+				"key_type": testOTPKeyType,
+			},
+			testAtRoleName: map[string]interface{}{
+				"key_type": testOTPKeyType,
+			},
+		},
+	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: testingFactory,
+		LogicalFactory: newTestingFactory(t),
 		Steps: []logicaltest.TestStep{
 			testRoleList(t, resp1),
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testRoleList(t, resp2),
+			testRoleWrite(t, testAtRoleName, testOTPRoleData),
+			testRoleList(t, resp3),
+			testRoleDelete(t, testAtRoleName),
+			testRoleList(t, resp2),
+			testRoleDelete(t, testOTPRoleName),
+			testRoleList(t, resp1),
 		},
 	})
 }
 
 func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
+	cleanup, sshAddress := prepareTestContainer(t, "", "")
+	defer cleanup()
+
+	host, port, err := net.SplitHostPort(sshAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	testDynamicRoleData := map[string]interface{}{
 		"key_type":     testDynamicKeyType,
 		"key":          testKeyName,
 		"admin_user":   testAdminUser,
 		"default_user": testAdminUser,
 		"cidr_list":    testCIDRList,
+		"port":         port,
 	}
 	data := map[string]interface{}{
 		"username": testUserName,
-		"ip":       testIP,
+		"ip":       host,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck:       testAccUserPrecheckFunc(t),
-		AcceptanceTest: true,
-		LogicalFactory: testingFactory,
+		LogicalFactory: newTestingFactory(t),
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
-			testCredsWrite(t, testDynamicRoleName, data, false),
+			testCredsWrite(t, testDynamicRoleName, data, false, sshAddress),
+			testRoleWrite(t, testAtRoleName, testDynamicRoleData),
+			testCredsWrite(t, testAtRoleName, data, false, sshAddress),
 		},
 	})
 }
@@ -336,13 +451,16 @@ func TestSSHBackend_OTPRoleCrud(t *testing.T) {
 		"cidr_list":    testCIDRList,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		LogicalFactory: testingFactory,
+		LogicalFactory: newTestingFactory(t),
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testRoleRead(t, testOTPRoleName, respOTPRoleData),
 			testRoleDelete(t, testOTPRoleName),
 			testRoleRead(t, testOTPRoleName, nil),
+			testRoleWrite(t, testAtRoleName, testOTPRoleData),
+			testRoleRead(t, testAtRoleName, respOTPRoleData),
+			testRoleDelete(t, testAtRoleName),
+			testRoleRead(t, testAtRoleName, nil),
 		},
 	})
 }
@@ -366,22 +484,24 @@ func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
 		"key_type":       testDynamicKeyType,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		LogicalFactory: testingFactory,
+		LogicalFactory: newTestingFactory(t),
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
 			testRoleRead(t, testDynamicRoleName, respDynamicRoleData),
 			testRoleDelete(t, testDynamicRoleName),
 			testRoleRead(t, testDynamicRoleName, nil),
+			testRoleWrite(t, testAtRoleName, testDynamicRoleData),
+			testRoleRead(t, testAtRoleName, respDynamicRoleData),
+			testRoleDelete(t, testAtRoleName),
+			testRoleRead(t, testAtRoleName, nil),
 		},
 	})
 }
 
 func TestSSHBackend_NamedKeysCrud(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		LogicalFactory: testingFactory,
+		LogicalFactory: newTestingFactory(t),
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testNamedKeysDelete(t),
@@ -390,21 +510,33 @@ func TestSSHBackend_NamedKeysCrud(t *testing.T) {
 }
 
 func TestSSHBackend_OTPCreate(t *testing.T) {
+	cleanup, sshAddress := prepareTestContainer(t, "", "")
+	defer func() {
+		if !t.Failed() {
+			cleanup()
+		}
+	}()
+
+	host, port, err := net.SplitHostPort(sshAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	testOTPRoleData := map[string]interface{}{
 		"key_type":     testOTPKeyType,
 		"default_user": testUserName,
 		"cidr_list":    testCIDRList,
+		"port":         port,
 	}
 	data := map[string]interface{}{
 		"username": testUserName,
-		"ip":       testIP,
+		"ip":       host,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		LogicalFactory: testingFactory,
+		LogicalFactory: newTestingFactory(t),
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
-			testCredsWrite(t, testOTPRoleName, data, false),
+			testCredsWrite(t, testOTPRoleName, data, false, sshAddress),
 		},
 	})
 }
@@ -417,8 +549,7 @@ func TestSSHBackend_VerifyEcho(t *testing.T) {
 		"message": api.VerifyEchoResponse,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		LogicalFactory: testingFactory,
+		LogicalFactory: newTestingFactory(t),
 		Steps: []logicaltest.TestStep{
 			testVerifyWrite(t, verifyData, expectedData),
 		},
@@ -455,8 +586,7 @@ func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		LogicalFactory: testingFactory,
+		LogicalFactory: newTestingFactory(t),
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testConfigZeroAddressWrite(t, req1),
@@ -487,47 +617,182 @@ func TestSSHBackend_CredsForZeroAddressRoles_otp(t *testing.T) {
 		"roles": testOTPRoleName,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		LogicalFactory: testingFactory,
+		LogicalFactory: newTestingFactory(t),
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, otpRoleData),
-			testCredsWrite(t, testOTPRoleName, data, true),
+			testCredsWrite(t, testOTPRoleName, data, true, ""),
 			testConfigZeroAddressWrite(t, req1),
-			testCredsWrite(t, testOTPRoleName, data, false),
+			testCredsWrite(t, testOTPRoleName, data, false, ""),
 			testConfigZeroAddressDelete(t),
-			testCredsWrite(t, testOTPRoleName, data, true),
+			testCredsWrite(t, testOTPRoleName, data, true, ""),
 		},
 	})
 }
 
 func TestSSHBackend_CredsForZeroAddressRoles_dynamic(t *testing.T) {
+	cleanup, sshAddress := prepareTestContainer(t, "", "")
+	defer cleanup()
+
+	host, port, err := net.SplitHostPort(sshAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	dynamicRoleData := map[string]interface{}{
 		"key_type":     testDynamicKeyType,
 		"key":          testKeyName,
 		"admin_user":   testAdminUser,
 		"default_user": testAdminUser,
+		"port":         port,
 	}
 	data := map[string]interface{}{
 		"username": testUserName,
-		"ip":       testIP,
+		"ip":       host,
 	}
 	req2 := map[string]interface{}{
 		"roles": testDynamicRoleName,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck:       testAccUserPrecheckFunc(t),
-		AcceptanceTest: true,
-		LogicalFactory: testingFactory,
+		LogicalFactory: newTestingFactory(t),
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, dynamicRoleData),
-			testCredsWrite(t, testDynamicRoleName, data, true),
+			testCredsWrite(t, testDynamicRoleName, data, true, sshAddress),
 			testConfigZeroAddressWrite(t, req2),
-			testCredsWrite(t, testDynamicRoleName, data, false),
+			testCredsWrite(t, testDynamicRoleName, data, false, sshAddress),
 			testConfigZeroAddressDelete(t),
-			testCredsWrite(t, testDynamicRoleName, data, true),
+			testCredsWrite(t, testDynamicRoleName, data, true, sshAddress),
 		},
 	})
+}
+
+func TestSSHBackend_CA(t *testing.T) {
+	testCases := []struct {
+		name        string
+		tag         string
+		algoSigner  string
+		expectError bool
+	}{
+		{"defaultSignerSSHDSupport", dockerImageTagSupportsRSA, "", false},
+		{"rsaSignerSSHDSupport", dockerImageTagSupportsRSA, ssh.SigAlgoRSA, false},
+		{"rsa2SignerSSHDSupport", dockerImageTagSupportsRSA, ssh.SigAlgoRSASHA2256, false},
+		{"rsa2SignerNoSSHDSupport", dockerImageTagSupportsNoRSA, ssh.SigAlgoRSASHA2256, false},
+		{"defaultSignerNoSSHDSupport", dockerImageTagSupportsNoRSA, "", true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			testSSHBackend_CA(t, tc.tag, tc.algoSigner, tc.expectError)
+		})
+	}
+}
+
+func testSSHBackend_CA(t *testing.T, dockerImageTag, algorithmSigner string, expectError bool) {
+	cleanup, sshAddress := prepareTestContainer(t, dockerImageTag, testCAPublicKey)
+	defer cleanup()
+
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+
+	testKeyToSignPrivate := `-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABFwAAAAdzc2gtcn
+NhAAAAAwEAAQAAAQEAwn1V2xd/EgJXIY53fBTtc20k/ajekqQngvkpFSwNHW63XNEQK8Ll
+FOCyGXoje9DUGxnYs3F/ohfsBBWkLNfU7fiENdSJL1pbkAgJ+2uhV9sLZjvYhikrXWoyJX
+LDKfY12LjpcBS2HeLMT04laZ/xSJrOBEJHGzHyr2wUO0NUQUQPUODAFhnHKgvvA4Uu79UY
+gcdThF4w83+EAnE4JzBZMKPMjzy4u1C0R/LoD8DuapHwX6NGWdEUvUZZ+XRcIWeCOvR0ne
+qGBRH35k1Mv7k65d7kkE0uvM5Z36erw3tdoszxPYf7AKnO1DpeU2uwMcym6xNwfwynKjhL
+qL/Mgi4uRwAAA8iAsY0zgLGNMwAAAAdzc2gtcnNhAAABAQDCfVXbF38SAlchjnd8FO1zbS
+T9qN6SpCeC+SkVLA0dbrdc0RArwuUU4LIZeiN70NQbGdizcX+iF+wEFaQs19Tt+IQ11Ikv
+WluQCAn7a6FX2wtmO9iGKStdajIlcsMp9jXYuOlwFLYd4sxPTiVpn/FIms4EQkcbMfKvbB
+Q7Q1RBRA9Q4MAWGccqC+8DhS7v1RiBx1OEXjDzf4QCcTgnMFkwo8yPPLi7ULRH8ugPwO5q
+kfBfo0ZZ0RS9Rln5dFwhZ4I69HSd6oYFEffmTUy/uTrl3uSQTS68zlnfp6vDe12izPE9h/
+sAqc7UOl5Ta7AxzKbrE3B/DKcqOEuov8yCLi5HAAAAAwEAAQAAAQABns2yT5XNbpuPOgKg
+1APObGBchKWmDxwNKUpAVOefEScR7OP3mV4TOHQDZlMZWvoJZ8O4av+nOA/NUOjXPs0VVn
+azhBvIezY8EvUSVSk49Cg6J9F7/KfR1WqpiTU7CkQUlCXNuz5xLUyKdJo3MQ/vjOqeenbh
+MR9Wes4IWF1BVe4VOD6lxRsjwuIieIgmScW28FFh2rgsEfO2spzZ3AWOGExw+ih757hFz5
+4A2fhsQXP8m3r8m7iiqcjTLWXdxTUk4zot2kZEjbI4Avk0BL+wVeFq6f/y+G+g5edqSo7j
+uuSgzbUQtA9PMnGxhrhU2Ob7n3VGdya7WbGZkaKP8zJhAAAAgQC3bJurmOSLIi3KVhp7lD
+/FfxwXHwVBFALCgq7EyNlkTz6RDoMFM4eOTRMDvsgWxT+bSB8R8eg1sfgY8rkHOuvTAVI5
+3oEYco3H7NWE9X8Zt0lyhO1uaE49EENNSQ8hY7R3UIw5becyI+7ZZxs9HkBgCQCZzSjzA+
+SIyAoMKM261AAAAIEA+PCkcDRp3J0PaoiuetXSlWZ5WjP3CtwT2xrvEX9x+ZsDgXCDYQ5T
+osxvEKOGSfIrHUUhzZbFGvqWyfrziPe9ypJrtCM7RJT/fApBXnbWFcDZzWamkQvohst+0w
+XHYCmNoJ6/Y+roLv3pzyFUmqRNcrQaohex7TZmsvHJT513UakAAACBAMgBXxH8DyNYdniX
+mIXEto4GqMh4rXdNwCghfpyWdJE6vCyDt7g7bYMq7AQ2ynSKRtQDT/ZgQNfSbilUq3iXz7
+xNZn5U9ndwFs90VmEpBup/PmhfX+Gwt5hQZLbkKZcgQ9XrhSKdMxVm1yy/fk0U457enlz5
+cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
+-----END OPENSSH PRIVATE KEY-----
+`
+	testKeyToSignPublic := `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDCfVXbF38SAlchjnd8FO1zbST9qN6SpCeC+SkVLA0dbrdc0RArwuUU4LIZeiN70NQbGdizcX+iF+wEFaQs19Tt+IQ11IkvWluQCAn7a6FX2wtmO9iGKStdajIlcsMp9jXYuOlwFLYd4sxPTiVpn/FIms4EQkcbMfKvbBQ7Q1RBRA9Q4MAWGccqC+8DhS7v1RiBx1OEXjDzf4QCcTgnMFkwo8yPPLi7ULRH8ugPwO5qkfBfo0ZZ0RS9Rln5dFwhZ4I69HSd6oYFEffmTUy/uTrl3uSQTS68zlnfp6vDe12izPE9h/sAqc7UOl5Ta7AxzKbrE3B/DKcqOEuov8yCLi5H `
+
+	roleOptions := map[string]interface{}{
+		"allow_user_certificates": true,
+		"allowed_users":           "*",
+		"default_extensions": []map[string]string{
+			{
+				"permit-pty": "",
+			},
+		},
+		"key_type":     "ca",
+		"default_user": testUserName,
+		"ttl":          "30m0s",
+	}
+	if algorithmSigner != "" {
+		roleOptions["algorithm_signer"] = algorithmSigner
+	}
+	testCase := logicaltest.TestCase{
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			configCaStep(),
+			testRoleWrite(t, "testcarole", roleOptions),
+			logicaltest.TestStep{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/testcarole",
+				ErrorOk:   expectError,
+				Data: map[string]interface{}{
+					"public_key":       testKeyToSignPublic,
+					"valid_principals": testUserName,
+				},
+
+				Check: func(resp *logical.Response) error {
+
+					signedKey := strings.TrimSpace(resp.Data["signed_key"].(string))
+					if signedKey == "" {
+						return errors.New("no signed key in response")
+					}
+
+					privKey, err := ssh.ParsePrivateKey([]byte(testKeyToSignPrivate))
+					if err != nil {
+						return fmt.Errorf("error parsing private key: %v", err)
+					}
+
+					parsedKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(signedKey))
+					if err != nil {
+						return fmt.Errorf("error parsing signed key: %v", err)
+					}
+					certSigner, err := ssh.NewCertSigner(parsedKey.(*ssh.Certificate), privKey)
+					if err != nil {
+						return err
+					}
+
+					err = testSSH(t, testUserName, sshAddress, ssh.PublicKeys(certSigner), "date")
+					if expectError && err == nil {
+						return fmt.Errorf("expected error but got none")
+					}
+					if !expectError && err != nil {
+						return err
+					}
+
+					return nil
+				},
+			},
+		},
+	}
+
+	logicaltest.Test(t, testCase)
 }
 
 func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
@@ -553,8 +818,8 @@ func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
 
 					key := string(resp.Data["http_raw_body"].([]byte))
 
-					if key != publicKey {
-						return fmt.Errorf("public_key incorrect. Expected %v, actual %v", publicKey, key)
+					if key != testCAPublicKey {
+						return fmt.Errorf("public_key incorrect. Expected %v, actual %v", testCAPublicKey, key)
 					}
 
 					return nil
@@ -575,12 +840,20 @@ func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
 		t.Fatalf("Cannot create backend: %s", err)
 	}
 
+	var expectedPublicKey string
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
+				Check: func(resp *logical.Response) error {
+					if resp.Data["public_key"].(string) == "" {
+						return fmt.Errorf("public_key empty")
+					}
+					expectedPublicKey = resp.Data["public_key"].(string)
+					return nil
+				},
 			},
 
 			logicaltest.TestStep{
@@ -594,6 +867,9 @@ func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
 
 					if key == "" {
 						return fmt.Errorf("public_key empty. Expected not empty, actual %s", key)
+					}
+					if key != expectedPublicKey {
+						return fmt.Errorf("public_key mismatch. Expected %s, actual %s", expectedPublicKey, key)
 					}
 
 					return nil
@@ -718,7 +994,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				Operation: logical.UpdateOperation,
 				Path:      "sign/weakkey",
 				Data: map[string]interface{}{
-					"public_key": publicKey,
+					"public_key": testCAPublicKey,
 				},
 				ErrorOk: true,
 				Check: func(resp *logical.Response) error {
@@ -740,7 +1016,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				Operation: logical.UpdateOperation,
 				Path:      "sign/stdkey",
 				Data: map[string]interface{}{
-					"public_key": publicKey,
+					"public_key": testCAPublicKey,
 				},
 			},
 			// Fail with 4096 key
@@ -857,8 +1133,8 @@ func configCaStep() logicaltest.TestStep {
 		Operation: logical.UpdateOperation,
 		Path:      "config/ca",
 		Data: map[string]interface{}{
-			"public_key":  publicKey,
-			"private_key": privateKey,
+			"public_key":  testCAPublicKey,
+			"private_key": testCAPrivateKey,
 		},
 	}
 }
@@ -957,7 +1233,7 @@ func validateSSHCertificate(cert *ssh.Certificate, keyID string, certType int, v
 }
 
 func getSigningPublicKey() (ssh.PublicKey, error) {
-	key, err := base64.StdEncoding.DecodeString(strings.Split(publicKey, " ")[1])
+	key, err := base64.StdEncoding.DecodeString(strings.Split(testCAPublicKey, " ")[1])
 	if err != nil {
 		return nil, err
 	}
@@ -1108,14 +1384,17 @@ func testRoleRead(t *testing.T, roleName string, expected map[string]interface{}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return fmt.Errorf("error decoding response:%s", err)
 			}
-			if roleName == testOTPRoleName {
+			switch d.KeyType {
+			case "otp":
 				if d.KeyType != expected["key_type"] || d.DefaultUser != expected["default_user"] || d.CIDRList != expected["cidr_list"] {
 					return fmt.Errorf("data mismatch. bad: %#v", resp)
 				}
-			} else {
+			case "dynamic":
 				if d.AdminUser != expected["admin_user"] || d.CIDRList != expected["cidr_list"] || d.KeyName != expected["key"] || d.KeyType != expected["key_type"] {
 					return fmt.Errorf("data mismatch. bad: %#v", resp)
 				}
+			default:
+				return fmt.Errorf("unknown key type. bad: %#v", resp)
 			}
 			return nil
 		},
@@ -1129,12 +1408,12 @@ func testRoleDelete(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
-func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, expectError bool) logicaltest.TestStep {
+func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, expectError bool, address string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      fmt.Sprintf("creds/%s", roleName),
 		Data:      data,
-		ErrorOk:   true,
+		ErrorOk:   expectError,
 		Check: func(resp *logical.Response) error {
 			if resp == nil {
 				return fmt.Errorf("response is nil")
@@ -1154,7 +1433,7 @@ func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, 
 				}
 				return nil
 			}
-			if roleName == testDynamicRoleName {
+			if roleName == testDynamicRoleName || roleName == testAtRoleName {
 				var d struct {
 					Key string `mapstructure:"key"`
 				}
@@ -1165,9 +1444,12 @@ func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, 
 					return fmt.Errorf("generated key is an empty string")
 				}
 				// Checking only for a parsable key
-				_, err := ssh.ParsePrivateKey([]byte(d.Key))
+				privKey, err := ssh.ParsePrivateKey([]byte(d.Key))
 				if err != nil {
 					return fmt.Errorf("generated key is invalid")
+				}
+				if err := testSSH(t, data["username"].(string), address, ssh.PublicKeys(privKey), "date"); err != nil {
+					return fmt.Errorf("unable to SSH with new key (%s): %w", d.Key, err)
 				}
 			} else {
 				if resp.Data["key_type"] != KeyTypeOTP {
@@ -1179,13 +1461,5 @@ func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, 
 			}
 			return nil
 		},
-	}
-}
-
-func testAccUserPrecheckFunc(t *testing.T) func() {
-	return func() {
-		if _, err := user.Lookup(testUserName); err != nil {
-			t.Skipf("Acceptance test skipped unless user %q is present", testUserName)
-		}
 	}
 }

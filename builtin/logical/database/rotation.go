@@ -127,112 +127,115 @@ type setCredentialsWAL struct {
 // This method loops through the priority queue, popping the highest priority
 // item until it encounters the first item that does not yet need rotation,
 // based on the current time.
-func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Storage) error {
-	for {
-		// Quit rotating credentials if shutdown has started
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
+func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Storage) {
+	for b.rotateCredential(ctx, s) {
+	}
+}
+
+func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storage) bool {
+	// Quit rotating credentials if shutdown has started
+	select {
+	case <-ctx.Done():
+		return false
+	default:
+	}
+	item, err := b.popFromRotationQueue()
+	if err != nil {
+		if err != queue.ErrEmpty {
+			b.logger.Error("error popping item from queue", "err", err)
 		}
-		item, err := b.popFromRotationQueue()
-		if err != nil {
-			if err == queue.ErrEmpty {
-				return nil
-			}
-			return err
-		}
+		return false
+	}
 
-		// Guard against possible nil item
-		if item == nil {
-			return nil
-		}
+	// Guard against possible nil item
+	if item == nil {
+		return false
+	}
 
-		// Grab the exclusive lock for this Role, to make sure we don't incur and
-		// writes during the rotation process
-		lock := locksutil.LockForKey(b.roleLocks, item.Key)
-		lock.Lock()
-		defer lock.Unlock()
+	// Grab the exclusive lock for this Role, to make sure we don't incur and
+	// writes during the rotation process
+	lock := locksutil.LockForKey(b.roleLocks, item.Key)
+	lock.Lock()
+	defer lock.Unlock()
 
-		// Validate the role still exists
-		role, err := b.StaticRole(ctx, s, item.Key)
-		if err != nil {
-			b.logger.Error("unable to load role", "role", item.Key, "error", err)
-			item.Priority = time.Now().Add(10 * time.Second).Unix()
-			if err := b.pushItem(item); err != nil {
-				b.logger.Error("unable to push item on to queue", "error", err)
-			}
-			continue
-		}
-		if role == nil {
-			b.logger.Warn("role not found", "role", item.Key, "error", err)
-			continue
-		}
-
-		// If "now" is less than the Item priority, then this item does not need to
-		// be rotated
-		if time.Now().Unix() < item.Priority {
-			if err := b.pushItem(item); err != nil {
-				b.logger.Error("unable to push item on to queue", "error", err)
-			}
-			// Break out of the for loop
-			break
-		}
-
-		input := &setStaticAccountInput{
-			RoleName: item.Key,
-			Role:     role,
-		}
-
-		// If there is a WAL entry related to this Role, the corresponding WAL ID
-		// should be stored in the Item's Value field.
-		if walID, ok := item.Value.(string); ok {
-			walEntry, err := b.findStaticWAL(ctx, s, walID)
-			if err != nil {
-				b.logger.Error("error finding static WAL", "error", err)
-				item.Priority = time.Now().Add(10 * time.Second).Unix()
-				if err := b.pushItem(item); err != nil {
-					b.logger.Error("unable to push item on to queue", "error", err)
-				}
-			}
-			if walEntry != nil && walEntry.NewPassword != "" {
-				input.Password = walEntry.NewPassword
-				input.WALID = walID
-			}
-		}
-
-		resp, err := b.setStaticAccount(ctx, s, input)
-		if err != nil {
-			b.logger.Error("unable to rotate credentials in periodic function", "error", err)
-			// Increment the priority enough so that the next call to this method
-			// likely will not attempt to rotate it, as a back-off of sorts
-			item.Priority = time.Now().Add(10 * time.Second).Unix()
-
-			// Preserve the WALID if it was returned
-			if resp != nil && resp.WALID != "" {
-				item.Value = resp.WALID
-			}
-
-			if err := b.pushItem(item); err != nil {
-				b.logger.Error("unable to push item on to queue", "error", err)
-			}
-			// Go to next item
-			continue
-		}
-
-		lvr := resp.RotationTime
-		if lvr.IsZero() {
-			lvr = time.Now()
-		}
-
-		// Update priority and push updated Item to the queue
-		nextRotation := lvr.Add(role.StaticAccount.RotationPeriod)
-		item.Priority = nextRotation.Unix()
+	// Validate the role still exists
+	role, err := b.StaticRole(ctx, s, item.Key)
+	if err != nil {
+		b.logger.Error("unable to load role", "role", item.Key, "error", err)
+		item.Priority = time.Now().Add(10 * time.Second).Unix()
 		if err := b.pushItem(item); err != nil {
-			b.logger.Warn("unable to push item on to queue", "error", err)
+			b.logger.Error("unable to push item on to queue", "error", err)
+		}
+		return true
+	}
+	if role == nil {
+		b.logger.Warn("role not found", "role", item.Key, "error", err)
+		return true
+	}
+
+	// If "now" is less than the Item priority, then this item does not need to
+	// be rotated
+	if time.Now().Unix() < item.Priority {
+		if err := b.pushItem(item); err != nil {
+			b.logger.Error("unable to push item on to queue", "error", err)
+		}
+		// Break out of the for loop
+		return false
+	}
+
+	input := &setStaticAccountInput{
+		RoleName: item.Key,
+		Role:     role,
+	}
+
+	// If there is a WAL entry related to this Role, the corresponding WAL ID
+	// should be stored in the Item's Value field.
+	if walID, ok := item.Value.(string); ok {
+		walEntry, err := b.findStaticWAL(ctx, s, walID)
+		if err != nil {
+			b.logger.Error("error finding static WAL", "error", err)
+			item.Priority = time.Now().Add(10 * time.Second).Unix()
+			if err := b.pushItem(item); err != nil {
+				b.logger.Error("unable to push item on to queue", "error", err)
+			}
+		}
+		if walEntry != nil && walEntry.NewPassword != "" {
+			input.Password = walEntry.NewPassword
+			input.WALID = walID
 		}
 	}
-	return nil
+
+	resp, err := b.setStaticAccount(ctx, s, input)
+	if err != nil {
+		b.logger.Error("unable to rotate credentials in periodic function", "error", err)
+		// Increment the priority enough so that the next call to this method
+		// likely will not attempt to rotate it, as a back-off of sorts
+		item.Priority = time.Now().Add(10 * time.Second).Unix()
+
+		// Preserve the WALID if it was returned
+		if resp != nil && resp.WALID != "" {
+			item.Value = resp.WALID
+		}
+
+		if err := b.pushItem(item); err != nil {
+			b.logger.Error("unable to push item on to queue", "error", err)
+		}
+		// Go to next item
+		return true
+	}
+
+	lvr := resp.RotationTime
+	if lvr.IsZero() {
+		lvr = time.Now()
+	}
+
+	// Update priority and push updated Item to the queue
+	nextRotation := lvr.Add(role.StaticAccount.RotationPeriod)
+	item.Priority = nextRotation.Unix()
+	if err := b.pushItem(item); err != nil {
+		b.logger.Warn("unable to push item on to queue", "error", err)
+	}
+	return true
 }
 
 // findStaticWAL loads a WAL entry by ID. If found, only return the WAL if it
@@ -522,7 +525,13 @@ func (b *databaseBackend) popFromRotationQueueByKey(name string) (*queue.Item, e
 	b.RLock()
 	defer b.RUnlock()
 	if b.credRotationQueue != nil {
-		return b.credRotationQueue.PopByKey(name)
+		item, err := b.credRotationQueue.PopByKey(name)
+		if err != nil {
+			return nil, err
+		}
+		if item != nil {
+			return item, nil
+		}
 	}
 	return nil, queue.ErrEmpty
 }

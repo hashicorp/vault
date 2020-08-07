@@ -23,9 +23,9 @@ func TestBackend_Config_Access(t *testing.T) {
 			t.Parallel()
 			testBackendConfigAccess(t, "1.3.0")
 		})
-		t.Run("1.4.0-rc", func(t *testing.T) {
+		t.Run("post-1.4.0", func(t *testing.T) {
 			t.Parallel()
-			testBackendConfigAccess(t, "1.4.0-rc1")
+			testBackendConfigAccess(t, "")
 		})
 	})
 }
@@ -83,14 +83,14 @@ func TestBackend_Renew_Revoke(t *testing.T) {
 			t.Parallel()
 			testBackendRenewRevoke(t, "1.3.0")
 		})
-		t.Run("1.4.0-rc", func(t *testing.T) {
+		t.Run("post-1.4.0", func(t *testing.T) {
 			t.Parallel()
 			t.Run("legacy", func(t *testing.T) {
 				t.Parallel()
-				testBackendRenewRevoke(t, "1.4.0-rc1")
+				testBackendRenewRevoke(t, "")
 			})
 
-			testBackendRenewRevoke14(t, "1.4.0-rc1")
+			testBackendRenewRevoke14(t, "")
 		})
 	})
 }
@@ -317,7 +317,7 @@ func TestBackend_LocalToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL, connToken := consul.PrepareTestContainer(t, "1.4.0-rc1")
+	cleanup, connURL, connToken := consul.PrepareTestContainer(t, "")
 	defer cleanup()
 	connData := map[string]interface{}{
 		"address": connURL,
@@ -444,9 +444,9 @@ func TestBackend_Management(t *testing.T) {
 			t.Parallel()
 			testBackendManagement(t, "1.3.0")
 		})
-		t.Run("1.4.0-rc", func(t *testing.T) {
+		t.Run("post-1.4.0", func(t *testing.T) {
 			t.Parallel()
-			testBackendManagement(t, "1.4.0-rc1")
+			testBackendManagement(t, "")
 		})
 	})
 }
@@ -483,14 +483,14 @@ func TestBackend_Basic(t *testing.T) {
 			t.Parallel()
 			testBackendBasic(t, "1.3.0")
 		})
-		t.Run("1.4.0-rc", func(t *testing.T) {
+		t.Run("post-1.4.0", func(t *testing.T) {
 			t.Parallel()
 			t.Run("legacy", func(t *testing.T) {
 				t.Parallel()
-				testBackendRenewRevoke(t, "1.4.0-rc1")
+				testBackendRenewRevoke(t, "")
 			})
 
-			testBackendBasic(t, "1.4.0-rc1")
+			testBackendBasic(t, "")
 		})
 	})
 }

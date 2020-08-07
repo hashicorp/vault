@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -77,7 +76,6 @@ func TestAWSEndToEnd(t *testing.T) {
 		// Retain thru the account number of the given arn and wildcard the rest.
 		"bound_iam_principal_arn": os.Getenv(envVarAwsTestRoleArn)[:25] + "*",
 	}); err != nil {
-		fmt.Println(err)
 		t.Fatal(err)
 	}
 

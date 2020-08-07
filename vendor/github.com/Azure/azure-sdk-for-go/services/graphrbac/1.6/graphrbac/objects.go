@@ -107,8 +107,8 @@ func (client ObjectsClient) GetObjectsByObjectIdsPreparer(ctx context.Context, p
 // GetObjectsByObjectIdsSender sends the GetObjectsByObjectIds request. The method will close the
 // http.Response Body if it receives an error.
 func (client ObjectsClient) GetObjectsByObjectIdsSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // GetObjectsByObjectIdsResponder handles the response to the GetObjectsByObjectIds request. The method always
@@ -198,8 +198,8 @@ func (client ObjectsClient) GetObjectsByObjectIdsNextPreparer(ctx context.Contex
 // GetObjectsByObjectIdsNextSender sends the GetObjectsByObjectIdsNext request. The method will close the
 // http.Response Body if it receives an error.
 func (client ObjectsClient) GetObjectsByObjectIdsNextSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // GetObjectsByObjectIdsNextResponder handles the response to the GetObjectsByObjectIdsNext request. The method always

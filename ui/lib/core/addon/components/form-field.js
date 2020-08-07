@@ -113,6 +113,12 @@ export default Component.extend({
       this.send('setAndBroadcast', path, valueToSet);
     },
 
+    setAndBroadcastTtl(path, value) {
+      const alwaysSendValue = path === 'expiry' || path === 'safetyBuffer';
+      let valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : 0;
+      this.send('setAndBroadcast', path, `${valueToSet}`);
+    },
+
     codemirrorUpdated(path, isString, value, codemirror) {
       codemirror.performLint();
       const hasErrors = codemirror.state.lint.marked.length > 0;

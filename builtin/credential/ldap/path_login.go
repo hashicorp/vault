@@ -133,9 +133,10 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	password := req.Auth.InternalData["password"].(string)
 
 	loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password)
-	if len(loginPolicies) == 0 {
+	if err != nil || (resp != nil && resp.IsError()) {
 		return resp, err
 	}
+
 	finalPolicies := cfg.TokenPolicies
 	if len(loginPolicies) > 0 {
 		finalPolicies = append(finalPolicies, loginPolicies...)

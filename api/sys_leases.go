@@ -28,7 +28,13 @@ func (c *Sys) Renew(id string, increment int) (*Secret, error) {
 }
 
 func (c *Sys) Revoke(id string) error {
-	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke/"+id)
+	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke")
+	body := map[string]interface{}{
+		"lease_id": id,
+	}
+	if err := r.SetJSONBody(body); err != nil {
+		return err
+	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()

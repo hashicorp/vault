@@ -39,7 +39,8 @@
         @valueAttribute={{'type'}}
         @labelAttribute={{'typeDisplay'}}
         @isFullwidth={{true}}
-        @onChange={{action (mut selectedAuth)}}
+        @selectedValue={{this.selectedAuth}}
+        @onChange={{action (mut this.selectedAuth)}}
         />
     {{/if}}
   {{#if (or (eq this.selectedAuthBackend.type "jwt") (eq this.selectedAuthBackend.type "oidc"))}}

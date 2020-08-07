@@ -8,10 +8,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/forwarding"
-	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/replication"
-	cache "github.com/patrickmn/go-cache"
 )
 
 type forwardedRequestRPCServer struct {
@@ -19,7 +17,6 @@ type forwardedRequestRPCServer struct {
 	handler               http.Handler
 	perfStandbySlots      chan struct{}
 	perfStandbyRepCluster *replication.Cluster
-	perfStandbyCache      *cache.Cache
 	raftFollowerStates    *raftFollowerStates
 }
 
@@ -84,9 +81,11 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 		ReplicationState: uint32(s.core.ReplicationState()),
 	}
 
-	if raftStorage, ok := s.core.underlyingPhysical.(*raft.RaftBackend); ok {
-		reply.RaftAppliedIndex = raftStorage.AppliedIndex()
-		reply.RaftNodeID = raftStorage.NodeID()
+	if raftBackend := s.core.getRaftBackend(); raftBackend != nil {
+		if !s.core.isRaftHAOnly() {
+			reply.RaftAppliedIndex = raftBackend.AppliedIndex()
+			reply.RaftNodeID = raftBackend.NodeID()
+		}
 	}
 
 	return reply, nil
@@ -106,18 +105,18 @@ type forwardingClient struct {
 func (c *forwardingClient) startHeartbeat() {
 	go func() {
 		tick := func() {
-			c.core.stateLock.RLock()
 			clusterAddr := c.core.ClusterAddr()
-			c.core.stateLock.RUnlock()
 
 			req := &EchoRequest{
 				Message:     "ping",
 				ClusterAddr: clusterAddr,
 			}
 
-			if raftStorage, ok := c.core.underlyingPhysical.(*raft.RaftBackend); ok {
-				req.RaftAppliedIndex = raftStorage.AppliedIndex()
-				req.RaftNodeID = raftStorage.NodeID()
+			if raftBackend := c.core.getRaftBackend(); raftBackend != nil {
+				if !c.core.isRaftHAOnly() {
+					req.RaftAppliedIndex = raftBackend.AppliedIndex()
+					req.RaftNodeID = raftBackend.NodeID()
+				}
 			}
 
 			ctx, cancel := context.WithTimeout(c.echoContext, 2*time.Second)

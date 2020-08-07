@@ -260,6 +260,10 @@ type IAMAPI interface {
 	GenerateCredentialReportWithContext(aws.Context, *iam.GenerateCredentialReportInput, ...request.Option) (*iam.GenerateCredentialReportOutput, error)
 	GenerateCredentialReportRequest(*iam.GenerateCredentialReportInput) (*request.Request, *iam.GenerateCredentialReportOutput)
 
+	GenerateOrganizationsAccessReport(*iam.GenerateOrganizationsAccessReportInput) (*iam.GenerateOrganizationsAccessReportOutput, error)
+	GenerateOrganizationsAccessReportWithContext(aws.Context, *iam.GenerateOrganizationsAccessReportInput, ...request.Option) (*iam.GenerateOrganizationsAccessReportOutput, error)
+	GenerateOrganizationsAccessReportRequest(*iam.GenerateOrganizationsAccessReportInput) (*request.Request, *iam.GenerateOrganizationsAccessReportOutput)
+
 	GenerateServiceLastAccessedDetails(*iam.GenerateServiceLastAccessedDetailsInput) (*iam.GenerateServiceLastAccessedDetailsOutput, error)
 	GenerateServiceLastAccessedDetailsWithContext(aws.Context, *iam.GenerateServiceLastAccessedDetailsInput, ...request.Option) (*iam.GenerateServiceLastAccessedDetailsOutput, error)
 	GenerateServiceLastAccessedDetailsRequest(*iam.GenerateServiceLastAccessedDetailsInput) (*request.Request, *iam.GenerateServiceLastAccessedDetailsOutput)
@@ -317,6 +321,10 @@ type IAMAPI interface {
 	GetOpenIDConnectProvider(*iam.GetOpenIDConnectProviderInput) (*iam.GetOpenIDConnectProviderOutput, error)
 	GetOpenIDConnectProviderWithContext(aws.Context, *iam.GetOpenIDConnectProviderInput, ...request.Option) (*iam.GetOpenIDConnectProviderOutput, error)
 	GetOpenIDConnectProviderRequest(*iam.GetOpenIDConnectProviderInput) (*request.Request, *iam.GetOpenIDConnectProviderOutput)
+
+	GetOrganizationsAccessReport(*iam.GetOrganizationsAccessReportInput) (*iam.GetOrganizationsAccessReportOutput, error)
+	GetOrganizationsAccessReportWithContext(aws.Context, *iam.GetOrganizationsAccessReportInput, ...request.Option) (*iam.GetOrganizationsAccessReportOutput, error)
+	GetOrganizationsAccessReportRequest(*iam.GetOrganizationsAccessReportInput) (*request.Request, *iam.GetOrganizationsAccessReportOutput)
 
 	GetPolicy(*iam.GetPolicyInput) (*iam.GetPolicyOutput, error)
 	GetPolicyWithContext(aws.Context, *iam.GetPolicyInput, ...request.Option) (*iam.GetPolicyOutput, error)

@@ -6,12 +6,19 @@ const { attr } = DS;
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 export default DS.Model.extend(KeyMixin, {
+  failedServerRead: attr('boolean'),
   auth: attr('string'),
   lease_duration: attr('number'),
   lease_id: attr('string'),
   renewable: attr('boolean'),
 
   secretData: attr('object'),
+  secretKeyAndValue: computed('secretData', function() {
+    const data = this.get('secretData');
+    return Object.keys(data).map(key => {
+      return { key, value: data[key] };
+    });
+  }),
 
   dataAsJSONString: computed('secretData', function() {
     return JSON.stringify(this.get('secretData'), null, 2);

@@ -56,7 +56,7 @@
   padding-left: $spacing-xxs + $spacing-l;
 }
 
-.ember-power-select-options {
+div > .ember-power-select-options {
   background: $white;
   border: $base-border;
   box-shadow: $box-shadow-middle;
@@ -71,7 +71,8 @@
   }
 
   .ember-power-select-option[aria-current='true'] {
-    @extend .ember-power-select-option:hover;
+    background-color: $menu-item-hover-background-color;
+    color: $menu-item-hover-color;
   }
 
   .ember-power-select-option--no-matches-message {

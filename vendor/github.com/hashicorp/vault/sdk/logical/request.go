@@ -2,9 +2,11 @@ package logical
 
 import (
 	"fmt"
-	"io"
+	"net/http"
 	"strings"
 	"time"
+
+	"github.com/mitchellh/copystructure"
 )
 
 // RequestWrapInfo is a struct that stores information about desired response
@@ -70,10 +72,7 @@ type Request struct {
 	// Operation is the requested operation type
 	Operation Operation `json:"operation" structs:"operation" mapstructure:"operation"`
 
-	// Path is the part of the request path not consumed by the
-	// routing. As an example, if the original request path is "prod/aws/foo"
-	// and the AWS logical backend is mounted at "prod/aws/", then the
-	// final path is "foo" since the mount prefix is trimmed.
+	// Path is the full path of the request
 	Path string `json:"path" structs:"path" mapstructure:"path" sentinel:""`
 
 	// Request data is an opaque map that must have string keys.
@@ -173,13 +172,22 @@ type Request struct {
 	// we can delete it before sending off to plugins
 	ClientTokenSource ClientTokenSource
 
-	// RequestReader if set can be used to read the full request body from the
-	// http request that generated this logical.Request object.
-	RequestReader io.ReadCloser `json:"-" sentinel:""`
+	// HTTPRequest, if set, can be used to access fields from the HTTP request
+	// that generated this logical.Request object, such as the request body.
+	HTTPRequest *http.Request `json:"-" sentinel:""`
 
 	// ResponseWriter if set can be used to stream a response value to the http
 	// request that generated this logical.Request object.
 	ResponseWriter *HTTPResponseWriter `json:"-" sentinel:""`
+}
+
+// Clone returns a deep copy of the request by using copystructure
+func (r *Request) Clone() (*Request, error) {
+	cpy, err := copystructure.Copy(r)
+	if err != nil {
+		return nil, err
+	}
+	return cpy.(*Request), nil
 }
 
 // Get returns a data field and guards for nil Data

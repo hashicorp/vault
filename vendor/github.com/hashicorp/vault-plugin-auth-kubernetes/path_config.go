@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"io/ioutil"
 
 	"github.com/briankassouf/jose/jws"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -50,11 +51,26 @@ extracted. Not every installation of Kuberentes exposes these keys.`,
 					Name: "Service account verification keys",
 				},
 			},
+			"issuer": {
+				Type:        framework.TypeString,
+				Description: "Optional JWT issuer. If no issuer is specified, then this plugin will use kubernetes.io/serviceaccount as the default issuer.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "JWT Issuer",
+				},
+			},
+			"disable_iss_validation": {
+				Type:        framework.TypeBool,
+				Description: "Disable JWT issuer validation. Allows to skip ISS validation.",
+				Default:     false,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Disable JWT Issuer Validation",
+				},
+			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathConfigWrite(),
-			logical.CreateOperation: b.pathConfigWrite(),
-			logical.ReadOperation:   b.pathConfigRead(),
+			logical.UpdateOperation: b.pathConfigWrite,
+			logical.CreateOperation: b.pathConfigWrite,
+			logical.ReadOperation:   b.pathConfigRead,
 		},
 
 		HelpSynopsis:    confHelpSyn,
@@ -63,76 +79,90 @@ extracted. Not every installation of Kuberentes exposes these keys.`,
 }
 
 // pathConfigWrite handles create and update commands to the config
-func (b *kubeAuthBackend) pathConfigRead() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		if config, err := b.config(ctx, req.Storage); err != nil {
-			return nil, err
-		} else if config == nil {
-			return nil, nil
-		} else {
-			// Create a map of data to be returned
-			resp := &logical.Response{
-				Data: map[string]interface{}{
-					"kubernetes_host":    config.Host,
-					"kubernetes_ca_cert": config.CACert,
-					"pem_keys":           config.PEMKeys,
-				},
-			}
-
-			return resp, nil
+func (b *kubeAuthBackend) pathConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if config, err := b.config(ctx, req.Storage); err != nil {
+		return nil, err
+	} else if config == nil {
+		return nil, nil
+	} else {
+		// Create a map of data to be returned
+		resp := &logical.Response{
+			Data: map[string]interface{}{
+				"kubernetes_host":        config.Host,
+				"kubernetes_ca_cert":     config.CACert,
+				"pem_keys":               config.PEMKeys,
+				"issuer":                 config.Issuer,
+				"disable_iss_validation": config.DisableISSValidation,
+			},
 		}
+
+		return resp, nil
 	}
 }
 
 // pathConfigWrite handles create and update commands to the config
-func (b *kubeAuthBackend) pathConfigWrite() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		host := data.Get("kubernetes_host").(string)
-		if host == "" {
-			return logical.ErrorResponse("no host provided"), nil
-		}
+func (b *kubeAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	host := data.Get("kubernetes_host").(string)
+	if host == "" {
+		return logical.ErrorResponse("no host provided"), nil
+	}
 
-		pemList := data.Get("pem_keys").([]string)
-		caCert := data.Get("kubernetes_ca_cert").(string)
-		if len(pemList) == 0 && len(caCert) == 0 {
+	localCACert, _ := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+
+	localTokenReviewer, _ := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+
+	pemList := data.Get("pem_keys").([]string)
+	caCert := data.Get("kubernetes_ca_cert").(string)
+	issuer := data.Get("issuer").(string)
+	disableIssValidation := data.Get("disable_iss_validation").(bool)
+	if len(pemList) == 0 && len(caCert) == 0 {
+		if len(localCACert) > 0 {
+			caCert = string(localCACert)
+		} else {
 			return logical.ErrorResponse("one of pem_keys or kubernetes_ca_cert must be set"), nil
 		}
+	}
 
-		tokenReviewer := data.Get("token_reviewer_jwt").(string)
-		if len(tokenReviewer) > 0 {
-			// Validate it's a JWT
-			_, err := jws.ParseJWT([]byte(tokenReviewer))
-			if err != nil {
-				return nil, err
-			}
-		}
+	tokenReviewer := data.Get("token_reviewer_jwt").(string)
+	if len(tokenReviewer) == 0 && len(localTokenReviewer) > 0 {
+		tokenReviewer = string(localTokenReviewer)
+	}
 
-		config := &kubeConfig{
-			PublicKeys:       make([]interface{}, len(pemList)),
-			PEMKeys:          pemList,
-			Host:             host,
-			CACert:           caCert,
-			TokenReviewerJWT: tokenReviewer,
-		}
-
-		var err error
-		for i, pem := range pemList {
-			config.PublicKeys[i], err = parsePublicKeyPEM([]byte(pem))
-			if err != nil {
-				return logical.ErrorResponse(err.Error()), nil
-			}
-		}
-
-		entry, err := logical.StorageEntryJSON(configPath, config)
+	if len(tokenReviewer) > 0 {
+		// Validate it's a JWT
+		_, err := jws.ParseJWT([]byte(tokenReviewer))
 		if err != nil {
 			return nil, err
 		}
-
-		if err := req.Storage.Put(ctx, entry); err != nil {
-			return nil, err
-		}
-		return nil, nil
 	}
+
+	config := &kubeConfig{
+		PublicKeys:           make([]interface{}, len(pemList)),
+		PEMKeys:              pemList,
+		Host:                 host,
+		CACert:               caCert,
+		TokenReviewerJWT:     tokenReviewer,
+		Issuer:               issuer,
+		DisableISSValidation: disableIssValidation,
+	}
+
+	var err error
+	for i, pem := range pemList {
+		config.PublicKeys[i], err = parsePublicKeyPEM([]byte(pem))
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+	}
+
+	entry, err := logical.StorageEntryJSON(configPath, config)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := req.Storage.Put(ctx, entry); err != nil {
+		return nil, err
+	}
+	return nil, nil
 }
 
 // kubeConfig contains the public key certificate used to verify the signature
@@ -149,6 +179,10 @@ type kubeConfig struct {
 	CACert string `json:"ca_cert"`
 	// TokenReviewJWT is the bearer to use during the TokenReview API call
 	TokenReviewerJWT string `json:"token_reviewer_jwt"`
+	// Issuer is the claim that specifies who issued the token
+	Issuer string `json:"issuer"`
+	// DisableISSValidation is optional parameter to allow to skip ISS validation
+	DisableISSValidation bool `json:"disable_iss_validation"`
 }
 
 // PasrsePublicKeyPEM is used to parse RSA and ECDSA public keys from PEMs

@@ -60,10 +60,14 @@ define GENERATED_FILE_HEADER
 endef
 export GENERATED_FILE_HEADER
 
+# GEN_CONFIG writes the config to a temporary file. If the whole process succeeds,
+# it them moves that file to $@. This makes is an atomic operation, so if it fails
+# make doesn't consider a half-baked file up to date.
 define GEN_CONFIG
 	@$(CIRCLECI) config pack $(SOURCE_DIR) > $(CONFIG_PACKED)
-	@echo "$$GENERATED_FILE_HEADER" > $@
-	@$(CIRCLECI) config process $(CONFIG_PACKED) >> $@
+	@echo "$$GENERATED_FILE_HEADER" > $@.tmp || { rm -f $@; exit 1; }
+	@$(CIRCLECI) config process $(CONFIG_PACKED) >> $@.tmp || { rm -f $@.tmp; exit 1; }
+	@mv -f $@.tmp $@
 endef
 
 $(OUT): $(CONFIG_SOURCE) 
@@ -75,7 +79,7 @@ $(TMP): $(CONFIG_SOURCE)
 
 .PHONY: config-up-to-date
 config-up-to-date: $(TMP) # Note this must not depend on $(OUT)!
-	@if diff config.yml $<; then \
+	@if diff -w $(OUT) $<; then \
 		echo "Generated $(OUT) is up to date!"; \
 	else \
 		echo "Generated $(OUT) is out of date, run make $(CONFIG) to update."; \

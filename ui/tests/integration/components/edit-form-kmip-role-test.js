@@ -71,14 +71,14 @@ module('Integration | Component | edit form kmip role', function(hooks) {
     this.set('model', model);
     await render(hbs`<EditFormKmipRole @model={{model}} />`);
 
-    assert.dom('[data-test-input="operationAll"').isChecked('sets operationAll');
+    assert.dom('[data-test-input="operationAll"]').isChecked('sets operationAll');
   });
 
   test('it renders: operationAll', async function(assert) {
     let model = createModel({ operationAll: true });
     this.set('model', model);
     await render(hbs`<EditFormKmipRole @model={{model}} />`);
-    assert.dom('[data-test-input="operationAll"').isChecked('sets operationAll');
+    assert.dom('[data-test-input="operationAll"]').isChecked('sets operationAll');
   });
 
   test('it renders: operationNone', async function(assert) {
@@ -95,7 +95,7 @@ module('Integration | Component | edit form kmip role', function(hooks) {
     await render(hbs`<EditFormKmipRole @model={{model}} />`);
 
     assert.dom('[data-test-input="operationNone"]').isChecked('sets operationNone');
-    assert.dom('[data-test-input="operationAll"').isNotChecked('sets operationAll');
+    assert.dom('[data-test-input="operationAll"]').isNotChecked('sets operationAll');
   });
 
   let savingTests = [

@@ -12,7 +12,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
 	"strings"
 	"sync"
@@ -24,23 +23,6 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testRandomPort(tb testing.TB) int {
-	tb.Helper()
-
-	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
-	if err != nil {
-		tb.Fatal(err)
-	}
-
-	l, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		tb.Fatal(err)
-	}
-	defer l.Close()
-
-	return l.Addr().(*net.TCPAddr).Port
-}
-
 func testBaseHCL(tb testing.TB, listenerExtras string) string {
 	tb.Helper()
 
@@ -51,7 +33,7 @@ func testBaseHCL(tb testing.TB, listenerExtras string) string {
 			tls_disable = "true"
 			%s
 		}
-	`, testRandomPort(tb), listenerExtras))
+	`, 0, listenerExtras))
 }
 
 const (
@@ -248,28 +230,28 @@ func TestServer(t *testing.T) {
 		{
 			"bad_listener_read_header_timeout_config",
 			testBaseHCL(t, badListenerReadHeaderTimeout) + inmemHCL,
-			"Could not parse a time value for http_read_header_timeout",
+			"unknown unit km in duration 12km",
 			1,
 			"-test-server-config",
 		},
 		{
 			"bad_listener_read_timeout_config",
 			testBaseHCL(t, badListenerReadTimeout) + inmemHCL,
-			"Could not parse a time value for http_read_timeout",
+			"parsing \"34日\": invalid syntax",
 			1,
 			"-test-server-config",
 		},
 		{
 			"bad_listener_write_timeout_config",
 			testBaseHCL(t, badListenerWriteTimeout) + inmemHCL,
-			"Could not parse a time value for http_write_timeout",
+			"unknown unit lbs in duration 56lbs",
 			1,
 			"-test-server-config",
 		},
 		{
 			"bad_listener_idle_timeout_config",
 			testBaseHCL(t, badListenerIdleTimeout) + inmemHCL,
-			"Could not parse a time value for http_idle_timeout",
+			"unknown unit gophers in duration 78gophers",
 			1,
 			"-test-server-config",
 		},

@@ -135,8 +135,8 @@ func (s *Salt) GetIdentifiedHMAC(data string) string {
 	return s.config.HMACType + ":" + s.GetHMAC(data)
 }
 
-// DidGenerate returns if the underlying salt value was generated
-// on initialization or if an existing salt value was loaded
+// DidGenerate returns true if the underlying salt value was generated
+// on initialization.
 func (s *Salt) DidGenerate() bool {
 	return s.generated
 }

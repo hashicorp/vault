@@ -13,18 +13,22 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
-	googleoauth2 "google.golang.org/api/oauth2/v2"
-	"gopkg.in/square/go-jose.v2"
+	"google.golang.org/api/googleapi"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 const (
-	labelRegex                 string = "^(?P<key>[a-z]([\\w-]+)?):(?P<value>[\\w-]*)$"
-	defaultHomeCredentialsFile        = ".gcp/credentials"
+	defaultHomeCredentialsFile                = ".gcp/credentials"
+
+	// Global URL: https://cloud.google.com/iam/docs/creating-managing-service-account-keys
+	serviceAccountPublicKeyUrlTemplate        = "https://www.googleapis.com/service_accounts/v1/metadata/x509/%s?alt=json"
+
+	// Global URL: Base URL from golang.org/x/oauth2, v1 returns x509 keys
+	googleOauthProviderX509CertUrl            = "https://www.googleapis.com/oauth2/v1/certs"
 )
 
 // GcpCredentials represents a simplified version of the Google Cloud Platform credentials file format.
@@ -123,9 +127,10 @@ func GetHttpClient(credentials *GcpCredentials, clientScopes ...string) (*http.C
 
 // PublicKey returns a public key from a Google PEM key file (type TYPE_X509_PEM_FILE).
 func PublicKey(pemString string) (interface{}, error) {
-	pemBytes, err := base64.StdEncoding.DecodeString(pemString)
-	if err != nil {
-		return nil, err
+	// Attempt to base64 decode
+	pemBytes := []byte(pemString)
+	if b64decoded, err := base64.StdEncoding.DecodeString(pemString); err == nil {
+		pemBytes = b64decoded
 	}
 
 	block, _ := pem.Decode(pemBytes)
@@ -141,38 +146,55 @@ func PublicKey(pemString string) (interface{}, error) {
 	return cert.PublicKey, nil
 }
 
-// OAuth2RSAPublicKey returns the PEM key file string for Google Oauth2 public cert for the given 'kid' id.
-func OAuth2RSAPublicKey(kid, oauth2BasePath string) (interface{}, error) {
-	oauth2Client, err := googleoauth2.New(cleanhttp.DefaultClient())
-	if err != nil {
-		return "", err
-	}
-
-	if len(oauth2BasePath) > 0 {
-		oauth2Client.BasePath = oauth2BasePath
-	}
-
-	jwks, err := oauth2Client.GetCertForOpenIdConnect().Do()
+func ServiceAccountPublicKey(serviceAccount string, keyId string) (interface{}, error) {
+	keyUrl := fmt.Sprintf(serviceAccountPublicKeyUrlTemplate, url.PathEscape(serviceAccount))
+	res, err := cleanhttp.DefaultClient().Get(keyUrl)
 	if err != nil {
 		return nil, err
 	}
-
-	for _, key := range jwks.Keys {
-		if key.Kid == kid && jose.SignatureAlgorithm(key.Alg) == jose.RS256 {
-			// Trim extra '=' from key so it can be parsed.
-			key.N = strings.TrimRight(key.N, "=")
-			js, err := key.MarshalJSON()
-			if err != nil {
-				return nil, fmt.Errorf("unable to marshal json %v", err)
-			}
-			key := &jose.JSONWebKey{}
-			if err := key.UnmarshalJSON(js); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal json %v", err)
-			}
-
-			return key.Key, nil
-		}
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
 	}
 
-	return nil, fmt.Errorf("could not find public key with kid '%s'", kid)
+	jwks := map[string]interface{}{}
+	if err := json.NewDecoder(res.Body).Decode(&jwks); err != nil {
+		return nil, fmt.Errorf("unable to decode JSON response: %v", err)
+	}
+	kRaw, ok := jwks[keyId]
+	if !ok {
+		return nil, fmt.Errorf("service account %q key %q not found at GET %q", keyId, serviceAccount, keyUrl)
+	}
+
+	kStr, ok := kRaw.(string)
+	if !ok {
+		return nil, fmt.Errorf("unexpected error - decoded JSON key value %v is not string", kRaw)
+	}
+	return PublicKey(kStr)
+}
+
+// OAuth2RSAPublicKey returns the PEM key file string for Google Oauth2 public cert for the given 'kid' id.
+func OAuth2RSAPublicKey(ctx context.Context, keyId string) (interface{}, error) {
+	certUrl := googleOauthProviderX509CertUrl
+	res, err := cleanhttp.DefaultClient().Get(certUrl)
+	if err != nil {
+		return nil, err
+	}
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+
+	jwks := map[string]interface{}{}
+	if err := json.NewDecoder(res.Body).Decode(&jwks); err != nil {
+		return nil, fmt.Errorf("unable to decode JSON response: %v", err)
+	}
+	kRaw, ok := jwks[keyId]
+	if !ok {
+		return nil, fmt.Errorf("key %q not found (GET %q)", keyId, certUrl)
+	}
+
+	kStr, ok := kRaw.(string)
+	if !ok {
+		return nil, fmt.Errorf("unexpected error - decoded JSON key value %v is not string", kRaw)
+	}
+	return PublicKey(kStr)
 }

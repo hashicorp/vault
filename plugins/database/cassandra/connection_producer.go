@@ -37,6 +37,7 @@ type cassandraConnectionProducer struct {
 	LocalDatacenter    string      `json:"local_datacenter" structs:"local_datacenter" mapstructure:"local_datacenter"`
 	PemBundle          string      `json:"pem_bundle" structs:"pem_bundle" mapstructure:"pem_bundle"`
 	PemJSON            string      `json:"pem_json" structs:"pem_json" mapstructure:"pem_json"`
+	SkipVerification   bool        `json:"skip_verification" structs:"skip_verification" mapstructure:"skip_verification"`
 
 	connectTimeout  time.Duration
 	socketKeepAlive time.Duration
@@ -249,6 +250,7 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 	if c.Consistency != "" {
 		consistencyValue, err := gocql.ParseConsistencyWrapper(c.Consistency)
 		if err != nil {
+			session.Close()
 			return nil, err
 		}
 
@@ -256,17 +258,21 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 	}
 
 	// Verify the info
-	err = session.Query(`LIST ALL`).WithContext(ctx).Exec()
-	if err != nil && len(c.Username) != 0 && strings.Contains(err.Error(), "not authorized") {
-		rowNum := session.Query(dbutil.QueryHelper(`LIST CREATE ON ALL ROLES OF '{{username}}';`, map[string]string{
-			"username": c.Username,
-		})).Iter().NumRows()
+	if !c.SkipVerification {
+		err = session.Query(`LIST ALL`).WithContext(ctx).Exec()
+		if err != nil && len(c.Username) != 0 && strings.Contains(err.Error(), "not authorized") {
+			rowNum := session.Query(dbutil.QueryHelper(`LIST CREATE ON ALL ROLES OF '{{username}}';`, map[string]string{
+				"username": c.Username,
+			})).Iter().NumRows()
 
-		if rowNum < 1 {
-			return nil, errwrap.Wrapf("error validating connection info: No role create permissions found, previous error: {{err}}", err)
+			if rowNum < 1 {
+				session.Close()
+				return nil, errwrap.Wrapf("error validating connection info: No role create permissions found, previous error: {{err}}", err)
+			}
+		} else if err != nil {
+			session.Close()
+			return nil, errwrap.Wrapf("error validating connection info: {{err}}", err)
 		}
-	} else if err != nil {
-		return nil, errwrap.Wrapf("error validating connection info: {{err}}", err)
 	}
 
 	return session, nil

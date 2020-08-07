@@ -1,0 +1,17 @@
+{{input
+  id=safeId
+  name=name
+  type="checkbox"
+  checked=checked
+  change=(action "handleChange" value='target.checked')
+  class=inputClasses
+  disabled=disabled
+  data-test-toggle-input=name
+}}
+<label data-test-toggle-label={{name}} for={{safeId}}>
+  {{#if (has-block)}}
+    {{yield}}
+  {{else}}
+    {{name}}
+  {{/if}}
+</label>

@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/vault/helper/awsutil"
+	"github.com/hashicorp/vault/sdk/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -74,9 +74,11 @@ func nonCachedClientIAM(ctx context.Context, s logical.Storage) (*iam.IAM, error
 	if err != nil {
 		return nil, err
 	}
-
-	client := iam.New(session.New(awsConfig))
-
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return nil, err
+	}
+	client := iam.New(sess)
 	if client == nil {
 		return nil, fmt.Errorf("could not obtain iam client")
 	}
@@ -88,8 +90,11 @@ func nonCachedClientSTS(ctx context.Context, s logical.Storage) (*sts.STS, error
 	if err != nil {
 		return nil, err
 	}
-	client := sts.New(session.New(awsConfig))
-
+	sess, err := session.NewSession(awsConfig)
+	if err != nil {
+		return nil, err
+	}
+	client := sts.New(sess)
 	if client == nil {
 		return nil, fmt.Errorf("could not obtain sts client")
 	}

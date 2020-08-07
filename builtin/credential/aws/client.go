@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/vault/helper/awsutil"
+	"github.com/hashicorp/vault/sdk/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -37,14 +37,19 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 	endpoint := aws.String("")
 	var maxRetries int = aws.UseServiceDefaultRetries
 	if config != nil {
-		// Override the default endpoint with the configured endpoint.
+		// Override the defaults with configured values.
 		switch {
 		case clientType == "ec2" && config.Endpoint != "":
 			endpoint = aws.String(config.Endpoint)
 		case clientType == "iam" && config.IAMEndpoint != "":
 			endpoint = aws.String(config.IAMEndpoint)
-		case clientType == "sts" && config.STSEndpoint != "":
-			endpoint = aws.String(config.STSEndpoint)
+		case clientType == "sts":
+			if config.STSEndpoint != "" {
+				endpoint = aws.String(config.STSEndpoint)
+			}
+			if config.STSRegion != "" {
+				region = config.STSRegion
+			}
 		}
 
 		credsConfig.AccessKey = config.AccessKey
@@ -245,12 +250,19 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 	if err != nil {
 		return nil, err
 	}
+	if stsRole == "" {
+		b.Logger().Debug(fmt.Sprintf("no stsRole found for %s", accountID))
+	} else {
+		b.Logger().Debug(fmt.Sprintf("found stsRole %s for account %s", stsRole, accountID))
+	}
 	b.configMutex.RLock()
 	if b.IAMClientsMap[region] != nil && b.IAMClientsMap[region][stsRole] != nil {
 		defer b.configMutex.RUnlock()
 		// If the client object was already created, return it
+		b.Logger().Debug(fmt.Sprintf("returning cached client for region %s and stsRole %s", region, stsRole))
 		return b.IAMClientsMap[region][stsRole], nil
 	}
+	b.Logger().Debug(fmt.Sprintf("no cached client for region %s and stsRole %s", region, stsRole))
 
 	// Release the read lock and acquire the write lock
 	b.configMutex.RUnlock()

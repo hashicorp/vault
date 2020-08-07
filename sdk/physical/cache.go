@@ -13,6 +13,10 @@ import (
 const (
 	// DefaultCacheSize is used if no cache size is specified for NewCache
 	DefaultCacheSize = 128 * 1024
+
+	// refreshCacheCtxKey is a ctx value that denotes the cache should be
+	// refreshed during a Get call.
+	refreshCacheCtxKey = "refresh_cache"
 )
 
 // These paths don't need to be cached by the LRU cache. This should
@@ -24,6 +28,22 @@ var cacheExceptionsPaths = []string{
 	"sys/expire/",
 	"core/poison-pill",
 	"core/raft/tls",
+}
+
+// CacheRefreshContext returns a context with an added value denoting if the
+// cache should attempt a refresh.
+func CacheRefreshContext(ctx context.Context, r bool) context.Context {
+	return context.WithValue(ctx, refreshCacheCtxKey, r)
+}
+
+// cacheRefreshFromContext is a helper to look up if the provided context is
+// requesting a cache refresh.
+func cacheRefreshFromContext(ctx context.Context) bool {
+	r, ok := ctx.Value(refreshCacheCtxKey).(bool)
+	if !ok {
+		return false
+	}
+	return r
 }
 
 // Cache is used to wrap an underlying physical backend
@@ -140,11 +160,13 @@ func (c *Cache) Get(ctx context.Context, key string) (*Entry, error) {
 	defer lock.RUnlock()
 
 	// Check the LRU first
-	if raw, ok := c.lru.Get(key); ok {
-		if raw == nil {
-			return nil, nil
+	if !cacheRefreshFromContext(ctx) {
+		if raw, ok := c.lru.Get(key); ok {
+			if raw == nil {
+				return nil, nil
+			}
+			return raw.(*Entry), nil
 		}
-		return raw.(*Entry), nil
 	}
 
 	// Read from the underlying backend

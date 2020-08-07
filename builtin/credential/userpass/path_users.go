@@ -22,6 +22,10 @@ func pathUsersList(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Navigation: true,
+			ItemType:   "User",
+		},
 	}
 }
 
@@ -37,6 +41,9 @@ func pathUsers(b *backend) *framework.Path {
 			"password": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Password for this user.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Sensitive: true,
+				},
 			},
 
 			"policies": &framework.FieldSchema{
@@ -75,6 +82,10 @@ func pathUsers(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Action:   "Create",
+			ItemType: "User",
+		},
 	}
 
 	tokenutil.AddTokenFields(p.Fields)
@@ -220,7 +231,7 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 			return logical.ErrorResponse(err.Error()), nil
 		}
 
-		if err := tokenutil.UpgradeValue(d, "bound_cidrs", "token_bound_cirs", &userEntry.BoundCIDRs, &userEntry.TokenBoundCIDRs); err != nil {
+		if err := tokenutil.UpgradeValue(d, "bound_cidrs", "token_bound_cidrs", &userEntry.BoundCIDRs, &userEntry.TokenBoundCIDRs); err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 	}

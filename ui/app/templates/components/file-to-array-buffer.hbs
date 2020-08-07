@@ -1,0 +1,36 @@
+<div class="field">
+  <div class="control is-expanded">
+    <label class="is-label">
+      {{#if label}}
+        {{label}}
+      {{/if}}
+    </label>
+    <div class="file has-name is-fullwidth">
+      <label class="file-label">
+        <input class="file-input" type="file" onchange={{action "pickedFile"}} data-test-file-input>
+        <span class="file-cta button">
+          <Icon @glyph="upload" class="has-light-grey-text" />
+          Choose a file…
+        </span>
+        <span class="file-name has-text-grey-dark" data-test-text-file-input-label=true>
+          {{or this.fileName "No file chosen"}}
+        </span>
+        {{#if this.fileName}}
+          <button type="button" class="file-delete-button" {{action 'clearFile'}} data-test-text-clear>
+            <Icon @glyph="cancel-circle-outline" />
+          </button>
+        {{/if}}
+      </label>
+    </div>
+  </div>
+  {{#if this.fileName}}
+  <p class="help has-text-grey">
+    This file is {{this.fileSize}} and was created on {{date-format this.fileLastModified 'MMM DD, YYYY hh:mm:ss A'}}.
+  </p>
+  {{/if}}
+  {{#if @fileHelpText}}
+  <p class="help has-text-grey">
+    {{@fileHelpText}}
+  </p>
+  {{/if}}
+</div>

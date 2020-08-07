@@ -1,3 +1,4 @@
+// env: node
 module.exports = {
   parser: 'babel-eslint',
   root: true,

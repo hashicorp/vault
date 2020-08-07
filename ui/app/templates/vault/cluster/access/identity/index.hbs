@@ -31,65 +31,63 @@
         </div>
         <div class="column has-text-right">
           {{#popup-menu name="identity-item" onOpen=(action "reloadRecord" item)}}
-            <nav class="menu">
-              <ul class="menu-list">
-                <li class="action">
-                  {{#link-to "vault.cluster.access.identity.show" item.id "details"}}
-                    Details
-                  {{/link-to}}
-                </li>
-                {{#if (or item.isReloading item.updatePath.isPending item.aliasPath.isPending)}}
+            <Confirm as |c|>
+              <nav class="menu">
+                <ul class="menu-list">
                   <li class="action">
-                    <button disabled type="button" class="link button is-loading is-transparent">
-                      loading
-                    </button>
+                    {{#link-to "vault.cluster.access.identity.show" item.id "details"}}
+                      Details
+                    {{/link-to}}
                   </li>
-                {{else}}
-                  {{#if item.canAddAlias}}
+                  {{#if (or item.isReloading item.updatePath.isPending item.aliasPath.isPending)}}
                     <li class="action">
-                      {{#link-to "vault.cluster.access.identity.aliases.add" (pluralize identityType) item.id}}
-                        Create alias
-                      {{/link-to}}
+                      <button disabled type="button" class="link button is-loading is-transparent">
+                        loading
+                      </button>
                     </li>
+                  {{else}}
+                    {{#if item.canAddAlias}}
+                      <li class="action">
+                        {{#link-to "vault.cluster.access.identity.aliases.add" (pluralize identityType) item.id}}
+                          Create alias
+                        {{/link-to}}
+                      </li>
+                    {{/if}}
+                    {{#if item.canEdit}}
+                      <li class="action">
+                        {{#link-to "vault.cluster.access.identity.edit" item.id}}
+                          Edit
+                        {{/link-to}}
+                      </li>
+                      <li class="action">
+                        {{#if item.disabled}}
+                          <button type="button" {{action "toggleDisabled" item}} class="link">
+                            Enable
+                          </button>
+                        {{else if (eq identityType 'entity')}}
+                          <c.Message
+                            @id="{{item.id}}-disable"
+                            @triggerText="Disable"
+                            @message="Associated tokens will not be revoked, but cannot be used"
+                            @title="Disable this?"
+                            @confirmButtonText="Disable"
+                            @onConfirm={{action "toggleDisabled" item}}
+                            data-test-engine-disable="true"/>
+                        {{/if}}
+                      </li>
+                    {{/if}}
+                    {{#if item.canDelete}}
+                      <li class="action">
+                        <c.Message
+                          @id={{item.id}}
+                          @onConfirm={{action "delete" item}}
+                          data-test-item-delete="true"/>
+                      </li>
+                    {{/if}}
                   {{/if}}
-                  {{#if item.canEdit}}
-                    <li class="action">
-                      {{#link-to "vault.cluster.access.identity.edit" item.id}}
-                        Edit
-                      {{/link-to}}
-                    </li>
-                    <li class="action">
-                      {{#if item.disabled}}
-                        <button type="button" {{action "toggleDisabled" item}} class="link">
-                          Enable
-                        </button>
-                      {{else if (eq identityType 'entity')}}
-                        <ConfirmAction
-                          @buttonClasses="link is-destroy"
-                          @confirmTitle="Disable this?"
-                          @confirmMessage="Associated tokens will not be revoked, but cannot be used"
-                          @confirmButtonText="Disable"
-                          @onConfirmAction={{action "toggleDisabled" item}}
-                        >
-                          Disable
-                        </ConfirmAction>
-                      {{/if}}
-                    </li>
-                  {{/if}}
-                  {{#if item.canDelete}}
-                    <li class="action">
-                      <ConfirmAction
-                        @buttonClasses="link is-destroy"
-                        @onConfirmAction={{action "delete" item}}
-                        data-test-item-delete="true"
-                      >
-                        Delete
-                      </ConfirmAction>
-                    </li>
-                  {{/if}}
-                {{/if}}
-              </ul>
-            </nav>
+                </ul>
+              </nav>
+            </Confirm>
           {{/popup-menu}}
         </div>
       </div>

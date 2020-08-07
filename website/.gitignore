@@ -1,0 +1,9 @@
+node_modules
+.DS_Store
+.next
+out
+.mdx-data
+
+# As per Next.js conventions (https://nextjs.org/docs/basic-features/environment-variables#default-environment-variables)
+.env*.local
+!.env*

@@ -1,0 +1,33 @@
+version = 0
+name = "ListDatabases"
+documentation = "ListDatabases performs a listDatabases operation."
+
+[properties]
+enabled = ["read preference"]
+retryable = {mode = "once per command", type = "reads"}
+disabled = ["collection"]
+
+[command]
+name = "listDatabases"
+parameter = "database"
+
+[request.filter]
+type = "document"
+constructor = true
+documentation = "Filter determines what results are returned from listDatabases."
+
+
+[request.nameOnly]
+type = "boolean"
+documentation = "NameOnly specifies whether to only return database names."
+
+[response]
+name = "ListDatabasesResult"
+
+[response.field.totalSize]
+type = "int64"
+documentation = "The sum of the size of all the database files on disk in bytes."
+
+[response.field.databases]
+type = "value"
+documentation = "An array of documents, one document for each database"

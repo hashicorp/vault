@@ -80,7 +80,7 @@ func (n *NumericDate) Time() time.Time {
 	return time.Unix(int64(*n), 0)
 }
 
-// Audience represents the recipents that the token is intended for.
+// Audience represents the recipients that the token is intended for.
 type Audience []string
 
 // UnmarshalJSON reads an audience from its JSON representation.

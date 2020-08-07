@@ -23,6 +23,10 @@ func pathListCerts(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathCertHelpSyn,
 		HelpDescription: pathCertHelpDesc,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Navigation: true,
+			ItemType:   "Certificate",
+		},
 	}
 }
 
@@ -39,6 +43,9 @@ func pathCerts(b *backend) *framework.Path {
 				Type: framework.TypeString,
 				Description: `The public certificate that should be trusted.
 Must be x509 PEM encoded.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					EditType: "file",
+				},
 			},
 
 			"allowed_names": &framework.FieldSchema{
@@ -47,36 +54,57 @@ Must be x509 PEM encoded.`,
 At least one must exist in either the Common Name or SANs. Supports globbing.  
 This parameter is deprecated, please use allowed_common_names, allowed_dns_sans, 
 allowed_email_sans, allowed_uri_sans.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Group: "Constraints",
+				},
 			},
 
 			"allowed_common_names": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of names.
 At least one must exist in the Common Name. Supports globbing.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Group: "Constraints",
+				},
 			},
 
 			"allowed_dns_sans": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of DNS names.
 At least one must exist in the SANs. Supports globbing.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Allowed DNS SANs",
+					Group: "Constraints",
+				},
 			},
 
 			"allowed_email_sans": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of Email Addresses.
 At least one must exist in the SANs. Supports globbing.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Allowed Email SANs",
+					Group: "Constraints",
+				},
 			},
 
 			"allowed_uri_sans": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of URIs.
 At least one must exist in the SANs. Supports globbing.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Allowed URI SANs",
+					Group: "Constraints",
+				},
 			},
 
 			"allowed_organizational_units": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of Organizational Units names.
 At least one must exist in the OU field.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Group: "Constraints",
+				},
 			},
 
 			"required_extensions": &framework.FieldSchema{
@@ -137,6 +165,10 @@ certificate.`,
 
 		HelpSynopsis:    pathCertHelpSyn,
 		HelpDescription: pathCertHelpDesc,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Action:   "Create",
+			ItemType: "Certificate",
+		},
 	}
 
 	tokenutil.AddTokenFields(p.Fields)

@@ -9,8 +9,7 @@ export default create({
     name: text('[data-test-identity-link]'),
   }),
 
-  delete: clickable('[data-test-confirm-action-trigger]', {
-    scope: '[data-test-item-delete]',
+  delete: clickable('[data-test-item-delete]', {
     testContainer: '#ember-testing',
   }),
   confirmDelete: clickable('[data-test-confirm-button]'),

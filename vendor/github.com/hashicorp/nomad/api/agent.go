@@ -237,6 +237,57 @@ func (a *Agent) Health() (*AgentHealthResponse, error) {
 	return nil, fmt.Errorf("unable to unmarshal response with status %d: %v", resp.StatusCode, err)
 }
 
+// Monitor returns a channel which will receive streaming logs from the agent
+// Providing a non-nil stopCh can be used to close the connection and stop log streaming
+func (a *Agent) Monitor(stopCh <-chan struct{}, q *QueryOptions) (<-chan *StreamFrame, <-chan error) {
+	errCh := make(chan error, 1)
+	r, err := a.client.newRequest("GET", "/v1/agent/monitor")
+	if err != nil {
+		errCh <- err
+		return nil, errCh
+	}
+
+	r.setQueryOptions(q)
+	_, resp, err := requireOK(a.client.doRequest(r))
+	if err != nil {
+		errCh <- err
+		return nil, errCh
+	}
+
+	frames := make(chan *StreamFrame, 10)
+	go func() {
+		defer resp.Body.Close()
+
+		dec := json.NewDecoder(resp.Body)
+
+		for {
+			select {
+			case <-stopCh:
+				close(frames)
+				return
+			default:
+			}
+
+			// Decode the next frame
+			var frame StreamFrame
+			if err := dec.Decode(&frame); err != nil {
+				close(frames)
+				errCh <- err
+				return
+			}
+
+			// Discard heartbeat frame
+			if frame.IsHeartbeat() {
+				continue
+			}
+
+			frames <- &frame
+		}
+	}()
+
+	return frames, errCh
+}
+
 // joinResponse is used to decode the response we get while
 // sending a member join request.
 type joinResponse struct {

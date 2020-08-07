@@ -171,10 +171,8 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
       `/vault/secrets/${path}/kmip/scopes/${scope}/roles/${role}`,
       'cancel navigates to role show'
     );
-    await rolesPage
-      .detailDelete()
-      .delete()
-      .confirmDelete();
+    await rolesPage.delete().confirmDelete();
+
     assert.equal(
       currentURL(),
       `/vault/secrets/${path}/kmip/scopes/${scope}/roles`,
@@ -209,8 +207,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
     await credentialsPage.visit({ backend: path, scope, role });
     // revoke the credentials
     await credentialsPage.listItemLinks.objectAt(0).menuToggle();
-    await credentialsPage.delete();
-    await credentialsPage.confirmDelete();
+    await credentialsPage.delete().confirmDelete();
     assert.equal(credentialsPage.listItemLinks.length, 0, 'renders no credentials');
     assert.ok(credentialsPage.isEmpty, 'renders empty');
   });
@@ -218,10 +215,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
   test('it can revoke from the credentials show page', async function(assert) {
     let { path, scope, role, serial } = await generateCreds();
     await credentialsPage.visitDetail({ backend: path, scope, role, serial });
-    await credentialsPage
-      .detailRevoke()
-      .delete()
-      .confirmDelete();
+    await credentialsPage.delete().confirmDelete();
 
     assert.equal(
       currentURL(),

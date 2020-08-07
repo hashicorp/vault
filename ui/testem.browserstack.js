@@ -69,7 +69,7 @@ module.exports = {
         '--os',
         'Windows',
         '--osv',
-        '10',
+        '8.1',
         '--b',
         'ie',
         '--bv',

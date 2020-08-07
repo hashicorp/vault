@@ -10,7 +10,6 @@ import (
 	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -39,7 +38,7 @@ var (
 var _ dbplugin.Database = (*MySQL)(nil)
 
 type MySQL struct {
-	*connutil.SQLConnectionProducer
+	*mySQLConnectionProducer
 	credsutil.CredentialsProducer
 }
 
@@ -55,8 +54,7 @@ func New(displayNameLen, roleNameLen, usernameLen int) func() (interface{}, erro
 }
 
 func new(displayNameLen, roleNameLen, usernameLen int) *MySQL {
-	connProducer := &connutil.SQLConnectionProducer{}
-	connProducer.Type = mySQLTypeName
+	connProducer := &mySQLConnectionProducer{}
 
 	credsProducer := &credsutil.SQLCredentialsProducer{
 		DisplayNameLen: displayNameLen,
@@ -66,8 +64,8 @@ func new(displayNameLen, roleNameLen, usernameLen int) *MySQL {
 	}
 
 	return &MySQL{
-		SQLConnectionProducer: connProducer,
-		CredentialsProducer:   credsProducer,
+		mySQLConnectionProducer: connProducer,
+		CredentialsProducer:     credsProducer,
 	}
 }
 
@@ -135,6 +133,7 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 
 	queryMap := map[string]string{
 		"name":       username,
+		"username":   username,
 		"password":   password,
 		"expiration": expirationStr,
 	}
@@ -187,6 +186,7 @@ func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 			// 1295: This command is not supported in the prepared statement protocol yet
 			// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
 			query = strings.Replace(query, "{{name}}", username, -1)
+			query = strings.Replace(query, "{{username}}", username, -1)
 			_, err = tx.ExecContext(ctx, query)
 			if err != nil {
 				return err
@@ -244,6 +244,7 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 			// 1295: This command is not supported in the prepared statement protocol yet
 			// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
 			query = strings.Replace(query, "{{username}}", m.Username, -1)
+			query = strings.Replace(query, "{{name}}", m.Username, -1)
 			query = strings.Replace(query, "{{password}}", password, -1)
 
 			if _, err := tx.ExecContext(ctx, query); err != nil {
@@ -283,18 +284,19 @@ func (m *MySQL) SetCredentials(ctx context.Context, statements dbplugin.Statemen
 
 	queryMap := map[string]string{
 		"name":     username,
+		"username": username,
 		"password": password,
 	}
 
-	if err := m.executePreparedStatmentsWithMap(ctx, statements.Rotation, queryMap); err != nil {
+	if err := m.executePreparedStatmentsWithMap(ctx, rotateStatements, queryMap); err != nil {
 		return "", "", err
 	}
 	return username, password, nil
 }
 
 // executePreparedStatmentsWithMap loops through the given templated SQL statements and
-// applies the a map to them, interpolating values into the templates,returning
-// tthe resulting username and password
+// applies the map to them, interpolating values into the templates, returning
+// the resulting username and password
 func (m *MySQL) executePreparedStatmentsWithMap(ctx context.Context, statements []string, queryMap map[string]string) error {
 	// Grab the lock
 	m.Lock()
