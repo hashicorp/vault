@@ -42,7 +42,7 @@ quota rule will be applied.
 
 A rate limit can be created with an optional `block_interval`, such that when set
 to a non-zero value, any client that hits a rate limit threshold will be blocked
-from all subsequent requests for a duration of `block` seconds.
+from all subsequent requests for a duration of `block_interval` seconds.
 
 Vault also allows the inspection of the state of rate limiting in a Vault node
 through various [metrics](/docs/internals/telemetry#Resource-Quota-Metrics) exposed
