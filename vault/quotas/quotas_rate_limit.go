@@ -224,7 +224,7 @@ func (rlq *RateLimitQuota) numBlockedClients() int {
 	defer rlq.lock.RUnlock()
 
 	size := 0
-	rlq.blockedClients.Range(func(key, value interface{}) bool {
+	rlq.blockedClients.Range(func(_, _ interface{}) bool {
 		size++
 		return true
 	})
