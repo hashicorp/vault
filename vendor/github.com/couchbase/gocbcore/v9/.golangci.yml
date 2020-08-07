@@ -1,0 +1,18 @@
+run:
+  modules-download-mode: readonly
+  tests: false
+  skip-files:
+    - logging.go  # Logging has some utility functions that are useful to have around which get flagged up
+linters:
+  enable:
+    - bodyclose
+    - golint
+    - gosec
+    - unconvert
+linters-settings:
+  golint:
+    set-exit-status: true
+    min-confidence: 0.81
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
