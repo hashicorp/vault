@@ -220,7 +220,7 @@ func (rlq *RateLimitQuota) getPurgeBlocked() bool {
 	return rlq.purgeBlocked
 }
 
-func (rlq *RateLimitQuota) numBlockedClient() int {
+func (rlq *RateLimitQuota) numBlockedClients() int {
 	rlq.lock.RLock()
 	defer rlq.lock.RUnlock()
 	return len(rlq.blockedClients)
