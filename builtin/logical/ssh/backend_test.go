@@ -417,7 +417,7 @@ func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 		"key":          testKeyName,
 		"admin_user":   testAdminUser,
 		"default_user": testAdminUser,
-		"cidr_list":    testCIDRList,
+		"cidr_list":    host + "/32",
 		"port":         port,
 	}
 	data := map[string]interface{}{
@@ -523,7 +523,7 @@ func TestSSHBackend_OTPCreate(t *testing.T) {
 	testOTPRoleData := map[string]interface{}{
 		"key_type":     testOTPKeyType,
 		"default_user": testUserName,
-		"cidr_list":    testCIDRList,
+		"cidr_list":    host + "/32",
 		"port":         port,
 	}
 	data := map[string]interface{}{
