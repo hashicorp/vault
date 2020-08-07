@@ -13,6 +13,7 @@ import (
 )
 
 func TestExpiration_RenewToken_TestCluster(t *testing.T) {
+	t.Parallel()
 	// Use a TestCluster and the approle backend to test renewal
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{

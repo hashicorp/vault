@@ -228,7 +228,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.13.10-buster \
+              testcontainer circleci/golang:1.14.6-stretch \
               tail -f /dev/null
 
             # Run tests
@@ -362,7 +362,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.13.10-buster \
+              testcontainer circleci/golang:1.14.6-stretch \
               tail -f /dev/null
 
             # Run tests
@@ -510,7 +510,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.13.10-buster \
+              testcontainer circleci/golang:1.14.6-stretch \
               tail -f /dev/null
 
             # Run tests
@@ -651,7 +651,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.13.10-buster \
+              testcontainer circleci/golang:1.14.6-stretch \
               tail -f /dev/null
 
             # Run tests
@@ -816,7 +816,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.13.10-buster \
+              testcontainer circleci/golang:1.14.6-stretch \
               tail -f /dev/null
 
             # Run tests

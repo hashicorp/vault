@@ -91,6 +91,7 @@ func testVariousBackends(t *testing.T, tf testFunc, basePort int, includeRaft bo
 // migration, using the pre-1.4 method of bring down the whole cluster to do
 // the migration.
 func TestSealMigration_ShamirToTransit_Pre14(t *testing.T) {
+	t.Parallel()
 	// Note that we do not test integrated raft storage since this is
 	// a pre-1.4 test.
 	testVariousBackends(t, testSealMigrationShamirToTransit_Pre14, basePort_ShamirToTransit_Pre14, false)
@@ -193,6 +194,7 @@ func migrateFromShamirToTransit_Pre14(t *testing.T, logger hclog.Logger, storage
 // migration, using the post-1.4 method of bring individual nodes in the cluster
 // to do the migration.
 func TestSealMigration_ShamirToTransit_Post14(t *testing.T) {
+	t.Parallel()
 	testVariousBackends(t, testSealMigrationShamirToTransit_Post14, basePort_ShamirToTransit_Post14, true)
 }
 
@@ -260,6 +262,7 @@ func migrateFromShamirToTransit_Post14(t *testing.T, logger hclog.Logger, storag
 // migration, using the post-1.4 method of bring individual nodes in the
 // cluster to do the migration.
 func TestSealMigration_TransitToShamir_Post14(t *testing.T) {
+	t.Parallel()
 	testVariousBackends(t, testSealMigrationTransitToShamir_Post14, basePort_TransitToShamir_Post14, true)
 }
 
