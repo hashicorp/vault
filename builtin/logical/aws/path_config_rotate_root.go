@@ -14,8 +14,12 @@ import (
 func pathConfigRotateRoot(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/rotate-root",
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathConfigRotateRootUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback:                    b.pathConfigRotateRootUpdate,
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathConfigRotateRootHelpSyn,

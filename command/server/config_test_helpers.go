@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 	"time"
@@ -710,4 +711,61 @@ listener "tcp" {
 	if diff := deep.Equal(config, *expected); diff != nil {
 		t.Fatal(diff)
 	}
+}
+
+func testParseSeals(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config_seals.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	config.Listeners[0].RawConfig = nil
+
+	expected := &Config{
+		Storage: &Storage{
+			Type:   "consul",
+			Config: map[string]string{},
+		},
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:    "tcp",
+					Address: "127.0.0.1:443",
+				},
+			},
+			Seals: []*configutil.KMS{
+				&configutil.KMS{
+					Type:    "pkcs11",
+					Purpose: []string{"many", "purposes"},
+					Config: map[string]string{
+						"lib":                    "/usr/lib/libcklog2.so",
+						"slot":                   "0.0",
+						"pin":                    "XXXXXXXX",
+						"key_label":              "HASHICORP",
+						"mechanism":              "0x1082",
+						"hmac_mechanism":         "0x0251",
+						"hmac_key_label":         "vault-hsm-hmac-key",
+						"default_hmac_key_label": "vault-hsm-hmac-key",
+						"generate_key":           "true",
+					},
+				},
+				&configutil.KMS{
+					Type:     "pkcs11",
+					Purpose:  []string{"single"},
+					Disabled: true,
+					Config: map[string]string{
+						"lib":                    "/usr/lib/libcklog2.so",
+						"slot":                   "0.0",
+						"pin":                    "XXXXXXXX",
+						"key_label":              "HASHICORP",
+						"mechanism":              "4226",
+						"hmac_mechanism":         "593",
+						"hmac_key_label":         "vault-hsm-hmac-key",
+						"default_hmac_key_label": "vault-hsm-hmac-key",
+						"generate_key":           "true",
+					},
+				},
+			},
+		},
+	}
+	require.Equal(t, config, expected)
 }

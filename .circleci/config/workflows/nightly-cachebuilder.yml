@@ -1,0 +1,10 @@
+triggers:
+  - schedule:
+      cron: "0 9 * * *"
+      filters:
+        branches:
+          only:
+            - master
+jobs:
+  - pre-flight-checks
+  - test-go-nightly
