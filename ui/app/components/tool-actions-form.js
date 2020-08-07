@@ -139,7 +139,7 @@ export default Component.extend(DEFAULTS, {
 
     updateTtl(evt) {
       const ttl = evt.enabled ? `${evt.seconds}s` : '30m';
-      set(this, wrapTTL, ttl);
+      set(this, 'wrapTTL', ttl);
     },
 
     codemirrorUpdated(val, codemirror) {
