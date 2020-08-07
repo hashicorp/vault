@@ -8,6 +8,7 @@ import (
 // Database to manipulate users within an external system (typically a database).
 type Database interface {
 	// Initialize the database plugin. This is the equivalent of a constructor for the
+	// database object itself.
 	Initialize(ctx context.Context, req InitializeRequest) (InitializeResponse, error)
 
 	// NewUser creates a new user within the database. This user is temporary in that it
