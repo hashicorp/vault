@@ -42,10 +42,6 @@ inputs:
     # YARN_VERSION is the version of Yarn to install for the UI layer.
     YARN_VERSION: 1.19.1-1
 
-    # BUILD_TAGS are passed as-is to the -tag flag of 'go build'. It should be
-    # a comma or space separated list, depending on the GO_VERSION you are using.
-    BUILD_TAGS: vault
-
     # Standard golang environment variables, passed to the 'go build' command.
     # You can use any standard environment variables here, any that you omit
     # will be ommitted from the go build command too, meaning to use the system
@@ -86,7 +82,7 @@ inputs:
 #
 # NOTE: You MUST NOT use single quotes in the build command, because at present we do no escaping.
 build-command: VERSION_PKG_PATH=github.com/hashicorp/vault/vendor/github.com/hashicorp/vault/sdk/version;
-  go build -v -tags "{{.BUILD_TAGS}}"
+  go build -v
     -ldflags "
       -X $VERSION_PKG_PATH.GitCommit=$PACKAGE_SOURCE_ID
       -X $VERSION_PKG_PATH.Version={{.PRODUCT_VERSION_MMP}}
