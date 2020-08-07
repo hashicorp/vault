@@ -337,6 +337,14 @@ func (s *Session) SetConsistency(cons Consistency) {
 	s.mu.Unlock()
 }
 
+// GetConsistency gets the default consistency level for this session.
+func (s *Session) GetConsistency() Consistency {
+	s.mu.RLock()
+	cons := s.cons
+	s.mu.RUnlock()
+	return cons
+}
+
 // SetPageSize sets the default page size for this session. A value <= 0 will
 // disable paging. This setting can also be changed on a per-query basis.
 func (s *Session) SetPageSize(n int) {

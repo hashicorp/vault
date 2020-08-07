@@ -156,3 +156,5 @@ require (
 	gopkg.in/square/go-jose.v2 v2.5.1
 	layeh.com/radius v0.0.0-20190322222518-890bc1058917
 )
+
+replace github.com/gocql/gocql => github.com/ncabatoff/gocql v0.0.0-20200807183424-481a900a1a1b
