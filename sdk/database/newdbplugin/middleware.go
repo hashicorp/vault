@@ -126,17 +126,17 @@ func (mw databaseMetricsMiddleware) Initialize(ctx context.Context, req Initiali
 
 func (mw databaseMetricsMiddleware) NewUser(ctx context.Context, req NewUserRequest) (resp NewUserResponse, err error) {
 	defer func(start time.Time) {
-		metrics.MeasureSince([]string{"database", "CreateUser"}, start)
-		metrics.MeasureSince([]string{"database", mw.typeStr, "CreateUser"}, start)
+		metrics.MeasureSince([]string{"database", "NewUser"}, start)
+		metrics.MeasureSince([]string{"database", mw.typeStr, "NewUser"}, start)
 
 		if err != nil {
-			metrics.IncrCounter([]string{"database", "CreateUser", "error"}, 1)
-			metrics.IncrCounter([]string{"database", mw.typeStr, "CreateUser", "error"}, 1)
+			metrics.IncrCounter([]string{"database", "NewUser", "error"}, 1)
+			metrics.IncrCounter([]string{"database", mw.typeStr, "NewUser", "error"}, 1)
 		}
 	}(time.Now())
 
-	metrics.IncrCounter([]string{"database", "CreateUser"}, 1)
-	metrics.IncrCounter([]string{"database", mw.typeStr, "CreateUser"}, 1)
+	metrics.IncrCounter([]string{"database", "NewUser"}, 1)
+	metrics.IncrCounter([]string{"database", mw.typeStr, "NewUser"}, 1)
 	return mw.next.NewUser(ctx, req)
 }
 
