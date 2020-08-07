@@ -21,7 +21,7 @@ label {
 .b-checkbox .is-label {
   color: $grey-darker;
   display: inline-block;
-  font-size: $body-size; // 14px to match designs
+  font-size: 14px;
   font-weight: $font-weight-bold;
 
   &:not(:last-child) {
