@@ -16,6 +16,10 @@ BUG FIXES:
 ## 1.5.1
 ### TBD
 
+CHANGES:
+
+* pki: The tidy operation will now remove revoked certificates if the parameter `tidy_revoked_certs` is set to `true`. This will result in certificate entries being immediately removed, as opposed to awaiting until its NotAfter time. Note that this only affects certificates that have been already revoked. [[GH-9609](https://github.com/hashicorp/vault/pull/9609)]
+
 IMPROVEMENTS:
 
 * auth/jwt: Add support for fetching groups and user information from G Suite during authentication. [[GH-9574](https://github.com/hashicorp/vault/pull/9574)]
@@ -25,6 +29,7 @@ BUG FIXES:
 
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-9603](https://github.com/hashicorp/vault/pull/9603)]
 * replication (enterprise): Fix status API output incorrectly stating replication is in `idle` state.
+* core: Fix panic when printing over-long info fields at startup [[GH-9681](https://github.com/hashicorp/vault/pull/9681)]
 
 ## 1.5.0
 ### July 21st, 2020
