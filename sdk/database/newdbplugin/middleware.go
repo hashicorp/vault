@@ -243,7 +243,8 @@ func (mw DatabaseErrorSanitizerMiddleware) Close() (err error) {
 	return mw.sanitize(mw.next.Close())
 }
 
-// sanitize
+// sanitize errors by removing any sensitive strings within their messages. This uses
+// the secretsFn to determine what fields should be sanitized.
 func (mw DatabaseErrorSanitizerMiddleware) sanitize(err error) error {
 	if err == nil {
 		return nil
