@@ -158,6 +158,7 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 		AAD:    "foobar",
 		DHType: "curve25519",
 		DHPath: dhpath,
+		DeriveKey: true,
 		Config: map[string]interface{}{
 			"path": out,
 		},
