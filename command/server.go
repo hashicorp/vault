@@ -91,7 +91,7 @@ type ServerCommand struct {
 
 	logOutput   io.Writer
 	gatedWriter *gatedwriter.Writer
-	logger      log.Logger
+	logger      log.InterceptLogger
 
 	cleanupGuard sync.Once
 
@@ -1706,11 +1706,11 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				c.UI.Warn(wrapAtLength(
 					"Development mode should NOT be used in production installations!"))
 				c.UI.Warn("")
-				c.logger.(log.InterceptLogger).DeregisterSink(qw)
+				c.logger.DeregisterSink(qw)
 
 			}),
 		}
-		c.logger.(log.InterceptLogger).RegisterSink(qw)
+		c.logger.RegisterSink(qw)
 	}
 
 	// Initialize the HTTP servers
