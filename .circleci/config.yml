@@ -126,7 +126,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.14.6
+    - GO_VERSION: 1.14.7
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.5.2
   algolia-index:
@@ -232,7 +232,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.14.6
+    - GO_VERSION: 1.14.7
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.5.2
   website-docker-image:
@@ -358,7 +358,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.14.6
+    - GO_VERSION: 1.14.7
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.5.2
   test-go-nightly:
@@ -465,7 +465,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.14.6
+    - GO_VERSION: 1.14.7
     - GO111MODULE: 'off'
     - GOTESTSUM_VERSION: 0.5.2
   pre-flight-checks:
