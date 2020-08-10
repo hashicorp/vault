@@ -1393,6 +1393,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisablePerformanceStandby = base.DisablePerformanceStandby
 		coreConfig.MetricsHelper = base.MetricsHelper
 		coreConfig.SecureRandomReader = base.SecureRandomReader
+		coreConfig.DisableSentinelTrace = base.DisableSentinelTrace
 
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
