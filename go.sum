@@ -565,8 +565,8 @@ github.com/hashicorp/vault-plugin-secrets-kv v0.5.6 h1:i8EoRnLD6+U1RSHaCFs3DGXsV
 github.com/hashicorp/vault-plugin-secrets-kv v0.5.6/go.mod h1:B/Cybh5aVF7LNAMHwVBxY8t7r2eL0C6HVGgTyP4nKK4=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2 h1:X9eK6NSb1qafvoEYxH5nomAW3JXl12KybR77NpgqpIU=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2/go.mod h1:YRW9zn9NZNitRlPYNAWRp/YEdKCF/X8aOg8IYSxFT5Y=
-github.com/hashicorp/vault-plugin-secrets-openldap v0.1.4 h1:FWuOJPquEDV1zbaaaq05cGwXb6OAoG67ERJe0wOAY0I=
-github.com/hashicorp/vault-plugin-secrets-openldap v0.1.4/go.mod h1:SeP/cV0AF4gxkPOvbsLyOIjNjbI6hsIs6fQb8IZldM4=
+github.com/hashicorp/vault-plugin-secrets-openldap v0.1.5 h1:jLYOv9YdaPdb7qfBrLDaHd8AxDjapBKHLviwftt7biw=
+github.com/hashicorp/vault-plugin-secrets-openldap v0.1.5/go.mod h1:NM+5N+URHHg8ZvlyOJuPy5McC3x0m//96uDCbM8Ygzc=
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
 github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d h1:kJCB4vdITiW1eC1vq2e6IsrXKrZit1bv/TDYFGMp4BQ=
 github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
