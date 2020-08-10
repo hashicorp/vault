@@ -21,6 +21,7 @@ export default [
       'rotation',
       'replication',
       'plugins',
+      'limits',
     ],
   },
   {
@@ -86,6 +87,7 @@ export default [
           'zookeeper',
         ],
       },
+      'sentinel',
       {
         category: 'service-registration',
         content: ['consul', 'kubernetes'],

@@ -2,10 +2,11 @@ package server
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/hcl"
@@ -592,6 +593,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"disable_printable_check":      false,
 		"disable_sealwrap":             true,
 		"raw_storage_endpoint":         true,
+		"disable_sentinel_trace":       true,
 		"enable_ui":                    true,
 		"ha_storage": map[string]interface{}{
 			"cluster_addr":       "top_level_cluster_addr",
@@ -757,8 +759,8 @@ func testParseSeals(t *testing.T) {
 						"slot":                   "0.0",
 						"pin":                    "XXXXXXXX",
 						"key_label":              "HASHICORP",
-						"mechanism":              "0x1082",
-						"hmac_mechanism":         "0x0251",
+						"mechanism":              "4226",
+						"hmac_mechanism":         "593",
 						"hmac_key_label":         "vault-hsm-hmac-key",
 						"default_hmac_key_label": "vault-hsm-hmac-key",
 						"generate_key":           "true",

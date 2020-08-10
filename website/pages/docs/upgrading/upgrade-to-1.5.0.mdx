@@ -25,9 +25,7 @@ that allows for operators to sample the entry size, view the average, and adjust
 the configuration value as necessary. For additional details, please see
 [Raft configuration](/docs/configuration/storage/raft).
 
-## Known Issues
-
-### Enabling telemetry on 32-bit systems will cause Vault to crash.
+## Enabling telemetry on 32-bit systems will cause Vault to crash.
 
 A workaround for this issue is to disable collection of usage gauges in
 the [telemetry](/docs/configuration/telemetry) stanza of the configuration.
@@ -44,7 +42,7 @@ This will suppress the metrics `vault.identity.entity.count`,
 `vault.token.count.by_policy`, `vault.token.count.by_ttl` and `vault.secret.kv.count`
 that were introduced in version 1.5.0, but all other Vault telemetry will remain available.
 
-### Non-string values in seal config prevent startup
+## Non-string values in seal config prevent startup
 
 Any values in the [Seal configuration stanza](/docs/configuration/seal)
 that are not quoted strings yield a parse error of the form:
@@ -63,3 +61,5 @@ The workaround is to quote the strings in question, as in:
 ```
  mechanism = "0x1082"
 ```
+
+@include 'partials/okta-group-pagination.mdx'

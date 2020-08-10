@@ -1393,6 +1393,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisablePerformanceStandby = base.DisablePerformanceStandby
 		coreConfig.MetricsHelper = base.MetricsHelper
 		coreConfig.SecureRandomReader = base.SecureRandomReader
+		coreConfig.DisableSentinelTrace = base.DisableSentinelTrace
 
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
@@ -1445,6 +1446,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DevToken = base.DevToken
 		coreConfig.CounterSyncInterval = base.CounterSyncInterval
 		coreConfig.RecoveryMode = base.RecoveryMode
+	}
+
+	if coreConfig.ClusterHeartbeatInterval == 0 {
+		// Set this lower so that state populates quickly to standby nodes
+		coreConfig.ClusterHeartbeatInterval = 2 * time.Second
 	}
 
 	if coreConfig.RawConfig == nil {
@@ -2017,14 +2023,16 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		"mysql-aurora-database-plugin",
 		"mysql-rds-database-plugin",
 		"mysql-legacy-database-plugin",
-		"postgresql-database-plugin",
-		"elasticsearch-database-plugin",
-		"mssql-database-plugin",
+
 		"cassandra-database-plugin",
-		"mongodb-database-plugin",
-		"mongodbatlas-database-plugin",
+		"couchbase-database-plugin",
+		"elasticsearch-database-plugin",
 		"hana-database-plugin",
 		"influxdb-database-plugin",
+		"mongodb-database-plugin",
+		"mongodbatlas-database-plugin",
+		"mssql-database-plugin",
+		"postgresql-database-plugin",
 		"redshift-database-plugin",
 	}
 }

@@ -112,6 +112,14 @@ func ParseBool(in interface{}) (bool, error) {
 	return result, nil
 }
 
+func ParseString(in interface{}) (string, error) {
+	var result string
+	if err := mapstructure.WeakDecode(in, &result); err != nil {
+		return "", err
+	}
+	return result, nil
+}
+
 func ParseCommaStringSlice(in interface{}) ([]string, error) {
 	rawString, ok := in.(string)
 	if ok && rawString == "" {
