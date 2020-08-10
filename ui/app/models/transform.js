@@ -1,7 +1,6 @@
-import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
 import DS from 'ember-data';
-import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 

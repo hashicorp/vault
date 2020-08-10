@@ -24,41 +24,38 @@
   </div>
   <div class="column has-text-right">
     <PopupMenu name="secret-menu">
-      <Confirm as |c|>
-        <nav class="menu">
-          <ul class="menu-list">
-            {{log item.updatePath.canEdit}}
-            {{#if (or item.versionPath.isLoading item.secretPath.isLoading)}}
+      <nav class="menu">
+        <ul class="menu-list">
+          {{#if (or item.versionPath.isLoading item.secretPath.isLoading)}}
+            <li class="action">
+              <button disabled type="button" class="link button is-loading is-transparent">
+                loading
+              </button>
+            </li>
+          {{else}}
+            {{#if item.updatePath.canRead}}
               <li class="action">
-                <button disabled type="button" class="link button is-loading is-transparent">
-                  loading
-                </button>
+                <SecretLink
+                  @mode="show"
+                  @secret={{item.id}}
+                  @class="has-text-black has-text-weight-semibold">
+                  Details
+                </SecretLink>
               </li>
-            {{else}}
-              {{#if item.updatePath.canRead}}
-                <li class="action">
-                  <SecretLink
-                    @mode="show"
-                    @secret={{item.id}}
-                    @class="has-text-black has-text-weight-semibold">
-                    Details
-                  </SecretLink>
-                </li>
-              {{/if}}
-              {{#if item.updatePath.canUpdate}}
-                <li class="action">
-                  <SecretLink
-                    @mode="edit"
-                    @secret={{item.id}}
-                    @class="has-text-black has-text-weight-semibold">
-                    Edit
-                  </SecretLink>
-                </li>
-              {{/if}}
             {{/if}}
-          </ul>
-        </nav>
-      </Confirm>
+            {{#if item.updatePath.canUpdate}}
+              <li class="action">
+                <SecretLink
+                  @mode="edit"
+                  @secret={{item.id}}
+                  @class="has-text-black has-text-weight-semibold">
+                  Edit
+                </SecretLink>
+              </li>
+            {{/if}}
+          {{/if}}
+        </ul>
+      </nav>
     </PopupMenu>
   </div>
 </div>
