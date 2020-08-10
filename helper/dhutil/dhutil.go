@@ -6,6 +6,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"golang.org/x/crypto/hkdf"
@@ -79,6 +80,8 @@ func DeriveSharedKey(secret, ourPublic, theirPublic []byte) ([]byte, error) {
 	if n != 32 {
 		return nil, errors.New("short read from hkdf")
 	}
+	fmt.Printf("Key: %s\n", hex.EncodeToString(key[:]))
+
 	return key[:], nil
 }
 
