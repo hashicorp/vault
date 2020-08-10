@@ -18,7 +18,7 @@ Many other options for storage are available with community support - see our [S
 
 ## Backups & Restores
 
-Due to the highly flexible nature of Vault's potential storage configurations, providing exacting guidance on backing up and restoring Vault is challenging.
+Due to the highly flexible nature of Vault's potential storage configurations, providing exact guidance on backing up and restoring Vault is challenging.
 
 When backing up Vault, there are two pieces to consider:
 
@@ -27,7 +27,7 @@ When backing up Vault, there are two pieces to consider:
 
 ### Vault's Persisted Data
 
-In an ideal world, backups and restores would be performed while Vault is offline. If offline backups are impossible, we have recommended using a storage backend that supports atomic snapshots (such as [Consul](https://www.consul.io/docs/commands/snapshot.html) or [Integrated Storage](https://www.vaultproject.io/docs/commands/operator/raft#snapshot)).
+Backups and restores are ideally performed while Vault is offline. If offline backups are not feasible, we recommend using a storage backend that supports atomic snapshots (such as [Consul](https://www.consul.io/docs/commands/snapshot.html) or [Integrated Storage](https://www.vaultproject.io/docs/commands/operator/raft#snapshot)).
 
 **If your storage backend does not support atomic snapshots, we recommend only taking offline backups.**
 
