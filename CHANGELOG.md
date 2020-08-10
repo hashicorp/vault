@@ -3,6 +3,7 @@
 IMPROVEMENTS:
 
 * auth/jwt: Add support for fetching groups and user information from G Suite during authentication. [[GH-123](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/123)]
+* secrets/openldap: Add "ad" schema that allows the engine to correctly rotate AD passwords. [[GH-16](https://github.com/hashicorp/vault-plugin-secrets-openldap/pull/16)]
 
 BUG FIXES:
 
@@ -16,15 +17,21 @@ BUG FIXES:
 ## 1.5.1
 ### TBD
 
+CHANGES:
+
+* pki: The tidy operation will now remove revoked certificates if the parameter `tidy_revoked_certs` is set to `true`. This will result in certificate entries being immediately removed, as opposed to awaiting until its NotAfter time. Note that this only affects certificates that have been already revoked. [[GH-9609](https://github.com/hashicorp/vault/pull/9609)]
+
 IMPROVEMENTS:
 
 * auth/jwt: Add support for fetching groups and user information from G Suite during authentication. [[GH-9574](https://github.com/hashicorp/vault/pull/9574)]
 * ui: Wrap TTL option on transit engine export action is updated to a new component. [[GH-9632](https://github.com/hashicorp/vault/pull/9632)]
+* ui: Wrap Tool uses newest version of TTL Picker component. [[GH-9691](https://github.com/hashicorp/vault/pull/9691)]
 
 BUG FIXES:
 
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-9603](https://github.com/hashicorp/vault/pull/9603)]
 * replication (enterprise): Fix status API output incorrectly stating replication is in `idle` state.
+* core: Fix panic when printing over-long info fields at startup [[GH-9681](https://github.com/hashicorp/vault/pull/9681)]
 
 ## 1.5.0
 ### July 21st, 2020
@@ -99,6 +106,7 @@ BUG FIXES:
 
 * auth/oci: Fix issue where users of the Oracle Cloud Infrastructure (OCI) auth method could not authenticate when the plugin backend was mounted at a non-default path. [[GH-7](https://github.com/hashicorp/vault-plugin-auth-oci/pull/7)]
 * core: Extend replicated cubbyhole fix in 1.4.0 to cover case where a performance primary is also a DR primary [[GH-9148](https://github.com/hashicorp/vault/pull/9148)]
+* replication (enterprise): Use the PrimaryClusterAddr if it's been set
 * seal/awskms: fix AWS KMS auto-unseal when AWS_ROLE_SESSION_NAME not set [[GH-9416](https://github.com/hashicorp/vault/pull/9416)]
 * sentinel: fix panic due to concurrent map access when rules iterate over metadata maps
 * secrets/aws: Fix issue where performance standbys weren't able to generate STS credentials after an IAM access key rotation in AWS and root IAM credential update in Vault [[GH-9186](https://github.com/hashicorp/vault/pull/9186)]
