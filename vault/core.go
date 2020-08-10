@@ -366,6 +366,9 @@ type Core struct {
 	baseLogger log.Logger
 	logger     log.Logger
 
+	// Disables the trace display for Sentinel checks
+	sentinelTraceDisabled bool
+
 	// cachingDisabled indicates whether caches are disabled
 	cachingDisabled bool
 	// Cache stores the actual cache; we always have this but may bypass it if
@@ -561,6 +564,9 @@ type CoreConfig struct {
 
 	Logger log.Logger
 
+	// Disables the trace display for Sentinel checks
+	DisableSentinelTrace bool
+
 	// Disables the LRU cache on the physical backend
 	DisableCache bool
 
@@ -725,6 +731,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 		defaultLeaseTTL:              conf.DefaultLeaseTTL,
 		maxLeaseTTL:                  conf.MaxLeaseTTL,
+		sentinelTraceDisabled:        conf.DisableSentinelTrace,
 		cachingDisabled:              conf.DisableCache,
 		clusterName:                  conf.ClusterName,
 		clusterNetworkLayer:          conf.ClusterNetworkLayer,
