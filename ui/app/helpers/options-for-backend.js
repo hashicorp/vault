@@ -62,7 +62,7 @@ const SECRET_BACKENDS = {
     item: 'transform',
     create: 'Create Transformation',
     editComponent: 'transform-edit',
-    listItemPartial: 'partials/secret-list/transform-transformations-item',
+    listItemPartial: 'partials/secret-list/transform-transformation-item',
   },
   transit: {
     searchPlaceholder: 'Filter keys',

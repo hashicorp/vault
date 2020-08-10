@@ -3,6 +3,7 @@ import { computed } from '@ember/object';
 import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import attachCapabilities from 'vault/lib/attach-capabilities';
 
 const { attr } = DS;
 
@@ -35,7 +36,8 @@ const TWEAK_SOURCE = [
   },
 ];
 
-export default DS.Model.extend({
+// export default DS.Model.extend({
+const Model = DS.Model.extend({
   // TODO: for now, commenting out openApi info, but keeping here just in case we end up using it.
   // useOpenAPI: true,
   // getHelpUrl: function(backend) {
@@ -93,17 +95,10 @@ export default DS.Model.extend({
   transformFieldAttrs: computed('transformAttrs', function() {
     return expandAttributeMeta(this, this.get('transformAttrs'));
   }),
-  updatePath: lazyCapabilities(apiPath`${'backend'}/transforms/${'id'}`, 'backend', 'id'),
-  canDelete: alias('updatePath.canDelete'),
-  canEdit: alias('updatePath.canUpdate'),
-  canRead: alias('updatePath.canRead'),
+  // zeroAddressPath: lazyCapabilities(apiPath`${'backend'}/config/zeroaddress`, 'backend'),
+  // canEditZeroAddress: alias('zeroAddressPath.canUpdate'),
+});
 
-  generatePath: lazyCapabilities(apiPath`${'backend'}/creds/${'id'}`, 'backend', 'id'),
-  canGenerate: alias('generatePath.canUpdate'),
-
-  signPath: lazyCapabilities(apiPath`${'backend'}/sign/${'id'}`, 'backend', 'id'),
-  canSign: alias('signPath.canUpdate'),
-
-  zeroAddressPath: lazyCapabilities(apiPath`${'backend'}/config/zeroaddress`, 'backend'),
-  canEditZeroAddress: alias('zeroAddressPath.canUpdate'),
+export default attachCapabilities(Model, {
+  updatePath: apiPath`transform/transformation/${'id'}`,
 });
