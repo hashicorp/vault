@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -12,14 +14,12 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
-	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	sealhelper "github.com/hashicorp/vault/helper/testhelpers/seal"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -126,10 +126,7 @@ func migrateFromShamirToTransit_Pre14(t *testing.T, logger hclog.Logger, storage
 
 	var transitSeal vault.Seal
 
-	var conf = vault.CoreConfig{
-		Logger:                    logger.Named("migrateFromShamirToTransit"),
-		DisablePerformanceStandby: true,
-	}
+	var conf = vault.CoreConfig{}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
 		NumCores:              numTestCores,
@@ -356,8 +353,8 @@ func migratePost14(t *testing.T, logger hclog.Logger, storage teststorage.Reusab
 		cluster.StartCore(t, i, opts)
 
 		unsealMigrate(t, cluster.Cores[i].Client, unsealKeys, true)
-		time.Sleep(5 * time.Second)
 	}
+	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 
 	// Step down the active node which will kick off the migration on one of the
 	// other nodes.
@@ -521,10 +518,7 @@ func initializeShamir(t *testing.T, logger hclog.Logger, storage teststorage.Reu
 	var baseClusterPort = basePort + 10
 
 	// Start the cluster
-	var conf = vault.CoreConfig{
-		Logger:                    logger.Named("initializeShamir"),
-		DisablePerformanceStandby: true,
-	}
+	var conf = vault.CoreConfig{}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
 		NumCores:              numTestCores,
@@ -574,10 +568,7 @@ func runShamir(t *testing.T, logger hclog.Logger, storage teststorage.ReusableSt
 	var baseClusterPort = basePort + 10
 
 	// Start the cluster
-	var conf = vault.CoreConfig{
-		Logger:                    logger.Named("runShamir"),
-		DisablePerformanceStandby: true,
-	}
+	var conf = vault.CoreConfig{}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
 		NumCores:              numTestCores,
@@ -648,10 +639,7 @@ func initializeTransit(t *testing.T, logger hclog.Logger, storage teststorage.Re
 	var baseClusterPort = basePort + 10
 
 	// Start the cluster
-	var conf = vault.CoreConfig{
-		Logger:                    logger,
-		DisablePerformanceStandby: true,
-	}
+	var conf = vault.CoreConfig{}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
 		NumCores:              numTestCores,
@@ -677,7 +665,7 @@ func initializeTransit(t *testing.T, logger hclog.Logger, storage teststorage.Re
 			t.Fatal(err)
 		}
 	}
-	testhelpers.WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
+	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 
 	err := client.Sys().Mount("kv-wrapped", &api.MountInput{
 		SealWrap: true,
@@ -703,9 +691,7 @@ func runTransit(t *testing.T, logger hclog.Logger, storage teststorage.ReusableS
 
 	// Start the cluster
 	var conf = vault.CoreConfig{
-		Logger:                    logger.Named("runTransit"),
-		DisablePerformanceStandby: true,
-		Seal:                      transitSeal,
+		Seal: transitSeal,
 	}
 	var opts = vault.TestClusterOptions{
 		HandlerFunc:           vaulthttp.Handler,
