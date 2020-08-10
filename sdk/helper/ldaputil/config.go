@@ -93,6 +93,17 @@ Default: cn`,
 			},
 		},
 
+		"searchfilter": {
+			Type:    framework.TypeString,
+			Default: "({{.UserAttr}}={{.Username}})",
+			Description: `Go template for LDAP search filer (optional)
+The template can access the following context variables: UserAttr, Username
+Default: ({{.UserAttr}}={{.Username}})`,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Search Filter",
+			},
+		},
+
 		"upndomain": {
 			Type:        framework.TypeString,
 			Description: "Enables userPrincipalDomain login with [username]@UPNDomain (optional)",
@@ -235,6 +246,19 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg.Url = strings.ToLower(d.Get("url").(string))
 	}
 
+	if _, ok := d.Raw["searchfilter"]; ok || !hadExisting {
+		searchfilter := d.Get("searchfilter").(string)
+		if searchfilter != "" {
+			// Validate the template before proceeding
+			_, err := template.New("queryTemplate").Parse(searchfilter)
+			if err != nil {
+				return nil, errwrap.Wrapf("invalid searchfilter: {{err}}", err)
+			}
+		}
+
+		cfg.SearchFilter = searchfilter
+	}
+
 	if _, ok := d.Raw["userattr"]; ok || !hadExisting {
 		cfg.UserAttr = strings.ToLower(d.Get("userattr").(string))
 	}
@@ -369,6 +393,7 @@ type ConfigEntry struct {
 	GroupFilter              string `json:"groupfilter"`
 	GroupAttr                string `json:"groupattr"`
 	UPNDomain                string `json:"upndomain"`
+	SearchFilter             string `json:"searchfilter"`
 	UserAttr                 string `json:"userattr"`
 	Certificate              string `json:"certificate"`
 	ClientTLSCert            string `json:"client_tls_cert`
@@ -405,6 +430,7 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 		"groupdn":                c.GroupDN,
 		"groupfilter":            c.GroupFilter,
 		"groupattr":              c.GroupAttr,
+		"searchfilter":           c.SearchFilter,
 		"upndomain":              c.UPNDomain,
 		"userattr":               c.UserAttr,
 		"certificate":            c.Certificate,

@@ -119,18 +119,44 @@ func (c *Client) GetUserBindDN(cfg *ConfigEntry, conn Connection, username strin
 			return bindDN, errwrap.Wrapf("LDAP bind (service) failed: {{err}}", err)
 		}
 
-		filter := fmt.Sprintf("(%s=%s)", cfg.UserAttr, ldap.EscapeFilter(username))
+		// If SearchFilter was defined, resolve it as a Go template and use the query to
+		// find the login user
+		if c.Logger.IsDebug() {
+			c.Logger.Debug("compiling search filter", "search_filter", cfg.SearchFilter)
+		}
+
+		// Parse the configuration as a template.
+		// Example template "({{.UserAttr}}={{.Username}})"
+		t, err := template.New("queryTemplate").Parse(cfg.SearchFilter)
+		if err != nil {
+			return bindDN, errwrap.Wrapf("LDAP search failed due to template compilation error: {{err}}", err)
+		}
+
+		// Build context to pass to template - we will be exposing UserDn and Username.
+		context := struct {
+			UserAttr string
+			Username string
+		}{
+			ldap.EscapeFilter(cfg.UserAttr),
+			ldap.EscapeFilter(username),
+		}
 		if cfg.UPNDomain != "" {
-			filter = fmt.Sprintf("(userPrincipalName=%s@%s)", EscapeLDAPValue(username), cfg.UPNDomain)
+			context.UserAttr = "userPrincipalName"
+			context.Username = fmt.Sprintf("%s@%s", EscapeLDAPValue(username), cfg.UPNDomain)
+		}
+
+		var renderedFilter bytes.Buffer
+		if err := t.Execute(&renderedFilter, context); err != nil {
+			return bindDN, errwrap.Wrapf("LDAP search failed due to template parsing error: {{err}}", err)
 		}
 
 		if c.Logger.IsDebug() {
-			c.Logger.Debug("discovering user", "userdn", cfg.UserDN, "filter", filter)
+			c.Logger.Debug("discovering user", "userdn", cfg.UserDN, "filter", renderedFilter.String())
 		}
 		result, err := conn.Search(&ldap.SearchRequest{
 			BaseDN:    cfg.UserDN,
 			Scope:     ldap.ScopeWholeSubtree,
-			Filter:    filter,
+			Filter:    renderedFilter.String(),
 			SizeLimit: math.MaxInt32,
 		})
 		if err != nil {
@@ -158,14 +184,41 @@ func (c *Client) GetUserDN(cfg *ConfigEntry, conn Connection, bindDN, username s
 	userDN := ""
 	if cfg.UPNDomain != "" {
 		// Find the distinguished name for the user if userPrincipalName used for login
-		filter := fmt.Sprintf("(userPrincipalName=%s@%s)", EscapeLDAPValue(username), cfg.UPNDomain)
+
+		// If SearchFilter was defined, resolve it as a Go template and use the query to
+		// find the login user
 		if c.Logger.IsDebug() {
-			c.Logger.Debug("searching upn", "userdn", cfg.UserDN, "filter", filter)
+			c.Logger.Debug("compiling search filter", "search_filter", cfg.SearchFilter)
+		}
+
+		// Parse the configuration as a template.
+		// Example template "({{.UserAttr}}={{.Username}})"
+		t, err := template.New("queryTemplate").Parse(cfg.SearchFilter)
+		if err != nil {
+			return bindDN, errwrap.Wrapf("LDAP search failed due to template compilation error: {{err}}", err)
+		}
+
+		// Build context to pass to template - we will be exposing UserDn and Username.
+		context := struct {
+			UserAttr string
+			Username string
+		}{
+			"userPrincipalName",
+			fmt.Sprintf("%s@%s", EscapeLDAPValue(username), cfg.UPNDomain),
+		}
+
+		var renderedFilter bytes.Buffer
+		if err := t.Execute(&renderedFilter, context); err != nil {
+			return bindDN, errwrap.Wrapf("LDAP search failed due to template parsing error: {{err}}", err)
+		}
+
+		if c.Logger.IsDebug() {
+			c.Logger.Debug("searching upn", "userdn", cfg.UserDN, "filter", renderedFilter.String())
 		}
 		result, err := conn.Search(&ldap.SearchRequest{
 			BaseDN:    cfg.UserDN,
 			Scope:     ldap.ScopeWholeSubtree,
-			Filter:    filter,
+			Filter:    renderedFilter.String(),
 			SizeLimit: math.MaxInt32,
 		})
 		if err != nil {
