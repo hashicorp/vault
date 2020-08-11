@@ -17,6 +17,10 @@ import (
 )
 
 func TestCassandraBackend(t *testing.T) {
+	if os.Getenv("VAULT_CI_GO_TEST_RACE") != "" {
+		t.Skipf("skipping in race mode")
+	}
+
 	if testing.Short() {
 		t.Skipf("skipping in short mode")
 	}
