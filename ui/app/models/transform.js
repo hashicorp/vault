@@ -35,7 +35,6 @@ const TWEAK_SOURCE = [
   },
 ];
 
-// export default DS.Model.extend({
 const Model = DS.Model.extend({
   // TODO: for now, commenting out openApi info, but keeping here just in case we end up using it.
   // useOpenAPI: true,
