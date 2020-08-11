@@ -15,7 +15,7 @@
       {{else if (eq mode 'edit')}}
         Edit Transformation
       {{else}}
-        SSH role <code>{{model.id}}</code>
+        Transformation <code>{{model.id}}</code>
       {{/if}}
     </h1>
   </p.levelLeft>
@@ -24,55 +24,39 @@
 {{#if (eq mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if (eq model.keyType "otp")}}
-        <ToolbarSecretLink
-          @secret={{model.id}}
-          @mode="credentials"
-          @data-test-backend-credentials=true
-          @replace=true
-        >
-         Generate Credential
-       </ToolbarSecretLink>
-      {{else}}
-        <ToolbarSecretLink
-          @secret={{model.id}}
-          @mode="sign"
-          @data-test-backend-credentials=true
-          @replace=true
-        >
-          Sign Keys
-        </ToolbarSecretLink>
-      {{/if}}
+      {{!-- TODO: update these actions, show delete grey out if not allowed --}}
       {{#if (or model.canUpdate model.canDelete)}}
         <div class="toolbar-separator" />
       {{/if}}
       {{#if model.canDelete}}
+      {{!-- TODO only allow deletion when not in use by a role --}}
         <ConfirmAction
           @buttonClasses="toolbar-link"
           @onConfirmAction={{action "delete"}}
+          @confirmTitle="Are you sure?"
+          @confirmMessage="This transformation is not in use by a role and can be deleted."
         >
-          Delete role
+          Delete transformation
         </ConfirmAction>
       {{/if}}
-      {{#if (or model.canUpdate model.canDelete)}}
+      {{#if model.canUpdate }}
         <ToolbarSecretLink
           @secret={{model.id}}
           @mode="edit"
           @data-test-edit-link=true
           @replace=true
         >
-          Edit role
+          Edit transformation
         </ToolbarSecretLink>
       {{/if}}
     </ToolbarActions>
   </Toolbar>
 {{/if}}
 
-<TransformEditForm @mode={{mode}} @model={{model}} />
-{{!-- TODO: keeping here for now to remind us what other component we need to add --}}
-{{!-- TODO: not following partial pattern in Transform, this comes from SSH --}}
-{{!-- {{#if (or (eq mode 'edit') (eq mode 'create'))}}
-  {{partial 'partials/role-ssh/form'}}
+{{#if (or (eq mode 'edit') (eq mode 'create'))}}
+  <TransformEditForm @mode={{mode}} @model={{model}} />
 {{else}}
-  {{partial 'partials/role-ssh/show'}}
-{{/if}} --}}
+  <TransformShowTransformation
+    @model={{model}}
+  />
+{{/if}}

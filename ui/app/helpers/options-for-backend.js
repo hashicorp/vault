@@ -59,7 +59,7 @@ const SECRET_BACKENDS = {
   transform: {
     displayName: 'Transformation',
     navigateTree: false,
-    listItemPartial: 'partials/secret-list/item',
+    listItemPartial: 'partials/secret-list/transform-transformation-item',
     tabs: [
       {
         name: 'transformations',
