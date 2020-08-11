@@ -107,5 +107,8 @@ func usernameFromEnv() string {
 	if user := os.Getenv("USER"); user != "" {
 		return user
 	}
+	if username := os.Getenv("USERNAME"); username != "" {
+		return username
+	}
 	return ""
 }
