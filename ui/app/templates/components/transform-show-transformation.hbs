@@ -19,11 +19,13 @@
       </span>
     </div>
     <div class="copy-text level">
-      <code>vault write transform/encode/payments value=&lt;enter your value here&gt;</code>
-      <CopyButton class="button is-transparent level-right" @clipboardText='blahblah'
-        @buttonType="button" @success={{action (set-flash-message 'Command copied!')}}>
-        <Icon @size='l' @glyph="copy-action" aria-label="Copy" />
-      </CopyButton>
+      {{#let "vault write transform/encode/payments value=<enter your value here>" as |copyEncodeCommand|}}
+        <code>vault write transform/encode/payments value=&lt;enter your value here&gt;</code>
+        <CopyButton class="button is-transparent level-right" @clipboardText={{copyEncodeCommand}}
+          @buttonType="button" @success={{action (set-flash-message 'Command copied!')}}>
+          <Icon @size='l' @glyph="copy-action" aria-label="Copy" />
+        </CopyButton>
+      {{/let}}
     </div>
   </div>
   <div>
@@ -34,11 +36,13 @@
       </span>
     </div>
     <div class="copy-text level">
-      <code>vault write transform/decode/payments value=&lt;enter your value here&gt;</code>
-      <CopyButton class="button is-transparent level-right" @clipboardText='blahblah'
-        @buttonType="button" @success={{action (set-flash-message 'Command copied!')}}>
-        <Icon @size='l' @glyph="copy-action" aria-label="Copy" />
-      </CopyButton>
+      {{#let "vault write transform/decode/payments value=<enter your value here>" as |copyDecodeCommand|}}
+        <code>vault write transform/decode/payments value=&lt;enter your value here&gt;</code>
+        <CopyButton class="button is-transparent level-right" @clipboardText={{copyDecodeCommand}}
+          @buttonType="button" @success={{action (set-flash-message 'Command copied!')}}>
+          <Icon @size='l' @glyph="copy-action" aria-label="Copy" />
+        </CopyButton>
+      {{/let}}
     </div>
   </div> 
 </div>

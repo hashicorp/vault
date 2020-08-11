@@ -39,7 +39,7 @@
           Delete transformation
         </ConfirmAction>
       {{/if}}
-      {{#if (or model.canUpdate model.canDelete)}}
+      {{#if model.canUpdate }}
         <ToolbarSecretLink
           @secret={{model.id}}
           @mode="edit"
