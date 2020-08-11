@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
+	"os"
 	"sync/atomic"
 	"time"
 
@@ -26,6 +27,12 @@ const (
 	GenerateRootDR
 	GenerateRecovery
 )
+
+func SkipTestIfRace(t testing.T) {
+	if os.Getenv("VAULT_CI_GO_TEST_RACE") == "1" {
+		t.Skipf("skipping in race mode")
+	}
+}
 
 // Generates a root token on the target cluster.
 func GenerateRoot(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) string {

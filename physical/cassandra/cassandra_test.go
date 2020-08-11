@@ -10,6 +10,7 @@ import (
 
 	"github.com/gocql/gocql"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -17,9 +18,7 @@ import (
 )
 
 func TestCassandraBackend(t *testing.T) {
-	if os.Getenv("VAULT_CI_GO_TEST_RACE") != "" {
-		t.Skipf("skipping in race mode")
-	}
+	testhelpers.SkipTestIfRace(t)
 
 	if testing.Short() {
 		t.Skipf("skipping in short mode")
