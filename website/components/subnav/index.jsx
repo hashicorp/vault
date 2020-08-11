@@ -14,7 +14,7 @@ export default function ProductSubnav() {
       ctaLinks={[
         {
           text: 'GitHub',
-          url: 'https://github.com/hashicorp/vault',
+          url: 'https://www.github.com/hashicorp/vault',
         },
         {
           text: 'Download',
