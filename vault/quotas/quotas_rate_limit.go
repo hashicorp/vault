@@ -10,7 +10,7 @@ import (
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/shared-secure-libs/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/pathmanager"
 	"github.com/sethvargo/go-limiter"
 	"github.com/sethvargo/go-limiter/httplimit"

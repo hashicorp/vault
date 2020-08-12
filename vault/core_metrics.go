@@ -8,7 +8,8 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/shared-secure-libs/metricsutil"
+	vaultmetrics "github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -325,7 +326,7 @@ func (c *Core) kvSecretGaugeCollector(ctx context.Context) ([]metricsutil.GaugeL
 		}
 
 		results[i].Labels = []metrics.Label{
-			metricsutil.NamespaceLabel(m.Namespace),
+			vaultmetrics.NamespaceLabel(m.Namespace),
 			{"mount_point", m.MountPoint},
 		}
 
@@ -356,7 +357,7 @@ func (c *Core) entityGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLab
 	values := make([]metricsutil.GaugeLabelValues, len(allNamespaces))
 	for i := range values {
 		values[i].Labels = []metrics.Label{
-			metricsutil.NamespaceLabel(allNamespaces[i]),
+			vaultmetrics.NamespaceLabel(allNamespaces[i]),
 		}
 		values[i].Value = float32(byNamespace[allNamespaces[i].ID])
 	}
@@ -395,7 +396,7 @@ func (c *Core) entityGaugeCollectorByMount(ctx context.Context) ([]metricsutil.G
 		}
 		values = append(values, metricsutil.GaugeLabelValues{
 			Labels: []metrics.Label{
-				metricsutil.NamespaceLabel(mountEntry.namespace),
+				vaultmetrics.NamespaceLabel(mountEntry.namespace),
 				{"auth_method", mountEntry.Type},
 				{"mount_point", "auth/" + mountEntry.Path},
 			},

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/shared-secure-libs/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
