@@ -2,8 +2,6 @@
 # Be sure to place this BEFORE `include` directives, if any.
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
-export RELEASE_GPG_KEY_FINGERPRINT := 91A6 E7F8 5D05 C656 30BE  F189 5185 2D87 348F FC4C
-
 TEST?=$$($(GO_CMD) list ./... | grep -v /vendor/ | grep -v /integ)
 TEST_TIMEOUT?=45m
 EXTENDED_TEST_TIMEOUT=60m
@@ -13,7 +11,7 @@ EXTERNAL_TOOLS_CI=\
 	github.com/elazarl/go-bindata-assetfs/... \
 	github.com/hashicorp/go-bindata/... \
 	github.com/mitchellh/gox \
-	golang.org/x/tools/cmd/goimports 
+	golang.org/x/tools/cmd/goimports
 EXTERNAL_TOOLS=\
 	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
@@ -249,38 +247,6 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-# GPG_KEY_VARS sets FPR to the fingerprint with no spaces and GIT_GPG_KEY_ID to a git compatible gpg key id.
-define GPG_KEY_VARS
-	FPR=$$(echo "$(RELEASE_GPG_KEY_FINGERPRINT)" | sed 's/ //g') && GIT_GPG_KEY_ID="0x$$(printf $$FPR | tail -c 16)"
-endef
-
-define FAIL_IF_GPG_KEY_MISSING
-	@$(GPG_KEY_VARS) && echo "Checking for key '$$FPR' (git key id: $$GIT_GPG_KEY_ID)"; \
-	gpg --list-secret-keys "$$FPR" >/dev/null 2>&1 || { \
-		echo "ERROR: Secret GPG key missing: $$FPR"; \
-		exit 1; \
-	}
-endef
-
-define FAIL_IF_UNCOMMITTED_CHANGES
-	@{ git diff --exit-code && git diff --cached --exit-code; } >/dev/null 2>&1 || { \
-		echo "ERROR: Uncommitted changes detected."; \
-		exit 1; \
-	}
-endef
-
-stage-commit:
-	$(FAIL_IF_GPG_KEY_MISSING)
-	$(FAIL_IF_UNCOMMITTED_CHANGES)
-	@[ -n "$(STAGE_VERSION)" ] || { echo "You must set STAGE_VERSION to the version in semver-like format."; exit 1; }
-	set -x; $(GPG_KEY_VARS) && git commit --allow-empty --gpg-sign=$$GIT_GPG_KEY_ID -m 'release: stage v$(STAGE_VERSION)' 
-
-publish-commit:
-	$(FAIL_IF_GPG_KEY_MISSING)
-	$(FAIL_IF_UNCOMMITTED_CHANGES)
-	@[ -n "$(PUBLISH_VERSION)" ] || { echo "You must set PUBLISH_VERSION to the version in semver-like format."; exit 1; }
-	set -x; $(GPG_KEY_VARS) && git commit --allow-empty --gpg-sign=$$GIT_GPG_KEY_ID -m 'release: publish v$(PUBLISH_VERSION)'
-
 # WRITE_GENERATED_FILE_HEADER overwrites the file specified, replacing its contents with
 # the header warning people not to attempt to edit or merge the file. You should call this
 # before writing the generated contents to the file.
@@ -319,7 +285,6 @@ PACKAGESPEC_TARGETS := \
 	package-meta stage-config stage \
 	watch-ci publish-config publish list-staged-builds
 
-$(PACKAGESPEC_TARGETS): 
 $(PACKAGESPEC_TARGETS):
 	@PRODUCT_REPO_ROOT="$(shell git rev-parse --show-toplevel)" $(MAKE) -C $(LOCKDIR) $@
 
@@ -357,6 +322,6 @@ ci-config: ci-update-release-packages
 ci-verify:
 	@$(MAKE) -C .circleci ci-verify
 
-.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack stage-commit publish-commit
+.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack packages build build-ci
 
 .NOTPARALLEL: ember-dist ember-dist-dev static-assets
