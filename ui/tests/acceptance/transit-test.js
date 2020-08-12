@@ -9,6 +9,18 @@ import secretListPage from 'vault/tests/pages/secrets/backend/list';
 const keyTypes = [
   {
     name: ts => `aes-${ts}`,
+    type: 'aes128-gcm96',
+    exportable: true,
+    supportsEncryption: true,
+  },
+  {
+    name: ts => `aes-convergent-${ts}`,
+    type: 'aes128-gcm96',
+    convergent: true,
+    supportsEncryption: true,
+  },
+  {
+    name: ts => `aes-${ts}`,
     type: 'aes256-gcm96',
     exportable: true,
     supportsEncryption: true,
@@ -34,6 +46,18 @@ const keyTypes = [
   {
     name: ts => `ecdsa-${ts}`,
     type: 'ecdsa-p256',
+    exportable: true,
+    supportsSigning: true,
+  },
+  {
+    name: ts => `ecdsa-${ts}`,
+    type: 'ecdsa-p384',
+    exportable: true,
+    supportsSigning: true,
+  },
+  {
+    name: ts => `ecdsa-${ts}`,
+    type: 'ecdsa-p521',
     exportable: true,
     supportsSigning: true,
   },
