@@ -530,7 +530,7 @@ func (c *AgentCommand) Run(args []string) int {
 	// signal.Notify(c.signalCh)
 
 	var ssDoneCh, ahDoneCh, tsDoneCh chan struct{}
-	var errCh chan error
+	errCh := make(chan error)
 	// Start auto-auth and sink servers
 	if method != nil {
 		enableTokenCh := len(config.Templates) > 0
@@ -559,8 +559,6 @@ func (c *AgentCommand) Run(args []string) int {
 			ExitAfterAuth: exitAfterAuth,
 		})
 		tsDoneCh = ts.DoneCh
-
-		errCh = make(chan error, 3)
 
 		go ah.Run(ctx, method, errCh)
 		go ss.Run(ctx, ah.OutputCh, sinks, errCh)

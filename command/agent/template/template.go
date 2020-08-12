@@ -8,6 +8,7 @@ package template
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 
@@ -81,9 +82,7 @@ func NewServer(conf *ServerConfig) *Server {
 // the Runner and return
 func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig, errCh chan error) {
 	if incoming == nil {
-		err := errors.New("incoming channel is nil")
-		ts.logger.Error("template server internal error", "error", err)
-		errCh <- err
+		errCh <- errors.New("template server: incoming channel is nil")
 		return
 	}
 
@@ -106,16 +105,14 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	var runnerConfig *ctconfig.Config
 	var runnerConfigErr error
 	if runnerConfig, runnerConfigErr = newRunnerConfig(ts.config, templates); runnerConfigErr != nil {
-		ts.logger.Error("template server failed to generate runner config", "error", runnerConfigErr)
-		errCh <- runnerConfigErr
+		errCh <- fmt.Errorf("template server failed to runner generate config: %w", runnerConfigErr)
 		return
 	}
 
 	var err error
 	ts.runner, err = manager.NewRunner(runnerConfig, false)
 	if err != nil {
-		ts.logger.Error("template server failed to create", "error", err)
-		errCh <- err
+		errCh <- fmt.Errorf("template server failed to create: %w", err)
 		return
 	}
 
@@ -170,9 +167,8 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			}
 
 		case err := <-ts.runner.ErrCh:
-			ts.logger.Error("template server error", "error", err.Error())
 			ts.runner.StopImmediately()
-			errCh <- err
+			errCh <- fmt.Errorf("template server: %w", err)
 			return
 
 		case <-ts.runner.TemplateRenderedCh():

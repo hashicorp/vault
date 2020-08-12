@@ -33,7 +33,7 @@ func TestSinkServer(t *testing.T) {
 	uuidStr, _ := uuid.GenerateUUID()
 	in := make(chan string)
 	sinks := []*sink.SinkConfig{fs1, fs2}
-	errCh := make(chan error, 1)
+	errCh := make(chan error)
 	go ss.Run(ctx, in, sinks, errCh)
 
 	// Seed a token
@@ -96,7 +96,7 @@ func TestSinkServerRetry(t *testing.T) {
 
 	in := make(chan string)
 	sinks := []*sink.SinkConfig{&sink.SinkConfig{Sink: b1}, &sink.SinkConfig{Sink: b2}}
-	errCh := make(chan error, 1)
+	errCh := make(chan error)
 	go ss.Run(ctx, in, sinks, errCh)
 
 	// Seed a token

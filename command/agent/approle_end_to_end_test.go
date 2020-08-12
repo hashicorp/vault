@@ -222,7 +222,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		Client: client,
 	}
 	ah := auth.NewAuthHandler(ahConfig)
-	errCh := make(chan error, 2)
+	errCh := make(chan error)
 	go ah.Run(ctx, am, errCh)
 	defer func() {
 		select {
@@ -557,7 +557,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		Client: client,
 	}
 	ah := auth.NewAuthHandler(ahConfig)
-	errCh := make(chan error, 2)
+	errCh := make(chan error)
 	go ah.Run(ctx, am, errCh)
 	defer func() {
 		select {

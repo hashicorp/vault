@@ -77,9 +77,7 @@ func backoffOrQuit(ctx context.Context, backoff time.Duration) {
 
 func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod, errCh chan<- error) {
 	if am == nil {
-		err := errors.New("nil auth method")
-		ah.logger.Error("auth handler internal error", "error", err)
-		errCh <- err
+		errCh <- errors.New("auth handler: nil auth method")
 		return
 	}
 

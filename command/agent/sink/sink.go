@@ -94,9 +94,7 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 	}
 
 	if incoming == nil {
-		err := errors.New("incoming channel is nil")
-		ss.logger.Info("sink server internal error", "error", err)
-		errCh <- err
+		errCh <- errors.New("sink server: incoming channel is nil")
 		return
 	}
 

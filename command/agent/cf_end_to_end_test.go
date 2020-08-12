@@ -112,7 +112,7 @@ func TestCFEndToEnd(t *testing.T) {
 	}
 
 	ah := auth.NewAuthHandler(ahConfig)
-	errCh := make(chan error, 2)
+	errCh := make(chan error)
 	go ah.Run(ctx, am, errCh)
 	defer func() {
 		select {

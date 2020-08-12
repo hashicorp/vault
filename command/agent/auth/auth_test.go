@@ -79,7 +79,7 @@ func TestAuthHandler(t *testing.T) {
 	})
 
 	am := newUserpassTestMethod(t, client)
-	errCh := make(chan error, 1)
+	errCh := make(chan error)
 	go ah.Run(ctx, am, errCh)
 
 	// Consume tokens so we don't block
