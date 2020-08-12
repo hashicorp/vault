@@ -11,13 +11,12 @@ import (
 	"io"
 	"strings"
 
-	"github.com/hashicorp/vault/sdk/helper/pointerutil"
-
 	ctconfig "github.com/hashicorp/consul-template/config"
 	ctlogging "github.com/hashicorp/consul-template/logging"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
+	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
 // ServerConfig is a config struct for setting up the basic parts of the
@@ -61,7 +60,9 @@ type Server struct {
 	logger        hclog.Logger
 	exitAfterAuth bool
 
-	testingLimitRetry bool
+	// testingLimitRetry is used for tests to limit the number of retries
+	// performed by the template server
+	testingLimitRetry int
 }
 
 // NewServer returns a new configured server
@@ -154,9 +155,8 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 
 				// If we're testing, limit retries to 3 attempts to avoid
 				// long test runs from exponential back-offs
-				if ts.testingLimitRetry {
-					i := 3
-					ctv.Vault.Retry = &ctconfig.RetryConfig{Attempts: &i}
+				if ts.testingLimitRetry != 0 {
+					ctv.Vault.Retry = &ctconfig.RetryConfig{Attempts: &ts.testingLimitRetry}
 				}
 
 				runnerConfig = runnerConfig.Merge(&ctv)

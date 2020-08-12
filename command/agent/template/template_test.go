@@ -36,6 +36,10 @@ func TestServerRun(t *testing.T) {
 		w.WriteHeader(404)
 		fmt.Fprintln(w, `{"errors":[]}`)
 	})
+	mux.HandleFunc("/v1/kv/myapp/perm-denied", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(403)
+		fmt.Fprintln(w, `{"errors":["1 error occurred:\n\t* permission denied\n\n"]}`)
+	})
 
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
@@ -132,6 +136,16 @@ func TestServerRun(t *testing.T) {
 			},
 			expectError: true,
 		},
+		"permission denied": {
+			templateMap: map[string]*templateTest{
+				"render_01": &templateTest{
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContentsPermDenied),
+					},
+				},
+			},
+			expectError: true,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -160,7 +174,7 @@ func TestServerRun(t *testing.T) {
 			if ts == nil {
 				t.Fatal("nil server returned")
 			}
-			server.testingLimitRetry = true
+			server.testingLimitRetry = 3
 
 			errCh := make(chan error, 1)
 			go server.Run(ctx, templateTokenCh, templatesToRender, errCh)
@@ -253,6 +267,16 @@ var templateContentsMissingKey = `
 
 var templateContentsBad = `
 {{ with secret "kv/myapp/config-bad"}}
+{
+{{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
+{{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}
+{{ if .Data.metadata.version}}"version":"{{ .Data.metadata.version }}"{{ end }}
+}
+{{ end }}
+`
+
+var templateContentsPermDenied = `
+{{ with secret "kv/myapp/perm-denied"}}
 {
 {{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
 {{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}
