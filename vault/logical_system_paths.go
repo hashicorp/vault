@@ -1294,6 +1294,9 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["token_type"][0]),
 				},
+				"enable_identity_group_creation": {
+					Type: framework.TypeBool,
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
