@@ -6,6 +6,21 @@ const SUPPORTED_BACKENDS = supportedSecretBackends();
 
 const getBackendPolicy = (backendType, backendName) => {
   let backend = backendName || '<secret-engine-name>';
+  let path;
+  if (backendType === 'kv-v2') {
+    path = `path "${backend}/data/*" {
+      capabilities = ["create", "read", "update", "delete", "list" ]
+    }`;
+  } else if (backendType === 'transit') {
+    path = `path "${backend}/keys/*" {
+      capabilities = ["create", "read", "update", "delete", "list" ]
+    }`;
+  } else if (backendType === 'ssh' || backendType === 'aws') {
+    path = `path "${backend}/roles/*" {
+      capabilities = ["create", "read", "update", "delete", "list" ]
+    }`;
+  }
+
   if (backendType === 'kv-v2') {
     return `
 # control over secrets engine config
@@ -18,16 +33,20 @@ path "${backend}/metadata/*" {
   capabilities = [ "create", "read", "update", "delete", "list" ]
 }
 
+${path}
+
 # List enabled secrets engine
 path "sys/mounts/${backend}" {
   capabilities = [ "read", "list" ]
 }`;
   }
   return `
-# Work with transform secrets engine
+# Configure secrets engine
 path "${backend}/*" {
   capabilities = [ "create", "read", "update", "delete", "list" ]
 }
+
+${path}
 
 # See secrets engine in list
 path "sys/mounts/${backend}" {
