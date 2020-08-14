@@ -156,6 +156,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.LicensingConfig = opts.LicensingConfig
 	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
 	conf.MetricsHelper = opts.MetricsHelper
+	conf.MetricSink = opts.MetricSink
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -304,6 +305,17 @@ func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {
 	t.Helper()
 	core := TestCore(t)
 	return testCoreUnsealed(t, core)
+}
+
+func TestCoreUnsealedWithMetrics(t testing.T) (*Core, [][]byte, string, *metrics.InmemSink) {
+	t.Helper()
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+	conf := &CoreConfig{
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
+	}
+	core, keys, root := testCoreUnsealed(t, TestCoreWithSealAndUI(t, conf))
+	return core, keys, root, inmemSink
 }
 
 // TestCoreUnsealedRaw returns a pure in-memory core that is already
@@ -1381,6 +1393,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisablePerformanceStandby = base.DisablePerformanceStandby
 		coreConfig.MetricsHelper = base.MetricsHelper
 		coreConfig.SecureRandomReader = base.SecureRandomReader
+		coreConfig.DisableSentinelTrace = base.DisableSentinelTrace
 
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
@@ -1433,6 +1446,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DevToken = base.DevToken
 		coreConfig.CounterSyncInterval = base.CounterSyncInterval
 		coreConfig.RecoveryMode = base.RecoveryMode
+	}
+
+	if coreConfig.ClusterHeartbeatInterval == 0 {
+		// Set this lower so that state populates quickly to standby nodes
+		coreConfig.ClusterHeartbeatInterval = 2 * time.Second
 	}
 
 	if coreConfig.RawConfig == nil {
@@ -2005,14 +2023,16 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		"mysql-aurora-database-plugin",
 		"mysql-rds-database-plugin",
 		"mysql-legacy-database-plugin",
-		"postgresql-database-plugin",
-		"elasticsearch-database-plugin",
-		"mssql-database-plugin",
+
 		"cassandra-database-plugin",
-		"mongodb-database-plugin",
-		"mongodbatlas-database-plugin",
+		"couchbase-database-plugin",
+		"elasticsearch-database-plugin",
 		"hana-database-plugin",
 		"influxdb-database-plugin",
+		"mongodb-database-plugin",
+		"mongodbatlas-database-plugin",
+		"mssql-database-plugin",
+		"postgresql-database-plugin",
 		"redshift-database-plugin",
 	}
 }

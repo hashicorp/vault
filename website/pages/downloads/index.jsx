@@ -2,6 +2,7 @@ import fetch from 'isomorphic-unfetch'
 import { VERSION, CHANGELOG_URL } from '../../data/version.js'
 import ProductDownloader from '@hashicorp/react-product-downloader'
 import Head from 'next/head'
+import Link from 'next/link'
 import HashiHead from '@hashicorp/react-head'
 
 export default function DownloadsPage({ releaseData }) {
@@ -15,13 +16,11 @@ export default function DownloadsPage({ releaseData }) {
         product="Vault"
         version={VERSION}
         releaseData={releaseData}
-        changelog={changelogUrl}
-        prerelease={{
-          type: 'release candidate',
-          name: 'v1.5.0',
-          version: '1.5.0-rc',
-        }}
-      />
+        changelog={changelogUrl}>
+        <p className="description g-type-body">Release notes are available in our
+          <Link href="/docs/release-notes"><a> documentation</a></Link>.
+        </p>
+      </ProductDownloader>
     </div>
   )
 }

@@ -12,7 +12,6 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -664,16 +663,7 @@ func TestIdentityStore_NewEntityCounter(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	c := TestCore(t)
-
-	// Replace metricSink before unsealing
-	// This results in some duplication from the normal test setup function.
-	inmemSink := metrics.NewInmemSink(
-		1000000*time.Hour,
-		2000000*time.Hour)
-	c.metricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
-
-	testCoreUnsealed(t, c)
+	c, _, _, sink := TestCoreUnsealedWithMetrics(t)
 
 	meGH := &MountEntry{
 		Table:       credentialTableType,
@@ -705,12 +695,12 @@ func TestIdentityStore_NewEntityCounter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectSingleCount(t, inmemSink, "identity.entity.creation")
+	expectSingleCount(t, sink, "identity.entity.creation")
 
 	_, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	expectSingleCount(t, inmemSink, "identity.entity.creation")
+	expectSingleCount(t, sink, "identity.entity.creation")
 }
