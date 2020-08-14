@@ -139,6 +139,7 @@ func NewCassandraBackend(conf map[string]string, logger log.Logger) (physical.Ba
 		}
 		cluster.DisableInitialHostLookup = disableInitialHostLookup
 	}
+
 	if err := setupCassandraTLS(conf, cluster); err != nil {
 		return nil, err
 	}
