@@ -92,7 +92,7 @@ var (
 		return nil
 	}
 
-	handlePluginReloadStatus = func(ctx context.Context, store logical.Storage, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	handlePluginReloadStatus = func(_ context.Context, _ logical.Storage, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 		return logical.RespondWithStatusCode(logical.ErrorResponse("enterprise only feature"), req, http.StatusNotImplemented)
 	}
 
