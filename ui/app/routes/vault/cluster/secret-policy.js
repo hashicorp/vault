@@ -81,7 +81,7 @@ export default Route.extend(ClusterRoute, {
     //   return this.transitionTo(this.routeParent, 'policies');
     // }
     return {
-      backend: backendType,
+      backend: backendName,
       secretName,
       policy: secretName
         ? getPolicy(backendType, backendName, secretName)
