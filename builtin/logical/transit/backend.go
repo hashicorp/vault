@@ -42,6 +42,8 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathListKeys(),
 			b.pathExportKeys(),
 			b.pathEncrypt(),
+			b.pathEncryptStream(),
+			b.pathDecryptStream(),
 			b.pathDecrypt(),
 			b.pathDatakey(),
 			b.pathRandom(),

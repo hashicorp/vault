@@ -638,7 +638,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		server := &http.Server{
 			Handler:           handler,
 			ReadHeaderTimeout: 10 * time.Second,
-			ReadTimeout:       30 * time.Second,
+			ReadTimeout:       90 * time.Second,
 			IdleTimeout:       5 * time.Minute,
 			ErrorLog:          c.logger.StandardLogger(nil),
 		}
@@ -1734,7 +1734,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		server := &http.Server{
 			Handler:           handler,
 			ReadHeaderTimeout: 10 * time.Second,
-			ReadTimeout:       30 * time.Second,
+			ReadTimeout:      90 * time.Second,
 			IdleTimeout:       5 * time.Minute,
 			ErrorLog:          c.logger.StandardLogger(nil),
 		}

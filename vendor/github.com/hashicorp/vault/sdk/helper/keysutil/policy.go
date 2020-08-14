@@ -782,8 +782,8 @@ func (p *Policy) convergentVersion(ver int) int {
 }
 
 func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, error) {
-	if !p.Type.EncryptionSupported() {
-		return "", errutil.UserError{Err: fmt.Sprintf("message encryption not supported for key type %v", p.Type)}
+	if err := p.encryptionPreconditions(ver) ; err != nil {
+		return "", err
 	}
 
 	// Decode the plaintext value
@@ -792,81 +792,11 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 		return "", errutil.UserError{Err: err.Error()}
 	}
 
-	switch {
-	case ver == 0:
-		ver = p.LatestVersion
-	case ver < 0:
-		return "", errutil.UserError{Err: "requested version for encryption is negative"}
-	case ver > p.LatestVersion:
-		return "", errutil.UserError{Err: "requested version for encryption is higher than the latest key version"}
-	case ver < p.MinEncryptionVersion:
-		return "", errutil.UserError{Err: "requested version for encryption is less than the minimum encryption key version"}
-	}
-
 	var ciphertext []byte
 
 	switch p.Type {
 	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
-		hmacKey := context
-
-		var aead cipher.AEAD
-		var encKey []byte
-		var deriveHMAC bool
-
-		encBytes := 32
-		hmacBytes := 0
-		if p.convergentVersion(ver) > 2 {
-			deriveHMAC = true
-			hmacBytes = 32
-		}
-		if p.Type == KeyType_AES128_GCM96 {
-			encBytes = 16
-		}
-
-		key, err := p.DeriveKey(context, ver, encBytes+hmacBytes)
-		if err != nil {
-			return "", err
-		}
-
-		if len(key) < encBytes+hmacBytes {
-			return "", errutil.InternalError{Err: "could not derive key, length too small"}
-		}
-
-		encKey = key[:encBytes]
-		if len(encKey) != encBytes {
-			return "", errutil.InternalError{Err: "could not derive enc key, length not correct"}
-		}
-		if deriveHMAC {
-			hmacKey = key[encBytes:]
-			if len(hmacKey) != hmacBytes {
-				return "", errutil.InternalError{Err: "could not derive hmac key, length not correct"}
-			}
-		}
-
-		switch p.Type {
-		case KeyType_AES128_GCM96, KeyType_AES256_GCM96:
-			// Setup the cipher
-			aesCipher, err := aes.NewCipher(encKey)
-			if err != nil {
-				return "", errutil.InternalError{Err: err.Error()}
-			}
-
-			// Setup the GCM AEAD
-			gcm, err := cipher.NewGCM(aesCipher)
-			if err != nil {
-				return "", errutil.InternalError{Err: err.Error()}
-			}
-
-			aead = gcm
-
-		case KeyType_ChaCha20_Poly1305:
-			cha, err := chacha20poly1305.New(encKey)
-			if err != nil {
-				return "", errutil.InternalError{Err: err.Error()}
-			}
-
-			aead = cha
-		}
+		aead, hmacKey, err := p.InitAEAD(ver, context)
 
 		if p.ConvergentEncryption {
 			convergentVersion := p.convergentVersion(ver)
@@ -1595,4 +1525,90 @@ func (p *Policy) getVersionPrefix(ver int) string {
 	p.versionPrefixCache.Store(ver, prefix)
 
 	return prefix
+}
+
+func (p *Policy) encryptionPreconditions(ver int) error {
+	if !p.Type.EncryptionSupported() {
+		return errutil.UserError{Err: fmt.Sprintf("message encryption not supported for key type %v", p.Type)}
+	}
+
+	switch {
+	case ver == 0:
+		ver = p.LatestVersion
+	case ver < 0:
+		return errutil.UserError{Err: "requested version for encryption is negative"}
+	case ver > p.LatestVersion:
+		return errutil.UserError{Err: "requested version for encryption is higher than the latest key version"}
+	case ver < p.MinEncryptionVersion:
+		return errutil.UserError{Err: "requested version for encryption is less than the minimum encryption key version"}
+	}
+	return nil
+}
+
+func (p *Policy) InitAEAD(ver int, context []byte) (aead cipher.AEAD, hmacKey []byte, err error) {
+	switch p.Type {
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
+		hmacKey := context
+
+		var encKey []byte
+		var deriveHMAC bool
+
+		encBytes := 32
+		hmacBytes := 0
+		if p.convergentVersion(ver) > 2 {
+			deriveHMAC = true
+			hmacBytes = 32
+		}
+		if p.Type == KeyType_AES128_GCM96 {
+			encBytes = 16
+		}
+
+		key, err := p.DeriveKey(context, ver, encBytes+hmacBytes)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if len(key) < encBytes+hmacBytes {
+			return nil, nil, errutil.InternalError{Err: "could not derive key, length too small"}
+		}
+
+		encKey = key[:encBytes]
+		if len(encKey) != encBytes {
+			err = errutil.InternalError{Err: "could not derive enc key, length not correct"}
+			return
+		}
+		if deriveHMAC {
+			hmacKey = key[encBytes:]
+			if len(hmacKey) != hmacBytes {
+				err = errutil.InternalError{Err: "could not derive hmac key, length not correct"}
+				return
+			}
+		}
+
+		switch p.Type {
+		case KeyType_AES128_GCM96, KeyType_AES256_GCM96:
+			// Setup the cipher
+			aesCipher, err := aes.NewCipher(encKey)
+			if err != nil {
+				return
+			}
+
+			// Setup the GCM AEAD
+			gcm, err := cipher.NewGCM(aesCipher)
+			if err != nil {
+				return
+			}
+
+			aead = gcm
+
+		case KeyType_ChaCha20_Poly1305:
+			cha, err := chacha20poly1305.New(encKey)
+			if err != nil {
+				return
+			}
+
+			aead = cha
+		}
+	}
+	return
 }

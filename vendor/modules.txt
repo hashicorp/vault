@@ -671,6 +671,11 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 github.com/mholt/archiver
 # github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
 github.com/michaelklishin/rabbit-hole
+# github.com/miscreant/miscreant.go v0.0.0-20200214223636-26d376326b75
+github.com/miscreant/miscreant.go
+github.com/miscreant/miscreant.go/block
+github.com/miscreant/miscreant.go/cmac
+github.com/miscreant/miscreant.go/pmac
 # github.com/mitchellh/cli v1.0.0
 github.com/mitchellh/cli
 # github.com/mitchellh/copystructure v1.0.0

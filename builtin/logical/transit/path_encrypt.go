@@ -1,15 +1,22 @@
 package transit
 
 import (
+	"bufio"
 	"context"
 	"encoding/base64"
+	"encoding/binary"
 	"fmt"
-
-	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/miscreant/miscreant.go"
+	"io"
+	"mime/multipart"
+	"strconv"
+
+	"github.com/hashicorp/errwrap"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -118,6 +125,78 @@ to the min_encryption_version configured on the key.`,
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.CreateOperation: b.pathEncryptWrite,
 			logical.UpdateOperation: b.pathEncryptWrite,
+		},
+
+		ExistenceCheck: b.pathEncryptExistenceCheck,
+
+		HelpSynopsis:    pathEncryptHelpSyn,
+		HelpDescription: pathEncryptHelpDesc,
+	}
+}
+
+func (b *backend) pathEncryptStream() *framework.Path {
+	return &framework.Path{
+		Pattern: "encrypt-stream/" + framework.GenericNameRegex("name"),
+		Fields: map[string]*framework.FieldSchema{
+			"name": {
+				Type:        framework.TypeString,
+				Description: "Name of the policy",
+			},
+
+			"nonce": {
+				Type: framework.TypeString,
+				Description: `
+Base64 encoded nonce value. Must be provided if convergent encryption is
+enabled for this key and the key was generated with Vault 0.6.1. Not required
+for keys created in 0.6.2+. The value must be exactly 96 bits (12 bytes) long
+and the user must ensure that for any given context (and thus, any given
+encryption key) this nonce value is **never reused**.
+`,
+			},
+
+			"type": {
+				Type:    framework.TypeString,
+				Default: "aes256-gcm96",
+				Description: `
+This parameter is required when encryption key is expected to be created.
+When performing an upsert operation, the type of key to create. Currently,
+"aes128-gcm96" (symmetric) and "aes256-gcm96" (symmetric) are the only types supported. Defaults to "aes256-gcm96".`,
+			},
+
+
+			"key_version": {
+				Type: framework.TypeInt,
+				Description: `The version of the key to use for encryption.
+Must be 0 (for latest) or a value greater than or equal
+to the min_encryption_version configured on the key.`,
+			},
+		},
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.CreateOperation: b.pathEncryptStreamWrite,
+			logical.UpdateOperation: b.pathEncryptStreamWrite,
+		},
+
+		ExistenceCheck: b.pathEncryptExistenceCheck,
+
+		HelpSynopsis:    pathEncryptHelpSyn,
+		HelpDescription: pathEncryptHelpDesc,
+	}
+}
+
+func (b *backend) pathDecryptStream() *framework.Path {
+	return &framework.Path{
+		Pattern: "decrypt-stream/" + framework.GenericNameRegex("name"),
+		Fields: map[string]*framework.FieldSchema{
+			"name": {
+				Type:        framework.TypeString,
+				Description: "Name of the policy",
+			},
+		},
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.CreateOperation: b.pathDecryptStreamWrite,
+			logical.UpdateOperation: b.pathDecryptStreamWrite,
 		},
 
 		ExistenceCheck: b.pathEncryptExistenceCheck,
@@ -394,6 +473,193 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 	p.Unlock()
 	return resp, nil
+}
+
+func (b *backend) pathEncryptStreamWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+	var err error
+	chunkSize := 1<<18
+	cli, ok := d.GetOk("chunk_size")
+	if ok {
+		chunkSize, err=strconv.Atoi(cli.(string))
+	}
+
+	ver := d.Get("key_version").(int)
+
+	// Get the policy
+	var p *keysutil.Policy
+	var polReq keysutil.PolicyRequest
+
+	if req.Operation == logical.CreateOperation {
+		polReq = keysutil.PolicyRequest{
+			Upsert:     true,
+			Storage:    req.Storage,
+			Name:       name,
+			Derived:    false,
+			Convergent: false,
+		}
+
+		keyType := d.Get("type").(string)
+		switch keyType {
+		case "aes256-gcm96":
+			polReq.KeyType = keysutil.KeyType_AES256_GCM96
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
+		}
+	} else {
+		polReq = keysutil.PolicyRequest{
+			Storage: req.Storage,
+			Name:    name,
+		}
+	}
+
+	p, _, err = b.lm.GetPolicy(ctx, polReq, b.GetRandomReader())
+	if err != nil {
+		return nil, err
+	}
+	if p == nil {
+		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
+	}
+	if !b.System().CachingDisabled() {
+		p.Lock(false)
+	}
+
+	key, err := p.DeriveKey(nil, ver, 32)
+	if err != nil {
+		p.Unlock()
+		return nil, err
+	}
+	// Compute random nonce
+	nonce, err := uuid.GenerateRandomBytes(8)
+	if err != nil {
+		return nil, errutil.InternalError{Err: err.Error()}
+	}
+	w, err := miscreant.NewStreamEncryptor("AES-PMAC-SIV", key, nonce)
+	if err != nil {
+		p.Unlock()
+		return nil, err
+	}
+
+	binbuf := make([]byte, 4)
+	n := binary.PutUvarint(binbuf, uint64(ver))
+	req.ResponseWriter.Write(binbuf[:n])
+	n = binary.PutUvarint(binbuf, uint64(chunkSize))
+	req.ResponseWriter.Write(binbuf[:n])
+	req.ResponseWriter.Write(nonce)
+
+	buff := make([]byte, chunkSize)
+	var tot uint64
+	for n, err := io.ReadFull(req.HTTPRequest.Body, buff); n > 0 || err == nil; n, err = io.ReadFull(req.HTTPRequest.Body, buff) {
+		if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF{
+			b.Logger().Error(err.Error())
+			return nil, nil
+		}
+		ct := w.Seal(nil, buff[:n], nil, n < chunkSize && err != io.EOF && err != io.ErrUnexpectedEOF)
+		tot += uint64(len(ct))
+		req.ResponseWriter.Write(ct)
+	}
+	if err != nil {
+		b.Logger().Error(err.Error())
+	}
+
+	return nil, nil
+}
+
+func (b *backend) pathDecryptStreamWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+
+	buf := bufio.NewReader(req.HTTPRequest.Body)
+	ver64 ,err := binary.ReadUvarint(buf)
+	if err != nil {
+		return nil, err
+	}
+	ver := int(ver64)
+	cs64 ,err := binary.ReadUvarint(buf)
+	if err != nil {
+		return nil, err
+	}
+	chunkSize := int(cs64)
+
+	// Get the policy
+	var p *keysutil.Policy
+	var polReq keysutil.PolicyRequest
+
+	if req.Operation == logical.CreateOperation {
+		polReq = keysutil.PolicyRequest{
+			Upsert:     true,
+			Storage:    req.Storage,
+			Name:       name,
+			Derived:    false,
+			Convergent: false,
+		}
+
+		keyType := d.Get("type").(string)
+		switch keyType {
+		case "aes256-gcm96":
+			polReq.KeyType = keysutil.KeyType_AES256_GCM96
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
+		}
+	} else {
+		polReq = keysutil.PolicyRequest{
+			Storage: req.Storage,
+			Name:    name,
+		}
+	}
+
+	p, _, err = b.lm.GetPolicy(ctx, polReq, b.GetRandomReader())
+	if err != nil {
+		return nil, err
+	}
+	if p == nil {
+		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
+	}
+	if !b.System().CachingDisabled() {
+		p.Lock(false)
+	}
+
+	key, err := p.DeriveKey(nil, ver, 32)
+	if err != nil {
+		p.Unlock()
+		return nil, err
+	}
+
+	// Compute random nonce
+	nonce := make([]byte,8)
+	_, err = io.ReadFull(buf, nonce)
+	if err != nil {
+		return nil, errutil.InternalError{Err: err.Error()}
+	}
+	w, err := miscreant.NewStreamDecryptor("AES-PMAC-SIV", key, nonce)
+	if err != nil {
+		p.Unlock()
+		return nil, err
+	}
+	mpw := multipart.NewWriter(req.ResponseWriter)
+	ptpart, err := mpw.CreateFormField("plaintext")
+	if err != nil {
+		p.Unlock()
+		return nil, err
+	}
+	chunkAndTagSize := chunkSize+w.Overhead()
+	buff := make([]byte, chunkAndTagSize)
+	for n, err := io.ReadFull(buf, buff); n > 0 || err == nil; n, err = io.ReadFull(buf, buff) {
+		pt, err := w.Open(nil, buff[:n], nil, n < chunkAndTagSize && err == io.EOF)
+		if err != nil {
+			// write the error part
+			errpart, perr := mpw.CreateFormField("error")
+			if perr != nil {
+				p.Unlock()
+				return nil, err
+			}
+			errpart.Write([]byte(err.Error()))
+			return nil, nil
+		}
+		ptpart.Write(pt)
+	}
+
+	mpw.Close()
+	return nil, nil
 }
 
 const pathEncryptHelpSyn = `Encrypt a plaintext value or a batch of plaintext

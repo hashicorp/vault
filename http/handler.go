@@ -1053,6 +1053,30 @@ func isForm(head []byte, contentType string) bool {
 	return true
 }
 
+func isJSON(head []byte, contentType string) bool {
+	contentType, _, err := mime.ParseMediaType(contentType)
+
+	// We'll assume good actors are telling the truth
+	if err != nil && contentType == "application/json" {
+		return true
+	}
+
+	// Look for the start of JSON or not-JSON, skipping any insignificant
+	// whitespace (per https://tools.ietf.org/html/rfc7159#section-2).
+	for _, c := range head {
+		switch c {
+		case ' ', '\t', '\n', '\r':
+			continue
+		case '[', '{': // JSON
+			return true
+		default: // not JSON
+			return false
+		}
+	}
+
+	return false
+}
+
 func respondError(w http.ResponseWriter, status int, err error) {
 	logical.RespondError(w, status, err)
 }

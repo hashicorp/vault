@@ -4,7 +4,11 @@ import (
 	"bufio"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"io"
 	"net"
 	"net/http"
@@ -15,8 +19,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"go.uber.org/atomic"
 )
@@ -37,6 +39,11 @@ func newBufferedReader(r io.ReadCloser) *bufferedReader {
 
 func (b *bufferedReader) Close() error {
 	return b.rOrig.Close()
+}
+
+var streamingPaths = []string{
+	"transit/encrypt-stream/*",
+	"transit/decrypt-stream/*",
 }
 
 func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
@@ -102,7 +109,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		// If we are uploading a snapshot we don't want to parse it. Instead
 		// we will simply add the HTTP request to the logical request object
 		// for later consumption.
-		if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
+		if path=="sys/storage/raft/snapshot" || path==	"sys/storage/raft/snapshot-force" {
 			passHTTPReq = true
 			origBody = r.Body
 		} else {
@@ -115,22 +122,60 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 				return nil, nil, http.StatusBadRequest, err
 			}
 
-			if isForm(head, r.Header.Get("Content-Type")) {
+			cts := r.Header.Values("Content-Type")
+			var ct string
+			if cts != nil {
+				ct = cts[0]
+			}
+
+			if isForm(head, ct) {
 				formData, err := parseFormRequest(r)
 				if err != nil {
 					return nil, nil, http.StatusBadRequest, fmt.Errorf("error parsing form data: %w", err)
 				}
 
 				data = formData
-			} else {
-				origBody, err = parseJSONRequest(perfStandby, r, w, &data)
-				if err == io.EOF {
-					data = nil
-					err = nil
-				}
+			} else if strings.HasPrefix(ct, "multipart/form-data") {
+				reader, err := r.MultipartReader()
 				if err != nil {
-					return nil, nil, http.StatusBadRequest, err
+					return nil, nil, http.StatusBadRequest, fmt.Errorf("error parsing form data: %w", err)
 				}
+
+				p, err := reader.NextPart()
+				if err != nil {
+					return nil, nil, http.StatusInternalServerError, fmt.Errorf("error parsing form data: %w", err)
+				}
+
+				buff := bufio.NewReader(p)
+				h2, err := buff.Peek(512)
+				if isJSON(h2, "") {
+					err := jsonutil.DecodeJSONFromReader(buff, &data)
+					if err != nil && err != io.EOF {
+						return nil, nil, http.StatusBadRequest, fmt.Errorf("failed to parse JSON input: %w", err)
+					}
+				}
+
+				p, err = reader.NextPart()
+				// one more field to parse, EOF is considered as failure here
+				if err != nil {
+					return nil, nil, http.StatusInternalServerError, fmt.Errorf("error parsing form data: %w", err)
+				}
+				if p.FormName() != "body" {
+					return nil, nil, http.StatusBadRequest, errors.New("body section is expected")
+				}
+				//Yikes
+				r.Body = p
+				passHTTPReq=true
+				responseWriter = w
+			} else if isJSON(head, ct) {
+					origBody, err = parseJSONRequest(perfStandby, r, w, &data)
+					if err == io.EOF {
+						data = nil
+						err = nil
+					}
+					if err != nil {
+						return nil, nil, http.StatusBadRequest, err
+					}
 			}
 		}
 
