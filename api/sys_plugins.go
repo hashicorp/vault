@@ -303,7 +303,7 @@ func (c *Sys) ReloadPluginStatus(reloadStatusInput *ReloadPluginStatusInput) (*R
 	resp, err := c.c.RawRequestWithContext(ctx, req)
 	defer resp.Body.Close()
 	if err != nil {
-		var er logical.Response
+		var logicalResp logical.Response
 		dec := json.NewDecoder(resp.Body)
 		err2 := dec.Decode(&er)
 		if err2 == nil && er.Data != nil{
