@@ -64,17 +64,15 @@ it is up to the administrator to remove it from the method.
 
 ### Via the CLI
 
-The below requires Vault to present a certificate signed by `ca.pem` and
-presents `cert.pem` (using `key.pem`) to authenticate against the `web` cert
-role. Note that the name of `web` ties out with the configuration example
-below writing to a path of `auth/cert/certs/web`. If a certificate role name
-is not specified, the auth method will try to authenticate against all trusted
-certificates.
+The below authenticates against the `web` cert role by presenting a certificate
+(`cert.pem`) and key (`key.pem`) signed by the CA associated with the `web` cert
+role. Note that the name `web` ties to the configuration example below writing
+to a path of `auth/cert/certs/web`. If a certificate role name is not specified,
+the auth method will try to authenticate against all trusted certificates.
 
 ```shell-session
 $ vault login \
     -method=cert \
-    -ca-cert=ca.pem \
     -client-cert=cert.pem \
     -client-key=key.pem \
     name=web
@@ -90,7 +88,6 @@ Optionally, you may specify a single certificate role to authenticate against.
 ```shell-session
 $ curl \
     --request POST \
-    --cacert ca.pem \
     --cert cert.pem \
     --key key.pem \
     --data '{"name": "web"}' \
