@@ -1132,6 +1132,7 @@ func (c *ServerCommand) Run(args []string) int {
 		CredentialBackends:        c.CredentialBackends,
 		LogicalBackends:           c.LogicalBackends,
 		Logger:                    c.logger,
+		DisableSentinelTrace:      config.DisableSentinelTrace,
 		DisableCache:              config.DisableCache,
 		DisableMlock:              config.DisableMlock,
 		MaxLeaseTTL:               config.MaxLeaseTTL,
