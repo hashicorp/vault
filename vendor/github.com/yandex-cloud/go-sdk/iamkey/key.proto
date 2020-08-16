@@ -1,0 +1,42 @@
+// Copyright (c) 2018 Yandex LLC. All rights reserved.
+// Author: Vladimir Skipor <skipor@yandex-team.ru>
+
+syntax = "proto3";
+
+package yandex.cloud.sdk.v1;
+
+import "google/protobuf/timestamp.proto";
+import "yandex/cloud/iam/v1/key.proto";
+
+option go_package = "bb.yandex-team.ru/cloud/cloud-go/sdk/iamkey";
+
+// Key is resource managed by IAM Key Service.
+// Can be issued for User or Service Account, but key authorization is supported only for Service Accounts.
+// Issued key contains private part that is not saved on server side, and should be saved by client.
+message Key {
+  // ID of the Key resource.
+  string id = 1;
+
+  oneof subject {
+    // ID of the user account that the Key resource belongs to.
+    string user_account_id = 2;
+
+    // ID of the service account that the Key resource belongs to.
+    string service_account_id = 3;
+  }
+
+  // Creation timestamp in [RFC3339](https://www.ietf.org/rfc/rfc3339.txt) text format.
+  google.protobuf.Timestamp created_at = 4;
+
+  // Description of the Key resource. 0-256 characters long.
+  string description = 5;
+
+  // An algorithm used to generate a key pair of the Key resource.
+  iam.v1.Key.Algorithm key_algorithm = 6;
+
+  // A public key of the Key resource.
+  string public_key = 7;
+
+  // A public key of the Key resource.
+  string private_key = 8;
+}

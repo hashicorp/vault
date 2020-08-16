@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/ocikms"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/transit"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/yandexcloudkms"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
@@ -192,6 +193,9 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 	case wrapping.Transit:
 		wrapper, kmsInfo, err = GetTransitKMSFunc(opts, configKMS)
 
+	case wrapping.YandexCloudKMS:
+		wrapper, kmsInfo, err = GetYandexCloudKMSFunc(opts, configKMS)
+
 	case wrapping.PKCS11:
 		return nil, fmt.Errorf("KMS type 'pkcs11' requires the Vault Enterprise HSM binary")
 
@@ -340,6 +344,22 @@ var GetTransitKMSFunc = func(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.
 		if namespace, ok := wrapperInfo["namespace"]; ok {
 			info["Transit Namespace"] = namespace
 		}
+	}
+	return wrapper, info, nil
+}
+
+func GetYandexCloudKMSFunc(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
+	wrapper := yandexcloudkms.NewWrapper(opts)
+	wrapperInfo, err := wrapper.SetConfig(kms.Config)
+	if err != nil {
+		// If the error is any other than logical.KeyNotFoundError, return the error
+		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
+			return nil, nil, err
+		}
+	}
+	info := make(map[string]string)
+	if wrapperInfo != nil {
+		info["Yandex.Cloud KMS KeyID"] = wrapperInfo["kms_key_id"]
 	}
 	return wrapper, info, nil
 }

@@ -1,0 +1,87 @@
+---
+layout: docs
+page_title: Yandex.Cloud KMS - Seals - Configuration
+sidebar_title: Yandex.Cloud KMS
+description: |-
+  The Yandex.Cloud KMS seal configures Vault to use Yandex.Cloud KMS as the seal wrapping mechanism.
+---
+
+# `yandexcloudkms` Seal
+
+The Yandex.Cloud KMS seal configures Vault to use Yandex.Cloud KMS as the seal wrapping mechanism.
+The Yandex.Cloud KMS seal is activated by one of the following:
+
+- The presence of a `seal "yandexcloudkms"` block in Vault's configuration file
+- The presence of the environment variable `VAULT_SEAL_TYPE` set to `yandexcloudkms`. If
+  enabling via environment variable, all other required values specific to Yandex.Cloud
+  KMS (i.e. `YANDEXCLOUD_KMS_KEY_ID`) must be also supplied, as well as all
+  other Yandex.Cloud-related environment variables that lends to successful
+  authentication (i.e. `YANDEXCLOUD_SERVICE_ACCOUNT_KEY_FILE`, etc.).
+
+## `yandexcloudkms` Example
+
+This example shows configuring Yandex.Cloud KMS seal through the Vault configuration file
+by providing the minimum required values:
+
+```hcl
+seal "yandexcloudkms" {
+  kms_key_id = "abdj1l83drsu9c7lakv7"
+}
+```
+
+## `yandexcloudkms` Parameters
+
+These parameters apply to the `seal` stanza in the Vault configuration file:
+
+- `oauth_token` `(string: <optional>)`: The Yandex account OAuth token.
+  May also be specified by the `YANDEXCLOUD_OAUTH_TOKEN` environment variable. The OAuth token can be
+  received [here](https://oauth.yandex.com/authorize?response_type=token&client_id=1a6990aa636648e9b2ef855fa7bec2fb)
+
+- `service_account_key_file` `(string: <optional>)`: The path to the service account key file.
+  May also be specified by the `YANDEXCLOUD_SERVICE_ACCOUNT_KEY_FILE` environment variable.
+  The service account key file can be created
+  in [this way](https://cloud.yandex.com/docs/iam/operations/iam-token/create-for-sa#keys-create)
+
+~> **Note:** Only one of `oauth_token` and `service_account_key_file` can be specified.
+
+- `kms_key_id` `(string: <required>)`: The Yandex.Cloud KMS key ID to use for encryption
+  and decryption. May also be specified by the `YANDEXCLOUD_KMS_KEY_ID` environment variable.
+
+## Authentication
+
+Authentication-related values must be provided, either as environment
+variables or as configuration parameters.
+
+~> **Note:** Although the configuration file allows you to pass in
+`YANDEXCLOUD_OAUTH_TOKEN` and `YANDEXCLOUD_SERVICE_ACCOUNT_KEY_FILE` as part of the seal's parameters, it
+is _strongly_ recommended to set these values via environment variables.
+
+Yandex.Cloud authentication values:
+
+- `YANDEXCLOUD_OAUTH_TOKEN`
+- `YANDEXCLOUD_SERVICE_ACCOUNT_KEY_FILE`
+
+Note: Only one of `YANDEXCLOUD_OAUTH_TOKEN` and `YANDEXCLOUD_SERVICE_ACCOUNT_KEY_FILE` can be specified.
+
+~> **NOTE:** Requests to Yandex.Cloud KMS can be authenticated on behalf of the linked service account.
+In order to use this method, omit both `YANDEXCLOUD_OAUTH_TOKEN` and `YANDEXCLOUD_SERVICE_ACCOUNT_KEY_FILE` and
+[link a service account to your Compute Cloud VM](https://cloud.yandex.com/docs/compute/operations/vm-connect/auth-inside-vm#link-sa-with-instance).
+
+The only role Vault needs on the KMS key is `kms.keys.encrypterDecrypter`.
+
+## `yandexcloudkms` Environment Variables
+
+Alternatively, the Yandex.Cloud KMS seal can be activated by providing the following
+environment variables:
+
+- `VAULT_SEAL_TYPE`
+- `YANDEXCLOUD_KMS_KEY_ID`
+
+## Key Rotation
+
+This seal supports rotating keys defined in Yandex.Cloud KMS
+[doc](https://cloud.yandex.com/docs/kms/concepts/version#rotate-key). Both automatic
+rotation and manual rotation is supported for KMS since the key information is stored with the
+encrypted data. Old key versions must not be
+disabled or deleted and are used to decrypt older data. Any new or updated data will be
+encrypted with the primary key version.
