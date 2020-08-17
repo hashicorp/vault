@@ -36,11 +36,7 @@ const TWEAK_SOURCE = [
 ];
 
 const Model = DS.Model.extend({
-  // TODO: for now, commenting out openApi info, but keeping here just in case we end up using it.
-  // useOpenAPI: true,
-  // getHelpUrl: function(backend) {
-  //   return `/v1/${backend}?help=1`;
-  // },
+  useOpenAPI: false,
   name: attr('string', {
     // TODO: make this required for making a transformation
     label: 'Name',
@@ -83,8 +79,6 @@ const Model = DS.Model.extend({
     subText: 'Search for an existing role, type a new role to create it, or use a wildcard (*).',
   }),
   transformAttrs: computed('type', function() {
-    // TODO: group them into sections/groups.  Right now, we don't different between required and not required as we do by hiding options.
-    // will default to design mocks on how to handle as it will likely be a different pattern using client-side validation, which we have not done before
     if (this.type === 'masking') {
       return ['name', 'type', 'masking_character', 'template', 'templates', 'allowed_roles'];
     }
@@ -93,8 +87,6 @@ const Model = DS.Model.extend({
   transformFieldAttrs: computed('transformAttrs', function() {
     return expandAttributeMeta(this, this.get('transformAttrs'));
   }),
-  // zeroAddressPath: lazyCapabilities(apiPath`${'backend'}/config/zeroaddress`, 'backend'),
-  // canEditZeroAddress: alias('zeroAddressPath.canUpdate'),
 });
 
 export default attachCapabilities(Model, {
