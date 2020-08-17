@@ -3,6 +3,7 @@
 IMPROVEMENTS:
 
 * auth/jwt: Add support for fetching groups and user information from G Suite during authentication. [[GH-123](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/123)]
+* secrets/openldap: Add "ad" schema that allows the engine to correctly rotate AD passwords. [[GH-16](https://github.com/hashicorp/vault-plugin-secrets-openldap/pull/16)]
 
 BUG FIXES:
 
@@ -16,14 +17,22 @@ BUG FIXES:
 ## 1.5.1
 ### TBD
 
+CHANGES:
+
+* pki: The tidy operation will now remove revoked certificates if the parameter `tidy_revoked_certs` is set to `true`. This will result in certificate entries being immediately removed, as opposed to awaiting until its NotAfter time. Note that this only affects certificates that have been already revoked. [[GH-9609](https://github.com/hashicorp/vault/pull/9609)]
+
 IMPROVEMENTS:
 
 * auth/jwt: Add support for fetching groups and user information from G Suite during authentication. [[GH-9574](https://github.com/hashicorp/vault/pull/9574)]
 * ui: Wrap TTL option on transit engine export action is updated to a new component. [[GH-9632](https://github.com/hashicorp/vault/pull/9632)]
+* ui: Wrap Tool uses newest version of TTL Picker component. [[GH-9691](https://github.com/hashicorp/vault/pull/9691)]
 
 BUG FIXES:
 
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-9603](https://github.com/hashicorp/vault/pull/9603)]
+* replication (enterprise): Fix status API output incorrectly stating replication is in `idle` state.
+* core: Fix panic when printing over-long info fields at startup [[GH-9681](https://github.com/hashicorp/vault/pull/9681)]
+* core: Seal migration using the new minimal-downtime strategy didn't work properly with performance standbys. [[GH-9690](https://github.com/hashicorp/vault/pull/9690)]
 
 ## 1.5.0
 ### July 21st, 2020
@@ -57,12 +66,14 @@ FEATURES:
 * **Integrated Storage as HA Storage**: In Vault 1.5, it is possible to use Integrated Storage as HA Storage with a different storage backend as regular storage.
 * **OIDC Auth Provider Extensions**: We've added support to OIDC Auth to incorporate IdP-specific extensions. Currently this includes expanded Azure AD groups support.
 * **GCP Secrets**: Support BigQuery dataset ACLs in absence of IAM endpoints.
+* **KMIP**: Add support for signing client certificates requests (CSRs) rather than having them be generated entirely within Vault.
 
 IMPROVEMENTS:
 
 * audit: Replication status requests are no longer audited. [[GH-8877](https://github.com/hashicorp/vault/pull/8877)]
 * audit: Added mount_type field to requests and responses. [[GH-9167](https://github.com/hashicorp/vault/pull/9167)]
 * auth/aws: Add support for Web Identity credentials [[GH-7738](https://github.com/hashicorp/vault/pull/7738)]
+* auth/aws: Retry on transient failures during AWS IAM auth login attempts [[GH-8727](https://github.com/hashicorp/vault/pull/8727)]
 * auth/jwt: Support users that are members of more than 200 groups on Azure [[GH-120](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/120)]
 * auth/kerberos: Support identities without userPrincipalName [[GH-44](https://github.com/hashicorp/vault-plugin-auth-kerberos/issues/44)]
 * auth/kubernetes: Allow disabling `iss` validation [[GH-91](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/91)]
@@ -97,6 +108,7 @@ BUG FIXES:
 
 * auth/oci: Fix issue where users of the Oracle Cloud Infrastructure (OCI) auth method could not authenticate when the plugin backend was mounted at a non-default path. [[GH-7](https://github.com/hashicorp/vault-plugin-auth-oci/pull/7)]
 * core: Extend replicated cubbyhole fix in 1.4.0 to cover case where a performance primary is also a DR primary [[GH-9148](https://github.com/hashicorp/vault/pull/9148)]
+* replication (enterprise): Use the PrimaryClusterAddr if it's been set
 * seal/awskms: fix AWS KMS auto-unseal when AWS_ROLE_SESSION_NAME not set [[GH-9416](https://github.com/hashicorp/vault/pull/9416)]
 * sentinel: fix panic due to concurrent map access when rules iterate over metadata maps
 * secrets/aws: Fix issue where performance standbys weren't able to generate STS credentials after an IAM access key rotation in AWS and root IAM credential update in Vault [[GH-9186](https://github.com/hashicorp/vault/pull/9186)]
@@ -114,6 +126,7 @@ BUG FIXES:
 BUG FIXES:
 
 * seal/awskms: fix AWS KMS auto-unseal when AWS_ROLE_SESSION_NAME not set [[GH-9416](https://github.com/hashicorp/vault/pull/9416)]
+* auth/okta: fix bug introduced in 1.4.0 that broke handling of external groups with > 200 members [[GH-9580](https://github.com/hashicorp/vault/pull/9580)]
 
 IMPROVEMENTS:
 * ui: Add transit key algorithms aes128-gcm96, ecdsa-p384, ecdsa-p521 to the UI. [[GH-9070](https://github.com/hashicorp/vault/pull/9070)] & [[GH-9520](https://github.com/hashicorp/vault/pull/9520)]
@@ -310,7 +323,7 @@ BUG FIXES:
 * cli: Fix CLI namespace autocompletion [[GH-8315](https://github.com/hashicorp/vault/pull/8315)]
 * identity: Fix incorrect caching of identity token JWKS responses [[GH-8412](https://github.com/hashicorp/vault/pull/8412)]
 * metrics/stackdriver: Fix issue that prevents the stackdriver metrics library to create unnecessary stackdriver descriptors [[GH-8073](https://github.com/hashicorp/vault/pull/8073)]
-* replication: Fix issue causing cubbyholes in namespaces on performance secondaries to not work.
+* replication (enterprise): Fix issue causing cubbyholes in namespaces on performance secondaries to not work.
 * replication (enterprise): Unmounting a dynamic secrets backend could sometimes lead to replication errors.  Change the order of operations to prevent that.
 * seal (enterprise): Fix seal migration when transactional seal wrap backend is in use.
 * secrets/database/influxdb: Fix potential panic if connection to the InfluxDB database cannot be established [[GH-8282](https://github.com/hashicorp/vault/pull/8282)]

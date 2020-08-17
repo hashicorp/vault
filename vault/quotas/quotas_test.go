@@ -18,7 +18,7 @@ func TestQuotas_Precedence(t *testing.T) {
 
 	setQuotaFunc := func(t *testing.T, name, nsPath, mountPath string) Quota {
 		t.Helper()
-		quota := NewRateLimitQuota(name, nsPath, mountPath, 10, time.Second)
+		quota := NewRateLimitQuota(name, nsPath, mountPath, 10, time.Second, 0)
 		require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
 		return quota
 	}
