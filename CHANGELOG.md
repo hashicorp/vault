@@ -72,6 +72,7 @@ IMPROVEMENTS:
 * audit: Replication status requests are no longer audited. [[GH-8877](https://github.com/hashicorp/vault/pull/8877)]
 * audit: Added mount_type field to requests and responses. [[GH-9167](https://github.com/hashicorp/vault/pull/9167)]
 * auth/aws: Add support for Web Identity credentials [[GH-7738](https://github.com/hashicorp/vault/pull/7738)]
+* auth/aws: Retry on transient failures during AWS IAM auth login attempts [[GH-8727](https://github.com/hashicorp/vault/pull/8727)]
 * auth/jwt: Support users that are members of more than 200 groups on Azure [[GH-120](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/120)]
 * auth/kerberos: Support identities without userPrincipalName [[GH-44](https://github.com/hashicorp/vault-plugin-auth-kerberos/issues/44)]
 * auth/kubernetes: Allow disabling `iss` validation [[GH-91](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/91)]
@@ -197,7 +198,6 @@ IMPROVEMENTS:
 
 * auth/aws: The set of metadata stored during login is now configurable [[GH-8783](https://github.com/hashicorp/vault/pull/8783)]
 * auth/aws: Improve region selection to avoid errors seen if the account hasn't enabled some newer AWS regions [[GH-8679](https://github.com/hashicorp/vault/pull/8679)]
-* auth/aws: Retry on transient failures during AWS IAM auth login attempts [[GH-8727](https://github.com/hashicorp/vault/pull/8727)]
 * auth/azure: Enable login from Azure VMs with user-assigned identities [[GH-33](https://github.com/hashicorp/vault-plugin-auth-azure/pull/33)]
 * auth/gcp: The set of metadata stored during login is now configurable [[GH-92](https://github.com/hashicorp/vault-plugin-auth-gcp/pull/92)]
 * auth/gcp: The type of alias name used during login is now configurable [[GH-95](https://github.com/hashicorp/vault-plugin-auth-gcp/pull/95)]
