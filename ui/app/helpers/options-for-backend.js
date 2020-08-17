@@ -69,17 +69,17 @@ const SECRET_BACKENDS = {
         editComponent: 'transformation-edit',
       },
       // TODO: Add tabs as needed
-      // {
-      //   name: 'roles',
-      //   modelPrefix: 'role/',
-      //   label: 'Roles',
-      //   searchPlaceholder: 'Filter roles',
-      //   item: 'roles',
-      //   create: 'Create role',
-      //   tab: 'role',
-      //   listItemPartial: 'partials/secret-list/item',
-      //   editComponent: 'transform-role-edit',
-      // },
+      {
+        name: 'roles',
+        modelPrefix: 'role/',
+        label: 'Roles',
+        searchPlaceholder: 'Filter roles',
+        item: 'roles',
+        create: 'Create role',
+        tab: 'role',
+        listItemPartial: 'partials/secret-list/item',
+        editComponent: 'transform-role-edit',
+      },
       // {
       //   name: 'templates',
       //   modelPrefix: 'template/',
