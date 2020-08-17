@@ -56,13 +56,13 @@ Documentation, Getting Started, and Certification Exams
 Documentation is available on the [Vault website](https://www.vaultproject.io/docs/).
 
 If you're new to Vault and want to get started with security automation, please
-check out our [Getting Started guides](https://learn.hashicorp.com/vault?track=getting-started#getting-started)
-on HashiCorp's learning platform. There are also [additional guides](https://learn.hashicorp.com/vault?track=getting-started#operations-and-development)
+check out our [Getting Started guides](https://learn.hashicorp.com/collections/vault/getting-started)
+on HashiCorp's learning platform. There are also [additional guides](https://learn.hashicorp.com/vault)
 to continue your learning.
 
 Show off your Vault knowledge by passing a certification exam. Visit the
 [certification page](https://www.hashicorp.com/certification/#hashicorp-certified-vault-associate)
-for information about exams and find [study materials](https://learn.hashicorp.com/vault/certification/vault-associate)
+for information about exams and find [study materials](https://learn.hashicorp.com/collections/vault/certification)
 on HashiCorp's learning platform.
 
 Developing Vault
