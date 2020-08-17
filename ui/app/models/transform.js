@@ -48,7 +48,7 @@ const Model = DS.Model.extend({
     label: 'Type',
     possibleValues: TYPES,
     subText:
-      'Vault provides two types of transformations: Format Preserving Encryption (FPE) is reversible, while Masking is not.',
+      'Vault provides two types of transformations: Format Preserving Encryption (FPE) is reversible, while Masking is not. This cannot be edited later.',
   }),
   tweak_source: attr('string', {
     defaultValue: 'supplied',
