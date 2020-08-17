@@ -33,12 +33,12 @@ export default ApplicationAdapter.extend({
   },
 
   query(store, type, query) {
-    // console.log({ type });
+    console.log({ type });
     return this.fetchByQuery(query);
   },
 
   queryRecord(store, type, query) {
-    // console.log({ type });
+    console.log({ type });
     return this.ajax(this._url(type.modelName, query.backend, query.id), 'GET').then(result => {
       // console.log(result);
 

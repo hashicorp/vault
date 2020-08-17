@@ -76,7 +76,7 @@ const SECRET_BACKENDS = {
         searchPlaceholder: 'Filter roles',
         item: 'roles',
         create: 'Create role',
-        tab: 'role',
+        tab: 'roles',
         listItemPartial: 'partials/secret-list/item',
         editComponent: 'transform-role-edit',
       },
