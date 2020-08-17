@@ -32,25 +32,25 @@ function App({ Component, pageProps }) {
         icon={[
           {
             href:
-              'https://www.datocms-assets.com/2885/1527033389-favicon.png?h=16&w=16',
+              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=16&w=16',
             type: 'image/png',
             sizes: '16x16',
           },
           {
             href:
-              'https://www.datocms-assets.com/2885/1527033389-favicon.png?h=32&w=32',
+              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=32&w=32',
             type: 'image/png',
             sizes: '32x32',
           },
           {
             href:
-              'https://www.datocms-assets.com/2885/1527033389-favicon.png?h=96&w=96',
+              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=96&w=96',
             type: 'image/png',
             sizes: '96x96',
           },
           {
             href:
-              'https://www.datocms-assets.com/2885/1527033389-favicon.png?h=192&w=192',
+              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=192&w=192',
             type: 'image/png',
             sizes: '192x192',
           },
