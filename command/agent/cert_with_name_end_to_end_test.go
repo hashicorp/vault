@@ -3,10 +3,6 @@ package agent
 import (
 	"context"
 	"encoding/pem"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -14,6 +10,10 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
 	vaultcert "github.com/hashicorp/vault/builtin/credential/cert"
 	"github.com/hashicorp/vault/command/agent/auth"
 	agentcert "github.com/hashicorp/vault/command/agent/auth/cert"
