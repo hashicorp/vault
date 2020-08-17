@@ -43,6 +43,11 @@ var (
 	errInvalidGetCallerIdentityResponse = errors.New("body of GetCallerIdentity is invalid")
 )
 
+var (
+	errRequestBodyNotValid              = errors.New("iam request body is invalid")
+	errInvalidGetCallerIdentityResponse = errors.New("body of GetCallerIdentity is invalid")
+)
+
 func (b *backend) pathLogin() *framework.Path {
 	return &framework.Path{
 		Pattern: "login$",
