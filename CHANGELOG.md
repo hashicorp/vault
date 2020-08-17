@@ -1,4 +1,41 @@
-## 1.4.2 (TBD)
+## 1.4.4
+### TBD
+
+BUG FIXES:
+
+* seal/awskms: fix AWS KMS auto-unseal when AWS_ROLE_SESSION_NAME not set [[GH-9416](https://github.com/hashicorp/vault/pull/9416)]
+* auth/okta: fix bug introduced in 1.4.0 that broke handling of external groups with > 200 members [[GH-9580](https://github.com/hashicorp/vault/pull/9580)]
+
+IMPROVEMENTS:
+* auth/aws: Retry on transient failures during AWS IAM auth login attempts [[GH-8727](https://github.com/hashicorp/vault/pull/8727)]
+* ui: Add transit key algorithms aes128-gcm96, ecdsa-p384, ecdsa-p521 to the UI. [[GH-9070](https://github.com/hashicorp/vault/pull/9070)] & [[GH-9520](https://github.com/hashicorp/vault/pull/9520)]
+
+## 1.4.3
+### July 2nd, 2020
+
+IMPROVEMENTS:
+
+* auth/aws: Add support for Web Identity credentials [[GH-9251](https://github.com/hashicorp/vault/pull/9251)]
+* auth/kerberos: Support identities without userPrincipalName [[GH-44](https://github.com/hashicorp/vault-plugin-auth-kerberos/issues/44)]
+* core: Add the Go version used to build a Vault binary to the server message output. [[GH-9078](https://github.com/hashicorp/vault/pull/9078)]
+* secrets/database: Add static role rotation for MongoDB Atlas database plugin [[GH-9311](https://github.com/hashicorp/vault/pull/9311)]
+* ui: Link to the Vault Changelog in the UI footer [[GH-9216](https://github.com/hashicorp/vault/pull/9216)]
+
+BUG FIXES:
+
+* agent: Restart template server when it shuts down [[GH-9200](https://github.com/hashicorp/vault/pull/9200)]
+* auth/oci: Fix issue where users of the Oracle Cloud Infrastructure (OCI) auth method could not authenticate when the plugin backend was mounted at a non-default path. [[GH-9278](https://github.com/hashicorp/vault/pull/9278)]
+* replication: The issue causing cubbyholes in namespaces on performance secondaries to not work, which was fixed in 1.4.0, was still an issue when the primary was both a performance primary and DR primary.
+* seal: (enterprise) Fix issue causing stored seal and recovery keys to be mistaken as sealwrapped values
+* secrets/aws: Fix issue where performance standbys weren't able to generate STS credentials after an IAM access key rotation in AWS and root IAM credential update in Vault [[GH-9207](https://github.com/hashicorp/vault/pull/9207)]
+* secrets/database: Fix issue that prevents performance standbys from connecting to databases after a root credential rotation [[GH-9208](https://github.com/hashicorp/vault/pull/9208)]
+* secrets/gcp: Fix issue were updates were not being applied to the `token_scopes` of a roleset. [[GH-9277](https://github.com/hashicorp/vault/pull/9277)]
+
+## 1.4.2 (May 21st, 2020)
+
+SECURITY:
+* core: Proxy environment variables are now redacted before being logged, in case the URLs include a username:password. This vulnerability, CVE-2020-13223, is fixed in 1.3.6 and 1.4.2, but affects 1.4.0 and 1.4.1, as well as older versions of Vault [[GH-9022](https://github.com/hashicorp/vault/pull/9022)]
+* secrets/gcp: Fix a regression in 1.4.0 where the system TTLs were being used instead of the configured backend TTLs for dynamic service accounts. This vulnerability is CVE-2020-12757. [[GH-85](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/85)]
 
 IMPROVEMENTS:
 
@@ -11,15 +48,24 @@ IMPROVEMENTS:
   
 BUG FIXES:
 
+* auth/aws: Fix token renewal issues caused by the metadata changes in 1.4.1 [[GH-8991](https://github.com/hashicorp/vault/pull/8991)] 
+* auth/ldap: Fix 1.4.0 regression that could result in auth failures when LDAP auth config includes upndomain. [[GH-9041](https://github.com/hashicorp/vault/pull/9041)]
+* secrets/ad: Forward rotation requests from standbys to active clusters [[GH-66](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/66)]
+* secrets/database: Prevent generation of usernames that are not allowed by the MongoDB Atlas API [[GH-9](https://github.com/hashicorp/vault-plugin-database-mongodbatlas/pull/9)]
+* secrets/database: Return an error if a manual rotation of static account credentials fails [[GH-9035](https://github.com/hashicorp/vault/pull/9035)]
+* secrets/openldap: Forward all rotation requests from standbys to active clusters [[GH-9028](https://github.com/hashicorp/vault/pull/9028)]
+* secrets/transform (enterprise): Fix panic that could occur when accessing cached template entries, such as a requests
+  that accessed templates directly or indirectly from a performance standby node.
 * serviceregistration: Fix a regression for Consul service registration that ignored using the listener address as
   the redirect address unless api_addr was provided. It now properly uses the same redirect address as the one
-  used by Vault's Core object. [[GH-8976](https://github.com/hashicorp/vault/pull/8976)] 
+  used by Vault's Core object. [[GH-8976](https://github.com/hashicorp/vault/pull/8976)]
 * storage/raft: Advertise the configured cluster address to the rest of the nodes in the raft cluster. This fixes
   an issue where a node advertising 0.0.0.0 is not using a unique hostname. [[GH-9008](https://github.com/hashicorp/vault/pull/9008)]
 * storage/raft: Fix panic when multiple nodes attempt to join the cluster at once. [[GH-9008](https://github.com/hashicorp/vault/pull/9008)]
 * sys: The path provided in `sys/internal/ui/mounts/:path` is now namespace-aware. This fixes an issue
   with `vault kv` subcommands that had namespaces provided in the path returning permission denied all the time.
   [[GH-8962](https://github.com/hashicorp/vault/pull/8962)]
+* ui: Fix snowman that appears when namespaces have more than one period [[GH-8910](https://github.com/hashicorp/vault/pull/8910)]
 
 ## 1.4.1 (April 30th, 2020)
 
