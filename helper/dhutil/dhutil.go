@@ -1,11 +1,15 @@
 package dhutil
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"golang.org/x/crypto/hkdf"
 	"io"
 
 	"golang.org/x/crypto/curve25519"
@@ -34,9 +38,9 @@ func GeneratePublicPrivateKey() ([]byte, []byte, error) {
 	return public[:], scalar[:], nil
 }
 
-// generateSharedKey uses the private key and the other party's public key to
+// GenerateSharedSecret uses the private key and the other party's public key to
 // generate the shared secret.
-func GenerateSharedKey(ourPrivate, theirPublic []byte) ([]byte, error) {
+func GenerateSharedSecret(ourPrivate, theirPublic []byte) ([]byte, error) {
 	if len(ourPrivate) != 32 {
 		return nil, fmt.Errorf("invalid private key length: %d", len(ourPrivate))
 	}
@@ -44,13 +48,50 @@ func GenerateSharedKey(ourPrivate, theirPublic []byte) ([]byte, error) {
 		return nil, fmt.Errorf("invalid public key length: %d", len(theirPublic))
 	}
 
-	var scalar, pub, secret [32]byte
-	copy(scalar[:], ourPrivate)
-	copy(pub[:], theirPublic)
+	return curve25519.X25519(ourPrivate, theirPublic)
+}
 
-	curve25519.ScalarMult(&secret, &scalar, &pub)
+// DeriveSharedKey uses HKDF to derive a key from a shared secret and public keys
+func DeriveSharedKey(secret, ourPublic, theirPublic []byte) ([]byte, error) {
+	// Derive the final key from the HKDF of the secret and public keys.
 
-	return secret[:], nil
+/*
+	Internally, HKDF hashes the secret and two public keys. If Alice and Bob are doing DH key exchange, Alice calculates:
+
+	HKDF(secret, A, B) since ourPublic is A.
+
+		Bob calculates HKDF(secret, B, A), since Bob's ours is B. That produces a different value. Now we only care
+	    that both public keys participate in the derivation, so simply sorting them so they are in a consistent
+	    numerical order (either one would do) arrives at an agreed value.
+*/
+
+	var pub1 []byte
+	var pub2 []byte
+	switch bytes.Compare(ourPublic, theirPublic) {
+	case 0:
+		return nil, errors.New("same public key supplied for both participants")
+	case -1:
+		pub1 = ourPublic
+		pub2 = theirPublic
+	case 1:
+		pub1 = theirPublic
+		pub2 = ourPublic
+	}
+
+	kio := hkdf.New(sha256.New, secret, pub1, pub2)
+
+	var key [32]byte
+	n, err := io.ReadFull(kio, key[:])
+	if err != nil {
+		// Don't return the key along with the error to prevent misuse
+		return nil, err
+	}
+	if n != 32 {
+		return nil, errors.New("short read from hkdf")
+	}
+	fmt.Printf("Key: %s\n", hex.EncodeToString(key[:]))
+
+	return key[:], nil
 }
 
 // Use AES256-GCM to encrypt some plaintext with a provided key. The returned values are

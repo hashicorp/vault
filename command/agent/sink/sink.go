@@ -32,6 +32,7 @@ type SinkConfig struct {
 	WrapTTL            time.Duration
 	DHType             string
 	DHPath             string
+	DeriveKey          bool
 	AAD                string
 	cachedRemotePubKey []byte
 	cachedPubKey       []byte
@@ -205,7 +206,16 @@ func (s *SinkConfig) encryptToken(token string) (string, error) {
 		resp.Curve25519PublicKey = s.cachedPubKey
 	}
 
-	aesKey, err = dhutil.GenerateSharedKey(s.cachedPriKey, s.cachedRemotePubKey)
+	secret, err := dhutil.GenerateSharedSecret(s.cachedPriKey, s.cachedRemotePubKey)
+	if err != nil {
+		return "", errwrap.Wrapf("error calculating shared key: {{err}}", err)
+	}
+	if s.DeriveKey {
+		aesKey, err = dhutil.DeriveSharedKey(secret, s.cachedPubKey, s.cachedRemotePubKey)
+	} else {
+		aesKey = secret
+	}
+
 	if err != nil {
 		return "", errwrap.Wrapf("error deriving shared key: {{err}}", err)
 	}
