@@ -315,8 +315,8 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 				}
 
 				if data.role.AllowedDomainsTemplate {
-					matched, _ := regexp.MatchString(`^{{.+?}}$`, currDomain)
-					if matched && data.req.EntityID != "" {
+					isTemplate, _ := framework.ValidateIdentityTemplate(currDomain)
+					if isTemplate && data.req.EntityID != "" {
 						tmpCurrDomain, err := framework.PopulateIdentityTemplate(currDomain, data.req.EntityID, b.System())
 						if err != nil {
 							continue
