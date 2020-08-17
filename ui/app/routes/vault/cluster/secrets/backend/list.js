@@ -28,12 +28,12 @@ export default Route.extend({
       case 'role':
         modelType = 'transform/role';
         break;
-      // case 'template':
-      //   modelType = 'transform/template';
-      //   break;
-      // case 'alphabet':
-      //   modelType = 'transform/alphabet';
-      //   break;
+      case 'template':
+        modelType = 'transform/template';
+        break;
+      case 'alphabet':
+        modelType = 'transform/alphabet';
+        break;
       default:
         modelType = 'transform'; // CBS TODO: transform/transformation
         break;
@@ -103,6 +103,7 @@ export default Route.extend({
           pageFilter: params.pageFilter,
         })
         .then(model => {
+          console.log({ model });
           this.set('has404', false);
           return model;
         })
