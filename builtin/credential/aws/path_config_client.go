@@ -302,7 +302,7 @@ type clientConfig struct {
 	STSEndpoint            string `json:"sts_endpoint"`
 	IAMServerIdHeaderValue string `json:"iam_server_id_header_value"`
 	AllowedSTSHeaderValues []string `json:"allowed_sts_header_values"`
-	MaxRetries             int    `json:"max_retries"`
+	MaxRetries             int      `json:"max_retries"`
 }
 
 func (c *clientConfig) validateAllowedSTSHeaderValues(headers http.Header) error {
