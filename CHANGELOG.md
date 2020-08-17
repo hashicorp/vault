@@ -32,6 +32,7 @@ BUG FIXES:
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-9603](https://github.com/hashicorp/vault/pull/9603)]
 * replication (enterprise): Fix status API output incorrectly stating replication is in `idle` state.
 * core: Fix panic when printing over-long info fields at startup [[GH-9681](https://github.com/hashicorp/vault/pull/9681)]
+* core: Seal migration using the new minimal-downtime strategy didn't work properly with performance standbys. [[GH-9690](https://github.com/hashicorp/vault/pull/9690)]
 
 ## 1.5.0
 ### July 21st, 2020
