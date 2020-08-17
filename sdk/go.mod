@@ -11,6 +11,7 @@ require (
 	github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
 	github.com/golang/protobuf v1.3.2
 	github.com/golang/snappy v0.0.1
+	github.com/gorilla/mux v1.7.4 // indirect
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-hclog v0.12.0
 	github.com/hashicorp/go-immutable-radix v1.0.0

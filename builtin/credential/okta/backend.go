@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/okta/okta-sdk-golang/okta"
+	"github.com/okta/okta-sdk-golang/v2/okta"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -77,7 +77,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		}
 	}
 
-	shim, err := cfg.OktaClient()
+	shim, err := cfg.OktaClient(ctx)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -258,9 +258,9 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 
 	var allGroups []string
 	// Only query the Okta API for group membership if we have a token
-	client := shim.Client()
+	client, oktactx := shim.Client()
 	if client != nil {
-		oktaGroups, err := b.getOktaGroups(client, &result.Embedded.User)
+		oktaGroups, err := b.getOktaGroups(oktactx, client, &result.Embedded.User)
 		if err != nil {
 			return nil, logical.ErrorResponse(fmt.Sprintf("okta failure retrieving groups: %v", err)), nil, nil
 		}
@@ -308,14 +308,24 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	return policies, oktaResponse, allGroups, nil
 }
 
-func (b *backend) getOktaGroups(client *okta.Client, user *okta.User) ([]string, error) {
-	groups, _, err := client.User.ListUserGroups(user.Id, nil)
+func (b *backend) getOktaGroups(ctx context.Context, client *okta.Client, user *okta.User) ([]string, error) {
+	groups, resp, err := client.User.ListUserGroups(ctx, user.Id)
 	if err != nil {
 		return nil, err
 	}
 	oktaGroups := make([]string, 0, len(groups))
 	for _, group := range groups {
 		oktaGroups = append(oktaGroups, group.Profile.Name)
+	}
+	for resp.HasNextPage() {
+		var nextGroups []*okta.Group
+		resp, err = resp.Next(ctx, &nextGroups)
+		if err != nil {
+			return nil, err
+		}
+		for _, group := range nextGroups {
+			oktaGroups = append(oktaGroups, group.Profile.Name)
+		}
 	}
 	if b.Logger().IsDebug() {
 		b.Logger().Debug("Groups fetched from Okta", "num_groups", len(oktaGroups), "groups", fmt.Sprintf("%#v", oktaGroups))
