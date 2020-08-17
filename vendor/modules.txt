@@ -357,7 +357,7 @@ github.com/gorhill/cronexpr
 github.com/gorilla/websocket
 # github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed
 github.com/hailocab/go-hostpool
-# github.com/hashicorp/consul-template v0.25.0
+# github.com/hashicorp/consul-template v0.25.1
 github.com/hashicorp/consul-template/child
 github.com/hashicorp/consul-template/config
 github.com/hashicorp/consul-template/dependency

@@ -3,14 +3,9 @@ package dependency
 import (
 	"log"
 	"math/rand"
-	"path"
-	"strings"
 	"time"
 
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
-
 	"github.com/hashicorp/vault/api"
 )
 
@@ -106,22 +101,6 @@ func renewSecret(clients *ClientSet, d renewer) error {
 	}
 }
 
-// durationFrom cert gets the duration of validity from cert data and
-// returns that value as an integer number of seconds
-func durationFromCert(certData string) int {
-	block, _ := pem.Decode([]byte(certData))
-	if block == nil {
-		return -1
-	}
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		log.Printf("[WARN] Unable to parse certificate data: %s", err)
-		return -1
-	}
-
-	return int(cert.NotAfter.Sub(cert.NotBefore).Seconds())
-}
-
 // leaseCheckWait accepts a secret and returns the recommended amount of
 // time to sleep.
 func leaseCheckWait(s *Secret) time.Duration {
@@ -132,12 +111,11 @@ func leaseCheckWait(s *Secret) time.Duration {
 	}
 
 	// Handle if this is a certificate with no lease
-	if certInterface, ok := s.Data["certificate"]; ok && s.LeaseID == "" {
-		if certData, ok := certInterface.(string); ok {
-			newDuration := durationFromCert(certData)
-			if newDuration > 0 {
-				log.Printf("[DEBUG] Found certificate and set lease duration to %d seconds", newDuration)
-				base = newDuration
+	if _, ok := s.Data["certificate"]; ok && s.LeaseID == "" {
+		if expInterface, ok := s.Data["expiration"]; ok {
+			if expData, err := expInterface.(json.Number).Int64(); err == nil {
+				base = int(expData - time.Now().Unix())
+				log.Printf("[DEBUG] Found certificate and set lease duration to %d seconds", base)
 			}
 		}
 	}
@@ -348,22 +326,4 @@ func isKVv2(client *api.Client, path string) (string, bool, error) {
 	}
 
 	return mountPath, false, nil
-}
-
-func addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
-	switch {
-	case p == mountPath, p == strings.TrimSuffix(mountPath, "/"):
-		return path.Join(mountPath, apiPrefix)
-	default:
-		p = strings.TrimPrefix(p, mountPath)
-		// Don't add /data/ to the path if it's been added manually.
-		apiPathPrefix := apiPrefix
-		if !strings.HasSuffix(apiPrefix, "/") {
-			apiPathPrefix += "/"
-		}
-		if strings.HasPrefix(p, apiPathPrefix) {
-			return path.Join(mountPath, p)
-		}
-		return path.Join(mountPath, apiPrefix, p)
-	}
 }
