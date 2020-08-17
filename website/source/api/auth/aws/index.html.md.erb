@@ -65,7 +65,11 @@ capabilities, the credentials are fetched automatically.
   signed headers validated by AWS. This is to protect against different types of
   replay attacks, for example a signed request sent to a dev server being resent
   to a production server. Consider setting this to the Vault server's DNS name.
-
+- `allowed_sts_header_values` `([]string: nil)` The list of allowed request headers 
+  when providing the iam_request_headers for an IAM based login call.  If not 
+  provided (recommended), defaults to the set of headers AWS STS expects for a 
+  GetCallerIdentity call.   
+ 
 ### Sample Payload
 
 ```json
