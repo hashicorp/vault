@@ -1,19 +1,31 @@
 import { assign } from '@ember/polyfills';
 import { resolve, allSettled } from 'rsvp';
-import ApplicationAdapter from './application';
+import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
   // TODO this adapter was copied over, much of this stuff may or may not need to be here.
   namespace: 'v1',
 
-  // defaultSerializer: 'role',
+  pathForType(type) {
+    return type.replace('transform/', '');
+  },
+
+  _url(modelType, backend, id) {
+    let type = this.pathForType(modelType);
+    let base = `/${this.namespace}/${encodePath(backend)}/${type}`;
+    if (id) {
+      return `${base}/${encodePath(id)}`;
+    }
+    // CBS TODO: if no id provided, should we assume it's a LIST?
+    return base;
+  },
 
   createOrUpdate(store, type, snapshot) {
     const serializer = store.serializerFor('transform'); // TODO replace transform with type.modelName
     const data = serializer.serialize(snapshot);
     const { id } = snapshot;
-    let url = this.urlForTransformations(snapshot.record.get('backend'), id);
+    let url = this._url(type.modelName, snapshot.record.get('backend'), id);
 
     return this.ajax(url, 'POST', { data });
   },
@@ -28,82 +40,27 @@ export default ApplicationAdapter.extend({
 
   deleteRecord(store, type, snapshot) {
     const { id } = snapshot;
-    return this.ajax(this.urlForTransformations(snapshot.record.get('backend'), id), 'DELETE');
+    return this.ajax(this._url(type.modelName, snapshot.record.get('backend'), id), 'DELETE');
   },
 
-  pathForType() {
-    return 'transform';
-  },
-
-  urlForAlphabet(backend, id) {
-    let url = `${this.buildURL()}/${encodePath(backend)}/alphabet`;
-    if (id) {
-      url = url + '/' + encodePath(id);
-    }
-    return url;
-  },
-
-  urlForTransformations(backend, id) {
-    let url = `${this.buildURL()}/${encodePath(backend)}/transformation`;
-    if (id) {
-      url = url + '/' + encodePath(id);
-    }
-    return url;
-  },
-
-  optionsForQuery(id) {
-    let data = {};
-    if (!id) {
-      data['list'] = true;
-    }
-    return { data };
-  },
-
-  fetchByQuery(store, query) {
-    const { id, backend } = query;
-    let zeroAddressAjax = resolve();
-    const queryAjax = this.ajax(this.urlForTransformations(backend, id), 'GET', this.optionsForQuery(id));
-    // TODO: come back to why you need this, carry over.
-    // if (!id) {
-    //   zeroAddressAjax = this.findAllZeroAddress(store, query);
-    // }
-
-    return allSettled([queryAjax, zeroAddressAjax]).then(results => {
-      // query result 404d, so throw the adapterError
-      if (!results[0].value) {
-        throw results[0].reason;
-      }
-      let resp = {
-        id,
-        name: id,
-        backend,
-        data: {},
-      };
-
-      results.forEach(result => {
-        if (result.value) {
-          if (result.value.data.roles) {
-            resp.data = assign({}, resp.data, { zero_address_roles: result.value.data.roles });
-          } else {
-            resp.data = assign({}, resp.data, result.value.data);
-          }
-        }
-      });
-      return resp;
-    });
-  },
-
-  findAllZeroAddress(store, query) {
-    const { backend } = query;
-    const url = `/v1/${encodePath(backend)}/config/zeroaddress`;
-    return this.ajax(url, 'GET');
+  urlForQuery(modelType, backend) {
+    let base = this._url(modelType, backend);
+    return base + '?list=true';
   },
 
   query(store, type, query) {
-    return this.fetchByQuery(store, query);
+    return this.ajax(this.urlForQuery(type.modelName, query.backend), 'GET').then(result => {
+      console.log(result);
+
+      return result;
+    });
   },
 
   queryRecord(store, type, query) {
-    return this.fetchByQuery(store, query);
+    return this.ajax(this._url(type.modelName, query.backend, query.id), 'GET').then(result => {
+      console.log(result);
+
+      return result;
+    });
   },
 });
