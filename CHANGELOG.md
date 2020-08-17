@@ -73,7 +73,6 @@ IMPROVEMENTS:
 * audit: Replication status requests are no longer audited. [[GH-8877](https://github.com/hashicorp/vault/pull/8877)]
 * audit: Added mount_type field to requests and responses. [[GH-9167](https://github.com/hashicorp/vault/pull/9167)]
 * auth/aws: Add support for Web Identity credentials [[GH-7738](https://github.com/hashicorp/vault/pull/7738)]
-* auth/aws: Retry on transient failures during AWS IAM auth login attempts [[GH-8727](https://github.com/hashicorp/vault/pull/8727)]
 * auth/jwt: Support users that are members of more than 200 groups on Azure [[GH-120](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/120)]
 * auth/kerberos: Support identities without userPrincipalName [[GH-44](https://github.com/hashicorp/vault-plugin-auth-kerberos/issues/44)]
 * auth/kubernetes: Allow disabling `iss` validation [[GH-91](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/91)]
@@ -129,6 +128,7 @@ BUG FIXES:
 * auth/okta: fix bug introduced in 1.4.0 that broke handling of external groups with > 200 members [[GH-9580](https://github.com/hashicorp/vault/pull/9580)]
 
 IMPROVEMENTS:
+* auth/aws: Retry on transient failures during AWS IAM auth login attempts [[GH-8727](https://github.com/hashicorp/vault/pull/8727)]
 * ui: Add transit key algorithms aes128-gcm96, ecdsa-p384, ecdsa-p521 to the UI. [[GH-9070](https://github.com/hashicorp/vault/pull/9070)] & [[GH-9520](https://github.com/hashicorp/vault/pull/9520)]
 
 ## 1.4.3
@@ -140,6 +140,7 @@ IMPROVEMENTS:
 * auth/kerberos: Support identities without userPrincipalName [[GH-44](https://github.com/hashicorp/vault-plugin-auth-kerberos/issues/44)]
 * core: Add the Go version used to build a Vault binary to the server message output. [[GH-9078](https://github.com/hashicorp/vault/pull/9078)]
 * secrets/database: Add static role rotation for MongoDB Atlas database plugin [[GH-9311](https://github.com/hashicorp/vault/pull/9311)]
+* physical/mysql: Require TLS or plaintext flagging in MySQL configuration [[GH-9012](https://github.com/hashicorp/vault/pull/9012)]
 * ui: Link to the Vault Changelog in the UI footer [[GH-9216](https://github.com/hashicorp/vault/pull/9216)]
 
 BUG FIXES:
