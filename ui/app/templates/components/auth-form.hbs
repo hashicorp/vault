@@ -70,16 +70,18 @@
       onsubmit={{action "doSubmit"}}
     >
         {{partial providerPartialName}}
-        {{#if (not-eq selectedAuthBackend.type "token")}}
+        {{#if (and (not-eq selectedAuthBackend.type "token") (not-eq selectedAuthBackend.type "unwrap")) }}
           <AuthFormOptions
             @customPath={{this.customPath}}
             @onPathChange={{action (mut this.customPath)}}
             @selectedAuthIsPath={{this.selectedAuthIsPath}}
           />
         {{/if}}
+        {{#if (not-eq selectedAuthBackend.type "unwrap") }}
         <button data-test-auth-submit=true type="submit" disabled={{authenticate.isRunning}} class="button is-primary {{if authenticate.isRunning 'is-loading'}}" id="auth-submit">
           Sign In
         </button>
+        {{/if}}
     </form>
   {{/if}}
 </div>
