@@ -72,13 +72,12 @@ func newKMAC(key []byte, tagSize int, customizationString []byte, c sha3.ShakeHa
 	if tagSize < kmacMinimumTagSize {
 		panic("tagSize is too small")
 	}
-	k := &kmac{ShakeHash: c, tagSize: tagSize}
+	k := &kmac{ShakeHash: c, tagSize: tagSize, rate: rate}
 	// leftEncode returns max 9 bytes
 	k.initBlock = make([]byte, 0, 9+len(key))
 	k.initBlock = append(k.initBlock, leftEncode(uint64(len(key)*8))...)
 	k.initBlock = append(k.initBlock, key...)
 	k.Write(bytepad(k.initBlock, k.BlockSize()))
-	k.rate = rate
 	return k
 }
 
