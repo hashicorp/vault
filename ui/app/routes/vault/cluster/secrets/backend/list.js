@@ -25,20 +25,19 @@ export default Route.extend({
   modelTypeForTransform(tab) {
     let modelType;
     switch (tab) {
-      case 'role':
+      case 'roles':
         modelType = 'transform/role';
         break;
-      case 'template':
+      case 'templates':
         modelType = 'transform/template';
         break;
-      case 'alphabet':
+      case 'alphabets':
         modelType = 'transform/alphabet';
         break;
       default:
         modelType = 'transform'; // CBS TODO: transform/transformation
         break;
     }
-    console.log('modelType, tab', modelType, tab);
     return modelType;
   },
 
