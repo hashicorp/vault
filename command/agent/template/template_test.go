@@ -177,7 +177,9 @@ func TestServerRun(t *testing.T) {
 			server.testingLimitRetry = 3
 
 			errCh := make(chan error)
-			go server.Run(ctx, templateTokenCh, templatesToRender, errCh)
+			go func() {
+				errCh <- server.Run(ctx, templateTokenCh, templatesToRender)
+			}()
 
 			// send a dummy value to trigger the internal Runner to query for secret
 			// info
