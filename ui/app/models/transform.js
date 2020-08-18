@@ -42,6 +42,7 @@ const Model = DS.Model.extend({
     label: 'Name',
     fieldValue: 'id',
     readOnly: true,
+    subText: 'The name for your transformation. This cannot be edited later.',
   }),
   type: attr('string', {
     defaultValue: 'fpe',

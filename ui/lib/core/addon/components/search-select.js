@@ -9,12 +9,13 @@ import layout from '../templates/components/search-select';
  * @module SearchSelect
  * The `SearchSelect` is an implementation of the [ember-power-select-with-create](https://github.com/poteto/ember-cli-flash) used for form elements where options come dynamically from the API.
  * @example
- * <SearchSelect @id="group-policies" @models={{["policies/acl"]}} @onChange={{onChange}} @inputValue={{get model valuePath}} @helpText="Policies associated with this group" @label="Policies" @fallbackComponent="string-list" />
+ * <SearchSelect @id="group-policies" @models={{["policies/acl"]}} @onChange={{onChange}} @initialSelected={{array 'selectedValue'}} @inputValue={{get model valuePath}} @helpText="Policies associated with this group" @label="Policies" @fallbackComponent="string-list" />
  *
  * @param id {String} - The name of the form field
  * @param models {String} - An array of model types to fetch from the API.
  * @param onChange {Func} - The onchange action for this form field.
  * @param inputValue {String | Array} -  A comma-separated string or an array of strings.
+ * @param [initialSelected] {Array} -  An array of initially selected options to display.
  * @param [helpText] {String} - Text to be displayed in the info tooltip for this form field
  * @param [subText] {String} - Text to be displayed below the label
  * @param label {String} - Label for this form field
@@ -44,6 +45,9 @@ export default Component.extend({
   shouldRenderName: false,
   init() {
     this._super(...arguments);
+    if (this.initialSelected) {
+      return this.set('selectedOptions', this.initialSelected); // need array helper to pass in.
+    }
     this.set('selectedOptions', this.inputValue || []);
   },
   didRender() {
@@ -110,6 +114,7 @@ export default Component.extend({
     }
   }).on('didInsertElement'),
   handleChange() {
+    // if select limit < selection length don't change, just return, selectLimit new property
     if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
       this.onChange(Array.from(this.selectedOptions, option => option.id));
     } else {
