@@ -6,7 +6,14 @@
     {{#each model.transformFieldAttrs as |attr|}}
       {{#if (eq attr.name 'templates')}}
         {{!-- TODO: for now don't show until backend makes api changes. --}}
-      {{else}}
+      {{else if (eq attr.name 'template')}}
+        <FormField
+          data-test-field
+          @attr={{attr}}
+          @model={{model}}
+          @selectLimit={{1}}
+        />
+       {{else}}
         <FormField
           data-test-field
           @attr={{attr}}

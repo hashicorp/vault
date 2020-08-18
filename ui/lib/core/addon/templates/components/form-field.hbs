@@ -73,7 +73,8 @@
       @subLabel={{attr.options.subLabel}}
       @fallbackComponent={{attr.options.fallbackComponent}}
       @initialSelected={{initialSelected}}
-      />
+      @selectLimit={{selectLimit}}
+    />
   </div>
 {{else if (eq attr.options.editType "mountAccessor")}}
   {{mount-accessor-select

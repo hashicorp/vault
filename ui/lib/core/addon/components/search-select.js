@@ -9,7 +9,7 @@ import layout from '../templates/components/search-select';
  * @module SearchSelect
  * The `SearchSelect` is an implementation of the [ember-power-select-with-create](https://github.com/poteto/ember-cli-flash) used for form elements where options come dynamically from the API.
  * @example
- * <SearchSelect @id="group-policies" @models={{["policies/acl"]}} @onChange={{onChange}} @initialSelected={{array 'selectedValue'}} @inputValue={{get model valuePath}} @helpText="Policies associated with this group" @label="Policies" @fallbackComponent="string-list" />
+ * <SearchSelect @id="group-policies" @models={{["policies/acl"]}} @onChange={{onChange}} @initialSelected={{array 'selectedValue'}} @selectLimit={{2}} @inputValue={{get model valuePath}} @helpText="Policies associated with this group" @label="Policies" @fallbackComponent="string-list" />
  *
  * @param id {String} - The name of the form field
  * @param models {String} - An array of model types to fetch from the API.
@@ -18,6 +18,7 @@ import layout from '../templates/components/search-select';
  * @param [initialSelected] {Array} -  An array of initially selected options to display.
  * @param [helpText] {String} - Text to be displayed in the info tooltip for this form field
  * @param [subText] {String} - Text to be displayed below the label
+ * @param [selectLimit] {Number} - A number that sets the limit to how many select options they can choose
  * @param label {String} - Label for this form field
  * @param [subLabel] {String} - a smaller label below the main Label
  * @param fallbackComponent {String} - name of component to be rendered if the API call 403s
@@ -114,7 +115,6 @@ export default Component.extend({
     }
   }).on('didInsertElement'),
   handleChange() {
-    // if select limit < selection length don't change, just return, selectLimit new property
     if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
       this.onChange(Array.from(this.selectedOptions, option => option.id));
     } else {
@@ -131,6 +131,14 @@ export default Component.extend({
       this.handleChange();
     },
     selectOption(option) {
+      if (this.selectLimit) {
+        if (
+          this.selectLimit === this.selectedOptions.length ||
+          this.selectLimit < this.selectedOptions.length
+        ) {
+          return;
+        }
+      }
       this.selectedOptions.pushObject(option);
       this.options.removeObject(option);
       this.handleChange();
