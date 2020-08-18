@@ -151,6 +151,14 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		return http.StatusInternalServerError, nil, err
 	}
 
+	// Get leader status
+	isLeader, leaderAddress, _, err := core.Leader()
+	if errwrap.Contains(err, vault.ErrHANotEnabled.Error()) {
+		err = nil
+	}
+	if err != nil {
+		return http.StatusInternalServerError, nil, err
+	}
 	// Determine the status code
 	code := activeCode
 	switch {
@@ -196,6 +204,8 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		Version:                    version.GetVersion().VersionNumber(),
 		ClusterName:                clusterName,
 		ClusterID:                  clusterID,
+		IsLeader:                   isLeader,
+		LeaderAddress:              leaderAddress,
 	}
 
 	if init && !sealed && !standby {
@@ -217,4 +227,6 @@ type HealthResponse struct {
 	ClusterName                string `json:"cluster_name,omitempty"`
 	ClusterID                  string `json:"cluster_id,omitempty"`
 	LastWAL                    uint64 `json:"last_wal,omitempty"`
+	IsLeader                   bool   `json:"is_leader"`
+	LeaderAddress              string `json:"leader_address"`
 }
