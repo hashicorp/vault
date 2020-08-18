@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-hclog"
@@ -158,7 +159,7 @@ func TestServerRun(t *testing.T) {
 				templatesToRender = append(templatesToRender, templateTest.template)
 			}
 
-			ctx := context.Background()
+			ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
 			sc := ServerConfig{
 				Logger: logging.NewVaultLogger(hclog.Trace),
 				VaultConf: &config.Vault{
@@ -186,16 +187,16 @@ func TestServerRun(t *testing.T) {
 			templateTokenCh <- "test"
 
 			select {
-			case <-server.DoneCh:
-				if tc.expectError {
-					t.Fatalf("expected error for test case")
-				}
+			case <-ctx.Done():
+				t.Fatal("timeout reached before templates were rendered")
 			case err := <-errCh:
 				if err != nil && !tc.expectError {
 					t.Fatalf("did not expect error, got: %v", err)
 				}
-				t.Logf("received expected error: %v", err)
-				return
+				if err != nil && tc.expectError {
+					t.Logf("received expected error: %v", err)
+					return
+				}
 			}
 
 			// verify test file exists and has the content we're looking for
