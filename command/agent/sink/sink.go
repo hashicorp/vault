@@ -47,7 +47,6 @@ type SinkServerConfig struct {
 
 // SinkServer is responsible for pushing tokens to sinks
 type SinkServer struct {
-	DoneCh        chan struct{}
 	logger        hclog.Logger
 	client        *api.Client
 	random        *rand.Rand
@@ -57,7 +56,6 @@ type SinkServer struct {
 
 func NewSinkServer(conf *SinkServerConfig) *SinkServer {
 	ss := &SinkServer{
-		DoneCh:        make(chan struct{}),
 		logger:        conf.Logger,
 		client:        conf.Client,
 		random:        rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
@@ -100,7 +98,6 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 	ss.logger.Info("starting sink server")
 	defer func() {
 		ss.logger.Info("sink server stopped")
-		close(ss.DoneCh)
 	}()
 
 	type sinkToken struct {

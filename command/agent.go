@@ -15,8 +15,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/oklog/run"
-
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -44,6 +42,7 @@ import (
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/kr/pretty"
 	"github.com/mitchellh/cli"
+	"github.com/oklog/run"
 	"github.com/posener/complete"
 )
 
@@ -533,11 +532,12 @@ func (c *AgentCommand) Run(args []string) int {
 
 	var g run.Group
 
-	// This run group watches for
+	// This run group watches for signal termination
 	g.Add(func() error {
 		for {
 			select {
 			case <-c.ShutdownCh:
+				c.UI.Output("==> Vault agent shutdown triggered")
 				return nil
 			case <-ctx.Done():
 				return nil

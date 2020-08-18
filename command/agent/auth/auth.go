@@ -31,7 +31,6 @@ type AuthConfig struct {
 // AuthHandler is responsible for keeping a token alive and renewed and passing
 // new tokens to the sink server
 type AuthHandler struct {
-	DoneCh                       chan struct{}
 	OutputCh                     chan string
 	TemplateTokenCh              chan string
 	logger                       hclog.Logger
@@ -52,7 +51,6 @@ type AuthHandlerConfig struct {
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 	ah := &AuthHandler{
-		DoneCh: make(chan struct{}),
 		// This is buffered so that if we try to output after the sink server
 		// has been shut down, during agent shutdown, we won't block
 		OutputCh:                     make(chan string, 1),
@@ -84,7 +82,6 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	defer func() {
 		am.Shutdown()
 		close(ah.OutputCh)
-		close(ah.DoneCh)
 		close(ah.TemplateTokenCh)
 		ah.logger.Info("auth handler stopped")
 	}()
