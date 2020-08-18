@@ -3,6 +3,7 @@ package awsauth
 import (
 	"context"
 	"fmt"
+	"net/textproto"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +17,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	cache "github.com/patrickmn/go-cache"
 )
+
+var defaultAllowedSTSRequestHeaders = []string{"Authorization", "Content-Length", "Content-Type", "User-Agent", "X-Amz-Date", textproto.CanonicalMIMEHeaderKey(iamServerIdHeader)}
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(conf)
