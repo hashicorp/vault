@@ -124,9 +124,17 @@ func testCertWithNoNAmeEndToEnd(t *testing.T, ahWrapping bool) {
 		ahConfig.WrapTTL = 10 * time.Second
 	}
 	ah := auth.NewAuthHandler(ahConfig)
+	errCh := make(chan error)
 	go func() {
-		if err := ah.Run(ctx, am); err != nil {
-			t.Fatal(err)
+		errCh <- ah.Run(ctx, am)
+	}()
+	defer func() {
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}()
 
@@ -153,8 +161,15 @@ func testCertWithNoNAmeEndToEnd(t *testing.T, ahWrapping bool) {
 		Client: client,
 	})
 	go func() {
-		if err := ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}); err != nil {
-			t.Fatal(err)
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+	}()
+	defer func() {
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}()
 

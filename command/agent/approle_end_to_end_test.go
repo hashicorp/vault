@@ -222,9 +222,17 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		Client: client,
 	}
 	ah := auth.NewAuthHandler(ahConfig)
+	errCh := make(chan error)
 	go func() {
-		if err := ah.Run(ctx, am); err != nil {
-			t.Fatal(err)
+		errCh <- ah.Run(ctx, am)
+	}()
+	defer func() {
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}()
 
@@ -244,9 +252,17 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		Logger: logger.Named("sink.server"),
 		Client: client,
 	})
+
 	go func() {
-		if err := ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}); err != nil {
-			t.Fatal(err)
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+	}()
+	defer func() {
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}()
 
@@ -550,9 +566,17 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		Client: client,
 	}
 	ah := auth.NewAuthHandler(ahConfig)
+	errCh := make(chan error)
 	go func() {
-		if err := ah.Run(ctx, am); err != nil {
-			t.Fatal(err)
+		errCh <- ah.Run(ctx, am)
+	}()
+	defer func() {
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}()
 
@@ -573,8 +597,16 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		Client: client,
 	})
 	go func() {
-		if err := ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}); err != nil {
-			t.Fatal(err)
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+	}()
+
+	defer func() {
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}()
 
