@@ -349,6 +349,7 @@ func (c *AgentCommand) Run(args []string) int {
 					Client:  client,
 					WrapTTL: sc.WrapTTL,
 					DHType:  sc.DHType,
+					DeriveKey: sc.DeriveKey,
 					DHPath:  sc.DHPath,
 					AAD:     sc.AAD,
 				}
