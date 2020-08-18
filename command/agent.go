@@ -579,9 +579,12 @@ func (c *AgentCommand) Run(args []string) int {
 
 		g.Add(func() error {
 			err := ss.Run(ctx, ah.OutputCh, sinks)
+			c.logger.Info("sinks finished, exiting")
 
 			// Wait until templates are rendered
-			<-ts.DoneCh
+			if len(config.Templates) > 0 {
+				<-ts.DoneCh
+			}
 
 			return err
 		}, func(error) {
