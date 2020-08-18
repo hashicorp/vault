@@ -61,7 +61,7 @@ There can at most be one top level `vault` block and it has the following
 configuration entries:
 
 - `address` `(string: <optional>)` - The address of the Vault server. This should
-  be a complete URL such as `https://127.0.0.1:8200`. This value can be
+  be a complete URL such as `https://vault.company.internal:8200`. This value can be
   overridden by setting the `VAULT_ADDR` environment variable.
 
 - `ca_cert` `(string: <optional>)` - Path on the local disk to a single PEM-encoded
@@ -112,7 +112,7 @@ An example configuration, with very contrived values, follows:
 pid_file = "./pidfile"
 
 vault {
-        address = "https://127.0.0.1:8200"
+        address = "https://vault.company.internal:8200"
 }
 
 auto_auth {
