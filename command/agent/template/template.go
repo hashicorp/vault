@@ -49,7 +49,8 @@ type Server struct {
 	config *ServerConfig
 
 	// runner is the consul-template runner
-	runner *manager.Runner
+	runner        *manager.Runner
+	runnerStarted *atomic.Bool
 
 	// Templates holds the parsed Consul Templates
 	Templates []*ctconfig.TemplateConfig
@@ -73,8 +74,9 @@ type Server struct {
 // NewServer returns a new configured server
 func NewServer(conf *ServerConfig) *Server {
 	ts := Server{
-		DoneCh:  make(chan struct{}),
-		stopped: atomic.NewBool(false),
+		DoneCh:        make(chan struct{}),
+		stopped:       atomic.NewBool(false),
+		runnerStarted: atomic.NewBool(false),
 
 		logger:        conf.Logger,
 		config:        conf,
@@ -145,6 +147,15 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		case token := <-incoming:
 			if token != *latestToken {
 				ts.logger.Info("template server received new token")
+
+				// If the runner was previously started and we intend to exit
+				// after auth, do not restart the runner if a new token is
+				// received.
+				if ts.exitAfterAuth && ts.runnerStarted.Load() {
+					ts.logger.Info("template server not restarting with new token with exit_after_auth set to true")
+					continue
+				}
+
 				ts.runner.Stop()
 				*latestToken = token
 				ctv := ctconfig.Config{
@@ -166,6 +177,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 					ts.logger.Error("template server failed with new Vault token", "error", runnerErr)
 					continue
 				}
+				ts.runnerStarted.CAS(false, true)
 				go ts.runner.Start()
 			}
 
