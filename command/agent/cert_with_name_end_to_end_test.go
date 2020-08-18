@@ -11,6 +11,9 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
 	vaultcert "github.com/hashicorp/vault/builtin/credential/cert"
 	"github.com/hashicorp/vault/command/agent/auth"
 	agentcert "github.com/hashicorp/vault/command/agent/auth/cert"
@@ -18,9 +21,6 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/helper/dhutil"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -137,6 +137,7 @@ func testCertWithNameEndToEnd(t *testing.T, ahWrapping bool) {
 		AAD:    "foobar",
 		DHType: "curve25519",
 		DHPath: dhpath,
+		DeriveKey: true,
 		Config: map[string]interface{}{
 			"path": out,
 		},
@@ -186,14 +187,17 @@ func testCertWithNameEndToEnd(t *testing.T, ahWrapping bool) {
 					continue
 				}
 
-				aesKey, err := dhutil.GenerateSharedKey(pri, resp.Curve25519PublicKey)
+				shared, err := dhutil.GenerateSharedSecret(pri, resp.Curve25519PublicKey)
+				if err != nil {
+					t.Fatal(err)
+				}
+				aesKey, err := dhutil.DeriveSharedKey(shared, pub, resp.Curve25519PublicKey)
 				if err != nil {
 					t.Fatal(err)
 				}
 				if len(aesKey) == 0 {
 					t.Fatal("got empty aes key")
 				}
-
 				val, err = dhutil.DecryptAES(aesKey, resp.EncryptedPayload, resp.Nonce, []byte("foobar"))
 				if err != nil {
 					t.Fatalf("error: %v\nresp: %v", err, string(val))
