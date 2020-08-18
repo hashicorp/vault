@@ -480,7 +480,7 @@ github.com/hashicorp/vault-plugin-secrets-ad/plugin/util
 # github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5
 github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
-# github.com/hashicorp/vault-plugin-secrets-azure v0.6.1
+# github.com/hashicorp/vault-plugin-secrets-azure v0.6.2-0.20200818154643-63f769e87b12
 github.com/hashicorp/vault-plugin-secrets-azure
 # github.com/hashicorp/vault-plugin-secrets-gcp v0.6.4-0.20200727183837-4005bee700bf
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin
