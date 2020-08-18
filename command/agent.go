@@ -626,7 +626,8 @@ func (c *AgentCommand) Run(args []string) int {
 	}()
 
 	if err := g.Run(); err != nil {
-		c.UI.Error(fmt.Sprintf("Error encountered: %s", err))
+		c.logger.Error("runtime error encountered", "error", err)
+		c.UI.Error("Error encountered during run, refer to logs for more details.")
 		return 1
 	}
 
