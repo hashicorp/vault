@@ -13,12 +13,12 @@
 # config contains packagespec config for this repo.
 config:
   # product-repo is important to CI providers.
-  product-repo:          git@github.com:hashicorp/vault.git
+  product-repo:          git@github.com:hashicorp/vault-private-release.git
   release-repo:          git@github.com:hashicorp/vault-release.git
   # product-id is used by external systems to identify this product.
   # It can be any unique name, but a golang import path is ideal.
   product-id:            github.com/hashicorp/vault
-  circleci-project-slug: gh/hashicorp/vault
+  circleci-project-slug: gh/hashicorp/vault-private-release
   circleci-host:         circleci.com
 
 # inputs are a set of environment variables that may affect the set of bytes produced
