@@ -42,6 +42,7 @@ import (
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/kr/pretty"
 	"github.com/mitchellh/cli"
+	"github.com/oklog/run"
 	"github.com/posener/complete"
 )
 
@@ -529,8 +530,21 @@ func (c *AgentCommand) Run(args []string) int {
 	// TODO: implement support for SIGHUP reloading of configuration
 	// signal.Notify(c.signalCh)
 
-	var ssDoneCh, ahDoneCh, tsDoneCh chan struct{}
-	errCh := make(chan error)
+	var g run.Group
+
+	// This run group watches for signal termination
+	g.Add(func() error {
+		for {
+			select {
+			case <-c.ShutdownCh:
+				c.UI.Output("==> Vault agent shutdown triggered")
+				return nil
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	}, func(error) {})
+
 	// Start auto-auth and sink servers
 	if method != nil {
 		enableTokenCh := len(config.Templates) > 0
@@ -541,14 +555,12 @@ func (c *AgentCommand) Run(args []string) int {
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 			EnableTemplateTokenCh:        enableTokenCh,
 		})
-		ahDoneCh = ah.DoneCh
 
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
 			Logger:        c.logger.Named("sink.server"),
 			Client:        client,
 			ExitAfterAuth: exitAfterAuth,
 		})
-		ssDoneCh = ss.DoneCh
 
 		ts := template.NewServer(&template.ServerConfig{
 			Logger:        c.logger.Named("template.server"),
@@ -558,11 +570,34 @@ func (c *AgentCommand) Run(args []string) int {
 			Namespace:     namespace,
 			ExitAfterAuth: exitAfterAuth,
 		})
-		tsDoneCh = ts.DoneCh
 
-		go ah.Run(ctx, method, errCh)
-		go ss.Run(ctx, ah.OutputCh, sinks, errCh)
-		go ts.Run(ctx, ah.TemplateTokenCh, config.Templates, errCh)
+		g.Add(func() error {
+			return ah.Run(ctx, method)
+		}, func(error) {
+			cancelFunc()
+		})
+
+		g.Add(func() error {
+			err := ss.Run(ctx, ah.OutputCh, sinks)
+			c.logger.Info("sinks finished, exiting")
+
+			// Wait until templates are rendered
+			if len(config.Templates) > 0 {
+				<-ts.DoneCh
+			}
+
+			return err
+		}, func(error) {
+			cancelFunc()
+		})
+
+		g.Add(func() error {
+			return ts.Run(ctx, ah.TemplateTokenCh, config.Templates)
+		}, func(error) {
+			cancelFunc()
+			ts.Stop()
+		})
+
 	}
 
 	// Server configuration output
@@ -593,30 +628,10 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}()
 
-	select {
-	case err := <-errCh:
-		c.UI.Error(fmt.Sprintf("Error encountered: %s", err))
+	if err := g.Run(); err != nil {
+		c.logger.Error("runtime error encountered", "error", err)
+		c.UI.Error("Error encountered during run, refer to logs for more details.")
 		return 1
-	case <-ssDoneCh:
-		// This will happen if we exit-on-auth
-		c.logger.Info("sinks finished, exiting")
-		// allow any templates to be rendered
-		if tsDoneCh != nil {
-			<-tsDoneCh
-		}
-	case <-c.ShutdownCh:
-		c.UI.Output("==> Vault agent shutdown triggered")
-		cancelFunc()
-		if ahDoneCh != nil {
-			<-ahDoneCh
-		}
-		if ssDoneCh != nil {
-			<-ssDoneCh
-		}
-
-		if tsDoneCh != nil {
-			<-tsDoneCh
-		}
 	}
 
 	return 0

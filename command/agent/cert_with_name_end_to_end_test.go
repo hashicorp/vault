@@ -128,12 +128,16 @@ func testCertWithNameEndToEnd(t *testing.T, ahWrapping bool) {
 	}
 	ah := auth.NewAuthHandler(ahConfig)
 	errCh := make(chan error)
-	go ah.Run(ctx, am, errCh)
+	go func() {
+		errCh <- ah.Run(ctx, am)
+	}()
 	defer func() {
 		select {
-		case <-ah.DoneCh:
+		case <-ctx.Done():
 		case err := <-errCh:
-			t.Fatal(err)
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}()
 
@@ -159,12 +163,16 @@ func testCertWithNameEndToEnd(t *testing.T, ahWrapping bool) {
 		Logger: logger.Named("sink.server"),
 		Client: client,
 	})
-	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}, errCh)
+	go func() {
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+	}()
 	defer func() {
 		select {
-		case <-ss.DoneCh:
+		case <-ctx.Done():
 		case err := <-errCh:
-			t.Fatal(err)
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}()
 

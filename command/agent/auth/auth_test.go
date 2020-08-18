@@ -80,7 +80,9 @@ func TestAuthHandler(t *testing.T) {
 
 	am := newUserpassTestMethod(t, client)
 	errCh := make(chan error)
-	go ah.Run(ctx, am, errCh)
+	go func() {
+		errCh <- ah.Run(ctx, am)
+	}()
 
 	// Consume tokens so we don't block
 	stopTime := time.Now().Add(5 * time.Second)
@@ -89,7 +91,10 @@ consumption:
 	for {
 		select {
 		case err := <-errCh:
-			t.Fatal(err)
+			if err != nil {
+				t.Fatal(err)
+			}
+			break consumption
 		case <-ah.OutputCh:
 		case <-ah.TemplateTokenCh:
 		// Nothing
@@ -98,8 +103,6 @@ consumption:
 				cancelFunc()
 				closed = true
 			}
-		case <-ah.DoneCh:
-			break consumption
 		}
 	}
 }

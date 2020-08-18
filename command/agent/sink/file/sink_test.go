@@ -34,18 +34,21 @@ func TestSinkServer(t *testing.T) {
 	in := make(chan string)
 	sinks := []*sink.SinkConfig{fs1, fs2}
 	errCh := make(chan error)
-	go ss.Run(ctx, in, sinks, errCh)
+	go func() {
+		errCh <- ss.Run(ctx, in, sinks)
+	}()
 
 	// Seed a token
 	in <- uuidStr
 
-	// Give it time to finish writing
-	time.Sleep(1 * time.Second)
-
 	// Tell it to shut down and give it time to do so
-	cancelFunc()
+	timer := time.AfterFunc(3*time.Second, func() {
+		cancelFunc()
+	})
+	defer timer.Stop()
+
 	select {
-	case <-ss.DoneCh:
+	case <-ctx.Done():
 	case err := <-errCh:
 		t.Fatal(err)
 	}
@@ -97,7 +100,9 @@ func TestSinkServerRetry(t *testing.T) {
 	in := make(chan string)
 	sinks := []*sink.SinkConfig{&sink.SinkConfig{Sink: b1}, &sink.SinkConfig{Sink: b2}}
 	errCh := make(chan error)
-	go ss.Run(ctx, in, sinks, errCh)
+	go func() {
+		errCh <- ss.Run(ctx, in, sinks)
+	}()
 
 	// Seed a token
 	in <- "bad"
@@ -124,8 +129,9 @@ func TestSinkServerRetry(t *testing.T) {
 	// Tell it to shut down and give it time to do so
 	cancelFunc()
 	select {
-	case <-ss.DoneCh:
 	case err := <-errCh:
-		t.Fatal(err)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 }

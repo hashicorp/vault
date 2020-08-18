@@ -100,14 +100,18 @@ func TestAliCloudEndToEnd(t *testing.T) {
 		Client: client,
 	}
 
-	errCh := make(chan error)
 	ah := auth.NewAuthHandler(ahConfig)
-	go ah.Run(ctx, am, errCh)
+	errCh := make(chan error)
+	go func() {
+		errCh <- ah.Run(ctx, am)
+	}()
 	defer func() {
 		select {
-		case <-ah.DoneCh:
+		case <-ctx.Done():
 		case err := <-errCh:
-			t.Fatal(err)
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}()
 
@@ -138,12 +142,16 @@ func TestAliCloudEndToEnd(t *testing.T) {
 		Logger: logger.Named("sink.server"),
 		Client: client,
 	})
-	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}, errCh)
+	go func() {
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+	}()
 	defer func() {
 		select {
-		case <-ss.DoneCh:
+		case <-ctx.Done():
 		case err := <-errCh:
-			t.Fatal(err)
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}()
 
