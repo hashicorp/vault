@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -35,6 +36,11 @@ const (
 	iamAuthType                   = "iam"
 	ec2AuthType                   = "ec2"
 	ec2EntityType                 = "ec2_instance"
+)
+
+var (
+	errRequestBodyNotValid              = errors.New("iam request body is invalid")
+	errInvalidGetCallerIdentityResponse = errors.New("body of GetCallerIdentity is invalid")
 )
 
 func (b *backend) pathLogin() *framework.Path {
@@ -1173,7 +1179,10 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		return logical.ErrorResponse("error parsing iam_request_url"), nil
 	}
-
+	if parsedUrl.RawQuery != "" {
+		// Should be no query parameters
+		return logical.ErrorResponse(logical.ErrInvalidRequest.Error()), nil
+	}
 	// TODO: There are two potentially valid cases we're not yet supporting that would
 	// necessitate this check being changed. First, if we support GET requests.
 	// Second if we support presigned POST requests
@@ -1186,6 +1195,9 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse("failed to base64 decode iam_request_body"), nil
 	}
 	body := string(bodyRaw)
+	if err = validateLoginIamRequestBody(body); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
 
 	headers := data.Get("iam_request_headers").(http.Header)
 	if len(headers) == 0 {
@@ -1205,6 +1217,9 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("error validating %s header: %v", iamServerIdHeader, err)), nil
 			}
+		}
+		if err = config.validateAllowedSTSHeaderValues(headers); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
 		if config.STSEndpoint != "" {
 			endpoint = config.STSEndpoint
@@ -1384,6 +1399,29 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	}, nil
 }
 
+// Validate that the iam_request_body passed is valid for the STS request
+func validateLoginIamRequestBody(body string) error {
+	qs, err := url.ParseQuery(body)
+	if err != nil {
+		return err
+	}
+	for k, v := range qs {
+		switch k {
+		case "Action":
+			if len(v) != 1 || v[0] != "GetCallerIdentity" {
+				return errRequestBodyNotValid
+			}
+		case "Version":
+		// Will assume for now that future versions don't change
+		// the semantics
+		default:
+			// Not expecting any other values
+			return errRequestBodyNotValid
+		}
+	}
+	return nil
+}
+
 // These two methods (hasValuesFor*) return two bools
 // The first is a hasAll, that is, does the request have all the values
 // necessary for this auth method
@@ -1549,8 +1587,12 @@ func ensureHeaderIsSigned(signedHeaders, headerToSign string) error {
 }
 
 func parseGetCallerIdentityResponse(response string) (GetCallerIdentityResponse, error) {
-	decoder := xml.NewDecoder(strings.NewReader(response))
 	result := GetCallerIdentityResponse{}
+	response = strings.TrimSpace(response)
+	if !strings.HasPrefix(response, "<GetCallerIdentityResponse") && !strings.HasPrefix(response, "<?xml") {
+		return result, errInvalidGetCallerIdentityResponse
+	}
+	decoder := xml.NewDecoder(strings.NewReader(response))
 	err := decoder.Decode(&result)
 	return result, err
 }
@@ -1573,6 +1615,11 @@ func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, bo
 	if response != nil {
 		defer response.Body.Close()
 	}
+	// Validate that the response type is XML
+	if ct := response.Header.Get("Content-Type"); ct != "text/xml" {
+		return nil, errInvalidGetCallerIdentityResponse
+	}
+
 	// we check for status code afterwards to also print out response body
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
