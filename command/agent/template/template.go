@@ -205,8 +205,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 }
 
 func (ts *Server) Stop() {
-	if !ts.stopped.Load() {
-		ts.stopped.Store(true)
+	if ts.stopped.CAS(false, true) {
 		close(ts.DoneCh)
 	}
 }
