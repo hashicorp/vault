@@ -34,12 +34,12 @@
         />
       {{else if (eq attr.name 'templates')}}
         {{!-- TODO: for now don't show until backend makes api changes. --}}
-      {{else if (eq attr.name 'roles')}}
+      {{else if (eq attr.name 'allowed_roles')}}
         <FormField
           data-test-field
           @attr={{attr}}
           @model={{model}}
-          @initialSelected={{model.roles}}
+          @initialSelected={{model.allowed_roles}}
         />
       {{else}}
       <FormField

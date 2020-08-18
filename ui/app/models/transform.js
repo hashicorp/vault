@@ -72,9 +72,9 @@ const Model = DS.Model.extend({
       'Templates allow Vault to determine what and how to capture the value to be transformed. Type to use an existing template or create a new one.',
   }),
   templates: attr('array'), // TODO: remove once BE changes the returned property to a singular template on the GET request.
-  allowed_roles: attr('string', {
-    label: 'Allowed roles',
+  allowed_roles: attr('array', {
     editType: 'searchSelect',
+    label: 'Allowed roles',
     fallbackComponent: 'string-list',
     models: ['transform/role'],
     subText: 'Search for an existing role, type a new role to create it, or use a wildcard (*).',

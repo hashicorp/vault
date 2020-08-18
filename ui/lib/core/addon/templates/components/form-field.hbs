@@ -71,7 +71,9 @@
       @onChange={{action (action "setAndBroadcast" valuePath)}} @inputValue={{get model valuePath}}
       @helpText={{attr.options.helpText}} @subText={{attr.options.subText}} @label={{labelString}}
       @subLabel={{attr.options.subLabel}}
-      @fallbackComponent={{attr.options.fallbackComponent}} />
+      @fallbackComponent={{attr.options.fallbackComponent}}
+      @initialSelected={{initialSelected}}
+      />
   </div>
 {{else if (eq attr.options.editType "mountAccessor")}}
   {{mount-accessor-select
