@@ -70,7 +70,7 @@ func NewSinkServer(conf *SinkServerConfig) *SinkServer {
 
 // Run executes the server's run loop, which is responsible for reading
 // in new tokens and pushing them out to the various sinks.
-func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*SinkConfig, errCh chan error) {
+func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*SinkConfig) error {
 	latestToken := new(string)
 	writeSink := func(currSink *SinkConfig, currToken string) error {
 		if currToken != *latestToken {
@@ -94,8 +94,7 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 	}
 
 	if incoming == nil {
-		errCh <- errors.New("sink server: incoming channel is nil")
-		return
+		return errors.New("sink server: incoming channel is nil")
 	}
 
 	ss.logger.Info("starting sink server")
@@ -112,7 +111,7 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 
 		case token := <-incoming:
 			if len(sinks) > 0 {
@@ -140,14 +139,14 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 				ss.logger.Trace("no sinks, ignoring new token")
 				if ss.exitAfterAuth {
 					ss.logger.Trace("no sinks, exitAfterAuth, bye")
-					return
+					return nil
 				}
 			}
 		case st := <-sinkCh:
 			atomic.AddInt32(ss.remaining, -1)
 			select {
 			case <-ctx.Done():
-				return
+				return nil
 			default:
 			}
 
@@ -156,14 +155,14 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 				ss.logger.Error("error returned by sink function, retrying", "error", err, "backoff", backoff.String())
 				select {
 				case <-ctx.Done():
-					return
+					return nil
 				case <-time.After(backoff):
 					atomic.AddInt32(ss.remaining, 1)
 					sinkCh <- st
 				}
 			} else {
 				if atomic.LoadInt32(ss.remaining) == 0 && ss.exitAfterAuth {
-					return
+					return nil
 				}
 			}
 		}

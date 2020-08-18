@@ -149,11 +149,8 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 	}
 	ah := auth.NewAuthHandler(ahConfig)
 	errCh := make(chan error)
-	go ah.Run(ctx, am, errCh)
-	defer func() {
-		select {
-		case <-ah.DoneCh:
-		case err := <-errCh:
+	go func() {
+		if err := ah.Run(ctx, am); err != nil {
 			t.Fatal(err)
 		}
 	}()
@@ -180,7 +177,11 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 		Logger: logger.Named("sink.server"),
 		Client: client,
 	})
-	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}, errCh)
+	go func() {
+		if err := ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}); err != nil {
+			t.Fatal(err)
+		}
+	}()
 	defer func() {
 		select {
 		case <-ss.DoneCh:

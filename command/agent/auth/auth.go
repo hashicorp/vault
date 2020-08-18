@@ -75,10 +75,9 @@ func backoffOrQuit(ctx context.Context, backoff time.Duration) {
 	}
 }
 
-func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod, errCh chan<- error) {
+func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	if am == nil {
-		errCh <- errors.New("auth handler: nil auth method")
-		return
+		return errors.New("auth handler: nil auth method")
 	}
 
 	ah.logger.Info("starting auth handler")
@@ -115,7 +114,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod, errCh chan<- erro
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 
 		default:
 		}

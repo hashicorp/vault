@@ -12,6 +12,8 @@ import (
 	"io"
 	"strings"
 
+	"go.uber.org/atomic"
+
 	ctconfig "github.com/hashicorp/consul-template/config"
 	ctlogging "github.com/hashicorp/consul-template/logging"
 	"github.com/hashicorp/consul-template/manager"
@@ -57,7 +59,9 @@ type Server struct {
 	// from the runner in the event we're using exit after auth.
 	lookupMap map[string][]*ctconfig.TemplateConfig
 
-	DoneCh        chan struct{}
+	DoneCh  chan struct{}
+	stopped *atomic.Bool
+
 	logger        hclog.Logger
 	exitAfterAuth bool
 
@@ -69,7 +73,9 @@ type Server struct {
 // NewServer returns a new configured server
 func NewServer(conf *ServerConfig) *Server {
 	ts := Server{
-		DoneCh:        make(chan struct{}),
+		DoneCh:  make(chan struct{}),
+		stopped: atomic.NewBool(false),
+
 		logger:        conf.Logger,
 		config:        conf,
 		exitAfterAuth: conf.ExitAfterAuth,
@@ -80,10 +86,9 @@ func NewServer(conf *ServerConfig) *Server {
 // Run kicks off the internal Consul Template runner, and listens for changes to
 // the token from the AuthHandler. If Done() is called on the context, shut down
 // the Runner and return
-func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig, errCh chan error) {
+func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig) error {
 	if incoming == nil {
-		errCh <- errors.New("template server: incoming channel is nil")
-		return
+		return errors.New("template server: incoming channel is nil")
 	}
 
 	latestToken := new(string)
@@ -91,13 +96,13 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	// defer the closing of the DoneCh
 	defer func() {
 		ts.logger.Info("template server stopped")
-		close(ts.DoneCh)
 	}()
 
-	// If there are no templates, return gracefully
+	// If there are no templates, we wait for context cancellation and then return
 	if len(templates) == 0 {
 		ts.logger.Info("no templates found")
-		return
+		<-ctx.Done()
+		return nil
 	}
 
 	// construct a consul template vault config based the agents vault
@@ -105,15 +110,13 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	var runnerConfig *ctconfig.Config
 	var runnerConfigErr error
 	if runnerConfig, runnerConfigErr = newRunnerConfig(ts.config, templates); runnerConfigErr != nil {
-		errCh <- fmt.Errorf("template server failed to runner generate config: %w", runnerConfigErr)
-		return
+		return fmt.Errorf("template server failed to runner generate config: %w", runnerConfigErr)
 	}
 
 	var err error
 	ts.runner, err = manager.NewRunner(runnerConfig, false)
 	if err != nil {
-		errCh <- fmt.Errorf("template server failed to create: %w", err)
-		return
+		return fmt.Errorf("template server failed to create: %w", err)
 	}
 
 	// Build the lookup map using the id mapping from the Template runner. This is
@@ -137,7 +140,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		select {
 		case <-ctx.Done():
 			ts.runner.Stop()
-			return
+			return nil
 
 		case token := <-incoming:
 			if token != *latestToken {
@@ -168,8 +171,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 
 		case err := <-ts.runner.ErrCh:
 			ts.runner.StopImmediately()
-			errCh <- fmt.Errorf("template server: %w", err)
-			return
+			return fmt.Errorf("template server: %w", err)
 
 		case <-ts.runner.TemplateRenderedCh():
 			// A template has been rendered, figure out what to do
@@ -196,9 +198,16 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				// return. The deferred closing of the DoneCh will allow agent to
 				// continue with closing down
 				ts.runner.Stop()
-				return
+				return nil
 			}
 		}
+	}
+}
+
+func (ts *Server) Stop() {
+	if !ts.stopped.Load() {
+		ts.stopped.Store(true)
+		close(ts.DoneCh)
 	}
 }
 

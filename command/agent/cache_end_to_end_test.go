@@ -199,12 +199,9 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		Client: client,
 	}
 	ah := auth.NewAuthHandler(ahConfig)
-	errCh := make(chan error)
-	go ah.Run(ctx, am, errCh)
-	defer func() {
-		select {
-		case <-ah.DoneCh:
-		case err := <-errCh:
+	go func() {
+		err := ah.Run(ctx, am)
+		if err != nil {
 			t.Fatal(err)
 		}
 	}()
@@ -236,11 +233,9 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	}
 	inmemSinkConfig.Sink = inmemSink
 
-	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config, inmemSinkConfig}, errCh)
-	defer func() {
-		select {
-		case <-ss.DoneCh:
-		case err := <-errCh:
+	go func() {
+		err := ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config, inmemSinkConfig})
+		if err != nil {
 			t.Fatal(err)
 		}
 	}()
