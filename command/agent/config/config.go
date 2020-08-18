@@ -30,7 +30,7 @@ type Config struct {
 	Templates     []*ctconfig.TemplateConfig `hcl:"templates"`
 }
 
-// Vault contains configuration for connnecting to Vault servers
+// Vault contains configuration for connecting to Vault servers
 type Vault struct {
 	Address          string      `hcl:"address"`
 	CACert           string      `hcl:"ca_cert"`
