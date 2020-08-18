@@ -8,10 +8,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/database/newdbplugin"
+
+	"github.com/hashicorp/go-uuid"
+
 	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/errwrap"
-	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -30,7 +33,7 @@ const (
 
 type dbPluginInstance struct {
 	sync.RWMutex
-	dbplugin.Database
+	database databaseVersionWrapper
 
 	id     string
 	name   string
@@ -46,7 +49,7 @@ func (dbi *dbPluginInstance) Close() error {
 	}
 	dbi.closed = true
 
-	return dbi.Database.Close()
+	return dbi.database.Close()
 }
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -255,30 +258,51 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 		return db, nil
 	}
 
-	dbp, err := dbplugin.PluginFactory(ctx, config.PluginName, b.System(), b.logger)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = dbp.Init(ctx, config.ConnectionDetails, true)
-	if err != nil {
-		dbp.Close()
-		return nil, err
-	}
-
 	id, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, err
 	}
 
-	db = &dbPluginInstance{
-		Database: dbp,
-		name:     name,
-		id:       id,
+	dbw, err := makeDatabase(ctx, config.PluginName, b.System(), b.logger)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create database instance: %w", err)
 	}
 
-	b.connections[name] = db
-	return db, nil
+	_, err = initDatabase(ctx, dbw, config.ConnectionDetails, true)
+	if err != nil {
+		dbw.Close()
+		return nil, err
+	}
+
+	dbi := &dbPluginInstance{
+		database: dbw,
+		id:       id,
+		name:     name,
+	}
+	return dbi, nil
+}
+
+func initDatabase(ctx context.Context, dbw databaseVersionWrapper, connDetails map[string]interface{}, verifyConnection bool) (newConfig map[string]interface{}, err error) {
+	if dbw.database != nil {
+		return initNewDatabase(ctx, dbw, connDetails, verifyConnection)
+	}
+	return initLegacyDatabase(ctx, dbw, connDetails, verifyConnection)
+}
+
+func initNewDatabase(ctx context.Context, dbw databaseVersionWrapper, connDetails map[string]interface{}, verifyConnection bool) (newConfig map[string]interface{}, err error) {
+	req := newdbplugin.InitializeRequest{
+		Config:           connDetails,
+		VerifyConnection: verifyConnection,
+	}
+	resp, err := dbw.database.Initialize(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Config, nil
+}
+
+func initLegacyDatabase(ctx context.Context, dbw databaseVersionWrapper, connDetails map[string]interface{}, verifyConnection bool) (newConfig map[string]interface{}, err error) {
+	return dbw.legacyDatabase.Init(ctx, connDetails, verifyConnection)
 }
 
 // invalidateQueue cancels any background queue loading and destroys the queue.

@@ -10,7 +10,6 @@ import (
 	"github.com/fatih/structs"
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -30,6 +29,8 @@ type DatabaseConfig struct {
 	AllowedRoles      []string               `json:"allowed_roles" structs:"allowed_roles" mapstructure:"allowed_roles"`
 
 	RootCredentialsRotateStatements []string `json:"root_credentials_rotate_statements" structs:"root_credentials_rotate_statements" mapstructure:"root_credentials_rotate_statements"`
+
+	PasswordPolicy string `json:"password_policy" structs:"password_policy" mapstructure:"password_policy"`
 }
 
 // pathResetConnection configures a path to reset a plugin.
@@ -113,6 +114,10 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 				to rotate the root user's credentials. See the plugin's API 
 				page for more information on support and formatting for this 
 				parameter.`,
+			},
+			"password_policy": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: `Password policy to use when generating passwords.`,
 			},
 		},
 
@@ -281,11 +286,11 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		delete(data.Raw, "allowed_roles")
 		delete(data.Raw, "verify_connection")
 		delete(data.Raw, "root_rotation_statements")
+		delete(data.Raw, "password_policy")
 
-		// Create a database plugin and initialize it.
-		db, err := dbplugin.PluginFactory(ctx, config.PluginName, b.System(), b.logger)
+		id, err := uuid.GenerateUUID()
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
+			return nil, err
 		}
 
 		// If this is an update, take any new values, overwrite what was there
@@ -302,10 +307,16 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			}
 		}
 
-		config.ConnectionDetails, err = db.Init(ctx, config.ConnectionDetails, verifyConnection)
+		// Create a database plugin and initialize it.
+		dbw, err := makeDatabase(ctx, config.PluginName, b.System(), b.logger)
 		if err != nil {
-			db.Close()
-			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
+			return logical.ErrorResponse("error creating database object: %w", err), nil
+		}
+
+		config.ConnectionDetails, err = initDatabase(ctx, dbw, config.ConnectionDetails, verifyConnection)
+		if err != nil {
+			dbw.Close()
+			return logical.ErrorResponse("error creating database object: %w", err), nil
 		}
 
 		b.Lock()
@@ -314,13 +325,8 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		// Close and remove the old connection
 		b.clearConnection(name)
 
-		id, err := uuid.GenerateUUID()
-		if err != nil {
-			return nil, err
-		}
-
 		b.connections[name] = &dbPluginInstance{
-			Database: db,
+			database: dbw,
 			name:     name,
 			id:       id,
 		}
