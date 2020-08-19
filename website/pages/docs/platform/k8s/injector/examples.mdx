@@ -19,12 +19,17 @@ using higher level constructs such as deployments, jobs or statefulsets.
 Before applying Vault Agent injection annotations to pods, the following requirements
 should be satisfied:
 
-- the master Kubernetes nodes can receive traffic from worker nodes on port `8080`,
+- the master Kubernetes nodes can connect to worker nodes on port `8080`,
 - Kubernetes auth method should be configured and enabled in Vault,
 - Pod should have a service account,
 - desired secrets exist within Vault,
 - the service account should be bound to a Vault role with a policy enabling access to desired secrets.
 
+Depending on where Vault is running (e.g. outside the Kubernetes cluster), there
+are some other connectivity requirements to keep in mind:
+
+- Vault can connect to the Kubernetes API,
+- Pods in the Kubernetes cluster can connect to Vault.
 
 For more information on configuring the Vault Kubernetes auth method,
 [see the official documentation](/docs/auth/kubernetes#configuration).
