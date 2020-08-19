@@ -1,5 +1,5 @@
 import { assign } from '@ember/polyfills';
-import { resolve, allSettled } from 'rsvp';
+import { allSettled } from 'rsvp';
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 

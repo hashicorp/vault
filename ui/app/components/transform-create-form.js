@@ -1,5 +1,4 @@
 import RoleEdit from './role-edit';
-import transform from '../models/transform';
 
 export default RoleEdit.extend({
   init() {
