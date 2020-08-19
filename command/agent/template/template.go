@@ -95,7 +95,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 
 	latestToken := new(string)
 	ts.logger.Info("starting template server")
-	// defer the closing of the DoneCh
+
 	defer func() {
 		ts.logger.Info("template server stopped")
 	}()

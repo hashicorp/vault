@@ -581,6 +581,18 @@ func (c *AgentCommand) Run(args []string) int {
 			err := ss.Run(ctx, ah.OutputCh, sinks)
 			c.logger.Info("sinks finished, exiting")
 
+			// Start goroutine to drain from ah.OutputCh from this point onward
+			// to prevent ah.Run from being blocked.
+			go func() {
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case <-ah.OutputCh:
+					}
+				}
+			}()
+
 			// Wait until templates are rendered
 			if len(config.Templates) > 0 {
 				<-ts.DoneCh
