@@ -199,7 +199,7 @@ export default Route.extend(UnloadModelRoute, {
       secret = secret.replace('cert/', '');
     }
     if (modelType.startsWith('transform/')) {
-      // CBS TODO: Replace smarter
+      // CBS TODO: we'll have more things to replace than just role/
       secret = secret.replace('role/', '');
     }
     let secretModel;
