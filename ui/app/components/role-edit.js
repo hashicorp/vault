@@ -88,8 +88,7 @@ export default Component.extend(FocusOnInsertMixin, {
   actions: {
     createOrUpdate(type, event) {
       event.preventDefault();
-
-      const modelId = this.get('model.id') || this.get('model.name'); // ARG TODO this is not okay
+      const modelId = this.get('model.id') || this.get('model.name'); // transform comes in as model.name
       // prevent from submitting if there's no key
       // maybe do something fancier later
       if (type === 'create' && isBlank(modelId)) {

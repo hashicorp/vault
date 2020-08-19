@@ -1,16 +1,13 @@
 import { assign } from '@ember/polyfills';
-import { resolve, allSettled } from 'rsvp';
+import { allSettled } from 'rsvp';
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
-  // TODO this adapter was copied over, much of this stuff may or may not need to be here.
   namespace: 'v1',
 
-  // defaultSerializer: 'role',
-
   createOrUpdate(store, type, snapshot) {
-    const serializer = store.serializerFor('transform'); // TODO replace transform with type.modelName
+    const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
     const { id } = snapshot;
     let url = this.urlForTransformations(snapshot.record.get('backend'), id);
@@ -35,14 +32,6 @@ export default ApplicationAdapter.extend({
     return 'transform';
   },
 
-  urlForAlphabet(backend, id) {
-    let url = `${this.buildURL()}/${encodePath(backend)}/alphabet`;
-    if (id) {
-      url = url + '/' + encodePath(id);
-    }
-    return url;
-  },
-
   urlForTransformations(backend, id) {
     let url = `${this.buildURL()}/${encodePath(backend)}/transformation`;
     if (id) {
@@ -61,14 +50,9 @@ export default ApplicationAdapter.extend({
 
   fetchByQuery(store, query) {
     const { id, backend } = query;
-    let zeroAddressAjax = resolve();
     const queryAjax = this.ajax(this.urlForTransformations(backend, id), 'GET', this.optionsForQuery(id));
-    // TODO: come back to why you need this, carry over.
-    // if (!id) {
-    //   zeroAddressAjax = this.findAllZeroAddress(store, query);
-    // }
 
-    return allSettled([queryAjax, zeroAddressAjax]).then(results => {
+    return allSettled([queryAjax]).then(results => {
       // query result 404d, so throw the adapterError
       if (!results[0].value) {
         throw results[0].reason;
@@ -91,12 +75,6 @@ export default ApplicationAdapter.extend({
       });
       return resp;
     });
-  },
-
-  findAllZeroAddress(store, query) {
-    const { backend } = query;
-    const url = `/v1/${encodePath(backend)}/config/zeroaddress`;
-    return this.ajax(url, 'GET');
   },
 
   query(store, type, query) {

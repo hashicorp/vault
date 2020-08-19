@@ -36,23 +36,20 @@ const TWEAK_SOURCE = [
 ];
 
 const Model = DS.Model.extend({
-  // TODO: for now, commenting out openApi info, but keeping here just in case we end up using it.
-  // useOpenAPI: true,
-  // getHelpUrl: function(backend) {
-  //   return `/v1/${backend}?help=1`;
-  // },
+  useOpenAPI: false,
   name: attr('string', {
     // TODO: make this required for making a transformation
     label: 'Name',
     fieldValue: 'id',
     readOnly: true,
+    subText: 'The name for your transformation. This cannot be edited later.',
   }),
   type: attr('string', {
     defaultValue: 'fpe',
     label: 'Type',
     possibleValues: TYPES,
     subText:
-      'Vault provides two types of transformations: Format Preserving Encryption (FPE) is reversible, while Masking is not.',
+      'Vault provides two types of transformations: Format Preserving Encryption (FPE) is reversible, while Masking is not. This cannot be edited later.',
   }),
   tweak_source: attr('string', {
     defaultValue: 'supplied',
@@ -70,21 +67,20 @@ const Model = DS.Model.extend({
     fallbackComponent: 'string-list',
     label: 'Template', // TODO: make this required for making a transformation
     models: ['transform/template'],
+    selectLimit: 1,
     subLabel: 'Template Name',
     subText:
       'Templates allow Vault to determine what and how to capture the value to be transformed. Type to use an existing template or create a new one.',
   }),
   templates: attr('array'), // TODO: remove once BE changes the returned property to a singular template on the GET request.
-  allowed_roles: attr('string', {
-    label: 'Allowed roles',
+  allowed_roles: attr('array', {
     editType: 'searchSelect',
+    label: 'Allowed roles',
     fallbackComponent: 'string-list',
     models: ['transform/role'],
     subText: 'Search for an existing role, type a new role to create it, or use a wildcard (*).',
   }),
   transformAttrs: computed('type', function() {
-    // TODO: group them into sections/groups.  Right now, we don't different between required and not required as we do by hiding options.
-    // will default to design mocks on how to handle as it will likely be a different pattern using client-side validation, which we have not done before
     if (this.type === 'masking') {
       return ['name', 'type', 'masking_character', 'template', 'templates', 'allowed_roles'];
     }
@@ -93,8 +89,6 @@ const Model = DS.Model.extend({
   transformFieldAttrs: computed('transformAttrs', function() {
     return expandAttributeMeta(this, this.get('transformAttrs'));
   }),
-  // zeroAddressPath: lazyCapabilities(apiPath`${'backend'}/config/zeroaddress`, 'backend'),
-  // canEditZeroAddress: alias('zeroAddressPath.canUpdate'),
 });
 
 export default attachCapabilities(Model, {

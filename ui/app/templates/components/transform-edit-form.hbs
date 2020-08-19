@@ -4,11 +4,51 @@
     {{!-- TODO: figure out what this ?? --}}
     {{!-- <NamespaceReminder @mode={{mode}} @noun="SSH role" /> --}}
     {{#each model.transformFieldAttrs as |attr|}}
+      {{#if (or (eq attr.name 'name') (eq attr.name 'type')) }}
+        <label for="{{attr.name}}" class="is-label">
+          {{attr.options.label}}
+        </label>
+        {{#if attr.options.subText}}
+          <p class="sub-text">{{attr.options.subText}}</p>
+        {{/if}}
+        {{#if attr.options.possibleValues}}
+          <div class="control is-expanded field is-readOnly">
+            <div class="select is-fullwidth">
+              <select name="{{attr.name}}" id="{{attr.name}}" disabled data-test-input={{attr.name}}>
+                <option selected={{get model attr.name}} value={{get model attr.name}}>
+                  {{get model attr.name}}
+                </option>
+              </select>
+            </div>
+          </div>
+        {{else}}
+          <input data-test-input={{attr.name}} id={{attr.name}} autocomplete="off" spellcheck="false"
+            value={{or (get model attr.name) attr.options.defaultValue}} readonly class="field input is-readOnly" type={{attr.type}} />
+        {{/if}}
+      {{else if (eq attr.name 'template')}}
+        <FormField
+          data-test-field
+          @attr={{attr}}
+          @model={{model}}
+          @initialSelected={{model.templates}}
+          @selectLimit={{selectLimit}}
+        />
+      {{else if (eq attr.name 'templates')}}
+        {{!-- TODO: for now don't show until backend makes api changes. --}}
+      {{else if (eq attr.name 'allowed_roles')}}
+        <FormField
+          data-test-field
+          @attr={{attr}}
+          @model={{model}}
+          @initialSelected={{model.allowed_roles}}
+        />
+      {{else}}
       <FormField
         data-test-field
         @attr={{attr}}
         @model={{model}}
       />
+      {{/if}}
     {{/each}}
   </div>
   <div class="field is-grouped-split box is-fullwidth is-bottomless">
