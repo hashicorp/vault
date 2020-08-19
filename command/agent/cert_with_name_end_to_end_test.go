@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/pem"
+	"github.com/oklog/run"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -118,29 +119,6 @@ func testCertWithNameEndToEnd(t *testing.T, ahWrapping bool) {
 		t.Fatal(err)
 	}
 
-	ahConfig := &auth.AuthHandlerConfig{
-		Logger:                       logger.Named("auth.handler"),
-		Client:                       client,
-		EnableReauthOnNewCredentials: true,
-	}
-	if ahWrapping {
-		ahConfig.WrapTTL = 10 * time.Second
-	}
-	ah := auth.NewAuthHandler(ahConfig)
-	errCh := make(chan error)
-	go func() {
-		errCh <- ah.Run(ctx, am)
-	}()
-	defer func() {
-		select {
-		case <-ctx.Done():
-		case err := <-errCh:
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-	}()
-
 	config := &sink.SinkConfig{
 		Logger: logger.Named("sink.file"),
 		AAD:    "foobar",
@@ -153,27 +131,30 @@ func testCertWithNameEndToEnd(t *testing.T, ahWrapping bool) {
 	if !ahWrapping {
 		config.WrapTTL = 10 * time.Second
 	}
+
 	fs, err := file.NewFileSink(config)
 	if err != nil {
 		t.Fatal(err)
 	}
 	config.Sink = fs
 
-	ss := sink.NewSinkServer(&sink.SinkServerConfig{
-		Logger: logger.Named("sink.server"),
-		Client: client,
-	})
+	asc := &AgentServerConfig{
+		Logger:                               logger,
+		Level:                                hclog.Trace,
+		Writer:                               hclog.DefaultOutput,
+		Sinks:                                []*sink.SinkConfig{config},
+		AutoAuthEnableReauthOnNewCredentials: true,
+	}
+
+	if ahWrapping {
+		asc.AutoAuthWrapTTL = 10 * time.Second
+	}
+
+	errchan := make(chan error)
 	go func() {
-		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
-	}()
-	defer func() {
-		select {
-		case <-ctx.Done():
-		case err := <-errCh:
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
+		var g run.Group
+		RunAgent(ctx, cancelFunc, &g, asc, client, am)
+		errchan <- g.Run()
 	}()
 
 	// This has to be after the other defers so it happens first
@@ -257,5 +238,10 @@ func testCertWithNameEndToEnd(t *testing.T, ahWrapping bool) {
 			time.Sleep(250 * time.Millisecond)
 		}
 	}
+
 	checkToken()
+	err = <-errchan
+	if err != nil {
+		t.Fatal(err)
+	}
 }

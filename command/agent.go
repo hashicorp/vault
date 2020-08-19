@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/hashicorp/vault/command/agent"
 	"io"
 	"net"
 	"net/http"
@@ -34,7 +35,6 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
-	"github.com/hashicorp/vault/command/agent/template"
 	"github.com/hashicorp/vault/internalshared/gatedwriter"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -547,69 +547,18 @@ func (c *AgentCommand) Run(args []string) int {
 
 	// Start auto-auth and sink servers
 	if method != nil {
-		enableTokenCh := len(config.Templates) > 0
-		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
-			Logger:                       c.logger.Named("auth.handler"),
-			Client:                       c.client,
-			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
-			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
-			EnableTemplateTokenCh:        enableTokenCh,
-		})
-
-		ss := sink.NewSinkServer(&sink.SinkServerConfig{
-			Logger:        c.logger.Named("sink.server"),
-			Client:        client,
-			ExitAfterAuth: exitAfterAuth,
-		})
-
-		ts := template.NewServer(&template.ServerConfig{
-			Logger:        c.logger.Named("template.server"),
-			LogLevel:      level,
-			LogWriter:     c.logWriter,
-			VaultConf:     config.Vault,
-			Namespace:     namespace,
-			ExitAfterAuth: exitAfterAuth,
-		})
-
-		g.Add(func() error {
-			return ah.Run(ctx, method)
-		}, func(error) {
-			cancelFunc()
-		})
-
-		g.Add(func() error {
-			err := ss.Run(ctx, ah.OutputCh, sinks)
-			c.logger.Info("sinks finished, exiting")
-
-			// Start goroutine to drain from ah.OutputCh from this point onward
-			// to prevent ah.Run from being blocked.
-			go func() {
-				for {
-					select {
-					case <-ctx.Done():
-						return
-					case <-ah.OutputCh:
-					}
-				}
-			}()
-
-			// Wait until templates are rendered
-			if len(config.Templates) > 0 {
-				<-ts.DoneCh
-			}
-
-			return err
-		}, func(error) {
-			cancelFunc()
-		})
-
-		g.Add(func() error {
-			return ts.Run(ctx, ah.TemplateTokenCh, config.Templates)
-		}, func(error) {
-			cancelFunc()
-			ts.Stop()
-		})
-
+		runcfg := &agent.AgentServerConfig{
+			Logger:          c.logger,
+			Level:           level,
+			Writer:          c.logWriter,
+			Sinks:           sinks,
+			Templates:       config.Templates,
+			Namespace:       namespace,
+			ExitAfterAuth:   config.ExitAfterAuth,
+			AutoAuthWrapTTL: config.AutoAuth.Method.WrapTTL,
+			VaultConf:       config.Vault,
+		}
+		agent.RunAgent(ctx, cancelFunc, &g, runcfg, client, method)
 	}
 
 	// Server configuration output
