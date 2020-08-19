@@ -68,7 +68,11 @@ jobs:
             else
               echo "No exact match found, proceeding with build."
             fi
-      - run: LAYER_SPEC_ID={{.name}} make -C packages*.lock load-builder-cache
+      - run:
+          name: Load whatever builder cache we have (if any) into the Docker daemon
+          no_output_timeout: 30m
+          command: |
+            LAYER_SPEC_ID={{.name}} make -C packages*.lock load-builder-cache
       {{- end}}{{end}}
 
       # No exact match was found, so build each layer up to target type.
@@ -130,7 +134,11 @@ jobs:
           {{- range .meta.circleci.BUILDER_CACHE_KEY_PREFIX_LIST}}
           - {{template "cache-key" .}}
           {{- end}}
-      - run: make -C packages*.lock load-builder-cache
+      - run:
+          name: Load whatever builder cache we have (if any) into the Docker daemon
+          no_output_timeout: 30m
+          command: |
+            make -C packages*.lock load-builder-cache
       - run: make -C packages*.lock package
       - run: ls -lahR .buildcache/packages
       # Save package cache.
