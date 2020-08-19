@@ -189,12 +189,13 @@ func (b *GcpAuthBackend) parseAndValidateJwt(ctx context.Context, req *logical.R
 	}
 	loginInfo.EmailOrId = baseClaims.Subject
 
-	if customClaims.Google != nil && customClaims.Google.Compute != nil && len(customClaims.Google.Compute.InstanceId) > 0 {
-		loginInfo.GceMetadata = customClaims.Google.Compute
-	}
-
-	if loginInfo.Role.RoleType == gceRoleType && loginInfo.GceMetadata == nil {
-		return nil, errors.New("expected JWT to have claims with GCE metadata")
+	if loginInfo.Role.RoleType == gceRoleType {
+		if customClaims.Google != nil && customClaims.Google.Compute != nil && len(customClaims.Google.Compute.InstanceId) > 0 {
+			loginInfo.GceMetadata = customClaims.Google.Compute
+		}
+		if loginInfo.GceMetadata == nil {
+			return nil, errors.New("expected JWT to have claims with GCE metadata")
+		}
 	}
 
 	return loginInfo, nil
