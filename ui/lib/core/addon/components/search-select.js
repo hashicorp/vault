@@ -132,10 +132,7 @@ export default Component.extend({
     },
     selectOption(option) {
       if (this.selectLimit) {
-        if (
-          this.selectLimit === this.selectedOptions.length ||
-          this.selectLimit < this.selectedOptions.length
-        ) {
+        if (this.selectLimit <= this.selectedOptions.length) {
           return;
         }
       }
