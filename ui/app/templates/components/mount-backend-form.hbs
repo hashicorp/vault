@@ -60,8 +60,8 @@
                 (action "onTypeChange" "type")
               }}
               @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}}
-              @tooltipMessage={{if (eq type.type 'transform')
-                'Transform is part of the Advanced Data Protection module, which is not included in your enterprise license.'
+              @tooltipMessage={{if (or (eq type.type 'transform') (eq type.type 'kmip'))
+                (concat (capitalize type.displayName) " is part of the Advanced Data Protection module, which is not included in your enterprise license.")
                 'This secret engine is not included in your license.'
               }}
             />

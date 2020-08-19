@@ -56,14 +56,10 @@ export default Component.extend({
   }),
 
   engines: computed('version.features[]', function() {
-    let mountEngines = [...ENGINES];
-    if (this.version.hasFeature('KMIP')) {
-      mountEngines.push(KMIP);
-    }
     if (this.get('version.isEnterprise')) {
-      mountEngines.push(TRANSFORM);
+      return ENGINES.concat([KMIP, TRANSFORM]);
     }
-    return mountEngines;
+    return ENGINES;
   }),
 
   willDestroy() {
