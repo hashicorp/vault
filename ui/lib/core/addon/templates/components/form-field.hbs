@@ -155,7 +155,7 @@
         value={{or (get model valuePath) attr.options.defaultValue}} oninput={{action
           (action "setAndBroadcast" valuePath)
           value="target.value"
-        }} class="input" />
+        }} class="input" maxLength={{attr.options.characterLimit}} />
 
       {{#if attr.options.validationAttr}}
         {{#if

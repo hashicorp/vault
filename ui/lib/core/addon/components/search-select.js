@@ -136,11 +136,6 @@ export default Component.extend({
       this.handleChange();
     },
     selectOption(option) {
-      if (this.selectLimit) {
-        if (this.selectLimit <= this.selectedOptions.length) {
-          return;
-        }
-      }
       this.selectedOptions.pushObject(option);
       this.options.removeObject(option);
       this.handleChange();
