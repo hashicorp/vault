@@ -45,6 +45,11 @@ func Test_addTLStoDSN(t *testing.T) {
 			tlsConfigName:  "tlsTest101",
 			expectedResult: "user:pa?ssword?@tcp(localhost:3306)/test?tls=tlsTest101&foo=bar",
 		},
+		"tls, valid tls parameter in query string": {
+			rootUrl:        "user:password@tcp(localhost:3306)/test?tls=true",
+			tlsConfigName:  "",
+			expectedResult: "user:password@tcp(localhost:3306)/test?tls=true",
+		},
 	}
 
 	for name, test := range tests {

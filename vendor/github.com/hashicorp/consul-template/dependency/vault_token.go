@@ -47,7 +47,6 @@ func (d *VaultTokenQuery) Fetch(clients *ClientSet, opts *QueryOptions,
 		if err != nil {
 			return nil, nil, errors.Wrap(err, d.String())
 		}
-		renewSecret(clients, d)
 	}
 
 	return nil, nil, ErrLeaseExpired
