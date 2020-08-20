@@ -31,6 +31,7 @@ BUG FIXES:
 
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-9603](https://github.com/hashicorp/vault/pull/9603)]
 * replication (enterprise): Fix status API output incorrectly stating replication is in `idle` state.
+* replication (enterprise): Use PrimaryClusterAddr if it's been set
 * core: Fix panic when printing over-long info fields at startup [[GH-9681](https://github.com/hashicorp/vault/pull/9681)]
 * core: Seal migration using the new minimal-downtime strategy didn't work properly with performance standbys. [[GH-9690](https://github.com/hashicorp/vault/pull/9690)]
 * core: Vault failed to start when there were non-string values in seal configuration [[GH-9555](https://github.com/hashicorp/vault/pull/9555)]
@@ -125,7 +126,7 @@ BUG FIXES:
 
 BUG FIXES:
 
-* auth/okta: fix bug introduced in 1.4.0 that broke handling of external groups with > 200 members [[GH-9580](https://github.com/hashicorp/vault/pull/9580)]
+* auth/okta: fix bug introduced in 1.4.0: only 200 external groups were fetched even if user belonged to more [[GH-9580](https://github.com/hashicorp/vault/pull/9580)]
 * seal/awskms: fix AWS KMS auto-unseal when AWS_ROLE_SESSION_NAME not set [[GH-9416](https://github.com/hashicorp/vault/pull/9416)]
 * secrets/aws: Fix possible issue creating access keys when using Performance Standbys  [[GH-9606](https://github.com/hashicorp/vault/pull/9606)]
 
