@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"context"
+	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
 	"database/sql"
@@ -450,9 +451,17 @@ func (m *MySQLBackend) List(ctx context.Context, prefix string) ([]string, error
 
 // LockWith is used for mutual exclusion based on the given key.
 func (m *MySQLBackend) LockWith(key, value string) (physical.Lock, error) {
+	// If multiple instances of Vault deployment trying to use the same MySQL
+	// DB endpoint, the first deployment will hold lock forever and others
+	// deployment will fail to insert record in the lock table.
+	// Use of a unique lock key based on db/table will resolve this problem.
+	// The db/table is hashed to ensure the lock string is less than 64 chars.
+	lockData := []byte(m.conf["database"] + "/" + m.conf["table"])
+	lockKey := key + "/" + fmt.Sprintf("%x", sha1.Sum(lockData))
+
 	l := &MySQLHALock{
 		in:     m,
-		key:    key,
+		key:    lockKey,
 		value:  value,
 		logger: m.logger,
 	}
