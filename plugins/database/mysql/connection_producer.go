@@ -218,7 +218,9 @@ func (c *mySQLConnectionProducer) addTLStoDSN() (connURL string, err error) {
 		return "", fmt.Errorf("unable to parse connectionURL: %s", err)
 	}
 
-	config.TLSConfig = c.tlsConfigName
+	if len(c.tlsConfigName) > 0 {
+		config.TLSConfig = c.tlsConfigName
+	}
 
 	connURL = config.FormatDSN()
 
