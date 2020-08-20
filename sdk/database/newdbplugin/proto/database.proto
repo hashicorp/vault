@@ -3,19 +3,19 @@ package newdbplugin; // TODO: Update name
 
 option go_package = "github.com/hashicorp/vault/sdk/database/newdbplugin/proto";
 
-import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 
 /////////////////
 // Initialize()
 /////////////////
 message InitializeRequest {
-    bytes config_data = 1;
+    google.protobuf.Struct config_data = 1;
     bool verify_connection = 2;
 }
 
 message InitializeResponse {
-    bytes config_data = 1;
+    google.protobuf.Struct config_data = 1;
 }
 /////////////////
 // NewUser()

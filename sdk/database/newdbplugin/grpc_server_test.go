@@ -2,12 +2,13 @@ package newdbplugin
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
 	"testing"
 	"time"
+
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -31,15 +32,6 @@ func TestGRPCServer_Initialize(t *testing.T) {
 	}
 
 	tests := map[string]testCase{
-		"bad config data": {
-			db: fakeDatabase{},
-			req: &proto.InitializeRequest{
-				ConfigData: []byte("98ythguns"),
-			},
-			expectedResp: &proto.InitializeResponse{},
-			expectErr:    true,
-			expectCode:   codes.InvalidArgument,
-		},
 		"database errored": {
 			db: fakeDatabase{
 				initErr: errors.New("initialization error"),
@@ -114,7 +106,7 @@ func TestGRPCServer_Initialize(t *testing.T) {
 	}
 }
 
-func TestCleanNumbers(t *testing.T) {
+func TestCoerceFloatsToInt(t *testing.T) {
 	type testCase struct {
 		input    map[string]interface{}
 		expected map[string]interface{}
@@ -137,64 +129,20 @@ func TestCleanNumbers(t *testing.T) {
 				"foo": 42,
 			},
 		},
-		"json.Number integer": {
+		"floats ": {
 			input: map[string]interface{}{
-				"foo": json.Number("42"),
+				"foo": 42.2,
+			},
+			expected: map[string]interface{}{
+				"foo": 42.2,
+			},
+		},
+		"floats coerced to ints": {
+			input: map[string]interface{}{
+				"foo": float64(42),
 			},
 			expected: map[string]interface{}{
 				"foo": int64(42),
-			},
-		},
-		"json.Number float": {
-			input: map[string]interface{}{
-				"foo": json.Number("42.123"),
-			},
-			expected: map[string]interface{}{
-				"foo": float64(42.123),
-			},
-		},
-		"bad json.Number": {
-			input: map[string]interface{}{
-				"foo": json.Number("bar"),
-			},
-			expected: map[string]interface{}{
-				"foo": json.Number("bar"),
-			},
-		},
-		"recursive integer": {
-			input: map[string]interface{}{
-				"foo": map[string]interface{}{
-					"bar": json.Number("42"),
-				},
-			},
-			expected: map[string]interface{}{
-				"foo": map[string]interface{}{
-					"bar": int64(42),
-				},
-			},
-		},
-		"recursive float": {
-			input: map[string]interface{}{
-				"foo": map[string]interface{}{
-					"bar": json.Number("42.123"),
-				},
-			},
-			expected: map[string]interface{}{
-				"foo": map[string]interface{}{
-					"bar": float64(42.123),
-				},
-			},
-		},
-		"recursive no numbers": {
-			input: map[string]interface{}{
-				"foo": map[string]interface{}{
-					"bar": "baz",
-				},
-			},
-			expected: map[string]interface{}{
-				"foo": map[string]interface{}{
-					"bar": "baz",
-				},
 			},
 		},
 	}
@@ -202,7 +150,7 @@ func TestCleanNumbers(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			actual := copyMap(test.input)
-			cleanNumbers(actual)
+			coerceFloatsToInt(actual)
 			if !reflect.DeepEqual(actual, test.expected) {
 				t.Fatalf("Actual: %#v\nExpected: %#v", actual, test.expected)
 			}
@@ -616,14 +564,14 @@ func TestGRPCServer_Close(t *testing.T) {
 	}
 }
 
-func marshal(t *testing.T, val interface{}) []byte {
+func marshal(t *testing.T, m map[string]interface{}) *structpb.Struct {
 	t.Helper()
 
-	b, err := json.Marshal(val)
+	strct, err := mapToStruct(m)
 	if err != nil {
-		t.Fatalf("unable to marshal to JSON: %s", err)
+		t.Fatalf("unable to marshal to protobuf: %s", err)
 	}
-	return b
+	return strct
 }
 
 type badJSONValue struct{}

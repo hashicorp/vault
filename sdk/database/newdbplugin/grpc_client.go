@@ -2,7 +2,6 @@ package newdbplugin
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -38,7 +37,7 @@ func (c gRPCClient) Initialize(ctx context.Context, req InitializeRequest) (Init
 }
 
 func initReqToProto(req InitializeRequest) (*proto.InitializeRequest, error) {
-	config, err := json.Marshal(req.Config)
+	config, err := mapToStruct(req.Config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to marshal config: %w", err)
 	}
@@ -51,10 +50,7 @@ func initReqToProto(req InitializeRequest) (*proto.InitializeRequest, error) {
 }
 
 func initRespFromProto(rpcResp *proto.InitializeResponse) (InitializeResponse, error) {
-	newConfig, err := parseConfigData(rpcResp.GetConfigData())
-	if err != nil {
-		return InitializeResponse{}, fmt.Errorf("unable to parse configuration response: %w", err)
-	}
+	newConfig := structToMap(rpcResp.GetConfigData())
 
 	resp := InitializeResponse{
 		Config: newConfig,

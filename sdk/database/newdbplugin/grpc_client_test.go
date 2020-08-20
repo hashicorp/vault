@@ -40,19 +40,6 @@ func TestGRPCClient_Initialize(t *testing.T) {
 			},
 			assertErr: assertErrNotNil,
 		},
-		"bad returned config": {
-			client: fakeClient{
-				initResp: &proto.InitializeResponse{
-					ConfigData: []byte("baddata"),
-				},
-			},
-			req: InitializeRequest{
-				Config: map[string]interface{}{
-					"foo": "bar",
-				},
-			},
-			assertErr: assertErrNotNil,
-		},
 		"happy path": {
 			client: fakeClient{
 				initResp: &proto.InitializeResponse{
