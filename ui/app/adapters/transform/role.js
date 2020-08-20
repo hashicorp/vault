@@ -5,7 +5,7 @@ export default ApplicationAdapater.extend({
   namespace: 'v1',
 
   pathForType() {
-    return type.replace('role');
+    return 'role';
   },
 
   _url(backend, id) {
