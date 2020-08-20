@@ -1,5 +1,7 @@
 import BaseAdapter from './base';
 
 export default BaseAdapter.extend({
-  // custom stuff for alphabet
+  pathForType() {
+    return 'alphabet';
+  },
 });

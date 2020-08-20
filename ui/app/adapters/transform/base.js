@@ -8,22 +8,12 @@ export default ApplicationAdapter.extend({
     return type.replace('transform/', '');
   },
 
-  _url(modelType, backend, id) {
-    let type = this.pathForType(modelType);
-    let base = `/${this.namespace}/${encodePath(backend)}/${type}`;
-    if (id) {
-      return `${base}/${encodePath(id)}`;
-    }
-    // CBS TODO: if no id provided, should we assume it's a LIST?
-    return base;
-  },
-
   createOrUpdate(store, type, snapshot) {
     const { modelName } = type;
     const serializer = store.serializerFor(modelName);
     const data = serializer.serialize(snapshot);
     const { id } = snapshot;
-    let url = this._url(modelName, snapshot.record.get('backend'), id);
+    let url = this.url(snapshot.record.get('backend'), modelName, id);
 
     return this.ajax(url, 'POST', { data });
   },
@@ -38,7 +28,7 @@ export default ApplicationAdapter.extend({
 
   deleteRecord(store, type, snapshot) {
     const { id } = snapshot;
-    return this.ajax(this._url(type.modelName, snapshot.record.get('backend'), id), 'DELETE');
+    return this.ajax(this.url(snapshot.record.get('backend'), type.modelName, id), 'DELETE');
   },
 
   url(backend, modelType, id) {
@@ -47,7 +37,7 @@ export default ApplicationAdapter.extend({
     if (id) {
       return `${url}/${encodePath(id)}`;
     }
-    return url;
+    return url + '?list=true';
   },
 
   fetchByQuery(query) {
@@ -70,7 +60,7 @@ export default ApplicationAdapter.extend({
 
   queryRecord(store, type, query) {
     console.log({ type });
-    return this.ajax(this._url(type.modelName, query.backend, query.id), 'GET').then(result => {
+    return this.ajax(this.url(query.backend, type.modelName, query.id), 'GET').then(result => {
       // console.log(result);
 
       return result;

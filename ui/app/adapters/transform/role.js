@@ -1,3 +1,7 @@
 import BaseAdapter from './base';
 
-export default BaseAdapter.extend({});
+export default BaseAdapter.extend({
+  pathForType() {
+    return 'role';
+  },
+});
