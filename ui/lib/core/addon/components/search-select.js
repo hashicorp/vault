@@ -22,6 +22,7 @@ import layout from '../templates/components/search-select';
  * @param label {String} - Label for this form field
  * @param [subLabel] {String} - a smaller label below the main Label
  * @param fallbackComponent {String} - name of component to be rendered if the API call 403s
+ * @param [backend] {String} - name of the backend if the query for options needs additional information (eg. secret backend)
  *
  * @param options {Array} - *Advanced usage* - `options` can be passed directly from the outside to the
  * power-select component. If doing this, `models` should not also be passed as that will overwrite the
@@ -93,7 +94,11 @@ export default Component.extend({
         this.set('shouldRenderName', true);
       }
       try {
-        let options = yield this.store.query(modelType, {});
+        let queryOptions = {};
+        if (this.backend) {
+          queryOptions = { backend: this.backend };
+        }
+        let options = yield this.store.query(modelType, queryOptions);
         this.formatOptions(options);
       } catch (err) {
         if (err.httpStatus === 404) {
