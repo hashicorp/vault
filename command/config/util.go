@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/hashicorp/vault/command/token"
+	"github.com/hashicorp/vault/sdk/helper/token"
 )
 
 // DefaultTokenHelper returns the token helper that is configured for Vault.

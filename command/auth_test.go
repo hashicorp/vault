@@ -5,7 +5,7 @@ import (
 
 	"github.com/mitchellh/cli"
 
-	"github.com/hashicorp/vault/command/token"
+	"github.com/hashicorp/vault/sdk/helper/token"
 )
 
 func testAuthCommand(tb testing.TB) (*cli.MockUi, *AuthCommand) {

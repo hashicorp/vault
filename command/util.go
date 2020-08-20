@@ -9,7 +9,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/config"
-	"github.com/hashicorp/vault/command/token"
+	"github.com/hashicorp/vault/sdk/helper/token"
 	"github.com/mitchellh/cli"
 )
 

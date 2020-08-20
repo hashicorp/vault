@@ -13,7 +13,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/token"
+	"github.com/hashicorp/vault/sdk/helper/token"
 	colorable "github.com/mattn/go-colorable"
 	"github.com/mitchellh/cli"
 )

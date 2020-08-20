@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	"github.com/hashicorp/vault/command/token"
+	"github.com/hashicorp/vault/sdk/helper/token"
 	"github.com/hashicorp/vault/vault"
 )
 
