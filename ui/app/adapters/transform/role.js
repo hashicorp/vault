@@ -3,14 +3,13 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapater.extend({
   namespace: 'v1',
-  modelName: 'transform/role',
 
-  pathForType(type) {
-    return type.replace('transform/', '');
+  pathForType() {
+    return type.replace('role');
   },
 
-  _url(modelType, backend, id) {
-    let type = this.pathForType(modelType);
+  _url(backend, id) {
+    let type = this.pathForType();
     let base = `/v1/${encodePath(backend)}/${type}`;
     if (id) {
       return `${base}/${encodePath(id)}`;
@@ -19,12 +18,8 @@ export default ApplicationAdapater.extend({
   },
 
   query(store, type, query) {
-    return this.ajax(this._url(this.modelName, query.backend), 'GET').then(result => {
+    return this.ajax(this._url(query.backend), 'GET').then(result => {
       return result;
     });
   },
-
-  // buildURL(modelName, id, snapshot, requestType, query) {
-  //   return this._super(`${modelName}/`, id, snapshot, requestType, query);
-  // },
 });
