@@ -20,6 +20,11 @@ NOTE:
 
 OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
 
+KNOWN ISSUES:
+
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.5.2 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.5.2)
+
 
 ## 1.5.1
 ### August 20th, 2020
@@ -33,6 +38,8 @@ SECURITY:
 KNOWN ISSUES:
 
 * OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.5.1 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.5.1)
 
 CHANGES:
 
@@ -146,6 +153,12 @@ NOTE:
 
 OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
 
+KNOWN ISSUES:
+
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.4.5 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.4.5)
+
+
 ## 1.4.4
 ### August 20th, 2020
 
@@ -157,6 +170,8 @@ SECURITY:
 KNOWN ISSUES:
 
 * OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.4.4 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.4.4)
 
 BUG FIXES:
 
@@ -386,6 +401,11 @@ NOTE:
 
 OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
 
+KNOWN ISSUES:
+
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.3.9 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.3.9)
+
 ## 1.3.8
 ### August 20th, 2020
 
@@ -397,6 +417,8 @@ SECURITY:
 KNOWN ISSUES:
 
 * OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.3.8 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.3.8)
 
 ## 1.3.7
 ### July 2nd, 2020
@@ -701,6 +723,11 @@ NOTE:
 
 OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
 
+KNOWN ISSUES:
+
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.2.6 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.2.6)
+
 ## 1.2.5
 ### August 20th, 2020
 
@@ -711,7 +738,9 @@ SECURITY:
 
 KNOWN ISSUES:
 
- * OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+* OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.2.5 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.2.5)
 
 ## 1.2.4 (November 7th, 2019)
 
