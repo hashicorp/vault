@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/vault-plugin-database-mongodbatlas"
+	mongodbatlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
@@ -289,6 +289,7 @@ func TestBackend_config_connection(t *testing.T) {
 			},
 			"allowed_roles":                      []string{"*"},
 			"root_credentials_rotate_statements": []string{},
+			"password_policy":                    "",
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -341,6 +342,7 @@ func TestBackend_config_connection(t *testing.T) {
 			},
 			"allowed_roles":                      []string{"*"},
 			"root_credentials_rotate_statements": []string{},
+			"password_policy":                    "",
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -382,6 +384,7 @@ func TestBackend_config_connection(t *testing.T) {
 			},
 			"allowed_roles":                      []string{"flu", "barre"},
 			"root_credentials_rotate_statements": []string{},
+			"password_policy":                    "",
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -769,6 +772,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 		},
 		"allowed_roles":                      []string{"plugin-role-test"},
 		"root_credentials_rotate_statements": []string(nil),
+		"password_policy":                    "",
 	}
 	req.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)

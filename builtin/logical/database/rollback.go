@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 	"google.golang.org/grpc/codes"
@@ -73,13 +72,13 @@ func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request,
 }
 
 // rollbackDatabaseCredentials rolls back root database credentials for
-// the connection associated with the passed WAL entry. It will creates
+// the connection associated with the passed WAL entry. It will create
 // a connection to the database using the WAL entry new password in
 // order to alter the password to be the WAL entry old password.
 func (b *databaseBackend) rollbackDatabaseCredentials(ctx context.Context, config *DatabaseConfig, entry rotateRootCredentialsWAL) error {
 	// Attempt to get a connection with the WAL entry new password.
 	config.ConnectionDetails["password"] = entry.NewPassword
-	dbc, err := b.GetConnectionWithConfig(ctx, entry.ConnectionName, config)
+	db, err := b.GetConnectionWithConfig(ctx, entry.ConnectionName, config)
 	if err != nil {
 		return err
 	}
@@ -91,22 +90,9 @@ func (b *databaseBackend) rollbackDatabaseCredentials(ctx context.Context, confi
 		}
 	}()
 
-	// Roll back the database password to the WAL entry old password
-	statements := dbplugin.Statements{Rotation: config.RootCredentialsRotateStatements}
-	userConfig := dbplugin.StaticUserConfig{
-		Username: entry.UserName,
-		Password: entry.OldPassword,
+	err = changeUserPassword(ctx, db.database, entry.UserName, entry.OldPassword, config.RootCredentialsRotateStatements)
+	if status.Code(err) == codes.Unimplemented {
+		return nil
 	}
-	if _, _, err := dbc.SetCredentials(ctx, statements, userConfig); err != nil {
-		// If the database plugin doesn't implement SetCredentials, the root
-		// credentials can't be rolled back. This means the root credential
-		// rotation happened via the plugin RotateRootCredentials RPC.
-		if status.Code(err) == codes.Unimplemented {
-			return nil
-		}
-
-		return err
-	}
-
-	return nil
+	return err
 }

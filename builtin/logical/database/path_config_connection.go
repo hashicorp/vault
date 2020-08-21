@@ -279,6 +279,10 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			config.RootCredentialsRotateStatements = data.Get("root_rotation_statements").([]string)
 		}
 
+		if passwordPolicyRaw, ok := data.GetOk("password_policy"); ok {
+			config.PasswordPolicy = passwordPolicyRaw.(string)
+		}
+
 		// Remove these entries from the data before we store it keyed under
 		// ConnectionDetails.
 		delete(data.Raw, "name")
@@ -310,13 +314,13 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		// Create a database plugin and initialize it.
 		dbw, err := makeDatabase(ctx, config.PluginName, b.System(), b.logger)
 		if err != nil {
-			return logical.ErrorResponse("error creating database object: %w", err), nil
+			return logical.ErrorResponse("error creating database object: %s", err), nil
 		}
 
 		config.ConnectionDetails, err = initDatabase(ctx, dbw, config.ConnectionDetails, verifyConnection)
 		if err != nil {
 			dbw.Close()
-			return logical.ErrorResponse("error creating database object: %w", err), nil
+			return logical.ErrorResponse("error creating database object: %s", err), nil
 		}
 
 		b.Lock()
@@ -331,12 +335,8 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			id:       id,
 		}
 
-		// Store it
-		entry, err = logical.StorageEntryJSON(fmt.Sprintf("config/%s", name), config)
+		err = storeConfig(ctx, req.Storage, name, config)
 		if err != nil {
-			return nil, err
-		}
-		if err := req.Storage.Put(ctx, entry); err != nil {
 			return nil, err
 		}
 
@@ -350,6 +350,13 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 					resp.AddWarning("Password found in connection_url, use a templated url to enable root rotation and prevent read access to password information.")
 				}
 			}
+		}
+
+		// If using a legacy DB plugin and set the `password_policy` field, send a warning to the user indicating
+		// the `password_policy` will not be used
+		if dbw.legacyDatabase != nil && config.PasswordPolicy != "" {
+			resp.AddWarning(fmt.Sprintf("%s does not support password policies - upgrade to the latest version of "+
+				"Vault (or the sdk if using a custom plugin) to gain password policy support", config.PluginName))
 		}
 
 		return resp, nil

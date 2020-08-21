@@ -316,21 +316,20 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	}
 
 	// Get the Database object
-	db, err := b.GetConnection(ctx, s, input.Role.DBName)
+	dbi, err := b.GetConnection(ctx, s, input.Role.DBName)
 	if err != nil {
 		return output, err
 	}
 
-	db.RLock()
-	defer db.RUnlock()
+	dbi.RLock()
+	defer dbi.RUnlock()
 
 	// Use password from input if available. This happens if we're restoring from
 	// a WAL item or processing the rotation queue with an item that has a WAL
 	// associated with it
 	newPassword := input.Password
 	if newPassword == "" {
-		// Generate a new password
-		newPassword, err = db.GenerateCredentials(ctx)
+		newPassword, err = generatePassword(ctx, dbi.database, b.System(), dbConfig.PasswordPolicy)
 		if err != nil {
 			return output, err
 		}
@@ -355,21 +354,17 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		}
 	}
 
-	_, password, err := db.SetCredentials(ctx, input.Role.Statements, config)
+	err = changeUserPassword(ctx, dbi.database, input.Role.StaticAccount.Username, newPassword, input.Role.Statements.Rotation)
 	if err != nil {
-		b.CloseIfShutdown(db, err)
+		b.CloseIfShutdown(dbi, err)
 		return output, errwrap.Wrapf("error setting credentials: {{err}}", err)
-	}
-
-	if newPassword != password {
-		return output, errors.New("mismatch passwords returned")
 	}
 
 	// Store updated role information
 	// lvr is the known LastVaultRotation
 	lvr := time.Now()
 	input.Role.StaticAccount.LastVaultRotation = lvr
-	input.Role.StaticAccount.Password = password
+	input.Role.StaticAccount.Password = newPassword
 	output.RotationTime = lvr
 
 	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+input.RoleName, input.Role)

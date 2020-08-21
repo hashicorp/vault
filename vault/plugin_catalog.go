@@ -10,11 +10,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
-
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -66,7 +66,19 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
 
 	{
-		// Attempt to run as database plugin
+		// Attempt to run as database V5 plugin
+		client, err := newdbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+		if err == nil {
+			// Close the client and cleanup the plugin process
+			client.Close()
+			return consts.PluginTypeDatabase, nil
+		} else {
+			logger.Warn(fmt.Sprintf("received %s attempting as db plugin, attempting as auth/secret plugin", err))
+		}
+	}
+
+	{
+		// Attempt to run as database V4 plugin
 		client, err := dbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
 		if err == nil {
 			// Close the client and cleanup the plugin process

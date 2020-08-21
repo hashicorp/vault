@@ -63,7 +63,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			// Adding a small buffer since the TTL will be calculated again after this call
 			// to ensure the database credential does not expire before the lease
 			expireTime = expireTime.Add(5 * time.Second)
-			err := db.RenewUser(ctx, role.Statements, username, expireTime)
+			err := renewUser(ctx, db.database, username, expireTime, role.Statements.Renewal)
 			if err != nil {
 				b.CloseIfShutdown(db, err)
 				return nil, err
@@ -103,26 +103,27 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			dbName = role.DBName
 			statements = role.Statements
 		} else {
-			if dbNameRaw, ok := req.Secret.InternalData["db_name"]; !ok {
+			dbNameRaw, ok := req.Secret.InternalData["db_name"]
+			if !ok {
 				return nil, fmt.Errorf("error during revoke: could not find role with name %q or embedded revocation db name data", req.Secret.InternalData["role"])
-			} else {
-				dbName = dbNameRaw.(string)
 			}
-			if statementsRaw, ok := req.Secret.InternalData["revocation_statements"]; !ok {
+			dbName = dbNameRaw.(string)
+
+			statementsRaw, ok := req.Secret.InternalData["revocation_statements"]
+			if !ok {
 				return nil, fmt.Errorf("error during revoke: could not find role with name %q or embedded revocation statement data", req.Secret.InternalData["role"])
-			} else {
-				// If we don't actually have any statements, because none were
-				// set in the role, we'll end up with an empty one and the
-				// default for the db type will be attempted
-				if statementsRaw != nil {
-					statementsSlice, ok := statementsRaw.([]interface{})
-					if !ok {
-						return nil, fmt.Errorf("error during revoke: could not find role with name %q and embedded reovcation data could not be read", req.Secret.InternalData["role"])
-					} else {
-						for _, v := range statementsSlice {
-							statements.Revocation = append(statements.Revocation, v.(string))
-						}
-					}
+			}
+
+			// If we don't actually have any statements, because none were
+			// set in the role, we'll end up with an empty one and the
+			// default for the db type will be attempted
+			if statementsRaw != nil {
+				statementsSlice, ok := statementsRaw.([]interface{})
+				if !ok {
+					return nil, fmt.Errorf("error during revoke: could not find role with name %q and embedded reovcation data could not be read", req.Secret.InternalData["role"])
+				}
+				for _, v := range statementsSlice {
+					statements.Revocation = append(statements.Revocation, v.(string))
 				}
 			}
 		}
@@ -136,7 +137,8 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 		db.RLock()
 		defer db.RUnlock()
 
-		if err := db.RevokeUser(ctx, statements, username); err != nil {
+		err = deleteUser(ctx, db.database, username, statements.Revocation)
+		if err != nil {
 			b.CloseIfShutdown(db, err)
 			return nil, err
 		}

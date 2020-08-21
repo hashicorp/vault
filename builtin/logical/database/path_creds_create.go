@@ -5,10 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
-
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -93,7 +89,14 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		// to ensure the database credential does not expire before the lease
 		expiration = expiration.Add(5 * time.Second)
 
-		username, password, err := b.createUser(ctx, db.database, role.Statements, req.DisplayName, name, expiration, dbConfig.PasswordPolicy)
+		username, password, err := createUser(ctx,
+			db.database,
+			b.System(),
+			role.Statements,
+			req.DisplayName,
+			name,
+			expiration,
+			dbConfig.PasswordPolicy)
 		if err != nil {
 			b.CloseIfShutdown(db, err)
 			return nil, err
@@ -112,65 +115,6 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		resp.Secret.MaxTTL = role.MaxTTL
 		return resp, nil
 	}
-}
-
-func (b databaseBackend) createUser(ctx context.Context, dbw databaseVersionWrapper, statements dbplugin.Statements, displayName, roleName string, expiration time.Time, passwordPolicy string) (username, password string, err error) {
-	if dbw.database != nil {
-		return b.createNewUser(ctx, dbw, statements, displayName, roleName, expiration, passwordPolicy)
-	}
-	return b.createLegacyUser(ctx, dbw, statements, displayName, roleName, expiration)
-}
-
-// createNewUser creates a user with the v5 Database interface
-func (b databaseBackend) createNewUser(
-	ctx context.Context,
-	dbw databaseVersionWrapper,
-	statements dbplugin.Statements,
-	displayName, roleName string,
-	expiration time.Time,
-	passwordPolicy string) (username, password string, err error) {
-
-	pass, err := generatePassword(ctx, b.System(), passwordPolicy)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to generate password: %w", err)
-	}
-
-	req := newdbplugin.NewUserRequest{
-		UsernameConfig: newdbplugin.UsernameMetadata{
-			DisplayName: displayName,
-			RoleName:    roleName,
-		},
-		Statements: newdbplugin.Statements{
-			Commands: statements.Creation,
-		},
-		RollbackStatements: newdbplugin.Statements{
-			Commands: statements.Rollback,
-		},
-		Password:   pass,
-		Expiration: expiration,
-	}
-
-	resp, err := dbw.database.NewUser(ctx, req)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to create user: %w", err)
-	}
-	return resp.Username, pass, nil
-}
-
-// createLegacyUser creates a user with the v4 Database interface
-func (b databaseBackend) createLegacyUser(
-	ctx context.Context,
-	dbw databaseVersionWrapper,
-	statements dbplugin.Statements,
-	displayName, roleName string,
-	expiration time.Time) (username, password string, err error) {
-
-	usernameConfig := dbplugin.UsernameConfig{
-		DisplayName: displayName,
-		RoleName:    roleName,
-	}
-
-	return dbw.legacyDatabase.CreateUser(ctx, statements, usernameConfig, expiration)
 }
 
 func (b *databaseBackend) pathStaticCredsRead() framework.OperationFunc {

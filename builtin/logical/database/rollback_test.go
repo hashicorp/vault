@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/hashicorp/vault/helper/namespace"
 )
 
 const (
@@ -98,11 +98,7 @@ func TestBackend_RotateRootCredentials_WAL_rollback(t *testing.T) {
 	}
 
 	// Alter the database password so it no longer matches what is in storage
-	_, _, err = pc.SetCredentials(context.Background(), dbplugin.Statements{},
-		dbplugin.StaticUserConfig{
-			Username: databaseUser,
-			Password: "newSecret",
-		})
+	err = changeUserPassword(context.Background(), pc.database, databaseUser, "newSecret", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -340,11 +336,7 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_2(t *testing.T) {
 	}
 
 	// Alter the database password
-	_, _, err = pc.SetCredentials(context.Background(), dbplugin.Statements{},
-		dbplugin.StaticUserConfig{
-			Username: databaseUser,
-			Password: "newSecret",
-		})
+	err = changeUserPassword(context.Background(), pc.database, databaseUser, "newSecret", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
