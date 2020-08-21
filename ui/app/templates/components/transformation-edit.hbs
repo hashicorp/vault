@@ -28,14 +28,13 @@
         <div class="toolbar-separator" />
       {{/if}}
       {{#if capabilities.canDelete}}
-        <ToolbarSecretLink
-          @secret={{model.id}}
-          @mode="edit"
-          @data-test-edit-link=true
-          @replace=true
+        <a
+          class="toolbar-link"
+          onclick={{action (mut isModalActive) true}}
+          data-test-replication-action-trigger
         >
           Delete transformation
-        </ToolbarSecretLink>
+        </a>
       {{/if}}
       {{#if capabilities.canUpdate }}
         <ToolbarSecretLink
@@ -60,3 +59,16 @@
     @model={{model}}
   />
 {{/if}}
+
+<ConfirmationModal
+  @title="Delete transformation"
+  @onClose={{action (mut isModalActive) false}}
+  @isActive={{isModalActive}}
+  @confirmText={{model.name}}
+  @toConfirmMsg="Type {{model.name}} to confirm deleting the transformation."
+  @onConfirm={{action "delete"}}
+>
+  <p class="has-bottom-margin-m">
+    Deleting the <strong>{{model.name}}</strong> transformation means that the underlying keys are lost and the data encoded by the transformation are unrecoverable and cannot be decoded.
+  </p>
+</ConfirmationModal>
