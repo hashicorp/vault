@@ -25,7 +25,7 @@ export default Route.extend({
   modelTypeForTransform(tab) {
     let modelType;
     switch (tab) {
-      case 'roles':
+      case 'role':
         modelType = 'transform/role';
         break;
       case 'templates':

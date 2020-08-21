@@ -9,11 +9,10 @@ export default ApplicationAdapter.extend({
   },
 
   createOrUpdate(store, type, snapshot) {
-    const { modelName } = type;
-    const serializer = store.serializerFor(modelName);
+    const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
     const { id } = snapshot;
-    let url = this.url(snapshot.record.get('backend'), modelName, id);
+    let url = this.url(snapshot.record.get('backend'), type.modelName, id);
 
     return this.ajax(url, 'POST', { data });
   },
