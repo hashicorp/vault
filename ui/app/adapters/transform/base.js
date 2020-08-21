@@ -43,12 +43,6 @@ export default ApplicationAdapter.extend({
   fetchByQuery(query) {
     const { backend, modelName, id } = query;
     return this.ajax(this.url(backend, modelName, id), 'GET').then(resp => {
-      if (id) {
-        return {
-          id,
-          ...resp,
-        };
-      }
       return resp;
     });
   },
@@ -61,9 +55,10 @@ export default ApplicationAdapter.extend({
   queryRecord(store, type, query) {
     console.log({ type });
     return this.ajax(this.url(query.backend, type.modelName, query.id), 'GET').then(result => {
-      // console.log(result);
-
-      return result;
+      return {
+        id: query.id,
+        ...result,
+      };
     });
   },
 
