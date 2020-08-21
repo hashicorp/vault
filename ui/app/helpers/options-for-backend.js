@@ -69,15 +69,13 @@ const SECRET_BACKENDS = {
         editComponent: 'transformation-edit',
       },
       {
-        name: 'roles',
+        name: 'role',
         modelPrefix: 'role/',
         label: 'Roles',
         searchPlaceholder: 'Filter roles',
-        item: 'roles',
+        item: 'role',
         create: 'Create role',
-        tab: 'roles',
-        listItemPartial: 'partials/secret-list/item',
-        editComponent: 'transform-role-edit',
+        tab: 'role',
       },
       {
         name: 'templates',

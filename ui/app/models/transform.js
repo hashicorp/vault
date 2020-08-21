@@ -92,5 +92,6 @@ const Model = DS.Model.extend({
 });
 
 export default attachCapabilities(Model, {
+  // TODO: Update to dynamic backend name
   updatePath: apiPath`transform/transformation/${'id'}`,
 });
