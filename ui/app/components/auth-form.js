@@ -9,6 +9,8 @@ import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { task } from 'ember-concurrency';
 const BACKENDS = supportedAuthBackends();
 
+import { toolsActions } from 'vault/helpers/tools-actions';
+
 /**
  * @module AuthForm
  * The `AuthForm` is used to sign users into Vault.
@@ -24,19 +26,50 @@ const BACKENDS = supportedAuthBackends();
  * @param selectedAuth=null {String} - The auth method that is currently selected in the dropdown.
  */
 
+// const DEFAULTS = {
+//   token: null,
+//   username: null,
+//   password: null,
+//   customPath: null,
+// };
 const DEFAULTS = {
   token: null,
+  rewrap_token: null,
+  errors: [],
+  wrap_info: null,
+  creation_time: null,
+  creation_ttl: null,
+  data: '{\n}',
+  unwrap_data: null,
+  details: null,
+  wrapTTL: null,
+  sum: null,
+  random_bytes: null,
+  input: null,
   username: null,
   password: null,
   customPath: null,
 };
+const WRAPPING_ENDPOINTS = ['lookup', 'wrap', 'unwrap', 'rewrap'];
 
 export default Component.extend(DEFAULTS, {
+  // putting these attrs here so they don't get reset when you click back
+  //random
+  bytes: 32,
+  //hash
+  format: 'base64',
+  algorithm: 'sha2-256',
+  tagName: '',
+  unwrapActiveTab: 'data',
+  selectedAction: null,
+
   router: service(),
   auth: service(),
   flashMessages: service(),
   store: service(),
   csp: service('csp-event'),
+  currentCluster: service(),
+  wizard: service(),
 
   //  passed in via a query param
   selectedAuth: null,
@@ -48,8 +81,88 @@ export default Component.extend(DEFAULTS, {
   // internal
   oldNamespace: null,
 
-  didReceiveAttrs() {
+  beforeModel(transition) {
+    const currentCluster = this.get('currentCluster.cluster.name');
+    const { selected_action: selectedAction } = this.paramsFor(this.routeName);
+    const supportedActions = toolsActions();
+
+    if (transition.targetName === this.routeName) {
+      transition.abort();
+      return this.replaceWith('vault.cluster.tools.tool', currentCluster, supportedActions[2]);
+    }
+  },
+  model(params) {
+    return params.selected_action;
+  },
+
+  setupController(controller, model) {
     this._super(...arguments);
+    controller.set('selectedAction', model);
+  },
+
+  handleSuccess(resp, action) {
+    let props = {};
+    let secret = (resp && resp.data) || resp.auth;
+
+    if (secret && action === 'unwrap') {
+      let details = {
+        'Request ID': resp.request_id,
+        'Lease ID': resp.lease_id || 'None',
+        Renewable: resp.renewable ? 'Yes' : 'No',
+        'Lease Duration': resp.lease_duration || 'None',
+      };
+      props = assign({}, props, { unwrap_data: secret }, { details: details });
+    }
+    props = assign({}, props, secret);
+    if (resp && resp.wrap_info) {
+      const keyName = action === 'rewrap' ? 'rewrap_token' : 'token';
+      props = assign({}, props, { [keyName]: resp.wrap_info.token });
+    }
+    if (props.token || props.rewrap_token || props.unwrap_data || action === 'lookup') {
+      this.get('wizard').transitionFeatureMachine(this.get('wizard.featureState'), 'CONTINUE');
+    }
+    this.setProperties(props);
+  },
+
+  onClear() {
+    this.reset();
+  },
+
+  updateTtl(evt) {
+    const ttl = evt.enabled ? `${evt.seconds}s` : '30m';
+    set(this, 'wrapTTL', ttl);
+  },
+
+  codemirrorUpdated(val, codemirror) {
+    codemirror.performLint();
+    const hasErrors = codemirror.state.lint.marked.length > 0;
+    this.setProperties(this, {
+      buttonDisabled: hasErrors,
+      data: val,
+    });
+  },
+
+  reset() {
+    if (this.selectedAuth !== 'unwrap') return ;
+    if (this.isDestroyed || this.isDestroying) {
+      return;
+    }
+    this.setProperties(this, DEFAULTS);
+  },
+
+  checkAction() {
+    const currentAction = get(this, 'selectedAction');
+    const oldAction = get(this, 'oldSelectedAction');
+    if (currentAction === undefined) {
+      return;
+    }
+    if (currentAction !== oldAction) {
+      this.reset();
+    }
+    this.set('oldSelectedAction', currentAction);
+  },
+
+  didReceiveAttrs() {
     let {
       wrappedToken: token,
       oldWrappedToken: oldToken,
@@ -59,24 +172,32 @@ export default Component.extend(DEFAULTS, {
       oldSelectedAuth: oldMethod,
     } = this;
 
-    next(() => {
-      if (!token && (oldNS === null || oldNS !== ns)) {
-        this.fetchMethods.perform();
-      }
-      this.set('oldNamespace', ns);
-      // we only want to trigger this once
-      if (token && !oldToken) {
-        this.unwrapToken.perform(token);
-        this.set('oldWrappedToken', token);
-      }
-      if (oldMethod && oldMethod !== newMethod) {
-        this.resetDefaults();
-      }
-      this.set('oldSelectedAuth', newMethod);
-    });
+    this._super(...arguments);
+    if (newMethod === "unwrap" && oldMethod !== undefined ) this.checkAction();
+    else
+    {
+      next(() => {
+        if (!token && (oldNS === null || oldNS !== ns)) {
+          this.fetchMethods.perform();
+        }
+        if (ns !== undefined && ns !== "") this.set('oldNamespace', ns);
+
+        // we only want to trigger this once
+        if (token && !oldToken) {
+          this.unwrapToken.perform(token);
+          this.set('oldWrappedToken', token);
+        }
+        if (oldMethod && oldMethod !== newMethod && newMethod !== 'unwrap') {
+          this.resetDefaults();
+        }
+        if (newMethod !== 'unwrap') this.set('oldSelectedAuth', newMethod);
+      });
+    }
   },
 
   didRender() {
+    if (this.element === null) return ;
+    //if (this.authMethod === 'unwrap' || this.authMethod === undefined) return ;
     this._super(...arguments);
     // on very narrow viewports the active tab may be overflowed, so we scroll it into view here
     let activeEle = this.element.querySelector('li.is-active');
@@ -188,6 +309,11 @@ export default Component.extend(DEFAULTS, {
   showLoading: or('isLoading', 'authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
   handleError(e, prefixMessage = true) {
+    if (this.authMethod === undefined){
+      this.set('errors', e.errors);
+      return ;
+    }
+
     this.set('loading', false);
     let errors;
     if (e.errors) {
@@ -208,7 +334,6 @@ export default Component.extend(DEFAULTS, {
     let clusterId = this.cluster.id;
     try {
       let authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
-
       let { isRoot, namespace } = authResponse;
       let transition;
       let { redirectTo } = this;
@@ -235,34 +360,67 @@ export default Component.extend(DEFAULTS, {
   }).withTestWaiter(),
 
   actions: {
-    doSubmit() {
-      let passedData, e;
-      if (arguments.length > 1) {
-        [passedData, e] = arguments;
-      } else {
-        [e] = arguments;
+    didTransition() {
+      const params = this.paramsFor(this.routeName);
+      if (this.wizard.currentMachine === 'tools') {
+        this.wizard.transitionFeatureMachine(this.wizard.featureState, params.selected_action.toUpperCase());
       }
-      if (e) {
-        e.preventDefault();
+      this.controller.setProperties(params);
+      return true;
+    },
+    doSubmit(evt) {
+      if (this.selectedAuth !== "unwrap")
+      {
+        let passedData, e;
+        if (arguments.length > 1) {
+          [passedData, e] = arguments;
+        } else {
+          [e] = arguments;
+        }
+        if (e) {
+          e.preventDefault();
+        }
+        let data = {};
+        this.setProperties({
+          error: null,
+        });
+        let backend = this.get('selectedAuthBackend') || {};
+        let backendMeta = BACKENDS.find(
+          b => (get(b, 'type') || '').toLowerCase() === (get(backend, 'type') || '').toLowerCase()
+        );
+        let attributes = get(backendMeta || {}, 'formAttributes') || [];
+  
+        data = assign(data, this.getProperties(...attributes));
+        if (passedData) {
+          data = assign(data, passedData);
+        }
+        if (this.get('customPath') || get(backend, 'id')) {
+          data.path = this.get('customPath') || get(backend, 'id');
+        }
+        return this.authenticate.unlinked().perform(backend.type, data);
       }
-      let data = {};
-      this.setProperties({
-        error: null,
-      });
-      let backend = this.get('selectedAuthBackend') || {};
-      let backendMeta = BACKENDS.find(
-        b => (get(b, 'type') || '').toLowerCase() === (get(backend, 'type') || '').toLowerCase()
-      );
-      let attributes = get(backendMeta || {}, 'formAttributes') || [];
+      else
+      {
+        evt.preventDefault();
+        const action = this.selectedAction;
+        const wrapTTL = action === 'wrap' ? get(this, 'wrapTTL') : null;
+        const data = { token: this.get('token') };  // this.getData();
+        this.setProperties(this, {
+          errors: null,
+          wrap_info: null,
+          creation_time: null,
+          creation_ttl: null,
+        });
 
-      data = assign(data, this.getProperties(...attributes));
-      if (passedData) {
-        data = assign(data, passedData);
+        this.get('store')
+          .adapterFor('tools')
+          .toolAction('unwrap', '', { clientToken: data.token })
+          .then(resp => this.handleSuccess(resp, 'unwrap'), (...errArgs) => this.handleError(...errArgs));
       }
-      if (this.get('customPath') || get(backend, 'id')) {
-        data.path = this.get('customPath') || get(backend, 'id');
-      }
-      return this.authenticate.unlinked().perform(backend.type, data);
+    },
+    onClear() {
+      this.reset();
+      this.resetDefaults();
     },
     handleError(e) {
       if (e) {

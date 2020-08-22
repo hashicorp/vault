@@ -70,7 +70,7 @@
       onsubmit={{action "doSubmit"}}
     >
         {{partial providerPartialName}}
-        {{#if (and (not-eq selectedAuthBackend.type "token") (not-eq selectedAuthBackend.type "unwrap")) }}
+        {{#if (and selectedAuthBackend.type (not-eq selectedAuthBackend.type "token") (not-eq selectedAuthBackend.type "unwrap")) }}
           <AuthFormOptions
             @customPath={{this.customPath}}
             @onPathChange={{action (mut this.customPath)}}
