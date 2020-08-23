@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/consul/agent/systemd"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
@@ -73,8 +74,16 @@ const (
 	storageTypeConsul = "consul"
 )
 
+// notifier is called after a successful JoinLAN.
+type notifier interface {
+	Notify(string) error
+}
+
 type ServerCommand struct {
 	*BaseCommand
+
+	// joinLANNotifier is called after a successful JoinLAN.
+	NotifierSystemd notifier
 
 	AuditBackends      map[string]audit.Factory
 	CredentialBackends map[string]logical.Factory
@@ -798,6 +807,9 @@ func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (log.Lev
 }
 
 func (c *ServerCommand) Run(args []string) int {
+
+	c.NotifierSystemd = &systemd.Notifier{}
+
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -1548,6 +1560,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			for {
 				err := core.UnsealWithStoredKeys(context.Background())
 				if err == nil {
+					if notifyErr := c.NotifierSystemd.Notify(systemd.Ready); notifyErr != nil {
+						c.logger.Debug("server: systemd notify failed", notifyErr)
+					}
 					return
 				}
 
