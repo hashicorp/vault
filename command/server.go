@@ -74,7 +74,7 @@ const (
 	storageTypeConsul = "consul"
 )
 
-// notifier is called after a successful JoinLAN.
+// notifier is called after a successful Vault start.
 type notifier interface {
 	Notify(string) error
 }
@@ -82,7 +82,7 @@ type notifier interface {
 type ServerCommand struct {
 	*BaseCommand
 
-	// joinLANNotifier is called after a successful JoinLAN.
+	// NotifierSystemd is called after Vault starts.
 	NotifierSystemd notifier
 
 	AuditBackends      map[string]audit.Factory
@@ -807,10 +807,8 @@ func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (log.Lev
 }
 
 func (c *ServerCommand) Run(args []string) int {
-
-	c.NotifierSystemd = &systemd.Notifier{}
-
 	f := c.Flags()
+	c.NotifierSystemd = &systemd.Notifier{}
 
 	if err := f.Parse(args); err != nil {
 		c.UI.Error(err.Error())

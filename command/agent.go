@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/consul/agent/systemd"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -50,6 +51,9 @@ var _ cli.CommandAutocomplete = (*AgentCommand)(nil)
 
 type AgentCommand struct {
 	*BaseCommand
+
+	// NotifierSystemd is called after Vault starts.
+	NotifierSystemd notifier
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
@@ -164,6 +168,7 @@ func (c *AgentCommand) AutocompleteFlags() complete.Flags {
 
 func (c *AgentCommand) Run(args []string) int {
 	f := c.Flags()
+	c.NotifierSystemd = &systemd.Notifier{}
 
 	if err := f.Parse(args); err != nil {
 		c.UI.Error(err.Error())
@@ -585,6 +590,10 @@ func (c *AgentCommand) Run(args []string) int {
 	if err := c.storePidFile(config.PidFile); err != nil {
 		c.UI.Error(fmt.Sprintf("Error storing PID: %s", err))
 		return 1
+	} else {
+		if notifyErr := c.NotifierSystemd.Notify(systemd.Ready); notifyErr != nil {
+			c.logger.Debug("server: systemd notify failed", notifyErr)
+		}
 	}
 
 	defer func() {
