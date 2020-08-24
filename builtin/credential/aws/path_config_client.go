@@ -58,7 +58,7 @@ func (b *backend) pathConfigClient() *framework.Path {
 			"allowed_sts_header_values": {
 				Type:        framework.TypeCommaStringSlice,
 				Default:     nil,
-				Description: "List of headers that are allowed to be in AWS STS request headers",
+				Description: "List of additional headers that are allowed to be in AWS STS request headers",
 			},
 >>>>>>> 30a6697f0... Change to string slice comma separated parsing
 			"max_retries": {
@@ -144,6 +144,7 @@ func (b *backend) pathConfigClientRead(ctx context.Context, req *logical.Request
 			"sts_region":                 clientConfig.STSRegion,
 			"iam_server_id_header_value": clientConfig.IAMServerIdHeaderValue,
 			"max_retries":                clientConfig.MaxRetries,
+			"allowed_sts_header_values":  clientConfig.AllowedSTSHeaderValues,
 		},
 	}, nil
 }
