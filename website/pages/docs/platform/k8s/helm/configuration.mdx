@@ -528,7 +528,7 @@ and consider if they're appropriate for your deployment.
       - `enabled` (`boolean: false`) -
         Enables `ha` mode for the Vault server. This mode uses a highly available backend storage (such as Consul) to store Vault's data. By default this is configured to use [Consul Helm](https://github.com/hashicorp/consul-helm). For a complete list of storage backends, see the [Vault documentation](/docs/configuration).
 
-      - `apiAddr`: (`string: "{}") - 
+      - `apiAddr`: (`string: "{}"`) - 
         Set the API address configuration for a Vault cluster.  If set to an empty string, the pod IP address is used.
 
       - `raft` - This configures `raft` integrated storage mode for the Vault server.
