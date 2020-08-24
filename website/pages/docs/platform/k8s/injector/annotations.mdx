@@ -56,6 +56,23 @@ them, optional commands to run, etc.
   unique value provided in `vault.hashicorp.com/agent-inject-secret-`. If not provided,
   a default generic template is used.
 
+- `vault.hashicorp.com/secret-volume-path` - configures where on the filesystem a secret
+  will be rendered. To map a path to a specific secret, use the same unique secret name:
+  `vault.hashicorp.com/secret-volume-path-SECRET-NAME`. For example, if a secret annotation
+  `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
+  `vault.hashicorp.com/secret-volume-path-foobar` would configure where that secret
+  is rendered. If no secret name is provided, this sets the default for all rendered
+  secrets in the pod.
+
+- `vault.hashicorp.com/agent-inject-file` - configures the filename and path
+  in the secrets volume where a Vault secret will be written. This should be used
+  with `vault.hashicorp.com/secret-volume-path`, which mounts a memory volume to
+  the specified path. If `secret-volume-path` is used, the path can be omitted from
+  this value. To map a filename to a specific secret, use the same unique secret name:
+  `vault.hashicorp.com/agent-inject-file-SECRET-NAME`. For example, if a secret annotation
+  `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
+  `vault.hashicorp.com/agent-inject-file-foobar` would configure the filename.
+
 - `vault.hashicorp.com/agent-inject-token` - configures Vault Agent to share the Vault 
   token with other containers in the pod. This is helpful when other containers 
   communicate directly with Vault but require auto-authentication provided by Vault 
@@ -93,23 +110,6 @@ them, optional commands to run, etc.
 - `vault.hashicorp.com/preserve-secret-case` - configures Vault Agent to preserve 
   the secret name case when creating the secret files. This should be set to a `true` 
   or `false` value. Defaults to `false`.
-
-- `vault.hashicorp.com/secret-volume-path` - configures where on the filesystem a secret 
-  will be rendered. To map a path to a specific secret, use the same unique secret name: 
-  `vault.hashicorp.com/secret-volume-path-SECRET-NAME`. For example, if a secret annotation 
-  `vault.hashicorp.com/agent-inject-secret-foobar` is configured, 
-  `vault.hashicorp.com/secret-volume-path-foobar` would configure where that secret 
-  is rendered. If no secret name is provided, this sets the default for all rendered 
-  secrets in the pod.
-
-- `vault.hashicorp.com/agent-inject-file` - configures the filename and path 
-  in the secrets volume where a Vault secret will be written. This should be used 
-  with `vault.hashicorp.com/secret-volume-path`, which mounts a memory volume to 
-  the specified path. If `secret-volume-path` is used, the path can be omitted from 
-  this value. To map a filename to a specific secret, use the same unique secret name:
-  `vault.hashicorp.com/agent-inject-file-SECRET-NAME`. For example, if a secret annotation
-  `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
-  `vault.hashicorp.com/agent-inject-file-foobar` would configure where the filename.
 
 - `vault.hashicorp.com/agent-run-as-user` - sets the user (uid) to run Vault
   agent as. Also available as a command-line option (`-run-as-user`) or
