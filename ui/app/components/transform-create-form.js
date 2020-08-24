@@ -1,6 +1,6 @@
-import RoleEdit from './role-edit';
+import TransformBase from './transform-edit-base';
 
-export default RoleEdit.extend({
+export default TransformBase.extend({
   init() {
     this._super(...arguments);
     this.set('backendType', 'transform');
