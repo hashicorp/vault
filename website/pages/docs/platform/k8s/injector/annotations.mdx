@@ -102,6 +102,15 @@ them, optional commands to run, etc.
   is rendered.  If no secret name is provided, this sets the default for all rendered 
   secrets in the pod.
 
+- `vault.hashicorp.com/agent-inject-file` - configures the filename and path 
+  in the secrets volume where a Vault secret will be written.  This should be used 
+  with `vault.hashicorp.com/secret-volume-path`, which mounts a memory volume to 
+  the specified path.  If `secret-volume-path` is used, the path can be omitted from 
+  this value. To map a filename to a specific secret, use the same unique secret name:
+  `vault.hashicorp.com/agent-inject-file-SECRET-NAME`. For example, if a secret annotation
+  `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
+  `vault.hashicorp.com/agent-inject-file-foobar` would configure where the filename.
+
 - `vault.hashicorp.com/agent-run-as-user` - sets the user (uid) to run Vault
   agent as. Also available as a command-line option (`-run-as-user`) or
   environment variable (`AGENT_INJECT_RUN_AS_USER`) for the injector. Defaults
@@ -125,6 +134,17 @@ them, optional commands to run, etc.
 
   ~> **Note**: If the first application container in the pod is running as root
   (uid 0), the `run-as-same-user` annotation will fail injection with an error.
+
+- `vault.hashicorp.com/agent-cache-enable` - configures Vault Agent to enable 
+  [caching](/docs/caching).  Defaults to `false`.
+
+- `vault.hashicorp.com/agent-cache-use-auto-auth-token` - configures Vault Agent cache 
+  to authenticate on behalf of the requester.  Set to `force` to enable.  Disabled 
+  by default.
+
+- `vault.hashicorp.com/agent-cache-listener-port` - configures Vault Agent cache 
+  listening port.  Defaults to `8080`.
+
 
 ## Vault Annotations
 
