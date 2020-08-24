@@ -18,7 +18,11 @@
       </span>
     </div>
     <div class="copy-text level">
-      {{#let (concat "vault write <backend>/encode/<your role name> value=<enter your value here>" (if (eq model.type 'fpe')"tweak_source =<base-64-string>")) as |copyEncodeCommand|}}
+      {{#let (concat 
+        "vault write <backend>/encode/" 
+        (if (and (take 1 model.allowed_roles) (eq model.allowed_roles.length 1)) (take 1 model.allowed_roles) "<choose a role>")
+        " value=<enter your value here>" 
+        (if (and (eq model.type 'fpe') (eq model.tweak_source "supplied")) " tweak_source=<enter your tweak>")) as |copyEncodeCommand|}}
         <code>{{copyEncodeCommand}}</code>
         <CopyButton class="button is-transparent level-right" @clipboardText={{copyEncodeCommand}}
           @buttonType="button" @success={{action (set-flash-message 'Command copied!')}}>
@@ -35,7 +39,11 @@
       </span>
     </div>
     <div class="copy-text level">
-      {{#let (concat "vault write <backend>/decode/<your role name> value=<enter your value here>" (if (eq model.type 'fpe')"tweak_source =<base-64-string>")) as |copyDecodeCommand|}}
+      {{#let (concat 
+        "vault write <backend>/decode/" 
+        (if (and (take 1 model.allowed_roles) (eq model.allowed_roles.length 1)) (take 1 model.allowed_roles) "<choose a role>")
+        " value=<enter your value here>" 
+        (if (and (eq model.type 'fpe') (eq model.tweak_source "supplied")) " tweak_source=<enter your tweak>")) as |copyDecodeCommand|}}
         <code>{{copyDecodeCommand}}</code>
         <CopyButton class="button is-transparent level-right" @clipboardText={{copyDecodeCommand}}
           @buttonType="button" @success={{action (set-flash-message 'Command copied!')}}>
