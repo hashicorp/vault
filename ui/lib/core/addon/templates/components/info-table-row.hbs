@@ -29,7 +29,7 @@
         /> No
       {{/if}}
     {{else}}
-      <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>
+      <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{if (gt value.length 10) (concat (take 5 value) ", and " (dec 5 value.length) " more.") value}}</code>
     {{/if}}
   </div>
 {{/if}}
