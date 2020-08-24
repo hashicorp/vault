@@ -54,7 +54,7 @@ func pathConfigClient(b *backend) *framework.Path {
 			"allowed_sts_header_values": &framework.FieldSchema {
 				Type:        framework.TypeStringSlice,
 				Default:     nil,
-				Description: "List of headers that are allowed to be in AWS STS request headers",
+				Description: "List of additional headers that are allowed to be in AWS STS request headers",
 			},
 			"max_retries": &framework.FieldSchema{
 				Type:        framework.TypeInt,
@@ -130,6 +130,7 @@ func (b *backend) pathConfigClientRead(ctx context.Context, req *logical.Request
 			"sts_endpoint":               clientConfig.STSEndpoint,
 			"iam_server_id_header_value": clientConfig.IAMServerIdHeaderValue,
 			"max_retries":                clientConfig.MaxRetries,
+			"allowed_sts_header_values":  clientConfig.AllowedSTSHeaderValues,
 		},
 	}, nil
 }
