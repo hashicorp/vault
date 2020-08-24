@@ -18,7 +18,8 @@ import (
 	cache "github.com/patrickmn/go-cache"
 )
 
-var defaultAllowedSTSRequestHeaders = []string{"Authorization", "Content-Length", "Content-Type", "User-Agent", "X-Amz-Date", textproto.CanonicalMIMEHeaderKey(iamServerIdHeader)}
+var defaultAllowedSTSRequestHeaders = []string{"Authorization", "Content-Length", "Content-Type", "Host", "User-Agent",
+	"X-Amz-Date", "X-Amz-Security-Token", "X-Vault-Aws-Iam-Server-Id",textproto.CanonicalMIMEHeaderKey(iamServerIdHeader)}
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(conf)
