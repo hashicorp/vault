@@ -71,7 +71,7 @@ and consider if they're appropriate for your deployment.
 
   - `metrics` - Values that configure the Vault Agent Injector metric exporter.
 
-    - `enabled` (`boolean: false`) - When set to `true`, the Vault Agent Injector exports metrics at the `/metrics` path.
+    - `enabled` (`boolean: false`) - When set to `true`, the Vault Agent Injector exports Prometheus metrics at the `/metrics` path.
 
   - `authPath` (`string: "auth/kubernetes"`) - Mount path of the Vault Kubernetes Auth Method.
 
@@ -307,7 +307,7 @@ and consider if they're appropriate for your deployment.
         Name of the path where a configMap or secret is mounted. If not specified
         the volume will be mounted to `/vault/userconfig/<name of volume>`.
       
-      - `defaultMode` (`string: 420`) - 
+      - `defaultMode` (`string: "420"`) - 
         Default mode of the mounted files.
 
       ```yaml
