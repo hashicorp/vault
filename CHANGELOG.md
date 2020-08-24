@@ -13,6 +13,14 @@ BUG FIXES:
 * secrets/database: Fix handling of TLS options in mongodb connection strings [[GH-9519](https://github.com/hashicorp/vault/pull/9519)]
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-93](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/93)]
 
+## 1.5.2.1
+### August 21st, 2020
+### Enterprise Only
+
+NOTE:
+
+Includes correct license in the HSM binary.
+
 ## 1.5.2
 ### August 20th, 2020
 
@@ -24,6 +32,8 @@ KNOWN ISSUES:
 
 * AWS IAM logins may return an error depending on the headers sent with the request.
   For more details and a workaround, see the [1.5.2 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.5.2)
+* In versions 1.2.6, 1.3.9, 1.4.5, and 1.5.2, enterprise licenses on the HSM build were not incorporated correctly - enterprise
+  customers should use 1.2.6.1, 1.3.9.1, 1.4.5.1, and 1.5.2.1.
 
 
 ## 1.5.1
@@ -146,11 +156,13 @@ BUG FIXES:
 * ui: Disallow max versions value of large than 9999999999999999 on kv2 secrets engine. [[GH-9242](https://github.com/hashicorp/vault/pull/9242)]
 * ui: Add and upgrade missing dependencies to resolve a failure with `make static-dist`. [[GH-9277](https://github.com/hashicorp/vault/pull/9371)]
 
-## 1.4.6 (TBD)
+## 1.4.5.1
+### August 21st, 2020
+### Enterprise Only
 
-IMPROVEMENTS:
+NOTE:
 
-* secret/azure: Use write-ahead-logs to cleanup any orphaned Service Principals [[GH-9773](https://github.com/hashicorp/vault/pull/9773)]
+Includes correct license in the HSM binary.
 
 ## 1.4.5
 ### August 20th, 2020
@@ -163,6 +175,8 @@ KNOWN ISSUES:
 
 * AWS IAM logins may return an error depending on the headers sent with the request.
   For more details and a workaround, see the [1.4.5 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.4.5)
+* In versions 1.2.6, 1.3.9, 1.4.5, and 1.5.2, enterprise licenses on the HSM build were not incorporated correctly - enterprise
+  customers should use 1.2.6.1, 1.3.9.1, 1.4.5.1, and 1.5.2.1.
 
 
 ## 1.4.4
@@ -400,6 +414,14 @@ BUG FIXES:
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
 * ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
 
+## 1.3.9.1
+### August 21st, 2020
+### Enterprise Only
+
+NOTE:
+
+Includes correct license in the HSM binary.
+
 ## 1.3.9
 ### August 20th, 2020
 
@@ -411,6 +433,8 @@ KNOWN ISSUES:
 
 * AWS IAM logins may return an error depending on the headers sent with the request.
   For more details and a workaround, see the [1.3.9 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.3.9)
+* In versions 1.2.6, 1.3.9, 1.4.5, and 1.5.2, enterprise licenses on the HSM build were not incorporated correctly - enterprise
+  customers should use 1.2.6.1, 1.3.9.1, 1.4.5.1, and 1.5.2.1.
 
 ## 1.3.8
 ### August 20th, 2020
@@ -722,6 +746,14 @@ BUG FIXES:
  * ui: show all active kv v2 secret versions even when `delete_version_after` is configured [[GH-7685](https://github.com/hashicorp/vault/pull/7685)]
  * ui: Ensure that items in the top navigation link to pages that users have access to [[GH-7590](https://github.com/hashicorp/vault/pull/7590)]
 
+## 1.2.6.1
+### August 21st, 2020
+### Enterprise Only
+
+NOTE:
+
+Includes correct license in the HSM binary.
+
 ## 1.2.6
 ### August 20th, 2020
 
@@ -733,6 +765,8 @@ KNOWN ISSUES:
 
 * AWS IAM logins may return an error depending on the headers sent with the request.
   For more details and a workaround, see the [1.2.6 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.2.6)
+* In versions 1.2.6, 1.3.9, 1.4.5, and 1.5.2, enterprise licenses on the HSM build were not incorporated correctly - enterprise
+  customers should use 1.2.6.1, 1.3.9.1, 1.4.5.1, and 1.5.2.1.
 
 ## 1.2.5
 ### August 20th, 2020
