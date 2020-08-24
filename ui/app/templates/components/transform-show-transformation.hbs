@@ -19,7 +19,7 @@
     </div>
     <div class="copy-text level">
       {{#let (concat 
-        "vault write <backend>/encode/" 
+        "vault write " model.backend "/encode/" 
         (if (and (take 1 model.allowed_roles) (eq model.allowed_roles.length 1)) (take 1 model.allowed_roles) "<choose a role>")
         " value=<enter your value here>" 
         (if (and (eq model.type 'fpe') (eq model.tweak_source "supplied")) " tweak_source=<enter your tweak>")) as |copyEncodeCommand|}}
@@ -40,7 +40,7 @@
     </div>
     <div class="copy-text level">
       {{#let (concat 
-        "vault write <backend>/decode/" 
+        "vault write " model.backend "/decode/" 
         (if (and (take 1 model.allowed_roles) (eq model.allowed_roles.length 1)) (take 1 model.allowed_roles) "<choose a role>")
         " value=<enter your value here>" 
         (if (and (eq model.type 'fpe') (eq model.tweak_source "supplied")) " tweak_source=<enter your tweak>")) as |copyDecodeCommand|}}
