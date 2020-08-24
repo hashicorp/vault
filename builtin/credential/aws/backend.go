@@ -3,6 +3,7 @@ package awsauth
 import (
 	"context"
 	"fmt"
+	"net/textproto"
 	"strings"
 	"sync"
 	"time"
