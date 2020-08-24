@@ -15,31 +15,16 @@ export default Component.extend(FocusOnInsertMixin, {
   wizard: service(),
 
   mode: null,
+  // TODO: Investigate if we need all of these
   emptyData: '{\n}',
   onDataChange() {},
   onRefresh() {},
   model: null,
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 
-  didReceiveAttrs() {
+  init() {
     this._super(...arguments);
-    if (
-      (this.get('wizard.featureState') === 'details' && this.get('mode') === 'create') ||
-      (this.get('wizard.featureState') === 'role' && this.get('mode') === 'show')
-    ) {
-      this.get('wizard').transitionFeatureMachine(
-        this.get('wizard.featureState'),
-        'CONTINUE',
-        this.get('backendType')
-      );
-    }
-    if (this.get('wizard.featureState') === 'displayRole') {
-      this.get('wizard').transitionFeatureMachine(
-        this.get('wizard.featureState'),
-        'NOOP',
-        this.get('backendType')
-      );
-    }
+    this.set('backendType', 'transform');
   },
 
   willDestroyElement() {
@@ -114,15 +99,6 @@ export default Component.extend(FocusOnInsertMixin, {
         this.hasDataChanges();
         this.transitionToRoute(LIST_ROOT_ROUTE);
       });
-    },
-
-    codemirrorUpdated(attr, val, codemirror) {
-      codemirror.performLint();
-      const hasErrors = codemirror.state.lint.marked.length > 0;
-
-      if (!hasErrors) {
-        set(this.get('model'), attr, JSON.parse(val));
-      }
     },
   },
 });
