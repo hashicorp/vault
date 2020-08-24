@@ -58,7 +58,7 @@ func (b *backend) pathConfigClient() *framework.Path {
 				Description: "Value to require in the X-Vault-AWS-IAM-Server-ID request header",
 			},
 			"allowed_sts_header_values": {
-				Type:        framework.TypeStringSlice,
+				Type:        framework.TypeCommaStringSlice,
 				Default:     nil,
 				Description: "List of headers that are allowed to be in AWS STS request headers",
 			},
@@ -332,12 +332,10 @@ type clientConfig struct {
 }
 
 func (c *clientConfig) validateAllowedSTSHeaderValues(headers http.Header) error {
-	allowList := c.AllowedSTSHeaderValues
-	if c.AllowedSTSHeaderValues == nil {
-		allowList = defaultAllowedSTSRequestHeaders
-	}
 	for k := range headers {
-		if !strutil.StrListContains(allowList, textproto.CanonicalMIMEHeaderKey(k)) {
+		h := textproto.CanonicalMIMEHeaderKey(k)
+		if 	!strutil.StrListContains(defaultAllowedSTSRequestHeaders, h) &&
+			!strutil.StrListContains(c.AllowedSTSHeaderValues, h) {
 			return errors.New("invalid request header: " + k)
 		}
 	}
