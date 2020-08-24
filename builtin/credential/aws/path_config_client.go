@@ -306,12 +306,10 @@ type clientConfig struct {
 }
 
 func (c *clientConfig) validateAllowedSTSHeaderValues(headers http.Header) error {
-	allowList := c.AllowedSTSHeaderValues
-	if c.AllowedSTSHeaderValues == nil {
-		allowList = defaultAllowedSTSRequestHeaders
-	}
 	for k := range headers {
-		if !strutil.StrListContains(allowList, textproto.CanonicalMIMEHeaderKey(k)) {
+		h := textproto.CanonicalMIMEHeaderKey(k)
+		if 	!strutil.StrListContains(defaultAllowedSTSRequestHeaders, h) &&
+			!strutil.StrListContains(c.AllowedSTSHeaderValues, h) {
 			return errors.New("invalid request header: " + k)
 		}
 	}
