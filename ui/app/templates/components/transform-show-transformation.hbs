@@ -18,8 +18,8 @@
       </span>
     </div>
     <div class="copy-text level">
-      {{#let "vault write <backend>/encode/<your role name> value=<enter your value here> tweak=<base-64-string>" as |copyEncodeCommand|}}
-        <code>vault write &lt;backend&gt;/encode/&lt;your role name&gt; value=&lt;enter your value here&gt; tweak=&lt;base-64 string&gt;</code>
+      {{#let (concat "vault write <backend>/encode/<your role name> value=<enter your value here>" (if (eq model.type 'fpe')"tweak_source =<base-64-string>")) as |copyEncodeCommand|}}
+        <code>{{copyEncodeCommand}}</code>
         <CopyButton class="button is-transparent level-right" @clipboardText={{copyEncodeCommand}}
           @buttonType="button" @success={{action (set-flash-message 'Command copied!')}}>
           <Icon @size='l' @glyph="copy-action" aria-label="Copy" />
@@ -35,8 +35,8 @@
       </span>
     </div>
     <div class="copy-text level">
-      {{#let "vault write <backend>/decode/<your role name> value=<enter your value here> tweak=<base-64-string>" as |copyDecodeCommand|}}
-        <code>vault write &lt;backend&gt;/decode/&lt;your role name&gt; value=&lt;enter your value here&gt; tweak=&lt;base-64 string&gt;</code>
+      {{#let (concat "vault write <backend>/decode/<your role name> value=<enter your value here>" (if (eq model.type 'fpe')"tweak_source =<base-64-string>")) as |copyDecodeCommand|}}
+        <code>{{copyDecodeCommand}}</code>
         <CopyButton class="button is-transparent level-right" @clipboardText={{copyDecodeCommand}}
           @buttonType="button" @success={{action (set-flash-message 'Command copied!')}}>
           <Icon @size='l' @glyph="copy-action" aria-label="Copy" />
