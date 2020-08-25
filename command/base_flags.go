@@ -1,6 +1,7 @@
 package command
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -748,6 +749,99 @@ func (f *FlagSet) Var(value flag.Value, name, usage string) {
 	f.mainSet.Var(value, name, usage)
 	f.flagSet.Var(value, name, usage)
 }
+
+// -- TimeVar and timeValue
+type TimeVar struct {
+	Name       string
+	Aliases    []string
+	Usage      string
+	Default    time.Time
+	Hidden     bool
+	EnvVar     string
+	Target     *time.Time
+	Completion complete.Predictor
+}
+
+// parseTimeAlternatives attempts several different allowable variants
+// of the time field.
+func parseTimeAlternatives(input string) (time.Time, error) {
+	t, err := time.Parse(time.RFC3339, input)
+	if err == nil {
+		return t, err
+	}
+
+	t, err = time.Parse("2006-01-02", input)
+	if err == nil {
+		return t, err
+	}
+
+	t, err = time.Parse("2006-01", input)
+	if err == nil {
+		return t, err
+	}
+
+	i, err := strconv.ParseInt(input, 10, 64)
+	if err == nil {
+		// Four-digit numbers are ambiguous, don't
+		// parse them as a time in 1970.
+		if i > 10000 {
+			return time.Unix(i, 0), nil
+		}
+	}
+
+	return time.Time{}, errors.New("Could not parse as absolute time.")
+}
+
+func (f *FlagSet) TimeVar(i *TimeVar) {
+	initial := i.Default
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
+		if d, err := parseTimeAlternatives(v); err == nil {
+			initial = d
+		}
+	}
+
+	def := ""
+	if !i.Default.IsZero() {
+		def = i.Default.String()
+	}
+
+	f.VarFlag(&VarFlag{
+		Name:       i.Name,
+		Aliases:    i.Aliases,
+		Usage:      i.Usage,
+		Default:    def,
+		EnvVar:     i.EnvVar,
+		Value:      newTimeValue(initial, i.Target, i.Hidden),
+		Completion: i.Completion,
+	})
+}
+
+type timeValue struct {
+	hidden bool
+	target *time.Time
+}
+
+func newTimeValue(def time.Time, target *time.Time, hidden bool) *timeValue {
+	*target = def
+	return &timeValue{
+		hidden: hidden,
+		target: target,
+	}
+}
+
+func (d *timeValue) Set(s string) error {
+	v, err := parseTimeAlternatives(s)
+	if err != nil {
+		return err
+	}
+	*d.target = v
+	return nil
+}
+
+func (d *timeValue) Get() interface{} { return *d.target }
+func (d *timeValue) String() string   { return (*d.target).String() }
+func (d *timeValue) Example() string  { return "time" }
+func (d *timeValue) Hidden() bool     { return d.hidden }
 
 // -- helpers
 func envDefault(key, def string) string {
