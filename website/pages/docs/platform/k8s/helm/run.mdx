@@ -54,7 +54,7 @@ $ helm repo add hashicorp https://helm.releases.hashicorp.com
 
 $ helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.5.0        	           	Install and configure Vault on Kubernetes.
+hashicorp/vault	0.7.0        	1.5.2      	Official HashiCorp Vault Chart
 ```
 
 -> **Important:** The Helm chart is new and under significant development.
@@ -76,8 +76,8 @@ NAME           	CHART VERSION	APP VERSION	DESCRIPTION
 hashicorp/vault	0.5.0        	           	Install and configure Vault on Kubernetes.
 hashicorp/vault	0.4.0        	           	Install and configure Vault on Kubernetes.
 
-# Install version 0.4.0
-$ helm install vault hashicorp/vault --version 0.4.0
+# Install version 0.7.0
+$ helm install vault hashicorp/vault --version 0.7.0
 ```
 
 The `helm install` command accepts parameters to override default configuration
@@ -420,14 +420,14 @@ Next, list the Helm versions and choose the desired version to install.
 ```bash
 helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.5.0        	           	Install and configure Vault on Kubernetes.
+hashicorp/vault	0.7.0        	1.5.2      	Official HashiCorp Vault Chart
 ```
 
 Next, test the upgrade with `--dry-run` first to verify the changes sent to the
 Kubernetes cluster.
 
 ```shell-session
-$ helm upgrade vault hashicorp/vault --version=0.5.0 \
+$ helm upgrade vault hashicorp/vault --version=0.7.0 \
     --set='server.image.repository=vault' \
     --set='server.image.tag=123.456' \
     --dry-run
