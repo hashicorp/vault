@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"net/http"
 	"net/textproto"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -309,7 +310,8 @@ type clientConfig struct {
 func (c *clientConfig) validateAllowedSTSHeaderValues(headers http.Header) error {
 	for k := range headers {
 		h := textproto.CanonicalMIMEHeaderKey(k)
-		if 	!strutil.StrListContains(defaultAllowedSTSRequestHeaders, h) &&
+		if 	strings.HasPrefix(h, amzHeaderPrefix) &&
+			!strutil.StrListContains(defaultAllowedSTSRequestHeaders, h) &&
 			!strutil.StrListContains(c.AllowedSTSHeaderValues, h) {
 			return errors.New("invalid request header: " + k)
 		}
