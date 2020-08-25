@@ -146,15 +146,11 @@ func updateUserReqToProto(req UpdateUserRequest) (*proto.UpdateUserRequest, erro
 
 	var password *proto.ChangePassword
 	if req.Password != nil && req.Password.NewPassword != "" {
-		var statements *proto.Statements
-		if len(req.Password.Statements.Commands) > 0 {
-			statements = &proto.Statements{
-				Commands: req.Password.Statements.Commands,
-			}
-		}
 		password = &proto.ChangePassword{
 			NewPassword: req.Password.NewPassword,
-			Statements:  statements,
+			Statements: &proto.Statements{
+				Commands: req.Password.Statements.Commands,
+			},
 		}
 	}
 
@@ -214,6 +210,9 @@ func deleteUserReqToProto(req DeleteUserRequest) (*proto.DeleteUserRequest, erro
 
 	rpcReq := &proto.DeleteUserRequest{
 		Username: req.Username,
+		Statements: &proto.Statements{
+			Commands: req.Statements.Commands,
+		},
 	}
 	return rpcReq, nil
 }

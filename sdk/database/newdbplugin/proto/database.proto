@@ -63,6 +63,7 @@ message UpdateUserResponse {}
 /////////////////
 message DeleteUserRequest {
     string username = 1;
+    Statements statements = 2;
 }
 
 message DeleteUserResponse {}
