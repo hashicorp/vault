@@ -3,13 +3,13 @@ package awsauth
 import (
 	"context"
 	"errors"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"net/http"
 	"net/textproto"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
