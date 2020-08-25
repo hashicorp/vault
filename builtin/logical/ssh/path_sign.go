@@ -531,7 +531,7 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 
 	algo := b.Role.AlgorithmSigner
 	if algo == "" {
-		algo = ssh.SigAlgoRSA
+		algo = ssh.SigAlgoRSASHA2256
 	}
 	sig, err := sshAlgorithmSigner.SignWithAlgorithm(rand.Reader, certificateBytes, algo)
 	if err != nil {
