@@ -1225,9 +1225,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 				return logical.ErrorResponse(fmt.Sprintf("error validating %s header: %v", iamServerIdHeader, err)), nil
 			}
 		}
-		if err = config.validateAllowedSTSHeaderValues(headers); err != nil {
-			return logical.ErrorResponse(err.Error()), nil
-		}
+		headers = config.strainAllowedSTSHeaderValues(headers)
 		if config.STSEndpoint != "" {
 			endpoint = config.STSEndpoint
 		}

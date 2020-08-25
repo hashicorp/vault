@@ -2,14 +2,13 @@ package awsauth
 
 import (
 	"context"
-	"errors"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"net/http"
 	"net/textproto"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (b *backend) pathConfigClient() *framework.Path {
@@ -332,15 +331,16 @@ type clientConfig struct {
 	MaxRetries             int      `json:"max_retries"`
 }
 
-func (c *clientConfig) validateAllowedSTSHeaderValues(headers http.Header) error {
-	for k := range headers {
+func (c *clientConfig) strainAllowedSTSHeaderValues(headers http.Header) http.Header {
+	passed := make(map[string][]string)
+	for k, v := range headers {
 		h := textproto.CanonicalMIMEHeaderKey(k)
-		if 	!strutil.StrListContains(defaultAllowedSTSRequestHeaders, h) &&
-			!strutil.StrListContains(c.AllowedSTSHeaderValues, h) {
-			return errors.New("invalid request header: " + k)
+		if 	strutil.StrListContains(defaultAllowedSTSRequestHeaders, h) ||
+			strutil.StrListContains(c.AllowedSTSHeaderValues, h) {
+			passed[k]=v
 		}
 	}
-	return nil
+	return passed
 }
 
 const pathConfigClientHelpSyn = `
