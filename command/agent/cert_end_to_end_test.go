@@ -171,10 +171,11 @@ func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 	}()
 
 	config := &sink.SinkConfig{
-		Logger: logger.Named("sink.file"),
-		AAD:    "foobar",
-		DHType: "curve25519",
-		DHPath: dhpath,
+		Logger:    logger.Named("sink.file"),
+		AAD:       "foobar",
+		DHType:    "curve25519",
+		DHPath:    dhpath,
+		DeriveKey: true,
 		Config: map[string]interface{}{
 			"path": out,
 		},
@@ -224,7 +225,11 @@ func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 					continue
 				}
 
-				aesKey, err := dhutil.GenerateSharedKey(pri, resp.Curve25519PublicKey)
+				shared, err := dhutil.GenerateSharedSecret(pri, resp.Curve25519PublicKey)
+				if err != nil {
+					t.Fatal(err)
+				}
+				aesKey, err := dhutil.DeriveSharedKey(shared, pub, resp.Curve25519PublicKey)
 				if err != nil {
 					t.Fatal(err)
 				}
