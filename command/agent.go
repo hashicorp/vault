@@ -344,14 +344,14 @@ func (c *AgentCommand) Run(args []string) int {
 			switch sc.Type {
 			case "file":
 				config := &sink.SinkConfig{
-					Logger:  c.logger.Named("sink.file"),
-					Config:  sc.Config,
-					Client:  client,
-					WrapTTL: sc.WrapTTL,
-					DHType:  sc.DHType,
+					Logger:    c.logger.Named("sink.file"),
+					Config:    sc.Config,
+					Client:    client,
+					WrapTTL:   sc.WrapTTL,
+					DHType:    sc.DHType,
 					DeriveKey: sc.DeriveKey,
-					DHPath:  sc.DHPath,
-					AAD:     sc.AAD,
+					DHPath:    sc.DHPath,
+					AAD:       sc.AAD,
 				}
 				s, err := file.NewFileSink(config)
 				if err != nil {
@@ -422,9 +422,7 @@ func (c *AgentCommand) Run(args []string) int {
 		if !okCertFile && !okCertKey {
 			c.UI.Warn(wrapAtLength("WARNING! Cache is enabled and using the same certificates " +
 				"from the 'cert' auto-auth method specified in the 'vault' stanza. Consider " +
-				"specifying certificate information in the 'cert' auto-auth's config stanza." +
-				"Refer to https://www.vaultproject.io/docs/upgrading/upgrade-to-1.5.1 for more" +
-				"information."))
+				"specifying certificate information in the 'cert' auto-auth's config stanza."))
 		}
 
 	}
