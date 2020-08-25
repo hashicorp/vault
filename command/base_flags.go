@@ -760,32 +760,65 @@ type TimeVar struct {
 	EnvVar     string
 	Target     *time.Time
 	Completion complete.Predictor
+	Formats    TimeFormat
 }
+
+// Identify the allowable formats, identified by the minimum
+// precision accepted.
+// TODO: move this somewhere where it can be re-used for the API.
+type TimeFormat int
+
+const (
+	TimeVar_EpochSecond TimeFormat = 1 << iota
+	TimeVar_RFC3339Nano
+	TimeVar_RFC3339Second
+	TimeVar_Day
+	TimeVar_Month
+)
+
+// Default value to use
+const TimeVar_TimeOrDay TimeFormat = TimeVar_EpochSecond | TimeVar_RFC3339Nano | TimeVar_RFC3339Second | TimeVar_Day
 
 // parseTimeAlternatives attempts several different allowable variants
 // of the time field.
-func parseTimeAlternatives(input string) (time.Time, error) {
-	t, err := time.Parse(time.RFC3339, input)
-	if err == nil {
-		return t, err
+func parseTimeAlternatives(input string, allowedFormats TimeFormat) (time.Time, error) {
+	// The RFC3339 formats require the inclusion of a time zone.
+	if allowedFormats&TimeVar_RFC3339Nano != 0 {
+		t, err := time.Parse(time.RFC3339Nano, input)
+		if err == nil {
+			return t, err
+		}
 	}
 
-	t, err = time.Parse("2006-01-02", input)
-	if err == nil {
-		return t, err
+	if allowedFormats&TimeVar_RFC3339Second != 0 {
+		t, err := time.Parse(time.RFC3339, input)
+		if err == nil {
+			return t, err
+		}
 	}
 
-	t, err = time.Parse("2006-01", input)
-	if err == nil {
-		return t, err
+	if allowedFormats&TimeVar_Day != 0 {
+		t, err := time.Parse("2006-01-02", input)
+		if err == nil {
+			return t, err
+		}
 	}
 
-	i, err := strconv.ParseInt(input, 10, 64)
-	if err == nil {
-		// Four-digit numbers are ambiguous, don't
-		// parse them as a time in 1970.
-		if i > 10000 {
-			return time.Unix(i, 0), nil
+	if allowedFormats&TimeVar_Month != 0 {
+		t, err := time.Parse("2006-01", input)
+		if err == nil {
+			return t, err
+		}
+	}
+
+	if allowedFormats&TimeVar_EpochSecond != 0 {
+		i, err := strconv.ParseInt(input, 10, 64)
+		if err == nil {
+			// Four-digit numbers are ambiguous, don't
+			// parse them as a time in 1970.
+			if i > 10000 {
+				return time.Unix(i, 0), nil
+			}
 		}
 	}
 
@@ -795,7 +828,7 @@ func parseTimeAlternatives(input string) (time.Time, error) {
 func (f *FlagSet) TimeVar(i *TimeVar) {
 	initial := i.Default
 	if v, exist := os.LookupEnv(i.EnvVar); exist {
-		if d, err := parseTimeAlternatives(v); err == nil {
+		if d, err := parseTimeAlternatives(v, i.Formats); err == nil {
 			initial = d
 		}
 	}
@@ -811,26 +844,28 @@ func (f *FlagSet) TimeVar(i *TimeVar) {
 		Usage:      i.Usage,
 		Default:    def,
 		EnvVar:     i.EnvVar,
-		Value:      newTimeValue(initial, i.Target, i.Hidden),
+		Value:      newTimeValue(initial, i.Target, i.Hidden, i.Formats),
 		Completion: i.Completion,
 	})
 }
 
 type timeValue struct {
-	hidden bool
-	target *time.Time
+	hidden  bool
+	target  *time.Time
+	formats TimeFormat
 }
 
-func newTimeValue(def time.Time, target *time.Time, hidden bool) *timeValue {
+func newTimeValue(def time.Time, target *time.Time, hidden bool, f TimeFormat) *timeValue {
 	*target = def
 	return &timeValue{
-		hidden: hidden,
-		target: target,
+		hidden:  hidden,
+		target:  target,
+		formats: f,
 	}
 }
 
 func (d *timeValue) Set(s string) error {
-	v, err := parseTimeAlternatives(s)
+	v, err := parseTimeAlternatives(s, d.formats)
 	if err != nil {
 		return err
 	}
