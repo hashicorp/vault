@@ -48,6 +48,7 @@ message UpdateUserRequest {
 
 message ChangePassword {
     string new_password = 1;
+    Statements statements = 2;
 }
 
 message ChangeExpiration {

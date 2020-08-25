@@ -146,8 +146,15 @@ func updateUserReqToProto(req UpdateUserRequest) (*proto.UpdateUserRequest, erro
 
 	var password *proto.ChangePassword
 	if req.Password != nil && req.Password.NewPassword != "" {
+		var statements *proto.Statements
+		if len(req.Password.Statements.Commands) > 0 {
+			statements = &proto.Statements{
+				Commands: req.Password.Statements.Commands,
+			}
+		}
 		password = &proto.ChangePassword{
 			NewPassword: req.Password.NewPassword,
+			Statements:  statements,
 		}
 	}
 
