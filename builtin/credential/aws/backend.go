@@ -3,7 +3,10 @@ package awsauth
 import (
 	"context"
 	"fmt"
-	"net/textproto"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/awsutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 	"strings"
 	"sync"
 	"time"
@@ -11,15 +14,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/awsutil"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/logical"
 	cache "github.com/patrickmn/go-cache"
 )
 
-var defaultAllowedSTSRequestHeaders = []string{"Authorization", "Content-Length", "Content-Type", "Host", "User-Agent",
-	"X-Amz-Date", "X-Amz-Security-Token", textproto.CanonicalMIMEHeaderKey(iamServerIdHeader)}
+const amzHeaderPrefix = "X-Amz-"
+var defaultAllowedSTSRequestHeaders = []string{"X-Amz-Date", "X-Amz-Security-Token", "X-Amz-Algorithm", "X-Amz-Signature",
+	"X-Amz-SignedHeaders"}
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(conf)
