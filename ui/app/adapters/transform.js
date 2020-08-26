@@ -67,9 +67,20 @@ export default ApplicationAdapter.extend({
       results.forEach(result => {
         if (result.value) {
           if (result.value.data.roles) {
+            // TODO: Check if this is needed and remove if not
             resp.data = assign({}, resp.data, { zero_address_roles: result.value.data.roles });
           } else {
-            resp.data = assign({}, resp.data, result.value.data);
+            let d = result.value.data;
+            if (d.templates) {
+              // In Transformations data goes up as "template", but comes down as "templates"
+              // To keep the keys consistent we're translating here
+              d = {
+                ...d,
+                template: [d.templates],
+              };
+              delete d.templates;
+            }
+            resp.data = assign({}, resp.data, d);
           }
         }
       });
