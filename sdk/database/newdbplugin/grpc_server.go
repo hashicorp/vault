@@ -63,9 +63,7 @@ func (g gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*pr
 			DisplayName: req.GetUsernameConfig().GetDisplayName(),
 			RoleName:    req.GetUsernameConfig().GetRoleName(),
 		},
-		Statements: Statements{
-			Commands: req.GetStatements().GetCommands(),
-		},
+		Statements: getStatementsFromProto(req),
 		Password:   req.GetPassword(),
 		Expiration: expiration,
 	}
@@ -103,6 +101,7 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 	if req.GetPassword() != nil && req.GetPassword().GetNewPassword() != "" {
 		password = &ChangePassword{
 			NewPassword: req.GetPassword().GetNewPassword(),
+			Statements:  getStatementsFromProto(req.GetPassword()),
 		}
 	}
 
@@ -115,9 +114,7 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 
 		expiration = &ChangeExpiration{
 			NewExpiration: newExpiration,
-			Statements: Statements{
-				Commands: req.GetExpiration().GetStatements().GetCommands(),
-			},
+			Statements:    getStatementsFromProto(req.GetExpiration()),
 		}
 	}
 
@@ -149,7 +146,8 @@ func (g gRPCServer) DeleteUser(ctx context.Context, req *proto.DeleteUserRequest
 		return &proto.DeleteUserResponse{}, status.Errorf(codes.InvalidArgument, "no username provided")
 	}
 	dbReq := DeleteUserRequest{
-		Username: req.GetUsername(),
+		Username:   req.GetUsername(),
+		Statements: getStatementsFromProto(req),
 	}
 
 	_, err := g.impl.DeleteUser(ctx, dbReq)
@@ -177,4 +175,19 @@ func (g gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, er
 		return &proto.Empty{}, status.Errorf(codes.Internal, "unable to close database plugin: %s", err)
 	}
 	return &proto.Empty{}, nil
+}
+
+type protoCommandGetter interface {
+	GetStatements() *proto.Statements
+}
+
+func getStatementsFromProto(req protoCommandGetter) (statements Statements) {
+	if req.GetStatements() == nil {
+		return statements
+	}
+	cmds := req.GetStatements().GetCommands()
+	statements = Statements{
+		Commands: cmds,
+	}
+	return statements
 }
