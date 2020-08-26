@@ -482,7 +482,10 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 		if ok {
 			algorithmSigner = algorithmSignerRaw.(string)
 			switch algorithmSigner {
-			case ssh.SigAlgoRSA, ssh.SigAlgoRSASHA2256, ssh.SigAlgoRSASHA2512, "":
+			case ssh.SigAlgoRSA, ssh.SigAlgoRSASHA2256, ssh.SigAlgoRSASHA2512:
+			case "":
+				// This case is valid, and the sign operation will use the signer's
+				// default algorithm.
 			default:
 				return nil, fmt.Errorf("unknown algorithm signer %q", algorithmSigner)
 			}

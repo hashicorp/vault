@@ -105,12 +105,24 @@ SeKWrUkryx46LVf6NMhkyYmRqCEjBwfOozzezi5WbiJy6nn54GQt
 -----END RSA PRIVATE KEY-----
 `
 
+	testCAPublicKeyEd25519 = `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO1S6g5Bib7vT8eoFnvTl3dZSjOQL/GkH1nkRcDS9++a ca
+`
+
+	testCAPrivateKeyEd25519 = `-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACDtUuoOQYm+70/HqBZ705d3WUozkC/xpB9Z5EXA0vfvmgAAAIhfRuszX0br
+MwAAAAtzc2gtZWQyNTUxOQAAACDtUuoOQYm+70/HqBZ705d3WUozkC/xpB9Z5EXA0vfvmg
+AAAEBQYa029SP/7AGPFQLmzwOc9eCoOZuwCq3iIf2C6fj9j+1S6g5Bib7vT8eoFnvTl3dZ
+SjOQL/GkH1nkRcDS9++aAAAAAmNhAQID
+-----END OPENSSH PRIVATE KEY-----
+`
+
 	// testPublicKeyInstall is the public key that is installed in the
 	// admin account's authorized_keys
 	testPublicKeyInstall = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9i+hFxZHGo6KblVme4zrAcJstR6I0PTJozW286X4WyvPnkMYDQ5mnhEYC7UWCvjoTWbPEXPX7NjhRtwQTGD67bV+lrxgfyzK1JZbUXK4PwgKJvQD+XyyWYMzDgGSQY61KUSqCxymSm/9NZkPU3ElaQ9xQuTzPpztM4ROfb8f2Yv6/ZESZsTo0MTAkp8Pcy+WkioI/uJ1H7zqs0EA4OMY4aDJRu0UtP4rTVeYNEAuRXdX+eH4aW3KMvhzpFTjMbaJHJXlEeUm2SaX5TNQyTOvghCeQILfYIL/Ca2ij8iwCmulwdV6eQGfd4VDu40PvSnmfoaE38o6HaPnX0kUcnKiT"
 
-	dockerImageTagSupportsRSA   = "8.1_p1-r0-ls20"
-	dockerImageTagSupportsNoRSA = "8.3_p1-r0-ls21"
+	dockerImageTagSupportsRSA1   = "8.1_p1-r0-ls20"
+	dockerImageTagSupportsNoRSA1 = "8.3_p1-r0-ls21"
 )
 
 func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), string) {
@@ -125,7 +137,7 @@ func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), str
 	}
 
 	if tag == "" {
-		tag = dockerImageTagSupportsNoRSA
+		tag = dockerImageTagSupportsNoRSA1
 	}
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "linuxserver/openssh-server",
@@ -668,29 +680,31 @@ func TestSSHBackend_CredsForZeroAddressRoles_dynamic(t *testing.T) {
 
 func TestSSHBackend_CA(t *testing.T) {
 	testCases := []struct {
-		name        string
-		tag         string
-		algoSigner  string
-		expectError bool
+		name         string
+		tag          string
+		caPublicKey  string
+		caPrivateKey string
+		algoSigner   string
+		expectError  bool
 	}{
-		{"defaultSignerSSHDSupport", dockerImageTagSupportsRSA, "", false},
-		{"rsaSignerSSHDSupport", dockerImageTagSupportsRSA, ssh.SigAlgoRSA, false},
-		{"rsa2SignerSSHDSupport", dockerImageTagSupportsRSA, ssh.SigAlgoRSASHA2256, false},
-		{"rsa2SignerNoSSHDSupport", dockerImageTagSupportsNoRSA, ssh.SigAlgoRSASHA2256, false},
-		{"defaultSignerNoSSHDSupport", dockerImageTagSupportsNoRSA, "", true},
+		{"defaultSignerRSA1Support", dockerImageTagSupportsRSA1, testCAPublicKey, testCAPrivateKey, "", false},
+		{"defaultSignerNoRSA1Support", dockerImageTagSupportsNoRSA1, testCAPublicKey, testCAPrivateKey, "", true},
+		{"rsaSignerRSA1Support", dockerImageTagSupportsRSA1, testCAPublicKey, testCAPrivateKey, ssh.SigAlgoRSA, false},
+		{"rsa2SignerRSA1Support", dockerImageTagSupportsRSA1, testCAPublicKey, testCAPrivateKey, ssh.SigAlgoRSASHA2256, false},
+		{"rsa2SignerNoRSA1Support", dockerImageTagSupportsNoRSA1, testCAPublicKey, testCAPrivateKey, ssh.SigAlgoRSASHA2256, false},
+		{"ed25519SignerRSA1Support", dockerImageTagSupportsRSA1, testCAPublicKeyEd25519, testCAPrivateKeyEd25519, "", false},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			testSSHBackend_CA(t, tc.tag, tc.algoSigner, tc.expectError)
+			testSSHBackend_CA(t, tc.tag, tc.caPublicKey, tc.caPrivateKey, tc.algoSigner, tc.expectError)
 		})
 	}
 }
 
-func testSSHBackend_CA(t *testing.T, dockerImageTag, algorithmSigner string, expectError bool) {
-	cleanup, sshAddress := prepareTestContainer(t, dockerImageTag, testCAPublicKey)
+func testSSHBackend_CA(t *testing.T, dockerImageTag, caPublicKey, caPrivateKey, algorithmSigner string, expectError bool) {
+	cleanup, sshAddress := prepareTestContainer(t, dockerImageTag, caPublicKey)
 	defer cleanup()
-
 	config := logical.TestBackendConfig()
 
 	b, err := Factory(context.Background(), config)
@@ -746,7 +760,7 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(),
+			configCaStep(caPublicKey, caPrivateKey),
 			testRoleWrite(t, "testcarole", roleOptions),
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -807,7 +821,7 @@ func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(),
+			configCaStep(testCAPublicKey, testCAPrivateKey),
 
 			logicaltest.TestStep{
 				Operation:       logical.ReadOperation,
@@ -892,7 +906,7 @@ func TestBackend_ValidPrincipalsValidatedForHostCertificates(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(),
+			configCaStep(testCAPublicKey, testCAPrivateKey),
 
 			createRoleStep("testing", map[string]interface{}{
 				"key_type":                "ca",
@@ -935,7 +949,7 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(),
+			configCaStep(testCAPublicKey, testCAPrivateKey),
 
 			createRoleStep("testing", map[string]interface{}{
 				"key_type":                 "ca",
@@ -982,7 +996,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(),
+			configCaStep(testCAPublicKey, testCAPrivateKey),
 			createRoleStep("weakkey", map[string]interface{}{
 				"key_type":                "ca",
 				"allow_user_certificates": true,
@@ -1051,7 +1065,7 @@ func TestBackend_CustomKeyIDFormat(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(),
+			configCaStep(testCAPublicKey, testCAPrivateKey),
 
 			createRoleStep("customrole", map[string]interface{}{
 				"key_type":                 "ca",
@@ -1100,7 +1114,7 @@ func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(),
+			configCaStep(testCAPublicKey, testCAPrivateKey),
 
 			createRoleStep("testing", map[string]interface{}{
 				"key_type":                "ca",
@@ -1128,13 +1142,13 @@ func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
 	logicaltest.Test(t, testCase)
 }
 
-func configCaStep() logicaltest.TestStep {
+func configCaStep(caPublicKey, caPrivateKey string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/ca",
 		Data: map[string]interface{}{
-			"public_key":  testCAPublicKey,
-			"private_key": testCAPrivateKey,
+			"public_key":  caPublicKey,
+			"private_key": caPrivateKey,
 		},
 	}
 }
