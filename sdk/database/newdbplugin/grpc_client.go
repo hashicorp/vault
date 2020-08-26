@@ -95,11 +95,14 @@ func newUserReqToProto(req NewUserRequest) (*proto.NewUserRequest, error) {
 			DisplayName: req.UsernameConfig.DisplayName,
 			RoleName:    req.UsernameConfig.RoleName,
 		},
+		Password:   req.Password,
+		Expiration: expiration,
 		Statements: &proto.Statements{
 			Commands: req.Statements.Commands,
 		},
-		Password:   req.Password,
-		Expiration: expiration,
+		RollbackStatements: &proto.Statements{
+			Commands: req.RollbackStatements.Commands,
+		},
 	}
 	return rpcReq, nil
 }

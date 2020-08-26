@@ -23,9 +23,10 @@ message InitializeResponse {
 
 message NewUserRequest {
     UsernameConfig username_config = 1;
-    Statements statements = 2;
-    string password = 3;
-    google.protobuf.Timestamp expiration = 4;
+    string password = 2;
+    google.protobuf.Timestamp expiration = 3;
+    Statements statements = 4;
+    Statements rollback_statements = 5;
 }
 
 message UsernameConfig {

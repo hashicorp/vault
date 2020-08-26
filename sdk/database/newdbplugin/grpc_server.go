@@ -63,9 +63,10 @@ func (g gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*pr
 			DisplayName: req.GetUsernameConfig().GetDisplayName(),
 			RoleName:    req.GetUsernameConfig().GetRoleName(),
 		},
-		Statements: getStatementsFromProto(req),
-		Password:   req.GetPassword(),
-		Expiration: expiration,
+		Password:           req.GetPassword(),
+		Expiration:         expiration,
+		Statements:         getStatementsFromProto(req.GetStatements()),
+		RollbackStatements: getStatementsFromProto(req.GetRollbackStatements()),
 	}
 
 	dbResp, err := g.impl.NewUser(ctx, dbReq)
@@ -101,7 +102,7 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 	if req.GetPassword() != nil && req.GetPassword().GetNewPassword() != "" {
 		password = &ChangePassword{
 			NewPassword: req.GetPassword().GetNewPassword(),
-			Statements:  getStatementsFromProto(req.GetPassword()),
+			Statements:  getStatementsFromProto(req.GetPassword().GetStatements()),
 		}
 	}
 
@@ -114,7 +115,7 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 
 		expiration = &ChangeExpiration{
 			NewExpiration: newExpiration,
-			Statements:    getStatementsFromProto(req.GetExpiration()),
+			Statements:    getStatementsFromProto(req.GetExpiration().GetStatements()),
 		}
 	}
 
@@ -147,7 +148,7 @@ func (g gRPCServer) DeleteUser(ctx context.Context, req *proto.DeleteUserRequest
 	}
 	dbReq := DeleteUserRequest{
 		Username:   req.GetUsername(),
-		Statements: getStatementsFromProto(req),
+		Statements: getStatementsFromProto(req.GetStatements()),
 	}
 
 	_, err := g.impl.DeleteUser(ctx, dbReq)
@@ -177,15 +178,11 @@ func (g gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, er
 	return &proto.Empty{}, nil
 }
 
-type protoCommandGetter interface {
-	GetStatements() *proto.Statements
-}
-
-func getStatementsFromProto(req protoCommandGetter) (statements Statements) {
-	if req.GetStatements() == nil {
+func getStatementsFromProto(protoStmts *proto.Statements) (statements Statements) {
+	if protoStmts == nil {
 		return statements
 	}
-	cmds := req.GetStatements().GetCommands()
+	cmds := protoStmts.GetCommands()
 	statements = Statements{
 		Commands: cmds,
 	}
