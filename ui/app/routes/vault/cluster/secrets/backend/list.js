@@ -102,7 +102,6 @@ export default Route.extend({
           pageFilter: params.pageFilter,
         })
         .then(model => {
-          console.log({ model });
           this.set('has404', false);
           return model;
         })
