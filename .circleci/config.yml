@@ -292,7 +292,9 @@ jobs:
         - .buildcache/archives/08-warm-go-build-vendor-cache-8a055286bfdd3c2b0f3ce25f54f88375384a2400.tar.gz
   install-ui-dependencies:
     docker:
-    - image: node:10-buster
+    - environment:
+        JOBS: 2
+      image: node:10-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /go/src/github.com/hashicorp/vault
     steps:
@@ -374,7 +376,9 @@ jobs:
         - .buildcache/archives/08-warm-go-build-vendor-cache-28637de51e735a2eca5909e5685278b304ac5b15.tar.gz
   test-ui:
     docker:
-    - image: node:10-buster
+    - environment:
+        JOBS: 2
+      image: node:10-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /go/src/github.com/hashicorp/vault
     resource_class: medium+
@@ -475,7 +479,9 @@ jobs:
         - .buildcache/archives/08-warm-go-build-vendor-cache-024e5c62d2ad59cb7a139748ec3571828bc950a8.tar.gz
   test-ui-browserstack:
     docker:
-    - image: node:10-buster
+    - environment:
+        JOBS: 2
+      image: node:10-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /go/src/github.com/hashicorp/vault
     resource_class: medium+

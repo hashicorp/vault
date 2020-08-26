@@ -11,6 +11,8 @@ go-machine:
 node:
   docker:
     - image: node:10-buster
+      environment:
+        JOBS: 2
   shell: /usr/bin/env bash -euo pipefail -c
   working_directory: /go/src/github.com/hashicorp/vault
 python:
