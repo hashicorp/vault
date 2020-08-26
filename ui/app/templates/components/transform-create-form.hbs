@@ -4,21 +4,11 @@
     {{!-- TODO: figure out what this ?? --}}
     {{!-- <NamespaceReminder @mode={{mode}} @noun="SSH role" /> --}}
     {{#each model.transformFieldAttrs as |attr|}}
-      {{#if (eq attr.name 'templates')}}
-        {{!-- TODO: for now don't show until backend makes api changes. --}}
-      {{else if (eq attr.name 'template')}}
-        <FormField
-          data-test-field
-          @attr={{attr}}
-          @model={{model}}
-        />
-       {{else}}
-        <FormField
-          data-test-field
-          @attr={{attr}}
-          @model={{model}}
-        />
-      {{/if}}
+      <FormField
+        data-test-field
+        @attr={{attr}}
+        @model={{model}}
+      />
     {{/each}}
   </div>
   <div class="field is-grouped-split box is-fullwidth is-bottomless">

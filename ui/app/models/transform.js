@@ -63,7 +63,7 @@ const Model = DS.Model.extend({
     label: 'Masking character',
     subText: 'Specify which character you’d like to mask your data.',
   }),
-  template: attr('string', {
+  template: attr('array', {
     editType: 'searchSelect',
     fallbackComponent: 'string-list',
     label: 'Template', // TODO: make this required for making a transformation
@@ -73,7 +73,6 @@ const Model = DS.Model.extend({
     subText:
       'Templates allow Vault to determine what and how to capture the value to be transformed. Type to use an existing template or create a new one.',
   }),
-  templates: attr('array'), // TODO: remove once BE changes the returned property to a singular template on the GET request.
   allowed_roles: attr('array', {
     editType: 'searchSelect',
     label: 'Allowed roles',
@@ -83,9 +82,9 @@ const Model = DS.Model.extend({
   }),
   transformAttrs: computed('type', function() {
     if (this.type === 'masking') {
-      return ['name', 'type', 'masking_character', 'template', 'templates', 'allowed_roles'];
+      return ['name', 'type', 'masking_character', 'template', 'allowed_roles'];
     }
-    return ['name', 'type', 'tweak_source', 'template', 'templates', 'allowed_roles'];
+    return ['name', 'type', 'tweak_source', 'template', 'allowed_roles'];
   }),
   transformFieldAttrs: computed('transformAttrs', function() {
     return expandAttributeMeta(this, this.get('transformAttrs'));
