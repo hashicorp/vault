@@ -196,13 +196,15 @@ clean-all-prune: clean-all
 # Configure the releaser repo. If you are developing that repo, you may want
 # to clone it adjacent to this one in ../packagespec-release, otherwise it will
 # be cloned into .releaser, if you have access to it.
+# If using it in an adjacent directory, you won't need to push changes in order
+# to test them locally.
 RELEASER_REPO  ?= git@github.com:hashicorp/packagespec-release.git
 RELEASER_DIR   := $(REPO_ROOT)/../packagespec-release
 RELEASER_CLONE := NO
 RELEASER_PULL  := NO
 ifeq ($(shell if [ -d $(RELEASER_DIR) ]; then echo OK; else echo NO; fi),NO)
 RELEASER_GITIGNORE   := $(REPO_ROOT)/.tmp/.gitignore
-RELEASER_DIR   := $(REPO_ROOT)/.tmp/.releaser
+RELEASER_DIR   := $(REPO_ROOT)/.tmp/releaser
 RELEASER_CLONE := YES
 RELEASER_PULL  := YES
 endif
@@ -233,6 +235,7 @@ define INVOKE_RELEASER_TARGET
 		}; \
 		mkdir -p $(RELEASER_DIR); \
 		echo "*" > "$(RELEASER_GITIGNORE)"; \
+		echo "==> First time setup for staging/publishing work."; \
 		echo "==> Attempting to clone $(RELEASER_REPO) into $(RELEASER_DIR)"; \
 		echo "==> NOTE: The above repo is only available to HashiCorp employees at this time."; \
 		mkdir -p $(RELEASER_DIR); \
@@ -240,7 +243,6 @@ define INVOKE_RELEASER_TARGET
 			echo "==> ERROR: Failed to clone $(RELEASER_REPO)"; \
 		fi; \
 	}; \
-	echo "==> Using releaser code from $(RELEASER_DIR)"; \
 	( \
 		cd $(RELEASER_DIR); \
 		if [ $(RELEASER_PULL) = YES ]; then \
@@ -248,6 +250,8 @@ define INVOKE_RELEASER_TARGET
 			git pull -q origin master; \
 			git clean -qf; \
 			git reset -q --hard HEAD; \
+		else \
+			echo "==> Using releaser code from $(RELEASER_DIR)"; \
 		fi; \
 		$(MAKE) $(1); \
 	)
