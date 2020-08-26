@@ -830,8 +830,8 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 				},
 
 				Check: func(resp *logical.Response) error {
-					// Tolerate empty response data if an error was expected
-					if expectError && resp.Data == nil {
+					// Tolerate nil response if an error was expected
+					if expectError && resp == nil {
 						return nil
 					}
 
