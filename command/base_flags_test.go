@@ -63,6 +63,12 @@ func Test_TimeParsing(t *testing.T) {
 			zeroTime,
 		},
 		{
+			"20201212",
+			TimeVar_TimeOrDay,
+			false,
+			zeroTime,
+		},
+		{
 			"9999999999999999999999999999999999999999999999",
 			TimeVar_TimeOrDay,
 			false,

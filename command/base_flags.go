@@ -814,9 +814,10 @@ func parseTimeAlternatives(input string, allowedFormats TimeFormat) (time.Time, 
 	if allowedFormats&TimeVar_EpochSecond != 0 {
 		i, err := strconv.ParseInt(input, 10, 64)
 		if err == nil {
-			// Four-digit numbers are ambiguous, don't
-			// parse them as a time in 1970.
-			if i > 10000 {
+			// If a customer enters 20200101 we don't want
+			// to parse that as an epoch time.
+			// This arbitrarily-chosen cutoff is around year 2000.
+			if i > 946000000 {
 				return time.Unix(i, 0), nil
 			}
 		}
