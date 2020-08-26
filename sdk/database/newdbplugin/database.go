@@ -137,7 +137,7 @@ type ChangePassword struct {
 	Statements Statements
 }
 
-// ChangeExpiration of a give user
+// ChangeExpiration of a given user
 type ChangeExpiration struct {
 	// NewExpiration of the user
 	NewExpiration time.Time
