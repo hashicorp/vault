@@ -687,12 +687,14 @@ func TestSSHBackend_CA(t *testing.T) {
 		algoSigner   string
 		expectError  bool
 	}{
-		{"defaultSignerRSA1Support", dockerImageTagSupportsRSA1, testCAPublicKey, testCAPrivateKey, "", false},
-		{"defaultSignerNoRSA1Support", dockerImageTagSupportsNoRSA1, testCAPublicKey, testCAPrivateKey, "", true},
-		{"rsaSignerRSA1Support", dockerImageTagSupportsRSA1, testCAPublicKey, testCAPrivateKey, ssh.SigAlgoRSA, false},
-		{"rsa2SignerRSA1Support", dockerImageTagSupportsRSA1, testCAPublicKey, testCAPrivateKey, ssh.SigAlgoRSASHA2256, false},
-		{"rsa2SignerNoRSA1Support", dockerImageTagSupportsNoRSA1, testCAPublicKey, testCAPrivateKey, ssh.SigAlgoRSASHA2256, false},
-		{"ed25519SignerRSA1Support", dockerImageTagSupportsRSA1, testCAPublicKeyEd25519, testCAPrivateKeyEd25519, "", false},
+		{"RSAKey/EmptyAlgoSigner/ImageSupportsRSA1", dockerImageTagSupportsRSA1, testCAPublicKey, testCAPrivateKey, "", false},
+		{"RSAKey/EmptyAlgoSigner/ImageSupportsNoRSA1", dockerImageTagSupportsNoRSA1, testCAPublicKey, testCAPrivateKey, "", true},
+		{"RSAKey/RSA1AlgoSigner/ImageSupportsRSA1", dockerImageTagSupportsRSA1, testCAPublicKey, testCAPrivateKey, ssh.SigAlgoRSA, false},
+		{"RSAKey/RSASHA2256AlgoSigner/ImageSupportsRSA1", dockerImageTagSupportsRSA1, testCAPublicKey, testCAPrivateKey, ssh.SigAlgoRSASHA2256, false},
+		{"RSAKey/RSASHA2256AlgoSigner/ImageSupportsNoRSA1", dockerImageTagSupportsNoRSA1, testCAPublicKey, testCAPrivateKey, ssh.SigAlgoRSASHA2256, false},
+		{"ed25519Key/EmptyAlgoSigner/ImageSupportsRSA1", dockerImageTagSupportsRSA1, testCAPublicKeyEd25519, testCAPrivateKeyEd25519, "", false},
+		{"ed25519Key/EmptyAlgoSigner/ImageSupportsNoRSA1", dockerImageTagSupportsNoRSA1, testCAPublicKeyEd25519, testCAPrivateKeyEd25519, "", false},
+		{"ed25519Key/RSA1AlgoSigner/ImageSupportsRSA1", dockerImageTagSupportsRSA1, testCAPublicKeyEd25519, testCAPrivateKeyEd25519, ssh.SigAlgoRSA, true},
 	}
 
 	for _, tc := range testCases {
