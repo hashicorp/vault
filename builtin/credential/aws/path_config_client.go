@@ -3,12 +3,13 @@ package awsauth
 import (
 	"context"
 	"errors"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"net/http"
 	"net/textproto"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -58,9 +59,9 @@ func (b *backend) pathConfigClient() *framework.Path {
 				Description: "Value to require in the X-Vault-AWS-IAM-Server-ID request header",
 			},
 			"allowed_sts_header_values": {
-				Type:        framework.TypeStringSlice,
+				Type:        framework.TypeCommaStringSlice,
 				Default:     nil,
-				Description: "List of headers that are allowed to be in AWS STS request headers",
+				Description: "List of additional headers that are allowed to be in AWS STS request headers",
 			},
 			"max_retries": {
 				Type:        framework.TypeInt,
@@ -145,6 +146,7 @@ func (b *backend) pathConfigClientRead(ctx context.Context, req *logical.Request
 			"sts_region":                 clientConfig.STSRegion,
 			"iam_server_id_header_value": clientConfig.IAMServerIdHeaderValue,
 			"max_retries":                clientConfig.MaxRetries,
+			"allowed_sts_header_values":  clientConfig.AllowedSTSHeaderValues,
 		},
 	}, nil
 }
@@ -332,12 +334,11 @@ type clientConfig struct {
 }
 
 func (c *clientConfig) validateAllowedSTSHeaderValues(headers http.Header) error {
-	allowList := c.AllowedSTSHeaderValues
-	if c.AllowedSTSHeaderValues == nil {
-		allowList = defaultAllowedSTSRequestHeaders
-	}
 	for k := range headers {
-		if !strutil.StrListContains(allowList, textproto.CanonicalMIMEHeaderKey(k)) {
+		h := textproto.CanonicalMIMEHeaderKey(k)
+		if strings.HasPrefix(h, amzHeaderPrefix) &&
+			!strutil.StrListContains(defaultAllowedSTSRequestHeaders, h) &&
+			!strutil.StrListContains(c.AllowedSTSHeaderValues, h) {
 			return errors.New("invalid request header: " + k)
 		}
 	}
