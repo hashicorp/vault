@@ -71,6 +71,7 @@ export default Route.extend(UnloadModelRoute, {
     let types = {
       transit: 'transit-key',
       ssh: 'role-ssh',
+      transform: 'transform',
       aws: 'role-aws',
       pki: secret && secret.startsWith('cert/') ? 'pki-certificate' : 'role-pki',
       cubbyhole: 'secret',
