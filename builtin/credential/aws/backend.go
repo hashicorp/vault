@@ -18,8 +18,10 @@ import (
 )
 
 const amzHeaderPrefix = "X-Amz-"
+
 var defaultAllowedSTSRequestHeaders = []string{
 	"X-Amz-Date",
+	"X-Amz-Credential",
 	"X-Amz-Security-Token",
 	"X-Amz-Algorithm",
 	"X-Amz-Signature",

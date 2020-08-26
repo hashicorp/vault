@@ -3,13 +3,13 @@ package awsauth
 import (
 	"context"
 	"errors"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"net/http"
 	"net/textproto"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -336,7 +336,7 @@ type clientConfig struct {
 func (c *clientConfig) validateAllowedSTSHeaderValues(headers http.Header) error {
 	for k := range headers {
 		h := textproto.CanonicalMIMEHeaderKey(k)
-		if 	strings.HasPrefix(h, amzHeaderPrefix) &&
+		if strings.HasPrefix(h, amzHeaderPrefix) &&
 			!strutil.StrListContains(defaultAllowedSTSRequestHeaders, h) &&
 			!strutil.StrListContains(c.AllowedSTSHeaderValues, h) {
 			return errors.New("invalid request header: " + k)
