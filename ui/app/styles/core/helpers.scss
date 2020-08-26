@@ -168,6 +168,10 @@
 .has-top-margin-xl {
   margin-top: $spacing-xl;
 }
+.has-border-bottom-light {
+  border-radius: 0;
+  border-bottom: 1px solid $grey-light;
+}
 .has-border-danger {
   border: 1px solid $danger;
 }
