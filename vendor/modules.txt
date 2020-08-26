@@ -375,7 +375,7 @@ github.com/hashicorp/vault-plugin-auth-cf/models
 github.com/hashicorp/vault-plugin-auth-cf/util
 github.com/hashicorp/vault-plugin-auth-cf/testing/certificates
 github.com/hashicorp/vault-plugin-auth-cf/testing/cf
-# github.com/hashicorp/vault-plugin-auth-gcp v0.5.3
+# github.com/hashicorp/vault-plugin-auth-gcp v0.5.4-0.20200819031205-f1713855d3ad
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
 # github.com/hashicorp/vault-plugin-auth-jwt v0.5.3

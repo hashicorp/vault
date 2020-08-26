@@ -8,8 +8,6 @@ replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
-replace github.com/hashicorp/vault-plugin-auth-gcp => github.com/hashicorp/vault-plugin-auth-gcpent v0.5.4-0.20200819031205-f1713855d3ad
-
 require (
 	cloud.google.com/go v0.39.0
 	github.com/Azure/azure-sdk-for-go v29.0.0+incompatible
@@ -76,7 +74,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.5.3
 	github.com/hashicorp/vault-plugin-auth-centrify v0.5.3
 	github.com/hashicorp/vault-plugin-auth-cf v0.5.2
-	github.com/hashicorp/vault-plugin-auth-gcp v0.5.3
+	github.com/hashicorp/vault-plugin-auth-gcp v0.5.4-0.20200819031205-f1713855d3ad
 	github.com/hashicorp/vault-plugin-auth-jwt v0.5.3
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.3
 	github.com/hashicorp/vault-plugin-auth-oci v0.5.2
