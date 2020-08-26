@@ -117,6 +117,8 @@ Router.map(function() {
           // transit-specific routes
           this.route('actions-root', { path: '/actions/' });
           this.route('actions', { path: '/actions/*secret' });
+          // transform-specific routes
+          // TODO: add these
         });
       });
       this.route('policies', { path: '/policies/:type' }, function() {
