@@ -274,9 +274,9 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 				"X-Amz-Date":                "20180910T203328Z",
 				"Authorization":             "AWS4-HMAC-SHA256 Credential=AKIAJPQ466AIIQW4LPSQ/20180910/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=cdef5819b2e97f1ff0f3e898fd2621aa03af00a4ec3e019122c20e5482534bf4",
 				"X-Vault-Aws-Iam-Server-Id": "VaultAcceptanceTesting",
-				"X-Mallory-Header":          "<?xml><h4ck0r/>",
+				"X-Amz-Mallory-Header":      "<?xml><h4ck0r/>",
 			},
-			ExpectErr: errors.New("invalid request header: X-Mallory-Header"),
+			ExpectErr: errors.New("invalid request header: X-Amz-Mallory-Header"),
 		},
 		{
 			Name: "JSON-complete",
