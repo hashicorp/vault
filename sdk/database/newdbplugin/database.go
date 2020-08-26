@@ -85,7 +85,7 @@ type NewUserRequest struct {
 	// user or similar actions.
 	Statements Statements
 
-	// RollbackSTatements is an ordered list of commands to run within the database
+	// RollbackStatements is an ordered list of commands to run within the database
 	// if the new user creation process fails.
 	RollbackStatements Statements
 
