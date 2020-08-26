@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
+// AuthMethod is the interface that auto-auth methods implement for the agent
+// to use.
 type AuthMethod interface {
 	// Authenticate returns a mount path, header, request body, and error.
 	// The header may be nil if no special header is needed.
@@ -18,6 +20,13 @@ type AuthMethod interface {
 	NewCreds() chan struct{}
 	CredSuccess()
 	Shutdown()
+}
+
+// AuthMethodWithClient is an extended interface that can return an API client
+// for use during the authentication call.
+type AuthMethodWithClient interface {
+	AuthMethod
+	AuthClient(client *api.Client) (*api.Client, error)
 }
 
 type AuthConfig struct {
@@ -122,6 +131,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 		backoff := 2*time.Second + time.Duration(ah.random.Int63()%int64(time.Second*2)-int64(time.Second))
 
 		ah.logger.Info("authenticating")
+
 		path, header, data, err := am.Authenticate(ctx, ah.client)
 		if err != nil {
 			ah.logger.Error("error getting path or data from method", "error", err, "backoff", backoff.Seconds())
@@ -129,9 +139,22 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			continue
 		}
 
-		clientToUse := ah.client
+		var clientToUse *api.Client
+
+		switch am.(type) {
+		case AuthMethodWithClient:
+			clientToUse, err = am.(AuthMethodWithClient).AuthClient(ah.client)
+			if err != nil {
+				ah.logger.Error("error creating client for authentication call", "error", err, "backoff", backoff.Seconds())
+				backoffOrQuit(ctx, backoff)
+				continue
+			}
+		default:
+			clientToUse = ah.client
+		}
+
 		if ah.wrapTTL > 0 {
-			wrapClient, err := ah.client.Clone()
+			wrapClient, err := clientToUse.Clone()
 			if err != nil {
 				ah.logger.Error("error creating client for wrapped call", "error", err, "backoff", backoff.Seconds())
 				backoffOrQuit(ctx, backoff)
@@ -216,7 +239,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			watcher.Stop()
 		}
 
-		watcher, err = ah.client.NewLifetimeWatcher(&api.LifetimeWatcherInput{
+		watcher, err = clientToUse.NewLifetimeWatcher(&api.LifetimeWatcherInput{
 			Secret: secret,
 		})
 		if err != nil {
