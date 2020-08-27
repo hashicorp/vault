@@ -71,6 +71,9 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   actions: {
+    restore(key) {
+      this.set(`model.${key}`, this.get(`model._content.${key}`));
+    },
     createOrUpdate(type, event) {
       event.preventDefault();
       const modelId = this.get('model.id') || this.get('model.name'); // transform comes in as model.name

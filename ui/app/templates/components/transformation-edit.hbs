@@ -56,7 +56,7 @@
 {{#if (eq mode 'edit')}}
   <TransformEditForm @mode={{mode}} @model={{model}} />
 {{else if (eq mode 'create')}}
-  <TransformCreateForm @mode={{mode}} @model={{model}} />
+  <TransformCreateForm @mode={{mode}} @model={{changeset model}} />
 {{else}}
   <TransformShowTransformation
     @model={{model}}
