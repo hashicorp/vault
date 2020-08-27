@@ -3,7 +3,7 @@
     {{#if (eq attr.type "object")}}
       {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(stringify (get model attr.name))}}
     {{else}}
-      {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
+      {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name) type=attr.type}}
     {{/if}}
   {{/each}}
 </div>
