@@ -11,9 +11,9 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
       {{#if (eq mode "create") }}
-        Create Transformation
+        Create transformation
       {{else if (eq mode 'edit')}}
-        Edit Transformation
+        Edit transformation
       {{else}}
         Transformation <code>{{model.id}}</code>
       {{/if}}
@@ -24,22 +24,19 @@
 {{#if (eq mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{!-- TODO: update these actions, show delete grey out if not allowed --}}
-      {{#if (or model.canUpdate model.canDelete)}}
+      {{#if (or capabilities.canUpdate capabilities.canDelete)}}
         <div class="toolbar-separator" />
       {{/if}}
-      {{#if model.canDelete}}
-      {{!-- TODO only allow deletion when not in use by a role --}}
-        <ConfirmAction
-          @buttonClasses="toolbar-link"
-          @onConfirmAction={{action "delete"}}
-          @confirmTitle="Are you sure?"
-          @confirmMessage="This transformation is not in use by a role and can be deleted."
+      {{#if capabilities.canDelete}}
+        <a
+          class="toolbar-link"
+          onclick={{action (mut isModalActive) true}}
+          data-test-replication-action-trigger
         >
           Delete transformation
-        </ConfirmAction>
+        </a>
       {{/if}}
-      {{#if model.canUpdate }}
+      {{#if capabilities.canUpdate }}
         <ToolbarSecretLink
           @secret={{model.id}}
           @mode="edit"
@@ -62,3 +59,17 @@
     @model={{model}}
   />
 {{/if}}
+
+<ConfirmationModal
+  @title="Delete transformation"
+  @onClose={{action (mut isModalActive) false}}
+  @isActive={{isModalActive}}
+  @confirmText={{model.name}}
+  @toConfirmMsg="Type {{model.name}} to confirm deleting the transformation."
+  @onConfirm={{action "delete"}}
+>
+  <p class="has-bottom-margin-m">
+    Deleting the <strong>{{model.name}}</strong> transformation means that the underlying keys are lost and the data encoded by the transformation are unrecoverable and cannot be decoded.
+  </p>
+  <MessageError @model={{model}} @errorMessage={{error}} />
+</ConfirmationModal>
