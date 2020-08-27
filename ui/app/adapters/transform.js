@@ -76,7 +76,7 @@ export default ApplicationAdapter.extend({
               // To keep the keys consistent we're translating here
               d = {
                 ...d,
-                template: [d.templates],
+                template: d.templates,
               };
               delete d.templates;
             }
