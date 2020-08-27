@@ -417,6 +417,7 @@ func assertAllFieldsSetValue(name string, rVal reflect.Value) error {
 		return nil
 	}
 
+	// Primitives fall through here
 	if rVal.IsZero() {
 		return fmt.Errorf("%s is zero", name)
 	}
