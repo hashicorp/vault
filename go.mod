@@ -48,7 +48,7 @@ require (
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
-	github.com/hashicorp/consul-template v0.25.0
+	github.com/hashicorp/consul-template v0.25.1
 	github.com/hashicorp/consul/api v1.4.0
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible
@@ -74,7 +74,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.5.6
 	github.com/hashicorp/vault-plugin-auth-centrify v0.5.5
 	github.com/hashicorp/vault-plugin-auth-cf v0.5.4
-	github.com/hashicorp/vault-plugin-auth-gcp v0.7.0
+	github.com/hashicorp/vault-plugin-auth-gcp v0.7.1-0.20200721115240-07ff53341dfe
 	github.com/hashicorp/vault-plugin-auth-jwt v0.7.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.0
@@ -82,9 +82,10 @@ require (
 	github.com/hashicorp/vault-plugin-database-couchbase v0.1.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2
+	github.com/hashicorp/vault-plugin-mock v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-ad v0.6.6
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5
-	github.com/hashicorp/vault-plugin-secrets-azure v0.6.1
+	github.com/hashicorp/vault-plugin-secrets-azure v0.6.2
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.4
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.6
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.6
