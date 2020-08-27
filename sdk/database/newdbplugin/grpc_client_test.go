@@ -512,26 +512,26 @@ type fakeClient struct {
 	closeErr error
 }
 
-func (f fakeClient) Initialize(ctx context.Context, in *proto.InitializeRequest, opts ...grpc.CallOption) (*proto.InitializeResponse, error) {
+func (f fakeClient) Initialize(context.Context, *proto.InitializeRequest, ...grpc.CallOption) (*proto.InitializeResponse, error) {
 	return f.initResp, f.initErr
 }
 
-func (f fakeClient) NewUser(ctx context.Context, in *proto.NewUserRequest, opts ...grpc.CallOption) (*proto.NewUserResponse, error) {
+func (f fakeClient) NewUser(context.Context, *proto.NewUserRequest, ...grpc.CallOption) (*proto.NewUserResponse, error) {
 	return f.newUserResp, f.newUserErr
 }
 
-func (f fakeClient) UpdateUser(ctx context.Context, in *proto.UpdateUserRequest, opts ...grpc.CallOption) (*proto.UpdateUserResponse, error) {
+func (f fakeClient) UpdateUser(context.Context, *proto.UpdateUserRequest, ...grpc.CallOption) (*proto.UpdateUserResponse, error) {
 	return f.updateUserResp, f.updateUserErr
 }
 
-func (f fakeClient) DeleteUser(ctx context.Context, in *proto.DeleteUserRequest, opts ...grpc.CallOption) (*proto.DeleteUserResponse, error) {
+func (f fakeClient) DeleteUser(context.Context, *proto.DeleteUserRequest, ...grpc.CallOption) (*proto.DeleteUserResponse, error) {
 	return f.deleteUserResp, f.deleteUserErr
 }
 
-func (f fakeClient) Type(ctx context.Context, in *proto.Empty, opts ...grpc.CallOption) (*proto.TypeResponse, error) {
+func (f fakeClient) Type(context.Context, *proto.Empty, ...grpc.CallOption) (*proto.TypeResponse, error) {
 	return f.typeResp, f.typeErr
 }
 
-func (f fakeClient) Close(ctx context.Context, in *proto.Empty, opts ...grpc.CallOption) (*proto.Empty, error) {
+func (f fakeClient) Close(context.Context, *proto.Empty, ...grpc.CallOption) (*proto.Empty, error) {
 	return &proto.Empty{}, f.typeErr
 }
