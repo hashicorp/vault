@@ -9,15 +9,19 @@ import layout from '../templates/components/search-select';
  * @module SearchSelect
  * The `SearchSelect` is an implementation of the [ember-power-select-with-create](https://github.com/poteto/ember-cli-flash) used for form elements where options come dynamically from the API.
  * @example
- * <SearchSelect @id="group-policies" @models={{["policies/acl"]}} @onChange={{onChange}} @inputValue={{get model valuePath}} @helpText="Policies associated with this group" @label="Policies" @fallbackComponent="string-list" />
+ * <SearchSelect @id="group-policies" @models={{["policies/acl"]}} @onChange={{onChange}} @selectLimit={{2}} @inputValue={{get model valuePath}} @helpText="Policies associated with this group" @label="Policies" @fallbackComponent="string-list" />
  *
  * @param id {String} - The name of the form field
  * @param models {String} - An array of model types to fetch from the API.
  * @param onChange {Func} - The onchange action for this form field.
  * @param inputValue {String | Array} -  A comma-separated string or an array of strings.
  * @param [helpText] {String} - Text to be displayed in the info tooltip for this form field
+ * @param [subText] {String} - Text to be displayed below the label
+ * @param [selectLimit] {Number} - A number that sets the limit to how many select options they can choose
  * @param label {String} - Label for this form field
+ * @param [subLabel] {String} - a smaller label below the main Label
  * @param fallbackComponent {String} - name of component to be rendered if the API call 403s
+ * @param [backend] {String} - name of the backend if the query for options needs additional information (eg. secret backend)
  *
  * @param options {Array} - *Advanced usage* - `options` can be passed directly from the outside to the
  * power-select component. If doing this, `models` should not also be passed as that will overwrite the
@@ -86,7 +90,11 @@ export default Component.extend({
         this.set('shouldRenderName', true);
       }
       try {
-        let options = yield this.store.query(modelType, {});
+        let queryOptions = {};
+        if (this.backend) {
+          queryOptions = { backend: this.backend };
+        }
+        let options = yield this.store.query(modelType, queryOptions);
         this.formatOptions(options);
       } catch (err) {
         if (err.httpStatus === 404) {

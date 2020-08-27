@@ -1501,8 +1501,8 @@ func maximum(b, a interface{}) (interface{}, error) {
 	}
 }
 
-// blacklisted always returns an error, to be used in place of blacklisted template functions
-func blacklisted(...string) (string, error) {
+// denied always returns an error, to be used in place of denied template functions
+func denied(...string) (string, error) {
 	return "", errors.New("function is disabled")
 }
 
