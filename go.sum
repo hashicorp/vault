@@ -555,6 +555,10 @@ github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4 h1:YE4qndazWmYGp
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4/go.mod h1:QjGrrxcRXv/4XkEZAlM0VMZEa3uxKAICFqDj27FP/48=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2 h1:tSToR3JRARqQkV9B10rk4VlZe2Sr9fOdhEP2NdxPo0I=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2/go.mod h1:HTXNzFr/SAVtJOs7jz0XxZ69jlKtaceEwp37l86UAQ0=
+github.com/hashicorp/vault-plugin-mock v0.14.0 h1:dmE29jOKdqmhwoFp7XNlDQmdrCK27rGGFmWVKIJHYiw=
+github.com/hashicorp/vault-plugin-mock v0.14.0/go.mod h1:83G4JKlOwUtxVourn5euQfze3ZWyXcUiLj2wqrKSDIM=
+github.com/hashicorp/vault-plugin-mock v0.15.0 h1:u4fyr61vmSjfHGzCDG1eiLndGQB46F9VGw9Tts4fBok=
+github.com/hashicorp/vault-plugin-mock v0.15.0/go.mod h1:83G4JKlOwUtxVourn5euQfze3ZWyXcUiLj2wqrKSDIM=
 github.com/hashicorp/vault-plugin-secrets-ad v0.6.6 h1:GskxrCCL2flrBtnAeOsBV+whCaqnnM/+t/h1IyqukNo=
 github.com/hashicorp/vault-plugin-secrets-ad v0.6.6/go.mod h1:L5L6NoJFxRvgxhuA2sWhloc3sbgmE7KxhNcoRxcaH9U=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5 h1:BOOtSls+BQ1EtPmpE9LoqZztsEZ1fRWVSkHWtRIrCB4=
@@ -855,8 +859,6 @@ github.com/sean-/conswriter v0.0.0-20180208195008-f5ae3917a627/go.mod h1:7zjs06q
 github.com/sean-/pager v0.0.0-20180208200047-666be9bf53b5/go.mod h1:BeybITEsBEg6qbIiqJ6/Bqeq25bCLbL7YFmpaFfJDuM=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 h1:nn5Wsu0esKSJiIVhscUtVbo7ada43DJhG55ua/hjS5I=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
-github.com/sethvargo/go-limiter v0.2.3 h1:xgphnEi/Ga/1JMU3Y4Zc8PzyOes4fci/wWwHN6alcqg=
-github.com/sethvargo/go-limiter v0.2.3/go.mod h1:C0kbSFbiriE5k2FFOe18M1YZbAR2Fiwf72uGu0CXCcU=
 github.com/sethvargo/go-limiter v0.3.0 h1:yRMc+Qs2yqw6YJp6UxrO2iUs6DOSq4zcnljbB7/rMns=
 github.com/sethvargo/go-limiter v0.3.0/go.mod h1:C0kbSFbiriE5k2FFOe18M1YZbAR2Fiwf72uGu0CXCcU=
 github.com/shirou/gopsutil v2.20.6-0.20200630091542-01afd763e6c0+incompatible h1:IYOqH6sML3rQGNVEQ5foLtpDt4TeW8PIUBuI9f8itkI=
