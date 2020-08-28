@@ -109,7 +109,7 @@ steps:
               ${package_names}
         else
           GOCACHE=<< parameters.cache_dir >> \
-            go test -tags "${GO_TAGS}" \
+            go test -v -tags "${GO_TAGS}" \
               -timeout=15m \
               -parallel=20 \
               << parameters.extra_flags >> \

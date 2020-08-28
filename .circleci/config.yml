@@ -783,7 +783,7 @@ jobs:
                 ${package_names}
           else
             GOCACHE=/tmp/go-cache \
-              go test -tags "${GO_TAGS}" \
+              go test -v -tags "${GO_TAGS}" \
                 -timeout=15m \
                 -parallel=20 \
                  \
@@ -976,7 +976,7 @@ jobs:
                 ${package_names}
           else
             GOCACHE=/tmp/go-cache \
-              go test -tags "${GO_TAGS}" \
+              go test -v -tags "${GO_TAGS}" \
                 -timeout=15m \
                 -parallel=20 \
                 -race \
@@ -1372,7 +1372,7 @@ jobs:
                 ${package_names}
           else
             GOCACHE=/tmp/go-cache \
-              go test -tags "${GO_TAGS}" \
+              go test -v -tags "${GO_TAGS}" \
                 -timeout=15m \
                 -parallel=20 \
                  \
@@ -1509,7 +1509,7 @@ jobs:
                 ${package_names}
           else
             GOCACHE=/tmp/go-cache \
-              go test -tags "${GO_TAGS}" \
+              go test -v -tags "${GO_TAGS}" \
                 -timeout=15m \
                 -parallel=20 \
                  \
@@ -2083,7 +2083,7 @@ jobs:
                 ${package_names}
           else
             GOCACHE=/tmp/go-cache \
-              go test -tags "${GO_TAGS}" \
+              go test -v -tags "${GO_TAGS}" \
                 -timeout=15m \
                 -parallel=20 \
                 -race \
