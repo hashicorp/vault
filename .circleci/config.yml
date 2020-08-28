@@ -783,11 +783,7 @@ jobs:
                 ${package_names}
           else
             GOCACHE=/tmp/go-cache \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
-                -tags "${GO_TAGS}" \
+              go test -tags "${GO_TAGS}" \
                 -timeout=15m \
                 -parallel=20 \
                  \
@@ -980,11 +976,7 @@ jobs:
                 ${package_names}
           else
             GOCACHE=/tmp/go-cache \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
-                -tags "${GO_TAGS}" \
+              go test -tags "${GO_TAGS}" \
                 -timeout=15m \
                 -parallel=20 \
                 -race \
@@ -1380,11 +1372,7 @@ jobs:
                 ${package_names}
           else
             GOCACHE=/tmp/go-cache \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
-                -tags "${GO_TAGS}" \
+              go test -tags "${GO_TAGS}" \
                 -timeout=15m \
                 -parallel=20 \
                  \
@@ -1521,11 +1509,7 @@ jobs:
                 ${package_names}
           else
             GOCACHE=/tmp/go-cache \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
-                -tags "${GO_TAGS}" \
+              go test -tags "${GO_TAGS}" \
                 -timeout=15m \
                 -parallel=20 \
                  \
@@ -2099,11 +2083,7 @@ jobs:
                 ${package_names}
           else
             GOCACHE=/tmp/go-cache \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
-                -tags "${GO_TAGS}" \
+              go test -tags "${GO_TAGS}" \
                 -timeout=15m \
                 -parallel=20 \
                 -race \
