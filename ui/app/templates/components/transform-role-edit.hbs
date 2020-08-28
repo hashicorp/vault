@@ -24,22 +24,20 @@
 {{#if (eq mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{!-- TODO: update these actions, show delete grey out if not allowed --}}
-      {{#if (or model.canUpdate model.canDelete)}}
+      {{!-- TODO: Ability to delete and edit role
+      {{#if (or capabilities.canUpdate capabilities.canDelete)}}
         <div class="toolbar-separator" />
       {{/if}}
-      {{#if model.canDelete}}
-      {{!-- TODO only allow deletion when not in use by a role --}}
-        <ConfirmAction
-          @buttonClasses="toolbar-link"
-          @onConfirmAction={{action "delete"}}
-          @confirmTitle="Are you sure?"
-          @confirmMessage="This transformation is not in use by a role and can be deleted."
+      {{#if capabilities.canDelete}}
+        <a
+          class="toolbar-link"
+          onclick={{action "delete"}}
+          data-test-transformation-role-delete
         >
           Delete role
-        </ConfirmAction>
+        </a>
       {{/if}}
-      {{#if model.canUpdate }}
+      {{#if capabilities.canUpdate }}
         <ToolbarSecretLink
           @secret={{model.id}}
           @mode="edit"
@@ -48,7 +46,7 @@
         >
           Edit role
         </ToolbarSecretLink>
-      {{/if}}
+      {{/if}} --}}
     </ToolbarActions>
   </Toolbar>
 {{/if}}
@@ -57,8 +55,7 @@
 <form onsubmit={{action "createOrUpdate" mode}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     {{message-error model=model}}
-    {{!-- TODO: figure out what this ?? --}}
-    {{!-- <NamespaceReminder @mode={{mode}} @noun="Transform role" /> --}}
+    <NamespaceReminder @mode={{mode}} @noun="Transform role" />
     {{#each model.attrs as |attr|}}
       <FormField
         data-test-field

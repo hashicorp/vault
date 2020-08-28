@@ -76,6 +76,7 @@ const SECRET_BACKENDS = {
         item: 'role',
         create: 'Create role',
         tab: 'role',
+        editComponent: 'transform-role-edit',
       },
       {
         name: 'templates',
