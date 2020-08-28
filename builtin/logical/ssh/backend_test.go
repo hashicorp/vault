@@ -976,7 +976,7 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 						return err
 					}
 
-					err = testSSH(t, testUserName, sshAddress, ssh.PublicKeys(certSigner), "date")
+					err = testSSH(testUserName, sshAddress, ssh.PublicKeys(certSigner), "date")
 					if err != nil {
 						return err
 					}
