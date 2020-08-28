@@ -194,14 +194,14 @@ func (b *GcpAuthBackend) parseAndValidateJwt(ctx context.Context, req *logical.R
 	}
 	loginInfo.EmailOrId = baseClaims.Subject
 
-	if customClaims.Google != nil && customClaims.Google.Compute != nil && len(customClaims.Google.Compute.InstanceId) > 0 {
-		loginInfo.GceMetadata = customClaims.Google.Compute
+	if loginInfo.Role.RoleType == gceRoleType {
+		if customClaims.Google != nil && customClaims.Google.Compute != nil && len(customClaims.Google.Compute.InstanceId) > 0 {
+			loginInfo.GceMetadata = customClaims.Google.Compute
+		}
+		if loginInfo.GceMetadata == nil {
+			return nil, errors.New("expected JWT to have claims with GCE metadata")
+		}
 	}
-
-	if loginInfo.Role.RoleType == gceRoleType && loginInfo.GceMetadata == nil {
-		return nil, errors.New("expected JWT to have claims with GCE metadata")
-	}
-
 	return loginInfo, nil
 }
 
@@ -221,18 +221,21 @@ func (b *GcpAuthBackend) getSigningKey(ctx context.Context, token *jwt.JSONWebTo
 		return k, nil
 	}
 
-	// If that failed, try to get account-specific key
-	b.Logger().Debug("Unable to get Google-wide OAuth2 Key, trying service-account public key")
 	saId, err := getJWTSubject(rawToken)
 	if err != nil {
 		return nil, err
 	}
-	k, saErr := gcputil.ServiceAccountPublicKey(saId, kid)
-	if saErr != nil {
+
+	if role.RoleType == iamRoleType {
+		// If that failed, and the authentication type is IAM, try to get account-specific key
+		b.Logger().Debug("Unable to get Google-wide OAuth2 Key, trying service-account public key")
+		k, saErr := gcputil.ServiceAccountPublicKey(saId, kid)
+		if saErr == nil {
+			return k, nil
+		}
 		return nil, errwrap.Wrapf(fmt.Sprintf("unable to get public key %q for JWT subject %q: {{err}}", kid, saId), saErr)
 	}
-
-	return k, nil
+	return nil, fmt.Errorf("unable to get public key %q for JWT subject %q: no Google OAuth2 provider key found for GCE role", kid, saId)
 }
 
 // getJWTSubject grabs 'sub' claim given an unverified signed JWT.

@@ -51,7 +51,6 @@ vault secrets enable aws
 vault secrets enable azure
 vault secrets enable cassandra
 vault secrets enable consul
-vault secrets enable couchbase
 vault secrets enable database
 vault secrets enable gcp
 vault secrets enable gcpkms
