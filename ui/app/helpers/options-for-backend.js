@@ -87,6 +87,7 @@ const SECRET_BACKENDS = {
         create: 'Create template',
         tab: 'templates',
         editComponent: 'transform-template-edit',
+        hideCreate: true,
       },
       {
         name: 'alphabets',
@@ -97,6 +98,7 @@ const SECRET_BACKENDS = {
         create: 'Create alphabet',
         tab: 'alphabets',
         editComponent: 'alphabet-edit',
+        hideCreate: true,
       },
     ],
   },
