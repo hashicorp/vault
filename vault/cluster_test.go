@@ -23,7 +23,6 @@ var (
 )
 
 func TestClusterFetching(t *testing.T) {
-	t.Parallel()
 	c, _, _ := TestCoreUnsealed(t)
 
 	err := c.setupCluster(context.Background())
@@ -89,7 +88,6 @@ func TestClusterHAFetching(t *testing.T) {
 }
 
 func TestCluster_ListenForRequests(t *testing.T) {
-	t.Parallel()
 	// Make this nicer for tests
 	manualStepDownSleepPeriod = 5 * time.Second
 

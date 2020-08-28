@@ -109,7 +109,11 @@ steps:
               ${package_names}
         else
           GOCACHE=<< parameters.cache_dir >> \
-            go test -v -tags "${GO_TAGS}" \
+            gotestsum --format=short-verbose \
+              --junitfile test-results/go-test/results.xml \
+              --jsonfile test-results/go-test/results.json \
+              -- \
+              -tags "${GO_TAGS}" \
               -timeout=15m \
               -parallel=20 \
               << parameters.extra_flags >> \
