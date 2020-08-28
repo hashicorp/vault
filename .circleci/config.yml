@@ -789,7 +789,7 @@ jobs:
                 -- \
                 -tags "${GO_TAGS}" \
                 -timeout=15m \
-                -parallel=20 \
+                -parallel=1 \
                  \
                 ${package_names}
           fi
@@ -986,7 +986,7 @@ jobs:
                 -- \
                 -tags "${GO_TAGS}" \
                 -timeout=15m \
-                -parallel=20 \
+                -parallel=1 \
                 -race \
                 ${package_names}
           fi
@@ -1386,7 +1386,7 @@ jobs:
                 -- \
                 -tags "${GO_TAGS}" \
                 -timeout=15m \
-                -parallel=20 \
+                -parallel=1 \
                  \
                 ${package_names}
           fi
@@ -1527,7 +1527,7 @@ jobs:
                 -- \
                 -tags "${GO_TAGS}" \
                 -timeout=15m \
-                -parallel=20 \
+                -parallel=1 \
                  \
                 ${package_names}
           fi
@@ -2105,7 +2105,7 @@ jobs:
                 -- \
                 -tags "${GO_TAGS}" \
                 -timeout=15m \
-                -parallel=20 \
+                -parallel=1 \
                 -race \
                 ${package_names}
           fi
