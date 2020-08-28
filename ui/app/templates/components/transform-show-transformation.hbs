@@ -1,0 +1,55 @@
+<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+  {{#each model.transformFieldAttrs as |attr|}}
+    {{#if (eq attr.type "object")}}
+      {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(stringify (get model attr.name))}}
+    {{else}}
+      {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name) type=attr.type}}
+    {{/if}}
+  {{/each}}
+</div>
+
+<div class="has-top-margin-xl has-bottom-margin-s">
+  <label class="title has-border-bottom-light page-header">CLI Commands</label>
+  <div class="has-bottom-margin-s">
+    <h2 class="title is-6">Encode</h2>
+    <div class="has-bottom-margin-s">
+      <span class="helper-text has-text-grey">
+        To test the encoding capability of your transformation, use the following command. It will output an encoded_value.
+      </span>
+    </div>
+    <div class="copy-text level">
+      {{#let (concat 
+        "vault write " model.backend "/encode/" 
+        (if (and (take 1 model.allowed_roles) (eq model.allowed_roles.length 1)) (take 1 model.allowed_roles) "<choose a role>")
+        " value=<enter your value here>" 
+        (if (and (eq model.type 'fpe') (eq model.tweak_source "supplied")) " tweak_source=<enter your tweak>")) as |copyEncodeCommand|}}
+        <code>{{copyEncodeCommand}}</code>
+        <CopyButton class="button is-transparent level-right" @clipboardText={{copyEncodeCommand}}
+          @buttonType="button" @success={{action (set-flash-message 'Command copied!')}}>
+          <Icon @size='l' @glyph="copy-action" aria-label="Copy" />
+        </CopyButton>
+      {{/let}}
+    </div>
+  </div>
+  <div>
+    <h2 class="title is-6">Decode</h2>
+    <div class="has-bottom-margin-s">
+      <span class="helper-text has-text-grey">
+        To test decoding capability of your transformation, use the encoded_value in the following command. It should return your original input.
+      </span>
+    </div>
+    <div class="copy-text level">
+      {{#let (concat 
+        "vault write " model.backend "/decode/" 
+        (if (and (take 1 model.allowed_roles) (eq model.allowed_roles.length 1)) (take 1 model.allowed_roles) "<choose a role>")
+        " value=<enter your value here>" 
+        (if (and (eq model.type 'fpe') (eq model.tweak_source "supplied")) " tweak_source=<enter your tweak>")) as |copyDecodeCommand|}}
+        <code>{{copyDecodeCommand}}</code>
+        <CopyButton class="button is-transparent level-right" @clipboardText={{copyDecodeCommand}}
+          @buttonType="button" @success={{action (set-flash-message 'Command copied!')}}>
+          <Icon @size='l' @glyph="copy-action" aria-label="Copy" />
+        </CopyButton>
+      {{/let}}
+    </div>
+  </div> 
+</div>

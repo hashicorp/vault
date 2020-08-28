@@ -158,6 +158,7 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 		AAD:    "foobar",
 		DHType: "curve25519",
 		DHPath: dhpath,
+		DeriveKey: true,
 		Config: map[string]interface{}{
 			"path": out,
 		},
@@ -231,7 +232,11 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 					continue
 				}
 
-				aesKey, err := dhutil.GenerateSharedKey(pri, resp.Curve25519PublicKey)
+				shared, err := dhutil.GenerateSharedSecret(pri, resp.Curve25519PublicKey)
+				if err != nil {
+					t.Fatal(err)
+				}
+				aesKey, err := dhutil.DeriveSharedKey(shared, pub, resp.Curve25519PublicKey)
 				if err != nil {
 					t.Fatal(err)
 				}
