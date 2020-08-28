@@ -14,6 +14,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -612,6 +613,30 @@ func AddNoopAudit(conf *CoreConfig, records **[][]byte) {
 				*records = &n.records
 			}
 			return n, nil
+		},
+	}
+}
+
+func AddFileAudit(conf *CoreConfig) {
+	conf.AuditBackends = map[string]audit.Factory{
+		"file": func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+			view := &logical.InmemStorage{}
+			view.Put(context.Background(), &logical.StorageEntry{
+				Key:   "salt",
+				Value: []byte("foo"),
+			})
+			config.SaltConfig = &salt.Config{
+				HMAC:     sha256.New,
+				HMACType: "hmac-sha256",
+			}
+			config.SaltView = view
+			config.Config = map[string]string{
+				"file_path": "/tmp/audit.log",
+				"mode":      "0777",
+				"prefix":    "haha good times",
+			}
+
+			return auditFile.Factory(context.Background(), config)
 		},
 	}
 }
@@ -1461,7 +1486,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	addAuditBackend := len(coreConfig.AuditBackends) == 0
 	if addAuditBackend {
-		AddNoopAudit(coreConfig, nil)
+		//AddNoopAudit(coreConfig, nil)
+		AddFileAudit(coreConfig)
 	}
 
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {
@@ -1932,9 +1958,9 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		auditReq := &logical.Request{
 			Operation:   logical.UpdateOperation,
 			ClientToken: tc.RootToken,
-			Path:        "sys/audit/noop",
+			Path:        "sys/audit/file",
 			Data: map[string]interface{}{
-				"type": "noop",
+				"type": "file",
 			},
 		}
 		resp, err = leader.Core.HandleRequest(namespace.RootContext(ctx), auditReq)
