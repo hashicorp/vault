@@ -3,9 +3,10 @@ import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 
 export default Controller.extend(BackendCrumbMixin, {
   backendController: controller('vault.cluster.secrets.backend'),
-  queryParams: ['initialKey'],
+  queryParams: ['initialKey', 'itemType'],
 
   initialKey: '',
+  itemType: '',
 
   actions: {
     refresh: function() {
