@@ -6,11 +6,14 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"sort"
 	"testing"
 
+	"github.com/go-test/deep"
 	proto "github.com/golang/protobuf/proto"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 func getFSM(t testing.TB) (*FSM, string) {
@@ -123,5 +126,32 @@ func TestFSM_Batching(t *testing.T) {
 
 	if latestConfig == nil && term > 1 {
 		t.Fatal("config wasn't updated")
+	}
+}
+
+func TestFSM_List(t *testing.T) {
+	fsm, dir := getFSM(t)
+	defer os.RemoveAll(dir)
+
+	ctx := context.Background()
+	count := 100
+	keys := rand.Perm(count)
+	var sorted []string
+	for _, k := range keys {
+		err := fsm.Put(ctx, &physical.Entry{Key: fmt.Sprintf("foo/%d/bar", k)})
+		sorted = append(sorted, fmt.Sprintf("%d/", k))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	sort.Strings(sorted)
+
+	got, err := fsm.List(ctx, "foo/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Strings(got)
+	if diff := deep.Equal(sorted, got); len(diff) > 0 {
+		t.Fatal(diff)
 	}
 }
