@@ -71,6 +71,7 @@ export default Route.extend(UnloadModelRoute, {
     let types = {
       transit: 'transit-key',
       ssh: 'role-ssh',
+      transform: secret && secret.startsWith('role/') ? 'transform/role' : 'transform', // CBS TODO: switch out better
       aws: 'role-aws',
       pki: secret && secret.startsWith('cert/') ? 'pki-certificate' : 'role-pki',
       cubbyhole: 'secret',
@@ -191,12 +192,15 @@ export default Route.extend(UnloadModelRoute, {
     let secret = this.secretParam();
     let backend = this.enginePathParam();
     let modelType = this.modelType(backend, secret);
-
     if (!secret) {
       secret = '\u0020';
     }
     if (modelType === 'pki-certificate') {
       secret = secret.replace('cert/', '');
+    }
+    if (modelType.startsWith('transform/')) {
+      // CBS TODO: we'll have more things to replace than just role/
+      secret = secret.replace('role/', '');
     }
     let secretModel;
 

@@ -13,8 +13,55 @@ BUG FIXES:
 * secrets/database: Fix handling of TLS options in mongodb connection strings [[GH-9519](https://github.com/hashicorp/vault/pull/9519)]
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-93](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/93)]
 
+## 1.5.3
+### August 27th, 2020
+
+NOTE:
+
+All security content from 1.5.2, 1.5.1, 1.4.5, 1.4.4, 1.3.9, 1.3.8, 1.2.6, and 1.2.5 has been made fully open source, and the git tags for 1.5.3, 1.4.6, 1.3.10, and 1.2.7 will build correctly for open source users.
+
+BUG FIXES:
+
+* auth/aws: Made header handling for IAM authentication more robust
+* secrets/ssh: Fixed a bug with role option for SSH signing algorithm to allow more than RSA signing
+
+## 1.5.2.1
+### August 21st, 2020
+### Enterprise Only
+
+NOTE:
+
+Includes correct license in the HSM binary.
+
+## 1.5.2
+### August 20th, 2020
+
+NOTE:
+
+OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+
+KNOWN ISSUES:
+
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.5.2 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.5.2)
+* In versions 1.2.6, 1.3.9, 1.4.5, and 1.5.2, enterprise licenses on the HSM build were not incorporated correctly - enterprise
+  customers should use 1.2.6.1, 1.3.9.1, 1.4.5.1, and 1.5.2.1.
+
+
 ## 1.5.1
-### TBD
+### August 20th, 2020
+
+SECURITY:
+
+* When using the IAM AWS Auth Method, under certain circumstances, values Vault uses to validate identities and roles can be manipulated and bypassed. This vulnerability affects Vault and Vault Enterprise 0.7.1 and newer and is fixed in 1.2.5, 1.3.8, 1.4.4, and 1.5.1 (CVE-2020-16250) (Discovered by Felix Wilhelm of Google Project Zero)
+* When using the GCP GCE Auth Method, under certain circumstances, values Vault uses to validate GCE VMs can be manipulated and bypassed. This vulnerability affects Vault and Vault Enterprise 0.8.3 and newer and is fixed in 1.2.5, 1.3.8, 1.4.4, and 1.5.1 (CVE-2020-16251) (Discovered by Felix Wilhelm of Google Project Zero)
+* When using Vault Agent with cert auto-auth and caching enabled, under certain circumstances, clients without permission to access agent's token may retrieve the token without login credentials. This vulnerability affects Vault Agent 1.1.0 and newer and is fixed in 1.5.1 (CVE-2020-17455)
+
+KNOWN ISSUES:
+
+* OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.5.1 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.5.1)
 
 CHANGES:
 
@@ -23,7 +70,9 @@ CHANGES:
 IMPROVEMENTS:
 
 * auth/jwt: Add support for fetching groups and user information from G Suite during authentication. [[GH-9574](https://github.com/hashicorp/vault/pull/9574)]
+* auth/jwt: Add EdDSA to supported algorithms. [[GH-129](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/129)]
 * pki: Add a `allowed_domains_template` parameter that enables the use of identity templating within the `allowed_domains` parameter. [[GH-8509](https://github.com/hashicorp/vault/pull/8509)]
+* secret/azure: Use write-ahead-logs to cleanup any orphaned Service Principals [[GH-9773](https://github.com/hashicorp/vault/pull/9773)]
 * ui: Wrap TTL option on transit engine export action is updated to a new component. [[GH-9632](https://github.com/hashicorp/vault/pull/9632)]
 * ui: Wrap Tool uses newest version of TTL Picker component. [[GH-9691](https://github.com/hashicorp/vault/pull/9691)]
 
@@ -121,8 +170,60 @@ BUG FIXES:
 * ui: Disallow max versions value of large than 9999999999999999 on kv2 secrets engine. [[GH-9242](https://github.com/hashicorp/vault/pull/9242)]
 * ui: Add and upgrade missing dependencies to resolve a failure with `make static-dist`. [[GH-9277](https://github.com/hashicorp/vault/pull/9371)]
 
+## 1.4.7 (TBD)
+
+IMPROVEMENTS:
+
+* secret/azure: Use write-ahead-logs to cleanup any orphaned Service Principals [[GH-9773](https://github.com/hashicorp/vault/pull/9773)]
+
+## 1.4.6
+### August 27th, 2020
+
+NOTE:
+
+All security content from 1.5.2, 1.5.1, 1.4.5, 1.4.4, 1.3.9, 1.3.8, 1.2.6, and 1.2.5 has been made fully open source, and the git tags for 1.5.3, 1.4.6, 1.3.10, and 1.2.7 will build correctly for open source users.
+
+BUG FIXES:
+
+* auth/aws: Made header handling for IAM authentication more robust
+* secrets/ssh: Fixed a bug with role option for SSH signing algorithm to allow more than RSA signing
+
+## 1.4.5.1
+### August 21st, 2020
+### Enterprise Only
+
+NOTE:
+
+Includes correct license in the HSM binary.
+
+## 1.4.5
+### August 20th, 2020
+
+NOTE:
+
+OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+
+KNOWN ISSUES:
+
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.4.5 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.4.5)
+* In versions 1.2.6, 1.3.9, 1.4.5, and 1.5.2, enterprise licenses on the HSM build were not incorporated correctly - enterprise
+  customers should use 1.2.6.1, 1.3.9.1, 1.4.5.1, and 1.5.2.1.
+
+
 ## 1.4.4
-### TBD
+### August 20th, 2020
+
+SECURITY:
+
+* When using the IAM AWS Auth Method, under certain circumstances, values Vault uses to validate identities and roles can be manipulated and bypassed. This vulnerability affects Vault and Vault Enterprise 0.7.1 and newer and is fixed in 1.2.5, 1.3.8, 1.4.4, and 1.5.1 (CVE-2020-16250) (Discovered by Felix Wilhelm of Google Project Zero)
+* When using the GCP GCE Auth Method, under certain circumstances, values Vault uses to validate GCE VMs can be manipulated and bypassed. This vulnerability affects Vault and Vault Enterprise 0.8.3 and newer and is fixed in 1.2.5, 1.3.8, 1.4.4, and 1.5.1 (CVE-2020-16251) (Discovered by Felix Wilhelm of Google Project Zero)
+
+KNOWN ISSUES:
+
+* OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.4.4 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.4.4)
 
 BUG FIXES:
 
@@ -344,6 +445,53 @@ BUG FIXES:
 * ui: Update headless Chrome flag to fix `yarn run test:oss` [[GH-8035](https://github.com/hashicorp/vault/pull/8035)]
 * ui: Update CLI to accept empty strings as param value to reset previously-set values
 * ui: Fix bug where error states don't clear when moving between action tabs on Transit [[GH-8354](https://github.com/hashicorp/vault/pull/8354)]
+
+## 1.3.10
+### August 27th, 2020
+
+NOTE:
+
+All security content from 1.5.2, 1.5.1, 1.4.5, 1.4.4, 1.3.9, 1.3.8, 1.2.6, and 1.2.5 has been made fully open source, and the git tags for 1.5.3, 1.4.6, 1.3.10, and 1.2.7 will build correctly for open source users.
+
+BUG FIXES:
+
+* auth/aws: Made header handling for IAM authentication more robust
+
+## 1.3.9.1
+### August 21st, 2020
+### Enterprise Only
+
+NOTE:
+
+Includes correct license in the HSM binary.
+
+## 1.3.9
+### August 20th, 2020
+
+NOTE:
+
+OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+
+KNOWN ISSUES:
+
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.3.9 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.3.9)
+* In versions 1.2.6, 1.3.9, 1.4.5, and 1.5.2, enterprise licenses on the HSM build were not incorporated correctly - enterprise
+  customers should use 1.2.6.1, 1.3.9.1, 1.4.5.1, and 1.5.2.1.
+
+## 1.3.8
+### August 20th, 2020
+
+SECURITY:
+
+* When using the IAM AWS Auth Method, under certain circumstances, values Vault uses to validate identities and roles can be manipulated and bypassed. This vulnerability affects Vault and Vault Enterprise 0.7.1 and newer and is fixed in 1.2.5, 1.3.8, 1.4.4, and 1.5.1 (CVE-2020-16250) (Discovered by Felix Wilhelm of Google Project Zero)
+* When using the GCP GCE Auth Method, under certain circumstances, values Vault uses to validate GCE VMs can be manipulated and bypassed. This vulnerability affects Vault and Vault Enterprise 0.8.3 and newer and is fixed in 1.2.5, 1.3.8, 1.4.4, and 1.5.1 (CVE-2020-16251) (Discovered by Felix Wilhelm of Google Project Zero)
+
+KNOWN ISSUES:
+
+* OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.3.8 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.3.8)
 
 ## 1.3.7
 ### July 2nd, 2020
@@ -640,6 +788,53 @@ BUG FIXES:
  * ui: fix an error when initializing from the UI using PGP keys [[GH-7542](https://github.com/hashicorp/vault/pull/7542)]
  * ui: show all active kv v2 secret versions even when `delete_version_after` is configured [[GH-7685](https://github.com/hashicorp/vault/pull/7685)]
  * ui: Ensure that items in the top navigation link to pages that users have access to [[GH-7590](https://github.com/hashicorp/vault/pull/7590)]
+
+## 1.2.7
+### August 27th, 2020
+
+NOTE:
+
+All security content from 1.5.2, 1.5.1, 1.4.5, 1.4.4, 1.3.9, 1.3.8, 1.2.6, and 1.2.5 has been made fully open source, and the git tags for 1.5.3, 1.4.6, 1.3.10, and 1.2.7 will build correctly for open source users.
+
+BUG FIXES:
+
+* auth/aws: Made header handling for IAM authentication more robust
+
+## 1.2.6.1
+### August 21st, 2020
+### Enterprise Only
+
+NOTE:
+
+Includes correct license in the HSM binary.
+
+## 1.2.6
+### August 20th, 2020
+
+NOTE:
+
+OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+
+KNOWN ISSUES:
+
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.2.6 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.2.6)
+* In versions 1.2.6, 1.3.9, 1.4.5, and 1.5.2, enterprise licenses on the HSM build were not incorporated correctly - enterprise
+  customers should use 1.2.6.1, 1.3.9.1, 1.4.5.1, and 1.5.2.1.
+
+## 1.2.5
+### August 20th, 2020
+
+SECURITY:
+
+ * When using the IAM AWS Auth Method, under certain circumstances, values Vault uses to validate identities and roles can be manipulated and bypassed. This vulnerability affects Vault and Vault Enterprise 0.7.1 and newer and is fixed in 1.2.5, 1.3.8, 1.4.4, and 1.5.1 (CVE-2020-16250) (Discovered by Felix Wilhelm of Google Project Zero)
+ * When using the GCP GCE Auth Method, under certain circumstances, values Vault uses to validate GCE VMs can be manipulated and bypassed. This vulnerability affects Vault and Vault Enterprise 0.8.3 and newer and is fixed in 1.2.5, 1.3.8, 1.4.4, and 1.5.1 (CVE-2020-16251) (Discovered by Felix Wilhelm of Google Project Zero)
+
+KNOWN ISSUES:
+
+* OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
+* AWS IAM logins may return an error depending on the headers sent with the request.
+  For more details and a workaround, see the [1.2.5 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.2.5)
 
 ## 1.2.4 (November 7th, 2019)
 
