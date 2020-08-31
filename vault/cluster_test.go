@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/tls"
 	"net/http"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -24,9 +23,6 @@ var (
 )
 
 func TestClusterFetching(t *testing.T) {
-	if os.Getenv("VAULT_CI_GO_TEST_RACE") != "" {
-		t.Skip("skipping race test")
-	}
 	c, _, _ := TestCoreUnsealed(t)
 
 	err := c.setupCluster(context.Background())
@@ -92,10 +88,6 @@ func TestClusterHAFetching(t *testing.T) {
 }
 
 func TestCluster_ListenForRequests(t *testing.T) {
-	if os.Getenv("VAULT_CI_GO_TEST_RACE") != "" {
-		t.Skip("skipping race test")
-	}
-
 	// Make this nicer for tests
 	manualStepDownSleepPeriod = 5 * time.Second
 

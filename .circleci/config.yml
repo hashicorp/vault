@@ -699,6 +699,13 @@ jobs:
         version: 18.09.3
     - run:
         command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
+    - restore_cache:
+        keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - run:
+        command: |
           set -x
 
           free -h
@@ -775,7 +782,7 @@ jobs:
                  \
                 ${package_names}
           else
-            GOCACHE=/tmp/go-cache \
+            # GOCACHE=/tmp/go-cache \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
@@ -887,6 +894,13 @@ jobs:
     - checkout
     - run:
         command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
+    - restore_cache:
+        keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - run:
+        command: |
           set -x
 
           free -h
@@ -962,7 +976,7 @@ jobs:
                 -race \
                 ${package_names}
           else
-            GOCACHE=/tmp/go-cache \
+            # GOCACHE=/tmp/go-cache \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
@@ -1280,6 +1294,13 @@ jobs:
     - checkout
     - run:
         command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
+    - restore_cache:
+        keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - run:
+        command: |
           set -x
 
           free -h
@@ -1355,7 +1376,7 @@ jobs:
                  \
                 ${package_names}
           else
-            GOCACHE=/tmp/go-cache \
+            # GOCACHE=/tmp/go-cache \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
@@ -1414,6 +1435,13 @@ jobs:
     - checkout
     - run:
         command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
+    - restore_cache:
+        keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - run:
+        command: |
           set -x
 
           free -h
@@ -1489,7 +1517,7 @@ jobs:
                  \
                 ${package_names}
           else
-            GOCACHE=/tmp/go-cache \
+            # GOCACHE=/tmp/go-cache \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
@@ -1502,6 +1530,11 @@ jobs:
           fi
         name: Run Go tests
         no_output_timeout: 60m
+    - save_cache:
+        key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+        paths:
+        - /tmp/go-cache
+        when: always
     - store_artifacts:
         path: test-results
     - store_test_results:
@@ -1979,6 +2012,13 @@ jobs:
         version: 18.09.3
     - run:
         command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
+    - restore_cache:
+        keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - run:
+        command: |
           set -x
 
           free -h
@@ -2055,7 +2095,7 @@ jobs:
                 -race \
                 ${package_names}
           else
-            GOCACHE=/tmp/go-cache \
+            # GOCACHE=/tmp/go-cache \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \

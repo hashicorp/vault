@@ -20,6 +20,13 @@ parameters:
     default: false
 steps:
   - run:
+      name: Compute test cache key
+      command: |
+        TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+  - restore_cache:
+      keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+  - run:
       name: Run Go tests
       no_output_timeout: 60m
       command: |
@@ -101,7 +108,7 @@ steps:
               << parameters.extra_flags >> \
               ${package_names}
         else
-          GOCACHE=<< parameters.cache_dir >> \
+          # GOCACHE=<< parameters.cache_dir >> \
             gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results.xml \
               --jsonfile test-results/go-test/results.json \
@@ -122,3 +129,11 @@ steps:
             command: |
               docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
               docker cp testcontainer:/tmp/gocache << parameters.cache_dir >>
+  - when:
+      condition: << parameters.save_cache >>
+      steps:
+        - save_cache:
+            when: always
+            key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+            paths:
+            - << parameters.cache_dir >>
