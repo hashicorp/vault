@@ -211,7 +211,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		resp.AddWarning(fmt.Sprintf("key %s already existed", name))
 	}
 
-	return nil, nil
+	return resp, nil
 }
 
 // Built-in helper type for returning asymmetric keys
