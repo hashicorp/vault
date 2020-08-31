@@ -52,9 +52,9 @@
           </small>
         {{else}}
           {{selected.id}}
-          {{#if wildCardLabel}}
+          {{#if wildcardLabel}}
             {{#let (filter-wildcard selected allOptions) as | wildcardCount |}}
-              includes {{wildcardCount}} {{if (gt wildcardCount 1) (pluralize wildCardLabel) wildCardLabel}}
+              includes {{wildcardCount}} {{if (gt wildcardCount 1) (pluralize wildcardLabel) wildcardLabel}}
             {{/let}}
           {{/if}}
         {{/if}}

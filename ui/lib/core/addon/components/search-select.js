@@ -15,13 +15,14 @@ import layout from '../templates/components/search-select';
  * @param models {String} - An array of model types to fetch from the API.
  * @param onChange {Func} - The onchange action for this form field.
  * @param inputValue {String | Array} -  A comma-separated string or an array of strings.
- * @param [helpText] {String} - Text to be displayed in the info tooltip for this form field
- * @param [subText] {String} - Text to be displayed below the label
- * @param [selectLimit] {Number} - A number that sets the limit to how many select options they can choose
  * @param label {String} - Label for this form field
- * @param [subLabel] {String} - a smaller label below the main Label
  * @param fallbackComponent {String} - name of component to be rendered if the API call 403s
  * @param [backend] {String} - name of the backend if the query for options needs additional information (eg. secret backend)
+ * @param [helpText] {String} - Text to be displayed in the info tooltip for this form field
+ * @param [selectLimit] {Number} - A number that sets the limit to how many select options they can choose
+ * @param [subText] {String} - Text to be displayed below the label
+ * @param [subLabel] {String} - a smaller label below the main Label
+ * @param [wildcardLabel] {String} - when you want the searchSelect component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
  *
  * @param options {Array} - *Advanced usage* - `options` can be passed directly from the outside to the
  * power-select component. If doing this, `models` should not also be passed as that will overwrite the

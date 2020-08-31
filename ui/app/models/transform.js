@@ -78,7 +78,7 @@ const Model = DS.Model.extend({
     label: 'Allowed roles',
     fallbackComponent: 'string-list',
     models: ['transform/role'],
-    wildCardLabel: 'role', // add wildCardLabel is you want to display count when wildcard used in searchSelect component
+    wildcardLabel: 'role', // add wildcardLabel is you want to display count when wildcard used in searchSelect component
     subText: 'Search for an existing role, type a new role to create it, or use a wildcard (*).',
   }),
   transformAttrs: computed('type', function() {
