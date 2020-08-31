@@ -113,6 +113,7 @@ steps:
               --junitfile test-results/go-test/results.xml \
               --jsonfile test-results/go-test/results.json \
               -- \
+              -p 1 \
               -tags "${GO_TAGS}" \
               -timeout=60m \
               -parallel=1 \
