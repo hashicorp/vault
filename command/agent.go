@@ -344,13 +344,14 @@ func (c *AgentCommand) Run(args []string) int {
 			switch sc.Type {
 			case "file":
 				config := &sink.SinkConfig{
-					Logger:  c.logger.Named("sink.file"),
-					Config:  sc.Config,
-					Client:  client,
-					WrapTTL: sc.WrapTTL,
-					DHType:  sc.DHType,
-					DHPath:  sc.DHPath,
-					AAD:     sc.AAD,
+					Logger:    c.logger.Named("sink.file"),
+					Config:    sc.Config,
+					Client:    client,
+					WrapTTL:   sc.WrapTTL,
+					DHType:    sc.DHType,
+					DeriveKey: sc.DeriveKey,
+					DHPath:    sc.DHPath,
+					AAD:       sc.AAD,
 				}
 				s, err := file.NewFileSink(config)
 				if err != nil {
@@ -410,9 +411,25 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}
 
-	// Output the header that the server has started
+	// Warn if cache _and_ cert auto-auth is enabled but certificates were not
+	// provided in the auto_auth.method["cert"].config stanza.
+	if config.Cache != nil && (config.AutoAuth != nil && config.AutoAuth.Method != nil && config.AutoAuth.Method.Type == "cert") {
+		_, okCertFile := config.AutoAuth.Method.Config["client_cert"]
+		_, okCertKey := config.AutoAuth.Method.Config["client_key"]
+
+		// If neither of these exists in the cert stanza, agent will use the
+		// certs from the vault stanza.
+		if !okCertFile && !okCertKey {
+			c.UI.Warn(wrapAtLength("WARNING! Cache is enabled and using the same certificates " +
+				"from the 'cert' auto-auth method specified in the 'vault' stanza. Consider " +
+				"specifying certificate information in the 'cert' auto-auth's config stanza."))
+		}
+
+	}
+
+	// Output the header that the agent has started
 	if !c.flagCombineLogs {
-		c.UI.Output("==> Vault server started! Log data will stream in below:\n")
+		c.UI.Output("==> Vault agent started! Log data will stream in below:\n")
 	}
 
 	// Inform any tests that the server is ready

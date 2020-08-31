@@ -352,7 +352,9 @@ func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 				keys = append(keys, key)
 			} else {
 				// Add truncated 'folder' paths
-				keys = strutil.AppendIfMissing(keys, string(key[:i+1]))
+				if len(keys) == 0 || keys[len(keys)-1] != key[:i+1] {
+					keys = append(keys, string(key[:i+1]))
+				}
 			}
 		}
 
