@@ -1,7 +1,5 @@
 import BaseAdapter from './base';
 
 export default BaseAdapter.extend({
-  pathForType() {
-    return 'role';
-  },
+  // custom stuff for transformation
 });
