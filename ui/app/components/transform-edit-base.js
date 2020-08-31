@@ -47,6 +47,14 @@ export default Component.extend(FocusOnInsertMixin, {
     this.get('router').transitionTo(...arguments);
   },
 
+  modelPrefixFromType(modelType) {
+    let modelPrefix = '';
+    if (modelType && modelType.startsWith('transform/')) {
+      modelPrefix = `${modelType.replace('transform/', '')}/`;
+    }
+    return modelPrefix;
+  },
+
   onEscape(e) {
     if (e.keyCode !== keys.ESC || this.get('mode') !== 'show') {
       return;
@@ -74,6 +82,7 @@ export default Component.extend(FocusOnInsertMixin, {
     createOrUpdate(type, event) {
       event.preventDefault();
       const modelId = this.get('model.id') || this.get('model.name'); // transform comes in as model.name
+      const modelPrefix = this.modelPrefixFromType(this.get('model.constructor.modelName'));
       // prevent from submitting if there's no key
       // maybe do something fancier later
       if (type === 'create' && isBlank(modelId)) {
@@ -82,7 +91,7 @@ export default Component.extend(FocusOnInsertMixin, {
 
       this.persist('save', () => {
         this.hasDataChanges();
-        this.transitionToRoute(SHOW_ROUTE, modelId);
+        this.transitionToRoute(SHOW_ROUTE, `${modelPrefix}${modelId}`);
       });
     },
 
