@@ -114,7 +114,7 @@ steps:
               --jsonfile test-results/go-test/results.json \
               -- \
               -tags "${GO_TAGS}" \
-              -timeout=15m \
+              -timeout=60m \
               -parallel=1 \
               << parameters.extra_flags >> \
               ${package_names}

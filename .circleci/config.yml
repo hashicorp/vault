@@ -788,7 +788,7 @@ jobs:
                 --jsonfile test-results/go-test/results.json \
                 -- \
                 -tags "${GO_TAGS}" \
-                -timeout=15m \
+                -timeout=60m \
                 -parallel=1 \
                  \
                 ${package_names}
@@ -985,7 +985,7 @@ jobs:
                 --jsonfile test-results/go-test/results.json \
                 -- \
                 -tags "${GO_TAGS}" \
-                -timeout=15m \
+                -timeout=60m \
                 -parallel=1 \
                 -race \
                 ${package_names}
@@ -1385,7 +1385,7 @@ jobs:
                 --jsonfile test-results/go-test/results.json \
                 -- \
                 -tags "${GO_TAGS}" \
-                -timeout=15m \
+                -timeout=60m \
                 -parallel=1 \
                  \
                 ${package_names}
@@ -1526,7 +1526,7 @@ jobs:
                 --jsonfile test-results/go-test/results.json \
                 -- \
                 -tags "${GO_TAGS}" \
-                -timeout=15m \
+                -timeout=60m \
                 -parallel=1 \
                  \
                 ${package_names}
@@ -2104,7 +2104,7 @@ jobs:
                 --jsonfile test-results/go-test/results.json \
                 -- \
                 -tags "${GO_TAGS}" \
-                -timeout=15m \
+                -timeout=60m \
                 -parallel=1 \
                 -race \
                 ${package_names}
