@@ -2691,7 +2691,7 @@ func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
 	if err := core.tokenStore.create(ctx, te); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("token id: %s", te.ID)
+	//t.Logf("token id: %s", te.ID)
 
 	if err := core.expiration.RegisterAuth(ctx, te, &logical.Auth{
 		LeaseOptions: logical.LeaseOptions{

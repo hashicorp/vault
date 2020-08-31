@@ -114,7 +114,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 			netConn, err := dialer(clnAddr.String(), 0)
 			if err != nil {
 				if expectFail {
-					t.Logf("testing %s unsuccessful as expected", clnAddr)
+					//t.Logf("testing %s unsuccessful as expected", clnAddr)
 					continue
 				}
 				t.Fatalf("error: %v\ncluster listener is %s", err, clnAddr)
@@ -134,7 +134,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 			case connState.NegotiatedProtocol != consts.RequestForwardingALPN || !connState.NegotiatedProtocolIsMutual:
 				t.Fatal("bad protocol negotiation")
 			}
-			t.Logf("testing %s successful", clnAddr)
+			//t.Logf("testing %s successful", clnAddr)
 		}
 	}
 
