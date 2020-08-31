@@ -236,7 +236,7 @@ func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
 
 	// update the rate limit quota with a high RPS such that no requests should fail
 	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
-		"rate": 1000.0,
+		"rate": 10000.0,
 		"path": "pki/",
 	})
 	if err != nil {
@@ -400,7 +400,7 @@ func TestQuotas_RateLimitQuota(t *testing.T) {
 
 	// update the rate limit quota with a high RPS such that no requests should fail
 	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
-		"rate": 1000.0,
+		"rate": 10000.0,
 	})
 	if err != nil {
 		t.Fatal(err)
