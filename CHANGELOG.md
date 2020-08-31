@@ -7,7 +7,6 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
-* core: Handle a trailing slash in the API address used for enabling replication
 * core: Fix resource leak in plugin API (plugin-dependent, not all plugins impacted) [[GH-9557](https://github.com/hashicorp/vault/pull/9557)]
 * core: Fix race involved in enabling certain features via a license change
 * secrets/database: Fix handling of TLS options in mongodb connection strings [[GH-9519](https://github.com/hashicorp/vault/pull/9519)]
@@ -84,6 +83,7 @@ BUG FIXES:
 * core: Fix panic when printing over-long info fields at startup [[GH-9681](https://github.com/hashicorp/vault/pull/9681)]
 * core: Seal migration using the new minimal-downtime strategy didn't work properly with performance standbys. [[GH-9690](https://github.com/hashicorp/vault/pull/9690)]
 * core: Vault failed to start when there were non-string values in seal configuration [[GH-9555](https://github.com/hashicorp/vault/pull/9555)]
+* core: Handle a trailing slash in the API address used for enabling replication
 
 ## 1.5.0
 ### July 21st, 2020
