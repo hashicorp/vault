@@ -885,9 +885,6 @@ jobs:
         name: Check branch name
         working_directory: ~/
     - checkout
-    - setup_remote_docker:
-        docker_layer_caching: true
-        version: 18.09.3
     - run:
         command: |
           set -x
