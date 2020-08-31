@@ -40,8 +40,9 @@ export default Component.extend({
   inputValue: computed(function() {
     return [];
   }),
-  selectedOptions: null, //list of selected options
-  options: null, //all possible options
+  allOptions: null, // list of options including matched
+  selectedOptions: null, // list of selected options
+  options: null, // all possible options
   shouldUseFallback: false,
   shouldRenderName: false,
   init() {
@@ -63,6 +64,11 @@ export default Component.extend({
       option.searchText = `${option.name} ${option.id}`;
       return option;
     });
+    let allOptions = options.toArray().map(option => {
+      return option.id;
+    });
+    this.set('allOptions', allOptions); // used by filter-wildcard helper
+
     let formattedOptions = this.selectedOptions.map(option => {
       let matchingOption = options.findBy('id', option);
       options.removeObject(matchingOption);
