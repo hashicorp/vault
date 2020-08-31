@@ -139,10 +139,14 @@ func TestFSM_List(t *testing.T) {
 	var sorted []string
 	for _, k := range keys {
 		err := fsm.Put(ctx, &physical.Entry{Key: fmt.Sprintf("foo/%d/bar", k)})
-		sorted = append(sorted, fmt.Sprintf("%d/", k))
 		if err != nil {
 			t.Fatal(err)
 		}
+		err = fsm.Put(ctx, &physical.Entry{Key: fmt.Sprintf("foo/%d/baz", k)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		sorted = append(sorted, fmt.Sprintf("%d/", k))
 	}
 	sort.Strings(sorted)
 
