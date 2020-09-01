@@ -55,7 +55,7 @@
           {{#if (and wildcardLabel (is-wildcard-string selected))}}
             {{#let (filter-wildcard selected allOptions) as | wildcardCount |}}
               <span class="tag is-light has-text-grey-dark" data-test-mode>
-                includes {{wildcardCount}} {{if (gt wildcardCount 1) (pluralize wildcardLabel) wildcardLabel}}
+                includes {{wildcardCount}} {{if (eq wildcardCount 1) wildcardLabel (pluralize wildcardLabel)}}
               </span>
             {{/let}}
           {{/if}}

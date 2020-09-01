@@ -28,13 +28,35 @@
         <div class="toolbar-separator" />
       {{/if}}
       {{#if capabilities.canDelete}}
+        {{#if (gt model.allowed_roles.length 0)}}
+          <ToolTip
+            @verticalPosition="above"
+            @horizontalPosition="center"
+            as |T|>
+            <T.trigger @tabindex=false>
+              <a
+              class="toolbar-link"
+              onclick={{action (mut isModalActive) true}}
+              aria-disabled="true"
+              disabled
+            >
+              Delete transformation
+            </a>
+          </T.trigger>
+          <T.content @class="tool-tip">
+            <div class="box">
+              This transformation is in use by a role and can’t be deleted.
+            </div>
+          </T.content>
+        </ToolTip>
+      {{else}}
         <a
           class="toolbar-link"
           onclick={{action (mut isModalActive) true}}
-          data-test-replication-action-trigger
         >
           Delete transformation
         </a>
+        {{/if}}
       {{/if}}
       {{#if capabilities.canUpdate }}
         <ToolbarSecretLink
