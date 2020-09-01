@@ -96,6 +96,11 @@ func (r *Response) IsError() bool {
 	return r != nil && r.Data != nil && r.Data["error"] != nil && (len(r.Data) == 1 || (r.Data["data"] != nil && len(r.Data) == 2))
 }
 
+// IsEmpty returns true if this response seems to be an empty struct.
+func (r *Response) IsEmpty() bool {
+	return r != nil && r.Secret == nil && r.Auth == nil && r.Data == nil && r.Redirect == "" && r.Warnings == nil && r.WrapInfo == nil && r.Headers == nil
+}
+
 func (r *Response) Error() error {
 	if !r.IsError() {
 		return nil
