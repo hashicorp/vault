@@ -51,12 +51,15 @@
             {{selected.id}}
           </small>
         {{else}}
-          {{selected.id}}
-          {{#if wildcardLabel}}
+          <div>{{selected.id}}
+          {{#if (and wildcardLabel (is-wildcard-string selected))}}
             {{#let (filter-wildcard selected allOptions) as | wildcardCount |}}
-              includes {{wildcardCount}} {{if (gt wildcardCount 1) (pluralize wildcardLabel) wildcardLabel}}
+              <span class="tag is-light has-text-grey-dark" data-test-mode>
+                includes {{wildcardCount}} {{if (gt wildcardCount 1) (pluralize wildcardLabel) wildcardLabel}}
+              </span>
             {{/let}}
           {{/if}}
+          </div>
         {{/if}}
         <div class="control">
           <button type="button" class="button is-ghost" data-test-selected-list-button="delete"
