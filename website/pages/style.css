@@ -10,32 +10,34 @@
 }
 
 @import '~@hashicorp/react-button/dist/style.css';
-@import '~@hashicorp/react-hero/dist/style.css';
-@import '~@hashicorp/react-section-header/dist/style.css';
-@import '~@hashicorp/react-use-cases/dist/style.css';
-@import '~@hashicorp/react-logo-grid/dist/style.css';
-@import '~@hashicorp/react-product-downloader/dist/style.css';
-@import '~@hashicorp/react-vertical-text-block-list/dist/style.css';
-@import '~@hashicorp/react-docs-sidenav/dist/style.css';
 @import '~@hashicorp/react-case-study-slider/dist/style.css';
-@import '~@hashicorp/react-content/dist/style.css';
-@import '~@hashicorp/react-text-and-content/dist/style.css';
 @import '~@hashicorp/react-code-block/dist/style.css';
 @import '~@hashicorp/react-consent-manager/dist/style.css';
-@import '~@hashicorp/react-toggle/dist/style.css';
+@import '~@hashicorp/react-content/dist/style.css';
 @import '~@hashicorp/react-docs-page/dist/style.css';
-@import '~@hashicorp/react-tabs/dist/style.css';
+@import '~@hashicorp/react-docs-sidenav/dist/style.css';
 @import '~@hashicorp/react-enterprise-alert/dist/style.css';
+@import '~@hashicorp/react-hero/dist/style.css';
+@import '~@hashicorp/react-logo-grid/dist/style.css';
+@import '~@hashicorp/react-product-downloader/dist/style.css';
+@import '~@hashicorp/react-search/dist/style.css';
+@import '~@hashicorp/react-section-header/dist/style.css';
+@import '~@hashicorp/react-tabs/dist/style.css';
+@import '~@hashicorp/react-text-and-content/dist/style.css';
+@import '~@hashicorp/react-toggle/dist/style.css';
+@import '~@hashicorp/react-use-cases/dist/style.css';
+@import '~@hashicorp/react-vertical-text-block-list/dist/style.css';
 
 /* Global Components - Transpiled */
 @import '~@hashicorp/react-mega-nav/style.css';
 
 /* Local Components */
 @import '../components/before-after-diagram/style.css';
-@import '../components/use-case-cta-section/style.css';
-@import '../components/subnav/style.css';
 @import '../components/footer/style.css';
+@import '../components/search-bar/style.css';
+@import '../components/subnav/style.css';
 @import '../components/tabs/style.css';
+@import '../components/use-case-cta-section/style.css';
 
 /* Pages */
 @import './not-found/style.css';
