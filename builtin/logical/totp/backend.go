@@ -33,6 +33,7 @@ func Backend() *backend {
 			pathListKeys(&b),
 			pathKeys(&b),
 			pathCode(&b),
+			pathExport(&b),
 		},
 
 		Secrets:     []*framework.Secret{},
