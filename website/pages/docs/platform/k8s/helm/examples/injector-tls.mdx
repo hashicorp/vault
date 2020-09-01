@@ -120,13 +120,13 @@ $ kubectl create secret generic injector-tls \
 Next, base64 encode the certificate authority so Kubernetes can verify the authenticity of the certificate:
 
 ```shell
-export CA_BUNDLE=$(cat injector-ca.crt | base64)
+$ export CA_BUNDLE=$(cat injector-ca.crt | base64)
 ```
 
 Finally, install the Vault Agent Injector with the following custom values:
 
 ```shell
-helm install vault hashicorp/vault \
+$ helm install vault hashicorp/vault \
   --set="injector.certs.secretName=injector-tls" \
   --set="injector.certs.caBundle=${CA_BUNDLE?}" 
 ```
