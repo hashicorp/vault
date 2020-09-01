@@ -1,7 +1,7 @@
 ---
 name: Plugin Submission
 about: Submit a community Vault plugin!
-title: "[Plugin Portal] Plugin Submission "
+title: "[Plugin Portal] Plugin Submission - <PLUGIN NAME>"
 labels: ecosystem/plugin
 assignees: ''
 
