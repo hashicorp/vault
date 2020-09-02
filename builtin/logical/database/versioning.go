@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/ryboe/q"
 )
 
 type databaseVersionWrapper struct {
@@ -90,16 +89,13 @@ var (
 )
 
 func generatePassword(ctx context.Context, dbw databaseVersionWrapper, generator passwordGenerator, passwordPolicy string) (password string, err error) {
-	q.Q("newStaticUserPassword")
 	// If using the legacy database, use GenerateCredentials instead of password policies
 	// This will keep the existing behavior even though passwords can be generated with a policy
 	if dbw.legacyDatabase != nil {
-		q.Q("Legacy database - using GenerateCredentials")
 		password, err := dbw.legacyDatabase.GenerateCredentials(ctx)
 		if err != nil {
 			return "", err
 		}
-		q.Q("Password:", password)
 		return password, nil
 	}
 
