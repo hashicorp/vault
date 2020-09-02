@@ -7,18 +7,16 @@ export default TransformBase.extend({
       return;
     }
 
-    let { type, allowed_roles, tweak_source, template } = this.model;
-    let isWildcardString = allowed_roles[0].includes('*');
+    let { type, allowed_roles, tweak_source, name } = this.model;
+    let wildCardRole = allowed_roles.find(role => role.includes('*'));
 
     // values to be returned
-    let role = '';
+    let role = '<choose a role>';
     let value = 'value=<enter your value here>'; // change this when decode vs encode
     let tweak = '';
 
     // determine the role
-    if (allowed_roles.length > 1 || isWildcardString) {
-      role = '<choose a role>';
-    } else {
+    if (allowed_roles.length === 1 && !wildCardRole) {
       role = allowed_roles[0];
     }
     // determine the tweak_source
@@ -26,6 +24,6 @@ export default TransformBase.extend({
       tweak = 'tweak=<enter your tweak>';
     }
 
-    return `${role} ${value} ${tweak} transformation=${template[0]}`;
+    return `${role} ${value} ${tweak} transformation=${name}`;
   }),
 });
