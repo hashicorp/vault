@@ -58,8 +58,16 @@ func wrapLoginPath(b *backend, loginPath *framework.Path) *framework.Path {
 		Description: "Multi-factor auth method to use (optional)",
 	}
 	// wrap write callback to do MFA after auth
-	loginHandler := loginPath.Callbacks[logical.UpdateOperation]
-	loginPath.Callbacks[logical.UpdateOperation] = b.wrapLoginHandler(loginHandler)
+	if loginPath.Callbacks != nil {
+		loginHandler := loginPath.Callbacks[logical.UpdateOperation]
+		loginPath.Callbacks[logical.UpdateOperation] = b.wrapLoginHandler(loginHandler)
+	}
+
+	if loginPath.Operations != nil {
+		loginOperation := loginPath.Operations[logical.UpdateOperation]
+		loginPath.Operations[logical.UpdateOperation] = b.wrapLoginOperation(loginOperation)
+	}
+
 	return loginPath
 }
 
@@ -84,5 +92,31 @@ func (b *backend) wrapLoginHandler(loginHandler framework.OperationFunc) framewo
 		} else {
 			return resp, err
 		}
+	}
+}
+
+func (b *backend) wrapLoginOperation(loginOperation framework.OperationHandler) framework.OperationHandler {
+	return &framework.PathOperation{
+		Callback: func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+			// login with original login function first
+			resp, err := loginOperation.Handler()(ctx, req, d)
+			if err != nil || resp.Auth == nil {
+				return resp, err
+			}
+
+			// check if multi-factor enabled
+			mfa_config, err := b.MFAConfig(ctx, req)
+			if err != nil || mfa_config == nil {
+				return resp, nil
+			}
+
+			// perform multi-factor authentication if type supported
+			handler, ok := handlers[mfa_config.Type]
+			if ok {
+				return handler(ctx, req, d, resp)
+			} else {
+				return resp, err
+			}
+		},
 	}
 }

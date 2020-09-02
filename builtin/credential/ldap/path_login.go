@@ -25,9 +25,17 @@ func pathLogin(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:         b.pathLogin,
-			logical.AliasLookaheadOperation: b.pathLoginAliasLookahead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation:         &framework.PathOperation{
+				Callback: b.pathLogin,
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
+			logical.AliasLookaheadOperation: &framework.PathOperation{
+				Callback: b.pathLoginAliasLookahead,
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathLoginSyn,
