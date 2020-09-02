@@ -206,7 +206,7 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 
 		logger:              logger,
 		serviceName:         service,
-		serviceTags:         strutil.ParseDedupLowercaseAndSortStrings(tags, ","),
+		serviceTags:         strutil.ParseDedupAndSortStrings(tags, ","),
 		serviceAddress:      serviceAddr,
 		checkTimeout:        checkTimeout,
 		disableRegistration: disableRegistration,
