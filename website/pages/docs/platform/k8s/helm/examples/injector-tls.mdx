@@ -127,6 +127,7 @@ Finally, install the Vault Agent Injector with the following custom values:
 
 ```shell
 $ helm install vault hashicorp/vault \
+  --namespace=vault \
   --set="injector.certs.secretName=injector-tls" \
   --set="injector.certs.caBundle=${CA_BUNDLE?}" 
 ```
