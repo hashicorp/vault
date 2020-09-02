@@ -7,7 +7,7 @@ assignees: ''
 
 ---
 
-Please provide details for the plugin to be listed. All fields are required for a submission to be included in the [Plugin Portal](https://www.vaultproject.io/api-docs/plugin-portal) page.
+Please provide details for the plugin to be listed. All fields are required for a submission to be included in the [Plugin Portal](https://www.vaultproject.io/docs/plugin-portal) page.
 
 **Plugin Information**
 Name as it would appear listed:
