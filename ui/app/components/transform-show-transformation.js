@@ -2,7 +2,7 @@ import TransformBase from './transform-edit-base';
 import { computed } from '@ember/object';
 
 export default TransformBase.extend({
-  cliCommand: computed('model.{allowed_roles}', 'model.{type}', 'model.{tweak_source}', function() {
+  cliCommand: computed('model.{allowed_roles, type, tweak_source}', function() {
     if (!this.model) {
       return;
     }
