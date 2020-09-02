@@ -2,9 +2,14 @@ package awsauth
 
 import (
 	"context"
+	"errors"
+	"net/http"
+	"net/textproto"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -52,6 +57,11 @@ func (b *backend) pathConfigClient() *framework.Path {
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "Value to require in the X-Vault-AWS-IAM-Server-ID request header",
+			},
+			"allowed_sts_header_values": {
+				Type:        framework.TypeCommaStringSlice,
+				Default:     nil,
+				Description: "List of additional headers that are allowed to be in AWS STS request headers",
 			},
 			"max_retries": {
 				Type:        framework.TypeInt,
@@ -136,6 +146,7 @@ func (b *backend) pathConfigClientRead(ctx context.Context, req *logical.Request
 			"sts_region":                 clientConfig.STSRegion,
 			"iam_server_id_header_value": clientConfig.IAMServerIdHeaderValue,
 			"max_retries":                clientConfig.MaxRetries,
+			"allowed_sts_header_values":  clientConfig.AllowedSTSHeaderValues,
 		},
 	}, nil
 }
@@ -257,6 +268,24 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 		configEntry.IAMServerIdHeaderValue = data.Get("iam_server_id_header_value").(string)
 	}
 
+	aHeadersValStr, ok := data.GetOk("allowed_sts_header_values")
+	if ok {
+		aHeadersValSl := aHeadersValStr.([]string)
+		for i, v := range aHeadersValSl {
+			aHeadersValSl[i] = textproto.CanonicalMIMEHeaderKey(v)
+		}
+		if !strutil.EquivalentSlices(configEntry.AllowedSTSHeaderValues, aHeadersValSl) {
+			// NOT setting changedCreds here, since this isn't really cached
+			configEntry.AllowedSTSHeaderValues = aHeadersValSl
+			changedOtherConfig = true
+		}
+	} else if req.Operation == logical.CreateOperation {
+		ah, ok := data.GetOk("allowed_sts_header_values")
+		if ok {
+			configEntry.AllowedSTSHeaderValues = ah.([]string)
+		}
+	}
+
 	maxRetriesInt, ok := data.GetOk("max_retries")
 	if ok {
 		configEntry.MaxRetries = maxRetriesInt.(int)
@@ -293,14 +322,27 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 // Struct to hold 'aws_access_key' and 'aws_secret_key' that are required to
 // interact with the AWS EC2 API.
 type clientConfig struct {
-	AccessKey              string `json:"access_key"`
-	SecretKey              string `json:"secret_key"`
-	Endpoint               string `json:"endpoint"`
-	IAMEndpoint            string `json:"iam_endpoint"`
-	STSEndpoint            string `json:"sts_endpoint"`
-	STSRegion              string `json:"sts_region"`
-	IAMServerIdHeaderValue string `json:"iam_server_id_header_value"`
-	MaxRetries             int    `json:"max_retries"`
+	AccessKey              string   `json:"access_key"`
+	SecretKey              string   `json:"secret_key"`
+	Endpoint               string   `json:"endpoint"`
+	IAMEndpoint            string   `json:"iam_endpoint"`
+	STSEndpoint            string   `json:"sts_endpoint"`
+	STSRegion              string   `json:"sts_region"`
+	IAMServerIdHeaderValue string   `json:"iam_server_id_header_value"`
+	AllowedSTSHeaderValues []string `json:"allowed_sts_header_values"`
+	MaxRetries             int      `json:"max_retries"`
+}
+
+func (c *clientConfig) validateAllowedSTSHeaderValues(headers http.Header) error {
+	for k := range headers {
+		h := textproto.CanonicalMIMEHeaderKey(k)
+		if strings.HasPrefix(h, amzHeaderPrefix) &&
+			!strutil.StrListContains(defaultAllowedSTSRequestHeaders, h) &&
+			!strutil.StrListContains(c.AllowedSTSHeaderValues, h) {
+			return errors.New("invalid request header: " + k)
+		}
+	}
+	return nil
 }
 
 const pathConfigClientHelpSyn = `
