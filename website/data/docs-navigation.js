@@ -331,6 +331,7 @@ export default [
                   'enterprise-with-raft',
                   'enterprise-dr-with-raft',
                   'enterprise-perf-with-raft',
+                  'injector-tls',
                 ],
               },
             ],
