@@ -168,7 +168,7 @@ type OperationProperties struct {
 	//
 	// If explicit forwarding is needed, it is usually true that forwarding from both performance
 	// standbys and performance secondaries should be enabled.
-
+	//
 	// ForwardPerformanceStandby indicates that this path should not be processed
 	// on a performance standby node, and should be forwarded to the active node instead.
 	ForwardPerformanceStandby bool
