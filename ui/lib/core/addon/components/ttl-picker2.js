@@ -21,12 +21,10 @@
  * @param changeOnInit=false {Boolean} - set this value if you'd like the passed onChange function to be called on component initialization
  */
 
-import Ember from 'ember';
-import Component from '@ember/component';
 import { computed } from '@ember/object';
-import { task, timeout } from 'ember-concurrency';
 import { typeOf } from '@ember/utils';
 import Duration from 'Duration.js';
+import TtlForm from './ttl-form';
 import layout from '../templates/components/ttl-picker2';
 
 const secondsMap = {
@@ -36,14 +34,11 @@ const secondsMap = {
   d: 86400,
 };
 const validUnits = ['s', 'm', 'h', 'd'];
-const convertToSeconds = (time, unit) => {
-  return time * secondsMap[unit];
-};
 const convertFromSeconds = (seconds, unit) => {
   return seconds / secondsMap[unit];
 };
 
-export default Component.extend({
+export default TtlForm.extend({
   layout,
   enableTTL: false,
   label: 'Time to live (TTL)',
@@ -52,7 +47,6 @@ export default Component.extend({
   description: '',
   time: 30,
   unit: 's',
-  recalculationTimeout: 5000,
   initialValue: null,
   changeOnInit: false,
 
@@ -88,7 +82,6 @@ export default Component.extend({
           time = seconds;
         }
       } catch (e) {
-        console.error(e);
         // if parsing fails leave as default 30s
       }
     }
@@ -121,52 +114,13 @@ export default Component.extend({
     };
     this.onChange(ttl);
   },
-  updateTime: task(function*(newTime) {
-    this.set('errorMessage', '');
-    let parsedTime;
-    parsedTime = parseInt(newTime, 10);
-    if (!newTime) {
-      this.set('errorMessage', 'This field is required');
-      return;
-    } else if (Number.isNaN(parsedTime)) {
-      this.set('errorMessage', 'Value must be a number');
-      return;
-    }
-    this.set('time', parsedTime);
-    this.handleChange();
-    if (Ember.testing) {
-      return;
-    }
-    this.set('recalculateSeconds', true);
-    yield timeout(this.recalculationTimeout);
-    this.set('recalculateSeconds', false);
-  }).restartable(),
 
-  recalculateTime(newUnit) {
-    const newTime = convertFromSeconds(this.seconds, newUnit);
-    this.setProperties({
-      time: newTime,
-      unit: newUnit,
-    });
-  },
-
-  seconds: computed('time', 'unit', function() {
-    return convertToSeconds(this.time, this.unit);
-  }),
   helperText: computed('enableTTL', 'helperTextUnset', 'helperTextSet', function() {
     return this.enableTTL ? this.helperTextEnabled : this.helperTextDisabled;
   }),
-  errorMessage: null,
+
   recalculateSeconds: false,
   actions: {
-    updateUnit(newUnit) {
-      if (this.recalculateSeconds) {
-        this.set('unit', newUnit);
-      } else {
-        this.recalculateTime(newUnit);
-      }
-      this.handleChange();
-    },
     toggleEnabled() {
       this.toggleProperty('enableTTL');
       this.handleChange();

@@ -117,6 +117,9 @@ Vault CLI, this is performed by using the `-target=recovery` flag to `vault oper
 The seal can be migrated from Shamir Seal to KMS Seal, KMS Seal to Shamir Seal,
 and KMS Seal to another KMS Seal.
 
+~> **NOTE**: A backup should be taken before starting seal migration in case
+something goes wrong.
+
 ~> **NOTE**: Seal migration process cannot be performed without downtime. Due to
 the technical underpinnings of the seal implementations, it is at this point not
 possible to perform seal migration without briefly bringing the whole cluster
@@ -128,33 +131,29 @@ downtime to be considered as an acceptable trade-off.
 available during the migration. For example, migration from KMS seal to Shamir
 seal will require that the KMS key be accessible during the migration.
 
-~> **NOTE**: Seal migration from KMS seal to Shamir seal is not currently
-supported when using Vault Enterprise. We plan to support this officially in a
-future release.
-
 ~> **NOTE**: Seal migration from KMS seal to KMS seal of same kind is not
 currently supported. We plan to support this officially in a future release.
 
-### Migration post Vault 1.4.0
+### Migration post Vault 1.5.1
 
 These steps are common for seal migrations between any supported kinds and for
 any storage backend.
 
 1. Take a standby node down and update the [seal
-   configuration](/docs/configuration/seal). 
+   configuration](/docs/configuration/seal).
 
     * If the migration is from Shamir seal to KMS seal, add the desired new KMS
-      seal block to the configuration. 
+      seal block to the configuration.
     * If the migration is from KMS seal to Shamir seal, add `disabled = "true"`
       to the old seal block.
     * If the migration is from KMS seal to another KMS seal, add `disabled =
-      "true"` to the old seal block and add the desired new KMS seal block. 
+      "true"` to the old seal block and add the desired new KMS seal block.
 
     Now, bring the standby node back up and run the unseal command on each key, by
-    supplying the `-migrate` flag. 
+    supplying the `-migrate` flag.
 
     * Supply Shamir unseal keys if the old seal was Shamir, which will be migrated
-      as the recovery keys for the KMS seal. 
+      as the recovery keys for the KMS seal.
     * Supply recovery keys if the old seal is one of KMS seals, which will be
       migrated as the recovery keys of the new KMS seal, or as Shamir unseal
       keys if the new seal is Shamir.
@@ -167,7 +166,7 @@ any storage backend.
 1. [Step down](https://www.vaultproject.io/docs/commands/operator/step-down) the
    active node. One of the standby nodes will become the new active node.
    When using Integrated Storage, ensure that quorum is reached and a leader is
-   elected. 
+   elected.
 
 1. The new active node will perform the migration. Monitor the server log in
    the active node to witness the completion of the seal migration process.
@@ -186,7 +185,7 @@ any storage backend.
    new seal information. Standby nodes can be restarted right away and the active
    node can be restarted upon a leadership change.
 
-### Migration pre 1.4
+### Migration pre 1.5.1
 
 #### Migration From Shamir to Auto Unseal
 
