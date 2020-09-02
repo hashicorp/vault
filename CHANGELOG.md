@@ -10,7 +10,7 @@ BUG FIXES:
 
 * core: Fix resource leak in plugin API (plugin-dependent, not all plugins impacted) [[GH-9557](https://github.com/hashicorp/vault/pull/9557)]
 * core: Fix race involved in enabling certain features via a license change
-* core: Fix crash when metrics collection encounters zero-length keys in KV store
+* core: Fix crash when metrics collection encounters zero-length keys in KV store [[GH-9811](https://github.com/hashicorp/vault/pull/9881)]
 * replication (enterprise): Only write failover cluster addresses if they've changed
 * secrets/database: Fix handling of TLS options in mongodb connection strings [[GH-9519](https://github.com/hashicorp/vault/pull/9519)]
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-93](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/93)]
