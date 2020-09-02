@@ -133,33 +133,60 @@ func (pg fakePasswordGenerator) GeneratePasswordFromPolicy(ctx context.Context, 
 }
 
 func TestGeneratePassword(t *testing.T) {
-	t.Run("no policy", func(t *testing.T) {
+	t.Run("v4 Database", func(t *testing.T) {
+		db := new(mockLegacyDatabase)
+		expected := "mysecurepassword"
+		db.On("GenerateCredentials", mock.Anything).Return(expected, error(nil)).Once()
+		dbw := databaseVersionWrapper{
+			legacyDatabase: db,
+		}
 		pg := fakePasswordGenerator{
 			password: "",
 			err:      fmt.Errorf("the password generator shouldn't be called"),
 		}
 
-		password, err := generatePassword(context.Background(), pg, "")
-		assertErrIsNil(t, err)
-		// Technically this is checking the number of bytes, not the number of runes
-		// But since the default should be ASCII characters, this is simplified
-		if len(password) != defaultPasswordGenerator.Length {
-			t.Fatalf("Password should be %d characters, but was %d", defaultPasswordGenerator.Length, len(password))
-		}
-	})
-
-	t.Run("with policy", func(t *testing.T) {
-		expected := "foobarbaz"
-		pg := fakePasswordGenerator{
-			password: expected,
-			err:      nil,
-		}
-
-		actual, err := generatePassword(context.Background(), pg, "testpolicy")
+		actual, err := generatePassword(context.Background(), dbw, pg, "")
 		assertErrIsNil(t, err)
 		if actual != expected {
 			t.Fatalf("Actual password: %s\nExpected password: %s", actual, expected)
 		}
+	})
+
+	t.Run("v5 Database", func(t *testing.T) {
+		t.Run("no policy", func(t *testing.T) {
+			dbw := databaseVersionWrapper{
+				// Don't actually need to set the new DB since it isn't used as long as the legacy DB isn't set
+			}
+			pg := fakePasswordGenerator{
+				password: "",
+				err:      fmt.Errorf("the password generator shouldn't be called"),
+			}
+
+			password, err := generatePassword(context.Background(), dbw, pg, "")
+			assertErrIsNil(t, err)
+			// Technically this is checking the number of bytes, not the number of runes
+			// But since the default should be ASCII characters, this is simplified
+			if len(password) != defaultPasswordGenerator.Length {
+				t.Fatalf("Password should be %d characters, but was %d", defaultPasswordGenerator.Length, len(password))
+			}
+		})
+
+		t.Run("with policy", func(t *testing.T) {
+			dbw := databaseVersionWrapper{
+				// Don't actually need to set the new DB since it isn't used as long as the legacy DB isn't set
+			}
+			expected := "foobarbaz"
+			pg := fakePasswordGenerator{
+				password: expected,
+				err:      nil,
+			}
+
+			actual, err := generatePassword(context.Background(), dbw, pg, "testpolicy")
+			assertErrIsNil(t, err)
+			if actual != expected {
+				t.Fatalf("Actual password: %s\nExpected password: %s", actual, expected)
+			}
+		})
 	})
 }
 
