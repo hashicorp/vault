@@ -86,6 +86,8 @@ EOF
 
 Finally, sign the certificiate:
 
+~> **Important Note:** Values such as days (how long the certificate is valid for) should be configured for your environment.
+
 ```shell
 $ openssl x509 \
   -req \
@@ -98,8 +100,6 @@ $ openssl x509 \
   -sha256 \
   -extfile csr.conf
 ```
-
-~> **Important Note:** Values such as days (how long the certificate is valid for) should be configured for your environment.
 
 ## Configuration
 
