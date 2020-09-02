@@ -36,37 +36,45 @@
             <T.trigger @tabindex=false>
               <a
               class="toolbar-link"
-              onclick={{action (mut isModalActive) true}}
               aria-disabled="true"
               disabled
-            >
-              Delete transformation
-            </a>
-          </T.trigger>
-          <T.content @class="tool-tip">
-            <div class="box">
-              This transformation is in use by a role and can’t be deleted.
-            </div>
-          </T.content>
-        </ToolTip>
-      {{else}}
+              >
+                Delete transformation
+              </a>
+            </T.trigger>
+            <T.content @class="tool-tip">
+              <div class="box">
+                This transformation is in use by a role and can’t be deleted.
+              </div>
+            </T.content>
+          </ToolTip>
+        {{else}}
         <a
           class="toolbar-link"
-          onclick={{action (mut isModalActive) true}}
+          onclick={{action (mut isDeleteModalActive) true}}
         >
           Delete transformation
         </a>
         {{/if}}
       {{/if}}
       {{#if capabilities.canUpdate }}
-        <ToolbarSecretLink
-          @secret={{model.id}}
-          @mode="edit"
-          @data-test-edit-link=true
-          @replace=true
-        >
-          Edit transformation
-        </ToolbarSecretLink>
+        {{#if (gt model.allowed_roles.length 0)}}
+          <a
+            class="toolbar-link"
+            onclick={{action (mut isEditModalActive) true}}
+          >
+            Edit transformation
+          </a>
+        {{else}}
+          <ToolbarSecretLink
+            @secret={{model.id}}
+            @mode="edit"
+            @data-test-edit-link=true
+            @replace=true
+          >
+            Edit transformation
+          </ToolbarSecretLink>
+        {{/if}}
       {{/if}}
     </ToolbarActions>
   </Toolbar>
@@ -84,8 +92,8 @@
 
 <ConfirmationModal
   @title="Delete transformation"
-  @onClose={{action (mut isModalActive) false}}
-  @isActive={{isModalActive}}
+  @onClose={{action (mut isDeleteModalActive) false}}
+  @isActive={{isDeleteModalActive}}
   @confirmText={{model.name}}
   @toConfirmMsg="Type {{model.name}} to confirm deleting the transformation."
   @onConfirm={{action "delete"}}
@@ -95,3 +103,28 @@
   </p>
   <MessageError @model={{model}} @errorMessage={{error}} />
 </ConfirmationModal>
+
+<Modal
+  @title="Edit transformation"
+  @onClose={{action (mut isEditModalActive) false}}
+  @isActive={{isEditModalActive}}
+  @type="warning"
+  @showCloseButton={{true}}
+>
+  <section class="modal-card-body">
+    <p>
+      You’re editing a transformation that is in use by at least one role. Editing it may mean that encode and decode operations stop working. Are you sure?
+    </p>
+  </section>
+  <footer class="modal-card-foot modal-card-foot-outlined">
+    {{#link-to "vault.cluster.secrets.backend.edit" model.id tagName="button" class="button is-primary"}}
+      Confirm
+    {{/link-to}}
+    <button
+      class="button is-secondary"
+      onclick={{action (mut isEditModalActive) false}}
+    >
+      Cancel
+    </button>
+  </footer>
+</Modal>
