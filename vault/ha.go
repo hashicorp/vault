@@ -72,6 +72,16 @@ func (c *Core) PerfStandby() bool {
 	return perfStandby
 }
 
+// HealthParams is meant as a way to avoid some extra locking on the very
+// common sys/health check
+func (c *Core) HealthParams() (standby, perfStandby bool) {
+	c.stateLock.RLock()
+	standby = c.standby
+	perfStandby = c.perfStandby
+	c.stateLock.RUnlock()
+	return
+}
+
 // Leader is used to get the current active leader
 func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err error) {
 	// Check if HA enabled. We don't need the lock for this check as it's set
