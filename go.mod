@@ -60,7 +60,7 @@ require (
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
-	github.com/hashicorp/go-retryablehttp v0.6.6
+	github.com/hashicorp/go-retryablehttp v0.6.7
 	github.com/hashicorp/go-rootcerts v1.0.2
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
@@ -74,7 +74,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.5.6
 	github.com/hashicorp/vault-plugin-auth-centrify v0.5.5
 	github.com/hashicorp/vault-plugin-auth-cf v0.5.4
-	github.com/hashicorp/vault-plugin-auth-gcp v0.7.0
+	github.com/hashicorp/vault-plugin-auth-gcp v0.7.1-0.20200721115240-07ff53341dfe
 	github.com/hashicorp/vault-plugin-auth-jwt v0.7.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.0
@@ -82,6 +82,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-couchbase v0.1.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2
+	github.com/hashicorp/vault-plugin-mock v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-ad v0.6.6
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5
 	github.com/hashicorp/vault-plugin-secrets-azure v0.6.2
@@ -150,7 +151,7 @@ require (
 	golang.org/x/tools v0.0.0-20200521155704-91d71f6c2f04
 	google.golang.org/api v0.29.0
 	google.golang.org/grpc v1.29.1
-	google.golang.org/protobuf v1.24.0
+	google.golang.org/protobuf v1.25.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.5.1
