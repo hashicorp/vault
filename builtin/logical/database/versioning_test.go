@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/logical"
+
 	"github.com/stretchr/testify/mock"
 )
 
@@ -661,12 +662,5 @@ func assertErrIsNil(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatalf("No error expected, got: %s", err)
-	}
-}
-
-func assertErrIsNotNil(t *testing.T, err error) {
-	t.Helper()
-	if err == nil {
-		t.Fatalf("Expected error, but didn't get one")
 	}
 }
