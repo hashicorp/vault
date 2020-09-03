@@ -22,7 +22,7 @@ const Model = DS.Model.extend({
     readOnly: true,
     subText: 'The name for your role. This cannot be edited later.',
   }),
-  transformations: attr('string', {
+  transformations: attr('array', {
     editType: 'searchSelect',
     fallbackComponent: 'string-list',
     label: 'Transformations',
