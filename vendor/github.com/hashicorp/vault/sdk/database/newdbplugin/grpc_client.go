@@ -2,7 +2,6 @@ package newdbplugin
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -38,7 +37,7 @@ func (c gRPCClient) Initialize(ctx context.Context, req InitializeRequest) (Init
 }
 
 func initReqToProto(req InitializeRequest) (*proto.InitializeRequest, error) {
-	config, err := json.Marshal(req.Config)
+	config, err := mapToStruct(req.Config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to marshal config: %w", err)
 	}
@@ -51,10 +50,7 @@ func initReqToProto(req InitializeRequest) (*proto.InitializeRequest, error) {
 }
 
 func initRespFromProto(rpcResp *proto.InitializeResponse) (InitializeResponse, error) {
-	newConfig, err := parseConfigData(rpcResp.GetConfigData())
-	if err != nil {
-		return InitializeResponse{}, fmt.Errorf("unable to parse configuration response: %w", err)
-	}
+	newConfig := structToMap(rpcResp.GetConfigData())
 
 	resp := InitializeResponse{
 		Config: newConfig,
@@ -99,11 +95,14 @@ func newUserReqToProto(req NewUserRequest) (*proto.NewUserRequest, error) {
 			DisplayName: req.UsernameConfig.DisplayName,
 			RoleName:    req.UsernameConfig.RoleName,
 		},
+		Password:   req.Password,
+		Expiration: expiration,
 		Statements: &proto.Statements{
 			Commands: req.Statements.Commands,
 		},
-		Password:   req.Password,
-		Expiration: expiration,
+		RollbackStatements: &proto.Statements{
+			Commands: req.RollbackStatements.Commands,
+		},
 	}
 	return rpcReq, nil
 }
@@ -152,6 +151,9 @@ func updateUserReqToProto(req UpdateUserRequest) (*proto.UpdateUserRequest, erro
 	if req.Password != nil && req.Password.NewPassword != "" {
 		password = &proto.ChangePassword{
 			NewPassword: req.Password.NewPassword,
+			Statements: &proto.Statements{
+				Commands: req.Password.Statements.Commands,
+			},
 		}
 	}
 
@@ -211,6 +213,9 @@ func deleteUserReqToProto(req DeleteUserRequest) (*proto.DeleteUserRequest, erro
 
 	rpcReq := &proto.DeleteUserRequest{
 		Username: req.Username,
+		Statements: &proto.Statements{
+			Commands: req.Statements.Commands,
+		},
 	}
 	return rpcReq, nil
 }

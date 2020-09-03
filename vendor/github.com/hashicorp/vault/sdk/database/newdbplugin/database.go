@@ -67,6 +67,7 @@ type InitializeRequest struct {
 type InitializeResponse struct {
 	// Config that should be saved in Vault. This may differ from the config in the request,
 	// but should contain everything required to Initialize the database.
+	// REQUIRED in order to save the configuration into Vault after initialization
 	Config map[string]interface{}
 }
 
@@ -85,7 +86,7 @@ type NewUserRequest struct {
 	// user or similar actions.
 	Statements Statements
 
-	// RollbackSTatements is an ordered list of commands to run within the database
+	// RollbackStatements is an ordered list of commands to run within the database
 	// if the new user creation process fails.
 	RollbackStatements Statements
 
@@ -105,7 +106,7 @@ type UsernameMetadata struct {
 // NewUserResponse returns any information Vault needs to know after creating a new user.
 type NewUserResponse struct {
 	// Username of the user created within the database.
-	// REQUIRED
+	// REQUIRED so Vault knows the name of the user that was created
 	Username string
 }
 
@@ -136,7 +137,7 @@ type ChangePassword struct {
 	Statements Statements
 }
 
-// ChangeExpiration of a give user
+// ChangeExpiration of a given user
 type ChangeExpiration struct {
 	// NewExpiration of the user
 	NewExpiration time.Time

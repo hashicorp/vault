@@ -1,9 +1,7 @@
 package newdbplugin
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -21,11 +19,7 @@ type gRPCServer struct {
 
 // Initialize the database plugin
 func (g gRPCServer) Initialize(ctx context.Context, request *proto.InitializeRequest) (*proto.InitializeResponse, error) {
-	// Parse the config back from JSON to a map[string]interface{}
-	rawConfig, err := parseConfigData(request.ConfigData)
-	if err != nil {
-		return &proto.InitializeResponse{}, status.Errorf(codes.InvalidArgument, "unable to parse config data: %s", err)
-	}
+	rawConfig := structToMap(request.ConfigData)
 
 	dbReq := InitializeRequest{
 		Config:           rawConfig,
@@ -37,7 +31,7 @@ func (g gRPCServer) Initialize(ctx context.Context, request *proto.InitializeReq
 		return &proto.InitializeResponse{}, status.Errorf(codes.Internal, "failed to initialize: %s", err)
 	}
 
-	newConfig, err := json.Marshal(dbResp.Config)
+	newConfig, err := mapToStruct(dbResp.Config)
 	if err != nil {
 		return &proto.InitializeResponse{}, status.Errorf(codes.Internal, "failed to marshal new config to JSON: %s", err)
 	}
@@ -47,51 +41,6 @@ func (g gRPCServer) Initialize(ctx context.Context, request *proto.InitializeReq
 	}
 
 	return resp, nil
-}
-
-func parseConfigData(b []byte) (map[string]interface{}, error) {
-	config := map[string]interface{}{}
-	if len(b) == 0 {
-		return config, nil
-	}
-	decoder := json.NewDecoder(bytes.NewReader(b))
-	decoder.UseNumber()
-	err := decoder.Decode(&config)
-	if err != nil {
-		return nil, err
-	}
-
-	cleanNumbers(config)
-	return config, nil
-}
-
-func cleanNumbers(data map[string]interface{}) {
-	for k, v := range data {
-		switch val := v.(type) {
-		case json.Number:
-			newNum, err := coerceToScalarNumber(val)
-			if err != nil {
-				continue
-			}
-			data[k] = newNum
-		case map[string]interface{}:
-			cleanNumbers(val)
-		}
-	}
-}
-
-func coerceToScalarNumber(num json.Number) (newVal interface{}, err error) {
-	intNum, err := num.Int64()
-	if err == nil {
-		return intNum, nil
-	}
-
-	floatNum, err := num.Float64()
-	if err == nil {
-		return floatNum, nil
-	}
-
-	return nil, fmt.Errorf("unrecognized number: %w", err)
 }
 
 func (g gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*proto.NewUserResponse, error) {
@@ -114,11 +63,10 @@ func (g gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*pr
 			DisplayName: req.GetUsernameConfig().GetDisplayName(),
 			RoleName:    req.GetUsernameConfig().GetRoleName(),
 		},
-		Statements: Statements{
-			Commands: req.GetStatements().GetCommands(),
-		},
-		Password:   req.GetPassword(),
-		Expiration: expiration,
+		Password:           req.GetPassword(),
+		Expiration:         expiration,
+		Statements:         getStatementsFromProto(req.GetStatements()),
+		RollbackStatements: getStatementsFromProto(req.GetRollbackStatements()),
 	}
 
 	dbResp, err := g.impl.NewUser(ctx, dbReq)
@@ -154,6 +102,7 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 	if req.GetPassword() != nil && req.GetPassword().GetNewPassword() != "" {
 		password = &ChangePassword{
 			NewPassword: req.GetPassword().GetNewPassword(),
+			Statements:  getStatementsFromProto(req.GetPassword().GetStatements()),
 		}
 	}
 
@@ -166,9 +115,7 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 
 		expiration = &ChangeExpiration{
 			NewExpiration: newExpiration,
-			Statements: Statements{
-				Commands: req.GetExpiration().GetStatements().GetCommands(),
-			},
+			Statements:    getStatementsFromProto(req.GetExpiration().GetStatements()),
 		}
 	}
 
@@ -200,7 +147,8 @@ func (g gRPCServer) DeleteUser(ctx context.Context, req *proto.DeleteUserRequest
 		return &proto.DeleteUserResponse{}, status.Errorf(codes.InvalidArgument, "no username provided")
 	}
 	dbReq := DeleteUserRequest{
-		Username: req.GetUsername(),
+		Username:   req.GetUsername(),
+		Statements: getStatementsFromProto(req.GetStatements()),
 	}
 
 	_, err := g.impl.DeleteUser(ctx, dbReq)
@@ -228,4 +176,15 @@ func (g gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, er
 		return &proto.Empty{}, status.Errorf(codes.Internal, "unable to close database plugin: %s", err)
 	}
 	return &proto.Empty{}, nil
+}
+
+func getStatementsFromProto(protoStmts *proto.Statements) (statements Statements) {
+	if protoStmts == nil {
+		return statements
+	}
+	cmds := protoStmts.GetCommands()
+	statements = Statements{
+		Commands: cmds,
+	}
+	return statements
 }
