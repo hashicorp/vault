@@ -22,6 +22,7 @@ import layout from '../templates/components/search-select';
  * @param [subLabel] {String} - a smaller label below the main Label
  * @param fallbackComponent {String} - name of component to be rendered if the API call 403s
  * @param [backend] {String} - name of the backend if the query for options needs additional information (eg. secret backend)
+ * @param [disallowNewItems=false] {Boolean} - Controls whether or not the user can add a new item if none found
  *
  * @param options {Array} - *Advanced usage* - `options` can be passed directly from the outside to the
  * power-select component. If doing this, `models` should not also be passed as that will overwrite the
@@ -44,6 +45,7 @@ export default Component.extend({
   options: null, //all possible options
   shouldUseFallback: false,
   shouldRenderName: false,
+  disallowNewItems: false,
   init() {
     this._super(...arguments);
     this.set('selectedOptions', this.inputValue || []);
@@ -149,6 +151,9 @@ export default Component.extend({
         return !options.some(group => group.options.findBy('id', id));
       }
       let existingOption = this.options && (this.options.findBy('id', id) || this.options.findBy('name', id));
+      if (this.disallowNewItems && !existingOption) {
+        return false;
+      }
       return !existingOption;
     },
   },
