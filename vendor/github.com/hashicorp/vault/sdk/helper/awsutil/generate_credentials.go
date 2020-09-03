@@ -43,6 +43,13 @@ type CredentialsConfig struct {
 	Logger hclog.Logger
 }
 
+// Make sure the logger isn't nil before logging
+func (c *CredentialsConfig) log(level hclog.Level, msg string, args ...interface{}) {
+	if c.Logger != nil {
+		c.Logger.Log(level, msg, args)
+	}
+}
+
 func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials, error) {
 	var providers []credentials.Provider
 
@@ -55,7 +62,7 @@ func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials,
 				SecretAccessKey: c.SecretKey,
 				SessionToken:    c.SessionToken,
 			}})
-		c.Logger.Debug("added static credential provider", "AccessKey", c.AccessKey)
+		c.log(hclog.Debug, "added static credential provider", "AccessKey", c.AccessKey)
 
 	case c.AccessKey == "" && c.SecretKey == "":
 		// Attempt to get credentials from the IAM instance role below
@@ -71,7 +78,7 @@ func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials,
 	if roleARN != "" && tokenPath != "" {
 		// this session is only created to create the WebIdentityRoleProvider, as the env variables are already there
 		// this automatically assumes the role, but the provider needs to be added to the chain
-		c.Logger.Debug("adding web identity provider", "roleARN", roleARN)
+		c.log(hclog.Debug, "adding web identity provider", "roleARN", roleARN)
 		sess, err := session.NewSession()
 		if err != nil {
 			return nil, errors.Wrap(err, "error creating a new session to create a WebIdentityRoleProvider")
@@ -81,7 +88,7 @@ func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials,
 		// Check if the webIdentityProvider can successfully retrieve
 		// credentials (via sts:AssumeRole), and warn if there's a problem.
 		if _, err := webIdentityProvider.Retrieve(); err != nil {
-			c.Logger.Warn("error assuming role", "roleARN", roleARN, "tokenPath", tokenPath, "sessionName", sessionName, "err", err)
+			c.log(hclog.Warn, "error assuming role", "roleARN", roleARN, "tokenPath", tokenPath, "sessionName", sessionName, "err", err)
 		}
 
 		//Add the web identity role credential provider
