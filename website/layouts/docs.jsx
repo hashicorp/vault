@@ -4,10 +4,12 @@ import { frontMatter as data } from '../pages/docs/**/*.mdx'
 import { MDXProvider } from '@mdx-js/react'
 import Head from 'next/head'
 import Link from 'next/link'
+import Columns from 'components/columns'
+import Tag from 'components/inline-tag'
 import Tabs, { Tab } from 'components/tabs'
 import EnterpriseAlert from 'components/enterprise-alert'
 
-const DEFAULT_COMPONENTS = { Tabs, Tab, EnterpriseAlert }
+const DEFAULT_COMPONENTS = { Tabs, Tab, EnterpriseAlert, Columns, Tag }
 
 export default function DocsLayoutWrapper(pageMeta) {
   function DocsLayout(props) {
