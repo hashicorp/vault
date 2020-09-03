@@ -79,6 +79,7 @@
       @fallbackComponent={{attr.options.fallbackComponent}}
       @selectLimit={{attr.options.selectLimit}}
       @backend={{model.backend}}
+      @disallowNewItems={{attr.options.onlyAllowExisting}}
     />
   </div>
 {{else if (eq attr.options.editType "mountAccessor")}}

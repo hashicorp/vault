@@ -22,13 +22,14 @@ const Model = DS.Model.extend({
     readOnly: true,
     subText: 'The name for your role. This cannot be edited later.',
   }),
-  transformations: attr('string', {
+  transformations: attr('array', {
     editType: 'searchSelect',
     fallbackComponent: 'string-list',
     label: 'Transformations',
     models: ['transform'],
     subLabel: 'Transformations',
     subText: 'Select which transformations this role will have access to. It must already exist.',
+    onlyAllowExisting: true,
   }),
 
   attrs: computed('transformations', function() {
