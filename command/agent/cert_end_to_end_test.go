@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/oklog/run"
+
 	"github.com/hashicorp/vault/builtin/logical/pki"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -156,29 +158,6 @@ func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 		t.Fatal(err)
 	}
 
-	ahConfig := &auth.AuthHandlerConfig{
-		Logger:                       logger.Named("auth.handler"),
-		Client:                       client,
-		EnableReauthOnNewCredentials: true,
-	}
-	if ahWrapping {
-		ahConfig.WrapTTL = 10 * time.Second
-	}
-	ah := auth.NewAuthHandler(ahConfig)
-	errCh := make(chan error)
-	go func() {
-		errCh <- ah.Run(ctx, am)
-	}()
-	defer func() {
-		select {
-		case <-ctx.Done():
-		case err := <-errCh:
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-	}()
-
 	config := &sink.SinkConfig{
 		Logger:    logger.Named("sink.file"),
 		AAD:       "foobar",
@@ -198,21 +177,23 @@ func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 	}
 	config.Sink = fs
 
-	ss := sink.NewSinkServer(&sink.SinkServerConfig{
-		Logger: logger.Named("sink.server"),
-		Client: client,
-	})
+	asc := &AgentServerConfig{
+		Logger:                               logger,
+		Level:                                hclog.Trace,
+		Writer:                               hclog.DefaultOutput,
+		Sinks:                                []*sink.SinkConfig{config},
+		AutoAuthEnableReauthOnNewCredentials: true,
+	}
+
+	if ahWrapping {
+		asc.AutoAuthWrapTTL = 10 * time.Second
+	}
+
+	errchan := make(chan error)
 	go func() {
-		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
-	}()
-	defer func() {
-		select {
-		case <-ctx.Done():
-		case err := <-errCh:
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
+		var g run.Group
+		RunAgent(ctx, cancelFunc, &g, asc, client, am)
+		errchan <- g.Run()
 	}()
 
 	// This has to be after the other defers so it happens first
@@ -490,27 +471,6 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ahConfig := &auth.AuthHandlerConfig{
-		Logger:                       logger.Named("auth.handler"),
-		Client:                       client,
-		EnableReauthOnNewCredentials: true,
-	}
-
-	ah := auth.NewAuthHandler(ahConfig)
-	errCh := make(chan error)
-	go func() {
-		errCh <- ah.Run(ctx, am)
-	}()
-	defer func() {
-		select {
-		case <-ctx.Done():
-		case err := <-errCh:
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-	}()
-
 	// /////////////
 	// Sink setup
 	// /////////////
@@ -537,21 +497,19 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	}
 	config.Sink = fs
 
-	ss := sink.NewSinkServer(&sink.SinkServerConfig{
-		Logger: logger.Named("sink.server"),
-		Client: client,
-	})
+	asc := &AgentServerConfig{
+		Logger:                               logger,
+		Level:                                hclog.Trace,
+		Writer:                               hclog.DefaultOutput,
+		Sinks:                                []*sink.SinkConfig{config},
+		AutoAuthEnableReauthOnNewCredentials: true,
+	}
+
+	errchan := make(chan error)
 	go func() {
-		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
-	}()
-	defer func() {
-		select {
-		case <-ctx.Done():
-		case err := <-errCh:
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
+		var g run.Group
+		RunAgent(ctx, cancelFunc, &g, asc, client, am)
+		errchan <- g.Run()
 	}()
 
 	// This has to be after the other defers so it happens first
