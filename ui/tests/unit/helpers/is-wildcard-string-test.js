@@ -20,10 +20,15 @@ module('Unit | Helpers | is-wildcard-string', function() {
     assert.equal(result, true);
   });
 
-  test('it returns false if string object does not have id', function(assert) {
+  test('it returns true if string object has name and no id', function(assert) {
     let string = { name: 'foo.bar*baz' };
     let result = isWildcardString([string]);
-    console.log(result, 'results');
+    assert.equal(result, true);
+  });
+
+  test('it returns false if string object has no name or id', function(assert) {
+    let string = { somethingElse: 'foo.bar*baz' };
+    let result = isWildcardString([string]);
     assert.equal(result, false);
   });
 });
