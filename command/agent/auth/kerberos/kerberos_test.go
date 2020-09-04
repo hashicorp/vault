@@ -51,9 +51,8 @@ func TestNewKerberosAuthMethod(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if authMethod.(*kerberosMethod).loginCfg.DisableFASTNegotiation != false {
-		t.Fatalf("disable_fast_negotation should be false, it wasn't: %t",
-			authMethod.(*kerberosMethod).loginCfg.DisableFASTNegotiation)
+	if actual := authMethod.(*kerberosMethod).loginCfg.DisableFASTNegotiation; actual != false {
+		t.Fatalf("disable_fast_negotation should be false, it wasn't: %t", actual)
 	}
 
 	authConfig.Config["disable_fast_negotiation"] = "true"
