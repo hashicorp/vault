@@ -716,6 +716,38 @@ func TestSystemBackend_remount_system(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_remount_clean(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "foo"
+	req.Data["to"] = "foo//bar"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != `'to' path 'foo//bar' does not match cleaned path 'foo/bar'` {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_remount_nonPrintable(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+	req.Data["from"] = "foo"
+	req.Data["to"] = "foo\nbar"
+	req.Data["config"] = structs.Map(MountConfig{})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != `'to' path cannot contain non-printable characters` {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
 func TestSystemBackend_leases(t *testing.T) {
 	core, b, root := testCoreSystemBackend(t)
 
