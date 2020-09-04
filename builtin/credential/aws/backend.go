@@ -17,6 +17,16 @@ import (
 	cache "github.com/patrickmn/go-cache"
 )
 
+const amzHeaderPrefix = "X-Amz-"
+
+var defaultAllowedSTSRequestHeaders = []string{
+	"X-Amz-Date",
+	"X-Amz-Credential",
+	"X-Amz-Security-Token",
+	"X-Amz-Algorithm",
+	"X-Amz-Signature",
+	"X-Amz-SignedHeaders"}
+
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(conf)
 	if err != nil {

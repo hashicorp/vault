@@ -175,12 +175,13 @@ export default Service.extend({
   // Returns relevant information from OpenAPI
   // as determined by the expandOpenApiProps util
   getProps(helpUrl, backend) {
+    // add name of thing you want
     debug(`Fetching schema properties for ${backend} from ${helpUrl}`);
 
     return this.ajax(helpUrl, backend).then(help => {
       // paths is an array but it will have a single entry
       // for the scope we're in
-      const path = Object.keys(help.openapi.paths)[0];
+      const path = Object.keys(help.openapi.paths)[0]; // do this or look at name
       const pathInfo = help.openapi.paths[path];
       const params = pathInfo.parameters;
       let paramProp = {};
@@ -202,7 +203,9 @@ export default Service.extend({
       }
 
       // TODO: handle post endpoints without requestBody
-      const props = pathInfo.post.requestBody.content['application/json'].schema.properties;
+      const props = pathInfo.post
+        ? pathInfo.post.requestBody.content['application/json'].schema.properties
+        : {};
       // put url params (e.g. {name}, {role})
       // at the front of the props list
       const newProps = assign({}, paramProp, props);

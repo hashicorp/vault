@@ -353,6 +353,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"cert",
 				"cf",
 				"consul",
+				"couchbase-database-plugin",
 				"elasticsearch-database-plugin",
 				"gcp",
 				"gcpkms",
