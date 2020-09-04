@@ -1,7 +1,7 @@
 import { helper as buildHelper } from '@ember/component/helper';
 
 export function filterWildcard([string, array]) {
-  if (!string) {
+  if (!string || !array) {
     return;
   }
   if (!string.id && string) {
