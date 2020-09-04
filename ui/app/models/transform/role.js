@@ -30,7 +30,6 @@ const Model = DS.Model.extend({
     onlyAllowExisting: true,
     subLabel: 'Transformations',
     subText: 'Select which transformations this role will have access to. It must already exist.',
-    wildcardLabel: 'transformation',
   }),
 
   attrs: computed('transformations', function() {
