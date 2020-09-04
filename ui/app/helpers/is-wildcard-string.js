@@ -6,22 +6,10 @@ export function isWildcardString([string]) {
   }
   // string is actually an object which is what comes in in the searchSelect component
   if (typeof string === 'object') {
-    if (!string.id && !string.name) {
-      return false;
-    }
-    if (string.id) {
-      return string.id.includes('*');
-    }
-    if (string.name) {
-      return string.name.includes('*');
-    }
+    string = Object.values(string)[0];
   }
-  // otherwise string is a string
-  if (string.includes('*')) {
-    return true;
-  }
-  // default to false
-  return false;
+
+  return string.includes('*');
 }
 
 export default buildHelper(isWildcardString);

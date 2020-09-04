@@ -26,9 +26,9 @@ module('Unit | Helpers | is-wildcard-string', function() {
     assert.equal(result, true);
   });
 
-  test('it returns false if string object has no name or id', function(assert) {
-    let string = { somethingElse: 'foo.bar*baz' };
+  test('it returns true if string object has name and id with with at least one wildcard', function(assert) {
+    let string = { id: '7*', name: 'seven' };
     let result = isWildcardString([string]);
-    assert.equal(result, false);
+    assert.equal(result, true);
   });
 });
