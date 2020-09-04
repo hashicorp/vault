@@ -52,12 +52,14 @@
           </small>
         {{else}}
           <div>{{selected.id}}
-          {{#if (and wildcardLabel (is-wildcard-string selected))}}
-            {{#let (filter-wildcard selected allOptions) as | wildcardCount |}}
-              <span class="tag is-light has-text-grey-dark" data-test-mode={{wildcardCount}}>
-                includes {{wildcardCount}} {{if (eq wildcardCount 1) wildcardLabel (pluralize wildcardLabel)}}
-              </span>
-            {{/let}}
+          {{#if wildcardLabel}}
+            {{#if (is-wildcard-string selected)}}
+              {{#let (filter-wildcard selected allOptions) as | wildcardCount |}}
+                <span class="tag is-light has-text-grey-dark" data-test-mode={{wildcardCount}}>
+                  includes {{wildcardCount}} {{if (eq wildcardCount 1) wildcardLabel (pluralize wildcardLabel)}}
+                </span>
+              {{/let}}
+            {{/if}}
           {{/if}}
           </div>
         {{/if}}
