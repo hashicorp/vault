@@ -282,6 +282,11 @@ func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 		}
 	}
 	checkToken()
+
+	err = <-errchan
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestCertEndToEnd_CertsInConfig(t *testing.T) {
@@ -537,5 +542,10 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 		}
 
 		time.Sleep(250 * time.Millisecond)
+	}
+
+	err = <-errchan
+	if err != nil {
+		t.Fatal(err)
 	}
 }
