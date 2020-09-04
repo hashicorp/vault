@@ -46,13 +46,18 @@ func TestNewKerberosAuthMethod(t *testing.T) {
 	}
 
 	authConfig = simpleAuthConfig()
-	delete(authConfig.Config, "disable_fast_negotiation")
-	if _, err := NewKerberosAuthMethod(authConfig); err != nil {
-		t.Fatal("err shouldn't be returned for missing disable_fast_negotiation")
+	authMethod, err := NewKerberosAuthMethod(authConfig)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	authConfig = simpleAuthConfig()
-	authMethod, err := NewKerberosAuthMethod(authConfig)
+	if authMethod.(*kerberosMethod).loginCfg.DisableFASTNegotiation != false {
+		t.Fatalf("disable_fast_negotation should be false, it wasn't: %t",
+			authMethod.(*kerberosMethod).loginCfg.DisableFASTNegotiation)
+	}
+
+	authConfig.Config["disable_fast_negotiation"] = "true"
+	authMethod, err = NewKerberosAuthMethod(authConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,16 +65,6 @@ func TestNewKerberosAuthMethod(t *testing.T) {
 	if authMethod.(*kerberosMethod).loginCfg.DisableFASTNegotiation != true {
 		t.Fatalf("disable_fast_negotation should be true, it wasn't: %t",
 			authMethod.(*kerberosMethod).loginCfg.DisableFASTNegotiation)
-	}
-
-	delete(authConfig.Config, "disable_fast_negotiation")
-	authMethod, err = NewKerberosAuthMethod(authConfig)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if authMethod.(*kerberosMethod).loginCfg.DisableFASTNegotiation != false {
-		t.Fatalf("disable_fast_negotation should be false, it wasn't: %t", authMethod.(*kerberosMethod).loginCfg.DisableFASTNegotiation)
 	}
 }
 
@@ -79,12 +74,11 @@ func simpleAuthConfig() *auth.AuthConfig {
 		MountPath: "kerberos",
 		WrapTTL:   20,
 		Config: map[string]interface{}{
-			"username":                 "grace",
-			"service":                  "HTTP/05a65fad28ef.matrix.lan:8200",
-			"realm":                    "MATRIX.LAN",
-			"keytab_path":              "grace.keytab",
-			"krb5conf_path":            "krb5.conf",
-			"disable_fast_negotiation": "true",
+			"username":      "grace",
+			"service":       "HTTP/05a65fad28ef.matrix.lan:8200",
+			"realm":         "MATRIX.LAN",
+			"keytab_path":   "grace.keytab",
+			"krb5conf_path": "krb5.conf",
 		},
 	}
 }
