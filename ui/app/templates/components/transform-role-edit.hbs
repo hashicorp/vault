@@ -24,7 +24,6 @@
 {{#if (eq mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{!-- TODO: Ability to delete and edit role
       {{#if (or capabilities.canUpdate capabilities.canDelete)}}
         <div class="toolbar-separator" />
       {{/if}}
@@ -39,14 +38,14 @@
       {{/if}}
       {{#if capabilities.canUpdate }}
         <ToolbarSecretLink
-          @secret={{model.id}}
+          @secret={{concat model.idPrefix model.id}}
           @mode="edit"
           @data-test-edit-link=true
           @replace=true
         >
           Edit role
         </ToolbarSecretLink>
-      {{/if}} --}}
+      {{/if}}
     </ToolbarActions>
   </Toolbar>
 {{/if}}
@@ -70,10 +69,10 @@
         type="submit"
         disabled={{buttonDisabled}}
         class="button is-primary"
-        data-test-role-ssh-create=true
+        data-test-role-transform-create=true
       >
         {{#if (eq mode 'create')}}
-          Create transformation
+          Create role
         {{else if (eq mode 'edit')}}
           Save
         {{/if}}

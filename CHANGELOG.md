@@ -10,6 +10,8 @@ BUG FIXES:
 
 * core: Fix resource leak in plugin API (plugin-dependent, not all plugins impacted) [[GH-9557](https://github.com/hashicorp/vault/pull/9557)]
 * core: Fix race involved in enabling certain features via a license change
+* core: Fix crash when metrics collection encounters zero-length keys in KV store [[GH-9811](https://github.com/hashicorp/vault/pull/9881)]
+* replication (enterprise): Only write failover cluster addresses if they've changed
 * secrets/database: Fix handling of TLS options in mongodb connection strings [[GH-9519](https://github.com/hashicorp/vault/pull/9519)]
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-93](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/93)]
 
@@ -165,6 +167,7 @@ BUG FIXES:
 * secrets/aws: Fix issue where performance standbys weren't able to generate STS credentials after an IAM access key rotation in AWS and root IAM credential update in Vault [[GH-9186](https://github.com/hashicorp/vault/pull/9186)]
 * secrets/database: Fix issue where rotating root database credentials while Vault's storage backend is unavailable causes Vault to lose access to the database [[GH-8782](https://github.com/hashicorp/vault/pull/8782)]
 * secrets/database: Fix issue that prevents performance standbys from connecting to databases after a root credential rotation [[GH-9129](https://github.com/hashicorp/vault/pull/9129)]
+* secrets/database: Fix parsing of multi-line PostgreSQL statements [[GH-8512](https://github.com/hashicorp/vault/pull/8512)]
 * secrets/gcp: Fix issue were updates were not being applied to the `token_scopes` of a roleset. [[GH-90](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/90)]
 * secrets/kv: Return the value of delete_version_after when reading kv/config, even if it is set to the default. [[GH-42](https://github.com/hashicorp/vault-plugin-secrets-kv/pull/42)]
 * ui: Add Toggle component into core addon so it is available in KMIP and other Ember Engines.[[GH-8913]](https://github.com/hashicorp/vault/pull/8913)

@@ -18,6 +18,7 @@ import layout from '../templates/components/search-select';
  * @param label {String} - Label for this form field
  * @param fallbackComponent {String} - name of component to be rendered if the API call 403s
  * @param [backend] {String} - name of the backend if the query for options needs additional information (eg. secret backend)
+ * @param [disallowNewItems=false] {Boolean} - Controls whether or not the user can add a new item if none found
  * @param [helpText] {String} - Text to be displayed in the info tooltip for this form field
  * @param [selectLimit] {Number} - A number that sets the limit to how many select options they can choose
  * @param [subText] {String} - Text to be displayed below the label
@@ -46,6 +47,7 @@ export default Component.extend({
   options: null, // all possible options
   shouldUseFallback: false,
   shouldRenderName: false,
+  disallowNewItems: false,
   init() {
     this._super(...arguments);
     this.set('selectedOptions', this.inputValue || []);
@@ -156,6 +158,9 @@ export default Component.extend({
         return !options.some(group => group.options.findBy('id', id));
       }
       let existingOption = this.options && (this.options.findBy('id', id) || this.options.findBy('name', id));
+      if (this.disallowNewItems && !existingOption) {
+        return false;
+      }
       return !existingOption;
     },
   },

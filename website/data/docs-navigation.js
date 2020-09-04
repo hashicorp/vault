@@ -294,6 +294,9 @@ export default [
   {
     category: 'plugin',
   },
+  {
+    category: 'plugin-portal',
+  },
   '----------------',
   {
     category: 'what-is-vault',
@@ -331,6 +334,7 @@ export default [
                   'enterprise-with-raft',
                   'enterprise-dr-with-raft',
                   'enterprise-perf-with-raft',
+                  'injector-tls',
                 ],
               },
             ],
