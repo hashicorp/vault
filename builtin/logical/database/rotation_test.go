@@ -772,12 +772,11 @@ func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
+	// Change background task interval to 1s to give more margin
+	// for it to successfully run during the sleeps below.
+	config.Config[queueTickIntervalKey] = "1"
 
 	// Rotation ticker starts running in Factory call
-	// so increase its frequency here.
-	queueTickSeconds = 1
-	queueTickInterval = time.Duration(queueTickSeconds) * time.Second
-
 	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
