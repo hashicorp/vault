@@ -17,11 +17,13 @@ import (
 	"github.com/hashicorp/vault/sdk/queue"
 )
 
-const (
+var (
 	// Interval to check the queue for items needing rotation
 	queueTickSeconds  = 5
-	queueTickInterval = queueTickSeconds * time.Second
+	queueTickInterval = time.Duration(queueTickSeconds) * time.Second
+)
 
+const (
 	// WAL storage key used for static account rotations
 	staticWALKey = "staticRotationKey"
 )
