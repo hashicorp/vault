@@ -1,0 +1,10 @@
+name: sarama
+
+up:
+  - go:
+      version: '1.14'
+
+commands:
+  test:
+    run: make test
+    desc: 'run unit tests'
