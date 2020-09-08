@@ -79,6 +79,7 @@ const Model = DS.Model.extend({
     fallbackComponent: 'string-list',
     models: ['transform/role'],
     subText: 'Search for an existing role, type a new role to create it, or use a wildcard (*).',
+    wildcardLabel: 'role',
   }),
   transformAttrs: computed('type', function() {
     if (this.type === 'masking') {

@@ -18,12 +18,8 @@
       </span>
     </div>
     <div class="copy-text level">
-      {{#let (concat 
-        "vault write " model.backend "/encode/" 
-        (if (and (take 1 model.allowed_roles) (eq model.allowed_roles.length 1)) (take 1 model.allowed_roles) "<choose a role>")
-        " value=<enter your value here>" 
-        (if (and (eq model.type 'fpe') (eq model.tweak_source "supplied")) " tweak_source=<enter your tweak>")) as |copyEncodeCommand|}}
-        <code>{{copyEncodeCommand}}</code>
+      {{#let (concat "vault write " model.backend "/encode/" cliCommand) as |copyEncodeCommand|}}
+        <code>vault write {{model.backend}}/encode/{{cliCommand}}</code>
         <CopyButton class="button is-transparent level-right" @clipboardText={{copyEncodeCommand}}
           @buttonType="button" @success={{action (set-flash-message 'Command copied!')}}>
           <Icon @size='l' @glyph="copy-action" aria-label="Copy" />
@@ -39,12 +35,8 @@
       </span>
     </div>
     <div class="copy-text level">
-      {{#let (concat 
-        "vault write " model.backend "/decode/" 
-        (if (and (take 1 model.allowed_roles) (eq model.allowed_roles.length 1)) (take 1 model.allowed_roles) "<choose a role>")
-        " value=<enter your value here>" 
-        (if (and (eq model.type 'fpe') (eq model.tweak_source "supplied")) " tweak_source=<enter your tweak>")) as |copyDecodeCommand|}}
-        <code>{{copyDecodeCommand}}</code>
+      {{#let (concat "vault write " model.backend "/decode/" cliCommand) as |copyDecodeCommand|}}
+        <code>vault write {{model.backend}}/decode/{{cliCommand}}</code>
         <CopyButton class="button is-transparent level-right" @clipboardText={{copyDecodeCommand}}
           @buttonType="button" @success={{action (set-flash-message 'Command copied!')}}>
           <Icon @size='l' @glyph="copy-action" aria-label="Copy" />
