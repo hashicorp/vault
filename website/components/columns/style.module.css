@@ -15,6 +15,12 @@
     columns: 4;
   }
 
+  &[class] ul {
+    @media (max-width: 500px) {
+      columns: 1;
+    }
+  }
+
   & > ul li {
     margin-top: 0;
   }
