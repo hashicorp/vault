@@ -467,8 +467,11 @@ func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp == nil {
 		t.Fatalf("bad: %v", resp)
+	}
+	if resp.Data["reload_id"] == nil {
+		t.Fatal("no reload_id in response")
 	}
 
 	for i := 0; i < 2; i++ {

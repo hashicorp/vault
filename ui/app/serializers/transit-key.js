@@ -17,7 +17,11 @@ export default DS.RESTSerializer.extend({
     assign(payload, payload.data);
     delete payload.data;
     // timestamps for these two are in seconds...
-    if (payload.type === 'aes256-gcm96' || payload.type === 'chacha20-poly1305') {
+    if (
+      payload.type === 'aes256-gcm96' ||
+      payload.type === 'chacha20-poly1305' ||
+      payload.type === 'aes128-gcm96'
+    ) {
       for (let version in payload.keys) {
         payload.keys[version] = payload.keys[version] * 1000;
       }

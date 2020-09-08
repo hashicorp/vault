@@ -1,13 +1,15 @@
 import DocsPage from '@hashicorp/react-docs-page'
-import order from '../data/api-navigation.js'
+import order from 'data/api-navigation.js'
 import { frontMatter as data } from '../pages/api-docs/**/*.mdx'
 import { MDXProvider } from '@mdx-js/react'
 import Head from 'next/head'
 import Link from 'next/link'
-import Tabs, { Tab } from '../components/tabs'
-import EnterpriseAlert from '../components/enterprise-alert'
+import Tabs, { Tab } from 'components/tabs'
+import EnterpriseAlert from 'components/enterprise-alert'
+import Columns from 'components/columns'
+import Tag from 'components/inline-tag'
 
-const DEFAULT_COMPONENTS = { Tabs, Tab, EnterpriseAlert }
+const DEFAULT_COMPONENTS = { Tabs, Tab, EnterpriseAlert, Columns, Tag }
 
 export default function ApiLayoutWrapper(pageMeta) {
   function ApiLayout(props) {

@@ -23,7 +23,8 @@ func TestKvMetadataPutCommandDeleteVersionAfter(t *testing.T) {
 	client, closer := testVaultServer(t)
 	defer closer()
 
-	if err := client.Sys().Mount("kv/", &api.MountInput{
+	basePath := t.Name() + "/"
+	if err := client.Sys().Mount(basePath, &api.MountInput{
 		Type: "kv-v2",
 	}); err != nil {
 		t.Fatal(err)
@@ -33,17 +34,19 @@ func TestKvMetadataPutCommandDeleteVersionAfter(t *testing.T) {
 	cmd.client = client
 
 	// Set a limit of 1s first.
-	code := cmd.Run([]string{"-delete-version-after=1s", "kv/secret/my-secret"})
+	code := cmd.Run([]string{"-delete-version-after=1s", basePath + "secret/my-secret"})
 	if code != 0 {
-		t.Errorf("expected %d but received %d", 0, code)
+		t.Fatalf("expected %d but received %d", 0, code)
 	}
 
+	metaFullPath := basePath + "metadata/secret/my-secret"
 	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-	if !strings.Contains(combined, "Success! Data written to: kv/metadata/secret/my-secret\n") {
-		t.Errorf("expected %q but received %q", "Success! Data written to: kv/metadata/secret/my-secret\n", combined)
+	success := "Success! Data written to: " + metaFullPath
+	if !strings.Contains(combined, success) {
+		t.Fatalf("expected %q but received %q", success, combined)
 	}
 
-	secret, err := client.Logical().Read("kv/metadata/secret/my-secret")
+	secret, err := client.Logical().Read(metaFullPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,17 +59,17 @@ func TestKvMetadataPutCommandDeleteVersionAfter(t *testing.T) {
 	cmd.client = client
 
 	// Set a limit of 1s first.
-	code = cmd.Run([]string{"-delete-version-after=0", "kv/secret/my-secret"})
+	code = cmd.Run([]string{"-delete-version-after=0", basePath + "secret/my-secret"})
 	if code != 0 {
 		t.Errorf("expected %d but received %d", 0, code)
 	}
 
 	combined = ui.OutputWriter.String() + ui.ErrorWriter.String()
-	if !strings.Contains(combined, "Success! Data written to: kv/metadata/secret/my-secret\n") {
-		t.Errorf("expected %q but received %q", "Success! Data written to: kv/metadata/secret/my-secret\n", combined)
+	if !strings.Contains(combined, success) {
+		t.Errorf("expected %q but received %q", success, combined)
 	}
 
-	secret, err = client.Logical().Read("kv/metadata/secret/my-secret")
+	secret, err = client.Logical().Read(metaFullPath)
 	if err != nil {
 		t.Fatal(err)
 	}

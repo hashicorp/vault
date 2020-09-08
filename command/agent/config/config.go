@@ -30,7 +30,7 @@ type Config struct {
 	Templates     []*ctconfig.TemplateConfig `hcl:"templates"`
 }
 
-// Vault contains configuration for connnecting to Vault servers
+// Vault contains configuration for connecting to Vault servers
 type Vault struct {
 	Address          string      `hcl:"address"`
 	CACert           string      `hcl:"ca_cert"`
@@ -75,6 +75,7 @@ type Sink struct {
 	WrapTTLRaw interface{}   `hcl:"wrap_ttl"`
 	WrapTTL    time.Duration `hcl:"-"`
 	DHType     string        `hcl:"dh_type"`
+	DeriveKey  bool          `hcl:"derive_key"`
 	DHPath     string        `hcl:"dh_path"`
 	AAD        string        `hcl:"aad"`
 	AADEnvVar  string        `hcl:"aad_env_var"`
@@ -156,8 +157,10 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	if result.AutoAuth != nil {
-		if len(result.AutoAuth.Sinks) == 0 && (result.Cache == nil || !result.Cache.UseAutoAuthToken) {
-			return nil, fmt.Errorf("auto_auth requires at least one sink or cache.use_auto_auth_token=true ")
+		if len(result.AutoAuth.Sinks) == 0 &&
+			(result.Cache == nil || !result.Cache.UseAutoAuthToken) &&
+			len(result.Templates) == 0 {
+			return nil, fmt.Errorf("auto_auth requires at least one sink or at least one template or cache.use_auto_auth_token=true")
 		}
 	}
 
@@ -392,6 +395,9 @@ func parseSinks(result *Config, list *ast.ObjectList) error {
 		case s.DHPath == "" && s.DHType == "":
 			if s.AAD != "" {
 				return multierror.Prefix(errors.New("specifying AAD data without 'dh_type' does not make sense"), fmt.Sprintf("sink.%s", s.Type))
+			}
+			if s.DeriveKey {
+				return multierror.Prefix(errors.New("specifying 'derive_key' data without 'dh_type' does not make sense"), fmt.Sprintf("sink.%s", s.Type))
 			}
 		case s.DHPath != "" && s.DHType != "":
 		default:

@@ -117,6 +117,8 @@ Router.map(function() {
           // transit-specific routes
           this.route('actions-root', { path: '/actions/' });
           this.route('actions', { path: '/actions/*secret' });
+          // transform-specific routes
+          // TODO: add these
         });
       });
       this.route('policies', { path: '/policies/:type' }, function() {
@@ -127,7 +129,9 @@ Router.map(function() {
         this.route('show', { path: '/:policy_name' });
         this.route('edit', { path: '/:policy_name/edit' });
       });
-      this.route('replication-dr-promote');
+      this.route('replication-dr-promote', function() {
+        this.route('details');
+      });
       if (config.addRootMounts) {
         config.addRootMounts.call(this);
       }

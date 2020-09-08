@@ -335,6 +335,7 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 	}
 
 	out = append(out, fmt.Sprintf("Version | %s", status.Version))
+	out = append(out, fmt.Sprintf("Storage Type | %s", status.StorageType))
 
 	if status.ClusterName != "" && status.ClusterID != "" {
 		out = append(out, fmt.Sprintf("Cluster Name | %s", status.ClusterName))
@@ -347,7 +348,7 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 	if err != nil && strings.Contains(err.Error(), "Vault is sealed") {
 		leaderStatus = &api.LeaderResponse{HAEnabled: true}
 		err = nil
-	}
+	} 
 	if err != nil {
 		ui.Error(fmt.Sprintf("Error checking leader status: %s", err))
 		return 1
@@ -355,6 +356,7 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 
 	// Output if HA is enabled
 	out = append(out, fmt.Sprintf("HA Enabled | %t", leaderStatus.HAEnabled))
+
 	if leaderStatus.HAEnabled {
 		mode := "sealed"
 		if !status.Sealed {

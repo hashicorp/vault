@@ -318,6 +318,11 @@ func (b *jwtAuthBackend) createIdentity(allClaims map[string]interface{}, role *
 		return nil, nil, fmt.Errorf("claim %q could not be converted to string", role.UserClaim)
 	}
 
+	err := b.fetchUserInfo(allClaims, role)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	metadata, err := extractMetadata(b.Logger(), allClaims, role.ClaimMappings)
 	if err != nil {
 		return nil, nil, err
@@ -334,10 +339,9 @@ func (b *jwtAuthBackend) createIdentity(allClaims map[string]interface{}, role *
 		return alias, groupAliases, nil
 	}
 
-	groupsClaimRaw := getClaim(b.Logger(), allClaims, role.GroupsClaim)
-
-	if groupsClaimRaw == nil {
-		return nil, nil, fmt.Errorf("%q claim not found in token", role.GroupsClaim)
+	groupsClaimRaw, err := b.fetchGroups(allClaims, role)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to fetch groups: %s", err)
 	}
 
 	groups, ok := normalizeList(groupsClaimRaw)
@@ -359,6 +363,44 @@ func (b *jwtAuthBackend) createIdentity(allClaims map[string]interface{}, role *
 	}
 
 	return alias, groupAliases, nil
+}
+
+// Checks if there's a custom provider_config and calls FetchUserInfo() if implemented.
+func (b *jwtAuthBackend) fetchUserInfo(allClaims map[string]interface{}, role *jwtRole) error {
+	pConfig, err := NewProviderConfig(b.cachedConfig, ProviderMap())
+	if err != nil {
+		return fmt.Errorf("failed to load custom provider config: %s", err)
+	}
+	// Fetch user info from custom provider if it's implemented
+	if pConfig != nil {
+		if uif, ok := pConfig.(UserInfoFetcher); ok {
+			return uif.FetchUserInfo(b, allClaims, role)
+		}
+	}
+
+	return nil
+}
+
+// Checks if there's a custom provider_config and calls FetchGroups() if implemented
+func (b *jwtAuthBackend) fetchGroups(allClaims map[string]interface{}, role *jwtRole) (interface{}, error) {
+	pConfig, err := NewProviderConfig(b.cachedConfig, ProviderMap())
+	if err != nil {
+		return nil, fmt.Errorf("failed to load custom provider config: %s", err)
+	}
+	// If the custom provider implements interface GroupsFetcher, call it,
+	// otherwise fall through to the default method
+	if pConfig != nil {
+		if gf, ok := pConfig.(GroupsFetcher); ok {
+			return gf.FetchGroups(b, allClaims, role)
+		}
+	}
+	groupsClaimRaw := getClaim(b.Logger(), allClaims, role.GroupsClaim)
+
+	if groupsClaimRaw == nil {
+		return nil, fmt.Errorf("%q claim not found in token", role.GroupsClaim)
+	}
+
+	return groupsClaimRaw, nil
 }
 
 const (

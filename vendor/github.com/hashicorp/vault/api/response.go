@@ -27,8 +27,8 @@ func (r *Response) DecodeJSON(out interface{}) error {
 // body must still be closed manually.
 func (r *Response) Error() error {
 	// 200 to 399 are okay status codes. 429 is the code for health status of
-	// standby nodes.
-	if (r.StatusCode >= 200 && r.StatusCode < 400) || r.StatusCode == 429 {
+	// standby nodes, otherwise, 429 is treated as quota limit reached.
+	if (r.StatusCode >= 200 && r.StatusCode < 400) || (r.StatusCode == 429 && r.Request.URL.Path == "/v1/sys/health") {
 		return nil
 	}
 

@@ -16,6 +16,9 @@
             onchange={{action (mut key.type) value="target.value"}}
             data-test-transit-key-type=true
           >
+            <option selected={{eq key.type "aes128-gcm96"}} value="aes128-gcm96">
+              aes128-gcm96
+            </option>
             <option selected={{eq key.type "aes256-gcm96"}} value="aes256-gcm96">
               aes256-gcm96
             </option>
@@ -24,6 +27,12 @@
             </option>
             <option selected={{eq key.type "ecdsa-p256"}} value="ecdsa-p256">
               ecdsa-p256
+            </option>
+            <option selected={{eq key.type "ecdsa-p384"}} value="ecdsa-p384">
+              ecdsa-p384
+            </option>
+            <option selected={{eq key.type "ecdsa-p521"}} value="ecdsa-p521">
+              ecdsa-p521
             </option>
             <option selected={{eq key.type "ed25519"}} value="ed25519">
               ed25519
@@ -56,6 +65,7 @@
       </div>
     </div>
     {{#if (or
+        (eq key.type "aes128-gcm96")
         (eq key.type "aes256-gcm96")
         (eq key.type "chacha20-poly1305")
         (eq key.type "ed25519")
@@ -77,6 +87,7 @@
       </div>
     {{/if}}
     {{#if (or
+        (eq key.type "aes128-gcm96")
         (eq key.type "aes256-gcm96")
         (eq key.type "chacha20-poly1305")
       )

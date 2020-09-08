@@ -19,6 +19,7 @@ const Eng = Engine.extend({
       'version',
       'wizard',
     ],
+    externalRoutes: ['replication'],
   },
 });
 

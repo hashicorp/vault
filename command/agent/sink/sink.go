@@ -32,6 +32,7 @@ type SinkConfig struct {
 	WrapTTL            time.Duration
 	DHType             string
 	DHPath             string
+	DeriveKey          bool
 	AAD                string
 	cachedRemotePubKey []byte
 	cachedPubKey       []byte
@@ -114,27 +115,34 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 			return
 
 		case token := <-incoming:
-			if token != *latestToken {
+			if len(sinks) > 0 {
+				if token != *latestToken {
 
-				// Drain the existing funcs
-			drainLoop:
-				for {
-					select {
-					case <-sinkCh:
-						atomic.AddInt32(ss.remaining, -1)
-					default:
-						break drainLoop
+					// Drain the existing funcs
+				drainLoop:
+					for {
+						select {
+						case <-sinkCh:
+							atomic.AddInt32(ss.remaining, -1)
+						default:
+							break drainLoop
+						}
+					}
+
+					*latestToken = token
+
+					for _, s := range sinks {
+						atomic.AddInt32(ss.remaining, 1)
+						sinkCh <- sinkToken{s, token}
 					}
 				}
-
-				*latestToken = token
-
-				for _, s := range sinks {
-					atomic.AddInt32(ss.remaining, 1)
-					sinkCh <- sinkToken{s, token}
+			} else {
+				ss.logger.Trace("no sinks, ignoring new token")
+				if ss.exitAfterAuth {
+					ss.logger.Trace("no sinks, exitAfterAuth, bye")
+					return
 				}
 			}
-
 		case st := <-sinkCh:
 			atomic.AddInt32(ss.remaining, -1)
 			select {
@@ -198,7 +206,16 @@ func (s *SinkConfig) encryptToken(token string) (string, error) {
 		resp.Curve25519PublicKey = s.cachedPubKey
 	}
 
-	aesKey, err = dhutil.GenerateSharedKey(s.cachedPriKey, s.cachedRemotePubKey)
+	secret, err := dhutil.GenerateSharedSecret(s.cachedPriKey, s.cachedRemotePubKey)
+	if err != nil {
+		return "", errwrap.Wrapf("error calculating shared key: {{err}}", err)
+	}
+	if s.DeriveKey {
+		aesKey, err = dhutil.DeriveSharedKey(secret, s.cachedPubKey, s.cachedRemotePubKey)
+	} else {
+		aesKey = secret
+	}
+
 	if err != nil {
 		return "", errwrap.Wrapf("error deriving shared key: {{err}}", err)
 	}

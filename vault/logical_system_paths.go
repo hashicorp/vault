@@ -708,13 +708,17 @@ func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 				Type:        framework.TypeCommaStringSlice,
 				Description: strings.TrimSpace(sysHelp["plugin-backend-reload-mounts"][0]),
 			},
+			"scope": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-backend-reload-scope"][0]),
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:    b.handlePluginReloadUpdate,
 				Summary:     "Reload mounted plugin backends.",
-				Description: "Either the plugin name (`plugin`) or the desired plugin backend mounts (`mounts`) must be provided, but not both. In the case that the plugin name is provided, all mounted paths that use that plugin backend will be reloaded.",
+				Description: "Either the plugin name (`plugin`) or the desired plugin backend mounts (`mounts`) must be provided, but not both. In the case that the plugin name is provided, all mounted paths that use that plugin backend will be reloaded.  If (`scope`) is provided and is (`global`), the plugin(s) are reloaded globally.",
 			},
 		},
 
@@ -1462,6 +1466,61 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
+		},
+
+		{
+			Pattern: "policies/password/(?P<name>.+)/generate$",
+
+			Fields: map[string]*framework.FieldSchema{
+				"name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "The name of the password policy.",
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handlePoliciesPasswordGenerate,
+					Summary:  "Generate a password from an existing password policy.",
+				},
+			},
+
+			HelpSynopsis:    "Generate a password from an existing password policy.",
+			HelpDescription: "Generate a password from an existing password policy.",
+		},
+
+		{
+			Pattern: "policies/password/(?P<name>.+)$",
+
+			Fields: map[string]*framework.FieldSchema{
+				"name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "The name of the password policy.",
+				},
+				"policy": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "The password policy",
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handlePoliciesPasswordSet,
+					Summary:  "Add a new or update an existing password policy.",
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handlePoliciesPasswordGet,
+					Summary:  "Retrieve an existing password policy.",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handlePoliciesPasswordDelete,
+					Summary:  "Delete a password policy.",
+				},
+			},
+
+			HelpSynopsis: "Read, Modify, or Delete a password policy.",
+			HelpDescription: "Read the rules of an existing password policy, create or update " +
+				"the rules of a password policy, or delete a password policy.",
 		},
 	}
 }
