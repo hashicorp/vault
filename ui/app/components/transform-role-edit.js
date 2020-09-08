@@ -3,7 +3,7 @@ import { inject as service } from '@ember/service';
 
 export default TransformBase.extend({
   store: service(),
-  initialTransformations: [],
+  initialTransformations: null,
 
   init() {
     this._super(...arguments);
