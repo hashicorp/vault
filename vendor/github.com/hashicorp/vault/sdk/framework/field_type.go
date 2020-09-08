@@ -56,6 +56,9 @@ const (
 
 	// TypeFloat parses both float32 and float64 values
 	TypeFloat
+
+	// TypeTime represents absolute time, using an RFC3999 format on the wire
+	TypeTime
 )
 
 func (t FieldType) String() string {
@@ -82,6 +85,8 @@ func (t FieldType) String() string {
 		return "header"
 	case TypeFloat:
 		return "float"
+	case TypeTime:
+		return "time"
 	default:
 		return "unknown type"
 	}
