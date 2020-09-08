@@ -27,9 +27,9 @@ const Model = DS.Model.extend({
     fallbackComponent: 'string-list',
     label: 'Transformations',
     models: ['transform'],
+    onlyAllowExisting: true,
     subLabel: 'Transformations',
     subText: 'Select which transformations this role will have access to. It must already exist.',
-    onlyAllowExisting: true,
   }),
 
   attrs: computed('transformations', function() {
