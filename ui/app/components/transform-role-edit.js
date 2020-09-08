@@ -1,6 +1,6 @@
 import TransformBase from './transform-edit-base';
 import { inject as service } from '@ember/service';
-import transform from '../adapters/transform';
+// import transform from '../adapters/transform';
 
 export default TransformBase.extend({
   store: service(),
@@ -16,27 +16,64 @@ export default TransformBase.extend({
     if (!added) return;
 
     // get just one for now
-    const testTransform = added[0];
-    console.log({ testTransform });
+    // const testTransform = added[0];
+    // console.log({ testTransform });
     const backend = this.get('model.backend');
-
-    this.store
-      .queryRecord('transform', {
-        backend,
-        id: testTransform,
-      })
-      .then(function(transformation) {
-        let roles = transformation.allowed_roles;
-        roles.push(roleId);
-        transformation.set('allowed_roles', roles);
-        // transformation.allowed_roles = [roleId];
-        // debugger;
-        transformation.save({ backend }); // => PATCH to '/posts/1'
-      });
+    // console.log(this.get('model'));
+    // For each added transformation, add current role id to allowed_roles
+    added.forEach(transformName => {
+      this.store
+        .queryRecord('transform', {
+          backend,
+          id: transformName,
+        })
+        .then(function(transformation) {
+          transformation.set('backend', backend);
+          console.log('get successful', transformation);
+          let roles = transformation.allowed_roles;
+          roles.push(roleId);
+          transformation.set('allowed_roles', roles);
+          // transformation.allowed_roles = [roleId];
+          transformation.save();
+        });
+    });
+    // this.store
+    //   .queryRecord('transform', {
+    //     backend,
+    //     id: testTransform,
+    //   })
+    //   .then(function(transformation) {
+    //     transformation.set('backend', backend);
+    //     console.log('get successful', transformation);
+    //     let roles = transformation.allowed_roles;
+    //     roles.push(roleId);
+    //     transformation.set('allowed_roles', roles);
+    //     // transformation.allowed_roles = [roleId];
+    //     transformation.save();
+    //   });
   },
 
   handleRemovedTransformations(removed) {
-    console.log({ removed });
+    if (!removed) return;
+    const backend = this.get('model.backend');
+
+    // For each added transformation, remove current role id from allowed_roles
+    removed.forEach(transformName => {
+      this.store
+        .queryRecord('transform', {
+          backend,
+          id: transformName,
+        })
+        .then(function(transformation) {
+          transformation.set('backend', backend);
+          console.log('get successful', transformation);
+          let roles = transformation.allowed_roles;
+          roles.push(roleId);
+          transformation.set('allowed_roles', roles);
+          // transformation.allowed_roles = [roleId];
+          transformation.save();
+        });
+    });
   },
 
   actions: {
