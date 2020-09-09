@@ -841,6 +841,9 @@ KNOWN ISSUES:
 * OSS binaries of 1.5.1, 1.4.4, 1.3.8, and 1.2.5 were built without the Vault UI. Enterprise binaries are not affected.
 * AWS IAM logins may return an error depending on the headers sent with the request.
   For more details and a workaround, see the [1.2.5 Upgrade Guide](https://www.vaultproject.io/docs/upgrading/upgrade-to-1.2.5)
+  
+BUG FIXES:
+* seal: (enterprise) Fix issue causing stored seal and recovery keys to be mistaken as sealwrapped values
 
 ## 1.2.4 (November 7th, 2019)
 
