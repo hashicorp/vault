@@ -5,6 +5,7 @@ IMPROVEMENTS:
 * auth/jwt: Add support for fetching groups and user information from G Suite during authentication. [[GH-123](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/123)]
 * secrets/openldap: Add "ad" schema that allows the engine to correctly rotate AD passwords. [[GH-16](https://github.com/hashicorp/vault-plugin-secrets-openldap/pull/16)]
 * command/server: Delay informational messages in -dev mode until logs have settled. [[GH-9702](https://github.com/hashicorp/vault/pull/9702)] 
+* sdk/framework: Add a time type for API fields. [[GH-9911](https://github.com/hashicorp/vault/pull/9911)]
 
 BUG FIXES:
 
