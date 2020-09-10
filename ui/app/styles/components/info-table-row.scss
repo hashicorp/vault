@@ -42,6 +42,10 @@
   .icon-false {
     color: $ui-gray-300;
   }
+
+  a {
+    text-decoration: none;
+  }
 }
 
 .info-table-row:not(.is-mobile) .column {
