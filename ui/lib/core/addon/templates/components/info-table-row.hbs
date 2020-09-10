@@ -30,7 +30,11 @@
       {{/if}}
     {{else}}
       {{#if (eq type 'array')}}
-        <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{if (gte value.length 10) (concat (take 5 value) ", and " (dec 5 value.length) " more.") value}}</code>
+      <InfoTableItemArray 
+        @isLink={{isLink}}
+        @modelType={{modelType}}
+        @displayArray={{value}}
+      />
       {{else}}
         <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>
       {{/if}}

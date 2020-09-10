@@ -3,7 +3,14 @@
     {{#if (eq attr.type "object")}}
       {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(stringify (get model attr.name))}}
     {{else}}
-      {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name) type=attr.type}}
+      {{info-table-row
+        label=(capitalize (or attr.options.label (humanize (dasherize attr.name))))
+        value=(get model attr.name)
+        type=attr.type
+        isLink=(eq attr.name 'allowed_roles')
+        modelType="transform/role"
+        wildcardLabel=attr.options.wildcardLabel
+      }}
     {{/if}}
   {{/each}}
 </div>
