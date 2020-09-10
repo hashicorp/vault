@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -74,16 +74,23 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	if clientConf.IAMEndpoint != "" {
 		iamEndpoint = aws.String(clientConf.IAMEndpoint)
 	}
+
+	// Attempt to retrieve the region, error out if no region is provided.
+	region, err := awsutil.GetRegion("")
+	if err != nil {
+		return nil, errwrap.Wrapf("error retrieving region: {{err}}", err)
+	}
+
 	awsConfig := &aws.Config{
 		Credentials: credentials.NewCredentials(staticCreds),
 		Endpoint:    iamEndpoint,
 
-		// Generally speaking, GetOrDefaultRegion will use the Vault server's region. However, if this
+		// Generally speaking, GetRegion will use the Vault server's region. However, if this
 		// needs to be overridden, an easy way would be to set the AWS_DEFAULT_REGION on the Vault server
 		// to the desired region. If that's still insufficient for someone's use case, in the future we
 		// could add the ability to specify the region either on the client config or as part of the
 		// inbound rotation call.
-		Region: aws.String(awsutil.GetOrDefaultRegion(b.Logger(), "")),
+		Region: aws.String(region),
 
 		// Prevents races.
 		HTTPClient: cleanhttp.DefaultClient(),
