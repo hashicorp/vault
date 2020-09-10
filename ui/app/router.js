@@ -59,7 +59,7 @@ Router.map(function() {
           this.route('index', { path: '/' });
           // lookup prefix
           // revoke prefix + revoke force
-          this.route('list-root', { path: '/list/' });
+          this.route('list-root', { path: '/list/:specific_tab' });
           this.route('list', { path: '/list/*prefix' });
           //renew + revoke
           this.route('show', { path: '/show/*lease_id' });
