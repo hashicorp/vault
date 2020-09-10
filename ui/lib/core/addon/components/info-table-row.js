@@ -19,6 +19,8 @@ import layout from '../templates/components/info-table-row';
  * @param helperText=null {string} - Text to describe the value displayed beneath the label.
  * @param alwaysRender=false {Boolean} - Indicates if the component content should be always be rendered.  When false, the value of `value` will be used to determine if the component should render.
  * @param [type=array] {string} - The type of value being passed in.  This is used for when you want to trim an array.  For example, if you have an array value that can equal length 15+ this will trim to show 5 and count how many more are there
+ * @param [isLink=true] {Boolean} - Indicates if the item should contain a link-to component.  Only setup for arrays, but this could be changed if needed.
+ * @param [modelType=null] {string} - Tells what model you want data for the allOptions to be returned from.  Used in conjunction with the the isLink.
  */
 export default Component.extend({
   layout,
