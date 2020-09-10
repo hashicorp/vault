@@ -52,7 +52,6 @@ func testVariousBackends(t *testing.T, tf testFunc, basePort int, includeRaft bo
 
 	t.Run("file", func(t *testing.T) {
 		t.Parallel()
-		t.Skip("fails intermittently")
 
 		logger := logger.Named("file")
 		storage, cleanup := teststorage.MakeReusableStorage(
