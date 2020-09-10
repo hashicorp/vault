@@ -92,7 +92,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 				Storage:   config.StorageView,
 				Data:      test.configData,
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
 
 			resp, err := b.HandleRequest(ctx, req)
@@ -113,7 +113,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 				Path:      fmt.Sprintf("rotate-root/%s", test.dbName),
 				Storage:   config.StorageView,
 			}
-			ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+			ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
 
 			resp, err = b.HandleRequest(ctx, req)
@@ -136,7 +136,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 					"max_ttl":     "1m",
 				},
 			}
-			ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+			ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
 
 			resp, err = b.HandleRequest(ctx, req)
@@ -156,7 +156,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 				Path:      fmt.Sprintf("creds/%s", dynamicRoleName),
 				Storage:   config.StorageView,
 			}
-			ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+			ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
 
 			resp, err = b.HandleRequest(ctx, req)
@@ -182,7 +182,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 					"rotation_period": "5",
 				},
 			}
-			ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+			ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
 
 			resp, err = b.HandleRequest(ctx, req)
@@ -202,7 +202,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 				Path:      fmt.Sprintf("static-creds/%s", staticRoleName),
 				Storage:   config.StorageView,
 			}
-			ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+			ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
 
 			resp, err = b.HandleRequest(ctx, req)
@@ -306,5 +306,12 @@ func assertRespHasNoErr(t *testing.T, resp *logical.Response) {
 	t.Helper()
 	if resp != nil && resp.IsError() {
 		t.Fatalf("response is error: %#v\n", resp)
+	}
+}
+
+func assertErrIsNil(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("No error expected, got: %s", err)
 	}
 }
