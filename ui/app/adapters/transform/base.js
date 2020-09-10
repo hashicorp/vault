@@ -42,7 +42,10 @@ export default ApplicationAdapter.extend({
   fetchByQuery(query) {
     const { backend, modelName, id } = query;
     return this.ajax(this.url(backend, modelName, id), 'GET').then(resp => {
-      return resp;
+      return {
+        ...resp,
+        backend,
+      };
     });
   },
 
