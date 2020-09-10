@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -89,28 +90,44 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		// to ensure the database credential does not expire before the lease
 		expiration = expiration.Add(5 * time.Second)
 
-		username, password, err := createUser(ctx,
-			db.database,
-			b.System(),
-			role.Statements,
-			req.DisplayName,
-			name,
-			expiration,
-			dbConfig.PasswordPolicy)
+		password, err := db.database.GeneratePassword(ctx, b.System(), dbConfig.PasswordPolicy)
+		if err != nil {
+			return nil, fmt.Errorf("unable to generate password: %w", err)
+		}
+
+		newUserReq := newdbplugin.NewUserRequest{
+			UsernameConfig: newdbplugin.UsernameMetadata{
+				DisplayName: req.DisplayName,
+				RoleName:    name,
+			},
+			Statements: newdbplugin.Statements{
+				Commands: role.Statements.Creation,
+			},
+			RollbackStatements: newdbplugin.Statements{
+				Commands: role.Statements.Rollback,
+			},
+			Password:   password,
+			Expiration: expiration,
+		}
+
+		// Overwriting the password in the event this is a legacy database plugin and the provided password is ignored
+		newUserResp, password, err := db.database.NewUser(ctx, newUserReq)
 		if err != nil {
 			b.CloseIfShutdown(db, err)
 			return nil, err
 		}
 
-		resp := b.Secret(SecretCredsType).Response(map[string]interface{}{
-			"username": username,
+		respData := map[string]interface{}{
+			"username": newUserResp.Username,
 			"password": password,
-		}, map[string]interface{}{
-			"username":              username,
+		}
+		internal := map[string]interface{}{
+			"username":              newUserResp.Username,
 			"role":                  name,
 			"db_name":               role.DBName,
 			"revocation_statements": role.Statements.Revocation,
-		})
+		}
+		resp := b.Secret(SecretCredsType).Response(respData, internal)
 		resp.Secret.TTL = role.DefaultTTL
 		resp.Secret.MaxTTL = role.MaxTTL
 		return resp, nil

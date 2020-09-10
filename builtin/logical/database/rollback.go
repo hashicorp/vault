@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 	"google.golang.org/grpc/codes"
@@ -90,7 +91,16 @@ func (b *databaseBackend) rollbackDatabaseCredentials(ctx context.Context, confi
 		}
 	}()
 
-	err = changeUserPassword(ctx, db.database, entry.UserName, entry.OldPassword, config.RootCredentialsRotateStatements)
+	updateReq := newdbplugin.UpdateUserRequest{
+		Username: entry.UserName,
+		Password: &newdbplugin.ChangePassword{
+			NewPassword: entry.OldPassword,
+			Statements: newdbplugin.Statements{
+				Commands: config.RootCredentialsRotateStatements,
+			},
+		},
+	}
+	_, err = db.database.UpdateUser(ctx, updateReq)
 	if status.Code(err) == codes.Unimplemented {
 		return nil
 	}

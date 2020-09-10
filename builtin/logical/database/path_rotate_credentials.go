@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
+	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
@@ -96,7 +94,7 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 		// Generate new credentials
 		username := config.ConnectionDetails["username"].(string)
 		oldPassword := config.ConnectionDetails["password"].(string)
-		newPassword, err := generatePassword(ctx, dbi.database, b.System(), config.PasswordPolicy)
+		newPassword, err := dbi.database.GeneratePassword(ctx, b.System(), config.PasswordPolicy)
 		if err != nil {
 			return nil, err
 		}
@@ -113,26 +111,21 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 			return nil, err
 		}
 
-		// Database v5
-		if dbi.database.database != nil {
-			err := changeUserPasswordNew(ctx, dbi.database, username, newPassword, config.RootCredentialsRotateStatements)
-			if err != nil {
-				return nil, fmt.Errorf("failed to change root user password: %w", err)
-			}
-		} else {
-			// Database v4
-			err = changeUserPasswordLegacy(ctx, dbi.database, username, newPassword, config.RootCredentialsRotateStatements)
-			if status.Code(err) == codes.Unimplemented {
-				// Fall back to using RotateRootCredentials if unimplemented
-				newConfigDetails, err := dbi.database.legacyDatabase.RotateRootCredentials(ctx, config.RootCredentialsRotateStatements)
-				if err != nil {
-					return nil, err
-				}
-				config.ConnectionDetails = newConfigDetails
-			}
-			if err != nil {
-				return nil, err
-			}
+		updateReq := newdbplugin.UpdateUserRequest{
+			Username: username,
+			Password: &newdbplugin.ChangePassword{
+				NewPassword: newPassword,
+				Statements: newdbplugin.Statements{
+					Commands: config.RootCredentialsRotateStatements,
+				},
+			},
+		}
+		newConfigDetails, err := dbi.database.UpdateUser(ctx, updateReq)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update user: %w", err)
+		}
+		if newConfigDetails != nil {
+			config.ConnectionDetails = newConfigDetails
 		}
 
 		err = storeConfig(ctx, req.Storage, name, config)

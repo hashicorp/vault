@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -259,12 +260,16 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 		return nil, err
 	}
 
-	dbw, err := makeDatabase(ctx, config.PluginName, b.System(), b.logger)
+	dbw, err := newDatabaseWrapper(ctx, config.PluginName, b.System(), b.logger)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create database instance: %w", err)
 	}
 
-	_, err = initDatabase(ctx, dbw, config.ConnectionDetails, true)
+	initReq := newdbplugin.InitializeRequest{
+		Config:           config.ConnectionDetails,
+		VerifyConnection: true,
+	}
+	_, err = dbw.Initialize(ctx, initReq)
 	if err != nil {
 		dbw.Close()
 		return nil, err

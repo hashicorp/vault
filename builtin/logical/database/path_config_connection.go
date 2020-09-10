@@ -10,6 +10,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -312,16 +313,21 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 
 		// Create a database plugin and initialize it.
-		dbw, err := makeDatabase(ctx, config.PluginName, b.System(), b.logger)
+		dbw, err := newDatabaseWrapper(ctx, config.PluginName, b.System(), b.logger)
 		if err != nil {
 			return logical.ErrorResponse("error creating database object: %s", err), nil
 		}
 
-		config.ConnectionDetails, err = initDatabase(ctx, dbw, config.ConnectionDetails, verifyConnection)
+		initReq := newdbplugin.InitializeRequest{
+			Config:           config.ConnectionDetails,
+			VerifyConnection: verifyConnection,
+		}
+		initResp, err := dbw.Initialize(ctx, initReq)
 		if err != nil {
 			dbw.Close()
 			return logical.ErrorResponse("error creating database object: %s", err), nil
 		}
+		config.ConnectionDetails = initResp.Config
 
 		b.Lock()
 		defer b.Unlock()
@@ -354,13 +360,26 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		// If using a legacy DB plugin and set the `password_policy` field, send a warning to the user indicating
 		// the `password_policy` will not be used
-		if dbw.legacyDatabase != nil && config.PasswordPolicy != "" {
+		if dbw.isLegacyDB() && config.PasswordPolicy != "" {
 			resp.AddWarning(fmt.Sprintf("%s does not support password policies - upgrade to the latest version of "+
 				"Vault (or the sdk if using a custom plugin) to gain password policy support", config.PluginName))
 		}
 
 		return resp, nil
 	}
+}
+
+func storeConfig(ctx context.Context, storage logical.Storage, name string, config *DatabaseConfig) error {
+	entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/%s", name), config)
+	if err != nil {
+		return fmt.Errorf("unable to marshal object to JSON: %w", err)
+	}
+
+	err = storage.Put(ctx, entry)
+	if err != nil {
+		return fmt.Errorf("failed to save object: %w", err)
+	}
+	return nil
 }
 
 const pathConfigConnectionHelpSyn = `

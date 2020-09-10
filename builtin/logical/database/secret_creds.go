@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -63,7 +64,17 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			// Adding a small buffer since the TTL will be calculated again after this call
 			// to ensure the database credential does not expire before the lease
 			expireTime = expireTime.Add(5 * time.Second)
-			err := renewUser(ctx, db.database, username, expireTime, role.Statements.Renewal)
+
+			updateReq := newdbplugin.UpdateUserRequest{
+				Username: username,
+				Expiration: &newdbplugin.ChangeExpiration{
+					NewExpiration: expireTime,
+					Statements: newdbplugin.Statements{
+						Commands: role.Statements.Renewal,
+					},
+				},
+			}
+			_, err := db.database.UpdateUser(ctx, updateReq)
 			if err != nil {
 				b.CloseIfShutdown(db, err)
 				return nil, err
@@ -137,7 +148,13 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 		db.RLock()
 		defer db.RUnlock()
 
-		err = deleteUser(ctx, db.database, username, statements.Revocation)
+		deleteReq := newdbplugin.DeleteUserRequest{
+			Username: username,
+			Statements: newdbplugin.Statements{
+				Commands: statements.Revocation,
+			},
+		}
+		_, err = db.database.DeleteUser(ctx, deleteReq)
 		if err != nil {
 			b.CloseIfShutdown(db, err)
 			return nil, err

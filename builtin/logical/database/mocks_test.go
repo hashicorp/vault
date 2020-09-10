@@ -15,32 +15,32 @@ type mockNewDatabase struct {
 	mock.Mock
 }
 
-func (m mockNewDatabase) Initialize(ctx context.Context, req newdbplugin.InitializeRequest) (newdbplugin.InitializeResponse, error) {
+func (m *mockNewDatabase) Initialize(ctx context.Context, req newdbplugin.InitializeRequest) (newdbplugin.InitializeResponse, error) {
 	args := m.Called(ctx, req)
 	return args.Get(0).(newdbplugin.InitializeResponse), args.Error(1)
 }
 
-func (m mockNewDatabase) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (newdbplugin.NewUserResponse, error) {
+func (m *mockNewDatabase) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (newdbplugin.NewUserResponse, error) {
 	args := m.Called(ctx, req)
 	return args.Get(0).(newdbplugin.NewUserResponse), args.Error(1)
 }
 
-func (m mockNewDatabase) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest) (newdbplugin.UpdateUserResponse, error) {
+func (m *mockNewDatabase) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest) (newdbplugin.UpdateUserResponse, error) {
 	args := m.Called(ctx, req)
 	return args.Get(0).(newdbplugin.UpdateUserResponse), args.Error(1)
 }
 
-func (m mockNewDatabase) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
+func (m *mockNewDatabase) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
 	args := m.Called(ctx, req)
 	return args.Get(0).(newdbplugin.DeleteUserResponse), args.Error(1)
 }
 
-func (m mockNewDatabase) Type() (string, error) {
+func (m *mockNewDatabase) Type() (string, error) {
 	args := m.Called()
 	return args.String(0), args.Error(1)
 }
 
-func (m mockNewDatabase) Close() error {
+func (m *mockNewDatabase) Close() error {
 	args := m.Called()
 	return args.Error(0)
 }
