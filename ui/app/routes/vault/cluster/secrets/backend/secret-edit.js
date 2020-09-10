@@ -17,7 +17,7 @@ export default Route.extend(UnloadModelRoute, {
     let { backend } = this.paramsFor('vault.cluster.secrets.backend');
     return backend;
   },
-  capabilities(secret) {
+  capabilities(secret, modelType) {
     const backend = this.enginePathParam();
     let backendModel = this.modelFor('vault.cluster.secrets.backend');
     let backendType = backendModel.engineType;
@@ -28,10 +28,36 @@ export default Route.extend(UnloadModelRoute, {
       path = backend + '/keys/' + secret;
     } else if (backendType === 'ssh' || backendType === 'aws') {
       path = backend + '/roles/' + secret;
+    } else if (modelType.startsWith('transform/')) {
+      path = this.buildTransformPath(backend, secret, modelType);
     } else {
       path = backend + '/' + secret;
     }
     return this.store.findRecord('capabilities', path);
+  },
+
+  buildTransformPath(backend, secret, modelType) {
+    let noun = modelType.split('/')[1];
+    return `${backend}/${noun}/${secret}`;
+  },
+
+  modelTypeForTransform(secretName) {
+    if (!secretName) return;
+    if (secretName.startsWith('role/')) {
+      return 'transform/role';
+    }
+    if (secretName.startsWith('template/')) {
+      return 'transform/template';
+    }
+    if (secretName.startsWith('alphabet/')) {
+      return 'transform/alphabet';
+    }
+    return 'transform'; // TODO: transform/transformation;
+  },
+
+  transformSecretName(secret, modelType) {
+    const noun = modelType.split('/')[1];
+    return secret.replace(`${noun}/`, '');
   },
 
   backendType() {
@@ -71,7 +97,7 @@ export default Route.extend(UnloadModelRoute, {
     let types = {
       transit: 'transit-key',
       ssh: 'role-ssh',
-      transform: secret && secret.startsWith('role/') ? 'transform/role' : 'transform', // CBS TODO: switch out better
+      transform: this.modelTypeForTransform(secret),
       aws: 'role-aws',
       pki: secret && secret.startsWith('cert/') ? 'pki-certificate' : 'role-pki',
       cubbyhole: 'secret',
@@ -199,12 +225,11 @@ export default Route.extend(UnloadModelRoute, {
       secret = secret.replace('cert/', '');
     }
     if (modelType.startsWith('transform/')) {
-      // CBS TODO: we'll have more things to replace than just role/
-      secret = secret.replace('role/', '');
+      secret = this.transformSecretName(secret, modelType);
     }
     let secretModel;
 
-    let capabilities = this.capabilities(secret);
+    let capabilities = this.capabilities(secret, modelType);
     try {
       secretModel = await this.store.queryRecord(modelType, { id: secret, backend });
     } catch (err) {

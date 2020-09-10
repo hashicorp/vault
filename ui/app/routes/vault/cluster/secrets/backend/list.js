@@ -54,7 +54,7 @@ export default Route.extend({
   beforeModel() {
     let secret = this.secretParam();
     let backend = this.enginePathParam();
-    let { tab } = this.paramsFor('vault.cluster.secrets.backend');
+    let { tab } = this.paramsFor('vault.cluster.secrets.backend.list-root');
     let secretEngine = this.store.peekRecord('secret-engine', backend);
     let type = secretEngine && secretEngine.get('engineType');
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
@@ -160,6 +160,7 @@ export default Route.extend({
       backendModel,
       baseKey: { id: secret },
       backendType: backendModel.get('engineType'),
+      tab: secretParams.tab,
     });
     if (!has404) {
       const pageFilter = secretParams.pageFilter;
