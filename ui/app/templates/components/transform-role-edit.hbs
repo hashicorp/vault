@@ -80,7 +80,7 @@
       {{#secret-link
         mode=(if (eq mode "create") "list" "show")
         class="button"
-        secret=model.id
+        secret=(concat "role/" model.id)
       }}
         Cancel
       {{/secret-link}}
