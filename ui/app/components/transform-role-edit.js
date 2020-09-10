@@ -63,16 +63,15 @@ export default TransformBase.extend({
       let hasError = res.find(r => !!r.errorStatus);
 
       if (hasError) {
-        let errorAdding = res.find(r => r.errorStatus === 403 && r.type && r.type === 'ADD');
-        let errorRemoving = res.find(r => r.errorStatus === 403 && r.type && r.type === 'REMOVE');
+        let errorAdding = res.find(r => r.errorStatus === 403 && r.action === 'ADD');
+        let errorRemoving = res.find(r => r.errorStatus === 403 && r.action === 'REMOVE');
 
         let message =
           'The edits to this role were successful, but allowed_roles for its transformations was not edited due to a lack of permissions.';
         if (type === 'create') {
           message =
             'Transformations have been attached to this role, but the role was not added to those transformations’ allowed_roles due to a lack of permissions.';
-        }
-        if (errorAdding && errorRemoving) {
+        } else if (errorAdding && errorRemoving) {
           message =
             'This role was edited to both add and remove transformations; however, this role was not added or removed from those transformations’ allowed_roles due to a lack of permissions.';
         } else if (errorAdding) {
