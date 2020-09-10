@@ -51,8 +51,8 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), retAddr
 	if consulRepo != "" {
 		dockerOptions.Repository = consulRepo
 		dockerOptions.Auth = dc.AuthConfiguration{
-			Username:      os.Getenv("CONSUL_DOCKER_USERNAME"),
-			Password:      os.Getenv("CONSUL_DOCKER_PASSWORD"),
+			Username: os.Getenv("CONSUL_DOCKER_USERNAME"),
+			Password: os.Getenv("CONSUL_DOCKER_PASSWORD"),
 		}
 	}
 	resource, err := pool.RunWithOptions(dockerOptions)

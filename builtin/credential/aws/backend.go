@@ -18,6 +18,7 @@ import (
 )
 
 const amzHeaderPrefix = "X-Amz-"
+
 var defaultAllowedSTSRequestHeaders = []string{
 	"X-Amz-Date",
 	"X-Amz-Credential",

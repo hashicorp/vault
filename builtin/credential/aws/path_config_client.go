@@ -349,7 +349,7 @@ type clientConfig struct {
 func (c *clientConfig) validateAllowedSTSHeaderValues(headers http.Header) error {
 	for k := range headers {
 		h := textproto.CanonicalMIMEHeaderKey(k)
-		if 	strings.HasPrefix(h, amzHeaderPrefix) &&
+		if strings.HasPrefix(h, amzHeaderPrefix) &&
 			!strutil.StrListContains(defaultAllowedSTSRequestHeaders, h) &&
 			!strutil.StrListContains(c.AllowedSTSHeaderValues, h) {
 			return errors.New("invalid request header: " + k)
