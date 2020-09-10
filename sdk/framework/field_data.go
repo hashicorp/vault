@@ -231,7 +231,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 			if err != nil {
 				return nil, false, err
 			}
-			return time, true, nil
+			return time.UTC(), true, nil
 		}
 
 	case TypeCommaIntSlice:
