@@ -83,9 +83,10 @@ func interpolatePolynomial(x_samples, y_samples []uint8, x uint8) uint8 {
 // Calculate the multiplicative inverse of x in GF(2^8)
 func invert(x uint8) uint8 {
 	var zero, goodVal uint8
-	/* 0 is self inverting */
 	ret := expTable[(255 - logTable[x])]
 	goodVal = ret
+
+	/* 0 is self inverting */
 	if subtle.ConstantTimeByteEq(x, 0) == 1 {
 		ret = zero
 	} else {
