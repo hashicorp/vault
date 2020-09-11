@@ -80,34 +80,18 @@ func interpolatePolynomial(x_samples, y_samples []uint8, x uint8) uint8 {
 	return result
 }
 
+func invert(x uint8) uint8 {
+	z := x
+	for i := 0; i < 6; i ++ {
+		z = mult(z, z)
+		z = mult(z, x)
+	}
+	return mult(z, z)
+}
+
 // div divides two numbers in GF(2^8)
-func div(a, b uint8) uint8 {
-	if b == 0 {
-		// leaks some timing information but we don't care anyways as this
-		// should never happen, hence the panic
-		panic("divide by zero")
-	}
-
-	var goodVal, zero uint8
-	log_a := logTable[a]
-	log_b := logTable[b]
-	diff := (int(log_a) - int(log_b)) % 255
-	if diff < 0 {
-		diff += 255
-	}
-
-	ret := expTable[diff]
-
-	// Ensure we return zero if a is zero but aren't subject to timing attacks
-	goodVal = ret
-
-	if subtle.ConstantTimeByteEq(a, 0) == 1 {
-		ret = zero
-	} else {
-		ret = goodVal
-	}
-
-	return ret
+func div(x, y uint8) uint8 {
+	return mult(x, invert(y))
 }
 
 // mult multiplies two numbers in GF(2^8)
