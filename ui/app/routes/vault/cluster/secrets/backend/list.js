@@ -160,7 +160,6 @@ export default Route.extend({
       backendModel,
       baseKey: { id: secret },
       backendType: backendModel.get('engineType'),
-      tab: secretParams.tab,
     });
     if (!has404) {
       const pageFilter = secretParams.pageFilter;
