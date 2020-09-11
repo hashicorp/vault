@@ -42,7 +42,7 @@ export default Route.extend(UnloadModelRoute, {
   },
 
   modelTypeForTransform(secretName) {
-    if (!secretName) return;
+    if (!secretName) return 'transform';
     if (secretName.startsWith('role/')) {
       return 'transform/role';
     }
