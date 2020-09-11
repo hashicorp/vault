@@ -30,11 +30,15 @@
       {{/if}}
     {{else}}
       {{#if (eq type 'array')}}
-      <InfoTableItemArray 
-        @isLink={{isLink}}
-        @modelType={{modelType}}
-        @displayArray={{value}}
-      />
+        <InfoTableItemArray 
+          @label={{label}}
+          @isLink={{isLink}}
+          @modelType={{modelType}}
+          @displayArray={{value}}
+          @wildcardLabel={{wildcardLabel}}
+          @queryParam={{queryParam}}
+          @viewAll={{viewAll}}
+        />
       {{else}}
         <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>
       {{/if}}
