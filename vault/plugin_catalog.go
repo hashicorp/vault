@@ -64,30 +64,11 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 // type. It will first attempt to run as a database plugin then a backend
 // plugin. Both of these will be run in metadata mode.
 func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
-
-	{
-		// Attempt to run as database V5 plugin
-		client, err := newdbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
-		if err == nil {
-			// Close the client and cleanup the plugin process
-			client.Close()
-			return consts.PluginTypeDatabase, nil
-		} else {
-			logger.Warn(fmt.Sprintf("received %s attempting as db plugin, attempting as auth/secret plugin", err))
-		}
+	err := isDatabasePlugin(ctx, plugin, logger)
+	if err == nil {
+		return consts.PluginTypeDatabase, nil
 	}
-
-	{
-		// Attempt to run as database V4 plugin
-		client, err := dbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
-		if err == nil {
-			// Close the client and cleanup the plugin process
-			client.Close()
-			return consts.PluginTypeDatabase, nil
-		} else {
-			logger.Warn(fmt.Sprintf("received %s attempting as db plugin, attempting as auth/secret plugin", err))
-		}
-	}
+	logger.Warn(fmt.Sprintf("received %s attempting as db plugin, attempting as auth/secret plugin", err))
 
 	{
 		// Attempt to run as backend plugin
@@ -114,6 +95,28 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 	}
 
 	return consts.PluginTypeUnknown, nil
+}
+
+func isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner, logger log.Logger) error {
+	merr := &multierror.Error{}
+	// Attempt to run as database V5 plugin
+	v5Client, err := newdbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	if err == nil {
+		// Close the client and cleanup the plugin process
+		v5Client.Close()
+		return nil
+	}
+	merr = multierror.Append(merr, err)
+
+	v4Client, err := dbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	if err == nil {
+		// Close the client and cleanup the plugin process
+		v4Client.Close()
+		return nil
+	}
+	merr = multierror.Append(merr, err)
+
+	return merr
 }
 
 // UpdatePlugins will loop over all the plugins of unknown type and attempt to
