@@ -364,7 +364,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 			},
 		},
 	}
-	_, err = dbi.database.UpdateUser(ctx, updateReq)
+	_, err = dbi.database.UpdateUser(ctx, updateReq, false)
 	if err != nil {
 		b.CloseIfShutdown(dbi, err)
 		return output, errwrap.Wrapf("error setting credentials: {{err}}", err)

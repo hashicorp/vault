@@ -481,7 +481,7 @@ func TestUpdateUser_missingDB(t *testing.T) {
 	dbw := databaseVersionWrapper{}
 
 	req := newdbplugin.UpdateUserRequest{}
-	resp, err := dbw.UpdateUser(context.Background(), req)
+	resp, err := dbw.UpdateUser(context.Background(), req, false)
 	if err == nil {
 		t.Fatalf("err expected, got nil")
 	}
@@ -532,7 +532,7 @@ func TestUpdateUser_newDB(t *testing.T) {
 				v5: newDB,
 			}
 
-			_, err := dbw.UpdateUser(context.Background(), test.req)
+			_, err := dbw.UpdateUser(context.Background(), test.req, false)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -545,7 +545,8 @@ func TestUpdateUser_newDB(t *testing.T) {
 
 func TestUpdateUser_legacyDB(t *testing.T) {
 	type testCase struct {
-		req newdbplugin.UpdateUserRequest
+		req        newdbplugin.UpdateUserRequest
+		isRootUser bool
 
 		setCredentialsErr   error
 		setCredentialsCalls int
@@ -566,6 +567,7 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			req: newdbplugin.UpdateUserRequest{
 				Username: "existing_user",
 			},
+			isRootUser: false,
 
 			setCredentialsCalls: 0,
 			rotateRootCalls:     0,
@@ -579,6 +581,7 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 				Password:   &newdbplugin.ChangePassword{},
 				Expiration: &newdbplugin.ChangeExpiration{},
 			},
+			isRootUser: false,
 
 			setCredentialsCalls: 0,
 			rotateRootCalls:     0,
@@ -593,6 +596,7 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 					NewPassword: "newpassowrd",
 				},
 			},
+			isRootUser: false,
 
 			setCredentialsErr:   nil,
 			setCredentialsCalls: 1,
@@ -609,11 +613,30 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 					NewPassword: "newpassowrd",
 				},
 			},
+			isRootUser: false,
 
 			setCredentialsErr:   fmt.Errorf("set credentials failed"),
 			setCredentialsCalls: 1,
 			rotateRootCalls:     0,
 			renewUserCalls:      0,
+
+			expectedConfig: nil,
+			expectErr:      true,
+		},
+		"change password - SetCredentials unimplemented but not a root user": {
+			req: newdbplugin.UpdateUserRequest{
+				Username: "existing_user",
+				Password: &newdbplugin.ChangePassword{
+					NewPassword: "newpassowrd",
+				},
+			},
+			isRootUser: false,
+
+			setCredentialsErr:   status.Error(codes.Unimplemented, "SetCredentials is not implemented"),
+			setCredentialsCalls: 1,
+
+			rotateRootCalls: 0,
+			renewUserCalls:  0,
 
 			expectedConfig: nil,
 			expectErr:      true,
@@ -625,6 +648,7 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 					NewPassword: "newpassowrd",
 				},
 			},
+			isRootUser: true,
 
 			setCredentialsErr:   status.Error(codes.Unimplemented, "SetCredentials is not implemented"),
 			setCredentialsCalls: 1,
@@ -632,9 +656,9 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			rotateRootConfig: map[string]interface{}{
 				"foo": "bar",
 			},
-
 			rotateRootCalls: 1,
-			renewUserCalls:  0,
+
+			renewUserCalls: 0,
 
 			expectedConfig: map[string]interface{}{
 				"foo": "bar",
@@ -648,6 +672,7 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 					NewPassword: "newpassowrd",
 				},
 			},
+			isRootUser: true,
 
 			setCredentialsErr:   status.Error(codes.Unimplemented, "SetCredentials is not implemented"),
 			setCredentialsCalls: 1,
@@ -667,6 +692,7 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 					NewExpiration: time.Now(),
 				},
 			},
+			isRootUser: false,
 
 			setCredentialsCalls: 0,
 			rotateRootCalls:     0,
@@ -684,6 +710,7 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 					NewExpiration: time.Now(),
 				},
 			},
+			isRootUser: false,
 
 			setCredentialsCalls: 0,
 			rotateRootCalls:     0,
@@ -715,7 +742,7 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 				v4: legacyDB,
 			}
 
-			newConfig, err := dbw.UpdateUser(context.Background(), test.req)
+			newConfig, err := dbw.UpdateUser(context.Background(), test.req, test.isRootUser)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}

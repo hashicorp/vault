@@ -89,7 +89,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 			pathListRoles(&b),
 			pathRoles(&b),
 			pathCredsCreate(&b),
-			pathRotateCredentials(&b),
+			pathRotateRootCredentials(&b),
 		),
 
 		Secrets: []*framework.Secret{

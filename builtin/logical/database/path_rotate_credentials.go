@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/vault/sdk/queue"
 )
 
-func pathRotateCredentials(b *databaseBackend) []*framework.Path {
+func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
 		&framework.Path{
 			Pattern: "rotate-root/" + framework.GenericNameRegex("name"),
@@ -24,7 +24,7 @@ func pathRotateCredentials(b *databaseBackend) []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:                    b.pathRotateCredentialsUpdate(),
+					Callback:                    b.pathRotateRootCredentialsUpdate(),
 					ForwardPerformanceSecondary: true,
 					ForwardPerformanceStandby:   true,
 				},
@@ -56,7 +56,7 @@ func pathRotateCredentials(b *databaseBackend) []*framework.Path {
 	}
 }
 
-func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc {
+func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 		if name == "" {
@@ -120,7 +120,7 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 				},
 			},
 		}
-		newConfigDetails, err := dbi.database.UpdateUser(ctx, updateReq)
+		newConfigDetails, err := dbi.database.UpdateUser(ctx, updateReq, true)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update user: %w", err)
 		}

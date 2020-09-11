@@ -107,7 +107,7 @@ func TestBackend_RotateRootCredentials_WAL_rollback(t *testing.T) {
 			NewPassword: "newSecret",
 		},
 	}
-	_, err = pc.database.UpdateUser(ctx, updateReq)
+	_, err = pc.database.UpdateUser(ctx, updateReq, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -353,7 +353,7 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_2(t *testing.T) {
 			NewPassword: "newSecret",
 		},
 	}
-	_, err = pc.database.UpdateUser(ctx, updateReq)
+	_, err = pc.database.UpdateUser(ctx, updateReq, false)
 	if err != nil {
 		t.Fatal(err)
 	}

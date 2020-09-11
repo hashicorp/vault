@@ -100,7 +100,10 @@ func (b *databaseBackend) rollbackDatabaseCredentials(ctx context.Context, confi
 			},
 		},
 	}
-	_, err = db.database.UpdateUser(ctx, updateReq)
+
+	// It actually is the root user here, but we only want to use SetCredentials since
+	// RotateRootCredentials doesn't give any control over what password is used
+	_, err = db.database.UpdateUser(ctx, updateReq, false)
 	if status.Code(err) == codes.Unimplemented {
 		return nil
 	}

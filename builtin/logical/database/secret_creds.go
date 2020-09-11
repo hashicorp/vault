@@ -74,7 +74,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 					},
 				},
 			}
-			_, err := db.database.UpdateUser(ctx, updateReq)
+			_, err := db.database.UpdateUser(ctx, updateReq, false)
 			if err != nil {
 				b.CloseIfShutdown(db, err)
 				return nil, err

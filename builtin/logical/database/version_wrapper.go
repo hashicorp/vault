@@ -21,6 +21,8 @@ type databaseVersionWrapper struct {
 	v5 newdbplugin.Database
 }
 
+// newDatabaseWrapper figures out which version of the database the pluginName is referring to and returns a wrapper object
+// that can be used to make operations on the underlying database plugin.
 func newDatabaseWrapper(ctx context.Context, pluginName string, sys pluginutil.LookRunnerUtil, logger log.Logger) (dbw databaseVersionWrapper, err error) {
 	newDB, err := newdbplugin.PluginFactory(ctx, pluginName, sys, logger)
 	if err == nil {
@@ -41,6 +43,8 @@ func newDatabaseWrapper(ctx context.Context, pluginName string, sys pluginutil.L
 	return dbw, fmt.Errorf("invalid database version")
 }
 
+// Initialize the underlying database. This is analogous to a constructor on the database plugin object.
+// Errors if the wrapper does not contain an underlying database.
 func (d databaseVersionWrapper) Initialize(ctx context.Context, req newdbplugin.InitializeRequest) (newdbplugin.InitializeResponse, error) {
 	if !d.isNewDB() && !d.isLegacyDB() {
 		return newdbplugin.InitializeResponse{}, fmt.Errorf("no underlying database specified")
@@ -66,6 +70,7 @@ func (d databaseVersionWrapper) Initialize(ctx context.Context, req newdbplugin.
 // This is done because the v4 Database is expected to generate a password and return it. The NewUserReponse
 // does not have a way of returning the password so this function signature needs to be different.
 // The password returned here should be considered the source of truth, not the provided password.
+// Errors if the wrapper does not contain an underlying database.
 func (d databaseVersionWrapper) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (resp newdbplugin.NewUserResponse, password string, err error) {
 	if !d.isNewDB() && !d.isLegacyDB() {
 		return newdbplugin.NewUserResponse{}, "", fmt.Errorf("no underlying database specified")
@@ -97,7 +102,10 @@ func (d databaseVersionWrapper) NewUser(ctx context.Context, req newdbplugin.New
 	return resp, password, nil
 }
 
-func (d databaseVersionWrapper) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest) (saveConfig map[string]interface{}, err error) {
+// UpdateUser in the underlying database. This is used to update any information currently supported
+// in the UpdateUserRequest such as password credentials or user TTL.
+// Errors if the wrapper does not contain an underlying database.
+func (d databaseVersionWrapper) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest, isRootUser bool) (saveConfig map[string]interface{}, err error) {
 	if !d.isNewDB() && !d.isLegacyDB() {
 		return nil, fmt.Errorf("no underlying database specified")
 	}
@@ -122,7 +130,7 @@ func (d databaseVersionWrapper) UpdateUser(ctx context.Context, req newdbplugin.
 
 	// Change password
 	if req.Password != nil {
-		return d.changePasswordLegacy(ctx, req.Username, req.Password)
+		return d.changePasswordLegacy(ctx, req.Username, req.Password, isRootUser)
 	}
 
 	// Change expiration date
@@ -136,7 +144,27 @@ func (d databaseVersionWrapper) UpdateUser(ctx context.Context, req newdbplugin.
 	return nil, nil
 }
 
-func (d databaseVersionWrapper) changePasswordLegacy(ctx context.Context, username string, passwordChange *newdbplugin.ChangePassword) (saveConfig map[string]interface{}, err error) {
+// changePasswordLegacy attempts to use SetCredentials to change the password for the user with the password provided
+// in ChangePassword. If that user is the root user and SetCredentials is unimplemented, it will fall back to using
+// RotateRootCredentials. If not the root user, this will not use RotateRootCredentials.
+func (d databaseVersionWrapper) changePasswordLegacy(ctx context.Context, username string, passwordChange *newdbplugin.ChangePassword, isRootUser bool) (saveConfig map[string]interface{}, err error) {
+	err = d.changeUserPasswordLegacy(ctx, username, passwordChange)
+
+	// If changing the root user's password but SetCredentials is unimplemented, fall back to RotateRootCredentials
+	if isRootUser && status.Code(err) == codes.Unimplemented {
+		saveConfig, err = d.changeRootUserPasswordLegacy(ctx, passwordChange)
+		if err != nil {
+			return nil, err
+		}
+		return saveConfig, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (d databaseVersionWrapper) changeUserPasswordLegacy(ctx context.Context, username string, passwordChange *newdbplugin.ChangePassword) (err error) {
 	stmts := dbplugin.Statements{
 		Rotation: passwordChange.Statements.Commands,
 	}
@@ -145,15 +173,14 @@ func (d databaseVersionWrapper) changePasswordLegacy(ctx context.Context, userna
 		Password: passwordChange.NewPassword,
 	}
 	_, _, err = d.v4.SetCredentials(ctx, stmts, staticConfig)
-	if status.Code(err) == codes.Unimplemented {
-		return d.v4.RotateRootCredentials(ctx, passwordChange.Statements.Commands)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return nil, nil
+	return err
 }
 
+func (d databaseVersionWrapper) changeRootUserPasswordLegacy(ctx context.Context, passwordChange *newdbplugin.ChangePassword) (saveConfig map[string]interface{}, err error) {
+	return d.v4.RotateRootCredentials(ctx, passwordChange.Statements.Commands)
+}
+
+// DeleteUser in the underlying database. Errors if the wrapper does not contain an underlying database.
 func (d databaseVersionWrapper) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
 	if !d.isNewDB() && !d.isLegacyDB() {
 		return newdbplugin.DeleteUserResponse{}, fmt.Errorf("no underlying database specified")
@@ -172,6 +199,7 @@ func (d databaseVersionWrapper) DeleteUser(ctx context.Context, req newdbplugin.
 	return newdbplugin.DeleteUserResponse{}, err
 }
 
+// Type of the underlying database. Errors if the wrapper does not contain an underlying database.
 func (d databaseVersionWrapper) Type() (string, error) {
 	if !d.isNewDB() && !d.isLegacyDB() {
 		return "", fmt.Errorf("no underlying database specified")
@@ -186,6 +214,7 @@ func (d databaseVersionWrapper) Type() (string, error) {
 	return d.v4.Type()
 }
 
+// Close the underlying database. Errors if the wrapper does not contain an underlying database.
 func (d databaseVersionWrapper) Close() error {
 	if !d.isNewDB() && !d.isLegacyDB() {
 		return fmt.Errorf("no underlying database specified")
@@ -211,6 +240,8 @@ var (
 	defaultPasswordGenerator = random.DefaultStringGenerator
 )
 
+// GeneratePassword either from the v4 database or by using the provided password policy. If using a v5 database
+// and no password policy is specified, this will have a reasonable default password generator.
 func (d databaseVersionWrapper) GeneratePassword(ctx context.Context, generator passwordGenerator, passwordPolicy string) (password string, err error) {
 	if !d.isNewDB() && !d.isLegacyDB() {
 		return "", fmt.Errorf("no underlying database specified")
