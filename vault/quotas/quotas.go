@@ -177,6 +177,10 @@ type Response struct {
 	// Access is the handle to reach back into the quota rule that processed the
 	// quota request. This may not be set all the time.
 	Access Access
+
+	// Headers defines any optional headers that may be returned by the quota rule
+	// to clients.
+	Headers map[string]string
 }
 
 // Config holds operator preferences around quota behaviors
@@ -184,6 +188,10 @@ type Config struct {
 	// EnableRateLimitAuditLogging, if set, starts audit logging of the
 	// request rejections that arise due to rate limit quota violations.
 	EnableRateLimitAuditLogging bool `json:"enable_rate_limit_audit_logging"`
+
+	// EnableRateLimitResponseHeaders dictates if rate limit quota HTTP headers
+	// should be added to responses.
+	EnableRateLimitResponseHeaders bool `json:"enable_rate_limit_response_headers"`
 }
 
 // Request contains information required by the quota manager to query and
@@ -372,6 +380,14 @@ func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath s
 	return quotas[0], nil
 }
 
+// QueryQuota returns the most specific applicable quota for a given request.
+func (m *Manager) QueryQuota(req *Request) (Quota, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	return m.queryQuota(nil, req)
+}
+
 // queryQuota returns the quota rule that is applicable for the given request. It
 // queries all the quota rules that are defined against request values and finds
 // the quota rule that takes priority.
@@ -494,7 +510,7 @@ func (m *Manager) DeleteQuota(ctx context.Context, qType string, name string) er
 func (m *Manager) ApplyQuota(req *Request) (Response, error) {
 	var resp Response
 
-	quota, err := m.queryQuota(nil, req)
+	quota, err := m.QueryQuota(req)
 	if err != nil {
 		return resp, err
 	}
@@ -521,10 +537,22 @@ func (m *Manager) SetEnableRateLimitAuditLogging(val bool) {
 	m.config.EnableRateLimitAuditLogging = val
 }
 
+// SetEnableRateLimitResponseHeaders updates the operator preference regarding
+// the rate limit quota HTTP header behavior.
+func (m *Manager) SetEnableRateLimitResponseHeaders(val bool) {
+	m.config.EnableRateLimitResponseHeaders = val
+}
+
 // RateLimitAuditLoggingEnabled returns if the quota configuration allows audit
 // logging of request rejections due to rate limiting quota rule violations.
 func (m *Manager) RateLimitAuditLoggingEnabled() bool {
 	return m.config.EnableRateLimitAuditLogging
+}
+
+// RateLimitResponseHeadersEnabled returns if the quota configuration allows for
+// rate limit quota HTTP headers to be added to responses.
+func (m *Manager) RateLimitResponseHeadersEnabled() bool {
+	return m.config.EnableRateLimitResponseHeaders
 }
 
 // Config returns the operator preferences in the quota manager
@@ -546,8 +574,7 @@ func (m *Manager) Reset() error {
 	m.storage = nil
 	m.ctx = nil
 
-	m.entManager.Reset()
-	return nil
+	return m.entManager.Reset()
 }
 
 // dbSchema creates a DB schema for holding all the quota rules. It creates a
@@ -628,7 +655,10 @@ func (m *Manager) Invalidate(key string) {
 			m.logger.Error("failed to invalidate quota config", "error", err)
 			return
 		}
+
 		m.SetEnableRateLimitAuditLogging(config.EnableRateLimitAuditLogging)
+		m.SetEnableRateLimitResponseHeaders(config.EnableRateLimitResponseHeaders)
+
 	default:
 		splitKeys := strings.Split(key, "/")
 		if len(splitKeys) != 2 {

@@ -1,13 +1,13 @@
 package vault
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/armon/go-metrics"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
-	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -39,7 +39,7 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 	for _, tm := range testMounts[1:] {
 		me := &MountEntry{
 			Table:   mountTableType,
-			Path:    sanitizeMountPath(tm.Path),
+			Path:    sanitizePath(tm.Path),
 			Type:    "kv",
 			Options: map[string]string{"version": tm.Version},
 		}
@@ -78,15 +78,23 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 		}
 	}
 	for _, p := range v2secrets {
-		req := logical.TestRequest(t, logical.CreateOperation, p)
-		req.Data["data"] = map[string]interface{}{"foo": "bar"}
-		req.ClientToken = root
-		resp, err := core.HandleRequest(ctx, req)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		if resp.Error() != nil {
-			t.Fatalf("bad: %#v", resp)
+		for i := 0; i < 50; i++ {
+			req := logical.TestRequest(t, logical.CreateOperation, p)
+			req.Data["data"] = map[string]interface{}{"foo": "bar"}
+			req.ClientToken = root
+			resp, err := core.HandleRequest(ctx, req)
+			if err != nil {
+				if errors.Is(err, logical.ErrInvalidRequest) {
+					// Handle scenario where KVv2 upgrade is ongoing
+					time.Sleep(100 * time.Millisecond)
+					continue
+				}
+				t.Fatalf("err: %v", err)
+			}
+			if resp.Error() != nil {
+				t.Fatalf("bad: %#v", resp)
+			}
+			break
 		}
 	}
 
@@ -132,16 +140,65 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 	}
 }
 
+func TestCoreMetrics_KvSecretGauge_BadPath(t *testing.T) {
+	// Use the real KV implementation instead of Passthrough
+	AddTestLogicalBackend("kv", logicalKv.Factory)
+	// Clean up for the next test.
+	defer func() {
+		delete(testLogicalBackends, "kv")
+	}()
+	core, _, _ := TestCoreUnsealed(t)
+
+	me := &MountEntry{
+		Table:   mountTableType,
+		Path:    sanitizePath("kv1"),
+		Type:    "kv",
+		Options: map[string]string{"version": "1"},
+	}
+	ctx := namespace.RootContext(nil)
+	err := core.mount(ctx, me)
+	if err != nil {
+		t.Fatalf("mount error: %v", err)
+	}
+
+	// I don't think there's any remaining way to create a zero-length
+	// key via the API, so we'll fake it by talking to the storage layer directly.
+	fake_entry := &logical.StorageEntry{
+		Key:   "logical/" + me.UUID + "/foo/",
+		Value: []byte{1},
+	}
+	err = core.barrier.Put(ctx, fake_entry)
+	if err != nil {
+		t.Fatalf("put error: %v", err)
+	}
+
+	values, err := core.kvSecretGaugeCollector(ctx)
+	if err != nil {
+		t.Fatalf("collector error: %v", err)
+	}
+	t.Logf("Values: %v", values)
+	found := false
+	var count float32 = -1
+	for _, glv := range values {
+		for _, l := range glv.Labels {
+			if l.Name == "mount_point" && l.Value == "kv1/" {
+				found = true
+				count = glv.Value
+				break
+			}
+		}
+	}
+	if found {
+		if count != 1.0 {
+			t.Errorf("bad secret count for kv1/")
+		}
+	} else {
+		t.Errorf("no secret count for kv1/")
+	}
+}
+
 func TestCoreMetrics_KvSecretGaugeError(t *testing.T) {
-	core := TestCore(t)
-
-	// Replace metricSink before unsealing
-	inmemSink := metrics.NewInmemSink(
-		1000000*time.Hour,
-		2000000*time.Hour)
-	core.metricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
-
-	testCoreUnsealed(t, core)
+	core, _, _, sink := TestCoreUnsealedWithMetrics(t)
 	ctx := namespace.RootContext(nil)
 
 	badKvMount := &kvMount{
@@ -153,7 +210,7 @@ func TestCoreMetrics_KvSecretGaugeError(t *testing.T) {
 
 	core.walkKvMountSecrets(ctx, badKvMount)
 
-	intervals := inmemSink.Data()
+	intervals := sink.Data()
 	// Test crossed an interval boundary, don't try to deal with it.
 	if len(intervals) > 1 {
 		t.Skip("Detected interval crossing.")

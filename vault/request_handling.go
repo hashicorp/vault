@@ -582,6 +582,8 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	var nonHMACReqDataKeys []string
 	entry := c.router.MatchingMountEntry(ctx, req.Path)
 	if entry != nil {
+		// Set here so the audit log has it even if authorization fails
+		req.MountType = entry.Type
 		// Get and set ignored HMAC'd value.
 		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 			nonHMACReqDataKeys = rawVals.([]string)
@@ -875,13 +877,14 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 			// Count the lease creation
 			ttl_label := metricsutil.TTLBucket(resp.Secret.TTL)
+			mountPointWithoutNs := ns.TrimmedPath(req.MountPoint)
 			c.MetricSink().IncrCounterWithLabels(
 				[]string{"secret", "lease", "creation"},
 				1,
 				[]metrics.Label{
 					metricsutil.NamespaceLabel(ns),
 					{"secret_engine", req.MountType},
-					{"mount_point", req.MountPoint},
+					{"mount_point", mountPointWithoutNs},
 					{"creation_ttl", ttl_label},
 				},
 			)
@@ -987,6 +990,8 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	var nonHMACReqDataKeys []string
 	entry := c.router.MatchingMountEntry(ctx, req.Path)
 	if entry != nil {
+		// Set here so the audit log has it even if authorization fails
+		req.MountType = entry.Type
 		// Get and set ignored HMAC'd value.
 		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 			nonHMACReqDataKeys = rawVals.([]string)
@@ -1268,13 +1273,15 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		// Count the successful token creation
 		ttl_label := metricsutil.TTLBucket(tokenTTL)
+		// Do not include namespace path in mount point; already present as separate label.
+		mountPointWithoutNs := ns.TrimmedPath(req.MountPoint)
 		c.metricSink.IncrCounterWithLabels(
 			[]string{"token", "creation"},
 			1,
 			[]metrics.Label{
 				metricsutil.NamespaceLabel(ns),
 				{"auth_method", req.MountType},
-				{"mount_point", req.MountPoint},
+				{"mount_point", mountPointWithoutNs},
 				{"creation_ttl", ttl_label},
 				{"token_type", auth.TokenType.String()},
 			},

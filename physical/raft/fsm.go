@@ -86,11 +86,7 @@ type FSM struct {
 }
 
 // NewFSM constructs a FSM using the given directory
-func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
-	path, ok := conf["path"]
-	if !ok {
-		return nil, fmt.Errorf("'path' must be set")
-	}
+func NewFSM(path string, logger log.Logger) (*FSM, error) {
 
 	// Initialize the latest term, index, and config values
 	latestTerm := new(uint64)
@@ -101,7 +97,7 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 	latestConfig.Store((*ConfigurationValue)(nil))
 
 	f := &FSM{
-		path:   conf["path"],
+		path:   path,
 		logger: logger,
 
 		latestTerm:   latestTerm,
@@ -356,7 +352,9 @@ func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 				keys = append(keys, key)
 			} else {
 				// Add truncated 'folder' paths
-				keys = strutil.AppendIfMissing(keys, string(key[:i+1]))
+				if len(keys) == 0 || keys[len(keys)-1] != key[:i+1] {
+					keys = append(keys, string(key[:i+1]))
+				}
 			}
 		}
 

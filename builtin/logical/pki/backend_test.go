@@ -30,6 +30,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/credential/userpass"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -2718,6 +2719,133 @@ func TestBackend_URI_SANs(t *testing.T) {
 			cert.URIs)
 	}
 }
+
+func TestBackend_AllowedDomainsTemplate(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// Write test policy for userpass auth method.
+	err := client.Sys().PutPolicy("test", `
+   path "pki/*" {  
+     capabilities = ["update"]
+   }`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable userpass auth method.
+	if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	// Configure test role for userpass.
+	if _, err := client.Logical().Write("auth/userpass/users/userpassname", map[string]interface{}{
+		"password": "test",
+		"policies": "test",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Login userpass for test role and keep client token.
+	secret, err := client.Logical().Write("auth/userpass/login/userpassname", map[string]interface{}{
+		"password": "test",
+	})
+	if err != nil || secret == nil {
+		t.Fatal(err)
+	}
+	userpassToken := secret.Auth.ClientToken
+
+	// Get auth accessor for identity template.
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+	userpassAccessor := auths["userpass/"].Accessor
+
+	// Mount PKI.
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate internal CA.
+	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Write role PKI.
+	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+		"allowed_domains":          []string{"foobar.com", "zipzap.com", "{{identity.entity.aliases." + userpassAccessor + ".name}}",
+										     "foo.{{identity.entity.aliases." + userpassAccessor + ".name}}.example.com"},
+		"allowed_domains_template": true,
+		"allow_bare_domains":       true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue certificate with userpassToken.
+	client.SetToken(userpassToken)
+	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "userpassname"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue certificate for foobar.com to verify allowed_domain_templae doesnt break plain domains.
+	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "foobar.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue certificate for unknown userpassname.
+	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "unknownuserpassname"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	// Issue certificate for foo.userpassname.domain.
+	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "foo.userpassname.example.com"})
+	if err != nil {
+		t.Fatal("expected error")
+	}
+
+	// Set allowed_domains_template to false.
+	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+		"allowed_domains_template": false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue certificate with userpassToken.
+	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "userpassname"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func setCerts() {
 	cak, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -2787,6 +2915,118 @@ func setCerts() {
 		Bytes: caBytes,
 	}
 	rsaCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
+}
+
+func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
+	// Enable PKI secret engine
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
+	client := cores[0].Client
+
+	var err error
+
+	// Mount /pki as a root CA
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Set the cluster's certificate as the root CA in /pki
+	pemBundleRootCA := string(cluster.CACertPEM) + string(cluster.CAKeyPEM)
+	_, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
+		"pem_bundle": pemBundleRootCA,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Mount /pki2 to operate as an intermediate CA
+	err = client.Sys().Mount("pki2", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a CSR for the intermediate CA
+	secret, err := client.Logical().Write("pki2/intermediate/generate/internal", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	intermediateCSR := secret.Data["csr"].(string)
+
+	// Sign the intermediate CSR using /pki
+	secret, err = client.Logical().Write("pki/root/sign-intermediate", map[string]interface{}{
+		"permitted_dns_domains": ".myvault.com",
+		"csr":                   intermediateCSR,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	intermediateCertSerial := secret.Data["serial_number"].(string)
+	intermediateCASerialColon := strings.ReplaceAll(strings.ToLower(intermediateCertSerial), ":", "-")
+
+	// Get the intermediate cert after signing
+	secret, err = client.Logical().Read("pki/cert/" + intermediateCASerialColon)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret == nil || len(secret.Data) == 0 || len(secret.Data["certificate"].(string)) == 0 {
+		t.Fatal("expected certificate information from read operation")
+	}
+
+	// Issue a revoke on on /pki
+	_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
+		"serial_number": intermediateCertSerial,
+	})
+
+	// Revoke adds a fixed 2s buffer, so we sleep for a bit longer to ensure
+	// the revocation time is past the current time.
+	time.Sleep(3 * time.Second)
+
+	// Issue a tidy on /pki
+	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
+		"tidy_cert_store":    true,
+		"tidy_revoked_certs": true,
+		"safety_buffer":      "1s",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Sleep a bit to make sure we're past the safety buffer
+	time.Sleep(2 * time.Second)
+
+	// Attempt to read the intermediate cert after revoke + tidy, and ensure
+	// that it's no longer present
+	secret, err = client.Logical().Read("pki/cert/" + intermediateCASerialColon)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret != nil {
+		t.Fatalf("expected empty response data, got: %#v", secret.Data)
+	}
+
 }
 
 var (

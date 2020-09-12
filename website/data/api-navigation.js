@@ -23,6 +23,7 @@ export default [
         category: 'databases',
         content: [
           'cassandra',
+          'couchbase',
           'elasticdb',
           'influxdb',
           'hanadb',
@@ -126,6 +127,9 @@ export default [
       'policies',
       'policies-password',
       'pprof',
+      'quotas-config',
+      'rate-limit-quotas',
+      'lease-count-quotas',
       'raw',
       'rekey',
       'rekey-recovery-key',

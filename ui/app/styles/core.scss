@@ -15,6 +15,7 @@
 @import 'bulma/switch';
 
 // Override Bulma details where appropriate
+@import './core/alert-banner';
 @import './core/generic';
 @import './core/box';
 @import './core/breadcrumb';
@@ -93,6 +94,7 @@
 @import './components/selectable-card-container.scss';
 // action-block extends selectable-card
 @import './components/action-block.scss';
+@import './components/shamir-modal-flow';
 @import './components/shamir-progress';
 @import './components/sidebar';
 @import './components/splash-page';
@@ -101,6 +103,7 @@
 @import './components/token-expire-warning';
 @import './components/toolbar';
 @import './components/tool-tip';
+@import './components/transform-edit.scss';
 @import './components/transit-card';
 @import './components/ttl-picker2';
 @import './components/unseal-warning';

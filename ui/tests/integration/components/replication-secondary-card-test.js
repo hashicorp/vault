@@ -17,7 +17,7 @@ const REPLICATION_DETAILS = {
   ],
 };
 
-module('Integration | Enterprise | Component | replication-secondary-card', function(hooks) {
+module('Integration | Component | replication-secondary-card', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
