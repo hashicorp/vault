@@ -60,6 +60,7 @@ import (
 	physS3 "github.com/hashicorp/vault/physical/s3"
 	physSpanner "github.com/hashicorp/vault/physical/spanner"
 	physSwift "github.com/hashicorp/vault/physical/swift"
+	physTencentCloudCOS "github.com/hashicorp/vault/physical/tencentcloudcos"
 	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
@@ -157,6 +158,7 @@ var (
 		"s3":                     physS3.NewS3Backend,
 		"spanner":                physSpanner.NewBackend,
 		"swift":                  physSwift.NewSwiftBackend,
+		"tencentcloudcos":        physTencentCloudCOS.NewTencentCloudCOSBackend,
 		"raft":                   physRaft.NewRaftBackend,
 		"zookeeper":              physZooKeeper.NewZooKeeperBackend,
 	}

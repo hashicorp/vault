@@ -135,6 +135,7 @@ require (
 	github.com/sethvargo/go-limiter v0.3.0
 	github.com/shirou/gopsutil v2.20.6-0.20200630091542-01afd763e6c0+incompatible
 	github.com/stretchr/testify v1.5.1
+	github.com/tencentyun/cos-go-sdk-v5 v0.7.7
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/ulikunitz/xz v0.5.7 // indirect
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect

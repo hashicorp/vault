@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/ocikms"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/tencentcloudkms"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/transit"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
@@ -189,6 +190,9 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 	case wrapping.OCIKMS:
 		wrapper, kmsInfo, err = GetOCIKMSKMSFunc(opts, configKMS)
 
+	case wrapping.TencentCloudKMS:
+		wrapper, kmsInfo, err = GetTencentCloudKMSFunc(opts, configKMS)
+
 	case wrapping.Transit:
 		wrapper, kmsInfo, err = GetTransitKMSFunc(opts, configKMS)
 
@@ -319,6 +323,23 @@ func GetOCIKMSKMSFunc(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper
 		info["OCI KMS Crypto Endpoint"] = wrapperInfo[ocikms.KMSConfigCryptoEndpoint]
 		info["OCI KMS Management Endpoint"] = wrapperInfo[ocikms.KMSConfigManagementEndpoint]
 		info["OCI KMS Principal Type"] = wrapperInfo["principal_type"]
+	}
+	return wrapper, info, nil
+}
+
+func GetTencentCloudKMSFunc(opts *wrapping.WrapperOptions, kms *KMS) (wrapping.Wrapper, map[string]string, error) {
+	wrapper := tencentcloudkms.NewWrapper(opts)
+	wrapperInfo, err := wrapper.SetConfig(kms.Config)
+	if err != nil {
+		// If the error is any other than logical.KeyNotFoundError, return the error
+		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
+			return nil, nil, err
+		}
+	}
+	info := make(map[string]string)
+	if wrapperInfo != nil {
+		info["TencentCloud KMS Region"] = wrapperInfo["region"]
+		info["TencentCloud KMS KeyID"] = wrapperInfo["kms_key_id"]
 	}
 	return wrapper, info, nil
 }
