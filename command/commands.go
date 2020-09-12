@@ -412,6 +412,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"operator members": func() (cli.Command, error) {
+			return &OperatorMembersCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"path-help": func() (cli.Command, error) {
 			return &PathHelpCommand{
 				BaseCommand: getBaseCommand(),

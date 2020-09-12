@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/replication"
+	"github.com/shirou/gopsutil/host"
 )
 
 type forwardedRequestRPCServer struct {
@@ -69,7 +70,7 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 
 func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (*EchoReply, error) {
 	if in.ClusterAddr != "" {
-		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, nil, 0)
+		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, in.NodeInfo, 0)
 	}
 
 	if in.RaftAppliedIndex > 0 && len(in.RaftNodeID) > 0 && s.raftFollowerStates != nil {
@@ -104,12 +105,18 @@ type forwardingClient struct {
 // with these requests it's useful to keep this as well
 func (c *forwardingClient) startHeartbeat() {
 	go func() {
+		clusterAddr := c.core.ClusterAddr()
+		h, _ := host.Info()
+		ni := NodeInformation{
+			ApiAddr: c.core.redirectAddr,
+			NodeID:  h.Hostname,
+			Mode:    "standby",
+		}
 		tick := func() {
-			clusterAddr := c.core.ClusterAddr()
-
 			req := &EchoRequest{
 				Message:     "ping",
 				ClusterAddr: clusterAddr,
+				NodeInfo:    &ni,
 			}
 
 			if raftBackend := c.core.getRaftBackend(); raftBackend != nil {
