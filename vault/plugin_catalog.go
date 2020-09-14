@@ -64,7 +64,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 // type. It will first attempt to run as a database plugin then a backend
 // plugin. Both of these will be run in metadata mode.
 func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
-	err := isDatabasePlugin(ctx, plugin, logger)
+	err := isDatabasePlugin(ctx, plugin)
 	if err == nil {
 		return consts.PluginTypeDatabase, nil
 	}
@@ -97,7 +97,7 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 	return consts.PluginTypeUnknown, nil
 }
 
-func isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner, logger log.Logger) error {
+func isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner) error {
 	merr := &multierror.Error{}
 	// Attempt to run as database V5 plugin
 	v5Client, err := newdbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
@@ -116,7 +116,7 @@ func isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner, logg
 	}
 	merr = multierror.Append(merr, err)
 
-	return merr
+	return merr.ErrorOrNil()
 }
 
 // UpdatePlugins will loop over all the plugins of unknown type and attempt to
