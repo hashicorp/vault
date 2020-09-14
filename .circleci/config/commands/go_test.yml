@@ -116,6 +116,7 @@ steps:
           #   --junitfile test-results/go-test/results.xml \
           #   --jsonfile test-results/go-test/results.json \
           #   -- \
+          (set +x; while true; do date; free -h; sleep 1; done > /tmp/free ) &
           go test -v \
               -p 1 \
               -tags "${GO_TAGS}" \
@@ -124,7 +125,7 @@ steps:
               << parameters.extra_flags >> \
               ${package_names} || true
         fi
-        free -h
+        cat /tmp/free
 
   - when:
       condition: << parameters.use_docker >>
