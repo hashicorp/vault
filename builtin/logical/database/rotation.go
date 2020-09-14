@@ -395,7 +395,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	return &setStaticAccountOutput{RotationTime: lvr}, merr
 }
 
-// initQueue preforms the necessary checks and initializations needed to preform
+// initQueue preforms the necessary checks and initializations needed to perform
 // automatic credential rotation for roles associated with static accounts. This
 // method verifies if a queue is needed (primary server or local mount), and if
 // so initializes the queue and launches a go-routine to periodically invoke a
