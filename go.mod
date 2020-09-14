@@ -12,7 +12,6 @@ require (
 	cloud.google.com/go/storage v1.6.0
 	github.com/Azure/azure-sdk-for-go v36.2.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.10.1
-	github.com/Microsoft/hcsshim v0.8.9 // indirect
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/SAP/go-hdb v0.14.1
 	github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
@@ -63,7 +62,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
-	github.com/hashicorp/raft v1.1.3-0.20200722211658-e8ce96ef55b8
+	github.com/hashicorp/raft v1.1.3-0.20200914140732-b7cd2b346b06
 	github.com/hashicorp/raft-snapshot v1.0.2-0.20190827162939-8117efcc5aab
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.5
 	github.com/hashicorp/vault-plugin-auth-azure v0.5.6
@@ -109,7 +108,6 @@ require (
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 	github.com/ncw/swift v1.0.47
 	github.com/oklog/run v1.0.0
-	github.com/okta/okta-sdk-golang v1.1.0 // indirect
 	github.com/okta/okta-sdk-golang/v2 v2.0.0
 	github.com/oracle/oci-go-sdk v12.5.0+incompatible
 	github.com/ory/dockertest v3.3.5+incompatible
