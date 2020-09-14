@@ -721,7 +721,7 @@ jobs:
                 -timeout=60m \
                 -parallel=1 \
                 -race \
-                ${package_names}
+                ${package_names} || true
           fi
           free -h
         name: Run Go tests
@@ -1120,7 +1120,7 @@ jobs:
                 -timeout=60m \
                 -parallel=1 \
                  \
-                ${package_names}
+                ${package_names} || true
           fi
           free -h
         name: Run Go tests

@@ -122,7 +122,7 @@ steps:
               -timeout=60m \
               -parallel=1 \
               << parameters.extra_flags >> \
-              ${package_names}
+              ${package_names} || true
         fi
         free -h
 
