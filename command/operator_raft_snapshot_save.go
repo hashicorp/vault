@@ -77,20 +77,26 @@ func (c *OperatorRaftSnapshotSaveCommand) Run(args []string) int {
 			return os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		},
 	}
-	defer w.Close()
 
 	client, err := c.Client()
 	if err != nil {
+		w.Close()
 		c.UI.Error(err.Error())
 		return 2
 	}
 
 	err = client.Sys().RaftSnapshot(w)
 	if err != nil {
+		w.Close()
 		c.UI.Error(fmt.Sprintf("Error taking the snapshot: %s", err))
 		return 2
 	}
-
+	
+	err = w.Close()
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error taking the snapshot: %s", err))
+		return 2
+	}
 	return 0
 }
 
