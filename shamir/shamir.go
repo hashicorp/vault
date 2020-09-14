@@ -99,7 +99,8 @@ func mult(a, b uint8) (out uint8) {
 
 	ret := int(expTable[sum])
 
-	// Jump through some hoops for constant time evaluation.
+	// Ensure we return zero if either a or b are zero but aren't subject to
+	// timing attacks
 	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(a, 0), 0, ret)
 	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(b, 0), 0, ret)
 
