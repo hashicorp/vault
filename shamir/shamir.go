@@ -93,7 +93,6 @@ func div(x, y uint8) uint8 {
 
 // mult multiplies two numbers in GF(2^8)
 func mult(a, b uint8) (out uint8) {
-	var z int
 	log_a := logTable[a]
 	log_b := logTable[b]
 	sum := (int(log_a) + int(log_b)) % 255
@@ -101,8 +100,8 @@ func mult(a, b uint8) (out uint8) {
 	ret := int(expTable[sum])
 
 	// Jump through some hoops for constant time evaluation.
-	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(a, 0), z, ret)
-	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(b, 0), z, ret)
+	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(a, 0), 0, ret)
+	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(b, 0), 0, ret)
 
 	return uint8(ret)
 
