@@ -487,10 +487,6 @@ github.com/hashicorp/go-retryablehttp v0.6.2 h1:bHM2aVXwBtBJWxHtkSrWuI4umABCUczs
 github.com/hashicorp/go-retryablehttp v0.6.2/go.mod h1:gEx6HMUGxYYhJScX7W1Il64m6cc2C1mDaW3NQ9sY1FY=
 github.com/hashicorp/go-retryablehttp v0.6.6 h1:HJunrbHTDDbBb/ay4kxa1n+dLmttUlnP3V9oNE4hmsM=
 github.com/hashicorp/go-retryablehttp v0.6.6/go.mod h1:vAew36LZh98gCBJNLH42IQ1ER/9wtLZZ8meHqQvEYWY=
-github.com/hashicorp/go-retryablehttp v0.6.7-0.20200721161721-0321369f5ae5 h1:5TSzdrlZZIR4v20yFQ27rfIqpJqDHlQxBZSdbcpVJ4E=
-github.com/hashicorp/go-retryablehttp v0.6.7-0.20200721161721-0321369f5ae5/go.mod h1:vAew36LZh98gCBJNLH42IQ1ER/9wtLZZ8meHqQvEYWY=
-github.com/hashicorp/go-retryablehttp v0.6.7-0.20200807182356-37b3e74def02 h1:ge34nim2FF6+u3uWkQX7QvLBgucVCIqIUfa0i3dGX/g=
-github.com/hashicorp/go-retryablehttp v0.6.7-0.20200807182356-37b3e74def02/go.mod h1:vAew36LZh98gCBJNLH42IQ1ER/9wtLZZ8meHqQvEYWY=
 github.com/hashicorp/go-retryablehttp v0.6.7 h1:8/CAEZt/+F7kR7GevNHulKkUjLht3CPmn7egmhieNKo=
 github.com/hashicorp/go-retryablehttp v0.6.7/go.mod h1:vAew36LZh98gCBJNLH42IQ1ER/9wtLZZ8meHqQvEYWY=
 github.com/hashicorp/go-rootcerts v1.0.1/go.mod h1:pqUvnprVnM5bf7AOirdbb01K4ccR319Vf4pU3K5EGc8=
@@ -528,8 +524,8 @@ github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d/go.mod h1:WKCL
 github.com/hashicorp/raft v1.0.1/go.mod h1:DVSAWItjLjTOkVbSpWQ0j0kUADIvDaCtBxIcbNAQLkI=
 github.com/hashicorp/raft v1.1.2-0.20191002163536-9c6bd3e3eb17 h1:p+2EISNdFCnD9R+B4xCiqSn429MCFtvM41aHJDJ6qW4=
 github.com/hashicorp/raft v1.1.2-0.20191002163536-9c6bd3e3eb17/go.mod h1:vPAJM8Asw6u8LxC3eJCUZmRP/E4QmUGE1R7g7k8sG/8=
-github.com/hashicorp/raft v1.1.3-0.20200722211658-e8ce96ef55b8 h1:vgDEILZTOUiPvVDduEnejW24S/yNCtst+kVwhGYJl08=
-github.com/hashicorp/raft v1.1.3-0.20200722211658-e8ce96ef55b8/go.mod h1:vPAJM8Asw6u8LxC3eJCUZmRP/E4QmUGE1R7g7k8sG/8=
+github.com/hashicorp/raft v1.1.3-0.20200914140732-b7cd2b346b06 h1:faxx3CU4pvdKtCZXsP62A5X0iV37eqLHgFObVkOplHQ=
+github.com/hashicorp/raft v1.1.3-0.20200914140732-b7cd2b346b06/go.mod h1:vPAJM8Asw6u8LxC3eJCUZmRP/E4QmUGE1R7g7k8sG/8=
 github.com/hashicorp/raft-boltdb v0.0.0-20171010151810-6e5ba93211ea/go.mod h1:pNv7Wc3ycL6F5oOWn+tPGo2gWD4a5X+yp/ntwdKLjRk=
 github.com/hashicorp/raft-snapshot v1.0.2-0.20190827162939-8117efcc5aab h1:WzGMwlO1DvaC93SvVOBOKtn+nXGEDXapyJuaRV3/VaY=
 github.com/hashicorp/raft-snapshot v1.0.2-0.20190827162939-8117efcc5aab/go.mod h1:5sL9eUn72lH5DzsFIJ9jaysITbHksSSszImWSOTC8Ic=
@@ -545,8 +541,6 @@ github.com/hashicorp/vault-plugin-auth-centrify v0.5.5/go.mod h1:GfRoy7NHsuR/ogm
 github.com/hashicorp/vault-plugin-auth-cf v0.5.4 h1:2wl+qK7cLpr4u/lkv5DgvkNoKKhHC69H1QmoXOnArLw=
 github.com/hashicorp/vault-plugin-auth-cf v0.5.4/go.mod h1:idkFYHc6ske2BE7fe00SpH+SBIlqDKz8vk/IPLJuX2o=
 github.com/hashicorp/vault-plugin-auth-gcp v0.5.1/go.mod h1:eLj92eX8MPI4vY1jaazVLF2sVbSAJ3LRHLRhF/pUmlI=
-github.com/hashicorp/vault-plugin-auth-gcp v0.7.0 h1:38xERGtaK55lx5QOxBZP3i6aJZ/UvdfxVJlTai2FlE8=
-github.com/hashicorp/vault-plugin-auth-gcp v0.7.0/go.mod h1:sHDguHmyGScoalGLEjuxvDCrMPVlw2c3f+ieeiHcv6w=
 github.com/hashicorp/vault-plugin-auth-gcp v0.7.1-0.20200721115240-07ff53341dfe h1:eh3UrWk1CIXTT54gqSXHHqFGkDQ9uFPB8sr4IymU4bE=
 github.com/hashicorp/vault-plugin-auth-gcp v0.7.1-0.20200721115240-07ff53341dfe/go.mod h1:sHDguHmyGScoalGLEjuxvDCrMPVlw2c3f+ieeiHcv6w=
 github.com/hashicorp/vault-plugin-auth-jwt v0.7.1 h1:6nuMtCs/c/rphMv05Z7Y4Nrt6Ae+AZjGb7yYdbJXIe8=
@@ -563,10 +557,6 @@ github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4 h1:YE4qndazWmYGp
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4/go.mod h1:QjGrrxcRXv/4XkEZAlM0VMZEa3uxKAICFqDj27FP/48=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2 h1:tSToR3JRARqQkV9B10rk4VlZe2Sr9fOdhEP2NdxPo0I=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2/go.mod h1:HTXNzFr/SAVtJOs7jz0XxZ69jlKtaceEwp37l86UAQ0=
-github.com/hashicorp/vault-plugin-mock v0.14.0 h1:dmE29jOKdqmhwoFp7XNlDQmdrCK27rGGFmWVKIJHYiw=
-github.com/hashicorp/vault-plugin-mock v0.14.0/go.mod h1:83G4JKlOwUtxVourn5euQfze3ZWyXcUiLj2wqrKSDIM=
-github.com/hashicorp/vault-plugin-mock v0.15.0 h1:u4fyr61vmSjfHGzCDG1eiLndGQB46F9VGw9Tts4fBok=
-github.com/hashicorp/vault-plugin-mock v0.15.0/go.mod h1:83G4JKlOwUtxVourn5euQfze3ZWyXcUiLj2wqrKSDIM=
 github.com/hashicorp/vault-plugin-mock v0.16.1 h1:5QQvSUHxDjEEbrd2REOeacqyJnCLPD51IQzy71hx8P0=
 github.com/hashicorp/vault-plugin-mock v0.16.1/go.mod h1:83G4JKlOwUtxVourn5euQfze3ZWyXcUiLj2wqrKSDIM=
 github.com/hashicorp/vault-plugin-secrets-ad v0.6.6 h1:GskxrCCL2flrBtnAeOsBV+whCaqnnM/+t/h1IyqukNo=

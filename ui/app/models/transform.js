@@ -90,9 +90,12 @@ const Model = DS.Model.extend({
   transformFieldAttrs: computed('transformAttrs', function() {
     return expandAttributeMeta(this, this.get('transformAttrs'));
   }),
+
+  backend: attr('string', {
+    readOnly: true,
+  }),
 });
 
 export default attachCapabilities(Model, {
-  // TODO: Update to dynamic backend name
-  updatePath: apiPath`transform/transformation/${'id'}`,
+  updatePath: apiPath`${'backend'}/transformation/${'id'}`,
 });

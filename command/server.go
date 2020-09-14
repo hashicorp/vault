@@ -801,7 +801,6 @@ type quiescenceSink struct {
 	t *time.Timer
 }
 
-
 func (q quiescenceSink) Accept(name string, level log.Level, msg string, args ...interface{}) {
 	q.t.Reset(100 * time.Millisecond)
 }
@@ -943,6 +942,15 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	logProxyEnvironmentVariables(c.logger)
+
+	if envMlock := os.Getenv("VAULT_DISABLE_MLOCK"); envMlock != "" {
+		var err error
+		config.DisableMlock, err = strconv.ParseBool(envMlock)
+		if err != nil {
+			c.UI.Output("Error parsing the environment variable VAULT_DISABLE_MLOCK")
+			return 1
+		}
+	}
 
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
