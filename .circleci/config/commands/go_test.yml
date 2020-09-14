@@ -112,10 +112,11 @@ steps:
               ${package_names}
         else
           # GOCACHE=<< parameters.cache_dir >> \
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
+          # gotestsum --format=short-verbose \
+          #   --junitfile test-results/go-test/results.xml \
+          #   --jsonfile test-results/go-test/results.json \
+          #   -- \
+          go test -v \
               -p 1 \
               -tags "${GO_TAGS}" \
               -timeout=60m \
@@ -123,6 +124,7 @@ steps:
               << parameters.extra_flags >> \
               ${package_names}
         fi
+        free -h
 
   - when:
       condition: << parameters.use_docker >>

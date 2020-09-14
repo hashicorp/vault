@@ -711,10 +711,11 @@ jobs:
                 ${package_names}
           else
             # GOCACHE=/tmp/go-cache \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
+            # gotestsum --format=short-verbose \
+            #   --junitfile test-results/go-test/results.xml \
+            #   --jsonfile test-results/go-test/results.json \
+            #   -- \
+            go test -v \
                 -p 1 \
                 -tags "${GO_TAGS}" \
                 -timeout=60m \
@@ -722,6 +723,7 @@ jobs:
                 -race \
                 ${package_names}
           fi
+          free -h
         name: Run Go tests
         no_output_timeout: 60m
     - store_artifacts:
@@ -1108,10 +1110,11 @@ jobs:
                 ${package_names}
           else
             # GOCACHE=/tmp/go-cache \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
+            # gotestsum --format=short-verbose \
+            #   --junitfile test-results/go-test/results.xml \
+            #   --jsonfile test-results/go-test/results.json \
+            #   -- \
+            go test -v \
                 -p 1 \
                 -tags "${GO_TAGS}" \
                 -timeout=60m \
@@ -1119,6 +1122,7 @@ jobs:
                  \
                 ${package_names}
           fi
+          free -h
         name: Run Go tests
         no_output_timeout: 60m
     - save_cache:
