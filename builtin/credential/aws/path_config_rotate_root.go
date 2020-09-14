@@ -36,14 +36,8 @@ func (b *backend) pathConfigRotateRoot() *framework.Path {
 func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// First get the AWS key and secret and validate that we _can_ rotate them.
 	// We need the read lock here to prevent anything else from mutating it while we're using it.
-	b.configMutex.RLock()
-	alreadyReleasedRLock := false
-	defer func() {
-		if alreadyReleasedRLock {
-			return
-		}
-		b.configMutex.RUnlock()
-	}()
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
 
 	clientConf, err := b.nonLockedClientConfigEntry(ctx, req.Storage)
 	if err != nil {
@@ -163,13 +157,6 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	oldAccessKey := clientConf.AccessKey
 	clientConf.AccessKey = *createAccessKeyRes.AccessKey.AccessKeyId
 	clientConf.SecretKey = *createAccessKeyRes.AccessKey.SecretAccessKey
-
-	// Now we will be mutating the store and caches, so we will need to prevent reads and mutations.
-	b.configMutex.RUnlock()
-	alreadyReleasedRLock = true
-
-	b.configMutex.Lock()
-	defer b.configMutex.Unlock()
 
 	// Someday we may want to allow the user to send a number of seconds to wait here
 	// before deleting the previous access key to allow work to complete. That would allow
