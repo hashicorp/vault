@@ -1,24 +1,6 @@
 import TransformBase from './transform-edit-base';
-import { inject as service } from '@ember/service';
-
-const addToList = (list, itemToAdd) => {
-  if (!list || !Array.isArray(list)) return list;
-  list.push(itemToAdd);
-  return list.uniq();
-};
-
-const removeFromList = (list, itemToRemove) => {
-  if (!list) return list;
-  const index = list.indexOf(itemToRemove);
-  if (index < 0) return list;
-  const newList = list.removeAt(index, 1);
-  return newList.uniq();
-};
 
 export default TransformBase.extend({
-  store: service(),
-  flashMessages: service(),
-
   initialTransformations: null,
 
   init() {
@@ -38,9 +20,9 @@ export default TransformBase.extend({
         .then(function(transformation) {
           let roles = transformation.allowed_roles;
           if (transform.action === 'ADD') {
-            roles = addToList(roles, roleId);
+            roles = this.addToList(roles, roleId);
           } else if (transform.action === 'REMOVE') {
-            roles = removeFromList(roles, roleId);
+            roles = this.removeFromList(roles, roleId);
           }
 
           transformation.setProperties({
@@ -48,14 +30,9 @@ export default TransformBase.extend({
             allowed_roles: roles,
           });
 
-          return transformation
-            .save()
-            .then(() => {
-              return 'Successfully saved';
-            })
-            .catch(e => {
-              return { errorStatus: e.httpStatus, ...transform };
-            });
+          return transformation.save().catch(e => {
+            return { errorStatus: e.httpStatus, ...transform };
+          });
         });
     });
 
