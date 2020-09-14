@@ -64,34 +64,38 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 // type. It will first attempt to run as a database plugin then a backend
 // plugin. Both of these will be run in metadata mode.
 func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
+	merr := &multierror.Error{}
 	err := isDatabasePlugin(ctx, plugin)
 	if err == nil {
 		return consts.PluginTypeDatabase, nil
 	}
-	logger.Warn(fmt.Sprintf("received %s attempting as db plugin, attempting as auth/secret plugin", err))
+	merr = multierror.Append(merr, err)
 
-	{
-		// Attempt to run as backend plugin
-		client, err := backendplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
-		if err == nil {
-			err := client.Setup(ctx, &logical.BackendConfig{})
-			if err != nil {
-				return consts.PluginTypeUnknown, err
-			}
-
-			backendType := client.Type()
-			client.Cleanup(ctx)
-
-			switch backendType {
-			case logical.TypeCredential:
-				return consts.PluginTypeCredential, nil
-			case logical.TypeLogical:
-				return consts.PluginTypeSecrets, nil
-			}
-			logger.Warn(fmt.Sprintf("unknown backendType of %s", backendType))
-		} else {
-			logger.Warn(fmt.Sprintf("received %s attempting as an auth/secret plugin, continuing", err))
+	// Attempt to run as backend plugin
+	client, err := backendplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	if err == nil {
+		err := client.Setup(ctx, &logical.BackendConfig{})
+		if err != nil {
+			return consts.PluginTypeUnknown, err
 		}
+
+		backendType := client.Type()
+		client.Cleanup(ctx)
+
+		switch backendType {
+		case logical.TypeCredential:
+			return consts.PluginTypeCredential, nil
+		case logical.TypeLogical:
+			return consts.PluginTypeSecrets, nil
+		}
+	} else {
+		merr = multierror.Append(merr, err)
+	}
+
+	if client.Type() == logical.TypeUnknown {
+		logger.Warn("%q is an unknown plugin type: %s", plugin.Name, merr.Error())
+	} else {
+		logger.Warn("%q is an unsupported plugin type %s: %s", plugin.Name, client.Type(), merr.Error())
 	}
 
 	return consts.PluginTypeUnknown, nil
