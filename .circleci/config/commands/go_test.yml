@@ -66,6 +66,9 @@ steps:
               sort -u | circleci tests split --split-by=timings --timings-type=classname)
         fi
 
+        # TODO revert
+        package_names=github.com/hashicorp/vault/vault
+
         # After running tests split step, we are now running the following steps
         # in multiple different containers, each getting a different subset of
         # the test packages in their package_names variable.  Each container
