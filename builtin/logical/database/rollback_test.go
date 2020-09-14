@@ -92,7 +92,7 @@ func TestBackend_RotateRootCredentials_WAL_rollback(t *testing.T) {
 	}
 
 	// Get a connection to the database plugin
-	pc, err := dbBackend.GetConnection(context.Background(),
+	dbi, err := dbBackend.GetConnection(context.Background(),
 		config.StorageView, "plugin-test")
 	if err != nil {
 		t.Fatal(err)
@@ -107,7 +107,7 @@ func TestBackend_RotateRootCredentials_WAL_rollback(t *testing.T) {
 			NewPassword: "newSecret",
 		},
 	}
-	_, err = pc.database.UpdateUser(ctx, updateReq, false)
+	_, err = dbi.database.UpdateUser(ctx, updateReq, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -339,7 +339,7 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_2(t *testing.T) {
 	}
 
 	// Get a connection to the database plugin
-	pc, err := dbBackend.GetConnection(context.Background(), config.StorageView, "plugin-test")
+	dbi, err := dbBackend.GetConnection(context.Background(), config.StorageView, "plugin-test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -353,7 +353,7 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_2(t *testing.T) {
 			NewPassword: "newSecret",
 		},
 	}
-	_, err = pc.database.UpdateUser(ctx, updateReq, false)
+	_, err = dbi.database.UpdateUser(ctx, updateReq, false)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -73,13 +73,13 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		}
 
 		// Get the Database object
-		db, err := b.GetConnection(ctx, req.Storage, role.DBName)
+		dbi, err := b.GetConnection(ctx, req.Storage, role.DBName)
 		if err != nil {
 			return nil, err
 		}
 
-		db.RLock()
-		defer db.RUnlock()
+		dbi.RLock()
+		defer dbi.RUnlock()
 
 		ttl, _, err := framework.CalculateTTL(b.System(), 0, role.DefaultTTL, 0, role.MaxTTL, 0, time.Time{})
 		if err != nil {
@@ -90,7 +90,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		// to ensure the database credential does not expire before the lease
 		expiration = expiration.Add(5 * time.Second)
 
-		password, err := db.database.GeneratePassword(ctx, b.System(), dbConfig.PasswordPolicy)
+		password, err := dbi.database.GeneratePassword(ctx, b.System(), dbConfig.PasswordPolicy)
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate password: %w", err)
 		}
@@ -111,9 +111,9 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		}
 
 		// Overwriting the password in the event this is a legacy database plugin and the provided password is ignored
-		newUserResp, password, err := db.database.NewUser(ctx, newUserReq)
+		newUserResp, password, err := dbi.database.NewUser(ctx, newUserReq)
 		if err != nil {
-			b.CloseIfShutdown(db, err)
+			b.CloseIfShutdown(dbi, err)
 			return nil, err
 		}
 

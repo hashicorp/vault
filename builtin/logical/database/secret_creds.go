@@ -46,13 +46,13 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 		}
 
 		// Get the Database object
-		db, err := b.GetConnection(ctx, req.Storage, role.DBName)
+		dbi, err := b.GetConnection(ctx, req.Storage, role.DBName)
 		if err != nil {
 			return nil, err
 		}
 
-		db.RLock()
-		defer db.RUnlock()
+		dbi.RLock()
+		defer dbi.RUnlock()
 
 		// Make sure we increase the VALID UNTIL endpoint for this user.
 		ttl, _, err := framework.CalculateTTL(b.System(), req.Secret.Increment, role.DefaultTTL, 0, role.MaxTTL, 0, req.Secret.IssueTime)
@@ -74,9 +74,9 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 					},
 				},
 			}
-			_, err := db.database.UpdateUser(ctx, updateReq, false)
+			_, err := dbi.database.UpdateUser(ctx, updateReq, false)
 			if err != nil {
-				b.CloseIfShutdown(db, err)
+				b.CloseIfShutdown(dbi, err)
 				return nil, err
 			}
 		}
@@ -140,13 +140,13 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 		}
 
 		// Get our connection
-		db, err := b.GetConnection(ctx, req.Storage, dbName)
+		dbi, err := b.GetConnection(ctx, req.Storage, dbName)
 		if err != nil {
 			return nil, err
 		}
 
-		db.RLock()
-		defer db.RUnlock()
+		dbi.RLock()
+		defer dbi.RUnlock()
 
 		deleteReq := newdbplugin.DeleteUserRequest{
 			Username: username,
@@ -154,9 +154,9 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 				Commands: statements.Revocation,
 			},
 		}
-		_, err = db.database.DeleteUser(ctx, deleteReq)
+		_, err = dbi.database.DeleteUser(ctx, deleteReq)
 		if err != nil {
-			b.CloseIfShutdown(db, err)
+			b.CloseIfShutdown(dbi, err)
 			return nil, err
 		}
 		return resp, nil

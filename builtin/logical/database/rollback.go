@@ -79,7 +79,7 @@ func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request,
 func (b *databaseBackend) rollbackDatabaseCredentials(ctx context.Context, config *DatabaseConfig, entry rotateRootCredentialsWAL) error {
 	// Attempt to get a connection with the WAL entry new password.
 	config.ConnectionDetails["password"] = entry.NewPassword
-	db, err := b.GetConnectionWithConfig(ctx, entry.ConnectionName, config)
+	dbi, err := b.GetConnectionWithConfig(ctx, entry.ConnectionName, config)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func (b *databaseBackend) rollbackDatabaseCredentials(ctx context.Context, confi
 
 	// It actually is the root user here, but we only want to use SetCredentials since
 	// RotateRootCredentials doesn't give any control over what password is used
-	_, err = db.database.UpdateUser(ctx, updateReq, false)
+	_, err = dbi.database.UpdateUser(ctx, updateReq, false)
 	if status.Code(err) == codes.Unimplemented {
 		return nil
 	}
