@@ -715,16 +715,14 @@ jobs:
             #   --junitfile test-results/go-test/results.xml \
             #   --jsonfile test-results/go-test/results.json \
             #   -- \
-            (set +x; while true; do date; free -h; sleep 1; done > /tmp/free ) &
             go test -v \
                 -p 1 \
                 -tags "${GO_TAGS}" \
                 -timeout=60m \
                 -parallel=1 \
                 -race \
-                ${package_names} || true
+                ${package_names}
           fi
-          cat /tmp/free
         name: Run Go tests
         no_output_timeout: 60m
     - store_artifacts:
@@ -1115,16 +1113,14 @@ jobs:
             #   --junitfile test-results/go-test/results.xml \
             #   --jsonfile test-results/go-test/results.json \
             #   -- \
-            (set +x; while true; do date; free -h; sleep 1; done > /tmp/free ) &
             go test -v \
                 -p 1 \
                 -tags "${GO_TAGS}" \
                 -timeout=60m \
                 -parallel=1 \
                  \
-                ${package_names} || true
+                ${package_names}
           fi
-          cat /tmp/free
         name: Run Go tests
         no_output_timeout: 60m
     - save_cache:
