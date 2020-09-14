@@ -106,7 +106,7 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.Physi
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("raft dir: %s", raftDir)
+	//t.Logf("raft dir: %s", raftDir)
 	cleanupFunc := func() {
 		os.RemoveAll(raftDir)
 	}
