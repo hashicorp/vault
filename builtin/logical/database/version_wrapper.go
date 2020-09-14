@@ -5,15 +5,13 @@ import (
 	"crypto/rand"
 	"fmt"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/random"
-	"github.com/hashicorp/vault/sdk/helper/pluginutil"
-
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/newdbplugin"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type databaseVersionWrapper struct {
@@ -116,9 +114,7 @@ func (d databaseVersionWrapper) UpdateUser(ctx context.Context, req newdbplugin.
 		return nil, err
 	}
 
-	// /////////////////////////////////////////////
 	// v4 Database
-
 	if req.Password == nil && req.Expiration == nil {
 		return nil, fmt.Errorf("missing change to be sent to the database")
 	}
