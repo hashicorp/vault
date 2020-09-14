@@ -15,24 +15,26 @@ import { isWildcardString } from 'vault/helpers/is-wildcard-string';
  *
  * @example
  * ```js
- * <InfoTableItemArray @displayArray={{['test-1','test-2','test-3']}} @isLink={{true}} @modelType="transform/role"/ @queryParam="role/">
+ * <InfoTableItemArray @displayArray={{['test-1','test-2','test-3']}} @isLink={{true}} @modelType="transform/role"/ @queryParam="role" @backend="transform" viewAll="roles">
  * ```
  *
  * @param displayArray=null {array} - This array of data to be displayed.  If there are more than 10 items in the array only five will show and a count of the other number in the array will show.
  * @param [isLink=true] {Boolean} - Indicates if the item should contain a link-to component.  Only setup for arrays, but this could be changed if needed.
  * @param [modelType=null] {string} - Tells what model you want data for the allOptions to be returned from.  Used in conjunction with the the isLink.
  * @param [wildcardLabel] {String} - when you want the component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
- * @param [queryParam] {String} - If you want to specific a tab for the View All XX to display to.  Ex: role/
+ * @param [queryParam] {String} - If you want to specific a tab for the View All XX to display to.  Ex: role
+ * @param [backend] {String} - To specify which backend to point the link to.
+ * @param [viewAll] {String} - Specify the word at the end of the link View all xx.
  */
 export default Component.extend({
   layout,
+  'data-test-info-table-item-array': true,
   allOptions: null,
   displayArray: null,
   wildcardInDisplayArray: false,
   store: service(),
   displayArrayAmended: computed('displayArray', function() {
     let { displayArray } = this;
-    // cut down array to length 5 if more than 10 items
     if (displayArray.length >= 10) {
       // if array greater than 10 in length only display the first 5
       displayArray = displayArray.slice(0, 5);
@@ -49,13 +51,11 @@ export default Component.extend({
   fetchOptions: task(function*() {
     if (this.isLink && this.modelType) {
       let queryOptions = {};
-      let backendModel = yield this.store.peekAll('secret-engine');
-      let array = backendModel.toArray().map(option => {
-        return option.id;
-      });
-      if (array) {
-        queryOptions = { backend: array.get('firstObject') };
+
+      if (this.backend) {
+        queryOptions = { backend: this.backend };
       }
+
       let options = yield this.store.query(this.modelType, queryOptions);
       this.formatOptions(options);
     }

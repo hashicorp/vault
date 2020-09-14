@@ -1,21 +1,19 @@
-
 {{#if isLink}}
   {{#each displayArrayAmended as |name|}}
     {{#if (is-wildcard-string name)}}
       {{#let (filter-wildcard name allOptions) as | wildcardCount |}}
         <span>{{name}}</span>
-        <span class="tag is-light has-text-grey-dark" data-test-mode={{wildcardCount}}>
+        <span class="tag is-light has-text-grey-dark" data-test-count={{wildcardCount}}>
           includes {{wildcardCount}} {{if (eq wildcardCount 1) wildcardLabel (pluralize wildcardLabel)}}
         </span>
         {{#if (eq displayArrayAmended.lastObject name)}}
           {{#link-to "vault.cluster.secrets.backend.list-root" (query-params tab=queryParam)}}
-            <span>View all {{viewAll}}</span>
+            <span data-test-view-all={{viewAll}}>View all {{viewAll}}</span>
           {{/link-to}}
         {{/if}}
       {{/let}}
     {{else}}
-      {{!-- Currently setup for roles only for the transform engine, this could be amended if a use case arises --}}
-      {{#link-to "vault.cluster.secrets.backend.show" (if queryParam (concat "role/" name) name)}}
+      {{#link-to "vault.cluster.secrets.backend.show" (if queryParam (concat queryParam "/" name) name)}}
         <span>{{name}}</span>
       {{/link-to}}
     {{/if}}
@@ -23,11 +21,11 @@
       ,&nbsp;
     {{/if}}
     {{#if (and (eq name displayArrayAmended.lastObject) (gte displayArray.length 10)) }}
-      &nbsp;and {{dec 5 displayArray.length}} others.&nbsp;
+      <span data-test-and={{dec 5 displayArray.length}}>&nbsp;and {{dec 5 displayArray.length}} others.&nbsp;</span>
     {{/if}}
     {{#if (and (eq name displayArrayAmended.lastObject) (gte displayArray.length 10)) }}
       {{#link-to "vault.cluster.secrets.backend.list-root" (query-params tab=queryParam)}}
-        <span>View all {{viewAll}} </span>
+        <span data-test-view-all={{viewAll}}>View all {{viewAll}} </span>
       {{/link-to}}
     {{/if}}
   {{/each}}

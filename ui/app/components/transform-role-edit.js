@@ -95,7 +95,7 @@ export default TransformBase.extend({
         const newModelTransformations = this.get('model.transformations');
 
         if (!this.initialTransformations) {
-          this.handleUpdatedTransformations(
+          this.handleUpdateTransformations(
             newModelTransformations.map(t => ({
               id: t,
               action: 'ADD',
