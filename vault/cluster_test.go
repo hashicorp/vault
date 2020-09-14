@@ -170,7 +170,6 @@ func TestCluster_ListenForRequests(t *testing.T) {
 }
 
 func TestCluster_ForwardRequests(t *testing.T) {
-	t.SkipNow()
 	// Make this nicer for tests
 	manualStepDownSleepPeriod = 5 * time.Second
 
