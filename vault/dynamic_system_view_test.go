@@ -17,6 +17,7 @@ import (
 )
 
 func TestIdentity_BackendTemplating(t *testing.T) {
+	t.SkipNow()
 	var err error
 	coreConfig := &CoreConfig{
 		DisableMlock: true,
