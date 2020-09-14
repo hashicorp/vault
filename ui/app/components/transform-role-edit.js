@@ -1,4 +1,4 @@
-import TransformBase from './transform-edit-base';
+import TransformBase, { addToList, removeFromList } from './transform-edit-base';
 
 export default TransformBase.extend({
   initialTransformations: null,
@@ -20,9 +20,9 @@ export default TransformBase.extend({
         .then(function(transformation) {
           let roles = transformation.allowed_roles;
           if (transform.action === 'ADD') {
-            roles = this.addToList(roles, roleId);
+            roles = addToList(roles, roleId);
           } else if (transform.action === 'REMOVE') {
-            roles = this.removeFromList(roles, roleId);
+            roles = removeFromList(roles, roleId);
           }
 
           transformation.setProperties({

@@ -8,6 +8,20 @@ import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
+export const addToList = (list, itemToAdd) => {
+  if (!list || !Array.isArray(list)) return list;
+  list.push(itemToAdd);
+  return list.uniq();
+};
+
+export const removeFromList = (list, itemToRemove) => {
+  if (!list) return list;
+  const index = list.indexOf(itemToRemove);
+  if (index < 0) return list;
+  const newList = list.removeAt(index, 1);
+  return newList.uniq();
+};
+
 export default Component.extend(FocusOnInsertMixin, {
   store: service(),
   flashMessages: service(),
@@ -49,22 +63,7 @@ export default Component.extend(FocusOnInsertMixin, {
     });
   },
 
-  addToList(list, itemToAdd) {
-    if (!list || !Array.isArray(list)) return list;
-    list.push(itemToAdd);
-    return list.uniq();
-  },
-
-  removeFromList(list, itemToRemove) {
-    if (!list) return list;
-    const index = list.indexOf(itemToRemove);
-    if (index < 0) return list;
-    const newList = list.removeAt(index, 1);
-    return newList.uniq();
-  },
-
   applyChanges(type, callback = () => {}) {
-    console.log('applying changes');
     const modelId = this.get('model.id') || this.get('model.name'); // transform comes in as model.name
     const modelPrefix = this.modelPrefixFromType(this.get('model.constructor.modelName'));
     // prevent from submitting if there's no key
