@@ -133,15 +133,11 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			return nil, err
 		}
 
-		b.deleteWal(ctx, req.Storage, walID)
+		err = framework.DeleteWAL(ctx, req.Storage, walID)
+		if err != nil {
+			b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walID)
+		}
 		return nil, nil
-	}
-}
-
-func (b *databaseBackend) deleteWal(ctx context.Context, storage logical.Storage, walID string) {
-	err := framework.DeleteWAL(ctx, storage, walID)
-	if err != nil {
-		b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walID)
 	}
 }
 
