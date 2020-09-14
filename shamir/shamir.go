@@ -88,6 +88,12 @@ func invert(x uint8) uint8 {
 
 // div divides two numbers in GF(2^8)
 func div(x, y uint8) uint8 {
+	if y == 0 {
+		// leaks some timing information but we don't care anyways as this
+		// should never happen, hence the panic
+		panic("divide by zero")
+	}
+
 	return mult(x, invert(y))
 }
 
