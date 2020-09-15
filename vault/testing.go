@@ -1107,7 +1107,6 @@ func NewTestLogger(t testing.T) *TestLogger {
 // given, one will be generated based on t.Name() for the cluster logger, and if
 // no base.Logger is given will also be used as the basis for each core's logger.
 func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
-	t.SkipNow()
 	var err error
 
 	var numCores int
