@@ -1,50 +1,58 @@
 package mssqlhelper
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"os"
 	"testing"
 
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
-	"github.com/ory/dockertest"
 )
+
+const mssqlPassword = "yourStrong(!)Password"
 
 func PrepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	if os.Getenv("MSSQL_URL") != "" {
 		return func() {}, os.Getenv("MSSQL_URL")
 	}
 
-	pool, err := dockertest.NewPool("")
+	runner, err := docker.NewServiceRunner(docker.RunOptions{
+		ContainerName: "sqlserver",
+		ImageRepo:     "mcr.microsoft.com/mssql/server",
+		ImageTag:      "2017-latest-ubuntu",
+		Env:           []string{"ACCEPT_EULA=Y", "SA_PASSWORD=" + mssqlPassword},
+		Ports:         []string{"1433/tcp"},
+	})
 	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
+		t.Fatalf("Could not start docker MSSQL: %s", err)
 	}
 
-	resource, err := pool.Run("mcr.microsoft.com/mssql/server", "2017-latest-ubuntu", []string{"ACCEPT_EULA=Y", "SA_PASSWORD=yourStrong(!)Password"})
+	svc, err := runner.StartService(context.Background(), connectMSSQL)
 	if err != nil {
-		t.Fatalf("Could not start local MSSQL docker container: %s", err)
+		t.Fatalf("Could not start docker MSSQL: %s", err)
 	}
 
-	cleanup = func() {
-		docker.CleanupResource(t, pool, resource)
+	return svc.Cleanup, svc.Config.URL().String()
+}
+
+func connectMSSQL(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+	u := url.URL{
+		Scheme: "sqlserver",
+		User:   url.UserPassword("sa", mssqlPassword),
+		Host:   fmt.Sprintf("%s:%d", host, port),
 	}
 
-	retURL = fmt.Sprintf("sqlserver://sa:yourStrong(!)Password@127.0.0.1:%s", resource.GetPort("1433/tcp"))
-
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
-		var err error
-		var db *sql.DB
-		db, err = sql.Open("mssql", retURL)
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-		return db.Ping()
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to MSSQL docker container: %s", err)
+	db, err := sql.Open("mssql", u.String())
+	if err != nil {
+		return nil, err
 	}
+	defer db.Close()
 
-	return
+	err = db.Ping()
+	if err != nil {
+		return nil, err
+	}
+	return docker.NewServiceURL(u), nil
 }
