@@ -5,6 +5,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/cassandra"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -12,6 +13,9 @@ import (
 func TestCassandraBackend(t *testing.T) {
 	if testing.Short() {
 		t.Skipf("skipping in short mode")
+	}
+	if os.Getenv("VAULT_CI_GO_TEST_RACE") != "" {
+		t.Skip("skipping race test in CI pending https://github.com/gocql/gocql/pull/1474")
 	}
 
 	cleanup, hosts := cassandra.PrepareTestContainer(t, "")
