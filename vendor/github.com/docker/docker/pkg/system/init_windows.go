@@ -18,7 +18,8 @@ var (
 
 // InitLCOW sets whether LCOW is supported or not. Requires RS5+
 func InitLCOW(experimental bool) {
-	if experimental && osversion.Build() >= osversion.RS5 {
+	v := GetOSVersion()
+	if experimental && v.Build >= osversion.RS5 {
 		lcowSupported = true
 	}
 }

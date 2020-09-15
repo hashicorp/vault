@@ -127,6 +127,7 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 }
 
 func TestRaft_HA_ExistingCluster(t *testing.T) {
+	t.Parallel()
 	conf := vault.CoreConfig{
 		DisablePerformanceStandby: true,
 	}

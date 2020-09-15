@@ -11,9 +11,9 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
       {{#if (eq mode "create") }}
-        Create Transformation
+        Create transformation
       {{else if (eq mode 'edit')}}
-        Edit Transformation
+        Edit transformation
       {{else}}
         Transformation <code>{{model.id}}</code>
       {{/if}}
@@ -24,30 +24,57 @@
 {{#if (eq mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{!-- TODO: update these actions, show delete grey out if not allowed --}}
-      {{#if (or model.canUpdate model.canDelete)}}
+      {{#if (or capabilities.canUpdate capabilities.canDelete)}}
         <div class="toolbar-separator" />
       {{/if}}
-      {{#if model.canDelete}}
-      {{!-- TODO only allow deletion when not in use by a role --}}
-        <ConfirmAction
-          @buttonClasses="toolbar-link"
-          @onConfirmAction={{action "delete"}}
-          @confirmTitle="Are you sure?"
-          @confirmMessage="This transformation is not in use by a role and can be deleted."
+      {{#if capabilities.canDelete}}
+        {{#if (gt model.allowed_roles.length 0)}}
+          <ToolTip
+            @verticalPosition="above"
+            @horizontalPosition="center"
+            as |T|>
+            <T.trigger @tabindex=false>
+              <a
+              class="toolbar-link"
+              aria-disabled="true"
+              disabled
+              >
+                Delete transformation
+              </a>
+            </T.trigger>
+            <T.content @class="tool-tip">
+              <div class="box">
+                This transformation is in use by a role and can’t be deleted.
+              </div>
+            </T.content>
+          </ToolTip>
+        {{else}}
+        <a
+          class="toolbar-link"
+          onclick={{action (mut isDeleteModalActive) true}}
         >
           Delete transformation
-        </ConfirmAction>
+        </a>
+        {{/if}}
       {{/if}}
-      {{#if model.canUpdate }}
-        <ToolbarSecretLink
-          @secret={{model.id}}
-          @mode="edit"
-          @data-test-edit-link=true
-          @replace=true
-        >
-          Edit transformation
-        </ToolbarSecretLink>
+      {{#if capabilities.canUpdate }}
+        {{#if (gt model.allowed_roles.length 0)}}
+          <a
+            class="toolbar-link"
+            onclick={{action (mut isEditModalActive) true}}
+          >
+            Edit transformation
+          </a>
+        {{else}}
+          <ToolbarSecretLink
+            @secret={{model.id}}
+            @mode="edit"
+            @data-test-edit-link=true
+            @replace=true
+          >
+            Edit transformation
+          </ToolbarSecretLink>
+        {{/if}}
       {{/if}}
     </ToolbarActions>
   </Toolbar>
@@ -62,3 +89,42 @@
     @model={{model}}
   />
 {{/if}}
+
+<ConfirmationModal
+  @title="Delete transformation"
+  @onClose={{action (mut isDeleteModalActive) false}}
+  @isActive={{isDeleteModalActive}}
+  @confirmText={{model.name}}
+  @toConfirmMsg="Type {{model.name}} to confirm deleting the transformation."
+  @onConfirm={{action "delete"}}
+>
+  <p class="has-bottom-margin-m">
+    Deleting the <strong>{{model.name}}</strong> transformation means that the underlying keys are lost and the data encoded by the transformation are unrecoverable and cannot be decoded.
+  </p>
+  <MessageError @model={{model}} @errorMessage={{error}} />
+</ConfirmationModal>
+
+<Modal
+  @title="Edit transformation"
+  @onClose={{action (mut isEditModalActive) false}}
+  @isActive={{isEditModalActive}}
+  @type="warning"
+  @showCloseButton={{true}}
+>
+  <section class="modal-card-body">
+    <p>
+      You’re editing a transformation that is in use by at least one role. Editing it may mean that encode and decode operations stop working. Are you sure?
+    </p>
+  </section>
+  <footer class="modal-card-foot modal-card-foot-outlined">
+    {{#link-to "vault.cluster.secrets.backend.edit" model.id tagName="button" class="button is-primary"}}
+      Confirm
+    {{/link-to}}
+    <button
+      class="button is-secondary"
+      onclick={{action (mut isEditModalActive) false}}
+    >
+      Cancel
+    </button>
+  </footer>
+</Modal>
