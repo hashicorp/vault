@@ -63,9 +63,6 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   actions: {
-    restore(key) {
-      this.set(`model.${key}`, this.get(`model._content.${key}`));
-    },
     createOrUpdate(type, event) {
       event.preventDefault();
 

@@ -1,12 +1,4 @@
 <form onsubmit={{action "createOrUpdate" "create"}}>
-  <ul>
-  {{#each model.changes as |change|}}
-    <li>
-      {{change.key}}: {{get model._content change.key}} -> {{change.value}}
-      <button {{action 'restore' change.key}}>Restore</button>
-    </li>
-  {{/each}}
-</ul>
   <div class="box is-sideless is-fullwidth is-marginless">
     {{message-error model=model}}
     {{!-- TODO: figure out what this ?? --}}
