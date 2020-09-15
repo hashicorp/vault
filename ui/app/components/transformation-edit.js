@@ -57,7 +57,7 @@ export default TransformBase.extend({
       });
   },
 
-  handleUpdateRoles(updateRoles, transformationId, type = 'update') {
+  handleUpdateRoles(updateRoles, transformationId) {
     if (!updateRoles) return;
     const backend = this.get('model.backend');
     const promises = updateRoles.map(r => this.updateOrCreateRole(r, transformationId, backend));
