@@ -35,7 +35,6 @@ func raftCluster(t testing.TB) *vault.TestCluster {
 }
 
 func TestRaft_Retry_Join(t *testing.T) {
-	t.Parallel()
 	var conf vault.CoreConfig
 	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
@@ -99,7 +98,6 @@ func TestRaft_Retry_Join(t *testing.T) {
 }
 
 func TestRaft_Join(t *testing.T) {
-	t.Parallel()
 	var conf vault.CoreConfig
 	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftBackendSetup(&conf, &opts)
@@ -162,7 +160,6 @@ func TestRaft_Join(t *testing.T) {
 }
 
 func TestRaft_RemovePeer(t *testing.T) {
-	t.Parallel()
 	cluster := raftCluster(t)
 	defer cluster.Cleanup()
 
@@ -205,7 +202,6 @@ func TestRaft_RemovePeer(t *testing.T) {
 }
 
 func TestRaft_Configuration(t *testing.T) {
-	t.Parallel()
 	cluster := raftCluster(t)
 	defer cluster.Cleanup()
 
@@ -252,7 +248,6 @@ func TestRaft_Configuration(t *testing.T) {
 }
 
 func TestRaft_ShamirUnseal(t *testing.T) {
-	t.Parallel()
 	cluster := raftCluster(t)
 	defer cluster.Cleanup()
 
@@ -264,7 +259,6 @@ func TestRaft_ShamirUnseal(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI(t *testing.T) {
-	t.Parallel()
 	cluster := raftCluster(t)
 	defer cluster.Cleanup()
 
@@ -343,7 +337,6 @@ func TestRaft_SnapshotAPI(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
-	t.Parallel()
 	tCases := []struct {
 		Name   string
 		Rekey  bool
@@ -494,7 +487,6 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
-	t.Parallel()
 	tCases := []struct {
 		Name       string
 		Rekey      bool
@@ -699,7 +691,6 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
-	t.Parallel()
 	cluster := raftCluster(t)
 	defer cluster.Cleanup()
 

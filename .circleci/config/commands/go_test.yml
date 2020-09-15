@@ -32,10 +32,8 @@ steps:
       command: |
         set -x
 
-        free -h
-
         case "<< parameters.extra_flags >>" in
-        *-race*) VAULT_CI_GO_TEST_RACE=1;;
+        *-race*) export VAULT_CI_GO_TEST_RACE=1;;
         esac
 
         # Install CircleCI CLI
@@ -96,7 +94,7 @@ steps:
           docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
           docker exec -w /go/src/github.com/hashicorp/vault/ \
-            -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache \
+            -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
             testcontainer \
             gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results.xml \
@@ -108,11 +106,11 @@ steps:
               << parameters.extra_flags >> \
               ${package_names}
         else
-          # GOCACHE=<< parameters.cache_dir >> \
-          gotestsum --format=short-verbose \
-            --junitfile test-results/go-test/results.xml \
-            --jsonfile test-results/go-test/results.json \
-            -- \
+          GOCACHE=<< parameters.cache_dir >> \
+            gotestsum --format=short-verbose \
+              --junitfile test-results/go-test/results.xml \
+              --jsonfile test-results/go-test/results.json \
+              -- \
               -tags "${GO_TAGS}" \
               -timeout=60m \
               -parallel=20 \

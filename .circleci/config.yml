@@ -709,10 +709,8 @@ jobs:
         command: |
           set -x
 
-          free -h
-
           case "" in
-          *-race*) VAULT_CI_GO_TEST_RACE=1;;
+          *-race*) export VAULT_CI_GO_TEST_RACE=1;;
           esac
 
           # Install CircleCI CLI
@@ -771,7 +769,7 @@ jobs:
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache \
+              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
               testcontainer \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
@@ -783,11 +781,11 @@ jobs:
                  \
                 ${package_names}
           else
-            # GOCACHE=/tmp/go-cache \
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
+            GOCACHE=/tmp/go-cache \
+              gotestsum --format=short-verbose \
+                --junitfile test-results/go-test/results.xml \
+                --jsonfile test-results/go-test/results.json \
+                -- \
                 -tags "${GO_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
@@ -878,7 +876,6 @@ jobs:
   test-go-race:
     docker:
     - image: circleci/golang:1.14.7-stretch
-    resource_class: xlarge
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
@@ -905,10 +902,8 @@ jobs:
         command: |
           set -x
 
-          free -h
-
           case "-race" in
-          *-race*) VAULT_CI_GO_TEST_RACE=1;;
+          *-race*) export VAULT_CI_GO_TEST_RACE=1;;
           esac
 
           # Install CircleCI CLI
@@ -966,7 +961,7 @@ jobs:
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache \
+              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
               testcontainer \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
@@ -978,11 +973,11 @@ jobs:
                 -race \
                 ${package_names}
           else
-            # GOCACHE=/tmp/go-cache \
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
+            GOCACHE=/tmp/go-cache \
+              gotestsum --format=short-verbose \
+                --junitfile test-results/go-test/results.xml \
+                --jsonfile test-results/go-test/results.json \
+                -- \
                 -tags "${GO_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
@@ -1306,10 +1301,8 @@ jobs:
         command: |
           set -x
 
-          free -h
-
           case "" in
-          *-race*) VAULT_CI_GO_TEST_RACE=1;;
+          *-race*) export VAULT_CI_GO_TEST_RACE=1;;
           esac
 
           # Install CircleCI CLI
@@ -1367,7 +1360,7 @@ jobs:
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache \
+              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
               testcontainer \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
@@ -1379,11 +1372,11 @@ jobs:
                  \
                 ${package_names}
           else
-            # GOCACHE=/tmp/go-cache \
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
+            GOCACHE=/tmp/go-cache \
+              gotestsum --format=short-verbose \
+                --junitfile test-results/go-test/results.xml \
+                --jsonfile test-results/go-test/results.json \
+                -- \
                 -tags "${GO_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
@@ -1447,10 +1440,8 @@ jobs:
         command: |
           set -x
 
-          free -h
-
           case "" in
-          *-race*) VAULT_CI_GO_TEST_RACE=1;;
+          *-race*) export VAULT_CI_GO_TEST_RACE=1;;
           esac
 
           # Install CircleCI CLI
@@ -1508,7 +1499,7 @@ jobs:
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache \
+              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
               testcontainer \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
@@ -1520,11 +1511,11 @@ jobs:
                  \
                 ${package_names}
           else
-            # GOCACHE=/tmp/go-cache \
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
+            GOCACHE=/tmp/go-cache \
+              gotestsum --format=short-verbose \
+                --junitfile test-results/go-test/results.xml \
+                --jsonfile test-results/go-test/results.json \
+                -- \
                 -tags "${GO_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
@@ -1995,7 +1986,6 @@ jobs:
   test-go-race-remote-docker:
     docker:
     - image: circleci/golang:1.14.7-stretch
-    resource_class: xlarge
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
@@ -2025,10 +2015,8 @@ jobs:
         command: |
           set -x
 
-          free -h
-
           case "-race" in
-          *-race*) VAULT_CI_GO_TEST_RACE=1;;
+          *-race*) export VAULT_CI_GO_TEST_RACE=1;;
           esac
 
           # Install CircleCI CLI
@@ -2087,7 +2075,7 @@ jobs:
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache \
+              -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
               testcontainer \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
@@ -2099,11 +2087,11 @@ jobs:
                 -race \
                 ${package_names}
           else
-            # GOCACHE=/tmp/go-cache \
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
+            GOCACHE=/tmp/go-cache \
+              gotestsum --format=short-verbose \
+                --junitfile test-results/go-test/results.xml \
+                --jsonfile test-results/go-test/results.json \
+                -- \
                 -tags "${GO_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
