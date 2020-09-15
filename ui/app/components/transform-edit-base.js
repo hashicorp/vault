@@ -8,7 +8,23 @@ import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
+export const addToList = (list, itemToAdd) => {
+  if (!list || !Array.isArray(list)) return list;
+  list.push(itemToAdd);
+  return list.uniq();
+};
+
+export const removeFromList = (list, itemToRemove) => {
+  if (!list) return list;
+  const index = list.indexOf(itemToRemove);
+  if (index < 0) return list;
+  const newList = list.removeAt(index, 1);
+  return newList.uniq();
+};
+
 export default Component.extend(FocusOnInsertMixin, {
+  store: service(),
+  flashMessages: service(),
   router: service(),
 
   mode: null,
@@ -79,7 +95,7 @@ export default Component.extend(FocusOnInsertMixin, {
 
     delete() {
       this.persist('destroyRecord', () => {
-        this.hasDataChanges();
+        this.onDataChange();
         this.transitionToRoute(LIST_ROOT_ROUTE);
       });
     },
