@@ -181,6 +181,8 @@ github.com/briankassouf/jose/jws
 github.com/briankassouf/jose/jwt
 # github.com/cenkalti/backoff v2.2.1+incompatible
 github.com/cenkalti/backoff
+# github.com/cenkalti/backoff/v3 v3.0.0
+github.com/cenkalti/backoff/v3
 # github.com/centrify/cloud-golang-sdk v0.0.0-20190214225812-119110094d0f
 github.com/centrify/cloud-golang-sdk/oauth
 github.com/centrify/cloud-golang-sdk/restapi
@@ -237,7 +239,7 @@ github.com/dimchansky/utfbom
 github.com/docker/distribution/digestset
 github.com/docker/distribution/reference
 github.com/docker/distribution/registry/api/errcode
-# github.com/docker/docker v1.4.2-0.20200319182547-c7ad2b866182
+# github.com/docker/docker v17.12.0-ce-rc1.0.20200309214505-aa6a9891b09c+incompatible
 github.com/docker/docker/api
 github.com/docker/docker/api/types
 github.com/docker/docker/api/types/blkiodev
@@ -720,7 +722,7 @@ github.com/opencontainers/go-digest
 # github.com/opencontainers/image-spec v1.0.1
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v0.1.1
+# github.com/opencontainers/runc v1.0.0-rc9
 github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/user
 # github.com/oracle/oci-go-sdk v12.5.0+incompatible
