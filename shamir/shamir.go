@@ -80,12 +80,6 @@ func interpolatePolynomial(x_samples, y_samples []uint8, x uint8) uint8 {
 	return result
 }
 
-// Calculate the multiplicative inverse of x in GF(2^8)
-func invert(x uint8) uint8 {
-	ret := expTable[(255 - logTable[x])]
-	return uint8(subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(x, 0), 0, int(ret)))
-}
-
 // div divides two numbers in GF(2^8)
 func div(a, b uint8) uint8 {
 	if b == 0 {
