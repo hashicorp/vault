@@ -2,16 +2,30 @@ package dbtesting
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 )
 
+func getRequestTimeout(t *testing.T) time.Duration {
+	rawDur := os.Getenv("VAULT_TEST_DATABASE_REQUEST_TIMEOUT")
+	if rawDur == "" {
+		return 2 * time.Second
+	}
+
+	dur, err := time.ParseDuration(rawDur)
+	if err != nil {
+		t.Fatalf("Failed to parse custom request timeout %q: %s", rawDur, err)
+	}
+	return dur
+}
+
 func AssertInitialize(t *testing.T, db newdbplugin.Database, req newdbplugin.InitializeRequest) newdbplugin.InitializeResponse {
 	t.Helper()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), getRequestTimeout(t))
 	defer cancel()
 
 	resp, err := db.Initialize(ctx, req)
@@ -24,7 +38,7 @@ func AssertInitialize(t *testing.T, db newdbplugin.Database, req newdbplugin.Ini
 func AssertNewUser(t *testing.T, db newdbplugin.Database, req newdbplugin.NewUserRequest) newdbplugin.NewUserResponse {
 	t.Helper()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), getRequestTimeout(t))
 	defer cancel()
 
 	resp, err := db.NewUser(ctx, req)
@@ -41,7 +55,7 @@ func AssertNewUser(t *testing.T, db newdbplugin.Database, req newdbplugin.NewUse
 func AssertUpdateUser(t *testing.T, db newdbplugin.Database, req newdbplugin.UpdateUserRequest) {
 	t.Helper()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), getRequestTimeout(t))
 	defer cancel()
 
 	_, err := db.UpdateUser(ctx, req)
@@ -53,7 +67,7 @@ func AssertUpdateUser(t *testing.T, db newdbplugin.Database, req newdbplugin.Upd
 func AssertDeleteUser(t *testing.T, db newdbplugin.Database, req newdbplugin.DeleteUserRequest) {
 	t.Helper()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), getRequestTimeout(t))
 	defer cancel()
 
 	_, err := db.DeleteUser(ctx, req)
