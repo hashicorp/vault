@@ -110,7 +110,7 @@ func isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner) erro
 		v5Client.Close()
 		return nil
 	}
-	merr = multierror.Append(merr, err)
+	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v5: %w", err))
 
 	v4Client, err := dbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
 	if err == nil {
@@ -118,7 +118,7 @@ func isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner) erro
 		v4Client.Close()
 		return nil
 	}
-	merr = multierror.Append(merr, err)
+	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v4: %w", err))
 
 	return merr.ErrorOrNil()
 }
