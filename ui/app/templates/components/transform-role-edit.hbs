@@ -92,6 +92,14 @@
   {{#each model.attrs as |attr|}}
     {{#if (eq attr.type "object")}}
       {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(stringify (get model attr.name))}}
+    {{else if (eq attr.type "array")}}
+      {{info-table-row
+        label=(capitalize (or attr.options.label (humanize (dasherize attr.name))))
+        value=(get model attr.name)
+        type=attr.type
+        isLink=(eq attr.name 'transformations')
+        viewAll="transformations"
+      }}
     {{else}}
       {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
     {{/if}}

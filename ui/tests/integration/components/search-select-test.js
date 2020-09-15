@@ -104,7 +104,7 @@ module('Integration | Component | search select', function(hooks) {
     await clickTrigger();
     await typeInSearch('*bar*');
     await component.selectOption();
-    assert.dom('[data-test-mode="2"]').exists('correctly counts with wildcard filter and shows the count');
+    assert.dom('[data-test-count="2"]').exists('correctly counts with wildcard filter and shows the count');
   });
 
   test('it behaves correctly if new items not allowed', async function(assert) {
