@@ -16,7 +16,6 @@ export default TransformBase.extend({
       })
       .then(roleStore => {
         let transformations = roleStore.transformations;
-        debugger;
         if (role.action === 'ADD') {
           transformations = addToList(transformations, transformationId);
         } else if (role.action === 'REMOVE') {
@@ -86,7 +85,7 @@ export default TransformBase.extend({
 
       this.applyChanges('save', () => {
         const transformationId = this.get('model.id');
-        const newModelRoles = this.get('model.allowed_roles');
+        const newModelRoles = this.get('model.allowed_roles') || [];
         const initialRoles = this.get('initialRoles') || [];
 
         const updateRoles = [...newModelRoles, ...initialRoles]

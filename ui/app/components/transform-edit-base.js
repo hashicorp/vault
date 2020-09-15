@@ -95,7 +95,7 @@ export default Component.extend(FocusOnInsertMixin, {
 
     delete() {
       this.persist('destroyRecord', () => {
-        this.hasDataChanges();
+        this.onDataChange();
         this.transitionToRoute(LIST_ROOT_ROUTE);
       });
     },
