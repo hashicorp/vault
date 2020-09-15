@@ -1603,10 +1603,10 @@ func TestExpiration_revokeEntry_rejected(t *testing.T) {
 		RequestHandler: func(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 			if req.Operation == logical.RevokeOperation {
 				if atomic.CompareAndSwapUint32(rejected, 0, 1) {
-					//t.Logf("denying revocation")
+					t.Logf("denying revocation")
 					return nil, errors.New("nope")
 				}
-				//t.Logf("allowing revocation")
+				t.Logf("allowing revocation")
 			}
 			return nil, nil
 		},
@@ -2096,11 +2096,11 @@ func TestExpiration_WalkTokens(t *testing.T) {
 
 	for true {
 		// Count before and after each revocation
-		//t.Logf("Counting %d tokens.", len(tokenEntries))
+		t.Logf("Counting %d tokens.", len(tokenEntries))
 		count := 0
 		exp.WalkTokens(func(leaseId string, auth *logical.Auth, path string) bool {
 			count += 1
-			//t.Logf("Lease ID %d: %q\n", count, leaseId)
+			t.Logf("Lease ID %d: %q\n", count, leaseId)
 			if !findMatchingPath(path, tokenEntries) {
 				t.Errorf("Mismatched Path: %v", path)
 			}
@@ -2123,7 +2123,7 @@ func TestExpiration_WalkTokens(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		//t.Logf("revocation lease ID: %q", leaseId)
+		t.Logf("revocation lease ID: %q", leaseId)
 		err = exp.Revoke(namespace.RootContext(nil), leaseId)
 		if err != nil {
 			t.Fatalf("err: %v", err)
