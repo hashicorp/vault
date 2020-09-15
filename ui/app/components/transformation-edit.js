@@ -25,7 +25,6 @@ export default TransformBase.extend({
           backend,
           transformations,
         });
-        console.log(`Saving ${role.id} with transformations`, transformations);
         return roleStore.save().catch(e => {
           return {
             errorStatus: e.httpStatus,
