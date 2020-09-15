@@ -666,9 +666,6 @@ jobs:
                 sort -u | circleci tests split --split-by=timings --timings-type=classname)
           fi
 
-          # TODO revert
-          package_names=github.com/hashicorp/vault/vault
-
           # After running tests split step, we are now running the following steps
           # in multiple different containers, each getting a different subset of
           # the test packages in their package_names variable.  Each container
@@ -712,12 +709,10 @@ jobs:
                 ${package_names}
           else
             # GOCACHE=/tmp/go-cache \
-            # gotestsum --format=short-verbose \
-            #   --junitfile test-results/go-test/results.xml \
-            #   --jsonfile test-results/go-test/results.json \
-            #   -- \
-            go test -v \
-                -p 1 \
+            gotestsum --format=short-verbose \
+              --junitfile test-results/go-test/results.xml \
+              --jsonfile test-results/go-test/results.json \
+              -- \
                 -tags "${GO_TAGS}" \
                 -timeout=60m \
                 -parallel=1 \
@@ -1064,9 +1059,6 @@ jobs:
                 sort -u | circleci tests split --split-by=timings --timings-type=classname)
           fi
 
-          # TODO revert
-          package_names=github.com/hashicorp/vault/vault
-
           # After running tests split step, we are now running the following steps
           # in multiple different containers, each getting a different subset of
           # the test packages in their package_names variable.  Each container
@@ -1110,12 +1102,10 @@ jobs:
                 ${package_names}
           else
             # GOCACHE=/tmp/go-cache \
-            # gotestsum --format=short-verbose \
-            #   --junitfile test-results/go-test/results.xml \
-            #   --jsonfile test-results/go-test/results.json \
-            #   -- \
-            go test -v \
-                -p 1 \
+            gotestsum --format=short-verbose \
+              --junitfile test-results/go-test/results.xml \
+              --jsonfile test-results/go-test/results.json \
+              -- \
                 -tags "${GO_TAGS}" \
                 -timeout=60m \
                 -parallel=1 \
