@@ -99,6 +99,8 @@ func div(a, b uint8) uint8 {
 	diff := ((int(log_a) - int(log_b))+255)%255
 
 	ret := int(expTable[diff])
+
+    // Ensure we return zero if a is zero but aren't subject to timing attacks
 	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(a, 0), 0, ret)
 	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(b, 0), 0, ret)
 	return uint8(ret)
