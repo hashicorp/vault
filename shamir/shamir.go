@@ -87,14 +87,21 @@ func invert(x uint8) uint8 {
 }
 
 // div divides two numbers in GF(2^8)
-func div(x, y uint8) uint8 {
-	if y == 0 {
+func div(a, b uint8) uint8 {
+	if b == 0 {
 		// leaks some timing information but we don't care anyways as this
 		// should never happen, hence the panic
 		panic("divide by zero")
 	}
 
-	return mult(x, invert(y))
+	log_a := logTable[a]
+	log_b := logTable[b]
+	diff := ((int(log_a) - int(log_b))+255)%255
+
+	ret := int(expTable[diff])
+	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(a, 0), 0, ret)
+	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(b, 0), 0, ret)
+	return uint8(ret)
 }
 
 // mult multiplies two numbers in GF(2^8)
@@ -111,7 +118,6 @@ func mult(a, b uint8) (out uint8) {
 	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(b, 0), 0, ret)
 
 	return uint8(ret)
-
 }
 
 // add combines two numbers in GF(2^8)
