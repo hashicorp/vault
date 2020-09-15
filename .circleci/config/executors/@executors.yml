@@ -26,6 +26,7 @@ alpine:
 docker-env:
   docker:
     - image: "circleci/golang:1.14.7-stretch"
+  resource_class: xlarge
   environment:
     GO111MODULE: "off"
     CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)

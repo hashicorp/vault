@@ -608,6 +608,7 @@ jobs:
   test-go-race:
     docker:
     - image: circleci/golang:1.14.7-stretch
+    resource_class: xlarge
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
     steps:
