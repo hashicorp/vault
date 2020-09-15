@@ -4,7 +4,7 @@
       {{#let (filter-wildcard name allOptions) as | wildcardCount |}}
         <span>{{name}}</span>
         <span class="tag is-light has-text-grey-dark" data-test-count={{wildcardCount}}>
-          includes {{wildcardCount}} {{if (eq wildcardCount 1) wildcardLabel (pluralize wildcardLabel)}}
+          includes {{if wildcardCount wildcardCount 0}} {{if (eq wildcardCount 1) wildcardLabel (pluralize wildcardLabel)}}
         </span>
         {{#if (eq displayArrayAmended.lastObject name)}}
           {{#link-to "vault.cluster.secrets.backend.list-root" (query-params tab=queryParam)}}
