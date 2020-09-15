@@ -30,6 +30,13 @@ const storeService = Service.extend({
           error.httpStatus = 500;
           reject(error);
           break;
+        case 'transform/transformation':
+          resolve([
+            { id: 'foo', name: 'bar' },
+            { id: 'foobar', name: '' },
+            { id: 'barfoo1', name: 'different' },
+          ]);
+          break;
         default:
           reject({ httpStatus: 404, message: 'not found' });
           break;
@@ -87,6 +94,31 @@ module('Integration | Component | search select', function(hooks) {
     assert.equal(component.options.length, 2, 'list shows two options, including the add option');
     await typeInSearch('nine');
     assert.equal(component.options.length, 1, 'list shows one option');
+  });
+
+  test('it counts options when wildcard is used and displays the count', async function(assert) {
+    const models = ['transform/transformation'];
+    this.set('models', models);
+    this.set('onChange', sinon.spy());
+    await render(hbs`{{search-select label="foo" models=models onChange=onChange wildcardLabel="role" }}`);
+    await clickTrigger();
+    await typeInSearch('*bar*');
+    await component.selectOption();
+    assert.dom('[data-test-mode="2"]').exists('correctly counts with wildcard filter and shows the count');
+  });
+
+  test('it behaves correctly if new items not allowed', async function(assert) {
+    const models = ['identity/entity'];
+    this.set('models', models);
+    this.set('onChange', sinon.spy());
+    await render(hbs`{{search-select label="foo" models=models onChange=onChange disallowNewItems=true}}`);
+    await clickTrigger();
+    assert.equal(component.options.length, 3, 'shows all options');
+    await typeInSearch('p');
+    assert.equal(component.options.length, 1, 'list shows one option');
+    assert.equal(component.options[0].text, 'No results found');
+    await clickTrigger();
+    assert.ok(this.onChange.notCalled, 'on change not called when empty state clicked');
   });
 
   test('it moves option from drop down to list when clicked', async function(assert) {

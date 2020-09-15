@@ -65,7 +65,7 @@ require (
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
-	github.com/hashicorp/go-retryablehttp v0.6.6
+	github.com/hashicorp/go-retryablehttp v0.6.7
 	github.com/hashicorp/go-rootcerts v1.0.2
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
@@ -73,7 +73,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
-	github.com/hashicorp/raft v1.1.3-0.20200722211658-e8ce96ef55b8
+	github.com/hashicorp/raft v1.1.3-0.20200914140732-b7cd2b346b06
 	github.com/hashicorp/raft-snapshot v1.0.2-0.20190827162939-8117efcc5aab
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.5
 	github.com/hashicorp/vault-plugin-auth-azure v0.5.6
@@ -87,7 +87,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-couchbase v0.1.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2
-	github.com/hashicorp/vault-plugin-mock v0.15.0
+	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.6.6
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5
 	github.com/hashicorp/vault-plugin-secrets-azure v0.6.2

@@ -341,7 +341,7 @@ github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/protobuf/ptypes/wrappers
 # github.com/golang/snappy v0.0.1
 github.com/golang/snappy
-# github.com/google/go-cmp v0.4.0
+# github.com/google/go-cmp v0.5.0
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
@@ -415,7 +415,7 @@ github.com/hashicorp/go-plugin/internal/plugin
 # github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
 github.com/hashicorp/go-raftchunking
 github.com/hashicorp/go-raftchunking/types
-# github.com/hashicorp/go-retryablehttp v0.6.6
+# github.com/hashicorp/go-retryablehttp v0.6.7
 github.com/hashicorp/go-retryablehttp
 # github.com/hashicorp/go-rootcerts v1.0.2
 github.com/hashicorp/go-rootcerts
@@ -447,7 +447,7 @@ github.com/hashicorp/logutils
 # github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
 github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
-# github.com/hashicorp/raft v1.1.3-0.20200722211658-e8ce96ef55b8
+# github.com/hashicorp/raft v1.1.3-0.20200914140732-b7cd2b346b06
 github.com/hashicorp/raft
 # github.com/hashicorp/raft-snapshot v1.0.2-0.20190827162939-8117efcc5aab
 github.com/hashicorp/raft-snapshot
@@ -484,7 +484,7 @@ github.com/hashicorp/vault-plugin-database-couchbase
 github.com/hashicorp/vault-plugin-database-elasticsearch
 # github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2
 github.com/hashicorp/vault-plugin-database-mongodbatlas
-# github.com/hashicorp/vault-plugin-mock v0.15.0
+# github.com/hashicorp/vault-plugin-mock v0.16.1
 github.com/hashicorp/vault-plugin-mock
 # github.com/hashicorp/vault-plugin-secrets-ad v0.6.6
 github.com/hashicorp/vault-plugin-secrets-ad/plugin

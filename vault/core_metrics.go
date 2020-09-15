@@ -294,7 +294,7 @@ func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
 			return
 		}
 		for _, path := range keys {
-			if path[len(path)-1] == '/' {
+			if len(path) > 0 && path[len(path)-1] == '/' {
 				subdirectories = append(subdirectories, currentDirectory+path)
 			} else {
 				m.NumSecrets += 1
