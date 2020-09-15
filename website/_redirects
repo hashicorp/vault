@@ -228,7 +228,7 @@
 
 # Intro getting started content -> Learn
 /intro/index.html                                https://learn.hashicorp.com/collections/vault/getting-started 301!
-/intro/getting-started/                          https://learn.hashicorp.com/vault/getting-started/install 301!
+/intro/getting-started/                          https://learn.hashicorp.com/tutorials/vault/getting-started-intro 301!
 /intro/getting-started/index.html                https://learn.hashicorp.com/vault/getting-started/install 301!
 /intro/getting-started/index                     https://learn.hashicorp.com/vault/getting-started/install 301!
 /intro/getting-started/dev-server.html           https://learn.hashicorp.com/vault/getting-started/dev-server 301!
