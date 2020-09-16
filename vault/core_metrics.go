@@ -27,10 +27,13 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 		select {
 		case <-emitTimer:
 			c.metricsMutex.Lock()
-			if c.expiration != nil {
+
+			// Emit on active node only
+			if c.expiration != nil && !c.perfStandby {
 				c.expiration.emitMetrics()
 			}
-			// Refresh the sealed gauge
+
+			// Refresh the sealed gauge, on all nodes
 			if c.Sealed() {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 0, nil)
 			} else {
@@ -54,6 +57,11 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			}
 			c.stateLock.RUnlock()
 		case <-identityCountTimer:
+			// Only emit on active node
+			if c.perfStandby {
+				break
+			}
+
 			// TODO: this can be replaced by the identity gauge counter; we need to
 			// sum across all namespaces.
 			go func() {
@@ -123,6 +131,9 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 	// The gauge collection processes are started and stopped here
 	// because there's more than one TokenManager created during startup,
 	// but we only want one set of gauges.
+	//
+	// Both active nodes and performance standby nodes call emitMetrics
+	// so we have to handle both.
 
 	metricsInit := []struct {
 		MetricName    []string
@@ -174,9 +185,10 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 		},
 	}
 
+	// Disable collection if configured, or if we're a performance standby.
 	if c.MetricSink().GaugeInterval == time.Duration(0) {
 		c.logger.Info("usage gauge collection is disabled")
-	} else {
+	} else if !c.perfStandby {
 		for _, init := range metricsInit {
 			if init.DisableEnvVar != "" {
 				if os.Getenv(init.DisableEnvVar) != "" {
