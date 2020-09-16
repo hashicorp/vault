@@ -6,6 +6,7 @@ IMPROVEMENTS:
 * secrets/openldap: Add "ad" schema that allows the engine to correctly rotate AD passwords. [[GH-16](https://github.com/hashicorp/vault-plugin-secrets-openldap/pull/16)]
 * command/server: Delay informational messages in -dev mode until logs have settled. [[GH-9702](https://github.com/hashicorp/vault/pull/9702)]
 * command/server: Add environment variable support for `disable_mlock`. [[GH-9931](https://github.com/hashicorp/vault/pull/9931)]
+* core: Disable usage metrics collection on performance standby nodes.. [[GH-9966](https://github.com/hashicorp/vault/pull/9966)]
 * sdk/framework: Add a time type for API fields. [[GH-9911](https://github.com/hashicorp/vault/pull/9911)]
 
 BUG FIXES:
