@@ -46,7 +46,7 @@ type CredentialsConfig struct {
 // Make sure the logger isn't nil before logging
 func (c *CredentialsConfig) log(level hclog.Level, msg string, args ...interface{}) {
 	if c.Logger != nil {
-		c.Logger.Log(level, msg, args)
+		c.Logger.Log(level, msg, args...)
 	}
 }
 
