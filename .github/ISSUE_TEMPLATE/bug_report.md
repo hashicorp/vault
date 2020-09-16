@@ -1,6 +1,9 @@
 ---
 name: Bug report
 about: Let us know about a bug!
+title: ''
+labels: ''
+assignees: ''
 
 ---
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -18,9 +19,11 @@ import (
 )
 
 const (
-	// Interval to check the queue for items needing rotation
-	queueTickSeconds  = 5
-	queueTickInterval = queueTickSeconds * time.Second
+	// Default interval to check the queue for items needing rotation
+	defaultQueueTickSeconds = 5
+
+	// Config key to set an alternate interval
+	queueTickIntervalKey = "rotation_queue_tick_interval"
 
 	// WAL storage key used for static account rotations
 	staticWALKey = "staticRotationKey"
@@ -91,7 +94,7 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 
 // runTicker kicks off a periodic ticker that invoke the automatic credential
 // rotation method at a determined interval. The default interval is 5 seconds.
-func (b *databaseBackend) runTicker(ctx context.Context, s logical.Storage) {
+func (b *databaseBackend) runTicker(ctx context.Context, queueTickInterval time.Duration, s logical.Storage) {
 	b.logger.Info("starting periodic ticker")
 	tick := time.NewTicker(queueTickInterval)
 	defer tick.Stop()
@@ -442,7 +445,16 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 		b.populateQueue(ctx, conf.StorageView)
 
 		// Launch ticker
-		go b.runTicker(ctx, conf.StorageView)
+		queueTickerInterval := defaultQueueTickSeconds * time.Second
+		if strVal, ok := conf.Config[queueTickIntervalKey]; ok {
+			newVal, err := strconv.Atoi(strVal)
+			if err == nil {
+				queueTickerInterval = time.Duration(newVal) * time.Second
+			} else {
+				b.Logger().Error("bad value for %q option: %q", queueTickIntervalKey, strVal)
+			}
+		}
+		go b.runTicker(ctx, queueTickerInterval, conf.StorageView)
 	}
 }
 

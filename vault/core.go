@@ -346,6 +346,9 @@ type Core struct {
 	// identityStore is used to manage client entities
 	identityStore *IdentityStore
 
+	// activityLog is used to track active client count
+	activityLog *ActivityLog
+
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
 
@@ -1933,6 +1936,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 			return err
 		}
+		if err := c.setupActivityLog(ctx); err != nil {
+			return err
+		}
 	} else {
 		c.auditBroker = NewAuditBroker(c.logger)
 	}
@@ -1964,7 +1970,8 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	return nil
 }
 
-// postUnseal is invoked on the active node after the barrier is unsealed, but before
+// postUnseal is invoked on the active node, and performance standby nodes,
+// after the barrier is unsealed, but before
 // allowing any user operations. This allows us to setup any state that
 // requires the Vault to be unsealed such as mount tables, logical backends,
 // credential stores, etc.

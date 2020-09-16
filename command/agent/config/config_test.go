@@ -138,11 +138,11 @@ func TestLoadConfigFile(t *testing.T) {
 					},
 				},
 				{
-					Type:    "file",
-					WrapTTL: 5 * time.Minute,
-					DHType:  "curve25519",
-					DHPath:  "/tmp/file-foo-dhpath2",
-					AAD:     "aad",
+					Type:      "file",
+					WrapTTL:   5 * time.Minute,
+					DHType:    "curve25519",
+					DHPath:    "/tmp/file-foo-dhpath2",
+					AAD:       "aad",
 					DeriveKey: true,
 					Config: map[string]interface{}{
 						"path": "/tmp/file-bar",
