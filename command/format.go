@@ -306,12 +306,6 @@ func (t TableFormatter) OutputMap(ui cli.Ui, data map[string]interface{}) error 
 
 // OutputSealStatus will print *api.SealStatusResponse in the CLI according to the format provided
 func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusResponse) int {
-	switch Format(ui) {
-	case "table":
-	default:
-		return OutputData(ui, status)
-	}
-
 	var sealPrefix string
 	if status.RecoverySeal {
 		sealPrefix = "Recovery "
@@ -392,8 +386,7 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 	if leaderStatus.LastWAL != 0 {
 		out = append(out, fmt.Sprintf("Last WAL | %d", leaderStatus.LastWAL))
 	}
-
-	ui.Output(tableOutput(out, nil))
+	return OutputData(ui, out)
 	return 0
 }
 
