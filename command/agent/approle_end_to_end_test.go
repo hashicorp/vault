@@ -23,6 +23,7 @@ import (
 )
 
 func TestAppRoleEndToEnd(t *testing.T) {
+	t.Parallel()
 
 	testCases := []struct {
 		removeSecretIDFile bool
@@ -54,6 +55,7 @@ func TestAppRoleEndToEnd(t *testing.T) {
 			secretFileAction = "remove"
 		}
 		t.Run(fmt.Sprintf("%s_secret_id_file bindSecretID=%v secretIDLess=%v expectToken=%v", secretFileAction, tc.bindSecretID, tc.secretIDLess, tc.expectToken), func(t *testing.T) {
+			t.Parallel()
 			testAppRoleEndToEnd(t, tc.removeSecretIDFile, tc.bindSecretID, tc.secretIDLess, tc.expectToken)
 		})
 	}

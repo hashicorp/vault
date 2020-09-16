@@ -18,6 +18,7 @@ import (
 )
 
 const amzHeaderPrefix = "X-Amz-"
+
 var defaultAllowedSTSRequestHeaders = []string{
 	"X-Amz-Date",
 	"X-Amz-Credential",
@@ -140,6 +141,7 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 			b.pathConfigClient(),
 			b.pathConfigCertificate(),
 			b.pathConfigIdentity(),
+			b.pathConfigRotateRoot(),
 			b.pathConfigSts(),
 			b.pathListSts(),
 			b.pathConfigTidyRoletagBlacklist(),
