@@ -289,6 +289,9 @@ func testCluster_Forwarding(t *testing.T, cluster *TestCluster, oldLeaderCoreIdx
 
 		time.Sleep(100 * time.Millisecond)
 	}
+	if ready != 2 {
+		t.Fatal("standbys have not discovered the new active node in time")
+	}
 
 	for i := 0; i < 3; i++ {
 		if i != newLeaderCoreIdx {
