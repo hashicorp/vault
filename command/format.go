@@ -348,7 +348,7 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 	if err != nil && strings.Contains(err.Error(), "Vault is sealed") {
 		leaderStatus = &api.LeaderResponse{HAEnabled: true}
 		err = nil
-	} 
+	}
 	if err != nil {
 		ui.Error(fmt.Sprintf("Error checking leader status: %s", err))
 		return 1

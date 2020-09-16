@@ -154,10 +154,10 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 	}()
 
 	config := &sink.SinkConfig{
-		Logger: logger.Named("sink.file"),
-		AAD:    "foobar",
-		DHType: "curve25519",
-		DHPath: dhpath,
+		Logger:    logger.Named("sink.file"),
+		AAD:       "foobar",
+		DHType:    "curve25519",
+		DHPath:    dhpath,
 		DeriveKey: true,
 		Config: map[string]interface{}{
 			"path": out,
