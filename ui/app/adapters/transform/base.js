@@ -57,6 +57,7 @@ export default ApplicationAdapter.extend({
     return this.ajax(this.url(query.backend, type.modelName, query.id), 'GET').then(result => {
       return {
         id: query.id,
+        name: query.id,
         ...result,
       };
     });
