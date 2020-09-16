@@ -248,6 +248,7 @@ func testCluster_ForwardRequestsCommon(t *testing.T, clusterOpts *TestClusterOpt
 }
 
 func testCluster_Forwarding(t *testing.T, cluster *TestCluster, oldLeaderCoreIdx, newLeaderCoreIdx int, rootToken, remoteCoreID string) {
+	t.Logf("new leaderidx will be %d, stepping down other cores to make it so", newLeaderCoreIdx)
 	err := cluster.Cores[oldLeaderCoreIdx].StepDown(context.Background(), &logical.Request{
 		Operation:   logical.UpdateOperation,
 		Path:        "sys/step-down",
