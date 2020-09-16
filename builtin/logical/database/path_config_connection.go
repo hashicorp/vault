@@ -144,7 +144,7 @@ func (b *databaseBackend) connectionExistenceCheck() framework.ExistenceFunc {
 
 		entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", name))
 		if err != nil {
-			return false, errors.New("failed to read connection configuration")
+			return false, fmt.Errorf("failed to read connection configuration: %w", err)
 		}
 
 		return entry != nil, nil
@@ -185,7 +185,7 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 
 		entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", name))
 		if err != nil {
-			return nil, errors.New("failed to read connection configuration")
+			return nil, fmt.Errorf("failed to read connection configuration: %w", err)
 		}
 		if entry == nil {
 			return nil, nil
@@ -251,7 +251,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", name))
 		if err != nil {
-			return nil, errors.New("failed to read connection configuration")
+			return nil, fmt.Errorf("failed to read connection configuration: %w", err)
 		}
 		if entry != nil {
 			if err := entry.DecodeJSON(config); err != nil {
@@ -360,7 +360,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		// If using a legacy DB plugin and set the `password_policy` field, send a warning to the user indicating
 		// the `password_policy` will not be used
-		if dbw.isLegacyDB() && config.PasswordPolicy != "" {
+		if dbw.isV4() && config.PasswordPolicy != "" {
 			resp.AddWarning(fmt.Sprintf("%s does not support password policies - upgrade to the latest version of "+
 				"Vault (or the sdk if using a custom plugin) to gain password policy support", config.PluginName))
 		}

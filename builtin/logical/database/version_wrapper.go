@@ -44,12 +44,12 @@ func newDatabaseWrapper(ctx context.Context, pluginName string, sys pluginutil.L
 // Initialize the underlying database. This is analogous to a constructor on the database plugin object.
 // Errors if the wrapper does not contain an underlying database.
 func (d databaseVersionWrapper) Initialize(ctx context.Context, req newdbplugin.InitializeRequest) (newdbplugin.InitializeResponse, error) {
-	if !d.isNewDB() && !d.isLegacyDB() {
+	if !d.isV5() && !d.isV4() {
 		return newdbplugin.InitializeResponse{}, fmt.Errorf("no underlying database specified")
 	}
 
 	// v5 Database
-	if d.isNewDB() {
+	if d.isV5() {
 		return d.v5.Initialize(ctx, req)
 	}
 
@@ -65,17 +65,17 @@ func (d databaseVersionWrapper) Initialize(ctx context.Context, req newdbplugin.
 }
 
 // NewUser in the database. This is different from the v5 Database in that it returns a password as well.
-// This is done because the v4 Database is expected to generate a password and return it. The NewUserReponse
+// This is done because the v4 Database is expected to generate a password and return it. The NewUserResponse
 // does not have a way of returning the password so this function signature needs to be different.
 // The password returned here should be considered the source of truth, not the provided password.
 // Errors if the wrapper does not contain an underlying database.
 func (d databaseVersionWrapper) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (resp newdbplugin.NewUserResponse, password string, err error) {
-	if !d.isNewDB() && !d.isLegacyDB() {
+	if !d.isV5() && !d.isV4() {
 		return newdbplugin.NewUserResponse{}, "", fmt.Errorf("no underlying database specified")
 	}
 
 	// v5 Database
-	if d.isNewDB() {
+	if d.isV5() {
 		resp, err = d.v5.NewUser(ctx, req)
 		return resp, req.Password, err
 	}
@@ -104,12 +104,12 @@ func (d databaseVersionWrapper) NewUser(ctx context.Context, req newdbplugin.New
 // in the UpdateUserRequest such as password credentials or user TTL.
 // Errors if the wrapper does not contain an underlying database.
 func (d databaseVersionWrapper) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest, isRootUser bool) (saveConfig map[string]interface{}, err error) {
-	if !d.isNewDB() && !d.isLegacyDB() {
+	if !d.isV5() && !d.isV4() {
 		return nil, fmt.Errorf("no underlying database specified")
 	}
 
 	// v5 Database
-	if d.isNewDB() {
+	if d.isV5() {
 		_, err := d.v5.UpdateUser(ctx, req)
 		return nil, err
 	}
@@ -178,12 +178,12 @@ func (d databaseVersionWrapper) changeRootUserPasswordLegacy(ctx context.Context
 
 // DeleteUser in the underlying database. Errors if the wrapper does not contain an underlying database.
 func (d databaseVersionWrapper) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
-	if !d.isNewDB() && !d.isLegacyDB() {
+	if !d.isV5() && !d.isV4() {
 		return newdbplugin.DeleteUserResponse{}, fmt.Errorf("no underlying database specified")
 	}
 
 	// v5 Database
-	if d.isNewDB() {
+	if d.isV5() {
 		return d.v5.DeleteUser(ctx, req)
 	}
 
@@ -197,12 +197,12 @@ func (d databaseVersionWrapper) DeleteUser(ctx context.Context, req newdbplugin.
 
 // Type of the underlying database. Errors if the wrapper does not contain an underlying database.
 func (d databaseVersionWrapper) Type() (string, error) {
-	if !d.isNewDB() && !d.isLegacyDB() {
+	if !d.isV5() && !d.isV4() {
 		return "", fmt.Errorf("no underlying database specified")
 	}
 
 	// v5 Database
-	if d.isNewDB() {
+	if d.isV5() {
 		return d.v5.Type()
 	}
 
@@ -212,11 +212,11 @@ func (d databaseVersionWrapper) Type() (string, error) {
 
 // Close the underlying database. Errors if the wrapper does not contain an underlying database.
 func (d databaseVersionWrapper) Close() error {
-	if !d.isNewDB() && !d.isLegacyDB() {
+	if !d.isV5() && !d.isV4() {
 		return fmt.Errorf("no underlying database specified")
 	}
 	// v5 Database
-	if d.isNewDB() {
+	if d.isV5() {
 		return d.v5.Close()
 	}
 
@@ -239,13 +239,13 @@ var (
 // GeneratePassword either from the v4 database or by using the provided password policy. If using a v5 database
 // and no password policy is specified, this will have a reasonable default password generator.
 func (d databaseVersionWrapper) GeneratePassword(ctx context.Context, generator passwordGenerator, passwordPolicy string) (password string, err error) {
-	if !d.isNewDB() && !d.isLegacyDB() {
+	if !d.isV5() && !d.isV4() {
 		return "", fmt.Errorf("no underlying database specified")
 	}
 
 	// If using the legacy database, use GenerateCredentials instead of password policies
 	// This will keep the existing behavior even though passwords can be generated with a policy
-	if d.isLegacyDB() {
+	if d.isV4() {
 		password, err := d.v4.GenerateCredentials(ctx)
 		if err != nil {
 			return "", err
@@ -259,10 +259,10 @@ func (d databaseVersionWrapper) GeneratePassword(ctx context.Context, generator 
 	return generator.GeneratePasswordFromPolicy(ctx, passwordPolicy)
 }
 
-func (d databaseVersionWrapper) isNewDB() bool {
+func (d databaseVersionWrapper) isV5() bool {
 	return d.v5 != nil
 }
 
-func (d databaseVersionWrapper) isLegacyDB() bool {
+func (d databaseVersionWrapper) isV4() bool {
 	return d.v4 != nil
 }
