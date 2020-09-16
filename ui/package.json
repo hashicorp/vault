@@ -93,7 +93,7 @@
     "ember-concurrency": "^1.0.0",
     "ember-concurrency-test-waiter": "^0.3.1",
     "ember-copy": "^1.0.0",
-    "ember-data": "~3.8.0",
+    "ember-data": "~3.16.0",
     "ember-data-model-fragments": "^4.0.0",
     "ember-engines": "^0.8.3",
     "ember-export-application-global": "^2.0.0",
