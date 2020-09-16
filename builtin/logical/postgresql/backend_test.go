@@ -10,9 +10,9 @@ import (
 	"reflect"
 	"testing"
 
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/logical"
-	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
 )

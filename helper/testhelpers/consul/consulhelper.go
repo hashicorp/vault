@@ -58,6 +58,7 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 		AuthUsername: os.Getenv("CONSUL_DOCKER_USERNAME"),
 		AuthPassword: os.Getenv("CONSUL_DOCKER_PASSWORD"),
 	})
+
 	if err != nil {
 		t.Fatalf("Could not start docker Consul: %s", err)
 	}
