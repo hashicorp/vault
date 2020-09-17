@@ -230,7 +230,7 @@ func deriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.Test
 }
 
 func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 20; i++ {
 		for _, core := range cluster.Cores {
 			leaderResp, err := core.Client.Sys().Leader()
 			if err != nil {
