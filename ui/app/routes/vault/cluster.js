@@ -54,7 +54,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
   async beforeModel() {
     const params = this.paramsFor(this.routeName);
-    this.clearNonGlobalModels();
+    // this.clearNonGlobalModels(); // ARG TODO: handle this either refresh or find all models.
     this.get('namespaceService').setNamespace(params.namespaceQueryParam);
     const id = this.getClusterId(params);
     if (id) {

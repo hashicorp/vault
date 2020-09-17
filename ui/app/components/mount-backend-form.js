@@ -94,9 +94,8 @@ export default Component.extend({
     this.flashMessages.success(`Successfully mounted the ${type} ${mountType} at ${path}.`);
     yield this.onMountSuccess(type, path);
     return;
-  })
-    .drop()
-    .withTestWaiter(),
+  }).drop(),
+  // .withTestWaiter(), // ARG TODO: handle withTestWaiter() which no longer works in upgrade, remove package from package.json
 
   actions: {
     onTypeChange(path, value) {

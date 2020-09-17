@@ -40,7 +40,7 @@ export default Component.extend({
     }
     this.router.transitionTo('vault.cluster.access.method.item.list').followRedirects();
     this.flashMessages.success(`Successfully saved ${this.itemType} ${this.model.id}.`);
-  }).withTestWaiter(),
+  }), // ARG TODO: handle withTestWaiter() which no longer works in upgrade, remove package from package.json
   actions: {
     deleteItem() {
       this.model.destroyRecord().then(() => {

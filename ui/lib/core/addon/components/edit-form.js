@@ -55,9 +55,8 @@ export default Component.extend({
       return;
     }
     yield this.onSave({ saveType: method, model });
-  })
-    .drop()
-    .withTestWaiter(),
+  }).drop(),
+  // .withTestWaiter(),  // ARG TODO: handle withTestWaiter() which no longer works in upgrade, remove package from package.json
 
   willDestroy() {
     let { model } = this;

@@ -44,5 +44,5 @@ export default AuthConfigComponent.extend({
     }
     this.router.transitionTo('vault.cluster.access.methods').followRedirects();
     this.flashMessages.success('The configuration was saved successfully.');
-  }).withTestWaiter(),
+  }), // ARG TODO: handle withTestWaiter() which no longer works in upgrade, remove package from package.json
 });
