@@ -92,7 +92,7 @@
     "ember-cli-string-helpers": "^4.0.0",
     "ember-cli-uglify": "^3.0.0",
     "ember-composable-helpers": "^4.3.0",
-    "ember-concurrency": "^1.0.0",
+    "ember-concurrency": "^1.3.0",
     "ember-concurrency-test-waiter": "^0.3.1",
     "ember-copy": "^1.0.0",
     "ember-data": "~3.20.0",
@@ -189,7 +189,8 @@
       "lib/kmip",
       "lib/open-api-explorer",
       "lib/replication",
-      "lib/service-worker-authenticated-download"
+      "lib/service-worker-authenticated-download",
+      "lib/test-engine"
     ]
   },
   "dependencies": {}
