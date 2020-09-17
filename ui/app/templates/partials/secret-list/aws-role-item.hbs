@@ -2,7 +2,7 @@
   (concat
     "vault.cluster.secrets.backend."
     "credentials"
-    (if (not item.id) "-root")
+    (unless item.id "-root")
   )
   item.id
   class="list-item-row"
@@ -15,7 +15,7 @@
         (concat
           "vault.cluster.secrets.backend."
            "credentials"
-          (if (not item.id) "-root")
+          (unless item.id "-root")
         )
         item.id
         class="has-text-black has-text-weight-semibold"

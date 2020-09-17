@@ -105,7 +105,7 @@
   {{list-pagination
     page=model.meta.currentPage
     lastPage=model.meta.lastPage
-    link=(concat "vault.cluster.access.leases.list" (if (not baseKey.id) "-root"))
+    link=(concat "vault.cluster.access.leases.list" (unless baseKey.id "-root"))
     model=(compact (array (if baseKey.id baseKey.id)))
   }}
 {{/if}}

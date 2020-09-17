@@ -2,7 +2,7 @@
   (concat
     "vault.cluster.secrets.backend."
     "credentials"
-    (if (not item.id) "-root")
+    (unless item.id "-root")
   )
   item.backend
   item.id
@@ -18,7 +18,7 @@
         (concat
           "vault.cluster.secrets.backend."
            "credentials"
-          (if (not item.id) "-root")
+          (unless item.id "-root")
         )
         item.id
         (query-params action="issue")

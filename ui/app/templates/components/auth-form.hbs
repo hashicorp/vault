@@ -17,7 +17,7 @@
           {{/with}}
         {{/each}}
         {{#if hasMethodsWithPath}}
-          <li class="{{if (not selectedAuthIsPath) 'is-active' ''}}" data-test-auth-method>
+          <li class="{{unless selectedAuthIsPath 'is-active' ''}}" data-test-auth-method>
             {{#link-to 'vault.cluster.auth' cluster.name (query-params with='token') data-test-auth-method-link="other"}}
               Other
             {{/link-to}}

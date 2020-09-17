@@ -5,7 +5,7 @@
   <label
     for="no-filtering"
     class="radio-card
-      {{if (not config.mode) " is-selected"}}"
+      {{unless config.mode " is-selected"}}"
   >
     <div class="radio-card-row">
       <Icon

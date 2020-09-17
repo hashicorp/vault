@@ -2,7 +2,7 @@
   (concat
     "vault.cluster.secrets.backend."
     "show"
-    (if (not item.id) "-root")
+    (unless item.id "-root")
   )
   item.idForNav
   class="list-item-row"
@@ -16,7 +16,7 @@
         (concat
           "vault.cluster.secrets.backend."
            "show"
-          (if (not item.id) "-root")
+          (unless item.id "-root")
         )
         item.idForNav
         class="has-text-black has-text-weight-semibold"

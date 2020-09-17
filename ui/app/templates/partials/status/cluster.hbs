@@ -2,7 +2,7 @@
   <div class="box">
     {{#unless version.isOSS}}
       {{#if (and activeCluster.unsealed auth.currentToken)}}
-        {{#if (not cluster.dr.isSecondary)}}
+        {{#unless cluster.dr.isSecondary}}
           {{#if (has-permission 'status' routeParams='replication')}}
             <nav class="menu">
               <p class="menu-label">Replication</p>
@@ -86,7 +86,7 @@
             </nav>
             <hr/>
           {{/if}}
-        {{/if}}
+        {{/unless}}
       {{/if}}
     {{/unless}}
       <nav class="menu">
