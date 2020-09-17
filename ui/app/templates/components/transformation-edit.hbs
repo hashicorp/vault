@@ -37,6 +37,8 @@
               <a
               class="toolbar-link"
               aria-disabled="true"
+              {{!-- ARG TODO: come back and double check because added in href blank for linting --}}
+              href=""
               disabled
               >
                 Delete transformation
@@ -52,6 +54,8 @@
         <a
           class="toolbar-link"
           onclick={{action (mut isDeleteModalActive) true}}
+          {{!-- ARG TODO: come back and double check because added in href blank for linting --}}
+          href=""
         >
           Delete transformation
         </a>
@@ -62,6 +66,8 @@
           <a
             class="toolbar-link"
             onclick={{action (mut isEditModalActive) true}}
+            href=""
+            {{!-- ARG TODO: come back and double check because added in href blank for linting --}}
             data-test-edit-link
           >
             Edit transformation
@@ -127,6 +133,7 @@
       Confirm
     {{/link-to}}
     <button
+      type="button"
       class="button is-secondary"
       onclick={{action (mut isEditModalActive) false}}
     >
