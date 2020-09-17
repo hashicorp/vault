@@ -28,7 +28,7 @@ export default Route.extend({
       case 'role':
         modelType = 'transform/role';
         break;
-      case 'templates':
+      case 'template':
         modelType = 'transform/template';
         break;
       case 'alphabets':
@@ -54,7 +54,7 @@ export default Route.extend({
   beforeModel() {
     let secret = this.secretParam();
     let backend = this.enginePathParam();
-    let { tab } = this.paramsFor('vault.cluster.secrets.backend');
+    let { tab } = this.paramsFor('vault.cluster.secrets.backend.list-root');
     let secretEngine = this.store.peekRecord('secret-engine', backend);
     let type = secretEngine && secretEngine.get('engineType');
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {

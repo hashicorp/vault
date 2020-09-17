@@ -1,4 +1,4 @@
-package rafttests
+package raftha
 
 import (
 	"sync/atomic"
@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
+	consulstorage "github.com/hashicorp/vault/helper/testhelpers/teststorage/consul"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -43,11 +44,11 @@ func TestRaft_HA_NewCluster(t *testing.T) {
 		t.Parallel()
 
 		t.Run("no_client_certs", func(t *testing.T) {
-			testRaftHANewCluster(t, teststorage.MakeConsulBackend, false)
+			testRaftHANewCluster(t, consulstorage.MakeConsulBackend, false)
 		})
 
 		t.Run("with_client_certs", func(t *testing.T) {
-			testRaftHANewCluster(t, teststorage.MakeConsulBackend, true)
+			testRaftHANewCluster(t, consulstorage.MakeConsulBackend, true)
 		})
 	})
 }
@@ -99,7 +100,7 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 
 	// Ensure peers are added
 	leaderClient := cluster.Cores[0].Client
-	verifyRaftPeers(t, leaderClient, map[string]bool{
+	testhelpers.VerifyRaftPeers(t, leaderClient, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 		"core-2": true,
@@ -121,12 +122,13 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 	}
 
 	// Ensure peers are removed
-	verifyRaftPeers(t, leaderClient, map[string]bool{
+	testhelpers.VerifyRaftPeers(t, leaderClient, map[string]bool{
 		"core-0": true,
 	})
 }
 
 func TestRaft_HA_ExistingCluster(t *testing.T) {
+	t.Parallel()
 	conf := vault.CoreConfig{
 		DisablePerformanceStandby: true,
 	}
@@ -231,7 +233,7 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 		joinFunc(cluster.Cores[2].Client)
 
 		// Ensure peers are added
-		verifyRaftPeers(t, leaderClient, map[string]bool{
+		testhelpers.VerifyRaftPeers(t, leaderClient, map[string]bool{
 			"core-0": true,
 			"core-1": true,
 			"core-2": true,

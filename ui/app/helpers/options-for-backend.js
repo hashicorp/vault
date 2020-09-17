@@ -58,7 +58,7 @@ const SECRET_BACKENDS = {
   transform: {
     displayName: 'Transformation',
     navigateTree: false,
-    listItemPartial: 'partials/secret-list/transform-transformation-item',
+    listItemPartial: 'partials/secret-list/transform-list-item',
     tabs: [
       {
         name: 'transformations',
@@ -67,6 +67,7 @@ const SECRET_BACKENDS = {
         item: 'transformation',
         create: 'Create transformation',
         editComponent: 'transformation-edit',
+        listItemPartial: 'partials/secret-list/transform-transformation-item',
       },
       {
         name: 'role',
@@ -79,15 +80,14 @@ const SECRET_BACKENDS = {
         editComponent: 'transform-role-edit',
       },
       {
-        name: 'templates',
+        name: 'template',
         modelPrefix: 'template/',
         label: 'Templates',
         searchPlaceholder: 'Filter templates',
-        item: 'templates',
+        item: 'template',
         create: 'Create template',
-        tab: 'templates',
+        tab: 'template',
         editComponent: 'transform-template-edit',
-        hideCreate: true,
       },
       {
         name: 'alphabets',
