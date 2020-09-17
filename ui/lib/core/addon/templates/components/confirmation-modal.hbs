@@ -27,6 +27,7 @@
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
     <button
+      type="button"
       class="button {{buttonClass}}"
       disabled={{unless (eq confirmationInput confirmText) true}}
       onclick={{onConfirm}}
@@ -35,6 +36,7 @@
       {{buttonText}}
     </button>
     <button
+      type="button"
       class="button is-secondary"
       onclick={{action (mut isActive) false}}
       data-test-cancel-button>

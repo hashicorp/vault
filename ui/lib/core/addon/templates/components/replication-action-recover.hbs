@@ -10,6 +10,7 @@
 
   <div class="action-block-action">
     <button
+      type="button"
       class="button is-secondary"
       onclick={{action (mut isModalActive) true}}
       data-test-replication-action-trigger
@@ -33,6 +34,7 @@
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
     <button
+      type="button"
       class="button is-primary"
       onclick={{action "onSubmit" "recover"}}
       data-test-recover-confirm-button
@@ -40,6 +42,7 @@
       Recover
     </button>
     <button
+      type="button"
       class="button is-secondary"
       onclick={{action (mut isModalActive) false}}
       data-test-recover-cancel-button>

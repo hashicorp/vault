@@ -1,5 +1,5 @@
 <ToolTip @onClose={{action (mut tooltipText) "Copy"}} as |T|>
-  <T.trigger data-test-tooltip-trigger tabindex=false>
+  <T.trigger data-test-tooltip-trigger tabindex="-1">
     <CopyButton
       data-test-hover-copy-button
       class="copy-button button is-compact is-transparent"
