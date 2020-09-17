@@ -158,6 +158,13 @@ func (kt KeyType) String() string {
 	return "[unknown]"
 }
 
+// Built-in helper type for returning asymmetric keys
+type AsymKey struct {
+	Name         string    `json:"name" structs:"name" mapstructure:"name"`
+	PublicKey    string    `json:"public_key" structs:"public_key" mapstructure:"public_key"`
+	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
+}
+
 type KeyData struct {
 	Policy       *Policy       `json:"policy"`
 	ArchivedKeys *archivedKeys `json:"archived_keys"`

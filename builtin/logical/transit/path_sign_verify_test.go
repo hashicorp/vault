@@ -321,7 +321,7 @@ func validatePublicKey(t *testing.T, in string, sig string, pubKeyRaw []byte, ex
 		t.Fatal(err)
 	}
 	val := keyReadResp.Data["keys"].(map[string]map[string]interface{})[strings.TrimPrefix(splitSig[1], "v")]
-	var ak asymKey
+	var ak keysutil.AsymKey
 	if err := mapstructure.Decode(val, &ak); err != nil {
 		t.Fatal(err)
 	}

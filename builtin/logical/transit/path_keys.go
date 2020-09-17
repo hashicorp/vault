@@ -182,13 +182,6 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 	return nil, nil
 }
 
-// Built-in helper type for returning asymmetric keys
-type asymKey struct {
-	Name         string    `json:"name" structs:"name" mapstructure:"name"`
-	PublicKey    string    `json:"public_key" structs:"public_key" mapstructure:"public_key"`
-	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
-}
-
 func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
@@ -274,7 +267,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
 		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {
-			key := asymKey{
+			key := keysutil.AsymKey{
 				PublicKey:    v.FormattedPublicKey,
 				CreationTime: v.CreationTime,
 			}
