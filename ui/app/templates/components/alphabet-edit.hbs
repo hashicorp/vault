@@ -11,11 +11,11 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
       {{#if (eq mode "create") }}
-        Create Template
+        Create Alphabet
       {{else if (eq mode "edit")}}
-        Edit Template
+        Edit Alphabet
       {{else}}
-        Template <code>{{model.id}}</code>
+        Alphabet <code>{{model.id}}</code>
       {{/if}}
     </h1>
   </p.levelLeft>
@@ -28,9 +28,9 @@
         <button
           class="toolbar-link"
           onclick={{action "delete"}}
-          data-test-transformation-template-delete
+          data-test-transformation-alphabet-delete
         >
-          Delete template
+          Delete alphabet
         </button>
       {{/if}}
       {{#if capabilities.canUpdate }}
@@ -40,7 +40,7 @@
           @data-test-edit-link=true
           @replace=true
         >
-          Edit template
+          Edit alphabet
         </ToolbarSecretLink>
       {{/if}}
     </ToolbarActions>
@@ -50,8 +50,9 @@
 {{#if (or (eq mode 'edit') (eq mode 'create'))}}
 <form onsubmit={{action "createOrUpdate" mode}}>
   <div class="box is-sideless is-fullwidth is-marginless">
+    {{log model "model"}}
     {{message-error model=model}}
-    <NamespaceReminder @mode={{mode}} @noun="transform template" />
+    <NamespaceReminder @mode={{mode}} @noun="transform alphabet" />
     {{#each model.attrs as |attr|}}
       {{#if (and (eq attr.name 'name') (eq mode 'edit')) }}
         <label for="{{attr.name}}" class="is-label">
@@ -65,7 +66,7 @@
           id={{attr.name}}
           autocomplete="off"
           spellcheck="false"
-          value={{or (get model attr.name) attr.options.defaultValue}}
+          value={{or (get model attr.name) model.id}}
           readonly
           class="field input is-readOnly"
           type={{attr.type}}
@@ -85,10 +86,10 @@
         type="submit"
         disabled={{buttonDisabled}}
         class="button is-primary"
-        data-test-template-transform-create=true
+        data-test-role-transform-create=true
       >
         {{#if (eq mode 'create')}}
-          Create template
+          Create role
         {{else if (eq mode 'edit')}}
           Save
         {{/if}}
@@ -105,6 +106,8 @@
 </form>
 {{else}}
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+  {{log model "model"}}
+  {{message-error model=model}}
   {{#each model.attrs as |attr|}}
     {{#if (eq attr.type "object")}}
       {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(stringify (get model attr.name))}}
@@ -113,7 +116,8 @@
         label=(capitalize (or attr.options.label (humanize (dasherize attr.name))))
         value=(get model attr.name)
         type=attr.type
-        viewAll=attr.name
+        isLink=(eq attr.name 'transformations')
+        viewAll="transformations"
       }}
     {{else}}
       {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}

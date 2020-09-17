@@ -58,9 +58,14 @@ export default Component.extend(FocusOnInsertMixin, {
   },
   persist(method, successCallback) {
     const model = get(this, 'model');
-    return model[method]().then(() => {
-      successCallback(model);
-    });
+    return model[method]()
+      .then(() => {
+        successCallback(model);
+      })
+      .catch(e => {
+        // console.log('e', e);
+        model.set('displayErrors', e.errors);
+      });
   },
 
   applyChanges(type, callback = () => {}) {

@@ -15,8 +15,6 @@ const Model = DS.Model.extend({
 
   name: attr('string', {
     label: 'Name',
-    fieldValue: 'id',
-    readOnly: true,
     subText:
       'Templates allow Vault to determine what and how to capture the value to be transformed. This cannot be edited later.',
   }),
@@ -34,13 +32,8 @@ const Model = DS.Model.extend({
     selectLimit: 1,
   }),
 
-  attrs: computed('pattern', 'alphabet', function() {
+  attrs: computed('name', function() {
     let keys = ['name', 'pattern', 'alphabet'];
-    return expandAttributeMeta(this, keys);
-  }),
-
-  editableAttrs: computed('pattern', 'alphabet', function() {
-    let keys = ['pattern', 'alphabet'];
     return expandAttributeMeta(this, keys);
   }),
 
