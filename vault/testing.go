@@ -696,6 +696,19 @@ func TestWaitActive(t testing.T, core *Core) {
 	}
 }
 
+func TestWaitActiveForwardingReady(t testing.T, core *Core) {
+	TestWaitActive(t, core)
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if _, ok := core.getClusterListener().Handler(consts.RequestForwardingALPN); ok {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	t.Fatal("timed out waiting for request forwarding handler to be registered")
+}
+
 func TestWaitActiveWithError(core *Core) error {
 	start := time.Now()
 	var standby bool
