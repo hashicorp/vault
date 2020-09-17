@@ -23,24 +23,20 @@ export default Component.extend({
   tagName: '',
   title: null,
   replicationDetails: null,
-  state: computed('replicationDetails.{state}', function() {
+  state: computed('replicationDetails.state', function() {
     return this.replicationDetails && this.replicationDetails.state
       ? this.replicationDetails.state
       : 'unknown';
   }),
-  connection: computed('replicationDetails.{connection_state}', function() {
+  connection: computed('replicationDetails.connection_state', function() {
     return this.replicationDetails.connection_state ? this.replicationDetails.connection_state : 'unknown';
   }),
-  lastRemoteWAL: computed('replicationDetails.{lastRemoteWAL}', function() {
+  lastRemoteWAL: computed('replicationDetails.lastRemoteWAL', function() {
     return this.replicationDetails && this.replicationDetails.lastRemoteWAL
       ? this.replicationDetails.lastRemoteWAL
       : 0;
   }),
-  inSyncState: computed('state', function() {
-    // if our definition of what is considered 'synced' changes,
-    // we should use the clusterStates helper instead
-    return this.state === 'stream-wals';
-  }),
+  inSyncState: computed.equal('state', 'stream-wals'),
   hasErrorClass: computed('replicationDetails', 'title', 'state', 'connection', function() {
     const { title, state, connection } = this;
 
@@ -52,9 +48,7 @@ export default Component.extend({
     }
     return false;
   }),
-  knownPrimaryClusterAddrs: computed('replicationDetails.{knownPrimaryClusterAddrs}', function() {
-    return this.replicationDetails.knownPrimaryClusterAddrs;
-  }),
+  knownPrimaryClusterAddrs: computed.reads('replicationDetails.knownPrimaryClusterAddrs'),
   primaryUiUrl: computed('replicationDetails.{primaries,knownPrimaryClusterAddrs}', function() {
     const { replicationDetails } = this;
     if (replicationDetails.primaries && replicationDetails.primaries.length) {

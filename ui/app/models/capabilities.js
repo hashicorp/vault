@@ -21,8 +21,8 @@ export { SUDO_PATHS, SUDO_PATH_PREFIXES };
 
 const computedCapability = function(capability) {
   return computed('path', 'capabilities', 'capabilities.[]', function() {
-    const capabilities = this.get('capabilities');
-    const path = this.get('path');
+    const capabilities = this.capabilities;
+    const path = this.path;
     if (!capabilities) {
       return false;
     }

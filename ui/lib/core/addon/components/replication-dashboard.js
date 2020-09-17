@@ -42,16 +42,16 @@ export default Component.extend({
   isSummaryDashboard: false,
   replicationDetails: null,
   replicationDetailsSummary: null,
-  isSyncing: computed('replicationDetails.{state}', 'isSecondary', function() {
+  isSyncing: computed('replicationDetails.state', 'isSecondary', function() {
     const { state } = this.replicationDetails;
     const isSecondary = this.isSecondary;
     return isSecondary && state && clusterStates([state]).isSyncing;
   }),
-  isReindexing: computed('replicationDetails.{reindex_in_progress}', function() {
+  isReindexing: computed('replicationDetails.reindex_in_progress', function() {
     const { replicationDetails } = this;
     return !!replicationDetails.reindex_in_progress;
   }),
-  reindexingStage: computed('replicationDetails.{reindex_stage}', function() {
+  reindexingStage: computed('replicationDetails.reindex_stage', function() {
     const { replicationDetails } = this;
     const stage = replicationDetails.reindex_stage;
     // specify the stage if we have one
@@ -74,8 +74,8 @@ export default Component.extend({
     return progressBar;
   }),
   summaryState: computed(
-    'replicationDetailsSummary.dr.{state}',
-    'replicationDetailsSummary.performance.{state}',
+    'replicationDetailsSummary.dr.state',
+    'replicationDetailsSummary.performance.state',
     function() {
       const { replicationDetailsSummary } = this;
       const drState = replicationDetailsSummary.dr.state;

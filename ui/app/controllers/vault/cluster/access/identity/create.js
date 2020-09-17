@@ -15,7 +15,7 @@ export default Controller.extend({
     };
     let routeName = listRoutes[type];
     if (!isDelete) {
-      yield this.transitionToRoute(this.get('showRoute'), model.id, this.get('showTab'));
+      yield this.transitionToRoute(this.showRoute, model.id, this.showTab);
       return;
     }
     yield this.transitionToRoute(routeName);

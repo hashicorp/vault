@@ -68,7 +68,7 @@ export default Certificate.extend({
         default: ['csr', 'commonName', 'format', 'useCsrValues'],
       },
     ];
-    if (this.get('useCsrValues') === false) {
+    if (this.useCsrValues === false) {
       groups = groups.concat(options);
     }
 

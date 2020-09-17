@@ -43,7 +43,7 @@ export default RoleEdit.extend({
       const hasErrors = codemirror.state.lint.marked.length > 0;
 
       if (!hasErrors) {
-        set(this.get('model'), attr, val);
+        set(this.model, attr, val);
       }
     },
   },

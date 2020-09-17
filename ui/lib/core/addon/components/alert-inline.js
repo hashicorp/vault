@@ -25,14 +25,14 @@ export default Component.extend({
   classNames: ['message-inline'],
 
   textClass: computed('type', function() {
-    if (this.get('type') == 'danger') {
-      return messageTypes([this.get('type')]).glyphClass;
+    if (this.type == 'danger') {
+      return messageTypes([this.type]).glyphClass;
     }
 
     return;
   }),
 
   alertType: computed('type', function() {
-    return messageTypes([this.get('type')]);
+    return messageTypes([this.type]);
   }),
 });

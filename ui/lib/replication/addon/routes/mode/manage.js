@@ -17,7 +17,7 @@ const pathForAction = (action, replicationMode, clusterMode) => {
 export default Route.extend({
   store: service(),
   model() {
-    const store = this.get('store');
+    const store = this.store;
     const model = this.modelFor('mode');
 
     const replicationMode = this.paramsFor('mode').replication_mode;

@@ -15,26 +15,26 @@ export default Component.extend({
   didReceiveAttrs() {
     this._super(...arguments);
     let accessor = this.get('model.id');
-    let data = this.get('controlGroup').wrapInfoForAccessor(accessor);
+    let data = this.controlGroup.wrapInfoForAccessor(accessor);
     this.set('controlGroupResponse', data);
   },
 
   currentUserEntityId: alias('auth.authData.entity_id'),
 
   currentUserIsRequesting: computed('currentUserEntityId', 'model.requestEntity.id', function() {
-    return this.get('currentUserEntityId') === this.get('model.requestEntity.id');
+    return this.currentUserEntityId === this.get('model.requestEntity.id');
   }),
 
   currentUserHasAuthorized: computed('currentUserEntityId', 'model.authorizations.@each.id', function() {
     let authorizations = this.get('model.authorizations') || [];
-    return Boolean(authorizations.findBy('id', this.get('currentUserEntityId')));
+    return Boolean(authorizations.findBy('id', this.currentUserEntityId));
   }),
 
   isSuccess: or('currentUserHasAuthorized', 'model.approved'),
   requestorName: computed('currentUserIsRequesting', 'model.requestEntity', function() {
     let entity = this.get('model.requestEntity');
 
-    if (this.get('currentUserIsRequesting')) {
+    if (this.currentUserIsRequesting) {
       return 'You';
     }
     if (entity && get(entity, 'name')) {
@@ -44,7 +44,7 @@ export default Component.extend({
   }),
 
   bannerPrefix: computed('model.approved', 'currentUserHasAuthorized', function() {
-    if (this.get('currentUserHasAuthorized')) {
+    if (this.currentUserHasAuthorized) {
       return 'Thanks!';
     }
     if (this.get('model.approved')) {
@@ -76,7 +76,7 @@ export default Component.extend({
 
   refresh: task(function*() {
     try {
-      yield this.get('model').reload();
+      yield this.model.reload();
     } catch (e) {
       this.set('errors', e);
     }
@@ -84,8 +84,8 @@ export default Component.extend({
 
   authorize: task(function*() {
     try {
-      yield this.get('model').save();
-      yield this.get('refresh').perform();
+      yield this.model.save();
+      yield this.refresh.perform();
     } catch (e) {
       this.set('errors', e);
     }

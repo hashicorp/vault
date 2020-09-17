@@ -89,11 +89,11 @@ export default DS.Model.extend({
   }),
 
   fieldGroups: computed('fieldDefinition', function() {
-    return this.fieldsToAttrs(this.get('fieldDefinition'));
+    return this.fieldsToAttrs(this.fieldDefinition);
   }),
 
-  attrs: computed('certificate', 'csr', function() {
-    let keys = this.get('certificate') || this.get('csr') ? this.get('DISPLAY_FIELDS').slice(0) : [];
+  attrs: computed('DISPLAY_FIELDS', 'certificate', 'csr', function() {
+    let keys = this.certificate || this.csr ? this.DISPLAY_FIELDS.slice(0) : [];
     return expandAttributeMeta(this, keys);
   }),
 

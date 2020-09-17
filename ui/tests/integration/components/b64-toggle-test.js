@@ -15,9 +15,9 @@ module('Integration | Component | b64 toggle', function(hooks) {
     this.set('value', 'value');
     await render(hbs`{{b64-toggle value=value}}`);
     await click('button');
-    assert.equal(this.get('value'), btoa('value'), 'encodes to base64');
+    assert.equal(this.value, btoa('value'), 'encodes to base64');
     await click('button');
-    assert.equal(this.get('value'), 'value', 'decodes from base64');
+    assert.equal(this.value, 'value', 'decodes from base64');
   });
 
   test('it toggles encoding starting with base64', async function(assert) {
@@ -25,7 +25,7 @@ module('Integration | Component | b64 toggle', function(hooks) {
     await render(hbs`{{b64-toggle value=value initialEncoding='base64'}}`);
     assert.ok(find('button').textContent.includes('Decode'), 'renders as on when in b64 mode');
     await click('button');
-    assert.equal(this.get('value'), 'value', 'decodes from base64');
+    assert.equal(this.value, 'value', 'decodes from base64');
   });
 
   test('it detects changes to value after encoding', async function(assert) {

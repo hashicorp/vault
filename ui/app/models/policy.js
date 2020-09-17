@@ -8,7 +8,7 @@ let { attr } = DS;
 export default DS.Model.extend({
   name: attr('string'),
   policy: attr('string'),
-  policyType: computed(function() {
+  policyType: computed('constructor.modelName', function() {
     return this.constructor.modelName.split('/')[1];
   }),
 
@@ -17,7 +17,7 @@ export default DS.Model.extend({
   canEdit: alias('updatePath.canUpdate'),
   canRead: alias('updatePath.canRead'),
   format: computed('policy', function() {
-    let policy = this.get('policy');
+    let policy = this.policy;
     let isJSON;
     try {
       let parsed = JSON.parse(policy);

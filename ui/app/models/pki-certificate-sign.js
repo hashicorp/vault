@@ -16,7 +16,7 @@ export default Certificate.extend({
     editType: 'textarea',
   }),
 
-  fieldGroups: computed('signVerbatim', function() {
+  fieldGroups: computed('newFields', 'signVerbatim', function() {
     const options = { Options: ['altNames', 'ipSans', 'ttl', 'excludeCnFromSans', 'otherSans'] };
     let groups = [
       {
@@ -26,7 +26,7 @@ export default Certificate.extend({
     if (this.newFields) {
       groups = combineFieldGroups(groups, this.newFields, []);
     }
-    if (this.get('signVerbatim') === false) {
+    if (this.signVerbatim === false) {
       groups.push(options);
     }
 

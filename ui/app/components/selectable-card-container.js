@@ -17,24 +17,24 @@ export default Component.extend({
   classNameBindings: ['isGridContainer'],
   counters: null,
   gridContainer: false,
-  isGridContainer: computed('counters', function() {
+  isGridContainer: computed('counters.httpsRequests.length', function() {
     return this.counters.httpsRequests.length > 1
       ? 'selectable-card-container has-grid'
       : 'selectable-card-container';
   }),
-  totalHttpRequests: computed('counters', function() {
+  totalHttpRequests: computed('counters.httpsRequests', function() {
     let httpsRequestsArray = this.counters.httpsRequests || [];
     return httpsRequestsArray.firstObject.total;
   }),
   // Limit number of months returned to the most recent 12
-  filteredHttpsRequests: computed('counters', function() {
+  filteredHttpsRequests: computed('counters.httpsRequests', function() {
     let httpsRequestsArray = this.counters.httpsRequests || [];
     if (httpsRequestsArray.length > 12) {
       httpsRequestsArray = httpsRequestsArray.slice(0, 12);
     }
     return httpsRequestsArray;
   }),
-  percentChange: computed('counters', function() {
+  percentChange: computed('counters.httpsRequests', function() {
     let httpsRequestsArray = this.counters.httpsRequests || [];
     let lastTwoMonthsArray = httpsRequestsArray.slice(0, 2);
     let previousMonthVal = lastTwoMonthsArray.lastObject.total;

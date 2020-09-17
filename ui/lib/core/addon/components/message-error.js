@@ -26,10 +26,10 @@ export default Component.extend({
     'errorMessage',
     'model.{isError,adapterError.message,adapterError.errors.@each}',
     'errors',
-    'errors.@each',
+    'errors.[]',
     function() {
-      const errorMessage = this.get('errorMessage');
-      const errors = this.get('errors');
+      const errorMessage = this.errorMessage;
+      const errors = this.errors;
       const modelIsError = this.get('model.isError');
       if (errorMessage) {
         return [errorMessage];

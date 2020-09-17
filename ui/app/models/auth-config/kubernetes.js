@@ -28,7 +28,7 @@ export default AuthConfig.extend({
     editType: 'stringArray',
   }),
 
-  fieldGroups: computed(function() {
+  fieldGroups: computed('newFields', function() {
     let groups = [
       {
         default: ['kubernetesHost', 'kubernetesCaCert'],

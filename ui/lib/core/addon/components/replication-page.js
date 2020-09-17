@@ -43,15 +43,13 @@ export default Component.extend({
     }
 
     try {
-      resp = yield this.get('store')
-        .adapterFor('replication-mode')
-        .fetchStatus(replicationMode);
+      resp = yield this.store.adapterFor('replication-mode').fetchStatus(replicationMode);
     } catch (e) {
       // do not handle error
     }
     this.set('reindexingDetails', resp);
   }),
-  isSummaryDashboard: computed('model.dr.{mode}', 'model.performance.{mode}', function() {
+  isSummaryDashboard: computed('model.dr.mode', 'model.performance.mode', function() {
     const router = this.router;
     const currentRoute = router.get('currentRouteName');
 
@@ -62,7 +60,7 @@ export default Component.extend({
       return drMode === 'primary' && performanceMode === 'primary';
     }
   }),
-  formattedReplicationMode: computed('model.{replicationMode}', 'isSummaryDashboard', function() {
+  formattedReplicationMode: computed('model.replicationMode', 'isSummaryDashboard', function() {
     // dr or performance 🤯
     const { isSummaryDashboard } = this;
     if (isSummaryDashboard) {
@@ -71,7 +69,7 @@ export default Component.extend({
     const mode = this.model.replicationMode;
     return MODE[mode];
   }),
-  clusterMode: computed('model.{replicationAttrs}', 'isSummaryDashboard', function() {
+  clusterMode: computed('model.replicationAttrs', 'isSummaryDashboard', function() {
     // primary or secondary
     const { model } = this;
     const { isSummaryDashboard } = this;
@@ -81,7 +79,7 @@ export default Component.extend({
     }
     return model.replicationAttrs.mode;
   }),
-  isLoadingData: computed('clusterMode', 'model.{replicationAttrs}', function() {
+  isLoadingData: computed('clusterMode', 'model.replicationAttrs', function() {
     const { clusterMode } = this;
     const { model } = this;
     const { isSummaryDashboard } = this;
@@ -114,7 +112,7 @@ export default Component.extend({
       return combinedObject;
     }
   }),
-  replicationDetails: computed('model.{replicationMode}', 'isSummaryDashboard', function() {
+  replicationDetails: computed('model.replicationMode', 'isSummaryDashboard', function() {
     const { model } = this;
     const { isSummaryDashboard } = this;
     if (isSummaryDashboard) {
@@ -124,13 +122,13 @@ export default Component.extend({
     const replicationMode = model.replicationMode;
     return model[replicationMode];
   }),
-  isDisabled: computed('replicationDetails.{mode}', function() {
+  isDisabled: computed('replicationDetails.mode', function() {
     if (this.replicationDetails.mode === 'disabled' || this.replicationDetails.mode === 'primary') {
       return true;
     }
     return false;
   }),
-  message: computed('model.{anyReplicationEnabled}', 'formattedReplicationMode', function() {
+  message: computed('model.anyReplicationEnabled', 'formattedReplicationMode', function() {
     let msg;
     if (this.model.anyReplicationEnabled) {
       msg = `This ${this.formattedReplicationMode} secondary has not been enabled.  You can do so from the ${this.formattedReplicationMode} Primary.`;

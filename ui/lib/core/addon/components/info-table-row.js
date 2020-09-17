@@ -38,6 +38,6 @@ export default Component.extend({
   value: null,
 
   valueIsBoolean: computed('value', function() {
-    return typeOf(this.get('value')) === 'boolean';
+    return typeOf(this.value) === 'boolean';
   }),
 });

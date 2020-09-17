@@ -23,7 +23,7 @@ export default Component.extend({
   tagName: '',
 
   callMethod: task(function*(method, model, successMessage, failureMessage, successCallback = () => {}) {
-    let flash = this.get('flashMessages');
+    let flash = this.flashMessages;
     try {
       yield model[method]();
       flash.success(successMessage);

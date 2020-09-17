@@ -6,7 +6,7 @@ export default Helper.extend({
   disableInterval: false,
 
   compute(value, { interval }) {
-    if (get(this, 'disableInterval')) {
+    if (this.disableInterval) {
       return;
     }
 

@@ -11,7 +11,7 @@ export default Component.extend({
   version: service(),
 
   transitionToRoute: function() {
-    this.get('router').transitionTo(...arguments);
+    this.router.transitionTo(...arguments);
   },
 
   classNames: 'user-menu auth-info',
@@ -24,22 +24,20 @@ export default Component.extend({
 
   actions: {
     restartGuide() {
-      this.get('wizard').restartGuide();
+      this.wizard.restartGuide();
     },
     renewToken() {
       this.set('fakeRenew', true);
       run.later(() => {
         this.set('fakeRenew', false);
-        this.get('auth').renew();
+        this.auth.renew();
       }, 200);
     },
 
     revokeToken() {
-      this.get('auth')
-        .revokeCurrentToken()
-        .then(() => {
-          this.transitionToRoute('vault.cluster.logout');
-        });
+      this.auth.revokeCurrentToken().then(() => {
+        this.transitionToRoute('vault.cluster.logout');
+      });
     },
   },
 });

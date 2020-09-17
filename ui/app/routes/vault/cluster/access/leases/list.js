@@ -47,7 +47,7 @@ export default Route.extend({
   setupController(controller, model) {
     const params = this.paramsFor(this.routeName);
     const prefix = params.prefix ? params.prefix : '';
-    const has404 = this.get('has404');
+    const has404 = this.has404;
     controller.set('hasModel', true);
     controller.setProperties({
       model: model.leases,

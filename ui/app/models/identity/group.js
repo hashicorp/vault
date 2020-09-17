@@ -10,7 +10,7 @@ const { attr, belongsTo } = DS;
 export default IdentityModel.extend({
   formFields: computed('type', function() {
     let fields = ['name', 'type', 'policies', 'metadata'];
-    if (this.get('type') === 'internal') {
+    if (this.type === 'internal') {
       return fields.concat(['memberGroupIds', 'memberEntityIds']);
     }
     return fields;
@@ -79,8 +79,8 @@ export default IdentityModel.extend({
 
   aliasPath: lazyCapabilities(apiPath`identity/group-alias`),
   canAddAlias: computed('aliasPath.canCreate', 'type', 'alias', function() {
-    let type = this.get('type');
-    let alias = this.get('alias');
+    let type = this.type;
+    let alias = this.alias;
     // internal groups can't have aliases, and external groups can only have one
     if (type === 'internal' || alias) {
       return false;

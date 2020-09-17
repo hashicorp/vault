@@ -119,7 +119,7 @@ export default DS.Model.extend({
   }),
 
   attrsForKeyType: computed('keyType', function() {
-    const keyType = this.get('keyType');
+    const keyType = this.keyType;
     let keys = keyType === 'ca' ? CA_FIELDS.slice(0) : OTP_FIELDS.slice(0);
     return expandAttributeMeta(this, keys);
   }),

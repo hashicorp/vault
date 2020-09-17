@@ -19,7 +19,7 @@ export default Controller.extend(BackendCrumbMixin, {
 
     toggleAdvancedEdit(bool) {
       this.set('preferAdvancedEdit', bool);
-      this.get('backendController').set('preferAdvancedEdit', bool);
+      this.backendController.set('preferAdvancedEdit', bool);
     },
   },
 });

@@ -24,7 +24,7 @@ export default Component.extend({
   itemType: null,
   flashMessages: service(),
   router: service(),
-  props: computed(function() {
+  props: computed('model', function() {
     return this.model.serialize();
   }),
   saveModel: task(function*() {

@@ -78,7 +78,7 @@ export default Service.extend({
       method,
       dataType: 'json',
       headers: {
-        'X-Vault-Token': this.get('currentToken'),
+        'X-Vault-Token': this.currentToken,
       },
     };
 
@@ -128,7 +128,7 @@ export default Service.extend({
 
   persistAuthData() {
     let [firstArg, resp] = arguments;
-    let tokens = this.get('tokens');
+    let tokens = this.tokens;
     let currentNamespace = this.get('namespaceService.path') || '';
     let tokenName;
     let options;
@@ -180,7 +180,7 @@ export default Service.extend({
     tokenName = this.generateTokenName(
       {
         backend,
-        clusterId: (options && options.clusterId) || this.get('activeCluster'),
+        clusterId: (options && options.clusterId) || this.activeCluster,
       },
       resp.policies
     );
@@ -216,7 +216,7 @@ export default Service.extend({
   },
 
   tokenExpirationDate: computed('currentTokenName', 'expirationCalcTS', function() {
-    const tokenName = this.get('currentTokenName');
+    const tokenName = this.currentTokenName;
     if (!tokenName) {
       return;
     }
@@ -225,13 +225,13 @@ export default Service.extend({
     return tokenExpirationEpoch ? expirationDate.setUTCMilliseconds(tokenExpirationEpoch) : null;
   }),
 
-  tokenExpired: computed(function() {
-    const expiration = this.get('tokenExpirationDate');
+  tokenExpired: computed('tokenExpirationDate', function() {
+    const expiration = this.tokenExpirationDate;
     return expiration ? this.now() >= expiration : null;
   }).volatile(),
 
   renewAfterEpoch: computed('currentTokenName', 'expirationCalcTS', function() {
-    const tokenName = this.get('currentTokenName');
+    const tokenName = this.currentTokenName;
     let { expirationCalcTS } = this;
     const data = this.getTokenData(tokenName);
     if (!tokenName || !data || !expirationCalcTS) {
@@ -243,8 +243,8 @@ export default Service.extend({
   }),
 
   renew() {
-    const tokenName = this.get('currentTokenName');
-    const currentlyRenewing = this.get('isRenewing');
+    const tokenName = this.currentTokenName;
+    const currentlyRenewing = this.isRenewing;
     if (currentlyRenewing) {
       return;
     }
@@ -274,9 +274,9 @@ export default Service.extend({
   }).on('init'),
   shouldRenew() {
     const now = this.now();
-    const lastFetch = this.get('lastFetch');
-    const renewTime = this.get('renewAfterEpoch');
-    if (!this.currentTokenName || this.get('tokenExpired') || this.get('allowExpiration') || !renewTime) {
+    const lastFetch = this.lastFetch;
+    const renewTime = this.renewAfterEpoch;
+    if (!this.currentTokenName || this.tokenExpired || this.allowExpiration || !renewTime) {
       return false;
     }
     if (lastFetch && now - lastFetch >= this.IDLE_TIMEOUT) {
@@ -329,7 +329,7 @@ export default Service.extend({
       resp.auth || resp.data,
       this.get('namespaceService.path')
     );
-    await this.get('permissions').getPaths.perform();
+    await this.permissions.getPaths.perform();
     return authData;
   },
 
@@ -338,31 +338,31 @@ export default Service.extend({
   },
 
   deleteCurrentToken() {
-    const tokenName = this.get('currentTokenName');
+    const tokenName = this.currentTokenName;
     this.deleteToken(tokenName);
     this.removeTokenData(tokenName);
   },
 
   deleteToken(tokenName) {
-    const tokenNames = this.get('tokens').without(tokenName);
+    const tokenNames = this.tokens.without(tokenName);
     this.removeTokenData(tokenName);
     this.set('tokens', tokenNames);
   },
 
   // returns the key for the token to use
   currentTokenName: computed('activeCluster', 'tokens', 'tokens.[]', function() {
-    const regex = new RegExp(this.get('activeCluster'));
-    return this.get('tokens').find(key => regex.test(key));
+    const regex = new RegExp(this.activeCluster);
+    return this.tokens.find(key => regex.test(key));
   }),
 
   currentToken: computed('currentTokenName', function() {
-    const name = this.get('currentTokenName');
+    const name = this.currentTokenName;
     const data = name && this.getTokenData(name);
     return name && data ? data.token : null;
   }),
 
   authData: computed('currentTokenName', function() {
-    const token = this.get('currentTokenName');
+    const token = this.currentTokenName;
     if (!token) {
       return;
     }

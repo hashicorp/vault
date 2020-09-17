@@ -13,7 +13,7 @@ export default Secret.extend({
   deletionTime: attr('string'),
   createdTime: attr('string'),
   deleted: computed('deletionTime', function() {
-    const deletionTime = new Date(this.get('deletionTime'));
+    const deletionTime = new Date(this.deletionTime);
     const now = new Date();
     return deletionTime <= now;
   }),

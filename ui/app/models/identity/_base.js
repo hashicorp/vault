@@ -9,10 +9,10 @@ export default DS.Model.extend({
   }),
 
   fields: computed('formFields', 'formFields.[]', function() {
-    return expandAttributeMeta(this, this.get('formFields'));
+    return expandAttributeMeta(this, this.formFields);
   }),
 
-  identityType: computed(function() {
+  identityType: computed('constructor.modelName', function() {
     let modelType = this.constructor.modelName.split('/')[1];
     return modelType;
   }),

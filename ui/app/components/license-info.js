@@ -10,10 +10,8 @@ export default Component.extend({
   model: null,
   text: '',
   showForm: false,
-  isTemporary: computed('licenseId', function() {
-    return this.licenseId === 'temporary';
-  }),
-  featuresInfo: computed('model', 'features', function() {
+  isTemporary: computed.equal('licenseId', 'temporary'),
+  featuresInfo: computed('features', 'model.performanceStandbyCount', function() {
     return allFeatures().map(feature => {
       let active = this.features.includes(feature);
       if (active && feature === 'Performance Standby') {

@@ -6,14 +6,12 @@ export default Route.extend(UnloadModel, {
   version: service(),
 
   beforeModel() {
-    return this.get('version')
-      .fetchFeatures()
-      .then(() => {
-        return this._super(...arguments);
-      });
+    return this.version.fetchFeatures().then(() => {
+      return this._super(...arguments);
+    });
   },
 
   model() {
-    return this.get('version').hasFeature('Control Groups') ? this.store.createRecord('control-group') : null;
+    return this.version.hasFeature('Control Groups') ? this.store.createRecord('control-group') : null;
   },
 });

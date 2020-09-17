@@ -9,7 +9,7 @@ export default Controller.extend(ListController, {
   store: service(),
   clusterController: controller('vault.cluster'),
 
-  backendCrumb: computed(function() {
+  backendCrumb: computed('clusterController.model.name', function() {
     return {
       label: 'leases',
       text: 'leases',
@@ -21,7 +21,7 @@ export default Controller.extend(ListController, {
   isLoading: false,
 
   filterIsFolder: computed('filter', function() {
-    return !!utils.keyIsFolder(this.get('filter'));
+    return !!utils.keyIsFolder(this.filter);
   }),
 
   emptyTitle: computed('baseKey.id', 'filter', 'filterIsFolder', function() {
@@ -41,18 +41,18 @@ export default Controller.extend(ListController, {
 
   actions: {
     revokePrefix(prefix, isForce) {
-      const adapter = this.get('store').adapterFor('lease');
+      const adapter = this.store.adapterFor('lease');
       const method = isForce ? 'forceRevokePrefix' : 'revokePrefix';
       const fn = adapter[method];
       fn.call(adapter, prefix)
         .then(() => {
           return this.transitionToRoute('vault.cluster.access.leases.list-root').then(() => {
-            this.get('flashMessages').success(`All of the leases under ${prefix} will be revoked.`);
+            this.flashMessages.success(`All of the leases under ${prefix} will be revoked.`);
           });
         })
         .catch(e => {
           const errString = e.errors.join('.');
-          this.get('flashMessages').danger(
+          this.flashMessages.danger(
             `There was an error attempting to revoke the prefix: ${prefix}. ${errString}.`
           );
         });

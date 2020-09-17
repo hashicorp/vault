@@ -26,7 +26,7 @@ export default ShamirFlow.extend({
           this.send('reset');
         }
       } else {
-        const adapter = this.get('store').adapterFor('cluster');
+        const adapter = this.store.adapterFor('cluster');
         adapter.generateDrOperationToken(this.model, { cancel: true });
         this.send('reset');
       }

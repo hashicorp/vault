@@ -63,7 +63,7 @@ export default Component.extend({
     return time * toSeconds[unit];
   },
 
-  TTL: computed('time', 'unit', function() {
+  TTL: computed('outputSeconds', 'time', 'unit', function() {
     let { time, unit, outputSeconds } = this.getProperties('time', 'unit', 'outputSeconds');
     //convert to hours
     if (unit === 'd') {

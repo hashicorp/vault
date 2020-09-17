@@ -53,13 +53,13 @@ export default DS.Model.extend({
   securityToken: attr('string'),
 
   attrs: computed('credentialType', 'accessKey', 'securityToken', function() {
-    let type = this.get('credentialType');
+    let type = this.credentialType;
     let fieldsForType = {
       iam_user: ['credentialType'],
       assumed_role: ['credentialType', 'ttl', 'roleArn'],
       federation_token: ['credentialType', 'ttl'],
     };
-    if (this.get('accessKey') || this.get('securityToken')) {
+    if (this.accessKey || this.securityToken) {
       return expandAttributeMeta(this, DISPLAY_FIELDS.slice(0));
     }
     return expandAttributeMeta(this, fieldsForType[type].slice(0));

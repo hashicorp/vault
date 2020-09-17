@@ -13,7 +13,7 @@ export default AuthConfig.extend({
     label: 'Certificate',
     editType: 'textarea',
   }),
-  fieldGroups: computed(function() {
+  fieldGroups: computed('newFields', function() {
     let groups = [
       {
         default: ['url'],

@@ -21,18 +21,18 @@ export default Component.extend({
   },
 
   currentPath: computed('mode', 'path', 'showCurrent', function() {
-    const mode = this.get('mode');
-    const path = this.get('path');
-    const showCurrent = this.get('showCurrent');
+    const mode = this.mode;
+    const path = this.path;
+    const showCurrent = this.showCurrent;
     if (!mode || showCurrent === false) {
       return path;
     }
     return `vault.cluster.secrets.backend.${mode}`;
   }),
 
-  secretPath: computed('baseKey', 'baseKey.{display,id}', 'root', 'showCurrent', function() {
+  secretPath: computed('baseKey.{display,id}', 'currentPath', 'path', 'root', 'showCurrent', function() {
     let crumbs = [];
-    const root = this.get('root');
+    const root = this.root;
     const baseKey = this.get('baseKey.display') || this.get('baseKey.id');
     const baseKeyModel = encodePath(this.get('baseKey.id'));
 
@@ -44,9 +44,9 @@ export default Component.extend({
       return crumbs;
     }
 
-    const path = this.get('path');
-    const currentPath = this.get('currentPath');
-    const showCurrent = this.get('showCurrent');
+    const path = this.path;
+    const currentPath = this.currentPath;
+    const showCurrent = this.showCurrent;
     const ancestors = utils.ancestorKeysForKey(baseKey);
     const parts = utils.keyPartsForKey(baseKey);
     if (ancestors.length === 0) {

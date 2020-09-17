@@ -46,7 +46,7 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   transitionToRoute() {
-    this.get('router').transitionTo(...arguments);
+    this.router.transitionTo(...arguments);
   },
 
   modelPrefixFromType(modelType) {
@@ -57,7 +57,7 @@ export default Component.extend(FocusOnInsertMixin, {
     return modelPrefix;
   },
   persist(method, successCallback) {
-    const model = get(this, 'model');
+    const model = this.model;
     return model[method]().then(() => {
       successCallback(model);
     });
@@ -86,11 +86,11 @@ export default Component.extend(FocusOnInsertMixin, {
     },
 
     setValue(key, event) {
-      set(get(this, 'model'), key, event.target.checked);
+      set(this.model, key, event.target.checked);
     },
 
     refresh() {
-      this.get('onRefresh')();
+      this.onRefresh();
     },
 
     delete() {

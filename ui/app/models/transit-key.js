@@ -93,11 +93,11 @@ export default DS.Model.extend({
 
   canDelete: computed('deletionAllowed', 'lastLoadTS', function() {
     const deleteAttrChanged = Boolean(this.changedAttributes().deletionAllowed);
-    return get(this, 'deletionAllowed') && deleteAttrChanged === false;
+    return this.deletionAllowed && deleteAttrChanged === false;
   }),
 
   keyVersions: computed('validKeyVersions', function() {
-    let maxVersion = Math.max(...get(this, 'validKeyVersions'));
+    let maxVersion = Math.max(...this.validKeyVersions);
     let versions = [];
     while (maxVersion > 0) {
       versions.unshift(maxVersion);
@@ -106,15 +106,21 @@ export default DS.Model.extend({
     return versions;
   }),
 
-  encryptionKeyVersions: computed('keyVerisons', 'minDecryptionVersion', 'latestVersion', function() {
-    const { keyVersions, minDecryptionVersion } = this.getProperties('keyVersions', 'minDecryptionVersion');
+  encryptionKeyVersions: computed(
+    'keyVerisons',
+    'keyVersions',
+    'latestVersion',
+    'minDecryptionVersion',
+    function() {
+      const { keyVersions, minDecryptionVersion } = this.getProperties('keyVersions', 'minDecryptionVersion');
 
-    return keyVersions
-      .filter(version => {
-        return version >= minDecryptionVersion;
-      })
-      .reverse();
-  }),
+      return keyVersions
+        .filter(version => {
+          return version >= minDecryptionVersion;
+        })
+        .reverse();
+    }
+  ),
 
   keysForEncryption: computed('minEncryptionVersion', 'latestVersion', function() {
     let { minEncryptionVersion, latestVersion } = this.getProperties('minEncryptionVersion', 'latestVersion');
@@ -128,15 +134,15 @@ export default DS.Model.extend({
   }),
 
   validKeyVersions: computed('keys', function() {
-    return Object.keys(get(this, 'keys'));
+    return Object.keys(this.keys);
   }),
 
-  exportKeyTypes: computed('exportable', 'type', function() {
+  exportKeyTypes: computed('exportable', 'supportsEncryption', 'supportsSigning', 'type', function() {
     let types = ['hmac'];
-    if (this.get('supportsSigning')) {
+    if (this.supportsSigning) {
       types.unshift('signing');
     }
-    if (this.get('supportsEncryption')) {
+    if (this.supportsEncryption) {
       types.unshift('encryption');
     }
     return types;

@@ -39,7 +39,7 @@ export default Component.extend({
   actions: {
     save(section) {
       this.set('loading', true);
-      const config = this.get('config');
+      const config = this.config;
       config
         .save({
           adapterOptions: {
@@ -48,7 +48,7 @@ export default Component.extend({
           },
         })
         .then(() => {
-          this.get('flashMessages').success(`The ${section} config for this backend has been updated.`);
+          this.flashMessages.success(`The ${section} config for this backend has been updated.`);
           // attrs aren't persistent for Tidy
           if (section === 'tidy') {
             config.rollbackAttributes();
@@ -63,7 +63,7 @@ export default Component.extend({
         });
     },
     refresh() {
-      this.get('onRefresh')();
+      this.onRefresh();
     },
   },
 });

@@ -19,21 +19,21 @@ export default Controller.extend({
       const hasErrors = codemirror.state.lint.marked.length > 0;
 
       if (!hasErrors) {
-        set(this.get('model'), attr, JSON.parse(val));
+        set(this.model, attr, JSON.parse(val));
       }
     },
 
     updateTtl(path, val) {
-      const model = this.get('model');
+      const model = this.model;
       let valueToSet = val.enabled === true ? `${val.seconds}s` : undefined;
       set(model, path, valueToSet);
     },
 
     newModel() {
-      const model = this.get('model');
+      const model = this.model;
       const roleModel = model.get('role');
       model.unloadRecord();
-      const newModel = this.get('store').createRecord('ssh-sign', {
+      const newModel = this.store.createRecord('ssh-sign', {
         role: roleModel,
         id: `${get(roleModel, 'backend')}-${get(roleModel, 'name')}`,
       });

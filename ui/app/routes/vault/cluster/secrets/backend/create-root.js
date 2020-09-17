@@ -40,7 +40,7 @@ export default EditBase.extend({
     }
     if (modelType !== 'secret' && modelType !== 'secret-v2') {
       if (this.get('wizard.featureState') === 'details' && this.get('wizard.componentState') === 'transit') {
-        this.get('wizard').transitionFeatureMachine('details', 'CONTINUE', 'transit');
+        this.wizard.transitionFeatureMachine('details', 'CONTINUE', 'transit');
       }
       return this.store.createRecord(modelType);
     }

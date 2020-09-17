@@ -26,7 +26,7 @@ export default AuthConfig.extend({
 
   googleCertsEndpoint: attr('string'),
 
-  fieldGroups: computed(function() {
+  fieldGroups: computed('newFields', function() {
     let groups = [
       { default: ['tenantId', 'resource'] },
       {

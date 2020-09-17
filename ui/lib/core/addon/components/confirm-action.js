@@ -43,7 +43,7 @@ export default Component.extend({
     },
 
     onConfirm() {
-      const confirmAction = this.get('onConfirmAction');
+      const confirmAction = this.onConfirmAction;
 
       if (typeof confirmAction !== 'function') {
         throw new Error('confirm-action components expects `onConfirmAction` attr to be a function');

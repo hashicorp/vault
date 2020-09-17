@@ -23,7 +23,7 @@ let LinkedBlockComponent = Component.extend({
       $target.closest('button') ||
       $target.closest('a');
     if (!isAnchorOrButton) {
-      let params = this.get('params');
+      let params = this.params;
       if (this.encode) {
         params = params.map((param, index) => {
           if (index === 0 || typeof param !== 'string') {
@@ -32,7 +32,7 @@ let LinkedBlockComponent = Component.extend({
           return encodePath(param);
         });
       }
-      const queryParams = this.get('queryParams');
+      const queryParams = this.queryParams;
       if (queryParams) {
         params.push({ queryParams });
       }
@@ -41,7 +41,7 @@ let LinkedBlockComponent = Component.extend({
         targetRoute = `${this.linkPrefix}.${targetRoute}`;
         this.params[0] = targetRoute;
       }
-      this.get('router').transitionTo(...params);
+      this.router.transitionTo(...params);
     }
   },
 });

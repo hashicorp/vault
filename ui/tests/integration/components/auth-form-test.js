@@ -153,7 +153,7 @@ module('Integration | Component | auth form', function(hooks) {
     this.owner.unregister('service:auth');
     this.owner.register('service:auth', workingAuthService);
     this.auth = this.owner.lookup('service:auth');
-    let authSpy = sinon.spy(this.get('auth'), 'authenticate');
+    let authSpy = sinon.spy(this.auth, 'authenticate');
     let methods = {
       'foo/': {
         type: 'userpass',
@@ -199,7 +199,7 @@ module('Integration | Component | auth form', function(hooks) {
   test('it makes a request to unwrap if passed a wrappedToken and logs in', async function(assert) {
     this.owner.register('service:auth', workingAuthService);
     this.auth = this.owner.lookup('service:auth');
-    let authSpy = sinon.spy(this.get('auth'), 'authenticate');
+    let authSpy = sinon.spy(this.auth, 'authenticate');
     let server = new Pretender(function() {
       this.post('/v1/sys/wrapping/unwrap', () => {
         return [

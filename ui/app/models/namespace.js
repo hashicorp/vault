@@ -10,7 +10,7 @@ export default DS.Model.extend({
     invalidMessage: 'You have entered and invalid path please only include letters, numbers, -, ., and _.',
   }),
   pathIsValid: computed('path', function() {
-    return this.get('path') && this.get('path').match(/^[\w\d-.]+$/g);
+    return this.path && this.path.match(/^[\w\d-.]+$/g);
   }),
   description: attr('string', {
     editType: 'textarea',

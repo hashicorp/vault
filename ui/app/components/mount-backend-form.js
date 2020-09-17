@@ -51,11 +51,11 @@ export default Component.extend({
     this.set('mountModel', model);
   },
 
-  mountTypes: computed('mountType', function() {
+  mountTypes: computed('engines', 'mountType', function() {
     return this.mountType === 'secret' ? this.engines : METHODS;
   }),
 
-  engines: computed('version.features[]', function() {
+  engines: computed('version.features[]', 'version.isEnterprise', function() {
     if (this.get('version.isEnterprise')) {
       return ENGINES.concat([KMIP, TRANSFORM]);
     }
@@ -64,7 +64,7 @@ export default Component.extend({
 
   willDestroy() {
     // if unsaved, we want to unload so it doesn't show up in the auth mount list
-    this.get('mountModel').rollbackAttributes();
+    this.mountModel.rollbackAttributes();
   },
 
   checkPathChange(type) {

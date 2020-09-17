@@ -154,9 +154,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     return this.secretData.isAdvanced();
   }),
 
-  showAdvancedMode: computed('preferAdvancedEdit', 'secretDataIsAdvanced', 'lastChange', function() {
-    return this.secretDataIsAdvanced || this.preferAdvancedEdit;
-  }),
+  showAdvancedMode: computed.or('secretDataIsAdvanced', 'preferAdvancedEdit'),
 
   isWriteWithoutRead: computed('model.failedServerRead', 'modelForData.failedServerRead', 'isV2', function() {
     if (!this.model) return;

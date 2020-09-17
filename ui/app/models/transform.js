@@ -88,7 +88,7 @@ const Model = DS.Model.extend({
     return ['name', 'type', 'tweak_source', 'template', 'allowed_roles'];
   }),
   transformFieldAttrs: computed('transformAttrs', function() {
-    return expandAttributeMeta(this, this.get('transformAttrs'));
+    return expandAttributeMeta(this, this.transformAttrs);
   }),
 
   backend: attr('string', {

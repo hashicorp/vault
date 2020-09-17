@@ -51,8 +51,8 @@ export default Component.extend(DEFAULTS, {
   },
 
   checkAction() {
-    const currentAction = get(this, 'selectedAction');
-    const oldAction = get(this, 'oldSelectedAction');
+    const currentAction = this.selectedAction;
+    const oldAction = this.oldSelectedAction;
 
     if (currentAction !== oldAction) {
       this.reset();
@@ -93,17 +93,15 @@ export default Component.extend(DEFAULTS, {
       props = assign({}, props, { [keyName]: resp.wrap_info.token });
     }
     if (props.token || props.rewrap_token || props.unwrap_data || action === 'lookup') {
-      this.get('wizard').transitionFeatureMachine(this.get('wizard.featureState'), 'CONTINUE');
+      this.wizard.transitionFeatureMachine(this.get('wizard.featureState'), 'CONTINUE');
     }
     setProperties(this, props);
   },
 
   getData() {
-    const action = get(this, 'selectedAction');
+    const action = this.selectedAction;
     if (WRAPPING_ENDPOINTS.includes(action)) {
-      return get(this, 'dataIsEmpty')
-        ? { token: (get(this, 'token') || '').trim() }
-        : JSON.parse(get(this, 'data'));
+      return this.dataIsEmpty ? { token: (this.token || '').trim() } : JSON.parse(this.data);
     }
     if (action === 'random') {
       return this.getProperties('bytes', 'format');
@@ -117,8 +115,8 @@ export default Component.extend(DEFAULTS, {
   actions: {
     doSubmit(evt) {
       evt.preventDefault();
-      const action = get(this, 'selectedAction');
-      const wrapTTL = action === 'wrap' ? get(this, 'wrapTTL') : null;
+      const action = this.selectedAction;
+      const wrapTTL = action === 'wrap' ? this.wrapTTL : null;
       const data = this.getData();
       setProperties(this, {
         errors: null,
@@ -127,7 +125,7 @@ export default Component.extend(DEFAULTS, {
         creation_ttl: null,
       });
 
-      get(this, 'store')
+      this.store
         .adapterFor('tools')
         .toolAction(action, data, { wrapTTL })
         .then(resp => this.handleSuccess(resp, action), (...errArgs) => this.handleError(...errArgs));

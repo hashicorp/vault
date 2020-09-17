@@ -19,7 +19,7 @@ let Model = DS.Model.extend({
   // namespaces introduced types with a `ns_` prefix for built-in engines
   // so we need to strip that to normalize the type
   methodType: computed('type', function() {
-    return this.get('type').replace(/^ns_/, '');
+    return this.type.replace(/^ns_/, '');
   }),
   description: attr('string', {
     editType: 'textarea',
@@ -37,10 +37,10 @@ let Model = DS.Model.extend({
   // used when the `auth` prefix is important,
   // currently only when setting perf mount filtering
   apiPath: computed('path', function() {
-    return `auth/${this.get('path')}`;
+    return `auth/${this.path}`;
   }),
   localDisplay: computed('local', function() {
-    return this.get('local') ? 'local' : 'replicated';
+    return this.local ? 'local' : 'replicated';
   }),
 
   tuneAttrs: computed(function() {
@@ -85,11 +85,11 @@ let Model = DS.Model.extend({
   }),
 
   attrs: computed('formFields', function() {
-    return expandAttributeMeta(this, this.get('formFields'));
+    return expandAttributeMeta(this, this.formFields);
   }),
 
   fieldGroups: computed('formFieldGroups', function() {
-    return fieldToAttrs(this, this.get('formFieldGroups'));
+    return fieldToAttrs(this, this.formFieldGroups);
   }),
   canDisable: alias('deletePath.canDelete'),
   canEdit: alias('configPath.canUpdate'),

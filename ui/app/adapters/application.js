@@ -60,7 +60,7 @@ export default DS.RESTAdapter.extend({
     let url = intendedUrl;
     let type = method;
     let options = passedOptions;
-    let controlGroup = this.get('controlGroup');
+    let controlGroup = this.controlGroup;
     let controlGroupToken = controlGroup.tokenForUrl(url);
     // if we have a Control Group token that matches the intendedUrl,
     // then we want to unwrap it and return the unwrapped response as
@@ -84,7 +84,7 @@ export default DS.RESTAdapter.extend({
       }
       const [resp] = args;
       if (resp && resp.warnings) {
-        let flash = this.get('flashMessages');
+        let flash = this.flashMessages;
         resp.warnings.forEach(message => {
           flash.info(message);
         });

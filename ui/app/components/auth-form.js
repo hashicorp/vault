@@ -89,8 +89,8 @@ export default Component.extend(DEFAULTS, {
       // set `with` to the first method
       if (
         !this.wrappedToken &&
-        ((this.get('fetchMethods.isIdle') && firstMethod && !this.get('selectedAuth')) ||
-          (this.get('selectedAuth') && !this.get('selectedAuthBackend')))
+        ((this.get('fetchMethods.isIdle') && firstMethod && !this.selectedAuth) ||
+          (this.selectedAuth && !this.selectedAuthBackend))
       ) {
         this.set('selectedAuth', firstMethod);
       }
@@ -127,7 +127,7 @@ export default Component.extend(DEFAULTS, {
     }
   ),
 
-  providerPartialName: computed('selectedAuthBackend', function() {
+  providerPartialName: computed('selectedAuthBackend.type', function() {
     let type = this.get('selectedAuthBackend.type') || 'token';
     type = type.toLowerCase();
     let templateName = dasherize(type);
@@ -139,16 +139,16 @@ export default Component.extend(DEFAULTS, {
   cspErrorText: `This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`,
 
   allSupportedMethods: computed('methodsToShow', 'hasMethodsWithPath', function() {
-    let hasMethodsWithPath = this.get('hasMethodsWithPath');
-    let methodsToShow = this.get('methodsToShow');
+    let hasMethodsWithPath = this.hasMethodsWithPath;
+    let methodsToShow = this.methodsToShow;
     return hasMethodsWithPath ? methodsToShow.concat(BACKENDS) : methodsToShow;
   }),
 
   hasMethodsWithPath: computed('methodsToShow', function() {
-    return this.get('methodsToShow').isAny('path');
+    return this.methodsToShow.isAny('path');
   }),
   methodsToShow: computed('methods', function() {
-    let methods = this.get('methods') || [];
+    let methods = this.methods || [];
     let shownMethods = methods.filter(m =>
       BACKENDS.find(b => get(b, 'type').toLowerCase() === get(m, 'type').toLowerCase())
     );
@@ -158,7 +158,7 @@ export default Component.extend(DEFAULTS, {
   unwrapToken: task(function*(token) {
     // will be using the Token Auth Method, so set it here
     this.set('selectedAuth', 'token');
-    let adapter = this.get('store').adapterFor('tools');
+    let adapter = this.store.adapterFor('tools');
     try {
       let response = yield adapter.toolAction('unwrap', null, { clientToken: token });
       this.set('token', response.auth.client_token);
@@ -169,7 +169,7 @@ export default Component.extend(DEFAULTS, {
   }), // ARG TODO: handle withTestWaiter() which no longer works in upgrade, remove package from package.json
 
   fetchMethods: task(function*() {
-    let store = this.get('store');
+    let store = this.store;
     try {
       let methods = yield store.findAll('auth-method', {
         adapterOptions: {
@@ -249,7 +249,7 @@ export default Component.extend(DEFAULTS, {
       this.setProperties({
         error: null,
       });
-      let backend = this.get('selectedAuthBackend') || {};
+      let backend = this.selectedAuthBackend || {};
       let backendMeta = BACKENDS.find(
         b => (get(b, 'type') || '').toLowerCase() === (get(backend, 'type') || '').toLowerCase()
       );
@@ -259,8 +259,8 @@ export default Component.extend(DEFAULTS, {
       if (passedData) {
         data = assign(data, passedData);
       }
-      if (this.get('customPath') || get(backend, 'id')) {
-        data.path = this.get('customPath') || get(backend, 'id');
+      if (this.customPath || get(backend, 'id')) {
+        data.path = this.customPath || get(backend, 'id');
       }
       return this.authenticate.unlinked().perform(backend.type, data);
     },

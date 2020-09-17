@@ -8,8 +8,8 @@ export default Service.extend({
   events: computed(function() {
     return [];
   }),
-  connectionViolations: computed('events.[].violatedDirective', function() {
-    return this.get('events').filter(e => e.violatedDirective.startsWith('connect-src'));
+  connectionViolations: computed('events.@each.violatedDirective', function() {
+    return this.events.filter(e => e.violatedDirective.startsWith('connect-src'));
   }),
 
   attach() {

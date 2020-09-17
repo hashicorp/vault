@@ -9,7 +9,7 @@ export default Route.extend(ClusterRoute, ListRoute, {
 
   activate() {
     if (this.get('wizard.featureState') === 'details') {
-      this.get('wizard').transitionFeatureMachine('details', 'CONTINUE', this.policyType());
+      this.wizard.transitionFeatureMachine('details', 'CONTINUE', this.policyType());
     }
   },
 
@@ -19,7 +19,7 @@ export default Route.extend(ClusterRoute, ListRoute, {
 
   model(params) {
     let policyType = this.policyType();
-    if (this.shouldReturnEmptyModel(policyType, this.get('version'))) {
+    if (this.shouldReturnEmptyModel(policyType, this.version)) {
       return;
     }
     return this.store

@@ -26,17 +26,17 @@ export default Controller.extend({
 
   /* eslint-disable-next-line ember/no-observers */
   onQPChange: observer('namespaceQueryParam', function() {
-    this.get('namespaceService').setNamespace(this.get('namespaceQueryParam'));
+    this.namespaceService.setNamespace(this.namespaceQueryParam);
   }),
 
   consoleOpen: alias('console.isOpen'),
 
   activeCluster: computed('auth.activeCluster', function() {
-    return this.get('store').peekRecord('cluster', this.get('auth.activeCluster'));
+    return this.store.peekRecord('cluster', this.get('auth.activeCluster'));
   }),
 
   activeClusterName: computed('activeCluster', function() {
-    const activeCluster = this.get('activeCluster');
+    const activeCluster = this.activeCluster;
     return activeCluster ? activeCluster.get('name') : null;
   }),
 

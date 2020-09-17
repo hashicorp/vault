@@ -13,7 +13,7 @@ export default AuthConfig.extend({
     label: 'Base URL',
   }),
 
-  fieldGroups: computed(function() {
+  fieldGroups: computed('newFields', function() {
     let groups = [
       { default: ['organization'] },
       {

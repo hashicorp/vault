@@ -17,11 +17,8 @@ export default DS.Model.extend({
   keyType: attr('string'),
   port: attr('number'),
   attrs: computed('key', function() {
-    let keys = this.get('key') ? DISPLAY_FIELDS.slice(0) : CREATE_FIELDS.slice(0);
+    let keys = this.key ? DISPLAY_FIELDS.slice(0) : CREATE_FIELDS.slice(0);
     return expandAttributeMeta(this, keys);
   }),
-  toCreds: computed('key', function() {
-    // todo: would this be better copied as an SSH command?
-    return this.get('key');
-  }),
+  toCreds: computed.reads('key'),
 });

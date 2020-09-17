@@ -12,7 +12,7 @@ export default Component.extend({
 
   actions: {
     onConfirmRevoke() {
-      this.get('onRevoke')(...arguments);
+      this.onRevoke(...arguments);
     },
   },
 });

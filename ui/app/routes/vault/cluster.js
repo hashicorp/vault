@@ -40,7 +40,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     // this method clears all of the ember data cached models except
     // the model types blacklisted in `globalNamespaceModels`
     let store = this.store;
-    let modelsToKeep = this.get('globalNamespaceModels');
+    let modelsToKeep = this.globalNamespaceModels;
     for (let model of getOwner(this)
       .lookup('data-adapter:main')
       .getModelTypes()) {
@@ -55,12 +55,12 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   async beforeModel() {
     const params = this.paramsFor(this.routeName);
     // this.clearNonGlobalModels(); // ARG TODO: handle this either refresh or find all models.
-    this.get('namespaceService').setNamespace(params.namespaceQueryParam);
+    this.namespaceService.setNamespace(params.namespaceQueryParam);
     const id = this.getClusterId(params);
     if (id) {
-      this.get('auth').setCluster(id);
-      await this.get('permissions').getPaths.perform();
-      return this.get('version').fetchFeatures();
+      this.auth.setCluster(id);
+      await this.permissions.getPaths.perform();
+      return this.version.fetchFeatures();
     } else {
       return reject({ httpStatus: 404, message: 'not found', path: params.cluster_name });
     }
@@ -68,7 +68,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
   model(params) {
     const id = this.getClusterId(params);
-    return this.get('store').findRecord('cluster', id);
+    return this.store.findRecord('cluster', id);
   },
 
   poll: task(function*() {
@@ -92,7 +92,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
   afterModel(model, transition) {
     this._super(...arguments);
-    this.get('currentCluster').setCluster(model);
+    this.currentCluster.setCluster(model);
 
     // Check that namespaces is enabled and if not,
     // clear the namespace by transition to this route w/o it

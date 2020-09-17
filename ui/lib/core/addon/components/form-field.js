@@ -78,9 +78,7 @@ export default Component.extend({
    * Computed property used to set values on the passed model
    *
    */
-  valuePath: computed('attr.{name,options.fieldValue}', function() {
-    return this.get('attr.options.fieldValue') || this.get('attr.name');
-  }),
+  valuePath: computed.or('attr.options.fieldValue', 'attr.name'),
 
   model: null,
 
@@ -97,16 +95,16 @@ export default Component.extend({
 
   actions: {
     setFile(_, keyFile) {
-      const path = this.get('valuePath');
+      const path = this.valuePath;
       const { value } = keyFile;
-      this.get('model').set(path, value);
-      this.get('onChange')(path, value);
+      this.model.set(path, value);
+      this.onChange(path, value);
       this.set('file', keyFile);
     },
 
     setAndBroadcast(path, value) {
-      this.get('model').set(path, value);
-      this.get('onChange')(path, value);
+      this.model.set(path, value);
+      this.onChange(path, value);
     },
 
     setAndBroadcastBool(path, trueVal, falseVal, value) {
@@ -126,8 +124,8 @@ export default Component.extend({
       let valToSet = isString ? value : JSON.parse(value);
 
       if (!hasErrors) {
-        this.get('model').set(path, valToSet);
-        this.get('onChange')(path, valToSet);
+        this.model.set(path, valToSet);
+        this.onChange(path, valToSet);
       }
     },
   },

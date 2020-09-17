@@ -37,18 +37,18 @@ export default Component.extend({
   items: null,
   itemNoun: 'item',
   paginationRouteName: '',
-  showPagination: computed('paginationRouteName', 'items.meta{lastPage,total}', function() {
+  showPagination: computed('items.met.{lastPage,total}', 'items.meta', 'paginationRouteName', function() {
     let meta = this.items.meta;
     return this.paginationRouteName && meta && meta.lastPage > 1 && meta.total > 0;
   }),
 
   emptyTitle: computed('itemNoun', function() {
-    let items = pluralize(this.get('itemNoun'));
+    let items = pluralize(this.itemNoun);
     return `No ${items} yet`;
   }),
 
   emptyMessage: computed('itemNoun', function() {
-    let items = pluralize(this.get('itemNoun'));
-    return `Your ${items} will be listed here. Add your first ${this.get('itemNoun')} to get started.`;
+    let items = pluralize(this.itemNoun);
+    return `Your ${items} will be listed here. Add your first ${this.itemNoun} to get started.`;
   }),
 });

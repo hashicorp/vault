@@ -33,7 +33,7 @@ export default DS.Model.extend({
   signVerbatimPath: lazyCapabilities(apiPath`${'backend'}/sign-verbatim/${'id'}`, 'backend', 'id'),
   canSignVerbatim: alias('signVerbatimPath.canUpdate'),
 
-  fieldGroups: computed(function() {
+  fieldGroups: computed('newFields', function() {
     let groups = [
       { default: ['name', 'keyType'] },
       {

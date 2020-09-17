@@ -20,17 +20,15 @@ export default Component.extend({
 
   init() {
     this._super(...arguments);
-    this.get('store')
-      .findAll('auth-method')
-      .then(methods => {
-        this.set('authMethods', methods);
-        this.set('aliasMountAccessor', methods.get('firstObject.accessor'));
-      });
+    this.store.findAll('auth-method').then(methods => {
+      this.set('authMethods', methods);
+      this.set('aliasMountAccessor', methods.get('firstObject.accessor'));
+    });
   },
 
   adapter() {
-    let type = this.get('type');
-    let store = this.get('store');
+    let type = this.type;
+    let store = this.store;
     return store.adapterFor(`identity/${type}`);
   },
 
@@ -50,9 +48,9 @@ export default Component.extend({
   },
 
   lookup: task(function*() {
-    let flash = this.get('flashMessages');
-    let type = this.get('type');
-    let store = this.get('store');
+    let flash = this.flashMessages;
+    let type = this.type;
+    let store = this.store;
     let { param, paramValue } = this.getProperties('param', 'paramValue');
     let response;
     try {
@@ -64,7 +62,7 @@ export default Component.extend({
       return;
     }
     if (response) {
-      return this.get('router').transitionTo('vault.cluster.access.identity.show', response.id, 'details');
+      return this.router.transitionTo('vault.cluster.access.identity.show', response.id, 'details');
     } else {
       flash.danger(`We were unable to find an identity ${type} with a "${param}" of "${paramValue}".`);
     }

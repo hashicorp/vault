@@ -7,11 +7,9 @@ const ALLOWED_TYPES = ['acl', 'egp', 'rgp'];
 export default Route.extend(ClusterRoute, {
   version: service(),
   beforeModel() {
-    return this.get('version')
-      .fetchFeatures()
-      .then(() => {
-        return this._super(...arguments);
-      });
+    return this.version.fetchFeatures().then(() => {
+      return this._super(...arguments);
+    });
   },
   model(params) {
     let policyType = params.type;

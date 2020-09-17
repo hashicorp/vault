@@ -13,21 +13,24 @@ export default Component.extend({
   currentMachine: computed.alias('wizard.currentMachine'),
   tutorialState: computed.alias('wizard.currentState'),
   tutorialComponent: computed.alias('wizard.tutorialComponent'),
-  showProgress: computed('wizard.featureComponent', 'tutorialState', function() {
-    return (
-      this.tutorialComponent.includes('active') &&
-      (this.tutorialState.includes('init.active') ||
-        (this.wizard.featureComponent && this.wizard.featureMachineHistory))
-    );
-  }),
+  showProgress: computed(
+    'tutorialComponent',
+    'tutorialState',
+    'wizard.{featureComponent,featureMachineHistory}',
+    function() {
+      return (
+        this.tutorialComponent.includes('active') &&
+        (this.tutorialState.includes('init.active') ||
+          (this.wizard.featureComponent && this.wizard.featureMachineHistory))
+      );
+    }
+  ),
   featureMachineHistory: computed.alias('wizard.featureMachineHistory'),
-  totalFeatures: computed('wizard.featureList', function() {
-    return this.wizard.featureList.length;
-  }),
+  totalFeatures: computed.reads('wizard.featureList.length'),
   completedFeatures: computed('wizard.currentMachine', function() {
     return this.wizard.getCompletedFeatures();
   }),
-  currentFeatureProgress: computed('featureMachineHistory.[]', function() {
+  currentFeatureProgress: computed('currentMachine', 'featureMachineHistory.[]', 'tutorialState', function() {
     if (this.tutorialState.includes('active.feature')) {
       let totalSteps = FEATURE_MACHINE_STEPS[this.currentMachine];
       if (this.currentMachine === 'secrets') {
@@ -63,35 +66,43 @@ export default Component.extend({
     }
     return null;
   }),
-  progressBar: computed('currentFeatureProgress', 'currentFeature', 'currentTutorialProgress', function() {
-    let bar = [];
-    if (this.currentTutorialProgress) {
-      bar.push({
-        style: htmlSafe(`width:${this.currentTutorialProgress.percentage}%;`),
-        completed: false,
-        showIcon: true,
-      });
-    } else {
-      if (this.currentFeatureProgress) {
-        this.completedFeatures.forEach(feature => {
-          bar.push({ style: htmlSafe('width:100%;'), completed: true, feature: feature, showIcon: true });
+  progressBar: computed(
+    'completedFeatures',
+    'currentFeature',
+    'currentFeatureProgress.percentage',
+    'currentMachine',
+    'currentTutorialProgress.percentage',
+    'wizard.featureList',
+    function() {
+      let bar = [];
+      if (this.currentTutorialProgress) {
+        bar.push({
+          style: htmlSafe(`width:${this.currentTutorialProgress.percentage}%;`),
+          completed: false,
+          showIcon: true,
         });
-        this.wizard.featureList.forEach(feature => {
-          if (feature === this.currentMachine) {
-            bar.push({
-              style: htmlSafe(`width:${this.currentFeatureProgress.percentage}%;`),
-              completed: this.currentFeatureProgress.percentage == 100 ? true : false,
-              feature: feature,
-              showIcon: true,
-            });
-          } else {
-            bar.push({ style: htmlSafe('width:0%;'), completed: false, feature: feature, showIcon: true });
-          }
-        });
+      } else {
+        if (this.currentFeatureProgress) {
+          this.completedFeatures.forEach(feature => {
+            bar.push({ style: htmlSafe('width:100%;'), completed: true, feature: feature, showIcon: true });
+          });
+          this.wizard.featureList.forEach(feature => {
+            if (feature === this.currentMachine) {
+              bar.push({
+                style: htmlSafe(`width:${this.currentFeatureProgress.percentage}%;`),
+                completed: this.currentFeatureProgress.percentage == 100 ? true : false,
+                feature: feature,
+                showIcon: true,
+              });
+            } else {
+              bar.push({ style: htmlSafe('width:0%;'), completed: false, feature: feature, showIcon: true });
+            }
+          });
+        }
       }
+      return bar;
     }
-    return bar;
-  }),
+  ),
 
   actions: {
     dismissWizard() {

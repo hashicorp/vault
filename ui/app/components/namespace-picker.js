@@ -27,11 +27,11 @@ export default Component.extend({
   didReceiveAttrs() {
     this._super(...arguments);
 
-    let ns = this.get('namespace');
-    let oldNS = this.get('oldNamespace');
+    let ns = this.namespace;
+    let oldNS = this.oldNamespace;
     if (!oldNS || ns !== oldNS) {
-      this.get('setForAnimation').perform();
-      this.get('fetchListCapability').perform();
+      this.setForAnimation.perform();
+      this.fetchListCapability.perform();
     }
     this.set('oldNamespace', ns);
   },
@@ -48,8 +48,8 @@ export default Component.extend({
     }
   }),
   setForAnimation: task(function*() {
-    let leaves = this.get('menuLeaves');
-    let lastLeaves = this.get('lastMenuLeaves');
+    let leaves = this.menuLeaves;
+    let lastLeaves = this.lastMenuLeaves;
     if (!lastLeaves) {
       this.set('lastMenuLeaves', leaves);
       yield timeout(0);
@@ -82,7 +82,7 @@ export default Component.extend({
   inRootNamespace: alias('namespaceService.inRootNamespace'),
 
   namespaceTree: computed('accessibleNamespaces', function() {
-    let nsList = this.get('accessibleNamespaces');
+    let nsList = this.accessibleNamespaces;
 
     if (!nsList) {
       return [];
@@ -123,8 +123,8 @@ export default Component.extend({
   // to render the nodes of each leaf
 
   // gets set as  'lastMenuLeaves' in the ember concurrency task above
-  menuLeaves: computed('namespacePath', 'namespaceTree', function() {
-    let ns = this.get('namespacePath');
+  menuLeaves: computed('namespacePath', 'namespaceTree', 'pathToLeaf', function() {
+    let ns = this.namespacePath;
     ns = ns.replace(/^\//, '');
     let leaves = ancestorKeysForKey(ns);
     leaves.push(ns);
@@ -137,7 +137,7 @@ export default Component.extend({
   // the nodes at the root of the namespace tree
   // these will get rendered as the bottom layer
   rootLeaves: computed('namespaceTree', function() {
-    let tree = this.get('namespaceTree');
+    let tree = this.namespaceTree;
     let leaves = Object.keys(tree);
     return leaves;
   }),
@@ -145,11 +145,11 @@ export default Component.extend({
   currentLeaf: alias('lastMenuLeaves.lastObject'),
   canAccessMultipleNamespaces: gt('accessibleNamespaces.length', 1),
   isUserRootNamespace: computed('auth.authData.userRootNamespace', 'namespacePath', function() {
-    return this.get('auth.authData.userRootNamespace') === this.get('namespacePath');
+    return this.get('auth.authData.userRootNamespace') === this.namespacePath;
   }),
 
   namespaceDisplay: computed('namespacePath', 'accessibleNamespaces', 'accessibleNamespaces.[]', function() {
-    let namespace = this.get('namespacePath');
+    let namespace = this.namespacePath;
     if (namespace === '') {
       return '';
     }

@@ -73,7 +73,7 @@ export default TransformBase.extend({
           // eg. trying to update a role with empty array as transformations
           message = `You've edited the allowed_roles for this transformation. However, the corresponding edits to some roles' transformations were not made`;
         }
-        this.get('flashMessages').stickyInfo(message);
+        this.flashMessages.stickyInfo(message);
       }
     });
   },
@@ -85,7 +85,7 @@ export default TransformBase.extend({
       this.applyChanges('save', () => {
         const transformationId = this.get('model.id');
         const newModelRoles = this.get('model.allowed_roles') || [];
-        const initialRoles = this.get('initialRoles') || [];
+        const initialRoles = this.initialRoles || [];
 
         const updateRoles = [...newModelRoles, ...initialRoles]
           .filter(r => r.indexOf('*') < 0) // TODO: expand wildcards into included roles instead

@@ -3,7 +3,5 @@ import { computed } from '@ember/object';
 
 export default Component.extend({
   content: null,
-  list: computed('content', function() {
-    return this.get('content').keys;
-  }),
+  list: computed.reads('content.keys'),
 });

@@ -44,8 +44,8 @@ export default Certificate.extend({
   }),
 
   fieldDefinition: computed('caType', 'uploadPemBundle', function() {
-    const type = this.get('caType');
-    const isUpload = this.get('uploadPemBundle');
+    const type = this.caType;
+    const isUpload = this.uploadPemBundle;
     let groups = [{ default: ['caType', 'uploadPemBundle'] }];
     if (isUpload) {
       groups[0].default.push('pemBundle');

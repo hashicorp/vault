@@ -23,7 +23,7 @@ export default Service.extend({
     // uses the adapter and the raw response here since
     // models get wiped when switching namespaces and we
     // want to keep track of these separately
-    let store = this.get('store');
+    let store = this.store;
     let adapter = store.adapterFor('namespace');
     let userRoot = this.get('auth.authData.userRootNamespace');
     try {

@@ -9,9 +9,7 @@ export default Component.extend({
   wizard: service(),
   auth: service(),
 
-  shouldRender: computed('wizard.showWhenUnauthenticated', 'auth.currentToken', function() {
-    return this.get('auth.currentToken') || this.get('wizard.showWhenUnauthenticated');
-  }),
+  shouldRender: computed.or('auth.currentToken', 'wizard.showWhenUnauthenticated'),
   currentState: alias('wizard.currentState'),
   featureState: alias('wizard.featureState'),
   featureComponent: alias('wizard.featureComponent'),
@@ -22,41 +20,33 @@ export default Component.extend({
 
   actions: {
     dismissWizard() {
-      this.get('wizard').transitionTutorialMachine(this.get('currentState'), 'DISMISS');
+      this.wizard.transitionTutorialMachine(this.currentState, 'DISMISS');
     },
 
     advanceWizard() {
       let inInit = matchesState('init', this.get('wizard.currentState'));
       let event = inInit ? this.get('wizard.initEvent') || 'CONTINUE' : 'CONTINUE';
-      this.get('wizard').transitionTutorialMachine(this.get('currentState'), event);
+      this.wizard.transitionTutorialMachine(this.currentState, event);
     },
 
     advanceFeature() {
-      this.get('wizard').transitionFeatureMachine(this.get('featureState'), 'CONTINUE');
+      this.wizard.transitionFeatureMachine(this.featureState, 'CONTINUE');
     },
 
     finishFeature() {
-      this.get('wizard').transitionFeatureMachine(this.get('featureState'), 'DONE');
+      this.wizard.transitionFeatureMachine(this.featureState, 'DONE');
     },
 
     repeatStep() {
-      this.get('wizard').transitionFeatureMachine(
-        this.get('featureState'),
-        'REPEAT',
-        this.get('componentState')
-      );
+      this.wizard.transitionFeatureMachine(this.featureState, 'REPEAT', this.componentState);
     },
 
     resetFeature() {
-      this.get('wizard').transitionFeatureMachine(
-        this.get('featureState'),
-        'RESET',
-        this.get('componentState')
-      );
+      this.wizard.transitionFeatureMachine(this.featureState, 'RESET', this.componentState);
     },
 
     pauseWizard() {
-      this.get('wizard').transitionTutorialMachine(this.get('currentState'), 'PAUSE');
+      this.wizard.transitionTutorialMachine(this.currentState, 'PAUSE');
     },
   },
 });

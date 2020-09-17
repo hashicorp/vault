@@ -19,7 +19,7 @@ export const COMPUTEDS = {
     return ['tlsClientKeyBits', 'tlsClientKeyType', 'tlsClientTtl'];
   }),
 
-  nonOperationFields: computed('tlsFields', 'operationFields', function() {
+  nonOperationFields: computed('newFields', 'operationFields', 'tlsFields', function() {
     let excludeFields = ['role'].concat(this.operationFields, this.tlsFields);
     return this.newFields.slice().removeObjects(excludeFields);
   }),
@@ -33,7 +33,7 @@ const Model = DS.Model.extend(COMPUTEDS, {
   getHelpUrl(path) {
     return `/v1/${path}/scope/example/role/example?help=1`;
   },
-  fieldGroups: computed('fields', 'tlsFields', 'nonOperationFields', function() {
+  fieldGroups: computed('fields', 'nonOperationFields.length', 'tlsFields', function() {
     const groups = [{ TLS: this.tlsFields }];
     if (this.nonOperationFields.length) {
       groups.unshift({ default: this.nonOperationFields });

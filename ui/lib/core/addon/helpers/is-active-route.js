@@ -15,7 +15,7 @@ export default Helper.extend({
   }),
 
   compute([routeName, model], { isExact }) {
-    const router = this.get('router');
+    const router = this.router;
     const currentRoute = router.get('currentRouteName');
     let currentURL = router.get('currentURL');
     // if we have any query params we want to discard them
