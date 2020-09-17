@@ -2,6 +2,7 @@ import ApplicationSerializer from '../application';
 
 export default ApplicationSerializer.extend({
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
+    payload.data.name = payload.id;
     if (payload.data.alphabet) {
       payload.data.alphabet = [payload.data.alphabet];
     }
