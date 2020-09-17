@@ -50,7 +50,6 @@
 {{#if (or (eq mode 'edit') (eq mode 'create'))}}
 <form onsubmit={{action "createOrUpdate" mode}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    {{log model "model"}}
     {{message-error model=model}}
     <NamespaceReminder @mode={{mode}} @noun="transform alphabet" />
     {{#each model.attrs as |attr|}}
@@ -106,8 +105,11 @@
 </form>
 {{else}}
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-  {{log model "model"}}
-  {{message-error model=model}}
+  {{#if model.displayErrors}}
+    <div class="has-top-padding-s">
+      {{message-error model=model}}
+    </div>
+  {{/if}}
   {{#each model.attrs as |attr|}}
     {{#if (eq attr.type "object")}}
       {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(stringify (get model attr.name))}}

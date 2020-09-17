@@ -63,7 +63,6 @@ export default Component.extend(FocusOnInsertMixin, {
         successCallback(model);
       })
       .catch(e => {
-        // console.log('e', e);
         model.set('displayErrors', e.errors);
       });
   },
