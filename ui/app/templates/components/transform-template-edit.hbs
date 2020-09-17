@@ -113,8 +113,7 @@
         label=(capitalize (or attr.options.label (humanize (dasherize attr.name))))
         value=(get model attr.name)
         type=attr.type
-        isLink=(eq attr.name 'transformations')
-        viewAll="transformations"
+        viewAll=attr.name
       }}
     {{else}}
       {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}

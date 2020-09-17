@@ -7,10 +7,6 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 const { attr } = DS;
 
 const Model = DS.Model.extend({
-  useOpenAPI: false,
-  // getHelpUrl: function(backend) {
-  //   return `/v1/${backend}/template?help=1`;
-  // },
   idPrefix: 'template/',
   idForNav: computed('id', 'idPrefix', function() {
     let modelId = this.id || '';
