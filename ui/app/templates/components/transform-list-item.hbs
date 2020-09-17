@@ -25,33 +25,25 @@
       <PopupMenu name="secret-menu">
         <nav class="menu">
           <ul class="menu-list">
-            {{#if (or item.versionPath.isLoading item.secretPath.isLoading)}}
+            {{#if item.updatePath.canRead}}
               <li class="action">
-                <button disabled type="button" class="link button is-loading is-transparent">
-                  loading
-                </button>
+                <SecretLink
+                  @mode="show"
+                  @secret={{itemPath}}
+                  @class="has-text-black has-text-weight-semibold">
+                  Details
+                </SecretLink>
               </li>
-            {{else}}
-              {{#if item.updatePath.canRead}}
-                <li class="action">
-                  <SecretLink
-                    @mode="show"
-                    @secret={{itemPath}}
-                    @class="has-text-black has-text-weight-semibold">
-                    Details
-                  </SecretLink>
-                </li>
-              {{/if}}
-              {{#if item.updatePath.canUpdate}}
-                <li class="action">
-                  <SecretLink
-                    @mode="edit"
-                    @secret={{itemPath}}
-                    @class="has-text-black has-text-weight-semibold">
-                    Edit
-                  </SecretLink>
-                </li>
-              {{/if}}
+            {{/if}}
+            {{#if item.updatePath.canUpdate}}
+              <li class="action">
+                <SecretLink
+                  @mode="edit"
+                  @secret={{itemPath}}
+                  @class="has-text-black has-text-weight-semibold">
+                  Edit
+                </SecretLink>
+              </li>
             {{/if}}
           </ul>
         </nav>
@@ -61,7 +53,7 @@
   </div>
   {{/linked-block}}
 {{else}}
-  <div class="list-item-row">
+  <div class="list-item-row" data-test-view-only-list-item>
     <div class="columns is-mobile">
       <div class="column is-12 has-text-grey has-text-weight-semibold">
         <Icon
