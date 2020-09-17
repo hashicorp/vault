@@ -104,20 +104,25 @@
   </div>
 </form>
 {{else}}
-<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-  {{#each model.attrs as |attr|}}
-    {{#if (eq attr.type "object")}}
-      {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(stringify (get model attr.name))}}
-    {{else if (eq attr.type "array")}}
-      {{info-table-row
-        label=(capitalize (or attr.options.label (humanize (dasherize attr.name))))
-        value=(get model attr.name)
-        type=attr.type
-        viewAll=attr.name
-      }}
-    {{else}}
-      {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
-    {{/if}}
-  {{/each}}
-</div>
+  {{#if model.displayErrors}}
+    <div class="has-top-margin-s">
+      {{message-error model=model}}
+    </div>
+  {{/if}}
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{#each model.attrs as |attr|}}
+      {{#if (eq attr.type "object")}}
+        {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(stringify (get model attr.name))}}
+      {{else if (eq attr.type "array")}}
+        {{info-table-row
+          label=(capitalize (or attr.options.label (humanize (dasherize attr.name))))
+          value=(get model attr.name)
+          type=attr.type
+          viewAll=attr.name
+        }}
+      {{else}}
+        {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
+      {{/if}}
+    {{/each}}
+  </div>
 {{/if}}
