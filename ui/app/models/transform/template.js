@@ -1,7 +1,7 @@
-import DS from 'ember-data';
+import Model, { attr, belongsTo, hasMany } from '@ember-data/model';
 
-export default DS.Model.extend({
-  name: DS.attr('string'),
-  alphabet: DS.belongsTo('transform/alphabet'),
-  transformations: DS.hasMany('transformation'),
+export default Model.extend({
+  name: attr('string'),
+  alphabet: belongsTo('transform/alphabet'),
+  transformations: hasMany('transformation'),
 });

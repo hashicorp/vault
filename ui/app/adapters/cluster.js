@@ -1,3 +1,4 @@
+import AdapterError from '@ember-data/adapter/error';
 import { inject as service } from '@ember/service';
 import { assign } from '@ember/polyfills';
 import { hash, resolve } from 'rsvp';
@@ -5,9 +6,6 @@ import { assert } from '@ember/debug';
 import { pluralize } from 'ember-inflector';
 
 import ApplicationAdapter from './application';
-import DS from 'ember-data';
-
-const { AdapterError } = DS;
 
 const ENDPOINTS = [
   'health',

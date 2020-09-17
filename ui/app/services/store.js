@@ -1,10 +1,10 @@
+import Store from '@ember-data/store';
 import { schedule } from '@ember/runloop';
 import { copy } from 'ember-copy';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
 import { assert } from '@ember/debug';
 import { set, get, computed } from '@ember/object';
-import DS from 'ember-data';
 import clamp from 'vault/utils/clamp';
 import config from 'vault/config/environment';
 
@@ -27,7 +27,7 @@ export function keyForCache(query) {
   return JSON.stringify(cacheKeyObject);
 }
 
-export default DS.Store.extend({
+export default Store.extend({
   // this is a map of map that stores the caches
   lazyCaches: computed(function() {
     return new Map();

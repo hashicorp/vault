@@ -1,8 +1,8 @@
+import AdapterError from '@ember-data/adapter/error';
 import { next } from '@ember/runloop';
 import { hash } from 'rsvp';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
-import DS from 'ember-data';
 import { TABS } from 'vault/helpers/tabs-for-identity-show';
 
 export default Route.extend({
@@ -12,7 +12,7 @@ export default Route.extend({
     let tabs = TABS[itemType];
     let modelType = `identity/${itemType}`;
     if (!tabs.includes(section)) {
-      const error = new DS.AdapterError();
+      const error = new AdapterError();
       set(error, 'httpStatus', 404);
       throw error;
     }

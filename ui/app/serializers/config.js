@@ -1,8 +1,8 @@
+import RESTSerializer from '@ember-data/serializer/rest';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
-import DS from 'ember-data';
 
-export default DS.RESTSerializer.extend({
+export default RESTSerializer.extend({
   keyForAttribute: function(attr) {
     return decamelize(attr);
   },

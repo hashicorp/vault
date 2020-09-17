@@ -1,11 +1,9 @@
+import { belongsTo, attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
 import IdentityModel from './_base';
-import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import identityCapabilities from 'vault/macros/identity-capabilities';
-
-const { attr, belongsTo } = DS;
 
 export default IdentityModel.extend({
   formFields: computed('type', function() {

@@ -1,10 +1,8 @@
+import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-
-const { attr } = DS;
 
 // these arrays define the order in which the fields will be displayed
 // see
@@ -40,7 +38,7 @@ const CA_FIELDS = [
   'keyIdFormat',
 ];
 
-export default DS.Model.extend({
+export default Model.extend({
   useOpenAPI: true,
   getHelpUrl: function(backend) {
     return `/v1/${backend}/roles/example?help=1`;

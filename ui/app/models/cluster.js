@@ -1,11 +1,10 @@
+import Model, { attr, hasMany } from '@ember-data/model';
 import { inject as service } from '@ember/service';
 import { alias, and, equal, gte, not, or } from '@ember/object/computed';
 import { get, computed } from '@ember/object';
-import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
-const { hasMany, attr } = DS;
 
-export default DS.Model.extend({
+export default Model.extend({
   version: service(),
 
   nodes: hasMany('nodes', { async: false }),

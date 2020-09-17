@@ -1,7 +1,7 @@
-import DS from 'ember-data';
+import Model, { attr, belongsTo } from '@ember-data/model';
 
-export default DS.Model.extend({
-  name: DS.attr('string'),
-  template: DS.belongsTo('transform/template'),
-  roles: DS.belongsTo('transform/role'),
+export default Model.extend({
+  name: attr('string'),
+  template: belongsTo('transform/template'),
+  roles: belongsTo('transform/role'),
 });

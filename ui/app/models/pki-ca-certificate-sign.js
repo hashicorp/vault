@@ -1,9 +1,7 @@
+import { attr } from '@ember-data/model';
 import { copy } from 'ember-copy';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import Certificate from './pki-certificate-sign';
-
-const { attr } = DS;
 
 export default Certificate.extend({
   backend: attr('string', {

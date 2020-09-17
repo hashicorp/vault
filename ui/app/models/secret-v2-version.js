@@ -1,8 +1,6 @@
+import { belongsTo, attr } from '@ember-data/model';
 import Secret from './secret';
-import DS from 'ember-data';
 import { computed } from '@ember/object';
-
-const { attr, belongsTo } = DS;
 
 export default Secret.extend({
   failedServerRead: attr('boolean'),

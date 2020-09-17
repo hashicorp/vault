@@ -1,9 +1,7 @@
+import { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import AuthConfig from '../../auth-config';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
-
-const { attr } = DS;
 
 export default AuthConfig.extend({
   secretKey: attr('string'),

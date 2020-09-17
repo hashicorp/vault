@@ -1,8 +1,8 @@
 /* eslint-disable */
+import AdapterError from '@ember-data/adapter/error';
 import { isEmpty } from '@ember/utils';
 import { get } from '@ember/object';
 import ApplicationAdapter from './application';
-import DS from 'ember-data';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import ControlGroupError from 'vault/lib/control-group-error';
 
@@ -30,7 +30,7 @@ export default ApplicationAdapter.extend({
     return this._super(...arguments).catch(errorOrModel => {
       // if the response is a real 404 or if the secret is gated by a control group this will be an error,
       // otherwise the response will be the body of a deleted / destroyed version
-      if (errorOrModel instanceof DS.AdapterError) {
+      if (errorOrModel instanceof AdapterError) {
         throw errorOrModel;
       }
       return errorOrModel;

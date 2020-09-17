@@ -1,11 +1,9 @@
-import DS from 'ember-data';
+import Model, { belongsTo } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 
-const { belongsTo } = DS;
-
-export default DS.Model.extend({
+export default Model.extend({
   useOpenAPI: true,
   ca: belongsTo('kmip/ca', { async: false }),
   getHelpUrl(path) {

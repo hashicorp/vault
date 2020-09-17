@@ -1,9 +1,9 @@
+import JSONSerializer from '@ember-data/serializer/json';
 import { isNone, isBlank } from '@ember/utils';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
-import DS from 'ember-data';
 
-export default DS.JSONSerializer.extend({
+export default JSONSerializer.extend({
   keyForAttribute: function(attr) {
     return decamelize(attr);
   },

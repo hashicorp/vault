@@ -1,11 +1,10 @@
+import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
-import DS from 'ember-data';
 import KeyMixin from 'vault/mixins/key-mixin';
-const { attr } = DS;
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
-export default DS.Model.extend(KeyMixin, {
+export default Model.extend(KeyMixin, {
   failedServerRead: attr('boolean'),
   auth: attr('string'),
   lease_duration: attr('number'),

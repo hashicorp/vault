@@ -1,6 +1,6 @@
+import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
-import DS from 'ember-data';
 
 const SECTIONS_FOR_TYPE = {
   pki: ['cert', 'urls', 'crl', 'tidy'],
@@ -28,7 +28,7 @@ export default Route.extend({
     const sections = SECTIONS_FOR_TYPE[backendModel.get('type')];
     const hasSection = sections.includes(sectionName);
     if (!backendModel || !hasSection) {
-      const error = new DS.AdapterError();
+      const error = new AdapterError();
       set(error, 'httpStatus', 404);
       throw error;
     }

@@ -1,11 +1,9 @@
+import { hasMany, attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import IdentityModel from './_base';
-import DS from 'ember-data';
 import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
-
-const { attr, hasMany } = DS;
 
 let Model = IdentityModel.extend({
   formFields: computed(function() {

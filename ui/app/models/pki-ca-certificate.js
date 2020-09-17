@@ -1,10 +1,8 @@
+import { attr } from '@ember-data/model';
 import { and } from '@ember/object/computed';
 import { computed } from '@ember/object';
 import Certificate from './pki-certificate';
-import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-
-const { attr } = DS;
 
 export default Certificate.extend({
   DISPLAY_FIELDS: computed(function() {

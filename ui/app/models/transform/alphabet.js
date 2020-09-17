@@ -1,5 +1,5 @@
-import DS from 'ember-data';
+import Model, { hasMany } from '@ember-data/model';
 
-export default DS.Model.extend({
-  templates: DS.hasMany('template'),
+export default Model.extend({
+  templates: hasMany('template'),
 });

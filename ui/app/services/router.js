@@ -1,7 +1,6 @@
 import Evented from '@ember/object/evented';
-import Service from '@ember/service';
+import Service, { inject as service } from '@ember/service';
 
-import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 
 let hasOwn = (obj, prop) => {

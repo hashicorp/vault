@@ -1,7 +1,6 @@
+import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-const { attr } = DS;
 const CREDENTIAL_TYPES = [
   {
     value: 'iam_user',
@@ -18,7 +17,7 @@ const CREDENTIAL_TYPES = [
 ];
 
 const DISPLAY_FIELDS = ['accessKey', 'secretKey', 'securityToken', 'leaseId', 'renewable', 'leaseDuration'];
-export default DS.Model.extend({
+export default Model.extend({
   helpText:
     'For Vault roles of credential type iam_user, there are no inputs, just submit the form. Choose a type to change the input options.',
   role: attr('object', {

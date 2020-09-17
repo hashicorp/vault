@@ -1,5 +1,4 @@
-import DS from 'ember-data';
-const { attr } = DS;
+import Model, { attr } from '@ember-data/model';
 
 /* sample response
 
@@ -22,6 +21,6 @@ const { attr } = DS;
 
 */
 
-export default DS.Model.extend({
+export default Model.extend({
   service_tokens: attr('object'),
 });

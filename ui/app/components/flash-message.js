@@ -1,5 +1,4 @@
-import { get } from '@ember/object';
-import { getWithDefault, computed } from '@ember/object';
+import { get, getWithDefault, computed } from '@ember/object';
 import FlashMessage from 'ember-cli-flash/components/flash-message';
 
 export default FlashMessage.extend({

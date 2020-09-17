@@ -1,11 +1,10 @@
+import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-const { attr } = DS;
 const CREATE_FIELDS = ['username', 'ip'];
 
 const DISPLAY_FIELDS = ['username', 'ip', 'key', 'keyType', 'port'];
-export default DS.Model.extend({
+export default Model.extend({
   role: attr('object', {
     readOnly: true,
   }),

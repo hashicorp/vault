@@ -1,14 +1,15 @@
+import AdapterError from '@ember-data/adapter/error';
+import RESTAdapter from '@ember-data/adapter/rest';
 import { inject as service } from '@ember/service';
 import { assign } from '@ember/polyfills';
 import { set } from '@ember/object';
 import RSVP from 'rsvp';
-import DS from 'ember-data';
 import config from '../config/environment';
 
 const { APP } = config;
 const { POLLING_URLS, NAMESPACE_ROOT_URLS } = APP;
 
-export default DS.RESTAdapter.extend({
+export default RESTAdapter.extend({
   auth: service(),
   namespaceService: service('namespace'),
   controlGroup: service(),
@@ -113,7 +114,7 @@ export default DS.RESTAdapter.extend({
   handleResponse(status, headers, payload, requestData) {
     const returnVal = this._super(...arguments);
     // ember data errors don't have the status code, so we add it here
-    if (returnVal instanceof DS.AdapterError) {
+    if (returnVal instanceof AdapterError) {
       set(returnVal, 'httpStatus', status);
       set(returnVal, 'path', requestData.url);
     }

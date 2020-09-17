@@ -1,15 +1,13 @@
+import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-
-const { attr } = DS;
 
 //identity will be managed separately and the inclusion
 //of the system backend is an implementation detail
 const LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 
-export default DS.Model.extend({
+export default Model.extend({
   path: attr('string'),
   accessor: attr('string'),
   name: attr('string'),
