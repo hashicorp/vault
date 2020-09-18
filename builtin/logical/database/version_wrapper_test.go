@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"regexp"
 	"testing"
 	"time"
 
@@ -311,6 +312,36 @@ func TestGeneratePassword_policies(t *testing.T) {
 				t.Fatalf("Actual password: %s Expected password: %s", password, test.expectedPassword)
 			}
 		})
+	}
+}
+
+func TestGeneratePassword_no_policy(t *testing.T) {
+	newDB := new(mockNewDatabase)
+	defer newDB.AssertExpectations(t)
+
+	dbw := databaseVersionWrapper{
+		v5: newDB,
+	}
+
+	passGen := fakePasswordGenerator{
+		password: "",
+		err:      fmt.Errorf("should not be called"),
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	password, err := dbw.GeneratePassword(ctx, passGen, "")
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	if password == "" {
+		t.Fatalf("missing password")
+	}
+
+	rawRegex := "^[a-zA-Z0-9-]{20}$"
+	re := regexp.MustCompile(rawRegex)
+	if !re.MatchString(password) {
+		t.Fatalf("password %q did not match regex: %q", password, rawRegex)
 	}
 }
 
