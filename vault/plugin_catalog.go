@@ -92,10 +92,15 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 		merr = multierror.Append(merr, err)
 	}
 
-	if client.Type() == logical.TypeUnknown {
-		logger.Warn("%q is an unknown plugin type: %s", plugin.Name, merr.Error())
+	if client == nil || client.Type() == logical.TypeUnknown {
+		logger.Warn("unknown plugin type",
+			"plugin name", plugin.Name,
+			"error", merr.Error())
 	} else {
-		logger.Warn("%q is an unsupported plugin type %s: %s", plugin.Name, client.Type(), merr.Error())
+		logger.Warn("unsupported plugin type",
+			"plugin name", plugin.Name,
+			"plugin type", client.Type().String(),
+			"error", merr.Error())
 	}
 
 	return consts.PluginTypeUnknown, nil
