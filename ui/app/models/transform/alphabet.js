@@ -9,7 +9,8 @@ const { attr } = DS;
 const Model = DS.Model.extend({
   idPrefix: 'alphabet/',
   name: attr('string', {
-    label: 'Name',
+    fieldValue: 'id',
+    readOnly: true,
     subText: 'The alphabet name. Keep in mind that spaces are not allowed and this cannot be edited later.',
   }),
   alphabet: attr('string', {
@@ -18,7 +19,7 @@ const Model = DS.Model.extend({
       'Provide the set of valid UTF-8 characters contained within both the input and transformed value. Read more.',
   }),
 
-  attrs: computed('name', function() {
+  attrs: computed(function() {
     let keys = ['name', 'alphabet'];
     return expandAttributeMeta(this, keys);
   }),
