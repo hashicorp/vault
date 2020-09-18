@@ -1,7 +1,6 @@
+import { attr } from '@ember-data/model';
 import { expandOpenApiProps, combineAttributes, combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 import { module, test } from 'qunit';
-import DS from 'ember-data';
-const { attr } = DS;
 
 module('Unit | Util | OpenAPI Data Utilities', function() {
   const OPENAPI_RESPONSE_PROPS = {

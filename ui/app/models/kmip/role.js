@@ -1,11 +1,9 @@
-import DS from 'ember-data';
+import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import fieldToAttrs from 'vault/utils/field-to-attrs';
+import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 
-const { attr } = DS;
 export const COMPUTEDS = {
   operationFields: computed('newFields', function() {
     return this.newFields.filter(key => key.startsWith('operation'));
@@ -25,7 +23,7 @@ export const COMPUTEDS = {
   }),
 };
 
-const Model = DS.Model.extend(COMPUTEDS, {
+const ModelExport = Model.extend(COMPUTEDS, {
   useOpenAPI: true,
   backend: attr({ readOnly: true }),
   scope: attr({ readOnly: true }),
@@ -76,6 +74,6 @@ const Model = DS.Model.extend(COMPUTEDS, {
   }),
 });
 
-export default attachCapabilities(Model, {
+export default attachCapabilities(ModelExport, {
   updatePath: apiPath`${'backend'}/scope/${'scope'}/role/${'id'}`,
 });

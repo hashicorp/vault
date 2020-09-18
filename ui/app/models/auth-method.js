@@ -1,6 +1,6 @@
+import Model, { hasMany, attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { memberAction } from 'ember-api-actions';
@@ -8,9 +8,7 @@ import { memberAction } from 'ember-api-actions';
 import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 
-const { attr, hasMany } = DS;
-
-let Model = DS.Model.extend({
+let ModelExport = Model.extend({
   authConfigs: hasMany('auth-config', { polymorphic: true, inverse: 'backend', async: false }),
   path: attr('string'),
   accessor: attr('string'),
@@ -95,7 +93,7 @@ let Model = DS.Model.extend({
   canEdit: alias('configPath.canUpdate'),
 });
 
-export default attachCapabilities(Model, {
+export default attachCapabilities(ModelExport, {
   deletePath: apiPath`sys/auth/${'id'}`,
   configPath: function(context) {
     if (context.type === 'aws') {

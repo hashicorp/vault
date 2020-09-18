@@ -1,10 +1,8 @@
+import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import attachCapabilities from 'vault/lib/attach-capabilities';
-
-const { attr } = DS;
 
 // these arrays define the order in which the fields will be displayed
 // see
@@ -35,7 +33,7 @@ const TWEAK_SOURCE = [
   },
 ];
 
-const Model = DS.Model.extend({
+const ModelExport = Model.extend({
   useOpenAPI: false,
   name: attr('string', {
     // TODO: make this required for making a transformation
@@ -96,6 +94,6 @@ const Model = DS.Model.extend({
   }),
 });
 
-export default attachCapabilities(Model, {
+export default attachCapabilities(ModelExport, {
   updatePath: apiPath`${'backend'}/transformation/${'id'}`,
 });
