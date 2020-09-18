@@ -31,7 +31,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
-* ui: fix bug where dropdown for identity/entity management is not reflective of actual policy
+* ui: fix bug where dropdown for identity/entity management is not reflective of actual policy [[GH-9958](https://github.com/hashicorp/vault/pull/9958)]
 
 ## 1.5.3
 ### August 27th, 2020
