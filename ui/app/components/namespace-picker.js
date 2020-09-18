@@ -21,7 +21,8 @@ export default Component.extend({
 
   init() {
     this._super(...arguments);
-    this.get('namespaceService.findNamespacesForUser').perform();
+    // ARG TODO double check removed get
+    this.namespaceService.findNamespacesForUser.perform();
   },
 
   didReceiveAttrs() {
@@ -159,7 +160,7 @@ export default Component.extend({
 
   actions: {
     refreshNamespaceList() {
-      this.get('namespaceService.findNamespacesForUser').perform();
+      this.namespaceService.findNamespacesForUser.perform();
     },
   },
 });

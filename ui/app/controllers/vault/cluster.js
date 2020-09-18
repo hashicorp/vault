@@ -46,7 +46,13 @@ export default Controller.extend({
     'auth.currentToken',
     'activeCluster.{dr.isSecondary,needsInit,sealed}',
     function() {
-      if (this.activeCluster.dr.isSecondary || this.activeCluster.needsInit || this.activeCluster.sealed) {
+      // ARG TODO something here fix
+      /* eslint-disable-next-line ember/no-get */
+      if (
+        this.get('activeCluster.dr.isSecondary') ||
+        this.activeCluster.needsInit ||
+        this.activeCluster.sealed
+      ) {
         return false;
       }
       if (

@@ -62,7 +62,7 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   hasDataChanges() {
-    this.onDataChange(get(this, 'model.hasDirtyAttributes'));
+    this.onDataChange(this.model.hasDirtyAttributes);
   },
 
   persist(method, successCallback) {

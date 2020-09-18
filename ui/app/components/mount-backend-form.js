@@ -55,7 +55,8 @@ export default Component.extend({
     return this.mountType === 'secret' ? this.engines : METHODS;
   }),
 
-  engines: computed('version.features[]', 'version.isEnterprise', function() {
+  // ARG TODO: double check used brace expansion
+  engines: computed('version.{features[],isEnterprise}', function() {
     if (this.version.isEnterprise) {
       return ENGINES.concat([KMIP, TRANSFORM]);
     }

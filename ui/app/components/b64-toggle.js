@@ -1,7 +1,7 @@
 import { equal } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
 import Component from '@ember/component';
-import { set, get, computed } from '@ember/object';
+import { set, computed } from '@ember/object';
 import { encodeString, decodeString } from 'vault/utils/b64';
 
 const B64 = 'base64';

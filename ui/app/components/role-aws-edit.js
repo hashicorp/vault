@@ -1,5 +1,5 @@
 import { isBlank } from '@ember/utils';
-import { set, get } from '@ember/object';
+import { set } from '@ember/object';
 import RoleEdit from './role-edit';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
@@ -14,8 +14,7 @@ export default RoleEdit.extend({
       if (type === 'create' && isBlank(modelId)) {
         return;
       }
-
-      var credential_type = get(this, 'model.credential_type');
+      var credential_type = this.model.credential_type;
       if (credential_type == 'iam_user') {
         set(this, 'model.role_arns', []);
       }
@@ -27,7 +26,7 @@ export default RoleEdit.extend({
         set(this, 'model.policy_arns', []);
       }
 
-      var policy_document = get(this, 'model.policy_document');
+      var policy_document = this.model.policy_document;
       if (policy_document == '{}') {
         set(this, 'model.policy_document', '');
       }
