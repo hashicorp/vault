@@ -38,7 +38,7 @@ export default Base.extend({
     const cluster = model.cluster;
     const replicationMode = this.replicationMode;
     if (
-      !this.get('version.hasPerfReplication') ||
+      !this.version.hasPerfReplication ||
       replicationMode !== 'performance' ||
       !cluster.get(`${replicationMode}.isPrimary`) ||
       !cluster.get('canAddSecondary')

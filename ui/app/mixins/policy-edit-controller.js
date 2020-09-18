@@ -31,7 +31,7 @@ export default Mixin.create({
         .save()
         .then(m => {
           flash.success(`${policyType.toUpperCase()} policy "${name}" was successfully saved.`);
-          if (this.get('wizard.featureState') === 'create') {
+          if (this.wizard.featureState === 'create') {
             this.wizard.transitionFeatureMachine('create', 'CONTINUE', policyType);
           }
           return this.transitionToRoute('vault.cluster.policy.show', m.get('policyType'), m.get('name'));

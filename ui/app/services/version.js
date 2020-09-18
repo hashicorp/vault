@@ -57,7 +57,7 @@ export default Service.extend({
   }),
 
   getFeatures: task(function*() {
-    if (this.get('features.length') || this.isOSS) {
+    if (this.features.length || this.isOSS) {
       return;
     }
     try {

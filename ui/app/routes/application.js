@@ -65,15 +65,15 @@ export default Route.extend({
         return true;
       }
       next(() => {
-        let applicationURL = this.get('routing.currentURL');
-        let activeRoute = this.get('routing.currentRouteName');
+        let applicationURL = this.routing.currentURL;
+        let activeRoute = this.routing.currentRouteName;
 
-        if (this.get('wizard.setURLAfterTransition')) {
+        if (this.wizard.setURLAfterTransition) {
           this.set('wizard.setURLAfterTransition', false);
           this.set('wizard.expectedURL', applicationURL);
           this.set('wizard.expectedRouteName', activeRoute);
         }
-        let expectedRouteName = this.get('wizard.expectedRouteName');
+        let expectedRouteName = this.wizard.expectedRouteName;
         if (this.routing.isActive(expectedRouteName) === false) {
           wizard.transitionTutorialMachine(wizard.get('currentState'), 'PAUSE');
         }

@@ -28,17 +28,17 @@ export default Component.extend({
     function() {
       const display = this.display;
       const mode = this.mode;
-      if (mode === 'performance' && display === 'menu' && this.get('version.hasPerfReplication') === false) {
+      if (mode === 'performance' && display === 'menu' && this.version.hasPerfReplication === false) {
         return 'https://www.hashicorp.com/products/vault';
       }
       if (this.replicationEnabled || display === 'menu') {
-        return this.router.urlFor('vault.cluster.replication.mode.index', this.get('cluster.id'), mode);
+        return this.router.urlFor('vault.cluster.replication.mode.index', this.cluster.id, mode);
       }
       return null;
     }
   ),
   target: computed('isPerformance', 'version.hasPerfReplication', function() {
-    if (this.isPerformance && this.get('version.hasPerfReplication') === false) {
+    if (this.isPerformance && this.version.hasPerfReplication === false) {
       return '_blank';
     }
     return null;

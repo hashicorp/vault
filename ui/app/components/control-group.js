@@ -14,7 +14,7 @@ export default Component.extend({
 
   didReceiveAttrs() {
     this._super(...arguments);
-    let accessor = this.get('model.id');
+    let accessor = this.model.id;
     let data = this.controlGroup.wrapInfoForAccessor(accessor);
     this.set('controlGroupResponse', data);
   },
@@ -22,17 +22,17 @@ export default Component.extend({
   currentUserEntityId: alias('auth.authData.entity_id'),
 
   currentUserIsRequesting: computed('currentUserEntityId', 'model.requestEntity.id', function() {
-    return this.currentUserEntityId === this.get('model.requestEntity.id');
+    return this.currentUserEntityId === this.model.requestEntity.id;
   }),
 
   currentUserHasAuthorized: computed('currentUserEntityId', 'model.authorizations.@each.id', function() {
-    let authorizations = this.get('model.authorizations') || [];
+    let authorizations = this.model.authorizations || [];
     return Boolean(authorizations.findBy('id', this.currentUserEntityId));
   }),
 
   isSuccess: or('currentUserHasAuthorized', 'model.approved'),
   requestorName: computed('currentUserIsRequesting', 'model.requestEntity', function() {
-    let entity = this.get('model.requestEntity');
+    let entity = this.model.requestEntity;
 
     if (this.currentUserIsRequesting) {
       return 'You';
@@ -47,14 +47,14 @@ export default Component.extend({
     if (this.currentUserHasAuthorized) {
       return 'Thanks!';
     }
-    if (this.get('model.approved')) {
+    if (this.model.approved) {
       return 'Success!';
     }
     return 'Locked';
   }),
 
   bannerText: computed('model.approved', 'currentUserIsRequesting', 'currentUserHasAuthorized', function() {
-    let isApproved = this.get('model.approved');
+    let isApproved = this.model.approved;
     let { currentUserHasAuthorized, currentUserIsRequesting } = this.getProperties(
       'currentUserIsRequesting',
       'currentUserHasAuthorized'

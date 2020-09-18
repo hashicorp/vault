@@ -48,7 +48,7 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
     'primary_api_addr',
     function() {
       const inculdesAPIAddr = this.tokenIncludesAPIAddr;
-      if (this.replicationMode === 'performance' && this.get('version.hasPerfReplication') === false) {
+      if (this.replicationMode === 'performance' && this.version.hasPerfReplication === false) {
         return true;
       }
       if (this.mode !== 'secondary' || inculdesAPIAddr || (!inculdesAPIAddr && this.primary_api_addr)) {

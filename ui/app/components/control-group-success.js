@@ -21,15 +21,15 @@ export default Component.extend({
     try {
       let response = yield adapter.toolAction('unwrap', null, { clientToken: token });
       this.set('unwrapData', response.auth || response.data);
-      this.controlGroup.deleteControlGroupToken(this.get('model.id'));
+      this.controlGroup.deleteControlGroupToken(this.model.id);
     } catch (e) {
       this.set('error', `Token unwrap failed: ${e.errors[0]}`);
     }
   }).drop(),
 
   markAndNavigate: task(function*() {
-    this.controlGroup.markTokenForUnwrap(this.get('model.id'));
-    let { url } = this.get('controlGroupResponse.uiParams');
+    this.controlGroup.markTokenForUnwrap(this.model.id);
+    let { url } = this.controlGroupResponse.uiParams;
     yield this.router.transitionTo(url);
   }).drop(),
 });

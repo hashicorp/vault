@@ -1,14 +1,14 @@
+import Model from '@ember-data/model';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 import apiPath from 'vault/utils/api-path';
 import { get } from '@ember/object';
-import DS from 'ember-data';
 
 let MODEL_TYPE = 'test-form-model';
 
 let makeModelClass = () => {
-  return DS.Model.extend();
+  return Model.extend();
 };
 
 module('Unit | lib | attach capabilities', function(hooks) {

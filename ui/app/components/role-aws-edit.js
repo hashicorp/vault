@@ -8,7 +8,7 @@ export default RoleEdit.extend({
     createOrUpdate(type, event) {
       event.preventDefault();
 
-      const modelId = this.get('model.id');
+      const modelId = this.model.id;
       // prevent from submitting if there's no key
       // maybe do something fancier later
       if (type === 'create' && isBlank(modelId)) {

@@ -8,7 +8,7 @@ export default Route.extend(ClusterRoute, ListRoute, {
   wizard: service(),
 
   activate() {
-    if (this.get('wizard.featureState') === 'details') {
+    if (this.wizard.featureState === 'details') {
       this.wizard.transitionFeatureMachine('details', 'CONTINUE', this.policyType());
     }
   },

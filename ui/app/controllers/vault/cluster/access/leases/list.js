@@ -14,7 +14,7 @@ export default Controller.extend(ListController, {
       label: 'leases',
       text: 'leases',
       path: 'vault.cluster.access.leases.list-root',
-      model: this.get('clusterController.model.name'),
+      model: this.clusterController.model.name,
     };
   }),
 
@@ -25,7 +25,7 @@ export default Controller.extend(ListController, {
   }),
 
   emptyTitle: computed('baseKey.id', 'filter', 'filterIsFolder', function() {
-    let id = this.get('baseKey.id');
+    let id = this.baseKey.id;
     let filter = this.filter;
     if (id === '') {
       return 'There are currently no leases.';

@@ -91,7 +91,7 @@ export default Component.extend({
   }),
 
   maybeAddRoot(leaves) {
-    let userRoot = this.get('auth.authData.userRootNamespace');
+    let userRoot = this.auth.authData.userRootNamespace;
     if (userRoot === '') {
       leaves.unshift('');
     }
@@ -145,7 +145,7 @@ export default Component.extend({
   currentLeaf: alias('lastMenuLeaves.lastObject'),
   canAccessMultipleNamespaces: gt('accessibleNamespaces.length', 1),
   isUserRootNamespace: computed('auth.authData.userRootNamespace', 'namespacePath', function() {
-    return this.get('auth.authData.userRootNamespace') === this.namespacePath;
+    return this.auth.authData.userRootNamespace === this.namespacePath;
   }),
 
   namespaceDisplay: computed('namespacePath', 'accessibleNamespaces', 'accessibleNamespaces.[]', function() {

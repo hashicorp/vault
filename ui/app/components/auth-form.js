@@ -89,7 +89,7 @@ export default Component.extend(DEFAULTS, {
       // set `with` to the first method
       if (
         !this.wrappedToken &&
-        ((this.get('fetchMethods.isIdle') && firstMethod && !this.selectedAuth) ||
+        ((this.fetchMethods.isIdle && firstMethod && !this.selectedAuth) ||
           (this.selectedAuth && !this.selectedAuthBackend))
       ) {
         this.set('selectedAuth', firstMethod);
@@ -98,7 +98,7 @@ export default Component.extend(DEFAULTS, {
   },
 
   firstMethod() {
-    let firstMethod = this.get('methodsToShow.firstObject');
+    let firstMethod = this.methodsToShow.firstObject;
     if (!firstMethod) return;
     // prefer backends with a path over those with a type
     return get(firstMethod, 'path') || get(firstMethod, 'type');
@@ -128,7 +128,7 @@ export default Component.extend(DEFAULTS, {
   ),
 
   providerPartialName: computed('selectedAuthBackend.type', function() {
-    let type = this.get('selectedAuthBackend.type') || 'token';
+    let type = this.selectedAuthBackend.type || 'token';
     type = type.toLowerCase();
     let templateName = dasherize(type);
     return `partials/auth-form/${templateName}`;

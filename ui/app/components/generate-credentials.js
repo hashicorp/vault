@@ -59,8 +59,8 @@ export default Component.extend({
   },
 
   didReceiveAttrs() {
-    if (this.get('wizard.featureState') === 'displayRole') {
-      this.wizard.transitionFeatureMachine(this.get('wizard.featureState'), 'CONTINUE', this.backendType);
+    if (this.wizard.featureState === 'displayRole') {
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.backendType);
     }
   },
 
@@ -98,8 +98,8 @@ export default Component.extend({
       this.model
         .save()
         .catch(() => {
-          if (this.get('wizard.featureState') === 'credentials') {
-            this.wizard.transitionFeatureMachine(this.get('wizard.featureState'), 'ERROR', this.backendType);
+          if (this.wizard.featureState === 'credentials') {
+            this.wizard.transitionFeatureMachine(this.wizard.featureState, 'ERROR', this.backendType);
           }
         })
         .finally(() => {

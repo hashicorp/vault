@@ -24,8 +24,8 @@ export default Component.extend({
     },
 
     advanceWizard() {
-      let inInit = matchesState('init', this.get('wizard.currentState'));
-      let event = inInit ? this.get('wizard.initEvent') || 'CONTINUE' : 'CONTINUE';
+      let inInit = matchesState('init', this.wizard.currentState);
+      let event = inInit ? this.wizard.initEvent || 'CONTINUE' : 'CONTINUE';
       this.wizard.transitionTutorialMachine(this.currentState, event);
     },
 

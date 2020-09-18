@@ -32,12 +32,12 @@ export default ClusterRouteBase.extend({
   },
   activate() {
     this.wizard.set('initEvent', 'LOGIN');
-    this.wizard.transitionTutorialMachine(this.get('wizard.currentState'), 'TOLOGIN');
+    this.wizard.transitionTutorialMachine(this.wizard.currentState, 'TOLOGIN');
   },
   actions: {
     willTransition(transition) {
       if (transition.targetName !== this.routeName) {
-        this.wizard.transitionTutorialMachine(this.get('wizard.currentState'), 'INITDONE');
+        this.wizard.transitionTutorialMachine(this.wizard.currentState, 'INITDONE');
       }
     },
   },

@@ -31,7 +31,7 @@ export default RESTAdapter.extend({
   },
 
   addHeaders(url, options) {
-    let token = options.clientToken || this.get('auth.currentToken');
+    let token = options.clientToken || this.auth.currentToken;
     let headers = {};
     if (token && !options.unauthenticated) {
       headers['X-Vault-Token'] = token;
@@ -39,8 +39,7 @@ export default RESTAdapter.extend({
     if (options.wrapTTL) {
       headers['X-Vault-Wrap-TTL'] = options.wrapTTL;
     }
-    let namespace =
-      typeof options.namespace === 'undefined' ? this.get('namespaceService.path') : options.namespace;
+    let namespace = typeof options.namespace === 'undefined' ? this.namespaceService.path : options.namespace;
     if (namespace && !NAMESPACE_ROOT_URLS.some(str => url.includes(str))) {
       headers['X-Vault-Namespace'] = namespace;
     }

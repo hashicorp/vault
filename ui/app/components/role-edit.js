@@ -24,13 +24,13 @@ export default Component.extend(FocusOnInsertMixin, {
   didReceiveAttrs() {
     this._super(...arguments);
     if (
-      (this.get('wizard.featureState') === 'details' && this.mode === 'create') ||
-      (this.get('wizard.featureState') === 'role' && this.mode === 'show')
+      (this.wizard.featureState === 'details' && this.mode === 'create') ||
+      (this.wizard.featureState === 'role' && this.mode === 'show')
     ) {
-      this.wizard.transitionFeatureMachine(this.get('wizard.featureState'), 'CONTINUE', this.backendType);
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.backendType);
     }
-    if (this.get('wizard.featureState') === 'displayRole') {
-      this.wizard.transitionFeatureMachine(this.get('wizard.featureState'), 'NOOP', this.backendType);
+    if (this.wizard.featureState === 'displayRole') {
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'NOOP', this.backendType);
     }
   },
 
@@ -69,7 +69,7 @@ export default Component.extend(FocusOnInsertMixin, {
     const model = this.model;
     return model[method]().then(() => {
       if (!get(model, 'isError')) {
-        if (this.get('wizard.featureState') === 'role') {
+        if (this.wizard.featureState === 'role') {
           this.wizard.transitionFeatureMachine('role', 'CONTINUE', this.backendType);
         }
         successCallback(model);
@@ -81,7 +81,7 @@ export default Component.extend(FocusOnInsertMixin, {
     createOrUpdate(type, event) {
       event.preventDefault();
 
-      const modelId = this.get('model.id');
+      const modelId = this.model.id;
       // prevent from submitting if there's no key
       // maybe do something fancier later
       if (type === 'create' && isBlank(modelId)) {

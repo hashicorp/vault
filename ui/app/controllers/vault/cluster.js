@@ -32,7 +32,7 @@ export default Controller.extend({
   consoleOpen: alias('console.isOpen'),
 
   activeCluster: computed('auth.activeCluster', function() {
-    return this.store.peekRecord('cluster', this.get('auth.activeCluster'));
+    return this.store.peekRecord('cluster', this.auth.activeCluster);
   }),
 
   activeClusterName: computed('activeCluster', function() {
@@ -46,11 +46,7 @@ export default Controller.extend({
     'auth.currentToken',
     'activeCluster.{dr.isSecondary,needsInit,sealed}',
     function() {
-      if (
-        this.get('activeCluster.dr.isSecondary') ||
-        this.get('activeCluster.needsInit') ||
-        this.get('activeCluster.sealed')
-      ) {
+      if (this.activeCluster.dr.isSecondary || this.activeCluster.needsInit || this.activeCluster.sealed) {
         return false;
       }
       if (

@@ -5,7 +5,7 @@ export default TransformBase.extend({
 
   init() {
     this._super(...arguments);
-    this.set('initialRoles', this.get('model.allowed_roles'));
+    this.set('initialRoles', this.model.allowed_roles);
   },
 
   updateOrCreateRole(role, transformationId, backend) {
@@ -59,7 +59,7 @@ export default TransformBase.extend({
 
   handleUpdateRoles(updateRoles, transformationId) {
     if (!updateRoles) return;
-    const backend = this.get('model.backend');
+    const backend = this.model.backend;
     const promises = updateRoles.map(r => this.updateOrCreateRole(r, transformationId, backend));
 
     Promise.all(promises).then(results => {
@@ -83,8 +83,8 @@ export default TransformBase.extend({
       event.preventDefault();
 
       this.applyChanges('save', () => {
-        const transformationId = this.get('model.id');
-        const newModelRoles = this.get('model.allowed_roles') || [];
+        const transformationId = this.model.id;
+        const newModelRoles = this.model.allowed_roles || [];
         const initialRoles = this.initialRoles || [];
 
         const updateRoles = [...newModelRoles, ...initialRoles]

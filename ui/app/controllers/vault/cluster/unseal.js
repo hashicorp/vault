@@ -7,8 +7,8 @@ export default Controller.extend({
   actions: {
     transitionToCluster(resp) {
       return this.model.reload().then(() => {
-        this.wizard.transitionTutorialMachine(this.get('wizard.currentState'), 'CONTINUE', resp);
-        return this.transitionToRoute('vault.cluster', this.get('model.name'));
+        this.wizard.transitionTutorialMachine(this.wizard.currentState, 'CONTINUE', resp);
+        return this.transitionToRoute('vault.cluster', this.model.name);
       });
     },
 

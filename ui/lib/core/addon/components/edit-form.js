@@ -1,7 +1,7 @@
+import AdapterError from '@ember-data/adapter/error';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
-import DS from 'ember-data';
 import layout from '../templates/components/edit-form';
 import { next } from '@ember/runloop';
 
@@ -40,7 +40,7 @@ export default Component.extend({
     } catch (err) {
       // err will display via model state
       // AdapterErrors are handled by the error-message component
-      if (err instanceof DS.AdapterError === false) {
+      if (err instanceof AdapterError === false) {
         throw err;
       }
       return;

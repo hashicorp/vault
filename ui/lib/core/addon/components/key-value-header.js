@@ -33,8 +33,8 @@ export default Component.extend({
   secretPath: computed('baseKey.{display,id}', 'currentPath', 'path', 'root', 'showCurrent', function() {
     let crumbs = [];
     const root = this.root;
-    const baseKey = this.get('baseKey.display') || this.get('baseKey.id');
-    const baseKeyModel = encodePath(this.get('baseKey.id'));
+    const baseKey = this.baseKey.display || this.baseKey.id;
+    const baseKeyModel = encodePath(this.baseKey.id);
 
     if (root) {
       crumbs.push(root);

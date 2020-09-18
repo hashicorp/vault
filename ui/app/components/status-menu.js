@@ -23,7 +23,7 @@ export default Component.extend({
     return glyphs[this.type];
   }),
   activeCluster: computed('auth.activeCluster', function() {
-    return this.store.peekRecord('cluster', this.get('auth.activeCluster'));
+    return this.store.peekRecord('cluster', this.auth.activeCluster);
   }),
   currentToken: computed.reads('auth.currentToken'),
 });

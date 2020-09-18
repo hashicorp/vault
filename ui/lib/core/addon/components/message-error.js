@@ -30,7 +30,7 @@ export default Component.extend({
     function() {
       const errorMessage = this.errorMessage;
       const errors = this.errors;
-      const modelIsError = this.get('model.isError');
+      const modelIsError = this.model.isError;
       if (errorMessage) {
         return [errorMessage];
       }
@@ -40,10 +40,10 @@ export default Component.extend({
       }
 
       if (modelIsError) {
-        if (this.get('model.adapterError.errors.length') > 0) {
-          return this.get('model.adapterError.errors');
+        if (this.model.adapterError.errors.length > 0) {
+          return this.model.adapterError.errors;
         }
-        return [this.get('model.adapterError.message')];
+        return [this.model.adapterError.message];
       }
     }
   ),

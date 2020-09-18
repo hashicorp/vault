@@ -93,7 +93,7 @@ export default Component.extend(DEFAULTS, {
       props = assign({}, props, { [keyName]: resp.wrap_info.token });
     }
     if (props.token || props.rewrap_token || props.unwrap_data || action === 'lookup') {
-      this.wizard.transitionFeatureMachine(this.get('wizard.featureState'), 'CONTINUE');
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE');
     }
     setProperties(this, props);
   },

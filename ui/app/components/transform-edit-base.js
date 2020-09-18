@@ -64,8 +64,8 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   applyChanges(type, callback = () => {}) {
-    const modelId = this.get('model.id') || this.get('model.name'); // transform comes in as model.name
-    const modelPrefix = this.modelPrefixFromType(this.get('model.constructor.modelName'));
+    const modelId = this.model.id || this.model.name; // transform comes in as model.name
+    const modelPrefix = this.modelPrefixFromType(this.model.constructor.modelName);
     // prevent from submitting if there's no key
     // maybe do something fancier later
     if (type === 'create' && isBlank(modelId)) {

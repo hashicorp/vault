@@ -42,7 +42,7 @@ export default ApplicationAdapter.extend({
       health: this.health(),
       sealStatus: this.sealStatus().catch(e => e),
     };
-    if (this.get('version.isEnterprise') && this.get('namespaceService.inRootNamespace')) {
+    if (this.version.isEnterprise && this.namespaceService.inRootNamespace) {
       fetches.replicationStatus = this.replicationStatus().catch(e => e);
     }
     return hash(fetches).then(({ health, sealStatus, replicationStatus }) => {

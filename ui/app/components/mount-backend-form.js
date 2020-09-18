@@ -56,7 +56,7 @@ export default Component.extend({
   }),
 
   engines: computed('version.features[]', 'version.isEnterprise', function() {
-    if (this.get('version.isEnterprise')) {
+    if (this.version.isEnterprise) {
       return ENGINES.concat([KMIP, TRANSFORM]);
     }
     return ENGINES;

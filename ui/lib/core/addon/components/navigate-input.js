@@ -123,7 +123,7 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   onTab: function(event) {
-    var firstPartialMatch = this.get('firstPartialMatch.id');
+    var firstPartialMatch = this.firstPartialMatch.id;
     if (!firstPartialMatch) {
       return;
     }

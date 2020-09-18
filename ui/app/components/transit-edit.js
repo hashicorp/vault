@@ -55,10 +55,10 @@ export default Component.extend(FocusOnInsertMixin, {
     const key = this.key;
     return key[method]().then(() => {
       if (!get(key, 'isError')) {
-        if (this.get('wizard.featureState') === 'secret') {
+        if (this.wizard.featureState === 'secret') {
           this.wizard.transitionFeatureMachine('secret', 'CONTINUE');
         } else {
-          if (this.get('wizard.featureState') === 'encryption') {
+          if (this.wizard.featureState === 'encryption') {
             this.wizard.transitionFeatureMachine('encryption', 'CONTINUE', 'transit');
           }
         }
@@ -71,7 +71,7 @@ export default Component.extend(FocusOnInsertMixin, {
     createOrUpdateKey(type, event) {
       event.preventDefault();
 
-      const keyId = this.get('key.id');
+      const keyId = this.key.id;
       // prevent from submitting if there's no key
       // maybe do something fancier later
       if (type === 'create' && isBlank(keyId)) {

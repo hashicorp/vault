@@ -58,7 +58,7 @@ export default Controller.extend({
           // this will clear the dataset cache on the store
           this.send('reload');
           flash.success(`${policyType.toUpperCase()} policy "${name}" was successfully deleted.`);
-          if (this.get('wizard.featureState') === 'delete') {
+          if (this.wizard.featureState === 'delete') {
             this.wizard.transitionFeatureMachine('delete', 'CONTINUE', policyType);
           }
         })

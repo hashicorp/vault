@@ -5,12 +5,12 @@ export default TransformBase.extend({
 
   init() {
     this._super(...arguments);
-    this.set('initialTransformations', this.get('model.transformations'));
+    this.set('initialTransformations', this.model.transformations);
   },
 
   handleUpdateTransformations(updateTransformations, roleId, type = 'update') {
     if (!updateTransformations) return;
-    const backend = this.get('model.backend');
+    const backend = this.model.backend;
     const promises = updateTransformations.map(transform => {
       return this.store
         .queryRecord('transform', {
@@ -68,8 +68,8 @@ export default TransformBase.extend({
       event.preventDefault();
 
       this.applyChanges('save', () => {
-        const roleId = this.get('model.id');
-        const newModelTransformations = this.get('model.transformations');
+        const roleId = this.model.id;
+        const newModelTransformations = this.model.transformations;
 
         if (!this.initialTransformations) {
           this.handleUpdateTransformations(

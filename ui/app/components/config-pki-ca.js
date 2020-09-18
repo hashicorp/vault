@@ -136,7 +136,7 @@ export default Component.extend({
     saveCA(method) {
       this.set('loading', true);
       const model = this.model;
-      const isUpload = this.get('model.uploadPemBundle');
+      const isUpload = this.model.uploadPemBundle;
       model
         .save({ adapterOptions: { method } })
         .then(m => {

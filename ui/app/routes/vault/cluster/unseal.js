@@ -6,6 +6,6 @@ export default ClusterRoute.extend({
 
   activate() {
     this.wizard.set('initEvent', 'UNSEAL');
-    this.wizard.transitionTutorialMachine(this.get('wizard.currentState'), 'TOUNSEAL');
+    this.wizard.transitionTutorialMachine(this.wizard.currentState, 'TOUNSEAL');
   },
 });

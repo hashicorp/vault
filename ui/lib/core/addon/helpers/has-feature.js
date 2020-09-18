@@ -31,6 +31,6 @@ export default Helper.extend({
     this.recompute();
   }),
   compute([featureName]) {
-    return hasFeature(featureName, this.get('version.features'));
+    return hasFeature(featureName, this.version.features);
   },
 });

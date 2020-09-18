@@ -11,9 +11,9 @@ export default Route.extend(UnloadModelRoute, UnsavedModelRoute, {
     if (
       policyType === 'acl' &&
       this.get('wizard.currentMachine') === 'policies' &&
-      this.get('wizard.featureState') === 'idle'
+      this.wizard.featureState === 'idle'
     ) {
-      this.wizard.transitionFeatureMachine(this.get('wizard.featureState'), 'CONTINUE');
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE');
     }
     if (!this.get('version.hasSentinel') && policyType !== 'acl') {
       return this.transitionTo('vault.cluster.policies', policyType);
