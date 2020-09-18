@@ -2,9 +2,9 @@ package transit
 
 import (
 	"context"
-	"testing"
-
+	"encoding/json"
 	"github.com/hashicorp/vault/sdk/logical"
+	"testing"
 )
 
 func TestTransit_BatchDecryption(t *testing.T) {
@@ -14,7 +14,8 @@ func TestTransit_BatchDecryption(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
 	batchEncryptionInput := []interface{}{
-		map[string]interface{}{"plaintext": "Cg=="},
+		map[string]interface{}{"plaintext": ""},     // empty string
+		map[string]interface{}{"plaintext": "Cg=="}, // newline
 		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
 	}
 	batchEncryptionData := map[string]interface{}{
@@ -52,14 +53,12 @@ func TestTransit_BatchDecryption(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchDecryptionResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
+	batchDecryptionResponseItems := resp.Data["batch_results"].([]DecryptBatchResponseItem)
+	expectedResult := "[{\"plaintext\":\"\"},{\"plaintext\":\"Cg==\"},{\"plaintext\":\"dGhlIHF1aWNrIGJyb3duIGZveA==\"}]"
 
-	plaintext1 := "dGhlIHF1aWNrIGJyb3duIGZveA=="
-	plaintext2 := "Cg=="
-	for _, item := range batchDecryptionResponseItems {
-		if item.Plaintext != plaintext1 && item.Plaintext != plaintext2 {
-			t.Fatalf("bad: plaintext: %q", item.Plaintext)
-		}
+	jsonResponse, err := json.Marshal(batchDecryptionResponseItems)
+	if err != nil || err == nil && string(jsonResponse) != expectedResult {
+		t.Fatalf("bad: expected json response [%s]", jsonResponse)
 	}
 }
 
