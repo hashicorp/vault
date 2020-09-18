@@ -22,6 +22,11 @@ existence with the Kubernetes TokenReview API. This endpoint configures the
 public key used to validate the JWT signature and the necessary information to
 access the Kubernetes API.
 
+If they aren't specified, Vault will use the local CA cert and service account
+JWT for the `kubernetes_ca_cert` and `token_reviewer_jwt` parameters,
+respectively, when running in a Kubernetes pod. This behavior may be disabled by
+setting `disable_local_ca_jwt` to `true`.
+
 | Method | Path                      |
 | :----- | :------------------------ |
 | `POST` | `/auth/kubernetes/config` |
@@ -41,6 +46,7 @@ access the Kubernetes API.
 - `issuer` `(string: "")` - Optional JWT issuer. If no issuer is specified, then this plugin will
   use `kubernetes.io/serviceaccount` as the default issuer.
 - `disable_iss_validation` `(bool: false)` - Disable JWT issuer validation. Allows to skip ISS validation.
+- `disable_local_ca_jwt` `(bool: false)` - Disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.
 
 
 ### Sample Payload
@@ -87,7 +93,8 @@ $ curl \
     "kubernetes_host": "https://192.168.99.100:8443",
     "kubernetes_ca_cert": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----",
     "pem_keys": ["-----BEGIN CERTIFICATE-----.....", .....],
-    "disable_iss_validation": false
+    "disable_iss_validation": false,
+    "disable_local_ca_jwt": false
   }
 }
 ```
