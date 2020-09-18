@@ -29,6 +29,10 @@ IMPROVEMENTS:
 
 * secrets/gcp: Add check for 403 during rollback to prevent repeated deletion calls [[GH-97](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/97)]
 
+BUG FIXES:
+
+* ui: fix bug where dropdown for identity/entity management is not reflective of actual policy
+
 ## 1.5.3
 ### August 27th, 2020
 
