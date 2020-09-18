@@ -51,13 +51,15 @@ export default Service.extend({
     if (this.version) {
       return;
     }
-    let response = yield this.store.adapterFor('cluster').health();
+    let response = yield this.store
+      .adapterFor('cluster')
+      .health();
     this.setVersion(response);
     return;
   }),
 
   getFeatures: task(function*() {
-    if (this.features.length || this.isOSS) {
+    if (this.get('features.length') || this.isOSS) {
       return;
     }
     try {
