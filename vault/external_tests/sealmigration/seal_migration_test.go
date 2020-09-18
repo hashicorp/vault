@@ -4,22 +4,22 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
-
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	sealhelper "github.com/hashicorp/vault/helper/testhelpers/seal"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage/consul"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -66,7 +66,7 @@ func testVariousBackends(t *testing.T, tf testFunc, basePort int, includeRaft bo
 
 		logger := logger.Named("consul")
 		storage, cleanup := teststorage.MakeReusableStorage(
-			t, logger, teststorage.MakeConsulBackend(t, logger))
+			t, logger, consul.MakeConsulBackend(t, logger))
 		defer cleanup()
 		tf(t, logger, storage, basePort+300)
 	})
