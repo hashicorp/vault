@@ -8,6 +8,11 @@ const { attr } = DS;
 
 const Model = DS.Model.extend({
   idPrefix: 'alphabet/',
+  idForNav: computed('id', 'idPrefix', function() {
+    let modelId = this.id || '';
+    return `${this.idPrefix}${modelId}`;
+  }),
+
   name: attr('string', {
     fieldValue: 'id',
     readOnly: true,
