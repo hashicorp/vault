@@ -117,7 +117,13 @@ func (y YamlFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 // An output formatter for table output of an object
 type TableFormatter struct{}
 
-// We don't use this
+// We don't use this due to the TableFormatter introducing a bug when the -field flag is supplied:
+// https://github.com/hashicorp/vault/commit/b24cf9a8af2190e96c614205b8cdf06d8c4b6718
+
+// NOTE: TODO: We can use this PURELY for the SealStatusResponse struct. Type check this like so:
+// https://stackoverflow.com/questions/6372474/how-to-determine-an-interface-values-real-type
+// and then if the type matches, do the table formatting thing. In OutputStatus, we'll
+// simply add HA fields to status, and then call Format. Format will --> []string
 func (t TableFormatter) Format(data interface{}) ([]byte, error) {
 	return nil, nil
 }
