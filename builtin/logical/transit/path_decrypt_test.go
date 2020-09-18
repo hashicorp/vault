@@ -125,7 +125,7 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchDecryptionResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
+	batchDecryptionResponseItems := resp.Data["batch_results"].([]DecryptBatchResponseItem)
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 	for _, item := range batchDecryptionResponseItems {
