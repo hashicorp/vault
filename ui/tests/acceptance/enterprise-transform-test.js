@@ -9,6 +9,7 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import transformationsPage from 'vault/tests/pages/secrets/backend/transform/transformations';
 import rolesPage from 'vault/tests/pages/secrets/backend/transform/roles';
 import templatesPage from 'vault/tests/pages/secrets/backend/transform/templates';
+import alphabetsPage from 'vault/tests/pages/secrets/backend/transform/alphabets';
 import searchSelect from 'vault/tests/pages/components/search-select';
 
 const searchSelectComponent = create(searchSelect);
@@ -172,7 +173,7 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
       .doesNotExist('Allowed roles are no longer on the transformation');
   });
 
-  test('it allows creation and update of a template', async function(assert) {
+  test('it allows creation and edit of a template', async function(assert) {
     const templateName = 'my-template';
     let backend = await mount();
     await click('[data-test-tab="Templates"]');
@@ -201,6 +202,37 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
       currentURL(),
       `/vault/secrets/${backend}/edit/template/${templateName}`,
       'Links to template edit page'
+    );
+    assert.dom('[data-test-input="name"]').hasAttribute('readonly');
+  });
+
+  test('it allows creation and edit of an alphabet', async function(assert) {
+    const alphabetName = 'vowels-only';
+    let backend = await mount();
+    await click('[data-test-tab="Alphabets"]');
+    assert.equal(currentURL(), `/vault/secrets/${backend}/list?tab=alphabet`, 'links to alphabet list page');
+    await alphabetsPage.createLink();
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${backend}/create?itemType=alphabet`,
+      'redirects to create alphabet page'
+    );
+    await alphabetsPage.name(alphabetName);
+    await alphabetsPage.alphabet('aeiou');
+    await alphabetsPage.submit();
+
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${backend}/show/alphabet/${alphabetName}`,
+      'redirects to show alphabet page after submit'
+    );
+    assert.dom('[data-test-row-value="Name"]').hasText(alphabetName);
+    assert.dom('[data-test-row-value="Alphabet"]').hasText('aeiou');
+    await alphabetsPage.editLink();
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${backend}/edit/alphabet/${alphabetName}`,
+      'Links to alphabet edit page'
     );
     assert.dom('[data-test-input="name"]').hasAttribute('readonly');
   });
