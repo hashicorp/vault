@@ -323,7 +323,7 @@ func generatePartitionToRegionMap() map[string]*endpoints.Region {
 		//   enabled for STS) by default.
 		//
 		//   For "aws-us-gov", choose "us-gov-west-1" because it is the only
-		//   valid region for IAM operation.s
+		//   valid region for IAM operations.
 		//
 		for _, r := range p.Regions() {
 			if p.ID() == "aws" && r.ID() != "us-east-1" {
