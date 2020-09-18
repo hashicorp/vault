@@ -29,6 +29,7 @@ module.exports = {
 };
 
 if (process.env.CI) {
+  /* eslint-disable no-undef */
   config.reporter = 'xunit';
   config.report_file = 'test-results/qunit/results.xml';
   config.xunit_intermediate_output = true;

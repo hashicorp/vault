@@ -18,6 +18,7 @@ module.exports = {
     es6: true,
   },
   rules: {
+    // TODO revisit once figure out how to replace, added during upgrade to 3.20
     'ember/no-new-mixins': 'off',
     'ember/no-mixins': 'off',
   },

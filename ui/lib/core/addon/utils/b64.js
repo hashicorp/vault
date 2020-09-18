@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import base64js from 'base64-js';
 
 export function encodeString(string) {

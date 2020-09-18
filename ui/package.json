@@ -13,7 +13,7 @@
     "build:dev": "ember build",
     "lint": "npm-run-all --aggregate-output --continue-on-error --parallel lint:*",
     "lint:hbs": "ember-template-lint app/**/* lib/**/*",
-    "lint:js": "eslint .",
+    "lint:js": "eslint . --fix",
     "fmt": "yarn run fmt-js && yarn run fmt-styles",
     "fmt:js": "prettier-eslint --single-quote --no-use-tabs --trailing-comma es5 --print-width=110 --write '{app,tests,config,lib}/**/*.js'",
     "fmt:styles": "prettier --write app/styles/**/*.*",

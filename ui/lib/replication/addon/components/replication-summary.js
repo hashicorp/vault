@@ -1,6 +1,6 @@
 import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
-import { get, computed } from '@ember/object';
+import { computed } from '@ember/object';
 import Component from '@ember/component';
 import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
 import ReplicationActions from 'core/mixins/replication-actions';

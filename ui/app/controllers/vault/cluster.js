@@ -1,3 +1,4 @@
+/* eslint-disable ember/no-observers */
 import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller from '@ember/controller';
@@ -24,7 +25,6 @@ export default Controller.extend({
 
   namespaceQueryParam: '',
 
-  /* eslint-disable-next-line ember/no-observers */
   onQPChange: observer('namespaceQueryParam', function() {
     this.namespaceService.setNamespace(this.namespaceQueryParam);
   }),

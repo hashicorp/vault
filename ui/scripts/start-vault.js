@@ -1,5 +1,7 @@
 /* eslint-env node */
 /* eslint-disable no-console */
+/* eslint-disable no-process-exit */
+/* eslint-disable node/no-extraneous-require */
 
 var fs = require('fs');
 var path = require('path');

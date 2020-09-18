@@ -1,3 +1,4 @@
+/* eslint-disable ember/no-observers */
 import { inject as service } from '@ember/service';
 import { isArray } from '@ember/array';
 import Helper from '@ember/component/helper';
@@ -9,7 +10,6 @@ const startsWith = (a, b) => a.indexOf(b) === 0;
 export default Helper.extend({
   router: service(),
 
-  /* eslint-disable-next-line ember/no-observers */
   onRouteChange: observer('router.currentURL', 'router.currentRouteName', function() {
     this.recompute();
   }),

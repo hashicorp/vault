@@ -6,7 +6,8 @@ export default Component.extend({
   replicationMode: null,
   secondaries: null,
   onRevoke: Function.prototype,
-
+  // TODO: added eslint disable during upgrade come back and fix.
+  /* eslint-disable ember/require-return-from-computed */
   addRoute: computed('replicationMode', function() {}),
   revokeRoute: computed('replicationMode', function() {}),
 

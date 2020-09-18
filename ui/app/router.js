@@ -123,7 +123,7 @@ Router.map(function() {
       });
       this.route('policies', { path: '/policies/:type' }, function() {
         this.route('index', { path: '/' });
-        this.route('create', { path: '/create' });
+        this.route('create');
       });
       this.route('policy', { path: '/policy/:type' }, function() {
         this.route('show', { path: '/:policy_name' });
