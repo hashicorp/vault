@@ -49,7 +49,7 @@ export default Fragment.extend({
   merkleRoot: attr('string'),
   merkleSyncProgress: attr('object'),
   syncProgress: computed('state', 'merkleSyncProgress', function() {
-    const { state, merkleSyncProgress } = this.getProperties('state', 'merkleSyncProgress');
+    const { state, merkleSyncProgress } = this;
     if (state !== 'merkle-sync' || !merkleSyncProgress) {
       return null;
     }

@@ -63,7 +63,7 @@ export default IdentityModel.extend({
     'memberGroupIds',
     'memberGroupIds.[]',
     function() {
-      let { memberEntityIds, memberGroupIds } = this.getProperties('memberEntityIds', 'memberGroupIds');
+      let { memberEntityIds, memberGroupIds } = this;
       let numEntities = (memberEntityIds && memberEntityIds.get('length')) || 0;
       let numGroups = (memberGroupIds && memberGroupIds.get('length')) || 0;
       return numEntities + numGroups > 0;

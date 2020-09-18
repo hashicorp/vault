@@ -63,7 +63,7 @@ export default Component.extend(DEFAULTS, {
   dataIsEmpty: match('data', new RegExp(DEFAULTS.data)),
 
   expirationDate: computed('creation_time', 'creation_ttl', function() {
-    const { creation_time, creation_ttl } = this.getProperties('creation_time', 'creation_ttl');
+    const { creation_time, creation_ttl } = this;
     if (!(creation_time && creation_ttl)) {
       return null;
     }

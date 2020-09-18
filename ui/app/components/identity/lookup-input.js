@@ -33,11 +33,7 @@ export default Component.extend({
   },
 
   data() {
-    let { param, paramValue, aliasMountAccessor } = this.getProperties(
-      'param',
-      'paramValue',
-      'aliasMountAccessor'
-    );
+    let { param, paramValue, aliasMountAccessor } = this;
     let data = {};
 
     data[underscore([param])] = paramValue;
@@ -51,7 +47,7 @@ export default Component.extend({
     let flash = this.flashMessages;
     let type = this.type;
     let store = this.store;
-    let { param, paramValue } = this.getProperties('param', 'paramValue');
+    let { param, paramValue } = this;
     let response;
     try {
       response = yield this.adapter().lookup(store, this.data());

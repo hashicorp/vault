@@ -110,7 +110,7 @@ export default Model.extend({
     'latestVersion',
     'minDecryptionVersion',
     function() {
-      const { keyVersions, minDecryptionVersion } = this.getProperties('keyVersions', 'minDecryptionVersion');
+      const { keyVersions, minDecryptionVersion } = this;
 
       return keyVersions
         .filter(version => {
@@ -121,7 +121,7 @@ export default Model.extend({
   ),
 
   keysForEncryption: computed('minEncryptionVersion', 'latestVersion', function() {
-    let { minEncryptionVersion, latestVersion } = this.getProperties('minEncryptionVersion', 'latestVersion');
+    let { minEncryptionVersion, latestVersion } = this;
     let minVersion = clamp(minEncryptionVersion - 1, 0, latestVersion);
     let versions = [];
     while (latestVersion > minVersion) {

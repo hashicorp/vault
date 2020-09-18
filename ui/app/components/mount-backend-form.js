@@ -81,7 +81,7 @@ export default Component.extend({
 
   mountBackend: task(function*() {
     const mountModel = this.mountModel;
-    const { type, path } = mountModel.getProperties('type', 'path');
+    const { type, path } = mountModel;
     try {
       yield mountModel.save();
     } catch (err) {

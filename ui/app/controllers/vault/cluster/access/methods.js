@@ -12,7 +12,7 @@ export default Controller.extend({
   filter: null,
 
   disableMethod: task(function*(method) {
-    const { type, path } = method.getProperties('type', 'path');
+    const { type, path } = method;
     try {
       yield method.destroyRecord();
       this.flashMessages.success(`The ${type} Auth Method at ${path} has been disabled.`);

@@ -11,7 +11,7 @@ export default Component.extend({
   ttl: '30m',
 
   wrapTTL: computed('wrapResponse', 'ttl', function() {
-    const { wrapResponse, ttl } = this.getProperties('wrapResponse', 'ttl');
+    const { wrapResponse, ttl } = this;
     return wrapResponse ? ttl : null;
   }),
 

@@ -55,10 +55,7 @@ export default Component.extend({
 
   bannerText: computed('model.approved', 'currentUserIsRequesting', 'currentUserHasAuthorized', function() {
     let isApproved = this.model.approved;
-    let { currentUserHasAuthorized, currentUserIsRequesting } = this.getProperties(
-      'currentUserIsRequesting',
-      'currentUserHasAuthorized'
-    );
+    let { currentUserHasAuthorized, currentUserIsRequesting } = this;
     if (currentUserHasAuthorized) {
       return 'You have given authorization';
     }

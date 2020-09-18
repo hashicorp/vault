@@ -83,7 +83,7 @@ export default Component.extend({
    * @type boolean
    */
   valuesMatch: computed('value', '_value', function() {
-    const { value, _value } = this.getProperties('value', '_value');
+    const { value, _value } = this;
     const anyBlank = isBlank(value) || isBlank(_value);
     return !anyBlank && value === _value;
   }),

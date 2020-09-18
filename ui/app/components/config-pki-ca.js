@@ -102,7 +102,7 @@ export default Component.extend({
    */
   downloadHrefs: computed('config', 'config.{backend,pem,caChain,der}', function() {
     const config = this.config;
-    const { backend, pem, caChain, der } = config.getProperties('backend', 'pem', 'caChain', 'der');
+    const { backend, pem, caChain, der } = config;
 
     if (!pem) {
       return [];
