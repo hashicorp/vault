@@ -20,6 +20,7 @@ BUG FIXES:
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-93](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/93)]
 * agent/auth/kerberos: Fix `disable_fast_negotiation` not being set on the auth method when configured by user. [[GH-9892](https://github.com/hashicorp/vault/pull/9892)]
 * cli: Don't open or overwrite a raft snapshot file on an unsuccessful `vault operator raft snapshot` [[GH-9894](https://github.com/hashicorp/vault/pull/9894)]
+* core: Implement constant time version of shamir GF(2^8) math [[GH-9932](https://github.com/hashicorp/vault/pull/9932)]
 
 ## 1.5.4
 ### TBD
@@ -27,6 +28,11 @@ BUG FIXES:
 IMPROVEMENTS:
 
 * secrets/gcp: Add check for 403 during rollback to prevent repeated deletion calls [[GH-97](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/97)]
+
+BUG FIXES:
+
+* mfa (enterprise): Fix incorrect handling of PingID responses that could result in auth requests failing
+* ui: fix bug where dropdown for identity/entity management is not reflective of actual policy [[GH-9958](https://github.com/hashicorp/vault/pull/9958)]
 
 ## 1.5.3
 ### August 27th, 2020

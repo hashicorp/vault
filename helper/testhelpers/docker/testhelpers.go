@@ -38,7 +38,6 @@ type RunOptions struct {
 	CopyFromTo      map[string]string
 	Ports           []string
 	DoNotAutoRemove bool
-	Repository      string
 	AuthUsername    string
 	AuthPassword    string
 }
