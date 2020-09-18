@@ -60,8 +60,8 @@ export default Component.extend({
    *
    */
   labelString: computed('attr.{name,options.label}', function() {
-    const label = this.get('attr.options.label');
-    const name = this.get('attr.name');
+    const label = this.attr.options.label;
+    const name = this.attr.name;
     if (label) {
       return label;
     }

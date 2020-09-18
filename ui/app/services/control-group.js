@@ -69,7 +69,7 @@ export default Service.extend({
   },
 
   tokenForUrl(url) {
-    if (this.get('version.isOSS')) {
+    if (this.version.isOSS) {
       return null;
     }
     let pathForUrl = parseURL(url).pathname;
@@ -85,7 +85,7 @@ export default Service.extend({
   checkForControlGroup(callbackArgs, response, wasWrapTTLRequested) {
     let creationPath = response && get(response, 'wrap_info.creation_path');
     if (
-      this.get('version.isOSS') ||
+      this.version.isOSS ||
       wasWrapTTLRequested ||
       !response ||
       (creationPath && WRAPPED_RESPONSE_PATHS.includes(creationPath)) ||

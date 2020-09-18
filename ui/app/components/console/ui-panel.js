@@ -92,7 +92,7 @@ export default Component.extend({
 
   refreshRoute: task(function*() {
     let owner = getOwner(this);
-    let routeName = this.get('router.currentRouteName');
+    let routeName = this.router.currentRouteName;
     let route = owner.lookup(`route:${routeName}`);
 
     try {

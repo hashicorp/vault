@@ -70,7 +70,7 @@ export default Component.extend({
       content: [],
       // trim the `value` when accessing objects
       objectAtContent: function(idx) {
-        const obj = this.get('content').objectAt(idx);
+        const obj = this.content.objectAt(idx);
         if (obj && obj.value) {
           set(obj, 'value', obj.value.trim());
         }

@@ -83,6 +83,6 @@ export default IdentityModel.extend({
     if (type === 'internal' || alias) {
       return false;
     }
-    return this.get('aliasPath.canCreate');
+    return this.aliasPath.canCreate;
   }),
 });

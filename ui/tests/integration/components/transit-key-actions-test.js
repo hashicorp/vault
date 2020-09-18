@@ -139,7 +139,7 @@ module('Integration | Component | transit key actions', function(hooks) {
     find('#plaintext-control .CodeMirror').CodeMirror.setValue('plaintext');
     await click('button[type="submit"]');
     assert.deepEqual(
-      this.get('storeService.callArgs'),
+      this.storeService.callArgs,
       {
         action: 'encrypt',
         backend: 'transit',
@@ -162,7 +162,7 @@ module('Integration | Component | transit key actions', function(hooks) {
     await click('button[type="submit"]');
 
     assert.deepEqual(
-      this.get('storeService.callArgs'),
+      this.storeService.callArgs,
       {
         action: 'encrypt',
         backend: 'transit',
@@ -194,7 +194,7 @@ module('Integration | Component | transit key actions', function(hooks) {
     await triggerEvent('#key_version', 'change');
     await click('button[type="submit"]');
     assert.deepEqual(
-      this.get('storeService.callArgs'),
+      this.storeService.callArgs,
       {
         action: 'encrypt',
         backend: 'transit',
@@ -261,7 +261,7 @@ module('Integration | Component | transit key actions', function(hooks) {
     await click('button[type="submit"]');
 
     assert.deepEqual(
-      this.get('storeService.callArgs'),
+      this.storeService.callArgs,
       {
         action: 'export',
         backend: 'transit',
@@ -272,7 +272,7 @@ module('Integration | Component | transit key actions', function(hooks) {
       },
       'passes expected args to the adapter'
     );
-    assert.equal(this.get('storeService.callArgsOptions.wrapTTL'), '30m', 'passes value for wrapTTL');
+    assert.equal(this.storeService.callArgsOptions.wrapTTL, '30m', 'passes value for wrapTTL');
     assert.equal(find('[data-test-encrypted-value="export"]').innerText, 'wrapped-token', 'wraps by default');
   });
 
@@ -305,7 +305,7 @@ module('Integration | Component | transit key actions', function(hooks) {
       'prints json response'
     );
     assert.deepEqual(
-      this.get('storeService.callArgs'),
+      this.storeService.callArgs,
       {
         action: 'export',
         backend: 'transit',
@@ -333,7 +333,7 @@ module('Integration | Component | transit key actions', function(hooks) {
     await blur('#algorithm');
     await click('button[type="submit"]');
     assert.deepEqual(
-      this.get('storeService.callArgs'),
+      this.storeService.callArgs,
       {
         action: 'hmac',
         backend: 'transit',

@@ -26,7 +26,7 @@ export default Controller.extend(CONFIG_ATTRS, {
   actions: {
     saveConfig(options = { delete: false }) {
       const isDelete = options.delete;
-      if (this.get('model.type') === 'ssh') {
+      if (this.model.type === 'ssh') {
         this.set('loading', true);
         this.model.saveCA({ isDelete }).then(() => {
           this.set('loading', false);

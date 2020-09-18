@@ -16,7 +16,7 @@ export default Route.extend(ClusterRoute, {
     if (!ALLOWED_TYPES.includes(policyType)) {
       return this.transitionTo('vault.cluster.policies', ALLOWED_TYPES[0]);
     }
-    if (!this.get('version.hasSentinel') && policyType !== 'acl') {
+    if (!this.version.hasSentinel && policyType !== 'acl') {
       return this.transitionTo('vault.cluster.policies', policyType);
     }
     return {};

@@ -82,8 +82,7 @@ export default Service.extend({
       },
     };
 
-    let namespace =
-      typeof options.namespace === 'undefined' ? this.get('namespaceService.path') : options.namespace;
+    let namespace = typeof options.namespace === 'undefined' ? this.namespaceService.path : options.namespace;
     if (namespace) {
       defaults.headers['X-Vault-Namespace'] = namespace;
     }
@@ -104,13 +103,13 @@ export default Service.extend({
   },
 
   renewCurrentToken() {
-    let namespace = this.get('authData.userRootNamespace');
+    let namespace = this.authData.userRootNamespace;
     const url = '/v1/auth/token/renew-self';
     return this.ajax(url, 'POST', { namespace });
   },
 
   revokeCurrentToken() {
-    let namespace = this.get('authData.userRootNamespace');
+    let namespace = this.authData.userRootNamespace;
     const url = '/v1/auth/token/revoke-self';
     return this.ajax(url, 'POST', { namespace });
   },
@@ -129,7 +128,7 @@ export default Service.extend({
   persistAuthData() {
     let [firstArg, resp] = arguments;
     let tokens = this.tokens;
-    let currentNamespace = this.get('namespaceService.path') || '';
+    let currentNamespace = this.namespaceService.path || '';
     let tokenName;
     let options;
     let backend;
@@ -162,7 +161,7 @@ export default Service.extend({
       userRootNamespace = '';
     }
     if (typeof userRootNamespace === 'undefined') {
-      userRootNamespace = this.get('authData.userRootNamespace');
+      userRootNamespace = this.authData.userRootNamespace;
     }
     if (typeof userRootNamespace === 'undefined') {
       userRootNamespace = currentNamespace;
@@ -324,17 +323,13 @@ export default Service.extend({
     const adapter = this.clusterAdapter();
 
     let resp = await adapter.authenticate(options);
-    let authData = await this.persistAuthData(
-      options,
-      resp.auth || resp.data,
-      this.get('namespaceService.path')
-    );
+    let authData = await this.persistAuthData(options, resp.auth || resp.data, this.namespaceService.path);
     await this.permissions.getPaths.perform();
     return authData;
   },
 
   getAuthType() {
-    return this.get('authData.backend.type');
+    return this.authData.backend.type;
   },
 
   deleteCurrentToken() {

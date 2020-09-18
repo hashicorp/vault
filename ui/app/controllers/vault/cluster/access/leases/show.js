@@ -11,7 +11,7 @@ export default Controller.extend({
       label: 'leases',
       text: 'leases',
       path: 'vault.cluster.access.leases.list-root',
-      model: this.get('clusterController.model.name'),
+      model: this.clusterController.model.name,
     };
   }),
 

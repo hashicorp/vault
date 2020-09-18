@@ -25,7 +25,7 @@ export default Service.extend({
     // want to keep track of these separately
     let store = this.store;
     let adapter = store.adapterFor('namespace');
-    let userRoot = this.get('auth.authData.userRootNamespace');
+    let userRoot = this.auth.authData.userRootNamespace;
     try {
       let ns = yield adapter.findAll(store, 'namespace', null, {
         adapterOptions: {

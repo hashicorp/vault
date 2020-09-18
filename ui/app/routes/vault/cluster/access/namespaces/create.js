@@ -10,6 +10,6 @@ export default Route.extend(UnloadModel, {
     });
   },
   model() {
-    return this.get('version.hasNamespaces') ? this.store.createRecord('namespace') : null;
+    return this.version.hasNamespaces ? this.store.createRecord('namespace') : null;
   },
 });

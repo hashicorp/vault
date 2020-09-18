@@ -30,7 +30,7 @@ export default Model.extend({
 
   modelTypeForKV: computed('engineType', 'options.version', function() {
     let type = this.engineType;
-    let version = this.get('options.version');
+    let version = this.options.version;
     let modelType = 'secret';
     if ((type === 'kv' || type === 'generic') && version === 2) {
       modelType = 'secret-v2';
