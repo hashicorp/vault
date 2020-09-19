@@ -26,11 +26,13 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 	for {
 		select {
 		case <-emitTimer:
-			c.metricsMutex.Lock()
-
-			// Emit on active node only
-			if c.expiration != nil && !c.perfStandby {
-				c.expiration.emitMetrics()
+			if !c.PerfStandby() {
+				c.metricsMutex.Lock()
+				// Emit on active node only
+				if c.expiration != nil {
+					c.expiration.emitMetrics()
+				}
+				c.metricsMutex.Unlock()
 			}
 
 			// Refresh the sealed gauge, on all nodes
@@ -39,7 +41,6 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			} else {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 1, nil)
 			}
-			c.metricsMutex.Unlock()
 
 		case <-writeTimer:
 			if stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh); stopped {
@@ -47,7 +48,7 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				// should trigger
 				continue
 			}
-			if c.perfStandby {
+			if c.perfStandby { // already have lock here, don't re-acquire
 				syncCounter(c)
 			} else {
 				err := c.saveCurrentRequestCounters(context.Background(), time.Now())
@@ -58,7 +59,7 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			c.stateLock.RUnlock()
 		case <-identityCountTimer:
 			// Only emit on active node
-			if c.perfStandby {
+			if c.PerfStandby() {
 				break
 			}
 
@@ -188,7 +189,7 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 	// Disable collection if configured, or if we're a performance standby.
 	if c.MetricSink().GaugeInterval == time.Duration(0) {
 		c.logger.Info("usage gauge collection is disabled")
-	} else if !c.perfStandby {
+	} else if !c.PerfStandby() {
 		for _, init := range metricsInit {
 			if init.DisableEnvVar != "" {
 				if os.Getenv(init.DisableEnvVar) != "" {
