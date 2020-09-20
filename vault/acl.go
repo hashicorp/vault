@@ -476,8 +476,6 @@ CHECK:
 		fmt.Println("testing allowed parameters match")
 		fmt.Println("permissions are:")
 		fmt.Printf("%+v\n", permissions)
-		fmt.Println("allowed parameters are: ")
-		fmt.Printf("%+v\n", permissions.AllowedParameters)
 
 		// If we don't have any allowed parameters set, allow
 		if len(permissions.AllowedParameters) == 0 {
@@ -494,10 +492,15 @@ CHECK:
 		fmt.Println("checking req Data")
 		fmt.Printf("%+v\n", req.Data)
 		for parameter, value := range req.Data {
-			fmt.Println("printing parameters and values in req.Data")
+			fmt.Println("printing parameter in req.Data")
 			fmt.Printf("%+v\n", parameter)
+			fmt.Println("printing value in req.Data")
 			fmt.Printf("%+v\n", value)
+			fmt.Println("allowed parameters are: ")
+			fmt.Printf("%+v\n", permissions.AllowedParameters)
 			valueSlice, ok := permissions.AllowedParameters[strings.ToLower(parameter)]
+			fmt.Println("value slice is: ")
+			fmt.Printf("%+v\n", valueSlice)
 			// Requested parameter is not in allowed list
 			if !ok && !allowedAll {
 				return
