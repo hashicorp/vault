@@ -55,12 +55,11 @@ export default ApplicationAdapter.extend({
 
   queryRecord(store, type, query) {
     return this.ajax(this.url(query.backend, type.modelName, query.id), 'GET').then(result => {
+      // CBS TODO: Add name to response and unmap name <> id on models
       return {
         id: query.id,
         ...result,
       };
     });
   },
-
-  // buildUrl(modelName, id, snapshot, requestType, query, returns) {},
 });

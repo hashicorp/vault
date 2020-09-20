@@ -91,7 +91,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 		cluster.UnsealCore(t, core)
 	}
 
-	verifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
+	testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 		"core-2": true,
@@ -174,7 +174,7 @@ func TestRaft_RemovePeer(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 
-	verifyRaftPeers(t, client, map[string]bool{
+	testhelpers.VerifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 		"core-2": true,
@@ -187,7 +187,7 @@ func TestRaft_RemovePeer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	verifyRaftPeers(t, client, map[string]bool{
+	testhelpers.VerifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 	})
@@ -199,7 +199,7 @@ func TestRaft_RemovePeer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	verifyRaftPeers(t, client, map[string]bool{
+	testhelpers.VerifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
 	})
 }
@@ -817,40 +817,4 @@ func BenchmarkRaft_SingleNode(b *testing.B) {
 	}
 
 	b.Run("256b", func(b *testing.B) { bench(b, 25) })
-}
-
-func verifyRaftPeers(t *testing.T, client *api.Client, expected map[string]bool) {
-	t.Helper()
-
-	resp, err := client.Logical().Read("sys/storage/raft/configuration")
-	if err != nil {
-		t.Fatalf("error reading raft config: %v", err)
-	}
-
-	if resp == nil || resp.Data == nil {
-		t.Fatal("missing response data")
-	}
-
-	config, ok := resp.Data["config"].(map[string]interface{})
-	if !ok {
-		t.Fatal("missing config in response data")
-	}
-
-	servers, ok := config["servers"].([]interface{})
-	if !ok {
-		t.Fatal("missing servers in response data config")
-	}
-
-	// Iterate through the servers and remove the node found in the response
-	// from the expected collection
-	for _, s := range servers {
-		server := s.(map[string]interface{})
-		delete(expected, server["node_id"].(string))
-	}
-
-	// If the collection is non-empty, it means that the peer was not found in
-	// the response.
-	if len(expected) != 0 {
-		t.Fatalf("failed to read configuration successfully, expected peers no found in configuration list: %v", expected)
-	}
 }

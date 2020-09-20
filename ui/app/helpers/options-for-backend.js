@@ -80,15 +80,14 @@ const SECRET_BACKENDS = {
         editComponent: 'transform-role-edit',
       },
       {
-        name: 'templates',
+        name: 'template',
         modelPrefix: 'template/',
         label: 'Templates',
         searchPlaceholder: 'Filter templates',
-        item: 'templates',
+        item: 'template',
         create: 'Create template',
-        tab: 'templates',
+        tab: 'template',
         editComponent: 'transform-template-edit',
-        hideCreate: true,
       },
       {
         name: 'alphabets',
