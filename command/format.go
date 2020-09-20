@@ -118,17 +118,17 @@ func (y YamlFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 type TableFormatter struct{}
 
 // We don't use this due to the TableFormatter introducing a bug when the -field flag is supplied:
-// https://github.com/hashicorp/vault/commit/b24cf9a8af2190e96c614205b8cdf06d8c4b6718
-
-// NOTE: TODO: We can use this PURELY for the SealStatusResponse struct. Type check this like so:
-// https://stackoverflow.com/questions/6372474/how-to-determine-an-interface-values-real-type
-// and then if the type matches, do the table formatting thing. In OutputStatus, we'll
-// simply add HA fields to status, and then call Format. Format will --> []string
+// https://github.com/hashicorp/vault/commit/b24cf9a8af2190e96c614205b8cdf06d8c4b6718 . However,
+// since vault status -h does not specify the -field flag can be used for this command
+// (https://www.vaultproject.io/docs/commands , https://www.vaultproject.io/docs/commands/status)
+// we will be using this function to format vault status -format=table.
 func (t TableFormatter) Format(data interface{}) ([]byte, error) {
 	return nil, nil
 }
 
 func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
+	fmt.Println("hi")
+	fmt.Printf("%T\n", data)
 	switch data.(type) {
 	case *api.Secret:
 		return t.OutputSecret(ui, secret)
@@ -138,9 +138,90 @@ func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) 
 		return t.OutputList(ui, nil, data)
 	case map[string]interface{}:
 		return t.OutputMap(ui, data.(map[string]interface{}))
+	case SealStatusOutput:
+		return t.OutputSealStatusStruct(ui, nil, data)
 	default:
 		return errors.New("cannot use the table formatter for this type")
 	}
+}
+
+func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, data interface{}) error {
+	var status SealStatusOutput = data.(SealStatusOutput)
+	var sealPrefix string
+	if status.RecoverySeal {
+		sealPrefix = "Recovery "
+	}
+
+	out := []string{}
+	out = append(out, "Key | Value")
+	out = append(out, fmt.Sprintf("%sSeal Type | %s", sealPrefix, status.Type))
+	out = append(out, fmt.Sprintf("Initialized | %t", status.Initialized))
+	out = append(out, fmt.Sprintf("Sealed | %t", status.Sealed))
+	out = append(out, fmt.Sprintf("Total %sShares | %d", sealPrefix, status.N))
+	out = append(out, fmt.Sprintf("Threshold | %d", status.T))
+
+	if status.Sealed {
+		out = append(out, fmt.Sprintf("Unseal Progress | %d/%d", status.Progress, status.T))
+		out = append(out, fmt.Sprintf("Unseal Nonce | %s", status.Nonce))
+	}
+
+	if status.Migration {
+		out = append(out, fmt.Sprintf("Seal Migration in Progress | %t", status.Migration))
+	}
+
+	out = append(out, fmt.Sprintf("Version | %s", status.Version))
+	out = append(out, fmt.Sprintf("Storage Type | %s", status.StorageType))
+
+	if status.ClusterName != "" && status.ClusterID != "" {
+		out = append(out, fmt.Sprintf("Cluster Name | %s", status.ClusterName))
+		out = append(out, fmt.Sprintf("Cluster ID | %s", status.ClusterID))
+	}
+
+	// Output if HA is enabled
+	out = append(out, fmt.Sprintf("HA Enabled | %t", status.HAEnabled))
+
+	if status.HAEnabled {
+		mode := "sealed"
+		if !status.Sealed {
+			out = append(out, fmt.Sprintf("HA Cluster | %s", status.LeaderClusterAddress))
+			mode = "standby"
+			showLeaderAddr := false
+			if status.IsSelf {
+				mode = "active"
+			} else {
+				if status.LeaderAddress == "" {
+					status.LeaderAddress = "<none>"
+				}
+				showLeaderAddr = true
+			}
+			out = append(out, fmt.Sprintf("HA Mode | %s", mode))
+
+			// This is down here just to keep ordering consistent
+			if showLeaderAddr {
+				out = append(out, fmt.Sprintf("Active Node Address | %s", status.LeaderAddress))
+			}
+
+			if status.PerfStandby {
+				out = append(out, fmt.Sprintf("Performance Standby Node | %t", status.PerfStandby))
+				out = append(out, fmt.Sprintf("Performance Standby Last Remote WAL | %d", status.PerfStandbyLastRemoteWAL))
+			}
+		}
+	}
+
+	if status.RaftCommittedIndex > 0 {
+		out = append(out, fmt.Sprintf("Raft Committed Index | %d", status.RaftCommittedIndex))
+	}
+	if status.RaftAppliedIndex > 0 {
+		out = append(out, fmt.Sprintf("Raft Applied Index | %d", status.RaftAppliedIndex))
+	}
+	if status.LastWAL != 0 {
+		out = append(out, fmt.Sprintf("Last WAL | %d", status.LastWAL))
+	}
+
+	ui.Output(tableOutput(out, &columnize.Config{
+		Delim: hopeDelim,
+	}))
+	return nil
 }
 
 func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface{}) error {
@@ -190,6 +271,7 @@ func (t TableFormatter) printWarnings(ui cli.Ui, secret *api.Secret) {
 	}
 }
 
+// Do not add to SealStatusResponse -- make a new struct, copy over, and then use format on the new struct
 func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 	if secret == nil {
 		return nil
@@ -312,35 +394,7 @@ func (t TableFormatter) OutputMap(ui cli.Ui, data map[string]interface{}) error 
 
 // OutputSealStatus will print *api.SealStatusResponse in the CLI according to the format provided
 func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusResponse) int {
-	var sealPrefix string
-	if status.RecoverySeal {
-		sealPrefix = "Recovery "
-	}
-
-	out := []string{}
-	out = append(out, "Key | Value")
-	out = append(out, fmt.Sprintf("%sSeal Type | %s", sealPrefix, status.Type))
-	out = append(out, fmt.Sprintf("Initialized | %t", status.Initialized))
-	out = append(out, fmt.Sprintf("Sealed | %t", status.Sealed))
-	out = append(out, fmt.Sprintf("Total %sShares | %d", sealPrefix, status.N))
-	out = append(out, fmt.Sprintf("Threshold | %d", status.T))
-
-	if status.Sealed {
-		out = append(out, fmt.Sprintf("Unseal Progress | %d/%d", status.Progress, status.T))
-		out = append(out, fmt.Sprintf("Unseal Nonce | %s", status.Nonce))
-	}
-
-	if status.Migration {
-		out = append(out, fmt.Sprintf("Seal Migration in Progress | %t", status.Migration))
-	}
-
-	out = append(out, fmt.Sprintf("Version | %s", status.Version))
-	out = append(out, fmt.Sprintf("Storage Type | %s", status.StorageType))
-
-	if status.ClusterName != "" && status.ClusterID != "" {
-		out = append(out, fmt.Sprintf("Cluster Name | %s", status.ClusterName))
-		out = append(out, fmt.Sprintf("Cluster ID | %s", status.ClusterID))
-	}
+	sealStatusOutput := SealStatusOutput{SealStatusResponse: *status}
 
 	// Mask the 'Vault is sealed' error, since this means HA is enabled, but that
 	// we cannot query for the leader since we are sealed.
@@ -354,48 +408,17 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 		return 1
 	}
 
-	// Output if HA is enabled
-	out = append(out, fmt.Sprintf("HA Enabled | %t", leaderStatus.HAEnabled))
-
-	if leaderStatus.HAEnabled {
-		mode := "sealed"
-		if !status.Sealed {
-			out = append(out, fmt.Sprintf("HA Cluster | %s", leaderStatus.LeaderClusterAddress))
-			mode = "standby"
-			showLeaderAddr := false
-			if leaderStatus.IsSelf {
-				mode = "active"
-			} else {
-				if leaderStatus.LeaderAddress == "" {
-					leaderStatus.LeaderAddress = "<none>"
-				}
-				showLeaderAddr = true
-			}
-			out = append(out, fmt.Sprintf("HA Mode | %s", mode))
-
-			// This is down here just to keep ordering consistent
-			if showLeaderAddr {
-				out = append(out, fmt.Sprintf("Active Node Address | %s", leaderStatus.LeaderAddress))
-			}
-
-			if leaderStatus.PerfStandby {
-				out = append(out, fmt.Sprintf("Performance Standby Node | %t", leaderStatus.PerfStandby))
-				out = append(out, fmt.Sprintf("Performance Standby Last Remote WAL | %d", leaderStatus.PerfStandbyLastRemoteWAL))
-			}
-		}
-	}
-
-	if leaderStatus.RaftCommittedIndex > 0 {
-		out = append(out, fmt.Sprintf("Raft Committed Index | %d", leaderStatus.RaftCommittedIndex))
-	}
-	if leaderStatus.RaftAppliedIndex > 0 {
-		out = append(out, fmt.Sprintf("Raft Applied Index | %d", leaderStatus.RaftAppliedIndex))
-	}
-	if leaderStatus.LastWAL != 0 {
-		out = append(out, fmt.Sprintf("Last WAL | %d", leaderStatus.LastWAL))
-	}
-
-	OutputData(ui, out)
+	// copy leaderStatus fields into sealStatusOutput for display later
+	sealStatusOutput.HAEnabled = leaderStatus.HAEnabled
+	sealStatusOutput.IsSelf = leaderStatus.IsSelf
+	sealStatusOutput.LeaderAddress = leaderStatus.LeaderAddress
+	sealStatusOutput.LeaderClusterAddress = leaderStatus.LeaderClusterAddress
+	sealStatusOutput.PerfStandby = leaderStatus.PerfStandby
+	sealStatusOutput.PerfStandbyLastRemoteWAL = leaderStatus.PerfStandbyLastRemoteWAL
+	sealStatusOutput.LastWAL = leaderStatus.LastWAL
+	sealStatusOutput.RaftCommittedIndex = leaderStatus.RaftCommittedIndex
+	sealStatusOutput.RaftAppliedIndex = leaderStatus.RaftAppliedIndex
+	OutputData(ui, sealStatusOutput)
 	return 0
 }
 
@@ -407,4 +430,20 @@ func looksLikeDuration(k string) bool {
 		k == "ttl" || strings.HasSuffix(k, "_ttl") ||
 		k == "duration" || strings.HasSuffix(k, "_duration") ||
 		k == "lease_max" || k == "ttl_max"
+}
+
+// This struct is responsible for capturing all the fields to be output by a
+// vault status command, including fields that do not come from the status API.
+// Currently we are adding the fields from api.LeaderResponse
+type SealStatusOutput struct {
+	api.SealStatusResponse
+	HAEnabled                bool   `json:"ha_enabled"`
+	IsSelf                   bool   `json:"is_self,omitempty""`
+	LeaderAddress            string `json:"leader_address,omitempty"`
+	LeaderClusterAddress     string `json:"leader_cluster_address,omitempty"`
+	PerfStandby              bool   `json:"performance_standby,omitempty"`
+	PerfStandbyLastRemoteWAL uint64 `json:"performance_standby_last_remote_wal,omitempty"`
+	LastWAL                  uint64 `json:"last_wal,omitempty"`
+	RaftCommittedIndex       uint64 `json:"raft_committed_index,omitempty"`
+	RaftAppliedIndex         uint64 `json:"raft_applied_index,omitempty"`
 }
