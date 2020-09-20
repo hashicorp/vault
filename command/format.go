@@ -127,8 +127,6 @@ func (t TableFormatter) Format(data interface{}) ([]byte, error) {
 }
 
 func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
-	fmt.Println("hi")
-	fmt.Printf("%T\n", data)
 	switch data.(type) {
 	case *api.Secret:
 		return t.OutputSecret(ui, secret)
@@ -219,7 +217,7 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 	}
 
 	ui.Output(tableOutput(out, &columnize.Config{
-		Delim: hopeDelim,
+		Delim: "|",
 	}))
 	return nil
 }
