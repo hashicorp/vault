@@ -118,10 +118,7 @@ func (y YamlFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 type TableFormatter struct{}
 
 // We don't use this due to the TableFormatter introducing a bug when the -field flag is supplied:
-// https://github.com/hashicorp/vault/commit/b24cf9a8af2190e96c614205b8cdf06d8c4b6718 . However,
-// since vault status -h does not specify the -field flag can be used for this command
-// (https://www.vaultproject.io/docs/commands , https://www.vaultproject.io/docs/commands/status)
-// we will be using this function to format vault status -format=table.
+// https://github.com/hashicorp/vault/commit/b24cf9a8af2190e96c614205b8cdf06d8c4b6718 .
 func (t TableFormatter) Format(data interface{}) ([]byte, error) {
 	return nil, nil
 }
@@ -269,7 +266,6 @@ func (t TableFormatter) printWarnings(ui cli.Ui, secret *api.Secret) {
 	}
 }
 
-// Do not add to SealStatusResponse -- make a new struct, copy over, and then use format on the new struct
 func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 	if secret == nil {
 		return nil
