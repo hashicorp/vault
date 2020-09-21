@@ -14,7 +14,6 @@ const Model = DS.Model.extend({
   }),
 
   name: attr('string', {
-    label: 'Name',
     fieldValue: 'id',
     readOnly: true,
     subText:
@@ -34,13 +33,8 @@ const Model = DS.Model.extend({
     selectLimit: 1,
   }),
 
-  attrs: computed('pattern', 'alphabet', function() {
+  attrs: computed(function() {
     let keys = ['name', 'pattern', 'alphabet'];
-    return expandAttributeMeta(this, keys);
-  }),
-
-  editableAttrs: computed('pattern', 'alphabet', function() {
-    let keys = ['pattern', 'alphabet'];
     return expandAttributeMeta(this, keys);
   }),
 
