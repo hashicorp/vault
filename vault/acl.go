@@ -318,6 +318,13 @@ func (a *ACL) Capabilities(ctx context.Context, path string) (pathCapabilities [
 func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheckOnly bool) (ret *ACLResults) {
 	ret = new(ACLResults)
 
+	// check if format of kv request is a v1 or v2 request:
+	// https://github.com/hashicorp/vault/blob/7aa1ffa92ee61b977efad1488b8f309b1e2136df/command/kv_get.go#L128
+	requestData := req.Data
+	if dataVTwo, ok := req.Data["data"]; ok && dataVTwo != nil {
+		requestData = dataVTwo.(map[string]interface{})
+	}
+
 	// Fast-path root
 	if a.root {
 		ret.Allowed = true
@@ -442,13 +449,13 @@ CHECK:
 	// parameters.
 	if op == logical.ReadOperation || op == logical.UpdateOperation || op == logical.CreateOperation {
 		for _, parameter := range permissions.RequiredParameters {
-			if _, ok := req.Data[strings.ToLower(parameter)]; !ok {
+			if _, ok := requestData[strings.ToLower(parameter)]; !ok {
 				return
 			}
 		}
 
 		// If there are no data fields, allow
-		if len(req.Data) == 0 {
+		if len(requestData) == 0 {
 			ret.Allowed = true
 			return
 		}
@@ -462,7 +469,7 @@ CHECK:
 			return
 		}
 
-		for parameter, value := range req.Data {
+		for parameter, value := range requestData {
 			// Check if parameter has been explicitly denied
 			if valueSlice, ok := permissions.DeniedParameters[strings.ToLower(parameter)]; ok {
 				// If the value exists in denied values slice, deny
@@ -485,7 +492,7 @@ CHECK:
 			return
 		}
 
-		for parameter, value := range req.Data {
+		for parameter, value := range requestData {
 			valueSlice, ok := permissions.AllowedParameters[strings.ToLower(parameter)]
 			// Requested parameter is not in allowed list
 			if !ok && !allowedAll {
