@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/hashicorp/go-hclog"
 	"github.com/pkg/errors"
 )
 
@@ -37,6 +38,9 @@ type CredentialsConfig struct {
 
 	// The http.Client to use, or nil for the client to use its default
 	HTTPClient *http.Client
+
+	// The logger to use for credential acquisition debugging
+	Logger hclog.Logger
 }
 
 func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials, error) {
