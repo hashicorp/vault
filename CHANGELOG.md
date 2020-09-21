@@ -11,16 +11,17 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+* agent/auth/kerberos: Fix `disable_fast_negotiation` not being set on the auth method when configured by user. [[GH-9892](https://github.com/hashicorp/vault/pull/9892)]
+* cli: Don't open or overwrite a raft snapshot file on an unsuccessful `vault operator raft snapshot` [[GH-9894](https://github.com/hashicorp/vault/pull/9894)]
+* core: Implement constant time version of shamir GF(2^8) math [[GH-9932](https://github.com/hashicorp/vault/pull/9932)]
 * core: Fix resource leak in plugin API (plugin-dependent, not all plugins impacted) [[GH-9557](https://github.com/hashicorp/vault/pull/9557)]
 * core: Fix race involved in enabling certain features via a license change
 * core: Fix crash when metrics collection encounters zero-length keys in KV store [[GH-9811](https://github.com/hashicorp/vault/pull/9881)]
 * identity: Check for timeouts in entity API [[GH-9925](https://github.com/hashicorp/vault/pull/9925)]
+* replication (enterprise): Don't stop replication if old filter path evaluation fails
 * replication (enterprise): Only write failover cluster addresses if they've changed
 * secrets/database: Fix handling of TLS options in mongodb connection strings [[GH-9519](https://github.com/hashicorp/vault/pull/9519)]
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-93](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/93)]
-* agent/auth/kerberos: Fix `disable_fast_negotiation` not being set on the auth method when configured by user. [[GH-9892](https://github.com/hashicorp/vault/pull/9892)]
-* cli: Don't open or overwrite a raft snapshot file on an unsuccessful `vault operator raft snapshot` [[GH-9894](https://github.com/hashicorp/vault/pull/9894)]
-* core: Implement constant time version of shamir GF(2^8) math [[GH-9932](https://github.com/hashicorp/vault/pull/9932)]
 
 ## 1.5.4
 ### TBD
