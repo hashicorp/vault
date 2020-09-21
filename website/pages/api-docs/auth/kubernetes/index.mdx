@@ -22,7 +22,7 @@ existence with the Kubernetes TokenReview API. This endpoint configures the
 public key used to validate the JWT signature and the necessary information to
 access the Kubernetes API.
 
-If they aren't specified, Vault will use the local CA cert and service account
+By default Vault will use the local CA cert and service account
 JWT for the `kubernetes_ca_cert` and `token_reviewer_jwt` parameters,
 respectively, when running in a Kubernetes pod. This behavior may be disabled by
 setting `disable_local_ca_jwt` to `true`.
