@@ -657,7 +657,7 @@ github.com/keybase/go-crypto/openpgp/s2k
 github.com/keybase/go-crypto/rsa
 # github.com/konsorten/go-windows-terminal-sequences v1.0.3
 github.com/konsorten/go-windows-terminal-sequences
-# github.com/kr/pretty v0.2.0
+# github.com/kr/pretty v0.2.1
 github.com/kr/pretty
 # github.com/kr/text v0.2.0
 github.com/kr/text
