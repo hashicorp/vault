@@ -51,7 +51,7 @@
 <form onsubmit={{action "createOrUpdate" mode}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     {{message-error model=model}}
-    <NamespaceReminder @mode={{mode}} @noun="Transform role" />
+    <NamespaceReminder @mode={{mode}} @noun="transform template" />
     {{#each model.attrs as |attr|}}
       {{#if (and (eq attr.name 'name') (eq mode 'edit')) }}
         <label for="{{attr.name}}" class="is-label">
@@ -66,7 +66,7 @@
           autocomplete="off"
           spellcheck="false"
           value={{or (get model attr.name) attr.options.defaultValue}}
-          readonly
+          readonly={{true}}
           class="field input is-readOnly"
           type={{attr.type}}
         />
@@ -85,10 +85,10 @@
         type="submit"
         disabled={{buttonDisabled}}
         class="button is-primary"
-        data-test-role-transform-create=true
+        data-test-template-transform-create=true
       >
         {{#if (eq mode 'create')}}
-          Create role
+          Create template
         {{else if (eq mode 'edit')}}
           Save
         {{/if}}
@@ -104,20 +104,25 @@
   </div>
 </form>
 {{else}}
-<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-  {{#each model.attrs as |attr|}}
-    {{#if (eq attr.type "object")}}
-      {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(stringify (get model attr.name))}}
-    {{else if (eq attr.type "array")}}
-      {{info-table-row
-        label=(capitalize (or attr.options.label (humanize (dasherize attr.name))))
-        value=(get model attr.name)
-        type=attr.type
-        viewAll=attr.name
-      }}
-    {{else}}
-      {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
-    {{/if}}
-  {{/each}}
-</div>
+  {{#if model.displayErrors}}
+    <div class="has-top-margin-s">
+      {{message-error model=model}}
+    </div>
+  {{/if}}
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{#each model.attrs as |attr|}}
+      {{#if (eq attr.type "object")}}
+        {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(stringify (get model attr.name))}}
+      {{else if (eq attr.type "array")}}
+        {{info-table-row
+          label=(capitalize (or attr.options.label (humanize (dasherize attr.name))))
+          value=(get model attr.name)
+          type=attr.type
+          viewAll=attr.name
+        }}
+      {{else}}
+        {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
+      {{/if}}
+    {{/each}}
+  </div>
 {{/if}}
