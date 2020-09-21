@@ -588,16 +588,30 @@ func testACLValuePermissions(t *testing.T, ns *namespace.Namespace) {
 			Path: tc.path,
 			Data: make(map[string]interface{}),
 		}
+		requestKV2 := &logical.Request{
+			Path: tc.path,
+			Data: make(map[string]interface{}),
+		}
+		dataKV2 := make(map[string]interface{})
+
 		ctx := namespace.ContextWithNamespace(context.Background(), ns)
 
 		for i, parameter := range tc.parameters {
 			request.Data[parameter] = tc.values[i]
+			dataKV2[parameter] = tc.values[i]
 		}
+
+		requestKV2.Data["data"] = dataKV2
+
 		for _, op := range toperations {
 			request.Operation = op
 			authResults := acl.AllowOperation(ctx, request, false)
 			if authResults.Allowed != tc.allowed {
 				t.Fatalf("bad: case %#v: %v", tc, authResults.Allowed)
+			}
+			authResultsKV2 := acl.AllowOperation(ctx, requestKV2, false)
+			if authResults.Allowed != tc.allowed {
+				t.Fatalf("bad: case %#v: %v", tc, authResultsKV2.Allowed)
 			}
 		}
 	}
