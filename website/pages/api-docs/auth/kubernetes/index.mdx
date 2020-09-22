@@ -22,11 +22,6 @@ existence with the Kubernetes TokenReview API. This endpoint configures the
 public key used to validate the JWT signature and the necessary information to
 access the Kubernetes API.
 
-By default Vault will use the local CA cert and service account
-JWT for the `kubernetes_ca_cert` and `token_reviewer_jwt` parameters,
-respectively, when running in a Kubernetes pod. This behavior may be disabled by
-setting `disable_local_ca_jwt` to `true`.
-
 | Method | Path                      |
 | :----- | :------------------------ |
 | `POST` | `/auth/kubernetes/config` |
@@ -36,8 +31,8 @@ setting `disable_local_ca_jwt` to `true`.
 - `kubernetes_host` `(string: <required>)` - Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.
 - `kubernetes_ca_cert` `(string: "")` - PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API. NOTE: Every line must end with a newline: \n
 - `token_reviewer_jwt` `(string: "")` - A service account JWT used to access the TokenReview
-  API to validate other JWTs during login. If not set
-  the JWT used for login will be used to access the API.
+  API to validate other JWTs during login. If not set,
+  the JWT submitted in the login payload will be used to access the Kubernetes TokenReview API.
 - `pem_keys` `(array: [])` - Optional list of PEM-formatted public keys or certificates
   used to verify the signatures of Kubernetes service account
   JWTs. If a certificate is given, its public key will be
@@ -48,6 +43,15 @@ setting `disable_local_ca_jwt` to `true`.
 - `disable_iss_validation` `(bool: false)` - Disable JWT issuer validation. Allows to skip ISS validation.
 - `disable_local_ca_jwt` `(bool: false)` - Disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.
 
+### Caveats
+
+Either `kubernetes_ca_cert` or `pem_keys` must be set.
+
+If Vault is running in a Kubernetes Pod, the `kubernetes_ca_cert` and
+`token_reviewer_jwt` parameters will be automatically set from the local CA cert
+(`/var/run/secrets/kubernetes.io/serviceaccount/ca.crt`) and local service
+account JWT (`/var/run/secrets/kubernetes.io/serviceaccount/token`). This
+behavior may be disabled by setting `disable_local_ca_jwt` to `true`.
 
 ### Sample Payload
 
