@@ -32,6 +32,7 @@ IMPROVEMENTS:
 * secrets/pki: Handle expiration of a cert not in storage as a success [[GH-9880](https://github.com/hashicorp/vault/pull/9880)]
 * auth/kubernetes: Add an option to disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod [[GH-97]](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/97)
 * secrets/gcp: Add check for 403 during rollback to prevent repeated deletion calls [[GH-97](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/97)]
+* credential/aws: Added X-Amz-Content-Sha256 as a default STS request header [[GH-10009](https://github.com/hashicorp/vault/pull/10009)]
 
 BUG FIXES:
 
