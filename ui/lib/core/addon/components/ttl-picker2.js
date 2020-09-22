@@ -106,7 +106,7 @@ export default TtlForm.extend({
     ];
   }),
   handleChange() {
-    let { time, unit, enableTTL, seconds } = this.getProperties('time', 'unit', 'enableTTL', 'seconds');
+    let { time, unit, enableTTL, seconds } = this;
     const ttl = {
       enabled: enableTTL,
       seconds,
