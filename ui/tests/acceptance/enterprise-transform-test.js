@@ -8,6 +8,8 @@ import authPage from 'vault/tests/pages/auth';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import transformationsPage from 'vault/tests/pages/secrets/backend/transform/transformations';
 import rolesPage from 'vault/tests/pages/secrets/backend/transform/roles';
+import templatesPage from 'vault/tests/pages/secrets/backend/transform/templates';
+import alphabetsPage from 'vault/tests/pages/secrets/backend/transform/alphabets';
 import searchSelect from 'vault/tests/pages/components/search-select';
 
 const searchSelectComponent = create(searchSelect);
@@ -169,5 +171,69 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
     assert
       .dom('[data-test-row-value="Allowed roles"]')
       .doesNotExist('Allowed roles are no longer on the transformation');
+  });
+
+  test('it allows creation and edit of a template', async function(assert) {
+    const templateName = 'my-template';
+    let backend = await mount();
+    await click('[data-test-tab="Templates"]');
+    assert.equal(currentURL(), `/vault/secrets/${backend}/list?tab=template`, 'links to template list page');
+    await templatesPage.createLink();
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${backend}/create?itemType=template`,
+      'redirects to create template page'
+    );
+    await templatesPage.name(templateName);
+    await templatesPage.pattern(`(\\d{4})`);
+    await clickTrigger('#alphabet');
+    assert.ok(searchSelectComponent.options.length > 0, 'lists built-in alphabets');
+    await selectChoose('#alphabet', '.ember-power-select-option', 0);
+    assert.dom('#alphabet .ember-power-select-trigger').doesNotExist('Alphabet input no longer searchable');
+    await templatesPage.submit();
+
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${backend}/show/template/${templateName}`,
+      'redirects to show template page after submit'
+    );
+    await templatesPage.editLink();
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${backend}/edit/template/${templateName}`,
+      'Links to template edit page'
+    );
+    assert.dom('[data-test-input="name"]').hasAttribute('readonly');
+  });
+
+  test('it allows creation and edit of an alphabet', async function(assert) {
+    const alphabetName = 'vowels-only';
+    let backend = await mount();
+    await click('[data-test-tab="Alphabets"]');
+    assert.equal(currentURL(), `/vault/secrets/${backend}/list?tab=alphabet`, 'links to alphabet list page');
+    await alphabetsPage.createLink();
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${backend}/create?itemType=alphabet`,
+      'redirects to create alphabet page'
+    );
+    await alphabetsPage.name(alphabetName);
+    await alphabetsPage.alphabet('aeiou');
+    await alphabetsPage.submit();
+
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${backend}/show/alphabet/${alphabetName}`,
+      'redirects to show alphabet page after submit'
+    );
+    assert.dom('[data-test-row-value="Name"]').hasText(alphabetName);
+    assert.dom('[data-test-row-value="Alphabet"]').hasText('aeiou');
+    await alphabetsPage.editLink();
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${backend}/edit/alphabet/${alphabetName}`,
+      'Links to alphabet edit page'
+    );
+    assert.dom('[data-test-input="name"]').hasAttribute('readonly');
   });
 });

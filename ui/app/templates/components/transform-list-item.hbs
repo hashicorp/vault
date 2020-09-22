@@ -1,4 +1,4 @@
-{{#if (and itemViewable item.updatePath.canRead)}}
+{{#if (and item.updatePath.canRead (not isBuiltin))}}
   {{#linked-block
     "vault.cluster.secrets.backend.show"
     itemPath
@@ -59,7 +59,23 @@
         <Icon
           @glyph='file-outline'
           @class="has-text-grey-light"/>
-        {{if (eq item.id ' ') '(self)' (or item.keyWithoutParent item.id)}}
+        {{#if isBuiltin}}
+          <ToolTip
+            @verticalPosition="above"
+            @horizontalPosition="left"
+            as |T|>
+            <T.trigger @tabindex=false>
+              {{item.id}}
+            </T.trigger>
+            <T.content @class="tool-tip">
+              <div class="box">
+                This is a built-in HashiCorp {{itemType}}. It can't be viewed or edited.
+              </div>
+            </T.content>
+          </ToolTip>
+        {{else}}
+          {{item.id}}
+        {{/if}}
       </div>
     </div>
   </div>
