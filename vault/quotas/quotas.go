@@ -557,6 +557,10 @@ func (m *Manager) SetEnableRateLimitResponseHeaders(val bool) {
 // SetRateLimitExemptPaths will wipe out the existing path manager and set the
 // paths based on the provided argument.
 func (m *Manager) SetRateLimitExemptPaths(vals []string) {
+	if vals == nil {
+		vals = []string{}
+	}
+
 	m.config.RateLimitExemptPaths = vals
 	m.rateLimitPathManager = pathmanager.New()
 	m.rateLimitPathManager.AddPaths(vals)
