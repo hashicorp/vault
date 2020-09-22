@@ -68,6 +68,7 @@ export default Component.extend({
     if (name) {
       return capitalize([humanize([dasherize([name])])]);
     }
+    return '';
   }),
 
   // both the path to mutate on the model, and the path to read the value from

@@ -21,7 +21,7 @@ export default Component.extend({
   segmentLinks: gt('lastPage', 10),
 
   pageRange: computed('lastPage', 'page', 'spread', function() {
-    const { spread, page, lastPage } = this.getProperties('spread', 'page', 'lastPage');
+    const { spread, page, lastPage } = this;
 
     let lower = Math.max(2, page - spread);
     let upper = Math.min(lastPage - 1, lower + spread * 2);

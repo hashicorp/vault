@@ -1,12 +1,12 @@
 import { inject as service } from '@ember/service';
 import { equal } from '@ember/object/computed';
-import { getProperties, get, computed } from '@ember/object';
+import { get, computed } from '@ember/object';
 import Component from '@ember/component';
 import layout from '../templates/components/replication-mode-summary';
 
 const replicationAttr = function(attr) {
   return computed(`cluster.{dr,performance}.${attr}`, 'cluster', 'mode', function() {
-    const { mode, cluster } = getProperties(this, 'mode', 'cluster');
+    const { mode, cluster } = this;
     return get(cluster, `${mode}.${attr}`);
   });
 };
