@@ -31,7 +31,7 @@ export default Route.extend({
       case 'template':
         modelType = 'transform/template';
         break;
-      case 'alphabets':
+      case 'alphabet':
         modelType = 'transform/alphabet';
         break;
       default:

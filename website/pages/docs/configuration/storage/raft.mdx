@@ -1,27 +1,27 @@
 ---
 layout: docs
-page_title: Raft - Storage Backends - Configuration
-sidebar_title: Raft
+page_title: Integrated Storage - Storage Backends - Configuration
+sidebar_title: Integrated Storage (Raft)
 description: |-
 
-  The Raft storage backend is used to persist Vault's data. Unlike all the other
+  The Integrated Storage (Raft) backend is used to persist Vault's data. Unlike all the other
   storage backends, this backend does not operate from a single source for the
   data. Instead all the nodes in a Vault cluster will have a replicated copy of
   the entire data. The data is replicated across the nodes using the Raft
   Consensus Algorithm.
 ---
 
-# Raft Storage Backend
+# Integrated Storage (Raft) Backend
 
-The Raft storage backend is used to persist Vault's data. Unlike other storage
-backends, Raft storage does not operate from a single source of data. Instead
+The Integrated Storage backend is used to persist Vault's data. Unlike other storage
+backends, Integrated Storage does not operate from a single source of data. Instead
 all the nodes in a Vault cluster will have a replicated copy of Vault's data.
 Data gets replicated across the all the nodes via the [Raft Consensus
 Algorithm][raft].
 
-- **High Availability** – the Raft storage backend supports high availability.
+- **High Availability** – the Integrated Storage backend supports high availability.
 
-- **HashiCorp Supported** – the Raft storage backend is officially supported
+- **HashiCorp Supported** – the Integrated Storage backend is officially supported
   by HashiCorp.
 
 ```hcl
@@ -32,14 +32,14 @@ storage "raft" {
 cluster_addr = "http://127.0.0.1:8201"
 ```
 
-~> **Note:** When using the Raft storage backend, it is required to provide
+~> **Note:** When using the Integrated Storage backend, it is required to provide
 `cluster_addr` to indicate the address and port to be used for communication
 between the nodes in the Raft cluster.
 
-~> **Note:** When using the Raft storage backend, a separate `ha_storage`
+~> **Note:** When using the Integrated Storage backend, a separate `ha_storage`
 backend cannot be declared.
 
-~> **Note:** When using the Raft storage backend, it is strongly recommended to
+~> **Note:** When using the Integrated Storage backend, it is strongly recommended to
 set `disable_mlock` to `true`, and to disable memory swapping on the system.
 
 ## `raft` Parameters
