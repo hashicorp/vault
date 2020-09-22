@@ -14,5 +14,5 @@
 - RENEW_TOKEN : The token which has to be renewed.
 - INCREMENT_VALUE : The duration of time by which the lease has to be extended. e.g. 3h, 755h.
 - ROOT_TOKEN : The root token of the vault, this is required by the vault to authorize the API request.
-- URL : The URL at which vault can be accessed by the Docker image inside the cronjob. This is required to make the API call for lease renewal.
+- URL : The url at which vault can be accessed by the Docker image inside the cronjob. This is required to make the API call for lease renewal.
 
