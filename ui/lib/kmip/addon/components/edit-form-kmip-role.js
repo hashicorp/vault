@@ -9,14 +9,16 @@ export default EditForm.extend({
     this._super(...arguments);
 
     if (this.model.isNew) {
-      this.model.set('operationAll', true);
+      // ARG TODO check after removing this.set
+      this.model.operationAll = true;
     }
   },
 
   actions: {
     toggleOperationSpecial(checked) {
-      this.model.set('operationNone', !checked);
-      this.model.set('operationAll', checked);
+      // ARG TODO check after removing this.set
+      this.model.operationNone = !checked;
+      this.model.operationAll = checked;
     },
 
     // when operationAll is true, we want all of the items

@@ -104,15 +104,15 @@ export default Model.extend({
     'revocationTime',
     'serialNumber',
     function() {
-      const props = this.getProperties(
-        'certificate',
-        'issuingCa',
-        'caChain',
-        'privateKey',
-        'privateKeyType',
-        'revocationTime',
-        'serialNumber'
-      );
+      const props = {
+        certificate: this.certificate,
+        issuingCa: this.issuingCa,
+        caChain: this.caChain,
+        privateKey: this.privateKey,
+        privateKeyType: this.privateKeyType,
+        revocationTime: this.revocationTime,
+        serialNumber: this.serialNumber,
+      };
       const propsWithVals = Object.keys(props).reduce((ret, prop) => {
         if (props[prop]) {
           ret[prop] = props[prop];

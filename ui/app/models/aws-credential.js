@@ -65,7 +65,12 @@ export default Model.extend({
   }),
 
   toCreds: computed('accessKey', 'secretKey', 'securityToken', 'leaseId', function() {
-    const props = this.getProperties('accessKey', 'secretKey', 'securityToken', 'leaseId');
+    const props = {
+      accessKey: this.accessKey,
+      secretKey: this.secretKey,
+      securityToken: this.securityToken,
+      leasId: this.leaseId,
+    };
     const propsWithVals = Object.keys(props).reduce((ret, prop) => {
       if (props[prop]) {
         ret[prop] = props[prop];
