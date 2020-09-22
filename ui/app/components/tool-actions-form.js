@@ -2,7 +2,7 @@ import { match } from '@ember/object/computed';
 import { assign } from '@ember/polyfills';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
-import { setProperties, computed, set, get } from '@ember/object';
+import { setProperties, computed, set } from '@ember/object';
 import { addSeconds } from 'date-fns';
 
 const DEFAULTS = {
@@ -104,11 +104,11 @@ export default Component.extend(DEFAULTS, {
       return this.dataIsEmpty ? { token: (this.token || '').trim() } : JSON.parse(this.data);
     }
     if (action === 'random') {
-      return this.getProperties('bytes', 'format');
+      return { bytes: this.bytes, format: this.format };
     }
 
     if (action === 'hash') {
-      return this.getProperties('input', 'format', 'algorithm');
+      return { input: this.input, format: this.format, algorithm: this.algorithm };
     }
   },
 

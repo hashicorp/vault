@@ -47,7 +47,6 @@ export default Controller.extend({
     'activeCluster.{dr.isSecondary,needsInit,sealed}',
     function() {
       // ARG TODO something here fix
-      /* eslint-disable-next-line ember/no-get */
       if (this.activeCluster.dr?.isSecondary || this.activeCluster.needsInit || this.activeCluster.sealed) {
         return false;
       }
