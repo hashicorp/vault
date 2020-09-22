@@ -768,11 +768,14 @@ func (b *RaftBackend) AppliedIndex() uint64 {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
-	if b.raft == nil {
+	if b.fsm == nil {
 		return 0
 	}
 
-	return b.raft.AppliedIndex()
+	// We use the latest index that the FSM has seen here, which may be behind
+	// raft.AppliedIndex() due to the async nature of the raft library.
+	indexState, _ := b.fsm.LatestState()
+	return indexState.Index
 }
 
 // RemovePeer removes the given peer ID from the raft cluster. If the node is
