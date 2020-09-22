@@ -46,10 +46,6 @@ type EncryptBatchResponseItem struct {
 	// KeyVersion defines the key version used to encrypt plaintext.
 	KeyVersion int `json:"key_version,omitempty" structs:"key_version" mapstructure:"key_version"`
 
-	// Plaintext for the ciphertext present in the corresponding batch
-	// request item
-	Plaintext string `json:"plaintext,omitempty" structs:"plaintext" mapstructure:"plaintext"`
-
 	// Error, if set represents a failure encountered while encrypting a
 	// corresponding batch request item
 	Error string `json:"error,omitempty" structs:"error" mapstructure:"error"`
