@@ -33,7 +33,7 @@ func TestTransit_BatchDecryption(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
+	batchResponseItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
 	batchDecryptionInput := make([]interface{}, len(batchResponseItems))
 	for i, item := range batchResponseItems {
 		batchDecryptionInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext}
@@ -103,7 +103,7 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchDecryptionInputItems := resp.Data["batch_results"].([]BatchResponseItem)
+	batchDecryptionInputItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
 
 	batchDecryptionInput := make([]interface{}, len(batchDecryptionInputItems))
 	for i, item := range batchDecryptionInputItems {

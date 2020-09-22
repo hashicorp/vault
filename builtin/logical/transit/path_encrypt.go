@@ -37,8 +37,8 @@ type BatchRequestItem struct {
 	DecodedNonce []byte
 }
 
-// BatchResponseItem represents a response item for batch processing
-type BatchResponseItem struct {
+// EncryptBatchResponseItem represents a response item for batch processing
+type EncryptBatchResponseItem struct {
 	// Ciphertext for the plaintext present in the corresponding batch
 	// request item
 	Ciphertext string `json:"ciphertext,omitempty" structs:"ciphertext" mapstructure:"ciphertext"`
@@ -250,7 +250,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	batchResponseItems := make([]BatchResponseItem, len(batchInputItems))
+	batchResponseItems := make([]EncryptBatchResponseItem, len(batchInputItems))
 	contextSet := len(batchInputItems[0].Context) != 0
 
 	// Before processing the batch request items, get the policy. If the
