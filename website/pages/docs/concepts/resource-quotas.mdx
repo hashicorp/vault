@@ -50,15 +50,9 @@ and through enabling optional audit logging.
 
 ## Exempt Routes
 
-The following routes are always exempt from rate limiting:
-
-- `/v1/sys/generate-recovery-token/attempt`
-- `/v1/sys/generate-recovery-token/update`
-- `/v1/sys/generate-root/attempt`
-- `/v1/sys/generate-root/update`
-- `/v1/sys/health`
-- `/v1/sys/seal-status`
-- `/v1/sys/unseal`
+By default, no paths are exempt from rate limiting. However, Vault operators can
+set paths that are exempt from all rate limit resource quotas by updating the
+resource quota `rate_limit_exempt_paths` configuration field.
 
 ## Learn
 
