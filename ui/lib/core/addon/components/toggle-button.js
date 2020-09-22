@@ -40,8 +40,8 @@ export default Component.extend({
     defineProperty(
       this,
       'isOpen',
-      computed(`toggleTarget.${toggleAttr}`, 'toggleAttr', 'toggleTarget', () => {
-        const props = this.getProperties('toggleTarget', 'toggleAttr');
+      computed(`toggleTarget.${toggleAttr}`, 'toggleAttr', 'toggleTarget', function() {
+        const props = { toggleTarget: this.toggleTarget, toggleAttr: this.toggleAttr };
         return get(props.toggleTarget, props.toggleAttr);
       })
     );

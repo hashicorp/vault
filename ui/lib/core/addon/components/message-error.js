@@ -30,9 +30,7 @@ export default Component.extend({
     function() {
       const errorMessage = this.errorMessage;
       const errors = this.errors;
-      /* eslint-disable-next-line ember/no-get */
-      // ARG TODO something up here with removing this.get
-      const modelIsError = this.get('model.isError');
+      const modelIsError = this.model?.isError;
       if (errorMessage) {
         return [errorMessage];
       }
@@ -47,6 +45,8 @@ export default Component.extend({
         }
         return [this.model.adapterError.message];
       }
+
+      return 'no error';
     }
   ),
 });

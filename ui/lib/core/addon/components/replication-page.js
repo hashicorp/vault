@@ -49,7 +49,7 @@ export default Component.extend({
     }
     this.set('reindexingDetails', resp);
   }),
-  isSummaryDashboard: computed('model.dr.mode', 'model.performance.mode', function() {
+  isSummaryDashboard: computed('model.{performance.mode,dr.mode}', function() {
     const router = this.router;
     const currentRoute = router.get('currentRouteName');
 
@@ -59,6 +59,7 @@ export default Component.extend({
       const performanceMode = this.model.performance.mode;
       return drMode === 'primary' && performanceMode === 'primary';
     }
+    return '';
   }),
   formattedReplicationMode: computed('model.replicationMode', 'isSummaryDashboard', function() {
     // dr or performance 🤯
@@ -111,6 +112,7 @@ export default Component.extend({
       combinedObject.performance = model['performance'];
       return combinedObject;
     }
+    return {};
   }),
   replicationDetails: computed('model.replicationMode', 'isSummaryDashboard', function() {
     const { model } = this;

@@ -104,6 +104,7 @@ export default Component.extend(DEFAULTS, {
         return 'providePGPKey';
       }
     }
+    return '';
   }),
 
   extractData(data) {
