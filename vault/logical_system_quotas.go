@@ -17,6 +17,10 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 		{
 			Pattern: "quotas/config$",
 			Fields: map[string]*framework.FieldSchema{
+				"rate_limit_exempt_paths": {
+					Type:        framework.TypeStringSlice,
+					Description: "Specifies the list of exempt paths from all rate limit quotas. If empty no paths will be exempt.",
+				},
 				"enable_rate_limit_audit_logging": {
 					Type:        framework.TypeBool,
 					Description: "If set, starts audit logging of requests that get rejected due to rate limit quota rule violations.",
@@ -105,6 +109,7 @@ func (b *SystemBackend) handleQuotasConfigUpdate() framework.OperationFunc {
 
 		config.EnableRateLimitAuditLogging = d.Get("enable_rate_limit_audit_logging").(bool)
 		config.EnableRateLimitResponseHeaders = d.Get("enable_rate_limit_response_headers").(bool)
+		config.RateLimitExemptPaths = d.Get("rate_limit_exempt_paths").([]string)
 
 		entry, err := logical.StorageEntryJSON(quotas.ConfigPath, config)
 		if err != nil {
@@ -116,6 +121,7 @@ func (b *SystemBackend) handleQuotasConfigUpdate() framework.OperationFunc {
 
 		b.Core.quotaManager.SetEnableRateLimitAuditLogging(config.EnableRateLimitAuditLogging)
 		b.Core.quotaManager.SetEnableRateLimitResponseHeaders(config.EnableRateLimitResponseHeaders)
+		b.Core.quotaManager.SetRateLimitExemptPaths(config.RateLimitExemptPaths)
 
 		return nil, nil
 	}
@@ -128,6 +134,7 @@ func (b *SystemBackend) handleQuotasConfigRead() framework.OperationFunc {
 			Data: map[string]interface{}{
 				"enable_rate_limit_audit_logging":    config.EnableRateLimitAuditLogging,
 				"enable_rate_limit_response_headers": config.EnableRateLimitResponseHeaders,
+				"rate_limit_exempt_paths":            config.RateLimitExemptPaths,
 			},
 		}, nil
 	}

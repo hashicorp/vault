@@ -11,13 +11,14 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/sdk/helper/pathmanager"
+
+	// "github.com/hashicorp/vault/sdk/helper/pathmanager"
 	"github.com/sethvargo/go-limiter"
 	"github.com/sethvargo/go-limiter/httplimit"
 	"github.com/sethvargo/go-limiter/memorystore"
 )
 
-var rateLimitExemptPaths = pathmanager.New()
+// var rateLimitExemptPaths = pathmanager.New()
 
 const (
 	// DefaultRateLimitPurgeInterval defines the default purge interval used by a
@@ -32,18 +33,18 @@ const (
 	EnvVaultEnableRateLimitAuditLogging = "VAULT_ENABLE_RATE_LIMIT_AUDIT_LOGGING"
 )
 
-func init() {
-	rateLimitExemptPaths.AddPaths([]string{
-		"sys/internal/ui/mounts",
-		"sys/generate-recovery-token/attempt",
-		"sys/generate-recovery-token/update",
-		"sys/generate-root/attempt",
-		"sys/generate-root/update",
-		"sys/health",
-		"sys/seal-status",
-		"sys/unseal",
-	})
-}
+// func init() {
+// 	rateLimitExemptPaths.AddPaths([]string{
+// 		"sys/internal/ui/mounts",
+// 		"sys/generate-recovery-token/attempt",
+// 		"sys/generate-recovery-token/update",
+// 		"sys/generate-root/attempt",
+// 		"sys/generate-root/update",
+// 		"sys/health",
+// 		"sys/seal-status",
+// 		"sys/unseal",
+// 	})
+// }
 
 // Ensure that RateLimitQuota implements the Quota interface
 var _ Quota = (*RateLimitQuota)(nil)
@@ -249,12 +250,6 @@ func (rlq *RateLimitQuota) QuotaName() string {
 func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
 	resp := Response{
 		Headers: make(map[string]string),
-	}
-
-	// Skip rate limit checks for paths that are exempt from rate limiting.
-	if rateLimitExemptPaths.HasPath(req.Path) {
-		resp.Allowed = true
-		return resp, nil
 	}
 
 	if req.ClientAddress == "" {

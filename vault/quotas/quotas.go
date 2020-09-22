@@ -11,6 +11,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/sdk/helper/pathmanager"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -137,6 +138,8 @@ type Manager struct {
 	// config containing operator preferences and quota behaviors
 	config *Config
 
+	rateLimitPathManager *pathmanager.PathManager
+
 	storage logical.Storage
 	ctx     context.Context
 
@@ -192,6 +195,11 @@ type Config struct {
 	// EnableRateLimitResponseHeaders dictates if rate limit quota HTTP headers
 	// should be added to responses.
 	EnableRateLimitResponseHeaders bool `json:"enable_rate_limit_response_headers"`
+
+	// RateLimitExemptPaths defines the set of exempt paths used for all rate limit
+	// quotas. Any request path that exists in this set is exempt from rate limiting.
+	// If the set is empty, no paths are exempt.
+	RateLimitExemptPaths []string `json:"rate_limit_exempt_paths"`
 }
 
 // Request contains information required by the quota manager to query and
@@ -223,11 +231,12 @@ func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.Clust
 	}
 
 	manager := &Manager{
-		db:         db,
-		logger:     logger,
-		metricSink: ms,
-		config:     new(Config),
-		lock:       new(sync.RWMutex),
+		db:                   db,
+		logger:               logger,
+		metricSink:           ms,
+		rateLimitPathManager: pathmanager.New(),
+		config:               new(Config),
+		lock:                 new(sync.RWMutex),
 	}
 
 	manager.init(walkFunc)
@@ -543,6 +552,16 @@ func (m *Manager) SetEnableRateLimitResponseHeaders(val bool) {
 	m.config.EnableRateLimitResponseHeaders = val
 }
 
+// SetRateLimitExemptPaths updates the rate limit exempt paths in the Manager's
+// configuration in addition to updating the path manager. Every call to
+// SetRateLimitExemptPaths will wipe out the existing path manager and set the
+// paths based on the provided argument.
+func (m *Manager) SetRateLimitExemptPaths(vals []string) {
+	m.config.RateLimitExemptPaths = vals
+	m.rateLimitPathManager = pathmanager.New()
+	m.rateLimitPathManager.AddPaths(vals)
+}
+
 // RateLimitAuditLoggingEnabled returns if the quota configuration allows audit
 // logging of request rejections due to rate limiting quota rule violations.
 func (m *Manager) RateLimitAuditLoggingEnabled() bool {
@@ -553,6 +572,23 @@ func (m *Manager) RateLimitAuditLoggingEnabled() bool {
 // rate limit quota HTTP headers to be added to responses.
 func (m *Manager) RateLimitResponseHeadersEnabled() bool {
 	return m.config.EnableRateLimitResponseHeaders
+}
+
+// RateLimitExemptPaths returns the list of exempt paths from all rate limit
+// resource quotas from the Manager's configuration.
+func (m *Manager) RateLimitExemptPaths() []string {
+	return m.config.RateLimitExemptPaths
+}
+
+// RateLimitPathExempt returns a boolean dictating if a given path is exempt from
+// any rate limit quota. If not rate limit path manager is defined, false is
+// returned.
+func (m *Manager) RateLimitPathExempt(path string) bool {
+	if m.rateLimitPathManager == nil {
+		return false
+	}
+
+	return m.rateLimitPathManager.HasPath(path)
 }
 
 // Config returns the operator preferences in the quota manager
@@ -658,6 +694,7 @@ func (m *Manager) Invalidate(key string) {
 
 		m.SetEnableRateLimitAuditLogging(config.EnableRateLimitAuditLogging)
 		m.SetEnableRateLimitResponseHeaders(config.EnableRateLimitResponseHeaders)
+		m.SetRateLimitExemptPaths(config.RateLimitExemptPaths)
 
 	default:
 		splitKeys := strings.Split(key, "/")
@@ -755,7 +792,10 @@ func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStan
 	if err != nil {
 		return err
 	}
+
 	m.SetEnableRateLimitAuditLogging(config.EnableRateLimitAuditLogging)
+	m.SetEnableRateLimitResponseHeaders(config.EnableRateLimitResponseHeaders)
+	m.SetRateLimitExemptPaths(config.RateLimitExemptPaths)
 
 	// Load the quota rules for all supported types from storage and load it in
 	// the quota manager.
