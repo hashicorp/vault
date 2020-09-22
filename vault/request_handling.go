@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	replTimeout = 10 * time.Second
+	replTimeout = 1 * time.Second
 )
 
 var (
@@ -861,19 +861,6 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			}
 			leaseGenerated = true
 			resp.Secret.LeaseID = leaseID
-
-			// Get the actual time of the lease
-			le, err := c.expiration.FetchLeaseTimes(ctx, leaseID)
-			if err != nil {
-				c.logger.Error("failed to fetch updated lease time", "request_path", req.Path, "error", err)
-				retErr = multierror.Append(retErr, ErrInternalError)
-				return nil, auth, retErr
-			}
-			// We round here because the clock will have already started
-			// ticking, so we'll end up always returning 299 instead of 300 or
-			// 26399 instead of 26400, say, even if it's just a few
-			// microseconds. This provides a nicer UX.
-			resp.Secret.TTL = le.ExpireTime.Sub(time.Now()).Round(time.Second)
 
 			// Count the lease creation
 			ttl_label := metricsutil.TTLBucket(resp.Secret.TTL)

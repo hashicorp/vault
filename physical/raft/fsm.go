@@ -77,6 +77,9 @@ type FSM struct {
 	logger      log.Logger
 	noopRestore bool
 
+	// applyDelay is used to simulate a slow apply in tests
+	applyDelay time.Duration
+
 	db *bolt.DB
 
 	// retoreCb is called after we've restored a snapshot
@@ -116,6 +119,21 @@ func NewFSM(path string, logger log.Logger) (*FSM, error) {
 	}
 
 	return f, nil
+}
+
+func (f *FSM) getDB() *bolt.DB {
+	f.l.RLock()
+	defer f.l.RUnlock()
+
+	return f.db
+}
+
+// SetFSMDelay adds a delay to the FSM apply. This is used in tests to simulate
+// a slow apply.
+func (r *RaftBackend) SetFSMDelay(delay time.Duration) {
+	r.fsm.l.Lock()
+	r.fsm.applyDelay = delay
+	r.fsm.l.Unlock()
 }
 
 func (f *FSM) openDBFile(dbPath string) error {
@@ -222,6 +240,9 @@ func writeSnapshotMetaToDB(metadata *raft.SnapshotMeta, db *bolt.DB) error {
 }
 
 func (f *FSM) witnessSnapshot(metadata *raft.SnapshotMeta) error {
+	f.l.RLock()
+	defer f.l.RUnlock()
+
 	err := writeSnapshotMetaToDB(metadata, f.db)
 	if err != nil {
 		return err
@@ -447,6 +468,10 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 
 	f.l.RLock()
 	defer f.l.RUnlock()
+
+	if f.applyDelay > 0 {
+		time.Sleep(f.applyDelay)
+	}
 
 	err = f.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(dataBucketName)

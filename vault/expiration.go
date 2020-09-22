@@ -981,6 +981,11 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 		if err != nil {
 			return nil, err
 		}
+
+		if tokenLeaseTimes == nil {
+			return nil, errors.New("failed to load batch token expiration time")
+		}
+
 		if le.ExpireTime.After(tokenLeaseTimes.ExpireTime) {
 			resp.Secret.TTL = tokenLeaseTimes.ExpireTime.Sub(le.LastRenewalTime)
 			le.ExpireTime = tokenLeaseTimes.ExpireTime
@@ -1200,6 +1205,9 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 		if err != nil {
 			return "", err
 		}
+		if tokenLeaseTimes == nil {
+			return "", errors.New("failed to load batch token expiration time")
+		}
 		if le.ExpireTime.After(tokenLeaseTimes.ExpireTime) {
 			le.ExpireTime = tokenLeaseTimes.ExpireTime
 		}
@@ -1225,7 +1233,13 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 	}
 
 	// Setup revocation timer if there is a lease
-	m.updatePending(le, resp.Secret.LeaseTotal())
+	m.updatePending(le, le.ExpireTime.Sub(time.Now()))
+
+	// We round here because the clock will have already started
+	// ticking, so we'll end up always returning 299 instead of 300 or
+	// 26399 instead of 26400, say, even if it's just a few
+	// microseconds. This provides a nicer UX.
+	resp.Secret.TTL = le.ExpireTime.Sub(time.Now()).Round(time.Second)
 
 	// Done
 	return le.LeaseID, nil
