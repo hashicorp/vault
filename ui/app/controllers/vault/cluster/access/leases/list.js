@@ -37,6 +37,7 @@ export default Controller.extend(ListController, {
         return `We couldn't find a prefix matching &quot;${filter}&quot;.`;
       }
     }
+    return '';
   }),
 
   actions: {

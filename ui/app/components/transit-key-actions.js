@@ -65,10 +65,12 @@ export default Component.extend(TRANSIT_PARAMS, {
   onRefresh() {},
   init() {
     this._super(...arguments);
+    console.log(this.key.supportedActions.firstObject, 'meep');
     if (this.selectedAction) {
       return;
     }
-    set(this, 'selectedAction', get(this, 'key.supportedActions.firstObject'));
+
+    set(this, 'selectedAction', this.key.supportedActions.firstObject);
     assert('`key` is required for `' + this.toString() + '`.', this.getModelInfo());
   },
 
@@ -81,8 +83,8 @@ export default Component.extend(TRANSIT_PARAMS, {
   },
 
   setExportKeyDefaults() {
-    const exportKeyType = get(this, 'key.exportKeyTypes.firstObject');
-    const exportKeyVersion = get(this, 'key.validKeyVersions.lastObject');
+    const exportKeyType = this.key.exportKeyTypes.firstObject;
+    const exportKeyVersion = this.key.validKeyVersions.lastObject;
     this.setProperties({
       exportKeyType,
       exportKeyVersion,
@@ -90,7 +92,7 @@ export default Component.extend(TRANSIT_PARAMS, {
   },
 
   keyIsRSA: computed('key.type', function() {
-    let type = get(this, 'key.type');
+    let type = this.key.type;
     return type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
   }),
 
@@ -124,7 +126,7 @@ export default Component.extend(TRANSIT_PARAMS, {
       // don't save values from datakey
       oldAction === 'datakey' ||
       // can rewrap signatures — using that as a ciphertext later would be problematic
-      (oldAction === 'rewrap' && !get(this, 'key.supportsEncryption'));
+      (oldAction === 'rewrap' && !this.key.supportsEncryption);
 
     if (!clearWithoutCheck && action) {
       paramsToKeep = PARAMS_FOR_ACTION[action];
@@ -176,7 +178,7 @@ export default Component.extend(TRANSIT_PARAMS, {
   },
 
   compactData(data) {
-    let type = get(this, 'key.type');
+    let type = this.key.type;
     let isRSA = type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
     return Object.keys(data).reduce((result, key) => {
       if (key === 'signature_algorithm' && !isRSA) {

@@ -48,7 +48,7 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   hasDataChanges() {
-    this.onDataChange(get(this, 'key.hasDirtyAttributes'));
+    this.onDataChange(this.key.hasDirtyAttributes);
   },
 
   persistKey(method, successCallback) {

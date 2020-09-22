@@ -2,7 +2,7 @@ import { inject as service } from '@ember/service';
 import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
 import Component from '@ember/component';
-import { set, get } from '@ember/object';
+import { set } from '@ember/object';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';

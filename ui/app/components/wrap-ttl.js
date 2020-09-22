@@ -1,6 +1,6 @@
 import { assert } from '@ember/debug';
 import Component from '@ember/component';
-import { set, get, computed } from '@ember/object';
+import { set, computed } from '@ember/object';
 import hbs from 'htmlbars-inline-precompile';
 
 export default Component.extend({
