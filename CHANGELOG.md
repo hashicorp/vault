@@ -19,7 +19,6 @@ BUG FIXES:
 * core: Fix race involved in enabling certain features via a license change
 * core: Fix crash when metrics collection encounters zero-length keys in KV store [[GH-9811](https://github.com/hashicorp/vault/pull/9881)]
 * identity: Check for timeouts in entity API [[GH-9925](https://github.com/hashicorp/vault/pull/9925)]
-* replication (enterprise): Don't stop replication if old filter path evaluation fails
 * replication (enterprise): Only write failover cluster addresses if they've changed
 * secrets/database: Fix handling of TLS options in mongodb connection strings [[GH-9519](https://github.com/hashicorp/vault/pull/9519)]
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-93](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/93)]
@@ -203,6 +202,9 @@ BUG FIXES:
 IMPROVEMENTS:
 
 * secret/azure: Use write-ahead-logs to cleanup any orphaned Service Principals [[GH-9773](https://github.com/hashicorp/vault/pull/9773)]
+
+BUG FIXES:
+* replication (enterprise): Don't stop replication if old filter path evaluation fails
 
 ## 1.4.6
 ### August 27th, 2020
