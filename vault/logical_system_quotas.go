@@ -119,6 +119,14 @@ func (b *SystemBackend) handleQuotasConfigUpdate() framework.OperationFunc {
 			return nil, err
 		}
 
+		entry, err = logical.StorageEntryJSON(quotas.DefaultRateLimitExemptPathsToggle, true)
+		if err != nil {
+			return nil, err
+		}
+		if err := req.Storage.Put(ctx, entry); err != nil {
+			return nil, err
+		}
+
 		b.Core.quotaManager.SetEnableRateLimitAuditLogging(config.EnableRateLimitAuditLogging)
 		b.Core.quotaManager.SetEnableRateLimitResponseHeaders(config.EnableRateLimitResponseHeaders)
 		b.Core.quotaManager.SetRateLimitExemptPaths(config.RateLimitExemptPaths)

@@ -177,10 +177,10 @@ func TestQuotas_RateLimitQuota_ExemptPaths(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// ensure exempt paths are empty by default
+	// ensure exempt paths are not empty by default
 	resp, err := client.Logical().Read("sys/quotas/config")
 	require.NoError(t, err)
-	require.Empty(t, resp.Data["rate_limit_exempt_paths"].([]interface{}), "expected no exempt paths by default")
+	require.NotEmpty(t, resp.Data["rate_limit_exempt_paths"].([]interface{}), "expected no exempt paths by default")
 
 	reqFunc := func(numSuccess, numFail *atomic.Int32) {
 		_, err := client.Logical().Read("sys/quotas/rate-limit/rlq")

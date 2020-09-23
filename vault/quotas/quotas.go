@@ -94,6 +94,13 @@ const (
 	// ConfigPath is the physical location where the quota configuration is
 	// persisted.
 	ConfigPath = StoragePrefix + "config"
+
+	// DefaultRateLimitExemptPathsToggle is the path to a toggle that allows us to
+	// determine if a Vault operator explicitly modified the exempt paths set for
+	// rate limit resource quotas. Specifically, when this toggle is false, we can
+	// infer a Vault node is operating with an initial default set and on a subsequent
+	// update to that set, we should not overwrite it on Setup.
+	DefaultRateLimitExemptPathsToggle = StoragePrefix + "default_rate_limit_exempt_paths_toggle"
 )
 
 var (
@@ -105,6 +112,16 @@ var (
 	// rate limit quota being exceeded.
 	ErrRateLimitQuotaExceeded = errors.New("rate limit quota exceeded")
 )
+
+var defaultExemptPaths = []string{
+	"/v1/sys/generate-recovery-token/attempt",
+	"/v1/sys/generate-recovery-token/update",
+	"/v1/sys/generate-root/attempt",
+	"/v1/sys/generate-root/update",
+	"/v1/sys/health",
+	"/v1/sys/seal-status",
+	"/v1/sys/unseal",
+}
 
 // Access provides information to reach back to the quota checker.
 type Access interface {
@@ -797,9 +814,30 @@ func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStan
 		return err
 	}
 
+	entry, err := storage.Get(ctx, DefaultRateLimitExemptPathsToggle)
+	if err != nil {
+		return err
+	}
+
+	// Determine if we need to set the default set of exempt paths for rate limit
+	// resource quotas. We use a default set introduced in 1.5 when the toggle
+	// entry does not exist in storage or is false. The toggle is flipped , i.e.
+	// set to true when SetRateLimitExemptPaths is called during a config update.
+	var toggle bool
+	if entry != nil {
+		if err := entry.DecodeJSON(&toggle); err != nil {
+			return err
+		}
+	}
+
+	exemptPaths := defaultExemptPaths
+	if toggle {
+		exemptPaths = config.RateLimitExemptPaths
+	}
+
 	m.SetEnableRateLimitAuditLogging(config.EnableRateLimitAuditLogging)
 	m.SetEnableRateLimitResponseHeaders(config.EnableRateLimitResponseHeaders)
-	m.SetRateLimitExemptPaths(config.RateLimitExemptPaths)
+	m.SetRateLimitExemptPaths(exemptPaths)
 
 	// Load the quota rules for all supported types from storage and load it in
 	// the quota manager.
