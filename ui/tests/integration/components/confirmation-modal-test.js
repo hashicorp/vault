@@ -23,11 +23,7 @@ module('Integration | Component | confirmation-modal', function(hooks) {
     `);
 
     assert.dom('[data-test-confirm-button]').isDisabled();
-    assert.equal(
-      find('[data-test-confirm-button]').textContent.trim(),
-      'Plz Continue',
-      'Confirm button has specified value'
-    );
+    assert.dom('[data-test-confirm-button]').hasText('Plz Continue', 'Confirm button has specified value');
 
     await fillIn('[data-test-confirmation-modal-input="demote"]', 'Destructive Thing');
     assert.dom('[data-test-confirm-button="demote"]').isNotDisabled();

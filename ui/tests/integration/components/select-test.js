@@ -60,11 +60,9 @@ module('Integration | Component | Select', function(hooks) {
     );
 
     assert.dom('[data-test-select="foo"]').hasValue('tues', 'sets selectedValue by default');
-    assert.equal(
-      this.element.querySelector('[data-test-select="foo"]').options[1].textContent.trim(),
-      'Tuesday',
-      'uses the labelAttribute to determine the label'
-    );
+    assert
+      .dom(this.element.querySelector('[data-test-select="foo"]').options[1])
+      .hasText('Tuesday', 'uses the labelAttribute to determine the label');
   });
 
   test('it calls onChange when an item is selected', async function(assert) {

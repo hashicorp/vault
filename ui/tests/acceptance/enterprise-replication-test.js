@@ -60,11 +60,12 @@ module('Acceptance | Enterprise | replication', function(hooks) {
       .dom('[data-test-empty-state-title]')
       .includesText('Disaster Recovery secondary not set up', 'shows the correct title of the empty state');
 
-    assert.equal(
-      find('[data-test-empty-state-message]').textContent.trim(),
-      'This cluster has not been enabled as a Disaster Recovery Secondary. You can do so by enabling replication and adding a secondary from the Disaster Recovery Primary.',
-      'renders default message specific to when no replication is enabled'
-    );
+    assert
+      .dom('[data-test-empty-state-message]')
+      .hasText(
+        'This cluster has not been enabled as a Disaster Recovery Secondary. You can do so by enabling replication and adding a secondary from the Disaster Recovery Primary.',
+        'renders default message specific to when no replication is enabled'
+      );
 
     await visit('/vault/replication');
     assert.equal(currentURL(), '/vault/replication');
@@ -134,10 +135,9 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     // nav to DR
     await visit('/vault/replication/dr');
     await fillIn('[data-test-replication-cluster-mode-select]', 'secondary');
-    assert.ok(
-      find('[data-test-replication-enable]:disabled'),
-      'dr secondary enable is disabled when other replication modes are on'
-    );
+    assert
+      .dom('[data-test-replication-enable]')
+      .isDisabled('dr secondary enable is disabled when other replication modes are on');
 
     // disable performance replication
     await disableReplication('performance', assert);
@@ -208,11 +208,12 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await visit('/vault/replication-dr-promote/details');
 
     assert.dom('[data-test-component="empty-state"]').exists();
-    assert.equal(
-      find('[data-test-empty-state-message]').textContent.trim(),
-      'This Disaster Recovery secondary has not been enabled.  You can do so from the Disaster Recovery Primary.',
-      'renders message when replication is enabled'
-    );
+    assert
+      .dom('[data-test-empty-state-message]')
+      .hasText(
+        'This Disaster Recovery secondary has not been enabled. You can do so from the Disaster Recovery Primary.',
+        'renders message when replication is enabled'
+      );
   });
 
   test('add secondary and navigate through token generation modal', async function(assert) {

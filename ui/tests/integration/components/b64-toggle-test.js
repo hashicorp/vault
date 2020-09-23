@@ -8,7 +8,7 @@ module('Integration | Component | b64 toggle', function(hooks) {
 
   test('it renders', async function(assert) {
     await render(hbs`{{b64-toggle}}`);
-    assert.equal(findAll('button').length, 1);
+    assert.dom('button').exists({ count: 1 });
   });
 
   test('it toggles encoding on the passed string', async function(assert) {

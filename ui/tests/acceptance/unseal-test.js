@@ -33,7 +33,7 @@ module('Acceptance | unseal', function(hooks) {
     await fillIn('[data-test-shamir-input]', unseal);
     await click('button[type="submit"]');
     await pollCluster(this.owner);
-    assert.equal(findAll('[data-test-cluster-status]').length, 0, 'ui does not show sealed warning');
+    assert.dom('[data-test-cluster-status]').doesNotExist('ui does not show sealed warning');
     assert.ok(currentURL().match(/\/vault\/auth/), 'vault is ready to authenticate');
   });
 });

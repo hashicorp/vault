@@ -158,11 +158,9 @@ module('Integration | Component | replication actions', function(hooks) {
       );
 
       let selector = oldVersion ? 'h4' : `[data-test-${action}-replication] h4`;
-      assert.equal(
-        find(selector).textContent.trim(),
-        headerText,
-        `${testKey}: renders the correct component header (${oldVersion})`
-      );
+      assert
+        .dom(selector)
+        .hasText(headerText, `${testKey}: renders the correct component header (${oldVersion})`);
 
       if (oldVersion) {
         await click('[data-test-confirm-action-trigger]');

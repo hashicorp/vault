@@ -22,10 +22,10 @@ module('Integration | Helper | has-permission', function(hooks) {
   test('it renders', async function(assert) {
     await render(hbs`{{#if (has-permission)}}Yes{{else}}No{{/if}}`);
 
-    assert.equal(this.element.textContent.trim(), 'No');
+    assert.dom(this.element).hasText('No');
     await run(() => {
       this.permissions.set('globPaths', { 'test/': { capabilities: ['update'] } });
     });
-    assert.equal(this.element.textContent.trim(), 'Yes', 'the helper re-computes when globPaths changes');
+    assert.dom(this.element).hasText('Yes', 'the helper re-computes when globPaths changes');
   });
 });

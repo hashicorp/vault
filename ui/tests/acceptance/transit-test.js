@@ -324,15 +324,13 @@ module('Acceptance | transit', function(hooks) {
 
       await click(`[data-test-transit-card=${keyAction}]`);
       await settled();
-      assert.ok(
-        find('[data-test-transit-key-version-select]'),
-        `${name}: the rotated key allows you to select versions`
-      );
+      assert
+        .dom('[data-test-transit-key-version-select]')
+        .exists(`${name}: the rotated key allows you to select versions`);
       if (key.exportable) {
-        assert.ok(
-          find('[data-test-transit-action-link="export"]'),
-          `${name}: exportable key has a link to export action`
-        );
+        assert
+          .dom('[data-test-transit-action-link="export"]')
+          .exists(`${name}: exportable key has a link to export action`);
       } else {
         assert
           .dom('[data-test-transit-action-link="export"]')

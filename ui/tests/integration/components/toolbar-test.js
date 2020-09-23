@@ -10,7 +10,7 @@ module('Integration | Component | toolbar', function(hooks) {
   test('it renders', async function(assert) {
     await render(hbs`<Toolbar>This is the toolbar content</Toolbar>`);
 
-    assert.equal(this.element.textContent.trim(), 'This is the toolbar content');
+    assert.dom(this.element).hasText('This is the toolbar content');
     assert.ok(isPresent('.toolbar'));
     assert.ok(isPresent('.toolbar-scroller'));
   });

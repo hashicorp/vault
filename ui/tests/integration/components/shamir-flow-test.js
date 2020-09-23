@@ -38,11 +38,7 @@ module('Integration | Component | shamir flow', function(hooks) {
   test('it renders', async function(assert) {
     await render(hbs`{{shamir-flow formText="like whoa"}}`);
 
-    assert.equal(
-      find('form [data-test-form-text]').textContent.trim(),
-      'like whoa',
-      'renders formText inline'
-    );
+    assert.dom('form [data-test-form-text]').hasText('like whoa', 'renders formText inline');
 
     await render(hbs`
       {{#shamir-flow formText="like whoa"}}
@@ -50,12 +46,8 @@ module('Integration | Component | shamir flow', function(hooks) {
       {{/shamir-flow}}
     `);
 
-    assert.equal(findAll('.shamir-progress').length, 0, 'renders no progress bar for no progress');
-    assert.equal(
-      find('form [data-test-form-text]').textContent.trim(),
-      'whoa again',
-      'renders the block, not formText'
-    );
+    assert.dom('.shamir-progress').doesNotExist('renders no progress bar for no progress');
+    assert.dom('form [data-test-form-text]').hasText('whoa again', 'renders the block, not formText');
 
     await render(hbs`
       {{shamir-flow progress=1 threshold=5}}
@@ -70,7 +62,7 @@ module('Integration | Component | shamir flow', function(hooks) {
     await render(hbs`
       {{shamir-flow errors=errors}}
     `);
-    assert.equal(findAll('.message.is-danger').length, 2, 'renders errors');
+    assert.dom('.message.is-danger').exists({ count: 2 }, 'renders errors');
   });
 
   test('it sends data to the passed action', async function(assert) {

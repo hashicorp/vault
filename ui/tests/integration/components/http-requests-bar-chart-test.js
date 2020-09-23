@@ -32,16 +32,12 @@ module('Integration | Component | http-requests-bar-chart', function(hooks) {
   test('it formats the ticks', async function(assert) {
     await render(hbs`<HttpRequestsBarChart @counters={{counters}}/>`);
 
-    assert.equal(
-      this.element.querySelector('.x-axis>.tick').textContent,
-      'Apr 2019',
-      'x axis ticks should should show the month and year'
-    );
-    assert.equal(
-      this.element.querySelectorAll('.y-axis>.tick')[1].textContent,
-      '2k',
-      'y axis ticks should round to the nearest thousand'
-    );
+    assert
+      .dom(this.element.querySelector('.x-axis>.tick'))
+      .hasText('Apr 2019', 'x axis ticks should should show the month and year');
+    assert
+      .dom(this.element.querySelectorAll('.y-axis>.tick')[1])
+      .hasText('2k', 'y axis ticks should round to the nearest thousand');
   });
 
   test('it renders a tooltip', async function(assert) {
@@ -49,6 +45,6 @@ module('Integration | Component | http-requests-bar-chart', function(hooks) {
     await triggerEvent('.shadow-bars>.bar', 'mouseenter');
     const tooltipLabel = document.querySelector('.d3-tooltip .date');
 
-    assert.equal(tooltipLabel.textContent, 'April 2019', 'it shows the tooltip with the formatted date');
+    assert.dom(tooltipLabel).hasText('April 2019', 'it shows the tooltip with the formatted date');
   });
 });

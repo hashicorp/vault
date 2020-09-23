@@ -10,7 +10,7 @@ module('Integration | Component | toolbar-link', function(hooks) {
   test('it renders', async function(assert) {
     await render(hbs`<ToolbarLink @params={{array '/secrets'}}>Link</ToolbarLink>`);
 
-    assert.equal(this.element.textContent.trim(), 'Link');
+    assert.dom(this.element).hasText('Link');
     assert.ok(isPresent('.toolbar-link'));
     assert.ok(isPresent('.icon'));
   });

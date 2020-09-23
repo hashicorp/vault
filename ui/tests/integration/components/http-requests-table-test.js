@@ -58,7 +58,7 @@ module('Integration | Component | http-requests-table', function(hooks) {
     let expectedValues = ['', '-50%', '100%', ''];
 
     this.element.querySelectorAll('[data-test-change]').forEach((td, i) => {
-      return assert.equal(td.textContent.trim(), expectedValues[i]);
+      return assert.dom(td).hasText(expectedValues[i]);
     });
   });
 });
