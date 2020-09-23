@@ -1,3 +1,4 @@
+import { equal } from '@ember/object/computed';
 import Component from '@ember/component';
 import { allFeatures } from 'vault/helpers/all-features';
 import { computed } from '@ember/object';
@@ -10,7 +11,7 @@ export default Component.extend({
   model: null,
   text: '',
   showForm: false,
-  isTemporary: computed.equal('licenseId', 'temporary'),
+  isTemporary: equal('licenseId', 'temporary'),
   featuresInfo: computed('features', 'model.performanceStandbyCount', function() {
     return allFeatures().map(feature => {
       let active = this.features.includes(feature);

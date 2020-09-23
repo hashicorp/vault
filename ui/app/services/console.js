@@ -1,5 +1,7 @@
 // Low level service that allows users to input paths to make requests to vault
 // this service provides the UI synecdote to the cli commands read, write, delete, and list
+import { filterBy } from '@ember/object/computed';
+
 import Service from '@ember/service';
 
 import { getOwner } from '@ember/application';
@@ -28,7 +30,7 @@ export default Service.extend({
   adapter() {
     return getOwner(this).lookup('adapter:console');
   },
-  commandHistory: computed.filterBy('log', 'type', 'command'),
+  commandHistory: filterBy('log', 'type', 'command'),
   log: computed(function() {
     return [];
   }),

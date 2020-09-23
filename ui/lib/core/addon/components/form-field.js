@@ -1,3 +1,4 @@
+import { or } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { capitalize } from 'vault/helpers/capitalize';
@@ -79,7 +80,7 @@ export default Component.extend({
    * Computed property used to set values on the passed model
    *
    */
-  valuePath: computed.or('attr.options.fieldValue', 'attr.name'),
+  valuePath: or('attr.options.fieldValue', 'attr.name'),
 
   model: null,
 

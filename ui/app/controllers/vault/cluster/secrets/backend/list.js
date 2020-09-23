@@ -1,3 +1,4 @@
+import { or } from '@ember/object/computed';
 import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
@@ -16,7 +17,7 @@ export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNea
     return !!utils.keyIsFolder(this.filter);
   }),
 
-  isConfigurableTab: computed.or('isCertTab', 'isConfigure'),
+  isConfigurableTab: or('isCertTab', 'isConfigure'),
 
   actions: {
     chooseAction(action) {

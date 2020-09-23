@@ -1,5 +1,5 @@
 import { inject as service } from '@ember/service';
-import { alias } from '@ember/object/computed';
+import { alias, or } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { matchesState } from 'xstate';
@@ -9,7 +9,7 @@ export default Component.extend({
   wizard: service(),
   auth: service(),
 
-  shouldRender: computed.or('auth.currentToken', 'wizard.showWhenUnauthenticated'),
+  shouldRender: or('auth.currentToken', 'wizard.showWhenUnauthenticated'),
   currentState: alias('wizard.currentState'),
   featureState: alias('wizard.featureState'),
   featureComponent: alias('wizard.featureComponent'),

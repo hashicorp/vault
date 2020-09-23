@@ -1,3 +1,4 @@
+import { or, not } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
@@ -126,13 +127,13 @@ export default Component.extend({
     ];
   }),
 
-  showReplication: computed.or('version.hasPerfReplication', 'version.hasDRReplication'),
+  showReplication: or('version.hasPerfReplication', 'version.hasDRReplication'),
 
   selectedFeatures: computed('allFeatures.@each.selected', function() {
     return this.allFeatures.filterBy('selected').mapBy('key');
   }),
 
-  cannotStartWizard: computed.not('selectedFeatures.length'),
+  cannotStartWizard: not('selectedFeatures.length'),
 
   actions: {
     saveFeatures() {

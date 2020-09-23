@@ -1,3 +1,4 @@
+import { reads } from '@ember/object/computed';
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
@@ -19,5 +20,5 @@ export default Model.extend({
     let keys = this.key ? DISPLAY_FIELDS.slice(0) : CREATE_FIELDS.slice(0);
     return expandAttributeMeta(this, keys);
   }),
-  toCreds: computed.reads('key'),
+  toCreds: reads('key'),
 });

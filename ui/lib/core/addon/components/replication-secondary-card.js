@@ -1,3 +1,4 @@
+import { equal, reads } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import layout from '../templates/components/replication-secondary-card';
@@ -36,7 +37,7 @@ export default Component.extend({
       ? this.replicationDetails.lastRemoteWAL
       : 0;
   }),
-  inSyncState: computed.equal('state', 'stream-wals'),
+  inSyncState: equal('state', 'stream-wals'),
   hasErrorClass: computed('replicationDetails', 'title', 'state', 'connection', function() {
     const { title, state, connection } = this;
 
@@ -48,7 +49,7 @@ export default Component.extend({
     }
     return false;
   }),
-  knownPrimaryClusterAddrs: computed.reads('replicationDetails.knownPrimaryClusterAddrs'),
+  knownPrimaryClusterAddrs: reads('replicationDetails.knownPrimaryClusterAddrs'),
   primaryUiUrl: computed('replicationDetails.{primaries,knownPrimaryClusterAddrs}', function() {
     const { replicationDetails } = this;
     if (replicationDetails.primaries && replicationDetails.primaries.length) {

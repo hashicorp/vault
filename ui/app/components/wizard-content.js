@@ -1,3 +1,4 @@
+import { alias, reads } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
@@ -10,9 +11,9 @@ export default Component.extend({
   glyph: null,
   headerText: null,
   selectProgress: null,
-  currentMachine: computed.alias('wizard.currentMachine'),
-  tutorialState: computed.alias('wizard.currentState'),
-  tutorialComponent: computed.alias('wizard.tutorialComponent'),
+  currentMachine: alias('wizard.currentMachine'),
+  tutorialState: alias('wizard.currentState'),
+  tutorialComponent: alias('wizard.tutorialComponent'),
   showProgress: computed(
     'tutorialComponent',
     'tutorialState',
@@ -25,8 +26,8 @@ export default Component.extend({
       );
     }
   ),
-  featureMachineHistory: computed.alias('wizard.featureMachineHistory'),
-  totalFeatures: computed.reads('wizard.featureList.length'),
+  featureMachineHistory: alias('wizard.featureMachineHistory'),
+  totalFeatures: reads('wizard.featureList.length'),
   completedFeatures: computed('wizard.currentMachine', function() {
     return this.wizard.getCompletedFeatures();
   }),

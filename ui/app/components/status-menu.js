@@ -1,5 +1,5 @@
 import { inject as service } from '@ember/service';
-import { alias } from '@ember/object/computed';
+import { alias, reads } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 
@@ -25,5 +25,5 @@ export default Component.extend({
   activeCluster: computed('auth.activeCluster', function() {
     return this.store.peekRecord('cluster', this.auth.activeCluster);
   }),
-  currentToken: computed.reads('auth.currentToken'),
+  currentToken: reads('auth.currentToken'),
 });

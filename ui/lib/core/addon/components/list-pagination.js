@@ -16,7 +16,7 @@ export default Component.extend({
   hasNext: computed('page', 'lastPage', function() {
     return this.page < this.lastPage;
   }),
-  hasPrevious: computed.gt('page', 1),
+  hasPrevious: gt('page', 1),
 
   segmentLinks: gt('lastPage', 10),
 

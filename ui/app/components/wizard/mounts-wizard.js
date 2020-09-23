@@ -1,5 +1,5 @@
 import { inject as service } from '@ember/service';
-import { alias } from '@ember/object/computed';
+import { alias, equal } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { engines } from 'vault/helpers/mountable-secret-engines';
@@ -20,7 +20,7 @@ export default Component.extend({
   nextStep: computed('fullNextStep', function() {
     return this.fullNextStep.split('.').lastObject;
   }),
-  needsEncryption: computed.equal('mountSubtype', 'transit'),
+  needsEncryption: equal('mountSubtype', 'transit'),
   stepComponent: alias('wizard.stepComponent'),
   detailsComponent: computed('currentMachine', 'mountSubtype', function() {
     let suffix = this.currentMachine === 'secrets' ? 'engine' : 'method';
