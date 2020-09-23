@@ -1459,6 +1459,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DevToken = base.DevToken
 		coreConfig.CounterSyncInterval = base.CounterSyncInterval
 		coreConfig.RecoveryMode = base.RecoveryMode
+
+		testApplyEntBaseConfig(coreConfig, base)
 	}
 
 	if coreConfig.ClusterHeartbeatInterval == 0 {
