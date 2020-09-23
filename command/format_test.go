@@ -81,10 +81,10 @@ func TestTableFormatter(t *testing.T) {
 	}
 }
 
-/*
-DESCRIPTION: Test to verify that the embedded struct SealStatusOutput
-ignores omitEmpty fields and prints out fields in the embedded struct explicitly.
-*/
+// TestStatusFormat tests to verify that the embedded struct
+// SealStatusOutput ignores omitEmpty fields and prints out
+// fields in the embedded struct explicitly. It also checks the spacing,
+// indentation, and delimiters of table formatting explicitly.
 func TestStatusFormat(t *testing.T) {
 	ui := mockUi{t: t}
 	os.Setenv(EnvVaultFormat, "table")
@@ -150,12 +150,9 @@ HA Enabled                    false`
 	}
 }
 
-/*
-INPUT: The "omitempty" option specifies that all omitempty values in the struct
-should be initialized with empty values. This is used to verify that omitempty
-fields are not returned in the vault status command.
-OUTPUT: SealStatusOutput from format.go
-*/
+// getMockStatusData outputs a SealStatusOutput struct from format.go to be used
+// for testing. The emptyfields parameter specifies whether the struct will be
+// initialized with all the omitempty fields as empty or not.
 func getMockStatusData(emptyFields bool) SealStatusOutput {
 	var status SealStatusOutput
 	var sealStatusResponseMock api.SealStatusResponse
