@@ -481,8 +481,95 @@ func TestExpiration_Register(t *testing.T) {
 	}
 }
 
+func TestExpiration_Register_BatchToken(t *testing.T) {
+	exp := mockExpiration(t)
+	noop := &NoopBackend{
+		RequestHandler: func(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+			resp := &logical.Response{Secret: req.Secret}
+			resp.Secret.TTL = time.Hour
+			return resp, nil
+		},
+	}
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	te := &logical.TokenEntry{
+		Type:         logical.TokenTypeBatch,
+		TTL:          1 * time.Second,
+		NamespaceID:  "root",
+		CreationTime: time.Now().Unix(),
+	}
+
+	err = exp.tokenStore.create(context.Background(), te)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "prod/aws/foo",
+		ClientToken: te.ID,
+	}
+	req.SetTokenEntry(te)
+	resp := &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL: time.Hour,
+			},
+		},
+		Data: map[string]interface{}{
+			"access_key": "xyz",
+			"secret_key": "abcd",
+		},
+	}
+
+	leaseID, err := exp.Register(namespace.RootContext(nil), req, resp)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	_, err = exp.Renew(namespace.RootContext(nil), leaseID, time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	start := time.Now()
+	reqID := 0
+	for {
+		if time.Now().Sub(start) > 10*time.Second {
+			t.Fatal("didn't revoke lease")
+		}
+		req = nil
+
+		noop.Lock()
+		if len(noop.Requests) > reqID {
+			req = noop.Requests[reqID]
+			reqID++
+		}
+		noop.Unlock()
+		if req == nil || req.Operation == logical.RenewOperation {
+			time.Sleep(5 * time.Millisecond)
+			continue
+		}
+		if req.Operation != logical.RevokeOperation {
+			t.Fatalf("Bad: %v", req)
+		}
+
+		break
+	}
+}
+
 func TestExpiration_RegisterAuth(t *testing.T) {
 	exp := mockExpiration(t)
+
 	root, err := exp.tokenStore.rootToken(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1461,7 +1548,7 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		ClientToken: root.ID,
 		Path:        "foo/bar",
 		IssueTime:   time.Now(),
-		ExpireTime:  time.Now(),
+		ExpireTime:  time.Now().Add(time.Minute),
 		namespace:   namespace.RootNamespace,
 	}
 
@@ -1471,7 +1558,7 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 	if err := exp.createIndexByToken(namespace.RootContext(nil), le, le.ClientToken); err != nil {
 		t.Fatalf("error creating secondary index: %v", err)
 	}
-	exp.updatePending(le, le.Secret.LeaseTotal())
+	exp.updatePending(le)
 
 	indexEntry, err := exp.indexByToken(namespace.RootContext(nil), le)
 	if err != nil {
