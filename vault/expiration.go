@@ -604,7 +604,7 @@ func (m *ExpirationManager) LazyRevoke(ctx context.Context, leaseID string) erro
 			return err
 		}
 
-		m.updatePendingInternal(le, 0)
+		m.updatePendingInternal(le)
 		m.pendingLock.Unlock()
 	}
 
@@ -726,7 +726,7 @@ func (m *ExpirationManager) RevokeByToken(ctx context.Context, te *logical.Token
 					return err
 				}
 
-				m.updatePendingInternal(le, 0)
+				m.updatePendingInternal(le)
 				m.pendingLock.Unlock()
 			}
 		}
@@ -910,7 +910,7 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 		}
 
 		// Update the expiration time
-		m.updatePendingInternal(le, resp.Secret.LeaseTotal())
+		m.updatePendingInternal(le)
 		m.pendingLock.Unlock()
 	}
 
@@ -1025,7 +1025,7 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 		}
 
 		// Update the expiration time
-		m.updatePendingInternal(le, resp.Auth.LeaseTotal())
+		m.updatePendingInternal(le)
 		m.pendingLock.Unlock()
 	}
 
@@ -1140,7 +1140,7 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 	}
 
 	// Setup revocation timer if there is a lease
-	m.updatePending(le, resp.Secret.LeaseTotal())
+	m.updatePending(le)
 
 	// Done
 	return le.LeaseID, nil
@@ -1213,7 +1213,7 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 	}
 
 	// Setup revocation timer
-	m.updatePending(&le, auth.LeaseTotal())
+	m.updatePending(&le)
 
 	return nil
 }
@@ -1309,16 +1309,16 @@ func (m *ExpirationManager) leaseTimesForExport(le *leaseEntry) *leaseEntry {
 }
 
 // updatePending is used to update a pending invocation for a lease
-func (m *ExpirationManager) updatePending(le *leaseEntry, leaseTotal time.Duration) {
+func (m *ExpirationManager) updatePending(le *leaseEntry) {
 	m.pendingLock.Lock()
 	defer m.pendingLock.Unlock()
 
-	m.updatePendingInternal(le, leaseTotal)
+	m.updatePendingInternal(le)
 }
 
 // updatePendingInternal is the locked version of updatePending; do not call
 // this without a write lock on m.pending
-func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal time.Duration) {
+func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 	// Check for an existing timer
 	pending, ok := m.pending[le.LeaseID]
 
@@ -1333,6 +1333,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal tim
 		return
 	}
 
+	leaseTotal := le.ExpireTime.Sub(time.Now())
 	// Create entry if it does not exist or reset if it does
 	if ok {
 		pending.timer.Reset(leaseTotal)
@@ -1498,7 +1499,7 @@ func (m *ExpirationManager) loadEntryInternal(ctx context.Context, leaseID strin
 		m.restoreLoaded.Store(le.LeaseID, struct{}{})
 
 		// Setup revocation timer
-		m.updatePending(le, le.ExpireTime.Sub(time.Now()))
+		m.updatePending(le)
 	}
 	return le, nil
 }
