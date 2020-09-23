@@ -57,7 +57,8 @@ export default Service.extend(Evented, {
       this.trigger('routeDidChange', transition);
     });
   },
-
+  // TODO try to take advantage of the public service however not at the moment an easy fix.
+  // eslint-disable-next-line ember/no-private-routing-service
   routing: service('-routing'),
   _router: alias('routing.router'),
   transitionTo() {

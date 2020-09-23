@@ -226,7 +226,9 @@ export default Service.extend({
 
   tokenExpired: computed('tokenExpirationDate', function() {
     const expiration = this.tokenExpirationDate;
-    return expiration ? this.now() >= expiration : null;
+    return get(expiration ? this.now() >= expiration : null);
+    // TODO: remove https://deprecations.emberjs.com/v3.x/#toc_computed-property-volatile
+    // eslint-disable-next-line ember/no-volatile-computed-properties
   }).volatile(),
 
   renewAfterEpoch: computed('currentTokenName', 'expirationCalcTS', function() {
@@ -275,6 +277,7 @@ export default Service.extend({
     const now = this.now();
     const lastFetch = this.lastFetch;
     const renewTime = this.renewAfterEpoch;
+    console.log(this.tokenExpired, 'TOken Expired');
     if (!this.currentTokenName || this.tokenExpired || this.allowExpiration || !renewTime) {
       return false;
     }

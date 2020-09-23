@@ -58,6 +58,8 @@ export default Fragment.extend({
       progress: sync_progress,
       total: sync_total_keys,
     };
+    // TODO: remove https://deprecations.emberjs.com/v3.x/#toc_computed-property-volatile
+    // eslint-disable-next-line ember/no-volatile-computed-properties
   }).volatile(),
 
   syncProgressPercent: computed('syncProgress', function() {

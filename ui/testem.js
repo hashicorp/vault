@@ -3,6 +3,7 @@
 module.exports = {
   test_page: 'tests/index.html?hidepassed',
   tap_quiet_logs: true,
+  tap_failed_tests_only: true,
   disable_watching: true,
   launch_in_ci: ['Chrome'],
   launch_in_dev: ['Chrome'],
@@ -29,10 +30,7 @@ module.exports = {
 };
 
 if (process.env.CI) {
-  /* eslint-disable no-undef */
-  config.reporter = 'xunit';
-  config.report_file = 'test-results/qunit/results.xml';
-  config.xunit_intermediate_output = true;
+  module.exports.reporter = 'xunit';
+  module.exports.report_file = 'test-results/qunit/results.xml';
+  module.exports.xunit_intermediate_output = true;
 }
-
-module.exports = config;
