@@ -20,12 +20,12 @@ export default Component.extend({
   itemPath: '',
   itemType: '',
 
-  itemViewable: computed('item', 'itemType', function() {
+  isBuiltin: computed('item', 'itemType', function() {
     const item = this.get('item');
     if (this.itemType === 'alphabet' || this.itemType === 'template') {
-      return !item.get('id').startsWith('builtin/');
+      return item.get('id').startsWith('builtin/');
     }
-    return true;
+    return false;
   }),
 
   backendType: 'transform',
