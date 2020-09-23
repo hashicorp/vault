@@ -910,7 +910,8 @@ func (c *TestCluster) Cleanup() {
 		go func() {
 			defer wg.Done()
 			if err := lc.stop(); err != nil {
-				// TODO do we care about this?
+				// Note that this log won't be seen if using TestLogger, due to
+				// the above call to StopLogging.
 				lc.Logger().Error("error during cleanup", "error", err)
 			}
 		}()
