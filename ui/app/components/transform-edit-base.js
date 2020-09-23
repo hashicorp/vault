@@ -28,7 +28,6 @@ export default Component.extend(FocusOnInsertMixin, {
   router: service(),
 
   mode: null,
-  onDataChange() {},
   onRefresh() {},
   model: null,
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
@@ -68,6 +67,13 @@ export default Component.extend(FocusOnInsertMixin, {
       });
   },
 
+  applyDelete(callback = () => {}) {
+    this.persist('destroyRecord', () => {
+      callback();
+      this.transitionToRoute(LIST_ROOT_ROUTE);
+    });
+  },
+
   applyChanges(type, callback = () => {}) {
     const modelId = this.get('model.id') || this.get('model.name'); // transform comes in as model.name
     const modelPrefix = this.modelPrefixFromType(this.get('model.constructor.modelName'));
@@ -99,10 +105,7 @@ export default Component.extend(FocusOnInsertMixin, {
     },
 
     delete() {
-      this.persist('destroyRecord', () => {
-        this.onDataChange();
-        this.transitionToRoute(LIST_ROOT_ROUTE);
-      });
+      this.applyDelete();
     },
   },
 });
