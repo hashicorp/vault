@@ -42,6 +42,7 @@ BUG FIXES:
 
 * mfa (enterprise): Fix incorrect handling of PingID responses that could result in auth requests failing
 * replication (enterprise): Improve race condition when using a newly created token on a performance standby node
+* replication (enterprise): Only write failover cluster addresses if they've changed
 * ui: fix bug where dropdown for identity/entity management is not reflective of actual policy [[GH-9958](https://github.com/hashicorp/vault/pull/9958)]
 
 ## 1.5.3
