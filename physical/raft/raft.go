@@ -607,6 +607,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			MaxPool:               3,
 			Timeout:               10 * time.Second,
 			ServerAddressProvider: b.serverAddressProvider,
+			Logger:                b.logger.Named("raft-net"),
 		}
 		transport := raft.NewNetworkTransportWithConfig(transConfig)
 

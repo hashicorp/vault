@@ -98,7 +98,7 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.Physi
 		"performance_multiplier": "8",
 	}
 
-	backend, err := raft.NewRaftBackend(conf, logger)
+	backend, err := raft.NewRaftBackend(conf, logger.Named("raft"))
 	if err != nil {
 		cleanupFunc()
 		t.Fatal(err)
