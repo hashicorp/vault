@@ -16,7 +16,6 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
-* agent/auth/kerberos: Fix `disable_fast_negotiation` not being set on the auth method when configured by user. [[GH-9892](https://github.com/hashicorp/vault/pull/9892)]
 * cli: Don't open or overwrite a raft snapshot file on an unsuccessful `vault operator raft snapshot` [[GH-9894](https://github.com/hashicorp/vault/pull/9894)]
 * core: Implement constant time version of shamir GF(2^8) math [[GH-9932](https://github.com/hashicorp/vault/pull/9932)]
 * core: Fix resource leak in plugin API (plugin-dependent, not all plugins impacted) [[GH-9557](https://github.com/hashicorp/vault/pull/9557)]
@@ -39,12 +38,13 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+* agent: Fix `disable_fast_negotiation` not being set on the auth method when configured by user. [[GH-9892](https://github.com/hashicorp/vault/pull/9892)]
+* core (enterprise): Fix hang when cluster-wide plugin reload cleanup is slow on unseal
+* core (enterprise): Fix an error in cluster-wide plugin reload cleanup following such a reload
 * mfa (enterprise): Fix incorrect handling of PingID responses that could result in auth requests failing
 * replication (enterprise): Improve race condition when using a newly created token on a performance standby node
 * replication (enterprise): Only write failover cluster addresses if they've changed
 * ui: fix bug where dropdown for identity/entity management is not reflective of actual policy [[GH-9958](https://github.com/hashicorp/vault/pull/9958)]
-* core (enterprise): Fix hang when cluster-wide plugin reload cleanup is slow on unseal
-* core (enterprise): Fix an error in cluster-wide plugin reload cleanup following such a reload
 
 ## 1.5.3
 ### August 27th, 2020
