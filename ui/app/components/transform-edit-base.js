@@ -28,6 +28,7 @@ export default Component.extend(FocusOnInsertMixin, {
   router: service(),
 
   mode: null,
+  onDataChange() {},
   onRefresh() {},
   model: null,
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
@@ -69,7 +70,9 @@ export default Component.extend(FocusOnInsertMixin, {
 
   applyDelete(callback = () => {}) {
     this.persist('destroyRecord', () => {
+      this.hasDataChanges();
       callback();
+      // TODO: Investigate what is causing a console error after this point
       this.transitionToRoute(LIST_ROOT_ROUTE);
     });
   },
@@ -84,9 +87,14 @@ export default Component.extend(FocusOnInsertMixin, {
     }
 
     this.persist('save', () => {
+      this.hasDataChanges();
       callback();
       this.transitionToRoute(SHOW_ROUTE, `${modelPrefix}${modelId}`);
     });
+  },
+
+  hasDataChanges() {
+    this.onDataChange(this.get('model.hasDirtyAttributes'));
   },
 
   actions: {
