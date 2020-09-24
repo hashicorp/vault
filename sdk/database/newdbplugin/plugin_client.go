@@ -39,13 +39,14 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		},
 	}
 
-	var client *plugin.Client
-	var err error
-	if isMetadataMode {
-		client, err = pluginRunner.RunMetadataMode(ctx, sys, pluginSets, handshakeConfig, []string{}, logger)
-	} else {
-		client, err = pluginRunner.Run(ctx, sys, pluginSets, handshakeConfig, []string{}, logger)
-	}
+	client, err := pluginRunner.RunConfig(ctx,
+		pluginutil.Runner(sys),
+		pluginutil.PluginSets(pluginSets),
+		pluginutil.HandshakeConfig(handshakeConfig),
+		pluginutil.Logger(logger),
+		pluginutil.MetadataMode(isMetadataMode),
+		pluginutil.AutoMTLS(true),
+	)
 	if err != nil {
 		return nil, err
 	}
