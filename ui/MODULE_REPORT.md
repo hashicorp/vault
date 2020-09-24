@@ -59,6 +59,20 @@ export default Route.extend({
 
 **Global**: `Ember.testing`
 
+**Location**: `lib/core/addon/components/ttl-form.js` at line 82
+
+```js
+    this.set('time', parsedTime);
+    this.handleChange();
+    if (Ember.testing) {
+      return;
+    }
+```
+
+### Unknown Global
+
+**Global**: `Ember.testing`
+
 **Location**: `app/routes/vault/cluster.js` at line 78
 
 ```js
@@ -71,16 +85,58 @@ export default Route.extend({
 
 ### Unknown Global
 
-**Global**: `Ember.testing`
+**Global**: `Ember.onerror`
 
-**Location**: `lib/core/addon/components/ttl-form.js` at line 82
+**Location**: `tests/helpers/wait-for-error.js` at line 5
 
 ```js
-    this.set('time', parsedTime);
-    this.handleChange();
-    if (Ember.testing) {
-      return;
-    }
+
+export default function waitForError(opts) {
+  const orig = Ember.onerror;
+
+  let error = null;
+```
+
+### Unknown Global
+
+**Global**: `Ember.onerror`
+
+**Location**: `tests/helpers/wait-for-error.js` at line 5
+
+```js
+
+export default function waitForError(opts) {
+  const orig = Ember.onerror;
+
+  let error = null;
+```
+
+### Unknown Global
+
+**Global**: `Ember.onerror`
+
+**Location**: `tests/helpers/wait-for-error.js` at line 8
+
+```js
+
+  let error = null;
+  Ember.onerror = err => {
+    error = err;
+  };
+```
+
+### Unknown Global
+
+**Global**: `Ember.onerror`
+
+**Location**: `tests/helpers/wait-for-error.js` at line 13
+
+```js
+
+  return waitUntil(() => error, opts).finally(() => {
+    Ember.onerror = orig;
+  });
+}
 ```
 
 ### Unknown Global
@@ -165,60 +221,4 @@ export default Route.extend({
     Ember.Logger.error = loggerError;
     return logout.visit();
   });
-```
-
-### Unknown Global
-
-**Global**: `Ember.onerror`
-
-**Location**: `tests/helpers/wait-for-error.js` at line 5
-
-```js
-
-export default function waitForError(opts) {
-  const orig = Ember.onerror;
-
-  let error = null;
-```
-
-### Unknown Global
-
-**Global**: `Ember.onerror`
-
-**Location**: `tests/helpers/wait-for-error.js` at line 5
-
-```js
-
-export default function waitForError(opts) {
-  const orig = Ember.onerror;
-
-  let error = null;
-```
-
-### Unknown Global
-
-**Global**: `Ember.onerror`
-
-**Location**: `tests/helpers/wait-for-error.js` at line 8
-
-```js
-
-  let error = null;
-  Ember.onerror = err => {
-    error = err;
-  };
-```
-
-### Unknown Global
-
-**Global**: `Ember.onerror`
-
-**Location**: `tests/helpers/wait-for-error.js` at line 13
-
-```js
-
-  return waitUntil(() => error, opts).finally(() => {
-    Ember.onerror = orig;
-  });
-}
 ```
