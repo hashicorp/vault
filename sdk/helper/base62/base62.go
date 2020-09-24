@@ -78,6 +78,8 @@ func DecodeString(src string) ([]byte, error) {
 	var num big.Int
 	var x big.Int
 	var y big.Int
+	var e big.Int
+
 	strlen := len(src)
 	for i, c := range src {
 		idx := strings.IndexRune(charset, c)
@@ -85,9 +87,9 @@ func DecodeString(src string) ([]byte, error) {
 			return nil, errors.New("invalid base62 character")
 		}
 		y.SetInt64(int64(strlen - (i + 1)))
-		y.Exp(csLenBig, &y, nil)
+		e.Exp(csLenBig, &y, nil)
 		x.SetInt64(int64(idx))
-		x.Mul(&x, &y)
+		x.Mul(&x, &e)
 		num.Add(&num, &x)
 	}
 	return num.Bytes(), nil
