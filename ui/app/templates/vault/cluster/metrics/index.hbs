@@ -6,6 +6,71 @@
   </p.levelLeft>
 </PageHeader>
 
+<div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless">
+  <nav class="tabs">
+    <ul>
+      {{#link-to
+        "vault.cluster.metrics"
+        tagName="li"
+        activeClass="is-active"
+      }}
+        {{#link-to
+          "vault.cluster.metrics"
+          data-test-configuration-tab=false
+        }}
+          Vault usage
+        {{/link-to}}
+      {{/link-to}}
+      {{#link-to
+        "vault.cluster.metrics.http-requests"
+        tagName="li"
+        activeClass="is-active"
+      }}
+        {{#link-to
+          "vault.cluster.metrics.http-requests"
+          data-test-configuration-tab=true
+        }}
+          Configuration
+        {{/link-to}}
+      {{/link-to}}
+    </ul>
+  </nav>
+</div>
+
+<div class="box is-sideless is-fullwidth is-marginless is-bottomless">
+  <p>The active clients metric contributes to billing. It is collected at the end of each month alongside unique entities and direct active tokens.</p>
+  <form>
+    <fieldset>
+      <label for="from">From</label>
+      <input name="from" id="from" />
+    </fieldset>
+    <fieldset>
+      <label for="through">Through</label>
+      <input name="through" id="through" />
+    </fieldset>
+    <input type="submit" value="query" class="button" />
+  </form>
+  <div class="selectable-card-container">
+    <SelectableCard
+      @cardTitle="Active clients"
+      @total={{model.activity.active_clients}}
+      @subText="Root namespace"
+    />
+    <SelectableCard
+      @cardTitle="Unique entities"
+      @total={{model.activity.unique_entities}}
+      @subText="Root namespace"
+    />
+    <SelectableCard
+      @cardTitle="Active direct tokens"
+      @total={{model.activity.direct_tokens}}
+      @subText="Root namespace"
+    />
+  </div>
+</div>
+
+<hr />
+
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
   {{#if (gt model.httpsRequests.length 1) }}
     <SelectableCardContainer @counters={{model}} @gridContainer="true"/>
