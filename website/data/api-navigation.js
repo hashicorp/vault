@@ -23,6 +23,7 @@ export default [
         category: 'databases',
         content: [
           'cassandra',
+          'couchbase',
           'elasticdb',
           'influxdb',
           'hanadb',

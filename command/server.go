@@ -91,7 +91,7 @@ type ServerCommand struct {
 
 	logOutput   io.Writer
 	gatedWriter *gatedwriter.Writer
-	logger      log.Logger
+	logger      log.InterceptLogger
 
 	cleanupGuard sync.Once
 
@@ -797,6 +797,14 @@ func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (log.Lev
 	return level, logLevelString, logLevelWasNotSet, logFormat, nil
 }
 
+type quiescenceSink struct {
+	t *time.Timer
+}
+
+func (q quiescenceSink) Accept(name string, level log.Level, msg string, args ...interface{}) {
+	q.t.Reset(100 * time.Millisecond)
+}
+
 func (c *ServerCommand) Run(args []string) int {
 	f := c.Flags()
 
@@ -934,6 +942,15 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	logProxyEnvironmentVariables(c.logger)
+
+	if envMlock := os.Getenv("VAULT_DISABLE_MLOCK"); envMlock != "" {
+		var err error
+		config.DisableMlock, err = strconv.ParseBool(envMlock)
+		if err != nil {
+			c.UI.Output("Error parsing the environment variable VAULT_DISABLE_MLOCK")
+			return 1
+		}
+	}
 
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
@@ -1592,6 +1609,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// If we're in Dev mode, then initialize the core
 	if c.flagDev && !c.flagDevSkipInit {
+
 		init, err := c.enableDev(core, coreConfig)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing Dev mode: %s", err))
@@ -1630,69 +1648,77 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			sort.Strings(plugins)
 		}
 
-		// Print the big dev mode warning!
-		c.UI.Warn(wrapAtLength(
-			"WARNING! dev mode is enabled! In this mode, Vault runs entirely " +
-				"in-memory and starts unsealed with a single unseal key. The root " +
-				"token is already authenticated to the CLI, so you can immediately " +
-				"begin using Vault."))
-		c.UI.Warn("")
-		c.UI.Warn("You may need to set the following environment variable:")
-		c.UI.Warn("")
+		var qw *quiescenceSink
+		qw = &quiescenceSink{
+			t: time.AfterFunc(100*time.Millisecond, func() {
+				// Print the big dev mode warning!
+				c.UI.Warn(wrapAtLength(
+					"WARNING! dev mode is enabled! In this mode, Vault runs entirely " +
+						"in-memory and starts unsealed with a single unseal key. The root " +
+						"token is already authenticated to the CLI, so you can immediately " +
+						"begin using Vault."))
+				c.UI.Warn("")
+				c.UI.Warn("You may need to set the following environment variable:")
+				c.UI.Warn("")
 
-		endpointURL := "http://" + config.Listeners[0].Address
-		if runtime.GOOS == "windows" {
-			c.UI.Warn("PowerShell:")
-			c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\"", endpointURL))
-			c.UI.Warn("cmd.exe:")
-			c.UI.Warn(fmt.Sprintf("    set VAULT_ADDR=%s", endpointURL))
-		} else {
-			c.UI.Warn(fmt.Sprintf("    $ export VAULT_ADDR='%s'", endpointURL))
+				endpointURL := "http://" + config.Listeners[0].Address
+				if runtime.GOOS == "windows" {
+					c.UI.Warn("PowerShell:")
+					c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\"", endpointURL))
+					c.UI.Warn("cmd.exe:")
+					c.UI.Warn(fmt.Sprintf("    set VAULT_ADDR=%s", endpointURL))
+				} else {
+					c.UI.Warn(fmt.Sprintf("    $ export VAULT_ADDR='%s'", endpointURL))
+				}
+
+				// Unseal key is not returned if stored shares is supported
+				if len(init.SecretShares) > 0 {
+					c.UI.Warn("")
+					c.UI.Warn(wrapAtLength(
+						"The unseal key and root token are displayed below in case you want " +
+							"to seal/unseal the Vault or re-authenticate."))
+					c.UI.Warn("")
+					c.UI.Warn(fmt.Sprintf("Unseal Key: %s", base64.StdEncoding.EncodeToString(init.SecretShares[0])))
+				}
+
+				if len(init.RecoveryShares) > 0 {
+					c.UI.Warn("")
+					c.UI.Warn(wrapAtLength(
+						"The recovery key and root token are displayed below in case you want " +
+							"to seal/unseal the Vault or re-authenticate."))
+					c.UI.Warn("")
+					c.UI.Warn(fmt.Sprintf("Recovery Key: %s", base64.StdEncoding.EncodeToString(init.RecoveryShares[0])))
+				}
+
+				c.UI.Warn(fmt.Sprintf("Root Token: %s", init.RootToken))
+
+				if len(plugins) > 0 {
+					c.UI.Warn("")
+					c.UI.Warn(wrapAtLength(
+						"The following dev plugins are registered in the catalog:"))
+					for _, p := range plugins {
+						c.UI.Warn(fmt.Sprintf("    - %s", p))
+					}
+				}
+
+				if len(pluginsNotLoaded) > 0 {
+					c.UI.Warn("")
+					c.UI.Warn(wrapAtLength(
+						"The following dev plugins FAILED to be registered in the catalog due to unknown type:"))
+					for _, p := range pluginsNotLoaded {
+						c.UI.Warn(fmt.Sprintf("    - %s", p))
+					}
+				}
+
+				c.UI.Warn("")
+				c.UI.Warn(wrapAtLength(
+					"Development mode should NOT be used in production installations!"))
+				c.UI.Warn("")
+				c.logger.DeregisterSink(qw)
+
+			}),
 		}
-
-		// Unseal key is not returned if stored shares is supported
-		if len(init.SecretShares) > 0 {
-			c.UI.Warn("")
-			c.UI.Warn(wrapAtLength(
-				"The unseal key and root token are displayed below in case you want " +
-					"to seal/unseal the Vault or re-authenticate."))
-			c.UI.Warn("")
-			c.UI.Warn(fmt.Sprintf("Unseal Key: %s", base64.StdEncoding.EncodeToString(init.SecretShares[0])))
-		}
-
-		if len(init.RecoveryShares) > 0 {
-			c.UI.Warn("")
-			c.UI.Warn(wrapAtLength(
-				"The recovery key and root token are displayed below in case you want " +
-					"to seal/unseal the Vault or re-authenticate."))
-			c.UI.Warn("")
-			c.UI.Warn(fmt.Sprintf("Recovery Key: %s", base64.StdEncoding.EncodeToString(init.RecoveryShares[0])))
-		}
-
-		c.UI.Warn(fmt.Sprintf("Root Token: %s", init.RootToken))
-
-		if len(plugins) > 0 {
-			c.UI.Warn("")
-			c.UI.Warn(wrapAtLength(
-				"The following dev plugins are registered in the catalog:"))
-			for _, p := range plugins {
-				c.UI.Warn(fmt.Sprintf("    - %s", p))
-			}
-		}
-
-		if len(pluginsNotLoaded) > 0 {
-			c.UI.Warn("")
-			c.UI.Warn(wrapAtLength(
-				"The following dev plugins FAILED to be registered in the catalog due to unknown type:"))
-			for _, p := range pluginsNotLoaded {
-				c.UI.Warn(fmt.Sprintf("    - %s", p))
-			}
-		}
-
-		c.UI.Warn("")
-		c.UI.Warn(wrapAtLength(
-			"Development mode should NOT be used in production installations!"))
-		c.UI.Warn("")
+		c.logger.RegisterSink(qw)
 	}
 
 	// Initialize the HTTP servers

@@ -73,6 +73,11 @@ The 'rate' must be positive.`,
 					Type:        framework.TypeDurationSecond,
 					Description: "The duration to enforce rate limiting for (default '1s').",
 				},
+				"block_interval": {
+					Type: framework.TypeDurationSecond,
+					Description: `If set, when a client reaches a rate limit threshold, the client will be prohibited
+from any further requests until after the 'block_interval' has elapsed.`,
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
@@ -154,6 +159,11 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			interval = time.Second
 		}
 
+		blockInterval := time.Second * time.Duration(d.Get("block_interval").(int))
+		if blockInterval < 0 {
+			return logical.ErrorResponse("'block' is invalid"), nil
+		}
+
 		mountPath := sanitizePath(d.Get("path").(string))
 		ns := b.Core.namespaceByPath(mountPath)
 		if ns.ID != namespace.RootNamespaceID {
@@ -185,13 +195,14 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 				return logical.ErrorResponse("quota rule with similar properties exists under the name %q", quotaByFactors.QuotaName()), nil
 			}
 
-			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, rate, interval)
+			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, rate, interval, blockInterval)
 		default:
 			rlq := quota.(*quotas.RateLimitQuota)
 			rlq.NamespacePath = ns.Path
 			rlq.MountPath = mountPath
 			rlq.Rate = rate
 			rlq.Interval = interval
+			rlq.BlockInterval = blockInterval
 		}
 
 		entry, err := logical.StorageEntryJSON(quotas.QuotaStoragePath(qType, name), quota)
@@ -232,11 +243,12 @@ func (b *SystemBackend) handleRateLimitQuotasRead() framework.OperationFunc {
 		}
 
 		data := map[string]interface{}{
-			"type":     qType,
-			"name":     rlq.Name,
-			"path":     nsPath + rlq.MountPath,
-			"rate":     rlq.Rate,
-			"interval": int(rlq.Interval.Seconds()),
+			"type":           qType,
+			"name":           rlq.Name,
+			"path":           nsPath + rlq.MountPath,
+			"rate":           rlq.Rate,
+			"interval":       int(rlq.Interval.Seconds()),
+			"block_interval": int(rlq.BlockInterval.Seconds()),
 		}
 
 		return &logical.Response{
