@@ -66,6 +66,10 @@ func Encode(src []byte) string {
 	var x big.Int
 	x.SetBytes(src)
 
+	// for x > 0 {
+	//   str = (charset[x%62]) + str
+	//   x = x/62
+	// }
 	for x.Cmp(&zero) > 0 {
 		x.DivMod(&x, csLenBig, &rem)
 		b = string(charset[int(rem.Int64())]) + b
@@ -80,6 +84,7 @@ func DecodeString(src string) ([]byte, error) {
 	var y big.Int
 	var e big.Int
 
+	// n = c[0]*62^0 + c[1]*62^1 + c[2]*62^2 ...
 	strlen := len(src)
 	for i, c := range src {
 		idx := strings.IndexRune(charset, c)
