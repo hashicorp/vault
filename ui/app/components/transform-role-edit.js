@@ -110,9 +110,8 @@ export default TransformBase.extend({
         id: t,
         action: 'REMOVE',
       }));
-      this.applyDelete(() => {
-        this.handleUpdateTransformations(updateTransformations, roleId);
-      });
+      this.handleUpdateTransformations(updateTransformations, roleId);
+      this.applyDelete();
     },
   },
 });

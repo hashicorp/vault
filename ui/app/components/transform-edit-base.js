@@ -46,7 +46,7 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   transitionToRoute() {
-    this.get('router').transitionTo(...arguments);
+    this.router.transitionTo(...arguments);
   },
 
   modelPrefixFromType(modelType) {
@@ -56,6 +56,15 @@ export default Component.extend(FocusOnInsertMixin, {
     }
     return modelPrefix;
   },
+
+  listTabFromType(modelType) {
+    let tab;
+    if (modelType && modelType.startsWith('transform/')) {
+      tab = `${modelType.replace('transform/', '')}`;
+    }
+    return tab;
+  },
+
   persist(method, successCallback) {
     const model = get(this, 'model');
     return model[method]()
@@ -69,11 +78,12 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   applyDelete(callback = () => {}) {
+    const tab = this.listTabFromType(this.get('model.constructor.modelName'));
     this.persist('destroyRecord', () => {
       this.hasDataChanges();
       callback();
       // TODO: Investigate what is causing a console error after this point
-      this.transitionToRoute(LIST_ROOT_ROUTE);
+      this.transitionToRoute(LIST_ROOT_ROUTE, { queryParams: { tab } });
     });
   },
 
