@@ -4,31 +4,22 @@
     <div class="content">
       <p>Return the cryptographic signature of the given data using <code>{{key.name}}</code> as the encryption key and the specified hash algorithm.</p>
     </div>
-    {{key-version-select
-      key=key
-      onVersionChange=(action (mut key_version))
-      key_version=key_version
-    }}
+    <KeyVersionSelect @key={{key}} @onVersionChange={{action (mut key_version)}} @key_version={{key_version}} />
     <div class="field">
       <label for="input" class="is-label">
         Input
       </label>
       <div class="control is-relative">
-        {{ivy-codemirror
-            value=input
-            valueUpdated=(action (mut input))
-            options=(hash
+        <IvyCodemirror @value={{input}} @valueUpdated={{action (mut input)}} @options={{hash
               lineNumbers=true
               tabSize=2
               mode='ruby'
               theme='hashi'
-            )
-            data-test-transit-input="input"
-          }}
+            }} @data-test-transit-input="input" />
       </div>
     </div>
     <div class="field">
-      {{input type="checkbox" id="encodedBase64" checked=encodedBase64 data-test-transit-input="encodedBase64"}}
+      <Input @type="checkbox" @id="encodedBase64" @checked={{encodedBase64}} data-test-transit-input="encodedBase64" />
       <label for="encodedBase64">This data is already encoded in base64</label>
     </div>
     {{#if key.derived}}
@@ -38,10 +29,10 @@
         </label>
         <div class="field has-addons">
           <div class="control">
-            {{input type="text" id="context" value=context class="input" data-test-transit-input="context"}}
+            <Input @type="text" @id="context" @value={{context}} class="input" data-test-transit-input="context" />
           </div>
           <div class="control">
-            {{b64-toggle value=context data-test-transit-b64-toggle="context"}}
+            <B64Toggle @value={{context}} @data-test-transit-b64-toggle="context" />
           </div>
         </div>
       </div>
@@ -53,7 +44,7 @@
         </div>
         <div class="level-right">
           <div class="control is-flex">
-            {{input  id="prehashed" type="checkbox" name="prehashed" class="switch is-rounded is-success is-small" checked=prehashed }}
+            <Input @id="prehashed" @type="checkbox" @name="prehashed" class="switch is-rounded is-success is-small" @checked={{prehashed}} />
             <label for="prehashed">Prehashed</label>
           </div>
         </div>

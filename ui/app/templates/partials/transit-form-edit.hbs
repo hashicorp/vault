@@ -1,6 +1,6 @@
 <form onsubmit={{action "createOrUpdateKey" "create"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    {{message-error model=key}}
+    <MessageError @model={{key}} />
     <NamespaceReminder @mode="edit" @noun="transit key" />
     <div class="field">
       <div class="b-checkbox">
@@ -81,13 +81,9 @@
           </div>
         {{/if}}
         <div class="control">
-          {{#secret-link
-            mode="show"
-            secret=key.id
-            class="button"
-          }}
+          <SecretLink @mode="show" @secret={{key.id}} @class="button">
             Cancel
-          {{/secret-link}}
+          </SecretLink>
         </div>
       </div>
       {{#if (and key.canDelete capabilities.canDelete)}}

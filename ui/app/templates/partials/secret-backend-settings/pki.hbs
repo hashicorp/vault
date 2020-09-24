@@ -2,8 +2,8 @@
   <nav class="tabs">
     <ul>
       {{#each (array 'cert' 'urls' 'crl' 'tidy') as |section|}}
-        {{#link-to 'vault.cluster.settings.configure-secret-backend.section' section tagName="li" activeClass="is-active"}}
-          {{#link-to 'vault.cluster.settings.configure-secret-backend.section' section}}
+        <LinkTo @route="vault.cluster.settings.configure-secret-backend.section" @model={{section}} @tagName="li" @activeClass="is-active">
+          <LinkTo @route="vault.cluster.settings.configure-secret-backend.section" @model={{section}}>
             {{#if (eq section 'cert')}}
               CA certificate
             {{else if (eq section 'urls')}}
@@ -13,8 +13,8 @@
             {{else if (eq section 'tidy')}}
               Tidy
             {{/if}}
-          {{/link-to}}
-        {{/link-to}}
+          </LinkTo>
+        </LinkTo>
       {{/each}}
     </ul>
   </nav>

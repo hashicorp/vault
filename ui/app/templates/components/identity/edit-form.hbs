@@ -15,7 +15,7 @@
 <form {{action (perform save) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode={{mode}} @noun={{lowercase (humanize model.identityType)}} />
-    {{message-error model=model}}
+    <MessageError @model={{model}} />
     {{#if (eq mode "merge")}}
       <AlertBanner
         @type="warning"
@@ -38,13 +38,13 @@
           {{/if}}
         </button>
         {{#if (or (eq mode "merge") (eq mode "create" ))}}
-          {{#link-to cancelLink class="button" data-test-cancel-link=true}}
+          <LinkTo @route={{cancelLink}} class="button" data-test-cancel-link={{true}}>
             Cancel
-          {{/link-to}}
+          </LinkTo>
         {{else}}
-          {{#link-to cancelLink model.id "details" class="button" data-test-cancel-link=true}}
+          <LinkTo @route={{cancelLink}} @models={{array model.id "details"}} class="button" data-test-cancel-link={{true}}>
             Cancel
-          {{/link-to}}
+          </LinkTo>
         {{/if}}
       </div>
     </div>

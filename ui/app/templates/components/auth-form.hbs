@@ -10,17 +10,17 @@
         {{#each methodsToShow as |method|}}
           {{#with (or method.path method.type) as |methodKey|}}
               <li class="{{if (and selectedAuthIsPath (eq (or selectedAuthBackend.path selectedAuthBackend.type) methodKey)) 'is-active' ''}}" data-test-auth-method>
-                {{#link-to 'vault.cluster.auth' cluster.name (query-params with=methodKey) data-test-auth-method-link=method.type}}
+                <LinkTo @route="vault.cluster.auth" @model={{cluster.name}} @query={{hash with=methodKey}} data-test-auth-method-link={{method.type}}>
                   {{or method.id (capitalize method.type)}}
-                {{/link-to}}
+                </LinkTo>
               </li>
           {{/with}}
         {{/each}}
         {{#if hasMethodsWithPath}}
           <li class="{{unless selectedAuthIsPath 'is-active' ''}}" data-test-auth-method>
-            {{#link-to 'vault.cluster.auth' cluster.name (query-params with='token') data-test-auth-method-link="other"}}
+            <LinkTo @route="vault.cluster.auth" @model={{cluster.name}} @query={{hash with='token'}} data-test-auth-method-link="other">
               Other
-            {{/link-to}}
+            </LinkTo>
           </li>
         {{/if}}
       </ul>
@@ -35,7 +35,7 @@
       <Select
         @label='Method'
         @name='auth-method'
-        @options={{supported-auth-backends}}
+        @options=<SupportedAuthBackends />
         @valueAttribute={{'type'}}
         @labelAttribute={{'typeDisplay'}}
         @isFullwidth={{true}}

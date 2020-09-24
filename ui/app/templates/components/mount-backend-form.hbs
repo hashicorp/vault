@@ -30,18 +30,10 @@
       @noun={{if (eq mountType "auth") "Auth Method" "Secret Engine"}}
      />
 
-    {{message-error model=mountModel}}
+    <MessageError @model={{mountModel}} />
     {{#if showEnable}}
-      {{form-field-groups
-        model=mountModel
-        onChange=(action "onTypeChange")
-        renderGroup="default"
-      }}
-      {{form-field-groups
-        model=mountModel
-        onChange=(action "onTypeChange")
-        renderGroup="Method Options"
-      }}
+      <FormFieldGroups @model={{mountModel}} @onChange={{action "onTypeChange"}} @renderGroup="default" />
+      <FormFieldGroups @model={{mountModel}} @onChange={{action "onTypeChange"}} @renderGroup="Method Options" />
     {{else}}
       {{#each (array "generic" "cloud" "infra") as |category|}}
         <h3 class="title box-radio-header">

@@ -1,4 +1,4 @@
-{{#popup-menu name="role-aws-nav"}}
+<PopupMenu @name="role-aws-nav">
   <Confirm as |c|>
     <nav class="menu">
       {{#if (or item.generatePath.isPending item.signPath.isPending)}}
@@ -13,16 +13,16 @@
         <ul class="menu-list">
           {{#if item.canGenerate}}
             <li class="action">
-              {{#link-to "vault.cluster.secrets.backend.credentials" item.id (query-params action="issue") data-test-role-pki-link="generate-certificate"}}
+              <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{item.id}} @query={{hash action="issue"}} data-test-role-pki-link="generate-certificate">
                 Generate certificate
-              {{/link-to}}
+              </LinkTo>
             </li>
           {{/if}}
           {{#if item.canSign}}
             <li class="action">
-              {{#link-to "vault.cluster.secrets.backend.credentials" item.id (query-params action="sign") data-test-role-pki-link="sign-certificate"}}
+              <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{item.id}} @query={{hash action="sign"}} data-test-role-pki-link="sign-certificate">
                 Sign certificate
-              {{/link-to}}
+              </LinkTo>
             </li>
           {{/if}}
         </ul>
@@ -42,16 +42,16 @@
         {{else}}
           {{#if item.canRead}}
             <li class="action">
-              {{#link-to "vault.cluster.secrets.backend.show" item.id data-test-role-pki-link="show"}}
+              <LinkTo @route="vault.cluster.secrets.backend.show" @model={{item.id}} data-test-role-pki-link="show">
                 Details
-              {{/link-to}}
+              </LinkTo>
             </li>
           {{/if}}
           {{#if item.canEdit}}
             <li class="action">
-              {{#link-to "vault.cluster.secrets.backend.edit" item.id data-test-role-pki-link="edit"}}
+              <LinkTo @route="vault.cluster.secrets.backend.edit" @model={{item.id}} data-test-role-pki-link="edit">
                 Edit
-              {{/link-to}}
+              </LinkTo>
             </li>
           {{/if}}
           {{#if item.canDelete}}
@@ -66,4 +66,4 @@
       </ul>
     </nav>
   </Confirm>
-{{/popup-menu}}
+</PopupMenu>

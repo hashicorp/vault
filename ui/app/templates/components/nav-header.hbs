@@ -36,4 +36,4 @@
 
   <div class="navbar-drawer-overlay{{if navDrawerOpen ' is-active'}}" onclick={{action "toggleNavDrawer" (not navDrawerOpen)}}></div>
 </nav>
-{{console/ui-panel isFullscreen=consoleFullscreen}}
+<Console::UiPanel @isFullscreen={{consoleFullscreen}} />

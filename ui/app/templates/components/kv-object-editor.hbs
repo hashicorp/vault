@@ -2,34 +2,19 @@
   <label class="title is-4" data-test-kv-label="true">
     {{label}}
     {{#if helpText}}
-      {{#info-tooltip}}
+      <InfoTooltip>
         {{helpText}}
-      {{/info-tooltip}}
+      </InfoTooltip>
     {{/if}}
   </label>
 {{/if}}
 {{#each kvData as |row index|}}
   <div class="columns is-variable is-1" data-test-kv-row>
     <div class="column is-one-quarter">
-      {{input
-        data-test-kv-key=true
-        value=row.name
-        placeholder="key"
-        change=(action "updateRow" row index)
-        class="input"
-      }}
+      <Input data-test-kv-key={{true}} @value={{row.name}} placeholder="key" @change={{action "updateRow" row index}} class="input" />
     </div>
     <div class="column">
-      {{textarea
-        data-test-kv-value=true
-        name=row.name
-        change=(action "updateRow" row index)
-        value=row.value
-        wrap="off"
-        class="input"
-        placeholder="value"
-        rows=1
-      }}
+      <Textarea data-test-kv-value={{true}} @name={{row.name}} @change={{action "updateRow" row index}} @value={{row.value}} @wrap="off" class="input" placeholder="value" @rows={{1}} />
     </div>
     <div class="column is-narrow">
       {{#if (eq kvData.length (inc index))}}

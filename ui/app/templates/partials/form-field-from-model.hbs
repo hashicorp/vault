@@ -20,7 +20,7 @@
     <label for="{{attr.name}}" class="is-label">
       {{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
       {{#if attr.options.helpText}}
-        {{#info-tooltip}}{{attr.options.helpText}}{{/info-tooltip}}
+        <InfoTooltip>{{attr.options.helpText}}</InfoTooltip>
       {{/if}}
     </label>
   {{/unless}}
@@ -52,12 +52,7 @@
   />
   {{else if (or (eq attr.type "number") (eq attr.type "string"))}}
     <div class="control">
-      {{input
-        id=attr.name
-        value=(get model (or attr.options.fieldValue attr.name))
-        class="input"
-        data-test-input=attr.name
-      }}
+      <Input @id={{attr.name}} @value={{get model (or attr.options.fieldValue attr.name)}} class="input" data-test-input={{attr.name}} />
     </div>
   {{else if (eq attr.type "boolean")}}
     <div class="b-checkbox">
@@ -73,16 +68,11 @@
       <label for="{{attr.name}}" class="is-label">
         {{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
         {{#if attr.options.helpText}}
-          {{#info-tooltip}}{{attr.options.helpText}}{{/info-tooltip}}
+          <InfoTooltip>{{attr.options.helpText}}</InfoTooltip>
         {{/if}}
       </label>
     </div>
   {{else if (eq attr.type "object")}}
-    {{json-editor
-      value=(if
-        (get model attr.name) (stringify (get model attr.name)) emptyData
-      )
-      valueUpdated=(action "codemirrorUpdated" attr.name)
-    }}
+    <JsonEditor @value={{if (get model attr.name) (stringify (get model attr.name)) emptyData}} @valueUpdated={{action "codemirrorUpdated" attr.name}} />
   {{/if}}
 </div>

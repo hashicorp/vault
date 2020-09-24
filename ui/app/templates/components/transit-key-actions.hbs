@@ -12,7 +12,7 @@
     </ConfirmAction>
   {{/if}}
 {{else}}
-  {{message-error errors=errors}}
+  <MessageError @errors={{errors}} />
   {{#if selectedAction}}
     <div data-test-transit-action={{selectedAction}}>
     {{partial (concat 'components/transit-key-action/' selectedAction)}}

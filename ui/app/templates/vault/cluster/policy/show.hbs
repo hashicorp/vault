@@ -2,10 +2,10 @@
   <p.top>
     <nav class="breadcrumb">
       <li>
-        {{#link-to "vault.cluster.policies" policyType data-test-policy-list-link=true}}
+        <LinkTo @route="vault.cluster.policies" @model={{policyType}} data-test-policy-list-link={{true}}>
           <span class="sep">&#x0002f;</span>
           {{uppercase policyType}} policies
-        {{/link-to}}
+        </LinkTo>
       </li>
     </nav>
   </p.top>
@@ -48,16 +48,13 @@
         </span>
       {{/if}}
     </label>
-    {{ivy-codemirror
-      value=model.policy
-      options=(hash
+    <IvyCodemirror @value={{model.policy}} @options={{hash
         readOnly=true
         lineNumbers=true
         tabSize=2
         mode='ruby'
         theme='hashi'
-      )
-    }}
+      }} />
   </div>
   {{#if model.paths}}
     <div class="field box is-shadowless no-bottom-padding is-marginless">

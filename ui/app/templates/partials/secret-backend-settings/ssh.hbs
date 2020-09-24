@@ -5,27 +5,15 @@
         Public key
       </label>
       <div class="control">
-        {{textarea
-          name="publicKey"
-          id="publicKey"
-          class="textarea"
-          value=model.publicKey
-          readonly=true
-          data-test-ssh-input="public-key"
-        }}
+        <Textarea @name="publicKey" @id="publicKey" class="textarea" @value={{model.publicKey}} @readonly={{true}} data-test-ssh-input="public-key" />
       </div>
     </div>
   </div>
   <div class="field is-grouped-split box is-fullwidth is-bottomless">
     <div class="control">
-      {{#copy-button
-        clipboardTarget="#publicKey"
-        class="button is-primary"
-        buttonType="button"
-        success=(action (set-flash-message "Public Key copied!"))
-      }}
+      <CopyButton @clipboardTarget="#publicKey" @class="button is-primary" @buttonType="button" @success={{action (set-flash-message "Public Key copied!")}}>
         Copy
-      {{/copy-button}}
+      </CopyButton>
     </div>
     <div class="control">
       <ConfirmAction
@@ -46,7 +34,7 @@
           Private key
         </label>
         <div class="control">
-          {{textarea name="privateKey" id="privateKey" class="input" value=model.privateKey}}
+          <Textarea @name="privateKey" @id="privateKey" class="input" @value={{model.privateKey}} />
         </div>
       </div>
       <div class="field">
@@ -54,7 +42,7 @@
           Public key
         </label>
         <div class="control">
-          {{textarea name="publicKey" id="publicKey" class="input" value=model.publicKey}}
+          <Textarea @name="publicKey" @id="publicKey" class="input" @value={{model.publicKey}} />
         </div>
       </div>
       <div class="b-checkbox">
@@ -67,9 +55,9 @@
         />
         <label for="generateSigningKey" class="is-label">
           Generate signing key
-          {{#info-tooltip}}
+          <InfoTooltip>
             Specifies if Vault should generate the signing key pair internally
-          {{/info-tooltip}}
+          </InfoTooltip>
         </label>
       </div>
     </div>

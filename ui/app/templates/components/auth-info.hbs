@@ -54,9 +54,9 @@
           {{/if}}
         {{/if}}
         <li class="action">
-          {{#link-to "vault.cluster.logout" activeClusterName id="logout" class="is-destroy" invokeAction=onLinkClick}}
+          <LinkTo @route="vault.cluster.logout" @model={{activeClusterName}} @id="logout" class="is-destroy" @invokeAction={{onLinkClick}}>
             Sign out
-          {{/link-to}}
+          </LinkTo>
         </li>
       </ul>
     </nav>

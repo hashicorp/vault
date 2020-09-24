@@ -1,7 +1,7 @@
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{#link-to "vault.cluster.access.leases"}}Leases{{/link-to}}
+      <LinkTo @route="vault.cluster.access.leases">Leases</LinkTo>
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -20,18 +20,18 @@
     @title="No leases with that ID"
     @message="Unable to find lease for the ID &quot;{{model.keyId}}&quot;. Try going back to the lookup and re-entering the ID."
   >
-    {{#link-to "vault.cluster.access.leases" class="link"}}
+    <LinkTo @route="vault.cluster.access.leases" class="link">
       Back to lookup
-    {{/link-to}}
+    </LinkTo>
   </EmptyState>
 {{else if (eq model.httpStatus 403)}}
   <EmptyState
     @title="You don't have access to a lease with that ID"
     @message="If you think you've reached this page in error, please contact your administrator."
   >
-    {{#link-to "vault.cluster.access.leases" class="link"}}
+    <LinkTo @route="vault.cluster.access.leases" class="link">
       Back to lookup
-    {{/link-to}}
+    </LinkTo>
   </EmptyState>
 {{else}}
   {{#each model.errors as |error|}}

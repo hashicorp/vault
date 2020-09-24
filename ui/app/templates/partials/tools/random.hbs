@@ -13,14 +13,9 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      {{#copy-button
-        clipboardText=random_bytes
-        class="button is-primary"
-        buttonType="button"
-        success=(action (set-flash-message 'Random bytes copied!'))
-      }}
+      <CopyButton @clipboardText={{random_bytes}} @class="button is-primary" @buttonType="button" @success={{action (set-flash-message "Random bytes copied!")}}>
         Copy
-      {{/copy-button}}
+      </CopyButton>
     </div>
     <div class="control">
       <button {{action 'onClear'}} type="button" class="button">
@@ -30,7 +25,7 @@
   </div>
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
-    {{message-error errors=errors}}
+    <MessageError @errors={{errors}} />
     <div class="field is-horizontal">
       <div class="field-body">
         <div class="field">
@@ -38,7 +33,7 @@
             Number of bytes
           </label>
           <div class="control">
-            {{input id="bytes" class="input" value=bytes data-test-tools-input="bytes"}}
+            <Input @id="bytes" class="input" @value={{bytes}} data-test-tools-input="bytes" />
           </div>
         </div>
         <div class="field">

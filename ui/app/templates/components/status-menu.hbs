@@ -1,12 +1,12 @@
-{{#basic-dropdown horizontalPosition="auto-left" verticalPosition="below" renderInPlace=media.isMobile as |d|}}
-  {{#d.trigger tagName=(if (eq type "replication") "span" "button") class=(if (eq type "replication") "" "button is-transparent")}}
+<BasicDropdown @horizontalPosition="auto-left" @verticalPosition="below" @renderInPlace={{media.isMobile}} as |d|>
+  <d.trigger @tagName={{if (eq type "replication") "span" "button"}} @class={{if (eq type "replication") "" "button is-transparent"}}>
     <Icon @glyph={{glyphName}} @size="l" aria-label={{ariaLabel}} />
     <div class="status-menu-label">
       {{label}}
     </div>
     <Chevron @direction="down" class="has-text-white is-status-chevron"/>
-  {{/d.trigger}}
-  {{#d.content class=(concat "status-menu-content status-menu-content-" type)}}
+  </d.trigger>
+  <d.content @class={{concat "status-menu-content status-menu-content-" type}}>
     {{partial partialName}}
-  {{/d.content}}
-{{/basic-dropdown}}
+  </d.content>
+</BasicDropdown>

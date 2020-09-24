@@ -17,14 +17,9 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      {{#copy-button
-        clipboardText=sum
-        class="button is-primary"
-        buttonType="button"
-        success=(action (set-flash-message 'Hashed data copied!'))
-      }}
+      <CopyButton @clipboardText={{sum}} @class="button is-primary" @buttonType="button" @success={{action (set-flash-message "Hashed data copied!")}}>
       Copy
-      {{/copy-button}}
+      </CopyButton>
     </div>
     <div class="control">
       <button {{action 'onClear'}} type="button" class="button" data-test-tools-back=true>
@@ -34,14 +29,14 @@
   </div>
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
-    {{message-error errors=errors}}
+    <MessageError @errors={{errors}} />
     <div class="field">
       <label for="input" class="is-label">
         Input
       </label>
       <div class="control">
-        {{textarea id="input" name="input" value=input class="textarea" data-test-tools-input="hash-input"}}
-        {{b64-toggle value=input isInput=false data-test-tools-b64-toggle="input"}}
+        <Textarea @id="input" @name="input" @value={{input}} class="textarea" data-test-tools-input="hash-input" />
+        <B64Toggle @value={{input}} @isInput={{false}} @data-test-tools-b64-toggle="input" />
       </div>
     </div>
     <div class="field is-horizontal">

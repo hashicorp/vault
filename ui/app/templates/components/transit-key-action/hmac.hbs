@@ -4,34 +4,22 @@
     <div class="content">
       <p>Generate the digest of given data using the specified hash algorithm and <code>{{key.name}}</code> as the named key.</p>
     </div>
-    {{key-version-select
-      key=key
-      onVersionChange=(action (mut key_version))
-      key_version=key_version
-    }}
+    <KeyVersionSelect @key={{key}} @onVersionChange={{action (mut key_version)}} @key_version={{key_version}} />
     <div class="field">
       <label for="input" class="is-label">
         Input
       </label>
       <div id="input-control" class="control is-relative">
-        {{ivy-codemirror
-          valueUpdated=(action (mut input))
-          options=(hash
+        <IvyCodemirror @valueUpdated={{action (mut input)}} @options={{hash
             lineNumbers=true
             tabSize=2
             mode='ruby'
             theme='hashi'
-          )
-          data-test-transit-input="input"
-        }}
+          }} @data-test-transit-input="input" />
       </div>
     </div>
     <div class="field">
-      {{input
-        type="checkbox"
-        id="encodedBase64"
-        checked=encodedBase64
-        data-test-transit-input="encodedBase64" }}
+      <Input @type="checkbox" @id="encodedBase64" @checked={{encodedBase64}} data-test-transit-input="encodedBase64" />
       <label for="encodedBase64">This data is already encoded in base64</label>
     </div>
     <div class="field">

@@ -1,25 +1,11 @@
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
   {{#each model.transformFieldAttrs as |attr|}}
     {{#if (eq attr.type "object")}}
-      {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(stringify (get model attr.name))}}
+      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get model attr.name)}} />
     {{else if (eq attr.type "array")}}
-      {{info-table-row
-        label=(capitalize (or attr.options.label (humanize (dasherize attr.name))))
-        value=(get model attr.name)
-        type=attr.type
-        isLink=(eq attr.name 'allowed_roles')
-        queryParam="role"
-        modelType="transform/role"
-        wildcardLabel=attr.options.wildcardLabel
-        viewAll="roles"
-        backend=model.backend
-      }}
+      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}} @type={{attr.type}} @isLink={{eq attr.name "allowed_roles"}} @queryParam="role" @modelType="transform/role" @wildcardLabel={{attr.options.wildcardLabel}} @viewAll="roles" @backend={{model.backend}} />
     {{else}}
-      {{info-table-row
-        label=(capitalize (or attr.options.label (humanize (dasherize attr.name))))
-        value=(get model attr.name)
-        type=attr.type
-      }}
+      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}} @type={{attr.type}} />
     {{/if}}
   {{/each}}
 </div>
