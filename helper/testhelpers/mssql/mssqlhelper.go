@@ -13,28 +13,37 @@ import (
 
 const mssqlPassword = "yourStrong(!)Password"
 
+// This constant is used in retrying the mssql container restart, since
+// intermittently the container starts but mssql within the container
+// is unreachable.
+const numRetries = 5
+
 func PrepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	if os.Getenv("MSSQL_URL") != "" {
 		return func() {}, os.Getenv("MSSQL_URL")
 	}
+	var svc *docker.Service
+	var err error
+	for i := 0; i < numRetries; i++ {
+		runner, err := docker.NewServiceRunner(docker.RunOptions{
+			ContainerName: "sqlserver",
+			ImageRepo:     "mcr.microsoft.com/mssql/server",
+			ImageTag:      "2017-latest-ubuntu",
+			Env:           []string{"ACCEPT_EULA=Y", "SA_PASSWORD=" + mssqlPassword}, // "MSSQL_PID=Express" does nothing
+			Ports:         []string{"1433/tcp"},
+		})
+		if err != nil {
+			t.Fatalf("Could not start docker MSSQL: %s", err)
+		}
 
-	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ContainerName: "sqlserver",
-		ImageRepo:     "mcr.microsoft.com/mssql/server",
-		ImageTag:      "2017-latest-ubuntu",
-		Env:           []string{"ACCEPT_EULA=Y", "SA_PASSWORD=" + mssqlPassword},
-		Ports:         []string{"1433/tcp"},
-	})
-	if err != nil {
-		t.Fatalf("Could not start docker MSSQL: %s", err)
+		svc, err = runner.StartService(context.Background(), connectMSSQL)
+		if err == nil {
+			return svc.Cleanup, svc.Config.URL().String()
+		}
 	}
 
-	svc, err := runner.StartService(context.Background(), connectMSSQL)
-	if err != nil {
-		t.Fatalf("Could not start docker MSSQL: %s", err)
-	}
-
-	return svc.Cleanup, svc.Config.URL().String()
+	t.Fatalf("Could not start docker MSSQL: %s", err)
+	return nil, ""
 }
 
 func connectMSSQL(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
