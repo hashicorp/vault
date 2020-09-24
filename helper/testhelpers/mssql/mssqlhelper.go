@@ -16,7 +16,7 @@ const mssqlPassword = "yourStrong(!)Password"
 // This constant is used in retrying the mssql container restart, since
 // intermittently the container starts but mssql within the container
 // is unreachable.
-const numRetries = 5
+const numRetries = 3
 
 func PrepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	if os.Getenv("MSSQL_URL") != "" {
