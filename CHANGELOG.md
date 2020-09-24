@@ -24,7 +24,11 @@ BUG FIXES:
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-93](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/93)]
 
 ## 1.5.4
-### TBD
+### September 24th, 2020
+
+SECURITY:
+
+* Batch Token Expiry: We addressed an issue where batch token leases could outlive their TTL because we were not scheduling the expiration time correctly. This vulnerability affects Vault OSS and Vault Enterprise 1.0 and newer and is fixed in 1.4.7 and 1.5.4 (CVE-2020-25816).
 
 IMPROVEMENTS:
 
@@ -205,7 +209,12 @@ BUG FIXES:
 * ui: Disallow max versions value of large than 9999999999999999 on kv2 secrets engine. [[GH-9242](https://github.com/hashicorp/vault/pull/9242)]
 * ui: Add and upgrade missing dependencies to resolve a failure with `make static-dist`. [[GH-9277](https://github.com/hashicorp/vault/pull/9371)]
 
-## 1.4.7 (TBD)
+## 1.4.7
+### September 24th, 2020
+
+SECURITY:
+
+* Batch Token Expiry: We addressed an issue where batch token leases could outlive their TTL because we were not scheduling the expiration time correctly. This vulnerability affects Vault OSS and Vault Enterprise 1.0 and newer and is fixed in 1.4.7 and 1.5.4 (CVE-2020-25816).
 
 IMPROVEMENTS:
 
