@@ -29,3 +29,30 @@ func TestRandom(t *testing.T) {
 		}
 	}
 }
+
+func TestDecode(t *testing.T) {
+	str := "A fairly simple test"
+	e := Encode([]byte(str))
+	b, err := Decode(e)
+
+	if err != nil {
+		t.Fail()
+	}
+	if string(b) != str {
+		t.Fail()
+	}
+
+	// A slightly harder test
+	str,err = Random(200)
+	if err != nil {
+		t.Fail()
+	}
+	b, err = Decode(str)
+	if err != nil {
+		t.Fail()
+	}
+	e = Encode(b)
+	if e != str {
+		t.Fail()
+	}
+}
