@@ -14,6 +14,7 @@ import (
 
 const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 const csLen = byte(len(charset))
+
 var csLenBig = big.NewInt(int64(len(charset)))
 
 // Random generates a random string using base-62 characters.
@@ -53,13 +54,15 @@ func RandomWithReader(length int, reader io.Reader) (string, error) {
 	}
 }
 
-// Encode encodes bytes to base62.
+// Encode encodes bytes to base62.  This does *not* scale linearly with input as base64, so use caution
+// when using on large inputs.
 func Encode(src []byte) string {
 	if src == nil {
 		return ""
 	}
 
-	var b string
+	var b strings.Builder
+	b.Grow(int(float32(len(src))*1.4))
 
 	var zero big.Int
 	var rem big.Int
@@ -70,32 +73,44 @@ func Encode(src []byte) string {
 	//   str = (charset[x%62]) + str
 	//   x = x/62
 	// }
-	for x.Cmp(&zero) > 0 {
+	for x.CmpAbs(&zero) > 0 {
 		x.DivMod(&x, csLenBig, &rem)
-		b = string(charset[int(rem.Int64())]) + b
+		b.WriteByte(charset[int(rem.Int64())])
 	}
-	return b
+	return reverse(b.String())
 }
 
-// Decode decodes a base62 string into bytes
-func DecodeString(src string) ([]byte, error) {
+// Decode decodes a base62 string into bytes. This does *not* scale linearly with input as base64, so use caution
+//// when using on large inputs.
+func Decode(dst []byte, src string) ([]byte, error) {
 	var num big.Int
 	var x big.Int
-	var y big.Int
-	var e big.Int
 
 	// n = c[0]*62^0 + c[1]*62^1 + c[2]*62^2 ...
-	strlen := len(src)
 	for i, c := range src {
+		if i > 0 {
+			num.Mul(&num, csLenBig)
+		}
 		idx := strings.IndexRune(charset, c)
 		if idx < 0 {
 			return nil, errors.New("invalid base62 character")
 		}
-		y.SetInt64(int64(strlen - (i + 1)))
-		e.Exp(csLenBig, &y, nil)
-		x.SetInt64(int64(idx))
-		x.Mul(&x, &e)
+		x.SetUint64(uint64(idx))
 		num.Add(&num, &x)
 	}
-	return num.Bytes(), nil
+
+	b := num.Bytes()
+	if cap(dst)<len(b) {
+		return num.Bytes(), nil
+	}
+	copy(dst[cap(dst)-len(b):], b)
+	return dst, nil
+}
+
+func reverse(input string) string {
+	runes := []rune(input)
+	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+		runes[i], runes[j] = runes[j], runes[i]
+	}
+	return string(runes)
 }
