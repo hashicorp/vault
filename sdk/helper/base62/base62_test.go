@@ -3,7 +3,6 @@ package base62
 import (
 	"bytes"
 	"crypto/rand"
-	"strings"
 	"testing"
 )
 
@@ -34,7 +33,7 @@ func TestRandom(t *testing.T) {
 }
 
 func TestDecode(t *testing.T) {
-	str := strings.Repeat("x", 10000)
+	str := "A fairly simple test case"
 
 	e := Encode([]byte(str))
 	b, err := Decode(nil, e)
@@ -47,7 +46,7 @@ func TestDecode(t *testing.T) {
 	}
 
 	input := make([]byte, 4)
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100; i++ {
 		output := make([]byte, 4)
 		rand.Read(input)
 		str = Encode(input)
