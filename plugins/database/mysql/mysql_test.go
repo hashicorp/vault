@@ -18,7 +18,7 @@ import (
 var _ dbplugin.Database = (*MySQL)(nil)
 
 func TestMySQL_Initialize(t *testing.T) {
-	cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, false, "secret")
+	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
 	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
@@ -75,7 +75,7 @@ func TestMySQL_CreateUser(t *testing.T) {
 
 	t.Run("non-legacy", func(t *testing.T) {
 		// Shared test container for speed - there should not be any overlap between the tests
-		cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, false, "secret")
+		cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
 		defer cleanup()
 
 		connectionDetails := map[string]interface{}{
@@ -93,7 +93,7 @@ func TestMySQL_CreateUser(t *testing.T) {
 
 	t.Run("legacy", func(t *testing.T) {
 		// Shared test container for speed - there should not be any overlap between the tests
-		cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, true, "secret")
+		cleanup, connURL := mysqlhelper.PrepareTestContainer(t, true, "secret")
 		defer cleanup()
 
 		connectionDetails := map[string]interface{}{
@@ -204,7 +204,7 @@ func TestMySQL_RotateRootCredentials(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, false, "secret")
+			cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
 			defer cleanup()
 
 			connURL = strings.Replace(connURL, "root:secret", `{{username}}:{{password}}`, -1)
@@ -266,7 +266,7 @@ func TestMySQL_RevokeUser(t *testing.T) {
 	}
 
 	// Shared test container for speed - there should not be any overlap between the tests
-	cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, false, "secret")
+	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
 	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
@@ -344,7 +344,7 @@ func TestMySQL_SetCredentials(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, false, "secret")
+			cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
 			defer cleanup()
 
 			// create the database user and verify we can access
@@ -414,7 +414,7 @@ func TestMySQL_SetCredentials(t *testing.T) {
 
 func TestMySQL_Initialize_ReservedChars(t *testing.T) {
 	pw := "#secret!%25#{@}"
-	cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, false, pw)
+	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, pw)
 	defer cleanup()
 
 	// Revert password set to test replacement by db.Init
