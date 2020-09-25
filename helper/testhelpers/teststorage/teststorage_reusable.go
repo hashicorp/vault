@@ -174,7 +174,7 @@ func makeReusableRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, raft
 	conf := map[string]string{
 		"path":                   raftDir,
 		"node_id":                nodeID,
-		"performance_multiplier": "8",
+		"performance_multiplier": "1",
 	}
 
 	backend, err := raft.NewRaftBackend(conf, logger)

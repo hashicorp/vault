@@ -95,7 +95,7 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.Physi
 	conf := map[string]string{
 		"path":                   raftDir,
 		"node_id":                nodeID,
-		"performance_multiplier": "8",
+		"performance_multiplier": "1",
 	}
 
 	backend, err := raft.NewRaftBackend(conf, logger.Named("raft"))
@@ -133,7 +133,7 @@ func RaftHAFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logg
 		conf := map[string]string{
 			"path":                   raftDir,
 			"node_id":                nodeID,
-			"performance_multiplier": "8",
+			"performance_multiplier": "1",
 		}
 
 		// Create and set the HA Backend
