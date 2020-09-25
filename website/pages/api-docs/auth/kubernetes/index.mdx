@@ -45,13 +45,14 @@ access the Kubernetes API.
 
 ### Caveats
 
-Either `kubernetes_ca_cert` or `pem_keys` must be set.
-
 If Vault is running in a Kubernetes Pod, the `kubernetes_ca_cert` and
-`token_reviewer_jwt` parameters will be automatically set from the local CA cert
+`token_reviewer_jwt` parameters will automatically default to the local CA cert
 (`/var/run/secrets/kubernetes.io/serviceaccount/ca.crt`) and local service
 account JWT (`/var/run/secrets/kubernetes.io/serviceaccount/token`). This
 behavior may be disabled by setting `disable_local_ca_jwt` to `true`.
+
+When Vault is running in a non-Kubernetes environment and `disable_local_ca_jwt`
+is `false`, either `kubernetes_ca_cert` or `pem_keys` must be set.
 
 ### Sample Payload
 
