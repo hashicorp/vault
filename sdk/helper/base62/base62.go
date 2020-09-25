@@ -86,7 +86,8 @@ func Decode(dst []byte, src string) ([]byte, error) {
 	var num big.Int
 	var x big.Int
 
-	// n = c[0]*62^0 + c[1]*62^1 + c[2]*62^2 ...
+	// n = c[0]
+	// n = n * 62 + c[1] ...
 	for i, c := range src {
 		if i > 0 {
 			num.Mul(&num, csLenBig)
