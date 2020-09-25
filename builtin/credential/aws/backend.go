@@ -18,6 +18,7 @@ import (
 )
 
 const amzHeaderPrefix = "X-Amz-"
+
 var defaultAllowedSTSRequestHeaders = []string{
 	"X-Amz-Date",
 	"X-Amz-Credential",
@@ -324,7 +325,7 @@ func generatePartitionToRegionMap() map[string]*endpoints.Region {
 		//
 		//   For "aws-us-gov", choose "us-gov-west-1" because it is the only
 		//   valid region for IAM operations.
-		//
+		//   ref: https://github.com/aws/aws-sdk-go/blob/v1.34.25/aws/endpoints/defaults.go#L8176-L8194
 		for _, r := range p.Regions() {
 			if p.ID() == "aws" && r.ID() != "us-east-1" {
 				continue
