@@ -1,6 +1,9 @@
 package base62
 
 import (
+	"bytes"
+	"crypto/rand"
+	"strings"
 	"testing"
 )
 
@@ -31,9 +34,10 @@ func TestRandom(t *testing.T) {
 }
 
 func TestDecode(t *testing.T) {
-	str := "A fairly simple test"
+	str := strings.Repeat("x", 10000)
+
 	e := Encode([]byte(str))
-	b, err := DecodeString(e)
+	b, err := Decode(nil, e)
 
 	if err != nil {
 		t.Fail()
@@ -42,29 +46,15 @@ func TestDecode(t *testing.T) {
 		t.Fail()
 	}
 
-	// A slightly harder test
-	str,err = Random(200)
-	if err != nil {
-		t.Fail()
-	}
-	b, err = DecodeString(str)
-	if err != nil {
-		t.Fail()
-	}
-	e = Encode(b)
-	if e != str {
-		t.Fail()
-	}
-}
-
-func BenchmarkEncodeDecode(b *testing.B) {
-	str,_ := Random(200)
-	for i := 0; i<b.N; i++ {
-		o, _ := DecodeString(str)
-		e := Encode(o)
-		if e != str {
-			b.Fail()
-			break
+	input := make([]byte, 4)
+	for i := 0; i < 10000; i++ {
+		output := make([]byte, 4)
+		rand.Read(input)
+		str = Encode(input)
+		b, err = Decode(output, str)
+		if !bytes.Equal(b, input) {
+			//e = Encode(b)
+			t.Fail()
 		}
 	}
 }
