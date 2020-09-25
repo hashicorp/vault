@@ -3,8 +3,10 @@ package pgpkeys
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 
@@ -140,4 +142,64 @@ func ReadPGPFile(path string) (string, error) {
 	}
 	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 
+}
+
+// SharePathsFlag implements the flag.Value interface and allows
+// writing the encrypted shares to the specified paths.
+type SharePathsFlag []string
+
+func (p *SharePathsFlag) String() string {
+	return fmt.Sprint(*p)
+}
+
+func (p *SharePathsFlag) Set(val string) error {
+	if len(*p) > 0 {
+		return errors.New("can only be specified once")
+	}
+
+	paths := strings.Split(val, ",")
+	err := ParseSharePaths(paths); if err != nil {
+		return err
+	}
+
+	*p = SharePathsFlag(paths)
+	return nil
+}
+
+func (p *SharePathsFlag) Example() string { return "user1.gpg, user2.gpg, ..." }
+
+// ParseSharePaths takes a list of paths to output encrypted shares and checks
+// if paths don't exist and they are writeable before attempting rekeying
+func ParseSharePaths(SharePaths []string) error {
+	for _, path := range SharePaths {
+		_, err := os.Stat(path)
+		if !os.IsNotExist(err) {
+			return errors.New(fmt.Sprintf("file %s already exists", path))
+		}
+		file, err := os.Create(path)
+		file.Close()
+		if err != nil {
+			return err
+		}
+		os.Remove(path)
+	}
+	return nil
+}
+
+// WriteSharePaths writes the given encrypted shares to specified paths in filesystem.
+func WriteSharePaths(StoredKeys map[string][]string, SharePaths []string) error {
+	if len(StoredKeys) != len(SharePaths) {
+		return errors.New("number of supplied pgp-shares paths does not match number of entries in backup")
+	}
+	i := 0
+	for _, v := range StoredKeys {
+		keyBytes, err := hex.DecodeString(strings.Join(v, "")); if err != nil {
+			return err
+		}
+		err = ioutil.WriteFile(SharePaths[i], keyBytes, 0600); if err != nil {
+			return err
+		}
+		i++
+	}
+	return nil
 }
