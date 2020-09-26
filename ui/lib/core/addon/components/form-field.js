@@ -105,7 +105,7 @@ export default Component.extend({
     },
 
     setAndBroadcast(path, value) {
-      this.model.path = value;
+      this.model.set(path, value);
       this.onChange(path, value);
     },
 
