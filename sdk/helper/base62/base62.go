@@ -16,6 +16,13 @@ const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 const csLen = byte(len(charset))
 
 var csLenBig = big.NewInt(int64(len(charset)))
+var lookup [256]*big.Int
+
+func init() {
+	for i, c := range charset {
+		lookup[c]= big.NewInt(int64(i))
+	}
+}
 
 // Random generates a random string using base-62 characters.
 // Resulting entropy is ~5.95 bits/character.
@@ -64,7 +71,7 @@ func Encode(src []byte) string {
 	var b strings.Builder
 	b.Grow(int(float32(len(src))*1.4))
 
-	var zero big.Int
+	//var zero big.Int
 	var rem big.Int
 	var x big.Int
 	x.SetBytes(src)
@@ -73,7 +80,7 @@ func Encode(src []byte) string {
 	//   str = (charset[x%62]) + str
 	//   x = x/62
 	// }
-	for x.CmpAbs(&zero) > 0 {
+	for x.BitLen() > 0 {
 		x.DivMod(&x, csLenBig, &rem)
 		b.WriteByte(charset[int(rem.Int64())])
 	}
@@ -84,24 +91,32 @@ func Encode(src []byte) string {
 	return reverse(b.String())
 }
 
+var errInvalidBase62Char = errors.New("invalid base62 character")
+
 // Decode decodes a base62 string into bytes. This does *not* scale linearly with input as base64, so use caution
 //// when using on large inputs.
 func DecodeString(src string) ([]byte, error) {
-	var num big.Int
-	var x big.Int
+	if src=="" {
+		return nil, nil
+	}
 
 	// n = c[0]
+	a := lookup[src[0]]
+	if a==nil {
+		return nil, errInvalidBase62Char
+	}
+
+	var num big.Int
+	num.Set(a)
+
 	// n = n * 62 + c[1] ...
-	for i, c := range src {
-		if i > 0 {
-			num.Mul(&num, csLenBig)
+	for _, c := range src[1:] {
+		num.Mul(&num, csLenBig)
+		a = lookup[c]
+		if a == nil {
+			return nil, errInvalidBase62Char
 		}
-		idx := strings.IndexRune(charset, c)
-		if idx < 0 {
-			return nil, errors.New("invalid base62 character")
-		}
-		x.SetUint64(uint64(idx))
-		num.Add(&num, &x)
+		num.Add(&num, a)
 	}
 
 	return num.Bytes(), nil

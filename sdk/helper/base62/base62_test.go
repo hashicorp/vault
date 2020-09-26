@@ -43,6 +43,16 @@ func TestDecode(t *testing.T) {
 		t.Fail()
 	}
 
+	_, err = DecodeString("invalid.string")
+	if err == nil {
+		t.Fail()
+	}
+
+	_, err = DecodeString(".also-bad")
+	if err == nil {
+		t.Fail()
+	}
+
 	input := make([]byte, 50)
 	for i := 0; i < 100; i++ {
 		rand.Read(input)
@@ -57,11 +67,25 @@ func TestDecode(t *testing.T) {
 
 
 func BenchmarkEncodeDecode(b *testing.B) {
-	c := 1000
+	c := 64
 	input := make([]byte, c)
 	rand.Read(input)
 	for i := 0; i < b.N; i++ {
 		e := Encode(input)
+		o, _ := DecodeString(e)
+		if !bytes.Equal(o,input) {
+			b.Fail()
+			break
+		}
+	}
+}
+
+func BenchmarkDecode(b *testing.B) {
+	c := 64
+	input := make([]byte, c)
+	rand.Read(input)
+	e := Encode(input)
+	for i := 0; i < b.N; i++ {
 		o, _ := DecodeString(e)
 		if !bytes.Equal(o,input) {
 			b.Fail()
