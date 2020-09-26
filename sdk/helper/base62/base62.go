@@ -77,12 +77,16 @@ func Encode(src []byte) string {
 		x.DivMod(&x, csLenBig, &rem)
 		b.WriteByte(charset[int(rem.Int64())])
 	}
+
+	for i:=0; i<len(src)-1 && src[i]==0; i++ {
+		b.WriteByte(0)
+	}
 	return reverse(b.String())
 }
 
 // Decode decodes a base62 string into bytes. This does *not* scale linearly with input as base64, so use caution
 //// when using on large inputs.
-func Decode(dst []byte, src string) ([]byte, error) {
+func DecodeString(src string) ([]byte, error) {
 	var num big.Int
 	var x big.Int
 
@@ -100,12 +104,7 @@ func Decode(dst []byte, src string) ([]byte, error) {
 		num.Add(&num, &x)
 	}
 
-	b := num.Bytes()
-	if cap(dst)<len(b) {
-		return num.Bytes(), nil
-	}
-	copy(dst[cap(dst)-len(b):], b)
-	return dst, nil
+	return num.Bytes(), nil
 }
 
 func reverse(input string) string {

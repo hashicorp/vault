@@ -32,28 +32,40 @@ func TestRandom(t *testing.T) {
 	}
 }
 
+
 func TestDecode(t *testing.T) {
 	str := "A fairly simple test case"
 
 	e := Encode([]byte(str))
-	b, err := Decode(nil, e)
+	b, err := DecodeString(e)
 
-	if err != nil {
-		t.Fail()
-	}
-	if string(b) != str {
+	if err != nil || string(b) != str {
 		t.Fail()
 	}
 
-	input := make([]byte, 4)
+	input := make([]byte, 50)
 	for i := 0; i < 100; i++ {
-		output := make([]byte, 4)
 		rand.Read(input)
 		str = Encode(input)
-		b, err = Decode(output, str)
-		if !bytes.Equal(b, input) {
+		b, err := DecodeString(str)
+		if err != nil || !bytes.Equal(b, input) {
 			//e = Encode(b)
 			t.Fail()
+		}
+	}
+}
+
+
+func BenchmarkEncodeDecode(b *testing.B) {
+	c := 1000
+	input := make([]byte, c)
+	rand.Read(input)
+	for i := 0; i < b.N; i++ {
+		e := Encode(input)
+		o, _ := DecodeString(e)
+		if !bytes.Equal(o,input) {
+			b.Fail()
+			break
 		}
 	}
 }
