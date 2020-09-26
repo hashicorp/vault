@@ -105,9 +105,7 @@ export default Component.extend({
     },
 
     setAndBroadcast(path, value) {
-      // ARG TODO fix, right now cannot type more than one value but if change it doesn't correctly send the data https://ember-learn.github.io/ember-octane-vs-classic-cheat-sheet/
-      // this.model.path = value;
-      this.model.set(path, value);
+      this.model.path = value;
       this.onChange(path, value);
     },
 
