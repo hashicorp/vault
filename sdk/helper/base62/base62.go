@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"io"
+	"math"
 	"math/big"
 	"strings"
 
@@ -17,6 +18,8 @@ const csLen = byte(len(charset))
 
 var csLenBig = big.NewInt(int64(len(charset)))
 var lookup [256]*big.Int
+var errInvalidBase62Char = errors.New("invalid base62 character")
+
 
 func init() {
 	for i, c := range charset {
@@ -69,7 +72,7 @@ func Encode(src []byte) string {
 	}
 
 	var b strings.Builder
-	b.Grow(int(float32(len(src))*1.4))
+	b.Grow(estimateOutLen(len(src)))
 
 	//var zero big.Int
 	var rem big.Int
@@ -85,16 +88,15 @@ func Encode(src []byte) string {
 		b.WriteByte(charset[int(rem.Int64())])
 	}
 
+
 	for i:=0; i<len(src)-1 && src[i]==0; i++ {
 		b.WriteByte(0)
 	}
 	return reverse(b.String())
 }
 
-var errInvalidBase62Char = errors.New("invalid base62 character")
-
 // Decode decodes a base62 string into bytes. This does *not* scale linearly with input as base64, so use caution
-//// when using on large inputs.
+// when using on large inputs.
 func DecodeString(src string) ([]byte, error) {
 	if src=="" {
 		return nil, nil
@@ -128,4 +130,8 @@ func reverse(input string) string {
 		runes[i], runes[j] = runes[j], runes[i]
 	}
 	return string(runes)
+}
+
+func estimateOutLen(inputLen int) int {
+	return int(math.Ceil(1.3435902316563355 * float64(inputLen)))
 }
