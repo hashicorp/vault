@@ -320,10 +320,19 @@ func generatePartitionToRegionMap() map[string]*endpoints.Region {
 
 	for _, p := range partitions {
 		// For most partitions, it's fine to choose a single region randomly.
-		// However, for the "aws" partition, it's best to choose "us-east-1"
-		// because it is always enabled (and enabled for STS) by default.
+		// However, there are a few exceptions:
+		//
+		//   For "aws", choose "us-east-1" because it is always enabled (and
+		//   enabled for STS) by default.
+		//
+		//   For "aws-us-gov", choose "us-gov-west-1" because it is the only
+		//   valid region for IAM operations.
+		//   ref: https://github.com/aws/aws-sdk-go/blob/v1.34.25/aws/endpoints/defaults.go#L8176-L8194
 		for _, r := range p.Regions() {
 			if p.ID() == "aws" && r.ID() != "us-east-1" {
+				continue
+			}
+			if p.ID() == "aws-us-gov" && r.ID() != "us-gov-west-1" {
 				continue
 			}
 			partitionToRegion[p.ID()] = &r
