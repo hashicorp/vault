@@ -20,12 +20,23 @@ BUG FIXES:
 * core: Fix resource leak in plugin API (plugin-dependent, not all plugins impacted) [[GH-9557](https://github.com/hashicorp/vault/pull/9557)]
 * core: Fix race involved in enabling certain features via a license change
 * identity: Check for timeouts in entity API [[GH-9925](https://github.com/hashicorp/vault/pull/9925)]
-* replication (enterprise): Only write failover cluster addresses if they've changed
 * secrets/database: Fix handling of TLS options in mongodb connection strings [[GH-9519](https://github.com/hashicorp/vault/pull/9519)]
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-93](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/93)]
 
-## 1.5.4
+## 1.5.5
 ### TBD
+
+BUG FIXES:
+
+* auth/aws: Restrict region selection when in the aws-us-gov partition to avoid IAM errors [[GH-9947](https://github.com/hashicorp/vault/pull/9947)]
+* core: Fix deadlock in handling EGP policies
+
+## 1.5.4
+### September 24th, 2020
+
+SECURITY:
+
+* Batch Token Expiry: We addressed an issue where batch token leases could outlive their TTL because we were not scheduling the expiration time correctly. This vulnerability affects Vault OSS and Vault Enterprise 1.0 and newer and is fixed in 1.4.7 and 1.5.4 (CVE-2020-25816).
 
 IMPROVEMENTS:
 
@@ -206,7 +217,12 @@ BUG FIXES:
 * ui: Disallow max versions value of large than 9999999999999999 on kv2 secrets engine. [[GH-9242](https://github.com/hashicorp/vault/pull/9242)]
 * ui: Add and upgrade missing dependencies to resolve a failure with `make static-dist`. [[GH-9277](https://github.com/hashicorp/vault/pull/9371)]
 
-## 1.4.7 (TBD)
+## 1.4.7
+### September 24th, 2020
+
+SECURITY:
+
+* Batch Token Expiry: We addressed an issue where batch token leases could outlive their TTL because we were not scheduling the expiration time correctly. This vulnerability affects Vault OSS and Vault Enterprise 1.0 and newer and is fixed in 1.4.7 and 1.5.4 (CVE-2020-25816).
 
 IMPROVEMENTS:
 
