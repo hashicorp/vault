@@ -63,7 +63,7 @@ GIT_EXCLUDE_LIST = $(call QUOTE_LIST,$(addprefix $(GIT_EXCLUDE_PREFIX),$(1)))
 # Source in LOCKDIR is encoded as PACKAGE_SPEC_ID and included in paths
 # and cache keys. Source in .circleci/ should not do much more than call
 # code in the release/ directory, SPEC is the source of LOCKDIR.
-ALWAYS_EXCLUDE_SOURCE := $(SPEC) $(LOCKDIR)/ packagespec.mk .circleci/
+ALWAYS_EXCLUDE_SOURCE := $(SPEC) $(LOCKDIR)/ ./packagespec.mk ./.circleci/
 # ALWAYS_EXCLUD_SOURCE_GIT is git path filter parlance for the above.
 ALWAYS_EXCLUDE_SOURCE_GIT := $(call GIT_EXCLUDE_LIST,$(ALWAYS_EXCLUDE_SOURCE))
 
