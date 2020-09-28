@@ -38,22 +38,33 @@
 </div>
 
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
+  {{#unless (eq model.config.enabled 'On')}}
+    <AlertBanner
+      @type="warning"
+      @title="Tracking is disabled"
+    >
+      This feature is currently disabled and data is not being collected. {{#link-to 'vault.cluster.metrics-config'}}Edit the configuration{{/link-to}} to enable tracking again.
+    </AlertBanner>
+  {{/unless}}
   <p class="has-bottom-margin-s">The active clients metric contributes to billing. It is collected at the end of each month alongside unique entities and direct active tokens.</p>
+  <h2 class="title is-4">
+    {{date-format model.activity.startTime "MMM DD, YYYY"}} through {{date-format model.activity.endTime "MMM DD, YYYY"}}
+  </h2>
   <div class="selectable-card-container">
     <SelectableCard
       @cardTitle="Active clients"
       @total={{model.activity.total.clients}}
-      @subText="Root namespace"
+      @subText="Current namespace"
     />
     <SelectableCard
       @cardTitle="Unique entities"
       @total={{model.activity.total.distinct_entities}}
-      @subText="Root namespace"
+      @subText="Current namespace"
     />
     <SelectableCard
       @cardTitle="Active direct tokens"
       @total={{model.activity.total.non_entity_tokens}}
-      @subText="Root namespace"
+      @subText="Current namespace"
     />
   </div>
 </div>
