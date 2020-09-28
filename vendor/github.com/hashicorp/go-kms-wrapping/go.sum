@@ -254,8 +254,8 @@ github.com/hashicorp/vault/api v1.0.5-0.20200805123347-1ef507638af6/go.mod h1:R3
 github.com/hashicorp/vault/sdk v0.1.14-0.20200519221530-14615acda45f/go.mod h1:WX57W2PwkrOPQ6rVQk+dy5/htHIaB4aBM70EwKThu10=
 github.com/hashicorp/vault/sdk v0.1.14-0.20200519221838-e0cfd64bc267 h1:e1ok06zGrWJW91rzRroyl5nRNqraaBe4d5hiKcVZuHM=
 github.com/hashicorp/vault/sdk v0.1.14-0.20200519221838-e0cfd64bc267/go.mod h1:WX57W2PwkrOPQ6rVQk+dy5/htHIaB4aBM70EwKThu10=
-github.com/hashicorp/vault/sdk v0.1.14-0.20200805123347-1ef507638af6 h1:8bzfSEdW5ztWR73O5ByXbOAx8V6lHL1qTH7PYDLRITI=
-github.com/hashicorp/vault/sdk v0.1.14-0.20200805123347-1ef507638af6/go.mod h1:+S2qzS1Tex9JgbHxb/Jv7CdZyKydxqg09G/qVvyVmUc=
+github.com/hashicorp/vault/sdk v0.1.14-0.20200916184745-5576096032f8 h1:oin8pbTJ+5OTk9JLzcCF1To0A/5Xsq5xJXQYhBTaOS8=
+github.com/hashicorp/vault/sdk v0.1.14-0.20200916184745-5576096032f8/go.mod h1:7GBJyKruotYxJlye8yHyGICV7kN7dQCNsCMTrb+v5J0=
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/huaweicloud/golangsdk v0.0.0-20200304081349-45ec0797f2a4 h1:/+f4LG96YdYE6/Duf7iZxPMRQHYaokb/CkuvkG+VPpY=
@@ -652,7 +652,6 @@ google.golang.org/protobuf v1.22.0 h1:cJv5/xdbk1NnMPR1VP9+HU6gupuG9MLBoH1r6RHZ2M
 google.golang.org/protobuf v1.22.0/go.mod h1:EGpADcykh3NcUnDUJcl1+ZksZNG86OlYog2l/sGQquU=
 google.golang.org/protobuf v1.23.0/go.mod h1:EGpADcykh3NcUnDUJcl1+ZksZNG86OlYog2l/sGQquU=
 google.golang.org/protobuf v1.23.1-0.20200526195155-81db48ad09cc/go.mod h1:EGpADcykh3NcUnDUJcl1+ZksZNG86OlYog2l/sGQquU=
-google.golang.org/protobuf v1.24.0/go.mod h1:r/3tXBNzIEhYS9I1OUVjXDlt8tc493IdKGjtUeSXeh4=
 google.golang.org/protobuf v1.25.0 h1:Ejskq+SyPohKW+1uil0JJMtmHCgJPJ/qWTxr8qp+R4c=
 google.golang.org/protobuf v1.25.0/go.mod h1:9JNX74DMeImyA3h4bdi1ymwjUzf21/xIlbajtzgsN7c=
 gopkg.in/airbrake/gobrake.v2 v2.0.9/go.mod h1:/h5ZAUhDkGaJfjzjKLSjv6zCL6O0LLBxU4K+aSYdM/U=
