@@ -24,4 +24,5 @@ module.exports = {
     'block-indentation': false,
     quotes: false,
   },
+  ignore: ['app/templates/components/console/ui-panel'], // ignore because pass in {{log}}
 };

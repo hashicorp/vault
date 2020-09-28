@@ -1,7 +1,6 @@
 import { inject as service } from '@ember/service';
 import { alias, or } from '@ember/object/computed';
 import Component from '@ember/component';
-import { computed } from '@ember/object';
 import { matchesState } from 'xstate';
 
 export default Component.extend({

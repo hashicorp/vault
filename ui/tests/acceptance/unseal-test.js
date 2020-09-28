@@ -1,4 +1,4 @@
-import { click, fillIn, findAll, currentURL, visit } from '@ember/test-helpers';
+import { click, fillIn, currentURL, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';

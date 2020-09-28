@@ -128,6 +128,9 @@ export default Component.extend(DEFAULTS, {
   ),
 
   providerPartialName: computed('selectedAuthBackend.type', function() {
+    if (!this.selectedAuthBackend) {
+      return;
+    }
     let type = this.selectedAuthBackend.type || 'token';
     type = type.toLowerCase();
     let templateName = dasherize(type);

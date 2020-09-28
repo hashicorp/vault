@@ -2,7 +2,6 @@ import { inject as service } from '@ember/service';
 import { or, alias } from '@ember/object/computed';
 import Component from '@ember/component';
 import { run } from '@ember/runloop';
-import { computed } from '@ember/object';
 
 export default Component.extend({
   auth: service(),
