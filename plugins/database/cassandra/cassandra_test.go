@@ -6,27 +6,32 @@ import (
 	"testing"
 	"time"
 
+	backoff "github.com/cenkalti/backoff/v3"
 	"github.com/gocql/gocql"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/testhelpers/cassandra"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 )
 
 func getCassandra(t *testing.T, protocolVersion interface{}) (*Cassandra, func()) {
 	cleanup, connURL := cassandra.PrepareTestContainer(t, "latest")
 	pieces := strings.Split(connURL, ":")
 
-	connectionDetails := map[string]interface{}{
-		"hosts":            connURL,
-		"port":             pieces[1],
-		"username":         "cassandra",
-		"password":         "cassandra",
-		"protocol_version": protocolVersion,
-		"connect_timeout":  "20s",
+	db := new()
+	req := newdbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"hosts":            connURL,
+			"port":             pieces[1],
+			"username":         "cassandra",
+			"password":         "cassandra",
+			"protocol_version": protocolVersion,
+			"connect_timeout":  "20s",
+		},
+		VerifyConnection: true,
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, err := db.Initialize(ctx, req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -54,109 +59,134 @@ func TestCassandra_CreateUser(t *testing.T) {
 	db, cleanup := getCassandra(t, 4)
 	defer cleanup()
 
-	statements := dbplugin.Statements{
-		Creation: []string{testCassandraRole},
+	password := "myreallysecurepassword"
+	req := newdbplugin.NewUserRequest{
+		UsernameConfig: newdbplugin.UsernameMetadata{
+			DisplayName: "test",
+			RoleName:    "test",
+		},
+		Statements: newdbplugin.Statements{
+			Commands: []string{createUserStatements},
+		},
+		Password:   password,
+		Expiration: time.Now().Add(1 * time.Minute),
 	}
 
-	usernameConfig := dbplugin.UsernameConfig{
-		DisplayName: "test",
-		RoleName:    "test",
-	}
-
-	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	resp, err := db.NewUser(ctx, req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(db.Hosts, db.Port, username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
+	assertCreds(t, db.Hosts, db.Port, resp.Username, password, 5*time.Second)
 }
 
-func TestMyCassandra_RenewUser(t *testing.T) {
+func TestMyCassandra_UpdateUserPassword(t *testing.T) {
 	db, cleanup := getCassandra(t, 4)
 	defer cleanup()
 
-	statements := dbplugin.Statements{
-		Creation: []string{testCassandraRole},
+	password := "myreallysecurepassword"
+	newUserReq := newdbplugin.NewUserRequest{
+		UsernameConfig: newdbplugin.UsernameMetadata{
+			DisplayName: "test",
+			RoleName:    "test",
+		},
+		Statements: newdbplugin.Statements{
+			Commands: []string{createUserStatements},
+		},
+		Password:   password,
+		Expiration: time.Now().Add(1 * time.Minute),
 	}
 
-	usernameConfig := dbplugin.UsernameConfig{
-		DisplayName: "test",
-		RoleName:    "test",
-	}
-
-	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	createResp, err := db.NewUser(ctx, newUserReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(db.Hosts, db.Port, username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
+	assertCreds(t, db.Hosts, db.Port, createResp.Username, password, 5*time.Second)
+
+	newPassword := "somenewpassword"
+	updateReq := newdbplugin.UpdateUserRequest{
+		Username: createResp.Username,
+		Password: &newdbplugin.ChangePassword{
+			NewPassword: newPassword,
+			Statements:  newdbplugin.Statements{},
+		},
+		Expiration: nil,
 	}
 
-	err = db.RenewUser(context.Background(), statements, username, time.Now().Add(time.Minute))
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, err = db.UpdateUser(ctx, updateReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+
+	assertCreds(t, db.Hosts, db.Port, createResp.Username, newPassword, 5*time.Second)
 }
 
-func TestCassandra_RevokeUser(t *testing.T) {
+func TestCassandra_DeleteUser(t *testing.T) {
 	db, cleanup := getCassandra(t, 4)
 	defer cleanup()
 
-	statements := dbplugin.Statements{
-		Creation: []string{testCassandraRole},
+	password := "myreallysecurepassword"
+	createReq := newdbplugin.NewUserRequest{
+		UsernameConfig: newdbplugin.UsernameMetadata{
+			DisplayName: "test",
+			RoleName:    "test",
+		},
+		Statements: newdbplugin.Statements{
+			Commands: []string{createUserStatements},
+		},
+		Password:   password,
+		Expiration: time.Now().Add(1 * time.Minute),
 	}
 
-	usernameConfig := dbplugin.UsernameConfig{
-		DisplayName: "test",
-		RoleName:    "test",
-	}
-
-	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	createResp, err := db.NewUser(ctx, createReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err = testCredsExist(db.Hosts, db.Port, username, password); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
+	assertCreds(t, db.Hosts, db.Port, createResp.Username, password, 5*time.Second)
+
+	deleteReq := newdbplugin.DeleteUserRequest{
+		Username: createResp.Username,
 	}
 
-	// Test default revoke statements
-	err = db.RevokeUser(context.Background(), statements, username)
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, err = db.DeleteUser(context.Background(), deleteReq)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err = testCredsExist(db.Hosts, db.Port, username, password); err == nil {
-		t.Fatal("Credentials were not revoked")
+	assertNoCreds(t, db.Hosts, db.Port, createResp.Username, password)
+}
+
+func assertCreds(t testing.TB, address string, port int, username, password string, timeout time.Duration) {
+	t.Helper()
+	op := func() error {
+		return connect(t, address, port, username, password)
+	}
+	bo := backoff.NewExponentialBackOff()
+	bo.MaxElapsedTime = timeout
+	bo.InitialInterval = 500 * time.Millisecond
+	bo.MaxInterval = bo.InitialInterval
+	bo.RandomizationFactor = 0.0
+
+	err := backoff.Retry(op, bo)
+	if err != nil {
+		t.Fatalf("failed to connect after %s: %s", timeout, err)
 	}
 }
 
-func TestCassandra_RotateRootCredentials(t *testing.T) {
-	db, cleanup := getCassandra(t, 4)
-	defer cleanup()
-
-	if !db.cassandraConnectionProducer.Initialized {
-		t.Fatal("Database should be initialized")
-	}
-
-	newConf, err := db.RotateRootCredentials(context.Background(), nil)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if newConf["password"] == "cassandra" {
-		t.Fatal("password was not updated")
-	}
-
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-}
-
-func testCredsExist(address string, port int, username, password string) error {
+func connect(t testing.TB, address string, port int, username, password string) error {
+	t.Helper()
 	clusterConfig := gocql.NewCluster(address)
 	clusterConfig.Authenticator = gocql.PasswordAuthenticator{
 		Username: username,
@@ -167,11 +197,29 @@ func testCredsExist(address string, port int, username, password string) error {
 
 	session, err := clusterConfig.CreateSession()
 	if err != nil {
-		return errwrap.Wrapf("error creating session: {{err}}", err)
+		return err
 	}
 	defer session.Close()
 	return nil
 }
 
-const testCassandraRole = `CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER;
+func assertNoCreds(t testing.TB, address string, port int, username, password string) {
+	t.Helper()
+	clusterConfig := gocql.NewCluster(address)
+	clusterConfig.Authenticator = gocql.PasswordAuthenticator{
+		Username: username,
+		Password: password,
+	}
+	clusterConfig.ProtoVersion = 4
+	clusterConfig.Port = port
+
+	session, err := clusterConfig.CreateSession()
+	if err != nil {
+		return // Happy path
+	}
+	defer session.Close()
+	t.Fatalf("able to make connection when credentials should not exist")
+}
+
+const createUserStatements = `CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER;
 GRANT ALL PERMISSIONS ON ALL KEYSPACES TO {{username}};`
