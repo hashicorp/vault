@@ -93,7 +93,13 @@ func (c *Cassandra) NewUser(ctx context.Context, req newdbplugin.NewUserRequest)
 		rollbackCQL = []string{defaultUserDeletionCQL}
 	}
 
-	username, err := c.newUsername(req.UsernameConfig)
+	username, err := credsutil.GenerateUsername(
+		credsutil.DisplayName(req.UsernameConfig.DisplayName, 15),
+		credsutil.RoleName(req.UsernameConfig.RoleName, 15),
+		credsutil.Separator("_"),
+		credsutil.MaxLength(100),
+		credsutil.ToLower(),
+	)
 	if err != nil {
 		return newdbplugin.NewUserResponse{}, err
 	}
