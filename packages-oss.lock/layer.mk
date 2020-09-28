@@ -171,6 +171,7 @@ $$(info SOURCE_DIRTY_LIST=$$($(1)_SOURCE_DIRTY_LIST))
 $$(info SOURCE_DIRTY_SUM=$$($(1)_SOURCE_DIRTY_SUM))
 $$(info SOURCE_ID=$$($(1)_SOURCE_ID))
 $$(info LAYER_ID=$$($(1)_LAYER_ID))
+$$(info SOURCE_LIST=$$(shell $$($(1)_SOURCE_CMD)))
 $$(info =====)
 endif
 
@@ -290,7 +291,8 @@ $$($(1)_DOCKERFILE):
 # once Docker supports that properly, because ustar only supports filenames
 # < 256 chars which could eventually be an issue.
 TAR_FORMAT := --format=ustar
-$(1)_FULL_DOCKER_BUILD_COMMAND = docker build -t $$($(1)_IMAGE_NAME) $$($(1)_DOCKER_BUILD_ARGS) \
+export DOCKER_BUILDKIT=1
+$(1)_FULL_DOCKER_BUILD_COMMAND = docker build --ssh=default -t $$($(1)_IMAGE_NAME) $$($(1)_DOCKER_BUILD_ARGS) \
 	-f $$($(1)_DOCKERFILE) - < $$($(1)_SOURCE_ARCHIVE_WITH_DOCKERFILE)
 
 $$($(1)_IMAGE): $$($(1)_BASE_IMAGE) $$($(1)_DOCKERFILE)
