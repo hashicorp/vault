@@ -110,3 +110,40 @@ $ curl \
   "warnings": null
 }
 ```
+
+## List Rate Limit Quotas
+
+This endpoint returns a list of all the rate limit quotas.
+
+| Method | Path                     |
+| :----- | :----------------------- |
+| `LIST` | `/sys/quotas/rate-limit` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --request LIST \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/quotas/rate-limit
+```
+
+### Sample Response
+
+```json
+{
+    "auth": null,
+    "data": {
+        "keys": [
+            "global-rate-limiter",
+            "kv-rate-limiter"
+        ]
+    },
+    "lease_duration": 0,
+    "lease_id": "",
+    "renewable": false,
+    "request_id": "ab633ee1-a692-ba03-083b-f1bd91c51c28",
+    "warnings": null,
+    "wrap_info": null
+}
+```

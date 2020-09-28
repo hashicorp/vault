@@ -187,6 +187,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 		AccessKey:    conf["access_key"],
 		SecretKey:    conf["secret_key"],
 		SessionToken: conf["session_token"],
+		Logger:       logger,
 	}
 	creds, err := credsConfig.GenerateCredentialChain()
 	if err != nil {

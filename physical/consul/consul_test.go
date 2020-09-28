@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -158,18 +157,10 @@ func TestConsul_newConsulBackend(t *testing.T) {
 }
 
 func TestConsulBackend(t *testing.T) {
-	consulToken := os.Getenv("CONSUL_HTTP_TOKEN")
-	addr := os.Getenv("CONSUL_HTTP_ADDR")
-	if addr == "" {
-		cleanup, connURL, token := consul.PrepareTestContainer(t, "1.4.4")
-		defer cleanup()
-		addr, consulToken = connURL, token
-	}
+	cleanup, config := consul.PrepareTestContainer(t, "1.4.4")
+	defer cleanup()
 
-	conf := api.DefaultConfig()
-	conf.Address = addr
-	conf.Token = consulToken
-	client, err := api.NewClient(conf)
+	client, err := api.NewClient(config.APIConfig())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -182,10 +173,10 @@ func TestConsulBackend(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewConsulBackend(map[string]string{
-		"address":      conf.Address,
+		"address":      config.Address(),
+		"token":        config.Token,
 		"path":         randPath,
 		"max_parallel": "256",
-		"token":        conf.Token,
 	}, logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -196,18 +187,10 @@ func TestConsulBackend(t *testing.T) {
 }
 
 func TestConsul_TooLarge(t *testing.T) {
-	consulToken := os.Getenv("CONSUL_HTTP_TOKEN")
-	addr := os.Getenv("CONSUL_HTTP_ADDR")
-	if addr == "" {
-		cleanup, connURL, token := consul.PrepareTestContainer(t, "1.4.4")
-		defer cleanup()
-		addr, consulToken = connURL, token
-	}
+	cleanup, config := consul.PrepareTestContainer(t, "1.4.4")
+	defer cleanup()
 
-	conf := api.DefaultConfig()
-	conf.Address = addr
-	conf.Token = consulToken
-	client, err := api.NewClient(conf)
+	client, err := api.NewClient(config.APIConfig())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -220,10 +203,10 @@ func TestConsul_TooLarge(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewConsulBackend(map[string]string{
-		"address":      conf.Address,
+		"address":      config.Address(),
+		"token":        config.Token,
 		"path":         randPath,
 		"max_parallel": "256",
-		"token":        conf.Token,
 	}, logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -267,18 +250,10 @@ func TestConsul_TooLarge(t *testing.T) {
 }
 
 func TestConsulHABackend(t *testing.T) {
-	consulToken := os.Getenv("CONSUL_HTTP_TOKEN")
-	addr := os.Getenv("CONSUL_HTTP_ADDR")
-	if addr == "" {
-		cleanup, connURL, token := consul.PrepareTestContainer(t, "1.4.4")
-		defer cleanup()
-		addr, consulToken = connURL, token
-	}
+	cleanup, config := consul.PrepareTestContainer(t, "1.4.4")
+	defer cleanup()
 
-	conf := api.DefaultConfig()
-	conf.Address = addr
-	conf.Token = consulToken
-	client, err := api.NewClient(conf)
+	client, err := api.NewClient(config.APIConfig())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -289,19 +264,19 @@ func TestConsulHABackend(t *testing.T) {
 	}()
 
 	logger := logging.NewVaultLogger(log.Debug)
-	config := map[string]string{
-		"address":      conf.Address,
+	backendConfig := map[string]string{
+		"address":      config.Address(),
+		"token":        config.Token,
 		"path":         randPath,
 		"max_parallel": "-1",
-		"token":        conf.Token,
 	}
 
-	b, err := NewConsulBackend(config, logger)
+	b, err := NewConsulBackend(backendConfig, logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	b2, err := NewConsulBackend(config, logger)
+	b2, err := NewConsulBackend(backendConfig, logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

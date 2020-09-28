@@ -259,7 +259,7 @@ func TestRaft_Snapshot_Peers(t *testing.T) {
 	ensureCommitApplied(t, commitIdx, raft2)
 
 	// Make sure the snapshot was applied correctly on the follower
-	if err := compareDBs(t, raft1.fsm.db, raft2.fsm.db, false); err != nil {
+	if err := compareDBs(t, raft1.fsm.getDB(), raft2.fsm.getDB(), false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -758,13 +758,13 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = compareDBs(t, fsm.db, newFSM.db, true)
+	err = compareDBs(t, fsm.getDB(), newFSM.getDB(), true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Make sure config data is different
-	err = compareDBs(t, fsm.db, newFSM.db, false)
+	err = compareDBs(t, fsm.getDB(), newFSM.getDB(), false)
 	if err == nil {
 		t.Fatal("expected error")
 	}

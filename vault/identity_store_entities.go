@@ -654,6 +654,16 @@ func (i *IdentityStore) handlePathEntityListCommon(ctx context.Context, req *log
 	mountAccessorMap := map[string]mountInfo{}
 
 	for {
+		// Check for timeouts
+		select {
+		case <-ctx.Done():
+			resp := logical.ListResponseWithInfo(keys, entityInfo)
+			resp.AddWarning("partial response due to timeout")
+			return resp, nil
+		default:
+			break
+		}
+
 		raw := iter.Next()
 		if raw == nil {
 			break

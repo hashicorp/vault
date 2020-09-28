@@ -1,22 +1,33 @@
 import { inject as service } from '@ember/service';
 import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
-import { task, waitForEvent } from 'ember-concurrency';
 import Component from '@ember/component';
 import { set, get } from '@ember/object';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
-import keys from 'vault/lib/keycodes';
 
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
+export const addToList = (list, itemToAdd) => {
+  if (!list || !Array.isArray(list)) return list;
+  list.push(itemToAdd);
+  return list.uniq();
+};
+
+export const removeFromList = (list, itemToRemove) => {
+  if (!list) return list;
+  const index = list.indexOf(itemToRemove);
+  if (index < 0) return list;
+  const newList = list.removeAt(index, 1);
+  return newList.uniq();
+};
+
 export default Component.extend(FocusOnInsertMixin, {
+  store: service(),
+  flashMessages: service(),
   router: service(),
-  wizard: service(),
 
   mode: null,
-  // TODO: Investigate if we need all of these
-  emptyData: '{\n}',
   onDataChange() {},
   onRefresh() {},
   model: null,
@@ -34,15 +45,6 @@ export default Component.extend(FocusOnInsertMixin, {
     }
   },
 
-  waitForKeyUp: task(function*() {
-    while (true) {
-      let event = yield waitForEvent(document.body, 'keyup');
-      this.onEscape(event);
-    }
-  })
-    .on('didInsertElement')
-    .cancelOn('willDestroyElement'),
-
   transitionToRoute() {
     this.get('router').transitionTo(...arguments);
   },
@@ -54,45 +56,38 @@ export default Component.extend(FocusOnInsertMixin, {
     }
     return modelPrefix;
   },
-
-  onEscape(e) {
-    if (e.keyCode !== keys.ESC || this.get('mode') !== 'show') {
-      return;
-    }
-    this.transitionToRoute(LIST_ROOT_ROUTE);
-  },
-
-  hasDataChanges() {
-    get(this, 'onDataChange')(get(this, 'model.hasDirtyAttributes'));
-  },
-
   persist(method, successCallback) {
     const model = get(this, 'model');
-    return model[method]().then(() => {
-      if (!get(model, 'isError')) {
-        if (this.get('wizard.featureState') === 'role') {
-          this.get('wizard').transitionFeatureMachine('role', 'CONTINUE', this.get('backendType'));
-        }
+    return model[method]()
+      .then(() => {
         successCallback(model);
-      }
+      })
+      .catch(e => {
+        model.set('displayErrors', e.errors);
+        throw e;
+      });
+  },
+
+  applyChanges(type, callback = () => {}) {
+    const modelId = this.get('model.id') || this.get('model.name'); // transform comes in as model.name
+    const modelPrefix = this.modelPrefixFromType(this.get('model.constructor.modelName'));
+    // prevent from submitting if there's no key
+    // maybe do something fancier later
+    if (type === 'create' && isBlank(modelId)) {
+      return;
+    }
+
+    this.persist('save', () => {
+      callback();
+      this.transitionToRoute(SHOW_ROUTE, `${modelPrefix}${modelId}`);
     });
   },
 
   actions: {
     createOrUpdate(type, event) {
       event.preventDefault();
-      const modelId = this.get('model.id') || this.get('model.name'); // transform comes in as model.name
-      const modelPrefix = this.modelPrefixFromType(this.get('model.constructor.modelName'));
-      // prevent from submitting if there's no key
-      // maybe do something fancier later
-      if (type === 'create' && isBlank(modelId)) {
-        return;
-      }
 
-      this.persist('save', () => {
-        this.hasDataChanges();
-        this.transitionToRoute(SHOW_ROUTE, `${modelPrefix}${modelId}`);
-      });
+      this.applyChanges(type);
     },
 
     setValue(key, event) {
@@ -105,7 +100,7 @@ export default Component.extend(FocusOnInsertMixin, {
 
     delete() {
       this.persist('destroyRecord', () => {
-        this.hasDataChanges();
+        this.onDataChange();
         this.transitionToRoute(LIST_ROOT_ROUTE);
       });
     },

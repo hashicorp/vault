@@ -9,4 +9,5 @@ export default create({
   name: fillable('[data-test-input="name"]'),
   transformations: fillable('[data-test-input="transformations"'),
   submit: clickable('[data-test-role-transform-create="true"]'),
+  modalConfirm: clickable('[data-test-edit-confirm-button]'),
 });
