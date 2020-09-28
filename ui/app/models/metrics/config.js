@@ -4,7 +4,7 @@ const { attr } = DS;
 
 export default DS.Model.extend({
   queriesAvailable: attr('boolean'),
-  defaultMonths: attr('number'),
+  defaultReportMonths: attr('number'),
   retentionMonths: attr('number'),
-  enabled: attr('boolean'),
+  enabled: attr('string'),
 });
