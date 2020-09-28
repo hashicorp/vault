@@ -265,7 +265,7 @@ func TestBackend_PluginMain_MockV5(t *testing.T) {
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 
-	RunV5(apiClientMeta.GetTLSConfig())
+	RunV5()
 }
 
 func assertNoRespData(t *testing.T, resp *logical.Response) {
