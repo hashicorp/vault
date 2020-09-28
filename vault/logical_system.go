@@ -149,6 +149,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadStatusPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.auditPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.mountPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.authPaths()...)
@@ -3619,6 +3620,10 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	}
 
 	return resp, nil
+}
+
+func (b *SystemBackend) pluginReloadStatus(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return handlePluginReloadStatus(ctx, b.Core.barrier, request, data)
 }
 
 func sanitizePath(path string) string {

@@ -508,7 +508,7 @@ github.com/hashicorp/vault-plugin-secrets-mongodbatlas
 # github.com/hashicorp/vault-plugin-secrets-openldap v0.1.5
 github.com/hashicorp/vault-plugin-secrets-openldap
 github.com/hashicorp/vault-plugin-secrets-openldap/client
-# github.com/hashicorp/vault/api v1.0.5-0.20200717191844-f687267c8086 => ./api
+# github.com/hashicorp/vault/api v1.0.5-0.20200723171834-4462db30e344 => ./api
 github.com/hashicorp/vault/api
 # github.com/hashicorp/vault/sdk v0.1.14-0.20200910202324-ca414e26ce60 => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
