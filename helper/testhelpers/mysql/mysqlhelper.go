@@ -1,6 +1,7 @@
 package mysqlhelper
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -8,17 +9,18 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
-	"github.com/ory/dockertest"
 )
 
-func PrepareMySQLTestContainer(t *testing.T, legacy bool, pw string) (cleanup func(), retURL string) {
+type Config struct {
+	docker.ServiceHostPort
+	ConnString string
+}
+
+var _ docker.ServiceConfig = &Config{}
+
+func PrepareTestContainer(t *testing.T, legacy bool, pw string) (func(), string) {
 	if os.Getenv("MYSQL_URL") != "" {
 		return func() {}, os.Getenv("MYSQL_URL")
-	}
-
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
 	}
 
 	imageVersion := "5.7"
@@ -26,33 +28,35 @@ func PrepareMySQLTestContainer(t *testing.T, legacy bool, pw string) (cleanup fu
 		imageVersion = "5.6"
 	}
 
-	resource, err := pool.Run("mysql", imageVersion, []string{"MYSQL_ROOT_PASSWORD=" + pw})
+	runner, err := docker.NewServiceRunner(docker.RunOptions{
+		ImageRepo: "mysql",
+		ImageTag:  imageVersion,
+		Ports:     []string{"3306/tcp"},
+		Env:       []string{"MYSQL_ROOT_PASSWORD=" + pw},
+	})
 	if err != nil {
-		t.Fatalf("Could not start local MySQL docker container: %s", err)
+		t.Fatalf("could not start docker mysql: %s", err)
 	}
 
-	cleanup = func() {
-		docker.CleanupResource(t, pool, resource)
-	}
-
-	retURL = fmt.Sprintf("root:%s@(localhost:%s)/mysql?parseTime=true", pw, resource.GetPort("3306/tcp"))
-
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
-		var err error
-		var db *sql.DB
-		db, err = sql.Open("mysql", retURL)
+	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+		hostIP := docker.NewServiceHostPort(host, port)
+		connString := fmt.Sprintf("root:%s@(%s)/mysql?parseTime=true", pw, hostIP.Address())
+		db, err := sql.Open("mysql", connString)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		defer db.Close()
-		return db.Ping()
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to MySQL docker container: %s", err)
-	}
+		err = db.Ping()
+		if err != nil {
+			return nil, err
+		}
+		return &Config{ServiceHostPort: *hostIP, ConnString: connString}, nil
+	})
 
-	return
+	if err != nil {
+		t.Fatalf("could not start docker mysql: %s", err)
+	}
+	return svc.Cleanup, svc.Config.(*Config).ConnString
 }
 
 func TestCredsExist(t testing.TB, connURL, username, password string) error {

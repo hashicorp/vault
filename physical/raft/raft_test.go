@@ -80,7 +80,7 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 		}
 
 		for {
-			if backend.AppliedIndex() >= 2 {
+			if backend.raft.AppliedIndex() >= 2 {
 				break
 			}
 		}
@@ -156,7 +156,7 @@ func compareFSMsWithErr(t *testing.T, fsm1, fsm2 *FSM) error {
 		return fmt.Errorf("configs did not match: %+v != %+v", config1, config2)
 	}
 
-	return compareDBs(t, fsm1.db, fsm2.db, false)
+	return compareDBs(t, fsm1.getDB(), fsm2.getDB(), false)
 }
 
 func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {

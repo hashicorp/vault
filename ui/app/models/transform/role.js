@@ -36,6 +36,8 @@ const Model = DS.Model.extend({
     let keys = ['name', 'transformations'];
     return expandAttributeMeta(this, keys);
   }),
+
+  backend: attr('string', { readOnly: true }),
 });
 
 export default attachCapabilities(Model, {
