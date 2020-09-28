@@ -137,6 +137,7 @@ Router.map(function() {
       }
 
       this.route('not-found', { path: '/*path' });
+      this.route('metrics-config');
     });
     this.route('not-found', { path: '/*path' });
   });
