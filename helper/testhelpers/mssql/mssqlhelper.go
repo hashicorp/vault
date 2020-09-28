@@ -22,14 +22,15 @@ func PrepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	if os.Getenv("MSSQL_URL") != "" {
 		return func() {}, os.Getenv("MSSQL_URL")
 	}
-	var svc *docker.Service
+
 	var err error
 	for i := 0; i < numRetries; i++ {
+		var svc *docker.Service
 		runner, err := docker.NewServiceRunner(docker.RunOptions{
 			ContainerName: "sqlserver",
 			ImageRepo:     "mcr.microsoft.com/mssql/server",
 			ImageTag:      "2017-latest-ubuntu",
-			Env:           []string{"ACCEPT_EULA=Y", "SA_PASSWORD=" + mssqlPassword}, // "MSSQL_PID=Express" does nothing
+			Env:           []string{"ACCEPT_EULA=Y", "SA_PASSWORD=" + mssqlPassword},
 			Ports:         []string{"1433/tcp"},
 		})
 		if err != nil {
