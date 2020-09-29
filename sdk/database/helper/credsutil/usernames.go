@@ -37,9 +37,7 @@ func (ub usernameBuilder) makeUsername() (string, error) {
 		ub.roleName,
 		userUUID,
 		now)
-	if ub.maxLen > 0 {
-		username = trunc(username, ub.maxLen)
-	}
+	username = trunc(username, ub.maxLen)
 	switch ub.caseOperation {
 	case Lowercase:
 		username = strings.ToLower(username)
@@ -54,23 +52,13 @@ type UsernameOpt func(*usernameBuilder)
 
 func DisplayName(dispName string, maxLength int) UsernameOpt {
 	return func(b *usernameBuilder) {
-		if maxLength > 0 {
-			dispName = trunc(dispName, maxLength)
-		} else if maxLength == NoneLength {
-			dispName = ""
-		}
-		b.displayName = dispName
+		b.displayName = trunc(dispName, maxLength)
 	}
 }
 
 func RoleName(roleName string, maxLength int) UsernameOpt {
 	return func(b *usernameBuilder) {
-		if maxLength > 0 {
-			roleName = trunc(roleName, maxLength)
-		} else if maxLength == NoneLength {
-			roleName = ""
-		}
-		b.roleName = roleName
+		b.roleName = trunc(roleName, maxLength)
 	}
 }
 
@@ -115,10 +103,17 @@ func GenerateUsername(opts ...UsernameOpt) (string, error) {
 }
 
 func trunc(str string, l int) string {
-	if len(str) < l {
+	switch {
+	case l > 0:
+		if l > len(str) {
+			return str
+		}
+		return str[:l]
+	case l == 0:
 		return str
+	default:
+		return ""
 	}
-	return str[:l]
 }
 
 func joinNonEmpty(sep string, vals ...string) string {
