@@ -11,7 +11,7 @@ export default Controller.extend({
       },
       {
         label: 'Retention period',
-        helperText: 'The number of months of activity logs to maintain for  client tracking.',
+        helperText: 'The number of months of activity logs to maintain for client tracking.',
         valueKey: 'retentionMonths',
       },
       {
