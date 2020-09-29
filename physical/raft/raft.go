@@ -120,6 +120,12 @@ type RaftBackend struct {
 	// It is suggested to use a value of 2x the Raft chunking size for optimal
 	// performance.
 	maxEntrySize uint64
+
+	// peerMetricsTicker is the ticker used to generate the peers metrics.
+	peerMetricsTicker *time.Ticker
+
+	// peerMetricsDoneCh is used to stop the periodic peers metrics ticker.
+	peerMetricsDoneCh chan bool
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -716,6 +722,21 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		opts.ClusterListener.AddClient(consts.RaftStorageALPN, b.streamLayer)
 	}
 
+	// Start a periodical ticker for metrics generation
+	b.peerMetricsTicker = time.NewTicker(2500 * time.Millisecond)
+	b.peerMetricsDoneCh = make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-b.peerMetricsDoneCh:
+				return
+			case <-b.peerMetricsTicker.C:
+				peers, _ := b.Peers(ctx)
+				metrics.SetGauge([]string{"raft", "peers"}, float32(len(peers)))
+			}
+		}
+	}()
+
 	// Close the init channel to signal setup has been completed
 	close(b.raftInitCh)
 
@@ -738,6 +759,10 @@ func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error
 	if b.raft != nil {
 		future = b.raft.Shutdown()
 	}
+
+	// Stop the peers metrics ticker
+	b.peerMetricsTicker.Stop()
+	b.peerMetricsDoneCh <- true
 
 	b.raft = nil
 
