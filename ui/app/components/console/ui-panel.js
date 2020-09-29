@@ -25,7 +25,7 @@ export default Component.extend({
   classNameBindings: ['isFullscreen:fullscreen'],
   isFullscreen: false,
   inputValue: null,
-  log: alias('console.log'),
+  cliLog: alias('console.log'),
 
   didRender() {
     this._super(...arguments);
