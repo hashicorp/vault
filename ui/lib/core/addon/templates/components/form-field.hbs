@@ -74,11 +74,13 @@
       @inputValue={{get model valuePath}}
       @helpText={{attr.options.helpText}}
       @subText={{attr.options.subText}}
+      @wildcardLabel={{attr.options.wildcardLabel}}
       @label={{labelString}}
       @subLabel={{attr.options.subLabel}}
       @fallbackComponent={{attr.options.fallbackComponent}}
       @selectLimit={{attr.options.selectLimit}}
       @backend={{model.backend}}
+      @disallowNewItems={{attr.options.onlyAllowExisting}}
     />
   </div>
 {{else if (eq attr.options.editType "mountAccessor")}}
