@@ -58,6 +58,8 @@ func DisplayName(dispName string, maxLength int) UsernameOpt {
 	return func(b *usernameBuilder) {
 		if maxLength > 0 {
 			dispName = trunc(dispName, maxLength)
+		} else if maxLength == NoneLength {
+			dispName = ""
 		}
 		b.displayName = dispName
 	}
@@ -67,6 +69,8 @@ func RoleName(roleName string, maxLength int) UsernameOpt {
 	return func(b *usernameBuilder) {
 		if maxLength > 0 {
 			roleName = trunc(roleName, maxLength)
+		} else if maxLength == NoneLength {
+			roleName = ""
 		}
 		b.roleName = roleName
 	}

@@ -97,6 +97,28 @@ func TestGenerateUsername(t *testing.T) {
 
 			regex: "^v_abcdefghijklmonpqrstuvwxyz_zyxwvutsrqpnomlkjihgfedcba_[a-zA-Z0-9]{20}_[0-9]+$",
 		},
+		"no display name": {
+			displayName:    "abcdefghijklmonpqrstuvwxyz",
+			displayNameLen: NoneLength,
+			roleName:       "zyxwvutsrqpnomlkjihgfedcba",
+			roleNameLen:    15,
+			usernameLen:    100,
+			separator:      "_",
+			caseOp:         KeepCase,
+
+			regex: "^v_zyxwvutsrqpnoml_[a-zA-Z0-9]{20}_[0-9]+$",
+		},
+		"no role name": {
+			displayName:    "abcdefghijklmonpqrstuvwxyz",
+			displayNameLen: 15,
+			roleName:       "zyxwvutsrqpnomlkjihgfedcba",
+			roleNameLen:    NoneLength,
+			usernameLen:    100,
+			separator:      "_",
+			caseOp:         KeepCase,
+
+			regex: "^v_abcdefghijklmon_[a-zA-Z0-9]{20}_[0-9]+$",
+		},
 	}
 
 	for name, test := range tests {
