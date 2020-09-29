@@ -314,6 +314,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     // Click confirm button
     await click('[data-test-confirm-button="demote"]');
     await click('[data-test-replication-link="details"]');
+    await settled();
     assert.dom('[data-test-replication-dashboard]').exists();
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
     assert.ok(
