@@ -9,9 +9,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"github.com/hashicorp/vault/sdk/helper/dbtxn"
-	"github.com/lib/pq"
+	"github.com/hashicorp/vault/sdk/database/newdbplugin"
+	dbtesting "github.com/hashicorp/vault/sdk/database/newdbplugin/testing"
 )
 
 func getPostgreSQL(t *testing.T, options map[string]interface{}) (*PostgreSQL, func()) {
@@ -24,11 +23,13 @@ func getPostgreSQL(t *testing.T, options map[string]interface{}) (*PostgreSQL, f
 		connectionDetails[k] = v
 	}
 
-	db := new()
-	_, err := db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	req := newdbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
 	}
+
+	db := new()
+	dbtesting.AssertInitialize(t, db, req)
 
 	if !db.Initialized {
 		t.Fatal("Database should be initialized")
@@ -58,90 +59,163 @@ func TestPostgreSQL_InitializeWithStringVals(t *testing.T) {
 	}
 }
 
-func TestPostgreSQL_CreateUser_missingArgs(t *testing.T) {
-	db := new()
-
-	usernameConfig := dbplugin.UsernameConfig{
-		DisplayName: "test",
-		RoleName:    "test",
-	}
-
-	username, password, err := db.CreateUser(context.Background(), dbplugin.Statements{}, usernameConfig, time.Now().Add(time.Minute))
-	if err == nil {
-		t.Fatalf("expected err, got nil")
-	}
-	if username != "" {
-		t.Fatalf("expected empty username, got [%s]", username)
-	}
-	if password != "" {
-		t.Fatalf("expected empty password, got [%s]", password)
-	}
-}
-
-func TestPostgreSQL_CreateUser(t *testing.T) {
+func TestPostgreSQL_NewUser(t *testing.T) {
 	type testCase struct {
-		createStmts          []string
-		shouldTestCredsExist bool
+		req            newdbplugin.NewUserRequest
+		expectErr      bool
+		credsAssertion credsAssertion
 	}
 
 	tests := map[string]testCase{
-		"admin name": {
-			createStmts: []string{`
-				CREATE ROLE "{{name}}" WITH
-				  LOGIN
-				  PASSWORD '{{password}}'
-				  VALID UNTIL '{{expiration}}';
-				GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
+		"no creation statements": {
+			req: newdbplugin.NewUserRequest{
+				UsernameConfig: newdbplugin.UsernameMetadata{
+					DisplayName: "test",
+					RoleName:    "test",
+				},
+				// No statements
+				Password:   "somesecurepassword",
+				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			shouldTestCredsExist: true,
+			expectErr:      true,
+			credsAssertion: assertCredsDoNotExist,
+		},
+		"admin name": {
+			req: newdbplugin.NewUserRequest{
+				UsernameConfig: newdbplugin.UsernameMetadata{
+					DisplayName: "test",
+					RoleName:    "test",
+				},
+				Statements: newdbplugin.Statements{
+					Commands: []string{`
+						CREATE ROLE "{{name}}" WITH
+						  LOGIN
+						  PASSWORD '{{password}}'
+						  VALID UNTIL '{{expiration}}';
+						GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
+					},
+				},
+				Password:   "somesecurepassword",
+				Expiration: time.Now().Add(1 * time.Minute),
+			},
+			expectErr:      false,
+			credsAssertion: assertCredsExist,
 		},
 		"admin username": {
-			createStmts: []string{`
-				CREATE ROLE "{{username}}" WITH
-				  LOGIN
-				  PASSWORD '{{password}}'
-				  VALID UNTIL '{{expiration}}';
-				GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{username}}";`,
+			req: newdbplugin.NewUserRequest{
+				UsernameConfig: newdbplugin.UsernameMetadata{
+					DisplayName: "test",
+					RoleName:    "test",
+				},
+				Statements: newdbplugin.Statements{
+					Commands: []string{`
+						CREATE ROLE "{{username}}" WITH
+						  LOGIN
+						  PASSWORD '{{password}}'
+						  VALID UNTIL '{{expiration}}';
+						GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{username}}";`,
+					},
+				},
+				Password:   "somesecurepassword",
+				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			shouldTestCredsExist: true,
+			expectErr:      false,
+			credsAssertion: assertCredsExist,
 		},
 		"read only name": {
-			createStmts: []string{`
-				CREATE ROLE "{{name}}" WITH
-				  LOGIN
-				  PASSWORD '{{password}}'
-				  VALID UNTIL '{{expiration}}';
-				GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";
-				GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO "{{name}}";`,
+			req: newdbplugin.NewUserRequest{
+				UsernameConfig: newdbplugin.UsernameMetadata{
+					DisplayName: "test",
+					RoleName:    "test",
+				},
+				Statements: newdbplugin.Statements{
+					Commands: []string{`
+						CREATE ROLE "{{name}}" WITH
+						  LOGIN
+						  PASSWORD '{{password}}'
+						  VALID UNTIL '{{expiration}}';
+						GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";
+						GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO "{{name}}";`,
+					},
+				},
+				Password:   "somesecurepassword",
+				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			shouldTestCredsExist: true,
+			expectErr:      false,
+			credsAssertion: assertCredsExist,
 		},
 		"read only username": {
-			createStmts: []string{`
-				CREATE ROLE "{{username}}" WITH
-				  LOGIN
-				  PASSWORD '{{password}}'
-				  VALID UNTIL '{{expiration}}';
-				GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{username}}";
-				GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO "{{username}}";`,
+			req: newdbplugin.NewUserRequest{
+				UsernameConfig: newdbplugin.UsernameMetadata{
+					DisplayName: "test",
+					RoleName:    "test",
+				},
+				Statements: newdbplugin.Statements{
+					Commands: []string{`
+						CREATE ROLE "{{username}}" WITH
+						  LOGIN
+						  PASSWORD '{{password}}'
+						  VALID UNTIL '{{expiration}}';
+						GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{username}}";
+						GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO "{{username}}";`,
+					},
+				},
+				Password:   "somesecurepassword",
+				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			shouldTestCredsExist: true,
+			expectErr:      false,
+			credsAssertion: assertCredsExist,
 		},
 		// https://github.com/hashicorp/vault/issues/6098
 		"reproduce GH-6098": {
-			createStmts: []string{
-				// NOTE: "rolname" in the following line is not a typo.
-				"DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE my_role; END IF; END $$",
+			req: newdbplugin.NewUserRequest{
+				UsernameConfig: newdbplugin.UsernameMetadata{
+					DisplayName: "test",
+					RoleName:    "test",
+				},
+				Statements: newdbplugin.Statements{
+					Commands: []string{
+						// NOTE: "rolname" in the following line is not a typo.
+						"DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE my_role; END IF; END $$",
+					},
+				},
+				Password:   "somesecurepassword",
+				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			// This test statement doesn't generate creds.
-			shouldTestCredsExist: false,
+			expectErr:      false,
+			credsAssertion: assertCredsDoNotExist,
 		},
 		"reproduce issue with template": {
-			createStmts: []string{
-				`DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE "{{username}}"; END IF; END $$`,
+			req: newdbplugin.NewUserRequest{
+				UsernameConfig: newdbplugin.UsernameMetadata{
+					DisplayName: "test",
+					RoleName:    "test",
+				},
+				Statements: newdbplugin.Statements{
+					Commands: []string{
+						`DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='my_role') THEN CREATE ROLE "{{username}}"; END IF; END $$`,
+					},
+				},
+				Password:   "somesecurepassword",
+				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			// This test statement doesn't generate creds.
-			shouldTestCredsExist: false,
+			expectErr:      false,
+			credsAssertion: assertCredsDoNotExist,
+		},
+		"large block statements": {
+			req: newdbplugin.NewUserRequest{
+				UsernameConfig: newdbplugin.UsernameMetadata{
+					DisplayName: "test",
+					RoleName:    "test",
+				},
+				Statements: newdbplugin.Statements{
+					Commands: newUserLargeBlockStatements,
+				},
+				Password:   "somesecurepassword",
+				Expiration: time.Now().Add(1 * time.Minute),
+			},
+			expectErr:      false,
+			credsAssertion: assertCredsExist,
 		},
 	}
 
@@ -151,44 +225,29 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			usernameConfig := dbplugin.UsernameConfig{
-				DisplayName: "test",
-				RoleName:    "test",
-			}
-
-			statements := dbplugin.Statements{
-				Creation: test.createStmts,
-			}
-
 			// Give a timeout just in case the test decides to be problematic
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			username, password, err := db.CreateUser(ctx, statements, usernameConfig, time.Now().Add(time.Minute))
-			if err != nil {
-				t.Fatalf("err: %s", err)
+			resp, err := db.NewUser(ctx, test.req)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
 			}
 
-			if !test.shouldTestCredsExist {
-				// We're done here.
-				return
-			}
-
-			if err = testCredsExist(t, db.ConnectionURL, username, password); err != nil {
-				t.Fatalf("Could not connect with new credentials: %s", err)
-			}
+			test.credsAssertion(t, db.ConnectionURL, resp.Username, test.req.Password)
 
 			// Ensure that the role doesn't expire immediately
 			time.Sleep(2 * time.Second)
 
-			if err = testCredsExist(t, db.ConnectionURL, username, password); err != nil {
-				t.Fatalf("Could not connect with new credentials: %s", err)
-			}
+			test.credsAssertion(t, db.ConnectionURL, resp.Username, test.req.Password)
 		})
 	}
 }
 
-func TestPostgreSQL_RenewUser(t *testing.T) {
+func TestUpdateUser_expiration(t *testing.T) {
 	type testCase struct {
 		renewalStmts []string
 	}
@@ -198,7 +257,7 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 			renewalStmts: nil,
 		},
 		"default renewal name": {
-			renewalStmts: []string{defaultPostgresRenewSQL},
+			renewalStmts: []string{defaultExpirationStatement},
 		},
 		"default renewal username": {
 			renewalStmts: []string{`
@@ -213,128 +272,69 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			statements := dbplugin.Statements{
-				Creation: []string{createAdminUser},
-				Renewal:  test.renewalStmts,
+			password := "myreallysecurepassword"
+			req := newdbplugin.NewUserRequest{
+				UsernameConfig: newdbplugin.UsernameMetadata{
+					DisplayName: "test",
+					RoleName:    "test",
+				},
+				Statements: newdbplugin.Statements{
+					Commands: []string{createAdminUser},
+				},
+				Password:   password,
+				Expiration: time.Now().Add(2 * time.Second),
+			}
+			createResp := dbtesting.AssertNewUser(t, db, req)
+
+			assertCredsExist(t, db.ConnectionURL, createResp.Username, password)
+
+			updateReq := newdbplugin.UpdateUserRequest{
+				Username: createResp.Username,
+				Expiration: &newdbplugin.ChangeExpiration{
+					NewExpiration: time.Now().Add(1 * time.Minute),
+					Statements: newdbplugin.Statements{
+						Commands: test.renewalStmts,
+					},
+				},
 			}
 
-			usernameConfig := dbplugin.UsernameConfig{
-				DisplayName: "test",
-				RoleName:    "test",
-			}
-
-			// Give a timeout just in case the test decides to be problematic
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-
-			username, password, err := db.CreateUser(ctx, statements, usernameConfig, time.Now().Add(2*time.Second))
-			if err != nil {
-				t.Fatalf("err: %s", err)
-			}
-
-			if err = testCredsExist(t, db.ConnectionURL, username, password); err != nil {
-				t.Fatalf("Could not connect with new credentials: %s", err)
-			}
-
-			err = db.RenewUser(ctx, statements, username, time.Now().Add(time.Minute))
-			if err != nil {
-				t.Fatalf("err: %s", err)
-			}
+			dbtesting.AssertUpdateUser(t, db, updateReq)
 
 			// Sleep longer than the initial expiration time
-			time.Sleep(2 * time.Second)
+			time.Sleep(3 * time.Second)
 
-			if err = testCredsExist(t, db.ConnectionURL, username, password); err != nil {
-				t.Fatalf("Could not connect with new credentials: %s", err)
-			}
+			assertCredsExist(t, db.ConnectionURL, updateReq.Username, password)
 		})
 	}
 }
 
-func TestPostgreSQL_RotateRootCredentials(t *testing.T) {
+func TestUpdateUser_Password(t *testing.T) {
 	type testCase struct {
-		statements []string
+		statements     []string
+		expectErr      bool
+		credsAssertion credsAssertion
 	}
 
 	tests := map[string]testCase{
-		"empty statements": {
-			statements: nil,
+		"default statements": {
+			statements:     nil,
+			expectErr:      false,
+			credsAssertion: assertCredsExist,
 		},
-		"default name": {
-			statements: []string{`
-				ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';`,
-			},
+		"explicit default statements": {
+			statements:     []string{defaultChangePasswordStatement},
+			expectErr:      false,
+			credsAssertion: assertCredsExist,
 		},
-		"default username": {
-			statements: []string{defaultPostgresRotateRootCredentialsSQL},
+		"name instead of username": {
+			statements:     []string{`ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';`},
+			expectErr:      false,
+			credsAssertion: assertCredsExist,
 		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			cleanup, connURL := postgresql.PrepareTestContainer(t, "latest")
-			defer cleanup()
-			connURL = strings.Replace(connURL, "postgres:secret", `{{username}}:{{password}}`, -1)
-
-			connectionDetails := map[string]interface{}{
-				"connection_url":       connURL,
-				"max_open_connections": 5,
-				"username":             "postgres",
-				"password":             "secret",
-			}
-
-			db := new()
-			connProducer := db.SQLConnectionProducer
-
-			// Give a timeout just in case the test decides to be problematic
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-
-			_, err := db.Init(ctx, connectionDetails, true)
-			if err != nil {
-				t.Fatalf("err: %s", err)
-			}
-
-			if !connProducer.Initialized {
-				t.Fatal("Database should be initialized")
-			}
-
-			newConf, err := db.RotateRootCredentials(ctx, test.statements)
-			if err != nil {
-				t.Fatalf("err: %v", err)
-			}
-			if newConf["password"] == "secret" {
-				t.Fatal("password was not updated")
-			}
-
-			err = db.Close()
-			if err != nil {
-				t.Fatalf("failed to close: %s", err)
-			}
-		})
-	}
-}
-
-func TestPostgreSQL_RevokeUser(t *testing.T) {
-	type testCase struct {
-		revokeStmts []string
-	}
-
-	tests := map[string]testCase{
-		"empty statements": {
-			revokeStmts: nil,
-		},
-		"explicit default name": {
-			revokeStmts: []string{defaultPostgresRevocationSQL},
-		},
-		"explicit default username": {
-			revokeStmts: []string{`
-				REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM "{{username}}";
-				REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM "{{username}}";
-				REVOKE USAGE ON SCHEMA public FROM "{{username}}";
-				
-				DROP ROLE IF EXISTS "{{username}}";`,
-			},
+		"bad statements": {
+			statements:     []string{`asdofyas8uf77asoiajv`},
+			expectErr:      true,
+			credsAssertion: assertCredsDoNotExist,
 		},
 	}
 
@@ -344,155 +344,321 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			statements := dbplugin.Statements{
-				Creation:   []string{createAdminUser},
-				Revocation: test.revokeStmts,
+			initialPass := "myreallysecurepassword"
+			createReq := newdbplugin.NewUserRequest{
+				UsernameConfig: newdbplugin.UsernameMetadata{
+					DisplayName: "test",
+					RoleName:    "test",
+				},
+				Statements: newdbplugin.Statements{
+					Commands: []string{createAdminUser},
+				},
+				Password:   initialPass,
+				Expiration: time.Now().Add(2 * time.Second),
+			}
+			createResp := dbtesting.AssertNewUser(t, db, createReq)
+
+			assertCredsExist(t, db.ConnectionURL, createResp.Username, initialPass)
+
+			newPass := "somenewpassword"
+			updateReq := newdbplugin.UpdateUserRequest{
+				Username: createResp.Username,
+				Password: &newdbplugin.ChangePassword{
+					NewPassword: newPass,
+					Statements: newdbplugin.Statements{
+						Commands: test.statements,
+					},
+				},
 			}
 
-			usernameConfig := dbplugin.UsernameConfig{
-				DisplayName: "test",
-				RoleName:    "test",
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_, err := db.UpdateUser(ctx, updateReq)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
 			}
 
-			username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(2*time.Second))
-			if err != nil {
-				t.Fatalf("err: %s", err)
+			test.credsAssertion(t, db.ConnectionURL, createResp.Username, newPass)
+		})
+	}
+
+	t.Run("user does not exist", func(t *testing.T) {
+		newPass := "somenewpassword"
+		updateReq := newdbplugin.UpdateUserRequest{
+			Username: "missing-user",
+			Password: &newdbplugin.ChangePassword{
+				NewPassword: newPass,
+				Statements:  newdbplugin.Statements{},
+			},
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_, err := db.UpdateUser(ctx, updateReq)
+		if err == nil {
+			t.Fatalf("err expected, got nil")
+		}
+
+		assertCredsDoNotExist(t, db.ConnectionURL, updateReq.Username, newPass)
+	})
+}
+
+func TestUpdateUser_Expiration(t *testing.T) {
+	type testCase struct {
+		statements []string
+		expectErr  bool
+	}
+
+	tests := map[string]testCase{
+		"no statements": {
+			statements: nil,
+			expectErr:  false,
+		},
+		"default statements with name": {
+			statements: []string{defaultExpirationStatement},
+		},
+		"default statements with username": {
+			statements: []string{`ALTER ROLE "{{username}}" VALID UNTIL '{{expiration}}';`},
+		},
+	}
+
+	// Shared test container for speed - there should not be any overlap between the tests
+	db, cleanup := getPostgreSQL(t, nil)
+	defer cleanup()
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			password := "myreallysecurepassword"
+			initialExpiration := time.Now().Add(1 * time.Minute).Truncate(time.Second)
+			createReq := newdbplugin.NewUserRequest{
+				UsernameConfig: newdbplugin.UsernameMetadata{
+					DisplayName: "test",
+					RoleName:    "test",
+				},
+				Statements: newdbplugin.Statements{
+					Commands: []string{createAdminUser},
+				},
+				Password:   password,
+				Expiration: initialExpiration,
+			}
+			createResp := dbtesting.AssertNewUser(t, db, createReq)
+
+			assertCredsExist(t, db.ConnectionURL, createResp.Username, password)
+
+			actualExpiration := getExpiration(t, db, createResp.Username)
+			if actualExpiration.IsZero() {
+				t.Fatalf("Initial expiration is zero but should be set")
+			}
+			if !actualExpiration.Equal(initialExpiration) {
+				t.Fatalf("Actual expiration: %s Expected expiration: %s", actualExpiration, initialExpiration)
 			}
 
-			if err = testCredsExist(t, db.ConnectionURL, username, password); err != nil {
-				t.Fatalf("Could not connect with new credentials: %s", err)
+			newExpiration := initialExpiration.Add(1 * time.Minute)
+			updateReq := newdbplugin.UpdateUserRequest{
+				Username: createResp.Username,
+				Expiration: &newdbplugin.ChangeExpiration{
+					NewExpiration: newExpiration,
+					Statements: newdbplugin.Statements{
+						Commands: test.statements,
+					},
+				},
 			}
 
-			// Test default revoke statements
-			err = db.RevokeUser(context.Background(), statements, username)
-			if err != nil {
-				t.Fatalf("err: %s", err)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_, err := db.UpdateUser(ctx, updateReq)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
 			}
 
-			if err := testCredsExist(t, db.ConnectionURL, username, password); err == nil {
-				t.Fatal("Credentials were not revoked")
+			actualExpiration = getExpiration(t, db, createResp.Username)
+			if !actualExpiration.Equal(newExpiration) {
+				t.Fatalf("Actual expiration: %s Expected expiration: %s", actualExpiration, initialExpiration)
 			}
 		})
 	}
 }
 
-func TestPostgreSQL_SetCredentials_missingArgs(t *testing.T) {
+func getExpiration(t testing.TB, db *PostgreSQL, username string) time.Time {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := fmt.Sprintf("select valuntil from pg_catalog.pg_user where usename = '%s'", username)
+	conn, err := db.getConnection(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get connection to database: %s", err)
+	}
+
+	stmt, err := conn.PrepareContext(ctx, query)
+	if err != nil {
+		t.Fatalf("Failed to prepare statement: %s", err)
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.QueryContext(ctx)
+	if err != nil {
+		t.Fatalf("Failed to execute query to get expiration: %s", err)
+	}
+
+	if !rows.Next() {
+		return time.Time{} // No expiration
+	}
+	rawExp := ""
+	err = rows.Scan(&rawExp)
+	if err != nil {
+		t.Fatalf("Unable to get raw expiration: %s", err)
+	}
+	if rawExp == "" {
+		return time.Time{} // No expiration
+	}
+	exp, err := time.Parse(time.RFC3339, rawExp)
+	if err != nil {
+		t.Fatalf("Failed to parse expiration %q: %s", rawExp, err)
+	}
+	return exp
+}
+
+func TestDeleteUser(t *testing.T) {
 	type testCase struct {
-		statements dbplugin.Statements
-		userConfig dbplugin.StaticUserConfig
+		revokeStmts    []string
+		expectErr      bool
+		credsAssertion credsAssertion
 	}
 
 	tests := map[string]testCase{
-		"empty rotation statements": {
-			statements: dbplugin.Statements{
-				Rotation: nil,
-			},
-			userConfig: dbplugin.StaticUserConfig{
-				Username: "testuser",
-				Password: "password",
-			},
+		"no statements": {
+			revokeStmts: nil,
+			expectErr:   false,
+			// Wait for a short time before failing because postgres takes a moment to finish deleting the user
+			credsAssertion: waitUntilCredsDoNotExist(2 * time.Second),
 		},
-		"empty username": {
-			statements: dbplugin.Statements{
-				Rotation: []string{`
-					ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';`,
-				},
-			},
-			userConfig: dbplugin.StaticUserConfig{
-				Username: "",
-				Password: "password",
-			},
+		"statements with name": {
+			revokeStmts: []string{`
+				REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM "{{name}}";
+				REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM "{{name}}";
+				REVOKE USAGE ON SCHEMA public FROM "{{name}}";
+		
+				DROP ROLE IF EXISTS "{{name}}";`},
+			expectErr: false,
+			// Wait for a short time before failing because postgres takes a moment to finish deleting the user
+			credsAssertion: waitUntilCredsDoNotExist(2 * time.Second),
 		},
-		"empty password": {
-			statements: dbplugin.Statements{
-				Rotation: []string{`
-					ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';`,
-				},
-			},
-			userConfig: dbplugin.StaticUserConfig{
-				Username: "testuser",
-				Password: "",
-			},
+		"statements with username": {
+			revokeStmts: []string{`
+				REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM "{{username}}";
+				REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM "{{username}}";
+				REVOKE USAGE ON SCHEMA public FROM "{{username}}";
+		
+				DROP ROLE IF EXISTS "{{username}}";`},
+			expectErr: false,
+			// Wait for a short time before failing because postgres takes a moment to finish deleting the user
+			credsAssertion: waitUntilCredsDoNotExist(2 * time.Second),
+		},
+		"bad statements": {
+			revokeStmts: []string{`8a9yhfoiasjff`},
+			expectErr:   true,
+			// Wait for a short time before checking because postgres takes a moment to finish deleting the user
+			credsAssertion: assertCredsExistAfter(100 * time.Millisecond),
 		},
 	}
 
+	// Shared test container for speed - there should not be any overlap between the tests
+	db, cleanup := getPostgreSQL(t, nil)
+	defer cleanup()
+
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			db := new()
+			password := "myreallysecurepassword"
+			createReq := newdbplugin.NewUserRequest{
+				UsernameConfig: newdbplugin.UsernameMetadata{
+					DisplayName: "test",
+					RoleName:    "test",
+				},
+				Statements: newdbplugin.Statements{
+					Commands: []string{createAdminUser},
+				},
+				Password:   password,
+				Expiration: time.Now().Add(2 * time.Second),
+			}
+			createResp := dbtesting.AssertNewUser(t, db, createReq)
 
-			username, password, err := db.SetCredentials(context.Background(), test.statements, test.userConfig)
-			if err == nil {
-				t.Fatalf("expected err, got nil")
+			assertCredsExist(t, db.ConnectionURL, createResp.Username, password)
+
+			deleteReq := newdbplugin.DeleteUserRequest{
+				Username: createResp.Username,
+				Statements: newdbplugin.Statements{
+					Commands: test.revokeStmts,
+				},
 			}
-			if username != "" {
-				t.Fatalf("expected empty username, got [%s]", username)
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			_, err := db.DeleteUser(ctx, deleteReq)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
 			}
-			if password != "" {
-				t.Fatalf("expected empty password, got [%s]", password)
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
 			}
+
+			test.credsAssertion(t, db.ConnectionURL, createResp.Username, password)
 		})
 	}
 }
 
-func TestPostgresSQL_SetCredentials(t *testing.T) {
-	type testCase struct {
-		rotationStmts []string
+type credsAssertion func(t testing.TB, connURL, username, password string)
+
+func assertCredsExist(t testing.TB, connURL, username, password string) {
+	t.Helper()
+	err := testCredsExist(t, connURL, username, password)
+	if err != nil {
+		t.Fatalf("user does not exist: %s", err)
 	}
+}
 
-	tests := map[string]testCase{
-		"name rotation": {
-			rotationStmts: []string{`
-				ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';`,
-			},
-		},
-		"username rotation": {
-			rotationStmts: []string{`
-				ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';`,
-			},
-		},
+func assertCredsDoNotExist(t testing.TB, connURL, username, password string) {
+	t.Helper()
+	err := testCredsExist(t, connURL, username, password)
+	if err == nil {
+		t.Fatalf("user should not exist but does")
 	}
+}
 
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			db, cleanup := getPostgreSQL(t, nil)
-			defer cleanup()
+func waitUntilCredsDoNotExist(timeout time.Duration) credsAssertion {
+	return func(t testing.TB, connURL, username, password string) {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
 
-			// create the database user
-			dbUser := "vaultstatictest"
-			initPassword := "password"
-			createTestPGUser(t, db.ConnectionURL, dbUser, initPassword, testRoleStaticCreate)
-
-			statements := dbplugin.Statements{
-				Rotation: test.rotationStmts,
+		ticker := time.NewTicker(10 * time.Millisecond)
+		for {
+			select {
+			case <-ctx.Done():
+				t.Fatalf("Timed out waiting for user %s to be deleted", username)
+			case <-ticker.C:
+				err := testCredsExist(t, connURL, username, password)
+				if err != nil {
+					// Happy path
+					return
+				}
 			}
+		}
+	}
+}
 
-			password, err := db.GenerateCredentials(context.Background())
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			usernameConfig := dbplugin.StaticUserConfig{
-				Username: dbUser,
-				Password: password,
-			}
-
-			if err := testCredsExist(t, db.ConnectionURL, dbUser, initPassword); err != nil {
-				t.Fatalf("Could not connect with initial credentials: %s", err)
-			}
-
-			username, password, err := db.SetCredentials(context.Background(), statements, usernameConfig)
-			if err != nil {
-				t.Fatalf("err: %s", err)
-			}
-
-			if err := testCredsExist(t, db.ConnectionURL, username, password); err != nil {
-				t.Fatalf("Could not connect with new credentials: %s", err)
-			}
-
-			if err := testCredsExist(t, db.ConnectionURL, username, initPassword); err == nil {
-				t.Fatalf("Should not be able to connect with initial credentials")
-			}
-		})
+func assertCredsExistAfter(timeout time.Duration) credsAssertion {
+	return func(t testing.TB, connURL, username, password string) {
+		t.Helper()
+		time.Sleep(timeout)
+		assertCredsExist(t, connURL, username, password)
 	}
 }
 
@@ -516,7 +682,7 @@ CREATE ROLE "{{name}}" WITH
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
 `
 
-var testPostgresBlockStatementRoleSlice = []string{
+var newUserLargeBlockStatements = []string{
 	`
 DO $$
 BEGIN
@@ -537,59 +703,6 @@ $$
 	`GRANT "foo-role" TO "{{name}}";`,
 	`ALTER ROLE "{{name}}" SET search_path = foo;`,
 	`GRANT CONNECT ON DATABASE "postgres" TO "{{name}}";`,
-}
-
-const defaultPostgresRevocationSQL = `
-REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM "{{name}}";
-REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM "{{name}}";
-REVOKE USAGE ON SCHEMA public FROM "{{name}}";
-
-DROP ROLE IF EXISTS "{{name}}";
-`
-
-const testRoleStaticCreate = `
-CREATE ROLE "{{name}}" WITH
-  LOGIN
-  PASSWORD '{{password}}';
-`
-
-// This is a copy of a test helper method also found in
-// builtin/logical/database/rotation_test.go , and should be moved into a shared
-// helper file in the future.
-func createTestPGUser(t *testing.T, connURL string, username, password, query string) {
-	t.Helper()
-	conn, err := pq.ParseURL(connURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	db, err := sql.Open("postgres", conn)
-	defer db.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Start a transaction
-	ctx := context.Background()
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = tx.Rollback()
-	}()
-
-	m := map[string]string{
-		"name":     username,
-		"password": password,
-	}
-	if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-		t.Fatal(err)
-	}
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		t.Fatal(err)
-	}
 }
 
 func TestContainsMultilineStatement(t *testing.T) {
