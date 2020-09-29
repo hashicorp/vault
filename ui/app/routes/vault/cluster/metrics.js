@@ -1,7 +1,7 @@
 import Route from '@ember/routing/route';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import { hash } from 'rsvp';
-import { endOfMonth } from 'date-fns';
+import { endOfMonth, isValid } from 'date-fns';
 
 const getActivityParams = ({ start, end }) => {
   // TODO: minStart, maxEnd
