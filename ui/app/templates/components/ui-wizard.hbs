@@ -1,7 +1,6 @@
 <div class="app-content {{if (and shouldRender featureComponent) "wizard-open"}}">
   {{yield}}
 </div>
-{{!-- ARG TODO added conditional to help with failing tests but double check the wizard still works as expected --}}
 {{#if featureComponent}}
   {{#component
     (if shouldRender tutorialComponent)
