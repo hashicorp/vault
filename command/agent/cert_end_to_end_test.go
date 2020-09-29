@@ -135,11 +135,7 @@ func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 		logger.Trace("wrote dh param file", "path", dhpath)
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	timer := time.AfterFunc(30*time.Second, func() {
-		cancelFunc()
-	})
-	defer timer.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
 	aaConfig := map[string]interface{}{}
 
@@ -215,8 +211,12 @@ func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 		}
 	}()
 
-	// This has to be after the other defers so it happens first
-	defer cancelFunc()
+	// This has to be after the other defers so it happens first. It allows
+	// successful test runs to immediately cancel all of the runner goroutines
+	// and unblock any of the blocking defer calls by the runner's DoneCh that
+	// comes before this and avoid successful tests from taking the entire
+	// timeout duration.
+	defer cancel()
 
 	cloned, err := client.Clone()
 	if err != nil {
@@ -471,11 +471,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	// Auth handler (auto-auth) setup
 	// /////////////
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	timer := time.AfterFunc(30*time.Second, func() {
-		cancelFunc()
-	})
-	defer timer.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
 	am, err := agentcert.NewCertAuthMethod(&auth.AuthConfig{
 		Logger:    logger.Named("auth.cert"),
@@ -554,8 +550,12 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 		}
 	}()
 
-	// This has to be after the other defers so it happens first
-	defer cancelFunc()
+	// This has to be after the other defers so it happens first. It allows
+	// successful test runs to immediately cancel all of the runner goroutines
+	// and unblock any of the blocking defer calls by the runner's DoneCh that
+	// comes before this and avoid successful tests from taking the entire
+	// timeout duration.
+	defer cancel()
 
 	// Read the token from the sink
 	timeout := time.Now().Add(5 * time.Second)

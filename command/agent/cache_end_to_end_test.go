@@ -151,11 +151,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	os.Remove(out)
 	t.Logf("output: %s", out)
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	timer := time.AfterFunc(30*time.Second, func() {
-		cancelFunc()
-	})
-	defer timer.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
 	conf := map[string]interface{}{
 		"role_id_file_path":                   role,
@@ -253,8 +249,12 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		}
 	}()
 
-	// This has to be after the other defers so it happens first
-	defer cancelFunc()
+	// This has to be after the other defers so it happens first. It allows
+	// successful test runs to immediately cancel all of the runner goroutines
+	// and unblock any of the blocking defer calls by the runner's DoneCh that
+	// comes before this and avoid successful tests from taking the entire
+	// timeout duration.
+	defer cancel()
 
 	// Check that no sink file exists
 	_, err = os.Lstat(out)
