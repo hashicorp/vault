@@ -31,14 +31,12 @@ func (ub usernameBuilder) makeUsername() (string, error) {
 
 	now := fmt.Sprint(time.Now().Unix())
 
-	parts := []string{
+	username := joinNonEmpty(ub.separator,
 		"v",
 		ub.displayName,
 		ub.roleName,
 		userUUID,
-		now,
-	}
-	username := joinNonEmpty(ub.separator, parts...)
+		now)
 	if ub.maxLen > 0 {
 		username = trunc(username, ub.maxLen)
 	}
