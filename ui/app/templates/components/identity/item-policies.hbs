@@ -1,4 +1,4 @@
-{{#each model.policies as |policyName|}}
+{{#each @model.policies as |policyName|}}
   {{#linked-block
     "vault.cluster.policy.show"
     "acl"
@@ -19,6 +19,6 @@
   {{/linked-block}}
 {{else}}
   <EmptyState
-    @title="No policies associated with {{model.name}} yet"
+    @title="No policies associated with {{@model.name}} yet"
   />
 {{/each}}

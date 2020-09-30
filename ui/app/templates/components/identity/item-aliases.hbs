@@ -1,4 +1,4 @@
-{{#each (if model.alias.id (array model.alias) model.aliases) as |item|}}
+{{#each (if @model.alias.id (array @model.alias) @model.aliases) as |item|}}
   {{#linked-block
     "vault.cluster.access.identity.aliases.show"
     item.id
@@ -26,6 +26,6 @@
   {{/linked-block}}
 {{else}}
   <EmptyState
-    @title="No {{model.identityType}} aliases for {{model.name}} yet"
+    @title="No {{@model.identityType}} aliases for {{@model.name}} yet"
   />
 {{/each}}
