@@ -15,20 +15,26 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"golang.org/x/net/http2"
 )
 
 func raftCluster(t testing.TB) *vault.TestCluster {
-	var conf vault.CoreConfig
+	conf := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": credUserpass.Factory,
+		},
+	}
 	var opts = vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
-	teststorage.RaftBackendSetup(&conf, &opts)
-	cluster := vault.NewTestCluster(t, &conf, &opts)
+	teststorage.RaftBackendSetup(conf, &opts)
+	cluster := vault.NewTestCluster(t, conf, &opts)
 	cluster.Start()
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	return cluster
