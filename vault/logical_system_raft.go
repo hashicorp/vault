@@ -155,14 +155,6 @@ func (b *SystemBackend) handleRaftConfigurationGet() framework.OperationFunc {
 	}
 }
 
-func (b *SystemBackend) wrapHandleRaftRemovePeer() framework.OperationFunc {
-	if b.Core.IsDRSecondary() {
-		return b.verifyDROperationToken(b.handleRaftRemovePeerUpdate(), false)
-	}
-
-	return b.handleRaftRemovePeerUpdate()
-}
-
 func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		serverID := d.Get("server_id").(string)

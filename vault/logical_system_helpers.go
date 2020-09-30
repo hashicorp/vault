@@ -139,3 +139,7 @@ func (b *SystemBackend) tuneMountTTLs(ctx context.Context, path string, me *Moun
 
 	return nil
 }
+
+func (b *SystemBackend) wrapHandleRaftRemovePeer() framework.OperationFunc {
+	return b.handleRaftRemovePeerUpdate()
+}
