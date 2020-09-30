@@ -24,7 +24,6 @@ module('Integration | Component | wrap ttl', function(hooks) {
   test('it renders', async function(assert) {
     await render(hbs`{{wrap-ttl onChange=(action onChange)}}`);
     assert.equal(this.lastOnChangeCall, '30m', 'calls onChange with 30m default on first render');
-    // await this.pauseTest();
     assert.dom('label[for="toggle-Wrapresponse"] .ttl-picker-label').hasText('Wrap response');
   });
 

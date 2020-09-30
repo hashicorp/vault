@@ -14,6 +14,7 @@
   <Toolbar>
     {{#if model.meta.total}}
       <ToolbarFilters>
+        {{!-- TODO: Keeping as non bracket component because during upgrade the bracket component broke this --}}
         {{navigate-input
           filterFocusDidChange=(action "setFilterFocus")
           filterDidChange=(action "setFilter")

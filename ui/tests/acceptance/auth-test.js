@@ -70,9 +70,10 @@ module('Acceptance | auth', function(hooks) {
       await component.login();
       let lastRequest = this.server.passthroughRequests[this.server.passthroughRequests.length - 1];
       let body = JSON.parse(lastRequest.requestBody);
+      // ARG TODO try to understand why X-Vault-Token became capitalized in the upgrade where before it was all lowercase
       if (backend.type === 'token') {
         assert.ok(
-          Object.keys(lastRequest.requestHeaders).includes('x-vault-token'),
+          Object.keys(lastRequest.requestHeaders).includes('X-Vault-Token'),
           'token uses vault token header'
         );
       } else if (backend.type === 'github') {
