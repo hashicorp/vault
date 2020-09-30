@@ -37,16 +37,24 @@
   </nav>
 </div>
 
-{{#if model.config.queriesAvailable}}
+{{#if (eq model.config.queriesAvailable false)}}
+  {{#if (eq model.config.enabled "On")}}
+    <EmptyState @title="No data is being received" @message='We haven’t yet gathered enough data to display here. We collect it at the end of each month, so your data will be available on the first of next month.' />
+  {{else}}
+    <EmptyState @title="No data is being received" @message='Tracking is disabled, and no data is being collected. To turn it on, edit the configuration.'>
+      <p>{{#link-to 'vault.cluster.metrics-config'}}Go to configuration{{/link-to}}</p>
+    </EmptyState>
+  {{/if}}
+{{else}}
   <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
-    {{#unless (eq model.config.enabled 'On')}}
+    {{#if (eq model.config.enabled 'Off')}}
       <AlertBanner
         @type="warning"
         @title="Tracking is disabled"
       >
         This feature is currently disabled and data is not being collected. {{#link-to 'vault.cluster.metrics-config'}}Edit the configuration{{/link-to}} to enable tracking again.
       </AlertBanner>
-    {{/unless}}
+    {{/if}}
     <p class="has-bottom-margin-s">The active clients metric contributes to billing. It is collected at the end of each month alongside unique entities and direct active tokens.</p>
     <h2 class="title is-4">
       {{date-format model.activity.startTime "MMM DD, YYYY"}} through {{date-format model.activity.endTime "MMM DD, YYYY"}}
@@ -54,29 +62,23 @@
     {{#unless model.activity.total}}
       <EmptyState @title="No data found" @message="No data exists for that query period. Try searching again." />
     {{else}}
-    <div class="selectable-card-container">
-      <SelectableCard
-        @cardTitle="Active clients"
-        @total={{model.activity.total.clients}}
-        @subText="Current namespace"
-      />
-      <SelectableCard
-        @cardTitle="Unique entities"
-        @total={{model.activity.total.distinct_entities}}
-        @subText="Current namespace"
-      />
-      <SelectableCard
-        @cardTitle="Active direct tokens"
-        @total={{model.activity.total.non_entity_tokens}}
-        @subText="Current namespace"
-      />
-    </div>
+      <div class="selectable-card-container">
+        <SelectableCard
+          @cardTitle="Active clients"
+          @total={{model.activity.total.clients}}
+          @subText="Current namespace"
+        />
+        <SelectableCard
+          @cardTitle="Unique entities"
+          @total={{model.activity.total.distinct_entities}}
+          @subText="Current namespace"
+        />
+        <SelectableCard
+          @cardTitle="Active direct tokens"
+          @total={{model.activity.total.non_entity_tokens}}
+          @subText="Current namespace"
+        />
+      </div>
     {{/unless}}
   </div>
-{{else if (eq model.config.enabled "On")}}
-  <EmptyState @title="No data is being received" @message='We haven’t yet gathered enough data to display here. We collect it at the end of each month, so your data will be available on the first of next month.' />
-{{else}}
-  <EmptyState @title="No data is being received" @message='Tracking is disabled, and no data is being collected. To turn it on, edit the configuration.'>
-    <p>{{#link-to 'vault.cluster.metrics-config'}}Go to configuration{{/link-to}}</p>
-  </EmptyState>
 {{/if}}
