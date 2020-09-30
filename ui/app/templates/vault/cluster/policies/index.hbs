@@ -14,7 +14,16 @@
   <Toolbar>
     {{#if model.meta.total}}
       <ToolbarFilters>
-        <NavigateInput @filterFocusDidChange={{action "setFilterFocus"}} @filterDidChange={{action "setFilter"}} @filter={{filter}} @filterMatchesKey={{filterMatchesKey}} @firstPartialMatch={{firstPartialMatch}} @extraNavParams={{policyType}} @placeholder="Filter policies" @mode="policy" />
+        {{navigate-input
+          filterFocusDidChange=(action "setFilterFocus")
+          filterDidChange=(action "setFilter")
+          filter=filter
+          filterMatchesKey=filterMatchesKey
+          firstPartialMatch=firstPartialMatch
+          extraNavParams=policyType
+          placeholder="Filter policies"
+          mode="policy"
+        }}
         {{#if filterFocused}}
           {{#if filterMatchesKey}}
             <p class="input-hint">
