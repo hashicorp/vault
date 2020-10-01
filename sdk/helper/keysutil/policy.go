@@ -692,16 +692,20 @@ func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage, randReade
 	return nil
 }
 
-// DeriveKey is used to derive the encryption key that should be used depending
+// GetKey is used to derive the encryption key that should be used depending
 // on the policy. If derivation is disabled the raw key is used and no context
 // is required, otherwise the KDF mode is used with the context to derive the
 // proper key.
-func (p *Policy) DeriveKey(context []byte, ver, numBytes int) ([]byte, error) {
+func (p *Policy) GetKey(context []byte, ver, numBytes int) ([]byte, error) {
 	// Fast-path non-derived keys
 	if !p.Derived {
 		return p.Keys[strconv.Itoa(ver)].Key, nil
 	}
 
+	return p.DeriveKey(context, nil, ver, numBytes)
+}
+
+func (p *Policy) DeriveKey(context, salt []byte, ver int, numBytes int) ([]byte, error) {
 	if !p.Type.DerivationSupported() {
 		return nil, errutil.UserError{Err: fmt.Sprintf("derivation not supported for key type %v", p.Type)}
 	}
@@ -723,10 +727,10 @@ func (p *Policy) DeriveKey(context []byte, ver, numBytes int) ([]byte, error) {
 	case Kdf_hmac_sha256_counter:
 		prf := kdf.HMACSHA256PRF
 		prfLen := kdf.HMACSHA256PRFLen
-		return kdf.CounterMode(prf, prfLen, p.Keys[strconv.Itoa(ver)].Key, context, 256)
+		return kdf.CounterMode(prf, prfLen, p.Keys[strconv.Itoa(ver)].Key, append(context, salt...), 256)
 
 	case Kdf_hkdf_sha256:
-		reader := hkdf.New(sha256.New, p.Keys[strconv.Itoa(ver)].Key, nil, context)
+		reader := hkdf.New(sha256.New, p.Keys[strconv.Itoa(ver)].Key, salt, context)
 		derBytes := bytes.NewBuffer(nil)
 		derBytes.Grow(numBytes)
 		limReader := &io.LimitedReader{
@@ -809,7 +813,6 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
 		hmacKey := context
 
-		var aead cipher.AEAD
 		var encKey []byte
 		var deriveHMAC bool
 
@@ -823,7 +826,7 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 			encBytes = 16
 		}
 
-		key, err := p.DeriveKey(context, ver, encBytes+hmacBytes)
+		key, err := p.GetKey(context, ver, encBytes+hmacBytes)
 		if err != nil {
 			return "", err
 		}
@@ -843,65 +846,10 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 			}
 		}
 
-		switch p.Type {
-		case KeyType_AES128_GCM96, KeyType_AES256_GCM96:
-			// Setup the cipher
-			aesCipher, err := aes.NewCipher(encKey)
-			if err != nil {
-				return "", errutil.InternalError{Err: err.Error()}
-			}
-
-			// Setup the GCM AEAD
-			gcm, err := cipher.NewGCM(aesCipher)
-			if err != nil {
-				return "", errutil.InternalError{Err: err.Error()}
-			}
-
-			aead = gcm
-
-		case KeyType_ChaCha20_Poly1305:
-			cha, err := chacha20poly1305.New(encKey)
-			if err != nil {
-				return "", errutil.InternalError{Err: err.Error()}
-			}
-
-			aead = cha
+		ciphertext,err = p.SymmetricEncryptRaw(ver, p.ConvergentEncryption, encKey, nil, hmacKey, plaintext, nil)
+		if err != nil {
+			return "", err
 		}
-
-		if p.ConvergentEncryption {
-			convergentVersion := p.convergentVersion(ver)
-			switch convergentVersion {
-			case 1:
-				if len(nonce) != aead.NonceSize() {
-					return "", errutil.UserError{Err: fmt.Sprintf("base64-decoded nonce must be %d bytes long when using convergent encryption with this key", aead.NonceSize())}
-				}
-			case 2, 3:
-				if len(hmacKey) == 0 {
-					return "", errutil.InternalError{Err: fmt.Sprintf("invalid hmac key length of zero")}
-				}
-				nonceHmac := hmac.New(sha256.New, hmacKey)
-				nonceHmac.Write(plaintext)
-				nonceSum := nonceHmac.Sum(nil)
-				nonce = nonceSum[:aead.NonceSize()]
-			default:
-				return "", errutil.InternalError{Err: fmt.Sprintf("unhandled convergent version %d", convergentVersion)}
-			}
-		} else {
-			// Compute random nonce
-			nonce, err = uuid.GenerateRandomBytes(aead.NonceSize())
-			if err != nil {
-				return "", errutil.InternalError{Err: err.Error()}
-			}
-		}
-
-		// Encrypt and tag with AEAD
-		ciphertext = aead.Seal(nil, nonce, plaintext, nil)
-
-		// Place the encrypted data after the nonce
-		if !p.ConvergentEncryption || p.convergentVersion(ver) > 1 {
-			ciphertext = append(nonce, ciphertext...)
-		}
-
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		key := p.Keys[strconv.Itoa(ver)].RSAKey
 		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, &key.PublicKey, plaintext, nil)
@@ -976,14 +924,12 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 
 	switch p.Type {
 	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
-		var aead cipher.AEAD
-
 		numBytes := 32
 		if p.Type == KeyType_AES128_GCM96 {
 			numBytes = 16
 		}
 
-		encKey, err := p.DeriveKey(context, ver, numBytes)
+		encKey, err := p.GetKey(context, ver, numBytes)
 		if err != nil {
 			return "", err
 		}
@@ -992,49 +938,7 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 			return "", errutil.InternalError{Err: "could not derive enc key, length not correct"}
 		}
 
-		switch p.Type {
-		case KeyType_AES128_GCM96, KeyType_AES256_GCM96:
-			// Setup the cipher
-			aesCipher, err := aes.NewCipher(encKey)
-			if err != nil {
-				return "", errutil.InternalError{Err: err.Error()}
-			}
-
-			// Setup the GCM AEAD
-			gcm, err := cipher.NewGCM(aesCipher)
-			if err != nil {
-				return "", errutil.InternalError{Err: err.Error()}
-			}
-
-			aead = gcm
-
-		case KeyType_ChaCha20_Poly1305:
-			cha, err := chacha20poly1305.New(encKey)
-			if err != nil {
-				return "", errutil.InternalError{Err: err.Error()}
-			}
-
-			aead = cha
-		}
-
-		if len(decoded) < aead.NonceSize() {
-			return "", errutil.UserError{Err: "invalid ciphertext length"}
-		}
-
-		// Extract the nonce and ciphertext
-		var ciphertext []byte
-		if p.ConvergentEncryption && convergentVersion == 1 {
-			ciphertext = decoded
-		} else {
-			nonce = decoded[:aead.NonceSize()]
-			ciphertext = decoded[aead.NonceSize():]
-		}
-
-		// Verify and Decrypt
-		plain, err = aead.Open(nil, nonce, ciphertext, nil)
-		if err != nil {
-			return "", errutil.UserError{Err: "invalid ciphertext: unable to decrypt"}
-		}
+		plain, err = p.SymmetricDecryptRaw(p.ConvergentEncryption, convergentVersion, encKey, decoded, nil)
 
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		key := p.Keys[strconv.Itoa(ver)].RSAKey
@@ -1156,7 +1060,7 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 		if p.Derived {
 			// Derive the key that should be used
 			var err error
-			key, err = p.DeriveKey(context, ver, 32)
+			key, err = p.GetKey(context, ver, 32)
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
 			}
@@ -1325,7 +1229,7 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 		if p.Derived {
 			// Derive the key that should be used
 			var err error
-			key, err = p.DeriveKey(context, ver, 32)
+			key, err = p.GetKey(context, ver, 32)
 			if err != nil {
 				return false, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
 			}
@@ -1595,4 +1499,119 @@ func (p *Policy) getVersionPrefix(ver int) string {
 	p.versionPrefixCache.Store(ver, prefix)
 
 	return prefix
+}
+
+func (p *Policy) SymmetricEncryptRaw(ver int, convergent bool, encKey, nonce, hmacKey, plaintext, additionalData []byte) ([]byte, error) {
+	var aead cipher.AEAD
+	var err error
+
+	switch p.Type {
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96:
+		// Setup the cipher
+		aesCipher, err := aes.NewCipher(encKey)
+		if err != nil {
+			return nil, errutil.InternalError{Err: err.Error()}
+		}
+
+		// Setup the GCM AEAD
+		gcm, err := cipher.NewGCM(aesCipher)
+		if err != nil {
+			return nil, errutil.InternalError{Err: err.Error()}
+		}
+
+		aead = gcm
+
+	case KeyType_ChaCha20_Poly1305:
+		cha, err := chacha20poly1305.New(encKey)
+		if err != nil {
+			return nil, errutil.InternalError{Err: err.Error()}
+		}
+
+		aead = cha
+	}
+
+	if convergent {
+		convergentVersion := p.convergentVersion(ver)
+		switch convergentVersion {
+		case 1:
+			if len(nonce) != aead.NonceSize() {
+				return nil, errutil.UserError{Err: fmt.Sprintf("base64-decoded nonce must be %d bytes long when using convergent encryption with this key", aead.NonceSize())}
+			}
+		case 2, 3:
+			if len(hmacKey) == 0 {
+				return nil, errutil.InternalError{Err: fmt.Sprintf("invalid hmac key length of zero")}
+			}
+			nonceHmac := hmac.New(sha256.New, hmacKey)
+			nonceHmac.Write(plaintext)
+			nonceSum := nonceHmac.Sum(nil)
+			nonce = nonceSum[:aead.NonceSize()]
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unhandled convergent version %d", convergentVersion)}
+		}
+	} else if nonce == nil {
+		// Compute random nonce
+		nonce, err = uuid.GenerateRandomBytes(aead.NonceSize())
+		if err != nil {
+			return nil, errutil.InternalError{Err: err.Error()}
+		}
+	}
+
+	// Encrypt and tag with AEAD
+	ciphertext := aead.Seal(nil, nonce, plaintext, additionalData)
+
+	// Place the encrypted data after the nonce
+	if !convergent || p.convergentVersion(ver) > 1 {
+		ciphertext = append(nonce, ciphertext...)
+	}
+	return ciphertext, nil
+}
+
+func (p *Policy) SymmetricDecryptRaw(convergent bool, convergentVersion int, encKey, ciphertext, additionalData []byte) ([]byte, error) {
+	var aead cipher.AEAD
+	var nonce []byte
+
+	switch p.Type {
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96:
+		// Setup the cipher
+		aesCipher, err := aes.NewCipher(encKey)
+		if err != nil {
+			return nil, errutil.InternalError{Err: err.Error()}
+		}
+
+		// Setup the GCM AEAD
+		gcm, err := cipher.NewGCM(aesCipher)
+		if err != nil {
+			return nil, errutil.InternalError{Err: err.Error()}
+		}
+
+		aead = gcm
+
+	case KeyType_ChaCha20_Poly1305:
+		cha, err := chacha20poly1305.New(encKey)
+		if err != nil {
+			return nil, errutil.InternalError{Err: err.Error()}
+		}
+
+		aead = cha
+	}
+
+	if len(ciphertext) < aead.NonceSize() {
+		return nil, errutil.UserError{Err: "invalid ciphertext length"}
+	}
+
+	// Extract the nonce and ciphertext
+	var trueCT []byte
+	if convergent && convergentVersion == 1 {
+		trueCT = ciphertext
+	} else {
+		nonce = ciphertext[:aead.NonceSize()]
+		trueCT = ciphertext[aead.NonceSize():]
+	}
+
+	// Verify and Decrypt
+	plain, err := aead.Open(nil, nonce, trueCT, additionalData)
+	if err != nil {
+		return nil, err
+	}
+	return plain, nil
 }
