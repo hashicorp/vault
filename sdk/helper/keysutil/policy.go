@@ -705,7 +705,9 @@ func (p *Policy) GetKey(context []byte, ver, numBytes int) ([]byte, error) {
 	return p.DeriveKey(context, nil, ver, numBytes)
 }
 
-// DeriveKey is used to derive a symmetric key given a context and salt.
+// DeriveKey is used to derive a symmetric key given a context and salt.  This does not
+// check the policies Derived flag, but just implements the derivation logic.  GetKey
+// is responsible for switching on the policy config.
 func (p *Policy) DeriveKey(context, salt []byte, ver int, numBytes int) ([]byte, error) {
 	if !p.Type.DerivationSupported() {
 		return nil, errutil.UserError{Err: fmt.Sprintf("derivation not supported for key type %v", p.Type)}
@@ -949,7 +951,9 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 				Convergent:        p.ConvergentEncryption,
 				ConvergentVersion: p.ConvergentVersion,
 			})
-
+		if err != nil {
+			return nil, err
+		}
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		key := p.Keys[strconv.Itoa(ver)].RSAKey
 		plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
@@ -1511,12 +1515,19 @@ func (p *Policy) getVersionPrefix(ver int) string {
 	return prefix
 }
 
+// SymmetricOpts are the arguments to symmetric operations that are "optional", e.g.
+// not always used.  This improves the aesthetics of calls to those functions.
 type SymmetricOpts struct {
-	Convergent        bool
+	// Whether to use convergent encryption
+	Convergent bool
+	// The version of the convergent encryption scheme
 	ConvergentVersion int
-	Nonce             []byte
-	AdditionalData    []byte
-	HMACKey           []byte
+	// The nonce, if not randomly generated
+	Nonce []byte
+	// Additional data to include in AEAD authentication
+	AdditionalData []byte
+	// The HMAC key, for generating IVs in convergent encryption
+	HMACKey []byte
 }
 
 // Symmetrically encrypt a plaintext given the convergence configuration and appropriate keys
