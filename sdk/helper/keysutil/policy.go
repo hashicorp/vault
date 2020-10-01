@@ -853,6 +853,7 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 			SymmetricOpts{
 				Convergent: p.ConvergentEncryption,
 				HMACKey:    hmacKey,
+				Nonce:      nonce,
 			})
 
 		if err != nil {
