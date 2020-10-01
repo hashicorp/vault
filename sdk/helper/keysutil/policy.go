@@ -952,7 +952,7 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 				ConvergentVersion: p.ConvergentVersion,
 			})
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		key := p.Keys[strconv.Itoa(ver)].RSAKey
