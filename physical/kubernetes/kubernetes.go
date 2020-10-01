@@ -22,6 +22,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -222,7 +223,7 @@ func (k *KubernetesBackend) List(ctx context.Context, prefix string) ([]string, 
 
 	listOptions := metav1.ListOptions{LabelSelector: selector.String(), Limit: 100}
 
-	keys := map[string]struct{}{}
+	var keys []string
 	for {
 		secrets, err := k.client.CoreV1().Secrets(k.namespace).List(ctx, listOptions)
 		if err != nil {
@@ -239,13 +240,13 @@ func (k *KubernetesBackend) List(ctx context.Context, prefix string) ([]string, 
 			key = strings.TrimPrefix(key, prefix)
 
 			if level == len(levelLabels) { // exact level matches
-				keys[key] = struct{}{}
+				keys = append(keys, key)
 			} else { // sublevel matches
 				i := strings.Index(key, "/")
 				if i != -1 {
 					key = key[:i]
 				}
-				keys[key+"/"] = struct{}{}
+				keys = strutil.AppendIfMissing(keys, key+"/")
 			}
 		}
 
@@ -256,14 +257,8 @@ func (k *KubernetesBackend) List(ctx context.Context, prefix string) ([]string, 
 		listOptions.Continue = secrets.Continue
 	}
 
-	var sorted []string
-	for key := range keys {
-		sorted = append(sorted, key)
-	}
+	// fmt.Printf("list keys under %s: %v\n", prefix, keys)
 
-	sort.Strings(sorted)
-
-	// fmt.Printf("list keys under %s: %v\n", prefix, sorted)
-
-	return sorted, nil
+	sort.Strings(keys)
+	return keys, nil
 }
