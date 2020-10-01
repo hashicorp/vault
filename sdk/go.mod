@@ -33,7 +33,7 @@ require (
 	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/hashicorp/hcl v1.0.0
-	github.com/hashicorp/vault/api 38d91b749c77fe70c89f374838c705e542c7b01f
+	github.com/hashicorp/vault/api v0.0.0-20201001211907-38d91b749c77
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mitchellh/copystructure v1.0.0
