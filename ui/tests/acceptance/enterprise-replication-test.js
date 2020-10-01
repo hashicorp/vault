@@ -234,8 +234,8 @@ module('Acceptance | Enterprise | replication', function(hooks) {
 
     // checks on secondary token modal
     assert.dom('#modal-wormhole').exists();
-    const modalDate = document.querySelector('[data-test-row-value="TTL"]').innerText;
-    assert.equal(modalDate, '1800s', 'shows the correct TTL of 1800s');
+    const modalDefaultTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
+    assert.equal(modalDefaultTtl, '1800s', 'shows the correct TTL of 1800s');
     // click off the modal to make sure you don't just have to click on the copy-close button to copy the token
     await click('[data-test-modal-background]');
     await settled();
