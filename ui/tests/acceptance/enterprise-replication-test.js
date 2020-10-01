@@ -4,7 +4,6 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
-import { dateFormat } from 'core/helpers/date-format';
 import { create } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import ss from 'vault/tests/pages/components/search-select';
@@ -235,16 +234,8 @@ module('Acceptance | Enterprise | replication', function(hooks) {
 
     // checks on secondary token modal
     assert.dom('#modal-wormhole').exists();
-    const today = new Date();
-    today.setMinutes(today.getMinutes() + 30); // add default 30 min TTL to current date to return expires
-    const dateFormatted = dateFormat([today, 'MMM DD, YYYY hh:mm:ss A']);
-    const modalDate = document.querySelector('[data-test-row-value="Expires"]').innerText;
-    // because timestamp might be off by a 1 sec due to different in exp from token vs. adding 30 min, checking the string before the seconds.
-    assert.equal(
-      dateFormatted.slice(0, 18),
-      modalDate.slice(0, 18),
-      'shows the correct expiration date and in the correct format'
-    );
+    const modalDate = document.querySelector('[data-test-row-value="TTL"]').innerText;
+    assert.equal(modalDate, '1800s', 'shows the correct TTL of 1800s');
     // click off the modal to make sure you don't just have to click on the copy-close button to copy the token
     await click('[data-test-modal-background]');
     await settled();
