@@ -138,7 +138,6 @@ func (k *KubernetesBackend) Put(ctx context.Context, entry *physical.Entry) erro
 	// key := entry.Key[lastSlash+1:]
 
 	labels := prefixToLabels(prefix)
-	labels["prefix-levels"] = fmt.Sprint(len(labels))
 
 	secret := v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -231,22 +230,15 @@ func (k *KubernetesBackend) List(ctx context.Context, prefix string) ([]string, 
 		}
 
 		for _, secret := range secrets.Items {
-			level, err := strconv.Atoi(secret.Labels["prefix-levels"])
-			if err != nil {
-				return nil, errwrap.Wrapf("failed to list secrets: {{err}}", err)
-			}
-
 			key := string(secret.Data["key"])
 			key = strings.TrimPrefix(key, prefix)
 
-			if level == len(levelLabels) { // exact level matches
+			if i := strings.Index(key, "/"); i == -1 {
+				// Add objects only from the current 'folder'
 				keys = append(keys, key)
-			} else { // sublevel matches
-				i := strings.Index(key, "/")
-				if i != -1 {
-					key = key[:i]
-				}
-				keys = strutil.AppendIfMissing(keys, key+"/")
+			} else if i != -1 {
+				// Add truncated 'folder' paths
+				keys = strutil.AppendIfMissing(keys, string(key[:i+1]))
 			}
 		}
 
