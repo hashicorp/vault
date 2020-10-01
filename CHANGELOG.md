@@ -35,6 +35,7 @@ BUG FIXES:
 
 * auth/aws: Restrict region selection when in the aws-us-gov partition to avoid IAM errors [[GH-9947](https://github.com/hashicorp/vault/pull/9947)]
 * core: Fix deadlock in handling EGP policies
+* core (enterprise): Fix extraneous error messages in DR Cluster
 
 ## 1.5.4
 ### September 24th, 2020
