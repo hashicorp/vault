@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/newdbplugin"
@@ -30,6 +31,9 @@ func newDatabaseWrapper(ctx context.Context, pluginName string, sys pluginutil.L
 		return dbw, nil
 	}
 
+	merr := &multierror.Error{}
+	merr = multierror.Append(merr, err)
+
 	legacyDB, err := dbplugin.PluginFactory(ctx, pluginName, sys, logger)
 	if err == nil {
 		dbw = databaseVersionWrapper{
@@ -37,8 +41,9 @@ func newDatabaseWrapper(ctx context.Context, pluginName string, sys pluginutil.L
 		}
 		return dbw, nil
 	}
+	merr = multierror.Append(merr, err)
 
-	return dbw, fmt.Errorf("invalid database version")
+	return dbw, fmt.Errorf("invalid database version: %s", merr)
 }
 
 // Initialize the underlying database. This is analogous to a constructor on the database plugin object.

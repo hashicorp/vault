@@ -1,5 +1,9 @@
 ## Next
 
+CHANGES:
+
+* agent: Agent now properly returns a non-zero exit code on error, such as one due to template rendering failure. Using `error_on_missing_key` in the template config will cause agent to immediately exit on failure. In order to make agent properly exit due to continuous failure from template rendering errors, the old behavior of indefinitely restarting the template server is now changed to exit once the default retry attempt of 12 times (with exponential backoff) gets exhausted. [[GH-9670](https://github.com/hashicorp/vault/pull/9670)]  
+
 FEATURES:
 
 * **Couchbase Secrets**: Vault can now manage static and dynamic credentials for Couchbase. [[GH-9664](https://github.com/hashicorp/vault/pull/9664)]
@@ -31,6 +35,7 @@ BUG FIXES:
 
 * auth/aws: Restrict region selection when in the aws-us-gov partition to avoid IAM errors [[GH-9947](https://github.com/hashicorp/vault/pull/9947)]
 * core: Fix deadlock in handling EGP policies
+* core (enterprise): Fix extraneous error messages in DR Cluster
 
 ## 1.5.4
 ### September 24th, 2020
