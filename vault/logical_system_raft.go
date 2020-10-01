@@ -83,7 +83,7 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.wrapHandleRaftRemovePeer(),
+					Callback: wrapHandleRaftRemovePeer(b),
 					Summary:  "Remove a peer from the raft cluster.",
 				},
 			},
