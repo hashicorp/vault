@@ -1048,15 +1048,7 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 		default:
 			// check 3 is a bit more complex, so we do it last
 			// only try to look up full ARNs if there's a wildcard ARN in BoundIamPrincipalIDs.
-			hasWildcardBind := false
-			for _, principalARN := range roleEntry.BoundIamPrincipalARNs {
-				if strings.HasSuffix(principalARN, "*") {
-					hasWildcardBind = true
-					break
-				}
-			}
-
-			if !hasWildcardBind {
+			if !hasWildcardBind(roleEntry.BoundIamPrincipalARNs) {
 				return nil, fmt.Errorf("role %q no longer bound to ARN %q", roleName, canonicalArn)
 			}
 
@@ -1331,26 +1323,18 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		case !roleEntry.ResolveAWSUniqueIDs && strutil.StrListContains(roleEntry.BoundIamPrincipalARNs, entity.canonicalArn()): // check 2 passed
 		default:
 			// evaluate check 3 -- only try to look up full ARNs if there's a wildcard ARN in BoundIamPrincipalIDs.
-			hasWildcardBind := false
-			for _, principalARN := range roleEntry.BoundIamPrincipalARNs {
-				if strings.HasSuffix(principalARN, "*") {
-					hasWildcardBind = true
-					break
-				}
-			}
-
-			if !hasWildcardBind {
-				return logical.ErrorResponse(fmt.Sprintf("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName)), nil
+			if !hasWildcardBind(roleEntry.BoundIamPrincipalARNs) {
+				return logical.ErrorResponse("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName), nil
 			}
 
 			fullArn := b.getCachedUserId(callerUniqueId)
 			if fullArn == "" {
 				fullArn, err = b.fullArn(ctx, entity, req.Storage)
 				if err != nil {
-					return logical.ErrorResponse(fmt.Sprintf("error looking up full ARN of entity %v when attempting login for role %q: %v", entity, roleName, err)), nil
+					return logical.ErrorResponse("error looking up full ARN of entity %v when attempting login for role %q: %v", entity, roleName, err), nil
 				}
 				if fullArn == "" {
-					return logical.ErrorResponse(fmt.Sprintf("got empty string back when looking up full ARN of entity %v when attempting login for role %q", entity, roleName)), nil
+					return logical.ErrorResponse("got empty string back when looking up full ARN of entity %v when attempting login for role %q", entity, roleName), nil
 				}
 				b.setCachedUserId(callerUniqueId, fullArn)
 			}
@@ -1362,7 +1346,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 				}
 			}
 			if !matchedWildcardBind {
-				return logical.ErrorResponse(fmt.Sprintf("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName)), nil
+				return logical.ErrorResponse("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName), nil
 			}
 		}
 	}
@@ -1432,6 +1416,15 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	return &logical.Response{
 		Auth: auth,
 	}, nil
+}
+
+func hasWildcardBind(boundIamPrincipalARNs []string) bool {
+	for _, principalARN := range boundIamPrincipalARNs {
+		if strings.HasSuffix(principalARN, "*") {
+			return true
+		}
+	}
+	return false
 }
 
 // Validate that the iam_request_body passed is valid for the STS request
