@@ -12,3 +12,4 @@ func testExtraTestCoreSetup(testing.T, interface{}, *TestClusterCore) {}
 func testAdjustUnderlyingStorage(tcc *TestClusterCore) {
 	tcc.UnderlyingStorage = tcc.physical
 }
+func testApplyEntBaseConfig(coreConfig, base *CoreConfig) {}

@@ -30,11 +30,9 @@ require (
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
 	github.com/client9/misspell v0.3.4
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
-	github.com/containerd/containerd v1.3.4 // indirect
 	github.com/coreos/go-semver v0.2.0
 	github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
 	github.com/dnaeon/go-vcr v1.0.1 // indirect
-	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200309214505-aa6a9891b09c+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/dsnet/compress v0.0.1 // indirect
@@ -60,7 +58,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-gcp-common v0.6.0
 	github.com/hashicorp/go-hclog v0.14.1
-	github.com/hashicorp/go-kms-wrapping v0.5.12
+	github.com/hashicorp/go-kms-wrapping v0.5.16
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/go-multierror v1.1.0
@@ -82,7 +80,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.7.1-0.20200721115240-07ff53341dfe
 	github.com/hashicorp/vault-plugin-auth-jwt v0.7.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.0
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.1-0.20200921171209-a8c355e565cb
 	github.com/hashicorp/vault-plugin-auth-oci v0.5.5
 	github.com/hashicorp/vault-plugin-database-couchbase v0.1.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4
@@ -96,8 +94,8 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.6
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.5
-	github.com/hashicorp/vault/api v1.0.5-0.20200717191844-f687267c8086
-	github.com/hashicorp/vault/sdk v0.1.14-0.20200910202324-ca414e26ce60
+	github.com/hashicorp/vault/api v1.0.5-0.20200805123347-1ef507638af6
+	github.com/hashicorp/vault/sdk v0.1.14-0.20200916184745-5576096032f8
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
@@ -123,9 +121,9 @@ require (
 	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/oklog/run v1.0.0
 	github.com/okta/okta-sdk-golang/v2 v2.0.0
+	github.com/opencontainers/runc v1.0.0-rc9 // indirect
 	github.com/oracle/oci-go-sdk v12.5.0+incompatible
 	github.com/ory/dockertest v3.3.5+incompatible
-	github.com/ory/dockertest/v3 v3.6.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
 	github.com/pkg/errors v0.9.1
@@ -140,7 +138,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.2.0
 	github.com/sethvargo/go-limiter v0.3.0
 	github.com/shirou/gopsutil v2.20.6-0.20200630091542-01afd763e6c0+incompatible
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.6.1
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/ulikunitz/xz v0.5.7 // indirect
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect

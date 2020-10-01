@@ -4,14 +4,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	realtesting "testing"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/helper/testhelpers/consul"
 	vaulthttp "github.com/hashicorp/vault/http"
-	physConsul "github.com/hashicorp/vault/physical/consul"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/physical"
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
@@ -82,24 +79,6 @@ func MakeFileBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBun
 	}
 }
 
-func MakeConsulBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
-	cleanup, config := consul.PrepareTestContainer(t.(*realtesting.T), "")
-
-	consulConf := map[string]string{
-		"address":      config.Address(),
-		"token":        config.Token,
-		"max_parallel": "32",
-	}
-	consulBackend, err := physConsul.NewConsulBackend(consulConf, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return &vault.PhysicalBackendBundle{
-		Backend: consulBackend,
-		Cleanup: cleanup,
-	}
-}
-
 func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
 	nodeID := fmt.Sprintf("core-%d", coreIdx)
 	raftDir, err := ioutil.TempDir("", "vault-raft-")
@@ -119,7 +98,7 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger) *vault.Physi
 		"performance_multiplier": "8",
 	}
 
-	backend, err := raft.NewRaftBackend(conf, logger)
+	backend, err := raft.NewRaftBackend(conf, logger.Named("raft"))
 	if err != nil {
 		cleanupFunc()
 		t.Fatal(err)
@@ -199,9 +178,6 @@ func InmemNonTransactionalBackendSetup(conf *vault.CoreConfig, opts *vault.TestC
 }
 func FileBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.PhysicalFactory = SharedPhysicalFactory(MakeFileBackend)
-}
-func ConsulBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
-	opts.PhysicalFactory = SharedPhysicalFactory(MakeConsulBackend)
 }
 
 func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {

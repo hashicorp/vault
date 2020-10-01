@@ -391,7 +391,7 @@ github.com/hashicorp/go-gcp-common/gcputil
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.1.0
 github.com/hashicorp/go-immutable-radix
-# github.com/hashicorp/go-kms-wrapping v0.5.12
+# github.com/hashicorp/go-kms-wrapping v0.5.16
 github.com/hashicorp/go-kms-wrapping
 github.com/hashicorp/go-kms-wrapping/internal/xor
 github.com/hashicorp/go-kms-wrapping/wrappers/aead
@@ -474,7 +474,7 @@ github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
 github.com/hashicorp/vault-plugin-auth-jwt
 # github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6
 github.com/hashicorp/vault-plugin-auth-kerberos
-# github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.0
+# github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.1-0.20200921171209-a8c355e565cb
 github.com/hashicorp/vault-plugin-auth-kubernetes
 # github.com/hashicorp/vault-plugin-auth-oci v0.5.5
 github.com/hashicorp/vault-plugin-auth-oci
@@ -508,13 +508,15 @@ github.com/hashicorp/vault-plugin-secrets-mongodbatlas
 # github.com/hashicorp/vault-plugin-secrets-openldap v0.1.5
 github.com/hashicorp/vault-plugin-secrets-openldap
 github.com/hashicorp/vault-plugin-secrets-openldap/client
-# github.com/hashicorp/vault/api v1.0.5-0.20200717191844-f687267c8086 => ./api
+# github.com/hashicorp/vault/api v1.0.5-0.20200805123347-1ef507638af6 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20200910202324-ca414e26ce60 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.14-0.20200916184745-5576096032f8 => ./sdk
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/database/helper/credsutil
 github.com/hashicorp/vault/sdk/database/helper/dbutil
+github.com/hashicorp/vault/sdk/database/newdbplugin
+github.com/hashicorp/vault/sdk/database/newdbplugin/proto
 github.com/hashicorp/vault/sdk/framework
 github.com/hashicorp/vault/sdk/helper/authmetadata
 github.com/hashicorp/vault/sdk/helper/awsutil
@@ -820,8 +822,11 @@ github.com/shirou/gopsutil/net
 github.com/shirou/gopsutil/process
 # github.com/sirupsen/logrus v1.6.0
 github.com/sirupsen/logrus
-# github.com/stretchr/testify v1.5.1
+# github.com/stretchr/objx v0.2.0
+github.com/stretchr/objx
+# github.com/stretchr/testify v1.6.1
 github.com/stretchr/testify/assert
+github.com/stretchr/testify/mock
 github.com/stretchr/testify/require
 # github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926
 github.com/tv42/httpunix
@@ -1190,6 +1195,8 @@ gopkg.in/square/go-jose.v2/json
 gopkg.in/square/go-jose.v2/jwt
 # gopkg.in/yaml.v2 v2.2.8
 gopkg.in/yaml.v2
+# gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+gopkg.in/yaml.v3
 # honnef.co/go/tools v0.0.1-2020.1.3
 honnef.co/go/tools/arg
 honnef.co/go/tools/cmd/staticcheck

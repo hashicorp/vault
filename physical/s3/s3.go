@@ -102,6 +102,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 		AccessKey:    accessKey,
 		SecretKey:    secretKey,
 		SessionToken: sessionToken,
+		Logger:       logger,
 	}
 	creds, err := credsConfig.GenerateCredentialChain()
 	if err != nil {
