@@ -696,7 +696,7 @@ func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage, randReade
 // on the policy. If derivation is disabled the raw key is used and no context
 // is required, otherwise the KDF mode is used with the context to derive the
 // proper key.
-func (p *Policy) DeriveKey(context []byte, ver, numBytes int) ([]byte, error) {
+func (p *Policy) DeriveKey(context, salt []byte, ver, numBytes int) ([]byte, error) {
 	// Fast-path non-derived keys
 	if !p.Derived {
 		return p.Keys[strconv.Itoa(ver)].Key, nil
@@ -726,7 +726,7 @@ func (p *Policy) DeriveKey(context []byte, ver, numBytes int) ([]byte, error) {
 		return kdf.CounterMode(prf, prfLen, p.Keys[strconv.Itoa(ver)].Key, context, 256)
 
 	case Kdf_hkdf_sha256:
-		reader := hkdf.New(sha256.New, p.Keys[strconv.Itoa(ver)].Key, nil, context)
+		reader := hkdf.New(sha256.New, p.Keys[strconv.Itoa(ver)].Key, salt, context)
 		derBytes := bytes.NewBuffer(nil)
 		derBytes.Grow(numBytes)
 		limReader := &io.LimitedReader{
@@ -823,7 +823,7 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 			encBytes = 16
 		}
 
-		key, err := p.DeriveKey(context, ver, encBytes+hmacBytes)
+		key, err := p.DeriveKey(context, nil, ver, encBytes+hmacBytes)
 		if err != nil {
 			return "", err
 		}
@@ -983,7 +983,7 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 			numBytes = 16
 		}
 
-		encKey, err := p.DeriveKey(context, ver, numBytes)
+		encKey, err := p.DeriveKey(context, nil, ver, numBytes)
 		if err != nil {
 			return "", err
 		}
@@ -1156,7 +1156,7 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 		if p.Derived {
 			// Derive the key that should be used
 			var err error
-			key, err = p.DeriveKey(context, ver, 32)
+			key, err = p.DeriveKey(context, nil, ver, 32)
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
 			}
@@ -1325,7 +1325,7 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 		if p.Derived {
 			// Derive the key that should be used
 			var err error
-			key, err = p.DeriveKey(context, ver, 32)
+			key, err = p.DeriveKey(context, nil, ver, 32)
 			if err != nil {
 				return false, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
 			}
