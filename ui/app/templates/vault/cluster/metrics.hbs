@@ -1,0 +1,70 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Metrics
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless">
+  <nav class="tabs">
+    <ul>
+      {{#link-to
+        "vault.cluster.metrics"
+        tagName="li"
+        activeClass="is-active"
+      }}
+        {{#link-to
+          "vault.cluster.metrics"
+          data-test-configuration-tab=false
+        }}
+          Vault usage
+        {{/link-to}}
+      {{/link-to}}
+      {{#link-to
+        "vault.cluster.metrics-config"
+        tagName="li"
+        activeClass="is-active"
+      }}
+        {{#link-to
+          "vault.cluster.metrics-config"
+          data-test-configuration-tab=true
+        }}
+          Configuration
+        {{/link-to}}
+      {{/link-to}}
+    </ul>
+  </nav>
+</div>
+
+<div class="box is-sideless is-fullwidth is-marginless is-bottomless">
+  {{#unless (eq model.config.enabled 'On')}}
+    <AlertBanner
+      @type="warning"
+      @title="Tracking is disabled"
+    >
+      This feature is currently disabled and data is not being collected. {{#link-to 'vault.cluster.metrics-config'}}Edit the configuration{{/link-to}} to enable tracking again.
+    </AlertBanner>
+  {{/unless}}
+  <p class="has-bottom-margin-s">The active clients metric contributes to billing. It is collected at the end of each month alongside unique entities and direct active tokens.</p>
+  <h2 class="title is-4">
+    {{date-format model.activity.startTime "MMM DD, YYYY"}} through {{date-format model.activity.endTime "MMM DD, YYYY"}}
+  </h2>
+  <div class="selectable-card-container">
+    <SelectableCard
+      @cardTitle="Active clients"
+      @total={{model.activity.total.clients}}
+      @subText="Current namespace"
+    />
+    <SelectableCard
+      @cardTitle="Unique entities"
+      @total={{model.activity.total.distinct_entities}}
+      @subText="Current namespace"
+    />
+    <SelectableCard
+      @cardTitle="Active direct tokens"
+      @total={{model.activity.total.non_entity_tokens}}
+      @subText="Current namespace"
+    />
+  </div>
+</div>
