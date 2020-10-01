@@ -47,10 +47,23 @@ func TestSinkServer(t *testing.T) {
 	})
 	defer timer.Stop()
 
+	// Solution to sink problem: The code commented out below selects the appropriate case; whether ctx.Done,
+	// or errCh returns. In the case that errCh returns BECAUSE ctx.Done() is hit, we get a race condition,
+	// where depending on which case returns first we either err, or succeed. We should explicitly check for
+	// errors instead like in the following block. I think this change will need to proliferate everywhere
+	// in the following PR: https://github.com/hashicorp/vault/pull/9670
+
+	// select {
+	// case <-ctx.Done():
+	// case err := <-errCh:
+	// 	t.Fatal(err)
+	// }
+
 	select {
-	case <-ctx.Done():
 	case err := <-errCh:
-		t.Fatal(err)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	for _, path := range []string{path1, path2} {
