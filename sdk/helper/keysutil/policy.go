@@ -1501,6 +1501,7 @@ func (p *Policy) getVersionPrefix(ver int) string {
 	return prefix
 }
 
+// Symmetrically encrypt a plaintext given the convergence configuration and appropriate keys
 func (p *Policy) SymmetricEncryptRaw(ver int, convergent bool, encKey, nonce, hmacKey, plaintext, additionalData []byte) ([]byte, error) {
 	var aead cipher.AEAD
 	var err error
@@ -1566,6 +1567,7 @@ func (p *Policy) SymmetricEncryptRaw(ver int, convergent bool, encKey, nonce, hm
 	return ciphertext, nil
 }
 
+// Symmetrically decrypt a ciphertext given the convergence configuration and appropriate keys
 func (p *Policy) SymmetricDecryptRaw(convergent bool, convergentVersion int, encKey, ciphertext, additionalData []byte) ([]byte, error) {
 	var aead cipher.AEAD
 	var nonce []byte
