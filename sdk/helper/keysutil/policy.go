@@ -705,6 +705,7 @@ func (p *Policy) GetKey(context []byte, ver, numBytes int) ([]byte, error) {
 	return p.DeriveKey(context, nil, ver, numBytes)
 }
 
+// DeriveKey is used to derive a symmetric key given a context and salt.
 func (p *Policy) DeriveKey(context, salt []byte, ver int, numBytes int) ([]byte, error) {
 	if !p.Type.DerivationSupported() {
 		return nil, errutil.UserError{Err: fmt.Sprintf("derivation not supported for key type %v", p.Type)}
