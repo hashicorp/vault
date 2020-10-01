@@ -69,6 +69,7 @@ save the server configuration files, any scripts for managing the Vault service,
 can reinstall any user-installed plugins. The location of these files will be specific to your
 installation of Vault.
 
-~> **NOTE**: Some of your configuration may be sensitive (a Vault token for Transit Autounseal
+~> **NOTE**: Although a backup or snapshot of Vault's data from the storage backend is encrypted,
+some of your configuration may be sensitive (a Vault token for Transit Autounseal
 or a TLS private key in your configuration, for example). The presence of this information in
 your backups will mean that they may need to be carefully protected.
