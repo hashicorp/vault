@@ -36,7 +36,7 @@ func TestRandom(t *testing.T) {
 func TestDecode(t *testing.T) {
 	str := "A fairly simple test case"
 
-	e := Encode([]byte(str))
+	e := EncodeToString([]byte(str))
 	b, err := DecodeString(e)
 
 	if err != nil || string(b) != str {
@@ -56,10 +56,10 @@ func TestDecode(t *testing.T) {
 	input := make([]byte, 50)
 	for i := 0; i < 100; i++ {
 		rand.Read(input)
-		str = Encode(input)
+		str = EncodeToString(input)
 		b, err := DecodeString(str)
 		if err != nil || !bytes.Equal(b, input) {
-			//e = Encode(b)
+			//e = EncodeToString(b)
 			t.Fail()
 		}
 	}
@@ -71,7 +71,7 @@ func BenchmarkEncodeDecode(b *testing.B) {
 	input := make([]byte, c)
 	rand.Read(input)
 	for i := 0; i < b.N; i++ {
-		e := Encode(input)
+		e := EncodeToString(input)
 		o, _ := DecodeString(e)
 		if !bytes.Equal(o,input) {
 			b.Fail()
@@ -84,7 +84,7 @@ func BenchmarkDecode(b *testing.B) {
 	c := 64
 	input := make([]byte, c)
 	rand.Read(input)
-	e := Encode(input)
+	e := EncodeToString(input)
 	for i := 0; i < b.N; i++ {
 		o, _ := DecodeString(e)
 		if !bytes.Equal(o,input) {
