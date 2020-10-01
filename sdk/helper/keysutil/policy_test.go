@@ -629,9 +629,9 @@ func BenchmarkSymmetric(b *testing.B) {
 	pt := make([]byte, 10)
 	ad := make([]byte, 10)
 	for i := 0; i < b.N; i++ {
-		ct, _ := p.SymmetricEncryptRaw(1,key, pt,
+		ct, _ := p.SymmetricEncryptRaw(1, key, pt,
 			SymmetricOpts{
-			AdditionalData: ad,
+				AdditionalData: ad,
 			})
 		pt2, _ := p.SymmetricDecryptRaw(key, ct, SymmetricOpts{
 			AdditionalData: ad,

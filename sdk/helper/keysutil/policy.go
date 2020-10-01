@@ -847,10 +847,10 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 			}
 		}
 
-		ciphertext,err = p.SymmetricEncryptRaw(ver, encKey, plaintext,
+		ciphertext, err = p.SymmetricEncryptRaw(ver, encKey, plaintext,
 			SymmetricOpts{
 				Convergent: p.ConvergentEncryption,
-				HMACKey: hmacKey,
+				HMACKey:    hmacKey,
 			})
 
 		if err != nil {
@@ -946,9 +946,9 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 
 		plain, err = p.SymmetricDecryptRaw(encKey, decoded,
 			SymmetricOpts{
-			Convergent: p.ConvergentEncryption,
-			ConvergentVersion: p.ConvergentVersion,
-		})
+				Convergent:        p.ConvergentEncryption,
+				ConvergentVersion: p.ConvergentVersion,
+			})
 
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		key := p.Keys[strconv.Itoa(ver)].RSAKey
@@ -1512,15 +1512,15 @@ func (p *Policy) getVersionPrefix(ver int) string {
 }
 
 type SymmetricOpts struct {
-	Convergent bool
+	Convergent        bool
 	ConvergentVersion int
-	Nonce []byte
-	AdditionalData []byte
-	HMACKey []byte
-
+	Nonce             []byte
+	AdditionalData    []byte
+	HMACKey           []byte
 }
+
 // Symmetrically encrypt a plaintext given the convergence configuration and appropriate keys
-func (p *Policy) SymmetricEncryptRaw(ver int,  encKey, plaintext []byte, opts SymmetricOpts) ([]byte, error) {
+func (p *Policy) SymmetricEncryptRaw(ver int, encKey, plaintext []byte, opts SymmetricOpts) ([]byte, error) {
 	var aead cipher.AEAD
 	var err error
 	nonce := opts.Nonce
