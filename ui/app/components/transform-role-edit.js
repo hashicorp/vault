@@ -104,8 +104,8 @@ export default TransformBase.extend({
     },
 
     delete() {
-      const roleId = this.get('model.id');
-      const roleTransformations = this.get('model.transformations') || [];
+      const roleId = this.model?.id;
+      const roleTransformations = this.model?.transformations || [];
       const updateTransformations = roleTransformations.map(t => ({
         id: t,
         action: 'REMOVE',
