@@ -293,7 +293,7 @@ func ExerciseBackend_ListPrefix(t testing.TB, b Backend) {
 	}
 	sort.Strings(keys)
 	if len(keys) != 1 || keys[0] != "baz" {
-		t.Errorf("level 1 expected [baz]: %v", keys)
+		t.Errorf("level 2 expected [baz]: %v", keys)
 	}
 }
 
