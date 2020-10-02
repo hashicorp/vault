@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	testPlaintext = "the quick brown fox"
+	testPlaintext = "The quick brown fox"
 )
 
 func createBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
