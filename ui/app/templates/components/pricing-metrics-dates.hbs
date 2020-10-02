@@ -1,5 +1,5 @@
-<div class="is-flex is-flex-center is-no-flex-grow field-body">
-  <div class="field">
+<div class="field-body pricing-metrics-date-form">
+  <div class="field is-narrow">
     <label for="start" class="is-label">From</label>
     <div class="control">
       {{input
@@ -13,7 +13,7 @@
       }}
     </div>
   </div>
-  <div class="field">
+  <div class="field is-narrow">
     <label for="end" class="is-label">Through</label>
     <div class="control">
       {{input
@@ -27,13 +27,13 @@
       }}
     </div>
   </div>
-  <button
-    type="submit"
-    disabled={{error}}
-    class="button is-primary"
-  >
+  {{#link-to 'vault.cluster.metrics'
+    (query-params start=(date-format startDate 'MM-YYYY') end=(date-format endDate 'MM-YYYY'))
+    class="button"
+    disabled=error
+  }}
     Query
-  </button>
+  {{/link-to}}
 </div>
 {{#if error}}
   <FormError>{{error}}</FormError>
