@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/gocql/gocql"
 	multierror "github.com/hashicorp/go-multierror"
@@ -134,62 +133,6 @@ func (c *Cassandra) NewUser(ctx context.Context, req newdbplugin.NewUserRequest)
 		Username: username,
 	}
 	return resp, nil
-}
-
-func (c *Cassandra) newUsername(config newdbplugin.UsernameMetadata) (string, error) {
-	displayName := trunc(config.DisplayName, 15)
-	roleName := trunc(config.RoleName, 15)
-
-	userUUID, err := credsutil.RandomAlphaNumeric(20, false)
-	if err != nil {
-		return "", err
-	}
-
-	now := fmt.Sprint(time.Now().Unix())
-
-	parts := []string{
-		"v",
-		displayName,
-		roleName,
-		userUUID,
-		now,
-	}
-	username := joinNonEmpty("_", parts...)
-	username = trunc(username, 100)
-	username = strings.ReplaceAll(username, "-", "_")
-	username = strings.ToLower(username)
-
-	return username, nil
-}
-
-func trunc(str string, l int) string {
-	if len(str) < l {
-		return str
-	}
-	return str[:l]
-}
-
-func joinNonEmpty(sep string, vals ...string) string {
-	if sep == "" {
-		return strings.Join(vals, sep)
-	}
-	switch len(vals) {
-	case 0:
-		return ""
-	case 1:
-		return vals[0]
-	}
-	builder := &strings.Builder{}
-	for _, val := range vals {
-		if val == "" {
-			continue
-		}
-		if builder.Len() > 0 {
-			builder.WriteString(sep)
-		}
-		builder.WriteString(val)
-	}
-	return builder.String()
 }
 
 func rollbackUser(ctx context.Context, session *gocql.Session, username string, rollbackCQL []string) error {
