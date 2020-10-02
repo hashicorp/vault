@@ -1580,7 +1580,7 @@ func (p *Policy) SymmetricEncryptRaw(ver int, encKey, plaintext []byte, opts Sym
 		default:
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unhandled convergent version %d", convergentVersion)}
 		}
-	} else if nonce == nil {
+	} else if len(nonce) == 0 {
 		// Compute random nonce
 		nonce, err = uuid.GenerateRandomBytes(aead.NonceSize())
 		if err != nil {
