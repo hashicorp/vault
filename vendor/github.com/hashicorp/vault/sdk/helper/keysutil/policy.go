@@ -705,7 +705,9 @@ func (p *Policy) GetKey(context []byte, ver, numBytes int) ([]byte, error) {
 	return p.DeriveKey(context, nil, ver, numBytes)
 }
 
-// DeriveKey is used to derive a symmetric key given a context and salt.
+// DeriveKey is used to derive a symmetric key given a context and salt.  This does not
+// check the policies Derived flag, but just implements the derivation logic.  GetKey
+// is responsible for switching on the policy config.
 func (p *Policy) DeriveKey(context, salt []byte, ver int, numBytes int) ([]byte, error) {
 	if !p.Type.DerivationSupported() {
 		return nil, errutil.UserError{Err: fmt.Sprintf("derivation not supported for key type %v", p.Type)}
@@ -847,7 +849,13 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 			}
 		}
 
-		ciphertext,err = p.SymmetricEncryptRaw(ver, p.ConvergentEncryption, encKey, nil, hmacKey, plaintext, nil)
+		ciphertext, err = p.SymmetricEncryptRaw(ver, encKey, plaintext,
+			SymmetricOpts{
+				Convergent: p.ConvergentEncryption,
+				HMACKey:    hmacKey,
+				Nonce:      nonce,
+			})
+
 		if err != nil {
 			return "", err
 		}
@@ -939,8 +947,14 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 			return "", errutil.InternalError{Err: "could not derive enc key, length not correct"}
 		}
 
-		plain, err = p.SymmetricDecryptRaw(p.ConvergentEncryption, convergentVersion, encKey, decoded, nil)
-
+		plain, err = p.SymmetricDecryptRaw(encKey, decoded,
+			SymmetricOpts{
+				Convergent:        p.ConvergentEncryption,
+				ConvergentVersion: p.ConvergentVersion,
+			})
+		if err != nil {
+			return "", err
+		}
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		key := p.Keys[strconv.Itoa(ver)].RSAKey
 		plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
@@ -1502,10 +1516,26 @@ func (p *Policy) getVersionPrefix(ver int) string {
 	return prefix
 }
 
+// SymmetricOpts are the arguments to symmetric operations that are "optional", e.g.
+// not always used.  This improves the aesthetics of calls to those functions.
+type SymmetricOpts struct {
+	// Whether to use convergent encryption
+	Convergent bool
+	// The version of the convergent encryption scheme
+	ConvergentVersion int
+	// The nonce, if not randomly generated
+	Nonce []byte
+	// Additional data to include in AEAD authentication
+	AdditionalData []byte
+	// The HMAC key, for generating IVs in convergent encryption
+	HMACKey []byte
+}
+
 // Symmetrically encrypt a plaintext given the convergence configuration and appropriate keys
-func (p *Policy) SymmetricEncryptRaw(ver int, convergent bool, encKey, nonce, hmacKey, plaintext, additionalData []byte) ([]byte, error) {
+func (p *Policy) SymmetricEncryptRaw(ver int, encKey, plaintext []byte, opts SymmetricOpts) ([]byte, error) {
 	var aead cipher.AEAD
 	var err error
+	nonce := opts.Nonce
 
 	switch p.Type {
 	case KeyType_AES128_GCM96, KeyType_AES256_GCM96:
@@ -1532,25 +1562,25 @@ func (p *Policy) SymmetricEncryptRaw(ver int, convergent bool, encKey, nonce, hm
 		aead = cha
 	}
 
-	if convergent {
+	if opts.Convergent {
 		convergentVersion := p.convergentVersion(ver)
 		switch convergentVersion {
 		case 1:
-			if len(nonce) != aead.NonceSize() {
+			if len(opts.Nonce) != aead.NonceSize() {
 				return nil, errutil.UserError{Err: fmt.Sprintf("base64-decoded nonce must be %d bytes long when using convergent encryption with this key", aead.NonceSize())}
 			}
 		case 2, 3:
-			if len(hmacKey) == 0 {
+			if len(opts.HMACKey) == 0 {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("invalid hmac key length of zero")}
 			}
-			nonceHmac := hmac.New(sha256.New, hmacKey)
+			nonceHmac := hmac.New(sha256.New, opts.HMACKey)
 			nonceHmac.Write(plaintext)
 			nonceSum := nonceHmac.Sum(nil)
 			nonce = nonceSum[:aead.NonceSize()]
 		default:
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unhandled convergent version %d", convergentVersion)}
 		}
-	} else if nonce == nil {
+	} else if len(nonce) == 0 {
 		// Compute random nonce
 		nonce, err = uuid.GenerateRandomBytes(aead.NonceSize())
 		if err != nil {
@@ -1559,17 +1589,17 @@ func (p *Policy) SymmetricEncryptRaw(ver int, convergent bool, encKey, nonce, hm
 	}
 
 	// Encrypt and tag with AEAD
-	ciphertext := aead.Seal(nil, nonce, plaintext, additionalData)
+	ciphertext := aead.Seal(nil, nonce, plaintext, opts.AdditionalData)
 
 	// Place the encrypted data after the nonce
-	if !convergent || p.convergentVersion(ver) > 1 {
+	if !opts.Convergent || p.convergentVersion(ver) > 1 {
 		ciphertext = append(nonce, ciphertext...)
 	}
 	return ciphertext, nil
 }
 
 // Symmetrically decrypt a ciphertext given the convergence configuration and appropriate keys
-func (p *Policy) SymmetricDecryptRaw(convergent bool, convergentVersion int, encKey, ciphertext, additionalData []byte) ([]byte, error) {
+func (p *Policy) SymmetricDecryptRaw(encKey, ciphertext []byte, opts SymmetricOpts) ([]byte, error) {
 	var aead cipher.AEAD
 	var nonce []byte
 
@@ -1604,7 +1634,7 @@ func (p *Policy) SymmetricDecryptRaw(convergent bool, convergentVersion int, enc
 
 	// Extract the nonce and ciphertext
 	var trueCT []byte
-	if convergent && convergentVersion == 1 {
+	if opts.Convergent && opts.ConvergentVersion == 1 {
 		trueCT = ciphertext
 	} else {
 		nonce = ciphertext[:aead.NonceSize()]
@@ -1612,7 +1642,7 @@ func (p *Policy) SymmetricDecryptRaw(convergent bool, convergentVersion int, enc
 	}
 
 	// Verify and Decrypt
-	plain, err := aead.Open(nil, nonce, trueCT, additionalData)
+	plain, err := aead.Open(nil, nonce, trueCT, opts.AdditionalData)
 	if err != nil {
 		return nil, err
 	}
