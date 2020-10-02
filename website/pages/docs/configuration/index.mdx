@@ -74,9 +74,9 @@ to specify where the configuration is.
 
 - `disable_mlock` `(bool: false)` – Disables the server from executing the
   `mlock` syscall. `mlock` prevents memory from being swapped to disk. Disabling
-  `mlock` is not recommended in production, but is fine for local development
-  and testing. This can also be provided via the environment variable 
-  `VAULT_DISABLE_MLOCK`.
+  `mlock` is not recommended unless using [integrated storage](/docs/internals/integrated-storage).
+  Follow the additional security precautions outlined below when disabling `mlock`.
+  This can also be provided via the environment variable `VAULT_DISABLE_MLOCK`.
 
   Disabling `mlock` is not recommended unless the systems running Vault only
   use encrypted swap or do not use swap at all. Vault only supports memory

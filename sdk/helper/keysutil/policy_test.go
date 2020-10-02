@@ -1,6 +1,7 @@
 package keysutil
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"reflect"
@@ -611,5 +612,32 @@ func Test_BadArchive(t *testing.T) {
 	// Here's the expected change
 	if len(p.Keys) != 6 {
 		t.Fatalf("unexpected key length %d", len(p.Keys))
+	}
+}
+
+func BenchmarkSymmetric(b *testing.B) {
+	ctx := context.Background()
+	lm, _ := NewLockManager(true, 0)
+	storage := &logical.InmemStorage{}
+	p, _, _ := lm.GetPolicy(ctx, PolicyRequest{
+		Upsert:  true,
+		Storage: storage,
+		KeyType: KeyType_AES256_GCM96,
+		Name:    "test",
+	}, rand.Reader)
+	key, _ := p.GetKey(nil, 1, 32)
+	pt := make([]byte, 10)
+	ad := make([]byte, 10)
+	for i := 0; i < b.N; i++ {
+		ct, _ := p.SymmetricEncryptRaw(1, key, pt,
+			SymmetricOpts{
+				AdditionalData: ad,
+			})
+		pt2, _ := p.SymmetricDecryptRaw(key, ct, SymmetricOpts{
+			AdditionalData: ad,
+		})
+		if !bytes.Equal(pt, pt2) {
+			b.Fail()
+		}
 	}
 }

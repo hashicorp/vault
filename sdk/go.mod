@@ -33,7 +33,7 @@ require (
 	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/hashicorp/hcl v1.0.0
-	github.com/hashicorp/vault/api v1.0.5-0.20200519221902-385fac77e20f
+	github.com/hashicorp/vault/api v0.0.0-20201001212527-2e121bafe1e4
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mitchellh/copystructure v1.0.0
@@ -46,6 +46,7 @@ require (
 	github.com/pierrec/lz4 v2.5.2+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/ryanuber/go-glob v1.0.0
+	github.com/stretchr/testify v1.5.1
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
 	golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980
