@@ -1,0 +1,52 @@
+<div class="is-flex is-flex-center is-no-flex-grow field-body">
+  <div class="field">
+    <label for="start" class="is-label">From</label>
+    <div class="control">
+      {{input
+        type="string"
+        value=start
+        name="start"
+        class=(concat 'input' (unless startDate ' has-error'))
+        autocomplete="off"
+        spellcheck="false"
+        data-test-start-input="true"
+      }}
+    </div>
+  </div>
+  <div class="field">
+    <label for="end" class="is-label">Through</label>
+    <div class="control">
+      {{input
+        type="string"
+        value=end
+        name="end"
+        class=(concat 'input' (unless endDate ' has-error'))
+        autocomplete="off"
+        spellcheck="false"
+        data-test-end-input="true"
+      }}
+    </div>
+  </div>
+  <button
+    type="submit"
+    disabled={{error}}
+    class="button is-primary"
+  >
+    Query
+  </button>
+</div>
+{{#if error}}
+  <FormError>{{error}}</FormError>
+{{/if}}
+<div class="box is-fullwidth is-shadowless">
+  <h2 class="title is-4">
+    {{date-format resultStart "MMM DD, YYYY"}} through {{date-format resultEnd "MMM DD, YYYY"}}
+  </h2>
+  {{#if showResultsWarning}}
+  <div class="access-information" data-test-results-date-warning>
+    <Icon @glyph="info-circle-fill" class="has-text-info"/>
+    {{!-- TODO: Add "Learn more here." link --}}
+    <p>This data may not reflect your search exactly. This is because Vault will only show data for contiguous blocks of time during which tracking was on. </p>
+  </div>
+  {{/if}}
+</div>
