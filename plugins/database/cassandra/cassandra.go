@@ -53,7 +53,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	newdbplugin.Serve(dbType.(newdbplugin.Database))
+	newdbplugin.Serve(dbType.(newdbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
 
 	return nil
 }
@@ -103,6 +103,7 @@ func (c *Cassandra) NewUser(ctx context.Context, req newdbplugin.NewUserRequest)
 	if err != nil {
 		return newdbplugin.NewUserResponse{}, err
 	}
+	username = strings.ReplaceAll(username, "-", "_")
 
 	for _, stmt := range creationCQL {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
