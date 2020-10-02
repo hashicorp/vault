@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -18,10 +19,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/leaderelection"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -36,6 +40,7 @@ type KubernetesBackend struct {
 	client     *kubernetes.Clientset
 	logger     log.Logger
 	permitPool *physical.PermitPool
+	haEnabled  bool
 }
 
 // NewKubernetesBackend constructs a Kubernetes backend using the given API client and
@@ -92,6 +97,16 @@ func NewKubernetesBackend(conf map[string]string, logger log.Logger) (physical.B
 		maxParInt = physical.DefaultParallelOperations
 	}
 
+	// Default value for ha_enabled
+	haEnabledStr, ok := conf["ha_enabled"]
+	if !ok {
+		haEnabledStr = "false"
+	}
+	haEnabled, err := strconv.ParseBool(haEnabledStr)
+	if err != nil {
+		return nil, fmt.Errorf("value [%v] of 'ha_enabled' could not be understood", haEnabledStr)
+	}
+
 	// TODO
 	// config.Burst
 	// config.RateLimiter
@@ -103,6 +118,7 @@ func NewKubernetesBackend(conf map[string]string, logger log.Logger) (physical.B
 		client:     client,
 		logger:     logger,
 		permitPool: physical.NewPermitPool(maxParInt),
+		haEnabled:  haEnabled,
 	}
 
 	return k, nil
@@ -253,4 +269,126 @@ func (k *KubernetesBackend) List(ctx context.Context, prefix string) ([]string, 
 
 	sort.Strings(keys)
 	return keys, nil
+}
+
+// LockWith is used for mutual exclusion based on the given key.
+func (k *KubernetesBackend) LockWith(key, value string) (physical.Lock, error) {
+	identity, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+	l := &KubernetesHALock{
+		in:        k,
+		key:       key,
+		value:     value,
+		logger:    k.logger,
+		client:    k.client,
+		namespace: k.namespace,
+		identity:  identity,
+	}
+	return l, nil
+}
+
+func (k *KubernetesBackend) HAEnabled() bool {
+	return k.haEnabled
+}
+
+type KubernetesHALock struct {
+	in            *KubernetesBackend
+	client        *kubernetes.Clientset
+	key           string
+	namespace     string
+	value         string
+	logger        log.Logger
+	leaderElector *leaderelection.LeaderElector
+	cancel        context.CancelFunc
+	identity      string
+	lock          sync.Mutex
+	held          bool
+}
+
+func (l *KubernetesHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	if l.held {
+		return nil, fmt.Errorf("lock already held")
+	}
+
+	rl, err := resourcelock.New(
+		resourcelock.LeasesResourceLock,
+		l.namespace,
+		toSHASum(l.key),
+		l.client.CoreV1(),
+		l.client.CoordinationV1(),
+		resourcelock.ResourceLockConfig{
+			Identity: l.identity,
+		})
+	if err != nil {
+		return nil, errwrap.Wrapf("error creating lock: {{err}}", err)
+	}
+
+	acquiredChan := make(chan struct{})
+	closeChan := make(chan struct{})
+
+	lec := leaderelection.LeaderElectionConfig{
+		Lock:          rl,
+		LeaseDuration: 15 * time.Second,
+		RenewDeadline: 10 * time.Second,
+		RetryPeriod:   2 * time.Second,
+		Callbacks: leaderelection.LeaderCallbacks{
+			OnStartedLeading: func(ctx context.Context) {
+				close(acquiredChan)
+			},
+			OnStoppedLeading: func() {
+				close(closeChan)
+			},
+		},
+		Name: l.value,
+	}
+
+	le, err := leaderelection.NewLeaderElector(lec)
+	if err != nil {
+		return nil, err
+	}
+
+	l.leaderElector = le
+
+	ctx, cancel := context.WithCancel(context.Background())
+	l.cancel = cancel
+
+	go func() {
+		le.Run(ctx)
+	}()
+
+	select {
+	case <-acquiredChan:
+		l.held = true
+		if stopCh != nil {
+			go func() {
+				<-stopCh
+				cancel()
+			}()
+		}
+		return closeChan, nil
+	case <-stopCh:
+		cancel()
+		return nil, nil
+	}
+}
+
+func (l *KubernetesHALock) Unlock() error {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	if !l.held {
+		return nil
+	}
+
+	l.cancel()
+	l.held = false
+
+	return nil
+}
+
+func (l *KubernetesHALock) Value() (bool, string, error) {
+	return l.leaderElector.IsLeader(), l.value, nil
 }
