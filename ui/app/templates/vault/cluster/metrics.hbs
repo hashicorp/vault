@@ -56,9 +56,14 @@
       </AlertBanner>
     {{/if}}
     <p class="has-bottom-margin-s">The active clients metric contributes to billing. It is collected at the end of each month alongside unique entities and direct active tokens.</p>
-    <h2 class="title is-4">
-      {{date-format model.activity.startTime "MMM DD, YYYY"}} through {{date-format model.activity.endTime "MMM DD, YYYY"}}
-    </h2>
+
+    <PricingMetricsDates
+      @queryStart={{model.queryStart}}
+      @queryEnd={{model.queryEnd}}
+      @resultStart={{model.activity.startTime}}
+      @resultEnd={{model.activity.endTime}}
+    />
+
     {{#unless model.activity.total}}
       <EmptyState @title="No data found" @message="No data exists for that query period. Try searching again." />
     {{else}}

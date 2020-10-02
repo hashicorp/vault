@@ -44,6 +44,8 @@ export default Route.extend(ClusterRoute, {
     let activity = this.store.queryRecord('metrics/activity', activityParams);
 
     return hash({
+      queryStart: params.start,
+      queryEnd: params.end,
       activity,
       config,
     });
