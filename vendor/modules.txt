@@ -447,7 +447,7 @@ github.com/hashicorp/logutils
 # github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
 github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
-# github.com/hashicorp/raft v1.1.3-0.20200914140732-b7cd2b346b06
+# github.com/hashicorp/raft v1.1.3-0.20201002073007-f367681f9c48
 github.com/hashicorp/raft
 # github.com/hashicorp/raft-snapshot v1.0.2-0.20190827162939-8117efcc5aab
 github.com/hashicorp/raft-snapshot
