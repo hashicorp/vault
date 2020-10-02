@@ -475,6 +475,9 @@ func (c *Client) SetAddress(addr string) error {
 		return errwrap.Wrapf("failed to set address: {{err}}", err)
 	}
 
+	c.config.modifyLock.Lock()
+	c.config.Address = addr
+	c.config.modifyLock.Unlock()
 	c.addr = parsedAddr
 	return nil
 }
@@ -499,6 +502,15 @@ func (c *Client) SetLimiter(rateLimit float64, burst int) {
 	c.config.Limiter = rate.NewLimiter(rate.Limit(rateLimit), burst)
 }
 
+func (c *Client) Limiter() *rate.Limiter {
+	c.modifyLock.RLock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+	c.modifyLock.RUnlock()
+
+	return c.config.Limiter
+}
+
 // SetMaxRetries sets the number of retries that will be used in the case of certain errors
 func (c *Client) SetMaxRetries(retries int) {
 	c.modifyLock.RLock()
@@ -507,6 +519,15 @@ func (c *Client) SetMaxRetries(retries int) {
 	c.modifyLock.RUnlock()
 
 	c.config.MaxRetries = retries
+}
+
+func (c *Client) MaxRetries() int {
+	c.modifyLock.RLock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+	c.modifyLock.RUnlock()
+
+	return c.config.MaxRetries
 }
 
 // SetCheckRetry sets the CheckRetry function to be used for future requests.
@@ -519,6 +540,15 @@ func (c *Client) SetCheckRetry(checkRetry retryablehttp.CheckRetry) {
 	c.config.CheckRetry = checkRetry
 }
 
+func (c *Client) CheckRetry() retryablehttp.CheckRetry {
+	c.modifyLock.RLock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+	c.modifyLock.RUnlock()
+
+	return c.config.CheckRetry
+}
+
 // SetClientTimeout sets the client request timeout
 func (c *Client) SetClientTimeout(timeout time.Duration) {
 	c.modifyLock.RLock()
@@ -527,6 +557,15 @@ func (c *Client) SetClientTimeout(timeout time.Duration) {
 	c.modifyLock.RUnlock()
 
 	c.config.Timeout = timeout
+}
+
+func (c *Client) ClientTimeout() time.Duration {
+	c.modifyLock.RLock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+	c.modifyLock.RUnlock()
+
+	return c.config.Timeout
 }
 
 func (c *Client) OutputCurlString() bool {
@@ -670,24 +709,41 @@ func (c *Client) SetBackoff(backoff retryablehttp.Backoff) {
 // Also, only the client's config is currently copied; this means items not in
 // the api.Config struct, such as policy override and wrapping function
 // behavior, must currently then be set as desired on the new client.
+//
+// One exception to this is the addr field of Client, which is also copied over.
+// Otherwise you have the confusing result of creating a client, customizing
+// the address via client.SetAddress() then cloning it and having it show the
+// default address again, instead of the one you just set. I'm not even sure
+// why the client has addr as a member at all, other than the convenience of
+// having it pre-parsed into a URL instead of a string.
 func (c *Client) Clone() (*Client, error) {
 	c.modifyLock.RLock()
-	c.config.modifyLock.RLock()
 	config := c.config
 	c.modifyLock.RUnlock()
 
+	config.modifyLock.RLock()
 	newConfig := &Config{
-		Address:    config.Address,
-		HttpClient: config.HttpClient,
-		MaxRetries: config.MaxRetries,
-		Timeout:    config.Timeout,
-		Backoff:    config.Backoff,
-		CheckRetry: config.CheckRetry,
-		Limiter:    config.Limiter,
+		Address:          config.Address,
+		HttpClient:       config.HttpClient,
+		MaxRetries:       config.MaxRetries,
+		Timeout:          config.Timeout,
+		Backoff:          config.Backoff,
+		CheckRetry:       config.CheckRetry,
+		Limiter:          config.Limiter,
+		OutputCurlString: config.OutputCurlString,
 	}
 	config.modifyLock.RUnlock()
+	client, err := NewClient(newConfig)
+	if err != nil {
+		return nil, err
+	}
 
-	return NewClient(newConfig)
+	err = client.SetAddress(newConfig.Address)
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
 }
 
 // SetPolicyOverride sets whether requests should be sent with the policy
