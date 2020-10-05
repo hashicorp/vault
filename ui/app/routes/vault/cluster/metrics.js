@@ -37,6 +37,7 @@ export default Route.extend(ClusterRoute, {
 
   model(params) {
     let config = this.store.queryRecord('metrics/config', {}).catch(e => {
+      console.debug(e);
       // swallowing error so activity can show if no config permissions
       return {};
     });
