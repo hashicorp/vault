@@ -16,7 +16,7 @@ require (
 	github.com/hashicorp/go-hclog v0.14.1
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/vault/api v1.0.5-0.20200805123347-1ef507638af6
-	github.com/hashicorp/vault/sdk v0.1.14-0.20200805123347-1ef507638af6
+	github.com/hashicorp/vault/sdk v0.1.14-0.20200916184745-5576096032f8
 	github.com/huaweicloud/golangsdk v0.0.0-20200304081349-45ec0797f2a4
 	github.com/oracle/oci-go-sdk v12.5.0+incompatible
 	github.com/stretchr/testify v1.6.1
