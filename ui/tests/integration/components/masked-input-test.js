@@ -22,8 +22,17 @@ module('Integration | Component | masked input', function(hooks) {
 
   test('it renders a textarea', async function(assert) {
     await render(hbs`{{masked-input}}`);
-
     assert.ok(component.textareaIsPresent);
+  });
+
+  test('it renders an input with type password when maskWhileTyping is true', async function(assert) {
+    await render(hbs`{{masked-input maskWhileTyping=true}}`);
+    assert.ok(component.inputIsPresent);
+    assert.equal(
+      this.element.querySelector('input').getAttribute('type'),
+      'password',
+      'default type equals password'
+    );
   });
 
   test('it does not render a textarea when displayOnly is true', async function(assert) {
@@ -84,5 +93,17 @@ module('Integration | Component | masked input', function(hooks) {
     await component.toggleMasked();
 
     assert.ok(hasClass(component.wrapperClass, 'masked'));
+  });
+
+  test('it changes type to text when unmasked button is clicked', async function(assert) {
+    this.set('value', 'value');
+    await render(hbs`{{masked-input value=value maskWhileTyping=true}}`);
+    await component.toggleMasked();
+
+    assert.equal(
+      this.element.querySelector('input').getAttribute('type'),
+      'text',
+      'when unmasked type changes to text'
+    );
   });
 });
