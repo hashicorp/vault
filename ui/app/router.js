@@ -134,7 +134,10 @@ Router.map(function() {
       }
 
       this.route('not-found', { path: '/*path' });
-      this.route('metrics-config');
+      this.route('metrics-config', function() {
+        this.route('index', { path: '/' });
+        this.route('edit');
+      });
     });
     this.route('not-found', { path: '/*path' });
   });
