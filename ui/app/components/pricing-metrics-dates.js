@@ -6,7 +6,7 @@
  *
  * @example
  * ```js
- * <PricingMetricsDates @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <PricingMetricsDates @resultStart="2020-03-01T00:00:00Z" @resultEnd="2020-08-31T23:59:59Z" @queryStart="03-2020" @queryEnd="08-2020" />
  * ```
  * @param {object} resultStart - resultStart is the start date of the metrics returned. Should be a valid date string that the built-in Date() fn can parse
  * @param {object} resultEnd - resultEnd is the end date of the metrics returned. Should be a valid date string that the built-in Date() fn can parse

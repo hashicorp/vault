@@ -1,14 +1,13 @@
 /**
  * @module FormError
- * FormError components are used to...
+ * FormError components are used to show an error on a form field that is more compact than the
+ * normal MessageError component. This component adds an icon and styling to the content of the
+ * component, so additionally styling (bold, italic) and links are allowed.
  *
  * @example
  * ```js
- * <FormError @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <FormError>Oh no <em>something bad</em>! <a href="#">Do something</a></FormError>
  * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
  */
 
 import Component from '@ember/component';
