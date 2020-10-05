@@ -73,16 +73,12 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 	latestToken := new(string)
 	writeSink := func(currSink *SinkConfig, currToken string) error {
 		if currToken != *latestToken {
-			ss.logger.Info("here!")
-			// fmt.Println("here!")
 			return nil
 		}
 		var err error
 
 		if currSink.WrapTTL != 0 {
 			if currToken, err = currSink.wrapToken(ss.client, currSink.WrapTTL, currToken); err != nil {
-				// fmt.Println("here!!")
-				ss.logger.Info("here!!")
 				return err
 			}
 		}
@@ -115,8 +111,6 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 	for {
 		select {
 		case <-ctx.Done():
-			// fmt.Println("here!!!!")
-			ss.logger.Info("here!!!!") // this is the issue
 			return nil
 
 		case token := <-incoming:
@@ -152,8 +146,6 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 			atomic.AddInt32(ss.remaining, -1)
 			select {
 			case <-ctx.Done():
-				// fmt.Println("here!!!!!")
-				ss.logger.Info("here!!!!!")
 				return nil
 			default:
 			}
@@ -163,8 +155,6 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 				ss.logger.Error("error returned by sink function, retrying", "error", err, "backoff", backoff.String())
 				select {
 				case <-ctx.Done():
-					// fmt.Println("here!!!!!!")
-					ss.logger.Info("here!!!!!!")
 					return nil
 				case <-time.After(backoff):
 					atomic.AddInt32(ss.remaining, 1)
@@ -172,8 +162,6 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 				}
 			} else {
 				if atomic.LoadInt32(ss.remaining) == 0 && ss.exitAfterAuth {
-					// fmt.Println("here!!!!!!!")
-					ss.logger.Info("here!!!!!!!")
 					return nil
 				}
 			}
