@@ -780,13 +780,13 @@ func (p *Policy) DeriveKey(context, salt []byte, ver int, numBytes int) ([]byte,
 	}
 }
 
-func (p *Policy) safeGetKeyEntry(ver int) (*KeyEntry, error) {
+func (p *Policy) safeGetKeyEntry(ver int) (KeyEntry, error) {
 	keyVerStr := strconv.Itoa(ver)
 	keyEntry, ok := p.Keys[keyVerStr]
 	if !ok {
-		return nil, errutil.UserError{Err: "no such key version"}
+		return keyEntry, errutil.UserError{Err: "no such key version"}
 	}
-	return &keyEntry, nil
+	return keyEntry, nil
 }
 
 func (p *Policy) convergentVersion(ver int) int {
