@@ -906,7 +906,9 @@ github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8/go.mod h1:HUYIGzjTL3rfEspMx
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 h1:eY9dn8+vbi4tKz5Qo6v2eYzo7kUS51QINcR5jNpbZS8=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
+github.com/yandex-cloud/go-genproto v0.0.0-20200722140432-762fe965ce77 h1:ujojfQqu+1XfDMOVzAcKIJ3pRSF5f3gAmVGxuLcFWn4=
 github.com/yandex-cloud/go-genproto v0.0.0-20200722140432-762fe965ce77/go.mod h1:HEUYX/p8966tMUHHT+TsS0hF/Ca/NYwqprC5WXSDMfE=
+github.com/yandex-cloud/go-sdk v0.0.0-20200722140627-2194e5077f13 h1:llDpCOEwliajLr8eXtLPIVW0hzat4ETTakiCI+z/c6k=
 github.com/yandex-cloud/go-sdk v0.0.0-20200722140627-2194e5077f13/go.mod h1:LEdAMqa1v/7KYe4b13ALLkonuDxLph57ibUb50ctvJk=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
