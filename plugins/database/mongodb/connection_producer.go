@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/mitchellh/mapstructure"
+
+	"github.com/hashicorp/errwrap"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -47,56 +47,6 @@ type writeConcern struct {
 	WTimeout int    // Milliseconds to wait for W before timing out
 	FSync    bool   // DEPRECATED: Is now handled by J. See: https://jira.mongodb.org/browse/CXX-910
 	J        bool   // Sync via the journal if present
-}
-
-func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
-	_, err := c.Init(ctx, conf, verifyConnection)
-	return err
-}
-
-// Initialize parses connection configuration.
-func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
-	c.Lock()
-	defer c.Unlock()
-
-	c.RawConfig = conf
-
-	err := mapstructure.WeakDecode(conf, c)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(c.ConnectionURL) == 0 {
-		return nil, fmt.Errorf("connection_url cannot be empty")
-	}
-
-	writeOpts, err := c.getWriteConcern()
-	if err != nil {
-		return nil, err
-	}
-
-	authOpts, err := c.getTLSAuth()
-	if err != nil {
-		return nil, err
-	}
-
-	c.clientOptions = options.MergeClientOptions(writeOpts, authOpts)
-
-	// Set initialized to true at this point since all fields are set,
-	// and the connection can be established at a later time.
-	c.Initialized = true
-
-	if verifyConnection {
-		if _, err := c.Connection(ctx); err != nil {
-			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
-		}
-
-		if err := c.client.Ping(ctx, readpref.Primary()); err != nil {
-			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
-		}
-	}
-
-	return conf, nil
 }
 
 // Connection creates or returns an existing a database connection. If the session fails
@@ -157,8 +107,8 @@ func (c *mongoDBConnectionProducer) Close() error {
 	return nil
 }
 
-func (c *mongoDBConnectionProducer) secretValues() map[string]interface{} {
-	return map[string]interface{}{
+func (c *mongoDBConnectionProducer) secretValues() map[string]string {
+	return map[string]string{
 		c.Password: "[password]",
 	}
 }
