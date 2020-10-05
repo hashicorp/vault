@@ -85,8 +85,6 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 
 		if currSink.DHType != "" {
 			if currToken, err = currSink.encryptToken(currToken); err != nil {
-				// fmt.Println("here!!!")
-				ss.logger.Info("here!!!")
 				return err
 			}
 		}
