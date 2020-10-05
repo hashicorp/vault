@@ -48,9 +48,10 @@ func TestSinkServer(t *testing.T) {
 	defer timer.Stop()
 
 	select {
-	case <-ctx.Done():
 	case err := <-errCh:
-		t.Fatal(err)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	for _, path := range []string{path1, path2} {
