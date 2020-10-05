@@ -22,6 +22,7 @@ module('Integration | Component | masked input', function(hooks) {
 
   test('it renders a textarea', async function(assert) {
     await render(hbs`{{masked-input}}`);
+
     assert.ok(component.textareaIsPresent);
   });
 
