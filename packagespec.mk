@@ -43,7 +43,8 @@ PASSTHROUGH_TARGETS := \
 	build package-contents copy-package-contents build-all \
 	aliases meta package package-meta \
 	build-ci watch-ci \
-	stage-config stage \
+	stage-config stage custom-build custom-build-config\
+	list-custom-builds \
 	list-staged-builds \
 	publish-config publish
 
@@ -66,7 +67,7 @@ packages:
 		echo "Note: packagespec is only available to HashiCorp employees at present."; \
 		exit 1; \
 	}
-	@packagespec lock -specfile $(SPEC) -lockdir $(LOCKDIR)
+	@packagespec lock
 	@$(MAKE) $(PACKAGESPEC_CIRCLECI_CONFIG)
 
 CIRCLECI_PRIMARY_TPL := .packagespec/templates/circleci-primary.yml.tpl
