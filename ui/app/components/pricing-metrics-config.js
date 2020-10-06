@@ -54,7 +54,7 @@ export default Component.extend({
     try {
       yield model.save();
     } catch (err) {
-      this.set('error', e.message);
+      this.set('error', err.message);
       return;
     }
     this.router.transitionTo('vault.cluster.metrics.config');
