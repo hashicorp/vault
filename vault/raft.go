@@ -747,7 +747,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	if isRaftHAOnly {
 		for _, info := range leaderInfos {
 			if info.LeaderAPIAddr != "" || info.AutoJoin != "" {
-				return false, errors.New("leader API address or auto-join metadata must be unset when raft is used exclusively for HA")
+				return false, errors.New("leader API address and auto-join metadata must be unset when raft is used exclusively for HA")
 			}
 		}
 
