@@ -15,7 +15,11 @@ Router.map(function() {
       this.route('logout');
       this.mount('open-api-explorer', { path: '/api-explorer' });
       this.route('license');
-      this.route('metrics');
+      this.route('metrics', function() {
+        this.route('index', { path: '/' });
+        this.route('config');
+        this.route('edit');
+      });
       this.route('storage', { path: '/storage/raft' });
       this.route('storage-restore', { path: '/storage/raft/restore' });
       this.route('settings', function() {
@@ -114,8 +118,6 @@ Router.map(function() {
           // transit-specific routes
           this.route('actions-root', { path: '/actions/' });
           this.route('actions', { path: '/actions/*secret' });
-          // transform-specific routes
-          // TODO: add these
         });
       });
       this.route('policies', { path: '/policies/:type' }, function() {
@@ -134,10 +136,6 @@ Router.map(function() {
       }
 
       this.route('not-found', { path: '/*path' });
-      this.route('metrics-config', function() {
-        this.route('index', { path: '/' });
-        this.route('edit');
-      });
     });
     this.route('not-found', { path: '/*path' });
   });

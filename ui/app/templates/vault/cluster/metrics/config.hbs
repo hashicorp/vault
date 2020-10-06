@@ -22,12 +22,12 @@
         {{/link-to}}
       {{/link-to}}
       {{#link-to
-        "vault.cluster.metrics-config"
+        "vault.cluster.metrics.config"
         tagName="li"
         activeClass="is-active"
       }}
         {{#link-to
-          "vault.cluster.metrics-config"
+          "vault.cluster.metrics.config"
           data-test-configuration-tab=true
         }}
           Configuration
@@ -40,7 +40,7 @@
 <Toolbar>
   <ToolbarActions>
     {{!-- {{#if capabilities.canUpdate }} --}}
-    {{#link-to 'vault.cluster.metrics-config.edit' class="toolbar-link"}}
+    {{#link-to 'vault.cluster.metrics.edit' class="toolbar-link"}}
       Edit configuration
     {{/link-to}}
 
