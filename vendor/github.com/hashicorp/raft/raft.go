@@ -515,6 +515,9 @@ func (r *Raft) startStopReplication() {
 		delete(r.leaderState.replState, serverID)
 		r.observe(PeerObservation{Peer: repl.peer, Removed: true})
 	}
+
+	// Update peers metric
+	metrics.SetGauge([]string{"raft", "peers"}, float32(len(r.configurations.latest.Servers)))
 }
 
 // configurationChangeChIfStable returns r.configurationChangeCh if it's safe

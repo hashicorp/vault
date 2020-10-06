@@ -365,6 +365,7 @@ These metrics relate to raft based [integrated storage][integrated-storage].
 | `vault.raft.leader.dispatchLog`									| Time for the leader to write log entries to disk.                                                                                                                                                                   | ms                                | timer   |
 | `vault.raft.leader.dispatchNumLogs`							| Number of logs committed to disk in a batch.                                                                                                                                                                        | logs                              | gauge   |
 | `vault.raft.list`											  				| Time to retrieve list of keys from raft's underlying storage.                                                                                                                                                       | ms                                | summary |
+| `vault.raft.peers`											  				| Number of peers in the raft cluster configuration.                                                                                                                                                       | peers                                | gauge |
 | `vault.raft.put`												  			| Time to persist key in raft's underlying storage.                                                                                                                                                                   | ms                                | summary |
 | `vault.raft.replication.appendEntries.log`			| Number of logs replicated to a node, to bring it up to speed with the leader's logs.                                                                                                                                | logs appended / interval          | counter |
 | `vault.raft.replication.appendEntries.rpc`			| Time taken by the append entries RFC, to replicate the log entries of a leader node onto its follower node(s).                                                                                                      | ms                                | timer   |
@@ -411,7 +412,7 @@ indicate flapping leadership.
 
 ## Metric Labels
 
-| Metric                                          | Description                                                                | Example                            | 
+| Metric                                          | Description                                                                | Example                            |
 | :---------------------------------------------- | :------------------------------------------------------------------------- | :--------------------------------- |
 | `auth_method`                                   | Authorization engine type    .                                             | `userpass`                         |
 | `cluster`                                       | The cluster name from which the metric originated; set in the configuration file, or automatically generated when a cluster is create                                                                                                                                      | `vault-cluster-d54ad07`            |
@@ -421,6 +422,7 @@ indicate flapping leadership.
 | `policy`                                        | A single named policy                                                      | `default`                          |
 | `secret_engine`                                 | The [secret engine][secrets-engine] type.                                  | `aws`                              |
 | `token_type`                                    | Identifies whether the token is a batch token or a service token.          | `service`                          |
+| `peer_id`                                       | Unique identifier of a peer.                                               | `node-1`                           |
 
 [secrets-engines]: /docs/secrets
 [storage-backends]: /docs/configuration/storage
