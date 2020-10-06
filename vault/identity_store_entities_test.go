@@ -1210,3 +1210,118 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		}
 	}
 }
+
+func TestIdentityStore_MergeEntitiesByID_DuplicateFromEntityIDs(t *testing.T) {
+	var err error
+	var resp *logical.Response
+
+	ctx := namespace.RootContext(nil)
+	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	// Register the entity
+	registerReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity",
+		Data: map[string]interface{}{
+			"name":     "testentityname2",
+			"metadata": []string{"someusefulkey=someusefulvalue"},
+		},
+	}
+
+	resp, err = is.HandleRequest(ctx, registerReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	entityID1 := resp.Data["id"].(string)
+	entity1, err := is.MemDBEntityByID(entityID1, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entity1 == nil {
+		t.Fatalf("failed to create entity: %v", err)
+	}
+
+	// Register another entity
+	registerReq.Data = map[string]interface{}{
+		"name":     "testentityname",
+		"metadata": []string{"someusefulkey=someusefulvalue"},
+	}
+
+	resp, err = is.HandleRequest(ctx, registerReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	entityID2 := resp.Data["id"].(string)
+
+	aliasReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "alias",
+		Data: map[string]interface{}{
+			"name":           "testaliasname1",
+			"mount_accessor": githubAccessor,
+			"metadata":       []string{"organization=hashicorp", "team=vault"},
+			"entity_id":      entityID2,
+		},
+	}
+
+	// Register the alias
+	resp, err = is.HandleRequest(ctx, aliasReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	entity2, err := is.MemDBEntityByID(entityID2, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entity2 == nil {
+		t.Fatalf("failed to create entity: %v", err)
+	}
+	if len(entity2.Aliases) != 1 {
+		t.Fatalf("bad: number of aliases in entity; expected: 1, actual: %d", len(entity2.Aliases))
+	}
+
+	mergeReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity/merge",
+		Data: map[string]interface{}{
+			"to_entity_id":    entityID1,
+			"from_entity_ids": []string{entityID2, entityID2},
+		},
+	}
+
+	resp, err = is.HandleRequest(ctx, mergeReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	entityReq := &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "entity/id/" + entityID2,
+	}
+	resp, err = is.HandleRequest(ctx, entityReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("entity should have been deleted")
+	}
+
+	entityReq.Path = "entity/id/" + entityID1
+	resp, err = is.HandleRequest(ctx, entityReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	entity1Lookup, err := is.MemDBEntityByID(entityID1, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entity1Lookup == nil {
+		t.Fatalf("failed to create entity: %v", err)
+	}
+
+	if len(entity1Lookup.Aliases) != 1 {
+		t.Fatalf("bad: number of aliases in entity; expected: 1, actual: %d", len(entity1Lookup.Aliases))
+	}
+}

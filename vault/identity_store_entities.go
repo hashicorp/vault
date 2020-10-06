@@ -733,8 +733,10 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		return errors.New("entity id to merge into does not belong to the request's namespace"), nil
 	}
 
+	sanitizedFromEntityIDs := strutil.RemoveDuplicates(fromEntityIDs, false)
+
 	// Merge the MFA secrets
-	for _, fromEntityID := range fromEntityIDs {
+	for _, fromEntityID := range sanitizedFromEntityIDs {
 		if fromEntityID == toEntity.ID {
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil
 		}
@@ -768,7 +770,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 	isPerfSecondaryOrStandby := i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) ||
 		i.localNode.HAState() == consts.PerfStandby
 	var fromEntityGroups []*identity.Group
-	for _, fromEntityID := range fromEntityIDs {
+	for _, fromEntityID := range sanitizedFromEntityIDs {
 		if fromEntityID == toEntity.ID {
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil
 		}
