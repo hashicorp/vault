@@ -27,13 +27,18 @@ func (c *OperatorRaftJoinCommand) Synopsis() string {
 
 func (c *OperatorRaftJoinCommand) Help() string {
 	helpText := `
-Usage: vault operator raft join [options] <leader-api-addr>
+Usage: vault operator raft join [options] <leader-api-addr|auto-join-configuration>
 
   Join the current node as a peer to the Raft cluster by providing the address
   of the Raft leader node.
 
       $ vault operator raft join "http://127.0.0.2:8200"
 
+  Join the current node as a peer to the Raft cluster by providing cloud auto-join
+  configuration.
+
+      $ vault operator raft join "provider=aws region=eu-west-1 ..."
+			
   TLS certificate data can also be consumed from a file on disk by prefixing with
   the "@" symbol. For example:
 
@@ -106,14 +111,14 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 		return 1
 	}
 
-	leaderAPIAddr := ""
+	leaderInfo := ""
 
 	args = f.Args()
 	switch len(args) {
 	case 0:
 		// No-op: This is acceptable if we're using raft for HA-only
 	case 1:
-		leaderAPIAddr = strings.TrimSpace(args[0])
+		leaderInfo = strings.TrimSpace(args[0])
 	default:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0-1, got %d)", len(args)))
 		return 1
@@ -143,14 +148,21 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 		return 2
 	}
 
-	resp, err := client.Sys().RaftJoin(&api.RaftJoinRequest{
-		LeaderAPIAddr:    leaderAPIAddr,
+	joinReq := &api.RaftJoinRequest{
 		LeaderCACert:     leaderCACert,
 		LeaderClientCert: leaderClientCert,
 		LeaderClientKey:  leaderClientKey,
 		Retry:            c.flagRetry,
 		NonVoter:         c.flagNonVoter,
-	})
+	}
+
+	if strings.HasPrefix(leaderInfo, "provider=") {
+		joinReq.AutoJoin = leaderInfo
+	} else {
+		joinReq.LeaderAPIAddr = leaderInfo
+	}
+
+	resp, err := client.Sys().RaftJoin(joinReq)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error joining the node to the Raft cluster: %s", err))
 		return 2
