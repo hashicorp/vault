@@ -520,6 +520,7 @@ github.com/hashicorp/vault/sdk/database/helper/credsutil
 github.com/hashicorp/vault/sdk/database/helper/dbutil
 github.com/hashicorp/vault/sdk/database/newdbplugin
 github.com/hashicorp/vault/sdk/database/newdbplugin/proto
+github.com/hashicorp/vault/sdk/database/newdbplugin/testing
 github.com/hashicorp/vault/sdk/framework
 github.com/hashicorp/vault/sdk/helper/authmetadata
 github.com/hashicorp/vault/sdk/helper/awsutil
