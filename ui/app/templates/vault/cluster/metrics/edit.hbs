@@ -6,33 +6,4 @@
   </p.levelLeft>
 </PageHeader>
 {{!-- CBS TODO: Move to component --}}
-<form onsubmit={{action "saveConfig" model}}>
-  <div class="box is-sideless is-fullwidth is-marginless">
-    {{message-error model=model}}
-    {{#each model.configAttrs as |attr|}}
-      <FormField
-          data-test-field
-          @attr={{attr}}
-          @model={{model}}
-        />
-    {{/each}}
-  </div>
-  <div class="field is-grouped-split box is-fullwidth is-bottomless">
-    <div class="control">
-      <button
-        type="submit"
-        disabled={{buttonDisabled}}
-        class="button is-primary"
-        data-test-edit-metrics-config-save=true
-      >
-        Save
-      </button>
-      {{#link-to
-        "vault.cluster.metrics.config"
-        class="button"
-      }}
-        Cancel
-      {{/link-to}}
-    </div>
-  </div>
-</form>
+<PricingMetricsConfig @model={{model}} @mode="edit" />
