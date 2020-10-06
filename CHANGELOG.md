@@ -16,6 +16,7 @@ IMPROVEMENTS:
 * command/server: Add environment variable support for `disable_mlock`. [[GH-9931](https://github.com/hashicorp/vault/pull/9931)]
 * sdk/framework: Add a time type for API fields. [[GH-9911](https://github.com/hashicorp/vault/pull/9911)]
 * seal/awskms: Add logging during awskms auto-unseal [[GH-9794](https://github.com/hashicorp/vault/pull/9794)]
+* storage/azure: Update SDK library to use [azure-storage-blob-go](https://github.com/Azure/azure-storage-blob-go) since previous library has been deprecated. [[GH-9577](https://github.com/hashicorp/vault/pull/9577/)]
 
 BUG FIXES:
 
