@@ -190,8 +190,9 @@ BREW_TOOLS := gln:coreutils gtouch:coreutils gstat:coreutils \
 $(eval $(call REQ_TOOLS,brew,brew,brew install,$(BREW_TOOLS)))
 else
 # If not mac, try to install using apt.
+SUDO := $(shell which sudo 2>/dev/null || true)
 APT_TOOLS := pip3:python3-pip jq:jq column:bsdmainutils
-$(eval $(call REQ_TOOLS,apt,apt-get,sudo apt-get update && sudo apt-get install -y,$(APT_TOOLS)))
+$(eval $(call REQ_TOOLS,apt,apt-get,$(SUDO) apt-get update && $(SUDO) apt-get install -y,$(APT_TOOLS)))
 PIP_TOOLS := yq:yq
 $(eval $(call REQ_TOOLS,pip,pip3,pip3 install,$(PIP_TOOLS)))
 
