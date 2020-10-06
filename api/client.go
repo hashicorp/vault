@@ -495,18 +495,18 @@ func (c *Client) Address() string {
 // rateLimit and burst are specified according to https://godoc.org/golang.org/x/time/rate#NewLimiter
 func (c *Client) SetLimiter(rateLimit float64, burst int) {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.Lock()
 	defer c.config.modifyLock.Unlock()
-	c.modifyLock.RUnlock()
 
 	c.config.Limiter = rate.NewLimiter(rate.Limit(rateLimit), burst)
 }
 
 func (c *Client) Limiter() *rate.Limiter {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.RLock()
 	defer c.config.modifyLock.RUnlock()
-	c.modifyLock.RUnlock()
 
 	return c.config.Limiter
 }
@@ -514,37 +514,73 @@ func (c *Client) Limiter() *rate.Limiter {
 // SetMaxRetries sets the number of retries that will be used in the case of certain errors
 func (c *Client) SetMaxRetries(retries int) {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.Lock()
 	defer c.config.modifyLock.Unlock()
-	c.modifyLock.RUnlock()
 
 	c.config.MaxRetries = retries
 }
 
 func (c *Client) MaxRetries() int {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.RLock()
 	defer c.config.modifyLock.RUnlock()
-	c.modifyLock.RUnlock()
 
 	return c.config.MaxRetries
+}
+
+func (c *Client) SetAgentAddress(address string) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.AgentAddress = address
+}
+
+func (c *Client) AgentAddress() string {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.AgentAddress
+}
+
+func (c *Client) SetSRVLookup(srv bool) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.SRVLookup = srv
+}
+
+func (c *Client) SRVLookup() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.SRVLookup
 }
 
 // SetCheckRetry sets the CheckRetry function to be used for future requests.
 func (c *Client) SetCheckRetry(checkRetry retryablehttp.CheckRetry) {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.Lock()
 	defer c.config.modifyLock.Unlock()
-	c.modifyLock.RUnlock()
 
 	c.config.CheckRetry = checkRetry
 }
 
 func (c *Client) CheckRetry() retryablehttp.CheckRetry {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.RLock()
 	defer c.config.modifyLock.RUnlock()
-	c.modifyLock.RUnlock()
 
 	return c.config.CheckRetry
 }
@@ -552,36 +588,36 @@ func (c *Client) CheckRetry() retryablehttp.CheckRetry {
 // SetClientTimeout sets the client request timeout
 func (c *Client) SetClientTimeout(timeout time.Duration) {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.Lock()
 	defer c.config.modifyLock.Unlock()
-	c.modifyLock.RUnlock()
 
 	c.config.Timeout = timeout
 }
 
 func (c *Client) ClientTimeout() time.Duration {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.RLock()
 	defer c.config.modifyLock.RUnlock()
-	c.modifyLock.RUnlock()
 
 	return c.config.Timeout
 }
 
 func (c *Client) OutputCurlString() bool {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.RLock()
 	defer c.config.modifyLock.RUnlock()
-	c.modifyLock.RUnlock()
 
 	return c.config.OutputCurlString
 }
 
 func (c *Client) SetOutputCurlString(curl bool) {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.Lock()
 	defer c.config.modifyLock.Unlock()
-	c.modifyLock.RUnlock()
 
 	c.config.OutputCurlString = curl
 }
@@ -591,7 +627,6 @@ func (c *Client) SetOutputCurlString(curl bool) {
 func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
-
 	return c.wrappingLookupFunc
 }
 
@@ -600,7 +635,6 @@ func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
 func (c *Client) SetWrappingLookupFunc(lookupFunc WrappingLookupFunc) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
-
 	c.wrappingLookupFunc = lookupFunc
 }
 
@@ -609,7 +643,6 @@ func (c *Client) SetWrappingLookupFunc(lookupFunc WrappingLookupFunc) {
 func (c *Client) SetMFACreds(creds []string) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
-
 	c.mfaCreds = creds
 }
 
@@ -634,7 +667,6 @@ func (c *Client) setNamespace(namespace string) {
 func (c *Client) Token() string {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
-
 	return c.token
 }
 
@@ -643,7 +675,6 @@ func (c *Client) Token() string {
 func (c *Client) SetToken(v string) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
-
 	c.token = v
 }
 
@@ -651,7 +682,6 @@ func (c *Client) SetToken(v string) {
 func (c *Client) ClearToken() {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
-
 	c.token = ""
 }
 
@@ -694,9 +724,9 @@ func (c *Client) SetHeaders(headers http.Header) {
 // SetBackoff sets the backoff function to be used for future requests.
 func (c *Client) SetBackoff(backoff retryablehttp.Backoff) {
 	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.Lock()
 	defer c.config.modifyLock.Unlock()
-	c.modifyLock.RUnlock()
 
 	c.config.Backoff = backoff
 }
@@ -709,19 +739,14 @@ func (c *Client) SetBackoff(backoff retryablehttp.Backoff) {
 // Also, only the client's config is currently copied; this means items not in
 // the api.Config struct, such as policy override and wrapping function
 // behavior, must currently then be set as desired on the new client.
-//
-// One exception to this is the addr field of Client, which is also copied over.
-// Otherwise you have the confusing result of creating a client, customizing
-// the address via client.SetAddress() then cloning it and having it show the
-// default address again, instead of the one you just set. I'm not even sure
-// why the client has addr as a member at all, other than the convenience of
-// having it pre-parsed into a URL instead of a string.
 func (c *Client) Clone() (*Client, error) {
 	c.modifyLock.RLock()
-	config := c.config
-	c.modifyLock.RUnlock()
+	defer c.modifyLock.RUnlock()
 
+	config := c.config
 	config.modifyLock.RLock()
+	defer config.modifyLock.RUnlock()
+
 	newConfig := &Config{
 		Address:          config.Address,
 		HttpClient:       config.HttpClient,
@@ -731,14 +756,10 @@ func (c *Client) Clone() (*Client, error) {
 		CheckRetry:       config.CheckRetry,
 		Limiter:          config.Limiter,
 		OutputCurlString: config.OutputCurlString,
+		AgentAddress:     config.AgentAddress,
+		SRVLookup:        config.SRVLookup,
 	}
-	config.modifyLock.RUnlock()
 	client, err := NewClient(newConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	err = client.SetAddress(newConfig.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -752,7 +773,6 @@ func (c *Client) Clone() (*Client, error) {
 func (c *Client) SetPolicyOverride(override bool) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
-
 	c.policyOverride = override
 }
 
