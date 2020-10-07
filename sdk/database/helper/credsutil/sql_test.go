@@ -10,15 +10,10 @@ import (
 )
 
 func TestGenerateUsername(t *testing.T) {
-	// The length of random alphanumeric string is hardcoded
-	// https://github.com/hashicorp/vault/blob/73b1eed7c9066b121f6d4c77aa2d8ace21b48fef/sdk/database/helper/credsutil/sql.go#L58
-	RandomAlphaNumericLen := 20
-	UnixTimestampLen := len(fmt.Sprint(time.Now().Unix()))
-
 	credsProducer := &SQLCredentialsProducer{
 		DisplayNameLen: 30,
 		RoleNameLen:    8,
-		UsernameLen:    55,
+		UsernameLen:    63,
 		Separator:      "-",
 	}
 
@@ -82,15 +77,8 @@ func TestGenerateUsername(t *testing.T) {
 				t.Fatalf("Expected username to begin with %s. But got %s", test.expectedUserPrefix, username)
 			}
 
-			var expectedLen int
-			if len(test.expectedUserPrefix) + RandomAlphaNumericLen + 1 + UnixTimestampLen < credsProducer.UsernameLen {
-				expectedLen = len(test.expectedUserPrefix) + RandomAlphaNumericLen + 1 + UnixTimestampLen
-			} else {
-				expectedLen = credsProducer.UsernameLen
-			}
-
-			if len(username) != expectedLen {
-				t.Fatalf("Expected username's length to be %d. But got %d", expectedLen, len(username))
+			if len(username) > credsProducer.UsernameLen {
+				t.Fatalf("Maximum username's length is %d. But got %d", credsProducer.UsernameLen, len(username))
 			}
 		})
 	}
