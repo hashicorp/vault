@@ -58,9 +58,7 @@ export default Component.extend({
       return;
     }
     this.router.transitionTo('vault.cluster.metrics.config');
-  })
-    .drop()
-    .withTestWaiter(),
+  }).drop(),
 
   actions: {
     onSaveChanges: function(evt) {

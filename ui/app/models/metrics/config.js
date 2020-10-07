@@ -1,7 +1,5 @@
 import DS from 'ember-data';
 import { computed } from '@ember/object';
-// import { apiPath } from 'vault/macros/lazy-capabilities';
-// import attachCapabilities from 'vault/lib/attach-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
