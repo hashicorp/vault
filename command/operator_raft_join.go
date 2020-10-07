@@ -156,7 +156,7 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 		NonVoter:         c.flagNonVoter,
 	}
 
-	if strings.HasPrefix(leaderInfo, "provider=") {
+	if strings.Contains(leaderInfo, "provider=") {
 		joinReq.AutoJoin = leaderInfo
 	} else {
 		joinReq.LeaderAPIAddr = leaderInfo
