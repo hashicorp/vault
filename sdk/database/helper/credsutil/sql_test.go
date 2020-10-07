@@ -1,15 +1,13 @@
 package credsutil
 
 import (
-	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 )
 
-func TestGenerateUsername(t *testing.T) {
+func TestSQLGenerateUsername(t *testing.T) {
 	credsProducer := &SQLCredentialsProducer{
 		DisplayNameLen: 30,
 		RoleNameLen:    8,
