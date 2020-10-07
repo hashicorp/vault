@@ -247,67 +247,6 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 	}
 }
 
-func TestUpdateUser_expiration(t *testing.T) {
-	type testCase struct {
-		renewalStmts []string
-	}
-
-	tests := map[string]testCase{
-		"empty renewal statements": {
-			renewalStmts: nil,
-		},
-		"default renewal name": {
-			renewalStmts: []string{defaultExpirationStatement},
-		},
-		"default renewal username": {
-			renewalStmts: []string{`
-				ALTER ROLE "{{username}}" VALID UNTIL '{{expiration}}';`,
-			},
-		},
-	}
-
-	// Shared test container for speed - there should not be any overlap between the tests
-	db, cleanup := getPostgreSQL(t, nil)
-	defer cleanup()
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			password := "myreallysecurepassword"
-			req := newdbplugin.NewUserRequest{
-				UsernameConfig: newdbplugin.UsernameMetadata{
-					DisplayName: "test",
-					RoleName:    "test",
-				},
-				Statements: newdbplugin.Statements{
-					Commands: []string{createAdminUser},
-				},
-				Password:   password,
-				Expiration: time.Now().Add(2 * time.Second),
-			}
-			createResp := dbtesting.AssertNewUser(t, db, req)
-
-			assertCredsExist(t, db.ConnectionURL, createResp.Username, password)
-
-			updateReq := newdbplugin.UpdateUserRequest{
-				Username: createResp.Username,
-				Expiration: &newdbplugin.ChangeExpiration{
-					NewExpiration: time.Now().Add(1 * time.Minute),
-					Statements: newdbplugin.Statements{
-						Commands: test.renewalStmts,
-					},
-				},
-			}
-
-			dbtesting.AssertUpdateUser(t, db, updateReq)
-
-			// Sleep longer than the initial expiration time
-			time.Sleep(3 * time.Second)
-
-			assertCredsExist(t, db.ConnectionURL, updateReq.Username, password)
-		})
-	}
-}
-
 func TestUpdateUser_Password(t *testing.T) {
 	type testCase struct {
 		statements     []string
@@ -408,20 +347,42 @@ func TestUpdateUser_Password(t *testing.T) {
 
 func TestUpdateUser_Expiration(t *testing.T) {
 	type testCase struct {
-		statements []string
-		expectErr  bool
+		initialExpiration  time.Time
+		newExpiration      time.Time
+		expectedExpiration time.Time
+		statements         []string
+		expectErr          bool
 	}
 
+	now := time.Now()
 	tests := map[string]testCase{
 		"no statements": {
-			statements: nil,
-			expectErr:  false,
+			initialExpiration:  now.Add(1 * time.Minute),
+			newExpiration:      now.Add(5 * time.Minute),
+			expectedExpiration: now.Add(5 * time.Minute),
+			statements:         nil,
+			expectErr:          false,
 		},
 		"default statements with name": {
-			statements: []string{defaultExpirationStatement},
+			initialExpiration:  now.Add(1 * time.Minute),
+			newExpiration:      now.Add(5 * time.Minute),
+			expectedExpiration: now.Add(5 * time.Minute),
+			statements:         []string{defaultExpirationStatement},
+			expectErr:          false,
 		},
 		"default statements with username": {
-			statements: []string{`ALTER ROLE "{{username}}" VALID UNTIL '{{expiration}}';`},
+			initialExpiration:  now.Add(1 * time.Minute),
+			newExpiration:      now.Add(5 * time.Minute),
+			expectedExpiration: now.Add(5 * time.Minute),
+			statements:         []string{`ALTER ROLE "{{username}}" VALID UNTIL '{{expiration}}';`},
+			expectErr:          false,
+		},
+		"bad statements": {
+			initialExpiration:  now.Add(1 * time.Minute),
+			newExpiration:      now.Add(5 * time.Minute),
+			expectedExpiration: now.Add(1 * time.Minute),
+			statements:         []string{"ladshfouay09sgj"},
+			expectErr:          true,
 		},
 	}
 
@@ -432,7 +393,7 @@ func TestUpdateUser_Expiration(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			password := "myreallysecurepassword"
-			initialExpiration := time.Now().Add(1 * time.Minute).Truncate(time.Second)
+			initialExpiration := test.initialExpiration.Truncate(time.Second)
 			createReq := newdbplugin.NewUserRequest{
 				UsernameConfig: newdbplugin.UsernameMetadata{
 					DisplayName: "test",
@@ -456,7 +417,7 @@ func TestUpdateUser_Expiration(t *testing.T) {
 				t.Fatalf("Actual expiration: %s Expected expiration: %s", actualExpiration, initialExpiration)
 			}
 
-			newExpiration := initialExpiration.Add(1 * time.Minute)
+			newExpiration := test.newExpiration.Truncate(time.Second)
 			updateReq := newdbplugin.UpdateUserRequest{
 				Username: createResp.Username,
 				Expiration: &newdbplugin.ChangeExpiration{
@@ -477,9 +438,10 @@ func TestUpdateUser_Expiration(t *testing.T) {
 				t.Fatalf("no error expected, got: %s", err)
 			}
 
+			expectedExpiration := test.expectedExpiration.Truncate(time.Second)
 			actualExpiration = getExpiration(t, db, createResp.Username)
-			if !actualExpiration.Equal(newExpiration) {
-				t.Fatalf("Actual expiration: %s Expected expiration: %s", actualExpiration, initialExpiration)
+			if !actualExpiration.Equal(expectedExpiration) {
+				t.Fatalf("Actual expiration: %s Expected expiration: %s", actualExpiration, expectedExpiration)
 			}
 		})
 	}
