@@ -117,10 +117,12 @@ func (p *PostgreSQL) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserR
 
 	merr := &multierror.Error{}
 	if req.Password != nil {
-		merr = multierror.Append(merr, p.changeUserPassword(ctx, req.Username, req.Password))
+		err := p.changeUserPassword(ctx, req.Username, req.Password)
+		merr = multierror.Append(merr, err)
 	}
 	if req.Expiration != nil {
-		merr = multierror.Append(merr, p.changeUserExpiration(ctx, req.Username, req.Expiration))
+		err := p.changeUserExpiration(ctx, req.Username, req.Expiration)
+		merr = multierror.Append(merr, err)
 	}
 	return newdbplugin.UpdateUserResponse{}, merr.ErrorOrNil()
 }
