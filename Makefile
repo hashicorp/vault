@@ -251,7 +251,7 @@ PACKAGESPEC_CIRCLECI_CONFIG := .circleci/config/@build-release.yml
 PACKAGESPEC_HOOK_POST_CI_CONFIG := $(MAKE) ci-config
 
 .PHONY: ci-config
-ci-config: $(PACKAGESPEC_CIRCLECI_CONFIG)
+ci-config:
 	@$(MAKE) -C .circleci ci-config
 .PHONY: ci-verify
 ci-verify:
