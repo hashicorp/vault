@@ -134,16 +134,6 @@ meta:
     BUILD_JOB_NAME: >-
       {{.GOOS}}_{{.GOARCH}}_package
 
-    # POST_PROCESSORS names post processors we may apply to packages
-    # later. It is a space separated list of words, with each word
-    # naming a post-processor to run. These post-processors are not run
-    # during a build, and the code to run them is not contained in this repo.
-    # These post processors are run in the order they are specified in.
-    POST_PROCESSORS: '
-      {{- if and (eq .GOOS "darwin") (eq .GOARCH "amd64")}}apple-notarize {{end -}}
-      {{- if and (eq .GOOS "windows") (eq .GOARCH "amd64")}}microsoft-notarize {{end -}}
-      av-scan'
-
     # BUNDLE_NAME is used in archive filenames, as well as by downstream processes.
     BUNDLE_NAME: "vault_{{.PRODUCT_VERSION}}"
 
