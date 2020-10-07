@@ -601,6 +601,7 @@ func waitUntilCredsDoNotExist(timeout time.Duration) credsAssertion {
 		defer cancel()
 
 		ticker := time.NewTicker(10 * time.Millisecond)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ctx.Done():
