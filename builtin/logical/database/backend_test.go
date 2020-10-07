@@ -3,20 +3,18 @@ package database
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"log"
 	"os"
 	"reflect"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/vault-plugin-database-mongodbatlas"
+	mongodbatlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/plugins/database/mongodb"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
@@ -29,63 +27,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
-	"github.com/ory/dockertest"
 )
-
-var (
-	testImagePull sync.Once
-)
-
-func preparePostgresTestContainer(t *testing.T, s logical.Storage, b logical.Backend) (cleanup func(), retURL string) {
-	t.Helper()
-	if os.Getenv("PG_URL") != "" {
-		return func() {}, os.Getenv("PG_URL")
-	}
-
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-
-	resource, err := pool.Run("postgres", "latest", []string{"POSTGRES_PASSWORD=secret", "POSTGRES_DB=database"})
-	if err != nil {
-		t.Fatalf("Could not start local PostgreSQL docker container: %s", err)
-	}
-
-	cleanup = func() {
-		docker.CleanupResource(t, pool, resource)
-	}
-
-	retURL = fmt.Sprintf("postgres://postgres:secret@localhost:%s/database?sslmode=disable", resource.GetPort("5432/tcp"))
-
-	// Exponential backoff-retry
-	if err = pool.Retry(func() error {
-		// This will cause a validation to run
-		resp, err := b.HandleRequest(namespace.RootContext(nil), &logical.Request{
-			Storage:   s,
-			Operation: logical.UpdateOperation,
-			Path:      "config/postgresql",
-			Data: map[string]interface{}{
-				"plugin_name":    "postgresql-database-plugin",
-				"connection_url": retURL,
-			},
-		})
-		if err != nil || (resp != nil && resp.IsError()) {
-			// It's likely not up and running yet, so return error and try again
-			return fmt.Errorf("err:%#v resp:%+v", err, resp)
-		}
-		if resp == nil {
-			t.Fatal("expected warning")
-		}
-
-		return nil
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to PostgreSQL docker container: %s", err)
-	}
-
-	return
-}
 
 func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	coreConfig := &vault.CoreConfig{
@@ -289,6 +231,7 @@ func TestBackend_config_connection(t *testing.T) {
 			},
 			"allowed_roles":                      []string{"*"},
 			"root_credentials_rotate_statements": []string{},
+			"password_policy":                    "",
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -341,6 +284,7 @@ func TestBackend_config_connection(t *testing.T) {
 			},
 			"allowed_roles":                      []string{"*"},
 			"root_credentials_rotate_statements": []string{},
+			"password_policy":                    "",
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -382,6 +326,7 @@ func TestBackend_config_connection(t *testing.T) {
 			},
 			"allowed_roles":                      []string{"flu", "barre"},
 			"root_credentials_rotate_statements": []string{},
+			"password_policy":                    "",
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -425,7 +370,7 @@ func TestBackend_BadConnectionString(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, _ := preparePostgresTestContainer(t, config.StorageView, b)
+	cleanup, _ := postgreshelper.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	respCheck := func(req *logical.Request) {
@@ -474,7 +419,7 @@ func TestBackend_basic(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	// Configure a connection
@@ -681,7 +626,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	// Configure a connection
@@ -769,6 +714,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 		},
 		"allowed_roles":                      []string{"plugin-role-test"},
 		"root_credentials_rotate_statements": []string(nil),
+		"password_policy":                    "",
 	}
 	req.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -859,7 +805,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	// Configure a connection
@@ -1107,7 +1053,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	// Configure a connection
@@ -1304,7 +1250,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)

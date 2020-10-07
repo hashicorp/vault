@@ -1,6 +1,6 @@
 ---
 layout: api
-page_title: /sys/quotas/config- HTTP API
+page_title: /sys/quotas/config - HTTP API
 sidebar_title: <code>/sys/quotas/config</code>
 description: The `/sys/quotas/config` endpoint is used to configure rate limit quotas.
 ---
@@ -19,12 +19,15 @@ The `/sys/quotas/config` endpoint is used to configure rate limit quotas.
 
 - `enable_rate_limit_audit_logging` `(bool: false)` - If set, starts audit logging
   of requests that get rejected due to rate limit quota rule violations.
+- `enable_rate_limit_response_headers` `(bool: false)` - If set, additional rate
+  limit quota HTTP headers will be added to responses.
 
 ### Sample Payload
 
 ```json
 {
   "enable_rate_limit_audit_logging": true,
+  "enable_rate_limit_response_headers": true,
 }
 ```
 
@@ -62,7 +65,8 @@ $ curl \
   "lease_duration": 0,
   "renewable": false,
   "data": {
-    "enable_rate_limit_audit_logging": false
+    "enable_rate_limit_audit_logging": false,
+    "enable_rate_limit_response_headers": false
   },
   "warnings": null
 }

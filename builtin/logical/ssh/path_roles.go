@@ -3,9 +3,7 @@ package ssh
 import (
 	"context"
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"strings"
-
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -13,6 +11,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -334,10 +333,9 @@ func pathRoles(b *backend) *framework.Path {
                                 `,
 			},
 			"algorithm_signer": &framework.FieldSchema{
-				Type:    framework.TypeString,
-				Default: ssh.SigAlgoRSA,
+				Type: framework.TypeString,
 				Description: `
-				When supplied, this value specifies a signing algorithm for the key.  Possible values: 
+				When supplied, this value specifies a signing algorithm for the key. Possible values: 
 				ssh-rsa, rsa-sha2-256, rsa-sha2-512.
 				`,
 				DisplayAttrs: &framework.DisplayAttributes{
@@ -479,11 +477,18 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 			KeyOptionSpecs:  keyOptionSpecs,
 		}
 	} else if keyType == KeyTypeCA {
-		algorithmSigner := d.Get("algorithm_signer").(string)
-		switch algorithmSigner {
-		case ssh.SigAlgoRSA, ssh.SigAlgoRSASHA2256, ssh.SigAlgoRSASHA2512:
-		default:
-			return nil, fmt.Errorf("unknown algorithm signer %q", algorithmSigner)
+		algorithmSigner := ""
+		algorithmSignerRaw, ok := d.GetOk("algorithm_signer")
+		if ok {
+			algorithmSigner = algorithmSignerRaw.(string)
+			switch algorithmSigner {
+			case ssh.SigAlgoRSA, ssh.SigAlgoRSASHA2256, ssh.SigAlgoRSASHA2512:
+			case "":
+				// This case is valid, and the sign operation will use the signer's
+				// default algorithm.
+			default:
+				return nil, fmt.Errorf("unknown algorithm signer %q", algorithmSigner)
+			}
 		}
 
 		role, errorResponse := b.createCARole(allowedUsers, d.Get("default_user").(string), algorithmSigner, d)

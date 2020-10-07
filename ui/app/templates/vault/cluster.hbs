@@ -72,6 +72,18 @@
           <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
         </div>
         <div class="navbar-separator is-hidden-mobile"></div>
+      {{else if (and (has-permission 'metrics' routeParams='activity') (not cluster.dr.isSecondary) auth.currentToken)}}
+        <div class="navbar-sections">
+          <div class="{{if (is-active-route 'vault.cluster.metrics') 'is-active'}}">
+            {{#link-to
+              "vault.cluster.metrics"
+              current-when="vault.cluster.metrics"
+              data-test-navbar-item='metrics'
+            }}
+              Metrics
+            {{/link-to}}
+          </div>
+        </div>
       {{/if}}
       <div class="navbar-item">
         <button type="button" class="button is-transparent nav-console-button{{if consoleOpen " popup-open"}}"

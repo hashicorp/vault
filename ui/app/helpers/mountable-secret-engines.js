@@ -5,6 +5,15 @@ export const KMIP = {
   value: 'kmip',
   type: 'kmip',
   category: 'generic',
+  requiredFeature: 'KMIP',
+};
+
+export const TRANSFORM = {
+  displayName: 'Transform',
+  value: 'transform',
+  type: 'transform',
+  category: 'generic',
+  requiredFeature: 'Transform Secrets Engine',
 };
 
 const MOUNTABLE_SECRET_ENGINES = [

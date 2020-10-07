@@ -23,6 +23,7 @@ import (
 // migration, using the pre-1.4 method of bring down the whole cluster to do
 // the migration.
 func TestSealMigration_TransitToShamir_Pre14(t *testing.T) {
+	t.Parallel()
 	// Note that we do not test integrated raft storage since this is
 	// a pre-1.4 test.
 	testVariousBackends(t, testSealMigrationTransitToShamir_Pre14, basePort_TransitToShamir_Pre14, false)
@@ -43,8 +44,8 @@ func testSealMigrationTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, s
 	cluster, _, transitSeal := initializeTransit(t, logger, storage, basePort, tss)
 	rootToken, recoveryKeys := cluster.RootToken, cluster.RecoveryKeys
 	cluster.EnsureCoresSealed(t)
-	storage.Cleanup(t, cluster)
 	cluster.Cleanup()
+	storage.Cleanup(t, cluster)
 
 	// Migrate the backend from transit to shamir
 	migrateFromTransitToShamir_Pre14(t, logger, storage, basePort, tss, transitSeal, rootToken, recoveryKeys)
@@ -83,8 +84,8 @@ func migrateFromTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage
 	cluster := vault.NewTestCluster(t, &conf, &opts)
 	cluster.Start()
 	defer func() {
-		storage.Cleanup(t, cluster)
 		cluster.Cleanup()
+		storage.Cleanup(t, cluster)
 	}()
 
 	leader := cluster.Cores[0]

@@ -259,7 +259,7 @@ func TestRaft_Snapshot_Peers(t *testing.T) {
 	ensureCommitApplied(t, commitIdx, raft2)
 
 	// Make sure the snapshot was applied correctly on the follower
-	if err := compareDBs(t, raft1.fsm.db, raft2.fsm.db, false); err != nil {
+	if err := compareDBs(t, raft1.fsm.getDB(), raft2.fsm.getDB(), false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -590,9 +590,7 @@ func TestBoltSnapshotStore_Listing(t *testing.T) {
 		Level: hclog.Trace,
 	})
 
-	fsm, err := NewFSM(map[string]string{
-		"path": parent,
-	}, logger)
+	fsm, err := NewFSM(parent, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -657,9 +655,7 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 		Level: hclog.Trace,
 	})
 
-	fsm, err := NewFSM(map[string]string{
-		"path": parent,
-	}, logger)
+	fsm, err := NewFSM(parent, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -757,20 +753,18 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 		t.Fatal("expected snapshot installer object")
 	}
 
-	newFSM, err := NewFSM(map[string]string{
-		"path": filepath.Dir(installer.Filename()),
-	}, logger)
+	newFSM, err := NewFSM(filepath.Dir(installer.Filename()), logger)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = compareDBs(t, fsm.db, newFSM.db, true)
+	err = compareDBs(t, fsm.getDB(), newFSM.getDB(), true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Make sure config data is different
-	err = compareDBs(t, fsm.db, newFSM.db, false)
+	err = compareDBs(t, fsm.getDB(), newFSM.getDB(), false)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -818,9 +812,7 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 
 		// Close/Reopen the db and make sure we still match
 		fsm.Close()
-		fsm, err = NewFSM(map[string]string{
-			"path": parent,
-		}, logger)
+		fsm, err = NewFSM(parent, logger)
 		if err != nil {
 			t.Fatal(err)
 		}
