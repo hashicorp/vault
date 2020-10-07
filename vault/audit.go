@@ -10,6 +10,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -516,10 +517,16 @@ type basicAuditor struct {
 }
 
 func (b *basicAuditor) AuditRequest(ctx context.Context, input *logical.LogInput) error {
+	if b.c.auditBroker == nil {
+		return consts.ErrSealed
+	}
 	return b.c.auditBroker.LogRequest(ctx, input, b.c.auditedHeaders)
 }
 
 func (b *basicAuditor) AuditResponse(ctx context.Context, input *logical.LogInput) error {
+	if b.c.auditBroker == nil {
+		return consts.ErrSealed
+	}
 	return b.c.auditBroker.LogResponse(ctx, input, b.c.auditedHeaders)
 }
 
