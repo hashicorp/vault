@@ -1,8 +1,8 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { subMonths, startOfToday, format } from 'date-fns';
+import { subMonths, startOfToday, format, endOfMonth } from 'date-fns';
 
 module('Integration | Component | pricing-metrics-dates', function(hooks) {
   setupRenderingTest(hooks);
@@ -81,5 +81,46 @@ module('Integration | Component | pricing-metrics-dates', function(hooks) {
       />
     `);
     assert.dom('[data-test-results-date-warning]').exists('shows states warning');
+  });
+
+  test('it shows appropriate errors on input form', async function(assert) {
+    const lastAvailable = endOfMonth(subMonths(startOfToday(), 1));
+    const firstAvailable = subMonths(lastAvailable, 12);
+    await render(hbs`
+      <PricingMetricsDates @retentionMonths=12 @defaultSpan=6 />
+    `);
+    assert.dom('[data-test-form-error]').doesNotExist('No form error shows by default');
+
+    await fillIn('[data-test-start-input]', format(subMonths(firstAvailable, 1), 'MM/YYYY'));
+    assert
+      .dom('[data-test-form-error]')
+      .includesText(
+        `No data retained before ${format(firstAvailable, 'MM/YYYY')}`,
+        'shows the correct error message for starting before the configured retainment period'
+      );
+
+    await fillIn('[data-test-end-input]', format(subMonths(lastAvailable, -1), 'MM/YYYY'));
+    assert
+      .dom('[data-test-form-error]')
+      .includesText(
+        'Data is not available until the end of the month',
+        'shows the correct error message for ending after the end of the last month'
+      );
+
+    await fillIn('[data-test-end-input]', 'not/date');
+    assert
+      .dom('[data-test-form-error]')
+      .includesText(
+        'End date is invalid. Please use format MM/YYYY',
+        'shows the correct error message for non-date input'
+      );
+
+    await fillIn('[data-test-start-input]', `13/${format(lastAvailable, 'YYYY')}`);
+    assert
+      .dom('[data-test-form-error]')
+      .includesText(
+        'Start date is invalid. Please use format MM/YYYY',
+        'shows the correct error message for an invalid month'
+      );
   });
 });
