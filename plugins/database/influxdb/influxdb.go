@@ -2,14 +2,15 @@ package influxdb
 
 import (
 	"context"
+	"fmt"
 	"strings"
-	"time"
+
+	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	influx "github.com/influxdata/influxdb/client/v2"
 )
@@ -21,18 +22,17 @@ const (
 	influxdbTypeName                  = "influxdb"
 )
 
-var _ dbplugin.Database = &Influxdb{}
+var _ newdbplugin.Database = &Influxdb{}
 
 // Influxdb is an implementation of Database interface
 type Influxdb struct {
 	*influxdbConnectionProducer
-	credsutil.CredentialsProducer
 }
 
 // New returns a new Cassandra instance
 func New() (interface{}, error) {
 	db := new()
-	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
+	dbType := newdbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 
 	return dbType, nil
 }
@@ -41,16 +41,8 @@ func new() *Influxdb {
 	connProducer := &influxdbConnectionProducer{}
 	connProducer.Type = influxdbTypeName
 
-	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 15,
-		RoleNameLen:    15,
-		UsernameLen:    100,
-		Separator:      "_",
-	}
-
 	return &Influxdb{
 		influxdbConnectionProducer: connProducer,
-		CredentialsProducer:        credsProducer,
 	}
 }
 
@@ -61,7 +53,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
+	newdbplugin.Serve(dbType.(newdbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
 
 	return nil
 }
@@ -80,43 +72,40 @@ func (i *Influxdb) getConnection(ctx context.Context) (influx.Client, error) {
 	return cli.(influx.Client), nil
 }
 
-// CreateUser generates the username/password on the underlying Influxdb secret backend as instructed by
+// NewUser generates the username/password on the underlying Influxdb secret backend as instructed by
 // the CreationStatement provided.
-func (i *Influxdb) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
-	// Grab the lock
+// func (i *Influxdb) NewUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
+func (i *Influxdb) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (resp newdbplugin.NewUserResponse, err error) {
 	i.Lock()
 	defer i.Unlock()
 
-	statements = dbutil.StatementCompatibilityHelper(statements)
-
-	// Get the connection
 	cli, err := i.getConnection(ctx)
 	if err != nil {
-		return "", "", err
+		return newdbplugin.NewUserResponse{}, fmt.Errorf("unable to get connection: %w", err)
 	}
 
-	creationIFQL := statements.Creation
+	creationIFQL := req.Statements.Commands
 	if len(creationIFQL) == 0 {
 		creationIFQL = []string{defaultUserCreationIFQL}
 	}
 
-	rollbackIFQL := statements.Rollback
+	rollbackIFQL := req.RollbackStatements.Commands
 	if len(rollbackIFQL) == 0 {
 		rollbackIFQL = []string{defaultUserDeletionIFQL}
 	}
 
-	username, err = i.GenerateUsername(usernameConfig)
+	username, err := credsutil.GenerateUsername(
+		credsutil.DisplayName(req.UsernameConfig.DisplayName, 15),
+		credsutil.RoleName(req.UsernameConfig.RoleName, 15),
+		credsutil.MaxLength(100),
+		credsutil.Separator("_"),
+		credsutil.ToLower(),
+	)
+	if err != nil {
+		return newdbplugin.NewUserResponse{}, fmt.Errorf("failed to generate username: %w", err)
+	}
 	username = strings.Replace(username, "-", "_", -1)
-	if err != nil {
-		return "", "", err
-	}
-	username = strings.ToLower(username)
-	password, err = i.GeneratePassword()
-	if err != nil {
-		return "", "", err
-	}
 
-	// Execute each query
 	for _, stmt := range creationIFQL {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
@@ -124,20 +113,24 @@ func (i *Influxdb) CreateUser(ctx context.Context, statements dbplugin.Statement
 				continue
 			}
 
-			q := influx.NewQuery(dbutil.QueryHelper(query, map[string]string{
+			m := map[string]string{
 				"username": username,
-				"password": password,
-			}), "", "")
+				"password": req.Password,
+			}
+			q := influx.NewQuery(dbutil.QueryHelper(query, m), "", "")
 			response, err := cli.Query(q)
 			if err != nil {
 				if response != nil && response.Error() != nil {
 					attemptRollback(cli, username, rollbackIFQL)
 				}
-				return "", "", err
+				return newdbplugin.NewUserResponse{}, fmt.Errorf("failed to run query in InfluxDB: %w", err)
 			}
 		}
 	}
-	return username, password, nil
+	resp = newdbplugin.NewUserResponse{
+		Username: username,
+	}
+	return resp, nil
 }
 
 // attemptRollback will attempt to roll back user creation if an error occurs in
@@ -165,26 +158,16 @@ func attemptRollback(cli influx.Client, username string, rollbackStatements []st
 	return nil
 }
 
-// RenewUser is not supported on Influxdb, so this is a no-op.
-func (i *Influxdb) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
-	// NOOP
-	return nil
-}
-
-// RevokeUser attempts to drop the specified user.
-func (i *Influxdb) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
-	// Grab the lock
+func (i *Influxdb) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
 	i.Lock()
 	defer i.Unlock()
 
-	statements = dbutil.StatementCompatibilityHelper(statements)
-
 	cli, err := i.getConnection(ctx)
 	if err != nil {
-		return err
+		return newdbplugin.DeleteUserResponse{}, fmt.Errorf("unable to get connection: %w", err)
 	}
 
-	revocationIFQL := statements.Revocation
+	revocationIFQL := req.Statements.Commands
 	if len(revocationIFQL) == 0 {
 		revocationIFQL = []string{defaultUserDeletionIFQL}
 	}
@@ -196,9 +179,10 @@ func (i *Influxdb) RevokeUser(ctx context.Context, statements dbplugin.Statement
 			if len(query) == 0 {
 				continue
 			}
-			q := influx.NewQuery(dbutil.QueryHelper(query, map[string]string{
-				"username": username,
-			}), "", "")
+			m := map[string]string{
+				"username": req.Username,
+			}
+			q := influx.NewQuery(dbutil.QueryHelper(query, m), "", "")
 			response, err := cli.Query(q)
 			result = multierror.Append(result, err)
 			if response != nil {
@@ -206,28 +190,35 @@ func (i *Influxdb) RevokeUser(ctx context.Context, statements dbplugin.Statement
 			}
 		}
 	}
-	return result.ErrorOrNil()
+	if result.ErrorOrNil() != nil {
+		return newdbplugin.DeleteUserResponse{}, fmt.Errorf("failed to delete user cleanly: %w", result.ErrorOrNil())
+	}
+	return newdbplugin.DeleteUserResponse{}, nil
 }
 
-// RotateRootCredentials is useful when we try to change root credential
-func (i *Influxdb) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	// Grab the lock
+func (i *Influxdb) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest) (newdbplugin.UpdateUserResponse, error) {
 	i.Lock()
 	defer i.Unlock()
 
+	if req.Password != nil {
+		err := i.changeUserPassword(ctx, req.Username, req.Password)
+		if err != nil {
+			return newdbplugin.UpdateUserResponse{}, fmt.Errorf("failed to change %q password: %w", req.Username, err)
+		}
+	}
+	// Expiration is a no-op
+	return newdbplugin.UpdateUserResponse{}, nil
+}
+
+func (i *Influxdb) changeUserPassword(ctx context.Context, username string, changePassword *newdbplugin.ChangePassword) error {
 	cli, err := i.getConnection(ctx)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("unable to get connection: %w", err)
 	}
 
-	rotateIFQL := statements
+	rotateIFQL := changePassword.Statements.Commands
 	if len(rotateIFQL) == 0 {
 		rotateIFQL = []string{defaultRootCredentialRotationIFQL}
-	}
-
-	password, err := i.GeneratePassword()
-	if err != nil {
-		return nil, err
 	}
 
 	var result *multierror.Error
@@ -237,10 +228,11 @@ func (i *Influxdb) RotateRootCredentials(ctx context.Context, statements []strin
 			if len(query) == 0 {
 				continue
 			}
-			q := influx.NewQuery(dbutil.QueryHelper(query, map[string]string{
-				"username": i.Username,
-				"password": password,
-			}), "", "")
+			m := map[string]string{
+				"username": username,
+				"password": changePassword.NewPassword,
+			}
+			q := influx.NewQuery(dbutil.QueryHelper(query, m), "", "")
 			response, err := cli.Query(q)
 			result = multierror.Append(result, err)
 			if response != nil {
@@ -251,9 +243,8 @@ func (i *Influxdb) RotateRootCredentials(ctx context.Context, statements []strin
 
 	err = result.ErrorOrNil()
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed to execute rotation queries: %w", err)
 	}
 
-	i.rawConfig["password"] = password
-	return i.rawConfig, nil
+	return nil
 }
