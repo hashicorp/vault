@@ -1,5 +1,5 @@
 import EmberObject from '@ember/object';
-import { module, test, todo } from 'qunit';
+import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, find, click } from '@ember/test-helpers';
 import Service from '@ember/service';
