@@ -51,12 +51,12 @@ dev-dynamic-mem: BUILD_TAGS+=memprofiler
 dev-dynamic-mem: dev-dynamic
 
 # Creates a Docker image by adding the compiled linux/amd64 binary found in ./bin.
-# The resulting image is tagged "vault:dev". 
+# The resulting image is tagged "vault:dev".
 docker-dev: prep
-	docker build -f scripts/docker/Dockerfile -t vault:dev .
+	docker build --build-arg VERSION=$(GO_VERSION_MIN) -f scripts/docker/Dockerfile -t vault:dev .
 
 docker-dev-ui: prep
-	docker build -f scripts/docker/Dockerfile.ui -t vault:dev-ui .
+	docker build --build-arg VERSION=$(GO_VERSION_MIN) -f scripts/docker/Dockerfile.ui -t vault:dev-ui .
 
 # test runs the unit tests and vets the code
 test: prep
