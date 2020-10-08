@@ -5,13 +5,14 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"strings"
 
 	stdmysql "github.com/go-sql-driver/mysql"
 )
@@ -122,7 +123,7 @@ func (m *MySQL) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (ne
 
 	password := req.Password
 
-	expirationStr := req.Expiration.String()
+	expirationStr := req.Expiration.Format("2006-01-02 15:04:05-0700")
 
 	queryMap := map[string]string{
 		"name":       username,
@@ -142,19 +143,23 @@ func (m *MySQL) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (ne
 }
 
 func (m *MySQL) generateUsername(req newdbplugin.NewUserRequest) (string, error) {
-	var dispName, roleName, maxLen credsutil.UsernameOpt
+	var dispNameLen, roleNameLen, maxLen int
 
 	if m.legacy {
-		dispName = credsutil.DisplayName(req.UsernameConfig.DisplayName, LegacyUsernameLen)
-		roleName = credsutil.RoleName(req.UsernameConfig.RoleName, LegacyMetadataLen)
-		maxLen = credsutil.MaxLength(LegacyUsernameLen)
+		dispNameLen = LegacyUsernameLen
+		roleNameLen = LegacyMetadataLen
+		maxLen = LegacyUsernameLen
 	} else {
-		dispName = credsutil.DisplayName(req.UsernameConfig.DisplayName, UsernameLen)
-		roleName = credsutil.RoleName(req.UsernameConfig.RoleName, MetadataLen)
-		maxLen = credsutil.MaxLength(UsernameLen)
+		dispNameLen = UsernameLen
+		roleNameLen = MetadataLen
+		maxLen = UsernameLen
 	}
 
-	username, err := credsutil.GenerateUsername(dispName, roleName, maxLen)
+	username, err := credsutil.GenerateUsername(
+		credsutil.DisplayName(req.UsernameConfig.DisplayName, dispNameLen),
+		credsutil.RoleName(req.UsernameConfig.RoleName, roleNameLen),
+		credsutil.MaxLength(maxLen),
+	)
 	if err != nil {
 		return "", errwrap.Wrapf("error generating username: {{err}}", err)
 	}
@@ -221,6 +226,8 @@ func (m *MySQL) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserReques
 			return newdbplugin.UpdateUserResponse{}, fmt.Errorf("failed to change password: %w", err)
 		}
 	}
+
+	// Expiration change/update is currently a no-op
 
 	return newdbplugin.UpdateUserResponse{}, nil
 }
