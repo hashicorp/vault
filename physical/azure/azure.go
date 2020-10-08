@@ -2,20 +2,20 @@ package azure
 
 import (
 	"context"
-	"encoding/base64"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	storage "github.com/Azure/azure-sdk-for-go/storage"
+	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/Azure/go-autorest/autorest/azure"
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -31,7 +31,7 @@ const (
 // AzureBackend is a physical backend that stores data
 // within an Azure blob container.
 type AzureBackend struct {
-	container  *storage.Container
+	container  *azblob.ContainerURL
 	logger     log.Logger
 	permitPool *physical.PermitPool
 }
@@ -75,19 +75,19 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 
-	environmentUrl := os.Getenv("AZURE_ARM_ENDPOINT")
-	if environmentUrl == "" {
-		environmentUrl = conf["arm_endpoint"]
+	environmentURL := os.Getenv("AZURE_ARM_ENDPOINT")
+	if environmentURL == "" {
+		environmentURL = conf["arm_endpoint"]
 	}
 
 	var environment azure.Environment
 	var err error
 
-	if environmentUrl != "" {
-		environment, err = azure.EnvironmentFromURL(environmentUrl)
+	if environmentURL != "" {
+		environment, err = azure.EnvironmentFromURL(environmentURL)
 		if err != nil {
 			errorMsg := fmt.Sprintf("failed to look up Azure environment descriptor for URL %q: {{err}}",
-				environmentUrl)
+				environmentURL)
 			return nil, errwrap.Wrapf(errorMsg, err)
 		}
 	} else {
@@ -99,19 +99,37 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 
-	client, err := storage.NewBasicClientOnSovereignCloud(accountName, accountKey, environment)
+	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create Azure client: {{err}}", err)
 	}
-	client.HTTPClient = cleanhttp.DefaultPooledClient()
 
-	blobClient := client.GetBlobService()
-	container := blobClient.GetContainerReference(name)
-	_, err = container.CreateIfNotExists(&storage.CreateContainerOptions{
-		Access: storage.ContainerAccessTypePrivate,
-	})
+	URL, err := url.Parse(
+		fmt.Sprintf("https://%s.blob.%s/%s", accountName, environment.StorageEndpointSuffix, name))
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to create %q container: {{err}}", name), err)
+		return nil, errwrap.Wrapf("failed to create Azure client: {{err}}", err)
+	}
+
+	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	containerURL := azblob.NewContainerURL(*URL, p)
+	_, err = containerURL.GetProperties(ctx, azblob.LeaseAccessConditions{})
+	if err != nil {
+		var e azblob.StorageError
+		if errors.As(err, &e) {
+			switch e.ServiceCode() {
+			case azblob.ServiceCodeContainerNotFound:
+				_, err := containerURL.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
+				if err != nil {
+					return nil, errwrap.Wrapf(fmt.Sprintf("failed to create %q container: {{err}}", name), err)
+				}
+			default:
+				return nil, errwrap.Wrapf(fmt.Sprintf("failed to get properties for container %q: {{err}}", name), err)
+			}
+		}
 	}
 
 	maxParStr, ok := conf["max_parallel"]
@@ -127,7 +145,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 
 	a := &AzureBackend{
-		container:  container,
+		container:  &containerURL,
 		logger:     logger,
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
@@ -142,22 +160,15 @@ func (a *AzureBackend) Put(ctx context.Context, entry *physical.Entry) error {
 		return fmt.Errorf("value is bigger than the current supported limit of 4MBytes")
 	}
 
-	blockID := base64.StdEncoding.EncodeToString([]byte("AAAA"))
-	blocks := make([]storage.Block, 1)
-	blocks[0] = storage.Block{ID: blockID, Status: storage.BlockStatusLatest}
-
 	a.permitPool.Acquire()
 	defer a.permitPool.Release()
 
-	blob := &storage.Blob{
-		Container: a.container,
-		Name:      entry.Key,
-	}
-	if err := blob.PutBlock(blockID, entry.Value, nil); err != nil {
-		return err
-	}
+	blobURL := a.container.NewBlockBlobURL(entry.Key)
+	_, err := azblob.UploadBufferToBlockBlob(ctx, entry.Value, blobURL, azblob.UploadToBlockBlobOptions{
+		BlockSize: MaxBlobSize,
+	})
 
-	return blob.PutBlockList(blocks, nil)
+	return err
 }
 
 // Get is used to fetch an entry
@@ -167,22 +178,23 @@ func (a *AzureBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 	a.permitPool.Acquire()
 	defer a.permitPool.Release()
 
-	blob := &storage.Blob{
-		Container: a.container,
-		Name:      key,
-	}
-	exists, err := blob.Exists()
+	blobURL := a.container.NewBlockBlobURL(key)
+	res, err := blobURL.Download(ctx, 0, 0, azblob.BlobAccessConditions{}, false)
 	if err != nil {
+		var e azblob.StorageError
+		if errors.As(err, &e) {
+			switch e.ServiceCode() {
+			case azblob.ServiceCodeBlobNotFound:
+				return nil, nil
+			default:
+				return nil, errwrap.Wrapf(fmt.Sprintf("failed to download blob %q: {{err}}", key), err)
+			}
+		}
 		return nil, err
-	}
-	if !exists {
-		return nil, nil
 	}
 
-	reader, err := blob.Get(nil)
-	if err != nil {
-		return nil, err
-	}
+	reader := res.Body(azblob.RetryReaderOptions{})
+
 	defer reader.Close()
 	data, err := ioutil.ReadAll(reader)
 
@@ -198,15 +210,23 @@ func (a *AzureBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 func (a *AzureBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"azure", "delete"}, time.Now())
 
-	blob := &storage.Blob{
-		Container: a.container,
-		Name:      key,
-	}
-
 	a.permitPool.Acquire()
 	defer a.permitPool.Release()
 
-	_, err := blob.DeleteIfExists(nil)
+	blobURL := a.container.NewBlockBlobURL(key)
+	_, err := blobURL.Delete(ctx, azblob.DeleteSnapshotsOptionInclude, azblob.BlobAccessConditions{})
+	if err != nil {
+		var e azblob.StorageError
+		if errors.As(err, &e) {
+			switch e.ServiceCode() {
+			case azblob.ServiceCodeBlobNotFound:
+				return nil
+			default:
+				return errwrap.Wrapf(fmt.Sprintf("failed to delete blob %q: {{err}}", key), err)
+			}
+		}
+	}
+
 	return err
 }
 
@@ -218,20 +238,18 @@ func (a *AzureBackend) List(ctx context.Context, prefix string) ([]string, error
 	a.permitPool.Acquire()
 	defer a.permitPool.Release()
 
-	var marker string
 	keys := []string{}
-	for {
-		list, err := a.container.ListBlobs(storage.ListBlobsParameters{
+	for marker := (azblob.Marker{}); marker.NotDone(); {
+		listBlob, err := a.container.ListBlobsFlatSegment(ctx, marker, azblob.ListBlobsSegmentOptions{
 			Prefix:     prefix,
-			Marker:     marker,
 			MaxResults: MaxListResults,
 		})
 		if err != nil {
 			return nil, err
 		}
 
-		for _, blob := range list.Blobs {
-			key := strings.TrimPrefix(blob.Name, prefix)
+		for _, blobInfo := range listBlob.Segment.BlobItems {
+			key := strings.TrimPrefix(blobInfo.Name, prefix)
 			if i := strings.Index(key, "/"); i == -1 {
 				// file
 				keys = append(keys, key)
@@ -241,10 +259,7 @@ func (a *AzureBackend) List(ctx context.Context, prefix string) ([]string, error
 			}
 		}
 
-		if list.NextMarker == "" {
-			break
-		}
-		marker = list.NextMarker
+		marker = listBlob.NextMarker
 	}
 
 	sort.Strings(keys)

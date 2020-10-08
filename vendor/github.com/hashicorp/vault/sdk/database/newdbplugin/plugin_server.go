@@ -1,6 +1,7 @@
 package newdbplugin
 
 import (
+	"crypto/tls"
 	"fmt"
 
 	"github.com/hashicorp/go-plugin"
@@ -10,11 +11,11 @@ import (
 // Serve is called from within a plugin and wraps the provided
 // Database implementation in a databasePluginRPCServer object and starts a
 // RPC server.
-func Serve(db Database) {
-	plugin.Serve(ServeConfig(db))
+func Serve(db Database, tlsProvider func() (*tls.Config, error)) {
+	plugin.Serve(ServeConfig(db, tlsProvider))
 }
 
-func ServeConfig(db Database) *plugin.ServeConfig {
+func ServeConfig(db Database, tlsProvider func() (*tls.Config, error)) *plugin.ServeConfig {
 	err := pluginutil.OptionallyEnableMlock()
 	if err != nil {
 		fmt.Println(err)
@@ -34,6 +35,7 @@ func ServeConfig(db Database) *plugin.ServeConfig {
 		HandshakeConfig:  handshakeConfig,
 		VersionedPlugins: pluginSets,
 		GRPCServer:       plugin.DefaultGRPCServer,
+		TLSProvider:      tlsProvider,
 	}
 
 	return conf

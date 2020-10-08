@@ -10,7 +10,7 @@ require (
 	cloud.google.com/go v0.56.0
 	cloud.google.com/go/spanner v1.5.1
 	cloud.google.com/go/storage v1.6.0
-	github.com/Azure/azure-sdk-for-go v36.2.0+incompatible
+	github.com/Azure/azure-storage-blob-go v0.10.0
 	github.com/Azure/go-autorest/autorest v0.10.1
 	github.com/DataDog/zstd v1.4.5 // indirect
 	github.com/NYTimes/gziphandler v1.1.1
@@ -32,7 +32,6 @@ require (
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/coreos/go-semver v0.2.0
 	github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
-	github.com/dnaeon/go-vcr v1.0.1 // indirect
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200309214505-aa6a9891b09c+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/dsnet/compress v0.0.1 // indirect
@@ -71,7 +70,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d
-	github.com/hashicorp/raft v1.1.3-0.20200914140732-b7cd2b346b06
+	github.com/hashicorp/raft v1.1.3-0.20201002073007-f367681f9c48
 	github.com/hashicorp/raft-snapshot v1.0.2-0.20190827162939-8117efcc5aab
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.5
 	github.com/hashicorp/vault-plugin-auth-azure v0.5.6
@@ -94,8 +93,8 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.6
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.5
-	github.com/hashicorp/vault/api v1.0.5-0.20200805123347-1ef507638af6
-	github.com/hashicorp/vault/sdk v0.1.14-0.20200916184745-5576096032f8
+	github.com/hashicorp/vault/api v1.0.5-0.20201001211907-38d91b749c77
+	github.com/hashicorp/vault/sdk v0.1.14-0.20201001211907-38d91b749c77
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f

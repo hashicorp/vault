@@ -72,6 +72,10 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 			Pattern: "storage/raft/remove-peer",
 
 			Fields: map[string]*framework.FieldSchema{
+				"dr_operation_token": {
+					Type:        framework.TypeString,
+					Description: "DR operation token used to authorize this request (if a DR secondary node).",
+				},
 				"server_id": {
 					Type: framework.TypeString,
 				},
@@ -79,7 +83,7 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleRaftRemovePeerUpdate(),
+					Callback: wrapHandleRaftRemovePeer(b),
 					Summary:  "Remove a peer from the raft cluster.",
 				},
 			},
