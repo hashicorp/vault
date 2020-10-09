@@ -251,7 +251,7 @@ All security content from 1.5.2, 1.5.1, 1.4.5, 1.4.4, 1.3.9, 1.3.8, 1.2.6, and 1
 BUG FIXES:
 
 * auth/aws: Made header handling for IAM authentication more robust
-* secrets/ssh: Fixed a bug with role option for SSH signing algorithm to allow more than RSA signing
+* secrets/ssh: Fixed a bug with role option for SSH signing algorithm to allow more than RSA signing [[GH-9824](https://github.com/hashicorp/vault/pull/9824)]
 
 ## 1.4.5.1
 ### August 21st, 2020
