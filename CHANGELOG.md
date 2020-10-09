@@ -25,6 +25,7 @@ BUG FIXES:
 * core: Fix resource leak in plugin API (plugin-dependent, not all plugins impacted) [[GH-9557](https://github.com/hashicorp/vault/pull/9557)]
 * core: Fix race involved in enabling certain features via a license change
 * identity: Check for timeouts in entity API [[GH-9925](https://github.com/hashicorp/vault/pull/9925)]
+* replication (enterprise): Fix panic when old filter path evaluation fails
 * secrets/database: Fix handling of TLS options in mongodb connection strings [[GH-9519](https://github.com/hashicorp/vault/pull/9519)]
 * secrets/gcp: Ensure that the IAM policy version is appropriately set after a roleset's bindings have changed. [[GH-93](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/93)]
 
