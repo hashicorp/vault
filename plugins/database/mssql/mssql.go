@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/ryboe/q"
 )
 
 const msSQLTypeName = "mssql"
@@ -302,7 +301,6 @@ func (m *MSSQL) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserReques
 }
 
 func (m *MSSQL) updateUserPass(ctx context.Context, username string, changePass *newdbplugin.ChangePassword) error {
-	q.Q("Updating user", username, changePass)
 	stmts := changePass.Statements.Commands
 	if len(stmts) == 0 {
 		stmts = []string{alterLoginSQL}
@@ -311,10 +309,8 @@ func (m *MSSQL) updateUserPass(ctx context.Context, username string, changePass 
 	password := changePass.NewPassword
 
 	if username == "" || password == "" {
-		q.Q("username or password is empty")
 		return errors.New("must provide both username and password")
 	}
-	q.Q("changing password now...")
 
 	m.Lock()
 	defer m.Unlock()
