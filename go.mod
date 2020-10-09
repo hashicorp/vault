@@ -81,7 +81,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.1.6
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.7.1-0.20200921171209-a8c355e565cb
 	github.com/hashicorp/vault-plugin-auth-oci v0.5.5
-	github.com/hashicorp/vault-plugin-database-couchbase v0.1.0
+	github.com/hashicorp/vault-plugin-database-couchbase v0.1.1-0.20201009184913-83c385bec4a2
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2
 	github.com/hashicorp/vault-plugin-mock v0.16.1
@@ -94,7 +94,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.2
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.1.5
 	github.com/hashicorp/vault/api v1.0.5-0.20201001211907-38d91b749c77
-	github.com/hashicorp/vault/sdk v0.1.14-0.20201001211907-38d91b749c77
+	github.com/hashicorp/vault/sdk v0.1.14-0.20201007132131-6a41edbf89f5
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
