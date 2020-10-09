@@ -1,6 +1,5 @@
 import { assign } from '@ember/polyfills';
 import ApplicationAdapter from './application';
-import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 
 export default ApplicationAdapter.extend({
