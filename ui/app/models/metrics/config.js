@@ -1,10 +1,12 @@
 import DS from 'ember-data';
 import { computed } from '@ember/object';
+import attachCapabilities from 'vault/lib/attach-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import { apiPath } from 'vault/macros/lazy-capabilities';
 
 const { attr } = DS;
 
-export default DS.Model.extend({
+const M = DS.Model.extend({
   queriesAvailable: attr('boolean'),
   defaultReportMonths: attr('number', {
     label: 'Default display',
@@ -27,4 +29,8 @@ export default DS.Model.extend({
     let keys = ['enabled', 'defaultReportMonths', 'retentionMonths'];
     return expandAttributeMeta(this, keys);
   }),
+});
+
+export default attachCapabilities(M, {
+  configPath: apiPath`sys/internal/counters/config`,
 });
