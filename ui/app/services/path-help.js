@@ -226,15 +226,18 @@ export default Service.extend({
     const deletePath = paths.find(path => path.operations.includes('delete'));
 
     return generatedItemAdapter.extend({
-      urlForItem(id, isList) {
+      urlForItem(id, isList, dynamicApiPath) {
         const itemType = getPath.path.slice(1);
         let url;
         id = encodePath(id);
-
+        // the apiPath changes when you switch between routes but the apiPath variable does not unless the model is reloaded
+        // check first for the dynamicApiPath which is passed through from the model->adapter
+        // If no dynamicApiPath, then use apiPath set higher up in function
+        dynamicApiPath = dynamicApiPath || apiPath;
         // isList indicates whether we are viewing the list page
         // of a top-level item such as userpass
         if (isList) {
-          url = `${this.buildURL()}/${apiPath}${itemType}/`;
+          url = `${this.buildURL()}/${dynamicApiPath}/${itemType}/`;
         } else {
           // build the URL for the show page of a nested item
           // such as a userpass group
