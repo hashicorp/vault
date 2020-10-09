@@ -21,18 +21,20 @@
           Vault usage
         {{/link-to}}
       {{/link-to}}
-      {{#link-to
-        "vault.cluster.metrics.config"
-        tagName="li"
-        activeClass="is-active"
-      }}
+      {{#if model.config.configPath.canRead}}
         {{#link-to
           "vault.cluster.metrics.config"
-          data-test-configuration-tab=true
+          tagName="li"
+          activeClass="is-active"
         }}
-          Configuration
+          {{#link-to
+            "vault.cluster.metrics.config"
+            data-test-configuration-tab=true
+          }}
+            Configuration
+          {{/link-to}}
         {{/link-to}}
-      {{/link-to}}
+      {{/if}}
     </ul>
   </nav>
 </div>
