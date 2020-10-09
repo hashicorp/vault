@@ -9,7 +9,7 @@ import NProgress from '@hashicorp/nextjs-scripts/lib/nprogress'
 import useAnchorLinkAnalytics from '@hashicorp/nextjs-scripts/lib/anchor-link-analytics'
 import HashiHead from '@hashicorp/react-head'
 import ProductSubnav from 'components/subnav'
-import MegaNav from '@hashicorp/react-mega-nav'
+import HashiStackMenu from '@hashicorp/react-hashi-stack-menu'
 import Footer from 'components/footer'
 import Error from './_error'
 
@@ -56,7 +56,7 @@ function App({ Component, pageProps }) {
           },
         ]}
       />
-      <MegaNav product="Vault" />
+      <HashiStackMenu />
       <ProductSubnav />
       <Component {...pageProps} />
       <Footer openConsentManager={openConsentManager} />

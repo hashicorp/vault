@@ -291,9 +291,6 @@ func (m *ExpirationManager) invalidate(key string) {
 				m.pending.Delete(leaseID)
 				m.leaseCount--
 
-				// If in the nonexpiring map, remove there.
-				m.nonexpiring.Delete(leaseID)
-
 				if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
 					m.logger.Error("failed to update quota on lease invalidation", "error", err)
 					return
@@ -304,8 +301,10 @@ func (m *ExpirationManager) invalidate(key string) {
 			}
 		default:
 			// There is no entry in the pending map and the invalidation
-			// resulted in a nil entry. This should ideally never happen.
+			// resulted in a nil entry.
 			if le == nil {
+				// If in the nonexpiring map, remove there.
+				m.nonexpiring.Delete(leaseID)
 				return
 			}
 			// Handle lease creation
@@ -626,9 +625,9 @@ func (m *ExpirationManager) Stop() error {
 		info := value.(pendingInfo)
 		info.timer.Stop()
 		m.pending.Delete(key)
-		m.leaseCount--
 		return true
 	})
+	m.leaseCount = 0
 	m.nonexpiring.Range(func(key, value interface{}) bool {
 		m.nonexpiring.Delete(key)
 		return true

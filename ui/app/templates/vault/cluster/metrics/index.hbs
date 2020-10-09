@@ -10,29 +10,31 @@
   <nav class="tabs">
     <ul>
       {{#link-to
-        "vault.cluster.metrics"
+        "vault.cluster.metrics.index"
         tagName="li"
         activeClass="is-active"
       }}
         {{#link-to
-          "vault.cluster.metrics"
+          "vault.cluster.metrics.index"
           data-test-configuration-tab=false
         }}
           Vault usage
         {{/link-to}}
       {{/link-to}}
-      {{#link-to
-        "vault.cluster.metrics-config"
-        tagName="li"
-        activeClass="is-active"
-      }}
+      {{#if model.config.configPath.canRead}}
         {{#link-to
-          "vault.cluster.metrics-config"
-          data-test-configuration-tab=true
+          "vault.cluster.metrics.config"
+          tagName="li"
+          activeClass="is-active"
         }}
-          Configuration
+          {{#link-to
+            "vault.cluster.metrics.config"
+            data-test-configuration-tab=true
+          }}
+            Configuration
+          {{/link-to}}
         {{/link-to}}
-      {{/link-to}}
+      {{/if}}
     </ul>
   </nav>
 </div>
@@ -42,7 +44,7 @@
     <EmptyState @title="No data is being received" @message='We haven’t yet gathered enough data to display here. We collect it at the end of each month, so your data will be available on the first of next month.' />
   {{else}}
     <EmptyState @title="No data is being received" @message='Tracking is disabled, and no data is being collected. To turn it on, edit the configuration.'>
-      <p>{{#link-to 'vault.cluster.metrics-config'}}Go to configuration{{/link-to}}</p>
+      <p>{{#link-to 'vault.cluster.metrics.config'}}Go to configuration{{/link-to}}</p>
     </EmptyState>
   {{/if}}
 {{else}}
@@ -52,7 +54,7 @@
         @type="warning"
         @title="Tracking is disabled"
       >
-        This feature is currently disabled and data is not being collected. {{#link-to 'vault.cluster.metrics-config'}}Edit the configuration{{/link-to}} to enable tracking again.
+        This feature is currently disabled and data is not being collected. {{#link-to 'vault.cluster.metrics.edit'}}Edit the configuration{{/link-to}} to enable tracking again.
       </AlertBanner>
     {{/if}}
     <p class="has-bottom-margin-s">The active clients metric contributes to billing. It is collected at the end of each month alongside unique entities and direct active tokens.</p>

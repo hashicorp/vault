@@ -489,7 +489,7 @@ github.com/hashicorp/vault-plugin-database-elasticsearch
 github.com/hashicorp/vault-plugin-database-mongodbatlas
 # github.com/hashicorp/vault-plugin-mock v0.16.1
 github.com/hashicorp/vault-plugin-mock
-# github.com/hashicorp/vault-plugin-secrets-ad v0.6.6
+# github.com/hashicorp/vault-plugin-secrets-ad v0.6.7
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/client
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/util
@@ -520,6 +520,7 @@ github.com/hashicorp/vault/sdk/database/helper/credsutil
 github.com/hashicorp/vault/sdk/database/helper/dbutil
 github.com/hashicorp/vault/sdk/database/newdbplugin
 github.com/hashicorp/vault/sdk/database/newdbplugin/proto
+github.com/hashicorp/vault/sdk/database/newdbplugin/testing
 github.com/hashicorp/vault/sdk/framework
 github.com/hashicorp/vault/sdk/helper/authmetadata
 github.com/hashicorp/vault/sdk/helper/awsutil
