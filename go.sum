@@ -502,8 +502,6 @@ github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d h1:BXqsASWhyiA
 github.com/hashicorp/nomad/api v0.0.0-20191220223628-edc62acd919d/go.mod h1:WKCL+tLVhN1D+APwH3JiTRZoxcdwRk86bWu1LVCUPaE=
 github.com/hashicorp/raft v1.0.1/go.mod h1:DVSAWItjLjTOkVbSpWQ0j0kUADIvDaCtBxIcbNAQLkI=
 github.com/hashicorp/raft v1.1.2-0.20191002163536-9c6bd3e3eb17/go.mod h1:vPAJM8Asw6u8LxC3eJCUZmRP/E4QmUGE1R7g7k8sG/8=
-github.com/hashicorp/raft v1.1.3-0.20200914140732-b7cd2b346b06 h1:faxx3CU4pvdKtCZXsP62A5X0iV37eqLHgFObVkOplHQ=
-github.com/hashicorp/raft v1.1.3-0.20200914140732-b7cd2b346b06/go.mod h1:vPAJM8Asw6u8LxC3eJCUZmRP/E4QmUGE1R7g7k8sG/8=
 github.com/hashicorp/raft v1.2.1-0.20201005193638-79efb13fec4f h1:fTKc3TdrbDFnBOyzHZ19v6hrcyZw+/oQxie1XN//1LQ=
 github.com/hashicorp/raft v1.2.1-0.20201005193638-79efb13fec4f/go.mod h1:vPAJM8Asw6u8LxC3eJCUZmRP/E4QmUGE1R7g7k8sG/8=
 github.com/hashicorp/raft-boltdb v0.0.0-20171010151810-6e5ba93211ea/go.mod h1:pNv7Wc3ycL6F5oOWn+tPGo2gWD4a5X+yp/ntwdKLjRk=
@@ -544,8 +542,8 @@ github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2-0.20200520204052-
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2 h1:tSToR3JRARqQkV9B10rk4VlZe2Sr9fOdhEP2NdxPo0I=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2/go.mod h1:HTXNzFr/SAVtJOs7jz0XxZ69jlKtaceEwp37l86UAQ0=
 github.com/hashicorp/vault-plugin-secrets-ad v0.6.6-0.20200520202259-fc6b89630f9f/go.mod h1:kk98nB+cwDbt3I7UGQq3ota7+eHZrGSTQZfSRGpluvA=
-github.com/hashicorp/vault-plugin-secrets-ad v0.6.6 h1:GskxrCCL2flrBtnAeOsBV+whCaqnnM/+t/h1IyqukNo=
-github.com/hashicorp/vault-plugin-secrets-ad v0.6.6/go.mod h1:L5L6NoJFxRvgxhuA2sWhloc3sbgmE7KxhNcoRxcaH9U=
+github.com/hashicorp/vault-plugin-secrets-ad v0.6.8 h1:n9peurpgxCdWhHYVwAZWiDXMQTWyRfoBzaxXo6RfLxM=
+github.com/hashicorp/vault-plugin-secrets-ad v0.6.8/go.mod h1:L5L6NoJFxRvgxhuA2sWhloc3sbgmE7KxhNcoRxcaH9U=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5 h1:BOOtSls+BQ1EtPmpE9LoqZztsEZ1fRWVSkHWtRIrCB4=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5/go.mod h1:gAoReoUpBHaBwkxQqTK7FY8nQC0MuaZHLiW5WOSny5g=
 github.com/hashicorp/vault-plugin-secrets-azure v0.5.6/go.mod h1:Q0cIL4kZWnMmQWkBfWtyOd7+JXTEpAyU4L932PMHq3E=

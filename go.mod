@@ -75,7 +75,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-oci v0.5.5
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.5.4
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.2
-	github.com/hashicorp/vault-plugin-secrets-ad v0.6.6
+	github.com/hashicorp/vault-plugin-secrets-ad v0.6.8
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.5
 	github.com/hashicorp/vault-plugin-secrets-azure v0.6.2-0.20200818154643-63f769e87b12
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.5
