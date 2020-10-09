@@ -73,8 +73,7 @@ func (i *Influxdb) getConnection(ctx context.Context) (influx.Client, error) {
 }
 
 // NewUser generates the username/password on the underlying Influxdb secret backend as instructed by
-// the CreationStatement provided.
-// func (i *Influxdb) NewUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
+// the statements provided.
 func (i *Influxdb) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (resp newdbplugin.NewUserResponse, err error) {
 	i.Lock()
 	defer i.Unlock()
