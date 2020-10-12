@@ -97,19 +97,24 @@ func Mounted(mountpoint string) (bool, error) {
 	return len(entries) > 0, nil
 }
 
-// Mount will mount filesystem according to the specified configuration.
-// Options must be specified like the mount or fstab unix commands:
-// "opt1=val1,opt2=val2". See flags.go for supported option flags.
+// Mount will mount filesystem according to the specified configuration, on the
+// condition that the target path is *not* already mounted. Options must be
+// specified like the mount or fstab unix commands: "opt1=val1,opt2=val2". See
+// flags.go for supported option flags.
 func Mount(device, target, mType, options string) error {
 	flag, data := parseOptions(options)
+	if flag&REMOUNT != REMOUNT {
+		if mounted, err := Mounted(target); err != nil || mounted {
+			return err
+		}
+	}
 	return mount(device, target, mType, uintptr(flag), data)
 }
 
-// ForceMount will mount filesystem according to the specified configuration.
-// Options must be specified like the mount or fstab unix commands:
-// "opt1=val1,opt2=val2". See flags.go for supported option flags.
-//
-// Deprecated: use Mount instead.
+// ForceMount will mount a filesystem according to the specified configuration,
+// *regardless* if the target path is not already mounted. Options must be
+// specified like the mount or fstab unix commands: "opt1=val1,opt2=val2". See
+// flags.go for supported option flags.
 func ForceMount(device, target, mType, options string) error {
 	flag, data := parseOptions(options)
 	return mount(device, target, mType, uintptr(flag), data)
@@ -139,10 +144,13 @@ func RecursiveUnmount(target string) error {
 		err = unmount(m.Mountpoint, mntDetach)
 		if err != nil {
 			if i == len(mounts)-1 { // last mount
-				return err
+				if mounted, e := Mounted(m.Mountpoint); e != nil || mounted {
+					return err
+				}
+			} else {
+				// This is some submount, we can ignore this error for now, the final unmount will fail if this is a real problem
+				logrus.WithError(err).Warnf("Failed to unmount submount %s", m.Mountpoint)
 			}
-			// This is some submount, we can ignore this error for now, the final unmount will fail if this is a real problem
-			logrus.WithError(err).Warnf("Failed to unmount submount %s", m.Mountpoint)
 		}
 
 		logrus.Debugf("Unmounted %s", m.Mountpoint)

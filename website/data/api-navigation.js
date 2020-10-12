@@ -23,6 +23,7 @@ export default [
         category: 'databases',
         content: [
           'cassandra',
+          'couchbase',
           'elasticdb',
           'influxdb',
           'hanadb',
@@ -118,6 +119,7 @@ export default [
         category: 'mfa',
         content: ['duo', 'okta', 'pingid', 'totp'],
       },
+      'monitor',
       'mounts',
       'namespaces',
       'plugins-reload-backend',

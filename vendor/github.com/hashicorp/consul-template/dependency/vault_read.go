@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"path"
 	"strings"
 	"time"
 
@@ -145,7 +146,7 @@ func (d *VaultReadQuery) readSecret(clients *ClientSet, opts *QueryOptions) (*ap
 			isKVv2 = false
 			d.secretPath = d.rawPath
 		} else if isKVv2 {
-			d.secretPath = addPrefixToVKVPath(d.rawPath, mountPath, "data")
+			d.secretPath = shimKVv2Path(d.rawPath, mountPath)
 		} else {
 			d.secretPath = d.rawPath
 		}
@@ -175,4 +176,22 @@ func deletedKVv2(s *api.Secret) bool {
 		return md["deletion_time"] != ""
 	}
 	return false
+}
+
+// shimKVv2Path aligns the supported legacy path to KV v2 specs by inserting
+// /data/ into the path for reading secrets. Paths for metadata are not modified.
+func shimKVv2Path(rawPath, mountPath string) string {
+	switch {
+	case rawPath == mountPath, rawPath == strings.TrimSuffix(mountPath, "/"):
+		return path.Join(mountPath, "data")
+	default:
+		p := strings.TrimPrefix(rawPath, mountPath)
+
+		// Only add /data/ prefix to the path if neither /data/ or /metadata/ are
+		// present.
+		if strings.HasPrefix(p, "data/") || strings.HasPrefix(p, "metadata/") {
+			return rawPath
+		}
+		return path.Join(mountPath, "data", p)
+	}
 }

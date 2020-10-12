@@ -27,17 +27,21 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 	for {
 		select {
 		case <-emitTimer:
-			c.metricsMutex.Lock()
-			if c.expiration != nil {
-				c.expiration.emitMetrics()
+			if !c.PerfStandby() {
+				c.metricsMutex.Lock()
+				// Emit on active node only
+				if c.expiration != nil {
+					c.expiration.emitMetrics()
+				}
+				c.metricsMutex.Unlock()
 			}
-			// Refresh the sealed gauge
+
+			// Refresh the sealed gauge, on all nodes
 			if c.Sealed() {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 0, nil)
 			} else {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 1, nil)
 			}
-			c.metricsMutex.Unlock()
 
 		case <-writeTimer:
 			if stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh); stopped {
@@ -45,7 +49,7 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				// should trigger
 				continue
 			}
-			if c.perfStandby {
+			if c.perfStandby { // already have lock here, don't re-acquire
 				syncCounter(c)
 			} else {
 				err := c.saveCurrentRequestCounters(context.Background(), time.Now())
@@ -55,6 +59,11 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			}
 			c.stateLock.RUnlock()
 		case <-identityCountTimer:
+			// Only emit on active node
+			if c.PerfStandby() {
+				break
+			}
+
 			// TODO: this can be replaced by the identity gauge counter; we need to
 			// sum across all namespaces.
 			go func() {
@@ -124,6 +133,9 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 	// The gauge collection processes are started and stopped here
 	// because there's more than one TokenManager created during startup,
 	// but we only want one set of gauges.
+	//
+	// Both active nodes and performance standby nodes call emitMetrics
+	// so we have to handle both.
 
 	metricsInit := []struct {
 		MetricName    []string
@@ -175,9 +187,10 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 		},
 	}
 
+	// Disable collection if configured, or if we're a performance standby.
 	if c.MetricSink().GaugeInterval == time.Duration(0) {
 		c.logger.Info("usage gauge collection is disabled")
-	} else {
+	} else if !c.PerfStandby() {
 		for _, init := range metricsInit {
 			if init.DisableEnvVar != "" {
 				if os.Getenv(init.DisableEnvVar) != "" {
@@ -295,7 +308,7 @@ func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
 			return
 		}
 		for _, path := range keys {
-			if path[len(path)-1] == '/' {
+			if len(path) > 0 && path[len(path)-1] == '/' {
 				subdirectories = append(subdirectories, currentDirectory+path)
 			} else {
 				m.NumSecrets += 1

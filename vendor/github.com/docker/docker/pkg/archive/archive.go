@@ -442,7 +442,7 @@ func newTarAppender(idMapping *idtools.IdentityMapping, writer io.Writer, chownO
 }
 
 // canonicalTarName provides a platform-independent and consistent posix-style
-// path for files and directories to be archived regardless of the platform.
+//path for files and directories to be archived regardless of the platform.
 func canonicalTarName(name string, isDir bool) string {
 	name = CanonicalTarNameForPath(name)
 
@@ -495,13 +495,13 @@ func (ta *tarAppender) addTarFile(path, name string) error {
 		}
 	}
 
-	// check whether the file is overlayfs whiteout
-	// if yes, skip re-mapping container ID mappings.
+	//check whether the file is overlayfs whiteout
+	//if yes, skip re-mapping container ID mappings.
 	isOverlayWhiteout := fi.Mode()&os.ModeCharDevice != 0 && hdr.Devmajor == 0 && hdr.Devminor == 0
 
-	// handle re-mapping container ID mappings back to host ID mappings before
-	// writing tar headers/files. We skip whiteout files because they were written
-	// by the kernel and already have proper ownership relative to the host
+	//handle re-mapping container ID mappings back to host ID mappings before
+	//writing tar headers/files. We skip whiteout files because they were written
+	//by the kernel and already have proper ownership relative to the host
 	if !isOverlayWhiteout && !strings.HasPrefix(filepath.Base(hdr.Name), WhiteoutPrefix) && !ta.IdentityMapping.Empty() {
 		fileIDPair, err := getFileUIDGID(fi.Sys())
 		if err != nil {
@@ -1134,7 +1134,7 @@ func (archiver *Archiver) CopyFileWithTar(src, dst string) (err error) {
 		dst = filepath.Join(dst, filepath.Base(src))
 	}
 	// Create the holding directory if necessary
-	if err := system.MkdirAll(filepath.Dir(dst), 0700); err != nil {
+	if err := system.MkdirAll(filepath.Dir(dst), 0700, ""); err != nil {
 		return err
 	}
 
@@ -1218,9 +1218,6 @@ func cmdStream(cmd *exec.Cmd, input io.Reader) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	// Ensure the command has exited before we clean anything up
-	done := make(chan struct{})
-
 	// Copy stdout to the returned pipe
 	go func() {
 		if err := cmd.Wait(); err != nil {
@@ -1228,16 +1225,9 @@ func cmdStream(cmd *exec.Cmd, input io.Reader) (io.ReadCloser, error) {
 		} else {
 			pipeW.Close()
 		}
-		close(done)
 	}()
 
-	return ioutils.NewReadCloserWrapper(pipeR, func() error {
-		// Close pipeR, and then wait for the command to complete before returning. We have to close pipeR first, as
-		// cmd.Wait waits for any non-file stdout/stderr/stdin to close.
-		err := pipeR.Close()
-		<-done
-		return err
-	}), nil
+	return pipeR, nil
 }
 
 // NewTempArchive reads the content of src into a temporary file, and returns the contents
