@@ -215,22 +215,6 @@ func assertNoCreds(t testing.TB, address string, port int, username, password st
 	if err != nil {
 		t.Fatalf("successfully connected after %s when it shouldn't", timeout)
 	}
-
-	// t.Helper()
-	// clusterConfig := gocql.NewCluster(address)
-	// clusterConfig.Authenticator = gocql.PasswordAuthenticator{
-	// 	Username: username,
-	// 	Password: password,
-	// }
-	// clusterConfig.ProtoVersion = 4
-	// clusterConfig.Port = port
-	//
-	// session, err := clusterConfig.CreateSession()
-	// if err != nil {
-	// 	return // Happy path
-	// }
-	// defer session.Close()
-	// t.Fatalf("able to make connection when credentials should not exist")
 }
 
 const createUserStatements = `CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER;
