@@ -1,0 +1,10 @@
+*.prof
+*.test
+*.coverprofile*
+tools/benchmark/benchmark
+tools/asinfo/asinfo
+debug/
+tmp/
+.DS_Store
+TODO
+PLAN.todo
