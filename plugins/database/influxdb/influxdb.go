@@ -196,6 +196,10 @@ func (i *Influxdb) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserReq
 }
 
 func (i *Influxdb) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest) (newdbplugin.UpdateUserResponse, error) {
+	if req.Password == nil && req.Expiration == nil {
+		return newdbplugin.UpdateUserResponse{}, fmt.Errorf("no changes requested")
+	}
+
 	i.Lock()
 	defer i.Unlock()
 
