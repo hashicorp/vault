@@ -356,7 +356,12 @@ func TestInfluxdb_RevokeDeletedUser(t *testing.T) {
 	delReq := newdbplugin.DeleteUserRequest{
 		Username: "someuser",
 	}
-	dbtesting.AssertDeleteUser(t, db, delReq)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, err := db.DeleteUser(ctx, delReq)
+	if err == nil {
+		t.Fatalf("Expected err, got nil")
+	}
 }
 
 func TestInfluxdb_RevokeUser(t *testing.T) {
