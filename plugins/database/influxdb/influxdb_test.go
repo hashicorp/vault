@@ -356,10 +356,7 @@ func TestInfluxdb_RevokeDeletedUser(t *testing.T) {
 	delReq := newdbplugin.DeleteUserRequest{
 		Username: "someuser",
 	}
-	_, err := db.DeleteUser(context.Background(), delReq)
-	if err == nil {
-		t.Fatalf("Expected err, got nil")
-	}
+	dbtesting.AssertDeleteUser(t, db, delReq)
 }
 
 func TestInfluxdb_RevokeUser(t *testing.T) {
@@ -389,14 +386,10 @@ func TestInfluxdb_RevokeUser(t *testing.T) {
 
 	assertCredsExist(t, config.URL().String(), newUserResp.Username, initialPassword)
 
-	// attempt to revoke the user after database is gone
 	delReq := newdbplugin.DeleteUserRequest{
 		Username: newUserResp.Username,
 	}
-	_, err := db.DeleteUser(context.Background(), delReq)
-	if err != nil {
-		t.Fatalf("Error deleting user: %s", err)
-	}
+	dbtesting.AssertDeleteUser(t, db, delReq)
 	assertCredsDoNotExist(t, config.URL().String(), newUserResp.Username, initialPassword)
 }
 
