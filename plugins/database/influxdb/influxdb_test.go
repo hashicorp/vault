@@ -125,9 +125,55 @@ func TestInfluxdb_Initialize(t *testing.T) {
 				VerifyConnection: true,
 			},
 			expectedResponse: newdbplugin.InitializeResponse{
-				Config: config.connectionParams(),
+				Config: makeConfig(config.connectionParams(), "port", strconv.Itoa(config.connectionParams()["port"].(int))),
 			},
 			expectErr:         false,
+			expectInitialized: true,
+		},
+		"missing config": {
+			req: newdbplugin.InitializeRequest{
+				Config:           nil,
+				VerifyConnection: true,
+			},
+			expectedResponse:  newdbplugin.InitializeResponse{},
+			expectErr:         true,
+			expectInitialized: false,
+		},
+		"missing host": {
+			req: newdbplugin.InitializeRequest{
+				Config:           makeConfig(config.connectionParams(), "host", ""),
+				VerifyConnection: true,
+			},
+			expectedResponse:  newdbplugin.InitializeResponse{},
+			expectErr:         true,
+			expectInitialized: false,
+		},
+		"missing username": {
+			req: newdbplugin.InitializeRequest{
+				Config:           makeConfig(config.connectionParams(), "username", ""),
+				VerifyConnection: true,
+			},
+			expectedResponse:  newdbplugin.InitializeResponse{},
+			expectErr:         true,
+			expectInitialized: false,
+		},
+		"missing password": {
+			req: newdbplugin.InitializeRequest{
+				Config:           makeConfig(config.connectionParams(), "password", ""),
+				VerifyConnection: true,
+			},
+			expectedResponse:  newdbplugin.InitializeResponse{},
+			expectErr:         true,
+			expectInitialized: false,
+		},
+		"failed to validate connection": {
+			req: newdbplugin.InitializeRequest{
+				// Host exists, but isn't a running instance
+				Config:           makeConfig(config.connectionParams(), "host", "foobar://bad_connection"),
+				VerifyConnection: true,
+			},
+			expectedResponse:  newdbplugin.InitializeResponse{},
+			expectErr:         true,
 			expectInitialized: true,
 		},
 	}
@@ -137,11 +183,7 @@ func TestInfluxdb_Initialize(t *testing.T) {
 			db := new()
 			defer dbtesting.AssertClose(t, db)
 
-			req := newdbplugin.InitializeRequest{
-				Config:           config.connectionParams(),
-				VerifyConnection: true,
-			}
-			resp, err := db.Initialize(context.Background(), req)
+			resp, err := db.Initialize(context.Background(), test.req)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -159,36 +201,6 @@ func TestInfluxdb_Initialize(t *testing.T) {
 				t.Fatalf("Database was initiailized when it shouldn't")
 			}
 		})
-	}
-
-	db := new()
-	req := newdbplugin.InitializeRequest{
-		Config:           config.connectionParams(),
-		VerifyConnection: true,
-	}
-	_, err := db.Initialize(context.Background(), req)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if !db.Initialized {
-		t.Fatal("Database should be initialized")
-	}
-
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	connectionParams := config.connectionParams()
-	connectionParams["port"] = strconv.Itoa(connectionParams["port"].(int))
-	req = newdbplugin.InitializeRequest{
-		Config:           connectionParams,
-		VerifyConnection: true,
-	}
-	_, err = db.Initialize(context.Background(), req)
-	if err != nil {
-		t.Fatalf("err: %s", err)
 	}
 }
 
@@ -326,6 +338,9 @@ func TestUpdateUser_password(t *testing.T) {
 // TestInfluxdb_RevokeDeletedUser tests attempting to revoke a user that was
 // deleted externally. Guards against a panic, see
 // https://github.com/hashicorp/vault/issues/6734
+// Updated to attempt to delete a user that never existed to replicate a similar scenario since
+// the cleanup function from `prepareInfluxdbTestContainer` does not do anything if using an
+// external InfluxDB instance rather than spinning one up for the test.
 func TestInfluxdb_RevokeDeletedUser(t *testing.T) {
 	cleanup, config := prepareInfluxdbTestContainer(t)
 	defer cleanup()
@@ -337,36 +352,14 @@ func TestInfluxdb_RevokeDeletedUser(t *testing.T) {
 	}
 	dbtesting.AssertInitialize(t, db, req)
 
-	initialPassword := "nuozxby98523u89bdfnkjl"
-	newUserReq := newdbplugin.NewUserRequest{
-		UsernameConfig: newdbplugin.UsernameMetadata{
-			DisplayName: "test",
-			RoleName:    "test",
-		},
-		Statements: newdbplugin.Statements{
-			Commands: []string{createUserStatements},
-		},
-		Password:   initialPassword,
-		Expiration: time.Now().Add(1 * time.Minute),
-	}
-	newUserResp := dbtesting.AssertNewUser(t, db, newUserReq)
-
-	assertCredsExist(t, config.URL().String(), newUserResp.Username, initialPassword)
-
-	// call cleanup to remove database
-	cleanup()
-
-	assertCredsDoNotExist(t, config.URL().String(), newUserResp.Username, initialPassword)
-
-	// attempt to revoke the user after database is gone
+	// attempt to revoke a user that does not exist
 	delReq := newdbplugin.DeleteUserRequest{
-		Username: newUserResp.Username,
+		Username: "someuser",
 	}
 	_, err := db.DeleteUser(context.Background(), delReq)
 	if err == nil {
 		t.Fatalf("Expected err, got nil")
 	}
-	assertCredsDoNotExist(t, config.URL().String(), newUserResp.Username, initialPassword)
 }
 
 func TestInfluxdb_RevokeUser(t *testing.T) {
@@ -406,6 +399,7 @@ func TestInfluxdb_RevokeUser(t *testing.T) {
 	}
 	assertCredsDoNotExist(t, config.URL().String(), newUserResp.Username, initialPassword)
 }
+
 func assertCredsExist(t testing.TB, address, username, password string) {
 	t.Helper()
 	err := testCredsExist(address, username, password)
