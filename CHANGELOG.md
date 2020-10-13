@@ -42,6 +42,10 @@ BUG FIXES:
 * secrets/mysql: Conditionally overwrite TLS parameters for MySQL secrets engine [[GH-9729](https://github.com/hashicorp/vault/pull/9729)]
 * secrets/ad: Fix bug where `password_policy` setting was not using correct key when `ad/config` was read [[GH-71](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/71)]
 
+IMPROVEMENTS:
+
+* core (enterprise): New metrics covering leader status for nodes
+
 ## 1.5.4
 ### September 24th, 2020
 
@@ -56,7 +60,6 @@ IMPROVEMENTS:
 * secrets/gcp: Add check for 403 during rollback to prevent repeated deletion calls [[GH-97](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/97)]
 * core: Disable usage metrics collection on performance standby nodes. [[GH-9966](https://github.com/hashicorp/vault/pull/9966)]
 * credential/aws: Added X-Amz-Content-Sha256 as a default STS request header [[GH-10009](https://github.com/hashicorp/vault/pull/10009)]
-* core (enterprise): New metrics covering leader status for nodes
 
 BUG FIXES:
 
