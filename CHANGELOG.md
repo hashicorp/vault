@@ -56,7 +56,7 @@ IMPROVEMENTS:
 * secrets/gcp: Add check for 403 during rollback to prevent repeated deletion calls [[GH-97](https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/97)]
 * core: Disable usage metrics collection on performance standby nodes. [[GH-9966](https://github.com/hashicorp/vault/pull/9966)]
 * credential/aws: Added X-Amz-Content-Sha256 as a default STS request header [[GH-10009](https://github.com/hashicorp/vault/pull/10009)]
-* core (enterprise): New telemetry metrics covering leader status for nodes
+* core (enterprise): New metrics covering leader status for nodes
 
 BUG FIXES:
 
