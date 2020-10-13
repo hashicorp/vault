@@ -889,6 +889,10 @@ func (c *Core) remount(ctx context.Context, src, dst string, updateStorage bool)
 	}
 
 	c.mountsLock.Lock()
+	if match := c.router.MatchingMount(ctx, dst); match != "" {
+		c.mountsLock.Unlock()
+		return fmt.Errorf("existing mount at %q", match)
+	}	
 	var entry *MountEntry
 	for _, mountEntry := range c.mounts.Entries {
 		if mountEntry.Path == src && mountEntry.NamespaceID == ns.ID {
