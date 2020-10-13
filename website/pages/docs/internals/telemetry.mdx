@@ -108,6 +108,7 @@ These metrics represent operational aspects of the running Vault instance.
 | `vault.cache.miss`                   | Number of times a value was not in the LRU cache. The results in a read from the configured storage.                                                                                                | cache miss   | counter |
 | `vault.cache.write`                  | Number of times a value was written to the LRU cache.                                                                                                                                               | cache write  | counter |
 | `vault.cache.delete`                 | Number of times a value was deleted from the LRU cache. This does not count cache expirations.                                                                                                      | cache delete | counter |
+| `vault.core.leader`                  | Has value 1 when the vault node is leader, and 0 when node is in standby.                                                                                                                           | bool | gauge   |
 
 ## Runtime Metrics
 
