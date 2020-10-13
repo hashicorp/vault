@@ -8,6 +8,10 @@ export default Application.extend({
     });
   },
 
+  urlForUpdateRecord() {
+    return this.buildURL() + '/internal/counters/config';
+  },
+
   urlForQuery() {
     return this.buildURL() + '/internal/counters/config';
   },

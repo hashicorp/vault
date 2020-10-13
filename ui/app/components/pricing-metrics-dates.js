@@ -18,13 +18,14 @@
 import { computed } from '@ember/object';
 import Component from '@ember/component';
 import {
-  compareAsc,
   differenceInSeconds,
   isValid,
   subMonths,
   startOfToday,
   format,
   endOfMonth,
+  startOfMonth,
+  isBefore,
 } from 'date-fns';
 import layout from '../templates/components/pricing-metrics-dates';
 import { parseDateString } from 'vault/helpers/parse-date-string';
@@ -99,9 +100,18 @@ export default Component.extend({
     if (!this.endDate) {
       return 'End date is invalid. Please use format MM/YYYY';
     }
-    if (compareAsc(this.endDate, this.startDate) < 0) {
+    if (isBefore(this.endDate, this.startDate)) {
       return 'Start date is after end date';
     }
+    const lastMonthAvailable = endOfMonth(subMonths(startOfToday(), 1));
+    if (isBefore(lastMonthAvailable, this.endDate)) {
+      return `Data is not available until the end of the month`;
+    }
+    const earliestRetained = startOfMonth(subMonths(lastMonthAvailable, this.retentionMonths));
+    if (isBefore(this.startDate, earliestRetained)) {
+      return `No data retained before ${format(earliestRetained, 'MM/YYYY')} due to your settings`;
+    }
+
     return null;
   }),
 
