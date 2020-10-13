@@ -17,8 +17,8 @@ export default ApplicationAdapter.extend({
     let data = {};
     if (isList) {
       data.list = true;
+      yield this.getDynamicApiPath.perform(id);
     }
-    yield this.getDynamicApiPath.perform(id);
 
     return this.ajax(this.urlForItem(id, isList, this.dynamicApiPath), 'GET', { data }).then(resp => {
       const data = {
@@ -34,6 +34,6 @@ export default ApplicationAdapter.extend({
   },
 
   queryRecord(store, type, query) {
-    return this.fetchByQuery(store, query);
+    return this.fetchByQuery.perform(store, query);
   },
 });

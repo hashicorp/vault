@@ -23,6 +23,7 @@ export function sanitizePath(path) {
 
 export default Service.extend({
   attrs: null,
+  dynamicApiPath: '',
   ajax(url, options = {}) {
     let appAdapter = getOwner(this).lookup(`adapter:application`);
     let { data } = options;
@@ -233,11 +234,13 @@ export default Service.extend({
         // the apiPath changes when you switch between routes but the apiPath variable does not unless the model is reloaded
         // check first for the dynamicApiPath which is passed through from the model->adapter
         // If no dynamicApiPath, then use apiPath set higher up in function
-        dynamicApiPath = dynamicApiPath || apiPath;
+        if (dynamicApiPath) {
+          apiPath = dynamicApiPath;
+        }
         // isList indicates whether we are viewing the list page
         // of a top-level item such as userpass
         if (isList) {
-          url = `${this.buildURL()}/${dynamicApiPath}/${itemType}/`;
+          url = `${this.buildURL()}/${apiPath}${itemType}/`;
         } else {
           // build the URL for the show page of a nested item
           // such as a userpass group
