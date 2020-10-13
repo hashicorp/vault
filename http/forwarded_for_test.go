@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	sockaddr "github.com/hashicorp/go-sockaddr"
-	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/shared-secure-libs/configutil"
 	"github.com/hashicorp/vault/vault"
 )
 

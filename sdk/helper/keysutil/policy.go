@@ -699,7 +699,12 @@ func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage, randReade
 func (p *Policy) GetKey(context []byte, ver, numBytes int) ([]byte, error) {
 	// Fast-path non-derived keys
 	if !p.Derived {
-		return p.Keys[strconv.Itoa(ver)].Key, nil
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return nil, err
+		}
+
+		return keyEntry.Key, nil
 	}
 
 	return p.DeriveKey(context, nil, ver, numBytes)
@@ -726,14 +731,19 @@ func (p *Policy) DeriveKey(context, salt []byte, ver int, numBytes int) ([]byte,
 		return nil, errutil.UserError{Err: "missing 'context' for key derivation; the key was created using a derived key, which means additional, per-request information must be included in order to perform operations with the key"}
 	}
 
+	keyEntry, err := p.safeGetKeyEntry(ver)
+	if err != nil {
+		return nil, err
+	}
+
 	switch p.KDF {
 	case Kdf_hmac_sha256_counter:
 		prf := kdf.HMACSHA256PRF
 		prfLen := kdf.HMACSHA256PRFLen
-		return kdf.CounterMode(prf, prfLen, p.Keys[strconv.Itoa(ver)].Key, append(context, salt...), 256)
+		return kdf.CounterMode(prf, prfLen, keyEntry.Key, append(context, salt...), 256)
 
 	case Kdf_hkdf_sha256:
-		reader := hkdf.New(sha256.New, p.Keys[strconv.Itoa(ver)].Key, salt, context)
+		reader := hkdf.New(sha256.New, keyEntry.Key, salt, context)
 		derBytes := bytes.NewBuffer(nil)
 		derBytes.Grow(numBytes)
 		limReader := &io.LimitedReader{
@@ -768,6 +778,15 @@ func (p *Policy) DeriveKey(context, salt []byte, ver int, numBytes int) ([]byte,
 	default:
 		return nil, errutil.InternalError{Err: "unsupported key derivation mode"}
 	}
+}
+
+func (p *Policy) safeGetKeyEntry(ver int) (KeyEntry, error) {
+	keyVerStr := strconv.Itoa(ver)
+	keyEntry, ok := p.Keys[keyVerStr]
+	if !ok {
+		return keyEntry, errutil.UserError{Err: "no such key version"}
+	}
+	return keyEntry, nil
 }
 
 func (p *Policy) convergentVersion(ver int) int {
@@ -860,7 +879,11 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 			return "", err
 		}
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
-		key := p.Keys[strconv.Itoa(ver)].RSAKey
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return "", err
+		}
+		key := keyEntry.RSAKey
 		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, &key.PublicKey, plaintext, nil)
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA encrypt the plaintext: %v", err)}
@@ -956,7 +979,11 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 			return "", err
 		}
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
-		key := p.Keys[strconv.Itoa(ver)].RSAKey
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return "", err
+		}
+		key := keyEntry.RSAKey
 		plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA decrypt the ciphertext: %v", err)}
@@ -976,12 +1003,15 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	case version > p.LatestVersion:
 		return nil, fmt.Errorf("key version does not exist; latest key version is %d", p.LatestVersion)
 	}
-
-	if p.Keys[strconv.Itoa(version)].HMACKey == nil {
+	keyEntry, err := p.safeGetKeyEntry(version)
+	if err != nil {
+		return nil, err
+	}
+	if keyEntry.HMACKey == nil {
 		return nil, fmt.Errorf("no HMAC key exists for that key version")
 	}
 
-	return p.Keys[strconv.Itoa(version)].HMACKey, nil
+	return keyEntry.HMACKey, nil
 }
 
 func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, sigAlgorithm string, marshaling MarshalingType) (*SigningResult, error) {
@@ -1003,6 +1033,11 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 	var sig []byte
 	var pubKey []byte
 	var err error
+	keyParams, err := p.safeGetKeyEntry(ver)
+	if err != nil {
+		return nil, err
+	}
+
 	switch p.Type {
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
 		var curveBits int
@@ -1019,7 +1054,6 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 			curve = elliptic.P256()
 		}
 
-		keyParams := p.Keys[strconv.Itoa(ver)]
 		key := &ecdsa.PrivateKey{
 			PublicKey: ecdsa.PublicKey{
 				Curve: curve,
@@ -1081,7 +1115,7 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 			}
 			pubKey = key.Public().(ed25519.PublicKey)
 		} else {
-			key = ed25519.PrivateKey(p.Keys[strconv.Itoa(ver)].Key)
+			key = ed25519.PrivateKey(keyParams.Key)
 		}
 
 		// Per docs, do not pre-hash ed25519; it does two passes and performs
@@ -1092,7 +1126,7 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 		}
 
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
-		key := p.Keys[strconv.Itoa(ver)].RSAKey
+		key := keyParams.RSAKey
 
 		var algo crypto.Hash
 		switch hashAlgorithm {
@@ -1229,7 +1263,10 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 			ecdsaSig.S.SetBytes(sb)
 		}
 
-		keyParams := p.Keys[strconv.Itoa(ver)]
+		keyParams, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return false, err
+		}
 		key := &ecdsa.PublicKey{
 			Curve: curve,
 			X:     keyParams.EC_X,
@@ -1255,7 +1292,12 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 		return ed25519.Verify(key.Public().(ed25519.PublicKey), input, sigBytes), nil
 
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
-		key := p.Keys[strconv.Itoa(ver)].RSAKey
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return false, err
+		}
+
+		key := keyEntry.RSAKey
 
 		var algo crypto.Hash
 		switch hashAlgorithm {

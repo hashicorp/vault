@@ -20,8 +20,9 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/shared-secure-libs/metricsutil"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/metricsutil"
+	vaultmetrics "github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/base62"
@@ -2728,7 +2729,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		[]string{"token", "creation"},
 		1,
 		[]metrics.Label{
-			metricsutil.NamespaceLabel(ns),
+			vaultmetrics.NamespaceLabel(ns),
 			{"auth_method", "token"},
 			{"mount_point", mountPointWithoutNs}, // path, not accessor
 			{"creation_ttl", ttl_label},
@@ -3429,7 +3430,7 @@ func (ts *TokenStore) gaugeCollector(ctx context.Context) ([]metricsutil.GaugeLa
 	// to potentially handle a larger number of tokens.
 	intValues := make([]int, len(allNamespaces))
 	for i, ns := range allNamespaces {
-		values[i].Labels = []metrics.Label{metricsutil.NamespaceLabel(ns)}
+		values[i].Labels = []metrics.Label{vaultmetrics.NamespaceLabel(ns)}
 		namespacePosition[ns.ID] = i
 	}
 
@@ -3521,7 +3522,7 @@ func (ts *TokenStore) gaugeCollectorByPolicy(ctx context.Context) ([]metricsutil
 			flattenedResults = append(flattenedResults,
 				metricsutil.GaugeLabelValues{
 					Labels: []metrics.Label{
-						metricsutil.NamespaceLabel(ns),
+						vaultmetrics.NamespaceLabel(ns),
 						{"policy", policy},
 					},
 					Value: float32(count),
@@ -3589,7 +3590,7 @@ func (ts *TokenStore) gaugeCollectorByTtl(ctx context.Context) ([]metricsutil.Ga
 			flattenedResults = append(flattenedResults,
 				metricsutil.GaugeLabelValues{
 					Labels: []metrics.Label{
-						metricsutil.NamespaceLabel(ns),
+						vaultmetrics.NamespaceLabel(ns),
 						{"creation_ttl", bucket},
 					},
 					Value: float32(count),
@@ -3689,7 +3690,7 @@ func (ts *TokenStore) gaugeCollectorByMethod(ctx context.Context) ([]metricsutil
 			flattenedResults = append(flattenedResults,
 				metricsutil.GaugeLabelValues{
 					Labels: []metrics.Label{
-						metricsutil.NamespaceLabel(ns),
+						vaultmetrics.NamespaceLabel(ns),
 						{"auth_method", method},
 					},
 					Value: float32(count),

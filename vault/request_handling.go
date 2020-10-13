@@ -12,10 +12,11 @@ import (
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
 	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/shared-secure-libs/configutil"
+	"github.com/hashicorp/shared-secure-libs/metricsutil"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/metricsutil"
+	vaultmetrics "github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -869,7 +870,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				[]string{"secret", "lease", "creation"},
 				1,
 				[]metrics.Label{
-					metricsutil.NamespaceLabel(ns),
+					vaultmetrics.NamespaceLabel(ns),
 					{"secret_engine", req.MountType},
 					{"mount_point", mountPointWithoutNs},
 					{"creation_ttl", ttl_label},
@@ -1266,7 +1267,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			[]string{"token", "creation"},
 			1,
 			[]metrics.Label{
-				metricsutil.NamespaceLabel(ns),
+				vaultmetrics.NamespaceLabel(ns),
 				{"auth_method", req.MountType},
 				{"mount_point", mountPointWithoutNs},
 				{"creation_ttl", ttl_label},

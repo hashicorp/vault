@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/shared-secure-libs/configutil"
 	"github.com/mitchellh/cli"
 )
 

@@ -6,7 +6,7 @@ import (
 	"context"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/shared-secure-libs/metricsutil"
 
 	memdb "github.com/hashicorp/go-memdb"
 )
