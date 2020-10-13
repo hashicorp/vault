@@ -12,7 +12,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
-	vaultmetrics "github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -576,7 +576,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		if err != nil {
 			nsLabel = metrics.Label{"namespace", "unknown"}
 		} else {
-			nsLabel = vaultmetrics.NamespaceLabel(ns)
+			nsLabel = metricsutil.NamespaceLabel(ns)
 		}
 		i.core.MetricSink().IncrCounterWithLabels(
 			[]string{"identity", "entity", "creation"},

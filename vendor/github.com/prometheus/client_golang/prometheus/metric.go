@@ -17,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	//lint:ignore SA1019 Need to keep deprecated package for compatibility.
 	"github.com/golang/protobuf/proto"
 	"github.com/prometheus/common/model"
 

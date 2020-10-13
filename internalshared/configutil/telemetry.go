@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/shared-secure-libs/metricsutil"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/cli"
 	"google.golang.org/api/option"
