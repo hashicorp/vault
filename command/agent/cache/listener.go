@@ -7,9 +7,9 @@ import (
 
 	"strings"
 
-	"github.com/hashicorp/shared-secure-libs/configutil"
-	"github.com/hashicorp/shared-secure-libs/listenerutil"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/listenerutil"
 )
 
 func StartListener(lnConfig *configutil.Listener) (net.Listener, *tls.Config, error) {

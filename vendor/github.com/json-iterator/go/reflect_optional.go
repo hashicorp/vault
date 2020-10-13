@@ -2,6 +2,7 @@ package jsoniter
 
 import (
 	"github.com/modern-go/reflect2"
+	"reflect"
 	"unsafe"
 )
 
@@ -9,6 +10,9 @@ func decoderOfOptional(ctx *ctx, typ reflect2.Type) ValDecoder {
 	ptrType := typ.(*reflect2.UnsafePtrType)
 	elemType := ptrType.Elem()
 	decoder := decoderOfType(ctx, elemType)
+	if ctx.prefix == "" && elemType.Kind() == reflect.Ptr {
+		return &dereferenceDecoder{elemType, decoder}
+	}
 	return &OptionalDecoder{elemType, decoder}
 }
 
