@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
@@ -53,7 +52,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
+	newdbplugin.Serve(dbType.(newdbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
 
 	return nil
 }
@@ -292,6 +291,9 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 }
 
 func (m *MSSQL) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest) (newdbplugin.UpdateUserResponse, error) {
+	if req.Password == nil && req.Expiration == nil {
+		return newdbplugin.UpdateUserResponse{}, fmt.Errorf("no changes requested")
+	}
 	if req.Password != nil {
 		err := m.updateUserPass(ctx, req.Username, req.Password)
 		return newdbplugin.UpdateUserResponse{}, err
