@@ -19,6 +19,7 @@ IMPROVEMENTS:
 * seal/awskms: Add logging during awskms auto-unseal [[GH-9794](https://github.com/hashicorp/vault/pull/9794)]
 * storage/azure: Update SDK library to use [azure-storage-blob-go](https://github.com/Azure/azure-storage-blob-go) since previous library has been deprecated. [[GH-9577](https://github.com/hashicorp/vault/pull/9577/)]
 * secrets/ad: `rotate-root` now supports POST requests like other secret engines [[GH-70](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/70)]
+* core (enterprise): New metrics covering leader status for nodes
 
 BUG FIXES:
 
@@ -41,10 +42,6 @@ BUG FIXES:
 * core (enterprise): Fix extraneous error messages in DR Cluster
 * secrets/mysql: Conditionally overwrite TLS parameters for MySQL secrets engine [[GH-9729](https://github.com/hashicorp/vault/pull/9729)]
 * secrets/ad: Fix bug where `password_policy` setting was not using correct key when `ad/config` was read [[GH-71](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/71)]
-
-IMPROVEMENTS:
-
-* core (enterprise): New metrics covering leader status for nodes
 
 ## 1.5.4
 ### September 24th, 2020
