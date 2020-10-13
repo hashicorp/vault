@@ -67,6 +67,7 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 
 	leaderInfos := []*raft.LeaderJoinInfo{
 		{
+			AutoJoin:      req.AutoJoin,
 			LeaderAPIAddr: req.LeaderAPIAddr,
 			TLSConfig:     tlsConfig,
 			Retry:         req.Retry,
@@ -90,6 +91,7 @@ type JoinResponse struct {
 }
 
 type JoinRequest struct {
+	AutoJoin         string `json:"auto_join"`
 	LeaderAPIAddr    string `json:"leader_api_addr"`
 	LeaderCACert     string `json:"leader_ca_cert"`
 	LeaderClientCert string `json:"leader_client_cert"`
