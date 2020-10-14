@@ -1465,8 +1465,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.CounterSyncInterval = base.CounterSyncInterval
 		coreConfig.RecoveryMode = base.RecoveryMode
 
-		coreConfig.ActivityLogConfig = base.ActivityLogConfig
-
 		testApplyEntBaseConfig(coreConfig, base)
 	}
 
