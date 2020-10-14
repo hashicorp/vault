@@ -173,6 +173,9 @@ func (h *HANA) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (res
 
 // Renewing hana user just means altering user's valid until property
 func (h *HANA) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest) (newdbplugin.UpdateUserResponse, error) {
+	h.Lock()
+	defer h.Unlock()
+
 	// No change requested
 	if req.Password == nil && req.Expiration == nil {
 		return newdbplugin.UpdateUserResponse{}, nil
@@ -191,21 +194,16 @@ func (h *HANA) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest
 	}
 	defer tx.Rollback()
 
-	if req.Expiration != nil {
-		// If expiration is in the role SQL, HANA will deactivate the user when time is up,
-		// regardless of whether vault is alive to revoke lease
-		expirationStr := req.Expiration.NewExpiration.String()
+	if req.Password != nil {
+		err = h.updateUserPassword(ctx, tx, req.Username, req.Password)
 		if err != nil {
 			return newdbplugin.UpdateUserResponse{}, err
 		}
+	}
 
-		// Renew user's valid until property field
-		stmt, err := tx.PrepareContext(ctx, "ALTER USER "+req.Username+" VALID UNTIL "+"'"+expirationStr+"'")
+	if req.Expiration != nil {
+		err = h.updateUserExpiration(ctx, tx, req.Username, req.Expiration)
 		if err != nil {
-			return newdbplugin.UpdateUserResponse{}, err
-		}
-		defer stmt.Close()
-		if _, err := stmt.ExecContext(ctx); err != nil {
 			return newdbplugin.UpdateUserResponse{}, err
 		}
 	}
@@ -218,8 +216,80 @@ func (h *HANA) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest
 	return newdbplugin.UpdateUserResponse{}, nil
 }
 
+func (h *HANA) updateUserPassword(ctx context.Context, tx *sql.Tx, username string, req *newdbplugin.ChangePassword) error {
+	password := req.NewPassword
+
+	if username == "" || password == "" {
+		return fmt.Errorf("must provide both username and password")
+	}
+
+	stmts := req.Statements.Commands
+	if len(stmts) == 0 {
+		stmts = []string{"ALTER USER {{username}} PASSWORD \"{{password}}\""}
+	}
+
+	for _, stmt := range stmts {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+
+			m := map[string]string{
+				"name":     username,
+				"username": username,
+				"password": password,
+			}
+
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+				return fmt.Errorf("failed to execute query: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (h *HANA) updateUserExpiration(ctx context.Context, tx *sql.Tx, username string, req *newdbplugin.ChangeExpiration) error {
+	// If expiration is in the role SQL, HANA will deactivate the user when time is up,
+	// regardless of whether vault is alive to revoke lease
+	expirationStr := req.NewExpiration.String()
+
+	if username == "" || expirationStr == "" {
+		return fmt.Errorf("must provide both username and expiration")
+	}
+
+	stmts := req.Statements.Commands
+	if len(stmts) == 0 {
+		stmts = []string{"ALTER USER {{username}} VALID UNTIL '{{expiration}}'"}
+	}
+
+	for _, stmt := range stmts {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+
+			m := map[string]string{
+				"name":       username,
+				"username":   username,
+				"expiration": expirationStr,
+			}
+
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+				return fmt.Errorf("failed to execute query: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
 // Revoking hana user will deactivate user and try to perform a soft drop
 func (h *HANA) DeleteUser(ctx context.Context, req newdbplugin.DeleteUserRequest) (newdbplugin.DeleteUserResponse, error) {
+	h.Lock()
+	h.Unlock()
 
 	// default revoke will be a soft drop on user
 	if len(req.Statements.Commands) == 0 {

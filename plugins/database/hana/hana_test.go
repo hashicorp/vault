@@ -103,6 +103,96 @@ func TestHANA_NewUser(t *testing.T) {
 	}
 }
 
+func TestHANA_UpdateUser(t *testing.T) {
+	if os.Getenv("HANA_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
+		t.SkipNow()
+	}
+	connURL := os.Getenv("HANA_URL")
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
+	initReq := newdbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	_, err := db.Initialize(context.Background(), initReq)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	password, err := credsutil.RandomAlphaNumeric(32, true)
+	if err != nil {
+		t.Fatalf("failed to generate password: %s", err)
+	}
+	password = strings.Replace(password, "-", "_", -1)
+
+	newReq := newdbplugin.NewUserRequest{
+		UsernameConfig: newdbplugin.UsernameMetadata{
+			DisplayName: "test-test",
+			RoleName:    "test-test",
+		},
+		Password: password,
+		Statements: newdbplugin.Statements{
+			Commands: []string{testHANARole},
+		},
+		Expiration: time.Now().Add(time.Hour),
+	}
+
+	// Test default revoke statements
+	userResp, err := db.NewUser(context.Background(), newReq)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if err = testCredsExist(t, connURL, userResp.Username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
+	newPassword, err := credsutil.RandomAlphaNumeric(32, true)
+	if err != nil {
+		t.Fatalf("failed to generate password: %s", err)
+	}
+	newPassword = strings.Replace(newPassword, "-", "_", -1)
+
+	// Change Password
+	updateReq := newdbplugin.UpdateUserRequest{
+		Username: userResp.Username,
+		Password: &newdbplugin.ChangePassword{
+			NewPassword: newPassword,
+		},
+	}
+
+	_, err = db.UpdateUser(context.Background(), updateReq)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if err := testCredsExist(t, connURL, userResp.Username, newPassword); err == nil {
+		t.Fatal("Credentials were not changed")
+	}
+
+	// Test custom update statement
+	userResp, err = db.NewUser(context.Background(), newReq)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if err = testCredsExist(t, connURL, userResp.Username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
+	updateReq.Password.Statements.Commands = []string{testHANAUpdate}
+	updateReq.Username = userResp.Username
+	_, err = db.UpdateUser(context.Background(), updateReq)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if err := testCredsExist(t, connURL, userResp.Username, newPassword); err == nil {
+		t.Fatal("Credentials were not revoked")
+	}
+}
+
 func TestHANA_DeleteUser(t *testing.T) {
 	if os.Getenv("HANA_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
 		t.SkipNow()
@@ -200,3 +290,6 @@ CREATE USER {{name}} PASSWORD {{password}} NO FORCE_FIRST_PASSWORD_CHANGE VALID 
 
 const testHANADrop = `
 DROP USER {{name}} CASCADE;`
+
+const testHANAUpdate = `
+ALTER USER {{name}} PASSWORD "{{password}}";`
