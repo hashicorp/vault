@@ -167,8 +167,6 @@ func (k *KubernetesBackend) Put(ctx context.Context, entry *physical.Entry) erro
 		},
 	}
 
-	// fmt.Printf("put key: %s (prefix: %s) labels: %v\n", entry.Key, prefix, secret.Labels)
-
 	_, err := k.client.CoreV1().Secrets(k.namespace).Create(ctx, &secret, metav1.CreateOptions{})
 
 	if err != nil && apierrors.IsAlreadyExists(err) {
@@ -191,8 +189,6 @@ func (k *KubernetesBackend) Get(ctx context.Context, key string) (*physical.Entr
 	defer k.permitPool.Release()
 
 	secretName := toSHASum(key)
-
-	// println("get key:", key)
 
 	secret, err := k.client.CoreV1().Secrets(k.namespace).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
@@ -264,8 +260,6 @@ func (k *KubernetesBackend) List(ctx context.Context, prefix string) ([]string, 
 
 		listOptions.Continue = secrets.Continue
 	}
-
-	// fmt.Printf("list keys under %s: %v\n", prefix, keys)
 
 	sort.Strings(keys)
 	return keys, nil
