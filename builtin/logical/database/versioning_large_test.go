@@ -113,7 +113,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 				Path:      fmt.Sprintf("rotate-root/%s", test.dbName),
 				Storage:   config.StorageView,
 			}
-			ctx, cancel = context.WithTimeout(context.Background(), %*time.Second)
+			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
 			resp, err = b.HandleRequest(ctx, req)
