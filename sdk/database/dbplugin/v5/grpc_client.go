@@ -1,4 +1,4 @@
-package newdbplugin
+package dbplugin
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin/proto"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 

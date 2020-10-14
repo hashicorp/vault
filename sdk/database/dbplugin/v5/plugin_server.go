@@ -1,4 +1,4 @@
-package newdbplugin
+package dbplugin
 
 import (
 	"crypto/tls"
