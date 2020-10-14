@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
@@ -57,7 +56,7 @@ func (h *HANA) secretValues() map[string]string {
 func (h *HANA) Initialize(ctx context.Context, req newdbplugin.InitializeRequest) (newdbplugin.InitializeResponse, error) {
 	conf, err := h.Init(ctx, req.Config, req.VerifyConnection)
 	if err != nil {
-		return newdbplugin.InitializeResponse{}, errwrap.Wrapf("error initializing db: %s", err)
+		return newdbplugin.InitializeResponse{}, fmt.Errorf("error initializing db: %s", err)
 	}
 
 	return newdbplugin.InitializeResponse{
@@ -108,7 +107,7 @@ func (h *HANA) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (res
 		return newdbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
 	}
 
-	dispName := credsutil.DisplayName(req.UsernameConfig.DisplayName, maxIdentifierLength)
+	dispName := credsutil.DisplayName(req.UsernameConfig.DisplayName, 32)
 	roleName := credsutil.RoleName(req.UsernameConfig.RoleName, 20)
 	maxLen := credsutil.MaxLength(maxIdentifierLength)
 	separator := credsutil.Separator("_")
@@ -174,6 +173,10 @@ func (h *HANA) NewUser(ctx context.Context, req newdbplugin.NewUserRequest) (res
 
 // Renewing hana user just means altering user's valid until property
 func (h *HANA) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest) (newdbplugin.UpdateUserResponse, error) {
+	// No change requested
+	if req.Password == nil && req.Expiration == nil {
+		return newdbplugin.UpdateUserResponse{}, nil
+	}
 
 	// Get connection
 	db, err := h.getConnection(ctx)
@@ -188,21 +191,23 @@ func (h *HANA) UpdateUser(ctx context.Context, req newdbplugin.UpdateUserRequest
 	}
 	defer tx.Rollback()
 
-	// If expiration is in the role SQL, HANA will deactivate the user when time is up,
-	// regardless of whether vault is alive to revoke lease
-	expirationStr := req.Expiration.NewExpiration.String()
-	if err != nil {
-		return newdbplugin.UpdateUserResponse{}, err
-	}
+	if req.Expiration != nil {
+		// If expiration is in the role SQL, HANA will deactivate the user when time is up,
+		// regardless of whether vault is alive to revoke lease
+		expirationStr := req.Expiration.NewExpiration.String()
+		if err != nil {
+			return newdbplugin.UpdateUserResponse{}, err
+		}
 
-	// Renew user's valid until property field
-	stmt, err := tx.PrepareContext(ctx, "ALTER USER "+req.Username+" VALID UNTIL "+"'"+expirationStr+"'")
-	if err != nil {
-		return newdbplugin.UpdateUserResponse{}, err
-	}
-	defer stmt.Close()
-	if _, err := stmt.ExecContext(ctx); err != nil {
-		return newdbplugin.UpdateUserResponse{}, err
+		// Renew user's valid until property field
+		stmt, err := tx.PrepareContext(ctx, "ALTER USER "+req.Username+" VALID UNTIL "+"'"+expirationStr+"'")
+		if err != nil {
+			return newdbplugin.UpdateUserResponse{}, err
+		}
+		defer stmt.Close()
+		if _, err := stmt.ExecContext(ctx); err != nil {
+			return newdbplugin.UpdateUserResponse{}, err
+		}
 	}
 
 	// Commit the transaction
