@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	newdbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
-	"github.com/hashicorp/vault/sdk/database/newdbplugin"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
