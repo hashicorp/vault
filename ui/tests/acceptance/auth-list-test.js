@@ -16,16 +16,6 @@ module('Acceptance | userpass secret backend', function(hooks) {
     return logout.visit();
   });
 
-  const POLICY = {
-    Version: '2012-10-17',
-    Statement: [
-      {
-        Effect: 'Allow',
-        Action: 'iam:*',
-        Resource: '*',
-      },
-    ],
-  };
   test('userpass backend', async function(assert) {
     let n = Math.random();
     const path1 = `userpass-${++n}`;
